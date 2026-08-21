@@ -16,6 +16,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { logout } from "@/app/actions/auth";
 
 const NAV_ITEMS = [
   { label: "Overview", icon: IconLayoutDashboard },
@@ -117,10 +118,15 @@ export function Sidebar({ className, onNavigate, onClose }: SidebarProps) {
               <IconSettings size={16} />
               Settings
             </button>
-            <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-red hover:bg-red/5 nav:py-2">
-              <IconLogout size={16} />
-              Log out
-            </button>
+            <form action={logout}>
+              <button
+                type="submit"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-red hover:bg-red/5 nav:py-2"
+              >
+                <IconLogout size={16} />
+                Log out
+              </button>
+            </form>
           </div>
         )}
       </div>
