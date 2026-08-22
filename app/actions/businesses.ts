@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { PlaceDetails } from "@/lib/google/places";
 
 export type SaveBusinessResult =
-  | { status: "saved" }
+  | { status: "saved"; businessId: string }
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
 
@@ -23,26 +23,35 @@ export async function saveBusiness(
     return { status: "unauthenticated" };
   }
 
-  const { error } = await supabase.from("businesses").upsert(
-    {
-      owner_id: user.id,
-      place_id: place.placeId,
-      name: place.name,
-      address: place.formattedAddress,
-      phone: place.phone,
-      website: place.website,
-      rating: place.rating,
-      review_count: place.userRatingCount,
-      category: place.primaryCategory,
-      lat: place.location?.lat ?? null,
-      lng: place.location?.lng ?? null,
-    },
-    { onConflict: "owner_id,place_id" }
-  );
+  const { data, error } = await supabase
+    .from("businesses")
+    .upsert(
+      {
+        owner_id: user.id,
+        place_id: place.placeId,
+        name: place.name,
+        address: place.formattedAddress,
+        phone: place.phone,
+        website: place.website,
+        rating: place.rating,
+        review_count: place.userRatingCount,
+        category: place.primaryCategory,
+        categories: place.categories,
+        opening_hours: place.openingHours,
+        business_status: place.businessStatus,
+        photo_count: place.photoCount,
+        google_maps_uri: place.googleMapsUri,
+        lat: place.location?.lat ?? null,
+        lng: place.location?.lng ?? null,
+      },
+      { onConflict: "owner_id,place_id" }
+    )
+    .select("id")
+    .single();
 
-  if (error) {
-    return { status: "error", message: error.message };
+  if (error || !data) {
+    return { status: "error", message: error?.message ?? "Save failed." };
   }
 
-  return { status: "saved" };
+  return { status: "saved", businessId: data.id };
 }

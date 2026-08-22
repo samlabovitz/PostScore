@@ -21,6 +21,7 @@ const DETAILS_FIELD_MASK = [
   "location",
   "businessStatus",
   "googleMapsUri",
+  "photos",
 ].join(",");
 
 function getApiKey(): string {
@@ -56,6 +57,8 @@ export interface PlaceDetails {
   location: { lat: number; lng: number } | null;
   businessStatus: string | null;
   googleMapsUri: string | null;
+  /** Number of photos Google has for this listing. Used by the scoring engine's photos check. */
+  photoCount: number | null;
 }
 
 export type PlaceLookupResult =
@@ -85,6 +88,7 @@ interface RawDetailsPlace {
   location?: { latitude?: number; longitude?: number };
   businessStatus?: string;
   googleMapsUri?: string;
+  photos?: unknown[];
 }
 
 async function searchPlaces(textQuery: string): Promise<RawSearchPlace[]> {
@@ -148,6 +152,7 @@ function normalizeDetails(raw: RawDetailsPlace): PlaceDetails {
         : null,
     businessStatus: raw.businessStatus ?? null,
     googleMapsUri: raw.googleMapsUri ?? null,
+    photoCount: Array.isArray(raw.photos) ? raw.photos.length : null,
   };
 }
 

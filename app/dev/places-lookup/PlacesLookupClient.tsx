@@ -30,7 +30,7 @@ function Field({ label, value }: { label: string; value: string | null }) {
 type SaveState =
   | { kind: "idle" }
   | { kind: "saving" }
-  | { kind: "saved" }
+  | { kind: "saved"; businessId: string }
   | { kind: "unauthenticated" }
   | { kind: "error"; message: string };
 
@@ -58,7 +58,7 @@ function SaveControl({
     setState({ kind: "saving" });
     const result = await saveBusiness(place);
     if (result.status === "saved") {
-      setState({ kind: "saved" });
+      setState({ kind: "saved", businessId: result.businessId });
     } else if (result.status === "unauthenticated") {
       setState({ kind: "unauthenticated" });
     } else {
@@ -78,7 +78,12 @@ function SaveControl({
         {state.kind === "saved" ? "Saved" : state.kind === "saving" ? "Saving..." : "Save business"}
       </Button>
       {state.kind === "saved" && (
-        <span className="text-sm text-green">Saved to your account.</span>
+        <Link
+          href={`/business/${state.businessId}`}
+          className="text-sm font-medium text-brass hover:underline"
+        >
+          Saved — view its PostScore →
+        </Link>
       )}
       {state.kind === "unauthenticated" && (
         <span className="text-sm text-red">
