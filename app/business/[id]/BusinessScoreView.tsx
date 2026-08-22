@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { IconCircleCheck, IconAlertTriangle, IconMinus } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { GradeBadge } from "@/components/ui/GradeBadge";
 import { ScoreGauge } from "@/components/ui/ScoreGauge";
+import { StatTile } from "@/components/ui/StatTile";
 import { cn } from "@/lib/utils";
 import { saveScoreSnapshot } from "@/app/actions/scoring";
 import type { BusinessRecord, ScoreHistoryRow } from "@/app/actions/scoring";
@@ -24,9 +26,64 @@ const CONFIDENCE_PILL: Record<Confidence, { variant: "green" | "brass" | "amber"
   NOT_FOUND: { variant: "neutral", label: "Not found" },
 };
 
+/** A compact status symbol per confidence state — a solid green check for
+ * anything actually verified, a muted dash for anything we don't (yet)
+ * have data for, so the list reads at a glance before you get to the
+ * per-check label and explanation. */
+function ConfidenceIcon({ confidence }: { confidence: Confidence }) {
+  switch (confidence) {
+    case "VERIFIED":
+      return <IconCircleCheck size={17} className="shrink-0 text-green" />;
+    case "LIKELY":
+      return <IconCircleCheck size={17} className="shrink-0 text-brass" />;
+    case "UNCERTAIN":
+      return <IconAlertTriangle size={17} className="shrink-0 text-amber" />;
+    case "NOT_FOUND":
+      return <IconMinus size={17} className="shrink-0 text-ink-mute" />;
+  }
+}
+
 function formatPoints(value: number | null): string {
   if (value === null) return "—";
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+/** Category's own 0–100 relative score, rendered as a labeled progress
+ * bar — green once a category is scoring strong, amber while there's
+ * real room to improve. Every number here (earned/possible points,
+ * percentage) is read straight off the real breakdown; no category is
+ * invented and no bar is drawn for a category with no determinable
+ * checks. */
+function CategoryProgressRow({ category }: { category: CategoryResult }) {
+  const pct = category.relativeScore;
+  const strong = pct !== null && pct >= 80;
+
+  return (
+    <div className="flex flex-col gap-2 py-3.5 first:pt-0 last:pb-0">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-sm font-medium text-ink">{category.label}</span>
+        <span className="text-sm tabular-nums text-ink-soft">
+          {formatPoints(category.earnedPoints)} / {formatPoints(category.possiblePoints)} pts
+        </span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-paper-deep">
+        {pct !== null && (
+          <div
+            className={cn(
+              "h-full rounded-full transition-[width] duration-700 ease-[cubic-bezier(0.4,0,0.2,1)]",
+              strong ? "bg-green" : "bg-amber"
+            )}
+            style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
+          />
+        )}
+      </div>
+      {pct === null && (
+        <p className="text-[12px] text-ink-mute">
+          Not yet determinable — nothing in this category has real data yet.
+        </p>
+      )}
+    </div>
+  );
 }
 
 function CategoryCard({ category }: { category: CategoryResult }) {
@@ -47,7 +104,10 @@ function CategoryCard({ category }: { category: CategoryResult }) {
           return (
             <div key={check.id} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-medium text-ink">{check.label}</span>
+                <span className="flex items-center gap-2 text-sm font-medium text-ink">
+                  <ConfidenceIcon confidence={check.confidence} />
+                  {check.label}
+                </span>
                 <div className="flex shrink-0 items-center gap-2">
                   <span
                     className={cn(
@@ -64,7 +124,7 @@ function CategoryCard({ category }: { category: CategoryResult }) {
                   <Pill variant={pill.variant}>{pill.label}</Pill>
                 </div>
               </div>
-              <p className="text-[13px] text-ink-mute">{check.explanation}</p>
+              <p className="pl-[25px] text-[13px] text-ink-mute">{check.explanation}</p>
             </div>
           );
         })}
@@ -161,7 +221,30 @@ export function BusinessScoreView({
         </div>
       </div>
 
-      <SectionHeading title="Breakdown" />
+      <SectionHeading title="At a glance" />
+      <Card className="p-5">
+        <div className="grid grid-cols-2 gap-6 sm:w-fit sm:grid-cols-2 sm:gap-10">
+          <StatTile
+            label="Google rating"
+            value={business.rating === null ? "—" : `${business.rating.toFixed(1)} ★`}
+          />
+          <StatTile
+            label="Google reviews"
+            value={business.review_count === null ? "—" : business.review_count.toLocaleString()}
+          />
+        </div>
+      </Card>
+
+      <SectionHeading title="Where your points are" />
+      <Card className="p-5">
+        <div className="flex flex-col divide-y divide-paper-line">
+          {breakdown.categories.map((category) => (
+            <CategoryProgressRow key={category.id} category={category} />
+          ))}
+        </div>
+      </Card>
+
+      <SectionHeading title="Detailed checks" />
       <div className="grid grid-cols-1 gap-4 nav:grid-cols-3">
         {breakdown.categories.map((category) => (
           <CategoryCard key={category.id} category={category} />

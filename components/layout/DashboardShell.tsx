@@ -16,7 +16,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }, [navOpen]);
 
   return (
-    <div className="min-h-screen bg-paper nav:grid nav:grid-cols-[250px_minmax(0,1fr)]">
+    <div className="min-h-screen bg-paper">
       <div className="flex items-center justify-between bg-ink px-4 py-3 nav:hidden">
         <button
           type="button"
@@ -44,14 +44,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
       <Sidebar
         className={cn(
-          "fixed inset-y-0 left-0 z-50 -translate-x-full transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] nav:static nav:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 -translate-x-full transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] nav:translate-x-0",
           navOpen && "translate-x-0"
         )}
         onNavigate={() => setNavOpen(false)}
         onClose={() => setNavOpen(false)}
       />
 
-      <main className="min-w-0 p-4 sm:p-8 nav:p-10">{children}</main>
+      <main className="min-w-0 p-4 sm:p-8 nav:ml-[250px] nav:p-10">{children}</main>
     </div>
   );
 }
