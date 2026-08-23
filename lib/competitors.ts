@@ -99,7 +99,7 @@ export interface UnscoredCompetitor {
 }
 
 export interface CompetitorScanResult {
-  status: "ok" | "no_location" | "no_category" | "error";
+  status: "ok" | "no_location" | "no_category" | "category_too_generic" | "error";
   /** Always a plain-language, honest summary of what was found. */
   message: string;
   /** Human-readable category label used for comparability, when known. */
@@ -137,18 +137,62 @@ function placeDetailsToScoringRow(place: PlaceDetails): BusinessScoringRow {
 }
 
 /**
+ * Too-broad Google place types that must NEVER be the sole basis for a
+ * category match. Virtually every retail, food, or service business
+ * carries one or more of these alongside its real type — "store",
+ * "point_of_interest", and "establishment" show up on almost everything
+ * Google indexes — so matching on one of these alone would treat
+ * completely unrelated businesses as comparable (a variety store and a
+ * burrito place both carry "store"/"food"). A comparison always requires
+ * a shared SPECIFIC type (e.g. "mexican_restaurant", "book_store",
+ * "hair_salon"); these are filtered out before any match is attempted.
+ * Add to this list as more over-broad matches turn up.
+ */
+const GENERIC_TYPES = new Set([
+  "store",
+  "point_of_interest",
+  "establishment",
+  "service",
+  "food",
+  "food_store",
+  "health",
+]);
+
+function isGenericType(type: string): boolean {
+  return GENERIC_TYPES.has(type);
+}
+
+/** The first type in `types` that isn't in GENERIC_TYPES, or null if
+ * every type present is too generic to match on (or the list is empty).
+ * Order matters: pass the most-authoritative type first (e.g.
+ * primaryType) so it wins when it's specific. */
+function firstSpecificType(types: Array<string | null | undefined>): string | null {
+  for (const t of types) {
+    if (t && !isGenericType(t)) return t;
+  }
+  return null;
+}
+
+/**
  * Curated groups of Google place-type slugs that are genuinely
  * comparable even when they're not the exact same type — e.g. a real
  * "beauty_salon" that does hair is a true competitor to a "hair_salon"
- * the way a customer (or Google Maps itself) would see it. This is a
- * disciplined allowlist, not a fuzzy match: a candidate only counts as
- * comparable if it shares a type with the subject directly, OR both the
- * subject's and the candidate's types fall in the SAME curated group
- * here. Anything not in one of these groups still requires an exact type
- * match — a barbershop (a distinct, more male-grooming-focused business
- * model) or an unrelated type like a gym stays excluded, on purpose.
+ * the way a customer (or Google Maps itself) would see it, and a
+ * "burrito_restaurant" is a real competitor to a "mexican_restaurant"
+ * even though Google filed them under different specific type slugs.
+ * This is a disciplined allowlist, not a fuzzy match: a candidate only
+ * counts as comparable if it shares a type with the subject directly, OR
+ * both the subject's and the candidate's types fall in the SAME curated
+ * group here — and every member of every group here is itself a SPECIFIC
+ * type, never one of GENERIC_TYPES. Anything not in one of these groups
+ * still requires an exact type match — a barbershop (a distinct, more
+ * male-grooming-focused business model) or an unrelated type like a gym
+ * stays excluded, on purpose.
  */
-const CATEGORY_FAMILIES: string[][] = [["hair_salon", "beauty_salon", "hair_care"]];
+const CATEGORY_FAMILIES: string[][] = [
+  ["hair_salon", "beauty_salon", "hair_care"],
+  ["mexican_restaurant", "tex_mex_restaurant", "burrito_restaurant", "taco_restaurant"],
+];
 
 function categoryFamilyFor(type: string): string[] | null {
   return CATEGORY_FAMILIES.find((family) => family.includes(type)) ?? null;
@@ -197,43 +241,93 @@ function candidateTypeSet(candidate: NearbyCandidate): string[] {
   return Array.from(set);
 }
 
-/** True only when we can verify the candidate shares the subject's
- * category — either an exact machine type slug match, or (for reference
- * types in a curated CATEGORY_FAMILIES group) membership in that same
- * family AND no clearly-different NON_HAIR_SERVICE_EXCLUSIONS type on
- * the candidate, or (only when no machine type is available at all) an
- * exact human-readable category label match. Never a fuzzy guess. */
-function isSameCategory(
+/**
+ * The actual decision logic, with a human-readable reason attached for
+ * debuggability — isSameCategory() below is a thin wrapper around this
+ * so the real matching behavior and any future diagnostic can never
+ * drift apart from each other. True only when we can verify the
+ * candidate shares the subject's category — either an exact machine
+ * type slug match, or (for reference types in a curated
+ * CATEGORY_FAMILIES group) membership in that same family AND no
+ * clearly-different NON_HAIR_SERVICE_EXCLUSIONS type on the candidate,
+ * or (only when no machine type is available at all) an exact
+ * human-readable category label match. Never a fuzzy guess.
+ */
+function categorizeMatch(
   candidate: NearbyCandidate,
   ref: { type: string | null; displayName: string | null }
-): boolean {
+): { matches: boolean; reason: string } {
   if (ref.type) {
     const family = categoryFamilyFor(ref.type);
     if (family) {
       const candidateTypes = candidateTypeSet(candidate);
-      if (candidateTypes.some((t) => NON_HAIR_SERVICE_EXCLUSIONS.includes(t))) {
-        return false;
+      const excludedHit = candidateTypes.find((t) => NON_HAIR_SERVICE_EXCLUSIONS.includes(t));
+      if (excludedHit) {
+        return {
+          matches: false,
+          reason: `excluded: candidate carries "${excludedHit}" (NON_HAIR_SERVICE_EXCLUSIONS), even though subject type "${ref.type}" is in a curated family [${family.join(", ")}]`,
+        };
       }
-      return candidateTypes.some((t) => family.includes(t));
+      const familyHit = candidateTypes.find((t) => family.includes(t));
+      if (familyHit) {
+        return {
+          matches: true,
+          reason: `family match: candidate type "${familyHit}" is in the same curated family [${family.join(", ")}] as subject type "${ref.type}"`,
+        };
+      }
+      return {
+        matches: false,
+        reason: `no overlap: candidate types [${candidateTypes.join(", ")}] don't intersect subject's curated family [${family.join(", ")}] for subject type "${ref.type}"`,
+      };
+    }
+    // Defense in depth: findAndScoreCompetitors() is expected to only
+    // ever pass a specific type here (see firstSpecificType), but if a
+    // generic type ever slipped through, refuse to match on it rather
+    // than silently treating half the map as comparable.
+    if (isGenericType(ref.type)) {
+      return {
+        matches: false,
+        reason: `refused: subject type "${ref.type}" is in GENERIC_TYPES and can never be a match basis on its own`,
+      };
     }
     // Not part of any curated family — exact type match only, same
     // discipline as before.
-    if (candidate.primaryType === ref.type) return true;
-    if (candidate.types && candidate.types.includes(ref.type)) return true;
-    return false;
+    if (candidate.primaryType === ref.type) {
+      return { matches: true, reason: `exact primaryType match ("${ref.type}")` };
+    }
+    if (candidate.types && candidate.types.includes(ref.type)) {
+      return { matches: true, reason: `exact match via candidate.types[] ("${ref.type}")` };
+    }
+    return {
+      matches: false,
+      reason: `no exact match: subject type "${ref.type}" not in candidate primaryType ("${candidate.primaryType ?? "—"}") or types [${(candidate.types ?? []).join(", ")}], and "${ref.type}" is not in any curated CATEGORY_FAMILIES group`,
+    };
   }
   if (ref.displayName) {
-    return (
+    const matches =
       !!candidate.primaryTypeDisplayName &&
-      candidate.primaryTypeDisplayName.trim().toLowerCase() ===
-        ref.displayName.trim().toLowerCase()
-    );
+      candidate.primaryTypeDisplayName.trim().toLowerCase() === ref.displayName.trim().toLowerCase();
+    return {
+      matches,
+      reason: matches
+        ? `display-name match ("${ref.displayName}") — no machine type was available on the subject`
+        : `no machine type on subject, and candidate's display name ("${candidate.primaryTypeDisplayName ?? "—"}") doesn't exactly match subject's ("${ref.displayName}")`,
+    };
   }
-  return false;
+  return { matches: false, reason: "no reference category available on the subject at all" };
+}
+
+/** True only when we can verify the candidate shares the subject's
+ * category — see categorizeMatch() for the full rule and reasoning. */
+function isSameCategory(
+  candidate: NearbyCandidate,
+  ref: { type: string | null; displayName: string | null }
+): boolean {
+  return categorizeMatch(candidate, ref).matches;
 }
 
 function emptyResult(
-  status: "no_location" | "no_category" | "error",
+  status: "no_location" | "no_category" | "category_too_generic" | "error",
   message: string,
   categoryLabel: string | null
 ): CompetitorScanResult {
@@ -268,8 +362,30 @@ export async function findAndScoreCompetitors(
     );
   }
 
-  const referenceType = subject.primaryType ?? subject.categories?.[0] ?? null;
+  // primaryType is checked first (Google's own most-authoritative type),
+  // then the full types list, in order — the first one that isn't in
+  // GENERIC_TYPES wins.
+  const hasAnyTypeData =
+    !!subject.primaryType || !!(subject.categories && subject.categories.length > 0);
+  const specificType = firstSpecificType([subject.primaryType, ...(subject.categories ?? [])]);
   const referenceDisplayName = subject.category ?? null;
+
+  if (hasAnyTypeData && !specificType) {
+    // The subject has real Google type data, but every type on it is too
+    // generic to match on (e.g. only "store"/"point_of_interest"/
+    // "establishment" — no specific type like "book_store" or
+    // "hair_salon"). Matching on a generic type would return a random
+    // mix of unrelated nearby businesses that all happen to share that
+    // same broad tag, so we bail out honestly instead of padding the
+    // list with businesses that aren't genuinely comparable.
+    return emptyResult(
+      "category_too_generic",
+      `We couldn't identify clearly comparable businesses for this category — ${subject.name ?? "this business"}'s Google category is too general to match reliably.`,
+      categoryLabel
+    );
+  }
+
+  const referenceType = specificType;
 
   if (!referenceType && !referenceDisplayName) {
     return emptyResult(
