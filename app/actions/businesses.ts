@@ -36,6 +36,7 @@ export async function saveBusiness(
         rating: place.rating,
         review_count: place.userRatingCount,
         category: place.primaryCategory,
+        primary_type: place.primaryType,
         categories: place.categories,
         opening_hours: place.openingHours,
         business_status: place.businessStatus,

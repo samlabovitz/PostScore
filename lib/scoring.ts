@@ -27,7 +27,7 @@
  * records the version that produced it, so historical scores stay
  * interpretable even after the formula evolves.
  */
-export const SCORING_VERSION = "1.0.0";
+export const SCORING_VERSION = "1.2.0";
 
 // ---------------------------------------------------------------------------
 // Core types
@@ -236,18 +236,22 @@ export function gradeFromTotal(total: number): Grade {
 /**
  * Star rating → fraction of that check's points, as a piecewise-linear
  * curve. Ratings below ~3.0 fall off fast (a genuinely bad rating should
- * hurt), and the curve tops out at 4.8 rather than a perfect 5.0 so a
+ * hurt), and the curve tops out at 4.9 rather than a perfect 5.0 so a
  * couple of stray reviews don't make "great" and "flawless" behave
- * identically.
+ * identically. Deliberately demanding in the middle of the range too — a
+ * 4.0 (0.55) or even a 4.5 (0.8) is real, visible room to improve, not a
+ * near-full score, so only businesses that are genuinely excellent land
+ * in the 90s+ on this check.
  */
 const RATING_CURVE: Array<[rating: number, fraction: number]> = [
   [0, 0],
-  [2.0, 0.15],
-  [3.0, 0.4],
-  [3.5, 0.6],
-  [4.0, 0.8],
-  [4.5, 0.95],
-  [4.8, 1.0],
+  [3.0, 0.15],
+  [3.5, 0.35],
+  [4.0, 0.55],
+  [4.3, 0.68],
+  [4.5, 0.8],
+  [4.7, 0.9],
+  [4.9, 1.0],
 ];
 
 function ratingFraction(rating: number): number {
@@ -265,15 +269,18 @@ function ratingFraction(rating: number): number {
 }
 
 /**
- * Review count at which this check reaches full points. Using log10
- * gives diminishing returns: going from 5 to 50 reviews matters a lot
- * more than going from 500 to 545.
+ * Review count at which this check reaches full points. A square-root
+ * curve still gives diminishing returns (5 to 50 reviews matters far more
+ * than 500 to 545 would), but rises much more steeply than a log curve
+ * would at the low end, so a handful of reviews only earns a small
+ * fraction of credit instead of nearly half — full credit genuinely
+ * requires sustained review volume, not just a few happy customers.
  */
 const REVIEW_COUNT_SATURATION = 150;
 
 function reviewCountFraction(count: number): number {
   const c = Math.max(0, count);
-  return Math.min(1, Math.log10(c + 1) / Math.log10(REVIEW_COUNT_SATURATION + 1));
+  return Math.min(1, Math.sqrt(c / REVIEW_COUNT_SATURATION));
 }
 
 /** A review within this many days counts as fully "recent." */
@@ -328,6 +335,13 @@ interface CheckDefinition {
   simulateFix(input: BusinessScoringInput): BusinessScoringInput;
 }
 
+// Visibility's two data-driven checks (rating, review count) share their
+// point ceiling between `maxPoints` below and the `* N` multiplier inside
+// each check's own `evaluate` — named here so a future rebalance can't
+// repeat the bug where only one of the two got updated.
+const RATING_CHECK_MAX_POINTS = 16;
+const REVIEW_COUNT_CHECK_MAX_POINTS = 18;
+
 const PLACEHOLDER_HOURS = [
   "Monday: 9:00 AM – 5:00 PM",
   "Tuesday: 9:00 AM – 5:00 PM",
@@ -342,7 +356,7 @@ export const CHECKS: CheckDefinition[] = [
     id: "visibility.rating",
     label: "Star rating",
     category: "visibility",
-    maxPoints: 20,
+    maxPoints: RATING_CHECK_MAX_POINTS,
     advice:
       "Improve your average star rating — ask happy customers for reviews and follow up on negative ones.",
     evaluate(input) {
@@ -355,18 +369,18 @@ export const CHECKS: CheckDefinition[] = [
       }
       const fraction = ratingFraction(input.rating);
       return {
-        earnedPoints: roundTo(fraction * 20, 1),
+        earnedPoints: roundTo(fraction * RATING_CHECK_MAX_POINTS, 1),
         confidence: "VERIFIED",
         explanation: `Rated ${input.rating.toFixed(1)}★ on Google.`,
       };
     },
-    simulateFix: (input) => ({ ...input, rating: 4.8 }),
+    simulateFix: (input) => ({ ...input, rating: 4.9 }),
   },
   {
     id: "visibility.review_count",
     label: "Review count",
     category: "visibility",
-    maxPoints: 14,
+    maxPoints: REVIEW_COUNT_CHECK_MAX_POINTS,
     advice:
       "Get more Google reviews — ask recent customers directly, or add a review link to receipts and follow-up emails.",
     evaluate(input) {
@@ -379,7 +393,7 @@ export const CHECKS: CheckDefinition[] = [
       }
       const fraction = reviewCountFraction(input.reviewCount);
       return {
-        earnedPoints: roundTo(fraction * 14, 1),
+        earnedPoints: roundTo(fraction * REVIEW_COUNT_CHECK_MAX_POINTS, 1),
         confidence: "VERIFIED",
         explanation: `${input.reviewCount} review${input.reviewCount === 1 ? "" : "s"} on Google (full credit at ${REVIEW_COUNT_SATURATION}+).`,
       };

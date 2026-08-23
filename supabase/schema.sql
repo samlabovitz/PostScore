@@ -112,3 +112,71 @@ create policy "Users can insert scores for their own businesses"
         and businesses.owner_id = auth.uid ()
     )
   );
+
+-- ---------------------------------------------------------------------------
+-- Competitors feature support (lib/competitors.ts)
+-- ---------------------------------------------------------------------------
+
+-- Google's machine-readable primary type slug (e.g. "hair_salon"), distinct
+-- from `category` (the human-readable primaryTypeDisplayName, e.g. "Hair
+-- Salon"). The competitors feature uses this to ask Nearby Search for
+-- genuinely same-category places instead of guessing from a display label.
+-- Nullable: existing saved businesses won't have it until re-saved, and the
+-- competitors feature falls back to `categories`/`category` when it's null.
+alter table public.businesses
+  add column if not exists primary_type text;
+
+-- One row per ranked entry per scan (the saved business itself, flagged
+-- via is_subject, plus each scored competitor), grouped by scan_id. Like
+-- `scores`, snapshots are never overwritten — history accumulates so you
+-- can see how the competitive ranking moved over time.
+create table if not exists public.competitor_scans (
+  id uuid primary key default gen_random_uuid(),
+  scan_id uuid not null,
+  business_id uuid not null references public.businesses (id) on delete cascade,
+  is_subject boolean not null default false,
+  place_id text not null,
+  name text,
+  address text,
+  distance_meters numeric,
+  rating numeric,
+  review_count integer,
+  has_website boolean,
+  total integer,
+  grade text,
+  scoring_version text,
+  breakdown_json jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists competitor_scans_business_id_created_at_idx
+  on public.competitor_scans (business_id, created_at desc);
+
+create index if not exists competitor_scans_scan_id_idx
+  on public.competitor_scans (scan_id);
+
+alter table public.competitor_scans enable row level security;
+
+-- Ownership is inherited from the business the scan was run for, same
+-- pattern as the `scores` table policies above.
+drop policy if exists "Users can view competitor scans for their own businesses" on public.competitor_scans;
+create policy "Users can view competitor scans for their own businesses"
+  on public.competitor_scans for select
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = competitor_scans.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can insert competitor scans for their own businesses" on public.competitor_scans;
+create policy "Users can insert competitor scans for their own businesses"
+  on public.competitor_scans for insert
+  with check (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = competitor_scans.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );

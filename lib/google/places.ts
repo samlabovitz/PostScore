@@ -17,11 +17,27 @@ const DETAILS_FIELD_MASK = [
   "rating",
   "userRatingCount",
   "types",
+  "primaryType",
   "primaryTypeDisplayName",
   "location",
   "businessStatus",
   "googleMapsUri",
   "photos",
+].join(",");
+
+// Nearby Search is used only to find candidate competitors near a saved
+// business's coordinates, so the mask stays deliberately narrow (Basic-tier
+// fields only) — we don't pay for contact/atmosphere data on places we may
+// filter out before ever fetching their full Details.
+const NEARBY_SEARCH_FIELD_MASK = [
+  "places.id",
+  "places.displayName",
+  "places.formattedAddress",
+  "places.types",
+  "places.primaryType",
+  "places.primaryTypeDisplayName",
+  "places.businessStatus",
+  "places.location",
 ].join(",");
 
 function getApiKey(): string {
@@ -54,6 +70,13 @@ export interface PlaceDetails {
   userRatingCount: number | null;
   categories: string[] | null;
   primaryCategory: string | null;
+  /**
+   * Google's machine-readable primary type slug (e.g. "hair_salon"), as
+   * opposed to `primaryCategory`'s human-readable display text (e.g. "Hair
+   * Salon"). Used to find genuinely same-category competitors via Nearby
+   * Search, where the API expects a type slug, not a display label.
+   */
+  primaryType: string | null;
   location: { lat: number; lng: number } | null;
   businessStatus: string | null;
   googleMapsUri: string | null;
@@ -84,11 +107,37 @@ interface RawDetailsPlace {
   rating?: number;
   userRatingCount?: number;
   types?: string[];
+  primaryType?: string;
   primaryTypeDisplayName?: { text?: string };
   location?: { latitude?: number; longitude?: number };
   businessStatus?: string;
   googleMapsUri?: string;
   photos?: unknown[];
+}
+
+interface RawNearbyPlace {
+  id: string;
+  displayName?: { text?: string };
+  formattedAddress?: string;
+  types?: string[];
+  primaryType?: string;
+  primaryTypeDisplayName?: { text?: string };
+  businessStatus?: string;
+  location?: { latitude?: number; longitude?: number };
+}
+
+/** A candidate returned by Nearby Search — deliberately thin (Basic fields
+ * only). Callers filter/rank these and only fetch full Details for the
+ * handful that survive filtering. */
+export interface NearbyCandidate {
+  placeId: string;
+  name: string | null;
+  formattedAddress: string | null;
+  types: string[] | null;
+  primaryType: string | null;
+  primaryTypeDisplayName: string | null;
+  businessStatus: string | null;
+  location: { lat: number; lng: number } | null;
 }
 
 async function searchPlaces(textQuery: string): Promise<RawSearchPlace[]> {
@@ -146,6 +195,7 @@ function normalizeDetails(raw: RawDetailsPlace): PlaceDetails {
       typeof raw.userRatingCount === "number" ? raw.userRatingCount : null,
     categories: raw.types && raw.types.length > 0 ? raw.types : null,
     primaryCategory: raw.primaryTypeDisplayName?.text ?? null,
+    primaryType: raw.primaryType ?? null,
     location:
       raw.location?.latitude != null && raw.location?.longitude != null
         ? { lat: raw.location.latitude, lng: raw.location.longitude }
@@ -154,6 +204,78 @@ function normalizeDetails(raw: RawDetailsPlace): PlaceDetails {
     googleMapsUri: raw.googleMapsUri ?? null,
     photoCount: Array.isArray(raw.photos) ? raw.photos.length : null,
   };
+}
+
+function normalizeNearby(raw: RawNearbyPlace): NearbyCandidate {
+  return {
+    placeId: raw.id,
+    name: raw.displayName?.text ?? null,
+    formattedAddress: raw.formattedAddress ?? null,
+    types: raw.types && raw.types.length > 0 ? raw.types : null,
+    primaryType: raw.primaryType ?? null,
+    primaryTypeDisplayName: raw.primaryTypeDisplayName?.text ?? null,
+    businessStatus: raw.businessStatus ?? null,
+    location:
+      raw.location?.latitude != null && raw.location?.longitude != null
+        ? { lat: raw.location.latitude, lng: raw.location.longitude }
+        : null,
+  };
+}
+
+/**
+ * Nearby Search (New) — finds real places within a radius of a point,
+ * optionally restricted to Google's own place-type slugs. One API call
+ * regardless of how many results come back (up to maxResultCount), and the
+ * field mask stays Basic-tier so this is cheap to call even though callers
+ * will discard most candidates during filtering.
+ */
+export async function searchNearbyPlaces(params: {
+  lat: number;
+  lng: number;
+  radiusMeters: number;
+  includedTypes?: string[];
+  maxResultCount?: number;
+  /**
+   * Google defaults Nearby Search to POPULARITY ranking, which can return
+   * a farther-but-popular place ahead of a genuinely closer one. Callers
+   * that care about real proximity (e.g. "who does this business actually
+   * compete with locally") should pass "DISTANCE" explicitly.
+   */
+  rankPreference?: "DISTANCE" | "POPULARITY";
+}): Promise<NearbyCandidate[]> {
+  const body: Record<string, unknown> = {
+    maxResultCount: params.maxResultCount ?? 20,
+    locationRestriction: {
+      circle: {
+        center: { latitude: params.lat, longitude: params.lng },
+        radius: params.radiusMeters,
+      },
+    },
+  };
+  if (params.includedTypes && params.includedTypes.length > 0) {
+    body.includedTypes = params.includedTypes;
+  }
+  if (params.rankPreference) {
+    body.rankPreference = params.rankPreference;
+  }
+
+  const res = await fetch(`${PLACES_API_BASE}/places:searchNearby`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": getApiKey(),
+      "X-Goog-FieldMask": NEARBY_SEARCH_FIELD_MASK,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Google Places nearby search failed (${res.status}): ${errText}`);
+  }
+
+  const data = (await res.json()) as { places?: RawNearbyPlace[] };
+  return (data.places ?? []).map(normalizeNearby);
 }
 
 /** Look up a business by name + free-form location (e.g. "Blue Bottle Coffee", "Oakland, CA"). */

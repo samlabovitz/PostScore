@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { IconCircleCheck, IconAlertTriangle, IconMinus } from "@tabler/icons-react";
+import Link from "next/link";
+import { IconCircleCheck, IconAlertTriangle, IconMinus, IconUsers } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
@@ -189,7 +190,16 @@ export function BusinessScoreView({
             data below
           </p>
         </div>
-        <SaveScanControl businessId={businessId} />
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/business/${businessId}/competitors`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-paper-deep bg-white px-[15px] py-[7px] text-[13px] font-medium text-ink hover:border-ink-soft"
+          >
+            <IconUsers size={15} />
+            View competitors
+          </Link>
+          <SaveScanControl businessId={businessId} />
+        </div>
       </div>
 
       <SectionHeading title="Current score" />

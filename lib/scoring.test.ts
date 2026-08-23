@@ -153,7 +153,7 @@ describe("curve sanity checks", () => {
   test("review count saturates at 150 for full credit", () => {
     const breakdown = scoreBusiness({ ...PERFECT_INPUT, reviewCount: 150 });
     const check = breakdown.checks.find((c) => c.id === "visibility.review_count")!;
-    expect(check.earnedPoints).toBe(14);
+    expect(check.earnedPoints).toBe(18);
   });
 
   test("zero reviews earns zero review-count points (but is still VERIFIED, not NOT_FOUND)", () => {
@@ -296,6 +296,84 @@ describe("businessRowToScoringInput adapter", () => {
     expect(input.rating).toBe(4.2);
     expect(input.mostRecentReviewDaysAgo).toBeNull();
     const breakdown = scoreBusiness(input);
-    expect(breakdown.scoringVersion).toBe("1.0.0");
+    expect(breakdown.scoringVersion).toBe("1.2.0");
+  });
+});
+
+// v1.1.0 re-tuned the rating and review-count curves to be more demanding
+// (see RATING_CURVE / reviewCountFraction) so that scores actually spread
+// out instead of clustering in the high 80s-100s. v1.2.0 went further and
+// shifted point ceiling *within* Visibility from the rating check (20->16)
+// to the review-count check (14->18) — see RATING_CHECK_MAX_POINTS /
+// REVIEW_COUNT_CHECK_MAX_POINTS — so that two businesses with the same
+// rating are meaningfully separated by how many reviews back it up, not
+// just marginally. These tests pin down the resulting shape: a 4.0 rating
+// should clearly lose points rather than scoring near-full, a handful of
+// reviews should earn only a small fraction of that check's points, more
+// reviews at an identical rating should move a business by a real margin,
+// a realistic "good but not perfect" business should land in the B range,
+// and only a business that's strong across rating, review volume, and
+// listing/website completeness should reach the 90s.
+describe("v1.2.0 curve & weight re-tuning", () => {
+  test("a 4.0 rating earns roughly half of the rating check's points, not near-full", () => {
+    const breakdown = scoreBusiness({ ...PERFECT_INPUT, rating: 4.0 });
+    const check = breakdown.checks.find((c) => c.id === "visibility.rating")!;
+    expect(check.earnedPoints).toBe(8.8); // 55% of 16 — see RATING_CURVE
+  });
+
+  test("a 4.5 rating no longer scores near-full on the rating check", () => {
+    const breakdown = scoreBusiness({ ...PERFECT_INPUT, rating: 4.5 });
+    const check = breakdown.checks.find((c) => c.id === "visibility.rating")!;
+    expect(check.earnedPoints).toBe(12.8); // 80% of 16 — see RATING_CURVE
+  });
+
+  test("a handful of reviews earns a small fraction of the review-count check", () => {
+    const breakdown = scoreBusiness({ ...PERFECT_INPUT, reviewCount: 6 });
+    const check = breakdown.checks.find((c) => c.id === "visibility.review_count")!;
+    // sqrt(6/150) * 18 = 3.6 — well under a quarter credit for a handful
+    // of reviews.
+    expect(check.earnedPoints).toBe(3.6);
+  });
+
+  test("at the same rating, meaningfully more reviews earns a meaningfully higher total", () => {
+    const moreReviews = scoreBusiness({ ...PERFECT_INPUT, rating: 5.0, reviewCount: 87 });
+    const fewerReviews = scoreBusiness({ ...PERFECT_INPUT, rating: 5.0, reviewCount: 29 });
+    expect(moreReviews.total).toBeGreaterThan(fewerReviews.total);
+    // The gap should be large enough to matter for ranking — not a
+    // rounding-error-sized difference — and in this case actually crosses
+    // a letter grade.
+    expect(moreReviews.total - fewerReviews.total).toBeGreaterThanOrEqual(5);
+    expect(moreReviews.grade).not.toBe(fewerReviews.grade);
+  });
+
+  test("a realistically 'average' business (good rating, some reviews, missing a couple listing items) lands in the B range", () => {
+    const input: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      rating: 4.5,
+      reviewCount: 30,
+      openingHours: null, // one missing completeness item
+    };
+    const breakdown = scoreBusiness(input);
+    expect(breakdown.total).toBeGreaterThanOrEqual(80);
+    expect(breakdown.total).toBeLessThanOrEqual(85);
+    expect(breakdown.grade).toBe("B");
+  });
+
+  test("a weak business (low rating, very few reviews, incomplete listing) falls to C or below", () => {
+    const input: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      rating: 3.5,
+      reviewCount: 5,
+      openingHours: null,
+      photoCount: 0,
+    };
+    const breakdown = scoreBusiness(input);
+    expect(breakdown.total).toBeLessThanOrEqual(79);
+  });
+
+  test("only a business strong across rating, review volume, and completeness reaches the 90s", () => {
+    const breakdown = scoreBusiness({ ...PERFECT_INPUT, rating: 4.8, reviewCount: 180 });
+    expect(breakdown.total).toBeGreaterThanOrEqual(90);
+    expect(breakdown.grade).toBe("A");
   });
 });
