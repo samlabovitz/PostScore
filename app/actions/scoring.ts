@@ -5,8 +5,10 @@ import {
   businessRowToScoringInput,
   getScoreWithSuggestions,
   type BusinessScoringRow,
+  type ScoreBreakdown,
   type ScoreWithSuggestions,
 } from "@/lib/scoring";
+import { reconcileTasks, type TaskRow } from "@/lib/actionPlan";
 
 export interface BusinessRecord extends BusinessScoringRow {
   id: string;
@@ -66,6 +68,16 @@ export type SaveScoreSnapshotResult =
  * Records the current score as a new row in `scores` — one row per scan,
  * so history accumulates. Uses the exact same breakdown scoreBusinessById
  * would show you; this just also persists it.
+ *
+ * This is also the app's one real "re-scan" moment, so it's where any
+ * action-plan tasks marked "I did this" get checked against reality
+ * (see reconcileTasks in lib/actionPlan.ts) — a task only ever becomes
+ * completed here, by the real breakdown showing its check at full
+ * points, never by the owner's checkbox alone. Note this re-scores
+ * whatever is currently saved in `businesses` — it does not re-fetch
+ * from Google, so a real Google-side fix (new hours, a linked website,
+ * etc.) only shows up here once that business's saved row has itself
+ * been refreshed (e.g. by re-running the Places lookup/save flow).
  */
 export async function saveScoreSnapshot(businessId: string): Promise<SaveScoreSnapshotResult> {
   const scored = await scoreBusinessById(businessId);
@@ -88,7 +100,46 @@ export async function saveScoreSnapshot(businessId: string): Promise<SaveScoreSn
     return { status: "error", message: error?.message ?? "Could not save this scan." };
   }
 
+  await reconcileActionPlanTasks(supabase, businessId, scored.result.breakdown, data.id);
+
   return { status: "saved", scoreId: data.id };
+}
+
+/**
+ * Applies reconcileTasks()'s verdict to the `tasks` table: pending tasks
+ * whose check is now genuinely full get marked completed and stamped
+ * with the score that proved it; completed tasks whose check has since
+ * regressed are deleted, since "completed" only means anything while
+ * the real breakdown still agrees — a fresh task row is created next
+ * time the owner marks it done again, rather than the row lying stale.
+ * Best-effort: a failure here shouldn't fail the scan that was just
+ * successfully saved.
+ */
+async function reconcileActionPlanTasks(
+  supabase: ReturnType<typeof createClient>,
+  businessId: string,
+  breakdown: ScoreBreakdown,
+  scoreId: string
+): Promise<void> {
+  const { data: taskRows, error } = await supabase
+    .from("tasks")
+    .select("id, check_id, status, promised_points, marked_done_at, verified_at")
+    .eq("business_id", businessId);
+
+  if (error || !taskRows || taskRows.length === 0) return;
+
+  const { toComplete, toReopen } = reconcileTasks(breakdown, taskRows as TaskRow[]);
+
+  if (toComplete.length > 0) {
+    await supabase
+      .from("tasks")
+      .update({ status: "completed", verified_at: new Date().toISOString(), verified_score_id: scoreId })
+      .in("id", toComplete);
+  }
+
+  if (toReopen.length > 0) {
+    await supabase.from("tasks").delete().in("id", toReopen);
+  }
 }
 
 export interface ScoreHistoryRow {
@@ -111,4 +162,36 @@ export async function getScoreHistory(businessId: string): Promise<ScoreHistoryR
 
   if (error || !data) return [];
   return data;
+}
+
+export interface ScoreSnapshot {
+  id: string;
+  total: number;
+  grade: string;
+  scoring_version: string;
+  created_at: string;
+  breakdown_json: ScoreBreakdown;
+}
+
+/**
+ * The two (or so) most recent saved scans, full breakdown included —
+ * used to build an honest "what changed since your last scan" view.
+ * Deliberately a separate, narrower query from getScoreHistory(): the
+ * history table only needs totals/grades for many rows, this needs the
+ * full per-check breakdown for just the last couple.
+ */
+export async function getRecentScoreSnapshots(
+  businessId: string,
+  limit = 2
+): Promise<ScoreSnapshot[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("scores")
+    .select("id, total, grade, scoring_version, created_at, breakdown_json")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) return [];
+  return data as ScoreSnapshot[];
 }

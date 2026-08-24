@@ -180,3 +180,99 @@ create policy "Users can insert competitor scans for their own businesses"
         and businesses.owner_id = auth.uid ()
     )
   );
+
+-- ---------------------------------------------------------------------------
+-- Action plan support (lib/actionPlan.ts)
+-- ---------------------------------------------------------------------------
+
+-- One row per (business, check) the owner has actually marked "I did
+-- this" on — an open task the owner hasn't touched yet has NO row here
+-- at all; it's simply derived live from the current breakdown
+-- (generateSuggestions in lib/scoring.ts). A row only ever exists in one
+-- of two states:
+--   pending_verification: the owner says they made the change; it does
+--     NOT add any points on its own.
+--   completed: a later re-scan actually found the underlying check at
+--     full points (see reconcileTasks() in lib/actionPlan.ts, run from
+--     saveScoreSnapshot in app/actions/scoring.ts) — this is the ONLY
+--     way a row becomes completed. If a completed check later regresses
+--     (the real data reverts), the reconciler deletes the row rather
+--     than leaving a stale "completed" claim; marking it done again
+--     creates a fresh row.
+create table if not exists public.tasks (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses (id) on delete cascade,
+  check_id text not null,
+  status text not null default 'pending_verification'
+    check (status in ('pending_verification', 'completed')),
+  -- The points that check was missing at the moment the owner marked it
+  -- done, recomputed server-side from real data (never trusted from the
+  -- client) — this is what "+N pts confirmed" shows once verified.
+  promised_points numeric not null,
+  marked_done_at timestamptz not null default now(),
+  verified_at timestamptz,
+  verified_score_id uuid references public.scores (id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+-- One standing task per (business, check) — marking a task done again
+-- (e.g. after a regression) updates the same row rather than piling up
+-- duplicates.
+create unique index if not exists tasks_business_check_unique
+  on public.tasks (business_id, check_id);
+
+create index if not exists tasks_business_id_idx
+  on public.tasks (business_id);
+
+alter table public.tasks enable row level security;
+
+drop policy if exists "Users can view tasks for their own businesses" on public.tasks;
+create policy "Users can view tasks for their own businesses"
+  on public.tasks for select
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = tasks.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can insert tasks for their own businesses" on public.tasks;
+create policy "Users can insert tasks for their own businesses"
+  on public.tasks for insert
+  with check (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = tasks.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can update tasks for their own businesses" on public.tasks;
+create policy "Users can update tasks for their own businesses"
+  on public.tasks for update
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = tasks.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = tasks.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can delete tasks for their own businesses" on public.tasks;
+create policy "Users can delete tasks for their own businesses"
+  on public.tasks for delete
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = tasks.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );

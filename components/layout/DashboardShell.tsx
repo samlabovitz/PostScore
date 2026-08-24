@@ -4,8 +4,18 @@ import { ReactNode, useEffect, useState } from "react";
 import { IconMenu2 } from "@tabler/icons-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { cn } from "@/lib/utils";
+import type { BusinessSummary } from "@/app/actions/businesses";
 
-export function DashboardShell({ children }: { children: ReactNode }) {
+export function DashboardShell({
+  business = null,
+  children,
+}: {
+  /** The business the current page is scoped to, if any — threaded down
+   * to the sidebar so nav links route to the right business and the
+   * header shows its real name/address instead of a placeholder. */
+  business?: BusinessSummary | null;
+  children: ReactNode;
+}) {
   const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
@@ -43,6 +53,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       />
 
       <Sidebar
+        business={business}
         className={cn(
           "fixed inset-y-0 left-0 z-50 -translate-x-full transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] nav:translate-x-0",
           navOpen && "translate-x-0"

@@ -27,7 +27,12 @@ interface CompetitorBusinessRow {
 }
 
 export type GetCompetitorsResult =
-  | { status: "ok"; businessName: string | null; result: CompetitorScanResult }
+  | {
+      status: "ok";
+      businessName: string | null;
+      businessAddress: string | null;
+      result: CompetitorScanResult;
+    }
   | { status: "not_found" }
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
@@ -81,7 +86,7 @@ export async function getCompetitors(businessId: string): Promise<GetCompetitors
 
   try {
     const result = await findAndScoreCompetitors(subject);
-    return { status: "ok", businessName: row.name, result };
+    return { status: "ok", businessName: row.name, businessAddress: row.address, result };
   } catch (err) {
     return {
       status: "error",

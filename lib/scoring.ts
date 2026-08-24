@@ -215,7 +215,11 @@ export const CATEGORY_WEIGHTS: Record<CategoryId, number> = {
 // Grade thresholds — tunable, checked in order, first match wins.
 // ---------------------------------------------------------------------------
 
-const GRADE_THRESHOLDS: Array<{ grade: Grade; min: number }> = [
+// Exported read-only so UI copy explaining "what does grade X mean" can
+// read the real ranges instead of hand-copying them somewhere else and
+// risking drift if these ever change. Purely a data export — the
+// thresholds and the logic that uses them are unchanged.
+export const GRADE_THRESHOLDS: ReadonlyArray<{ grade: Grade; min: number }> = [
   { grade: "A", min: 90 },
   { grade: "B", min: 80 },
   { grade: "C", min: 70 },

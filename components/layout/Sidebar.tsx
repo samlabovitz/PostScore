@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   IconLayoutDashboard,
   IconTrendingUp,
-  IconStar,
   IconWorld,
   IconUsers,
   IconTag,
@@ -17,25 +18,41 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/app/actions/auth";
+import type { BusinessSummary } from "@/app/actions/businesses";
 
-const NAV_ITEMS = [
-  { label: "Overview", icon: IconLayoutDashboard },
-  { label: "Growth", icon: IconTrendingUp },
-  { label: "Reviews", icon: IconStar },
-  { label: "Website", icon: IconWorld },
-  { label: "Competitors", icon: IconUsers },
-  { label: "Pricing", icon: IconTag },
-  { label: "Reports", icon: IconFileText },
+const NAV_ITEMS: Array<{
+  label: string;
+  icon: typeof IconLayoutDashboard;
+  path: (businessId: string) => string;
+}> = [
+  { label: "Overview", icon: IconLayoutDashboard, path: (id) => `/business/${id}` },
+  { label: "Growth", icon: IconTrendingUp, path: (id) => `/business/${id}/growth` },
+  { label: "Website & Reviews", icon: IconWorld, path: (id) => `/business/${id}/website-reviews` },
+  { label: "Competitors", icon: IconUsers, path: (id) => `/business/${id}/competitors` },
+  { label: "Pricing", icon: IconTag, path: (id) => `/business/${id}/pricing` },
+  { label: "Reports", icon: IconFileText, path: (id) => `/business/${id}/reports` },
 ];
 
 interface SidebarProps {
+  /** The business the current page is scoped to, if any. Nav links are
+   * only real (and highlightable) when this is set — there's nothing
+   * to route to otherwise. */
+  business?: BusinessSummary | null;
   className?: string;
   onNavigate?: () => void;
   onClose?: () => void;
 }
 
-export function Sidebar({ className, onNavigate, onClose }: SidebarProps) {
-  const [active, setActive] = useState("Overview");
+/** Overview's own href (`/business/{id}`) must match exactly — every
+ * other business subpage also starts with that string, so a naive
+ * prefix check would light up Overview on every page. */
+function isNavActive(pathname: string, href: string): boolean {
+  if (pathname === href) return true;
+  return href.split("/").length > 3 && pathname.startsWith(`${href}/`);
+}
+
+export function Sidebar({ business = null, className, onNavigate, onClose }: SidebarProps) {
+  const pathname = usePathname();
   const [profileOpen, setProfileOpen] = useState(false);
 
   return (
@@ -61,21 +78,35 @@ export function Sidebar({ className, onNavigate, onClose }: SidebarProps) {
       </div>
 
       <div className="mt-5 rounded-[11px] border border-white/[.09] bg-white/[.06] p-3">
-        <div className="text-[13.5px] font-semibold text-white">Business name</div>
-        <div className="mt-0.5 text-[11px] text-[#9FB0C7]">Location</div>
+        <div className="truncate text-[13.5px] font-semibold text-white">
+          {business ? (business.name ?? "Untitled business") : "No business selected"}
+        </div>
+        <div className="mt-0.5 truncate text-[11px] text-[#9FB0C7]">
+          {business ? (business.address ?? "No address on file") : "Save a business to get started"}
+        </div>
       </div>
 
       <nav className="mt-5 flex flex-1 flex-col gap-1 overflow-y-auto">
-        {NAV_ITEMS.map(({ label, icon: Icon }) => {
-          const isActive = active === label;
+        {NAV_ITEMS.map(({ label, icon: Icon, path }) => {
+          if (!business) {
+            return (
+              <span
+                key={label}
+                className="flex cursor-not-allowed items-center gap-[11px] rounded-[9px] px-3 py-3 text-left text-sm font-medium text-[#5C6B82] nav:py-2.5"
+              >
+                <Icon size={18} stroke={1.75} />
+                {label}
+              </span>
+            );
+          }
+
+          const href = path(business.id);
+          const isActive = isNavActive(pathname, href);
           return (
-            <button
+            <Link
               key={label}
-              type="button"
-              onClick={() => {
-                setActive(label);
-                onNavigate?.();
-              }}
+              href={href}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-[11px] rounded-[9px] px-3 py-3 text-left text-sm font-medium transition-colors nav:py-2.5",
                 isActive
@@ -85,7 +116,7 @@ export function Sidebar({ className, onNavigate, onClose }: SidebarProps) {
             >
               <Icon size={18} stroke={1.75} />
               {label}
-            </button>
+            </Link>
           );
         })}
       </nav>
