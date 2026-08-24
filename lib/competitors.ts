@@ -232,6 +232,20 @@ const NON_HAIR_SERVICE_EXCLUSIONS = [
   "tanning_studio",
 ];
 
+/**
+ * A business currently isn't a real competitor if it isn't currently
+ * open for business — Google's businessStatus enum is OPERATIONAL,
+ * CLOSED_TEMPORARILY, or CLOSED_PERMANENTLY, and both closed states mean
+ * "not who this business is competing with right now." Checked both
+ * before scoring (from Nearby Search's thinner data) and again after
+ * fetching full Details, since Nearby Search data can be slightly stale.
+ */
+const CLOSED_BUSINESS_STATUSES = new Set(["CLOSED_TEMPORARILY", "CLOSED_PERMANENTLY"]);
+
+function isClosedStatus(status: string | null): boolean {
+  return !!status && CLOSED_BUSINESS_STATUSES.has(status);
+}
+
 /** Every type slug Google has on file for a candidate — its primaryType
  * plus its full types list, deduplicated. */
 function candidateTypeSet(candidate: NearbyCandidate): string[] {
@@ -245,13 +259,26 @@ function candidateTypeSet(candidate: NearbyCandidate): string[] {
  * The actual decision logic, with a human-readable reason attached for
  * debuggability — isSameCategory() below is a thin wrapper around this
  * so the real matching behavior and any future diagnostic can never
- * drift apart from each other. True only when we can verify the
- * candidate shares the subject's category — either an exact machine
- * type slug match, or (for reference types in a curated
- * CATEGORY_FAMILIES group) membership in that same family AND no
- * clearly-different NON_HAIR_SERVICE_EXCLUSIONS type on the candidate,
- * or (only when no machine type is available at all) an exact
- * human-readable category label match. Never a fuzzy guess.
+ * drift apart from each other.
+ *
+ * A candidate only counts as comparable when being the subject's type
+ * IS the candidate's own primary identity, not a sideline: either
+ * candidate.primaryType exactly equals the subject's reference type, or
+ * (for reference types in a curated CATEGORY_FAMILIES group)
+ * candidate.primaryType is itself a member of that same family — AND,
+ * in the family case, the candidate carries no clearly-different
+ * NON_HAIR_SERVICE_EXCLUSIONS type anywhere on it. A type appearing only
+ * in candidate.types[] (never as its primaryType) is NEVER enough on its
+ * own — that's exactly how a convenience store that happens to sell
+ * liquor (primaryType "convenience_store", "liquor_store" buried in
+ * types[]) used to slip in as a competitor to an actual liquor store.
+ * Requiring primaryType identity also means a generic or differently-
+ * specific primaryType (a supermarket's bakery aisle, a drugstore that
+ * also carries liquor) is automatically excluded without needing to
+ * hand-list every broad/unrelated type — see GENERIC_TYPES for the one
+ * remaining defense-in-depth check that still applies. The only other
+ * path is (when no machine type is available on the subject at all) an
+ * exact human-readable category label match. Never a fuzzy guess.
  */
 function categorizeMatch(
   candidate: NearbyCandidate,
@@ -260,24 +287,30 @@ function categorizeMatch(
   if (ref.type) {
     const family = categoryFamilyFor(ref.type);
     if (family) {
+      const primaryIsFamilyMember = !!candidate.primaryType && family.includes(candidate.primaryType);
+      if (!primaryIsFamilyMember) {
+        const secondaryFamilyHit = candidate.types?.find((t) => family.includes(t));
+        return {
+          matches: false,
+          reason: secondaryFamilyHit
+            ? `primaryType "${candidate.primaryType ?? "—"}" is not in subject's curated family [${family.join(", ")}], even though "${secondaryFamilyHit}" appears in candidate.types[] — a secondary tag isn't enough; a business must have this as its actual primary identity`
+            : `primaryType "${candidate.primaryType ?? "—"}" is not in subject's curated family [${family.join(", ")}], and candidate.types[] [${(candidate.types ?? []).join(", ")}] has no overlap either`,
+        };
+      }
+      // primaryType confirmed a family member — still check the full
+      // type set for a disqualifying secondary tag (e.g. a shop Google
+      // primary-typed as "beauty_salon" that also carries "nail_salon").
       const candidateTypes = candidateTypeSet(candidate);
       const excludedHit = candidateTypes.find((t) => NON_HAIR_SERVICE_EXCLUSIONS.includes(t));
       if (excludedHit) {
         return {
           matches: false,
-          reason: `excluded: candidate carries "${excludedHit}" (NON_HAIR_SERVICE_EXCLUSIONS), even though subject type "${ref.type}" is in a curated family [${family.join(", ")}]`,
-        };
-      }
-      const familyHit = candidateTypes.find((t) => family.includes(t));
-      if (familyHit) {
-        return {
-          matches: true,
-          reason: `family match: candidate type "${familyHit}" is in the same curated family [${family.join(", ")}] as subject type "${ref.type}"`,
+          reason: `excluded: candidate carries "${excludedHit}" (NON_HAIR_SERVICE_EXCLUSIONS), even though its primaryType "${candidate.primaryType}" is in a curated family [${family.join(", ")}]`,
         };
       }
       return {
-        matches: false,
-        reason: `no overlap: candidate types [${candidateTypes.join(", ")}] don't intersect subject's curated family [${family.join(", ")}] for subject type "${ref.type}"`,
+        matches: true,
+        reason: `primaryType "${candidate.primaryType}" is in the same curated family [${family.join(", ")}] as subject type "${ref.type}"`,
       };
     }
     // Defense in depth: findAndScoreCompetitors() is expected to only
@@ -290,17 +323,18 @@ function categorizeMatch(
         reason: `refused: subject type "${ref.type}" is in GENERIC_TYPES and can never be a match basis on its own`,
       };
     }
-    // Not part of any curated family — exact type match only, same
-    // discipline as before.
+    // Not part of any curated family — the candidate's PRIMARY identity
+    // must equal the subject's type. A match via candidate.types[] alone
+    // is deliberately not enough (see the function doc comment above).
     if (candidate.primaryType === ref.type) {
       return { matches: true, reason: `exact primaryType match ("${ref.type}")` };
     }
-    if (candidate.types && candidate.types.includes(ref.type)) {
-      return { matches: true, reason: `exact match via candidate.types[] ("${ref.type}")` };
-    }
+    const secondaryHit = candidate.types?.includes(ref.type) ?? false;
     return {
       matches: false,
-      reason: `no exact match: subject type "${ref.type}" not in candidate primaryType ("${candidate.primaryType ?? "—"}") or types [${(candidate.types ?? []).join(", ")}], and "${ref.type}" is not in any curated CATEGORY_FAMILIES group`,
+      reason: secondaryHit
+        ? `primaryType "${candidate.primaryType ?? "—"}" doesn't match subject type "${ref.type}", even though "${ref.type}" appears in candidate.types[] — a secondary tag isn't enough; primaryType must be the actual identity`
+        : `no match: subject type "${ref.type}" not found in candidate primaryType ("${candidate.primaryType ?? "—"}") or types [${(candidate.types ?? []).join(", ")}], and "${ref.type}" is not in any curated CATEGORY_FAMILIES group`,
     };
   }
   if (ref.displayName) {
@@ -434,7 +468,7 @@ export async function findAndScoreCompetitors(
 
     comparable = candidates
       .filter((c) => c.placeId !== subject.placeId)
-      .filter((c) => c.businessStatus !== "CLOSED_PERMANENTLY")
+      .filter((c) => !isClosedStatus(c.businessStatus))
       .filter((c) => c.location !== null)
       .filter((c) => isSameCategory(c, { type: referenceType, displayName: referenceDisplayName }))
       .map((c) => ({
@@ -473,19 +507,24 @@ export async function findAndScoreCompetitors(
     }
 
     // Re-check status at Details time too — Nearby Search data can be
-    // slightly stale, and we never want to score a closed business. This
-    // candidate was already counted in `comparable` (and so in the "we
-    // found N comparable businesses" message below), so it goes to
+    // slightly stale, and we never want to score a closed business
+    // (temporarily or permanently — neither is a current competitor).
+    // This candidate was already counted in `comparable` (and so in the
+    // "we found N comparable businesses" message below), so it goes to
     // `unscored` rather than a silent continue — dropping it with no
     // record would let the reported count and radius overstate what's
     // actually shown, with no footnote explaining the gap.
-    if (result.place.businessStatus === "CLOSED_PERMANENTLY") {
+    if (isClosedStatus(result.place.businessStatus)) {
+      const closedLabel =
+        result.place.businessStatus === "CLOSED_TEMPORARILY"
+          ? "temporarily closed"
+          : "permanently closed";
       unscored.push({
         placeId: candidate.placeId,
         name: result.place.name ?? candidate.name ?? "(unnamed listing)",
         address: result.place.formattedAddress ?? candidate.formattedAddress,
         distanceMeters,
-        reason: "Google shows this listing as permanently closed.",
+        reason: `Google shows this listing as ${closedLabel}.`,
       });
       continue;
     }
