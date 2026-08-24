@@ -27,7 +27,7 @@
  * records the version that produced it, so historical scores stay
  * interpretable even after the formula evolves.
  */
-export const SCORING_VERSION = "1.2.0";
+export const SCORING_VERSION = "1.3.0";
 
 // ---------------------------------------------------------------------------
 // Core types
@@ -269,6 +269,56 @@ function ratingFraction(rating: number): number {
 }
 
 /**
+ * How many reviews it takes before we fully trust a business's star
+ * rating. A 5.0 average from a handful of reviews could easily be
+ * friends and employees — it isn't the same claim as a 5.0 from dozens
+ * of independent customers. This is deliberately a LOWER bar than
+ * REVIEW_COUNT_SATURATION: the review-count check separately measures
+ * "how much social proof volume do you have" (full credit needs ~150),
+ * while this measures "how much do we trust the star number itself" —
+ * that only needs enough reviews to rule out a small, unrepresentative
+ * sample, not the same volume a strong reputation requires.
+ */
+const RATING_CONFIDENCE_FULL_AT_REVIEWS = 40;
+
+/**
+ * Review count → confidence multiplier applied to the rating check's
+ * earned points (see visibility.rating below), as a piecewise-linear
+ * curve mirroring RATING_CURVE's style. Clearly discounted under ~15
+ * reviews, ramping smoothly (no cliffs) to full trust by
+ * RATING_CONFIDENCE_FULL_AT_REVIEWS. This is a genuinely different axis
+ * from the review-count check's own curve — a business can lose points
+ * on both for the same underlying "not enough reviews yet" weakness,
+ * which is honest: a thin sample really does hurt both how much we
+ * trust the star value AND how much social proof it represents.
+ */
+const RATING_CONFIDENCE_CURVE: Array<[reviewCount: number, factor: number]> = [
+  [0, 0.3],
+  [5, 0.4],
+  [10, 0.55],
+  [15, 0.68],
+  [25, 0.85],
+  [RATING_CONFIDENCE_FULL_AT_REVIEWS, 1.0],
+];
+
+function ratingConfidenceFactor(reviewCount: number | null): number {
+  // No review count on file at all means we have no evidence backing the
+  // star value — treat it the same as zero reviews rather than assuming
+  // it's trustworthy.
+  const c = Math.max(0, reviewCount ?? 0);
+  for (let i = 0; i < RATING_CONFIDENCE_CURVE.length - 1; i++) {
+    const [c0, f0] = RATING_CONFIDENCE_CURVE[i];
+    const [c1, f1] = RATING_CONFIDENCE_CURVE[i + 1];
+    if (c <= c1) {
+      if (c <= c0) return f0;
+      const t = (c - c0) / (c1 - c0);
+      return f0 + t * (f1 - f0);
+    }
+  }
+  return 1;
+}
+
+/**
  * Review count at which this check reaches full points. A square-root
  * curve still gives diminishing returns (5 to 50 reviews matters far more
  * than 500 to 545 would), but rises much more steeply than a log curve
@@ -358,7 +408,7 @@ export const CHECKS: CheckDefinition[] = [
     category: "visibility",
     maxPoints: RATING_CHECK_MAX_POINTS,
     advice:
-      "Improve your average star rating — ask happy customers for reviews and follow up on negative ones.",
+      "Improve your average star rating — ask happy customers for reviews (more reviews also means your rating carries more weight) and follow up on negative ones.",
     evaluate(input) {
       if (input.rating === null) {
         return {
@@ -367,14 +417,31 @@ export const CHECKS: CheckDefinition[] = [
           explanation: "Google returned no star rating for this listing.",
         };
       }
-      const fraction = ratingFraction(input.rating);
-      return {
-        earnedPoints: roundTo(fraction * RATING_CHECK_MAX_POINTS, 1),
-        confidence: "VERIFIED",
-        explanation: `Rated ${input.rating.toFixed(1)}★ on Google.`,
-      };
+      const ratingFrac = ratingFraction(input.rating);
+      const confidenceFactor = ratingConfidenceFactor(input.reviewCount);
+      const earnedPoints = roundTo(ratingFrac * confidenceFactor * RATING_CHECK_MAX_POINTS, 1);
+      const fullConfidence = confidenceFactor >= 1;
+
+      let explanation: string;
+      if (input.reviewCount === null) {
+        explanation = `Rated ${input.rating.toFixed(1)}★ on Google, but Google didn't return a review count to back it up — shown at reduced confidence until review volume is verified.`;
+      } else if (!fullConfidence) {
+        explanation = `Rated ${input.rating.toFixed(1)}★ on Google, but based on only ${input.reviewCount} review${input.reviewCount === 1 ? "" : "s"} — as you gather more reviews, this rating will carry more weight toward your score.`;
+      } else {
+        explanation = `Rated ${input.rating.toFixed(1)}★ on Google.`;
+      }
+
+      return { earnedPoints, confidence: "VERIFIED", explanation };
     },
-    simulateFix: (input) => ({ ...input, rating: 4.9 }),
+    // Full points require both a strong star value AND enough reviews to
+    // trust it — reviewCount is only raised if it's currently below the
+    // confidence threshold, never lowered, so this stays the minimal
+    // change that guarantees this exact check reaches full points.
+    simulateFix: (input) => ({
+      ...input,
+      rating: 4.9,
+      reviewCount: Math.max(input.reviewCount ?? 0, RATING_CONFIDENCE_FULL_AT_REVIEWS),
+    }),
   },
   {
     id: "visibility.review_count",

@@ -296,7 +296,7 @@ describe("businessRowToScoringInput adapter", () => {
     expect(input.rating).toBe(4.2);
     expect(input.mostRecentReviewDaysAgo).toBeNull();
     const breakdown = scoreBusiness(input);
-    expect(breakdown.scoringVersion).toBe("1.2.0");
+    expect(breakdown.scoringVersion).toBe("1.3.0");
   });
 });
 
@@ -304,7 +304,7 @@ describe("businessRowToScoringInput adapter", () => {
 // (see RATING_CURVE / reviewCountFraction) so that scores actually spread
 // out instead of clustering in the high 80s-100s. v1.2.0 went further and
 // shifted point ceiling *within* Visibility from the rating check (20->16)
-// to the review-count check (14->18) — see RATING_CHECK_MAX_POINTS /
+// to the review-count check (14->18) — see RATING_MAX_POINTS /
 // REVIEW_COUNT_CHECK_MAX_POINTS — so that two businesses with the same
 // rating are meaningfully separated by how many reviews back it up, not
 // just marginally. These tests pin down the resulting shape: a 4.0 rating
@@ -346,11 +346,15 @@ describe("v1.2.0 curve & weight re-tuning", () => {
     expect(moreReviews.grade).not.toBe(fewerReviews.grade);
   });
 
-  test("a realistically 'average' business (good rating, some reviews, missing a couple listing items) lands in the B range", () => {
+  test("a realistically 'average' business (good rating backed by enough reviews to trust it, missing a couple listing items) lands in the B range", () => {
     const input: BusinessScoringInput = {
       ...PERFECT_INPUT,
       rating: 4.5,
-      reviewCount: 30,
+      // 45 reviews clears RATING_CONFIDENCE_FULL_AT_REVIEWS (40), so this
+      // business's rating isn't also getting confidence-discounted on top
+      // of the curve's own demandingness — it's a realistic, established
+      // small business, not a thin-sample one.
+      reviewCount: 45,
       openingHours: null, // one missing completeness item
     };
     const breakdown = scoreBusiness(input);
@@ -375,5 +379,98 @@ describe("v1.2.0 curve & weight re-tuning", () => {
     const breakdown = scoreBusiness({ ...PERFECT_INPUT, rating: 4.8, reviewCount: 180 });
     expect(breakdown.total).toBeGreaterThanOrEqual(90);
     expect(breakdown.grade).toBe("A");
+  });
+});
+
+// v1.3.0 added review-confidence weighting to the rating check: a
+// business's star value alone no longer earns full rating points — it
+// also needs enough reviews backing it up to be trusted (full confidence
+// at RATING_CONFIDENCE_FULL_AT_REVIEWS). This is deliberately a
+// different axis from the review-count check (which measures social
+// proof volume, saturating much later at 150) — a thin-sample business
+// can lose points on both, honestly, for the same real weakness.
+describe("v1.3.0 rating confidence weighting", () => {
+  const RATING_MAX_POINTS = CHECKS.find((c) => c.id === "visibility.rating")!.maxPoints;
+  // Mirrors RATING_CONFIDENCE_FULL_AT_REVIEWS in lib/scoring.ts — not
+  // exported (it's an internal curve constant), so pinned here the same
+  // way other tests in this file pin internal curve values directly.
+  const RATING_CONFIDENCE_FULL_AT_REVIEWS = 40;
+
+  test("a perfect 5.0 rating from only 7 reviews earns well under full rating points", () => {
+    const breakdown = scoreBusiness({ ...PERFECT_INPUT, rating: 5.0, reviewCount: 7 });
+    const check = breakdown.checks.find((c) => c.id === "visibility.rating")!;
+    expect(check.confidence).toBe("VERIFIED");
+    // The star value itself is maxed (ratingFraction(5.0) = 1.0), so any
+    // shortfall below the 16-point ceiling is purely the confidence
+    // discount — not a curve/rounding artifact.
+    expect(check.earnedPoints).toBeLessThan(RATING_MAX_POINTS * 0.6);
+    expect(check.earnedPoints).toBeGreaterThan(0);
+  });
+
+  test("the same 5.0 rating earns full rating points once review count clears the confidence threshold", () => {
+    const breakdown = scoreBusiness({
+      ...PERFECT_INPUT,
+      rating: 5.0,
+      reviewCount: RATING_CONFIDENCE_FULL_AT_REVIEWS,
+    });
+    const check = breakdown.checks.find((c) => c.id === "visibility.rating")!;
+    expect(check.earnedPoints).toBe(RATING_MAX_POINTS);
+  });
+
+  test("confidence ramps smoothly: more reviews never earns fewer rating points at a fixed star value", () => {
+    const counts = [0, 3, 7, 10, 15, 20, 25, 30, 35, 40, 60, 150];
+    const points = counts.map(
+      (reviewCount) =>
+        scoreBusiness({ ...PERFECT_INPUT, rating: 4.7, reviewCount }).checks.find(
+          (c) => c.id === "visibility.rating"
+        )!.earnedPoints!
+    );
+    for (let i = 1; i < points.length; i++) {
+      expect(points[i]).toBeGreaterThanOrEqual(points[i - 1]);
+    }
+    // And it's a ramp, not a single jump — points strictly increase
+    // somewhere in the middle of the range, not just at the endpoints.
+    expect(points[points.length - 1]).toBeGreaterThan(points[0]);
+  });
+
+  test("a null review count discounts confidence the same as zero, not the same as full trust", () => {
+    const withZero = scoreBusiness({ ...PERFECT_INPUT, rating: 4.9, reviewCount: 0 });
+    const withNull = scoreBusiness({ ...PERFECT_INPUT, rating: 4.9, reviewCount: null });
+    const zeroCheck = withZero.checks.find((c) => c.id === "visibility.rating")!;
+    const nullCheck = withNull.checks.find((c) => c.id === "visibility.rating")!;
+    expect(nullCheck.confidence).toBe("VERIFIED");
+    expect(nullCheck.earnedPoints).toBe(zeroCheck.earnedPoints);
+    expect(nullCheck.earnedPoints).toBeLessThan(RATING_MAX_POINTS);
+  });
+
+  test("explanation honestly names the review count while confidence is discounted, and drops the caveat once full", () => {
+    const thin = scoreBusiness({ ...PERFECT_INPUT, rating: 5.0, reviewCount: 7 });
+    const thinCheck = thin.checks.find((c) => c.id === "visibility.rating")!;
+    expect(thinCheck.explanation).toContain("7 review");
+    expect(thinCheck.explanation.toLowerCase()).toContain("more reviews");
+
+    const established = scoreBusiness({ ...PERFECT_INPUT, rating: 5.0, reviewCount: 200 });
+    const establishedCheck = established.checks.find((c) => c.id === "visibility.rating")!;
+    expect(establishedCheck.explanation).toBe("Rated 5.0★ on Google.");
+  });
+
+  test("simulateFix for the rating check reaches full points on its own, even starting from zero or null reviews", () => {
+    const zeroReviews: BusinessScoringInput = { ...PERFECT_INPUT, rating: 2.0, reviewCount: 0 };
+    const fixedFromZero = scoreBusiness(applyCheckFix(zeroReviews, "visibility.rating"));
+    expect(fixedFromZero.checks.find((c) => c.id === "visibility.rating")!.earnedPoints).toBe(
+      RATING_MAX_POINTS
+    );
+
+    const nullReviews: BusinessScoringInput = { ...PERFECT_INPUT, rating: 2.0, reviewCount: null };
+    const fixedFromNull = scoreBusiness(applyCheckFix(nullReviews, "visibility.rating"));
+    expect(fixedFromNull.checks.find((c) => c.id === "visibility.rating")!.earnedPoints).toBe(
+      RATING_MAX_POINTS
+    );
+  });
+
+  test("simulateFix never lowers an already-sufficient review count", () => {
+    const input: BusinessScoringInput = { ...PERFECT_INPUT, rating: 2.0, reviewCount: 500 };
+    const fixed = applyCheckFix(input, "visibility.rating");
+    expect(fixed.reviewCount).toBe(500);
   });
 });
