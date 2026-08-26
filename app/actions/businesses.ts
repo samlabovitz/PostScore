@@ -61,6 +61,16 @@ export interface BusinessSummary {
   id: string;
   name: string | null;
   address: string | null;
+  /**
+   * Google's human-readable category (e.g. "Hair Salon") and
+   * machine-readable type slug (e.g. "hair_salon") — feed
+   * bizProfile() resolution. Optional because some callers (the
+   * sidebar header, the competitors page) only ever need
+   * id/name/address and build this shape without them; getBusinessSummary()
+   * itself always populates both.
+   */
+  category?: string | null;
+  primary_type?: string | null;
 }
 
 export type GetBusinessSummaryResult =
@@ -86,7 +96,7 @@ export async function getBusinessSummary(businessId: string): Promise<GetBusines
 
   const { data, error } = await supabase
     .from("businesses")
-    .select("id, name, address")
+    .select("id, name, address, category, primary_type")
     .eq("id", businessId)
     .single();
 

@@ -7,6 +7,7 @@ import {
   type CompetitorScanResult,
   type CompetitorSourceBusiness,
 } from "@/lib/competitors";
+import { bizProfile } from "@/config/bizProfiles";
 
 interface CompetitorBusinessRow {
   place_id: string;
@@ -31,6 +32,8 @@ export type GetCompetitorsResult =
       status: "ok";
       businessName: string | null;
       businessAddress: string | null;
+      /** The resolved business-type profile's noun, e.g. "salons" — see config/bizProfiles.ts. */
+      competitorNoun: string;
       result: CompetitorScanResult;
     }
   | { status: "not_found" }
@@ -86,7 +89,14 @@ export async function getCompetitors(businessId: string): Promise<GetCompetitors
 
   try {
     const result = await findAndScoreCompetitors(subject);
-    return { status: "ok", businessName: row.name, businessAddress: row.address, result };
+    const competitorNoun = bizProfile(row.category, row.primary_type).competitorNoun;
+    return {
+      status: "ok",
+      businessName: row.name,
+      businessAddress: row.address,
+      competitorNoun,
+      result,
+    };
   } catch (err) {
     return {
       status: "error",

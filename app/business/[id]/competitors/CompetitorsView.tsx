@@ -130,10 +130,13 @@ function SaveScanControl({ businessId }: { businessId: string }) {
 export function CompetitorsView({
   businessId,
   businessName,
+  competitorNoun,
   result,
 }: {
   businessId: string;
   businessName: string | null;
+  /** The resolved business-type profile's noun, e.g. "salons" — see config/bizProfiles.ts. */
+  competitorNoun: string;
   result: CompetitorScanResult;
 }) {
   const competitorCount = result.ranked.filter((r) => !r.isSubject).length;
@@ -152,8 +155,9 @@ export function CompetitorsView({
           Competitors
         </h1>
         <p className="mt-1 text-sm text-ink-soft">
-          Real nearby businesses{result.categoryLabel ? ` in the same category (${result.categoryLabel})` : ""},
-          scored with the same PostScore engine and ranked strictly by that score.
+          Real nearby {competitorNoun}
+          {result.categoryLabel ? ` in the same category (${result.categoryLabel})` : ""}, scored
+          with the same PostScore engine and ranked strictly by that score.
         </p>
       </div>
 
