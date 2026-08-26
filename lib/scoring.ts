@@ -27,7 +27,7 @@
  * records the version that produced it, so historical scores stay
  * interpretable even after the formula evolves.
  */
-export const SCORING_VERSION = "1.3.0";
+export const SCORING_VERSION = "1.4.0";
 
 // ---------------------------------------------------------------------------
 // Core types
@@ -70,11 +70,20 @@ export type CategoryId = "visibility" | "completeness" | "website";
  * a failure — that distinction is handled per-check via Confidence.
  */
 export interface BusinessScoringInput {
-  /** Star rating 0–5 as returned by Google. null = Google returned no rating. */
+  /**
+   * Star rating 0–5 as returned by Google. null = Google returned no
+   * rating — see visibility.rating's evaluate() for how this combines
+   * with reviewCount to distinguish "confirmed no reviews, so no rating
+   * exists" (scored) from a genuinely inconsistent response (excluded).
+   */
   rating: number | null;
   /**
-   * Total review count. null = Google didn't return this field.
-   * 0 is a real, verified "no reviews yet" — not the same as null.
+   * Total review count. A saved business only reaches this input after
+   * a real, successful Places fetch that always requests this field, so
+   * null here means the same thing as an explicit 0: Google confirmed
+   * there's no count to report. Both are treated identically by
+   * visibility.review_count and visibility.rating below — a real,
+   * scored weakness, never excluded as unknown.
    */
   reviewCount: number | null;
   /**
@@ -415,6 +424,21 @@ export const CHECKS: CheckDefinition[] = [
       "Improve your average star rating — ask happy customers for reviews (more reviews also means your rating carries more weight) and follow up on negative ones.",
     evaluate(input) {
       if (input.rating === null) {
+        // Same reasoning as visibility.review_count: a successfully
+        // fetched listing with zero reviews genuinely has no rating to
+        // compute — that's a confirmed fact, not a data gap, and scores
+        // as a real zero. Only when reviews genuinely exist (a positive
+        // confirmed count) but rating is still missing is that a truly
+        // inconsistent response we can't honestly explain — that stays
+        // excluded.
+        const reviewCount = input.reviewCount ?? 0;
+        if (reviewCount === 0) {
+          return {
+            earnedPoints: 0,
+            confidence: "VERIFIED",
+            explanation: "No Google reviews yet — this is the biggest thing holding your visibility back.",
+          };
+        }
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
@@ -455,18 +479,22 @@ export const CHECKS: CheckDefinition[] = [
     advice:
       "Get more Google reviews — ask recent customers directly, or add a review link to receipts and follow-up emails.",
     evaluate(input) {
-      if (input.reviewCount === null) {
-        return {
-          earnedPoints: null,
-          confidence: "NOT_FOUND",
-          explanation: "Google returned no review count for this listing.",
-        };
-      }
-      const fraction = reviewCountFraction(input.reviewCount);
+      // A saved business only ever reaches scoring after a real,
+      // successful Places fetch — we always request this field, and
+      // Google always either returns the real count or omits it because
+      // the true count is zero (there's no other reason a listing we
+      // successfully fetched would lack it). So null here is a
+      // CONFIRMED zero, not missing data: it gets scored low, same as
+      // an explicit 0, never excluded.
+      const reviewCount = input.reviewCount ?? 0;
+      const fraction = reviewCountFraction(reviewCount);
       return {
         earnedPoints: roundTo(fraction * REVIEW_COUNT_CHECK_MAX_POINTS, 1),
         confidence: "VERIFIED",
-        explanation: `${input.reviewCount} review${input.reviewCount === 1 ? "" : "s"} on Google (full credit at ${REVIEW_COUNT_SATURATION}+).`,
+        explanation:
+          reviewCount === 0
+            ? "0 reviews on Google — ask your customers for reviews to start building social proof."
+            : `${reviewCount} review${reviewCount === 1 ? "" : "s"} on Google (full credit at ${REVIEW_COUNT_SATURATION}+).`,
       };
     },
     simulateFix: (input) => ({ ...input, reviewCount: REVIEW_COUNT_SATURATION }),

@@ -115,21 +115,50 @@ describe("confidence-aware scoring", () => {
     expect(photos.earnedPoints).toBe(0);
   });
 
-  test("missing rating and review count entirely excludes visibility from the total, rather than zeroing it", () => {
+  test("a confirmed zero — no reviews, no rating — is scored as a real weakness, never excluded (the v1.4.0 fix)", () => {
     const input: BusinessScoringInput = {
       ...PERFECT_INPUT,
       rating: null,
       reviewCount: null,
     };
     const breakdown = scoreBusiness(input);
+
+    const rating = breakdown.checks.find((c) => c.id === "visibility.rating")!;
+    const reviewCount = breakdown.checks.find((c) => c.id === "visibility.review_count")!;
+    // A saved business only reaches scoring after a real, successful
+    // fetch — so null here is a CONFIRMED zero, not missing data. Both
+    // checks are VERIFIED and scored at the floor, never excluded.
+    expect(rating.confidence).toBe("VERIFIED");
+    expect(rating.earnedPoints).toBe(0);
+    expect(reviewCount.confidence).toBe("VERIFIED");
+    expect(reviewCount.earnedPoints).toBe(0);
+
     const visibility = breakdown.categories.find((c) => c.id === "visibility")!;
-    // Every visibility check is NOT_FOUND for this business.
-    expect(visibility.possiblePoints).toBe(0);
-    expect(visibility.relativeScore).toBeNull();
-    // Completeness (30) and Website (30) are still fully determinable and
-    // perfect, so the total is renormalized across just those two
-    // categories rather than treating the missing 40% as a loss.
-    expect(breakdown.total).toBe(100);
+    // possiblePoints stays real (34, from rating + review_count) — the
+    // category is fully determinable, just genuinely scoring zero on
+    // its two real-data checks, not renormalized away as unknown.
+    expect(visibility.possiblePoints).toBe(34);
+    expect(visibility.earnedPoints).toBe(0);
+    expect(visibility.relativeScore).toBe(0);
+
+    // THE BUG THIS FIXES: before v1.4.0, both checks went NOT_FOUND, the
+    // whole category got excluded, and the score renormalized across
+    // just Completeness (30) and Website (30) — a business with zero
+    // reviews and no rating could hit 100. Now a perfect listing with no
+    // social proof caps well below a passing grade.
+    expect(breakdown.total).toBe(60);
+    expect(breakdown.grade).toBe("D");
+  });
+
+  test("a genuinely inconsistent response — reviews exist but no rating came back — still honestly excludes the rating check", () => {
+    const input: BusinessScoringInput = { ...PERFECT_INPUT, rating: null, reviewCount: 25 };
+    const breakdown = scoreBusiness(input);
+    const rating = breakdown.checks.find((c) => c.id === "visibility.rating")!;
+    // A positive confirmed review count with no rating is an
+    // unexplainable data inconsistency, not a confirmed zero — this
+    // stays excluded, same as before.
+    expect(rating.confidence).toBe("NOT_FOUND");
+    expect(rating.earnedPoints).toBeNull();
   });
 
   test("an unrecognized business status is UNCERTAIN, not a failure", () => {
@@ -296,7 +325,7 @@ describe("businessRowToScoringInput adapter", () => {
     expect(input.rating).toBe(4.2);
     expect(input.mostRecentReviewDaysAgo).toBeNull();
     const breakdown = scoreBusiness(input);
-    expect(breakdown.scoringVersion).toBe("1.3.0");
+    expect(breakdown.scoringVersion).toBe("1.4.0");
   });
 });
 
