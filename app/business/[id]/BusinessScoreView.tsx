@@ -20,8 +20,6 @@ import { StatTile } from "@/components/ui/StatTile";
 import { cn } from "@/lib/utils";
 import { saveScoreSnapshot } from "@/app/actions/scoring";
 import type { BusinessRecord, ScoreHistoryRow, ScoreSnapshot } from "@/app/actions/scoring";
-import { ActionPlanSection } from "./ActionPlanSection";
-import type { ActionPlanTask, CompletedTask } from "@/lib/actionPlan";
 import {
   GRADE_THRESHOLDS,
   type CategoryResult,
@@ -475,14 +473,12 @@ export function BusinessScoreView({
   result,
   history,
   recentSnapshots,
-  actionPlan,
 }: {
   businessId: string;
   business: BusinessRecord;
   result: ScoreWithSuggestions;
   history: ScoreHistoryRow[];
   recentSnapshots: ScoreSnapshot[];
-  actionPlan: { tasks: ActionPlanTask[]; completed: CompletedTask[]; error?: string };
 }) {
   const { breakdown, projectedBreakdown } = result;
 
@@ -534,6 +530,12 @@ export function BusinessScoreView({
               </span>
               <span className="text-sm text-white/60">/ 100 · {projectedBreakdown.grade}</span>
             </div>
+            <Link
+              href={`/business/${businessId}/growth`}
+              className="mt-2 inline-block text-[12px] font-medium text-brass hover:underline"
+            >
+              See your action plan →
+            </Link>
           </div>
           <SinceLastScanControl history={history} />
         </div>
@@ -574,16 +576,6 @@ export function BusinessScoreView({
           <CategoryCard key={category.id} category={category} />
         ))}
       </div>
-
-      <SectionHeading
-        title={actionPlan.error ? "Action plan" : `Action plan (${actionPlan.tasks.length})`}
-      />
-      <ActionPlanSection
-        businessId={businessId}
-        tasks={actionPlan.tasks}
-        completed={actionPlan.completed}
-        error={actionPlan.error}
-      />
 
       <SectionHeading title="Scan history" />
       <Card className="p-5">

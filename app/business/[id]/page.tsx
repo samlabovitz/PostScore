@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
 import { scoreBusinessById, getScoreHistory, getRecentScoreSnapshots } from "@/app/actions/scoring";
-import { getActionPlan } from "@/app/actions/actionPlan";
 import { BusinessScoreView } from "./BusinessScoreView";
 
 export default async function BusinessPage({ params }: { params: { id: string } }) {
@@ -24,23 +23,10 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     );
   }
 
-  const [history, recentSnapshots, actionPlanResult] = await Promise.all([
+  const [history, recentSnapshots] = await Promise.all([
     getScoreHistory(params.id),
     getRecentScoreSnapshots(params.id, 2),
-    getActionPlan(params.id, scored.result.breakdown, scored.result.suggestions),
   ]);
-
-  const actionPlan =
-    actionPlanResult.status === "ok"
-      ? actionPlanResult
-      : {
-          tasks: [],
-          completed: [],
-          error:
-            actionPlanResult.status === "error"
-              ? actionPlanResult.message
-              : "Couldn't load your action plan — try refreshing.",
-        };
 
   return (
     <DashboardShell business={scored.business}>
@@ -50,7 +36,6 @@ export default async function BusinessPage({ params }: { params: { id: string } 
         result={scored.result}
         history={history}
         recentSnapshots={recentSnapshots}
-        actionPlan={actionPlan}
       />
     </DashboardShell>
   );

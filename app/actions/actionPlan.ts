@@ -4,27 +4,32 @@ import { createClient } from "@/lib/supabase/server";
 import {
   buildActionPlan,
   buildCompletedTasks,
+  buildWeeklyPlan,
   type ActionPlanTask,
   type CompletedTask,
   type TaskRow,
+  type WeeklyPlan,
 } from "@/lib/actionPlan";
 import { businessRowToScoringInput, scoreBusiness } from "@/lib/scoring";
-import type { BusinessScoringRow, ScoreBreakdown, Suggestion } from "@/lib/scoring";
+import type { BusinessScoringInput, BusinessScoringRow, ScoreBreakdown, Suggestion } from "@/lib/scoring";
 
 export type GetActionPlanResult =
-  | { status: "ok"; tasks: ActionPlanTask[]; completed: CompletedTask[] }
+  | ({ status: "ok"; tasks: ActionPlanTask[]; completed: CompletedTask[] } & WeeklyPlan)
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
 
 /**
  * Overlays any in-flight task status (pending verification / completed)
- * onto the live breakdown's own suggestions. Takes the breakdown and
- * suggestions as arguments rather than recomputing them, since the
- * calling page has already scored the business once — no need to fetch
- * and re-score it a second time just to build the plan.
+ * onto the live breakdown's own suggestions, then splits the result into
+ * this week's achievable plan vs. everything longer-term (see
+ * buildWeeklyPlan). Takes the input/breakdown/suggestions as arguments
+ * rather than recomputing them, since the calling page has already
+ * scored the business once — no need to fetch and re-score it a second
+ * time just to build the plan.
  */
 export async function getActionPlan(
   businessId: string,
+  input: BusinessScoringInput,
   breakdown: ScoreBreakdown,
   suggestions: Suggestion[]
 ): Promise<GetActionPlanResult> {
@@ -48,11 +53,13 @@ export async function getActionPlan(
   }
 
   const rows = (data ?? []) as TaskRow[];
+  const tasks = buildActionPlan(breakdown, suggestions, rows);
 
   return {
     status: "ok",
-    tasks: buildActionPlan(breakdown, suggestions, rows),
+    tasks,
     completed: buildCompletedTasks(breakdown, rows),
+    ...buildWeeklyPlan(tasks, breakdown, input),
   };
 }
 

@@ -16,7 +16,38 @@ function formatPoints(value: number): string {
 
 type MarkState = { kind: "idle" } | { kind: "saving" } | { kind: "error"; message: string };
 
-function TaskCard({ task, businessId }: { task: ActionPlanTask; businessId: string }) {
+/** Which list a task card is rendered in — the SAME task (same checkId,
+ * same effort) can legitimately appear in both "This week's plan" and
+ * "Bigger projects" (see buildWeeklyPlan's duplication for
+ * quick_win_action checks), so the badge/points framing is chosen by
+ * context, not derived purely from the task's own effort field. */
+export type TaskCardContext = "weekly" | "later";
+
+function effortBadge(
+  task: ActionPlanTask,
+  context: TaskCardContext
+): { label: string; variant: "green" | "amber" | "neutral" } {
+  if (task.effort === "quick_win") return { label: "Quick win", variant: "green" };
+  if (task.effort === "quick_win_action") {
+    return context === "weekly"
+      ? { label: "This week's action", variant: "green" }
+      : { label: "Ongoing outcome", variant: "neutral" };
+  }
+  // longer_term
+  return context === "weekly"
+    ? { label: "First step", variant: "amber" }
+    : { label: "Longer-term", variant: "neutral" };
+}
+
+export function TaskCard({
+  task,
+  businessId,
+  context = "later",
+}: {
+  task: ActionPlanTask;
+  businessId: string;
+  context?: TaskCardContext;
+}) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [state, setState] = useState<MarkState>({ kind: "idle" });
@@ -35,17 +66,27 @@ function TaskCard({ task, businessId }: { task: ActionPlanTask; businessId: stri
   }
 
   const isPending = task.status === "pending_verification";
+  const badge = effortBadge(task, context);
+  const pointsLabel =
+    context === "weekly" && task.effort !== "quick_win"
+      ? `~+${formatPoints(task.promisedPoints)} pts this week`
+      : `Up to +${formatPoints(task.promisedPoints)} pts`;
 
   return (
     <div className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-sm font-semibold text-ink">{task.label}</div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-ink">{task.label}</span>
+            <Pill variant={badge.variant} className="!px-2 !py-0.5 text-[10px]">
+              {badge.label}
+            </Pill>
+          </div>
           <p className="mt-0.5 text-[13px] text-ink-soft">{task.problem}</p>
           <p className="mt-1.5 text-[12px] text-ink-mute">{task.why}</p>
         </div>
         <Pill variant={isPending ? "neutral" : "brass"} className="shrink-0">
-          {isPending ? "Pending" : `Up to +${formatPoints(task.promisedPoints)} pts`}
+          {isPending ? "Pending" : pointsLabel}
         </Pill>
       </div>
 
@@ -101,6 +142,69 @@ function TaskCard({ task, businessId }: { task: ActionPlanTask; businessId: stri
   );
 }
 
+/** A card listing a set of tasks, or an honest empty-state message when
+ * the set is empty — the caller supplies the message so a "nothing left
+ * this week" state can read differently from a "nothing longer-term
+ * either" state. */
+export function TaskListCard({
+  tasks,
+  businessId,
+  emptyMessage,
+  footnote,
+  context = "later",
+}: {
+  tasks: ActionPlanTask[];
+  businessId: string;
+  emptyMessage: string;
+  footnote?: string;
+  context?: TaskCardContext;
+}) {
+  if (tasks.length === 0) {
+    return <Card className="p-5 text-sm text-ink-soft">{emptyMessage}</Card>;
+  }
+
+  return (
+    <Card className="p-5">
+      <div className="flex flex-col divide-y divide-paper-line">
+        {tasks.map((task) => (
+          <TaskCard key={task.checkId} task={task} businessId={businessId} context={context} />
+        ))}
+      </div>
+      {footnote && (
+        <p className="mt-4 border-t border-paper-line pt-3 text-[12px] text-ink-mute">{footnote}</p>
+      )}
+    </Card>
+  );
+}
+
+export function CompletedTasksCard({ completed }: { completed: CompletedTask[] }) {
+  if (completed.length === 0) return null;
+
+  return (
+    <Card className="p-5">
+      <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
+        Confirmed wins
+      </div>
+      <div className="flex flex-col divide-y divide-paper-line">
+        {completed.map((task) => (
+          <div
+            key={task.checkId}
+            className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0"
+          >
+            <span className="flex items-center gap-2 text-sm text-ink">
+              <IconCircleCheck size={16} className="shrink-0 text-green" />
+              {task.label}
+            </span>
+            <Pill variant="green" className="shrink-0">
+              +{formatPoints(task.pointsGained)} pts confirmed
+            </Pill>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 export function ActionPlanSection({
   businessId,
   tasks,
@@ -121,49 +225,21 @@ export function ActionPlanSection({
         <Card className="p-5 text-sm text-red">
           Couldn&apos;t load your action plan: {error}
         </Card>
-      ) : tasks.length === 0 ? (
-        <Card className="p-5 text-sm text-ink-soft">
-          Every determinable check is already earning full points. Nothing to plan for right now.
-        </Card>
       ) : (
-        <Card className="p-5">
-          <div className="flex flex-col divide-y divide-paper-line">
-            {tasks.map((task) => (
-              <TaskCard key={task.checkId} task={task} businessId={businessId} />
-            ))}
-          </div>
-          <p className="mt-4 border-t border-paper-line pt-3 text-[12px] text-ink-mute">
-            Every estimate here is exactly what its check is currently missing — the same numbers
-            behind the projected score above. They&apos;re real math, not a promise: points only
-            ever land after a re-scan actually finds the fix, never from clicking &quot;I did
-            this&quot; alone.
-          </p>
-        </Card>
+        <TaskListCard
+          tasks={tasks}
+          businessId={businessId}
+          emptyMessage="Every determinable check is already earning full points. Nothing to plan for right now."
+          footnote={
+            'Every estimate here is exactly what its check is currently missing — the same ' +
+            "numbers behind the projected score above. They're real math, not a promise: points " +
+            'only ever land after a re-scan actually finds the fix, never from clicking "I did ' +
+            'this" alone.'
+          }
+        />
       )}
 
-      {completed.length > 0 && (
-        <Card className="p-5">
-          <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-            Confirmed wins
-          </div>
-          <div className="flex flex-col divide-y divide-paper-line">
-            {completed.map((task) => (
-              <div
-                key={task.checkId}
-                className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0"
-              >
-                <span className="flex items-center gap-2 text-sm text-ink">
-                  <IconCircleCheck size={16} className="shrink-0 text-green" />
-                  {task.label}
-                </span>
-                <Pill variant="green" className="shrink-0">
-                  +{formatPoints(task.pointsGained)} pts confirmed
-                </Pill>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+      <CompletedTasksCard completed={completed} />
     </div>
   );
 }
