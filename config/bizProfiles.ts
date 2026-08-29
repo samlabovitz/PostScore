@@ -24,6 +24,26 @@ export interface OfferTemplate {
   description: string;
 }
 
+/**
+ * Ready-to-use offer copy for the three marketing angles the coupon
+ * builder always offers (Growth → Coupons). The ANGLES themselves are
+ * universal marketing strategy (get someone in the door the first
+ * time; ride a calendar moment; fill an empty slot) — what has to be
+ * type-tailored is the STRUCTURE of the offer behind each one, exactly
+ * like couponPresets/offerTemplates above. Hand-written per profile so
+ * "Use this offer" always pre-fills something that actually fits how
+ * this kind of business makes money, never a generic string reused
+ * across verticals.
+ */
+export interface CouponAngles {
+  /** The lowest-risk offer to get a first-time customer in the door. */
+  firstTime: string;
+  /** An offer tied to a calendar moment (a season, a holiday, an event). */
+  seasonal: string;
+  /** An offer aimed at the business's own quiet hours/days. */
+  slowDay: string;
+}
+
 export interface FaqEntry {
   /** May contain {businessName} / {city} tokens — see renderFaq(). */
   question: string;
@@ -57,6 +77,8 @@ export interface BizProfile {
    */
   couponPresets: CouponPreset[];
   offerTemplates: OfferTemplate[];
+  /** See CouponAngles. */
+  couponAngles: CouponAngles;
   /** Concrete, type-appropriate ideas for the Growth page. */
   growActions: string[];
   faq: FaqEntry[];
@@ -117,6 +139,11 @@ const SALON_PROFILE: BizProfile = {
       description: "Pairs well with the coupon above — give both people a reason to act.",
     },
   ],
+  couponAngles: {
+    firstTime: "New client special: 20% off your first appointment",
+    seasonal: "Holiday styling special: book your seasonal look this week",
+    slowDay: "20% off Tuesday & Wednesday appointments",
+  },
   growActions: [
     "Ask every client at checkout for a Google review — the best time is right after a great appointment.",
     "Post real before/after photos weekly; personal-care listings live and die on photos.",
@@ -184,6 +211,11 @@ const RESTAURANT_PROFILE: BizProfile = {
       description: "Removes the biggest friction point for a customer trying you for the first time.",
     },
   ],
+  couponAngles: {
+    firstTime: "First-time online order: free delivery",
+    seasonal: "Seasonal menu special: this month's feature, 15% off",
+    slowDay: "Buy one entrée, get one 50% off — dine-in, Sunday–Tuesday",
+  },
   growActions: [
     "Ask happy diners for a Google review before they leave, or on the receipt.",
     "Post daily or weekly specials as real photos — food photos are the single biggest driver of clicks.",
@@ -228,6 +260,11 @@ const LAWYER_PROFILE: BizProfile = {
       description: "A concrete, bounded discount that doesn't touch contingency or hourly case work.",
     },
   ],
+  couponAngles: {
+    firstTime: "Free 30-minute initial consultation",
+    seasonal: "Year-end document review special — get your paperwork in order",
+    slowDay: "Flat-fee case review, available this week",
+  },
   growActions: [
     "Ask satisfied clients for a Google review once their matter is resolved, where doing so is ethically appropriate.",
     "Publish a short, plain-language FAQ answering the questions {city} clients actually ask before calling.",
@@ -312,6 +349,11 @@ const PRACTITIONER_PROFILE: BizProfile = {
       description: "Especially effective for group classes, where an extra attendee costs you almost nothing.",
     },
   ],
+  couponAngles: {
+    firstTime: "Free consultation or intro session for new clients",
+    seasonal: "New season, new goals: 15% off a fresh session pack",
+    slowDay: "10% off weekday morning sessions",
+  },
   growActions: [
     "Ask clients for a Google review right after a session that clearly went well.",
     "Share a short client testimonial or result monthly — this stands in for the photos a storefront business would post.",
@@ -367,6 +409,11 @@ const DEFAULT_PROFILE: BizProfile = {
       description: "Tie a promotion to a real calendar moment relevant to your customers.",
     },
   ],
+  couponAngles: {
+    firstTime: "10% off for new customers",
+    seasonal: "Seasonal special — tied to what's happening this month",
+    slowDay: "$10 off a $50+ purchase or visit on your slowest day of the week",
+  },
   growActions: [
     "Ask happy customers for a Google review — it's the single highest-leverage thing most small businesses skip.",
     "Keep your hours, phone number, and website current on your Google listing.",

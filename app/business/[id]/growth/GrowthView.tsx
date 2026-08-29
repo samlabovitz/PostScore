@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { StatTile } from "@/components/ui/StatTile";
@@ -10,6 +11,17 @@ import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/S
 import { TaskListCard, CompletedTasksCard } from "../ActionPlanSection";
 import type { ActionPlanTask, CompletedTask } from "@/lib/actionPlan";
 import type { ScoreBreakdown } from "@/lib/scoring";
+import type { BizProfile } from "@/config/bizProfiles";
+
+// The builder generates a random coupon code and reads window.location
+// on first render — genuinely client-only state, not something that
+// can (or should) match a server-rendered pass. Loading it with
+// ssr:false avoids a hydration mismatch entirely rather than papering
+// over it with an effect-delayed placeholder.
+const CouponBuilder = dynamic(
+  () => import("./CouponBuilder").then((m) => m.CouponBuilder),
+  { ssr: false, loading: () => <Card className="p-8 text-sm text-ink-soft">Loading…</Card> }
+);
 
 type Segment = "plan" | "coupons" | "referral";
 
@@ -32,12 +44,14 @@ function ComingTogether({ title, body }: { title: string; body: string }) {
 export function GrowthView({
   businessId,
   businessName,
+  profile,
   referralOk,
   breakdown,
   actionPlan,
 }: {
   businessId: string;
   businessName: string | null;
+  profile: BizProfile;
   referralOk: boolean;
   breakdown: ScoreBreakdown;
   actionPlan: {
@@ -141,10 +155,7 @@ export function GrowthView({
       )}
 
       {segment === "coupons" && (
-        <ComingTogether
-          title="Coupons are coming together"
-          body="Soon you'll be able to create and send coupon offers to your customers right from here."
-        />
+        <CouponBuilder businessName={businessName ?? "Your business"} profile={profile} />
       )}
 
       {segment === "referral" && referralOk && (

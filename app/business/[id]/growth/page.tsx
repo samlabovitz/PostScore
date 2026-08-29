@@ -65,6 +65,7 @@ export default async function GrowthPage({ params }: { params: { id: string } })
       <GrowthView
         businessId={params.id}
         businessName={business.name}
+        profile={profile}
         referralOk={profile.referralOk}
         breakdown={scored.result.breakdown}
         actionPlan={actionPlan}
