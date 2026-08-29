@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { scoreBusinessById } from "@/app/actions/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
+import { listActivePromos } from "@/app/actions/promos";
 import { businessRowToScoringInput } from "@/lib/scoring";
 import { bizProfile } from "@/config/bizProfiles";
 import { GrowthView } from "./GrowthView";
@@ -45,6 +46,9 @@ export default async function GrowthPage({ params }: { params: { id: string } })
     scored.result.suggestions
   );
 
+  const promosResult = await listActivePromos(params.id);
+  const initialPromos = promosResult.status === "ok" ? promosResult.promos : [];
+
   const actionPlan =
     actionPlanResult.status === "ok"
       ? actionPlanResult
@@ -65,10 +69,12 @@ export default async function GrowthPage({ params }: { params: { id: string } })
       <GrowthView
         businessId={params.id}
         businessName={business.name}
+        businessPhone={business.phone ?? null}
         profile={profile}
         referralOk={profile.referralOk}
         breakdown={scored.result.breakdown}
         actionPlan={actionPlan}
+        initialPromos={initialPromos}
       />
     </DashboardShell>
   );

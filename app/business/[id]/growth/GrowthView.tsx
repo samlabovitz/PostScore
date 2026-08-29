@@ -12,14 +12,15 @@ import { TaskListCard, CompletedTasksCard } from "../ActionPlanSection";
 import type { ActionPlanTask, CompletedTask } from "@/lib/actionPlan";
 import type { ScoreBreakdown } from "@/lib/scoring";
 import type { BizProfile } from "@/config/bizProfiles";
+import type { PromoRow } from "@/lib/promos";
 
 // The builder generates a random coupon code and reads window.location
 // on first render — genuinely client-only state, not something that
 // can (or should) match a server-rendered pass. Loading it with
 // ssr:false avoids a hydration mismatch entirely rather than papering
 // over it with an effect-delayed placeholder.
-const CouponBuilder = dynamic(
-  () => import("./CouponBuilder").then((m) => m.CouponBuilder),
+const CouponsSection = dynamic(
+  () => import("./CouponsSection").then((m) => m.CouponsSection),
   { ssr: false, loading: () => <Card className="p-8 text-sm text-ink-soft">Loading…</Card> }
 );
 
@@ -44,16 +45,20 @@ function ComingTogether({ title, body }: { title: string; body: string }) {
 export function GrowthView({
   businessId,
   businessName,
+  businessPhone,
   profile,
   referralOk,
   breakdown,
   actionPlan,
+  initialPromos,
 }: {
   businessId: string;
   businessName: string | null;
+  businessPhone: string | null;
   profile: BizProfile;
   referralOk: boolean;
   breakdown: ScoreBreakdown;
+  initialPromos: PromoRow[];
   actionPlan: {
     tasks: ActionPlanTask[];
     completed: CompletedTask[];
@@ -155,7 +160,13 @@ export function GrowthView({
       )}
 
       {segment === "coupons" && (
-        <CouponBuilder businessName={businessName ?? "Your business"} profile={profile} />
+        <CouponsSection
+          businessId={businessId}
+          businessName={businessName ?? "Your business"}
+          businessPhone={businessPhone}
+          profile={profile}
+          initialPromos={initialPromos}
+        />
       )}
 
       {segment === "referral" && referralOk && (

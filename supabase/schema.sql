@@ -276,3 +276,139 @@ create policy "Users can delete tasks for their own businesses"
         and businesses.owner_id = auth.uid ()
     )
   );
+
+-- ---------------------------------------------------------------------------
+-- Coupon promotions support (lib/promos.ts, Day 9 pass 2b)
+-- ---------------------------------------------------------------------------
+
+-- One row per coupon the owner has actually started running. `type`
+-- records which offer angle it came from (see OfferAngle ids in
+-- CouponBuilder.tsx: "firstTime" | "seasonal" | "slowDay" | "custom").
+-- `redemptions` is an honest, staff-incremented tally (see
+-- increment_promo_redemption below) — there is no POS integration or
+-- auto-detection anywhere in this feature, so this number is exactly
+-- and only how many times a human tapped "+1 Redeemed".
+create table if not exists public.promos (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses (id) on delete cascade,
+  type text not null,
+  offer text not null,
+  code text not null,
+  instructions text,
+  terms text,
+  expiry date,
+  redemptions integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists promos_business_id_idx
+  on public.promos (business_id);
+
+-- Speeds up the "how many active promos does this business have" check
+-- the trigger below runs on every insert/update.
+create index if not exists promos_business_active_idx
+  on public.promos (business_id)
+  where active;
+
+alter table public.promos enable row level security;
+
+drop policy if exists "Users can view promos for their own businesses" on public.promos;
+create policy "Users can view promos for their own businesses"
+  on public.promos for select
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = promos.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can insert promos for their own businesses" on public.promos;
+create policy "Users can insert promos for their own businesses"
+  on public.promos for insert
+  with check (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = promos.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can update promos for their own businesses" on public.promos;
+create policy "Users can update promos for their own businesses"
+  on public.promos for update
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = promos.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = promos.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can delete promos for their own businesses" on public.promos;
+create policy "Users can delete promos for their own businesses"
+  on public.promos for delete
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = promos.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+-- Enforces "at most 2 active promos per business" as a real database
+-- invariant, not just a UI check — the app disables the "Start & track
+-- this offer" button at 2 active promos, but this trigger is what
+-- actually guarantees it, including against races or a second tab.
+-- `language plpgsql` (not `security definer`) so it runs as the calling
+-- role and stays subject to the same RLS the policies above define.
+create or replace function public.enforce_max_active_promos()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.active then
+    if (
+      select count(*) from public.promos
+      where business_id = new.business_id
+        and active
+        and id <> new.id
+    ) >= 2 then
+      raise exception 'A business can run at most 2 active promotions at once. End one before starting another.'
+        using errcode = 'P0001';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists promos_enforce_max_active on public.promos;
+create trigger promos_enforce_max_active
+  before insert or update on public.promos
+  for each row execute function public.enforce_max_active_promos();
+
+-- Atomic "+1 Redeemed" tap. A plain client-side read-then-update could
+-- lose a count under concurrent taps (two staff members, two devices);
+-- this does the increment in one statement instead. `language sql`
+-- (not `security definer`) so it still runs as the calling role and is
+-- still subject to the update RLS policy above — a user can only ever
+-- increment redemptions on a promo their own business owns.
+create or replace function public.increment_promo_redemption(p_promo_id uuid)
+returns integer
+language sql
+as $$
+  update public.promos
+  set redemptions = redemptions + 1
+  where id = p_promo_id
+  returning redemptions;
+$$;
+
+grant execute on function public.increment_promo_redemption(uuid) to authenticated;

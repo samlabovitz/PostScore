@@ -1,7 +1,9 @@
 // Pure, presentation-only helpers for the Growth → Coupons builder.
-// No persistence and no scoring logic here — the code and redeem URL
-// are cosmetic/preview-only until pass 2b adds a real promos table,
-// uniqueness enforcement, and an actual /redeem/<code> page.
+// No persistence or scoring logic here. Pass 2b (see lib/promos.ts and
+// app/actions/promos.ts) added a real `promos` table so a built coupon
+// can be saved and tracked, but the code has no uniqueness enforcement
+// and the QR's /redeem/<code> URL has no page behind it yet — both
+// still cosmetic/preview-only until a later pass.
 
 // Excludes 0/O/1/I so a customer or owner reading the code aloud (or
 // off a printed coupon) never has to guess which character it was.

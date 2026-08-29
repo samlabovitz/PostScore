@@ -71,6 +71,9 @@ export interface BusinessSummary {
    */
   category?: string | null;
   primary_type?: string | null;
+  /** Optional: only the Growth page's coupon share caption needs this,
+   * so most callers don't select it. */
+  phone?: string | null;
 }
 
 export type GetBusinessSummaryResult =
@@ -96,7 +99,7 @@ export async function getBusinessSummary(businessId: string): Promise<GetBusines
 
   const { data, error } = await supabase
     .from("businesses")
-    .select("id, name, address, category, primary_type")
+    .select("id, name, address, category, primary_type, phone")
     .eq("id", businessId)
     .single();
 

@@ -9,6 +9,8 @@ import {
   IconDownload,
   IconQrcode,
   IconRefresh,
+  IconRocket,
+  IconShare2,
   IconSparkles,
   IconTicket,
   IconUserPlus,
@@ -24,6 +26,8 @@ import {
 } from "@/lib/coupons";
 import { downloadDataUrl, renderCouponPng } from "@/lib/couponImage";
 import type { BizProfile } from "@/config/bizProfiles";
+import type { StartPromoInput, StartPromoResult } from "@/app/actions/promos";
+import { ShareCouponModal } from "./ShareCouponModal";
 
 const DEFAULT_EXPIRY_DAYS = 60;
 const DEFAULT_INSTRUCTIONS = "Show this coupon in-store to redeem.";
@@ -114,10 +118,22 @@ function CouponPreview({
 
 export function CouponBuilder({
   businessName,
+  businessPhone,
   profile,
+  activeCount,
+  maxActive,
+  onStart,
 }: {
   businessName: string;
+  businessPhone: string | null;
   profile: BizProfile;
+  /** How many promos are currently active for this business — drives
+   * the "Start & track this offer" disabled state and copy. Owned by
+   * the parent CouponsSection so it stays in sync with the Active
+   * promotions list below. */
+  activeCount: number;
+  maxActive: number;
+  onStart: (input: StartPromoInput) => Promise<StartPromoResult>;
 }) {
   const [offer, setOffer] = useState(() => profile.couponPresets[0]?.label ?? "");
   const [expiry, setExpiry] = useState(() => defaultExpiryDate(DEFAULT_EXPIRY_DAYS, new Date()));
@@ -125,10 +141,17 @@ export function CouponBuilder({
   const [moreOpen, setMoreOpen] = useState(false);
   const [instructions, setInstructions] = useState(DEFAULT_INSTRUCTIONS);
   const [terms, setTerms] = useState(DEFAULT_TERMS);
+  const [angleId, setAngleId] = useState<string>("custom");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [startState, setStartState] = useState<
+    { kind: "idle" } | { kind: "working" } | { kind: "success" } | { kind: "error"; message: string }
+  >({ kind: "idle" });
 
   function applyAngle(angle: OfferAngle) {
     setOffer(profile.couponAngles[angle.id]);
     setCode(generateCouponCode());
+    setAngleId(angle.id);
+    setStartState({ kind: "idle" });
   }
 
   // The real page origin is only knowable client-side. This component
@@ -165,7 +188,36 @@ export function CouponBuilder({
     { kind: "idle" } | { kind: "working" } | { kind: "error"; message: string }
   >({ kind: "idle" });
 
-  const canDownload = offer.trim().length > 0 && expiry.length > 0 && !!qrDataUrl;
+  const hasRequiredFields = offer.trim().length > 0 && expiry.length > 0;
+  const canDownload = hasRequiredFields && !!qrDataUrl;
+  const atLimit = activeCount >= maxActive;
+  const canStart = hasRequiredFields && !atLimit && startState.kind !== "working";
+
+  async function handleStart() {
+    setStartState({ kind: "working" });
+    const result = await onStart({
+      type: angleId,
+      offer: offer.trim(),
+      code,
+      instructions: instructions.trim(),
+      terms: terms.trim(),
+      expiry,
+    });
+    if (result.status === "ok") {
+      setStartState({ kind: "success" });
+      setCode(generateCouponCode());
+    } else if (result.status === "limit_reached") {
+      setStartState({
+        kind: "error",
+        message: `You're already running ${maxActive} active coupons — end one in Active promotions below before starting another.`,
+      });
+    } else {
+      setStartState({
+        kind: "error",
+        message: result.status === "error" ? result.message : "Couldn't start this — try again.",
+      });
+    }
+  }
 
   async function handleDownload() {
     if (!qrDataUrl) return;
@@ -363,14 +415,20 @@ export function CouponBuilder({
             terms={terms}
           />
 
-          <Button
-            variant="brass"
-            onClick={handleDownload}
-            disabled={!canDownload || downloadState.kind === "working"}
-          >
-            <IconDownload size={16} />
-            {downloadState.kind === "working" ? "Generating..." : "Download image"}
-          </Button>
+          <div className="flex flex-wrap gap-2.5">
+            <Button
+              variant="default"
+              onClick={handleDownload}
+              disabled={!canDownload || downloadState.kind === "working"}
+            >
+              <IconDownload size={16} />
+              {downloadState.kind === "working" ? "Generating..." : "Download image"}
+            </Button>
+            <Button variant="default" onClick={() => setShareOpen(true)} disabled={!hasRequiredFields}>
+              <IconShare2 size={16} />
+              Share
+            </Button>
+          </div>
           {!canDownload && (
             <p className="text-[12px] text-ink-mute">
               Add an offer and an expiry date to download your coupon.
@@ -380,12 +438,39 @@ export function CouponBuilder({
             <p className="text-[12px] text-red">{downloadState.message}</p>
           )}
 
+          <Button variant="brass" onClick={handleStart} disabled={!canStart}>
+            <IconRocket size={16} />
+            {startState.kind === "working" ? "Starting…" : "Start & track this offer"}
+          </Button>
+          {atLimit ? (
+            <p className="text-[12px] text-ink-mute">
+              You can run up to {maxActive} coupons at once. End one in Active promotions below to
+              start a new one.
+            </p>
+          ) : startState.kind === "success" ? (
+            <p className="text-[12px] text-green">
+              Started — track redemptions in Active promotions below.
+            </p>
+          ) : startState.kind === "error" ? (
+            <p className="text-[12px] text-red">{startState.message}</p>
+          ) : null}
+
           <p className="text-[12px] text-ink-mute">
             This creates a real image you share yourself — PostScore doesn&apos;t post it to
             Google or text it to customers automatically.
           </p>
         </div>
       </div>
+
+      <ShareCouponModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        businessName={businessName}
+        offer={offer}
+        code={code}
+        expiryLabel={formatExpiry(expiry)}
+        phone={businessPhone}
+      />
     </div>
   );
 }
