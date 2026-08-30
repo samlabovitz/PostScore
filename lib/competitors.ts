@@ -133,6 +133,13 @@ function placeDetailsToScoringRow(place: PlaceDetails): BusinessScoringRow {
     category: place.primaryCategory,
     photo_count: place.photoCount,
     business_status: place.businessStatus,
+    // Competitors are scored from a fresh, real-time Places fetch, not
+    // our own saved businesses table — there's no cached HTTPS probe
+    // for them, and doing a live network check of every competitor's
+    // site here would meaningfully slow down a scan. null is honest:
+    // the check is excluded for competitors, never guessed from their
+    // URL string (the exact bug this fix removes for the main flow).
+    https_status: null,
   };
 }
 

@@ -43,7 +43,7 @@ export async function scoreBusinessById(businessId: string): Promise<ScoreBusine
   const { data: business, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, google_maps_uri"
+      "id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, google_maps_uri"
     )
     .eq("id", businessId)
     .single();

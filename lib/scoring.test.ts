@@ -24,6 +24,7 @@ const PERFECT_INPUT: BusinessScoringInput = {
   address: "742 Evergreen Terrace, Springfield",
   openingHours: ["Monday: 9:00 AM – 5:00 PM"],
   website: "https://example.com",
+  httpsStatus: "https",
   categories: ["cafe", "coffee_shop"],
   primaryCategory: "Cafe",
   photoCount: 12,
@@ -40,6 +41,7 @@ const STRUGGLING_INPUT: BusinessScoringInput = {
   address: "10 Market St",
   openingHours: null,
   website: null,
+  httpsStatus: null,
   categories: null,
   primaryCategory: "Hardware Store",
   photoCount: 0,
@@ -169,12 +171,58 @@ describe("confidence-aware scoring", () => {
     expect(status.earnedPoints).toBeNull();
   });
 
-  test("a website URL with no recognizable scheme is UNCERTAIN for HTTPS, not a failure", () => {
-    const input: BusinessScoringInput = { ...PERFECT_INPUT, website: "example.com" };
-    const breakdown = scoreBusiness(input);
-    const https = breakdown.checks.find((c) => c.id === "website.https")!;
-    expect(https.confidence).toBe("UNCERTAIN");
-    expect(https.earnedPoints).toBeNull();
+  // v1.5.0 replaced website.https's naive "does the URL string start
+  // with https://" logic with a real network probe result
+  // (httpsStatus, see lib/websiteHttps.ts) — the string itself is never
+  // consulted anymore, since Google's listed scheme frequently
+  // disagrees with what the site actually serves.
+  describe("website.https reads the real probe result, never the URL string", () => {
+    test("confirmed https (a live check succeeded over HTTPS) earns full points, VERIFIED", () => {
+      // The URL string itself says http:// — exactly the case that used
+      // to score wrong — but the real probe confirmed HTTPS works.
+      const input: BusinessScoringInput = {
+        ...PERFECT_INPUT,
+        website: "http://example.com",
+        httpsStatus: "https",
+      };
+      const breakdown = scoreBusiness(input);
+      const https = breakdown.checks.find((c) => c.id === "website.https")!;
+      expect(https.confidence).toBe("VERIFIED");
+      expect(https.earnedPoints).toBe(https.maxPoints);
+    });
+
+    test("confirmed http-only (no working https found) scores as missing HTTPS, VERIFIED", () => {
+      const input: BusinessScoringInput = { ...PERFECT_INPUT, httpsStatus: "http_only" };
+      const breakdown = scoreBusiness(input);
+      const https = breakdown.checks.find((c) => c.id === "website.https")!;
+      expect(https.confidence).toBe("VERIFIED");
+      expect(https.earnedPoints).toBe(0);
+    });
+
+    test("a probe that couldn't complete (unreachable) is NOT_FOUND — excluded, never scored as a failure", () => {
+      const input: BusinessScoringInput = { ...PERFECT_INPUT, httpsStatus: "unreachable" };
+      const breakdown = scoreBusiness(input);
+      const https = breakdown.checks.find((c) => c.id === "website.https")!;
+      expect(https.confidence).toBe("NOT_FOUND");
+      expect(https.earnedPoints).toBeNull();
+    });
+
+    test("a website that simply hasn't been checked yet (httpsStatus null) is also NOT_FOUND, not a guess", () => {
+      const input: BusinessScoringInput = { ...PERFECT_INPUT, httpsStatus: null };
+      const breakdown = scoreBusiness(input);
+      const https = breakdown.checks.find((c) => c.id === "website.https")!;
+      expect(https.confidence).toBe("NOT_FOUND");
+      expect(https.earnedPoints).toBeNull();
+    });
+
+    test("simulateFix reaches full points by confirming httpsStatus, without needing to rewrite the URL string", () => {
+      const input: BusinessScoringInput = { ...PERFECT_INPUT, httpsStatus: "http_only" };
+      const fixed = applyCheckFix(input, "website.https");
+      expect(fixed.website).toBe(input.website); // untouched — the real fix is a working endpoint, not a string
+      const breakdown = scoreBusiness(fixed);
+      const https = breakdown.checks.find((c) => c.id === "website.https")!;
+      expect(https.earnedPoints).toBe(https.maxPoints);
+    });
   });
 });
 
@@ -281,15 +329,20 @@ describe("suggestion -> projected score guarantee", () => {
     expect(fixedBreakdown.total - breakdown.total).toBe(promisedTotal);
   });
 
-  test("honesty check: fixing 'has a website' can move the total by MORE than that suggestion's own promised points, because HTTPS goes from excluded to fully verified as a side effect", () => {
-    // STRUGGLING_INPUT has no website, so website.https is NOT_FOUND
-    // ("not applicable") and generates no suggestion of its own. Once a
-    // website is added, https becomes determinable and (being
-    // https://example.com) scores full — points nobody promised in
-    // advance for that specific fix. This is exactly the "other
-    // real-world changes can independently move the total" case the
-    // suggestion engine is honest about: promisedPoints is a guarantee
-    // about the check it came from, not a full prediction of the total.
+  test("honesty check (the v1.5.0 fix): fixing 'has a website' does NOT retroactively verify HTTPS as a side effect", () => {
+    // Before v1.5.0, website.https read the `website` string itself, so
+    // simulateFix'ing "has a website" to "https://example.com" also
+    // silently made HTTPS score VERIFIED and full — a fake, unearned
+    // claim, since nothing had actually confirmed the real site
+    // (whatever it turns out to be) serves HTTPS. Now that
+    // website.https reads only the real probe result (httpsStatus),
+    // adding a website string alone must NOT change it: it stays
+    // exactly what it was — here, NOT_FOUND, since STRUGGLING_INPUT's
+    // httpsStatus is null (never checked) — until an actual network
+    // check runs and confirms it. (The total can still move by more
+    // than this one check's own promised points, same as before — that
+    // renormalization-within-a-category effect is unrelated to this
+    // bug and isn't what this test is guarding.)
     const { breakdown, suggestions } = getScoreWithSuggestions(STRUGGLING_INPUT);
     const hasWebsiteSuggestion = suggestions.find((s) => s.checkId === "website.has_website")!;
     expect(hasWebsiteSuggestion).toBeDefined();
@@ -298,13 +351,14 @@ describe("suggestion -> projected score guarantee", () => {
     expect(httpsBefore.confidence).toBe("NOT_FOUND");
 
     const fixedInput = applyCheckFix(STRUGGLING_INPUT, "website.has_website");
+    expect(fixedInput.httpsStatus).toBeNull(); // untouched by this fix — the real bug this closes
     const fixedBreakdown = scoreBusiness(fixedInput);
     const httpsAfter = fixedBreakdown.checks.find((c) => c.id === "website.https")!;
-    expect(httpsAfter.confidence).toBe("VERIFIED");
-    expect(httpsAfter.earnedPoints).toBe(httpsAfter.maxPoints);
+    expect(httpsAfter.confidence).toBe("NOT_FOUND");
+    expect(httpsAfter.earnedPoints).toBeNull();
 
     const actualDelta = fixedBreakdown.total - breakdown.total;
-    expect(actualDelta).toBeGreaterThan(hasWebsiteSuggestion.promisedPoints);
+    expect(actualDelta).toBeGreaterThanOrEqual(hasWebsiteSuggestion.promisedPoints);
   });
 });
 
@@ -317,6 +371,7 @@ describe("businessRowToScoringInput adapter", () => {
       address: "1 First St",
       opening_hours: null,
       website: "https://mybiz.example",
+      https_status: "https",
       categories: ["bakery"],
       category: "Bakery",
       photo_count: 4,
@@ -324,8 +379,26 @@ describe("businessRowToScoringInput adapter", () => {
     });
     expect(input.rating).toBe(4.2);
     expect(input.mostRecentReviewDaysAgo).toBeNull();
+    expect(input.httpsStatus).toBe("https");
     const breakdown = scoreBusiness(input);
-    expect(breakdown.scoringVersion).toBe("1.4.0");
+    expect(breakdown.scoringVersion).toBe("1.5.0");
+  });
+
+  test("degrades an unexpected https_status value to null (excluded) rather than trusting a bad cast", () => {
+    const input = businessRowToScoringInput({
+      rating: 4.2,
+      review_count: 30,
+      phone: null,
+      address: null,
+      opening_hours: null,
+      website: "https://mybiz.example",
+      https_status: "totally-not-a-real-value",
+      categories: null,
+      category: null,
+      photo_count: null,
+      business_status: null,
+    });
+    expect(input.httpsStatus).toBeNull();
   });
 });
 

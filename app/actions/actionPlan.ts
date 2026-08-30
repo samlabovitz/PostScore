@@ -93,7 +93,7 @@ export async function markTaskDone(businessId: string, checkId: string): Promise
   const { data: business, error: businessError } = await supabase
     .from("businesses")
     .select(
-      "rating, review_count, phone, address, opening_hours, website, categories, category, photo_count, business_status"
+      "rating, review_count, phone, address, opening_hours, website, categories, category, photo_count, business_status, https_status"
     )
     .eq("id", businessId)
     .single();

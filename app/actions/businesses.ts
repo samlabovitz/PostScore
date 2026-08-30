@@ -2,13 +2,21 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { PlaceDetails } from "@/lib/google/places";
+import { checkWebsiteHttps } from "@/lib/websiteHttps";
 
 export type SaveBusinessResult =
   | { status: "saved"; businessId: string }
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
 
-/** Persists a looked-up Google place as a business owned by the current user. */
+/**
+ * Persists a looked-up Google place as a business owned by the current
+ * user. Also runs a real HTTPS probe of the site here (see
+ * lib/websiteHttps.ts) — this is the one "data collection" moment for
+ * that fact, same as every other Google-derived field, so it's cached
+ * onto the row rather than re-checked on every score view. When there's
+ * no website, https_status stays null (nothing to check).
+ */
 export async function saveBusiness(
   place: PlaceDetails
 ): Promise<SaveBusinessResult> {
@@ -22,6 +30,8 @@ export async function saveBusiness(
   if (userError || !user) {
     return { status: "unauthenticated" };
   }
+
+  const httpsStatus = place.website ? await checkWebsiteHttps(place.website) : null;
 
   const { data, error } = await supabase
     .from("businesses")
@@ -44,6 +54,8 @@ export async function saveBusiness(
         google_maps_uri: place.googleMapsUri,
         lat: place.location?.lat ?? null,
         lng: place.location?.lng ?? null,
+        https_status: httpsStatus,
+        https_checked_at: httpsStatus ? new Date().toISOString() : null,
       },
       { onConflict: "owner_id,place_id" }
     )

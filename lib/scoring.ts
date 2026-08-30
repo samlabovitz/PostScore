@@ -8,10 +8,19 @@
 // scores comparable over time and what makes the suggestion→score
 // guarantee below possible to prove with a test.
 //
+// A couple of input fields (mostRecentReviewDaysAgo, httpsStatus)
+// represent facts that can only be established by doing real work
+// outside this module — reading the clock, or making a network
+// request — at data-collection time. That work happens elsewhere (see
+// lib/websiteHttps.ts for the HTTPS probe) and its result is frozen
+// into the input once, before scoreBusiness ever runs. This module
+// never re-derives those facts itself and never makes them up.
+//
 // Every point on the board is tied to a real field that Google Places
-// returned (or a real, derived fact about that field, like "does this
-// URL start with https://"). Nothing here estimates search rank,
-// invents an SEO score, or asks an LLM to guess a quality level. Where
+// returned, or a real fact established some other honest way (like an
+// actual network probe of the business's website — see httpsStatus).
+// Nothing here estimates search rank, invents an SEO score, or asks an
+// LLM to guess a quality level. Where
 // we can't determine a check from real data (Google didn't return the
 // field, or we haven't built the underlying data collection yet), the
 // check is marked NOT_FOUND/UNCERTAIN and is excluded from scoring —
@@ -27,7 +36,7 @@
  * records the version that produced it, so historical scores stay
  * interpretable even after the formula evolves.
  */
-export const SCORING_VERSION = "1.4.0";
+export const SCORING_VERSION = "1.5.0";
 
 // ---------------------------------------------------------------------------
 // Core types
@@ -53,6 +62,28 @@ export const SCORING_VERSION = "1.4.0";
  * as a zero — absence of proof isn't proof of a problem.
  */
 export type Confidence = "VERIFIED" | "LIKELY" | "UNCERTAIN" | "NOT_FOUND";
+
+/**
+ * Result of an actual network probe of a business's website — see
+ * lib/websiteHttps.ts for how this gets computed (a real HTTPS
+ * request, following redirects, made outside this module and once per
+ * save, not per score) and app/actions/businesses.ts for where it's
+ * cached onto the business row. lib/scoring.ts never makes the
+ * request itself; website.https below only scores whatever fact was
+ * frozen into the input, same as mostRecentReviewDaysAgo.
+ * - "https": the site was reached and responded successfully over
+ *   HTTPS, after following any redirects. This is deliberately
+ *   independent of what scheme Google's listed URL uses — a business
+ *   can list "http://example.com" on Google while the real site
+ *   redirects to HTTPS, and this correctly reflects the real site.
+ * - "http_only": the site was reached over HTTP, but no working HTTPS
+ *   endpoint could be confirmed even when requested directly.
+ * - "unreachable": the probe could not complete at all (timeout,
+ *   network error, DNS failure, or the site blocked the request).
+ *   This proves nothing about whether HTTPS actually works, so it
+ *   must never be scored as a failure.
+ */
+export type HttpsCheckStatus = "https" | "http_only" | "unreachable";
 
 export type Grade = "A" | "B" | "C" | "D" | "F";
 
@@ -106,6 +137,14 @@ export interface BusinessScoringInput {
   openingHours: string[] | null;
   /** Website URL on the Google listing (same field the Website category evaluates). */
   website: string | null;
+  /**
+   * Whether the website actually serves HTTPS, from a real network
+   * probe — see HttpsCheckStatus above. null = not yet checked (either
+   * this business has never been saved/re-saved since the probe was
+   * added, or it has no website to check). Never inferred from the
+   * `website` string's scheme.
+   */
+  httpsStatus: HttpsCheckStatus | null;
   /**
    * Category/type strings from Google (e.g. `types`). null/empty =
    * Google returned no category list.
@@ -360,14 +399,6 @@ function recencyFraction(daysAgo: number): number {
     (d - RECENCY_FULL_CREDIT_DAYS) /
       (RECENCY_ZERO_CREDIT_DAYS - RECENCY_FULL_CREDIT_DAYS)
   );
-}
-
-/** Detects the URL scheme without assuming a malformed URL is a failure. */
-function detectScheme(website: string): "https" | "http" | "unknown" {
-  const trimmed = website.trim();
-  if (/^https:\/\//i.test(trimmed)) return "https";
-  if (/^http:\/\//i.test(trimmed)) return "http";
-  return "unknown";
 }
 
 function roundTo(value: number, decimals: number): number {
@@ -729,31 +760,39 @@ export const CHECKS: CheckDefinition[] = [
           explanation: "Not applicable — no website on file to check.",
         };
       }
-      const scheme = detectScheme(input.website);
-      if (scheme === "https") {
+      if (input.httpsStatus === "https") {
         return {
           earnedPoints: 6,
           confidence: "VERIFIED",
-          explanation: "Website uses HTTPS.",
+          explanation: "Confirmed by a live check: the site loads successfully over HTTPS.",
         };
       }
-      if (scheme === "http") {
+      if (input.httpsStatus === "http_only") {
         return {
           earnedPoints: 0,
           confidence: "VERIFIED",
-          explanation: "Website uses HTTP, not HTTPS.",
+          explanation: "Confirmed by a live check: the site only loads over HTTP — no working HTTPS was found.",
         };
       }
+      // input.httpsStatus is "unreachable" or (more commonly) null — a
+      // live check either couldn't complete or hasn't run yet. Either
+      // way this is honestly excluded, never scored as a failure just
+      // because we lack proof — a failed or missing probe says nothing
+      // about whether the site's HTTPS actually works.
       return {
         earnedPoints: null,
-        confidence: "UNCERTAIN",
-        explanation: "Website URL has no recognizable http/https scheme — can't verify HTTPS.",
+        confidence: "NOT_FOUND",
+        explanation:
+          input.httpsStatus === "unreachable"
+            ? "Couldn't verify HTTPS — a live check of this site timed out, hit a network error, or was blocked. Excluded from your score, not counted against you."
+            : "HTTPS hasn't been checked for this site yet.",
       };
     },
     simulateFix: (input) => {
-      if (!input.website) return { ...input, website: "https://example.com" };
-      const withoutScheme = input.website.replace(/^https?:\/\//i, "");
-      return { ...input, website: `https://${withoutScheme}` };
+      if (!input.website || input.website.trim().length === 0) {
+        return { ...input, website: "https://example.com", httpsStatus: "https" };
+      }
+      return { ...input, httpsStatus: "https" };
     },
   },
   {
@@ -944,6 +983,20 @@ export interface BusinessScoringRow {
   category: string | null;
   photo_count: number | null;
   business_status: string | null;
+  /** Cached result of the real HTTPS probe — see HttpsCheckStatus.
+   * Stored as plain text since it comes from Postgres; narrowed back
+   * to the real union by parseHttpsStatus below rather than trusted
+   * with a blind cast. */
+  https_status: string | null;
+}
+
+/** Narrows a stored https_status string back to the real union,
+ * degrading anything unexpected to null (never-checked) rather than
+ * trusting an unvalidated cast — this is our own cached column, but a
+ * bad value here should fail safe (excluded) rather than silently
+ * mis-score. */
+function parseHttpsStatus(value: string | null): HttpsCheckStatus | null {
+  return value === "https" || value === "http_only" || value === "unreachable" ? value : null;
 }
 
 /** Maps a saved business row to scoring input. Pure. */
@@ -957,6 +1010,7 @@ export function businessRowToScoringInput(row: BusinessScoringRow): BusinessScor
     address: row.address,
     openingHours: row.opening_hours,
     website: row.website,
+    httpsStatus: parseHttpsStatus(row.https_status),
     categories: row.categories,
     primaryCategory: row.category,
     photoCount: row.photo_count,

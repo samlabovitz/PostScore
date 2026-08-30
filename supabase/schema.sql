@@ -548,3 +548,23 @@ as $$
 $$;
 
 grant execute on function public.increment_referral_redemption(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- HTTPS check caching (lib/websiteHttps.ts, lib/scoring.ts's website.https
+-- check — fixes the check previously guessing HTTPS from the URL string)
+-- ---------------------------------------------------------------------------
+
+-- A real, server-side network probe of the business's website (see
+-- lib/websiteHttps.ts) is run once when the business is saved/re-saved
+-- (see saveBusiness in app/actions/businesses.ts) and its result cached
+-- here, rather than re-fetched on every score view. https_status holds
+-- one of 'https' | 'http_only' | 'unreachable' (see HttpsCheckStatus in
+-- lib/scoring.ts) as plain text — validated back into that union by
+-- parseHttpsStatus when read, never trusted blindly. Both columns are
+-- nullable: an already-saved business won't have either until it's next
+-- saved, and the scoring engine treats null exactly like a probe that
+-- couldn't complete — excluded from the score, never scored as a
+-- failure.
+alter table public.businesses
+  add column if not exists https_status text,
+  add column if not exists https_checked_at timestamptz;
