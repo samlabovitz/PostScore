@@ -25,9 +25,10 @@ import {
   generateCouponCode,
 } from "@/lib/coupons";
 import { downloadDataUrl, renderCouponPng } from "@/lib/couponImage";
+import { buildShareCaption } from "@/lib/promos";
 import type { BizProfile } from "@/config/bizProfiles";
 import type { StartPromoInput, StartPromoResult } from "@/app/actions/promos";
-import { ShareCouponModal } from "./ShareCouponModal";
+import { ShareModal } from "./ShareModal";
 
 const DEFAULT_EXPIRY_DAYS = 60;
 const DEFAULT_INSTRUCTIONS = "Show this coupon in-store to redeem.";
@@ -462,14 +463,17 @@ export function CouponBuilder({
         </div>
       </div>
 
-      <ShareCouponModal
+      <ShareModal
         open={shareOpen}
         onClose={() => setShareOpen(false)}
-        businessName={businessName}
-        offer={offer}
-        code={code}
-        expiryLabel={formatExpiry(expiry)}
-        phone={businessPhone}
+        title="How to share your coupon"
+        caption={buildShareCaption({
+          businessName,
+          offer,
+          code,
+          expiryLabel: formatExpiry(expiry),
+          phone: businessPhone,
+        })}
       />
     </div>
   );

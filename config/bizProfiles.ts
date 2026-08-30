@@ -44,6 +44,23 @@ export interface CouponAngles {
   slowDay: string;
 }
 
+/**
+ * A referral reward structure, hand-written per profile exactly like
+ * CouponPreset — the reward has to fit how this kind of business makes
+ * money (a salon can afford a service discount; a restaurant can
+ * afford a free item; retail can afford a flat credit), so it's never
+ * generated or shared across verticals.
+ */
+export interface ReferralPreset {
+  id: string;
+  /** What the person doing the referring gets, e.g. "$15 off your next visit". */
+  referrerReward: string;
+  /** What the new customer they refer gets, e.g. "20% off their first visit". */
+  friendReward: string;
+  /** When/why an owner would use this one — same purpose as CouponPreset.description. */
+  description: string;
+}
+
 export interface FaqEntry {
   /** May contain {businessName} / {city} tokens — see renderFaq(). */
   question: string;
@@ -91,6 +108,13 @@ export interface BizProfile {
    * normal, unrestricted marketing tactic.
    */
   referralOk: boolean;
+  /**
+   * Ready-made referrer/friend reward pairs for the Refer a friend
+   * builder — always populated when referralOk is true, always empty
+   * when it's false (the referral segment never mounts in that case,
+   * so there's nothing to populate it with).
+   */
+  referralPresets: ReferralPreset[];
 }
 
 const SALON_PROFILE: BizProfile = {
@@ -161,6 +185,20 @@ const SALON_PROFILE: BizProfile = {
     },
   ],
   referralOk: true,
+  referralPresets: [
+    {
+      id: "pct_off_both",
+      referrerReward: "$15 off your next visit",
+      friendReward: "20% off their first visit",
+      description: "The classic salon referral — rewards loyalty and removes the risk of trying someone new.",
+    },
+    {
+      id: "free_addon",
+      referrerReward: "A free add-on (blowout, brow wax, etc.) on your next visit",
+      friendReward: "10% off their first appointment",
+      description: "Costs you time and product, not cash — a good option if you'd rather not discount services directly.",
+    },
+  ],
 };
 
 const RESTAURANT_PROFILE: BizProfile = {
@@ -233,6 +271,20 @@ const RESTAURANT_PROFILE: BizProfile = {
     },
   ],
   referralOk: true,
+  referralPresets: [
+    {
+      id: "free_item_both",
+      referrerReward: "A free appetizer or dessert on your next visit",
+      friendReward: "A free appetizer or dessert on their first order",
+      description: "Free items cost less than a straight discount and feel generous to both sides.",
+    },
+    {
+      id: "pct_off_both",
+      referrerReward: "$10 off your next order",
+      friendReward: "15% off their first order",
+      description: "Straightforward cash-off works well for takeout and delivery orders.",
+    },
+  ],
 };
 
 const LAWYER_PROFILE: BizProfile = {
@@ -283,8 +335,12 @@ const LAWYER_PROFILE: BizProfile = {
   ],
   // See the field's own doc comment above: referral fee arrangements are
   // restricted for attorneys under most states' rules of professional
-  // conduct, so PostScore doesn't suggest one here.
+  // conduct, so PostScore doesn't suggest one here. Empty rather than
+  // omitted so the field stays required across every profile — this
+  // array is simply never read, since the referral segment never
+  // mounts when referralOk is false.
   referralOk: false,
+  referralPresets: [],
 };
 
 /**
@@ -371,6 +427,20 @@ const PRACTITIONER_PROFILE: BizProfile = {
     },
   ],
   referralOk: true,
+  referralPresets: [
+    {
+      id: "free_session_both",
+      referrerReward: "A free class or session",
+      friendReward: "A free class or session",
+      description: "Especially effective for group classes, where an extra attendee costs you almost nothing.",
+    },
+    {
+      id: "credit_toward_session",
+      referrerReward: "$15 credit toward your next session",
+      friendReward: "20% off their first session",
+      description: "Works well for 1:1 appointment-based practices where a free slot is a real cost.",
+    },
+  ],
 };
 
 /**
@@ -431,6 +501,20 @@ const DEFAULT_PROFILE: BizProfile = {
     },
   ],
   referralOk: true,
+  referralPresets: [
+    {
+      id: "credit_both",
+      referrerReward: "$10 account credit",
+      friendReward: "$10 off their first purchase",
+      description: "Account credit keeps them coming back; works for almost any retail or transaction-based business.",
+    },
+    {
+      id: "pct_off_both",
+      referrerReward: "10% off your next purchase",
+      friendReward: "10% off their first purchase",
+      description: "A simple, universally understood reward for both sides.",
+    },
+  ],
 };
 
 /**

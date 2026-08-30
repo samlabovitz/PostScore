@@ -412,3 +412,139 @@ as $$
 $$;
 
 grant execute on function public.increment_promo_redemption(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Referral program support (lib/referrals.ts, Day 10 pass 2)
+-- ---------------------------------------------------------------------------
+
+-- A dedicated table rather than reusing `promos` with a type of
+-- 'referral': a referral is genuinely two-sided (a reward for the
+-- referrer AND a separate reward for the friend they bring), which
+-- `promos` has no columns for, and it has its own active-limit rule
+-- (see enforce_max_active_referrals below) that's different from the
+-- coupon 2-max and would have had to special-case `type` inside the
+-- shared enforce_max_active_promos trigger. Real, named columns for
+-- both rewards and a trigger that only ever means one thing is cleaner
+-- than overloading `promos.offer` or bolting nullable referral-only
+-- columns onto a table other code already depends on.
+create table if not exists public.referrals (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses (id) on delete cascade,
+  referrer_reward text not null,
+  friend_reward text not null,
+  code text not null,
+  redemptions integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists referrals_business_id_idx
+  on public.referrals (business_id);
+
+-- Speeds up the "does this business already have an active referral"
+-- check the trigger below runs on every insert/update.
+create index if not exists referrals_business_active_idx
+  on public.referrals (business_id)
+  where active;
+
+alter table public.referrals enable row level security;
+
+drop policy if exists "Users can view referrals for their own businesses" on public.referrals;
+create policy "Users can view referrals for their own businesses"
+  on public.referrals for select
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = referrals.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can insert referrals for their own businesses" on public.referrals;
+create policy "Users can insert referrals for their own businesses"
+  on public.referrals for insert
+  with check (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = referrals.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can update referrals for their own businesses" on public.referrals;
+create policy "Users can update referrals for their own businesses"
+  on public.referrals for update
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = referrals.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = referrals.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can delete referrals for their own businesses" on public.referrals;
+create policy "Users can delete referrals for their own businesses"
+  on public.referrals for delete
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = referrals.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+-- Enforces "at most 1 active referral program per business" as a real
+-- database invariant, same real-enforcement approach as the coupon
+-- 2-max (enforce_max_active_promos above). One active referral is the
+-- right default — unlike coupons, where a business plausibly runs a
+-- first-visit offer AND a separate slow-day offer at once, a referral
+-- program is a single standing structure ("bring a friend, you both
+-- get X"); running two simultaneously just means two different
+-- rewards for the same action, which is confusing rather than useful.
+create or replace function public.enforce_max_active_referrals()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.active then
+    if (
+      select count(*) from public.referrals
+      where business_id = new.business_id
+        and active
+        and id <> new.id
+    ) >= 1 then
+      raise exception 'A business can run at most 1 active referral program at once. End it before starting another.'
+        using errcode = 'P0001';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists referrals_enforce_max_active on public.referrals;
+create trigger referrals_enforce_max_active
+  before insert or update on public.referrals
+  for each row execute function public.enforce_max_active_referrals();
+
+-- Atomic "+1 Referral" tap — same reasoning as increment_promo_redemption
+-- above: a plain client-side read-then-update could lose a count under
+-- concurrent taps, and `language sql` (not `security definer`) keeps
+-- this subject to the update RLS policy above.
+create or replace function public.increment_referral_redemption(p_referral_id uuid)
+returns integer
+language sql
+as $$
+  update public.referrals
+  set redemptions = redemptions + 1
+  where id = p_referral_id
+  returning redemptions;
+$$;
+
+grant execute on function public.increment_referral_redemption(uuid) to authenticated;

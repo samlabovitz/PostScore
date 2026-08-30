@@ -3,7 +3,6 @@
 import { IconBrandGoogle, IconBrandInstagram, IconMessage, IconPrinter } from "@tabler/icons-react";
 import { Modal } from "@/components/ui/Modal";
 import { CopyBlock } from "@/components/ui/CopyBlock";
-import { buildShareCaption } from "@/lib/promos";
 
 interface ShareOption {
   icon: typeof IconBrandGoogle;
@@ -15,12 +14,12 @@ const OPTIONS: ShareOption[] = [
   {
     icon: IconBrandGoogle,
     title: "Post to your Google Business Profile",
-    howTo: "Open your Business Profile, go to Posts → Add update, paste the caption below, and attach the coupon image you downloaded.",
+    howTo: "Open your Business Profile, go to Posts → Add update, paste the caption below, and attach the image you downloaded.",
   },
   {
     icon: IconBrandInstagram,
     title: "Post to Instagram or Facebook",
-    howTo: "Start a new post or story, attach the coupon image, and paste the caption below.",
+    howTo: "Start a new post or story, attach the image, and paste the caption below.",
   },
   {
     icon: IconMessage,
@@ -30,35 +29,32 @@ const OPTIONS: ShareOption[] = [
   {
     icon: IconPrinter,
     title: "Print it for the counter",
-    howTo: "Print the coupon image and set it by the register, window, or waiting area.",
+    howTo: "Print the image and set it by the register, window, or waiting area.",
   },
 ];
 
-export function ShareCouponModal({
+/** Honest hand-off sharing instructions, shared by the coupon and
+ * referral features: the caller builds the pre-written caption
+ * (buildShareCaption / buildReferralShareCaption in lib/promos.ts and
+ * lib/referrals.ts) and this modal just explains where to post it —
+ * PostScore never posts or sends anything itself. */
+export function ShareModal({
   open,
   onClose,
-  businessName,
-  offer,
-  code,
-  expiryLabel,
-  phone,
+  title,
+  caption,
 }: {
   open: boolean;
   onClose: () => void;
-  businessName: string;
-  offer: string;
-  code: string;
-  expiryLabel: string;
-  phone?: string | null;
+  title: string;
+  caption: string;
 }) {
-  const caption = buildShareCaption({ businessName, offer, code, expiryLabel, phone });
-
   return (
-    <Modal open={open} onClose={onClose} title="How to share your coupon">
+    <Modal open={open} onClose={onClose} title={title}>
       <div className="flex flex-col gap-4">
         <p className="text-[12.5px] text-ink-mute">
           PostScore doesn&apos;t post to Google, Instagram, or text anyone automatically — download
-          the coupon image, then use any of these to post or send it yourself.
+          the image, then use any of these to post or send it yourself.
         </p>
 
         <div className="flex flex-col divide-y divide-paper-line">

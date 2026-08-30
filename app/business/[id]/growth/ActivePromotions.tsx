@@ -6,8 +6,8 @@ import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
 import { formatExpiry } from "@/lib/coupons";
-import { redemptionLabel, type PromoRow } from "@/lib/promos";
-import { ShareCouponModal } from "./ShareCouponModal";
+import { buildShareCaption, redemptionLabel, type PromoRow } from "@/lib/promos";
+import { ShareModal } from "./ShareModal";
 import type { EndPromoResult, IncrementRedemptionResult } from "@/app/actions/promos";
 
 type RedeemState = { kind: "idle" } | { kind: "saving" } | { kind: "error"; message: string };
@@ -105,14 +105,17 @@ function PromoCard({
       {redeemState.kind === "error" && <p className="text-[12px] text-red">{redeemState.message}</p>}
       {endState.kind === "error" && <p className="text-[12px] text-red">{endState.message}</p>}
 
-      <ShareCouponModal
+      <ShareModal
         open={shareOpen}
         onClose={() => setShareOpen(false)}
-        businessName={businessName}
-        offer={promo.offer}
-        code={promo.code}
-        expiryLabel={expiryLabel}
-        phone={businessPhone}
+        title="How to share your coupon"
+        caption={buildShareCaption({
+          businessName,
+          offer: promo.offer,
+          code: promo.code,
+          expiryLabel,
+          phone: businessPhone,
+        })}
       />
     </div>
   );

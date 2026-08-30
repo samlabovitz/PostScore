@@ -13,6 +13,7 @@ import type { ActionPlanTask, CompletedTask } from "@/lib/actionPlan";
 import type { ScoreBreakdown } from "@/lib/scoring";
 import type { BizProfile } from "@/config/bizProfiles";
 import type { PromoRow } from "@/lib/promos";
+import type { ReferralRow } from "@/lib/referrals";
 
 // The builder generates a random coupon code and reads window.location
 // on first render — genuinely client-only state, not something that
@@ -21,6 +22,13 @@ import type { PromoRow } from "@/lib/promos";
 // over it with an effect-delayed placeholder.
 const CouponsSection = dynamic(
   () => import("./CouponsSection").then((m) => m.CouponsSection),
+  { ssr: false, loading: () => <Card className="p-8 text-sm text-ink-soft">Loading…</Card> }
+);
+
+// The referral builder generates a random code on first render — same
+// genuinely client-only state as the coupon builder, same ssr:false fix.
+const ReferralSection = dynamic(
+  () => import("./ReferralSection").then((m) => m.ReferralSection),
   { ssr: false, loading: () => <Card className="p-8 text-sm text-ink-soft">Loading…</Card> }
 );
 
@@ -33,15 +41,6 @@ function gradeTransitionLabel(from: string, to: string): string {
   return from === to ? `Stays a ${to}` : `${from} → ${to}`;
 }
 
-function ComingTogether({ title, body }: { title: string; body: string }) {
-  return (
-    <Card className="p-8 text-center">
-      <div className="text-sm font-semibold text-ink">{title}</div>
-      <p className="mx-auto mt-1.5 max-w-md text-[13px] text-ink-soft">{body}</p>
-    </Card>
-  );
-}
-
 export function GrowthView({
   businessId,
   businessName,
@@ -51,6 +50,7 @@ export function GrowthView({
   breakdown,
   actionPlan,
   initialPromos,
+  initialReferral,
 }: {
   businessId: string;
   businessName: string | null;
@@ -59,6 +59,7 @@ export function GrowthView({
   referralOk: boolean;
   breakdown: ScoreBreakdown;
   initialPromos: PromoRow[];
+  initialReferral: ReferralRow | null;
   actionPlan: {
     tasks: ActionPlanTask[];
     completed: CompletedTask[];
@@ -170,9 +171,12 @@ export function GrowthView({
       )}
 
       {segment === "referral" && referralOk && (
-        <ComingTogether
-          title="Refer a friend is coming together"
-          body="Soon you'll be able to set up a referral reward so happy customers can send new ones your way."
+        <ReferralSection
+          businessId={businessId}
+          businessName={businessName ?? "Your business"}
+          businessPhone={businessPhone}
+          profile={profile}
+          initialReferral={initialReferral}
         />
       )}
     </div>

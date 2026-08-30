@@ -5,6 +5,7 @@ import { getBusinessSummary } from "@/app/actions/businesses";
 import { scoreBusinessById } from "@/app/actions/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
 import { listActivePromos } from "@/app/actions/promos";
+import { getActiveReferral } from "@/app/actions/referrals";
 import { businessRowToScoringInput } from "@/lib/scoring";
 import { bizProfile } from "@/config/bizProfiles";
 import { GrowthView } from "./GrowthView";
@@ -49,6 +50,11 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   const promosResult = await listActivePromos(params.id);
   const initialPromos = promosResult.status === "ok" ? promosResult.promos : [];
 
+  // Only businesses with referralOk ever see the Refer a friend segment
+  // (see GrowthView), so there's no reason to query it for the rest.
+  const referralResult = profile.referralOk ? await getActiveReferral(params.id) : null;
+  const initialReferral = referralResult?.status === "ok" ? referralResult.referral : null;
+
   const actionPlan =
     actionPlanResult.status === "ok"
       ? actionPlanResult
@@ -75,6 +81,7 @@ export default async function GrowthPage({ params }: { params: { id: string } })
         breakdown={scored.result.breakdown}
         actionPlan={actionPlan}
         initialPromos={initialPromos}
+        initialReferral={initialReferral}
       />
     </DashboardShell>
   );
