@@ -21,6 +21,24 @@ import {
  * on purpose — every entry costs one Places Details call. */
 export const MAX_COMPETITORS = 5;
 
+/**
+ * Diagnostic-only, off by default. Set the DEBUG_COMPETITORS=1
+ * environment variable (server-side — this never runs in the browser)
+ * to print, for every findAndScoreCompetitors() call: the subject's
+ * name/primaryType/types[], and for every raw Nearby Search candidate
+ * at every radius tier actually searched, its name/primaryType/types[]/
+ * distance and the exact isSameCategory verdict + reason (see
+ * categorizeMatch below) — never a guess, always the real rule that
+ * matched or failed. This never changes matching behavior, only
+ * observes it; output goes to the server console (the `next dev`
+ * terminal), since this runs inside a server action.
+ */
+const DEBUG_COMPETITORS = process.env.DEBUG_COMPETITORS === "1";
+
+function debugLog(...args: unknown[]): void {
+  if (DEBUG_COMPETITORS) console.log("[competitors]", ...args);
+}
+
 const METERS_PER_MILE = 1609.34;
 
 /**
@@ -198,7 +216,20 @@ function firstSpecificType(types: Array<string | null | undefined>): string | nu
  */
 const CATEGORY_FAMILIES: string[][] = [
   ["hair_salon", "beauty_salon", "hair_care"],
-  ["mexican_restaurant", "tex_mex_restaurant", "burrito_restaurant", "taco_restaurant"],
+  [
+    "mexican_restaurant",
+    "tex_mex_restaurant",
+    "burrito_restaurant",
+    "taco_restaurant",
+    // Real, live Google data (see DEBUG_COMPETITORS): a genuine burrito
+    // place — El Diablo Burritos, Newark DE — comes back with
+    // primaryType "southwestern_us_restaurant" and "burrito_restaurant"
+    // only as a secondary type. Since categorizeMatch() requires the
+    // family match on primaryType (a secondary tag isn't enough — see
+    // its doc comment), that business never matched "mexican_restaurant"
+    // subjects (e.g. Chipotle) in either direction until this was added.
+    "southwestern_us_restaurant",
+  ],
 ];
 
 function categoryFamilyFor(type: string): string[] | null {
@@ -428,6 +459,15 @@ export async function findAndScoreCompetitors(
 
   const referenceType = specificType;
 
+  debugLog("SUBJECT", {
+    name: subject.name,
+    primaryType: subject.primaryType,
+    types: subject.categories ?? [],
+    category: subject.category,
+    resolvedReferenceType: referenceType,
+    resolvedReferenceDisplayName: referenceDisplayName,
+  });
+
   if (!referenceType && !referenceDisplayName) {
     return emptyResult(
       "no_category",
@@ -448,6 +488,7 @@ export async function findAndScoreCompetitors(
   // "hair_salon" isn't filtered out server-side before isSameCategory()
   // ever sees it.
   const includedTypes = referenceType ? comparableTypesFor(referenceType) : undefined;
+  debugLog("includedTypes requested from Nearby Search:", includedTypes ?? "(none — no specific reference type)");
 
   // Start at the narrowest radius tier ("who is actually nearby") and
   // only widen if it genuinely doesn't turn up enough comparable
@@ -473,6 +514,25 @@ export async function findAndScoreCompetitors(
       );
     }
 
+    if (DEBUG_COMPETITORS) {
+      debugLog(
+        `tier ${tier} (radius ${formatMiles(RADIUS_TIERS_METERS[tier])} mi): ${candidates.length} raw candidate(s) from Nearby Search`
+      );
+      for (const c of candidates) {
+        const verdict = categorizeMatch(c, { type: referenceType, displayName: referenceDisplayName });
+        const distanceMeters = c.location ? haversineMeters(subjectLocation, c.location) : null;
+        debugLog("  candidate", {
+          name: c.name,
+          primaryType: c.primaryType,
+          types: c.types ?? [],
+          distanceMi: distanceMeters !== null ? metersToMiles(distanceMeters).toFixed(2) : "— (no location)",
+          businessStatus: c.businessStatus,
+          isSameCategory: verdict.matches,
+          reason: verdict.reason,
+        });
+      }
+    }
+
     comparable = candidates
       .filter((c) => c.placeId !== subject.placeId)
       .filter((c) => !isClosedStatus(c.businessStatus))
@@ -484,6 +544,8 @@ export async function findAndScoreCompetitors(
       }))
       .sort((a, b) => a.distanceMeters - b.distanceMeters)
       .slice(0, MAX_COMPETITORS);
+
+    debugLog(`tier ${tier}: ${comparable.length} candidate(s) passed every filter (isSameCategory + open + has location)`);
 
     if (comparable.length >= MAX_COMPETITORS) break;
     if (tier < RADIUS_TIERS_METERS.length - 1) searchWidened = true;
