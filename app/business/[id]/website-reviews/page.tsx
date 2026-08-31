@@ -1,59 +1,42 @@
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import { IconArrowLeft } from "@tabler/icons-react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
-import { SectionHeading } from "@/components/ui/SectionHeading";
-import { getBusinessSummary } from "@/app/actions/businesses";
+import { getReviewsPageData } from "@/app/actions/reviews";
 import { bizProfile, renderFaq } from "@/config/bizProfiles";
+import { ReviewsAndWebsiteView } from "./ReviewsAndWebsiteView";
 
 export default async function WebsiteReviewsPage({ params }: { params: { id: string } }) {
-  const summary = await getBusinessSummary(params.id);
+  const result = await getReviewsPageData(params.id);
 
-  if (summary.status === "unauthenticated") {
+  if (result.status === "unauthenticated") {
     redirect("/login");
   }
-  if (summary.status === "not_found") {
+  if (result.status === "not_found") {
     notFound();
   }
+  if (result.status === "error") {
+    return (
+      <DashboardShell>
+        <Card className="p-5 text-sm text-red">{result.message}</Card>
+      </DashboardShell>
+    );
+  }
 
-  const { business } = summary;
-  const profile = bizProfile(business.category, business.primary_type);
-  const faq = renderFaq(profile.faq, business);
+  const { data } = result;
+  const profile = bizProfile(data.category, data.primaryType);
+  const faq = renderFaq(profile.faq, { name: data.businessName, address: data.address });
 
   return (
-    <DashboardShell business={business}>
-      <div className="flex flex-col gap-6 nav:gap-8">
-        <div>
-          <Link
-            href={`/business/${business.id}`}
-            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
-          >
-            <IconArrowLeft size={15} />
-            Back to {business.name ?? "business"}
-          </Link>
-          <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
-            Website & Reviews
-          </h1>
-          <p className="mt-1 text-sm text-ink-soft">
-            A starter FAQ draft for your website, based on what customers of a{" "}
-            {profile.label.toLowerCase()} business typically ask — publishing tools are still coming
-            together, but you&apos;re welcome to copy this in today.
-          </p>
-        </div>
-
-        <SectionHeading title="FAQ draft" />
-        <Card className="p-5">
-          <div className="flex flex-col divide-y divide-paper-line">
-            {faq.map((entry) => (
-              <div key={entry.question} className="py-3 first:pt-0 last:pb-0">
-                <div className="text-sm font-semibold text-ink">{entry.question}</div>
-                <p className="mt-0.5 text-[13px] text-ink-soft">{entry.answer}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+    <DashboardShell
+      business={{
+        id: params.id,
+        name: data.businessName,
+        address: data.address,
+        category: data.category,
+        primary_type: data.primaryType,
+      }}
+    >
+      <ReviewsAndWebsiteView businessId={params.id} reviews={data} faq={faq} />
     </DashboardShell>
   );
 }

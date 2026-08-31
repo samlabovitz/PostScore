@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   IconLayoutDashboard,
   IconTrendingUp,
-  IconWorld,
+  IconStar,
   IconUsers,
   IconTag,
   IconFileText,
@@ -27,7 +27,7 @@ const NAV_ITEMS: Array<{
 }> = [
   { label: "Overview", icon: IconLayoutDashboard, path: (id) => `/business/${id}` },
   { label: "Growth", icon: IconTrendingUp, path: (id) => `/business/${id}/growth` },
-  { label: "Website & Reviews", icon: IconWorld, path: (id) => `/business/${id}/website-reviews` },
+  { label: "Reviews", icon: IconStar, path: (id) => `/business/${id}/website-reviews` },
   { label: "Competitors", icon: IconUsers, path: (id) => `/business/${id}/competitors` },
   { label: "Pricing", icon: IconTag, path: (id) => `/business/${id}/pricing` },
   { label: "Reports", icon: IconFileText, path: (id) => `/business/${id}/reports` },
