@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { IconArrowLeft, IconMessageCircle, IconStar } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { StatTile } from "@/components/ui/StatTile";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/SegmentedControl";
 import { CategoryCard } from "@/components/scoring/CategoryCard";
 import {
   ratingCaption,
@@ -16,9 +14,6 @@ import {
 } from "@/lib/reviews";
 import { GetMoreReviews } from "./GetMoreReviews";
 import type { ReviewsPageData } from "@/app/actions/reviews";
-import type { FaqEntry } from "@/config/bizProfiles";
-
-type Segment = "reviews" | "website";
 
 function ReviewSocialProof({
   rating,
@@ -87,22 +82,13 @@ function ReplyAssistantComingSoon() {
   );
 }
 
-export function ReviewsAndWebsiteView({
+export function ReviewsView({
   businessId,
   reviews,
-  faq,
 }: {
   businessId: string;
   reviews: ReviewsPageData;
-  faq: FaqEntry[];
 }) {
-  const [segment, setSegment] = useState<Segment>("reviews");
-
-  const options: SegmentedControlOption<Segment>[] = [
-    { value: "reviews", label: "Reviews" },
-    { value: "website", label: "Website" },
-  ];
-
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
       <div>
@@ -122,59 +108,30 @@ export function ReviewsAndWebsiteView({
         </p>
       </div>
 
-      <SegmentedControl options={options} value={segment} onChange={setSegment} />
+      <ReviewSocialProof rating={reviews.rating} reviewCount={reviews.reviewCount} />
 
-      {segment === "reviews" && (
-        <div className="flex flex-col gap-6 nav:gap-8">
-          <ReviewSocialProof rating={reviews.rating} reviewCount={reviews.reviewCount} />
+      <div className="grid grid-cols-2 gap-6 sm:grid-cols-2">
+        <StatTile
+          label="Rating"
+          value={reviews.rating !== null ? `${reviews.rating.toFixed(1)} ★` : "—"}
+        />
+        <StatTile
+          label="Total reviews"
+          value={reviews.reviewCount !== null ? reviews.reviewCount.toLocaleString() : "—"}
+        />
+      </div>
 
-          <div className="grid grid-cols-2 gap-6 sm:grid-cols-2">
-            <StatTile
-              label="Rating"
-              value={reviews.rating !== null ? `${reviews.rating.toFixed(1)} ★` : "—"}
-            />
-            <StatTile
-              label="Total reviews"
-              value={reviews.reviewCount !== null ? reviews.reviewCount.toLocaleString() : "—"}
-            />
-          </div>
-
-          <div>
-            <div className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-              <IconStar size={13} />
-              The rubric behind your review score
-            </div>
-            <CategoryCard category={reviews.visibilityCategory} />
-          </div>
-
-          <GetMoreReviews businessName={reviews.businessName ?? "Your business"} placeId={reviews.placeId} />
-
-          <ReplyAssistantComingSoon />
+      <div>
+        <div className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
+          <IconStar size={13} />
+          The rubric behind your review score
         </div>
-      )}
+        <CategoryCard category={reviews.visibilityCategory} />
+      </div>
 
-      {segment === "website" && (
-        <div>
-          <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-            FAQ draft
-          </div>
-          <p className="mb-3 text-sm text-ink-soft">
-            A starter FAQ for your website, based on what customers of this kind of business
-            typically ask — publishing tools are still coming together, but you&apos;re welcome to
-            copy this in today.
-          </p>
-          <Card className="p-5">
-            <div className="flex flex-col divide-y divide-paper-line">
-              {faq.map((entry) => (
-                <div key={entry.question} className="py-3 first:pt-0 last:pb-0">
-                  <div className="text-sm font-semibold text-ink">{entry.question}</div>
-                  <p className="mt-0.5 text-[13px] text-ink-soft">{entry.answer}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      )}
+      <GetMoreReviews businessName={reviews.businessName ?? "Your business"} placeId={reviews.placeId} />
+
+      <ReplyAssistantComingSoon />
     </div>
   );
 }

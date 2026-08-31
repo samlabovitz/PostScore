@@ -2,8 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
 import { getReviewsPageData } from "@/app/actions/reviews";
-import { bizProfile, renderFaq } from "@/config/bizProfiles";
-import { ReviewsAndWebsiteView } from "./ReviewsAndWebsiteView";
+import { ReviewsView } from "./ReviewsView";
 
 export default async function WebsiteReviewsPage({ params }: { params: { id: string } }) {
   const result = await getReviewsPageData(params.id);
@@ -23,8 +22,6 @@ export default async function WebsiteReviewsPage({ params }: { params: { id: str
   }
 
   const { data } = result;
-  const profile = bizProfile(data.category, data.primaryType);
-  const faq = renderFaq(profile.faq, { name: data.businessName, address: data.address });
 
   return (
     <DashboardShell
@@ -36,7 +33,7 @@ export default async function WebsiteReviewsPage({ params }: { params: { id: str
         primary_type: data.primaryType,
       }}
     >
-      <ReviewsAndWebsiteView businessId={params.id} reviews={data} faq={faq} />
+      <ReviewsView businessId={params.id} reviews={data} />
     </DashboardShell>
   );
 }
