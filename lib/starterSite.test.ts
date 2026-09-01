@@ -12,6 +12,10 @@ const BASE: StarterSiteInput = {
   businessName: "Rosa's Cafe",
   category: "Cafe",
   tagline: "",
+  taglineFontId: "classic",
+  taglineColor: null,
+  taglineSize: "medium",
+  taglinePlacement: "below",
   phone: "+1 555-123-4567",
   address: "742 Evergreen Terrace, Springfield",
   openingHours: ["Monday: 9:00 AM – 5:00 PM"],
@@ -20,6 +24,7 @@ const BASE: StarterSiteInput = {
   googleMapsUri: "https://maps.google.com/?cid=123",
   profileId: "restaurant",
   themeId: "ink",
+  customAccent: null,
   fontId: "classic",
   show: { address: true, phone: true, hours: true, rating: true },
 };
@@ -43,7 +48,7 @@ describe("buildStarterSiteHtml", () => {
 
   test("never fabricates a tagline the owner didn't write", () => {
     const html = buildStarterSiteHtml({ ...BASE, tagline: "" });
-    expect(html).not.toContain('class="tagline"');
+    expect(html).not.toContain('class="tagline');
   });
 
   test("includes the owner's real tagline when they wrote one", () => {
@@ -134,6 +139,11 @@ describe("buildStarterSiteHtml", () => {
 });
 
 describe("getStarterSiteTheme / getStarterSiteFont", () => {
+  test("there are at least 8 themes and 8 fonts, spanning distinct moods/categories", () => {
+    expect(STARTER_SITE_THEMES.length).toBeGreaterThanOrEqual(8);
+    expect(STARTER_SITE_FONTS.length).toBeGreaterThanOrEqual(8);
+  });
+
   test("every theme id is unique and resolves to itself", () => {
     const ids = STARTER_SITE_THEMES.map((t) => t.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -154,9 +164,18 @@ describe("getStarterSiteTheme / getStarterSiteFont", () => {
     expect(getStarterSiteTheme("not-a-real-theme")).toBe(STARTER_SITE_THEMES[0]);
     expect(getStarterSiteFont("not-a-real-font")).toBe(STARTER_SITE_FONTS[0]);
   });
+
+  test("includes at least two genuinely characterful display fonts for headings", () => {
+    const displayIds = ["statement", "vintage"];
+    for (const id of displayIds) {
+      const font = getStarterSiteFont(id);
+      expect(font.id).toBe(id);
+      expect(font.heading.family).not.toBe(font.body.family);
+    }
+  });
 });
 
-describe("buildStarterSiteHtml: theme and font are baked into the output", () => {
+describe("buildStarterSiteHtml: theme, accent override, and font are baked into the output", () => {
   test("changing the theme changes the real colors in the generated CSS", () => {
     const ink = buildStarterSiteHtml({ ...BASE, themeId: "ink" });
     const terracotta = buildStarterSiteHtml({ ...BASE, themeId: "terracotta" });
@@ -171,12 +190,24 @@ describe("buildStarterSiteHtml: theme and font are baked into the output", () =>
     expect(new Set(htmls).size).toBe(STARTER_SITE_THEMES.length);
   });
 
+  test("a custom accent color overrides the theme's own accent everywhere accent is used", () => {
+    const html = buildStarterSiteHtml({ ...BASE, customAccent: "#ff00aa" });
+    expect(html).toContain("#ff00aa");
+    expect(html).not.toContain(getStarterSiteTheme("ink").accent);
+  });
+
+  test("an invalid custom accent falls back honestly to the theme's real accent", () => {
+    const html = buildStarterSiteHtml({ ...BASE, customAccent: "not-a-color" });
+    expect(html).toContain(getStarterSiteTheme("ink").accent);
+    expect(html).not.toContain("not-a-color");
+  });
+
   test("changing the font swaps both the Google Fonts link and the CSS font-family", () => {
     const classic = buildStarterSiteHtml({ ...BASE, fontId: "classic" });
     const elegant = buildStarterSiteHtml({ ...BASE, fontId: "elegant" });
-    expect(classic).toContain(getStarterSiteFont("classic").googleFontsHref);
+    expect(classic).toContain("family=Fraunces");
     expect(classic).toContain("Fraunces");
-    expect(elegant).toContain(getStarterSiteFont("elegant").googleFontsHref);
+    expect(elegant).toContain("family=Playfair+Display");
     expect(elegant).toContain("Playfair Display");
     expect(elegant).not.toContain("Fraunces");
   });
@@ -189,6 +220,65 @@ describe("buildStarterSiteHtml: theme and font are baked into the output", () =>
   test("an unrecognized theme or font id still produces a complete, styled document (safe fallback)", () => {
     const html = buildStarterSiteHtml({ ...BASE, themeId: "bogus", fontId: "bogus" });
     expect(html).toContain(STARTER_SITE_THEMES[0].heroBg);
-    expect(html).toContain(STARTER_SITE_FONTS[0].googleFontsHref);
+    expect(html).toContain(`family=${STARTER_SITE_FONTS[0].heading.family.replace(/ /g, "+")}`);
+  });
+});
+
+describe("buildStarterSiteHtml: tagline styling (font, color, size, placement)", () => {
+  const withTagline = { ...BASE, tagline: "Fresh, fast, made-to-order" };
+
+  test("the tagline can use a different font than the main heading font", () => {
+    const html = buildStarterSiteHtml({ ...withTagline, fontId: "classic", taglineFontId: "vintage" });
+    // Both families must load: the main heading/body pair AND the tagline's own.
+    expect(html).toContain("family=Fraunces");
+    expect(html).toContain("family=Abril+Fatface");
+    expect(html).toContain(".tagline {");
+    expect(html).toContain(getStarterSiteFont("vintage").heading.cssFamily);
+  });
+
+  test("does not request the tagline's font twice when it matches the main font", () => {
+    const html = buildStarterSiteHtml({ ...withTagline, fontId: "classic", taglineFontId: "classic" });
+    const occurrences = html.split("family=Fraunces").length - 1;
+    expect(occurrences).toBe(1);
+  });
+
+  test("does not load a tagline font at all when there's no tagline", () => {
+    const html = buildStarterSiteHtml({ ...BASE, tagline: "", fontId: "classic", taglineFontId: "vintage" });
+    expect(html).not.toContain("family=Abril+Fatface");
+  });
+
+  test("a real tagline color is baked into the output", () => {
+    const html = buildStarterSiteHtml({ ...withTagline, taglineColor: "#123456" });
+    expect(html).toContain("#123456");
+  });
+
+  test("an invalid tagline color falls back honestly instead of breaking the CSS", () => {
+    const html = buildStarterSiteHtml({ ...withTagline, taglineColor: "javascript:alert(1)" });
+    expect(html).not.toContain("javascript:alert(1)");
+  });
+
+  test("tagline size maps to a real, distinct font-size", () => {
+    const small = buildStarterSiteHtml({ ...withTagline, taglineSize: "small" });
+    const large = buildStarterSiteHtml({ ...withTagline, taglineSize: "large" });
+    expect(small).toContain("15px");
+    expect(large).toContain("22px");
+    expect(small).not.toBe(large);
+  });
+
+  test("placement 'above' puts the tagline before the business name in the hero markup", () => {
+    const html = buildStarterSiteHtml({ ...withTagline, taglinePlacement: "above" });
+    const bodyStart = html.indexOf("<body>");
+    const taglineIndex = html.indexOf('class="tagline', bodyStart);
+    const nameIndex = html.indexOf("<h1>Rosa", bodyStart);
+    expect(bodyStart).toBeGreaterThan(-1);
+    expect(taglineIndex).toBeLessThan(nameIndex);
+  });
+
+  test("placement 'below' (default) puts the tagline after the business name", () => {
+    const html = buildStarterSiteHtml({ ...withTagline, taglinePlacement: "below" });
+    const bodyStart = html.indexOf("<body>");
+    const taglineIndex = html.indexOf('class="tagline', bodyStart);
+    const nameIndex = html.indexOf("<h1>Rosa", bodyStart);
+    expect(nameIndex).toBeLessThan(taglineIndex);
   });
 });

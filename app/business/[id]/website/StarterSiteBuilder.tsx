@@ -20,9 +20,22 @@ import {
   STARTER_SITE_THEMES,
   buildStarterSiteHtml,
   getStarterSiteTheme,
+  type TaglinePlacement,
+  type TaglineSize,
 } from "@/lib/starterSite";
 import { downloadTextFile } from "@/lib/downloadFile";
 import { markTaskDone } from "@/app/actions/actionPlan";
+
+const TAGLINE_SIZES: Array<{ value: TaglineSize; label: string }> = [
+  { value: "small", label: "Small" },
+  { value: "medium", label: "Medium" },
+  { value: "large", label: "Large" },
+];
+
+const TAGLINE_PLACEMENTS: Array<{ value: TaglinePlacement; label: string }> = [
+  { value: "below", label: "Below name" },
+  { value: "above", label: "Above name" },
+];
 
 function slugify(name: string): string {
   const slug = name
@@ -86,12 +99,25 @@ export function StarterSiteBuilder({
 }) {
   const router = useRouter();
   const [tagline, setTagline] = useState("");
+  const [taglineFontId, setTaglineFontId] = useState(STARTER_SITE_FONTS[0].id);
+  const [taglineColor, setTaglineColor] = useState<string | null>(null);
+  const [taglineSize, setTaglineSize] = useState<TaglineSize>("medium");
+  const [taglinePlacement, setTaglinePlacement] = useState<TaglinePlacement>("below");
   const [themeId, setThemeId] = useState(STARTER_SITE_THEMES[0].id);
+  const [customAccent, setCustomAccent] = useState<string | null>(null);
   const [fontId, setFontId] = useState(STARTER_SITE_FONTS[0].id);
   const [showAddress, setShowAddress] = useState(!!address);
   const [showPhone, setShowPhone] = useState(!!phone);
   const [showHours, setShowHours] = useState(!!openingHours && openingHours.length > 0);
   const [showRating, setShowRating] = useState(rating !== null);
+
+  function handleThemeSelect(id: string) {
+    setThemeId(id);
+    setCustomAccent(null); // a fresh theme choice starts from that theme's own accent
+  }
+
+  const currentTheme = getStarterSiteTheme(themeId);
+  const effectiveAccent = customAccent ?? currentTheme.accent;
 
   const html = useMemo(
     () =>
@@ -99,6 +125,10 @@ export function StarterSiteBuilder({
         businessName,
         category,
         tagline,
+        taglineFontId,
+        taglineColor,
+        taglineSize,
+        taglinePlacement,
         phone,
         address,
         openingHours,
@@ -107,6 +137,7 @@ export function StarterSiteBuilder({
         googleMapsUri,
         profileId,
         themeId,
+        customAccent,
         fontId,
         show: { address: showAddress, phone: showPhone, hours: showHours, rating: showRating },
       }),
@@ -114,6 +145,10 @@ export function StarterSiteBuilder({
       businessName,
       category,
       tagline,
+      taglineFontId,
+      taglineColor,
+      taglineSize,
+      taglinePlacement,
       phone,
       address,
       openingHours,
@@ -122,6 +157,7 @@ export function StarterSiteBuilder({
       googleMapsUri,
       profileId,
       themeId,
+      customAccent,
       fontId,
       showAddress,
       showPhone,
@@ -186,6 +222,100 @@ export function StarterSiteBuilder({
             <p className="mt-1 text-[12px] text-ink-mute">
               Left blank, the site just won&apos;t show a tagline — we never write one for you.
             </p>
+
+            {tagline.trim().length > 0 && (
+              <div className="mt-3 flex flex-col gap-3 rounded-lg border border-paper-line bg-paper p-3">
+                <div className="text-[12px] font-medium text-ink-soft">Tagline style</div>
+
+                <div>
+                  <div className="mb-1.5 text-[11.5px] text-ink-mute">Font</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {STARTER_SITE_FONTS.map((font) => (
+                      <button
+                        key={font.id}
+                        type="button"
+                        onClick={() => setTaglineFontId(font.id)}
+                        title={font.label}
+                        className={cn(
+                          "rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition-colors",
+                          taglineFontId === font.id
+                            ? "border-brass bg-brass/10 text-brass"
+                            : "border-paper-deep bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
+                        )}
+                      >
+                        {font.label.split(" — ")[0]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-end gap-4">
+                  <div>
+                    <div className="mb-1.5 text-[11.5px] text-ink-mute">Color</div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={taglineColor ?? "#cbd5e6"}
+                        onChange={(e) => setTaglineColor(e.target.value)}
+                        aria-label="Tagline color"
+                        className="h-8 w-10 cursor-pointer rounded border border-paper-deep bg-white p-0.5"
+                      />
+                      {taglineColor !== null && (
+                        <button
+                          type="button"
+                          onClick={() => setTaglineColor(null)}
+                          className="text-[11px] font-medium text-ink-mute hover:text-ink"
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="mb-1.5 text-[11.5px] text-ink-mute">Size</div>
+                    <div className="flex gap-1">
+                      {TAGLINE_SIZES.map((s) => (
+                        <button
+                          key={s.value}
+                          type="button"
+                          onClick={() => setTaglineSize(s.value)}
+                          className={cn(
+                            "rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition-colors",
+                            taglineSize === s.value
+                              ? "border-brass bg-brass/10 text-brass"
+                              : "border-paper-deep bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
+                          )}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="mb-1.5 text-[11.5px] text-ink-mute">Placement</div>
+                    <div className="flex gap-1">
+                      {TAGLINE_PLACEMENTS.map((p) => (
+                        <button
+                          key={p.value}
+                          type="button"
+                          onClick={() => setTaglinePlacement(p.value)}
+                          className={cn(
+                            "rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition-colors",
+                            taglinePlacement === p.value
+                              ? "border-brass bg-brass/10 text-brass"
+                              : "border-paper-deep bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
+                          )}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
@@ -195,7 +325,7 @@ export function StarterSiteBuilder({
                 <button
                   key={theme.id}
                   type="button"
-                  onClick={() => setThemeId(theme.id)}
+                  onClick={() => handleThemeSelect(theme.id)}
                   title={theme.label}
                   aria-label={theme.label}
                   aria-pressed={themeId === theme.id}
@@ -212,7 +342,28 @@ export function StarterSiteBuilder({
                 </button>
               ))}
             </div>
-            <p className="mt-1.5 text-[12px] text-ink-mute">{getStarterSiteTheme(themeId).label}</p>
+            <div className="mt-2.5 flex items-center gap-2">
+              <input
+                type="color"
+                value={effectiveAccent}
+                onChange={(e) => setCustomAccent(e.target.value)}
+                aria-label="Custom accent color"
+                className="h-8 w-10 cursor-pointer rounded border border-paper-deep bg-white p-0.5"
+              />
+              <p className="text-[12px] text-ink-mute">
+                {currentTheme.label}
+                {customAccent !== null && " · custom accent"}
+              </p>
+              {customAccent !== null && (
+                <button
+                  type="button"
+                  onClick={() => setCustomAccent(null)}
+                  className="text-[11px] font-medium text-ink-mute hover:text-ink"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
           </div>
 
           <div>

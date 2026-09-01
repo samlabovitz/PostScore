@@ -1,26 +1,29 @@
 // Pure builder for the Website page's starter-site generator: takes
 // real, already-saved Google data plus a few owner customizations
-// (tagline, which sections to show, a color theme, a font pairing) and
-// returns a complete, self-contained HTML document as a string. No
-// DOM, no network, no randomness — the exact same input always
-// produces the exact same file, so the live preview (an iframe srcDoc)
-// and the downloaded file are always identical.
+// (tagline — with its own font/color/size/placement, which sections to
+// show, a color theme with an optional accent override, a font
+// pairing) and returns a complete, self-contained HTML document as a
+// string. No DOM, no network, no randomness — the exact same input
+// always produces the exact same file, so the live preview (an iframe
+// srcDoc) and the downloaded file are always identical.
 //
 // Nothing here is fabricated: every fact on the page is either a real
 // field from the saved business or text the owner typed themselves
 // (the tagline). A field the owner chooses to hide, or that was never
 // on file, is simply omitted — never replaced with a placeholder that
-// could be mistaken for real information. Color/font are pure styling
-// choices with no bearing on what's shown.
+// could be mistaken for real information. Color/font/tagline styling
+// are pure presentation choices with no bearing on what's shown.
 
 /**
  * A curated color theme: a dark hero background (paired with white
  * hero text), an accent used for buttons/links/the category label, and
  * a light page background with matching card/text tones. Deliberately
- * a closed set rather than a free-form color picker — every combination
- * here is hand-picked to stay legible (white-on-dark hero, dark accent
- * against both the dark hero and white cards), so there's no way to
- * end up with an unreadable site.
+ * a closed set rather than a free-form color picker for the base
+ * palette — every combination here is hand-picked to stay legible
+ * (white-on-dark hero, an accent dark/saturated enough to read against
+ * both the dark hero and white cards) — but the accent itself can be
+ * fine-tuned with a real color picker (see customAccent on
+ * StarterSiteInput) for owners who want to nudge just the pop color.
  */
 export interface StarterSiteTheme {
   id: string;
@@ -84,6 +87,56 @@ export const STARTER_SITE_THEMES: StarterSiteTheme[] = [
     textSoft: "#5c4258",
     textMute: "#83717f",
   },
+  {
+    id: "teal",
+    label: "Midnight Teal",
+    heroBg: "#0e2b2c",
+    accent: "#2f9c8f",
+    pageBg: "#eff5f4",
+    cardBorder: "#d9e6e4",
+    textSoft: "#2d4644",
+    textMute: "#5c7371",
+  },
+  {
+    id: "crimson",
+    label: "Crimson & Charcoal",
+    heroBg: "#1f1b1b",
+    accent: "#b8382f",
+    pageBg: "#f3f1ef",
+    cardBorder: "#e3ded9",
+    textSoft: "#4a413d",
+    textMute: "#7a716c",
+  },
+  {
+    id: "ocean",
+    label: "Ocean & Sand",
+    heroBg: "#1a3b4a",
+    accent: "#d4a24c",
+    pageBg: "#f6f2e8",
+    cardBorder: "#e8ddc8",
+    textSoft: "#35525f",
+    textMute: "#62808c",
+  },
+  {
+    id: "berry",
+    label: "Berry & Cream",
+    heroBg: "#45213a",
+    accent: "#cf9a56",
+    pageBg: "#f8f1ec",
+    cardBorder: "#ecdfd5",
+    textSoft: "#5e3a52",
+    textMute: "#85677c",
+  },
+  {
+    id: "graphite",
+    label: "Graphite & Lime",
+    heroBg: "#1c1f1a",
+    accent: "#7a9c3f",
+    pageBg: "#f4f5f0",
+    cardBorder: "#e0e3d8",
+    textSoft: "#3c4636",
+    textMute: "#6a7462",
+  },
 ];
 
 const DEFAULT_THEME = STARTER_SITE_THEMES[0];
@@ -92,49 +145,104 @@ export function getStarterSiteTheme(id: string): StarterSiteTheme {
   return STARTER_SITE_THEMES.find((t) => t.id === id) ?? DEFAULT_THEME;
 }
 
-/** A curated heading/body font pairing, each a real Google Font loaded
- * from a single combined stylesheet link — never a free-text font
- * name, so every choice is guaranteed to actually load and render. */
+/** A real Google Font family plus the specific weights this site
+ * requests and the full CSS font-family value (with realistic
+ * fallbacks) to render it. Never a free-text font name — every choice
+ * here is guaranteed to actually exist on Google Fonts and load. */
+export interface GoogleFontSpec {
+  /** Google Fonts family name, e.g. "Fraunces". */
+  family: string;
+  /** The wght@ axis value(s) this site needs, e.g. "600;700". */
+  weights: string;
+  /** Full CSS font-family value with fallbacks, e.g. "'Fraunces', Georgia, serif". */
+  cssFamily: string;
+}
+
+/** A curated heading/body font pairing spanning clean sans, warm
+ * serif, modern/geometric, and characterful display styles. */
 export interface StarterSiteFont {
   id: string;
   label: string;
-  headingFamily: string;
-  bodyFamily: string;
-  googleFontsHref: string;
+  heading: GoogleFontSpec;
+  body: GoogleFontSpec;
 }
 
 export const STARTER_SITE_FONTS: StarterSiteFont[] = [
   {
     id: "classic",
-    label: "Classic (warm serif + clean sans)",
-    headingFamily: "'Fraunces', Georgia, 'Times New Roman', serif",
-    bodyFamily: "'Inter', Arial, Helvetica, sans-serif",
-    googleFontsHref:
-      "https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600&display=swap",
+    label: "Classic — warm serif + clean sans",
+    heading: { family: "Fraunces", weights: "600;700", cssFamily: "'Fraunces', Georgia, 'Times New Roman', serif" },
+    body: { family: "Inter", weights: "400;500;600", cssFamily: "'Inter', Arial, Helvetica, sans-serif" },
   },
   {
     id: "modern",
-    label: "Modern (bold sans pairing)",
-    headingFamily: "'Manrope', Arial, Helvetica, sans-serif",
-    bodyFamily: "'Inter', Arial, Helvetica, sans-serif",
-    googleFontsHref:
-      "https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600&display=swap",
+    label: "Modern — bold sans pairing",
+    heading: { family: "Manrope", weights: "700;800", cssFamily: "'Manrope', Arial, Helvetica, sans-serif" },
+    body: { family: "Inter", weights: "400;500;600", cssFamily: "'Inter', Arial, Helvetica, sans-serif" },
   },
   {
     id: "elegant",
-    label: "Elegant (upscale serif)",
-    headingFamily: "'Playfair Display', Georgia, 'Times New Roman', serif",
-    bodyFamily: "'Lora', Georgia, serif",
-    googleFontsHref:
-      "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Lora:wght@400;500;600&display=swap",
+    label: "Elegant — upscale serif",
+    heading: {
+      family: "Playfair Display",
+      weights: "700;800",
+      cssFamily: "'Playfair Display', Georgia, 'Times New Roman', serif",
+    },
+    body: { family: "Lora", weights: "400;500;600", cssFamily: "'Lora', Georgia, serif" },
   },
   {
     id: "friendly",
-    label: "Friendly (rounded, warm)",
-    headingFamily: "'Quicksand', Arial, Helvetica, sans-serif",
-    bodyFamily: "'Nunito', Arial, Helvetica, sans-serif",
-    googleFontsHref:
-      "https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&family=Nunito:wght@400;600;700&display=swap",
+    label: "Friendly — rounded, warm",
+    heading: { family: "Quicksand", weights: "600;700", cssFamily: "'Quicksand', Arial, Helvetica, sans-serif" },
+    body: { family: "Nunito", weights: "400;600;700", cssFamily: "'Nunito', Arial, Helvetica, sans-serif" },
+  },
+  {
+    id: "minimal",
+    label: "Minimal — single clean sans",
+    heading: { family: "Work Sans", weights: "600;700", cssFamily: "'Work Sans', Arial, Helvetica, sans-serif" },
+    body: { family: "Work Sans", weights: "400;500", cssFamily: "'Work Sans', Arial, Helvetica, sans-serif" },
+  },
+  {
+    id: "editorial",
+    label: "Editorial — literary serif",
+    heading: { family: "Crimson Pro", weights: "600;700", cssFamily: "'Crimson Pro', Georgia, serif" },
+    body: {
+      family: "Source Sans 3",
+      weights: "400;500;600",
+      cssFamily: "'Source Sans 3', Arial, Helvetica, sans-serif",
+    },
+  },
+  {
+    id: "geometric",
+    label: "Geometric — modern display",
+    heading: {
+      family: "Space Grotesk",
+      weights: "500;700",
+      cssFamily: "'Space Grotesk', Arial, Helvetica, sans-serif",
+    },
+    body: { family: "Inter", weights: "400;500;600", cssFamily: "'Inter', Arial, Helvetica, sans-serif" },
+  },
+  {
+    id: "grotesk",
+    label: "Grotesk — bold Swiss sans",
+    heading: { family: "Archivo", weights: "900", cssFamily: "'Archivo', Arial, Helvetica, sans-serif" },
+    body: { family: "Archivo", weights: "400;500", cssFamily: "'Archivo', Arial, Helvetica, sans-serif" },
+  },
+  {
+    id: "statement",
+    label: "Statement — bold condensed display",
+    heading: { family: "Bebas Neue", weights: "400", cssFamily: "'Bebas Neue', Arial, Helvetica, sans-serif" },
+    body: { family: "Inter", weights: "400;500;600", cssFamily: "'Inter', Arial, Helvetica, sans-serif" },
+  },
+  {
+    id: "vintage",
+    label: "Vintage — high-contrast display",
+    heading: { family: "Abril Fatface", weights: "400", cssFamily: "'Abril Fatface', Georgia, serif" },
+    body: {
+      family: "Nunito Sans",
+      weights: "400;600;700",
+      cssFamily: "'Nunito Sans', Arial, Helvetica, sans-serif",
+    },
   },
 ];
 
@@ -143,6 +251,38 @@ const DEFAULT_FONT = STARTER_SITE_FONTS[0];
 export function getStarterSiteFont(id: string): StarterSiteFont {
   return STARTER_SITE_FONTS.find((f) => f.id === id) ?? DEFAULT_FONT;
 }
+
+/** Builds one combined Google Fonts stylesheet URL for exactly the
+ * families actually in use (deduplicated by family name) — never more
+ * than what this specific document needs, and never less. */
+function buildGoogleFontsHref(specs: GoogleFontSpec[]): string {
+  const seen = new Map<string, string>();
+  for (const spec of specs) {
+    if (!seen.has(spec.family)) seen.set(spec.family, spec.weights);
+  }
+  const familyParams = Array.from(seen.entries())
+    .map(([family, weights]) => `family=${family.replace(/ /g, "+")}:wght@${weights}`)
+    .join("&");
+  return `https://fonts.googleapis.com/css2?${familyParams}&display=swap`;
+}
+
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
+/** Only ever trusts a real 6-digit hex color; anything else (an empty
+ * string, a stray value) falls back honestly instead of producing
+ * broken CSS. */
+function safeHexColor(value: string | null, fallback: string): string {
+  return value && HEX_COLOR_RE.test(value) ? value : fallback;
+}
+
+export type TaglineSize = "small" | "medium" | "large";
+export type TaglinePlacement = "above" | "below";
+
+const TAGLINE_SIZE_PX: Record<TaglineSize, number> = {
+  small: 15,
+  medium: 17,
+  large: 22,
+};
 
 /** Which action a customer would actually take, phrased for how this
  * kind of business really gets used — an appointment business gets
@@ -184,6 +324,13 @@ export interface StarterSiteInput {
   category: string | null;
   /** Owner-written, optional — never invented on their behalf. */
   tagline: string;
+  /** One of STARTER_SITE_FONTS' ids — the tagline uses that pairing's
+   * heading font, independent of the main fontId below. */
+  taglineFontId: string;
+  /** A real 6-digit hex, or null to use a theme-appropriate default. */
+  taglineColor: string | null;
+  taglineSize: TaglineSize;
+  taglinePlacement: TaglinePlacement;
   phone: string | null;
   address: string | null;
   openingHours: string[] | null;
@@ -197,6 +344,9 @@ export interface StarterSiteInput {
   profileId: string;
   /** One of STARTER_SITE_THEMES' ids — purely visual. */
   themeId: string;
+  /** A real 6-digit hex overriding just the theme's accent color, or
+   * null to use the theme's own accent as-is. */
+  customAccent: string | null;
   /** One of STARTER_SITE_FONTS' ids — purely visual. */
   fontId: string;
   /** Which real sections the owner chose to include — a field can only
@@ -212,6 +362,9 @@ export interface StarterSiteInput {
 export function buildStarterSiteHtml(input: StarterSiteInput): string {
   const theme = getStarterSiteTheme(input.themeId);
   const font = getStarterSiteFont(input.fontId);
+  const taglineFont = getStarterSiteFont(input.taglineFontId);
+  const accent = safeHexColor(input.customAccent, theme.accent);
+  const taglineColor = safeHexColor(input.taglineColor, "#cbd5e6");
 
   const name = input.businessName.trim() || "Your Business";
   const showAddress = input.show.address && !!input.address;
@@ -221,6 +374,10 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   const tagline = input.tagline.trim();
 
   const description = escapeHtml(tagline || input.category || name);
+
+  const fontsHref = buildGoogleFontsHref(
+    tagline ? [font.heading, font.body, taglineFont.heading] : [font.heading, font.body]
+  );
 
   const heroCtas: string[] = [];
   if (showPhone) {
@@ -285,6 +442,17 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
       </section>`);
   }
 
+  const taglineHtml = tagline
+    ? `<p class="tagline tagline--${input.taglinePlacement}">${escapeHtml(tagline)}</p>`
+    : "";
+  const nameHtml = `<h1>${escapeHtml(name)}</h1>`;
+  const categoryHtml = input.category ? `<div class="category">${escapeHtml(input.category)}</div>` : "";
+
+  const heroBody =
+    input.taglinePlacement === "above"
+      ? [taglineHtml, nameHtml, categoryHtml]
+      : [nameHtml, categoryHtml, taglineHtml];
+
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -294,7 +462,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
 <meta name="description" content="${description}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="${font.googleFontsHref}" rel="stylesheet">
+<link href="${fontsHref}" rel="stylesheet">
 <style>
   :root {
     color-scheme: light;
@@ -302,12 +470,12 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: ${font.bodyFamily};
+    font-family: ${font.body.cssFamily};
     background: ${theme.pageBg};
     color: ${theme.heroBg};
   }
   h1, h2 {
-    font-family: ${font.headingFamily};
+    font-family: ${font.heading.cssFamily};
     margin: 0;
   }
   .hero {
@@ -322,19 +490,25 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   }
   .hero .category {
     margin-top: 10px;
-    color: ${theme.accent};
+    color: ${accent};
     font-size: 13px;
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
-  .hero .tagline {
-    margin-top: 14px;
-    font-size: 17px;
-    color: #cbd5e6;
+  ${
+    tagline
+      ? `.hero .tagline {
+    font-family: ${taglineFont.heading.cssFamily};
+    font-size: ${TAGLINE_SIZE_PX[input.taglineSize]}px;
+    color: ${taglineColor};
     max-width: 520px;
     margin-left: auto;
     margin-right: auto;
+  }
+  .hero .tagline--below { margin-top: 14px; }
+  .hero .tagline--above { margin-bottom: 10px; }`
+      : ""
   }
   .hero .ctas {
     margin-top: 26px;
@@ -352,7 +526,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
     text-decoration: none;
   }
   .btn-primary {
-    background: ${theme.accent};
+    background: ${accent};
     color: #fff;
   }
   .btn-secondary {
@@ -396,7 +570,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   }
   .hours li:first-child { border-top: none; }
   .link {
-    color: ${theme.accent};
+    color: ${accent};
     font-weight: 600;
     text-decoration: none;
     font-size: 14.5px;
@@ -409,7 +583,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
     margin-top: 14px;
   }
   .stars {
-    color: ${theme.accent};
+    color: ${accent};
     font-size: 20px;
     letter-spacing: 2px;
   }
@@ -423,9 +597,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
 </head>
 <body>
   <div class="hero">
-    <h1>${escapeHtml(name)}</h1>
-    ${input.category ? `<div class="category">${escapeHtml(input.category)}</div>` : ""}
-    ${tagline ? `<p class="tagline">${escapeHtml(tagline)}</p>` : ""}
+    ${heroBody.join("\n    ")}
     ${heroCtas.length > 0 ? `<div class="ctas">${heroCtas.join("\n      ")}</div>` : ""}
   </div>
   <main>
