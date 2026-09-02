@@ -63,11 +63,69 @@ export function priceTierLabel(id: PriceTierId): string {
   return PRICE_TIERS.find((t) => t.id === id)?.label ?? id;
 }
 
+/**
+ * The three-way honesty distinction the AI must make for every service
+ * (see the system prompt in app/actions/pricing.ts): whether its tier
+ * came from real local data, a general-knowledge estimate, or neither.
+ * Kept separate from PriceTierId — a tier is WHAT the AI concluded,
+ * basis is HOW it knows — so the UI can label the two independently.
+ */
+export const ASSESSMENT_BASES = [
+  {
+    id: "verified_local",
+    label: "Based on local price levels",
+    description: "Grounded in real Google price-level data for nearby competitors.",
+  },
+  {
+    id: "general_estimate",
+    label: "General estimate",
+    description: "A typical-price estimate from general knowledge — not verified against local competitors.",
+  },
+  {
+    id: "no_data",
+    label: "No market data",
+    description: "Neither real local data nor a reliable typical price was available.",
+  },
+] as const;
+
+export type AssessmentBasis = (typeof ASSESSMENT_BASES)[number]["id"];
+
+const ASSESSMENT_BASIS_IDS = new Set<string>(ASSESSMENT_BASES.map((b) => b.id));
+
+export function isAssessmentBasis(value: unknown): value is AssessmentBasis {
+  return typeof value === "string" && ASSESSMENT_BASIS_IDS.has(value);
+}
+
+export function assessmentBasisLabel(id: AssessmentBasis): string {
+  return ASSESSMENT_BASES.find((b) => b.id === id)?.label ?? id;
+}
+
+/**
+ * Keeps tier and basis internally coherent no matter what a caller
+ * passes in: "no_data" in either field forces both to "no_data" (a
+ * ranking with no real or estimated basis isn't a ranking), and an
+ * invalid/missing basis on a real tier degrades to "general_estimate"
+ * — the more conservative of the two real bases — rather than ever
+ * silently upgrading an unlabeled result to "verified_local".
+ */
+function normalizeTierAndBasis(
+  rawTier: unknown,
+  rawBasis: unknown
+): { tier: PriceTierId; basis: AssessmentBasis } {
+  const tier = isPriceTierId(rawTier) ? rawTier : "no_data";
+  if (tier === "no_data") return { tier: "no_data", basis: "no_data" };
+  const basis = isAssessmentBasis(rawBasis) ? rawBasis : "general_estimate";
+  if (basis === "no_data") return { tier: "no_data", basis: "no_data" };
+  return { tier, basis };
+}
+
 /** One AI-assessed result for a single entered service. */
 export interface PriceAssessment {
   service: string;
   price: number;
   tier: PriceTierId;
+  /** See AssessmentBasis — how the tier/guidance were actually derived. */
+  basis: AssessmentBasis;
   guidance: string;
 }
 
@@ -129,10 +187,12 @@ export function parsePricingAssessmentPayload(raw: unknown): PricingAssessmentPa
     if (!entry || typeof entry !== "object") continue;
     const e = entry as Record<string, unknown>;
     if (typeof e.service !== "string" || typeof e.price !== "number") continue;
+    const { tier, basis } = normalizeTierAndBasis(e.tier, e.basis);
     assessments.push({
       service: e.service,
       price: e.price,
-      tier: isPriceTierId(e.tier) ? e.tier : "no_data",
+      tier,
+      basis,
       guidance: typeof e.guidance === "string" ? e.guidance : "",
     });
   }
@@ -210,10 +270,12 @@ export function buildPricingPrompt(input: PricingPromptInput): string {
 
 /** Raw shape we ask Claude to reply with — validated field by field
  * before anything reaches an owner, since a malformed or missing tier
- * must degrade to "no_data" rather than ever showing a wrong ranking. */
+ * or basis must degrade to "no_data" rather than ever showing a wrong
+ * ranking or a general estimate mislabeled as verified local data. */
 interface RawAssessment {
   service?: unknown;
   tier?: unknown;
+  basis?: unknown;
   guidance?: unknown;
 }
 
@@ -221,8 +283,11 @@ interface RawAssessment {
  * Parses and validates Claude's JSON reply against the real services we
  * asked about. Never trusts the model's output blindly: a missing,
  * unparseable, or out-of-range response for a given service falls back
- * to an honest "no_data" tier with an explanatory note, rather than
- * showing a guessed or stale ranking.
+ * to an honest "no_data" tier/basis with an explanatory note, rather
+ * than showing a guessed or stale ranking — and normalizeTierAndBasis
+ * ensures a real tier can never end up paired with an invalid or
+ * missing basis (it degrades to the more conservative
+ * "general_estimate" rather than ever defaulting to "verified_local").
  */
 export function parsePricingAssessmentResponse(
   raw: string,
@@ -232,6 +297,7 @@ export function parsePricingAssessmentResponse(
     service,
     price,
     tier: "no_data",
+    basis: "no_data",
     guidance: note,
   });
 
@@ -259,11 +325,11 @@ export function parsePricingAssessmentResponse(
   return services.map((s, i) => {
     const entry = assessments[i];
     if (!entry) return fallback(s.service, s.price, fallbackNote);
-    const tier = isPriceTierId(entry.tier) ? entry.tier : "no_data";
+    const { tier, basis } = normalizeTierAndBasis(entry.tier, entry.basis);
     const guidance =
       typeof entry.guidance === "string" && entry.guidance.trim().length > 0
         ? entry.guidance.trim()
         : fallbackNote;
-    return { service: s.service, price: s.price, tier, guidance };
+    return { service: s.service, price: s.price, tier, basis, guidance };
   });
 }

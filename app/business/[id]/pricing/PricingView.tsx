@@ -6,7 +6,9 @@ import {
   IconArrowLeft,
   IconBulb,
   IconChartBar,
+  IconInfoCircle,
   IconLoader2,
+  IconMapPin,
   IconPlus,
   IconSparkles,
   IconTag,
@@ -25,7 +27,9 @@ import {
   type StoredPricingAssessment,
 } from "@/app/actions/pricing";
 import {
+  ASSESSMENT_BASES,
   PRICE_TIERS,
+  type AssessmentBasis,
   type PriceLevelComparison,
   type PriceRow,
   type PriceTierId,
@@ -60,6 +64,25 @@ const TIER_ACCENT_BORDER: Record<PriceTierId, string> = {
   premium: "border-l-red",
   no_data: "border-l-ink/20",
 };
+
+/**
+ * Deliberately NOT reusing tier colors here — basis (how we know) is a
+ * different axis from tier (what we concluded), and giving it its own
+ * quiet, neutral styling keeps the two from being visually confused.
+ * Nothing renders for "no_data": the tier badge already says "No market
+ * data", so a second badge would be redundant.
+ */
+function BasisBadge({ basis }: { basis: AssessmentBasis }) {
+  if (basis === "no_data") return null;
+  const label = ASSESSMENT_BASES.find((b) => b.id === basis)?.label ?? basis;
+  const Icon = basis === "verified_local" ? IconMapPin : IconInfoCircle;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-ink/5 px-2 py-0.5 text-[10.5px] font-medium text-ink-mute">
+      <Icon size={11} />
+      {label}
+    </span>
+  );
+}
 
 function PriceLegend() {
   return (
@@ -323,6 +346,11 @@ function AssessmentResults({ result }: { result: StoredPricingAssessment }) {
                 {PRICE_TIERS.find((t) => t.id === a.tier)?.label ?? a.tier}
               </Pill>
             </div>
+            {a.basis !== "no_data" && (
+              <div className="mt-1">
+                <BasisBadge basis={a.basis} />
+              </div>
+            )}
             <p className="mt-1 text-[12.5px] text-ink-soft">{a.guidance}</p>
           </div>
         ))}
