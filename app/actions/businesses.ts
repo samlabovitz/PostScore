@@ -52,6 +52,7 @@ export async function saveBusiness(
         business_status: place.businessStatus,
         photo_count: place.photoCount,
         google_maps_uri: place.googleMapsUri,
+        price_level: place.priceLevel,
         lat: place.location?.lat ?? null,
         lng: place.location?.lng ?? null,
         https_status: httpsStatus,

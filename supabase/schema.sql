@@ -568,3 +568,100 @@ grant execute on function public.increment_referral_redemption(uuid) to authenti
 alter table public.businesses
   add column if not exists https_status text,
   add column if not exists https_checked_at timestamptz;
+
+-- ---------------------------------------------------------------------------
+-- Pricing support (lib/pricing.ts, app/actions/pricing.ts — "Price check")
+-- ---------------------------------------------------------------------------
+
+-- Google's own price-level signal for this listing (e.g.
+-- "PRICE_LEVEL_MODERATE"), captured at save time alongside primary_type
+-- (see saveBusiness in app/actions/businesses.ts). Nullable: Google
+-- doesn't have price data for every listing (most non-restaurant
+-- services have none), and an already-saved business won't have it
+-- until re-saved.
+alter table public.businesses
+  add column if not exists price_level text;
+
+-- One row per service the owner has told us they charge for. Prices are
+-- never part of the score (lib/scoring.ts never reads this table) —
+-- this is purely the owner's own private input for the "Price check"
+-- tool, used only to build the prompt sent to the Anthropic API for a
+-- tier assessment (see assessPricing in app/actions/pricing.ts).
+create table if not exists public.prices (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses (id) on delete cascade,
+  service text not null,
+  price numeric not null check (price >= 0),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists prices_business_id_idx
+  on public.prices (business_id);
+
+alter table public.prices enable row level security;
+
+drop policy if exists "Users can view prices for their own businesses" on public.prices;
+create policy "Users can view prices for their own businesses"
+  on public.prices for select
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = prices.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can insert prices for their own businesses" on public.prices;
+create policy "Users can insert prices for their own businesses"
+  on public.prices for insert
+  with check (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = prices.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can update prices for their own businesses" on public.prices;
+create policy "Users can update prices for their own businesses"
+  on public.prices for update
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = prices.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = prices.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can delete prices for their own businesses" on public.prices;
+create policy "Users can delete prices for their own businesses"
+  on public.prices for delete
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = prices.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+-- The LAST "Assess my pricing" result, cached directly on the business —
+-- same single-latest-value pattern as https_status/https_checked_at
+-- above, not a history table, since the Pricing page only ever needs to
+-- show "your most recent assessment" on return. pricing_assessment holds
+-- the real PricingAssessmentPayload (see lib/pricing.ts) — the AI's
+-- per-service tiers/guidance plus the real Google price-level context it
+-- was assessed against — so a returning owner sees exactly what was
+-- shown at assessment time, not just bare tiers. Both null until the
+-- owner's first "Assess my pricing" click; re-running it overwrites both
+-- rather than accumulating, and the API is never re-called just because
+-- this page was opened.
+alter table public.businesses
+  add column if not exists pricing_assessment jsonb,
+  add column if not exists pricing_assessed_at timestamptz;

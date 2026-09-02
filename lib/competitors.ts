@@ -90,6 +90,11 @@ export interface CompetitorSourceBusiness extends BusinessScoringRow {
   lng: number | null;
   /** Google's machine-readable primary type slug, e.g. "hair_salon". */
   primaryType: string | null;
+  /** The subject's own cached Google price-level enum (e.g.
+   * "PRICE_LEVEL_MODERATE"), for the Pricing page's price-level
+   * comparison. Optional/undefined for callers (like the Competitors
+   * page) that don't select it — never fabricated when absent. */
+  priceLevel?: string | null;
 }
 
 export interface RankedCompetitor {
@@ -104,6 +109,10 @@ export interface RankedCompetitor {
   hasWebsite: boolean;
   googleMapsUri: string | null;
   breakdown: ScoreBreakdown;
+  /** Google's raw price-level enum for this listing (e.g.
+   * "PRICE_LEVEL_MODERATE"), or null when Google has no price data for
+   * it — see lib/priceLevel.ts for the display mapping. */
+  priceLevel: string | null;
 }
 
 /** A nearby, genuinely same-category place we found but couldn't score —
@@ -612,6 +621,7 @@ export async function findAndScoreCompetitors(
       hasWebsite: !!result.place.website && result.place.website.trim().length > 0,
       googleMapsUri: result.place.googleMapsUri,
       breakdown,
+      priceLevel: result.place.priceLevel,
     });
   }
 
@@ -626,6 +636,7 @@ export async function findAndScoreCompetitors(
     hasWebsite: !!subject.website && subject.website.trim().length > 0,
     googleMapsUri: null,
     breakdown: subjectBreakdown,
+    priceLevel: subject.priceLevel ?? null,
   };
 
   const ranked = [subjectEntry, ...scoredCompetitors].sort(

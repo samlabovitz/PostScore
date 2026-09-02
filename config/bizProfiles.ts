@@ -67,6 +67,19 @@ export interface FaqEntry {
   answer: string;
 }
 
+/** A single curated pricing-strategy tip for the Pricing page's "Pricing
+ * tips for [type]" section. Static, hand-written content — no API call,
+ * no invented numbers, just genuine small-business pricing strategy
+ * (anchoring, tiering, when to raise prices) tailored to how this kind
+ * of business actually sells. */
+export interface PricingTip {
+  id: string;
+  /** Short strategy name, e.g. "Anchor with your premium option". */
+  label: string;
+  /** 1-2 sentences of concrete, type-specific guidance. */
+  description: string;
+}
+
 export interface BizProfile {
   id: string;
   /** Human-readable name for this profile, shown nowhere critical — just for our own clarity. */
@@ -115,6 +128,15 @@ export interface BizProfile {
    * so there's nothing to populate it with).
    */
   referralPresets: ReferralPreset[];
+  /**
+   * Type-appropriate example service names for the Pricing page's
+   * "Your services & prices" table (e.g. "Entrée" for a restaurant,
+   * "Service Call" for a general/trades business) — placeholder text
+   * only, never a real price, never sent as data to the AI assessment.
+   */
+  pricingExamples: string[];
+  /** See PricingTip. Always at least 2 entries. */
+  pricingTips: PricingTip[];
 }
 
 const SALON_PROFILE: BizProfile = {
@@ -197,6 +219,33 @@ const SALON_PROFILE: BizProfile = {
       referrerReward: "A free add-on (blowout, brow wax, etc.) on your next visit",
       friendReward: "10% off their first appointment",
       description: "Costs you time and product, not cash — a good option if you'd rather not discount services directly.",
+    },
+  ],
+  pricingExamples: ["Women's Haircut", "Men's Haircut", "Color & Highlights"],
+  pricingTips: [
+    {
+      id: "anchor_premium",
+      label: "Anchor with your premium service",
+      description:
+        "List your most premium color or treatment service first on your menu — even clients who choose a basic cut anchor their expectations against it, making your mid-tier services feel reasonably priced by comparison.",
+    },
+    {
+      id: "consult_price_chemical",
+      label: "Price chemical services by consultation",
+      description:
+        "Hair length and thickness vary enormously; a flat price for color or treatments either underpays you on thick, long hair or overprices thin, short hair. Quote those after a quick look, not off a fixed menu price.",
+    },
+    {
+      id: "good_better_best",
+      label: "Offer a good/better/best tier",
+      description:
+        "A basic blowout, a deluxe version, and a premium add-on let clients self-select their spend instead of you guessing one price that's wrong for everyone.",
+    },
+    {
+      id: "raise_when_booked_out",
+      label: "Raise prices when you're consistently booked 1-2 weeks out",
+      description:
+        "A steadily full calendar — not just a busy Saturday — is the honest signal you're underpriced relative to demand.",
     },
   ],
 };
@@ -285,6 +334,33 @@ const RESTAURANT_PROFILE: BizProfile = {
       description: "Straightforward cash-off works well for takeout and delivery orders.",
     },
   ],
+  pricingExamples: ["Entrée", "Appetizer", "Dessert"],
+  pricingTips: [
+    {
+      id: "anchor_standout_dish",
+      label: "Anchor with one standout high-price dish",
+      description:
+        "A single $32 entrée on the menu makes every $18-22 entrée look reasonable by comparison, even if few people actually order the anchor item itself.",
+    },
+    {
+      id: "steer_to_margin",
+      label: "Steer orders to your best-margin items",
+      description:
+        "Highlighting a strong-margin dish (bolding it, adding \"chef's favorite\") lifts orders toward it without discounting anything.",
+    },
+    {
+      id: "review_prices_periodically",
+      label: "Review menu prices on a schedule, not by feel",
+      description:
+        "Many restaurants underprice for years because reprinting the menu feels like a hassle. A quarterly price review against your real food costs avoids slow margin erosion.",
+    },
+    {
+      id: "bundle_combo",
+      label: "Use combo or bundle pricing",
+      description:
+        "Pairing an app or side with an entrée at a set combined price increases the average ticket without feeling like a price hike to the customer.",
+    },
+  ],
 };
 
 const LAWYER_PROFILE: BizProfile = {
@@ -341,6 +417,33 @@ const LAWYER_PROFILE: BizProfile = {
   // mounts when referralOk is false.
   referralOk: false,
   referralPresets: [],
+  pricingExamples: ["Initial Consultation", "Flat-Fee Document Review", "Hourly Rate"],
+  pricingTips: [
+    {
+      id: "flat_fee_commodity_work",
+      label: "Use flat fees for commodity work",
+      description:
+        "For predictable matters like document review or uncontested filings, a known flat fee removes the price anxiety of an open-ended hourly estimate most prospective clients don't trust.",
+    },
+    {
+      id: "tiered_consultation",
+      label: "Offer a tiered consultation",
+      description:
+        "A free 15-minute phone screen plus a paid 1-hour strategy session lets price-sensitive prospects self-select in without you working for free indefinitely.",
+    },
+    {
+      id: "raise_when_turning_away_work",
+      label: "Raise rates when you're turning away work",
+      description:
+        "Consistently declining matters you'd otherwise take is the real signal you're underpriced — not how long it's been since your last increase.",
+    },
+    {
+      id: "scope_in_writing",
+      label: "Put what's included in writing",
+      description:
+        "Being explicit about what a flat fee covers (and what triggers hourly billing) up front prevents fee disputes later.",
+    },
+  ],
 };
 
 /**
@@ -441,6 +544,33 @@ const PRACTITIONER_PROFILE: BizProfile = {
       description: "Works well for 1:1 appointment-based practices where a free slot is a real cost.",
     },
   ],
+  pricingExamples: ["1:1 Session", "Group Class", "Intro Session"],
+  pricingTips: [
+    {
+      id: "package_pricing",
+      label: "Sell session packages, not just singles",
+      description:
+        "A 5- or 10-session bundle rewards commitment and smooths your calendar, and clients who've prepaid rarely no-show.",
+    },
+    {
+      id: "low_cost_intro",
+      label: "Use a free or low-cost intro session to convert",
+      description:
+        "A short intro session converts hesitant leads without permanently discounting your real rate — keep it clearly framed as a one-time offer.",
+    },
+    {
+      id: "raise_when_booked_out",
+      label: "Raise your rate when you're consistently booked out",
+      description:
+        "A calendar that's full 2+ weeks ahead, week after week, is real demand — not just a busy stretch — and the honest signal it's time to raise your rate.",
+    },
+    {
+      id: "price_by_format",
+      label: "Price the same expertise differently by format",
+      description:
+        "A group class and a 1:1 session use the same skill but cost you very differently to deliver — price each by format rather than discounting your core 1:1 rate.",
+    },
+  ],
 };
 
 /**
@@ -513,6 +643,33 @@ const DEFAULT_PROFILE: BizProfile = {
       referrerReward: "10% off your next purchase",
       friendReward: "10% off their first purchase",
       description: "A simple, universally understood reward for both sides.",
+    },
+  ],
+  pricingExamples: ["Standard Service", "Service Call", "Product/Item"],
+  pricingTips: [
+    {
+      id: "anchor_pricing",
+      label: "Anchor with your highest-priced option",
+      description:
+        "Showing your highest-priced option first makes your mid-tier option feel like the reasonable middle ground, even if few customers pick the anchor itself.",
+    },
+    {
+      id: "good_better_best",
+      label: "Offer a good/better/best tier",
+      description:
+        "A basic, a standard, and a premium option each give price-sensitive and premium customers a natural fit — one price is rarely right for both.",
+    },
+    {
+      id: "raise_when_consistently_busy",
+      label: "Raise prices on sustained demand, not a hunch",
+      description:
+        "Being consistently busy for weeks — not just one good week — is the honest signal you're underpriced, not how long it's been since your last increase.",
+    },
+    {
+      id: "bundle_package",
+      label: "Bundle or package related work",
+      description:
+        "Combining related services or items into one package price can lift your average sale without feeling like a price increase to the customer.",
     },
   ],
 };

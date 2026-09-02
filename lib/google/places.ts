@@ -23,6 +23,7 @@ const DETAILS_FIELD_MASK = [
   "businessStatus",
   "googleMapsUri",
   "photos",
+  "priceLevel",
 ].join(",");
 
 // Nearby Search is used only to find candidate competitors near a saved
@@ -38,6 +39,7 @@ const NEARBY_SEARCH_FIELD_MASK = [
   "places.primaryTypeDisplayName",
   "places.businessStatus",
   "places.location",
+  "places.priceLevel",
 ].join(",");
 
 function getApiKey(): string {
@@ -82,6 +84,14 @@ export interface PlaceDetails {
   googleMapsUri: string | null;
   /** Number of photos Google has for this listing. Used by the scoring engine's photos check. */
   photoCount: number | null;
+  /**
+   * Google's raw price-level enum (e.g. "PRICE_LEVEL_MODERATE"), or null
+   * when Google has no price data for this listing — common for
+   * service businesses (salons, lawyers) that aren't restaurants/bars.
+   * Never used by the scoring engine; see lib/priceLevel.ts for the
+   * display mapping used by the Pricing page.
+   */
+  priceLevel: string | null;
 }
 
 export type PlaceLookupResult =
@@ -113,6 +123,7 @@ interface RawDetailsPlace {
   businessStatus?: string;
   googleMapsUri?: string;
   photos?: unknown[];
+  priceLevel?: string;
 }
 
 interface RawNearbyPlace {
@@ -124,6 +135,7 @@ interface RawNearbyPlace {
   primaryTypeDisplayName?: { text?: string };
   businessStatus?: string;
   location?: { latitude?: number; longitude?: number };
+  priceLevel?: string;
 }
 
 /** A candidate returned by Nearby Search — deliberately thin (Basic fields
@@ -138,6 +150,7 @@ export interface NearbyCandidate {
   primaryTypeDisplayName: string | null;
   businessStatus: string | null;
   location: { lat: number; lng: number } | null;
+  priceLevel: string | null;
 }
 
 async function searchPlaces(textQuery: string): Promise<RawSearchPlace[]> {
@@ -203,6 +216,7 @@ function normalizeDetails(raw: RawDetailsPlace): PlaceDetails {
     businessStatus: raw.businessStatus ?? null,
     googleMapsUri: raw.googleMapsUri ?? null,
     photoCount: Array.isArray(raw.photos) ? raw.photos.length : null,
+    priceLevel: raw.priceLevel ?? null,
   };
 }
 
@@ -219,6 +233,7 @@ function normalizeNearby(raw: RawNearbyPlace): NearbyCandidate {
       raw.location?.latitude != null && raw.location?.longitude != null
         ? { lat: raw.location.latitude, lng: raw.location.longitude }
         : null,
+    priceLevel: raw.priceLevel ?? null,
   };
 }
 
