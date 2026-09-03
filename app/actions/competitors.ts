@@ -145,6 +145,7 @@ export async function saveCompetitorScan(businessId: string): Promise<SaveCompet
     grade: r.breakdown.grade,
     scoring_version: r.breakdown.scoringVersion,
     breakdown_json: r.breakdown,
+    price_level: r.priceLevel,
   }));
 
   const { error } = await supabase.from("competitor_scans").insert(rows);
@@ -178,4 +179,66 @@ export async function getCompetitorScanHistory(
 
   if (error || !data) return [];
   return data;
+}
+
+export interface CompetitorSnapshotEntry {
+  name: string | null;
+  isSubject: boolean;
+  total: number | null;
+  grade: string | null;
+  priceLevel: string | null;
+}
+
+export interface CompetitorSnapshot {
+  scanId: string;
+  createdAt: string;
+  entries: CompetitorSnapshotEntry[];
+}
+
+/**
+ * The single most recent saved competitor scan for a business, or null if
+ * none has ever been saved. Deliberately reads the LAST *saved* scan
+ * (competitor_scans, a plain DB read) rather than re-running the live
+ * Google Places scan getCompetitors() does — used to ground the "Ask
+ * about your presence" assistant (see app/actions/assistant.ts) without
+ * spending a fresh round of Places API calls on every chat message. If
+ * the owner has never clicked "Save this scan," this honestly returns
+ * null rather than silently running a live scan the owner didn't ask for.
+ */
+export async function getLatestCompetitorSnapshot(businessId: string): Promise<CompetitorSnapshot | null> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from("competitor_scans")
+    .select("scan_id, created_at, is_subject, name, total, grade, price_level")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error || !data || data.length === 0) return null;
+
+  const rows = data as Array<{
+    scan_id: string;
+    created_at: string;
+    is_subject: boolean;
+    name: string | null;
+    total: number | null;
+    grade: string | null;
+    price_level: string | null;
+  }>;
+
+  const latestScanId = rows[0].scan_id;
+  const latestRows = rows.filter((r) => r.scan_id === latestScanId);
+
+  return {
+    scanId: latestScanId,
+    createdAt: rows[0].created_at,
+    entries: latestRows.map((r) => ({
+      name: r.name,
+      isSubject: r.is_subject,
+      total: r.total,
+      grade: r.grade,
+      priceLevel: r.price_level,
+    })),
+  };
 }

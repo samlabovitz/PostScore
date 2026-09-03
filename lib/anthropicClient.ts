@@ -68,3 +68,50 @@ export async function callAnthropicMessage(params: {
   }
   return text;
 }
+
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/**
+ * Multi-turn variant of callAnthropicMessage, for the "Ask about your
+ * presence" assistant (see app/actions/assistant.ts) — the pricing tool
+ * above only ever needs one exchange, but a chat needs the real prior
+ * turns sent back on every call so Claude has conversational context.
+ * Same model, same honest-error-on-failure behavior; callers are
+ * responsible for keeping `messages` short (see MAX_HISTORY_MESSAGES in
+ * app/actions/assistant.ts) to keep input tokens — and cost — bounded.
+ */
+export async function callAnthropicChat(params: {
+  system: string;
+  messages: ChatTurn[];
+  maxTokens?: number;
+}): Promise<string> {
+  const res = await fetch(ANTHROPIC_API_BASE, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": getApiKey(),
+      "anthropic-version": ANTHROPIC_VERSION,
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: params.maxTokens ?? 400,
+      system: params.system,
+      messages: params.messages.map((m) => ({ role: m.role, content: m.content })),
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Anthropic API request failed (${res.status}): ${body}`);
+  }
+
+  const data = (await res.json()) as RawMessageResponse;
+  const text = data.content?.find((block) => block.type === "text")?.text;
+  if (!text) {
+    throw new Error("Anthropic API returned no text content.");
+  }
+  return text;
+}

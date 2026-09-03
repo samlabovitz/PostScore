@@ -665,3 +665,74 @@ create policy "Users can delete prices for their own businesses"
 alter table public.businesses
   add column if not exists pricing_assessment jsonb,
   add column if not exists pricing_assessed_at timestamptz;
+
+-- ---------------------------------------------------------------------------
+-- Assistant chat support (lib/assistant.ts, app/actions/assistant.ts —
+-- "Ask about your presence", Day 12)
+-- ---------------------------------------------------------------------------
+
+-- Google's own price-level signal for each ranked entry in a saved
+-- competitor scan (e.g. "PRICE_LEVEL_MODERATE") — the same field
+-- saveBusiness caches onto `businesses.price_level` above, now also
+-- captured per competitor so the assistant can ground a "how do I compare
+-- on price" answer in real Google data. Added after competitor_scans
+-- shipped, so it's an `add column if not exists` here rather than in the
+-- table's own create statement earlier in this file. Nullable: Google has
+-- no price data for most non-restaurant listings, and scans saved before
+-- this column existed won't have it until the next "Save this scan."
+alter table public.competitor_scans
+  add column if not exists price_level text;
+
+-- One row per chat turn (owner question or assistant reply), so the
+-- conversation survives navigating away and coming back — same
+-- persistence intent as `tasks`/`promos`, just append-only rather than
+-- upserted. `role` mirrors the Anthropic Messages API's own turn roles.
+-- Every assistant reply is generated from real business data plus
+-- clearly-labeled general guidance (see the system prompt built in
+-- app/actions/assistant.ts) — this table only stores the resulting text,
+-- never anything fabricated on our side.
+create table if not exists public.assistant_messages (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses (id) on delete cascade,
+  role text not null check (role in ('user', 'assistant')),
+  content text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists assistant_messages_business_id_created_at_idx
+  on public.assistant_messages (business_id, created_at asc);
+
+alter table public.assistant_messages enable row level security;
+
+drop policy if exists "Users can view assistant messages for their own businesses" on public.assistant_messages;
+create policy "Users can view assistant messages for their own businesses"
+  on public.assistant_messages for select
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = assistant_messages.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can insert assistant messages for their own businesses" on public.assistant_messages;
+create policy "Users can insert assistant messages for their own businesses"
+  on public.assistant_messages for insert
+  with check (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = assistant_messages.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can delete assistant messages for their own businesses" on public.assistant_messages;
+create policy "Users can delete assistant messages for their own businesses"
+  on public.assistant_messages for delete
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = assistant_messages.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
