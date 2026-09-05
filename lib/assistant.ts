@@ -136,7 +136,7 @@ HOW TO ANSWER:
    - Reply rates, response times, or any review-management metric — not tracked by PostScore at all.
    - Anything else about this business that simply isn't in the REAL DATA CONTEXT block.
 4. If part of the REAL DATA CONTEXT is missing (e.g. no competitor scan has ever been saved), say so honestly and point to where the owner can get it (e.g. "run a scan on the Competitors page") rather than guessing or working around it.
-5. Be concise and concrete — a busy owner, not an essay. Prefer a short paragraph or a tight bulleted list over long prose, and don't just repeat the context block back at them.
+5. BE BRIEF. A busy owner, not an essay. No preamble ("Great question", "Looking at your data..."), no restating the question, no repeating the context block back at them, no summarizing what you're about to say before saying it. Lead with the answer. Prefer a short paragraph (2-4 sentences) or a tight bulleted list of specifics over long prose — every sentence should add a new fact, number, or instruction, not restate one already given. Still include every real-data specific and caveat the question actually needs; cut words, not substance.
 6. You cannot take any action on their behalf (you can't edit their listing, send a review request, or change anything) — you only answer questions. If asked to do something, explain that and point to the right page in the dashboard instead.
 `.trim();
 
@@ -281,7 +281,10 @@ export const MAX_ACTION_PLAN_TASKS_IN_CONTEXT = 5;
  * forever. */
 export const MAX_HISTORY_MESSAGES = 12;
 
-/** Generous enough for a real, useful answer (sometimes a short bulleted
+/** Enough room for a real, useful answer (sometimes a short bulleted
  * list) but capped well below an essay — cost control, same spirit as
- * the Pricing tool's per-service token cap. */
-export const ASSISTANT_MAX_TOKENS = 600;
+ * the Pricing tool's per-service token cap. Lowered from 600 alongside
+ * the tightened system prompt (rule 5) to reinforce brevity, while
+ * staying generous enough that a real multi-point answer won't get cut
+ * off mid-sentence. */
+export const ASSISTANT_MAX_TOKENS = 450;

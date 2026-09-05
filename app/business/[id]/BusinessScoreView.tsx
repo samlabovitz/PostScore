@@ -23,6 +23,9 @@ import {
   type ScoreBreakdown,
   type ScoreWithSuggestions,
 } from "@/lib/scoring";
+import { AssistantView } from "@/components/assistant/AssistantView";
+import type { AssistantMessageRow } from "@/app/actions/assistant";
+import type { AssistantBusinessContext } from "@/lib/assistant";
 
 function formatSignedPoints(value: number): string {
   return value > 0 ? `+${formatPoints(value)}` : formatPoints(value);
@@ -385,18 +388,29 @@ function ChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
   );
 }
 
+export type AssistantEmbedData =
+  | {
+      status: "ok";
+      context: AssistantBusinessContext;
+      starterPrompts: string[];
+      messages: AssistantMessageRow[];
+    }
+  | { status: "unavailable"; message: string };
+
 export function BusinessScoreView({
   businessId,
   business,
   result,
   history,
   recentSnapshots,
+  assistant,
 }: {
   businessId: string;
   business: BusinessRecord;
   result: ScoreWithSuggestions;
   history: ScoreHistoryRow[];
   recentSnapshots: ScoreSnapshot[];
+  assistant: AssistantEmbedData;
 }) {
   const { breakdown, projectedBreakdown } = result;
 
@@ -458,6 +472,20 @@ export function BusinessScoreView({
           <SinceLastScanControl history={history} />
         </div>
       </div>
+
+      {assistant.status === "ok" ? (
+        <AssistantView
+          businessId={businessId}
+          businessName={business.name}
+          context={assistant.context}
+          starterPrompts={assistant.starterPrompts}
+          initialMessages={assistant.messages}
+        />
+      ) : (
+        <Card className="p-5 text-sm text-ink-soft">
+          The assistant isn&apos;t available right now: {assistant.message}
+        </Card>
+      )}
 
       <SectionHeading title="At a glance" />
       <Card className="p-5">

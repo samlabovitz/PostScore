@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import {
-  IconArrowLeft,
   IconInfoCircle,
   IconLoader2,
   IconMessageChatbot,
@@ -15,6 +13,7 @@ import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
 import { GradeBadge } from "@/components/ui/GradeBadge";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { cn } from "@/lib/utils";
 import {
   clearAssistantConversation,
@@ -138,6 +137,13 @@ function EmptyState({
   );
 }
 
+/**
+ * The "Ask about your presence" assistant, embedded directly on the
+ * Overview page below the score section. Lives only here now — there is
+ * no separate /assistant route — so this is always rendered inline
+ * alongside the rest of Overview's sections, using SectionHeading like
+ * every other section on that page.
+ */
 export function AssistantView({
   businessId,
   businessName,
@@ -209,26 +215,8 @@ export function AssistantView({
   }
 
   return (
-    <div className="flex flex-col gap-8 nav:gap-10">
-      <div>
-        <Link
-          href={`/business/${businessId}`}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
-        >
-          <IconArrowLeft size={15} />
-          Back to {businessName ?? "business"}
-        </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-2.5">
-          <h1 className="font-serif text-2xl font-semibold text-ink nav:text-[27px]">
-            Ask about your presence
-          </h1>
-          <Pill variant="brass">Beta</Pill>
-        </div>
-        <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">
-          Ask questions about your real PostScore, score breakdown, action plan, and competitors —
-          or ask for general local-marketing advice, clearly labeled as general.
-        </p>
-      </div>
+    <div className="flex flex-col gap-4">
+      <SectionHeading title="Ask about your presence" action={<Pill variant="brass">Beta</Pill>} />
 
       <Card className="flex items-start gap-3 p-4">
         <GradeBadge grade={context.score.grade} className="shrink-0" />

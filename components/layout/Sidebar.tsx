@@ -11,7 +11,6 @@ import {
   IconUsers,
   IconTag,
   IconFileText,
-  IconMessageChatbot,
   IconChevronDown,
   IconLogout,
   IconSettings,
@@ -34,7 +33,6 @@ const NAV_ITEMS: Array<{
   { label: "Competitors", icon: IconUsers, path: (id) => `/business/${id}/competitors` },
   { label: "Pricing", icon: IconTag, path: (id) => `/business/${id}/pricing` },
   { label: "Reports", icon: IconFileText, path: (id) => `/business/${id}/reports` },
-  { label: "Assistant", icon: IconMessageChatbot, path: (id) => `/business/${id}/assistant` },
 ];
 
 interface SidebarProps {
