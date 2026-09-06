@@ -36,7 +36,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
           status: "ok",
           context: assistantPageData.context,
           starterPrompts: assistantPageData.starterPrompts,
-          messages: assistantPageData.messages,
+          conversationCount: assistantPageData.conversationCount,
         }
       : {
           status: "unavailable",

@@ -7,7 +7,7 @@ import { getActionPlan } from "@/app/actions/actionPlan";
 import { listActivePromos } from "@/app/actions/promos";
 import { getActiveReferral } from "@/app/actions/referrals";
 import { businessRowToScoringInput } from "@/lib/scoring";
-import { bizProfile } from "@/config/bizProfiles";
+import { resolveBizProfile } from "@/config/bizProfiles";
 import { GrowthView } from "./GrowthView";
 
 export default async function GrowthPage({ params }: { params: { id: string } }) {
@@ -21,7 +21,7 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   }
 
   const { business } = summary;
-  const profile = bizProfile(business.category, business.primary_type);
+  const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override);
 
   const scored = await scoreBusinessById(params.id);
 

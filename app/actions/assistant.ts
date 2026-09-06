@@ -2,26 +2,31 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getBusinessSummary } from "@/app/actions/businesses";
-import { scoreBusinessById } from "@/app/actions/scoring";
+import { scoreBusinessById, getScoreHistory } from "@/app/actions/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
 import { getLatestCompetitorSnapshot } from "@/app/actions/competitors";
 import { businessRowToScoringInput } from "@/lib/scoring";
-import { bizProfile } from "@/config/bizProfiles";
+import { bizProfile, resolveBizProfile } from "@/config/bizProfiles";
 import { priceLevelToSymbol } from "@/lib/priceLevel";
 import { callAnthropicChat } from "@/lib/anthropicClient";
 import {
   ASSISTANT_MAX_TOKENS,
   ASSISTANT_SYSTEM_RULES,
   MAX_ACTION_PLAN_TASKS_IN_CONTEXT,
+  MAX_FIXED_ITEMS_IN_CONTEXT,
   MAX_HISTORY_MESSAGES,
   MAX_LOSING_CHECKS_IN_CONTEXT,
+  MAX_SCORE_HISTORY_IN_CONTEXT,
   buildAssistantContextText,
   buildAssistantStarterPrompts,
   type AssistantActionPlanTask,
   type AssistantBusinessContext,
+  type AssistantBusinessProfile,
   type AssistantCompetitorSummary,
   type AssistantExcludedCheck,
+  type AssistantFixedItem,
   type AssistantLosingCheck,
+  type AssistantScoreHistoryEntry,
 } from "@/lib/assistant";
 
 export interface AssistantMessageRow {
@@ -29,6 +34,27 @@ export interface AssistantMessageRow {
   role: "user" | "assistant";
   content: string;
   created_at: string;
+}
+
+/** How many characters of the conversation's first real question to show
+ * in the history menu — enough to recognize it, short enough to fit one
+ * line. The preview is always the owner's own real words, never a
+ * generated summary. */
+const CONVERSATION_PREVIEW_LENGTH = 100;
+
+/** How many past conversations the history menu loads at once — a small
+ * business realistically has dozens, not thousands, of chat sessions, so
+ * this is a safety cap rather than real pagination. */
+const MAX_CONVERSATIONS_IN_HISTORY = 40;
+
+export interface AssistantConversationSummary {
+  id: string;
+  startedAt: string;
+  lastMessageAt: string;
+  messageCount: number;
+  /** The conversation's first user message, truncated — a real quote,
+   * never a generated summary. */
+  preview: string;
 }
 
 type LoadContextResult =
@@ -50,9 +76,10 @@ type LoadContextResult =
  * page first loaded.
  */
 async function loadContext(businessId: string): Promise<LoadContextResult> {
-  const [summaryResult, scored] = await Promise.all([
+  const [summaryResult, scored, scoreHistoryRows] = await Promise.all([
     getBusinessSummary(businessId),
     scoreBusinessById(businessId),
+    getScoreHistory(businessId),
   ]);
 
   if (scored.status === "unauthenticated" || summaryResult.status === "unauthenticated") {
@@ -65,7 +92,13 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     return { status: "error", message: scored.message };
   }
 
-  const profile = bizProfile(summaryResult.business.category, summaryResult.business.primary_type);
+  const autoDetectedProfile = bizProfile(summaryResult.business.category, summaryResult.business.primary_type);
+  const businessTypeOverride = summaryResult.business.business_type_override ?? null;
+  const profile = resolveBizProfile(
+    summaryResult.business.category,
+    summaryResult.business.primary_type,
+    businessTypeOverride
+  );
   const input = businessRowToScoringInput(scored.business);
   const { breakdown, suggestions } = scored.result;
 
@@ -119,6 +152,40 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     .filter((c) => c.confidence === "UNCERTAIN" || c.confidence === "NOT_FOUND")
     .map((c) => ({ label: c.label, confidence: c.confidence, explanation: c.explanation }));
 
+  // getScoreHistory comes back newest-first; take the most recent N then
+  // reverse so the memory block reads as a real oldest-to-newest trend.
+  const scoreHistory: AssistantScoreHistoryEntry[] = scoreHistoryRows
+    .slice(0, MAX_SCORE_HISTORY_IN_CONTEXT)
+    .map((h) => ({
+      total: h.total,
+      grade: h.grade as AssistantScoreHistoryEntry["grade"],
+      date: new Date(h.created_at).toLocaleDateString(),
+    }))
+    .reverse();
+
+  const fixedItems: AssistantFixedItem[] =
+    actionPlanResult.status === "ok"
+      ? actionPlanResult.completed.slice(0, MAX_FIXED_ITEMS_IN_CONTEXT).map((c) => ({
+          label: c.label,
+          pointsGained: c.pointsGained,
+          verifiedAt: c.verifiedAt ? new Date(c.verifiedAt).toLocaleDateString() : null,
+        }))
+      : [];
+
+  const businessProfile: AssistantBusinessProfile = {
+    businessType: profile.label,
+    businessTypeId: profile.id,
+    autoDetectedBusinessType: autoDetectedProfile.label,
+    autoDetectedBusinessTypeId: autoDetectedProfile.id,
+    businessTypeOverridden: businessTypeOverride !== null,
+    location: summaryResult.business.address ?? null,
+    services: summaryResult.business.services ?? [],
+    avgJobValueLow: summaryResult.business.avg_job_value_low ?? null,
+    avgJobValueHigh: summaryResult.business.avg_job_value_high ?? null,
+    scoreHistory,
+    fixedItems,
+  };
+
   const context: AssistantBusinessContext = {
     listing: {
       name: scored.business.name,
@@ -149,6 +216,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     },
     actionPlan: { topTasks },
     competitors,
+    profile: businessProfile,
   };
 
   return { status: "ok", context };
@@ -159,25 +227,33 @@ export type GetAssistantPageDataResult =
       status: "ok";
       context: AssistantBusinessContext;
       starterPrompts: string[];
-      messages: AssistantMessageRow[];
+      /** How many past conversations exist for this business — just a
+       * count (cheap), not their content, so the entry point can say
+       * "3 past conversations" without loading any chat history until
+       * the owner actually opens the history menu. */
+      conversationCount: number;
     }
   | { status: "unauthenticated" }
   | { status: "not_found" }
   | { status: "error"; message: string };
 
-/** Loads everything the assistant page needs on first render: the real
- * grounding context, tailored starter prompts, and the saved
- * conversation so far. */
+/**
+ * Loads everything the assistant needs on first render: the real
+ * grounding context, tailored starter prompts, and how many past
+ * conversations exist. Deliberately does NOT load any messages — opening
+ * the assistant always starts a fresh chat (see sendAssistantMessage);
+ * past conversations are only ever fetched on demand, from the history
+ * menu (see getConversationHistory/getConversationMessages).
+ */
 export async function getAssistantPageData(businessId: string): Promise<GetAssistantPageDataResult> {
   const loaded = await loadContext(businessId);
   if (loaded.status !== "ok") return loaded;
 
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("assistant_messages")
-    .select("id, role, content, created_at")
-    .eq("business_id", businessId)
-    .order("created_at", { ascending: true });
+  const { count, error } = await supabase
+    .from("assistant_conversations")
+    .select("id", { count: "exact", head: true })
+    .eq("business_id", businessId);
 
   if (error) {
     return { status: "error", message: error.message };
@@ -187,12 +263,12 @@ export async function getAssistantPageData(businessId: string): Promise<GetAssis
     status: "ok",
     context: loaded.context,
     starterPrompts: buildAssistantStarterPrompts(loaded.context),
-    messages: (data ?? []) as AssistantMessageRow[],
+    conversationCount: count ?? 0,
   };
 }
 
 export type SendAssistantMessageResult =
-  | { status: "ok"; userMessage: AssistantMessageRow; reply: AssistantMessageRow }
+  | { status: "ok"; userMessage: AssistantMessageRow; reply: AssistantMessageRow; conversationId: string }
   | { status: "unauthenticated" }
   | { status: "not_found" }
   | { status: "error"; message: string };
@@ -206,10 +282,20 @@ export type SendAssistantMessageResult =
  * fresh (see loadContext) so every reply reflects the business's actual
  * current state, and caps both the context and the resent history to
  * keep input tokens — and cost — bounded on a cheap Haiku model.
+ *
+ * `conversationId` is null for a session's first message — a new
+ * `assistant_conversations` row is created lazily right here, so a chat
+ * opened and closed without ever being used never leaves an empty
+ * conversation behind. Every call returns the (possibly newly-created)
+ * conversationId so the client can pass it back on the next message in
+ * the same session. Chat history resent to the model is scoped to THIS
+ * conversation only — a fresh chat is genuinely fresh to the model too,
+ * never carrying context from an unrelated past session.
  */
 export async function sendAssistantMessage(
   businessId: string,
-  message: string
+  message: string,
+  conversationId: string | null
 ): Promise<SendAssistantMessageResult> {
   const trimmed = message.trim();
   if (!trimmed) {
@@ -221,9 +307,31 @@ export async function sendAssistantMessage(
 
   const supabase = createClient();
 
+  let activeConversationId = conversationId;
+  if (!activeConversationId) {
+    const { data: conversationRow, error: conversationError } = await supabase
+      .from("assistant_conversations")
+      .insert({ business_id: businessId })
+      .select("id")
+      .single();
+
+    if (conversationError || !conversationRow) {
+      return {
+        status: "error",
+        message: conversationError?.message ?? "Could not start a new conversation.",
+      };
+    }
+    activeConversationId = conversationRow.id as string;
+  }
+
   const { data: userRow, error: userError } = await supabase
     .from("assistant_messages")
-    .insert({ business_id: businessId, role: "user", content: trimmed })
+    .insert({
+      business_id: businessId,
+      conversation_id: activeConversationId,
+      role: "user",
+      content: trimmed,
+    })
     .select("id, role, content, created_at")
     .single();
 
@@ -234,7 +342,7 @@ export async function sendAssistantMessage(
   const { data: historyRows, error: historyError } = await supabase
     .from("assistant_messages")
     .select("id, role, content, created_at")
-    .eq("business_id", businessId)
+    .eq("conversation_id", activeConversationId)
     .order("created_at", { ascending: false })
     .limit(MAX_HISTORY_MESSAGES);
 
@@ -268,7 +376,12 @@ export async function sendAssistantMessage(
 
   const { data: replyRow, error: replyError } = await supabase
     .from("assistant_messages")
-    .insert({ business_id: businessId, role: "assistant", content: replyText.trim() })
+    .insert({
+      business_id: businessId,
+      conversation_id: activeConversationId,
+      role: "assistant",
+      content: replyText.trim(),
+    })
     .select("id, role, content, created_at")
     .single();
 
@@ -280,6 +393,7 @@ export async function sendAssistantMessage(
     status: "ok",
     userMessage: userRow as AssistantMessageRow,
     reply: replyRow as AssistantMessageRow,
+    conversationId: activeConversationId,
   };
 }
 
@@ -288,11 +402,19 @@ export type ClearAssistantConversationResult =
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
 
-/** Deletes the saved conversation for this business so the owner can
- * start fresh. RLS (business-ownership scoped, same as every other
- * table) is what actually enforces this can only ever delete the
- * caller's own business's messages. */
-export async function clearAssistantConversation(businessId: string): Promise<ClearAssistantConversationResult> {
+/**
+ * Abandons the CURRENT, still-in-progress conversation — not the owner's
+ * whole history (see the history menu for that; past conversations are
+ * never touched by this). Deletes the conversation row itself (its
+ * messages cascade with it) so a chat the owner explicitly discarded
+ * doesn't linger in the history menu as a stray abandoned session. RLS
+ * (business-ownership scoped, same as every other table) is what actually
+ * enforces this can only ever delete the caller's own business's data.
+ */
+export async function clearAssistantConversation(
+  businessId: string,
+  conversationId: string
+): Promise<ClearAssistantConversationResult> {
   const supabase = createClient();
 
   const {
@@ -303,10 +425,111 @@ export async function clearAssistantConversation(businessId: string): Promise<Cl
     return { status: "unauthenticated" };
   }
 
-  const { error } = await supabase.from("assistant_messages").delete().eq("business_id", businessId);
+  const { error } = await supabase
+    .from("assistant_conversations")
+    .delete()
+    .eq("id", conversationId)
+    .eq("business_id", businessId);
+
   if (error) {
     return { status: "error", message: error.message };
   }
 
   return { status: "ok" };
+}
+
+export type GetConversationHistoryResult =
+  | { status: "ok"; conversations: AssistantConversationSummary[] }
+  | { status: "unauthenticated" }
+  | { status: "error"; message: string };
+
+/**
+ * Lists past conversations for the history menu — summaries only (a
+ * preview of the real first question, a real message count, real
+ * timestamps), never full transcripts; see getConversationMessages for
+ * reading one. Fetched lazily, only when the owner opens the history
+ * menu, so a business with a long chat history never pays for it just to
+ * open the assistant.
+ */
+export async function getConversationHistory(businessId: string): Promise<GetConversationHistoryResult> {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { status: "unauthenticated" };
+  }
+
+  const { data, error } = await supabase
+    .from("assistant_conversations")
+    .select("id, started_at, assistant_messages(role, content, created_at)")
+    .eq("business_id", businessId)
+    .order("started_at", { ascending: false })
+    .limit(MAX_CONVERSATIONS_IN_HISTORY);
+
+  if (error) {
+    return { status: "error", message: error.message };
+  }
+
+  type Row = {
+    id: string;
+    started_at: string;
+    assistant_messages: Array<{ role: "user" | "assistant"; content: string; created_at: string }>;
+  };
+
+  const conversations: AssistantConversationSummary[] = ((data ?? []) as Row[])
+    .map((row) => {
+      const messages = [...row.assistant_messages].sort((a, b) => a.created_at.localeCompare(b.created_at));
+      const firstUserMessage = messages.find((m) => m.role === "user");
+      return {
+        id: row.id,
+        startedAt: row.started_at,
+        lastMessageAt: messages[messages.length - 1]?.created_at ?? row.started_at,
+        messageCount: messages.length,
+        preview: (firstUserMessage?.content ?? "").slice(0, CONVERSATION_PREVIEW_LENGTH),
+      };
+    })
+    // A conversation row with zero messages shouldn't normally exist
+    // (sendAssistantMessage only creates one alongside its first
+    // message), but never surface an empty one in the menu if it does.
+    .filter((c) => c.messageCount > 0);
+
+  return { status: "ok", conversations };
+}
+
+export type GetConversationMessagesResult =
+  | { status: "ok"; messages: AssistantMessageRow[] }
+  | { status: "unauthenticated" }
+  | { status: "error"; message: string };
+
+/** Reads one past conversation's real messages, in order, for the
+ * history menu's read-only view. */
+export async function getConversationMessages(
+  businessId: string,
+  conversationId: string
+): Promise<GetConversationMessagesResult> {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { status: "unauthenticated" };
+  }
+
+  const { data, error } = await supabase
+    .from("assistant_messages")
+    .select("id, role, content, created_at")
+    .eq("business_id", businessId)
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return { status: "error", message: error.message };
+  }
+
+  return { status: "ok", messages: (data ?? []) as AssistantMessageRow[] };
 }

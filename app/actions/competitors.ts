@@ -7,7 +7,7 @@ import {
   type CompetitorScanResult,
   type CompetitorSourceBusiness,
 } from "@/lib/competitors";
-import { bizProfile } from "@/config/bizProfiles";
+import { resolveBizProfile } from "@/config/bizProfiles";
 
 interface CompetitorBusinessRow {
   place_id: string;
@@ -24,6 +24,7 @@ interface CompetitorBusinessRow {
   business_status: string | null;
   https_status: string | null;
   primary_type: string | null;
+  business_type_override: string | null;
   lat: number | null;
   lng: number | null;
 }
@@ -60,7 +61,7 @@ export async function getCompetitors(businessId: string): Promise<GetCompetitors
   const { data: business, error } = await supabase
     .from("businesses")
     .select(
-      "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, primary_type, lat, lng"
+      "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, primary_type, business_type_override, lat, lng"
     )
     .eq("id", businessId)
     .single();
@@ -91,7 +92,7 @@ export async function getCompetitors(businessId: string): Promise<GetCompetitors
 
   try {
     const result = await findAndScoreCompetitors(subject);
-    const competitorNoun = bizProfile(row.category, row.primary_type).competitorNoun;
+    const competitorNoun = resolveBizProfile(row.category, row.primary_type, row.business_type_override).competitorNoun;
     return {
       status: "ok",
       businessName: row.name,

@@ -23,8 +23,7 @@ import {
   type ScoreBreakdown,
   type ScoreWithSuggestions,
 } from "@/lib/scoring";
-import { AssistantView } from "@/components/assistant/AssistantView";
-import type { AssistantMessageRow } from "@/app/actions/assistant";
+import { AssistantLauncher } from "@/components/assistant/AssistantLauncher";
 import type { AssistantBusinessContext } from "@/lib/assistant";
 
 function formatSignedPoints(value: number): string {
@@ -393,7 +392,7 @@ export type AssistantEmbedData =
       status: "ok";
       context: AssistantBusinessContext;
       starterPrompts: string[];
-      messages: AssistantMessageRow[];
+      conversationCount: number;
     }
   | { status: "unavailable"; message: string };
 
@@ -474,12 +473,12 @@ export function BusinessScoreView({
       </div>
 
       {assistant.status === "ok" ? (
-        <AssistantView
+        <AssistantLauncher
           businessId={businessId}
           businessName={business.name}
           context={assistant.context}
           starterPrompts={assistant.starterPrompts}
-          initialMessages={assistant.messages}
+          conversationCount={assistant.conversationCount}
         />
       ) : (
         <Card className="p-5 text-sm text-ink-soft">

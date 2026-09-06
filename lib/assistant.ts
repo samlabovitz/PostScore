@@ -100,11 +100,81 @@ export interface AssistantCompetitorSummary {
   entries: AssistantCompetitorEntry[];
 }
 
+export interface AssistantScoreHistoryEntry {
+  total: number;
+  grade: Grade;
+  /** Pre-formatted for display/prompt use (e.g. "1/2/2026") — this module
+   * never does date math, only ordering, since a real date is all either
+   * the panel or the prompt needs. */
+  date: string;
+}
+
+export interface AssistantFixedItem {
+  /** The check's real label (e.g. "Uses HTTPS") — never a paraphrase. */
+  label: string;
+  /** The real points gained, as confirmed by a later re-scan — see
+   * reconcileTasks() in lib/actionPlan.ts. Never an estimate. */
+  pointsGained: number;
+  /** Pre-formatted display date, or null if somehow unset. */
+  verifiedAt: string | null;
+}
+
+/**
+ * The persisted "what I know about your business" memory: durable facts
+ * that outlive any one conversation, most of them read live off tables
+ * that already exist (`businesses`, `scores`, `tasks`) rather than
+ * duplicated into their own store — see the schema comment in
+ * supabase/schema.sql. `services`, `avgJobValueLow`/`avgJobValueHigh`, and
+ * `businessTypeOverridden` are the only genuinely new owner-entered facts;
+ * everything else here is derived, never invented.
+ */
+export interface AssistantBusinessProfile {
+  /** The resolved label actually in effect — the owner's override when
+   * one is set, otherwise the Google-category auto-detection (see
+   * resolveBizProfile() in config/bizProfiles.ts). This is the value
+   * every other part of the app (offers, pricing tips, this context) uses. */
+  businessType: string;
+  /** The resolved profile's own id (e.g. "salon") — lets the panel
+   * pre-select the right dropdown option without re-deriving it. */
+  businessTypeId: string;
+  /** The Google-category auto-detected label, regardless of whether an
+   * override is set — shown as honest reference context (e.g. "Google
+   * detected: General Business") so a correction is never silently
+   * hiding what Google actually said. */
+  autoDetectedBusinessType: string;
+  /** The Google-category auto-detected profile's own id — lets the panel
+   * tell "the owner picked the same thing Google already detected" apart
+   * from a real correction, so selecting it back in the dropdown clears
+   * the override rather than storing a redundant one. */
+  autoDetectedBusinessTypeId: string;
+  /** True when the owner has set business_type_override — i.e.
+   * `businessType` reflects a manual correction, not Google's category. */
+  businessTypeOverridden: boolean;
+  location: string | null;
+  /** Owner-entered, editable from the "What I know about your business"
+   * panel. Empty array = not entered yet, never a guessed default. */
+  services: string[];
+  /** Owner-entered job-value range, editable from the same panel — both
+   * null together when not entered yet; never one without the other (see
+   * the range check constraint in supabase/schema.sql). */
+  avgJobValueLow: number | null;
+  avgJobValueHigh: number | null;
+  /** Oldest-first, capped by the caller (see MAX_SCORE_HISTORY_IN_CONTEXT)
+   * — every entry is a real saved row from `scores`, never interpolated. */
+  scoreHistory: AssistantScoreHistoryEntry[];
+  /** Newest-first, capped by the caller (see MAX_FIXED_ITEMS_IN_CONTEXT) —
+   * only checks a re-scan has actually confirmed complete, i.e.
+   * buildCompletedTasks() output, never a task the owner merely marked
+   * "pending verification." */
+  fixedItems: AssistantFixedItem[];
+}
+
 export interface AssistantBusinessContext {
   listing: AssistantListingSummary;
   score: AssistantScoreSummary;
   actionPlan: AssistantActionPlanSummary;
   competitors: AssistantCompetitorSummary;
+  profile: AssistantBusinessProfile;
 }
 
 // ---------------------------------------------------------------------------
@@ -123,10 +193,12 @@ export interface AssistantBusinessContext {
 export const ASSISTANT_SYSTEM_RULES = `
 You are the PostScore Assistant, embedded in a local business owner's PostScore dashboard. The owner is asking about their own business's real online presence — their Google Business Profile, their PostScore, their competitors, and general local-marketing strategy.
 
-You will be given a "REAL DATA CONTEXT" block below with this exact business's real, current PostScore breakdown, action plan, competitor standing (if a scan has ever been saved), and Google listing details. Every fact in that block is real data PostScore actually collected for this business — not a hypothetical.
+You will be given a "REAL DATA CONTEXT" block below with this exact business's real, current PostScore breakdown, action plan, competitor standing (if a scan has ever been saved), Google listing details, and a persisted "WHAT WE KNOW ABOUT THIS BUSINESS" memory section (business type, location, owner-entered services and average job value, real score history, and checks a re-scan has actually confirmed fixed). Every fact in that block is real data PostScore actually collected or was actually told for this business — not a hypothetical.
 
 HOW TO ANSWER:
 1. GROUNDED FIRST. When the owner asks about their business, their score, their listing, or their competitors, answer using ONLY the facts in the REAL DATA CONTEXT block. Never invent a number, a rank, or a detail that isn't in it.
+1b. USE THE PERSISTED MEMORY LIKE A COACH WHO REMEMBERS. The "WHAT WE KNOW ABOUT THIS BUSINESS" section is memory that carries across sessions — when it's relevant, weave it into your answer instead of only talking about the current snapshot, e.g. "Last time you added photos and your score went up 6 points — next, let's tackle reviews." But every specific you cite this way (a past score, a date, a fixed item) MUST come verbatim from that section. If score history has fewer than 2 entries, don't claim a trend or a "since last time" comparison exists — say this is the first score on file instead. If the fixed-items list is empty, say nothing has been confirmed fixed yet rather than inventing one.
+1c. DON'T RECITE WHAT THE OWNER CAN ALREADY SEE. Business type, location, services, and job-value range are shown to the owner right next to this chat, in a "What I know about your business" panel — never open or pad an answer by restating them back as if informing the owner of their own business (e.g. never say something like "You're a liquor store at 246 E Delaware Ave with an $8-$80 job range" before getting to the actual point). Use those facts silently instead: to word advice in the vocabulary of what they actually sell, or to translate a fix into a real dollar stake using their real job-value range (e.g. "each fixed review-flow gap is worth roughly $8-$80 in likely lost jobs" is fine — stating the STAKE is insight; stating the raw range back with no new point attached is just recitation). If services or a job-value range were never entered, say so plainly only when the owner's question actually depends on knowing it, and point to the panel to add it — don't guess what the business sells or charges. This rule is about business type/location/services/job-value specifically; rule 1b's score-history and fixed-item callouts are real narrative progress, not static identity facts, so keep using those.
 2. GENERAL GUIDANCE, CLEARLY LABELED. When the owner asks a general "how do I..." or strategy question that isn't answered by looking at their data, you may give genuinely helpful general local-marketing guidance — but any sentence of general guidance MUST start a new paragraph beginning with the exact text "General guidance:" so it reads as clearly separate from their real data. Never blend a general tip into a data-grounded sentence, and never present a general tip as if it were something found in their specific data.
 3. NEVER FABRICATE. You were not given, and must NEVER invent or guess, any of the following. If asked, say plainly you don't have it and briefly why:
    - Individual reviews or review text — you only ever have an aggregate rating and count, never the actual review content. That requires a Google Business Profile connection PostScore doesn't have yet.
@@ -136,8 +208,16 @@ HOW TO ANSWER:
    - Reply rates, response times, or any review-management metric — not tracked by PostScore at all.
    - Anything else about this business that simply isn't in the REAL DATA CONTEXT block.
 4. If part of the REAL DATA CONTEXT is missing (e.g. no competitor scan has ever been saved), say so honestly and point to where the owner can get it (e.g. "run a scan on the Competitors page") rather than guessing or working around it.
-5. BE BRIEF. A busy owner, not an essay. No preamble ("Great question", "Looking at your data..."), no restating the question, no repeating the context block back at them, no summarizing what you're about to say before saying it. Lead with the answer. Prefer a short paragraph (2-4 sentences) or a tight bulleted list of specifics over long prose — every sentence should add a new fact, number, or instruction, not restate one already given. Still include every real-data specific and caveat the question actually needs; cut words, not substance.
+5. BE BRIEF — SHORTER THAN FEELS NATURAL. A busy owner glancing at their phone, not an essay. No preamble ("Great question", "Looking at your data...", "Sure, here's..."), no restating the question, no repeating the context block back at them, no summarizing what you're about to say before saying it, no closing recap of what you just said. Lead with the single most useful sentence. Default target: 1-3 short sentences, or 3-5 terse bullets (a few words each, not full paragraphs) for a "top things to fix" style question — reach for more only when the question genuinely can't be answered honestly in that space (e.g. it has several real caveats). Every sentence must add a new fact, number, or instruction; if a sentence only restates or transitions, cut it. Say each fact once. Prefer short, plain words over hedging phrases ("it seems like", "you might want to consider") — state it directly. Still include every real-data specific and caveat the question actually needs — cut words and framing, never substance.
 6. You cannot take any action on their behalf (you can't edit their listing, send a review request, or change anything) — you only answer questions. If asked to do something, explain that and point to the right page in the dashboard instead.
+7. BE A GUIDE TO POSTSCORE'S OWN TOOLS, NOT JUST GENERIC ADVICE. Whenever your advice is something PostScore itself has a real, built tool or page for, name that exact page/tab so the owner acts inside the app instead of guessing where to go or reaching for some outside tool. Use ONLY these real mappings — never invent a feature, page, or tab that isn't listed here:
+   - Getting more/fresh reviews → the shareable review link and front-desk QR code sign on the Reviews page.
+   - A discount, promotion, or coupon → the coupon builder on the Growth page's Coupons tab.
+   - A referral / "refer a friend" program → the Growth page's Refer a friend tab.
+   - Pricing strategy, or how their prices compare → the Pricing page.
+   - How they stack up against nearby competitors → the Competitors page (run or re-run a scan there for real data).
+   - No website, or a weak one → the Website page's starter-site builder.
+   Still answer the real question first — the pointer is the closing sentence, not a substitute for genuine guidance. Don't force a pointer into an answer it doesn't fit; only add one when it's genuinely the next concrete step.
 `.trim();
 
 // ---------------------------------------------------------------------------
@@ -159,6 +239,42 @@ export function buildAssistantContextText(context: AssistantBusinessContext): st
   lines.push("=== REAL DATA CONTEXT ===");
   lines.push(`Business: ${context.listing.name ?? "Unnamed business"} (${context.listing.categoryLabel})`);
   lines.push(`PostScore: ${context.score.total}/100 (Grade ${context.score.grade})`);
+
+  lines.push("");
+  lines.push("=== WHAT WE KNOW ABOUT THIS BUSINESS (persisted memory, carries across sessions) ===");
+  lines.push(
+    context.profile.businessTypeOverridden
+      ? `Business type: ${context.profile.businessType} (owner-corrected from Google's auto-detected "${context.profile.autoDetectedBusinessType}"). Location: ${context.profile.location ?? "not on file"}.`
+      : `Business type: ${context.profile.businessType} (auto-detected from Google's category). Location: ${context.profile.location ?? "not on file"}.`
+  );
+  lines.push(
+    context.profile.services.length > 0
+      ? `Services (owner-entered): ${context.profile.services.join(", ")}.`
+      : "Services: not entered yet — owner hasn't listed their services in the \"What I know about your business\" panel."
+  );
+  lines.push(
+    context.profile.avgJobValueLow !== null && context.profile.avgJobValueHigh !== null
+      ? `Typical job/ticket value range (owner-entered): $${context.profile.avgJobValueLow}-$${context.profile.avgJobValueHigh}.`
+      : "Typical job/ticket value range: not entered yet."
+  );
+  if (context.profile.scoreHistory.length >= 2) {
+    const trend = context.profile.scoreHistory.map((h) => `${h.date}: ${h.total} (${h.grade})`).join(" -> ");
+    lines.push(`Score history (oldest to newest, real saved scans): ${trend}.`);
+  } else if (context.profile.scoreHistory.length === 1) {
+    const only = context.profile.scoreHistory[0];
+    lines.push(`Score history: only one saved score so far — ${only.date}: ${only.total} (${only.grade}). No trend to compare yet.`);
+  } else {
+    lines.push("Score history: no saved scans yet.");
+  }
+  if (context.profile.fixedItems.length > 0) {
+    lines.push("Confirmed fixed (a later re-scan actually verified these, newest first):");
+    for (const f of context.profile.fixedItems) {
+      lines.push(`- ${f.label} (+${f.pointsGained} pts, confirmed ${f.verifiedAt ?? "on an earlier date"})`);
+    }
+  } else {
+    lines.push("Confirmed fixed: nothing confirmed fixed yet.");
+  }
+  lines.push("");
 
   lines.push("Category breakdown:");
   for (const c of context.score.categories) {
@@ -241,6 +357,10 @@ export function buildAssistantStarterPrompts(context: AssistantBusinessContext):
     "What are the top 3 things I should fix this week?",
   ];
 
+  if (context.profile.scoreHistory.length >= 2 || context.profile.fixedItems.length > 0) {
+    prompts.push("What's changed since I started?");
+  }
+
   const topLoss = context.score.losingChecks[0];
   if (topLoss) {
     prompts.push(`Why is my ${CATEGORY_LABELS[topLoss.category]} section losing points?`);
@@ -275,6 +395,15 @@ export const MAX_LOSING_CHECKS_IN_CONTEXT = 12;
  * "enough to feel real, few enough to stay cheap" reasoning. */
 export const MAX_ACTION_PLAN_TASKS_IN_CONTEXT = 5;
 
+/** How many saved scans' worth of score history to include in the
+ * persisted-memory block — enough to show a real trend without resending
+ * a business's entire scan history on every message. */
+export const MAX_SCORE_HISTORY_IN_CONTEXT = 8;
+
+/** How many confirmed-fixed items (newest first) to include — same
+ * "enough to feel real, cheap to resend" reasoning as the caps above. */
+export const MAX_FIXED_ITEMS_IN_CONTEXT = 8;
+
 /** How many prior chat turns (user+assistant messages combined) to
  * resend to the API on every call — a chat's cost grows with every turn
  * kept, so this bounds it rather than resending the whole conversation
@@ -283,8 +412,10 @@ export const MAX_HISTORY_MESSAGES = 12;
 
 /** Enough room for a real, useful answer (sometimes a short bulleted
  * list) but capped well below an essay — cost control, same spirit as
- * the Pricing tool's per-service token cap. Lowered from 600 alongside
- * the tightened system prompt (rule 5) to reinforce brevity, while
- * staying generous enough that a real multi-point answer won't get cut
- * off mid-sentence. */
-export const ASSISTANT_MAX_TOKENS = 450;
+ * the Pricing tool's per-service token cap. Lowered from 600, then again
+ * from 450, alongside the tightened system prompt (rule 5's "1-3
+ * sentences or 3-5 terse bullets" target) to reinforce brevity, while
+ * staying generous enough that a real multi-point answer (plus a labeled
+ * "General guidance:" paragraph, when one applies) won't get cut off
+ * mid-sentence. */
+export const ASSISTANT_MAX_TOKENS = 300;

@@ -4,7 +4,7 @@ import { IconArrowLeft } from "@tabler/icons-react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
 import { getWebsitePageData } from "@/app/actions/website";
-import { bizProfile, renderFaq } from "@/config/bizProfiles";
+import { resolveBizProfile, renderFaq } from "@/config/bizProfiles";
 import { StarterSiteBuilder } from "./StarterSiteBuilder";
 
 export default async function WebsitePage({ params }: { params: { id: string } }) {
@@ -18,7 +18,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
   }
 
   const { data } = result;
-  const profile = bizProfile(data.category, data.primaryType);
+  const profile = resolveBizProfile(data.category, data.primaryType, data.businessTypeOverride);
   const faq = renderFaq(profile.faq, { name: data.businessName, address: data.address });
   const hasWebsite = !!data.website && data.website.trim().length > 0;
 

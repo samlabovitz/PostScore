@@ -289,18 +289,35 @@ const TAGLINE_SIZE_PX: Record<TaglineSize, number> = {
  * "booked," a restaurant gets "ordered," a legal practice gets a
  * "consultation." Always a real phone call; never a fabricated online
  * booking link this app doesn't actually have. */
+/** Grouped by which of config/bizProfiles.ts's five content profiles each
+ * business type id resolves to (see BUSINESS_TYPE_OPTIONS there) — a
+ * narrow type like "barbershop" reuses the salon content profile's whole
+ * approach to running the business, so it gets the same "Call to book"
+ * verb a plain "salon" would. Anything not listed (retail, trades, and
+ * other types that reuse the general default content) falls through to
+ * "Call us," same as an unrecognized id. */
+const BOOK_VERB_IDS = new Set([
+  "salon",
+  "barbershop",
+  "spa",
+  "nail_salon",
+  "practitioner",
+  "gym_fitness",
+  "accountant",
+  "real_estate",
+  "consultant",
+  "coach",
+  "tutor_education",
+  "photographer",
+]);
+const ORDER_VERB_IDS = new Set(["restaurant", "cafe", "bar", "bakery", "liquor_store", "grocery_market"]);
+const CONSULTATION_VERB_IDS = new Set(["lawyer", "dentist", "medical_clinic"]);
+
 function ctaVerb(profileId: string): string {
-  switch (profileId) {
-    case "salon":
-    case "practitioner":
-      return "Call to book";
-    case "restaurant":
-      return "Call to order";
-    case "lawyer":
-      return "Call for a consultation";
-    default:
-      return "Call us";
-  }
+  if (BOOK_VERB_IDS.has(profileId)) return "Call to book";
+  if (ORDER_VERB_IDS.has(profileId)) return "Call to order";
+  if (CONSULTATION_VERB_IDS.has(profileId)) return "Call for a consultation";
+  return "Call us";
 }
 
 function escapeHtml(value: string): string {

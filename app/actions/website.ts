@@ -7,6 +7,7 @@ export interface WebsitePageData {
   address: string | null;
   category: string | null;
   primaryType: string | null;
+  businessTypeOverride: string | null;
   phone: string | null;
   openingHours: string[] | null;
   rating: number | null;
@@ -44,7 +45,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "name, address, category, primary_type, phone, opening_hours, rating, review_count, website, google_maps_uri"
+      "name, address, category, primary_type, business_type_override, phone, opening_hours, rating, review_count, website, google_maps_uri"
     )
     .eq("id", businessId)
     .single();
@@ -60,6 +61,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       address: data.address,
       category: data.category,
       primaryType: data.primary_type,
+      businessTypeOverride: data.business_type_override,
       phone: data.phone,
       openingHours: data.opening_hours,
       rating: data.rating,

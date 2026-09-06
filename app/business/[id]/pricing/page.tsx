@@ -3,7 +3,7 @@ import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { getPrices, getPricingAssessment } from "@/app/actions/pricing";
-import { bizProfile } from "@/config/bizProfiles";
+import { resolveBizProfile } from "@/config/bizProfiles";
 import { PricingView } from "./PricingView";
 
 export default async function PricingPage({ params }: { params: { id: string } }) {
@@ -17,7 +17,7 @@ export default async function PricingPage({ params }: { params: { id: string } }
   }
 
   const { business } = summary;
-  const profile = bizProfile(business.category, business.primary_type);
+  const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override);
   const [pricesResult, assessmentResult] = await Promise.all([
     getPrices(params.id),
     getPricingAssessment(params.id),

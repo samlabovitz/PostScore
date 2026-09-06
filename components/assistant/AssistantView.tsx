@@ -2,9 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  IconArrowLeft,
+  IconHistory,
   IconInfoCircle,
   IconLoader2,
   IconMessageChatbot,
+  IconMessages,
   IconSend2,
   IconSparkles,
   IconTrash,
@@ -17,10 +20,14 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { cn } from "@/lib/utils";
 import {
   clearAssistantConversation,
+  getConversationHistory,
+  getConversationMessages,
   sendAssistantMessage,
+  type AssistantConversationSummary,
   type AssistantMessageRow,
 } from "@/app/actions/assistant";
 import type { AssistantBusinessContext } from "@/lib/assistant";
+import { BusinessMemoryPanel } from "@/components/assistant/BusinessMemoryPanel";
 
 const GENERAL_GUIDANCE_PREFIX = "general guidance:";
 
@@ -137,36 +144,114 @@ function EmptyState({
   );
 }
 
+function timeAgo(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function HistoryList({
+  loading,
+  error,
+  conversations,
+  onOpen,
+}: {
+  loading: boolean;
+  error: string | null;
+  conversations: AssistantConversationSummary[] | null;
+  onOpen: (id: string) => void;
+}) {
+  if (loading) {
+    return (
+      <div className="flex flex-1 items-center justify-center py-10 text-ink-mute">
+        <IconLoader2 size={18} className="animate-spin" />
+      </div>
+    );
+  }
+  if (error) {
+    return <p className="p-5 text-[13px] text-red">{error}</p>;
+  }
+  if (!conversations || conversations.length === 0) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 py-10 text-center">
+        <IconMessages size={22} className="text-ink-mute" />
+        <p className="text-[13px] text-ink-soft">No past conversations yet.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col divide-y divide-paper-line">
+      {conversations.map((c) => (
+        <button
+          key={c.id}
+          type="button"
+          onClick={() => onOpen(c.id)}
+          className="flex flex-col gap-0.5 px-1 py-3 text-left transition-colors hover:bg-paper"
+        >
+          <span className="truncate text-[13px] font-medium text-ink">
+            {c.preview || "New conversation"}
+          </span>
+          <span className="text-[11.5px] text-ink-mute">
+            {timeAgo(c.startedAt)} · {c.messageCount} message{c.messageCount === 1 ? "" : "s"}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Which pane the chat card's body shows — "chat" is the live, fresh
+ * session; "history" lists past conversations; "reading" shows one past
+ * conversation's real messages, read-only (no input, nothing resumable —
+ * see AssistantView's own doc comment for why a past chat is never
+ * continued). */
+type Pane = { kind: "chat" } | { kind: "history" } | { kind: "reading"; conversationId: string };
+
 /**
- * The "Ask about your presence" assistant, embedded directly on the
- * Overview page below the score section. Lives only here now — there is
- * no separate /assistant route — so this is always rendered inline
- * alongside the rest of Overview's sections, using SectionHeading like
- * every other section on that page.
+ * The "Ask about your presence" assistant, opened from a compact entry
+ * point on the Overview page (see AssistantLauncher) inside a modal
+ * overlay (see AssistantOverlay). Always starts from a blank conversation
+ * — no prior messages are loaded on open — and every message sent
+ * belongs to a new `assistant_conversations` row created lazily on the
+ * session's first message (see sendAssistantMessage). Past sessions are
+ * never lost: they're saved automatically (every message is written to
+ * the database as it's sent) and browsable from the History pane below,
+ * read-only — the model only ever sees the CURRENT conversation's
+ * messages, never a past one, so opening the assistant again really is a
+ * fresh start for it too, not just visually.
  */
 export function AssistantView({
   businessId,
   businessName,
   context,
   starterPrompts,
-  initialMessages,
 }: {
   businessId: string;
   businessName: string | null;
   context: AssistantBusinessContext;
   starterPrompts: string[];
-  initialMessages: AssistantMessageRow[];
 }) {
-  const [messages, setMessages] = useState<AssistantMessageRow[]>(initialMessages);
+  const [messages, setMessages] = useState<AssistantMessageRow[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const [pane, setPane] = useState<Pane>({ kind: "chat" });
+  const [history, setHistory] = useState<AssistantConversationSummary[] | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [readingMessages, setReadingMessages] = useState<AssistantMessageRow[] | null>(null);
+  const [readingError, setReadingError] = useState<string | null>(null);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, sending]);
+  }, [messages, sending, pane]);
 
   async function send(text: string) {
     const trimmed = text.trim();
@@ -184,15 +269,19 @@ export function AssistantView({
       { id: optimisticId, role: "user", content: trimmed, created_at: new Date().toISOString() },
     ]);
 
-    const result = await sendAssistantMessage(businessId, trimmed);
+    const result = await sendAssistantMessage(businessId, trimmed, conversationId);
     setSending(false);
 
     if (result.status === "ok") {
+      setConversationId(result.conversationId);
       setMessages((prev) => [
         ...prev.filter((m) => m.id !== optimisticId),
         result.userMessage,
         result.reply,
       ]);
+      // A new conversation now exists (or an existing one just grew) —
+      // invalidate any cached history list so reopening it reflects it.
+      setHistory(null);
     } else {
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
       setError(
@@ -203,16 +292,52 @@ export function AssistantView({
   }
 
   async function handleClear() {
+    if (!conversationId) return;
     setClearing(true);
-    const result = await clearAssistantConversation(businessId);
+    const result = await clearAssistantConversation(businessId, conversationId);
     setClearing(false);
     if (result.status === "ok") {
       setMessages([]);
+      setConversationId(null);
       setError(null);
+      setHistory(null);
     } else {
       setError(result.status === "error" ? result.message : "Couldn't clear the conversation.");
     }
   }
+
+  async function openHistory() {
+    setPane({ kind: "history" });
+    if (history !== null) return;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    const result = await getConversationHistory(businessId);
+    setHistoryLoading(false);
+    if (result.status === "ok") {
+      // The conversation in progress (if any) isn't "past" yet — it's
+      // already saved as it's typed, so it would otherwise show up here
+      // as a duplicate of the live chat.
+      setHistory(result.conversations.filter((c) => c.id !== conversationId));
+    } else {
+      setHistoryError(
+        result.status === "error" ? result.message : "Couldn't load past conversations."
+      );
+    }
+  }
+
+  async function openConversation(id: string) {
+    setPane({ kind: "reading", conversationId: id });
+    setReadingMessages(null);
+    setReadingError(null);
+    const result = await getConversationMessages(businessId, id);
+    if (result.status === "ok") {
+      setReadingMessages(result.messages);
+    } else {
+      setReadingError(result.status === "error" ? result.message : "Couldn't load this conversation.");
+    }
+  }
+
+  const isChat = pane.kind === "chat";
 
   return (
     <div className="flex flex-col gap-4">
@@ -230,27 +355,69 @@ export function AssistantView({
         </p>
       </Card>
 
+      <BusinessMemoryPanel businessId={businessId} profile={context.profile} />
+
       <Card className="flex flex-col overflow-hidden p-0">
         <div className="flex items-center justify-between gap-3 border-b border-paper-line px-5 py-3">
-          <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink-mute">
-            <IconSparkles size={14} className="text-brass" />
-            Conversation is saved to this business
-          </div>
-          {messages.length > 0 && (
+          {isChat ? (
+            <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink-mute">
+              <IconSparkles size={14} className="text-brass" />
+              New conversation — past chats are saved
+            </div>
+          ) : (
             <button
               type="button"
-              onClick={handleClear}
-              disabled={clearing}
-              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-ink-mute hover:bg-red/10 hover:text-red disabled:opacity-50"
+              onClick={() => setPane({ kind: "chat" })}
+              className="flex items-center gap-1.5 text-[12px] font-medium text-ink-mute hover:text-ink"
             >
-              <IconTrash size={13} />
-              Clear conversation
+              <IconArrowLeft size={14} />
+              {pane.kind === "history" ? "Past conversations" : "Back to new chat"}
             </button>
           )}
+          <div className="flex items-center gap-1">
+            {isChat && (
+              <button
+                type="button"
+                onClick={openHistory}
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-ink-mute hover:bg-paper-deep hover:text-ink"
+              >
+                <IconHistory size={13} />
+                History
+              </button>
+            )}
+            {isChat && messages.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClear}
+                disabled={clearing}
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-ink-mute hover:bg-red/10 hover:text-red disabled:opacity-50"
+              >
+                <IconTrash size={13} />
+                Clear
+              </button>
+            )}
+          </div>
         </div>
 
         <div ref={scrollRef} className="flex max-h-[520px] min-h-[320px] flex-col gap-3 overflow-y-auto p-5">
-          {messages.length === 0 ? (
+          {pane.kind === "history" ? (
+            <HistoryList
+              loading={historyLoading}
+              error={historyError}
+              conversations={history}
+              onOpen={openConversation}
+            />
+          ) : pane.kind === "reading" ? (
+            readingError ? (
+              <p className="text-[13px] text-red">{readingError}</p>
+            ) : readingMessages === null ? (
+              <div className="flex flex-1 items-center justify-center text-ink-mute">
+                <IconLoader2 size={18} className="animate-spin" />
+              </div>
+            ) : (
+              readingMessages.map((m) => <MessageBubble key={m.id} message={m} />)
+            )
+          ) : messages.length === 0 ? (
             <EmptyState businessName={businessName} starterPrompts={starterPrompts} onPick={send} />
           ) : (
             <>
@@ -262,50 +429,52 @@ export function AssistantView({
           )}
         </div>
 
-        <div className="border-t border-paper-line p-4">
-          {messages.length > 0 && (
-            <div className="mb-3 flex flex-wrap gap-2">
-              {starterPrompts.slice(0, 3).map((prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  onClick={() => send(prompt)}
-                  disabled={sending}
-                  className="rounded-full border border-paper-deep bg-white px-3 py-1.5 text-[11.5px] font-medium text-ink-soft transition-colors hover:border-brass hover:text-ink disabled:opacity-50"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-          )}
-          {error && <p className="mb-2 text-[12px] text-red">{error}</p>}
-          <form
-            className="flex items-end gap-2.5"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void send(draft);
-            }}
-          >
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  void send(draft);
-                }
+        {isChat && (
+          <div className="border-t border-paper-line p-4">
+            {messages.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {starterPrompts.slice(0, 3).map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    onClick={() => send(prompt)}
+                    disabled={sending}
+                    className="rounded-full border border-paper-deep bg-white px-3 py-1.5 text-[11.5px] font-medium text-ink-soft transition-colors hover:border-brass hover:text-ink disabled:opacity-50"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            )}
+            {error && <p className="mb-2 text-[12px] text-red">{error}</p>}
+            <form
+              className="flex items-end gap-2.5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void send(draft);
               }}
-              placeholder="Ask about your score, action plan, competitors, or general marketing advice…"
-              rows={2}
-              disabled={sending}
-              className="min-w-0 flex-1 resize-none rounded-lg border border-paper-deep bg-white px-3.5 py-2.5 text-sm text-ink outline-none focus:border-ink-soft disabled:opacity-60"
-            />
-            <Button type="submit" variant="brass" disabled={sending || !draft.trim()} className="shrink-0">
-              {sending ? <IconLoader2 size={16} className="animate-spin" /> : <IconSend2 size={16} />}
-              Send
-            </Button>
-          </form>
-        </div>
+            >
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void send(draft);
+                  }
+                }}
+                placeholder="Ask about your score, action plan, competitors, or general marketing advice…"
+                rows={2}
+                disabled={sending}
+                className="min-w-0 flex-1 resize-none rounded-lg border border-paper-deep bg-white px-3.5 py-2.5 text-sm text-ink outline-none focus:border-ink-soft disabled:opacity-60"
+              />
+              <Button type="submit" variant="brass" disabled={sending || !draft.trim()} className="shrink-0">
+                {sending ? <IconLoader2 size={16} className="animate-spin" /> : <IconSend2 size={16} />}
+                Send
+              </Button>
+            </form>
+          </div>
+        )}
       </Card>
     </div>
   );

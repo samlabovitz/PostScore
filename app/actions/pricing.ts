@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { bizProfile } from "@/config/bizProfiles";
+import { resolveBizProfile } from "@/config/bizProfiles";
 import {
   findAndScoreCompetitors,
   type CompetitorSourceBusiness,
@@ -202,6 +202,7 @@ interface PricingBusinessRow {
   business_status: string | null;
   https_status: string | null;
   primary_type: string | null;
+  business_type_override: string | null;
   price_level: string | null;
   lat: number | null;
   lng: number | null;
@@ -245,7 +246,7 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
     supabase
       .from("businesses")
       .select(
-        "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, primary_type, price_level, lat, lng"
+        "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, primary_type, business_type_override, price_level, lat, lng"
       )
       .eq("id", businessId)
       .single(),
@@ -300,7 +301,7 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
     priceLevelContext = null;
   }
 
-  const businessTypeLabel = bizProfile(row.category, row.primary_type).label;
+  const businessTypeLabel = resolveBizProfile(row.category, row.primary_type, row.business_type_override).label;
   const prompt = buildPricingPrompt({
     businessTypeLabel,
     services,

@@ -674,41 +674,420 @@ const DEFAULT_PROFILE: BizProfile = {
   ],
 };
 
-/**
- * Checked in order — the first profile whose `match` list hits wins.
- * Keep more specific keyword sets ahead of looser ones if that ever
- * matters; today's four sets don't overlap.
- */
-const BIZ_PROFILES: BizProfile[] = [
-  SALON_PROFILE,
-  RESTAURANT_PROFILE,
-  LAWYER_PROFILE,
-  PRACTITIONER_PROFILE,
-];
-
 export { DEFAULT_PROFILE };
 
 /**
+ * The five hand-written content sources — coupons, offers, growth ideas,
+ * FAQ, referral rules, pricing tips — every business type ultimately
+ * reuses. Writing genuinely distinct monetization content for every one
+ * of the ~30 narrow business types below isn't realistic (a "barbershop"
+ * doesn't need different coupon math than a "salon"; a "plumber" and an
+ * "electrician" run their business the same way), so a narrow type picks
+ * whichever of these five actually matches how it makes money — see each
+ * BusinessTypeOption's `contentProfileId` below.
+ */
+type ContentProfileId = "salon" | "restaurant" | "lawyer" | "practitioner" | "default";
+
+const CONTENT_PROFILES: Record<ContentProfileId, BizProfile> = {
+  salon: SALON_PROFILE,
+  restaurant: RESTAURANT_PROFILE,
+  lawyer: LAWYER_PROFILE,
+  practitioner: PRACTITIONER_PROFILE,
+  default: DEFAULT_PROFILE,
+};
+
+/**
+ * One selectable/detectable business type. Distinct from BizProfile
+ * itself: this carries only IDENTITY (what it's called, what Google/the
+ * owner calls it) and points at the CONTENT it reuses, rather than
+ * duplicating a full BizProfile's coupon/FAQ/pricing content per narrow
+ * type. See buildResolvedProfile() below for how the two combine.
+ */
+interface BusinessTypeOption {
+  id: string;
+  label: string;
+  /**
+   * Keywords matched case-insensitively against the business's Google
+   * category (display name) and primary type (machine slug). Checked in
+   * the order BUSINESS_TYPE_OPTIONS lists them, first hit wins — so a
+   * narrower type (e.g. "barbershop") is listed ahead of the broader
+   * type it would otherwise be swallowed by (e.g. generic "salon") and
+   * no keyword is reused across two entries.
+   */
+  match: string[];
+  /** Representative Google Places type slugs — informational metadata,
+   * not a rewiring of lib/competitors.ts's own matching. */
+  placesType: string[];
+  /** Which hand-written content this type's coupons/offers/growth ideas/
+   * FAQ/pricing tips/referral rules actually come from. */
+  contentProfileId: ContentProfileId;
+  /**
+   * Overrides the content profile's own competitorNoun (e.g. "barbershops"
+   * instead of the salon content's "salons") — every other field is
+   * reused as-is. Omit to just use the content profile's own noun.
+   */
+  competitorNoun?: string;
+}
+
+/**
+ * Every business type PostScore recognizes — the single source of truth
+ * for both auto-detection (bizProfile(), matched against Google's real
+ * category/primary type) and the owner's manual-correction dropdown
+ * (BIZ_PROFILE_OPTIONS). Order matters: the first entry whose `match`
+ * list hits wins, so more specific types are listed ahead of the general
+ * bucket they'd otherwise fall into (e.g. "pet_services" ahead of
+ * "medical_clinic" so "Veterinary Clinic" doesn't match on "clinic"
+ * first). "default" is last and matches everything as the final
+ * catch-all — see bizProfile()'s empty-match-list check.
+ */
+const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
+  // Salon & personal care — narrow types first, generic "salon" last so
+  // it doesn't swallow the others (its own keywords, "salon"/"hair"/
+  // "beauty", never overlap theirs).
+  {
+    id: "barbershop",
+    label: "Barbershop",
+    match: ["barber"],
+    placesType: ["barber_shop"],
+    contentProfileId: "salon",
+    competitorNoun: "barbershops",
+  },
+  {
+    id: "spa",
+    label: "Spa & Wellness",
+    match: ["spa", "massage", "day spa"],
+    placesType: ["spa", "day_spa", "massage"],
+    contentProfileId: "salon",
+    competitorNoun: "spas",
+  },
+  {
+    id: "nail_salon",
+    label: "Nail Salon",
+    match: ["nail salon", "nail", "lash", "brow"],
+    placesType: ["nail_salon"],
+    contentProfileId: "salon",
+    competitorNoun: "nail salons",
+  },
+  {
+    id: "salon",
+    label: SALON_PROFILE.label,
+    match: ["salon", "hair", "beauty", "tanning"],
+    placesType: ["hair_salon", "beauty_salon"],
+    contentProfileId: "salon",
+  },
+
+  // Food & drink — narrow types first, generic "restaurant" last.
+  {
+    id: "cafe",
+    label: "Café / Coffee Shop",
+    match: ["cafe", "café", "coffee", "espresso"],
+    placesType: ["cafe", "coffee_shop"],
+    contentProfileId: "restaurant",
+    competitorNoun: "cafes",
+  },
+  {
+    id: "bar",
+    label: "Bar / Pub",
+    match: ["bar", "pub", "tavern", "brewery", "taproom"],
+    placesType: ["bar", "pub", "night_club"],
+    contentProfileId: "restaurant",
+    competitorNoun: "bars",
+  },
+  {
+    id: "bakery",
+    label: "Bakery",
+    match: ["bakery", "patisserie", "bakeshop"],
+    placesType: ["bakery"],
+    contentProfileId: "restaurant",
+    competitorNoun: "bakeries",
+  },
+  {
+    id: "liquor_store",
+    label: "Liquor & Wine Store",
+    match: ["liquor", "wine shop", "spirits", "package store", "beer store"],
+    placesType: ["liquor_store"],
+    contentProfileId: "restaurant",
+    competitorNoun: "liquor stores",
+  },
+  {
+    id: "grocery_market",
+    label: "Grocery / Market",
+    match: ["grocery", "supermarket", "convenience store", "mini mart", "corner store"],
+    placesType: ["grocery_store", "supermarket", "convenience_store"],
+    contentProfileId: "restaurant",
+    competitorNoun: "grocery stores",
+  },
+  {
+    id: "restaurant",
+    label: RESTAURANT_PROFILE.label,
+    match: ["restaurant", "pizza", "diner", "burger", "taco", "sushi", "deli", "food", "eatery", "grill", "bistro", "bbq"],
+    placesType: ["restaurant", "meal_takeaway"],
+    contentProfileId: "restaurant",
+  },
+
+  // Retail
+  {
+    id: "hardware_store",
+    label: "Hardware Store",
+    match: ["hardware store", "hardware"],
+    placesType: ["hardware_store"],
+    contentProfileId: "default",
+    competitorNoun: "hardware stores",
+  },
+  {
+    id: "florist",
+    label: "Florist",
+    match: ["florist", "flower shop", "floral"],
+    placesType: ["florist"],
+    contentProfileId: "default",
+    competitorNoun: "florists",
+  },
+  {
+    id: "retail_boutique",
+    label: "Retail / Boutique",
+    match: ["boutique", "clothing store", "apparel", "gift shop", "shoe store", "retail store"],
+    placesType: ["clothing_store", "gift_shop", "shoe_store"],
+    contentProfileId: "default",
+    competitorNoun: "boutiques",
+  },
+
+  // Health, fitness & pets — narrower types (pet_services' own "clinic"-
+  // free keywords, dentist) ahead of the broad "medical_clinic" catch-all
+  // so a "Veterinary Clinic" or dental listing doesn't match on "clinic"
+  // first.
+  {
+    id: "gym_fitness",
+    label: "Gym & Fitness Studio",
+    match: ["gym", "fitness center", "fitness studio", "crossfit", "yoga studio", "pilates studio"],
+    placesType: ["gym", "fitness_center", "yoga_studio"],
+    contentProfileId: "practitioner",
+    competitorNoun: "gyms",
+  },
+  {
+    id: "pet_services",
+    label: "Pet Services",
+    match: ["veterinary", "vet clinic", "pet grooming", "dog walking", "pet sitting", "kennel", "pet store"],
+    placesType: ["veterinary_care", "pet_store"],
+    contentProfileId: "default",
+    competitorNoun: "pet-service businesses",
+  },
+  {
+    id: "dentist",
+    label: "Dentist",
+    match: ["dentist", "dental", "orthodont"],
+    placesType: ["dentist"],
+    contentProfileId: "lawyer",
+    competitorNoun: "dental practices",
+  },
+  {
+    id: "medical_clinic",
+    label: "Medical / Clinic",
+    match: ["doctor", "medical center", "physician", "urgent care", "chiropractor", "optometrist", "clinic"],
+    placesType: ["doctor", "medical_clinic", "physiotherapist"],
+    contentProfileId: "lawyer",
+    competitorNoun: "medical practices",
+  },
+
+  // Professional & advisory services
+  {
+    id: "lawyer",
+    label: "Law Firm",
+    match: ["lawyer", "attorney", "law firm", "law office", "legal services", "legal"],
+    placesType: ["lawyer", "legal_services"],
+    contentProfileId: "lawyer",
+  },
+  {
+    id: "accountant",
+    label: "Accounting & Tax",
+    match: ["accountant", "accounting", "cpa", "tax service", "bookkeeping"],
+    placesType: ["accounting"],
+    contentProfileId: "practitioner",
+    competitorNoun: "accounting firms",
+  },
+  {
+    id: "real_estate",
+    label: "Real Estate",
+    match: ["real estate", "realtor", "realty"],
+    placesType: ["real_estate_agency"],
+    contentProfileId: "practitioner",
+    competitorNoun: "real estate agencies",
+  },
+  {
+    id: "consultant",
+    label: "Consulting",
+    match: ["consultant", "consulting", "advisory"],
+    placesType: ["consultant"],
+    contentProfileId: "practitioner",
+    competitorNoun: "consultants",
+  },
+  {
+    id: "coach",
+    label: "Coaching",
+    match: ["coach", "coaching"],
+    placesType: ["life_coach"],
+    contentProfileId: "practitioner",
+    competitorNoun: "coaches",
+  },
+  {
+    id: "tutor_education",
+    label: "Tutoring & Education",
+    match: ["tutor", "tutoring", "learning center", "test prep", "driving school", "music lessons"],
+    placesType: ["tutoring_service"],
+    contentProfileId: "practitioner",
+    competitorNoun: "tutoring services",
+  },
+  {
+    id: "photographer",
+    label: "Photography",
+    match: ["photographer", "photography", "photo studio"],
+    placesType: ["photography_studio"],
+    contentProfileId: "practitioner",
+    competitorNoun: "photographers",
+  },
+  {
+    id: "practitioner",
+    label: PRACTITIONER_PROFILE.label,
+    match: ["therapist", "therapy", "counselor", "counseling", "personal trainer", "fitness instructor", "dance studio", "training studio"],
+    placesType: ["consultant"],
+    contentProfileId: "practitioner",
+  },
+
+  // Trades & home services — no hand-written content of their own; they
+  // share the general/transactional default content (its own
+  // pricingExamples already include "Service Call").
+  {
+    id: "auto_repair",
+    label: "Auto Repair",
+    match: ["auto repair", "mechanic", "car repair", "auto body", "tire shop"],
+    placesType: ["car_repair"],
+    contentProfileId: "default",
+    competitorNoun: "auto shops",
+  },
+  {
+    id: "plumber",
+    label: "Plumbing",
+    match: ["plumber", "plumbing"],
+    placesType: ["plumber"],
+    contentProfileId: "default",
+    competitorNoun: "plumbers",
+  },
+  {
+    id: "electrician",
+    label: "Electrical",
+    match: ["electrician", "electrical contractor", "electrical service"],
+    placesType: ["electrician"],
+    contentProfileId: "default",
+    competitorNoun: "electricians",
+  },
+  {
+    id: "landscaper",
+    label: "Landscaping",
+    match: ["landscap", "lawn care", "lawn service", "tree service"],
+    placesType: ["landscaper"],
+    contentProfileId: "default",
+    competitorNoun: "landscapers",
+  },
+  {
+    id: "cleaning_service",
+    label: "Cleaning Service",
+    match: ["cleaning service", "house cleaning", "janitorial", "maid service"],
+    placesType: ["house_cleaning"],
+    contentProfileId: "default",
+    competitorNoun: "cleaning services",
+  },
+
+  // Catch-all — empty match list, so it's never reached by the keyword
+  // scan below and only ever returned as the explicit final fallback.
+  {
+    id: "default",
+    label: DEFAULT_PROFILE.label,
+    match: [],
+    placesType: [],
+    contentProfileId: "default",
+  },
+];
+
+const DEFAULT_OPTION = BUSINESS_TYPE_OPTIONS[BUSINESS_TYPE_OPTIONS.length - 1];
+
+/** Combines one BusinessTypeOption's identity with its content profile's
+ * actual coupon/offer/FAQ/pricing content into the BizProfile shape every
+ * call site already expects. */
+function buildResolvedProfile(option: BusinessTypeOption): BizProfile {
+  const content = CONTENT_PROFILES[option.contentProfileId];
+  return {
+    ...content,
+    id: option.id,
+    label: option.label,
+    match: option.match,
+    placesType: option.placesType,
+    competitorNoun: option.competitorNoun ?? content.competitorNoun,
+  };
+}
+
+/**
  * Resolves a business's real Google category/primary type to the right
- * profile. Never returns nothing — an unrecognized or missing category
- * (including the "too generic" case, e.g. a listing typed only as
- * "store" or "point_of_interest") falls through to DEFAULT_PROFILE,
- * which is deliberately built to be useful on its own.
+ * business type. Never returns nothing — an unrecognized or missing
+ * category (including the "too generic" case, e.g. a listing typed only
+ * as "store" or "point_of_interest") falls through to the general
+ * default, which is deliberately built to be useful on its own.
+ *
+ * Pure auto-detection only — does not know about an owner's manual
+ * correction. Use resolveBizProfile() at any call site that should honor
+ * business_type_override once one might exist.
  */
 export function bizProfile(
   category: string | null | undefined,
   primaryType?: string | null
 ): BizProfile {
   const haystack = `${category ?? ""} ${primaryType ?? ""}`.toLowerCase();
-  if (!haystack.trim()) return DEFAULT_PROFILE;
+  if (!haystack.trim()) return buildResolvedProfile(DEFAULT_OPTION);
 
-  for (const profile of BIZ_PROFILES) {
-    if (profile.match.some((keyword) => haystack.includes(keyword))) {
-      return profile;
+  for (const option of BUSINESS_TYPE_OPTIONS) {
+    if (option.match.some((keyword) => haystack.includes(keyword))) {
+      return buildResolvedProfile(option);
     }
   }
 
-  return DEFAULT_PROFILE;
+  return buildResolvedProfile(DEFAULT_OPTION);
+}
+
+export interface BizProfileOption {
+  id: string;
+  label: string;
+}
+
+/** For the "correct your business type" dropdown — every supported
+ * business type's id/label, in the same order they're matched. */
+export const BIZ_PROFILE_OPTIONS: BizProfileOption[] = BUSINESS_TYPE_OPTIONS.map((o) => ({
+  id: o.id,
+  label: o.label,
+}));
+
+/** Looks up a business type by its own id (e.g. "barbershop") — used only
+ * to apply an owner's manual override. Returns null for a missing or
+ * unrecognized id rather than guessing, so callers can cleanly fall back
+ * to auto-detection. */
+export function bizProfileById(id: string | null | undefined): BizProfile | null {
+  if (!id) return null;
+  const option = BUSINESS_TYPE_OPTIONS.find((o) => o.id === id);
+  return option ? buildResolvedProfile(option) : null;
+}
+
+/**
+ * The business-type resolver every call site should use once an owner
+ * override might exist: prefers a manual correction (business_type_
+ * override, set from the assistant's "What I know about your business"
+ * panel) when it names a real, still-supported type, and only falls back
+ * to Google-category auto-detection (bizProfile()) when there's no
+ * override on file. bizProfile() itself stays the pure auto-detection
+ * primitive underneath.
+ */
+export function resolveBizProfile(
+  category: string | null | undefined,
+  primaryType: string | null | undefined,
+  override?: string | null
+): BizProfile {
+  return bizProfileById(override) ?? bizProfile(category, primaryType);
 }
 
 /** Best-effort city extraction from a Google formatted address (typically

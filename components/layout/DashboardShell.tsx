@@ -27,7 +27,7 @@ export function DashboardShell({
 
   return (
     <div className="min-h-screen bg-paper">
-      <div className="flex items-center justify-between bg-ink px-4 py-3 nav:hidden">
+      <div className="sticky top-0 z-30 flex h-14 items-center justify-between bg-ink px-4 nav:hidden">
         <button
           type="button"
           onClick={() => setNavOpen(true)}

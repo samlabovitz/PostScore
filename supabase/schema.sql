@@ -736,3 +736,171 @@ create policy "Users can delete assistant messages for their own businesses"
         and businesses.owner_id = auth.uid ()
     )
   );
+
+-- ---------------------------------------------------------------------------
+-- Assistant business-context memory (lib/assistant.ts, app/actions/assistant.ts
+-- — persistent "what I know about your business" profile, Day 12 pass 3)
+-- ---------------------------------------------------------------------------
+
+-- Owner-entered facts the assistant otherwise has no way to know, since
+-- nothing else in the app captures them: what the business actually sells
+-- (as a short list of service names, distinct from the priced line items in
+-- `prices` above — this is the plain-language list the assistant reads,
+-- not a pricing input). Nullable and owner-editable at any time from the
+-- assistant's "What I know about your business" panel; absence is honestly
+-- "not entered yet," never guessed. Everything else the panel shows
+-- (business type, location, score history, confirmed fixes) is read live
+-- from data this schema already has — `businesses` (category, primary_type,
+-- address), `scores`, and `tasks` — rather than duplicated here, so there's
+-- nothing else to keep in sync.
+alter table public.businesses
+  add column if not exists services text[];
+
+-- Superseded by the low/high range below — drop it if an earlier pass
+-- already added the single-number version.
+alter table public.businesses drop column if exists avg_job_value;
+
+-- A typical job/ticket size, entered as a LOW/HIGH range rather than one
+-- number — most businesses' real jobs span a spread (e.g. "$8 to $80" for
+-- a liquor store, a bottle vs. a case) and a single average would flatten
+-- that into something misleading. A range is only ever both-or-neither: the
+-- low end alone isn't a usable range, so the check constraint below
+-- enforces they're set (or unset) together, and that low never exceeds
+-- high. Used by the assistant to reason about the real dollar stakes behind
+-- a gap (e.g. "each lost review-driven job is worth roughly $8-80"), never
+-- as a scoring input.
+alter table public.businesses
+  add column if not exists avg_job_value_low numeric check (avg_job_value_low >= 0),
+  add column if not exists avg_job_value_high numeric check (avg_job_value_high >= 0);
+
+alter table public.businesses drop constraint if exists businesses_job_value_range_check;
+alter table public.businesses add constraint businesses_job_value_range_check
+  check (
+    (avg_job_value_low is null) = (avg_job_value_high is null)
+    and (avg_job_value_low is null or avg_job_value_low <= avg_job_value_high)
+  );
+
+-- Lets the owner correct their business type directly when Google's own
+-- category is too generic to resolve to the right type in
+-- config/bizProfiles.ts (e.g. a listing Google only categorizes as a bare
+-- "store" falls through to the generic "General Business" default). null
+-- = no override; resolveBizProfile() falls back to Google-category
+-- auto-detection (bizProfile()) in that case. Once set, every call site
+-- that resolves a business type — the assistant, Growth's offer
+-- templates, Pricing's tips and AI assessment, the Competitors page's
+-- "competitors" noun, the Website starter-site generator — uses the
+-- override instead of the auto-detected type.
+alter table public.businesses
+  add column if not exists business_type_override text;
+
+-- Named separately (rather than inline on the column above) so it can be
+-- dropped and re-added idempotently — constrained to the exact set of
+-- business type ids the app currently supports (see BUSINESS_TYPE_OPTIONS
+-- in config/bizProfiles.ts, ~30 types as of the expanded list below).
+-- Update this list if a business type is ever added or removed there.
+alter table public.businesses drop constraint if exists businesses_business_type_override_check;
+alter table public.businesses add constraint businesses_business_type_override_check
+  check (
+    business_type_override is null
+    or business_type_override in (
+      'barbershop', 'spa', 'nail_salon', 'salon',
+      'cafe', 'bar', 'bakery', 'liquor_store', 'grocery_market', 'restaurant',
+      'hardware_store', 'florist', 'retail_boutique',
+      'gym_fitness', 'pet_services', 'dentist', 'medical_clinic',
+      'lawyer', 'accountant', 'real_estate', 'consultant', 'coach', 'tutor_education', 'photographer', 'practitioner',
+      'auto_repair', 'plumber', 'electrician', 'landscaper', 'cleaning_service',
+      'default'
+    )
+  );
+
+-- ---------------------------------------------------------------------------
+-- Assistant conversation history (lib/assistant.ts, app/actions/assistant.ts
+-- — past-chats history menu, fresh chat per open, Day 12 pass 5)
+-- ---------------------------------------------------------------------------
+
+-- One row per chat SESSION, grouping the messages in `assistant_messages`
+-- below into distinct conversations. Before this table existed, every
+-- message for a business belonged to one continuous, ever-growing thread;
+-- now, opening the assistant always starts a new row here (created lazily,
+-- on that session's first real message — never an empty row for a chat
+-- that was opened and closed without saying anything), and the owner can
+-- browse past ones from a history menu inside the assistant. Immutable
+-- once created — a conversation is never edited or renamed, only read,
+-- listed, or deleted (see clearAssistantConversation).
+create table if not exists public.assistant_conversations (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses (id) on delete cascade,
+  started_at timestamptz not null default now()
+);
+
+create index if not exists assistant_conversations_business_id_started_at_idx
+  on public.assistant_conversations (business_id, started_at desc);
+
+alter table public.assistant_conversations enable row level security;
+
+drop policy if exists "Users can view assistant conversations for their own businesses" on public.assistant_conversations;
+create policy "Users can view assistant conversations for their own businesses"
+  on public.assistant_conversations for select
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = assistant_conversations.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can insert assistant conversations for their own businesses" on public.assistant_conversations;
+create policy "Users can insert assistant conversations for their own businesses"
+  on public.assistant_conversations for insert
+  with check (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = assistant_conversations.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can delete assistant conversations for their own businesses" on public.assistant_conversations;
+create policy "Users can delete assistant conversations for their own businesses"
+  on public.assistant_conversations for delete
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = assistant_conversations.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+-- Every message now belongs to exactly one conversation, in addition to
+-- (still, redundantly) its business — business_id stays for the existing
+-- RLS policies and the simpler business-scoped queries that don't care
+-- about session grouping.
+alter table public.assistant_messages
+  add column if not exists conversation_id uuid references public.assistant_conversations (id) on delete cascade;
+
+-- Backfills every message saved before this table existed into one
+-- legacy conversation per business, so nothing already saved is silently
+-- orphaned or hidden from the new history menu. A no-op on a fresh
+-- database (nothing to backfill) and safe to re-run (the `where
+-- conversation_id is null` guard means an already-migrated row is never
+-- touched twice).
+with legacy as (
+  insert into public.assistant_conversations (business_id, started_at)
+  select business_id, min(created_at)
+  from public.assistant_messages
+  where conversation_id is null
+  group by business_id
+  returning id, business_id
+)
+update public.assistant_messages m
+set conversation_id = legacy.id
+from legacy
+where m.business_id = legacy.business_id
+  and m.conversation_id is null;
+
+-- Safe to apply unconditionally — a no-op if the column is already
+-- NOT NULL, and every row is guaranteed one by the backfill just above.
+alter table public.assistant_messages alter column conversation_id set not null;
+
+create index if not exists assistant_messages_conversation_id_created_at_idx
+  on public.assistant_messages (conversation_id, created_at asc);

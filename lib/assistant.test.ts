@@ -71,6 +71,22 @@ const BASE_CONTEXT: AssistantBusinessContext = {
       { name: "Riverside Cafe", isSubject: true, total: 74, grade: "C", priceLevelSymbol: "$$" },
     ],
   },
+  profile: {
+    businessType: "Restaurant & Food Service",
+    businessTypeId: "restaurant",
+    autoDetectedBusinessType: "Restaurant & Food Service",
+    autoDetectedBusinessTypeId: "restaurant",
+    businessTypeOverridden: false,
+    location: "123 River St, Springfield",
+    services: ["Brunch", "Catering"],
+    avgJobValueLow: 15,
+    avgJobValueHigh: 45,
+    scoreHistory: [
+      { total: 68, grade: "D", date: "1/1/2026" },
+      { total: 74, grade: "C", date: "2/1/2026" },
+    ],
+    fixedItems: [{ label: "Photos on listing", pointsGained: 6, verifiedAt: "1/15/2026" }],
+  },
 };
 
 describe("buildAssistantContextText", () => {
@@ -115,6 +131,65 @@ describe("buildAssistantContextText", () => {
     };
     expect(buildAssistantContextText(noTasks)).toContain("No open tasks.");
   });
+
+  test("includes the persisted business-memory block with real score history and fixed items", () => {
+    const text = buildAssistantContextText(BASE_CONTEXT);
+    expect(text).toContain("WHAT WE KNOW ABOUT THIS BUSINESS");
+    expect(text).toContain("Services (owner-entered): Brunch, Catering.");
+    expect(text).toContain("Typical job/ticket value range (owner-entered): $15-$45.");
+    expect(text).toContain("1/1/2026: 68 (D) -> 2/1/2026: 74 (C)");
+    expect(text).toContain("Photos on listing (+6 pts, confirmed 1/15/2026)");
+  });
+
+  test("notes an owner-corrected business type honestly, including what Google actually detected", () => {
+    const overridden: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      profile: {
+        ...BASE_CONTEXT.profile,
+        businessType: "Liquor & Wine Store",
+        businessTypeId: "default",
+        autoDetectedBusinessType: "General Business",
+        businessTypeOverridden: true,
+      },
+    };
+    const text = buildAssistantContextText(overridden);
+    expect(text).toContain('Business type: Liquor & Wine Store (owner-corrected from Google\'s auto-detected "General Business")');
+  });
+
+  test("is honest when no services, job value, score history, or fixed items are on file", () => {
+    const empty: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      profile: {
+        businessType: "Restaurant & Food Service",
+        businessTypeId: "restaurant",
+        autoDetectedBusinessType: "Restaurant & Food Service",
+        autoDetectedBusinessTypeId: "restaurant",
+        businessTypeOverridden: false,
+        location: null,
+        services: [],
+        avgJobValueLow: null,
+        avgJobValueHigh: null,
+        scoreHistory: [],
+        fixedItems: [],
+      },
+    };
+    const text = buildAssistantContextText(empty);
+    expect(text).toContain("Services: not entered yet");
+    expect(text).toContain("Typical job/ticket value range: not entered yet.");
+    expect(text).toContain("Score history: no saved scans yet.");
+    expect(text).toContain("Confirmed fixed: nothing confirmed fixed yet.");
+    expect(text).not.toContain("Brunch");
+  });
+
+  test("does not claim a trend with only one saved score", () => {
+    const oneScore: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      profile: { ...BASE_CONTEXT.profile, scoreHistory: [{ total: 74, grade: "C", date: "2/1/2026" }] },
+    };
+    const text = buildAssistantContextText(oneScore);
+    expect(text).toContain("only one saved score so far");
+    expect(text).toContain("No trend to compare yet.");
+  });
 });
 
 describe("buildAssistantStarterPrompts", () => {
@@ -143,6 +218,20 @@ describe("buildAssistantStarterPrompts", () => {
     const prompts = buildAssistantStarterPrompts(BASE_CONTEXT);
     expect(prompts.some((p) => /rank|search position/i.test(p))).toBe(false);
   });
+
+  test("only suggests a 'what's changed' prompt when there's real history or fixed items to talk about", () => {
+    expect(buildAssistantStarterPrompts(BASE_CONTEXT)).toContain("What's changed since I started?");
+
+    const nothingYet: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      profile: {
+        ...BASE_CONTEXT.profile,
+        scoreHistory: [{ total: 74, grade: "C", date: "2/1/2026" }],
+        fixedItems: [],
+      },
+    };
+    expect(buildAssistantStarterPrompts(nothingYet)).not.toContain("What's changed since I started?");
+  });
 });
 
 describe("ASSISTANT_SYSTEM_RULES", () => {
@@ -159,5 +248,24 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
 
   test("requires general guidance to be labeled with the exact prefix the UI parses", () => {
     expect(ASSISTANT_SYSTEM_RULES).toContain('"General guidance:"');
+  });
+
+  test("instructs the assistant not to recite panel-visible identity facts back to the owner", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("DON'T RECITE WHAT THE OWNER CAN ALREADY SEE");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("What I know about your business");
+  });
+
+  test("points the assistant to PostScore's own real tools/pages, never an invented one", () => {
+    for (const phrase of [
+      "Reviews page",
+      "Growth page's Coupons tab",
+      "Growth page's Refer a friend tab",
+      "the Pricing page",
+      "the Competitors page",
+      "starter-site builder",
+    ]) {
+      expect(ASSISTANT_SYSTEM_RULES).toContain(phrase);
+    }
+    expect(ASSISTANT_SYSTEM_RULES).toContain("never invent a feature, page, or tab that isn't listed here");
   });
 });
