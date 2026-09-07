@@ -17,9 +17,13 @@ import {
   type PlaceDetails,
 } from "@/lib/google/places";
 
-/** How many nearest comparable competitors to score and show. Kept small
- * on purpose — every entry costs one Places Details call. */
-export const MAX_COMPETITORS = 5;
+/** How many nearest comparable competitors to score and show, at most —
+ * never padded to this number: `comparable` below is built by filtering
+ * for genuine category matches FIRST (isSameCategory), then slicing to
+ * this cap, so a sparse area still honestly shows fewer. Kept bounded on
+ * purpose since every entry costs one Places Details call, but raised
+ * from 5 to 10 so a dense area can show a fuller, still-genuine picture. */
+export const MAX_COMPETITORS = 10;
 
 /**
  * Diagnostic-only, off by default. Set the DEBUG_COMPETITORS=1
