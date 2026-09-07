@@ -363,6 +363,319 @@ const RESTAURANT_PROFILE: BizProfile = {
   ],
 };
 
+/**
+ * Purchase-based alcohol retail — bottles/cases sold to take away, not
+ * food served to eat in. Deliberately separate from RESTAURANT_PROFILE:
+ * a liquor store has no entrées, no appetizers, no dine-in service, so
+ * "free dessert with your entrée" is meaningless here — every offer is
+ * built around the bottle/case as the unit of purchase instead.
+ */
+const LIQUOR_WINE_PROFILE: BizProfile = {
+  id: "liquor_wine",
+  label: "Liquor & Wine Store",
+  match: ["liquor", "wine shop", "spirits", "package store", "beer store"],
+  placesType: ["liquor_store"],
+  competitorNoun: "liquor stores",
+  couponPresets: [
+    {
+      id: "flat_off_purchase",
+      label: "$5 off a $30+ purchase",
+      description: "A simple threshold discount that nudges a single-bottle visit into a bigger basket.",
+    },
+    {
+      id: "bottle_bogo_pct",
+      label: "Buy 2 bottles, get 10% off",
+      description: "Rewards buying more than one bottle without discounting your best sellers outright.",
+    },
+    {
+      id: "case_discount",
+      label: "10% off when you buy a full case (12 bottles)",
+      description: "Standard retail case-discount math — moves volume and rewards your best customers.",
+    },
+  ],
+  offerTemplates: [
+    {
+      id: "featured_bottle_month",
+      label: "Featured wine or spirit of the month: 15% off",
+      description: "Gives repeat customers a reason to check back, and lets you move a specific bottle.",
+    },
+    {
+      id: "new_customer_pct",
+      label: "New customer: 10% off your first purchase",
+      description: "Low-risk way to get a first-time shopper to choose you over a bigger chain store.",
+    },
+  ],
+  couponAngles: {
+    firstTime: "New customer: 10% off your first purchase",
+    seasonal: "Holiday case discount: 15% off mixed cases through New Year's",
+    slowDay: "10% off purchases on your slowest weekday",
+  },
+  growActions: [
+    "Ask regulars for a Google review at checkout — it's the fastest way to build trust with first-time shoppers.",
+    "Post real photos of new arrivals, seasonal picks, and your featured bottle of the month.",
+    "Highlight a weekly or monthly staff pick — gives repeat customers a reason to check back.",
+    "Run a case-discount promotion around holidays (Thanksgiving, New Year's, summer cookouts) when case buying spikes.",
+  ],
+  faq: [
+    {
+      question: "Does {businessName} offer tastings or take special orders?",
+      answer: "Call or stop by to ask about upcoming tastings and special-order requests.",
+    },
+    {
+      question: "What are {businessName}'s hours near {city}?",
+      answer: "See our current hours on our Google Business Profile listing.",
+    },
+  ],
+  referralOk: true,
+  referralPresets: [
+    {
+      id: "credit_both",
+      referrerReward: "$5 credit toward your next purchase",
+      friendReward: "$5 off their first purchase",
+      description: "Simple cash-off works well for a straightforward retail purchase.",
+    },
+    {
+      id: "case_discount_referral",
+      referrerReward: "10% off your next case",
+      friendReward: "10% off their first purchase",
+      description: "Rewards your best (case-buying) customers specifically for bringing in new ones.",
+    },
+  ],
+  pricingExamples: ["Bottle of Wine", "Six-Pack of Beer", "Case (12 bottles)"],
+  pricingTips: [
+    {
+      id: "loss_leader_traffic",
+      label: "Use a few loss-leader items to drive traffic",
+      description:
+        "A handful of well-known, aggressively-priced bottles get people in the door; make it back on higher-margin wine and spirits they buy alongside them.",
+    },
+    {
+      id: "case_bulk_discount",
+      label: "Price cases to reward bulk buying",
+      description:
+        "A standard 10-15% case discount is expected in this category — not offering one pushes case-sized purchases to a competitor who does.",
+    },
+    {
+      id: "feature_margin_bottles",
+      label: "Feature your best-margin bottles at eye level",
+      description:
+        "Placement and a \"staff pick\" tag lift sales on your best-margin bottles more effectively than discounting your worst-margin ones.",
+    },
+    {
+      id: "seasonal_pricing",
+      label: "Plan promotions around real seasonal demand spikes",
+      description:
+        "Holidays, tailgate season, and summer cookouts are when case-sized purchases naturally happen — put your promotional budget there instead of spreading it evenly all year.",
+    },
+  ],
+};
+
+/**
+ * Basket-based grocery/convenience retail — repeat, high-frequency
+ * purchases of everyday items, not a single big-ticket sale. Distinct
+ * from both LIQUOR_WINE_PROFILE (single-category, less frequent) and
+ * RESTAURANT_PROFILE (no prepared entrées here) — the offer structure
+ * revolves around basket size and shopping frequency instead.
+ */
+const GROCERY_MARKET_PROFILE: BizProfile = {
+  id: "grocery_market",
+  label: "Grocery / Market",
+  match: ["grocery", "supermarket", "convenience store", "mini mart", "corner store"],
+  placesType: ["grocery_store", "supermarket", "convenience_store"],
+  competitorNoun: "grocery stores",
+  couponPresets: [
+    {
+      id: "flat_off_basket",
+      label: "$5 off a $40+ basket",
+      description: "A threshold discount sized to your typical basket, not a single item.",
+    },
+    {
+      id: "weekly_special",
+      label: "This week's special: featured items discounted",
+      description: "Keeps the store feeling fresh and gives shoppers a reason to check back weekly.",
+    },
+    {
+      id: "loyalty_repeat",
+      label: "Loyalty: every 10th shop, $10 off",
+      description: "Rewards shopping frequency directly — the real driver of grocery revenue.",
+    },
+  ],
+  offerTemplates: [
+    {
+      id: "new_shopper_special",
+      label: "New shopper special: $10 off your first $40+ order",
+      description: "Removes the risk of switching from wherever a shopper usually goes.",
+    },
+    {
+      id: "seasonal_produce_sale",
+      label: "Seasonal produce sale: this week's fresh picks discounted",
+      description: "Moves perishable inventory while it's at its best, and reads as genuinely fresh.",
+    },
+  ],
+  couponAngles: {
+    firstTime: "New shopper special: $10 off your first $40+ order",
+    seasonal: "Seasonal produce sale: this week's fresh picks discounted",
+    slowDay: "$5 off a $40+ basket on your slowest shopping day",
+  },
+  growActions: [
+    "Ask regular shoppers for a Google review at checkout.",
+    "Post real photos of fresh produce and this week's specials — food photos drive foot traffic.",
+    "Keep your weekly specials and hours current on your Google listing.",
+    "Start a simple loyalty program (e.g. every 10th shop, $10 off) to reward repeat shoppers.",
+  ],
+  faq: [
+    {
+      question: "Does {businessName} offer delivery or curbside pickup?",
+      answer: "Call or check our website to see current delivery and pickup options.",
+    },
+    {
+      question: "What are {businessName}'s hours near {city}?",
+      answer: "See our current hours on our Google Business Profile listing.",
+    },
+  ],
+  referralOk: true,
+  referralPresets: [
+    {
+      id: "credit_both",
+      referrerReward: "$10 credit toward your next shop",
+      friendReward: "$10 off their first $40+ order",
+      description: "Store credit brings the referrer back for another shop, not just a one-time reward.",
+    },
+    {
+      id: "pct_off_both",
+      referrerReward: "10% off your next shop",
+      friendReward: "10% off their first shop",
+      description: "Simple and universally understood for a basket-based purchase.",
+    },
+  ],
+  pricingExamples: ["Weekly Basket", "Featured Special Item", "Bulk/Case Item"],
+  pricingTips: [
+    {
+      id: "loss_leader_weekly_specials",
+      label: "Use weekly specials as loss leaders",
+      description:
+        "A few aggressively-priced staples each week pull shoppers in; the rest of their basket is where the real margin comes from.",
+    },
+    {
+      id: "bulk_case_pricing",
+      label: "Price bulk and case items to reward bigger baskets",
+      description: "A modest per-unit discount on multi-packs increases average basket size without discounting everyday single items.",
+    },
+    {
+      id: "seasonal_produce_pricing",
+      label: "Adjust produce pricing to real seasonal supply costs",
+      description: "Produce cost swings with the season — repricing it on a schedule protects margin better than a fixed year-round price.",
+    },
+    {
+      id: "loyalty_raises_frequency",
+      label: "Use loyalty rewards to raise visit frequency, not to discount margin",
+      description: "A repeat-shop reward (every 10th visit, say) grows revenue by bringing shoppers back more often, rather than cutting the price of every visit.",
+    },
+  ],
+};
+
+/**
+ * Counter-service coffee/baked-goods retail — sold by the item or drink,
+ * not the entrée. Split out from RESTAURANT_PROFILE because a café or
+ * bakery genuinely has no entrée to build an "appetizer or dessert with
+ * your entrée" offer around; the unit here is the drink or the pastry.
+ */
+const CAFE_BAKERY_PROFILE: BizProfile = {
+  id: "cafe_bakery",
+  label: "Café & Bakery",
+  match: ["cafe", "café", "coffee", "espresso", "bakery", "patisserie", "bakeshop"],
+  placesType: ["cafe", "coffee_shop", "bakery"],
+  competitorNoun: "cafes",
+  couponPresets: [
+    {
+      id: "flat_off_order",
+      label: "$2 off any order of $10+",
+      description: "A low, easy threshold that fits a typical coffee-and-pastry order.",
+    },
+    {
+      id: "free_item_with_purchase",
+      label: "Free pastry or drink with any $15+ purchase",
+      description: "Feels generous without discounting your core menu price.",
+    },
+    {
+      id: "loyalty_punch",
+      label: "Buy 9 drinks, get the 10th free",
+      description: "The classic café loyalty structure — rewards habitual repeat visits.",
+    },
+  ],
+  offerTemplates: [
+    {
+      id: "first_visit_special",
+      label: "First-time customer: free drink or pastry with any purchase",
+      description: "Removes the risk of trying somewhere new for their morning coffee run.",
+    },
+    {
+      id: "morning_slow_hours",
+      label: "20% off orders before 9am",
+      description: "Fills your early slow hours instead of discounting your rush.",
+    },
+  ],
+  couponAngles: {
+    firstTime: "First-time customer: free drink or pastry with any purchase",
+    seasonal: "Seasonal drink or pastry: try it this month, 15% off",
+    slowDay: "20% off orders during your slowest afternoon hours",
+  },
+  growActions: [
+    "Ask happy customers for a Google review before they leave.",
+    "Post daily photos of fresh pastries, seasonal drinks, and the space itself.",
+    "Keep your menu and prices current on your Google listing.",
+    "Run a loyalty punch card (physical or digital) to reward regulars.",
+  ],
+  faq: [
+    {
+      question: "Does {businessName} have Wi-Fi or seating to work from?",
+      answer: "Yes — stop in and ask about seating and Wi-Fi availability.",
+    },
+    {
+      question: "Does {businessName} take special orders for cakes or catering?",
+      answer: "Call or stop by to ask about special orders and catering.",
+    },
+  ],
+  referralOk: true,
+  referralPresets: [
+    {
+      id: "free_item_both",
+      referrerReward: "A free drink or pastry on your next visit",
+      friendReward: "A free drink or pastry on their first visit",
+      description: "Free items cost less than a straight discount and feel generous to both sides.",
+    },
+    {
+      id: "pct_off_both",
+      referrerReward: "$5 off your next order",
+      friendReward: "15% off their first order",
+      description: "Straightforward cash-off for a typical coffee-shop order.",
+    },
+  ],
+  pricingExamples: ["Coffee/Espresso Drink", "Pastry/Baked Good", "Sandwich or Light Bite"],
+  pricingTips: [
+    {
+      id: "anchor_specialty_drink",
+      label: "Anchor with a specialty or premium drink",
+      description: "A $7 specialty latte on the board makes your $4.50 standard latte feel like the reasonable choice.",
+    },
+    {
+      id: "bundle_combo",
+      label: "Use combo pricing for a drink + pastry",
+      description: "A set combined price for a drink and a pastry lifts average ticket without feeling like a price hike.",
+    },
+    {
+      id: "review_ingredient_costs",
+      label: "Review prices as ingredient costs shift",
+      description: "Coffee, dairy, and flour costs move often; check menu pricing against real costs on a schedule rather than by feel.",
+    },
+    {
+      id: "loyalty_over_discount",
+      label: "Use a loyalty punch card instead of blanket discounts",
+      description: "Rewarding the 10th visit costs less over time than discounting every visit, and it drives repeat frequency specifically.",
+    },
+  ],
+};
+
 const LAWYER_PROFILE: BizProfile = {
   id: "lawyer",
   label: "Legal Services",
@@ -442,6 +755,111 @@ const LAWYER_PROFILE: BizProfile = {
       label: "Put what's included in writing",
       description:
         "Being explicit about what a flat fee covers (and what triggers hourly billing) up front prevents fee disputes later.",
+    },
+  ],
+};
+
+/**
+ * Advisory professional services billed by engagement or return, not by
+ * visit or session — accounting, tax, and bookkeeping. Shares LAWYER_
+ * PROFILE's consultation/flat-fee offer structure (the right shape for
+ * this kind of work) but is its own profile rather than reusing that one
+ * directly: unlike attorney referral-fee ethics rules (see referralOk on
+ * LAWYER_PROFILE), accounting has no comparable blanket restriction on a
+ * simple client referral discount, so referrals stay on here.
+ */
+const PROFESSIONAL_SERVICES_PROFILE: BizProfile = {
+  id: "professional_services",
+  label: "Accounting & Tax",
+  match: ["accountant", "accounting", "cpa", "tax service", "bookkeeping"],
+  placesType: ["accounting"],
+  competitorNoun: "accounting firms",
+  couponPresets: [
+    {
+      id: "free_consultation",
+      label: "Free 30-minute initial consultation",
+      description: "Lowers the barrier to a first call for a prospect who isn't sure what they need yet.",
+    },
+    {
+      id: "flat_fee_package",
+      label: "Flat-fee package for a simple return or bookkeeping setup",
+      description: "Gives a price-anxious prospective client a known cost instead of an open-ended hourly estimate.",
+    },
+    {
+      id: "new_client_pct",
+      label: "10% off your first year of service",
+      description: "A bounded discount that doesn't touch your ongoing engagement rate.",
+    },
+  ],
+  offerTemplates: [
+    {
+      id: "new_client_return_discount",
+      label: "New client discount: $50 off your first tax return",
+      description: "A concrete, low-risk reason to switch from a prior preparer.",
+    },
+    {
+      id: "bundle_bookkeeping_tax",
+      label: "Bundle monthly bookkeeping and annual tax prep into one flat package price",
+      description: "Packaging recurring and annual work together increases what a client books with you at once.",
+    },
+  ],
+  couponAngles: {
+    firstTime: "Free 30-minute initial consultation",
+    seasonal: "Tax season special: book your return early and save",
+    slowDay: "Flat-fee bookkeeping setup review, available this week",
+  },
+  growActions: [
+    "Ask satisfied clients for a Google review once their return or engagement is complete.",
+    "Publish a short FAQ answering the tax/bookkeeping questions {city} clients actually ask.",
+    "Keep your services and credentials current on your listing — clients compare this directly.",
+    "Offer a free consultation to convert price-sensitive prospects who are still deciding.",
+  ],
+  faq: [
+    {
+      question: "Does {businessName} offer a free consultation?",
+      answer: "Yes — call or use our contact form to schedule an initial consultation.",
+    },
+    {
+      question: "What services does {businessName} provide?",
+      answer: "See our services page for the specific accounting and tax services we offer.",
+    },
+  ],
+  referralOk: true,
+  referralPresets: [
+    {
+      id: "credit_both",
+      referrerReward: "$25 credit toward your next invoice",
+      friendReward: "$50 off their first service",
+      description: "Invoice credit keeps the referrer engaged as an ongoing client rather than a one-time discount.",
+    },
+    {
+      id: "pct_off_both",
+      referrerReward: "10% off your next year of service",
+      friendReward: "10% off their first year",
+      description: "Simple and proportional for an ongoing engagement rather than a one-off purchase.",
+    },
+  ],
+  pricingExamples: ["Individual Tax Return", "Business Tax Return", "Monthly Bookkeeping"],
+  pricingTips: [
+    {
+      id: "flat_fee_commodity_work",
+      label: "Use flat fees for straightforward returns",
+      description: "A known flat fee for a simple return removes the price anxiety of an open-ended hourly estimate most prospective clients don't trust.",
+    },
+    {
+      id: "tiered_by_complexity",
+      label: "Tier pricing by complexity, not by client",
+      description: "A simple/standard/complex return tier lets clients self-select based on their actual situation instead of one flat price under- or over-charging most of them.",
+    },
+    {
+      id: "retainer_for_ongoing",
+      label: "Use a monthly retainer for ongoing bookkeeping",
+      description: "A predictable monthly retainer for recurring bookkeeping work is easier for a client to budget for than variable hourly billing, and smooths your own revenue.",
+    },
+    {
+      id: "raise_when_turning_away_work",
+      label: "Raise rates when you're turning away work",
+      description: "Consistently declining new engagements you'd otherwise take is the real signal you're underpriced — not how long it's been since your last increase.",
     },
   ],
 };
@@ -574,6 +992,314 @@ const PRACTITIONER_PROFILE: BizProfile = {
 };
 
 /**
+ * Membership-based fitness businesses — the economics are recurring
+ * membership dues plus drop-in classes, not a single per-session fee the
+ * way PRACTITIONER_PROFILE's 1:1 coaching/consulting is. Split out on
+ * purpose: "50% off your first month" and "bring a friend" are the real
+ * offers gyms run, not a "session pack" a solo practitioner would sell.
+ */
+const GYM_FITNESS_PROFILE: BizProfile = {
+  id: "gym_fitness",
+  label: "Gym & Fitness Studio",
+  match: ["gym", "fitness center", "fitness studio", "crossfit", "yoga studio", "pilates studio"],
+  placesType: ["gym", "fitness_center", "yoga_studio"],
+  competitorNoun: "gyms",
+  couponPresets: [
+    {
+      id: "first_month_pct",
+      label: "50% off your first month",
+      description: "The standard, highest-converting gym offer — removes the risk of committing to a new place.",
+    },
+    {
+      id: "no_enrollment_fee",
+      label: "No enrollment fee for new members this month",
+      description: "Removes a common friction point without discounting your actual membership rate.",
+    },
+    {
+      id: "class_pack_bonus",
+      label: "Buy a 10-class pack, get 2 classes free",
+      description: "Rewards commitment and smooths out class attendance without discounting drop-in rate.",
+    },
+  ],
+  offerTemplates: [
+    {
+      id: "new_member_special",
+      label: "New member special: 50% off your first month, no enrollment fee",
+      description: "Stacks the two lowest-risk offers into one strong first-time hook.",
+    },
+    {
+      id: "bring_a_friend",
+      label: "Bring a friend: you both get a free class or session",
+      description: "Costs you one class slot, not cash — effective since a class has near-zero marginal cost per extra person.",
+    },
+  ],
+  couponAngles: {
+    firstTime: "New member special: 50% off your first month, no enrollment fee",
+    seasonal: "New Year, new goals: 50% off your first month",
+    slowDay: "20% off off-peak (mid-day) class sign-ups",
+  },
+  growActions: [
+    "Ask members for a Google review after a great class or a real milestone.",
+    "Post real photos of classes, the space, and member results (with permission).",
+    "Keep your class schedule and current promotions up to date on your listing.",
+    "Run a 'bring a friend' week where existing members can bring a guest free.",
+  ],
+  faq: [
+    {
+      question: "Does {businessName} offer a free trial class or day pass?",
+      answer: "Yes — ask about trial options when you stop by or call.",
+    },
+    {
+      question: "What is {businessName}'s class schedule?",
+      answer: "See our current class schedule on our website or by calling.",
+    },
+  ],
+  referralOk: true,
+  referralPresets: [
+    {
+      id: "free_month_both",
+      referrerReward: "A free month of membership",
+      friendReward: "50% off their first month",
+      description: "Membership is your recurring revenue, so rewarding with more of it costs you less than it's worth to a member.",
+    },
+    {
+      id: "free_session_both",
+      referrerReward: "A free class or session",
+      friendReward: "A free class or session",
+      description: "Especially effective for group classes, where an extra attendee costs you almost nothing.",
+    },
+  ],
+  pricingExamples: ["Monthly Membership", "Drop-in Class", "Personal Training Session"],
+  pricingTips: [
+    {
+      id: "tiered_membership",
+      label: "Offer tiered membership levels",
+      description: "A basic, unlimited, and premium-with-training tier lets members self-select their spend instead of one price fitting everyone poorly.",
+    },
+    {
+      id: "annual_discount",
+      label: "Discount annual memberships to lock in commitment",
+      description: "A modest discount for paying annually improves your cash flow and retention more than it costs you in margin.",
+    },
+    {
+      id: "off_peak_pricing",
+      label: "Price off-peak sessions lower to fill slow hours",
+      description: "Discounting mid-day or early-morning slots fills capacity that would otherwise sit empty, without touching your peak-hour rate.",
+    },
+    {
+      id: "raise_when_classes_full",
+      label: "Raise rates when classes are consistently full",
+      description: "Waitlisted classes week after week are the honest signal you're underpriced relative to demand.",
+    },
+  ],
+};
+
+/**
+ * Service-call trades — plumbers, electricians, auto repair, landscaping,
+ * cleaning. The unit of work is a job/visit priced by the call or the
+ * project, not a product purchase or a recurring appointment, so the
+ * offers are built around the first service call and seasonal
+ * maintenance work instead of a purchase threshold or a booked session.
+ */
+const TRADES_PROFILE: BizProfile = {
+  id: "trades",
+  label: "Trades & Home Services",
+  match: ["plumber", "plumbing", "electrician", "electrical", "auto repair", "mechanic", "landscap", "lawn care", "cleaning service", "house cleaning"],
+  placesType: ["plumber", "electrician", "car_repair", "landscaper", "house_cleaning"],
+  competitorNoun: "service providers",
+  couponPresets: [
+    {
+      id: "flat_off_first_call",
+      label: "$25 off your first service call",
+      description: "Removes the risk of trying a new provider for a job that's otherwise hard to price-shop.",
+    },
+    {
+      id: "seasonal_tuneup",
+      label: "Seasonal tune-up special: $20 off an inspection or maintenance visit",
+      description: "Fills your slower season with real, useful maintenance work instead of sitting idle.",
+    },
+    {
+      id: "bundle_multiple_jobs",
+      label: "10% off when you bundle two or more jobs in one visit",
+      description: "Rewards a bigger ticket per trip out, which is where your real margin is (less drive time per dollar billed).",
+    },
+  ],
+  offerTemplates: [
+    {
+      id: "new_customer_first_call",
+      label: "New customer special: $25 off your first service call",
+      description: "The single highest-converting offer for a trade — lowers the risk of trying someone new.",
+    },
+    {
+      id: "seasonal_maintenance",
+      label: "Seasonal maintenance special (e.g. AC tune-up before summer, furnace check before winter)",
+      description: "Turns a predictable seasonal need into booked revenue before it becomes an emergency call.",
+    },
+  ],
+  couponAngles: {
+    firstTime: "New customer special: $25 off your first service call",
+    seasonal: "Seasonal tune-up special: $20 off an inspection before the season changes",
+    slowDay: "10% off service calls booked on weekday mornings",
+  },
+  growActions: [
+    "Ask every satisfied customer for a Google review right after the job's done.",
+    "Post real before/after photos of completed jobs.",
+    "Keep your service area and emergency-availability info current on your listing.",
+    "Offer a seasonal tune-up special to fill your slower season with booked work.",
+  ],
+  faq: [
+    {
+      question: "Does {businessName} offer emergency or same-day service?",
+      answer: "Call to check current availability for emergency or same-day appointments.",
+    },
+    {
+      question: "What areas near {city} does {businessName} serve?",
+      answer: "We serve {city} and the surrounding area — call to confirm we cover your location.",
+    },
+  ],
+  referralOk: true,
+  referralPresets: [
+    {
+      id: "flat_off_both",
+      referrerReward: "$25 off your next service call",
+      friendReward: "$25 off their first service call",
+      description: "Straightforward cash-off for a straightforward service-call business.",
+    },
+    {
+      id: "pct_off_both",
+      referrerReward: "10% off your next service",
+      friendReward: "10% off their first service",
+      description: "Scales with the job size instead of a flat amount that might be too small for a big job or too generous for a small one.",
+    },
+  ],
+  pricingExamples: ["Service Call", "Standard Job", "Seasonal Tune-Up"],
+  pricingTips: [
+    {
+      id: "flat_vs_hourly",
+      label: "Decide flat-rate vs. hourly per job type",
+      description: "A predictable job (a drain clog, an outlet swap) is a good flat-rate candidate; open-ended diagnostic work is better billed hourly so you're not eating the risk of the unknown.",
+    },
+    {
+      id: "travel_radius_pricing",
+      label: "Price a trip charge for jobs outside your core area",
+      description: "A modest travel fee for farther jobs protects your margin without turning away work closer to home that doesn't need one.",
+    },
+    {
+      id: "seasonal_demand_pricing",
+      label: "Raise prices in your peak season, discount your slow one",
+      description: "Demand for most trades swings hard by season — pricing flat all year leaves money on the table in peak months and idle capacity in slow ones.",
+    },
+    {
+      id: "bundle_multiple_jobs",
+      label: "Bundle multiple jobs at one property",
+      description: "A small discount for handling two or three jobs in one visit still nets you more per hour than two separate trips.",
+    },
+  ],
+};
+
+/**
+ * Purchase-based general retail — clothing, gifts, hardware, flowers, and
+ * similar storefronts where the customer buys a physical item outright.
+ * The offer structure centers on the purchase itself (a dollar threshold,
+ * a multi-item deal) rather than a visit, a session, or a service call.
+ */
+const RETAIL_PROFILE: BizProfile = {
+  id: "retail",
+  label: "Retail Store",
+  match: ["boutique", "clothing store", "apparel", "gift shop", "shoe store", "retail store", "hardware store", "hardware", "florist", "flower shop", "floral"],
+  placesType: ["clothing_store", "gift_shop", "shoe_store", "hardware_store", "florist"],
+  competitorNoun: "retailers",
+  couponPresets: [
+    {
+      id: "flat_off_threshold",
+      label: "$10 off a $50+ purchase",
+      description: "A threshold discount that nudges a smaller purchase into a bigger one.",
+    },
+    {
+      id: "bogo",
+      label: "Buy one, get one 50% off select items",
+      description: "A classic retail traffic driver — great for moving seasonal or overstocked items.",
+    },
+    {
+      id: "bulk_discount",
+      label: "10% off when you buy 3 or more",
+      description: "Rewards a bigger basket without discounting a single-item purchase.",
+    },
+  ],
+  offerTemplates: [
+    {
+      id: "welcome_offer",
+      label: "New customer welcome offer: 15% off your first purchase",
+      description: "Give first-time customers a clear reason to choose you over a competitor.",
+    },
+    {
+      id: "seasonal_clearance",
+      label: "Seasonal sale: discount last season's stock to make room for new arrivals",
+      description: "Moves aging inventory while giving repeat customers a reason to check back.",
+    },
+  ],
+  couponAngles: {
+    firstTime: "New customer welcome offer: 15% off your first purchase",
+    seasonal: "Seasonal sale — tied to the season or an upcoming holiday",
+    slowDay: "$10 off a $50+ purchase on your slowest shopping day",
+  },
+  growActions: [
+    "Ask happy customers for a Google review at checkout.",
+    "Post real photos of new arrivals and in-store displays weekly.",
+    "Keep your hours and current promotions up to date on your Google listing.",
+    "Run a seasonal clearance sale to move older stock and highlight new arrivals.",
+  ],
+  faq: [
+    {
+      question: "Does {businessName} accept returns or exchanges?",
+      answer: "Yes — ask about our return and exchange policy at checkout.",
+    },
+    {
+      question: "What are {businessName}'s hours near {city}?",
+      answer: "See our current hours on our Google Business Profile listing.",
+    },
+  ],
+  referralOk: true,
+  referralPresets: [
+    {
+      id: "credit_both",
+      referrerReward: "$10 store credit",
+      friendReward: "$10 off their first purchase",
+      description: "Store credit keeps the referrer coming back rather than a one-time cash reward.",
+    },
+    {
+      id: "pct_off_both",
+      referrerReward: "10% off your next purchase",
+      friendReward: "15% off their first purchase",
+      description: "Simple and universally understood for a straightforward retail purchase.",
+    },
+  ],
+  pricingExamples: ["Standard Item", "Featured/New Arrival", "Bulk/Multi-pack"],
+  pricingTips: [
+    {
+      id: "anchor_pricing",
+      label: "Anchor with your highest-priced item",
+      description: "Showing a premium option first makes your mid-tier items feel reasonably priced by comparison.",
+    },
+    {
+      id: "bulk_bundle_pricing",
+      label: "Price bundles or multi-packs to increase average sale",
+      description: "A modest per-unit discount on a bundle lifts average sale size without discounting a single-item purchase.",
+    },
+    {
+      id: "seasonal_markdowns",
+      label: "Plan a seasonal markdown schedule",
+      description: "A planned clearance cadence (end of season, holiday) protects margin better than ad hoc discounting whenever inventory feels stale.",
+    },
+    {
+      id: "raise_on_demand",
+      label: "Raise prices on items that consistently sell out",
+      description: "An item that sells out every time you restock it is underpriced relative to real demand.",
+    },
+  ],
+};
+
+/**
  * The fallback for anything unrecognized. Must be genuinely useful on
  * its own — never a "we couldn't categorize you" dead end — since a
  * business's Google category can be missing, generic, or just not one
@@ -677,22 +1403,45 @@ const DEFAULT_PROFILE: BizProfile = {
 export { DEFAULT_PROFILE };
 
 /**
- * The five hand-written content sources — coupons, offers, growth ideas,
- * FAQ, referral rules, pricing tips — every business type ultimately
- * reuses. Writing genuinely distinct monetization content for every one
- * of the ~30 narrow business types below isn't realistic (a "barbershop"
- * doesn't need different coupon math than a "salon"; a "plumber" and an
- * "electrician" run their business the same way), so a narrow type picks
- * whichever of these five actually matches how it makes money — see each
- * BusinessTypeOption's `contentProfileId` below.
+ * The hand-written content sources — coupons, offers, growth ideas, FAQ,
+ * referral rules, pricing tips — every business type ultimately reuses.
+ * Writing genuinely distinct monetization content for every one of the
+ * ~35 narrow business types below isn't realistic (a "barbershop" doesn't
+ * need different coupon math than a "salon"), so a narrow type picks
+ * whichever of these actually matches how it makes money — see each
+ * BusinessTypeOption's `contentProfileId` below. Each one here is a
+ * genuinely distinct MONEY MODEL (purchase-based retail vs. a basket-
+ * based grocery shop vs. a service call vs. a membership vs. a booked
+ * session, etc.) — never just a copy/paste of another with the nouns
+ * swapped, since the whole point is that the offer STRUCTURE has to
+ * match how that kind of business actually earns money.
  */
-type ContentProfileId = "salon" | "restaurant" | "lawyer" | "practitioner" | "default";
+type ContentProfileId =
+  | "salon"
+  | "restaurant"
+  | "liquor_wine"
+  | "grocery_market"
+  | "cafe_bakery"
+  | "lawyer"
+  | "professional_services"
+  | "practitioner"
+  | "gym_fitness"
+  | "trades"
+  | "retail"
+  | "default";
 
 const CONTENT_PROFILES: Record<ContentProfileId, BizProfile> = {
   salon: SALON_PROFILE,
   restaurant: RESTAURANT_PROFILE,
+  liquor_wine: LIQUOR_WINE_PROFILE,
+  grocery_market: GROCERY_MARKET_PROFILE,
+  cafe_bakery: CAFE_BAKERY_PROFILE,
   lawyer: LAWYER_PROFILE,
+  professional_services: PROFESSIONAL_SERVICES_PROFILE,
   practitioner: PRACTITIONER_PROFILE,
+  gym_fitness: GYM_FITNESS_PROFILE,
+  trades: TRADES_PROFILE,
+  retail: RETAIL_PROFILE,
   default: DEFAULT_PROFILE,
 };
 
@@ -782,7 +1531,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     label: "Café / Coffee Shop",
     match: ["cafe", "café", "coffee", "espresso"],
     placesType: ["cafe", "coffee_shop"],
-    contentProfileId: "restaurant",
+    contentProfileId: "cafe_bakery",
     competitorNoun: "cafes",
   },
   {
@@ -798,7 +1547,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     label: "Bakery",
     match: ["bakery", "patisserie", "bakeshop"],
     placesType: ["bakery"],
-    contentProfileId: "restaurant",
+    contentProfileId: "cafe_bakery",
     competitorNoun: "bakeries",
   },
   {
@@ -806,7 +1555,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     label: "Liquor & Wine Store",
     match: ["liquor", "wine shop", "spirits", "package store", "beer store"],
     placesType: ["liquor_store"],
-    contentProfileId: "restaurant",
+    contentProfileId: "liquor_wine",
     competitorNoun: "liquor stores",
   },
   {
@@ -814,7 +1563,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     label: "Grocery / Market",
     match: ["grocery", "supermarket", "convenience store", "mini mart", "corner store"],
     placesType: ["grocery_store", "supermarket", "convenience_store"],
-    contentProfileId: "restaurant",
+    contentProfileId: "grocery_market",
     competitorNoun: "grocery stores",
   },
   {
@@ -831,7 +1580,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     label: "Hardware Store",
     match: ["hardware store", "hardware"],
     placesType: ["hardware_store"],
-    contentProfileId: "default",
+    contentProfileId: "retail",
     competitorNoun: "hardware stores",
   },
   {
@@ -839,7 +1588,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     label: "Florist",
     match: ["florist", "flower shop", "floral"],
     placesType: ["florist"],
-    contentProfileId: "default",
+    contentProfileId: "retail",
     competitorNoun: "florists",
   },
   {
@@ -847,7 +1596,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     label: "Retail / Boutique",
     match: ["boutique", "clothing store", "apparel", "gift shop", "shoe store", "retail store"],
     placesType: ["clothing_store", "gift_shop", "shoe_store"],
-    contentProfileId: "default",
+    contentProfileId: "retail",
     competitorNoun: "boutiques",
   },
 
@@ -860,7 +1609,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     label: "Gym & Fitness Studio",
     match: ["gym", "fitness center", "fitness studio", "crossfit", "yoga studio", "pilates studio"],
     placesType: ["gym", "fitness_center", "yoga_studio"],
-    contentProfileId: "practitioner",
+    contentProfileId: "gym_fitness",
     competitorNoun: "gyms",
   },
   {
@@ -901,7 +1650,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     label: "Accounting & Tax",
     match: ["accountant", "accounting", "cpa", "tax service", "bookkeeping"],
     placesType: ["accounting"],
-    contentProfileId: "practitioner",
+    contentProfileId: "professional_services",
     competitorNoun: "accounting firms",
   },
   {
@@ -952,15 +1701,17 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     contentProfileId: "practitioner",
   },
 
-  // Trades & home services — no hand-written content of their own; they
-  // share the general/transactional default content (its own
-  // pricingExamples already include "Service Call").
+  // Trades & home services — share the "trades" service-call content
+  // profile (see TRADES_PROFILE): a plumber and an electrician run their
+  // business the same way (priced by the call/job, not a purchase or a
+  // booked session), so they reuse one hand-written content set rather
+  // than each getting their own.
   {
     id: "auto_repair",
     label: "Auto Repair",
     match: ["auto repair", "mechanic", "car repair", "auto body", "tire shop"],
     placesType: ["car_repair"],
-    contentProfileId: "default",
+    contentProfileId: "trades",
     competitorNoun: "auto shops",
   },
   {
@@ -968,7 +1719,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     label: "Plumbing",
     match: ["plumber", "plumbing"],
     placesType: ["plumber"],
-    contentProfileId: "default",
+    contentProfileId: "trades",
     competitorNoun: "plumbers",
   },
   {
@@ -976,7 +1727,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     label: "Electrical",
     match: ["electrician", "electrical contractor", "electrical service"],
     placesType: ["electrician"],
-    contentProfileId: "default",
+    contentProfileId: "trades",
     competitorNoun: "electricians",
   },
   {
@@ -984,7 +1735,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     label: "Landscaping",
     match: ["landscap", "lawn care", "lawn service", "tree service"],
     placesType: ["landscaper"],
-    contentProfileId: "default",
+    contentProfileId: "trades",
     competitorNoun: "landscapers",
   },
   {
@@ -992,7 +1743,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     label: "Cleaning Service",
     match: ["cleaning service", "house cleaning", "janitorial", "maid service"],
     placesType: ["house_cleaning"],
-    contentProfileId: "default",
+    contentProfileId: "trades",
     competitorNoun: "cleaning services",
   },
 
