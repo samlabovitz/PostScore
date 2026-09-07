@@ -8,9 +8,9 @@ import {
   IconLoader2,
   IconMessageChatbot,
   IconMessages,
+  IconPlus,
   IconSend2,
   IconSparkles,
-  IconTrash,
 } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
@@ -19,9 +19,9 @@ import { GradeBadge } from "@/components/ui/GradeBadge";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { cn } from "@/lib/utils";
 import {
-  clearAssistantConversation,
   getConversationHistory,
   getConversationMessages,
+  getCurrentConversation,
   sendAssistantMessage,
   type AssistantConversationSummary,
   type AssistantMessageRow,
@@ -203,25 +203,30 @@ function HistoryList({
   );
 }
 
-/** Which pane the chat card's body shows — "chat" is the live, fresh
- * session; "history" lists past conversations; "reading" shows one past
- * conversation's real messages, read-only (no input, nothing resumable —
- * see AssistantView's own doc comment for why a past chat is never
- * continued). */
-type Pane = { kind: "chat" } | { kind: "history" } | { kind: "reading"; conversationId: string };
+/** Which pane the chat card's body shows — "chat" is the live, editable
+ * conversation (whichever one is current: resumed from last time, opened
+ * from history, or freshly started); "history" lists past conversations
+ * to resume. There's no read-only pane — opening a past conversation from
+ * history makes it the live one, see resumeConversation. */
+type Pane = { kind: "chat" } | { kind: "history" };
 
 /**
- * The "Ask about your presence" assistant, opened from a compact entry
+ * "PostAI", the owner-facing assistant, opened from a compact entry
  * point on the Overview page (see AssistantLauncher) inside a modal
- * overlay (see AssistantOverlay). Always starts from a blank conversation
- * — no prior messages are loaded on open — and every message sent
- * belongs to a new `assistant_conversations` row created lazily on the
- * session's first message (see sendAssistantMessage). Past sessions are
- * never lost: they're saved automatically (every message is written to
- * the database as it's sent) and browsable from the History pane below,
- * read-only — the model only ever sees the CURRENT conversation's
- * messages, never a past one, so opening the assistant again really is a
- * fresh start for it too, not just visually.
+ * overlay (see AssistantOverlay). Opening it resumes whichever
+ * conversation the owner was last actually active in (see
+ * getCurrentConversation) rather than always starting blank — the owner
+ * can keep typing into it exactly like they never left. Every message
+ * sent belongs to a real `assistant_conversations` row, created lazily on
+ * a genuinely new conversation's first message (see sendAssistantMessage).
+ * Past conversations are never lost — every message is written to the
+ * database as it's sent — and browsable from the History pane below;
+ * opening one from there also makes it the live, resumed conversation
+ * (see resumeConversation), not a read-only view. "New chat" (see
+ * handleNewChat) is the one deliberate way to set the current
+ * conversation aside and start a genuinely blank one — it never deletes
+ * anything, so the conversation it leaves behind simply becomes ordinary
+ * history.
  */
 export function AssistantView({
   businessId,
@@ -239,23 +244,46 @@ export function AssistantView({
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [clearing, setClearing] = useState(false);
+  const [resuming, setResuming] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [pane, setPane] = useState<Pane>({ kind: "chat" });
   const [history, setHistory] = useState<AssistantConversationSummary[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
-  const [readingMessages, setReadingMessages] = useState<AssistantMessageRow[] | null>(null);
-  const [readingError, setReadingError] = useState<string | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, sending, pane]);
+  }, [messages, sending, resuming, pane]);
+
+  // Resume the conversation the owner was last active in, once, on mount
+  // — this component only mounts when the modal actually opens (see
+  // AssistantOverlay), so this runs exactly once per open.
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCurrent() {
+      const result = await getCurrentConversation(businessId);
+      if (cancelled) return;
+      if (result.status === "ok" && result.conversation) {
+        setConversationId(result.conversation.id);
+        setMessages(result.conversation.messages);
+      }
+      setResuming(false);
+    }
+    void loadCurrent();
+    return () => {
+      cancelled = true;
+    };
+    // businessId never changes for a mounted instance of this modal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function send(text: string) {
     const trimmed = text.trim();
-    if (!trimmed || sending) return;
+    // Guarding on `resuming` too avoids a race where a message sent
+    // before the resumed conversation finishes loading would get
+    // clobbered the instant that load resolves and overwrites local state.
+    if (!trimmed || sending || resuming) return;
 
     setError(null);
     setDraft("");
@@ -291,19 +319,21 @@ export function AssistantView({
     }
   }
 
-  async function handleClear() {
-    if (!conversationId) return;
-    setClearing(true);
-    const result = await clearAssistantConversation(businessId, conversationId);
-    setClearing(false);
-    if (result.status === "ok") {
-      setMessages([]);
-      setConversationId(null);
-      setError(null);
-      setHistory(null);
-    } else {
-      setError(result.status === "error" ? result.message : "Couldn't clear the conversation.");
-    }
+  /**
+   * Sets the current conversation aside and starts a genuinely blank one
+   * — a purely local reset, never a delete. The conversation left behind
+   * keeps every message it already has and simply becomes ordinary
+   * history (see the History pane); nothing is lost.
+   */
+  function handleNewChat() {
+    setMessages([]);
+    setConversationId(null);
+    setError(null);
+    setPane({ kind: "chat" });
+    // The just-set-aside conversation is no longer "current," so a
+    // cached history list (which excludes whatever's current) would
+    // wrongly still hide it — invalidate so reopening history shows it.
+    setHistory(null);
   }
 
   async function openHistory() {
@@ -325,15 +355,24 @@ export function AssistantView({
     }
   }
 
-  async function openConversation(id: string) {
-    setPane({ kind: "reading", conversationId: id });
-    setReadingMessages(null);
-    setReadingError(null);
+  /**
+   * Opening a past conversation from history RESUMES it — it becomes the
+   * live conversation, editable and appended to going forward, not a
+   * read-only view of the past.
+   */
+  async function resumeConversation(id: string) {
+    setError(null);
     const result = await getConversationMessages(businessId, id);
     if (result.status === "ok") {
-      setReadingMessages(result.messages);
+      setConversationId(id);
+      setMessages(result.messages);
+      setPane({ kind: "chat" });
+      // This conversation is now "current," so a cached history list
+      // (fetched while a different one was current) would show it as
+      // still-browsable past history — invalidate so it's excluded again.
+      setHistory(null);
     } else {
-      setReadingError(result.status === "error" ? result.message : "Couldn't load this conversation.");
+      setHistoryError(result.status === "error" ? result.message : "Couldn't load this conversation.");
     }
   }
 
@@ -341,17 +380,13 @@ export function AssistantView({
 
   return (
     <div className="flex flex-col gap-4">
-      <SectionHeading title="Ask about your presence" action={<Pill variant="brass">Beta</Pill>} />
+      <SectionHeading title="PostAI" action={<Pill variant="brass">Beta</Pill>} />
 
-      <Card className="flex items-start gap-3 p-4">
+      <Card className="flex items-center gap-3 p-4">
         <GradeBadge grade={context.score.grade} className="shrink-0" />
         <p className="text-[13px] text-ink-soft">
-          Grounded in your real PostScore ({context.score.total}/100), score breakdown, action plan,
-          and (when saved) your competitor scan. General strategy tips are always labeled{" "}
-          <span className="font-medium text-ink">General guidance</span> — never presented as
-          something found in your data. This assistant can&apos;t fabricate facts it wasn&apos;t
-          given: it will say plainly when it doesn&apos;t have something (e.g. individual reviews or a
-          Google search rank).
+          Grounded in your real PostScore ({context.score.total}/100) — general tips are always
+          labeled, nothing is fabricated.
         </p>
       </Card>
 
@@ -362,7 +397,7 @@ export function AssistantView({
           {isChat ? (
             <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink-mute">
               <IconSparkles size={14} className="text-brass" />
-              New conversation — past chats are saved
+              {conversationId ? "Continuing this conversation" : "New conversation — past chats are saved"}
             </div>
           ) : (
             <button
@@ -371,7 +406,7 @@ export function AssistantView({
               className="flex items-center gap-1.5 text-[12px] font-medium text-ink-mute hover:text-ink"
             >
               <IconArrowLeft size={14} />
-              {pane.kind === "history" ? "Past conversations" : "Back to new chat"}
+              Back to chat
             </button>
           )}
           <div className="flex items-center gap-1">
@@ -388,12 +423,12 @@ export function AssistantView({
             {isChat && messages.length > 0 && (
               <button
                 type="button"
-                onClick={handleClear}
-                disabled={clearing}
-                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-ink-mute hover:bg-red/10 hover:text-red disabled:opacity-50"
+                onClick={handleNewChat}
+                disabled={sending}
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-ink-mute hover:bg-paper-deep hover:text-ink disabled:opacity-50"
               >
-                <IconTrash size={13} />
-                Clear
+                <IconPlus size={13} />
+                New chat
               </button>
             )}
           </div>
@@ -405,18 +440,12 @@ export function AssistantView({
               loading={historyLoading}
               error={historyError}
               conversations={history}
-              onOpen={openConversation}
+              onOpen={resumeConversation}
             />
-          ) : pane.kind === "reading" ? (
-            readingError ? (
-              <p className="text-[13px] text-red">{readingError}</p>
-            ) : readingMessages === null ? (
-              <div className="flex flex-1 items-center justify-center text-ink-mute">
-                <IconLoader2 size={18} className="animate-spin" />
-              </div>
-            ) : (
-              readingMessages.map((m) => <MessageBubble key={m.id} message={m} />)
-            )
+          ) : resuming ? (
+            <div className="flex flex-1 items-center justify-center text-ink-mute">
+              <IconLoader2 size={18} className="animate-spin" />
+            </div>
           ) : messages.length === 0 ? (
             <EmptyState businessName={businessName} starterPrompts={starterPrompts} onPick={send} />
           ) : (
@@ -438,7 +467,7 @@ export function AssistantView({
                     key={prompt}
                     type="button"
                     onClick={() => send(prompt)}
-                    disabled={sending}
+                    disabled={sending || resuming}
                     className="rounded-full border border-paper-deep bg-white px-3 py-1.5 text-[11.5px] font-medium text-ink-soft transition-colors hover:border-brass hover:text-ink disabled:opacity-50"
                   >
                     {prompt}
@@ -465,10 +494,15 @@ export function AssistantView({
                 }}
                 placeholder="Ask about your score, action plan, competitors, or general marketing advice…"
                 rows={2}
-                disabled={sending}
+                disabled={sending || resuming}
                 className="min-w-0 flex-1 resize-none rounded-lg border border-paper-deep bg-white px-3.5 py-2.5 text-sm text-ink outline-none focus:border-ink-soft disabled:opacity-60"
               />
-              <Button type="submit" variant="brass" disabled={sending || !draft.trim()} className="shrink-0">
+              <Button
+                type="submit"
+                variant="brass"
+                disabled={sending || resuming || !draft.trim()}
+                className="shrink-0"
+              >
                 {sending ? <IconLoader2 size={16} className="animate-spin" /> : <IconSend2 size={16} />}
                 Send
               </Button>

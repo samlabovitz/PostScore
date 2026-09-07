@@ -240,9 +240,11 @@ export type GetAssistantPageDataResult =
 /**
  * Loads everything the assistant needs on first render: the real
  * grounding context, tailored starter prompts, and how many past
- * conversations exist. Deliberately does NOT load any messages — opening
- * the assistant always starts a fresh chat (see sendAssistantMessage);
- * past conversations are only ever fetched on demand, from the history
+ * conversations exist. Deliberately does NOT load any messages — the
+ * client resumes the current conversation itself, separately, via
+ * getCurrentConversation (kept out of this call so the page's own
+ * server-render never has to wait on it). Past conversations otherwise
+ * beyond the current one are only fetched on demand, from the history
  * menu (see getConversationHistory/getConversationMessages).
  */
 export async function getAssistantPageData(businessId: string): Promise<GetAssistantPageDataResult> {
@@ -397,24 +399,23 @@ export async function sendAssistantMessage(
   };
 }
 
-export type ClearAssistantConversationResult =
-  | { status: "ok" }
+export type GetCurrentConversationResult =
+  | { status: "ok"; conversation: { id: string; messages: AssistantMessageRow[] } | null }
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
 
 /**
- * Abandons the CURRENT, still-in-progress conversation — not the owner's
- * whole history (see the history menu for that; past conversations are
- * never touched by this). Deletes the conversation row itself (its
- * messages cascade with it) so a chat the owner explicitly discarded
- * doesn't linger in the history menu as a stray abandoned session. RLS
- * (business-ownership scoped, same as every other table) is what actually
- * enforces this can only ever delete the caller's own business's data.
+ * Finds the conversation the owner was last actually active in — the one
+ * holding the most recently sent message, not merely the most recently
+ * created conversation row (an owner who reopens an older conversation
+ * from the history menu and keeps typing in it makes THAT the current one
+ * again, without any separate "which chat is active" flag to maintain).
+ * Opening PostAI resumes this conversation instead of always starting
+ * blank; see AssistantView. Returns `conversation: null` when this
+ * business has never had a single message sent — genuinely nothing to
+ * resume, not an error.
  */
-export async function clearAssistantConversation(
-  businessId: string,
-  conversationId: string
-): Promise<ClearAssistantConversationResult> {
+export async function getCurrentConversation(businessId: string): Promise<GetCurrentConversationResult> {
   const supabase = createClient();
 
   const {
@@ -425,17 +426,38 @@ export async function clearAssistantConversation(
     return { status: "unauthenticated" };
   }
 
-  const { error } = await supabase
-    .from("assistant_conversations")
-    .delete()
-    .eq("id", conversationId)
-    .eq("business_id", businessId);
+  const { data: latest, error: latestError } = await supabase
+    .from("assistant_messages")
+    .select("conversation_id")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  if (error) {
-    return { status: "error", message: error.message };
+  if (latestError) {
+    return { status: "error", message: latestError.message };
+  }
+  if (!latest) {
+    return { status: "ok", conversation: null };
   }
 
-  return { status: "ok" };
+  const { data: messages, error: messagesError } = await supabase
+    .from("assistant_messages")
+    .select("id, role, content, created_at")
+    .eq("conversation_id", latest.conversation_id)
+    .order("created_at", { ascending: true });
+
+  if (messagesError) {
+    return { status: "error", message: messagesError.message };
+  }
+
+  return {
+    status: "ok",
+    conversation: {
+      id: latest.conversation_id as string,
+      messages: (messages ?? []) as AssistantMessageRow[],
+    },
+  };
 }
 
 export type GetConversationHistoryResult =

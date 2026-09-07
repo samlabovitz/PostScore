@@ -19,7 +19,7 @@ export function GradeBadge({ grade = null, className }: GradeBadgeProps) {
   return (
     <div
       className={cn(
-        "flex h-11 w-11 items-center justify-center rounded-lg font-serif text-lg font-bold",
+        "flex h-8 w-8 items-center justify-center rounded-lg font-serif text-sm font-bold",
         grade ? gradeClasses[grade] : "bg-ink/5 text-ink-mute",
         className
       )}

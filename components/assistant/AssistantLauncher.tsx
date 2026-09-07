@@ -46,7 +46,7 @@ function AssistantEntryPoint({
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
-            <span className="text-[15px] font-semibold text-ink">Ask PostScore AI</span>
+            <span className="text-[15px] font-semibold text-ink">Ask PostAI</span>
             <Pill variant="brass">Beta</Pill>
           </span>
           <span className="mt-0.5 block truncate text-[12.5px] text-ink-soft">
@@ -99,7 +99,7 @@ export function AssistantLauncher({
         onOpen={() => setOpen(true)}
       />
 
-      <AssistantOverlay open={open} onClose={() => setOpen(false)} title="PostScore Assistant">
+      <AssistantOverlay open={open} onClose={() => setOpen(false)} title="PostAI">
         <AssistantView
           businessId={businessId}
           businessName={businessName}

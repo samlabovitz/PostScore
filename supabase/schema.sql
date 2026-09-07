@@ -821,12 +821,14 @@ alter table public.businesses add constraint businesses_business_type_override_c
 -- One row per chat SESSION, grouping the messages in `assistant_messages`
 -- below into distinct conversations. Before this table existed, every
 -- message for a business belonged to one continuous, ever-growing thread;
--- now, opening the assistant always starts a new row here (created lazily,
--- on that session's first real message — never an empty row for a chat
--- that was opened and closed without saying anything), and the owner can
--- browse past ones from a history menu inside the assistant. Immutable
--- once created — a conversation is never edited or renamed, only read,
--- listed, or deleted (see clearAssistantConversation).
+-- now, a new row here is created lazily on a genuinely new conversation's
+-- first real message (never an empty row for a chat opened and closed
+-- without saying anything). Opening the assistant resumes whichever
+-- conversation was last active (see getCurrentConversation in
+-- app/actions/assistant.ts) rather than always starting a new row, and the
+-- owner can browse and resume past ones from a history menu inside the
+-- assistant. The row itself is immutable — never edited or renamed, only
+-- read, listed, or added to.
 create table if not exists public.assistant_conversations (
   id uuid primary key default gen_random_uuid(),
   business_id uuid not null references public.businesses (id) on delete cascade,
