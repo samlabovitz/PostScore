@@ -3,7 +3,7 @@
 import { ReactNode, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { IconUsers, IconChevronDown } from "@tabler/icons-react";
+import { IconUsers, IconChevronDown, IconRefresh } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
@@ -13,8 +13,9 @@ import { ScoreGauge } from "@/components/ui/ScoreGauge";
 import { StatTile } from "@/components/ui/StatTile";
 import { CategoryCard, formatPoints } from "@/components/scoring/CategoryCard";
 import { cn } from "@/lib/utils";
-import { saveScoreSnapshot } from "@/app/actions/scoring";
+import { rescanBusiness } from "@/app/actions/scoring";
 import type { BusinessRecord, ScoreHistoryRow, ScoreSnapshot } from "@/app/actions/scoring";
+import { diffProfileSnapshots, type ProfileSnapshot } from "@/lib/profileChanges";
 import {
   GRADE_THRESHOLDS,
   type CategoryResult,
@@ -70,31 +71,69 @@ function CategoryProgressRow({ category }: { category: CategoryResult }) {
   );
 }
 
-function SaveScanControl({ businessId }: { businessId: string }) {
+/** One honest sentence summarizing a completed re-scan — every number in
+ * it comes straight from the real reconciliation/diff the scan just ran,
+ * never a generic "Done!". */
+function summarizeRescan(tasksConfirmed: number, tasksReopened: number, changeCount: number): string {
+  const parts: string[] = [];
+  if (tasksConfirmed > 0) {
+    parts.push(`${tasksConfirmed} task${tasksConfirmed === 1 ? "" : "s"} confirmed`);
+  }
+  if (tasksReopened > 0) {
+    parts.push(`${tasksReopened} task${tasksReopened === 1 ? "" : "s"} back on your plan`);
+  }
+  if (changeCount > 0) {
+    parts.push(`${changeCount} listing change${changeCount === 1 ? "" : "s"} found`);
+  }
+  return parts.length > 0 ? `Re-scanned — ${parts.join(", ")}.` : "Re-scanned — nothing new since last time.";
+}
+
+/**
+ * The real "Re-scan now" trigger — the one manual entry point into
+ * rescanBusiness() (app/actions/scoring.ts), which live-refetches this
+ * business from Google, re-scores it, reconciles pending-verification
+ * tasks against the fresh data, and diffs the listing for real changes.
+ * One click, one Google Places call — never looped, never scheduled
+ * here (see that function's own doc comment for how a future automatic
+ * cadence could call the same function).
+ */
+function RescanControl({ businessId }: { businessId: string }) {
   const router = useRouter();
   const [state, setState] = useState<
-    { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; message: string }
+    | { kind: "idle" }
+    | { kind: "scanning" }
+    | { kind: "done"; message: string }
+    | { kind: "error"; message: string }
   >({ kind: "idle" });
 
-  async function handleSave() {
-    setState({ kind: "saving" });
-    const result = await saveScoreSnapshot(businessId);
-    if (result.status === "saved") {
-      setState({ kind: "saved" });
+  async function handleRescan() {
+    setState({ kind: "scanning" });
+    const result = await rescanBusiness(businessId);
+    if (result.status === "ok") {
+      setState({
+        kind: "done",
+        message: summarizeRescan(result.tasksConfirmed, result.tasksReopened, result.changes.length),
+      });
       router.refresh();
+    } else if (result.status === "no_results") {
+      setState({
+        kind: "error",
+        message: "Couldn't find this listing on Google anymore — it may have been removed or merged into another listing.",
+      });
     } else if (result.status === "error") {
       setState({ kind: "error", message: result.message });
     } else {
-      setState({ kind: "error", message: "Could not save this scan." });
+      setState({ kind: "error", message: "Could not re-scan this business." });
     }
   }
 
   return (
     <div className="flex items-center gap-3">
-      <Button variant="brass" size="sm" onClick={handleSave} disabled={state.kind === "saving"}>
-        {state.kind === "saving" ? "Saving scan..." : "Save this scan to history"}
+      <Button variant="brass" size="sm" onClick={handleRescan} disabled={state.kind === "scanning"}>
+        <IconRefresh size={14} className={cn(state.kind === "scanning" && "animate-spin")} />
+        {state.kind === "scanning" ? "Re-scanning..." : "Re-scan now"}
       </Button>
-      {state.kind === "saved" && <span className="text-sm text-green">Saved.</span>}
+      {state.kind === "done" && <span className="text-sm text-green">{state.message}</span>}
       {state.kind === "error" && <span className="text-sm text-red">{state.message}</span>}
     </div>
   );
@@ -389,6 +428,61 @@ function ChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
   );
 }
 
+/** Real changes to the business's own Google listing (hours, phone,
+ * website, categories, photos, rating, reviews, status) between the two
+ * most recent scans — see diffProfileSnapshots in lib/profileChanges.ts.
+ * Distinct from ChangesFeed above: this reports what actually changed on
+ * the real-world listing, not the resulting score-point deltas. Honest
+ * at every branch: fewer than two scans, or either scan predating
+ * profile-snapshot tracking, says so plainly rather than guessing; zero
+ * real differences says so too, rather than showing nothing at all. */
+function ListingChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
+  if (snapshots.length < 2) {
+    return (
+      <Card className="p-5 text-sm text-ink-soft">
+        No prior scan to compare yet — real listing changes will show up here after your next
+        re-scan.
+      </Card>
+    );
+  }
+
+  const [current, previous] = snapshots;
+
+  if (!current.profile_snapshot_json || !previous.profile_snapshot_json) {
+    return (
+      <Card className="p-5 text-sm text-ink-soft">
+        Your last scan predates listing-change tracking — this will start working from your next
+        re-scan.
+      </Card>
+    );
+  }
+
+  const changes = diffProfileSnapshots(
+    previous.profile_snapshot_json as ProfileSnapshot,
+    current.profile_snapshot_json as ProfileSnapshot
+  );
+
+  if (changes.length === 0) {
+    return (
+      <Card className="p-5 text-sm text-ink-soft">
+        Nothing changed on your listing since your last scan.
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="p-5">
+      <div className="flex flex-col divide-y divide-paper-line">
+        {changes.map((change) => (
+          <div key={change.field} className="py-2.5 text-sm text-ink first:pt-0 last:pb-0">
+            {change.description}
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 export type AssistantEmbedData =
   | {
       status: "ok";
@@ -438,7 +532,7 @@ export function BusinessScoreView({
             <IconUsers size={15} />
             View competitors
           </Link>
-          <SaveScanControl businessId={businessId} />
+          <RescanControl businessId={businessId} />
         </div>
       </div>
 
@@ -508,7 +602,10 @@ export function BusinessScoreView({
       <SectionHeading title="Business listing" />
       <ListingCard business={business} />
 
-      <SectionHeading title="Since your last scan" />
+      <SectionHeading title="What changed since your last scan" />
+      <ListingChangesFeed snapshots={recentSnapshots} />
+
+      <SectionHeading title="Score impact since your last scan" />
       <ChangesFeed snapshots={recentSnapshots} />
 
       <SectionHeading title="Where your points are" />
@@ -531,8 +628,7 @@ export function BusinessScoreView({
       <Card className="p-5">
         {history.length === 0 ? (
           <p className="text-sm text-ink-soft">
-            No saved scans yet — click &quot;Save this scan to history&quot; above to record the
-            current score.
+            No saved scans yet — click &quot;Re-scan now&quot; above to record the current score.
           </p>
         ) : (
           <table className="w-full text-sm">

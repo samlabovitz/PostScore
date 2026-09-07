@@ -9,6 +9,9 @@ import {
   type ScoreWithSuggestions,
 } from "@/lib/scoring";
 import { reconcileTasks, type TaskRow } from "@/lib/actionPlan";
+import { buildProfileSnapshot, diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
+import { lookupBusinessByPlaceId } from "@/lib/google/places";
+import { saveBusiness } from "@/app/actions/businesses";
 
 export interface BusinessRecord extends BusinessScoringRow {
   id: string;
@@ -59,7 +62,7 @@ export async function scoreBusinessById(businessId: string): Promise<ScoreBusine
 }
 
 export type SaveScoreSnapshotResult =
-  | { status: "saved"; scoreId: string }
+  | { status: "saved"; scoreId: string; tasksConfirmed: number; tasksReopened: number }
   | { status: "not_found" }
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
@@ -67,17 +70,20 @@ export type SaveScoreSnapshotResult =
 /**
  * Records the current score as a new row in `scores` — one row per scan,
  * so history accumulates. Uses the exact same breakdown scoreBusinessById
- * would show you; this just also persists it.
+ * would show you; this just also persists it, along with a real-listing
+ * profile snapshot (see buildProfileSnapshot in lib/profileChanges.ts)
+ * used to build the honest "what changed since your last scan" feed.
  *
  * This is also the app's one real "re-scan" moment, so it's where any
  * action-plan tasks marked "I did this" get checked against reality
  * (see reconcileTasks in lib/actionPlan.ts) — a task only ever becomes
  * completed here, by the real breakdown showing its check at full
  * points, never by the owner's checkbox alone. Note this re-scores
- * whatever is currently saved in `businesses` — it does not re-fetch
- * from Google, so a real Google-side fix (new hours, a linked website,
- * etc.) only shows up here once that business's saved row has itself
- * been refreshed (e.g. by re-running the Places lookup/save flow).
+ * whatever is currently saved in `businesses` — it does not itself
+ * re-fetch from Google, so a real Google-side fix (new hours, a linked
+ * website, etc.) only shows up here once that business's saved row has
+ * itself been refreshed. rescanBusiness() below is the caller that does
+ * that live re-fetch first, then calls this to score and persist it.
  */
 export async function saveScoreSnapshot(businessId: string): Promise<SaveScoreSnapshotResult> {
   const scored = await scoreBusinessById(businessId);
@@ -92,6 +98,7 @@ export async function saveScoreSnapshot(businessId: string): Promise<SaveScoreSn
       grade: scored.result.breakdown.grade,
       breakdown_json: scored.result.breakdown,
       scoring_version: scored.result.breakdown.scoringVersion,
+      profile_snapshot_json: buildProfileSnapshot(scored.business),
     })
     .select("id")
     .single();
@@ -100,9 +107,14 @@ export async function saveScoreSnapshot(businessId: string): Promise<SaveScoreSn
     return { status: "error", message: error?.message ?? "Could not save this scan." };
   }
 
-  await reconcileActionPlanTasks(supabase, businessId, scored.result.breakdown, data.id);
+  const { toComplete, toReopen } = await reconcileActionPlanTasks(
+    supabase,
+    businessId,
+    scored.result.breakdown,
+    data.id
+  );
 
-  return { status: "saved", scoreId: data.id };
+  return { status: "saved", scoreId: data.id, tasksConfirmed: toComplete, tasksReopened: toReopen };
 }
 
 /**
@@ -112,21 +124,22 @@ export async function saveScoreSnapshot(businessId: string): Promise<SaveScoreSn
  * regressed are deleted, since "completed" only means anything while
  * the real breakdown still agrees — a fresh task row is created next
  * time the owner marks it done again, rather than the row lying stale.
- * Best-effort: a failure here shouldn't fail the scan that was just
- * successfully saved.
+ * Returns real counts (never estimated) so a caller can tell the owner
+ * exactly what a re-scan actually confirmed. Best-effort: a failure here
+ * shouldn't fail the scan that was just successfully saved.
  */
 async function reconcileActionPlanTasks(
   supabase: ReturnType<typeof createClient>,
   businessId: string,
   breakdown: ScoreBreakdown,
   scoreId: string
-): Promise<void> {
+): Promise<{ toComplete: number; toReopen: number }> {
   const { data: taskRows, error } = await supabase
     .from("tasks")
     .select("id, check_id, status, promised_points, marked_done_at, verified_at")
     .eq("business_id", businessId);
 
-  if (error || !taskRows || taskRows.length === 0) return;
+  if (error || !taskRows || taskRows.length === 0) return { toComplete: 0, toReopen: 0 };
 
   const { toComplete, toReopen } = reconcileTasks(breakdown, taskRows as TaskRow[]);
 
@@ -140,6 +153,109 @@ async function reconcileActionPlanTasks(
   if (toReopen.length > 0) {
     await supabase.from("tasks").delete().in("id", toReopen);
   }
+
+  return { toComplete: toComplete.length, toReopen: toReopen.length };
+}
+
+export type RescanBusinessResult =
+  | { status: "ok"; scoreId: string; tasksConfirmed: number; tasksReopened: number; changes: ProfileChange[] }
+  | { status: "not_found" }
+  | { status: "unauthenticated" }
+  | { status: "no_results" }
+  | { status: "error"; message: string };
+
+/**
+ * The real "re-scan now" action, and the only place a business's saved
+ * Google data gets refreshed after it was first added: re-fetches this
+ * business's LIVE data from Google Places by its real place_id (a fresh
+ * network call — never a re-read of whatever's already saved), then
+ * hands the result to saveBusiness() (app/actions/businesses.ts), which
+ * overwrites the saved row AND re-runs the real HTTPS probe on the
+ * current website, exactly like the original add-business flow. Only
+ * once that's landed does it call saveScoreSnapshot() to score the
+ * now-current data, persist a new `scores` row, and run the pending-
+ * verification reconciliation — so a task only ever gets confirmed by
+ * this real re-detected data, never by the click itself. Also diffs the
+ * profile snapshot from just before the re-fetch against the fresh one,
+ * so the caller can show an immediate "what changed" summary without
+ * waiting on a page reload.
+ *
+ * Exactly one Google Places Details call per invocation — this is a
+ * manual, owner-triggered action with no looping or scheduling; a
+ * cadence-based auto-rescan can call this same function later without
+ * any change here.
+ */
+export async function rescanBusiness(businessId: string): Promise<RescanBusinessResult> {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { status: "unauthenticated" };
+  }
+
+  const { data: before, error: beforeError } = await supabase
+    .from("businesses")
+    .select("place_id, phone, website, opening_hours, categories, photo_count, rating, review_count, business_status")
+    .eq("id", businessId)
+    .single();
+
+  if (beforeError || !before) {
+    return { status: "not_found" };
+  }
+
+  const previousSnapshot: ProfileSnapshot = buildProfileSnapshot(before);
+
+  const lookup = await lookupBusinessByPlaceId(before.place_id);
+
+  if (lookup.status === "no_results") {
+    return { status: "no_results" };
+  }
+  if (lookup.status === "multiple") {
+    // A single place_id we already resolved once should never come back
+    // ambiguous on a re-fetch — surface this honestly rather than
+    // silently guessing which candidate is still the right one.
+    return {
+      status: "error",
+      message: "Google returned more than one match for this listing's saved place ID.",
+    };
+  }
+  if (lookup.status === "error") {
+    return { status: "error", message: lookup.message };
+  }
+
+  const saved = await saveBusiness(lookup.place);
+  if (saved.status !== "saved") {
+    return saved.status === "unauthenticated"
+      ? { status: "unauthenticated" }
+      : { status: "error", message: saved.status === "error" ? saved.message : "Could not save the fresh listing data." };
+  }
+
+  const scoreResult = await saveScoreSnapshot(businessId);
+  if (scoreResult.status !== "saved") {
+    return scoreResult;
+  }
+
+  const currentSnapshot: ProfileSnapshot = buildProfileSnapshot({
+    phone: lookup.place.phone,
+    website: lookup.place.website,
+    opening_hours: lookup.place.openingHours,
+    categories: lookup.place.categories,
+    photo_count: lookup.place.photoCount,
+    rating: lookup.place.rating,
+    review_count: lookup.place.userRatingCount,
+    business_status: lookup.place.businessStatus,
+  });
+
+  return {
+    status: "ok",
+    scoreId: scoreResult.scoreId,
+    tasksConfirmed: scoreResult.tasksConfirmed,
+    tasksReopened: scoreResult.tasksReopened,
+    changes: diffProfileSnapshots(previousSnapshot, currentSnapshot),
+  };
 }
 
 export interface ScoreHistoryRow {
@@ -171,14 +287,20 @@ export interface ScoreSnapshot {
   scoring_version: string;
   created_at: string;
   breakdown_json: ScoreBreakdown;
+  /** Real Google listing fields at the moment of this scan — see
+   * buildProfileSnapshot in lib/profileChanges.ts. Null for any scan
+   * saved before that column existed; callers must treat that honestly
+   * as "nothing to diff from," never as all-fields-unchanged. */
+  profile_snapshot_json: ProfileSnapshot | null;
 }
 
 /**
- * The two (or so) most recent saved scans, full breakdown included —
- * used to build an honest "what changed since your last scan" view.
- * Deliberately a separate, narrower query from getScoreHistory(): the
- * history table only needs totals/grades for many rows, this needs the
- * full per-check breakdown for just the last couple.
+ * The two (or so) most recent saved scans, full breakdown AND profile
+ * snapshot included — used to build both the check-level "score changes"
+ * view and the real-listing "what changed" feed. Deliberately a
+ * separate, narrower query from getScoreHistory(): the history table
+ * only needs totals/grades for many rows, this needs the full per-check
+ * breakdown and profile snapshot for just the last couple.
  */
 export async function getRecentScoreSnapshots(
   businessId: string,
@@ -187,7 +309,7 @@ export async function getRecentScoreSnapshots(
   const supabase = createClient();
   const { data, error } = await supabase
     .from("scores")
-    .select("id, total, grade, scoring_version, created_at, breakdown_json")
+    .select("id, total, grade, scoring_version, created_at, breakdown_json, profile_snapshot_json")
     .eq("business_id", businessId)
     .order("created_at", { ascending: false })
     .limit(limit);

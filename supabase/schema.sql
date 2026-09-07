@@ -906,3 +906,19 @@ alter table public.assistant_messages alter column conversation_id set not null;
 
 create index if not exists assistant_messages_conversation_id_created_at_idx
   on public.assistant_messages (conversation_id, created_at asc);
+
+-- ---------------------------------------------------------------------------
+-- Real re-scan & change detection (lib/profileChanges.ts,
+-- app/actions/scoring.ts's rescanBusiness, Day 13)
+-- ---------------------------------------------------------------------------
+
+-- A snapshot of the real Google listing fields (phone, website, hours,
+-- categories, photo count, rating, review count, status) at the moment
+-- of THIS scan — see buildProfileSnapshot() in lib/profileChanges.ts.
+-- Stored alongside breakdown_json on the same one-row-per-scan `scores`
+-- table rather than a separate table, since it's exactly the same
+-- "snapshot taken at scan time" pattern. Nullable: scans saved before
+-- this column existed simply have no snapshot to diff from, which the
+-- "what changed" feed shows honestly rather than guessing.
+alter table public.scores
+  add column if not exists profile_snapshot_json jsonb;
