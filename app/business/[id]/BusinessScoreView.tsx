@@ -25,6 +25,8 @@ import {
 } from "@/lib/scoring";
 import { AssistantLauncher } from "@/components/assistant/AssistantLauncher";
 import type { AssistantBusinessContext } from "@/lib/assistant";
+import { LocalBenchmarkTile } from "@/components/dashboard/LocalBenchmarkTile";
+import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
 
 function formatSignedPoints(value: number): string {
   return value > 0 ? `+${formatPoints(value)}` : formatPoints(value);
@@ -403,6 +405,7 @@ export function BusinessScoreView({
   history,
   recentSnapshots,
   assistant,
+  benchmark,
 }: {
   businessId: string;
   business: BusinessRecord;
@@ -410,6 +413,7 @@ export function BusinessScoreView({
   history: ScoreHistoryRow[];
   recentSnapshots: ScoreSnapshot[];
   assistant: AssistantEmbedData;
+  benchmark: GetLocalBenchmarkResult;
 }) {
   const { breakdown, projectedBreakdown } = result;
 
@@ -488,7 +492,7 @@ export function BusinessScoreView({
 
       <SectionHeading title="At a glance" />
       <Card className="p-5">
-        <div className="grid grid-cols-2 gap-6 sm:w-fit sm:grid-cols-2 sm:gap-10">
+        <div className="grid grid-cols-2 gap-6 sm:w-fit sm:grid-cols-3 sm:gap-10">
           <StatTile
             label="Google rating"
             value={business.rating === null ? "—" : `${business.rating.toFixed(1)} ★`}
@@ -497,6 +501,7 @@ export function BusinessScoreView({
             label="Google reviews"
             value={business.review_count === null ? "—" : business.review_count.toLocaleString()}
           />
+          <LocalBenchmarkTile businessId={businessId} result={benchmark} />
         </div>
       </Card>
 

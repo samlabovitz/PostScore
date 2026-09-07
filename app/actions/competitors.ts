@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import {
   findAndScoreCompetitors,
+  MAX_COMPETITORS,
   type CompetitorScanResult,
   type CompetitorSourceBusiness,
 } from "@/lib/competitors";
@@ -241,5 +242,131 @@ export async function getLatestCompetitorSnapshot(businessId: string): Promise<C
       grade: r.grade,
       priceLevel: r.price_level,
     })),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Local benchmark (Day 12c) — "where do I rank against my real local peers,"
+// computed entirely from the last SAVED competitor scan (getLatestCompetitor
+// Snapshot above), never a fresh live Google Places call. It moves only when
+// the owner re-saves a scan on the Competitors page — same cadence as the
+// scan data it's built from.
+// ---------------------------------------------------------------------------
+
+/**
+ * A saved scan with fewer real nearby peers than a scan normally finds
+ * (see MAX_COMPETITORS in lib/competitors.ts) is still a legitimate
+ * comparison, just a limited one — the UI must say so rather than present
+ * a 1-of-1 or 2-of-3 comparison with the same confidence as a full one.
+ */
+const SMALL_SAMPLE_THRESHOLD = MAX_COMPETITORS;
+
+export interface LocalBenchmark {
+  /** The resolved business-type profile's noun, e.g. "salons". */
+  competitorNoun: string;
+  scanId: string;
+  /** ISO timestamp of the scan this benchmark was computed from — callers format for display. */
+  scanAt: string;
+  subjectTotal: number;
+  subjectGrade: string | null;
+  /** 1-based rank among the full peer set (this business included), highest PostScore first. */
+  rank: number;
+  /** Peer set size INCLUDING this business — the "Y" in "#X of Y", same convention the assistant's competitor context and the live Competitors page already use. */
+  peerCount: number;
+  /** Real nearby peers actually compared against — EXCLUDES this business itself, since a business isn't "nearby" itself. This is the N in "based on N nearby [type]". */
+  othersCount: number;
+  /** How many of those other peers this business currently outscores (a tie doesn't count as "ahead of"). */
+  aheadCount: number;
+  /** Rounded 0-100 percent of `othersCount` this business is ahead of. */
+  percentileAhead: number;
+  /** True when othersCount is below SMALL_SAMPLE_THRESHOLD — the UI must disclose this rather than present a small comparison as a definitive ranking. */
+  smallSample: boolean;
+}
+
+export type GetLocalBenchmarkResult =
+  | { status: "ok"; benchmark: LocalBenchmark }
+  /** A scan was saved, but it found no comparable businesses at all to compare against — honest, not an error. */
+  | { status: "no_peers"; competitorNoun: string }
+  /** No competitor scan has ever been saved for this business — the honest "go save one first" state. */
+  | { status: "no_scan" }
+  | { status: "not_found" }
+  | { status: "unauthenticated" }
+  | { status: "error"; message: string };
+
+/**
+ * Computes where this business ranks among the real nearby peers from its
+ * last SAVED competitor scan — never a fresh live scan (see
+ * getLatestCompetitorSnapshot's own doc comment for why), and never
+ * against anything but that scan's own already-same-category, already-
+ * nearby matches (lib/competitors.ts's real matching logic, not
+ * re-implemented or loosened here). Resolves the business-type noun with
+ * resolveBizProfile so a manually-corrected type is reflected here too,
+ * same as coupons/referrals/pricing.
+ */
+export async function getLocalBenchmark(businessId: string): Promise<GetLocalBenchmarkResult> {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { status: "unauthenticated" };
+  }
+
+  const { data: business, error: businessError } = await supabase
+    .from("businesses")
+    .select("category, primary_type, business_type_override")
+    .eq("id", businessId)
+    .single();
+
+  if (businessError || !business) {
+    return { status: "not_found" };
+  }
+
+  const competitorNoun = resolveBizProfile(
+    business.category,
+    business.primary_type,
+    business.business_type_override
+  ).competitorNoun;
+
+  const snapshot = await getLatestCompetitorSnapshot(businessId);
+  if (!snapshot) {
+    return { status: "no_scan" };
+  }
+
+  const subject = snapshot.entries.find((e) => e.isSubject);
+  if (!subject || subject.total === null) {
+    // Every real saved scan includes the subject with a real score — this
+    // shouldn't happen, but if it somehow did, say there's nothing to
+    // show rather than guess a number.
+    return { status: "no_peers", competitorNoun };
+  }
+  const subjectTotal = subject.total;
+
+  const others = snapshot.entries.filter((e) => !e.isSubject);
+  if (others.length === 0) {
+    return { status: "no_peers", competitorNoun };
+  }
+
+  const sorted = [...snapshot.entries].sort((a, b) => (b.total ?? -1) - (a.total ?? -1));
+  const rank = sorted.findIndex((e) => e.isSubject) + 1;
+  const aheadCount = others.filter((e) => (e.total ?? -1) < subjectTotal).length;
+
+  return {
+    status: "ok",
+    benchmark: {
+      competitorNoun,
+      scanId: snapshot.scanId,
+      scanAt: snapshot.createdAt,
+      subjectTotal,
+      subjectGrade: subject.grade,
+      rank,
+      peerCount: snapshot.entries.length,
+      othersCount: others.length,
+      aheadCount,
+      percentileAhead: Math.round((aheadCount / others.length) * 100),
+      smallSample: others.length < SMALL_SAMPLE_THRESHOLD,
+    },
   };
 }

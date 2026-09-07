@@ -3,6 +3,7 @@ import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
 import { scoreBusinessById, getScoreHistory, getRecentScoreSnapshots } from "@/app/actions/scoring";
 import { getAssistantPageData } from "@/app/actions/assistant";
+import { getLocalBenchmark } from "@/app/actions/competitors";
 import { BusinessScoreView, type AssistantEmbedData } from "./BusinessScoreView";
 
 export default async function BusinessPage({ params }: { params: { id: string } }) {
@@ -24,10 +25,11 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     );
   }
 
-  const [history, recentSnapshots, assistantPageData] = await Promise.all([
+  const [history, recentSnapshots, assistantPageData, benchmark] = await Promise.all([
     getScoreHistory(params.id),
     getRecentScoreSnapshots(params.id, 2),
     getAssistantPageData(params.id),
+    getLocalBenchmark(params.id),
   ]);
 
   const assistant: AssistantEmbedData =
@@ -55,6 +57,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
         history={history}
         recentSnapshots={recentSnapshots}
         assistant={assistant}
+        benchmark={benchmark}
       />
     </DashboardShell>
   );
