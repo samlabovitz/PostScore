@@ -73,11 +73,19 @@ function CategoryProgressRow({ category }: { category: CategoryResult }) {
 
 /** One honest sentence summarizing a completed re-scan — every number in
  * it comes straight from the real reconciliation/diff the scan just ran,
- * never a generic "Done!". */
-function summarizeRescan(tasksConfirmed: number, tasksReopened: number, changeCount: number): string {
+ * never a generic "Done!". A scan that genuinely found nothing new says
+ * so plainly, rather than a silent or ambiguous success. */
+function summarizeRescan(
+  tasksConfirmed: number,
+  pointsConfirmed: number,
+  tasksReopened: number,
+  changeCount: number
+): string {
   const parts: string[] = [];
   if (tasksConfirmed > 0) {
-    parts.push(`${tasksConfirmed} task${tasksConfirmed === 1 ? "" : "s"} confirmed`);
+    parts.push(
+      `${tasksConfirmed} task${tasksConfirmed === 1 ? "" : "s"} confirmed (+${formatPoints(pointsConfirmed)} pts)`
+    );
   }
   if (tasksReopened > 0) {
     parts.push(`${tasksReopened} task${tasksReopened === 1 ? "" : "s"} back on your plan`);
@@ -85,7 +93,7 @@ function summarizeRescan(tasksConfirmed: number, tasksReopened: number, changeCo
   if (changeCount > 0) {
     parts.push(`${changeCount} listing change${changeCount === 1 ? "" : "s"} found`);
   }
-  return parts.length > 0 ? `Re-scanned — ${parts.join(", ")}.` : "Re-scanned — nothing new since last time.";
+  return parts.length > 0 ? `Re-scanned — ${parts.join(", ")}.` : "Re-scanned — nothing changed since last scan.";
 }
 
 /**
@@ -112,7 +120,12 @@ function RescanControl({ businessId }: { businessId: string }) {
     if (result.status === "ok") {
       setState({
         kind: "done",
-        message: summarizeRescan(result.tasksConfirmed, result.tasksReopened, result.changes.length),
+        message: summarizeRescan(
+          result.tasksConfirmed,
+          result.pointsConfirmed,
+          result.tasksReopened,
+          result.changes.length
+        ),
       });
       router.refresh();
     } else if (result.status === "no_results") {

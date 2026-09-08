@@ -51,6 +51,7 @@ export function GrowthView({
   actionPlan,
   initialPromos,
   initialReferral,
+  lastScanAt,
 }: {
   businessId: string;
   businessName: string | null;
@@ -60,6 +61,11 @@ export function GrowthView({
   breakdown: ScoreBreakdown;
   initialPromos: PromoRow[];
   initialReferral: ReferralRow | null;
+  /** When this business was last re-scanned — see getLastScanAt() in
+   * app/actions/scoring.ts. Lets a still-pending task tell "hasn't been
+   * re-checked yet" apart from "checked, no real change" (see
+   * pendingCheckStatus in lib/actionPlan.ts). */
+  lastScanAt: string | null;
   actionPlan: {
     tasks: ActionPlanTask[];
     completed: CompletedTask[];
@@ -139,6 +145,7 @@ export function GrowthView({
                 tasks={actionPlan.weeklyTasks}
                 businessId={businessId}
                 context="weekly"
+                lastScanAt={lastScanAt}
                 emptyMessage="You're caught up — no real gaps determinable right now. Nice work."
                 footnote={
                   'Every estimate here is exactly what its check is currently missing — the same ' +
@@ -151,6 +158,7 @@ export function GrowthView({
               <TaskListCard
                 tasks={actionPlan.laterTasks}
                 businessId={businessId}
+                lastScanAt={lastScanAt}
                 emptyMessage="Nothing longer-term right now — everything determinable is either in this week's plan or already done."
               />
             </>

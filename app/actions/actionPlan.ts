@@ -5,6 +5,7 @@ import {
   buildActionPlan,
   buildCompletedTasks,
   buildWeeklyPlan,
+  weeklyTrackedMetricValue,
   type ActionPlanTask,
   type CompletedTask,
   type TaskRow,
@@ -45,7 +46,7 @@ export async function getActionPlan(
 
   const { data, error } = await supabase
     .from("tasks")
-    .select("id, check_id, status, promised_points, marked_done_at, verified_at")
+    .select("id, check_id, status, promised_points, marked_done_at, verified_at, marked_metric_value")
     .eq("business_id", businessId);
 
   if (error) {
@@ -102,7 +103,8 @@ export async function markTaskDone(businessId: string, checkId: string): Promise
     return { status: "not_found" };
   }
 
-  const breakdown = scoreBusiness(businessRowToScoringInput(business as BusinessScoringRow));
+  const input = businessRowToScoringInput(business as BusinessScoringRow);
+  const breakdown = scoreBusiness(input);
   const check = breakdown.checks.find((c) => c.id === checkId);
 
   if (!check) {
@@ -110,6 +112,11 @@ export async function markTaskDone(businessId: string, checkId: string): Promise
   }
 
   const promisedPoints = Math.round((check.maxPoints - (check.earnedPoints ?? 0)) * 10) / 10;
+  // The real raw metric (e.g. review count) at this exact moment, for a
+  // gradual check with a numeric weekly target — lets a later re-scan
+  // show honest "1 of 3, X to go" progress against the real baseline
+  // instead of just a points gap. Null for one-shot checks.
+  const markedMetricValue = weeklyTrackedMetricValue(checkId, input);
 
   const { error } = await supabase.from("tasks").upsert(
     {
@@ -118,6 +125,7 @@ export async function markTaskDone(businessId: string, checkId: string): Promise
       status: "pending_verification",
       promised_points: promisedPoints,
       marked_done_at: new Date().toISOString(),
+      marked_metric_value: markedMetricValue,
       verified_at: null,
       verified_score_id: null,
     },

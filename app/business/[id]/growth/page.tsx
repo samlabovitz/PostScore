@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
 import { getBusinessSummary } from "@/app/actions/businesses";
-import { scoreBusinessById } from "@/app/actions/scoring";
+import { scoreBusinessById, getLastScanAt } from "@/app/actions/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
 import { listActivePromos } from "@/app/actions/promos";
 import { getActiveReferral } from "@/app/actions/referrals";
@@ -50,6 +50,8 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   const promosResult = await listActivePromos(params.id);
   const initialPromos = promosResult.status === "ok" ? promosResult.promos : [];
 
+  const lastScanAt = await getLastScanAt(params.id);
+
   // Only businesses with referralOk ever see the Refer a friend segment
   // (see GrowthView), so there's no reason to query it for the rest.
   const referralResult = profile.referralOk ? await getActiveReferral(params.id) : null;
@@ -82,6 +84,7 @@ export default async function GrowthPage({ params }: { params: { id: string } })
         actionPlan={actionPlan}
         initialPromos={initialPromos}
         initialReferral={initialReferral}
+        lastScanAt={lastScanAt}
       />
     </DashboardShell>
   );

@@ -62,7 +62,7 @@ export async function scoreBusinessById(businessId: string): Promise<ScoreBusine
 }
 
 export type SaveScoreSnapshotResult =
-  | { status: "saved"; scoreId: string; tasksConfirmed: number; tasksReopened: number }
+  | { status: "saved"; scoreId: string; tasksConfirmed: number; tasksReopened: number; pointsConfirmed: number }
   | { status: "not_found" }
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
@@ -107,14 +107,20 @@ export async function saveScoreSnapshot(businessId: string): Promise<SaveScoreSn
     return { status: "error", message: error?.message ?? "Could not save this scan." };
   }
 
-  const { toComplete, toReopen } = await reconcileActionPlanTasks(
+  const { toComplete, toReopen, pointsConfirmed } = await reconcileActionPlanTasks(
     supabase,
     businessId,
     scored.result.breakdown,
     data.id
   );
 
-  return { status: "saved", scoreId: data.id, tasksConfirmed: toComplete, tasksReopened: toReopen };
+  return {
+    status: "saved",
+    scoreId: data.id,
+    tasksConfirmed: toComplete,
+    tasksReopened: toReopen,
+    pointsConfirmed,
+  };
 }
 
 /**
@@ -124,24 +130,29 @@ export async function saveScoreSnapshot(businessId: string): Promise<SaveScoreSn
  * regressed are deleted, since "completed" only means anything while
  * the real breakdown still agrees — a fresh task row is created next
  * time the owner marks it done again, rather than the row lying stale.
- * Returns real counts (never estimated) so a caller can tell the owner
- * exactly what a re-scan actually confirmed. Best-effort: a failure here
- * shouldn't fail the scan that was just successfully saved.
+ * Returns real counts and the real point total confirmed (each
+ * confirmed task's own stored `promised_points`, never estimated or
+ * re-derived) so a caller can tell the owner exactly what a re-scan
+ * actually proved. Best-effort: a failure here shouldn't fail the scan
+ * that was just successfully saved.
  */
 async function reconcileActionPlanTasks(
   supabase: ReturnType<typeof createClient>,
   businessId: string,
   breakdown: ScoreBreakdown,
   scoreId: string
-): Promise<{ toComplete: number; toReopen: number }> {
+): Promise<{ toComplete: number; toReopen: number; pointsConfirmed: number }> {
   const { data: taskRows, error } = await supabase
     .from("tasks")
-    .select("id, check_id, status, promised_points, marked_done_at, verified_at")
+    .select("id, check_id, status, promised_points, marked_done_at, verified_at, marked_metric_value")
     .eq("business_id", businessId);
 
-  if (error || !taskRows || taskRows.length === 0) return { toComplete: 0, toReopen: 0 };
+  if (error || !taskRows || taskRows.length === 0) {
+    return { toComplete: 0, toReopen: 0, pointsConfirmed: 0 };
+  }
 
-  const { toComplete, toReopen } = reconcileTasks(breakdown, taskRows as TaskRow[]);
+  const rows = taskRows as TaskRow[];
+  const { toComplete, toReopen } = reconcileTasks(breakdown, rows);
 
   if (toComplete.length > 0) {
     await supabase
@@ -154,11 +165,21 @@ async function reconcileActionPlanTasks(
     await supabase.from("tasks").delete().in("id", toReopen);
   }
 
-  return { toComplete: toComplete.length, toReopen: toReopen.length };
+  const rowById = new Map(rows.map((r) => [r.id, r]));
+  const pointsConfirmed = toComplete.reduce((sum, id) => sum + (rowById.get(id)?.promised_points ?? 0), 0);
+
+  return { toComplete: toComplete.length, toReopen: toReopen.length, pointsConfirmed };
 }
 
 export type RescanBusinessResult =
-  | { status: "ok"; scoreId: string; tasksConfirmed: number; tasksReopened: number; changes: ProfileChange[] }
+  | {
+      status: "ok";
+      scoreId: string;
+      tasksConfirmed: number;
+      tasksReopened: number;
+      pointsConfirmed: number;
+      changes: ProfileChange[];
+    }
   | { status: "not_found" }
   | { status: "unauthenticated" }
   | { status: "no_results" }
@@ -254,8 +275,29 @@ export async function rescanBusiness(businessId: string): Promise<RescanBusiness
     scoreId: scoreResult.scoreId,
     tasksConfirmed: scoreResult.tasksConfirmed,
     tasksReopened: scoreResult.tasksReopened,
+    pointsConfirmed: scoreResult.pointsConfirmed,
     changes: diffProfileSnapshots(previousSnapshot, currentSnapshot),
   };
+}
+
+/** When the business's most recent scan ran, or null if it's never been
+ * scanned — used to tell a still-pending action-plan task apart as
+ * "hasn't been re-checked since you marked it" vs. "checked, no change
+ * yet" (see pendingCheckStatus in lib/actionPlan.ts). A single narrow
+ * query rather than reusing getScoreHistory/getRecentScoreSnapshots,
+ * since the Growth page needs only this one timestamp. */
+export async function getLastScanAt(businessId: string): Promise<string | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("scores")
+    .select("created_at")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.created_at;
 }
 
 export interface ScoreHistoryRow {

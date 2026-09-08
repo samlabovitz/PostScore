@@ -922,3 +922,18 @@ create index if not exists assistant_messages_conversation_id_created_at_idx
 -- "what changed" feed shows honestly rather than guessing.
 alter table public.scores
   add column if not exists profile_snapshot_json jsonb;
+
+-- ---------------------------------------------------------------------------
+-- Honest weekly progress numbers (lib/actionPlan.ts's weeklyMetricProgress,
+-- app/actions/actionPlan.ts's markTaskDone, Day 13 pass 2)
+-- ---------------------------------------------------------------------------
+
+-- The real raw metric value (e.g. review count) at the moment the owner
+-- marked a gradual (quick_win_action) task done — lets a later re-scan
+-- show honest numeric progress ("1 of 3 new reviews: 15 so far, 2 to
+-- go") against the real current value, not just a points estimate. Null
+-- for one-shot checks (no numeric weekly target exists for them) and
+-- for rows marked before this column existed — those simply fall back
+-- to the existing points-based pending status until marked again.
+alter table public.tasks
+  add column if not exists marked_metric_value numeric;
