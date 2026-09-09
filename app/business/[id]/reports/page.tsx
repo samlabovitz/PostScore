@@ -1,8 +1,8 @@
 import { notFound, redirect } from "next/navigation";
-import { IconFileText } from "@tabler/icons-react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
-import { ComingTogether } from "@/components/dashboard/ComingTogether";
 import { getBusinessSummary } from "@/app/actions/businesses";
+import { getReportsData } from "@/app/actions/reports";
+import { ReportsView } from "./ReportsView";
 
 export default async function ReportsPage({ params }: { params: { id: string } }) {
   const summary = await getBusinessSummary(params.id);
@@ -14,14 +14,18 @@ export default async function ReportsPage({ params }: { params: { id: string } }
     notFound();
   }
 
+  const reports = await getReportsData(params.id);
+
+  if (reports.status === "unauthenticated") {
+    redirect("/login");
+  }
+  if (reports.status === "not_found") {
+    notFound();
+  }
+
   return (
     <DashboardShell business={summary.business}>
-      <ComingTogether
-        section="Reports"
-        businessId={summary.business.id}
-        businessName={summary.business.name}
-        icon={IconFileText}
-      />
+      <ReportsView businessId={params.id} businessName={summary.business.name} reports={reports} />
     </DashboardShell>
   );
 }

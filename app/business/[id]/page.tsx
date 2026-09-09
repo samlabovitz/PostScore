@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { scoreBusinessById, getScoreHistory, getRecentScoreSnapshots } from "@/app/actions/scoring";
 import { getAssistantPageData } from "@/app/actions/assistant";
 import { getLocalBenchmark } from "@/app/actions/competitors";
+import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { BusinessScoreView, type AssistantEmbedData } from "./BusinessScoreView";
 
 export default async function BusinessPage({ params }: { params: { id: string } }) {
@@ -25,11 +26,12 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     );
   }
 
-  const [history, recentSnapshots, assistantPageData, benchmark] = await Promise.all([
+  const [history, recentSnapshots, assistantPageData, benchmark, gbpStatus] = await Promise.all([
     getScoreHistory(params.id),
     getRecentScoreSnapshots(params.id, 2),
     getAssistantPageData(params.id),
     getLocalBenchmark(params.id),
+    getGbpConnectionStatus(params.id),
   ]);
 
   const assistant: AssistantEmbedData =
@@ -58,6 +60,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
         recentSnapshots={recentSnapshots}
         assistant={assistant}
         benchmark={benchmark}
+        gbpConnected={gbpStatus.status === "ok" && gbpStatus.connected}
       />
     </DashboardShell>
   );

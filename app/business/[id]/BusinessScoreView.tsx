@@ -28,6 +28,7 @@ import { AssistantLauncher } from "@/components/assistant/AssistantLauncher";
 import type { AssistantBusinessContext } from "@/lib/assistant";
 import { LocalBenchmarkTile } from "@/components/dashboard/LocalBenchmarkTile";
 import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
+import { LiveListingSection } from "@/components/gbp/LiveListingSection";
 
 function formatSignedPoints(value: number): string {
   return value > 0 ? `+${formatPoints(value)}` : formatPoints(value);
@@ -513,6 +514,7 @@ export function BusinessScoreView({
   recentSnapshots,
   assistant,
   benchmark,
+  gbpConnected,
 }: {
   businessId: string;
   business: BusinessRecord;
@@ -521,6 +523,7 @@ export function BusinessScoreView({
   recentSnapshots: ScoreSnapshot[];
   assistant: AssistantEmbedData;
   benchmark: GetLocalBenchmarkResult;
+  gbpConnected: boolean;
 }) {
   const { breakdown, projectedBreakdown } = result;
 
@@ -614,6 +617,9 @@ export function BusinessScoreView({
 
       <SectionHeading title="Business listing" />
       <ListingCard business={business} />
+
+      <SectionHeading title="Your live Google listing" />
+      <LiveListingSection businessId={businessId} connected={gbpConnected} />
 
       <SectionHeading title="What changed since your last scan" />
       <ListingChangesFeed snapshots={recentSnapshots} />

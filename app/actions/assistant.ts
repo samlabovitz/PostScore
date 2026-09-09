@@ -5,6 +5,7 @@ import { getBusinessSummary } from "@/app/actions/businesses";
 import { scoreBusinessById, getScoreHistory } from "@/app/actions/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
 import { getLatestCompetitorSnapshot } from "@/app/actions/competitors";
+import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { businessRowToScoringInput } from "@/lib/scoring";
 import { bizProfile, resolveBizProfile } from "@/config/bizProfiles";
 import { priceLevelToSymbol } from "@/lib/priceLevel";
@@ -76,10 +77,11 @@ type LoadContextResult =
  * page first loaded.
  */
 async function loadContext(businessId: string): Promise<LoadContextResult> {
-  const [summaryResult, scored, scoreHistoryRows] = await Promise.all([
+  const [summaryResult, scored, scoreHistoryRows, gbpStatus] = await Promise.all([
     getBusinessSummary(businessId),
     scoreBusinessById(businessId),
     getScoreHistory(businessId),
+    getGbpConnectionStatus(businessId),
   ]);
 
   if (scored.status === "unauthenticated" || summaryResult.status === "unauthenticated") {
@@ -217,6 +219,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     actionPlan: { topTasks },
     competitors,
     profile: businessProfile,
+    gbp: { connected: gbpStatus.status === "ok" && gbpStatus.connected },
   };
 
   return { status: "ok", context };

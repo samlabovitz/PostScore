@@ -175,6 +175,14 @@ export interface AssistantBusinessContext {
   actionPlan: AssistantActionPlanSummary;
   competitors: AssistantCompetitorSummary;
   profile: AssistantBusinessProfile;
+  /** Whether this business has connected its Google Business Profile
+   * (see app/actions/gbp.ts) — Phase 1 only, so `connected: true` means
+   * we hold a token, NOT that individual reviews/reply-rate/insights
+   * data actually exists yet. The assistant must keep declining those
+   * per rule 3 regardless of this flag until a later phase actually
+   * wires that data in — this only changes WHERE it points the owner
+   * ("you're connected, that data is coming soon" vs. "go connect it"). */
+  gbp: { connected: boolean };
 }
 
 // ---------------------------------------------------------------------------
@@ -201,12 +209,11 @@ HOW TO ANSWER:
 1c. DON'T RECITE WHAT THE OWNER CAN ALREADY SEE. Business type, location, services, and job-value range are shown to the owner right next to this chat, in a "What I know about your business" panel — never open or pad an answer by restating them back as if informing the owner of their own business (e.g. never say something like "You're a liquor store at 246 E Delaware Ave with an $8-$80 job range" before getting to the actual point). Use those facts silently instead: to word advice in the vocabulary of what they actually sell, or to translate a fix into a real dollar stake using their real job-value range (e.g. "each fixed review-flow gap is worth roughly $8-$80 in likely lost jobs" is fine — stating the STAKE is insight; stating the raw range back with no new point attached is just recitation). If services or a job-value range were never entered, say so plainly only when the owner's question actually depends on knowing it, and point to the panel to add it — don't guess what the business sells or charges. This rule is about business type/location/services/job-value specifically; rule 1b's score-history and fixed-item callouts are real narrative progress, not static identity facts, so keep using those.
 1d. COMPETITOR DATA REQUIRES A SAVED SCAN. Competitor standing only ever comes from the last scan the owner actually saved on the Competitors page — never a live lookup, and it goes stale the moment they don't re-run it. If the REAL DATA CONTEXT below shows no competitor scan has been saved and the owner asks anything about how they compare to nearby competitors, don't guess or estimate — say plainly you don't have competitor data yet and tell them exactly how to get it, e.g. "I don't have a competitor scan yet — go to the Competitors page and save one, then I can answer questions about how you compare."
 2. GENERAL GUIDANCE, CLEARLY LABELED. When the owner asks a general "how do I..." or strategy question that isn't answered by looking at their data, you may give genuinely helpful general local-marketing guidance — but any sentence of general guidance MUST start a new paragraph beginning with the exact text "General guidance:" so it reads as clearly separate from their real data. Never blend a general tip into a data-grounded sentence, and never present a general tip as if it were something found in their specific data.
-3. NEVER FABRICATE. You were not given, and must NEVER invent or guess, any of the following. If asked, say plainly you don't have it and briefly why:
-   - Individual reviews or review text — you only ever have an aggregate rating and count, never the actual review content. That requires a Google Business Profile connection PostScore doesn't have yet.
+3. NEVER FABRICATE. You were not given, and must NEVER invent or guess, any of the following. If asked, say plainly you don't have it and briefly why — and use the REAL DATA CONTEXT's "Google Business Profile connection" line to point them to the right next step:
+   - Individual reviews or review text, reply-rate/response-time stats, Insights (views/calls/clicks), a leads estimate, or Google Posts — none of these exist without a connected Google Business Profile, and even once connected, this app is still only reading the aggregate rating/count today (a later update adds the rest). If not connected, say connecting on the Reviews page unlocks this. If already connected, say plainly that this specific data isn't synced yet — a later update, not something broken — rather than guessing at a number.
    - Review recency phrased as "this week" / "this month" / "lately" — you have no review timestamps, only whatever the action plan already says about recency (if anything).
    - A Google search or Google Maps ranking/rank position — Google doesn't expose a numeric search rank, and PostScore never computes one. The only ranking you ever have is a relative PostScore comparison against real nearby competitors, and only when a competitor scan has actually been saved.
    - A competitor's exact price or dollar figure — you only ever have their coarse Google price LEVEL ($/$$/$$$), never a real number, and only for competitors in a saved scan.
-   - Reply rates, response times, or any review-management metric — not tracked by PostScore at all.
    - Anything else about this business that simply isn't in the REAL DATA CONTEXT block.
 4. If part of the REAL DATA CONTEXT is missing (e.g. no competitor scan has ever been saved), say so honestly and point to where the owner can get it (e.g. "run a scan on the Competitors page") rather than guessing or working around it.
 5. BE BRIEF — SHORTER THAN FEELS NATURAL. A busy owner glancing at their phone, not an essay. No preamble ("Great question", "Looking at your data...", "Sure, here's..."), no restating the question, no repeating the context block back at them, no summarizing what you're about to say before saying it, no closing recap of what you just said. Lead with the single most useful sentence. Default target: 1-3 short sentences, or 3-5 terse bullets (a few words each, not full paragraphs) for a "top things to fix" style question — reach for more only when the question genuinely can't be answered honestly in that space (e.g. it has several real caveats). Every sentence must add a new fact, number, or instruction; if a sentence only restates or transitions, cut it. Say each fact once. Prefer short, plain words over hedging phrases ("it seems like", "you might want to consider") — state it directly. Still include every real-data specific and caveat the question actually needs — cut words and framing, never substance.
@@ -218,6 +225,7 @@ HOW TO ANSWER:
    - Pricing strategy, or how their prices compare → the Pricing page.
    - How they stack up against nearby competitors → the Competitors page (run or re-run a scan there for real data).
    - No website, or a weak one → the Website page's starter-site builder.
+   - Unlocking individual reviews, reply drafts, Insights, or Google Posts → connecting their Google Business Profile (the "Connect to unlock" prompt on the Reviews page, or the Overview page's "Your live Google listing" section).
    Still answer the real question first — the pointer is the closing sentence, not a substitute for genuine guidance. Don't force a pointer into an answer it doesn't fit; only add one when it's genuinely the next concrete step.
 `.trim();
 
@@ -337,6 +345,12 @@ export function buildAssistantContextText(context: AssistantBusinessContext): st
   );
   lines.push(
     `- Photos on listing: ${context.listing.photoCount ?? "not returned by Google"}. Business status: ${context.listing.businessStatus ?? "not returned by Google"}.`
+  );
+
+  lines.push(
+    context.gbp.connected
+      ? "Google Business Profile connection: connected. Individual reviews, reply drafts, Insights, and Google Posts are still not synced yet (a later update) — don't invent numbers for them even though it's connected."
+      : "Google Business Profile connection: not connected. Individual reviews, reply drafts, reply-rate stats, Insights (views/calls/clicks), the leads estimate, and Google Posts all require connecting it first — point the owner to the Reviews page or Overview page's connect prompt."
   );
 
   return lines.join("\n");

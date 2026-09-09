@@ -4,6 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import type { PlaceDetails } from "@/lib/google/places";
 import { checkWebsiteHttps } from "@/lib/websiteHttps";
 import { bizProfileById } from "@/config/bizProfiles";
+import {
+  businessRowToScoringInput,
+  scoreBusiness,
+  type BusinessScoringRow,
+  type Grade,
+} from "@/lib/scoring";
 
 export type SaveBusinessResult =
   | { status: "saved"; businessId: string }
@@ -251,4 +257,65 @@ export async function updateBusinessTypeOverride(
   }
 
   return { status: "ok", businessTypeOverride: data.business_type_override };
+}
+
+export interface MyBusinessRow {
+  id: string;
+  name: string | null;
+  address: string | null;
+  category: string | null;
+  /** A live score computed the same way scoreBusinessById does (never a
+   * separately-saved value that could drift) — null only if this
+   * business's row is somehow missing the scoring-relevant columns,
+   * which shouldn't happen for a normally-saved business. */
+  score: { total: number; grade: Grade } | null;
+}
+
+export type ListMyBusinessesResult =
+  | { status: "ok"; businesses: MyBusinessRow[] }
+  | { status: "unauthenticated" };
+
+/**
+ * Every business the current user has saved, each with its current live
+ * score — what the real home page ("/") lists so a returning owner can
+ * jump into any of their businesses, and a brand-new owner sees an
+ * honest "you haven't added one yet" state instead of dead placeholder
+ * content. RLS (businesses_owner_id_idx / the owner-scoped select
+ * policy) is what actually guarantees this only ever returns the
+ * caller's own rows.
+ */
+export async function listMyBusinesses(): Promise<ListMyBusinessesResult> {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { status: "unauthenticated" };
+  }
+
+  const { data, error } = await supabase
+    .from("businesses")
+    .select(
+      "id, name, address, category, phone, website, rating, review_count, categories, opening_hours, photo_count, business_status, https_status, created_at"
+    )
+    .order("created_at", { ascending: false });
+
+  if (error || !data) {
+    return { status: "ok", businesses: [] };
+  }
+
+  const businesses: MyBusinessRow[] = data.map((row) => {
+    const breakdown = scoreBusiness(businessRowToScoringInput(row as BusinessScoringRow));
+    return {
+      id: row.id,
+      name: row.name,
+      address: row.address,
+      category: row.category,
+      score: { total: breakdown.total, grade: breakdown.grade },
+    };
+  });
+
+  return { status: "ok", businesses };
 }

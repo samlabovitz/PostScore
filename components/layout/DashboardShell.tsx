@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
+import Link from "next/link";
 import { IconMenu2 } from "@tabler/icons-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { cn } from "@/lib/utils";
@@ -36,10 +37,10 @@ export function DashboardShell({
         >
           <IconMenu2 size={22} />
         </button>
-        <div className="font-serif text-lg font-semibold">
+        <Link href="/" className="font-serif text-lg font-semibold">
           <span className="text-white">Post</span>
           <span className="text-brass">Score</span>
-        </div>
+        </Link>
         <span className="w-[34px]" aria-hidden="true" />
       </div>
 

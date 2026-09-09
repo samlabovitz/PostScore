@@ -87,6 +87,7 @@ const BASE_CONTEXT: AssistantBusinessContext = {
     ],
     fixedItems: [{ label: "Photos on listing", pointsGained: 6, verifiedAt: "1/15/2026" }],
   },
+  gbp: { connected: false },
 };
 
 describe("buildAssistantContextText", () => {
@@ -122,6 +123,22 @@ describe("buildAssistantContextText", () => {
     const text = buildAssistantContextText(noCompetitors);
     expect(text).toContain("No competitor scan has ever been saved");
     expect(text).not.toContain("PostScore 88");
+  });
+
+  test("points to the connect flow honestly when Google Business Profile isn't connected", () => {
+    const text = buildAssistantContextText(BASE_CONTEXT);
+    expect(text).toContain("Google Business Profile connection: not connected");
+    expect(text).toContain("Reviews page or Overview page's connect prompt");
+  });
+
+  test("says data still isn't synced even when connected, rather than implying it's live", () => {
+    const connected: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      gbp: { connected: true },
+    };
+    const text = buildAssistantContextText(connected);
+    expect(text).toContain("Google Business Profile connection: connected");
+    expect(text).toContain("still not synced yet");
   });
 
   test("reflects zero open tasks honestly when the action plan is empty", () => {
@@ -240,7 +257,7 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
       "Individual reviews",
       "search or Google Maps ranking",
       "competitor's exact price",
-      "Reply rates, response times",
+      "reply-rate/response-time stats",
     ]) {
       expect(ASSISTANT_SYSTEM_RULES).toContain(phrase);
     }

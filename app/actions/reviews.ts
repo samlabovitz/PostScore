@@ -7,6 +7,7 @@ import {
   type BusinessScoringRow,
   type CategoryResult,
 } from "@/lib/scoring";
+import { getGbpConnectionStatus } from "@/app/actions/gbp";
 
 export interface ReviewsPageData {
   businessName: string | null;
@@ -23,6 +24,10 @@ export interface ReviewsPageData {
    * their actual earned/max points and confidence. Never re-derived or
    * re-styled here; the Reviews page renders this exact object. */
   visibilityCategory: CategoryResult;
+  /** Whether this business has connected its Google Business Profile —
+   * gates the reply-assistant card between "connect to unlock" and an
+   * honest "connected, syncing soon" state (see app/actions/gbp.ts). */
+  gbpConnected: boolean;
 }
 
 export type GetReviewsPageDataResult =
@@ -80,6 +85,8 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
     return { status: "error", message: "Could not load the review scoring breakdown." };
   }
 
+  const gbpStatus = await getGbpConnectionStatus(businessId);
+
   return {
     status: "ok",
     data: {
@@ -91,6 +98,7 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
       rating: row.rating,
       reviewCount: row.review_count,
       visibilityCategory,
+      gbpConnected: gbpStatus.status === "ok" && gbpStatus.connected,
     },
   };
 }

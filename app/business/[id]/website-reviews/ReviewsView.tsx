@@ -7,6 +7,7 @@ import { Pill } from "@/components/ui/Pill";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { CategoryCard } from "@/components/scoring/CategoryCard";
+import { ConnectToUnlockCard } from "@/components/gbp/ConnectToUnlock";
 import {
   RATING_TARGET,
   ratingCaption,
@@ -151,6 +152,25 @@ export function ReviewsView({
 
       <div>
         <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
+          Reply assistant
+        </div>
+        {reviews.gbpConnected ? (
+          <ComingSoonCard
+            icon={IconMessageCircle}
+            title="Reply assistant"
+            body="Your Google Business Profile is connected — reading your actual reviews and drafting replies is a later update, not live yet. Nothing fabricated in the meantime."
+          />
+        ) : (
+          <ConnectToUnlockCard
+            businessId={businessId}
+            title="Reply assistant"
+            description="Drafting replies to your actual reviews needs real Google Business Profile access — we only get your rating and review count today, not individual review content or authors. Connect your profile to unlock it."
+          />
+        )}
+      </div>
+
+      <div>
+        <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
           Coming soon
         </div>
         <div className="flex flex-col gap-3">
@@ -158,11 +178,6 @@ export function ReviewsView({
             icon={IconMessage2}
             title="Auto-text customers after their visit"
             body="Automatically texting a review link after a visit needs a way to know who visited and when — we don't have that yet. For now, sharing the link or sign above is on you."
-          />
-          <ComingSoonCard
-            icon={IconMessageCircle}
-            title="Reply assistant"
-            body="Drafting replies to your actual reviews needs deeper Google Business Profile access than we have today — we only get your rating and review count, not individual review content or authors. We won't show you reviews to reply to until we can show real ones."
           />
         </div>
       </div>

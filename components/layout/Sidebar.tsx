@@ -13,7 +13,6 @@ import {
   IconFileText,
   IconChevronDown,
   IconLogout,
-  IconSettings,
   IconUser,
   IconX,
 } from "@tabler/icons-react";
@@ -65,10 +64,10 @@ export function Sidebar({ business = null, className, onNavigate, onClose }: Sid
       )}
     >
       <div className="flex items-center justify-between px-2">
-        <div className="font-serif text-[21px] font-semibold">
+        <Link href="/" onClick={onNavigate} className="font-serif text-[21px] font-semibold">
           <span className="text-white">Post</span>
           <span className="text-brass">Score</span>
-        </div>
+        </Link>
         <button
           type="button"
           onClick={onClose}
@@ -79,14 +78,25 @@ export function Sidebar({ business = null, className, onNavigate, onClose }: Sid
         </button>
       </div>
 
-      <div className="mt-5 rounded-[11px] border border-white/[.09] bg-white/[.06] p-3">
-        <div className="truncate text-[13.5px] font-semibold text-white">
-          {business ? (business.name ?? "Untitled business") : "No business selected"}
+      {business ? (
+        <div className="mt-5 rounded-[11px] border border-white/[.09] bg-white/[.06] p-3">
+          <div className="truncate text-[13.5px] font-semibold text-white">
+            {business.name ?? "Untitled business"}
+          </div>
+          <div className="mt-0.5 truncate text-[11px] text-[#9FB0C7]">
+            {business.address ?? "No address on file"}
+          </div>
         </div>
-        <div className="mt-0.5 truncate text-[11px] text-[#9FB0C7]">
-          {business ? (business.address ?? "No address on file") : "Save a business to get started"}
-        </div>
-      </div>
+      ) : (
+        <Link
+          href="/business/new"
+          onClick={onNavigate}
+          className="mt-5 block rounded-[11px] border border-dashed border-white/[.15] p-3 hover:border-white/[.3]"
+        >
+          <div className="truncate text-[13.5px] font-semibold text-white">No business selected</div>
+          <div className="mt-0.5 truncate text-[11px] text-brass">+ Add a business to get started</div>
+        </Link>
+      )}
 
       <nav className="mt-5 flex flex-1 flex-col gap-1 overflow-y-auto">
         {NAV_ITEMS.map(({ label, icon: Icon, path }) => {
@@ -147,10 +157,9 @@ export function Sidebar({ business = null, className, onNavigate, onClose }: Sid
 
         {profileOpen && (
           <div className="absolute bottom-full left-0 mb-2 w-full rounded-xl border border-paper-deep bg-white p-1.5 shadow-card">
-            <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-ink hover:bg-paper nav:py-2">
-              <IconSettings size={16} />
-              Settings
-            </button>
+            {/* No Settings page exists yet — a button here would do nothing
+                when clicked, so it's omitted rather than shown as a dead
+                control. Add it back once there's a real page to route to. */}
             <form action={logout}>
               <button
                 type="submit"
