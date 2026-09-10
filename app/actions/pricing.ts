@@ -201,6 +201,7 @@ interface PricingBusinessRow {
   photo_count: number | null;
   business_status: string | null;
   https_status: string | null;
+  website_analysis_json: unknown;
   primary_type: string | null;
   business_type_override: string | null;
   price_level: string | null;
@@ -246,7 +247,7 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
     supabase
       .from("businesses")
       .select(
-        "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, primary_type, business_type_override, price_level, lat, lng"
+        "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, primary_type, business_type_override, price_level, lat, lng"
       )
       .eq("id", businessId)
       .single(),
@@ -292,6 +293,7 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
       photo_count: row.photo_count,
       business_status: row.business_status,
       https_status: row.https_status,
+      website_analysis_json: row.website_analysis_json,
     };
     const scan = await findAndScoreCompetitors(subject);
     if (scan.status === "ok" && scan.ranked.length > 0) {

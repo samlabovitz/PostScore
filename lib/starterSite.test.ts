@@ -27,6 +27,8 @@ const BASE: StarterSiteInput = {
   customAccent: null,
   fontId: "classic",
   show: { address: true, phone: true, hours: true, rating: true },
+  heroImage: null,
+  contentImages: [],
 };
 
 describe("buildStarterSiteHtml", () => {
@@ -280,5 +282,40 @@ describe("buildStarterSiteHtml: tagline styling (font, color, size, placement)",
     const taglineIndex = html.indexOf('class="tagline', bodyStart);
     const nameIndex = html.indexOf("<h1>Rosa", bodyStart);
     expect(nameIndex).toBeLessThan(taglineIndex);
+  });
+});
+
+describe("photos", () => {
+  const HERO_DATA_URI = "data:image/jpeg;base64,/9j/AAAA";
+  const PHOTO_1 = { dataUri: "data:image/jpeg;base64,AAA1", alt: "Storefront" };
+  const PHOTO_2 = { dataUri: "data:image/jpeg;base64,AAA2", alt: "Interior" };
+
+  test("with no photos, the hero uses the theme's flat background and no Photos section renders", () => {
+    const html = buildStarterSiteHtml(BASE);
+    expect(html).not.toContain("data:image");
+    expect(html).not.toContain("Photos</h2>");
+  });
+
+  test("a hero photo is embedded as the hero's background image, data URI and all", () => {
+    const html = buildStarterSiteHtml({
+      ...BASE,
+      heroImage: { dataUri: HERO_DATA_URI, alt: "Rosa's Cafe storefront" },
+    });
+    expect(html).toContain(HERO_DATA_URI);
+  });
+
+  test("content images render as a real Photos section, in order, with their alt text escaped", () => {
+    const html = buildStarterSiteHtml({
+      ...BASE,
+      contentImages: [PHOTO_1, { dataUri: "data:image/jpeg;base64,AAA3", alt: '<script>alert(1)</script>' }],
+    });
+    expect(html).toContain("Photos</h2>");
+    expect(html.indexOf(PHOTO_1.dataUri)).toBeLessThan(html.indexOf("AAA3"));
+    expect(html).not.toContain("<script>alert(1)</script>");
+  });
+
+  test("is still deterministic with photos included", () => {
+    const input = { ...BASE, heroImage: { dataUri: HERO_DATA_URI, alt: "x" }, contentImages: [PHOTO_1, PHOTO_2] };
+    expect(buildStarterSiteHtml(input)).toBe(buildStarterSiteHtml({ ...input }));
   });
 });

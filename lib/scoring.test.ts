@@ -10,12 +10,34 @@ import {
   gradeFromTotal,
   scoreBusiness,
   type BusinessScoringInput,
+  type WebsiteAnalysis,
 } from "./scoring";
 
-// A business where every real, collectible field is present and good.
-// Review recency, mobile-friendliness, and page speed are still
-// NOT_FOUND here (they're never collected today), which is itself part
-// of what this suite checks.
+// A real, fully-good website analysis — see WebsiteAnalysis in
+// lib/scoring.ts and lib/websiteAnalysis.ts for how this gets collected
+// for a real business. Used by PERFECT_INPUT below.
+const GOOD_WEBSITE_ANALYSIS: WebsiteAnalysis = {
+  content: {
+    hasTitle: true,
+    hasMetaDescription: true,
+    hasViewportTag: true,
+    headingCount: 5,
+    visibleTextLength: 900,
+    hasPhoneLink: true,
+    hasEmailLink: true,
+    hasCtaText: true,
+  },
+  mobilePerformanceScore: 96,
+  screenshotUrl: "https://example.com/screenshot.png",
+  checkedAt: "2024-01-01T00:00:00.000Z",
+};
+
+// A business where every real, collectible field is present and good —
+// including a real, fully-analyzed website (v1.6.0: performance/mobile,
+// content depth, and contact/conversion are now real, collected checks,
+// not permanent placeholders). Review recency is still NOT_FOUND here
+// (it's never collected today), which is itself part of what this suite
+// checks.
 const PERFECT_INPUT: BusinessScoringInput = {
   rating: 4.9,
   reviewCount: 500,
@@ -29,6 +51,7 @@ const PERFECT_INPUT: BusinessScoringInput = {
   primaryCategory: "Cafe",
   photoCount: 12,
   businessStatus: "OPERATIONAL",
+  websiteAnalysis: GOOD_WEBSITE_ANALYSIS,
 };
 
 // A realistic partially-filled-out business: has a Google listing with
@@ -46,6 +69,7 @@ const STRUGGLING_INPUT: BusinessScoringInput = {
   primaryCategory: "Hardware Store",
   photoCount: 0,
   businessStatus: "OPERATIONAL",
+  websiteAnalysis: null,
 };
 
 describe("config integrity", () => {
@@ -268,11 +292,16 @@ describe("suggestion -> projected score guarantee", () => {
   test("no suggestions are generated from NOT_FOUND/UNCERTAIN checks", () => {
     const { suggestions } = getScoreWithSuggestions(STRUGGLING_INPUT);
     const recency = suggestions.find((s) => s.checkId === "visibility.review_recency");
-    const mobile = suggestions.find((s) => s.checkId === "website.mobile_friendly");
-    const speed = suggestions.find((s) => s.checkId === "website.page_speed");
+    // STRUGGLING_INPUT has no website at all, so the three real website
+    // quality checks are honestly excluded (nothing to analyze) rather
+    // than suggested — same NOT_FOUND semantics as every other check.
+    const performance = suggestions.find((s) => s.checkId === "website.performance_mobile");
+    const content = suggestions.find((s) => s.checkId === "website.content_depth");
+    const contact = suggestions.find((s) => s.checkId === "website.contact_conversion");
     expect(recency).toBeUndefined();
-    expect(mobile).toBeUndefined();
-    expect(speed).toBeUndefined();
+    expect(performance).toBeUndefined();
+    expect(content).toBeUndefined();
+    expect(contact).toBeUndefined();
   });
 
   test("applying every suggestion's fix and re-scoring reproduces projectedBreakdown exactly", () => {
@@ -360,6 +389,26 @@ describe("suggestion -> projected score guarantee", () => {
     const actualDelta = fixedBreakdown.total - breakdown.total;
     expect(actualDelta).toBeGreaterThanOrEqual(hasWebsiteSuggestion.promisedPoints);
   });
+
+  test("honesty check (the v1.6.0 fix): fixing 'has a website' does NOT retroactively verify the real website quality checks", () => {
+    // Same class of bug as the v1.5.0 fix above, for the three new real
+    // checks: simply adding a website string must not make
+    // performance_mobile/content_depth/contact_conversion score as if a
+    // real analysis had run and found a great site. They must stay
+    // NOT_FOUND until a real WebsiteAnalysis is actually present.
+    const { suggestions } = getScoreWithSuggestions(STRUGGLING_INPUT);
+    const hasWebsiteSuggestion = suggestions.find((s) => s.checkId === "website.has_website")!;
+    expect(hasWebsiteSuggestion).toBeDefined();
+
+    const fixedInput = applyCheckFix(STRUGGLING_INPUT, "website.has_website");
+    expect(fixedInput.websiteAnalysis).toBeNull(); // untouched by this fix
+    const fixedBreakdown = scoreBusiness(fixedInput);
+    for (const id of ["website.performance_mobile", "website.content_depth", "website.contact_conversion"]) {
+      const check = fixedBreakdown.checks.find((c) => c.id === id)!;
+      expect(check.confidence).toBe("NOT_FOUND");
+      expect(check.earnedPoints).toBeNull();
+    }
+  });
 });
 
 describe("businessRowToScoringInput adapter", () => {
@@ -376,12 +425,13 @@ describe("businessRowToScoringInput adapter", () => {
       category: "Bakery",
       photo_count: 4,
       business_status: "OPERATIONAL",
+      website_analysis_json: null,
     });
     expect(input.rating).toBe(4.2);
     expect(input.mostRecentReviewDaysAgo).toBeNull();
     expect(input.httpsStatus).toBe("https");
     const breakdown = scoreBusiness(input);
-    expect(breakdown.scoringVersion).toBe("1.5.0");
+    expect(breakdown.scoringVersion).toBe("1.6.0");
   });
 
   test("degrades an unexpected https_status value to null (excluded) rather than trusting a bad cast", () => {
@@ -397,8 +447,63 @@ describe("businessRowToScoringInput adapter", () => {
       category: null,
       photo_count: null,
       business_status: null,
+      website_analysis_json: null,
     });
     expect(input.httpsStatus).toBeNull();
+  });
+
+  test("round-trips a real website_analysis_json value, and degrades a malformed one to null rather than trusting a bad cast", () => {
+    const good = businessRowToScoringInput({
+      rating: 4.2,
+      review_count: 30,
+      phone: null,
+      address: null,
+      opening_hours: null,
+      website: "https://mybiz.example",
+      https_status: "https",
+      categories: null,
+      category: null,
+      photo_count: null,
+      business_status: null,
+      website_analysis_json: GOOD_WEBSITE_ANALYSIS,
+    });
+    expect(good.websiteAnalysis).toEqual(GOOD_WEBSITE_ANALYSIS);
+
+    const malformed = businessRowToScoringInput({
+      rating: 4.2,
+      review_count: 30,
+      phone: null,
+      address: null,
+      opening_hours: null,
+      website: "https://mybiz.example",
+      https_status: "https",
+      categories: null,
+      category: null,
+      photo_count: null,
+      business_status: null,
+      website_analysis_json: { content: "not a real signals object", checkedAt: "2024-01-01T00:00:00.000Z" },
+    });
+    expect(malformed.websiteAnalysis).toEqual({
+      content: null,
+      mobilePerformanceScore: null,
+      screenshotUrl: null,
+      checkedAt: "2024-01-01T00:00:00.000Z",
+    });
+
+    const missing = businessRowToScoringInput({
+      rating: 4.2,
+      review_count: 30,
+      phone: null,
+      address: null,
+      opening_hours: null,
+      website: "https://mybiz.example",
+      https_status: "https",
+      categories: null,
+      category: null,
+      photo_count: null,
+      business_status: null,
+    });
+    expect(missing.websiteAnalysis).toBeNull();
   });
 });
 

@@ -171,6 +171,10 @@ function placeDetailsToScoringRow(place: PlaceDetails): BusinessScoringRow {
     // the check is excluded for competitors, never guessed from their
     // URL string (the exact bug this fix removes for the main flow).
     https_status: null,
+    // Same reasoning: a real PageSpeed/HTML/screenshot analysis per
+    // competitor would be slow and isn't something PostScore runs for
+    // businesses it doesn't own — excluded, never estimated.
+    website_analysis_json: null,
   };
 }
 

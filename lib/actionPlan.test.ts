@@ -17,6 +17,7 @@ const ROUGH_INPUT: BusinessScoringInput = {
   primaryCategory: "Restaurant",
   photoCount: 0,
   businessStatus: "OPERATIONAL",
+  websiteAnalysis: null,
 };
 
 // The exact real-world shape that regressed: solid listing completeness
@@ -38,6 +39,7 @@ const STRUGGLING_SALON_INPUT: BusinessScoringInput = {
   primaryCategory: "Hair Salon",
   photoCount: 6,
   businessStatus: "OPERATIONAL",
+  websiteAnalysis: null,
 };
 
 // A genuinely strong business: nothing determinable is a real gap.
@@ -54,6 +56,7 @@ const STRONG_INPUT: BusinessScoringInput = {
   primaryCategory: "Hair Salon",
   photoCount: 12,
   businessStatus: "OPERATIONAL",
+  websiteAnalysis: null,
 };
 
 function plan(input: BusinessScoringInput) {

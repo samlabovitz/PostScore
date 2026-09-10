@@ -1041,3 +1041,65 @@ create policy "Users can delete gbp connections for their own businesses"
         and businesses.owner_id = auth.uid ()
     )
   );
+
+-- ---------------------------------------------------------------------------
+-- Deep website analysis (lib/websiteAnalysis.ts, lib/scoring.ts's
+-- website.performance_mobile / website.content_depth /
+-- website.contact_conversion checks) — v1.6.0 Website scoring overhaul
+-- ---------------------------------------------------------------------------
+
+-- A real, server-side analysis of a business's live website (a
+-- PageSpeed Insights call, a real HTML fetch for content/contact
+-- signals, a screenshot capture) is run once when the business is
+-- saved/re-saved (see saveBusiness in app/actions/businesses.ts) and
+-- its result cached here, same "collect once, cache, never re-derive"
+-- model as https_status/https_checked_at above. website_analysis_json
+-- holds the real WebsiteAnalysis shape (lib/scoring.ts) — content
+-- signals, PageSpeed mobile score, screenshot URL, each independently
+-- nullable when that one sub-check couldn't complete — validated back
+-- into that shape by parseWebsiteAnalysis when read, never trusted
+-- blindly. Both columns are nullable: an already-saved business won't
+-- have either until it's next saved, and the scoring engine treats null
+-- exactly like an analysis that couldn't complete — excluded from the
+-- score, never scored as a failure.
+alter table public.businesses
+  add column if not exists website_analysis_json jsonb,
+  add column if not exists website_analysis_checked_at timestamptz;
+
+-- Public bucket for real website screenshots — one object per business,
+-- overwritten on each analysis at path "<business id>.png". Public read
+-- is fine here: the image is just a screenshot of the business's own
+-- already-public website. Writes are restricted to the business's real
+-- owner, same ownership-check pattern as every RLS policy above.
+insert into storage.buckets (id, name, public)
+values ('website-screenshots', 'website-screenshots', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Public read of website screenshots" on storage.objects;
+create policy "Public read of website screenshots"
+  on storage.objects for select
+  using (bucket_id = 'website-screenshots');
+
+drop policy if exists "Owners can write their business's website screenshot" on storage.objects;
+create policy "Owners can write their business's website screenshot"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'website-screenshots'
+    and exists (
+      select 1 from public.businesses b
+      where b.owner_id = auth.uid ()
+        and name = b.id::text || '.png'
+    )
+  );
+
+drop policy if exists "Owners can update their business's website screenshot" on storage.objects;
+create policy "Owners can update their business's website screenshot"
+  on storage.objects for update
+  using (
+    bucket_id = 'website-screenshots'
+    and exists (
+      select 1 from public.businesses b
+      where b.owner_id = auth.uid ()
+        and name = b.id::text || '.png'
+    )
+  );

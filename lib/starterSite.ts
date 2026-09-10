@@ -374,6 +374,14 @@ export interface StarterSiteInput {
     hours: boolean;
     rating: boolean;
   };
+  /** An owner-uploaded photo for the hero background, as a data: URI —
+   * see StarterSiteBuilder.tsx for how it's captured/resized client-side.
+   * null = no hero photo, the theme's flat heroBg is used instead. */
+  heroImage: { dataUri: string; alt: string } | null;
+  /** Owner-uploaded photos for a "Photos" section, as data: URIs — same
+   * capture path as heroImage. Embedded directly in the generated HTML
+   * so the downloaded file is still one self-contained document. */
+  contentImages: Array<{ dataUri: string; alt: string }>;
 }
 
 export function buildStarterSiteHtml(input: StarterSiteInput): string {
@@ -410,6 +418,18 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   }
 
   const sections: string[] = [];
+
+  if (input.contentImages.length > 0) {
+    sections.push(`
+      <section class="card card--photos">
+        <h2>Photos</h2>
+        <div class="photo-grid">
+          ${input.contentImages
+            .map((img) => `<img src="${img.dataUri}" alt="${escapeHtml(img.alt)}" loading="lazy">`)
+            .join("\n          ")}
+        </div>
+      </section>`);
+  }
 
   if (showHours) {
     sections.push(`
@@ -496,7 +516,11 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
     margin: 0;
   }
   .hero {
-    background: ${theme.heroBg};
+    background: ${
+      input.heroImage
+        ? `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url("${input.heroImage.dataUri}") center/cover no-repeat, ${theme.heroBg}`
+        : theme.heroBg
+    };
     color: #fff;
     padding: 56px 24px;
     text-align: center;
@@ -573,6 +597,17 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
     margin: 0 0 8px;
     color: ${theme.textSoft};
     line-height: 1.5;
+  }
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  .photo-grid img {
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+    border-radius: 8px;
   }
   .hours {
     list-style: none;

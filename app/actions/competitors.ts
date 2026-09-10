@@ -24,6 +24,7 @@ interface CompetitorBusinessRow {
   photo_count: number | null;
   business_status: string | null;
   https_status: string | null;
+  website_analysis_json: unknown;
   primary_type: string | null;
   business_type_override: string | null;
   lat: number | null;
@@ -62,7 +63,7 @@ export async function getCompetitors(businessId: string): Promise<GetCompetitors
   const { data: business, error } = await supabase
     .from("businesses")
     .select(
-      "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, primary_type, business_type_override, lat, lng"
+      "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, primary_type, business_type_override, lat, lng"
     )
     .eq("id", businessId)
     .single();
@@ -89,6 +90,7 @@ export async function getCompetitors(businessId: string): Promise<GetCompetitors
     photo_count: row.photo_count,
     business_status: row.business_status,
     https_status: row.https_status,
+    website_analysis_json: row.website_analysis_json,
   };
 
   try {

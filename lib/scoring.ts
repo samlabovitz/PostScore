@@ -36,7 +36,7 @@
  * records the version that produced it, so historical scores stay
  * interpretable even after the formula evolves.
  */
-export const SCORING_VERSION = "1.5.0";
+export const SCORING_VERSION = "1.6.0";
 
 // ---------------------------------------------------------------------------
 // Core types
@@ -84,6 +84,65 @@ export type Confidence = "VERIFIED" | "LIKELY" | "UNCERTAIN" | "NOT_FOUND";
  *   must never be scored as a failure.
  */
 export type HttpsCheckStatus = "https" | "http_only" | "unreachable";
+
+/**
+ * Real signals read off a business's own live HTML by an actual
+ * server-side fetch — see lib/websiteContentAnalysis.ts's
+ * analyzeWebsiteHtml(), which is pure and network-free (it just reads a
+ * string of HTML someone else already fetched). Every field here is a
+ * literal, checkable fact about the page's markup/text; nothing is
+ * inferred or guessed. Used by website.content_depth and
+ * website.contact_conversion below.
+ */
+export interface WebsiteContentSignals {
+  hasTitle: boolean;
+  hasMetaDescription: boolean;
+  /** A <meta name="viewport"> tag with a real device-width directive —
+   * the one concrete, checkable "responsive/modern site" signal we can
+   * read from raw HTML without rendering it. */
+  hasViewportTag: boolean;
+  /** Count of <h1>-<h6> tags — a bare single-block page has ~0. */
+  headingCount: number;
+  /** Character count of visible text after stripping tags/scripts/styles. */
+  visibleTextLength: number;
+  /** A real tel: link. */
+  hasPhoneLink: boolean;
+  /** A real mailto: link. */
+  hasEmailLink: boolean;
+  /** A curated call-to-action phrase ("book now", "contact us", etc.)
+   * found in the page's visible text. */
+  hasCtaText: boolean;
+}
+
+/**
+ * The frozen result of analyzing a business's live website — see
+ * lib/websiteAnalysis.ts for how this gets collected (real network
+ * calls: an HTML fetch, a PageSpeed Insights API call, a screenshot
+ * capture) once per save/re-scan, same timing and caching model as
+ * HttpsCheckStatus above. lib/scoring.ts never makes any of these calls
+ * itself.
+ *
+ * Every field is independently nullable on purpose: a site can serve
+ * HTTPS fine and pass PageSpeed while blocking PostScore's own HTML
+ * fetch (e.g. Cloudflare bot protection), so one failed signal must
+ * never suppress or zero out the others.
+ */
+export interface WebsiteAnalysis {
+  /** null = the server-side HTML fetch failed or was blocked — excluded
+   * from content_depth/contact_conversion, never scored as a failure. */
+  content: WebsiteContentSignals | null;
+  /** 0-100, from PageSpeed Insights' mobile "performance" category
+   * score. null = no PAGESPEED_API_KEY configured, or the call failed
+   * or timed out — excluded, never scored as a failure. */
+  mobilePerformanceScore: number | null;
+  /** Public URL of a real captured screenshot. null = no
+   * SCREENSHOT_API_KEY configured, or capture failed/was blocked. */
+  screenshotUrl: string | null;
+  /** ISO timestamp of collection — display only; scoreBusiness() never
+   * reads this (it must stay clock-free), it's for UI "checked X ago"
+   * copy. */
+  checkedAt: string;
+}
 
 export type Grade = "A" | "B" | "C" | "D" | "F";
 
@@ -163,6 +222,14 @@ export interface BusinessScoringInput {
   photoCount: number | null;
   /** Google's businessStatus enum, e.g. "OPERATIONAL". null = not returned. */
   businessStatus: string | null;
+  /**
+   * The frozen result of a real, server-side analysis of this
+   * business's live website — see WebsiteAnalysis above. null = never
+   * analyzed (no website, or a row saved before this analysis existed).
+   * Feeds website.performance_mobile/content_depth/contact_conversion
+   * below; never re-derived or estimated inside this module.
+   */
+  websiteAnalysis: WebsiteAnalysis | null;
 }
 
 /** A single check's result, always expressed on the same 0–100 point scale as the total. */
@@ -385,6 +452,23 @@ function reviewCountFraction(count: number): number {
   return Math.min(1, Math.sqrt(c / REVIEW_COUNT_SATURATION));
 }
 
+/** Below this many visible characters, a page reads as a bare single
+ * block (a default landing-page template, "under construction," etc.)
+ * and earns no content-depth credit for length. */
+const THIN_CONTENT_CHARS = 100;
+/** At or above this many visible characters, a page has genuinely
+ * substantial content and earns full length credit — picked well below
+ * a real multi-section small-business site's typical length so this
+ * isn't a hard ceiling businesses realistically can't clear. */
+const FULL_CONTENT_CHARS = 600;
+
+function contentLengthFraction(chars: number): number {
+  const c = Math.max(0, chars);
+  if (c <= THIN_CONTENT_CHARS) return 0;
+  if (c >= FULL_CONTENT_CHARS) return 1;
+  return (c - THIN_CONTENT_CHARS) / (FULL_CONTENT_CHARS - THIN_CONTENT_CHARS);
+}
+
 /** A review within this many days counts as fully "recent." */
 const RECENCY_FULL_CREDIT_DAYS = 90;
 /** No review within this many days earns zero recency credit. */
@@ -435,6 +519,54 @@ interface CheckDefinition {
 // repeat the bug where only one of the two got updated.
 const RATING_CHECK_MAX_POINTS = 16;
 const REVIEW_COUNT_CHECK_MAX_POINTS = 18;
+
+/** A fully-good WebsiteAnalysis, used only by the Website quality checks'
+ * simulateFix (mirrors PLACEHOLDER_HOURS's role below) — never shown to
+ * a real business, only fed through scoreBusiness() to prove the
+ * suggestion→projected-score guarantee for these checks. */
+const PERFECT_WEBSITE_ANALYSIS: WebsiteAnalysis = {
+  content: {
+    hasTitle: true,
+    hasMetaDescription: true,
+    hasViewportTag: true,
+    headingCount: 4,
+    visibleTextLength: FULL_CONTENT_CHARS,
+    hasPhoneLink: true,
+    hasEmailLink: true,
+    hasCtaText: true,
+  },
+  mobilePerformanceScore: 100,
+  screenshotUrl: null,
+  checkedAt: new Date(0).toISOString(),
+};
+
+/** Curated, specific action phrases — not generic verbs like "learn
+ * more" that a thin page could contain incidentally — used by
+ * lib/websiteContentAnalysis.ts to detect a genuine call-to-action.
+ * Exported so that module (and its tests) share this single list rather
+ * than each keeping its own copy. */
+export const WEBSITE_CTA_PHRASES: string[] = [
+  "book now",
+  "book an appointment",
+  "book online",
+  "make an appointment",
+  "schedule an appointment",
+  "schedule now",
+  "schedule a consultation",
+  "order now",
+  "order online",
+  "contact us",
+  "get a quote",
+  "request a quote",
+  "call now",
+  "buy now",
+  "shop now",
+  "reserve a table",
+  "reserve now",
+  "get started",
+  "sign up now",
+  "request an appointment",
+];
 
 const PLACEHOLDER_HOURS = [
   "Monday: 9:00 AM – 5:00 PM",
@@ -728,17 +860,25 @@ export const CHECKS: CheckDefinition[] = [
   },
 
   // --- Website (30 pts) -----------------------------------------------------
+  // v1.6.0 re-weight: merely having a URL on file used to be worth 20 of
+  // these 30 points — a bare, single-block landing page and a fast,
+  // complete site scored almost identically. Having a site is now a
+  // small base (has_website, below) and the three real, measured
+  // quality checks (performance_mobile/content_depth/contact_conversion)
+  // carry the actual weight, fed by a real analysis of the live site —
+  // see WebsiteAnalysis above and lib/websiteAnalysis.ts for how it's
+  // collected (once per save/re-scan, exactly like the HTTPS probe).
   {
     id: "website.has_website",
     label: "Has a website",
     category: "website",
-    maxPoints: 20,
+    maxPoints: 4,
     advice:
       "Get a website for your business — it's one of the biggest trust signals for potential customers.",
     evaluate(input) {
       const has = !!input.website && input.website.trim().length > 0;
       return {
-        earnedPoints: has ? 20 : 0,
+        earnedPoints: has ? 4 : 0,
         confidence: "VERIFIED",
         explanation: has ? "Business has a website on file." : "No website on file.",
       };
@@ -796,38 +936,157 @@ export const CHECKS: CheckDefinition[] = [
     },
   },
   {
-    id: "website.mobile_friendly",
-    label: "Mobile-friendly",
+    id: "website.performance_mobile",
+    label: "Performance & mobile",
     category: "website",
-    maxPoints: 2,
-    advice: "Not yet implemented.",
-    evaluate() {
+    maxPoints: 10,
+    advice:
+      "Speed up your site — compress images, use a fast static host, and cut unnecessary scripts. A lightweight page (like PostScore's starter site) loads fast by default.",
+    evaluate(input) {
+      if (!input.website || input.website.trim().length === 0) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: "Not applicable — no website on file to check." };
+      }
+      if (!input.websiteAnalysis) {
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: "This site hasn't been analyzed yet — re-scan to run a real PageSpeed check.",
+        };
+      }
+      const score = input.websiteAnalysis.mobilePerformanceScore;
+      if (score === null) {
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation:
+            "Couldn't get a real PageSpeed score for this site — either PostScore's PageSpeed check isn't configured yet, or Google's PageSpeed Insights API couldn't complete the audit. Excluded from your score, not counted against you.",
+        };
+      }
+      const earnedPoints = roundTo((score / 100) * 10, 1);
       return {
-        earnedPoints: null,
-        confidence: "NOT_FOUND",
-        // Deliberately not-yet-implemented, per spec: never faked, never
-        // scored as a failure. A future site-quality crawler fills this in.
+        earnedPoints,
+        confidence: "VERIFIED",
         explanation:
-          "Not yet implemented — mobile-friendliness will be checked by a future site-quality crawler. Excluded from your score, not counted against you.",
+          score >= 80
+            ? `Fast on mobile — Google PageSpeed mobile performance score of ${score}/100.`
+            : score >= 50
+              ? `Loads a bit slowly on mobile — Google PageSpeed mobile performance score of ${score}/100.`
+              : `Loads slowly on mobile — Google PageSpeed mobile performance score of only ${score}/100.`,
       };
     },
-    simulateFix: (input) => input,
+    simulateFix: (input) => ({
+      ...input,
+      website: input.website || "https://example.com",
+      websiteAnalysis: {
+        ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
+        mobilePerformanceScore: 100,
+      },
+    }),
   },
   {
-    id: "website.page_speed",
-    label: "Page speed",
+    id: "website.content_depth",
+    label: "Content depth",
     category: "website",
-    maxPoints: 2,
-    advice: "Not yet implemented.",
-    evaluate() {
+    maxPoints: 6,
+    advice:
+      "Build out real content — a title and meta description, a few real headings, and a genuine amount of text about what you offer. A single bare block reads as an unfinished site to visitors and to search engines.",
+    evaluate(input) {
+      if (!input.website || input.website.trim().length === 0) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: "Not applicable — no website on file to check." };
+      }
+      const content = input.websiteAnalysis?.content ?? null;
+      if (!content) {
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: input.websiteAnalysis
+            ? "Couldn't read this site's content — the automated check may have been blocked. Excluded from your score, not counted against you."
+            : "This site hasn't been analyzed yet — re-scan to check its real content.",
+        };
+      }
+      // Sub-point weights: title 1 / meta description 1 / viewport 1.5 /
+      // has a real heading 1 / genuine text length 1.5 — sums to 6.
+      const titlePts = content.hasTitle ? 1 : 0;
+      const metaPts = content.hasMetaDescription ? 1 : 0;
+      const viewportPts = content.hasViewportTag ? 1.5 : 0;
+      const headingPts = content.headingCount > 0 ? 1 : 0;
+      const lengthPts = contentLengthFraction(content.visibleTextLength) * 1.5;
+      const earnedPoints = roundTo(titlePts + metaPts + viewportPts + headingPts + lengthPts, 1);
+
+      const missing: string[] = [];
+      if (!content.hasTitle) missing.push("no page title");
+      if (!content.hasMetaDescription) missing.push("no meta description");
+      if (!content.hasViewportTag) missing.push("not mobile-optimized (no viewport tag)");
+      if (content.headingCount === 0) missing.push("no real headings/sections");
+      if (content.visibleTextLength <= THIN_CONTENT_CHARS) missing.push("very little content — reads as a bare landing page");
+
       return {
-        earnedPoints: null,
-        confidence: "NOT_FOUND",
+        earnedPoints,
+        confidence: "VERIFIED",
         explanation:
-          "Not yet implemented — page speed will be checked by a future site-quality crawler. Excluded from your score, not counted against you.",
+          missing.length === 0
+            ? "Real, substantial content: a title, meta description, headings, and a mobile viewport tag all present."
+            : `Content gaps found: ${missing.join(", ")}.`,
       };
     },
-    simulateFix: (input) => input,
+    simulateFix: (input) => ({
+      ...input,
+      website: input.website || "https://example.com",
+      websiteAnalysis: {
+        ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
+        content: PERFECT_WEBSITE_ANALYSIS.content,
+      },
+    }),
+  },
+  {
+    id: "website.contact_conversion",
+    label: "Contact & conversion",
+    category: "website",
+    maxPoints: 4,
+    advice:
+      "Add a real click-to-call phone link or email address, and a clear call-to-action (e.g. \"Call now\" or \"Book an appointment\") — visitors shouldn't have to hunt for how to reach you.",
+    evaluate(input) {
+      if (!input.website || input.website.trim().length === 0) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: "Not applicable — no website on file to check." };
+      }
+      const content = input.websiteAnalysis?.content ?? null;
+      if (!content) {
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: input.websiteAnalysis
+            ? "Couldn't read this site's content — the automated check may have been blocked. Excluded from your score, not counted against you."
+            : "This site hasn't been analyzed yet — re-scan to check its real contact info and calls-to-action.",
+        };
+      }
+      const hasContact = content.hasPhoneLink || content.hasEmailLink;
+      const earnedPoints = (hasContact ? 2 : 0) + (content.hasCtaText ? 2 : 0);
+
+      const problems: string[] = [];
+      if (!hasContact) problems.push("no click-to-call phone or email link found");
+      if (!content.hasCtaText) problems.push("no clear call-to-action found");
+
+      return {
+        earnedPoints,
+        confidence: "VERIFIED",
+        explanation:
+          problems.length === 0
+            ? "A real contact link and a clear call-to-action are both present."
+            : problems.map((p) => p[0].toUpperCase() + p.slice(1)).join("; ") + ".",
+      };
+    },
+    simulateFix: (input) => ({
+      ...input,
+      website: input.website || "https://example.com",
+      websiteAnalysis: {
+        ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
+        content: {
+          ...(input.websiteAnalysis?.content ?? PERFECT_WEBSITE_ANALYSIS.content!),
+          hasPhoneLink: true,
+          hasCtaText: true,
+        },
+      },
+    }),
   },
 ];
 
@@ -988,6 +1247,14 @@ export interface BusinessScoringRow {
    * to the real union by parseHttpsStatus below rather than trusted
    * with a blind cast. */
   https_status: string | null;
+  /** Cached result of the real website analysis — see WebsiteAnalysis.
+   * A jsonb column, so Supabase already hands this back as a parsed
+   * object (or null); narrowed by parseWebsiteAnalysis below rather
+   * than trusted with a blind cast, same reasoning as https_status.
+   * Optional (not just nullable) so a caller that hasn't selected this
+   * column yet still type-checks — treated identically to null/legacy
+   * data by parseWebsiteAnalysis: never analyzed. */
+  website_analysis_json?: unknown;
 }
 
 /** Narrows a stored https_status string back to the real union,
@@ -997,6 +1264,36 @@ export interface BusinessScoringRow {
  * mis-score. */
 function parseHttpsStatus(value: string | null): HttpsCheckStatus | null {
   return value === "https" || value === "http_only" || value === "unreachable" ? value : null;
+}
+
+function isWebsiteContentSignals(value: unknown): value is WebsiteContentSignals {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.hasTitle === "boolean" &&
+    typeof v.hasMetaDescription === "boolean" &&
+    typeof v.hasViewportTag === "boolean" &&
+    typeof v.headingCount === "number" &&
+    typeof v.visibleTextLength === "number" &&
+    typeof v.hasPhoneLink === "boolean" &&
+    typeof v.hasEmailLink === "boolean" &&
+    typeof v.hasCtaText === "boolean"
+  );
+}
+
+/** Narrows a stored website_analysis_json value back to the real shape,
+ * degrading anything unexpected (a legacy row, a malformed value) to
+ * null (never-analyzed) rather than trusting an unvalidated cast — same
+ * fail-safe reasoning as parseHttpsStatus above. */
+function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  const content = isWebsiteContentSignals(v.content) ? v.content : null;
+  const mobilePerformanceScore = typeof v.mobilePerformanceScore === "number" ? v.mobilePerformanceScore : null;
+  const screenshotUrl = typeof v.screenshotUrl === "string" ? v.screenshotUrl : null;
+  const checkedAt = typeof v.checkedAt === "string" ? v.checkedAt : null;
+  if (checkedAt === null) return null;
+  return { content, mobilePerformanceScore, screenshotUrl, checkedAt };
 }
 
 /** Maps a saved business row to scoring input. Pure. */
@@ -1015,5 +1312,6 @@ export function businessRowToScoringInput(row: BusinessScoringRow): BusinessScor
     primaryCategory: row.category,
     photoCount: row.photo_count,
     businessStatus: row.business_status,
+    websiteAnalysis: parseWebsiteAnalysis(row.website_analysis_json),
   };
 }

@@ -3,13 +3,17 @@
 import { createClient } from "@/lib/supabase/server";
 import type { PlaceDetails } from "@/lib/google/places";
 import { checkWebsiteHttps } from "@/lib/websiteHttps";
+import { collectWebsiteAnalysis } from "@/lib/websiteAnalysis";
 import { bizProfileById } from "@/config/bizProfiles";
 import {
   businessRowToScoringInput,
   scoreBusiness,
   type BusinessScoringRow,
   type Grade,
+  type WebsiteAnalysis,
 } from "@/lib/scoring";
+
+const WEBSITE_SCREENSHOTS_BUCKET = "website-screenshots";
 
 export type SaveBusinessResult =
   | { status: "saved"; businessId: string }
@@ -18,11 +22,20 @@ export type SaveBusinessResult =
 
 /**
  * Persists a looked-up Google place as a business owned by the current
- * user. Also runs a real HTTPS probe of the site here (see
- * lib/websiteHttps.ts) — this is the one "data collection" moment for
- * that fact, same as every other Google-derived field, so it's cached
- * onto the row rather than re-checked on every score view. When there's
- * no website, https_status stays null (nothing to check).
+ * user. Also runs a real HTTPS probe (lib/websiteHttps.ts) and a real
+ * deep website analysis (lib/websiteAnalysis.ts) of the site here —
+ * this is the one "data collection" moment for both, same as every
+ * other Google-derived field, so they're cached onto the row rather
+ * than re-checked on every score view. When there's no website, both
+ * stay null (nothing to check).
+ *
+ * The website analysis's screenshot needs this business's own id for
+ * its storage path, which doesn't exist until after the upsert below —
+ * so the screenshot (if one was captured) is uploaded and folded into
+ * website_analysis_json with a small follow-up update, after the main
+ * upsert returns the row's id. A failure at that follow-up step still
+ * leaves the save itself successful; it just means no screenshot URL
+ * this time, which the Website page shows honestly.
  */
 export async function saveBusiness(
   place: PlaceDetails
@@ -38,7 +51,25 @@ export async function saveBusiness(
     return { status: "unauthenticated" };
   }
 
-  const httpsStatus = place.website ? await checkWebsiteHttps(place.website) : null;
+  const [httpsStatus, analysis] = await Promise.all([
+    place.website ? checkWebsiteHttps(place.website) : Promise.resolve(null),
+    place.website
+      ? collectWebsiteAnalysis(place.website, {
+          pageSpeedApiKey: process.env.PAGESPEED_API_KEY,
+          screenshotApiKey: process.env.SCREENSHOT_API_KEY,
+        })
+      : Promise.resolve(null),
+  ]);
+
+  const checkedAt = new Date().toISOString();
+  const websiteAnalysis: WebsiteAnalysis | null = analysis
+    ? {
+        content: analysis.content,
+        mobilePerformanceScore: analysis.mobilePerformanceScore,
+        screenshotUrl: null, // filled in by the follow-up update below, if a screenshot was captured
+        checkedAt,
+      }
+    : null;
 
   const { data, error } = await supabase
     .from("businesses")
@@ -63,7 +94,9 @@ export async function saveBusiness(
         lat: place.location?.lat ?? null,
         lng: place.location?.lng ?? null,
         https_status: httpsStatus,
-        https_checked_at: httpsStatus ? new Date().toISOString() : null,
+        https_checked_at: httpsStatus ? checkedAt : null,
+        website_analysis_json: websiteAnalysis,
+        website_analysis_checked_at: websiteAnalysis ? checkedAt : null,
       },
       { onConflict: "owner_id,place_id" }
     )
@@ -72,6 +105,22 @@ export async function saveBusiness(
 
   if (error || !data) {
     return { status: "error", message: error?.message ?? "Save failed." };
+  }
+
+  if (analysis?.screenshotBytes && websiteAnalysis) {
+    const path = `${data.id}.png`;
+    const { error: uploadError } = await supabase.storage
+      .from(WEBSITE_SCREENSHOTS_BUCKET)
+      .upload(path, analysis.screenshotBytes, { contentType: "image/png", upsert: true });
+
+    if (!uploadError) {
+      const screenshotUrl = supabase.storage.from(WEBSITE_SCREENSHOTS_BUCKET).getPublicUrl(path).data
+        .publicUrl;
+      await supabase
+        .from("businesses")
+        .update({ website_analysis_json: { ...websiteAnalysis, screenshotUrl } })
+        .eq("id", data.id);
+    }
   }
 
   return { status: "saved", businessId: data.id };
@@ -298,7 +347,7 @@ export async function listMyBusinesses(): Promise<ListMyBusinessesResult> {
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, category, phone, website, rating, review_count, categories, opening_hours, photo_count, business_status, https_status, created_at"
+      "id, name, address, category, phone, website, rating, review_count, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, created_at"
     )
     .order("created_at", { ascending: false });
 

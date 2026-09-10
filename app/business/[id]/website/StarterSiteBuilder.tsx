@@ -8,9 +8,11 @@ import {
   IconDownload,
   IconMapPin,
   IconPhone,
+  IconPhoto,
   IconRocket,
   IconStar,
   IconWand,
+  IconX,
 } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -24,7 +26,13 @@ import {
   type TaglineSize,
 } from "@/lib/starterSite";
 import { downloadTextFile } from "@/lib/downloadFile";
+import { resizeImageForEmbedding } from "@/lib/resizeImageForEmbedding";
 import { markTaskDone } from "@/app/actions/actionPlan";
+
+/** Keeps the downloaded HTML file's size reasonable — each photo is
+ * already resized/compressed (see resizeImageForEmbedding), but a hard
+ * cap on count is a simple, honest way to bound the total. */
+const MAX_CONTENT_IMAGES = 4;
 
 const TAGLINE_SIZES: Array<{ value: TaglineSize; label: string }> = [
   { value: "small", label: "Small" },
@@ -83,7 +91,7 @@ export function StarterSiteBuilder({
   reviewCount,
   googleMapsUri,
   profileId,
-  hasWebsite,
+  builderOfferReason,
 }: {
   businessId: string;
   businessName: string;
@@ -95,7 +103,10 @@ export function StarterSiteBuilder({
   reviewCount: number | null;
   googleMapsUri: string | null;
   profileId: string;
-  hasWebsite: boolean;
+  /** Why the builder is being offered — see BuilderOffer in
+   * app/actions/website.ts. Drives the headline/subcopy only; the
+   * generator itself is identical in every case. */
+  builderOfferReason: "no_website" | "underperforming" | "backup";
 }) {
   const router = useRouter();
   const [tagline, setTagline] = useState("");
@@ -110,6 +121,36 @@ export function StarterSiteBuilder({
   const [showPhone, setShowPhone] = useState(!!phone);
   const [showHours, setShowHours] = useState(!!openingHours && openingHours.length > 0);
   const [showRating, setShowRating] = useState(rating !== null);
+  const [heroImage, setHeroImage] = useState<{ dataUri: string; alt: string } | null>(null);
+  const [contentImages, setContentImages] = useState<Array<{ dataUri: string; alt: string }>>([]);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  async function handleHeroImageSelect(file: File | null) {
+    if (!file) return;
+    setPhotoError(null);
+    try {
+      const dataUri = await resizeImageForEmbedding(file, 1600);
+      setHeroImage({ dataUri, alt: `${businessName} hero photo` });
+    } catch {
+      setPhotoError("Couldn't process that photo — try a different image file.");
+    }
+  }
+
+  async function handleContentImageSelect(file: File | null) {
+    if (!file) return;
+    if (contentImages.length >= MAX_CONTENT_IMAGES) return;
+    setPhotoError(null);
+    try {
+      const dataUri = await resizeImageForEmbedding(file, 1000);
+      setContentImages((prev) => [...prev, { dataUri, alt: `${businessName} photo` }]);
+    } catch {
+      setPhotoError("Couldn't process that photo — try a different image file.");
+    }
+  }
+
+  function removeContentImage(index: number) {
+    setContentImages((prev) => prev.filter((_, i) => i !== index));
+  }
 
   function handleThemeSelect(id: string) {
     setThemeId(id);
@@ -140,6 +181,8 @@ export function StarterSiteBuilder({
         customAccent,
         fontId,
         show: { address: showAddress, phone: showPhone, hours: showHours, rating: showRating },
+        heroImage,
+        contentImages,
       }),
     [
       businessName,
@@ -163,6 +206,8 @@ export function StarterSiteBuilder({
       showPhone,
       showHours,
       showRating,
+      heroImage,
+      contentImages,
     ]
   );
 
@@ -196,12 +241,18 @@ export function StarterSiteBuilder({
           Starter website generator
         </div>
         <h2 className="mt-1.5 font-serif text-2xl font-bold text-ink">
-          {hasWebsite ? "Build a backup starter site" : "Turn your Google data into a real website"}
+          {builderOfferReason === "no_website"
+            ? "Turn your Google data into a real website"
+            : builderOfferReason === "underperforming"
+              ? "Your current site may be holding you back"
+              : "Build a backup starter site"}
         </h2>
         <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">
-          {hasWebsite
-            ? "You already have a website on file, so this is here if you ever want a simple backup or a fresh starting point — not something you need."
-            : "No website is one of the biggest gaps in your PostScore. This builds a real, mobile-friendly one-page site from your actual Google listing data — nothing invented."}
+          {builderOfferReason === "no_website"
+            ? "No website is one of the biggest gaps in your PostScore. This builds a real, mobile-friendly one-page site from your actual Google listing data — nothing invented."
+            : builderOfferReason === "underperforming"
+              ? "Your website's real, measured PostScore is lower than what this free starter template would score for the same business — see the visual analysis above for exactly why. A clean rebuild could score better."
+              : "You already have a website on file, so this is here if you ever want a simple backup or a fresh starting point — not something you need."}
         </p>
       </div>
 
@@ -384,6 +435,85 @@ export function StarterSiteBuilder({
                   {font.label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-1 text-[13px] font-medium text-ink-soft">
+              Photos <span className="font-normal text-ink-mute">(optional — your own photos)</span>
+            </div>
+            <p className="mb-2 text-[12px] text-ink-mute">
+              Embedded directly in the downloaded file — each photo adds to its size, so a few good
+              ones go further than many.
+            </p>
+
+            <div className="flex flex-col gap-3">
+              <div>
+                <div className="mb-1.5 text-[11.5px] text-ink-mute">Hero photo</div>
+                {heroImage ? (
+                  <div className="flex items-center gap-2.5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={heroImage.dataUri}
+                      alt=""
+                      className="h-14 w-20 rounded-md object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setHeroImage(null)}
+                      className="inline-flex items-center gap-1 text-[12px] font-medium text-ink-mute hover:text-ink"
+                    >
+                      <IconX size={13} /> Remove
+                    </button>
+                  </div>
+                ) : (
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-paper-deep px-3 py-2 text-[12.5px] font-medium text-ink-soft hover:border-ink-soft hover:text-ink">
+                    <IconPhoto size={15} />
+                    Upload a hero photo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleHeroImageSelect(e.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                )}
+              </div>
+
+              <div>
+                <div className="mb-1.5 text-[11.5px] text-ink-mute">
+                  Content photos ({contentImages.length}/{MAX_CONTENT_IMAGES})
+                </div>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {contentImages.map((img, i) => (
+                    <div key={i} className="relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={img.dataUri} alt="" className="h-14 w-14 rounded-md object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeContentImage(i)}
+                        aria-label="Remove photo"
+                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-paper-deep bg-white text-ink-mute hover:text-ink"
+                      >
+                        <IconX size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  {contentImages.length < MAX_CONTENT_IMAGES && (
+                    <label className="inline-flex h-14 w-14 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-paper-deep text-ink-mute hover:border-ink-soft hover:text-ink">
+                      <IconPhoto size={16} />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleContentImageSelect(e.target.files?.[0] ?? null)}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {photoError && <p className="text-[12px] text-red">{photoError}</p>}
             </div>
           </div>
 

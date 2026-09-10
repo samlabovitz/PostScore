@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { getWebsitePageData } from "@/app/actions/website";
 import { resolveBizProfile, renderFaq } from "@/config/bizProfiles";
 import { StarterSiteBuilder } from "./StarterSiteBuilder";
+import { WebsiteVisualAnalysis } from "./WebsiteVisualAnalysis";
 
 export default async function WebsitePage({ params }: { params: { id: string } }) {
   const result = await getWebsitePageData(params.id);
@@ -17,7 +18,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
     notFound();
   }
 
-  const { data } = result;
+  const { data, builderOffer } = result;
   const profile = resolveBizProfile(data.category, data.primaryType, data.businessTypeOverride);
   const faq = renderFaq(profile.faq, { name: data.businessName, address: data.address });
   const hasWebsite = !!data.website && data.website.trim().length > 0;
@@ -34,9 +35,17 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       reviewCount={data.reviewCount}
       googleMapsUri={data.googleMapsUri}
       profileId={profile.id}
-      hasWebsite={hasWebsite}
+      builderOfferReason={builderOffer.reason}
     />
   );
+
+  const visualAnalysis = hasWebsite ? (
+    <WebsiteVisualAnalysis
+      websiteAnalysis={data.websiteAnalysis}
+      websiteCategory={data.websiteCategory}
+      websiteSuggestions={data.websiteSuggestions}
+    />
+  ) : null;
 
   const faqSection = (
     <div>
@@ -85,6 +94,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
 
         {hasWebsite ? (
           <>
+            {visualAnalysis}
             {faqSection}
             {generator}
           </>

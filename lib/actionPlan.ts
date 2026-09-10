@@ -212,6 +212,28 @@ const ACTION_PLAN_COPY: Record<string, ActionPlanCopy> = {
     // minutes of settings, not a rebuild.
     effort: "quick_win",
   },
+  "website.performance_mobile": {
+    why: "A slow-loading site loses visitors before they ever see what you offer — and Google itself factors real-world site speed into search ranking.",
+    action: "Speed up your website, especially on mobile.",
+    fix: "Compress large images, remove unnecessary scripts/plugins, and use a fast host. PostScore's starter-site builder (Website page) generates a lightweight page that scores well on this by construction.",
+    ownerActionOnGoogle: false,
+    // Real, measured site-speed work is a project, not a same-week fix.
+    effort: "longer_term",
+  },
+  "website.content_depth": {
+    why: "A bare, single-block page reads as unfinished to both visitors and Google — real content is what actually convinces someone to trust and choose you.",
+    action: "Build out real content on your site: a clear title, a meta description, a few genuine sections, and real text about what you offer.",
+    fix: "Go to the Website page → the starter-site builder already includes a title, meta description, mobile viewport tag, and real sections built from your Google listing data — a fast way to replace a thin page.",
+    ownerActionOnGoogle: false,
+    effort: "longer_term",
+  },
+  "website.contact_conversion": {
+    why: "If a visitor can't immediately see how to reach you or what to do next, most will just leave instead of hunting for a contact method.",
+    action: "Add a real click-to-call phone or email link, and a clear call-to-action, to your website.",
+    fix: "Go to the Website page → the starter-site builder includes a click-to-call phone link and a clear call-to-action by default whenever a phone number is on file.",
+    ownerActionOnGoogle: false,
+    effort: "longer_term",
+  },
 };
 
 const FALLBACK_COPY: ActionPlanCopy = {
