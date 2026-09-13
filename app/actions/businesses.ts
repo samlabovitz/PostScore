@@ -4,16 +4,16 @@ import { createClient } from "@/lib/supabase/server";
 import type { PlaceDetails } from "@/lib/google/places";
 import { checkWebsiteHttps } from "@/lib/websiteHttps";
 import { collectWebsiteAnalysis } from "@/lib/websiteAnalysis";
+import { uploadWebsiteScreenshots } from "@/lib/websiteScreenshotUpload";
 import { bizProfileById } from "@/config/bizProfiles";
 import {
   businessRowToScoringInput,
+  parseWebsiteAnalysis,
   scoreBusiness,
   type BusinessScoringRow,
   type Grade,
   type WebsiteAnalysis,
 } from "@/lib/scoring";
-
-const WEBSITE_SCREENSHOTS_BUCKET = "website-screenshots";
 
 export type SaveBusinessResult =
   | { status: "saved"; businessId: string }
@@ -29,9 +29,19 @@ export type SaveBusinessResult =
  * than re-checked on every score view. When there's no website, both
  * stay null (nothing to check).
  *
- * The website analysis's screenshot needs this business's own id for
- * its storage path, which doesn't exist until after the upsert below —
- * so the screenshot (if one was captured) is uploaded and folded into
+ * Screenshots (real, billed ScreenshotOne calls) are the one exception
+ * to "re-collect everything on every save": they're only ever captured
+ * on a business's first scan — detected below by this same owner+place
+ * having no prior website_analysis_json with a lastScreenshotRefreshAt
+ * — and reused as-is on every regular re-scan after that. Content and
+ * PageSpeed are still refreshed every time, same as always. The only
+ * other way screenshots get re-captured is the explicit, rate-limited
+ * "Refresh screenshots" action (app/actions/websiteScreenshots.ts).
+ *
+ * The website analysis's screenshots (the homepage's, and any of its
+ * other discovered pages') need this business's own id for their storage
+ * paths, which don't exist until after the upsert below — so, when this
+ * scan does capture them, they're uploaded and folded into
  * website_analysis_json with a small follow-up update, after the main
  * upsert returns the row's id. A failure at that follow-up step still
  * leaves the save itself successful; it just means no screenshot URL
@@ -51,24 +61,70 @@ export async function saveBusiness(
     return { status: "unauthenticated" };
   }
 
+  // Same owner+place key the upsert below conflicts on — this is how we
+  // recognize "this exact business already exists" and read whatever
+  // screenshot state it already has, before deciding whether this scan
+  // needs to spend a ScreenshotOne call at all.
+  const existingAnalysis = place.website
+    ? parseWebsiteAnalysis(
+        (
+          await supabase
+            .from("businesses")
+            .select("website_analysis_json")
+            .eq("owner_id", user.id)
+            .eq("place_id", place.placeId)
+            .maybeSingle()
+        ).data?.website_analysis_json ?? null
+      )
+    : null;
+  const captureScreenshots = existingAnalysis?.lastScreenshotRefreshAt == null;
+
   const [httpsStatus, analysis] = await Promise.all([
     place.website ? checkWebsiteHttps(place.website) : Promise.resolve(null),
     place.website
-      ? collectWebsiteAnalysis(place.website, {
-          pageSpeedApiKey: process.env.PAGESPEED_API_KEY,
-          screenshotApiKey: process.env.SCREENSHOT_API_KEY,
-        })
+      ? collectWebsiteAnalysis(
+          place.website,
+          {
+            pageSpeedApiKey: process.env.PAGESPEED_API_KEY,
+            screenshotApiKey: process.env.SCREENSHOT_API_KEY,
+          },
+          { captureScreenshots }
+        )
       : Promise.resolve(null),
   ]);
 
   const checkedAt = new Date().toISOString();
   const websiteAnalysis: WebsiteAnalysis | null = analysis
-    ? {
-        content: analysis.content,
-        mobilePerformanceScore: analysis.mobilePerformanceScore,
-        screenshotUrl: null, // filled in by the follow-up update below, if a screenshot was captured
-        checkedAt,
-      }
+    ? captureScreenshots
+      ? {
+          content: analysis.content,
+          mobilePerformanceScore: analysis.mobilePerformanceScore,
+          screenshotUrl: null, // filled in by the follow-up update below
+          additionalPages: [], // filled in by the follow-up update below
+          lastScreenshotRefreshAt: null, // filled in by the follow-up update below, once the capture attempt lands
+          // No real page-discovery signal exists yet (see
+          // website.about_presence/website.services_presence in
+          // lib/scoring.ts) — honestly false, never guessed, until that
+          // detection is actually built.
+          hasAboutPage: false,
+          hasServicesPage: false,
+          checkedAt,
+        }
+      : {
+          content: analysis.content,
+          mobilePerformanceScore: analysis.mobilePerformanceScore,
+          // Regular re-scan: reuse whatever's already stored rather than
+          // spending another ScreenshotOne call — see captureScreenshots above.
+          screenshotUrl: existingAnalysis?.screenshotUrl ?? null,
+          additionalPages: existingAnalysis?.additionalPages ?? [],
+          lastScreenshotRefreshAt: existingAnalysis?.lastScreenshotRefreshAt ?? null,
+          // Carried forward for the same reason as the fields above — once
+          // real detection exists, a regular re-scan shouldn't silently
+          // reset a previously-detected page back to false.
+          hasAboutPage: existingAnalysis?.hasAboutPage ?? false,
+          hasServicesPage: existingAnalysis?.hasServicesPage ?? false,
+          checkedAt,
+        }
     : null;
 
   const { data, error } = await supabase
@@ -107,19 +163,38 @@ export async function saveBusiness(
     return { status: "error", message: error?.message ?? "Save failed." };
   }
 
-  if (analysis?.screenshotBytes && websiteAnalysis) {
-    const path = `${data.id}.png`;
-    const { error: uploadError } = await supabase.storage
-      .from(WEBSITE_SCREENSHOTS_BUCKET)
-      .upload(path, analysis.screenshotBytes, { contentType: "image/png", upsert: true });
+  if (captureScreenshots && websiteAnalysis) {
+    // Ownership invariant: every storage path uploadWebsiteScreenshots
+    // writes to is derived only from data.id, the id just returned by
+    // the RLS-scoped upsert above for a row owned by `user.id` — never
+    // from anything client-supplied. That's what makes it safe for that
+    // helper to write with the service-role client, which bypasses RLS
+    // entirely: ownership was already proven before we get here.
+    //
+    // This runs (and stamps lastScreenshotRefreshAt below) even if
+    // analysis.screenshotBytes/additionalPages both came back empty — a
+    // capture ATTEMPT happened this scan, and that's what must be
+    // recorded, so a fully-failed first attempt doesn't get silently
+    // retried (and re-billed) on every regular re-scan afterward. The
+    // one honest way to retry a failed capture is the rate-limited
+    // "Refresh screenshots" action.
+    const { screenshotUrl, additionalPages } = await uploadWebsiteScreenshots(data.id, {
+      screenshotBytes: analysis?.screenshotBytes ?? null,
+      additionalPages: analysis?.additionalPages ?? [],
+    });
 
-    if (!uploadError) {
-      const screenshotUrl = supabase.storage.from(WEBSITE_SCREENSHOTS_BUCKET).getPublicUrl(path).data
-        .publicUrl;
-      await supabase
-        .from("businesses")
-        .update({ website_analysis_json: { ...websiteAnalysis, screenshotUrl } })
-        .eq("id", data.id);
+    const lastScreenshotRefreshAt = new Date().toISOString();
+    const { error: followUpError } = await supabase
+      .from("businesses")
+      .update({
+        website_analysis_json: { ...websiteAnalysis, screenshotUrl, additionalPages, lastScreenshotRefreshAt },
+      })
+      .eq("id", data.id);
+
+    if (followUpError) {
+      console.error(
+        `[saveBusiness] follow-up update writing screenshotUrl/additionalPages/lastScreenshotRefreshAt failed: ${followUpError.message}`
+      );
     }
   }
 

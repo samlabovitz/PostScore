@@ -112,6 +112,57 @@ export interface WebsiteContentSignals {
   /** A curated call-to-action phrase ("book now", "contact us", etc.)
    * found in the page's visible text. */
   hasCtaText: boolean;
+  /** True when this page reads as an empty client-side-rendered app
+   * shell (near-zero visible text/headings, plus an actual technical
+   * signal like id="__nuxt"/id="__next"/id="root"/id="app" or a
+   * serverRendered:false flag) rather than a genuinely bare or broken
+   * page — see lib/websiteContentAnalysis.ts's detectClientRenderedShell.
+   * website.content_depth/website.contact_conversion below check this
+   * FIRST and, when true, exclude themselves from scoring with an honest
+   * "couldn't verify — renders with JavaScript" explanation instead of
+   * scoring these (necessarily empty) signals as real failures. A site
+   * that's genuinely thin/bare — no CSR marker present — still scores
+   * normally on these same fields; this flag exists specifically so
+   * "we couldn't read it" is never confused with "there's nothing
+   * there." */
+  isLikelyClientRenderedShell: boolean;
+  /** Only meaningful when isLikelyClientRenderedShell is true: real
+   * signals recovered from Google PageSpeed's own rendered-Chrome
+   * Lighthouse audits (document-title/meta-description/viewport/
+   * heading-order — see lib/websiteAnalysis.ts's
+   * fetchPageSpeedMobileScore and PAGESPEED_CSR_RECOVERY_CATEGORIES),
+   * requested only for a detected shell. null when this isn't a
+   * client-rendered shell, or when it is but that widened PageSpeed call
+   * didn't succeed — website.content_depth falls back to its full
+   * "couldn't verify" exclusion in that case, exactly as before this
+   * recovery existed. Deliberately kept separate from
+   * hasTitle/hasMetaDescription/hasViewportTag/headingCount above rather
+   * than overwriting them: those stay the real (if empty) static-fetch
+   * result, so the raw static signal is never lost even once recovery
+   * succeeds. */
+  renderedContentSignals: RenderedContentSignals | null;
+}
+
+/** Real presence/absence signals Google PageSpeed's Lighthouse run can
+ * confirm from a page's actual rendered DOM — see WebsiteContentSignals.
+ * Each field is independently nullable: true/false is a real,
+ * Lighthouse-confirmed presence/absence; null means that specific audit
+ * wasn't present in the response (genuinely unknown — never credited,
+ * and never reported as a confirmed failure either, by
+ * website.content_depth). There's deliberately no "content length"
+ * field here: no Lighthouse audit measures visible text depth, so that
+ * dimension always stays unconfirmed for a client-rendered site. */
+export interface RenderedContentSignals {
+  hasTitle: boolean | null;
+  hasMetaDescription: boolean | null;
+  hasViewportTag: boolean | null;
+  /** Derived from Lighthouse's heading-order audit: that audit's
+   * scoreDisplayMode is "notApplicable" specifically when the rendered
+   * page has zero heading elements (nothing to check the order of); any
+   * other display mode means at least one heading exists. An indirect
+   * proxy — heading-order's real purpose is order-correctness, not
+   * counting — but a reliable presence signal in practice. */
+  hasHeadings: boolean | null;
 }
 
 /**
@@ -138,10 +189,70 @@ export interface WebsiteAnalysis {
   /** Public URL of a real captured screenshot. null = no
    * SCREENSHOT_API_KEY configured, or capture failed/was blocked. */
   screenshotUrl: string | null;
+  /** Up to ~4 other real internal pages (services/about/contact/menu)
+   * discovered on the homepage's nav and/or sitemap.xml during the same
+   * scan, each with its own best-effort screenshot. Display only, purely
+   * additive to the Website page's visual analysis section —
+   * scoreBusiness() never reads this, and a page whose screenshot
+   * couldn't be captured stays in the list with screenshotUrl: null
+   * rather than being dropped, so the UI can show an honest "couldn't
+   * capture this page" instead of silently having fewer pages. Always
+   * [], never undefined, when nothing was discovered. */
+  additionalPages: WebsiteAnalysisPage[];
+  /** ISO timestamp of the most recent real screenshot CAPTURE attempt
+   * (homepage + any discovered pages) — distinct from checkedAt below,
+   * which updates on every re-scan whether or not screenshots were
+   * touched. null = screenshots have never been captured for this
+   * business; the next scan (of any kind) will capture them for the
+   * first time. Screenshots are otherwise only ever re-captured through
+   * the explicit, SCREENSHOT_REFRESH_COOLDOWN_DAYS-limited "Refresh
+   * screenshots" action (see app/actions/websiteScreenshots.ts) — a
+   * regular re-scan reuses whatever's already stored here rather than
+   * spending another ScreenshotOne call, which is exactly what this
+   * field exists to make possible. Display only; scoreBusiness() never
+   * reads it. */
+  lastScreenshotRefreshAt: string | null;
+  /** True only when a real page was found in this site's nav links or
+   * sitemap.xml whose link text/URL matches an About/Our Story/Meet The
+   * Team synonym (see lib/websiteAnalysis.ts's detectPagePresence and
+   * ABOUT_PAGE_SYNONYMS) — never inferred from page content, only from a
+   * genuine discovered link. false covers every case where we can't
+   * confirm this: no matching page found, discovery didn't run, or a
+   * single-page site whose About content (if any) lives on the homepage
+   * where we can't detect it. website.about_presence below treats false
+   * identically to "unknown" — excluded, never scored as a failure —
+   * since a missing link is never proof of missing content. */
+  hasAboutPage: boolean;
+  /** Same real page-discovery signal as hasAboutPage, for a Services/
+   * Products/Menu-type page (see SERVICES_PAGE_SYNONYMS) — see
+   * website.services_presence. */
+  hasServicesPage: boolean;
   /** ISO timestamp of collection — display only; scoreBusiness() never
    * reads this (it must stay clock-free), it's for UI "checked X ago"
    * copy. */
   checkedAt: string;
+}
+
+/** How often screenshots can be manually re-captured via the "Refresh
+ * screenshots" action — real ScreenshotOne cost, so kept deliberately
+ * infrequent. Shared by the server action that enforces it
+ * (app/actions/websiteScreenshots.ts) and the Website page button that
+ * shows the honest "available in N days" countdown, so the two can never
+ * drift out of sync. */
+export const SCREENSHOT_REFRESH_COOLDOWN_DAYS = 30;
+
+/** One other real internal page discovered alongside the homepage — see
+ * WebsiteAnalysis.additionalPages. */
+export interface WebsiteAnalysisPage {
+  /** Human-readable label for the UI (e.g. "Services", "About",
+   * "Contact"), derived from the real nav link text or, failing that,
+   * the URL's path segment — never invented. */
+  label: string;
+  /** The real, discovered page URL (absolute). */
+  url: string;
+  /** Public URL of a real captured screenshot of this page. null = the
+   * capture failed or was blocked — shown honestly, not guessed. */
+  screenshotUrl: string | null;
 }
 
 export type Grade = "A" | "B" | "C" | "D" | "F";
@@ -469,6 +580,17 @@ function contentLengthFraction(chars: number): number {
   return (c - THIN_CONTENT_CHARS) / (FULL_CONTENT_CHARS - THIN_CONTENT_CHARS);
 }
 
+/** Shared by website.content_depth and website.contact_conversion —
+ * both exclude themselves the same honest way when
+ * content.isLikelyClientRenderedShell is true, rather than scoring the
+ * (necessarily empty) static-fetch signals as real failures. Deliberately
+ * distinct wording from "couldn't read this site's content" (the
+ * fetch-failed/blocked case just above it in each check): this is a
+ * different, more specific honest state — we DID read the page, it's
+ * just a JS-rendered shell our static check can't see inside. */
+const CLIENT_RENDERED_SHELL_EXPLANATION =
+  "Couldn't verify — this site renders its content with JavaScript, which our static check can't read. Excluded from your score, not counted against you.";
+
 /** A review within this many days counts as fully "recent." */
 const RECENCY_FULL_CREDIT_DAYS = 90;
 /** No review within this many days earns zero recency credit. */
@@ -534,9 +656,15 @@ const PERFECT_WEBSITE_ANALYSIS: WebsiteAnalysis = {
     hasPhoneLink: true,
     hasEmailLink: true,
     hasCtaText: true,
+    isLikelyClientRenderedShell: false,
+    renderedContentSignals: null,
   },
   mobilePerformanceScore: 100,
   screenshotUrl: null,
+  additionalPages: [],
+  lastScreenshotRefreshAt: null,
+  hasAboutPage: true,
+  hasServicesPage: true,
   checkedAt: new Date(0).toISOString(),
 };
 
@@ -987,7 +1115,7 @@ export const CHECKS: CheckDefinition[] = [
     id: "website.content_depth",
     label: "Content depth",
     category: "website",
-    maxPoints: 6,
+    maxPoints: 5,
     advice:
       "Build out real content — a title and meta description, a few real headings, and a genuine amount of text about what you offer. A single bare block reads as an unfinished site to visitors and to search engines.",
     evaluate(input) {
@@ -1004,13 +1132,63 @@ export const CHECKS: CheckDefinition[] = [
             : "This site hasn't been analyzed yet — re-scan to check its real content.",
         };
       }
+      if (content.isLikelyClientRenderedShell) {
+        const recovered = content.renderedContentSignals;
+        if (!recovered) {
+          return { earnedPoints: null, confidence: "NOT_FOUND", explanation: CLIENT_RENDERED_SHELL_EXPLANATION };
+        }
+        // Recovered via Google PageSpeed's real rendered-Chrome Lighthouse
+        // audits (see fetchPageSpeedMobileScore/PAGESPEED_CSR_RECOVERY_CATEGORIES
+        // in lib/websiteAnalysis.ts) instead of our own static fetch, which
+        // saw an empty shell. Deliberately capped at the sub-points these
+        // audits can actually confirm — title 1 / meta description 1 /
+        // viewport 1.5 / headings 1 = 4.5 of 5. No Lighthouse audit measures
+        // visible text depth, so the remaining 0.5 "content length" point
+        // is never earned here, but also never described as a failure —
+        // see the explanation below.
+        const titlePts = recovered.hasTitle ? 1 : 0;
+        const metaPts = recovered.hasMetaDescription ? 1 : 0;
+        const viewportPts = recovered.hasViewportTag ? 1.5 : 0;
+        const headingPts = recovered.hasHeadings ? 1 : 0;
+        const earnedPoints = roundTo(titlePts + metaPts + viewportPts + headingPts, 1);
+
+        // Each sub-signal is tri-state: true/false is a real Lighthouse-
+        // confirmed presence/absence (goes in one of these two honest
+        // lists); null means that specific audit wasn't in the response —
+        // silently uncredited, never reported as a confirmed failure.
+        const confirmedPresent: string[] = [];
+        const confirmedMissing: string[] = [];
+        if (recovered.hasTitle === true) confirmedPresent.push("a page title");
+        else if (recovered.hasTitle === false) confirmedMissing.push("no page title found");
+        if (recovered.hasMetaDescription === true) confirmedPresent.push("a meta description");
+        else if (recovered.hasMetaDescription === false) confirmedMissing.push("no meta description found");
+        if (recovered.hasViewportTag === true) confirmedPresent.push("a mobile viewport tag");
+        else if (recovered.hasViewportTag === false) confirmedMissing.push("not mobile-optimized (no viewport tag)");
+        if (recovered.hasHeadings === true) confirmedPresent.push("real headings");
+        else if (recovered.hasHeadings === false) confirmedMissing.push("no real headings/sections");
+
+        const explanationParts = [
+          "This site renders its content with JavaScript — verified using Google's real rendered-page audit instead of a static fetch.",
+        ];
+        if (confirmedPresent.length > 0) explanationParts.push(`Confirmed present: ${confirmedPresent.join(", ")}.`);
+        if (confirmedMissing.length > 0) explanationParts.push(`Confirmed missing: ${confirmedMissing.join("; ")}.`);
+        explanationParts.push(
+          "Content depth/length couldn't be independently confirmed for this site and isn't credited either way."
+        );
+
+        return { earnedPoints, confidence: "VERIFIED", explanation: explanationParts.join(" ") };
+      }
       // Sub-point weights: title 1 / meta description 1 / viewport 1.5 /
-      // has a real heading 1 / genuine text length 1.5 — sums to 6.
+      // has a real heading 1 / genuine text length 0.5 — sums to 5. Length
+      // carries the least weight of the five: it's the fuzziest signal (a
+      // character-count proxy, not a hard verification), and the lightest
+      // one to trim to make room for website.about_presence/
+      // website.services_presence's real page-discovery signals.
       const titlePts = content.hasTitle ? 1 : 0;
       const metaPts = content.hasMetaDescription ? 1 : 0;
       const viewportPts = content.hasViewportTag ? 1.5 : 0;
       const headingPts = content.headingCount > 0 ? 1 : 0;
-      const lengthPts = contentLengthFraction(content.visibleTextLength) * 1.5;
+      const lengthPts = contentLengthFraction(content.visibleTextLength) * 0.5;
       const earnedPoints = roundTo(titlePts + metaPts + viewportPts + headingPts + lengthPts, 1);
 
       const missing: string[] = [];
@@ -1042,7 +1220,7 @@ export const CHECKS: CheckDefinition[] = [
     id: "website.contact_conversion",
     label: "Contact & conversion",
     category: "website",
-    maxPoints: 4,
+    maxPoints: 3,
     advice:
       "Add a real click-to-call phone link or email address, and a clear call-to-action (e.g. \"Call now\" or \"Book an appointment\") — visitors shouldn't have to hunt for how to reach you.",
     evaluate(input) {
@@ -1059,8 +1237,16 @@ export const CHECKS: CheckDefinition[] = [
             : "This site hasn't been analyzed yet — re-scan to check its real contact info and calls-to-action.",
         };
       }
+      if (content.isLikelyClientRenderedShell) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: CLIENT_RENDERED_SHELL_EXPLANATION };
+      }
+      // Sub-point weights: a real contact link 2 / a clear CTA phrase 1 —
+      // sums to 3. Contact link keeps its original weight (the more
+      // reliable signal, a literal tel:/mailto: href); CTA phrase-matching
+      // is the fuzzier heuristic, so it's the one trimmed to make room for
+      // website.about_presence/website.services_presence.
       const hasContact = content.hasPhoneLink || content.hasEmailLink;
-      const earnedPoints = (hasContact ? 2 : 0) + (content.hasCtaText ? 2 : 0);
+      const earnedPoints = (hasContact ? 2 : 0) + (content.hasCtaText ? 1 : 0);
 
       const problems: string[] = [];
       if (!hasContact) problems.push("no click-to-call phone or email link found");
@@ -1086,6 +1272,91 @@ export const CHECKS: CheckDefinition[] = [
           hasCtaText: true,
         },
       },
+    }),
+  },
+  {
+    id: "website.about_presence",
+    label: "About / our story",
+    category: "website",
+    maxPoints: 1,
+    advice:
+      "Add a real About or Our Story page (linked from your main navigation) — a short background/team page reassures visitors this is a real, established business.",
+    // Deliberately two-state, not three: a missing About *link* is never
+    // proof of a missing About *section* (it may just live on the
+    // homepage, which page discovery can't see into) — so there's no
+    // honest "real failure" here, only "found" or "couldn't verify." See
+    // WebsiteAnalysis.hasAboutPage's own doc comment for the exact
+    // real-page-discovery signal this reads.
+    evaluate(input) {
+      if (!input.website || input.website.trim().length === 0) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: "Not applicable — no website on file to check." };
+      }
+      if (!input.websiteAnalysis) {
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: "This site hasn't been analyzed yet — re-scan to check its real navigation.",
+        };
+      }
+      if (input.websiteAnalysis.hasAboutPage) {
+        return {
+          earnedPoints: 1,
+          confidence: "VERIFIED",
+          explanation: "Found a real About/Our Story page linked from this site's navigation or sitemap.",
+        };
+      }
+      return {
+        earnedPoints: null,
+        confidence: "NOT_FOUND",
+        explanation:
+          "Couldn't verify — no About/Our Story page was found in this site's navigation or sitemap. A single-page site may have this content on its homepage instead, which we can't detect. Excluded from your score, not counted against you.",
+      };
+    },
+    simulateFix: (input) => ({
+      ...input,
+      website: input.website || "https://example.com",
+      websiteAnalysis: { ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS), hasAboutPage: true },
+    }),
+  },
+  {
+    id: "website.services_presence",
+    label: "Services / products",
+    category: "website",
+    maxPoints: 1,
+    advice:
+      "Add a real Services, Products, or Menu page (linked from your main navigation) — visitors and search engines both look for a clear list of what you offer.",
+    // Same two-state reasoning as website.about_presence above — a
+    // missing Services/Products *link* is never proof there's no
+    // Services/Products *content*.
+    evaluate(input) {
+      if (!input.website || input.website.trim().length === 0) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: "Not applicable — no website on file to check." };
+      }
+      if (!input.websiteAnalysis) {
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: "This site hasn't been analyzed yet — re-scan to check its real navigation.",
+        };
+      }
+      if (input.websiteAnalysis.hasServicesPage) {
+        return {
+          earnedPoints: 1,
+          confidence: "VERIFIED",
+          explanation: "Found a real Services/Products page linked from this site's navigation or sitemap.",
+        };
+      }
+      return {
+        earnedPoints: null,
+        confidence: "NOT_FOUND",
+        explanation:
+          "Couldn't verify — no Services/Products page was found in this site's navigation or sitemap. A single-page site may list these on its homepage instead, which we can't detect. Excluded from your score, not counted against you.",
+      };
+    },
+    simulateFix: (input) => ({
+      ...input,
+      website: input.website || "https://example.com",
+      websiteAnalysis: { ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS), hasServicesPage: true },
     }),
   },
 ];
@@ -1266,10 +1537,39 @@ function parseHttpsStatus(value: string | null): HttpsCheckStatus | null {
   return value === "https" || value === "http_only" || value === "unreachable" ? value : null;
 }
 
-function isWebsiteContentSignals(value: unknown): value is WebsiteContentSignals {
-  if (!value || typeof value !== "object") return false;
+/** Narrows a stored content value back to the real shape, same fail-safe
+ * reasoning as parseHttpsStatus/parseWebsiteAnalysis. isLikelyClientRenderedShell
+ * is treated as optional on the way in (default false) rather than
+ * required like every other field here: a row saved before this flag
+ * existed simply predates it, and the honest fallback is to keep scoring
+ * its real, already-validated content fields exactly as before — not to
+ * discard the whole content analysis (and start showing "hasn't been
+ * analyzed yet") just because this one newer field is absent. */
+function parseNullableBoolean(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
+}
+
+/** A malformed/missing renderedContentSignals value degrades to null
+ * (same fail-safe reasoning as the rest of this file) rather than
+ * discarding the whole content analysis — website.content_depth already
+ * treats null here as "couldn't recover, fall back to full exclusion,"
+ * so a bad stored value just re-derives that same honest state instead
+ * of crashing or fabricating recovered signals. */
+function parseRenderedContentSignals(value: unknown): RenderedContentSignals | null {
+  if (!value || typeof value !== "object") return null;
   const v = value as Record<string, unknown>;
-  return (
+  return {
+    hasTitle: parseNullableBoolean(v.hasTitle),
+    hasMetaDescription: parseNullableBoolean(v.hasMetaDescription),
+    hasViewportTag: parseNullableBoolean(v.hasViewportTag),
+    hasHeadings: parseNullableBoolean(v.hasHeadings),
+  };
+}
+
+function parseWebsiteContentSignals(value: unknown): WebsiteContentSignals | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  const hasCoreFields =
     typeof v.hasTitle === "boolean" &&
     typeof v.hasMetaDescription === "boolean" &&
     typeof v.hasViewportTag === "boolean" &&
@@ -1277,23 +1577,75 @@ function isWebsiteContentSignals(value: unknown): value is WebsiteContentSignals
     typeof v.visibleTextLength === "number" &&
     typeof v.hasPhoneLink === "boolean" &&
     typeof v.hasEmailLink === "boolean" &&
-    typeof v.hasCtaText === "boolean"
+    typeof v.hasCtaText === "boolean";
+  if (!hasCoreFields) return null;
+  return {
+    hasTitle: v.hasTitle as boolean,
+    hasMetaDescription: v.hasMetaDescription as boolean,
+    hasViewportTag: v.hasViewportTag as boolean,
+    headingCount: v.headingCount as number,
+    visibleTextLength: v.visibleTextLength as number,
+    hasPhoneLink: v.hasPhoneLink as boolean,
+    hasEmailLink: v.hasEmailLink as boolean,
+    hasCtaText: v.hasCtaText as boolean,
+    isLikelyClientRenderedShell:
+      typeof v.isLikelyClientRenderedShell === "boolean" ? v.isLikelyClientRenderedShell : false,
+    renderedContentSignals: v.renderedContentSignals ? parseRenderedContentSignals(v.renderedContentSignals) : null,
+  };
+}
+
+function isWebsiteAnalysisPage(value: unknown): value is WebsiteAnalysisPage {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.label === "string" &&
+    typeof v.url === "string" &&
+    (v.screenshotUrl === null || typeof v.screenshotUrl === "string")
   );
+}
+
+/** A malformed/missing additionalPages value degrades to [] (same
+ * fail-safe reasoning as the rest of parseWebsiteAnalysis) rather than
+ * dropping the whole analysis — the homepage screenshot/PageSpeed/content
+ * signals are still real and usable even if this one extra field is bad. */
+function parseAdditionalPages(value: unknown): WebsiteAnalysisPage[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(isWebsiteAnalysisPage);
 }
 
 /** Narrows a stored website_analysis_json value back to the real shape,
  * degrading anything unexpected (a legacy row, a malformed value) to
  * null (never-analyzed) rather than trusting an unvalidated cast — same
- * fail-safe reasoning as parseHttpsStatus above. */
-function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
+ * fail-safe reasoning as parseHttpsStatus above. Exported so the
+ * server-only save/refresh paths (app/actions/businesses.ts,
+ * app/actions/websiteScreenshots.ts) can read a business's *existing*
+ * stored analysis with this same real narrowing — e.g. to decide whether
+ * screenshots have ever been captured — rather than re-implementing it. */
+export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
   if (!value || typeof value !== "object") return null;
   const v = value as Record<string, unknown>;
-  const content = isWebsiteContentSignals(v.content) ? v.content : null;
+  const content = parseWebsiteContentSignals(v.content);
   const mobilePerformanceScore = typeof v.mobilePerformanceScore === "number" ? v.mobilePerformanceScore : null;
   const screenshotUrl = typeof v.screenshotUrl === "string" ? v.screenshotUrl : null;
+  const additionalPages = parseAdditionalPages(v.additionalPages);
+  const lastScreenshotRefreshAt = typeof v.lastScreenshotRefreshAt === "string" ? v.lastScreenshotRefreshAt : null;
+  // A row saved before this signal existed simply predates it — the
+  // honest fallback is false (same as "not found"), not a crash or a
+  // fabricated true.
+  const hasAboutPage = typeof v.hasAboutPage === "boolean" ? v.hasAboutPage : false;
+  const hasServicesPage = typeof v.hasServicesPage === "boolean" ? v.hasServicesPage : false;
   const checkedAt = typeof v.checkedAt === "string" ? v.checkedAt : null;
   if (checkedAt === null) return null;
-  return { content, mobilePerformanceScore, screenshotUrl, checkedAt };
+  return {
+    content,
+    mobilePerformanceScore,
+    screenshotUrl,
+    additionalPages,
+    lastScreenshotRefreshAt,
+    hasAboutPage,
+    hasServicesPage,
+    checkedAt,
+  };
 }
 
 /** Maps a saved business row to scoring input. Pure. */

@@ -7,6 +7,8 @@ import { getWebsitePageData } from "@/app/actions/website";
 import { resolveBizProfile, renderFaq } from "@/config/bizProfiles";
 import { StarterSiteBuilder } from "./StarterSiteBuilder";
 import { WebsiteVisualAnalysis } from "./WebsiteVisualAnalysis";
+import { WebsiteScoreBreakdown } from "./WebsiteScoreBreakdown";
+import { CollapsibleGenerator } from "./CollapsibleGenerator";
 
 export default async function WebsitePage({ params }: { params: { id: string } }) {
   const result = await getWebsitePageData(params.id);
@@ -40,9 +42,20 @@ export default async function WebsitePage({ params }: { params: { id: string } }
   );
 
   const visualAnalysis = hasWebsite ? (
-    <WebsiteVisualAnalysis
-      websiteAnalysis={data.websiteAnalysis}
+    <WebsiteVisualAnalysis businessId={params.id} websiteAnalysis={data.websiteAnalysis} />
+  ) : null;
+
+  // The one merged "how is your Website score built" section — reads the
+  // exact same live CategoryResult the overview page's own "Detailed
+  // checks" section is built from, never a separate copy or
+  // re-derivation, so a check that's excluded here (e.g. PageSpeed
+  // couldn't score, a client-rendered site we couldn't fully read) shows
+  // the identical honest "couldn't verify" state as everywhere else,
+  // never a 0.
+  const scoreBreakdown = hasWebsite ? (
+    <WebsiteScoreBreakdown
       websiteCategory={data.websiteCategory}
+      websiteAnalysis={data.websiteAnalysis}
       websiteSuggestions={data.websiteSuggestions}
     />
   ) : null;
@@ -95,8 +108,9 @@ export default async function WebsitePage({ params }: { params: { id: string } }
         {hasWebsite ? (
           <>
             {visualAnalysis}
+            {scoreBreakdown}
             {faqSection}
-            {generator}
+            <CollapsibleGenerator defaultExpanded={false}>{generator}</CollapsibleGenerator>
           </>
         ) : (
           <>

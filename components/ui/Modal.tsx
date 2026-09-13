@@ -20,10 +20,15 @@ export function Modal({
   useEffect(() => {
     if (!open) return;
     document.body.style.overflow = "hidden";
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
       document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open]);
+  }, [open, onClose]);
 
   if (!open) return null;
 

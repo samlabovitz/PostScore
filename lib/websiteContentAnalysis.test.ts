@@ -46,6 +46,9 @@ describe("analyzeWebsiteHtml", () => {
     expect(signals.hasPhoneLink).toBe(false);
     expect(signals.hasEmailLink).toBe(false);
     expect(signals.hasCtaText).toBe(false);
+    // Genuinely thin, not unreadable — no CSR marker present, so this
+    // must read as "bare," never as "couldn't verify."
+    expect(signals.isLikelyClientRenderedShell).toBe(false);
   });
 
   test("a rich, complete small-business site reads as substantial on every signal", () => {
@@ -58,6 +61,28 @@ describe("analyzeWebsiteHtml", () => {
     expect(signals.hasPhoneLink).toBe(true);
     expect(signals.hasEmailLink).toBe(true);
     expect(signals.hasCtaText).toBe(true); // "Book an appointment"
+    expect(signals.isLikelyClientRenderedShell).toBe(false);
+  });
+
+  test("an empty client-side-rendered app shell is flagged as unreadable, not as bare", () => {
+    // Mirrors a real Nuxt (serverRendered:false) site's actual static
+    // HTML: an empty mount div and nothing else — the real content only
+    // exists after JS execution, which this static fetch never runs.
+    const html = `<!doctype html><html><head><title>Goldberg Hardware</title></head><body><div id="__nuxt"></div><script>window.__NUXT__=(function(a){return {serverRendered:false}})();</script></body></html>`;
+    const signals = analyzeWebsiteHtml(html);
+    expect(signals.headingCount).toBe(0);
+    expect(signals.hasPhoneLink).toBe(false);
+    expect(signals.isLikelyClientRenderedShell).toBe(true);
+  });
+
+  test("a real site that happens to use a common container id (e.g. #app) with genuine content is NOT flagged as a shell", () => {
+    // The marker alone is never enough — only near-zero content +
+    // marker together count as a shell, so a real static site that
+    // simply named a wrapper div "app" isn't penalized.
+    const html = `<!doctype html><html><head><title>x</title></head><body><div id="app"><h1>Real Business</h1><p>${"Plenty of genuine, real, hand-written content about this business. ".repeat(5)}</p><a href="tel:+15551234567">Call us</a></div></body></html>`;
+    const signals = analyzeWebsiteHtml(html);
+    expect(signals.headingCount).toBe(1);
+    expect(signals.isLikelyClientRenderedShell).toBe(false);
   });
 
   test("never counts script/style text as visible content", () => {

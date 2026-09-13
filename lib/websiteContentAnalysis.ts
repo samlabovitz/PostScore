@@ -25,6 +25,48 @@ function stripHtmlComments(html: string): string {
   return html.replace(/<!--[\s\S]*?-->/g, " ");
 }
 
+/** Below this many visible characters (and zero real headings), a page
+ * reads as having essentially no content at all — deliberately much
+ * stricter than lib/scoring.ts's THIN_CONTENT_CHARS (which flags a real,
+ * if thin, page for content_depth's own scoring): this threshold is only
+ * for recognizing an empty pre-render shell, never for judging a real
+ * page's depth. */
+const CSR_SHELL_MAX_TEXT_CHARS = 40;
+
+/** Real, checkable technical signals that a page's markup is a
+ * client-side app's mount point rather than its actual rendered content
+ * — the well-known container ids a handful of popular frameworks use
+ * (Nuxt, Next.js, and the generic "root"/"app" convention React/Vue
+ * starter templates default to), plus an explicit serverRendered:false
+ * flag some frameworks (Nuxt) embed in their hydration payload. None of
+ * these alone proves a shell — plenty of real, fully-rendered sites also
+ * happen to have a <div id="app">...</div> full of real static content —
+ * which is why detectClientRenderedShell below only trusts them in
+ * combination with near-zero visible text/headings. */
+const CSR_SHELL_MARKERS: RegExp[] = [
+  /id=["']__nuxt["']/i,
+  /id=["']__next["']/i,
+  /id=["']root["']/i,
+  /id=["']app["']/i,
+  /serverRendered["']?\s*:\s*false/i,
+];
+
+/**
+ * True only when a page both (a) reads as having essentially no real
+ * content AND (b) carries an actual technical signal of client-side
+ * rendering — see CSR_SHELL_MARKERS. Deliberately conjunctive, never
+ * inferred from thin content alone: a genuinely bare/broken landing page
+ * with no such marker still reads as bare, not "unreadable." This is
+ * what lets website.content_depth/website.contact_conversion
+ * (lib/scoring.ts) tell "we couldn't read this site" apart from "this
+ * site has no content" — the two must never be confused, since only one
+ * of them is honestly a failure worth reporting.
+ */
+function detectClientRenderedShell(html: string, visibleTextLength: number, headingCount: number): boolean {
+  if (visibleTextLength > CSR_SHELL_MAX_TEXT_CHARS || headingCount > 0) return false;
+  return CSR_SHELL_MARKERS.some((marker) => marker.test(html));
+}
+
 function extractTag(html: string, re: RegExp): string | null {
   const match = html.match(re);
   return match ? match[1] : null;
@@ -82,6 +124,8 @@ export function analyzeWebsiteHtml(html: string): WebsiteContentSignals {
   const lowerText = visibleText.toLowerCase();
   const hasCtaText = WEBSITE_CTA_PHRASES.some((phrase) => lowerText.includes(phrase));
 
+  const isLikelyClientRenderedShell = detectClientRenderedShell(clean, visibleTextLength, headingCount);
+
   return {
     hasTitle,
     hasMetaDescription,
@@ -91,5 +135,11 @@ export function analyzeWebsiteHtml(html: string): WebsiteContentSignals {
     hasPhoneLink,
     hasEmailLink,
     hasCtaText,
+    isLikelyClientRenderedShell,
+    // This module never calls PageSpeed — recovery (when isLikelyClientRenderedShell
+    // is true) is layered on afterward by lib/websiteAnalysis.ts's
+    // collectWebsiteAnalysis, which is the only thing that ever sets this
+    // to non-null.
+    renderedContentSignals: null,
   };
 }

@@ -26,9 +26,15 @@ const GOOD_WEBSITE_ANALYSIS: WebsiteAnalysis = {
     hasPhoneLink: true,
     hasEmailLink: true,
     hasCtaText: true,
+    isLikelyClientRenderedShell: false,
+    renderedContentSignals: null,
   },
   mobilePerformanceScore: 96,
   screenshotUrl: "https://example.com/screenshot.png",
+  additionalPages: [],
+  lastScreenshotRefreshAt: "2024-01-01T00:00:00.000Z",
+  hasAboutPage: true,
+  hasServicesPage: true,
   checkedAt: "2024-01-01T00:00:00.000Z",
 };
 
@@ -411,6 +417,140 @@ describe("suggestion -> projected score guarantee", () => {
   });
 });
 
+describe("client-side-rendered shell honesty (the Goldberg Hardware fix)", () => {
+  // A real static fetch of a JS-rendered site (e.g. a Nuxt
+  // serverRendered:false app) gets back an essentially empty page —
+  // every content signal reads exactly like a genuinely bare site would.
+  // isLikelyClientRenderedShell is what tells the two apart; these tests
+  // pin down that content_depth/contact_conversion treat it as an honest
+  // exclusion, never as a scored failure.
+  const CSR_SHELL_CONTENT: WebsiteAnalysis = {
+    ...GOOD_WEBSITE_ANALYSIS,
+    content: {
+      hasTitle: true,
+      hasMetaDescription: false,
+      hasViewportTag: false,
+      headingCount: 0,
+      visibleTextLength: 0,
+      hasPhoneLink: false,
+      hasEmailLink: false,
+      hasCtaText: false,
+      isLikelyClientRenderedShell: true,
+      // No PageSpeed recovery for this fixture — see the CSR_RECOVERED_*
+      // tests further below for the case where it succeeded.
+      renderedContentSignals: null,
+    },
+  };
+  const CSR_SHELL_INPUT: BusinessScoringInput = { ...PERFECT_INPUT, websiteAnalysis: CSR_SHELL_CONTENT };
+
+  test("content_depth excludes itself (NOT_FOUND) rather than scoring an empty shell as a bare page", () => {
+    const breakdown = scoreBusiness(CSR_SHELL_INPUT);
+    const check = breakdown.checks.find((c) => c.id === "website.content_depth")!;
+    expect(check.confidence).toBe("NOT_FOUND");
+    expect(check.earnedPoints).toBeNull();
+    expect(check.explanation).toContain("renders its content with JavaScript");
+    expect(check.explanation).not.toContain("bare landing page");
+  });
+
+  test("contact_conversion excludes itself (NOT_FOUND) rather than reporting no contact info found", () => {
+    const breakdown = scoreBusiness(CSR_SHELL_INPUT);
+    const check = breakdown.checks.find((c) => c.id === "website.contact_conversion")!;
+    expect(check.confidence).toBe("NOT_FOUND");
+    expect(check.earnedPoints).toBeNull();
+    expect(check.explanation).toContain("renders its content with JavaScript");
+    expect(check.explanation).not.toContain("no click-to-call");
+  });
+
+  test("a CSR-shell exclusion never generates a suggestion (it's excluded, not a fixable failure)", () => {
+    const { suggestions } = getScoreWithSuggestions(CSR_SHELL_INPUT);
+    expect(suggestions.find((s) => s.checkId === "website.content_depth")).toBeUndefined();
+    expect(suggestions.find((s) => s.checkId === "website.contact_conversion")).toBeUndefined();
+  });
+
+  test("checks unrelated to content (HTTPS, has-website, performance) still score normally for a CSR-shell site", () => {
+    const breakdown = scoreBusiness(CSR_SHELL_INPUT);
+    expect(breakdown.checks.find((c) => c.id === "website.has_website")!.confidence).toBe("VERIFIED");
+    expect(breakdown.checks.find((c) => c.id === "website.https")!.confidence).toBe("VERIFIED");
+    expect(breakdown.checks.find((c) => c.id === "website.performance_mobile")!.confidence).toBe("VERIFIED");
+  });
+
+  test("a genuinely bare site (no CSR marker) still scores content_depth/contact_conversion as real failures, not excluded", () => {
+    const bareButRealInput: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      websiteAnalysis: {
+        ...GOOD_WEBSITE_ANALYSIS,
+        content: { ...CSR_SHELL_CONTENT.content!, isLikelyClientRenderedShell: false },
+      },
+    };
+    const breakdown = scoreBusiness(bareButRealInput);
+    const content = breakdown.checks.find((c) => c.id === "website.content_depth")!;
+    const contact = breakdown.checks.find((c) => c.id === "website.contact_conversion")!;
+    expect(content.confidence).toBe("VERIFIED");
+    expect(content.earnedPoints).toBe(1); // hasTitle: true is the only signal earning points here
+    expect(contact.confidence).toBe("VERIFIED");
+    expect(contact.earnedPoints).toBe(0);
+  });
+
+  test("content_depth scores a CSR site for real once PageSpeed recovers title/meta/viewport/headings, capped at 4.5/6 — never the length points", () => {
+    const recoveredInput: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      websiteAnalysis: {
+        ...GOOD_WEBSITE_ANALYSIS,
+        content: {
+          ...CSR_SHELL_CONTENT.content!,
+          renderedContentSignals: { hasTitle: true, hasMetaDescription: true, hasViewportTag: true, hasHeadings: true },
+        },
+      },
+    };
+    const breakdown = scoreBusiness(recoveredInput);
+    const content = breakdown.checks.find((c) => c.id === "website.content_depth")!;
+    expect(content.confidence).toBe("VERIFIED");
+    expect(content.earnedPoints).toBe(4.5); // title 1 + meta 1 + viewport 1.5 + headings 1 — length never credited
+    expect(content.explanation).toContain("verified using Google's real rendered-page audit");
+    expect(content.explanation).not.toContain("bare landing page");
+  });
+
+  test("content_depth reports a PageSpeed-confirmed absence honestly, distinct from an unconfirmed signal", () => {
+    const partialInput: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      websiteAnalysis: {
+        ...GOOD_WEBSITE_ANALYSIS,
+        content: {
+          ...CSR_SHELL_CONTENT.content!,
+          // Lighthouse genuinely found no title, confirmed no meta
+          // description, and the viewport audit was missing from the
+          // response entirely (e.g. a partial API response) — these two
+          // failure modes must read differently.
+          renderedContentSignals: { hasTitle: false, hasMetaDescription: false, hasViewportTag: null, hasHeadings: true },
+        },
+      },
+    };
+    const breakdown = scoreBusiness(partialInput);
+    const content = breakdown.checks.find((c) => c.id === "website.content_depth")!;
+    expect(content.earnedPoints).toBe(1); // headings only: 0 + 0 + 0 (unconfirmed viewport) + 1
+    expect(content.explanation).toContain("no page title found");
+    expect(content.explanation).toContain("no meta description found");
+    expect(content.explanation).not.toContain("viewport"); // unconfirmed, not reported as a failure
+  });
+
+  test("contact_conversion still fully excludes itself for a CSR site even when content_depth recovered real signals", () => {
+    const recoveredInput: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      websiteAnalysis: {
+        ...GOOD_WEBSITE_ANALYSIS,
+        content: {
+          ...CSR_SHELL_CONTENT.content!,
+          renderedContentSignals: { hasTitle: true, hasMetaDescription: true, hasViewportTag: true, hasHeadings: true },
+        },
+      },
+    };
+    const breakdown = scoreBusiness(recoveredInput);
+    const contact = breakdown.checks.find((c) => c.id === "website.contact_conversion")!;
+    expect(contact.confidence).toBe("NOT_FOUND");
+    expect(contact.earnedPoints).toBeNull();
+  });
+});
+
 describe("businessRowToScoringInput adapter", () => {
   test("maps a saved businesses row into scoring input without inventing data", () => {
     const input = businessRowToScoringInput({
@@ -487,6 +627,10 @@ describe("businessRowToScoringInput adapter", () => {
       content: null,
       mobilePerformanceScore: null,
       screenshotUrl: null,
+      additionalPages: [],
+      lastScreenshotRefreshAt: null,
+      hasAboutPage: false,
+      hasServicesPage: false,
       checkedAt: "2024-01-01T00:00:00.000Z",
     });
 

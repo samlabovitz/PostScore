@@ -1103,3 +1103,57 @@ create policy "Owners can update their business's website screenshot"
         and name = b.id::text || '.png'
     )
   );
+
+-- ---------------------------------------------------------------------------
+-- Monthly email report — schema only (lib/monthlyReport.ts's pure
+-- buildMonthlyReportContent already exists; the cron job that actually
+-- generates/sends a report, and writes the row below, is a later piece)
+-- ---------------------------------------------------------------------------
+
+-- Opt-out, not opt-in: every business starts subscribed, since this app
+-- has no premium/paid tier to gate the feature behind — an owner turns
+-- this off if they don't want the monthly email, rather than having to
+-- turn it on.
+alter table public.businesses
+  add column if not exists monthly_report_enabled boolean not null default true;
+
+-- One row per report actually generated/sent — this is both the send-log
+-- (so the cron job can tell "has this business already gotten a report
+-- this run" and never double-send) and next month's baseline pointer:
+-- the report after this one diffs against current_score_id here, never
+-- an arbitrary date-based lookback. Rows are never overwritten, same
+-- append-only history pattern as `scores`/`competitor_scans` above.
+create table if not exists public.monthly_reports (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses (id) on delete cascade,
+  -- null = this was the business's first-ever report — an honest
+  -- baseline with no prior scan to diff against (see
+  -- buildMonthlyReportContent in lib/monthlyReport.ts), never a
+  -- fabricated "no change" delta.
+  baseline_score_id uuid references public.scores (id),
+  current_score_id uuid not null references public.scores (id),
+  sent_at timestamptz not null default now()
+);
+
+create index if not exists monthly_reports_business_id_sent_at_idx
+  on public.monthly_reports (business_id, sent_at desc);
+
+alter table public.monthly_reports enable row level security;
+
+-- Read-only for regular users — this only ever needs to power the
+-- in-app teaser's "next report due"/"last sent" display. The cron job
+-- that actually creates these rows runs as the service-role admin
+-- client (lib/supabase/admin.ts), which bypasses RLS entirely by
+-- design — deliberately no insert/update/delete policy here, so a
+-- regular authenticated user has no path to write a monthly_reports row
+-- of their own, real or fake.
+drop policy if exists "Users can view monthly reports for their own businesses" on public.monthly_reports;
+create policy "Users can view monthly reports for their own businesses"
+  on public.monthly_reports for select
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = monthly_reports.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
