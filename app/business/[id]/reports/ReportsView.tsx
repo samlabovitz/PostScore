@@ -2,6 +2,7 @@ import Link from "next/link";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ScoreHistoryChart } from "@/components/reports/ScoreHistoryChart";
+import { MonthlyEmailReportCard } from "@/components/reports/MonthlyEmailReportCard";
 import { MonthlyRecapCard } from "@/components/reports/MonthlyRecapCard";
 import { VerifiedFixesCard } from "@/components/reports/VerifiedFixesCard";
 import type { GetReportsDataResult } from "@/app/actions/reports";
@@ -33,6 +34,7 @@ export function ReportsView({
 
       <SectionHeading title="Score over time" />
       <ScoreHistoryChart history={reports.history} />
+      <MonthlyEmailReportCard businessId={businessId} status={reports.monthlyEmailReport} />
 
       <SectionHeading title="Monthly recap" />
       <MonthlyRecapCard businessName={businessName ?? "Your business"} recap={reports.recap} />

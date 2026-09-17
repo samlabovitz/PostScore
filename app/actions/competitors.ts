@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import {
   findAndScoreCompetitors,
@@ -60,6 +61,22 @@ export async function getCompetitors(businessId: string): Promise<GetCompetitors
     return { status: "unauthenticated" };
   }
 
+  return getCompetitorsWithClient(supabase, businessId);
+}
+
+/**
+ * The real logic behind getCompetitors() — see scoreBusinessWithClient's
+ * doc comment (app/actions/scoring.ts) for why this accepts an injected
+ * client rather than creating its own. Reused by the monthly-report cron
+ * route via the service-role admin client, so cron's competitor standing
+ * comes from the exact same live-scan-and-rank logic
+ * (lib/competitors.ts's findAndScoreCompetitors) the interactive
+ * Competitors page uses — never a second implementation.
+ */
+export async function getCompetitorsWithClient(
+  supabase: SupabaseClient,
+  businessId: string
+): Promise<GetCompetitorsResult> {
   const { data: business, error } = await supabase
     .from("businesses")
     .select(
@@ -125,13 +142,32 @@ export type SaveCompetitorScanResult =
  * never overwritten, so history can accumulate like `scores` does.
  */
 export async function saveCompetitorScan(businessId: string): Promise<SaveCompetitorScanResult> {
-  const fetched = await getCompetitors(businessId);
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { status: "unauthenticated" };
+  }
+
+  return saveCompetitorScanWithClient(supabase, businessId);
+}
+
+/** The real logic behind saveCompetitorScan() — see getCompetitorsWithClient's
+ * doc comment for why this accepts an injected client rather than
+ * creating its own. Reused by the monthly-report cron route. */
+export async function saveCompetitorScanWithClient(
+  supabase: SupabaseClient,
+  businessId: string
+): Promise<SaveCompetitorScanResult> {
+  const fetched = await getCompetitorsWithClient(supabase, businessId);
   if (fetched.status !== "ok") return fetched;
   if (fetched.result.status !== "ok" || fetched.result.ranked.length === 0) {
     return { status: "no_data" };
   }
 
-  const supabase = createClient();
   const scanId = randomUUID();
 
   const rows = fetched.result.ranked.map((r) => ({

@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
+import { MONTHLY_REPORTS_LIVE } from "@/lib/monthlyReportsFeatureFlag";
 
 /** One real saved scan, exactly what the Reports page needs to plot the
  * score-over-time chart and diff listing changes — a narrower query than
@@ -17,6 +18,21 @@ export interface ReportsScoreRow {
    * lib/profileChanges.ts). Null for any scan saved before that column
    * existed — callers must treat that honestly as "nothing to diff from." */
   profile_snapshot_json: ProfileSnapshot | null;
+}
+
+/** The Reports page's real, staged status for the monthly EMAIL report
+ * feature — distinct from MonthlyRecap above, which is the in-app
+ * scan-to-scan recap, not the emailed one. */
+export interface MonthlyEmailReportStatus {
+  /** See MONTHLY_REPORTS_LIVE. False means every field below is moot —
+   * the UI must show an honest "coming soon" state regardless of them. */
+  live: boolean;
+  /** This business's own real monthly_report_enabled column. */
+  enabled: boolean;
+  /** The most recent real monthly_reports.sent_at for this business —
+   * owners already have SELECT on that table (see supabase/schema.sql).
+   * null if no report has ever actually been sent. */
+  lastSentAt: string | null;
 }
 
 export interface MonthlyRecap {
@@ -57,6 +73,9 @@ export type GetReportsDataResult =
        * (Phase 1 has no source of this data at all) and, later, real
        * counts once that data actually flows in. */
       gbpConnected: boolean;
+      /** The Reports page's monthly EMAIL report card data — see
+       * MonthlyEmailReportStatus. */
+      monthlyEmailReport: MonthlyEmailReportStatus;
     }
   | { status: "unauthenticated" }
   | { status: "not_found" };
@@ -81,7 +100,7 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
 
   const { data: business, error: businessError } = await supabase
     .from("businesses")
-    .select("name")
+    .select("name, monthly_report_enabled")
     .eq("id", businessId)
     .single();
 
@@ -142,6 +161,16 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
 
   const gbpStatus = await getGbpConnectionStatus(businessId);
 
+  // Owners have real SELECT on monthly_reports (see supabase/schema.sql)
+  // — this is a plain RLS-scoped read, not a special case.
+  const { data: lastReport } = await supabase
+    .from("monthly_reports")
+    .select("sent_at")
+    .eq("business_id", businessId)
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   return {
     status: "ok",
     businessName: business.name,
@@ -150,5 +179,10 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
     listingChangesDetected,
     recap,
     gbpConnected: gbpStatus.status === "ok" && gbpStatus.connected,
+    monthlyEmailReport: {
+      live: MONTHLY_REPORTS_LIVE,
+      enabled: business.monthly_report_enabled,
+      lastSentAt: lastReport?.sent_at ?? null,
+    },
   };
 }

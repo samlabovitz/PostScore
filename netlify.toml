@@ -1,0 +1,18 @@
+# Deliberately narrow: this only declares the Netlify Functions directory
+# (netlify/functions/monthly-reports-scheduler.mts,
+# netlify/functions/monthly-reports-batch.mts). Their own schedule/
+# background behavior is declared inline in each file's own `export const
+# config` — the modern, self-contained approach Netlify recommends —
+# so no [functions."name"] blocks are needed here for that.
+#
+# No [build] section here on purpose: this repo had no netlify.toml
+# before this file, meaning the site's build command/publish
+# directory/Next.js Runtime plugin are almost certainly already
+# configured directly in the Netlify dashboard for this site today. If
+# this file grows a [build] block later, make sure it actually MATCHES
+# the dashboard's existing settings rather than silently overriding
+# them — netlify.toml's [build] takes precedence over the dashboard once
+# present.
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"

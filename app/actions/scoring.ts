@@ -1,5 +1,6 @@
 "use server";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import {
   businessRowToScoringInput,
@@ -11,7 +12,7 @@ import {
 import { reconcileTasks, type TaskRow } from "@/lib/actionPlan";
 import { buildProfileSnapshot, diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
 import { lookupBusinessByPlaceId } from "@/lib/google/places";
-import { saveBusiness } from "@/app/actions/businesses";
+import { saveBusinessWithClient } from "@/app/actions/businesses";
 
 export interface BusinessRecord extends BusinessScoringRow {
   id: string;
@@ -43,6 +44,27 @@ export async function scoreBusinessById(businessId: string): Promise<ScoreBusine
     return { status: "unauthenticated" };
   }
 
+  return scoreBusinessWithClient(supabase, businessId);
+}
+
+/**
+ * The real logic behind scoreBusinessById(), parameterized by an
+ * already-resolved Supabase client instead of creating its own RLS-
+ * scoped one and checking the session — reused by the monthly-report
+ * cron route (via the service-role admin client, which has no session
+ * to check and no RLS to rely on) so cron and the interactive Website
+ * page score a business through the exact same code, never a second
+ * scoring path that could drift on a future honesty fix. With the
+ * RLS-scoped client, `not_found` still means "doesn't exist OR isn't
+ * this session's own business" exactly as before; with the admin
+ * client, it purely means "doesn't exist" — the cron caller is
+ * responsible for only ever passing a businessId it already looked up
+ * itself.
+ */
+export async function scoreBusinessWithClient(
+  supabase: SupabaseClient,
+  businessId: string
+): Promise<ScoreBusinessResult> {
   const { data: business, error } = await supabase
     .from("businesses")
     .select(
@@ -86,10 +108,32 @@ export type SaveScoreSnapshotResult =
  * that live re-fetch first, then calls this to score and persist it.
  */
 export async function saveScoreSnapshot(businessId: string): Promise<SaveScoreSnapshotResult> {
-  const scored = await scoreBusinessById(businessId);
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { status: "unauthenticated" };
+  }
+
+  return saveScoreSnapshotWithClient(supabase, businessId);
+}
+
+/**
+ * The real logic behind saveScoreSnapshot() — see scoreBusinessWithClient's
+ * doc comment for why this accepts an injected client rather than
+ * creating its own. Reused as-is by rescanBusinessWithClient below and
+ * by the monthly-report cron route.
+ */
+export async function saveScoreSnapshotWithClient(
+  supabase: SupabaseClient,
+  businessId: string
+): Promise<SaveScoreSnapshotResult> {
+  const scored = await scoreBusinessWithClient(supabase, businessId);
   if (scored.status !== "ok") return scored;
 
-  const supabase = createClient();
   const { data, error } = await supabase
     .from("scores")
     .insert({
@@ -137,7 +181,7 @@ export async function saveScoreSnapshot(businessId: string): Promise<SaveScoreSn
  * that was just successfully saved.
  */
 async function reconcileActionPlanTasks(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   businessId: string,
   breakdown: ScoreBreakdown,
   scoreId: string
@@ -190,21 +234,18 @@ export type RescanBusinessResult =
  * Google data gets refreshed after it was first added: re-fetches this
  * business's LIVE data from Google Places by its real place_id (a fresh
  * network call — never a re-read of whatever's already saved), then
- * hands the result to saveBusiness() (app/actions/businesses.ts), which
- * overwrites the saved row AND re-runs the real HTTPS probe on the
+ * hands the result to saveBusinessWithClient() (app/actions/businesses.ts),
+ * which overwrites the saved row AND re-runs the real HTTPS probe on the
  * current website, exactly like the original add-business flow. Only
- * once that's landed does it call saveScoreSnapshot() to score the
- * now-current data, persist a new `scores` row, and run the pending-
+ * once that's landed does it call saveScoreSnapshotWithClient() to score
+ * the now-current data, persist a new `scores` row, and run the pending-
  * verification reconciliation — so a task only ever gets confirmed by
  * this real re-detected data, never by the click itself. Also diffs the
  * profile snapshot from just before the re-fetch against the fresh one,
  * so the caller can show an immediate "what changed" summary without
  * waiting on a page reload.
  *
- * Exactly one Google Places Details call per invocation — this is a
- * manual, owner-triggered action with no looping or scheduling; a
- * cadence-based auto-rescan can call this same function later without
- * any change here.
+ * Exactly one Google Places Details call per invocation.
  */
 export async function rescanBusiness(businessId: string): Promise<RescanBusinessResult> {
   const supabase = createClient();
@@ -217,9 +258,29 @@ export async function rescanBusiness(businessId: string): Promise<RescanBusiness
     return { status: "unauthenticated" };
   }
 
+  return rescanBusinessWithClient(supabase, businessId);
+}
+
+/**
+ * The real logic behind rescanBusiness() — see scoreBusinessWithClient's
+ * doc comment for why this accepts an injected client rather than
+ * creating its own. This is the SAME re-scan the interactive "Re-scan
+ * now" button runs, parameterized so the monthly-report cron route can
+ * run the identical Google-refetch → save → score → diff sequence,
+ * through the service-role admin client, for a business it doesn't have
+ * a session for. Reads the business's own real owner_id off the row
+ * itself (never a client-supplied value) so saveBusinessWithClient's
+ * upsert still lands on the exact same owner+place_id row it always has.
+ */
+export async function rescanBusinessWithClient(
+  supabase: SupabaseClient,
+  businessId: string
+): Promise<RescanBusinessResult> {
   const { data: before, error: beforeError } = await supabase
     .from("businesses")
-    .select("place_id, phone, website, opening_hours, categories, photo_count, rating, review_count, business_status")
+    .select(
+      "owner_id, place_id, phone, website, opening_hours, categories, photo_count, rating, review_count, business_status"
+    )
     .eq("id", businessId)
     .single();
 
@@ -247,14 +308,14 @@ export async function rescanBusiness(businessId: string): Promise<RescanBusiness
     return { status: "error", message: lookup.message };
   }
 
-  const saved = await saveBusiness(lookup.place);
+  const saved = await saveBusinessWithClient(supabase, before.owner_id, lookup.place);
   if (saved.status !== "saved") {
     return saved.status === "unauthenticated"
       ? { status: "unauthenticated" }
       : { status: "error", message: saved.status === "error" ? saved.message : "Could not save the fresh listing data." };
   }
 
-  const scoreResult = await saveScoreSnapshot(businessId);
+  const scoreResult = await saveScoreSnapshotWithClient(supabase, businessId);
   if (scoreResult.status !== "saved") {
     return scoreResult;
   }

@@ -11,6 +11,7 @@
     "email:dev": "email dev --dir emails"
   },
   "dependencies": {
+    "@netlify/functions": "^6.0.0",
     "@react-email/components": "^1.0.12",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
@@ -23,6 +24,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@react-email/ui": "^6.9.5",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18",

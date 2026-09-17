@@ -1,5 +1,6 @@
 "use server";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { PlaceDetails } from "@/lib/google/places";
 import { checkWebsiteHttps } from "@/lib/websiteHttps";
@@ -61,6 +62,31 @@ export async function saveBusiness(
     return { status: "unauthenticated" };
   }
 
+  return saveBusinessWithClient(supabase, user.id, place);
+}
+
+/**
+ * The real logic behind saveBusiness(), parameterized by an already-
+ * resolved Supabase client and ownerId instead of creating its own
+ * RLS-scoped client and reading the session — so a caller that already
+ * knows exactly which owner a business belongs to (the interactive
+ * "use server" wrapper above, via its own session; the monthly-report
+ * cron route, via the businesses row it's already iterating, using the
+ * service-role admin client) can reuse the EXACT same save/analyze/
+ * screenshot-cooldown behavior, never a second reimplementation that
+ * could drift from this one on a future honesty fix. The interactive
+ * path's RLS-scoped client still enforces that a real user can only ever
+ * pass their OWN id here (nothing downstream re-derives ownerId from the
+ * client); the admin client has no such enforcement, so every cron
+ * caller is responsible for only ever passing a real, already-looked-up
+ * owner_id for the exact business it means to update — never a
+ * client-suppliable value.
+ */
+export async function saveBusinessWithClient(
+  supabase: SupabaseClient,
+  ownerId: string,
+  place: PlaceDetails
+): Promise<SaveBusinessResult> {
   // Same owner+place key the upsert below conflicts on — this is how we
   // recognize "this exact business already exists" and read whatever
   // screenshot state it already has, before deciding whether this scan
@@ -71,7 +97,7 @@ export async function saveBusiness(
           await supabase
             .from("businesses")
             .select("website_analysis_json")
-            .eq("owner_id", user.id)
+            .eq("owner_id", ownerId)
             .eq("place_id", place.placeId)
             .maybeSingle()
         ).data?.website_analysis_json ?? null
@@ -131,7 +157,7 @@ export async function saveBusiness(
     .from("businesses")
     .upsert(
       {
-        owner_id: user.id,
+        owner_id: ownerId,
         place_id: place.placeId,
         name: place.name,
         address: place.formattedAddress,
@@ -166,10 +192,12 @@ export async function saveBusiness(
   if (captureScreenshots && websiteAnalysis) {
     // Ownership invariant: every storage path uploadWebsiteScreenshots
     // writes to is derived only from data.id, the id just returned by
-    // the RLS-scoped upsert above for a row owned by `user.id` — never
-    // from anything client-supplied. That's what makes it safe for that
+    // the upsert above for a row owned by `ownerId` — never from
+    // anything client-supplied. That's what makes it safe for that
     // helper to write with the service-role client, which bypasses RLS
-    // entirely: ownership was already proven before we get here.
+    // entirely: ownership was already proven before we get here (by the
+    // interactive path's own session, or by the cron caller's own
+    // businesses-table lookup — see saveBusinessWithClient's doc comment).
     //
     // This runs (and stamps lastScreenshotRefreshAt below) even if
     // analysis.screenshotBytes/additionalPages both came back empty — a
@@ -381,6 +409,50 @@ export async function updateBusinessTypeOverride(
   }
 
   return { status: "ok", businessTypeOverride: data.business_type_override };
+}
+
+export type SetMonthlyReportEnabledResult =
+  | { status: "ok"; enabled: boolean }
+  | { status: "unauthenticated" }
+  | { status: "not_found" }
+  | { status: "error"; message: string };
+
+/**
+ * The owner's own on/off preference for the monthly email report —
+ * RLS-scoped exactly like every other owner setting on this table (the
+ * general "Users can update their own businesses" policy in
+ * supabase/schema.sql already covers this column; no new policy needed).
+ * This is the same monthly_report_enabled column the unsubscribe page
+ * (app/unsubscribe/page.tsx) and the cron route both read — an owner can
+ * always turn reports back on here after unsubscribing from an email,
+ * since unsubscribing only ever flips this one boolean.
+ */
+export async function setMonthlyReportEnabled(
+  businessId: string,
+  enabled: boolean
+): Promise<SetMonthlyReportEnabledResult> {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { status: "unauthenticated" };
+  }
+
+  const { data, error } = await supabase
+    .from("businesses")
+    .update({ monthly_report_enabled: enabled })
+    .eq("id", businessId)
+    .select("monthly_report_enabled")
+    .single();
+
+  if (error || !data) {
+    return { status: "not_found" };
+  }
+
+  return { status: "ok", enabled: data.monthly_report_enabled };
 }
 
 export interface MyBusinessRow {

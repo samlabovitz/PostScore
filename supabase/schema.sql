@@ -1157,3 +1157,56 @@ create policy "Users can view monthly reports for their own businesses"
         and businesses.owner_id = auth.uid ()
     )
   );
+
+-- A real, unguessable per-business secret the unsubscribe link
+-- (app/unsubscribe/page.tsx) checks against — never the business's own
+-- id alone, which is guessable/enumerable and would let anyone flip a
+-- stranger's monthly_report_enabled off. gen_random_uuid() is a
+-- cryptographically strong generator (already used for every primary
+-- key in this file) and, as a VOLATILE default expression, Postgres
+-- evaluates it separately for every existing row during this ALTER —
+-- so this backfills a genuinely distinct token per business, never the
+-- same value repeated. No new extension required (gen_random_uuid() is
+-- built into modern Postgres). Dashes are stripped only for a slightly
+-- shorter, plainer-looking URL — the token's entropy is unchanged.
+--
+-- Deliberately not exposed to the owner-scoped RLS client anywhere in
+-- this app: only ever read/written by the service-role admin client
+-- (the cron route that builds the email's unsubscribe link, and the
+-- unsubscribe page itself), so a regular authenticated user has no way
+-- to read another business's token even if they somehow knew its id.
+alter table public.businesses
+  add column if not exists unsubscribe_token text not null
+    default replace(gen_random_uuid()::text, '-', '');
+
+create unique index if not exists businesses_unsubscribe_token_unique
+  on public.businesses (unsubscribe_token);
+
+-- Closes a real race the app-level idempotency check in
+-- app/api/cron/monthly-reports/route.ts can only narrow, never fully
+-- close on its own: that check is a plain check-then-act read (SELECT
+-- for an existing row, then, much later, INSERT one), so two genuinely
+-- concurrent runs — e.g. a manual "Run now" overlapping the real
+-- scheduled one — could both pass the check before either has written
+-- anything. This unique index is the actual guarantee: at most one row
+-- can ever exist for the same business in the same real calendar month,
+-- full stop, enforced by Postgres itself regardless of how many
+-- concurrent processes are racing to insert one.
+--
+-- `sent_at at time zone 'utc'` converts the stored timestamptz into a
+-- plain UTC-based timestamp before truncating to the month — matching
+-- exactly how the route itself computes "this calendar month"
+-- (Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, ...) in
+-- handleCronRun), so the database's notion of "same month" can never
+-- quietly disagree with the app's. Without the explicit UTC conversion,
+-- date_trunc('month', sent_at) would truncate using whatever timezone
+-- the connection happens to be in — not what either side actually means.
+--
+-- Note for whoever applies this: if any duplicate (business_id, month)
+-- pairs already exist in monthly_reports, this CREATE will fail with a
+-- duplicate-key error — resolve those rows by hand first (there
+-- shouldn't be any yet; MONTHLY_REPORTS_LIVE has stayed false through
+-- every piece of this feature so far, so no real report has gone out to
+-- create one).
+create unique index if not exists monthly_reports_one_per_business_per_month
+  on public.monthly_reports (business_id, date_trunc('month', sent_at at time zone 'utc'));

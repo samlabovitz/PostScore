@@ -15,7 +15,7 @@
 // zero" rule in lib/profileChanges.ts.
 
 import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "./profileChanges";
-import type { Grade } from "./scoring";
+import { generateSuggestions, type Grade, type ScoreBreakdown } from "./scoring";
 
 /**
  * One real saved scan, exactly the fields buildMonthlyReportContent
@@ -32,6 +32,16 @@ export interface MonthlyReportScoreRow {
   /** Real Google listing fields at scan time — null for a scan saved
    * before profile-snapshot tracking existed. Never treated as zero. */
   profileSnapshot: ProfileSnapshot | null;
+  /** The real, full per-check scoring breakdown for this exact scan —
+   * the same `breakdown_json` every `scores` row already stores (see
+   * supabase/schema.sql), never recomputed or estimated here. Unlike
+   * profileSnapshot this is never null: breakdown_json has been a
+   * required column since the `scores` table was created, so every real
+   * scan row has one. Only the CURRENT row's breakdown is ever read (by
+   * buildFocus below) — a baseline row carries one too, for symmetry,
+   * but nothing here diffs it against the current scan's.
+   */
+  breakdown: ScoreBreakdown;
 }
 
 /** The subject business's real standing in one real competitor scan —
@@ -40,6 +50,17 @@ export interface MonthlyReportScoreRow {
 export interface CompetitorSnapshot {
   rank: number;
   totalCompetitors: number;
+  /** The real review count of whichever business ranked #1 in this same
+   * competitor scan — a genuine fact from that scan's own
+   * RankedCompetitor list (see lib/competitors.ts), never estimated.
+   * null when that scan didn't produce a usable review count for the
+   * top-ranked business (e.g. Google returned none). Used only to
+   * compute the honest "the top-ranked business has N more reviews"
+   * focus pointer below — never shown as a raw number on its own, since
+   * without the subject's own real review count alongside it, it's not
+   * a comparison anyone could act on.
+   */
+  topCompetitorReviewCount: number | null;
 }
 
 /** Both sides of a real competitor-rank comparison — the caller only
@@ -91,6 +112,51 @@ export type ListingChangesResult =
   | { available: true; changes: ProfileChange[] }
   | { available: false };
 
+/** What kind of real fact a closing focus pointer is grounded in —
+ * exists so a caller (or a test) can verify every pointer traces back
+ * to something real, never free-written advice. */
+export type FocusPointerKind = "score_gap" | "competitor_gap" | "listing_issue" | "general_tip";
+
+/** One line in the closing "what to focus on" section. Every pointer is
+ * assembled — never generated — from a real fact this scan already
+ * produced:
+ *   - "score_gap": a real check from THIS scan's own breakdown that's
+ *     currently losing points, using that check's own real explanation/
+ *     advice copy (see lib/scoring.ts's CHECKS) — never hand-written per
+ *     report. `checkId` names exactly which real check, so this can
+ *     always be traced back to the breakdown it came from.
+ *   - "competitor_gap": a real, computed gap between the subject's own
+ *     real current review count and the top-ranked competitor's real
+ *     review count from the same competitor scan.
+ *   - "listing_issue": a real, already-detected change from
+ *     diffProfileSnapshots (the same list rendered under "Listing
+ *     changes" elsewhere in the report) — never a separately-invented
+ *     description.
+ *   - "general_tip": the ONE exception to "grounded in this business's
+ *     own data" — a fixed, vetted, evergreen tip from GENERAL_FOCUS_TIPS
+ *     below, used only to fill a genuinely empty remaining slot, and
+ *     never phrased as a claim about this specific business (no
+ *     "checkId", since it isn't tied to one).
+ */
+export interface FocusPointer {
+  kind: FocusPointerKind;
+  text: string;
+  /** The real check this pointer came from — set only for "score_gap". */
+  checkId?: string;
+}
+
+export interface MonthlyReportFocus {
+  /** True only when this scan's real breakdown, competitor standing, and
+   * listing changes genuinely had nothing worth flagging — a real,
+   * rare, near-perfect result, never a stand-in for "we chose not to
+   * show a tip." When true, `pointers` is always empty; the email shows
+   * an honest "nothing notable this month" line instead of a general
+   * tip, so a near-perfect business is never handed filler advice it
+   * doesn't need. */
+  nothingNotable: boolean;
+  pointers: FocusPointer[];
+}
+
 export type MonthlyReportKind = "baseline" | "update";
 
 export interface MonthlyReportContent {
@@ -110,6 +176,11 @@ export interface MonthlyReportContent {
    * counts against steadiness — this is about what moved among what we
    * could check, not a claim about what we couldn't. */
   isSteady: boolean;
+  /** The closing "this month & what to focus on" section — see
+   * MonthlyReportFocus. Assembled entirely from this same real content
+   * (the current scan's breakdown, the real competitor/listing facts
+   * above), never a separately generated summary. */
+  focus: MonthlyReportFocus;
 }
 
 function roundTo1(n: number): number {
@@ -220,6 +291,122 @@ function buildMovementSummary(
   return `${capitalizeFirst(parts.join("; "))}.`;
 }
 
+/** A small, fixed, hand-vetted set of evergreen best-practice tips —
+ * never generated, never claiming anything about a specific business's
+ * own data. Used only as a last-resort filler (see buildFocus) when a
+ * real scan genuinely didn't produce enough data-derived pointers to
+ * fill the section, and always clearly framed as general guidance, not
+ * a status report on this business. Deliberately covers ground the
+ * scoring engine doesn't measure at all (e.g. Google Business Profile
+ * posts aren't a scored check), so it can never contradict or duplicate
+ * a real finding shown elsewhere in the same report. */
+export const GENERAL_FOCUS_TIPS: FocusPointer[] = [
+  {
+    kind: "general_tip",
+    text: "General tip: posting an update or offer to your Google Business Profile every so often helps keep your listing active in local search — this isn't something we currently measure, so treat it as general guidance, not a status report.",
+  },
+];
+
+/** Caps how many of the biggest real, currently-losing checks from this
+ * scan's own breakdown can become "score_gap" pointers — see
+ * buildFocus's overall MAX_FOCUS_POINTERS cap for the section as a
+ * whole. */
+const MAX_SCORE_GAP_POINTERS = 2;
+
+/** Real, currently-losing checks from this scan's own breakdown, biggest
+ * opportunity first — literally generateSuggestions()'s own output
+ * (the same real ranking the Website/action-plan pages already show
+ * this business), never a separately hand-picked check. */
+function scoreGapPointers(breakdown: ScoreBreakdown): FocusPointer[] {
+  return generateSuggestions(breakdown)
+    .filter((s) => s.promisedPoints > 0)
+    .slice(0, MAX_SCORE_GAP_POINTERS)
+    .map((s, i) => ({
+      kind: "score_gap" as const,
+      text:
+        i === 0
+          ? `Your biggest opportunity: ${s.label} — ${s.advice}`
+          : `Also worth a look: ${s.label} — ${s.advice}`,
+      checkId: s.checkId,
+    }));
+}
+
+/** A real, positive gap between the top-ranked business's real review
+ * count and the subject's own real current review count, in the same
+ * competitor scan — null (no pointer) unless every real fact it needs
+ * is actually available: a real competitor comparison, a real current
+ * review count, the subject genuinely isn't already #1, and the top
+ * competitor's own review count was itself real. Never estimated when
+ * any of those is missing. */
+function competitorGapPointer(competitor: CompetitorMovement, reviewCount: MetricResult): FocusPointer | null {
+  if (!competitor.available || !reviewCount.available) return null;
+  if (competitor.current.rank <= 1) return null;
+  const topReviews = competitor.current.topCompetitorReviewCount;
+  if (topReviews === null) return null;
+  const gap = topReviews - reviewCount.current;
+  if (gap <= 0) return null;
+  return {
+    kind: "competitor_gap",
+    text: `The top-ranked business near you has ${gap} more review${gap === 1 ? "" : "s"} than you — closing that gap moves your ranking.`,
+  };
+}
+
+/** A real, already-detected listing change worth the owner's attention —
+ * scoped to the fields most likely to actually matter operationally
+ * (phone/website/status), never the full raw list already shown
+ * elsewhere in the report (categories/photos churn is real but rarely
+ * something to "focus on"). Picks diffProfileSnapshots' own first match,
+ * never a separately-invented description. */
+function listingIssuePointer(listingChanges: ListingChangesResult): FocusPointer | null {
+  if (!listingChanges.available) return null;
+  const notable = listingChanges.changes.find(
+    (c) => c.field === "phone" || c.field === "website" || c.field === "status"
+  );
+  if (!notable) return null;
+  return { kind: "listing_issue", text: `Listing change worth a look: ${notable.description}` };
+}
+
+/** How many pointers (data-derived plus, at most, one general tip) the
+ * closing focus section ever shows — enough to feel like real,
+ * actionable guidance without turning into a second action plan. */
+const MAX_FOCUS_POINTERS = 3;
+
+/**
+ * Assembles the closing "what to focus on" section entirely from real
+ * facts this scan already produced — never a generated paragraph. Every
+ * pointer traces back to a real check (score_gap), a real computed
+ * competitor gap (competitor_gap), or a real detected change
+ * (listing_issue); the one allowed exception is a single fixed,
+ * clearly-labeled evergreen tip used only to fill a genuinely empty
+ * remaining slot (see GENERAL_FOCUS_TIPS). If literally nothing real
+ * stood out, this says so honestly instead of inventing a concern or
+ * forcing a generic tip into an otherwise-empty section.
+ */
+function buildFocus(
+  breakdown: ScoreBreakdown,
+  competitor: CompetitorMovement,
+  reviewCount: MetricResult,
+  listingChanges: ListingChangesResult
+): MonthlyReportFocus {
+  const scoreGaps = scoreGapPointers(breakdown);
+  const competitorGap = competitorGapPointer(competitor, reviewCount);
+  const listingIssue = listingIssuePointer(listingChanges);
+
+  const pointers: FocusPointer[] = [];
+  if (scoreGaps[0]) pointers.push(scoreGaps[0]);
+  if (competitorGap) pointers.push(competitorGap);
+  if (listingIssue) pointers.push(listingIssue);
+  if (scoreGaps[1] && pointers.length < MAX_FOCUS_POINTERS) pointers.push(scoreGaps[1]);
+
+  if (pointers.length === 0) {
+    return { nothingNotable: true, pointers: [] };
+  }
+  if (pointers.length < MAX_FOCUS_POINTERS) {
+    pointers.push(GENERAL_FOCUS_TIPS[0]);
+  }
+  return { nothingNotable: false, pointers: pointers.slice(0, MAX_FOCUS_POINTERS) };
+}
+
 /**
  * Builds this month's report content from two real scans (baseline null
  * only for a business's genuine first report) and an optional real
@@ -255,6 +442,7 @@ export function buildMonthlyReportContent(
       // changes found," genuinely not applicable.
       listingChanges: { available: false },
       isSteady: false,
+      focus: buildFocus(current.breakdown, competitor, reviewCount, { available: false }),
     };
   }
 
@@ -295,5 +483,6 @@ export function buildMonthlyReportContent(
     competitor,
     listingChanges: changes,
     isSteady,
+    focus: buildFocus(current.breakdown, competitor, reviewCount, changes),
   };
 }
