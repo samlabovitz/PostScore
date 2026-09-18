@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { saveBusiness } from "@/app/actions/businesses";
+import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
 import type { PlaceLookupResult, PlaceCandidate, PlaceDetails } from "@/lib/google/places";
 
 function Field({ label, value }: { label: string; value: string | null }) {
@@ -32,13 +34,16 @@ type SaveState =
  * action every business in this app goes through. On success it routes
  * straight to the new business's real Overview page rather than leaving
  * the owner on a static confirmation. */
-function SaveControl({ place }: { place: PlaceDetails }) {
+function SaveControl({ place, language }: { place: PlaceDetails; language: Locale }) {
   const router = useRouter();
   const [state, setState] = useState<SaveState>({ kind: "idle" });
 
   async function handleSave() {
     setState({ kind: "saving" });
-    const result = await saveBusiness(place);
+    // normalizeLocale() runs again inside saveBusiness itself right before
+    // the write — this call is just so a bad value never leaves the
+    // client in the first place.
+    const result = await saveBusiness(place, normalizeLocale(language));
     if (result.status === "saved") {
       setState({ kind: "saved" });
       router.push(`/business/${result.businessId}`);
@@ -67,7 +72,11 @@ function SaveControl({ place }: { place: PlaceDetails }) {
   );
 }
 
-function DetailsView({ place }: { place: PlaceDetails }) {
+function DetailsView({ place, language, onLanguageChange }: {
+  place: PlaceDetails;
+  language: Locale;
+  onLanguageChange: (locale: Locale) => void;
+}) {
   return (
     <Card className="p-5">
       <Field label="Name" value={place.name} />
@@ -81,8 +90,15 @@ function DetailsView({ place }: { place: PlaceDetails }) {
       />
       <Field label="Category" value={place.primaryCategory} />
 
+      <div className="flex flex-col gap-0.5 border-b border-paper-line py-2.5">
+        <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">Language</span>
+        <div className="mt-1 max-w-[200px]">
+          <LanguageSelector value={language} onChange={onLanguageChange} />
+        </div>
+      </div>
+
       <div className="mt-4 border-t border-paper-line pt-4">
-        <SaveControl place={place} />
+        <SaveControl place={place} language={language} />
       </div>
     </Card>
   );
@@ -102,6 +118,7 @@ export function AddBusinessSearch() {
   const [location, setLocation] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PlaceLookupResult | null>(null);
+  const [language, setLanguage] = useState<Locale>(DEFAULT_LOCALE);
 
   async function runLookup(body: Record<string, string>) {
     setLoading(true);
@@ -194,7 +211,9 @@ export function AddBusinessSearch() {
             </Card>
           )}
 
-          {result.status === "found" && <DetailsView place={result.place} />}
+          {result.status === "found" && (
+            <DetailsView place={result.place} language={language} onLanguageChange={setLanguage} />
+          )}
         </>
       )}
     </div>

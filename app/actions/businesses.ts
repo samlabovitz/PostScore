@@ -3,6 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { PlaceDetails } from "@/lib/google/places";
+import { normalizeLocale, type Locale } from "@/lib/i18n";
 import { checkWebsiteHttps } from "@/lib/websiteHttps";
 import { collectWebsiteAnalysis } from "@/lib/websiteAnalysis";
 import { uploadWebsiteScreenshots } from "@/lib/websiteScreenshotUpload";
@@ -49,7 +50,8 @@ export type SaveBusinessResult =
  * this time, which the Website page shows honestly.
  */
 export async function saveBusiness(
-  place: PlaceDetails
+  place: PlaceDetails,
+  language?: Locale
 ): Promise<SaveBusinessResult> {
   const supabase = createClient();
 
@@ -62,7 +64,7 @@ export async function saveBusiness(
     return { status: "unauthenticated" };
   }
 
-  return saveBusinessWithClient(supabase, user.id, place);
+  return saveBusinessWithClient(supabase, user.id, place, language);
 }
 
 /**
@@ -85,7 +87,15 @@ export async function saveBusiness(
 export async function saveBusinessWithClient(
   supabase: SupabaseClient,
   ownerId: string,
-  place: PlaceDetails
+  place: PlaceDetails,
+  // Only ever provided by the intake flow, on first save, when an owner
+  // has actually picked a language — omitted by every re-scan caller
+  // (app/actions/scoring.ts, the monthly-report cron) so a rescan can
+  // never clobber a business's already-chosen language back to the
+  // column default. See the upsert below: the `language` key is only
+  // added to the payload when this is provided, and Postgres's upsert
+  // only touches columns present in the payload on conflict.
+  language?: Locale
 ): Promise<SaveBusinessResult> {
   // Same owner+place key the upsert below conflicts on — this is how we
   // recognize "this exact business already exists" and read whatever
@@ -179,6 +189,12 @@ export async function saveBusinessWithClient(
         https_checked_at: httpsStatus ? checkedAt : null,
         website_analysis_json: websiteAnalysis,
         website_analysis_checked_at: websiteAnalysis ? checkedAt : null,
+        // Normalized right before the write — this is the actual trust
+        // boundary (a "use server" action is callable with any payload,
+        // not just what the intake page's own <select> offers), so a bad
+        // or unsupported value can never land in the DB even if the
+        // client-side value were somehow tampered with.
+        ...(language !== undefined ? { language: normalizeLocale(language) } : {}),
       },
       { onConflict: "owner_id,place_id" }
     )
