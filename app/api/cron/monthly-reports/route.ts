@@ -57,6 +57,7 @@ import {
 import type { Grade } from "@/lib/scoring";
 import { MonthlyReportEmail, monthlyReportSubject } from "@/emails/MonthlyReportEmail";
 import { sendEmail } from "@/lib/email";
+import { normalizeLocale } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -356,13 +357,18 @@ async function processBusiness(
   // 3e. Real content, real email, real owner address.
   const { data: freshBusiness, error: freshBusinessError } = await supabase
     .from("businesses")
-    .select("name, owner_id, unsubscribe_token")
+    .select("name, owner_id, unsubscribe_token, language")
     .eq("id", businessId)
     .single();
 
   if (freshBusinessError || !freshBusiness) {
     return { businessId, status: "failed", reason: "could not re-read business after rescan" };
   }
+
+  // A bad/unknown value can never reach the email render or subject
+  // builder — same discipline as saveBusinessWithClient's own write-time
+  // normalization (app/actions/businesses.ts).
+  const locale = normalizeLocale(freshBusiness.language);
 
   const { data: ownerUser, error: ownerError } = await supabase.auth.admin.getUserById(freshBusiness.owner_id);
   if (ownerError || !ownerUser?.user?.email) {
@@ -419,8 +425,8 @@ async function processBusiness(
 
   const sendResult = await sendEmail({
     to: ownerUser.user.email,
-    subject: monthlyReportSubject(businessName, reportDate),
-    react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl }),
+    subject: monthlyReportSubject(businessName, reportDate, locale),
+    react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale }),
   });
 
   if (sendResult.status !== "sent") {

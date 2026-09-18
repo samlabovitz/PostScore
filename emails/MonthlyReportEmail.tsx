@@ -29,6 +29,7 @@ import type {
   MonthlyReportContent,
   ScoreMovement,
 } from "@/lib/monthlyReport";
+import { DEFAULT_LOCALE, formatMonthLabel, type Locale } from "@/lib/i18n";
 
 export interface MonthlyReportEmailProps {
   businessName: string;
@@ -46,23 +47,22 @@ export interface MonthlyReportEmailProps {
    * Never optional — every report visibly offers a way to turn these
    * emails off. */
   unsubscribeUrl: string;
-}
-
-function formatMonthLabel(iso: string): string {
-  // timeZone: "UTC" is load-bearing, not decoration — reportDate is a
-  // UTC-midnight ISO date, and formatting it in whatever timezone the
-  // server process happens to run in can silently roll it back to the
-  // previous day (e.g. "2026-09-01T00:00:00.000Z" reads as August 31st
-  // anywhere west of UTC), mislabeling every report's month.
-  return new Date(iso).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+  /** The business's own chosen language (businesses.language, run through
+   * normalizeLocale() by the caller) — only ever affects the "Month Year"
+   * label for now. Every other string in this template is still
+   * hardcoded English; see lib/i18n's message dictionary for the plan to
+   * translate the rest. Defaults to DEFAULT_LOCALE so every existing
+   * caller/sample that doesn't pass this keeps rendering exactly as
+   * before. */
+  locale?: Locale;
 }
 
 /** The exact subject line every report uses — exported so the real send
  * path builds its email subject from this same function, never a
  * separately hand-written string that could drift from what the body
  * actually says. */
-export function monthlyReportSubject(businessName: string, reportDate: string): string {
-  return `${businessName} — your ${formatMonthLabel(reportDate)} PostScore report`;
+export function monthlyReportSubject(businessName: string, reportDate: string, locale: Locale = DEFAULT_LOCALE): string {
+  return `${businessName} — your ${formatMonthLabel(reportDate, locale)} PostScore report`;
 }
 
 function capitalizeFirst(s: string): string {
@@ -367,8 +367,14 @@ function ListingChangesSection({ listingChanges }: { listingChanges: MonthlyRepo
   );
 }
 
-export function MonthlyReportEmail({ businessName, reportDate, content, unsubscribeUrl }: MonthlyReportEmailProps) {
-  const monthLabel = formatMonthLabel(reportDate);
+export function MonthlyReportEmail({
+  businessName,
+  reportDate,
+  content,
+  unsubscribeUrl,
+  locale = DEFAULT_LOCALE,
+}: MonthlyReportEmailProps) {
+  const monthLabel = formatMonthLabel(reportDate, locale);
 
   return (
     <Html>

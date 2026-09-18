@@ -305,4 +305,35 @@ describe("monthlyReportSubject", () => {
       "Riverside Cafe — your September 2026 PostScore report"
     );
   });
+
+  test("defaults to English when no locale is passed", () => {
+    expect(monthlyReportSubject("Riverside Cafe", "2026-09-01T00:00:00.000Z", "en")).toBe(
+      monthlyReportSubject("Riverside Cafe", "2026-09-01T00:00:00.000Z")
+    );
+  });
+
+  test("formats the month label in Spanish when locale is 'es' — every other word stays English for now", () => {
+    expect(monthlyReportSubject("Riverside Cafe", "2026-09-01T00:00:00.000Z", "es")).toBe(
+      "Riverside Cafe — your septiembre de 2026 PostScore report"
+    );
+  });
+});
+
+describe("MonthlyReportEmail — locale", () => {
+  test("renders the month heading in Spanish when locale is 'es', with every other fragment left in English", async () => {
+    const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} locale="es" />);
+
+    // React Email inserts an SSR hydration comment between the {monthLabel}
+    // expression and the literal " report" text that follows it in JSX, so
+    // this checks each side of that boundary rather than one joined string.
+    expect(html).toContain("septiembre de 2026");
+    expect(html).toMatch(/septiembre de 2026<!-- -->\s*report/);
+    // Not yet translated — this step only threads the month label.
+    expect(html).toContain("Your baseline is set — welcome to PostScore.");
+  });
+
+  test("defaults to the English month heading when no locale is passed", async () => {
+    const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} />);
+    expect(html).toMatch(/September 2026<!-- -->\s*report/);
+  });
 });
