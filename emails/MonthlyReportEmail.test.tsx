@@ -312,41 +312,43 @@ describe("monthlyReportSubject", () => {
     );
   });
 
-  test("formats the month label in Spanish when locale is 'es' — every other word stays English for now", () => {
+  test("renders the real, reviewed Spanish subject line (word order and all) when locale is 'es'", () => {
     expect(monthlyReportSubject("Riverside Cafe", "2026-09-01T00:00:00.000Z", "es")).toBe(
-      "Riverside Cafe — your septiembre de 2026 PostScore report"
+      "Riverside Cafe — su informe PostScore de septiembre de 2026"
     );
   });
 });
 
 describe("MonthlyReportEmail — locale", () => {
-  test("renders the month heading in Spanish when locale is 'es', with every other fragment left in English", async () => {
+  test("renders the month heading with Spanish word order via report.monthHeading, plus the now-translated baseline headline", async () => {
     const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} locale="es" />);
 
-    // React Email inserts an SSR hydration comment between the {monthLabel}
-    // expression and the literal " report" text that follows it in JSX, so
-    // this checks each side of that boundary rather than one joined string.
-    expect(html).toContain("septiembre de 2026");
-    expect(html).toMatch(/septiembre de 2026<!-- -->\s*report/);
-    // Not yet translated — this step only threads the month label.
-    expect(html).toContain("Your baseline is set — welcome to PostScore.");
+    // report.monthHeading is now a single per-locale template
+    // ("Informe de {month}", not English's "{month} report" order) —
+    // interpolated into ONE string before it ever reaches JSX, so there's
+    // no hydration-comment boundary to work around here.
+    expect(html).toContain("Informe de septiembre de 2026");
+    expect(html).toContain(
+      "Su punto de partida está definido — le damos la bienvenida a PostScore. Aquí es donde se encuentra hoy."
+    );
   });
 
-  test("defaults to the English month heading when no locale is passed", async () => {
+  test("defaults to the English month heading ('{month} report' word order) when no locale is passed", async () => {
     const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} />);
-    expect(html).toMatch(/September 2026<!-- -->\s*report/);
+    expect(html).toContain("September 2026 report");
   });
 });
 
-describe("MonthlyReportEmail — es plural fallback (rendered output, not just category selection)", () => {
+describe("MonthlyReportEmail — es plural rendering (real Spanish singular vs. plural, not just category selection)", () => {
   // Hand-built rather than run through buildMonthlyReportContent(), so
   // the review-count delta is the ONLY real movement in this content —
   // that isolates reviewFragment as the one fact the headline can show,
   // with nothing else competing for the "top two facts" slot buildHeadline
-  // picks from. es has no report.* translations yet (see messages.ts), so
-  // this exercises tPlural's real fallback-to-English-by-CATEGORY path —
-  // not just Intl.PluralRules.select() in isolation, but the actual HTML
-  // MonthlyReportEmail renders for a genuinely untranslated locale.
+  // picks from. es now has a real, reviewed translation for
+  // report.fragment.reviewsGained (see messages.ts) — this proves the
+  // actual rendered HTML picks the correct Spanish singular ("reseña") at
+  // count=1 and plural ("reseñas") at count=2, not just that
+  // Intl.PluralRules.select() returns the right category in isolation.
   function reviewDeltaContent(delta: number): MonthlyReportContent {
     return {
       kind: "update",
@@ -361,7 +363,7 @@ describe("MonthlyReportEmail — es plural fallback (rendered output, not just c
     };
   }
 
-  test("count=1: renders English's SINGULAR form ('1 review'), never '1 reviews'", async () => {
+  test("count=1: renders Spanish's SINGULAR form ('1 reseña'), never '1 reseñas'", async () => {
     const html = await renderToText(
       <MonthlyReportEmail
         businessName="Riverside Cafe"
@@ -372,11 +374,11 @@ describe("MonthlyReportEmail — es plural fallback (rendered output, not just c
       />
     );
 
-    expect(html).toContain("You gained 1 review.");
-    expect(html).not.toContain("1 reviews");
+    expect(html).toContain("Sumó 1 reseña.");
+    expect(html).not.toContain("1 reseñas");
   });
 
-  test("count=2: renders English's PLURAL form ('2 reviews')", async () => {
+  test("count=2: renders Spanish's PLURAL form ('2 reseñas')", async () => {
     const html = await renderToText(
       <MonthlyReportEmail
         businessName="Riverside Cafe"
@@ -387,6 +389,6 @@ describe("MonthlyReportEmail — es plural fallback (rendered output, not just c
       />
     );
 
-    expect(html).toContain("You gained 2 reviews.");
+    expect(html).toContain("Sumó 2 reseñas.");
   });
 });

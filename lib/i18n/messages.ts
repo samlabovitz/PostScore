@@ -12,7 +12,7 @@ export type MessageKey =
   | "common.and"
   // --- Monthly report email (emails/MonthlyReportEmail.tsx) ---
   | "report.subject"
-  | "report.monthHeadingSuffix"
+  | "report.monthHeading"
   | "report.headline.baseline"
   | "report.headline.steady"
   | "report.tone.positive"
@@ -93,7 +93,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "common.and": "and",
 
     "report.subject": "{businessName} — your {month} PostScore report",
-    "report.monthHeadingSuffix": " report",
+    "report.monthHeading": "{month} report",
 
     "report.headline.baseline": "Your baseline is set — welcome to PostScore. Here's where you stand today.",
     "report.headline.steady": "A steady month — your presence held its ground.",
@@ -158,11 +158,71 @@ export const messages: Record<Locale, LocaleMessages> = {
     // "common.cancel" intentionally left untranslated for now — t()
     // below falls back to the English string ("Cancel") until this is
     // filled in, so leaving it out is safe rather than a bug.
-    //
-    // No report.* key has a Spanish value yet — this step only moves the
-    // English report copy into the dictionary, so every report.* lookup
-    // for "es" falls back to English via t()/tPlural until real Spanish
-    // copy is written in a later step.
+    "common.and": "y",
+
+    "report.subject": "{businessName} — su informe PostScore de {month}",
+    "report.monthHeading": "Informe de {month}",
+
+    "report.headline.baseline":
+      "Su punto de partida está definido — le damos la bienvenida a PostScore. Aquí es donde se encuentra hoy.",
+    "report.headline.steady": "Un mes estable — su presencia se mantuvo firme.",
+
+    "report.tone.positive": "Excelente progreso este mes.",
+    "report.tone.negative": "Son cosas que pasan — esto es en lo que conviene concentrarse para darle la vuelta.",
+
+    "report.fragment.scoreRose.one": "su puntuación subió {count} punto",
+    "report.fragment.scoreRose.other": "su puntuación subió {count} puntos",
+    "report.fragment.scoreDropped.one": "su puntuación bajó {count} punto",
+    "report.fragment.scoreDropped.other": "su puntuación bajó {count} puntos",
+    "report.fragment.gradeChanged": "su nota cambió a {grade}",
+    "report.fragment.reviewsGained.one": "sumó {count} reseña",
+    "report.fragment.reviewsGained.other": "sumó {count} reseñas",
+    "report.fragment.reviewsLost.one": "perdió {count} reseña",
+    "report.fragment.reviewsLost.other": "perdió {count} reseñas",
+    "report.fragment.ratingRose": "su calificación subió a {value}★",
+    "report.fragment.ratingDropped": "su calificación bajó a {value}★",
+    "report.fragment.competitorUp": "subió al puesto #{rank} de {total}",
+    "report.fragment.competitorDown": "bajó al puesto #{rank} de {total}",
+    "report.fragment.listingChanges.one": "hubo {count} cambio en su ficha",
+    "report.fragment.listingChanges.other": "hubo {count} cambios en su ficha",
+
+    "report.label.rating": "Calificación",
+    "report.label.reviewCount": "Número de reseñas",
+    "report.unmeasured.rating": "este análisis no incluyó un valor de calificación real.",
+    "report.unmeasured.reviewCount": "este análisis no incluyó un número de reseñas real.",
+    "report.metric.notMeasuredPrefix": "No se midió en este período — ",
+    "report.metric.noPrior": "{value} (no hay informe anterior con el que comparar)",
+    "report.metric.unchanged": "{value} — sin cambios",
+    "report.metric.delta": "{value} ({delta} frente al informe anterior)",
+
+    // report.score.summary intentionally has no Spanish value — it's pure
+    // placeholders ("{total}/100 · {grade}"), so it stays on the English
+    // fallback rather than a translation with nothing to actually
+    // translate.
+    "report.score.sinceLastReport": "{delta} desde el último informe",
+
+    "report.focus.label": "Este mes y en qué concentrarse",
+    "report.focus.nothingNotable":
+      "Nada notable que señalar este mes — su ficha y su sitio web están en muy buena forma en todos los aspectos.",
+
+    "report.competitorSection.label": "Posición frente a la competencia",
+    "report.competitorSection.unavailable":
+      "Sin seguimiento en este período — no hay ningún análisis de la competencia disponible para comparar.",
+    "report.competitorSection.rank": "#{rank} de {total} en la zona",
+    "report.competitorSection.same": "Igual que en su último informe.",
+    "report.competitorSection.movedUp": "Subió desde el puesto #{rank} del informe anterior.",
+    "report.competitorSection.movedDown": "Bajó desde el puesto #{rank} del informe anterior.",
+
+    "report.listingSection.label": "Cambios en la ficha",
+    "report.listingSection.unavailable":
+      "No disponible para esta comparación — uno de los dos análisis es anterior al seguimiento de cambios en la ficha, o este es su primer informe.",
+    "report.listingSection.none": "No se detectaron otros cambios en la ficha este mes.",
+
+    "report.baselineNote":
+      "Este es su primer informe de PostScore — un verdadero punto de partida, no una tendencia. El informe del próximo mes mostrará el cambio real de un mes a otro.",
+
+    "report.footer.enabledForPrefix": "Está recibiendo esto porque los informes mensuales por correo están activados para ",
+    "report.footer.unsubscribeLinkText": "Darse de baja de estos informes",
   },
 };
 

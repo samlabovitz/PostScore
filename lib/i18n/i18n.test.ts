@@ -41,17 +41,18 @@ describe("tPlural", () => {
   // Intl.PluralRules is the actual selection mechanism (not a hardcoded
   // count === 1 check) — this proves it genuinely picks the "one"
   // category at count=1 and "other" at count=2 for both locales this app
-  // currently supports, via the real singular/plural message keys.
+  // currently supports, via the real singular/plural message keys. es now
+  // has a real, reviewed translation for this key, so this also proves
+  // the correct Spanish singular/plural form is chosen, not just that the
+  // category selection matches English's.
   test("picks the singular ('one') key at count=1, for both en and es", () => {
     expect(tPlural("en", "report.fragment.reviewsGained", 1)).toBe("you gained 1 review");
-    // es has no report.* translations yet, so this falls back to the
-    // same English "one" text via tPlural's own fallback chain.
-    expect(tPlural("es", "report.fragment.reviewsGained", 1)).toBe("you gained 1 review");
+    expect(tPlural("es", "report.fragment.reviewsGained", 1)).toBe("sumó 1 reseña");
   });
 
   test("picks the plural ('other') key at count=2, for both en and es", () => {
     expect(tPlural("en", "report.fragment.reviewsGained", 2)).toBe("you gained 2 reviews");
-    expect(tPlural("es", "report.fragment.reviewsGained", 2)).toBe("you gained 2 reviews");
+    expect(tPlural("es", "report.fragment.reviewsGained", 2)).toBe("sumó 2 reseñas");
   });
 
   test("really does ask Intl.PluralRules, not a hardcoded n===1 check", () => {

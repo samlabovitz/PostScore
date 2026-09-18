@@ -411,7 +411,7 @@ export function MonthlyReportEmail({
           }}
         >
           <Text style={{ color: "#6b7890", fontSize: "11.5px", letterSpacing: "0.06em", textTransform: "uppercase", margin: "0 0 4px" }}>
-            {monthLabel}{t(locale, "report.monthHeadingSuffix")}
+            {t(locale, "report.monthHeading", { month: monthLabel })}
           </Text>
           <Heading style={{ color: "#14243f", fontSize: "22px", margin: "0 0 18px" }}>{businessName}</Heading>
 
