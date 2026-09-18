@@ -69,6 +69,14 @@ alter table public.businesses
   add column if not exists photo_count integer,
   add column if not exists google_maps_uri text;
 
+-- The business's content language (e.g. for the monthly report email and
+-- any other business-facing copy) — not nullable, since every business
+-- has a language whether or not one was ever chosen; 'en' is the honest
+-- default until real language selection exists. Safe to re-run for the
+-- same reason as the block above.
+alter table public.businesses
+  add column if not exists language text not null default 'en';
+
 -- One row per scan. Scores are never overwritten in place — history
 -- accumulates so you can see a business's PostScore change over time, and
 -- so a score is always attributable to the exact scoring_version that
