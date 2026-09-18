@@ -9,7 +9,7 @@ import {
   SAMPLE_REAL_DELTAS,
   SAMPLE_STEADY,
 } from "./sampleMonthlyReportContent";
-import { GENERAL_FOCUS_TIPS } from "@/lib/monthlyReport";
+import { GENERAL_FOCUS_TIPS, type MonthlyReportContent } from "@/lib/monthlyReport";
 import { CHECKS } from "@/lib/scoring";
 
 // A regression guard against the one thing this template must never do:
@@ -335,5 +335,58 @@ describe("MonthlyReportEmail — locale", () => {
   test("defaults to the English month heading when no locale is passed", async () => {
     const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} />);
     expect(html).toMatch(/September 2026<!-- -->\s*report/);
+  });
+});
+
+describe("MonthlyReportEmail — es plural fallback (rendered output, not just category selection)", () => {
+  // Hand-built rather than run through buildMonthlyReportContent(), so
+  // the review-count delta is the ONLY real movement in this content —
+  // that isolates reviewFragment as the one fact the headline can show,
+  // with nothing else competing for the "top two facts" slot buildHeadline
+  // picks from. es has no report.* translations yet (see messages.ts), so
+  // this exercises tPlural's real fallback-to-English-by-CATEGORY path —
+  // not just Intl.PluralRules.select() in isolation, but the actual HTML
+  // MonthlyReportEmail renders for a genuinely untranslated locale.
+  function reviewDeltaContent(delta: number): MonthlyReportContent {
+    return {
+      kind: "update",
+      summary: "test fixture — not asserted on",
+      score: { current: { total: 80, grade: "B" }, previous: { total: 80, grade: "B" }, scoreDelta: 0, gradeChanged: false },
+      rating: { available: false },
+      reviewCount: { available: true, current: 50 + delta, previous: 50, delta },
+      competitor: { available: false },
+      listingChanges: { available: false },
+      isSteady: false,
+      focus: { nothingNotable: true, pointers: [] },
+    };
+  }
+
+  test("count=1: renders English's SINGULAR form ('1 review'), never '1 reviews'", async () => {
+    const html = await renderToText(
+      <MonthlyReportEmail
+        businessName="Riverside Cafe"
+        reportDate="2026-09-01T00:00:00.000Z"
+        unsubscribeUrl="https://postscore.app/unsubscribe?business=sample&token=PLACEHOLDER"
+        content={reviewDeltaContent(1)}
+        locale="es"
+      />
+    );
+
+    expect(html).toContain("You gained 1 review.");
+    expect(html).not.toContain("1 reviews");
+  });
+
+  test("count=2: renders English's PLURAL form ('2 reviews')", async () => {
+    const html = await renderToText(
+      <MonthlyReportEmail
+        businessName="Riverside Cafe"
+        reportDate="2026-09-01T00:00:00.000Z"
+        unsubscribeUrl="https://postscore.app/unsubscribe?business=sample&token=PLACEHOLDER"
+        content={reviewDeltaContent(2)}
+        locale="es"
+      />
+    );
+
+    expect(html).toContain("You gained 2 reviews.");
   });
 });

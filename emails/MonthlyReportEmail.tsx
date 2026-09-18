@@ -10,6 +10,15 @@
 // Plain and trustworthy over flashy on purpose: no logos, no charts, no
 // decorative images — this is a small business owner's real monthly
 // standing, in plain text.
+//
+// Every English sentence below is sourced from lib/i18n's message
+// dictionary via t()/tPlural(), keyed under "report.*" — this file itself
+// holds no hardcoded UI copy anymore. Only two kinds of literal text
+// remain hardcoded here on purpose: "PostScore" (the product's own brand
+// name, never translated — see lib/i18n's proper-noun rule) and passed-in
+// values like businessName (also never translated). No Spanish values
+// exist in the dictionary yet, so every t()/tPlural() call currently
+// renders the exact same English text this file used to hardcode.
 import {
   Body,
   Container,
@@ -29,7 +38,7 @@ import type {
   MonthlyReportContent,
   ScoreMovement,
 } from "@/lib/monthlyReport";
-import { DEFAULT_LOCALE, formatMonthLabel, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, formatMonthLabel, t, tPlural, type Locale } from "@/lib/i18n";
 
 export interface MonthlyReportEmailProps {
   businessName: string;
@@ -48,12 +57,9 @@ export interface MonthlyReportEmailProps {
    * emails off. */
   unsubscribeUrl: string;
   /** The business's own chosen language (businesses.language, run through
-   * normalizeLocale() by the caller) — only ever affects the "Month Year"
-   * label for now. Every other string in this template is still
-   * hardcoded English; see lib/i18n's message dictionary for the plan to
-   * translate the rest. Defaults to DEFAULT_LOCALE so every existing
-   * caller/sample that doesn't pass this keeps rendering exactly as
-   * before. */
+   * normalizeLocale() by the caller). Defaults to DEFAULT_LOCALE so every
+   * existing caller/sample that doesn't pass this keeps rendering exactly
+   * as before. */
   locale?: Locale;
 }
 
@@ -62,7 +68,7 @@ export interface MonthlyReportEmailProps {
  * separately hand-written string that could drift from what the body
  * actually says. */
 export function monthlyReportSubject(businessName: string, reportDate: string, locale: Locale = DEFAULT_LOCALE): string {
-  return `${businessName} — your ${formatMonthLabel(reportDate, locale)} PostScore report`;
+  return t(locale, "report.subject", { businessName, month: formatMonthLabel(reportDate, locale) });
 }
 
 function capitalizeFirst(s: string): string {
@@ -73,37 +79,39 @@ function capitalizeFirst(s: string): string {
 // fields lib/monthlyReport.ts's isSteady computation checks, in the same
 // order. A fragment is only ever produced from a real, non-null,
 // non-zero delta; nothing here estimates or infers movement.
-function scoreFragment(score: ScoreMovement): string | null {
+function scoreFragment(score: ScoreMovement, locale: Locale): string | null {
   if (score.scoreDelta !== null && score.scoreDelta !== 0) {
     const abs = Math.abs(score.scoreDelta);
-    return `your score ${score.scoreDelta > 0 ? "rose" : "dropped"} ${abs} point${abs === 1 ? "" : "s"}`;
+    return tPlural(locale, score.scoreDelta > 0 ? "report.fragment.scoreRose" : "report.fragment.scoreDropped", abs);
   }
-  if (score.gradeChanged) return `your grade changed to ${score.current.grade}`;
+  if (score.gradeChanged) return t(locale, "report.fragment.gradeChanged", { grade: score.current.grade });
   return null;
 }
 
-function reviewFragment(reviewCount: MetricResult): string | null {
+function reviewFragment(reviewCount: MetricResult, locale: Locale): string | null {
   if (!reviewCount.available || reviewCount.delta === null || reviewCount.delta === 0) return null;
   const abs = Math.abs(reviewCount.delta);
-  return reviewCount.delta > 0
-    ? `you gained ${abs} review${abs === 1 ? "" : "s"}`
-    : `you lost ${abs} review${abs === 1 ? "" : "s"}`;
+  return tPlural(locale, reviewCount.delta > 0 ? "report.fragment.reviewsGained" : "report.fragment.reviewsLost", abs);
 }
 
-function ratingFragment(rating: MetricResult): string | null {
+function ratingFragment(rating: MetricResult, locale: Locale): string | null {
   if (!rating.available || rating.delta === null || rating.delta === 0) return null;
-  return `your rating ${rating.delta > 0 ? "rose" : "dropped"} to ${rating.current.toFixed(1)}★`;
+  return t(locale, rating.delta > 0 ? "report.fragment.ratingRose" : "report.fragment.ratingDropped", {
+    value: rating.current.toFixed(1),
+  });
 }
 
-function competitorFragment(competitor: CompetitorMovement): string | null {
+function competitorFragment(competitor: CompetitorMovement, locale: Locale): string | null {
   if (!competitor.available || competitor.rankDelta === 0) return null;
-  return `you moved ${competitor.rankDelta > 0 ? "up" : "down"} to #${competitor.current.rank} of ${competitor.current.totalCompetitors}`;
+  return t(locale, competitor.rankDelta > 0 ? "report.fragment.competitorUp" : "report.fragment.competitorDown", {
+    rank: competitor.current.rank,
+    total: competitor.current.totalCompetitors,
+  });
 }
 
-function listingFragment(listingChanges: ListingChangesResult): string | null {
+function listingFragment(listingChanges: ListingChangesResult, locale: Locale): string | null {
   if (!listingChanges.available || listingChanges.changes.length === 0) return null;
-  const n = listingChanges.changes.length;
-  return `there ${n === 1 ? "was" : "were"} ${n} listing change${n === 1 ? "" : "s"}`;
+  return tPlural(locale, "report.fragment.listingChanges", listingChanges.changes.length);
 }
 
 /**
@@ -121,11 +129,9 @@ function listingFragment(listingChanges: ListingChangesResult): string | null {
  *   - no real delta (null, or exactly 0 — the isSteady case is already
  *     handled before this is ever called) gets no added tone at all.
  */
-function earnedTonePhrase(scoreDelta: number | null): string | null {
+function earnedTonePhrase(scoreDelta: number | null, locale: Locale): string | null {
   if (scoreDelta === null || scoreDelta === 0) return null;
-  return scoreDelta > 0
-    ? "Great progress this month."
-    : "It happens — here's what to focus on to turn it around.";
+  return scoreDelta > 0 ? t(locale, "report.tone.positive") : t(locale, "report.tone.negative");
 }
 
 /**
@@ -149,24 +155,24 @@ function earnedTonePhrase(scoreDelta: number | null): string | null {
  *     a real decline, warmly earned on a real improvement, silent
  *     otherwise.
  */
-export function buildHeadline(content: MonthlyReportContent): string {
+export function buildHeadline(content: MonthlyReportContent, locale: Locale = DEFAULT_LOCALE): string {
   if (content.kind === "baseline") {
-    return "Your baseline is set — welcome to PostScore. Here's where you stand today.";
+    return t(locale, "report.headline.baseline");
   }
   if (content.isSteady) {
-    return "A steady month — your presence held its ground.";
+    return t(locale, "report.headline.steady");
   }
 
   const fragments = [
-    scoreFragment(content.score),
-    reviewFragment(content.reviewCount),
-    ratingFragment(content.rating),
-    competitorFragment(content.competitor),
-    listingFragment(content.listingChanges),
+    scoreFragment(content.score, locale),
+    reviewFragment(content.reviewCount, locale),
+    ratingFragment(content.rating, locale),
+    competitorFragment(content.competitor, locale),
+    listingFragment(content.listingChanges, locale),
   ].filter((f): f is string => f !== null);
 
-  const base = `${capitalizeFirst(fragments.slice(0, 2).join(" and "))}.`;
-  const tone = earnedTonePhrase(content.score.scoreDelta);
+  const base = `${capitalizeFirst(fragments.slice(0, 2).join(` ${t(locale, "common.and")} `))}.`;
+  const tone = earnedTonePhrase(content.score.scoreDelta, locale);
   return tone ? `${base} ${tone}` : base;
 }
 
@@ -189,29 +195,31 @@ function MetricLine({
   metric,
   format,
   unmeasuredNote,
+  locale,
 }: {
   label: string;
   metric: MetricResult;
   format: (n: number) => string;
   unmeasuredNote: string;
+  locale: Locale;
 }) {
   if (!metric.available) {
     return (
       <Section>
         <Text style={labelStyle}>{label}</Text>
-        <Text style={mutedStyle}>Not measured this period — {unmeasuredNote}</Text>
+        <Text style={mutedStyle}>{t(locale, "report.metric.notMeasuredPrefix")}{unmeasuredNote}</Text>
       </Section>
     );
   }
 
   let detail: string;
   if (metric.delta === null) {
-    detail = `${format(metric.current)} (no prior report to compare against)`;
+    detail = t(locale, "report.metric.noPrior", { value: format(metric.current) });
   } else if (metric.delta === 0) {
-    detail = `${format(metric.current)} — unchanged`;
+    detail = t(locale, "report.metric.unchanged", { value: format(metric.current) });
   } else {
     const sign = metric.delta > 0 ? "+" : "";
-    detail = `${format(metric.current)} (${sign}${format(metric.delta)} vs. last report)`;
+    detail = t(locale, "report.metric.delta", { value: format(metric.current), delta: `${sign}${format(metric.delta)}` });
   }
 
   return (
@@ -233,7 +241,7 @@ function MetricLine({
  * entirely rather than shown as "+0" — this bar never implies
  * month-over-month movement that isn't real.
  */
-function ScoreVisual({ score }: { score: MonthlyReportContent["score"] }) {
+function ScoreVisual({ score, locale }: { score: MonthlyReportContent["score"]; locale: Locale }) {
   const pct = score.current.total;
   const showDelta = score.scoreDelta !== null && score.scoreDelta !== 0;
 
@@ -262,13 +270,15 @@ function ScoreVisual({ score }: { score: MonthlyReportContent["score"] }) {
           <tr>
             <td>
               <Text style={{ ...valueStyle, fontSize: "20px", fontWeight: 700, margin: 0 }}>
-                {`${score.current.total}/100 · ${score.current.grade}`}
+                {t(locale, "report.score.summary", { total: score.current.total, grade: score.current.grade })}
               </Text>
             </td>
             {showDelta && (
               <td align="right">
                 <Text style={{ color: "#6b7890", fontSize: "12.5px", margin: 0 }}>
-                  {`${score.scoreDelta! > 0 ? "+" : ""}${score.scoreDelta} since last report`}
+                  {t(locale, "report.score.sinceLastReport", {
+                    delta: `${score.scoreDelta! > 0 ? "+" : ""}${score.scoreDelta}`,
+                  })}
                 </Text>
               </td>
             )}
@@ -292,14 +302,14 @@ function ScoreVisual({ score }: { score: MonthlyReportContent["score"] }) {
  * when there genuinely was nothing to flag, an honest line saying so —
  * never a fabricated concern to fill the space.
  */
-function FocusSection({ content }: { content: MonthlyReportContent }) {
+function FocusSection({ content, locale }: { content: MonthlyReportContent; locale: Locale }) {
   return (
     <Section>
-      <Text style={labelStyle}>This month & what to focus on</Text>
-      <Text style={{ ...valueStyle, margin: "0 0 10px" }}>{buildHeadline(content)}</Text>
+      <Text style={labelStyle}>{t(locale, "report.focus.label")}</Text>
+      <Text style={{ ...valueStyle, margin: "0 0 10px" }}>{buildHeadline(content, locale)}</Text>
       {content.focus.nothingNotable ? (
         <Text style={mutedStyle}>
-          Nothing notable to flag this month — your listing and site are in strong shape across the board.
+          {t(locale, "report.focus.nothingNotable")}
         </Text>
       ) : (
         content.focus.pointers.map((pointer, i) => (
@@ -312,37 +322,43 @@ function FocusSection({ content }: { content: MonthlyReportContent }) {
   );
 }
 
-function CompetitorSection({ competitor }: { competitor: MonthlyReportContent["competitor"] }) {
+function CompetitorSection({ competitor, locale }: { competitor: MonthlyReportContent["competitor"]; locale: Locale }) {
   if (!competitor.available) {
     return (
       <Section>
-        <Text style={labelStyle}>Competitor standing</Text>
-        <Text style={mutedStyle}>Not tracked this period — no competitor scan is available to compare.</Text>
+        <Text style={labelStyle}>{t(locale, "report.competitorSection.label")}</Text>
+        <Text style={mutedStyle}>{t(locale, "report.competitorSection.unavailable")}</Text>
       </Section>
     );
   }
-  const rankLine = `#${competitor.current.rank} of ${competitor.current.totalCompetitors} nearby`;
+  const rankLine = t(locale, "report.competitorSection.rank", {
+    rank: competitor.current.rank,
+    total: competitor.current.totalCompetitors,
+  });
   const deltaLine =
     competitor.rankDelta === 0
-      ? "Same as your last report."
-      : `${competitor.rankDelta > 0 ? "Moved up" : "Moved down"} from #${competitor.previous.rank} last report.`;
+      ? t(locale, "report.competitorSection.same")
+      : t(
+          locale,
+          competitor.rankDelta > 0 ? "report.competitorSection.movedUp" : "report.competitorSection.movedDown",
+          { rank: competitor.previous.rank }
+        );
   return (
     <Section>
-      <Text style={labelStyle}>Competitor standing</Text>
+      <Text style={labelStyle}>{t(locale, "report.competitorSection.label")}</Text>
       <Text style={valueStyle}>{rankLine}</Text>
       <Text style={{ ...valueStyle, fontSize: "13px", marginTop: "-10px" }}>{deltaLine}</Text>
     </Section>
   );
 }
 
-function ListingChangesSection({ listingChanges }: { listingChanges: MonthlyReportContent["listingChanges"] }) {
+function ListingChangesSection({ listingChanges, locale }: { listingChanges: MonthlyReportContent["listingChanges"]; locale: Locale }) {
   if (!listingChanges.available) {
     return (
       <Section>
-        <Text style={labelStyle}>Listing changes</Text>
+        <Text style={labelStyle}>{t(locale, "report.listingSection.label")}</Text>
         <Text style={mutedStyle}>
-          Not available for this comparison — one of the two scans predates listing-change tracking, or this is
-          your first report.
+          {t(locale, "report.listingSection.unavailable")}
         </Text>
       </Section>
     );
@@ -350,14 +366,14 @@ function ListingChangesSection({ listingChanges }: { listingChanges: MonthlyRepo
   if (listingChanges.changes.length === 0) {
     return (
       <Section>
-        <Text style={labelStyle}>Listing changes</Text>
-        <Text style={valueStyle}>No other listing changes detected this month.</Text>
+        <Text style={labelStyle}>{t(locale, "report.listingSection.label")}</Text>
+        <Text style={valueStyle}>{t(locale, "report.listingSection.none")}</Text>
       </Section>
     );
   }
   return (
     <Section>
-      <Text style={labelStyle}>Listing changes</Text>
+      <Text style={labelStyle}>{t(locale, "report.listingSection.label")}</Text>
       {listingChanges.changes.map((change) => (
         <Text key={change.field} style={{ ...valueStyle, margin: "0 0 4px" }}>
           • {change.description}
@@ -395,49 +411,50 @@ export function MonthlyReportEmail({
           }}
         >
           <Text style={{ color: "#6b7890", fontSize: "11.5px", letterSpacing: "0.06em", textTransform: "uppercase", margin: "0 0 4px" }}>
-            {monthLabel} report
+            {monthLabel}{t(locale, "report.monthHeadingSuffix")}
           </Text>
           <Heading style={{ color: "#14243f", fontSize: "22px", margin: "0 0 18px" }}>{businessName}</Heading>
 
           <Text style={{ color: "#14243f", fontSize: "17px", fontWeight: 600, lineHeight: "1.5", margin: "0 0 20px" }}>
-            {buildHeadline(content)}
+            {buildHeadline(content, locale)}
           </Text>
 
           <Hr style={{ borderColor: "#e5e1d8", margin: "0 0 20px" }} />
 
-          <ScoreVisual score={content.score} />
+          <ScoreVisual score={content.score} locale={locale} />
           <MetricLine
-            label="Rating"
+            label={t(locale, "report.label.rating")}
             metric={content.rating}
             format={(n) => `${n.toFixed(1)}★`}
-            unmeasuredNote="this scan didn't include a real rating value."
+            unmeasuredNote={t(locale, "report.unmeasured.rating")}
+            locale={locale}
           />
           <MetricLine
-            label="Review count"
+            label={t(locale, "report.label.reviewCount")}
             metric={content.reviewCount}
             format={(n) => `${n}`}
-            unmeasuredNote="this scan didn't include a real review count."
+            unmeasuredNote={t(locale, "report.unmeasured.reviewCount")}
+            locale={locale}
           />
-          <CompetitorSection competitor={content.competitor} />
-          <ListingChangesSection listingChanges={content.listingChanges} />
+          <CompetitorSection competitor={content.competitor} locale={locale} />
+          <ListingChangesSection listingChanges={content.listingChanges} locale={locale} />
 
           <Hr style={{ borderColor: "#e5e1d8", margin: "4px 0 20px" }} />
 
           {content.kind === "baseline" && (
             <Text style={{ color: "#6b7890", fontSize: "12.5px", lineHeight: "1.5", margin: "0 0 20px" }}>
-              This is your first PostScore report — a real baseline, not a trend. Next month&apos;s report will
-              show real month-over-month change.
+              {t(locale, "report.baselineNote")}
             </Text>
           )}
 
-          <FocusSection content={content} />
+          <FocusSection content={content} locale={locale} />
 
           <Hr style={{ borderColor: "#e5e1d8", margin: "4px 0 20px" }} />
 
           <Text style={{ color: "#9aa3b2", fontSize: "11.5px", lineHeight: "1.5", margin: 0 }}>
-            You&apos;re receiving this because monthly email reports are on for {businessName}.{" "}
+            {t(locale, "report.footer.enabledForPrefix")}{businessName}.{" "}
             <Link href={unsubscribeUrl} style={{ color: "#9aa3b2", textDecoration: "underline" }}>
-              Unsubscribe from these reports
+              {t(locale, "report.footer.unsubscribeLinkText")}
             </Link>
             .
           </Text>

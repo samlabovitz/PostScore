@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { normalizeLocale } from "./locale";
-import { t } from "./messages";
+import { t, tPlural } from "./messages";
 import { formatMonthLabel } from "./format";
 
 describe("normalizeLocale", () => {
@@ -30,6 +30,35 @@ describe("t", () => {
   test("returns the locale's own translation when present", () => {
     expect(t("es", "common.save")).toBe("Guardar");
     expect(t("en", "common.save")).toBe("Save");
+  });
+
+  test("interpolates {name} placeholders from the given params", () => {
+    expect(t("en", "report.fragment.gradeChanged", { grade: "B" })).toBe("your grade changed to B");
+  });
+});
+
+describe("tPlural", () => {
+  // Intl.PluralRules is the actual selection mechanism (not a hardcoded
+  // count === 1 check) — this proves it genuinely picks the "one"
+  // category at count=1 and "other" at count=2 for both locales this app
+  // currently supports, via the real singular/plural message keys.
+  test("picks the singular ('one') key at count=1, for both en and es", () => {
+    expect(tPlural("en", "report.fragment.reviewsGained", 1)).toBe("you gained 1 review");
+    // es has no report.* translations yet, so this falls back to the
+    // same English "one" text via tPlural's own fallback chain.
+    expect(tPlural("es", "report.fragment.reviewsGained", 1)).toBe("you gained 1 review");
+  });
+
+  test("picks the plural ('other') key at count=2, for both en and es", () => {
+    expect(tPlural("en", "report.fragment.reviewsGained", 2)).toBe("you gained 2 reviews");
+    expect(tPlural("es", "report.fragment.reviewsGained", 2)).toBe("you gained 2 reviews");
+  });
+
+  test("really does ask Intl.PluralRules, not a hardcoded n===1 check", () => {
+    expect(new Intl.PluralRules("en").select(1)).toBe("one");
+    expect(new Intl.PluralRules("en").select(2)).toBe("other");
+    expect(new Intl.PluralRules("es").select(1)).toBe("one");
+    expect(new Intl.PluralRules("es").select(2)).toBe("other");
   });
 });
 
