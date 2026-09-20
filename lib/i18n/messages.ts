@@ -55,19 +55,46 @@ export type MessageKey =
   | "report.listingSection.none"
   | "report.baselineNote"
   | "report.footer.enabledForPrefix"
-  | "report.footer.unsubscribeLinkText";
+  | "report.footer.unsubscribeLinkText"
+  // --- Dashboard: Competitors page (app/business/[id]/competitors/CompetitorsView.tsx) ---
+  // Naming convention for the whole dashboard rollout: dashboard.<section>.<key>.
+  | "dashboard.competitors.title"
+  | "dashboard.competitors.subtitle"
+  | "dashboard.competitors.categoryClause"
+  | "dashboard.competitors.backTo"
+  | "dashboard.competitors.businessFallback"
+  | "dashboard.competitors.rankedHeading"
+  | "dashboard.competitors.rankSuffix"
+  | "dashboard.competitors.unscoredHeading"
+  | "dashboard.competitors.nothingToCompare"
+  | "dashboard.competitors.noRating"
+  | "dashboard.competitors.reviewCount.one"
+  | "dashboard.competitors.reviewCount.other"
+  | "dashboard.competitors.noReviewCount"
+  | "dashboard.competitors.hasWebsite"
+  | "dashboard.competitors.noWebsite"
+  | "dashboard.competitors.milesSuffix"
+  | "dashboard.competitors.yourBusiness"
+  | "dashboard.competitors.noAddress"
+  | "dashboard.competitors.postscoreOutOf100"
+  | "dashboard.competitors.savingScan"
+  | "dashboard.competitors.saveScan"
+  | "dashboard.competitors.saved"
+  | "dashboard.competitors.noComparableCompetitors"
+  | "dashboard.competitors.saveError";
 
-/** The five report messages that vary by count — see tPlural below. Each
- * has a ".one" and ".other" MessageKey (the only two categories English
- * or Spanish ever produce — see tPlural's own doc comment for how a
- * future locale with more categories, e.g. "few"/"many", would still get
- * a safe result even before every category is seeded for it). */
+/** The report/dashboard messages that vary by count — see tPlural below.
+ * Each has a ".one" and ".other" MessageKey (the only two categories
+ * English or Spanish ever produce — see tPlural's own doc comment for
+ * how a future locale with more categories, e.g. "few"/"many", would
+ * still get a safe result even before every category is seeded for it). */
 export type PluralKeyBase =
   | "report.fragment.scoreRose"
   | "report.fragment.scoreDropped"
   | "report.fragment.reviewsGained"
   | "report.fragment.reviewsLost"
-  | "report.fragment.listingChanges";
+  | "report.fragment.listingChanges"
+  | "dashboard.competitors.reviewCount";
 
 // English is the dictionary every other locale falls back to via t()
 // below, so it's kept fully seeded. Other locales are deliberately
@@ -150,6 +177,34 @@ export const messages: Record<Locale, LocaleMessages> = {
 
     "report.footer.enabledForPrefix": "You're receiving this because monthly email reports are on for ",
     "report.footer.unsubscribeLinkText": "Unsubscribe from these reports",
+
+    "dashboard.competitors.title": "Competitors",
+    "dashboard.competitors.subtitle":
+      "Real nearby {competitorNoun}{categoryClause}, scored with the same PostScore engine and ranked strictly by that score.",
+    "dashboard.competitors.categoryClause": " in the same category ({categoryLabel})",
+    "dashboard.competitors.backTo": "Back to {name}",
+    "dashboard.competitors.businessFallback": "business",
+    "dashboard.competitors.rankedHeading": "Ranked by PostScore{rankSuffix}",
+    "dashboard.competitors.rankSuffix": " — you're #{rank} of {total}",
+    "dashboard.competitors.unscoredHeading": "Found nearby, but couldn't be scored",
+    "dashboard.competitors.nothingToCompare":
+      "Your PostScore ({total}) is shown above with nothing to compare it to yet — widen your search area or check back later as more listings appear nearby.",
+    "dashboard.competitors.noRating": "No rating",
+    "dashboard.competitors.reviewCount.one": "{count} review",
+    "dashboard.competitors.reviewCount.other": "{count} reviews",
+    "dashboard.competitors.noReviewCount": "No review count",
+    "dashboard.competitors.hasWebsite": "Has website",
+    "dashboard.competitors.noWebsite": "No website",
+    "dashboard.competitors.milesSuffix": " mi",
+    "dashboard.competitors.yourBusiness": "Your business",
+    "dashboard.competitors.noAddress": "No address on file",
+    "dashboard.competitors.postscoreOutOf100": "PostScore / 100",
+    "dashboard.competitors.savingScan": "Saving scan...",
+    "dashboard.competitors.saveScan": "Save this scan to history",
+    "dashboard.competitors.saved": "Saved.",
+    "dashboard.competitors.noComparableCompetitors":
+      "Nothing to save — no comparable competitors were found.",
+    "dashboard.competitors.saveError": "Could not save this scan.",
   },
   es: {
     "language.en": "Inglés",
@@ -223,6 +278,32 @@ export const messages: Record<Locale, LocaleMessages> = {
 
     "report.footer.enabledForPrefix": "Está recibiendo esto porque los informes mensuales por correo están activados para ",
     "report.footer.unsubscribeLinkText": "Darse de baja de estos informes",
+
+    "dashboard.competitors.title": "Competencia",
+    "dashboard.competitors.subtitle":
+      "{competitorNoun} reales cercanos{categoryClause}, evaluados con el mismo motor de PostScore y ordenados estrictamente por esa puntuación.",
+    "dashboard.competitors.categoryClause": " en la misma categoría ({categoryLabel})",
+    "dashboard.competitors.backTo": "Volver a {name}",
+    "dashboard.competitors.businessFallback": "negocio",
+    "dashboard.competitors.rankedHeading": "Ordenados por PostScore{rankSuffix}",
+    "dashboard.competitors.rankSuffix": " — usted es el #{rank} de {total}",
+    "dashboard.competitors.unscoredHeading": "Encontrados cerca, pero no se pudieron evaluar",
+    "dashboard.competitors.nothingToCompare":
+      "Su PostScore ({total}) se muestra arriba, pero aún no hay nada con qué compararlo — amplíe su área de búsqueda o vuelva más tarde a medida que aparezcan más negocios cerca.",
+    "dashboard.competitors.noRating": "Sin calificación",
+    "dashboard.competitors.reviewCount.one": "{count} reseña",
+    "dashboard.competitors.reviewCount.other": "{count} reseñas",
+    "dashboard.competitors.noReviewCount": "Sin número de reseñas",
+    "dashboard.competitors.hasWebsite": "Tiene sitio web",
+    "dashboard.competitors.noWebsite": "Sin sitio web",
+    "dashboard.competitors.milesSuffix": " mi",
+    "dashboard.competitors.yourBusiness": "Su negocio",
+    "dashboard.competitors.noAddress": "Sin dirección registrada",
+    "dashboard.competitors.postscoreOutOf100": "PostScore / 100",
+    // savingScan, saveScan, saved, noComparableCompetitors, and
+    // saveError have no Spanish value yet — not part of the reviewed
+    // list this was translated from. Each falls back to English via
+    // t()/tPlural until reviewed Spanish copy is provided for them.
   },
 };
 
@@ -247,14 +328,24 @@ export function t(locale: Locale, key: MessageKey, params: Record<string, string
 }
 
 /**
- * Resolves one of the five report messages that vary by count. Asks
+ * Resolves one of the report/dashboard messages that vary by count. Asks
  * Intl.PluralRules for `locale`'s REAL plural category for `count` —
  * never hardcoded to just "one"/"other" — so a future locale with more
  * categories (e.g. Arabic's "zero"/"one"/"two"/"few"/"many"/"other", or
  * Polish's "few"/"many") resolves correctly once seeded.
  *
+ * `count` always drives the REAL plural-category selection, but the
+ * value actually interpolated for `{count}` in the template defaults to
+ * `count` itself and can be overridden via `params.count` — e.g. passing
+ * the locale-formatted `entry.reviewCount.toLocaleString()` ("1,234") as
+ * `params.count` while still passing the raw number as `count` so
+ * Intl.PluralRules sees the real number, not a formatted string. Any
+ * other `{name}` placeholder in the template comes from `params` the
+ * same way t() handles it.
+ *
  * Fallback order when `locale` doesn't have that exact category seeded
- * (e.g. "es" today, which has no report.* translations at all yet):
+ * (e.g. "es" today, which has no report.* or dashboard.* translations
+ * at all yet):
  *   1. `locale`'s own text for this exact category
  *   2. English's text for this SAME exact category — this is the common
  *      case for an untranslated locale, and matters: it keeps the right
@@ -267,7 +358,12 @@ export function t(locale: Locale, key: MessageKey, params: Record<string, string
  *   5. the raw key, as an absolute last resort
  * Never blank/undefined at any step.
  */
-export function tPlural(locale: Locale, keyBase: PluralKeyBase, count: number): string {
+export function tPlural(
+  locale: Locale,
+  keyBase: PluralKeyBase,
+  count: number,
+  params: Record<string, string | number> = {}
+): string {
   const category = new Intl.PluralRules(locale).select(count);
   const dictLocale = messages[locale] as Partial<Record<string, string>>;
   const dictDefault = messages[DEFAULT_LOCALE] as Partial<Record<string, string>>;
@@ -277,5 +373,5 @@ export function tPlural(locale: Locale, keyBase: PluralKeyBase, count: number): 
     dictLocale[`${keyBase}.other`] ??
     dictDefault[`${keyBase}.other`] ??
     `${keyBase}.other`;
-  return interpolate(template, { count });
+  return interpolate(template, { count, ...params });
 }

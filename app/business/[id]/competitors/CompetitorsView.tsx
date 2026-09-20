@@ -12,31 +12,37 @@ import { GradeBadge } from "@/components/ui/GradeBadge";
 import { cn } from "@/lib/utils";
 import { saveCompetitorScan } from "@/app/actions/competitors";
 import type { CompetitorScanResult, RankedCompetitor } from "@/lib/competitors";
+import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 
-function milesLabel(meters: number): string {
+function milesLabel(meters: number, locale: Locale): string {
   const mi = meters / 1609.34;
-  return `${mi < 0.1 ? "<0.1" : mi.toFixed(1)} mi`;
+  return `${mi < 0.1 ? "<0.1" : mi.toFixed(1)}${t(locale, "dashboard.competitors.milesSuffix")}`;
 }
 
 function SignalChips({ entry }: { entry: RankedCompetitor }) {
+  const locale = useLocale();
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <Pill variant="neutral" className="gap-1">
         <IconStar size={12} className={entry.rating !== null ? "text-brass" : "text-ink-mute"} />
-        {entry.rating !== null ? entry.rating.toFixed(1) : "No rating"}
+        {entry.rating !== null ? entry.rating.toFixed(1) : t(locale, "dashboard.competitors.noRating")}
       </Pill>
       <Pill variant="neutral" className="gap-1">
         <IconMessageCircle size={12} />
-        {entry.reviewCount !== null ? `${entry.reviewCount.toLocaleString()} reviews` : "No review count"}
+        {entry.reviewCount !== null
+          ? tPlural(locale, "dashboard.competitors.reviewCount", entry.reviewCount, {
+              count: entry.reviewCount.toLocaleString(),
+            })
+          : t(locale, "dashboard.competitors.noReviewCount")}
       </Pill>
       <Pill variant={entry.hasWebsite ? "green" : "amber"} className="gap-1">
         {entry.hasWebsite ? <IconWorld size={12} /> : <IconWorldOff size={12} />}
-        {entry.hasWebsite ? "Has website" : "No website"}
+        {entry.hasWebsite ? t(locale, "dashboard.competitors.hasWebsite") : t(locale, "dashboard.competitors.noWebsite")}
       </Pill>
       {entry.distanceMeters !== null && (
         <Pill variant="neutral" className="gap-1">
           <IconMapPin size={12} />
-          {milesLabel(entry.distanceMeters)}
+          {milesLabel(entry.distanceMeters, locale)}
         </Pill>
       )}
     </div>
@@ -44,6 +50,7 @@ function SignalChips({ entry }: { entry: RankedCompetitor }) {
 }
 
 function RankedRow({ entry, rank }: { entry: RankedCompetitor; rank: number }) {
+  const locale = useLocale();
   const row = (
     <div
       className={cn(
@@ -68,11 +75,13 @@ function RankedRow({ entry, rank }: { entry: RankedCompetitor; rank: number }) {
             <span className="text-sm font-semibold text-ink">{entry.name}</span>
             {entry.isSubject && (
               <Pill variant="brass" className="shrink-0">
-                Your business
+                {t(locale, "dashboard.competitors.yourBusiness")}
               </Pill>
             )}
           </div>
-          <div className="mt-0.5 text-[12px] text-ink-mute">{entry.address ?? "No address on file"}</div>
+          <div className="mt-0.5 text-[12px] text-ink-mute">
+            {entry.address ?? t(locale, "dashboard.competitors.noAddress")}
+          </div>
           <div className="mt-2">
             <SignalChips entry={entry} />
           </div>
@@ -80,7 +89,9 @@ function RankedRow({ entry, rank }: { entry: RankedCompetitor; rank: number }) {
       </div>
       <div className="text-right sm:pl-3">
         <div className="font-serif text-2xl font-bold text-ink">{entry.breakdown.total}</div>
-        <div className="text-[11px] uppercase tracking-[0.06em] text-ink-mute">PostScore / 100</div>
+        <div className="text-[11px] uppercase tracking-[0.06em] text-ink-mute">
+          {t(locale, "dashboard.competitors.postscoreOutOf100")}
+        </div>
       </div>
     </div>
   );
@@ -96,6 +107,7 @@ function RankedRow({ entry, rank }: { entry: RankedCompetitor; rank: number }) {
 }
 
 function SaveScanControl({ businessId }: { businessId: string }) {
+  const locale = useLocale();
   const router = useRouter();
   const [state, setState] = useState<
     { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; message: string }
@@ -108,20 +120,20 @@ function SaveScanControl({ businessId }: { businessId: string }) {
       setState({ kind: "saved" });
       router.refresh();
     } else if (result.status === "no_data") {
-      setState({ kind: "error", message: "Nothing to save — no comparable competitors were found." });
+      setState({ kind: "error", message: t(locale, "dashboard.competitors.noComparableCompetitors") });
     } else if (result.status === "error") {
       setState({ kind: "error", message: result.message });
     } else {
-      setState({ kind: "error", message: "Could not save this scan." });
+      setState({ kind: "error", message: t(locale, "dashboard.competitors.saveError") });
     }
   }
 
   return (
     <div className="flex items-center gap-3">
       <Button variant="brass" size="sm" onClick={handleSave} disabled={state.kind === "saving"}>
-        {state.kind === "saving" ? "Saving scan..." : "Save this scan to history"}
+        {state.kind === "saving" ? t(locale, "dashboard.competitors.savingScan") : t(locale, "dashboard.competitors.saveScan")}
       </Button>
-      {state.kind === "saved" && <span className="text-sm text-green">Saved.</span>}
+      {state.kind === "saved" && <span className="text-sm text-green">{t(locale, "dashboard.competitors.saved")}</span>}
       {state.kind === "error" && <span className="text-sm text-red">{state.message}</span>}
     </div>
   );
@@ -139,7 +151,18 @@ export function CompetitorsView({
   competitorNoun: string;
   result: CompetitorScanResult;
 }) {
+  const locale = useLocale();
   const competitorCount = result.ranked.filter((r) => !r.isSubject).length;
+
+  const categoryClause = result.categoryLabel
+    ? t(locale, "dashboard.competitors.categoryClause", { categoryLabel: result.categoryLabel })
+    : "";
+  const subtitle = t(locale, "dashboard.competitors.subtitle", { competitorNoun, categoryClause });
+
+  const rankSuffix = result.subjectRank
+    ? t(locale, "dashboard.competitors.rankSuffix", { rank: result.subjectRank, total: result.ranked.length })
+    : "";
+  const rankedHeading = t(locale, "dashboard.competitors.rankedHeading", { rankSuffix });
 
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
@@ -149,26 +172,21 @@ export function CompetitorsView({
           className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
         >
           <IconArrowLeft size={15} />
-          Back to {businessName ?? "business"}
+          {t(locale, "dashboard.competitors.backTo", {
+            name: businessName ?? t(locale, "dashboard.competitors.businessFallback"),
+          })}
         </Link>
         <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
-          Competitors
+          {t(locale, "dashboard.competitors.title")}
         </h1>
-        <p className="mt-1 text-sm text-ink-soft">
-          Real nearby {competitorNoun}
-          {result.categoryLabel ? ` in the same category (${result.categoryLabel})` : ""}, scored
-          with the same PostScore engine and ranked strictly by that score.
-        </p>
+        <p className="mt-1 text-sm text-ink-soft">{subtitle}</p>
       </div>
 
       <Card className="p-4 text-sm text-ink-soft">{result.message}</Card>
 
       {result.status === "ok" && result.ranked.length > 0 && (
         <>
-          <SectionHeading
-            title={`Ranked by PostScore${result.subjectRank ? ` — you're #${result.subjectRank} of ${result.ranked.length}` : ""}`}
-            action={<SaveScanControl businessId={businessId} />}
-          />
+          <SectionHeading title={rankedHeading} action={<SaveScanControl businessId={businessId} />} />
           <div className="flex flex-col gap-3">
             {result.ranked.map((entry, i) => (
               <RankedRow key={entry.placeId} entry={entry} rank={i + 1} />
@@ -179,7 +197,7 @@ export function CompetitorsView({
 
       {result.unscored.length > 0 && (
         <>
-          <SectionHeading title="Found nearby, but couldn't be scored" />
+          <SectionHeading title={t(locale, "dashboard.competitors.unscoredHeading")} />
           <Card className="p-5">
             <div className="flex flex-col divide-y divide-paper-line">
               {result.unscored.map((u) => (
@@ -187,7 +205,7 @@ export function CompetitorsView({
                   <div>
                     <div className="text-sm font-medium text-ink">{u.name}</div>
                     <div className="mt-0.5 text-[12px] text-ink-mute">
-                      {u.address ?? "No address on file"} · {milesLabel(u.distanceMeters)}
+                      {u.address ?? t(locale, "dashboard.competitors.noAddress")} · {milesLabel(u.distanceMeters, locale)}
                     </div>
                   </div>
                   <span className="shrink-0 text-[12px] text-ink-mute">{u.reason}</span>
@@ -200,9 +218,9 @@ export function CompetitorsView({
 
       {result.status === "ok" && competitorCount === 0 && result.unscored.length === 0 && (
         <Card className="p-5 text-sm text-ink-soft">
-          Your PostScore ({result.ranked[0]?.breakdown.total ?? "—"}) is shown above with nothing to
-          compare it to yet — widen your search area or check back later as more listings appear
-          nearby.
+          {t(locale, "dashboard.competitors.nothingToCompare", {
+            total: result.ranked[0]?.breakdown.total ?? "—",
+          })}
         </Card>
       )}
     </div>
