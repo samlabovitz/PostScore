@@ -19,6 +19,10 @@ export interface BusinessRecord extends BusinessScoringRow {
   name: string | null;
   address: string | null;
   google_maps_uri: string | null;
+  /** The business's own real language column — display-only, never used
+   * by scoring. Passed straight through to DashboardShell (which
+   * normalizes it), same as the rest of this display-only trio. */
+  language: string | null;
 }
 
 export type ScoreBusinessResult =
@@ -68,7 +72,7 @@ export async function scoreBusinessWithClient(
   const { data: business, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, google_maps_uri"
+      "id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language"
     )
     .eq("id", businessId)
     .single();

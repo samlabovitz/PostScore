@@ -278,6 +278,14 @@ export interface BusinessSummary {
   services?: string[] | null;
   avg_job_value_low?: number | null;
   avg_job_value_high?: number | null;
+  /** The business's own real language column, run through
+   * normalizeLocale() by whoever renders it (DashboardShell) — never
+   * trusted raw. Optional for the same reason every other field here is:
+   * only DashboardShell needs it, so it's the one caller that always
+   * selects it; other callers building this shape without a real
+   * `businesses` row (e.g. an inline literal in a page.tsx) safely fall
+   * back to DEFAULT_LOCALE via normalizeLocale(undefined). */
+  language?: string | null;
 }
 
 export type GetBusinessSummaryResult =
@@ -304,7 +312,7 @@ export async function getBusinessSummary(businessId: string): Promise<GetBusines
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, category, primary_type, business_type_override, phone, services, avg_job_value_low, avg_job_value_high"
+      "id, name, address, category, primary_type, business_type_override, phone, services, avg_job_value_low, avg_job_value_high, language"
     )
     .eq("id", businessId)
     .single();

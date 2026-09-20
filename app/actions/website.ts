@@ -24,6 +24,9 @@ export interface WebsitePageData {
   category: string | null;
   primaryType: string | null;
   businessTypeOverride: string | null;
+  /** The business's own real language column — display-only, passed
+   * straight through to DashboardShell (which normalizes it). */
+  language: string | null;
   phone: string | null;
   openingHours: string[] | null;
   rating: number | null;
@@ -198,7 +201,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "name, address, category, primary_type, business_type_override, phone, opening_hours, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri"
+      "name, address, category, primary_type, business_type_override, phone, opening_hours, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language"
     )
     .eq("id", businessId)
     .single();
@@ -244,6 +247,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       category: data.category,
       primaryType: data.primary_type,
       businessTypeOverride: data.business_type_override,
+      language: data.language,
       phone: data.phone,
       openingHours: data.opening_hours,
       rating: data.rating,

@@ -25,7 +25,12 @@ export default async function CompetitorsPage({ params }: { params: { id: string
 
   return (
     <DashboardShell
-      business={{ id: params.id, name: fetched.businessName, address: fetched.businessAddress }}
+      business={{
+        id: params.id,
+        name: fetched.businessName,
+        address: fetched.businessAddress,
+        language: fetched.language,
+      }}
     >
       <CompetitorsView
         businessId={params.id}

@@ -14,6 +14,9 @@ export interface ReviewsPageData {
   address: string | null;
   category: string | null;
   primaryType: string | null;
+  /** The business's own real language column — display-only, passed
+   * straight through to DashboardShell (which normalizes it). */
+  language: string | null;
   /** Google's own place_id — the review link/QR are only ever built
    * from this real value, never guessed. */
   placeId: string | null;
@@ -57,7 +60,7 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "name, address, category, primary_type, place_id, rating, review_count, phone, opening_hours, website, categories, photo_count, business_status, https_status, website_analysis_json"
+      "name, address, category, primary_type, place_id, rating, review_count, phone, opening_hours, website, categories, photo_count, business_status, https_status, website_analysis_json, language"
     )
     .eq("id", businessId)
     .single();
@@ -72,6 +75,7 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
     category: string | null;
     primary_type: string | null;
     place_id: string | null;
+    language: string | null;
   };
 
   const breakdown = scoreBusiness(businessRowToScoringInput(row));
@@ -94,6 +98,7 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
       address: row.address,
       category: row.category,
       primaryType: row.primary_type,
+      language: row.language,
       placeId: row.place_id,
       rating: row.rating,
       reviewCount: row.review_count,

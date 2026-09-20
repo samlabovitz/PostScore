@@ -31,6 +31,7 @@ export default async function WebsiteReviewsPage({ params }: { params: { id: str
         address: data.address,
         category: data.category,
         primary_type: data.primaryType,
+        language: data.language,
       }}
     >
       <ReviewsView businessId={params.id} reviews={data} />

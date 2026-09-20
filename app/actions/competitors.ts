@@ -15,6 +15,7 @@ interface CompetitorBusinessRow {
   place_id: string;
   name: string | null;
   address: string | null;
+  language: string | null;
   phone: string | null;
   website: string | null;
   rating: number | null;
@@ -37,6 +38,9 @@ export type GetCompetitorsResult =
       status: "ok";
       businessName: string | null;
       businessAddress: string | null;
+      /** The business's own real language column — display-only, passed
+       * straight through to DashboardShell (which normalizes it). */
+      language: string | null;
       /** The resolved business-type profile's noun, e.g. "salons" — see config/bizProfiles.ts. */
       competitorNoun: string;
       result: CompetitorScanResult;
@@ -80,7 +84,7 @@ export async function getCompetitorsWithClient(
   const { data: business, error } = await supabase
     .from("businesses")
     .select(
-      "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, primary_type, business_type_override, lat, lng"
+      "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, primary_type, business_type_override, lat, lng, language"
     )
     .eq("id", businessId)
     .single();
@@ -117,6 +121,7 @@ export async function getCompetitorsWithClient(
       status: "ok",
       businessName: row.name,
       businessAddress: row.address,
+      language: row.language,
       competitorNoun,
       result,
     };

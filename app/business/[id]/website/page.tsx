@@ -91,6 +91,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
         address: data.address,
         category: data.category,
         primary_type: data.primaryType,
+        language: data.language,
       }}
     >
       <div className="flex flex-col gap-8 nav:gap-10">
