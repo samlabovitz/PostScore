@@ -67,7 +67,12 @@ export const dynamic = "force-dynamic";
 // response-timing side channel, same discipline as any credential check.
 // ---------------------------------------------------------------------------
 
-function isAuthorized(request: NextRequest): boolean {
+// Exported so the dev-only single-business test route
+// (app/api/cron/monthly-reports/send-one/route.ts) can reuse the EXACT
+// same bearer-secret gate — never a second, separately-typed-out check
+// that could drift from this one (e.g. quietly forgetting the
+// timing-safe comparison).
+export function isAuthorized(request: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     // Never treat "not configured" as "no secret required" — an unset
@@ -95,7 +100,9 @@ function isAuthorized(request: NextRequest): boolean {
 // lib/email.ts) — never optimistically before that.
 // ---------------------------------------------------------------------------
 
-interface CronRunResult {
+// Exported for the same reason as isAuthorized above — the single-business
+// test route returns this exact shape rather than a separately-typed one.
+export interface CronRunResult {
   businessId: string;
   status: "sent" | "skipped" | "failed";
   reason?: string;
@@ -244,8 +251,17 @@ function describeRescanFailure(result: RescanBusinessResult): string {
  * mode is caught by the caller's per-business try/catch (see POST
  * below), so one business's real scan/send failure can never take down
  * the whole run.
+ *
+ * Exported so the dev-only single-business test route
+ * (app/api/cron/monthly-reports/send-one/route.ts) can call the EXACT
+ * same real render/subject/send/reservation logic for one businessId —
+ * never a second reimplementation that could drift from this one. That
+ * also means it inherits this function's own idempotency guard as-is: if
+ * this business already has a monthly_reports row for the current
+ * calendar month, a test call returns "skipped" rather than sending
+ * again — the same real behavior a production run would have.
  */
-async function processBusiness(
+export async function processBusiness(
   supabase: ReturnType<typeof createAdminClient>,
   businessId: string,
   startOfMonthIso: string,
