@@ -11,6 +11,7 @@ import {
 } from "./sampleMonthlyReportContent";
 import { GENERAL_FOCUS_TIPS, type MonthlyReportContent } from "@/lib/monthlyReport";
 import { CHECKS } from "@/lib/scoring";
+import { DEFAULT_LOCALE, t } from "@/lib/i18n";
 
 // A regression guard against the one thing this template must never do:
 // add OVER-THE-TOP enthusiasm — these words are banned unconditionally,
@@ -253,7 +254,7 @@ describe("MonthlyReportEmail — closing focus section", () => {
 
   test("no orphan advice: every focus pointer shown across all four sample states traces back to a real check/fact in that same sample's own data", () => {
     const samples = [SAMPLE_BASELINE, SAMPLE_STEADY, SAMPLE_REAL_DELTAS, SAMPLE_MISSING_DATA];
-    const generalTipTexts = GENERAL_FOCUS_TIPS.map((t) => t.text);
+    const generalTipTexts = GENERAL_FOCUS_TIPS().map((t) => t.text);
 
     for (const sample of samples) {
       const content = sample.content;
@@ -267,8 +268,8 @@ describe("MonthlyReportEmail — closing focus section", () => {
           expect(pointer.checkId).toBeTruthy();
           const checkDef = CHECKS.find((c) => c.id === pointer.checkId);
           expect(checkDef).toBeDefined();
-          expect(pointer.text).toContain(checkDef!.label);
-          expect(pointer.text).toContain(checkDef!.advice);
+          expect(pointer.text).toContain(t(DEFAULT_LOCALE, checkDef!.labelKey));
+          expect(pointer.text).toContain(t(DEFAULT_LOCALE, checkDef!.adviceKey));
         } else if (pointer.kind === "competitor_gap") {
           // The competitor must be real (available, subject not #1) and
           // the review count must be real too.

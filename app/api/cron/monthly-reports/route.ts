@@ -391,7 +391,7 @@ export async function processBusiness(
     return { businessId, status: "failed", reason: "no real email on file for this business's owner" };
   }
 
-  const content = buildMonthlyReportContent(baselineRow, currentRow, competitorDelta);
+  const content = buildMonthlyReportContent(baselineRow, currentRow, competitorDelta, locale);
   const reportDate = now.toISOString();
   const businessName = freshBusiness.name ?? "Your business";
   // A real, working unsubscribe link — app/unsubscribe/page.tsx validates

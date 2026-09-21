@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { downloadDataUrl } from "@/lib/couponImage";
 import { renderRecapPng } from "@/lib/reportsRecapImage";
 import type { MonthlyRecap } from "@/app/actions/reports";
+import { tPlural, useLocale } from "@/lib/i18n";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -29,6 +30,8 @@ export function MonthlyRecapCard({
   businessName: string;
   recap: MonthlyRecap | null;
 }) {
+  const locale = useLocale();
+
   if (!recap) {
     return (
       <Card className="p-5 text-sm text-ink-soft">
@@ -38,7 +41,7 @@ export function MonthlyRecapCard({
   }
 
   const { previous, current, scoreDelta, daysBetween, changes, changesUnavailable } = recap;
-  const dateRangeLabel = `${formatDate(previous.created_at)} – ${formatDate(current.created_at)} (${daysBetween} day${daysBetween === 1 ? "" : "s"})`;
+  const dateRangeLabel = `${formatDate(previous.created_at)} – ${formatDate(current.created_at)} (${tPlural(locale, "dashboard.reports.recapDayCount", daysBetween)})`;
 
   return (
     <Card className="p-5">

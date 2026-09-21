@@ -1,3 +1,5 @@
+"use client";
+
 import { IconAlertTriangle, IconCheck, IconMinus, IconX } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { formatPoints } from "@/components/scoring/CategoryCard";
@@ -10,6 +12,7 @@ import {
   type Suggestion,
   type WebsiteAnalysis,
 } from "@/lib/scoring";
+import { t, tPlural, useLocale } from "@/lib/i18n";
 
 /** "Infrastructure" checks first, "what's actually on the page" checks
  * second — a deliberate, honest-only grouping (no check is invented or
@@ -214,6 +217,8 @@ export function WebsiteScoreBreakdown({
   websiteAnalysis: WebsiteAnalysis | null;
   websiteSuggestions: Suggestion[];
 }) {
+  const locale = useLocale();
+
   if (!websiteCategory) return null;
 
   const grade = websiteCategory.relativeScore !== null ? gradeFromTotal(websiteCategory.relativeScore) : null;
@@ -257,8 +262,8 @@ export function WebsiteScoreBreakdown({
           </div>
           <p className="text-[13px] text-ink-soft">
             {excludedPoints > 0
-              ? `${excludedPoints} pt${excludedPoints === 1 ? "" : "s"} not yet verified, not counted for or against.`
-              : "Every website check has real, verified data."}
+              ? tPlural(locale, "dashboard.website.excludedPoints", excludedPoints)
+              : t(locale, "dashboard.website.allVerified")}
           </p>
         </div>
       </Card>

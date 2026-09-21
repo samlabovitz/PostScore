@@ -385,7 +385,7 @@ describe("buildMonthlyReportContent — closing focus section", () => {
 
     const generalTips = report.focus.pointers.filter((p) => p.kind === "general_tip");
     expect(generalTips.length).toBe(1);
-    expect(GENERAL_FOCUS_TIPS.map((t) => t.text)).toContain(generalTips[0].text);
+    expect(GENERAL_FOCUS_TIPS().map((t) => t.text)).toContain(generalTips[0].text);
   });
 
   test("never shows more than 3 pointers total, even when every real source has something to say", () => {

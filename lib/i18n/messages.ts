@@ -81,7 +81,176 @@ export type MessageKey =
   | "dashboard.competitors.saveScan"
   | "dashboard.competitors.saved"
   | "dashboard.competitors.noComparableCompetitors"
-  | "dashboard.competitors.saveError";
+  | "dashboard.competitors.saveError"
+  // --- Shared content layer: scoring checks (lib/scoring.ts's CHECKS) ---
+  // Keyed by each check's own stable id (e.g. "visibility.rating"), so a
+  // check's real id and its i18n key namespace can never drift apart.
+  // Shared between the dashboard (CategoryCard, WebsiteScoreBreakdown,
+  // ActionPlanSection via lib/actionPlan.ts) and the monthly report email
+  // (via generateSuggestions()'s advice/label feeding lib/monthlyReport.ts's
+  // focus pointers) — the same reason these live under content.*, not report.*.
+  | "content.checks.visibility.rating.label"
+  | "content.checks.visibility.rating.advice"
+  | "content.checks.visibility.rating.explanation.noReviews"
+  | "content.checks.visibility.rating.explanation.notFound"
+  | "content.checks.visibility.rating.explanation.noReviewCountBackup"
+  | "content.checks.visibility.rating.explanation.lowConfidence.one"
+  | "content.checks.visibility.rating.explanation.lowConfidence.other"
+  | "content.checks.visibility.rating.explanation.confident"
+  | "content.checks.visibility.review_count.label"
+  | "content.checks.visibility.review_count.advice"
+  | "content.checks.visibility.review_count.explanation.zero"
+  | "content.checks.visibility.review_count.explanation.nonzero.one"
+  | "content.checks.visibility.review_count.explanation.nonzero.other"
+  | "content.checks.visibility.review_recency.label"
+  | "content.checks.visibility.review_recency.advice"
+  | "content.checks.visibility.review_recency.explanation.notCollected"
+  | "content.checks.visibility.review_recency.explanation.recent"
+  | "content.checks.completeness.phone.label"
+  | "content.checks.completeness.phone.advice"
+  | "content.checks.completeness.phone.explanation.present"
+  | "content.checks.completeness.phone.explanation.missing"
+  | "content.checks.completeness.address.label"
+  | "content.checks.completeness.address.advice"
+  | "content.checks.completeness.address.explanation.present"
+  | "content.checks.completeness.address.explanation.missing"
+  | "content.checks.completeness.hours.label"
+  | "content.checks.completeness.hours.advice"
+  | "content.checks.completeness.hours.explanation.present"
+  | "content.checks.completeness.hours.explanation.missing"
+  | "content.checks.completeness.website_link.label"
+  | "content.checks.completeness.website_link.advice"
+  | "content.checks.completeness.website_link.explanation.present"
+  | "content.checks.completeness.website_link.explanation.missing"
+  | "content.checks.completeness.categories.label"
+  | "content.checks.completeness.categories.advice"
+  | "content.checks.completeness.categories.explanation.hasList.one"
+  | "content.checks.completeness.categories.explanation.hasList.other"
+  | "content.checks.completeness.categories.explanation.primaryOnly"
+  | "content.checks.completeness.categories.explanation.none"
+  | "content.checks.completeness.photos.label"
+  | "content.checks.completeness.photos.advice"
+  | "content.checks.completeness.photos.explanation.notFound"
+  | "content.checks.completeness.photos.explanation.has.one"
+  | "content.checks.completeness.photos.explanation.has.other"
+  | "content.checks.completeness.photos.explanation.none"
+  | "content.checks.completeness.business_status.label"
+  | "content.checks.completeness.business_status.advice"
+  | "content.checks.completeness.business_status.explanation.notFound"
+  | "content.checks.completeness.business_status.explanation.operational"
+  | "content.checks.completeness.business_status.explanation.closed"
+  | "content.checks.completeness.business_status.explanation.unrecognized"
+  | "content.checks.website.has_website.label"
+  | "content.checks.website.has_website.advice"
+  | "content.checks.website.has_website.explanation.present"
+  | "content.checks.website.has_website.explanation.missing"
+  | "content.checks.website.https.label"
+  | "content.checks.website.https.advice"
+  | "content.checks.website.https.explanation.noWebsite"
+  | "content.checks.website.https.explanation.https"
+  | "content.checks.website.https.explanation.httpOnly"
+  | "content.checks.website.https.explanation.unreachable"
+  | "content.checks.website.https.explanation.notChecked"
+  | "content.checks.website.performance_mobile.label"
+  | "content.checks.website.performance_mobile.advice"
+  | "content.checks.website.performance_mobile.explanation.noWebsite"
+  | "content.checks.website.performance_mobile.explanation.notAnalyzed"
+  | "content.checks.website.performance_mobile.explanation.noScore"
+  | "content.checks.website.performance_mobile.explanation.fast"
+  | "content.checks.website.performance_mobile.explanation.slowish"
+  | "content.checks.website.performance_mobile.explanation.slow"
+  | "content.checks.website.content_depth.label"
+  | "content.checks.website.content_depth.advice"
+  | "content.checks.website.content_depth.explanation.noWebsite"
+  | "content.checks.website.content_depth.explanation.couldntRead"
+  | "content.checks.website.content_depth.explanation.notAnalyzed"
+  | "content.checks.website.content_depth.explanation.clientRenderedShell"
+  | "content.checks.website.content_depth.explanation.recoveredBase"
+  | "content.checks.website.content_depth.explanation.confirmedPresentTemplate"
+  | "content.checks.website.content_depth.explanation.confirmedMissingTemplate"
+  | "content.checks.website.content_depth.explanation.recoveredNote"
+  | "content.checks.website.content_depth.explanation.presentTitle"
+  | "content.checks.website.content_depth.explanation.presentMeta"
+  | "content.checks.website.content_depth.explanation.presentViewport"
+  | "content.checks.website.content_depth.explanation.presentHeadings"
+  | "content.checks.website.content_depth.explanation.missingTitle"
+  | "content.checks.website.content_depth.explanation.missingMeta"
+  | "content.checks.website.content_depth.explanation.missingViewport"
+  | "content.checks.website.content_depth.explanation.missingHeadings"
+  | "content.checks.website.content_depth.explanation.allGood"
+  | "content.checks.website.content_depth.explanation.gapsTemplate"
+  | "content.checks.website.content_depth.explanation.gapNoTitle"
+  | "content.checks.website.content_depth.explanation.gapNoMeta"
+  | "content.checks.website.content_depth.explanation.gapNoViewport"
+  | "content.checks.website.content_depth.explanation.gapNoHeadings"
+  | "content.checks.website.content_depth.explanation.gapThinContent"
+  | "content.checks.website.contact_conversion.label"
+  | "content.checks.website.contact_conversion.advice"
+  | "content.checks.website.contact_conversion.explanation.noWebsite"
+  | "content.checks.website.contact_conversion.explanation.couldntRead"
+  | "content.checks.website.contact_conversion.explanation.notAnalyzed"
+  | "content.checks.website.contact_conversion.explanation.clientRenderedShell"
+  | "content.checks.website.contact_conversion.explanation.allGood"
+  | "content.checks.website.contact_conversion.explanation.noContact"
+  | "content.checks.website.contact_conversion.explanation.noCta"
+  | "content.checks.website.about_presence.label"
+  | "content.checks.website.about_presence.advice"
+  | "content.checks.website.about_presence.explanation.noWebsite"
+  | "content.checks.website.about_presence.explanation.notAnalyzed"
+  | "content.checks.website.about_presence.explanation.found"
+  | "content.checks.website.about_presence.explanation.notFound"
+  | "content.checks.website.services_presence.label"
+  | "content.checks.website.services_presence.advice"
+  | "content.checks.website.services_presence.explanation.noWebsite"
+  | "content.checks.website.services_presence.explanation.notAnalyzed"
+  | "content.checks.website.services_presence.explanation.found"
+  | "content.checks.website.services_presence.explanation.notFound"
+  // --- Shared content layer: listing-change descriptions (lib/profileChanges.ts) ---
+  | "content.listingChange.phone.added"
+  | "content.listingChange.phone.removed"
+  | "content.listingChange.phone.changed"
+  | "content.listingChange.website.added"
+  | "content.listingChange.website.removed"
+  | "content.listingChange.website.changed"
+  | "content.listingChange.hours.added"
+  | "content.listingChange.hours.removed"
+  | "content.listingChange.hours.changed"
+  | "content.listingChange.categories.addedPart"
+  | "content.listingChange.categories.removedPart"
+  | "content.listingChange.categories.changed"
+  | "content.listingChange.photos.added.one"
+  | "content.listingChange.photos.added.other"
+  | "content.listingChange.photos.removed.one"
+  | "content.listingChange.photos.removed.other"
+  | "content.listingChange.rating.rose"
+  | "content.listingChange.rating.dropped"
+  | "content.listingChange.reviews.gained.one"
+  | "content.listingChange.reviews.gained.other"
+  | "content.listingChange.reviews.lost"
+  | "content.listingChange.status.operational"
+  | "content.listingChange.status.closedTemporarily"
+  | "content.listingChange.status.closedPermanently"
+  | "content.listingChange.status.changed"
+  // --- Email-only glue (lib/monthlyReport.ts) ---
+  | "report.focus.biggestOpportunity"
+  | "report.focus.alsoWorthALook"
+  | "report.focus.listingIssue"
+  | "report.focus.competitorGap.one"
+  | "report.focus.competitorGap.other"
+  | "report.focus.generalTip"
+  | "report.summary.reviewsGained.one"
+  | "report.summary.reviewsGained.other"
+  | "report.summary.reviewsLost"
+  | "report.summary.listingChanges.one"
+  | "report.summary.listingChanges.other"
+  // --- Dashboard-only render-site strings not shared with the email ---
+  | "dashboard.website.excludedPoints.one"
+  | "dashboard.website.excludedPoints.other"
+  | "dashboard.website.allVerified"
+  | "dashboard.actionPlan.weeklyReviewTarget.one"
+  | "dashboard.actionPlan.weeklyReviewTarget.other"
+  | "dashboard.reports.recapDayCount.one"
+  | "dashboard.reports.recapDayCount.other";
 
 /** The report/dashboard messages that vary by count — see tPlural below.
  * Each has a ".one" and ".other" MessageKey (the only two categories
@@ -94,7 +263,20 @@ export type PluralKeyBase =
   | "report.fragment.reviewsGained"
   | "report.fragment.reviewsLost"
   | "report.fragment.listingChanges"
-  | "dashboard.competitors.reviewCount";
+  | "dashboard.competitors.reviewCount"
+  | "content.checks.visibility.rating.explanation.lowConfidence"
+  | "content.checks.visibility.review_count.explanation.nonzero"
+  | "content.checks.completeness.categories.explanation.hasList"
+  | "content.checks.completeness.photos.explanation.has"
+  | "content.listingChange.photos.added"
+  | "content.listingChange.photos.removed"
+  | "content.listingChange.reviews.gained"
+  | "report.focus.competitorGap"
+  | "report.summary.reviewsGained"
+  | "report.summary.listingChanges"
+  | "dashboard.website.excludedPoints"
+  | "dashboard.actionPlan.weeklyReviewTarget"
+  | "dashboard.reports.recapDayCount";
 
 // English is the dictionary every other locale falls back to via t()
 // below, so it's kept fully seeded. Other locales are deliberately
@@ -205,6 +387,249 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.noComparableCompetitors":
       "Nothing to save — no comparable competitors were found.",
     "dashboard.competitors.saveError": "Could not save this scan.",
+
+    // --- content.checks.* — pure extraction of lib/scoring.ts's CHECKS;
+    // every value below reproduces that file's original hardcoded
+    // label/advice/explanation text exactly, byte-for-byte.
+    "content.checks.visibility.rating.label": "Star rating",
+    "content.checks.visibility.rating.advice":
+      "Improve your average star rating — ask happy customers for reviews (more reviews also means your rating carries more weight) and follow up on negative ones.",
+    "content.checks.visibility.rating.explanation.noReviews":
+      "No Google reviews yet — this is the biggest thing holding your visibility back.",
+    "content.checks.visibility.rating.explanation.notFound": "Google returned no star rating for this listing.",
+    "content.checks.visibility.rating.explanation.noReviewCountBackup":
+      "Rated {rating}★ on Google, but Google didn't return a review count to back it up — shown at reduced confidence until review volume is verified.",
+    "content.checks.visibility.rating.explanation.lowConfidence.one":
+      "Rated {rating}★ on Google, but based on only {count} review — as you gather more reviews, this rating will carry more weight toward your score.",
+    "content.checks.visibility.rating.explanation.lowConfidence.other":
+      "Rated {rating}★ on Google, but based on only {count} reviews — as you gather more reviews, this rating will carry more weight toward your score.",
+    "content.checks.visibility.rating.explanation.confident": "Rated {rating}★ on Google.",
+
+    "content.checks.visibility.review_count.label": "Review count",
+    "content.checks.visibility.review_count.advice":
+      "Get more Google reviews — ask recent customers directly, or add a review link to receipts and follow-up emails.",
+    "content.checks.visibility.review_count.explanation.zero":
+      "0 reviews on Google — ask your customers for reviews to start building social proof.",
+    "content.checks.visibility.review_count.explanation.nonzero.one":
+      "{count} review on Google (full credit at {saturation}+).",
+    "content.checks.visibility.review_count.explanation.nonzero.other":
+      "{count} reviews on Google (full credit at {saturation}+).",
+
+    "content.checks.visibility.review_recency.label": "Review recency",
+    "content.checks.visibility.review_recency.advice":
+      "Keep reviews coming in regularly — recent activity signals to customers (and Google) that the business is active.",
+    "content.checks.visibility.review_recency.explanation.notCollected":
+      "Review timestamps aren't collected by the current Google Places integration yet, so this check is excluded rather than scored as a failure.",
+    "content.checks.visibility.review_recency.explanation.recent": "Most recent review was {days} day(s) ago.",
+
+    "content.checks.completeness.phone.label": "Phone number",
+    "content.checks.completeness.phone.advice": "Add a phone number to your Google Business Profile.",
+    "content.checks.completeness.phone.explanation.present": "Phone number is on the listing.",
+    "content.checks.completeness.phone.explanation.missing": "No phone number on the listing.",
+
+    "content.checks.completeness.address.label": "Address",
+    "content.checks.completeness.address.advice":
+      "Add a complete, verified address to your Google Business Profile.",
+    "content.checks.completeness.address.explanation.present": "Address is on the listing.",
+    "content.checks.completeness.address.explanation.missing": "No address on the listing.",
+
+    "content.checks.completeness.hours.label": "Business hours",
+    "content.checks.completeness.hours.advice": "Add your business hours to your Google Business Profile.",
+    "content.checks.completeness.hours.explanation.present": "Business hours are on the listing.",
+    "content.checks.completeness.hours.explanation.missing": "No business hours on the listing.",
+
+    "content.checks.completeness.website_link.label": "Website link on listing",
+    "content.checks.completeness.website_link.advice": "Link your website in your Google Business Profile.",
+    "content.checks.completeness.website_link.explanation.present": "Website is linked on the listing.",
+    "content.checks.completeness.website_link.explanation.missing": "No website linked on the listing.",
+
+    "content.checks.completeness.categories.label": "Categories",
+    "content.checks.completeness.categories.advice":
+      "Add business categories to your Google Business Profile so customers can find you by what you offer.",
+    "content.checks.completeness.categories.explanation.hasList.one": "{count} category on the listing.",
+    "content.checks.completeness.categories.explanation.hasList.other": "{count} categories on the listing.",
+    "content.checks.completeness.categories.explanation.primaryOnly":
+      'No full category list, but a primary category ("{category}") is on file.',
+    "content.checks.completeness.categories.explanation.none": "No categories on the listing.",
+
+    "content.checks.completeness.photos.label": "Photos",
+    "content.checks.completeness.photos.advice":
+      "Add photos to your Google Business Profile — listings with photos get more engagement.",
+    "content.checks.completeness.photos.explanation.notFound": "Google returned no photo data for this listing.",
+    "content.checks.completeness.photos.explanation.has.one": "{count} photo on the listing.",
+    "content.checks.completeness.photos.explanation.has.other": "{count} photos on the listing.",
+    "content.checks.completeness.photos.explanation.none": "No photos on the listing.",
+
+    "content.checks.completeness.business_status.label": "Operational status",
+    "content.checks.completeness.business_status.advice":
+      "Make sure your Google Business Profile shows as Operational.",
+    "content.checks.completeness.business_status.explanation.notFound":
+      "Google returned no business status for this listing.",
+    "content.checks.completeness.business_status.explanation.operational": "Listing shows as Operational.",
+    "content.checks.completeness.business_status.explanation.closed": "Listing shows as {status}.",
+    "content.checks.completeness.business_status.explanation.unrecognized":
+      'Listing has an unrecognized status ("{status}") — can\'t confidently score it.',
+
+    "content.checks.website.has_website.label": "Has a website",
+    "content.checks.website.has_website.advice":
+      "Get a website for your business — it's one of the biggest trust signals for potential customers.",
+    "content.checks.website.has_website.explanation.present": "Business has a website on file.",
+    "content.checks.website.has_website.explanation.missing": "No website on file.",
+
+    "content.checks.website.https.label": "Uses HTTPS",
+    "content.checks.website.https.advice":
+      'Move your website to HTTPS — browsers flag non-HTTPS sites as "not secure," which costs trust.',
+    "content.checks.website.https.explanation.noWebsite": "Not applicable — no website on file to check.",
+    "content.checks.website.https.explanation.https":
+      "Confirmed by a live check: the site loads successfully over HTTPS.",
+    "content.checks.website.https.explanation.httpOnly":
+      "Confirmed by a live check: the site only loads over HTTP — no working HTTPS was found.",
+    "content.checks.website.https.explanation.unreachable":
+      "Couldn't verify HTTPS — a live check of this site timed out, hit a network error, or was blocked. Excluded from your score, not counted against you.",
+    "content.checks.website.https.explanation.notChecked": "HTTPS hasn't been checked for this site yet.",
+
+    "content.checks.website.performance_mobile.label": "Performance & mobile",
+    "content.checks.website.performance_mobile.advice":
+      "Speed up your site — compress images, use a fast static host, and cut unnecessary scripts. A lightweight page (like PostScore's starter site) loads fast by default.",
+    "content.checks.website.performance_mobile.explanation.noWebsite":
+      "Not applicable — no website on file to check.",
+    "content.checks.website.performance_mobile.explanation.notAnalyzed":
+      "This site hasn't been analyzed yet — re-scan to run a real PageSpeed check.",
+    "content.checks.website.performance_mobile.explanation.noScore":
+      "Couldn't get a real PageSpeed score for this site — either PostScore's PageSpeed check isn't configured yet, or Google's PageSpeed Insights API couldn't complete the audit. Excluded from your score, not counted against you.",
+    "content.checks.website.performance_mobile.explanation.fast":
+      "Fast on mobile — Google PageSpeed mobile performance score of {score}/100.",
+    "content.checks.website.performance_mobile.explanation.slowish":
+      "Loads a bit slowly on mobile — Google PageSpeed mobile performance score of {score}/100.",
+    "content.checks.website.performance_mobile.explanation.slow":
+      "Loads slowly on mobile — Google PageSpeed mobile performance score of only {score}/100.",
+
+    "content.checks.website.content_depth.label": "Content depth",
+    "content.checks.website.content_depth.advice":
+      "Build out real content — a title and meta description, a few real headings, and a genuine amount of text about what you offer. A single bare block reads as an unfinished site to visitors and to search engines.",
+    "content.checks.website.content_depth.explanation.noWebsite": "Not applicable — no website on file to check.",
+    "content.checks.website.content_depth.explanation.couldntRead":
+      "Couldn't read this site's content — the automated check may have been blocked. Excluded from your score, not counted against you.",
+    "content.checks.website.content_depth.explanation.notAnalyzed":
+      "This site hasn't been analyzed yet — re-scan to check its real content.",
+    "content.checks.website.content_depth.explanation.clientRenderedShell":
+      "Couldn't verify — this site renders its content with JavaScript, which our static check can't read. Excluded from your score, not counted against you.",
+    "content.checks.website.content_depth.explanation.recoveredBase":
+      "This site renders its content with JavaScript — verified using Google's real rendered-page audit instead of a static fetch.",
+    "content.checks.website.content_depth.explanation.confirmedPresentTemplate": "Confirmed present: {items}.",
+    "content.checks.website.content_depth.explanation.confirmedMissingTemplate": "Confirmed missing: {items}.",
+    "content.checks.website.content_depth.explanation.recoveredNote":
+      "Content depth/length couldn't be independently confirmed for this site and isn't credited either way.",
+    "content.checks.website.content_depth.explanation.presentTitle": "a page title",
+    "content.checks.website.content_depth.explanation.presentMeta": "a meta description",
+    "content.checks.website.content_depth.explanation.presentViewport": "a mobile viewport tag",
+    "content.checks.website.content_depth.explanation.presentHeadings": "real headings",
+    "content.checks.website.content_depth.explanation.missingTitle": "no page title found",
+    "content.checks.website.content_depth.explanation.missingMeta": "no meta description found",
+    "content.checks.website.content_depth.explanation.missingViewport":
+      "not mobile-optimized (no viewport tag)",
+    "content.checks.website.content_depth.explanation.missingHeadings": "no real headings/sections",
+    "content.checks.website.content_depth.explanation.allGood":
+      "Real, substantial content: a title, meta description, headings, and a mobile viewport tag all present.",
+    "content.checks.website.content_depth.explanation.gapsTemplate": "Content gaps found: {items}.",
+    "content.checks.website.content_depth.explanation.gapNoTitle": "no page title",
+    "content.checks.website.content_depth.explanation.gapNoMeta": "no meta description",
+    "content.checks.website.content_depth.explanation.gapNoViewport": "not mobile-optimized (no viewport tag)",
+    "content.checks.website.content_depth.explanation.gapNoHeadings": "no real headings/sections",
+    "content.checks.website.content_depth.explanation.gapThinContent":
+      "very little content — reads as a bare landing page",
+
+    "content.checks.website.contact_conversion.label": "Contact & conversion",
+    "content.checks.website.contact_conversion.advice":
+      'Add a real click-to-call phone link or email address, and a clear call-to-action (e.g. "Call now" or "Book an appointment") — visitors shouldn\'t have to hunt for how to reach you.',
+    "content.checks.website.contact_conversion.explanation.noWebsite":
+      "Not applicable — no website on file to check.",
+    "content.checks.website.contact_conversion.explanation.couldntRead":
+      "Couldn't read this site's content — the automated check may have been blocked. Excluded from your score, not counted against you.",
+    "content.checks.website.contact_conversion.explanation.notAnalyzed":
+      "This site hasn't been analyzed yet — re-scan to check its real contact info and calls-to-action.",
+    "content.checks.website.contact_conversion.explanation.clientRenderedShell":
+      "Couldn't verify — this site renders its content with JavaScript, which our static check can't read. Excluded from your score, not counted against you.",
+    "content.checks.website.contact_conversion.explanation.allGood":
+      "A real contact link and a clear call-to-action are both present.",
+    "content.checks.website.contact_conversion.explanation.noContact": "no click-to-call phone or email link found",
+    "content.checks.website.contact_conversion.explanation.noCta": "no clear call-to-action found",
+
+    "content.checks.website.about_presence.label": "About / our story",
+    "content.checks.website.about_presence.advice":
+      "Add a real About or Our Story page (linked from your main navigation) — a short background/team page reassures visitors this is a real, established business.",
+    "content.checks.website.about_presence.explanation.noWebsite": "Not applicable — no website on file to check.",
+    "content.checks.website.about_presence.explanation.notAnalyzed":
+      "This site hasn't been analyzed yet — re-scan to check its real navigation.",
+    "content.checks.website.about_presence.explanation.found":
+      "Found a real About/Our Story page linked from this site's navigation or sitemap.",
+    "content.checks.website.about_presence.explanation.notFound":
+      "Couldn't verify — no About/Our Story page was found in this site's navigation or sitemap. A single-page site may have this content on its homepage instead, which we can't detect. Excluded from your score, not counted against you.",
+
+    "content.checks.website.services_presence.label": "Services / products",
+    "content.checks.website.services_presence.advice":
+      "Add a real Services, Products, or Menu page (linked from your main navigation) — visitors and search engines both look for a clear list of what you offer.",
+    "content.checks.website.services_presence.explanation.noWebsite":
+      "Not applicable — no website on file to check.",
+    "content.checks.website.services_presence.explanation.notAnalyzed":
+      "This site hasn't been analyzed yet — re-scan to check its real navigation.",
+    "content.checks.website.services_presence.explanation.found":
+      "Found a real Services/Products page linked from this site's navigation or sitemap.",
+    "content.checks.website.services_presence.explanation.notFound":
+      "Couldn't verify — no Services/Products page was found in this site's navigation or sitemap. A single-page site may list these on its homepage instead, which we can't detect. Excluded from your score, not counted against you.",
+
+    // --- content.listingChange.* — pure extraction of lib/profileChanges.ts's
+    // diffProfileSnapshots() sentences, byte-for-byte.
+    "content.listingChange.phone.added": "A phone number was added to your listing.",
+    "content.listingChange.phone.removed": "The phone number was removed from your listing.",
+    "content.listingChange.phone.changed": "Your phone number changed.",
+    "content.listingChange.website.added": "A website was added to your listing.",
+    "content.listingChange.website.removed": "The website was removed from your listing.",
+    "content.listingChange.website.changed": "Your website URL changed.",
+    "content.listingChange.hours.added": "Hours were added to your listing.",
+    "content.listingChange.hours.removed": "Hours were removed from your listing.",
+    "content.listingChange.hours.changed": "Your hours changed.",
+    "content.listingChange.categories.addedPart": "added {list}",
+    "content.listingChange.categories.removedPart": "removed {list}",
+    "content.listingChange.categories.changed": "Your categories changed — {parts}.",
+    "content.listingChange.photos.added.one": "{count} photo added.",
+    "content.listingChange.photos.added.other": "{count} photos added.",
+    "content.listingChange.photos.removed.one": "A photo was removed.",
+    "content.listingChange.photos.removed.other": "{count} photos were removed.",
+    "content.listingChange.rating.rose": "Your rating rose from {previous}★ to {current}★.",
+    "content.listingChange.rating.dropped": "Your rating dropped from {previous}★ to {current}★.",
+    "content.listingChange.reviews.gained.one": "{count} new review.",
+    "content.listingChange.reviews.gained.other": "{count} new reviews.",
+    "content.listingChange.reviews.lost": "Your review count dropped by {count}.",
+    "content.listingChange.status.operational": "Operational",
+    "content.listingChange.status.closedTemporarily": "Temporarily closed",
+    "content.listingChange.status.closedPermanently": "Permanently closed",
+    "content.listingChange.status.changed": "Your listing status changed from {previous} to {current}.",
+
+    // --- report.* — email-only glue extracted from lib/monthlyReport.ts.
+    "report.focus.biggestOpportunity": "Your biggest opportunity: {label} — {advice}",
+    "report.focus.alsoWorthALook": "Also worth a look: {label} — {advice}",
+    "report.focus.listingIssue": "Listing change worth a look: {description}",
+    "report.focus.competitorGap.one":
+      "The top-ranked business near you has {count} more review than you — closing that gap moves your ranking.",
+    "report.focus.competitorGap.other":
+      "The top-ranked business near you has {count} more reviews than you — closing that gap moves your ranking.",
+    "report.focus.generalTip":
+      "General tip: posting an update or offer to your Google Business Profile every so often helps keep your listing active in local search — this isn't something we currently measure, so treat it as general guidance, not a status report.",
+    "report.summary.reviewsGained.one": "{count} new review",
+    "report.summary.reviewsGained.other": "{count} new reviews",
+    "report.summary.reviewsLost": "your review count dropped by {count}",
+    "report.summary.listingChanges.one": "{count} listing change detected",
+    "report.summary.listingChanges.other": "{count} listing changes detected",
+
+    // --- dashboard.* — render-site-only strings (not shared with the email).
+    "dashboard.website.excludedPoints.one": "{count} pt not yet verified, not counted for or against.",
+    "dashboard.website.excludedPoints.other": "{count} pts not yet verified, not counted for or against.",
+    "dashboard.website.allVerified": "Every website check has real, verified data.",
+    "dashboard.actionPlan.weeklyReviewTarget.one": "Get {count}+ new review this week ({before} → {after}+)",
+    "dashboard.actionPlan.weeklyReviewTarget.other": "Get {count}+ new reviews this week ({before} → {after}+)",
+    "dashboard.reports.recapDayCount.one": "{count} day",
+    "dashboard.reports.recapDayCount.other": "{count} days",
   },
   es: {
     "language.en": "Inglés",
@@ -304,6 +729,170 @@ export const messages: Record<Locale, LocaleMessages> = {
     // saveError have no Spanish value yet — not part of the reviewed
     // list this was translated from. Each falls back to English via
     // t()/tPlural until reviewed Spanish copy is provided for them.
+
+    // --- content.checks.* / content.listingChange.* / report.* /
+    // dashboard.* — reviewed Spanish translations for the shared content
+    // layer extracted in Step L3 (beat 1). Every en key added there has
+    // a real, reviewed es value here; none were machine-translated.
+    "content.checks.visibility.rating.label": "Calificación de estrellas",
+    "content.checks.visibility.rating.advice": "Mejore su calificación promedio de estrellas — pida reseñas a los clientes satisfechos (más reseñas también significa que su calificación tiene más peso) y dé seguimiento a las negativas.",
+    "content.checks.visibility.rating.explanation.noReviews": "Aún no tiene reseñas en Google — esto es lo que más está frenando su visibilidad.",
+    "content.checks.visibility.rating.explanation.notFound": "Google no devolvió ninguna calificación de estrellas para esta ficha.",
+    "content.checks.visibility.rating.explanation.noReviewCountBackup": "Calificación de {rating}★ en Google, pero Google no devolvió un número de reseñas que la respalde — se muestra con menor confianza hasta que se verifique el volumen de reseñas.",
+    "content.checks.visibility.rating.explanation.lowConfidence.one": "Calificación de {rating}★ en Google, pero basada en solo {count} reseña — a medida que reúna más reseñas, esta calificación tendrá más peso en su puntuación.",
+    "content.checks.visibility.rating.explanation.lowConfidence.other": "Calificación de {rating}★ en Google, pero basada en solo {count} reseñas — a medida que reúna más reseñas, esta calificación tendrá más peso en su puntuación.",
+    "content.checks.visibility.rating.explanation.confident": "Calificación de {rating}★ en Google.",
+    "content.checks.visibility.review_count.label": "Número de reseñas",
+    "content.checks.visibility.review_count.advice": "Consiga más reseñas en Google — pídalas directamente a clientes recientes, o agregue un enlace de reseña en los recibos y correos de seguimiento.",
+    "content.checks.visibility.review_count.explanation.zero": "0 reseñas en Google — pida reseñas a sus clientes para empezar a generar prueba social.",
+    "content.checks.visibility.review_count.explanation.nonzero.one": "{count} reseña en Google (crédito completo a partir de {saturation}+).",
+    "content.checks.visibility.review_count.explanation.nonzero.other": "{count} reseñas en Google (crédito completo a partir de {saturation}+).",
+    "content.checks.visibility.review_recency.label": "Actualidad de las reseñas",
+    "content.checks.visibility.review_recency.advice": "Mantenga un flujo regular de reseñas — la actividad reciente les indica a los clientes (y a Google) que el negocio está activo.",
+    "content.checks.visibility.review_recency.explanation.notCollected": "La integración actual de Google Places aún no recopila las fechas de las reseñas, por lo que esta comprobación se excluye en lugar de contarse como una falla.",
+    "content.checks.visibility.review_recency.explanation.recent": "La reseña más reciente fue hace {days} día(s).",
+    "content.checks.completeness.phone.label": "Número de teléfono",
+    "content.checks.completeness.phone.advice": "Agregue un número de teléfono a su Perfil de Negocio de Google.",
+    "content.checks.completeness.phone.explanation.present": "El número de teléfono está en la ficha.",
+    "content.checks.completeness.phone.explanation.missing": "No hay número de teléfono en la ficha.",
+    "content.checks.completeness.address.label": "Dirección",
+    "content.checks.completeness.address.advice": "Agregue una dirección completa y verificada a su Perfil de Negocio de Google.",
+    "content.checks.completeness.address.explanation.present": "La dirección está en la ficha.",
+    "content.checks.completeness.address.explanation.missing": "No hay dirección en la ficha.",
+    "content.checks.completeness.hours.label": "Horario de atención",
+    "content.checks.completeness.hours.advice": "Agregue su horario de atención a su Perfil de Negocio de Google.",
+    "content.checks.completeness.hours.explanation.present": "El horario de atención está en la ficha.",
+    "content.checks.completeness.hours.explanation.missing": "No hay horario de atención en la ficha.",
+    "content.checks.completeness.website_link.label": "Enlace al sitio web en la ficha",
+    "content.checks.completeness.website_link.advice": "Enlace su sitio web en su Perfil de Negocio de Google.",
+    "content.checks.completeness.website_link.explanation.present": "El sitio web está enlazado en la ficha.",
+    "content.checks.completeness.website_link.explanation.missing": "No hay ningún sitio web enlazado en la ficha.",
+    "content.checks.completeness.categories.label": "Categorías",
+    "content.checks.completeness.categories.advice": "Agregue categorías de negocio a su Perfil de Negocio de Google para que los clientes puedan encontrarlo por lo que ofrece.",
+    "content.checks.completeness.categories.explanation.hasList.one": "{count} categoría en la ficha.",
+    "content.checks.completeness.categories.explanation.hasList.other": "{count} categorías en la ficha.",
+    "content.checks.completeness.categories.explanation.primaryOnly": "No hay una lista completa de categorías, pero hay una categoría principal (\"{category}\") registrada.",
+    "content.checks.completeness.categories.explanation.none": "No hay categorías en la ficha.",
+    "content.checks.completeness.photos.label": "Fotos",
+    "content.checks.completeness.photos.advice": "Agregue fotos a su Perfil de Negocio de Google — las fichas con fotos generan más interacción.",
+    "content.checks.completeness.photos.explanation.notFound": "Google no devolvió datos de fotos para esta ficha.",
+    "content.checks.completeness.photos.explanation.has.one": "{count} foto en la ficha.",
+    "content.checks.completeness.photos.explanation.has.other": "{count} fotos en la ficha.",
+    "content.checks.completeness.photos.explanation.none": "No hay fotos en la ficha.",
+    "content.checks.completeness.business_status.label": "Estado operativo",
+    "content.checks.completeness.business_status.advice": "Asegúrese de que su Perfil de Negocio de Google aparezca como Operativo.",
+    "content.checks.completeness.business_status.explanation.notFound": "Google no devolvió el estado del negocio para esta ficha.",
+    "content.checks.completeness.business_status.explanation.operational": "La ficha aparece como Operativo.",
+    "content.checks.completeness.business_status.explanation.closed": "La ficha aparece como {status}.",
+    "content.checks.completeness.business_status.explanation.unrecognized": "La ficha tiene un estado no reconocido (\"{status}\") — no se puede evaluar con confianza.",
+    "content.checks.website.has_website.label": "Tiene un sitio web",
+    "content.checks.website.has_website.advice": "Consiga un sitio web para su negocio — es una de las señales de confianza más importantes para los clientes potenciales.",
+    "content.checks.website.has_website.explanation.present": "El negocio tiene un sitio web registrado.",
+    "content.checks.website.has_website.explanation.missing": "No hay ningún sitio web registrado.",
+    "content.checks.website.https.label": "Usa HTTPS",
+    "content.checks.website.https.advice": "Migre su sitio web a HTTPS — los navegadores marcan los sitios sin HTTPS como \"no seguro\", lo que le resta confianza.",
+    "content.checks.website.https.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para comprobar.",
+    "content.checks.website.https.explanation.https": "Confirmado con una comprobación en vivo: el sitio carga correctamente por HTTPS.",
+    "content.checks.website.https.explanation.httpOnly": "Confirmado con una comprobación en vivo: el sitio solo carga por HTTP — no se encontró un HTTPS funcional.",
+    "content.checks.website.https.explanation.unreachable": "No se pudo verificar HTTPS — una comprobación en vivo de este sitio agotó el tiempo de espera, tuvo un error de red o fue bloqueada. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.https.explanation.notChecked": "Aún no se ha comprobado HTTPS para este sitio.",
+    "content.checks.website.performance_mobile.label": "Rendimiento y móvil",
+    "content.checks.website.performance_mobile.advice": "Acelere su sitio — comprima las imágenes, use un alojamiento estático rápido y elimine los scripts innecesarios. Una página ligera (como el sitio inicial de PostScore) carga rápido de forma predeterminada.",
+    "content.checks.website.performance_mobile.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para comprobar.",
+    "content.checks.website.performance_mobile.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para ejecutar una comprobación real de PageSpeed.",
+    "content.checks.website.performance_mobile.explanation.noScore": "No se pudo obtener una puntuación real de PageSpeed para este sitio — o la comprobación de PageSpeed de PostScore aún no está configurada, o la API de Google PageSpeed Insights no pudo completar la auditoría. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.performance_mobile.explanation.fast": "Rápido en móvil — puntuación de rendimiento móvil de Google PageSpeed de {score}/100.",
+    "content.checks.website.performance_mobile.explanation.slowish": "Carga un poco lento en móvil — puntuación de rendimiento móvil de Google PageSpeed de {score}/100.",
+    "content.checks.website.performance_mobile.explanation.slow": "Carga lento en móvil — puntuación de rendimiento móvil de Google PageSpeed de solo {score}/100.",
+    "content.checks.website.content_depth.label": "Profundidad del contenido",
+    "content.checks.website.content_depth.advice": "Desarrolle contenido real — un título y una meta descripción, algunos encabezados reales y una cantidad genuina de texto sobre lo que ofrece. Un solo bloque vacío se percibe como un sitio sin terminar, tanto para los visitantes como para los motores de búsqueda.",
+    "content.checks.website.content_depth.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para comprobar.",
+    "content.checks.website.content_depth.explanation.couldntRead": "No se pudo leer el contenido de este sitio — es posible que la comprobación automática haya sido bloqueada. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.content_depth.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para comprobar su contenido real.",
+    "content.checks.website.content_depth.explanation.clientRenderedShell": "No se pudo verificar — este sitio muestra su contenido con JavaScript, que nuestra comprobación estática no puede leer. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.content_depth.explanation.recoveredBase": "Este sitio muestra su contenido con JavaScript — verificado usando la auditoría real de página renderizada de Google en lugar de una descarga estática.",
+    "content.checks.website.content_depth.explanation.confirmedPresentTemplate": "Confirmado presente: {items}.",
+    "content.checks.website.content_depth.explanation.confirmedMissingTemplate": "Confirmado ausente: {items}.",
+    "content.checks.website.content_depth.explanation.recoveredNote": "La profundidad o extensión del contenido no se pudo confirmar de forma independiente para este sitio y no se acredita en ningún sentido.",
+    "content.checks.website.content_depth.explanation.presentTitle": "un título de página",
+    "content.checks.website.content_depth.explanation.presentMeta": "una meta descripción",
+    "content.checks.website.content_depth.explanation.presentViewport": "una etiqueta viewport para móviles",
+    "content.checks.website.content_depth.explanation.presentHeadings": "encabezados reales",
+    "content.checks.website.content_depth.explanation.missingTitle": "no se encontró un título de página",
+    "content.checks.website.content_depth.explanation.missingMeta": "no se encontró una meta descripción",
+    "content.checks.website.content_depth.explanation.missingViewport": "no está optimizado para móviles (sin etiqueta viewport)",
+    "content.checks.website.content_depth.explanation.missingHeadings": "sin encabezados o secciones reales",
+    "content.checks.website.content_depth.explanation.allGood": "Contenido real y sustancial: hay un título, una meta descripción, encabezados y una etiqueta viewport para móviles.",
+    "content.checks.website.content_depth.explanation.gapsTemplate": "Deficiencias de contenido encontradas: {items}.",
+    "content.checks.website.content_depth.explanation.gapNoTitle": "sin título de página",
+    "content.checks.website.content_depth.explanation.gapNoMeta": "sin meta descripción",
+    "content.checks.website.content_depth.explanation.gapNoViewport": "no está optimizado para móviles (sin etiqueta viewport)",
+    "content.checks.website.content_depth.explanation.gapNoHeadings": "sin encabezados o secciones reales",
+    "content.checks.website.content_depth.explanation.gapThinContent": "muy poco contenido — se percibe como una página de aterrizaje vacía",
+    "content.checks.website.contact_conversion.label": "Contacto y conversión",
+    "content.checks.website.contact_conversion.advice": "Agregue un enlace real de teléfono con clic para llamar o una dirección de correo electrónico, y una llamada a la acción clara (p. ej. \"Llamar ahora\" o \"Reservar una cita\") — los visitantes no deberían tener que buscar cómo contactarlo.",
+    "content.checks.website.contact_conversion.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para comprobar.",
+    "content.checks.website.contact_conversion.explanation.couldntRead": "No se pudo leer el contenido de este sitio — es posible que la comprobación automática haya sido bloqueada. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.contact_conversion.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para comprobar su información de contacto y llamadas a la acción reales.",
+    "content.checks.website.contact_conversion.explanation.clientRenderedShell": "No se pudo verificar — este sitio muestra su contenido con JavaScript, que nuestra comprobación estática no puede leer. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.contact_conversion.explanation.allGood": "Hay un enlace de contacto real y una llamada a la acción clara.",
+    "content.checks.website.contact_conversion.explanation.noContact": "no se encontró un enlace de teléfono con clic para llamar ni de correo electrónico",
+    "content.checks.website.contact_conversion.explanation.noCta": "no se encontró una llamada a la acción clara",
+    "content.checks.website.about_presence.label": "Acerca de / nuestra historia",
+    "content.checks.website.about_presence.advice": "Agregue una página real de Acerca de o Nuestra historia (enlazada desde su navegación principal) — una breve página de antecedentes o de equipo les da confianza a los visitantes de que este es un negocio real y establecido.",
+    "content.checks.website.about_presence.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para comprobar.",
+    "content.checks.website.about_presence.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para comprobar su navegación real.",
+    "content.checks.website.about_presence.explanation.found": "Se encontró una página real de Acerca de / Nuestra historia enlazada desde la navegación o el mapa del sitio.",
+    "content.checks.website.about_presence.explanation.notFound": "No se pudo verificar — no se encontró ninguna página de Acerca de / Nuestra historia en la navegación ni en el mapa del sitio. Un sitio de una sola página puede tener este contenido en su página de inicio, lo cual no podemos detectar. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.services_presence.label": "Servicios / productos",
+    "content.checks.website.services_presence.advice": "Agregue una página real de Servicios, Productos o Menú (enlazada desde su navegación principal) — tanto los visitantes como los motores de búsqueda buscan una lista clara de lo que ofrece.",
+    "content.checks.website.services_presence.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para comprobar.",
+    "content.checks.website.services_presence.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para comprobar su navegación real.",
+    "content.checks.website.services_presence.explanation.found": "Se encontró una página real de Servicios / Productos enlazada desde la navegación o el mapa del sitio.",
+    "content.checks.website.services_presence.explanation.notFound": "No se pudo verificar — no se encontró ninguna página de Servicios / Productos en la navegación ni en el mapa del sitio. Un sitio de una sola página puede listarlos en su página de inicio, lo cual no podemos detectar. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.listingChange.phone.added": "Se agregó un número de teléfono a su ficha.",
+    "content.listingChange.phone.removed": "Se eliminó el número de teléfono de su ficha.",
+    "content.listingChange.phone.changed": "Su número de teléfono cambió.",
+    "content.listingChange.website.added": "Se agregó un sitio web a su ficha.",
+    "content.listingChange.website.removed": "Se eliminó el sitio web de su ficha.",
+    "content.listingChange.website.changed": "La URL de su sitio web cambió.",
+    "content.listingChange.hours.added": "Se agregó el horario a su ficha.",
+    "content.listingChange.hours.removed": "Se eliminó el horario de su ficha.",
+    "content.listingChange.hours.changed": "Su horario cambió.",
+    "content.listingChange.categories.addedPart": "se agregó {list}",
+    "content.listingChange.categories.removedPart": "se eliminó {list}",
+    "content.listingChange.categories.changed": "Sus categorías cambiaron — {parts}.",
+    "content.listingChange.photos.added.one": "{count} foto agregada.",
+    "content.listingChange.photos.added.other": "{count} fotos agregadas.",
+    "content.listingChange.photos.removed.one": "Se eliminó una foto.",
+    "content.listingChange.photos.removed.other": "Se eliminaron {count} fotos.",
+    "content.listingChange.rating.rose": "Su calificación subió de {previous}★ a {current}★.",
+    "content.listingChange.rating.dropped": "Su calificación bajó de {previous}★ a {current}★.",
+    "content.listingChange.reviews.gained.one": "{count} reseña nueva.",
+    "content.listingChange.reviews.gained.other": "{count} reseñas nuevas.",
+    "content.listingChange.reviews.lost": "Su número de reseñas bajó en {count}.",
+    "content.listingChange.status.operational": "Operativo",
+    "content.listingChange.status.closedTemporarily": "Cerrado temporalmente",
+    "content.listingChange.status.closedPermanently": "Cerrado permanentemente",
+    "content.listingChange.status.changed": "El estado de su ficha cambió de {previous} a {current}.",
+    "report.focus.biggestOpportunity": "Su mayor oportunidad: {label} — {advice}",
+    "report.focus.alsoWorthALook": "También vale la pena revisar: {label} — {advice}",
+    "report.focus.listingIssue": "Cambio en la ficha que vale la pena revisar: {description}",
+    "report.focus.competitorGap.one": "El negocio mejor posicionado cerca de usted tiene {count} reseña más que usted — cerrar esa brecha mejora su posición.",
+    "report.focus.competitorGap.other": "El negocio mejor posicionado cerca de usted tiene {count} reseñas más que usted — cerrar esa brecha mejora su posición.",
+    "report.focus.generalTip": "Consejo general: publicar de vez en cuando una novedad u oferta en su Perfil de Negocio de Google ayuda a mantener su ficha activa en las búsquedas locales — esto no es algo que midamos actualmente, así que tómelo como una orientación general, no como un informe de estado.",
+    "report.summary.reviewsGained.one": "{count} reseña nueva",
+    "report.summary.reviewsGained.other": "{count} reseñas nuevas",
+    "report.summary.reviewsLost": "su número de reseñas bajó en {count}",
+    "report.summary.listingChanges.one": "{count} cambio detectado en su ficha",
+    "report.summary.listingChanges.other": "{count} cambios detectados en su ficha",
+    "dashboard.website.excludedPoints.one": "{count} punto aún sin verificar, no se cuenta ni a favor ni en contra.",
+    "dashboard.website.excludedPoints.other": "{count} puntos aún sin verificar, no se cuentan ni a favor ni en contra.",
+    "dashboard.website.allVerified": "Todas las comprobaciones del sitio web tienen datos reales y verificados.",
+    "dashboard.actionPlan.weeklyReviewTarget.one": "Consiga {count}+ reseña nueva esta semana ({before} → {after}+)",
+    "dashboard.actionPlan.weeklyReviewTarget.other": "Consiga {count}+ reseñas nuevas esta semana ({before} → {after}+)",
+    "dashboard.reports.recapDayCount.one": "{count} día",
+    "dashboard.reports.recapDayCount.other": "{count} días",
   },
 };
 

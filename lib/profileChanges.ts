@@ -9,6 +9,15 @@
 // only ever compared when both sides have a real, known value (or one
 // side is a clean null->value / value->null transition worth naming);
 // an unknown baseline never gets treated as zero or guessed at.
+//
+// Every description is sourced from lib/i18n's message dictionary via
+// t()/tPlural(), keyed under "content.listingChange.<field>.*" — shared
+// with the monthly report email, same as lib/scoring.ts's CHECKS.
+// `locale` defaults to DEFAULT_LOCALE, so every existing caller that
+// doesn't pass one keeps getting the exact same English text this file
+// used to hardcode.
+
+import { DEFAULT_LOCALE, t, tPlural, type Locale } from "@/lib/i18n";
 
 export interface ProfileSnapshot {
   phone: string | null;
@@ -60,10 +69,10 @@ function sameStringArray(a: string[] | null, b: string[] | null): boolean {
   return a.every((v, i) => v === b[i]);
 }
 
-function businessStatusLabel(status: string): string {
-  if (status === "OPERATIONAL") return "Operational";
-  if (status === "CLOSED_TEMPORARILY") return "Temporarily closed";
-  if (status === "CLOSED_PERMANENTLY") return "Permanently closed";
+function businessStatusLabel(status: string, locale: Locale): string {
+  if (status === "OPERATIONAL") return t(locale, "content.listingChange.status.operational");
+  if (status === "CLOSED_TEMPORARILY") return t(locale, "content.listingChange.status.closedTemporarily");
+  if (status === "CLOSED_PERMANENTLY") return t(locale, "content.listingChange.status.closedPermanently");
   return status;
 }
 
@@ -72,41 +81,43 @@ function businessStatusLabel(status: string): string {
  * difference, in plain language. Order is not significant — callers
  * render the full list. Returns an empty array when nothing real
  * changed, which callers must show honestly (never as an error or as
- * "no data").
+ * "no data"). `locale` defaults to DEFAULT_LOCALE, same reasoning as
+ * lib/scoring.ts's scoreBusiness().
  */
 export function diffProfileSnapshots(
   previous: ProfileSnapshot,
-  current: ProfileSnapshot
+  current: ProfileSnapshot,
+  locale: Locale = DEFAULT_LOCALE
 ): ProfileChange[] {
   const changes: ProfileChange[] = [];
 
   if (previous.phone !== current.phone) {
     if (!previous.phone && current.phone) {
-      changes.push({ field: "phone", description: "A phone number was added to your listing." });
+      changes.push({ field: "phone", description: t(locale, "content.listingChange.phone.added") });
     } else if (previous.phone && !current.phone) {
-      changes.push({ field: "phone", description: "The phone number was removed from your listing." });
+      changes.push({ field: "phone", description: t(locale, "content.listingChange.phone.removed") });
     } else {
-      changes.push({ field: "phone", description: "Your phone number changed." });
+      changes.push({ field: "phone", description: t(locale, "content.listingChange.phone.changed") });
     }
   }
 
   if (previous.website !== current.website) {
     if (!previous.website && current.website) {
-      changes.push({ field: "website", description: "A website was added to your listing." });
+      changes.push({ field: "website", description: t(locale, "content.listingChange.website.added") });
     } else if (previous.website && !current.website) {
-      changes.push({ field: "website", description: "The website was removed from your listing." });
+      changes.push({ field: "website", description: t(locale, "content.listingChange.website.removed") });
     } else {
-      changes.push({ field: "website", description: "Your website URL changed." });
+      changes.push({ field: "website", description: t(locale, "content.listingChange.website.changed") });
     }
   }
 
   if (!sameStringArray(previous.openingHours, current.openingHours)) {
     if (!previous.openingHours && current.openingHours) {
-      changes.push({ field: "hours", description: "Hours were added to your listing." });
+      changes.push({ field: "hours", description: t(locale, "content.listingChange.hours.added") });
     } else if (previous.openingHours && !current.openingHours) {
-      changes.push({ field: "hours", description: "Hours were removed from your listing." });
+      changes.push({ field: "hours", description: t(locale, "content.listingChange.hours.removed") });
     } else {
-      changes.push({ field: "hours", description: "Your hours changed." });
+      changes.push({ field: "hours", description: t(locale, "content.listingChange.hours.changed") });
     }
   }
 
@@ -116,9 +127,16 @@ export function diffProfileSnapshots(
   const removedCats = Array.from(prevCats).filter((c) => !currCats.has(c));
   if (addedCats.length > 0 || removedCats.length > 0) {
     const parts: string[] = [];
-    if (addedCats.length > 0) parts.push(`added ${addedCats.join(", ")}`);
-    if (removedCats.length > 0) parts.push(`removed ${removedCats.join(", ")}`);
-    changes.push({ field: "categories", description: `Your categories changed — ${parts.join("; ")}.` });
+    if (addedCats.length > 0) {
+      parts.push(t(locale, "content.listingChange.categories.addedPart", { list: addedCats.join(", ") }));
+    }
+    if (removedCats.length > 0) {
+      parts.push(t(locale, "content.listingChange.categories.removedPart", { list: removedCats.join(", ") }));
+    }
+    changes.push({
+      field: "categories",
+      description: t(locale, "content.listingChange.categories.changed", { parts: parts.join("; ") }),
+    });
   }
 
   if (
@@ -131,17 +149,18 @@ export function diffProfileSnapshots(
       field: "photos",
       description:
         delta > 0
-          ? `${delta} photo${delta === 1 ? "" : "s"} added.`
-          : Math.abs(delta) === 1
-            ? "A photo was removed."
-            : `${Math.abs(delta)} photos were removed.`,
+          ? tPlural(locale, "content.listingChange.photos.added", delta)
+          : tPlural(locale, "content.listingChange.photos.removed", Math.abs(delta)),
     });
   }
 
   if (previous.rating !== null && current.rating !== null && previous.rating !== current.rating) {
     changes.push({
       field: "rating",
-      description: `Your rating ${current.rating > previous.rating ? "rose" : "dropped"} from ${previous.rating.toFixed(1)}★ to ${current.rating.toFixed(1)}★.`,
+      description: t(locale, current.rating > previous.rating ? "content.listingChange.rating.rose" : "content.listingChange.rating.dropped", {
+        previous: previous.rating.toFixed(1),
+        current: current.rating.toFixed(1),
+      }),
     });
   }
 
@@ -155,8 +174,8 @@ export function diffProfileSnapshots(
       field: "reviews",
       description:
         delta > 0
-          ? `${delta} new review${delta === 1 ? "" : "s"}.`
-          : `Your review count dropped by ${Math.abs(delta)}.`,
+          ? tPlural(locale, "content.listingChange.reviews.gained", delta)
+          : t(locale, "content.listingChange.reviews.lost", { count: Math.abs(delta) }),
     });
   }
 
@@ -167,7 +186,10 @@ export function diffProfileSnapshots(
   ) {
     changes.push({
       field: "status",
-      description: `Your listing status changed from ${businessStatusLabel(previous.businessStatus)} to ${businessStatusLabel(current.businessStatus)}.`,
+      description: t(locale, "content.listingChange.status.changed", {
+        previous: businessStatusLabel(previous.businessStatus, locale),
+        current: businessStatusLabel(current.businessStatus, locale),
+      }),
     });
   }
 

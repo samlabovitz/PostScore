@@ -25,6 +25,16 @@
 // field, or we haven't built the underlying data collection yet), the
 // check is marked NOT_FOUND/UNCERTAIN and is excluded from scoring —
 // never silently treated as a failing zero.
+//
+// Every check's label/advice/explanation is sourced from lib/i18n's
+// message dictionary via t()/tPlural(), keyed under "content.checks.<id>.*"
+// — the same shared-content-layer pattern lib/monthlyReport.ts and
+// emails/MonthlyReportEmail.tsx use for report.* copy. scoreBusiness() and
+// generateSuggestions() both default their `locale` parameter to
+// DEFAULT_LOCALE, so every existing caller that doesn't pass one keeps
+// getting the exact same English text this file used to hardcode.
+
+import { DEFAULT_LOCALE, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
 
 // ---------------------------------------------------------------------------
 // Versioning
@@ -580,17 +590,6 @@ function contentLengthFraction(chars: number): number {
   return (c - THIN_CONTENT_CHARS) / (FULL_CONTENT_CHARS - THIN_CONTENT_CHARS);
 }
 
-/** Shared by website.content_depth and website.contact_conversion —
- * both exclude themselves the same honest way when
- * content.isLikelyClientRenderedShell is true, rather than scoring the
- * (necessarily empty) static-fetch signals as real failures. Deliberately
- * distinct wording from "couldn't read this site's content" (the
- * fetch-failed/blocked case just above it in each check): this is a
- * different, more specific honest state — we DID read the page, it's
- * just a JS-rendered shell our static check can't see inside. */
-const CLIENT_RENDERED_SHELL_EXPLANATION =
-  "Couldn't verify — this site renders its content with JavaScript, which our static check can't read. Excluded from your score, not counted against you.";
-
 /** A review within this many days counts as fully "recent." */
 const RECENCY_FULL_CREDIT_DAYS = 90;
 /** No review within this many days earns zero recency credit. */
@@ -622,12 +621,17 @@ function roundTo(value: number, decimals: number): number {
 
 interface CheckDefinition {
   id: string;
-  label: string;
+  /** i18n key for this check's display label — see content.checks.<id>.label. */
+  labelKey: MessageKey;
   category: CategoryId;
   maxPoints: number;
-  /** Copy shown on a suggestion generated from this check while it's losing points. */
-  advice: string;
-  evaluate(input: BusinessScoringInput): {
+  /** i18n key for the copy shown on a suggestion generated from this
+   * check while it's losing points — see content.checks.<id>.advice. */
+  adviceKey: MessageKey;
+  evaluate(
+    input: BusinessScoringInput,
+    locale: Locale
+  ): {
     earnedPoints: number | null;
     confidence: Confidence;
     explanation: string;
@@ -708,12 +712,11 @@ export const CHECKS: CheckDefinition[] = [
   // --- Visibility & Reputation (40 pts) ------------------------------------
   {
     id: "visibility.rating",
-    label: "Star rating",
+    labelKey: "content.checks.visibility.rating.label",
     category: "visibility",
     maxPoints: RATING_CHECK_MAX_POINTS,
-    advice:
-      "Improve your average star rating — ask happy customers for reviews (more reviews also means your rating carries more weight) and follow up on negative ones.",
-    evaluate(input) {
+    adviceKey: "content.checks.visibility.rating.advice",
+    evaluate(input, locale) {
       if (input.rating === null) {
         // Same reasoning as visibility.review_count: a successfully
         // fetched listing with zero reviews genuinely has no rating to
@@ -727,13 +730,13 @@ export const CHECKS: CheckDefinition[] = [
           return {
             earnedPoints: 0,
             confidence: "VERIFIED",
-            explanation: "No Google reviews yet — this is the biggest thing holding your visibility back.",
+            explanation: t(locale, "content.checks.visibility.rating.explanation.noReviews"),
           };
         }
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
-          explanation: "Google returned no star rating for this listing.",
+          explanation: t(locale, "content.checks.visibility.rating.explanation.notFound"),
         };
       }
       const ratingFrac = ratingFraction(input.rating);
@@ -743,11 +746,20 @@ export const CHECKS: CheckDefinition[] = [
 
       let explanation: string;
       if (input.reviewCount === null) {
-        explanation = `Rated ${input.rating.toFixed(1)}★ on Google, but Google didn't return a review count to back it up — shown at reduced confidence until review volume is verified.`;
+        explanation = t(locale, "content.checks.visibility.rating.explanation.noReviewCountBackup", {
+          rating: input.rating.toFixed(1),
+        });
       } else if (!fullConfidence) {
-        explanation = `Rated ${input.rating.toFixed(1)}★ on Google, but based on only ${input.reviewCount} review${input.reviewCount === 1 ? "" : "s"} — as you gather more reviews, this rating will carry more weight toward your score.`;
+        explanation = tPlural(
+          locale,
+          "content.checks.visibility.rating.explanation.lowConfidence",
+          input.reviewCount,
+          { rating: input.rating.toFixed(1) }
+        );
       } else {
-        explanation = `Rated ${input.rating.toFixed(1)}★ on Google.`;
+        explanation = t(locale, "content.checks.visibility.rating.explanation.confident", {
+          rating: input.rating.toFixed(1),
+        });
       }
 
       return { earnedPoints, confidence: "VERIFIED", explanation };
@@ -764,12 +776,11 @@ export const CHECKS: CheckDefinition[] = [
   },
   {
     id: "visibility.review_count",
-    label: "Review count",
+    labelKey: "content.checks.visibility.review_count.label",
     category: "visibility",
     maxPoints: REVIEW_COUNT_CHECK_MAX_POINTS,
-    advice:
-      "Get more Google reviews — ask recent customers directly, or add a review link to receipts and follow-up emails.",
-    evaluate(input) {
+    adviceKey: "content.checks.visibility.review_count.advice",
+    evaluate(input, locale) {
       // A saved business only ever reaches scoring after a real,
       // successful Places fetch — we always request this field, and
       // Google always either returns the real count or omits it because
@@ -784,33 +795,35 @@ export const CHECKS: CheckDefinition[] = [
         confidence: "VERIFIED",
         explanation:
           reviewCount === 0
-            ? "0 reviews on Google — ask your customers for reviews to start building social proof."
-            : `${reviewCount} review${reviewCount === 1 ? "" : "s"} on Google (full credit at ${REVIEW_COUNT_SATURATION}+).`,
+            ? t(locale, "content.checks.visibility.review_count.explanation.zero")
+            : tPlural(locale, "content.checks.visibility.review_count.explanation.nonzero", reviewCount, {
+                saturation: REVIEW_COUNT_SATURATION,
+              }),
       };
     },
     simulateFix: (input) => ({ ...input, reviewCount: REVIEW_COUNT_SATURATION }),
   },
   {
     id: "visibility.review_recency",
-    label: "Review recency",
+    labelKey: "content.checks.visibility.review_recency.label",
     category: "visibility",
     maxPoints: 6,
-    advice:
-      "Keep reviews coming in regularly — recent activity signals to customers (and Google) that the business is active.",
-    evaluate(input) {
+    adviceKey: "content.checks.visibility.review_recency.advice",
+    evaluate(input, locale) {
       if (input.mostRecentReviewDaysAgo === null) {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
-          explanation:
-            "Review timestamps aren't collected by the current Google Places integration yet, so this check is excluded rather than scored as a failure.",
+          explanation: t(locale, "content.checks.visibility.review_recency.explanation.notCollected"),
         };
       }
       const fraction = recencyFraction(input.mostRecentReviewDaysAgo);
       return {
         earnedPoints: roundTo(fraction * 6, 1),
         confidence: "VERIFIED",
-        explanation: `Most recent review was ${input.mostRecentReviewDaysAgo} day(s) ago.`,
+        explanation: t(locale, "content.checks.visibility.review_recency.explanation.recent", {
+          days: input.mostRecentReviewDaysAgo,
+        }),
       };
     },
     simulateFix: (input) => ({ ...input, mostRecentReviewDaysAgo: 0 }),
@@ -819,89 +832,102 @@ export const CHECKS: CheckDefinition[] = [
   // --- Google Listing Completeness (30 pts) --------------------------------
   {
     id: "completeness.phone",
-    label: "Phone number",
+    labelKey: "content.checks.completeness.phone.label",
     category: "completeness",
     maxPoints: 4,
-    advice: "Add a phone number to your Google Business Profile.",
-    evaluate(input) {
+    adviceKey: "content.checks.completeness.phone.advice",
+    evaluate(input, locale) {
       const has = !!input.phone && input.phone.trim().length > 0;
       return {
         earnedPoints: has ? 4 : 0,
         confidence: "VERIFIED",
-        explanation: has
-          ? "Phone number is on the listing."
-          : "No phone number on the listing.",
+        explanation: t(
+          locale,
+          has ? "content.checks.completeness.phone.explanation.present" : "content.checks.completeness.phone.explanation.missing"
+        ),
       };
     },
     simulateFix: (input) => ({ ...input, phone: "+1-555-000-0000" }),
   },
   {
     id: "completeness.address",
-    label: "Address",
+    labelKey: "content.checks.completeness.address.label",
     category: "completeness",
     maxPoints: 4,
-    advice: "Add a complete, verified address to your Google Business Profile.",
-    evaluate(input) {
+    adviceKey: "content.checks.completeness.address.advice",
+    evaluate(input, locale) {
       const has = !!input.address && input.address.trim().length > 0;
       return {
         earnedPoints: has ? 4 : 0,
         confidence: "VERIFIED",
-        explanation: has
-          ? "Address is on the listing."
-          : "No address on the listing.",
+        explanation: t(
+          locale,
+          has
+            ? "content.checks.completeness.address.explanation.present"
+            : "content.checks.completeness.address.explanation.missing"
+        ),
       };
     },
     simulateFix: (input) => ({ ...input, address: "123 Main St" }),
   },
   {
     id: "completeness.hours",
-    label: "Business hours",
+    labelKey: "content.checks.completeness.hours.label",
     category: "completeness",
     maxPoints: 4,
-    advice: "Add your business hours to your Google Business Profile.",
-    evaluate(input) {
+    adviceKey: "content.checks.completeness.hours.advice",
+    evaluate(input, locale) {
       const has = !!input.openingHours && input.openingHours.length > 0;
       return {
         earnedPoints: has ? 4 : 0,
         confidence: "VERIFIED",
-        explanation: has
-          ? "Business hours are on the listing."
-          : "No business hours on the listing.",
+        explanation: t(
+          locale,
+          has
+            ? "content.checks.completeness.hours.explanation.present"
+            : "content.checks.completeness.hours.explanation.missing"
+        ),
       };
     },
     simulateFix: (input) => ({ ...input, openingHours: PLACEHOLDER_HOURS }),
   },
   {
     id: "completeness.website_link",
-    label: "Website link on listing",
+    labelKey: "content.checks.completeness.website_link.label",
     category: "completeness",
     maxPoints: 4,
-    advice: "Link your website in your Google Business Profile.",
-    evaluate(input) {
+    adviceKey: "content.checks.completeness.website_link.advice",
+    evaluate(input, locale) {
       const has = !!input.website && input.website.trim().length > 0;
       return {
         earnedPoints: has ? 4 : 0,
         confidence: "VERIFIED",
-        explanation: has
-          ? "Website is linked on the listing."
-          : "No website linked on the listing.",
+        explanation: t(
+          locale,
+          has
+            ? "content.checks.completeness.website_link.explanation.present"
+            : "content.checks.completeness.website_link.explanation.missing"
+        ),
       };
     },
     simulateFix: (input) => ({ ...input, website: "https://example.com" }),
   },
   {
     id: "completeness.categories",
-    label: "Categories",
+    labelKey: "content.checks.completeness.categories.label",
     category: "completeness",
     maxPoints: 4,
-    advice:
-      "Add business categories to your Google Business Profile so customers can find you by what you offer.",
-    evaluate(input) {
+    adviceKey: "content.checks.completeness.categories.advice",
+    evaluate(input, locale) {
       if (input.categories && input.categories.length > 0) {
         return {
           earnedPoints: 4,
           confidence: "VERIFIED",
-          explanation: `${input.categories.length} categor${input.categories.length === 1 ? "y" : "ies"} on the listing.`,
+          explanation: tPlural(
+            locale,
+            "content.checks.completeness.categories.explanation.hasList",
+            input.categories.length
+          ),
         };
       }
       if (input.primaryCategory) {
@@ -910,30 +936,31 @@ export const CHECKS: CheckDefinition[] = [
         return {
           earnedPoints: roundTo(4 * 0.75, 1),
           confidence: "LIKELY",
-          explanation: `No full category list, but a primary category ("${input.primaryCategory}") is on file.`,
+          explanation: t(locale, "content.checks.completeness.categories.explanation.primaryOnly", {
+            category: input.primaryCategory,
+          }),
         };
       }
       return {
         earnedPoints: 0,
         confidence: "VERIFIED",
-        explanation: "No categories on the listing.",
+        explanation: t(locale, "content.checks.completeness.categories.explanation.none"),
       };
     },
     simulateFix: (input) => ({ ...input, categories: ["placeholder_category"] }),
   },
   {
     id: "completeness.photos",
-    label: "Photos",
+    labelKey: "content.checks.completeness.photos.label",
     category: "completeness",
     maxPoints: 4,
-    advice:
-      "Add photos to your Google Business Profile — listings with photos get more engagement.",
-    evaluate(input) {
+    adviceKey: "content.checks.completeness.photos.advice",
+    evaluate(input, locale) {
       if (input.photoCount === null) {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
-          explanation: "Google returned no photo data for this listing.",
+          explanation: t(locale, "content.checks.completeness.photos.explanation.notFound"),
         };
       }
       const has = input.photoCount > 0;
@@ -941,31 +968,31 @@ export const CHECKS: CheckDefinition[] = [
         earnedPoints: has ? 4 : 0,
         confidence: "VERIFIED",
         explanation: has
-          ? `${input.photoCount} photo${input.photoCount === 1 ? "" : "s"} on the listing.`
-          : "No photos on the listing.",
+          ? tPlural(locale, "content.checks.completeness.photos.explanation.has", input.photoCount)
+          : t(locale, "content.checks.completeness.photos.explanation.none"),
       };
     },
     simulateFix: (input) => ({ ...input, photoCount: 5 }),
   },
   {
     id: "completeness.business_status",
-    label: "Operational status",
+    labelKey: "content.checks.completeness.business_status.label",
     category: "completeness",
     maxPoints: 6,
-    advice: "Make sure your Google Business Profile shows as Operational.",
-    evaluate(input) {
+    adviceKey: "content.checks.completeness.business_status.advice",
+    evaluate(input, locale) {
       if (input.businessStatus === null) {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
-          explanation: "Google returned no business status for this listing.",
+          explanation: t(locale, "content.checks.completeness.business_status.explanation.notFound"),
         };
       }
       if (input.businessStatus === "OPERATIONAL") {
         return {
           earnedPoints: 6,
           confidence: "VERIFIED",
-          explanation: "Listing shows as Operational.",
+          explanation: t(locale, "content.checks.completeness.business_status.explanation.operational"),
         };
       }
       if (
@@ -975,13 +1002,17 @@ export const CHECKS: CheckDefinition[] = [
         return {
           earnedPoints: 0,
           confidence: "VERIFIED",
-          explanation: `Listing shows as ${input.businessStatus.replace("_", " ").toLowerCase()}.`,
+          explanation: t(locale, "content.checks.completeness.business_status.explanation.closed", {
+            status: input.businessStatus.replace("_", " ").toLowerCase(),
+          }),
         };
       }
       return {
         earnedPoints: null,
         confidence: "UNCERTAIN",
-        explanation: `Listing has an unrecognized status ("${input.businessStatus}") — can't confidently score it.`,
+        explanation: t(locale, "content.checks.completeness.business_status.explanation.unrecognized", {
+          status: input.businessStatus,
+        }),
       };
     },
     simulateFix: (input) => ({ ...input, businessStatus: "OPERATIONAL" }),
@@ -998,48 +1029,51 @@ export const CHECKS: CheckDefinition[] = [
   // collected (once per save/re-scan, exactly like the HTTPS probe).
   {
     id: "website.has_website",
-    label: "Has a website",
+    labelKey: "content.checks.website.has_website.label",
     category: "website",
     maxPoints: 4,
-    advice:
-      "Get a website for your business — it's one of the biggest trust signals for potential customers.",
-    evaluate(input) {
+    adviceKey: "content.checks.website.has_website.advice",
+    evaluate(input, locale) {
       const has = !!input.website && input.website.trim().length > 0;
       return {
         earnedPoints: has ? 4 : 0,
         confidence: "VERIFIED",
-        explanation: has ? "Business has a website on file." : "No website on file.",
+        explanation: t(
+          locale,
+          has
+            ? "content.checks.website.has_website.explanation.present"
+            : "content.checks.website.has_website.explanation.missing"
+        ),
       };
     },
     simulateFix: (input) => ({ ...input, website: "https://example.com" }),
   },
   {
     id: "website.https",
-    label: "Uses HTTPS",
+    labelKey: "content.checks.website.https.label",
     category: "website",
     maxPoints: 6,
-    advice:
-      'Move your website to HTTPS — browsers flag non-HTTPS sites as "not secure," which costs trust.',
-    evaluate(input) {
+    adviceKey: "content.checks.website.https.advice",
+    evaluate(input, locale) {
       if (!input.website || input.website.trim().length === 0) {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
-          explanation: "Not applicable — no website on file to check.",
+          explanation: t(locale, "content.checks.website.https.explanation.noWebsite"),
         };
       }
       if (input.httpsStatus === "https") {
         return {
           earnedPoints: 6,
           confidence: "VERIFIED",
-          explanation: "Confirmed by a live check: the site loads successfully over HTTPS.",
+          explanation: t(locale, "content.checks.website.https.explanation.https"),
         };
       }
       if (input.httpsStatus === "http_only") {
         return {
           earnedPoints: 0,
           confidence: "VERIFIED",
-          explanation: "Confirmed by a live check: the site only loads over HTTP — no working HTTPS was found.",
+          explanation: t(locale, "content.checks.website.https.explanation.httpOnly"),
         };
       }
       // input.httpsStatus is "unreachable" or (more commonly) null — a
@@ -1050,10 +1084,12 @@ export const CHECKS: CheckDefinition[] = [
       return {
         earnedPoints: null,
         confidence: "NOT_FOUND",
-        explanation:
+        explanation: t(
+          locale,
           input.httpsStatus === "unreachable"
-            ? "Couldn't verify HTTPS — a live check of this site timed out, hit a network error, or was blocked. Excluded from your score, not counted against you."
-            : "HTTPS hasn't been checked for this site yet.",
+            ? "content.checks.website.https.explanation.unreachable"
+            : "content.checks.website.https.explanation.notChecked"
+        ),
       };
     },
     simulateFix: (input) => {
@@ -1065,20 +1101,23 @@ export const CHECKS: CheckDefinition[] = [
   },
   {
     id: "website.performance_mobile",
-    label: "Performance & mobile",
+    labelKey: "content.checks.website.performance_mobile.label",
     category: "website",
     maxPoints: 10,
-    advice:
-      "Speed up your site — compress images, use a fast static host, and cut unnecessary scripts. A lightweight page (like PostScore's starter site) loads fast by default.",
-    evaluate(input) {
+    adviceKey: "content.checks.website.performance_mobile.advice",
+    evaluate(input, locale) {
       if (!input.website || input.website.trim().length === 0) {
-        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: "Not applicable — no website on file to check." };
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: t(locale, "content.checks.website.performance_mobile.explanation.noWebsite"),
+        };
       }
       if (!input.websiteAnalysis) {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
-          explanation: "This site hasn't been analyzed yet — re-scan to run a real PageSpeed check.",
+          explanation: t(locale, "content.checks.website.performance_mobile.explanation.notAnalyzed"),
         };
       }
       const score = input.websiteAnalysis.mobilePerformanceScore;
@@ -1086,20 +1125,22 @@ export const CHECKS: CheckDefinition[] = [
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
-          explanation:
-            "Couldn't get a real PageSpeed score for this site — either PostScore's PageSpeed check isn't configured yet, or Google's PageSpeed Insights API couldn't complete the audit. Excluded from your score, not counted against you.",
+          explanation: t(locale, "content.checks.website.performance_mobile.explanation.noScore"),
         };
       }
       const earnedPoints = roundTo((score / 100) * 10, 1);
       return {
         earnedPoints,
         confidence: "VERIFIED",
-        explanation:
+        explanation: t(
+          locale,
           score >= 80
-            ? `Fast on mobile — Google PageSpeed mobile performance score of ${score}/100.`
+            ? "content.checks.website.performance_mobile.explanation.fast"
             : score >= 50
-              ? `Loads a bit slowly on mobile — Google PageSpeed mobile performance score of ${score}/100.`
-              : `Loads slowly on mobile — Google PageSpeed mobile performance score of only ${score}/100.`,
+              ? "content.checks.website.performance_mobile.explanation.slowish"
+              : "content.checks.website.performance_mobile.explanation.slow",
+          { score }
+        ),
       };
     },
     simulateFix: (input) => ({
@@ -1113,29 +1154,39 @@ export const CHECKS: CheckDefinition[] = [
   },
   {
     id: "website.content_depth",
-    label: "Content depth",
+    labelKey: "content.checks.website.content_depth.label",
     category: "website",
     maxPoints: 5,
-    advice:
-      "Build out real content — a title and meta description, a few real headings, and a genuine amount of text about what you offer. A single bare block reads as an unfinished site to visitors and to search engines.",
-    evaluate(input) {
+    adviceKey: "content.checks.website.content_depth.advice",
+    evaluate(input, locale) {
       if (!input.website || input.website.trim().length === 0) {
-        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: "Not applicable — no website on file to check." };
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: t(locale, "content.checks.website.content_depth.explanation.noWebsite"),
+        };
       }
       const content = input.websiteAnalysis?.content ?? null;
       if (!content) {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
-          explanation: input.websiteAnalysis
-            ? "Couldn't read this site's content — the automated check may have been blocked. Excluded from your score, not counted against you."
-            : "This site hasn't been analyzed yet — re-scan to check its real content.",
+          explanation: t(
+            locale,
+            input.websiteAnalysis
+              ? "content.checks.website.content_depth.explanation.couldntRead"
+              : "content.checks.website.content_depth.explanation.notAnalyzed"
+          ),
         };
       }
       if (content.isLikelyClientRenderedShell) {
         const recovered = content.renderedContentSignals;
         if (!recovered) {
-          return { earnedPoints: null, confidence: "NOT_FOUND", explanation: CLIENT_RENDERED_SHELL_EXPLANATION };
+          return {
+            earnedPoints: null,
+            confidence: "NOT_FOUND",
+            explanation: t(locale, "content.checks.website.content_depth.explanation.clientRenderedShell"),
+          };
         }
         // Recovered via Google PageSpeed's real rendered-Chrome Lighthouse
         // audits (see fetchPageSpeedMobileScore/PAGESPEED_CSR_RECOVERY_CATEGORIES
@@ -1158,23 +1209,31 @@ export const CHECKS: CheckDefinition[] = [
         // silently uncredited, never reported as a confirmed failure.
         const confirmedPresent: string[] = [];
         const confirmedMissing: string[] = [];
-        if (recovered.hasTitle === true) confirmedPresent.push("a page title");
-        else if (recovered.hasTitle === false) confirmedMissing.push("no page title found");
-        if (recovered.hasMetaDescription === true) confirmedPresent.push("a meta description");
-        else if (recovered.hasMetaDescription === false) confirmedMissing.push("no meta description found");
-        if (recovered.hasViewportTag === true) confirmedPresent.push("a mobile viewport tag");
-        else if (recovered.hasViewportTag === false) confirmedMissing.push("not mobile-optimized (no viewport tag)");
-        if (recovered.hasHeadings === true) confirmedPresent.push("real headings");
-        else if (recovered.hasHeadings === false) confirmedMissing.push("no real headings/sections");
+        if (recovered.hasTitle === true) confirmedPresent.push(t(locale, "content.checks.website.content_depth.explanation.presentTitle"));
+        else if (recovered.hasTitle === false) confirmedMissing.push(t(locale, "content.checks.website.content_depth.explanation.missingTitle"));
+        if (recovered.hasMetaDescription === true) confirmedPresent.push(t(locale, "content.checks.website.content_depth.explanation.presentMeta"));
+        else if (recovered.hasMetaDescription === false) confirmedMissing.push(t(locale, "content.checks.website.content_depth.explanation.missingMeta"));
+        if (recovered.hasViewportTag === true) confirmedPresent.push(t(locale, "content.checks.website.content_depth.explanation.presentViewport"));
+        else if (recovered.hasViewportTag === false) confirmedMissing.push(t(locale, "content.checks.website.content_depth.explanation.missingViewport"));
+        if (recovered.hasHeadings === true) confirmedPresent.push(t(locale, "content.checks.website.content_depth.explanation.presentHeadings"));
+        else if (recovered.hasHeadings === false) confirmedMissing.push(t(locale, "content.checks.website.content_depth.explanation.missingHeadings"));
 
-        const explanationParts = [
-          "This site renders its content with JavaScript — verified using Google's real rendered-page audit instead of a static fetch.",
-        ];
-        if (confirmedPresent.length > 0) explanationParts.push(`Confirmed present: ${confirmedPresent.join(", ")}.`);
-        if (confirmedMissing.length > 0) explanationParts.push(`Confirmed missing: ${confirmedMissing.join("; ")}.`);
-        explanationParts.push(
-          "Content depth/length couldn't be independently confirmed for this site and isn't credited either way."
-        );
+        const explanationParts = [t(locale, "content.checks.website.content_depth.explanation.recoveredBase")];
+        if (confirmedPresent.length > 0) {
+          explanationParts.push(
+            t(locale, "content.checks.website.content_depth.explanation.confirmedPresentTemplate", {
+              items: confirmedPresent.join(", "),
+            })
+          );
+        }
+        if (confirmedMissing.length > 0) {
+          explanationParts.push(
+            t(locale, "content.checks.website.content_depth.explanation.confirmedMissingTemplate", {
+              items: confirmedMissing.join("; "),
+            })
+          );
+        }
+        explanationParts.push(t(locale, "content.checks.website.content_depth.explanation.recoveredNote"));
 
         return { earnedPoints, confidence: "VERIFIED", explanation: explanationParts.join(" ") };
       }
@@ -1192,19 +1251,19 @@ export const CHECKS: CheckDefinition[] = [
       const earnedPoints = roundTo(titlePts + metaPts + viewportPts + headingPts + lengthPts, 1);
 
       const missing: string[] = [];
-      if (!content.hasTitle) missing.push("no page title");
-      if (!content.hasMetaDescription) missing.push("no meta description");
-      if (!content.hasViewportTag) missing.push("not mobile-optimized (no viewport tag)");
-      if (content.headingCount === 0) missing.push("no real headings/sections");
-      if (content.visibleTextLength <= THIN_CONTENT_CHARS) missing.push("very little content — reads as a bare landing page");
+      if (!content.hasTitle) missing.push(t(locale, "content.checks.website.content_depth.explanation.gapNoTitle"));
+      if (!content.hasMetaDescription) missing.push(t(locale, "content.checks.website.content_depth.explanation.gapNoMeta"));
+      if (!content.hasViewportTag) missing.push(t(locale, "content.checks.website.content_depth.explanation.gapNoViewport"));
+      if (content.headingCount === 0) missing.push(t(locale, "content.checks.website.content_depth.explanation.gapNoHeadings"));
+      if (content.visibleTextLength <= THIN_CONTENT_CHARS) missing.push(t(locale, "content.checks.website.content_depth.explanation.gapThinContent"));
 
       return {
         earnedPoints,
         confidence: "VERIFIED",
         explanation:
           missing.length === 0
-            ? "Real, substantial content: a title, meta description, headings, and a mobile viewport tag all present."
-            : `Content gaps found: ${missing.join(", ")}.`,
+            ? t(locale, "content.checks.website.content_depth.explanation.allGood")
+            : t(locale, "content.checks.website.content_depth.explanation.gapsTemplate", { items: missing.join(", ") }),
       };
     },
     simulateFix: (input) => ({
@@ -1218,27 +1277,37 @@ export const CHECKS: CheckDefinition[] = [
   },
   {
     id: "website.contact_conversion",
-    label: "Contact & conversion",
+    labelKey: "content.checks.website.contact_conversion.label",
     category: "website",
     maxPoints: 3,
-    advice:
-      "Add a real click-to-call phone link or email address, and a clear call-to-action (e.g. \"Call now\" or \"Book an appointment\") — visitors shouldn't have to hunt for how to reach you.",
-    evaluate(input) {
+    adviceKey: "content.checks.website.contact_conversion.advice",
+    evaluate(input, locale) {
       if (!input.website || input.website.trim().length === 0) {
-        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: "Not applicable — no website on file to check." };
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: t(locale, "content.checks.website.contact_conversion.explanation.noWebsite"),
+        };
       }
       const content = input.websiteAnalysis?.content ?? null;
       if (!content) {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
-          explanation: input.websiteAnalysis
-            ? "Couldn't read this site's content — the automated check may have been blocked. Excluded from your score, not counted against you."
-            : "This site hasn't been analyzed yet — re-scan to check its real contact info and calls-to-action.",
+          explanation: t(
+            locale,
+            input.websiteAnalysis
+              ? "content.checks.website.contact_conversion.explanation.couldntRead"
+              : "content.checks.website.contact_conversion.explanation.notAnalyzed"
+          ),
         };
       }
       if (content.isLikelyClientRenderedShell) {
-        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: CLIENT_RENDERED_SHELL_EXPLANATION };
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: t(locale, "content.checks.website.contact_conversion.explanation.clientRenderedShell"),
+        };
       }
       // Sub-point weights: a real contact link 2 / a clear CTA phrase 1 —
       // sums to 3. Contact link keeps its original weight (the more
@@ -1249,15 +1318,15 @@ export const CHECKS: CheckDefinition[] = [
       const earnedPoints = (hasContact ? 2 : 0) + (content.hasCtaText ? 1 : 0);
 
       const problems: string[] = [];
-      if (!hasContact) problems.push("no click-to-call phone or email link found");
-      if (!content.hasCtaText) problems.push("no clear call-to-action found");
+      if (!hasContact) problems.push(t(locale, "content.checks.website.contact_conversion.explanation.noContact"));
+      if (!content.hasCtaText) problems.push(t(locale, "content.checks.website.contact_conversion.explanation.noCta"));
 
       return {
         earnedPoints,
         confidence: "VERIFIED",
         explanation:
           problems.length === 0
-            ? "A real contact link and a clear call-to-action are both present."
+            ? t(locale, "content.checks.website.contact_conversion.explanation.allGood")
             : problems.map((p) => p[0].toUpperCase() + p.slice(1)).join("; ") + ".",
       };
     },
@@ -1276,40 +1345,42 @@ export const CHECKS: CheckDefinition[] = [
   },
   {
     id: "website.about_presence",
-    label: "About / our story",
+    labelKey: "content.checks.website.about_presence.label",
     category: "website",
     maxPoints: 1,
-    advice:
-      "Add a real About or Our Story page (linked from your main navigation) — a short background/team page reassures visitors this is a real, established business.",
+    adviceKey: "content.checks.website.about_presence.advice",
     // Deliberately two-state, not three: a missing About *link* is never
     // proof of a missing About *section* (it may just live on the
     // homepage, which page discovery can't see into) — so there's no
     // honest "real failure" here, only "found" or "couldn't verify." See
     // WebsiteAnalysis.hasAboutPage's own doc comment for the exact
     // real-page-discovery signal this reads.
-    evaluate(input) {
+    evaluate(input, locale) {
       if (!input.website || input.website.trim().length === 0) {
-        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: "Not applicable — no website on file to check." };
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: t(locale, "content.checks.website.about_presence.explanation.noWebsite"),
+        };
       }
       if (!input.websiteAnalysis) {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
-          explanation: "This site hasn't been analyzed yet — re-scan to check its real navigation.",
+          explanation: t(locale, "content.checks.website.about_presence.explanation.notAnalyzed"),
         };
       }
       if (input.websiteAnalysis.hasAboutPage) {
         return {
           earnedPoints: 1,
           confidence: "VERIFIED",
-          explanation: "Found a real About/Our Story page linked from this site's navigation or sitemap.",
+          explanation: t(locale, "content.checks.website.about_presence.explanation.found"),
         };
       }
       return {
         earnedPoints: null,
         confidence: "NOT_FOUND",
-        explanation:
-          "Couldn't verify — no About/Our Story page was found in this site's navigation or sitemap. A single-page site may have this content on its homepage instead, which we can't detect. Excluded from your score, not counted against you.",
+        explanation: t(locale, "content.checks.website.about_presence.explanation.notFound"),
       };
     },
     simulateFix: (input) => ({
@@ -1320,37 +1391,39 @@ export const CHECKS: CheckDefinition[] = [
   },
   {
     id: "website.services_presence",
-    label: "Services / products",
+    labelKey: "content.checks.website.services_presence.label",
     category: "website",
     maxPoints: 1,
-    advice:
-      "Add a real Services, Products, or Menu page (linked from your main navigation) — visitors and search engines both look for a clear list of what you offer.",
+    adviceKey: "content.checks.website.services_presence.advice",
     // Same two-state reasoning as website.about_presence above — a
     // missing Services/Products *link* is never proof there's no
     // Services/Products *content*.
-    evaluate(input) {
+    evaluate(input, locale) {
       if (!input.website || input.website.trim().length === 0) {
-        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: "Not applicable — no website on file to check." };
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: t(locale, "content.checks.website.services_presence.explanation.noWebsite"),
+        };
       }
       if (!input.websiteAnalysis) {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
-          explanation: "This site hasn't been analyzed yet — re-scan to check its real navigation.",
+          explanation: t(locale, "content.checks.website.services_presence.explanation.notAnalyzed"),
         };
       }
       if (input.websiteAnalysis.hasServicesPage) {
         return {
           earnedPoints: 1,
           confidence: "VERIFIED",
-          explanation: "Found a real Services/Products page linked from this site's navigation or sitemap.",
+          explanation: t(locale, "content.checks.website.services_presence.explanation.found"),
         };
       }
       return {
         earnedPoints: null,
         confidence: "NOT_FOUND",
-        explanation:
-          "Couldn't verify — no Services/Products page was found in this site's navigation or sitemap. A single-page site may list these on its homepage instead, which we can't detect. Excluded from your score, not counted against you.",
+        explanation: t(locale, "content.checks.website.services_presence.explanation.notFound"),
       };
     },
     simulateFix: (input) => ({
@@ -1377,14 +1450,17 @@ function findCheck(checkId: string): CheckDefinition {
 
 /**
  * Scores a business from real Google Places-derived data. Pure and
- * deterministic: same input, same output, always.
+ * deterministic: same input (and locale), same output, always. `locale`
+ * defaults to DEFAULT_LOCALE so every existing caller that doesn't pass
+ * one keeps getting the exact same English label/explanation text this
+ * file used to hardcode — see content.checks.<id>.* in lib/i18n/messages.ts.
  */
-export function scoreBusiness(input: BusinessScoringInput): ScoreBreakdown {
+export function scoreBusiness(input: BusinessScoringInput, locale: Locale = DEFAULT_LOCALE): ScoreBreakdown {
   const checks: CheckResult[] = CHECKS.map((def) => {
-    const result = def.evaluate(input);
+    const result = def.evaluate(input, locale);
     return {
       id: def.id,
-      label: def.label,
+      label: t(locale, def.labelKey),
       category: def.category,
       maxPoints: def.maxPoints,
       earnedPoints: result.earnedPoints,
@@ -1446,9 +1522,14 @@ export function scoreBusiness(input: BusinessScoringInput): ScoreBreakdown {
  * (determinable confidence, earnedPoints < maxPoints); its
  * promisedPoints is exactly (maxPoints - earnedPoints) for that check —
  * never a separately hand-written number. Sorted by promisedPoints,
- * highest first.
+ * highest first. `locale` defaults to DEFAULT_LOCALE, same reasoning as
+ * scoreBusiness() above — label/advice are looked up fresh via the
+ * check's own labelKey/adviceKey rather than reused from `breakdown`, so
+ * a caller can request a different locale's suggestions from an
+ * already-computed breakdown without it silently staying in whatever
+ * locale that breakdown was originally built with.
  */
-export function generateSuggestions(breakdown: ScoreBreakdown): Suggestion[] {
+export function generateSuggestions(breakdown: ScoreBreakdown, locale: Locale = DEFAULT_LOCALE): Suggestion[] {
   return breakdown.checks
     .filter((c) => isDeterminable(c.confidence) && (c.earnedPoints ?? 0) < c.maxPoints)
     .map((c) => {
@@ -1456,9 +1537,9 @@ export function generateSuggestions(breakdown: ScoreBreakdown): Suggestion[] {
       return {
         checkId: c.id,
         category: c.category,
-        label: c.label,
+        label: t(locale, def.labelKey),
         promisedPoints: roundTo(c.maxPoints - (c.earnedPoints ?? 0), 1),
-        advice: def.advice,
+        advice: t(locale, def.adviceKey),
       };
     })
     .sort((a, b) => b.promisedPoints - a.promisedPoints);
@@ -1480,15 +1561,18 @@ export function applyCheckFix(
  * literal output of the same scoring function, given the data state
  * suggestions describe. See scoring.test.ts for the guarantee test.
  */
-export function getScoreWithSuggestions(input: BusinessScoringInput): ScoreWithSuggestions {
-  const breakdown = scoreBusiness(input);
-  const suggestions = generateSuggestions(breakdown);
+export function getScoreWithSuggestions(
+  input: BusinessScoringInput,
+  locale: Locale = DEFAULT_LOCALE
+): ScoreWithSuggestions {
+  const breakdown = scoreBusiness(input, locale);
+  const suggestions = generateSuggestions(breakdown, locale);
 
   const projectedInput = suggestions.reduce(
     (acc, s) => applyCheckFix(acc, s.checkId),
     input
   );
-  const projectedBreakdown = scoreBusiness(projectedInput);
+  const projectedBreakdown = scoreBusiness(projectedInput, locale);
 
   return { breakdown, suggestions, projectedInput, projectedBreakdown };
 }

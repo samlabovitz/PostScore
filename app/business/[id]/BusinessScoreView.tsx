@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { rescanBusiness } from "@/app/actions/scoring";
 import type { BusinessRecord, ScoreHistoryRow, ScoreSnapshot } from "@/app/actions/scoring";
 import { diffProfileSnapshots, type ProfileSnapshot } from "@/lib/profileChanges";
+import { useLocale } from "@/lib/i18n";
 import {
   GRADE_THRESHOLDS,
   type CategoryResult,
@@ -451,6 +452,8 @@ function ChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
  * profile-snapshot tracking, says so plainly rather than guessing; zero
  * real differences says so too, rather than showing nothing at all. */
 function ListingChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
+  const locale = useLocale();
+
   if (snapshots.length < 2) {
     return (
       <Card className="p-5 text-sm text-ink-soft">
@@ -473,7 +476,8 @@ function ListingChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
 
   const changes = diffProfileSnapshots(
     previous.profile_snapshot_json as ProfileSnapshot,
-    current.profile_snapshot_json as ProfileSnapshot
+    current.profile_snapshot_json as ProfileSnapshot,
+    locale
   );
 
   if (changes.length === 0) {

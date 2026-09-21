@@ -16,6 +16,7 @@
 
 import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "./profileChanges";
 import { generateSuggestions, type Grade, type ScoreBreakdown } from "./scoring";
+import { DEFAULT_LOCALE, t, tPlural, type Locale } from "@/lib/i18n";
 
 /**
  * One real saved scan, exactly the fields buildMonthlyReportContent
@@ -209,11 +210,15 @@ function competitorMovement(delta: CompetitorDelta | null): CompetitorMovement {
   };
 }
 
-function listingChanges(previous: ProfileSnapshot | null, current: ProfileSnapshot | null): ListingChangesResult {
+function listingChanges(
+  previous: ProfileSnapshot | null,
+  current: ProfileSnapshot | null,
+  locale: Locale
+): ListingChangesResult {
   if (!previous || !current) return { available: false };
   return {
     available: true,
-    changes: diffProfileSnapshots(previous, current).filter((c) => c.field !== "rating" && c.field !== "reviews"),
+    changes: diffProfileSnapshots(previous, current, locale).filter((c) => c.field !== "rating" && c.field !== "reviews"),
   };
 }
 
@@ -254,38 +259,56 @@ function buildMovementSummary(
   rating: MetricResult,
   reviewCount: MetricResult,
   competitor: CompetitorMovement,
-  changes: ListingChangesResult
+  changes: ListingChangesResult,
+  locale: Locale
 ): string {
   const parts: string[] = [];
 
+  // Score/grade/rating/competitor phrasing below reuses the EXACT SAME
+  // report.fragment.* keys the email headline (buildHeadline in
+  // emails/MonthlyReportEmail.tsx) builds from — never a second,
+  // separately-worded copy of "your score rose N points" or "you moved
+  // up/down" that could drift from it. The trailing "to {total}
+  // ({grade})"/join punctuation below is this sentence's own glue, not
+  // shared with the headline, so it stays plain template literals.
   if (scoreDelta !== 0) {
-    parts.push(
-      `your score ${scoreDelta > 0 ? "rose" : "dropped"} ${Math.abs(scoreDelta)} point${Math.abs(scoreDelta) === 1 ? "" : "s"} to ${current.total}${gradeChanged ? ` (${current.grade})` : ""}`
+    const scoreFragment = tPlural(
+      locale,
+      scoreDelta > 0 ? "report.fragment.scoreRose" : "report.fragment.scoreDropped",
+      Math.abs(scoreDelta)
     );
+    parts.push(`${scoreFragment} to ${current.total}${gradeChanged ? ` (${current.grade})` : ""}`);
   } else if (gradeChanged) {
-    parts.push(`your grade changed to ${current.grade}`);
+    parts.push(t(locale, "report.fragment.gradeChanged", { grade: current.grade }));
   }
 
   if (rating.available && rating.delta !== null && rating.delta !== 0) {
-    parts.push(`your rating ${rating.delta > 0 ? "rose" : "dropped"} to ${formatRating(rating.current)}`);
+    parts.push(
+      t(locale, rating.delta > 0 ? "report.fragment.ratingRose" : "report.fragment.ratingDropped", {
+        value: rating.current.toFixed(1),
+      })
+    );
   }
 
   if (reviewCount.available && reviewCount.delta !== null && reviewCount.delta !== 0) {
     parts.push(
       reviewCount.delta > 0
-        ? `${reviewCount.delta} new review${reviewCount.delta === 1 ? "" : "s"}`
-        : `your review count dropped by ${Math.abs(reviewCount.delta)}`
+        ? tPlural(locale, "report.summary.reviewsGained", reviewCount.delta)
+        : t(locale, "report.summary.reviewsLost", { count: Math.abs(reviewCount.delta) })
     );
   }
 
   if (competitor.available && competitor.rankDelta !== 0) {
     parts.push(
-      `you moved ${competitor.rankDelta > 0 ? "up" : "down"} to #${competitor.current.rank} of ${competitor.current.totalCompetitors}`
+      t(locale, competitor.rankDelta > 0 ? "report.fragment.competitorUp" : "report.fragment.competitorDown", {
+        rank: competitor.current.rank,
+        total: competitor.current.totalCompetitors,
+      })
     );
   }
 
   if (changes.available && changes.changes.length > 0) {
-    parts.push(`${changes.changes.length} listing change${changes.changes.length === 1 ? "" : "s"} detected`);
+    parts.push(tPlural(locale, "report.summary.listingChanges", changes.changes.length));
   }
 
   return `${capitalizeFirst(parts.join("; "))}.`;
@@ -300,12 +323,9 @@ function buildMovementSummary(
  * scoring engine doesn't measure at all (e.g. Google Business Profile
  * posts aren't a scored check), so it can never contradict or duplicate
  * a real finding shown elsewhere in the same report. */
-export const GENERAL_FOCUS_TIPS: FocusPointer[] = [
-  {
-    kind: "general_tip",
-    text: "General tip: posting an update or offer to your Google Business Profile every so often helps keep your listing active in local search — this isn't something we currently measure, so treat it as general guidance, not a status report.",
-  },
-];
+export function GENERAL_FOCUS_TIPS(locale: Locale = DEFAULT_LOCALE): FocusPointer[] {
+  return [{ kind: "general_tip", text: t(locale, "report.focus.generalTip") }];
+}
 
 /** Caps how many of the biggest real, currently-losing checks from this
  * scan's own breakdown can become "score_gap" pointers — see
@@ -317,16 +337,16 @@ const MAX_SCORE_GAP_POINTERS = 2;
  * opportunity first — literally generateSuggestions()'s own output
  * (the same real ranking the Website/action-plan pages already show
  * this business), never a separately hand-picked check. */
-function scoreGapPointers(breakdown: ScoreBreakdown): FocusPointer[] {
-  return generateSuggestions(breakdown)
+function scoreGapPointers(breakdown: ScoreBreakdown, locale: Locale): FocusPointer[] {
+  return generateSuggestions(breakdown, locale)
     .filter((s) => s.promisedPoints > 0)
     .slice(0, MAX_SCORE_GAP_POINTERS)
     .map((s, i) => ({
       kind: "score_gap" as const,
-      text:
-        i === 0
-          ? `Your biggest opportunity: ${s.label} — ${s.advice}`
-          : `Also worth a look: ${s.label} — ${s.advice}`,
+      text: t(locale, i === 0 ? "report.focus.biggestOpportunity" : "report.focus.alsoWorthALook", {
+        label: s.label,
+        advice: s.advice,
+      }),
       checkId: s.checkId,
     }));
 }
@@ -338,7 +358,11 @@ function scoreGapPointers(breakdown: ScoreBreakdown): FocusPointer[] {
  * review count, the subject genuinely isn't already #1, and the top
  * competitor's own review count was itself real. Never estimated when
  * any of those is missing. */
-function competitorGapPointer(competitor: CompetitorMovement, reviewCount: MetricResult): FocusPointer | null {
+function competitorGapPointer(
+  competitor: CompetitorMovement,
+  reviewCount: MetricResult,
+  locale: Locale
+): FocusPointer | null {
   if (!competitor.available || !reviewCount.available) return null;
   if (competitor.current.rank <= 1) return null;
   const topReviews = competitor.current.topCompetitorReviewCount;
@@ -347,7 +371,7 @@ function competitorGapPointer(competitor: CompetitorMovement, reviewCount: Metri
   if (gap <= 0) return null;
   return {
     kind: "competitor_gap",
-    text: `The top-ranked business near you has ${gap} more review${gap === 1 ? "" : "s"} than you — closing that gap moves your ranking.`,
+    text: tPlural(locale, "report.focus.competitorGap", gap),
   };
 }
 
@@ -357,13 +381,16 @@ function competitorGapPointer(competitor: CompetitorMovement, reviewCount: Metri
  * elsewhere in the report (categories/photos churn is real but rarely
  * something to "focus on"). Picks diffProfileSnapshots' own first match,
  * never a separately-invented description. */
-function listingIssuePointer(listingChanges: ListingChangesResult): FocusPointer | null {
+function listingIssuePointer(listingChanges: ListingChangesResult, locale: Locale): FocusPointer | null {
   if (!listingChanges.available) return null;
   const notable = listingChanges.changes.find(
     (c) => c.field === "phone" || c.field === "website" || c.field === "status"
   );
   if (!notable) return null;
-  return { kind: "listing_issue", text: `Listing change worth a look: ${notable.description}` };
+  return {
+    kind: "listing_issue",
+    text: t(locale, "report.focus.listingIssue", { description: notable.description }),
+  };
 }
 
 /** How many pointers (data-derived plus, at most, one general tip) the
@@ -386,11 +413,12 @@ function buildFocus(
   breakdown: ScoreBreakdown,
   competitor: CompetitorMovement,
   reviewCount: MetricResult,
-  listingChanges: ListingChangesResult
+  listingChanges: ListingChangesResult,
+  locale: Locale
 ): MonthlyReportFocus {
-  const scoreGaps = scoreGapPointers(breakdown);
-  const competitorGap = competitorGapPointer(competitor, reviewCount);
-  const listingIssue = listingIssuePointer(listingChanges);
+  const scoreGaps = scoreGapPointers(breakdown, locale);
+  const competitorGap = competitorGapPointer(competitor, reviewCount, locale);
+  const listingIssue = listingIssuePointer(listingChanges, locale);
 
   const pointers: FocusPointer[] = [];
   if (scoreGaps[0]) pointers.push(scoreGaps[0]);
@@ -402,7 +430,7 @@ function buildFocus(
     return { nothingNotable: true, pointers: [] };
   }
   if (pointers.length < MAX_FOCUS_POINTERS) {
-    pointers.push(GENERAL_FOCUS_TIPS[0]);
+    pointers.push(GENERAL_FOCUS_TIPS(locale)[0]);
   }
   return { nothingNotable: false, pointers: pointers.slice(0, MAX_FOCUS_POINTERS) };
 }
@@ -418,7 +446,8 @@ function buildFocus(
 export function buildMonthlyReportContent(
   baseline: MonthlyReportScoreRow | null,
   current: MonthlyReportScoreRow,
-  competitorDelta: CompetitorDelta | null
+  competitorDelta: CompetitorDelta | null,
+  locale: Locale = DEFAULT_LOCALE
 ): MonthlyReportContent {
   const competitor = competitorMovement(competitorDelta);
 
@@ -442,13 +471,13 @@ export function buildMonthlyReportContent(
       // changes found," genuinely not applicable.
       listingChanges: { available: false },
       isSteady: false,
-      focus: buildFocus(current.breakdown, competitor, reviewCount, { available: false }),
+      focus: buildFocus(current.breakdown, competitor, reviewCount, { available: false }, locale),
     };
   }
 
   const rating = numericMetric(baseline.profileSnapshot?.rating, current.profileSnapshot?.rating);
   const reviewCount = numericMetric(baseline.profileSnapshot?.reviewCount, current.profileSnapshot?.reviewCount);
-  const changes = listingChanges(baseline.profileSnapshot, current.profileSnapshot);
+  const changes = listingChanges(baseline.profileSnapshot, current.profileSnapshot, locale);
 
   const scoreDelta = current.total - baseline.total;
   const gradeChanged = current.grade !== baseline.grade;
@@ -471,7 +500,7 @@ export function buildMonthlyReportContent(
     kind: "update",
     summary: isSteady
       ? buildSteadySummary(current, rating, competitor)
-      : buildMovementSummary(scoreDelta, current, gradeChanged, rating, reviewCount, competitor, changes),
+      : buildMovementSummary(scoreDelta, current, gradeChanged, rating, reviewCount, competitor, changes, locale),
     score: {
       current: { total: current.total, grade: current.grade },
       previous: { total: baseline.total, grade: baseline.grade },
@@ -483,6 +512,6 @@ export function buildMonthlyReportContent(
     competitor,
     listingChanges: changes,
     isSteady,
-    focus: buildFocus(current.breakdown, competitor, reviewCount, changes),
+    focus: buildFocus(current.breakdown, competitor, reviewCount, changes, locale),
   };
 }

@@ -18,6 +18,7 @@ import {
   type ScoreBreakdown,
   type Suggestion,
 } from "@/lib/scoring";
+import { DEFAULT_LOCALE, tPlural, type Locale } from "@/lib/i18n";
 
 /**
  * Whether a check's FULL points are realistically reachable within
@@ -601,7 +602,11 @@ interface WeeklyTargetInfo {
  * targetDelta) when no numeric field diff is available to describe (e.g.
  * a future weeklyFix that isn't review-count-based).
  */
-function deriveWeeklyTargetInfo(checkId: string, input: BusinessScoringInput): WeeklyTargetInfo | null {
+function deriveWeeklyTargetInfo(
+  checkId: string,
+  input: BusinessScoringInput,
+  locale: Locale
+): WeeklyTargetInfo | null {
   const copy = ACTION_PLAN_COPY[checkId];
   if (!copy?.weeklyFix) return null;
 
@@ -611,7 +616,7 @@ function deriveWeeklyTargetInfo(checkId: string, input: BusinessScoringInput): W
   if (after > before) {
     const delta = after - before;
     return {
-      label: `Get ${delta}+ new review${delta === 1 ? "" : "s"} this week (${before} → ${after}+)`,
+      label: tPlural(locale, "dashboard.actionPlan.weeklyReviewTarget", delta, { before, after }),
       targetDelta: delta,
     };
   }
@@ -636,7 +641,8 @@ export function buildWeeklyPlan(
   tasks: ActionPlanTask[],
   breakdown: ScoreBreakdown,
   input: BusinessScoringInput,
-  cap: number = WEEKLY_PLAN_CAP
+  cap: number = WEEKLY_PLAN_CAP,
+  locale: Locale = DEFAULT_LOCALE
 ): WeeklyPlan {
   const candidates = tasks
     .filter((t) => t.effort === "quick_win" || t.effort === "quick_win_action")
@@ -663,7 +669,7 @@ export function buildWeeklyPlan(
   const weeklyTasks: ActionPlanTask[] = picked.map(({ task, weeklyPoints }) => {
     if (task.effort !== "quick_win_action") return task;
     const copy = ACTION_PLAN_COPY[task.checkId];
-    const targetInfo = deriveWeeklyTargetInfo(task.checkId, input);
+    const targetInfo = deriveWeeklyTargetInfo(task.checkId, input, locale);
     return {
       ...task,
       promisedPoints: weeklyPoints,
