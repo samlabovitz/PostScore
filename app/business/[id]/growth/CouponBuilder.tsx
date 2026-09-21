@@ -29,35 +29,34 @@ import { buildShareCaption } from "@/lib/promos";
 import type { BizProfile } from "@/config/bizProfiles";
 import type { StartPromoInput, StartPromoResult } from "@/app/actions/promos";
 import { ShareModal } from "./ShareModal";
+import { t, tPlural, useLocale } from "@/lib/i18n";
 
 const DEFAULT_EXPIRY_DAYS = 60;
-const DEFAULT_INSTRUCTIONS = "Show this coupon in-store to redeem.";
-const DEFAULT_TERMS = "One per customer. Cannot combine with other offers.";
 
 interface OfferAngle {
   id: keyof BizProfile["couponAngles"];
-  title: string;
-  why: string;
+  titleKey: "dashboard.growth.coupon.angleFirstTimeTitle" | "dashboard.growth.coupon.angleSeasonalTitle" | "dashboard.growth.coupon.angleSlowDayTitle";
+  whyKey: "dashboard.growth.coupon.angleFirstTimeWhy" | "dashboard.growth.coupon.angleSeasonalWhy" | "dashboard.growth.coupon.angleSlowDayWhy";
   icon: typeof IconUserPlus;
 }
 
 const ANGLES: OfferAngle[] = [
   {
     id: "firstTime",
-    title: "First-time customer",
-    why: "Removes the risk of trying someone new — usually the highest-converting offer a business can run.",
+    titleKey: "dashboard.growth.coupon.angleFirstTimeTitle",
+    whyKey: "dashboard.growth.coupon.angleFirstTimeWhy",
     icon: IconUserPlus,
   },
   {
     id: "seasonal",
-    title: "Seasonal or event",
-    why: "Ties your offer to a moment customers are already thinking about, so it feels timely, not random.",
+    titleKey: "dashboard.growth.coupon.angleSeasonalTitle",
+    whyKey: "dashboard.growth.coupon.angleSeasonalWhy",
     icon: IconSparkles,
   },
   {
     id: "slowDay",
-    title: "Fill a slow day",
-    why: "Turns your quietest hours into real traffic instead of leaving them empty.",
+    titleKey: "dashboard.growth.coupon.angleSlowDayTitle",
+    whyKey: "dashboard.growth.coupon.angleSlowDayWhy",
     icon: IconCalendarStats,
   },
 ];
@@ -79,22 +78,25 @@ function CouponPreview({
   qrDataUrl: string | null;
   terms: string;
 }) {
+  const locale = useLocale();
   return (
     <Card className="overflow-hidden p-0">
       <div className="bg-ink px-5 py-3.5">
         <div className="truncate text-[15px] font-bold text-white">{businessName}</div>
         <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-brass">
-          Exclusive offer
+          {t(locale, "dashboard.growth.coupon.previewExclusiveOffer")}
         </div>
       </div>
       <div className="grid grid-cols-[1fr_auto]">
         <div className="flex flex-col gap-2.5 p-5">
           <div className="font-serif text-2xl font-bold leading-snug text-ink">
-            {offer.trim() || "Your offer will appear here"}
+            {offer.trim() || t(locale, "dashboard.growth.coupon.previewOfferPlaceholder")}
           </div>
           {instructions.trim() && <p className="text-[12.5px] text-ink-soft">{instructions.trim()}</p>}
           <div className="mt-1 flex w-fit flex-col items-start gap-0.5 rounded-lg border border-brass/40 bg-brass/5 px-3 py-1.5">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-brass">Code</span>
+            <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-brass">
+              {t(locale, "dashboard.growth.coupon.previewCodeLabel")}
+            </span>
             <span className="font-mono text-sm font-bold text-ink">{code}</span>
           </div>
           <div className="mt-1 text-[12.5px] font-bold text-red">{expiryLabel}</div>
@@ -103,13 +105,15 @@ function CouponPreview({
         <div className="flex w-[160px] flex-col items-center justify-center gap-2 border-l border-dashed border-paper-deep bg-paper p-4">
           {qrDataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={qrDataUrl} alt="Scan to redeem this coupon" className="h-24 w-24" />
+            <img src={qrDataUrl} alt={t(locale, "dashboard.growth.coupon.previewQrAlt")} className="h-24 w-24" />
           ) : (
             <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-paper-deep text-ink-mute">
               <IconQrcode size={28} />
             </div>
           )}
-          <div className="text-center text-[10px] text-ink-mute">Scan to redeem</div>
+          <div className="text-center text-[10px] text-ink-mute">
+            {t(locale, "dashboard.growth.coupon.previewScanToRedeem")}
+          </div>
           <div className="text-[9px] font-bold uppercase tracking-[0.08em] text-brass">PostScore</div>
         </div>
       </div>
@@ -136,12 +140,13 @@ export function CouponBuilder({
   maxActive: number;
   onStart: (input: StartPromoInput) => Promise<StartPromoResult>;
 }) {
+  const locale = useLocale();
   const [offer, setOffer] = useState(() => profile.couponPresets[0]?.label ?? "");
   const [expiry, setExpiry] = useState(() => defaultExpiryDate(DEFAULT_EXPIRY_DAYS, new Date()));
   const [code, setCode] = useState(() => generateCouponCode());
   const [moreOpen, setMoreOpen] = useState(false);
-  const [instructions, setInstructions] = useState(DEFAULT_INSTRUCTIONS);
-  const [terms, setTerms] = useState(DEFAULT_TERMS);
+  const [instructions, setInstructions] = useState(() => t(locale, "dashboard.growth.coupon.defaultInstructions"));
+  const [terms, setTerms] = useState(() => t(locale, "dashboard.growth.coupon.defaultTerms"));
   const [angleId, setAngleId] = useState<string>("custom");
   const [shareOpen, setShareOpen] = useState(false);
   const [startState, setStartState] = useState<
@@ -210,12 +215,12 @@ export function CouponBuilder({
     } else if (result.status === "limit_reached") {
       setStartState({
         kind: "error",
-        message: `You're already running ${maxActive} active coupons — end one in Active promotions below before starting another.`,
+        message: tPlural(locale, "dashboard.growth.coupon.startLimitError", maxActive),
       });
     } else {
       setStartState({
         kind: "error",
-        message: result.status === "error" ? result.message : "Couldn't start this — try again.",
+        message: result.status === "error" ? result.message : t(locale, "dashboard.growth.coupon.startErrorFallback"),
       });
     }
   }
@@ -238,7 +243,7 @@ export function CouponBuilder({
     } catch (err) {
       setDownloadState({
         kind: "error",
-        message: err instanceof Error ? err.message : "Could not generate the image — try again.",
+        message: err instanceof Error ? err.message : t(locale, "dashboard.growth.coupon.downloadErrorFallback"),
       });
     }
   }
@@ -248,15 +253,12 @@ export function CouponBuilder({
       <div>
         <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-brass">
           <IconTicket size={14} />
-          Digital coupon generator
+          {t(locale, "dashboard.growth.coupon.eyebrow")}
         </div>
         <h2 className="mt-1.5 font-serif text-2xl font-bold text-ink">
-          Turn online lookers into walk-ins
+          {t(locale, "dashboard.growth.coupon.heading")}
         </h2>
-        <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">
-          A first-visit or seasonal offer gives someone browsing your listing a reason to come in
-          now. Build one below — you&apos;ll get a real, downloadable coupon with a scannable code.
-        </p>
+        <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">{t(locale, "dashboard.growth.coupon.intro")}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -266,16 +268,16 @@ export function CouponBuilder({
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brass/10 text-brass">
                 <angle.icon size={16} />
               </span>
-              <div className="text-sm font-semibold text-ink">{angle.title}</div>
+              <div className="text-sm font-semibold text-ink">{t(locale, angle.titleKey)}</div>
             </div>
-            <p className="flex-1 text-[13px] text-ink-soft">{angle.why}</p>
+            <p className="flex-1 text-[13px] text-ink-soft">{t(locale, angle.whyKey)}</p>
             <Button
               variant="default"
               size="sm"
               onClick={() => applyAngle(angle)}
               className="w-fit"
             >
-              Use this offer
+              {t(locale, "dashboard.growth.coupon.useThisOffer")}
               <IconArrowDown size={13} />
             </Button>
           </Card>
@@ -286,20 +288,20 @@ export function CouponBuilder({
         <Card className="flex flex-col gap-4 p-5">
           <div>
             <label className="mb-1 block text-[13px] font-medium text-ink-soft">
-              Your offer <span className="text-red">*</span>
+              {t(locale, "dashboard.growth.coupon.offerLabel")} <span className="text-red">*</span>
             </label>
             <input
               type="text"
               value={offer}
               onChange={(e) => setOffer(e.target.value)}
-              placeholder="e.g. 10% off your next visit"
+              placeholder={t(locale, "dashboard.growth.coupon.offerPlaceholder")}
               className="w-full rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft"
             />
           </div>
 
           <div>
             <div className="mb-1.5 text-[13px] font-medium text-ink-soft">
-              Quick picks for {profile.label}
+              {t(locale, "dashboard.growth.coupon.quickPicksFor", { label: profile.label })}
             </div>
             <div className="flex flex-wrap gap-2">
               {profile.couponPresets.map((preset) => (
@@ -323,7 +325,7 @@ export function CouponBuilder({
 
           <div>
             <label className="mb-1 block text-[13px] font-medium text-ink-soft">
-              Expires <span className="text-red">*</span>
+              {t(locale, "dashboard.growth.coupon.expiresLabel")} <span className="text-red">*</span>
             </label>
             <input
               type="date"
@@ -339,7 +341,7 @@ export function CouponBuilder({
               onClick={() => setMoreOpen((o) => !o)}
               className="flex items-center gap-1 text-[12.5px] font-medium text-brass hover:underline"
             >
-              More options
+              {t(locale, "dashboard.growth.coupon.moreOptions")}
               <IconChevronDown
                 size={13}
                 className={cn("transition-transform", moreOpen && "rotate-180")}
@@ -350,7 +352,7 @@ export function CouponBuilder({
               <div className="mt-3 flex flex-col gap-4 border-t border-paper-line pt-4">
                 <div>
                   <label className="mb-1 block text-[13px] font-medium text-ink-soft">
-                    Redemption code
+                    {t(locale, "dashboard.growth.coupon.redemptionCodeLabel")}
                   </label>
                   <div className="flex items-center gap-2">
                     <input
@@ -364,19 +366,19 @@ export function CouponBuilder({
                       variant="default"
                       size="sm"
                       onClick={() => setCode(generateCouponCode())}
-                      aria-label="Generate a new code"
+                      aria-label={t(locale, "dashboard.growth.coupon.generateNewCodeAriaLabel")}
                     >
                       <IconRefresh size={14} />
                     </Button>
                   </div>
                   <p className="mt-1 text-[12px] text-ink-mute">
-                    Auto-generated — edit it if you&apos;d rather use your own.
+                    {t(locale, "dashboard.growth.coupon.codeAutoGeneratedNote")}
                   </p>
                 </div>
 
                 <div>
                   <label className="mb-1 block text-[13px] font-medium text-ink-soft">
-                    Instructions on the coupon
+                    {t(locale, "dashboard.growth.coupon.instructionsLabel")}
                   </label>
                   <textarea
                     value={instructions}
@@ -388,7 +390,10 @@ export function CouponBuilder({
 
                 <div>
                   <label className="mb-1 block text-[13px] font-medium text-ink-soft">
-                    Terms <span className="font-normal text-ink-mute">(optional)</span>
+                    {t(locale, "dashboard.growth.coupon.termsLabel")}{" "}
+                    <span className="font-normal text-ink-mute">
+                      {t(locale, "dashboard.growth.coupon.optionalHint")}
+                    </span>
                   </label>
                   <textarea
                     value={terms}
@@ -404,7 +409,7 @@ export function CouponBuilder({
 
         <div className="flex flex-col gap-3">
           <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-            Live preview
+            {t(locale, "dashboard.growth.coupon.livePreview")}
           </div>
           <CouponPreview
             businessName={businessName}
@@ -423,17 +428,17 @@ export function CouponBuilder({
               disabled={!canDownload || downloadState.kind === "working"}
             >
               <IconDownload size={16} />
-              {downloadState.kind === "working" ? "Generating..." : "Download image"}
+              {downloadState.kind === "working"
+                ? t(locale, "dashboard.growth.coupon.downloadGenerating")
+                : t(locale, "dashboard.growth.coupon.downloadImage")}
             </Button>
             <Button variant="default" onClick={() => setShareOpen(true)} disabled={!hasRequiredFields}>
               <IconShare2 size={16} />
-              Share
+              {t(locale, "dashboard.growth.coupon.share")}
             </Button>
           </div>
           {!canDownload && (
-            <p className="text-[12px] text-ink-mute">
-              Add an offer and an expiry date to download your coupon.
-            </p>
+            <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.growth.coupon.downloadHint")}</p>
           )}
           {downloadState.kind === "error" && (
             <p className="text-[12px] text-red">{downloadState.message}</p>
@@ -441,32 +446,28 @@ export function CouponBuilder({
 
           <Button variant="brass" onClick={handleStart} disabled={!canStart}>
             <IconRocket size={16} />
-            {startState.kind === "working" ? "Starting…" : "Start & track this offer"}
+            {startState.kind === "working"
+              ? t(locale, "dashboard.growth.coupon.starting")
+              : t(locale, "dashboard.growth.coupon.startAndTrack")}
           </Button>
           {atLimit ? (
             <p className="text-[12px] text-ink-mute">
-              You can run up to {maxActive} coupons at once. End one in Active promotions below to
-              start a new one.
+              {tPlural(locale, "dashboard.growth.coupon.atLimitMessage", maxActive)}
             </p>
           ) : startState.kind === "success" ? (
-            <p className="text-[12px] text-green">
-              Started — track redemptions in Active promotions below.
-            </p>
+            <p className="text-[12px] text-green">{t(locale, "dashboard.growth.coupon.startSuccess")}</p>
           ) : startState.kind === "error" ? (
             <p className="text-[12px] text-red">{startState.message}</p>
           ) : null}
 
-          <p className="text-[12px] text-ink-mute">
-            This creates a real image you share yourself — PostScore doesn&apos;t post it to
-            Google or text it to customers automatically.
-          </p>
+          <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.growth.coupon.disclaimer")}</p>
         </div>
       </div>
 
       <ShareModal
         open={shareOpen}
         onClose={() => setShareOpen(false)}
-        title="How to share your coupon"
+        title={t(locale, "dashboard.growth.coupon.shareModalTitle")}
         caption={buildShareCaption({
           businessName,
           offer,

@@ -4,26 +4,34 @@ import { useState } from "react";
 import { IconHandClick, IconInfoCircle, IconSend, IconWalk } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
+import { t, useLocale, type MessageKey } from "@/lib/i18n";
 
-const STEPS = [
+interface Step {
+  icon: typeof IconSend;
+  titleKey: MessageKey;
+  bodyKey: MessageKey;
+}
+
+const STEPS: Step[] = [
   {
     icon: IconSend,
-    title: "1. Share it",
-    body: "Download the coupon image and post it, text it, or print it yourself — see \"How to share.\"",
+    titleKey: "dashboard.growth.howCouponsWork.step1Title",
+    bodyKey: "dashboard.growth.howCouponsWork.step1Body",
   },
   {
     icon: IconWalk,
-    title: "2. Customer brings it",
-    body: "They show the image or code — on their phone or printed — at checkout.",
+    titleKey: "dashboard.growth.howCouponsWork.step2Title",
+    bodyKey: "dashboard.growth.howCouponsWork.step2Body",
   },
   {
     icon: IconHandClick,
-    title: "3. Tap to log it",
-    body: "Staff taps \"+1 Redeemed\" in Active promotions. That's the entire tracking system.",
+    titleKey: "dashboard.growth.howCouponsWork.step3Title",
+    bodyKey: "dashboard.growth.howCouponsWork.step3Body",
   },
 ];
 
 export function HowCouponsWork() {
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
 
   return (
@@ -31,7 +39,7 @@ export function HowCouponsWork() {
       <Card className="p-5">
         <div className="flex items-center justify-between gap-3">
           <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-            How it works, in 3 steps
+            {t(locale, "dashboard.growth.howCouponsWork.heading")}
           </div>
           <button
             type="button"
@@ -39,45 +47,50 @@ export function HowCouponsWork() {
             className="inline-flex items-center gap-1 text-[12.5px] font-medium text-brass hover:underline"
           >
             <IconInfoCircle size={14} />
-            What you need to know
+            {t(locale, "dashboard.growth.howCouponsWork.whatYouNeedToKnow")}
           </button>
         </div>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {STEPS.map((step) => (
-            <div key={step.title} className="flex flex-col gap-2">
+            <div key={step.titleKey} className="flex flex-col gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brass/10 text-brass">
                 <step.icon size={16} />
               </span>
-              <div className="text-[13px] font-semibold text-ink">{step.title}</div>
-              <p className="text-[12.5px] text-ink-soft">{step.body}</p>
+              <div className="text-[13px] font-semibold text-ink">{t(locale, step.titleKey)}</div>
+              <p className="text-[12.5px] text-ink-soft">{t(locale, step.bodyKey)}</p>
             </div>
           ))}
         </div>
       </Card>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Running a coupon — what you need">
+      <Modal open={open} onClose={() => setOpen(false)} title={t(locale, "dashboard.growth.howCouponsWork.modalTitle")}>
         <div className="flex flex-col gap-3 text-[13px] text-ink-soft">
           <p>
-            <span className="font-semibold text-ink">Build.</span> Pick an offer angle or write your
-            own, set an expiry, and PostScore generates a real coupon image with a code and QR code.
+            <span className="font-semibold text-ink">
+              {t(locale, "dashboard.growth.howCouponsWork.modalBuildLabel")}
+            </span>{" "}
+            {t(locale, "dashboard.growth.howCouponsWork.modalBuildBody")}
           </p>
           <p>
-            <span className="font-semibold text-ink">Share the image.</span> Download it and post it
-            yourself — to your Google Business Profile, Instagram, Facebook, a text to regulars, or
-            print it for the counter. PostScore never posts or sends anything on your behalf.
+            <span className="font-semibold text-ink">
+              {t(locale, "dashboard.growth.howCouponsWork.modalShareLabel")}
+            </span>{" "}
+            {t(locale, "dashboard.growth.howCouponsWork.modalShareBody")}
           </p>
           <p>
-            <span className="font-semibold text-ink">Customer shows it.</span> They bring the image or
-            code in — on their phone or printed — and show it at checkout.
+            <span className="font-semibold text-ink">
+              {t(locale, "dashboard.growth.howCouponsWork.modalCustomerLabel")}
+            </span>{" "}
+            {t(locale, "dashboard.growth.howCouponsWork.modalCustomerBody")}
           </p>
           <p>
-            <span className="font-semibold text-ink">Staff taps +1.</span> Whoever&apos;s at the
-            register taps &quot;+1 Redeemed&quot; on that coupon in Active promotions.
+            <span className="font-semibold text-ink">
+              {t(locale, "dashboard.growth.howCouponsWork.modalStaffLabel")}
+            </span>{" "}
+            {t(locale, "dashboard.growth.howCouponsWork.modalStaffBody")}
           </p>
           <div className="mt-1 rounded-lg bg-paper p-3 text-[12.5px] text-ink-mute">
-            Be honest with yourself about what this is: the redemption count is a simple stored tally
-            that a human increments by hand. It is not a POS integration and nothing detects a
-            redemption automatically — if staff forgets to tap it, that redemption isn&apos;t counted.
+            {t(locale, "dashboard.growth.howCouponsWork.modalHonestNote")}
           </div>
         </div>
       </Modal>

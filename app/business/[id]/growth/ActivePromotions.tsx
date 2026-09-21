@@ -9,6 +9,7 @@ import { formatExpiry } from "@/lib/coupons";
 import { buildShareCaption, redemptionLabel, type PromoRow } from "@/lib/promos";
 import { ShareModal } from "./ShareModal";
 import type { EndPromoResult, IncrementRedemptionResult } from "@/app/actions/promos";
+import { t, useLocale } from "@/lib/i18n";
 
 type RedeemState = { kind: "idle" } | { kind: "saving" } | { kind: "error"; message: string };
 type EndState = { kind: "idle" } | { kind: "confirming" } | { kind: "saving" } | { kind: "error"; message: string };
@@ -26,6 +27,7 @@ function PromoCard({
   onRedeem: (id: string) => Promise<IncrementRedemptionResult>;
   onEnd: (id: string) => Promise<EndPromoResult>;
 }) {
+  const locale = useLocale();
   const [redeemState, setRedeemState] = useState<RedeemState>({ kind: "idle" });
   const [endState, setEndState] = useState<EndState>({ kind: "idle" });
   const [shareOpen, setShareOpen] = useState(false);
@@ -36,7 +38,13 @@ function PromoCard({
     setRedeemState(
       result.status === "ok"
         ? { kind: "idle" }
-        : { kind: "error", message: result.status === "error" ? result.message : "Couldn't log that — try again." }
+        : {
+            kind: "error",
+            message:
+              result.status === "error"
+                ? result.message
+                : t(locale, "dashboard.growth.activePromotions.redeemErrorFallback"),
+          }
     );
   }
 
@@ -46,7 +54,10 @@ function PromoCard({
     if (result.status !== "ok") {
       setEndState({
         kind: "error",
-        message: result.status === "error" ? result.message : "Couldn't end this — try again.",
+        message:
+          result.status === "error"
+            ? result.message
+            : t(locale, "dashboard.growth.activePromotions.endErrorFallback"),
       });
     }
     // On success the parent removes this card from the list entirely,
@@ -73,17 +84,23 @@ function PromoCard({
       <div className="flex flex-wrap items-center gap-2.5">
         <Button variant="brass" size="sm" onClick={handleRedeem} disabled={redeemState.kind === "saving"}>
           <IconTicket size={14} />
-          {redeemState.kind === "saving" ? "Logging…" : "+1 Redeemed"}
+          {redeemState.kind === "saving"
+            ? t(locale, "dashboard.growth.activePromotions.redeemLogging")
+            : t(locale, "dashboard.growth.activePromotions.redeemButton")}
         </Button>
         <Button variant="default" size="sm" onClick={() => setShareOpen(true)}>
           <IconShare2 size={14} />
-          Share
+          {t(locale, "dashboard.growth.activePromotions.share")}
         </Button>
         {endState.kind === "confirming" || endState.kind === "saving" ? (
           <>
-            <span className="text-[12.5px] text-ink-mute">End this coupon?</span>
+            <span className="text-[12.5px] text-ink-mute">
+              {t(locale, "dashboard.growth.activePromotions.endConfirmQuestion")}
+            </span>
             <Button variant="default" size="sm" onClick={handleEnd} disabled={endState.kind === "saving"}>
-              {endState.kind === "saving" ? "Ending…" : "Yes, end it"}
+              {endState.kind === "saving"
+                ? t(locale, "dashboard.growth.activePromotions.ending")
+                : t(locale, "dashboard.growth.activePromotions.endConfirmYes")}
             </Button>
             <button
               type="button"
@@ -91,13 +108,13 @@ function PromoCard({
               disabled={endState.kind === "saving"}
               className="text-[12.5px] font-medium text-ink-mute hover:text-ink disabled:opacity-50"
             >
-              Cancel
+              {t(locale, "dashboard.growth.activePromotions.cancel")}
             </button>
           </>
         ) : (
           <Button variant="default" size="sm" onClick={() => setEndState({ kind: "confirming" })}>
             <IconPlayerStop size={14} />
-            End
+            {t(locale, "dashboard.growth.activePromotions.endButton")}
           </Button>
         )}
       </div>
@@ -108,7 +125,7 @@ function PromoCard({
       <ShareModal
         open={shareOpen}
         onClose={() => setShareOpen(false)}
-        title="How to share your coupon"
+        title={t(locale, "dashboard.growth.activePromotions.shareModalTitle")}
         caption={buildShareCaption({
           businessName,
           offer: promo.offer,
@@ -136,15 +153,15 @@ export function ActivePromotions({
   onRedeem: (id: string) => Promise<IncrementRedemptionResult>;
   onEnd: (id: string) => Promise<EndPromoResult>;
 }) {
+  const locale = useLocale();
   return (
     <div>
       <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-        Active promotions ({promos.length}/{maxActive})
+        {t(locale, "dashboard.growth.activePromotions.heading", { active: promos.length, max: maxActive })}
       </div>
       {promos.length === 0 ? (
         <Card className="p-5 text-sm text-ink-soft">
-          Nothing running yet. Build a coupon above and hit &quot;Start &amp; track this offer&quot; to
-          see it here.
+          {t(locale, "dashboard.growth.activePromotions.emptyState")}
         </Card>
       ) : (
         <Card className="p-5">

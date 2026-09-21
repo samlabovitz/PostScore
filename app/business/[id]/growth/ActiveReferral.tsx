@@ -9,6 +9,7 @@ import { buildReferralShareCaption, type ReferralRow } from "@/lib/referrals";
 import { redemptionLabel } from "@/lib/promos";
 import { ShareModal } from "./ShareModal";
 import type { EndReferralResult, IncrementReferralRedemptionResult } from "@/app/actions/referrals";
+import { t, useLocale } from "@/lib/i18n";
 
 type RedeemState = { kind: "idle" } | { kind: "saving" } | { kind: "error"; message: string };
 type EndState = { kind: "idle" } | { kind: "confirming" } | { kind: "saving" } | { kind: "error"; message: string };
@@ -28,6 +29,7 @@ export function ActiveReferral({
   onRedeem: (id: string) => Promise<IncrementReferralRedemptionResult>;
   onEnd: (id: string) => Promise<EndReferralResult>;
 }) {
+  const locale = useLocale();
   const [redeemState, setRedeemState] = useState<RedeemState>({ kind: "idle" });
   const [endState, setEndState] = useState<EndState>({ kind: "idle" });
   const [shareOpen, setShareOpen] = useState(false);
@@ -39,7 +41,13 @@ export function ActiveReferral({
     setRedeemState(
       result.status === "ok"
         ? { kind: "idle" }
-        : { kind: "error", message: result.status === "error" ? result.message : "Couldn't log that — try again." }
+        : {
+            kind: "error",
+            message:
+              result.status === "error"
+                ? result.message
+                : t(locale, "dashboard.growth.activeReferral.redeemErrorFallback"),
+          }
     );
   }
 
@@ -50,7 +58,10 @@ export function ActiveReferral({
     if (result.status !== "ok") {
       setEndState({
         kind: "error",
-        message: result.status === "error" ? result.message : "Couldn't end this — try again.",
+        message:
+          result.status === "error"
+            ? result.message
+            : t(locale, "dashboard.growth.activeReferral.endErrorFallback"),
       });
     }
     // On success the parent clears the referral entirely, so there's
@@ -60,12 +71,11 @@ export function ActiveReferral({
   return (
     <div>
       <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-        Active referral ({referral ? 1 : 0}/{maxActive})
+        {t(locale, "dashboard.growth.activeReferral.heading", { active: referral ? 1 : 0, max: maxActive })}
       </div>
       {!referral ? (
         <Card className="p-5 text-sm text-ink-soft">
-          Nothing running yet. Build a referral offer above and hit &quot;Start &amp; track this
-          referral&quot; to see it here.
+          {t(locale, "dashboard.growth.activeReferral.emptyState")}
         </Card>
       ) : (
         <Card className="p-5">
@@ -73,11 +83,13 @@ export function ActiveReferral({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex flex-col gap-1">
                 <div className="text-sm">
-                  <span className="font-semibold text-ink">You get: </span>
+                  <span className="font-semibold text-ink">{t(locale, "dashboard.growth.activeReferral.youGet")}</span>
                   <span className="text-ink-soft">{referral.referrer_reward}</span>
                 </div>
                 <div className="text-sm">
-                  <span className="font-semibold text-ink">Friend gets: </span>
+                  <span className="font-semibold text-ink">
+                    {t(locale, "dashboard.growth.activeReferral.friendGets")}
+                  </span>
                   <span className="text-ink-soft">{referral.friend_reward}</span>
                 </div>
                 <span className="mt-1 font-mono text-[12.5px] text-ink">{referral.code}</span>
@@ -90,17 +102,23 @@ export function ActiveReferral({
             <div className="flex flex-wrap items-center gap-2.5">
               <Button variant="brass" size="sm" onClick={handleRedeem} disabled={redeemState.kind === "saving"}>
                 <IconGift size={14} />
-                {redeemState.kind === "saving" ? "Logging…" : "+1 Referral"}
+                {redeemState.kind === "saving"
+                  ? t(locale, "dashboard.growth.activeReferral.redeemLogging")
+                  : t(locale, "dashboard.growth.activeReferral.redeemButton")}
               </Button>
               <Button variant="default" size="sm" onClick={() => setShareOpen(true)}>
                 <IconShare2 size={14} />
-                Share
+                {t(locale, "dashboard.growth.activeReferral.share")}
               </Button>
               {endState.kind === "confirming" || endState.kind === "saving" ? (
                 <>
-                  <span className="text-[12.5px] text-ink-mute">End this referral program?</span>
+                  <span className="text-[12.5px] text-ink-mute">
+                    {t(locale, "dashboard.growth.activeReferral.endConfirmQuestion")}
+                  </span>
                   <Button variant="default" size="sm" onClick={handleEnd} disabled={endState.kind === "saving"}>
-                    {endState.kind === "saving" ? "Ending…" : "Yes, end it"}
+                    {endState.kind === "saving"
+                      ? t(locale, "dashboard.growth.activeReferral.ending")
+                      : t(locale, "dashboard.growth.activeReferral.endConfirmYes")}
                   </Button>
                   <button
                     type="button"
@@ -108,13 +126,13 @@ export function ActiveReferral({
                     disabled={endState.kind === "saving"}
                     className="text-[12.5px] font-medium text-ink-mute hover:text-ink disabled:opacity-50"
                   >
-                    Cancel
+                    {t(locale, "dashboard.growth.activeReferral.cancel")}
                   </button>
                 </>
               ) : (
                 <Button variant="default" size="sm" onClick={() => setEndState({ kind: "confirming" })}>
                   <IconPlayerStop size={14} />
-                  End
+                  {t(locale, "dashboard.growth.activeReferral.endButton")}
                 </Button>
               )}
             </div>
@@ -126,7 +144,7 @@ export function ActiveReferral({
           <ShareModal
             open={shareOpen}
             onClose={() => setShareOpen(false)}
-            title="How to share your referral offer"
+            title={t(locale, "dashboard.growth.activeReferral.shareModalTitle")}
             caption={buildReferralShareCaption({
               businessName,
               referrerReward: referral.referrer_reward,

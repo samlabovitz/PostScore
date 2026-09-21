@@ -8,6 +8,7 @@ import { Modal } from "@/components/ui/Modal";
 import { CopyBlock } from "@/components/ui/CopyBlock";
 import { formatExpiry } from "@/lib/coupons";
 import { buildFaqDraft, buildGooglePostDraft, type PromoRow } from "@/lib/promos";
+import { t, useLocale } from "@/lib/i18n";
 
 type DraftKind = "google-post" | "faq";
 
@@ -24,6 +25,7 @@ function DraftCard({
   onOpen: () => void;
   disabled: boolean;
 }) {
+  const locale = useLocale();
   return (
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex items-center gap-2.5">
@@ -34,7 +36,9 @@ function DraftCard({
       </div>
       <p className="flex-1 text-[13px] text-ink-soft">{body}</p>
       <Button variant="default" size="sm" onClick={onOpen} disabled={disabled} className="w-fit">
-        {disabled ? "Start a coupon first" : "Generate draft"}
+        {disabled
+          ? t(locale, "dashboard.growth.moreWays.startCouponFirst")
+          : t(locale, "dashboard.growth.moreWays.generateDraft")}
       </Button>
     </Card>
   );
@@ -47,6 +51,7 @@ export function MoreWaysToBringPeopleIn({
   promos: PromoRow[];
   businessName: string;
 }) {
+  const locale = useLocale();
   const [open, setOpen] = useState<DraftKind | null>(null);
   const promo = promos[0] ?? null;
 
@@ -61,20 +66,20 @@ export function MoreWaysToBringPeopleIn({
   return (
     <div>
       <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-        More ways to bring people in
+        {t(locale, "dashboard.growth.moreWays.heading")}
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <DraftCard
           icon={IconBrandGoogle}
-          title="Draft a Google Post"
-          body="Generates text about your active offer for a Google Business Profile update — you copy it and post it yourself."
+          title={t(locale, "dashboard.growth.moreWays.googlePostTitle")}
+          body={t(locale, "dashboard.growth.moreWays.googlePostBody")}
           onOpen={() => setOpen("google-post")}
           disabled={!promo}
         />
         <DraftCard
           icon={IconFileText}
-          title="Write an FAQ"
-          body="Generates a Q&A about your active offer for your Google profile's Q&A section or your website — you post it yourself."
+          title={t(locale, "dashboard.growth.moreWays.faqTitle")}
+          body={t(locale, "dashboard.growth.moreWays.faqBody")}
           onOpen={() => setOpen("faq")}
           disabled={!promo}
         />
@@ -83,12 +88,15 @@ export function MoreWaysToBringPeopleIn({
       <Modal
         open={open !== null}
         onClose={() => setOpen(null)}
-        title={open === "google-post" ? "Draft Google post" : "Draft FAQ"}
+        title={
+          open === "google-post"
+            ? t(locale, "dashboard.growth.moreWays.modalTitleGooglePost")
+            : t(locale, "dashboard.growth.moreWays.modalTitleFaq")
+        }
       >
         <div className="flex flex-col gap-3">
           <p className="text-[12.5px] text-ink-mute">
-            This is draft text based on your active &quot;{promo?.offer}&quot; coupon. Copy it and post
-            it yourself — PostScore doesn&apos;t post to Google or anywhere else on your behalf.
+            {t(locale, "dashboard.growth.moreWays.modalIntro", { offer: promo?.offer ?? "" })}
           </p>
           <CopyBlock text={draft} rows={open === "faq" ? 8 : 5} />
         </div>

@@ -14,6 +14,7 @@ import type { ScoreBreakdown } from "@/lib/scoring";
 import type { BizProfile } from "@/config/bizProfiles";
 import type { PromoRow } from "@/lib/promos";
 import type { ReferralRow } from "@/lib/referrals";
+import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 
 // The builder generates a random coupon code and reads window.location
 // on first render — genuinely client-only state, not something that
@@ -37,8 +38,10 @@ type Segment = "plan" | "coupons" | "referral";
 /** Honest grade-change copy: only claims a letter change when the real
  * projected grade actually differs from today's — otherwise it says so
  * plainly rather than implying movement that isn't there. */
-function gradeTransitionLabel(from: string, to: string): string {
-  return from === to ? `Stays a ${to}` : `${from} → ${to}`;
+function gradeTransitionLabel(from: string, to: string, locale: Locale): string {
+  return from === to
+    ? t(locale, "dashboard.growth.view.gradeStays", { grade: to })
+    : t(locale, "dashboard.growth.view.gradeChangeArrow", { from, to });
 }
 
 export function GrowthView({
@@ -75,17 +78,18 @@ export function GrowthView({
     error?: string;
   };
 }) {
+  const locale = useLocale();
   const [segment, setSegment] = useState<Segment>("plan");
 
   const { weeklyProjectedBreakdown } = actionPlan;
   const pointsWithinReach = weeklyProjectedBreakdown.total - breakdown.total;
 
   const options: SegmentedControlOption<Segment>[] = [
-    { value: "plan", label: "Action plan" },
-    { value: "coupons", label: "Coupons" },
+    { value: "plan", label: t(locale, "dashboard.growth.view.tabPlan") },
+    { value: "coupons", label: t(locale, "dashboard.growth.view.tabCoupons") },
   ];
   if (referralOk) {
-    options.push({ value: "referral", label: "Refer a friend" });
+    options.push({ value: "referral", label: t(locale, "dashboard.growth.view.tabReferral") });
   }
 
   return (
@@ -96,13 +100,14 @@ export function GrowthView({
           className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
         >
           <IconArrowLeft size={15} />
-          Back to {businessName ?? "business"}
+          {t(locale, "dashboard.growth.view.backTo", {
+            name: businessName ?? t(locale, "dashboard.growth.view.businessFallback"),
+          })}
         </Link>
-        <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">Growth</h1>
-        <p className="mt-1 text-sm text-ink-soft">
-          Raise your score and bring more customers through the door — everything you can act on,
-          in one place.
-        </p>
+        <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
+          {t(locale, "dashboard.growth.view.title")}
+        </h1>
+        <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.growth.view.subtitle")}</p>
       </div>
 
       <SegmentedControl options={options} value={segment} onChange={setSegment} />
@@ -111,55 +116,60 @@ export function GrowthView({
         <div className="flex flex-col gap-6 nav:gap-8">
           <Card className="p-5">
             <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-              If you finish this week&apos;s plan
+              {t(locale, "dashboard.growth.view.weeklyCardLabel")}
             </div>
             <div className="mt-3 grid grid-cols-2 gap-6 sm:grid-cols-4">
-              <StatTile label="Score today" value={breakdown.total} />
-              <StatTile label="Projected after plan" value={weeklyProjectedBreakdown.total} />
+              <StatTile label={t(locale, "dashboard.growth.view.statScoreToday")} value={breakdown.total} />
               <StatTile
-                label="Points within reach"
+                label={t(locale, "dashboard.growth.view.statProjected")}
+                value={weeklyProjectedBreakdown.total}
+              />
+              <StatTile
+                label={t(locale, "dashboard.growth.view.statPointsWithinReach")}
                 value={pointsWithinReach > 0 ? `+${pointsWithinReach}` : "0"}
               />
               <StatTile
-                label="Grade"
-                value={gradeTransitionLabel(breakdown.grade, weeklyProjectedBreakdown.grade)}
+                label={t(locale, "dashboard.growth.view.statGrade")}
+                value={gradeTransitionLabel(breakdown.grade, weeklyProjectedBreakdown.grade, locale)}
               />
             </div>
             <p className="mt-4 border-t border-paper-line pt-3 text-[12px] text-ink-mute">
               {actionPlan.weeklyTasks.length > 0
-                ? `Based on just the ${actionPlan.weeklyTasks.length} task${
-                    actionPlan.weeklyTasks.length === 1 ? "" : "s"
-                  } below — a realistic week, not every gap at once. See "Bigger projects" for the longer game.`
-                : 'Nothing realistic to move this week, so this matches your current score. See "Bigger projects" for the longer game.'}
+                ? tPlural(locale, "dashboard.growth.view.weeklyPlanNote", actionPlan.weeklyTasks.length)
+                : t(locale, "dashboard.growth.view.weeklyPlanNoteEmpty")}
             </p>
           </Card>
 
           {actionPlan.error ? (
             <Card className="p-5 text-sm text-red">
-              Couldn&apos;t load your action plan: {actionPlan.error}
+              {t(locale, "dashboard.growth.view.actionPlanErrorPrefix", { error: actionPlan.error })}
             </Card>
           ) : (
             <>
-              <SectionHeading title={`This week's plan (${actionPlan.weeklyTasks.length})`} />
+              <SectionHeading
+                title={t(locale, "dashboard.growth.view.weeklyPlanHeading", {
+                  count: actionPlan.weeklyTasks.length,
+                })}
+              />
               <TaskListCard
                 tasks={actionPlan.weeklyTasks}
                 businessId={businessId}
                 context="weekly"
                 lastScanAt={lastScanAt}
-                emptyMessage="You're caught up — no real gaps determinable right now. Nice work."
-                footnote={
-                  'Every estimate here is exactly what its check is currently missing — the same ' +
-                  'numbers behind the projected score above. Points only ever land after a ' +
-                  're-scan actually finds the fix, never from clicking "I did this" alone.'
-                }
+                emptyMessage={t(locale, "dashboard.growth.view.weeklyEmptyMessage")}
+                footnote={t(locale, "dashboard.growth.view.weeklyFootnote")}
               />
 
-              <SectionHeading title={`Bigger projects (${actionPlan.laterTasks.length})`} />
+              <SectionHeading
+                title={t(locale, "dashboard.growth.view.laterTasksHeading", {
+                  count: actionPlan.laterTasks.length,
+                })}
+              />
               <TaskListCard
                 tasks={actionPlan.laterTasks}
                 businessId={businessId}
                 lastScanAt={lastScanAt}
-                emptyMessage="Nothing longer-term right now — everything determinable is either in this week's plan or already done."
+                emptyMessage={t(locale, "dashboard.growth.view.laterEmptyMessage")}
               />
             </>
           )}
@@ -171,7 +181,7 @@ export function GrowthView({
       {segment === "coupons" && (
         <CouponsSection
           businessId={businessId}
-          businessName={businessName ?? "Your business"}
+          businessName={businessName ?? t(locale, "dashboard.growth.view.businessNameFallback")}
           businessPhone={businessPhone}
           profile={profile}
           initialPromos={initialPromos}
@@ -181,7 +191,7 @@ export function GrowthView({
       {segment === "referral" && referralOk && (
         <ReferralSection
           businessId={businessId}
-          businessName={businessName ?? "Your business"}
+          businessName={businessName ?? t(locale, "dashboard.growth.view.businessNameFallback")}
           businessPhone={businessPhone}
           profile={profile}
           initialReferral={initialReferral}
