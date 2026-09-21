@@ -5,9 +5,10 @@ import { Card } from "@/components/ui/Card";
 import { Toggle } from "@/components/ui/Toggle";
 import { setMonthlyReportEnabled } from "@/app/actions/businesses";
 import type { MonthlyEmailReportStatus } from "@/app/actions/reports";
+import { t, useLocale, type Locale } from "@/lib/i18n";
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+function formatDate(iso: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale, { month: "long", day: "numeric", year: "numeric" }).format(new Date(iso));
 }
 
 /** A plain "about a month later" estimate from the last real send —
@@ -16,10 +17,10 @@ function formatDate(iso: string): string {
  * it is, a scheduler run time isn't a guarantee. UTC throughout so this
  * can't drift a day depending on the server's local timezone, same
  * reasoning as formatMonthLabel in emails/MonthlyReportEmail.tsx. */
-function estimateNextReportDate(lastSentIso: string): string {
+function estimateNextReportDate(lastSentIso: string, locale: Locale): string {
   const d = new Date(lastSentIso);
   const next = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()));
-  return formatDate(next.toISOString());
+  return formatDate(next.toISOString(), locale);
 }
 
 /**
@@ -46,6 +47,7 @@ export function MonthlyEmailReportCard({
   businessId: string;
   status: MonthlyEmailReportStatus;
 }) {
+  const locale = useLocale();
   const [enabled, setEnabled] = useState(status.enabled);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +60,7 @@ export function MonthlyEmailReportCard({
     if (result.status === "ok") {
       setEnabled(result.enabled);
     } else {
-      setError(result.status === "error" ? result.message : "Couldn't save — try again.");
+      setError(result.status === "error" ? result.message : t(locale, "dashboard.reports.emailSaveError"));
     }
     setSaving(false);
   }
@@ -68,14 +70,21 @@ export function MonthlyEmailReportCard({
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-mute">
-            Monthly email report
+            {t(locale, "dashboard.reports.monthlyEmailReportLabel")}
           </div>
           <StatusLine status={status} enabled={enabled} />
           {error && <p className="mt-1.5 text-[13px] text-red">{error}</p>}
         </div>
         <div className="flex shrink-0 items-center gap-2.5">
-          <span className="text-[13px] font-medium text-ink-soft">{enabled ? "On" : "Off"}</span>
-          <Toggle checked={enabled} onChange={handleToggle} disabled={saving} label="Monthly email report" />
+          <span className="text-[13px] font-medium text-ink-soft">
+            {enabled ? t(locale, "dashboard.reports.onLabel") : t(locale, "dashboard.reports.offLabel")}
+          </span>
+          <Toggle
+            checked={enabled}
+            onChange={handleToggle}
+            disabled={saving}
+            label={t(locale, "dashboard.reports.monthlyEmailReportLabel")}
+          />
         </div>
       </div>
     </Card>
@@ -83,26 +92,22 @@ export function MonthlyEmailReportCard({
 }
 
 function StatusLine({ status, enabled }: { status: MonthlyEmailReportStatus; enabled: boolean }) {
+  const locale = useLocale();
   if (!status.live) {
-    return (
-      <p className="mt-1 text-sm text-ink-soft">
-        Coming soon — a real monthly recap of your PostScore, emailed to you automatically.
-      </p>
-    );
+    return <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.reports.emailComingSoon")}</p>;
   }
   if (!enabled) {
-    return <p className="mt-1 text-sm text-ink-soft">Off — you won&apos;t receive a monthly email report.</p>;
+    return <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.reports.emailOffMessage")}</p>;
   }
   if (!status.lastSentAt) {
-    return (
-      <p className="mt-1 text-sm text-ink-soft">
-        On — your first report will be a baseline (no month-over-month comparison yet).
-      </p>
-    );
+    return <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.reports.emailFirstReportBaseline")}</p>;
   }
   return (
     <p className="mt-1 text-sm text-ink-soft">
-      Last sent {formatDate(status.lastSentAt)} · Next report around {estimateNextReportDate(status.lastSentAt)}
+      {t(locale, "dashboard.reports.emailLastSentNext", {
+        lastSent: formatDate(status.lastSentAt, locale),
+        nextReport: estimateNextReportDate(status.lastSentAt, locale),
+      })}
     </p>
   );
 }

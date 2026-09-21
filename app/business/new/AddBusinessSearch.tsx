@@ -7,15 +7,16 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { saveBusiness } from "@/app/actions/businesses";
-import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, normalizeLocale, t, useLocale, type Locale } from "@/lib/i18n";
 import type { PlaceLookupResult, PlaceCandidate, PlaceDetails } from "@/lib/google/places";
 
 function Field({ label, value }: { label: string; value: string | null }) {
+  const locale = useLocale();
   return (
     <div className="flex flex-col gap-0.5 border-b border-paper-line py-2.5 last:border-b-0">
       <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">{label}</span>
       {value === null ? (
-        <span className="text-sm italic text-ink-mute">Not available</span>
+        <span className="text-sm italic text-ink-mute">{t(locale, "dashboard.common.notAvailable")}</span>
       ) : (
         <span className="text-sm text-ink">{value}</span>
       )}
@@ -36,6 +37,7 @@ type SaveState =
  * the owner on a static confirmation. */
 function SaveControl({ place, language }: { place: PlaceDetails; language: Locale }) {
   const router = useRouter();
+  const locale = useLocale();
   const [state, setState] = useState<SaveState>({ kind: "idle" });
 
   async function handleSave() {
@@ -62,10 +64,14 @@ function SaveControl({ place, language }: { place: PlaceDetails; language: Local
         onClick={handleSave}
         disabled={state.kind === "saving" || state.kind === "saved"}
       >
-        {state.kind === "saved" ? "Saved — opening…" : state.kind === "saving" ? "Saving..." : "Add this business"}
+        {state.kind === "saved"
+          ? t(locale, "dashboard.intake.savedOpening")
+          : state.kind === "saving"
+            ? t(locale, "dashboard.intake.saving")
+            : t(locale, "dashboard.intake.addThisBusiness")}
       </Button>
       {state.kind === "unauthenticated" && (
-        <span className="text-sm text-red">Your session expired — log in again to save.</span>
+        <span className="text-sm text-red">{t(locale, "dashboard.intake.sessionExpiredError")}</span>
       )}
       {state.kind === "error" && <span className="text-sm text-red">{state.message}</span>}
     </div>
@@ -77,21 +83,27 @@ function DetailsView({ place, language, onLanguageChange }: {
   language: Locale;
   onLanguageChange: (locale: Locale) => void;
 }) {
+  const locale = useLocale();
   return (
     <Card className="p-5">
-      <Field label="Name" value={place.name} />
-      <Field label="Address" value={place.formattedAddress} />
-      <Field label="Phone" value={place.phone} />
-      <Field label="Website" value={place.website} />
-      <Field label="Rating" value={place.rating !== null ? `${place.rating.toFixed(1)} ★` : null} />
+      <Field label={t(locale, "dashboard.intake.nameLabel")} value={place.name} />
+      <Field label={t(locale, "dashboard.common.addressLabel")} value={place.formattedAddress} />
+      <Field label={t(locale, "dashboard.common.phoneLabel")} value={place.phone} />
+      <Field label={t(locale, "dashboard.common.websiteLabel")} value={place.website} />
       <Field
-        label="Reviews"
+        label={t(locale, "dashboard.common.ratingLabel")}
+        value={place.rating !== null ? `${place.rating.toFixed(1)} ★` : null}
+      />
+      <Field
+        label={t(locale, "dashboard.common.reviewsLabel")}
         value={place.userRatingCount !== null ? String(place.userRatingCount) : null}
       />
-      <Field label="Category" value={place.primaryCategory} />
+      <Field label={t(locale, "dashboard.intake.categoryLabel")} value={place.primaryCategory} />
 
       <div className="flex flex-col gap-0.5 border-b border-paper-line py-2.5">
-        <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">Language</span>
+        <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
+          {t(locale, "dashboard.intake.languageLabel")}
+        </span>
         <div className="mt-1 max-w-[200px]">
           <LanguageSelector value={language} onChange={onLanguageChange} />
         </div>
@@ -114,6 +126,7 @@ function DetailsView({ place, language, onLanguageChange }: {
  * adding a second location.
  */
 export function AddBusinessSearch() {
+  const locale = useLocale();
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [loading, setLoading] = useState(false);
@@ -132,7 +145,7 @@ export function AddBusinessSearch() {
       const data = (await res.json()) as PlaceLookupResult;
       setResult(data);
     } catch {
-      setResult({ status: "error", message: "The search failed — check your connection and try again." });
+      setResult({ status: "error", message: t(locale, "dashboard.intake.searchFailedError") });
     } finally {
       setLoading(false);
     }
@@ -150,42 +163,43 @@ export function AddBusinessSearch() {
 
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
-      <SectionHeading title="Find your business on Google" />
+      <SectionHeading title={t(locale, "dashboard.intake.findBusinessHeading")} />
       <Card className="p-5">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="flex-1">
-            <label className="mb-1 block text-[13px] font-medium text-ink-soft">Business name</label>
+            <label className="mb-1 block text-[13px] font-medium text-ink-soft">
+              {t(locale, "dashboard.intake.businessNameFieldLabel")}
+            </label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Blue Bottle Coffee"
+              placeholder={t(locale, "dashboard.intake.businessNamePlaceholder")}
               className="w-full rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft"
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 block text-[13px] font-medium text-ink-soft">City / location</label>
+            <label className="mb-1 block text-[13px] font-medium text-ink-soft">
+              {t(locale, "dashboard.intake.locationFieldLabel")}
+            </label>
             <input
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g. Oakland, CA"
+              placeholder={t(locale, "dashboard.intake.locationPlaceholder")}
               className="w-full rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft"
             />
           </div>
           <Button type="submit" variant="brass" disabled={loading || !name.trim() || !location.trim()}>
-            {loading ? "Searching..." : "Search"}
+            {loading ? t(locale, "dashboard.intake.searching") : t(locale, "dashboard.intake.searchButton")}
           </Button>
         </form>
       </Card>
 
       {result && (
         <>
-          <SectionHeading title="Result" />
+          <SectionHeading title={t(locale, "dashboard.intake.resultHeading")} />
 
           {result.status === "no_results" && (
-            <Card className="p-5 text-sm text-ink-soft">
-              No matching business found for that name and location. Try broadening the location or
-              checking the spelling.
-            </Card>
+            <Card className="p-5 text-sm text-ink-soft">{t(locale, "dashboard.intake.noMatchingBusiness")}</Card>
           )}
 
           {result.status === "error" && <Card className="p-5 text-sm text-red">{result.message}</Card>}
@@ -193,7 +207,7 @@ export function AddBusinessSearch() {
           {result.status === "multiple" && (
             <Card className="p-5">
               <p className="mb-3 text-sm text-ink-soft">
-                Found {result.candidates.length} possible matches. Pick the correct one:
+                {t(locale, "dashboard.intake.multipleMatches", { count: result.candidates.length })}
               </p>
               <div className="flex flex-col gap-2">
                 {result.candidates.map((candidate) => (
@@ -204,7 +218,9 @@ export function AddBusinessSearch() {
                     className="rounded-lg border border-paper-deep px-3 py-2.5 text-left text-sm hover:border-ink-soft"
                   >
                     <div className="font-medium text-ink">{candidate.name}</div>
-                    <div className="text-ink-mute">{candidate.formattedAddress ?? "Not available"}</div>
+                    <div className="text-ink-mute">
+                      {candidate.formattedAddress ?? t(locale, "dashboard.common.notAvailable")}
+                    </div>
                   </button>
                 ))}
               </div>

@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
+import { t, useLocale } from "@/lib/i18n";
 
 /**
  * "How do I compare to my real local peers" — a compact tile that sits
@@ -19,10 +22,11 @@ export function LocalBenchmarkTile({
   businessId: string;
   result: GetLocalBenchmarkResult;
 }) {
+  const locale = useLocale();
   return (
     <div className="col-span-2 flex flex-col gap-1.5 sm:col-span-1">
       <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-mute">
-        Local benchmark
+        {t(locale, "dashboard.overview.localBenchmarkLabel")}
       </span>
       <LocalBenchmarkValue businessId={businessId} result={result} />
     </div>
@@ -36,13 +40,15 @@ function LocalBenchmarkValue({
   businessId: string;
   result: GetLocalBenchmarkResult;
 }) {
+  const locale = useLocale();
+
   if (result.status === "no_scan") {
     return (
       <Link
         href={`/business/${businessId}/competitors`}
         className="max-w-[220px] text-sm font-medium text-brass hover:underline"
       >
-        Save a competitor scan to see your local ranking →
+        {t(locale, "dashboard.overview.saveScanToSeeRanking")}
       </Link>
     );
   }
@@ -50,7 +56,7 @@ function LocalBenchmarkValue({
   if (result.status === "no_peers") {
     return (
       <span className="max-w-[220px] text-sm text-ink-soft">
-        No comparable {result.competitorNoun} found in your last scan.
+        {t(locale, "dashboard.overview.noComparablePeers", { competitorNoun: result.competitorNoun })}
       </span>
     );
   }
@@ -63,11 +69,15 @@ function LocalBenchmarkValue({
   return (
     <>
       <span className="font-serif text-[26px] font-semibold text-ink">
-        #{b.rank} of {b.peerCount}
+        {t(locale, "dashboard.overview.rankOfPeerCount", { rank: b.rank, peerCount: b.peerCount })}
       </span>
       <span className="max-w-[220px] text-[12px] text-ink-mute">
-        Ahead of {b.percentileAhead}% of {b.othersCount} nearby {b.competitorNoun}
-        {b.smallSample ? " — small sample" : ""}
+        {t(locale, "dashboard.overview.aheadOfNearby", {
+          percentileAhead: b.percentileAhead,
+          othersCount: b.othersCount,
+          competitorNoun: b.competitorNoun,
+        })}
+        {b.smallSample ? t(locale, "dashboard.overview.smallSampleSuffix") : ""}
       </span>
     </>
   );

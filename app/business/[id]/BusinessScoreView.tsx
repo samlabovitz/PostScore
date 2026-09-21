@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { rescanBusiness } from "@/app/actions/scoring";
 import type { BusinessRecord, ScoreHistoryRow, ScoreSnapshot } from "@/app/actions/scoring";
 import { diffProfileSnapshots, type ProfileSnapshot } from "@/lib/profileChanges";
-import { useLocale } from "@/lib/i18n";
+import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 import {
   GRADE_THRESHOLDS,
   type CategoryResult,
@@ -42,6 +42,7 @@ function formatSignedPoints(value: number): string {
  * invented and no bar is drawn for a category with no determinable
  * checks. */
 function CategoryProgressRow({ category }: { category: CategoryResult }) {
+  const locale = useLocale();
   const pct = category.relativeScore;
   const strong = pct !== null && pct >= 80;
 
@@ -50,7 +51,8 @@ function CategoryProgressRow({ category }: { category: CategoryResult }) {
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-sm font-medium text-ink">{category.label}</span>
         <span className="text-sm tabular-nums text-ink-soft">
-          {formatPoints(category.earnedPoints)} / {formatPoints(category.possiblePoints)} pts
+          {formatPoints(category.earnedPoints)} / {formatPoints(category.possiblePoints)}{" "}
+          {t(locale, "dashboard.website.ptsAbbrev")}
         </span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-paper-deep">
@@ -65,9 +67,7 @@ function CategoryProgressRow({ category }: { category: CategoryResult }) {
         )}
       </div>
       {pct === null && (
-        <p className="text-[12px] text-ink-mute">
-          Not yet determinable — nothing in this category has real data yet.
-        </p>
+        <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.overview.categoryNotDeterminable")}</p>
       )}
     </div>
   );
@@ -81,21 +81,31 @@ function summarizeRescan(
   tasksConfirmed: number,
   pointsConfirmed: number,
   tasksReopened: number,
-  changeCount: number
+  changeCount: number,
+  locale: Locale
 ): string {
   const parts: string[] = [];
   if (tasksConfirmed > 0) {
     parts.push(
-      `${tasksConfirmed} task${tasksConfirmed === 1 ? "" : "s"} confirmed (+${formatPoints(pointsConfirmed)} pts)`
+      tPlural(locale, "dashboard.overview.rescanTasksConfirmed", tasksConfirmed, {
+        count: tasksConfirmed,
+        points: formatPoints(pointsConfirmed),
+      })
     );
   }
   if (tasksReopened > 0) {
-    parts.push(`${tasksReopened} task${tasksReopened === 1 ? "" : "s"} back on your plan`);
+    parts.push(
+      tPlural(locale, "dashboard.overview.rescanTasksReopened", tasksReopened, { count: tasksReopened })
+    );
   }
   if (changeCount > 0) {
-    parts.push(`${changeCount} listing change${changeCount === 1 ? "" : "s"} found`);
+    parts.push(
+      tPlural(locale, "dashboard.overview.rescanListingChangesFound", changeCount, { count: changeCount })
+    );
   }
-  return parts.length > 0 ? `Re-scanned — ${parts.join(", ")}.` : "Re-scanned — nothing changed since last scan.";
+  return parts.length > 0
+    ? t(locale, "dashboard.overview.rescanSummary", { parts: parts.join(", ") })
+    : t(locale, "dashboard.overview.rescanNothingChanged");
 }
 
 /**
@@ -109,6 +119,7 @@ function summarizeRescan(
  */
 function RescanControl({ businessId }: { businessId: string }) {
   const router = useRouter();
+  const locale = useLocale();
   const [state, setState] = useState<
     | { kind: "idle" }
     | { kind: "scanning" }
@@ -126,19 +137,20 @@ function RescanControl({ businessId }: { businessId: string }) {
           result.tasksConfirmed,
           result.pointsConfirmed,
           result.tasksReopened,
-          result.changes.length
+          result.changes.length,
+          locale
         ),
       });
       router.refresh();
     } else if (result.status === "no_results") {
       setState({
         kind: "error",
-        message: "Couldn't find this listing on Google anymore — it may have been removed or merged into another listing.",
+        message: t(locale, "dashboard.overview.rescanNoResultsError"),
       });
     } else if (result.status === "error") {
       setState({ kind: "error", message: result.message });
     } else {
-      setState({ kind: "error", message: "Could not re-scan this business." });
+      setState({ kind: "error", message: t(locale, "dashboard.overview.rescanErrorFallback") });
     }
   }
 
@@ -146,7 +158,9 @@ function RescanControl({ businessId }: { businessId: string }) {
     <div className="flex items-center gap-3">
       <Button variant="brass" size="sm" onClick={handleRescan} disabled={state.kind === "scanning"}>
         <IconRefresh size={14} className={cn(state.kind === "scanning" && "animate-spin")} />
-        {state.kind === "scanning" ? "Re-scanning..." : "Re-scan now"}
+        {state.kind === "scanning"
+          ? t(locale, "dashboard.overview.rescanning")
+          : t(locale, "dashboard.overview.rescanNow")}
       </Button>
       {state.kind === "done" && <span className="text-sm text-green">{state.message}</span>}
       {state.kind === "error" && <span className="text-sm text-red">{state.message}</span>}
@@ -167,6 +181,7 @@ function gradeRangeLabel(index: number): string {
  * of what each letter grade actually means — the real ranges the
  * scoring engine uses, not a guess. */
 function GradeExplainer({ grade }: { grade: Grade }) {
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
 
   return (
@@ -175,7 +190,7 @@ function GradeExplainer({ grade }: { grade: Grade }) {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        aria-label="What does this grade mean?"
+        aria-label={t(locale, "dashboard.overview.gradeMeaningAriaLabel")}
         className="rounded-lg transition-opacity hover:opacity-80"
       >
         <GradeBadge grade={grade} />
@@ -183,7 +198,7 @@ function GradeExplainer({ grade }: { grade: Grade }) {
       {open && (
         <div className="absolute left-0 top-full z-20 mt-2 w-60 rounded-xl border border-paper-deep bg-white p-4 shadow-card">
           <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-            Grade ranges
+            {t(locale, "dashboard.overview.gradeRangesHeading")}
           </div>
           <div className="flex flex-col gap-1.5">
             {GRADE_THRESHOLDS.map((t, i) => (
@@ -211,17 +226,16 @@ function GradeExplainer({ grade }: { grade: Grade }) {
  * or hiding the control entirely. Clicking it reveals the real recent
  * scan history it was computed from. */
 function SinceLastScanControl({ history }: { history: ScoreHistoryRow[] }) {
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
 
   if (history.length < 2) {
     return (
       <div className="rounded-xl border border-white/10 bg-white/[.05] p-4">
         <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-brass">
-          Since last scan
+          {t(locale, "dashboard.overview.sinceLastScanLabel")}
         </div>
-        <div className="mt-1.5 text-sm text-white/70">
-          Tracking starts now — we&apos;ll show changes after your next scan.
-        </div>
+        <div className="mt-1.5 text-sm text-white/70">{t(locale, "dashboard.overview.trackingStartsNow")}</div>
       </div>
     );
   }
@@ -240,7 +254,7 @@ function SinceLastScanControl({ history }: { history: ScoreHistoryRow[] }) {
       >
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-brass">
-            Since last scan
+            {t(locale, "dashboard.overview.sinceLastScanLabel")}
           </span>
           <IconChevronDown
             size={14}
@@ -248,13 +262,13 @@ function SinceLastScanControl({ history }: { history: ScoreHistoryRow[] }) {
           />
         </div>
         <div className={cn("mt-1 font-serif text-2xl font-bold", deltaColor)}>
-          {delta === 0 ? "No change" : formatSignedPoints(delta)}
+          {delta === 0 ? t(locale, "dashboard.overview.noChange") : formatSignedPoints(delta)}
         </div>
       </button>
       {open && (
         <div className="absolute left-0 right-0 top-full z-20 mt-2 rounded-xl border border-paper-deep bg-white p-3 shadow-card">
           <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-            Recent scans
+            {t(locale, "dashboard.overview.recentScansHeading")}
           </div>
           <div className="flex flex-col divide-y divide-paper-line">
             {history.slice(0, 6).map((row) => (
@@ -283,19 +297,19 @@ function ListingField({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-const NOT_AVAILABLE = <span className="italic text-ink-mute">Not available</span>;
-
 /** The real saved Google listing data — every field either shows what
  * Google actually returned or honestly says "Not available." No field
  * is guessed or left blank without explanation. */
 function ListingCard({ business }: { business: BusinessRecord }) {
+  const locale = useLocale();
+  const notAvailable = <span className="italic text-ink-mute">{t(locale, "dashboard.common.notAvailable")}</span>;
   return (
     <Card className="p-5">
       <div className="flex flex-col divide-y divide-paper-line">
-        <ListingField label="Address" value={business.address ?? NOT_AVAILABLE} />
-        <ListingField label="Phone" value={business.phone ?? NOT_AVAILABLE} />
+        <ListingField label={t(locale, "dashboard.common.addressLabel")} value={business.address ?? notAvailable} />
+        <ListingField label={t(locale, "dashboard.common.phoneLabel")} value={business.phone ?? notAvailable} />
         <ListingField
-          label="Hours"
+          label={t(locale, "dashboard.overview.hoursLabel")}
           value={
             business.opening_hours && business.opening_hours.length > 0 ? (
               <div className="flex flex-col gap-0.5">
@@ -304,20 +318,20 @@ function ListingCard({ business }: { business: BusinessRecord }) {
                 ))}
               </div>
             ) : (
-              NOT_AVAILABLE
+              notAvailable
             )
           }
         />
         <ListingField
-          label="Rating"
-          value={business.rating !== null ? `${business.rating.toFixed(1)} ★` : NOT_AVAILABLE}
+          label={t(locale, "dashboard.common.ratingLabel")}
+          value={business.rating !== null ? `${business.rating.toFixed(1)} ★` : notAvailable}
         />
         <ListingField
-          label="Reviews"
-          value={business.review_count !== null ? business.review_count.toLocaleString() : NOT_AVAILABLE}
+          label={t(locale, "dashboard.common.reviewsLabel")}
+          value={business.review_count !== null ? business.review_count.toLocaleString() : notAvailable}
         />
         <ListingField
-          label="Website"
+          label={t(locale, "dashboard.common.websiteLabel")}
           value={
             business.website ? (
               <a
@@ -329,13 +343,13 @@ function ListingCard({ business }: { business: BusinessRecord }) {
                 {business.website}
               </a>
             ) : (
-              NOT_AVAILABLE
+              notAvailable
             )
           }
         />
         {business.google_maps_uri && (
           <ListingField
-            label="Google Maps"
+            label={t(locale, "dashboard.overview.googleMapsLabel")}
             value={
               <a
                 href={business.google_maps_uri}
@@ -343,7 +357,7 @@ function ListingCard({ business }: { business: BusinessRecord }) {
                 rel="noreferrer"
                 className="font-medium text-brass hover:underline"
               >
-                View on Google Maps
+                {t(locale, "dashboard.overview.viewOnGoogleMaps")}
               </a>
             }
           />
@@ -383,11 +397,11 @@ function diffBreakdowns(previous: ScoreBreakdown, current: ScoreBreakdown): Chec
  * them (where a point-for-point comparison would be misleading), it
  * says so honestly instead of guessing. */
 function ChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
+  const locale = useLocale();
+
   if (snapshots.length < 2) {
     return (
-      <Card className="p-5 text-sm text-ink-soft">
-        No prior scan to compare yet — changes will show up here after your next scan.
-      </Card>
+      <Card className="p-5 text-sm text-ink-soft">{t(locale, "dashboard.overview.noPriorScanChanges")}</Card>
     );
   }
 
@@ -396,9 +410,10 @@ function ChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
   if (current.scoring_version !== previous.scoring_version) {
     return (
       <Card className="p-5 text-sm text-ink-soft">
-        Scoring was updated between these two scans ({previous.scoring_version} →{" "}
-        {current.scoring_version}), so a check-by-check comparison isn&apos;t shown here — the
-        total score above still reflects the real difference.
+        {t(locale, "dashboard.overview.scoringUpdatedBetweenScans", {
+          previous: previous.scoring_version,
+          current: current.scoring_version,
+        })}
       </Card>
     );
   }
@@ -406,7 +421,9 @@ function ChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
   const changes = diffBreakdowns(previous.breakdown_json, current.breakdown_json);
 
   if (changes.length === 0) {
-    return <Card className="p-5 text-sm text-ink-soft">Nothing changed since your last scan.</Card>;
+    return (
+      <Card className="p-5 text-sm text-ink-soft">{t(locale, "dashboard.overview.nothingChangedSinceLastScan")}</Card>
+    );
   }
 
   return (
@@ -428,11 +445,11 @@ function ChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
                   variant={delta > 0 ? "green" : delta < 0 ? "red" : "neutral"}
                   className="shrink-0"
                 >
-                  {formatSignedPoints(delta)} pts
+                  {formatSignedPoints(delta)} {t(locale, "dashboard.website.ptsAbbrev")}
                 </Pill>
               ) : (
                 <Pill variant="neutral" className="shrink-0">
-                  Updated
+                  {t(locale, "dashboard.overview.updatedPillLabel")}
                 </Pill>
               )}
             </div>
@@ -457,8 +474,7 @@ function ListingChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
   if (snapshots.length < 2) {
     return (
       <Card className="p-5 text-sm text-ink-soft">
-        No prior scan to compare yet — real listing changes will show up here after your next
-        re-scan.
+        {t(locale, "dashboard.overview.noPriorScanListingChanges")}
       </Card>
     );
   }
@@ -468,8 +484,7 @@ function ListingChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
   if (!current.profile_snapshot_json || !previous.profile_snapshot_json) {
     return (
       <Card className="p-5 text-sm text-ink-soft">
-        Your last scan predates listing-change tracking — this will start working from your next
-        re-scan.
+        {t(locale, "dashboard.overview.predatesListingTracking")}
       </Card>
     );
   }
@@ -483,7 +498,7 @@ function ListingChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
   if (changes.length === 0) {
     return (
       <Card className="p-5 text-sm text-ink-soft">
-        Nothing changed on your listing since your last scan.
+        {t(locale, "dashboard.overview.nothingChangedOnListing")}
       </Card>
     );
   }
@@ -529,6 +544,7 @@ export function BusinessScoreView({
   benchmark: GetLocalBenchmarkResult;
   gbpConnected: boolean;
 }) {
+  const locale = useLocale();
   const { breakdown, projectedBreakdown } = result;
 
   return (
@@ -536,12 +552,13 @@ export function BusinessScoreView({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-serif text-2xl font-semibold text-ink nav:text-[27px]">
-            {business.name ?? "Untitled business"}
+            {business.name ?? t(locale, "dashboard.overview.untitledBusiness")}
           </h1>
-          <p className="mt-1 text-sm text-ink-soft">{business.address ?? "No address on file"}</p>
+          <p className="mt-1 text-sm text-ink-soft">
+            {business.address ?? t(locale, "dashboard.overview.noAddressOnFile")}
+          </p>
           <p className="mt-1 text-xs text-ink-mute">
-            Scoring version {breakdown.scoringVersion} · computed live from the saved Google Places
-            data below
+            {t(locale, "dashboard.overview.scoringVersionNote", { version: breakdown.scoringVersion })}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -550,13 +567,13 @@ export function BusinessScoreView({
             className="inline-flex items-center gap-1.5 rounded-lg border border-paper-deep bg-white px-[15px] py-[7px] text-[13px] font-medium text-ink hover:border-ink-soft"
           >
             <IconUsers size={15} />
-            View competitors
+            {t(locale, "dashboard.overview.viewCompetitors")}
           </Link>
           <RescanControl businessId={businessId} />
         </div>
       </div>
 
-      <SectionHeading title="Current score" />
+      <SectionHeading title={t(locale, "dashboard.overview.currentScoreHeading")} />
       <div className="rounded-2xl bg-gradient-to-br from-[#1c2f4c] to-[#111f34] p-5 shadow-card sm:p-6 nav:p-8">
         <div className="grid grid-cols-1 items-center gap-6 nav:grid-cols-[auto_1fr_1fr_1fr] nav:gap-6">
           <ScoreGauge score={breakdown.total} className="mx-auto nav:mx-0" />
@@ -564,26 +581,28 @@ export function BusinessScoreView({
             <GradeExplainer grade={breakdown.grade} />
             <div>
               <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9FB0C7]">
-                Grade
+                {t(locale, "dashboard.overview.gradeLabel")}
               </div>
               <div className="text-sm text-white/70">{breakdown.total} / 100</div>
             </div>
           </div>
           <div className="rounded-xl border border-white/10 bg-white/[.05] p-4">
             <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-brass">
-              Projected if all suggestions completed
+              {t(locale, "dashboard.overview.projectedLabel")}
             </div>
             <div className="mt-1 flex items-baseline gap-2">
               <span className="font-serif text-2xl font-bold text-white">
                 {projectedBreakdown.total}
               </span>
-              <span className="text-sm text-white/60">/ 100 · {projectedBreakdown.grade}</span>
+              <span className="text-sm text-white/60">
+                {t(locale, "dashboard.overview.scoreOutOf100WithGrade", { grade: projectedBreakdown.grade })}
+              </span>
             </div>
             <Link
               href={`/business/${businessId}/growth`}
               className="mt-2 inline-block text-[12px] font-medium text-brass hover:underline"
             >
-              See your action plan →
+              {t(locale, "dashboard.overview.seeActionPlan")}
             </Link>
           </div>
           <SinceLastScanControl history={history} />
@@ -600,38 +619,38 @@ export function BusinessScoreView({
         />
       ) : (
         <Card className="p-5 text-sm text-ink-soft">
-          The assistant isn&apos;t available right now: {assistant.message}
+          {t(locale, "dashboard.overview.assistantUnavailablePrefix", { message: assistant.message })}
         </Card>
       )}
 
-      <SectionHeading title="At a glance" />
+      <SectionHeading title={t(locale, "dashboard.overview.atAGlanceHeading")} />
       <Card className="p-5">
         <div className="grid grid-cols-2 gap-6 sm:w-fit sm:grid-cols-3 sm:gap-10">
           <StatTile
-            label="Google rating"
+            label={t(locale, "dashboard.overview.googleRatingLabel")}
             value={business.rating === null ? "—" : `${business.rating.toFixed(1)} ★`}
           />
           <StatTile
-            label="Google reviews"
+            label={t(locale, "dashboard.overview.googleReviewsLabel")}
             value={business.review_count === null ? "—" : business.review_count.toLocaleString()}
           />
           <LocalBenchmarkTile businessId={businessId} result={benchmark} />
         </div>
       </Card>
 
-      <SectionHeading title="Business listing" />
+      <SectionHeading title={t(locale, "dashboard.overview.businessListingHeading")} />
       <ListingCard business={business} />
 
-      <SectionHeading title="Your live Google listing" />
+      <SectionHeading title={t(locale, "dashboard.overview.liveListingHeading")} />
       <LiveListingSection businessId={businessId} connected={gbpConnected} />
 
-      <SectionHeading title="What changed since your last scan" />
+      <SectionHeading title={t(locale, "dashboard.overview.whatChangedHeading")} />
       <ListingChangesFeed snapshots={recentSnapshots} />
 
-      <SectionHeading title="Score impact since your last scan" />
+      <SectionHeading title={t(locale, "dashboard.overview.scoreImpactHeading")} />
       <ChangesFeed snapshots={recentSnapshots} />
 
-      <SectionHeading title="Where your points are" />
+      <SectionHeading title={t(locale, "dashboard.overview.wherePointsAreHeading")} />
       <Card className="p-5">
         <div className="flex flex-col divide-y divide-paper-line">
           {breakdown.categories.map((category) => (
@@ -640,27 +659,29 @@ export function BusinessScoreView({
         </div>
       </Card>
 
-      <SectionHeading title="Detailed checks" />
+      <SectionHeading title={t(locale, "dashboard.overview.detailedChecksHeading")} />
       <div className="grid grid-cols-1 gap-4 nav:grid-cols-3">
         {breakdown.categories.map((category) => (
           <CategoryCard key={category.id} category={category} />
         ))}
       </div>
 
-      <SectionHeading title="Scan history" />
+      <SectionHeading title={t(locale, "dashboard.overview.scanHistoryHeading")} />
       <Card className="p-5">
         {history.length === 0 ? (
           <p className="text-sm text-ink-soft">
-            No saved scans yet — click &quot;Re-scan now&quot; above to record the current score.
+            {t(locale, "dashboard.overview.noSavedScans", {
+              rescanNow: t(locale, "dashboard.overview.rescanNow"),
+            })}
           </p>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-[0.06em] text-ink-mute">
-                <th className="pb-2 font-medium">Date</th>
-                <th className="pb-2 font-medium">Score</th>
-                <th className="pb-2 font-medium">Grade</th>
-                <th className="pb-2 font-medium">Version</th>
+                <th className="pb-2 font-medium">{t(locale, "dashboard.overview.dateColumn")}</th>
+                <th className="pb-2 font-medium">{t(locale, "dashboard.overview.scoreColumn")}</th>
+                <th className="pb-2 font-medium">{t(locale, "dashboard.overview.gradeColumn")}</th>
+                <th className="pb-2 font-medium">{t(locale, "dashboard.overview.versionColumn")}</th>
               </tr>
             </thead>
             <tbody>

@@ -62,14 +62,14 @@ function ReviewSocialProof({
           label={t(locale, "dashboard.websiteReviews.avgRatingLabel")}
           value={rating !== null ? `${rating.toFixed(1)} ★` : "—"}
           percent={ratingProgressPercent(rating)}
-          caption={ratingCaption(rating)}
+          caption={ratingCaption(rating, locale)}
         />
         <StatCard
           icon={IconMessages}
           label={t(locale, "dashboard.websiteReviews.reviewVolumeLabel")}
           value={reviewCount !== null ? reviewCount.toLocaleString() : "—"}
           percent={reviewCountProgressPercent(reviewCount)}
-          caption={reviewCountCaption(reviewCount)}
+          caption={reviewCountCaption(reviewCount, locale)}
         />
       </div>
 

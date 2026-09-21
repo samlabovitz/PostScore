@@ -577,7 +577,241 @@ export type MessageKey =
   | "dashboard.websiteReviews.downloadGenerating"
   | "dashboard.websiteReviews.downloadButton"
   | "dashboard.websiteReviews.downloadErrorFallback"
-  | "dashboard.websiteReviews.qrHelper";
+  | "dashboard.websiteReviews.qrHelper"
+  // --- Step L6 (beat 1): shared common.* additions for the smaller
+  // sections below (backTo/fallback patterns + generic listing-field
+  // labels reused across Overview and Intake, per explicit instruction
+  // to reuse existing copy instead of duplicating per-section keys).
+  | "dashboard.common.backTo"
+  | "dashboard.common.businessFallback"
+  | "dashboard.common.businessNameFallback"
+  | "dashboard.common.connectGoogleBusinessProfile"
+  | "dashboard.common.notAvailable"
+  | "dashboard.common.addressLabel"
+  | "dashboard.common.phoneLabel"
+  | "dashboard.common.ratingLabel"
+  | "dashboard.common.reviewsLabel"
+  | "dashboard.common.websiteLabel"
+  // --- Overview section (app/business/[id]/page.tsx, BusinessScoreView.tsx,
+  // ActionPlanSection.tsx, LocalBenchmarkTile.tsx, LiveListingSection.tsx,
+  // AssistantLauncher.tsx). content.checks.* / content.listingChange.*
+  // (L3) keep flowing through unchanged — not re-extracted here.
+  | "dashboard.overview.assistantDataErrorFallback"
+  | "dashboard.overview.categoryNotDeterminable"
+  | "dashboard.overview.rescanTasksConfirmed.one"
+  | "dashboard.overview.rescanTasksConfirmed.other"
+  | "dashboard.overview.rescanTasksReopened.one"
+  | "dashboard.overview.rescanTasksReopened.other"
+  | "dashboard.overview.rescanListingChangesFound.one"
+  | "dashboard.overview.rescanListingChangesFound.other"
+  | "dashboard.overview.rescanSummary"
+  | "dashboard.overview.rescanNothingChanged"
+  | "dashboard.overview.rescanNoResultsError"
+  | "dashboard.overview.rescanErrorFallback"
+  | "dashboard.overview.rescanning"
+  | "dashboard.overview.rescanNow"
+  | "dashboard.overview.gradeMeaningAriaLabel"
+  | "dashboard.overview.gradeRangesHeading"
+  | "dashboard.overview.sinceLastScanLabel"
+  | "dashboard.overview.trackingStartsNow"
+  | "dashboard.overview.noChange"
+  | "dashboard.overview.recentScansHeading"
+  | "dashboard.overview.hoursLabel"
+  | "dashboard.overview.googleMapsLabel"
+  | "dashboard.overview.viewOnGoogleMaps"
+  | "dashboard.overview.noPriorScanChanges"
+  | "dashboard.overview.scoringUpdatedBetweenScans"
+  | "dashboard.overview.nothingChangedSinceLastScan"
+  | "dashboard.overview.updatedPillLabel"
+  | "dashboard.overview.noPriorScanListingChanges"
+  | "dashboard.overview.predatesListingTracking"
+  | "dashboard.overview.nothingChangedOnListing"
+  | "dashboard.overview.untitledBusiness"
+  | "dashboard.overview.noAddressOnFile"
+  | "dashboard.overview.scoringVersionNote"
+  | "dashboard.overview.viewCompetitors"
+  | "dashboard.overview.currentScoreHeading"
+  | "dashboard.overview.gradeLabel"
+  | "dashboard.overview.projectedLabel"
+  | "dashboard.overview.scoreOutOf100WithGrade"
+  | "dashboard.overview.seeActionPlan"
+  | "dashboard.overview.assistantUnavailablePrefix"
+  | "dashboard.overview.atAGlanceHeading"
+  | "dashboard.overview.googleRatingLabel"
+  | "dashboard.overview.googleReviewsLabel"
+  | "dashboard.overview.businessListingHeading"
+  | "dashboard.overview.liveListingHeading"
+  | "dashboard.overview.whatChangedHeading"
+  | "dashboard.overview.scoreImpactHeading"
+  | "dashboard.overview.wherePointsAreHeading"
+  | "dashboard.overview.detailedChecksHeading"
+  | "dashboard.overview.scanHistoryHeading"
+  | "dashboard.overview.noSavedScans"
+  | "dashboard.overview.dateColumn"
+  | "dashboard.overview.scoreColumn"
+  | "dashboard.overview.gradeColumn"
+  | "dashboard.overview.versionColumn"
+  | "dashboard.overview.actionPlan.toDo"
+  | "dashboard.overview.actionPlan.completeThisWeek"
+  | "dashboard.overview.actionPlan.inProgressFraction"
+  | "dashboard.overview.actionPlan.notQuiteYet"
+  | "dashboard.overview.actionPlan.inProgress"
+  | "dashboard.overview.actionPlan.checkedWorse"
+  | "dashboard.overview.actionPlan.checkedNoChange"
+  | "dashboard.overview.actionPlan.checkedWithDate"
+  | "dashboard.overview.actionPlan.checkedNoDate"
+  | "dashboard.overview.actionPlan.willCheckNextRescan"
+  | "dashboard.overview.actionPlan.doneThisWeek"
+  | "dashboard.overview.actionPlan.progressText"
+  | "dashboard.overview.actionPlan.downTo"
+  | "dashboard.overview.actionPlan.stillAt"
+  | "dashboard.overview.actionPlan.movedWrongWay"
+  | "dashboard.overview.actionPlan.realProgress"
+  | "dashboard.overview.actionPlan.noRealChangeYet"
+  | "dashboard.overview.actionPlan.googleStillDoesntShow"
+  | "dashboard.overview.actionPlan.quickWin"
+  | "dashboard.overview.actionPlan.thisWeeksAction"
+  | "dashboard.overview.actionPlan.ongoingOutcome"
+  | "dashboard.overview.actionPlan.firstStep"
+  | "dashboard.overview.actionPlan.longerTerm"
+  | "dashboard.overview.actionPlan.couldNotSave"
+  | "dashboard.overview.actionPlan.hideHowToFix"
+  | "dashboard.overview.actionPlan.howToFixIt"
+  | "dashboard.overview.actionPlan.doThisLabel"
+  | "dashboard.overview.actionPlan.howLabel"
+  | "dashboard.overview.actionPlan.ownerActionOnGoogle"
+  | "dashboard.overview.actionPlan.saving"
+  | "dashboard.overview.actionPlan.didThisAgain"
+  | "dashboard.overview.actionPlan.didThis"
+  | "dashboard.overview.actionPlan.pointsThisWeek"
+  | "dashboard.overview.actionPlan.pointsUpTo"
+  | "dashboard.overview.actionPlan.confirmedWinsHeading"
+  | "dashboard.overview.actionPlan.pointsConfirmed"
+  | "dashboard.overview.localBenchmarkLabel"
+  | "dashboard.overview.saveScanToSeeRanking"
+  | "dashboard.overview.noComparablePeers"
+  | "dashboard.overview.rankOfPeerCount"
+  | "dashboard.overview.aheadOfNearby"
+  | "dashboard.overview.smallSampleSuffix"
+  | "dashboard.overview.profileChecklistTitle"
+  | "dashboard.overview.profileChecklistDescription"
+  | "dashboard.overview.gbpConnectedNotWiredUp"
+  | "dashboard.overview.ptsAvailable"
+  | "dashboard.overview.askPostAI"
+  | "dashboard.overview.betaLabel"
+  | "dashboard.overview.assistantPrompt"
+  | "dashboard.overview.pastConversations.one"
+  | "dashboard.overview.pastConversations.other"
+  | "dashboard.overview.postAiOverlayTitle"
+  // --- Connect-GBP section (app/business/[id]/connect-gbp/*,
+  // components/gbp/ConnectToUnlock.tsx).
+  | "dashboard.connectGbp.unlockEditableListingTitle"
+  | "dashboard.connectGbp.unlockEditableListingBody"
+  | "dashboard.connectGbp.unlockCompletenessFixesTitle"
+  | "dashboard.connectGbp.unlockCompletenessFixesBody"
+  | "dashboard.connectGbp.unlockReviewRecencyTitle"
+  | "dashboard.connectGbp.unlockReviewRecencyBody"
+  | "dashboard.connectGbp.unlockReplyAssistantTitle"
+  | "dashboard.connectGbp.unlockReplyAssistantBody"
+  | "dashboard.connectGbp.unlockReplyRateStatsTitle"
+  | "dashboard.connectGbp.unlockReplyRateStatsBody"
+  | "dashboard.connectGbp.unlockInsightsLeadsTitle"
+  | "dashboard.connectGbp.unlockInsightsLeadsBody"
+  | "dashboard.connectGbp.unlockPostsTrackingTitle"
+  | "dashboard.connectGbp.unlockPostsTrackingBody"
+  | "dashboard.connectGbp.disconnecting"
+  | "dashboard.connectGbp.disconnect"
+  | "dashboard.connectGbp.disconnectError"
+  | "dashboard.connectGbp.pageTitle"
+  | "dashboard.connectGbp.pageSubtitle"
+  | "dashboard.connectGbp.justConnectedMessage"
+  | "dashboard.connectGbp.connectedHeading"
+  | "dashboard.connectGbp.sinceDate"
+  | "dashboard.connectGbp.connectedFallback"
+  | "dashboard.connectGbp.notWiredUpSuffix"
+  | "dashboard.connectGbp.readyToConnectHeading"
+  | "dashboard.connectGbp.oauthConfiguredBody"
+  | "dashboard.connectGbp.oauthNotConfiguredBody"
+  | "dashboard.connectGbp.skipForNow"
+  | "dashboard.connectGbp.connectToUnlock"
+  | "dashboard.connectGbp.needsConnectedGbp"
+  // --- Reports section (app/business/[id]/reports/*).
+  | "dashboard.reports.pageTitle"
+  | "dashboard.reports.subtitle"
+  | "dashboard.reports.scoreOverTimeHeading"
+  | "dashboard.reports.monthlyRecapHeading"
+  | "dashboard.reports.whatWeveVerifiedHeading"
+  // --- Intake section (app/business/new/*). No business exists yet at
+  // this stage, so page.tsx wires these via DEFAULT_LOCALE explicitly.
+  | "dashboard.intake.pageTitle"
+  | "dashboard.intake.pageSubtitle"
+  | "dashboard.intake.nameLabel"
+  | "dashboard.intake.categoryLabel"
+  | "dashboard.intake.languageLabel"
+  | "dashboard.intake.savedOpening"
+  | "dashboard.intake.saving"
+  | "dashboard.intake.addThisBusiness"
+  | "dashboard.intake.sessionExpiredError"
+  | "dashboard.intake.findBusinessHeading"
+  | "dashboard.intake.businessNameFieldLabel"
+  | "dashboard.intake.businessNamePlaceholder"
+  | "dashboard.intake.locationFieldLabel"
+  | "dashboard.intake.locationPlaceholder"
+  | "dashboard.intake.searching"
+  | "dashboard.intake.searchButton"
+  | "dashboard.intake.searchFailedError"
+  | "dashboard.intake.resultHeading"
+  | "dashboard.intake.noMatchingBusiness"
+  | "dashboard.intake.multipleMatches"
+  // --- Lib sweep: lib/reviews.ts's ratingCaption()/reviewCountCaption(),
+  // rendered only in website-reviews's ReviewsView.tsx — namespaced under
+  // the existing dashboard.websiteReviews.* section rather than a new
+  // dashboard.reviewsLib.*, since that's the only place these render.
+  | "dashboard.websiteReviews.ratingCaptionNoRating"
+  | "dashboard.websiteReviews.ratingCaptionAtTarget"
+  | "dashboard.websiteReviews.ratingCaptionBelowTarget"
+  | "dashboard.websiteReviews.reviewCountCaptionNone"
+  | "dashboard.websiteReviews.reviewCountCaptionPassed"
+  | "dashboard.websiteReviews.reviewCountCaptionRemaining.one"
+  | "dashboard.websiteReviews.reviewCountCaptionRemaining.other"
+  // --- Step L6 (beat 2), Part B: Reports section's own child components
+  // (MonthlyRecapCard.tsx, MonthlyEmailReportCard.tsx, ScoreHistoryChart.tsx).
+  | "dashboard.reports.recapFirstScanMessage"
+  | "dashboard.reports.recapWhatChangedHeading"
+  | "dashboard.reports.recapChangesUnavailable"
+  | "dashboard.reports.recapNoChangesDetected"
+  | "dashboard.reports.recapPreparingDownload"
+  | "dashboard.reports.recapDownloadButton"
+  | "dashboard.reports.recapShareButton"
+  | "dashboard.reports.recapImageError"
+  | "dashboard.reports.recapShareTitle"
+  | "dashboard.reports.recapShareText"
+  | "dashboard.reports.recapShareDropped"
+  | "dashboard.reports.recapShareRose"
+  | "dashboard.reports.emailSaveError"
+  | "dashboard.reports.monthlyEmailReportLabel"
+  | "dashboard.reports.onLabel"
+  | "dashboard.reports.offLabel"
+  | "dashboard.reports.emailComingSoon"
+  | "dashboard.reports.emailOffMessage"
+  | "dashboard.reports.emailFirstReportBaseline"
+  | "dashboard.reports.emailLastSentNext"
+  | "dashboard.reports.chartRangeWeekly"
+  | "dashboard.reports.chartRange6Months"
+  | "dashboard.reports.chartRangeAllTime"
+  | "dashboard.reports.chartRangeLabelWeek"
+  | "dashboard.reports.chartRangeLabel6Months"
+  | "dashboard.reports.chartRangeLabelAllTime"
+  | "dashboard.reports.chartToday"
+  | "dashboard.reports.chartDaysAgo.one"
+  | "dashboard.reports.chartDaysAgo.other"
+  | "dashboard.reports.chartNoHistoryYet"
+  | "dashboard.reports.chartNotEnoughHistory"
+  | "dashboard.reports.chartChangeLabel"
+  | "dashboard.reports.chartTotalScansLabel"
+  | "dashboard.reports.chartLastScanLabel"
+  | "dashboard.reports.chartMoreEarlier"
+  | "dashboard.reports.chartAriaLabel";
 
 /** The report/dashboard messages that vary by count — see tPlural below.
  * Each has a ".one" and ".other" MessageKey (the only two categories
@@ -610,7 +844,13 @@ export type PluralKeyBase =
   | "dashboard.common.redemptionCount"
   | "dashboard.website.refreshAvailableInError"
   | "dashboard.website.availableInDays"
-  | "dashboard.website.seeMorePages";
+  | "dashboard.website.seeMorePages"
+  | "dashboard.overview.rescanTasksConfirmed"
+  | "dashboard.overview.rescanTasksReopened"
+  | "dashboard.overview.rescanListingChangesFound"
+  | "dashboard.overview.pastConversations"
+  | "dashboard.websiteReviews.reviewCountCaptionRemaining"
+  | "dashboard.reports.chartDaysAgo";
 
 // English is the dictionary every other locale falls back to via t()
 // below, so it's kept fully seeded. Other locales are deliberately
@@ -1358,6 +1598,281 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.downloadButton": "Download",
     "dashboard.websiteReviews.downloadErrorFallback": "Could not generate the image — try again.",
     "dashboard.websiteReviews.qrHelper": "A print-ready sign for your counter or window — you print and place it yourself.",
+
+    // --- Step L6 (beat 1): dashboard.common.* additions shared across
+    // Overview and Intake (generic listing-field labels + fallback/backTo
+    // patterns), so these sections reuse rather than duplicate copy.
+    "dashboard.common.backTo": "Back to {name}",
+    "dashboard.common.businessFallback": "business",
+    "dashboard.common.businessNameFallback": "Your business",
+    "dashboard.common.connectGoogleBusinessProfile": "Connect Google Business Profile",
+    "dashboard.common.notAvailable": "Not available",
+    "dashboard.common.addressLabel": "Address",
+    "dashboard.common.phoneLabel": "Phone",
+    "dashboard.common.ratingLabel": "Rating",
+    "dashboard.common.reviewsLabel": "Reviews",
+    "dashboard.common.websiteLabel": "Website",
+
+    // --- Overview section: app/business/[id]/page.tsx (server),
+    // BusinessScoreView.tsx, ActionPlanSection.tsx, LocalBenchmarkTile.tsx,
+    // LiveListingSection.tsx, AssistantLauncher.tsx.
+    "dashboard.overview.assistantDataErrorFallback": "Couldn't load the assistant's grounding data.",
+    "dashboard.overview.categoryNotDeterminable":
+      "Not yet determinable — nothing in this category has real data yet.",
+    "dashboard.overview.rescanTasksConfirmed.one": "{count} task confirmed (+{points} pts)",
+    "dashboard.overview.rescanTasksConfirmed.other": "{count} tasks confirmed (+{points} pts)",
+    "dashboard.overview.rescanTasksReopened.one": "{count} task back on your plan",
+    "dashboard.overview.rescanTasksReopened.other": "{count} tasks back on your plan",
+    "dashboard.overview.rescanListingChangesFound.one": "{count} listing change found",
+    "dashboard.overview.rescanListingChangesFound.other": "{count} listing changes found",
+    "dashboard.overview.rescanSummary": "Re-scanned — {parts}.",
+    "dashboard.overview.rescanNothingChanged": "Re-scanned — nothing changed since last scan.",
+    "dashboard.overview.rescanNoResultsError":
+      "Couldn't find this listing on Google anymore — it may have been removed or merged into another listing.",
+    "dashboard.overview.rescanErrorFallback": "Could not re-scan this business.",
+    "dashboard.overview.rescanning": "Re-scanning...",
+    "dashboard.overview.rescanNow": "Re-scan now",
+    "dashboard.overview.gradeMeaningAriaLabel": "What does this grade mean?",
+    "dashboard.overview.gradeRangesHeading": "Grade ranges",
+    "dashboard.overview.sinceLastScanLabel": "Since last scan",
+    "dashboard.overview.trackingStartsNow": "Tracking starts now — we'll show changes after your next scan.",
+    "dashboard.overview.noChange": "No change",
+    "dashboard.overview.recentScansHeading": "Recent scans",
+    "dashboard.overview.hoursLabel": "Hours",
+    "dashboard.overview.googleMapsLabel": "Google Maps",
+    "dashboard.overview.viewOnGoogleMaps": "View on Google Maps",
+    "dashboard.overview.noPriorScanChanges":
+      "No prior scan to compare yet — changes will show up here after your next scan.",
+    "dashboard.overview.scoringUpdatedBetweenScans":
+      "Scoring was updated between these two scans ({previous} → {current}), so a check-by-check comparison isn't shown here — the total score above still reflects the real difference.",
+    "dashboard.overview.nothingChangedSinceLastScan": "Nothing changed since your last scan.",
+    "dashboard.overview.updatedPillLabel": "Updated",
+    "dashboard.overview.noPriorScanListingChanges":
+      "No prior scan to compare yet — real listing changes will show up here after your next re-scan.",
+    "dashboard.overview.predatesListingTracking":
+      "Your last scan predates listing-change tracking — this will start working from your next re-scan.",
+    "dashboard.overview.nothingChangedOnListing": "Nothing changed on your listing since your last scan.",
+    "dashboard.overview.untitledBusiness": "Untitled business",
+    "dashboard.overview.noAddressOnFile": "No address on file",
+    "dashboard.overview.scoringVersionNote":
+      "Scoring version {version} · computed live from the saved Google Places data below",
+    "dashboard.overview.viewCompetitors": "View competitors",
+    "dashboard.overview.currentScoreHeading": "Current score",
+    "dashboard.overview.gradeLabel": "Grade",
+    "dashboard.overview.projectedLabel": "Projected if all suggestions completed",
+    "dashboard.overview.scoreOutOf100WithGrade": "/ 100 · {grade}",
+    "dashboard.overview.seeActionPlan": "See your action plan →",
+    "dashboard.overview.assistantUnavailablePrefix": "The assistant isn't available right now: {message}",
+    "dashboard.overview.atAGlanceHeading": "At a glance",
+    "dashboard.overview.googleRatingLabel": "Google rating",
+    "dashboard.overview.googleReviewsLabel": "Google reviews",
+    "dashboard.overview.businessListingHeading": "Business listing",
+    "dashboard.overview.liveListingHeading": "Your live Google listing",
+    "dashboard.overview.whatChangedHeading": "What changed since your last scan",
+    "dashboard.overview.scoreImpactHeading": "Score impact since your last scan",
+    "dashboard.overview.wherePointsAreHeading": "Where your points are",
+    "dashboard.overview.detailedChecksHeading": "Detailed checks",
+    "dashboard.overview.scanHistoryHeading": "Scan history",
+    "dashboard.overview.noSavedScans": 'No saved scans yet — click "{rescanNow}" above to record the current score.',
+    "dashboard.overview.dateColumn": "Date",
+    "dashboard.overview.scoreColumn": "Score",
+    "dashboard.overview.gradeColumn": "Grade",
+    "dashboard.overview.versionColumn": "Version",
+
+    "dashboard.overview.actionPlan.toDo": "To do",
+    "dashboard.overview.actionPlan.completeThisWeek": "Complete this week",
+    "dashboard.overview.actionPlan.inProgressFraction": "In progress ({gained} of {targetDelta})",
+    "dashboard.overview.actionPlan.notQuiteYet": "Not quite yet",
+    "dashboard.overview.actionPlan.inProgress": "In progress",
+    "dashboard.overview.actionPlan.checkedWorse": "Checked — worse",
+    "dashboard.overview.actionPlan.checkedNoChange": "Checked — no change",
+    "dashboard.overview.actionPlan.checkedWithDate": "Checked {date}.",
+    "dashboard.overview.actionPlan.checkedNoDate": "Checked.",
+    "dashboard.overview.actionPlan.willCheckNextRescan": "We'll check this on your next re-scan.",
+    "dashboard.overview.actionPlan.doneThisWeek": "Done this week! You reached {current} reviews.",
+    "dashboard.overview.actionPlan.progressText":
+      "Progress: {gained} of {targetDelta} new reviews ({current} so far, {remaining} to go).",
+    "dashboard.overview.actionPlan.downTo":
+      "Down to {current} reviews (was {baseline}) — give it another go this week.",
+    "dashboard.overview.actionPlan.stillAt": "Still {current} reviews — give it another go this week.",
+    "dashboard.overview.actionPlan.movedWrongWay": "This moved the wrong way.",
+    "dashboard.overview.actionPlan.realProgress":
+      "Real progress — score points update automatically as the re-scan confirms it, never from clicking done.",
+    "dashboard.overview.actionPlan.noRealChangeYet":
+      "No real change yet — this confirms gradually as the real number rises, not from one action alone.",
+    "dashboard.overview.actionPlan.googleStillDoesntShow":
+      "Google still doesn't show this — double-check it saved, then re-scan again.",
+    "dashboard.overview.actionPlan.quickWin": "Quick win",
+    "dashboard.overview.actionPlan.thisWeeksAction": "This week's action",
+    "dashboard.overview.actionPlan.ongoingOutcome": "Ongoing outcome",
+    "dashboard.overview.actionPlan.firstStep": "First step",
+    "dashboard.overview.actionPlan.longerTerm": "Longer-term",
+    "dashboard.overview.actionPlan.couldNotSave": "Could not save that — try again.",
+    "dashboard.overview.actionPlan.hideHowToFix": "Hide how to fix it",
+    "dashboard.overview.actionPlan.howToFixIt": "How to fix it",
+    "dashboard.overview.actionPlan.doThisLabel": "Do this: ",
+    "dashboard.overview.actionPlan.howLabel": "How: ",
+    "dashboard.overview.actionPlan.ownerActionOnGoogle":
+      "This is a change you make yourself, on Google — PostScore can tell you exactly what to do, but we can't edit your listing for you.",
+    "dashboard.overview.actionPlan.saving": "Saving...",
+    "dashboard.overview.actionPlan.didThisAgain": "I did this again",
+    "dashboard.overview.actionPlan.didThis": "I did this",
+    "dashboard.overview.actionPlan.pointsThisWeek": "~+{points} pts this week",
+    "dashboard.overview.actionPlan.pointsUpTo": "Up to +{points} pts",
+    "dashboard.overview.actionPlan.confirmedWinsHeading": "Confirmed wins",
+    "dashboard.overview.actionPlan.pointsConfirmed": "+{points} pts confirmed",
+
+    "dashboard.overview.localBenchmarkLabel": "Local benchmark",
+    "dashboard.overview.saveScanToSeeRanking": "Save a competitor scan to see your local ranking →",
+    "dashboard.overview.noComparablePeers": "No comparable {competitorNoun} found in your last scan.",
+    "dashboard.overview.rankOfPeerCount": "#{rank} of {peerCount}",
+    "dashboard.overview.aheadOfNearby": "Ahead of {percentileAhead}% of {othersCount} nearby {competitorNoun}",
+    "dashboard.overview.smallSampleSuffix": " — small sample",
+
+    "dashboard.overview.profileChecklistTitle": "Profile-completeness checklist",
+    "dashboard.overview.profileChecklistDescription":
+      "Connect your Google Business Profile to see exactly which listing fields are missing, add fixes straight to your action plan, and track review recency from your real, live Google data.",
+    "dashboard.overview.gbpConnectedNotWiredUp":
+      "Google Business Profile connected. Live field-by-field completeness isn't wired up yet — that's a later update, not something broken here. We'll show your real checklist here once it ships.",
+    "dashboard.overview.ptsAvailable": "+{points} pts available",
+
+    "dashboard.overview.askPostAI": "Ask PostAI",
+    "dashboard.overview.betaLabel": "Beta",
+    "dashboard.overview.assistantPrompt": "Ask anything about your score, competitors, or what to fix next.",
+    "dashboard.overview.pastConversations.one": " {count} past conversation saved.",
+    "dashboard.overview.pastConversations.other": " {count} past conversations saved.",
+    "dashboard.overview.postAiOverlayTitle": "PostAI",
+
+    // --- Connect-GBP section: app/business/[id]/connect-gbp/*,
+    // components/gbp/ConnectToUnlock.tsx.
+    "dashboard.connectGbp.unlockEditableListingTitle": "Live, editable listing",
+    "dashboard.connectGbp.unlockEditableListingBody":
+      "Update your hours, phone, and other listing fields from PostScore instead of Google directly.",
+    "dashboard.connectGbp.unlockCompletenessFixesTitle": "Profile-completeness fixes",
+    "dashboard.connectGbp.unlockCompletenessFixesBody":
+      "See exactly which listing fields are missing, and add each one straight to your action plan.",
+    "dashboard.connectGbp.unlockReviewRecencyTitle": "Review recency",
+    "dashboard.connectGbp.unlockReviewRecencyBody":
+      "Know how fresh your reviews really are, not just your total count.",
+    "dashboard.connectGbp.unlockReplyAssistantTitle": "Individual reviews + AI reply assistant",
+    "dashboard.connectGbp.unlockReplyAssistantBody":
+      "Read your actual reviews and get a drafted reply for each one, ready to post.",
+    "dashboard.connectGbp.unlockReplyRateStatsTitle": "Reply-rate stats",
+    "dashboard.connectGbp.unlockReplyRateStatsBody":
+      "Track how many of your reviews you've actually replied to.",
+    "dashboard.connectGbp.unlockInsightsLeadsTitle": "Insights + leads estimate",
+    "dashboard.connectGbp.unlockInsightsLeadsBody":
+      "Real views, calls, and clicks from your Google listing, and an estimated leads number built from them.",
+    "dashboard.connectGbp.unlockPostsTrackingTitle": "Google Posts tracking",
+    "dashboard.connectGbp.unlockPostsTrackingBody": "See what you've posted to Google and how it's landing.",
+    "dashboard.connectGbp.disconnecting": "Disconnecting...",
+    "dashboard.connectGbp.disconnect": "Disconnect",
+    "dashboard.connectGbp.disconnectError": "Couldn't disconnect — try again.",
+    "dashboard.connectGbp.pageTitle": "Connect your Google Business Profile",
+    "dashboard.connectGbp.pageSubtitle":
+      "Connecting lets PostScore read (and, for some fields, edit) your real Google Business Profile — on top of the public listing data we already score today.",
+    "dashboard.connectGbp.justConnectedMessage":
+      "Connected. We're still finishing Google's review process for full API access — the features below unlock as each one goes live, not all at once.",
+    "dashboard.connectGbp.connectedHeading": "Google Business Profile connected",
+    "dashboard.connectGbp.sinceDate": "Since {date}.",
+    "dashboard.connectGbp.connectedFallback": "Connected.",
+    "dashboard.connectGbp.notWiredUpSuffix":
+      "Real listing/review/insights data isn't wired up yet — that's a later update, not something broken here.",
+    "dashboard.connectGbp.readyToConnectHeading": "Ready to connect?",
+    "dashboard.connectGbp.oauthConfiguredBody":
+      "You'll go to Google to approve access, then come back here. You can disconnect at any time.",
+    "dashboard.connectGbp.oauthNotConfiguredBody":
+      "Google Business Profile connection isn't configured in this environment yet — check back soon.",
+    "dashboard.connectGbp.skipForNow": "Skip for now",
+    "dashboard.connectGbp.connectToUnlock": "Connect to unlock",
+    "dashboard.connectGbp.needsConnectedGbp": "Needs a connected Google Business Profile.",
+
+    // --- Reports section: app/business/[id]/reports/*.
+    "dashboard.reports.pageTitle": "Reports & history",
+    "dashboard.reports.subtitle": "Your real PostScore history — every number here comes from a scan you actually ran.",
+    "dashboard.reports.scoreOverTimeHeading": "Score over time",
+    "dashboard.reports.monthlyRecapHeading": "Monthly recap",
+    "dashboard.reports.whatWeveVerifiedHeading": "What we've verified",
+
+    // --- Intake section: app/business/new/*. No business exists yet at
+    // this stage, so page.tsx wires these via DEFAULT_LOCALE explicitly.
+    "dashboard.intake.pageTitle": "Add a business",
+    "dashboard.intake.pageSubtitle": "Search for your real Google Business Profile listing to start scoring it.",
+    "dashboard.intake.nameLabel": "Name",
+    "dashboard.intake.categoryLabel": "Category",
+    "dashboard.intake.languageLabel": "Language",
+    "dashboard.intake.savedOpening": "Saved — opening…",
+    "dashboard.intake.saving": "Saving...",
+    "dashboard.intake.addThisBusiness": "Add this business",
+    "dashboard.intake.sessionExpiredError": "Your session expired — log in again to save.",
+    "dashboard.intake.findBusinessHeading": "Find your business on Google",
+    "dashboard.intake.businessNameFieldLabel": "Business name",
+    "dashboard.intake.businessNamePlaceholder": "e.g. Blue Bottle Coffee",
+    "dashboard.intake.locationFieldLabel": "City / location",
+    "dashboard.intake.locationPlaceholder": "e.g. Oakland, CA",
+    "dashboard.intake.searching": "Searching...",
+    "dashboard.intake.searchButton": "Search",
+    "dashboard.intake.searchFailedError": "The search failed — check your connection and try again.",
+    "dashboard.intake.resultHeading": "Result",
+    "dashboard.intake.noMatchingBusiness":
+      "No matching business found for that name and location. Try broadening the location or checking the spelling.",
+    "dashboard.intake.multipleMatches": "Found {count} possible matches. Pick the correct one:",
+
+    // --- Lib sweep: lib/reviews.ts's ratingCaption()/reviewCountCaption().
+    "dashboard.websiteReviews.ratingCaptionNoRating":
+      "No rating yet — this fills in once your listing has reviews.",
+    "dashboard.websiteReviews.ratingCaptionAtTarget":
+      "You're at {rating}★ — at or above the {target}+ most customers look for.",
+    "dashboard.websiteReviews.ratingCaptionBelowTarget":
+      "You're at {rating}★ — aim for {target}+ to build stronger trust at a glance.",
+    "dashboard.websiteReviews.reviewCountCaptionNone":
+      "No reviews yet — every review you get starts building this up.",
+    "dashboard.websiteReviews.reviewCountCaptionPassed": "You've passed {milestone} reviews — {reviewCount} total.",
+    "dashboard.websiteReviews.reviewCountCaptionRemaining.one": "{remaining} more review to reach {milestone}.",
+    "dashboard.websiteReviews.reviewCountCaptionRemaining.other": "{remaining} more reviews to reach {milestone}.",
+
+    // --- Step L6 (beat 2), Part B: Reports section's own child components.
+    "dashboard.reports.recapFirstScanMessage":
+      "This is your first recorded scan — a recap will appear here once you have two.",
+    "dashboard.reports.recapWhatChangedHeading": "What changed",
+    "dashboard.reports.recapChangesUnavailable":
+      "One of these two scans predates listing-change tracking, so a real diff isn't available for this period.",
+    "dashboard.reports.recapNoChangesDetected": "No real listing changes were detected in this period.",
+    "dashboard.reports.recapPreparingDownload": "Preparing…",
+    "dashboard.reports.recapDownloadButton": "Download",
+    "dashboard.reports.recapShareButton": "Share",
+    "dashboard.reports.recapImageError": "Couldn't generate image.",
+    "dashboard.reports.recapShareTitle": "{businessName} — PostScore recap",
+    "dashboard.reports.recapShareText": "{businessName}'s PostScore {direction} {fromScore} → {toScore} ({dateRangeLabel}).",
+    "dashboard.reports.recapShareDropped": "dropped",
+    "dashboard.reports.recapShareRose": "rose",
+    "dashboard.reports.emailSaveError": "Couldn't save — try again.",
+    "dashboard.reports.monthlyEmailReportLabel": "Monthly email report",
+    "dashboard.reports.onLabel": "On",
+    "dashboard.reports.offLabel": "Off",
+    "dashboard.reports.emailComingSoon":
+      "Coming soon — a real monthly recap of your PostScore, emailed to you automatically.",
+    "dashboard.reports.emailOffMessage": "Off — you won't receive a monthly email report.",
+    "dashboard.reports.emailFirstReportBaseline":
+      "On — your first report will be a baseline (no month-over-month comparison yet).",
+    "dashboard.reports.emailLastSentNext": "Last sent {lastSent} · Next report around {nextReport}",
+    "dashboard.reports.chartRangeWeekly": "Weekly",
+    "dashboard.reports.chartRange6Months": "6 months",
+    "dashboard.reports.chartRangeAllTime": "All time",
+    "dashboard.reports.chartRangeLabelWeek": "the last week",
+    "dashboard.reports.chartRangeLabel6Months": "the last 6 months",
+    "dashboard.reports.chartRangeLabelAllTime": "all time",
+    "dashboard.reports.chartToday": "Today",
+    "dashboard.reports.chartDaysAgo.one": "1 day ago",
+    "dashboard.reports.chartDaysAgo.other": "{days} days ago",
+    "dashboard.reports.chartNoHistoryYet":
+      "You haven't run a scan yet — re-scan from the Overview page to start your history.",
+    "dashboard.reports.chartNotEnoughHistory": "Not enough history yet — your chart fills in as you re-scan.",
+    "dashboard.reports.chartChangeLabel": "Change · {range}",
+    "dashboard.reports.chartTotalScansLabel": "Total scans recorded",
+    "dashboard.reports.chartLastScanLabel": "Last scan",
+    "dashboard.reports.chartMoreEarlier": "+{count} earlier",
+    "dashboard.reports.chartAriaLabel": "Score over time, {count} scans, from {from} to {to}",
   },
   es: {
     "language.en": "Inglés",
@@ -1943,6 +2458,229 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.downloadButton": "Descargar",
     "dashboard.websiteReviews.downloadErrorFallback": "No se pudo generar la imagen — inténtelo de nuevo.",
     "dashboard.websiteReviews.qrHelper": "Un cartel listo para imprimir para su mostrador o ventana — usted mismo lo imprime y lo coloca.",
+
+    // --- Step L6 (beat 2): reviewed Spanish for the smaller dashboard
+    // sections (Overview, Connect-GBP, Reports, Intake) + shared common.*
+    // additions + the lib/reviews.ts sweep. scoreOutOf100WithGrade and
+    // postAiOverlayTitle deliberately have no es entry (pure
+    // placeholders/brand name) and fall back to English.
+    "dashboard.overview.assistantDataErrorFallback": "No se pudieron cargar los datos de contexto del asistente.",
+    "dashboard.overview.categoryNotDeterminable": "Aún no se puede determinar — todavía no hay datos reales en esta categoría.",
+    "dashboard.overview.rescanTasksConfirmed.one": "{count} tarea confirmada (+{points} pts)",
+    "dashboard.overview.rescanTasksConfirmed.other": "{count} tareas confirmadas (+{points} pts)",
+    "dashboard.overview.rescanTasksReopened.one": "{count} tarea de vuelta en su plan",
+    "dashboard.overview.rescanTasksReopened.other": "{count} tareas de vuelta en su plan",
+    "dashboard.overview.rescanListingChangesFound.one": "{count} cambio detectado en su ficha",
+    "dashboard.overview.rescanListingChangesFound.other": "{count} cambios detectados en su ficha",
+    "dashboard.overview.rescanSummary": "Nuevo análisis — {parts}.",
+    "dashboard.overview.rescanNothingChanged": "Nuevo análisis — nada cambió desde el último análisis.",
+    "dashboard.overview.rescanNoResultsError": "Ya no se pudo encontrar esta ficha en Google — puede que se haya eliminado o fusionado con otra ficha.",
+    "dashboard.overview.rescanErrorFallback": "No se pudo volver a analizar este negocio.",
+    "dashboard.overview.rescanning": "Analizando de nuevo...",
+    "dashboard.overview.rescanNow": "Analizar de nuevo",
+    "dashboard.overview.gradeMeaningAriaLabel": "¿Qué significa esta nota?",
+    "dashboard.overview.gradeRangesHeading": "Rangos de notas",
+    "dashboard.overview.sinceLastScanLabel": "Desde el último análisis",
+    "dashboard.overview.trackingStartsNow": "El seguimiento empieza ahora — mostraremos los cambios después de su próximo análisis.",
+    "dashboard.overview.noChange": "Sin cambios",
+    "dashboard.overview.recentScansHeading": "Análisis recientes",
+    "dashboard.overview.hoursLabel": "Horario",
+    "dashboard.overview.googleMapsLabel": "Google Maps",
+    "dashboard.overview.viewOnGoogleMaps": "Ver en Google Maps",
+    "dashboard.overview.noPriorScanChanges": "Aún no hay un análisis anterior con el que comparar — los cambios aparecerán aquí después de su próximo análisis.",
+    "dashboard.overview.scoringUpdatedBetweenScans": "El sistema de puntuación se actualizó entre estos dos análisis ({previous} → {current}), así que aquí no se muestra una comparación comprobación por comprobación — la puntuación total de arriba sigue reflejando la diferencia real.",
+    "dashboard.overview.nothingChangedSinceLastScan": "Nada cambió desde su último análisis.",
+    "dashboard.overview.updatedPillLabel": "Actualizado",
+    "dashboard.overview.noPriorScanListingChanges": "Aún no hay un análisis anterior con el que comparar — los cambios reales en su ficha aparecerán aquí después de su próximo análisis.",
+    "dashboard.overview.predatesListingTracking": "Su último análisis es anterior al seguimiento de cambios en la ficha — esto empezará a funcionar a partir de su próximo análisis.",
+    "dashboard.overview.nothingChangedOnListing": "Nada cambió en su ficha desde su último análisis.",
+    "dashboard.overview.untitledBusiness": "Negocio sin nombre",
+    "dashboard.overview.noAddressOnFile": "Sin dirección registrada",
+    "dashboard.overview.scoringVersionNote": "Versión de puntuación {version} · calculada en vivo a partir de los datos guardados de Google Places de abajo",
+    "dashboard.overview.viewCompetitors": "Ver competencia",
+    "dashboard.overview.currentScoreHeading": "Puntuación actual",
+    "dashboard.overview.gradeLabel": "Nota",
+    "dashboard.overview.projectedLabel": "Proyectada si se completan todas las sugerencias",
+    "dashboard.overview.seeActionPlan": "Ver su plan de acción →",
+    "dashboard.overview.assistantUnavailablePrefix": "El asistente no está disponible en este momento: {message}",
+    "dashboard.overview.atAGlanceHeading": "De un vistazo",
+    "dashboard.overview.googleRatingLabel": "Calificación de Google",
+    "dashboard.overview.googleReviewsLabel": "Reseñas de Google",
+    "dashboard.overview.businessListingHeading": "Ficha del negocio",
+    "dashboard.overview.liveListingHeading": "Su ficha de Google en vivo",
+    "dashboard.overview.whatChangedHeading": "Qué cambió desde su último análisis",
+    "dashboard.overview.scoreImpactHeading": "Impacto en la puntuación desde su último análisis",
+    "dashboard.overview.wherePointsAreHeading": "Dónde están sus puntos",
+    "dashboard.overview.detailedChecksHeading": "Comprobaciones detalladas",
+    "dashboard.overview.scanHistoryHeading": "Historial de análisis",
+    "dashboard.overview.noSavedScans": "Aún no hay análisis guardados — haga clic en \"{rescanNow}\" arriba para registrar la puntuación actual.",
+    "dashboard.overview.dateColumn": "Fecha",
+    "dashboard.overview.scoreColumn": "Puntuación",
+    "dashboard.overview.gradeColumn": "Nota",
+    "dashboard.overview.versionColumn": "Versión",
+    "dashboard.overview.actionPlan.toDo": "Por hacer",
+    "dashboard.overview.actionPlan.completeThisWeek": "Completar esta semana",
+    "dashboard.overview.actionPlan.inProgressFraction": "En curso ({gained} de {targetDelta})",
+    "dashboard.overview.actionPlan.notQuiteYet": "Todavía no",
+    "dashboard.overview.actionPlan.inProgress": "En curso",
+    "dashboard.overview.actionPlan.checkedWorse": "Comprobado — peor",
+    "dashboard.overview.actionPlan.checkedNoChange": "Comprobado — sin cambios",
+    "dashboard.overview.actionPlan.checkedWithDate": "Comprobado el {date}.",
+    "dashboard.overview.actionPlan.checkedNoDate": "Comprobado.",
+    "dashboard.overview.actionPlan.willCheckNextRescan": "Lo comprobaremos en su próximo análisis.",
+    "dashboard.overview.actionPlan.doneThisWeek": "¡Hecho esta semana! Alcanzó {current} reseñas.",
+    "dashboard.overview.actionPlan.progressText": "Progreso: {gained} de {targetDelta} reseñas nuevas ({current} hasta ahora, faltan {remaining}).",
+    "dashboard.overview.actionPlan.downTo": "Bajó a {current} reseñas (antes {baseline}) — inténtelo de nuevo esta semana.",
+    "dashboard.overview.actionPlan.stillAt": "Sigue en {current} reseñas — inténtelo de nuevo esta semana.",
+    "dashboard.overview.actionPlan.movedWrongWay": "Esto se movió en la dirección equivocada.",
+    "dashboard.overview.actionPlan.realProgress": "Progreso real — los puntos de la puntuación se actualizan automáticamente a medida que el nuevo análisis lo confirma, nunca por hacer clic en hecho.",
+    "dashboard.overview.actionPlan.noRealChangeYet": "Aún no hay un cambio real — esto se confirma gradualmente a medida que sube el número real, no por una sola acción.",
+    "dashboard.overview.actionPlan.googleStillDoesntShow": "Google aún no muestra esto — verifique que se guardó y luego vuelva a analizar.",
+    "dashboard.overview.actionPlan.quickWin": "Logro rápido",
+    "dashboard.overview.actionPlan.thisWeeksAction": "La acción de esta semana",
+    "dashboard.overview.actionPlan.ongoingOutcome": "Resultado continuo",
+    "dashboard.overview.actionPlan.firstStep": "Primer paso",
+    "dashboard.overview.actionPlan.longerTerm": "A más largo plazo",
+    "dashboard.overview.actionPlan.couldNotSave": "No se pudo guardar — inténtelo de nuevo.",
+    "dashboard.overview.actionPlan.hideHowToFix": "Ocultar cómo solucionarlo",
+    "dashboard.overview.actionPlan.howToFixIt": "Cómo solucionarlo",
+    "dashboard.overview.actionPlan.doThisLabel": "Haga esto: ",
+    "dashboard.overview.actionPlan.howLabel": "Cómo: ",
+    "dashboard.overview.actionPlan.ownerActionOnGoogle": "Este es un cambio que usted mismo hace, en Google — PostScore puede decirle exactamente qué hacer, pero no podemos editar su ficha por usted.",
+    "dashboard.overview.actionPlan.saving": "Guardando...",
+    "dashboard.overview.actionPlan.didThisAgain": "Lo hice de nuevo",
+    "dashboard.overview.actionPlan.didThis": "Ya lo hice",
+    "dashboard.overview.actionPlan.pointsThisWeek": "~+{points} pts esta semana",
+    "dashboard.overview.actionPlan.pointsUpTo": "Hasta +{points} pts",
+    "dashboard.overview.actionPlan.confirmedWinsHeading": "Logros confirmados",
+    "dashboard.overview.actionPlan.pointsConfirmed": "+{points} pts confirmados",
+    "dashboard.overview.localBenchmarkLabel": "Referencia local",
+    "dashboard.overview.saveScanToSeeRanking": "Guarde un análisis de la competencia para ver su posición local →",
+    "dashboard.overview.noComparablePeers": "No se encontraron {competitorNoun} comparables en su último análisis.",
+    "dashboard.overview.rankOfPeerCount": "#{rank} de {peerCount}",
+    "dashboard.overview.aheadOfNearby": "Por delante del {percentileAhead}% de {othersCount} {competitorNoun} cercanos",
+    "dashboard.overview.smallSampleSuffix": " — muestra pequeña",
+    "dashboard.overview.profileChecklistTitle": "Lista de verificación de perfil completo",
+    "dashboard.overview.profileChecklistDescription": "Conecte su Perfil de Negocio de Google para ver exactamente qué campos faltan en su ficha, agregar soluciones directamente a su plan de acción y hacer seguimiento de la actualidad de las reseñas a partir de sus datos reales y en vivo de Google.",
+    "dashboard.overview.gbpConnectedNotWiredUp": "Perfil de Negocio de Google conectado. La verificación de campos en vivo aún no está habilitada — es una actualización futura, no algo averiado aquí. Mostraremos su lista real aquí cuando esté disponible.",
+    "dashboard.overview.ptsAvailable": "+{points} pts disponibles",
+    "dashboard.overview.askPostAI": "Pregunte a PostAI",
+    "dashboard.overview.betaLabel": "Beta",
+    "dashboard.overview.assistantPrompt": "Pregunte lo que sea sobre su puntuación, la competencia o qué mejorar a continuación.",
+    "dashboard.overview.pastConversations.one": " {count} conversación anterior guardada.",
+    "dashboard.overview.pastConversations.other": " {count} conversaciones anteriores guardadas.",
+    "dashboard.connectGbp.unlockEditableListingTitle": "Ficha en vivo y editable",
+    "dashboard.connectGbp.unlockEditableListingBody": "Actualice su horario, teléfono y otros campos de la ficha desde PostScore en lugar de directamente en Google.",
+    "dashboard.connectGbp.unlockCompletenessFixesTitle": "Soluciones para completar el perfil",
+    "dashboard.connectGbp.unlockCompletenessFixesBody": "Vea exactamente qué campos faltan en su ficha y agregue cada uno directamente a su plan de acción.",
+    "dashboard.connectGbp.unlockReviewRecencyTitle": "Actualidad de las reseñas",
+    "dashboard.connectGbp.unlockReviewRecencyBody": "Sepa qué tan recientes son realmente sus reseñas, no solo su número total.",
+    "dashboard.connectGbp.unlockReplyAssistantTitle": "Reseñas individuales + asistente de respuestas con IA",
+    "dashboard.connectGbp.unlockReplyAssistantBody": "Lea sus reseñas reales y obtenga una respuesta redactada para cada una, lista para publicar.",
+    "dashboard.connectGbp.unlockReplyRateStatsTitle": "Estadísticas de tasa de respuesta",
+    "dashboard.connectGbp.unlockReplyRateStatsBody": "Haga seguimiento de a cuántas de sus reseñas ha respondido realmente.",
+    "dashboard.connectGbp.unlockInsightsLeadsTitle": "Métricas + estimación de clientes potenciales",
+    "dashboard.connectGbp.unlockInsightsLeadsBody": "Vistas, llamadas y clics reales de su ficha de Google, y un número estimado de clientes potenciales calculado a partir de ellos.",
+    "dashboard.connectGbp.unlockPostsTrackingTitle": "Seguimiento de publicaciones de Google",
+    "dashboard.connectGbp.unlockPostsTrackingBody": "Vea lo que ha publicado en Google y cómo está funcionando.",
+    "dashboard.connectGbp.disconnecting": "Desconectando...",
+    "dashboard.connectGbp.disconnect": "Desconectar",
+    "dashboard.connectGbp.disconnectError": "No se pudo desconectar — inténtelo de nuevo.",
+    "dashboard.connectGbp.pageTitle": "Conecte su Perfil de Negocio de Google",
+    "dashboard.connectGbp.pageSubtitle": "Conectarlo permite que PostScore lea (y, en algunos campos, edite) su Perfil de Negocio de Google real — además de los datos públicos de la ficha que ya evaluamos hoy.",
+    "dashboard.connectGbp.justConnectedMessage": "Conectado. Todavía estamos completando el proceso de revisión de Google para el acceso completo a la API — las funciones de abajo se desbloquean a medida que cada una entra en funcionamiento, no todas a la vez.",
+    "dashboard.connectGbp.connectedHeading": "Perfil de Negocio de Google conectado",
+    "dashboard.connectGbp.sinceDate": "Desde el {date}.",
+    "dashboard.connectGbp.connectedFallback": "Conectado.",
+    "dashboard.connectGbp.notWiredUpSuffix": "Los datos reales de ficha, reseñas y métricas aún no están habilitados — es una actualización futura, no algo averiado aquí.",
+    "dashboard.connectGbp.readyToConnectHeading": "¿Listo para conectar?",
+    "dashboard.connectGbp.oauthConfiguredBody": "Irá a Google para aprobar el acceso y luego volverá aquí. Puede desconectarse en cualquier momento.",
+    "dashboard.connectGbp.oauthNotConfiguredBody": "La conexión con el Perfil de Negocio de Google aún no está configurada en este entorno — vuelva pronto.",
+    "dashboard.connectGbp.skipForNow": "Omitir por ahora",
+    "dashboard.connectGbp.connectToUnlock": "Conectar para desbloquear",
+    "dashboard.connectGbp.needsConnectedGbp": "Requiere un Perfil de Negocio de Google conectado.",
+    "dashboard.reports.pageTitle": "Informes e historial",
+    "dashboard.reports.subtitle": "Su historial real de PostScore — cada número aquí proviene de un análisis que realmente realizó.",
+    "dashboard.reports.scoreOverTimeHeading": "Puntuación a lo largo del tiempo",
+    "dashboard.reports.monthlyRecapHeading": "Resumen mensual",
+    "dashboard.reports.whatWeveVerifiedHeading": "Lo que hemos verificado",
+    "dashboard.intake.pageTitle": "Agregar un negocio",
+    "dashboard.intake.pageSubtitle": "Busque su ficha real del Perfil de Negocio de Google para empezar a evaluarla.",
+    "dashboard.intake.nameLabel": "Nombre",
+    "dashboard.intake.categoryLabel": "Categoría",
+    "dashboard.intake.languageLabel": "Idioma",
+    "dashboard.intake.savedOpening": "Guardado — abriendo…",
+    "dashboard.intake.saving": "Guardando...",
+    "dashboard.intake.addThisBusiness": "Agregar este negocio",
+    "dashboard.intake.sessionExpiredError": "Su sesión expiró — inicie sesión de nuevo para guardar.",
+    "dashboard.intake.findBusinessHeading": "Encuentre su negocio en Google",
+    "dashboard.intake.businessNameFieldLabel": "Nombre del negocio",
+    "dashboard.intake.businessNamePlaceholder": "p. ej. Blue Bottle Coffee",
+    "dashboard.intake.locationFieldLabel": "Ciudad / ubicación",
+    "dashboard.intake.locationPlaceholder": "p. ej. Oakland, CA",
+    "dashboard.intake.searching": "Buscando...",
+    "dashboard.intake.searchButton": "Buscar",
+    "dashboard.intake.searchFailedError": "La búsqueda falló — revise su conexión e inténtelo de nuevo.",
+    "dashboard.intake.resultHeading": "Resultado",
+    "dashboard.intake.noMatchingBusiness": "No se encontró ningún negocio que coincida con ese nombre y ubicación. Pruebe ampliando la ubicación o revisando la ortografía.",
+    "dashboard.intake.multipleMatches": "Se encontraron {count} posibles coincidencias. Elija la correcta:",
+    "dashboard.common.backTo": "Volver a {name}",
+    "dashboard.common.businessFallback": "negocio",
+    "dashboard.common.businessNameFallback": "Su negocio",
+    "dashboard.common.connectGoogleBusinessProfile": "Conectar Perfil de Negocio de Google",
+    "dashboard.common.notAvailable": "No disponible",
+    "dashboard.common.addressLabel": "Dirección",
+    "dashboard.common.phoneLabel": "Teléfono",
+    "dashboard.common.ratingLabel": "Calificación",
+    "dashboard.common.reviewsLabel": "Reseñas",
+    "dashboard.common.websiteLabel": "Sitio web",
+    "dashboard.websiteReviews.ratingCaptionNoRating": "Aún sin calificación — esto se completa cuando su ficha tenga reseñas.",
+    "dashboard.websiteReviews.ratingCaptionAtTarget": "Está en {rating}★ — en o por encima del {target}+ que buscan la mayoría de los clientes.",
+    "dashboard.websiteReviews.ratingCaptionBelowTarget": "Está en {rating}★ — apunte a {target}+ para generar mayor confianza a primera vista.",
+    "dashboard.websiteReviews.reviewCountCaptionNone": "Aún sin reseñas — cada reseña que consiga empieza a construir esto.",
+    "dashboard.websiteReviews.reviewCountCaptionPassed": "Ha superado las {milestone} reseñas — {reviewCount} en total.",
+    "dashboard.websiteReviews.reviewCountCaptionRemaining.one": "{remaining} reseña más para alcanzar {milestone}.",
+    "dashboard.websiteReviews.reviewCountCaptionRemaining.other": "{remaining} reseñas más para alcanzar {milestone}.",
+
+    // --- Step L6 (beat 3): reviewed Spanish for the Reports children
+    // (MonthlyRecapCard.tsx, MonthlyEmailReportCard.tsx, ScoreHistoryChart.tsx)
+    // added in beat 2, Part B.
+    "dashboard.reports.recapFirstScanMessage": "Este es su primer análisis registrado — aquí aparecerá un resumen cuando tenga dos.",
+    "dashboard.reports.recapWhatChangedHeading": "Qué cambió",
+    "dashboard.reports.recapChangesUnavailable": "Uno de estos dos análisis es anterior al seguimiento de cambios en la ficha, así que no hay una comparación real disponible para este período.",
+    "dashboard.reports.recapNoChangesDetected": "No se detectaron cambios reales en la ficha durante este período.",
+    "dashboard.reports.recapPreparingDownload": "Preparando…",
+    "dashboard.reports.recapDownloadButton": "Descargar",
+    "dashboard.reports.recapShareButton": "Compartir",
+    "dashboard.reports.recapImageError": "No se pudo generar la imagen.",
+    "dashboard.reports.recapShareTitle": "{businessName} — resumen de PostScore",
+    "dashboard.reports.recapShareText": "El PostScore de {businessName} {direction} {fromScore} → {toScore} ({dateRangeLabel}).",
+    "dashboard.reports.recapShareDropped": "bajó de",
+    "dashboard.reports.recapShareRose": "subió de",
+    "dashboard.reports.emailSaveError": "No se pudo guardar — inténtelo de nuevo.",
+    "dashboard.reports.monthlyEmailReportLabel": "Informe mensual por correo",
+    "dashboard.reports.onLabel": "Activado",
+    "dashboard.reports.offLabel": "Desactivado",
+    "dashboard.reports.emailComingSoon": "Próximamente — un resumen mensual real de su PostScore, enviado a su correo automáticamente.",
+    "dashboard.reports.emailOffMessage": "Desactivado — no recibirá un informe mensual por correo.",
+    "dashboard.reports.emailFirstReportBaseline": "Activado — su primer informe será un punto de partida (aún sin comparación de un mes a otro).",
+    "dashboard.reports.emailLastSentNext": "Último envío {lastSent} · Próximo informe alrededor del {nextReport}",
+    "dashboard.reports.chartRangeWeekly": "Semanal",
+    "dashboard.reports.chartRange6Months": "6 meses",
+    "dashboard.reports.chartRangeAllTime": "Todo el tiempo",
+    "dashboard.reports.chartRangeLabelWeek": "la última semana",
+    "dashboard.reports.chartRangeLabel6Months": "los últimos 6 meses",
+    "dashboard.reports.chartRangeLabelAllTime": "todo el tiempo",
+    "dashboard.reports.chartToday": "Hoy",
+    "dashboard.reports.chartDaysAgo.one": "hace 1 día",
+    "dashboard.reports.chartDaysAgo.other": "hace {days} días",
+    "dashboard.reports.chartNoHistoryYet": "Aún no ha realizado un análisis — vuelva a analizar desde la página de Resumen para empezar su historial.",
+    "dashboard.reports.chartNotEnoughHistory": "Aún no hay suficiente historial — su gráfico se completa a medida que vuelve a analizar.",
+    "dashboard.reports.chartChangeLabel": "Cambio · {range}",
+    "dashboard.reports.chartTotalScansLabel": "Total de análisis registrados",
+    "dashboard.reports.chartLastScanLabel": "Último análisis",
+    "dashboard.reports.chartMoreEarlier": "+{count} anteriores",
+    "dashboard.reports.chartAriaLabel": "Puntuación a lo largo del tiempo, {count} análisis, de {from} a {to}",
   },
 };
 

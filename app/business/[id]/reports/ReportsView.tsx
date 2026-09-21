@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -6,6 +8,7 @@ import { MonthlyEmailReportCard } from "@/components/reports/MonthlyEmailReportC
 import { MonthlyRecapCard } from "@/components/reports/MonthlyRecapCard";
 import { VerifiedFixesCard } from "@/components/reports/VerifiedFixesCard";
 import type { GetReportsDataResult } from "@/app/actions/reports";
+import { t, useLocale } from "@/lib/i18n";
 
 export function ReportsView({
   businessId,
@@ -16,6 +19,7 @@ export function ReportsView({
   businessName: string | null;
   reports: Extract<GetReportsDataResult, { status: "ok" }>;
 }) {
+  const locale = useLocale();
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
       <div>
@@ -24,22 +28,27 @@ export function ReportsView({
           className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
         >
           <IconArrowLeft size={15} />
-          Back to {businessName ?? "business"}
+          {t(locale, "dashboard.common.backTo", {
+            name: businessName ?? t(locale, "dashboard.common.businessFallback"),
+          })}
         </Link>
-        <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">Reports & history</h1>
-        <p className="mt-1 text-sm text-ink-soft">
-          Your real PostScore history — every number here comes from a scan you actually ran.
-        </p>
+        <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
+          {t(locale, "dashboard.reports.pageTitle")}
+        </h1>
+        <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.reports.subtitle")}</p>
       </div>
 
-      <SectionHeading title="Score over time" />
+      <SectionHeading title={t(locale, "dashboard.reports.scoreOverTimeHeading")} />
       <ScoreHistoryChart history={reports.history} />
       <MonthlyEmailReportCard businessId={businessId} status={reports.monthlyEmailReport} />
 
-      <SectionHeading title="Monthly recap" />
-      <MonthlyRecapCard businessName={businessName ?? "Your business"} recap={reports.recap} />
+      <SectionHeading title={t(locale, "dashboard.reports.monthlyRecapHeading")} />
+      <MonthlyRecapCard
+        businessName={businessName ?? t(locale, "dashboard.common.businessNameFallback")}
+        recap={reports.recap}
+      />
 
-      <SectionHeading title="What we've verified" />
+      <SectionHeading title={t(locale, "dashboard.reports.whatWeveVerifiedHeading")} />
       <VerifiedFixesCard
         businessId={businessId}
         confirmedFixCount={reports.confirmedFixCount}

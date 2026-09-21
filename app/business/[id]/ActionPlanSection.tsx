@@ -16,6 +16,7 @@ import {
   type PendingCheckStatus,
   type WeeklyMetricProgress,
 } from "@/lib/actionPlan";
+import { t, useLocale, type Locale } from "@/lib/i18n";
 
 function formatPoints(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
@@ -48,39 +49,43 @@ type StatusVariant = "neutral" | "amber" | "green" | "red" | "brass";
 function taskStatus(
   task: ActionPlanTask,
   pendingStatus: PendingCheckStatus | null,
-  metricProgress: WeeklyMetricProgress | null
+  metricProgress: WeeklyMetricProgress | null,
+  locale: Locale
 ): { label: string; variant: StatusVariant } {
   if (task.status !== "pending_verification") {
-    return { label: "To do", variant: "neutral" };
+    return { label: t(locale, "dashboard.overview.actionPlan.toDo"), variant: "neutral" };
   }
 
   if (metricProgress) {
     switch (metricProgress.kind) {
       case "complete":
-        return { label: "Complete this week", variant: "green" };
+        return { label: t(locale, "dashboard.overview.actionPlan.completeThisWeek"), variant: "green" };
       case "partial":
         return {
-          label: `In progress (${metricProgress.gained} of ${metricProgress.targetDelta})`,
+          label: t(locale, "dashboard.overview.actionPlan.inProgressFraction", {
+            gained: metricProgress.gained,
+            targetDelta: metricProgress.targetDelta,
+          }),
           variant: "brass",
         };
       case "not_quite_yet":
-        return { label: "Not quite yet", variant: "amber" };
+        return { label: t(locale, "dashboard.overview.actionPlan.notQuiteYet"), variant: "amber" };
       case "not_yet_checked":
       default:
-        return { label: "In progress", variant: "amber" };
+        return { label: t(locale, "dashboard.overview.actionPlan.inProgress"), variant: "amber" };
     }
   }
 
   switch (pendingStatus) {
     case "progressed":
-      return { label: "Complete this week", variant: "green" };
+      return { label: t(locale, "dashboard.overview.actionPlan.completeThisWeek"), variant: "green" };
     case "regressed":
-      return { label: "Checked — worse", variant: "red" };
+      return { label: t(locale, "dashboard.overview.actionPlan.checkedWorse"), variant: "red" };
     case "unchanged":
-      return { label: "Checked — no change", variant: "amber" };
+      return { label: t(locale, "dashboard.overview.actionPlan.checkedNoChange"), variant: "amber" };
     case "not_yet_checked":
     default:
-      return { label: "In progress", variant: "amber" };
+      return { label: t(locale, "dashboard.overview.actionPlan.inProgress"), variant: "amber" };
   }
 }
 
@@ -109,7 +114,10 @@ function CurrentStatus({
   metricProgress: WeeklyMetricProgress | null;
   lastScanAt: string | null;
 }) {
-  const checkedLabel = lastScanAt ? `Checked ${formatCheckedAt(lastScanAt)}.` : "Checked.";
+  const locale = useLocale();
+  const checkedLabel = lastScanAt
+    ? t(locale, "dashboard.overview.actionPlan.checkedWithDate", { date: formatCheckedAt(lastScanAt) })
+    : t(locale, "dashboard.overview.actionPlan.checkedNoDate");
 
   // Nothing to compare yet, either way — the honest wait, plus the real
   // current value for context.
@@ -117,7 +125,9 @@ function CurrentStatus({
     return (
       <div className="rounded-lg bg-paper px-3 py-2.5">
         <p className="text-[12.5px] text-ink-soft">{task.problem}</p>
-        <p className="mt-1 text-[12px] text-ink-mute">We&apos;ll check this on your next re-scan.</p>
+        <p className="mt-1 text-[12px] text-ink-mute">
+          {t(locale, "dashboard.overview.actionPlan.willCheckNextRescan")}
+        </p>
       </div>
     );
   }
@@ -126,16 +136,21 @@ function CurrentStatus({
     const { kind, current, baseline, targetDelta, gained } = metricProgress;
     let line: string;
     if (kind === "complete") {
-      line = `${checkedLabel} Done this week! You reached ${current} reviews.`;
+      line = `${checkedLabel} ${t(locale, "dashboard.overview.actionPlan.doneThisWeek", { current })}`;
     } else if (kind === "partial") {
       const remaining = Math.max(0, targetDelta - gained);
-      line = `${checkedLabel} Progress: ${gained} of ${targetDelta} new reviews (${current} so far, ${remaining} to go).`;
+      line = `${checkedLabel} ${t(locale, "dashboard.overview.actionPlan.progressText", {
+        gained,
+        targetDelta,
+        current,
+        remaining,
+      })}`;
     } else {
       // not_quite_yet
       line =
         current < baseline
-          ? `${checkedLabel} Down to ${current} reviews (was ${baseline}) — give it another go this week.`
-          : `${checkedLabel} Still ${current} reviews — give it another go this week.`;
+          ? `${checkedLabel} ${t(locale, "dashboard.overview.actionPlan.downTo", { current, baseline })}`
+          : `${checkedLabel} ${t(locale, "dashboard.overview.actionPlan.stillAt", { current })}`;
     }
     return (
       <div className="rounded-lg bg-paper px-3 py-2.5">
@@ -151,13 +166,13 @@ function CurrentStatus({
   const gradual = task.effort === "quick_win_action";
   let note: string | null = null;
   if (pendingStatus === "regressed") {
-    note = `${checkedLabel} This moved the wrong way.`;
+    note = `${checkedLabel} ${t(locale, "dashboard.overview.actionPlan.movedWrongWay")}`;
   } else if (pendingStatus === "progressed") {
-    note = `${checkedLabel} Real progress — score points update automatically as the re-scan confirms it, never from clicking done.`;
+    note = `${checkedLabel} ${t(locale, "dashboard.overview.actionPlan.realProgress")}`;
   } else if (pendingStatus === "unchanged") {
     note = gradual
-      ? `${checkedLabel} No real change yet — this confirms gradually as the real number rises, not from one action alone.`
-      : `${checkedLabel} Google still doesn't show this — double-check it saved, then re-scan again.`;
+      ? `${checkedLabel} ${t(locale, "dashboard.overview.actionPlan.noRealChangeYet")}`
+      : `${checkedLabel} ${t(locale, "dashboard.overview.actionPlan.googleStillDoesntShow")}`;
   }
 
   return (
@@ -179,18 +194,21 @@ export type TaskCardContext = "weekly" | "later";
 
 function effortBadge(
   task: ActionPlanTask,
-  context: TaskCardContext
+  context: TaskCardContext,
+  locale: Locale
 ): { label: string; variant: "green" | "amber" | "neutral" } {
-  if (task.effort === "quick_win") return { label: "Quick win", variant: "green" };
+  if (task.effort === "quick_win") {
+    return { label: t(locale, "dashboard.overview.actionPlan.quickWin"), variant: "green" };
+  }
   if (task.effort === "quick_win_action") {
     return context === "weekly"
-      ? { label: "This week's action", variant: "green" }
-      : { label: "Ongoing outcome", variant: "neutral" };
+      ? { label: t(locale, "dashboard.overview.actionPlan.thisWeeksAction"), variant: "green" }
+      : { label: t(locale, "dashboard.overview.actionPlan.ongoingOutcome"), variant: "neutral" };
   }
   // longer_term
   return context === "weekly"
-    ? { label: "First step", variant: "amber" }
-    : { label: "Longer-term", variant: "neutral" };
+    ? { label: t(locale, "dashboard.overview.actionPlan.firstStep"), variant: "amber" }
+    : { label: t(locale, "dashboard.overview.actionPlan.longerTerm"), variant: "neutral" };
 }
 
 export function TaskCard({
@@ -209,6 +227,7 @@ export function TaskCard({
   lastScanAt?: string | null;
 }) {
   const router = useRouter();
+  const locale = useLocale();
   const [expanded, setExpanded] = useState(false);
   const [state, setState] = useState<MarkState>({ kind: "idle" });
 
@@ -220,7 +239,8 @@ export function TaskCard({
     } else {
       setState({
         kind: "error",
-        message: result.status === "error" ? result.message : "Could not save that — try again.",
+        message:
+          result.status === "error" ? result.message : t(locale, "dashboard.overview.actionPlan.couldNotSave"),
       });
     }
   }
@@ -236,12 +256,12 @@ export function TaskCard({
     ? metricProgress.kind !== "not_yet_checked"
     : pendingStatus !== null && pendingStatus !== "not_yet_checked";
   const canMarkAgain = isPending && checkedAlready;
-  const badge = effortBadge(task, context);
-  const status = taskStatus(task, pendingStatus, metricProgress);
+  const badge = effortBadge(task, context, locale);
+  const status = taskStatus(task, pendingStatus, metricProgress, locale);
   const pointsLabel =
     context === "weekly" && task.effort !== "quick_win"
-      ? `~+${formatPoints(task.promisedPoints)} pts this week`
-      : `Up to +${formatPoints(task.promisedPoints)} pts`;
+      ? t(locale, "dashboard.overview.actionPlan.pointsThisWeek", { points: formatPoints(task.promisedPoints) })
+      : t(locale, "dashboard.overview.actionPlan.pointsUpTo", { points: formatPoints(task.promisedPoints) });
   // The obtainable ask, front and center — a weekly target for a
   // gradual check, or the one-shot action itself when there isn't one.
   const headline = task.weeklyTarget ?? task.action;
@@ -274,27 +294,26 @@ export function TaskCard({
         onClick={() => setExpanded((e) => !e)}
         className="flex w-fit items-center gap-1 text-[12px] font-medium text-brass hover:underline"
       >
-        {expanded ? "Hide how to fix it" : "How to fix it"}
+        {expanded
+          ? t(locale, "dashboard.overview.actionPlan.hideHowToFix")
+          : t(locale, "dashboard.overview.actionPlan.howToFixIt")}
         <IconChevronDown size={13} className={cn("transition-transform", expanded && "rotate-180")} />
       </button>
 
       {expanded && (
         <div className="rounded-lg bg-paper p-3 text-[13px] text-ink-soft">
           <div className="mb-1.5">
-            <span className="font-medium text-ink">Do this: </span>
+            <span className="font-medium text-ink">{t(locale, "dashboard.overview.actionPlan.doThisLabel")}</span>
             {task.action}
           </div>
           <div>
-            <span className="font-medium text-ink">How: </span>
+            <span className="font-medium text-ink">{t(locale, "dashboard.overview.actionPlan.howLabel")}</span>
             {task.fix}
           </div>
           {task.ownerActionOnGoogle && (
             <div className="mt-2.5 flex items-start gap-1.5 border-t border-paper-line pt-2.5 text-[12px] text-ink-mute">
               <IconBrandGoogle size={14} className="mt-0.5 shrink-0" />
-              <span>
-                This is a change you make yourself, on Google — PostScore can tell you exactly what
-                to do, but we can&apos;t edit your listing for you.
-              </span>
+              <span>{t(locale, "dashboard.overview.actionPlan.ownerActionOnGoogle")}</span>
             </div>
           )}
         </div>
@@ -315,7 +334,11 @@ export function TaskCard({
             onClick={handleMarkDone}
             disabled={state.kind === "saving"}
           >
-            {state.kind === "saving" ? "Saving..." : canMarkAgain ? "I did this again" : "I did this"}
+            {state.kind === "saving"
+              ? t(locale, "dashboard.overview.actionPlan.saving")
+              : canMarkAgain
+                ? t(locale, "dashboard.overview.actionPlan.didThisAgain")
+                : t(locale, "dashboard.overview.actionPlan.didThis")}
           </Button>
           {state.kind === "error" && <span className="text-[12px] text-red">{state.message}</span>}
         </div>
@@ -368,12 +391,13 @@ export function TaskListCard({
 }
 
 export function CompletedTasksCard({ completed }: { completed: CompletedTask[] }) {
+  const locale = useLocale();
   if (completed.length === 0) return null;
 
   return (
     <Card className="p-5">
       <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-        Confirmed wins
+        {t(locale, "dashboard.overview.actionPlan.confirmedWinsHeading")}
       </div>
       <div className="flex flex-col divide-y divide-paper-line">
         {completed.map((task) => (
@@ -386,7 +410,9 @@ export function CompletedTasksCard({ completed }: { completed: CompletedTask[] }
               {task.label}
             </span>
             <Pill variant="green" className="shrink-0">
-              +{formatPoints(task.pointsGained)} pts confirmed
+              {t(locale, "dashboard.overview.actionPlan.pointsConfirmed", {
+                points: formatPoints(task.pointsGained),
+              })}
             </Pill>
           </div>
         ))}

@@ -5,6 +5,8 @@
 // "aim for X" read on the same real rating/review-count data, distinct
 // from how those numbers actually earn points.
 
+import { DEFAULT_LOCALE, t, tPlural, type Locale } from "@/lib/i18n";
+
 /** The rating this app encourages aiming for, shown in the social-proof
  * section's progress bar and caption. Independent of RATING_CURVE in
  * lib/scoring.ts, which has its own, more granular point curve. */
@@ -43,20 +45,32 @@ export function reviewCountProgressPercent(reviewCount: number | null): number |
 
 /** Honest caption for the rating bar — names the real number and
  * whether it's at/above the target, never implies a score or promise. */
-export function ratingCaption(rating: number | null): string {
-  if (rating === null) return "No rating yet — this fills in once your listing has reviews.";
+export function ratingCaption(rating: number | null, locale: Locale = DEFAULT_LOCALE): string {
+  if (rating === null) return t(locale, "dashboard.websiteReviews.ratingCaptionNoRating");
   if (rating >= RATING_TARGET) {
-    return `You're at ${rating.toFixed(1)}★ — at or above the ${RATING_TARGET}+ most customers look for.`;
+    return t(locale, "dashboard.websiteReviews.ratingCaptionAtTarget", {
+      rating: rating.toFixed(1),
+      target: RATING_TARGET,
+    });
   }
-  return `You're at ${rating.toFixed(1)}★ — aim for ${RATING_TARGET}+ to build stronger trust at a glance.`;
+  return t(locale, "dashboard.websiteReviews.ratingCaptionBelowTarget", {
+    rating: rating.toFixed(1),
+    target: RATING_TARGET,
+  });
 }
 
 /** Honest caption for the review-count bar. */
-export function reviewCountCaption(reviewCount: number | null): string {
-  if (reviewCount === null) return "No reviews yet — every review you get starts building this up.";
+export function reviewCountCaption(reviewCount: number | null, locale: Locale = DEFAULT_LOCALE): string {
+  if (reviewCount === null) return t(locale, "dashboard.websiteReviews.reviewCountCaptionNone");
   if (reviewCount >= REVIEW_COUNT_MILESTONE) {
-    return `You've passed ${REVIEW_COUNT_MILESTONE} reviews — ${reviewCount.toLocaleString()} total.`;
+    return t(locale, "dashboard.websiteReviews.reviewCountCaptionPassed", {
+      milestone: REVIEW_COUNT_MILESTONE,
+      reviewCount: reviewCount.toLocaleString(),
+    });
   }
   const remaining = REVIEW_COUNT_MILESTONE - reviewCount;
-  return `${remaining} more review${remaining === 1 ? "" : "s"} to reach ${REVIEW_COUNT_MILESTONE}.`;
+  return tPlural(locale, "dashboard.websiteReviews.reviewCountCaptionRemaining", remaining, {
+    remaining,
+    milestone: REVIEW_COUNT_MILESTONE,
+  });
 }

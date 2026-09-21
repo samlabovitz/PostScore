@@ -5,6 +5,7 @@ import { scoreBusinessById, getScoreHistory, getRecentScoreSnapshots } from "@/a
 import { getAssistantPageData } from "@/app/actions/assistant";
 import { getLocalBenchmark } from "@/app/actions/competitors";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
+import { normalizeLocale, t } from "@/lib/i18n";
 import { BusinessScoreView, type AssistantEmbedData } from "./BusinessScoreView";
 
 export default async function BusinessPage({ params }: { params: { id: string } }) {
@@ -34,6 +35,8 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     getGbpConnectionStatus(params.id),
   ]);
 
+  const locale = normalizeLocale(scored.business.language);
+
   const assistant: AssistantEmbedData =
     assistantPageData.status === "ok"
       ? {
@@ -47,7 +50,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
           message:
             assistantPageData.status === "error"
               ? assistantPageData.message
-              : "Couldn't load the assistant's grounding data.",
+              : t(locale, "dashboard.overview.assistantDataErrorFallback"),
         };
 
   return (

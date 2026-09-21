@@ -6,20 +6,28 @@ import { StatTile } from "@/components/ui/StatTile";
 import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/SegmentedControl";
 import { GRADE_THRESHOLDS } from "@/lib/scoring";
 import type { ReportsScoreRow } from "@/app/actions/reports";
+import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 
 type RangeKey = "week" | "6m" | "all";
 
-const RANGE_OPTIONS: SegmentedControlOption<RangeKey>[] = [
-  { value: "week", label: "Weekly" },
-  { value: "6m", label: "6 months" },
-  { value: "all", label: "All time" },
-];
+function rangeOptions(locale: Locale): SegmentedControlOption<RangeKey>[] {
+  return [
+    { value: "week", label: t(locale, "dashboard.reports.chartRangeWeekly") },
+    { value: "6m", label: t(locale, "dashboard.reports.chartRange6Months") },
+    { value: "all", label: t(locale, "dashboard.reports.chartRangeAllTime") },
+  ];
+}
 
-const RANGE_LABEL: Record<RangeKey, string> = {
-  week: "the last week",
-  "6m": "the last 6 months",
-  all: "all time",
-};
+function rangeLabel(range: RangeKey, locale: Locale): string {
+  switch (range) {
+    case "week":
+      return t(locale, "dashboard.reports.chartRangeLabelWeek");
+    case "6m":
+      return t(locale, "dashboard.reports.chartRangeLabel6Months");
+    case "all":
+      return t(locale, "dashboard.reports.chartRangeLabelAllTime");
+  }
+}
 
 function cutoffFor(range: RangeKey): number | null {
   if (range === "week") return Date.now() - 7 * 86_400_000;
@@ -31,15 +39,14 @@ function cutoffFor(range: RangeKey): number | null {
   return null;
 }
 
-function formatShortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+function formatShortDate(iso: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(new Date(iso));
 }
 
-function daysAgoLabel(iso: string): string {
+function daysAgoLabel(iso: string, locale: Locale): string {
   const days = Math.round((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  if (days <= 0) return "Today";
-  if (days === 1) return "1 day ago";
-  return `${days} days ago`;
+  if (days <= 0) return t(locale, "dashboard.reports.chartToday");
+  return tPlural(locale, "dashboard.reports.chartDaysAgo", days, { days });
 }
 
 const CHART_WIDTH = 640;
@@ -55,6 +62,7 @@ const PAD_BOTTOM = 26;
  * at least two real scans to draw a line between, this shows an honest
  * "not enough history yet" state instead of a fake or flat line. */
 export function ScoreHistoryChart({ history }: { history: ReportsScoreRow[] }) {
+  const locale = useLocale();
   const [range, setRange] = useState<RangeKey>("6m");
 
   const filtered = useMemo(() => {
@@ -71,15 +79,17 @@ export function ScoreHistoryChart({ history }: { history: ReportsScoreRow[] }) {
   return (
     <Card className="p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="font-serif text-base font-semibold text-ink">Score over time</h3>
-        <SegmentedControl options={RANGE_OPTIONS} value={range} onChange={setRange} />
+        <h3 className="font-serif text-base font-semibold text-ink">
+          {t(locale, "dashboard.reports.scoreOverTimeHeading")}
+        </h3>
+        <SegmentedControl options={rangeOptions(locale)} value={range} onChange={setRange} />
       </div>
 
       <div className="mt-5">
         {history.length === 0 ? (
-          <EmptyState message="You haven't run a scan yet — re-scan from the Overview page to start your history." />
+          <EmptyState message={t(locale, "dashboard.reports.chartNoHistoryYet")} />
         ) : filtered.length < 2 ? (
-          <EmptyState message="Not enough history yet — your chart fills in as you re-scan." />
+          <EmptyState message={t(locale, "dashboard.reports.chartNotEnoughHistory")} />
         ) : (
           <>
             <Chart points={filtered} />
@@ -90,19 +100,22 @@ export function ScoreHistoryChart({ history }: { history: ReportsScoreRow[] }) {
 
       <div className="mt-5 grid grid-cols-2 gap-6 border-t border-paper-line pt-4 sm:w-fit sm:grid-cols-3 sm:gap-10">
         <StatTile
-          label={`Change · ${RANGE_LABEL[range]}`}
+          label={t(locale, "dashboard.reports.chartChangeLabel", { range: rangeLabel(range, locale) })}
           value={
             changeOverRange === null
               ? "—"
               : changeOverRange === 0
-                ? "No change"
+                ? t(locale, "dashboard.overview.noChange")
                 : changeOverRange > 0
                   ? `+${changeOverRange}`
                   : `${changeOverRange}`
           }
         />
-        <StatTile label="Total scans recorded" value={history.length} />
-        <StatTile label="Last scan" value={last ? daysAgoLabel(last.created_at) : "—"} />
+        <StatTile label={t(locale, "dashboard.reports.chartTotalScansLabel")} value={history.length} />
+        <StatTile
+          label={t(locale, "dashboard.reports.chartLastScanLabel")}
+          value={last ? daysAgoLabel(last.created_at, locale) : "—"}
+        />
       </div>
     </Card>
   );
@@ -113,6 +126,7 @@ export function ScoreHistoryChart({ history }: { history: ReportsScoreRow[] }) {
  * numbers a line chart alone can't. Newest first; capped so a long
  * "All time" range doesn't turn into an unreadable wall of chips. */
 function PointsLegend({ points }: { points: ReportsScoreRow[] }) {
+  const locale = useLocale();
   const newestFirst = [...points].reverse();
   const shown = newestFirst.slice(0, 12);
   const hiddenCount = newestFirst.length - shown.length;
@@ -124,11 +138,13 @@ function PointsLegend({ points }: { points: ReportsScoreRow[] }) {
           key={p.id}
           className="rounded-md bg-paper px-2 py-1 text-[11px] tabular-nums text-ink-soft"
         >
-          {formatShortDate(p.created_at)} · {p.total} ({p.grade})
+          {formatShortDate(p.created_at, locale)} · {p.total} ({p.grade})
         </span>
       ))}
       {hiddenCount > 0 && (
-        <span className="rounded-md px-2 py-1 text-[11px] text-ink-mute">+{hiddenCount} earlier</span>
+        <span className="rounded-md px-2 py-1 text-[11px] text-ink-mute">
+          {t(locale, "dashboard.reports.chartMoreEarlier", { count: hiddenCount })}
+        </span>
       )}
     </div>
   );
@@ -159,6 +175,7 @@ function gradeBands(yFor: (score: number) => number) {
 }
 
 function Chart({ points }: { points: ReportsScoreRow[] }) {
+  const locale = useLocale();
   const innerWidth = CHART_WIDTH - PAD_LEFT - PAD_RIGHT;
   const innerHeight = CHART_HEIGHT - PAD_TOP - PAD_BOTTOM;
 
@@ -186,7 +203,11 @@ function Chart({ points }: { points: ReportsScoreRow[] }) {
       className="h-[220px] w-full"
       preserveAspectRatio="none"
       role="img"
-      aria-label={`Score over time, ${points.length} scans, from ${points[0].total} to ${points[points.length - 1].total}`}
+      aria-label={t(locale, "dashboard.reports.chartAriaLabel", {
+        count: points.length,
+        from: points[0].total,
+        to: points[points.length - 1].total,
+      })}
     >
       {bands.map((band, i) => (
         <rect
@@ -234,7 +255,7 @@ function Chart({ points }: { points: ReportsScoreRow[] }) {
       })}
 
       <text x={xFor(points[0].created_at)} y={CHART_HEIGHT - 6} textAnchor="start" fontSize={11} fill="#6b7890">
-        {formatShortDate(points[0].created_at)}
+        {formatShortDate(points[0].created_at, locale)}
       </text>
       <text
         x={xFor(points[points.length - 1].created_at)}
@@ -243,7 +264,7 @@ function Chart({ points }: { points: ReportsScoreRow[] }) {
         fontSize={11}
         fill="#6b7890"
       >
-        {formatShortDate(points[points.length - 1].created_at)}
+        {formatShortDate(points[points.length - 1].created_at, locale)}
       </text>
     </svg>
   );

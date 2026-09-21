@@ -1,6 +1,9 @@
+"use client";
+
 import { Card } from "@/components/ui/Card";
 import { IconCircleCheck, IconCircleDashed } from "@tabler/icons-react";
 import { ConnectToUnlockCard } from "@/components/gbp/ConnectToUnlock";
+import { t, useLocale } from "@/lib/i18n";
 
 /**
  * One real Google Business Profile field this business's live listing
@@ -52,12 +55,14 @@ export function LiveListingSection({
   connected: boolean;
   fields?: GbpListingField[] | null;
 }) {
+  const locale = useLocale();
+
   if (!connected) {
     return (
       <ConnectToUnlockCard
         businessId={businessId}
-        title="Profile-completeness checklist"
-        description="Connect your Google Business Profile to see exactly which listing fields are missing, add fixes straight to your action plan, and track review recency from your real, live Google data."
+        title={t(locale, "dashboard.overview.profileChecklistTitle")}
+        description={t(locale, "dashboard.overview.profileChecklistDescription")}
       />
     );
   }
@@ -65,9 +70,7 @@ export function LiveListingSection({
   if (!fields) {
     return (
       <Card className="p-5 text-sm text-ink-soft">
-        Google Business Profile connected. Live field-by-field completeness isn&apos;t wired up
-        yet — that&apos;s a later update, not something broken here. We&apos;ll show your real
-        checklist here once it ships.
+        {t(locale, "dashboard.overview.gbpConnectedNotWiredUp")}
       </Card>
     );
   }
@@ -89,7 +92,7 @@ export function LiveListingSection({
             </div>
             {!field.complete && field.actionPlanPoints !== undefined && (
               <span className="shrink-0 text-[12px] font-medium text-brass">
-                +{field.actionPlanPoints} pts available
+                {t(locale, "dashboard.overview.ptsAvailable", { points: field.actionPlanPoints })}
               </span>
             )}
           </div>

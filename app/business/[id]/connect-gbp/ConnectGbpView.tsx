@@ -18,47 +18,53 @@ import {
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { disconnectGbp } from "@/app/actions/gbp";
+import { t, useLocale, type Locale } from "@/lib/i18n";
 
-const UNLOCKS: Array<{ icon: typeof IconEdit; title: string; body: string }> = [
-  {
-    icon: IconEdit,
-    title: "Live, editable listing",
-    body: "Update your hours, phone, and other listing fields from PostScore instead of Google directly.",
-  },
-  {
-    icon: IconClipboardCheck,
-    title: "Profile-completeness fixes",
-    body: "See exactly which listing fields are missing, and add each one straight to your action plan.",
-  },
-  {
-    icon: IconClock,
-    title: "Review recency",
-    body: "Know how fresh your reviews really are, not just your total count.",
-  },
-  {
-    icon: IconMessageCircle,
-    title: "Individual reviews + AI reply assistant",
-    body: "Read your actual reviews and get a drafted reply for each one, ready to post.",
-  },
-  {
-    icon: IconChartBar,
-    title: "Reply-rate stats",
-    body: "Track how many of your reviews you've actually replied to.",
-  },
-  {
-    icon: IconChartBar,
-    title: "Insights + leads estimate",
-    body: "Real views, calls, and clicks from your Google listing, and an estimated leads number built from them.",
-  },
-  {
-    icon: IconFilePencil,
-    title: "Google Posts tracking",
-    body: "See what you've posted to Google and how it's landing.",
-  },
-];
+function buildUnlocks(
+  locale: Locale
+): Array<{ icon: typeof IconEdit; title: string; body: string }> {
+  return [
+    {
+      icon: IconEdit,
+      title: t(locale, "dashboard.connectGbp.unlockEditableListingTitle"),
+      body: t(locale, "dashboard.connectGbp.unlockEditableListingBody"),
+    },
+    {
+      icon: IconClipboardCheck,
+      title: t(locale, "dashboard.connectGbp.unlockCompletenessFixesTitle"),
+      body: t(locale, "dashboard.connectGbp.unlockCompletenessFixesBody"),
+    },
+    {
+      icon: IconClock,
+      title: t(locale, "dashboard.connectGbp.unlockReviewRecencyTitle"),
+      body: t(locale, "dashboard.connectGbp.unlockReviewRecencyBody"),
+    },
+    {
+      icon: IconMessageCircle,
+      title: t(locale, "dashboard.connectGbp.unlockReplyAssistantTitle"),
+      body: t(locale, "dashboard.connectGbp.unlockReplyAssistantBody"),
+    },
+    {
+      icon: IconChartBar,
+      title: t(locale, "dashboard.connectGbp.unlockReplyRateStatsTitle"),
+      body: t(locale, "dashboard.connectGbp.unlockReplyRateStatsBody"),
+    },
+    {
+      icon: IconChartBar,
+      title: t(locale, "dashboard.connectGbp.unlockInsightsLeadsTitle"),
+      body: t(locale, "dashboard.connectGbp.unlockInsightsLeadsBody"),
+    },
+    {
+      icon: IconFilePencil,
+      title: t(locale, "dashboard.connectGbp.unlockPostsTrackingTitle"),
+      body: t(locale, "dashboard.connectGbp.unlockPostsTrackingBody"),
+    },
+  ];
+}
 
 function DisconnectControl({ businessId }: { businessId: string }) {
   const router = useRouter();
+  const locale = useLocale();
   const [state, setState] = useState<"idle" | "working" | "error">("idle");
 
   async function handleDisconnect() {
@@ -74,9 +80,13 @@ function DisconnectControl({ businessId }: { businessId: string }) {
   return (
     <div className="flex items-center gap-3">
       <Button variant="default" size="sm" onClick={handleDisconnect} disabled={state === "working"}>
-        {state === "working" ? "Disconnecting..." : "Disconnect"}
+        {state === "working"
+          ? t(locale, "dashboard.connectGbp.disconnecting")
+          : t(locale, "dashboard.connectGbp.disconnect")}
       </Button>
-      {state === "error" && <span className="text-sm text-red">Couldn&apos;t disconnect — try again.</span>}
+      {state === "error" && (
+        <span className="text-sm text-red">{t(locale, "dashboard.connectGbp.disconnectError")}</span>
+      )}
     </div>
   );
 }
@@ -98,6 +108,8 @@ export function ConnectGbpView({
   error: string | null;
   oauthConfigured: boolean;
 }) {
+  const locale = useLocale();
+  const unlocks = buildUnlocks(locale);
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
       <div>
@@ -106,24 +118,20 @@ export function ConnectGbpView({
           className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
         >
           <IconArrowLeft size={15} />
-          Back to {businessName ?? "business"}
+          {t(locale, "dashboard.common.backTo", {
+            name: businessName ?? t(locale, "dashboard.common.businessFallback"),
+          })}
         </Link>
         <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
-          Connect your Google Business Profile
+          {t(locale, "dashboard.connectGbp.pageTitle")}
         </h1>
-        <p className="mt-1 max-w-xl text-sm text-ink-soft">
-          Connecting lets PostScore read (and, for some fields, edit) your real Google Business
-          Profile — on top of the public listing data we already score today.
-        </p>
+        <p className="mt-1 max-w-xl text-sm text-ink-soft">{t(locale, "dashboard.connectGbp.pageSubtitle")}</p>
       </div>
 
       {justConnected && (
         <Card className="flex items-center gap-3 border-green/30 bg-green/5 p-4">
           <IconCircleCheck size={20} className="shrink-0 text-green" />
-          <p className="text-sm text-ink">
-            Connected. We&apos;re still finishing Google&apos;s review process for full API access —
-            the features below unlock as each one goes live, not all at once.
-          </p>
+          <p className="text-sm text-ink">{t(locale, "dashboard.connectGbp.justConnectedMessage")}</p>
         </Card>
       )}
 
@@ -141,13 +149,20 @@ export function ConnectGbpView({
               <IconCircleCheck size={18} />
             </span>
             <div>
-              <div className="text-sm font-semibold text-ink">Google Business Profile connected</div>
+              <div className="text-sm font-semibold text-ink">
+                {t(locale, "dashboard.connectGbp.connectedHeading")}
+              </div>
               <div className="text-[12.5px] text-ink-mute">
                 {connectedAt
-                  ? `Since ${new Date(connectedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}.`
-                  : "Connected."}{" "}
-                Real listing/review/insights data isn&apos;t wired up yet — that&apos;s a later
-                update, not something broken here.
+                  ? t(locale, "dashboard.connectGbp.sinceDate", {
+                      date: new Intl.DateTimeFormat(locale, {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      }).format(new Date(connectedAt)),
+                    })
+                  : t(locale, "dashboard.connectGbp.connectedFallback")}{" "}
+                {t(locale, "dashboard.connectGbp.notWiredUpSuffix")}
               </div>
             </div>
           </div>
@@ -158,7 +173,7 @@ export function ConnectGbpView({
       ) : (
         <>
           <div className="grid grid-cols-1 gap-3 nav:grid-cols-2">
-            {UNLOCKS.map((u) => (
+            {unlocks.map((u) => (
               <Card key={u.title} className="flex items-start gap-3 p-4">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brass/10 text-brass">
                   <u.icon size={16} />
@@ -173,28 +188,30 @@ export function ConnectGbpView({
 
           <Card className="flex flex-col items-start gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div className="text-sm font-semibold text-ink">Ready to connect?</div>
+              <div className="text-sm font-semibold text-ink">
+                {t(locale, "dashboard.connectGbp.readyToConnectHeading")}
+              </div>
               <p className="mt-0.5 max-w-md text-[12.5px] text-ink-mute">
                 {oauthConfigured
-                  ? "You'll go to Google to approve access, then come back here. You can disconnect at any time."
-                  : "Google Business Profile connection isn't configured in this environment yet — check back soon."}
+                  ? t(locale, "dashboard.connectGbp.oauthConfiguredBody")
+                  : t(locale, "dashboard.connectGbp.oauthNotConfiguredBody")}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-3">
               <Link href={`/business/${businessId}`} className="text-sm font-medium text-ink-soft hover:text-ink">
-                Skip for now
+                {t(locale, "dashboard.connectGbp.skipForNow")}
               </Link>
               {oauthConfigured ? (
                 <a href={`/api/gbp/connect?businessId=${businessId}`}>
                   <Button variant="brass">
                     <IconBrandGoogle size={15} />
-                    Connect Google Business Profile
+                    {t(locale, "dashboard.common.connectGoogleBusinessProfile")}
                   </Button>
                 </a>
               ) : (
                 <Button variant="brass" disabled>
                   <IconBrandGoogle size={15} />
-                  Connect Google Business Profile
+                  {t(locale, "dashboard.common.connectGoogleBusinessProfile")}
                 </Button>
               )}
             </div>

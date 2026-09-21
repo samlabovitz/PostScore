@@ -17,6 +17,7 @@ import { Pill } from "@/components/ui/Pill";
 import { AssistantView } from "@/components/assistant/AssistantView";
 import { AssistantOverlay } from "@/components/assistant/AssistantOverlay";
 import type { AssistantBusinessContext } from "@/lib/assistant";
+import { t, tPlural, useLocale } from "@/lib/i18n";
 
 /**
  * Deliberately reads as an AI presence coach at a glance — a gradient
@@ -34,6 +35,7 @@ function AssistantEntryPoint({
   starterPrompts: string[];
   onOpen: () => void;
 }) {
+  const locale = useLocale();
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-paper-deep bg-white p-4 shadow-card">
       <button
@@ -46,13 +48,15 @@ function AssistantEntryPoint({
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
-            <span className="text-[15px] font-semibold text-ink">Ask PostAI</span>
-            <Pill variant="brass">Beta</Pill>
+            <span className="text-[15px] font-semibold text-ink">{t(locale, "dashboard.overview.askPostAI")}</span>
+            <Pill variant="brass">{t(locale, "dashboard.overview.betaLabel")}</Pill>
           </span>
           <span className="mt-0.5 block truncate text-[12.5px] text-ink-soft">
-            Ask anything about your score, competitors, or what to fix next.
+            {t(locale, "dashboard.overview.assistantPrompt")}
             {conversationCount > 0 &&
-              ` ${conversationCount} past conversation${conversationCount === 1 ? "" : "s"} saved.`}
+              tPlural(locale, "dashboard.overview.pastConversations", conversationCount, {
+                count: conversationCount,
+              })}
           </span>
         </span>
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink-mute transition-colors group-hover:bg-brass/10 group-hover:text-brass">
@@ -89,6 +93,7 @@ export function AssistantLauncher({
   starterPrompts: string[];
   conversationCount: number;
 }) {
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
 
   return (
@@ -99,7 +104,7 @@ export function AssistantLauncher({
         onOpen={() => setOpen(true)}
       />
 
-      <AssistantOverlay open={open} onClose={() => setOpen(false)} title="PostAI">
+      <AssistantOverlay open={open} onClose={() => setOpen(false)} title={t(locale, "dashboard.overview.postAiOverlayTitle")}>
         <AssistantView
           businessId={businessId}
           businessName={businessName}
