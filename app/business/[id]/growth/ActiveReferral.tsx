@@ -95,7 +95,7 @@ export function ActiveReferral({
                 <span className="mt-1 font-mono text-[12.5px] text-ink">{referral.code}</span>
               </div>
               <Pill variant="brass" className="shrink-0">
-                {redemptionLabel(referral.redemptions)}
+                {redemptionLabel(referral.redemptions, locale)}
               </Pill>
             </div>
 

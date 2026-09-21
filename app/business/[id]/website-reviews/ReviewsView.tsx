@@ -17,6 +17,7 @@ import {
 } from "@/lib/reviews";
 import { GetMoreReviews } from "./GetMoreReviews";
 import type { ReviewsPageData } from "@/app/actions/reviews";
+import { t, useLocale } from "@/lib/i18n";
 
 function StatCard({
   icon: Icon,
@@ -51,20 +52,21 @@ function ReviewSocialProof({
   rating: number | null;
   reviewCount: number | null;
 }) {
+  const locale = useLocale();
   return (
     <div>
-      <SectionHeading title="Your review social proof" className="mb-4" />
+      <SectionHeading title={t(locale, "dashboard.websiteReviews.socialProofHeading")} className="mb-4" />
       <div className="grid grid-cols-1 gap-5 nav:grid-cols-2">
         <StatCard
           icon={IconStar}
-          label="Average rating"
+          label={t(locale, "dashboard.websiteReviews.avgRatingLabel")}
           value={rating !== null ? `${rating.toFixed(1)} ★` : "—"}
           percent={ratingProgressPercent(rating)}
           caption={ratingCaption(rating)}
         />
         <StatCard
           icon={IconMessages}
-          label="Review volume"
+          label={t(locale, "dashboard.websiteReviews.reviewVolumeLabel")}
           value={reviewCount !== null ? reviewCount.toLocaleString() : "—"}
           percent={reviewCountProgressPercent(reviewCount)}
           caption={reviewCountCaption(reviewCount)}
@@ -72,16 +74,15 @@ function ReviewSocialProof({
       </div>
 
       <div className="mt-5 rounded-xl bg-paper-deep/40 p-4">
-        <p className="text-[13px] text-ink-soft">
-          Rating and volume work together, not separately: a great rating from a handful of reviews
-          doesn&apos;t carry much weight — customers (and Google) trust it more once it&apos;s backed
-          by real volume. Building both together does more for how you&apos;re perceived than either
-          alone.
-        </p>
+        <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.websiteReviews.ratingVolumeExplainer")}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-[12px] text-ink-mute">For example:</span>
-          <Pill variant="green">{RATING_TARGET}★ from 200 reviews — strong trust</Pill>
-          <Pill variant="amber">{RATING_TARGET}★ from 5 reviews — still building trust</Pill>
+          <span className="text-[12px] text-ink-mute">{t(locale, "dashboard.websiteReviews.forExampleLabel")}</span>
+          <Pill variant="green">
+            {t(locale, "dashboard.websiteReviews.exampleStrongTrust", { target: RATING_TARGET })}
+          </Pill>
+          <Pill variant="amber">
+            {t(locale, "dashboard.websiteReviews.exampleBuildingTrust", { target: RATING_TARGET })}
+          </Pill>
         </div>
       </div>
     </div>
@@ -97,6 +98,7 @@ function ComingSoonCard({
   title: string;
   body: string;
 }) {
+  const locale = useLocale();
   return (
     <Card className="flex items-start gap-3 p-4 opacity-70">
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink/5 text-ink-mute">
@@ -106,7 +108,7 @@ function ComingSoonCard({
         <div className="text-[13px] font-semibold text-ink">
           {title}
           <span className="ml-2 rounded-full bg-ink/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-ink-mute">
-            Coming soon
+            {t(locale, "dashboard.websiteReviews.comingSoonLabel")}
           </span>
         </div>
         <p className="mt-0.5 text-[12.5px] text-ink-mute">{body}</p>
@@ -122,6 +124,7 @@ export function ReviewsView({
   businessId: string;
   reviews: ReviewsPageData;
 }) {
+  const locale = useLocale();
   return (
     <div className="flex flex-col gap-8 nav:gap-10">
       <div>
@@ -130,54 +133,56 @@ export function ReviewsView({
           className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
         >
           <IconArrowLeft size={15} />
-          Back to {reviews.businessName ?? "business"}
+          {t(locale, "dashboard.websiteReviews.backTo", {
+            name: reviews.businessName ?? t(locale, "dashboard.websiteReviews.businessFallback"),
+          })}
         </Link>
         <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
-          Reviews & Replies
+          {t(locale, "dashboard.websiteReviews.pageTitle")}
         </h1>
-        <p className="mt-1 text-sm text-ink-soft">
-          Everything here is your real Google data, or clearly labeled as coming soon — nothing
-          fabricated.
-        </p>
+        <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.websiteReviews.subtitle")}</p>
       </div>
 
-      <GetMoreReviews businessName={reviews.businessName ?? "Your business"} placeId={reviews.placeId} />
+      <GetMoreReviews
+        businessName={reviews.businessName ?? t(locale, "dashboard.websiteReviews.businessNameFallback")}
+        placeId={reviews.placeId}
+      />
 
       <ReviewSocialProof rating={reviews.rating} reviewCount={reviews.reviewCount} />
 
       <div>
-        <SectionHeading title="The rubric behind your review score" className="mb-4" />
+        <SectionHeading title={t(locale, "dashboard.websiteReviews.rubricHeading")} className="mb-4" />
         <CategoryCard category={reviews.visibilityCategory} />
       </div>
 
       <div>
         <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-          Reply assistant
+          {t(locale, "dashboard.websiteReviews.replyAssistantLabel")}
         </div>
         {reviews.gbpConnected ? (
           <ComingSoonCard
             icon={IconMessageCircle}
-            title="Reply assistant"
-            body="Your Google Business Profile is connected — reading your actual reviews and drafting replies is a later update, not live yet. Nothing fabricated in the meantime."
+            title={t(locale, "dashboard.websiteReviews.replyAssistantLabel")}
+            body={t(locale, "dashboard.websiteReviews.replyAssistantConnectedBody")}
           />
         ) : (
           <ConnectToUnlockCard
             businessId={businessId}
-            title="Reply assistant"
-            description="Drafting replies to your actual reviews needs real Google Business Profile access — we only get your rating and review count today, not individual review content or authors. Connect your profile to unlock it."
+            title={t(locale, "dashboard.websiteReviews.replyAssistantLabel")}
+            description={t(locale, "dashboard.websiteReviews.replyAssistantUnlockDescription")}
           />
         )}
       </div>
 
       <div>
         <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-          Coming soon
+          {t(locale, "dashboard.websiteReviews.comingSoonLabel")}
         </div>
         <div className="flex flex-col gap-3">
           <ComingSoonCard
             icon={IconMessage2}
-            title="Auto-text customers after their visit"
-            body="Automatically texting a review link after a visit needs a way to know who visited and when — we don't have that yet. For now, sharing the link or sign above is on you."
+            title={t(locale, "dashboard.websiteReviews.autoTextTitle")}
+            body={t(locale, "dashboard.websiteReviews.autoTextBody")}
           />
         </div>
       </div>

@@ -28,21 +28,22 @@ import {
 import { downloadTextFile } from "@/lib/downloadFile";
 import { resizeImageForEmbedding } from "@/lib/resizeImageForEmbedding";
 import { markTaskDone } from "@/app/actions/actionPlan";
+import { t, useLocale, type MessageKey } from "@/lib/i18n";
 
 /** Keeps the downloaded HTML file's size reasonable — each photo is
  * already resized/compressed (see resizeImageForEmbedding), but a hard
  * cap on count is a simple, honest way to bound the total. */
 const MAX_CONTENT_IMAGES = 4;
 
-const TAGLINE_SIZES: Array<{ value: TaglineSize; label: string }> = [
-  { value: "small", label: "Small" },
-  { value: "medium", label: "Medium" },
-  { value: "large", label: "Large" },
+const TAGLINE_SIZES: Array<{ value: TaglineSize; labelKey: MessageKey }> = [
+  { value: "small", labelKey: "dashboard.website.starter.taglineSizeSmall" },
+  { value: "medium", labelKey: "dashboard.website.starter.taglineSizeMedium" },
+  { value: "large", labelKey: "dashboard.website.starter.taglineSizeLarge" },
 ];
 
-const TAGLINE_PLACEMENTS: Array<{ value: TaglinePlacement; label: string }> = [
-  { value: "below", label: "Below name" },
-  { value: "above", label: "Above name" },
+const TAGLINE_PLACEMENTS: Array<{ value: TaglinePlacement; labelKey: MessageKey }> = [
+  { value: "below", labelKey: "dashboard.website.starter.placementBelow" },
+  { value: "above", labelKey: "dashboard.website.starter.placementAbove" },
 ];
 
 function slugify(name: string): string {
@@ -62,6 +63,7 @@ interface ToggleRowProps {
 }
 
 function ToggleRow({ icon: Icon, label, checked, onChange, available }: ToggleRowProps) {
+  const locale = useLocale();
   return (
     <label
       className={`flex items-center gap-2.5 py-2 text-sm ${available ? "text-ink" : "cursor-not-allowed text-ink-mute"}`}
@@ -75,7 +77,9 @@ function ToggleRow({ icon: Icon, label, checked, onChange, available }: ToggleRo
       />
       <Icon size={15} className="shrink-0" />
       <span className="flex-1">{label}</span>
-      {!available && <span className="text-[11px] text-ink-mute">Not on file</span>}
+      {!available && (
+        <span className="text-[11px] text-ink-mute">{t(locale, "dashboard.website.starter.notOnFile")}</span>
+      )}
     </label>
   );
 }
@@ -108,6 +112,7 @@ export function StarterSiteBuilder({
    * generator itself is identical in every case. */
   builderOfferReason: "no_website" | "underperforming" | "backup";
 }) {
+  const locale = useLocale();
   const router = useRouter();
   const [tagline, setTagline] = useState("");
   const [taglineFontId, setTaglineFontId] = useState(STARTER_SITE_FONTS[0].id);
@@ -132,7 +137,7 @@ export function StarterSiteBuilder({
       const dataUri = await resizeImageForEmbedding(file, 1600);
       setHeroImage({ dataUri, alt: `${businessName} hero photo` });
     } catch {
-      setPhotoError("Couldn't process that photo — try a different image file.");
+      setPhotoError(t(locale, "dashboard.website.starter.photoErrorFallback"));
     }
   }
 
@@ -144,7 +149,7 @@ export function StarterSiteBuilder({
       const dataUri = await resizeImageForEmbedding(file, 1000);
       setContentImages((prev) => [...prev, { dataUri, alt: `${businessName} photo` }]);
     } catch {
-      setPhotoError("Couldn't process that photo — try a different image file.");
+      setPhotoError(t(locale, "dashboard.website.starter.photoErrorFallback"));
     }
   }
 
@@ -228,7 +233,7 @@ export function StarterSiteBuilder({
     } else {
       setMarkState({
         kind: "error",
-        message: result.status === "error" ? result.message : "Couldn't save that — try again.",
+        message: result.status === "error" ? result.message : t(locale, "dashboard.website.starter.markErrorFallback"),
       });
     }
   }
@@ -238,21 +243,21 @@ export function StarterSiteBuilder({
       <div>
         <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-brass">
           <IconWand size={14} />
-          Starter website generator
+          {t(locale, "dashboard.website.starter.eyebrow")}
         </div>
         <h2 className="mt-1.5 font-serif text-2xl font-bold text-ink">
           {builderOfferReason === "no_website"
-            ? "Turn your Google data into a real website"
+            ? t(locale, "dashboard.website.starter.headlineNoWebsite")
             : builderOfferReason === "underperforming"
-              ? "Your current site may be holding you back"
-              : "Build a backup starter site"}
+              ? t(locale, "dashboard.website.starter.headlineUnderperforming")
+              : t(locale, "dashboard.website.starter.headlineBackup")}
         </h2>
         <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">
           {builderOfferReason === "no_website"
-            ? "No website is one of the biggest gaps in your PostScore. This builds a real, mobile-friendly one-page site from your actual Google listing data — nothing invented."
+            ? t(locale, "dashboard.website.starter.subcopyNoWebsite")
             : builderOfferReason === "underperforming"
-              ? "Your website's real, measured PostScore is lower than what this free starter template would score for the same business — see the visual analysis above for exactly why. A clean rebuild could score better."
-              : "You already have a website on file, so this is here if you ever want a simple backup or a fresh starting point — not something you need."}
+              ? t(locale, "dashboard.website.starter.subcopyUnderperforming")
+              : t(locale, "dashboard.website.starter.subcopyBackup")}
         </p>
       </div>
 
@@ -260,26 +265,31 @@ export function StarterSiteBuilder({
         <Card className="flex flex-col gap-4 p-5">
           <div>
             <label className="mb-1 block text-[13px] font-medium text-ink-soft">
-              Tagline <span className="font-normal text-ink-mute">(optional — write your own)</span>
+              {t(locale, "dashboard.website.starter.taglineLabel")}{" "}
+              <span className="font-normal text-ink-mute">
+                {t(locale, "dashboard.website.starter.taglineOptionalHint")}
+              </span>
             </label>
             <input
               type="text"
               value={tagline}
               onChange={(e) => setTagline(e.target.value)}
-              placeholder="e.g. Fresh, fast, made-to-order"
+              placeholder={t(locale, "dashboard.website.starter.taglinePlaceholder")}
               maxLength={120}
               className="w-full rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft"
             />
-            <p className="mt-1 text-[12px] text-ink-mute">
-              Left blank, the site just won&apos;t show a tagline — we never write one for you.
-            </p>
+            <p className="mt-1 text-[12px] text-ink-mute">{t(locale, "dashboard.website.starter.taglineHelper")}</p>
 
             {tagline.trim().length > 0 && (
               <div className="mt-3 flex flex-col gap-3 rounded-lg border border-paper-line bg-paper p-3">
-                <div className="text-[12px] font-medium text-ink-soft">Tagline style</div>
+                <div className="text-[12px] font-medium text-ink-soft">
+                  {t(locale, "dashboard.website.starter.taglineStyleLabel")}
+                </div>
 
                 <div>
-                  <div className="mb-1.5 text-[11.5px] text-ink-mute">Font</div>
+                  <div className="mb-1.5 text-[11.5px] text-ink-mute">
+                    {t(locale, "dashboard.website.starter.taglineFontLabel")}
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
                     {STARTER_SITE_FONTS.map((font) => (
                       <button
@@ -302,13 +312,15 @@ export function StarterSiteBuilder({
 
                 <div className="flex flex-wrap items-end gap-4">
                   <div>
-                    <div className="mb-1.5 text-[11.5px] text-ink-mute">Color</div>
+                    <div className="mb-1.5 text-[11.5px] text-ink-mute">
+                      {t(locale, "dashboard.website.starter.colorLabel")}
+                    </div>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
                         value={taglineColor ?? "#cbd5e6"}
                         onChange={(e) => setTaglineColor(e.target.value)}
-                        aria-label="Tagline color"
+                        aria-label={t(locale, "dashboard.website.starter.taglineColorAriaLabel")}
                         className="h-8 w-10 cursor-pointer rounded border border-paper-deep bg-white p-0.5"
                       />
                       {taglineColor !== null && (
@@ -317,14 +329,16 @@ export function StarterSiteBuilder({
                           onClick={() => setTaglineColor(null)}
                           className="text-[11px] font-medium text-ink-mute hover:text-ink"
                         >
-                          Reset
+                          {t(locale, "dashboard.website.starter.reset")}
                         </button>
                       )}
                     </div>
                   </div>
 
                   <div>
-                    <div className="mb-1.5 text-[11.5px] text-ink-mute">Size</div>
+                    <div className="mb-1.5 text-[11.5px] text-ink-mute">
+                      {t(locale, "dashboard.website.starter.sizeLabel")}
+                    </div>
                     <div className="flex gap-1">
                       {TAGLINE_SIZES.map((s) => (
                         <button
@@ -338,14 +352,16 @@ export function StarterSiteBuilder({
                               : "border-paper-deep bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
                           )}
                         >
-                          {s.label}
+                          {t(locale, s.labelKey)}
                         </button>
                       ))}
                     </div>
                   </div>
 
                   <div>
-                    <div className="mb-1.5 text-[11.5px] text-ink-mute">Placement</div>
+                    <div className="mb-1.5 text-[11.5px] text-ink-mute">
+                      {t(locale, "dashboard.website.starter.placementLabel")}
+                    </div>
                     <div className="flex gap-1">
                       {TAGLINE_PLACEMENTS.map((p) => (
                         <button
@@ -359,7 +375,7 @@ export function StarterSiteBuilder({
                               : "border-paper-deep bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
                           )}
                         >
-                          {p.label}
+                          {t(locale, p.labelKey)}
                         </button>
                       ))}
                     </div>
@@ -370,7 +386,9 @@ export function StarterSiteBuilder({
           </div>
 
           <div>
-            <div className="mb-2 text-[13px] font-medium text-ink-soft">Color theme</div>
+            <div className="mb-2 text-[13px] font-medium text-ink-soft">
+              {t(locale, "dashboard.website.starter.colorThemeLabel")}
+            </div>
             <div className="flex flex-wrap items-center gap-3">
               {STARTER_SITE_THEMES.map((theme) => (
                 <button
@@ -398,12 +416,12 @@ export function StarterSiteBuilder({
                 type="color"
                 value={effectiveAccent}
                 onChange={(e) => setCustomAccent(e.target.value)}
-                aria-label="Custom accent color"
+                aria-label={t(locale, "dashboard.website.starter.customAccentAriaLabel")}
                 className="h-8 w-10 cursor-pointer rounded border border-paper-deep bg-white p-0.5"
               />
               <p className="text-[12px] text-ink-mute">
                 {currentTheme.label}
-                {customAccent !== null && " · custom accent"}
+                {customAccent !== null && t(locale, "dashboard.website.starter.customAccentSuffix")}
               </p>
               {customAccent !== null && (
                 <button
@@ -411,14 +429,16 @@ export function StarterSiteBuilder({
                   onClick={() => setCustomAccent(null)}
                   className="text-[11px] font-medium text-ink-mute hover:text-ink"
                 >
-                  Reset
+                  {t(locale, "dashboard.website.starter.reset")}
                 </button>
               )}
             </div>
           </div>
 
           <div>
-            <div className="mb-2 text-[13px] font-medium text-ink-soft">Font</div>
+            <div className="mb-2 text-[13px] font-medium text-ink-soft">
+              {t(locale, "dashboard.website.starter.fontSectionLabel")}
+            </div>
             <div className="flex flex-wrap gap-2">
               {STARTER_SITE_FONTS.map((font) => (
                 <button
@@ -440,16 +460,18 @@ export function StarterSiteBuilder({
 
           <div>
             <div className="mb-1 text-[13px] font-medium text-ink-soft">
-              Photos <span className="font-normal text-ink-mute">(optional — your own photos)</span>
+              {t(locale, "dashboard.website.starter.photosLabel")}{" "}
+              <span className="font-normal text-ink-mute">
+                {t(locale, "dashboard.website.starter.photosOptionalHint")}
+              </span>
             </div>
-            <p className="mb-2 text-[12px] text-ink-mute">
-              Embedded directly in the downloaded file — each photo adds to its size, so a few good
-              ones go further than many.
-            </p>
+            <p className="mb-2 text-[12px] text-ink-mute">{t(locale, "dashboard.website.starter.photosHelper")}</p>
 
             <div className="flex flex-col gap-3">
               <div>
-                <div className="mb-1.5 text-[11.5px] text-ink-mute">Hero photo</div>
+                <div className="mb-1.5 text-[11.5px] text-ink-mute">
+                  {t(locale, "dashboard.website.starter.heroPhotoLabel")}
+                </div>
                 {heroImage ? (
                   <div className="flex items-center gap-2.5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -463,13 +485,13 @@ export function StarterSiteBuilder({
                       onClick={() => setHeroImage(null)}
                       className="inline-flex items-center gap-1 text-[12px] font-medium text-ink-mute hover:text-ink"
                     >
-                      <IconX size={13} /> Remove
+                      <IconX size={13} /> {t(locale, "dashboard.website.starter.removePhoto")}
                     </button>
                   </div>
                 ) : (
                   <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-paper-deep px-3 py-2 text-[12.5px] font-medium text-ink-soft hover:border-ink-soft hover:text-ink">
                     <IconPhoto size={15} />
-                    Upload a hero photo
+                    {t(locale, "dashboard.website.starter.uploadHeroPhoto")}
                     <input
                       type="file"
                       accept="image/*"
@@ -482,7 +504,10 @@ export function StarterSiteBuilder({
 
               <div>
                 <div className="mb-1.5 text-[11.5px] text-ink-mute">
-                  Content photos ({contentImages.length}/{MAX_CONTENT_IMAGES})
+                  {t(locale, "dashboard.website.starter.contentPhotosLabel", {
+                    current: contentImages.length,
+                    max: MAX_CONTENT_IMAGES,
+                  })}
                 </div>
                 <div className="flex flex-wrap items-center gap-2.5">
                   {contentImages.map((img, i) => (
@@ -492,7 +517,7 @@ export function StarterSiteBuilder({
                       <button
                         type="button"
                         onClick={() => removeContentImage(i)}
-                        aria-label="Remove photo"
+                        aria-label={t(locale, "dashboard.website.starter.removePhotoAriaLabel")}
                         className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-paper-deep bg-white text-ink-mute hover:text-ink"
                       >
                         <IconX size={12} />
@@ -519,33 +544,36 @@ export function StarterSiteBuilder({
 
           <div>
             <div className="mb-1 text-[13px] font-medium text-ink-soft">
-              What to include <span className="font-normal text-ink-mute">(all from your real listing)</span>
+              {t(locale, "dashboard.website.starter.whatToIncludeLabel")}{" "}
+              <span className="font-normal text-ink-mute">
+                {t(locale, "dashboard.website.starter.whatToIncludeHint")}
+              </span>
             </div>
             <div className="flex flex-col divide-y divide-paper-line">
               <ToggleRow
                 icon={IconMapPin}
-                label="Address & map"
+                label={t(locale, "dashboard.website.starter.includeAddress")}
                 checked={showAddress}
                 onChange={setShowAddress}
                 available={!!address}
               />
               <ToggleRow
                 icon={IconPhone}
-                label="Phone (click-to-call)"
+                label={t(locale, "dashboard.website.starter.includePhone")}
                 checked={showPhone}
                 onChange={setShowPhone}
                 available={!!phone}
               />
               <ToggleRow
                 icon={IconClock}
-                label="Hours"
+                label={t(locale, "dashboard.website.starter.includeHours")}
                 checked={showHours}
                 onChange={setShowHours}
                 available={!!openingHours && openingHours.length > 0}
               />
               <ToggleRow
                 icon={IconStar}
-                label="Rating & reviews"
+                label={t(locale, "dashboard.website.starter.includeRating")}
                 checked={showRating}
                 onChange={setShowRating}
                 available={rating !== null}
@@ -556,11 +584,11 @@ export function StarterSiteBuilder({
 
         <div className="flex flex-col gap-3">
           <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-            Live preview — exactly what you&apos;ll download
+            {t(locale, "dashboard.website.starter.livePreviewLabel")}
           </div>
           <Card className="overflow-hidden p-0">
             <iframe
-              title="Live preview of your starter site"
+              title={t(locale, "dashboard.website.starter.iframeTitle")}
               srcDoc={html}
               sandbox="allow-scripts allow-popups"
               className="h-[420px] w-full border-0"
@@ -568,45 +596,40 @@ export function StarterSiteBuilder({
           </Card>
           <Button variant="brass" onClick={handleDownload}>
             <IconDownload size={16} />
-            Download site (HTML)
+            {t(locale, "dashboard.website.starter.downloadSiteButton")}
           </Button>
-          <p className="text-[12px] text-ink-mute">
-            A single, real HTML file — the same one shown above, with your chosen color theme, font,
-            tagline, and sections baked right in. Open it in any browser, or upload it to any host to
-            make it live.
-          </p>
+          <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.website.starter.downloadHelper")}</p>
         </div>
       </div>
 
       <Card className="p-5">
-        <div className="text-[13px] font-semibold text-ink">How to publish it</div>
+        <div className="text-[13px] font-semibold text-ink">
+          {t(locale, "dashboard.website.starter.howToPublishHeading")}
+        </div>
         <ol className="mt-2 flex flex-col gap-1.5 text-[13px] text-ink-soft">
-          <li>1. Download the file above.</li>
+          <li>{t(locale, "dashboard.website.starter.publishStep1")}</li>
           <li>
-            2. Upload it as <span className="font-mono text-[12px]">index.html</span> to any static
-            host — a free option like Netlify Drop or GitHub Pages, or your existing hosting/cPanel if
-            you have one.
+            {t(locale, "dashboard.website.starter.publishStep2Prefix")}
+            <span className="font-mono text-[12px]">index.html</span>
+            {t(locale, "dashboard.website.starter.publishStep2Suffix")}
           </li>
-          <li>3. That gives you a real, public URL for the site.</li>
-          <li>
-            4. Add that URL to your Google Business Profile&apos;s website field, then re-save this
-            business from Google Places here so PostScore picks it up.
-          </li>
+          <li>{t(locale, "dashboard.website.starter.publishStep3")}</li>
+          <li>{t(locale, "dashboard.website.starter.publishStep4")}</li>
         </ol>
         <p className="mt-3 border-t border-paper-line pt-3 text-[12px] text-ink-mute">
-          Downloading this file doesn&apos;t change your PostScore by itself — the Website points land
-          only once the real site is live at a real URL, Google shows it on your listing, and a
-          re-scan confirms it. That&apos;s the same honest rule every check on this app follows.
+          {t(locale, "dashboard.website.starter.publishFootnote")}
         </p>
       </Card>
 
       <Card className="flex items-center justify-between gap-4 p-4">
         <div>
-          <div className="text-[13px] font-semibold text-ink">Already published it?</div>
+          <div className="text-[13px] font-semibold text-ink">
+            {t(locale, "dashboard.website.starter.alreadyPublishedHeading")}
+          </div>
           <p className="mt-0.5 text-[12.5px] text-ink-mute">
             {markState.kind === "done"
-              ? "Marked as pending — we'll confirm it for real the next time we re-scan your listing."
-              : "This flags it on your action plan as pending — it still only completes once a re-scan verifies the real site."}
+              ? t(locale, "dashboard.website.starter.markedDoneStatus")
+              : t(locale, "dashboard.website.starter.notYetMarkedStatus")}
           </p>
           {markState.kind === "error" && (
             <p className="mt-1 text-[12px] text-red">{markState.message}</p>
@@ -619,7 +642,11 @@ export function StarterSiteBuilder({
           className="shrink-0"
         >
           {markState.kind === "done" ? <IconCheck size={16} /> : <IconRocket size={16} />}
-          {markState.kind === "saving" ? "Saving..." : markState.kind === "done" ? "Marked" : "Mark as published"}
+          {markState.kind === "saving"
+            ? t(locale, "dashboard.website.starter.markSaving")
+            : markState.kind === "done"
+              ? t(locale, "dashboard.website.starter.markMarked")
+              : t(locale, "dashboard.website.starter.markAsPublished")}
         </Button>
       </Card>
     </div>

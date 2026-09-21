@@ -9,6 +9,7 @@ import { CopyBlock } from "@/components/ui/CopyBlock";
 import { downloadDataUrl } from "@/lib/couponImage";
 import { renderReviewSignPng } from "@/lib/reviewSignImage";
 import { buildGoogleReviewUrl } from "@/lib/reviews";
+import { t, useLocale } from "@/lib/i18n";
 
 /**
  * Always rendered for every business, regardless of rating or review
@@ -23,6 +24,7 @@ export function GetMoreReviews({
   businessName: string;
   placeId: string | null;
 }) {
+  const locale = useLocale();
   const reviewUrl = placeId ? buildGoogleReviewUrl(placeId) : null;
 
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export function GetMoreReviews({
     } catch (err) {
       setDownloadState({
         kind: "error",
-        message: err instanceof Error ? err.message : "Could not generate the image — try again.",
+        message: err instanceof Error ? err.message : t(locale, "dashboard.websiteReviews.downloadErrorFallback"),
       });
     }
   }
@@ -69,39 +71,41 @@ export function GetMoreReviews({
       <div>
         <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-brass">
           <IconTrendingUp size={14} />
-          Growth lever
+          {t(locale, "dashboard.websiteReviews.growthLeverEyebrow")}
         </div>
         <h2 className="mt-1.5 font-serif text-2xl font-bold text-ink">
-          Get more reviews — your #1 growth lever
+          {t(locale, "dashboard.websiteReviews.growthLeverHeading")}
         </h2>
         <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">
-          No matter your score, more reviews bring in more customers. Make leaving one effortless.
+          {t(locale, "dashboard.websiteReviews.growthLeverIntro")}
         </p>
       </div>
 
       {!reviewUrl ? (
         <Card className="p-5 text-sm text-ink-soft">
-          We don&apos;t have a Google place ID on file for this business yet, so we can&apos;t build
-          a real review link. Re-save it from a fresh Google Places lookup to pick one up.
+          {t(locale, "dashboard.websiteReviews.noPlaceIdMessage")}
         </Card>
       ) : (
         <Card className="p-5">
-          <div className="mb-5 font-serif text-lg font-semibold text-ink">Make it effortless</div>
+          <div className="mb-5 font-serif text-lg font-semibold text-ink">
+            {t(locale, "dashboard.websiteReviews.makeItEffortlessHeading")}
+          </div>
           <div className="grid grid-cols-1 gap-6 nav:grid-cols-2">
             <div className="flex flex-col gap-3">
-              <div className="text-[13px] font-medium text-ink-soft">Shareable review link</div>
+              <div className="text-[13px] font-medium text-ink-soft">
+                {t(locale, "dashboard.websiteReviews.shareableLinkLabel")}
+              </div>
               <CopyBlock text={reviewUrl} rows={2} />
-              <p className="text-[12px] text-ink-mute">
-                Opens the real Google &quot;write a review&quot; screen for your listing. Text it to a
-                customer, post it, or add it to a receipt or follow-up email — you send it yourself.
-              </p>
+              <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.websiteReviews.shareableLinkHelper")}</p>
             </div>
 
             <div className="flex flex-col items-center gap-3 border-t border-paper-line pt-5 nav:border-l nav:border-t-0 nav:pl-6 nav:pt-0">
-              <div className="w-full text-[13px] font-medium text-ink-soft">Front-desk QR code</div>
+              <div className="w-full text-[13px] font-medium text-ink-soft">
+                {t(locale, "dashboard.websiteReviews.qrCodeLabel")}
+              </div>
               {qrDataUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={qrDataUrl} alt="Scan to leave a Google review" className="h-32 w-32" />
+                <img src={qrDataUrl} alt={t(locale, "dashboard.websiteReviews.qrAlt")} className="h-32 w-32" />
               ) : (
                 <div className="flex h-32 w-32 items-center justify-center rounded-lg bg-paper text-ink-mute">
                   <IconQrcode size={28} />
@@ -114,14 +118,14 @@ export function GetMoreReviews({
                 className="w-full"
               >
                 <IconDownload size={16} />
-                {downloadState.kind === "working" ? "Generating..." : "Download"}
+                {downloadState.kind === "working"
+                  ? t(locale, "dashboard.websiteReviews.downloadGenerating")
+                  : t(locale, "dashboard.websiteReviews.downloadButton")}
               </Button>
               {downloadState.kind === "error" && (
                 <p className="text-[12px] text-red">{downloadState.message}</p>
               )}
-              <p className="text-[12px] text-ink-mute">
-                A print-ready sign for your counter or window — you print and place it yourself.
-              </p>
+              <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.websiteReviews.qrHelper")}</p>
             </div>
           </div>
         </Card>

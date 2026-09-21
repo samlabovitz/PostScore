@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { IconCheck, IconCopy } from "@tabler/icons-react";
 import { Button } from "@/components/ui/Button";
+import { t, useLocale } from "@/lib/i18n";
 
 /** A pre-written block of text with a "Copy" button — used anywhere the
  * app hands the owner text to paste somewhere themselves (a share
  * caption, a Google post draft, an FAQ draft). Copying never sends the
  * text anywhere on its own. */
 export function CopyBlock({ text, rows }: { text: string; rows?: number }) {
+  const locale = useLocale();
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -34,7 +36,7 @@ export function CopyBlock({ text, rows }: { text: string; rows?: number }) {
       />
       <Button type="button" variant="default" size="sm" onClick={handleCopy} className="w-fit">
         {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
-        {copied ? "Copied" : "Copy text"}
+        {copied ? t(locale, "dashboard.common.copied") : t(locale, "dashboard.common.copyText")}
       </Button>
     </div>
   );

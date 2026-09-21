@@ -9,6 +9,7 @@ import { StarterSiteBuilder } from "./StarterSiteBuilder";
 import { WebsiteVisualAnalysis } from "./WebsiteVisualAnalysis";
 import { WebsiteScoreBreakdown } from "./WebsiteScoreBreakdown";
 import { CollapsibleGenerator } from "./CollapsibleGenerator";
+import { normalizeLocale, t } from "@/lib/i18n";
 
 export default async function WebsitePage({ params }: { params: { id: string } }) {
   const result = await getWebsitePageData(params.id);
@@ -21,6 +22,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
   }
 
   const { data, builderOffer } = result;
+  const locale = normalizeLocale(data.language);
   const profile = resolveBizProfile(data.category, data.primaryType, data.businessTypeOverride);
   const faq = renderFaq(profile.faq, { name: data.businessName, address: data.address });
   const hasWebsite = !!data.website && data.website.trim().length > 0;
@@ -28,7 +30,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
   const generator = (
     <StarterSiteBuilder
       businessId={params.id}
-      businessName={data.businessName ?? "Your business"}
+      businessName={data.businessName ?? t(locale, "dashboard.website.businessNameFallback")}
       category={data.category}
       phone={data.phone}
       address={data.address}
@@ -63,13 +65,9 @@ export default async function WebsitePage({ params }: { params: { id: string } }
   const faqSection = (
     <div>
       <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-        FAQ draft
+        {t(locale, "dashboard.website.faqDraftHeading")}
       </div>
-      <p className="mb-3 text-sm text-ink-soft">
-        A starter FAQ for your website, based on what customers of this kind of business typically
-        ask — publishing tools are still coming together, but you&apos;re welcome to copy this in
-        today.
-      </p>
+      <p className="mb-3 text-sm text-ink-soft">{t(locale, "dashboard.website.faqDraftIntro")}</p>
       <Card className="p-5">
         <div className="flex flex-col divide-y divide-paper-line">
           {faq.map((entry) => (
@@ -101,9 +99,13 @@ export default async function WebsitePage({ params }: { params: { id: string } }
             className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
           >
             <IconArrowLeft size={15} />
-            Back to {data.businessName ?? "business"}
+            {t(locale, "dashboard.website.backTo", {
+              name: data.businessName ?? t(locale, "dashboard.website.businessFallback"),
+            })}
           </Link>
-          <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">Website</h1>
+          <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
+            {t(locale, "dashboard.website.pageTitle")}
+          </h1>
         </div>
 
         {hasWebsite ? (

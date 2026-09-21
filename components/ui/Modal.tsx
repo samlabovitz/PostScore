@@ -3,6 +3,7 @@
 import { ReactNode, useEffect } from "react";
 import { IconX } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { t, useLocale } from "@/lib/i18n";
 
 export function Modal({
   open,
@@ -17,6 +18,7 @@ export function Modal({
   children: ReactNode;
   className?: string;
 }) {
+  const locale = useLocale();
   useEffect(() => {
     if (!open) return;
     document.body.style.overflow = "hidden";
@@ -53,7 +55,7 @@ export function Modal({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t(locale, "dashboard.common.close")}
             className="rounded-md p-1 text-ink-mute hover:bg-paper hover:text-ink"
           >
             <IconX size={18} />

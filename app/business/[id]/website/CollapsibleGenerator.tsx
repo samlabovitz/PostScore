@@ -2,6 +2,7 @@
 
 import { ReactNode, useState } from "react";
 import { IconChevronDown, IconWand } from "@tabler/icons-react";
+import { t, useLocale } from "@/lib/i18n";
 
 /**
  * A thin visibility wrapper around the starter-site generator
@@ -20,6 +21,7 @@ export function CollapsibleGenerator({
   defaultExpanded: boolean;
   children: ReactNode;
 }) {
+  const locale = useLocale();
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   if (!expanded) {
@@ -31,10 +33,8 @@ export function CollapsibleGenerator({
       >
         <span className="inline-flex items-center gap-2 text-sm font-medium text-ink">
           <IconWand size={15} className="text-brass" />
-          Starter website generator
-          <span className="font-normal text-ink-mute">
-            — build a backup or fresh starting point from your real listing data
-          </span>
+          {t(locale, "dashboard.website.collapsible.title")}
+          <span className="font-normal text-ink-mute">{t(locale, "dashboard.website.collapsible.subtitle")}</span>
         </span>
         <IconChevronDown size={15} className="shrink-0 text-ink-mute" />
       </button>
@@ -49,7 +49,7 @@ export function CollapsibleGenerator({
         className="inline-flex w-fit items-center gap-1 text-[12px] font-medium text-ink-soft hover:text-ink"
       >
         <IconChevronDown size={13} className="rotate-180" />
-        Hide starter website generator
+        {t(locale, "dashboard.website.collapsible.hide")}
       </button>
       {children}
     </div>

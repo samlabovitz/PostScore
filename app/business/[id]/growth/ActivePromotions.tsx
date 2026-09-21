@@ -77,7 +77,7 @@ function PromoCard({
           </div>
         </div>
         <Pill variant="brass" className="shrink-0">
-          {redemptionLabel(promo.redemptions)}
+          {redemptionLabel(promo.redemptions, locale)}
         </Pill>
       </div>
 

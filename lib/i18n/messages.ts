@@ -424,7 +424,160 @@ export type MessageKey =
   | "dashboard.growth.shareModal.optionTextHowTo"
   | "dashboard.growth.shareModal.optionPrintTitle"
   | "dashboard.growth.shareModal.optionPrintHowTo"
-  | "dashboard.growth.shareModal.captionLabel";
+  | "dashboard.growth.shareModal.captionLabel"
+  // --- Part A: app-wide shared UI strings (components/ui/CopyBlock.tsx,
+  // components/ui/Modal.tsx, lib/promos.ts's redemptionLabel).
+  | "dashboard.common.copyText"
+  | "dashboard.common.copied"
+  | "dashboard.common.close"
+  | "dashboard.common.noRedemptionsLogged"
+  | "dashboard.common.redemptionCount.one"
+  | "dashboard.common.redemptionCount.other"
+  // --- Part B: Website section (app/business/[id]/website/*) — the
+  // section's OWN chrome only. Scoring-check label/advice/explanation
+  // text stays on content.checks.* (L3, never re-extracted here); any
+  // string sourced from config/bizProfiles.ts (L8) or lib/starterSite.ts's
+  // theme/font preset labels stays untouched data, never extracted here.
+  | "dashboard.website.backTo"
+  | "dashboard.website.businessFallback"
+  | "dashboard.website.businessNameFallback"
+  | "dashboard.website.pageTitle"
+  | "dashboard.website.faqDraftHeading"
+  | "dashboard.website.faqDraftIntro"
+  | "dashboard.website.visualAnalysisHeading"
+  | "dashboard.website.visualAnalysisSubtitle"
+  | "dashboard.website.refreshScreenshotsButton"
+  | "dashboard.website.refreshingScreenshots"
+  | "dashboard.website.refreshAvailableInError.one"
+  | "dashboard.website.refreshAvailableInError.other"
+  | "dashboard.website.noWebsiteToScreenshot"
+  | "dashboard.website.refreshErrorFallback"
+  | "dashboard.website.availableInDays.one"
+  | "dashboard.website.availableInDays.other"
+  | "dashboard.website.screenshotAlt"
+  | "dashboard.website.tapToView"
+  | "dashboard.website.couldntCapturePage"
+  | "dashboard.website.prevPageAriaLabel"
+  | "dashboard.website.nextPageAriaLabel"
+  | "dashboard.website.lightboxCouldntCapture"
+  | "dashboard.website.lightboxPageCounter"
+  | "dashboard.website.viewFullSizeAriaLabel"
+  | "dashboard.website.homepageScreenshotAlt"
+  | "dashboard.website.hideOtherPages"
+  | "dashboard.website.seeMorePages.one"
+  | "dashboard.website.seeMorePages.other"
+  | "dashboard.website.noPreviewCaptured"
+  | "dashboard.website.noPreviewCapturedNote"
+  | "dashboard.website.screenshotsCaptured"
+  | "dashboard.website.homepageLabel"
+  | "dashboard.website.scoreHeading"
+  | "dashboard.website.ptsAbbrev"
+  | "dashboard.website.technicalHeading"
+  | "dashboard.website.contentContactHeading"
+  | "dashboard.website.couldntVerifyPrefix"
+  | "dashboard.website.lighthouseScoreLabel"
+  | "dashboard.website.signalTitle"
+  | "dashboard.website.signalMeta"
+  | "dashboard.website.signalViewport"
+  | "dashboard.website.signalHeadings"
+  | "dashboard.website.outOf100"
+  | "dashboard.website.collapsible.title"
+  | "dashboard.website.collapsible.subtitle"
+  | "dashboard.website.collapsible.hide"
+  | "dashboard.website.starter.taglineSizeSmall"
+  | "dashboard.website.starter.taglineSizeMedium"
+  | "dashboard.website.starter.taglineSizeLarge"
+  | "dashboard.website.starter.placementBelow"
+  | "dashboard.website.starter.placementAbove"
+  | "dashboard.website.starter.notOnFile"
+  | "dashboard.website.starter.eyebrow"
+  | "dashboard.website.starter.headlineNoWebsite"
+  | "dashboard.website.starter.headlineUnderperforming"
+  | "dashboard.website.starter.headlineBackup"
+  | "dashboard.website.starter.subcopyNoWebsite"
+  | "dashboard.website.starter.subcopyUnderperforming"
+  | "dashboard.website.starter.subcopyBackup"
+  | "dashboard.website.starter.taglineLabel"
+  | "dashboard.website.starter.taglineOptionalHint"
+  | "dashboard.website.starter.taglinePlaceholder"
+  | "dashboard.website.starter.taglineHelper"
+  | "dashboard.website.starter.taglineStyleLabel"
+  | "dashboard.website.starter.taglineFontLabel"
+  | "dashboard.website.starter.taglineColorAriaLabel"
+  | "dashboard.website.starter.colorLabel"
+  | "dashboard.website.starter.reset"
+  | "dashboard.website.starter.sizeLabel"
+  | "dashboard.website.starter.placementLabel"
+  | "dashboard.website.starter.colorThemeLabel"
+  | "dashboard.website.starter.customAccentAriaLabel"
+  | "dashboard.website.starter.customAccentSuffix"
+  | "dashboard.website.starter.fontSectionLabel"
+  | "dashboard.website.starter.photosLabel"
+  | "dashboard.website.starter.photosOptionalHint"
+  | "dashboard.website.starter.photosHelper"
+  | "dashboard.website.starter.heroPhotoLabel"
+  | "dashboard.website.starter.removePhoto"
+  | "dashboard.website.starter.uploadHeroPhoto"
+  | "dashboard.website.starter.contentPhotosLabel"
+  | "dashboard.website.starter.removePhotoAriaLabel"
+  | "dashboard.website.starter.photoErrorFallback"
+  | "dashboard.website.starter.whatToIncludeLabel"
+  | "dashboard.website.starter.whatToIncludeHint"
+  | "dashboard.website.starter.includeAddress"
+  | "dashboard.website.starter.includePhone"
+  | "dashboard.website.starter.includeHours"
+  | "dashboard.website.starter.includeRating"
+  | "dashboard.website.starter.livePreviewLabel"
+  | "dashboard.website.starter.iframeTitle"
+  | "dashboard.website.starter.downloadSiteButton"
+  | "dashboard.website.starter.downloadHelper"
+  | "dashboard.website.starter.howToPublishHeading"
+  | "dashboard.website.starter.publishStep1"
+  | "dashboard.website.starter.publishStep2Prefix"
+  | "dashboard.website.starter.publishStep2Suffix"
+  | "dashboard.website.starter.publishStep3"
+  | "dashboard.website.starter.publishStep4"
+  | "dashboard.website.starter.publishFootnote"
+  | "dashboard.website.starter.alreadyPublishedHeading"
+  | "dashboard.website.starter.markedDoneStatus"
+  | "dashboard.website.starter.notYetMarkedStatus"
+  | "dashboard.website.starter.markErrorFallback"
+  | "dashboard.website.starter.markSaving"
+  | "dashboard.website.starter.markMarked"
+  | "dashboard.website.starter.markAsPublished"
+  // --- Part B: Website-reviews section (app/business/[id]/website-reviews/*)
+  | "dashboard.websiteReviews.backTo"
+  | "dashboard.websiteReviews.businessFallback"
+  | "dashboard.websiteReviews.pageTitle"
+  | "dashboard.websiteReviews.subtitle"
+  | "dashboard.websiteReviews.businessNameFallback"
+  | "dashboard.websiteReviews.socialProofHeading"
+  | "dashboard.websiteReviews.avgRatingLabel"
+  | "dashboard.websiteReviews.reviewVolumeLabel"
+  | "dashboard.websiteReviews.ratingVolumeExplainer"
+  | "dashboard.websiteReviews.forExampleLabel"
+  | "dashboard.websiteReviews.exampleStrongTrust"
+  | "dashboard.websiteReviews.exampleBuildingTrust"
+  | "dashboard.websiteReviews.rubricHeading"
+  | "dashboard.websiteReviews.replyAssistantLabel"
+  | "dashboard.websiteReviews.replyAssistantConnectedBody"
+  | "dashboard.websiteReviews.replyAssistantUnlockDescription"
+  | "dashboard.websiteReviews.comingSoonLabel"
+  | "dashboard.websiteReviews.autoTextTitle"
+  | "dashboard.websiteReviews.autoTextBody"
+  | "dashboard.websiteReviews.growthLeverEyebrow"
+  | "dashboard.websiteReviews.growthLeverHeading"
+  | "dashboard.websiteReviews.growthLeverIntro"
+  | "dashboard.websiteReviews.noPlaceIdMessage"
+  | "dashboard.websiteReviews.makeItEffortlessHeading"
+  | "dashboard.websiteReviews.shareableLinkLabel"
+  | "dashboard.websiteReviews.shareableLinkHelper"
+  | "dashboard.websiteReviews.qrCodeLabel"
+  | "dashboard.websiteReviews.qrAlt"
+  | "dashboard.websiteReviews.downloadGenerating"
+  | "dashboard.websiteReviews.downloadButton"
+  | "dashboard.websiteReviews.downloadErrorFallback"
+  | "dashboard.websiteReviews.qrHelper";
 
 /** The report/dashboard messages that vary by count — see tPlural below.
  * Each has a ".one" and ".other" MessageKey (the only two categories
@@ -453,7 +606,11 @@ export type PluralKeyBase =
   | "dashboard.reports.recapDayCount"
   | "dashboard.growth.view.weeklyPlanNote"
   | "dashboard.growth.coupon.atLimitMessage"
-  | "dashboard.growth.coupon.startLimitError";
+  | "dashboard.growth.coupon.startLimitError"
+  | "dashboard.common.redemptionCount"
+  | "dashboard.website.refreshAvailableInError"
+  | "dashboard.website.availableInDays"
+  | "dashboard.website.seeMorePages";
 
 // English is the dictionary every other locale falls back to via t()
 // below, so it's kept fully seeded. Other locales are deliberately
@@ -1025,6 +1182,182 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.shareModal.optionPrintHowTo":
       "Print the image and set it by the register, window, or waiting area.",
     "dashboard.growth.shareModal.captionLabel": "Pre-written caption",
+
+    // --- dashboard.common.* — Step L5 (beat 1), Part A: app-wide shared
+    // UI strings, pure extraction, byte-for-byte.
+    "dashboard.common.copyText": "Copy text",
+    "dashboard.common.copied": "Copied",
+    "dashboard.common.close": "Close",
+    "dashboard.common.noRedemptionsLogged": "No redemptions logged yet",
+    "dashboard.common.redemptionCount.one": "{count} redemption logged",
+    "dashboard.common.redemptionCount.other": "{count} redemptions logged",
+
+    // --- dashboard.website.* — Step L5 (beat 1), Part B: the Website
+    // section's own chrome. content.checks.* (L3) is never duplicated
+    // here; bizProfiles/lib/starterSite.ts preset data stays untouched.
+    "dashboard.website.backTo": "Back to {name}",
+    "dashboard.website.businessFallback": "business",
+    "dashboard.website.businessNameFallback": "Your business",
+    "dashboard.website.pageTitle": "Website",
+    "dashboard.website.faqDraftHeading": "FAQ draft",
+    "dashboard.website.faqDraftIntro":
+      "A starter FAQ for your website, based on what customers of this kind of business typically ask — publishing tools are still coming together, but you're welcome to copy this in today.",
+    "dashboard.website.visualAnalysisHeading": "Visual analysis",
+    "dashboard.website.visualAnalysisSubtitle": "What customers actually see when they visit your live site.",
+    "dashboard.website.refreshScreenshotsButton": "Refresh screenshots",
+    "dashboard.website.refreshingScreenshots": "Refreshing...",
+    "dashboard.website.refreshAvailableInError.one": "Screenshots refresh available in {count} day.",
+    "dashboard.website.refreshAvailableInError.other": "Screenshots refresh available in {count} days.",
+    "dashboard.website.noWebsiteToScreenshot": "This business has no website to screenshot.",
+    "dashboard.website.refreshErrorFallback": "Couldn't refresh screenshots — try again shortly.",
+    "dashboard.website.availableInDays.one": "Available in {count} day",
+    "dashboard.website.availableInDays.other": "Available in {count} days",
+    "dashboard.website.screenshotAlt": "Screenshot of the {label} page",
+    "dashboard.website.tapToView": "Tap to view",
+    "dashboard.website.couldntCapturePage": "Couldn't capture this page",
+    "dashboard.website.prevPageAriaLabel": "Previous page",
+    "dashboard.website.nextPageAriaLabel": "Next page",
+    "dashboard.website.lightboxCouldntCapture": "We couldn't capture this page.",
+    "dashboard.website.lightboxPageCounter": "{current} of {total}",
+    "dashboard.website.viewFullSizeAriaLabel": "View full-size homepage screenshot",
+    "dashboard.website.homepageScreenshotAlt": "Screenshot of the business's live website",
+    "dashboard.website.hideOtherPages": "Hide other pages",
+    "dashboard.website.seeMorePages.one": "See {count} more page",
+    "dashboard.website.seeMorePages.other": "See {count} more pages",
+    "dashboard.website.noPreviewCaptured": "We couldn't capture a preview of this site.",
+    "dashboard.website.noPreviewCapturedNote":
+      "Some sites block automated screenshot tools, or a preview hasn't been captured yet — this doesn't affect your Website score.",
+    "dashboard.website.screenshotsCaptured": "Screenshots captured {date}",
+    "dashboard.website.homepageLabel": "Homepage",
+    "dashboard.website.scoreHeading": "Website score",
+    "dashboard.website.ptsAbbrev": "pts",
+    "dashboard.website.technicalHeading": "Technical",
+    "dashboard.website.contentContactHeading": "Content & contact",
+    "dashboard.website.couldntVerifyPrefix": "Couldn't verify —",
+    "dashboard.website.lighthouseScoreLabel": "Lighthouse mobile score",
+    "dashboard.website.signalTitle": "Title",
+    "dashboard.website.signalMeta": "Meta description",
+    "dashboard.website.signalViewport": "Viewport",
+    "dashboard.website.signalHeadings": "Headings",
+    "dashboard.website.outOf100": "/ 100",
+    "dashboard.website.collapsible.title": "Starter website generator",
+    "dashboard.website.collapsible.subtitle":
+      "— build a backup or fresh starting point from your real listing data",
+    "dashboard.website.collapsible.hide": "Hide starter website generator",
+    "dashboard.website.starter.taglineSizeSmall": "Small",
+    "dashboard.website.starter.taglineSizeMedium": "Medium",
+    "dashboard.website.starter.taglineSizeLarge": "Large",
+    "dashboard.website.starter.placementBelow": "Below name",
+    "dashboard.website.starter.placementAbove": "Above name",
+    "dashboard.website.starter.notOnFile": "Not on file",
+    "dashboard.website.starter.eyebrow": "Starter website generator",
+    "dashboard.website.starter.headlineNoWebsite": "Turn your Google data into a real website",
+    "dashboard.website.starter.headlineUnderperforming": "Your current site may be holding you back",
+    "dashboard.website.starter.headlineBackup": "Build a backup starter site",
+    "dashboard.website.starter.subcopyNoWebsite":
+      "No website is one of the biggest gaps in your PostScore. This builds a real, mobile-friendly one-page site from your actual Google listing data — nothing invented.",
+    "dashboard.website.starter.subcopyUnderperforming":
+      "Your website's real, measured PostScore is lower than what this free starter template would score for the same business — see the visual analysis above for exactly why. A clean rebuild could score better.",
+    "dashboard.website.starter.subcopyBackup":
+      "You already have a website on file, so this is here if you ever want a simple backup or a fresh starting point — not something you need.",
+    "dashboard.website.starter.taglineLabel": "Tagline",
+    "dashboard.website.starter.taglineOptionalHint": "(optional — write your own)",
+    "dashboard.website.starter.taglinePlaceholder": "e.g. Fresh, fast, made-to-order",
+    "dashboard.website.starter.taglineHelper":
+      "Left blank, the site just won't show a tagline — we never write one for you.",
+    "dashboard.website.starter.taglineStyleLabel": "Tagline style",
+    "dashboard.website.starter.taglineFontLabel": "Font",
+    "dashboard.website.starter.taglineColorAriaLabel": "Tagline color",
+    "dashboard.website.starter.colorLabel": "Color",
+    "dashboard.website.starter.reset": "Reset",
+    "dashboard.website.starter.sizeLabel": "Size",
+    "dashboard.website.starter.placementLabel": "Placement",
+    "dashboard.website.starter.colorThemeLabel": "Color theme",
+    "dashboard.website.starter.customAccentAriaLabel": "Custom accent color",
+    "dashboard.website.starter.customAccentSuffix": " · custom accent",
+    "dashboard.website.starter.fontSectionLabel": "Font",
+    "dashboard.website.starter.photosLabel": "Photos",
+    "dashboard.website.starter.photosOptionalHint": "(optional — your own photos)",
+    "dashboard.website.starter.photosHelper":
+      "Embedded directly in the downloaded file — each photo adds to its size, so a few good ones go further than many.",
+    "dashboard.website.starter.heroPhotoLabel": "Hero photo",
+    "dashboard.website.starter.removePhoto": "Remove",
+    "dashboard.website.starter.uploadHeroPhoto": "Upload a hero photo",
+    "dashboard.website.starter.contentPhotosLabel": "Content photos ({current}/{max})",
+    "dashboard.website.starter.removePhotoAriaLabel": "Remove photo",
+    "dashboard.website.starter.photoErrorFallback": "Couldn't process that photo — try a different image file.",
+    "dashboard.website.starter.whatToIncludeLabel": "What to include",
+    "dashboard.website.starter.whatToIncludeHint": "(all from your real listing)",
+    "dashboard.website.starter.includeAddress": "Address & map",
+    "dashboard.website.starter.includePhone": "Phone (click-to-call)",
+    "dashboard.website.starter.includeHours": "Hours",
+    "dashboard.website.starter.includeRating": "Rating & reviews",
+    "dashboard.website.starter.livePreviewLabel": "Live preview — exactly what you'll download",
+    "dashboard.website.starter.iframeTitle": "Live preview of your starter site",
+    "dashboard.website.starter.downloadSiteButton": "Download site (HTML)",
+    "dashboard.website.starter.downloadHelper":
+      "A single, real HTML file — the same one shown above, with your chosen color theme, font, tagline, and sections baked right in. Open it in any browser, or upload it to any host to make it live.",
+    "dashboard.website.starter.howToPublishHeading": "How to publish it",
+    "dashboard.website.starter.publishStep1": "1. Download the file above.",
+    "dashboard.website.starter.publishStep2Prefix": "2. Upload it as ",
+    "dashboard.website.starter.publishStep2Suffix":
+      " to any static host — a free option like Netlify Drop or GitHub Pages, or your existing hosting/cPanel if you have one.",
+    "dashboard.website.starter.publishStep3": "3. That gives you a real, public URL for the site.",
+    "dashboard.website.starter.publishStep4":
+      "4. Add that URL to your Google Business Profile's website field, then re-save this business from Google Places here so PostScore picks it up.",
+    "dashboard.website.starter.publishFootnote":
+      "Downloading this file doesn't change your PostScore by itself — the Website points land only once the real site is live at a real URL, Google shows it on your listing, and a re-scan confirms it. That's the same honest rule every check on this app follows.",
+    "dashboard.website.starter.alreadyPublishedHeading": "Already published it?",
+    "dashboard.website.starter.markedDoneStatus":
+      "Marked as pending — we'll confirm it for real the next time we re-scan your listing.",
+    "dashboard.website.starter.notYetMarkedStatus":
+      "This flags it on your action plan as pending — it still only completes once a re-scan verifies the real site.",
+    "dashboard.website.starter.markErrorFallback": "Couldn't save that — try again.",
+    "dashboard.website.starter.markSaving": "Saving...",
+    "dashboard.website.starter.markMarked": "Marked",
+    "dashboard.website.starter.markAsPublished": "Mark as published",
+
+    // --- dashboard.websiteReviews.* — Step L5 (beat 1), Part B.
+    "dashboard.websiteReviews.backTo": "Back to {name}",
+    "dashboard.websiteReviews.businessFallback": "business",
+    "dashboard.websiteReviews.pageTitle": "Reviews & Replies",
+    "dashboard.websiteReviews.subtitle":
+      "Everything here is your real Google data, or clearly labeled as coming soon — nothing fabricated.",
+    "dashboard.websiteReviews.businessNameFallback": "Your business",
+    "dashboard.websiteReviews.socialProofHeading": "Your review social proof",
+    "dashboard.websiteReviews.avgRatingLabel": "Average rating",
+    "dashboard.websiteReviews.reviewVolumeLabel": "Review volume",
+    "dashboard.websiteReviews.ratingVolumeExplainer":
+      "Rating and volume work together, not separately: a great rating from a handful of reviews doesn't carry much weight — customers (and Google) trust it more once it's backed by real volume. Building both together does more for how you're perceived than either alone.",
+    "dashboard.websiteReviews.forExampleLabel": "For example:",
+    "dashboard.websiteReviews.exampleStrongTrust": "{target}★ from 200 reviews — strong trust",
+    "dashboard.websiteReviews.exampleBuildingTrust": "{target}★ from 5 reviews — still building trust",
+    "dashboard.websiteReviews.rubricHeading": "The rubric behind your review score",
+    "dashboard.websiteReviews.replyAssistantLabel": "Reply assistant",
+    "dashboard.websiteReviews.replyAssistantConnectedBody":
+      "Your Google Business Profile is connected — reading your actual reviews and drafting replies is a later update, not live yet. Nothing fabricated in the meantime.",
+    "dashboard.websiteReviews.replyAssistantUnlockDescription":
+      "Drafting replies to your actual reviews needs real Google Business Profile access — we only get your rating and review count today, not individual review content or authors. Connect your profile to unlock it.",
+    "dashboard.websiteReviews.comingSoonLabel": "Coming soon",
+    "dashboard.websiteReviews.autoTextTitle": "Auto-text customers after their visit",
+    "dashboard.websiteReviews.autoTextBody":
+      "Automatically texting a review link after a visit needs a way to know who visited and when — we don't have that yet. For now, sharing the link or sign above is on you.",
+    "dashboard.websiteReviews.growthLeverEyebrow": "Growth lever",
+    "dashboard.websiteReviews.growthLeverHeading": "Get more reviews — your #1 growth lever",
+    "dashboard.websiteReviews.growthLeverIntro":
+      "No matter your score, more reviews bring in more customers. Make leaving one effortless.",
+    "dashboard.websiteReviews.noPlaceIdMessage":
+      "We don't have a Google place ID on file for this business yet, so we can't build a real review link. Re-save it from a fresh Google Places lookup to pick one up.",
+    "dashboard.websiteReviews.makeItEffortlessHeading": "Make it effortless",
+    "dashboard.websiteReviews.shareableLinkLabel": "Shareable review link",
+    "dashboard.websiteReviews.shareableLinkHelper":
+      'Opens the real Google "write a review" screen for your listing. Text it to a customer, post it, or add it to a receipt or follow-up email — you send it yourself.',
+    "dashboard.websiteReviews.qrCodeLabel": "Front-desk QR code",
+    "dashboard.websiteReviews.qrAlt": "Scan to leave a Google review",
+    "dashboard.websiteReviews.downloadGenerating": "Generating...",
+    "dashboard.websiteReviews.downloadButton": "Download",
+    "dashboard.websiteReviews.downloadErrorFallback": "Could not generate the image — try again.",
+    "dashboard.websiteReviews.qrHelper": "A print-ready sign for your counter or window — you print and place it yourself.",
   },
   es: {
     "language.en": "Inglés",
@@ -1459,6 +1792,157 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.shareModal.optionPrintTitle": "Imprímalo para el mostrador",
     "dashboard.growth.shareModal.optionPrintHowTo": "Imprima la imagen y colóquela junto a la caja, la ventana o la zona de espera.",
     "dashboard.growth.shareModal.captionLabel": "Texto pre-escrito",
+
+    // --- dashboard.common.* / dashboard.website.* / dashboard.websiteReviews.*
+    // — reviewed Spanish translations for Step L5 (beat 1)'s shared UI +
+    // Website + Website-reviews extraction. dashboard.website.excludedPoints.*
+    // and dashboard.website.allVerified already had es values from L3 and
+    // are not repeated here.
+    "dashboard.common.copyText": "Copiar texto",
+    "dashboard.common.copied": "Copiado",
+    "dashboard.common.close": "Cerrar",
+    "dashboard.common.noRedemptionsLogged": "Aún no se han registrado canjes",
+    "dashboard.common.redemptionCount.one": "{count} canje registrado",
+    "dashboard.common.redemptionCount.other": "{count} canjes registrados",
+    "dashboard.website.backTo": "Volver a {name}",
+    "dashboard.website.businessFallback": "negocio",
+    "dashboard.website.businessNameFallback": "Su negocio",
+    "dashboard.website.pageTitle": "Sitio web",
+    "dashboard.website.faqDraftHeading": "Borrador de preguntas frecuentes",
+    "dashboard.website.faqDraftIntro": "Una sección inicial de preguntas frecuentes para su sitio web, basada en lo que suelen preguntar los clientes de este tipo de negocio — las herramientas de publicación aún se están desarrollando, pero puede copiar esto hoy mismo.",
+    "dashboard.website.visualAnalysisHeading": "Análisis visual",
+    "dashboard.website.visualAnalysisSubtitle": "Lo que los clientes ven realmente cuando visitan su sitio en vivo.",
+    "dashboard.website.refreshScreenshotsButton": "Actualizar capturas de pantalla",
+    "dashboard.website.refreshingScreenshots": "Actualizando...",
+    "dashboard.website.refreshAvailableInError.one": "La actualización de capturas estará disponible en {count} día.",
+    "dashboard.website.refreshAvailableInError.other": "La actualización de capturas estará disponible en {count} días.",
+    "dashboard.website.noWebsiteToScreenshot": "Este negocio no tiene un sitio web del que tomar capturas.",
+    "dashboard.website.refreshErrorFallback": "No se pudieron actualizar las capturas — inténtelo de nuevo en un momento.",
+    "dashboard.website.availableInDays.one": "Disponible en {count} día",
+    "dashboard.website.availableInDays.other": "Disponible en {count} días",
+    "dashboard.website.screenshotAlt": "Captura de pantalla de la página {label}",
+    "dashboard.website.tapToView": "Pulse para ver",
+    "dashboard.website.couldntCapturePage": "No se pudo capturar esta página",
+    "dashboard.website.prevPageAriaLabel": "Página anterior",
+    "dashboard.website.nextPageAriaLabel": "Página siguiente",
+    "dashboard.website.lightboxCouldntCapture": "No pudimos capturar esta página.",
+    "dashboard.website.lightboxPageCounter": "{current} de {total}",
+    "dashboard.website.viewFullSizeAriaLabel": "Ver la captura de la página de inicio a tamaño completo",
+    "dashboard.website.homepageScreenshotAlt": "Captura de pantalla del sitio web en vivo del negocio",
+    "dashboard.website.hideOtherPages": "Ocultar otras páginas",
+    "dashboard.website.seeMorePages.one": "Ver {count} página más",
+    "dashboard.website.seeMorePages.other": "Ver {count} páginas más",
+    "dashboard.website.noPreviewCaptured": "No pudimos capturar una vista previa de este sitio.",
+    "dashboard.website.noPreviewCapturedNote": "Algunos sitios bloquean las herramientas automáticas de captura, o aún no se ha capturado una vista previa — esto no afecta su puntuación de Sitio web.",
+    "dashboard.website.screenshotsCaptured": "Capturas tomadas el {date}",
+    "dashboard.website.homepageLabel": "Página de inicio",
+    "dashboard.website.scoreHeading": "Puntuación del sitio web",
+    "dashboard.website.ptsAbbrev": "pts",
+    "dashboard.website.technicalHeading": "Técnico",
+    "dashboard.website.contentContactHeading": "Contenido y contacto",
+    "dashboard.website.couldntVerifyPrefix": "No se pudo verificar —",
+    "dashboard.website.lighthouseScoreLabel": "Puntuación móvil de Lighthouse",
+    "dashboard.website.signalTitle": "Título",
+    "dashboard.website.signalMeta": "Meta descripción",
+    "dashboard.website.signalViewport": "Viewport",
+    "dashboard.website.signalHeadings": "Encabezados",
+    "dashboard.website.outOf100": "/ 100",
+    "dashboard.website.collapsible.title": "Generador de sitio web inicial",
+    "dashboard.website.collapsible.subtitle": "— cree una copia de seguridad o un punto de partida nuevo a partir de los datos reales de su ficha",
+    "dashboard.website.collapsible.hide": "Ocultar el generador de sitio web inicial",
+    "dashboard.website.starter.taglineSizeSmall": "Pequeño",
+    "dashboard.website.starter.taglineSizeMedium": "Mediano",
+    "dashboard.website.starter.taglineSizeLarge": "Grande",
+    "dashboard.website.starter.placementBelow": "Debajo del nombre",
+    "dashboard.website.starter.placementAbove": "Encima del nombre",
+    "dashboard.website.starter.notOnFile": "No registrado",
+    "dashboard.website.starter.eyebrow": "Generador de sitio web inicial",
+    "dashboard.website.starter.headlineNoWebsite": "Convierta sus datos de Google en un sitio web real",
+    "dashboard.website.starter.headlineUnderperforming": "Su sitio actual podría estar frenándolo",
+    "dashboard.website.starter.headlineBackup": "Cree un sitio inicial de respaldo",
+    "dashboard.website.starter.subcopyNoWebsite": "No tener un sitio web es una de las mayores deficiencias en su PostScore. Esto crea uno real, apto para móviles, de una sola página, a partir de los datos reales de su ficha de Google — nada inventado.",
+    "dashboard.website.starter.subcopyUnderperforming": "El PostScore real y medido de su sitio web es más bajo que el que obtendría esta plantilla inicial gratuita para el mismo negocio — vea el análisis visual de arriba para saber exactamente por qué. Una reconstrucción limpia podría obtener una mejor puntuación.",
+    "dashboard.website.starter.subcopyBackup": "Ya tiene un sitio web registrado, así que esto está aquí por si alguna vez quiere una copia de seguridad sencilla o un nuevo punto de partida — no es algo que necesite.",
+    "dashboard.website.starter.taglineLabel": "Eslogan",
+    "dashboard.website.starter.taglineOptionalHint": "(opcional — escriba el suyo)",
+    "dashboard.website.starter.taglinePlaceholder": "p. ej. Fresco, rápido, hecho al momento",
+    "dashboard.website.starter.taglineHelper": "Si lo deja en blanco, el sitio simplemente no mostrará un eslogan — nunca escribimos uno por usted.",
+    "dashboard.website.starter.taglineStyleLabel": "Estilo del eslogan",
+    "dashboard.website.starter.taglineFontLabel": "Fuente",
+    "dashboard.website.starter.taglineColorAriaLabel": "Color del eslogan",
+    "dashboard.website.starter.colorLabel": "Color",
+    "dashboard.website.starter.reset": "Restablecer",
+    "dashboard.website.starter.sizeLabel": "Tamaño",
+    "dashboard.website.starter.placementLabel": "Ubicación",
+    "dashboard.website.starter.colorThemeLabel": "Tema de color",
+    "dashboard.website.starter.customAccentAriaLabel": "Color de acento personalizado",
+    "dashboard.website.starter.customAccentSuffix": " · acento personalizado",
+    "dashboard.website.starter.fontSectionLabel": "Fuente",
+    "dashboard.website.starter.photosLabel": "Fotos",
+    "dashboard.website.starter.photosOptionalHint": "(opcional — sus propias fotos)",
+    "dashboard.website.starter.photosHelper": "Se incrustan directamente en el archivo descargado — cada foto aumenta su tamaño, así que unas pocas buenas rinden más que muchas.",
+    "dashboard.website.starter.heroPhotoLabel": "Foto principal",
+    "dashboard.website.starter.removePhoto": "Quitar",
+    "dashboard.website.starter.uploadHeroPhoto": "Suba una foto principal",
+    "dashboard.website.starter.contentPhotosLabel": "Fotos de contenido ({current}/{max})",
+    "dashboard.website.starter.removePhotoAriaLabel": "Quitar foto",
+    "dashboard.website.starter.photoErrorFallback": "No se pudo procesar esa foto — pruebe con un archivo de imagen diferente.",
+    "dashboard.website.starter.whatToIncludeLabel": "Qué incluir",
+    "dashboard.website.starter.whatToIncludeHint": "(todo de su ficha real)",
+    "dashboard.website.starter.includeAddress": "Dirección y mapa",
+    "dashboard.website.starter.includePhone": "Teléfono (clic para llamar)",
+    "dashboard.website.starter.includeHours": "Horario",
+    "dashboard.website.starter.includeRating": "Calificación y reseñas",
+    "dashboard.website.starter.livePreviewLabel": "Vista previa en vivo — exactamente lo que descargará",
+    "dashboard.website.starter.iframeTitle": "Vista previa en vivo de su sitio inicial",
+    "dashboard.website.starter.downloadSiteButton": "Descargar sitio (HTML)",
+    "dashboard.website.starter.downloadHelper": "Un único archivo HTML real — el mismo que se muestra arriba, con el tema de color, la fuente, el eslogan y las secciones que eligió ya integrados. Ábralo en cualquier navegador, o súbalo a cualquier alojamiento para ponerlo en vivo.",
+    "dashboard.website.starter.howToPublishHeading": "Cómo publicarlo",
+    "dashboard.website.starter.publishStep1": "1. Descargue el archivo de arriba.",
+    "dashboard.website.starter.publishStep2Prefix": "2. Súbalo como ",
+    "dashboard.website.starter.publishStep2Suffix": " a cualquier alojamiento estático — una opción gratuita como Netlify Drop o GitHub Pages, o su alojamiento/cPanel actual si tiene uno.",
+    "dashboard.website.starter.publishStep3": "3. Eso le da una URL real y pública para el sitio.",
+    "dashboard.website.starter.publishStep4": "4. Agregue esa URL al campo de sitio web de su Perfil de Negocio de Google, luego vuelva a guardar este negocio desde Google Places aquí para que PostScore lo detecte.",
+    "dashboard.website.starter.publishFootnote": "Descargar este archivo no cambia su PostScore por sí solo — los puntos de Sitio web se acreditan únicamente cuando el sitio real está en vivo en una URL real, Google lo muestra en su ficha y un nuevo análisis lo confirma. Es la misma regla honesta que sigue cada comprobación de esta app.",
+    "dashboard.website.starter.alreadyPublishedHeading": "¿Ya lo publicó?",
+    "dashboard.website.starter.markedDoneStatus": "Marcado como pendiente — lo confirmaremos de verdad la próxima vez que analicemos su ficha.",
+    "dashboard.website.starter.notYetMarkedStatus": "Esto lo marca como pendiente en su plan de acción — aún se completa solo cuando un nuevo análisis verifica el sitio real.",
+    "dashboard.website.starter.markErrorFallback": "No se pudo guardar — inténtelo de nuevo.",
+    "dashboard.website.starter.markSaving": "Guardando...",
+    "dashboard.website.starter.markMarked": "Marcado",
+    "dashboard.website.starter.markAsPublished": "Marcar como publicado",
+    "dashboard.websiteReviews.backTo": "Volver a {name}",
+    "dashboard.websiteReviews.businessFallback": "negocio",
+    "dashboard.websiteReviews.pageTitle": "Reseñas y respuestas",
+    "dashboard.websiteReviews.subtitle": "Todo lo que hay aquí son sus datos reales de Google, o está claramente marcado como próximamente — nada inventado.",
+    "dashboard.websiteReviews.businessNameFallback": "Su negocio",
+    "dashboard.websiteReviews.socialProofHeading": "Su prueba social de reseñas",
+    "dashboard.websiteReviews.avgRatingLabel": "Calificación promedio",
+    "dashboard.websiteReviews.reviewVolumeLabel": "Volumen de reseñas",
+    "dashboard.websiteReviews.ratingVolumeExplainer": "La calificación y el volumen funcionan juntos, no por separado: una gran calificación con un puñado de reseñas no tiene mucho peso — los clientes (y Google) confían más en ella cuando está respaldada por un volumen real. Desarrollar ambos a la vez hace más por cómo lo perciben que cualquiera de los dos por separado.",
+    "dashboard.websiteReviews.forExampleLabel": "Por ejemplo:",
+    "dashboard.websiteReviews.exampleStrongTrust": "{target}★ de 200 reseñas — confianza sólida",
+    "dashboard.websiteReviews.exampleBuildingTrust": "{target}★ de 5 reseñas — aún generando confianza",
+    "dashboard.websiteReviews.rubricHeading": "El criterio detrás de su puntuación de reseñas",
+    "dashboard.websiteReviews.replyAssistantLabel": "Asistente de respuestas",
+    "dashboard.websiteReviews.replyAssistantConnectedBody": "Su Perfil de Negocio de Google está conectado — leer sus reseñas reales y redactar respuestas es una actualización futura, aún no está disponible. Nada inventado mientras tanto.",
+    "dashboard.websiteReviews.replyAssistantUnlockDescription": "Redactar respuestas a sus reseñas reales requiere acceso real al Perfil de Negocio de Google — hoy solo obtenemos su calificación y su número de reseñas, no el contenido ni los autores de cada reseña. Conecte su perfil para desbloquearlo.",
+    "dashboard.websiteReviews.comingSoonLabel": "Próximamente",
+    "dashboard.websiteReviews.autoTextTitle": "Enviar mensajes automáticos a los clientes tras su visita",
+    "dashboard.websiteReviews.autoTextBody": "Enviar automáticamente un enlace de reseña tras una visita requiere una forma de saber quién visitó y cuándo — aún no la tenemos. Por ahora, compartir el enlace o el cartel de arriba depende de usted.",
+    "dashboard.websiteReviews.growthLeverEyebrow": "Palanca de crecimiento",
+    "dashboard.websiteReviews.growthLeverHeading": "Consiga más reseñas — su palanca de crecimiento n.º 1",
+    "dashboard.websiteReviews.growthLeverIntro": "Sea cual sea su puntuación, más reseñas atraen a más clientes. Haga que dejar una sea muy fácil.",
+    "dashboard.websiteReviews.noPlaceIdMessage": "Aún no tenemos un ID de lugar de Google registrado para este negocio, así que no podemos crear un enlace de reseña real. Vuelva a guardarlo desde una búsqueda nueva en Google Places para obtener uno.",
+    "dashboard.websiteReviews.makeItEffortlessHeading": "Hágalo muy fácil",
+    "dashboard.websiteReviews.shareableLinkLabel": "Enlace de reseña para compartir",
+    "dashboard.websiteReviews.shareableLinkHelper": "Abre la pantalla real de Google para \"escribir una reseña\" de su ficha. Envíelo por mensaje a un cliente, publíquelo o agréguelo a un recibo o correo de seguimiento — usted mismo lo envía.",
+    "dashboard.websiteReviews.qrCodeLabel": "Código QR para el mostrador",
+    "dashboard.websiteReviews.qrAlt": "Escanee para dejar una reseña en Google",
+    "dashboard.websiteReviews.downloadGenerating": "Generando...",
+    "dashboard.websiteReviews.downloadButton": "Descargar",
+    "dashboard.websiteReviews.downloadErrorFallback": "No se pudo generar la imagen — inténtelo de nuevo.",
+    "dashboard.websiteReviews.qrHelper": "Un cartel listo para imprimir para su mostrador o ventana — usted mismo lo imprime y lo coloca.",
   },
 };
 

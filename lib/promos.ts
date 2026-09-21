@@ -6,6 +6,8 @@
 // for display, and generating the hand-off text the owner copies and
 // posts themselves.
 
+import { DEFAULT_LOCALE, t, tPlural, type Locale } from "@/lib/i18n";
+
 /** The database also enforces this via a trigger (see
  * enforce_max_active_promos in supabase/schema.sql) — this constant is
  * only for UI copy/disabling, never the actual guarantee. */
@@ -27,11 +29,13 @@ export interface PromoRow {
 }
 
 /** A short, honest label for how a promo is doing — never implies
- * anything beyond the real stored tally. */
-export function redemptionLabel(count: number): string {
-  if (count === 0) return "No redemptions logged yet";
-  if (count === 1) return "1 redemption logged";
-  return `${count} redemptions logged`;
+ * anything beyond the real stored tally. `locale` defaults to
+ * DEFAULT_LOCALE, same reasoning as lib/scoring.ts's scoreBusiness(), so
+ * every existing caller that doesn't pass one keeps getting the exact
+ * same English text this file used to hardcode. */
+export function redemptionLabel(count: number, locale: Locale = DEFAULT_LOCALE): string {
+  if (count === 0) return t(locale, "dashboard.common.noRedemptionsLogged");
+  return tPlural(locale, "dashboard.common.redemptionCount", count);
 }
 
 interface CaptionInput {

@@ -12,7 +12,7 @@ import {
   type Suggestion,
   type WebsiteAnalysis,
 } from "@/lib/scoring";
-import { t, tPlural, useLocale } from "@/lib/i18n";
+import { t, tPlural, useLocale, type MessageKey } from "@/lib/i18n";
 
 /** "Infrastructure" checks first, "what's actually on the page" checks
  * second — a deliberate, honest-only grouping (no check is invented or
@@ -54,7 +54,8 @@ const ROW_STYLES: Record<RowState, { icon: typeof IconCheck; iconWrap: string; b
  * RenderedContentSignals in lib/scoring.ts). true/false is a genuine
  * Lighthouse-confirmed fact (green/red); null means that specific audit
  * wasn't in the response — shown neutral, never guessed. */
-function SignalChip({ label, value }: { label: string; value: boolean | null }) {
+function SignalChip({ label, value }: { label: MessageKey; value: boolean | null }) {
+  const locale = useLocale();
   const Icon = value === true ? IconCheck : value === false ? IconX : IconMinus;
   return (
     <span
@@ -64,7 +65,7 @@ function SignalChip({ label, value }: { label: string; value: boolean | null }) 
       )}
     >
       <Icon size={11} />
-      {label}
+      {t(locale, label)}
     </span>
   );
 }
@@ -78,6 +79,7 @@ function CheckRow({
   suggestion: Suggestion | undefined;
   websiteAnalysis: WebsiteAnalysis | null;
 }) {
+  const locale = useLocale();
   const state = deriveRowState(check);
   const style = ROW_STYLES[state];
   const Icon = style.icon;
@@ -116,7 +118,11 @@ function CheckRow({
         </div>
 
         <p className="mt-2 text-[13px] text-ink-soft">
-          {state === "excluded" && <span className="mr-1.5 font-medium text-ink-mute">Couldn&apos;t verify —</span>}
+          {state === "excluded" && (
+            <span className="mr-1.5 font-medium text-ink-mute">
+              {t(locale, "dashboard.website.couldntVerifyPrefix")}
+            </span>
+          )}
           {check.explanation}
         </p>
 
@@ -127,7 +133,7 @@ function CheckRow({
         {performanceScore !== null && (
           <div className="mt-2">
             <span className="inline-flex items-center gap-1.5 rounded-md bg-paper px-2 py-1 text-[11.5px] font-medium text-ink-soft">
-              Lighthouse mobile score
+              {t(locale, "dashboard.website.lighthouseScoreLabel")}
               <span className="font-semibold text-ink">{performanceScore}/100</span>
             </span>
           </div>
@@ -135,10 +141,10 @@ function CheckRow({
 
         {recovered && (
           <div className="mt-2 flex flex-wrap gap-1.5">
-            <SignalChip label="Title" value={recovered.hasTitle} />
-            <SignalChip label="Meta description" value={recovered.hasMetaDescription} />
-            <SignalChip label="Viewport" value={recovered.hasViewportTag} />
-            <SignalChip label="Headings" value={recovered.hasHeadings} />
+            <SignalChip label="dashboard.website.signalTitle" value={recovered.hasTitle} />
+            <SignalChip label="dashboard.website.signalMeta" value={recovered.hasMetaDescription} />
+            <SignalChip label="dashboard.website.signalViewport" value={recovered.hasViewportTag} />
+            <SignalChip label="dashboard.website.signalHeadings" value={recovered.hasHeadings} />
           </div>
         )}
       </div>
@@ -147,6 +153,7 @@ function CheckRow({
 }
 
 function WebsiteScoreRing({ relativeScore, grade }: { relativeScore: number | null; grade: Grade | null }) {
+  const locale = useLocale();
   const size = 100;
   const viewBox = 120;
   const radius = 50;
@@ -184,7 +191,7 @@ function WebsiteScoreRing({ relativeScore, grade }: { relativeScore: number | nu
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <div className="font-serif text-[24px] font-bold leading-none text-ink">{pct === null ? "—" : Math.round(pct)}</div>
-        <div className="mt-0.5 text-[10px] text-ink-mute">/ 100</div>
+        <div className="mt-0.5 text-[10px] text-ink-mute">{t(locale, "dashboard.website.outOf100")}</div>
       </div>
     </div>
   );
@@ -235,7 +242,9 @@ export function WebsiteScoreBreakdown({
 
   return (
     <div>
-      <div className="mb-3 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">Website score</div>
+      <div className="mb-3 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
+        {t(locale, "dashboard.website.scoreHeading")}
+      </div>
 
       <Card className="mb-5 flex flex-col items-start gap-4 nav:flex-row nav:items-center">
         <WebsiteScoreRing relativeScore={websiteCategory.relativeScore} grade={grade} />
@@ -244,7 +253,9 @@ export function WebsiteScoreBreakdown({
             <span className="font-serif text-2xl font-bold text-ink">
               {formatPoints(websiteCategory.earnedPoints)}
             </span>
-            <span className="text-sm text-ink-mute">/ {formatPoints(websiteCategory.possiblePoints)} pts</span>
+            <span className="text-sm text-ink-mute">
+              / {formatPoints(websiteCategory.possiblePoints)} {t(locale, "dashboard.website.ptsAbbrev")}
+            </span>
             {grade && (
               <span
                 className={cn(
@@ -270,7 +281,9 @@ export function WebsiteScoreBreakdown({
 
       <div className="flex flex-col gap-5">
         <div>
-          <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">Technical</div>
+          <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
+            {t(locale, "dashboard.website.technicalHeading")}
+          </div>
           <Card className="p-5">
             <div className="flex flex-col divide-y divide-paper-line">
               {technicalChecks.map((check) => (
@@ -287,7 +300,7 @@ export function WebsiteScoreBreakdown({
 
         <div>
           <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-            Content &amp; contact
+            {t(locale, "dashboard.website.contentContactHeading")}
           </div>
           <Card className="p-5">
             <div className="flex flex-col divide-y divide-paper-line">

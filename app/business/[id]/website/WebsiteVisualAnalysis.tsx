@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { SCREENSHOT_REFRESH_COOLDOWN_DAYS, type WebsiteAnalysis, type WebsiteAnalysisPage } from "@/lib/scoring";
 import { refreshWebsiteScreenshots } from "@/app/actions/websiteScreenshots";
+import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 
 const COOLDOWN_MS = SCREENSHOT_REFRESH_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -27,12 +28,21 @@ function daysRemainingUntil(targetMs: number): number {
   return Math.max(1, Math.ceil((targetMs - Date.now()) / DAY_MS));
 }
 
-/** "Sep 11, 2026" — used only for the honest "Screenshots captured ..."
- * caption below, read from lastScreenshotRefreshAt (the real capture
- * date), never checkedAt (which updates on every re-scan regardless of
- * whether screenshots were touched — see saveBusiness's doc comment). */
-function formatCaptureDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+/** "Sep 11, 2026" (or its real Spanish equivalent) — used only for the
+ * honest "Screenshots captured ..." caption below, read from
+ * lastScreenshotRefreshAt (the real capture date), never checkedAt
+ * (which updates on every re-scan regardless of whether screenshots were
+ * touched — see saveBusiness's doc comment). Same approach as
+ * formatMonthLabel in lib/i18n/format.ts: a real Intl.DateTimeFormat
+ * keyed off the business's own locale, not a hardcoded "en-US" — for
+ * locale "en" this produces the exact same "Sep 11, 2026" style output
+ * toLocaleDateString("en-US", ...) used to. Deliberately no timeZone
+ * override (unlike formatMonthLabel's UTC pin): lastScreenshotRefreshAt
+ * is a real timestamp, not a UTC-midnight-only date, so this keeps
+ * reading it in whatever timezone the browser already runs in, exactly
+ * as toLocaleDateString did before. */
+function formatCaptureDate(iso: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" }).format(new Date(iso));
 }
 
 /**
@@ -53,6 +63,7 @@ function RefreshScreenshotsControl({
   businessId: string;
   lastScreenshotRefreshAt: string | null;
 }) {
+  const locale = useLocale();
   const router = useRouter();
   const [state, setState] = useState<
     { kind: "idle" } | { kind: "refreshing" } | { kind: "error"; message: string }
@@ -73,13 +84,13 @@ function RefreshScreenshotsControl({
     }
     if (result.status === "too_soon") {
       const days = daysRemainingUntil(new Date(result.nextAvailableAt).getTime());
-      setState({ kind: "error", message: `Screenshots refresh available in ${days} day${days === 1 ? "" : "s"}.` });
+      setState({ kind: "error", message: tPlural(locale, "dashboard.website.refreshAvailableInError", days) });
     } else if (result.status === "no_website") {
-      setState({ kind: "error", message: "This business has no website to screenshot." });
+      setState({ kind: "error", message: t(locale, "dashboard.website.noWebsiteToScreenshot") });
     } else if (result.status === "error") {
       setState({ kind: "error", message: result.message });
     } else {
-      setState({ kind: "error", message: "Couldn't refresh screenshots — try again shortly." });
+      setState({ kind: "error", message: t(locale, "dashboard.website.refreshErrorFallback") });
     }
   }
 
@@ -87,11 +98,13 @@ function RefreshScreenshotsControl({
     <div className="flex flex-col items-start gap-1 nav:items-end">
       <Button variant="default" size="sm" onClick={handleRefresh} disabled={isTooSoon || state.kind === "refreshing"}>
         <IconRefresh size={13} className={cn(state.kind === "refreshing" && "animate-spin")} />
-        {state.kind === "refreshing" ? "Refreshing..." : "Refresh screenshots"}
+        {state.kind === "refreshing"
+          ? t(locale, "dashboard.website.refreshingScreenshots")
+          : t(locale, "dashboard.website.refreshScreenshotsButton")}
       </Button>
       {isTooSoon && state.kind !== "error" && (
         <span className="text-[11.5px] text-ink-mute">
-          Available in {daysRemaining} day{daysRemaining === 1 ? "" : "s"}
+          {tPlural(locale, "dashboard.website.availableInDays", daysRemaining)}
         </span>
       )}
       {state.kind === "error" && <span className="text-[11.5px] text-red">{state.message}</span>}
@@ -106,6 +119,7 @@ function AdditionalPageThumbnail({
   page: WebsiteAnalysisPage;
   onOpen: () => void;
 }) {
+  const locale = useLocale();
   return (
     <button
       type="button"
@@ -120,7 +134,7 @@ function AdditionalPageThumbnail({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={page.screenshotUrl}
-          alt={`Screenshot of the ${page.label} page`}
+          alt={t(locale, "dashboard.website.screenshotAlt", { label: page.label })}
           className="h-20 w-full object-cover object-top"
         />
       ) : (
@@ -131,7 +145,9 @@ function AdditionalPageThumbnail({
       <div className="px-2 py-1.5">
         <div className="truncate text-[12px] font-medium text-ink">{page.label}</div>
         <div className="text-[11px] text-ink-mute">
-          {page.screenshotUrl ? "Tap to view" : "Couldn't capture this page"}
+          {page.screenshotUrl
+            ? t(locale, "dashboard.website.tapToView")
+            : t(locale, "dashboard.website.couldntCapturePage")}
         </div>
       </div>
     </button>
@@ -163,6 +179,7 @@ function ScreenshotLightbox({
   onIndexChange: (index: number) => void;
   onClose: () => void;
 }) {
+  const locale = useLocale();
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (pages.length < 2) return;
@@ -184,7 +201,7 @@ function ScreenshotLightbox({
             <button
               type="button"
               onClick={() => onIndexChange((index - 1 + pages.length) % pages.length)}
-              aria-label="Previous page"
+              aria-label={t(locale, "dashboard.website.prevPageAriaLabel")}
               className="absolute left-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-ink/60 text-white transition-colors hover:bg-ink/80"
             >
               <IconChevronLeft size={18} />
@@ -192,7 +209,7 @@ function ScreenshotLightbox({
             <button
               type="button"
               onClick={() => onIndexChange((index + 1) % pages.length)}
-              aria-label="Next page"
+              aria-label={t(locale, "dashboard.website.nextPageAriaLabel")}
               className="absolute right-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-ink/60 text-white transition-colors hover:bg-ink/80"
             >
               <IconChevronRight size={18} />
@@ -203,19 +220,19 @@ function ScreenshotLightbox({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={page.screenshotUrl}
-            alt={`Screenshot of the ${page.label} page`}
+            alt={t(locale, "dashboard.website.screenshotAlt", { label: page.label })}
             className="w-full rounded-md"
           />
         ) : (
           <div className="flex flex-col items-center justify-center gap-2 rounded-md bg-paper py-24 text-center">
             <IconPhotoOff size={28} className="text-ink-mute" />
-            <p className="text-sm text-ink-soft">We couldn&apos;t capture this page.</p>
+            <p className="text-sm text-ink-soft">{t(locale, "dashboard.website.lightboxCouldntCapture")}</p>
           </div>
         )}
       </div>
       {pages.length > 1 && (
         <p className="mt-3 text-center text-[12px] text-ink-mute">
-          {index + 1} of {pages.length}
+          {t(locale, "dashboard.website.lightboxPageCounter", { current: index + 1, total: pages.length })}
         </p>
       )}
     </Modal>
@@ -243,6 +260,7 @@ export function WebsiteVisualAnalysis({
   businessId: string;
   websiteAnalysis: WebsiteAnalysis | null;
 }) {
+  const locale = useLocale();
   const [expanded, setExpanded] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
@@ -251,7 +269,7 @@ export function WebsiteVisualAnalysis({
 
   const lightboxPages: LightboxPage[] = websiteAnalysis
     ? [
-        { label: "Homepage", screenshotUrl: websiteAnalysis.screenshotUrl },
+        { label: t(locale, "dashboard.website.homepageLabel"), screenshotUrl: websiteAnalysis.screenshotUrl },
         ...additionalPages.map((p) => ({ label: p.label, screenshotUrl: p.screenshotUrl })),
       ]
     : [];
@@ -261,9 +279,9 @@ export function WebsiteVisualAnalysis({
       <div className="mb-3 flex flex-col items-start justify-between gap-3 nav:flex-row nav:items-end">
         <div>
           <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-            Visual analysis
+            {t(locale, "dashboard.website.visualAnalysisHeading")}
           </div>
-          <p className="text-sm text-ink-soft">What customers actually see when they visit your live site.</p>
+          <p className="text-sm text-ink-soft">{t(locale, "dashboard.website.visualAnalysisSubtitle")}</p>
         </div>
         <RefreshScreenshotsControl
           businessId={businessId}
@@ -278,13 +296,13 @@ export function WebsiteVisualAnalysis({
               <button
                 type="button"
                 onClick={() => setLightboxIndex(0)}
-                aria-label="View full-size homepage screenshot"
+                aria-label={t(locale, "dashboard.website.viewFullSizeAriaLabel")}
                 className="block w-full text-left"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={websiteAnalysis.screenshotUrl}
-                  alt="Screenshot of the business's live website"
+                  alt={t(locale, "dashboard.website.homepageScreenshotAlt")}
                   className="max-h-[440px] w-full border-b border-paper-line object-cover object-top"
                 />
               </button>
@@ -296,8 +314,8 @@ export function WebsiteVisualAnalysis({
                   className="flex items-center justify-center gap-1.5 border-b border-paper-line px-3 py-2 text-[12.5px] font-medium text-ink-soft hover:text-ink"
                 >
                   {expanded
-                    ? "Hide other pages"
-                    : `See ${additionalPages.length} more page${additionalPages.length === 1 ? "" : "s"}`}
+                    ? t(locale, "dashboard.website.hideOtherPages")
+                    : tPlural(locale, "dashboard.website.seeMorePages", additionalPages.length)}
                   <IconChevronDown size={13} className={cn("transition-transform", expanded && "rotate-180")} />
                 </button>
               )}
@@ -305,13 +323,8 @@ export function WebsiteVisualAnalysis({
           ) : (
             <div className="flex flex-col items-center justify-center gap-2 p-10 text-center">
               <IconPhoto size={28} className="text-ink-mute" />
-              <p className="text-sm text-ink-soft">
-                We couldn&apos;t capture a preview of this site.
-              </p>
-              <p className="text-[12px] text-ink-mute">
-                Some sites block automated screenshot tools, or a preview hasn&apos;t been captured
-                yet — this doesn&apos;t affect your Website score.
-              </p>
+              <p className="text-sm text-ink-soft">{t(locale, "dashboard.website.noPreviewCaptured")}</p>
+              <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.website.noPreviewCapturedNote")}</p>
             </div>
           )}
 
@@ -325,7 +338,9 @@ export function WebsiteVisualAnalysis({
         </Card>
         {websiteAnalysis?.lastScreenshotRefreshAt && (
           <p className="px-0.5 text-[11.5px] text-ink-mute">
-            Screenshots captured {formatCaptureDate(websiteAnalysis.lastScreenshotRefreshAt)}
+            {t(locale, "dashboard.website.screenshotsCaptured", {
+              date: formatCaptureDate(websiteAnalysis.lastScreenshotRefreshAt, locale),
+            })}
           </p>
         )}
       </div>
