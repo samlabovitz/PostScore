@@ -10,6 +10,7 @@ import {
   type CompetitorSourceBusiness,
 } from "@/lib/competitors";
 import { resolveBizProfile } from "@/config/bizProfiles";
+import { normalizeLocale } from "@/lib/i18n";
 
 interface CompetitorBusinessRow {
   place_id: string;
@@ -116,7 +117,12 @@ export async function getCompetitorsWithClient(
 
   try {
     const result = await findAndScoreCompetitors(subject);
-    const competitorNoun = resolveBizProfile(row.category, row.primary_type, row.business_type_override).competitorNoun;
+    const competitorNoun = resolveBizProfile(
+      row.category,
+      row.primary_type,
+      row.business_type_override,
+      normalizeLocale(row.language)
+    ).competitorNoun;
     return {
       status: "ok",
       businessName: row.name,
@@ -359,7 +365,7 @@ export async function getLocalBenchmark(businessId: string): Promise<GetLocalBen
 
   const { data: business, error: businessError } = await supabase
     .from("businesses")
-    .select("category, primary_type, business_type_override")
+    .select("category, primary_type, business_type_override, language")
     .eq("id", businessId)
     .single();
 
@@ -370,7 +376,8 @@ export async function getLocalBenchmark(businessId: string): Promise<GetLocalBen
   const competitorNoun = resolveBizProfile(
     business.category,
     business.primary_type,
-    business.business_type_override
+    business.business_type_override,
+    normalizeLocale(business.language)
   ).competitorNoun;
 
   const snapshot = await getLatestCompetitorSnapshot(businessId);

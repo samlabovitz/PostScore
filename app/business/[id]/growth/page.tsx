@@ -22,7 +22,8 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   }
 
   const { business } = summary;
-  const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override);
+  const locale = normalizeLocale(business.language);
+  const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override, locale);
 
   const scored = await scoreBusinessById(params.id);
 
@@ -41,7 +42,6 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   }
 
   const input = businessRowToScoringInput(scored.business);
-  const locale = normalizeLocale(scored.business.language);
   const actionPlanResult = await getActionPlan(
     params.id,
     input,

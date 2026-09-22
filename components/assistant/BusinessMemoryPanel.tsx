@@ -21,7 +21,7 @@ import {
 } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { updateBusinessProfile, updateBusinessTypeOverride } from "@/app/actions/businesses";
-import { BIZ_PROFILE_OPTIONS } from "@/config/bizProfiles";
+import { getBizProfileOptions } from "@/config/bizProfiles";
 import type { AssistantBusinessProfile } from "@/lib/assistant";
 import { t, useLocale } from "@/lib/i18n";
 
@@ -184,6 +184,7 @@ function BusinessTypeField({
   onSaved: (result: { businessType: string; businessTypeId: string; overridden: boolean }) => void;
 }) {
   const locale = useLocale();
+  const options = getBizProfileOptions(locale);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -198,7 +199,7 @@ function BusinessTypeField({
     setSaving(false);
 
     if (result.status === "ok") {
-      const option = BIZ_PROFILE_OPTIONS.find((o) => o.id === nextId);
+      const option = options.find((o) => o.id === nextId);
       onSaved({
         businessType: option?.label ?? nextId,
         businessTypeId: nextId,
@@ -223,7 +224,7 @@ function BusinessTypeField({
           disabled={saving}
           className="rounded-lg border border-paper-deep bg-white px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-ink-soft disabled:opacity-60"
         >
-          {BIZ_PROFILE_OPTIONS.map((o) => (
+          {options.map((o) => (
             <option key={o.id} value={o.id}>
               {o.label}
             </option>

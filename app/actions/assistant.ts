@@ -109,12 +109,17 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     return { status: "error", message: scored.message };
   }
 
-  const autoDetectedProfile = bizProfile(summaryResult.business.category, summaryResult.business.primary_type);
+  const autoDetectedProfile = bizProfile(
+    summaryResult.business.category,
+    summaryResult.business.primary_type,
+    locale
+  );
   const businessTypeOverride = summaryResult.business.business_type_override ?? null;
   const profile = resolveBizProfile(
     summaryResult.business.category,
     summaryResult.business.primary_type,
-    businessTypeOverride
+    businessTypeOverride,
+    locale
   );
   const input = businessRowToScoringInput(scored.business);
   const { breakdown, suggestions } = scored.result;

@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { getPrices, getPricingAssessment } from "@/app/actions/pricing";
 import { resolveBizProfile } from "@/config/bizProfiles";
+import { normalizeLocale } from "@/lib/i18n";
 import { PricingView } from "./PricingView";
 
 export default async function PricingPage({ params }: { params: { id: string } }) {
@@ -17,7 +18,8 @@ export default async function PricingPage({ params }: { params: { id: string } }
   }
 
   const { business } = summary;
-  const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override);
+  const locale = normalizeLocale(business.language);
+  const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override, locale);
   const [pricesResult, assessmentResult] = await Promise.all([
     getPrices(params.id),
     getPricingAssessment(params.id),

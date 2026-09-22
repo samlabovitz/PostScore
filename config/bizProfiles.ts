@@ -9,6 +9,19 @@
 // changes a check, a point value, or a grade. It only decides which
 // copy (competitor noun, coupon/offer presets, growth ideas, FAQ) and
 // which features (like referrals) apply to a given business.
+//
+// Step L8 (beat 1): every user-facing string below is authored as an
+// i18n MessageKey (see lib/i18n/messages.ts's bizProfiles.*/
+// bizProfileOptions.* namespace), not literal English — see
+// BizProfileSource and localizeBizProfile() further down for how a
+// source profile becomes a real, localized BizProfile. The public
+// interfaces immediately below (BizProfile, CouponPreset, etc.) are
+// deliberately UNCHANGED from before this beat: they describe what a
+// caller of bizProfile()/resolveBizProfile()/bizProfileById() gets back
+// — real, resolved text — never the authoring-time key shape, so no
+// consumer elsewhere in the app needs to change.
+
+import { DEFAULT_LOCALE, t, type Locale, type MessageKey } from "@/lib/i18n";
 
 export interface CouponPreset {
   id: string;
@@ -139,9 +152,128 @@ export interface BizProfile {
   pricingTips: PricingTip[];
 }
 
-const SALON_PROFILE: BizProfile = {
+
+// ---------------------------------------------------------------------------
+// Authoring-time "source" shapes — internal only, never exported, never
+// seen outside this module. Every text field here holds an i18n
+// MessageKey; growActions/pricingExamples/faq additionally carry a
+// stable `id` per item (this beat's one real restructure) so each array
+// item can be its own translatable key exactly like couponPresets/
+// offerTemplates/referralPresets/pricingTips already were. See
+// localizeBizProfile() below for the one place a BizProfileSource turns
+// into the real, resolved BizProfile every other module already knows.
+// ---------------------------------------------------------------------------
+
+interface KeyedLabelDescriptionSource {
+  id: string;
+  label: MessageKey;
+  description: MessageKey;
+}
+
+interface ReferralPresetSource {
+  id: string;
+  referrerReward: MessageKey;
+  friendReward: MessageKey;
+  description: MessageKey;
+}
+
+interface CouponAnglesSource {
+  firstTime: MessageKey;
+  seasonal: MessageKey;
+  slowDay: MessageKey;
+}
+
+interface GrowActionSource {
+  id: string;
+  text: MessageKey;
+}
+
+interface PricingExampleSource {
+  id: string;
+  text: MessageKey;
+}
+
+interface FaqEntrySource {
+  id: string;
+  /** May contain {businessName} / {city} tokens, same as FaqEntry.question
+   * — resolved to real text by localizeBizProfile() first, then those
+   * tokens are substituted afterward, at render time, by renderFaq(). */
+  question: MessageKey;
+  answer: MessageKey;
+}
+
+interface BizProfileSource {
+  id: string;
+  label: MessageKey;
+  match: string[];
+  placesType: string[];
+  competitorNoun: MessageKey;
+  couponPresets: KeyedLabelDescriptionSource[];
+  offerTemplates: KeyedLabelDescriptionSource[];
+  couponAngles: CouponAnglesSource;
+  growActions: GrowActionSource[];
+  faq: FaqEntrySource[];
+  referralOk: boolean;
+  referralPresets: ReferralPresetSource[];
+  pricingExamples: PricingExampleSource[];
+  pricingTips: KeyedLabelDescriptionSource[];
+}
+
+/**
+ * The one place a BizProfileSource's i18n keys become real, localized
+ * text — called by bizProfile()/bizProfileById() (and so, transitively,
+ * resolveBizProfile()) right before returning. growActions and
+ * pricingExamples deliberately flatten back to plain string[] here (their
+ * per-item `id` was only ever needed to give each one a stable
+ * translation key — no consumer reads it), same reasoning as faq's `id`
+ * being dropped: FaqEntry stays exactly {question, answer}, matching the
+ * shape renderFaq() and every caller already expects.
+ */
+function localizeBizProfile(source: BizProfileSource, locale: Locale): BizProfile {
+  return {
+    id: source.id,
+    label: t(locale, source.label),
+    match: source.match,
+    placesType: source.placesType,
+    competitorNoun: t(locale, source.competitorNoun),
+    couponPresets: source.couponPresets.map((p) => ({
+      id: p.id,
+      label: t(locale, p.label),
+      description: t(locale, p.description),
+    })),
+    offerTemplates: source.offerTemplates.map((o) => ({
+      id: o.id,
+      label: t(locale, o.label),
+      description: t(locale, o.description),
+    })),
+    couponAngles: {
+      firstTime: t(locale, source.couponAngles.firstTime),
+      seasonal: t(locale, source.couponAngles.seasonal),
+      slowDay: t(locale, source.couponAngles.slowDay),
+    },
+    growActions: source.growActions.map((g) => t(locale, g.text)),
+    faq: source.faq.map((f) => ({
+      question: t(locale, f.question),
+      answer: t(locale, f.answer),
+    })),
+    referralOk: source.referralOk,
+    referralPresets: source.referralPresets.map((r) => ({
+      id: r.id,
+      referrerReward: t(locale, r.referrerReward),
+      friendReward: t(locale, r.friendReward),
+      description: t(locale, r.description),
+    })),
+    pricingExamples: source.pricingExamples.map((p) => t(locale, p.text)),
+    pricingTips: source.pricingTips.map((p) => ({
+      id: p.id,
+      label: t(locale, p.label),
+      description: t(locale, p.description),
+    })),
+  };
+}
+const SALON_PROFILE: BizProfileSource = {
   id: "salon",
-  label: "Salon & Personal Care",
+  label: "bizProfiles.salon.label",
   match: [
     "salon",
     "hair",
@@ -155,104 +287,106 @@ const SALON_PROFILE: BizProfile = {
     "massage",
   ],
   placesType: ["hair_salon", "beauty_salon", "nail_salon", "barber_shop", "spa", "day_spa"],
-  competitorNoun: "salons",
+  competitorNoun: "bizProfiles.salon.competitorNoun",
   couponPresets: [
     {
       id: "pct_off_next_appt",
-      label: "10% off your next appointment",
-      description: "A simple loyalty nudge — give it to anyone who books their next visit before leaving.",
+      label: "bizProfiles.salon.couponPresets.pct_off_next_appt.label",
+      description: "bizProfiles.salon.couponPresets.pct_off_next_appt.description",
     },
     {
       id: "flat_off_rebook",
-      label: "$15 off your next visit when you rebook today",
-      description: "Rewards booking ahead specifically, which smooths out your schedule.",
+      label: "bizProfiles.salon.couponPresets.flat_off_rebook.label",
+      description: "bizProfiles.salon.couponPresets.flat_off_rebook.description",
     },
     {
       id: "bring_a_friend",
-      label: "Bring a friend: you both get 15% off",
-      description: "Turns an existing client into new foot traffic without any ad spend.",
+      label: "bizProfiles.salon.couponPresets.bring_a_friend.label",
+      description: "bizProfiles.salon.couponPresets.bring_a_friend.description",
     },
   ],
   offerTemplates: [
     {
       id: "new_client_special",
-      label: "New client special: 20% off your first appointment",
-      description: "The single highest-converting offer for a service business — removes the risk of trying someone new.",
+      label: "bizProfiles.salon.offerTemplates.new_client_special.label",
+      description: "bizProfiles.salon.offerTemplates.new_client_special.description",
     },
     {
       id: "referral_credit",
-      label: "Referral reward: $10 credit for you and your friend",
-      description: "Pairs well with the coupon above — give both people a reason to act.",
+      label: "bizProfiles.salon.offerTemplates.referral_credit.label",
+      description: "bizProfiles.salon.offerTemplates.referral_credit.description",
     },
   ],
   couponAngles: {
-    firstTime: "New client special: 20% off your first appointment",
-    seasonal: "Holiday styling special: book your seasonal look this week",
-    slowDay: "20% off Tuesday & Wednesday appointments",
+    firstTime: "bizProfiles.salon.couponAngles.firstTime",
+    seasonal: "bizProfiles.salon.couponAngles.seasonal",
+    slowDay: "bizProfiles.salon.couponAngles.slowDay",
   },
   growActions: [
-    "Ask every client at checkout for a Google review — the best time is right after a great appointment.",
-    "Post real before/after photos weekly; personal-care listings live and die on photos.",
-    "Offer a small rebooking discount right at checkout so the next visit gets locked in.",
-    "Run a seasonal styling special around holidays or events people book ahead for.",
+    { id: "action1", text: "bizProfiles.salon.growActions.action1" },
+    { id: "action2", text: "bizProfiles.salon.growActions.action2" },
+    { id: "action3", text: "bizProfiles.salon.growActions.action3" },
+    { id: "action4", text: "bizProfiles.salon.growActions.action4" },
   ],
   faq: [
     {
-      question: "Do I need an appointment at {businessName}?",
-      answer: "We recommend booking ahead to guarantee your preferred time, though walk-ins may be available depending on the day.",
+      id: "item1",
+      question: "bizProfiles.salon.faq.item1.question",
+      answer: "bizProfiles.salon.faq.item1.answer",
     },
     {
-      question: "What areas does {businessName} serve near {city}?",
-      answer: "We're located in {city} and welcome clients from the surrounding area.",
+      id: "item2",
+      question: "bizProfiles.salon.faq.item2.question",
+      answer: "bizProfiles.salon.faq.item2.answer",
     },
   ],
   referralOk: true,
   referralPresets: [
     {
       id: "pct_off_both",
-      referrerReward: "$15 off your next visit",
-      friendReward: "20% off their first visit",
-      description: "The classic salon referral — rewards loyalty and removes the risk of trying someone new.",
+      referrerReward: "bizProfiles.salon.referralPresets.pct_off_both.referrerReward",
+      friendReward: "bizProfiles.salon.referralPresets.pct_off_both.friendReward",
+      description: "bizProfiles.salon.referralPresets.pct_off_both.description",
     },
     {
       id: "free_addon",
-      referrerReward: "A free add-on (blowout, brow wax, etc.) on your next visit",
-      friendReward: "10% off their first appointment",
-      description: "Costs you time and product, not cash — a good option if you'd rather not discount services directly.",
+      referrerReward: "bizProfiles.salon.referralPresets.free_addon.referrerReward",
+      friendReward: "bizProfiles.salon.referralPresets.free_addon.friendReward",
+      description: "bizProfiles.salon.referralPresets.free_addon.description",
     },
   ],
-  pricingExamples: ["Women's Haircut", "Men's Haircut", "Color & Highlights"],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.salon.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.salon.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.salon.pricingExamples.example3" },
+  ],
   pricingTips: [
     {
       id: "anchor_premium",
-      label: "Anchor with your premium service",
-      description:
-        "List your most premium color or treatment service first on your menu — even clients who choose a basic cut anchor their expectations against it, making your mid-tier services feel reasonably priced by comparison.",
+      label: "bizProfiles.salon.pricingTips.anchor_premium.label",
+      description: "bizProfiles.salon.pricingTips.anchor_premium.description",
     },
     {
       id: "consult_price_chemical",
-      label: "Price chemical services by consultation",
-      description:
-        "Hair length and thickness vary enormously; a flat price for color or treatments either underpays you on thick, long hair or overprices thin, short hair. Quote those after a quick look, not off a fixed menu price.",
+      label: "bizProfiles.salon.pricingTips.consult_price_chemical.label",
+      description: "bizProfiles.salon.pricingTips.consult_price_chemical.description",
     },
     {
       id: "good_better_best",
-      label: "Offer a good/better/best tier",
-      description:
-        "A basic blowout, a deluxe version, and a premium add-on let clients self-select their spend instead of you guessing one price that's wrong for everyone.",
+      label: "bizProfiles.salon.pricingTips.good_better_best.label",
+      description: "bizProfiles.salon.pricingTips.good_better_best.description",
     },
     {
       id: "raise_when_booked_out",
-      label: "Raise prices when you're consistently booked 1-2 weeks out",
-      description:
-        "A steadily full calendar — not just a busy Saturday — is the honest signal you're underpriced relative to demand.",
+      label: "bizProfiles.salon.pricingTips.raise_when_booked_out.label",
+      description: "bizProfiles.salon.pricingTips.raise_when_booked_out.description",
     },
   ],
 };
 
-const RESTAURANT_PROFILE: BizProfile = {
+const RESTAURANT_PROFILE: BizProfileSource = {
   id: "restaurant",
-  label: "Restaurant & Food Service",
+  label: "bizProfiles.restaurant.label",
   match: [
     "restaurant",
     "cafe",
@@ -268,97 +402,99 @@ const RESTAURANT_PROFILE: BizProfile = {
     "food",
   ],
   placesType: ["restaurant", "cafe", "bakery", "bar", "meal_takeaway"],
-  competitorNoun: "restaurants",
+  competitorNoun: "bizProfiles.restaurant.competitorNoun",
   couponPresets: [
     {
       id: "free_item_with_purchase",
-      label: "Free appetizer or dessert with any entrée",
-      description: "Feels generous without discounting your core menu price.",
+      label: "bizProfiles.restaurant.couponPresets.free_item_with_purchase.label",
+      description: "bizProfiles.restaurant.couponPresets.free_item_with_purchase.description",
     },
     {
       id: "pct_off_pickup",
-      label: "15% off pickup or online orders",
-      description: "Pushes traffic toward your cheapest-to-fulfill order channel.",
+      label: "bizProfiles.restaurant.couponPresets.pct_off_pickup.label",
+      description: "bizProfiles.restaurant.couponPresets.pct_off_pickup.description",
     },
     {
       id: "bogo_entree",
-      label: "Buy one entrée, get one 50% off (dine-in only)",
-      description: "A classic slow-night traffic driver — restrict it to your quietest hours.",
+      label: "bizProfiles.restaurant.couponPresets.bogo_entree.label",
+      description: "bizProfiles.restaurant.couponPresets.bogo_entree.description",
     },
   ],
   offerTemplates: [
     {
       id: "happy_hour",
-      label: "Happy hour: 20% off drinks, 4–6pm",
-      description: "Fills the gap between lunch and dinner rushes.",
+      label: "bizProfiles.restaurant.offerTemplates.happy_hour.label",
+      description: "bizProfiles.restaurant.offerTemplates.happy_hour.description",
     },
     {
       id: "first_online_order",
-      label: "First-time online order: free delivery",
-      description: "Removes the biggest friction point for a customer trying you for the first time.",
+      label: "bizProfiles.restaurant.offerTemplates.first_online_order.label",
+      description: "bizProfiles.restaurant.offerTemplates.first_online_order.description",
     },
   ],
   couponAngles: {
-    firstTime: "First-time online order: free delivery",
-    seasonal: "Seasonal menu special: this month's feature, 15% off",
-    slowDay: "Buy one entrée, get one 50% off — dine-in, Sunday–Tuesday",
+    firstTime: "bizProfiles.restaurant.couponAngles.firstTime",
+    seasonal: "bizProfiles.restaurant.couponAngles.seasonal",
+    slowDay: "bizProfiles.restaurant.couponAngles.slowDay",
   },
   growActions: [
-    "Ask happy diners for a Google review before they leave, or on the receipt.",
-    "Post daily or weekly specials as real photos — food photos are the single biggest driver of clicks.",
-    "Make sure your menu and prices are current on your Google listing.",
-    "Run a promotion on your slowest night of the week instead of discounting your busiest.",
+    { id: "action1", text: "bizProfiles.restaurant.growActions.action1" },
+    { id: "action2", text: "bizProfiles.restaurant.growActions.action2" },
+    { id: "action3", text: "bizProfiles.restaurant.growActions.action3" },
+    { id: "action4", text: "bizProfiles.restaurant.growActions.action4" },
   ],
   faq: [
     {
-      question: "Does {businessName} take reservations?",
-      answer: "Give us a call or check our website to see reservation availability.",
+      id: "item1",
+      question: "bizProfiles.restaurant.faq.item1.question",
+      answer: "bizProfiles.restaurant.faq.item1.answer",
     },
     {
-      question: "Does {businessName} offer takeout or delivery?",
-      answer: "Yes — order for pickup directly, or through your preferred delivery app.",
+      id: "item2",
+      question: "bizProfiles.restaurant.faq.item2.question",
+      answer: "bizProfiles.restaurant.faq.item2.answer",
     },
   ],
   referralOk: true,
   referralPresets: [
     {
       id: "free_item_both",
-      referrerReward: "A free appetizer or dessert on your next visit",
-      friendReward: "A free appetizer or dessert on their first order",
-      description: "Free items cost less than a straight discount and feel generous to both sides.",
+      referrerReward: "bizProfiles.restaurant.referralPresets.free_item_both.referrerReward",
+      friendReward: "bizProfiles.restaurant.referralPresets.free_item_both.friendReward",
+      description: "bizProfiles.restaurant.referralPresets.free_item_both.description",
     },
     {
       id: "pct_off_both",
-      referrerReward: "$10 off your next order",
-      friendReward: "15% off their first order",
-      description: "Straightforward cash-off works well for takeout and delivery orders.",
+      referrerReward: "bizProfiles.restaurant.referralPresets.pct_off_both.referrerReward",
+      friendReward: "bizProfiles.restaurant.referralPresets.pct_off_both.friendReward",
+      description: "bizProfiles.restaurant.referralPresets.pct_off_both.description",
     },
   ],
-  pricingExamples: ["Entrée", "Appetizer", "Dessert"],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.restaurant.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.restaurant.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.restaurant.pricingExamples.example3" },
+  ],
   pricingTips: [
     {
       id: "anchor_standout_dish",
-      label: "Anchor with one standout high-price dish",
-      description:
-        "A single $32 entrée on the menu makes every $18-22 entrée look reasonable by comparison, even if few people actually order the anchor item itself.",
+      label: "bizProfiles.restaurant.pricingTips.anchor_standout_dish.label",
+      description: "bizProfiles.restaurant.pricingTips.anchor_standout_dish.description",
     },
     {
       id: "steer_to_margin",
-      label: "Steer orders to your best-margin items",
-      description:
-        "Highlighting a strong-margin dish (bolding it, adding \"chef's favorite\") lifts orders toward it without discounting anything.",
+      label: "bizProfiles.restaurant.pricingTips.steer_to_margin.label",
+      description: "bizProfiles.restaurant.pricingTips.steer_to_margin.description",
     },
     {
       id: "review_prices_periodically",
-      label: "Review menu prices on a schedule, not by feel",
-      description:
-        "Many restaurants underprice for years because reprinting the menu feels like a hassle. A quarterly price review against your real food costs avoids slow margin erosion.",
+      label: "bizProfiles.restaurant.pricingTips.review_prices_periodically.label",
+      description: "bizProfiles.restaurant.pricingTips.review_prices_periodically.description",
     },
     {
       id: "bundle_combo",
-      label: "Use combo or bundle pricing",
-      description:
-        "Pairing an app or side with an entrée at a set combined price increases the average ticket without feeling like a price hike to the customer.",
+      label: "bizProfiles.restaurant.pricingTips.bundle_combo.label",
+      description: "bizProfiles.restaurant.pricingTips.bundle_combo.description",
     },
   ],
 };
@@ -370,102 +506,104 @@ const RESTAURANT_PROFILE: BizProfile = {
  * "free dessert with your entrée" is meaningless here — every offer is
  * built around the bottle/case as the unit of purchase instead.
  */
-const LIQUOR_WINE_PROFILE: BizProfile = {
+const LIQUOR_WINE_PROFILE: BizProfileSource = {
   id: "liquor_wine",
-  label: "Liquor & Wine Store",
+  label: "bizProfiles.liquor_wine.label",
   match: ["liquor", "wine shop", "spirits", "package store", "beer store"],
   placesType: ["liquor_store"],
-  competitorNoun: "liquor stores",
+  competitorNoun: "bizProfiles.liquor_wine.competitorNoun",
   couponPresets: [
     {
       id: "flat_off_purchase",
-      label: "$5 off a $30+ purchase",
-      description: "A simple threshold discount that nudges a single-bottle visit into a bigger basket.",
+      label: "bizProfiles.liquor_wine.couponPresets.flat_off_purchase.label",
+      description: "bizProfiles.liquor_wine.couponPresets.flat_off_purchase.description",
     },
     {
       id: "bottle_bogo_pct",
-      label: "Buy 2 bottles, get 10% off",
-      description: "Rewards buying more than one bottle without discounting your best sellers outright.",
+      label: "bizProfiles.liquor_wine.couponPresets.bottle_bogo_pct.label",
+      description: "bizProfiles.liquor_wine.couponPresets.bottle_bogo_pct.description",
     },
     {
       id: "case_discount",
-      label: "10% off when you buy a full case (12 bottles)",
-      description: "Standard retail case-discount math — moves volume and rewards your best customers.",
+      label: "bizProfiles.liquor_wine.couponPresets.case_discount.label",
+      description: "bizProfiles.liquor_wine.couponPresets.case_discount.description",
     },
   ],
   offerTemplates: [
     {
       id: "featured_bottle_month",
-      label: "Featured wine or spirit of the month: 15% off",
-      description: "Gives repeat customers a reason to check back, and lets you move a specific bottle.",
+      label: "bizProfiles.liquor_wine.offerTemplates.featured_bottle_month.label",
+      description: "bizProfiles.liquor_wine.offerTemplates.featured_bottle_month.description",
     },
     {
       id: "new_customer_pct",
-      label: "New customer: 10% off your first purchase",
-      description: "Low-risk way to get a first-time shopper to choose you over a bigger chain store.",
+      label: "bizProfiles.liquor_wine.offerTemplates.new_customer_pct.label",
+      description: "bizProfiles.liquor_wine.offerTemplates.new_customer_pct.description",
     },
   ],
   couponAngles: {
-    firstTime: "New customer: 10% off your first purchase",
-    seasonal: "Holiday case discount: 15% off mixed cases through New Year's",
-    slowDay: "10% off purchases on your slowest weekday",
+    firstTime: "bizProfiles.liquor_wine.couponAngles.firstTime",
+    seasonal: "bizProfiles.liquor_wine.couponAngles.seasonal",
+    slowDay: "bizProfiles.liquor_wine.couponAngles.slowDay",
   },
   growActions: [
-    "Ask regulars for a Google review at checkout — it's the fastest way to build trust with first-time shoppers.",
-    "Post real photos of new arrivals, seasonal picks, and your featured bottle of the month.",
-    "Highlight a weekly or monthly staff pick — gives repeat customers a reason to check back.",
-    "Run a case-discount promotion around holidays (Thanksgiving, New Year's, summer cookouts) when case buying spikes.",
+    { id: "action1", text: "bizProfiles.liquor_wine.growActions.action1" },
+    { id: "action2", text: "bizProfiles.liquor_wine.growActions.action2" },
+    { id: "action3", text: "bizProfiles.liquor_wine.growActions.action3" },
+    { id: "action4", text: "bizProfiles.liquor_wine.growActions.action4" },
   ],
   faq: [
     {
-      question: "Does {businessName} offer tastings or take special orders?",
-      answer: "Call or stop by to ask about upcoming tastings and special-order requests.",
+      id: "item1",
+      question: "bizProfiles.liquor_wine.faq.item1.question",
+      answer: "bizProfiles.liquor_wine.faq.item1.answer",
     },
     {
-      question: "What are {businessName}'s hours near {city}?",
-      answer: "See our current hours on our Google Business Profile listing.",
+      id: "item2",
+      question: "bizProfiles.liquor_wine.faq.item2.question",
+      answer: "bizProfiles.liquor_wine.faq.item2.answer",
     },
   ],
   referralOk: true,
   referralPresets: [
     {
       id: "credit_both",
-      referrerReward: "$5 credit toward your next purchase",
-      friendReward: "$5 off their first purchase",
-      description: "Simple cash-off works well for a straightforward retail purchase.",
+      referrerReward: "bizProfiles.liquor_wine.referralPresets.credit_both.referrerReward",
+      friendReward: "bizProfiles.liquor_wine.referralPresets.credit_both.friendReward",
+      description: "bizProfiles.liquor_wine.referralPresets.credit_both.description",
     },
     {
       id: "case_discount_referral",
-      referrerReward: "10% off your next case",
-      friendReward: "10% off their first purchase",
-      description: "Rewards your best (case-buying) customers specifically for bringing in new ones.",
+      referrerReward: "bizProfiles.liquor_wine.referralPresets.case_discount_referral.referrerReward",
+      friendReward: "bizProfiles.liquor_wine.referralPresets.case_discount_referral.friendReward",
+      description: "bizProfiles.liquor_wine.referralPresets.case_discount_referral.description",
     },
   ],
-  pricingExamples: ["Bottle of Wine", "Six-Pack of Beer", "Case (12 bottles)"],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.liquor_wine.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.liquor_wine.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.liquor_wine.pricingExamples.example3" },
+  ],
   pricingTips: [
     {
       id: "loss_leader_traffic",
-      label: "Use a few loss-leader items to drive traffic",
-      description:
-        "A handful of well-known, aggressively-priced bottles get people in the door; make it back on higher-margin wine and spirits they buy alongside them.",
+      label: "bizProfiles.liquor_wine.pricingTips.loss_leader_traffic.label",
+      description: "bizProfiles.liquor_wine.pricingTips.loss_leader_traffic.description",
     },
     {
       id: "case_bulk_discount",
-      label: "Price cases to reward bulk buying",
-      description:
-        "A standard 10-15% case discount is expected in this category — not offering one pushes case-sized purchases to a competitor who does.",
+      label: "bizProfiles.liquor_wine.pricingTips.case_bulk_discount.label",
+      description: "bizProfiles.liquor_wine.pricingTips.case_bulk_discount.description",
     },
     {
       id: "feature_margin_bottles",
-      label: "Feature your best-margin bottles at eye level",
-      description:
-        "Placement and a \"staff pick\" tag lift sales on your best-margin bottles more effectively than discounting your worst-margin ones.",
+      label: "bizProfiles.liquor_wine.pricingTips.feature_margin_bottles.label",
+      description: "bizProfiles.liquor_wine.pricingTips.feature_margin_bottles.description",
     },
     {
       id: "seasonal_pricing",
-      label: "Plan promotions around real seasonal demand spikes",
-      description:
-        "Holidays, tailgate season, and summer cookouts are when case-sized purchases naturally happen — put your promotional budget there instead of spreading it evenly all year.",
+      label: "bizProfiles.liquor_wine.pricingTips.seasonal_pricing.label",
+      description: "bizProfiles.liquor_wine.pricingTips.seasonal_pricing.description",
     },
   ],
 };
@@ -477,99 +615,104 @@ const LIQUOR_WINE_PROFILE: BizProfile = {
  * RESTAURANT_PROFILE (no prepared entrées here) — the offer structure
  * revolves around basket size and shopping frequency instead.
  */
-const GROCERY_MARKET_PROFILE: BizProfile = {
+const GROCERY_MARKET_PROFILE: BizProfileSource = {
   id: "grocery_market",
-  label: "Grocery / Market",
+  label: "bizProfiles.grocery_market.label",
   match: ["grocery", "supermarket", "convenience store", "mini mart", "corner store"],
   placesType: ["grocery_store", "supermarket", "convenience_store"],
-  competitorNoun: "grocery stores",
+  competitorNoun: "bizProfiles.grocery_market.competitorNoun",
   couponPresets: [
     {
       id: "flat_off_basket",
-      label: "$5 off a $40+ basket",
-      description: "A threshold discount sized to your typical basket, not a single item.",
+      label: "bizProfiles.grocery_market.couponPresets.flat_off_basket.label",
+      description: "bizProfiles.grocery_market.couponPresets.flat_off_basket.description",
     },
     {
       id: "weekly_special",
-      label: "This week's special: featured items discounted",
-      description: "Keeps the store feeling fresh and gives shoppers a reason to check back weekly.",
+      label: "bizProfiles.grocery_market.couponPresets.weekly_special.label",
+      description: "bizProfiles.grocery_market.couponPresets.weekly_special.description",
     },
     {
       id: "loyalty_repeat",
-      label: "Loyalty: every 10th shop, $10 off",
-      description: "Rewards shopping frequency directly — the real driver of grocery revenue.",
+      label: "bizProfiles.grocery_market.couponPresets.loyalty_repeat.label",
+      description: "bizProfiles.grocery_market.couponPresets.loyalty_repeat.description",
     },
   ],
   offerTemplates: [
     {
       id: "new_shopper_special",
-      label: "New shopper special: $10 off your first $40+ order",
-      description: "Removes the risk of switching from wherever a shopper usually goes.",
+      label: "bizProfiles.grocery_market.offerTemplates.new_shopper_special.label",
+      description: "bizProfiles.grocery_market.offerTemplates.new_shopper_special.description",
     },
     {
       id: "seasonal_produce_sale",
-      label: "Seasonal produce sale: this week's fresh picks discounted",
-      description: "Moves perishable inventory while it's at its best, and reads as genuinely fresh.",
+      label: "bizProfiles.grocery_market.offerTemplates.seasonal_produce_sale.label",
+      description: "bizProfiles.grocery_market.offerTemplates.seasonal_produce_sale.description",
     },
   ],
   couponAngles: {
-    firstTime: "New shopper special: $10 off your first $40+ order",
-    seasonal: "Seasonal produce sale: this week's fresh picks discounted",
-    slowDay: "$5 off a $40+ basket on your slowest shopping day",
+    firstTime: "bizProfiles.grocery_market.couponAngles.firstTime",
+    seasonal: "bizProfiles.grocery_market.couponAngles.seasonal",
+    slowDay: "bizProfiles.grocery_market.couponAngles.slowDay",
   },
   growActions: [
-    "Ask regular shoppers for a Google review at checkout.",
-    "Post real photos of fresh produce and this week's specials — food photos drive foot traffic.",
-    "Keep your weekly specials and hours current on your Google listing.",
-    "Start a simple loyalty program (e.g. every 10th shop, $10 off) to reward repeat shoppers.",
+    { id: "action1", text: "bizProfiles.grocery_market.growActions.action1" },
+    { id: "action2", text: "bizProfiles.grocery_market.growActions.action2" },
+    { id: "action3", text: "bizProfiles.grocery_market.growActions.action3" },
+    { id: "action4", text: "bizProfiles.grocery_market.growActions.action4" },
   ],
   faq: [
     {
-      question: "Does {businessName} offer delivery or curbside pickup?",
-      answer: "Call or check our website to see current delivery and pickup options.",
+      id: "item1",
+      question: "bizProfiles.grocery_market.faq.item1.question",
+      answer: "bizProfiles.grocery_market.faq.item1.answer",
     },
     {
-      question: "What are {businessName}'s hours near {city}?",
-      answer: "See our current hours on our Google Business Profile listing.",
+      id: "item2",
+      question: "bizProfiles.grocery_market.faq.item2.question",
+      answer: "bizProfiles.grocery_market.faq.item2.answer",
     },
   ],
   referralOk: true,
   referralPresets: [
     {
       id: "credit_both",
-      referrerReward: "$10 credit toward your next shop",
-      friendReward: "$10 off their first $40+ order",
-      description: "Store credit brings the referrer back for another shop, not just a one-time reward.",
+      referrerReward: "bizProfiles.grocery_market.referralPresets.credit_both.referrerReward",
+      friendReward: "bizProfiles.grocery_market.referralPresets.credit_both.friendReward",
+      description: "bizProfiles.grocery_market.referralPresets.credit_both.description",
     },
     {
       id: "pct_off_both",
-      referrerReward: "10% off your next shop",
-      friendReward: "10% off their first shop",
-      description: "Simple and universally understood for a basket-based purchase.",
+      referrerReward: "bizProfiles.grocery_market.referralPresets.pct_off_both.referrerReward",
+      friendReward: "bizProfiles.grocery_market.referralPresets.pct_off_both.friendReward",
+      description: "bizProfiles.grocery_market.referralPresets.pct_off_both.description",
     },
   ],
-  pricingExamples: ["Weekly Basket", "Featured Special Item", "Bulk/Case Item"],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.grocery_market.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.grocery_market.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.grocery_market.pricingExamples.example3" },
+  ],
   pricingTips: [
     {
       id: "loss_leader_weekly_specials",
-      label: "Use weekly specials as loss leaders",
-      description:
-        "A few aggressively-priced staples each week pull shoppers in; the rest of their basket is where the real margin comes from.",
+      label: "bizProfiles.grocery_market.pricingTips.loss_leader_weekly_specials.label",
+      description: "bizProfiles.grocery_market.pricingTips.loss_leader_weekly_specials.description",
     },
     {
       id: "bulk_case_pricing",
-      label: "Price bulk and case items to reward bigger baskets",
-      description: "A modest per-unit discount on multi-packs increases average basket size without discounting everyday single items.",
+      label: "bizProfiles.grocery_market.pricingTips.bulk_case_pricing.label",
+      description: "bizProfiles.grocery_market.pricingTips.bulk_case_pricing.description",
     },
     {
       id: "seasonal_produce_pricing",
-      label: "Adjust produce pricing to real seasonal supply costs",
-      description: "Produce cost swings with the season — repricing it on a schedule protects margin better than a fixed year-round price.",
+      label: "bizProfiles.grocery_market.pricingTips.seasonal_produce_pricing.label",
+      description: "bizProfiles.grocery_market.pricingTips.seasonal_produce_pricing.description",
     },
     {
       id: "loyalty_raises_frequency",
-      label: "Use loyalty rewards to raise visit frequency, not to discount margin",
-      description: "A repeat-shop reward (every 10th visit, say) grows revenue by bringing shoppers back more often, rather than cutting the price of every visit.",
+      label: "bizProfiles.grocery_market.pricingTips.loyalty_raises_frequency.label",
+      description: "bizProfiles.grocery_market.pricingTips.loyalty_raises_frequency.description",
     },
   ],
 };
@@ -580,146 +723,154 @@ const GROCERY_MARKET_PROFILE: BizProfile = {
  * bakery genuinely has no entrée to build an "appetizer or dessert with
  * your entrée" offer around; the unit here is the drink or the pastry.
  */
-const CAFE_BAKERY_PROFILE: BizProfile = {
+const CAFE_BAKERY_PROFILE: BizProfileSource = {
   id: "cafe_bakery",
-  label: "Café & Bakery",
+  label: "bizProfiles.cafe_bakery.label",
   match: ["cafe", "café", "coffee", "espresso", "bakery", "patisserie", "bakeshop"],
   placesType: ["cafe", "coffee_shop", "bakery"],
-  competitorNoun: "cafes",
+  competitorNoun: "bizProfiles.cafe_bakery.competitorNoun",
   couponPresets: [
     {
       id: "flat_off_order",
-      label: "$2 off any order of $10+",
-      description: "A low, easy threshold that fits a typical coffee-and-pastry order.",
+      label: "bizProfiles.cafe_bakery.couponPresets.flat_off_order.label",
+      description: "bizProfiles.cafe_bakery.couponPresets.flat_off_order.description",
     },
     {
       id: "free_item_with_purchase",
-      label: "Free pastry or drink with any $15+ purchase",
-      description: "Feels generous without discounting your core menu price.",
+      label: "bizProfiles.cafe_bakery.couponPresets.free_item_with_purchase.label",
+      description: "bizProfiles.cafe_bakery.couponPresets.free_item_with_purchase.description",
     },
     {
       id: "loyalty_punch",
-      label: "Buy 9 drinks, get the 10th free",
-      description: "The classic café loyalty structure — rewards habitual repeat visits.",
+      label: "bizProfiles.cafe_bakery.couponPresets.loyalty_punch.label",
+      description: "bizProfiles.cafe_bakery.couponPresets.loyalty_punch.description",
     },
   ],
   offerTemplates: [
     {
       id: "first_visit_special",
-      label: "First-time customer: free drink or pastry with any purchase",
-      description: "Removes the risk of trying somewhere new for their morning coffee run.",
+      label: "bizProfiles.cafe_bakery.offerTemplates.first_visit_special.label",
+      description: "bizProfiles.cafe_bakery.offerTemplates.first_visit_special.description",
     },
     {
       id: "morning_slow_hours",
-      label: "20% off orders before 9am",
-      description: "Fills your early slow hours instead of discounting your rush.",
+      label: "bizProfiles.cafe_bakery.offerTemplates.morning_slow_hours.label",
+      description: "bizProfiles.cafe_bakery.offerTemplates.morning_slow_hours.description",
     },
   ],
   couponAngles: {
-    firstTime: "First-time customer: free drink or pastry with any purchase",
-    seasonal: "Seasonal drink or pastry: try it this month, 15% off",
-    slowDay: "20% off orders during your slowest afternoon hours",
+    firstTime: "bizProfiles.cafe_bakery.couponAngles.firstTime",
+    seasonal: "bizProfiles.cafe_bakery.couponAngles.seasonal",
+    slowDay: "bizProfiles.cafe_bakery.couponAngles.slowDay",
   },
   growActions: [
-    "Ask happy customers for a Google review before they leave.",
-    "Post daily photos of fresh pastries, seasonal drinks, and the space itself.",
-    "Keep your menu and prices current on your Google listing.",
-    "Run a loyalty punch card (physical or digital) to reward regulars.",
+    { id: "action1", text: "bizProfiles.cafe_bakery.growActions.action1" },
+    { id: "action2", text: "bizProfiles.cafe_bakery.growActions.action2" },
+    { id: "action3", text: "bizProfiles.cafe_bakery.growActions.action3" },
+    { id: "action4", text: "bizProfiles.cafe_bakery.growActions.action4" },
   ],
   faq: [
     {
-      question: "Does {businessName} have Wi-Fi or seating to work from?",
-      answer: "Yes — stop in and ask about seating and Wi-Fi availability.",
+      id: "item1",
+      question: "bizProfiles.cafe_bakery.faq.item1.question",
+      answer: "bizProfiles.cafe_bakery.faq.item1.answer",
     },
     {
-      question: "Does {businessName} take special orders for cakes or catering?",
-      answer: "Call or stop by to ask about special orders and catering.",
+      id: "item2",
+      question: "bizProfiles.cafe_bakery.faq.item2.question",
+      answer: "bizProfiles.cafe_bakery.faq.item2.answer",
     },
   ],
   referralOk: true,
   referralPresets: [
     {
       id: "free_item_both",
-      referrerReward: "A free drink or pastry on your next visit",
-      friendReward: "A free drink or pastry on their first visit",
-      description: "Free items cost less than a straight discount and feel generous to both sides.",
+      referrerReward: "bizProfiles.cafe_bakery.referralPresets.free_item_both.referrerReward",
+      friendReward: "bizProfiles.cafe_bakery.referralPresets.free_item_both.friendReward",
+      description: "bizProfiles.cafe_bakery.referralPresets.free_item_both.description",
     },
     {
       id: "pct_off_both",
-      referrerReward: "$5 off your next order",
-      friendReward: "15% off their first order",
-      description: "Straightforward cash-off for a typical coffee-shop order.",
+      referrerReward: "bizProfiles.cafe_bakery.referralPresets.pct_off_both.referrerReward",
+      friendReward: "bizProfiles.cafe_bakery.referralPresets.pct_off_both.friendReward",
+      description: "bizProfiles.cafe_bakery.referralPresets.pct_off_both.description",
     },
   ],
-  pricingExamples: ["Coffee/Espresso Drink", "Pastry/Baked Good", "Sandwich or Light Bite"],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.cafe_bakery.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.cafe_bakery.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.cafe_bakery.pricingExamples.example3" },
+  ],
   pricingTips: [
     {
       id: "anchor_specialty_drink",
-      label: "Anchor with a specialty or premium drink",
-      description: "A $7 specialty latte on the board makes your $4.50 standard latte feel like the reasonable choice.",
+      label: "bizProfiles.cafe_bakery.pricingTips.anchor_specialty_drink.label",
+      description: "bizProfiles.cafe_bakery.pricingTips.anchor_specialty_drink.description",
     },
     {
       id: "bundle_combo",
-      label: "Use combo pricing for a drink + pastry",
-      description: "A set combined price for a drink and a pastry lifts average ticket without feeling like a price hike.",
+      label: "bizProfiles.cafe_bakery.pricingTips.bundle_combo.label",
+      description: "bizProfiles.cafe_bakery.pricingTips.bundle_combo.description",
     },
     {
       id: "review_ingredient_costs",
-      label: "Review prices as ingredient costs shift",
-      description: "Coffee, dairy, and flour costs move often; check menu pricing against real costs on a schedule rather than by feel.",
+      label: "bizProfiles.cafe_bakery.pricingTips.review_ingredient_costs.label",
+      description: "bizProfiles.cafe_bakery.pricingTips.review_ingredient_costs.description",
     },
     {
       id: "loyalty_over_discount",
-      label: "Use a loyalty punch card instead of blanket discounts",
-      description: "Rewarding the 10th visit costs less over time than discounting every visit, and it drives repeat frequency specifically.",
+      label: "bizProfiles.cafe_bakery.pricingTips.loyalty_over_discount.label",
+      description: "bizProfiles.cafe_bakery.pricingTips.loyalty_over_discount.description",
     },
   ],
 };
 
-const LAWYER_PROFILE: BizProfile = {
+const LAWYER_PROFILE: BizProfileSource = {
   id: "lawyer",
-  label: "Legal Services",
+  label: "bizProfiles.lawyer.label",
   match: ["lawyer", "attorney", "law firm", "law office", "legal services", "legal"],
   placesType: ["lawyer", "legal_services"],
-  competitorNoun: "firms",
+  competitorNoun: "bizProfiles.lawyer.competitorNoun",
   couponPresets: [
     {
       id: "free_consultation",
-      label: "Free 30-minute initial consultation",
-      description: "The standard, ethically uncomplicated way most firms lower the barrier to a first call.",
+      label: "bizProfiles.lawyer.couponPresets.free_consultation.label",
+      description: "bizProfiles.lawyer.couponPresets.free_consultation.description",
     },
     {
       id: "flat_fee_review",
-      label: "Flat-fee case review for a set price",
-      description: "Gives a price-anxious prospective client a known cost to get real advice.",
+      label: "bizProfiles.lawyer.couponPresets.flat_fee_review.label",
+      description: "bizProfiles.lawyer.couponPresets.flat_fee_review.description",
     },
   ],
   offerTemplates: [
     {
       id: "new_client_doc_review",
-      label: "New client discount on document preparation",
-      description: "A concrete, bounded discount that doesn't touch contingency or hourly case work.",
+      label: "bizProfiles.lawyer.offerTemplates.new_client_doc_review.label",
+      description: "bizProfiles.lawyer.offerTemplates.new_client_doc_review.description",
     },
   ],
   couponAngles: {
-    firstTime: "Free 30-minute initial consultation",
-    seasonal: "Year-end document review special — get your paperwork in order",
-    slowDay: "Flat-fee case review, available this week",
+    firstTime: "bizProfiles.lawyer.couponAngles.firstTime",
+    seasonal: "bizProfiles.lawyer.couponAngles.seasonal",
+    slowDay: "bizProfiles.lawyer.couponAngles.slowDay",
   },
   growActions: [
-    "Ask satisfied clients for a Google review once their matter is resolved, where doing so is ethically appropriate.",
-    "Publish a short, plain-language FAQ answering the questions {city} clients actually ask before calling.",
-    "Keep your practice areas and attorney bios current — this is often the deciding factor between two firms.",
-    "Respond calmly and professionally to any negative review; how a firm handles criticism is itself evidence to a prospective client.",
+    { id: "action1", text: "bizProfiles.lawyer.growActions.action1" },
+    { id: "action2", text: "bizProfiles.lawyer.growActions.action2" },
+    { id: "action3", text: "bizProfiles.lawyer.growActions.action3" },
+    { id: "action4", text: "bizProfiles.lawyer.growActions.action4" },
   ],
   faq: [
     {
-      question: "Does {businessName} offer a free consultation?",
-      answer: "Yes — call or use our contact form to schedule an initial consultation.",
+      id: "item1",
+      question: "bizProfiles.lawyer.faq.item1.question",
+      answer: "bizProfiles.lawyer.faq.item1.answer",
     },
     {
-      question: "What areas of law does {businessName} practice?",
-      answer: "See our practice areas page for the specific matters we handle.",
+      id: "item2",
+      question: "bizProfiles.lawyer.faq.item2.question",
+      answer: "bizProfiles.lawyer.faq.item2.answer",
     },
   ],
   // See the field's own doc comment above: referral fee arrangements are
@@ -730,31 +881,31 @@ const LAWYER_PROFILE: BizProfile = {
   // mounts when referralOk is false.
   referralOk: false,
   referralPresets: [],
-  pricingExamples: ["Initial Consultation", "Flat-Fee Document Review", "Hourly Rate"],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.lawyer.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.lawyer.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.lawyer.pricingExamples.example3" },
+  ],
   pricingTips: [
     {
       id: "flat_fee_commodity_work",
-      label: "Use flat fees for commodity work",
-      description:
-        "For predictable matters like document review or uncontested filings, a known flat fee removes the price anxiety of an open-ended hourly estimate most prospective clients don't trust.",
+      label: "bizProfiles.lawyer.pricingTips.flat_fee_commodity_work.label",
+      description: "bizProfiles.lawyer.pricingTips.flat_fee_commodity_work.description",
     },
     {
       id: "tiered_consultation",
-      label: "Offer a tiered consultation",
-      description:
-        "A free 15-minute phone screen plus a paid 1-hour strategy session lets price-sensitive prospects self-select in without you working for free indefinitely.",
+      label: "bizProfiles.lawyer.pricingTips.tiered_consultation.label",
+      description: "bizProfiles.lawyer.pricingTips.tiered_consultation.description",
     },
     {
       id: "raise_when_turning_away_work",
-      label: "Raise rates when you're turning away work",
-      description:
-        "Consistently declining matters you'd otherwise take is the real signal you're underpriced — not how long it's been since your last increase.",
+      label: "bizProfiles.lawyer.pricingTips.raise_when_turning_away_work.label",
+      description: "bizProfiles.lawyer.pricingTips.raise_when_turning_away_work.description",
     },
     {
       id: "scope_in_writing",
-      label: "Put what's included in writing",
-      description:
-        "Being explicit about what a flat fee covers (and what triggers hourly billing) up front prevents fee disputes later.",
+      label: "bizProfiles.lawyer.pricingTips.scope_in_writing.label",
+      description: "bizProfiles.lawyer.pricingTips.scope_in_writing.description",
     },
   ],
 };
@@ -768,98 +919,104 @@ const LAWYER_PROFILE: BizProfile = {
  * LAWYER_PROFILE), accounting has no comparable blanket restriction on a
  * simple client referral discount, so referrals stay on here.
  */
-const PROFESSIONAL_SERVICES_PROFILE: BizProfile = {
+const PROFESSIONAL_SERVICES_PROFILE: BizProfileSource = {
   id: "professional_services",
-  label: "Accounting & Tax",
+  label: "bizProfiles.professional_services.label",
   match: ["accountant", "accounting", "cpa", "tax service", "bookkeeping"],
   placesType: ["accounting"],
-  competitorNoun: "accounting firms",
+  competitorNoun: "bizProfiles.professional_services.competitorNoun",
   couponPresets: [
     {
       id: "free_consultation",
-      label: "Free 30-minute initial consultation",
-      description: "Lowers the barrier to a first call for a prospect who isn't sure what they need yet.",
+      label: "bizProfiles.professional_services.couponPresets.free_consultation.label",
+      description: "bizProfiles.professional_services.couponPresets.free_consultation.description",
     },
     {
       id: "flat_fee_package",
-      label: "Flat-fee package for a simple return or bookkeeping setup",
-      description: "Gives a price-anxious prospective client a known cost instead of an open-ended hourly estimate.",
+      label: "bizProfiles.professional_services.couponPresets.flat_fee_package.label",
+      description: "bizProfiles.professional_services.couponPresets.flat_fee_package.description",
     },
     {
       id: "new_client_pct",
-      label: "10% off your first year of service",
-      description: "A bounded discount that doesn't touch your ongoing engagement rate.",
+      label: "bizProfiles.professional_services.couponPresets.new_client_pct.label",
+      description: "bizProfiles.professional_services.couponPresets.new_client_pct.description",
     },
   ],
   offerTemplates: [
     {
       id: "new_client_return_discount",
-      label: "New client discount: $50 off your first tax return",
-      description: "A concrete, low-risk reason to switch from a prior preparer.",
+      label: "bizProfiles.professional_services.offerTemplates.new_client_return_discount.label",
+      description: "bizProfiles.professional_services.offerTemplates.new_client_return_discount.description",
     },
     {
       id: "bundle_bookkeeping_tax",
-      label: "Bundle monthly bookkeeping and annual tax prep into one flat package price",
-      description: "Packaging recurring and annual work together increases what a client books with you at once.",
+      label: "bizProfiles.professional_services.offerTemplates.bundle_bookkeeping_tax.label",
+      description: "bizProfiles.professional_services.offerTemplates.bundle_bookkeeping_tax.description",
     },
   ],
   couponAngles: {
-    firstTime: "Free 30-minute initial consultation",
-    seasonal: "Tax season special: book your return early and save",
-    slowDay: "Flat-fee bookkeeping setup review, available this week",
+    firstTime: "bizProfiles.professional_services.couponAngles.firstTime",
+    seasonal: "bizProfiles.professional_services.couponAngles.seasonal",
+    slowDay: "bizProfiles.professional_services.couponAngles.slowDay",
   },
   growActions: [
-    "Ask satisfied clients for a Google review once their return or engagement is complete.",
-    "Publish a short FAQ answering the tax/bookkeeping questions {city} clients actually ask.",
-    "Keep your services and credentials current on your listing — clients compare this directly.",
-    "Offer a free consultation to convert price-sensitive prospects who are still deciding.",
+    { id: "action1", text: "bizProfiles.professional_services.growActions.action1" },
+    { id: "action2", text: "bizProfiles.professional_services.growActions.action2" },
+    { id: "action3", text: "bizProfiles.professional_services.growActions.action3" },
+    { id: "action4", text: "bizProfiles.professional_services.growActions.action4" },
   ],
   faq: [
     {
-      question: "Does {businessName} offer a free consultation?",
-      answer: "Yes — call or use our contact form to schedule an initial consultation.",
+      id: "item1",
+      question: "bizProfiles.professional_services.faq.item1.question",
+      answer: "bizProfiles.professional_services.faq.item1.answer",
     },
     {
-      question: "What services does {businessName} provide?",
-      answer: "See our services page for the specific accounting and tax services we offer.",
+      id: "item2",
+      question: "bizProfiles.professional_services.faq.item2.question",
+      answer: "bizProfiles.professional_services.faq.item2.answer",
     },
   ],
   referralOk: true,
   referralPresets: [
     {
       id: "credit_both",
-      referrerReward: "$25 credit toward your next invoice",
-      friendReward: "$50 off their first service",
-      description: "Invoice credit keeps the referrer engaged as an ongoing client rather than a one-time discount.",
+      referrerReward: "bizProfiles.professional_services.referralPresets.credit_both.referrerReward",
+      friendReward: "bizProfiles.professional_services.referralPresets.credit_both.friendReward",
+      description: "bizProfiles.professional_services.referralPresets.credit_both.description",
     },
     {
       id: "pct_off_both",
-      referrerReward: "10% off your next year of service",
-      friendReward: "10% off their first year",
-      description: "Simple and proportional for an ongoing engagement rather than a one-off purchase.",
+      referrerReward: "bizProfiles.professional_services.referralPresets.pct_off_both.referrerReward",
+      friendReward: "bizProfiles.professional_services.referralPresets.pct_off_both.friendReward",
+      description: "bizProfiles.professional_services.referralPresets.pct_off_both.description",
     },
   ],
-  pricingExamples: ["Individual Tax Return", "Business Tax Return", "Monthly Bookkeeping"],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.professional_services.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.professional_services.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.professional_services.pricingExamples.example3" },
+  ],
   pricingTips: [
     {
       id: "flat_fee_commodity_work",
-      label: "Use flat fees for straightforward returns",
-      description: "A known flat fee for a simple return removes the price anxiety of an open-ended hourly estimate most prospective clients don't trust.",
+      label: "bizProfiles.professional_services.pricingTips.flat_fee_commodity_work.label",
+      description: "bizProfiles.professional_services.pricingTips.flat_fee_commodity_work.description",
     },
     {
       id: "tiered_by_complexity",
-      label: "Tier pricing by complexity, not by client",
-      description: "A simple/standard/complex return tier lets clients self-select based on their actual situation instead of one flat price under- or over-charging most of them.",
+      label: "bizProfiles.professional_services.pricingTips.tiered_by_complexity.label",
+      description: "bizProfiles.professional_services.pricingTips.tiered_by_complexity.description",
     },
     {
       id: "retainer_for_ongoing",
-      label: "Use a monthly retainer for ongoing bookkeeping",
-      description: "A predictable monthly retainer for recurring bookkeeping work is easier for a client to budget for than variable hourly billing, and smooths your own revenue.",
+      label: "bizProfiles.professional_services.pricingTips.retainer_for_ongoing.label",
+      description: "bizProfiles.professional_services.pricingTips.retainer_for_ongoing.description",
     },
     {
       id: "raise_when_turning_away_work",
-      label: "Raise rates when you're turning away work",
-      description: "Consistently declining new engagements you'd otherwise take is the real signal you're underpriced — not how long it's been since your last increase.",
+      label: "bizProfiles.professional_services.pricingTips.raise_when_turning_away_work.label",
+      description: "bizProfiles.professional_services.pricingTips.raise_when_turning_away_work.description",
     },
   ],
 };
@@ -872,9 +1029,9 @@ const PROFESSIONAL_SERVICES_PROFILE: BizProfile = {
  * business with none of those "physical" signals still gets a real,
  * useful plan — see bizProfile() and the Day 8 test notes.
  */
-const PRACTITIONER_PROFILE: BizProfile = {
+const PRACTITIONER_PROFILE: BizProfileSource = {
   id: "practitioner",
-  label: "Practitioner, Coaching & Classes",
+  label: "bizProfiles.practitioner.label",
   match: [
     "consultant",
     "consulting",
@@ -896,97 +1053,99 @@ const PRACTITIONER_PROFILE: BizProfile = {
     "driving school",
   ],
   placesType: ["consultant", "tutoring_service", "yoga_studio"],
-  competitorNoun: "practitioners",
+  competitorNoun: "bizProfiles.practitioner.competitorNoun",
   couponPresets: [
     {
       id: "pct_off_next_session",
-      label: "10% off your next session or class",
-      description: "The direct equivalent of a loyalty discount when there's no product to discount instead.",
+      label: "bizProfiles.practitioner.couponPresets.pct_off_next_session.label",
+      description: "bizProfiles.practitioner.couponPresets.pct_off_next_session.description",
     },
     {
       id: "free_intro_consult",
-      label: "Free consultation or intro session for new clients",
-      description: "Lets a new client experience your style before committing money.",
+      label: "bizProfiles.practitioner.couponPresets.free_intro_consult.label",
+      description: "bizProfiles.practitioner.couponPresets.free_intro_consult.description",
     },
     {
       id: "class_pack_bonus",
-      label: "Buy a 5-session pack, get 1 free",
-      description: "Rewards commitment and smooths out your booking calendar.",
+      label: "bizProfiles.practitioner.couponPresets.class_pack_bonus.label",
+      description: "bizProfiles.practitioner.couponPresets.class_pack_bonus.description",
     },
   ],
   offerTemplates: [
     {
       id: "new_client_special",
-      label: "New client special: 20% off your first session",
-      description: "Same logic as any service business — remove the risk of trying someone new.",
+      label: "bizProfiles.practitioner.offerTemplates.new_client_special.label",
+      description: "bizProfiles.practitioner.offerTemplates.new_client_special.description",
     },
     {
       id: "referral_free_class",
-      label: "Refer a friend: you both get a free class",
-      description: "Especially effective for group classes, where an extra attendee costs you almost nothing.",
+      label: "bizProfiles.practitioner.offerTemplates.referral_free_class.label",
+      description: "bizProfiles.practitioner.offerTemplates.referral_free_class.description",
     },
   ],
   couponAngles: {
-    firstTime: "Free consultation or intro session for new clients",
-    seasonal: "New season, new goals: 15% off a fresh session pack",
-    slowDay: "10% off weekday morning sessions",
+    firstTime: "bizProfiles.practitioner.couponAngles.firstTime",
+    seasonal: "bizProfiles.practitioner.couponAngles.seasonal",
+    slowDay: "bizProfiles.practitioner.couponAngles.slowDay",
   },
   growActions: [
-    "Ask clients for a Google review right after a session that clearly went well.",
-    "Share a short client testimonial or result monthly — this stands in for the photos a storefront business would post.",
-    "List your specialties and formats (virtual, in-person, group, 1:1) clearly, since you may not have a menu or storefront to show instead.",
-    "Offer a free intro session or class to convert new leads who are still deciding.",
+    { id: "action1", text: "bizProfiles.practitioner.growActions.action1" },
+    { id: "action2", text: "bizProfiles.practitioner.growActions.action2" },
+    { id: "action3", text: "bizProfiles.practitioner.growActions.action3" },
+    { id: "action4", text: "bizProfiles.practitioner.growActions.action4" },
   ],
   faq: [
     {
-      question: "Does {businessName} offer virtual or remote sessions?",
-      answer: "Yes — ask about virtual options if an in-person session near {city} doesn't fit your schedule.",
+      id: "item1",
+      question: "bizProfiles.practitioner.faq.item1.question",
+      answer: "bizProfiles.practitioner.faq.item1.answer",
     },
     {
-      question: "Do I need to book an appointment with {businessName} in advance?",
-      answer: "Yes, sessions are by appointment — reach out to check current availability.",
+      id: "item2",
+      question: "bizProfiles.practitioner.faq.item2.question",
+      answer: "bizProfiles.practitioner.faq.item2.answer",
     },
   ],
   referralOk: true,
   referralPresets: [
     {
       id: "free_session_both",
-      referrerReward: "A free class or session",
-      friendReward: "A free class or session",
-      description: "Especially effective for group classes, where an extra attendee costs you almost nothing.",
+      referrerReward: "bizProfiles.practitioner.referralPresets.free_session_both.referrerReward",
+      friendReward: "bizProfiles.practitioner.referralPresets.free_session_both.friendReward",
+      description: "bizProfiles.practitioner.referralPresets.free_session_both.description",
     },
     {
       id: "credit_toward_session",
-      referrerReward: "$15 credit toward your next session",
-      friendReward: "20% off their first session",
-      description: "Works well for 1:1 appointment-based practices where a free slot is a real cost.",
+      referrerReward: "bizProfiles.practitioner.referralPresets.credit_toward_session.referrerReward",
+      friendReward: "bizProfiles.practitioner.referralPresets.credit_toward_session.friendReward",
+      description: "bizProfiles.practitioner.referralPresets.credit_toward_session.description",
     },
   ],
-  pricingExamples: ["1:1 Session", "Group Class", "Intro Session"],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.practitioner.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.practitioner.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.practitioner.pricingExamples.example3" },
+  ],
   pricingTips: [
     {
       id: "package_pricing",
-      label: "Sell session packages, not just singles",
-      description:
-        "A 5- or 10-session bundle rewards commitment and smooths your calendar, and clients who've prepaid rarely no-show.",
+      label: "bizProfiles.practitioner.pricingTips.package_pricing.label",
+      description: "bizProfiles.practitioner.pricingTips.package_pricing.description",
     },
     {
       id: "low_cost_intro",
-      label: "Use a free or low-cost intro session to convert",
-      description:
-        "A short intro session converts hesitant leads without permanently discounting your real rate — keep it clearly framed as a one-time offer.",
+      label: "bizProfiles.practitioner.pricingTips.low_cost_intro.label",
+      description: "bizProfiles.practitioner.pricingTips.low_cost_intro.description",
     },
     {
       id: "raise_when_booked_out",
-      label: "Raise your rate when you're consistently booked out",
-      description:
-        "A calendar that's full 2+ weeks ahead, week after week, is real demand — not just a busy stretch — and the honest signal it's time to raise your rate.",
+      label: "bizProfiles.practitioner.pricingTips.raise_when_booked_out.label",
+      description: "bizProfiles.practitioner.pricingTips.raise_when_booked_out.description",
     },
     {
       id: "price_by_format",
-      label: "Price the same expertise differently by format",
-      description:
-        "A group class and a 1:1 session use the same skill but cost you very differently to deliver — price each by format rather than discounting your core 1:1 rate.",
+      label: "bizProfiles.practitioner.pricingTips.price_by_format.label",
+      description: "bizProfiles.practitioner.pricingTips.price_by_format.description",
     },
   ],
 };
@@ -998,98 +1157,104 @@ const PRACTITIONER_PROFILE: BizProfile = {
  * purpose: "50% off your first month" and "bring a friend" are the real
  * offers gyms run, not a "session pack" a solo practitioner would sell.
  */
-const GYM_FITNESS_PROFILE: BizProfile = {
+const GYM_FITNESS_PROFILE: BizProfileSource = {
   id: "gym_fitness",
-  label: "Gym & Fitness Studio",
+  label: "bizProfiles.gym_fitness.label",
   match: ["gym", "fitness center", "fitness studio", "crossfit", "yoga studio", "pilates studio"],
   placesType: ["gym", "fitness_center", "yoga_studio"],
-  competitorNoun: "gyms",
+  competitorNoun: "bizProfiles.gym_fitness.competitorNoun",
   couponPresets: [
     {
       id: "first_month_pct",
-      label: "50% off your first month",
-      description: "The standard, highest-converting gym offer — removes the risk of committing to a new place.",
+      label: "bizProfiles.gym_fitness.couponPresets.first_month_pct.label",
+      description: "bizProfiles.gym_fitness.couponPresets.first_month_pct.description",
     },
     {
       id: "no_enrollment_fee",
-      label: "No enrollment fee for new members this month",
-      description: "Removes a common friction point without discounting your actual membership rate.",
+      label: "bizProfiles.gym_fitness.couponPresets.no_enrollment_fee.label",
+      description: "bizProfiles.gym_fitness.couponPresets.no_enrollment_fee.description",
     },
     {
       id: "class_pack_bonus",
-      label: "Buy a 10-class pack, get 2 classes free",
-      description: "Rewards commitment and smooths out class attendance without discounting drop-in rate.",
+      label: "bizProfiles.gym_fitness.couponPresets.class_pack_bonus.label",
+      description: "bizProfiles.gym_fitness.couponPresets.class_pack_bonus.description",
     },
   ],
   offerTemplates: [
     {
       id: "new_member_special",
-      label: "New member special: 50% off your first month, no enrollment fee",
-      description: "Stacks the two lowest-risk offers into one strong first-time hook.",
+      label: "bizProfiles.gym_fitness.offerTemplates.new_member_special.label",
+      description: "bizProfiles.gym_fitness.offerTemplates.new_member_special.description",
     },
     {
       id: "bring_a_friend",
-      label: "Bring a friend: you both get a free class or session",
-      description: "Costs you one class slot, not cash — effective since a class has near-zero marginal cost per extra person.",
+      label: "bizProfiles.gym_fitness.offerTemplates.bring_a_friend.label",
+      description: "bizProfiles.gym_fitness.offerTemplates.bring_a_friend.description",
     },
   ],
   couponAngles: {
-    firstTime: "New member special: 50% off your first month, no enrollment fee",
-    seasonal: "New Year, new goals: 50% off your first month",
-    slowDay: "20% off off-peak (mid-day) class sign-ups",
+    firstTime: "bizProfiles.gym_fitness.couponAngles.firstTime",
+    seasonal: "bizProfiles.gym_fitness.couponAngles.seasonal",
+    slowDay: "bizProfiles.gym_fitness.couponAngles.slowDay",
   },
   growActions: [
-    "Ask members for a Google review after a great class or a real milestone.",
-    "Post real photos of classes, the space, and member results (with permission).",
-    "Keep your class schedule and current promotions up to date on your listing.",
-    "Run a 'bring a friend' week where existing members can bring a guest free.",
+    { id: "action1", text: "bizProfiles.gym_fitness.growActions.action1" },
+    { id: "action2", text: "bizProfiles.gym_fitness.growActions.action2" },
+    { id: "action3", text: "bizProfiles.gym_fitness.growActions.action3" },
+    { id: "action4", text: "bizProfiles.gym_fitness.growActions.action4" },
   ],
   faq: [
     {
-      question: "Does {businessName} offer a free trial class or day pass?",
-      answer: "Yes — ask about trial options when you stop by or call.",
+      id: "item1",
+      question: "bizProfiles.gym_fitness.faq.item1.question",
+      answer: "bizProfiles.gym_fitness.faq.item1.answer",
     },
     {
-      question: "What is {businessName}'s class schedule?",
-      answer: "See our current class schedule on our website or by calling.",
+      id: "item2",
+      question: "bizProfiles.gym_fitness.faq.item2.question",
+      answer: "bizProfiles.gym_fitness.faq.item2.answer",
     },
   ],
   referralOk: true,
   referralPresets: [
     {
       id: "free_month_both",
-      referrerReward: "A free month of membership",
-      friendReward: "50% off their first month",
-      description: "Membership is your recurring revenue, so rewarding with more of it costs you less than it's worth to a member.",
+      referrerReward: "bizProfiles.gym_fitness.referralPresets.free_month_both.referrerReward",
+      friendReward: "bizProfiles.gym_fitness.referralPresets.free_month_both.friendReward",
+      description: "bizProfiles.gym_fitness.referralPresets.free_month_both.description",
     },
     {
       id: "free_session_both",
-      referrerReward: "A free class or session",
-      friendReward: "A free class or session",
-      description: "Especially effective for group classes, where an extra attendee costs you almost nothing.",
+      referrerReward: "bizProfiles.gym_fitness.referralPresets.free_session_both.referrerReward",
+      friendReward: "bizProfiles.gym_fitness.referralPresets.free_session_both.friendReward",
+      description: "bizProfiles.gym_fitness.referralPresets.free_session_both.description",
     },
   ],
-  pricingExamples: ["Monthly Membership", "Drop-in Class", "Personal Training Session"],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.gym_fitness.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.gym_fitness.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.gym_fitness.pricingExamples.example3" },
+  ],
   pricingTips: [
     {
       id: "tiered_membership",
-      label: "Offer tiered membership levels",
-      description: "A basic, unlimited, and premium-with-training tier lets members self-select their spend instead of one price fitting everyone poorly.",
+      label: "bizProfiles.gym_fitness.pricingTips.tiered_membership.label",
+      description: "bizProfiles.gym_fitness.pricingTips.tiered_membership.description",
     },
     {
       id: "annual_discount",
-      label: "Discount annual memberships to lock in commitment",
-      description: "A modest discount for paying annually improves your cash flow and retention more than it costs you in margin.",
+      label: "bizProfiles.gym_fitness.pricingTips.annual_discount.label",
+      description: "bizProfiles.gym_fitness.pricingTips.annual_discount.description",
     },
     {
       id: "off_peak_pricing",
-      label: "Price off-peak sessions lower to fill slow hours",
-      description: "Discounting mid-day or early-morning slots fills capacity that would otherwise sit empty, without touching your peak-hour rate.",
+      label: "bizProfiles.gym_fitness.pricingTips.off_peak_pricing.label",
+      description: "bizProfiles.gym_fitness.pricingTips.off_peak_pricing.description",
     },
     {
       id: "raise_when_classes_full",
-      label: "Raise rates when classes are consistently full",
-      description: "Waitlisted classes week after week are the honest signal you're underpriced relative to demand.",
+      label: "bizProfiles.gym_fitness.pricingTips.raise_when_classes_full.label",
+      description: "bizProfiles.gym_fitness.pricingTips.raise_when_classes_full.description",
     },
   ],
 };
@@ -1101,98 +1266,104 @@ const GYM_FITNESS_PROFILE: BizProfile = {
  * offers are built around the first service call and seasonal
  * maintenance work instead of a purchase threshold or a booked session.
  */
-const TRADES_PROFILE: BizProfile = {
+const TRADES_PROFILE: BizProfileSource = {
   id: "trades",
-  label: "Trades & Home Services",
+  label: "bizProfiles.trades.label",
   match: ["plumber", "plumbing", "electrician", "electrical", "auto repair", "mechanic", "landscap", "lawn care", "cleaning service", "house cleaning"],
   placesType: ["plumber", "electrician", "car_repair", "landscaper", "house_cleaning"],
-  competitorNoun: "service providers",
+  competitorNoun: "bizProfiles.trades.competitorNoun",
   couponPresets: [
     {
       id: "flat_off_first_call",
-      label: "$25 off your first service call",
-      description: "Removes the risk of trying a new provider for a job that's otherwise hard to price-shop.",
+      label: "bizProfiles.trades.couponPresets.flat_off_first_call.label",
+      description: "bizProfiles.trades.couponPresets.flat_off_first_call.description",
     },
     {
       id: "seasonal_tuneup",
-      label: "Seasonal tune-up special: $20 off an inspection or maintenance visit",
-      description: "Fills your slower season with real, useful maintenance work instead of sitting idle.",
+      label: "bizProfiles.trades.couponPresets.seasonal_tuneup.label",
+      description: "bizProfiles.trades.couponPresets.seasonal_tuneup.description",
     },
     {
       id: "bundle_multiple_jobs",
-      label: "10% off when you bundle two or more jobs in one visit",
-      description: "Rewards a bigger ticket per trip out, which is where your real margin is (less drive time per dollar billed).",
+      label: "bizProfiles.trades.couponPresets.bundle_multiple_jobs.label",
+      description: "bizProfiles.trades.couponPresets.bundle_multiple_jobs.description",
     },
   ],
   offerTemplates: [
     {
       id: "new_customer_first_call",
-      label: "New customer special: $25 off your first service call",
-      description: "The single highest-converting offer for a trade — lowers the risk of trying someone new.",
+      label: "bizProfiles.trades.offerTemplates.new_customer_first_call.label",
+      description: "bizProfiles.trades.offerTemplates.new_customer_first_call.description",
     },
     {
       id: "seasonal_maintenance",
-      label: "Seasonal maintenance special (e.g. AC tune-up before summer, furnace check before winter)",
-      description: "Turns a predictable seasonal need into booked revenue before it becomes an emergency call.",
+      label: "bizProfiles.trades.offerTemplates.seasonal_maintenance.label",
+      description: "bizProfiles.trades.offerTemplates.seasonal_maintenance.description",
     },
   ],
   couponAngles: {
-    firstTime: "New customer special: $25 off your first service call",
-    seasonal: "Seasonal tune-up special: $20 off an inspection before the season changes",
-    slowDay: "10% off service calls booked on weekday mornings",
+    firstTime: "bizProfiles.trades.couponAngles.firstTime",
+    seasonal: "bizProfiles.trades.couponAngles.seasonal",
+    slowDay: "bizProfiles.trades.couponAngles.slowDay",
   },
   growActions: [
-    "Ask every satisfied customer for a Google review right after the job's done.",
-    "Post real before/after photos of completed jobs.",
-    "Keep your service area and emergency-availability info current on your listing.",
-    "Offer a seasonal tune-up special to fill your slower season with booked work.",
+    { id: "action1", text: "bizProfiles.trades.growActions.action1" },
+    { id: "action2", text: "bizProfiles.trades.growActions.action2" },
+    { id: "action3", text: "bizProfiles.trades.growActions.action3" },
+    { id: "action4", text: "bizProfiles.trades.growActions.action4" },
   ],
   faq: [
     {
-      question: "Does {businessName} offer emergency or same-day service?",
-      answer: "Call to check current availability for emergency or same-day appointments.",
+      id: "item1",
+      question: "bizProfiles.trades.faq.item1.question",
+      answer: "bizProfiles.trades.faq.item1.answer",
     },
     {
-      question: "What areas near {city} does {businessName} serve?",
-      answer: "We serve {city} and the surrounding area — call to confirm we cover your location.",
+      id: "item2",
+      question: "bizProfiles.trades.faq.item2.question",
+      answer: "bizProfiles.trades.faq.item2.answer",
     },
   ],
   referralOk: true,
   referralPresets: [
     {
       id: "flat_off_both",
-      referrerReward: "$25 off your next service call",
-      friendReward: "$25 off their first service call",
-      description: "Straightforward cash-off for a straightforward service-call business.",
+      referrerReward: "bizProfiles.trades.referralPresets.flat_off_both.referrerReward",
+      friendReward: "bizProfiles.trades.referralPresets.flat_off_both.friendReward",
+      description: "bizProfiles.trades.referralPresets.flat_off_both.description",
     },
     {
       id: "pct_off_both",
-      referrerReward: "10% off your next service",
-      friendReward: "10% off their first service",
-      description: "Scales with the job size instead of a flat amount that might be too small for a big job or too generous for a small one.",
+      referrerReward: "bizProfiles.trades.referralPresets.pct_off_both.referrerReward",
+      friendReward: "bizProfiles.trades.referralPresets.pct_off_both.friendReward",
+      description: "bizProfiles.trades.referralPresets.pct_off_both.description",
     },
   ],
-  pricingExamples: ["Service Call", "Standard Job", "Seasonal Tune-Up"],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.trades.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.trades.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.trades.pricingExamples.example3" },
+  ],
   pricingTips: [
     {
       id: "flat_vs_hourly",
-      label: "Decide flat-rate vs. hourly per job type",
-      description: "A predictable job (a drain clog, an outlet swap) is a good flat-rate candidate; open-ended diagnostic work is better billed hourly so you're not eating the risk of the unknown.",
+      label: "bizProfiles.trades.pricingTips.flat_vs_hourly.label",
+      description: "bizProfiles.trades.pricingTips.flat_vs_hourly.description",
     },
     {
       id: "travel_radius_pricing",
-      label: "Price a trip charge for jobs outside your core area",
-      description: "A modest travel fee for farther jobs protects your margin without turning away work closer to home that doesn't need one.",
+      label: "bizProfiles.trades.pricingTips.travel_radius_pricing.label",
+      description: "bizProfiles.trades.pricingTips.travel_radius_pricing.description",
     },
     {
       id: "seasonal_demand_pricing",
-      label: "Raise prices in your peak season, discount your slow one",
-      description: "Demand for most trades swings hard by season — pricing flat all year leaves money on the table in peak months and idle capacity in slow ones.",
+      label: "bizProfiles.trades.pricingTips.seasonal_demand_pricing.label",
+      description: "bizProfiles.trades.pricingTips.seasonal_demand_pricing.description",
     },
     {
       id: "bundle_multiple_jobs",
-      label: "Bundle multiple jobs at one property",
-      description: "A small discount for handling two or three jobs in one visit still nets you more per hour than two separate trips.",
+      label: "bizProfiles.trades.pricingTips.bundle_multiple_jobs.label",
+      description: "bizProfiles.trades.pricingTips.bundle_multiple_jobs.description",
     },
   ],
 };
@@ -1203,98 +1374,104 @@ const TRADES_PROFILE: BizProfile = {
  * The offer structure centers on the purchase itself (a dollar threshold,
  * a multi-item deal) rather than a visit, a session, or a service call.
  */
-const RETAIL_PROFILE: BizProfile = {
+const RETAIL_PROFILE: BizProfileSource = {
   id: "retail",
-  label: "Retail Store",
+  label: "bizProfiles.retail.label",
   match: ["boutique", "clothing store", "apparel", "gift shop", "shoe store", "retail store", "hardware store", "hardware", "florist", "flower shop", "floral"],
   placesType: ["clothing_store", "gift_shop", "shoe_store", "hardware_store", "florist"],
-  competitorNoun: "retailers",
+  competitorNoun: "bizProfiles.retail.competitorNoun",
   couponPresets: [
     {
       id: "flat_off_threshold",
-      label: "$10 off a $50+ purchase",
-      description: "A threshold discount that nudges a smaller purchase into a bigger one.",
+      label: "bizProfiles.retail.couponPresets.flat_off_threshold.label",
+      description: "bizProfiles.retail.couponPresets.flat_off_threshold.description",
     },
     {
       id: "bogo",
-      label: "Buy one, get one 50% off select items",
-      description: "A classic retail traffic driver — great for moving seasonal or overstocked items.",
+      label: "bizProfiles.retail.couponPresets.bogo.label",
+      description: "bizProfiles.retail.couponPresets.bogo.description",
     },
     {
       id: "bulk_discount",
-      label: "10% off when you buy 3 or more",
-      description: "Rewards a bigger basket without discounting a single-item purchase.",
+      label: "bizProfiles.retail.couponPresets.bulk_discount.label",
+      description: "bizProfiles.retail.couponPresets.bulk_discount.description",
     },
   ],
   offerTemplates: [
     {
       id: "welcome_offer",
-      label: "New customer welcome offer: 15% off your first purchase",
-      description: "Give first-time customers a clear reason to choose you over a competitor.",
+      label: "bizProfiles.retail.offerTemplates.welcome_offer.label",
+      description: "bizProfiles.retail.offerTemplates.welcome_offer.description",
     },
     {
       id: "seasonal_clearance",
-      label: "Seasonal sale: discount last season's stock to make room for new arrivals",
-      description: "Moves aging inventory while giving repeat customers a reason to check back.",
+      label: "bizProfiles.retail.offerTemplates.seasonal_clearance.label",
+      description: "bizProfiles.retail.offerTemplates.seasonal_clearance.description",
     },
   ],
   couponAngles: {
-    firstTime: "New customer welcome offer: 15% off your first purchase",
-    seasonal: "Seasonal sale — tied to the season or an upcoming holiday",
-    slowDay: "$10 off a $50+ purchase on your slowest shopping day",
+    firstTime: "bizProfiles.retail.couponAngles.firstTime",
+    seasonal: "bizProfiles.retail.couponAngles.seasonal",
+    slowDay: "bizProfiles.retail.couponAngles.slowDay",
   },
   growActions: [
-    "Ask happy customers for a Google review at checkout.",
-    "Post real photos of new arrivals and in-store displays weekly.",
-    "Keep your hours and current promotions up to date on your Google listing.",
-    "Run a seasonal clearance sale to move older stock and highlight new arrivals.",
+    { id: "action1", text: "bizProfiles.retail.growActions.action1" },
+    { id: "action2", text: "bizProfiles.retail.growActions.action2" },
+    { id: "action3", text: "bizProfiles.retail.growActions.action3" },
+    { id: "action4", text: "bizProfiles.retail.growActions.action4" },
   ],
   faq: [
     {
-      question: "Does {businessName} accept returns or exchanges?",
-      answer: "Yes — ask about our return and exchange policy at checkout.",
+      id: "item1",
+      question: "bizProfiles.retail.faq.item1.question",
+      answer: "bizProfiles.retail.faq.item1.answer",
     },
     {
-      question: "What are {businessName}'s hours near {city}?",
-      answer: "See our current hours on our Google Business Profile listing.",
+      id: "item2",
+      question: "bizProfiles.retail.faq.item2.question",
+      answer: "bizProfiles.retail.faq.item2.answer",
     },
   ],
   referralOk: true,
   referralPresets: [
     {
       id: "credit_both",
-      referrerReward: "$10 store credit",
-      friendReward: "$10 off their first purchase",
-      description: "Store credit keeps the referrer coming back rather than a one-time cash reward.",
+      referrerReward: "bizProfiles.retail.referralPresets.credit_both.referrerReward",
+      friendReward: "bizProfiles.retail.referralPresets.credit_both.friendReward",
+      description: "bizProfiles.retail.referralPresets.credit_both.description",
     },
     {
       id: "pct_off_both",
-      referrerReward: "10% off your next purchase",
-      friendReward: "15% off their first purchase",
-      description: "Simple and universally understood for a straightforward retail purchase.",
+      referrerReward: "bizProfiles.retail.referralPresets.pct_off_both.referrerReward",
+      friendReward: "bizProfiles.retail.referralPresets.pct_off_both.friendReward",
+      description: "bizProfiles.retail.referralPresets.pct_off_both.description",
     },
   ],
-  pricingExamples: ["Standard Item", "Featured/New Arrival", "Bulk/Multi-pack"],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.retail.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.retail.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.retail.pricingExamples.example3" },
+  ],
   pricingTips: [
     {
       id: "anchor_pricing",
-      label: "Anchor with your highest-priced item",
-      description: "Showing a premium option first makes your mid-tier items feel reasonably priced by comparison.",
+      label: "bizProfiles.retail.pricingTips.anchor_pricing.label",
+      description: "bizProfiles.retail.pricingTips.anchor_pricing.description",
     },
     {
       id: "bulk_bundle_pricing",
-      label: "Price bundles or multi-packs to increase average sale",
-      description: "A modest per-unit discount on a bundle lifts average sale size without discounting a single-item purchase.",
+      label: "bizProfiles.retail.pricingTips.bulk_bundle_pricing.label",
+      description: "bizProfiles.retail.pricingTips.bulk_bundle_pricing.description",
     },
     {
       id: "seasonal_markdowns",
-      label: "Plan a seasonal markdown schedule",
-      description: "A planned clearance cadence (end of season, holiday) protects margin better than ad hoc discounting whenever inventory feels stale.",
+      label: "bizProfiles.retail.pricingTips.seasonal_markdowns.label",
+      description: "bizProfiles.retail.pricingTips.seasonal_markdowns.description",
     },
     {
       id: "raise_on_demand",
-      label: "Raise prices on items that consistently sell out",
-      description: "An item that sells out every time you restock it is underpriced relative to real demand.",
+      label: "bizProfiles.retail.pricingTips.raise_on_demand.label",
+      description: "bizProfiles.retail.pricingTips.raise_on_demand.description",
     },
   ],
 };
@@ -1305,97 +1482,99 @@ const RETAIL_PROFILE: BizProfile = {
  * business's Google category can be missing, generic, or just not one
  * we've written a specific profile for yet.
  */
-const DEFAULT_PROFILE: BizProfile = {
+const DEFAULT_PROFILE: BizProfileSource = {
   id: "default",
-  label: "General Business",
+  label: "bizProfiles.default.label",
   match: [],
   placesType: [],
-  competitorNoun: "businesses",
+  competitorNoun: "bizProfiles.default.competitorNoun",
   couponPresets: [
     {
       id: "flat_off_purchase",
-      label: "$10 off a $50+ purchase or visit",
-      description: "Works for almost any transaction-based business without assuming how you charge.",
+      label: "bizProfiles.default.couponPresets.flat_off_purchase.label",
+      description: "bizProfiles.default.couponPresets.flat_off_purchase.description",
     },
     {
       id: "pct_off_new_customer",
-      label: "10% off for new customers",
-      description: "A low-risk, universally understood way to convert a first-time visitor.",
+      label: "bizProfiles.default.couponPresets.pct_off_new_customer.label",
+      description: "bizProfiles.default.couponPresets.pct_off_new_customer.description",
     },
   ],
   offerTemplates: [
     {
       id: "welcome_offer",
-      label: "New customer welcome offer",
-      description: "Give first-time customers a clear reason to choose you over a competitor.",
+      label: "bizProfiles.default.offerTemplates.welcome_offer.label",
+      description: "bizProfiles.default.offerTemplates.welcome_offer.description",
     },
     {
       id: "seasonal_special",
-      label: "Seasonal special",
-      description: "Tie a promotion to a real calendar moment relevant to your customers.",
+      label: "bizProfiles.default.offerTemplates.seasonal_special.label",
+      description: "bizProfiles.default.offerTemplates.seasonal_special.description",
     },
   ],
   couponAngles: {
-    firstTime: "10% off for new customers",
-    seasonal: "Seasonal special — tied to what's happening this month",
-    slowDay: "$10 off a $50+ purchase or visit on your slowest day of the week",
+    firstTime: "bizProfiles.default.couponAngles.firstTime",
+    seasonal: "bizProfiles.default.couponAngles.seasonal",
+    slowDay: "bizProfiles.default.couponAngles.slowDay",
   },
   growActions: [
-    "Ask happy customers for a Google review — it's the single highest-leverage thing most small businesses skip.",
-    "Keep your hours, phone number, and website current on your Google listing.",
-    "Add a few recent, real photos of your business.",
-    "Reply to every review you get, positive or negative — it's visible to every future customer.",
+    { id: "action1", text: "bizProfiles.default.growActions.action1" },
+    { id: "action2", text: "bizProfiles.default.growActions.action2" },
+    { id: "action3", text: "bizProfiles.default.growActions.action3" },
+    { id: "action4", text: "bizProfiles.default.growActions.action4" },
   ],
   faq: [
     {
-      question: "How can I contact {businessName}?",
-      answer: "Call us or use the contact information on our Google listing.",
+      id: "item1",
+      question: "bizProfiles.default.faq.item1.question",
+      answer: "bizProfiles.default.faq.item1.answer",
     },
     {
-      question: "What are {businessName}'s hours?",
-      answer: "See our current hours on our Google Business Profile listing.",
+      id: "item2",
+      question: "bizProfiles.default.faq.item2.question",
+      answer: "bizProfiles.default.faq.item2.answer",
     },
   ],
   referralOk: true,
   referralPresets: [
     {
       id: "credit_both",
-      referrerReward: "$10 account credit",
-      friendReward: "$10 off their first purchase",
-      description: "Account credit keeps them coming back; works for almost any retail or transaction-based business.",
+      referrerReward: "bizProfiles.default.referralPresets.credit_both.referrerReward",
+      friendReward: "bizProfiles.default.referralPresets.credit_both.friendReward",
+      description: "bizProfiles.default.referralPresets.credit_both.description",
     },
     {
       id: "pct_off_both",
-      referrerReward: "10% off your next purchase",
-      friendReward: "10% off their first purchase",
-      description: "A simple, universally understood reward for both sides.",
+      referrerReward: "bizProfiles.default.referralPresets.pct_off_both.referrerReward",
+      friendReward: "bizProfiles.default.referralPresets.pct_off_both.friendReward",
+      description: "bizProfiles.default.referralPresets.pct_off_both.description",
     },
   ],
-  pricingExamples: ["Standard Service", "Service Call", "Product/Item"],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.default.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.default.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.default.pricingExamples.example3" },
+  ],
   pricingTips: [
     {
       id: "anchor_pricing",
-      label: "Anchor with your highest-priced option",
-      description:
-        "Showing your highest-priced option first makes your mid-tier option feel like the reasonable middle ground, even if few customers pick the anchor itself.",
+      label: "bizProfiles.default.pricingTips.anchor_pricing.label",
+      description: "bizProfiles.default.pricingTips.anchor_pricing.description",
     },
     {
       id: "good_better_best",
-      label: "Offer a good/better/best tier",
-      description:
-        "A basic, a standard, and a premium option each give price-sensitive and premium customers a natural fit — one price is rarely right for both.",
+      label: "bizProfiles.default.pricingTips.good_better_best.label",
+      description: "bizProfiles.default.pricingTips.good_better_best.description",
     },
     {
       id: "raise_when_consistently_busy",
-      label: "Raise prices on sustained demand, not a hunch",
-      description:
-        "Being consistently busy for weeks — not just one good week — is the honest signal you're underpriced, not how long it's been since your last increase.",
+      label: "bizProfiles.default.pricingTips.raise_when_consistently_busy.label",
+      description: "bizProfiles.default.pricingTips.raise_when_consistently_busy.description",
     },
     {
       id: "bundle_package",
-      label: "Bundle or package related work",
-      description:
-        "Combining related services or items into one package price can lift your average sale without feeling like a price increase to the customer.",
+      label: "bizProfiles.default.pricingTips.bundle_package.label",
+      description: "bizProfiles.default.pricingTips.bundle_package.description",
     },
   ],
 };
@@ -1430,7 +1609,7 @@ type ContentProfileId =
   | "retail"
   | "default";
 
-const CONTENT_PROFILES: Record<ContentProfileId, BizProfile> = {
+const CONTENT_PROFILES: Record<ContentProfileId, BizProfileSource> = {
   salon: SALON_PROFILE,
   restaurant: RESTAURANT_PROFILE,
   liquor_wine: LIQUOR_WINE_PROFILE,
@@ -1454,7 +1633,7 @@ const CONTENT_PROFILES: Record<ContentProfileId, BizProfile> = {
  */
 interface BusinessTypeOption {
   id: string;
-  label: string;
+  label: MessageKey;
   /**
    * Keywords matched case-insensitively against the business's Google
    * category (display name) and primary type (machine slug). Checked in
@@ -1475,7 +1654,7 @@ interface BusinessTypeOption {
    * instead of the salon content's "salons") — every other field is
    * reused as-is. Omit to just use the content profile's own noun.
    */
-  competitorNoun?: string;
+  competitorNoun?: MessageKey;
 }
 
 /**
@@ -1495,27 +1674,27 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
   // "beauty", never overlap theirs).
   {
     id: "barbershop",
-    label: "Barbershop",
+    label: "bizProfileOptions.barbershop.label",
     match: ["barber"],
     placesType: ["barber_shop"],
     contentProfileId: "salon",
-    competitorNoun: "barbershops",
+    competitorNoun: "bizProfileOptions.barbershop.competitorNoun",
   },
   {
     id: "spa",
-    label: "Spa & Wellness",
+    label: "bizProfileOptions.spa.label",
     match: ["spa", "massage", "day spa"],
     placesType: ["spa", "day_spa", "massage"],
     contentProfileId: "salon",
-    competitorNoun: "spas",
+    competitorNoun: "bizProfileOptions.spa.competitorNoun",
   },
   {
     id: "nail_salon",
-    label: "Nail Salon",
+    label: "bizProfileOptions.nail_salon.label",
     match: ["nail salon", "nail", "lash", "brow"],
     placesType: ["nail_salon"],
     contentProfileId: "salon",
-    competitorNoun: "nail salons",
+    competitorNoun: "bizProfileOptions.nail_salon.competitorNoun",
   },
   {
     id: "salon",
@@ -1528,43 +1707,43 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
   // Food & drink — narrow types first, generic "restaurant" last.
   {
     id: "cafe",
-    label: "Café / Coffee Shop",
+    label: "bizProfileOptions.cafe.label",
     match: ["cafe", "café", "coffee", "espresso"],
     placesType: ["cafe", "coffee_shop"],
     contentProfileId: "cafe_bakery",
-    competitorNoun: "cafes",
+    competitorNoun: "bizProfileOptions.cafe.competitorNoun",
   },
   {
     id: "bar",
-    label: "Bar / Pub",
+    label: "bizProfileOptions.bar.label",
     match: ["bar", "pub", "tavern", "brewery", "taproom"],
     placesType: ["bar", "pub", "night_club"],
     contentProfileId: "restaurant",
-    competitorNoun: "bars",
+    competitorNoun: "bizProfileOptions.bar.competitorNoun",
   },
   {
     id: "bakery",
-    label: "Bakery",
+    label: "bizProfileOptions.bakery.label",
     match: ["bakery", "patisserie", "bakeshop"],
     placesType: ["bakery"],
     contentProfileId: "cafe_bakery",
-    competitorNoun: "bakeries",
+    competitorNoun: "bizProfileOptions.bakery.competitorNoun",
   },
   {
     id: "liquor_store",
-    label: "Liquor & Wine Store",
+    label: "bizProfileOptions.liquor_store.label",
     match: ["liquor", "wine shop", "spirits", "package store", "beer store"],
     placesType: ["liquor_store"],
     contentProfileId: "liquor_wine",
-    competitorNoun: "liquor stores",
+    competitorNoun: "bizProfileOptions.liquor_store.competitorNoun",
   },
   {
     id: "grocery_market",
-    label: "Grocery / Market",
+    label: "bizProfileOptions.grocery_market.label",
     match: ["grocery", "supermarket", "convenience store", "mini mart", "corner store"],
     placesType: ["grocery_store", "supermarket", "convenience_store"],
     contentProfileId: "grocery_market",
-    competitorNoun: "grocery stores",
+    competitorNoun: "bizProfileOptions.grocery_market.competitorNoun",
   },
   {
     id: "restaurant",
@@ -1577,27 +1756,27 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
   // Retail
   {
     id: "hardware_store",
-    label: "Hardware Store",
+    label: "bizProfileOptions.hardware_store.label",
     match: ["hardware store", "hardware"],
     placesType: ["hardware_store"],
     contentProfileId: "retail",
-    competitorNoun: "hardware stores",
+    competitorNoun: "bizProfileOptions.hardware_store.competitorNoun",
   },
   {
     id: "florist",
-    label: "Florist",
+    label: "bizProfileOptions.florist.label",
     match: ["florist", "flower shop", "floral"],
     placesType: ["florist"],
     contentProfileId: "retail",
-    competitorNoun: "florists",
+    competitorNoun: "bizProfileOptions.florist.competitorNoun",
   },
   {
     id: "retail_boutique",
-    label: "Retail / Boutique",
+    label: "bizProfileOptions.retail_boutique.label",
     match: ["boutique", "clothing store", "apparel", "gift shop", "shoe store", "retail store"],
     placesType: ["clothing_store", "gift_shop", "shoe_store"],
     contentProfileId: "retail",
-    competitorNoun: "boutiques",
+    competitorNoun: "bizProfileOptions.retail_boutique.competitorNoun",
   },
 
   // Health, fitness & pets — narrower types (pet_services' own "clinic"-
@@ -1606,92 +1785,92 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
   // first.
   {
     id: "gym_fitness",
-    label: "Gym & Fitness Studio",
+    label: "bizProfileOptions.gym_fitness.label",
     match: ["gym", "fitness center", "fitness studio", "crossfit", "yoga studio", "pilates studio"],
     placesType: ["gym", "fitness_center", "yoga_studio"],
     contentProfileId: "gym_fitness",
-    competitorNoun: "gyms",
+    competitorNoun: "bizProfileOptions.gym_fitness.competitorNoun",
   },
   {
     id: "pet_services",
-    label: "Pet Services",
+    label: "bizProfileOptions.pet_services.label",
     match: ["veterinary", "vet clinic", "pet grooming", "dog walking", "pet sitting", "kennel", "pet store"],
     placesType: ["veterinary_care", "pet_store"],
     contentProfileId: "default",
-    competitorNoun: "pet-service businesses",
+    competitorNoun: "bizProfileOptions.pet_services.competitorNoun",
   },
   {
     id: "dentist",
-    label: "Dentist",
+    label: "bizProfileOptions.dentist.label",
     match: ["dentist", "dental", "orthodont"],
     placesType: ["dentist"],
     contentProfileId: "lawyer",
-    competitorNoun: "dental practices",
+    competitorNoun: "bizProfileOptions.dentist.competitorNoun",
   },
   {
     id: "medical_clinic",
-    label: "Medical / Clinic",
+    label: "bizProfileOptions.medical_clinic.label",
     match: ["doctor", "medical center", "physician", "urgent care", "chiropractor", "optometrist", "clinic"],
     placesType: ["doctor", "medical_clinic", "physiotherapist"],
     contentProfileId: "lawyer",
-    competitorNoun: "medical practices",
+    competitorNoun: "bizProfileOptions.medical_clinic.competitorNoun",
   },
 
   // Professional & advisory services
   {
     id: "lawyer",
-    label: "Law Firm",
+    label: "bizProfileOptions.lawyer.label",
     match: ["lawyer", "attorney", "law firm", "law office", "legal services", "legal"],
     placesType: ["lawyer", "legal_services"],
     contentProfileId: "lawyer",
   },
   {
     id: "accountant",
-    label: "Accounting & Tax",
+    label: "bizProfileOptions.accountant.label",
     match: ["accountant", "accounting", "cpa", "tax service", "bookkeeping"],
     placesType: ["accounting"],
     contentProfileId: "professional_services",
-    competitorNoun: "accounting firms",
+    competitorNoun: "bizProfileOptions.accountant.competitorNoun",
   },
   {
     id: "real_estate",
-    label: "Real Estate",
+    label: "bizProfileOptions.real_estate.label",
     match: ["real estate", "realtor", "realty"],
     placesType: ["real_estate_agency"],
     contentProfileId: "practitioner",
-    competitorNoun: "real estate agencies",
+    competitorNoun: "bizProfileOptions.real_estate.competitorNoun",
   },
   {
     id: "consultant",
-    label: "Consulting",
+    label: "bizProfileOptions.consultant.label",
     match: ["consultant", "consulting", "advisory"],
     placesType: ["consultant"],
     contentProfileId: "practitioner",
-    competitorNoun: "consultants",
+    competitorNoun: "bizProfileOptions.consultant.competitorNoun",
   },
   {
     id: "coach",
-    label: "Coaching",
+    label: "bizProfileOptions.coach.label",
     match: ["coach", "coaching"],
     placesType: ["life_coach"],
     contentProfileId: "practitioner",
-    competitorNoun: "coaches",
+    competitorNoun: "bizProfileOptions.coach.competitorNoun",
   },
   {
     id: "tutor_education",
-    label: "Tutoring & Education",
+    label: "bizProfileOptions.tutor_education.label",
     match: ["tutor", "tutoring", "learning center", "test prep", "driving school", "music lessons"],
     placesType: ["tutoring_service"],
     contentProfileId: "practitioner",
-    competitorNoun: "tutoring services",
+    competitorNoun: "bizProfileOptions.tutor_education.competitorNoun",
   },
   {
     id: "photographer",
-    label: "Photography",
+    label: "bizProfileOptions.photographer.label",
     match: ["photographer", "photography", "photo studio"],
     placesType: ["photography_studio"],
     contentProfileId: "practitioner",
-    competitorNoun: "photographers",
+    competitorNoun: "bizProfileOptions.photographer.competitorNoun",
   },
   {
     id: "practitioner",
@@ -1708,43 +1887,43 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
   // than each getting their own.
   {
     id: "auto_repair",
-    label: "Auto Repair",
+    label: "bizProfileOptions.auto_repair.label",
     match: ["auto repair", "mechanic", "car repair", "auto body", "tire shop"],
     placesType: ["car_repair"],
     contentProfileId: "trades",
-    competitorNoun: "auto shops",
+    competitorNoun: "bizProfileOptions.auto_repair.competitorNoun",
   },
   {
     id: "plumber",
-    label: "Plumbing",
+    label: "bizProfileOptions.plumber.label",
     match: ["plumber", "plumbing"],
     placesType: ["plumber"],
     contentProfileId: "trades",
-    competitorNoun: "plumbers",
+    competitorNoun: "bizProfileOptions.plumber.competitorNoun",
   },
   {
     id: "electrician",
-    label: "Electrical",
+    label: "bizProfileOptions.electrician.label",
     match: ["electrician", "electrical contractor", "electrical service"],
     placesType: ["electrician"],
     contentProfileId: "trades",
-    competitorNoun: "electricians",
+    competitorNoun: "bizProfileOptions.electrician.competitorNoun",
   },
   {
     id: "landscaper",
-    label: "Landscaping",
+    label: "bizProfileOptions.landscaper.label",
     match: ["landscap", "lawn care", "lawn service", "tree service"],
     placesType: ["landscaper"],
     contentProfileId: "trades",
-    competitorNoun: "landscapers",
+    competitorNoun: "bizProfileOptions.landscaper.competitorNoun",
   },
   {
     id: "cleaning_service",
-    label: "Cleaning Service",
+    label: "bizProfileOptions.cleaning_service.label",
     match: ["cleaning service", "house cleaning", "janitorial", "maid service"],
     placesType: ["house_cleaning"],
     contentProfileId: "trades",
-    competitorNoun: "cleaning services",
+    competitorNoun: "bizProfileOptions.cleaning_service.competitorNoun",
   },
 
   // Catch-all — empty match list, so it's never reached by the keyword
@@ -1763,7 +1942,11 @@ const DEFAULT_OPTION = BUSINESS_TYPE_OPTIONS[BUSINESS_TYPE_OPTIONS.length - 1];
 /** Combines one BusinessTypeOption's identity with its content profile's
  * actual coupon/offer/FAQ/pricing content into the BizProfile shape every
  * call site already expects. */
-function buildResolvedProfile(option: BusinessTypeOption): BizProfile {
+/** Combines one BusinessTypeOption's identity with its content profile's
+ * actual coupon/offer/FAQ/pricing content into the BizProfileSource shape
+ * localizeBizProfile() below can resolve — structural merge only, still
+ * i18n keys throughout, not yet real text. */
+function buildResolvedProfileSource(option: BusinessTypeOption): BizProfileSource {
   const content = CONTENT_PROFILES[option.contentProfileId];
   return {
     ...content,
@@ -1785,21 +1968,28 @@ function buildResolvedProfile(option: BusinessTypeOption): BizProfile {
  * Pure auto-detection only — does not know about an owner's manual
  * correction. Use resolveBizProfile() at any call site that should honor
  * business_type_override once one might exist.
+ *
+ * `locale` resolves every returned string (label, competitorNoun, coupon/
+ * offer/referral/pricing copy, growActions, FAQ) in that language —
+ * defaults to DEFAULT_LOCALE so every existing call site that hasn't been
+ * updated to thread a real locale yet keeps getting exactly the English
+ * text it always has.
  */
 export function bizProfile(
   category: string | null | undefined,
-  primaryType?: string | null
+  primaryType?: string | null,
+  locale: Locale = DEFAULT_LOCALE
 ): BizProfile {
   const haystack = `${category ?? ""} ${primaryType ?? ""}`.toLowerCase();
-  if (!haystack.trim()) return buildResolvedProfile(DEFAULT_OPTION);
+  if (!haystack.trim()) return localizeBizProfile(buildResolvedProfileSource(DEFAULT_OPTION), locale);
 
   for (const option of BUSINESS_TYPE_OPTIONS) {
     if (option.match.some((keyword) => haystack.includes(keyword))) {
-      return buildResolvedProfile(option);
+      return localizeBizProfile(buildResolvedProfileSource(option), locale);
     }
   }
 
-  return buildResolvedProfile(DEFAULT_OPTION);
+  return localizeBizProfile(buildResolvedProfileSource(DEFAULT_OPTION), locale);
 }
 
 export interface BizProfileOption {
@@ -1808,20 +1998,25 @@ export interface BizProfileOption {
 }
 
 /** For the "correct your business type" dropdown — every supported
- * business type's id/label, in the same order they're matched. */
-export const BIZ_PROFILE_OPTIONS: BizProfileOption[] = BUSINESS_TYPE_OPTIONS.map((o) => ({
-  id: o.id,
-  label: o.label,
-}));
+ * business type's id/label, in the same order they're matched. A
+ * function (not a static export) because each label now resolves from an
+ * i18n key: the one real client-side consumer (BusinessMemoryPanel.tsx)
+ * calls this with its own useLocale() value. */
+export function getBizProfileOptions(locale: Locale = DEFAULT_LOCALE): BizProfileOption[] {
+  return BUSINESS_TYPE_OPTIONS.map((o) => ({
+    id: o.id,
+    label: t(locale, o.label),
+  }));
+}
 
 /** Looks up a business type by its own id (e.g. "barbershop") — used only
  * to apply an owner's manual override. Returns null for a missing or
  * unrecognized id rather than guessing, so callers can cleanly fall back
  * to auto-detection. */
-export function bizProfileById(id: string | null | undefined): BizProfile | null {
+export function bizProfileById(id: string | null | undefined, locale: Locale = DEFAULT_LOCALE): BizProfile | null {
   if (!id) return null;
   const option = BUSINESS_TYPE_OPTIONS.find((o) => o.id === id);
-  return option ? buildResolvedProfile(option) : null;
+  return option ? localizeBizProfile(buildResolvedProfileSource(option), locale) : null;
 }
 
 /**
@@ -1836,15 +2031,21 @@ export function bizProfileById(id: string | null | undefined): BizProfile | null
 export function resolveBizProfile(
   category: string | null | undefined,
   primaryType: string | null | undefined,
-  override?: string | null
+  override?: string | null,
+  locale: Locale = DEFAULT_LOCALE
 ): BizProfile {
-  return bizProfileById(override) ?? bizProfile(category, primaryType);
+  return bizProfileById(override, locale) ?? bizProfile(category, primaryType, locale);
 }
 
 /** Best-effort city extraction from a Google formatted address (typically
  * "Street, City, State ZIP, Country") for FAQ copy only — never used for
  * scoring or matching, so an imprecise guess here is low-stakes. Falls
- * back honestly rather than guessing wrong when the shape is unexpected. */
+ * back honestly rather than guessing wrong when the shape is unexpected.
+ *
+ * Deliberately NOT localized, same as renderFaq() below: its one real
+ * caller (app/business/[id]/website/page.tsx) feeds the customer-facing
+ * generated starter site, which stays English-only by design — see
+ * lib/starterSite.ts's own scope note. */
 function extractCity(address: string | null | undefined): string {
   if (!address) return "your area";
   const parts = address.split(",").map((p) => p.trim());
@@ -1852,7 +2053,10 @@ function extractCity(address: string | null | undefined): string {
 }
 
 /** Fills {businessName} / {city} tokens in a profile's FAQ with a real
- * business's actual data. */
+ * business's actual data. Deliberately NOT localized — see extractCity()
+ * above; the FaqEntry[] passed in is expected to already be the English
+ * resolution (resolveBizProfile()'s default locale) from the starter-site
+ * path, same as before this beat. */
 export function renderFaq(
   faq: FaqEntry[],
   business: { name: string | null; address: string | null }
