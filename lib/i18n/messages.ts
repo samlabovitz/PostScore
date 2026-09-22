@@ -231,6 +231,60 @@ export type MessageKey =
   | "content.listingChange.status.closedTemporarily"
   | "content.listingChange.status.closedPermanently"
   | "content.listingChange.status.changed"
+  // --- Shared content layer: action-plan task copy (lib/actionPlan.ts's
+  // ACTION_PLAN_COPY/FALLBACK_COPY). Keyed by each check's own stable id,
+  // same convention as content.checks.* above. Rendered by
+  // ActionPlanSection.tsx's TaskCard (task.why/action/fix).
+  | "content.actionPlan.visibility.rating.why"
+  | "content.actionPlan.visibility.rating.action"
+  | "content.actionPlan.visibility.rating.fix"
+  | "content.actionPlan.visibility.rating.weeklyAction"
+  | "content.actionPlan.visibility.review_count.why"
+  | "content.actionPlan.visibility.review_count.action"
+  | "content.actionPlan.visibility.review_count.fix"
+  | "content.actionPlan.visibility.review_count.weeklyAction"
+  | "content.actionPlan.visibility.review_recency.why"
+  | "content.actionPlan.visibility.review_recency.action"
+  | "content.actionPlan.visibility.review_recency.fix"
+  | "content.actionPlan.completeness.phone.why"
+  | "content.actionPlan.completeness.phone.action"
+  | "content.actionPlan.completeness.phone.fix"
+  | "content.actionPlan.completeness.address.why"
+  | "content.actionPlan.completeness.address.action"
+  | "content.actionPlan.completeness.address.fix"
+  | "content.actionPlan.completeness.hours.why"
+  | "content.actionPlan.completeness.hours.action"
+  | "content.actionPlan.completeness.hours.fix"
+  | "content.actionPlan.completeness.website_link.why"
+  | "content.actionPlan.completeness.website_link.action"
+  | "content.actionPlan.completeness.website_link.fix"
+  | "content.actionPlan.completeness.categories.why"
+  | "content.actionPlan.completeness.categories.action"
+  | "content.actionPlan.completeness.categories.fix"
+  | "content.actionPlan.completeness.photos.why"
+  | "content.actionPlan.completeness.photos.action"
+  | "content.actionPlan.completeness.photos.fix"
+  | "content.actionPlan.completeness.business_status.why"
+  | "content.actionPlan.completeness.business_status.action"
+  | "content.actionPlan.completeness.business_status.fix"
+  | "content.actionPlan.website.has_website.why"
+  | "content.actionPlan.website.has_website.action"
+  | "content.actionPlan.website.has_website.fix"
+  | "content.actionPlan.website.https.why"
+  | "content.actionPlan.website.https.action"
+  | "content.actionPlan.website.https.fix"
+  | "content.actionPlan.website.performance_mobile.why"
+  | "content.actionPlan.website.performance_mobile.action"
+  | "content.actionPlan.website.performance_mobile.fix"
+  | "content.actionPlan.website.content_depth.why"
+  | "content.actionPlan.website.content_depth.action"
+  | "content.actionPlan.website.content_depth.fix"
+  | "content.actionPlan.website.contact_conversion.why"
+  | "content.actionPlan.website.contact_conversion.action"
+  | "content.actionPlan.website.contact_conversion.fix"
+  | "content.actionPlan.fallback.why"
+  | "content.actionPlan.fallback.action"
+  | "content.actionPlan.fallback.fix"
   // --- Email-only glue (lib/monthlyReport.ts) ---
   | "report.focus.biggestOpportunity"
   | "report.focus.alsoWorthALook"
@@ -1180,6 +1234,94 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.listingChange.status.closedPermanently": "Permanently closed",
     "content.listingChange.status.changed": "Your listing status changed from {previous} to {current}.",
 
+    // --- content.actionPlan.* — lib/actionPlan.ts's ACTION_PLAN_COPY/FALLBACK_COPY.
+    "content.actionPlan.visibility.rating.why":
+      "Your star rating is often the first thing a potential customer sees — a stronger average rating directly raises the odds they pick you over a nearby competitor.",
+    "content.actionPlan.visibility.rating.action":
+      "Ask recent happy customers for a review, and reply to any negative ones so future customers see you take feedback seriously.",
+    "content.actionPlan.visibility.rating.fix":
+      "Go to the Reviews page → use the \"Get more reviews\" section: download your front-desk QR code or copy your review link and share it with customers right after a good visit. A steady trickle beats one big batch.",
+    "content.actionPlan.visibility.rating.weeklyAction":
+      "Ask 3-5 of your happiest recent customers for a Google review this week — fresh reviews are the fastest real lever on your rating.",
+    "content.actionPlan.visibility.review_count.why":
+      "More reviews means more social proof — customers trust a business with dozens of reviews far more than one with a handful, even at the same star rating.",
+    "content.actionPlan.visibility.review_count.action":
+      "Make leaving a review as easy as possible, and ask consistently rather than just once.",
+    "content.actionPlan.visibility.review_count.fix":
+      "Go to the Reviews page → \"Get more reviews\" section: copy your review link into receipts, follow-up texts, or emails, or print the front-desk QR code for checkout.",
+    "content.actionPlan.visibility.review_count.weeklyAction":
+      "Ask 3-5 recent customers for a Google review this week — every real review adds up toward a stronger review base.",
+    "content.actionPlan.visibility.review_recency.why":
+      "A steady stream of recent reviews signals an active, currently-trustworthy business — a rating built entirely on old reviews looks stale to customers and to Google.",
+    "content.actionPlan.visibility.review_recency.action":
+      "Keep asking for reviews on an ongoing basis, not in one push.",
+    "content.actionPlan.visibility.review_recency.fix":
+      "Go to the Reviews page → \"Get more reviews\" section and keep sharing your review link or QR code on an ongoing basis — a recurring reminder (weekly, or after every N customers) keeps new reviews coming in instead of stopping after one round.",
+    "content.actionPlan.completeness.phone.why":
+      "A missing phone number is one of the fastest ways to lose a customer who's ready to call right now.",
+    "content.actionPlan.completeness.phone.action": "Add your business phone number to your Google Business Profile.",
+    "content.actionPlan.completeness.phone.fix": "In Google Business Profile: Edit profile → Contact information → Phone number.",
+    "content.actionPlan.completeness.address.why":
+      "Without a verified address, customers — and Google Maps — can't reliably find you, which can keep you out of local search results entirely.",
+    "content.actionPlan.completeness.address.action": "Add or correct your business address on Google Business Profile.",
+    "content.actionPlan.completeness.address.fix": "In Google Business Profile: Edit profile → Business information → Address.",
+    "content.actionPlan.completeness.hours.why":
+      "Customers routinely check hours before visiting — if they're missing, many will just choose a competitor who's listed clearly.",
+    "content.actionPlan.completeness.hours.action": "Add your real business hours to Google Business Profile.",
+    "content.actionPlan.completeness.hours.fix":
+      "In Google Business Profile: Edit profile → Business information → Hours. Fill in every day, including holiday hours if they differ.",
+    "content.actionPlan.completeness.website_link.why":
+      "Linking your website on your Google listing gives customers one more trusted way to learn more and convert, right from search results.",
+    "content.actionPlan.completeness.website_link.action": "Link your website URL on your Google Business Profile.",
+    "content.actionPlan.completeness.website_link.fix":
+      "Don't have a site yet? Build one in minutes on the Website page's starter-site builder. Once you have a URL, add it to your Google Business Profile: Edit profile → Business information → Website.",
+    "content.actionPlan.completeness.categories.why":
+      "Categories are how Google matches your listing to what people are actually searching for — more accurate categories mean more relevant searches you show up in.",
+    "content.actionPlan.completeness.categories.action": "Add or expand your business categories on Google Business Profile.",
+    "content.actionPlan.completeness.categories.fix":
+      "In Google Business Profile: Edit profile → Business information → Category. Add every category that genuinely describes what you offer, with the most specific one as primary.",
+    "content.actionPlan.completeness.photos.why":
+      "Listings with real photos get substantially more clicks and calls — photos are often a customer's first real impression of your business.",
+    "content.actionPlan.completeness.photos.action": "Add real, current photos of your business to Google Business Profile.",
+    "content.actionPlan.completeness.photos.fix":
+      "In Google Business Profile: Photos → Add photos. Storefront, interior, team, and your products or work are the highest-impact shots.",
+    "content.actionPlan.completeness.business_status.why":
+      "If Google shows your listing as closed — temporarily or permanently — when you're actually open, customers won't even consider visiting.",
+    "content.actionPlan.completeness.business_status.action":
+      "Verify your listing shows as Operational, and if it's wrong, ask Google to correct it.",
+    "content.actionPlan.completeness.business_status.fix":
+      "In Google Business Profile, check your listing status. Use \"Reopen this business\" if it's marked closed in error, or file a reinstatement request if the listing was suspended.",
+    "content.actionPlan.website.has_website.why":
+      "A website is one of the strongest trust signals for a customer doing their research — without one, you're relying entirely on your Google listing to make the sale.",
+    "content.actionPlan.website.has_website.action": "Get a website up for your business, even a simple one.",
+    "content.actionPlan.website.has_website.fix":
+      "Go to the Website page → use the starter-site builder: it turns your real Google listing data (hours, services, photos) into a live one-page site in minutes, no design work needed. Want something more custom later? A builder like Squarespace or Wix works too — but this gets you live today.",
+    "content.actionPlan.website.https.why":
+      "Browsers actively warn visitors when a site isn't secure, which erodes trust fast — HTTPS is a baseline expectation today, not a nice-to-have.",
+    "content.actionPlan.website.https.action": "Move your website to HTTPS.",
+    "content.actionPlan.website.https.fix":
+      "Most hosts issue a free SSL certificate — check your hosting provider's dashboard for an \"enable HTTPS\" or \"SSL\" option, or ask whoever manages your site to turn it on.",
+    "content.actionPlan.website.performance_mobile.why":
+      "A slow-loading site loses visitors before they ever see what you offer — and Google itself factors real-world site speed into search ranking.",
+    "content.actionPlan.website.performance_mobile.action": "Speed up your website, especially on mobile.",
+    "content.actionPlan.website.performance_mobile.fix":
+      "Compress large images, remove unnecessary scripts/plugins, and use a fast host. PostScore's starter-site builder (Website page) generates a lightweight page that scores well on this by construction.",
+    "content.actionPlan.website.content_depth.why":
+      "A bare, single-block page reads as unfinished to both visitors and Google — real content is what actually convinces someone to trust and choose you.",
+    "content.actionPlan.website.content_depth.action":
+      "Build out real content on your site: a clear title, a meta description, a few genuine sections, and real text about what you offer.",
+    "content.actionPlan.website.content_depth.fix":
+      "Go to the Website page → the starter-site builder already includes a title, meta description, mobile viewport tag, and real sections built from your Google listing data — a fast way to replace a thin page.",
+    "content.actionPlan.website.contact_conversion.why":
+      "If a visitor can't immediately see how to reach you or what to do next, most will just leave instead of hunting for a contact method.",
+    "content.actionPlan.website.contact_conversion.action":
+      "Add a real click-to-call phone or email link, and a clear call-to-action, to your website.",
+    "content.actionPlan.website.contact_conversion.fix":
+      "Go to the Website page → the starter-site builder includes a click-to-call phone link and a clear call-to-action by default whenever a phone number is on file.",
+    "content.actionPlan.fallback.why": "Improving this check helps your overall PostScore.",
+    "content.actionPlan.fallback.action": "Review the explanation above and address the underlying gap.",
+    "content.actionPlan.fallback.fix": "See this check's explanation for exactly what's missing.",
+
     // --- report.* — email-only glue extracted from lib/monthlyReport.ts.
     "report.focus.biggestOpportunity": "Your biggest opportunity: {label} — {advice}",
     "report.focus.alsoWorthALook": "Also worth a look: {label} — {advice}",
@@ -2118,6 +2260,95 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.listingChange.status.closedTemporarily": "Cerrado temporalmente",
     "content.listingChange.status.closedPermanently": "Cerrado permanentemente",
     "content.listingChange.status.changed": "El estado de su ficha cambió de {previous} a {current}.",
+
+    // --- content.actionPlan.* — lib/actionPlan.ts's ACTION_PLAN_COPY/FALLBACK_COPY.
+    "content.actionPlan.visibility.rating.why":
+      "Su calificación de estrellas suele ser lo primero que ve un cliente potencial — una mejor calificación promedio aumenta directamente las probabilidades de que lo elijan a usted en lugar de a un competidor cercano.",
+    "content.actionPlan.visibility.rating.action":
+      "Pida una reseña a clientes satisfechos recientes y responda a las negativas para que los futuros clientes vean que toma en serio los comentarios.",
+    "content.actionPlan.visibility.rating.fix":
+      "Vaya a la página de Reseñas → use la sección \"Conseguir más reseñas\": descargue el código QR para su mostrador o copie su enlace de reseña y compártalo con los clientes justo después de una buena visita. Un flujo constante supera a un gran lote de una sola vez.",
+    "content.actionPlan.visibility.rating.weeklyAction":
+      "Pida una reseña de Google a 3-5 de sus clientes recientes más satisfechos esta semana — las reseñas recientes son la palanca real más rápida sobre su calificación.",
+    "content.actionPlan.visibility.review_count.why":
+      "Más reseñas significa más prueba social — los clientes confían mucho más en un negocio con decenas de reseñas que en uno con un puñado, aun con la misma calificación de estrellas.",
+    "content.actionPlan.visibility.review_count.action":
+      "Haga que dejar una reseña sea lo más fácil posible, y pídalo de forma constante en lugar de una sola vez.",
+    "content.actionPlan.visibility.review_count.fix":
+      "Vaya a la página de Reseñas → sección \"Conseguir más reseñas\": copie su enlace de reseña en los recibos, mensajes de seguimiento o correos, o imprima el código QR del mostrador para el momento de pagar.",
+    "content.actionPlan.visibility.review_count.weeklyAction":
+      "Pida una reseña de Google a 3-5 clientes recientes esta semana — cada reseña real suma para fortalecer su base de reseñas.",
+    "content.actionPlan.visibility.review_recency.why":
+      "Un flujo constante de reseñas recientes indica un negocio activo y confiable en el presente — una calificación basada únicamente en reseñas antiguas se ve desactualizada para los clientes y para Google.",
+    "content.actionPlan.visibility.review_recency.action":
+      "Siga pidiendo reseñas de forma continua, no en un solo impulso.",
+    "content.actionPlan.visibility.review_recency.fix":
+      "Vaya a la página de Reseñas → sección \"Conseguir más reseñas\" y siga compartiendo su enlace de reseña o código QR de forma continua — un recordatorio recurrente (semanal, o después de cada N clientes) mantiene el flujo de nuevas reseñas en lugar de detenerse tras una sola ronda.",
+    "content.actionPlan.completeness.phone.why":
+      "Un número de teléfono faltante es una de las formas más rápidas de perder a un cliente que está listo para llamar en ese momento.",
+    "content.actionPlan.completeness.phone.action": "Agregue el número de teléfono de su negocio a su Perfil de Negocio de Google.",
+    "content.actionPlan.completeness.phone.fix": "En el Perfil de Negocio de Google: Editar perfil → Información de contacto → Número de teléfono.",
+    "content.actionPlan.completeness.address.why":
+      "Sin una dirección verificada, los clientes — y Google Maps — no pueden encontrarlo de forma fiable, lo que puede dejarlo fuera de los resultados de búsqueda locales por completo.",
+    "content.actionPlan.completeness.address.action": "Agregue o corrija la dirección de su negocio en el Perfil de Negocio de Google.",
+    "content.actionPlan.completeness.address.fix": "En el Perfil de Negocio de Google: Editar perfil → Información de la empresa → Dirección.",
+    "content.actionPlan.completeness.hours.why":
+      "Los clientes suelen consultar el horario antes de visitar — si falta, muchos simplemente elegirán a un competidor que lo tenga indicado con claridad.",
+    "content.actionPlan.completeness.hours.action": "Agregue el horario real de su negocio al Perfil de Negocio de Google.",
+    "content.actionPlan.completeness.hours.fix":
+      "En el Perfil de Negocio de Google: Editar perfil → Información de la empresa → Horario. Complete todos los días, incluidos los horarios de días festivos si son diferentes.",
+    "content.actionPlan.completeness.website_link.why":
+      "Enlazar su sitio web en su ficha de Google les da a los clientes una forma confiable más de obtener información y convertir, directamente desde los resultados de búsqueda.",
+    "content.actionPlan.completeness.website_link.action": "Enlace la URL de su sitio web en su Perfil de Negocio de Google.",
+    "content.actionPlan.completeness.website_link.fix":
+      "¿Aún no tiene un sitio? Cree uno en minutos con el generador de sitio inicial de la página de Sitio web. Una vez que tenga una URL, agréguela a su Perfil de Negocio de Google: Editar perfil → Información de la empresa → Sitio web.",
+    "content.actionPlan.completeness.categories.why":
+      "Las categorías son la forma en que Google relaciona su ficha con lo que la gente realmente busca — categorías más precisas significan más búsquedas relevantes en las que aparece.",
+    "content.actionPlan.completeness.categories.action": "Agregue o amplíe las categorías de su negocio en el Perfil de Negocio de Google.",
+    "content.actionPlan.completeness.categories.fix":
+      "En el Perfil de Negocio de Google: Editar perfil → Información de la empresa → Categoría. Agregue todas las categorías que describan genuinamente lo que ofrece, con la más específica como principal.",
+    "content.actionPlan.completeness.photos.why":
+      "Las fichas con fotos reales reciben muchos más clics y llamadas — las fotos suelen ser la primera impresión real que un cliente tiene de su negocio.",
+    "content.actionPlan.completeness.photos.action": "Agregue fotos reales y actuales de su negocio al Perfil de Negocio de Google.",
+    "content.actionPlan.completeness.photos.fix":
+      "En el Perfil de Negocio de Google: Fotos → Agregar fotos. La fachada, el interior, el equipo y sus productos o trabajos son las tomas de mayor impacto.",
+    "content.actionPlan.completeness.business_status.why":
+      "Si Google muestra su ficha como cerrada — temporal o permanentemente — cuando en realidad está abierto, los clientes ni siquiera considerarán visitarlo.",
+    "content.actionPlan.completeness.business_status.action":
+      "Verifique que su ficha aparezca como Operativo y, si es incorrecto, pídale a Google que lo corrija.",
+    "content.actionPlan.completeness.business_status.fix":
+      "En el Perfil de Negocio de Google, revise el estado de su ficha. Use \"Reabrir este negocio\" si está marcada como cerrada por error, o presente una solicitud de restablecimiento si la ficha fue suspendida.",
+    "content.actionPlan.website.has_website.why":
+      "Un sitio web es una de las señales de confianza más fuertes para un cliente que está investigando — sin uno, depende por completo de su ficha de Google para lograr la venta.",
+    "content.actionPlan.website.has_website.action": "Ponga en marcha un sitio web para su negocio, aunque sea sencillo.",
+    "content.actionPlan.website.has_website.fix":
+      "Vaya a la página de Sitio web → use el generador de sitio inicial: convierte los datos reales de su ficha de Google (horario, servicios, fotos) en un sitio de una página en vivo en minutos, sin trabajo de diseño. ¿Quiere algo más personalizado más adelante? Un creador como Squarespace o Wix también sirve — pero esto lo pone en vivo hoy.",
+    "content.actionPlan.website.https.why":
+      "Los navegadores advierten activamente a los visitantes cuando un sitio no es seguro, lo que erosiona la confianza rápidamente — HTTPS es una expectativa básica hoy en día, no un lujo.",
+    "content.actionPlan.website.https.action": "Migre su sitio web a HTTPS.",
+    "content.actionPlan.website.https.fix":
+      "La mayoría de los alojamientos emiten un certificado SSL gratuito — busque en el panel de su proveedor de alojamiento una opción para \"habilitar HTTPS\" o \"SSL\", o pídale a quien administra su sitio que lo active.",
+    "content.actionPlan.website.performance_mobile.why":
+      "Un sitio de carga lenta pierde visitantes antes de que siquiera vean lo que ofrece — y el propio Google tiene en cuenta la velocidad real del sitio en el posicionamiento de búsqueda.",
+    "content.actionPlan.website.performance_mobile.action": "Acelere su sitio web, especialmente en móvil.",
+    "content.actionPlan.website.performance_mobile.fix":
+      "Comprima las imágenes grandes, elimine los scripts o complementos innecesarios y use un alojamiento rápido. El generador de sitio inicial de PostScore (página de Sitio web) genera una página ligera que obtiene una buena puntuación en esto por su propia construcción.",
+    "content.actionPlan.website.content_depth.why":
+      "Una página vacía de un solo bloque se percibe como sin terminar tanto para los visitantes como para Google — el contenido real es lo que de verdad convence a alguien de confiar en usted y elegirlo.",
+    "content.actionPlan.website.content_depth.action":
+      "Desarrolle contenido real en su sitio: un título claro, una meta descripción, algunas secciones genuinas y texto real sobre lo que ofrece.",
+    "content.actionPlan.website.content_depth.fix":
+      "Vaya a la página de Sitio web → el generador de sitio inicial ya incluye un título, una meta descripción, una etiqueta viewport para móviles y secciones reales creadas a partir de los datos de su ficha de Google — una forma rápida de reemplazar una página con poco contenido.",
+    "content.actionPlan.website.contact_conversion.why":
+      "Si un visitante no puede ver de inmediato cómo contactarlo o qué hacer a continuación, la mayoría simplemente se irá en lugar de buscar una forma de contacto.",
+    "content.actionPlan.website.contact_conversion.action":
+      "Agregue a su sitio web un enlace real de teléfono con clic para llamar o de correo electrónico, y una llamada a la acción clara.",
+    "content.actionPlan.website.contact_conversion.fix":
+      "Vaya a la página de Sitio web → el generador de sitio inicial incluye un enlace de teléfono con clic para llamar y una llamada a la acción clara de forma predeterminada siempre que haya un número de teléfono registrado.",
+    "content.actionPlan.fallback.why": "Mejorar esta comprobación ayuda a su PostScore en general.",
+    "content.actionPlan.fallback.action": "Revise la explicación de arriba y aborde la deficiencia subyacente.",
+    "content.actionPlan.fallback.fix": "Consulte la explicación de esta comprobación para saber exactamente qué falta.",
+
     "report.focus.biggestOpportunity": "Su mayor oportunidad: {label} — {advice}",
     "report.focus.alsoWorthALook": "También vale la pena revisar: {label} — {advice}",
     "report.focus.listingIssue": "Cambio en la ficha que vale la pena revisar: {description}",

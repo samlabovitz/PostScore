@@ -8,6 +8,7 @@ import { listActivePromos } from "@/app/actions/promos";
 import { getActiveReferral } from "@/app/actions/referrals";
 import { businessRowToScoringInput } from "@/lib/scoring";
 import { resolveBizProfile } from "@/config/bizProfiles";
+import { normalizeLocale } from "@/lib/i18n";
 import { GrowthView } from "./GrowthView";
 
 export default async function GrowthPage({ params }: { params: { id: string } }) {
@@ -40,11 +41,13 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   }
 
   const input = businessRowToScoringInput(scored.business);
+  const locale = normalizeLocale(scored.business.language);
   const actionPlanResult = await getActionPlan(
     params.id,
     input,
     scored.result.breakdown,
-    scored.result.suggestions
+    scored.result.suggestions,
+    locale
   );
 
   const promosResult = await listActivePromos(params.id);

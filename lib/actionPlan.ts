@@ -18,7 +18,7 @@ import {
   type ScoreBreakdown,
   type Suggestion,
 } from "@/lib/scoring";
-import { DEFAULT_LOCALE, tPlural, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
 
 /**
  * Whether a check's FULL points are realistically reachable within
@@ -44,13 +44,16 @@ import { DEFAULT_LOCALE, tPlural, type Locale } from "@/lib/i18n";
 export type TaskEffort = "quick_win" | "quick_win_action" | "longer_term";
 
 export interface ActionPlanCopy {
-  /** Why this matters for actually getting customers — not just "raises your score." */
-  why: string;
-  /** The high-level thing to do — for "quick_win_action" entries, this
-   * describes the FULL long-run project (shown in "Bigger projects"). */
-  action: string;
-  /** Concrete, step-by-step how-to. */
-  fix: string;
+  /** i18n key for why this matters for actually getting customers — not
+   * just "raises your score." Resolved via t(locale, why) — see
+   * content.actionPlan.* in lib/i18n/messages.ts. */
+  why: MessageKey;
+  /** i18n key for the high-level thing to do — for "quick_win_action"
+   * entries, this describes the FULL long-run project (shown in "Bigger
+   * projects"). */
+  action: MessageKey;
+  /** i18n key for the concrete, step-by-step how-to. */
+  fix: MessageKey;
   /**
    * True when completing this task means changing something on the
    * business's Google listing (hours, photos, categories, contact
@@ -62,12 +65,13 @@ export interface ActionPlanCopy {
   /** See TaskEffort. */
   effort: TaskEffort;
   /**
-   * Only meaningful for effort "quick_win_action": the concrete,
-   * doable-this-week action, shown in "This week's plan" INSTEAD of
-   * `action` — e.g. "Ask 3-5 recent customers for a review this week,"
-   * rather than the longer-run "grow your review base" framing.
+   * Only meaningful for effort "quick_win_action": i18n key for the
+   * concrete, doable-this-week action, shown in "This week's plan"
+   * INSTEAD of `action` — e.g. "Ask 3-5 recent customers for a review
+   * this week," rather than the longer-run "grow your review base"
+   * framing. Resolved via t(locale, weeklyAction).
    */
-  weeklyAction?: string;
+  weeklyAction?: MessageKey;
   /**
    * Only meaningful for effort "quick_win_action": the realistic input
    * change a focused week of the real action would produce (e.g. a
@@ -102,9 +106,9 @@ function weeklyReviewAskFix(input: BusinessScoringInput): BusinessScoringInput {
 
 const ACTION_PLAN_COPY: Record<string, ActionPlanCopy> = {
   "visibility.rating": {
-    why: "Your star rating is often the first thing a potential customer sees — a stronger average rating directly raises the odds they pick you over a nearby competitor.",
-    action: "Ask recent happy customers for a review, and reply to any negative ones so future customers see you take feedback seriously.",
-    fix: "Go to the Reviews page → use the \"Get more reviews\" section: download your front-desk QR code or copy your review link and share it with customers right after a good visit. A steady trickle beats one big batch.",
+    why: "content.actionPlan.visibility.rating.why",
+    action: "content.actionPlan.visibility.rating.action",
+    fix: "content.actionPlan.visibility.rating.fix",
     // The action itself is sharing OUR review link/QR code, not editing
     // anything on the Google listing directly — the reviews land on
     // Google because customers post them, not because the owner edited
@@ -115,57 +119,55 @@ const ACTION_PLAN_COPY: Record<string, ActionPlanCopy> = {
     // time — but asking for reviews THIS WEEK is a real, bounded action
     // that makes honest, modest progress toward it. See weeklyFix.
     effort: "quick_win_action",
-    weeklyAction:
-      "Ask 3-5 of your happiest recent customers for a Google review this week — fresh reviews are the fastest real lever on your rating.",
+    weeklyAction: "content.actionPlan.visibility.rating.weeklyAction",
     weeklyFix: weeklyReviewAskFix,
   },
   "visibility.review_count": {
-    why: "More reviews means more social proof — customers trust a business with dozens of reviews far more than one with a handful, even at the same star rating.",
-    action: "Make leaving a review as easy as possible, and ask consistently rather than just once.",
-    fix: "Go to the Reviews page → \"Get more reviews\" section: copy your review link into receipts, follow-up texts, or emails, or print the front-desk QR code for checkout.",
+    why: "content.actionPlan.visibility.review_count.why",
+    action: "content.actionPlan.visibility.review_count.action",
+    fix: "content.actionPlan.visibility.review_count.fix",
     ownerActionOnGoogle: false,
     // The FULL outcome (a saturating volume of reviews) is genuinely a
     // months-long habit — but asking this week is still a real,
     // bounded action with an honest, modest weekly gain. See weeklyFix.
     effort: "quick_win_action",
-    weeklyAction:
-      "Ask 3-5 recent customers for a Google review this week — every real review adds up toward a stronger review base.",
+    weeklyAction: "content.actionPlan.visibility.review_count.weeklyAction",
     weeklyFix: weeklyReviewAskFix,
   },
   "visibility.review_recency": {
-    why: "A steady stream of recent reviews signals an active, currently-trustworthy business — a rating built entirely on old reviews looks stale to customers and to Google.",
-    action: "Keep asking for reviews on an ongoing basis, not in one push.",
-    fix: "Go to the Reviews page → \"Get more reviews\" section and keep sharing your review link or QR code on an ongoing basis — a recurring reminder (weekly, or after every N customers) keeps new reviews coming in instead of stopping after one round.",
+    why: "content.actionPlan.visibility.review_recency.why",
+    action: "content.actionPlan.visibility.review_recency.action",
+    fix: "content.actionPlan.visibility.review_recency.fix",
     ownerActionOnGoogle: false,
     // Unlike rating/count, this check only needs ONE fresh review to
     // reach full points — realistically doable this week.
     effort: "quick_win",
   },
   "completeness.phone": {
-    why: "A missing phone number is one of the fastest ways to lose a customer who's ready to call right now.",
-    action: "Add your business phone number to your Google Business Profile.",
-    fix: "In Google Business Profile: Edit profile → Contact information → Phone number.",
+    why: "content.actionPlan.completeness.phone.why",
+    action: "content.actionPlan.completeness.phone.action",
+    fix: "content.actionPlan.completeness.phone.fix",
     ownerActionOnGoogle: true,
     effort: "quick_win",
   },
   "completeness.address": {
-    why: "Without a verified address, customers — and Google Maps — can't reliably find you, which can keep you out of local search results entirely.",
-    action: "Add or correct your business address on Google Business Profile.",
-    fix: "In Google Business Profile: Edit profile → Business information → Address.",
+    why: "content.actionPlan.completeness.address.why",
+    action: "content.actionPlan.completeness.address.action",
+    fix: "content.actionPlan.completeness.address.fix",
     ownerActionOnGoogle: true,
     effort: "quick_win",
   },
   "completeness.hours": {
-    why: "Customers routinely check hours before visiting — if they're missing, many will just choose a competitor who's listed clearly.",
-    action: "Add your real business hours to Google Business Profile.",
-    fix: "In Google Business Profile: Edit profile → Business information → Hours. Fill in every day, including holiday hours if they differ.",
+    why: "content.actionPlan.completeness.hours.why",
+    action: "content.actionPlan.completeness.hours.action",
+    fix: "content.actionPlan.completeness.hours.fix",
     ownerActionOnGoogle: true,
     effort: "quick_win",
   },
   "completeness.website_link": {
-    why: "Linking your website on your Google listing gives customers one more trusted way to learn more and convert, right from search results.",
-    action: "Link your website URL on your Google Business Profile.",
-    fix: "Don't have a site yet? Build one in minutes on the Website page's starter-site builder. Once you have a URL, add it to your Google Business Profile: Edit profile → Business information → Website.",
+    why: "content.actionPlan.completeness.website_link.why",
+    action: "content.actionPlan.completeness.website_link.action",
+    fix: "content.actionPlan.completeness.website_link.fix",
     ownerActionOnGoogle: true,
     // Reads the exact same `website` field as website.has_website — in
     // this data model the two checks are always in the same state, so
@@ -175,72 +177,72 @@ const ACTION_PLAN_COPY: Record<string, ActionPlanCopy> = {
     effort: "longer_term",
   },
   "completeness.categories": {
-    why: "Categories are how Google matches your listing to what people are actually searching for — more accurate categories mean more relevant searches you show up in.",
-    action: "Add or expand your business categories on Google Business Profile.",
-    fix: "In Google Business Profile: Edit profile → Business information → Category. Add every category that genuinely describes what you offer, with the most specific one as primary.",
+    why: "content.actionPlan.completeness.categories.why",
+    action: "content.actionPlan.completeness.categories.action",
+    fix: "content.actionPlan.completeness.categories.fix",
     ownerActionOnGoogle: true,
     effort: "quick_win",
   },
   "completeness.photos": {
-    why: "Listings with real photos get substantially more clicks and calls — photos are often a customer's first real impression of your business.",
-    action: "Add real, current photos of your business to Google Business Profile.",
-    fix: "In Google Business Profile: Photos → Add photos. Storefront, interior, team, and your products or work are the highest-impact shots.",
+    why: "content.actionPlan.completeness.photos.why",
+    action: "content.actionPlan.completeness.photos.action",
+    fix: "content.actionPlan.completeness.photos.fix",
     ownerActionOnGoogle: true,
     effort: "quick_win",
   },
   "completeness.business_status": {
-    why: "If Google shows your listing as closed — temporarily or permanently — when you're actually open, customers won't even consider visiting.",
-    action: "Verify your listing shows as Operational, and if it's wrong, ask Google to correct it.",
-    fix: "In Google Business Profile, check your listing status. Use \"Reopen this business\" if it's marked closed in error, or file a reinstatement request if the listing was suspended.",
+    why: "content.actionPlan.completeness.business_status.why",
+    action: "content.actionPlan.completeness.business_status.action",
+    fix: "content.actionPlan.completeness.business_status.fix",
     ownerActionOnGoogle: true,
     effort: "quick_win",
   },
   "website.has_website": {
-    why: "A website is one of the strongest trust signals for a customer doing their research — without one, you're relying entirely on your Google listing to make the sale.",
-    action: "Get a website up for your business, even a simple one.",
-    fix: "Go to the Website page → use the starter-site builder: it turns your real Google listing data (hours, services, photos) into a live one-page site in minutes, no design work needed. Want something more custom later? A builder like Squarespace or Wix works too — but this gets you live today.",
+    why: "content.actionPlan.website.has_website.why",
+    action: "content.actionPlan.website.has_website.action",
+    fix: "content.actionPlan.website.has_website.fix",
     ownerActionOnGoogle: false,
     // Building and publishing a website is a real, multi-step project —
     // never a this-week task.
     effort: "longer_term",
   },
   "website.https": {
-    why: "Browsers actively warn visitors when a site isn't secure, which erodes trust fast — HTTPS is a baseline expectation today, not a nice-to-have.",
-    action: "Move your website to HTTPS.",
-    fix: "Most hosts issue a free SSL certificate — check your hosting provider's dashboard for an \"enable HTTPS\" or \"SSL\" option, or ask whoever manages your site to turn it on.",
+    why: "content.actionPlan.website.https.why",
+    action: "content.actionPlan.website.https.action",
+    fix: "content.actionPlan.website.https.fix",
     ownerActionOnGoogle: false,
     // Flipping on a host's free SSL certificate is normally a few
     // minutes of settings, not a rebuild.
     effort: "quick_win",
   },
   "website.performance_mobile": {
-    why: "A slow-loading site loses visitors before they ever see what you offer — and Google itself factors real-world site speed into search ranking.",
-    action: "Speed up your website, especially on mobile.",
-    fix: "Compress large images, remove unnecessary scripts/plugins, and use a fast host. PostScore's starter-site builder (Website page) generates a lightweight page that scores well on this by construction.",
+    why: "content.actionPlan.website.performance_mobile.why",
+    action: "content.actionPlan.website.performance_mobile.action",
+    fix: "content.actionPlan.website.performance_mobile.fix",
     ownerActionOnGoogle: false,
     // Real, measured site-speed work is a project, not a same-week fix.
     effort: "longer_term",
   },
   "website.content_depth": {
-    why: "A bare, single-block page reads as unfinished to both visitors and Google — real content is what actually convinces someone to trust and choose you.",
-    action: "Build out real content on your site: a clear title, a meta description, a few genuine sections, and real text about what you offer.",
-    fix: "Go to the Website page → the starter-site builder already includes a title, meta description, mobile viewport tag, and real sections built from your Google listing data — a fast way to replace a thin page.",
+    why: "content.actionPlan.website.content_depth.why",
+    action: "content.actionPlan.website.content_depth.action",
+    fix: "content.actionPlan.website.content_depth.fix",
     ownerActionOnGoogle: false,
     effort: "longer_term",
   },
   "website.contact_conversion": {
-    why: "If a visitor can't immediately see how to reach you or what to do next, most will just leave instead of hunting for a contact method.",
-    action: "Add a real click-to-call phone or email link, and a clear call-to-action, to your website.",
-    fix: "Go to the Website page → the starter-site builder includes a click-to-call phone link and a clear call-to-action by default whenever a phone number is on file.",
+    why: "content.actionPlan.website.contact_conversion.why",
+    action: "content.actionPlan.website.contact_conversion.action",
+    fix: "content.actionPlan.website.contact_conversion.fix",
     ownerActionOnGoogle: false,
     effort: "longer_term",
   },
 };
 
 const FALLBACK_COPY: ActionPlanCopy = {
-  why: "Improving this check helps your overall PostScore.",
-  action: "Review the explanation above and address the underlying gap.",
-  fix: "See this check's explanation for exactly what's missing.",
+  why: "content.actionPlan.fallback.why",
+  action: "content.actionPlan.fallback.action",
+  fix: "content.actionPlan.fallback.fix",
   ownerActionOnGoogle: false,
   // Conservative default for any future check without explicit copy
   // above: never assume an unclassified check is a quick win.
@@ -337,7 +339,8 @@ export interface CompletedTask {
 export function buildActionPlan(
   breakdown: ScoreBreakdown,
   suggestions: Suggestion[],
-  taskRows: TaskRow[]
+  taskRows: TaskRow[],
+  locale: Locale = DEFAULT_LOCALE
 ): ActionPlanTask[] {
   const rowByCheckId = new Map(taskRows.map((row) => [row.check_id, row]));
 
@@ -351,9 +354,9 @@ export function buildActionPlan(
       category: s.category,
       label: s.label,
       problem: check.explanation,
-      why: copy.why,
-      action: copy.action,
-      fix: copy.fix,
+      why: t(locale, copy.why),
+      action: t(locale, copy.action),
+      fix: t(locale, copy.fix),
       ownerActionOnGoogle: copy.ownerActionOnGoogle,
       promisedPoints: s.promisedPoints,
       status: row?.status === "pending_verification" ? "pending_verification" : "open",
@@ -621,7 +624,7 @@ function deriveWeeklyTargetInfo(
     };
   }
 
-  return copy.weeklyAction ? { label: copy.weeklyAction, targetDelta: null } : null;
+  return copy.weeklyAction ? { label: t(locale, copy.weeklyAction), targetDelta: null } : null;
 }
 
 /**
@@ -673,7 +676,7 @@ export function buildWeeklyPlan(
     return {
       ...task,
       promisedPoints: weeklyPoints,
-      action: copy?.weeklyAction ?? task.action,
+      action: copy?.weeklyAction ? t(locale, copy.weeklyAction) : task.action,
       weeklyTarget: targetInfo?.label ?? null,
       weeklyTargetDelta: targetInfo?.targetDelta ?? null,
       currentMetricValue: weeklyTrackedMetricValue(task.checkId, input),

@@ -13,6 +13,7 @@ import {
 } from "@/lib/actionPlan";
 import { businessRowToScoringInput, scoreBusiness } from "@/lib/scoring";
 import type { BusinessScoringInput, BusinessScoringRow, ScoreBreakdown, Suggestion } from "@/lib/scoring";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n";
 
 export type GetActionPlanResult =
   | ({ status: "ok"; tasks: ActionPlanTask[]; completed: CompletedTask[] } & WeeklyPlan)
@@ -32,7 +33,8 @@ export async function getActionPlan(
   businessId: string,
   input: BusinessScoringInput,
   breakdown: ScoreBreakdown,
-  suggestions: Suggestion[]
+  suggestions: Suggestion[],
+  locale: Locale = DEFAULT_LOCALE
 ): Promise<GetActionPlanResult> {
   const supabase = createClient();
 
@@ -54,13 +56,13 @@ export async function getActionPlan(
   }
 
   const rows = (data ?? []) as TaskRow[];
-  const tasks = buildActionPlan(breakdown, suggestions, rows);
+  const tasks = buildActionPlan(breakdown, suggestions, rows, locale);
 
   return {
     status: "ok",
     tasks,
     completed: buildCompletedTasks(breakdown, rows),
-    ...buildWeeklyPlan(tasks, breakdown, input),
+    ...buildWeeklyPlan(tasks, breakdown, input, undefined, locale),
   };
 }
 
