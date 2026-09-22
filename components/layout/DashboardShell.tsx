@@ -6,7 +6,7 @@ import { IconMenu2 } from "@tabler/icons-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { cn } from "@/lib/utils";
 import type { BusinessSummary } from "@/app/actions/businesses";
-import { LocaleProvider, normalizeLocale } from "@/lib/i18n";
+import { LocaleProvider, normalizeLocale, t } from "@/lib/i18n";
 
 export function DashboardShell({
   business = null,
@@ -40,7 +40,7 @@ export function DashboardShell({
           <button
             type="button"
             onClick={() => setNavOpen(true)}
-            aria-label="Open menu"
+            aria-label={t(locale, "dashboard.shell.openMenuAriaLabel")}
             className="rounded-md p-1.5 text-white hover:bg-white/[.07]"
           >
             <IconMenu2 size={22} />

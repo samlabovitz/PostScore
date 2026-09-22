@@ -19,19 +19,20 @@ import {
 import { cn } from "@/lib/utils";
 import { logout } from "@/app/actions/auth";
 import type { BusinessSummary } from "@/app/actions/businesses";
+import { t, useLocale, type MessageKey } from "@/lib/i18n";
 
 const NAV_ITEMS: Array<{
-  label: string;
+  labelKey: MessageKey;
   icon: typeof IconLayoutDashboard;
   path: (businessId: string) => string;
 }> = [
-  { label: "Overview", icon: IconLayoutDashboard, path: (id) => `/business/${id}` },
-  { label: "Growth", icon: IconTrendingUp, path: (id) => `/business/${id}/growth` },
-  { label: "Reviews", icon: IconStar, path: (id) => `/business/${id}/website-reviews` },
-  { label: "Website", icon: IconWorld, path: (id) => `/business/${id}/website` },
-  { label: "Competitors", icon: IconUsers, path: (id) => `/business/${id}/competitors` },
-  { label: "Pricing", icon: IconTag, path: (id) => `/business/${id}/pricing` },
-  { label: "Reports", icon: IconFileText, path: (id) => `/business/${id}/reports` },
+  { labelKey: "dashboard.nav.overview", icon: IconLayoutDashboard, path: (id) => `/business/${id}` },
+  { labelKey: "dashboard.nav.growth", icon: IconTrendingUp, path: (id) => `/business/${id}/growth` },
+  { labelKey: "dashboard.nav.reviews", icon: IconStar, path: (id) => `/business/${id}/website-reviews` },
+  { labelKey: "dashboard.nav.website", icon: IconWorld, path: (id) => `/business/${id}/website` },
+  { labelKey: "dashboard.nav.competitors", icon: IconUsers, path: (id) => `/business/${id}/competitors` },
+  { labelKey: "dashboard.nav.pricing", icon: IconTag, path: (id) => `/business/${id}/pricing` },
+  { labelKey: "dashboard.nav.reports", icon: IconFileText, path: (id) => `/business/${id}/reports` },
 ];
 
 interface SidebarProps {
@@ -54,6 +55,7 @@ function isNavActive(pathname: string, href: string): boolean {
 
 export function Sidebar({ business = null, className, onNavigate, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const locale = useLocale();
   const [profileOpen, setProfileOpen] = useState(false);
 
   return (
@@ -71,7 +73,7 @@ export function Sidebar({ business = null, className, onNavigate, onClose }: Sid
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close menu"
+          aria-label={t(locale, "dashboard.shell.closeMenuAriaLabel")}
           className="-mr-1.5 rounded-md p-1.5 text-[#9FB0C7] hover:bg-white/[.07] hover:text-white nav:hidden"
         >
           <IconX size={20} />
@@ -81,10 +83,10 @@ export function Sidebar({ business = null, className, onNavigate, onClose }: Sid
       {business ? (
         <div className="mt-5 rounded-[11px] border border-white/[.09] bg-white/[.06] p-3">
           <div className="truncate text-[13.5px] font-semibold text-white">
-            {business.name ?? "Untitled business"}
+            {business.name ?? t(locale, "dashboard.overview.untitledBusiness")}
           </div>
           <div className="mt-0.5 truncate text-[11px] text-[#9FB0C7]">
-            {business.address ?? "No address on file"}
+            {business.address ?? t(locale, "dashboard.overview.noAddressOnFile")}
           </div>
         </div>
       ) : (
@@ -93,17 +95,22 @@ export function Sidebar({ business = null, className, onNavigate, onClose }: Sid
           onClick={onNavigate}
           className="mt-5 block rounded-[11px] border border-dashed border-white/[.15] p-3 hover:border-white/[.3]"
         >
-          <div className="truncate text-[13.5px] font-semibold text-white">No business selected</div>
-          <div className="mt-0.5 truncate text-[11px] text-brass">+ Add a business to get started</div>
+          <div className="truncate text-[13.5px] font-semibold text-white">
+            {t(locale, "dashboard.shell.noBusinessSelected")}
+          </div>
+          <div className="mt-0.5 truncate text-[11px] text-brass">
+            {t(locale, "dashboard.shell.addBusinessToGetStarted")}
+          </div>
         </Link>
       )}
 
       <nav className="mt-5 flex flex-1 flex-col gap-1 overflow-y-auto">
-        {NAV_ITEMS.map(({ label, icon: Icon, path }) => {
+        {NAV_ITEMS.map(({ labelKey, icon: Icon, path }) => {
+          const label = t(locale, labelKey);
           if (!business) {
             return (
               <span
-                key={label}
+                key={labelKey}
                 className="flex cursor-not-allowed items-center gap-[11px] rounded-[9px] px-3 py-3 text-left text-sm font-medium text-[#5C6B82] nav:py-2.5"
               >
                 <Icon size={18} stroke={1.75} />
@@ -116,7 +123,7 @@ export function Sidebar({ business = null, className, onNavigate, onClose }: Sid
           const isActive = isNavActive(pathname, href);
           return (
             <Link
-              key={label}
+              key={labelKey}
               href={href}
               onClick={onNavigate}
               className={cn(
@@ -143,7 +150,7 @@ export function Sidebar({ business = null, className, onNavigate, onClose }: Sid
             <IconUser size={16} />
           </span>
           <span className="flex-1">
-            <span className="block text-sm font-medium text-white">Account</span>
+            <span className="block text-sm font-medium text-white">{t(locale, "dashboard.nav.account")}</span>
             <span className="block text-[11px] text-[#9FB0C7]">—</span>
           </span>
           <IconChevronDown
@@ -166,7 +173,7 @@ export function Sidebar({ business = null, className, onNavigate, onClose }: Sid
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-red hover:bg-red/5 nav:py-2"
               >
                 <IconLogout size={16} />
-                Log out
+                {t(locale, "dashboard.nav.logOut")}
               </button>
             </form>
           </div>

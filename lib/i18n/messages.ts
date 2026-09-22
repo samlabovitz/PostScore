@@ -10,6 +10,25 @@ export type MessageKey =
   | "common.save"
   | "common.cancel"
   | "common.and"
+  // --- Sidebar nav + profile dropdown (components/layout/Sidebar.tsx,
+  // both client components already inside LocaleProvider).
+  | "dashboard.nav.overview"
+  | "dashboard.nav.growth"
+  | "dashboard.nav.reviews"
+  | "dashboard.nav.website"
+  | "dashboard.nav.competitors"
+  | "dashboard.nav.pricing"
+  | "dashboard.nav.reports"
+  | "dashboard.nav.account"
+  | "dashboard.nav.logOut"
+  // --- Dashboard shell chrome (components/layout/DashboardShell.tsx +
+  // the business-picker states in Sidebar.tsx). "Untitled business" and
+  // "No address on file" reuse dashboard.overview.untitledBusiness /
+  // dashboard.overview.noAddressOnFile — identical text, not duplicated.
+  | "dashboard.shell.openMenuAriaLabel"
+  | "dashboard.shell.closeMenuAriaLabel"
+  | "dashboard.shell.noBusinessSelected"
+  | "dashboard.shell.addBusinessToGetStarted"
   // --- Monthly report email (emails/MonthlyReportEmail.tsx) ---
   | "report.subject"
   | "report.monthHeading"
@@ -1547,6 +1566,20 @@ export const messages: Record<Locale, LocaleMessages> = {
     "common.save": "Save",
     "common.cancel": "Cancel",
     "common.and": "and",
+
+    "dashboard.nav.overview": "Overview",
+    "dashboard.nav.growth": "Growth",
+    "dashboard.nav.reviews": "Reviews",
+    "dashboard.nav.website": "Website",
+    "dashboard.nav.competitors": "Competitors",
+    "dashboard.nav.pricing": "Pricing",
+    "dashboard.nav.reports": "Reports",
+    "dashboard.nav.account": "Account",
+    "dashboard.nav.logOut": "Log out",
+    "dashboard.shell.openMenuAriaLabel": "Open menu",
+    "dashboard.shell.closeMenuAriaLabel": "Close menu",
+    "dashboard.shell.noBusinessSelected": "No business selected",
+    "dashboard.shell.addBusinessToGetStarted": "+ Add a business to get started",
 
     "report.subject": "{businessName} — your {month} PostScore report",
     "report.monthHeading": "{month} report",
@@ -3242,6 +3275,20 @@ export const messages: Record<Locale, LocaleMessages> = {
     // below falls back to the English string ("Cancel") until this is
     // filled in, so leaving it out is safe rather than a bug.
     "common.and": "y",
+
+    "dashboard.nav.overview": "Resumen",
+    "dashboard.nav.growth": "Crecimiento",
+    "dashboard.nav.reviews": "Reseñas",
+    "dashboard.nav.website": "Sitio web",
+    "dashboard.nav.competitors": "Competencia",
+    "dashboard.nav.pricing": "Precios",
+    "dashboard.nav.reports": "Informes",
+    "dashboard.nav.account": "Cuenta",
+    "dashboard.nav.logOut": "Cerrar sesión",
+    "dashboard.shell.openMenuAriaLabel": "Abrir menú",
+    "dashboard.shell.closeMenuAriaLabel": "Cerrar menú",
+    "dashboard.shell.noBusinessSelected": "Ningún negocio seleccionado",
+    "dashboard.shell.addBusinessToGetStarted": "+ Agregar un negocio para empezar",
 
     "report.subject": "{businessName} — su informe PostScore de {month}",
     "report.monthHeading": "Informe de {month}",
