@@ -243,8 +243,15 @@ function formatEffort(effort: TaskEffort): string {
  * ASSISTANT_SYSTEM_RULES and sent as part of the system prompt on every
  * message — short and structured on purpose to keep input tokens (and so
  * cost) low even though it's resent on every turn of a conversation.
+ *
+ * `locale` only matters for the one field this function resolves itself
+ * (the losing-checks category name via CATEGORY_LABELS below) — every
+ * other piece of text in `context` (check labels/explanations, category
+ * names in the breakdown, action-plan copy) was already resolved in the
+ * caller's own locale when `context` was built (see loadContext() in
+ * app/actions/assistant.ts).
  */
-export function buildAssistantContextText(context: AssistantBusinessContext): string {
+export function buildAssistantContextText(context: AssistantBusinessContext, locale: Locale = DEFAULT_LOCALE): string {
   const lines: string[] = [];
   lines.push("=== REAL DATA CONTEXT ===");
   lines.push(`Business: ${context.listing.name ?? "Unnamed business"} (${context.listing.categoryLabel})`);
@@ -295,7 +302,7 @@ export function buildAssistantContextText(context: AssistantBusinessContext): st
   if (context.score.losingChecks.length > 0) {
     lines.push("Checks currently losing points (biggest opportunity first):");
     for (const c of context.score.losingChecks) {
-      lines.push(`- [${CATEGORY_LABELS[c.category]}] ${c.label}: ${c.earnedPoints ?? 0}/${c.maxPoints} pts — ${c.explanation}`);
+      lines.push(`- [${t(locale, CATEGORY_LABELS[c.category])}] ${c.label}: ${c.earnedPoints ?? 0}/${c.maxPoints} pts — ${c.explanation}`);
     }
   } else {
     lines.push("No checks are currently losing points — every determinable check is at full points.");
@@ -372,8 +379,8 @@ export function buildAssistantContextText(context: AssistantBusinessContext): st
  * owner's own message — resolved through `t()` exactly ONCE here, so
  * the button and the sent message can never drift apart into two
  * different languages. The category name interpolated into
- * "whyCategoryLosingPoints" (CATEGORY_LABELS) is itself still
- * English-only today — a separate, pre-existing gap, not fixed here.
+ * "whyCategoryLosingPoints" (CATEGORY_LABELS) resolves in the same
+ * locale too.
  */
 export function buildAssistantStarterPrompts(
   context: AssistantBusinessContext,
@@ -392,7 +399,7 @@ export function buildAssistantStarterPrompts(
   if (topLoss) {
     prompts.push(
       t(locale, "dashboard.assistant.starterPrompts.whyCategoryLosingPoints", {
-        category: CATEGORY_LABELS[topLoss.category],
+        category: t(locale, CATEGORY_LABELS[topLoss.category]),
       })
     );
   }

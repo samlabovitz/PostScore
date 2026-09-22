@@ -101,6 +101,15 @@ export type MessageKey =
   | "dashboard.competitors.saved"
   | "dashboard.competitors.noComparableCompetitors"
   | "dashboard.competitors.saveError"
+  // --- Shared content layer: the 3 scoring category names
+  // (lib/scoring.ts's CATEGORY_LABELS). Shared between the dashboard
+  // (CategoryProgressRow, CategoryCard — all 3 of its importing pages)
+  // and the assistant grounding (lib/assistant.ts's
+  // buildAssistantContextText/buildAssistantStarterPrompts) — same
+  // reason as content.checks.* below.
+  | "content.categories.visibility"
+  | "content.categories.completeness"
+  | "content.categories.website"
   // --- Shared content layer: scoring checks (lib/scoring.ts's CHECKS) ---
   // Keyed by each check's own stable id (e.g. "visibility.rating"), so a
   // check's real id and its i18n key namespace can never drift apart.
@@ -689,6 +698,14 @@ export type MessageKey =
   | "dashboard.overview.trackingStartsNow"
   | "dashboard.overview.noChange"
   | "dashboard.overview.recentScansHeading"
+  // components/scoring/CategoryCard.tsx — shared by 3 pages (Overview,
+  // Website, Reviews). "pts" reuses the existing dashboard.website.ptsAbbrev
+  // key instead of duplicating it (was hardcoded separately before).
+  | "dashboard.overview.confidenceVerified"
+  | "dashboard.overview.confidenceLikely"
+  | "dashboard.overview.confidenceUncertain"
+  | "dashboard.overview.confidenceNotFound"
+  | "dashboard.overview.categoryWeightAnnotation"
   | "dashboard.overview.hoursLabel"
   | "dashboard.overview.googleMapsLabel"
   | "dashboard.overview.viewOnGoogleMaps"
@@ -1668,6 +1685,11 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Nothing to save — no comparable competitors were found.",
     "dashboard.competitors.saveError": "Could not save this scan.",
 
+    // --- content.categories.* — lib/scoring.ts's CATEGORY_LABELS.
+    "content.categories.visibility": "Visibility & Reputation",
+    "content.categories.completeness": "Google Listing Completeness",
+    "content.categories.website": "Website",
+
     // --- content.checks.* — pure extraction of lib/scoring.ts's CHECKS;
     // every value below reproduces that file's original hardcoded
     // label/advice/explanation text exactly, byte-for-byte.
@@ -2432,6 +2454,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.trackingStartsNow": "Tracking starts now — we'll show changes after your next scan.",
     "dashboard.overview.noChange": "No change",
     "dashboard.overview.recentScansHeading": "Recent scans",
+    "dashboard.overview.confidenceVerified": "Verified",
+    "dashboard.overview.confidenceLikely": "Likely",
+    "dashboard.overview.confidenceUncertain": "Uncertain",
+    "dashboard.overview.confidenceNotFound": "Not found",
+    "dashboard.overview.categoryWeightAnnotation": "(of {weight} weight)",
     "dashboard.overview.hoursLabel": "Hours",
     "dashboard.overview.googleMapsLabel": "Google Maps",
     "dashboard.overview.viewOnGoogleMaps": "View on Google Maps",
@@ -3380,6 +3407,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     // list this was translated from. Each falls back to English via
     // t()/tPlural until reviewed Spanish copy is provided for them.
 
+    // --- content.categories.* — reviewed Spanish.
+    "content.categories.visibility": "Visibilidad y reputación",
+    "content.categories.completeness": "Integridad de la ficha de Google",
+    "content.categories.website": "Sitio web",
+
     // --- content.checks.* / content.listingChange.* / report.* /
     // dashboard.* — reviewed Spanish translations for the shared content
     // layer extracted in Step L3 (beat 1). Every en key added there has
@@ -3980,6 +4012,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.trackingStartsNow": "El seguimiento empieza ahora — mostraremos los cambios después de su próximo análisis.",
     "dashboard.overview.noChange": "Sin cambios",
     "dashboard.overview.recentScansHeading": "Análisis recientes",
+    "dashboard.overview.confidenceVerified": "Verificado",
+    "dashboard.overview.confidenceLikely": "Probable",
+    "dashboard.overview.confidenceUncertain": "Sin confirmar",
+    "dashboard.overview.confidenceNotFound": "No encontrado",
+    "dashboard.overview.categoryWeightAnnotation": "(de {weight} de peso)",
     "dashboard.overview.hoursLabel": "Horario",
     "dashboard.overview.googleMapsLabel": "Google Maps",
     "dashboard.overview.viewOnGoogleMaps": "Ver en Google Maps",

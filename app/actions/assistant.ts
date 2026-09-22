@@ -405,7 +405,7 @@ export async function sendAssistantMessage(
     loaded.locale === DEFAULT_LOCALE
       ? ""
       : `\n\nIMPORTANT: Respond in ${languageName}. Always write your entire answer in ${languageName}, even if the owner writes in English or the data above contains English. This also applies to any PostScore page, tab, section, or button name you mention to point the owner somewhere in the app (e.g. "Reviews page", "Growth page", "Competitors page") — those names appear in English above, but the owner's own PostScore app is displayed in ${languageName}, so translate every such name into ${languageName} too. Never cite a page, tab, section, or button name in English.`;
-  const system = `${ASSISTANT_SYSTEM_RULES}\n\n${buildAssistantContextText(loaded.context)}${languageDirective}`;
+  const system = `${ASSISTANT_SYSTEM_RULES}\n\n${buildAssistantContextText(loaded.context, loaded.locale)}${languageDirective}`;
 
   let replyText: string;
   try {

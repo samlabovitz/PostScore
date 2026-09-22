@@ -435,10 +435,14 @@ export interface ScoreWithSuggestions {
 // Category weights (must sum to 100; a test asserts this stays true)
 // ---------------------------------------------------------------------------
 
-export const CATEGORY_LABELS: Record<CategoryId, string> = {
-  visibility: "Visibility & Reputation",
-  completeness: "Google Listing Completeness",
-  website: "Website",
+/** Values are i18n MessageKeys, not literal display text — resolve via
+ * t(locale, CATEGORY_LABELS[id]) at every read site (see scoreBusiness()
+ * below and lib/assistant.ts's two direct readers). Never read this
+ * record's values directly as English. */
+export const CATEGORY_LABELS: Record<CategoryId, MessageKey> = {
+  visibility: "content.categories.visibility",
+  completeness: "content.categories.completeness",
+  website: "content.categories.website",
 };
 
 export const CATEGORY_WEIGHTS: Record<CategoryId, number> = {
@@ -1477,7 +1481,7 @@ export function scoreBusiness(input: BusinessScoringInput, locale: Locale = DEFA
       const earnedPoints = determinable.reduce((sum, c) => sum + (c.earnedPoints ?? 0), 0);
       return {
         id: categoryId,
-        label: CATEGORY_LABELS[categoryId],
+        label: t(locale, CATEGORY_LABELS[categoryId]),
         weight: CATEGORY_WEIGHTS[categoryId],
         possiblePoints,
         earnedPoints,

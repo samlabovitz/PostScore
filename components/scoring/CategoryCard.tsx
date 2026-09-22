@@ -3,12 +3,13 @@ import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { cn } from "@/lib/utils";
 import type { CategoryResult, Confidence } from "@/lib/scoring";
+import { t, useLocale, type MessageKey } from "@/lib/i18n";
 
-const CONFIDENCE_PILL: Record<Confidence, { variant: "green" | "brass" | "amber" | "neutral"; label: string }> = {
-  VERIFIED: { variant: "green", label: "Verified" },
-  LIKELY: { variant: "brass", label: "Likely" },
-  UNCERTAIN: { variant: "amber", label: "Uncertain" },
-  NOT_FOUND: { variant: "neutral", label: "Not found" },
+const CONFIDENCE_PILL: Record<Confidence, { variant: "green" | "brass" | "amber" | "neutral"; labelKey: MessageKey }> = {
+  VERIFIED: { variant: "green", labelKey: "dashboard.overview.confidenceVerified" },
+  LIKELY: { variant: "brass", labelKey: "dashboard.overview.confidenceLikely" },
+  UNCERTAIN: { variant: "amber", labelKey: "dashboard.overview.confidenceUncertain" },
+  NOT_FOUND: { variant: "neutral", labelKey: "dashboard.overview.confidenceNotFound" },
 };
 
 /** A compact status symbol per confidence state — a solid green check for
@@ -39,13 +40,17 @@ export function formatPoints(value: number | null): string {
  * wants to show just one category's real rubric (e.g. the Reviews page
  * showing only "visibility") without re-deriving or re-styling it. */
 export function CategoryCard({ category }: { category: CategoryResult }) {
+  const locale = useLocale();
   return (
     <Card className="p-5">
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="font-serif text-base font-semibold text-ink">{category.label}</h3>
         <span className="text-sm text-ink-mute">
-          {formatPoints(category.earnedPoints)} / {formatPoints(category.possiblePoints)} pts
-          <span className="ml-1.5 text-ink-mute/70">(of {category.weight} weight)</span>
+          {formatPoints(category.earnedPoints)} / {formatPoints(category.possiblePoints)}{" "}
+          {t(locale, "dashboard.website.ptsAbbrev")}
+          <span className="ml-1.5 text-ink-mute/70">
+            {t(locale, "dashboard.overview.categoryWeightAnnotation", { weight: category.weight })}
+          </span>
         </span>
       </div>
 
@@ -73,7 +78,7 @@ export function CategoryCard({ category }: { category: CategoryResult }) {
                   >
                     {formatPoints(check.earnedPoints)} / {check.maxPoints}
                   </span>
-                  <Pill variant={pill.variant}>{pill.label}</Pill>
+                  <Pill variant={pill.variant}>{t(locale, pill.labelKey)}</Pill>
                 </div>
               </div>
               <p className="pl-[25px] text-[13px] text-ink-mute">{check.explanation}</p>
