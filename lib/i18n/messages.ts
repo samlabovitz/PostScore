@@ -2269,7 +2269,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.visibility.rating.fix":
       "Vaya a la página de Reseñas → use la sección \"Conseguir más reseñas\": descargue el código QR para su mostrador o copie su enlace de reseña y compártalo con los clientes justo después de una buena visita. Un flujo constante supera a un gran lote de una sola vez.",
     "content.actionPlan.visibility.rating.weeklyAction":
-      "Pida una reseña de Google a 3-5 de sus clientes recientes más satisfechos esta semana — las reseñas recientes son la palanca real más rápida sobre su calificación.",
+      "Pida una reseña de Google a 3-5 de sus clientes recientes más satisfechos esta semana — las reseñas recientes son la palanca real más rápida para su calificación.",
     "content.actionPlan.visibility.review_count.why":
       "Más reseñas significa más prueba social — los clientes confían mucho más en un negocio con decenas de reseñas que en uno con un puñado, aun con la misma calificación de estrellas.",
     "content.actionPlan.visibility.review_count.action":
@@ -2277,7 +2277,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.visibility.review_count.fix":
       "Vaya a la página de Reseñas → sección \"Conseguir más reseñas\": copie su enlace de reseña en los recibos, mensajes de seguimiento o correos, o imprima el código QR del mostrador para el momento de pagar.",
     "content.actionPlan.visibility.review_count.weeklyAction":
-      "Pida una reseña de Google a 3-5 clientes recientes esta semana — cada reseña real suma para fortalecer su base de reseñas.",
+      "Pida una reseña de Google a 3-5 clientes recientes esta semana — cada reseña real suma para construir una base de reseñas más sólida.",
     "content.actionPlan.visibility.review_recency.why":
       "Un flujo constante de reseñas recientes indica un negocio activo y confiable en el presente — una calificación basada únicamente en reseñas antiguas se ve desactualizada para los clientes y para Google.",
     "content.actionPlan.visibility.review_recency.action":
