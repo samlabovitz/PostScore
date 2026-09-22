@@ -28,6 +28,7 @@ import {
 } from "@/app/actions/assistant";
 import type { AssistantBusinessContext } from "@/lib/assistant";
 import { BusinessMemoryPanel } from "@/components/assistant/BusinessMemoryPanel";
+import { t, tPlural, useLocale } from "@/lib/i18n";
 
 const GENERAL_GUIDANCE_PREFIX = "general guidance:";
 
@@ -54,6 +55,7 @@ function splitAssistantContent(content: string): Array<{ general: boolean; text:
 }
 
 function AssistantMessageContent({ content }: { content: string }) {
+  const locale = useLocale();
   const parts = splitAssistantContent(content);
   return (
     <div className="flex flex-col gap-2.5">
@@ -62,7 +64,7 @@ function AssistantMessageContent({ content }: { content: string }) {
           <div key={i} className="rounded-lg bg-ink/5 p-2.5">
             <div className="mb-1 flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.05em] text-ink-mute">
               <IconInfoCircle size={12} />
-              General guidance
+              {t(locale, "dashboard.assistant.generalGuidanceLabel")}
             </div>
             <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-ink-soft">{part.text}</p>
           </div>
@@ -97,11 +99,12 @@ function MessageBubble({ message }: { message: AssistantMessageRow }) {
 }
 
 function TypingIndicator() {
+  const locale = useLocale();
   return (
     <div className="flex justify-start">
       <div className="flex items-center gap-2 rounded-xl border border-paper-deep bg-white px-4 py-3 text-ink-mute">
         <IconLoader2 size={15} className="animate-spin" />
-        <span className="text-[12.5px]">Thinking…</span>
+        <span className="text-[12.5px]">{t(locale, "dashboard.assistant.thinking")}</span>
       </div>
     </div>
   );
@@ -116,16 +119,20 @@ function EmptyState({
   starterPrompts: string[];
   onPick: (prompt: string) => void;
 }) {
+  const locale = useLocale();
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 py-10 text-center">
       <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brass/10 text-brass">
         <IconMessageChatbot size={20} />
       </span>
       <div>
-        <p className="text-sm font-semibold text-ink">Ask anything about {businessName ?? "your business"}&apos;s presence</p>
+        <p className="text-sm font-semibold text-ink">
+          {t(locale, "dashboard.assistant.emptyStateHeadline", {
+            business: businessName ?? t(locale, "dashboard.assistant.yourBusinessFallback"),
+          })}
+        </p>
         <p className="mt-1 max-w-[42ch] text-[13px] text-ink-soft">
-          Answers are grounded in your real PostScore data. General strategy tips are always labeled
-          separately.
+          {t(locale, "dashboard.assistant.emptyStateBody")}
         </p>
       </div>
       <div className="flex max-w-xl flex-wrap justify-center gap-2">
@@ -164,6 +171,7 @@ function HistoryList({
   conversations: AssistantConversationSummary[] | null;
   onOpen: (id: string) => void;
 }) {
+  const locale = useLocale();
   if (loading) {
     return (
       <div className="flex flex-1 items-center justify-center py-10 text-ink-mute">
@@ -178,7 +186,7 @@ function HistoryList({
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 py-10 text-center">
         <IconMessages size={22} className="text-ink-mute" />
-        <p className="text-[13px] text-ink-soft">No past conversations yet.</p>
+        <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.assistant.noPastConversations")}</p>
       </div>
     );
   }
@@ -192,10 +200,13 @@ function HistoryList({
           className="flex flex-col gap-0.5 px-1 py-3 text-left transition-colors hover:bg-paper"
         >
           <span className="truncate text-[13px] font-medium text-ink">
-            {c.preview || "New conversation"}
+            {c.preview || t(locale, "dashboard.assistant.newConversationFallback")}
           </span>
           <span className="text-[11.5px] text-ink-mute">
-            {timeAgo(c.startedAt)} · {c.messageCount} message{c.messageCount === 1 ? "" : "s"}
+            {timeAgo(c.startedAt)} ·{" "}
+            {tPlural(locale, "dashboard.assistant.historyMessageCount", c.messageCount, {
+              count: c.messageCount,
+            })}
           </span>
         </button>
       ))}
@@ -239,6 +250,7 @@ export function AssistantView({
   context: AssistantBusinessContext;
   starterPrompts: string[];
 }) {
+  const locale = useLocale();
   const [messages, setMessages] = useState<AssistantMessageRow[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -313,7 +325,7 @@ export function AssistantView({
     } else {
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
       setError(
-        result.status === "error" ? result.message : "Couldn't reach the assistant — try again."
+        result.status === "error" ? result.message : t(locale, "dashboard.assistant.couldNotReachFallback")
       );
       setDraft(trimmed);
     }
@@ -350,7 +362,7 @@ export function AssistantView({
       setHistory(result.conversations.filter((c) => c.id !== conversationId));
     } else {
       setHistoryError(
-        result.status === "error" ? result.message : "Couldn't load past conversations."
+        result.status === "error" ? result.message : t(locale, "dashboard.assistant.couldNotLoadPastConversations")
       );
     }
   }
@@ -372,7 +384,9 @@ export function AssistantView({
       // still-browsable past history — invalidate so it's excluded again.
       setHistory(null);
     } else {
-      setHistoryError(result.status === "error" ? result.message : "Couldn't load this conversation.");
+      setHistoryError(
+        result.status === "error" ? result.message : t(locale, "dashboard.assistant.couldNotLoadConversation")
+      );
     }
   }
 
@@ -380,13 +394,15 @@ export function AssistantView({
 
   return (
     <div className="flex flex-col gap-4">
-      <SectionHeading title="PostAI" action={<Pill variant="brass">Beta</Pill>} />
+      <SectionHeading
+        title={t(locale, "dashboard.overview.postAiOverlayTitle")}
+        action={<Pill variant="brass">{t(locale, "dashboard.overview.betaLabel")}</Pill>}
+      />
 
       <Card className="flex items-center gap-3 p-4">
         <GradeBadge grade={context.score.grade} className="shrink-0" />
         <p className="text-[13px] text-ink-soft">
-          Grounded in your real PostScore ({context.score.total}/100) — general tips are always
-          labeled, nothing is fabricated.
+          {t(locale, "dashboard.assistant.groundedInScore", { total: context.score.total })}
         </p>
       </Card>
 
@@ -397,7 +413,9 @@ export function AssistantView({
           {isChat ? (
             <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink-mute">
               <IconSparkles size={14} className="text-brass" />
-              {conversationId ? "Continuing this conversation" : "New conversation — past chats are saved"}
+              {conversationId
+                ? t(locale, "dashboard.assistant.continuingConversation")
+                : t(locale, "dashboard.assistant.newConversationSavedNote")}
             </div>
           ) : (
             <button
@@ -406,7 +424,7 @@ export function AssistantView({
               className="flex items-center gap-1.5 text-[12px] font-medium text-ink-mute hover:text-ink"
             >
               <IconArrowLeft size={14} />
-              Back to chat
+              {t(locale, "dashboard.assistant.backToChat")}
             </button>
           )}
           <div className="flex items-center gap-1">
@@ -417,7 +435,7 @@ export function AssistantView({
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-ink-mute hover:bg-paper-deep hover:text-ink"
               >
                 <IconHistory size={13} />
-                History
+                {t(locale, "dashboard.assistant.historyButton")}
               </button>
             )}
             {isChat && messages.length > 0 && (
@@ -428,7 +446,7 @@ export function AssistantView({
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-ink-mute hover:bg-paper-deep hover:text-ink disabled:opacity-50"
               >
                 <IconPlus size={13} />
-                New chat
+                {t(locale, "dashboard.assistant.newChatButton")}
               </button>
             )}
           </div>
@@ -492,7 +510,7 @@ export function AssistantView({
                     void send(draft);
                   }
                 }}
-                placeholder="Ask about your score, action plan, competitors, or general marketing advice…"
+                placeholder={t(locale, "dashboard.assistant.inputPlaceholder")}
                 rows={2}
                 disabled={sending || resuming}
                 className="min-w-0 flex-1 resize-none rounded-lg border border-paper-deep bg-white px-3.5 py-2.5 text-sm text-ink outline-none focus:border-ink-soft disabled:opacity-60"
@@ -504,7 +522,7 @@ export function AssistantView({
                 className="shrink-0"
               >
                 {sending ? <IconLoader2 size={16} className="animate-spin" /> : <IconSend2 size={16} />}
-                Send
+                {t(locale, "dashboard.assistant.sendButton")}
               </Button>
             </form>
           </div>

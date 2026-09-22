@@ -757,6 +757,75 @@ export type MessageKey =
   | "dashboard.overview.pastConversations.one"
   | "dashboard.overview.pastConversations.other"
   | "dashboard.overview.postAiOverlayTitle"
+  // --- Assistant ("PostAI") chrome: components/assistant/AssistantOverlay.tsx,
+  // AssistantView.tsx, BusinessMemoryPanel.tsx. Does NOT include the
+  // model's system prompt/grounding text (lib/assistant.ts) or the
+  // starter-prompt questions it generates — those are sent to the model
+  // verbatim and are Step L7's separate "respond in the owner's language"
+  // territory, not UI dictionary text.
+  | "dashboard.assistant.closeAriaLabel"
+  | "dashboard.assistant.generalGuidanceLabel"
+  | "dashboard.assistant.thinking"
+  | "dashboard.assistant.yourBusinessFallback"
+  | "dashboard.assistant.emptyStateHeadline"
+  | "dashboard.assistant.emptyStateBody"
+  | "dashboard.assistant.noPastConversations"
+  | "dashboard.assistant.newConversationFallback"
+  | "dashboard.assistant.historyMessageCount.one"
+  | "dashboard.assistant.historyMessageCount.other"
+  | "dashboard.assistant.couldNotReachFallback"
+  | "dashboard.assistant.couldNotLoadPastConversations"
+  | "dashboard.assistant.couldNotLoadConversation"
+  | "dashboard.assistant.groundedInScore"
+  | "dashboard.assistant.continuingConversation"
+  | "dashboard.assistant.newConversationSavedNote"
+  | "dashboard.assistant.backToChat"
+  | "dashboard.assistant.historyButton"
+  | "dashboard.assistant.newChatButton"
+  | "dashboard.assistant.inputPlaceholder"
+  | "dashboard.assistant.sendButton"
+  // sendAssistantMessage's own server-action error fallbacks
+  // (app/actions/assistant.ts) — rendered in the chat UI via
+  // result.message, so chrome, not model output. Threaded via
+  // normalizeLocale(business.language), same as other server actions.
+  | "dashboard.assistant.errorTypeQuestionFirst"
+  | "dashboard.assistant.errorCouldNotStartConversation"
+  | "dashboard.assistant.errorCouldNotSaveMessage"
+  | "dashboard.assistant.errorCouldNotGetReply"
+  | "dashboard.assistant.memory.noSavedScans"
+  | "dashboard.assistant.memory.onlyOneScore"
+  | "dashboard.assistant.memory.pointsSinceDate"
+  | "dashboard.assistant.memory.noConfirmedFixed"
+  | "dashboard.assistant.memory.pointsGainedWithDate"
+  | "dashboard.assistant.memory.pointsGainedNoDate"
+  | "dashboard.assistant.memory.removeServiceAriaLabel"
+  | "dashboard.assistant.memory.noServicesYet"
+  | "dashboard.assistant.memory.serviceInputPlaceholder"
+  | "dashboard.assistant.memory.addButton"
+  | "dashboard.assistant.memory.businessTypeLabel"
+  | "dashboard.assistant.memory.businessTypeCorrected"
+  | "dashboard.assistant.memory.businessTypeAutoDetected"
+  | "dashboard.assistant.memory.couldNotSaveFallback"
+  | "dashboard.assistant.memory.heading"
+  | "dashboard.assistant.memory.subheading"
+  | "dashboard.assistant.memory.locationLabel"
+  | "dashboard.assistant.memory.notOnFile"
+  | "dashboard.assistant.memory.servicesJobValueHeading"
+  | "dashboard.assistant.memory.editButton"
+  | "dashboard.assistant.memory.servicesFieldLabel"
+  | "dashboard.assistant.memory.jobValueRangeLabel"
+  | "dashboard.assistant.memory.lowPlaceholder"
+  | "dashboard.assistant.memory.highPlaceholder"
+  | "dashboard.assistant.memory.toSeparator"
+  | "dashboard.assistant.memory.errorMissingLow"
+  | "dashboard.assistant.memory.errorMissingHigh"
+  | "dashboard.assistant.memory.errorInvalidNumbers"
+  | "dashboard.assistant.memory.errorLowExceedsHigh"
+  | "dashboard.assistant.memory.servicesNotEntered"
+  | "dashboard.assistant.memory.jobValueLine"
+  | "dashboard.assistant.memory.jobValueNotEntered"
+  | "dashboard.assistant.memory.fixedHeading"
+  | "dashboard.assistant.memory.scoreTrendHeading"
   // --- Connect-GBP section (app/business/[id]/connect-gbp/*,
   // components/gbp/ConnectToUnlock.tsx).
   | "dashboard.connectGbp.unlockEditableListingTitle"
@@ -904,7 +973,8 @@ export type PluralKeyBase =
   | "dashboard.overview.rescanListingChangesFound"
   | "dashboard.overview.pastConversations"
   | "dashboard.websiteReviews.reviewCountCaptionRemaining"
-  | "dashboard.reports.chartDaysAgo";
+  | "dashboard.reports.chartDaysAgo"
+  | "dashboard.assistant.historyMessageCount";
 
 // English is the dictionary every other locale falls back to via t()
 // below, so it's kept fully seeded. Other locales are deliberately
@@ -1885,6 +1955,71 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.pastConversations.other": " {count} past conversations saved.",
     "dashboard.overview.postAiOverlayTitle": "PostAI",
 
+    // --- Assistant ("PostAI") chrome: components/assistant/AssistantOverlay.tsx,
+    // AssistantView.tsx, BusinessMemoryPanel.tsx.
+    "dashboard.assistant.closeAriaLabel": "Close assistant",
+    "dashboard.assistant.generalGuidanceLabel": "General guidance",
+    "dashboard.assistant.thinking": "Thinking…",
+    "dashboard.assistant.yourBusinessFallback": "your business",
+    "dashboard.assistant.emptyStateHeadline": "Ask anything about {business}'s presence",
+    "dashboard.assistant.emptyStateBody":
+      "Answers are grounded in your real PostScore data. General strategy tips are always labeled separately.",
+    "dashboard.assistant.noPastConversations": "No past conversations yet.",
+    "dashboard.assistant.newConversationFallback": "New conversation",
+    "dashboard.assistant.historyMessageCount.one": "{count} message",
+    "dashboard.assistant.historyMessageCount.other": "{count} messages",
+    "dashboard.assistant.couldNotReachFallback": "Couldn't reach the assistant — try again.",
+    "dashboard.assistant.couldNotLoadPastConversations": "Couldn't load past conversations.",
+    "dashboard.assistant.couldNotLoadConversation": "Couldn't load this conversation.",
+    "dashboard.assistant.groundedInScore":
+      "Grounded in your real PostScore ({total}/100) — general tips are always labeled, nothing is fabricated.",
+    "dashboard.assistant.continuingConversation": "Continuing this conversation",
+    "dashboard.assistant.newConversationSavedNote": "New conversation — past chats are saved",
+    "dashboard.assistant.backToChat": "Back to chat",
+    "dashboard.assistant.historyButton": "History",
+    "dashboard.assistant.newChatButton": "New chat",
+    "dashboard.assistant.inputPlaceholder":
+      "Ask about your score, action plan, competitors, or general marketing advice…",
+    "dashboard.assistant.sendButton": "Send",
+    "dashboard.assistant.errorTypeQuestionFirst": "Type a question first.",
+    "dashboard.assistant.errorCouldNotStartConversation": "Could not start a new conversation.",
+    "dashboard.assistant.errorCouldNotSaveMessage": "Could not save your message.",
+    "dashboard.assistant.errorCouldNotGetReply": "Couldn't get a reply.",
+    "dashboard.assistant.memory.noSavedScans": "No saved scans yet.",
+    "dashboard.assistant.memory.onlyOneScore": "Only one saved score so far — {total}/100 on {date}. No trend yet.",
+    "dashboard.assistant.memory.pointsSinceDate": "{delta} pts since {date}",
+    "dashboard.assistant.memory.noConfirmedFixed": "Nothing confirmed fixed yet.",
+    "dashboard.assistant.memory.pointsGainedWithDate": "+{points} pts · {date}",
+    "dashboard.assistant.memory.pointsGainedNoDate": "+{points} pts",
+    "dashboard.assistant.memory.removeServiceAriaLabel": "Remove {service}",
+    "dashboard.assistant.memory.noServicesYet": "No services added yet.",
+    "dashboard.assistant.memory.serviceInputPlaceholder": "e.g. Haircuts",
+    "dashboard.assistant.memory.addButton": "Add",
+    "dashboard.assistant.memory.businessTypeLabel": "Business type",
+    "dashboard.assistant.memory.businessTypeCorrected": 'Corrected by you — Google detected "{autoDetected}."',
+    "dashboard.assistant.memory.businessTypeAutoDetected": "Auto-detected from your Google listing.",
+    "dashboard.assistant.memory.couldNotSaveFallback": "Couldn't save — try again.",
+    "dashboard.assistant.memory.heading": "What I know about your business",
+    "dashboard.assistant.memory.subheading": "The real facts the assistant remembers, every session.",
+    "dashboard.assistant.memory.locationLabel": "Location",
+    "dashboard.assistant.memory.notOnFile": "Not on file",
+    "dashboard.assistant.memory.servicesJobValueHeading": "Services & typical job value",
+    "dashboard.assistant.memory.editButton": "Edit",
+    "dashboard.assistant.memory.servicesFieldLabel": "Services",
+    "dashboard.assistant.memory.jobValueRangeLabel": "Typical job/ticket value range",
+    "dashboard.assistant.memory.lowPlaceholder": "Low",
+    "dashboard.assistant.memory.highPlaceholder": "High",
+    "dashboard.assistant.memory.toSeparator": "to $",
+    "dashboard.assistant.memory.errorMissingLow": "Enter a low value too, or clear the high value.",
+    "dashboard.assistant.memory.errorMissingHigh": "Enter a high value too, or clear the low value.",
+    "dashboard.assistant.memory.errorInvalidNumbers": "Enter valid positive numbers.",
+    "dashboard.assistant.memory.errorLowExceedsHigh": "The low value can't be more than the high value.",
+    "dashboard.assistant.memory.servicesNotEntered": "Not entered yet.",
+    "dashboard.assistant.memory.jobValueLine": "Typical job/ticket value: ${low} to ${high}",
+    "dashboard.assistant.memory.jobValueNotEntered": "Typical job/ticket value: not entered yet.",
+    "dashboard.assistant.memory.fixedHeading": "What you've fixed",
+    "dashboard.assistant.memory.scoreTrendHeading": "Score trend",
+
     // --- Connect-GBP section: app/business/[id]/connect-gbp/*,
     // components/gbp/ConnectToUnlock.tsx.
     "dashboard.connectGbp.unlockEditableListingTitle": "Live, editable listing",
@@ -2800,6 +2935,73 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.assistantPrompt": "Pregunte lo que sea sobre su puntuación, la competencia o qué mejorar a continuación.",
     "dashboard.overview.pastConversations.one": " {count} conversación anterior guardada.",
     "dashboard.overview.pastConversations.other": " {count} conversaciones anteriores guardadas.",
+
+    // --- Assistant ("PostAI") chrome: components/assistant/AssistantOverlay.tsx,
+    // AssistantView.tsx, BusinessMemoryPanel.tsx.
+    "dashboard.assistant.closeAriaLabel": "Cerrar asistente",
+    "dashboard.assistant.generalGuidanceLabel": "Orientación general",
+    "dashboard.assistant.thinking": "Pensando…",
+    "dashboard.assistant.yourBusinessFallback": "su negocio",
+    "dashboard.assistant.emptyStateHeadline": "Pregunte lo que sea sobre la presencia de {business}",
+    "dashboard.assistant.emptyStateBody":
+      "Las respuestas se basan en sus datos reales de PostScore. Los consejos generales de estrategia siempre se etiquetan por separado.",
+    "dashboard.assistant.noPastConversations": "Aún no hay conversaciones anteriores.",
+    "dashboard.assistant.newConversationFallback": "Nueva conversación",
+    "dashboard.assistant.historyMessageCount.one": "{count} mensaje",
+    "dashboard.assistant.historyMessageCount.other": "{count} mensajes",
+    "dashboard.assistant.couldNotReachFallback": "No se pudo contactar al asistente — inténtelo de nuevo.",
+    "dashboard.assistant.couldNotLoadPastConversations": "No se pudieron cargar las conversaciones anteriores.",
+    "dashboard.assistant.couldNotLoadConversation": "No se pudo cargar esta conversación.",
+    "dashboard.assistant.groundedInScore":
+      "Basado en su PostScore real ({total}/100) — los consejos generales siempre se etiquetan, nada es inventado.",
+    "dashboard.assistant.continuingConversation": "Continuando esta conversación",
+    "dashboard.assistant.newConversationSavedNote": "Nueva conversación — los chats anteriores se guardan",
+    "dashboard.assistant.backToChat": "Volver al chat",
+    "dashboard.assistant.historyButton": "Historial",
+    "dashboard.assistant.newChatButton": "Nuevo chat",
+    "dashboard.assistant.inputPlaceholder":
+      "Pregunte sobre su puntuación, plan de acción, competencia o consejos generales de marketing…",
+    "dashboard.assistant.sendButton": "Enviar",
+    "dashboard.assistant.errorTypeQuestionFirst": "Escriba una pregunta primero.",
+    "dashboard.assistant.errorCouldNotStartConversation": "No se pudo iniciar una nueva conversación.",
+    "dashboard.assistant.errorCouldNotSaveMessage": "No se pudo guardar su mensaje.",
+    "dashboard.assistant.errorCouldNotGetReply": "No se pudo obtener una respuesta.",
+    "dashboard.assistant.memory.noSavedScans": "Aún no hay análisis guardados.",
+    "dashboard.assistant.memory.onlyOneScore":
+      "Solo una puntuación guardada hasta ahora — {total}/100 el {date}. Aún no hay tendencia.",
+    "dashboard.assistant.memory.pointsSinceDate": "{delta} pts desde el {date}",
+    "dashboard.assistant.memory.noConfirmedFixed": "Aún no hay nada confirmado como solucionado.",
+    "dashboard.assistant.memory.pointsGainedWithDate": "+{points} pts · {date}",
+    "dashboard.assistant.memory.pointsGainedNoDate": "+{points} pts",
+    "dashboard.assistant.memory.removeServiceAriaLabel": "Quitar {service}",
+    "dashboard.assistant.memory.noServicesYet": "Aún no se han agregado servicios.",
+    "dashboard.assistant.memory.serviceInputPlaceholder": "p. ej. Cortes de cabello",
+    "dashboard.assistant.memory.addButton": "Agregar",
+    "dashboard.assistant.memory.businessTypeLabel": "Tipo de negocio",
+    "dashboard.assistant.memory.businessTypeCorrected": 'Corregido por usted — Google detectó "{autoDetected}."',
+    "dashboard.assistant.memory.businessTypeAutoDetected": "Detectado automáticamente de su ficha de Google.",
+    "dashboard.assistant.memory.couldNotSaveFallback": "No se pudo guardar — inténtelo de nuevo.",
+    "dashboard.assistant.memory.heading": "Lo que sé sobre su negocio",
+    "dashboard.assistant.memory.subheading": "Los datos reales que el asistente recuerda, en cada sesión.",
+    "dashboard.assistant.memory.locationLabel": "Ubicación",
+    "dashboard.assistant.memory.notOnFile": "No registrado",
+    "dashboard.assistant.memory.servicesJobValueHeading": "Servicios y valor típico por trabajo",
+    "dashboard.assistant.memory.editButton": "Editar",
+    "dashboard.assistant.memory.servicesFieldLabel": "Servicios",
+    "dashboard.assistant.memory.jobValueRangeLabel": "Rango de valor típico por trabajo/ticket",
+    "dashboard.assistant.memory.lowPlaceholder": "Mínimo",
+    "dashboard.assistant.memory.highPlaceholder": "Máximo",
+    "dashboard.assistant.memory.toSeparator": "a $",
+    "dashboard.assistant.memory.errorMissingLow": "Ingrese también un valor mínimo, o borre el valor máximo.",
+    "dashboard.assistant.memory.errorMissingHigh": "Ingrese también un valor máximo, o borre el valor mínimo.",
+    "dashboard.assistant.memory.errorInvalidNumbers": "Ingrese números positivos válidos.",
+    "dashboard.assistant.memory.errorLowExceedsHigh": "El valor mínimo no puede ser mayor que el valor máximo.",
+    "dashboard.assistant.memory.servicesNotEntered": "Aún no se ha ingresado.",
+    "dashboard.assistant.memory.jobValueLine": "Valor típico por trabajo/ticket: ${low} a ${high}",
+    "dashboard.assistant.memory.jobValueNotEntered": "Valor típico por trabajo/ticket: aún no se ha ingresado.",
+    "dashboard.assistant.memory.fixedHeading": "Lo que ha solucionado",
+    "dashboard.assistant.memory.scoreTrendHeading": "Tendencia de la puntuación",
+
     "dashboard.connectGbp.unlockEditableListingTitle": "Ficha en vivo y editable",
     "dashboard.connectGbp.unlockEditableListingBody": "Actualice su horario, teléfono y otros campos de la ficha desde PostScore en lugar de directamente en Google.",
     "dashboard.connectGbp.unlockCompletenessFixesTitle": "Soluciones para completar el perfil",

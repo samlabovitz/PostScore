@@ -20,6 +20,7 @@
 
 import { ReactNode, useEffect } from "react";
 import { IconX } from "@tabler/icons-react";
+import { t, useLocale } from "@/lib/i18n";
 
 export function AssistantOverlay({
   open,
@@ -32,6 +33,7 @@ export function AssistantOverlay({
   title: string;
   children: ReactNode;
 }) {
+  const locale = useLocale();
   useEffect(() => {
     if (!open) return;
 
@@ -71,7 +73,7 @@ export function AssistantOverlay({
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close assistant"
+              aria-label={t(locale, "dashboard.assistant.closeAriaLabel")}
               className="rounded-lg p-1.5 text-ink-mute transition-colors hover:bg-paper-deep hover:text-ink"
             >
               <IconX size={20} />

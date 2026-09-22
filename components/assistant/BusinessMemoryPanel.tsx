@@ -23,16 +23,18 @@ import { Card } from "@/components/ui/Card";
 import { updateBusinessProfile, updateBusinessTypeOverride } from "@/app/actions/businesses";
 import { BIZ_PROFILE_OPTIONS } from "@/config/bizProfiles";
 import type { AssistantBusinessProfile } from "@/lib/assistant";
+import { t, useLocale } from "@/lib/i18n";
 
 function ScoreTrend({ history }: { history: AssistantBusinessProfile["scoreHistory"] }) {
+  const locale = useLocale();
   if (history.length === 0) {
-    return <p className="text-[13px] text-ink-soft">No saved scans yet.</p>;
+    return <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.assistant.memory.noSavedScans")}</p>;
   }
   if (history.length === 1) {
     const only = history[0];
     return (
       <p className="text-[13px] text-ink-soft">
-        Only one saved score so far — {only.total}/100 on {only.date}. No trend yet.
+        {t(locale, "dashboard.assistant.memory.onlyOneScore", { total: only.total, date: only.date })}
       </p>
     );
   }
@@ -50,8 +52,10 @@ function ScoreTrend({ history }: { history: AssistantBusinessProfile["scoreHisto
           <IconTrendingDown size={15} className="text-red" />
         )}
         <span className="text-[13px] font-medium text-ink">
-          {delta >= 0 ? "+" : ""}
-          {delta} pts since {first.date}
+          {t(locale, "dashboard.assistant.memory.pointsSinceDate", {
+            delta: `${delta >= 0 ? "+" : ""}${delta}`,
+            date: first.date,
+          })}
         </span>
       </div>
       <p className="text-[12px] text-ink-mute">
@@ -62,8 +66,9 @@ function ScoreTrend({ history }: { history: AssistantBusinessProfile["scoreHisto
 }
 
 function FixedItems({ items }: { items: AssistantBusinessProfile["fixedItems"] }) {
+  const locale = useLocale();
   if (items.length === 0) {
-    return <p className="text-[13px] text-ink-soft">Nothing confirmed fixed yet.</p>;
+    return <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.assistant.memory.noConfirmedFixed")}</p>;
   }
   return (
     <ul className="flex flex-col gap-1.5">
@@ -71,7 +76,12 @@ function FixedItems({ items }: { items: AssistantBusinessProfile["fixedItems"] }
         <li key={i} className="flex items-baseline justify-between gap-3 text-[13px]">
           <span className="text-ink">{item.label}</span>
           <span className="shrink-0 tabular-nums text-ink-mute">
-            +{item.pointsGained} pts{item.verifiedAt ? ` · ${item.verifiedAt}` : ""}
+            {item.verifiedAt
+              ? t(locale, "dashboard.assistant.memory.pointsGainedWithDate", {
+                  points: item.pointsGained,
+                  date: item.verifiedAt,
+                })
+              : t(locale, "dashboard.assistant.memory.pointsGainedNoDate", { points: item.pointsGained })}
           </span>
         </li>
       ))}
@@ -92,6 +102,7 @@ function ServicesEditor({
   onChange: (next: string[]) => void;
   disabled: boolean;
 }) {
+  const locale = useLocale();
   const [draft, setDraft] = useState("");
 
   function addFromDraft() {
@@ -108,7 +119,9 @@ function ServicesEditor({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-1.5">
-        {services.length === 0 && <span className="text-[12.5px] text-ink-mute">No services added yet.</span>}
+        {services.length === 0 && (
+          <span className="text-[12.5px] text-ink-mute">{t(locale, "dashboard.assistant.memory.noServicesYet")}</span>
+        )}
         {services.map((s) => (
           <span
             key={s}
@@ -120,7 +133,7 @@ function ServicesEditor({
               onClick={() => onChange(services.filter((x) => x !== s))}
               disabled={disabled}
               className="rounded-full p-0.5 text-ink-mute hover:bg-ink/10 hover:text-red disabled:opacity-50"
-              aria-label={`Remove ${s}`}
+              aria-label={t(locale, "dashboard.assistant.memory.removeServiceAriaLabel", { service: s })}
             >
               <IconX size={11} />
             </button>
@@ -138,7 +151,7 @@ function ServicesEditor({
               addFromDraft();
             }
           }}
-          placeholder="e.g. Haircuts"
+          placeholder={t(locale, "dashboard.assistant.memory.serviceInputPlaceholder")}
           disabled={disabled}
           className="min-w-0 flex-1 rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft disabled:opacity-60"
         />
@@ -148,7 +161,7 @@ function ServicesEditor({
           disabled={disabled || !draft.trim()}
           className="shrink-0 rounded-lg border border-paper-deep px-3 py-2 text-[12.5px] font-medium text-ink-soft disabled:opacity-50"
         >
-          Add
+          {t(locale, "dashboard.assistant.memory.addButton")}
         </button>
       </div>
     </div>
@@ -170,6 +183,7 @@ function BusinessTypeField({
   businessTypeOverridden: boolean;
   onSaved: (result: { businessType: string; businessTypeId: string; overridden: boolean }) => void;
 }) {
+  const locale = useLocale();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -191,13 +205,17 @@ function BusinessTypeField({
         overridden: result.businessTypeOverride !== null,
       });
     } else {
-      setError(result.status === "error" ? result.message : "Couldn't save — try again.");
+      setError(
+        result.status === "error" ? result.message : t(locale, "dashboard.assistant.memory.couldNotSaveFallback")
+      );
     }
   }
 
   return (
     <div>
-      <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-ink-mute">Business type</p>
+      <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-ink-mute">
+        {t(locale, "dashboard.assistant.memory.businessTypeLabel")}
+      </p>
       <div className="mt-1 flex items-center gap-2">
         <select
           value={businessTypeId}
@@ -215,8 +233,8 @@ function BusinessTypeField({
       </div>
       <p className="mt-1 text-[11.5px] text-ink-mute">
         {businessTypeOverridden
-          ? `Corrected by you — Google detected "${autoDetectedBusinessType}."`
-          : "Auto-detected from your Google listing."}
+          ? t(locale, "dashboard.assistant.memory.businessTypeCorrected", { autoDetected: autoDetectedBusinessType })
+          : t(locale, "dashboard.assistant.memory.businessTypeAutoDetected")}
       </p>
       {error && <p className="mt-1 text-[12px] text-red">{error}</p>}
     </div>
@@ -230,6 +248,7 @@ export function BusinessMemoryPanel({
   businessId: string;
   profile: AssistantBusinessProfile;
 }) {
+  const locale = useLocale();
   const [current, setCurrent] = useState(profile);
   const [editing, setEditing] = useState(false);
   const [servicesDraft, setServicesDraft] = useState<string[]>(current.services);
@@ -255,11 +274,11 @@ export function BusinessMemoryPanel({
     const high = jobHighDraft.trim();
 
     if (low === "" && high !== "") {
-      setError("Enter a low value too, or clear the high value.");
+      setError(t(locale, "dashboard.assistant.memory.errorMissingLow"));
       return;
     }
     if (high === "" && low !== "") {
-      setError("Enter a high value too, or clear the low value.");
+      setError(t(locale, "dashboard.assistant.memory.errorMissingHigh"));
       return;
     }
 
@@ -268,11 +287,11 @@ export function BusinessMemoryPanel({
 
     if (avgJobValueLow !== null && avgJobValueHigh !== null) {
       if (Number.isNaN(avgJobValueLow) || Number.isNaN(avgJobValueHigh) || avgJobValueLow < 0 || avgJobValueHigh < 0) {
-        setError("Enter valid positive numbers.");
+        setError(t(locale, "dashboard.assistant.memory.errorInvalidNumbers"));
         return;
       }
       if (avgJobValueLow > avgJobValueHigh) {
-        setError("The low value can't be more than the high value.");
+        setError(t(locale, "dashboard.assistant.memory.errorLowExceedsHigh"));
         return;
       }
     }
@@ -295,7 +314,9 @@ export function BusinessMemoryPanel({
       }));
       setEditing(false);
     } else {
-      setError(result.status === "error" ? result.message : "Couldn't save — try again.");
+      setError(
+        result.status === "error" ? result.message : t(locale, "dashboard.assistant.memory.couldNotSaveFallback")
+      );
     }
   }
 
@@ -306,8 +327,8 @@ export function BusinessMemoryPanel({
           <IconBrain size={16} />
         </span>
         <div>
-          <p className="text-sm font-semibold text-ink">What I know about your business</p>
-          <p className="text-[12px] text-ink-mute">The real facts the assistant remembers, every session.</p>
+          <p className="text-sm font-semibold text-ink">{t(locale, "dashboard.assistant.memory.heading")}</p>
+          <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.assistant.memory.subheading")}</p>
         </div>
       </div>
 
@@ -323,15 +344,19 @@ export function BusinessMemoryPanel({
           }
         />
         <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-ink-mute">Location</p>
-          <p className="mt-1 text-[13px] text-ink">{current.location ?? "Not on file"}</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-ink-mute">
+            {t(locale, "dashboard.assistant.memory.locationLabel")}
+          </p>
+          <p className="mt-1 text-[13px] text-ink">
+            {current.location ?? t(locale, "dashboard.assistant.memory.notOnFile")}
+          </p>
         </div>
       </div>
 
       <div className="border-t border-paper-line pt-4">
         <div className="mb-2 flex items-center justify-between">
           <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-ink-mute">
-            Services &amp; typical job value
+            {t(locale, "dashboard.assistant.memory.servicesJobValueHeading")}
           </p>
           {!editing && (
             <button
@@ -340,7 +365,7 @@ export function BusinessMemoryPanel({
               className="inline-flex items-center gap-1 text-[12px] font-medium text-ink-mute hover:text-ink"
             >
               <IconPencil size={13} />
-              Edit
+              {t(locale, "dashboard.assistant.memory.editButton")}
             </button>
           )}
         </div>
@@ -348,11 +373,15 @@ export function BusinessMemoryPanel({
         {editing ? (
           <div className="flex flex-col gap-3">
             <div>
-              <label className="mb-1 block text-[12px] text-ink-soft">Services</label>
+              <label className="mb-1 block text-[12px] text-ink-soft">
+                {t(locale, "dashboard.assistant.memory.servicesFieldLabel")}
+              </label>
               <ServicesEditor services={servicesDraft} onChange={setServicesDraft} disabled={saving} />
             </div>
             <div>
-              <label className="mb-1 block text-[12px] text-ink-soft">Typical job/ticket value range</label>
+              <label className="mb-1 block text-[12px] text-ink-soft">
+                {t(locale, "dashboard.assistant.memory.jobValueRangeLabel")}
+              </label>
               <div className="flex items-center gap-2 text-sm text-ink-mute">
                 <span>$</span>
                 <input
@@ -361,18 +390,18 @@ export function BusinessMemoryPanel({
                   step="0.01"
                   value={jobLowDraft}
                   onChange={(e) => setJobLowDraft(e.target.value)}
-                  placeholder="Low"
+                  placeholder={t(locale, "dashboard.assistant.memory.lowPlaceholder")}
                   disabled={saving}
                   className="w-[90px] rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft disabled:opacity-60"
                 />
-                <span>to $</span>
+                <span>{t(locale, "dashboard.assistant.memory.toSeparator")}</span>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
                   value={jobHighDraft}
                   onChange={(e) => setJobHighDraft(e.target.value)}
-                  placeholder="High"
+                  placeholder={t(locale, "dashboard.assistant.memory.highPlaceholder")}
                   disabled={saving}
                   className="w-[90px] rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft disabled:opacity-60"
                 />
@@ -387,7 +416,7 @@ export function BusinessMemoryPanel({
                 className="inline-flex items-center gap-1.5 rounded-lg bg-ink px-3 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-60"
               >
                 {saving ? <IconLoader2 size={13} className="animate-spin" /> : <IconCheck size={13} />}
-                Save
+                {t(locale, "common.save")}
               </button>
               <button
                 type="button"
@@ -396,32 +425,39 @@ export function BusinessMemoryPanel({
                 className="inline-flex items-center gap-1.5 rounded-lg border border-paper-deep px-3 py-1.5 text-[12.5px] font-medium text-ink-soft disabled:opacity-60"
               >
                 <IconX size={13} />
-                Cancel
+                {t(locale, "common.cancel")}
               </button>
             </div>
           </div>
         ) : (
           <div className="flex flex-col gap-2">
             <p className="text-[13px] text-ink">
-              {current.services.length > 0 ? current.services.join(", ") : "Not entered yet."}
+              {current.services.length > 0
+                ? current.services.join(", ")
+                : t(locale, "dashboard.assistant.memory.servicesNotEntered")}
             </p>
             <p className="text-[13px] text-ink">
               {current.avgJobValueLow !== null && current.avgJobValueHigh !== null
-                ? `Typical job/ticket value: $${current.avgJobValueLow} to $${current.avgJobValueHigh}`
-                : "Typical job/ticket value: not entered yet."}
+                ? t(locale, "dashboard.assistant.memory.jobValueLine", {
+                    low: current.avgJobValueLow,
+                    high: current.avgJobValueHigh,
+                  })
+                : t(locale, "dashboard.assistant.memory.jobValueNotEntered")}
             </p>
           </div>
         )}
       </div>
 
       <div className="border-t border-paper-line pt-4">
-        <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.05em] text-ink-mute">Score trend</p>
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.05em] text-ink-mute">
+          {t(locale, "dashboard.assistant.memory.scoreTrendHeading")}
+        </p>
         <ScoreTrend history={current.scoreHistory} />
       </div>
 
       <div className="border-t border-paper-line pt-4">
         <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.05em] text-ink-mute">
-          What you&apos;ve fixed
+          {t(locale, "dashboard.assistant.memory.fixedHeading")}
         </p>
         <FixedItems items={current.fixedItems} />
       </div>

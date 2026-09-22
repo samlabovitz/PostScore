@@ -29,6 +29,7 @@ import {
   type AssistantLosingCheck,
   type AssistantScoreHistoryEntry,
 } from "@/lib/assistant";
+import { normalizeLocale, t, type Locale } from "@/lib/i18n";
 
 export interface AssistantMessageRow {
   id: string;
@@ -59,7 +60,7 @@ export interface AssistantConversationSummary {
 }
 
 type LoadContextResult =
-  | { status: "ok"; context: AssistantBusinessContext }
+  | { status: "ok"; context: AssistantBusinessContext; locale: Locale }
   | { status: "unauthenticated" }
   | { status: "not_found" }
   | { status: "error"; message: string };
@@ -222,7 +223,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     gbp: { connected: gbpStatus.status === "ok" && gbpStatus.connected },
   };
 
-  return { status: "ok", context };
+  return { status: "ok", context, locale: normalizeLocale(summaryResult.business.language) };
 }
 
 export type GetAssistantPageDataResult =
@@ -302,13 +303,13 @@ export async function sendAssistantMessage(
   message: string,
   conversationId: string | null
 ): Promise<SendAssistantMessageResult> {
-  const trimmed = message.trim();
-  if (!trimmed) {
-    return { status: "error", message: "Type a question first." };
-  }
-
   const loaded = await loadContext(businessId);
   if (loaded.status !== "ok") return loaded;
+
+  const trimmed = message.trim();
+  if (!trimmed) {
+    return { status: "error", message: t(loaded.locale, "dashboard.assistant.errorTypeQuestionFirst") };
+  }
 
   const supabase = createClient();
 
@@ -323,7 +324,7 @@ export async function sendAssistantMessage(
     if (conversationError || !conversationRow) {
       return {
         status: "error",
-        message: conversationError?.message ?? "Could not start a new conversation.",
+        message: conversationError?.message ?? t(loaded.locale, "dashboard.assistant.errorCouldNotStartConversation"),
       };
     }
     activeConversationId = conversationRow.id as string;
@@ -341,7 +342,10 @@ export async function sendAssistantMessage(
     .single();
 
   if (userError || !userRow) {
-    return { status: "error", message: userError?.message ?? "Could not save your message." };
+    return {
+      status: "error",
+      message: userError?.message ?? t(loaded.locale, "dashboard.assistant.errorCouldNotSaveMessage"),
+    };
   }
 
   const { data: historyRows, error: historyError } = await supabase
@@ -375,7 +379,7 @@ export async function sendAssistantMessage(
   } catch (err) {
     return {
       status: "error",
-      message: err instanceof Error ? err.message : "Could not reach the assistant — try again.",
+      message: err instanceof Error ? err.message : t(loaded.locale, "dashboard.assistant.errorCouldNotGetReply"),
     };
   }
 
@@ -391,7 +395,10 @@ export async function sendAssistantMessage(
     .single();
 
   if (replyError || !replyRow) {
-    return { status: "error", message: replyError?.message ?? "Could not save the assistant's reply." };
+    return {
+      status: "error",
+      message: replyError?.message ?? t(loaded.locale, "dashboard.assistant.errorCouldNotGetReply"),
+    };
   }
 
   return {
