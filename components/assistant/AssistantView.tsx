@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   IconArrowLeft,
   IconHistory,
-  IconInfoCircle,
   IconLoader2,
   IconMessageChatbot,
   IconMessages,
@@ -28,55 +27,8 @@ import {
 } from "@/app/actions/assistant";
 import type { AssistantBusinessContext } from "@/lib/assistant";
 import { BusinessMemoryPanel } from "@/components/assistant/BusinessMemoryPanel";
+import { AssistantMessageContent } from "@/components/assistant/AssistantMessageContent";
 import { t, tPlural, useLocale } from "@/lib/i18n";
-
-const GENERAL_GUIDANCE_PREFIX = "general guidance:";
-
-/**
- * Splits one assistant reply into paragraphs, pulling out any paragraph
- * the model has labeled "General guidance:" (see ASSISTANT_SYSTEM_RULES
- * in lib/assistant.ts) so it can render visibly distinct from the
- * data-grounded parts of the answer — the same labeling discipline the
- * Pricing page's "general estimate" badge uses, just for free-form text
- * instead of a fixed field.
- */
-function splitAssistantContent(content: string): Array<{ general: boolean; text: string }> {
-  return content
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter((p) => p.length > 0)
-    .map((paragraph) => {
-      const lower = paragraph.toLowerCase();
-      if (lower.startsWith(GENERAL_GUIDANCE_PREFIX)) {
-        return { general: true, text: paragraph.slice(GENERAL_GUIDANCE_PREFIX.length).trim() };
-      }
-      return { general: false, text: paragraph };
-    });
-}
-
-function AssistantMessageContent({ content }: { content: string }) {
-  const locale = useLocale();
-  const parts = splitAssistantContent(content);
-  return (
-    <div className="flex flex-col gap-2.5">
-      {parts.map((part, i) =>
-        part.general ? (
-          <div key={i} className="rounded-lg bg-ink/5 p-2.5">
-            <div className="mb-1 flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.05em] text-ink-mute">
-              <IconInfoCircle size={12} />
-              {t(locale, "dashboard.assistant.generalGuidanceLabel")}
-            </div>
-            <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-ink-soft">{part.text}</p>
-          </div>
-        ) : (
-          <p key={i} className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-ink">
-            {part.text}
-          </p>
-        )
-      )}
-    </div>
-  );
-}
 
 function MessageBubble({ message }: { message: AssistantMessageRow }) {
   const isUser = message.role === "user";

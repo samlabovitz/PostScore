@@ -29,7 +29,7 @@ import {
   type AssistantLosingCheck,
   type AssistantScoreHistoryEntry,
 } from "@/lib/assistant";
-import { normalizeLocale, t, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, normalizeLocale, t, type Locale } from "@/lib/i18n";
 
 export interface AssistantMessageRow {
   id: string;
@@ -78,17 +78,31 @@ type LoadContextResult =
  * page first loaded.
  */
 async function loadContext(businessId: string): Promise<LoadContextResult> {
-  const [summaryResult, scored, scoreHistoryRows, gbpStatus] = await Promise.all([
+  // getBusinessSummary is awaited separately (not folded into the
+  // Promise.all below) because its business.language is needed to derive
+  // `locale` BEFORE scoring — scoreBusinessById needs the real locale to
+  // produce Spanish-language check labels/explanations for a Spanish
+  // business, not English ones re-labeled after the fact.
+  const [summaryResult, scoreHistoryRows, gbpStatus] = await Promise.all([
     getBusinessSummary(businessId),
-    scoreBusinessById(businessId),
     getScoreHistory(businessId),
     getGbpConnectionStatus(businessId),
   ]);
 
-  if (scored.status === "unauthenticated" || summaryResult.status === "unauthenticated") {
+  if (summaryResult.status === "unauthenticated") {
     return { status: "unauthenticated" };
   }
-  if (scored.status === "not_found" || summaryResult.status === "not_found") {
+  if (summaryResult.status === "not_found") {
+    return { status: "not_found" };
+  }
+
+  const locale = normalizeLocale(summaryResult.business.language);
+  const scored = await scoreBusinessById(businessId, locale);
+
+  if (scored.status === "unauthenticated") {
+    return { status: "unauthenticated" };
+  }
+  if (scored.status === "not_found") {
     return { status: "not_found" };
   }
   if (scored.status === "error") {
@@ -105,7 +119,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
   const input = businessRowToScoringInput(scored.business);
   const { breakdown, suggestions } = scored.result;
 
-  const actionPlanResult = await getActionPlan(businessId, input, breakdown, suggestions);
+  const actionPlanResult = await getActionPlan(businessId, input, breakdown, suggestions, locale);
   const topTasks: AssistantActionPlanTask[] =
     actionPlanResult.status === "ok"
       ? actionPlanResult.tasks.slice(0, MAX_ACTION_PLAN_TASKS_IN_CONTEXT).map((t) => ({
@@ -223,7 +237,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     gbp: { connected: gbpStatus.status === "ok" && gbpStatus.connected },
   };
 
-  return { status: "ok", context, locale: normalizeLocale(summaryResult.business.language) };
+  return { status: "ok", context, locale };
 }
 
 export type GetAssistantPageDataResult =
@@ -268,7 +282,7 @@ export async function getAssistantPageData(businessId: string): Promise<GetAssis
   return {
     status: "ok",
     context: loaded.context,
-    starterPrompts: buildAssistantStarterPrompts(loaded.context),
+    starterPrompts: buildAssistantStarterPrompts(loaded.context, loaded.locale),
     conversationCount: count ?? 0,
   };
 }
@@ -367,7 +381,26 @@ export async function sendAssistantMessage(
   const oldestFirst = ((historyRows ?? []) as AssistantMessageRow[]).slice().reverse();
   const recentTurns =
     oldestFirst.length > 0 && oldestFirst[0].role === "assistant" ? oldestFirst.slice(1) : oldestFirst;
-  const system = `${ASSISTANT_SYSTEM_RULES}\n\n${buildAssistantContextText(loaded.context)}`;
+  // Named in English on purpose (t(DEFAULT_LOCALE, ...), not t(loaded.locale, ...))
+  // — the instruction itself is English-language model instructions, same
+  // as ASSISTANT_SYSTEM_RULES; only the owner-facing UI is ever localized.
+  //
+  // The second sentence exists because ASSISTANT_SYSTEM_RULES (rule 7) and
+  // buildAssistantContextText() both hardcode English PostScore page/tab/
+  // section names ("Reviews page", "Growth page's Coupons tab", "Overview
+  // page's ... connect prompt", "What I know about your business" panel,
+  // etc.) as part of the model's real tool-mapping instructions — those
+  // names are never re-localized in the prompt itself. Rather than
+  // hardcoding a second English->locale name table here (which could drift
+  // from the actual localized nav labels in lib/i18n/messages.ts), the
+  // model is told to translate any such name it cites into the owner's own
+  // language — it already reliably does this given an explicit instruction.
+  const languageName = t(DEFAULT_LOCALE, `language.${loaded.locale}`);
+  const languageDirective =
+    loaded.locale === DEFAULT_LOCALE
+      ? ""
+      : `\n\nIMPORTANT: Respond in ${languageName}. Always write your entire answer in ${languageName}, even if the owner writes in English or the data above contains English. This also applies to any PostScore page, tab, section, or button name you mention to point the owner somewhere in the app (e.g. "Reviews page", "Growth page", "Competitors page") — those names appear in English above, but the owner's own PostScore app is displayed in ${languageName}, so translate every such name into ${languageName} too. Never cite a page, tab, section, or button name in English.`;
+  const system = `${ASSISTANT_SYSTEM_RULES}\n\n${buildAssistantContextText(loaded.context)}${languageDirective}`;
 
   let replyText: string;
   try {

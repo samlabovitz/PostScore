@@ -792,6 +792,21 @@ export type MessageKey =
   | "dashboard.assistant.errorCouldNotStartConversation"
   | "dashboard.assistant.errorCouldNotSaveMessage"
   | "dashboard.assistant.errorCouldNotGetReply"
+  // Starter-prompt questions (lib/assistant.ts's buildAssistantStarterPrompts).
+  // Genuinely dual-purpose: rendered as button labels AND sent to the
+  // model verbatim as the user's message when clicked — resolved ONCE
+  // via locale so the two can never desync (see Step L7 beat 1/2's
+  // "ambiguous" note, now resolved). es intentionally left absent —
+  // reviewed Spanish supplied separately, not auto-translated.
+  | "dashboard.assistant.starterPrompts.whatsHurtingScore"
+  | "dashboard.assistant.starterPrompts.top3ThisWeek"
+  | "dashboard.assistant.starterPrompts.whatsChangedSinceStart"
+  | "dashboard.assistant.starterPrompts.whyCategoryLosingPoints"
+  | "dashboard.assistant.starterPrompts.compareToCompetitorsAvailable"
+  | "dashboard.assistant.starterPrompts.compareToCompetitorsUnavailable"
+  | "dashboard.assistant.starterPrompts.howToGetMoreReviews"
+  | "dashboard.assistant.starterPrompts.ratingGoodEnough"
+  | "dashboard.assistant.starterPrompts.startBuildingRatingFromZero"
   | "dashboard.assistant.memory.noSavedScans"
   | "dashboard.assistant.memory.onlyOneScore"
   | "dashboard.assistant.memory.pointsSinceDate"
@@ -1985,6 +2000,16 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.errorCouldNotStartConversation": "Could not start a new conversation.",
     "dashboard.assistant.errorCouldNotSaveMessage": "Could not save your message.",
     "dashboard.assistant.errorCouldNotGetReply": "Couldn't get a reply.",
+    "dashboard.assistant.starterPrompts.whatsHurtingScore": "What's hurting my score the most right now?",
+    "dashboard.assistant.starterPrompts.top3ThisWeek": "What are the top 3 things I should fix this week?",
+    "dashboard.assistant.starterPrompts.whatsChangedSinceStart": "What's changed since I started?",
+    "dashboard.assistant.starterPrompts.whyCategoryLosingPoints": "Why is my {category} section losing points?",
+    "dashboard.assistant.starterPrompts.compareToCompetitorsAvailable": "How do I compare to my nearby competitors?",
+    "dashboard.assistant.starterPrompts.compareToCompetitorsUnavailable": "How can I compare to my nearby competitors?",
+    "dashboard.assistant.starterPrompts.howToGetMoreReviews": "How do I get more Google reviews?",
+    "dashboard.assistant.starterPrompts.ratingGoodEnough":
+      "Is my rating good enough, or should I focus on getting more reviews?",
+    "dashboard.assistant.starterPrompts.startBuildingRatingFromZero": "How do I start building a rating from zero reviews?",
     "dashboard.assistant.memory.noSavedScans": "No saved scans yet.",
     "dashboard.assistant.memory.onlyOneScore": "Only one saved score so far — {total}/100 on {date}. No trend yet.",
     "dashboard.assistant.memory.pointsSinceDate": "{delta} pts since {date}",
@@ -2966,6 +2991,17 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.errorCouldNotStartConversation": "No se pudo iniciar una nueva conversación.",
     "dashboard.assistant.errorCouldNotSaveMessage": "No se pudo guardar su mensaje.",
     "dashboard.assistant.errorCouldNotGetReply": "No se pudo obtener una respuesta.",
+    "dashboard.assistant.starterPrompts.whatsHurtingScore": "¿Qué es lo que más está perjudicando mi puntuación ahora mismo?",
+    "dashboard.assistant.starterPrompts.top3ThisWeek": "¿Cuáles son las 3 cosas principales que debería solucionar esta semana?",
+    "dashboard.assistant.starterPrompts.whatsChangedSinceStart": "¿Qué ha cambiado desde que empecé?",
+    "dashboard.assistant.starterPrompts.whyCategoryLosingPoints": "¿Por qué mi sección de {category} está perdiendo puntos?",
+    "dashboard.assistant.starterPrompts.compareToCompetitorsAvailable": "¿Cómo me comparo con mis competidores cercanos?",
+    "dashboard.assistant.starterPrompts.compareToCompetitorsUnavailable": "¿Cómo puedo compararme con mis competidores cercanos?",
+    "dashboard.assistant.starterPrompts.howToGetMoreReviews": "¿Cómo consigo más reseñas de Google?",
+    "dashboard.assistant.starterPrompts.ratingGoodEnough":
+      "¿Mi calificación es suficiente, o debería enfocarme en conseguir más reseñas?",
+    "dashboard.assistant.starterPrompts.startBuildingRatingFromZero":
+      "¿Cómo empiezo a construir una calificación desde cero reseñas?",
     "dashboard.assistant.memory.noSavedScans": "Aún no hay análisis guardados.",
     "dashboard.assistant.memory.onlyOneScore":
       "Solo una puntuación guardada hasta ahora — {total}/100 el {date}. Aún no hay tendencia.",

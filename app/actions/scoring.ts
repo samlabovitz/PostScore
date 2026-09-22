@@ -13,6 +13,7 @@ import { reconcileTasks, type TaskRow } from "@/lib/actionPlan";
 import { buildProfileSnapshot, diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
 import { lookupBusinessByPlaceId } from "@/lib/google/places";
 import { saveBusinessWithClient } from "@/app/actions/businesses";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n";
 
 export interface BusinessRecord extends BusinessScoringRow {
   id: string;
@@ -37,7 +38,10 @@ export type ScoreBusinessResult =
  * on whatever the businesses table currently holds, so viewing a
  * business's page is free to do as often as you like.
  */
-export async function scoreBusinessById(businessId: string): Promise<ScoreBusinessResult> {
+export async function scoreBusinessById(
+  businessId: string,
+  locale: Locale = DEFAULT_LOCALE
+): Promise<ScoreBusinessResult> {
   const supabase = createClient();
 
   const {
@@ -48,7 +52,7 @@ export async function scoreBusinessById(businessId: string): Promise<ScoreBusine
     return { status: "unauthenticated" };
   }
 
-  return scoreBusinessWithClient(supabase, businessId);
+  return scoreBusinessWithClient(supabase, businessId, locale);
 }
 
 /**
@@ -67,7 +71,8 @@ export async function scoreBusinessById(businessId: string): Promise<ScoreBusine
  */
 export async function scoreBusinessWithClient(
   supabase: SupabaseClient,
-  businessId: string
+  businessId: string,
+  locale: Locale = DEFAULT_LOCALE
 ): Promise<ScoreBusinessResult> {
   const { data: business, error } = await supabase
     .from("businesses")
@@ -82,7 +87,7 @@ export async function scoreBusinessWithClient(
   }
 
   const input = businessRowToScoringInput(business as BusinessScoringRow);
-  const result = getScoreWithSuggestions(input);
+  const result = getScoreWithSuggestions(input, locale);
 
   return { status: "ok", business: business as BusinessRecord, result };
 }

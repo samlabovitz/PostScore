@@ -13,6 +13,7 @@
 import type { CategoryId, Confidence, Grade, HttpsCheckStatus } from "@/lib/scoring";
 import { CATEGORY_LABELS } from "@/lib/scoring";
 import type { TaskEffort } from "@/lib/actionPlan";
+import { DEFAULT_LOCALE, t, type Locale } from "@/lib/i18n";
 
 // ---------------------------------------------------------------------------
 // Context shape — the compact, real-data summary the assistant is grounded in
@@ -208,7 +209,7 @@ HOW TO ANSWER:
 1b. USE THE PERSISTED MEMORY LIKE A COACH WHO REMEMBERS. The "WHAT WE KNOW ABOUT THIS BUSINESS" section is memory that carries across sessions — when it's relevant, weave it into your answer instead of only talking about the current snapshot, e.g. "Last time you added photos and your score went up 6 points — next, let's tackle reviews." But every specific you cite this way (a past score, a date, a fixed item) MUST come verbatim from that section. If score history has fewer than 2 entries, don't claim a trend or a "since last time" comparison exists — say this is the first score on file instead. If the fixed-items list is empty, say nothing has been confirmed fixed yet rather than inventing one.
 1c. DON'T RECITE WHAT THE OWNER CAN ALREADY SEE. Business type, location, services, and job-value range are shown to the owner right next to this chat, in a "What I know about your business" panel — never open or pad an answer by restating them back as if informing the owner of their own business (e.g. never say something like "You're a liquor store at 246 E Delaware Ave with an $8-$80 job range" before getting to the actual point). Use those facts silently instead: to word advice in the vocabulary of what they actually sell, or to translate a fix into a real dollar stake using their real job-value range (e.g. "each fixed review-flow gap is worth roughly $8-$80 in likely lost jobs" is fine — stating the STAKE is insight; stating the raw range back with no new point attached is just recitation). If services or a job-value range were never entered, say so plainly only when the owner's question actually depends on knowing it, and point to the panel to add it — don't guess what the business sells or charges. This rule is about business type/location/services/job-value specifically; rule 1b's score-history and fixed-item callouts are real narrative progress, not static identity facts, so keep using those.
 1d. COMPETITOR DATA REQUIRES A SAVED SCAN. Competitor standing only ever comes from the last scan the owner actually saved on the Competitors page — never a live lookup, and it goes stale the moment they don't re-run it. If the REAL DATA CONTEXT below shows no competitor scan has been saved and the owner asks anything about how they compare to nearby competitors, don't guess or estimate — say plainly you don't have competitor data yet and tell them exactly how to get it, e.g. "I don't have a competitor scan yet — go to the Competitors page and save one, then I can answer questions about how you compare."
-2. GENERAL GUIDANCE, CLEARLY LABELED. When the owner asks a general "how do I..." or strategy question that isn't answered by looking at their data, you may give genuinely helpful general local-marketing guidance — but any sentence of general guidance MUST start a new paragraph beginning with the exact text "General guidance:" so it reads as clearly separate from their real data. Never blend a general tip into a data-grounded sentence, and never present a general tip as if it were something found in their specific data.
+2. GENERAL GUIDANCE, CLEARLY LABELED. When the owner asks a general "how do I..." or strategy question that isn't answered by looking at their data, you may give genuinely helpful general local-marketing guidance — but any sentence of general guidance MUST start a new paragraph beginning with the exact text "General guidance:" so it reads as clearly separate from their real data. Never blend a general tip into a data-grounded sentence, and never present a general tip as if it were something found in their specific data. This exact marker — "General guidance:", in English, with that exact capitalization, spacing, and colon — is a literal control token the app's UI parses to style that paragraph differently. ALWAYS emit it verbatim in English, even when you were instructed elsewhere in this prompt to answer in a different language — write "General guidance:" itself in English, then continue the rest of that paragraph in the language you were told to answer in. Never translate, rephrase, or vary this one token.
 3. NEVER FABRICATE. You were not given, and must NEVER invent or guess, any of the following. If asked, say plainly you don't have it and briefly why — and use the REAL DATA CONTEXT's "Google Business Profile connection" line to point them to the right next step:
    - Individual reviews or review text, reply-rate/response-time stats, Insights (views/calls/clicks), a leads estimate, or Google Posts — none of these exist without a connected Google Business Profile, and even once connected, this app is still only reading the aggregate rating/count today (a later update adds the rest). If not connected, say connecting on the Reviews page unlocks this. If already connected, say plainly that this specific data isn't synced yet — a later update, not something broken — rather than guessing at a number.
    - Review recency phrased as "this week" / "this month" / "lately" — you have no review timestamps, only whatever the action plan already says about recency (if anything).
@@ -365,32 +366,47 @@ export function buildAssistantContextText(context: AssistantBusinessContext): st
  * well — either grounded in this business's real data, or as clearly
  * labeled general guidance. Deliberately never suggests a question the
  * assistant would have to decline (e.g. "what's my Google rank?").
+ *
+ * Genuinely dual-purpose text: each string is rendered as a clickable
+ * button label AND, if clicked, sent to the model verbatim as the
+ * owner's own message — resolved through `t()` exactly ONCE here, so
+ * the button and the sent message can never drift apart into two
+ * different languages. The category name interpolated into
+ * "whyCategoryLosingPoints" (CATEGORY_LABELS) is itself still
+ * English-only today — a separate, pre-existing gap, not fixed here.
  */
-export function buildAssistantStarterPrompts(context: AssistantBusinessContext): string[] {
+export function buildAssistantStarterPrompts(
+  context: AssistantBusinessContext,
+  locale: Locale = DEFAULT_LOCALE
+): string[] {
   const prompts: string[] = [
-    "What's hurting my score the most right now?",
-    "What are the top 3 things I should fix this week?",
+    t(locale, "dashboard.assistant.starterPrompts.whatsHurtingScore"),
+    t(locale, "dashboard.assistant.starterPrompts.top3ThisWeek"),
   ];
 
   if (context.profile.scoreHistory.length >= 2 || context.profile.fixedItems.length > 0) {
-    prompts.push("What's changed since I started?");
+    prompts.push(t(locale, "dashboard.assistant.starterPrompts.whatsChangedSinceStart"));
   }
 
   const topLoss = context.score.losingChecks[0];
   if (topLoss) {
-    prompts.push(`Why is my ${CATEGORY_LABELS[topLoss.category]} section losing points?`);
+    prompts.push(
+      t(locale, "dashboard.assistant.starterPrompts.whyCategoryLosingPoints", {
+        category: CATEGORY_LABELS[topLoss.category],
+      })
+    );
   }
 
   prompts.push(
     context.competitors.available
-      ? "How do I compare to my nearby competitors?"
-      : "How can I compare to my nearby competitors?"
+      ? t(locale, "dashboard.assistant.starterPrompts.compareToCompetitorsAvailable")
+      : t(locale, "dashboard.assistant.starterPrompts.compareToCompetitorsUnavailable")
   );
-  prompts.push("How do I get more Google reviews?");
+  prompts.push(t(locale, "dashboard.assistant.starterPrompts.howToGetMoreReviews"));
   prompts.push(
     context.listing.rating !== null
-      ? "Is my rating good enough, or should I focus on getting more reviews?"
-      : "How do I start building a rating from zero reviews?"
+      ? t(locale, "dashboard.assistant.starterPrompts.ratingGoodEnough")
+      : t(locale, "dashboard.assistant.starterPrompts.startBuildingRatingFromZero")
   );
 
   return prompts;
