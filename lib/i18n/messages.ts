@@ -3593,7 +3593,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Los clientes suelen consultar el horario antes de visitar — si falta, muchos simplemente elegirán a un competidor que lo tenga indicado con claridad.",
     "content.actionPlan.completeness.hours.action": "Agregue el horario real de su negocio al Perfil de Negocio de Google.",
     "content.actionPlan.completeness.hours.fix":
-      "En el Perfil de Negocio de Google: Editar perfil → Información de la empresa → Horario. Complete todos los días, incluidos los horarios de días festivos si son diferentes.",
+      "En el Perfil de Negocio de Google: Editar perfil → Información de la empresa → Horario de atención. Complete todos los días, incluidos los horarios de días festivos si son diferentes.",
     "content.actionPlan.completeness.website_link.why":
       "Enlazar su sitio web en su ficha de Google les da a los clientes una forma confiable más de obtener información y convertir, directamente desde los resultados de búsqueda.",
     "content.actionPlan.completeness.website_link.action": "Enlace la URL de su sitio web en su Perfil de Negocio de Google.",
@@ -4016,7 +4016,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.confidenceLikely": "Probable",
     "dashboard.overview.confidenceUncertain": "Sin confirmar",
     "dashboard.overview.confidenceNotFound": "No encontrado",
-    "dashboard.overview.categoryWeightAnnotation": "(de {weight} de peso)",
+    "dashboard.overview.categoryWeightAnnotation": "(peso: {weight})",
     "dashboard.overview.hoursLabel": "Horario",
     "dashboard.overview.googleMapsLabel": "Google Maps",
     "dashboard.overview.viewOnGoogleMaps": "Ver en Google Maps",
@@ -4354,7 +4354,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.restaurant.label": "Restaurante y servicio de comida",
     "bizProfiles.restaurant.competitorNoun": "restaurantes",
     "bizProfiles.restaurant.couponPresets.free_item_with_purchase.label":
-      "Aperitivo o postre gratis con cualquier plato fuerte",
+      "Aperitivo o postre gratis con cualquier plato principal",
     "bizProfiles.restaurant.couponPresets.free_item_with_purchase.description":
       "Se siente generoso sin descontar el precio de su menú principal.",
     "bizProfiles.restaurant.couponPresets.pct_off_pickup.label":
@@ -4362,7 +4362,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.restaurant.couponPresets.pct_off_pickup.description":
       "Dirige el tráfico hacia su canal de pedidos más económico de atender.",
     "bizProfiles.restaurant.couponPresets.bogo_entree.label":
-      "Compre un plato fuerte y llévese el segundo al 50% (solo para comer en el lugar)",
+      "Compre un plato principal y llévese el segundo al 50% (solo para comer en el lugar)",
     "bizProfiles.restaurant.couponPresets.bogo_entree.description":
       "Un clásico para atraer tráfico en noches lentas — limítelo a sus horas más tranquilas.",
     "bizProfiles.restaurant.offerTemplates.happy_hour.label": "Happy hour: 20% de descuento en bebidas, de 4 a 6 pm",
@@ -4375,7 +4375,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.restaurant.couponAngles.seasonal":
       "Especial del menú de temporada: el plato destacado de este mes, 15% de descuento",
     "bizProfiles.restaurant.couponAngles.slowDay":
-      "Compre un plato fuerte y llévese el segundo al 50% — para comer en el lugar, de domingo a martes",
+      "Compre un plato principal y llévese el segundo al 50% — para comer en el lugar, de domingo a martes",
     "bizProfiles.restaurant.faq.item1.question": "¿{businessName} acepta reservaciones?",
     "bizProfiles.restaurant.faq.item1.answer":
       "Llámenos o consulte nuestro sitio web para ver la disponibilidad de reservaciones.",
@@ -4392,12 +4392,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.restaurant.referralPresets.pct_off_both.friendReward": "15% de descuento en su primer pedido",
     "bizProfiles.restaurant.referralPresets.pct_off_both.description":
       "El descuento directo en efectivo funciona bien para pedidos para llevar y a domicilio.",
-    "bizProfiles.restaurant.pricingExamples.example1": "Plato fuerte",
+    "bizProfiles.restaurant.pricingExamples.example1": "Plato principal",
     "bizProfiles.restaurant.pricingExamples.example2": "Entrada",
     "bizProfiles.restaurant.pricingExamples.example3": "Postre",
     "bizProfiles.restaurant.pricingTips.anchor_standout_dish.label": "Ancle con un plato destacado de precio alto",
     "bizProfiles.restaurant.pricingTips.anchor_standout_dish.description":
-      "Un solo plato fuerte de $32 en el menú hace que cada plato de $18 a $22 parezca razonable en comparación, aunque pocas personas pidan realmente el plato ancla.",
+      "Un solo plato principal de $32 en el menú hace que cada plato de $18 a $22 parezca razonable en comparación, aunque pocas personas pidan realmente el plato ancla.",
     "bizProfiles.restaurant.pricingTips.steer_to_margin.label": "Dirija los pedidos hacia sus platos de mejor margen",
     "bizProfiles.restaurant.pricingTips.steer_to_margin.description":
       'Destacar un plato de buen margen (poniéndolo en negrita, agregando "el favorito del chef") aumenta los pedidos hacia él sin descontar nada.',
@@ -4407,7 +4407,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Muchos restaurantes cobran de menos durante años porque reimprimir el menú se siente como una molestia. Una revisión trimestral de precios frente a sus costos reales de comida evita una erosión lenta del margen.",
     "bizProfiles.restaurant.pricingTips.bundle_combo.label": "Use precios de combo o paquete",
     "bizProfiles.restaurant.pricingTips.bundle_combo.description":
-      "Combinar un aperitivo o acompañamiento con un plato fuerte a un precio conjunto fijo aumenta el ticket promedio sin que el cliente lo sienta como un aumento de precio.",
+      "Combinar un aperitivo o acompañamiento con un plato principal a un precio conjunto fijo aumenta el ticket promedio sin que el cliente lo sienta como un aumento de precio.",
     "bizProfiles.liquor_wine.label": "Licorería y tienda de vinos",
     "bizProfiles.liquor_wine.competitorNoun": "licorerías",
     "bizProfiles.liquor_wine.couponPresets.flat_off_purchase.label": "$5 de descuento en compras de $30 o más",
@@ -4690,9 +4690,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.professional_services.pricingTips.tiered_by_complexity.description":
       "Un nivel de declaración sencilla/estándar/compleja permite que los clientes se seleccionen según su situación real, en lugar de un precio único que le cobra de más o de menos a la mayoría.",
     "bizProfiles.professional_services.pricingTips.retainer_for_ongoing.label":
-      "Use una iguala mensual para la contabilidad continua",
+      "Use una tarifa mensual fija para la contabilidad continua",
     "bizProfiles.professional_services.pricingTips.retainer_for_ongoing.description":
-      "Una iguala mensual predecible para el trabajo recurrente de contabilidad es más fácil de presupuestar para un cliente que la facturación variable por horas, y estabiliza sus propios ingresos.",
+      "Una tarifa mensual fija predecible para el trabajo recurrente de contabilidad es más fácil de presupuestar para un cliente que la facturación variable por horas, y estabiliza sus propios ingresos.",
     "bizProfiles.professional_services.pricingTips.raise_when_turning_away_work.label":
       "Suba sus tarifas cuando esté rechazando trabajo",
     "bizProfiles.professional_services.pricingTips.raise_when_turning_away_work.description":

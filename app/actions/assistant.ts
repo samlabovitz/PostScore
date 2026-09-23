@@ -401,10 +401,17 @@ export async function sendAssistantMessage(
   // model is told to translate any such name it cites into the owner's own
   // language — it already reliably does this given an explicit instruction.
   const languageName = t(DEFAULT_LOCALE, `language.${loaded.locale}`);
+  // "usted" vs. "tú" is a Spanish-specific formality distinction with no
+  // English equivalent, so it's gated to es specifically rather than
+  // folded into the generic (any-locale) sentences above it.
+  const formalityDirective =
+    loaded.locale === "es"
+      ? ` Use the formal "usted" form throughout your answer — never "tú" or its conjugations.`
+      : "";
   const languageDirective =
     loaded.locale === DEFAULT_LOCALE
       ? ""
-      : `\n\nIMPORTANT: Respond in ${languageName}. Always write your entire answer in ${languageName}, even if the owner writes in English or the data above contains English. This also applies to any PostScore page, tab, section, or button name you mention to point the owner somewhere in the app (e.g. "Reviews page", "Growth page", "Competitors page") — those names appear in English above, but the owner's own PostScore app is displayed in ${languageName}, so translate every such name into ${languageName} too. Never cite a page, tab, section, or button name in English.`;
+      : `\n\nIMPORTANT: Respond in ${languageName}. Always write your entire answer in ${languageName}, even if the owner writes in English or the data above contains English. This also applies to any PostScore page, tab, section, or button name you mention to point the owner somewhere in the app (e.g. "Reviews page", "Growth page", "Competitors page") — those names appear in English above, but the owner's own PostScore app is displayed in ${languageName}, so translate every such name into ${languageName} too. Never cite a page, tab, section, or button name in English.${formalityDirective}`;
   const system = `${ASSISTANT_SYSTEM_RULES}\n\n${buildAssistantContextText(loaded.context, loaded.locale)}${languageDirective}`;
 
   let replyText: string;
