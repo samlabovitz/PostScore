@@ -179,6 +179,7 @@ export async function saveBusinessWithClient(
         primary_type: place.primaryType,
         categories: place.categories,
         opening_hours: place.openingHours,
+        opening_hours_periods: place.openingHoursPeriods,
         business_status: place.businessStatus,
         photo_count: place.photoCount,
         google_maps_uri: place.googleMapsUri,

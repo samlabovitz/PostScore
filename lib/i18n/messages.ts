@@ -707,6 +707,12 @@ export type MessageKey =
   | "dashboard.overview.confidenceNotFound"
   | "dashboard.overview.categoryWeightAnnotation"
   | "dashboard.overview.hoursLabel"
+  // --- lib/hours.ts's formatOpeningHours() — the two fixed English
+  // strings a locale-formatted hours line can contain besides real
+  // Google times; everything else in that function is Intl-formatted,
+  // not translated text.
+  | "dashboard.overview.hoursClosed"
+  | "dashboard.overview.hoursOpen24"
   | "dashboard.overview.googleMapsLabel"
   | "dashboard.overview.viewOnGoogleMaps"
   | "dashboard.overview.noPriorScanChanges"
@@ -2505,6 +2511,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.confidenceNotFound": "Not found",
     "dashboard.overview.categoryWeightAnnotation": "(of {weight} weight)",
     "dashboard.overview.hoursLabel": "Hours",
+    "dashboard.overview.hoursClosed": "Closed",
+    "dashboard.overview.hoursOpen24": "Open 24 hours",
     "dashboard.overview.googleMapsLabel": "Google Maps",
     "dashboard.overview.viewOnGoogleMaps": "View on Google Maps",
     "dashboard.overview.noPriorScanChanges":
@@ -4112,6 +4120,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.confidenceNotFound": "No encontrado",
     "dashboard.overview.categoryWeightAnnotation": "(peso: {weight})",
     "dashboard.overview.hoursLabel": "Horario",
+    "dashboard.overview.hoursClosed": "Cerrado",
+    "dashboard.overview.hoursOpen24": "Abierto las 24 horas",
     "dashboard.overview.googleMapsLabel": "Google Maps",
     "dashboard.overview.viewOnGoogleMaps": "Ver en Google Maps",
     "dashboard.overview.noPriorScanChanges": "Aún no hay un análisis anterior con el que comparar — los cambios aparecerán aquí después de su próximo análisis.",

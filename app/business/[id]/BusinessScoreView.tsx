@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { rescanBusiness } from "@/app/actions/scoring";
 import type { BusinessRecord, ScoreHistoryRow, ScoreSnapshot } from "@/app/actions/scoring";
 import { diffProfileSnapshots, type ProfileSnapshot } from "@/lib/profileChanges";
+import { formatOpeningHours } from "@/lib/hours";
 import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 import {
   GRADE_THRESHOLDS,
@@ -303,6 +304,14 @@ function ListingField({ label, value }: { label: string; value: ReactNode }) {
 function ListingCard({ business }: { business: BusinessRecord }) {
   const locale = useLocale();
   const notAvailable = <span className="italic text-ink-mute">{t(locale, "dashboard.common.notAvailable")}</span>;
+  // Only Spanish tries the localized lines — English businesses keep
+  // reading the stored opening_hours weekday descriptions exactly as
+  // before, so English output stays byte-identical. formatOpeningHours
+  // itself falls back to null (and so, below, to opening_hours) whenever
+  // the structured data is missing or doesn't parse.
+  const localizedHours =
+    locale === "es" ? formatOpeningHours(business.opening_hours_periods, locale) : null;
+  const hoursLines = localizedHours ?? business.opening_hours;
   return (
     <Card className="p-5">
       <div className="flex flex-col divide-y divide-paper-line">
@@ -311,9 +320,9 @@ function ListingCard({ business }: { business: BusinessRecord }) {
         <ListingField
           label={t(locale, "dashboard.overview.hoursLabel")}
           value={
-            business.opening_hours && business.opening_hours.length > 0 ? (
+            hoursLines && hoursLines.length > 0 ? (
               <div className="flex flex-col gap-0.5">
-                {business.opening_hours.map((line) => (
+                {hoursLines.map((line) => (
                   <span key={line}>{line}</span>
                 ))}
               </div>

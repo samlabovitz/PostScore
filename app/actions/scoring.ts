@@ -11,7 +11,7 @@ import {
 } from "@/lib/scoring";
 import { reconcileTasks, type TaskRow } from "@/lib/actionPlan";
 import { buildProfileSnapshot, diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
-import { lookupBusinessByPlaceId } from "@/lib/google/places";
+import { lookupBusinessByPlaceId, type OpeningHoursPeriod } from "@/lib/google/places";
 import { saveBusinessWithClient } from "@/app/actions/businesses";
 import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
 
@@ -24,6 +24,12 @@ export interface BusinessRecord extends BusinessScoringRow {
    * by scoring. Passed straight through to DashboardShell (which
    * normalizes it), same as the rest of this display-only trio. */
   language: string | null;
+  /** Google's structured regularOpeningHours.periods (see
+   * lib/google/places.ts) — display-only, never used by scoring. Lets
+   * ListingCard (BusinessScoreView.tsx) render hours in the business's
+   * own language via lib/hours.ts's formatOpeningHours(), falling back
+   * to the English opening_hours lines above when this is null. */
+  opening_hours_periods: OpeningHoursPeriod[] | null;
 }
 
 export type ScoreBusinessResult =
@@ -77,7 +83,7 @@ export async function scoreBusinessWithClient(
   const { data: business, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language"
+      "id, name, address, phone, website, rating, review_count, category, categories, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language"
     )
     .eq("id", businessId)
     .single();

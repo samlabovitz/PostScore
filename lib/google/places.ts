@@ -14,6 +14,7 @@ const DETAILS_FIELD_MASK = [
   "internationalPhoneNumber",
   "websiteUri",
   "regularOpeningHours.weekdayDescriptions",
+  "regularOpeningHours.periods",
   "rating",
   "userRatingCount",
   "types",
@@ -61,6 +62,19 @@ export interface PlaceCandidate {
   formattedAddress: string | null;
 }
 
+/**
+ * One open/close period from Google's regularOpeningHours.periods, kept
+ * exactly as Google shapes it — `day` (0-6, Sunday first), `hour`,
+ * `minute` — with no inferred or filled-in values. `close` is absent for
+ * a period Google reports as never closing that day, and a period that
+ * runs past midnight has `close.day` different from `open.day` — both
+ * stored as-is, never normalized.
+ */
+export interface OpeningHoursPeriod {
+  open?: { day?: number; hour?: number; minute?: number };
+  close?: { day?: number; hour?: number; minute?: number };
+}
+
 export interface PlaceDetails {
   placeId: string;
   name: string | null;
@@ -68,6 +82,14 @@ export interface PlaceDetails {
   phone: string | null;
   website: string | null;
   openingHours: string[] | null;
+  /**
+   * Google's structured regularOpeningHours.periods — separate from the
+   * English-formatted `openingHours` weekday descriptions above, so hours
+   * can eventually be displayed in the business's own language. Stored
+   * exactly as Google returns it; null when Google returns no periods.
+   * Not yet read anywhere else in the app.
+   */
+  openingHoursPeriods: OpeningHoursPeriod[] | null;
   rating: number | null;
   userRatingCount: number | null;
   categories: string[] | null;
@@ -106,14 +128,14 @@ interface RawSearchPlace {
   formattedAddress?: string;
 }
 
-interface RawDetailsPlace {
+export interface RawDetailsPlace {
   id: string;
   displayName?: { text?: string };
   formattedAddress?: string;
   nationalPhoneNumber?: string;
   internationalPhoneNumber?: string;
   websiteUri?: string;
-  regularOpeningHours?: { weekdayDescriptions?: string[] };
+  regularOpeningHours?: { weekdayDescriptions?: string[]; periods?: OpeningHoursPeriod[] };
   rating?: number;
   userRatingCount?: number;
   types?: string[];
@@ -195,7 +217,9 @@ async function getPlaceDetails(
   return { place: normalizeDetails(raw), raw };
 }
 
-function normalizeDetails(raw: RawDetailsPlace): PlaceDetails {
+/** Exported for lib/google/places.test.ts — this is a pure mapping
+ * function, so it's tested directly rather than through a mocked fetch. */
+export function normalizeDetails(raw: RawDetailsPlace): PlaceDetails {
   return {
     placeId: raw.id,
     name: raw.displayName?.text ?? null,
@@ -203,6 +227,10 @@ function normalizeDetails(raw: RawDetailsPlace): PlaceDetails {
     phone: raw.internationalPhoneNumber ?? raw.nationalPhoneNumber ?? null,
     website: raw.websiteUri ?? null,
     openingHours: raw.regularOpeningHours?.weekdayDescriptions ?? null,
+    openingHoursPeriods:
+      raw.regularOpeningHours?.periods && raw.regularOpeningHours.periods.length > 0
+        ? raw.regularOpeningHours.periods
+        : null,
     rating: typeof raw.rating === "number" ? raw.rating : null,
     userRatingCount:
       typeof raw.userRatingCount === "number" ? raw.userRatingCount : null,
