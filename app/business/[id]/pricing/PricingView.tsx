@@ -27,7 +27,6 @@ import {
   type StoredPricingAssessment,
 } from "@/app/actions/pricing";
 import {
-  ASSESSMENT_BASES,
   PRICE_TIERS,
   type AssessmentBasis,
   type PriceLevelComparison,
@@ -35,6 +34,7 @@ import {
   type PriceTierId,
 } from "@/lib/pricing";
 import type { BizProfile } from "@/config/bizProfiles";
+import { t, useLocale, type MessageKey } from "@/lib/i18n";
 
 /**
  * Not a value judgment (premium isn't "bad") — just five visually
@@ -66,6 +66,38 @@ const TIER_ACCENT_BORDER: Record<PriceTierId, string> = {
 };
 
 /**
+ * lib/pricing.ts's PRICE_TIERS/ASSESSMENT_BASES hold the real English
+ * label/description text (single source of truth for tier IDs and the
+ * AI response validation) — lib/pricing.ts itself stays untouched/
+ * English-only, so this view resolves display text for each id through
+ * its own key lookup instead of reading `.label`/`.description` off
+ * those arrays directly. Never read this record's values as English.
+ */
+const TIER_LABEL_KEY: Record<PriceTierId, MessageKey> = {
+  under_market: "dashboard.pricing.tier.underMarket.label",
+  competitive: "dashboard.pricing.tier.competitive.label",
+  upper_mid: "dashboard.pricing.tier.upperMid.label",
+  premium: "dashboard.pricing.tier.premium.label",
+  no_data: "dashboard.pricing.tier.noData.label",
+};
+
+const TIER_DESCRIPTION_KEY: Record<PriceTierId, MessageKey> = {
+  under_market: "dashboard.pricing.tier.underMarket.description",
+  competitive: "dashboard.pricing.tier.competitive.description",
+  upper_mid: "dashboard.pricing.tier.upperMid.description",
+  premium: "dashboard.pricing.tier.premium.description",
+  no_data: "dashboard.pricing.tier.noData.description",
+};
+
+/** Only "verified_local" and "general_estimate" ever reach BasisBadge —
+ * it returns null for "no_data" before any lookup — so that's the only
+ * basis with no key here. */
+const BASIS_LABEL_KEY: Record<Exclude<AssessmentBasis, "no_data">, MessageKey> = {
+  verified_local: "dashboard.pricing.basis.verifiedLocal.label",
+  general_estimate: "dashboard.pricing.basis.generalEstimate.label",
+};
+
+/**
  * Deliberately NOT reusing tier colors here — basis (how we know) is a
  * different axis from tier (what we concluded), and giving it its own
  * quiet, neutral styling keeps the two from being visually confused.
@@ -73,29 +105,32 @@ const TIER_ACCENT_BORDER: Record<PriceTierId, string> = {
  * data", so a second badge would be redundant.
  */
 function BasisBadge({ basis }: { basis: AssessmentBasis }) {
+  const locale = useLocale();
   if (basis === "no_data") return null;
-  const label = ASSESSMENT_BASES.find((b) => b.id === basis)?.label ?? basis;
   const Icon = basis === "verified_local" ? IconMapPin : IconInfoCircle;
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-ink/5 px-2 py-0.5 text-[10.5px] font-medium text-ink-mute">
       <Icon size={11} />
-      {label}
+      {t(locale, BASIS_LABEL_KEY[basis])}
     </span>
   );
 }
 
 function PriceLegend() {
+  const locale = useLocale();
   return (
     <div>
-      <SectionHeading title="What the rankings mean" className="mb-3" />
+      <SectionHeading title={t(locale, "dashboard.pricing.rankingsHeading")} className="mb-3" />
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 nav:grid-cols-5">
         {PRICE_TIERS.map((tier) => (
           <div key={tier.id} className="rounded-lg border border-paper-deep bg-white p-3">
             <div className="flex items-center gap-1.5">
               <span className={cn("h-2 w-2 shrink-0 rounded-full", TIER_DOT_COLOR[tier.id])} />
-              <span className="text-[12.5px] font-semibold text-ink">{tier.label}</span>
+              <span className="text-[12.5px] font-semibold text-ink">{t(locale, TIER_LABEL_KEY[tier.id])}</span>
             </div>
-            <p className="mt-1 text-[11px] leading-snug text-ink-mute">{tier.description}</p>
+            <p className="mt-1 text-[11px] leading-snug text-ink-mute">
+              {t(locale, TIER_DESCRIPTION_KEY[tier.id])}
+            </p>
           </div>
         ))}
       </div>
@@ -112,6 +147,7 @@ function ServiceRow({
   onSave: (id: string, service: string, price: number) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
+  const locale = useLocale();
   const [service, setService] = useState(row.service);
   const [priceText, setPriceText] = useState(String(row.price));
   const [deleting, setDeleting] = useState(false);
@@ -150,7 +186,7 @@ function ServiceRow({
       </div>
       <button
         type="button"
-        aria-label={`Remove ${row.service}`}
+        aria-label={t(locale, "dashboard.pricing.removeServiceAriaLabel", { service: row.service })}
         disabled={deleting}
         onClick={async () => {
           setDeleting(true);
@@ -175,6 +211,7 @@ function ServicesAndPrices({
   setPrices: React.Dispatch<React.SetStateAction<PriceRow[]>>;
   pricingExamples: string[];
 }) {
+  const locale = useLocale();
   const [newService, setNewService] = useState("");
   const [newPrice, setNewPrice] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
@@ -183,11 +220,11 @@ function ServicesAndPrices({
   async function handleAdd() {
     const parsed = Number(newPrice);
     if (!newService.trim()) {
-      setAddError("Enter a service name.");
+      setAddError(t(locale, "dashboard.pricing.enterServiceName"));
       return;
     }
     if (Number.isNaN(parsed) || parsed < 0) {
-      setAddError("Enter a valid price.");
+      setAddError(t(locale, "dashboard.pricing.enterValidPrice"));
       return;
     }
     setAddError(null);
@@ -197,7 +234,7 @@ function ServicesAndPrices({
       setNewService("");
       setNewPrice("");
     } else {
-      setAddError(result.status === "error" ? result.message : "Could not add this row.");
+      setAddError(result.status === "error" ? result.message : t(locale, "dashboard.pricing.couldNotAddRow"));
     }
   }
 
@@ -207,7 +244,7 @@ function ServicesAndPrices({
       setPrices((prev) => prev.map((p) => (p.id === id ? result.row : p)));
       setRowError(null);
     } else {
-      setRowError(result.status === "error" ? result.message : "Could not save this row.");
+      setRowError(result.status === "error" ? result.message : t(locale, "dashboard.pricing.couldNotSaveRow"));
     }
   }
 
@@ -217,16 +254,14 @@ function ServicesAndPrices({
       setPrices((prev) => prev.filter((p) => p.id !== id));
       setRowError(null);
     } else {
-      setRowError(result.status === "error" ? result.message : "Could not remove this row.");
+      setRowError(result.status === "error" ? result.message : t(locale, "dashboard.pricing.couldNotRemoveRow"));
     }
   }
 
   return (
     <Card className="p-5">
       {prices.length === 0 ? (
-        <p className="text-sm text-ink-soft">
-          Add a service and what you charge for it below to get started.
-        </p>
+        <p className="text-sm text-ink-soft">{t(locale, "dashboard.pricing.emptyServicesPrompt")}</p>
       ) : (
         <div className="flex flex-col divide-y divide-paper-line">
           {prices.map((row) => (
@@ -239,7 +274,9 @@ function ServicesAndPrices({
       <div className="mt-4 flex items-center gap-2.5 border-t border-paper-line pt-4">
         <input
           type="text"
-          placeholder={`e.g. ${pricingExamples[0] ?? "Standard Service"}`}
+          placeholder={t(locale, "dashboard.pricing.servicePlaceholder", {
+            example: pricingExamples[0] ?? t(locale, "dashboard.pricing.standardServiceFallback"),
+          })}
           value={newService}
           onChange={(e) => setNewService(e.target.value)}
           className="min-w-0 flex-1 rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft"
@@ -258,11 +295,13 @@ function ServicesAndPrices({
         </div>
         <Button type="button" variant="default" size="sm" onClick={handleAdd} className="shrink-0">
           <IconPlus size={14} />
-          Add
+          {t(locale, "dashboard.pricing.addServiceButton")}
         </Button>
       </div>
       {pricingExamples.length > 0 && (
-        <p className="mt-2 text-[12px] text-ink-mute">Examples: {pricingExamples.join(", ")}</p>
+        <p className="mt-2 text-[12px] text-ink-mute">
+          {t(locale, "dashboard.pricing.examplesPrefix", { examples: pricingExamples.join(", ") })}
+        </p>
       )}
       {addError && <p className="mt-2 text-[12px] text-red">{addError}</p>}
     </Card>
@@ -273,15 +312,18 @@ function ServicesAndPrices({
  * business's own $/$$/$$$ next to nearby competitors', never a
  * fabricated number. */
 function PriceLevelStrip({ context }: { context: PriceLevelComparison }) {
+  const locale = useLocale();
   return (
     <div>
       <div className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
         <IconChartBar size={13} />
-        Real Google price-level context
+        {t(locale, "dashboard.pricing.priceLevelContextHeading")}
       </div>
       <div className="flex flex-wrap items-stretch gap-2">
         <div className="flex flex-col items-center justify-center rounded-lg bg-brass px-3.5 py-2 text-white">
-          <span className="text-[10px] font-semibold uppercase tracking-wide opacity-85">You</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wide opacity-85">
+            {t(locale, "dashboard.pricing.youLabel")}
+          </span>
           <span className="text-sm font-bold">{context.subjectSymbol ?? "—"}</span>
         </div>
         {context.competitors.map((c, i) => (
@@ -301,14 +343,13 @@ function PriceLevelStrip({ context }: { context: PriceLevelComparison }) {
 }
 
 function AssessmentEmptyState() {
+  const locale = useLocale();
   return (
     <Card className="flex flex-col items-center gap-2 border-dashed p-8 text-center">
       <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brass/10 text-brass">
         <IconSparkles size={18} />
       </span>
-      <p className="max-w-[26ch] text-sm text-ink-soft">
-        Add your prices, then click &quot;Assess my pricing&quot; to see how they compare.
-      </p>
+      <p className="max-w-[26ch] text-sm text-ink-soft">{t(locale, "dashboard.pricing.assessmentEmptyState")}</p>
     </Card>
   );
 }
@@ -327,6 +368,7 @@ function AssessmentSkeleton() {
 }
 
 function AssessmentResults({ result }: { result: StoredPricingAssessment }) {
+  const locale = useLocale();
   return (
     <Card className="p-5">
       <div className="flex flex-col gap-2.5">
@@ -343,7 +385,7 @@ function AssessmentResults({ result }: { result: StoredPricingAssessment }) {
                 {a.service} <span className="font-normal text-ink-mute">— ${a.price.toFixed(2)}</span>
               </div>
               <Pill variant={TIER_PILL_VARIANT[a.tier]} className="shrink-0">
-                {PRICE_TIERS.find((t) => t.id === a.tier)?.label ?? a.tier}
+                {t(locale, TIER_LABEL_KEY[a.tier])}
               </Pill>
             </div>
             {a.basis !== "no_data" && (
@@ -365,9 +407,13 @@ function AssessmentResults({ result }: { result: StoredPricingAssessment }) {
 }
 
 function PricingTips({ profile }: { profile: BizProfile }) {
+  const locale = useLocale();
   return (
     <div>
-      <SectionHeading title={`Pricing tips for ${profile.label.toLowerCase()}`} className="mb-3" />
+      <SectionHeading
+        title={t(locale, "dashboard.pricing.pricingTipsHeading", { profile: profile.label.toLowerCase() })}
+        className="mb-3"
+      />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {profile.pricingTips.map((tip) => (
           <Card key={tip.id} className="flex items-start gap-3 p-4">
@@ -381,10 +427,7 @@ function PricingTips({ profile }: { profile: BizProfile }) {
           </Card>
         ))}
       </div>
-      <p className="mt-3 text-[12px] text-ink-mute">
-        General pricing strategy for this type of business — not a data-driven analysis of your
-        actual prices. For that, use &quot;Assess my pricing&quot; above.
-      </p>
+      <p className="mt-3 text-[12px] text-ink-mute">{t(locale, "dashboard.pricing.generalStrategyFootnote")}</p>
     </div>
   );
 }
@@ -402,6 +445,7 @@ export function PricingView({
   initialPrices: PriceRow[];
   initialAssessment: StoredPricingAssessment | null;
 }) {
+  const locale = useLocale();
   const [prices, setPrices] = useState<PriceRow[]>(initialPrices);
   const [lastResult, setLastResult] = useState<StoredPricingAssessment | null>(initialAssessment);
   const [runState, setRunState] = useState<
@@ -419,11 +463,11 @@ export function PricingView({
       });
       setRunState({ kind: "idle" });
     } else if (result.status === "no_prices") {
-      setRunState({ kind: "error", message: "Add at least one service and price above first." });
+      setRunState({ kind: "error", message: t(locale, "dashboard.pricing.noPricesError") });
     } else {
       setRunState({
         kind: "error",
-        message: result.status === "error" ? result.message : "Couldn't assess pricing — try again.",
+        message: result.status === "error" ? result.message : t(locale, "dashboard.pricing.assessErrorFallback"),
       });
     }
   }
@@ -438,34 +482,31 @@ export function PricingView({
           className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
         >
           <IconArrowLeft size={15} />
-          Back to {businessName ?? "business"}
+          {t(locale, "dashboard.competitors.backTo", {
+            name: businessName ?? t(locale, "dashboard.competitors.businessFallback"),
+          })}
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-2.5">
-          <h1 className="font-serif text-2xl font-semibold text-ink nav:text-[27px]">Price check</h1>
+          <h1 className="font-serif text-2xl font-semibold text-ink nav:text-[27px]">
+            {t(locale, "dashboard.pricing.pageTitle")}
+          </h1>
           <Pill variant="brass">{profile.label}</Pill>
         </div>
-        <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">
-          Enter your prices and see how they compare to your local market — with advice on where
-          you can adjust to bring more people in.
-        </p>
+        <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">{t(locale, "dashboard.pricing.introText")}</p>
       </div>
 
       <Card className="flex items-start gap-3 p-4">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink/5 text-ink-mute">
           <IconTag size={16} />
         </span>
-        <p className="text-[13px] text-ink-soft">
-          Optional and private. Prices aren&apos;t part of your score — this is just a tool. You
-          type in what you charge; we compare it to local market data where we can find it, and
-          give a clear estimate where we can&apos;t. We never guess a competitor&apos;s exact price.
-        </p>
+        <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.pricing.disclosureText")}</p>
       </Card>
 
       <PriceLegend />
 
       <div className="grid grid-cols-1 gap-6 nav:grid-cols-2 nav:items-start">
         <div className="flex flex-col gap-4">
-          <SectionHeading title="Your services & prices" />
+          <SectionHeading title={t(locale, "dashboard.pricing.servicesHeading")} />
           <ServicesAndPrices
             businessId={businessId}
             prices={prices}
@@ -476,20 +517,28 @@ export function PricingView({
           <div className="flex flex-col gap-2">
             <Button variant="brass" onClick={handleAssess} disabled={prices.length === 0 || isWorking} className="w-fit">
               <IconSparkles size={16} />
-              {isWorking ? "Assessing…" : lastResult ? "Re-assess my pricing" : "Assess my pricing"}
+              {isWorking
+                ? t(locale, "dashboard.pricing.assessingButton")
+                : lastResult
+                  ? t(locale, "dashboard.pricing.reassessButton")
+                  : t(locale, "dashboard.pricing.assessButton")}
             </Button>
             {runState.kind === "error" ? (
               <p className="text-[12px] text-red">{runState.message}</p>
             ) : lastResult ? (
               <p className="text-[12px] text-ink-mute">
-                Last assessed {new Date(lastResult.assessedAt).toLocaleString()}
+                {t(locale, "dashboard.pricing.lastAssessed", {
+                  date: new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(
+                    new Date(lastResult.assessedAt)
+                  ),
+                })}
               </p>
             ) : null}
           </div>
         </div>
 
         <div className="flex flex-col gap-4">
-          <SectionHeading title="Your pricing assessment" />
+          <SectionHeading title={t(locale, "dashboard.pricing.assessmentHeading")} />
           {lastResult ? (
             <div className="relative">
               <AssessmentResults result={lastResult} />

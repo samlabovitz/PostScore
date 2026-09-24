@@ -986,6 +986,51 @@ export type MessageKey =
   | "dashboard.reports.chartLastScanLabel"
   | "dashboard.reports.chartMoreEarlier"
   | "dashboard.reports.chartAriaLabel"
+  // --- Pricing page (app/business/[id]/pricing/PricingView.tsx). Tier
+  // labels/descriptions and basis labels mirror lib/pricing.ts's
+  // PRICE_TIERS/ASSESSMENT_BASES (kept as local key lookups by id here,
+  // since lib/pricing.ts itself stays English-only/untouched). The
+  // "no_data" assessment basis has no key — BasisBadge never renders it.
+  | "dashboard.pricing.pageTitle"
+  | "dashboard.pricing.introText"
+  | "dashboard.pricing.disclosureText"
+  | "dashboard.pricing.rankingsHeading"
+  | "dashboard.pricing.tier.underMarket.label"
+  | "dashboard.pricing.tier.underMarket.description"
+  | "dashboard.pricing.tier.competitive.label"
+  | "dashboard.pricing.tier.competitive.description"
+  | "dashboard.pricing.tier.upperMid.label"
+  | "dashboard.pricing.tier.upperMid.description"
+  | "dashboard.pricing.tier.premium.label"
+  | "dashboard.pricing.tier.premium.description"
+  | "dashboard.pricing.tier.noData.label"
+  | "dashboard.pricing.tier.noData.description"
+  | "dashboard.pricing.basis.verifiedLocal.label"
+  | "dashboard.pricing.basis.generalEstimate.label"
+  | "dashboard.pricing.servicesHeading"
+  | "dashboard.pricing.removeServiceAriaLabel"
+  | "dashboard.pricing.enterServiceName"
+  | "dashboard.pricing.enterValidPrice"
+  | "dashboard.pricing.couldNotAddRow"
+  | "dashboard.pricing.couldNotSaveRow"
+  | "dashboard.pricing.couldNotRemoveRow"
+  | "dashboard.pricing.emptyServicesPrompt"
+  | "dashboard.pricing.servicePlaceholder"
+  | "dashboard.pricing.standardServiceFallback"
+  | "dashboard.pricing.addServiceButton"
+  | "dashboard.pricing.examplesPrefix"
+  | "dashboard.pricing.priceLevelContextHeading"
+  | "dashboard.pricing.youLabel"
+  | "dashboard.pricing.assessmentEmptyState"
+  | "dashboard.pricing.pricingTipsHeading"
+  | "dashboard.pricing.generalStrategyFootnote"
+  | "dashboard.pricing.noPricesError"
+  | "dashboard.pricing.assessErrorFallback"
+  | "dashboard.pricing.assessmentHeading"
+  | "dashboard.pricing.assessingButton"
+  | "dashboard.pricing.reassessButton"
+  | "dashboard.pricing.assessButton"
+  | "dashboard.pricing.lastAssessed"
   // --- Business-type profiles (config/bizProfiles.ts). Step L8 (beat 1).
   // bizProfiles.<contentProfileId>.<field>[.<itemKey>] — the 12 hand-
   // written content profiles (coupon/offer/referral/pricing presets,
@@ -2770,6 +2815,55 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.chartMoreEarlier": "+{count} earlier",
     "dashboard.reports.chartAriaLabel": "Score over time, {count} scans, from {from} to {to}",
 
+    // --- Pricing page. See the matching comment on the MessageKey union
+    // above.
+    "dashboard.pricing.pageTitle": "Price check",
+    "dashboard.pricing.introText":
+      "Enter your prices and see how they compare to your local market — with advice on where you can adjust to bring more people in.",
+    "dashboard.pricing.disclosureText":
+      "Optional and private. Prices aren't part of your score — this is just a tool. You type in what you charge; we compare it to local market data where we can find it, and give a clear estimate where we can't. We never guess a competitor's exact price.",
+    "dashboard.pricing.rankingsHeading": "What the rankings mean",
+    "dashboard.pricing.tier.underMarket.label": "Under market",
+    "dashboard.pricing.tier.underMarket.description":
+      "Below the local range — there may be room to raise this price.",
+    "dashboard.pricing.tier.competitive.label": "Competitive",
+    "dashboard.pricing.tier.competitive.description": "Within the typical local range for this service.",
+    "dashboard.pricing.tier.upperMid.label": "Upper-mid",
+    "dashboard.pricing.tier.upperMid.description": "Toward the top of the local range.",
+    "dashboard.pricing.tier.premium.label": "Premium",
+    "dashboard.pricing.tier.premium.description": "Above the local range — fine if your reviews back it up.",
+    "dashboard.pricing.tier.noData.label": "No market data",
+    "dashboard.pricing.tier.noData.description": "We couldn't find reliable local prices, so we won't guess.",
+    "dashboard.pricing.basis.verifiedLocal.label": "Based on local price levels",
+    "dashboard.pricing.basis.generalEstimate.label": "General estimate",
+    "dashboard.pricing.servicesHeading": "Your services & prices",
+    "dashboard.pricing.removeServiceAriaLabel": "Remove {service}",
+    "dashboard.pricing.enterServiceName": "Enter a service name.",
+    "dashboard.pricing.enterValidPrice": "Enter a valid price.",
+    "dashboard.pricing.couldNotAddRow": "Could not add this row.",
+    "dashboard.pricing.couldNotSaveRow": "Could not save this row.",
+    "dashboard.pricing.couldNotRemoveRow": "Could not remove this row.",
+    "dashboard.pricing.emptyServicesPrompt":
+      "Add a service and what you charge for it below to get started.",
+    "dashboard.pricing.servicePlaceholder": "e.g. {example}",
+    "dashboard.pricing.standardServiceFallback": "Standard Service",
+    "dashboard.pricing.addServiceButton": "Add",
+    "dashboard.pricing.examplesPrefix": "Examples: {examples}",
+    "dashboard.pricing.priceLevelContextHeading": "Real Google price-level context",
+    "dashboard.pricing.youLabel": "You",
+    "dashboard.pricing.assessmentEmptyState":
+      "Add your prices, then click \"Assess my pricing\" to see how they compare.",
+    "dashboard.pricing.pricingTipsHeading": "Pricing tips for {profile}",
+    "dashboard.pricing.generalStrategyFootnote":
+      "General pricing strategy for this type of business — not a data-driven analysis of your actual prices. For that, use \"Assess my pricing\" above.",
+    "dashboard.pricing.noPricesError": "Add at least one service and price above first.",
+    "dashboard.pricing.assessErrorFallback": "Couldn't assess pricing — try again.",
+    "dashboard.pricing.assessmentHeading": "Your pricing assessment",
+    "dashboard.pricing.assessingButton": "Assessing…",
+    "dashboard.pricing.reassessButton": "Re-assess my pricing",
+    "dashboard.pricing.assessButton": "Assess my pricing",
+    "dashboard.pricing.lastAssessed": "Last assessed {date}",
+
     // --- Business-type profiles (config/bizProfiles.ts). See the
     // matching comment on the MessageKey union above.
     "bizProfiles.salon.label": "Salon & Personal Care",
@@ -4292,6 +4386,54 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.chartLastScanLabel": "Último análisis",
     "dashboard.reports.chartMoreEarlier": "+{count} anteriores",
     "dashboard.reports.chartAriaLabel": "Puntuación a lo largo del tiempo, {count} análisis, de {from} a {to}",
+
+    // --- Pricing page. Draft Spanish — pending your review.
+    "dashboard.pricing.pageTitle": "Revisión de precios",
+    "dashboard.pricing.introText":
+      "Ingrese sus precios y vea cómo se comparan con su mercado local — con consejos sobre dónde puede ajustar para atraer a más clientes.",
+    "dashboard.pricing.disclosureText":
+      "Opcional y privado. Los precios no forman parte de su puntuación — es solo una herramienta. Usted ingresa lo que cobra; lo comparamos con datos del mercado local cuando podemos encontrarlos, y damos una estimación clara cuando no podemos. Nunca adivinamos el precio exacto de un competidor.",
+    "dashboard.pricing.rankingsHeading": "Qué significan las clasificaciones",
+    "dashboard.pricing.tier.underMarket.label": "Por debajo del mercado",
+    "dashboard.pricing.tier.underMarket.description":
+      "Por debajo del rango local — puede haber margen para subir este precio.",
+    "dashboard.pricing.tier.competitive.label": "Competitivo",
+    "dashboard.pricing.tier.competitive.description": "Dentro del rango local típico para este servicio.",
+    "dashboard.pricing.tier.upperMid.label": "Medio-alto",
+    "dashboard.pricing.tier.upperMid.description": "Hacia la parte alta del rango local.",
+    "dashboard.pricing.tier.premium.label": "Premium",
+    "dashboard.pricing.tier.premium.description": "Por encima del rango local — está bien si sus reseñas lo respaldan.",
+    "dashboard.pricing.tier.noData.label": "Sin datos de mercado",
+    "dashboard.pricing.tier.noData.description": "No pudimos encontrar precios locales confiables, así que no vamos a adivinar.",
+    "dashboard.pricing.basis.verifiedLocal.label": "Basado en niveles de precios locales",
+    "dashboard.pricing.basis.generalEstimate.label": "Estimación general",
+    "dashboard.pricing.servicesHeading": "Sus servicios y precios",
+    "dashboard.pricing.removeServiceAriaLabel": "Quitar {service}",
+    "dashboard.pricing.enterServiceName": "Ingrese el nombre de un servicio.",
+    "dashboard.pricing.enterValidPrice": "Ingrese un precio válido.",
+    "dashboard.pricing.couldNotAddRow": "No se pudo agregar esta fila.",
+    "dashboard.pricing.couldNotSaveRow": "No se pudo guardar esta fila.",
+    "dashboard.pricing.couldNotRemoveRow": "No se pudo quitar esta fila.",
+    "dashboard.pricing.emptyServicesPrompt":
+      "Para empezar, agregue abajo un servicio y lo que cobra por él.",
+    "dashboard.pricing.servicePlaceholder": "p. ej. {example}",
+    "dashboard.pricing.standardServiceFallback": "Servicio estándar",
+    "dashboard.pricing.addServiceButton": "Agregar",
+    "dashboard.pricing.examplesPrefix": "Ejemplos: {examples}",
+    "dashboard.pricing.priceLevelContextHeading": "Nivel de precios real según Google",
+    "dashboard.pricing.youLabel": "Su negocio",
+    "dashboard.pricing.assessmentEmptyState":
+      "Agregue sus precios y luego haga clic en \"Evaluar mis precios\" para ver cómo se comparan.",
+    "dashboard.pricing.pricingTipsHeading": "Consejos de precios para {profile}",
+    "dashboard.pricing.generalStrategyFootnote":
+      "Estrategia general de precios para este tipo de negocio — no es un análisis basado en datos de sus precios reales. Para eso, use \"Evaluar mis precios\" arriba.",
+    "dashboard.pricing.noPricesError": "Primero agregue arriba al menos un servicio con su precio.",
+    "dashboard.pricing.assessErrorFallback": "No se pudieron evaluar los precios — inténtelo de nuevo.",
+    "dashboard.pricing.assessmentHeading": "Su evaluación de precios",
+    "dashboard.pricing.assessingButton": "Evaluando…",
+    "dashboard.pricing.reassessButton": "Volver a evaluar mis precios",
+    "dashboard.pricing.assessButton": "Evaluar mis precios",
+    "dashboard.pricing.lastAssessed": "Última evaluación: {date}",
 
     // --- Business-type profiles (config/bizProfiles.ts). Reviewed Spanish,
     // added profile-by-profile as supplied. growActions.* intentionally
