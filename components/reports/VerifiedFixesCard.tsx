@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { ConnectToUnlockTile } from "@/components/gbp/ConnectToUnlock";
+import { t, useLocale } from "@/lib/i18n";
 
 /**
  * "What we've verified so far" — deliberately NOT "what your
@@ -25,28 +26,31 @@ export function VerifiedFixesCard({
   listingChangesDetected: number;
   gbpConnected: boolean;
 }) {
+  const locale = useLocale();
+  const reviewsRepliedToLabel = t(locale, "dashboard.reports.reviewsRepliedToLabel");
+  const googlePostsPublishedLabel = t(locale, "dashboard.reports.googlePostsPublishedLabel");
   return (
     <Card className="p-5">
       <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
         <VerifiedTile
-          label="Action-plan fixes confirmed"
+          label={t(locale, "dashboard.reports.verifiedFixesConfirmedLabel")}
           value={confirmedFixCount}
-          note="Confirmed by a real re-scan finding the check at full points."
+          note={t(locale, "dashboard.reports.verifiedFixesConfirmedNote")}
         />
         <VerifiedTile
-          label="Listing changes detected"
+          label={t(locale, "dashboard.reports.listingChangesDetectedLabel")}
           value={listingChangesDetected}
-          note="Real differences found between your saved scans."
+          note={t(locale, "dashboard.reports.listingChangesDetectedNote")}
         />
         {gbpConnected ? (
-          <PendingSyncTile label="Reviews replied to" />
+          <PendingSyncTile label={reviewsRepliedToLabel} />
         ) : (
-          <ConnectToUnlockTile businessId={businessId} label="Reviews replied to" />
+          <ConnectToUnlockTile businessId={businessId} label={reviewsRepliedToLabel} />
         )}
         {gbpConnected ? (
-          <PendingSyncTile label="Google Posts published" />
+          <PendingSyncTile label={googlePostsPublishedLabel} />
         ) : (
-          <ConnectToUnlockTile businessId={businessId} label="Google Posts published" />
+          <ConnectToUnlockTile businessId={businessId} label={googlePostsPublishedLabel} />
         )}
       </div>
     </Card>
@@ -68,13 +72,14 @@ function VerifiedTile({ label, value, note }: { label: string; value: number; no
  * connection itself. Distinct from "coming soon" (which implies nothing
  * exists yet) and from a fabricated 0. */
 function PendingSyncTile({ label }: { label: string }) {
+  const locale = useLocale();
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-mute">{label}</span>
       <Pill variant="brass" className="w-fit">
-        Syncing soon
+        {t(locale, "dashboard.reports.syncingSoonLabel")}
       </Pill>
-      <span className="text-[11px] text-ink-mute">Connected — this starts counting in a later update.</span>
+      <span className="text-[11px] text-ink-mute">{t(locale, "dashboard.reports.connectedSyncingNote")}</span>
     </div>
   );
 }

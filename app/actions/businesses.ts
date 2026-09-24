@@ -490,6 +490,11 @@ export interface MyBusinessRow {
    * business's row is somehow missing the scoring-relevant columns,
    * which shouldn't happen for a normally-saved business. */
   score: { total: number; grade: Grade } | null;
+  /** The business's own real language column — display-only, passed
+   * straight through. app/page.tsx uses this across the whole list to
+   * decide the page's own locale (only when every business shares one
+   * language; otherwise the page honestly stays English). */
+  language: string | null;
 }
 
 export type ListMyBusinessesResult =
@@ -536,6 +541,7 @@ export async function listMyBusinesses(): Promise<ListMyBusinessesResult> {
       address: row.address,
       category: row.category,
       score: { total: breakdown.total, grade: breakdown.grade },
+      language: row.language,
     };
   });
 

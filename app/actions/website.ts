@@ -18,6 +18,7 @@ import {
 } from "@/lib/starterSite";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale, type Locale } from "@/lib/i18n";
+import type { OpeningHoursPeriod } from "@/lib/google/places";
 
 export interface WebsitePageData {
   businessName: string | null;
@@ -30,6 +31,12 @@ export interface WebsitePageData {
   language: string | null;
   phone: string | null;
   openingHours: string[] | null;
+  /** Google's structured regularOpeningHours.periods (see
+   * lib/google/places.ts) — passed straight through to the starter-site
+   * generator so it can display Spanish hours (lib/hours.ts) when the
+   * site's own language is set to Spanish; null falls back to
+   * openingHours. */
+  openingHoursPeriods: OpeningHoursPeriod[] | null;
   rating: number | null;
   reviewCount: number | null;
   /** Real Google-listed website, if any — used only to detect whether
@@ -116,6 +123,7 @@ function estimateTemplateWebsiteScore(
   locale: Locale
 ): number | null {
   const templateHtml = buildStarterSiteHtml({
+    locale,
     businessName: data.businessName,
     category: data.category,
     tagline: "",
@@ -126,6 +134,9 @@ function estimateTemplateWebsiteScore(
     phone: data.phone,
     address: data.address,
     openingHours: data.openingHours,
+    // Not needed for this internal scoring-only estimate — never shown
+    // to the owner, and analyzeWebsiteHtml() doesn't parse hours text.
+    openingHoursPeriods: null,
     rating: data.rating,
     reviewCount: data.reviewCount,
     googleMapsUri: data.googleMapsUri,
@@ -203,7 +214,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "name, address, category, primary_type, business_type_override, phone, opening_hours, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language"
+      "name, address, category, primary_type, business_type_override, phone, opening_hours, opening_hours_periods, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language"
     )
     .eq("id", businessId)
     .single();
@@ -257,6 +268,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       language: data.language,
       phone: data.phone,
       openingHours: data.opening_hours,
+      openingHoursPeriods: data.opening_hours_periods,
       rating: data.rating,
       reviewCount: data.review_count,
       website: data.website,

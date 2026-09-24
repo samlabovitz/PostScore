@@ -2,13 +2,11 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
-import { Card } from "@/components/ui/Card";
 import { getWebsitePageData } from "@/app/actions/website";
 import { resolveBizProfile, renderFaq } from "@/config/bizProfiles";
-import { StarterSiteBuilder } from "./StarterSiteBuilder";
+import { WebsiteGeneratorSection } from "./WebsiteGeneratorSection";
 import { WebsiteVisualAnalysis } from "./WebsiteVisualAnalysis";
 import { WebsiteScoreBreakdown } from "./WebsiteScoreBreakdown";
-import { CollapsibleGenerator } from "./CollapsibleGenerator";
 import { normalizeLocale, t } from "@/lib/i18n";
 
 export default async function WebsitePage({ params }: { params: { id: string } }) {
@@ -23,23 +21,35 @@ export default async function WebsitePage({ params }: { params: { id: string } }
 
   const { data, builderOffer } = result;
   const locale = normalizeLocale(data.language);
-  const profile = resolveBizProfile(data.category, data.primaryType, data.businessTypeOverride);
-  const faq = renderFaq(profile.faq, { name: data.businessName, address: data.address });
+  // The generator's own "Site language" selector (StarterSiteBuilder)
+  // defaults to this same locale but the owner can switch it — so the
+  // profile/FAQ are resolved once per language here, and the client
+  // side (WebsiteGeneratorSection) picks between them at render time.
+  const profileEn = resolveBizProfile(data.category, data.primaryType, data.businessTypeOverride, "en");
+  const profileEs = resolveBizProfile(data.category, data.primaryType, data.businessTypeOverride, "es");
+  const faqEn = renderFaq(profileEn.faq, { name: data.businessName, address: data.address });
+  const faqEs = renderFaq(profileEs.faq, { name: data.businessName, address: data.address });
   const hasWebsite = !!data.website && data.website.trim().length > 0;
+  const businessName = data.businessName ?? t(locale, "dashboard.website.businessNameFallback");
 
-  const generator = (
-    <StarterSiteBuilder
+  const generatorSection = (
+    <WebsiteGeneratorSection
       businessId={params.id}
-      businessName={data.businessName ?? t(locale, "dashboard.website.businessNameFallback")}
+      businessName={businessName}
+      businessLanguage={data.language}
       category={data.category}
       phone={data.phone}
       address={data.address}
       openingHours={data.openingHours}
+      openingHoursPeriods={data.openingHoursPeriods}
       rating={data.rating}
       reviewCount={data.reviewCount}
       googleMapsUri={data.googleMapsUri}
-      profileId={profile.id}
+      profileId={profileEn.id}
       builderOfferReason={builderOffer.reason}
+      hasWebsite={hasWebsite}
+      faqEn={faqEn}
+      faqEs={faqEs}
     />
   );
 
@@ -61,25 +71,6 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       websiteSuggestions={data.websiteSuggestions}
     />
   ) : null;
-
-  const faqSection = (
-    <div>
-      <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-        {t(locale, "dashboard.website.faqDraftHeading")}
-      </div>
-      <p className="mb-3 text-sm text-ink-soft">{t(locale, "dashboard.website.faqDraftIntro")}</p>
-      <Card className="p-5">
-        <div className="flex flex-col divide-y divide-paper-line">
-          {faq.map((entry) => (
-            <div key={entry.question} className="py-3 first:pt-0 last:pb-0">
-              <div className="text-sm font-semibold text-ink">{entry.question}</div>
-              <p className="mt-0.5 text-[13px] text-ink-soft">{entry.answer}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
-  );
 
   return (
     <DashboardShell
@@ -112,15 +103,9 @@ export default async function WebsitePage({ params }: { params: { id: string } }
           <>
             {visualAnalysis}
             {scoreBreakdown}
-            {faqSection}
-            <CollapsibleGenerator defaultExpanded={false}>{generator}</CollapsibleGenerator>
           </>
-        ) : (
-          <>
-            {generator}
-            {faqSection}
-          </>
-        )}
+        ) : null}
+        {generatorSection}
       </div>
     </DashboardShell>
   );

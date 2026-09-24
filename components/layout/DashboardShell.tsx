@@ -33,6 +33,20 @@ export function DashboardShell({
     };
   }, [navOpen]);
 
+  // app/layout.tsx's <html lang="en"> is a static, per-request-unaware
+  // default — Next.js's single root layout has no way to read a nested
+  // route's own business before rendering it server-side. This is the
+  // one place that DOES know the real business (and so its real
+  // language) on every dashboard page, so it's the one place that
+  // corrects <html lang> for it; a page with no business in context
+  // (the home list, intake) leaves the honest "en" default in place.
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    return () => {
+      document.documentElement.lang = "en";
+    };
+  }, [locale]);
+
   return (
     <LocaleProvider locale={locale}>
       <div className="min-h-screen bg-paper" data-locale={locale}>

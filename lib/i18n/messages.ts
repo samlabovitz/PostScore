@@ -85,6 +85,27 @@ export type MessageKey =
   | "dashboard.competitors.rankedHeading"
   | "dashboard.competitors.rankSuffix"
   | "dashboard.competitors.unscoredHeading"
+  // --- lib/competitors.ts's own message strings (findAndScoreCompetitors),
+  // threaded with the business's locale rather than always English.
+  | "dashboard.competitors.thisBusinessFallback"
+  | "dashboard.competitors.thisBusinessNameFallback"
+  | "dashboard.competitors.noCoordinatesError"
+  | "dashboard.competitors.categoryTooGenericError"
+  | "dashboard.competitors.noCategoryError"
+  | "dashboard.competitors.nearbySearchFailedFallback"
+  | "dashboard.competitors.unnamedListing"
+  | "dashboard.competitors.noUsableDetails"
+  | "dashboard.competitors.temporarilyClosed"
+  | "dashboard.competitors.permanentlyClosed"
+  | "dashboard.competitors.closedListingReason"
+  | "dashboard.competitors.sameCategoryFallback"
+  | "dashboard.competitors.foundNoneMessage"
+  | "dashboard.competitors.foundFewMessage.one"
+  | "dashboard.competitors.foundFewMessage.other"
+  | "dashboard.competitors.showingNearestMessage"
+  | "dashboard.competitors.searchWidenedSuffix"
+  | "dashboard.competitors.unscoredSuffix.one"
+  | "dashboard.competitors.unscoredSuffix.other"
   | "dashboard.competitors.nothingToCompare"
   | "dashboard.competitors.noRating"
   | "dashboard.competitors.reviewCount.one"
@@ -335,7 +356,7 @@ export type MessageKey =
   | "dashboard.reports.recapDayCount.other"
   // --- Growth section (app/business/[id]/growth/*) — pure extraction of
   // each component's own hardcoded UI copy. Anything sourced from
-  // config/bizProfiles.ts (coupon/referral presets, angles, growActions,
+  // config/bizProfiles.ts (coupon/referral presets, angles,
   // pricingExamples, FAQ text) is deliberately left OUT of this
   // dictionary — that content stays English-only data flowing through as
   // interpolated params (see e.g. quickPicksFor's {label}), never
@@ -943,6 +964,28 @@ export type MessageKey =
   | "dashboard.intake.resultHeading"
   | "dashboard.intake.noMatchingBusiness"
   | "dashboard.intake.multipleMatches"
+  // --- Home page (app/page.tsx, "Your businesses" list).
+  | "dashboard.home.pageTitle"
+  | "dashboard.home.nothingAddedYet"
+  | "dashboard.home.savedBusinessCount.one"
+  | "dashboard.home.savedBusinessCount.other"
+  | "dashboard.home.addBusinessButton"
+  | "dashboard.home.untitledBusiness"
+  | "dashboard.home.noAddressOnFile"
+  | "dashboard.home.emptyStateHeading"
+  | "dashboard.home.emptyStateBody"
+  | "dashboard.home.addFirstBusinessButton"
+  // --- Unsubscribe page (app/unsubscribe/page.tsx) — reachable outside
+  // the dashboard, from a real monthly-report email link.
+  | "dashboard.unsubscribe.invalidLinkTitle"
+  | "dashboard.unsubscribe.invalidLinkMessage"
+  | "dashboard.unsubscribe.expiredLinkTitle"
+  | "dashboard.unsubscribe.expiredLinkMessage"
+  | "dashboard.unsubscribe.updateFailedTitle"
+  | "dashboard.unsubscribe.updateFailedMessage"
+  | "dashboard.unsubscribe.successTitle"
+  | "dashboard.unsubscribe.successMessage"
+  | "dashboard.unsubscribe.thisBusinessFallback"
   // --- Lib sweep: lib/reviews.ts's ratingCaption()/reviewCountCaption(),
   // rendered only in website-reviews's ReviewsView.tsx — namespaced under
   // the existing dashboard.websiteReviews.* section rather than a new
@@ -992,6 +1035,15 @@ export type MessageKey =
   | "dashboard.reports.chartLastScanLabel"
   | "dashboard.reports.chartMoreEarlier"
   | "dashboard.reports.chartAriaLabel"
+  // --- components/reports/VerifiedFixesCard.tsx.
+  | "dashboard.reports.verifiedFixesConfirmedLabel"
+  | "dashboard.reports.verifiedFixesConfirmedNote"
+  | "dashboard.reports.listingChangesDetectedLabel"
+  | "dashboard.reports.listingChangesDetectedNote"
+  | "dashboard.reports.reviewsRepliedToLabel"
+  | "dashboard.reports.googlePostsPublishedLabel"
+  | "dashboard.reports.syncingSoonLabel"
+  | "dashboard.reports.connectedSyncingNote"
   // --- Pricing page (app/business/[id]/pricing/PricingView.tsx). Tier
   // labels/descriptions and basis labels mirror lib/pricing.ts's
   // PRICE_TIERS/ASSESSMENT_BASES (kept as local key lookups by id here,
@@ -1037,10 +1089,62 @@ export type MessageKey =
   | "dashboard.pricing.reassessButton"
   | "dashboard.pricing.assessButton"
   | "dashboard.pricing.lastAssessed"
+  // --- Starter-site generator (lib/starterSite.ts + StarterSiteBuilder.tsx).
+  // Theme/font labels keep the same English text lib/starterSite.ts's own
+  // STARTER_SITE_THEMES/STARTER_SITE_FONTS hold as data — that file stays
+  // untouched/English-only; StarterSiteBuilder.tsx resolves display text
+  // by id through these keys instead of reading `.label` directly. The
+  // "starterSite.*" (no "dashboard." prefix) keys below are the fixed
+  // English strings inside the GENERATED site's own HTML, controlled by
+  // its own "Site language" selector — independent of the dashboard's
+  // own locale.
+  | "dashboard.website.starter.siteLanguageLabel"
+  | "dashboard.website.starter.siteLanguageEnglishOption"
+  | "dashboard.website.starter.siteLanguageSpanishOption"
+  | "starterSite.theme.ink"
+  | "starterSite.theme.terracotta"
+  | "starterSite.theme.forest"
+  | "starterSite.theme.slate"
+  | "starterSite.theme.plum"
+  | "starterSite.theme.teal"
+  | "starterSite.theme.crimson"
+  | "starterSite.theme.ocean"
+  | "starterSite.theme.berry"
+  | "starterSite.theme.graphite"
+  | "starterSite.font.classic"
+  | "starterSite.font.modern"
+  | "starterSite.font.elegant"
+  | "starterSite.font.friendly"
+  | "starterSite.font.minimal"
+  | "starterSite.font.editorial"
+  | "starterSite.font.geometric"
+  | "starterSite.font.grotesk"
+  | "starterSite.font.statement"
+  | "starterSite.font.vintage"
+  | "starterSite.ctaBook"
+  | "starterSite.ctaOrder"
+  | "starterSite.ctaConsultation"
+  | "starterSite.ctaCallUs"
+  | "starterSite.getDirections"
+  | "starterSite.getDirectionsArrow"
+  | "starterSite.photosHeading"
+  | "starterSite.hoursHeading"
+  | "starterSite.locationHeading"
+  | "starterSite.contactHeading"
+  | "starterSite.reviewsHeading"
+  | "starterSite.reviewsAverageFromCount.one"
+  | "starterSite.reviewsAverageFromCount.other"
+  | "starterSite.reviewsAverageOnGoogle"
+  | "starterSite.seeReviewsOnGoogle"
+  | "starterSite.defaultBusinessName"
+  | "starterSite.footerBuiltWith"
+  | "starterSite.mapTitle"
+  | "starterSite.heroPhotoAlt"
+  | "starterSite.contentPhotoAlt"
   // --- Business-type profiles (config/bizProfiles.ts). Step L8 (beat 1).
   // bizProfiles.<contentProfileId>.<field>[.<itemKey>] — the 12 hand-
   // written content profiles (coupon/offer/referral/pricing presets,
-  // couponAngles, growActions, faq — see docs/i18n/bizprofiles/*-en.md
+  // couponAngles, faq — see docs/i18n/bizprofiles/*-en.md
   // for the full grouped list per profile). bizProfileOptions.<optionId>.
   // {label,competitorNoun} — the ~30 narrower, selectable business TYPES
   // (e.g. "barbershop") that reuse one of the 12 content profiles; a few
@@ -1079,10 +1183,6 @@ export type MessageKey =
   | "bizProfiles.salon.couponAngles.firstTime"
   | "bizProfiles.salon.couponAngles.seasonal"
   | "bizProfiles.salon.couponAngles.slowDay"
-  | "bizProfiles.salon.growActions.action1"
-  | "bizProfiles.salon.growActions.action2"
-  | "bizProfiles.salon.growActions.action3"
-  | "bizProfiles.salon.growActions.action4"
   | "bizProfiles.salon.pricingExamples.example1"
   | "bizProfiles.salon.pricingExamples.example2"
   | "bizProfiles.salon.pricingExamples.example3"
@@ -1119,10 +1219,6 @@ export type MessageKey =
   | "bizProfiles.restaurant.couponAngles.firstTime"
   | "bizProfiles.restaurant.couponAngles.seasonal"
   | "bizProfiles.restaurant.couponAngles.slowDay"
-  | "bizProfiles.restaurant.growActions.action1"
-  | "bizProfiles.restaurant.growActions.action2"
-  | "bizProfiles.restaurant.growActions.action3"
-  | "bizProfiles.restaurant.growActions.action4"
   | "bizProfiles.restaurant.pricingExamples.example1"
   | "bizProfiles.restaurant.pricingExamples.example2"
   | "bizProfiles.restaurant.pricingExamples.example3"
@@ -1159,10 +1255,6 @@ export type MessageKey =
   | "bizProfiles.liquor_wine.couponAngles.firstTime"
   | "bizProfiles.liquor_wine.couponAngles.seasonal"
   | "bizProfiles.liquor_wine.couponAngles.slowDay"
-  | "bizProfiles.liquor_wine.growActions.action1"
-  | "bizProfiles.liquor_wine.growActions.action2"
-  | "bizProfiles.liquor_wine.growActions.action3"
-  | "bizProfiles.liquor_wine.growActions.action4"
   | "bizProfiles.liquor_wine.pricingExamples.example1"
   | "bizProfiles.liquor_wine.pricingExamples.example2"
   | "bizProfiles.liquor_wine.pricingExamples.example3"
@@ -1199,10 +1291,6 @@ export type MessageKey =
   | "bizProfiles.grocery_market.couponAngles.firstTime"
   | "bizProfiles.grocery_market.couponAngles.seasonal"
   | "bizProfiles.grocery_market.couponAngles.slowDay"
-  | "bizProfiles.grocery_market.growActions.action1"
-  | "bizProfiles.grocery_market.growActions.action2"
-  | "bizProfiles.grocery_market.growActions.action3"
-  | "bizProfiles.grocery_market.growActions.action4"
   | "bizProfiles.grocery_market.pricingExamples.example1"
   | "bizProfiles.grocery_market.pricingExamples.example2"
   | "bizProfiles.grocery_market.pricingExamples.example3"
@@ -1239,10 +1327,6 @@ export type MessageKey =
   | "bizProfiles.cafe_bakery.couponAngles.firstTime"
   | "bizProfiles.cafe_bakery.couponAngles.seasonal"
   | "bizProfiles.cafe_bakery.couponAngles.slowDay"
-  | "bizProfiles.cafe_bakery.growActions.action1"
-  | "bizProfiles.cafe_bakery.growActions.action2"
-  | "bizProfiles.cafe_bakery.growActions.action3"
-  | "bizProfiles.cafe_bakery.growActions.action4"
   | "bizProfiles.cafe_bakery.pricingExamples.example1"
   | "bizProfiles.cafe_bakery.pricingExamples.example2"
   | "bizProfiles.cafe_bakery.pricingExamples.example3"
@@ -1269,10 +1353,6 @@ export type MessageKey =
   | "bizProfiles.lawyer.couponAngles.firstTime"
   | "bizProfiles.lawyer.couponAngles.seasonal"
   | "bizProfiles.lawyer.couponAngles.slowDay"
-  | "bizProfiles.lawyer.growActions.action1"
-  | "bizProfiles.lawyer.growActions.action2"
-  | "bizProfiles.lawyer.growActions.action3"
-  | "bizProfiles.lawyer.growActions.action4"
   | "bizProfiles.lawyer.pricingExamples.example1"
   | "bizProfiles.lawyer.pricingExamples.example2"
   | "bizProfiles.lawyer.pricingExamples.example3"
@@ -1309,10 +1389,6 @@ export type MessageKey =
   | "bizProfiles.professional_services.couponAngles.firstTime"
   | "bizProfiles.professional_services.couponAngles.seasonal"
   | "bizProfiles.professional_services.couponAngles.slowDay"
-  | "bizProfiles.professional_services.growActions.action1"
-  | "bizProfiles.professional_services.growActions.action2"
-  | "bizProfiles.professional_services.growActions.action3"
-  | "bizProfiles.professional_services.growActions.action4"
   | "bizProfiles.professional_services.pricingExamples.example1"
   | "bizProfiles.professional_services.pricingExamples.example2"
   | "bizProfiles.professional_services.pricingExamples.example3"
@@ -1349,10 +1425,6 @@ export type MessageKey =
   | "bizProfiles.practitioner.couponAngles.firstTime"
   | "bizProfiles.practitioner.couponAngles.seasonal"
   | "bizProfiles.practitioner.couponAngles.slowDay"
-  | "bizProfiles.practitioner.growActions.action1"
-  | "bizProfiles.practitioner.growActions.action2"
-  | "bizProfiles.practitioner.growActions.action3"
-  | "bizProfiles.practitioner.growActions.action4"
   | "bizProfiles.practitioner.pricingExamples.example1"
   | "bizProfiles.practitioner.pricingExamples.example2"
   | "bizProfiles.practitioner.pricingExamples.example3"
@@ -1389,10 +1461,6 @@ export type MessageKey =
   | "bizProfiles.gym_fitness.couponAngles.firstTime"
   | "bizProfiles.gym_fitness.couponAngles.seasonal"
   | "bizProfiles.gym_fitness.couponAngles.slowDay"
-  | "bizProfiles.gym_fitness.growActions.action1"
-  | "bizProfiles.gym_fitness.growActions.action2"
-  | "bizProfiles.gym_fitness.growActions.action3"
-  | "bizProfiles.gym_fitness.growActions.action4"
   | "bizProfiles.gym_fitness.pricingExamples.example1"
   | "bizProfiles.gym_fitness.pricingExamples.example2"
   | "bizProfiles.gym_fitness.pricingExamples.example3"
@@ -1429,10 +1497,6 @@ export type MessageKey =
   | "bizProfiles.trades.couponAngles.firstTime"
   | "bizProfiles.trades.couponAngles.seasonal"
   | "bizProfiles.trades.couponAngles.slowDay"
-  | "bizProfiles.trades.growActions.action1"
-  | "bizProfiles.trades.growActions.action2"
-  | "bizProfiles.trades.growActions.action3"
-  | "bizProfiles.trades.growActions.action4"
   | "bizProfiles.trades.pricingExamples.example1"
   | "bizProfiles.trades.pricingExamples.example2"
   | "bizProfiles.trades.pricingExamples.example3"
@@ -1469,10 +1533,6 @@ export type MessageKey =
   | "bizProfiles.retail.couponAngles.firstTime"
   | "bizProfiles.retail.couponAngles.seasonal"
   | "bizProfiles.retail.couponAngles.slowDay"
-  | "bizProfiles.retail.growActions.action1"
-  | "bizProfiles.retail.growActions.action2"
-  | "bizProfiles.retail.growActions.action3"
-  | "bizProfiles.retail.growActions.action4"
   | "bizProfiles.retail.pricingExamples.example1"
   | "bizProfiles.retail.pricingExamples.example2"
   | "bizProfiles.retail.pricingExamples.example3"
@@ -1507,10 +1567,6 @@ export type MessageKey =
   | "bizProfiles.default.couponAngles.firstTime"
   | "bizProfiles.default.couponAngles.seasonal"
   | "bizProfiles.default.couponAngles.slowDay"
-  | "bizProfiles.default.growActions.action1"
-  | "bizProfiles.default.growActions.action2"
-  | "bizProfiles.default.growActions.action3"
-  | "bizProfiles.default.growActions.action4"
   | "bizProfiles.default.pricingExamples.example1"
   | "bizProfiles.default.pricingExamples.example2"
   | "bizProfiles.default.pricingExamples.example3"
@@ -1584,6 +1640,10 @@ export type PluralKeyBase =
   | "report.fragment.reviewsLost"
   | "report.fragment.listingChanges"
   | "dashboard.competitors.reviewCount"
+  | "dashboard.home.savedBusinessCount"
+  | "dashboard.competitors.foundFewMessage"
+  | "dashboard.competitors.unscoredSuffix"
+  | "starterSite.reviewsAverageFromCount"
   | "content.checks.visibility.rating.explanation.lowConfidence"
   | "content.checks.visibility.review_count.explanation.nonzero"
   | "content.checks.completeness.categories.explanation.hasList"
@@ -1717,6 +1777,34 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.rankedHeading": "Ranked by PostScore{rankSuffix}",
     "dashboard.competitors.rankSuffix": " — you're #{rank} of {total}",
     "dashboard.competitors.unscoredHeading": "Found nearby, but couldn't be scored",
+    "dashboard.competitors.thisBusinessFallback": "this business",
+    "dashboard.competitors.thisBusinessNameFallback": "This business",
+    "dashboard.competitors.noCoordinatesError":
+      "This business has no saved coordinates, so we can't search nearby. Re-save it from a fresh Google Places lookup to pick up its location.",
+    "dashboard.competitors.categoryTooGenericError":
+      "We couldn't identify clearly comparable businesses for this category — {name}'s Google category is too general to match reliably.",
+    "dashboard.competitors.noCategoryError":
+      "This business has no category on file, so we can't tell which nearby businesses are genuinely comparable. Re-save it from Google Places to pick up its category.",
+    "dashboard.competitors.nearbySearchFailedFallback": "Nearby search failed.",
+    "dashboard.competitors.unnamedListing": "(unnamed listing)",
+    "dashboard.competitors.noUsableDetails": "Google Places returned no usable details for this listing.",
+    "dashboard.competitors.temporarilyClosed": "temporarily closed",
+    "dashboard.competitors.permanentlyClosed": "permanently closed",
+    "dashboard.competitors.closedListingReason": "Google shows this listing as {status}.",
+    "dashboard.competitors.sameCategoryFallback": "same-category",
+    "dashboard.competitors.foundNoneMessage":
+      "We found 0 comparable {label} businesses within {searchedLabel} mi of this listing.",
+    "dashboard.competitors.foundFewMessage.one":
+      "We found only {count} comparable {label} business — the nearest are within {radiusLabel} mi.",
+    "dashboard.competitors.foundFewMessage.other":
+      "We found only {count} comparable {label} businesses — the nearest are within {radiusLabel} mi.",
+    "dashboard.competitors.showingNearestMessage":
+      "Showing the {count} nearest comparable {label} businesses, all within {radiusLabel} mi.",
+    "dashboard.competitors.searchWidenedSuffix": " We widened the search area to find them.",
+    "dashboard.competitors.unscoredSuffix.one":
+      " {count} of them couldn't be scored — Google returned no usable details.",
+    "dashboard.competitors.unscoredSuffix.other":
+      " {count} of them couldn't be scored — Google returned no usable details.",
     "dashboard.competitors.nothingToCompare":
       "Your PostScore ({total}) is shown above with nothing to compare it to yet — widen your search area or check back later as more listings appear nearby.",
     "dashboard.competitors.noRating": "No rating",
@@ -2766,6 +2854,30 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.intake.noMatchingBusiness":
       "No matching business found for that name and location. Try broadening the location or checking the spelling.",
     "dashboard.intake.multipleMatches": "Found {count} possible matches. Pick the correct one:",
+    "dashboard.home.pageTitle": "Your businesses",
+    "dashboard.home.nothingAddedYet": "Nothing added yet.",
+    "dashboard.home.savedBusinessCount.one": "{count} saved business.",
+    "dashboard.home.savedBusinessCount.other": "{count} saved businesses.",
+    "dashboard.home.addBusinessButton": "Add a business",
+    "dashboard.home.untitledBusiness": "Untitled business",
+    "dashboard.home.noAddressOnFile": "No address on file",
+    "dashboard.home.emptyStateHeading": "You haven't added a business yet",
+    "dashboard.home.emptyStateBody":
+      "Search for your real Google Business Profile listing to get its first PostScore.",
+    "dashboard.home.addFirstBusinessButton": "Add your first business",
+    "dashboard.unsubscribe.invalidLinkTitle": "Invalid unsubscribe link",
+    "dashboard.unsubscribe.invalidLinkMessage":
+      "This link is missing information and can't be processed. If you clicked this from a real PostScore email, please contact support.",
+    "dashboard.unsubscribe.expiredLinkTitle": "Invalid or expired link",
+    "dashboard.unsubscribe.expiredLinkMessage":
+      "We couldn't verify this unsubscribe link. If you're still receiving emails you don't want, please contact support.",
+    "dashboard.unsubscribe.updateFailedTitle": "Something went wrong",
+    "dashboard.unsubscribe.updateFailedMessage":
+      "We verified your link but couldn't update your preference just now. Please try again in a moment.",
+    "dashboard.unsubscribe.successTitle": "You're unsubscribed",
+    "dashboard.unsubscribe.successMessage":
+      "Monthly email reports are now off for {name}. You can turn them back on anytime from its Reports page.",
+    "dashboard.unsubscribe.thisBusinessFallback": "this business",
 
     // --- Lib sweep: lib/reviews.ts's ratingCaption()/reviewCountCaption().
     "dashboard.websiteReviews.ratingCaptionNoRating":
@@ -2822,6 +2934,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.chartLastScanLabel": "Last scan",
     "dashboard.reports.chartMoreEarlier": "+{count} earlier",
     "dashboard.reports.chartAriaLabel": "Score over time, {count} scans, from {from} to {to}",
+    "dashboard.reports.verifiedFixesConfirmedLabel": "Action-plan fixes confirmed",
+    "dashboard.reports.verifiedFixesConfirmedNote": "Confirmed by a real re-scan finding the check at full points.",
+    "dashboard.reports.listingChangesDetectedLabel": "Listing changes detected",
+    "dashboard.reports.listingChangesDetectedNote": "Real differences found between your saved scans.",
+    "dashboard.reports.reviewsRepliedToLabel": "Reviews replied to",
+    "dashboard.reports.googlePostsPublishedLabel": "Google Posts published",
+    "dashboard.reports.syncingSoonLabel": "Syncing soon",
+    "dashboard.reports.connectedSyncingNote": "Connected — this starts counting in a later update.",
 
     // --- Pricing page. See the matching comment on the MessageKey union
     // above.
@@ -2872,6 +2992,52 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.pricing.assessButton": "Assess my pricing",
     "dashboard.pricing.lastAssessed": "Last assessed {date}",
 
+    // --- Starter-site generator. See the matching comment on the
+    // MessageKey union above.
+    "dashboard.website.starter.siteLanguageLabel": "Site language",
+    "dashboard.website.starter.siteLanguageEnglishOption": "English",
+    "dashboard.website.starter.siteLanguageSpanishOption": "Español",
+    "starterSite.theme.ink": "Ink & Brass",
+    "starterSite.theme.terracotta": "Terracotta & Clay",
+    "starterSite.theme.forest": "Forest & Gold",
+    "starterSite.theme.slate": "Slate & Coral",
+    "starterSite.theme.plum": "Plum & Rose Gold",
+    "starterSite.theme.teal": "Midnight Teal",
+    "starterSite.theme.crimson": "Crimson & Charcoal",
+    "starterSite.theme.ocean": "Ocean & Sand",
+    "starterSite.theme.berry": "Berry & Cream",
+    "starterSite.theme.graphite": "Graphite & Lime",
+    "starterSite.font.classic": "Classic — warm serif + clean sans",
+    "starterSite.font.modern": "Modern — bold sans pairing",
+    "starterSite.font.elegant": "Elegant — upscale serif",
+    "starterSite.font.friendly": "Friendly — rounded, warm",
+    "starterSite.font.minimal": "Minimal — single clean sans",
+    "starterSite.font.editorial": "Editorial — literary serif",
+    "starterSite.font.geometric": "Geometric — modern display",
+    "starterSite.font.grotesk": "Grotesk — bold Swiss sans",
+    "starterSite.font.statement": "Statement — bold condensed display",
+    "starterSite.font.vintage": "Vintage — high-contrast display",
+    "starterSite.ctaBook": "Call to book",
+    "starterSite.ctaOrder": "Call to order",
+    "starterSite.ctaConsultation": "Call for a consultation",
+    "starterSite.ctaCallUs": "Call us",
+    "starterSite.getDirections": "Get directions",
+    "starterSite.getDirectionsArrow": "Get directions →",
+    "starterSite.photosHeading": "Photos",
+    "starterSite.hoursHeading": "Hours",
+    "starterSite.locationHeading": "Location",
+    "starterSite.contactHeading": "Contact",
+    "starterSite.reviewsHeading": "Reviews",
+    "starterSite.reviewsAverageFromCount.one": "{rating} average from {count} Google review",
+    "starterSite.reviewsAverageFromCount.other": "{rating} average from {count} Google reviews",
+    "starterSite.reviewsAverageOnGoogle": "{rating} average on Google",
+    "starterSite.seeReviewsOnGoogle": "See our reviews on Google →",
+    "starterSite.defaultBusinessName": "Your Business",
+    "starterSite.footerBuiltWith": "Site built with PostScore",
+    "starterSite.mapTitle": "Map to {name}",
+    "starterSite.heroPhotoAlt": "{name} hero photo",
+    "starterSite.contentPhotoAlt": "{name} photo",
+
     // --- Business-type profiles (config/bizProfiles.ts). See the
     // matching comment on the MessageKey union above.
     "bizProfiles.salon.label": "Salon & Personal Care",
@@ -2903,10 +3069,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.salon.couponAngles.firstTime": "New client special: 20% off your first appointment",
     "bizProfiles.salon.couponAngles.seasonal": "Holiday styling special: book your seasonal look this week",
     "bizProfiles.salon.couponAngles.slowDay": "20% off Tuesday & Wednesday appointments",
-    "bizProfiles.salon.growActions.action1": "Ask every client at checkout for a Google review — the best time is right after a great appointment.",
-    "bizProfiles.salon.growActions.action2": "Post real before/after photos weekly; personal-care listings live and die on photos.",
-    "bizProfiles.salon.growActions.action3": "Offer a small rebooking discount right at checkout so the next visit gets locked in.",
-    "bizProfiles.salon.growActions.action4": "Run a seasonal styling special around holidays or events people book ahead for.",
     "bizProfiles.salon.pricingExamples.example1": "Women's Haircut",
     "bizProfiles.salon.pricingExamples.example2": "Men's Haircut",
     "bizProfiles.salon.pricingExamples.example3": "Color & Highlights",
@@ -2943,17 +3105,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.restaurant.couponAngles.firstTime": "First-time online order: free delivery",
     "bizProfiles.restaurant.couponAngles.seasonal": "Seasonal menu special: this month's feature, 15% off",
     "bizProfiles.restaurant.couponAngles.slowDay": "Buy one entrée, get one 50% off — dine-in, Sunday–Tuesday",
-    "bizProfiles.restaurant.growActions.action1": "Ask happy diners for a Google review before they leave, or on the receipt.",
-    "bizProfiles.restaurant.growActions.action2": "Post daily or weekly specials as real photos — food photos are the single biggest driver of clicks.",
-    "bizProfiles.restaurant.growActions.action3": "Make sure your menu and prices are current on your Google listing.",
-    "bizProfiles.restaurant.growActions.action4": "Run a promotion on your slowest night of the week instead of discounting your busiest.",
     "bizProfiles.restaurant.pricingExamples.example1": "Entrée",
     "bizProfiles.restaurant.pricingExamples.example2": "Appetizer",
     "bizProfiles.restaurant.pricingExamples.example3": "Dessert",
     "bizProfiles.restaurant.faq.item1.question": "Does {businessName} take reservations?",
     "bizProfiles.restaurant.faq.item1.answer": "Give us a call or check our website to see reservation availability.",
     "bizProfiles.restaurant.faq.item2.question": "Does {businessName} offer takeout or delivery?",
-    "bizProfiles.restaurant.faq.item2.answer": "Yes — order for pickup directly, or through your preferred delivery app.",
+    "bizProfiles.restaurant.faq.item2.answer": "Call us or check our website for pickup and delivery options.",
     "bizProfiles.liquor_wine.label": "Liquor & Wine Store",
     "bizProfiles.liquor_wine.competitorNoun": "liquor stores",
     "bizProfiles.liquor_wine.couponPresets.flat_off_purchase.label": "$5 off a $30+ purchase",
@@ -2983,10 +3141,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.liquor_wine.couponAngles.firstTime": "New customer: 10% off your first purchase",
     "bizProfiles.liquor_wine.couponAngles.seasonal": "Holiday case discount: 15% off mixed cases through New Year's",
     "bizProfiles.liquor_wine.couponAngles.slowDay": "10% off purchases on your slowest weekday",
-    "bizProfiles.liquor_wine.growActions.action1": "Ask regulars for a Google review at checkout — it's the fastest way to build trust with first-time shoppers.",
-    "bizProfiles.liquor_wine.growActions.action2": "Post real photos of new arrivals, seasonal picks, and your featured bottle of the month.",
-    "bizProfiles.liquor_wine.growActions.action3": "Highlight a weekly or monthly staff pick — gives repeat customers a reason to check back.",
-    "bizProfiles.liquor_wine.growActions.action4": "Run a case-discount promotion around holidays (Thanksgiving, New Year's, summer cookouts) when case buying spikes.",
     "bizProfiles.liquor_wine.pricingExamples.example1": "Bottle of Wine",
     "bizProfiles.liquor_wine.pricingExamples.example2": "Six-Pack of Beer",
     "bizProfiles.liquor_wine.pricingExamples.example3": "Case (12 bottles)",
@@ -3023,10 +3177,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.grocery_market.couponAngles.firstTime": "New shopper special: $10 off your first $40+ order",
     "bizProfiles.grocery_market.couponAngles.seasonal": "Seasonal produce sale: this week's fresh picks discounted",
     "bizProfiles.grocery_market.couponAngles.slowDay": "$5 off a $40+ basket on your slowest shopping day",
-    "bizProfiles.grocery_market.growActions.action1": "Ask regular shoppers for a Google review at checkout.",
-    "bizProfiles.grocery_market.growActions.action2": "Post real photos of fresh produce and this week's specials — food photos drive foot traffic.",
-    "bizProfiles.grocery_market.growActions.action3": "Keep your weekly specials and hours current on your Google listing.",
-    "bizProfiles.grocery_market.growActions.action4": "Start a simple loyalty program (e.g. every 10th shop, $10 off) to reward repeat shoppers.",
     "bizProfiles.grocery_market.pricingExamples.example1": "Weekly Basket",
     "bizProfiles.grocery_market.pricingExamples.example2": "Featured Special Item",
     "bizProfiles.grocery_market.pricingExamples.example3": "Bulk/Case Item",
@@ -3063,15 +3213,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.cafe_bakery.couponAngles.firstTime": "First-time customer: free drink or pastry with any purchase",
     "bizProfiles.cafe_bakery.couponAngles.seasonal": "Seasonal drink or pastry: try it this month, 15% off",
     "bizProfiles.cafe_bakery.couponAngles.slowDay": "20% off orders during your slowest afternoon hours",
-    "bizProfiles.cafe_bakery.growActions.action1": "Ask happy customers for a Google review before they leave.",
-    "bizProfiles.cafe_bakery.growActions.action2": "Post daily photos of fresh pastries, seasonal drinks, and the space itself.",
-    "bizProfiles.cafe_bakery.growActions.action3": "Keep your menu and prices current on your Google listing.",
-    "bizProfiles.cafe_bakery.growActions.action4": "Run a loyalty punch card (physical or digital) to reward regulars.",
     "bizProfiles.cafe_bakery.pricingExamples.example1": "Coffee/Espresso Drink",
     "bizProfiles.cafe_bakery.pricingExamples.example2": "Pastry/Baked Good",
     "bizProfiles.cafe_bakery.pricingExamples.example3": "Sandwich or Light Bite",
     "bizProfiles.cafe_bakery.faq.item1.question": "Does {businessName} have Wi-Fi or seating to work from?",
-    "bizProfiles.cafe_bakery.faq.item1.answer": "Yes — stop in and ask about seating and Wi-Fi availability.",
+    "bizProfiles.cafe_bakery.faq.item1.answer": "Call us or check our website for seating and Wi-Fi availability.",
     "bizProfiles.cafe_bakery.faq.item2.question": "Does {businessName} take special orders for cakes or catering?",
     "bizProfiles.cafe_bakery.faq.item2.answer": "Call or stop by to ask about special orders and catering.",
     "bizProfiles.lawyer.label": "Legal Services",
@@ -3093,17 +3239,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.lawyer.couponAngles.firstTime": "Free 30-minute initial consultation",
     "bizProfiles.lawyer.couponAngles.seasonal": "Year-end document review special — get your paperwork in order",
     "bizProfiles.lawyer.couponAngles.slowDay": "Flat-fee case review, available this week",
-    "bizProfiles.lawyer.growActions.action1": "Ask satisfied clients for a Google review once their matter is resolved, where doing so is ethically appropriate.",
-    "bizProfiles.lawyer.growActions.action2": "Publish a short, plain-language FAQ answering the questions {city} clients actually ask before calling.",
-    "bizProfiles.lawyer.growActions.action3": "Keep your practice areas and attorney bios current — this is often the deciding factor between two firms.",
-    "bizProfiles.lawyer.growActions.action4": "Respond calmly and professionally to any negative review; how a firm handles criticism is itself evidence to a prospective client.",
     "bizProfiles.lawyer.pricingExamples.example1": "Initial Consultation",
     "bizProfiles.lawyer.pricingExamples.example2": "Flat-Fee Document Review",
     "bizProfiles.lawyer.pricingExamples.example3": "Hourly Rate",
     "bizProfiles.lawyer.faq.item1.question": "Does {businessName} offer a free consultation?",
-    "bizProfiles.lawyer.faq.item1.answer": "Yes — call or use our contact form to schedule an initial consultation.",
+    "bizProfiles.lawyer.faq.item1.answer": "Call us or use our contact form to ask about scheduling an initial consultation.",
     "bizProfiles.lawyer.faq.item2.question": "What areas of law does {businessName} practice?",
-    "bizProfiles.lawyer.faq.item2.answer": "See our practice areas page for the specific matters we handle.",
+    "bizProfiles.lawyer.faq.item2.answer": "Call us or check our website for the specific matters we handle.",
     "bizProfiles.professional_services.label": "Accounting & Tax",
     "bizProfiles.professional_services.competitorNoun": "accounting firms",
     "bizProfiles.professional_services.couponPresets.free_consultation.label": "Free 30-minute initial consultation",
@@ -3133,17 +3275,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.professional_services.couponAngles.firstTime": "Free 30-minute initial consultation",
     "bizProfiles.professional_services.couponAngles.seasonal": "Tax season special: book your return early and save",
     "bizProfiles.professional_services.couponAngles.slowDay": "Flat-fee bookkeeping setup review, available this week",
-    "bizProfiles.professional_services.growActions.action1": "Ask satisfied clients for a Google review once their return or engagement is complete.",
-    "bizProfiles.professional_services.growActions.action2": "Publish a short FAQ answering the tax/bookkeeping questions {city} clients actually ask.",
-    "bizProfiles.professional_services.growActions.action3": "Keep your services and credentials current on your listing — clients compare this directly.",
-    "bizProfiles.professional_services.growActions.action4": "Offer a free consultation to convert price-sensitive prospects who are still deciding.",
     "bizProfiles.professional_services.pricingExamples.example1": "Individual Tax Return",
     "bizProfiles.professional_services.pricingExamples.example2": "Business Tax Return",
     "bizProfiles.professional_services.pricingExamples.example3": "Monthly Bookkeeping",
     "bizProfiles.professional_services.faq.item1.question": "Does {businessName} offer a free consultation?",
-    "bizProfiles.professional_services.faq.item1.answer": "Yes — call or use our contact form to schedule an initial consultation.",
+    "bizProfiles.professional_services.faq.item1.answer": "Call us or use our contact form to ask about scheduling an initial consultation.",
     "bizProfiles.professional_services.faq.item2.question": "What services does {businessName} provide?",
-    "bizProfiles.professional_services.faq.item2.answer": "See our services page for the specific accounting and tax services we offer.",
+    "bizProfiles.professional_services.faq.item2.answer": "Call us or check our website for the specific accounting and tax services we offer.",
     "bizProfiles.practitioner.label": "Practitioner, Coaching & Classes",
     "bizProfiles.practitioner.competitorNoun": "practitioners",
     "bizProfiles.practitioner.couponPresets.pct_off_next_session.label": "10% off your next session or class",
@@ -3173,17 +3311,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.practitioner.couponAngles.firstTime": "Free consultation or intro session for new clients",
     "bizProfiles.practitioner.couponAngles.seasonal": "New season, new goals: 15% off a fresh session pack",
     "bizProfiles.practitioner.couponAngles.slowDay": "10% off weekday morning sessions",
-    "bizProfiles.practitioner.growActions.action1": "Ask clients for a Google review right after a session that clearly went well.",
-    "bizProfiles.practitioner.growActions.action2": "Share a short client testimonial or result monthly — this stands in for the photos a storefront business would post.",
-    "bizProfiles.practitioner.growActions.action3": "List your specialties and formats (virtual, in-person, group, 1:1) clearly, since you may not have a menu or storefront to show instead.",
-    "bizProfiles.practitioner.growActions.action4": "Offer a free intro session or class to convert new leads who are still deciding.",
     "bizProfiles.practitioner.pricingExamples.example1": "1:1 Session",
     "bizProfiles.practitioner.pricingExamples.example2": "Group Class",
     "bizProfiles.practitioner.pricingExamples.example3": "Intro Session",
     "bizProfiles.practitioner.faq.item1.question": "Does {businessName} offer virtual or remote sessions?",
-    "bizProfiles.practitioner.faq.item1.answer": "Yes — ask about virtual options if an in-person session near {city} doesn't fit your schedule.",
+    "bizProfiles.practitioner.faq.item1.answer": "Call us to ask about virtual options if an in-person session near {city} doesn't fit your schedule.",
     "bizProfiles.practitioner.faq.item2.question": "Do I need to book an appointment with {businessName} in advance?",
-    "bizProfiles.practitioner.faq.item2.answer": "Yes, sessions are by appointment — reach out to check current availability.",
+    "bizProfiles.practitioner.faq.item2.answer": "Call us to check whether an appointment is required and current availability.",
     "bizProfiles.gym_fitness.label": "Gym & Fitness Studio",
     "bizProfiles.gym_fitness.competitorNoun": "gyms",
     "bizProfiles.gym_fitness.couponPresets.first_month_pct.label": "50% off your first month",
@@ -3213,15 +3347,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.gym_fitness.couponAngles.firstTime": "New member special: 50% off your first month, no enrollment fee",
     "bizProfiles.gym_fitness.couponAngles.seasonal": "New Year, new goals: 50% off your first month",
     "bizProfiles.gym_fitness.couponAngles.slowDay": "20% off off-peak (mid-day) class sign-ups",
-    "bizProfiles.gym_fitness.growActions.action1": "Ask members for a Google review after a great class or a real milestone.",
-    "bizProfiles.gym_fitness.growActions.action2": "Post real photos of classes, the space, and member results (with permission).",
-    "bizProfiles.gym_fitness.growActions.action3": "Keep your class schedule and current promotions up to date on your listing.",
-    "bizProfiles.gym_fitness.growActions.action4": "Run a 'bring a friend' week where existing members can bring a guest free.",
     "bizProfiles.gym_fitness.pricingExamples.example1": "Monthly Membership",
     "bizProfiles.gym_fitness.pricingExamples.example2": "Drop-in Class",
     "bizProfiles.gym_fitness.pricingExamples.example3": "Personal Training Session",
     "bizProfiles.gym_fitness.faq.item1.question": "Does {businessName} offer a free trial class or day pass?",
-    "bizProfiles.gym_fitness.faq.item1.answer": "Yes — ask about trial options when you stop by or call.",
+    "bizProfiles.gym_fitness.faq.item1.answer": "Call us or stop by to ask about trial options.",
     "bizProfiles.gym_fitness.faq.item2.question": "What is {businessName}'s class schedule?",
     "bizProfiles.gym_fitness.faq.item2.answer": "See our current class schedule on our website or by calling.",
     "bizProfiles.trades.label": "Trades & Home Services",
@@ -3253,10 +3383,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.trades.couponAngles.firstTime": "New customer special: $25 off your first service call",
     "bizProfiles.trades.couponAngles.seasonal": "Seasonal tune-up special: $20 off an inspection before the season changes",
     "bizProfiles.trades.couponAngles.slowDay": "10% off service calls booked on weekday mornings",
-    "bizProfiles.trades.growActions.action1": "Ask every satisfied customer for a Google review right after the job's done.",
-    "bizProfiles.trades.growActions.action2": "Post real before/after photos of completed jobs.",
-    "bizProfiles.trades.growActions.action3": "Keep your service area and emergency-availability info current on your listing.",
-    "bizProfiles.trades.growActions.action4": "Offer a seasonal tune-up special to fill your slower season with booked work.",
     "bizProfiles.trades.pricingExamples.example1": "Service Call",
     "bizProfiles.trades.pricingExamples.example2": "Standard Job",
     "bizProfiles.trades.pricingExamples.example3": "Seasonal Tune-Up",
@@ -3293,15 +3419,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.retail.couponAngles.firstTime": "New customer welcome offer: 15% off your first purchase",
     "bizProfiles.retail.couponAngles.seasonal": "Seasonal sale — tied to the season or an upcoming holiday",
     "bizProfiles.retail.couponAngles.slowDay": "$10 off a $50+ purchase on your slowest shopping day",
-    "bizProfiles.retail.growActions.action1": "Ask happy customers for a Google review at checkout.",
-    "bizProfiles.retail.growActions.action2": "Post real photos of new arrivals and in-store displays weekly.",
-    "bizProfiles.retail.growActions.action3": "Keep your hours and current promotions up to date on your Google listing.",
-    "bizProfiles.retail.growActions.action4": "Run a seasonal clearance sale to move older stock and highlight new arrivals.",
     "bizProfiles.retail.pricingExamples.example1": "Standard Item",
     "bizProfiles.retail.pricingExamples.example2": "Featured/New Arrival",
     "bizProfiles.retail.pricingExamples.example3": "Bulk/Multi-pack",
     "bizProfiles.retail.faq.item1.question": "Does {businessName} accept returns or exchanges?",
-    "bizProfiles.retail.faq.item1.answer": "Yes — ask about our return and exchange policy at checkout.",
+    "bizProfiles.retail.faq.item1.answer": "Call us or check our website for our return and exchange policy.",
     "bizProfiles.retail.faq.item2.question": "What are {businessName}'s hours near {city}?",
     "bizProfiles.retail.faq.item2.answer": "See our current hours on our Google Business Profile listing.",
     "bizProfiles.default.label": "General Business",
@@ -3331,10 +3453,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.default.couponAngles.firstTime": "10% off for new customers",
     "bizProfiles.default.couponAngles.seasonal": "Seasonal special — tied to what's happening this month",
     "bizProfiles.default.couponAngles.slowDay": "$10 off a $50+ purchase or visit on your slowest day of the week",
-    "bizProfiles.default.growActions.action1": "Ask happy customers for a Google review — it's the single highest-leverage thing most small businesses skip.",
-    "bizProfiles.default.growActions.action2": "Keep your hours, phone number, and website current on your Google listing.",
-    "bizProfiles.default.growActions.action3": "Add a few recent, real photos of your business.",
-    "bizProfiles.default.growActions.action4": "Reply to every review you get, positive or negative — it's visible to every future customer.",
     "bizProfiles.default.pricingExamples.example1": "Standard Service",
     "bizProfiles.default.pricingExamples.example2": "Service Call",
     "bizProfiles.default.pricingExamples.example3": "Product/Item",
@@ -3400,9 +3518,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "language.en": "Inglés",
     "language.es": "Español",
     "common.save": "Guardar",
-    // "common.cancel" intentionally left untranslated for now — t()
-    // below falls back to the English string ("Cancel") until this is
-    // filled in, so leaving it out is safe rather than a bug.
+    "common.cancel": "Cancelar",
     "common.and": "y",
 
     "dashboard.nav.overview": "Resumen",
@@ -3454,10 +3570,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "report.metric.unchanged": "{value} — sin cambios",
     "report.metric.delta": "{value} ({delta} frente al informe anterior)",
 
-    // report.score.summary intentionally has no Spanish value — it's pure
-    // placeholders ("{total}/100 · {grade}"), so it stays on the English
-    // fallback rather than a translation with nothing to actually
-    // translate.
+    // Pure placeholders ("{total}/100 · {grade}") — same value as English
+    // since there's no literal text to translate, but present explicitly
+    // so no MessageKey silently relies on the English fallback.
+    "report.score.summary": "{total}/100 · {grade}",
     "report.score.sinceLastReport": "{delta} desde el último informe",
 
     "report.focus.label": "Este mes y en qué concentrarse",
@@ -3485,13 +3601,41 @@ export const messages: Record<Locale, LocaleMessages> = {
 
     "dashboard.competitors.title": "Competencia",
     "dashboard.competitors.subtitle":
-      "{competitorNoun} reales cercanos{categoryClause}, evaluados con el mismo motor de PostScore y ordenados estrictamente por esa puntuación.",
+      "Estos son {competitorNoun} reales cercanos{categoryClause}, evaluados con el mismo motor de PostScore y ordenados estrictamente por esa puntuación.",
     "dashboard.competitors.categoryClause": " en la misma categoría ({categoryLabel})",
     "dashboard.competitors.backTo": "Volver a {name}",
     "dashboard.competitors.businessFallback": "negocio",
     "dashboard.competitors.rankedHeading": "Ordenados por PostScore{rankSuffix}",
     "dashboard.competitors.rankSuffix": " — usted es el #{rank} de {total}",
     "dashboard.competitors.unscoredHeading": "Encontrados cerca, pero no se pudieron evaluar",
+    "dashboard.competitors.thisBusinessFallback": "este negocio",
+    "dashboard.competitors.thisBusinessNameFallback": "Este negocio",
+    "dashboard.competitors.noCoordinatesError":
+      "Este negocio no tiene coordenadas guardadas, por lo que no podemos buscar cerca. Vuelva a guardarlo desde una búsqueda reciente de Google Places para obtener su ubicación.",
+    "dashboard.competitors.categoryTooGenericError":
+      "No pudimos identificar negocios claramente comparables para esta categoría — la categoría de Google de {name} es demasiado general para comparar de forma confiable.",
+    "dashboard.competitors.noCategoryError":
+      "Este negocio no tiene una categoría registrada, por lo que no podemos saber qué negocios cercanos son realmente comparables. Vuelva a guardarlo desde Google Places para obtener su categoría.",
+    "dashboard.competitors.nearbySearchFailedFallback": "La búsqueda cercana falló.",
+    "dashboard.competitors.unnamedListing": "(ficha sin nombre)",
+    "dashboard.competitors.noUsableDetails": "Google Places no devolvió detalles utilizables para esta ficha.",
+    "dashboard.competitors.temporarilyClosed": "cerrado temporalmente",
+    "dashboard.competitors.permanentlyClosed": "cerrado permanentemente",
+    "dashboard.competitors.closedListingReason": "Google muestra esta ficha como {status}.",
+    "dashboard.competitors.sameCategoryFallback": "misma categoría",
+    "dashboard.competitors.foundNoneMessage":
+      "No encontramos negocios comparables ({label}) a menos de {searchedLabel} mi de esta ficha.",
+    "dashboard.competitors.foundFewMessage.one":
+      "Encontramos solo {count} negocio comparable ({label}) — el más cercano está a menos de {radiusLabel} mi.",
+    "dashboard.competitors.foundFewMessage.other":
+      "Encontramos solo {count} negocios comparables ({label}) — los más cercanos están a menos de {radiusLabel} mi.",
+    "dashboard.competitors.showingNearestMessage":
+      "Mostrando los {count} negocios comparables ({label}) más cercanos, todos a menos de {radiusLabel} mi.",
+    "dashboard.competitors.searchWidenedSuffix": " Ampliamos el área de búsqueda para encontrarlos.",
+    "dashboard.competitors.unscoredSuffix.one":
+      " {count} de ellos no se pudo evaluar — Google no devolvió detalles utilizables.",
+    "dashboard.competitors.unscoredSuffix.other":
+      " {count} de ellos no se pudieron evaluar — Google no devolvió detalles utilizables.",
     "dashboard.competitors.nothingToCompare":
       "Su PostScore ({total}) se muestra arriba, pero aún no hay nada con qué compararlo — amplíe su área de búsqueda o vuelva más tarde a medida que aparezcan más negocios cerca.",
     "dashboard.competitors.noRating": "Sin calificación",
@@ -3504,10 +3648,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.yourBusiness": "Su negocio",
     "dashboard.competitors.noAddress": "Sin dirección registrada",
     "dashboard.competitors.postscoreOutOf100": "PostScore / 100",
-    // savingScan, saveScan, saved, noComparableCompetitors, and
-    // saveError have no Spanish value yet — not part of the reviewed
-    // list this was translated from. Each falls back to English via
-    // t()/tPlural until reviewed Spanish copy is provided for them.
+    "dashboard.competitors.savingScan": "Guardando análisis...",
+    "dashboard.competitors.saveScan": "Guardar este análisis en el historial",
+    "dashboard.competitors.saved": "Guardado.",
+    "dashboard.competitors.noComparableCompetitors":
+      "Nada que guardar — no se encontraron competidores comparables.",
+    "dashboard.competitors.saveError": "No se pudo guardar este análisis.",
 
     // --- content.categories.* — reviewed Spanish.
     "content.categories.visibility": "Visibilidad y reputación",
@@ -3769,8 +3915,9 @@ export const messages: Record<Locale, LocaleMessages> = {
 
     // --- dashboard.growth.* — reviewed Spanish translations for the
     // Growth section extracted in Step L4 (beat 1). gradeChangeArrow is
-    // intentionally absent (pure placeholders, "{from} → {to}") — falls
-    // back to English via t()/tPlural until/unless it's ever given one.
+    // pure placeholders ("{from} → {to}") — same value as English since
+    // there's no literal text to translate.
+    "dashboard.growth.view.gradeChangeArrow": "{from} → {to}",
     "dashboard.growth.view.backTo": "Volver a {name}",
     "dashboard.growth.view.businessFallback": "negocio",
     "dashboard.growth.view.businessNameFallback": "Su negocio",
@@ -4091,9 +4238,11 @@ export const messages: Record<Locale, LocaleMessages> = {
 
     // --- Step L6 (beat 2): reviewed Spanish for the smaller dashboard
     // sections (Overview, Connect-GBP, Reports, Intake) + shared common.*
-    // additions + the lib/reviews.ts sweep. scoreOutOf100WithGrade and
-    // postAiOverlayTitle deliberately have no es entry (pure
-    // placeholders/brand name) and fall back to English.
+    // additions + the lib/reviews.ts sweep. scoreOutOf100WithGrade is pure
+    // placeholders (same value as English); postAiOverlayTitle is the
+    // "PostAI" product name, unchanged in every locale.
+    "dashboard.overview.scoreOutOf100WithGrade": "/ 100 · {grade}",
+    "dashboard.overview.postAiOverlayTitle": "PostAI",
     "dashboard.overview.assistantDataErrorFallback": "No se pudieron cargar los datos de contexto del asistente.",
     "dashboard.overview.categoryNotDeterminable": "Aún no se puede determinar — todavía no hay datos reales en esta categoría.",
     "dashboard.overview.rescanTasksConfirmed.one": "{count} tarea confirmada (+{points} pts)",
@@ -4339,6 +4488,30 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.intake.resultHeading": "Resultado",
     "dashboard.intake.noMatchingBusiness": "No se encontró ningún negocio que coincida con ese nombre y ubicación. Pruebe ampliando la ubicación o revisando la ortografía.",
     "dashboard.intake.multipleMatches": "Se encontraron {count} posibles coincidencias. Elija la correcta:",
+    "dashboard.home.pageTitle": "Sus negocios",
+    "dashboard.home.nothingAddedYet": "Aún no se ha agregado nada.",
+    "dashboard.home.savedBusinessCount.one": "{count} negocio guardado.",
+    "dashboard.home.savedBusinessCount.other": "{count} negocios guardados.",
+    "dashboard.home.addBusinessButton": "Agregar un negocio",
+    "dashboard.home.untitledBusiness": "Negocio sin título",
+    "dashboard.home.noAddressOnFile": "Sin dirección registrada",
+    "dashboard.home.emptyStateHeading": "Aún no ha agregado un negocio",
+    "dashboard.home.emptyStateBody":
+      "Busque su ficha real del Perfil de Negocio de Google para obtener su primer PostScore.",
+    "dashboard.home.addFirstBusinessButton": "Agregar su primer negocio",
+    "dashboard.unsubscribe.invalidLinkTitle": "Enlace de cancelación no válido",
+    "dashboard.unsubscribe.invalidLinkMessage":
+      "A este enlace le falta información y no se puede procesar. Si hizo clic en este enlace desde un correo real de PostScore, comuníquese con soporte.",
+    "dashboard.unsubscribe.expiredLinkTitle": "Enlace no válido o vencido",
+    "dashboard.unsubscribe.expiredLinkMessage":
+      "No pudimos verificar este enlace de cancelación. Si sigue recibiendo correos que no desea, comuníquese con soporte.",
+    "dashboard.unsubscribe.updateFailedTitle": "Algo salió mal",
+    "dashboard.unsubscribe.updateFailedMessage":
+      "Verificamos su enlace, pero no pudimos actualizar su preferencia en este momento. Inténtelo de nuevo en un momento.",
+    "dashboard.unsubscribe.successTitle": "Se canceló su suscripción",
+    "dashboard.unsubscribe.successMessage":
+      "Los informes mensuales por correo ahora están desactivados para {name}. Puede volver a activarlos en cualquier momento desde su página de Informes.",
+    "dashboard.unsubscribe.thisBusinessFallback": "este negocio",
     "dashboard.common.backTo": "Volver a {name}",
     "dashboard.common.businessFallback": "negocio",
     "dashboard.common.businessNameFallback": "Su negocio",
@@ -4396,6 +4569,15 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.chartLastScanLabel": "Último análisis",
     "dashboard.reports.chartMoreEarlier": "+{count} anteriores",
     "dashboard.reports.chartAriaLabel": "Puntuación a lo largo del tiempo, {count} análisis, de {from} a {to}",
+    "dashboard.reports.verifiedFixesConfirmedLabel": "Correcciones del plan de acción confirmadas",
+    "dashboard.reports.verifiedFixesConfirmedNote":
+      "Confirmado por un análisis real que encuentra la comprobación con el puntaje completo.",
+    "dashboard.reports.listingChangesDetectedLabel": "Cambios en la ficha detectados",
+    "dashboard.reports.listingChangesDetectedNote": "Diferencias reales encontradas entre sus análisis guardados.",
+    "dashboard.reports.reviewsRepliedToLabel": "Reseñas respondidas",
+    "dashboard.reports.googlePostsPublishedLabel": "Publicaciones de Google publicadas",
+    "dashboard.reports.syncingSoonLabel": "Sincronización próximamente",
+    "dashboard.reports.connectedSyncingNote": "Conectado — esto comenzará a contarse en una actualización futura.",
 
     // --- Pricing page. Draft Spanish — pending your review.
     "dashboard.pricing.pageTitle": "Revisión de precios",
@@ -4445,9 +4627,57 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.pricing.assessButton": "Evaluar mis precios",
     "dashboard.pricing.lastAssessed": "Última evaluación: {date}",
 
+    // --- Starter-site generator. Draft Spanish — pending your review.
+    // siteLanguageEnglishOption/siteLanguageSpanishOption are each
+    // language's own endonym, so their value is intentionally the SAME
+    // in both dictionaries (a language switcher names each option in
+    // that language itself, not translated into the current UI locale).
+    "dashboard.website.starter.siteLanguageLabel": "Idioma del sitio",
+    "dashboard.website.starter.siteLanguageEnglishOption": "English",
+    "dashboard.website.starter.siteLanguageSpanishOption": "Español",
+    "starterSite.theme.ink": "Tinta y latón",
+    "starterSite.theme.terracotta": "Terracota y arcilla",
+    "starterSite.theme.forest": "Bosque y oro",
+    "starterSite.theme.slate": "Pizarra y coral",
+    "starterSite.theme.plum": "Ciruela y oro rosa",
+    "starterSite.theme.teal": "Verde azulado medianoche",
+    "starterSite.theme.crimson": "Carmesí y carbón",
+    "starterSite.theme.ocean": "Océano y arena",
+    "starterSite.theme.berry": "Baya y crema",
+    "starterSite.theme.graphite": "Grafito y lima",
+    "starterSite.font.classic": "Clásico — serif cálida + sans limpia",
+    "starterSite.font.modern": "Moderno — combinación sans en negrita",
+    "starterSite.font.elegant": "Elegante — serif de lujo",
+    "starterSite.font.friendly": "Amigable — redondeada, cálida",
+    "starterSite.font.minimal": "Minimalista — sans limpia única",
+    "starterSite.font.editorial": "Editorial — serif literaria",
+    "starterSite.font.geometric": "Geométrico — display moderna",
+    "starterSite.font.grotesk": "Grotesca — sans suiza en negrita",
+    "starterSite.font.statement": "Llamativo — display condensada en negrita",
+    "starterSite.font.vintage": "Vintage — display de alto contraste",
+    "starterSite.ctaBook": "Llame para reservar",
+    "starterSite.ctaOrder": "Llame para pedir",
+    "starterSite.ctaConsultation": "Llame para una consulta",
+    "starterSite.ctaCallUs": "Llámenos",
+    "starterSite.getDirections": "Cómo llegar",
+    "starterSite.getDirectionsArrow": "Cómo llegar →",
+    "starterSite.photosHeading": "Fotos",
+    "starterSite.hoursHeading": "Horario",
+    "starterSite.locationHeading": "Ubicación",
+    "starterSite.contactHeading": "Contacto",
+    "starterSite.reviewsHeading": "Reseñas",
+    "starterSite.reviewsAverageFromCount.one": "{rating} de promedio según {count} reseña de Google",
+    "starterSite.reviewsAverageFromCount.other": "{rating} de promedio según {count} reseñas de Google",
+    "starterSite.reviewsAverageOnGoogle": "{rating} de promedio en Google",
+    "starterSite.seeReviewsOnGoogle": "Vea nuestras reseñas en Google →",
+    "starterSite.defaultBusinessName": "Su negocio",
+    "starterSite.footerBuiltWith": "Sitio creado con PostScore",
+    "starterSite.mapTitle": "Mapa hacia {name}",
+    "starterSite.heroPhotoAlt": "Foto principal de {name}",
+    "starterSite.contentPhotoAlt": "Foto de {name}",
+
     // --- Business-type profiles (config/bizProfiles.ts). Reviewed Spanish,
-    // added profile-by-profile as supplied. growActions.* intentionally
-    // absent (dead content — never rendered — falls back to English).
+    // added profile-by-profile as supplied.
     "bizProfiles.salon.label": "Salón y cuidado personal",
     "bizProfiles.salon.competitorNoun": "salones",
     "bizProfiles.salon.couponPresets.pct_off_next_appt.label": "10% de descuento en su próxima cita",
@@ -4533,7 +4763,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Llámenos o consulte nuestro sitio web para ver la disponibilidad de reservaciones.",
     "bizProfiles.restaurant.faq.item2.question": "¿{businessName} ofrece comida para llevar o a domicilio?",
     "bizProfiles.restaurant.faq.item2.answer":
-      "Sí — haga su pedido para recoger directamente, o a través de su app de entrega preferida.",
+      "Llámenos o consulte nuestro sitio web para conocer las opciones de recogida y entrega a domicilio.",
     "bizProfiles.restaurant.referralPresets.free_item_both.referrerReward":
       "Un aperitivo o postre gratis en su próxima visita",
     "bizProfiles.restaurant.referralPresets.free_item_both.friendReward":
@@ -4713,7 +4943,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.cafe_bakery.couponAngles.slowDay":
       "20% de descuento en pedidos durante sus horas más lentas de la tarde",
     "bizProfiles.cafe_bakery.faq.item1.question": "¿{businessName} tiene Wi-Fi o lugares para trabajar?",
-    "bizProfiles.cafe_bakery.faq.item1.answer": "Sí — pase y pregunte sobre la disponibilidad de asientos y Wi-Fi.",
+    "bizProfiles.cafe_bakery.faq.item1.answer": "Llámenos o consulte nuestro sitio web para conocer la disponibilidad de asientos y Wi-Fi.",
     "bizProfiles.cafe_bakery.faq.item2.question":
       "¿{businessName} acepta pedidos especiales de pasteles o servicio de catering?",
     "bizProfiles.cafe_bakery.faq.item2.answer": "Llame o pase a preguntar sobre pedidos especiales y catering.",
@@ -4764,10 +4994,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.lawyer.couponAngles.slowDay": "Revisión de caso a tarifa fija, disponible esta semana",
     "bizProfiles.lawyer.faq.item1.question": "¿{businessName} ofrece una consulta gratuita?",
     "bizProfiles.lawyer.faq.item1.answer":
-      "Sí — llame o use nuestro formulario de contacto para programar una consulta inicial.",
+      "Llámenos o use nuestro formulario de contacto para preguntar sobre cómo programar una consulta inicial.",
     "bizProfiles.lawyer.faq.item2.question": "¿En qué áreas del derecho ejerce {businessName}?",
     "bizProfiles.lawyer.faq.item2.answer":
-      "Consulte nuestra página de áreas de práctica para los asuntos específicos que manejamos.",
+      "Llámenos o consulte nuestro sitio web para conocer los asuntos específicos que manejamos.",
     "bizProfiles.lawyer.pricingExamples.example1": "Consulta inicial",
     "bizProfiles.lawyer.pricingExamples.example2": "Revisión de documentos a tarifa fija",
     "bizProfiles.lawyer.pricingExamples.example3": "Tarifa por hora",
@@ -4814,10 +5044,10 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Revisión de la configuración de contabilidad a tarifa fija, disponible esta semana",
     "bizProfiles.professional_services.faq.item1.question": "¿{businessName} ofrece una consulta gratuita?",
     "bizProfiles.professional_services.faq.item1.answer":
-      "Sí — llame o use nuestro formulario de contacto para programar una consulta inicial.",
+      "Llámenos o use nuestro formulario de contacto para preguntar sobre cómo programar una consulta inicial.",
     "bizProfiles.professional_services.faq.item2.question": "¿Qué servicios ofrece {businessName}?",
     "bizProfiles.professional_services.faq.item2.answer":
-      "Consulte nuestra página de servicios para los servicios específicos de contabilidad e impuestos que ofrecemos.",
+      "Llámenos o consulte nuestro sitio web para conocer los servicios específicos de contabilidad e impuestos que ofrecemos.",
     "bizProfiles.professional_services.referralPresets.credit_both.referrerReward":
       "$25 de crédito para su próxima factura",
     "bizProfiles.professional_services.referralPresets.credit_both.friendReward":
@@ -4877,11 +5107,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.practitioner.couponAngles.slowDay": "10% de descuento en sesiones de mañana entre semana",
     "bizProfiles.practitioner.faq.item1.question": "¿{businessName} ofrece sesiones virtuales o a distancia?",
     "bizProfiles.practitioner.faq.item1.answer":
-      "Sí — pregunte por las opciones virtuales si una sesión presencial cerca de {city} no se ajusta a su horario.",
+      "Llámenos para preguntar por las opciones virtuales si una sesión presencial cerca de {city} no se ajusta a su horario.",
     "bizProfiles.practitioner.faq.item2.question":
       "¿Necesito reservar una cita con {businessName} con anticipación?",
     "bizProfiles.practitioner.faq.item2.answer":
-      "Sí, las sesiones son con cita — comuníquese para consultar la disponibilidad actual.",
+      "Llámenos para consultar si se requiere cita y conocer la disponibilidad actual.",
     "bizProfiles.practitioner.referralPresets.free_session_both.referrerReward": "Una clase o sesión gratis",
     "bizProfiles.practitioner.referralPresets.free_session_both.friendReward": "Una clase o sesión gratis",
     "bizProfiles.practitioner.referralPresets.free_session_both.description":
@@ -4939,7 +5169,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       "20% de descuento en inscripciones a clases en horas de menor afluencia (mediodía)",
     "bizProfiles.gym_fitness.faq.item1.question":
       "¿{businessName} ofrece una clase de prueba gratis o un pase de día?",
-    "bizProfiles.gym_fitness.faq.item1.answer": "Sí — pregunte por las opciones de prueba cuando pase o llame.",
+    "bizProfiles.gym_fitness.faq.item1.answer": "Llámenos o visítenos para preguntar por las opciones de prueba.",
     "bizProfiles.gym_fitness.faq.item2.question": "¿Cuál es el horario de clases de {businessName}?",
     "bizProfiles.gym_fitness.faq.item2.answer":
       "Consulte nuestro horario de clases actual en nuestro sitio web o llamando.",
@@ -5058,7 +5288,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       "$10 de descuento en compras de $50 o más en su día de compra más lento",
     "bizProfiles.retail.faq.item1.question": "¿{businessName} acepta devoluciones o cambios?",
     "bizProfiles.retail.faq.item1.answer":
-      "Sí — pregunte por nuestra política de devoluciones y cambios al momento de pagar.",
+      "Llámenos o consulte nuestro sitio web para conocer nuestra política de devoluciones y cambios.",
     "bizProfiles.retail.faq.item2.question": "¿Cuál es el horario de {businessName} cerca de {city}?",
     "bizProfiles.retail.faq.item2.answer":
       "Consulte nuestro horario actual en nuestra ficha del Perfil de Negocio de Google.",

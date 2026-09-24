@@ -25,10 +25,47 @@ import {
   type TaglinePlacement,
   type TaglineSize,
 } from "@/lib/starterSite";
+import type { OpeningHoursPeriod } from "@/lib/google/places";
 import { downloadTextFile } from "@/lib/downloadFile";
 import { resizeImageForEmbedding } from "@/lib/resizeImageForEmbedding";
 import { markTaskDone } from "@/app/actions/actionPlan";
-import { t, useLocale, type MessageKey } from "@/lib/i18n";
+import { normalizeLocale, t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
+
+/**
+ * lib/starterSite.ts's own STARTER_SITE_THEMES/STARTER_SITE_FONTS hold
+ * the canonical English `.label` text as data — that file stays
+ * untouched/English-only, so this view resolves each id's DASHBOARD-
+ * locale display text through these keys instead of reading `.label`
+ * directly. Never read those arrays' `.label` values as display text.
+ */
+const THEME_LABEL_KEY: Record<string, MessageKey> = {
+  ink: "starterSite.theme.ink",
+  terracotta: "starterSite.theme.terracotta",
+  forest: "starterSite.theme.forest",
+  slate: "starterSite.theme.slate",
+  plum: "starterSite.theme.plum",
+  teal: "starterSite.theme.teal",
+  crimson: "starterSite.theme.crimson",
+  ocean: "starterSite.theme.ocean",
+  berry: "starterSite.theme.berry",
+  graphite: "starterSite.theme.graphite",
+};
+
+/** Each value keeps the same " — short name / description" shape as the
+ * English `.label` it replaces, since the compact tagline-font buttons
+ * below split on " — " to show just the short name. */
+const FONT_LABEL_KEY: Record<string, MessageKey> = {
+  classic: "starterSite.font.classic",
+  modern: "starterSite.font.modern",
+  elegant: "starterSite.font.elegant",
+  friendly: "starterSite.font.friendly",
+  minimal: "starterSite.font.minimal",
+  editorial: "starterSite.font.editorial",
+  geometric: "starterSite.font.geometric",
+  grotesk: "starterSite.font.grotesk",
+  statement: "starterSite.font.statement",
+  vintage: "starterSite.font.vintage",
+};
 
 /** Keeps the downloaded HTML file's size reasonable — each photo is
  * already resized/compressed (see resizeImageForEmbedding), but a hard
@@ -87,22 +124,35 @@ function ToggleRow({ icon: Icon, label, checked, onChange, available }: ToggleRo
 export function StarterSiteBuilder({
   businessId,
   businessName,
+  businessLanguage,
   category,
   phone,
   address,
   openingHours,
+  openingHoursPeriods,
   rating,
   reviewCount,
   googleMapsUri,
   profileId,
   builderOfferReason,
+  onSiteLocaleChange,
 }: {
   businessId: string;
   businessName: string;
+  /** The business's own real language column — only used to default the
+   * generated site's own "Site language" selector below; the dashboard
+   * chrome around the generator always follows the dashboard's own
+   * locale (useLocale()), never this. */
+  businessLanguage: string | null;
   category: string | null;
   phone: string | null;
   address: string | null;
   openingHours: string[] | null;
+  /** Google's structured regularOpeningHours.periods — see
+   * lib/google/places.ts. Preferred for the generated site's Hours
+   * section when the site language is Spanish (lib/hours.ts); null
+   * falls back to openingHours exactly as before. */
+  openingHoursPeriods: OpeningHoursPeriod[] | null;
   rating: number | null;
   reviewCount: number | null;
   googleMapsUri: string | null;
@@ -111,9 +161,18 @@ export function StarterSiteBuilder({
    * app/actions/website.ts. Drives the headline/subcopy only; the
    * generator itself is identical in every case. */
   builderOfferReason: "no_website" | "underperforming" | "backup";
+  /** Lets a parent (the FAQ section, which shares no other state with
+   * this component) mirror the generated site's chosen language — see
+   * WebsiteGeneratorSection.tsx. */
+  onSiteLocaleChange?: (locale: Locale) => void;
 }) {
   const locale = useLocale();
   const router = useRouter();
+  const [siteLocale, setSiteLocaleState] = useState<Locale>(() => normalizeLocale(businessLanguage));
+  function setSiteLocale(next: Locale) {
+    setSiteLocaleState(next);
+    onSiteLocaleChange?.(next);
+  }
   const [tagline, setTagline] = useState("");
   const [taglineFontId, setTaglineFontId] = useState(STARTER_SITE_FONTS[0].id);
   const [taglineColor, setTaglineColor] = useState<string | null>(null);
@@ -135,7 +194,7 @@ export function StarterSiteBuilder({
     setPhotoError(null);
     try {
       const dataUri = await resizeImageForEmbedding(file, 1600);
-      setHeroImage({ dataUri, alt: `${businessName} hero photo` });
+      setHeroImage({ dataUri, alt: t(siteLocale, "starterSite.heroPhotoAlt", { name: businessName }) });
     } catch {
       setPhotoError(t(locale, "dashboard.website.starter.photoErrorFallback"));
     }
@@ -147,7 +206,10 @@ export function StarterSiteBuilder({
     setPhotoError(null);
     try {
       const dataUri = await resizeImageForEmbedding(file, 1000);
-      setContentImages((prev) => [...prev, { dataUri, alt: `${businessName} photo` }]);
+      setContentImages((prev) => [
+        ...prev,
+        { dataUri, alt: t(siteLocale, "starterSite.contentPhotoAlt", { name: businessName }) },
+      ]);
     } catch {
       setPhotoError(t(locale, "dashboard.website.starter.photoErrorFallback"));
     }
@@ -168,6 +230,7 @@ export function StarterSiteBuilder({
   const html = useMemo(
     () =>
       buildStarterSiteHtml({
+        locale: siteLocale,
         businessName,
         category,
         tagline,
@@ -178,6 +241,7 @@ export function StarterSiteBuilder({
         phone,
         address,
         openingHours,
+        openingHoursPeriods,
         rating,
         reviewCount,
         googleMapsUri,
@@ -190,6 +254,7 @@ export function StarterSiteBuilder({
         contentImages,
       }),
     [
+      siteLocale,
       businessName,
       category,
       tagline,
@@ -200,6 +265,7 @@ export function StarterSiteBuilder({
       phone,
       address,
       openingHours,
+      openingHoursPeriods,
       rating,
       reviewCount,
       googleMapsUri,
@@ -264,6 +330,32 @@ export function StarterSiteBuilder({
       <div className="grid grid-cols-1 gap-6 nav:grid-cols-2">
         <Card className="flex flex-col gap-4 p-5">
           <div>
+            <div className="mb-2 text-[13px] font-medium text-ink-soft">
+              {t(locale, "dashboard.website.starter.siteLanguageLabel")}
+            </div>
+            <div className="flex gap-1">
+              {(["en", "es"] as const).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setSiteLocale(option)}
+                  aria-pressed={siteLocale === option}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors",
+                    siteLocale === option
+                      ? "border-brass bg-brass/10 text-brass"
+                      : "border-paper-deep bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
+                  )}
+                >
+                  {option === "es"
+                    ? t(locale, "dashboard.website.starter.siteLanguageSpanishOption")
+                    : t(locale, "dashboard.website.starter.siteLanguageEnglishOption")}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
             <label className="mb-1 block text-[13px] font-medium text-ink-soft">
               {t(locale, "dashboard.website.starter.taglineLabel")}{" "}
               <span className="font-normal text-ink-mute">
@@ -291,22 +383,25 @@ export function StarterSiteBuilder({
                     {t(locale, "dashboard.website.starter.taglineFontLabel")}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {STARTER_SITE_FONTS.map((font) => (
-                      <button
-                        key={font.id}
-                        type="button"
-                        onClick={() => setTaglineFontId(font.id)}
-                        title={font.label}
-                        className={cn(
-                          "rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition-colors",
-                          taglineFontId === font.id
-                            ? "border-brass bg-brass/10 text-brass"
-                            : "border-paper-deep bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
-                        )}
-                      >
-                        {font.label.split(" — ")[0]}
-                      </button>
-                    ))}
+                    {STARTER_SITE_FONTS.map((font) => {
+                      const fontLabel = t(locale, FONT_LABEL_KEY[font.id]);
+                      return (
+                        <button
+                          key={font.id}
+                          type="button"
+                          onClick={() => setTaglineFontId(font.id)}
+                          title={fontLabel}
+                          className={cn(
+                            "rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition-colors",
+                            taglineFontId === font.id
+                              ? "border-brass bg-brass/10 text-brass"
+                              : "border-paper-deep bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
+                          )}
+                        >
+                          {fontLabel.split(" — ")[0]}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -390,26 +485,29 @@ export function StarterSiteBuilder({
               {t(locale, "dashboard.website.starter.colorThemeLabel")}
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              {STARTER_SITE_THEMES.map((theme) => (
-                <button
-                  key={theme.id}
-                  type="button"
-                  onClick={() => handleThemeSelect(theme.id)}
-                  title={theme.label}
-                  aria-label={theme.label}
-                  aria-pressed={themeId === theme.id}
-                  className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all",
-                    themeId === theme.id ? "border-ink" : "border-transparent hover:border-paper-deep"
-                  )}
-                  style={{ backgroundColor: theme.heroBg }}
-                >
-                  <span
-                    className="h-3.5 w-3.5 rounded-full ring-1 ring-white/40"
-                    style={{ backgroundColor: theme.accent }}
-                  />
-                </button>
-              ))}
+              {STARTER_SITE_THEMES.map((theme) => {
+                const themeLabel = t(locale, THEME_LABEL_KEY[theme.id]);
+                return (
+                  <button
+                    key={theme.id}
+                    type="button"
+                    onClick={() => handleThemeSelect(theme.id)}
+                    title={themeLabel}
+                    aria-label={themeLabel}
+                    aria-pressed={themeId === theme.id}
+                    className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all",
+                      themeId === theme.id ? "border-ink" : "border-transparent hover:border-paper-deep"
+                    )}
+                    style={{ backgroundColor: theme.heroBg }}
+                  >
+                    <span
+                      className="h-3.5 w-3.5 rounded-full ring-1 ring-white/40"
+                      style={{ backgroundColor: theme.accent }}
+                    />
+                  </button>
+                );
+              })}
             </div>
             <div className="mt-2.5 flex items-center gap-2">
               <input
@@ -420,7 +518,7 @@ export function StarterSiteBuilder({
                 className="h-8 w-10 cursor-pointer rounded border border-paper-deep bg-white p-0.5"
               />
               <p className="text-[12px] text-ink-mute">
-                {currentTheme.label}
+                {t(locale, THEME_LABEL_KEY[currentTheme.id])}
                 {customAccent !== null && t(locale, "dashboard.website.starter.customAccentSuffix")}
               </p>
               {customAccent !== null && (
@@ -452,7 +550,7 @@ export function StarterSiteBuilder({
                       : "border-paper-deep bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
                   )}
                 >
-                  {font.label}
+                  {t(locale, FONT_LABEL_KEY[font.id])}
                 </button>
               ))}
             </div>

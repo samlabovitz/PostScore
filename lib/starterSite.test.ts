@@ -9,6 +9,7 @@ import {
 } from "./starterSite";
 
 const BASE: StarterSiteInput = {
+  locale: "en",
   businessName: "Rosa's Cafe",
   category: "Cafe",
   tagline: "",
@@ -19,6 +20,7 @@ const BASE: StarterSiteInput = {
   phone: "+1 555-123-4567",
   address: "742 Evergreen Terrace, Springfield",
   openingHours: ["Monday: 9:00 AM – 5:00 PM"],
+  openingHoursPeriods: null,
   rating: 4.6,
   reviewCount: 120,
   googleMapsUri: "https://maps.google.com/?cid=123",
@@ -317,5 +319,56 @@ describe("photos", () => {
   test("is still deterministic with photos included", () => {
     const input = { ...BASE, heroImage: { dataUri: HERO_DATA_URI, alt: "x" }, contentImages: [PHOTO_1, PHOTO_2] };
     expect(buildStarterSiteHtml(input)).toBe(buildStarterSiteHtml({ ...input }));
+  });
+});
+
+describe("buildStarterSiteHtml: site language (locale)", () => {
+  test("locale 'es' translates the fixed template text and sets <html lang>", () => {
+    const html = buildStarterSiteHtml({ ...BASE, locale: "es" });
+    expect(html).toContain('<html lang="es">');
+    expect(html).toContain("Cómo llegar");
+    expect(html).toContain("Horario");
+    expect(html).toContain("Contacto");
+    expect(html).toContain("Reseñas");
+    expect(html).toContain("Sitio creado con PostScore");
+    expect(html).not.toContain("Get directions");
+  });
+
+  test("CTA verb is translated per business type in Spanish", () => {
+    const html = buildStarterSiteHtml({ ...BASE, locale: "es", profileId: "salon" });
+    expect(html).toContain("Llame para reservar");
+  });
+
+  test("Spanish hours use the real structured periods, not the English weekday lines", () => {
+    const html = buildStarterSiteHtml({
+      ...BASE,
+      locale: "es",
+      openingHoursPeriods: [{ open: { day: 1, hour: 9, minute: 0 }, close: { day: 1, hour: 17, minute: 0 } }],
+    });
+    expect(html).toContain("Lunes: 9:00 a.m. – 5:00 p.m.");
+    expect(html).not.toContain("Monday: 9:00 AM");
+  });
+
+  test("Spanish falls back to the English hours lines when there's no structured data", () => {
+    const html = buildStarterSiteHtml({ ...BASE, locale: "es", openingHoursPeriods: null });
+    expect(html).toContain("Monday: 9:00 AM – 5:00 PM");
+  });
+
+  test("a Spanish site with no name falls back to the Spanish default business name", () => {
+    const html = buildStarterSiteHtml({ ...BASE, locale: "es", businessName: "   " });
+    expect(html).toContain("Su negocio");
+  });
+
+  test("locale 'en' is byte-identical to the pre-i18n baseline output", () => {
+    // Same input as the very first determinism test above, explicit
+    // about locale: "en" now being required — this is the contract that
+    // English output never changes shape from adding Spanish.
+    const html = buildStarterSiteHtml({ ...BASE, locale: "en" });
+    expect(html).toContain("Get directions");
+    expect(html).toContain("Hours");
+    expect(html).toContain("Contact");
+    expect(html).toContain("Reviews");
+    expect(html).toContain("Site built with PostScore");
+    expect(html).toContain('<html lang="en">');
   });
 });

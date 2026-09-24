@@ -13,6 +13,19 @@
 // on file, is simply omitted — never replaced with a placeholder that
 // could be mistaken for real information. Color/font/tagline styling
 // are pure presentation choices with no bearing on what's shown.
+//
+// The generated site's own fixed text (CTAs, section headings, footer,
+// <html lang>) follows `locale` on StarterSiteInput — the site's own
+// "Site language" choice (StarterSiteBuilder.tsx), independent of the
+// dashboard's own UI locale. Hours specifically prefer the real
+// structured openingHoursPeriods, formatted via lib/hours.ts, when the
+// site language is Spanish; the plain openingHours weekday-description
+// lines (always English, from Google) are the fallback whenever the
+// structured data can't honestly produce a Spanish line.
+
+import { t, tPlural, type Locale } from "./i18n";
+import { formatOpeningHours } from "./hours";
+import type { OpeningHoursPeriod } from "./google/places";
 
 /**
  * A curated color theme: a dark hero background (paired with white
@@ -313,11 +326,11 @@ const BOOK_VERB_IDS = new Set([
 const ORDER_VERB_IDS = new Set(["restaurant", "cafe", "bar", "bakery", "liquor_store", "grocery_market"]);
 const CONSULTATION_VERB_IDS = new Set(["lawyer", "dentist", "medical_clinic"]);
 
-function ctaVerb(profileId: string): string {
-  if (BOOK_VERB_IDS.has(profileId)) return "Call to book";
-  if (ORDER_VERB_IDS.has(profileId)) return "Call to order";
-  if (CONSULTATION_VERB_IDS.has(profileId)) return "Call for a consultation";
-  return "Call us";
+function ctaVerb(profileId: string, locale: Locale): string {
+  if (BOOK_VERB_IDS.has(profileId)) return t(locale, "starterSite.ctaBook");
+  if (ORDER_VERB_IDS.has(profileId)) return t(locale, "starterSite.ctaOrder");
+  if (CONSULTATION_VERB_IDS.has(profileId)) return t(locale, "starterSite.ctaConsultation");
+  return t(locale, "starterSite.ctaCallUs");
 }
 
 function escapeHtml(value: string): string {
@@ -336,6 +349,11 @@ function telHref(phone: string): string {
 }
 
 export interface StarterSiteInput {
+  /** The generated site's own language — independent of the dashboard's
+   * UI locale. Controls every fixed string in the output (CTAs, section
+   * headings, footer, <html lang>) and which of openingHours /
+   * openingHoursPeriods is preferred for the Hours section. */
+  locale: Locale;
   businessName: string;
   /** The business's real Google category display name, e.g. "Hair Salon". */
   category: string | null;
@@ -351,6 +369,12 @@ export interface StarterSiteInput {
   phone: string | null;
   address: string | null;
   openingHours: string[] | null;
+  /** Google's structured regularOpeningHours.periods (see
+   * lib/google/places.ts) — preferred over the plain openingHours lines
+   * above whenever `locale` is "es" and lib/hours.ts's
+   * formatOpeningHours() can honestly produce Spanish lines from it;
+   * null falls back to openingHours exactly as before. */
+  openingHoursPeriods: OpeningHoursPeriod[] | null;
   rating: number | null;
   reviewCount: number | null;
   /** Real link to the business's own Google listing, when on file —
@@ -385,16 +409,23 @@ export interface StarterSiteInput {
 }
 
 export function buildStarterSiteHtml(input: StarterSiteInput): string {
+  const locale = input.locale;
   const theme = getStarterSiteTheme(input.themeId);
   const font = getStarterSiteFont(input.fontId);
   const taglineFont = getStarterSiteFont(input.taglineFontId);
   const accent = safeHexColor(input.customAccent, theme.accent);
   const taglineColor = safeHexColor(input.taglineColor, "#cbd5e6");
 
-  const name = input.businessName.trim() || "Your Business";
+  const name = input.businessName.trim() || t(locale, "starterSite.defaultBusinessName");
   const showAddress = input.show.address && !!input.address;
   const showPhone = input.show.phone && !!input.phone;
-  const showHours = input.show.hours && !!input.openingHours && input.openingHours.length > 0;
+  // Spanish prefers the real structured hours, formatted honestly by
+  // lib/hours.ts; when that can't produce a result (no structured data,
+  // or it doesn't parse), this falls back to the plain English lines —
+  // never a guessed Spanish schedule.
+  const hoursLines =
+    (locale === "es" ? formatOpeningHours(input.openingHoursPeriods, locale) : null) ?? input.openingHours;
+  const showHours = input.show.hours && !!hoursLines && hoursLines.length > 0;
   const showRating = input.show.rating && input.rating !== null;
   const tagline = input.tagline.trim();
 
@@ -407,13 +438,13 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   const heroCtas: string[] = [];
   if (showPhone) {
     heroCtas.push(
-      `<a class="btn btn-primary" href="${telHref(input.phone as string)}">${escapeHtml(ctaVerb(input.profileId))}: ${escapeHtml(input.phone as string)}</a>`
+      `<a class="btn btn-primary" href="${telHref(input.phone as string)}">${escapeHtml(ctaVerb(input.profileId, locale))}: ${escapeHtml(input.phone as string)}</a>`
     );
   }
   if (showAddress) {
     const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(input.address as string)}`;
     heroCtas.push(
-      `<a class="btn ${showPhone ? "btn-secondary" : "btn-primary"}" href="${directionsUrl}" target="_blank" rel="noopener noreferrer">Get directions</a>`
+      `<a class="btn ${showPhone ? "btn-secondary" : "btn-primary"}" href="${directionsUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(locale, "starterSite.getDirections"))}</a>`
     );
   }
 
@@ -422,7 +453,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   if (input.contentImages.length > 0) {
     sections.push(`
       <section class="card card--photos">
-        <h2>Photos</h2>
+        <h2>${escapeHtml(t(locale, "starterSite.photosHeading"))}</h2>
         <div class="photo-grid">
           ${input.contentImages
             .map((img) => `<img src="${img.dataUri}" alt="${escapeHtml(img.alt)}" loading="lazy">`)
@@ -434,9 +465,9 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   if (showHours) {
     sections.push(`
       <section class="card">
-        <h2>Hours</h2>
+        <h2>${escapeHtml(t(locale, "starterSite.hoursHeading"))}</h2>
         <ul class="hours">
-          ${(input.openingHours as string[]).map((line) => `<li>${escapeHtml(line)}</li>`).join("\n          ")}
+          ${(hoursLines as string[]).map((line) => `<li>${escapeHtml(line)}</li>`).join("\n          ")}
         </ul>
       </section>`);
   }
@@ -446,17 +477,17 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
     const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(input.address as string)}`;
     sections.push(`
       <section class="card">
-        <h2>Location</h2>
+        <h2>${escapeHtml(t(locale, "starterSite.locationHeading"))}</h2>
         <p>${escapeHtml(input.address as string)}</p>
-        <a class="link" href="${directionsUrl}" target="_blank" rel="noopener noreferrer">Get directions →</a>
-        <iframe class="map" src="${mapSrc}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Map to ${escapeHtml(name)}"></iframe>
+        <a class="link" href="${directionsUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(locale, "starterSite.getDirectionsArrow"))}</a>
+        <iframe class="map" src="${mapSrc}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="${escapeHtml(t(locale, "starterSite.mapTitle", { name }))}"></iframe>
       </section>`);
   }
 
   if (showPhone) {
     sections.push(`
       <section class="card">
-        <h2>Contact</h2>
+        <h2>${escapeHtml(t(locale, "starterSite.contactHeading"))}</h2>
         <p><a class="link" href="${telHref(input.phone as string)}">${escapeHtml(input.phone as string)}</a></p>
       </section>`);
   }
@@ -465,14 +496,16 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
     const stars = "★".repeat(Math.max(0, Math.min(5, Math.round(input.rating as number))));
     const reviewsLine =
       input.reviewCount !== null
-        ? `${(input.rating as number).toFixed(1)} average from ${input.reviewCount.toLocaleString()} Google review${input.reviewCount === 1 ? "" : "s"}`
-        : `${(input.rating as number).toFixed(1)} average on Google`;
+        ? tPlural(locale, "starterSite.reviewsAverageFromCount", input.reviewCount, {
+            rating: (input.rating as number).toFixed(1),
+          })
+        : t(locale, "starterSite.reviewsAverageOnGoogle", { rating: (input.rating as number).toFixed(1) });
     const reviewsLink = input.googleMapsUri
-      ? `<p><a class="link" href="${escapeHtml(input.googleMapsUri)}" target="_blank" rel="noopener noreferrer">See our reviews on Google →</a></p>`
+      ? `<p><a class="link" href="${escapeHtml(input.googleMapsUri)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(locale, "starterSite.seeReviewsOnGoogle"))}</a></p>`
       : "";
     sections.push(`
       <section class="card">
-        <h2>Reviews</h2>
+        <h2>${escapeHtml(t(locale, "starterSite.reviewsHeading"))}</h2>
         <p class="stars" aria-hidden="true">${stars}</p>
         <p>${escapeHtml(reviewsLine)}</p>
         ${reviewsLink}
@@ -491,7 +524,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
       : [nameHtml, categoryHtml, taglineHtml];
 
   return `<!doctype html>
-<html lang="en">
+<html lang="${locale}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -655,7 +688,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   <main>
     ${sections.join("\n    ")}
   </main>
-  <footer>Site built with PostScore</footer>
+  <footer>${escapeHtml(t(locale, "starterSite.footerBuiltWith"))}</footer>
 </body>
 </html>
 `;

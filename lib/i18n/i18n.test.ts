@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { normalizeLocale } from "./locale";
-import { t, tPlural } from "./messages";
+import { t, tPlural, type MessageKey } from "./messages";
 import { formatMonthLabel } from "./format";
 
 describe("normalizeLocale", () => {
@@ -21,10 +21,15 @@ describe("normalizeLocale", () => {
 });
 
 describe("t", () => {
-  test("falls back to the English string when the locale hasn't translated a key", () => {
-    // "common.cancel" is deliberately left out of the Spanish dictionary
-    // in messages.ts to exercise exactly this path.
-    expect(t("es", "common.cancel")).toBe("Cancel");
+  test("falls back to the raw key as a last resort when a key exists in neither dictionary", () => {
+    // Every real MessageKey now has both an en and an es value (see the
+    // messages.test.ts guardrail), so there's no real production key left
+    // to exercise the "missing everywhere" rung of the fallback chain —
+    // a synthetic, obviously-fake key does that instead, bypassing the
+    // MessageKey type on purpose.
+    const unknownKey = "__test_only_unknown_key__" as MessageKey;
+    expect(t("es", unknownKey)).toBe(unknownKey);
+    expect(t("en", unknownKey)).toBe(unknownKey);
   });
 
   test("returns the locale's own translation when present", () => {

@@ -17,6 +17,7 @@ import {
   type PricingAssessmentPayload,
 } from "@/lib/pricing";
 import { callAnthropicMessage } from "@/lib/anthropicClient";
+import { DEFAULT_LOCALE } from "@/lib/i18n";
 
 const PRICE_COLUMNS = "id, business_id, service, price, created_at";
 
@@ -295,7 +296,11 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
       https_status: row.https_status,
       website_analysis_json: row.website_analysis_json,
     };
-    const scan = await findAndScoreCompetitors(subject);
+    // Only `.ranked`'s price levels are read below (buildPriceLevelComparison)
+    // — `.message` is never surfaced here, so there's no real business
+    // locale to thread through; PricingBusinessRow doesn't select
+    // `language` for that reason.
+    const scan = await findAndScoreCompetitors(subject, DEFAULT_LOCALE);
     if (scan.status === "ok" && scan.ranked.length > 0) {
       priceLevelContext = buildPriceLevelComparison(scan.ranked);
     }

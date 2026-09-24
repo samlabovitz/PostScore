@@ -116,12 +116,13 @@ export async function getCompetitorsWithClient(
   };
 
   try {
-    const result = await findAndScoreCompetitors(subject);
+    const locale = normalizeLocale(row.language);
+    const result = await findAndScoreCompetitors(subject, locale);
     const competitorNoun = resolveBizProfile(
       row.category,
       row.primary_type,
       row.business_type_override,
-      normalizeLocale(row.language)
+      locale
     ).competitorNoun;
     return {
       status: "ok",

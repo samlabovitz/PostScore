@@ -122,8 +122,6 @@ export interface BizProfile {
   offerTemplates: OfferTemplate[];
   /** See CouponAngles. */
   couponAngles: CouponAngles;
-  /** Concrete, type-appropriate ideas for the Growth page. */
-  growActions: string[];
   faq: FaqEntry[];
   /**
    * False hides the referral segment entirely. Concretely false today
@@ -156,7 +154,7 @@ export interface BizProfile {
 // ---------------------------------------------------------------------------
 // Authoring-time "source" shapes — internal only, never exported, never
 // seen outside this module. Every text field here holds an i18n
-// MessageKey; growActions/pricingExamples/faq additionally carry a
+// MessageKey; pricingExamples/faq additionally carry a
 // stable `id` per item (this beat's one real restructure) so each array
 // item can be its own translatable key exactly like couponPresets/
 // offerTemplates/referralPresets/pricingTips already were. See
@@ -183,11 +181,6 @@ interface CouponAnglesSource {
   slowDay: MessageKey;
 }
 
-interface GrowActionSource {
-  id: string;
-  text: MessageKey;
-}
-
 interface PricingExampleSource {
   id: string;
   text: MessageKey;
@@ -211,7 +204,6 @@ interface BizProfileSource {
   couponPresets: KeyedLabelDescriptionSource[];
   offerTemplates: KeyedLabelDescriptionSource[];
   couponAngles: CouponAnglesSource;
-  growActions: GrowActionSource[];
   faq: FaqEntrySource[];
   referralOk: boolean;
   referralPresets: ReferralPresetSource[];
@@ -222,12 +214,12 @@ interface BizProfileSource {
 /**
  * The one place a BizProfileSource's i18n keys become real, localized
  * text — called by bizProfile()/bizProfileById() (and so, transitively,
- * resolveBizProfile()) right before returning. growActions and
- * pricingExamples deliberately flatten back to plain string[] here (their
- * per-item `id` was only ever needed to give each one a stable
- * translation key — no consumer reads it), same reasoning as faq's `id`
- * being dropped: FaqEntry stays exactly {question, answer}, matching the
- * shape renderFaq() and every caller already expects.
+ * resolveBizProfile()) right before returning. pricingExamples
+ * deliberately flattens back to plain string[] here (its per-item `id`
+ * was only ever needed to give each one a stable translation key — no
+ * consumer reads it), same reasoning as faq's `id` being dropped:
+ * FaqEntry stays exactly {question, answer}, matching the shape
+ * renderFaq() and every caller already expects.
  */
 function localizeBizProfile(source: BizProfileSource, locale: Locale): BizProfile {
   return {
@@ -251,7 +243,6 @@ function localizeBizProfile(source: BizProfileSource, locale: Locale): BizProfil
       seasonal: t(locale, source.couponAngles.seasonal),
       slowDay: t(locale, source.couponAngles.slowDay),
     },
-    growActions: source.growActions.map((g) => t(locale, g.text)),
     faq: source.faq.map((f) => ({
       question: t(locale, f.question),
       answer: t(locale, f.answer),
@@ -322,12 +313,6 @@ const SALON_PROFILE: BizProfileSource = {
     seasonal: "bizProfiles.salon.couponAngles.seasonal",
     slowDay: "bizProfiles.salon.couponAngles.slowDay",
   },
-  growActions: [
-    { id: "action1", text: "bizProfiles.salon.growActions.action1" },
-    { id: "action2", text: "bizProfiles.salon.growActions.action2" },
-    { id: "action3", text: "bizProfiles.salon.growActions.action3" },
-    { id: "action4", text: "bizProfiles.salon.growActions.action4" },
-  ],
   faq: [
     {
       id: "item1",
@@ -437,12 +422,6 @@ const RESTAURANT_PROFILE: BizProfileSource = {
     seasonal: "bizProfiles.restaurant.couponAngles.seasonal",
     slowDay: "bizProfiles.restaurant.couponAngles.slowDay",
   },
-  growActions: [
-    { id: "action1", text: "bizProfiles.restaurant.growActions.action1" },
-    { id: "action2", text: "bizProfiles.restaurant.growActions.action2" },
-    { id: "action3", text: "bizProfiles.restaurant.growActions.action3" },
-    { id: "action4", text: "bizProfiles.restaurant.growActions.action4" },
-  ],
   faq: [
     {
       id: "item1",
@@ -546,12 +525,6 @@ const LIQUOR_WINE_PROFILE: BizProfileSource = {
     seasonal: "bizProfiles.liquor_wine.couponAngles.seasonal",
     slowDay: "bizProfiles.liquor_wine.couponAngles.slowDay",
   },
-  growActions: [
-    { id: "action1", text: "bizProfiles.liquor_wine.growActions.action1" },
-    { id: "action2", text: "bizProfiles.liquor_wine.growActions.action2" },
-    { id: "action3", text: "bizProfiles.liquor_wine.growActions.action3" },
-    { id: "action4", text: "bizProfiles.liquor_wine.growActions.action4" },
-  ],
   faq: [
     {
       id: "item1",
@@ -655,12 +628,6 @@ const GROCERY_MARKET_PROFILE: BizProfileSource = {
     seasonal: "bizProfiles.grocery_market.couponAngles.seasonal",
     slowDay: "bizProfiles.grocery_market.couponAngles.slowDay",
   },
-  growActions: [
-    { id: "action1", text: "bizProfiles.grocery_market.growActions.action1" },
-    { id: "action2", text: "bizProfiles.grocery_market.growActions.action2" },
-    { id: "action3", text: "bizProfiles.grocery_market.growActions.action3" },
-    { id: "action4", text: "bizProfiles.grocery_market.growActions.action4" },
-  ],
   faq: [
     {
       id: "item1",
@@ -763,12 +730,6 @@ const CAFE_BAKERY_PROFILE: BizProfileSource = {
     seasonal: "bizProfiles.cafe_bakery.couponAngles.seasonal",
     slowDay: "bizProfiles.cafe_bakery.couponAngles.slowDay",
   },
-  growActions: [
-    { id: "action1", text: "bizProfiles.cafe_bakery.growActions.action1" },
-    { id: "action2", text: "bizProfiles.cafe_bakery.growActions.action2" },
-    { id: "action3", text: "bizProfiles.cafe_bakery.growActions.action3" },
-    { id: "action4", text: "bizProfiles.cafe_bakery.growActions.action4" },
-  ],
   faq: [
     {
       id: "item1",
@@ -855,12 +816,6 @@ const LAWYER_PROFILE: BizProfileSource = {
     seasonal: "bizProfiles.lawyer.couponAngles.seasonal",
     slowDay: "bizProfiles.lawyer.couponAngles.slowDay",
   },
-  growActions: [
-    { id: "action1", text: "bizProfiles.lawyer.growActions.action1" },
-    { id: "action2", text: "bizProfiles.lawyer.growActions.action2" },
-    { id: "action3", text: "bizProfiles.lawyer.growActions.action3" },
-    { id: "action4", text: "bizProfiles.lawyer.growActions.action4" },
-  ],
   faq: [
     {
       id: "item1",
@@ -959,12 +914,6 @@ const PROFESSIONAL_SERVICES_PROFILE: BizProfileSource = {
     seasonal: "bizProfiles.professional_services.couponAngles.seasonal",
     slowDay: "bizProfiles.professional_services.couponAngles.slowDay",
   },
-  growActions: [
-    { id: "action1", text: "bizProfiles.professional_services.growActions.action1" },
-    { id: "action2", text: "bizProfiles.professional_services.growActions.action2" },
-    { id: "action3", text: "bizProfiles.professional_services.growActions.action3" },
-    { id: "action4", text: "bizProfiles.professional_services.growActions.action4" },
-  ],
   faq: [
     {
       id: "item1",
@@ -1088,12 +1037,6 @@ const PRACTITIONER_PROFILE: BizProfileSource = {
     seasonal: "bizProfiles.practitioner.couponAngles.seasonal",
     slowDay: "bizProfiles.practitioner.couponAngles.slowDay",
   },
-  growActions: [
-    { id: "action1", text: "bizProfiles.practitioner.growActions.action1" },
-    { id: "action2", text: "bizProfiles.practitioner.growActions.action2" },
-    { id: "action3", text: "bizProfiles.practitioner.growActions.action3" },
-    { id: "action4", text: "bizProfiles.practitioner.growActions.action4" },
-  ],
   faq: [
     {
       id: "item1",
@@ -1197,12 +1140,6 @@ const GYM_FITNESS_PROFILE: BizProfileSource = {
     seasonal: "bizProfiles.gym_fitness.couponAngles.seasonal",
     slowDay: "bizProfiles.gym_fitness.couponAngles.slowDay",
   },
-  growActions: [
-    { id: "action1", text: "bizProfiles.gym_fitness.growActions.action1" },
-    { id: "action2", text: "bizProfiles.gym_fitness.growActions.action2" },
-    { id: "action3", text: "bizProfiles.gym_fitness.growActions.action3" },
-    { id: "action4", text: "bizProfiles.gym_fitness.growActions.action4" },
-  ],
   faq: [
     {
       id: "item1",
@@ -1306,12 +1243,6 @@ const TRADES_PROFILE: BizProfileSource = {
     seasonal: "bizProfiles.trades.couponAngles.seasonal",
     slowDay: "bizProfiles.trades.couponAngles.slowDay",
   },
-  growActions: [
-    { id: "action1", text: "bizProfiles.trades.growActions.action1" },
-    { id: "action2", text: "bizProfiles.trades.growActions.action2" },
-    { id: "action3", text: "bizProfiles.trades.growActions.action3" },
-    { id: "action4", text: "bizProfiles.trades.growActions.action4" },
-  ],
   faq: [
     {
       id: "item1",
@@ -1414,12 +1345,6 @@ const RETAIL_PROFILE: BizProfileSource = {
     seasonal: "bizProfiles.retail.couponAngles.seasonal",
     slowDay: "bizProfiles.retail.couponAngles.slowDay",
   },
-  growActions: [
-    { id: "action1", text: "bizProfiles.retail.growActions.action1" },
-    { id: "action2", text: "bizProfiles.retail.growActions.action2" },
-    { id: "action3", text: "bizProfiles.retail.growActions.action3" },
-    { id: "action4", text: "bizProfiles.retail.growActions.action4" },
-  ],
   faq: [
     {
       id: "item1",
@@ -1517,12 +1442,6 @@ const DEFAULT_PROFILE: BizProfileSource = {
     seasonal: "bizProfiles.default.couponAngles.seasonal",
     slowDay: "bizProfiles.default.couponAngles.slowDay",
   },
-  growActions: [
-    { id: "action1", text: "bizProfiles.default.growActions.action1" },
-    { id: "action2", text: "bizProfiles.default.growActions.action2" },
-    { id: "action3", text: "bizProfiles.default.growActions.action3" },
-    { id: "action4", text: "bizProfiles.default.growActions.action4" },
-  ],
   faq: [
     {
       id: "item1",
@@ -1970,7 +1889,7 @@ function buildResolvedProfileSource(option: BusinessTypeOption): BizProfileSourc
  * business_type_override once one might exist.
  *
  * `locale` resolves every returned string (label, competitorNoun, coupon/
- * offer/referral/pricing copy, growActions, FAQ) in that language —
+ * offer/referral/pricing copy, FAQ) in that language —
  * defaults to DEFAULT_LOCALE so every existing call site that hasn't been
  * updated to thread a real locale yet keeps getting exactly the English
  * text it always has.
@@ -2042,10 +1961,11 @@ export function resolveBizProfile(
  * scoring or matching, so an imprecise guess here is low-stakes. Falls
  * back honestly rather than guessing wrong when the shape is unexpected.
  *
- * Deliberately NOT localized, same as renderFaq() below: its one real
- * caller (app/business/[id]/website/page.tsx) feeds the customer-facing
- * generated starter site, which stays English-only by design — see
- * lib/starterSite.ts's own scope note. */
+ * The fallback string itself isn't localized (no `locale` param here) —
+ * its one real caller (app/business/[id]/website/page.tsx) calls this
+ * once per site language and only ever hits this fallback for a business
+ * with no usable address at all, same low-stakes reasoning as the rest
+ * of this function. */
 function extractCity(address: string | null | undefined): string {
   if (!address) return "your area";
   const parts = address.split(",").map((p) => p.trim());
@@ -2053,10 +1973,12 @@ function extractCity(address: string | null | undefined): string {
 }
 
 /** Fills {businessName} / {city} tokens in a profile's FAQ with a real
- * business's actual data. Deliberately NOT localized — see extractCity()
- * above; the FaqEntry[] passed in is expected to already be the English
- * resolution (resolveBizProfile()'s default locale) from the starter-site
- * path, same as before this beat. */
+ * business's actual data. The `faq` passed in should already be the
+ * resolution for whichever site language the caller wants — pass the
+ * result of resolveBizProfile(..., locale).faq for each language you
+ * need (see app/business/[id]/website/page.tsx, which calls this once
+ * per site language and lets the generator's own "Site language"
+ * selector choose between them at render time). */
 export function renderFaq(
   faq: FaqEntry[],
   business: { name: string | null; address: string | null }

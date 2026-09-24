@@ -23,6 +23,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // The honest default — this single root layout has no way to know a
+  // nested /business/[id]/* route's own business (and so its real
+  // language) before rendering server-side. components/layout/
+  // DashboardShell.tsx, which DOES know it on every dashboard page,
+  // corrects this client-side to the current business's real language;
+  // a page with no business in context (this one, login/signup, the
+  // home list) simply leaves it at "en".
   return (
     <html lang="en">
       <body className={`${fraunces.variable} ${inter.variable} antialiased`}>

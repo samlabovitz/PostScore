@@ -16,6 +16,7 @@ import {
   type NearbyCandidate,
   type PlaceDetails,
 } from "@/lib/google/places";
+import { t, tPlural, type Locale } from "@/lib/i18n";
 
 /** How many nearest comparable competitors to score and show, at most —
  * never padded to this number: `comparable` below is built by filtering
@@ -439,16 +440,13 @@ function emptyResult(
  * "maps rank" or SEO metric.
  */
 export async function findAndScoreCompetitors(
-  subject: CompetitorSourceBusiness
+  subject: CompetitorSourceBusiness,
+  locale: Locale
 ): Promise<CompetitorScanResult> {
   const categoryLabel = subject.category ?? subject.primaryType ?? null;
 
   if (subject.lat === null || subject.lng === null) {
-    return emptyResult(
-      "no_location",
-      "This business has no saved coordinates, so we can't search nearby. Re-save it from a fresh Google Places lookup to pick up its location.",
-      categoryLabel
-    );
+    return emptyResult("no_location", t(locale, "dashboard.competitors.noCoordinatesError"), categoryLabel);
   }
 
   // primaryType is checked first (Google's own most-authoritative type),
@@ -469,7 +467,9 @@ export async function findAndScoreCompetitors(
     // list with businesses that aren't genuinely comparable.
     return emptyResult(
       "category_too_generic",
-      `We couldn't identify clearly comparable businesses for this category — ${subject.name ?? "this business"}'s Google category is too general to match reliably.`,
+      t(locale, "dashboard.competitors.categoryTooGenericError", {
+        name: subject.name ?? t(locale, "dashboard.competitors.thisBusinessFallback"),
+      }),
       categoryLabel
     );
   }
@@ -486,15 +486,11 @@ export async function findAndScoreCompetitors(
   });
 
   if (!referenceType && !referenceDisplayName) {
-    return emptyResult(
-      "no_category",
-      "This business has no category on file, so we can't tell which nearby businesses are genuinely comparable. Re-save it from Google Places to pick up its category.",
-      categoryLabel
-    );
+    return emptyResult("no_category", t(locale, "dashboard.competitors.noCategoryError"), categoryLabel);
   }
 
   const subjectLocation = { lat: subject.lat, lng: subject.lng };
-  const subjectBreakdown = scoreBusiness(businessRowToScoringInput(subject));
+  const subjectBreakdown = scoreBusiness(businessRowToScoringInput(subject), locale);
 
   type Comparable = { candidate: NearbyCandidate; distanceMeters: number };
   let comparable: Comparable[] = [];
@@ -526,7 +522,7 @@ export async function findAndScoreCompetitors(
     } catch (err) {
       return emptyResult(
         "error",
-        err instanceof Error ? err.message : "Nearby search failed.",
+        err instanceof Error ? err.message : t(locale, "dashboard.competitors.nearbySearchFailedFallback"),
         categoryLabel
       );
     }
@@ -581,13 +577,13 @@ export async function findAndScoreCompetitors(
     if (result.status !== "found") {
       unscored.push({
         placeId: candidate.placeId,
-        name: candidate.name ?? "(unnamed listing)",
+        name: candidate.name ?? t(locale, "dashboard.competitors.unnamedListing"),
         address: candidate.formattedAddress,
         distanceMeters,
         reason:
           result.status === "error"
             ? result.message
-            : "Google Places returned no usable details for this listing.",
+            : t(locale, "dashboard.competitors.noUsableDetails"),
       });
       continue;
     }
@@ -603,20 +599,20 @@ export async function findAndScoreCompetitors(
     if (isClosedStatus(result.place.businessStatus)) {
       const closedLabel =
         result.place.businessStatus === "CLOSED_TEMPORARILY"
-          ? "temporarily closed"
-          : "permanently closed";
+          ? t(locale, "dashboard.competitors.temporarilyClosed")
+          : t(locale, "dashboard.competitors.permanentlyClosed");
       unscored.push({
         placeId: candidate.placeId,
-        name: result.place.name ?? candidate.name ?? "(unnamed listing)",
+        name: result.place.name ?? candidate.name ?? t(locale, "dashboard.competitors.unnamedListing"),
         address: result.place.formattedAddress ?? candidate.formattedAddress,
         distanceMeters,
-        reason: `Google shows this listing as ${closedLabel}.`,
+        reason: t(locale, "dashboard.competitors.closedListingReason", { status: closedLabel }),
       });
       continue;
     }
 
     const row = placeDetailsToScoringRow(result.place);
-    const breakdown = scoreBusiness(businessRowToScoringInput(row));
+    const breakdown = scoreBusiness(businessRowToScoringInput(row), locale);
 
     scoredCompetitors.push({
       placeId: candidate.placeId,
@@ -635,7 +631,7 @@ export async function findAndScoreCompetitors(
 
   const subjectEntry: RankedCompetitor = {
     placeId: subject.placeId,
-    name: subject.name ?? "This business",
+    name: subject.name ?? t(locale, "dashboard.competitors.thisBusinessNameFallback"),
     isSubject: true,
     address: subject.address,
     distanceMeters: null,
@@ -660,22 +656,22 @@ export async function findAndScoreCompetitors(
     comparableCount > 0 ? Math.max(...comparable.map((c) => c.distanceMeters)) : 0;
   const radiusMiles = metersToMiles(farthestMeters);
   const radiusLabel = formatMiles(farthestMeters);
-  const label = categoryLabel ?? "same-category";
+  const label = categoryLabel ?? t(locale, "dashboard.competitors.sameCategoryFallback");
 
   let message: string;
   if (comparableCount === 0) {
     const searchedLabel = formatMiles(RADIUS_TIERS_METERS[RADIUS_TIERS_METERS.length - 1]);
-    message = `We found 0 comparable ${label} businesses within ${searchedLabel} mi of this listing.`;
+    message = t(locale, "dashboard.competitors.foundNoneMessage", { label, searchedLabel });
   } else if (comparableCount < MAX_COMPETITORS) {
-    message = `We found only ${comparableCount} comparable ${label} business${comparableCount === 1 ? "" : "es"} — the nearest are within ${radiusLabel} mi.`;
+    message = tPlural(locale, "dashboard.competitors.foundFewMessage", comparableCount, { label, radiusLabel });
   } else {
-    message = `Showing the ${comparableCount} nearest comparable ${label} businesses, all within ${radiusLabel} mi.`;
+    message = t(locale, "dashboard.competitors.showingNearestMessage", { count: comparableCount, label, radiusLabel });
   }
   if (searchWidened && comparableCount > 0) {
-    message += ` We widened the search area to find them.`;
+    message += t(locale, "dashboard.competitors.searchWidenedSuffix");
   }
   if (unscored.length > 0) {
-    message += ` ${unscored.length} of them couldn't be scored — Google returned no usable details.`;
+    message += tPlural(locale, "dashboard.competitors.unscoredSuffix", unscored.length);
   }
 
   return {

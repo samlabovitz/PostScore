@@ -20,6 +20,7 @@
 // does no further harm than an owner clicking it twice.
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card } from "@/components/ui/Card";
+import { DEFAULT_LOCALE, normalizeLocale, t, type Locale } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -56,11 +57,14 @@ export default async function UnsubscribePage({
   const businessId = searchParams.business;
   const token = searchParams.token;
 
+  // No business row is known yet at this point — there's no real
+  // language to read, so this honestly stays the default (English)
+  // rather than guessing one.
   if (!businessId || !token) {
     return (
       <UnsubscribeShell
-        title="Invalid unsubscribe link"
-        message="This link is missing information and can't be processed. If you clicked this from a real PostScore email, please contact support."
+        title={t(DEFAULT_LOCALE, "dashboard.unsubscribe.invalidLinkTitle")}
+        message={t(DEFAULT_LOCALE, "dashboard.unsubscribe.invalidLinkMessage")}
         tone="error"
       />
     );
@@ -74,19 +78,25 @@ export default async function UnsubscribePage({
 
   const { data: business, error } = await supabase
     .from("businesses")
-    .select("id, name, unsubscribe_token, monthly_report_enabled")
+    .select("id, name, unsubscribe_token, monthly_report_enabled, language")
     .eq("id", businessId)
     .maybeSingle();
 
   if (error || !business || business.unsubscribe_token !== token) {
+    // Still no verified business row — same reasoning as above, stays
+    // in the default locale rather than trusting an unverified id's
+    // language (this branch is also reached with a real row when the
+    // token doesn't match, i.e. a possibly-spoofed request).
     return (
       <UnsubscribeShell
-        title="Invalid or expired link"
-        message="We couldn't verify this unsubscribe link. If you're still receiving emails you don't want, please contact support."
+        title={t(DEFAULT_LOCALE, "dashboard.unsubscribe.expiredLinkTitle")}
+        message={t(DEFAULT_LOCALE, "dashboard.unsubscribe.expiredLinkMessage")}
         tone="error"
       />
     );
   }
+
+  const locale: Locale = normalizeLocale(business.language);
 
   if (business.monthly_report_enabled) {
     const { error: updateError } = await supabase
@@ -97,8 +107,8 @@ export default async function UnsubscribePage({
     if (updateError) {
       return (
         <UnsubscribeShell
-          title="Something went wrong"
-          message="We verified your link but couldn't update your preference just now. Please try again in a moment."
+          title={t(locale, "dashboard.unsubscribe.updateFailedTitle")}
+          message={t(locale, "dashboard.unsubscribe.updateFailedMessage")}
           tone="error"
         />
       );
@@ -107,8 +117,10 @@ export default async function UnsubscribePage({
 
   return (
     <UnsubscribeShell
-      title="You're unsubscribed"
-      message={`Monthly email reports are now off for ${business.name ?? "this business"}. You can turn them back on anytime from its Reports page.`}
+      title={t(locale, "dashboard.unsubscribe.successTitle")}
+      message={t(locale, "dashboard.unsubscribe.successMessage", {
+        name: business.name ?? t(locale, "dashboard.unsubscribe.thisBusinessFallback"),
+      })}
       tone="success"
     />
   );
