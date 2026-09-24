@@ -77,6 +77,14 @@ alter table public.businesses
 alter table public.businesses
   add column if not exists language text not null default 'en';
 
+-- Google's structured regularOpeningHours.periods (day/hour open+close
+-- pairs), separate from the English-formatted opening_hours text[] above
+-- — lets hours be displayed in the business's own language. Nullable:
+-- existing saved businesses won't have it until re-saved. Safe to re-run
+-- for the same reason as the blocks above.
+alter table public.businesses
+  add column if not exists opening_hours_periods jsonb;
+
 -- One row per scan. Scores are never overwritten in place — history
 -- accumulates so you can see a business's PostScore change over time, and
 -- so a score is always attributable to the exact scoring_version that
