@@ -13,7 +13,7 @@ import { reconcileTasks, type TaskRow } from "@/lib/actionPlan";
 import { buildProfileSnapshot, diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
 import { lookupBusinessByPlaceId } from "@/lib/google/places";
 import { saveBusinessWithClient } from "@/app/actions/businesses";
-import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
 
 export interface BusinessRecord extends BusinessScoringRow {
   id: string;
@@ -288,7 +288,7 @@ export async function rescanBusinessWithClient(
   const { data: before, error: beforeError } = await supabase
     .from("businesses")
     .select(
-      "owner_id, place_id, phone, website, opening_hours, categories, photo_count, rating, review_count, business_status"
+      "owner_id, place_id, phone, website, opening_hours, categories, photo_count, rating, review_count, business_status, language"
     )
     .eq("id", businessId)
     .single();
@@ -297,6 +297,7 @@ export async function rescanBusinessWithClient(
     return { status: "not_found" };
   }
 
+  const locale = normalizeLocale(before.language);
   const previousSnapshot: ProfileSnapshot = buildProfileSnapshot(before);
 
   const lookup = await lookupBusinessByPlaceId(before.place_id);
@@ -346,7 +347,7 @@ export async function rescanBusinessWithClient(
     tasksConfirmed: scoreResult.tasksConfirmed,
     tasksReopened: scoreResult.tasksReopened,
     pointsConfirmed: scoreResult.pointsConfirmed,
-    changes: diffProfileSnapshots(previousSnapshot, currentSnapshot),
+    changes: diffProfileSnapshots(previousSnapshot, currentSnapshot, locale),
   };
 }
 

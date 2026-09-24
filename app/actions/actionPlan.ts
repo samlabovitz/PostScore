@@ -13,7 +13,7 @@ import {
 } from "@/lib/actionPlan";
 import { businessRowToScoringInput, scoreBusiness } from "@/lib/scoring";
 import type { BusinessScoringInput, BusinessScoringRow, ScoreBreakdown, Suggestion } from "@/lib/scoring";
-import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
 
 export type GetActionPlanResult =
   | ({ status: "ok"; tasks: ActionPlanTask[]; completed: CompletedTask[] } & WeeklyPlan)
@@ -96,7 +96,7 @@ export async function markTaskDone(businessId: string, checkId: string): Promise
   const { data: business, error: businessError } = await supabase
     .from("businesses")
     .select(
-      "rating, review_count, phone, address, opening_hours, website, categories, category, photo_count, business_status, https_status, website_analysis_json"
+      "rating, review_count, phone, address, opening_hours, website, categories, category, photo_count, business_status, https_status, website_analysis_json, language"
     )
     .eq("id", businessId)
     .single();
@@ -105,8 +105,9 @@ export async function markTaskDone(businessId: string, checkId: string): Promise
     return { status: "not_found" };
   }
 
+  const locale = normalizeLocale(business.language);
   const input = businessRowToScoringInput(business as BusinessScoringRow);
-  const breakdown = scoreBusiness(input);
+  const breakdown = scoreBusiness(input, locale);
   const check = breakdown.checks.find((c) => c.id === checkId);
 
   if (!check) {

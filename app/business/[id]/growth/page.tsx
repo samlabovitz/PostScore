@@ -25,7 +25,7 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   const locale = normalizeLocale(business.language);
   const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override, locale);
 
-  const scored = await scoreBusinessById(params.id);
+  const scored = await scoreBusinessById(params.id, locale);
 
   if (scored.status === "unauthenticated") {
     redirect("/login");

@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
 import { scoreBusinessById, getScoreHistory, getRecentScoreSnapshots } from "@/app/actions/scoring";
+import { getBusinessSummary } from "@/app/actions/businesses";
 import { getAssistantPageData } from "@/app/actions/assistant";
 import { getLocalBenchmark } from "@/app/actions/competitors";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
@@ -9,7 +10,25 @@ import { normalizeLocale, t } from "@/lib/i18n";
 import { BusinessScoreView, type AssistantEmbedData } from "./BusinessScoreView";
 
 export default async function BusinessPage({ params }: { params: { id: string } }) {
-  const scored = await scoreBusinessById(params.id);
+  // getBusinessSummary is awaited separately (not folded into the
+  // Promise.all below) because its business.language is needed to derive
+  // `locale` BEFORE scoring — scoreBusinessById needs the real locale to
+  // produce Spanish-language check labels/explanations for a Spanish
+  // business, not English ones re-labeled after the fact (same reasoning
+  // as loadContext() in app/actions/assistant.ts).
+  const summary = await getBusinessSummary(params.id);
+
+  if (summary.status === "unauthenticated") {
+    redirect("/login");
+  }
+
+  if (summary.status === "not_found") {
+    notFound();
+  }
+
+  const locale = normalizeLocale(summary.business.language);
+
+  const scored = await scoreBusinessById(params.id, locale);
 
   if (scored.status === "unauthenticated") {
     redirect("/login");
@@ -34,8 +53,6 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     getLocalBenchmark(params.id),
     getGbpConnectionStatus(params.id),
   ]);
-
-  const locale = normalizeLocale(scored.business.language);
 
   const assistant: AssistantEmbedData =
     assistantPageData.status === "ok"

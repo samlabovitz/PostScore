@@ -8,6 +8,7 @@ import {
   type CategoryResult,
 } from "@/lib/scoring";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
+import { normalizeLocale } from "@/lib/i18n";
 
 export interface ReviewsPageData {
   businessName: string | null;
@@ -78,7 +79,8 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
     language: string | null;
   };
 
-  const breakdown = scoreBusiness(businessRowToScoringInput(row));
+  const locale = normalizeLocale(row.language);
+  const breakdown = scoreBusiness(businessRowToScoringInput(row), locale);
   const visibilityCategory = breakdown.categories.find((c) => c.id === "visibility");
 
   if (!visibilityCategory) {

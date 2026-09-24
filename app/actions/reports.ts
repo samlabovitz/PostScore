@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { MONTHLY_REPORTS_LIVE } from "@/lib/monthlyReportsFeatureFlag";
+import { normalizeLocale } from "@/lib/i18n";
 
 /** One real saved scan, exactly what the Reports page needs to plot the
  * score-over-time chart and diff listing changes — a narrower query than
@@ -100,13 +101,15 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
 
   const { data: business, error: businessError } = await supabase
     .from("businesses")
-    .select("name, monthly_report_enabled")
+    .select("name, monthly_report_enabled, language")
     .eq("id", businessId)
     .single();
 
   if (businessError || !business) {
     return { status: "not_found" };
   }
+
+  const locale = normalizeLocale(business.language);
 
   const { data: scores, error: scoresError } = await supabase
     .from("scores")
@@ -125,7 +128,7 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
     const prev = history[i - 1].profile_snapshot_json;
     const curr = history[i].profile_snapshot_json;
     if (prev && curr) {
-      listingChangesDetected += diffProfileSnapshots(prev, curr).length;
+      listingChangesDetected += diffProfileSnapshots(prev, curr, locale).length;
     }
   }
 
@@ -144,7 +147,8 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
       changes: changesAvailable
         ? diffProfileSnapshots(
             previous.profile_snapshot_json as ProfileSnapshot,
-            current.profile_snapshot_json as ProfileSnapshot
+            current.profile_snapshot_json as ProfileSnapshot,
+            locale
           )
         : [],
       changesUnavailable: !changesAvailable,

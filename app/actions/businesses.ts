@@ -518,7 +518,7 @@ export async function listMyBusinesses(): Promise<ListMyBusinessesResult> {
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, category, phone, website, rating, review_count, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, created_at"
+      "id, name, address, category, phone, website, rating, review_count, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, created_at, language"
     )
     .order("created_at", { ascending: false });
 
@@ -527,7 +527,8 @@ export async function listMyBusinesses(): Promise<ListMyBusinessesResult> {
   }
 
   const businesses: MyBusinessRow[] = data.map((row) => {
-    const breakdown = scoreBusiness(businessRowToScoringInput(row as BusinessScoringRow));
+    const locale = normalizeLocale(row.language);
+    const breakdown = scoreBusiness(businessRowToScoringInput(row as BusinessScoringRow), locale);
     return {
       id: row.id,
       name: row.name,

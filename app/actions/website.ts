@@ -17,6 +17,7 @@ import {
   buildStarterSiteHtml,
 } from "@/lib/starterSite";
 import { resolveBizProfile } from "@/config/bizProfiles";
+import { normalizeLocale, type Locale } from "@/lib/i18n";
 
 export interface WebsitePageData {
   businessName: string | null;
@@ -111,7 +112,8 @@ function estimateTemplateWebsiteScore(
     reviewCount: number | null;
     googleMapsUri: string | null;
     profileId: string;
-  }
+  },
+  locale: Locale
 ): number | null {
   const templateHtml = buildStarterSiteHtml({
     businessName: data.businessName,
@@ -155,7 +157,7 @@ function estimateTemplateWebsiteScore(
     },
   });
 
-  const templateBreakdown = scoreBusiness(templateInput);
+  const templateBreakdown = scoreBusiness(templateInput, locale);
   return templateBreakdown.categories.find((c) => c.id === "website")?.relativeScore ?? null;
 }
 
@@ -212,12 +214,13 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
 
   const businessRow = data as BusinessScoringRow;
   const hasWebsite = !!data.website && data.website.trim().length > 0;
-  const profile = resolveBizProfile(data.category, data.primary_type, data.business_type_override);
+  const locale = normalizeLocale(data.language);
+  const profile = resolveBizProfile(data.category, data.primary_type, data.business_type_override, locale);
 
   const realInput = businessRowToScoringInput(businessRow);
-  const realBreakdown = scoreBusiness(realInput);
+  const realBreakdown = scoreBusiness(realInput, locale);
   const websiteCategory = realBreakdown.categories.find((c) => c.id === "website") ?? null;
-  const websiteSuggestions = generateSuggestions(realBreakdown).filter((s) => s.category === "website");
+  const websiteSuggestions = generateSuggestions(realBreakdown, locale).filter((s) => s.category === "website");
   // Only trust the real score for the underperformance comparison once
   // this site's quality checks are actually determinable — a business
   // whose site has never been analyzed yet has no honest basis for
@@ -225,17 +228,21 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const realWebsiteScore =
     hasWebsite && realInput.websiteAnalysis?.content ? websiteCategory?.relativeScore ?? null : null;
 
-  const templateWebsiteScore = estimateTemplateWebsiteScore(businessRow, {
-    businessName: data.name ?? "Your business",
-    category: data.category,
-    phone: data.phone,
-    address: data.address,
-    openingHours: data.opening_hours,
-    rating: data.rating,
-    reviewCount: data.review_count,
-    googleMapsUri: data.google_maps_uri,
-    profileId: profile.id,
-  });
+  const templateWebsiteScore = estimateTemplateWebsiteScore(
+    businessRow,
+    {
+      businessName: data.name ?? "Your business",
+      category: data.category,
+      phone: data.phone,
+      address: data.address,
+      openingHours: data.opening_hours,
+      rating: data.rating,
+      reviewCount: data.review_count,
+      googleMapsUri: data.google_maps_uri,
+      profileId: profile.id,
+    },
+    locale
+  );
 
   const builderOffer = buildBuilderOffer(hasWebsite, realWebsiteScore, templateWebsiteScore);
 
