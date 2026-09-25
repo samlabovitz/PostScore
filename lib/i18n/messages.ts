@@ -3109,9 +3109,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.restaurant.pricingExamples.example2": "Appetizer",
     "bizProfiles.restaurant.pricingExamples.example3": "Dessert",
     "bizProfiles.restaurant.faq.item1.question": "Does {businessName} take reservations?",
-    "bizProfiles.restaurant.faq.item1.answer": "Give us a call or check our website to see reservation availability.",
+    "bizProfiles.restaurant.faq.item1.answer": "Call us to check reservation availability.",
     "bizProfiles.restaurant.faq.item2.question": "Does {businessName} offer takeout or delivery?",
-    "bizProfiles.restaurant.faq.item2.answer": "Call us or check our website for pickup and delivery options.",
+    "bizProfiles.restaurant.faq.item2.answer": "Call us to ask about pickup and delivery options.",
     "bizProfiles.liquor_wine.label": "Liquor & Wine Store",
     "bizProfiles.liquor_wine.competitorNoun": "liquor stores",
     "bizProfiles.liquor_wine.couponPresets.flat_off_purchase.label": "$5 off a $30+ purchase",
@@ -3181,7 +3181,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.grocery_market.pricingExamples.example2": "Featured Special Item",
     "bizProfiles.grocery_market.pricingExamples.example3": "Bulk/Case Item",
     "bizProfiles.grocery_market.faq.item1.question": "Does {businessName} offer delivery or curbside pickup?",
-    "bizProfiles.grocery_market.faq.item1.answer": "Call or check our website to see current delivery and pickup options.",
+    "bizProfiles.grocery_market.faq.item1.answer": "Call us to ask about current delivery and pickup options.",
     "bizProfiles.grocery_market.faq.item2.question": "What are {businessName}'s hours near {city}?",
     "bizProfiles.grocery_market.faq.item2.answer": "See our current hours on our Google Business Profile listing.",
     "bizProfiles.cafe_bakery.label": "Café & Bakery",
@@ -3217,7 +3217,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.cafe_bakery.pricingExamples.example2": "Pastry/Baked Good",
     "bizProfiles.cafe_bakery.pricingExamples.example3": "Sandwich or Light Bite",
     "bizProfiles.cafe_bakery.faq.item1.question": "Does {businessName} have Wi-Fi or seating to work from?",
-    "bizProfiles.cafe_bakery.faq.item1.answer": "Call us or check our website for seating and Wi-Fi availability.",
+    "bizProfiles.cafe_bakery.faq.item1.answer": "Call us to ask about seating and Wi-Fi.",
     "bizProfiles.cafe_bakery.faq.item2.question": "Does {businessName} take special orders for cakes or catering?",
     "bizProfiles.cafe_bakery.faq.item2.answer": "Call or stop by to ask about special orders and catering.",
     "bizProfiles.lawyer.label": "Legal Services",
@@ -3243,9 +3243,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.lawyer.pricingExamples.example2": "Flat-Fee Document Review",
     "bizProfiles.lawyer.pricingExamples.example3": "Hourly Rate",
     "bizProfiles.lawyer.faq.item1.question": "Does {businessName} offer a free consultation?",
-    "bizProfiles.lawyer.faq.item1.answer": "Call us or use our contact form to ask about scheduling an initial consultation.",
+    "bizProfiles.lawyer.faq.item1.answer": "Call us to ask about scheduling an initial consultation.",
     "bizProfiles.lawyer.faq.item2.question": "What areas of law does {businessName} practice?",
-    "bizProfiles.lawyer.faq.item2.answer": "Call us or check our website for the specific matters we handle.",
+    "bizProfiles.lawyer.faq.item2.answer": "Call us to ask whether we handle your specific matter.",
     "bizProfiles.professional_services.label": "Accounting & Tax",
     "bizProfiles.professional_services.competitorNoun": "accounting firms",
     "bizProfiles.professional_services.couponPresets.free_consultation.label": "Free 30-minute initial consultation",
@@ -3279,9 +3279,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.professional_services.pricingExamples.example2": "Business Tax Return",
     "bizProfiles.professional_services.pricingExamples.example3": "Monthly Bookkeeping",
     "bizProfiles.professional_services.faq.item1.question": "Does {businessName} offer a free consultation?",
-    "bizProfiles.professional_services.faq.item1.answer": "Call us or use our contact form to ask about scheduling an initial consultation.",
+    "bizProfiles.professional_services.faq.item1.answer": "Call us to ask about scheduling an initial consultation.",
     "bizProfiles.professional_services.faq.item2.question": "What services does {businessName} provide?",
-    "bizProfiles.professional_services.faq.item2.answer": "Call us or check our website for the specific accounting and tax services we offer.",
+    "bizProfiles.professional_services.faq.item2.answer": "Call us to ask about the specific accounting and tax services we offer.",
     "bizProfiles.practitioner.label": "Practitioner, Coaching & Classes",
     "bizProfiles.practitioner.competitorNoun": "practitioners",
     "bizProfiles.practitioner.couponPresets.pct_off_next_session.label": "10% off your next session or class",
@@ -3353,7 +3353,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.gym_fitness.faq.item1.question": "Does {businessName} offer a free trial class or day pass?",
     "bizProfiles.gym_fitness.faq.item1.answer": "Call us or stop by to ask about trial options.",
     "bizProfiles.gym_fitness.faq.item2.question": "What is {businessName}'s class schedule?",
-    "bizProfiles.gym_fitness.faq.item2.answer": "See our current class schedule on our website or by calling.",
+    "bizProfiles.gym_fitness.faq.item2.answer": "Call us to ask about our current class schedule.",
     "bizProfiles.trades.label": "Trades & Home Services",
     "bizProfiles.trades.competitorNoun": "service providers",
     "bizProfiles.trades.couponPresets.flat_off_first_call.label": "$25 off your first service call",
@@ -3423,7 +3423,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.retail.pricingExamples.example2": "Featured/New Arrival",
     "bizProfiles.retail.pricingExamples.example3": "Bulk/Multi-pack",
     "bizProfiles.retail.faq.item1.question": "Does {businessName} accept returns or exchanges?",
-    "bizProfiles.retail.faq.item1.answer": "Call us or check our website for our return and exchange policy.",
+    "bizProfiles.retail.faq.item1.answer": "Call us to ask about our return and exchange policy.",
     "bizProfiles.retail.faq.item2.question": "What are {businessName}'s hours near {city}?",
     "bizProfiles.retail.faq.item2.answer": "See our current hours on our Google Business Profile listing.",
     "bizProfiles.default.label": "General Business",
@@ -3601,7 +3601,7 @@ export const messages: Record<Locale, LocaleMessages> = {
 
     "dashboard.competitors.title": "Competencia",
     "dashboard.competitors.subtitle":
-      "Estos son {competitorNoun} reales cercanos{categoryClause}, evaluados con el mismo motor de PostScore y ordenados estrictamente por esa puntuación.",
+      "Competidores reales cercanos{categoryClause}, evaluados con el mismo motor de PostScore y ordenados estrictamente por esa puntuación.",
     "dashboard.competitors.categoryClause": " en la misma categoría ({categoryLabel})",
     "dashboard.competitors.backTo": "Volver a {name}",
     "dashboard.competitors.businessFallback": "negocio",
@@ -3616,7 +3616,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       "No pudimos identificar negocios claramente comparables para esta categoría — la categoría de Google de {name} es demasiado general para comparar de forma confiable.",
     "dashboard.competitors.noCategoryError":
       "Este negocio no tiene una categoría registrada, por lo que no podemos saber qué negocios cercanos son realmente comparables. Vuelva a guardarlo desde Google Places para obtener su categoría.",
-    "dashboard.competitors.nearbySearchFailedFallback": "La búsqueda cercana falló.",
+    "dashboard.competitors.nearbySearchFailedFallback": "La búsqueda de negocios cercanos falló.",
     "dashboard.competitors.unnamedListing": "(ficha sin nombre)",
     "dashboard.competitors.noUsableDetails": "Google Places no devolvió detalles utilizables para esta ficha.",
     "dashboard.competitors.temporarilyClosed": "cerrado temporalmente",
@@ -4493,7 +4493,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.home.savedBusinessCount.one": "{count} negocio guardado.",
     "dashboard.home.savedBusinessCount.other": "{count} negocios guardados.",
     "dashboard.home.addBusinessButton": "Agregar un negocio",
-    "dashboard.home.untitledBusiness": "Negocio sin título",
+    "dashboard.home.untitledBusiness": "Negocio sin nombre",
     "dashboard.home.noAddressOnFile": "Sin dirección registrada",
     "dashboard.home.emptyStateHeading": "Aún no ha agregado un negocio",
     "dashboard.home.emptyStateBody":
@@ -4571,12 +4571,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.chartAriaLabel": "Puntuación a lo largo del tiempo, {count} análisis, de {from} a {to}",
     "dashboard.reports.verifiedFixesConfirmedLabel": "Correcciones del plan de acción confirmadas",
     "dashboard.reports.verifiedFixesConfirmedNote":
-      "Confirmado por un análisis real que encuentra la comprobación con el puntaje completo.",
-    "dashboard.reports.listingChangesDetectedLabel": "Cambios en la ficha detectados",
+      "Confirmado cuando un nuevo análisis real encuentra la comprobación con la puntuación completa.",
+    "dashboard.reports.listingChangesDetectedLabel": "Cambios detectados en la ficha",
     "dashboard.reports.listingChangesDetectedNote": "Diferencias reales encontradas entre sus análisis guardados.",
     "dashboard.reports.reviewsRepliedToLabel": "Reseñas respondidas",
-    "dashboard.reports.googlePostsPublishedLabel": "Publicaciones de Google publicadas",
-    "dashboard.reports.syncingSoonLabel": "Sincronización próximamente",
+    "dashboard.reports.googlePostsPublishedLabel": "Publicaciones en Google",
+    "dashboard.reports.syncingSoonLabel": "Se sincronizará pronto",
     "dashboard.reports.connectedSyncingNote": "Conectado — esto comenzará a contarse en una actualización futura.",
 
     // --- Pricing page. Draft Spanish — pending your review.
@@ -4652,7 +4652,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "starterSite.font.minimal": "Minimalista — sans limpia única",
     "starterSite.font.editorial": "Editorial — serif literaria",
     "starterSite.font.geometric": "Geométrico — display moderna",
-    "starterSite.font.grotesk": "Grotesca — sans suiza en negrita",
+    "starterSite.font.grotesk": "Grotesk — sans suiza en negrita",
     "starterSite.font.statement": "Llamativo — display condensada en negrita",
     "starterSite.font.vintage": "Vintage — display de alto contraste",
     "starterSite.ctaBook": "Llame para reservar",
@@ -4672,7 +4672,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "starterSite.seeReviewsOnGoogle": "Vea nuestras reseñas en Google →",
     "starterSite.defaultBusinessName": "Su negocio",
     "starterSite.footerBuiltWith": "Sitio creado con PostScore",
-    "starterSite.mapTitle": "Mapa hacia {name}",
+    "starterSite.mapTitle": "Mapa de {name}",
     "starterSite.heroPhotoAlt": "Foto principal de {name}",
     "starterSite.contentPhotoAlt": "Foto de {name}",
 
@@ -4760,10 +4760,10 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Compre un plato principal y llévese el segundo al 50% — para comer en el lugar, de domingo a martes",
     "bizProfiles.restaurant.faq.item1.question": "¿{businessName} acepta reservaciones?",
     "bizProfiles.restaurant.faq.item1.answer":
-      "Llámenos o consulte nuestro sitio web para ver la disponibilidad de reservaciones.",
+      "Llámenos para consultar la disponibilidad de reservaciones.",
     "bizProfiles.restaurant.faq.item2.question": "¿{businessName} ofrece comida para llevar o a domicilio?",
     "bizProfiles.restaurant.faq.item2.answer":
-      "Llámenos o consulte nuestro sitio web para conocer las opciones de recogida y entrega a domicilio.",
+      "Llámenos para preguntar por las opciones de recogida y entrega a domicilio.",
     "bizProfiles.restaurant.referralPresets.free_item_both.referrerReward":
       "Un aperitivo o postre gratis en su próxima visita",
     "bizProfiles.restaurant.referralPresets.free_item_both.friendReward":
@@ -4880,7 +4880,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.grocery_market.faq.item1.question":
       "¿{businessName} ofrece entrega a domicilio o recogida en la acera?",
     "bizProfiles.grocery_market.faq.item1.answer":
-      "Llame o consulte nuestro sitio web para ver las opciones actuales de entrega y recogida.",
+      "Llámenos para preguntar por las opciones actuales de entrega y recogida.",
     "bizProfiles.grocery_market.faq.item2.question": "¿Cuál es el horario de {businessName} cerca de {city}?",
     "bizProfiles.grocery_market.faq.item2.answer":
       "Consulte nuestro horario actual en nuestra ficha del Perfil de Negocio de Google.",
@@ -4943,7 +4943,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.cafe_bakery.couponAngles.slowDay":
       "20% de descuento en pedidos durante sus horas más lentas de la tarde",
     "bizProfiles.cafe_bakery.faq.item1.question": "¿{businessName} tiene Wi-Fi o lugares para trabajar?",
-    "bizProfiles.cafe_bakery.faq.item1.answer": "Llámenos o consulte nuestro sitio web para conocer la disponibilidad de asientos y Wi-Fi.",
+    "bizProfiles.cafe_bakery.faq.item1.answer": "Llámenos para preguntar por los asientos y el Wi-Fi.",
     "bizProfiles.cafe_bakery.faq.item2.question":
       "¿{businessName} acepta pedidos especiales de pasteles o servicio de catering?",
     "bizProfiles.cafe_bakery.faq.item2.answer": "Llame o pase a preguntar sobre pedidos especiales y catering.",
@@ -4994,10 +4994,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.lawyer.couponAngles.slowDay": "Revisión de caso a tarifa fija, disponible esta semana",
     "bizProfiles.lawyer.faq.item1.question": "¿{businessName} ofrece una consulta gratuita?",
     "bizProfiles.lawyer.faq.item1.answer":
-      "Llámenos o use nuestro formulario de contacto para preguntar sobre cómo programar una consulta inicial.",
+      "Llámenos para preguntar cómo programar una consulta inicial.",
     "bizProfiles.lawyer.faq.item2.question": "¿En qué áreas del derecho ejerce {businessName}?",
     "bizProfiles.lawyer.faq.item2.answer":
-      "Llámenos o consulte nuestro sitio web para conocer los asuntos específicos que manejamos.",
+      "Llámenos para preguntar si atendemos su caso específico.",
     "bizProfiles.lawyer.pricingExamples.example1": "Consulta inicial",
     "bizProfiles.lawyer.pricingExamples.example2": "Revisión de documentos a tarifa fija",
     "bizProfiles.lawyer.pricingExamples.example3": "Tarifa por hora",
@@ -5044,10 +5044,10 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Revisión de la configuración de contabilidad a tarifa fija, disponible esta semana",
     "bizProfiles.professional_services.faq.item1.question": "¿{businessName} ofrece una consulta gratuita?",
     "bizProfiles.professional_services.faq.item1.answer":
-      "Llámenos o use nuestro formulario de contacto para preguntar sobre cómo programar una consulta inicial.",
+      "Llámenos para preguntar cómo programar una consulta inicial.",
     "bizProfiles.professional_services.faq.item2.question": "¿Qué servicios ofrece {businessName}?",
     "bizProfiles.professional_services.faq.item2.answer":
-      "Llámenos o consulte nuestro sitio web para conocer los servicios específicos de contabilidad e impuestos que ofrecemos.",
+      "Llámenos para preguntar por los servicios específicos de contabilidad e impuestos que ofrecemos.",
     "bizProfiles.professional_services.referralPresets.credit_both.referrerReward":
       "$25 de crédito para su próxima factura",
     "bizProfiles.professional_services.referralPresets.credit_both.friendReward":
@@ -5172,7 +5172,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.gym_fitness.faq.item1.answer": "Llámenos o visítenos para preguntar por las opciones de prueba.",
     "bizProfiles.gym_fitness.faq.item2.question": "¿Cuál es el horario de clases de {businessName}?",
     "bizProfiles.gym_fitness.faq.item2.answer":
-      "Consulte nuestro horario de clases actual en nuestro sitio web o llamando.",
+      "Llámenos para preguntar por nuestro horario de clases actual.",
     "bizProfiles.gym_fitness.referralPresets.free_month_both.referrerReward": "Un mes de membresía gratis",
     "bizProfiles.gym_fitness.referralPresets.free_month_both.friendReward": "50% de descuento en su primer mes",
     "bizProfiles.gym_fitness.referralPresets.free_month_both.description":
@@ -5288,7 +5288,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       "$10 de descuento en compras de $50 o más en su día de compra más lento",
     "bizProfiles.retail.faq.item1.question": "¿{businessName} acepta devoluciones o cambios?",
     "bizProfiles.retail.faq.item1.answer":
-      "Llámenos o consulte nuestro sitio web para conocer nuestra política de devoluciones y cambios.",
+      "Llámenos para preguntar por nuestra política de devoluciones y cambios.",
     "bizProfiles.retail.faq.item2.question": "¿Cuál es el horario de {businessName} cerca de {city}?",
     "bizProfiles.retail.faq.item2.answer":
       "Consulte nuestro horario actual en nuestra ficha del Perfil de Negocio de Google.",
