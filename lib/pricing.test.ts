@@ -5,13 +5,17 @@ import {
   assessmentBasisLabel,
   buildPriceLevelComparison,
   buildPricingPrompt,
+  buildPricingSystemPrompt,
   isAssessmentBasis,
   isPriceTierId,
+  isPricingLanguageMismatch,
   parsePricingAssessmentPayload,
   parsePricingAssessmentResponse,
   priceTierLabel,
+  pricingMaxTokens,
 } from "./pricing";
 import type { RankedCompetitor } from "./competitors";
+import { resolveBizProfile } from "../config/bizProfiles";
 
 describe("PRICE_TIERS / isPriceTierId / priceTierLabel", () => {
   test("has exactly 5 tiers ending with no_data", () => {
@@ -261,8 +265,24 @@ describe("parsePricingAssessmentPayload", () => {
         subjectSymbol: "$$",
         competitors: [{ name: "Nearby Salon", symbol: "$$$", distanceMeters: 800 }],
       },
+      locale: "es",
     };
     expect(parsePricingAssessmentPayload(payload)).toEqual(payload);
+  });
+
+  test("a stored assessment with no locale field (from before this feature) parses locale as null, never assumed en or es", () => {
+    const result = parsePricingAssessmentPayload({
+      assessments: [{ service: "Women's Haircut", price: 45, tier: "competitive", basis: "verified_local", guidance: "ok" }],
+    });
+    expect(result!.locale).toBeNull();
+  });
+
+  test("an invalid locale value (e.g. from a manual DB edit) parses as null rather than trusting it", () => {
+    const result = parsePricingAssessmentPayload({
+      assessments: [{ service: "Women's Haircut", price: 45, tier: "competitive", basis: "verified_local", guidance: "ok" }],
+      locale: "fr",
+    });
+    expect(result!.locale).toBeNull();
   });
 
   test("returns null for garbage instead of guessing a shape", () => {
@@ -303,5 +323,91 @@ describe("parsePricingAssessmentPayload", () => {
       assessments: [{ service: "Women's Haircut", price: 45, tier: "competitive", basis: "verified_local", guidance: "ok" }],
     });
     expect(result!.priceLevelContext).toBeNull();
+  });
+});
+
+describe("buildPricingSystemPrompt", () => {
+  test("English prompt is unchanged by locale support — identical to the base prompt with no locale arg", () => {
+    expect(buildPricingSystemPrompt("en")).toBe(buildPricingSystemPrompt());
+  });
+
+  test("Spanish prompt contains the language directive and never touches the base English rules", () => {
+    const en = buildPricingSystemPrompt("en");
+    const es = buildPricingSystemPrompt("es");
+    expect(es.startsWith(en)).toBe(true);
+    expect(es).toContain("usted");
+    expect(es).toContain("Spanish");
+    expect(es).toContain("es una estimación general, no verificada con competidores locales");
+  });
+
+  test("Spanish directive tells the model to keep JSON keys, tier values, and basis values in English", () => {
+    const es = buildPricingSystemPrompt("es");
+    expect(es).toContain('"service"');
+    expect(es).toContain('"tier"');
+    expect(es).toContain('"basis"');
+    expect(es).toContain('"guidance"');
+  });
+});
+
+describe("pricingMaxTokens", () => {
+  test("English maxTokens is unchanged by locale support", () => {
+    expect(pricingMaxTokens(3, "en")).toBe(pricingMaxTokens(3));
+    expect(pricingMaxTokens(3)).toBe(Math.min(800, Math.max(260, 180 + 3 * 70)));
+  });
+
+  test("Spanish gets ~1.3x the English maxTokens for the same service count", () => {
+    const en = pricingMaxTokens(3, "en");
+    const es = pricingMaxTokens(3, "es");
+    expect(es).toBe(Math.round(en * 1.3));
+  });
+
+  test("Spanish maxTokens still respects the same base bounds", () => {
+    expect(pricingMaxTokens(0, "es")).toBe(Math.round(260 * 1.3));
+    expect(pricingMaxTokens(100, "es")).toBe(Math.round(800 * 1.3));
+  });
+});
+
+describe("isPricingLanguageMismatch (drives PricingView's language-mismatch note)", () => {
+  test("no mismatch when the stored assessment's locale matches the current business language", () => {
+    expect(isPricingLanguageMismatch("en", "en")).toBe(false);
+    expect(isPricingLanguageMismatch("es", "es")).toBe(false);
+  });
+
+  test("mismatch when the stored assessment's locale differs from the current business language", () => {
+    expect(isPricingLanguageMismatch("es", "en")).toBe(true);
+    expect(isPricingLanguageMismatch("en", "es")).toBe(true);
+  });
+
+  test("a null stored locale (legacy, pre-locale assessment) is treated as English — no mismatch for an English business", () => {
+    expect(isPricingLanguageMismatch(null, "en")).toBe(false);
+  });
+
+  test("a null stored locale is a mismatch for a Spanish business, since it's really an old English assessment", () => {
+    expect(isPricingLanguageMismatch(null, "es")).toBe(true);
+  });
+});
+
+describe("assessPricing prompt assembly (as app/actions/pricing.ts builds it)", () => {
+  test("a Spanish business's system prompt contains the directive, and its user prompt carries the Spanish type label", () => {
+    const locale = "es";
+    const businessTypeLabel = resolveBizProfile("hair salon", null, null, locale).label;
+    expect(businessTypeLabel).toBe("Salón y cuidado personal");
+
+    const system = buildPricingSystemPrompt(locale);
+    expect(system).toContain("usted");
+
+    const prompt = buildPricingPrompt({
+      businessTypeLabel,
+      services: [{ service: "Women's Haircut", price: 45 }],
+      priceLevelContext: null,
+    });
+    expect(prompt).toContain("Salón y cuidado personal");
+  });
+
+  test("an English business's system prompt and type label are byte-identical to today's (no locale)", () => {
+    const businessTypeLabel = resolveBizProfile("hair salon", null, null, "en").label;
+    expect(businessTypeLabel).toBe(resolveBizProfile("hair salon", null, null).label);
+    expect(businessTypeLabel).toBe("Salon & Personal Care");
+    expect(buildPricingSystemPrompt("en")).toBe(buildPricingSystemPrompt());
   });
 });

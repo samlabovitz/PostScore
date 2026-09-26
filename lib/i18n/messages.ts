@@ -1132,6 +1132,7 @@ export type MessageKey =
   | "dashboard.pricing.reassessButton"
   | "dashboard.pricing.assessButton"
   | "dashboard.pricing.lastAssessed"
+  | "dashboard.pricing.languageMismatchNote"
   // --- Starter-site generator (lib/starterSite.ts + StarterSiteBuilder.tsx).
   // Theme/font labels keep the same English text lib/starterSite.ts's own
   // STARTER_SITE_THEMES/STARTER_SITE_FONTS hold as data — that file stays
@@ -3071,6 +3072,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.pricing.reassessButton": "Re-assess my pricing",
     "dashboard.pricing.assessButton": "Assess my pricing",
     "dashboard.pricing.lastAssessed": "Last assessed {date}",
+    "dashboard.pricing.languageMismatchNote":
+      "Written in Spanish. Re-assess your pricing to switch it to English.",
 
     // --- Starter-site generator. See the matching comment on the
     // MessageKey union above.
@@ -4743,6 +4746,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.pricing.reassessButton": "Volver a evaluar mis precios",
     "dashboard.pricing.assessButton": "Evaluar mis precios",
     "dashboard.pricing.lastAssessed": "Última evaluación: {date}",
+    "dashboard.pricing.languageMismatchNote":
+      "Escrita en inglés. Vuelva a evaluar sus precios para cambiarla al español.",
 
     // --- Starter-site generator. Draft Spanish — pending your review.
     // siteLanguageEnglishOption/siteLanguageSpanishOption are each

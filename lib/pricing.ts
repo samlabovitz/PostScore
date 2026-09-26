@@ -6,6 +6,7 @@
 
 import { priceLevelToSymbol } from "@/lib/priceLevel";
 import type { RankedCompetitor } from "@/lib/competitors";
+import { DEFAULT_LOCALE, t, type Locale } from "@/lib/i18n";
 
 /** Mirrors the `prices` table's columns exactly (see supabase/schema.sql). */
 export interface PriceRow {
@@ -166,6 +167,10 @@ export function buildPriceLevelComparison(
 export interface PricingAssessmentPayload {
   assessments: PriceAssessment[];
   priceLevelContext: PriceLevelComparison | null;
+  /** The locale the AI actually wrote this assessment's guidance in.
+   * null means an older assessment saved before this field existed —
+   * always treated as English, never assumed to secretly be Spanish. */
+  locale: Locale | null;
 }
 
 /**
@@ -216,7 +221,9 @@ export function parsePricingAssessmentPayload(raw: unknown): PricingAssessmentPa
     };
   }
 
-  return { assessments, priceLevelContext };
+  const locale = obj.locale === "en" || obj.locale === "es" ? (obj.locale as Locale) : null;
+
+  return { assessments, priceLevelContext, locale };
 }
 
 export interface PricingPromptInput {
@@ -266,6 +273,69 @@ export function buildPricingPrompt(input: PricingPromptInput): string {
     lines.push(`- ${s.service}: $${s.price.toFixed(2)}`);
   }
   return lines.join("\n");
+}
+
+/** The pricing-assessment system prompt, English-only — the JSON keys,
+ * tier values, and basis values it specifies are parsed by
+ * parsePricingAssessmentResponse below and must never be translated. */
+const PRICING_SYSTEM_BASE = [
+  "You are a pricing analyst for small local businesses. You assess whether the prices a business owner charges look low, competitive, high, or premium relative to their real market.",
+  "You will be given: the business's type, real Google price-level data ($/$$/$$$) for nearby same-category competitors where available, and the real prices the owner charges for each service.",
+  "Frame your guidance in language natural for this business type — e.g. salons/restaurants think in per-service or per-dish menu prices, law firms think in flat-fee vs. hourly, a general/trades business thinks in per-job or per-service-call pricing.",
+  "For EACH service, decide independently which of three bases applies, and set \"basis\" to exactly one of these:",
+  '- "verified_local": you have real Google price-level data for nearby competitors that is genuinely relevant to this specific service. Base the tier and guidance on that real local signal.',
+  '- "general_estimate": there is no relevant local price-level data for this service, BUT it is a specific, widely known item with a genuinely knowable typical market price — e.g. a well-known branded product (a specific packaged snack, drink, etc.) or a standard, common menu item (a bacon-egg-and-cheese, a cup of coffee, a scoop of ice cream). Give an honest estimate of the typical price or range from general knowledge, and the guidance MUST explicitly say this is a general/typical estimate, not verified local data. Ordinary retailer/regional price variation is EXPECTED and does not disqualify a general estimate — that is exactly why you give a RANGE (e.g. "roughly $3-5") instead of one exact number. Example: for "Cheez-Its (family size)" priced at $7 with no local data, a correct response is {"tier":"premium","basis":"general_estimate","guidance":"Typical retail for a family-size box is roughly $3-5, so $7 reads high — this is a general estimate, not verified against local competitors."}. Reach for "general_estimate" whenever you can name even an approximate typical range — reserve "no_data" for services you genuinely cannot estimate at all.',
+  '- "no_data": neither real local data nor ANY reasonably knowable typical price/range exists for this item — it is too custom, unique, or variable to estimate at all (e.g. a fully bespoke package, a highly variable custom job). This should be rare for well-known consumer products or standard menu items. Set tier to "no_data" too — never guess a tier without a real basis.',
+  "CRITICAL HONESTY RULES:",
+  "- Never invent a specific competitor's exact price or a fake 'local average' — you only ever have competitors' coarse $/$$/$$$ price LEVEL, never a real dollar figure for any of them.",
+  "- A \"general_estimate\" must NEVER be presented as if it were verified local competitor data. Its guidance sentence must make clear it's a general/typical estimate.",
+  "- Prefer a general_estimate with an honest range over a lazy no_data — only use \"no_data\" when you truly have no reasonable sense of typical pricing, not merely because prices vary somewhat.",
+  "- Guidance must be one short, concrete sentence — no filler, no fabricated statistics.",
+  "Reply with ONLY valid JSON, no markdown fence, no commentary, in exactly this shape:",
+  '{"assessments":[{"service":"<same service name as given>","tier":"under_market"|"competitive"|"upper_mid"|"premium"|"no_data","basis":"verified_local"|"general_estimate"|"no_data","guidance":"<1 sentence>"}]}',
+  "Return exactly one assessment per service given, in the same order they were given.",
+].join("\n");
+
+/**
+ * Builds the pricing-assessment system prompt for the given locale.
+ * English (the default) is returned completely unchanged from
+ * PRICING_SYSTEM_BASE. For Spanish, a directive is appended — never
+ * prepended or interleaved — so the base instructions above are never
+ * touched, and it explicitly tells the model to translate only the
+ * "guidance" sentence: the JSON field names, every "tier" value, and
+ * every "basis" value must stay in English exactly as specified, since
+ * parsePricingAssessmentResponse only recognizes those exact English
+ * strings.
+ */
+export function buildPricingSystemPrompt(locale: Locale = DEFAULT_LOCALE): string {
+  if (locale !== "es") return PRICING_SYSTEM_BASE;
+
+  const languageName = t(DEFAULT_LOCALE, "language.es");
+  const directive = `\n\nIMPORTANT: Write every "guidance" sentence in natural ${languageName}, using the formal "usted" register throughout — never "tú" or its conjugations. The JSON itself must otherwise stay exactly as specified above, in English: the field names ("service", "tier", "basis", "guidance"), and every "tier" and "basis" value, must remain the exact English strings listed — never translate those. The "service" field must echo the exact service name as given, unchanged. When "basis" is "general_estimate", the ${languageName} guidance must still clearly state that it is a general estimate, not verified local data (for example: "es una estimación general, no verificada con competidores locales").`;
+  return PRICING_SYSTEM_BASE + directive;
+}
+
+/**
+ * The Anthropic maxTokens cap for a pricing assessment. Spanish replies
+ * tend to run longer than their English equivalents for the same
+ * content, so Spanish gets a ~1.3x allowance on top of the same base
+ * English uses — English itself is completely unchanged.
+ */
+export function pricingMaxTokens(serviceCount: number, locale: Locale = DEFAULT_LOCALE): number {
+  const base = Math.min(800, Math.max(260, 180 + serviceCount * 70));
+  return locale === "es" ? Math.round(base * 1.3) : base;
+}
+
+/**
+ * Whether a stored assessment's language note should show above the
+ * results — true only when the assessment was actually written in a
+ * different language than the business is currently displayed in.
+ * `storedLocale` of null means an assessment saved before this field
+ * existed, which is always treated as English (never assumed to
+ * secretly be Spanish) — never auto-translated either way, just flagged.
+ */
+export function isPricingLanguageMismatch(storedLocale: Locale | null, currentLocale: Locale): boolean {
+  return (storedLocale ?? DEFAULT_LOCALE) !== currentLocale;
 }
 
 /** Raw shape we ask Claude to reply with — validated field by field

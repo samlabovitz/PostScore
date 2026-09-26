@@ -28,6 +28,7 @@ import {
 } from "@/app/actions/pricing";
 import {
   PRICE_TIERS,
+  isPricingLanguageMismatch,
   type AssessmentBasis,
   type PriceLevelComparison,
   type PriceRow,
@@ -460,6 +461,7 @@ export function PricingView({
         assessments: result.assessments,
         priceLevelContext: result.priceLevelContext,
         assessedAt: result.assessedAt,
+        locale: result.locale,
       });
       setRunState({ kind: "idle" });
     } else if (result.status === "no_prices") {
@@ -473,6 +475,7 @@ export function PricingView({
   }
 
   const isWorking = runState.kind === "working";
+  const showLanguageMismatch = lastResult !== null && isPricingLanguageMismatch(lastResult.locale, locale);
 
   return (
     <div className="flex flex-col gap-8 nav:gap-10">
@@ -540,14 +543,19 @@ export function PricingView({
         <div className="flex flex-col gap-4">
           <SectionHeading title={t(locale, "dashboard.pricing.assessmentHeading")} />
           {lastResult ? (
-            <div className="relative">
-              <AssessmentResults result={lastResult} />
-              {isWorking && (
-                <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/70">
-                  <IconLoader2 size={22} className="animate-spin text-brass" />
-                </div>
+            <>
+              <div className="relative">
+                <AssessmentResults result={lastResult} />
+                {isWorking && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/70">
+                    <IconLoader2 size={22} className="animate-spin text-brass" />
+                  </div>
+                )}
+              </div>
+              {showLanguageMismatch && (
+                <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.pricing.languageMismatchNote")}</p>
               )}
-            </div>
+            </>
           ) : isWorking ? (
             <AssessmentSkeleton />
           ) : (
