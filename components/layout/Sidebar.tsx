@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -11,14 +10,11 @@ import {
   IconUsers,
   IconTag,
   IconFileText,
-  IconChevronDown,
-  IconLogout,
-  IconUser,
   IconX,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
-import { logout } from "@/app/actions/auth";
 import type { BusinessSummary } from "@/app/actions/businesses";
+import { AccountMenu } from "@/components/layout/AccountMenu";
 import { t, useLocale, type MessageKey } from "@/lib/i18n";
 
 const NAV_ITEMS: Array<{
@@ -40,6 +36,9 @@ interface SidebarProps {
    * only real (and highlightable) when this is set — there's nothing
    * to route to otherwise. */
   business?: BusinessSummary | null;
+  /** The logged-in user's email, if known yet — see DashboardShell and
+   * AccountMenu's own doc comments. */
+  userEmail?: string | null;
   className?: string;
   onNavigate?: () => void;
   onClose?: () => void;
@@ -53,10 +52,9 @@ function isNavActive(pathname: string, href: string): boolean {
   return href.split("/").length > 3 && pathname.startsWith(`${href}/`);
 }
 
-export function Sidebar({ business = null, className, onNavigate, onClose }: SidebarProps) {
+export function Sidebar({ business = null, userEmail = null, className, onNavigate, onClose }: SidebarProps) {
   const pathname = usePathname();
   const locale = useLocale();
-  const [profileOpen, setProfileOpen] = useState(false);
 
   return (
     <aside
@@ -140,45 +138,7 @@ export function Sidebar({ business = null, className, onNavigate, onClose }: Sid
         })}
       </nav>
 
-      <div className="relative mt-3 border-t border-white/10 pt-3">
-        <button
-          type="button"
-          onClick={() => setProfileOpen((open) => !open)}
-          className="flex w-full items-center gap-2.5 rounded-[9px] px-2 py-2 text-left hover:bg-white/[.07]"
-        >
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brass text-white">
-            <IconUser size={16} />
-          </span>
-          <span className="flex-1">
-            <span className="block text-sm font-medium text-white">{t(locale, "dashboard.nav.account")}</span>
-            <span className="block text-[11px] text-[#9FB0C7]">—</span>
-          </span>
-          <IconChevronDown
-            size={16}
-            className={cn(
-              "text-[#9FB0C7] transition-transform",
-              profileOpen && "rotate-180"
-            )}
-          />
-        </button>
-
-        {profileOpen && (
-          <div className="absolute bottom-full left-0 mb-2 w-full rounded-xl border border-paper-deep bg-white p-1.5 shadow-card">
-            {/* No Settings page exists yet — a button here would do nothing
-                when clicked, so it's omitted rather than shown as a dead
-                control. Add it back once there's a real page to route to. */}
-            <form action={logout}>
-              <button
-                type="submit"
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-red hover:bg-red/5 nav:py-2"
-              >
-                <IconLogout size={16} />
-                {t(locale, "dashboard.nav.logOut")}
-              </button>
-            </form>
-          </div>
-        )}
-      </div>
+      <AccountMenu business={business} userEmail={userEmail} />
     </aside>
   );
 }

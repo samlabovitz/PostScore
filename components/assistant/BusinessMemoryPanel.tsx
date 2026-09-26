@@ -168,7 +168,10 @@ function ServicesEditor({
   );
 }
 
-function BusinessTypeField({
+/** Exported so the Settings page (app/business/[id]/settings/page.tsx)
+ * can reuse this exact control standalone — same save action, same
+ * validation, same copy — rather than duplicating it. */
+export function BusinessTypeField({
   businessId,
   businessTypeId,
   autoDetectedBusinessTypeId,

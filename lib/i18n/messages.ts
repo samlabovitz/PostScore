@@ -21,6 +21,49 @@ export type MessageKey =
   | "dashboard.nav.reports"
   | "dashboard.nav.account"
   | "dashboard.nav.logOut"
+  // --- Per-business language toggle (BusinessLanguageToggle.tsx), inside
+  // the sidebar's collapsed account menu.
+  | "dashboard.nav.languageForBusinessLabel"
+  | "dashboard.nav.languageToggleEn"
+  | "dashboard.nav.languageToggleEs"
+  | "dashboard.nav.languageSaving"
+  | "dashboard.nav.languageUpdateError"
+  | "dashboard.nav.settings"
+  // --- Settings page (app/business/[id]/settings/page.tsx).
+  | "dashboard.settings.backTo"
+  | "dashboard.settings.businessFallback"
+  | "dashboard.settings.languageHeading"
+  | "dashboard.settings.monthlyEmailHeading"
+  | "dashboard.settings.monthlyEmailUnavailable"
+  | "dashboard.settings.businessTypeHeading"
+  | "dashboard.settings.accountEmailLabel"
+  | "dashboard.settings.subscriptionHeading"
+  // --- Cancellation flow (components/settings/CancelSubscriptionFlow.tsx),
+  // previewable at app/dev/cancel-flow before any real subscription
+  // exists — see lib/subscription.ts.
+  | "dashboard.cancelSubscription.step1Heading"
+  | "dashboard.cancelSubscription.step1Note"
+  | "dashboard.cancelSubscription.reasonTooExpensive"
+  | "dashboard.cancelSubscription.reasonNotEnoughResults"
+  | "dashboard.cancelSubscription.reasonNoTime"
+  | "dashboard.cancelSubscription.reasonDidntWork"
+  | "dashboard.cancelSubscription.reasonSwitching"
+  | "dashboard.cancelSubscription.reasonBusinessChanging"
+  | "dashboard.cancelSubscription.reasonShortTerm"
+  | "dashboard.cancelSubscription.reasonOther"
+  | "dashboard.cancelSubscription.reasonPreferNotToSay"
+  | "dashboard.cancelSubscription.didntWorkFollowUpLabel"
+  | "dashboard.cancelSubscription.switchingFollowUpLabel"
+  | "dashboard.cancelSubscription.otherFollowUpLabel"
+  | "dashboard.cancelSubscription.improvementLabel"
+  | "dashboard.cancelSubscription.continueButton"
+  | "dashboard.cancelSubscription.keepPlanButton"
+  | "dashboard.cancelSubscription.step2Heading"
+  | "dashboard.cancelSubscription.step2Body"
+  | "dashboard.cancelSubscription.confirmCancelButton"
+  | "dashboard.cancelSubscription.backLink"
+  | "dashboard.cancelSubscription.successMessage"
+  | "dashboard.cancelSubscription.error"
   // --- Dashboard shell chrome (components/layout/DashboardShell.tsx +
   // the business-picker states in Sidebar.tsx). "Untitled business" and
   // "No address on file" reuse dashboard.overview.untitledBusiness /
@@ -1704,6 +1747,43 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.reports": "Reports",
     "dashboard.nav.account": "Account",
     "dashboard.nav.logOut": "Log out",
+    "dashboard.nav.languageForBusinessLabel": "Language for this business",
+    "dashboard.nav.languageToggleEn": "EN",
+    "dashboard.nav.languageToggleEs": "ES",
+    "dashboard.nav.languageSaving": "Saving…",
+    "dashboard.nav.languageUpdateError": "Couldn't update the language — try again.",
+    "dashboard.nav.settings": "Settings",
+    "dashboard.settings.backTo": "Back to {name}",
+    "dashboard.settings.businessFallback": "business",
+    "dashboard.settings.languageHeading": "Language",
+    "dashboard.settings.monthlyEmailHeading": "Monthly email report",
+    "dashboard.settings.monthlyEmailUnavailable": "Couldn't load this section — try again later.",
+    "dashboard.settings.businessTypeHeading": "Business type",
+    "dashboard.settings.accountEmailLabel": "Email",
+    "dashboard.settings.subscriptionHeading": "Subscription",
+    "dashboard.cancelSubscription.step1Heading": "Before you go — what's the main reason you're canceling?",
+    "dashboard.cancelSubscription.step1Note": "Optional — you can cancel either way.",
+    "dashboard.cancelSubscription.reasonTooExpensive": "It costs more than it's worth to me",
+    "dashboard.cancelSubscription.reasonNotEnoughResults": "I'm not seeing enough results",
+    "dashboard.cancelSubscription.reasonNoTime": "I don't have time to act on the recommendations",
+    "dashboard.cancelSubscription.reasonDidntWork": "Something didn't work or was confusing",
+    "dashboard.cancelSubscription.reasonSwitching": "I'm switching to another service or hired someone",
+    "dashboard.cancelSubscription.reasonBusinessChanging": "My business is closing or changing",
+    "dashboard.cancelSubscription.reasonShortTerm": "I only needed it for a short time",
+    "dashboard.cancelSubscription.reasonOther": "Other",
+    "dashboard.cancelSubscription.reasonPreferNotToSay": "Prefer not to say",
+    "dashboard.cancelSubscription.didntWorkFollowUpLabel": "What went wrong?",
+    "dashboard.cancelSubscription.switchingFollowUpLabel": "Which one? (optional)",
+    "dashboard.cancelSubscription.otherFollowUpLabel": "Tell us more",
+    "dashboard.cancelSubscription.improvementLabel": "Is there anything we could have done better? (optional)",
+    "dashboard.cancelSubscription.continueButton": "Continue",
+    "dashboard.cancelSubscription.keepPlanButton": "Keep my plan",
+    "dashboard.cancelSubscription.step2Heading": "Cancel your subscription?",
+    "dashboard.cancelSubscription.step2Body": "Your plan stays active until {date}. You won't be charged again.",
+    "dashboard.cancelSubscription.confirmCancelButton": "Cancel subscription",
+    "dashboard.cancelSubscription.backLink": "Back",
+    "dashboard.cancelSubscription.successMessage": "Your subscription is canceled. Your plan stays active until {date}.",
+    "dashboard.cancelSubscription.error": "Something went wrong — try again.",
     "dashboard.shell.openMenuAriaLabel": "Open menu",
     "dashboard.shell.closeMenuAriaLabel": "Close menu",
     "dashboard.shell.noBusinessSelected": "No business selected",
@@ -3530,6 +3610,43 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.reports": "Informes",
     "dashboard.nav.account": "Cuenta",
     "dashboard.nav.logOut": "Cerrar sesión",
+    "dashboard.nav.languageForBusinessLabel": "Idioma de este negocio",
+    "dashboard.nav.languageToggleEn": "EN",
+    "dashboard.nav.languageToggleEs": "ES",
+    "dashboard.nav.languageSaving": "Guardando…",
+    "dashboard.nav.languageUpdateError": "No se pudo actualizar el idioma — inténtelo de nuevo.",
+    "dashboard.nav.settings": "Configuración",
+    "dashboard.settings.backTo": "Volver a {name}",
+    "dashboard.settings.businessFallback": "negocio",
+    "dashboard.settings.languageHeading": "Idioma",
+    "dashboard.settings.monthlyEmailHeading": "Informe mensual por correo",
+    "dashboard.settings.monthlyEmailUnavailable": "No se pudo cargar esta sección — inténtelo de nuevo más tarde.",
+    "dashboard.settings.businessTypeHeading": "Tipo de negocio",
+    "dashboard.settings.accountEmailLabel": "Correo electrónico",
+    "dashboard.settings.subscriptionHeading": "Suscripción",
+    "dashboard.cancelSubscription.step1Heading": "Antes de irse, ¿cuál es el motivo principal por el que cancela?",
+    "dashboard.cancelSubscription.step1Note": "Opcional: puede cancelar de todos modos.",
+    "dashboard.cancelSubscription.reasonTooExpensive": "Cuesta más de lo que vale para mí",
+    "dashboard.cancelSubscription.reasonNotEnoughResults": "No estoy viendo suficientes resultados",
+    "dashboard.cancelSubscription.reasonNoTime": "No tengo tiempo para aplicar las recomendaciones",
+    "dashboard.cancelSubscription.reasonDidntWork": "Algo no funcionó o fue confuso",
+    "dashboard.cancelSubscription.reasonSwitching": "Me cambio a otro servicio o contraté a alguien",
+    "dashboard.cancelSubscription.reasonBusinessChanging": "Mi negocio está cerrando o cambiando",
+    "dashboard.cancelSubscription.reasonShortTerm": "Solo lo necesitaba por un tiempo",
+    "dashboard.cancelSubscription.reasonOther": "Otro motivo",
+    "dashboard.cancelSubscription.reasonPreferNotToSay": "Prefiero no decirlo",
+    "dashboard.cancelSubscription.didntWorkFollowUpLabel": "¿Qué salió mal?",
+    "dashboard.cancelSubscription.switchingFollowUpLabel": "¿Cuál? (opcional)",
+    "dashboard.cancelSubscription.otherFollowUpLabel": "Cuéntenos más",
+    "dashboard.cancelSubscription.improvementLabel": "¿Hay algo que pudimos haber hecho mejor? (opcional)",
+    "dashboard.cancelSubscription.continueButton": "Continuar",
+    "dashboard.cancelSubscription.keepPlanButton": "Mantener mi plan",
+    "dashboard.cancelSubscription.step2Heading": "¿Cancelar su suscripción?",
+    "dashboard.cancelSubscription.step2Body": "Su plan seguirá activo hasta el {date}. No se le volverá a cobrar.",
+    "dashboard.cancelSubscription.confirmCancelButton": "Cancelar suscripción",
+    "dashboard.cancelSubscription.backLink": "Volver",
+    "dashboard.cancelSubscription.successMessage": "Su suscripción se canceló. Su plan sigue activo hasta el {date}.",
+    "dashboard.cancelSubscription.error": "Algo salió mal — inténtelo de nuevo.",
     "dashboard.shell.openMenuAriaLabel": "Abrir menú",
     "dashboard.shell.closeMenuAriaLabel": "Cerrar menú",
     "dashboard.shell.noBusinessSelected": "Ningún negocio seleccionado",

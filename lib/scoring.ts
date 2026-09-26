@@ -1448,6 +1448,19 @@ function findCheck(checkId: string): CheckDefinition {
   return def;
 }
 
+/**
+ * A check's current labelKey by id, or null if CHECKS no longer defines
+ * that id (a retired/renamed check from an older scoring_version).
+ * Unlike findCheck() above, never throws — meant for re-resolving a
+ * check id read back from storage (e.g. a historical scores.
+ * breakdown_json snapshot) in the CURRENT locale, where an unknown id is
+ * an honest, expected possibility, not a bug. Callers must fall back to
+ * the stored label rather than guessing when this returns null.
+ */
+export function checkLabelKey(checkId: string): MessageKey | null {
+  return CHECKS.find((c) => c.id === checkId)?.labelKey ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // Core scoring
 // ---------------------------------------------------------------------------

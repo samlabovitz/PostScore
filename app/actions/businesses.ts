@@ -3,7 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { PlaceDetails } from "@/lib/google/places";
-import { normalizeLocale, type Locale } from "@/lib/i18n";
+import { normalizeLocale, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n";
 import { checkWebsiteHttps } from "@/lib/websiteHttps";
 import { collectWebsiteAnalysis } from "@/lib/websiteAnalysis";
 import { uploadWebsiteScreenshots } from "@/lib/websiteScreenshotUpload";
@@ -478,6 +478,59 @@ export async function setMonthlyReportEnabled(
   }
 
   return { status: "ok", enabled: data.monthly_report_enabled };
+}
+
+export type UpdateBusinessLanguageResult =
+  | { status: "ok"; language: Locale }
+  | { status: "unauthenticated" }
+  | { status: "not_found" }
+  | { status: "error"; message: string };
+
+/**
+ * The owner's manual language choice for this one business — drives the
+ * whole dashboard's locale (DashboardShell reads this same column) and
+ * the generated content that follows it. RLS-scoped exactly like every
+ * other owner setting on this table (the general "Users can update
+ * their own businesses" policy in supabase/schema.sql already covers
+ * this column; no new policy needed) — `.eq("id", businessId)` only
+ * ever matches a row RLS lets this session see, so a businessId the
+ * caller doesn't own resolves as "not_found", never a silent write to
+ * someone else's row. `language` is accepted as a plain string (not
+ * typed Locale) and validated against SUPPORTED_LOCALES here — this is
+ * the real trust boundary: a "use server" action is callable with any
+ * payload, not just what the toggle's own two options offer, so a bad
+ * value can never reach the database.
+ */
+export async function updateBusinessLanguage(
+  businessId: string,
+  language: string
+): Promise<UpdateBusinessLanguageResult> {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { status: "unauthenticated" };
+  }
+
+  if (!(SUPPORTED_LOCALES as readonly string[]).includes(language)) {
+    return { status: "error", message: `"${language}" isn't a supported language.` };
+  }
+
+  const { data, error } = await supabase
+    .from("businesses")
+    .update({ language })
+    .eq("id", businessId)
+    .select("language")
+    .single();
+
+  if (error || !data) {
+    return { status: "not_found" };
+  }
+
+  return { status: "ok", language: normalizeLocale(data.language) };
 }
 
 export interface MyBusinessRow {

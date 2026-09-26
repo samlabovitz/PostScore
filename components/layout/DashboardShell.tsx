@@ -6,6 +6,7 @@ import { IconMenu2 } from "@tabler/icons-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { cn } from "@/lib/utils";
 import type { BusinessSummary } from "@/app/actions/businesses";
+import { getCurrentUserEmail } from "@/app/actions/auth";
 import { LocaleProvider, normalizeLocale, t } from "@/lib/i18n";
 
 export function DashboardShell({
@@ -25,6 +26,23 @@ export function DashboardShell({
   // state) safely normalizes to DEFAULT_LOCALE — same never-throws
   // guarantee normalizeLocale() always gives.
   const locale = normalizeLocale(business?.language);
+  // This shell is a client component (needed for the mobile nav's own
+  // open/close state), so it can't read the session directly the way
+  // every server-rendered page already does — fetched once via a tiny
+  // server action instead of threading an email prop through every one
+  // of those pages. Starts null (nothing shown under "Account" yet,
+  // never a placeholder) until this resolves.
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCurrentUserEmail().then((email) => {
+      if (!cancelled) setUserEmail(email);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = navOpen ? "hidden" : "";
@@ -77,6 +95,7 @@ export function DashboardShell({
 
         <Sidebar
           business={business}
+          userEmail={userEmail}
           className={cn(
             "fixed inset-y-0 left-0 z-50 -translate-x-full transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] nav:translate-x-0",
             navOpen && "translate-x-0"

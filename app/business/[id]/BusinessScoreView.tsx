@@ -17,11 +17,11 @@ import { rescanBusiness } from "@/app/actions/scoring";
 import type { BusinessRecord, ScoreHistoryRow, ScoreSnapshot } from "@/app/actions/scoring";
 import { diffProfileSnapshots, type ProfileSnapshot } from "@/lib/profileChanges";
 import { formatOpeningHours } from "@/lib/hours";
+import { diffBreakdowns, resolveChangeDisplay } from "@/lib/scoreChanges";
 import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 import {
   GRADE_THRESHOLDS,
   type CategoryResult,
-  type CheckResult,
   type Grade,
   type ScoreBreakdown,
   type ScoreWithSuggestions,
@@ -376,36 +376,28 @@ function ListingCard({ business }: { business: BusinessRecord }) {
   );
 }
 
-interface CheckChange {
-  check: CheckResult;
-  fromPoints: number | null;
-  toPoints: number | null;
-}
-
-/** Pure diff between two real, previously-saved breakdowns — only
- * checks whose earned points or confidence actually changed, sorted by
- * the size of the change. Never inferred or estimated. */
-function diffBreakdowns(previous: ScoreBreakdown, current: ScoreBreakdown): CheckChange[] {
-  const changes: CheckChange[] = [];
-  for (const check of current.checks) {
-    const prevCheck = previous.checks.find((c) => c.id === check.id);
-    if (!prevCheck) continue;
-    if (prevCheck.earnedPoints !== check.earnedPoints || prevCheck.confidence !== check.confidence) {
-      changes.push({ check, fromPoints: prevCheck.earnedPoints, toPoints: check.earnedPoints });
-    }
-  }
-  return changes.sort((a, b) => {
-    const deltaA = Math.abs((a.toPoints ?? 0) - (a.fromPoints ?? 0));
-    const deltaB = Math.abs((b.toPoints ?? 0) - (b.fromPoints ?? 0));
-    return deltaB - deltaA;
-  });
-}
-
 /** What changed between the two most recent saved scans, check by
  * check. With fewer than two scans, or a scoring-version change between
  * them (where a point-for-point comparison would be misleading), it
- * says so honestly instead of guessing. */
-function ChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
+ * says so honestly instead of guessing.
+ *
+ * Both `check`s a change is built from come from OLD, already-saved
+ * `scores.breakdown_json` snapshots — frozen at whatever locale was live
+ * the moment each scan ran (almost always English; see
+ * app/actions/scoring.ts's saveScoreSnapshotWithClient). Never render
+ * `check.label`/`check.explanation` directly: the label is re-resolved
+ * from the check's stable id via checkLabelKey() in the CURRENT locale,
+ * and the explanation is read from `liveBreakdown` (the real, current-
+ * locale score this page already computed for `result`), matched by id.
+ * Only a check id that no longer exists in either place falls back to
+ * the stored (possibly-English) text — honest, not a silent guess. */
+function ChangesFeed({
+  snapshots,
+  liveBreakdown,
+}: {
+  snapshots: ScoreSnapshot[];
+  liveBreakdown: ScoreBreakdown;
+}) {
   const locale = useLocale();
 
   if (snapshots.length < 2) {
@@ -440,14 +432,15 @@ function ChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
       <div className="flex flex-col divide-y divide-paper-line">
         {changes.slice(0, 8).map(({ check, fromPoints, toPoints }) => {
           const delta = fromPoints !== null && toPoints !== null ? toPoints - fromPoints : null;
+          const { label, explanation } = resolveChangeDisplay(check, liveBreakdown, locale);
           return (
             <div
               key={check.id}
               className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0"
             >
               <div>
-                <div className="text-sm font-medium text-ink">{check.label}</div>
-                <div className="mt-0.5 text-[12px] text-ink-mute">{check.explanation}</div>
+                <div className="text-sm font-medium text-ink">{label}</div>
+                <div className="mt-0.5 text-[12px] text-ink-mute">{explanation}</div>
               </div>
               {delta !== null ? (
                 <Pill
@@ -657,7 +650,7 @@ export function BusinessScoreView({
       <ListingChangesFeed snapshots={recentSnapshots} />
 
       <SectionHeading title={t(locale, "dashboard.overview.scoreImpactHeading")} />
-      <ChangesFeed snapshots={recentSnapshots} />
+      <ChangesFeed snapshots={recentSnapshots} liveBreakdown={breakdown} />
 
       <SectionHeading title={t(locale, "dashboard.overview.wherePointsAreHeading")} />
       <Card className="p-5">
