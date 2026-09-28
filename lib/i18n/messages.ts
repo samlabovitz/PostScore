@@ -1670,7 +1670,295 @@ export type MessageKey =
   | "bizProfileOptions.landscaper.label"
   | "bizProfileOptions.landscaper.competitorNoun"
   | "bizProfileOptions.cleaning_service.label"
-  | "bizProfileOptions.cleaning_service.competitorNoun";
+  | "bizProfileOptions.cleaning_service.competitorNoun"
+  | "bizProfiles.home_services.label"
+  | "bizProfiles.home_services.competitorNoun"
+  | "bizProfiles.home_services.couponPresets.flat_off_first_project.label"
+  | "bizProfiles.home_services.couponPresets.flat_off_first_project.description"
+  | "bizProfiles.home_services.couponPresets.seasonal_inspection.label"
+  | "bizProfiles.home_services.couponPresets.seasonal_inspection.description"
+  | "bizProfiles.home_services.couponPresets.bundle_multiple_projects.label"
+  | "bizProfiles.home_services.couponPresets.bundle_multiple_projects.description"
+  | "bizProfiles.home_services.offerTemplates.new_customer_free_estimate.label"
+  | "bizProfiles.home_services.offerTemplates.new_customer_free_estimate.description"
+  | "bizProfiles.home_services.offerTemplates.seasonal_maintenance.label"
+  | "bizProfiles.home_services.offerTemplates.seasonal_maintenance.description"
+  | "bizProfiles.home_services.couponAngles.firstTime"
+  | "bizProfiles.home_services.couponAngles.seasonal"
+  | "bizProfiles.home_services.couponAngles.slowDay"
+  | "bizProfiles.home_services.pricingExamples.example1"
+  | "bizProfiles.home_services.pricingExamples.example2"
+  | "bizProfiles.home_services.pricingExamples.example3"
+  | "bizProfiles.home_services.faq.item1.question"
+  | "bizProfiles.home_services.faq.item1.answer"
+  | "bizProfiles.home_services.faq.item2.question"
+  | "bizProfiles.home_services.faq.item2.answer"
+  | "bizProfiles.home_services.referralPresets.flat_off_both.referrerReward"
+  | "bizProfiles.home_services.referralPresets.flat_off_both.friendReward"
+  | "bizProfiles.home_services.referralPresets.flat_off_both.description"
+  | "bizProfiles.home_services.referralPresets.pct_off_both.referrerReward"
+  | "bizProfiles.home_services.referralPresets.pct_off_both.friendReward"
+  | "bizProfiles.home_services.referralPresets.pct_off_both.description"
+  | "bizProfiles.home_services.pricingTips.quote_vs_flat.label"
+  | "bizProfiles.home_services.pricingTips.quote_vs_flat.description"
+  | "bizProfiles.home_services.pricingTips.license_insurance_trust.label"
+  | "bizProfiles.home_services.pricingTips.license_insurance_trust.description"
+  | "bizProfiles.home_services.pricingTips.seasonal_demand_pricing.label"
+  | "bizProfiles.home_services.pricingTips.seasonal_demand_pricing.description"
+  | "bizProfiles.home_services.pricingTips.bundle_multiple_projects.label"
+  | "bizProfiles.home_services.pricingTips.bundle_multiple_projects.description"
+  | "bizProfiles.repair_dropoff.label"
+  | "bizProfiles.repair_dropoff.competitorNoun"
+  | "bizProfiles.repair_dropoff.couponPresets.pct_off_first_item.label"
+  | "bizProfiles.repair_dropoff.couponPresets.pct_off_first_item.description"
+  | "bizProfiles.repair_dropoff.couponPresets.loyalty_punch.label"
+  | "bizProfiles.repair_dropoff.couponPresets.loyalty_punch.description"
+  | "bizProfiles.repair_dropoff.couponPresets.bundle_multiple_items.label"
+  | "bizProfiles.repair_dropoff.couponPresets.bundle_multiple_items.description"
+  | "bizProfiles.repair_dropoff.offerTemplates.new_customer_first_item.label"
+  | "bizProfiles.repair_dropoff.offerTemplates.new_customer_first_item.description"
+  | "bizProfiles.repair_dropoff.offerTemplates.slow_season_special.label"
+  | "bizProfiles.repair_dropoff.offerTemplates.slow_season_special.description"
+  | "bizProfiles.repair_dropoff.couponAngles.firstTime"
+  | "bizProfiles.repair_dropoff.couponAngles.seasonal"
+  | "bizProfiles.repair_dropoff.couponAngles.slowDay"
+  | "bizProfiles.repair_dropoff.pricingExamples.example1"
+  | "bizProfiles.repair_dropoff.pricingExamples.example2"
+  | "bizProfiles.repair_dropoff.pricingExamples.example3"
+  | "bizProfiles.repair_dropoff.faq.item1.question"
+  | "bizProfiles.repair_dropoff.faq.item1.answer"
+  | "bizProfiles.repair_dropoff.faq.item2.question"
+  | "bizProfiles.repair_dropoff.faq.item2.answer"
+  | "bizProfiles.repair_dropoff.referralPresets.flat_off_both.referrerReward"
+  | "bizProfiles.repair_dropoff.referralPresets.flat_off_both.friendReward"
+  | "bizProfiles.repair_dropoff.referralPresets.flat_off_both.description"
+  | "bizProfiles.repair_dropoff.referralPresets.pct_off_both.referrerReward"
+  | "bizProfiles.repair_dropoff.referralPresets.pct_off_both.friendReward"
+  | "bizProfiles.repair_dropoff.referralPresets.pct_off_both.description"
+  | "bizProfiles.repair_dropoff.pricingTips.per_item_vs_bundle.label"
+  | "bizProfiles.repair_dropoff.pricingTips.per_item_vs_bundle.description"
+  | "bizProfiles.repair_dropoff.pricingTips.rush_fee.label"
+  | "bizProfiles.repair_dropoff.pricingTips.rush_fee.description"
+  | "bizProfiles.repair_dropoff.pricingTips.seasonal_demand_pricing.label"
+  | "bizProfiles.repair_dropoff.pricingTips.seasonal_demand_pricing.description"
+  | "bizProfiles.repair_dropoff.pricingTips.raise_when_backlog.label"
+  | "bizProfiles.repair_dropoff.pricingTips.raise_when_backlog.description"
+  | "bizProfiles.recreation.label"
+  | "bizProfiles.recreation.competitorNoun"
+  | "bizProfiles.recreation.couponPresets.pct_off_admission.label"
+  | "bizProfiles.recreation.couponPresets.pct_off_admission.description"
+  | "bizProfiles.recreation.couponPresets.group_discount.label"
+  | "bizProfiles.recreation.couponPresets.group_discount.description"
+  | "bizProfiles.recreation.couponPresets.birthday_party_special.label"
+  | "bizProfiles.recreation.couponPresets.birthday_party_special.description"
+  | "bizProfiles.recreation.offerTemplates.new_visitor_special.label"
+  | "bizProfiles.recreation.offerTemplates.new_visitor_special.description"
+  | "bizProfiles.recreation.offerTemplates.slow_weekday_special.label"
+  | "bizProfiles.recreation.offerTemplates.slow_weekday_special.description"
+  | "bizProfiles.recreation.couponAngles.firstTime"
+  | "bizProfiles.recreation.couponAngles.seasonal"
+  | "bizProfiles.recreation.couponAngles.slowDay"
+  | "bizProfiles.recreation.pricingExamples.example1"
+  | "bizProfiles.recreation.pricingExamples.example2"
+  | "bizProfiles.recreation.pricingExamples.example3"
+  | "bizProfiles.recreation.faq.item1.question"
+  | "bizProfiles.recreation.faq.item1.answer"
+  | "bizProfiles.recreation.faq.item2.question"
+  | "bizProfiles.recreation.faq.item2.answer"
+  | "bizProfiles.recreation.referralPresets.friend_ticket_both.referrerReward"
+  | "bizProfiles.recreation.referralPresets.friend_ticket_both.friendReward"
+  | "bizProfiles.recreation.referralPresets.friend_ticket_both.description"
+  | "bizProfiles.recreation.referralPresets.pct_off_both.referrerReward"
+  | "bizProfiles.recreation.referralPresets.pct_off_both.friendReward"
+  | "bizProfiles.recreation.referralPresets.pct_off_both.description"
+  | "bizProfiles.recreation.pricingTips.time_slot_pricing.label"
+  | "bizProfiles.recreation.pricingTips.time_slot_pricing.description"
+  | "bizProfiles.recreation.pricingTips.group_and_party_packages.label"
+  | "bizProfiles.recreation.pricingTips.group_and_party_packages.description"
+  | "bizProfiles.recreation.pricingTips.anchor_premium_package.label"
+  | "bizProfiles.recreation.pricingTips.anchor_premium_package.description"
+  | "bizProfiles.recreation.pricingTips.raise_when_booked_out.label"
+  | "bizProfiles.recreation.pricingTips.raise_when_booked_out.description"
+  | "bizProfiles.events.label"
+  | "bizProfiles.events.competitorNoun"
+  | "bizProfiles.events.couponPresets.flat_off_booking.label"
+  | "bizProfiles.events.couponPresets.flat_off_booking.description"
+  | "bizProfiles.events.couponPresets.early_booking_discount.label"
+  | "bizProfiles.events.couponPresets.early_booking_discount.description"
+  | "bizProfiles.events.couponPresets.off_season_discount.label"
+  | "bizProfiles.events.couponPresets.off_season_discount.description"
+  | "bizProfiles.events.offerTemplates.new_client_booking_special.label"
+  | "bizProfiles.events.offerTemplates.new_client_booking_special.description"
+  | "bizProfiles.events.offerTemplates.off_peak_date_special.label"
+  | "bizProfiles.events.offerTemplates.off_peak_date_special.description"
+  | "bizProfiles.events.couponAngles.firstTime"
+  | "bizProfiles.events.couponAngles.seasonal"
+  | "bizProfiles.events.couponAngles.slowDay"
+  | "bizProfiles.events.pricingExamples.example1"
+  | "bizProfiles.events.pricingExamples.example2"
+  | "bizProfiles.events.pricingExamples.example3"
+  | "bizProfiles.events.faq.item1.question"
+  | "bizProfiles.events.faq.item1.answer"
+  | "bizProfiles.events.faq.item2.question"
+  | "bizProfiles.events.faq.item2.answer"
+  | "bizProfiles.events.referralPresets.flat_off_both.referrerReward"
+  | "bizProfiles.events.referralPresets.flat_off_both.friendReward"
+  | "bizProfiles.events.referralPresets.flat_off_both.description"
+  | "bizProfiles.events.referralPresets.pct_off_both.referrerReward"
+  | "bizProfiles.events.referralPresets.pct_off_both.friendReward"
+  | "bizProfiles.events.referralPresets.pct_off_both.description"
+  | "bizProfiles.events.pricingTips.package_tiers.label"
+  | "bizProfiles.events.pricingTips.package_tiers.description"
+  | "bizProfiles.events.pricingTips.deposit_to_hold_date.label"
+  | "bizProfiles.events.pricingTips.deposit_to_hold_date.description"
+  | "bizProfiles.events.pricingTips.peak_vs_offpeak_pricing.label"
+  | "bizProfiles.events.pricingTips.peak_vs_offpeak_pricing.description"
+  | "bizProfiles.events.pricingTips.raise_when_booked_out.label"
+  | "bizProfiles.events.pricingTips.raise_when_booked_out.description"
+  | "bizProfiles.car_wash_detailing.label"
+  | "bizProfiles.car_wash_detailing.competitorNoun"
+  | "bizProfiles.car_wash_detailing.couponPresets.flat_off_first_wash.label"
+  | "bizProfiles.car_wash_detailing.couponPresets.flat_off_first_wash.description"
+  | "bizProfiles.car_wash_detailing.couponPresets.free_upgrade_first_visit.label"
+  | "bizProfiles.car_wash_detailing.couponPresets.free_upgrade_first_visit.description"
+  | "bizProfiles.car_wash_detailing.couponPresets.detailing_bundle.label"
+  | "bizProfiles.car_wash_detailing.couponPresets.detailing_bundle.description"
+  | "bizProfiles.car_wash_detailing.offerTemplates.new_customer_first_wash.label"
+  | "bizProfiles.car_wash_detailing.offerTemplates.new_customer_first_wash.description"
+  | "bizProfiles.car_wash_detailing.offerTemplates.membership_trial.label"
+  | "bizProfiles.car_wash_detailing.offerTemplates.membership_trial.description"
+  | "bizProfiles.car_wash_detailing.couponAngles.firstTime"
+  | "bizProfiles.car_wash_detailing.couponAngles.seasonal"
+  | "bizProfiles.car_wash_detailing.couponAngles.slowDay"
+  | "bizProfiles.car_wash_detailing.pricingExamples.example1"
+  | "bizProfiles.car_wash_detailing.pricingExamples.example2"
+  | "bizProfiles.car_wash_detailing.pricingExamples.example3"
+  | "bizProfiles.car_wash_detailing.faq.item1.question"
+  | "bizProfiles.car_wash_detailing.faq.item1.answer"
+  | "bizProfiles.car_wash_detailing.faq.item2.question"
+  | "bizProfiles.car_wash_detailing.faq.item2.answer"
+  | "bizProfiles.car_wash_detailing.referralPresets.free_wash_both.referrerReward"
+  | "bizProfiles.car_wash_detailing.referralPresets.free_wash_both.friendReward"
+  | "bizProfiles.car_wash_detailing.referralPresets.free_wash_both.description"
+  | "bizProfiles.car_wash_detailing.referralPresets.pct_off_both.referrerReward"
+  | "bizProfiles.car_wash_detailing.referralPresets.pct_off_both.friendReward"
+  | "bizProfiles.car_wash_detailing.referralPresets.pct_off_both.description"
+  | "bizProfiles.car_wash_detailing.pricingTips.tiered_wash_packages.label"
+  | "bizProfiles.car_wash_detailing.pricingTips.tiered_wash_packages.description"
+  | "bizProfiles.car_wash_detailing.pricingTips.membership_for_recurring_revenue.label"
+  | "bizProfiles.car_wash_detailing.pricingTips.membership_for_recurring_revenue.description"
+  | "bizProfiles.car_wash_detailing.pricingTips.detailing_by_vehicle_size.label"
+  | "bizProfiles.car_wash_detailing.pricingTips.detailing_by_vehicle_size.description"
+  | "bizProfiles.car_wash_detailing.pricingTips.off_peak_pricing.label"
+  | "bizProfiles.car_wash_detailing.pricingTips.off_peak_pricing.description"
+  | "bizProfiles.childcare.label"
+  | "bizProfiles.childcare.competitorNoun"
+  | "bizProfiles.childcare.couponPresets.flat_off_enrollment.label"
+  | "bizProfiles.childcare.couponPresets.flat_off_enrollment.description"
+  | "bizProfiles.childcare.couponPresets.waived_registration_fee.label"
+  | "bizProfiles.childcare.couponPresets.waived_registration_fee.description"
+  | "bizProfiles.childcare.couponPresets.sibling_discount.label"
+  | "bizProfiles.childcare.couponPresets.sibling_discount.description"
+  | "bizProfiles.childcare.offerTemplates.new_family_special.label"
+  | "bizProfiles.childcare.offerTemplates.new_family_special.description"
+  | "bizProfiles.childcare.offerTemplates.seasonal_enrollment_push.label"
+  | "bizProfiles.childcare.offerTemplates.seasonal_enrollment_push.description"
+  | "bizProfiles.childcare.couponAngles.firstTime"
+  | "bizProfiles.childcare.couponAngles.seasonal"
+  | "bizProfiles.childcare.couponAngles.slowDay"
+  | "bizProfiles.childcare.pricingExamples.example1"
+  | "bizProfiles.childcare.pricingExamples.example2"
+  | "bizProfiles.childcare.pricingExamples.example3"
+  | "bizProfiles.childcare.faq.item1.question"
+  | "bizProfiles.childcare.faq.item1.answer"
+  | "bizProfiles.childcare.faq.item2.question"
+  | "bizProfiles.childcare.faq.item2.answer"
+  | "bizProfiles.childcare.referralPresets.flat_off_both.referrerReward"
+  | "bizProfiles.childcare.referralPresets.flat_off_both.friendReward"
+  | "bizProfiles.childcare.referralPresets.flat_off_both.description"
+  | "bizProfiles.childcare.referralPresets.free_week_both.referrerReward"
+  | "bizProfiles.childcare.referralPresets.free_week_both.friendReward"
+  | "bizProfiles.childcare.referralPresets.free_week_both.description"
+  | "bizProfiles.childcare.pricingTips.tuition_tiers_by_schedule.label"
+  | "bizProfiles.childcare.pricingTips.tuition_tiers_by_schedule.description"
+  | "bizProfiles.childcare.pricingTips.waitlist_signals_room_to_raise.label"
+  | "bizProfiles.childcare.pricingTips.waitlist_signals_room_to_raise.description"
+  | "bizProfiles.childcare.pricingTips.bundle_sibling_discount.label"
+  | "bizProfiles.childcare.pricingTips.bundle_sibling_discount.description"
+  | "bizProfiles.childcare.pricingTips.registration_fee_covers_admin.label"
+  | "bizProfiles.childcare.pricingTips.registration_fee_covers_admin.description"
+  | "bizProfiles.lodging.label"
+  | "bizProfiles.lodging.competitorNoun"
+  | "bizProfiles.lodging.couponPresets.pct_off_first_stay.label"
+  | "bizProfiles.lodging.couponPresets.pct_off_first_stay.description"
+  | "bizProfiles.lodging.couponPresets.extended_stay_discount.label"
+  | "bizProfiles.lodging.couponPresets.extended_stay_discount.description"
+  | "bizProfiles.lodging.couponPresets.off_season_discount.label"
+  | "bizProfiles.lodging.couponPresets.off_season_discount.description"
+  | "bizProfiles.lodging.offerTemplates.new_guest_special.label"
+  | "bizProfiles.lodging.offerTemplates.new_guest_special.description"
+  | "bizProfiles.lodging.offerTemplates.off_peak_stay_special.label"
+  | "bizProfiles.lodging.offerTemplates.off_peak_stay_special.description"
+  | "bizProfiles.lodging.couponAngles.firstTime"
+  | "bizProfiles.lodging.couponAngles.seasonal"
+  | "bizProfiles.lodging.couponAngles.slowDay"
+  | "bizProfiles.lodging.pricingExamples.example1"
+  | "bizProfiles.lodging.pricingExamples.example2"
+  | "bizProfiles.lodging.pricingExamples.example3"
+  | "bizProfiles.lodging.faq.item1.question"
+  | "bizProfiles.lodging.faq.item1.answer"
+  | "bizProfiles.lodging.faq.item2.question"
+  | "bizProfiles.lodging.faq.item2.answer"
+  | "bizProfiles.lodging.referralPresets.flat_off_both.referrerReward"
+  | "bizProfiles.lodging.referralPresets.flat_off_both.friendReward"
+  | "bizProfiles.lodging.referralPresets.flat_off_both.description"
+  | "bizProfiles.lodging.referralPresets.pct_off_both.referrerReward"
+  | "bizProfiles.lodging.referralPresets.pct_off_both.friendReward"
+  | "bizProfiles.lodging.referralPresets.pct_off_both.description"
+  | "bizProfiles.lodging.pricingTips.peak_vs_offpeak_pricing.label"
+  | "bizProfiles.lodging.pricingTips.peak_vs_offpeak_pricing.description"
+  | "bizProfiles.lodging.pricingTips.length_of_stay_discount.label"
+  | "bizProfiles.lodging.pricingTips.length_of_stay_discount.description"
+  | "bizProfiles.lodging.pricingTips.raise_when_booked_out.label"
+  | "bizProfiles.lodging.pricingTips.raise_when_booked_out.description"
+  | "bizProfiles.lodging.pricingTips.bundle_add_ons.label"
+  | "bizProfiles.lodging.pricingTips.bundle_add_ons.description"
+  | "bizProfiles.tattoo_body_art.label"
+  | "bizProfiles.tattoo_body_art.competitorNoun"
+  | "bizProfiles.tattoo_body_art.couponPresets.flat_off_first_session.label"
+  | "bizProfiles.tattoo_body_art.couponPresets.flat_off_first_session.description"
+  | "bizProfiles.tattoo_body_art.couponPresets.free_touchup.label"
+  | "bizProfiles.tattoo_body_art.couponPresets.free_touchup.description"
+  | "bizProfiles.tattoo_body_art.couponPresets.flash_day_special.label"
+  | "bizProfiles.tattoo_body_art.couponPresets.flash_day_special.description"
+  | "bizProfiles.tattoo_body_art.offerTemplates.new_client_first_session.label"
+  | "bizProfiles.tattoo_body_art.offerTemplates.new_client_first_session.description"
+  | "bizProfiles.tattoo_body_art.offerTemplates.slow_weekday_special.label"
+  | "bizProfiles.tattoo_body_art.offerTemplates.slow_weekday_special.description"
+  | "bizProfiles.tattoo_body_art.couponAngles.firstTime"
+  | "bizProfiles.tattoo_body_art.couponAngles.seasonal"
+  | "bizProfiles.tattoo_body_art.couponAngles.slowDay"
+  | "bizProfiles.tattoo_body_art.pricingExamples.example1"
+  | "bizProfiles.tattoo_body_art.pricingExamples.example2"
+  | "bizProfiles.tattoo_body_art.pricingExamples.example3"
+  | "bizProfiles.tattoo_body_art.faq.item1.question"
+  | "bizProfiles.tattoo_body_art.faq.item1.answer"
+  | "bizProfiles.tattoo_body_art.faq.item2.question"
+  | "bizProfiles.tattoo_body_art.faq.item2.answer"
+  | "bizProfiles.tattoo_body_art.referralPresets.flat_off_both.referrerReward"
+  | "bizProfiles.tattoo_body_art.referralPresets.flat_off_both.friendReward"
+  | "bizProfiles.tattoo_body_art.referralPresets.flat_off_both.description"
+  | "bizProfiles.tattoo_body_art.referralPresets.pct_off_both.referrerReward"
+  | "bizProfiles.tattoo_body_art.referralPresets.pct_off_both.friendReward"
+  | "bizProfiles.tattoo_body_art.referralPresets.pct_off_both.description"
+  | "bizProfiles.tattoo_body_art.pricingTips.deposit_protects_time.label"
+  | "bizProfiles.tattoo_body_art.pricingTips.deposit_protects_time.description"
+  | "bizProfiles.tattoo_body_art.pricingTips.price_by_time_not_just_size.label"
+  | "bizProfiles.tattoo_body_art.pricingTips.price_by_time_not_just_size.description"
+  | "bizProfiles.tattoo_body_art.pricingTips.flash_vs_custom_pricing.label"
+  | "bizProfiles.tattoo_body_art.pricingTips.flash_vs_custom_pricing.description"
+  | "bizProfiles.tattoo_body_art.pricingTips.raise_when_booked_weeks_out.label"
+  | "bizProfiles.tattoo_body_art.pricingTips.raise_when_booked_weeks_out.description";
 
 /** The report/dashboard messages that vary by count — see tPlural below.
  * Each has a ".one" and ".other" MessageKey (the only two categories
@@ -2281,7 +2569,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.coupon.defaultTerms": "One per customer. Cannot combine with other offers.",
     "dashboard.growth.coupon.angleFirstTimeTitle": "First-time customer",
     "dashboard.growth.coupon.angleFirstTimeWhy":
-      "Removes the risk of trying someone new — usually the highest-converting offer a business can run.",
+      "Removes the risk of trying someone new — usually one of the most effective offers a business can run.",
     "dashboard.growth.coupon.angleSeasonalTitle": "Seasonal or event",
     "dashboard.growth.coupon.angleSeasonalWhy":
       "Ties your offer to a moment customers are already thinking about, so it feels timely, not random.",
@@ -3132,7 +3420,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.salon.couponPresets.bring_a_friend.label": "Bring a friend: you both get 15% off",
     "bizProfiles.salon.couponPresets.bring_a_friend.description": "Turns an existing client into new foot traffic without any ad spend.",
     "bizProfiles.salon.offerTemplates.new_client_special.label": "New client special: 20% off your first appointment",
-    "bizProfiles.salon.offerTemplates.new_client_special.description": "The single highest-converting offer for a service business — removes the risk of trying someone new.",
+    "bizProfiles.salon.offerTemplates.new_client_special.description": "Usually one of the most effective offers for a service business — removes the risk of trying someone new.",
     "bizProfiles.salon.offerTemplates.referral_credit.label": "Referral reward: $10 credit for you and your friend",
     "bizProfiles.salon.offerTemplates.referral_credit.description": "Pairs well with the coupon above — give both people a reason to act.",
     "bizProfiles.salon.referralPresets.pct_off_both.referrerReward": "$15 off your next visit",
@@ -3404,7 +3692,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.gym_fitness.label": "Gym & Fitness Studio",
     "bizProfiles.gym_fitness.competitorNoun": "gyms",
     "bizProfiles.gym_fitness.couponPresets.first_month_pct.label": "50% off your first month",
-    "bizProfiles.gym_fitness.couponPresets.first_month_pct.description": "The standard, highest-converting gym offer — removes the risk of committing to a new place.",
+    "bizProfiles.gym_fitness.couponPresets.first_month_pct.description": "Usually one of the most effective gym offers — removes the risk of committing to a new place.",
     "bizProfiles.gym_fitness.couponPresets.no_enrollment_fee.label": "No enrollment fee for new members this month",
     "bizProfiles.gym_fitness.couponPresets.no_enrollment_fee.description": "Removes a common friction point without discounting your actual membership rate.",
     "bizProfiles.gym_fitness.couponPresets.class_pack_bonus.label": "Buy a 10-class pack, get 2 classes free",
@@ -3446,7 +3734,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.trades.couponPresets.bundle_multiple_jobs.label": "10% off when you bundle two or more jobs in one visit",
     "bizProfiles.trades.couponPresets.bundle_multiple_jobs.description": "Rewards a bigger ticket per trip out, which is where your real margin is (less drive time per dollar billed).",
     "bizProfiles.trades.offerTemplates.new_customer_first_call.label": "New customer special: $25 off your first service call",
-    "bizProfiles.trades.offerTemplates.new_customer_first_call.description": "The single highest-converting offer for a trade — lowers the risk of trying someone new.",
+    "bizProfiles.trades.offerTemplates.new_customer_first_call.description": "Usually one of the most effective offers for a trade — lowers the risk of trying someone new.",
     "bizProfiles.trades.offerTemplates.seasonal_maintenance.label": "Seasonal maintenance special (e.g. AC tune-up before summer, furnace check before winter)",
     "bizProfiles.trades.offerTemplates.seasonal_maintenance.description": "Turns a predictable seasonal need into booked revenue before it becomes an emergency call.",
     "bizProfiles.trades.referralPresets.flat_off_both.referrerReward": "$25 off your next service call",
@@ -3596,6 +3884,468 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfileOptions.landscaper.competitorNoun": "landscapers",
     "bizProfileOptions.cleaning_service.label": "Cleaning Service",
     "bizProfileOptions.cleaning_service.competitorNoun": "cleaning services",
+    "bizProfiles.home_services.label": "Home Services & Contractors",
+    "bizProfiles.home_services.competitorNoun": "contractors",
+    "bizProfiles.home_services.couponPresets.flat_off_first_project.label": "$100 off your first project",
+    "bizProfiles.home_services.couponPresets.flat_off_first_project.description":
+      "Lowers the risk of choosing a new contractor for a big-ticket job.",
+    "bizProfiles.home_services.couponPresets.seasonal_inspection.label":
+      "Seasonal inspection special: $30 off a roof, HVAC, or gutter inspection",
+    "bizProfiles.home_services.couponPresets.seasonal_inspection.description":
+      "Fills your slower season with real, useful inspection work instead of sitting idle.",
+    "bizProfiles.home_services.couponPresets.bundle_multiple_projects.label":
+      "10% off when you bundle two or more projects",
+    "bizProfiles.home_services.couponPresets.bundle_multiple_projects.description":
+      "Rewards a bigger job per visit, which is where your real margin is (less drive time per dollar billed).",
+    "bizProfiles.home_services.offerTemplates.new_customer_free_estimate.label":
+      "New customer special: Free on-site estimate + $100 off your first project",
+    "bizProfiles.home_services.offerTemplates.new_customer_free_estimate.description":
+      "Usually one of the most effective offers for a home-services business — lowers the risk of trying someone new.",
+    "bizProfiles.home_services.offerTemplates.seasonal_maintenance.label":
+      "Seasonal maintenance special (e.g. gutter cleaning before fall, AC tune-up before summer)",
+    "bizProfiles.home_services.offerTemplates.seasonal_maintenance.description":
+      "Turns a predictable seasonal need into booked revenue before it becomes an emergency call.",
+    "bizProfiles.home_services.couponAngles.firstTime":
+      "New customer special: Free on-site estimate + $100 off your first project",
+    "bizProfiles.home_services.couponAngles.seasonal":
+      "Seasonal inspection special: $30 off a roof, HVAC, or gutter inspection before the season changes",
+    "bizProfiles.home_services.couponAngles.slowDay": "5% off projects booked for weekday mornings",
+    "bizProfiles.home_services.pricingExamples.example1": "Project Quote",
+    "bizProfiles.home_services.pricingExamples.example2": "Service Call",
+    "bizProfiles.home_services.pricingExamples.example3": "Seasonal Inspection",
+    "bizProfiles.home_services.faq.item1.question": "Is {businessName} licensed and insured?",
+    "bizProfiles.home_services.faq.item1.answer":
+      "Call us to ask about our licensing and insurance before your project.",
+    "bizProfiles.home_services.faq.item2.question": "Does {businessName} offer free estimates?",
+    "bizProfiles.home_services.faq.item2.answer": "Call us to ask about scheduling a free on-site estimate.",
+    "bizProfiles.home_services.referralPresets.flat_off_both.referrerReward": "$100 off your next project",
+    "bizProfiles.home_services.referralPresets.flat_off_both.friendReward": "$100 off their first project",
+    "bizProfiles.home_services.referralPresets.flat_off_both.description":
+      "Straightforward cash-off for a big-ticket, word-of-mouth-driven business.",
+    "bizProfiles.home_services.referralPresets.pct_off_both.referrerReward": "10% off your next project",
+    "bizProfiles.home_services.referralPresets.pct_off_both.friendReward": "10% off their first project",
+    "bizProfiles.home_services.referralPresets.pct_off_both.description":
+      "Scales with project size instead of a flat amount that might be too small for a large renovation.",
+    "bizProfiles.home_services.pricingTips.quote_vs_flat.label":
+      "Decide quote-based vs. flat-rate per job type",
+    "bizProfiles.home_services.pricingTips.quote_vs_flat.description":
+      "A well-defined job (a gutter cleaning, a fixture swap) is a good flat-rate candidate; open-ended project work (a remodel, a roof replacement) is better quoted after seeing the site, so you're not underpricing the unknown.",
+    "bizProfiles.home_services.pricingTips.license_insurance_trust.label":
+      "Lead with your license and insurance",
+    "bizProfiles.home_services.pricingTips.license_insurance_trust.description":
+      "Being licensed and insured is one of the biggest trust signals a homeowner checks for before hiring — make it easy to find, and it justifies pricing above an unlicensed competitor.",
+    "bizProfiles.home_services.pricingTips.seasonal_demand_pricing.label":
+      "Raise prices in your peak season, discount your slow one",
+    "bizProfiles.home_services.pricingTips.seasonal_demand_pricing.description":
+      "Demand for most home-improvement work swings hard by season — pricing flat all year leaves money on the table in peak months and idle capacity in slow ones.",
+    "bizProfiles.home_services.pricingTips.bundle_multiple_projects.label":
+      "Bundle multiple projects at one property",
+    "bizProfiles.home_services.pricingTips.bundle_multiple_projects.description":
+      "A modest discount for handling two or three projects in one visit still nets you more per trip than separate jobs spread across different visits.",
+    "bizProfiles.repair_dropoff.label": "Repair, Alterations & Dry Cleaning",
+    "bizProfiles.repair_dropoff.competitorNoun": "repair and cleaning shops",
+    "bizProfiles.repair_dropoff.couponPresets.pct_off_first_item.label": "20% off your first item",
+    "bizProfiles.repair_dropoff.couponPresets.pct_off_first_item.description":
+      "Lowers the risk of trying a new shop for something you need done right.",
+    "bizProfiles.repair_dropoff.couponPresets.loyalty_punch.label": "Every 6th item free (punch card)",
+    "bizProfiles.repair_dropoff.couponPresets.loyalty_punch.description":
+      "Rewards repeat drop-offs without discounting any single order — a natural fit for a business built on small, frequent tickets.",
+    "bizProfiles.repair_dropoff.couponPresets.bundle_multiple_items.label":
+      "15% off when you drop off 3 or more items at once",
+    "bizProfiles.repair_dropoff.couponPresets.bundle_multiple_items.description":
+      "Rewards a bigger ticket per visit, which is worth more to you than the same items spread across separate trips.",
+    "bizProfiles.repair_dropoff.offerTemplates.new_customer_first_item.label":
+      "New customer special: 20% off your first item",
+    "bizProfiles.repair_dropoff.offerTemplates.new_customer_first_item.description":
+      "Usually one of the most effective offers for a drop-off business — lowers the risk of trying someone new.",
+    "bizProfiles.repair_dropoff.offerTemplates.slow_season_special.label":
+      "Off-season special (e.g. coats and heavy fabrics discounted in summer)",
+    "bizProfiles.repair_dropoff.offerTemplates.slow_season_special.description":
+      "Fills capacity during your predictable slow months instead of sitting idle.",
+    "bizProfiles.repair_dropoff.couponAngles.firstTime": "New customer special: 20% off your first item",
+    "bizProfiles.repair_dropoff.couponAngles.seasonal":
+      "Seasonal special: discount on coats and heavy fabrics before the weather turns",
+    "bizProfiles.repair_dropoff.couponAngles.slowDay": "10% off items dropped off on weekday mornings",
+    "bizProfiles.repair_dropoff.pricingExamples.example1": "Standard Item",
+    "bizProfiles.repair_dropoff.pricingExamples.example2": "Rush Order",
+    "bizProfiles.repair_dropoff.pricingExamples.example3": "Alteration",
+    "bizProfiles.repair_dropoff.faq.item1.question": "What's the typical turnaround time at {businessName}?",
+    "bizProfiles.repair_dropoff.faq.item1.answer":
+      "Call us to ask about current turnaround times for your item.",
+    "bizProfiles.repair_dropoff.faq.item2.question": "Does {businessName} offer rush service?",
+    "bizProfiles.repair_dropoff.faq.item2.answer":
+      "Call us to ask whether rush service is available and what it costs.",
+    "bizProfiles.repair_dropoff.referralPresets.flat_off_both.referrerReward": "$10 off your next order",
+    "bizProfiles.repair_dropoff.referralPresets.flat_off_both.friendReward": "$10 off their first order",
+    "bizProfiles.repair_dropoff.referralPresets.flat_off_both.description":
+      "Straightforward cash-off for a straightforward per-item business.",
+    "bizProfiles.repair_dropoff.referralPresets.pct_off_both.referrerReward": "15% off your next order",
+    "bizProfiles.repair_dropoff.referralPresets.pct_off_both.friendReward": "15% off their first order",
+    "bizProfiles.repair_dropoff.referralPresets.pct_off_both.description":
+      "Scales with order size instead of a flat amount that might be too small for a large order or too generous for a single item.",
+    "bizProfiles.repair_dropoff.pricingTips.per_item_vs_bundle.label": "Price by item, but reward the bundle",
+    "bizProfiles.repair_dropoff.pricingTips.per_item_vs_bundle.description":
+      "Keep your base pricing simple and per-item, then use a bundle or punch-card discount to reward customers who bring in more at once rather than discounting any single item.",
+    "bizProfiles.repair_dropoff.pricingTips.rush_fee.label": "Charge extra for rush turnaround",
+    "bizProfiles.repair_dropoff.pricingTips.rush_fee.description":
+      "A rush fee lets you accommodate an urgent request without slowing down every other order in the queue — price it high enough that it's worth reshuffling your workflow.",
+    "bizProfiles.repair_dropoff.pricingTips.seasonal_demand_pricing.label":
+      "Plan your slow season ahead of time",
+    "bizProfiles.repair_dropoff.pricingTips.seasonal_demand_pricing.description":
+      "Drop-off businesses often have a predictable slow season (e.g. lighter fabrics in summer) — a seasonal special fills capacity instead of leaving it idle.",
+    "bizProfiles.repair_dropoff.pricingTips.raise_when_backlog.label": "Raise prices when your backlog grows",
+    "bizProfiles.repair_dropoff.pricingTips.raise_when_backlog.description":
+      "A growing queue and longer turnaround times are a sign demand has outpaced your price — a modest increase is often overdue before you need to hire more help.",
+    "bizProfiles.recreation.label": "Recreation & Entertainment",
+    "bizProfiles.recreation.competitorNoun": "venues",
+    "bizProfiles.recreation.couponPresets.pct_off_admission.label": "20% off admission for your first visit",
+    "bizProfiles.recreation.couponPresets.pct_off_admission.description":
+      "Lowers the risk of trying a new venue for a family outing.",
+    "bizProfiles.recreation.couponPresets.group_discount.label": "10% off for groups of 6 or more",
+    "bizProfiles.recreation.couponPresets.group_discount.description":
+      "Encourages bigger parties to choose you over a competitor, and a bigger group means more concessions and add-on revenue too.",
+    "bizProfiles.recreation.couponPresets.birthday_party_special.label": "$25 off a birthday party package",
+    "bizProfiles.recreation.couponPresets.birthday_party_special.description":
+      "Turns your standard party package into the easy, obvious choice when someone's comparing venues for a kid's birthday.",
+    "bizProfiles.recreation.offerTemplates.new_visitor_special.label":
+      "New visitor special: 20% off admission",
+    "bizProfiles.recreation.offerTemplates.new_visitor_special.description":
+      "Usually one of the most effective offers for a ticketed venue — lowers the risk of trying somewhere new.",
+    "bizProfiles.recreation.offerTemplates.slow_weekday_special.label":
+      "Weekday special: discounted admission Monday-Thursday",
+    "bizProfiles.recreation.offerTemplates.slow_weekday_special.description":
+      "Fills your slowest hours — weekday afternoons before school lets out, or weekday evenings — with real paying visits.",
+    "bizProfiles.recreation.couponAngles.firstTime":
+      "New visitor special: 20% off admission for your first visit",
+    "bizProfiles.recreation.couponAngles.seasonal":
+      "Holiday and school-break special: discounted admission during peak break weeks",
+    "bizProfiles.recreation.couponAngles.slowDay": "Weekday special: discounted admission Monday-Thursday",
+    "bizProfiles.recreation.pricingExamples.example1": "Single Admission",
+    "bizProfiles.recreation.pricingExamples.example2": "Group Rate",
+    "bizProfiles.recreation.pricingExamples.example3": "Birthday Party Package",
+    "bizProfiles.recreation.faq.item1.question":
+      "Does {businessName} take walk-ins, or do I need to book a time slot?",
+    "bizProfiles.recreation.faq.item1.answer":
+      "Call us to check current availability and whether a reservation is recommended.",
+    "bizProfiles.recreation.faq.item2.question": "Does {businessName} host birthday parties or group events?",
+    "bizProfiles.recreation.faq.item2.answer":
+      "Call us to ask about birthday party packages and group rates.",
+    "bizProfiles.recreation.referralPresets.friend_ticket_both.referrerReward":
+      "A free admission on your next visit",
+    "bizProfiles.recreation.referralPresets.friend_ticket_both.friendReward": "20% off their first visit",
+    "bizProfiles.recreation.referralPresets.friend_ticket_both.description":
+      "A free visit is a strong reward for a business where each visit already has a clear ticket price.",
+    "bizProfiles.recreation.referralPresets.pct_off_both.referrerReward": "15% off your next visit",
+    "bizProfiles.recreation.referralPresets.pct_off_both.friendReward": "15% off their first visit",
+    "bizProfiles.recreation.referralPresets.pct_off_both.description":
+      "Scales with group size instead of a flat amount that might not matter much to a family of five.",
+    "bizProfiles.recreation.pricingTips.time_slot_pricing.label":
+      "Price peak and off-peak time slots differently",
+    "bizProfiles.recreation.pricingTips.time_slot_pricing.description":
+      "Weekend afternoons and school breaks are your highest-demand slots — price them at a premium and use weekday off-peak pricing to fill quieter hours instead of leaving them empty.",
+    "bizProfiles.recreation.pricingTips.group_and_party_packages.label":
+      "Build clear group and birthday party packages",
+    "bizProfiles.recreation.pricingTips.group_and_party_packages.description":
+      "A bundled package (admission + a private area + a host) is easier to sell and worth more per head than pricing everything a la carte.",
+    "bizProfiles.recreation.pricingTips.anchor_premium_package.label": "Anchor with your premium package",
+    "bizProfiles.recreation.pricingTips.anchor_premium_package.description":
+      "Showing a higher-tier package (VIP lanes, a deluxe party add-on) next to your standard one makes the standard option look like the reasonable choice.",
+    "bizProfiles.recreation.pricingTips.raise_when_booked_out.label":
+      "Raise prices once weekends are consistently booked out",
+    "bizProfiles.recreation.pricingTips.raise_when_booked_out.description":
+      "If your prime weekend and birthday-party slots are filling up in advance, that's a sign you're underpriced for the demand you actually have.",
+    "bizProfiles.events.label": "Events & Celebrations",
+    "bizProfiles.events.competitorNoun": "event vendors",
+    "bizProfiles.events.couponPresets.flat_off_booking.label": "$100 off when you book your date",
+    "bizProfiles.events.couponPresets.flat_off_booking.description":
+      "Lowers the risk of committing to a vendor for a once-in-a-lifetime date.",
+    "bizProfiles.events.couponPresets.early_booking_discount.label":
+      "10% off for booking 6+ months in advance",
+    "bizProfiles.events.couponPresets.early_booking_discount.description":
+      "Rewards the early booking that gives you the most lead time to plan and staff the event properly.",
+    "bizProfiles.events.couponPresets.off_season_discount.label":
+      "15% off events booked in your slower season",
+    "bizProfiles.events.couponPresets.off_season_discount.description":
+      "Fills dates that would otherwise go unbooked in your predictably slower months.",
+    "bizProfiles.events.offerTemplates.new_client_booking_special.label":
+      "New client special: $100 off when you book your date",
+    "bizProfiles.events.offerTemplates.new_client_booking_special.description":
+      "Usually one of the most effective offers for an events business — lowers the risk of committing to someone new.",
+    "bizProfiles.events.offerTemplates.off_peak_date_special.label":
+      "Off-peak date special (weekday or off-season events discounted)",
+    "bizProfiles.events.offerTemplates.off_peak_date_special.description":
+      "Fills the calendar dates couples and planners overlook in favor of Saturdays in peak season.",
+    "bizProfiles.events.couponAngles.firstTime": "New client special: $100 off when you book your date",
+    "bizProfiles.events.couponAngles.seasonal":
+      "Off-season special: 15% off events booked outside peak wedding season",
+    "bizProfiles.events.couponAngles.slowDay":
+      "Weekday event special: discounted rate for events booked Sunday-Thursday",
+    "bizProfiles.events.pricingExamples.example1": "Base Package",
+    "bizProfiles.events.pricingExamples.example2": "Full-Day Package",
+    "bizProfiles.events.pricingExamples.example3": "Add-On Service",
+    "bizProfiles.events.faq.item1.question": "Is {businessName} available on my date?",
+    "bizProfiles.events.faq.item1.answer": "Call us to check current availability for your date.",
+    "bizProfiles.events.faq.item2.question": "Does {businessName} require a deposit to book?",
+    "bizProfiles.events.faq.item2.answer":
+      "Call us to ask about our booking process and deposit requirements.",
+    "bizProfiles.events.referralPresets.flat_off_both.referrerReward": "$50 off your next booking",
+    "bizProfiles.events.referralPresets.flat_off_both.friendReward": "$50 off their event",
+    "bizProfiles.events.referralPresets.flat_off_both.description":
+      "A meaningful cash reward for a business where a single referral can be worth an entire event's worth of revenue.",
+    "bizProfiles.events.referralPresets.pct_off_both.referrerReward": "10% off your next booking",
+    "bizProfiles.events.referralPresets.pct_off_both.friendReward": "10% off their event",
+    "bizProfiles.events.referralPresets.pct_off_both.description":
+      "Scales with the size of the event instead of a flat amount that might be too small for a large celebration.",
+    "bizProfiles.events.pricingTips.package_tiers.label": "Build good/better/best packages",
+    "bizProfiles.events.pricingTips.package_tiers.description":
+      "Most clients planning an event compare packages, not line items — a clear tiered structure (basic, standard, premium) makes the mid-tier package feel like the obvious, reasonable choice.",
+    "bizProfiles.events.pricingTips.deposit_to_hold_date.label": "Require a deposit to hold the date",
+    "bizProfiles.events.pricingTips.deposit_to_hold_date.description":
+      "A deposit protects you from turning away other clients for a date that an undecided client later cancels, and it commits them to following through.",
+    "bizProfiles.events.pricingTips.peak_vs_offpeak_pricing.label":
+      "Price peak dates higher than off-peak ones",
+    "bizProfiles.events.pricingTips.peak_vs_offpeak_pricing.description":
+      "Saturdays in peak season are your highest-demand dates — price them at a premium and use an off-peak or weekday discount to fill dates that would otherwise sit empty.",
+    "bizProfiles.events.pricingTips.raise_when_booked_out.label":
+      "Raise prices once your peak dates book out early",
+    "bizProfiles.events.pricingTips.raise_when_booked_out.description":
+      "If your best dates are booking up months in advance, that's a clear sign you're priced below what the demand actually supports.",
+    "bizProfiles.car_wash_detailing.label": "Car Wash & Detailing",
+    "bizProfiles.car_wash_detailing.competitorNoun": "car washes",
+    "bizProfiles.car_wash_detailing.couponPresets.flat_off_first_wash.label": "$5 off your first wash",
+    "bizProfiles.car_wash_detailing.couponPresets.flat_off_first_wash.description":
+      "Lowers the risk of trying a new wash instead of the one a driver already uses out of habit.",
+    "bizProfiles.car_wash_detailing.couponPresets.free_upgrade_first_visit.label":
+      "Free upgrade to the next wash package on your first visit",
+    "bizProfiles.car_wash_detailing.couponPresets.free_upgrade_first_visit.description":
+      "Lets a new customer experience your best package at little extra cost, which is the easiest way to sell them on the higher tier next time.",
+    "bizProfiles.car_wash_detailing.couponPresets.detailing_bundle.label":
+      "15% off when you bundle a wash with a detailing service",
+    "bizProfiles.car_wash_detailing.couponPresets.detailing_bundle.description":
+      "Rewards the bigger-ticket visit, which is worth far more to you than a standalone wash.",
+    "bizProfiles.car_wash_detailing.offerTemplates.new_customer_first_wash.label":
+      "New customer special: $5 off your first wash",
+    "bizProfiles.car_wash_detailing.offerTemplates.new_customer_first_wash.description":
+      "Usually one of the most effective offers for a car wash — lowers the risk of trying somewhere new.",
+    "bizProfiles.car_wash_detailing.offerTemplates.membership_trial.label":
+      "Membership trial: first month of unlimited washes at a discount",
+    "bizProfiles.car_wash_detailing.offerTemplates.membership_trial.description":
+      "Memberships are the real recurring-revenue engine for a wash — a discounted trial month is the easiest way to get someone to try one.",
+    "bizProfiles.car_wash_detailing.couponAngles.firstTime": "New customer special: $5 off your first wash",
+    "bizProfiles.car_wash_detailing.couponAngles.seasonal":
+      "Seasonal special: discount on a full detail before or after winter road salt or pollen season",
+    "bizProfiles.car_wash_detailing.couponAngles.slowDay": "10% off washes on weekday mornings",
+    "bizProfiles.car_wash_detailing.pricingExamples.example1": "Basic Wash",
+    "bizProfiles.car_wash_detailing.pricingExamples.example2": "Full Detail",
+    "bizProfiles.car_wash_detailing.pricingExamples.example3": "Monthly Membership",
+    "bizProfiles.car_wash_detailing.faq.item1.question":
+      "Does {businessName} offer unlimited wash memberships?",
+    "bizProfiles.car_wash_detailing.faq.item1.answer":
+      "Call us to ask about current membership plans and pricing.",
+    "bizProfiles.car_wash_detailing.faq.item2.question":
+      "How long does a full detail take at {businessName}?",
+    "bizProfiles.car_wash_detailing.faq.item2.answer":
+      "Call us to ask about current detailing turnaround times.",
+    "bizProfiles.car_wash_detailing.referralPresets.free_wash_both.referrerReward":
+      "A free wash on your next visit",
+    "bizProfiles.car_wash_detailing.referralPresets.free_wash_both.friendReward": "$5 off their first wash",
+    "bizProfiles.car_wash_detailing.referralPresets.free_wash_both.description":
+      "A free wash is a strong, low-cost reward for a business where the marginal cost of one extra wash is small.",
+    "bizProfiles.car_wash_detailing.referralPresets.pct_off_both.referrerReward": "15% off your next visit",
+    "bizProfiles.car_wash_detailing.referralPresets.pct_off_both.friendReward": "15% off their first visit",
+    "bizProfiles.car_wash_detailing.referralPresets.pct_off_both.description":
+      "Scales with whether they choose a basic wash or a full detail, unlike a flat amount.",
+    "bizProfiles.car_wash_detailing.pricingTips.tiered_wash_packages.label":
+      "Build good/better/best wash packages",
+    "bizProfiles.car_wash_detailing.pricingTips.tiered_wash_packages.description":
+      "A simple 3-tier wash menu (basic, premium, full detail) makes the middle option feel like the obvious choice, and gives you room to upsell at the register.",
+    "bizProfiles.car_wash_detailing.pricingTips.membership_for_recurring_revenue.label":
+      "Sell memberships for recurring revenue",
+    "bizProfiles.car_wash_detailing.pricingTips.membership_for_recurring_revenue.description":
+      "An unlimited monthly membership turns an occasional customer into a predictable, repeat one — price it so a customer who washes twice a month already comes out ahead.",
+    "bizProfiles.car_wash_detailing.pricingTips.detailing_by_vehicle_size.label":
+      "Price detailing by vehicle size",
+    "bizProfiles.car_wash_detailing.pricingTips.detailing_by_vehicle_size.description":
+      "A full detail takes meaningfully longer on a 3-row SUV than a compact sedan — pricing by size keeps your per-hour rate consistent instead of underpricing bigger jobs.",
+    "bizProfiles.car_wash_detailing.pricingTips.off_peak_pricing.label":
+      "Discount your slowest hours, not your best ones",
+    "bizProfiles.car_wash_detailing.pricingTips.off_peak_pricing.description":
+      "Weekday mornings are usually your quietest — a modest discount there fills otherwise-empty bays without touching your full-price weekend rush.",
+    "bizProfiles.childcare.label": "Childcare & Early Education",
+    "bizProfiles.childcare.competitorNoun": "childcare providers",
+    "bizProfiles.childcare.couponPresets.flat_off_enrollment.label": "$50 off your first month's enrollment",
+    "bizProfiles.childcare.couponPresets.flat_off_enrollment.description":
+      "Lowers the real financial commitment of switching providers or enrolling for the first time.",
+    "bizProfiles.childcare.couponPresets.waived_registration_fee.label":
+      "Waived registration fee for new enrollments",
+    "bizProfiles.childcare.couponPresets.waived_registration_fee.description":
+      "Removes a one-time cost that can otherwise feel like an extra hurdle on top of monthly tuition.",
+    "bizProfiles.childcare.couponPresets.sibling_discount.label":
+      "10% off tuition for a second enrolled sibling",
+    "bizProfiles.childcare.couponPresets.sibling_discount.description":
+      "Reflects real savings from enrolling siblings together, and makes your program the easy choice for a family with more than one child.",
+    "bizProfiles.childcare.offerTemplates.new_family_special.label":
+      "New family special: waived registration fee + $50 off your first month",
+    "bizProfiles.childcare.offerTemplates.new_family_special.description":
+      "Usually one of the most effective offers for a childcare program — lowers the upfront cost of enrolling somewhere new.",
+    "bizProfiles.childcare.offerTemplates.seasonal_enrollment_push.label":
+      "Seasonal enrollment special (e.g. discounted registration before the new school year)",
+    "bizProfiles.childcare.offerTemplates.seasonal_enrollment_push.description":
+      "Fills open spots ahead of your highest-demand enrollment window instead of leaving them open.",
+    "bizProfiles.childcare.couponAngles.firstTime":
+      "New family special: waived registration fee + $50 off your first month",
+    "bizProfiles.childcare.couponAngles.seasonal":
+      "Back-to-school special: discounted registration for enrollments before the new school year",
+    "bizProfiles.childcare.couponAngles.slowDay":
+      "Discounted rate for part-time schedules on traditionally lower-enrollment days",
+    "bizProfiles.childcare.pricingExamples.example1": "Full-Time Enrollment",
+    "bizProfiles.childcare.pricingExamples.example2": "Part-Time Enrollment",
+    "bizProfiles.childcare.pricingExamples.example3": "Drop-In Care",
+    "bizProfiles.childcare.faq.item1.question": "Can I tour {businessName} before enrolling?",
+    "bizProfiles.childcare.faq.item1.answer": "Call us to schedule a tour and see current openings.",
+    "bizProfiles.childcare.faq.item2.question": "What is {businessName}'s current enrollment availability?",
+    "bizProfiles.childcare.faq.item2.answer":
+      "Call us to check current openings and waitlist status for your child's age group.",
+    "bizProfiles.childcare.referralPresets.flat_off_both.referrerReward": "$50 off your next month's tuition",
+    "bizProfiles.childcare.referralPresets.flat_off_both.friendReward": "$50 off their first month",
+    "bizProfiles.childcare.referralPresets.flat_off_both.description":
+      "A meaningful reward for an ongoing relationship — many parents choose childcare based on recommendations from other parents.",
+    "bizProfiles.childcare.referralPresets.free_week_both.referrerReward": "A free week of tuition",
+    "bizProfiles.childcare.referralPresets.free_week_both.friendReward": "A discounted first month",
+    "bizProfiles.childcare.referralPresets.free_week_both.description":
+      "A strong reward that costs you a predictable, capped amount rather than an open-ended percentage.",
+    "bizProfiles.childcare.pricingTips.tuition_tiers_by_schedule.label":
+      "Price by schedule, not just by age group",
+    "bizProfiles.childcare.pricingTips.tuition_tiers_by_schedule.description":
+      "Full-time, part-time, and drop-in care have very different staffing costs per child — pricing each schedule type separately keeps your margins honest across all of them.",
+    "bizProfiles.childcare.pricingTips.waitlist_signals_room_to_raise.label":
+      "A waitlist is a sign you can raise tuition",
+    "bizProfiles.childcare.pricingTips.waitlist_signals_room_to_raise.description":
+      "If you're consistently full with a waiting list, that's real evidence your current tuition is below what local demand actually supports.",
+    "bizProfiles.childcare.pricingTips.bundle_sibling_discount.label":
+      "Offer a modest sibling discount, not a steep one",
+    "bizProfiles.childcare.pricingTips.bundle_sibling_discount.description":
+      "A sibling discount should be enough to matter to a family's decision without meaningfully denting your per-child revenue — a modest percentage is usually enough.",
+    "bizProfiles.childcare.pricingTips.registration_fee_covers_admin.label":
+      "Price your registration fee to cover real admin costs",
+    "bizProfiles.childcare.pricingTips.registration_fee_covers_admin.description":
+      "A one-time registration fee (paperwork, background checks, a spot on the roster) should reflect the real cost of onboarding a new family, separate from ongoing tuition.",
+    "bizProfiles.lodging.label": "Lodging",
+    "bizProfiles.lodging.competitorNoun": "places to stay",
+    "bizProfiles.lodging.couponPresets.pct_off_first_stay.label": "15% off your first stay",
+    "bizProfiles.lodging.couponPresets.pct_off_first_stay.description":
+      "Lowers the risk of trying a new place to stay instead of a familiar chain or a previous favorite.",
+    "bizProfiles.lodging.couponPresets.extended_stay_discount.label": "10% off stays of 5 nights or longer",
+    "bizProfiles.lodging.couponPresets.extended_stay_discount.description":
+      "Rewards the longer, more valuable booking without discounting a quick overnight stay.",
+    "bizProfiles.lodging.couponPresets.off_season_discount.label":
+      "20% off stays booked in your slower season",
+    "bizProfiles.lodging.couponPresets.off_season_discount.description":
+      "Fills rooms that would otherwise sit empty in your predictably slower months.",
+    "bizProfiles.lodging.offerTemplates.new_guest_special.label":
+      "New guest special: 15% off your first stay",
+    "bizProfiles.lodging.offerTemplates.new_guest_special.description":
+      "Usually one of the most effective offers for a lodging business — lowers the risk of trying somewhere new.",
+    "bizProfiles.lodging.offerTemplates.off_peak_stay_special.label":
+      "Off-peak stay special (weekday or off-season nights discounted)",
+    "bizProfiles.lodging.offerTemplates.off_peak_stay_special.description":
+      "Fills the nights that fill last — midweek, or outside your peak travel season — with real bookings.",
+    "bizProfiles.lodging.couponAngles.firstTime": "New guest special: 15% off your first stay",
+    "bizProfiles.lodging.couponAngles.seasonal":
+      "Off-season special: 20% off stays booked outside peak travel season",
+    "bizProfiles.lodging.couponAngles.slowDay": "Midweek special: discounted rate for Sunday-Thursday stays",
+    "bizProfiles.lodging.pricingExamples.example1": "Nightly Rate",
+    "bizProfiles.lodging.pricingExamples.example2": "Weekly Rate",
+    "bizProfiles.lodging.pricingExamples.example3": "Extended Stay Rate",
+    "bizProfiles.lodging.faq.item1.question": "What is {businessName}'s check-in and check-out time?",
+    "bizProfiles.lodging.faq.item1.answer": "Call us to confirm current check-in and check-out times.",
+    "bizProfiles.lodging.faq.item2.question": "Does {businessName} have availability for my dates?",
+    "bizProfiles.lodging.faq.item2.answer": "Call us to check current availability for your dates.",
+    "bizProfiles.lodging.referralPresets.flat_off_both.referrerReward": "$25 off your next stay",
+    "bizProfiles.lodging.referralPresets.flat_off_both.friendReward": "$25 off their first stay",
+    "bizProfiles.lodging.referralPresets.flat_off_both.description":
+      "Straightforward cash-off for a business where a referred stay can be worth several nights of revenue.",
+    "bizProfiles.lodging.referralPresets.pct_off_both.referrerReward": "15% off your next stay",
+    "bizProfiles.lodging.referralPresets.pct_off_both.friendReward": "15% off their first stay",
+    "bizProfiles.lodging.referralPresets.pct_off_both.description":
+      "Scales with the length of the stay instead of a flat amount that might be too small for a week-long booking.",
+    "bizProfiles.lodging.pricingTips.peak_vs_offpeak_pricing.label":
+      "Price peak season and weekend nights higher",
+    "bizProfiles.lodging.pricingTips.peak_vs_offpeak_pricing.description":
+      "Weekend and peak-season nights are your highest-demand inventory — price them at a premium and use midweek or off-season discounts to fill nights that would otherwise sit empty.",
+    "bizProfiles.lodging.pricingTips.length_of_stay_discount.label":
+      "Discount longer stays, not shorter ones",
+    "bizProfiles.lodging.pricingTips.length_of_stay_discount.description":
+      "A guest staying a week costs you less per night to service than someone checking in and out daily — a length-of-stay discount reflects that real savings.",
+    "bizProfiles.lodging.pricingTips.raise_when_booked_out.label":
+      "Raise rates once your best dates book out early",
+    "bizProfiles.lodging.pricingTips.raise_when_booked_out.description":
+      "If your peak-season or weekend dates are consistently booking up well in advance, that's a sign your nightly rate is below what demand actually supports.",
+    "bizProfiles.lodging.pricingTips.bundle_add_ons.label":
+      "Bundle add-ons instead of discounting the room rate",
+    "bizProfiles.lodging.pricingTips.bundle_add_ons.description":
+      "A late checkout, parking, or a welcome package bundled into a slightly higher rate protects your base price better than discounting the room itself.",
+    "bizProfiles.tattoo_body_art.label": "Tattoo & Body Art",
+    "bizProfiles.tattoo_body_art.competitorNoun": "studios",
+    "bizProfiles.tattoo_body_art.couponPresets.flat_off_first_session.label":
+      "$20 off your first tattoo session",
+    "bizProfiles.tattoo_body_art.couponPresets.flat_off_first_session.description":
+      "Lowers the risk of trying a new artist for a decision that's permanent.",
+    "bizProfiles.tattoo_body_art.couponPresets.free_touchup.label": "Free touch-up session within 60 days",
+    "bizProfiles.tattoo_body_art.couponPresets.free_touchup.description":
+      "A strong trust signal — showing you stand behind your work costs you little for the reassurance it gives a first-time client.",
+    "bizProfiles.tattoo_body_art.couponPresets.flash_day_special.label":
+      "Flash day special: discounted pricing on pre-drawn flash designs",
+    "bizProfiles.tattoo_body_art.couponPresets.flash_day_special.description":
+      "Fills the chair with quick, lower-commitment bookings on days that would otherwise be open.",
+    "bizProfiles.tattoo_body_art.offerTemplates.new_client_first_session.label":
+      "New client special: $20 off your first tattoo session",
+    "bizProfiles.tattoo_body_art.offerTemplates.new_client_first_session.description":
+      "Usually one of the most effective offers for a tattoo studio — lowers the risk of trying a new artist.",
+    "bizProfiles.tattoo_body_art.offerTemplates.slow_weekday_special.label":
+      "Weekday special: discounted rate for sessions booked Monday-Thursday",
+    "bizProfiles.tattoo_body_art.offerTemplates.slow_weekday_special.description":
+      "Fills weekday chair time that would otherwise sit open while weekends stay booked out.",
+    "bizProfiles.tattoo_body_art.couponAngles.firstTime":
+      "New client special: $20 off your first tattoo session",
+    "bizProfiles.tattoo_body_art.couponAngles.seasonal":
+      "Flash day special: discounted pricing on pre-drawn flash designs for a limited time",
+    "bizProfiles.tattoo_body_art.couponAngles.slowDay":
+      "Weekday special: discounted rate for sessions booked Monday-Thursday",
+    "bizProfiles.tattoo_body_art.pricingExamples.example1": "Small Piece",
+    "bizProfiles.tattoo_body_art.pricingExamples.example2": "Standard Session",
+    "bizProfiles.tattoo_body_art.pricingExamples.example3": "Full Session (Half Day)",
+    "bizProfiles.tattoo_body_art.faq.item1.question":
+      "Does {businessName} require a consultation before booking a tattoo?",
+    "bizProfiles.tattoo_body_art.faq.item1.answer": "Call us to ask about scheduling a consultation.",
+    "bizProfiles.tattoo_body_art.faq.item2.question":
+      "Does {businessName} require a deposit to book a session?",
+    "bizProfiles.tattoo_body_art.faq.item2.answer":
+      "Call us to ask about our booking process and deposit requirements.",
+    "bizProfiles.tattoo_body_art.referralPresets.flat_off_both.referrerReward": "$20 off your next session",
+    "bizProfiles.tattoo_body_art.referralPresets.flat_off_both.friendReward": "$20 off their first session",
+    "bizProfiles.tattoo_body_art.referralPresets.flat_off_both.description":
+      "Straightforward cash-off that works well for a business built on repeat clients and word-of-mouth.",
+    "bizProfiles.tattoo_body_art.referralPresets.pct_off_both.referrerReward": "10% off your next session",
+    "bizProfiles.tattoo_body_art.referralPresets.pct_off_both.friendReward": "10% off their first session",
+    "bizProfiles.tattoo_body_art.referralPresets.pct_off_both.description":
+      "Scales with the size of the piece instead of a flat amount that might be too small for a large session.",
+    "bizProfiles.tattoo_body_art.pricingTips.deposit_protects_time.label":
+      "Always require a deposit to hold a booking",
+    "bizProfiles.tattoo_body_art.pricingTips.deposit_protects_time.description":
+      "A non-refundable deposit protects your chair time from a no-show or a late cancellation, and it's standard practice across the industry that clients already expect.",
+    "bizProfiles.tattoo_body_art.pricingTips.price_by_time_not_just_size.label":
+      "Price by time in the chair, not just design size",
+    "bizProfiles.tattoo_body_art.pricingTips.price_by_time_not_just_size.description":
+      "A small but highly detailed piece can take longer than a larger simple one — pricing by session length (or a blended hourly-plus-flat rate) keeps your rate honest across styles.",
+    "bizProfiles.tattoo_body_art.pricingTips.flash_vs_custom_pricing.label":
+      "Price flash designs lower than fully custom work",
+    "bizProfiles.tattoo_body_art.pricingTips.flash_vs_custom_pricing.description":
+      "Pre-drawn flash pieces take less consultation and design time than custom work — pricing them accordingly fills chair time with lower-commitment bookings without underpricing your custom pieces.",
+    "bizProfiles.tattoo_body_art.pricingTips.raise_when_booked_weeks_out.label":
+      "Raise prices once you're booked weeks in advance",
+    "bizProfiles.tattoo_body_art.pricingTips.raise_when_booked_weeks_out.description":
+      "A backlog of bookings stretching weeks out is a clear sign your current pricing is below what demand for your work actually supports.",
   },
   es: {
     "language.en": "Inglés",
@@ -4064,7 +4814,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.coupon.defaultInstructions": "Muestre este cupón en la tienda para canjearlo.",
     "dashboard.growth.coupon.defaultTerms": "Uno por cliente. No se puede combinar con otras ofertas.",
     "dashboard.growth.coupon.angleFirstTimeTitle": "Cliente por primera vez",
-    "dashboard.growth.coupon.angleFirstTimeWhy": "Elimina el riesgo de probar algo nuevo — suele ser la oferta con mayor conversión que un negocio puede ofrecer.",
+    "dashboard.growth.coupon.angleFirstTimeWhy": "Elimina el riesgo de probar algo nuevo — suele ser una de las ofertas más efectivas que un negocio puede ofrecer.",
     "dashboard.growth.coupon.angleSeasonalTitle": "Temporada o evento",
     "dashboard.growth.coupon.angleSeasonalWhy": "Vincula su oferta a un momento en el que los clientes ya están pensando, así se siente oportuna y no aleatoria.",
     "dashboard.growth.coupon.angleSlowDayTitle": "Llene un día lento",
@@ -4814,7 +5564,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.salon.offerTemplates.new_client_special.label":
       "Especial para clientes nuevos: 20% de descuento en su primera cita",
     "bizProfiles.salon.offerTemplates.new_client_special.description":
-      "La oferta con mayor conversión para un negocio de servicios — elimina el riesgo de probar algo nuevo.",
+      "Suele ser una de las ofertas más efectivas para un negocio de servicios — elimina el riesgo de probar algo nuevo.",
     "bizProfiles.salon.offerTemplates.referral_credit.label":
       "Recompensa por recomendación: $10 de crédito para usted y su amigo",
     "bizProfiles.salon.offerTemplates.referral_credit.description":
@@ -5267,7 +6017,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.gym_fitness.competitorNoun": "gimnasios",
     "bizProfiles.gym_fitness.couponPresets.first_month_pct.label": "50% de descuento en su primer mes",
     "bizProfiles.gym_fitness.couponPresets.first_month_pct.description":
-      "La oferta de gimnasio estándar y con mayor conversión — elimina el riesgo de comprometerse con un lugar nuevo.",
+      "Suele ser una de las ofertas más efectivas para gimnasios — elimina el riesgo de comprometerse con un lugar nuevo.",
     "bizProfiles.gym_fitness.couponPresets.no_enrollment_fee.label":
       "Sin cuota de inscripción para nuevos miembros este mes",
     "bizProfiles.gym_fitness.couponPresets.no_enrollment_fee.description":
@@ -5338,7 +6088,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.trades.offerTemplates.new_customer_first_call.label":
       "Especial para clientes nuevos: $25 de descuento en su primera visita de servicio",
     "bizProfiles.trades.offerTemplates.new_customer_first_call.description":
-      "La oferta con mayor conversión para un oficio — reduce el riesgo de probar a alguien nuevo.",
+      "Suele ser una de las ofertas más efectivas para un oficio — reduce el riesgo de probar a alguien nuevo.",
     "bizProfiles.trades.offerTemplates.seasonal_maintenance.label":
       "Especial de mantenimiento de temporada (p. ej. revisión del aire acondicionado antes del verano, revisión de la calefacción antes del invierno)",
     "bizProfiles.trades.offerTemplates.seasonal_maintenance.description":
@@ -5540,6 +6290,519 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfileOptions.spa.competitorNoun": "spas",
     "bizProfileOptions.tutor_education.label": "Tutoría y educación",
     "bizProfileOptions.tutor_education.competitorNoun": "servicios de tutoría",
+    "bizProfiles.home_services.label": "Servicios para el hogar y contratistas",
+    "bizProfiles.home_services.competitorNoun": "contratistas",
+    "bizProfiles.home_services.couponPresets.flat_off_first_project.label":
+      "$100 de descuento en su primer proyecto",
+    "bizProfiles.home_services.couponPresets.flat_off_first_project.description":
+      "Reduce el riesgo de elegir un nuevo contratista para un trabajo de alto costo.",
+    "bizProfiles.home_services.couponPresets.seasonal_inspection.label":
+      "Especial de inspección de temporada: $30 de descuento en una inspección de techo, aire acondicionado o canaletas",
+    "bizProfiles.home_services.couponPresets.seasonal_inspection.description":
+      "Llena su temporada más lenta con trabajo de inspección real y útil en lugar de estar inactivo.",
+    "bizProfiles.home_services.couponPresets.bundle_multiple_projects.label":
+      "10% de descuento al combinar dos o más proyectos",
+    "bizProfiles.home_services.couponPresets.bundle_multiple_projects.description":
+      "Premia un trabajo más grande por visita, que es donde está su verdadero margen (menos tiempo de traslado por cada dólar facturado).",
+    "bizProfiles.home_services.offerTemplates.new_customer_free_estimate.label":
+      "Especial para clientes nuevos: presupuesto gratis a domicilio + $100 de descuento en su primer proyecto",
+    "bizProfiles.home_services.offerTemplates.new_customer_free_estimate.description":
+      "Suele ser una de las ofertas más efectivas para un negocio de servicios para el hogar — reduce el riesgo de probar a alguien nuevo.",
+    "bizProfiles.home_services.offerTemplates.seasonal_maintenance.label":
+      "Especial de mantenimiento de temporada (p. ej. limpieza de canaletas antes del otoño, revisión del aire acondicionado antes del verano)",
+    "bizProfiles.home_services.offerTemplates.seasonal_maintenance.description":
+      "Convierte una necesidad de temporada predecible en ingresos reservados antes de que se vuelva una llamada de emergencia.",
+    "bizProfiles.home_services.couponAngles.firstTime":
+      "Especial para clientes nuevos: presupuesto gratis a domicilio + $100 de descuento en su primer proyecto",
+    "bizProfiles.home_services.couponAngles.seasonal":
+      "Especial de inspección de temporada: $30 de descuento en una inspección de techo, aire acondicionado o canaletas antes de que cambie la temporada",
+    "bizProfiles.home_services.couponAngles.slowDay":
+      "5% de descuento en proyectos reservados para las mañanas entre semana",
+    "bizProfiles.home_services.pricingExamples.example1": "Presupuesto de proyecto",
+    "bizProfiles.home_services.pricingExamples.example2": "Visita de servicio",
+    "bizProfiles.home_services.pricingExamples.example3": "Inspección de temporada",
+    "bizProfiles.home_services.faq.item1.question": "¿{businessName} tiene licencia y seguro?",
+    "bizProfiles.home_services.faq.item1.answer":
+      "Llámenos para preguntar sobre nuestra licencia y seguro antes de su proyecto.",
+    "bizProfiles.home_services.faq.item2.question": "¿{businessName} ofrece presupuestos gratis?",
+    "bizProfiles.home_services.faq.item2.answer":
+      "Llámenos para preguntar sobre cómo programar un presupuesto gratis a domicilio.",
+    "bizProfiles.home_services.referralPresets.flat_off_both.referrerReward":
+      "$100 de descuento en su próximo proyecto",
+    "bizProfiles.home_services.referralPresets.flat_off_both.friendReward":
+      "$100 de descuento en su primer proyecto",
+    "bizProfiles.home_services.referralPresets.flat_off_both.description":
+      "Descuento directo en efectivo para un negocio de trabajos grandes que depende del boca a boca.",
+    "bizProfiles.home_services.referralPresets.pct_off_both.referrerReward":
+      "10% de descuento en su próximo proyecto",
+    "bizProfiles.home_services.referralPresets.pct_off_both.friendReward":
+      "10% de descuento en su primer proyecto",
+    "bizProfiles.home_services.referralPresets.pct_off_both.description":
+      "Se ajusta al tamaño del proyecto en lugar de un monto fijo que podría ser demasiado pequeño para una renovación grande.",
+    "bizProfiles.home_services.pricingTips.quote_vs_flat.label":
+      "Decida entre presupuesto por proyecto y tarifa fija según el tipo de trabajo",
+    "bizProfiles.home_services.pricingTips.quote_vs_flat.description":
+      "Un trabajo bien definido (una limpieza de canaletas, un cambio de accesorio) es un buen candidato para tarifa fija; un proyecto más abierto (una remodelación, un cambio de techo) es mejor cotizarlo después de ver el sitio, para no subvalorar lo desconocido.",
+    "bizProfiles.home_services.pricingTips.license_insurance_trust.label": "Destaque su licencia y seguro",
+    "bizProfiles.home_services.pricingTips.license_insurance_trust.description":
+      "Tener licencia y seguro es una de las señales de confianza más importantes que busca un propietario antes de contratar — facilite que se vea, y esto justifica un precio más alto que el de un competidor sin licencia.",
+    "bizProfiles.home_services.pricingTips.seasonal_demand_pricing.label":
+      "Suba los precios en su temporada alta y ofrezca descuentos en la temporada baja",
+    "bizProfiles.home_services.pricingTips.seasonal_demand_pricing.description":
+      "La demanda de la mayoría de los trabajos de mejoras para el hogar cambia mucho según la temporada — mantener el mismo precio todo el año deja dinero sobre la mesa en los meses de alta demanda y capacidad ociosa en los meses lentos.",
+    "bizProfiles.home_services.pricingTips.bundle_multiple_projects.label":
+      "Combine varios proyectos en una sola propiedad",
+    "bizProfiles.home_services.pricingTips.bundle_multiple_projects.description":
+      "Un descuento modesto por atender dos o tres proyectos en una sola visita igual le deja más ganancia por viaje que trabajos separados en visitas distintas.",
+    "bizProfiles.repair_dropoff.label": "Reparaciones, arreglos y tintorería",
+    "bizProfiles.repair_dropoff.competitorNoun": "talleres y tintorerías",
+    "bizProfiles.repair_dropoff.couponPresets.pct_off_first_item.label":
+      "20% de descuento en su primer artículo",
+    "bizProfiles.repair_dropoff.couponPresets.pct_off_first_item.description":
+      "Reduce el riesgo de probar un taller nuevo para algo que necesita que quede bien hecho.",
+    "bizProfiles.repair_dropoff.couponPresets.loyalty_punch.label":
+      "El sexto artículo gratis (tarjeta de sellos)",
+    "bizProfiles.repair_dropoff.couponPresets.loyalty_punch.description":
+      "Premia las entregas frecuentes sin descontar ningún pedido individual — encaja bien con un negocio basado en compras pequeñas y frecuentes.",
+    "bizProfiles.repair_dropoff.couponPresets.bundle_multiple_items.label":
+      "15% de descuento al entregar 3 o más artículos a la vez",
+    "bizProfiles.repair_dropoff.couponPresets.bundle_multiple_items.description":
+      "Premia una compra más grande por visita, que vale más para usted que los mismos artículos repartidos en visitas separadas.",
+    "bizProfiles.repair_dropoff.offerTemplates.new_customer_first_item.label":
+      "Especial para clientes nuevos: 20% de descuento en su primer artículo",
+    "bizProfiles.repair_dropoff.offerTemplates.new_customer_first_item.description":
+      "Suele ser una de las ofertas más efectivas para un negocio donde los clientes dejan sus artículos — reduce el riesgo de probar a alguien nuevo.",
+    "bizProfiles.repair_dropoff.offerTemplates.slow_season_special.label":
+      "Especial de temporada baja (p. ej. descuento en abrigos y telas gruesas en verano)",
+    "bizProfiles.repair_dropoff.offerTemplates.slow_season_special.description":
+      "Llena su capacidad durante los meses lentos predecibles en lugar de estar inactivo.",
+    "bizProfiles.repair_dropoff.couponAngles.firstTime":
+      "Especial para clientes nuevos: 20% de descuento en su primer artículo",
+    "bizProfiles.repair_dropoff.couponAngles.seasonal":
+      "Especial de temporada: descuento en abrigos y telas gruesas antes de que cambie el clima",
+    "bizProfiles.repair_dropoff.couponAngles.slowDay":
+      "10% de descuento en artículos entregados las mañanas entre semana",
+    "bizProfiles.repair_dropoff.pricingExamples.example1": "Artículo estándar",
+    "bizProfiles.repair_dropoff.pricingExamples.example2": "Pedido urgente",
+    "bizProfiles.repair_dropoff.pricingExamples.example3": "Arreglo",
+    "bizProfiles.repair_dropoff.faq.item1.question":
+      "¿Cuál es el tiempo de entrega típico en {businessName}?",
+    "bizProfiles.repair_dropoff.faq.item1.answer":
+      "Llámenos para preguntar sobre los tiempos de entrega actuales para su artículo.",
+    "bizProfiles.repair_dropoff.faq.item2.question": "¿{businessName} ofrece servicio urgente?",
+    "bizProfiles.repair_dropoff.faq.item2.answer":
+      "Llámenos para preguntar si el servicio urgente está disponible y cuánto cuesta.",
+    "bizProfiles.repair_dropoff.referralPresets.flat_off_both.referrerReward":
+      "$10 de descuento en su próximo pedido",
+    "bizProfiles.repair_dropoff.referralPresets.flat_off_both.friendReward":
+      "$10 de descuento en su primer pedido",
+    "bizProfiles.repair_dropoff.referralPresets.flat_off_both.description":
+      "Descuento directo en efectivo para un negocio sencillo de precio por artículo.",
+    "bizProfiles.repair_dropoff.referralPresets.pct_off_both.referrerReward":
+      "15% de descuento en su próximo pedido",
+    "bizProfiles.repair_dropoff.referralPresets.pct_off_both.friendReward":
+      "15% de descuento en su primer pedido",
+    "bizProfiles.repair_dropoff.referralPresets.pct_off_both.description":
+      "Se ajusta al tamaño del pedido en lugar de un monto fijo que podría ser muy pequeño para un pedido grande o muy generoso para un solo artículo.",
+    "bizProfiles.repair_dropoff.pricingTips.per_item_vs_bundle.label":
+      "Cobre por artículo, pero premie el paquete",
+    "bizProfiles.repair_dropoff.pricingTips.per_item_vs_bundle.description":
+      "Mantenga su precio base simple y por artículo, y use un descuento por paquete o una tarjeta de sellos para premiar a los clientes que traen más artículos a la vez, en lugar de descontar un solo artículo.",
+    "bizProfiles.repair_dropoff.pricingTips.rush_fee.label": "Cobre extra por entrega urgente",
+    "bizProfiles.repair_dropoff.pricingTips.rush_fee.description":
+      "Un cargo por urgencia le permite atender una solicitud urgente sin retrasar el resto de los pedidos en la fila — cóbrelo lo suficientemente alto para que valga la pena reorganizar su flujo de trabajo.",
+    "bizProfiles.repair_dropoff.pricingTips.seasonal_demand_pricing.label":
+      "Planifique su temporada baja con anticipación",
+    "bizProfiles.repair_dropoff.pricingTips.seasonal_demand_pricing.description":
+      "Los negocios donde los clientes dejan sus artículos suelen tener una temporada baja predecible (p. ej. telas más ligeras en verano) — un especial de temporada llena la capacidad en lugar de dejarla inactiva.",
+    "bizProfiles.repair_dropoff.pricingTips.raise_when_backlog.label":
+      "Suba los precios cuando aumente su acumulado de pedidos",
+    "bizProfiles.repair_dropoff.pricingTips.raise_when_backlog.description":
+      "Una fila creciente y tiempos de entrega más largos son señal de que la demanda superó su precio — un aumento modesto suele ser necesario antes de tener que contratar más ayuda.",
+    "bizProfiles.recreation.label": "Recreación y entretenimiento",
+    "bizProfiles.recreation.competitorNoun": "lugares de entretenimiento",
+    "bizProfiles.recreation.couponPresets.pct_off_admission.label":
+      "20% de descuento en la entrada para su primera visita",
+    "bizProfiles.recreation.couponPresets.pct_off_admission.description":
+      "Reduce el riesgo de probar un lugar nuevo para una salida familiar.",
+    "bizProfiles.recreation.couponPresets.group_discount.label":
+      "10% de descuento para grupos de 6 o más personas",
+    "bizProfiles.recreation.couponPresets.group_discount.description":
+      "Anima a grupos más grandes a elegirlo a usted en lugar de a la competencia, y un grupo más grande también significa más ventas de comida y extras.",
+    "bizProfiles.recreation.couponPresets.birthday_party_special.label":
+      "$25 de descuento en un paquete de fiesta de cumpleaños",
+    "bizProfiles.recreation.couponPresets.birthday_party_special.description":
+      "Convierte su paquete estándar de fiesta en la opción fácil y obvia cuando alguien está comparando lugares para el cumpleaños de un niño.",
+    "bizProfiles.recreation.offerTemplates.new_visitor_special.label":
+      "Especial para visitantes nuevos: 20% de descuento en la entrada",
+    "bizProfiles.recreation.offerTemplates.new_visitor_special.description":
+      "Suele ser una de las ofertas más efectivas para un lugar con entrada pagada — reduce el riesgo de probar un lugar nuevo.",
+    "bizProfiles.recreation.offerTemplates.slow_weekday_special.label":
+      "Especial entre semana: entrada con descuento de lunes a jueves",
+    "bizProfiles.recreation.offerTemplates.slow_weekday_special.description":
+      "Llena sus horas más lentas — tardes entre semana antes de que salgan de la escuela, o noches entre semana — con visitas reales que pagan.",
+    "bizProfiles.recreation.couponAngles.firstTime":
+      "Especial para visitantes nuevos: 20% de descuento en la entrada para su primera visita",
+    "bizProfiles.recreation.couponAngles.seasonal":
+      "Especial de vacaciones escolares: entrada con descuento durante las semanas de mayor demanda",
+    "bizProfiles.recreation.couponAngles.slowDay":
+      "Especial entre semana: entrada con descuento de lunes a jueves",
+    "bizProfiles.recreation.pricingExamples.example1": "Entrada individual",
+    "bizProfiles.recreation.pricingExamples.example2": "Tarifa grupal",
+    "bizProfiles.recreation.pricingExamples.example3": "Paquete de fiesta de cumpleaños",
+    "bizProfiles.recreation.faq.item1.question":
+      "¿{businessName} acepta visitas sin reserva, o necesito reservar un horario?",
+    "bizProfiles.recreation.faq.item1.answer":
+      "Llámenos para consultar la disponibilidad actual y si se recomienda reservar.",
+    "bizProfiles.recreation.faq.item2.question":
+      "¿{businessName} organiza fiestas de cumpleaños o eventos grupales?",
+    "bizProfiles.recreation.faq.item2.answer":
+      "Llámenos para preguntar sobre paquetes de fiesta de cumpleaños y tarifas grupales.",
+    "bizProfiles.recreation.referralPresets.friend_ticket_both.referrerReward":
+      "Una entrada gratis en su próxima visita",
+    "bizProfiles.recreation.referralPresets.friend_ticket_both.friendReward":
+      "20% de descuento en su primera visita",
+    "bizProfiles.recreation.referralPresets.friend_ticket_both.description":
+      "Una visita gratis es un premio atractivo para un negocio donde cada visita ya tiene un precio de entrada claro.",
+    "bizProfiles.recreation.referralPresets.pct_off_both.referrerReward":
+      "15% de descuento en su próxima visita",
+    "bizProfiles.recreation.referralPresets.pct_off_both.friendReward":
+      "15% de descuento en su primera visita",
+    "bizProfiles.recreation.referralPresets.pct_off_both.description":
+      "Se ajusta al tamaño del grupo en lugar de un monto fijo que podría no importar mucho para una familia de cinco personas.",
+    "bizProfiles.recreation.pricingTips.time_slot_pricing.label":
+      "Cobre distinto en horarios de alta y baja demanda",
+    "bizProfiles.recreation.pricingTips.time_slot_pricing.description":
+      "Las tardes de fin de semana y las vacaciones escolares son sus horarios de mayor demanda — cóbrelos a un precio más alto y use precios más bajos entre semana para llenar las horas tranquilas en lugar de dejarlas vacías.",
+    "bizProfiles.recreation.pricingTips.group_and_party_packages.label":
+      "Cree paquetes claros para grupos y fiestas de cumpleaños",
+    "bizProfiles.recreation.pricingTips.group_and_party_packages.description":
+      "Un paquete combinado (entrada + un área privada + un anfitrión) es más fácil de vender y vale más por persona que cobrar todo por separado.",
+    "bizProfiles.recreation.pricingTips.anchor_premium_package.label":
+      "Use su paquete premium como referencia",
+    "bizProfiles.recreation.pricingTips.anchor_premium_package.description":
+      "Mostrar un paquete de nivel superior (carriles VIP, un extra de fiesta deluxe) junto al estándar hace que la opción estándar parezca la elección razonable.",
+    "bizProfiles.recreation.pricingTips.raise_when_booked_out.label":
+      "Suba los precios cuando los fines de semana estén siempre llenos",
+    "bizProfiles.recreation.pricingTips.raise_when_booked_out.description":
+      "Si sus mejores horarios de fin de semana y fiestas de cumpleaños se llenan con anticipación, es señal de que su precio está por debajo de la demanda real que tiene.",
+    "bizProfiles.events.label": "Eventos y celebraciones",
+    "bizProfiles.events.competitorNoun": "proveedores de eventos",
+    "bizProfiles.events.couponPresets.flat_off_booking.label": "$100 de descuento al reservar su fecha",
+    "bizProfiles.events.couponPresets.flat_off_booking.description":
+      "Reduce el riesgo de comprometerse con un proveedor para una fecha única en la vida.",
+    "bizProfiles.events.couponPresets.early_booking_discount.label":
+      "10% de descuento por reservar con 6 o más meses de anticipación",
+    "bizProfiles.events.couponPresets.early_booking_discount.description":
+      "Premia la reserva anticipada, que le da más tiempo para planificar y organizar el personal del evento adecuadamente.",
+    "bizProfiles.events.couponPresets.off_season_discount.label":
+      "15% de descuento en eventos reservados en su temporada más lenta",
+    "bizProfiles.events.couponPresets.off_season_discount.description":
+      "Llena fechas que de otro modo quedarían libres en sus meses predeciblemente más lentos.",
+    "bizProfiles.events.offerTemplates.new_client_booking_special.label":
+      "Especial para clientes nuevos: $100 de descuento al reservar su fecha",
+    "bizProfiles.events.offerTemplates.new_client_booking_special.description":
+      "Suele ser una de las ofertas más efectivas para un negocio de eventos — reduce el riesgo de comprometerse con alguien nuevo.",
+    "bizProfiles.events.offerTemplates.off_peak_date_special.label":
+      "Especial de fechas de baja demanda (descuento en eventos entre semana o fuera de temporada)",
+    "bizProfiles.events.offerTemplates.off_peak_date_special.description":
+      "Llena las fechas del calendario que las parejas y organizadores pasan por alto a favor de los sábados en temporada alta.",
+    "bizProfiles.events.couponAngles.firstTime":
+      "Especial para clientes nuevos: $100 de descuento al reservar su fecha",
+    "bizProfiles.events.couponAngles.seasonal":
+      "Especial de temporada baja: 15% de descuento en eventos reservados fuera de la temporada alta de bodas",
+    "bizProfiles.events.couponAngles.slowDay":
+      "Especial de eventos entre semana: tarifa con descuento para eventos reservados de domingo a jueves",
+    "bizProfiles.events.pricingExamples.example1": "Paquete básico",
+    "bizProfiles.events.pricingExamples.example2": "Paquete de día completo",
+    "bizProfiles.events.pricingExamples.example3": "Servicio adicional",
+    "bizProfiles.events.faq.item1.question": "¿{businessName} está disponible en mi fecha?",
+    "bizProfiles.events.faq.item1.answer": "Llámenos para consultar la disponibilidad actual de su fecha.",
+    "bizProfiles.events.faq.item2.question": "¿{businessName} requiere un depósito para reservar?",
+    "bizProfiles.events.faq.item2.answer":
+      "Llámenos para preguntar sobre nuestro proceso de reserva y los requisitos de depósito.",
+    "bizProfiles.events.referralPresets.flat_off_both.referrerReward":
+      "$50 de descuento en su próxima reserva",
+    "bizProfiles.events.referralPresets.flat_off_both.friendReward": "$50 de descuento en su evento",
+    "bizProfiles.events.referralPresets.flat_off_both.description":
+      "Un premio en efectivo significativo para un negocio donde una sola referencia puede valer el ingreso de un evento completo.",
+    "bizProfiles.events.referralPresets.pct_off_both.referrerReward":
+      "10% de descuento en su próxima reserva",
+    "bizProfiles.events.referralPresets.pct_off_both.friendReward": "10% de descuento en su evento",
+    "bizProfiles.events.referralPresets.pct_off_both.description":
+      "Se ajusta al tamaño del evento en lugar de un monto fijo que podría ser demasiado pequeño para una celebración grande.",
+    "bizProfiles.events.pricingTips.package_tiers.label": "Cree paquetes de nivel básico, medio y premium",
+    "bizProfiles.events.pricingTips.package_tiers.description":
+      "La mayoría de los clientes que planean un evento comparan paquetes, no artículos individuales — una estructura clara por niveles (básico, estándar, premium) hace que el paquete intermedio parezca la elección obvia y razonable.",
+    "bizProfiles.events.pricingTips.deposit_to_hold_date.label": "Exija un depósito para apartar la fecha",
+    "bizProfiles.events.pricingTips.deposit_to_hold_date.description":
+      "Un depósito lo protege de rechazar a otros clientes por una fecha que un cliente indeciso cancela después, y lo compromete a seguir adelante.",
+    "bizProfiles.events.pricingTips.peak_vs_offpeak_pricing.label":
+      "Cobre más por las fechas de alta demanda que por las de baja demanda",
+    "bizProfiles.events.pricingTips.peak_vs_offpeak_pricing.description":
+      "Los sábados en temporada alta son sus fechas de mayor demanda — cóbrelas a un precio más alto y use un descuento de temporada baja o entre semana para llenar fechas que de otro modo quedarían vacías.",
+    "bizProfiles.events.pricingTips.raise_when_booked_out.label":
+      "Suba los precios cuando sus fechas de alta demanda se reserven con mucha anticipación",
+    "bizProfiles.events.pricingTips.raise_when_booked_out.description":
+      "Si sus mejores fechas se reservan con meses de anticipación, es una señal clara de que su precio está por debajo de lo que realmente soporta la demanda.",
+    "bizProfiles.car_wash_detailing.label": "Autolavado y detallado",
+    "bizProfiles.car_wash_detailing.competitorNoun": "autolavados",
+    "bizProfiles.car_wash_detailing.couponPresets.flat_off_first_wash.label":
+      "$5 de descuento en su primer lavado",
+    "bizProfiles.car_wash_detailing.couponPresets.flat_off_first_wash.description":
+      "Reduce el riesgo de probar un autolavado nuevo en lugar del que un conductor ya usa por costumbre.",
+    "bizProfiles.car_wash_detailing.couponPresets.free_upgrade_first_visit.label":
+      "Mejora gratis al siguiente paquete de lavado en su primera visita",
+    "bizProfiles.car_wash_detailing.couponPresets.free_upgrade_first_visit.description":
+      "Permite que un cliente nuevo pruebe su mejor paquete con poco costo extra, lo cual facilita venderle el nivel superior la próxima vez.",
+    "bizProfiles.car_wash_detailing.couponPresets.detailing_bundle.label":
+      "15% de descuento al combinar un lavado con un servicio de detallado",
+    "bizProfiles.car_wash_detailing.couponPresets.detailing_bundle.description":
+      "Premia la visita de mayor valor, que vale mucho más para usted que un lavado por separado.",
+    "bizProfiles.car_wash_detailing.offerTemplates.new_customer_first_wash.label":
+      "Especial para clientes nuevos: $5 de descuento en su primer lavado",
+    "bizProfiles.car_wash_detailing.offerTemplates.new_customer_first_wash.description":
+      "Suele ser una de las ofertas más efectivas para un autolavado — reduce el riesgo de probar un lugar nuevo.",
+    "bizProfiles.car_wash_detailing.offerTemplates.membership_trial.label":
+      "Prueba de membresía: primer mes de lavados ilimitados con descuento",
+    "bizProfiles.car_wash_detailing.offerTemplates.membership_trial.description":
+      "Las membresías son el verdadero motor de ingresos recurrentes para un autolavado — un mes de prueba con descuento es la forma más fácil de que alguien la pruebe.",
+    "bizProfiles.car_wash_detailing.couponAngles.firstTime":
+      "Especial para clientes nuevos: $5 de descuento en su primer lavado",
+    "bizProfiles.car_wash_detailing.couponAngles.seasonal":
+      "Especial de temporada: descuento en un detallado completo antes o después de la sal del invierno o la temporada de polen",
+    "bizProfiles.car_wash_detailing.couponAngles.slowDay":
+      "10% de descuento en lavados las mañanas entre semana",
+    "bizProfiles.car_wash_detailing.pricingExamples.example1": "Lavado básico",
+    "bizProfiles.car_wash_detailing.pricingExamples.example2": "Detallado completo",
+    "bizProfiles.car_wash_detailing.pricingExamples.example3": "Membresía mensual",
+    "bizProfiles.car_wash_detailing.faq.item1.question":
+      "¿{businessName} ofrece membresías de lavados ilimitados?",
+    "bizProfiles.car_wash_detailing.faq.item1.answer":
+      "Llámenos para preguntar sobre los planes de membresía actuales y sus precios.",
+    "bizProfiles.car_wash_detailing.faq.item2.question":
+      "¿Cuánto dura un detallado completo en {businessName}?",
+    "bizProfiles.car_wash_detailing.faq.item2.answer":
+      "Llámenos para preguntar sobre los tiempos actuales de entrega del detallado.",
+    "bizProfiles.car_wash_detailing.referralPresets.free_wash_both.referrerReward":
+      "Un lavado gratis en su próxima visita",
+    "bizProfiles.car_wash_detailing.referralPresets.free_wash_both.friendReward":
+      "$5 de descuento en su primer lavado",
+    "bizProfiles.car_wash_detailing.referralPresets.free_wash_both.description":
+      "Un lavado gratis es un premio atractivo y de bajo costo para un negocio donde el costo adicional de un lavado extra es pequeño.",
+    "bizProfiles.car_wash_detailing.referralPresets.pct_off_both.referrerReward":
+      "15% de descuento en su próxima visita",
+    "bizProfiles.car_wash_detailing.referralPresets.pct_off_both.friendReward":
+      "15% de descuento en su primera visita",
+    "bizProfiles.car_wash_detailing.referralPresets.pct_off_both.description":
+      "Se ajusta según si eligen un lavado básico o un detallado completo, a diferencia de un monto fijo.",
+    "bizProfiles.car_wash_detailing.pricingTips.tiered_wash_packages.label":
+      "Cree paquetes de lavado de nivel básico, medio y premium",
+    "bizProfiles.car_wash_detailing.pricingTips.tiered_wash_packages.description":
+      "Un menú simple de 3 niveles de lavado (básico, premium, detallado completo) hace que la opción intermedia parezca la elección obvia, y le da espacio para vender más en la caja.",
+    "bizProfiles.car_wash_detailing.pricingTips.membership_for_recurring_revenue.label":
+      "Venda membresías para tener ingresos recurrentes",
+    "bizProfiles.car_wash_detailing.pricingTips.membership_for_recurring_revenue.description":
+      "Una membresía mensual ilimitada convierte a un cliente ocasional en uno recurrente y predecible — cóbrela de manera que un cliente que lava su auto dos veces al mes ya salga ganando.",
+    "bizProfiles.car_wash_detailing.pricingTips.detailing_by_vehicle_size.label":
+      "Cobre el detallado según el tamaño del vehículo",
+    "bizProfiles.car_wash_detailing.pricingTips.detailing_by_vehicle_size.description":
+      "Un detallado completo toma bastante más tiempo en una camioneta grande que en un sedán compacto — cobrar según el tamaño mantiene su tarifa por hora consistente en lugar de subvalorar los trabajos más grandes.",
+    "bizProfiles.car_wash_detailing.pricingTips.off_peak_pricing.label":
+      "Ofrezca descuentos en sus horas más lentas, no en las mejores",
+    "bizProfiles.car_wash_detailing.pricingTips.off_peak_pricing.description":
+      "Las mañanas entre semana suelen ser las más tranquilas — un descuento modesto ahí llena espacios de lavado que de otro modo estarían vacíos, sin afectar su tarifa completa en el fin de semana de mayor demanda.",
+    "bizProfiles.childcare.label": "Guarderías y educación temprana",
+    "bizProfiles.childcare.competitorNoun": "proveedores de cuidado infantil",
+    "bizProfiles.childcare.couponPresets.flat_off_enrollment.label":
+      "$50 de descuento en la inscripción del primer mes",
+    "bizProfiles.childcare.couponPresets.flat_off_enrollment.description":
+      "Reduce el compromiso económico real de cambiar de proveedor o inscribirse por primera vez.",
+    "bizProfiles.childcare.couponPresets.waived_registration_fee.label":
+      "Sin cuota de inscripción para familias nuevas",
+    "bizProfiles.childcare.couponPresets.waived_registration_fee.description":
+      "Elimina un costo único que de otro modo puede sentirse como un obstáculo adicional además de la colegiatura mensual.",
+    "bizProfiles.childcare.couponPresets.sibling_discount.label":
+      "10% de descuento en la colegiatura del segundo hermano inscrito",
+    "bizProfiles.childcare.couponPresets.sibling_discount.description":
+      "Refleja el ahorro real de inscribir hermanos juntos, y convierte su programa en la opción fácil para una familia con más de un hijo.",
+    "bizProfiles.childcare.offerTemplates.new_family_special.label":
+      "Especial para familias nuevas: cuota de inscripción gratis + $50 de descuento en el primer mes",
+    "bizProfiles.childcare.offerTemplates.new_family_special.description":
+      "Suele ser una de las ofertas más efectivas para un programa de cuidado infantil — reduce el costo inicial de inscribirse en un lugar nuevo.",
+    "bizProfiles.childcare.offerTemplates.seasonal_enrollment_push.label":
+      "Especial de inscripción de temporada (p. ej. descuento en la inscripción antes del nuevo ciclo escolar)",
+    "bizProfiles.childcare.offerTemplates.seasonal_enrollment_push.description":
+      "Llena los cupos disponibles antes de su período de mayor demanda de inscripción, en lugar de dejarlos vacíos.",
+    "bizProfiles.childcare.couponAngles.firstTime":
+      "Especial para familias nuevas: cuota de inscripción gratis + $50 de descuento en el primer mes",
+    "bizProfiles.childcare.couponAngles.seasonal":
+      "Especial de regreso a clases: descuento en la inscripción antes del nuevo ciclo escolar",
+    "bizProfiles.childcare.couponAngles.slowDay":
+      "Tarifa con descuento para horarios de medio tiempo en los días de menor inscripción habitual",
+    "bizProfiles.childcare.pricingExamples.example1": "Inscripción de tiempo completo",
+    "bizProfiles.childcare.pricingExamples.example2": "Inscripción de medio tiempo",
+    "bizProfiles.childcare.pricingExamples.example3": "Cuidado sin cita",
+    "bizProfiles.childcare.faq.item1.question": "¿Puedo visitar {businessName} antes de inscribirme?",
+    "bizProfiles.childcare.faq.item1.answer":
+      "Llámenos para programar una visita y conocer los cupos disponibles.",
+    "bizProfiles.childcare.faq.item2.question":
+      "¿Cuál es la disponibilidad de inscripción actual en {businessName}?",
+    "bizProfiles.childcare.faq.item2.answer":
+      "Llámenos para consultar los cupos disponibles y la lista de espera para la edad de su hijo.",
+    "bizProfiles.childcare.referralPresets.flat_off_both.referrerReward":
+      "$50 de descuento en la colegiatura del próximo mes",
+    "bizProfiles.childcare.referralPresets.flat_off_both.friendReward": "$50 de descuento en su primer mes",
+    "bizProfiles.childcare.referralPresets.flat_off_both.description":
+      "Un premio significativo para una relación continua — muchos padres eligen el cuidado infantil según las recomendaciones de otros padres.",
+    "bizProfiles.childcare.referralPresets.free_week_both.referrerReward": "Una semana de colegiatura gratis",
+    "bizProfiles.childcare.referralPresets.free_week_both.friendReward": "Un primer mes con descuento",
+    "bizProfiles.childcare.referralPresets.free_week_both.description":
+      "Un premio atractivo que le cuesta un monto predecible y limitado, en lugar de un porcentaje abierto.",
+    "bizProfiles.childcare.pricingTips.tuition_tiers_by_schedule.label":
+      "Cobre según el horario, no solo según el grupo de edad",
+    "bizProfiles.childcare.pricingTips.tuition_tiers_by_schedule.description":
+      "El cuidado de tiempo completo, medio tiempo y sin cita tienen costos de personal muy distintos por niño — cobrar cada tipo de horario por separado mantiene sus márgenes correctos en todos los casos.",
+    "bizProfiles.childcare.pricingTips.waitlist_signals_room_to_raise.label":
+      "Una lista de espera es señal de que puede subir la colegiatura",
+    "bizProfiles.childcare.pricingTips.waitlist_signals_room_to_raise.description":
+      "Si siempre está lleno y con lista de espera, es evidencia real de que su colegiatura actual está por debajo de lo que realmente soporta la demanda local.",
+    "bizProfiles.childcare.pricingTips.bundle_sibling_discount.label":
+      "Ofrezca un descuento moderado para hermanos, no uno muy alto",
+    "bizProfiles.childcare.pricingTips.bundle_sibling_discount.description":
+      "Un descuento para hermanos debe ser suficiente para influir en la decisión de la familia sin afectar mucho su ingreso por niño — un porcentaje moderado suele ser suficiente.",
+    "bizProfiles.childcare.pricingTips.registration_fee_covers_admin.label":
+      "Cobre su cuota de inscripción según los costos administrativos reales",
+    "bizProfiles.childcare.pricingTips.registration_fee_covers_admin.description":
+      "Una cuota de inscripción única (papeleo, verificación de antecedentes, un lugar en la lista) debe reflejar el costo real de incorporar a una familia nueva, aparte de la colegiatura continua.",
+    "bizProfiles.lodging.label": "Hospedaje",
+    "bizProfiles.lodging.competitorNoun": "lugares para hospedarse",
+    "bizProfiles.lodging.couponPresets.pct_off_first_stay.label": "15% de descuento en su primera estadía",
+    "bizProfiles.lodging.couponPresets.pct_off_first_stay.description":
+      "Reduce el riesgo de probar un lugar nuevo en lugar de una cadena conocida o un favorito anterior.",
+    "bizProfiles.lodging.couponPresets.extended_stay_discount.label":
+      "10% de descuento en estadías de 5 noches o más",
+    "bizProfiles.lodging.couponPresets.extended_stay_discount.description":
+      "Premia la reserva más larga y valiosa sin descontar una estadía corta de una noche.",
+    "bizProfiles.lodging.couponPresets.off_season_discount.label":
+      "20% de descuento en estadías reservadas en su temporada más lenta",
+    "bizProfiles.lodging.couponPresets.off_season_discount.description":
+      "Llena habitaciones que de otro modo quedarían vacías en sus meses predeciblemente más lentos.",
+    "bizProfiles.lodging.offerTemplates.new_guest_special.label":
+      "Especial para huéspedes nuevos: 15% de descuento en su primera estadía",
+    "bizProfiles.lodging.offerTemplates.new_guest_special.description":
+      "Suele ser una de las ofertas más efectivas para un negocio de hospedaje — reduce el riesgo de probar un lugar nuevo.",
+    "bizProfiles.lodging.offerTemplates.off_peak_stay_special.label":
+      "Especial de temporada baja (descuento en noches entre semana o fuera de temporada)",
+    "bizProfiles.lodging.offerTemplates.off_peak_stay_special.description":
+      "Llena las noches que se reservan al final — entre semana, o fuera de la temporada alta de viajes — con reservas reales.",
+    "bizProfiles.lodging.couponAngles.firstTime":
+      "Especial para huéspedes nuevos: 15% de descuento en su primera estadía",
+    "bizProfiles.lodging.couponAngles.seasonal":
+      "Especial de temporada baja: 20% de descuento en estadías reservadas fuera de la temporada alta de viajes",
+    "bizProfiles.lodging.couponAngles.slowDay":
+      "Especial entre semana: tarifa con descuento para estadías de domingo a jueves",
+    "bizProfiles.lodging.pricingExamples.example1": "Tarifa por noche",
+    "bizProfiles.lodging.pricingExamples.example2": "Tarifa semanal",
+    "bizProfiles.lodging.pricingExamples.example3": "Tarifa de estadía prolongada",
+    "bizProfiles.lodging.faq.item1.question": "¿Cuál es el horario de entrada y salida de {businessName}?",
+    "bizProfiles.lodging.faq.item1.answer":
+      "Llámenos para confirmar los horarios actuales de entrada y salida.",
+    "bizProfiles.lodging.faq.item2.question": "¿{businessName} tiene disponibilidad para mis fechas?",
+    "bizProfiles.lodging.faq.item2.answer": "Llámenos para consultar la disponibilidad actual de sus fechas.",
+    "bizProfiles.lodging.referralPresets.flat_off_both.referrerReward":
+      "$25 de descuento en su próxima estadía",
+    "bizProfiles.lodging.referralPresets.flat_off_both.friendReward":
+      "$25 de descuento en su primera estadía",
+    "bizProfiles.lodging.referralPresets.flat_off_both.description":
+      "Descuento directo en efectivo para un negocio donde una estadía referida puede valer varias noches de ingresos.",
+    "bizProfiles.lodging.referralPresets.pct_off_both.referrerReward":
+      "15% de descuento en su próxima estadía",
+    "bizProfiles.lodging.referralPresets.pct_off_both.friendReward": "15% de descuento en su primera estadía",
+    "bizProfiles.lodging.referralPresets.pct_off_both.description":
+      "Se ajusta a la duración de la estadía en lugar de un monto fijo que podría ser demasiado pequeño para una reserva de una semana.",
+    "bizProfiles.lodging.pricingTips.peak_vs_offpeak_pricing.label":
+      "Cobre más por las noches de temporada alta y fines de semana",
+    "bizProfiles.lodging.pricingTips.peak_vs_offpeak_pricing.description":
+      "Las noches de fin de semana y temporada alta son su inventario de mayor demanda — cóbrelas a un precio más alto y use descuentos entre semana o de temporada baja para llenar noches que de otro modo quedarían vacías.",
+    "bizProfiles.lodging.pricingTips.length_of_stay_discount.label":
+      "Ofrezca descuentos en estadías más largas, no en las cortas",
+    "bizProfiles.lodging.pricingTips.length_of_stay_discount.description":
+      "Un huésped que se queda una semana le cuesta menos por noche que alguien que entra y sale a diario — un descuento por duración de estadía refleja ese ahorro real.",
+    "bizProfiles.lodging.pricingTips.raise_when_booked_out.label":
+      "Suba las tarifas cuando sus mejores fechas se reserven con anticipación",
+    "bizProfiles.lodging.pricingTips.raise_when_booked_out.description":
+      "Si sus fechas de temporada alta o fin de semana se reservan siempre con mucha anticipación, es señal de que su tarifa por noche está por debajo de lo que realmente soporta la demanda.",
+    "bizProfiles.lodging.pricingTips.bundle_add_ons.label":
+      "Combine extras en el precio en lugar de descontar la tarifa de la habitación",
+    "bizProfiles.lodging.pricingTips.bundle_add_ons.description":
+      "Una salida tardía, estacionamiento o un paquete de bienvenida incluidos en una tarifa un poco más alta protegen mejor su precio base que descontar la habitación.",
+    "bizProfiles.tattoo_body_art.label": "Tatuajes y arte corporal",
+    "bizProfiles.tattoo_body_art.competitorNoun": "estudios",
+    "bizProfiles.tattoo_body_art.couponPresets.flat_off_first_session.label":
+      "$20 de descuento en su primera sesión de tatuaje",
+    "bizProfiles.tattoo_body_art.couponPresets.flat_off_first_session.description":
+      "Reduce el riesgo de probar un nuevo artista para una decisión que es permanente.",
+    "bizProfiles.tattoo_body_art.couponPresets.free_touchup.label":
+      "Sesión de retoque gratis dentro de los 60 días",
+    "bizProfiles.tattoo_body_art.couponPresets.free_touchup.description":
+      "Una señal de confianza fuerte — mostrar que respalda su trabajo le cuesta poco y le da tranquilidad a un cliente nuevo.",
+    "bizProfiles.tattoo_body_art.couponPresets.flash_day_special.label":
+      "Especial de día de diseños flash: precio reducido en diseños ya dibujados",
+    "bizProfiles.tattoo_body_art.couponPresets.flash_day_special.description":
+      "Llena la silla con reservas rápidas y de menor compromiso en días que de otro modo estarían libres.",
+    "bizProfiles.tattoo_body_art.offerTemplates.new_client_first_session.label":
+      "Especial para clientes nuevos: $20 de descuento en su primera sesión de tatuaje",
+    "bizProfiles.tattoo_body_art.offerTemplates.new_client_first_session.description":
+      "Suele ser una de las ofertas más efectivas para un estudio de tatuajes — reduce el riesgo de probar un nuevo artista.",
+    "bizProfiles.tattoo_body_art.offerTemplates.slow_weekday_special.label":
+      "Especial entre semana: tarifa con descuento para sesiones reservadas de lunes a jueves",
+    "bizProfiles.tattoo_body_art.offerTemplates.slow_weekday_special.description":
+      "Llena el tiempo de silla entre semana que de otro modo quedaría libre mientras los fines de semana siguen llenos.",
+    "bizProfiles.tattoo_body_art.couponAngles.firstTime":
+      "Especial para clientes nuevos: $20 de descuento en su primera sesión de tatuaje",
+    "bizProfiles.tattoo_body_art.couponAngles.seasonal":
+      "Especial de día de diseños flash: precio reducido en diseños ya dibujados por tiempo limitado",
+    "bizProfiles.tattoo_body_art.couponAngles.slowDay":
+      "Especial entre semana: tarifa con descuento para sesiones reservadas de lunes a jueves",
+    "bizProfiles.tattoo_body_art.pricingExamples.example1": "Pieza pequeña",
+    "bizProfiles.tattoo_body_art.pricingExamples.example2": "Sesión estándar",
+    "bizProfiles.tattoo_body_art.pricingExamples.example3": "Sesión completa (medio día)",
+    "bizProfiles.tattoo_body_art.faq.item1.question":
+      "¿{businessName} requiere una consulta antes de reservar un tatuaje?",
+    "bizProfiles.tattoo_body_art.faq.item1.answer": "Llámenos para preguntar cómo programar una consulta.",
+    "bizProfiles.tattoo_body_art.faq.item2.question":
+      "¿{businessName} requiere un depósito para reservar una sesión?",
+    "bizProfiles.tattoo_body_art.faq.item2.answer":
+      "Llámenos para preguntar sobre nuestro proceso de reserva y los requisitos de depósito.",
+    "bizProfiles.tattoo_body_art.referralPresets.flat_off_both.referrerReward":
+      "$20 de descuento en su próxima sesión",
+    "bizProfiles.tattoo_body_art.referralPresets.flat_off_both.friendReward":
+      "$20 de descuento en su primera sesión",
+    "bizProfiles.tattoo_body_art.referralPresets.flat_off_both.description":
+      "Descuento directo en efectivo que funciona bien para un negocio basado en clientes recurrentes y el boca a boca.",
+    "bizProfiles.tattoo_body_art.referralPresets.pct_off_both.referrerReward":
+      "10% de descuento en su próxima sesión",
+    "bizProfiles.tattoo_body_art.referralPresets.pct_off_both.friendReward":
+      "10% de descuento en su primera sesión",
+    "bizProfiles.tattoo_body_art.referralPresets.pct_off_both.description":
+      "Se ajusta al tamaño de la pieza en lugar de un monto fijo que podría ser demasiado pequeño para una sesión grande.",
+    "bizProfiles.tattoo_body_art.pricingTips.deposit_protects_time.label":
+      "Siempre exija un depósito para apartar una reserva",
+    "bizProfiles.tattoo_body_art.pricingTips.deposit_protects_time.description":
+      "Un depósito no reembolsable protege su tiempo de silla de una inasistencia o una cancelación tardía, y es una práctica estándar en la industria que los clientes ya esperan.",
+    "bizProfiles.tattoo_body_art.pricingTips.price_by_time_not_just_size.label":
+      "Cobre según el tiempo en la silla, no solo el tamaño del diseño",
+    "bizProfiles.tattoo_body_art.pricingTips.price_by_time_not_just_size.description":
+      "Una pieza pequeña pero muy detallada puede tomar más tiempo que una más grande y simple — cobrar según la duración de la sesión (o una tarifa combinada por hora y fija) mantiene su precio correcto en todos los estilos.",
+    "bizProfiles.tattoo_body_art.pricingTips.flash_vs_custom_pricing.label":
+      "Cobre menos por los diseños flash que por el trabajo personalizado",
+    "bizProfiles.tattoo_body_art.pricingTips.flash_vs_custom_pricing.description":
+      "Las piezas flash ya dibujadas requieren menos tiempo de consulta y diseño que el trabajo personalizado — cobrarlas acorde llena el tiempo de silla con reservas de menor compromiso sin subvalorar sus piezas personalizadas.",
+    "bizProfiles.tattoo_body_art.pricingTips.raise_when_booked_weeks_out.label":
+      "Suba los precios cuando tenga reservas con semanas de anticipación",
+    "bizProfiles.tattoo_body_art.pricingTips.raise_when_booked_weeks_out.description":
+      "Una lista de reservas que se extiende semanas es una señal clara de que su precio actual está por debajo de lo que realmente soporta la demanda de su trabajo.",
   },
 };
 

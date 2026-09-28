@@ -1501,6 +1501,896 @@ const DEFAULT_PROFILE: BizProfileSource = {
 export { DEFAULT_PROFILE };
 
 /**
+ * On-site, project/service-call businesses — general contractors,
+ * roofers, HVAC, painters, remodelers, and similar home-improvement
+ * trades. Distinct from TRADES_PROFILE's plumber/electrician/
+ * landscaper/auto-repair/cleaning set: those are single-visit service
+ * calls priced per job; this profile leans toward bigger, quoted
+ * projects (a roof, a remodel) alongside smaller service calls, so the
+ * offer structure centers on a free estimate and licensing/insurance
+ * trust signals rather than just a flat first-call discount.
+ */
+const HOME_SERVICES_PROFILE: BizProfileSource = {
+  id: "home_services",
+  label: "bizProfiles.home_services.label",
+  match: [
+    "general contractor",
+    "contractor",
+    "roofing",
+    "roofer",
+    "hvac",
+    "remodeling contractor",
+    "renovation",
+    "handyman",
+    "home improvement",
+  ],
+  placesType: ["general_contractor", "roofing_contractor", "hvac_contractor"],
+  competitorNoun: "bizProfiles.home_services.competitorNoun",
+  couponPresets: [
+    {
+      id: "flat_off_first_project",
+      label: "bizProfiles.home_services.couponPresets.flat_off_first_project.label",
+      description: "bizProfiles.home_services.couponPresets.flat_off_first_project.description",
+    },
+    {
+      id: "seasonal_inspection",
+      label: "bizProfiles.home_services.couponPresets.seasonal_inspection.label",
+      description: "bizProfiles.home_services.couponPresets.seasonal_inspection.description",
+    },
+    {
+      id: "bundle_multiple_projects",
+      label: "bizProfiles.home_services.couponPresets.bundle_multiple_projects.label",
+      description: "bizProfiles.home_services.couponPresets.bundle_multiple_projects.description",
+    },
+  ],
+  offerTemplates: [
+    {
+      id: "new_customer_free_estimate",
+      label: "bizProfiles.home_services.offerTemplates.new_customer_free_estimate.label",
+      description: "bizProfiles.home_services.offerTemplates.new_customer_free_estimate.description",
+    },
+    {
+      id: "seasonal_maintenance",
+      label: "bizProfiles.home_services.offerTemplates.seasonal_maintenance.label",
+      description: "bizProfiles.home_services.offerTemplates.seasonal_maintenance.description",
+    },
+  ],
+  couponAngles: {
+    firstTime: "bizProfiles.home_services.couponAngles.firstTime",
+    seasonal: "bizProfiles.home_services.couponAngles.seasonal",
+    slowDay: "bizProfiles.home_services.couponAngles.slowDay",
+  },
+  faq: [
+    {
+      id: "item1",
+      question: "bizProfiles.home_services.faq.item1.question",
+      answer: "bizProfiles.home_services.faq.item1.answer",
+    },
+    {
+      id: "item2",
+      question: "bizProfiles.home_services.faq.item2.question",
+      answer: "bizProfiles.home_services.faq.item2.answer",
+    },
+  ],
+  referralOk: true,
+  referralPresets: [
+    {
+      id: "flat_off_both",
+      referrerReward: "bizProfiles.home_services.referralPresets.flat_off_both.referrerReward",
+      friendReward: "bizProfiles.home_services.referralPresets.flat_off_both.friendReward",
+      description: "bizProfiles.home_services.referralPresets.flat_off_both.description",
+    },
+    {
+      id: "pct_off_both",
+      referrerReward: "bizProfiles.home_services.referralPresets.pct_off_both.referrerReward",
+      friendReward: "bizProfiles.home_services.referralPresets.pct_off_both.friendReward",
+      description: "bizProfiles.home_services.referralPresets.pct_off_both.description",
+    },
+  ],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.home_services.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.home_services.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.home_services.pricingExamples.example3" },
+  ],
+  pricingTips: [
+    {
+      id: "quote_vs_flat",
+      label: "bizProfiles.home_services.pricingTips.quote_vs_flat.label",
+      description: "bizProfiles.home_services.pricingTips.quote_vs_flat.description",
+    },
+    {
+      id: "license_insurance_trust",
+      label: "bizProfiles.home_services.pricingTips.license_insurance_trust.label",
+      description: "bizProfiles.home_services.pricingTips.license_insurance_trust.description",
+    },
+    {
+      id: "seasonal_demand_pricing",
+      label: "bizProfiles.home_services.pricingTips.seasonal_demand_pricing.label",
+      description: "bizProfiles.home_services.pricingTips.seasonal_demand_pricing.description",
+    },
+    {
+      id: "bundle_multiple_projects",
+      label: "bizProfiles.home_services.pricingTips.bundle_multiple_projects.label",
+      description: "bizProfiles.home_services.pricingTips.bundle_multiple_projects.description",
+    },
+  ],
+};
+
+/**
+ * Drop-off, per-item repair and garment-care businesses — shoe repair,
+ * tailoring/alterations, phone/computer/watch/jewelry/appliance repair,
+ * dry cleaning, laundromats. The unit of work is a small, individually
+ * priced item with a turnaround time, not a quoted project or a
+ * recurring appointment — so the offers are built around per-item and
+ * bundle pricing, and the FAQ centers on turnaround time, the one thing
+ * every drop-off customer actually wants to know.
+ */
+const REPAIR_DROPOFF_PROFILE: BizProfileSource = {
+  id: "repair_dropoff",
+  label: "bizProfiles.repair_dropoff.label",
+  match: [
+    "dry cleaner",
+    "dry cleaning",
+    "laundromat",
+    "laundry",
+    "tailor",
+    "alterations",
+    "shoe repair",
+    "cobbler",
+    "phone repair",
+    "computer repair",
+    "watch repair",
+    "jewelry repair",
+    "appliance repair",
+    "locksmith",
+  ],
+  placesType: ["laundry"],
+  competitorNoun: "bizProfiles.repair_dropoff.competitorNoun",
+  couponPresets: [
+    {
+      id: "pct_off_first_item",
+      label: "bizProfiles.repair_dropoff.couponPresets.pct_off_first_item.label",
+      description: "bizProfiles.repair_dropoff.couponPresets.pct_off_first_item.description",
+    },
+    {
+      id: "loyalty_punch",
+      label: "bizProfiles.repair_dropoff.couponPresets.loyalty_punch.label",
+      description: "bizProfiles.repair_dropoff.couponPresets.loyalty_punch.description",
+    },
+    {
+      id: "bundle_multiple_items",
+      label: "bizProfiles.repair_dropoff.couponPresets.bundle_multiple_items.label",
+      description: "bizProfiles.repair_dropoff.couponPresets.bundle_multiple_items.description",
+    },
+  ],
+  offerTemplates: [
+    {
+      id: "new_customer_first_item",
+      label: "bizProfiles.repair_dropoff.offerTemplates.new_customer_first_item.label",
+      description: "bizProfiles.repair_dropoff.offerTemplates.new_customer_first_item.description",
+    },
+    {
+      id: "slow_season_special",
+      label: "bizProfiles.repair_dropoff.offerTemplates.slow_season_special.label",
+      description: "bizProfiles.repair_dropoff.offerTemplates.slow_season_special.description",
+    },
+  ],
+  couponAngles: {
+    firstTime: "bizProfiles.repair_dropoff.couponAngles.firstTime",
+    seasonal: "bizProfiles.repair_dropoff.couponAngles.seasonal",
+    slowDay: "bizProfiles.repair_dropoff.couponAngles.slowDay",
+  },
+  faq: [
+    {
+      id: "item1",
+      question: "bizProfiles.repair_dropoff.faq.item1.question",
+      answer: "bizProfiles.repair_dropoff.faq.item1.answer",
+    },
+    {
+      id: "item2",
+      question: "bizProfiles.repair_dropoff.faq.item2.question",
+      answer: "bizProfiles.repair_dropoff.faq.item2.answer",
+    },
+  ],
+  referralOk: true,
+  referralPresets: [
+    {
+      id: "flat_off_both",
+      referrerReward: "bizProfiles.repair_dropoff.referralPresets.flat_off_both.referrerReward",
+      friendReward: "bizProfiles.repair_dropoff.referralPresets.flat_off_both.friendReward",
+      description: "bizProfiles.repair_dropoff.referralPresets.flat_off_both.description",
+    },
+    {
+      id: "pct_off_both",
+      referrerReward: "bizProfiles.repair_dropoff.referralPresets.pct_off_both.referrerReward",
+      friendReward: "bizProfiles.repair_dropoff.referralPresets.pct_off_both.friendReward",
+      description: "bizProfiles.repair_dropoff.referralPresets.pct_off_both.description",
+    },
+  ],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.repair_dropoff.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.repair_dropoff.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.repair_dropoff.pricingExamples.example3" },
+  ],
+  pricingTips: [
+    {
+      id: "per_item_vs_bundle",
+      label: "bizProfiles.repair_dropoff.pricingTips.per_item_vs_bundle.label",
+      description: "bizProfiles.repair_dropoff.pricingTips.per_item_vs_bundle.description",
+    },
+    {
+      id: "rush_fee",
+      label: "bizProfiles.repair_dropoff.pricingTips.rush_fee.label",
+      description: "bizProfiles.repair_dropoff.pricingTips.rush_fee.description",
+    },
+    {
+      id: "seasonal_demand_pricing",
+      label: "bizProfiles.repair_dropoff.pricingTips.seasonal_demand_pricing.label",
+      description: "bizProfiles.repair_dropoff.pricingTips.seasonal_demand_pricing.description",
+    },
+    {
+      id: "raise_when_backlog",
+      label: "bizProfiles.repair_dropoff.pricingTips.raise_when_backlog.label",
+      description: "bizProfiles.repair_dropoff.pricingTips.raise_when_backlog.description",
+    },
+  ],
+};
+
+/**
+ * Ticketed entertainment venues — bowling, arcades, escape rooms,
+ * trampoline parks, mini golf, laser tag. The unit of business is
+ * admission (a ticket or a time slot), often bought in groups and for
+ * birthday parties, not a purchase, a service call, or a recurring
+ * membership — so the offers center on admission discounts, group
+ * rates, and party packages.
+ */
+const RECREATION_PROFILE: BizProfileSource = {
+  id: "recreation",
+  label: "bizProfiles.recreation.label",
+  match: [
+    "bowling",
+    "arcade",
+    "escape room",
+    "trampoline park",
+    "mini golf",
+    "golf range",
+    "golf course",
+    "driving range",
+    "laser tag",
+    "paintball",
+    "axe throwing",
+    "skating rink",
+    "amusement",
+  ],
+  placesType: ["bowling_alley", "amusement_center"],
+  competitorNoun: "bizProfiles.recreation.competitorNoun",
+  couponPresets: [
+    {
+      id: "pct_off_admission",
+      label: "bizProfiles.recreation.couponPresets.pct_off_admission.label",
+      description: "bizProfiles.recreation.couponPresets.pct_off_admission.description",
+    },
+    {
+      id: "group_discount",
+      label: "bizProfiles.recreation.couponPresets.group_discount.label",
+      description: "bizProfiles.recreation.couponPresets.group_discount.description",
+    },
+    {
+      id: "birthday_party_special",
+      label: "bizProfiles.recreation.couponPresets.birthday_party_special.label",
+      description: "bizProfiles.recreation.couponPresets.birthday_party_special.description",
+    },
+  ],
+  offerTemplates: [
+    {
+      id: "new_visitor_special",
+      label: "bizProfiles.recreation.offerTemplates.new_visitor_special.label",
+      description: "bizProfiles.recreation.offerTemplates.new_visitor_special.description",
+    },
+    {
+      id: "slow_weekday_special",
+      label: "bizProfiles.recreation.offerTemplates.slow_weekday_special.label",
+      description: "bizProfiles.recreation.offerTemplates.slow_weekday_special.description",
+    },
+  ],
+  couponAngles: {
+    firstTime: "bizProfiles.recreation.couponAngles.firstTime",
+    seasonal: "bizProfiles.recreation.couponAngles.seasonal",
+    slowDay: "bizProfiles.recreation.couponAngles.slowDay",
+  },
+  faq: [
+    {
+      id: "item1",
+      question: "bizProfiles.recreation.faq.item1.question",
+      answer: "bizProfiles.recreation.faq.item1.answer",
+    },
+    {
+      id: "item2",
+      question: "bizProfiles.recreation.faq.item2.question",
+      answer: "bizProfiles.recreation.faq.item2.answer",
+    },
+  ],
+  referralOk: true,
+  referralPresets: [
+    {
+      id: "friend_ticket_both",
+      referrerReward: "bizProfiles.recreation.referralPresets.friend_ticket_both.referrerReward",
+      friendReward: "bizProfiles.recreation.referralPresets.friend_ticket_both.friendReward",
+      description: "bizProfiles.recreation.referralPresets.friend_ticket_both.description",
+    },
+    {
+      id: "pct_off_both",
+      referrerReward: "bizProfiles.recreation.referralPresets.pct_off_both.referrerReward",
+      friendReward: "bizProfiles.recreation.referralPresets.pct_off_both.friendReward",
+      description: "bizProfiles.recreation.referralPresets.pct_off_both.description",
+    },
+  ],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.recreation.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.recreation.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.recreation.pricingExamples.example3" },
+  ],
+  pricingTips: [
+    {
+      id: "time_slot_pricing",
+      label: "bizProfiles.recreation.pricingTips.time_slot_pricing.label",
+      description: "bizProfiles.recreation.pricingTips.time_slot_pricing.description",
+    },
+    {
+      id: "group_and_party_packages",
+      label: "bizProfiles.recreation.pricingTips.group_and_party_packages.label",
+      description: "bizProfiles.recreation.pricingTips.group_and_party_packages.description",
+    },
+    {
+      id: "anchor_premium_package",
+      label: "bizProfiles.recreation.pricingTips.anchor_premium_package.label",
+      description: "bizProfiles.recreation.pricingTips.anchor_premium_package.description",
+    },
+    {
+      id: "raise_when_booked_out",
+      label: "bizProfiles.recreation.pricingTips.raise_when_booked_out.label",
+      description: "bizProfiles.recreation.pricingTips.raise_when_booked_out.description",
+    },
+  ],
+};
+
+/**
+ * One-date, booked-in-advance celebration vendors — wedding planners,
+ * DJs, caterers, party rental companies, photo booths, event venues.
+ * The unit of business is a single booked date sold as a package, not a
+ * repeat visit or a per-item purchase — so the offers center on booking
+ * the date itself (an early-booking or off-season discount, a deposit
+ * to hold it) rather than a return-visit discount.
+ */
+const EVENTS_PROFILE: BizProfileSource = {
+  id: "events",
+  label: "bizProfiles.events.label",
+  match: [
+    "wedding planner",
+    "wedding venue",
+    "banquet hall",
+    "event venue",
+    "event space",
+    "event planning",
+    "party rental",
+    "photo booth",
+  ],
+  placesType: ["banquet_hall", "wedding_venue"],
+  competitorNoun: "bizProfiles.events.competitorNoun",
+  couponPresets: [
+    {
+      id: "flat_off_booking",
+      label: "bizProfiles.events.couponPresets.flat_off_booking.label",
+      description: "bizProfiles.events.couponPresets.flat_off_booking.description",
+    },
+    {
+      id: "early_booking_discount",
+      label: "bizProfiles.events.couponPresets.early_booking_discount.label",
+      description: "bizProfiles.events.couponPresets.early_booking_discount.description",
+    },
+    {
+      id: "off_season_discount",
+      label: "bizProfiles.events.couponPresets.off_season_discount.label",
+      description: "bizProfiles.events.couponPresets.off_season_discount.description",
+    },
+  ],
+  offerTemplates: [
+    {
+      id: "new_client_booking_special",
+      label: "bizProfiles.events.offerTemplates.new_client_booking_special.label",
+      description: "bizProfiles.events.offerTemplates.new_client_booking_special.description",
+    },
+    {
+      id: "off_peak_date_special",
+      label: "bizProfiles.events.offerTemplates.off_peak_date_special.label",
+      description: "bizProfiles.events.offerTemplates.off_peak_date_special.description",
+    },
+  ],
+  couponAngles: {
+    firstTime: "bizProfiles.events.couponAngles.firstTime",
+    seasonal: "bizProfiles.events.couponAngles.seasonal",
+    slowDay: "bizProfiles.events.couponAngles.slowDay",
+  },
+  faq: [
+    {
+      id: "item1",
+      question: "bizProfiles.events.faq.item1.question",
+      answer: "bizProfiles.events.faq.item1.answer",
+    },
+    {
+      id: "item2",
+      question: "bizProfiles.events.faq.item2.question",
+      answer: "bizProfiles.events.faq.item2.answer",
+    },
+  ],
+  referralOk: true,
+  referralPresets: [
+    {
+      id: "flat_off_both",
+      referrerReward: "bizProfiles.events.referralPresets.flat_off_both.referrerReward",
+      friendReward: "bizProfiles.events.referralPresets.flat_off_both.friendReward",
+      description: "bizProfiles.events.referralPresets.flat_off_both.description",
+    },
+    {
+      id: "pct_off_both",
+      referrerReward: "bizProfiles.events.referralPresets.pct_off_both.referrerReward",
+      friendReward: "bizProfiles.events.referralPresets.pct_off_both.friendReward",
+      description: "bizProfiles.events.referralPresets.pct_off_both.description",
+    },
+  ],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.events.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.events.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.events.pricingExamples.example3" },
+  ],
+  pricingTips: [
+    {
+      id: "package_tiers",
+      label: "bizProfiles.events.pricingTips.package_tiers.label",
+      description: "bizProfiles.events.pricingTips.package_tiers.description",
+    },
+    {
+      id: "deposit_to_hold_date",
+      label: "bizProfiles.events.pricingTips.deposit_to_hold_date.label",
+      description: "bizProfiles.events.pricingTips.deposit_to_hold_date.description",
+    },
+    {
+      id: "peak_vs_offpeak_pricing",
+      label: "bizProfiles.events.pricingTips.peak_vs_offpeak_pricing.label",
+      description: "bizProfiles.events.pricingTips.peak_vs_offpeak_pricing.description",
+    },
+    {
+      id: "raise_when_booked_out",
+      label: "bizProfiles.events.pricingTips.raise_when_booked_out.label",
+      description: "bizProfiles.events.pricingTips.raise_when_booked_out.description",
+    },
+  ],
+};
+
+/**
+ * Vehicle wash and cosmetic-detailing businesses — car washes, auto
+ * detailers, window tinting, vehicle wraps. Deliberately separate from
+ * TRADES_PROFILE's auto_repair: nothing here is being fixed, so a
+ * "mechanic" FAQ or a repair-call coupon would be the wrong copy. The
+ * offers center on wash packages and memberships instead.
+ */
+const CAR_WASH_DETAILING_PROFILE: BizProfileSource = {
+  id: "car_wash_detailing",
+  label: "bizProfiles.car_wash_detailing.label",
+  match: ["car wash", "auto detailing", "car detailing", "window tinting", "vehicle wrap"],
+  placesType: ["car_wash"],
+  competitorNoun: "bizProfiles.car_wash_detailing.competitorNoun",
+  couponPresets: [
+    {
+      id: "flat_off_first_wash",
+      label: "bizProfiles.car_wash_detailing.couponPresets.flat_off_first_wash.label",
+      description: "bizProfiles.car_wash_detailing.couponPresets.flat_off_first_wash.description",
+    },
+    {
+      id: "free_upgrade_first_visit",
+      label: "bizProfiles.car_wash_detailing.couponPresets.free_upgrade_first_visit.label",
+      description: "bizProfiles.car_wash_detailing.couponPresets.free_upgrade_first_visit.description",
+    },
+    {
+      id: "detailing_bundle",
+      label: "bizProfiles.car_wash_detailing.couponPresets.detailing_bundle.label",
+      description: "bizProfiles.car_wash_detailing.couponPresets.detailing_bundle.description",
+    },
+  ],
+  offerTemplates: [
+    {
+      id: "new_customer_first_wash",
+      label: "bizProfiles.car_wash_detailing.offerTemplates.new_customer_first_wash.label",
+      description: "bizProfiles.car_wash_detailing.offerTemplates.new_customer_first_wash.description",
+    },
+    {
+      id: "membership_trial",
+      label: "bizProfiles.car_wash_detailing.offerTemplates.membership_trial.label",
+      description: "bizProfiles.car_wash_detailing.offerTemplates.membership_trial.description",
+    },
+  ],
+  couponAngles: {
+    firstTime: "bizProfiles.car_wash_detailing.couponAngles.firstTime",
+    seasonal: "bizProfiles.car_wash_detailing.couponAngles.seasonal",
+    slowDay: "bizProfiles.car_wash_detailing.couponAngles.slowDay",
+  },
+  faq: [
+    {
+      id: "item1",
+      question: "bizProfiles.car_wash_detailing.faq.item1.question",
+      answer: "bizProfiles.car_wash_detailing.faq.item1.answer",
+    },
+    {
+      id: "item2",
+      question: "bizProfiles.car_wash_detailing.faq.item2.question",
+      answer: "bizProfiles.car_wash_detailing.faq.item2.answer",
+    },
+  ],
+  referralOk: true,
+  referralPresets: [
+    {
+      id: "free_wash_both",
+      referrerReward: "bizProfiles.car_wash_detailing.referralPresets.free_wash_both.referrerReward",
+      friendReward: "bizProfiles.car_wash_detailing.referralPresets.free_wash_both.friendReward",
+      description: "bizProfiles.car_wash_detailing.referralPresets.free_wash_both.description",
+    },
+    {
+      id: "pct_off_both",
+      referrerReward: "bizProfiles.car_wash_detailing.referralPresets.pct_off_both.referrerReward",
+      friendReward: "bizProfiles.car_wash_detailing.referralPresets.pct_off_both.friendReward",
+      description: "bizProfiles.car_wash_detailing.referralPresets.pct_off_both.description",
+    },
+  ],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.car_wash_detailing.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.car_wash_detailing.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.car_wash_detailing.pricingExamples.example3" },
+  ],
+  pricingTips: [
+    {
+      id: "tiered_wash_packages",
+      label: "bizProfiles.car_wash_detailing.pricingTips.tiered_wash_packages.label",
+      description: "bizProfiles.car_wash_detailing.pricingTips.tiered_wash_packages.description",
+    },
+    {
+      id: "membership_for_recurring_revenue",
+      label: "bizProfiles.car_wash_detailing.pricingTips.membership_for_recurring_revenue.label",
+      description: "bizProfiles.car_wash_detailing.pricingTips.membership_for_recurring_revenue.description",
+    },
+    {
+      id: "detailing_by_vehicle_size",
+      label: "bizProfiles.car_wash_detailing.pricingTips.detailing_by_vehicle_size.label",
+      description: "bizProfiles.car_wash_detailing.pricingTips.detailing_by_vehicle_size.description",
+    },
+    {
+      id: "off_peak_pricing",
+      label: "bizProfiles.car_wash_detailing.pricingTips.off_peak_pricing.label",
+      description: "bizProfiles.car_wash_detailing.pricingTips.off_peak_pricing.description",
+    },
+  ],
+};
+
+/**
+ * Enrollment-based childcare and early education — daycares,
+ * preschools, Montessori programs, after-school programs, summer
+ * camps. The unit of business is a recurring enrollment (like a
+ * membership) rather than a single visit, but the offers center on
+ * touring and enrolling rather than a trial class, and the FAQ leans on
+ * safety and availability — the two things a parent actually needs
+ * reassurance on before committing their child to a new provider.
+ */
+const CHILDCARE_PROFILE: BizProfileSource = {
+  id: "childcare",
+  label: "bizProfiles.childcare.label",
+  match: [
+    "daycare",
+    "day care",
+    "child care center",
+    "child care",
+    "preschool",
+    "montessori",
+    "after-school program",
+    "childcare",
+  ],
+  placesType: ["child_care_agency", "preschool"],
+  competitorNoun: "bizProfiles.childcare.competitorNoun",
+  couponPresets: [
+    {
+      id: "flat_off_enrollment",
+      label: "bizProfiles.childcare.couponPresets.flat_off_enrollment.label",
+      description: "bizProfiles.childcare.couponPresets.flat_off_enrollment.description",
+    },
+    {
+      id: "waived_registration_fee",
+      label: "bizProfiles.childcare.couponPresets.waived_registration_fee.label",
+      description: "bizProfiles.childcare.couponPresets.waived_registration_fee.description",
+    },
+    {
+      id: "sibling_discount",
+      label: "bizProfiles.childcare.couponPresets.sibling_discount.label",
+      description: "bizProfiles.childcare.couponPresets.sibling_discount.description",
+    },
+  ],
+  offerTemplates: [
+    {
+      id: "new_family_special",
+      label: "bizProfiles.childcare.offerTemplates.new_family_special.label",
+      description: "bizProfiles.childcare.offerTemplates.new_family_special.description",
+    },
+    {
+      id: "seasonal_enrollment_push",
+      label: "bizProfiles.childcare.offerTemplates.seasonal_enrollment_push.label",
+      description: "bizProfiles.childcare.offerTemplates.seasonal_enrollment_push.description",
+    },
+  ],
+  couponAngles: {
+    firstTime: "bizProfiles.childcare.couponAngles.firstTime",
+    seasonal: "bizProfiles.childcare.couponAngles.seasonal",
+    slowDay: "bizProfiles.childcare.couponAngles.slowDay",
+  },
+  faq: [
+    {
+      id: "item1",
+      question: "bizProfiles.childcare.faq.item1.question",
+      answer: "bizProfiles.childcare.faq.item1.answer",
+    },
+    {
+      id: "item2",
+      question: "bizProfiles.childcare.faq.item2.question",
+      answer: "bizProfiles.childcare.faq.item2.answer",
+    },
+  ],
+  referralOk: true,
+  referralPresets: [
+    {
+      id: "flat_off_both",
+      referrerReward: "bizProfiles.childcare.referralPresets.flat_off_both.referrerReward",
+      friendReward: "bizProfiles.childcare.referralPresets.flat_off_both.friendReward",
+      description: "bizProfiles.childcare.referralPresets.flat_off_both.description",
+    },
+    {
+      id: "free_week_both",
+      referrerReward: "bizProfiles.childcare.referralPresets.free_week_both.referrerReward",
+      friendReward: "bizProfiles.childcare.referralPresets.free_week_both.friendReward",
+      description: "bizProfiles.childcare.referralPresets.free_week_both.description",
+    },
+  ],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.childcare.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.childcare.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.childcare.pricingExamples.example3" },
+  ],
+  pricingTips: [
+    {
+      id: "tuition_tiers_by_schedule",
+      label: "bizProfiles.childcare.pricingTips.tuition_tiers_by_schedule.label",
+      description: "bizProfiles.childcare.pricingTips.tuition_tiers_by_schedule.description",
+    },
+    {
+      id: "waitlist_signals_room_to_raise",
+      label: "bizProfiles.childcare.pricingTips.waitlist_signals_room_to_raise.label",
+      description: "bizProfiles.childcare.pricingTips.waitlist_signals_room_to_raise.description",
+    },
+    {
+      id: "bundle_sibling_discount",
+      label: "bizProfiles.childcare.pricingTips.bundle_sibling_discount.label",
+      description: "bizProfiles.childcare.pricingTips.bundle_sibling_discount.description",
+    },
+    {
+      id: "registration_fee_covers_admin",
+      label: "bizProfiles.childcare.pricingTips.registration_fee_covers_admin.label",
+      description: "bizProfiles.childcare.pricingTips.registration_fee_covers_admin.description",
+    },
+  ],
+};
+
+/**
+ * Nightly-rate overnight stays — hotels, motels, bed & breakfasts,
+ * hostels, RV parks, glamping sites. The unit of business is a night
+ * (or a multi-night stay), sold at a rate that swings hard by season
+ * and day of week, so the offers center on length-of-stay and
+ * off-season discounts rather than a purchase or a per-visit coupon.
+ */
+const LODGING_PROFILE: BizProfileSource = {
+  id: "lodging",
+  label: "bizProfiles.lodging.label",
+  match: ["hotel", "motel", "bed and breakfast", "hostel", "rv park", "campground", "glamping"],
+  placesType: ["lodging", "hotel", "motel"],
+  competitorNoun: "bizProfiles.lodging.competitorNoun",
+  couponPresets: [
+    {
+      id: "pct_off_first_stay",
+      label: "bizProfiles.lodging.couponPresets.pct_off_first_stay.label",
+      description: "bizProfiles.lodging.couponPresets.pct_off_first_stay.description",
+    },
+    {
+      id: "extended_stay_discount",
+      label: "bizProfiles.lodging.couponPresets.extended_stay_discount.label",
+      description: "bizProfiles.lodging.couponPresets.extended_stay_discount.description",
+    },
+    {
+      id: "off_season_discount",
+      label: "bizProfiles.lodging.couponPresets.off_season_discount.label",
+      description: "bizProfiles.lodging.couponPresets.off_season_discount.description",
+    },
+  ],
+  offerTemplates: [
+    {
+      id: "new_guest_special",
+      label: "bizProfiles.lodging.offerTemplates.new_guest_special.label",
+      description: "bizProfiles.lodging.offerTemplates.new_guest_special.description",
+    },
+    {
+      id: "off_peak_stay_special",
+      label: "bizProfiles.lodging.offerTemplates.off_peak_stay_special.label",
+      description: "bizProfiles.lodging.offerTemplates.off_peak_stay_special.description",
+    },
+  ],
+  couponAngles: {
+    firstTime: "bizProfiles.lodging.couponAngles.firstTime",
+    seasonal: "bizProfiles.lodging.couponAngles.seasonal",
+    slowDay: "bizProfiles.lodging.couponAngles.slowDay",
+  },
+  faq: [
+    {
+      id: "item1",
+      question: "bizProfiles.lodging.faq.item1.question",
+      answer: "bizProfiles.lodging.faq.item1.answer",
+    },
+    {
+      id: "item2",
+      question: "bizProfiles.lodging.faq.item2.question",
+      answer: "bizProfiles.lodging.faq.item2.answer",
+    },
+  ],
+  referralOk: true,
+  referralPresets: [
+    {
+      id: "flat_off_both",
+      referrerReward: "bizProfiles.lodging.referralPresets.flat_off_both.referrerReward",
+      friendReward: "bizProfiles.lodging.referralPresets.flat_off_both.friendReward",
+      description: "bizProfiles.lodging.referralPresets.flat_off_both.description",
+    },
+    {
+      id: "pct_off_both",
+      referrerReward: "bizProfiles.lodging.referralPresets.pct_off_both.referrerReward",
+      friendReward: "bizProfiles.lodging.referralPresets.pct_off_both.friendReward",
+      description: "bizProfiles.lodging.referralPresets.pct_off_both.description",
+    },
+  ],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.lodging.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.lodging.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.lodging.pricingExamples.example3" },
+  ],
+  pricingTips: [
+    {
+      id: "peak_vs_offpeak_pricing",
+      label: "bizProfiles.lodging.pricingTips.peak_vs_offpeak_pricing.label",
+      description: "bizProfiles.lodging.pricingTips.peak_vs_offpeak_pricing.description",
+    },
+    {
+      id: "length_of_stay_discount",
+      label: "bizProfiles.lodging.pricingTips.length_of_stay_discount.label",
+      description: "bizProfiles.lodging.pricingTips.length_of_stay_discount.description",
+    },
+    {
+      id: "raise_when_booked_out",
+      label: "bizProfiles.lodging.pricingTips.raise_when_booked_out.label",
+      description: "bizProfiles.lodging.pricingTips.raise_when_booked_out.description",
+    },
+    {
+      id: "bundle_add_ons",
+      label: "bizProfiles.lodging.pricingTips.bundle_add_ons.label",
+      description: "bizProfiles.lodging.pricingTips.bundle_add_ons.description",
+    },
+  ],
+};
+
+/**
+ * Tattoo, piercing, and permanent body-art studios — a genuinely
+ * distinct business from salon/spa beauty services: work is priced per
+ * session/piece rather than per visit, a deposit is standard practice
+ * to hold a booking, and the FAQ centers on consultations and portfolio
+ * availability rather than walk-in appointments.
+ */
+const TATTOO_BODY_ART_PROFILE: BizProfileSource = {
+  id: "tattoo_body_art",
+  label: "bizProfiles.tattoo_body_art.label",
+  match: ["tattoo", "piercing", "body art", "tattoo studio", "tattoo parlor", "microblading", "permanent makeup"],
+  placesType: ["tattoo_parlor"],
+  competitorNoun: "bizProfiles.tattoo_body_art.competitorNoun",
+  couponPresets: [
+    {
+      id: "flat_off_first_session",
+      label: "bizProfiles.tattoo_body_art.couponPresets.flat_off_first_session.label",
+      description: "bizProfiles.tattoo_body_art.couponPresets.flat_off_first_session.description",
+    },
+    {
+      id: "free_touchup",
+      label: "bizProfiles.tattoo_body_art.couponPresets.free_touchup.label",
+      description: "bizProfiles.tattoo_body_art.couponPresets.free_touchup.description",
+    },
+    {
+      id: "flash_day_special",
+      label: "bizProfiles.tattoo_body_art.couponPresets.flash_day_special.label",
+      description: "bizProfiles.tattoo_body_art.couponPresets.flash_day_special.description",
+    },
+  ],
+  offerTemplates: [
+    {
+      id: "new_client_first_session",
+      label: "bizProfiles.tattoo_body_art.offerTemplates.new_client_first_session.label",
+      description: "bizProfiles.tattoo_body_art.offerTemplates.new_client_first_session.description",
+    },
+    {
+      id: "slow_weekday_special",
+      label: "bizProfiles.tattoo_body_art.offerTemplates.slow_weekday_special.label",
+      description: "bizProfiles.tattoo_body_art.offerTemplates.slow_weekday_special.description",
+    },
+  ],
+  couponAngles: {
+    firstTime: "bizProfiles.tattoo_body_art.couponAngles.firstTime",
+    seasonal: "bizProfiles.tattoo_body_art.couponAngles.seasonal",
+    slowDay: "bizProfiles.tattoo_body_art.couponAngles.slowDay",
+  },
+  faq: [
+    {
+      id: "item1",
+      question: "bizProfiles.tattoo_body_art.faq.item1.question",
+      answer: "bizProfiles.tattoo_body_art.faq.item1.answer",
+    },
+    {
+      id: "item2",
+      question: "bizProfiles.tattoo_body_art.faq.item2.question",
+      answer: "bizProfiles.tattoo_body_art.faq.item2.answer",
+    },
+  ],
+  referralOk: true,
+  referralPresets: [
+    {
+      id: "flat_off_both",
+      referrerReward: "bizProfiles.tattoo_body_art.referralPresets.flat_off_both.referrerReward",
+      friendReward: "bizProfiles.tattoo_body_art.referralPresets.flat_off_both.friendReward",
+      description: "bizProfiles.tattoo_body_art.referralPresets.flat_off_both.description",
+    },
+    {
+      id: "pct_off_both",
+      referrerReward: "bizProfiles.tattoo_body_art.referralPresets.pct_off_both.referrerReward",
+      friendReward: "bizProfiles.tattoo_body_art.referralPresets.pct_off_both.friendReward",
+      description: "bizProfiles.tattoo_body_art.referralPresets.pct_off_both.description",
+    },
+  ],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.tattoo_body_art.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.tattoo_body_art.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.tattoo_body_art.pricingExamples.example3" },
+  ],
+  pricingTips: [
+    {
+      id: "deposit_protects_time",
+      label: "bizProfiles.tattoo_body_art.pricingTips.deposit_protects_time.label",
+      description: "bizProfiles.tattoo_body_art.pricingTips.deposit_protects_time.description",
+    },
+    {
+      id: "price_by_time_not_just_size",
+      label: "bizProfiles.tattoo_body_art.pricingTips.price_by_time_not_just_size.label",
+      description: "bizProfiles.tattoo_body_art.pricingTips.price_by_time_not_just_size.description",
+    },
+    {
+      id: "flash_vs_custom_pricing",
+      label: "bizProfiles.tattoo_body_art.pricingTips.flash_vs_custom_pricing.label",
+      description: "bizProfiles.tattoo_body_art.pricingTips.flash_vs_custom_pricing.description",
+    },
+    {
+      id: "raise_when_booked_weeks_out",
+      label: "bizProfiles.tattoo_body_art.pricingTips.raise_when_booked_weeks_out.label",
+      description: "bizProfiles.tattoo_body_art.pricingTips.raise_when_booked_weeks_out.description",
+    },
+  ],
+};
+
+/**
  * The hand-written content sources — coupons, offers, growth ideas, FAQ,
  * referral rules, pricing tips — every business type ultimately reuses.
  * Writing genuinely distinct monetization content for every one of the
@@ -1526,7 +2416,15 @@ type ContentProfileId =
   | "gym_fitness"
   | "trades"
   | "retail"
-  | "default";
+  | "default"
+  | "home_services"
+  | "repair_dropoff"
+  | "recreation"
+  | "events"
+  | "car_wash_detailing"
+  | "childcare"
+  | "lodging"
+  | "tattoo_body_art";
 
 const CONTENT_PROFILES: Record<ContentProfileId, BizProfileSource> = {
   salon: SALON_PROFILE,
@@ -1541,6 +2439,14 @@ const CONTENT_PROFILES: Record<ContentProfileId, BizProfileSource> = {
   trades: TRADES_PROFILE,
   retail: RETAIL_PROFILE,
   default: DEFAULT_PROFILE,
+  home_services: HOME_SERVICES_PROFILE,
+  repair_dropoff: REPAIR_DROPOFF_PROFILE,
+  recreation: RECREATION_PROFILE,
+  events: EVENTS_PROFILE,
+  car_wash_detailing: CAR_WASH_DETAILING_PROFILE,
+  childcare: CHILDCARE_PROFILE,
+  lodging: LODGING_PROFILE,
+  tattoo_body_art: TATTOO_BODY_ART_PROFILE,
 };
 
 /**
@@ -1635,7 +2541,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
   {
     id: "bar",
     label: "bizProfileOptions.bar.label",
-    match: ["bar", "pub", "tavern", "brewery", "taproom"],
+    match: ["bar", "pub", "tavern", "brewery", "taproom", "brewpub", "gastropub"],
     placesType: ["bar", "pub", "night_club"],
     contentProfileId: "restaurant",
     competitorNoun: "bizProfileOptions.bar.competitorNoun",
@@ -1667,7 +2573,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
   {
     id: "restaurant",
     label: RESTAURANT_PROFILE.label,
-    match: ["restaurant", "pizza", "diner", "burger", "taco", "sushi", "deli", "food", "eatery", "grill", "bistro", "bbq"],
+    match: ["restaurant", "pizza", "diner", "burger", "taco", "sushi", "deli", "food", "eatery", "grill", "bistro", "bbq", "cafeteria"],
     placesType: ["restaurant", "meal_takeaway"],
     contentProfileId: "restaurant",
   },
@@ -1836,6 +2742,26 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     contentProfileId: "trades",
     competitorNoun: "bizProfileOptions.landscaper.competitorNoun",
   },
+  // repair_dropoff is deliberately positioned here — right before
+  // cleaning_service, rather than in the "Day 2 new business types"
+  // block below with the other 7 — so its own "dry cleaner"/"dry
+  // cleaning" keywords get checked before cleaning_service's "cleaning
+  // service" keyword. Without this, "Dry cleaning service" would match
+  // cleaning_service's broader "cleaning service" keyword first, even
+  // though it's a repair_dropoff business, not a house-cleaning one.
+  // Every one of the 29 entries above this is still checked first, so
+  // this can only ever take a business away from cleaning_service (the
+  // one case it's meant to fix) or from something later in the list —
+  // never from anything already resolved above. "House cleaning
+  // service" still resolves to cleaning_service unchanged: none of
+  // repair_dropoff's keywords appear in it.
+  {
+    id: "repair_dropoff",
+    label: REPAIR_DROPOFF_PROFILE.label,
+    match: REPAIR_DROPOFF_PROFILE.match,
+    placesType: REPAIR_DROPOFF_PROFILE.placesType,
+    contentProfileId: "repair_dropoff",
+  },
   {
     id: "cleaning_service",
     label: "bizProfileOptions.cleaning_service.label",
@@ -1843,6 +2769,66 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     placesType: ["house_cleaning"],
     contentProfileId: "trades",
     competitorNoun: "bizProfileOptions.cleaning_service.competitorNoun",
+  },
+
+  // Day 2 new business types — each owns its own dedicated content
+  // profile (not shared), so `label` reuses that profile's own label
+  // key directly, same as "salon"/"restaurant"/"default" above.
+  // Deliberately appended at the very end, after every existing type
+  // (repair_dropoff excepted — see above) and right before the
+  // "default" catch-all: every entry above is still checked first for
+  // any haystack, so no new keyword here can ever take over a business
+  // an existing type already correctly detects — see the "Auto-detect
+  // safety" section of ~/Desktop/new-types-review.md for the full
+  // collision analysis.
+  {
+    id: "home_services",
+    label: HOME_SERVICES_PROFILE.label,
+    match: HOME_SERVICES_PROFILE.match,
+    placesType: HOME_SERVICES_PROFILE.placesType,
+    contentProfileId: "home_services",
+  },
+  {
+    id: "recreation",
+    label: RECREATION_PROFILE.label,
+    match: RECREATION_PROFILE.match,
+    placesType: RECREATION_PROFILE.placesType,
+    contentProfileId: "recreation",
+  },
+  {
+    id: "events",
+    label: EVENTS_PROFILE.label,
+    match: EVENTS_PROFILE.match,
+    placesType: EVENTS_PROFILE.placesType,
+    contentProfileId: "events",
+  },
+  {
+    id: "car_wash_detailing",
+    label: CAR_WASH_DETAILING_PROFILE.label,
+    match: CAR_WASH_DETAILING_PROFILE.match,
+    placesType: CAR_WASH_DETAILING_PROFILE.placesType,
+    contentProfileId: "car_wash_detailing",
+  },
+  {
+    id: "childcare",
+    label: CHILDCARE_PROFILE.label,
+    match: CHILDCARE_PROFILE.match,
+    placesType: CHILDCARE_PROFILE.placesType,
+    contentProfileId: "childcare",
+  },
+  {
+    id: "lodging",
+    label: LODGING_PROFILE.label,
+    match: LODGING_PROFILE.match,
+    placesType: LODGING_PROFILE.placesType,
+    contentProfileId: "lodging",
+  },
+  {
+    id: "tattoo_body_art",
+    label: TATTOO_BODY_ART_PROFILE.label,
+    match: TATTOO_BODY_ART_PROFILE.match,
+    placesType: TATTOO_BODY_ART_PROFILE.placesType,
+    contentProfileId: "tattoo_body_art",
   },
 
   // Catch-all — empty match list, so it's never reached by the keyword
@@ -1894,6 +2880,24 @@ function buildResolvedProfileSource(option: BusinessTypeOption): BizProfileSourc
  * updated to thread a real locale yet keeps getting exactly the English
  * text it always has.
  */
+/**
+ * A short keyword (5 characters or fewer, e.g. "deli", "spa", "bar",
+ * "gym") is too likely to appear as a substring INSIDE an unrelated
+ * word — "deli" inside "Delivery service", "lash" inside "Splash pad",
+ * "bar" inside "Barbecue" — to safely match with plain substring
+ * containment. Those match as a whole word only (word boundaries on
+ * both sides), with an optional trailing "s" so "deli"/"delis" and
+ * "nail"/"nails" both match. A longer keyword (more than 5 characters)
+ * keeps today's plain substring matching, since that's exactly what
+ * lets a prefix keyword like "landscap" (matches "landscaper" and
+ * "landscaping" alike) or "orthodont" keep working.
+ */
+function keywordMatches(haystack: string, keyword: string): boolean {
+  if (keyword.length > 5) return haystack.includes(keyword);
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b${escaped}s?\\b`).test(haystack);
+}
+
 export function bizProfile(
   category: string | null | undefined,
   primaryType?: string | null,
@@ -1903,7 +2907,7 @@ export function bizProfile(
   if (!haystack.trim()) return localizeBizProfile(buildResolvedProfileSource(DEFAULT_OPTION), locale);
 
   for (const option of BUSINESS_TYPE_OPTIONS) {
-    if (option.match.some((keyword) => haystack.includes(keyword))) {
+    if (option.match.some((keyword) => keywordMatches(haystack, keyword))) {
       return localizeBizProfile(buildResolvedProfileSource(option), locale);
     }
   }

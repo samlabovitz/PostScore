@@ -322,9 +322,19 @@ const BOOK_VERB_IDS = new Set([
   "coach",
   "tutor_education",
   "photographer",
+  // Day 2 new types: each is a booked-date/reservation business (a
+  // time slot, an event date, a tour, a stay) in the same sense as the
+  // appointment-based types above — home_services/repair_dropoff/
+  // car_wash_detailing stay off this list on purpose, matching how
+  // "trades"/"auto_repair" already fall through to the "Call us"
+  // default rather than "Call to book" for a walk-in-style service.
+  "recreation",
+  "events",
+  "childcare",
+  "lodging",
 ]);
 const ORDER_VERB_IDS = new Set(["restaurant", "cafe", "bar", "bakery", "liquor_store", "grocery_market"]);
-const CONSULTATION_VERB_IDS = new Set(["lawyer", "dentist", "medical_clinic"]);
+const CONSULTATION_VERB_IDS = new Set(["lawyer", "dentist", "medical_clinic", "tattoo_body_art"]);
 
 function ctaVerb(profileId: string, locale: Locale): string {
   if (BOOK_VERB_IDS.has(profileId)) return t(locale, "starterSite.ctaBook");

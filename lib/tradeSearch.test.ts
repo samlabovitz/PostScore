@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { TRADES, searchTrades, type BusinessTypeId, type PlannedTypeId } from "./tradeSearch";
+import { TRADES, searchTrades, type BusinessTypeId } from "./tradeSearch";
 import { getBizProfileOptions } from "@/config/bizProfiles";
 
 describe("TRADES data integrity", () => {
@@ -12,9 +12,9 @@ describe("TRADES data integrity", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  test("every trade's businessTypeId is one of the 31 real ids in config/bizProfiles.ts", () => {
+  test("every trade's businessTypeId is one of the 39 real ids in config/bizProfiles.ts", () => {
     const realIds = new Set(getBizProfileOptions("en").map((o) => o.id));
-    expect(realIds.size).toBe(31);
+    expect(realIds.size).toBe(39);
     for (const trade of TRADES) {
       expect(realIds.has(trade.businessTypeId)).toBe(true);
     }
@@ -24,7 +24,7 @@ describe("TRADES data integrity", () => {
     const realIds = new Set(getBizProfileOptions("en").map((o) => o.id));
     // Every trade's businessTypeId already had to satisfy the
     // BusinessTypeId union at compile time — this just confirms the
-    // union's 31 members are exactly the real ids, neither more nor
+    // union's 39 members are exactly the real ids, neither more nor
     // fewer, by exercising one representative trade per id we know we
     // seeded (every real id appears on at least one trade above).
     const usedIds = new Set(TRADES.map((t) => t.businessTypeId as BusinessTypeId));
@@ -41,27 +41,54 @@ describe("TRADES data integrity", () => {
     }
   });
 
-  const PLANNED_TYPE_IDS: PlannedTypeId[] = [
-    "home_services",
-    "repair_dropoff",
-    "recreation",
-    "events",
-    "car_wash_detailing",
-    "childcare",
-    "lodging",
-    "tattoo_body_art",
-  ];
-
-  test("every plannedTypeId is one of the 8 proposed types, and only set on trades still mapped to default", () => {
-    const valid = new Set<string>(PLANNED_TYPE_IDS);
-    let plannedCount = 0;
+  test("no trade carries a plannedTypeId field anymore — the 8 new types are real now", () => {
     for (const trade of TRADES) {
-      if (trade.plannedTypeId === undefined) continue;
-      plannedCount++;
-      expect(valid.has(trade.plannedTypeId)).toBe(true);
-      expect(trade.businessTypeId).toBe("default");
+      expect((trade as unknown as Record<string, unknown>).plannedTypeId).toBeUndefined();
     }
-    expect(plannedCount).toBeGreaterThan(0);
+  });
+});
+
+describe("searchTrades — trades that moved onto the 8 new types", () => {
+  test('"roofer" resolves to the home_services business type', () => {
+    const results = searchTrades("roofer", "en");
+    const roofer = results.find((r) => r.id === "roofer");
+    expect(roofer).toBeDefined();
+    expect(roofer!.businessTypeId).toBe("home_services");
+  });
+
+  test('"dry cleaner" resolves to the repair_dropoff business type', () => {
+    const results = searchTrades("dry cleaner", "en");
+    const dryCleaner = results.find((r) => r.id === "dry_cleaner");
+    expect(dryCleaner).toBeDefined();
+    expect(dryCleaner!.businessTypeId).toBe("repair_dropoff");
+  });
+
+  test('"golf" resolves to the recreation business type', () => {
+    const results = searchTrades("golf", "en");
+    const golfRange = results.find((r) => r.id === "golf_driving_range");
+    expect(golfRange).toBeDefined();
+    expect(golfRange!.businessTypeId).toBe("recreation");
+  });
+
+  test('"car wash" resolves to the car_wash_detailing business type', () => {
+    const results = searchTrades("car wash", "en");
+    const carWash = results.find((r) => r.id === "car_wash");
+    expect(carWash).toBeDefined();
+    expect(carWash!.businessTypeId).toBe("car_wash_detailing");
+  });
+
+  test('"hotel" resolves to the lodging business type', () => {
+    const results = searchTrades("hotel", "en");
+    const hotel = results.find((r) => r.id === "hotel_motel");
+    expect(hotel).toBeDefined();
+    expect(hotel!.businessTypeId).toBe("lodging");
+  });
+
+  test('"tattoo" resolves to the tattoo_body_art business type', () => {
+    const results = searchTrades("tattoo", "en");
+    const tattoo = results.find((r) => r.id === "tattoo_studio");
+    expect(tattoo).toBeDefined();
+    expect(tattoo!.businessTypeId).toBe("tattoo_body_art");
   });
 });
 
