@@ -36,6 +36,8 @@ export type MessageKey =
   | "dashboard.settings.monthlyEmailHeading"
   | "dashboard.settings.monthlyEmailUnavailable"
   | "dashboard.settings.businessTypeHeading"
+  | "dashboard.settings.businessTypePickedByYou"
+  | "dashboard.settings.businessTypePickedByYouWithTrade"
   | "dashboard.settings.accountEmailLabel"
   | "dashboard.settings.subscriptionHeading"
   // --- Cancellation flow (components/settings/CancelSubscriptionFlow.tsx),
@@ -992,6 +994,10 @@ export type MessageKey =
   | "dashboard.intake.nameLabel"
   | "dashboard.intake.categoryLabel"
   | "dashboard.intake.languageLabel"
+  | "dashboard.intake.tradeLabel"
+  | "dashboard.intake.tradeAutoDetectedHelper"
+  | "dashboard.intake.tradeSomethingElse"
+  | "dashboard.intake.tradeNoMatch"
   | "dashboard.intake.savedOpening"
   | "dashboard.intake.saving"
   | "dashboard.intake.addThisBusiness"
@@ -2048,6 +2054,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.monthlyEmailHeading": "Monthly email report",
     "dashboard.settings.monthlyEmailUnavailable": "Couldn't load this section — try again later.",
     "dashboard.settings.businessTypeHeading": "Business type",
+    "dashboard.settings.businessTypePickedByYou": "Picked by you",
+    "dashboard.settings.businessTypePickedByYouWithTrade": "{trade} — picked by you",
     "dashboard.settings.accountEmailLabel": "Email",
     "dashboard.settings.subscriptionHeading": "Subscription",
     "dashboard.cancelSubscription.step1Heading": "Before you go — what's the main reason you're canceling?",
@@ -3207,6 +3215,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.intake.nameLabel": "Name",
     "dashboard.intake.categoryLabel": "Category",
     "dashboard.intake.languageLabel": "Language",
+    "dashboard.intake.tradeLabel": "What kind of business is this?",
+    "dashboard.intake.tradeAutoDetectedHelper": "Detected from your Google listing — change it if it's wrong.",
+    "dashboard.intake.tradeSomethingElse": "Something else",
+    "dashboard.intake.tradeNoMatch":
+      'No match — choose "Something else" and we\'ll use your Google listing.',
     "dashboard.intake.savedOpening": "Saved — opening…",
     "dashboard.intake.saving": "Saving...",
     "dashboard.intake.addThisBusiness": "Add this business",
@@ -4375,6 +4388,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.monthlyEmailHeading": "Informe mensual por correo",
     "dashboard.settings.monthlyEmailUnavailable": "No se pudo cargar esta sección — inténtelo de nuevo más tarde.",
     "dashboard.settings.businessTypeHeading": "Tipo de negocio",
+    "dashboard.settings.businessTypePickedByYou": "Elegido por usted",
+    "dashboard.settings.businessTypePickedByYouWithTrade": "{trade}: elegido por usted",
     "dashboard.settings.accountEmailLabel": "Correo electrónico",
     "dashboard.settings.subscriptionHeading": "Suscripción",
     "dashboard.cancelSubscription.step1Heading": "Antes de irse, ¿cuál es el motivo principal por el que cancela?",
@@ -5343,6 +5358,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.intake.nameLabel": "Nombre",
     "dashboard.intake.categoryLabel": "Categoría",
     "dashboard.intake.languageLabel": "Idioma",
+    "dashboard.intake.tradeLabel": "¿Qué tipo de negocio es?",
+    "dashboard.intake.tradeAutoDetectedHelper": "Detectado en su ficha de Google — cámbielo si no es correcto.",
+    "dashboard.intake.tradeSomethingElse": "Otro tipo de negocio",
+    "dashboard.intake.tradeNoMatch":
+      'Sin resultados: elija "Otro tipo de negocio" y usaremos su ficha de Google.',
     "dashboard.intake.savedOpening": "Guardado — abriendo…",
     "dashboard.intake.saving": "Guardando...",
     "dashboard.intake.addThisBusiness": "Agregar este negocio",

@@ -17,16 +17,22 @@ export function BusinessTypeSetting({
   autoDetectedBusinessTypeId,
   autoDetectedBusinessType,
   initialOverridden,
+  initialTradeName,
 }: {
   businessId: string;
   initialBusinessTypeId: string;
   autoDetectedBusinessTypeId: string;
   autoDetectedBusinessType: string;
   initialOverridden: boolean;
+  /** The saved trade's own display name (in the business's language),
+   * already resolved server-side from business.trade_id — null when no
+   * specific trade is behind the current type. */
+  initialTradeName: string | null;
 }) {
   const [state, setState] = useState({
     businessTypeId: initialBusinessTypeId,
     overridden: initialOverridden,
+    tradeName: initialTradeName,
   });
 
   return (
@@ -36,7 +42,14 @@ export function BusinessTypeSetting({
       autoDetectedBusinessTypeId={autoDetectedBusinessTypeId}
       autoDetectedBusinessType={autoDetectedBusinessType}
       businessTypeOverridden={state.overridden}
-      onSaved={({ businessTypeId, overridden }) => setState({ businessTypeId, overridden })}
+      tradeName={state.tradeName}
+      onSaved={({ businessTypeId, overridden }) =>
+        // A change through this dropdown always clears trade_id
+        // server-side (see updateBusinessTypeOverride) — a specific
+        // intake-typeahead trade can never survive a manual correction
+        // here, so the locally-held trade name is cleared to match.
+        setState({ businessTypeId, overridden, tradeName: null })
+      }
     />
   );
 }

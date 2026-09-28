@@ -24,6 +24,7 @@ import { updateBusinessProfile, updateBusinessTypeOverride } from "@/app/actions
 import { getBizProfileOptions } from "@/config/bizProfiles";
 import type { AssistantBusinessProfile } from "@/lib/assistant";
 import { t, useLocale } from "@/lib/i18n";
+import { businessTypeSourceText } from "./businessTypeSource";
 
 function ScoreTrend({ history }: { history: AssistantBusinessProfile["scoreHistory"] }) {
   const locale = useLocale();
@@ -177,6 +178,7 @@ export function BusinessTypeField({
   autoDetectedBusinessTypeId,
   autoDetectedBusinessType,
   businessTypeOverridden,
+  tradeName,
   onSaved,
 }: {
   businessId: string;
@@ -184,6 +186,17 @@ export function BusinessTypeField({
   autoDetectedBusinessTypeId: string;
   autoDetectedBusinessType: string;
   businessTypeOverridden: boolean;
+  /**
+   * Only passed by the Settings page (BusinessTypeSetting.tsx) — when
+   * provided (even as null), the description below the dropdown uses
+   * the honest 3-way "{trade} — picked by you" / "Picked by you" /
+   * auto-detected wording instead of this field's own generic
+   * "Corrected by you" text, reflecting whether a specific intake-
+   * typeahead trade (lib/tradeSearch.ts) is actually behind the current
+   * type. Omitted entirely by every other caller (e.g. PostAI's memory
+   * panel below), whose description text is unaffected by this prop.
+   */
+  tradeName?: string | null;
   onSaved: (result: { businessType: string; businessTypeId: string; overridden: boolean }) => void;
 }) {
   const locale = useLocale();
@@ -236,9 +249,7 @@ export function BusinessTypeField({
         {saving && <IconLoader2 size={14} className="animate-spin text-ink-mute" />}
       </div>
       <p className="mt-1 text-[11.5px] text-ink-mute">
-        {businessTypeOverridden
-          ? t(locale, "dashboard.assistant.memory.businessTypeCorrected", { autoDetected: autoDetectedBusinessType })
-          : t(locale, "dashboard.assistant.memory.businessTypeAutoDetected")}
+        {businessTypeSourceText({ locale, businessTypeOverridden, tradeName, autoDetectedBusinessType })}
       </p>
       {error && <p className="mt-1 text-[12px] text-red">{error}</p>}
     </div>

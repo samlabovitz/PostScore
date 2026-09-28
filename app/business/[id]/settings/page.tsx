@@ -8,6 +8,7 @@ import { getBusinessSummary } from "@/app/actions/businesses";
 import { getReportsData } from "@/app/actions/reports";
 import { createClient } from "@/lib/supabase/server";
 import { bizProfile, resolveBizProfile } from "@/config/bizProfiles";
+import { tradeLabel } from "@/lib/tradeSearch";
 import { BusinessLanguageToggle } from "@/components/layout/BusinessLanguageToggle";
 import { MonthlyEmailReportCard } from "@/components/reports/MonthlyEmailReportCard";
 import { BusinessTypeSetting } from "./BusinessTypeSetting";
@@ -61,6 +62,7 @@ export default async function SettingsPage({ params }: { params: { id: string } 
   const autoDetectedProfile = bizProfile(business.category, business.primary_type, locale);
   const businessTypeOverride = business.business_type_override ?? null;
   const profile = resolveBizProfile(business.category, business.primary_type, businessTypeOverride, locale);
+  const tradeName = business.trade_id ? tradeLabel(business.trade_id, locale) : null;
 
   return (
     <DashboardShell business={business}>
@@ -107,6 +109,7 @@ export default async function SettingsPage({ params }: { params: { id: string } 
               autoDetectedBusinessTypeId={autoDetectedProfile.id}
               autoDetectedBusinessType={autoDetectedProfile.label}
               initialOverridden={businessTypeOverride !== null}
+              initialTradeName={tradeName}
             />
           </Card>
         </div>

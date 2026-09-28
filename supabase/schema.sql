@@ -812,7 +812,7 @@ alter table public.businesses
 -- Named separately (rather than inline on the column above) so it can be
 -- dropped and re-added idempotently — constrained to the exact set of
 -- business type ids the app currently supports (see BUSINESS_TYPE_OPTIONS
--- in config/bizProfiles.ts, ~30 types as of the expanded list below).
+-- in config/bizProfiles.ts, 39 types as of the expanded list below).
 -- Update this list if a business type is ever added or removed there.
 alter table public.businesses drop constraint if exists businesses_business_type_override_check;
 alter table public.businesses add constraint businesses_business_type_override_check
@@ -825,9 +825,24 @@ alter table public.businesses add constraint businesses_business_type_override_c
       'gym_fitness', 'pet_services', 'dentist', 'medical_clinic',
       'lawyer', 'accountant', 'real_estate', 'consultant', 'coach', 'tutor_education', 'photographer', 'practitioner',
       'auto_repair', 'plumber', 'electrician', 'landscaper', 'cleaning_service',
+      'home_services', 'repair_dropoff', 'recreation', 'events', 'car_wash_detailing',
+      'childcare', 'lodging', 'tattoo_body_art',
       'default'
     )
   );
+
+-- The specific trade the owner picked at intake (lib/tradeSearch.ts's
+-- TRADES[].id, e.g. "roofer" or "shoe_repair") — set alongside
+-- business_type_override so Settings can say which exact trade drove
+-- the override, not just that one exists. null means the business type
+-- comes from Google auto-detection or a manual override with no
+-- specific trade behind it (e.g. chosen straight from the Settings
+-- dropdown). Not constrained to a fixed list the way business_type_
+-- override is: TRADES is expected to keep growing, and a stale trade_id
+-- here is harmless (Settings falls back to the generic "Picked by you"
+-- label if the id no longer resolves).
+alter table public.businesses
+  add column if not exists trade_id text;
 
 -- ---------------------------------------------------------------------------
 -- Assistant conversation history (lib/assistant.ts, app/actions/assistant.ts

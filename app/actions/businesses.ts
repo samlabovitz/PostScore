@@ -51,7 +51,14 @@ export type SaveBusinessResult =
  */
 export async function saveBusiness(
   place: PlaceDetails,
-  language?: Locale
+  language?: Locale,
+  // Only ever provided by the intake flow's trade typeahead (see
+  // app/business/new/AddBusinessSearch.tsx) — both set together when the
+  // owner picks a real trade, both explicitly null when they pick
+  // "Something else" (or never open the typeahead), so Google-category
+  // auto-detection is what resolveBizProfile() falls back to either way.
+  businessTypeOverride?: string | null,
+  tradeId?: string | null
 ): Promise<SaveBusinessResult> {
   const supabase = createClient();
 
@@ -64,7 +71,7 @@ export async function saveBusiness(
     return { status: "unauthenticated" };
   }
 
-  return saveBusinessWithClient(supabase, user.id, place, language);
+  return saveBusinessWithClient(supabase, user.id, place, language, businessTypeOverride, tradeId);
 }
 
 /**
@@ -95,8 +102,19 @@ export async function saveBusinessWithClient(
   // column default. See the upsert below: the `language` key is only
   // added to the payload when this is provided, and Postgres's upsert
   // only touches columns present in the payload on conflict.
-  language?: Locale
+  language?: Locale,
+  // Same "only ever provided by the intake flow" reasoning as `language`
+  // above — omitted (not merely null) by every re-scan caller, so a
+  // rescan can never clobber an owner's already-saved trade pick (or
+  // lack of one) back to a default. Explicitly null (not omitted) is
+  // how the intake flow itself records "Something else"/no pick.
+  businessTypeOverride?: string | null,
+  tradeId?: string | null
 ): Promise<SaveBusinessResult> {
+  if (businessTypeOverride != null && !bizProfileById(businessTypeOverride)) {
+    return { status: "error", message: `"${businessTypeOverride}" isn't a supported business type.` };
+  }
+
   // Same owner+place key the upsert below conflicts on — this is how we
   // recognize "this exact business already exists" and read whatever
   // screenshot state it already has, before deciding whether this scan
@@ -196,6 +214,8 @@ export async function saveBusinessWithClient(
         // or unsupported value can never land in the DB even if the
         // client-side value were somehow tampered with.
         ...(language !== undefined ? { language: normalizeLocale(language) } : {}),
+        ...(businessTypeOverride !== undefined ? { business_type_override: businessTypeOverride } : {}),
+        ...(tradeId !== undefined ? { trade_id: tradeId } : {}),
       },
       { onConflict: "owner_id,place_id" }
     )
@@ -270,6 +290,17 @@ export interface BusinessSummary {
    * auto-detection.
    */
   business_type_override?: string | null;
+  /**
+   * The specific trade (lib/tradeSearch.ts's TRADES[].id) the owner
+   * picked at intake, if any — set alongside business_type_override so
+   * the Settings page can say which exact trade drove the override
+   * ("Roofer — picked by you") instead of just that one exists. null
+   * means no specific trade is behind the current type — either it's
+   * auto-detected, or the owner corrected it straight from the Settings
+   * dropdown (which clears this). Optional for the same reason every
+   * other field here is: only the Settings page currently needs it.
+   */
+  trade_id?: string | null;
   /** Optional: only the Growth page's coupon share caption needs this,
    * so most callers don't select it. */
   phone?: string | null;
@@ -313,7 +344,7 @@ export async function getBusinessSummary(businessId: string): Promise<GetBusines
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, category, primary_type, business_type_override, phone, services, avg_job_value_low, avg_job_value_high, language"
+      "id, name, address, category, primary_type, business_type_override, trade_id, phone, services, avg_job_value_low, avg_job_value_high, language"
     )
     .eq("id", businessId)
     .single();
@@ -403,6 +434,13 @@ export type UpdateBusinessTypeOverrideResult =
  * in config/bizProfiles.ts) or null to clear the override and revert to
  * Google-category auto-detection — validated here so a bad id can never
  * reach the database's own check constraint as a confusing raw SQL error.
+ *
+ * Always clears trade_id too: this action is only ever called from a
+ * plain "pick a type" dropdown (Settings, PostAI's memory panel), never
+ * from the intake typeahead — so whatever specific trade used to be
+ * behind the business's type (if any) no longer applies once the type
+ * is set this way. The intake flow that DOES know a specific trade
+ * writes trade_id itself, directly in saveBusinessWithClient.
  */
 export async function updateBusinessTypeOverride(
   businessId: string,
@@ -424,7 +462,7 @@ export async function updateBusinessTypeOverride(
 
   const { data, error } = await supabase
     .from("businesses")
-    .update({ business_type_override: overrideId })
+    .update({ business_type_override: overrideId, trade_id: null })
     .eq("id", businessId)
     .select("business_type_override")
     .single();

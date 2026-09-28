@@ -9,6 +9,7 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 import { saveBusiness } from "@/app/actions/businesses";
 import { DEFAULT_LOCALE, normalizeLocale, t, useLocale, type Locale } from "@/lib/i18n";
 import type { PlaceLookupResult, PlaceCandidate, PlaceDetails } from "@/lib/google/places";
+import { TradeTypeahead, tradePickToSaveFields, type TradePick } from "./TradeTypeahead";
 
 function Field({ label, value }: { label: string; value: string | null }) {
   const locale = useLocale();
@@ -35,7 +36,7 @@ type SaveState =
  * action every business in this app goes through. On success it routes
  * straight to the new business's real Overview page rather than leaving
  * the owner on a static confirmation. */
-function SaveControl({ place, language }: { place: PlaceDetails; language: Locale }) {
+function SaveControl({ place, language, pick }: { place: PlaceDetails; language: Locale; pick: TradePick | null }) {
   const router = useRouter();
   const locale = useLocale();
   const [state, setState] = useState<SaveState>({ kind: "idle" });
@@ -44,8 +45,13 @@ function SaveControl({ place, language }: { place: PlaceDetails; language: Local
     setState({ kind: "saving" });
     // normalizeLocale() runs again inside saveBusiness itself right before
     // the write — this call is just so a bad value never leaves the
-    // client in the first place.
-    const result = await saveBusiness(place, normalizeLocale(language));
+    // client in the first place. tradePickToSaveFields is the exact
+    // "picking a trade saves both fields; Something else saves nulls"
+    // mapping — null for both means saveBusiness leaves the business
+    // type to Google-category auto-detection, same as never having
+    // selected a trade at all.
+    const { businessTypeOverride, tradeId } = tradePickToSaveFields(pick);
+    const result = await saveBusiness(place, normalizeLocale(language), businessTypeOverride, tradeId);
     if (result.status === "saved") {
       setState({ kind: "saved" });
       router.push(`/business/${result.businessId}`);
@@ -78,10 +84,18 @@ function SaveControl({ place, language }: { place: PlaceDetails; language: Local
   );
 }
 
-function DetailsView({ place, language, onLanguageChange }: {
+function DetailsView({
+  place,
+  language,
+  onLanguageChange,
+  pick,
+  onPickChange,
+}: {
   place: PlaceDetails;
   language: Locale;
   onLanguageChange: (locale: Locale) => void;
+  pick: TradePick | null;
+  onPickChange: (pick: TradePick | null) => void;
 }) {
   const locale = useLocale();
   return (
@@ -109,8 +123,10 @@ function DetailsView({ place, language, onLanguageChange }: {
         </div>
       </div>
 
+      <TradeTypeahead place={place} locale={language} pick={pick} onPickChange={onPickChange} />
+
       <div className="mt-4 border-t border-paper-line pt-4">
-        <SaveControl place={place} language={language} />
+        <SaveControl place={place} language={language} pick={pick} />
       </div>
     </Card>
   );
@@ -132,10 +148,15 @@ export function AddBusinessSearch() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PlaceLookupResult | null>(null);
   const [language, setLanguage] = useState<Locale>(DEFAULT_LOCALE);
+  const [pick, setPick] = useState<TradePick | null>(null);
 
   async function runLookup(body: Record<string, string>) {
     setLoading(true);
     setResult(null);
+    // A fresh lookup means a possibly different real business — any
+    // trade picked for the previous listing shouldn't silently carry
+    // over onto this one.
+    setPick(null);
     try {
       const res = await fetch("/api/places/lookup", {
         method: "POST",
@@ -228,7 +249,13 @@ export function AddBusinessSearch() {
           )}
 
           {result.status === "found" && (
-            <DetailsView place={result.place} language={language} onLanguageChange={setLanguage} />
+            <DetailsView
+              place={result.place}
+              language={language}
+              onLanguageChange={setLanguage}
+              pick={pick}
+              onPickChange={setPick}
+            />
           )}
         </>
       )}

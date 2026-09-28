@@ -579,3 +579,17 @@ export function searchTrades(query: string, locale: Locale = DEFAULT_LOCALE): Tr
     businessTypeId: entry.businessTypeId,
   }));
 }
+
+/**
+ * Looks up a trade by its stored id (businesses.trade_id) and returns
+ * its display name in the given locale — or null if the id doesn't
+ * match any current trade. Never throws: TRADES can grow or a row's
+ * id can otherwise go stale, and a caller (Settings' business-type
+ * source line) should fall back to a generic message rather than break
+ * when that happens, not treat it as an error.
+ */
+export function tradeLabel(tradeId: string, locale: Locale = DEFAULT_LOCALE): string | null {
+  const entry = TRADES.find((t) => t.id === tradeId);
+  if (!entry) return null;
+  return locale === "es" ? entry.nameEs : entry.nameEn;
+}
