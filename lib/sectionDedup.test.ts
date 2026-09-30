@@ -89,7 +89,7 @@ const WEAK_WEBSITE_INPUT: BusinessScoringInput = {
       isLikelyClientRenderedShell: false,
       renderedContentSignals: null,
     },
-    mobilePerformanceScore: 20,
+    mobilePerformance: { method: "lab", fieldCategory: null, labScore: 20 },
     screenshotUrl: null,
     additionalPages: [],
     lastScreenshotRefreshAt: null,

@@ -430,8 +430,12 @@ function ChangesFeed({
   return (
     <Card className="p-5">
       <div className="flex flex-col divide-y divide-paper-line">
-        {changes.slice(0, 8).map(({ check, fromPoints, toPoints }) => {
-          const delta = fromPoints !== null && toPoints !== null ? toPoints - fromPoints : null;
+        {changes.slice(0, 8).map(({ check, fromPoints, toPoints, methodChanged }) => {
+          // A method change confounds the point delta — it's never
+          // honest to imply the business itself got faster or slower
+          // when what actually changed is HOW speed was measured (see
+          // CheckChange.methodChanged's own doc).
+          const delta = !methodChanged && fromPoints !== null && toPoints !== null ? toPoints - fromPoints : null;
           const { label, explanation } = resolveChangeDisplay(check, liveBreakdown, locale);
           return (
             <div
@@ -440,7 +444,9 @@ function ChangesFeed({
             >
               <div>
                 <div className="text-sm font-medium text-ink">{label}</div>
-                <div className="mt-0.5 text-[12px] text-ink-mute">{explanation}</div>
+                <div className="mt-0.5 text-[12px] text-ink-mute">
+                  {methodChanged ? t(locale, "dashboard.overview.speedMeasurementMethodChanged") : explanation}
+                </div>
               </div>
               {delta !== null ? (
                 <Pill

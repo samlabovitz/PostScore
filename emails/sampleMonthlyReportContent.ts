@@ -52,7 +52,7 @@ function scoringInput(overrides: Partial<BusinessScoringInput> = {}): BusinessSc
         isLikelyClientRenderedShell: false,
         renderedContentSignals: null,
       },
-      mobilePerformanceScore: 92,
+      mobilePerformance: { method: "lab", fieldCategory: null, labScore: 92 },
       screenshotUrl: null,
       additionalPages: [],
       lastScreenshotRefreshAt: null,

@@ -250,9 +250,11 @@ export type MessageKey =
   | "content.checks.website.performance_mobile.explanation.noWebsite"
   | "content.checks.website.performance_mobile.explanation.notAnalyzed"
   | "content.checks.website.performance_mobile.explanation.noScore"
-  | "content.checks.website.performance_mobile.explanation.fast"
-  | "content.checks.website.performance_mobile.explanation.slowish"
-  | "content.checks.website.performance_mobile.explanation.slow"
+  | "content.checks.website.performance_mobile.explanation.field"
+  | "content.checks.website.performance_mobile.explanation.lab"
+  | "content.checks.website.performance_mobile.fieldCategory.fast"
+  | "content.checks.website.performance_mobile.fieldCategory.average"
+  | "content.checks.website.performance_mobile.fieldCategory.slow"
   | "content.checks.website.content_depth.label"
   | "content.checks.website.content_depth.advice"
   | "content.checks.website.content_depth.explanation.noWebsite"
@@ -837,6 +839,7 @@ export type MessageKey =
   | "dashboard.overview.scoringUpdatedBetweenScans"
   | "dashboard.overview.nothingChangedSinceLastScan"
   | "dashboard.overview.updatedPillLabel"
+  | "dashboard.overview.speedMeasurementMethodChanged"
   | "dashboard.overview.noPriorScanListingChanges"
   | "dashboard.overview.predatesListingTracking"
   | "dashboard.overview.nothingChangedOnListing"
@@ -2370,13 +2373,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.performance_mobile.explanation.notAnalyzed":
       "This site hasn't been analyzed yet — re-scan to run a real PageSpeed check.",
     "content.checks.website.performance_mobile.explanation.noScore":
-      "Couldn't get a real PageSpeed score for this site — either PostScore's PageSpeed check isn't configured yet, or Google's PageSpeed Insights API couldn't complete the audit. Excluded from your score, not counted against you.",
-    "content.checks.website.performance_mobile.explanation.fast":
-      "Fast on mobile — Google PageSpeed mobile performance score of {score}/100.",
-    "content.checks.website.performance_mobile.explanation.slowish":
-      "Loads a bit slowly on mobile — Google PageSpeed mobile performance score of {score}/100.",
-    "content.checks.website.performance_mobile.explanation.slow":
-      "Loads slowly on mobile — Google PageSpeed mobile performance score of only {score}/100.",
+      "Couldn't get a real speed measurement for this site — either PostScore's PageSpeed check isn't configured yet, or Google's PageSpeed Insights API couldn't complete the audit (no real-user data and every lab run failed). Excluded from your score, not counted against you.",
+    "content.checks.website.performance_mobile.explanation.field":
+      "Real visitors on phones over the last 28 days (Google Chrome data): {category}.",
+    "content.checks.website.performance_mobile.explanation.lab":
+      "Simulated phone test, middle of 3 runs: {score}/100. Results can vary between tests.",
+    "content.checks.website.performance_mobile.fieldCategory.fast": "fast",
+    "content.checks.website.performance_mobile.fieldCategory.average": "average",
+    "content.checks.website.performance_mobile.fieldCategory.slow": "slow",
 
     "content.checks.website.content_depth.label": "Content depth",
     "content.checks.website.content_depth.advice":
@@ -3124,6 +3128,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Scoring was updated between these two scans ({previous} → {current}), so a check-by-check comparison isn't shown here — the total score above still reflects the real difference.",
     "dashboard.overview.nothingChangedSinceLastScan": "Nothing changed since your last scan.",
     "dashboard.overview.updatedPillLabel": "Updated",
+    "dashboard.overview.speedMeasurementMethodChanged": "Speed measurement updated to a more accurate method",
     "dashboard.overview.noPriorScanListingChanges":
       "No prior scan to compare yet — real listing changes will show up here after your next re-scan.",
     "dashboard.overview.predatesListingTracking":
@@ -4756,10 +4761,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.performance_mobile.advice": "Acelere su sitio — comprima las imágenes, use un alojamiento estático rápido y elimine los scripts innecesarios. Una página ligera (como el sitio inicial de PostScore) carga rápido de forma predeterminada.",
     "content.checks.website.performance_mobile.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para comprobar.",
     "content.checks.website.performance_mobile.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para ejecutar una comprobación real de PageSpeed.",
-    "content.checks.website.performance_mobile.explanation.noScore": "No se pudo obtener una puntuación real de PageSpeed para este sitio — o la comprobación de PageSpeed de PostScore aún no está configurada, o la API de Google PageSpeed Insights no pudo completar la auditoría. Se excluye de su puntuación, no se cuenta en su contra.",
-    "content.checks.website.performance_mobile.explanation.fast": "Rápido en móvil — puntuación de rendimiento móvil de Google PageSpeed de {score}/100.",
-    "content.checks.website.performance_mobile.explanation.slowish": "Carga un poco lento en móvil — puntuación de rendimiento móvil de Google PageSpeed de {score}/100.",
-    "content.checks.website.performance_mobile.explanation.slow": "Carga lento en móvil — puntuación de rendimiento móvil de Google PageSpeed de solo {score}/100.",
+    "content.checks.website.performance_mobile.explanation.noScore": "No se pudo obtener una medición real de velocidad para este sitio — o la comprobación de PageSpeed de PostScore aún no está configurada, o la API de Google PageSpeed Insights no pudo completar la auditoría (sin datos reales de usuarios y fallaron todas las pruebas simuladas). Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.performance_mobile.explanation.field": "Visitantes reales en teléfonos durante los últimos 28 días (datos de Google Chrome): {category}.",
+    "content.checks.website.performance_mobile.explanation.lab": "Prueba simulada en teléfono, valor medio de 3 pruebas: {score}/100. Los resultados pueden variar entre pruebas.",
+    "content.checks.website.performance_mobile.fieldCategory.fast": "rápido",
+    "content.checks.website.performance_mobile.fieldCategory.average": "promedio",
+    "content.checks.website.performance_mobile.fieldCategory.slow": "lento",
     "content.checks.website.content_depth.label": "Profundidad del contenido",
     "content.checks.website.content_depth.advice": "Desarrolle contenido real — un título y una meta descripción, algunos encabezados reales y una cantidad genuina de texto sobre lo que ofrece. Un solo bloque vacío se percibe como un sitio sin terminar, tanto para los visitantes como para los motores de búsqueda.",
     "content.checks.website.content_depth.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para comprobar.",
@@ -5386,6 +5393,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.scoringUpdatedBetweenScans": "El sistema de puntuación se actualizó entre estos dos análisis ({previous} → {current}), así que aquí no se muestra una comparación comprobación por comprobación — la puntuación total de arriba sigue reflejando la diferencia real.",
     "dashboard.overview.nothingChangedSinceLastScan": "Nada cambió desde su último análisis.",
     "dashboard.overview.updatedPillLabel": "Actualizado",
+    "dashboard.overview.speedMeasurementMethodChanged": "La medición de velocidad se actualizó a un método más preciso",
     "dashboard.overview.noPriorScanListingChanges": "Aún no hay un análisis anterior con el que comparar — los cambios reales en su ficha aparecerán aquí después de su próximo análisis.",
     "dashboard.overview.predatesListingTracking": "Su último análisis es anterior al seguimiento de cambios en la ficha — esto empezará a funcionar a partir de su próximo análisis.",
     "dashboard.overview.nothingChangedOnListing": "Nada cambió en su ficha desde su último análisis.",

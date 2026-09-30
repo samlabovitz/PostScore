@@ -50,7 +50,7 @@ function scoringInput(overrides: Partial<BusinessScoringInput> = {}): BusinessSc
         isLikelyClientRenderedShell: false,
         renderedContentSignals: null,
       },
-      mobilePerformanceScore: 92,
+      mobilePerformance: { method: "lab", fieldCategory: null, labScore: 92 },
       screenshotUrl: null,
       additionalPages: [],
       lastScreenshotRefreshAt: null,
@@ -84,7 +84,7 @@ function perfectScoringInput(): BusinessScoringInput {
         isLikelyClientRenderedShell: false,
         renderedContentSignals: null,
       },
-      mobilePerformanceScore: 100,
+      mobilePerformance: { method: "lab", fieldCategory: null, labScore: 100 },
     },
   });
 }

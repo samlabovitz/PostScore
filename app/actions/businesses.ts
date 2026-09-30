@@ -152,7 +152,7 @@ export async function saveBusinessWithClient(
     ? captureScreenshots
       ? {
           content: analysis.content,
-          mobilePerformanceScore: analysis.mobilePerformanceScore,
+          mobilePerformance: analysis.mobilePerformance,
           screenshotUrl: null, // filled in by the follow-up update below
           additionalPages: [], // filled in by the follow-up update below
           lastScreenshotRefreshAt: null, // filled in by the follow-up update below, once the capture attempt lands
@@ -166,7 +166,7 @@ export async function saveBusinessWithClient(
         }
       : {
           content: analysis.content,
-          mobilePerformanceScore: analysis.mobilePerformanceScore,
+          mobilePerformance: analysis.mobilePerformance,
           // Regular re-scan: reuse whatever's already stored rather than
           // spending another ScreenshotOne call — see captureScreenshots above.
           screenshotUrl: existingAnalysis?.screenshotUrl ?? null,

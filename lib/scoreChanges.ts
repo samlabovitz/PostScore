@@ -11,6 +11,14 @@ export interface CheckChange {
   check: CheckResult;
   fromPoints: number | null;
   toPoints: number | null;
+  /** True when this check's own meta.method differs between the two
+   * scans being compared (today, the only check that ever sets
+   * meta.method is website.performance_mobile — see CheckResult.meta's
+   * own doc). The point delta here is confounded by a change in HOW the
+   * check was measured, not necessarily a real underlying change, so a
+   * caller must show an honest "measurement method updated" message
+   * instead of implying the business got faster or slower. */
+  methodChanged: boolean;
 }
 
 /** Pure diff between two real, previously-saved breakdowns — only
@@ -22,7 +30,8 @@ export function diffBreakdowns(previous: ScoreBreakdown, current: ScoreBreakdown
     const prevCheck = previous.checks.find((c) => c.id === check.id);
     if (!prevCheck) continue;
     if (prevCheck.earnedPoints !== check.earnedPoints || prevCheck.confidence !== check.confidence) {
-      changes.push({ check, fromPoints: prevCheck.earnedPoints, toPoints: check.earnedPoints });
+      const methodChanged = (prevCheck.meta?.method ?? null) !== (check.meta?.method ?? null);
+      changes.push({ check, fromPoints: prevCheck.earnedPoints, toPoints: check.earnedPoints, methodChanged });
     }
   }
   return changes.sort((a, b) => {

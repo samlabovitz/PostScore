@@ -79,7 +79,7 @@ export async function refreshWebsiteScreenshots(businessId: string): Promise<Ref
   const lastScreenshotRefreshAt = new Date().toISOString();
   const updated: WebsiteAnalysis = {
     content: existing?.content ?? null,
-    mobilePerformanceScore: existing?.mobilePerformanceScore ?? null,
+    mobilePerformance: existing?.mobilePerformance ?? null,
     screenshotUrl,
     additionalPages,
     lastScreenshotRefreshAt,

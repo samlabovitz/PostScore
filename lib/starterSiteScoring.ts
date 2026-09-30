@@ -16,6 +16,7 @@ import {
   type ScoreBreakdown,
 } from "@/lib/scoring";
 import { rawWeightedTotal } from "@/lib/actionPlan";
+import type { MobilePerformanceMeasurement } from "@/lib/scoring";
 import type { Locale } from "@/lib/i18n";
 
 export interface StarterSiteTemplateData {
@@ -40,7 +41,7 @@ export interface StarterSiteTemplateData {
  */
 export interface TemplateHostingAssumptions {
   httpsStatus: "https" | "http_only" | null;
-  mobilePerformanceScore: number | null;
+  mobilePerformance: MobilePerformanceMeasurement | null;
 }
 
 /** Nothing claimed about hosting — every free static host varies, so
@@ -49,21 +50,24 @@ export interface TemplateHostingAssumptions {
  * hard-coded inline). */
 export const TEMPLATE_HOSTING_UNKNOWN: TemplateHostingAssumptions = {
   httpsStatus: "https",
-  mobilePerformanceScore: null,
+  mobilePerformance: null,
 };
 
 /** Nothing the template guarantees on its own — excludes both
  * hosting-dependent facts, for an honest LOW estimate. */
 export const TEMPLATE_HOSTING_LOW: TemplateHostingAssumptions = {
   httpsStatus: null,
-  mobilePerformanceScore: null,
+  mobilePerformance: null,
 };
 
 /** The best realistic outcome once it's live on a fast, HTTPS-serving
- * host — for an honest HIGH estimate. */
+ * host — for an honest HIGH estimate. A hypothetical, not a real
+ * measurement, so it's expressed as a "lab" reading (matching
+ * PERFECT_WEBSITE_ANALYSIS in lib/scoring.ts) rather than claiming real
+ * field data that was never actually collected. */
 export const TEMPLATE_HOSTING_HIGH: TemplateHostingAssumptions = {
   httpsStatus: "https",
-  mobilePerformanceScore: 100,
+  mobilePerformance: { method: "lab", fieldCategory: null, labScore: 100 },
 };
 
 /**
@@ -124,7 +128,7 @@ export function buildTemplateScoringInput(
     https_status: hosting.httpsStatus,
     website_analysis_json: {
       content: analyzeWebsiteHtml(templateHtml),
-      mobilePerformanceScore: hosting.mobilePerformanceScore,
+      mobilePerformance: hosting.mobilePerformance,
       screenshotUrl: null,
       checkedAt: new Date().toISOString(),
     },

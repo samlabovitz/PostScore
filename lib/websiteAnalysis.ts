@@ -17,7 +17,7 @@
 // exclude it from scoring, never fabricate a value or fail the save.
 
 import { analyzeWebsiteHtml } from "./websiteContentAnalysis";
-import type { RenderedContentSignals, WebsiteContentSignals } from "./scoring";
+import type { FieldSpeedCategory, MobilePerformanceMeasurement, RenderedContentSignals, WebsiteContentSignals } from "./scoring";
 
 const HTML_FETCH_TIMEOUT_MS = 8000;
 /** Real Lighthouse audits genuinely take a while — this needs to be
@@ -60,7 +60,7 @@ const PAGESPEED_DEFAULT_CATEGORIES = ["performance"] as const;
  * make Lighthouse's real rendered-Chrome run also compute the
  * document-title/meta-description/viewport/heading-order audits this
  * module recovers content signals from (see the RenderedContentSignals
- * extraction in fetchPageSpeedMobileScore below, and
+ * extraction in fetchMobilePerformance below, and
  * website.content_depth in lib/scoring.ts, which is the only thing that
  * reads them). Never requested for a normal site — real added
  * Lighthouse-run cost, deliberately paid only where the static crawl is
@@ -316,34 +316,40 @@ async function captureAdditionalPageScreenshots(
   return captured;
 }
 
-export interface PageSpeedResult {
-  mobilePerformanceScore: number | null;
-  /** Only non-null when `categories` included "seo" or "accessibility"
-   * (i.e. PAGESPEED_CSR_RECOVERY_CATEGORIES was requested) AND the call
-   * actually succeeded — see RenderedContentSignals in lib/scoring.ts
-   * for what each field means and how website.content_depth uses them. */
-  renderedContentSignals: RenderedContentSignals | null;
+/** The subset of PageSpeed Insights' real JSON response this module
+ * reads — both the lab (lighthouseResult) and real-user field-data
+ * (loadingExperience/originLoadingExperience) portions of the same
+ * response. */
+interface RawPageSpeedResponse {
+  lighthouseResult?: {
+    categories?: { performance?: { score?: number } };
+    audits?: Record<string, { score?: number | null; scoreDisplayMode?: string }>;
+  };
+  /** Real Chrome UX Report data for this exact URL, when Google has
+   * enough real-visitor traffic to report it. */
+  loadingExperience?: { overall_category?: string };
+  /** Same real CrUX data, aggregated across the whole origin — Google's
+   * fallback for a URL that individually doesn't have enough traffic to
+   * report on its own. */
+  originLoadingExperience?: { overall_category?: string };
 }
 
-const EMPTY_PAGESPEED_RESULT: PageSpeedResult = { mobilePerformanceScore: null, renderedContentSignals: null };
+function isFieldSpeedCategory(value: unknown): value is FieldSpeedCategory {
+  return value === "FAST" || value === "AVERAGE" || value === "SLOW";
+}
 
-/**
- * Calls Google's PageSpeed Insights API (mobile strategy) for a real
- * performance score — and, when `categories` includes "seo"/
- * "accessibility" (see PAGESPEED_CSR_RECOVERY_CATEGORIES), recovers real
- * content signals from Lighthouse's rendered-DOM audits too, for a site
- * whose static HTML our own fetch can't read (a client-rendered shell).
- * Returns nulls — never throws, never guesses — when no API key is
- * configured or the call fails/times out.
- */
-export async function fetchPageSpeedMobileScore(
+/** One real HTTP call to PageSpeed Insights (mobile strategy) — the
+ * low-level building block fetchMobilePerformance composes into the
+ * real field-data-first, lab-median-fallback measurement below. Keeps
+ * the same one-retry-on-network-failure resilience this module always
+ * had (never retries a real HTTP error response, only a dropped
+ * connection/timeout). Returns null — never throws — on any failure. */
+async function fetchPageSpeedRunOnce(
   website: string,
-  apiKey: string | undefined,
-  categories: readonly string[] = PAGESPEED_DEFAULT_CATEGORIES,
-  fetchImpl: typeof fetch = fetch
-): Promise<PageSpeedResult> {
-  if (!website || website.trim().length === 0 || !apiKey) return EMPTY_PAGESPEED_RESULT;
-
+  apiKey: string,
+  categories: readonly string[],
+  fetchImpl: typeof fetch
+): Promise<RawPageSpeedResponse | null> {
   const target = /^https?:\/\//i.test(website.trim()) ? website.trim() : `https://${website.trim()}`;
   const categoryParams = categories.map((c) => `&category=${encodeURIComponent(c)}`).join("");
   const url =
@@ -359,52 +365,164 @@ export async function fetchPageSpeedMobileScore(
       await new Promise((resolve) => setTimeout(resolve, PAGESPEED_RETRY_DELAY_MS));
     }
   }
-  if (!res || !res.ok) return EMPTY_PAGESPEED_RESULT;
+  if (!res || !res.ok) return null;
 
   try {
-    const json = (await res.json()) as {
-      lighthouseResult?: {
-        categories?: { performance?: { score?: number } };
-        audits?: Record<string, { score?: number | null; scoreDisplayMode?: string }>;
-      };
-    };
-    const score = json.lighthouseResult?.categories?.performance?.score;
-    const mobilePerformanceScore =
-      typeof score === "number" && !Number.isNaN(score) ? Math.round(Math.max(0, Math.min(1, score)) * 100) : null;
-
-    let renderedContentSignals: RenderedContentSignals | null = null;
-    if (categories.includes("seo") || categories.includes("accessibility")) {
-      const audits = json.lighthouseResult?.audits ?? {};
-      // Real, Lighthouse-confirmed presence/absence from the rendered
-      // DOM — see RenderedContentSignals' own doc comment (lib/scoring.ts)
-      // for exactly what each value means and website.content_depth for
-      // how it's scored. score===1 -> confirmed present, score===0 ->
-      // confirmed absent, audit missing/other -> genuinely unknown (null).
-      const boolFromAuditScore = (auditId: string): boolean | null => {
-        const auditScore = audits[auditId]?.score;
-        if (auditScore === 1) return true;
-        if (auditScore === 0) return false;
-        return null;
-      };
-      // heading-order's scoreDisplayMode is "notApplicable" specifically
-      // when the rendered page has zero heading elements (nothing to
-      // check the order of) — any other display mode means at least one
-      // heading exists. An indirect proxy (the audit's real purpose is
-      // order-correctness, not counting), but a reliable presence signal.
-      const headingOrderAudit = audits["heading-order"];
-      const hasHeadings = headingOrderAudit ? headingOrderAudit.scoreDisplayMode !== "notApplicable" : null;
-      renderedContentSignals = {
-        hasTitle: boolFromAuditScore("document-title"),
-        hasMetaDescription: boolFromAuditScore("meta-description"),
-        hasViewportTag: boolFromAuditScore("viewport"),
-        hasHeadings,
-      };
-    }
-
-    return { mobilePerformanceScore, renderedContentSignals };
+    return (await res.json()) as RawPageSpeedResponse;
   } catch {
-    return EMPTY_PAGESPEED_RESULT;
+    return null;
   }
+}
+
+function extractLabScore(raw: RawPageSpeedResponse): number | null {
+  const score = raw.lighthouseResult?.categories?.performance?.score;
+  return typeof score === "number" && !Number.isNaN(score) ? Math.round(Math.max(0, Math.min(1, score)) * 100) : null;
+}
+
+/** URL-level field data first, origin-level second — see
+ * MobilePerformanceMeasurement's own doc (lib/scoring.ts) for why each
+ * is preferred over the lab fallback, and in that order (a URL's own
+ * real visitors beat its origin's aggregate whenever Google reports
+ * both). A missing/malformed/"NONE" category means Google genuinely has
+ * no field data at that level, not a real classification — never
+ * treated as one. */
+function extractFieldCategory(raw: RawPageSpeedResponse): FieldSpeedCategory | null {
+  const urlCategory = raw.loadingExperience?.overall_category;
+  if (isFieldSpeedCategory(urlCategory)) return urlCategory;
+  const originCategory = raw.originLoadingExperience?.overall_category;
+  if (isFieldSpeedCategory(originCategory)) return originCategory;
+  return null;
+}
+
+function extractRenderedContentSignals(
+  raw: RawPageSpeedResponse,
+  categories: readonly string[]
+): RenderedContentSignals | null {
+  if (!categories.includes("seo") && !categories.includes("accessibility")) return null;
+  const audits = raw.lighthouseResult?.audits ?? {};
+  // Real, Lighthouse-confirmed presence/absence from the rendered DOM —
+  // see RenderedContentSignals' own doc comment (lib/scoring.ts) for
+  // exactly what each value means and website.content_depth for how
+  // it's scored. score===1 -> confirmed present, score===0 -> confirmed
+  // absent, audit missing/other -> genuinely unknown (null).
+  const boolFromAuditScore = (auditId: string): boolean | null => {
+    const auditScore = audits[auditId]?.score;
+    if (auditScore === 1) return true;
+    if (auditScore === 0) return false;
+    return null;
+  };
+  // heading-order's scoreDisplayMode is "notApplicable" specifically
+  // when the rendered page has zero heading elements (nothing to check
+  // the order of) — any other display mode means at least one heading
+  // exists. An indirect proxy (the audit's real purpose is order-
+  // correctness, not counting), but a reliable presence signal.
+  const headingOrderAudit = audits["heading-order"];
+  const hasHeadings = headingOrderAudit ? headingOrderAudit.scoreDisplayMode !== "notApplicable" : null;
+  return {
+    hasTitle: boolFromAuditScore("document-title"),
+    hasMetaDescription: boolFromAuditScore("meta-description"),
+    hasViewportTag: boolFromAuditScore("viewport"),
+    hasHeadings,
+  };
+}
+
+/** Standard median: the middle value of an odd-length sorted list, or
+ * the average of the two middle values of an even-length one — used so
+ * one outlier run (a cold cache, a network hiccup) can't single-
+ * handedly swing the lab fallback the way trusting any one run would. */
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+export interface MobilePerformanceFetchResult {
+  measurement: MobilePerformanceMeasurement | null;
+  /** Only non-null when `categories` included "seo" or "accessibility"
+   * (i.e. PAGESPEED_CSR_RECOVERY_CATEGORIES was requested) AND the
+   * first run actually succeeded — see RenderedContentSignals in
+   * lib/scoring.ts for what each field means and how
+   * website.content_depth uses them. */
+  renderedContentSignals: RenderedContentSignals | null;
+  /** Real PageSpeed Insights calls this measurement spent — 1 when the
+   * first run already carried real-user field data, 3 when it didn't
+   * and the median-of-3 lab fallback ran (see fetchMobilePerformance's
+   * own doc). Exposed for tests and per-scan quota accounting; never
+   * read by scoring itself. */
+  callCount: number;
+}
+
+const EMPTY_MOBILE_PERFORMANCE_RESULT: MobilePerformanceFetchResult = {
+  measurement: null,
+  renderedContentSignals: null,
+  callCount: 0,
+};
+
+/**
+ * The real measurement behind website.performance_mobile — see
+ * MobilePerformanceMeasurement in lib/scoring.ts for the full field-vs-
+ * lab reasoning. Order:
+ *
+ * 1. Run PageSpeed Insights once. If its response carries real-user
+ *    field data (loadingExperience for this exact URL, or, failing
+ *    that, originLoadingExperience for the whole origin), use it — 1
+ *    call total, and the most accurate signal available.
+ * 2. Otherwise (no field data, or the first run itself failed), fall
+ *    back to a lab measurement: fire 2 more runs in parallel (we
+ *    already have the first), then take the MEDIAN of however many of
+ *    the 3 succeeded — never trusting any single run, since the same
+ *    live site's Lighthouse score can swing by dozens of points
+ *    between two runs minutes apart (see mobile-speed-change.md's
+ *    investigation). Up to 3 calls total.
+ * 3. If every attempt failed (no field data AND zero successful lab
+ *    runs), the measurement is null — "couldn't verify," excluded from
+ *    scoring exactly like today, never a fabricated value.
+ *
+ * Runs once per scan (see collectWebsiteAnalysis's own doc) — never on
+ * page load. Returns EMPTY_MOBILE_PERFORMANCE_RESULT — never throws —
+ * when no API key is configured or the URL is empty.
+ */
+export async function fetchMobilePerformance(
+  website: string,
+  apiKey: string | undefined,
+  categories: readonly string[] = PAGESPEED_DEFAULT_CATEGORIES,
+  fetchImpl: typeof fetch = fetch
+): Promise<MobilePerformanceFetchResult> {
+  if (!website || website.trim().length === 0 || !apiKey) return EMPTY_MOBILE_PERFORMANCE_RESULT;
+
+  const first = await fetchPageSpeedRunOnce(website, apiKey, categories, fetchImpl);
+  const renderedContentSignals = first ? extractRenderedContentSignals(first, categories) : null;
+
+  const fieldCategory = first ? extractFieldCategory(first) : null;
+  if (fieldCategory) {
+    return {
+      measurement: { method: "field", fieldCategory, labScore: null },
+      renderedContentSignals,
+      callCount: 1,
+    };
+  }
+
+  // No field data for this site (or the first run itself failed) — fall
+  // back to the honest lab measurement. We already have one attempt
+  // (`first`); fire the other two in parallel rather than serially, so
+  // this fallback costs one extra round-trip, not two.
+  const [secondRaw, thirdRaw] = await Promise.all([
+    fetchPageSpeedRunOnce(website, apiKey, categories, fetchImpl),
+    fetchPageSpeedRunOnce(website, apiKey, categories, fetchImpl),
+  ]);
+  const labScores = [first, secondRaw, thirdRaw]
+    .map((raw) => (raw ? extractLabScore(raw) : null))
+    .filter((s): s is number => s !== null);
+
+  if (labScores.length === 0) {
+    return { measurement: null, renderedContentSignals, callCount: 3 };
+  }
+
+  return {
+    measurement: { method: "lab", fieldCategory: null, labScore: median(labScores) },
+    renderedContentSignals,
+    callCount: 3,
+  };
 }
 
 /**
@@ -481,7 +599,7 @@ export async function captureWebsiteScreenshots(
 
 export interface WebsiteAnalysisCollection {
   content: WebsiteContentSignals | null;
-  mobilePerformanceScore: number | null;
+  mobilePerformance: MobilePerformanceMeasurement | null;
   screenshotBytes: Buffer | null;
   /** Up to MAX_ADDITIONAL_PAGES other real discovered pages, each with
    * its own best-effort screenshot — see AdditionalPageCapture. Always []
@@ -531,7 +649,7 @@ export async function collectWebsiteAnalysis(
   const contentPromise = htmlPromise.then((html) => (html ? analyzeWebsiteHtml(html) : null));
 
   const pageSpeedPromise = contentPromise.then((content) =>
-    fetchPageSpeedMobileScore(
+    fetchMobilePerformance(
       website,
       keys.pageSpeedApiKey,
       content?.isLikelyClientRenderedShell ? PAGESPEED_CSR_RECOVERY_CATEGORIES : PAGESPEED_DEFAULT_CATEGORIES,
@@ -550,7 +668,7 @@ export async function collectWebsiteAnalysis(
   ]);
 
   const baseContent = contentResult.status === "fulfilled" ? contentResult.value : null;
-  const pageSpeed = pageSpeedResult.status === "fulfilled" ? pageSpeedResult.value : EMPTY_PAGESPEED_RESULT;
+  const pageSpeed = pageSpeedResult.status === "fulfilled" ? pageSpeedResult.value : EMPTY_MOBILE_PERFORMANCE_RESULT;
   const screenshots =
     screenshotsResult.status === "fulfilled" ? screenshotsResult.value : { screenshotBytes: null, additionalPages: [] };
 
@@ -568,7 +686,7 @@ export async function collectWebsiteAnalysis(
 
   return {
     content,
-    mobilePerformanceScore: pageSpeed.mobilePerformanceScore,
+    mobilePerformance: pageSpeed.measurement,
     screenshotBytes: screenshots.screenshotBytes,
     additionalPages: screenshots.additionalPages,
   };

@@ -29,7 +29,7 @@ const GOOD_WEBSITE_ANALYSIS: WebsiteAnalysis = {
     isLikelyClientRenderedShell: false,
     renderedContentSignals: null,
   },
-  mobilePerformanceScore: 96,
+  mobilePerformance: { method: "lab", fieldCategory: null, labScore: 96 },
   screenshotUrl: "https://example.com/screenshot.png",
   additionalPages: [],
   lastScreenshotRefreshAt: "2024-01-01T00:00:00.000Z",
@@ -625,7 +625,7 @@ describe("businessRowToScoringInput adapter", () => {
     });
     expect(malformed.websiteAnalysis).toEqual({
       content: null,
-      mobilePerformanceScore: null,
+      mobilePerformance: null,
       screenshotUrl: null,
       additionalPages: [],
       lastScreenshotRefreshAt: null,
@@ -823,5 +823,59 @@ describe("v1.3.0 rating confidence weighting", () => {
     const input: BusinessScoringInput = { ...PERFECT_INPUT, rating: 2.0, reviewCount: 500 };
     const fixed = applyCheckFix(input, "visibility.rating");
     expect(fixed.reviewCount).toBe(500);
+  });
+});
+
+describe("website.performance_mobile: field-vs-lab measurement (Day 3b)", () => {
+  function withMeasurement(measurement: WebsiteAnalysis["mobilePerformance"]): BusinessScoringInput {
+    return { ...PERFECT_INPUT, websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, mobilePerformance: measurement } };
+  }
+
+  test("real-user field data FAST earns the full 10/10, VERIFIED, tagged meta.method 'field'", () => {
+    const breakdown = scoreBusiness(withMeasurement({ method: "field", fieldCategory: "FAST", labScore: null }));
+    const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
+    expect(check.earnedPoints).toBe(10);
+    expect(check.confidence).toBe("VERIFIED");
+    expect(check.meta).toEqual({ method: "field" });
+    expect(check.explanation).toContain("fast");
+    expect(check.explanation).toContain("28 days");
+  });
+
+  test("real-user field data AVERAGE earns 6/10", () => {
+    const breakdown = scoreBusiness(withMeasurement({ method: "field", fieldCategory: "AVERAGE", labScore: null }));
+    const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
+    expect(check.earnedPoints).toBe(6);
+    expect(check.meta).toEqual({ method: "field" });
+  });
+
+  test("real-user field data SLOW earns 2/10", () => {
+    const breakdown = scoreBusiness(withMeasurement({ method: "field", fieldCategory: "SLOW", labScore: null }));
+    const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
+    expect(check.earnedPoints).toBe(2);
+    expect(check.meta).toEqual({ method: "field" });
+  });
+
+  test("a lab measurement (median of 3 runs) keeps the existing linear score/10 mapping, tagged meta.method 'lab'", () => {
+    const breakdown = scoreBusiness(withMeasurement({ method: "lab", fieldCategory: null, labScore: 65 }));
+    const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
+    expect(check.earnedPoints).toBe(6.5);
+    expect(check.confidence).toBe("VERIFIED");
+    expect(check.meta).toEqual({ method: "lab" });
+    expect(check.explanation).toContain("65/100");
+    expect(check.explanation).toContain("middle of 3 runs");
+  });
+
+  test("no measurement at all (every attempt failed) is NOT_FOUND, excluded, meta null — never a fabricated value", () => {
+    const breakdown = scoreBusiness(withMeasurement(null));
+    const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
+    expect(check.earnedPoints).toBeNull();
+    expect(check.confidence).toBe("NOT_FOUND");
+    expect(check.meta).toBeNull();
+  });
+
+  test("simulateFix reaches the full 10/10 (via a lab measurement — a field FAST now also reaches 10, so either honestly proves the guarantee)", () => {
+    const fixed = scoreBusiness(applyCheckFix(withMeasurement(null), "website.performance_mobile"));
+    const check = fixed.checks.find((c) => c.id === "website.performance_mobile")!;
+    expect(check.earnedPoints).toBe(10);
   });
 });

@@ -89,9 +89,14 @@ function CheckRow({
       : Math.max(0, Math.min(100, (check.earnedPoints / check.maxPoints) * 100));
 
   // Real, previously-invisible detail worth its own small fact instead of
-  // staying buried in prose — only rendered where the real data exists.
+  // staying buried in prose — only rendered for a real lab measurement
+  // (a /100 score). Field-data measurements have no such number; their
+  // FAST/AVERAGE/SLOW classification is already stated in the check's
+  // own explanation text above.
   const performanceScore =
-    check.id === "website.performance_mobile" ? websiteAnalysis?.mobilePerformanceScore ?? null : null;
+    check.id === "website.performance_mobile" && websiteAnalysis?.mobilePerformance?.method === "lab"
+      ? websiteAnalysis.mobilePerformance.labScore
+      : null;
   const recovered =
     check.id === "website.content_depth" ? websiteAnalysis?.content?.renderedContentSignals ?? null : null;
 

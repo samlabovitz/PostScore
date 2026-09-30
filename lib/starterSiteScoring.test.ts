@@ -42,7 +42,7 @@ describe("buildTemplateScoringInput", () => {
     const input = buildTemplateScoringInput(NO_WEBSITE_ROW, DATA, "en", TEMPLATE_HOSTING_LOW);
     expect(input.website).toBe("https://example.com");
     expect(input.httpsStatus).toBeNull();
-    expect(input.websiteAnalysis?.mobilePerformanceScore).toBeNull();
+    expect(input.websiteAnalysis?.mobilePerformance).toBeNull();
     // Content signals ARE real — the template's own generated HTML.
     expect(input.websiteAnalysis?.content?.hasTitle).toBe(true);
   });
@@ -50,13 +50,13 @@ describe("buildTemplateScoringInput", () => {
   test("HIGH hosting includes real HTTPS and a full mobile performance score", () => {
     const input = buildTemplateScoringInput(NO_WEBSITE_ROW, DATA, "en", TEMPLATE_HOSTING_HIGH);
     expect(input.httpsStatus).toBe("https");
-    expect(input.websiteAnalysis?.mobilePerformanceScore).toBe(100);
+    expect(input.websiteAnalysis?.mobilePerformance).toEqual({ method: "lab", fieldCategory: null, labScore: 100 });
   });
 
   test("the default (UNKNOWN) hosting matches the Website page's own existing builder-offer estimate", () => {
     const input = buildTemplateScoringInput(NO_WEBSITE_ROW, DATA, "en", TEMPLATE_HOSTING_UNKNOWN);
     expect(input.httpsStatus).toBe("https");
-    expect(input.websiteAnalysis?.mobilePerformanceScore).toBeNull();
+    expect(input.websiteAnalysis?.mobilePerformance).toBeNull();
   });
 });
 

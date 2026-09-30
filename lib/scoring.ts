@@ -140,7 +140,7 @@ export interface WebsiteContentSignals {
    * signals recovered from Google PageSpeed's own rendered-Chrome
    * Lighthouse audits (document-title/meta-description/viewport/
    * heading-order — see lib/websiteAnalysis.ts's
-   * fetchPageSpeedMobileScore and PAGESPEED_CSR_RECOVERY_CATEGORIES),
+   * fetchMobilePerformance and PAGESPEED_CSR_RECOVERY_CATEGORIES),
    * requested only for a detected shell. null when this isn't a
    * client-rendered shell, or when it is but that widened PageSpeed call
    * didn't succeed — website.content_depth falls back to its full
@@ -175,6 +175,35 @@ export interface RenderedContentSignals {
   hasHeadings: boolean | null;
 }
 
+export type MobilePerformanceMethod = "field" | "lab";
+export type FieldSpeedCategory = "FAST" | "AVERAGE" | "SLOW";
+
+/**
+ * How website.performance_mobile's real speed signal was determined for
+ * a scan — see lib/websiteAnalysis.ts's fetchMobilePerformance for how
+ * each is collected, and the check's own evaluate() below for how each
+ * maps to points.
+ *
+ * "field" (Chrome UX Report real-visitor data — either for this exact
+ * URL, or, failing that, the site's whole origin) is preferred whenever
+ * Google has it: real visitors' actual phones over a real 28-day window
+ * beat any single simulated run. "lab" (a Lighthouse performance score,
+ * taken as the MEDIAN of 3 independent runs rather than trusting any
+ * one of them) is the honest fallback for a newer or lower-traffic site
+ * Google has no real-user data for yet — see mobile-speed-change.md's
+ * investigation for how much a single lab run can swing between two
+ * runs of the same live site minutes apart.
+ */
+export interface MobilePerformanceMeasurement {
+  method: MobilePerformanceMethod;
+  /** Google's own FAST/AVERAGE/SLOW real-user classification. Set only
+   * when method === "field"; null otherwise. */
+  fieldCategory: FieldSpeedCategory | null;
+  /** 0-100, the median of 3 real Lighthouse mobile-performance runs. Set
+   * only when method === "lab"; null otherwise. */
+  labScore: number | null;
+}
+
 /**
  * The frozen result of analyzing a business's live website — see
  * lib/websiteAnalysis.ts for how this gets collected (real network
@@ -192,10 +221,13 @@ export interface WebsiteAnalysis {
   /** null = the server-side HTML fetch failed or was blocked — excluded
    * from content_depth/contact_conversion, never scored as a failure. */
   content: WebsiteContentSignals | null;
-  /** 0-100, from PageSpeed Insights' mobile "performance" category
-   * score. null = no PAGESPEED_API_KEY configured, or the call failed
-   * or timed out — excluded, never scored as a failure. */
-  mobilePerformanceScore: number | null;
+  /** How fast this site really is on mobile — see
+   * MobilePerformanceMeasurement's own doc for the field-vs-lab method
+   * and lib/websiteAnalysis.ts's fetchMobilePerformance for how it's
+   * collected. null = no PAGESPEED_API_KEY configured, or every attempt
+   * (real-user field data AND all 3 lab runs) failed or timed out —
+   * excluded, never scored as a failure. */
+  mobilePerformance: MobilePerformanceMeasurement | null;
   /** Public URL of a real captured screenshot. null = no
    * SCREENSHOT_API_KEY configured, or capture failed/was blocked. */
   screenshotUrl: string | null;
@@ -369,6 +401,14 @@ export interface CheckResult {
   confidence: Confidence;
   /** Human-readable explanation of why the check earned what it earned. */
   explanation: string;
+  /** Optional machine-readable detail about HOW this check's value was
+   * determined — currently set only by website.performance_mobile
+   * (`{ method: "field" | "lab" }`), read by lib/scoreChanges.ts to tell
+   * a genuine speed change apart from a change caused purely by
+   * switching measurement method between two scans. null for every
+   * other check, and for performance_mobile itself whenever it's
+   * NOT_FOUND (nothing was actually measured). */
+  meta: Record<string, string> | null;
 }
 
 export interface CategoryResult {
@@ -639,6 +679,9 @@ interface CheckDefinition {
     earnedPoints: number | null;
     confidence: Confidence;
     explanation: string;
+    /** See CheckResult.meta's own doc — omitted (defaults to null) by
+     * every check except website.performance_mobile. */
+    meta?: Record<string, string> | null;
   };
   simulateFix(input: BusinessScoringInput): BusinessScoringInput;
 }
@@ -649,6 +692,44 @@ interface CheckDefinition {
 // repeat the bug where only one of the two got updated.
 const RATING_CHECK_MAX_POINTS = 16;
 const REVIEW_COUNT_CHECK_MAX_POINTS = 18;
+
+/**
+ * website.performance_mobile's points for real-user field data (Google's
+ * coarse FAST/AVERAGE/SLOW classification), on the check's own 10-point
+ * scale:
+ *
+ * - FAST -> 10 (full points): FAST is Google's TOP real-user category —
+ *   real visitors' actual phones, over a real 28-day window, confirming
+ *   this site is genuinely fast. That's at least as strong a claim as a
+ *   single perfect (100/100) simulated lab run, so a fast site backed by
+ *   real visitor data must be able to earn full points exactly like a
+ *   perfect lab result — never capped below it just for being measured a
+ *   different, more accurate way.
+ * - AVERAGE -> 6: CrUX's "AVERAGE" ("needs improvement") lines up with
+ *   the lab "slowish" band (50-79, i.e. 5.0-7.9 pts, using the existing
+ *   earnedPoints = labScore/10 mapping); its midpoint is ~65 (6.5 pts) —
+ *   rounded down to a clean 6 to stay honestly on the cautious side of
+ *   "needs improvement," never rounding a middling result up toward
+ *   "fast."
+ * - SLOW -> 2: CrUX's "SLOW" ("poor") lines up with the lab "slow" band
+ *   (<50, i.e. <5 pts); its midpoint is ~2.5. Real, sustained real-user
+ *   evidence of poor Core Web Vitals is a stronger, more damning signal
+ *   than one middling simulated run, so this rounds DOWN from the
+ *   band's midpoint (2, not 3) rather than up — while still leaving
+ *   room below for a genuinely catastrophic lab-measured site near 0,
+ *   which SLOW field data alone doesn't confirm.
+ */
+const FIELD_CATEGORY_POINTS: Record<FieldSpeedCategory, number> = {
+  FAST: 10,
+  AVERAGE: 6,
+  SLOW: 2,
+};
+
+const FIELD_CATEGORY_LABEL_KEYS: Record<FieldSpeedCategory, MessageKey> = {
+  FAST: "content.checks.website.performance_mobile.fieldCategory.fast",
+  AVERAGE: "content.checks.website.performance_mobile.fieldCategory.average",
+  SLOW: "content.checks.website.performance_mobile.fieldCategory.slow",
+};
 
 /** A fully-good WebsiteAnalysis, used only by the Website quality checks'
  * simulateFix (mirrors PLACEHOLDER_HOURS's role below) — never shown to
@@ -667,7 +748,7 @@ const PERFECT_WEBSITE_ANALYSIS: WebsiteAnalysis = {
     isLikelyClientRenderedShell: false,
     renderedContentSignals: null,
   },
-  mobilePerformanceScore: 100,
+  mobilePerformance: { method: "lab", fieldCategory: null, labScore: 100 },
   screenshotUrl: null,
   additionalPages: [],
   lastScreenshotRefreshAt: null,
@@ -1124,27 +1205,50 @@ export const CHECKS: CheckDefinition[] = [
           explanation: t(locale, "content.checks.website.performance_mobile.explanation.notAnalyzed"),
         };
       }
-      const score = input.websiteAnalysis.mobilePerformanceScore;
-      if (score === null) {
+      const measurement = input.websiteAnalysis.mobilePerformance;
+      if (!measurement) {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
           explanation: t(locale, "content.checks.website.performance_mobile.explanation.noScore"),
         };
       }
-      const earnedPoints = roundTo((score / 100) * 10, 1);
+      // Real-user field data (Chrome UX Report, either for this exact
+      // URL or the site's whole origin — see fetchMobilePerformance in
+      // lib/websiteAnalysis.ts) always wins when Google has it: it's
+      // real visitors' real phones over a real 28-day window, not one
+      // simulated run.
+      if (measurement.method === "field" && measurement.fieldCategory) {
+        const category = measurement.fieldCategory;
+        return {
+          earnedPoints: FIELD_CATEGORY_POINTS[category],
+          confidence: "VERIFIED",
+          explanation: t(locale, "content.checks.website.performance_mobile.explanation.field", {
+            category: t(locale, FIELD_CATEGORY_LABEL_KEYS[category]),
+          }),
+          meta: { method: "field" },
+        };
+      }
+      // No field data for this site (too little real traffic for Google
+      // to have collected it) — fall back to the honest lab measurement,
+      // already computed as the median of 3 independent runs rather
+      // than trusting any single one (see MobilePerformanceMeasurement's
+      // own doc).
+      if (measurement.method === "lab" && measurement.labScore !== null) {
+        const score = measurement.labScore;
+        return {
+          earnedPoints: roundTo((score / 100) * 10, 1),
+          confidence: "VERIFIED",
+          explanation: t(locale, "content.checks.website.performance_mobile.explanation.lab", {
+            score: Math.round(score),
+          }),
+          meta: { method: "lab" },
+        };
+      }
       return {
-        earnedPoints,
-        confidence: "VERIFIED",
-        explanation: t(
-          locale,
-          score >= 80
-            ? "content.checks.website.performance_mobile.explanation.fast"
-            : score >= 50
-              ? "content.checks.website.performance_mobile.explanation.slowish"
-              : "content.checks.website.performance_mobile.explanation.slow",
-          { score }
-        ),
+        earnedPoints: null,
+        confidence: "NOT_FOUND",
+        explanation: t(locale, "content.checks.website.performance_mobile.explanation.noScore"),
       };
     },
     simulateFix: (input) => ({
@@ -1152,7 +1256,7 @@ export const CHECKS: CheckDefinition[] = [
       website: input.website || "https://example.com",
       websiteAnalysis: {
         ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
-        mobilePerformanceScore: 100,
+        mobilePerformance: PERFECT_WEBSITE_ANALYSIS.mobilePerformance,
       },
     }),
   },
@@ -1193,7 +1297,7 @@ export const CHECKS: CheckDefinition[] = [
           };
         }
         // Recovered via Google PageSpeed's real rendered-Chrome Lighthouse
-        // audits (see fetchPageSpeedMobileScore/PAGESPEED_CSR_RECOVERY_CATEGORIES
+        // audits (see fetchMobilePerformance/PAGESPEED_CSR_RECOVERY_CATEGORIES
         // in lib/websiteAnalysis.ts) instead of our own static fetch, which
         // saw an empty shell. Deliberately capped at the sub-points these
         // audits can actually confirm — title 1 / meta description 1 /
@@ -1483,6 +1587,7 @@ export function scoreBusiness(input: BusinessScoringInput, locale: Locale = DEFA
       earnedPoints: result.earnedPoints,
       confidence: result.confidence,
       explanation: result.explanation,
+      meta: result.meta ?? null,
     };
   });
 
@@ -1714,6 +1819,33 @@ function parseAdditionalPages(value: unknown): WebsiteAnalysisPage[] {
   return value.filter(isWebsiteAnalysisPage);
 }
 
+function isFieldSpeedCategory(value: unknown): value is FieldSpeedCategory {
+  return value === "FAST" || value === "AVERAGE" || value === "SLOW";
+}
+
+/**
+ * A row saved before this measurement shape existed only ever has the
+ * old flat `mobilePerformanceScore` number (a single, un-medianed lab
+ * run) — degrading that to null (never-measured) rather than silently
+ * relabeling it as "lab, median of 3 runs" is deliberate: the
+ * explanation text this check shows makes a specific, real claim about
+ * HOW the number was produced, and a legacy single-run score can't
+ * honestly back that claim. The next rescan measures it for real under
+ * the new method. Same fail-safe reasoning as hasAboutPage/hasServicesPage
+ * below.
+ */
+function parseMobilePerformance(value: unknown): MobilePerformanceMeasurement | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  if (v.method === "field" && isFieldSpeedCategory(v.fieldCategory)) {
+    return { method: "field", fieldCategory: v.fieldCategory, labScore: null };
+  }
+  if (v.method === "lab" && typeof v.labScore === "number") {
+    return { method: "lab", fieldCategory: null, labScore: v.labScore };
+  }
+  return null;
+}
+
 /** Narrows a stored website_analysis_json value back to the real shape,
  * degrading anything unexpected (a legacy row, a malformed value) to
  * null (never-analyzed) rather than trusting an unvalidated cast — same
@@ -1726,7 +1858,7 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
   if (!value || typeof value !== "object") return null;
   const v = value as Record<string, unknown>;
   const content = parseWebsiteContentSignals(v.content);
-  const mobilePerformanceScore = typeof v.mobilePerformanceScore === "number" ? v.mobilePerformanceScore : null;
+  const mobilePerformance = parseMobilePerformance(v.mobilePerformance);
   const screenshotUrl = typeof v.screenshotUrl === "string" ? v.screenshotUrl : null;
   const additionalPages = parseAdditionalPages(v.additionalPages);
   const lastScreenshotRefreshAt = typeof v.lastScreenshotRefreshAt === "string" ? v.lastScreenshotRefreshAt : null;
@@ -1739,7 +1871,7 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
   if (checkedAt === null) return null;
   return {
     content,
-    mobilePerformanceScore,
+    mobilePerformance,
     screenshotUrl,
     additionalPages,
     lastScreenshotRefreshAt,

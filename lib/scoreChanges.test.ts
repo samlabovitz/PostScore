@@ -21,6 +21,7 @@ function fakeCheck(overrides: Partial<CheckResult> = {}): CheckResult {
     earnedPoints: 10,
     confidence: "VERIFIED",
     explanation: "Stored English explanation from an old scan.",
+    meta: null,
     ...overrides,
   };
 }
@@ -140,5 +141,43 @@ describe("diffBreakdowns", () => {
     const current = fakeBreakdown([fakeCheck({ id: "new-check" })]);
 
     expect(diffBreakdowns(previous, current)).toEqual([]);
+  });
+
+  test("methodChanged is true when a check's meta.method differs between scans (e.g. field -> lab), even though it did genuinely change points", () => {
+    const previous = fakeBreakdown([
+      fakeCheck({ id: "website.performance_mobile", earnedPoints: 9, meta: { method: "field" } }),
+    ]);
+    const current = fakeBreakdown([
+      fakeCheck({ id: "website.performance_mobile", earnedPoints: 6.5, meta: { method: "lab" } }),
+    ]);
+
+    const changes = diffBreakdowns(previous, current);
+
+    expect(changes).toHaveLength(1);
+    expect(changes[0].methodChanged).toBe(true);
+  });
+
+  test("methodChanged is false for a real point change where the method stayed the same", () => {
+    const previous = fakeBreakdown([
+      fakeCheck({ id: "website.performance_mobile", earnedPoints: 5, meta: { method: "lab" } }),
+    ]);
+    const current = fakeBreakdown([
+      fakeCheck({ id: "website.performance_mobile", earnedPoints: 8, meta: { method: "lab" } }),
+    ]);
+
+    const changes = diffBreakdowns(previous, current);
+
+    expect(changes).toHaveLength(1);
+    expect(changes[0].methodChanged).toBe(false);
+  });
+
+  test("methodChanged is false for a check that never sets meta (meta null on both sides)", () => {
+    const previous = fakeBreakdown([fakeCheck({ id: "completeness.phone", earnedPoints: 0, meta: null })]);
+    const current = fakeBreakdown([fakeCheck({ id: "completeness.phone", earnedPoints: 10, meta: null })]);
+
+    const changes = diffBreakdowns(previous, current);
+
+    expect(changes).toHaveLength(1);
+    expect(changes[0].methodChanged).toBe(false);
   });
 });
