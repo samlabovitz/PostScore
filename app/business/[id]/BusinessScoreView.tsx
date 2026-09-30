@@ -524,6 +524,41 @@ function ListingChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
   );
 }
 
+/**
+ * Compact, always-shown reminder that PostScore's growth tools help
+ * every business regardless of its current score — deliberately placed
+ * right below the score so a strong scorer doesn't read the page as
+ * "you're done." `hasScore` is false only in the genuine edge case where
+ * literally nothing about the business was determinable (every category
+ * has zero possiblePoints) — never for a real, low-but-computed total,
+ * which is still an honest score worth naming in the first sentence.
+ */
+function GrowMoreCustomersBanner({ businessId, breakdown }: { businessId: string; breakdown: ScoreBreakdown }) {
+  const locale = useLocale();
+  const hasScore = breakdown.categories.some((c) => c.possiblePoints > 0);
+
+  return (
+    <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+      <div>
+        <h2 className="font-serif text-base font-semibold text-ink">
+          {t(locale, "dashboard.overview.growBanner.heading")}
+        </h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          {hasScore
+            ? t(locale, "dashboard.overview.growBanner.subtextWithScore", { score: breakdown.total })
+            : t(locale, "dashboard.overview.growBanner.subtextNoScore")}
+        </p>
+      </div>
+      <Link
+        href={`/business/${businessId}/growth#ways-to-grow`}
+        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-brass bg-brass px-[15px] py-[7px] text-[13px] font-medium text-white transition-colors hover:bg-[#a5772a]"
+      >
+        {t(locale, "dashboard.overview.growBanner.button")}
+      </Link>
+    </Card>
+  );
+}
+
 export type AssistantEmbedData =
   | {
       status: "ok";
@@ -616,6 +651,8 @@ export function BusinessScoreView({
           <SinceLastScanControl history={history} />
         </div>
       </div>
+
+      <GrowMoreCustomersBanner businessId={businessId} breakdown={breakdown} />
 
       {assistant.status === "ok" ? (
         <AssistantLauncher

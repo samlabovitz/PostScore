@@ -267,7 +267,7 @@ export function GrowthView({
           />
 
           {growthMoves.length > 0 && (
-            <>
+            <div id="ways-to-grow" className="flex flex-col gap-6 scroll-mt-20 nav:gap-8">
               <SectionHeading title={t(locale, "dashboard.growth.moves.sectionHeading")} />
               <Card className="p-5">
                 <div className="flex flex-col divide-y divide-paper-line">
@@ -276,7 +276,7 @@ export function GrowthView({
                   ))}
                 </div>
               </Card>
-            </>
+            </div>
           )}
         </div>
       )}

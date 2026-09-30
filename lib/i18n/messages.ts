@@ -852,6 +852,10 @@ export type MessageKey =
   | "dashboard.overview.projectedLabel"
   | "dashboard.overview.scoreOutOf100WithGrade"
   | "dashboard.overview.seeActionPlan"
+  | "dashboard.overview.growBanner.heading"
+  | "dashboard.overview.growBanner.subtextWithScore"
+  | "dashboard.overview.growBanner.subtextNoScore"
+  | "dashboard.overview.growBanner.button"
   | "dashboard.overview.assistantUnavailablePrefix"
   | "dashboard.overview.atAGlanceHeading"
   | "dashboard.overview.googleRatingLabel"
@@ -3144,6 +3148,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.projectedLabel": "Projected if all suggestions completed",
     "dashboard.overview.scoreOutOf100WithGrade": "/ 100 · {grade}",
     "dashboard.overview.seeActionPlan": "See your action plan →",
+    "dashboard.overview.growBanner.heading": "More customers, whatever your score",
+    "dashboard.overview.growBanner.subtextWithScore":
+      "You're at {score}/100. Whether a business scores 70 or 95, PostScore's growth tools, like coupons, referral programs, a weekly routine, and price checks, help bring more customers through the door.",
+    "dashboard.overview.growBanner.subtextNoScore":
+      "Whether a business scores 70 or 95, PostScore's growth tools, like coupons, referral programs, a weekly routine, and price checks, help bring more customers through the door.",
+    "dashboard.overview.growBanner.button": "See ways to grow",
     "dashboard.overview.assistantUnavailablePrefix": "The assistant isn't available right now: {message}",
     "dashboard.overview.atAGlanceHeading": "At a glance",
     "dashboard.overview.googleRatingLabel": "Google rating",
@@ -5405,6 +5415,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.gradeLabel": "Nota",
     "dashboard.overview.projectedLabel": "Proyectada si se completan todas las sugerencias",
     "dashboard.overview.seeActionPlan": "Ver su plan de acción →",
+    "dashboard.overview.growBanner.heading": "Más clientes, sin importar su puntuación",
+    "dashboard.overview.growBanner.subtextWithScore":
+      "Su puntuación es {score}/100. Ya sea que un negocio tenga 70 o 95, las herramientas de crecimiento de PostScore, como cupones, programas de recomendación, una rutina semanal y comparaciones de precios, ayudan a atraer más clientes.",
+    "dashboard.overview.growBanner.subtextNoScore":
+      "Ya sea que un negocio tenga 70 o 95, las herramientas de crecimiento de PostScore, como cupones, programas de recomendación, una rutina semanal y comparaciones de precios, ayudan a atraer más clientes.",
+    "dashboard.overview.growBanner.button": "Ver formas de crecer",
     "dashboard.overview.assistantUnavailablePrefix": "El asistente no está disponible en este momento: {message}",
     "dashboard.overview.atAGlanceHeading": "De un vistazo",
     "dashboard.overview.googleRatingLabel": "Calificación de Google",
