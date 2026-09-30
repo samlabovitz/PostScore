@@ -32,6 +32,17 @@ export function isGbpOAuthConfigured(): boolean {
   return readEnv("GOOGLE_OAUTH_CLIENT_ID") !== null && readEnv("GOOGLE_OAUTH_CLIENT_SECRET") !== null;
 }
 
+/** Whether the weekly-plan "Connect your Google Business Profile" item
+ * should be proactively surfaced to real owners. Separate from
+ * isGbpOAuthConfigured: OAuth can be fully configured for local testing
+ * while still staying hidden from real users, since Google blocks
+ * non-test accounts from an app whose OAuth consent screen hasn't
+ * passed verification yet. Defaults off — set GBP_CONNECT_PUBLIC=true
+ * only in an environment where you want the item to actually show. */
+export function isGbpConnectPublic(): boolean {
+  return process.env.GBP_CONNECT_PUBLIC === "true";
+}
+
 function getOAuthConfig(): { clientId: string; clientSecret: string } {
   if (typeof window !== "undefined") {
     throw new Error("Google Business Profile OAuth must run on the server.");

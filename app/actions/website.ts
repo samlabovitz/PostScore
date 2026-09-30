@@ -10,12 +10,11 @@ import {
   type Suggestion,
   type WebsiteAnalysis,
 } from "@/lib/scoring";
-import { analyzeWebsiteHtml } from "@/lib/websiteContentAnalysis";
 import {
-  STARTER_SITE_FONTS,
-  STARTER_SITE_THEMES,
-  buildStarterSiteHtml,
-} from "@/lib/starterSite";
+  buildTemplateScoringInput,
+  TEMPLATE_HOSTING_UNKNOWN,
+  type StarterSiteTemplateData,
+} from "@/lib/starterSiteScoring";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale, type Locale } from "@/lib/i18n";
 import type { OpeningHoursPeriod } from "@/lib/google/places";
@@ -109,65 +108,10 @@ const UNDERPERFORMING_MARGIN = 8;
  */
 function estimateTemplateWebsiteScore(
   business: BusinessScoringRow,
-  data: {
-    businessName: string;
-    category: string | null;
-    phone: string | null;
-    address: string | null;
-    openingHours: string[] | null;
-    rating: number | null;
-    reviewCount: number | null;
-    googleMapsUri: string | null;
-    profileId: string;
-  },
+  data: StarterSiteTemplateData,
   locale: Locale
 ): number | null {
-  const templateHtml = buildStarterSiteHtml({
-    locale,
-    businessName: data.businessName,
-    category: data.category,
-    tagline: "",
-    taglineFontId: STARTER_SITE_FONTS[0].id,
-    taglineColor: null,
-    taglineSize: "medium",
-    taglinePlacement: "below",
-    phone: data.phone,
-    address: data.address,
-    openingHours: data.openingHours,
-    // Not needed for this internal scoring-only estimate — never shown
-    // to the owner, and analyzeWebsiteHtml() doesn't parse hours text.
-    openingHoursPeriods: null,
-    rating: data.rating,
-    reviewCount: data.reviewCount,
-    googleMapsUri: data.googleMapsUri,
-    profileId: data.profileId,
-    themeId: STARTER_SITE_THEMES[0].id,
-    customAccent: null,
-    fontId: STARTER_SITE_FONTS[0].id,
-    show: {
-      address: !!data.address,
-      phone: !!data.phone,
-      hours: !!data.openingHours && data.openingHours.length > 0,
-      rating: data.rating !== null,
-    },
-    // The template estimate compares against the builder's default,
-    // no-customization state — no photos uploaded yet.
-    heroImage: null,
-    contentImages: [],
-  });
-
-  const templateInput = businessRowToScoringInput({
-    ...business,
-    website: "https://example.com",
-    https_status: "https",
-    website_analysis_json: {
-      content: analyzeWebsiteHtml(templateHtml),
-      mobilePerformanceScore: null, // honestly excluded — never live-tested
-      screenshotUrl: null,
-      checkedAt: new Date().toISOString(),
-    },
-  });
-
+  const templateInput = buildTemplateScoringInput(business, data, locale, TEMPLATE_HOSTING_UNKNOWN);
   const templateBreakdown = scoreBusiness(templateInput, locale);
   return templateBreakdown.categories.find((c) => c.id === "website")?.relativeScore ?? null;
 }

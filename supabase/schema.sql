@@ -699,6 +699,18 @@ alter table public.businesses
 alter table public.competitor_scans
   add column if not exists price_level text;
 
+-- Real Google photo count per competitor, captured the same way
+-- price_level above was — lets lib/growthMoves.ts's
+-- add_photos_vs_competitors move show a real "nearby competitors have
+-- N, you have M" comparison from the latest saved scan, instead of
+-- trying to back a raw count out of the completeness.photos check's
+-- points (breakdown_json only has the scored outcome, not the real
+-- number). Nullable: Google has no photo count for some listings, and
+-- scans saved before this column existed won't have it until the next
+-- "Save this scan."
+alter table public.competitor_scans
+  add column if not exists photo_count integer;
+
 -- One row per chat turn (owner question or assistant reply), so the
 -- conversation survives navigating away and coming back — same
 -- persistence intent as `tasks`/`promos`, just append-only rather than
@@ -1241,3 +1253,74 @@ create unique index if not exists businesses_unsubscribe_token_unique
 -- create one).
 create unique index if not exists monthly_reports_one_per_business_per_month
   on public.monthly_reports (business_id, date_trunc('month', sent_at at time zone 'utc'));
+
+-- ---------------------------------------------------------------------------
+-- Weekly checklist support (lib/weeklyChecklist.ts, Day 3 pass 2d)
+-- ---------------------------------------------------------------------------
+
+-- One row per (business, week, item) the owner has actually checked off
+-- on the Growth page's "Your weekly routine" checklist — a habit tracker
+-- PostScore has no way to verify itself (it can't see Google posts or
+-- review replies), so this is purely an honest, owner-marked log.
+-- Unchecking an item deletes its row rather than storing a false state,
+-- so "checked" always means a real row exists — never a boolean flag
+-- that could silently drift from what was actually marked.
+create table if not exists public.weekly_checks (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses (id) on delete cascade,
+  -- The Monday (in the business's own reporting timezone — see
+  -- lib/weeklyChecklist.ts's WEEKLY_CHECKLIST_TIMEZONE) that this check
+  -- belongs to, stored as a plain date so a row is never ambiguous about
+  -- which week it's for regardless of what timezone later reads it back
+  -- from.
+  week_start date not null,
+  -- One of the fixed checklist item ids (post_update, reply_reviews,
+  -- share_review_link, add_photo, check_hours) — free text, like
+  -- tasks.check_id, validated at the application layer rather than a DB
+  -- enum, so a new item never needs a migration to add.
+  item_id text not null,
+  checked_at timestamptz not null default now()
+);
+
+-- At most one row per (business, week, item) — checking the same item
+-- twice in the same week is a no-op, never a duplicate row.
+create unique index if not exists weekly_checks_business_week_item_unique
+  on public.weekly_checks (business_id, week_start, item_id);
+
+create index if not exists weekly_checks_business_id_idx
+  on public.weekly_checks (business_id);
+
+alter table public.weekly_checks enable row level security;
+
+drop policy if exists "Users can view weekly checks for their own businesses" on public.weekly_checks;
+create policy "Users can view weekly checks for their own businesses"
+  on public.weekly_checks for select
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = weekly_checks.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can insert weekly checks for their own businesses" on public.weekly_checks;
+create policy "Users can insert weekly checks for their own businesses"
+  on public.weekly_checks for insert
+  with check (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = weekly_checks.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+drop policy if exists "Users can delete weekly checks for their own businesses" on public.weekly_checks;
+create policy "Users can delete weekly checks for their own businesses"
+  on public.weekly_checks for delete
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = weekly_checks.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );

@@ -340,6 +340,10 @@ export type MessageKey =
   | "content.actionPlan.visibility.review_recency.why"
   | "content.actionPlan.visibility.review_recency.action"
   | "content.actionPlan.visibility.review_recency.fix"
+  | "content.actionPlan.mergedReviews.title"
+  | "content.actionPlan.mergedReviews.why"
+  | "content.actionPlan.mergedReviews.action"
+  | "content.actionPlan.mergedReviews.fix"
   | "content.actionPlan.completeness.phone.why"
   | "content.actionPlan.completeness.phone.action"
   | "content.actionPlan.completeness.phone.fix"
@@ -364,6 +368,7 @@ export type MessageKey =
   | "content.actionPlan.website.has_website.why"
   | "content.actionPlan.website.has_website.action"
   | "content.actionPlan.website.has_website.fix"
+  | "content.actionPlan.website.has_website.timingNote"
   | "content.actionPlan.website.https.why"
   | "content.actionPlan.website.https.action"
   | "content.actionPlan.website.https.fix"
@@ -373,9 +378,11 @@ export type MessageKey =
   | "content.actionPlan.website.content_depth.why"
   | "content.actionPlan.website.content_depth.action"
   | "content.actionPlan.website.content_depth.fix"
+  | "content.actionPlan.website.content_depth.weeklyAction"
   | "content.actionPlan.website.contact_conversion.why"
   | "content.actionPlan.website.contact_conversion.action"
   | "content.actionPlan.website.contact_conversion.fix"
+  | "content.actionPlan.website.contact_conversion.weeklyAction"
   | "content.actionPlan.fallback.why"
   | "content.actionPlan.fallback.action"
   | "content.actionPlan.fallback.fix"
@@ -414,6 +421,50 @@ export type MessageKey =
   | "dashboard.growth.view.tabPlan"
   | "dashboard.growth.view.tabCoupons"
   | "dashboard.growth.view.tabReferral"
+  | "dashboard.growth.moves.sectionHeading"
+  | "dashboard.growth.moves.badge"
+  | "dashboard.growth.moves.goLabel"
+  | "dashboard.growth.moves.startCoupon.title"
+  | "dashboard.growth.moves.startCoupon.why"
+  | "dashboard.growth.moves.startCoupon.howTo"
+  | "dashboard.growth.moves.startReferral.title"
+  | "dashboard.growth.moves.startReferral.why"
+  | "dashboard.growth.moves.startReferral.howTo"
+  | "dashboard.growth.moves.runPriceCheck.title"
+  | "dashboard.growth.moves.runPriceCheck.why"
+  | "dashboard.growth.moves.runPriceCheck.howTo"
+  | "dashboard.growth.moves.refreshPriceCheck.title"
+  | "dashboard.growth.moves.refreshPriceCheck.why"
+  | "dashboard.growth.moves.refreshPriceCheck.howTo"
+  | "dashboard.growth.moves.refreshPriceCheck.lastChecked"
+  | "dashboard.growth.moves.addPhotos.title"
+  | "dashboard.growth.moves.addPhotos.why"
+  | "dashboard.growth.moves.addPhotos.howTo"
+  | "dashboard.growth.moves.buildStarterSite.title"
+  | "dashboard.growth.moves.buildStarterSite.noWebsite"
+  | "dashboard.growth.moves.buildStarterSite.howTo"
+  | "dashboard.growth.moves.improveWebsite.title"
+  | "dashboard.growth.moves.improveWebsite.why"
+  | "dashboard.growth.moves.improveWebsite.howTo"
+  | "dashboard.growth.moves.connectGbp.title"
+  | "dashboard.growth.moves.connectGbp.why"
+  | "dashboard.growth.moves.connectGbp.howTo"
+  | "dashboard.growth.checklist.sectionHeading"
+  | "dashboard.growth.checklist.note"
+  | "dashboard.growth.checklist.checkedByYouLabel"
+  | "dashboard.growth.checklist.saveError"
+  | "dashboard.growth.checklist.streak.one"
+  | "dashboard.growth.checklist.streak.other"
+  | "dashboard.growth.checklist.items.postUpdate.title"
+  | "dashboard.growth.checklist.items.postUpdate.howTo"
+  | "dashboard.growth.checklist.items.replyReviews.title"
+  | "dashboard.growth.checklist.items.replyReviews.howTo"
+  | "dashboard.growth.checklist.items.shareReviewLink.title"
+  | "dashboard.growth.checklist.items.shareReviewLink.howTo"
+  | "dashboard.growth.checklist.items.addPhoto.title"
+  | "dashboard.growth.checklist.items.addPhoto.howTo"
+  | "dashboard.growth.checklist.items.checkHours.title"
+  | "dashboard.growth.checklist.items.checkHours.howTo"
   | "dashboard.growth.view.weeklyCardLabel"
   | "dashboard.growth.view.statScoreToday"
   | "dashboard.growth.view.statProjected"
@@ -430,6 +481,7 @@ export type MessageKey =
   | "dashboard.growth.view.weeklyEmptyMessage"
   | "dashboard.growth.view.weeklyFootnote"
   | "dashboard.growth.view.laterEmptyMessage"
+  | "dashboard.growth.view.fullPointsMessage"
   | "dashboard.growth.coupon.defaultInstructions"
   | "dashboard.growth.coupon.defaultTerms"
   | "dashboard.growth.coupon.angleFirstTimeTitle"
@@ -842,11 +894,14 @@ export type MessageKey =
   | "dashboard.overview.actionPlan.doThisLabel"
   | "dashboard.overview.actionPlan.howLabel"
   | "dashboard.overview.actionPlan.ownerActionOnGoogle"
+  | "dashboard.overview.actionPlan.setupBadgeLabel"
   | "dashboard.overview.actionPlan.saving"
   | "dashboard.overview.actionPlan.didThisAgain"
   | "dashboard.overview.actionPlan.didThis"
   | "dashboard.overview.actionPlan.pointsThisWeek"
   | "dashboard.overview.actionPlan.pointsUpTo"
+  | "dashboard.overview.actionPlan.pointsRangeOnceLive"
+  | "dashboard.overview.actionPlan.mergedReviewsHelpsLabel"
   | "dashboard.overview.actionPlan.confirmedWinsHeading"
   | "dashboard.overview.actionPlan.pointsConfirmed"
   | "dashboard.overview.localBenchmarkLabel"
@@ -1996,6 +2051,7 @@ export type PluralKeyBase =
   | "dashboard.actionPlan.weeklyReviewTarget"
   | "dashboard.reports.recapDayCount"
   | "dashboard.growth.view.weeklyPlanNote"
+  | "dashboard.growth.checklist.streak"
   | "dashboard.growth.coupon.atLimitMessage"
   | "dashboard.growth.coupon.startLimitError"
   | "dashboard.common.redemptionCount"
@@ -2447,6 +2503,13 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Keep asking for reviews on an ongoing basis, not in one push.",
     "content.actionPlan.visibility.review_recency.fix":
       "Go to the Reviews page → \"Get more reviews\" section and keep sharing your review link or QR code on an ongoing basis — a recurring reminder (weekly, or after every N customers) keeps new reviews coming in instead of stopping after one round.",
+    "content.actionPlan.mergedReviews.title": "Get a few fresh reviews this week",
+    "content.actionPlan.mergedReviews.why":
+      "Your star rating, review count, and how recent your reviews are all move from the exact same action — a few fresh reviews this week helps all three at once.",
+    "content.actionPlan.mergedReviews.action":
+      "Build a steady flow of fresh Google reviews — it strengthens your rating, your review count, and how recent your reviews look, all together.",
+    "content.actionPlan.mergedReviews.fix":
+      "Go to the Reviews page → use the \"Get more reviews\" section: download your front-desk QR code or copy your review link and share it with customers right after a good visit. A steady trickle beats one big batch.",
     "content.actionPlan.completeness.phone.why":
       "A missing phone number is one of the fastest ways to lose a customer who's ready to call right now.",
     "content.actionPlan.completeness.phone.action": "Add your business phone number to your Google Business Profile.",
@@ -2486,6 +2549,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.website.has_website.action": "Get a website up for your business, even a simple one.",
     "content.actionPlan.website.has_website.fix":
       "Go to the Website page → use the starter-site builder: it turns your real Google listing data (hours, services, photos) into a live one-page site in minutes, no design work needed. Want something more custom later? A builder like Squarespace or Wix works too — but this gets you live today.",
+    "content.actionPlan.website.has_website.timingNote":
+      "Points count once your site is live and linked on your Google listing — Google can take a few days to show it.",
     "content.actionPlan.website.https.why":
       "Browsers actively warn visitors when a site isn't secure, which erodes trust fast — HTTPS is a baseline expectation today, not a nice-to-have.",
     "content.actionPlan.website.https.action": "Move your website to HTTPS.",
@@ -2502,12 +2567,16 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Build out real content on your site: a clear title, a meta description, a few genuine sections, and real text about what you offer.",
     "content.actionPlan.website.content_depth.fix":
       "Go to the Website page → the starter-site builder already includes a title, meta description, mobile viewport tag, and real sections built from your Google listing data — a fast way to replace a thin page.",
+    "content.actionPlan.website.content_depth.weeklyAction":
+      "Add a title, meta description, and mobile viewport tag to your website this week.",
     "content.actionPlan.website.contact_conversion.why":
       "If a visitor can't immediately see how to reach you or what to do next, most will just leave instead of hunting for a contact method.",
     "content.actionPlan.website.contact_conversion.action":
       "Add a real click-to-call phone or email link, and a clear call-to-action, to your website.",
     "content.actionPlan.website.contact_conversion.fix":
       "Go to the Website page → the starter-site builder includes a click-to-call phone link and a clear call-to-action by default whenever a phone number is on file.",
+    "content.actionPlan.website.contact_conversion.weeklyAction":
+      "Add a clickable phone number and a clear call-to-action to your website this week.",
     "content.actionPlan.fallback.why": "Improving this check helps your overall PostScore.",
     "content.actionPlan.fallback.action": "Review the explanation above and address the underlying gap.",
     "content.actionPlan.fallback.fix": "See this check's explanation for exactly what's missing.",
@@ -2551,12 +2620,78 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.view.tabPlan": "Action plan",
     "dashboard.growth.view.tabCoupons": "Coupons",
     "dashboard.growth.view.tabReferral": "Refer a friend",
+    "dashboard.growth.moves.sectionHeading": "Ways to bring in more customers",
+    "dashboard.growth.moves.badge": "Brings in customers — doesn't change your score",
+    "dashboard.growth.moves.goLabel": "Go do this",
+    "dashboard.growth.moves.startCoupon.title": "Start a coupon or promo",
+    "dashboard.growth.moves.startCoupon.why":
+      "A discount or promo gives customers an extra nudge to choose you right now instead of waiting — and you haven't created one yet.",
+    "dashboard.growth.moves.startCoupon.howTo":
+      "Go to the Growth page's Coupons tab and build one: pick a discount, a name customers will recognize, and how long it runs.",
+    "dashboard.growth.moves.startReferral.title": "Start a referral program",
+    "dashboard.growth.moves.startReferral.why":
+      "Happy customers are often willing to send you new ones — but only if there's an easy, obvious way to do it, and you don't have one yet.",
+    "dashboard.growth.moves.startReferral.howTo":
+      "Go to the Growth page's Refer a friend tab and set one up: a simple reward for the customer who refers someone, and for the friend who shows up.",
+    "dashboard.growth.moves.runPriceCheck.title": "Compare your prices to nearby competitors",
+    "dashboard.growth.moves.runPriceCheck.why":
+      "You've never run a price check — without one, you don't know if you're priced out of reach or leaving money on the table compared to businesses near you.",
+    "dashboard.growth.moves.runPriceCheck.howTo":
+      "Go to the Pricing page and run a price check — it compares your real prices against nearby competitors so you can see exactly where you stand.",
+    "dashboard.growth.moves.refreshPriceCheck.title": "Re-check your prices against competitors",
+    "dashboard.growth.moves.refreshPriceCheck.why":
+      "Local prices drift over a season, so it's worth seeing where you stand today.",
+    "dashboard.growth.moves.refreshPriceCheck.howTo":
+      "Go to the Pricing page and run a fresh price check against nearby competitors.",
+    "dashboard.growth.moves.refreshPriceCheck.lastChecked": "Last checked {date}",
+    "dashboard.growth.moves.addPhotos.title": "Add a few more photos",
+    "dashboard.growth.moves.addPhotos.why":
+      "Nearby competitors average {competitorPhotos} photos; you have {yourPhotos}. More real photos give customers a better first impression before they ever visit.",
+    "dashboard.growth.moves.addPhotos.howTo":
+      "Add photos to your Google Business Profile: open it (search your business name on Google while signed in, or go to business.google.com) and choose Add photos. Storefront, interior, team, and your products or work make the biggest difference.",
+    "dashboard.growth.moves.buildStarterSite.title": "Build a free starter website",
+    "dashboard.growth.moves.buildStarterSite.noWebsite":
+      "You don't have a website on file. PostScore can build you a free starter page from your real Google listing in a few minutes.",
+    "dashboard.growth.moves.buildStarterSite.howTo":
+      "Go to the Website page and use the starter-site builder — it turns your real Google listing data (hours, services, photos) into a live one-page site in minutes, no design work needed.",
+    "dashboard.growth.moves.improveWebsite.title": "Improve your website",
+    "dashboard.growth.moves.improveWebsite.why": "Your site is losing points on {issues}.",
+    "dashboard.growth.moves.improveWebsite.howTo":
+      "Go to the Website page and use the fix list there for exactly what to change, check by check.",
+    "dashboard.growth.moves.connectGbp.title": "Connect your Google Business Profile",
+    "dashboard.growth.moves.connectGbp.why":
+      "A one-time setup that links PostScore to your real Google listing. Upcoming features like post and review-reply tracking will use this connection.",
+    "dashboard.growth.moves.connectGbp.howTo":
+      "Go to the Connect Google page and sign in with the Google account that manages this business's listing.",
+    "dashboard.growth.checklist.sectionHeading": "Your weekly routine",
+    "dashboard.growth.checklist.note":
+      "PostScore can't see your Google posts or replies yet — you check these off yourself. They don't change your score.",
+    "dashboard.growth.checklist.checkedByYouLabel": "Checked by you",
+    "dashboard.growth.checklist.saveError": "Couldn't save — please try again.",
+    "dashboard.growth.checklist.streak.one": "{count} week in a row",
+    "dashboard.growth.checklist.streak.other": "{count} weeks in a row",
+    "dashboard.growth.checklist.items.postUpdate.title": "Post an update or offer to Google",
+    "dashboard.growth.checklist.items.postUpdate.howTo":
+      "Open your Google Business Profile (search your business name on Google while signed in, or go to business.google.com) and choose Add update.",
+    "dashboard.growth.checklist.items.replyReviews.title": "Reply to your new Google reviews",
+    "dashboard.growth.checklist.items.replyReviews.howTo":
+      "Open your Google Business Profile and reply to any new reviews — a short, genuine reply goes a long way, especially on a critical one.",
+    "dashboard.growth.checklist.items.shareReviewLink.title": "Share your review link with 3+ happy customers",
+    "dashboard.growth.checklist.items.shareReviewLink.howTo":
+      "Go to the Reviews page → copy your review link or QR code and send it to a few recent customers.",
+    "dashboard.growth.checklist.items.addPhoto.title": "Add one new photo to your Google listing",
+    "dashboard.growth.checklist.items.addPhoto.howTo":
+      "Open your Google Business Profile → Photos → Add photos, and upload one real, current photo.",
+    "dashboard.growth.checklist.items.checkHours.title":
+      "Check your hours are still correct (including holiday hours)",
+    "dashboard.growth.checklist.items.checkHours.howTo":
+      "Open your Google Business Profile → Business information → Hours, and confirm they're still accurate.",
     "dashboard.growth.view.weeklyCardLabel": "If you finish this week's plan",
     "dashboard.growth.view.statScoreToday": "Score today",
     "dashboard.growth.view.statProjected": "Projected after plan",
     "dashboard.growth.view.statPointsWithinReach": "Points within reach",
     "dashboard.growth.view.statGrade": "Grade",
-    "dashboard.growth.view.gradeStays": "Stays a {grade}",
+    "dashboard.growth.view.gradeStays": "Stays {article} {grade}",
     "dashboard.growth.view.gradeChangeArrow": "{from} → {to}",
     "dashboard.growth.view.weeklyPlanNote.one":
       'Based on just the {count} task below — a realistic week, not every gap at once. See "Bigger projects" for the longer game.',
@@ -2567,11 +2702,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.view.actionPlanErrorPrefix": "Couldn't load your action plan: {error}",
     "dashboard.growth.view.weeklyPlanHeading": "This week's plan ({count})",
     "dashboard.growth.view.laterTasksHeading": "Bigger projects ({count})",
-    "dashboard.growth.view.weeklyEmptyMessage": "You're caught up — no real gaps determinable right now. Nice work.",
+    "dashboard.growth.view.weeklyEmptyMessage":
+      "No quick score fixes this week — keep up your weekly routine and try one of the ways to bring in more customers below.",
     "dashboard.growth.view.weeklyFootnote":
       'Every estimate here is exactly what its check is currently missing — the same numbers behind the projected score above. Points only ever land after a re-scan actually finds the fix, never from clicking "I did this" alone.',
     "dashboard.growth.view.laterEmptyMessage":
       "Nothing longer-term right now — everything determinable is either in this week's plan or already done.",
+    "dashboard.growth.view.fullPointsMessage":
+      "You're at full points on everything we can check — keep up your weekly routine.",
 
     "dashboard.growth.coupon.defaultInstructions": "Show this coupon in-store to redeem.",
     "dashboard.growth.coupon.defaultTerms": "One per customer. Cannot combine with other offers.",
@@ -3053,11 +3191,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.actionPlan.howLabel": "How: ",
     "dashboard.overview.actionPlan.ownerActionOnGoogle":
       "This is a change you make yourself, on Google — PostScore can tell you exactly what to do, but we can't edit your listing for you.",
+    "dashboard.overview.actionPlan.setupBadgeLabel": "Setup — doesn't change your score",
     "dashboard.overview.actionPlan.saving": "Saving...",
     "dashboard.overview.actionPlan.didThisAgain": "I did this again",
     "dashboard.overview.actionPlan.didThis": "I did this",
-    "dashboard.overview.actionPlan.pointsThisWeek": "~+{points} pts this week",
+    "dashboard.overview.actionPlan.pointsThisWeek": "About +{points} pts this week",
     "dashboard.overview.actionPlan.pointsUpTo": "Up to +{points} pts",
+    "dashboard.overview.actionPlan.pointsRangeOnceLive": "About +{low}–{high} pts once it's live (depends on where you host it)",
+    "dashboard.overview.actionPlan.mergedReviewsHelpsLabel": "Helps with:",
     "dashboard.overview.actionPlan.confirmedWinsHeading": "Confirmed wins",
     "dashboard.overview.actionPlan.pointsConfirmed": "+{points} pts confirmed",
 
@@ -4714,6 +4855,13 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Siga pidiendo reseñas de forma continua, no en un solo impulso.",
     "content.actionPlan.visibility.review_recency.fix":
       "Vaya a la página de Reseñas → sección \"Conseguir más reseñas\" y siga compartiendo su enlace de reseña o código QR de forma continua — un recordatorio recurrente (semanal, o después de cada N clientes) mantiene el flujo de nuevas reseñas en lugar de detenerse tras una sola ronda.",
+    "content.actionPlan.mergedReviews.title": "Consiga algunas reseñas nuevas esta semana",
+    "content.actionPlan.mergedReviews.why":
+      "Su calificación, la cantidad de reseñas y qué tan recientes son avanzan con la misma acción — unas cuantas reseñas nuevas esta semana ayudan a las tres a la vez.",
+    "content.actionPlan.mergedReviews.action":
+      "Genere un flujo constante de reseñas nuevas en Google — esto fortalece su calificación, la cantidad de reseñas y qué tan recientes se ven, todo a la vez.",
+    "content.actionPlan.mergedReviews.fix":
+      "Vaya a la página de Reseñas → use la sección \"Conseguir más reseñas\": descargue el código QR para su mostrador o copie su enlace de reseña y compártalo con los clientes justo después de una buena visita. Un flujo constante supera a un gran lote de una sola vez.",
     "content.actionPlan.completeness.phone.why":
       "Un número de teléfono faltante es una de las formas más rápidas de perder a un cliente que está listo para llamar en ese momento.",
     "content.actionPlan.completeness.phone.action": "Agregue el número de teléfono de su negocio a su Perfil de Negocio de Google.",
@@ -4753,6 +4901,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.website.has_website.action": "Ponga en marcha un sitio web para su negocio, aunque sea sencillo.",
     "content.actionPlan.website.has_website.fix":
       "Vaya a la página de Sitio web → use el generador de sitio inicial: convierte los datos reales de su ficha de Google (horario, servicios, fotos) en un sitio de una página en vivo en minutos, sin trabajo de diseño. ¿Quiere algo más personalizado más adelante? Un creador como Squarespace o Wix también sirve — pero esto lo pone en vivo hoy.",
+    "content.actionPlan.website.has_website.timingNote":
+      "Los puntos cuentan cuando su sitio esté publicado y enlazado en su ficha de Google; Google puede tardar unos días en mostrarlo.",
     "content.actionPlan.website.https.why":
       "Los navegadores advierten activamente a los visitantes cuando un sitio no es seguro, lo que erosiona la confianza rápidamente — HTTPS es una expectativa básica hoy en día, no un lujo.",
     "content.actionPlan.website.https.action": "Migre su sitio web a HTTPS.",
@@ -4769,12 +4919,16 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Desarrolle contenido real en su sitio: un título claro, una meta descripción, algunas secciones genuinas y texto real sobre lo que ofrece.",
     "content.actionPlan.website.content_depth.fix":
       "Vaya a la página de Sitio web → el generador de sitio inicial ya incluye un título, una meta descripción, una etiqueta viewport para móviles y secciones reales creadas a partir de los datos de su ficha de Google — una forma rápida de reemplazar una página con poco contenido.",
+    "content.actionPlan.website.content_depth.weeklyAction":
+      "Agregue un título, una meta descripción y una etiqueta de viewport móvil a su sitio web esta semana.",
     "content.actionPlan.website.contact_conversion.why":
       "Si un visitante no puede ver de inmediato cómo contactarlo o qué hacer a continuación, la mayoría simplemente se irá en lugar de buscar una forma de contacto.",
     "content.actionPlan.website.contact_conversion.action":
       "Agregue a su sitio web un enlace real de teléfono con clic para llamar o de correo electrónico, y una llamada a la acción clara.",
     "content.actionPlan.website.contact_conversion.fix":
       "Vaya a la página de Sitio web → el generador de sitio inicial incluye un enlace de teléfono con clic para llamar y una llamada a la acción clara de forma predeterminada siempre que haya un número de teléfono registrado.",
+    "content.actionPlan.website.contact_conversion.weeklyAction":
+      "Agregue un número de teléfono con enlace y una llamada a la acción clara a su sitio web esta semana.",
     "content.actionPlan.fallback.why": "Mejorar esta comprobación ayuda a su PostScore en general.",
     "content.actionPlan.fallback.action": "Revise la explicación de arriba y aborde la deficiencia subyacente.",
     "content.actionPlan.fallback.fix": "Consulte la explicación de esta comprobación para saber exactamente qué falta.",
@@ -4811,6 +4965,73 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.view.tabPlan": "Plan de acción",
     "dashboard.growth.view.tabCoupons": "Cupones",
     "dashboard.growth.view.tabReferral": "Recomiende a un amigo",
+    "dashboard.growth.moves.sectionHeading": "Formas de atraer más clientes",
+    "dashboard.growth.moves.badge": "Atrae clientes: no cambia su puntuación",
+    "dashboard.growth.moves.goLabel": "Ir a hacerlo",
+    "dashboard.growth.moves.startCoupon.title": "Cree un cupón o promoción",
+    "dashboard.growth.moves.startCoupon.why":
+      "Un descuento o promoción le da a los clientes un motivo extra para elegirlo ahora mismo, en lugar de esperar — y todavía no ha creado ninguno.",
+    "dashboard.growth.moves.startCoupon.howTo":
+      "Vaya a la pestaña Cupones de la página Crecimiento y cree uno: elija un descuento, un nombre que los clientes reconozcan y la duración.",
+    "dashboard.growth.moves.startReferral.title": "Cree un programa de recomendación",
+    "dashboard.growth.moves.startReferral.why":
+      "Los clientes satisfechos muchas veces están dispuestos a recomendarle nuevos clientes, pero solo si existe una forma fácil y clara de hacerlo, y todavía no cuenta con una.",
+    "dashboard.growth.moves.startReferral.howTo":
+      "Vaya a la pestaña Recomiende a un amigo de la página Crecimiento y configure uno: una recompensa sencilla para quien recomienda y para el amigo que llega.",
+    "dashboard.growth.moves.runPriceCheck.title": "Compare sus precios con la competencia cercana",
+    "dashboard.growth.moves.runPriceCheck.why":
+      "Nunca ha hecho una comparación de precios — sin ella, no sabe si sus precios están fuera de alcance o si está dejando dinero sobre la mesa en comparación con los negocios cercanos.",
+    "dashboard.growth.moves.runPriceCheck.howTo":
+      "Vaya a la página de Precios y haga una comparación de precios — compara sus precios reales con la competencia cercana para que vea exactamente dónde se encuentra.",
+    "dashboard.growth.moves.refreshPriceCheck.title": "Vuelva a comparar sus precios con la competencia",
+    "dashboard.growth.moves.refreshPriceCheck.why":
+      "Los precios locales cambian con las temporadas, así que vale la pena ver dónde se encuentra hoy.",
+    "dashboard.growth.moves.refreshPriceCheck.howTo":
+      "Vaya a la página de Precios y haga una nueva comparación de precios con la competencia cercana.",
+    "dashboard.growth.moves.refreshPriceCheck.lastChecked": "Última revisión: {date}",
+    "dashboard.growth.moves.addPhotos.title": "Agregue algunas fotos más",
+    "dashboard.growth.moves.addPhotos.why":
+      "La competencia cercana tiene en promedio {competitorPhotos} fotos; usted tiene {yourPhotos}. Más fotos reales le dan a los clientes una mejor primera impresión antes de visitarlo.",
+    "dashboard.growth.moves.addPhotos.howTo":
+      "Agregue fotos a su Perfil de Negocio de Google: ábralo (busque el nombre de su negocio en Google con su sesión iniciada, o vaya a business.google.com) y elija Agregar fotos. La fachada, el interior, su equipo y sus productos o trabajos son las que más ayudan.",
+    "dashboard.growth.moves.buildStarterSite.title": "Cree una página web inicial gratis",
+    "dashboard.growth.moves.buildStarterSite.noWebsite":
+      "No tiene un sitio web registrado. PostScore puede crearle una página inicial gratis a partir de su ficha real de Google en pocos minutos.",
+    "dashboard.growth.moves.buildStarterSite.howTo":
+      "Vaya a la página de Sitio web y use el creador de páginas iniciales — convierte los datos reales de su ficha de Google (horario, servicios, fotos) en un sitio de una página en minutos, sin necesidad de diseño.",
+    "dashboard.growth.moves.improveWebsite.title": "Mejore su sitio web",
+    "dashboard.growth.moves.improveWebsite.why": "Su sitio pierde puntos en {issues}.",
+    "dashboard.growth.moves.improveWebsite.howTo":
+      "Vaya a la página de Sitio web y use la lista de soluciones que aparece ahí para saber exactamente qué cambiar, comprobación por comprobación.",
+    "dashboard.growth.moves.connectGbp.title": "Conecte su Perfil de Negocio de Google",
+    "dashboard.growth.moves.connectGbp.why":
+      "Una configuración única que vincula PostScore con su ficha real de Google. Las próximas funciones, como el seguimiento de publicaciones y respuestas a reseñas, usarán esta conexión.",
+    "dashboard.growth.moves.connectGbp.howTo":
+      "Vaya a la página de Conectar Google e inicie sesión con la cuenta de Google que administra la ficha de este negocio.",
+    "dashboard.growth.checklist.sectionHeading": "Su rutina semanal",
+    "dashboard.growth.checklist.note":
+      "PostScore todavía no puede ver sus publicaciones ni respuestas de Google: usted mismo las marca. No cambian su puntuación.",
+    "dashboard.growth.checklist.checkedByYouLabel": "Marcado por usted",
+    "dashboard.growth.checklist.saveError": "No se pudo guardar. Inténtelo de nuevo.",
+    "dashboard.growth.checklist.streak.one": "{count} semana seguida",
+    "dashboard.growth.checklist.streak.other": "{count} semanas seguidas",
+    "dashboard.growth.checklist.items.postUpdate.title": "Publique una novedad u oferta en Google",
+    "dashboard.growth.checklist.items.postUpdate.howTo":
+      "Abra su Perfil de Negocio de Google (busque el nombre de su negocio en Google con su sesión iniciada, o vaya a business.google.com) y elija Agregar novedad.",
+    "dashboard.growth.checklist.items.replyReviews.title": "Responda sus nuevas reseñas de Google",
+    "dashboard.growth.checklist.items.replyReviews.howTo":
+      "Abra su Perfil de Negocio de Google y responda las reseñas nuevas — una respuesta breve y genuina vale mucho, sobre todo en una reseña crítica.",
+    "dashboard.growth.checklist.items.shareReviewLink.title":
+      "Comparta su enlace de reseñas con 3 o más clientes satisfechos",
+    "dashboard.growth.checklist.items.shareReviewLink.howTo":
+      "Vaya a la página de Reseñas → copie su enlace de reseña o código QR y envíelo a algunos clientes recientes.",
+    "dashboard.growth.checklist.items.addPhoto.title": "Agregue una foto nueva a su ficha de Google",
+    "dashboard.growth.checklist.items.addPhoto.howTo":
+      "Abra su Perfil de Negocio de Google → Fotos → Agregar fotos, y suba una foto real y actual.",
+    "dashboard.growth.checklist.items.checkHours.title":
+      "Revise que su horario siga correcto (incluido el horario de días festivos)",
+    "dashboard.growth.checklist.items.checkHours.howTo":
+      "Abra su Perfil de Negocio de Google → Información del negocio → Horario, y confirme que siga siendo exacto.",
     "dashboard.growth.view.weeklyCardLabel": "Si completa el plan de esta semana",
     "dashboard.growth.view.statScoreToday": "Puntuación de hoy",
     "dashboard.growth.view.statProjected": "Proyectada tras el plan",
@@ -4823,9 +5044,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.view.actionPlanErrorPrefix": "No se pudo cargar su plan de acción: {error}",
     "dashboard.growth.view.weeklyPlanHeading": "El plan de esta semana ({count})",
     "dashboard.growth.view.laterTasksHeading": "Proyectos más grandes ({count})",
-    "dashboard.growth.view.weeklyEmptyMessage": "Está al día — no hay deficiencias reales que se puedan determinar ahora mismo. Buen trabajo.",
+    "dashboard.growth.view.weeklyEmptyMessage":
+      "No hay arreglos rápidos de puntuación esta semana: mantenga su rutina semanal y pruebe una de las formas de atraer más clientes que aparecen abajo.",
     "dashboard.growth.view.weeklyFootnote": "Cada estimación aquí es exactamente lo que le falta actualmente a esa comprobación — los mismos números detrás de la puntuación proyectada de arriba. Los puntos solo se acreditan después de que un nuevo análisis realmente encuentre la mejora, nunca por hacer clic en \"Ya lo hice\" por sí solo.",
     "dashboard.growth.view.laterEmptyMessage": "Nada a más largo plazo ahora mismo — todo lo que se puede determinar está en el plan de esta semana o ya está hecho.",
+    "dashboard.growth.view.fullPointsMessage":
+      "Tiene todos los puntos en todo lo que podemos revisar: mantenga su rutina semanal.",
     "dashboard.growth.coupon.defaultInstructions": "Muestre este cupón en la tienda para canjearlo.",
     "dashboard.growth.coupon.defaultTerms": "Uno por cliente. No se puede combinar con otras ofertas.",
     "dashboard.growth.coupon.angleFirstTimeTitle": "Cliente por primera vez",
@@ -5218,11 +5442,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.actionPlan.doThisLabel": "Haga esto: ",
     "dashboard.overview.actionPlan.howLabel": "Cómo: ",
     "dashboard.overview.actionPlan.ownerActionOnGoogle": "Este es un cambio que usted mismo hace, en Google — PostScore puede decirle exactamente qué hacer, pero no podemos editar su ficha por usted.",
+    "dashboard.overview.actionPlan.setupBadgeLabel": "Configuración: no cambia su puntuación",
     "dashboard.overview.actionPlan.saving": "Guardando...",
     "dashboard.overview.actionPlan.didThisAgain": "Lo hice de nuevo",
     "dashboard.overview.actionPlan.didThis": "Ya lo hice",
-    "dashboard.overview.actionPlan.pointsThisWeek": "~+{points} pts esta semana",
+    "dashboard.overview.actionPlan.pointsThisWeek": "Aprox. +{points} pts esta semana",
     "dashboard.overview.actionPlan.pointsUpTo": "Hasta +{points} pts",
+    "dashboard.overview.actionPlan.pointsRangeOnceLive": "Aprox. +{low}–{high} pts cuando esté publicado (depende de dónde lo aloje)",
+    "dashboard.overview.actionPlan.mergedReviewsHelpsLabel": "Ayuda con:",
     "dashboard.overview.actionPlan.confirmedWinsHeading": "Logros confirmados",
     "dashboard.overview.actionPlan.pointsConfirmed": "+{points} pts confirmados",
     "dashboard.overview.localBenchmarkLabel": "Referencia local",

@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { StatTile } from "@/components/ui/StatTile";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/SegmentedControl";
-import { TaskListCard, CompletedTasksCard } from "../ActionPlanSection";
+import { TaskListCard, GrowthMoveCard, CompletedTasksCard } from "../ActionPlanSection";
+import { WeeklyChecklist } from "./WeeklyChecklist";
 import type { ActionPlanTask, CompletedTask } from "@/lib/actionPlan";
+import type { GrowthMove } from "@/lib/growthMoves";
+import type { WeeklyChecklistItem, WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
 import type { ScoreBreakdown } from "@/lib/scoring";
 import type { BizProfile } from "@/config/bizProfiles";
 import type { PromoRow } from "@/lib/promos";
@@ -35,13 +38,27 @@ const ReferralSection = dynamic(
 
 type Segment = "plan" | "coupons" | "referral";
 
+/** "an" before a vowel-sounding grade letter (A, E, F), "a" before every
+ * other grade (B, C, D) — English article agreement, not a scoring
+ * concept, so it lives here rather than as a lookup table anyone would
+ * mistake for grade data. */
+export function gradeArticle(grade: string): string {
+  return ["A", "E", "F"].includes(grade) ? "an" : "a";
+}
+
 /** Honest grade-change copy: only claims a letter change when the real
  * projected grade actually differs from today's — otherwise it says so
  * plainly rather than implying movement that isn't there. */
-function gradeTransitionLabel(from: string, to: string, locale: Locale): string {
+export function gradeTransitionLabel(from: string, to: string, locale: Locale): string {
   return from === to
-    ? t(locale, "dashboard.growth.view.gradeStays", { grade: to })
+    ? t(locale, "dashboard.growth.view.gradeStays", { article: gradeArticle(to), grade: to })
     : t(locale, "dashboard.growth.view.gradeChangeArrow", { from, to });
+}
+
+function segmentFromParam(param: string | null, referralOk: boolean): Segment {
+  if (param === "coupons") return "coupons";
+  if (param === "referral" && referralOk) return "referral";
+  return "plan";
 }
 
 export function GrowthView({
@@ -52,6 +69,8 @@ export function GrowthView({
   referralOk,
   breakdown,
   actionPlan,
+  growthMoves,
+  weeklyChecklist,
   initialPromos,
   initialReferral,
   lastScanAt,
@@ -75,14 +94,58 @@ export function GrowthView({
     weeklyTasks: ActionPlanTask[];
     laterTasks: ActionPlanTask[];
     weeklyProjectedBreakdown: ScoreBreakdown;
+    /** Set only when a weekly task is itself a range (currently only
+     * the no-website starter-site card) — see WeeklyPlan's own doc. */
+    weeklyProjectedBreakdownHigh: ScoreBreakdown | null;
     error?: string;
+  };
+  /** Every growth move currently firing for this business — real,
+   * honest customer-getting actions with no scoring gap behind them.
+   * See lib/growthMoves.ts. Rendered in its own "Ways to bring in more
+   * customers" section below, entirely separate from the score-based
+   * action plan. */
+  growthMoves: GrowthMove[];
+  /** "Your weekly routine" checklist state — see lib/weeklyChecklist.ts.
+   * Rendered above the growth moves section, entirely separate from
+   * both the score-based action plan and growth moves: these five
+   * items never earn points and are never counted in any projected
+   * score. */
+  weeklyChecklist: {
+    items: WeeklyChecklistItem[];
+    checkedItemIds: WeeklyChecklistItemId[];
+    streakWeeks: number;
   };
 }) {
   const locale = useLocale();
-  const [segment, setSegment] = useState<Segment>("plan");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // The Growth page's tab is URL-driven (?tab=coupons / ?tab=referral)
+  // so a growth move's link (e.g. "start a coupon") can deep-link
+  // straight to the right tab instead of just landing on this page's
+  // default "plan" segment.
+  const segment = segmentFromParam(searchParams.get("tab"), referralOk);
 
-  const { weeklyProjectedBreakdown } = actionPlan;
-  const pointsWithinReach = weeklyProjectedBreakdown.total - breakdown.total;
+  function setSegment(next: Segment) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "plan") {
+      params.delete("tab");
+    } else {
+      params.set("tab", next);
+    }
+    const query = params.toString();
+    router.replace(`/business/${businessId}/growth${query ? `?${query}` : ""}`, { scroll: false });
+  }
+
+  const { weeklyProjectedBreakdown, weeklyProjectedBreakdownHigh } = actionPlan;
+  const pointsWithinReachLow = weeklyProjectedBreakdown.total - breakdown.total;
+  const pointsWithinReachHigh = weeklyProjectedBreakdownHigh
+    ? weeklyProjectedBreakdownHigh.total - breakdown.total
+    : null;
+  // Whenever no quick score task qualified and nothing longer_term had
+  // an honest weekly first step either, buildWeeklyPlan leaves the week
+  // truly empty — the only time that happens for a business with real
+  // remaining gaps is when there simply aren't any left to show.
+  const hasNoRemainingScoreGaps = actionPlan.tasks.length === 0;
 
   const options: SegmentedControlOption<Segment>[] = [
     { value: "plan", label: t(locale, "dashboard.growth.view.tabPlan") },
@@ -122,11 +185,21 @@ export function GrowthView({
               <StatTile label={t(locale, "dashboard.growth.view.statScoreToday")} value={breakdown.total} />
               <StatTile
                 label={t(locale, "dashboard.growth.view.statProjected")}
-                value={weeklyProjectedBreakdown.total}
+                value={
+                  weeklyProjectedBreakdownHigh
+                    ? `${weeklyProjectedBreakdown.total}–${weeklyProjectedBreakdownHigh.total}`
+                    : weeklyProjectedBreakdown.total
+                }
               />
               <StatTile
                 label={t(locale, "dashboard.growth.view.statPointsWithinReach")}
-                value={pointsWithinReach > 0 ? `+${pointsWithinReach}` : "0"}
+                value={
+                  pointsWithinReachHigh !== null
+                    ? `+${Math.max(0, pointsWithinReachLow)}–${Math.max(0, pointsWithinReachHigh)}`
+                    : pointsWithinReachLow > 0
+                      ? `+${pointsWithinReachLow}`
+                      : "0"
+                }
               />
               <StatTile
                 label={t(locale, "dashboard.growth.view.statGrade")}
@@ -156,8 +229,14 @@ export function GrowthView({
                 businessId={businessId}
                 context="weekly"
                 lastScanAt={lastScanAt}
-                emptyMessage={t(locale, "dashboard.growth.view.weeklyEmptyMessage")}
-                footnote={t(locale, "dashboard.growth.view.weeklyFootnote")}
+                emptyMessage={
+                  hasNoRemainingScoreGaps
+                    ? t(locale, "dashboard.growth.view.fullPointsMessage")
+                    : t(locale, "dashboard.growth.view.weeklyEmptyMessage")
+                }
+                footnote={
+                  actionPlan.weeklyTasks.length > 0 ? t(locale, "dashboard.growth.view.weeklyFootnote") : undefined
+                }
               />
 
               <SectionHeading
@@ -169,12 +248,36 @@ export function GrowthView({
                 tasks={actionPlan.laterTasks}
                 businessId={businessId}
                 lastScanAt={lastScanAt}
-                emptyMessage={t(locale, "dashboard.growth.view.laterEmptyMessage")}
+                emptyMessage={
+                  hasNoRemainingScoreGaps
+                    ? t(locale, "dashboard.growth.view.fullPointsMessage")
+                    : t(locale, "dashboard.growth.view.laterEmptyMessage")
+                }
               />
             </>
           )}
 
           <CompletedTasksCard completed={actionPlan.completed} />
+
+          <WeeklyChecklist
+            businessId={businessId}
+            items={weeklyChecklist.items}
+            initialCheckedItemIds={weeklyChecklist.checkedItemIds}
+            initialStreakWeeks={weeklyChecklist.streakWeeks}
+          />
+
+          {growthMoves.length > 0 && (
+            <>
+              <SectionHeading title={t(locale, "dashboard.growth.moves.sectionHeading")} />
+              <Card className="p-5">
+                <div className="flex flex-col divide-y divide-paper-line">
+                  {growthMoves.map((move) => (
+                    <GrowthMoveCard key={move.id} move={move} />
+                  ))}
+                </div>
+              </Card>
+            </>
+          )}
         </div>
       )}
 

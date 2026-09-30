@@ -198,6 +198,7 @@ export async function saveCompetitorScanWithClient(
     scoring_version: r.breakdown.scoringVersion,
     breakdown_json: r.breakdown,
     price_level: r.priceLevel,
+    photo_count: r.photoCount,
   }));
 
   const { error } = await supabase.from("competitor_scans").insert(rows);
@@ -239,6 +240,7 @@ export interface CompetitorSnapshotEntry {
   total: number | null;
   grade: string | null;
   priceLevel: string | null;
+  photoCount: number | null;
 }
 
 export interface CompetitorSnapshot {
@@ -262,7 +264,7 @@ export async function getLatestCompetitorSnapshot(businessId: string): Promise<C
 
   const { data, error } = await supabase
     .from("competitor_scans")
-    .select("scan_id, created_at, is_subject, name, total, grade, price_level")
+    .select("scan_id, created_at, is_subject, name, total, grade, price_level, photo_count")
     .eq("business_id", businessId)
     .order("created_at", { ascending: false })
     .limit(50);
@@ -277,6 +279,7 @@ export async function getLatestCompetitorSnapshot(businessId: string): Promise<C
     total: number | null;
     grade: string | null;
     price_level: string | null;
+    photo_count: number | null;
   }>;
 
   const latestScanId = rows[0].scan_id;
@@ -291,6 +294,7 @@ export async function getLatestCompetitorSnapshot(businessId: string): Promise<C
       total: r.total,
       grade: r.grade,
       priceLevel: r.price_level,
+      photoCount: r.photo_count,
     })),
   };
 }

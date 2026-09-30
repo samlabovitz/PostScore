@@ -4,13 +4,20 @@ import { createClient } from "@/lib/supabase/server";
 import {
   buildActionPlan,
   buildCompletedTasks,
+  buildConnectGbpWeeklyTask,
   buildWeeklyPlan,
+  mergeReviewTasks,
+  mergeWebsiteTasks,
   weeklyTrackedMetricValue,
+  WEEKLY_PLAN_CAP,
   type ActionPlanTask,
   type CompletedTask,
   type TaskRow,
   type WeeklyPlan,
 } from "@/lib/actionPlan";
+import { estimateStarterSiteRange, type StarterSiteTemplateData } from "@/lib/starterSiteScoring";
+import { getGbpConnectionStatus } from "@/app/actions/gbp";
+import { isGbpConnectPublic } from "@/lib/googleBusinessProfile";
 import { businessRowToScoringInput, scoreBusiness } from "@/lib/scoring";
 import type { BusinessScoringInput, BusinessScoringRow, ScoreBreakdown, Suggestion } from "@/lib/scoring";
 import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
@@ -19,6 +26,22 @@ export type GetActionPlanResult =
   | ({ status: "ok"; tasks: ActionPlanTask[]; completed: CompletedTask[] } & WeeklyPlan)
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
+
+/** What getActionPlan needs, beyond the scoring-shaped `input`, to
+ * honestly score PostScore's own starter template for a no-website
+ * business (see lib/starterSiteScoring.ts) — real business facts that
+ * BusinessScoringInput doesn't carry (a display name, Maps link, biz
+ * profile id). Optional: when omitted (e.g. the assistant's own call,
+ * which doesn't render a UI card), the no-website task simply falls
+ * back to a single estimated value instead of a real template-based
+ * range — see mergeWebsiteTasks's own doc.
+ */
+export interface StarterSiteContext {
+  businessRow: BusinessScoringRow;
+  businessName: string;
+  googleMapsUri: string | null;
+  profileId: string;
+}
 
 /**
  * Overlays any in-flight task status (pending verification / completed)
@@ -34,7 +57,8 @@ export async function getActionPlan(
   input: BusinessScoringInput,
   breakdown: ScoreBreakdown,
   suggestions: Suggestion[],
-  locale: Locale = DEFAULT_LOCALE
+  locale: Locale = DEFAULT_LOCALE,
+  starterSiteContext?: StarterSiteContext
 ): Promise<GetActionPlanResult> {
   const supabase = createClient();
 
@@ -56,13 +80,61 @@ export async function getActionPlan(
   }
 
   const rows = (data ?? []) as TaskRow[];
-  const tasks = buildActionPlan(breakdown, suggestions, rows, locale);
+  const rawTasks = buildActionPlan(breakdown, suggestions, rows, input, locale);
+  // Merge the review checks (rating/review_count/review_recency) into
+  // one card whenever more than one is an open gap, and the
+  // deterministically-coupled website checks (has_website/website_link)
+  // into one card whenever there's no website, before anything
+  // downstream (the weekly plan, the UI) ever sees the list — see
+  // mergeReviewTasks's and mergeWebsiteTasks's own docs for why.
+  const reviewMerged = mergeReviewTasks(rawTasks, breakdown, input, locale);
+
+  const starterSiteRange =
+    !input.website && starterSiteContext
+      ? estimateStarterSiteRange(
+          breakdown,
+          starterSiteContext.businessRow,
+          {
+            businessName: starterSiteContext.businessName,
+            category: input.primaryCategory,
+            phone: input.phone,
+            address: input.address,
+            openingHours: input.openingHours,
+            rating: input.rating,
+            reviewCount: input.reviewCount,
+            googleMapsUri: starterSiteContext.googleMapsUri,
+            profileId: starterSiteContext.profileId,
+          } satisfies StarterSiteTemplateData,
+          locale
+        )
+      : null;
+
+  const tasks = mergeWebsiteTasks(reviewMerged, breakdown, input, locale, starterSiteRange);
+
+  // The connect_gbp "setup" item (see item 4/6 of Day 3 step 2e's
+  // second pass): a real weekly-plan card, never a growth move (see
+  // lib/growthMoves.ts's own doc for why it moved here), shown only
+  // while the business's Google Business Profile genuinely isn't
+  // connected AND GBP_CONNECT_PUBLIC=true (see isGbpConnectPublic's own
+  // doc — off by default until Google's OAuth app verification is
+  // approved, since an unverified app blocks non-test Google accounts).
+  // Takes one of the weekly plan's own slots.
+  const gbpStatus = await getGbpConnectionStatus(businessId);
+  const connectGbpTask =
+    isGbpConnectPublic() && gbpStatus.status === "ok" && !gbpStatus.connected
+      ? buildConnectGbpWeeklyTask(businessId, locale)
+      : null;
+  const weeklyPlanCap = connectGbpTask ? WEEKLY_PLAN_CAP - 1 : WEEKLY_PLAN_CAP;
+
+  const weeklyPlan = buildWeeklyPlan(tasks, breakdown, input, weeklyPlanCap, locale);
+  const weeklyTasks = connectGbpTask ? [connectGbpTask, ...weeklyPlan.weeklyTasks] : weeklyPlan.weeklyTasks;
 
   return {
     status: "ok",
     tasks,
     completed: buildCompletedTasks(breakdown, rows),
-    ...buildWeeklyPlan(tasks, breakdown, input, undefined, locale),
+    ...weeklyPlan,
+    weeklyTasks,
   };
 }
 

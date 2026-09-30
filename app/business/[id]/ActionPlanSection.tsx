@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { IconChevronDown, IconBrandGoogle, IconCircleCheck } from "@tabler/icons-react";
+import Link from "next/link";
+import { IconChevronDown, IconBrandGoogle, IconCircleCheck, IconArrowUpRight } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
@@ -16,6 +17,7 @@ import {
   type PendingCheckStatus,
   type WeeklyMetricProgress,
 } from "@/lib/actionPlan";
+import type { GrowthMove } from "@/lib/growthMoves";
 import { t, useLocale, type Locale } from "@/lib/i18n";
 
 function formatPoints(value: number): string {
@@ -211,6 +213,37 @@ function effortBadge(
     : { label: t(locale, "dashboard.overview.actionPlan.longerTerm"), variant: "neutral" };
 }
 
+/**
+ * A "setup" task's card (currently only connect_gbp) — a real one-time
+ * account action, not a score check, so it never has a status pill, a
+ * points comparison, or an "I did this" checkbox to reconcile on a
+ * re-scan. Shown inline with real score tasks in "This week's plan" but
+ * visually distinct via its own badge — see TaskEffort's "setup" doc.
+ */
+function SetupTaskCard({ task }: { task: ActionPlanTask }) {
+  const locale = useLocale();
+  return (
+    <div className="flex flex-col gap-2.5 py-4 first:pt-0 last:pb-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-semibold text-ink">{task.label}</span>
+        <Pill variant="neutral" className="!px-2 !py-0.5 text-[10px]">
+          {t(locale, "dashboard.overview.actionPlan.setupBadgeLabel")}
+        </Pill>
+      </div>
+      <p className="text-[12px] text-ink-mute">{task.why}</p>
+      {task.href && (
+        <Link
+          href={task.href}
+          className="flex w-fit items-center gap-1 text-[12.5px] font-medium text-brass hover:underline"
+        >
+          {t(locale, "dashboard.growth.moves.goLabel")}
+          <IconArrowUpRight size={13} />
+        </Link>
+      )}
+    </div>
+  );
+}
+
 export function TaskCard({
   task,
   businessId,
@@ -231,16 +264,26 @@ export function TaskCard({
   const [expanded, setExpanded] = useState(false);
   const [state, setState] = useState<MarkState>({ kind: "idle" });
 
+  if (task.effort === "setup") {
+    return <SetupTaskCard task={task} />;
+  }
+
   async function handleMarkDone() {
     setState({ kind: "saving" });
-    const result = await markTaskDone(businessId, task.checkId);
-    if (result.status === "ok") {
+    // The merged reviews card stands in for 2-3 real checks (see
+    // mergeReviewTasks in lib/actionPlan.ts) — "I did this" marks every
+    // one of their real underlying tasks rows, never the synthetic
+    // checkId itself (which names no real task row).
+    const checkIds = task.mergedCheckIds ?? [task.checkId];
+    const results = await Promise.all(checkIds.map((checkId) => markTaskDone(businessId, checkId)));
+    const failed = results.find((r) => r.status !== "ok");
+    if (!failed) {
       router.refresh();
     } else {
       setState({
         kind: "error",
         message:
-          result.status === "error" ? result.message : t(locale, "dashboard.overview.actionPlan.couldNotSave"),
+          failed.status === "error" ? failed.message : t(locale, "dashboard.overview.actionPlan.couldNotSave"),
       });
     }
   }
@@ -258,10 +301,21 @@ export function TaskCard({
   const canMarkAgain = isPending && checkedAlready;
   const badge = effortBadge(task, context, locale);
   const status = taskStatus(task, pendingStatus, metricProgress, locale);
+  // The real weighted contribution to the 0-100 total (see
+  // ActionPlanTask.weightedPoints) — never the raw promisedPoints,
+  // which can differ a lot for a check like website.has_website or
+  // website.https that's often the only determinable check in its own
+  // category. Showing this everywhere (weekly AND later) is what makes
+  // a weekly card's points actually sum to "Points within reach".
   const pointsLabel =
-    context === "weekly" && task.effort !== "quick_win"
-      ? t(locale, "dashboard.overview.actionPlan.pointsThisWeek", { points: formatPoints(task.promisedPoints) })
-      : t(locale, "dashboard.overview.actionPlan.pointsUpTo", { points: formatPoints(task.promisedPoints) });
+    task.weightedPointsHigh !== null
+      ? t(locale, "dashboard.overview.actionPlan.pointsRangeOnceLive", {
+          low: formatPoints(task.weightedPoints),
+          high: formatPoints(task.weightedPointsHigh),
+        })
+      : context === "weekly" && task.effort !== "quick_win"
+        ? t(locale, "dashboard.overview.actionPlan.pointsThisWeek", { points: formatPoints(task.weightedPoints) })
+        : t(locale, "dashboard.overview.actionPlan.pointsUpTo", { points: formatPoints(task.weightedPoints) });
   // The obtainable ask, front and center — a weekly target for a
   // gradual check, or the one-shot action itself when there isn't one.
   const headline = task.weeklyTarget ?? task.action;
@@ -288,6 +342,17 @@ export function TaskCard({
       </div>
 
       <p className="text-[12px] text-ink-mute">{task.why}</p>
+
+      {task.mergedLabels && task.mergedLabels.length > 0 && (
+        <p className="text-[12px] text-ink-mute">
+          <span className="font-medium text-ink-soft">
+            {t(locale, "dashboard.overview.actionPlan.mergedReviewsHelpsLabel")}
+          </span>{" "}
+          {task.mergedLabels.join(", ")}
+        </p>
+      )}
+
+      {task.timingNote && <p className="text-[12px] italic text-ink-mute">{task.timingNote}</p>}
 
       <button
         type="button"
@@ -341,6 +406,57 @@ export function TaskCard({
                 : t(locale, "dashboard.overview.actionPlan.didThis")}
           </Button>
           {state.kind === "error" && <span className="text-[12px] text-red">{state.message}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * A growth move's card — visually similar to TaskCard, but never has a
+ * status pill, points, or a mark-done button, since a growth move never
+ * earns points and PostScore has no way to verify a customer-getting
+ * habit the way it verifies a scoring check. The badge is the one thing
+ * that must never be skipped: it's what keeps a growth move from being
+ * mistaken for a scored action plan item.
+ */
+export function GrowthMoveCard({ move }: { move: GrowthMove }) {
+  const locale = useLocale();
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-2.5 py-4 first:pt-0 last:pb-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-semibold text-ink">{move.title}</span>
+        <Pill variant="neutral" className="!px-2 !py-0.5 text-[10px]">
+          {t(locale, "dashboard.growth.moves.badge")}
+        </Pill>
+      </div>
+
+      {move.meta && <p className="text-[11px] text-ink-mute">{move.meta}</p>}
+      <p className="text-[12px] text-ink-mute">{move.why}</p>
+
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => !e)}
+        className="flex w-fit items-center gap-1 text-[12px] font-medium text-brass hover:underline"
+      >
+        {expanded
+          ? t(locale, "dashboard.overview.actionPlan.hideHowToFix")
+          : t(locale, "dashboard.overview.actionPlan.howToFixIt")}
+        <IconChevronDown size={13} className={cn("transition-transform", expanded && "rotate-180")} />
+      </button>
+
+      {expanded && (
+        <div className="rounded-lg bg-paper p-3 text-[13px] text-ink-soft">
+          <p>{move.howTo}</p>
+          <Link
+            href={move.href}
+            className="mt-2.5 flex w-fit items-center gap-1 text-[12.5px] font-medium text-brass hover:underline"
+          >
+            {t(locale, "dashboard.growth.moves.goLabel")}
+            <IconArrowUpRight size={13} />
+          </Link>
         </div>
       )}
     </div>

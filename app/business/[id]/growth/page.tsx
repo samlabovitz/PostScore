@@ -4,9 +4,12 @@ import { Card } from "@/components/ui/Card";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { scoreBusinessById, getLastScanAt } from "@/app/actions/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
+import { getGrowthMoves } from "@/app/actions/growthMoves";
+import { getWeeklyChecklistState } from "@/app/actions/weeklyChecklist";
 import { listActivePromos } from "@/app/actions/promos";
 import { getActiveReferral } from "@/app/actions/referrals";
 import { businessRowToScoringInput } from "@/lib/scoring";
+import { buildWeeklyChecklistItems } from "@/lib/weeklyChecklist";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale } from "@/lib/i18n";
 import { GrowthView } from "./GrowthView";
@@ -47,11 +50,27 @@ export default async function GrowthPage({ params }: { params: { id: string } })
     input,
     scored.result.breakdown,
     scored.result.suggestions,
-    locale
+    locale,
+    {
+      businessRow: scored.business,
+      businessName: business.name ?? "Your business",
+      googleMapsUri: scored.business.google_maps_uri ?? null,
+      profileId: profile.id,
+    }
   );
 
   const promosResult = await listActivePromos(params.id);
   const initialPromos = promosResult.status === "ok" ? promosResult.promos : [];
+
+  const growthMovesResult = await getGrowthMoves(params.id, scored.result.breakdown, locale);
+  const growthMoves = growthMovesResult.status === "ok" ? growthMovesResult.moves : [];
+
+  const checklistStateResult = await getWeeklyChecklistState(params.id);
+  const weeklyChecklist = {
+    items: buildWeeklyChecklistItems(locale),
+    checkedItemIds: checklistStateResult.status === "ok" ? checklistStateResult.state.checkedItemIds : [],
+    streakWeeks: checklistStateResult.status === "ok" ? checklistStateResult.state.streakWeeks : 0,
+  };
 
   const lastScanAt = await getLastScanAt(params.id);
 
@@ -69,6 +88,7 @@ export default async function GrowthPage({ params }: { params: { id: string } })
           weeklyTasks: [],
           laterTasks: [],
           weeklyProjectedBreakdown: scored.result.breakdown,
+          weeklyProjectedBreakdownHigh: null,
           error:
             actionPlanResult.status === "error"
               ? actionPlanResult.message
@@ -85,6 +105,8 @@ export default async function GrowthPage({ params }: { params: { id: string } })
         referralOk={profile.referralOk}
         breakdown={scored.result.breakdown}
         actionPlan={actionPlan}
+        growthMoves={growthMoves}
+        weeklyChecklist={weeklyChecklist}
         initialPromos={initialPromos}
         initialReferral={initialReferral}
         lastScanAt={lastScanAt}

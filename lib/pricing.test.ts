@@ -70,6 +70,7 @@ function makeCompetitor(overrides: Partial<RankedCompetitor>): RankedCompetitor 
     googleMapsUri: null,
     breakdown: { total: 80, grade: "B", scoringVersion: "1.5.0", categories: [] } as never,
     priceLevel: null,
+    photoCount: null,
     ...overrides,
   };
 }

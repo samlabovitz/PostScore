@@ -118,6 +118,13 @@ export interface RankedCompetitor {
    * "PRICE_LEVEL_MODERATE"), or null when Google has no price data for
    * it — see lib/priceLevel.ts for the display mapping. */
   priceLevel: string | null;
+  /** Google's real photo count for this listing — surfaced (not just
+   * folded into `breakdown`'s completeness.photos check) so a caller
+   * like lib/growthMoves.ts's add_photos_vs_competitors move can show
+   * the real "nearby competitors have N, you have M" comparison rather
+   * than trying to back it out of a points gap. Null when Google
+   * reports none. */
+  photoCount: number | null;
 }
 
 /** A nearby, genuinely same-category place we found but couldn't score —
@@ -626,6 +633,7 @@ export async function findAndScoreCompetitors(
       googleMapsUri: result.place.googleMapsUri,
       breakdown,
       priceLevel: result.place.priceLevel,
+      photoCount: result.place.photoCount,
     });
   }
 
@@ -641,6 +649,7 @@ export async function findAndScoreCompetitors(
     googleMapsUri: null,
     breakdown: subjectBreakdown,
     priceLevel: subject.priceLevel ?? null,
+    photoCount: subject.photo_count,
   };
 
   const ranked = [subjectEntry, ...scoredCompetitors].sort(

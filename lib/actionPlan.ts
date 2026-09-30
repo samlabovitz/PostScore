@@ -37,11 +37,17 @@ import { DEFAULT_LOCALE, t, tPlural, type Locale, type MessageKey } from "@/lib/
  * - "longer_term": no bounded weekly action exists at all — the
  *   outcome can only be forced by an undertaking like building and
  *   publishing a website.
+ * - "setup": not a real score check at all — a one-time account setup
+ *   step (currently only "connect your Google Business Profile") that
+ *   the weekly plan can feature alongside real score tasks. Always 0
+ *   points, always links straight out via `href` rather than an
+ *   "I did this" checkbox (see ActionPlanTask.href) — see
+ *   buildConnectGbpWeeklyTask.
  * Hand-classified per check (not inferred from maxPoints or category)
  * so it stays an explicit, easily-tuned editorial call rather than a
  * guess — see the effort field on each entry in ACTION_PLAN_COPY.
  */
-export type TaskEffort = "quick_win" | "quick_win_action" | "longer_term";
+export type TaskEffort = "quick_win" | "quick_win_action" | "longer_term" | "setup";
 
 export interface ActionPlanCopy {
   /** i18n key for why this matters for actually getting customers — not
@@ -82,6 +88,17 @@ export interface ActionPlanCopy {
    * single week's realistic progress.
    */
   weeklyFix?: (input: BusinessScoringInput) => BusinessScoringInput;
+  /**
+   * Optional i18n key for a short caveat shown alongside this task
+   * whenever it's a real, open gap — for a task where doing the action
+   * doesn't mean the score updates immediately (e.g. Google needs a few
+   * days to re-index a newly linked website), so the owner isn't left
+   * wondering why a re-scan right after "I did this" doesn't yet show
+   * the points. Purely informational — never changes when points are
+   * actually confirmed (that's still only ever reconcileTasks, off a
+   * real re-scan).
+   */
+  timingNote?: MessageKey;
 }
 
 /** A realistic number of new reviews a focused week of asking might
@@ -91,16 +108,47 @@ export interface ActionPlanCopy {
 const WEEKLY_REALISTIC_NEW_REVIEWS = 3;
 
 /**
- * The honest "if I spend this week asking for reviews" input delta:
- * a handful of new reviews, which also means at least one is recent.
- * Reused by both the rating and review-count checks below, since
- * asking for reviews is the one real action behind both gaps.
+ * The honest "if I spend this week asking for reviews" input delta: a
+ * handful of new reviews. Reused by both the rating and review-count
+ * checks below, since asking for reviews is the one real action behind
+ * both gaps.
+ *
+ * Deliberately does NOT touch mostRecentReviewDaysAgo — that's
+ * review_recency's own field, a DIFFERENT check that this fix has no
+ * business silently resurrecting. In production mostRecentReviewDaysAgo
+ * is null for every business (not collected yet), which makes
+ * review_recency NOT_FOUND — non-determinable, excluded from the
+ * visibility category's possible/earned points entirely. If this fix
+ * set it to 0 unconditionally, re-scoring with it would flip
+ * review_recency from excluded to fully-earned (6/6), inflating the
+ * category's earned-vs-possible ratio far beyond what asking for a few
+ * reviews actually promised — a real check nobody merged, displayed, or
+ * promised points for, silently padding the projected total. See
+ * reviewAskFixIncluding below for the one place recency's own gain is
+ * legitimately counted: when it's actually one of the checks being
+ * merged/displayed.
  */
 function weeklyReviewAskFix(input: BusinessScoringInput): BusinessScoringInput {
   return {
     ...input,
     reviewCount: (input.reviewCount ?? 0) + WEEKLY_REALISTIC_NEW_REVIEWS,
-    mostRecentReviewDaysAgo: 0,
+  };
+}
+
+/**
+ * The same honest review-ask fix, but ALSO closes review_recency —
+ * used only when review_recency is genuinely one of the checks a
+ * merged reviews card stands in for (see mergeReviewTasks). Getting a
+ * few fresh reviews this week does make the listing's most recent
+ * review recent, so crediting review_recency here is honest — but only
+ * when review_recency is an included, displayed check, never as a
+ * blanket side effect of asking for reviews in general (see
+ * weeklyReviewAskFix's own doc for why that would be a scoring leak).
+ */
+function reviewAskFixIncluding(mergedCheckIds: string[]): (input: BusinessScoringInput) => BusinessScoringInput {
+  return (input) => {
+    const next = weeklyReviewAskFix(input);
+    return mergedCheckIds.includes("visibility.review_recency") ? { ...next, mostRecentReviewDaysAgo: 0 } : next;
   };
 }
 
@@ -202,9 +250,13 @@ const ACTION_PLAN_COPY: Record<string, ActionPlanCopy> = {
     action: "content.actionPlan.website.has_website.action",
     fix: "content.actionPlan.website.has_website.fix",
     ownerActionOnGoogle: false,
-    // Building and publishing a website is a real, multi-step project —
-    // never a this-week task.
-    effort: "longer_term",
+    // The starter-site builder turns this into a genuinely bounded,
+    // this-week action (minutes, not a real project) — see
+    // mergeWebsiteTasks below for why it's paired with
+    // completeness.website_link (the exact same underlying `website`
+    // field, always open or closed together).
+    effort: "quick_win",
+    timingNote: "content.actionPlan.website.has_website.timingNote",
   },
   "website.https": {
     why: "content.actionPlan.website.https.why",
@@ -229,6 +281,23 @@ const ACTION_PLAN_COPY: Record<string, ActionPlanCopy> = {
     fix: "content.actionPlan.website.content_depth.fix",
     ownerActionOnGoogle: false,
     effort: "longer_term",
+    // Not a normal weekly candidate (effort stays longer_term — full
+    // content richness is genuinely a bigger project) — but the three
+    // technical fields (title/meta description/viewport tag) ARE a
+    // real, bounded weekly action, used ONLY as a last-resort weekly-
+    // plan promotion when no quick_win/quick_win_action task qualifies
+    // (see buildWeeklyPlan's promotion step).
+    weeklyAction: "content.actionPlan.website.content_depth.weeklyAction",
+    weeklyFix: (input) =>
+      input.websiteAnalysis?.content
+        ? {
+            ...input,
+            websiteAnalysis: {
+              ...input.websiteAnalysis,
+              content: { ...input.websiteAnalysis.content, hasTitle: true, hasMetaDescription: true, hasViewportTag: true },
+            },
+          }
+        : input,
   },
   "website.contact_conversion": {
     why: "content.actionPlan.website.contact_conversion.why",
@@ -236,6 +305,20 @@ const ACTION_PLAN_COPY: Record<string, ActionPlanCopy> = {
     fix: "content.actionPlan.website.contact_conversion.fix",
     ownerActionOnGoogle: false,
     effort: "longer_term",
+    // Same reasoning as content_depth above — a real phone link and a
+    // clear call-to-action are a genuine weekly-sized step, used only
+    // for last-resort weekly-plan promotion.
+    weeklyAction: "content.actionPlan.website.contact_conversion.weeklyAction",
+    weeklyFix: (input) =>
+      input.websiteAnalysis?.content
+        ? {
+            ...input,
+            websiteAnalysis: {
+              ...input.websiteAnalysis,
+              content: { ...input.websiteAnalysis.content, hasPhoneLink: true, hasCtaText: true },
+            },
+          }
+        : input,
   },
 };
 
@@ -248,6 +331,110 @@ const FALLBACK_COPY: ActionPlanCopy = {
   // above: never assume an unclassified check is a quick win.
   effort: "longer_term",
 };
+
+function round1(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+/**
+ * The 0–100 total BEFORE the final `Math.round()` scoreBusiness() itself
+ * applies — recomputed here by reading the exact same public category
+ * fields (weight/possiblePoints/earnedPoints) scoreBusiness() already
+ * exposes on ScoreBreakdown, never a second scoring decision or a
+ * change to lib/scoring.ts. Exists so a set of per-task point displays
+ * can be rounded ONCE, together, against the real total (see
+ * apportionToTotal) instead of each independently rounding against an
+ * already-rounded number and drifting out of sum with it.
+ */
+export function rawWeightedTotal(breakdown: ScoreBreakdown): number {
+  const determinable = breakdown.categories.filter((c) => c.possiblePoints > 0);
+  const totalPossibleWeight = determinable.reduce((sum, c) => sum + c.weight, 0);
+  if (totalPossibleWeight === 0) return 0;
+  const totalEarnedWeight = determinable.reduce(
+    (sum, c) => sum + (c.earnedPoints / c.possiblePoints) * c.weight,
+    0
+  );
+  return (totalEarnedWeight / totalPossibleWeight) * 100;
+}
+
+/**
+ * The real, honest weighted value of applying `fix` — exactly what it
+ * would move the 0–100 total (and so "Points within reach") by,
+ * computed identically for every task type (a quick_win's full fix, a
+ * quick_win_action's weekly or full fix, a merge's combined fix) so no
+ * card can ever show a number in different units than the projection.
+ * Most checks' categories have weight == possiblePoints (completeness,
+ * and visibility whenever review_recency is also determinable), where
+ * this equals the check's own raw points — but website.has_website and
+ * website.https are real counterexamples: often the ONLY determinable
+ * check in the 30-weight "website" category, so closing one is worth
+ * far more of the total than its own small raw-point value suggests.
+ * Never negative — a realistic fix never makes the total worse.
+ */
+function weightedFixPoints(
+  breakdown: ScoreBreakdown,
+  input: BusinessScoringInput,
+  fix: (input: BusinessScoringInput) => BusinessScoringInput
+): number {
+  const after = scoreBusiness(fix(input));
+  return Math.max(0, rawWeightedTotal(after) - rawWeightedTotal(breakdown));
+}
+
+/**
+ * Rounds a set of raw (unrounded) weighted-point values to 1-decimal
+ * display numbers that sum to EXACTLY `targetTotal` (an integer — the
+ * real "Points within reach" delta) via largest-remainder apportionment:
+ * floor every value to 1 decimal, then hand out the leftover tenths (or
+ * claw back excess ones) to whichever values have the largest (or
+ * smallest) fractional remainder. Independent per-task rounding can't
+ * guarantee an exact sum — this is exactly the "cards don't add up to
+ * the total already shown on the page" bug this exists to prevent.
+ */
+function apportionToTotal(rawValues: number[], targetTotal: number): number[] {
+  if (rawValues.length === 0) return [];
+
+  const scale = 10; // 1 decimal place
+  const targetUnits = Math.round(targetTotal * scale);
+  const floors = rawValues.map((v) => Math.floor(v * scale));
+  let remainder = targetUnits - floors.reduce((sum, f) => sum + f, 0);
+
+  const byRemainderDesc = rawValues
+    .map((v, i) => ({ i, frac: v * scale - floors[i] }))
+    .sort((a, b) => b.frac - a.frac);
+
+  const units = [...floors];
+  // Hand out (or claw back) the full remainder, most-deserving entry
+  // first, wrapping around as many times as needed — never capped at
+  // one pass. The additive per-task deltas are exact (each task's own
+  // fix touches disjoint checks), but `targetTotal` here is the
+  // DIFFERENCE of two independently-rounded totals (today's and the
+  // projected one), which can drift up to a full point from the true
+  // raw sum — one entry alone can't always absorb that on a single
+  // ±1 pass, so this keeps looping until the sum matches exactly.
+  let i = 0;
+  while (remainder > 0) {
+    units[byRemainderDesc[i % byRemainderDesc.length].i] += 1;
+    i++;
+    remainder--;
+  }
+  i = 0;
+  while (remainder < 0) {
+    units[byRemainderDesc[i % byRemainderDesc.length].i] -= 1;
+    i++;
+    remainder++;
+  }
+  return units.map((u) => u / scale);
+}
+
+/** Applies every merged check's own REAL simulateFix in sequence — the
+ * full-outcome fix for a merged card's weightedPoints (Bigger Projects
+ * framing), as opposed to a merge's own weekly-scoped fix (see
+ * reviewAskFixIncluding for reviews; the website merge's two checks
+ * share one identical simulateFix, so this degenerates to that same
+ * fix there too). */
+function fullMergeFix(mergedCheckIds: string[]): (input: BusinessScoringInput) => BusinessScoringInput {
+  return (input) => mergedCheckIds.reduce((acc, id) => applyCheckFix(acc, id), input);
+}
 
 /** Shape of a row from the `tasks` table — only the fields the plan needs. */
 export interface TaskRow {
@@ -318,6 +505,67 @@ export interface ActionPlanTask {
    * stale, never the value from when the task was marked. Null when this
    * task has no numeric weekly target. */
   currentMetricValue: number | null;
+  /**
+   * Set only on the merged reviews card (see mergeReviewTasks below) —
+   * the real underlying checkIds it stands in for (2 or 3 of
+   * visibility.rating/review_count/review_recency). `checkId` itself is
+   * a synthetic id (MERGED_REVIEW_CHECK_ID) that names no real check —
+   * "I did this" on this card must mark every id here instead, and the
+   * real `tasks` DB rows/check ids behind each one are completely
+   * unaffected by the merge. Null on every normal task.
+   */
+  mergedCheckIds: string[] | null;
+  /** Each merged check's own short label, same order as
+   * mergedCheckIds — e.g. ["Star rating", "Review count", "Review
+   * recency"] — so the merged card can honestly list what it helps
+   * with instead of hiding the specifics behind one combined title.
+   * Null whenever mergedCheckIds is null. */
+  mergedLabels: string[] | null;
+  /** Short caveat shown alongside this task — see ActionPlanCopy's
+   * timingNote doc. Null for every task without one. */
+  timingNote: string | null;
+  /**
+   * This task's REAL contribution to the 0–100 total if its fix were
+   * applied alone — i.e. exactly what it would move "Points within
+   * reach" by, in the SAME weighted units the projection uses. This is
+   * the number every card should display, never `promisedPoints` (a
+   * raw check-points figure that only happens to match the weighted
+   * total for most checks — website.has_website and website.https are
+   * real counterexamples: a small raw-point check can be the ONLY
+   * determinable check in its whole category, so closing it is worth
+   * far more of the weighted total than its own raw points suggest).
+   * See weightedFixPoints/rawWeightedTotal for how this is computed,
+   * and apportionToTotal for how a picked set of these are rounded so
+   * they sum to exactly the same integer the projection shows.
+   */
+  weightedPoints: number;
+  /**
+   * Set only for the no-website starter-site task (see mergeWebsiteTasks
+   * and lib/starterSiteScoring.ts): when non-null, `weightedPoints` is
+   * the honest LOW end of a real range and this is the HIGH end — what
+   * the template guarantees regardless of hosting vs. what it's worth
+   * once HTTPS and full mobile performance are also true, which depend
+   * on where the owner hosts it. Null for every other task, which shows
+   * a single exact value.
+   */
+  weightedPointsHigh: number | null;
+  /**
+   * Set only for a "setup" task (see TaskEffort) — the PostScore page
+   * this links straight out to, shown as a plain link/button instead of
+   * an "I did this" checkbox (there's no score check to reconcile on a
+   * re-scan). Null for every real score task, which uses the normal
+   * mark-done flow instead.
+   */
+  href: string | null;
+  /**
+   * Set only alongside weightedPointsHigh — the real website-related
+   * input overlay (website/httpsStatus/websiteAnalysis) for the LOW and
+   * HIGH ends of the starter-site range, so buildWeeklyPlan's
+   * projection can honestly reflect each scenario instead of guessing
+   * from the two numbers alone. Null for every other task.
+   */
+  rangeLowOverlay: Partial<BusinessScoringInput> | null;
+  rangeHighOverlay: Partial<BusinessScoringInput> | null;
 }
 
 export interface CompletedTask {
@@ -334,12 +582,15 @@ export interface CompletedTask {
  * (determinable checks only, so NOT_FOUND/not-yet-implemented checks
  * like mobile-friendliness never appear) and same biggest-opportunity-
  * first ordering. `taskRows` overlays any in-flight "I did this" status;
- * a task with no matching row is simply open.
+ * a task with no matching row is simply open. `input` is only used to
+ * compute each task's real weightedPoints (see its own doc) — never to
+ * re-derive anything reconcileTasks/markTaskDone already own.
  */
 export function buildActionPlan(
   breakdown: ScoreBreakdown,
   suggestions: Suggestion[],
   taskRows: TaskRow[],
+  input: BusinessScoringInput,
   locale: Locale = DEFAULT_LOCALE
 ): ActionPlanTask[] {
   const rowByCheckId = new Map(taskRows.map((row) => [row.check_id, row]));
@@ -367,8 +618,218 @@ export function buildActionPlan(
       weeklyTarget: null,
       weeklyTargetDelta: null,
       currentMetricValue: null,
+      mergedCheckIds: null,
+      mergedLabels: null,
+      timingNote: copy.timingNote ? t(locale, copy.timingNote) : null,
+      weightedPoints: round1(weightedFixPoints(breakdown, input, (inp) => applyCheckFix(inp, s.checkId))),
+      weightedPointsHigh: null,
+      href: null,
+      rangeLowOverlay: null,
+      rangeHighOverlay: null,
     };
   });
+}
+
+/** Synthetic checkId for the merged reviews card — never a real check,
+ * never persisted, never scored. See mergeReviewTasks below. */
+export const MERGED_REVIEW_CHECK_ID = "visibility.reviews_merged";
+
+const REVIEW_CHECK_IDS: readonly string[] = [
+  "visibility.rating",
+  "visibility.review_count",
+  "visibility.review_recency",
+];
+
+/**
+ * Combines visibility.rating/review_count/review_recency into ONE card
+ * whenever more than one is still an open gap. All three point back at
+ * the exact same real action (ask customers for a review — see
+ * weeklyReviewAskFix), so showing up to three near-duplicate "ask for
+ * reviews" cards would just be noise dressed up as three different
+ * tasks. This is a pure display-time transform over buildActionPlan's
+ * own output: the underlying `tasks` DB rows and real check ids are
+ * completely untouched, so every downstream consumer (buildWeeklyPlan,
+ * markTaskDone, task history) keeps working against the real ids —
+ * only the UI ever sees the merged card, via its `mergedCheckIds`.
+ */
+export function mergeReviewTasks(
+  tasks: ActionPlanTask[],
+  breakdown: ScoreBreakdown,
+  input: BusinessScoringInput,
+  locale: Locale = DEFAULT_LOCALE
+): ActionPlanTask[] {
+  const reviewTasks = tasks.filter((task) => REVIEW_CHECK_IDS.includes(task.checkId));
+  if (reviewTasks.length < 2) return tasks;
+
+  const mergedCheckIds = reviewTasks.map((task) => task.checkId);
+  const mergedLabels = reviewTasks.map((task) => task.label);
+
+  // Whichever of rating/review_count is present drives the real weekly
+  // review-count target — both share the literal same weeklyFix
+  // (weeklyReviewAskFix), so either gives the identical, real number.
+  // At least one of the two is always present here: review_recency has
+  // no weeklyFix of its own, so a merge of review_recency with just one
+  // other check always includes rating or review_count too.
+  const weeklyFixSourceId = mergedCheckIds.find((id) => ACTION_PLAN_COPY[id]?.weeklyFix) ?? null;
+  const targetInfo = weeklyFixSourceId ? deriveWeeklyTargetInfo(weeklyFixSourceId, input, locale) : null;
+
+  const mergedTask: ActionPlanTask = {
+    checkId: MERGED_REVIEW_CHECK_ID,
+    category: "visibility",
+    label: t(locale, "content.actionPlan.mergedReviews.title"),
+    problem: reviewTasks.map((task) => task.problem).join(" "),
+    why: t(locale, "content.actionPlan.mergedReviews.why"),
+    action: t(locale, "content.actionPlan.mergedReviews.action"),
+    fix: t(locale, "content.actionPlan.mergedReviews.fix"),
+    ownerActionOnGoogle: false,
+    promisedPoints: round1(reviewTasks.reduce((sum, task) => sum + task.promisedPoints, 0)),
+    status: reviewTasks.some((task) => task.status === "pending_verification")
+      ? "pending_verification"
+      : "open",
+    markedDoneAt:
+      reviewTasks
+        .map((task) => task.markedDoneAt)
+        .filter((d): d is string => d !== null)
+        .sort()
+        .pop() ?? null,
+    // The merged card gets its own simplified open/pending treatment in
+    // the UI (see ActionPlanSection.tsx) rather than forcing the
+    // existing single-check progress math to reconcile three different
+    // checks' markedPromisedPoints/markedMetricValue at once.
+    markedPromisedPoints: null,
+    markedMetricValue: null,
+    effort: "quick_win_action",
+    weeklyTarget: targetInfo?.label ?? null,
+    weeklyTargetDelta: targetInfo?.targetDelta ?? null,
+    currentMetricValue: weeklyFixSourceId ? weeklyTrackedMetricValue(weeklyFixSourceId, input) : null,
+    mergedCheckIds,
+    mergedLabels,
+    timingNote: null,
+    weightedPoints: round1(weightedFixPoints(breakdown, input, fullMergeFix(mergedCheckIds))),
+    weightedPointsHigh: null,
+    href: null,
+    rangeLowOverlay: null,
+    rangeHighOverlay: null,
+  };
+
+  const merged: ActionPlanTask[] = [];
+  let inserted = false;
+  for (const task of tasks) {
+    if (REVIEW_CHECK_IDS.includes(task.checkId)) {
+      if (!inserted) {
+        merged.push(mergedTask);
+        inserted = true;
+      }
+      continue;
+    }
+    merged.push(task);
+  }
+  return merged;
+}
+
+/** Synthetic checkId for the merged starter-site card — never a real
+ * check, never persisted, never scored. See mergeWebsiteTasks below. */
+export const MERGED_WEBSITE_CHECK_ID = "website.starter_site_merged";
+
+const WEBSITE_CHECK_IDS: readonly string[] = ["website.has_website", "completeness.website_link"];
+
+/**
+ * Combines website.has_website and completeness.website_link into ONE
+ * card whenever there's no website — unlike the review checks above,
+ * these two are DETERMINISTICALLY coupled (both evaluate the exact same
+ * `website` field with the exact same presence test — see lib/scoring.ts),
+ * so they're always open or closed together, never independently. That
+ * means projecting has_website's fix alone would silently ALSO close
+ * website_link in the real breakdown (same underlying fact, so honestly
+ * it SHOULD close) — but showing only has_website's own points while
+ * the real score moves by both checks' combined total is exactly the
+ * "displayed points ≠ projected gain" bug fixed in step 2c. Merging
+ * them into one card that shows their honest combined total keeps the
+ * projection matching what's actually displayed. Pure display-time
+ * transform, same as mergeReviewTasks: the underlying `tasks` DB rows
+ * and real check ids are untouched.
+ */
+export function mergeWebsiteTasks(
+  tasks: ActionPlanTask[],
+  breakdown: ScoreBreakdown,
+  input: BusinessScoringInput,
+  locale: Locale = DEFAULT_LOCALE,
+  /**
+   * The real starter-template LOW/HIGH weighted-points range plus each
+   * scenario's real website-related input overlay (see
+   * lib/starterSiteScoring.ts and app/actions/actionPlan.ts's
+   * estimateStarterSiteRange) — only ever real when this business has
+   * no website (the only case this merge fires for at all). When
+   * omitted (a caller with no business-profile data to build the
+   * template from, e.g. the assistant), the merged card falls back to
+   * a single weightedFixPoints value like any other task.
+   */
+  starterSiteRange: {
+    low: number;
+    high: number;
+    lowOverlay: Partial<BusinessScoringInput>;
+    highOverlay: Partial<BusinessScoringInput>;
+  } | null = null
+): ActionPlanTask[] {
+  const websiteTasks = tasks.filter((task) => WEBSITE_CHECK_IDS.includes(task.checkId));
+  if (websiteTasks.length < 2) return tasks;
+
+  const hasWebsiteTask = websiteTasks.find((task) => task.checkId === "website.has_website");
+  const copy = ACTION_PLAN_COPY["website.has_website"];
+  const mergedCheckIds = websiteTasks.map((task) => task.checkId);
+
+  const mergedTask: ActionPlanTask = {
+    checkId: MERGED_WEBSITE_CHECK_ID,
+    category: "website",
+    label: hasWebsiteTask?.label ?? t(locale, "content.checks.website.has_website.label"),
+    problem: websiteTasks.map((task) => task.problem).join(" "),
+    why: t(locale, copy.why),
+    action: t(locale, copy.action),
+    fix: t(locale, copy.fix),
+    ownerActionOnGoogle: false,
+    promisedPoints: round1(websiteTasks.reduce((sum, task) => sum + task.promisedPoints, 0)),
+    status: websiteTasks.some((task) => task.status === "pending_verification")
+      ? "pending_verification"
+      : "open",
+    markedDoneAt:
+      websiteTasks
+        .map((task) => task.markedDoneAt)
+        .filter((d): d is string => d !== null)
+        .sort()
+        .pop() ?? null,
+    // Same simplified open/pending treatment as the merged reviews card
+    // — see its own comment on this exact pattern above.
+    markedPromisedPoints: null,
+    markedMetricValue: null,
+    effort: "quick_win",
+    weeklyTarget: null,
+    weeklyTargetDelta: null,
+    currentMetricValue: null,
+    mergedCheckIds,
+    mergedLabels: websiteTasks.map((task) => task.label),
+    timingNote: copy.timingNote ? t(locale, copy.timingNote) : null,
+    weightedPoints: starterSiteRange
+      ? round1(starterSiteRange.low)
+      : round1(weightedFixPoints(breakdown, input, fullMergeFix(mergedCheckIds))),
+    weightedPointsHigh: starterSiteRange ? round1(starterSiteRange.high) : null,
+    href: null,
+    rangeLowOverlay: starterSiteRange?.lowOverlay ?? null,
+    rangeHighOverlay: starterSiteRange?.highOverlay ?? null,
+  };
+
+  const merged: ActionPlanTask[] = [];
+  let inserted = false;
+  for (const task of tasks) {
+    if (WEBSITE_CHECK_IDS.includes(task.checkId)) {
+      if (!inserted) {
+        merged.push(mergedTask);
+        inserted = true;
+      }
+      continue;
+    }
+    merged.push(task);
+  }
+  return merged;
 }
 
 export type PendingCheckStatus = "not_yet_checked" | "unchanged" | "progressed" | "regressed";
@@ -507,22 +968,78 @@ export function reconcileTasks(breakdown: ScoreBreakdown, taskRows: TaskRow[]): 
 // This week's plan
 // ---------------------------------------------------------------------------
 
-/** How many quick wins "this week's plan" surfaces at once — enough to
- * feel like real progress, few enough to not be overwhelming. */
+/** How many quick score fixes "this week's plan" surfaces at once —
+ * enough to feel like real progress, few enough to not be overwhelming. */
 export const WEEKLY_PLAN_CAP = 3;
+
+/** Never present a task with a weighted impact under this many points
+ * as "the action of this week" — below this, the fix is real but too
+ * small to honestly headline a week. Tuned editorial constant, not
+ * derived from any scoring math. */
+const MIN_WEEKLY_HEADLINE_POINTS = 0.5;
+
+/**
+ * The synthetic "connect your Google Business Profile" weekly-plan card
+ * — a real, one-time account setup step, not a score check (see
+ * TaskEffort's "setup" doc). Always 0 points, always links straight out
+ * via `href` instead of an "I did this" checkbox. The caller (see
+ * app/actions/actionPlan.ts) only ever builds this when the business's
+ * GBP genuinely isn't connected — a real OAuth flow at
+ * /api/gbp/connect writes a real gbp_connections row on success (see
+ * app/api/gbp/callback/route.ts), so this is never shown once that's
+ * true. Never appears anywhere else on the page (see item 1's
+ * no-repeats rule — it used to be a growth move; see lib/growthMoves.ts's
+ * own doc for why it moved here instead).
+ */
+export function buildConnectGbpWeeklyTask(businessId: string, locale: Locale = DEFAULT_LOCALE): ActionPlanTask {
+  return {
+    checkId: "setup.connect_gbp",
+    category: "completeness",
+    label: t(locale, "dashboard.growth.moves.connectGbp.title"),
+    problem: "",
+    why: t(locale, "dashboard.growth.moves.connectGbp.why"),
+    action: t(locale, "dashboard.growth.moves.connectGbp.howTo"),
+    fix: t(locale, "dashboard.growth.moves.connectGbp.howTo"),
+    ownerActionOnGoogle: false,
+    promisedPoints: 0,
+    status: "open",
+    markedDoneAt: null,
+    markedPromisedPoints: null,
+    markedMetricValue: null,
+    effort: "setup",
+    weeklyTarget: null,
+    weeklyTargetDelta: null,
+    currentMetricValue: null,
+    mergedCheckIds: null,
+    mergedLabels: null,
+    timingNote: null,
+    weightedPoints: 0,
+    weightedPointsHigh: null,
+    href: `/business/${businessId}/connect-gbp`,
+    rangeLowOverlay: null,
+    rangeHighOverlay: null,
+  };
+}
 
 export interface WeeklyPlan {
   /**
-   * Up to WEEKLY_PLAN_CAP tasks, highest realistic-this-week-impact
-   * first. A "quick_win" task appears with its real, full promisedPoints
-   * (it fully closes this week). A "quick_win_action" task appears with
-   * its promisedPoints and `action` REPLACED by the honest, modest
-   * weekly estimate/copy (see weeklyActionPoints below) — never the
-   * full outcome. If a business has real gaps but none of them have any
-   * bounded weekly action at all, the single highest-impact task is
-   * still featured here (never a dead "nothing to do") with its normal
-   * copy and a weekly point estimate of 0, since no honest partial
-   * progress metric exists for it.
+   * Up to WEEKLY_PLAN_CAP real score tasks doable this week, at most
+   * one of them a review item (guaranteed structurally: the 3 review
+   * checks are always pre-merged into a single card before this runs —
+   * see mergeReviewTasks). Never growth moves — those only ever appear
+   * in the Growth page's separate "Ways to bring in more customers"
+   * section, entirely outside any projected score. If fewer than
+   * WEEKLY_PLAN_CAP tasks clear MIN_WEEKLY_HEADLINE_POINTS, only those
+   * are shown — never padded with anything else. If none do, this is
+   * empty and the UI shows an honest "no quick score fixes this week"
+   * message instead. A "quick_win" task appears with its real, full
+   * weightedPoints (it fully closes this week). A "quick_win_action"
+   * task (this includes the merged reviews card — see
+   * mergeReviewTasks) appears with its weightedPoints and `action`
+   * REPLACED by the honest, modest weekly estimate/copy — never the
+   * full outcome. Every task's weightedPoints here has already been
+   * apportioned (see apportionToTotal) to sum EXACTLY to
+   * weeklyProjectedBreakdown.total - (today's real total).
    */
   weeklyTasks: ActionPlanTask[];
   /**
@@ -542,29 +1059,16 @@ export interface WeeklyPlan {
    * suggestion→score guarantee (see getScoreWithSuggestions in
    * lib/scoring.ts), just scoped to this week's realistic subset and
    * realistic increments instead of every gap closed at once. Never a
-   * hand-summed or invented estimate.
+   * hand-summed or invented estimate. When any picked task is itself a
+   * range (currently only the no-website starter-site card), this is
+   * the LOW-end projection.
    */
   weeklyProjectedBreakdown: ScoreBreakdown;
-}
-
-function round1(value: number): number {
-  return Math.round(value * 10) / 10;
-}
-
-/** The honest, modest point gain a "quick_win_action" check would earn
- * from its weeklyFix alone — computed by literally re-running
- * scoreBusiness, never hand-estimated. Never negative (a realistic
- * action never makes a check worse). */
-function weeklyActionPoints(
-  checkId: string,
-  breakdown: ScoreBreakdown,
-  input: BusinessScoringInput,
-  weeklyFix: (input: BusinessScoringInput) => BusinessScoringInput
-): number {
-  const before = breakdown.checks.find((c) => c.id === checkId)?.earnedPoints ?? 0;
-  const after =
-    scoreBusiness(weeklyFix(input)).checks.find((c) => c.id === checkId)?.earnedPoints ?? 0;
-  return round1(Math.max(0, after - before));
+  /** The HIGH-end projection — set only when at least one picked task
+   * is a range, using that task's own HIGH overlay instead of its LOW
+   * one. Null whenever nothing picked is a range (the common case),
+   * in which case weeklyProjectedBreakdown alone is the whole story. */
+  weeklyProjectedBreakdownHigh: ScoreBreakdown | null;
 }
 
 /**
@@ -628,17 +1132,95 @@ function deriveWeeklyTargetInfo(
 }
 
 /**
- * Splits an already-built action plan into "this week" (a small,
- * achievable set of real actions) and "later" (everything else, shown
+ * The real, honest input-transform this task's weekly slot represents —
+ * the SAME fix used both to rank/compute its weekly weightedPoints and
+ * to build the projected breakdown, so the two can never drift apart.
+ * Null for a longer_term task (no bounded weekly action exists at all)
+ * or a quick_win_action check with no weeklyFix of its own.
+ */
+function weeklyFixForTask(
+  task: ActionPlanTask,
+  useHighOverlay: boolean = false
+): ((input: BusinessScoringInput) => BusinessScoringInput) | null {
+  if (task.effort === "quick_win_action") {
+    if (task.mergedCheckIds) return reviewAskFixIncluding(task.mergedCheckIds);
+    const copy = ACTION_PLAN_COPY[task.checkId];
+    return copy?.weeklyFix ?? null;
+  }
+  if (task.effort === "quick_win") {
+    // A range task (currently only the no-website starter-site card)
+    // has its own real LOW/HIGH website-field overlay — a template
+    // scoring input, not the check's own generic simulateFix — see
+    // mergeWebsiteTasks and lib/starterSiteScoring.ts.
+    if (task.rangeLowOverlay) {
+      const overlay = useHighOverlay ? task.rangeHighOverlay : task.rangeLowOverlay;
+      return (input) => ({ ...input, ...overlay });
+    }
+    // A merged quick_win (e.g. has_website+website_link with no range
+    // data)'s own checkId is synthetic — no real check to look up. Both
+    // merged checks share the identical real simulateFix (see
+    // mergeWebsiteTasks), so applying either real id's fix closes both
+    // honestly.
+    const realCheckId = task.mergedCheckIds?.[0] ?? task.checkId;
+    return (input) => applyCheckFix(input, realCheckId);
+  }
+  return null;
+}
+
+/**
+ * The one, last-resort source of "this week's plan" content when NO
+ * quick_win/quick_win_action task clears the headline bar: the single
+ * best longer_term check that genuinely has its own honest, bounded
+ * weekly first step (see e.g. website.content_depth/contact_conversion's
+ * weeklyFix — not every longer_term check has one; website.
+ * performance_mobile genuinely doesn't, since no input PostScore
+ * controls can honestly move a live Lighthouse score). Never invents a
+ * step for a check that has none. Returns null when nothing is
+ * eligible, in which case the week is genuinely empty.
+ */
+function bestPromotableLongerTermTask(
+  tasks: ActionPlanTask[],
+  breakdown: ScoreBreakdown,
+  input: BusinessScoringInput
+): { task: ActionPlanTask; fix: (input: BusinessScoringInput) => BusinessScoringInput; weeklyWeightedPoints: number } | null {
+  const promotable = tasks
+    .filter((t) => t.effort === "longer_term")
+    .map((task) => {
+      const fix = ACTION_PLAN_COPY[task.checkId]?.weeklyFix ?? null;
+      return { task, fix, weeklyWeightedPoints: fix ? weightedFixPoints(breakdown, input, fix) : 0 };
+    })
+    .filter((c): c is { task: ActionPlanTask; fix: (input: BusinessScoringInput) => BusinessScoringInput; weeklyWeightedPoints: number } => c.fix !== null)
+    .sort((a, b) => b.weeklyWeightedPoints - a.weeklyWeightedPoints);
+  return promotable[0] ?? null;
+}
+
+/**
+ * Splits an already-built action plan into "this week" (up to
+ * WEEKLY_PLAN_CAP real score tasks doable this week — see WeeklyPlan's
+ * own doc for the exact rules) and "later" (everything else, shown
  * honestly rather than hidden). `tasks` must already be ordered
- * biggest-opportunity-first (buildActionPlan's own ordering).
+ * biggest-opportunity-first (buildActionPlan's own ordering, after
+ * mergeReviewTasks/mergeWebsiteTasks). Growth moves never appear here —
+ * see app/business/[id]/growth/GrowthView.tsx's separate "Ways to bring
+ * in more customers" section for those.
  *
- * Ranks candidates by their REALISTIC this-week impact (full points for
- * a quick_win, a modest honest estimate for a quick_win_action) rather
- * than their full potential, so a small-but-fully-closable quick win
- * isn't crowded out by a big check that can only move a little this
- * week. A business with real gaps but zero bounded weekly action still
- * gets its single highest-impact task featured — see WeeklyPlan's doc.
+ * Ranks candidates by their REALISTIC this-week WEIGHTED impact (full
+ * weightedPoints for a quick_win, a modest honest weekly estimate for a
+ * quick_win_action — see weightedFixPoints) rather than raw check
+ * points, so a small-but-fully-closable quick win isn't crowded out by
+ * a check that can only move a little this week, and so the ranking
+ * always agrees with what the cards actually display. Only candidates
+ * clearing MIN_WEEKLY_HEADLINE_POINTS are ever shown; if NONE do, the
+ * single best "Bigger projects" item with a real weekly first step is
+ * promoted instead (see bestPromotableLongerTermTask) — only when even
+ * THAT doesn't exist is the week genuinely empty (no filler, no other
+ * fallback). Once picked, every task's displayed weightedPoints is
+ * apportioned (see apportionToTotal) to sum EXACTLY to
+ * weeklyProjectedBreakdown's own real total delta. The caller (see
+ * app/actions/actionPlan.ts) is responsible for the connect_gbp "setup"
+ * item, if any — it's never part of `tasks` here, so reduce `cap` by 1
+ * before calling when it applies, and prepend it to the result
+ * afterward.
  */
 export function buildWeeklyPlan(
   tasks: ActionPlanTask[],
@@ -649,70 +1231,95 @@ export function buildWeeklyPlan(
 ): WeeklyPlan {
   const candidates = tasks
     .filter((t) => t.effort === "quick_win" || t.effort === "quick_win_action")
-    .map((t) => {
-      if (t.effort === "quick_win") {
-        return { task: t, weeklyPoints: t.promisedPoints };
-      }
-      const copy = ACTION_PLAN_COPY[t.checkId];
-      const weeklyPoints = copy?.weeklyFix
-        ? weeklyActionPoints(t.checkId, breakdown, input, copy.weeklyFix)
-        : 0;
-      return { task: t, weeklyPoints };
+    .map((task) => {
+      const fix = weeklyFixForTask(task);
+      const weeklyWeightedPoints = fix ? weightedFixPoints(breakdown, input, fix) : 0;
+      return { task, fix, weeklyWeightedPoints };
     })
-    .sort((a, b) => b.weeklyPoints - a.weeklyPoints)
-    .slice(0, cap);
+    .sort((a, b) => b.weeklyWeightedPoints - a.weeklyWeightedPoints);
 
-  // Never leave a business with real gaps staring at an empty week —
-  // if nothing has a bounded weekly action, still feature the single
-  // highest-impact task as this week's first step (honest zero weekly
-  // gain, since no partial-progress metric exists for it).
-  const picked =
-    candidates.length > 0 ? candidates : tasks.length > 0 ? [{ task: tasks[0], weeklyPoints: 0 }] : [];
+  let picked = candidates.filter((c) => c.weeklyWeightedPoints >= MIN_WEEKLY_HEADLINE_POINTS).slice(0, Math.max(0, cap));
+  const promotedCheckIds = new Set<string>();
 
-  const weeklyTasks: ActionPlanTask[] = picked.map(({ task, weeklyPoints }) => {
-    if (task.effort !== "quick_win_action") return task;
+  // No quick score task qualifies — promote the single best "Bigger
+  // projects" item's honest weekly-sized first step instead, if one
+  // exists (see bestPromotableLongerTermTask). This is the ONLY case a
+  // longer_term task can ever appear in the weekly plan.
+  if (picked.length === 0 && cap > 0) {
+    const promoted = bestPromotableLongerTermTask(tasks, breakdown, input);
+    if (promoted) {
+      picked = [promoted];
+      promotedCheckIds.add(promoted.task.checkId);
+    }
+  }
+
+  const weeklyProjectedInput = picked.reduce((acc, { fix }) => (fix ? fix(acc) : acc), input);
+  const weeklyProjectedBreakdown = scoreBusiness(weeklyProjectedInput);
+  // The real target every displayed card must sum to — apportionToTotal
+  // below is what actually guarantees that, not independent rounding.
+  const targetDelta = weeklyProjectedBreakdown.total - breakdown.total;
+  const apportionedPoints = apportionToTotal(
+    picked.map((p) => p.weeklyWeightedPoints),
+    targetDelta
+  );
+
+  // The HIGH-end projection: only meaningfully different from the LOW
+  // one when a picked task is itself a range (currently only the
+  // no-website starter-site card) — every other picked task uses the
+  // exact same fix either way, so this stays null in the common case.
+  const rangeTasks = picked.filter((p) => p.task.weightedPointsHigh !== null);
+  const weeklyProjectedBreakdownHigh =
+    rangeTasks.length > 0
+      ? scoreBusiness(
+          picked.reduce((acc, { task, fix }) => {
+            const highFix = weeklyFixForTask(task, true);
+            return highFix ? highFix(acc) : fix ? fix(acc) : acc;
+          }, input)
+        )
+      : null;
+
+  const weeklyTasks: ActionPlanTask[] = picked.map(({ task }, i) => {
+    const weightedPoints = apportionedPoints[i];
+    if (task.weightedPointsHigh !== null) {
+      // A range: keep the LOW value apportioned; the HIGH value passes
+      // through unadjusted — it's an honest range, not a precise
+      // sum-matching figure.
+      return { ...task, weightedPoints };
+    }
+    if (task.effort === "quick_win" || (task.effort === "quick_win_action" && task.mergedCheckIds)) {
+      return { ...task, weightedPoints };
+    }
+    // An individual (unmerged) quick_win_action check, or a promoted
+    // longer_term first step: swap in the modest, doable-this-week
+    // action/target framing — never the full outcome's action text.
+    // A promoted longer_term check's weeklyFix doesn't move reviewCount
+    // (weeklyTrackedMetricValue/deriveWeeklyTargetInfo are review-
+    // specific), so it gets the plain weeklyAction text with no numeric
+    // target rather than a meaningless "3 to go" tracker.
+    const isPromoted = promotedCheckIds.has(task.checkId);
     const copy = ACTION_PLAN_COPY[task.checkId];
-    const targetInfo = deriveWeeklyTargetInfo(task.checkId, input, locale);
+    const targetInfo = isPromoted ? null : deriveWeeklyTargetInfo(task.checkId, input, locale);
     return {
       ...task,
-      promisedPoints: weeklyPoints,
+      weightedPoints,
       action: copy?.weeklyAction ? t(locale, copy.weeklyAction) : task.action,
       weeklyTarget: targetInfo?.label ?? null,
       weeklyTargetDelta: targetInfo?.targetDelta ?? null,
-      currentMetricValue: weeklyTrackedMetricValue(task.checkId, input),
+      currentMetricValue: isPromoted ? null : weeklyTrackedMetricValue(task.checkId, input),
     };
   });
 
-  // The full outcome of any quick_win_action task picked this week
-  // still belongs in "Bigger projects" too — the action is real
-  // progress, but the full outcome is still a genuinely bigger,
-  // ongoing project. Everything else picked (a quick_win, or the
-  // zero-gain fallback) is fully represented by its weekly card alone.
-  const duplicatedCheckIds = new Set(
-    picked.filter((p) => p.task.effort === "quick_win_action").map((p) => p.task.checkId)
-  );
+  // Strict one-section-only rule: a task picked for this week never
+  // also appears in "Bigger projects" — no exceptions, including for a
+  // quick_win_action's full outcome (previously duplicated there; see
+  // item 1 of Day 3 step 2e's second pass).
   const pickedCheckIds = new Set(picked.map((p) => p.task.checkId));
-  const laterTasks = tasks.filter(
-    (t) => duplicatedCheckIds.has(t.checkId) || !pickedCheckIds.has(t.checkId)
-  );
-
-  const weeklyProjectedInput = picked.reduce((acc, { task }) => {
-    if (task.effort === "quick_win_action") {
-      const copy = ACTION_PLAN_COPY[task.checkId];
-      return copy?.weeklyFix ? copy.weeklyFix(acc) : acc;
-    }
-    if (task.effort === "quick_win") {
-      return applyCheckFix(acc, task.checkId);
-    }
-    // The zero-gain fallback (a longer_term task with no bounded weekly
-    // action): featured as this week's focus, but no fix is applied —
-    // there's no honest partial progress to project for it.
-    return acc;
-  }, input);
+  const laterTasks = tasks.filter((t) => !pickedCheckIds.has(t.checkId));
 
   return {
     weeklyTasks,
     laterTasks,
-    weeklyProjectedBreakdown: scoreBusiness(weeklyProjectedInput),
+    weeklyProjectedBreakdown,
+    weeklyProjectedBreakdownHigh,
   };
 }
