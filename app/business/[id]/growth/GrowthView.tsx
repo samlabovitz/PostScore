@@ -259,12 +259,14 @@ export function GrowthView({
 
           <CompletedTasksCard completed={actionPlan.completed} />
 
-          <WeeklyChecklist
-            businessId={businessId}
-            items={weeklyChecklist.items}
-            initialCheckedItemIds={weeklyChecklist.checkedItemIds}
-            initialStreakWeeks={weeklyChecklist.streakWeeks}
-          />
+          <div id="weekly-routine" className="scroll-mt-20">
+            <WeeklyChecklist
+              businessId={businessId}
+              items={weeklyChecklist.items}
+              initialCheckedItemIds={weeklyChecklist.checkedItemIds}
+              initialStreakWeeks={weeklyChecklist.streakWeeks}
+            />
+          </div>
 
           {growthMoves.length > 0 && (
             <div id="ways-to-grow" className="flex flex-col gap-6 scroll-mt-20 nav:gap-8">

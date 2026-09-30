@@ -855,6 +855,14 @@ export type MessageKey =
   | "dashboard.overview.growBanner.heading"
   | "dashboard.overview.growBanner.subtextWithScore"
   | "dashboard.overview.growBanner.subtextNoScore"
+  | "dashboard.overview.growBanner.tools.coupons.label"
+  | "dashboard.overview.growBanner.tools.coupons.description"
+  | "dashboard.overview.growBanner.tools.referral.label"
+  | "dashboard.overview.growBanner.tools.referral.description"
+  | "dashboard.overview.growBanner.tools.weeklyRoutine.label"
+  | "dashboard.overview.growBanner.tools.weeklyRoutine.description"
+  | "dashboard.overview.growBanner.tools.priceCheck.label"
+  | "dashboard.overview.growBanner.tools.priceCheck.description"
   | "dashboard.overview.growBanner.button"
   | "dashboard.overview.assistantUnavailablePrefix"
   | "dashboard.overview.atAGlanceHeading"
@@ -3150,10 +3158,18 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.seeActionPlan": "See your action plan →",
     "dashboard.overview.growBanner.heading": "More customers, whatever your score",
     "dashboard.overview.growBanner.subtextWithScore":
-      "You're at {score}/100. Whether a business scores 70 or 95, PostScore's growth tools, like coupons, referral programs, a weekly routine, and price checks, help bring more customers through the door.",
+      "You're at {score}/100. Whether your score is high or low, these tools help bring in more customers:",
     "dashboard.overview.growBanner.subtextNoScore":
-      "Whether a business scores 70 or 95, PostScore's growth tools, like coupons, referral programs, a weekly routine, and price checks, help bring more customers through the door.",
-    "dashboard.overview.growBanner.button": "See ways to grow",
+      "Whether your score is high or low, these tools help bring in more customers:",
+    "dashboard.overview.growBanner.tools.coupons.label": "Coupons",
+    "dashboard.overview.growBanner.tools.coupons.description": "Give new customers a reason to try you",
+    "dashboard.overview.growBanner.tools.referral.label": "Referral program",
+    "dashboard.overview.growBanner.tools.referral.description": "Turn happy regulars into your best advertising",
+    "dashboard.overview.growBanner.tools.weeklyRoutine.label": "Weekly routine",
+    "dashboard.overview.growBanner.tools.weeklyRoutine.description": "Keep your Google listing fresh and active",
+    "dashboard.overview.growBanner.tools.priceCheck.label": "Price check",
+    "dashboard.overview.growBanner.tools.priceCheck.description": "See how your prices compare nearby",
+    "dashboard.overview.growBanner.button": "See all ways to grow",
     "dashboard.overview.assistantUnavailablePrefix": "The assistant isn't available right now: {message}",
     "dashboard.overview.atAGlanceHeading": "At a glance",
     "dashboard.overview.googleRatingLabel": "Google rating",
@@ -5417,10 +5433,17 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.seeActionPlan": "Ver su plan de acción →",
     "dashboard.overview.growBanner.heading": "Más clientes, sin importar su puntuación",
     "dashboard.overview.growBanner.subtextWithScore":
-      "Su puntuación es {score}/100. Ya sea que un negocio tenga 70 o 95, las herramientas de crecimiento de PostScore, como cupones, programas de recomendación, una rutina semanal y comparaciones de precios, ayudan a atraer más clientes.",
-    "dashboard.overview.growBanner.subtextNoScore":
-      "Ya sea que un negocio tenga 70 o 95, las herramientas de crecimiento de PostScore, como cupones, programas de recomendación, una rutina semanal y comparaciones de precios, ayudan a atraer más clientes.",
-    "dashboard.overview.growBanner.button": "Ver formas de crecer",
+      "Su puntuación es {score}/100. Ya sea alta o baja, estas herramientas ayudan a atraer más clientes:",
+    "dashboard.overview.growBanner.subtextNoScore": "Ya sea alta o baja, estas herramientas ayudan a atraer más clientes:",
+    "dashboard.overview.growBanner.tools.coupons.label": "Cupones",
+    "dashboard.overview.growBanner.tools.coupons.description": "Deles a los clientes nuevos un motivo para visitarlo",
+    "dashboard.overview.growBanner.tools.referral.label": "Programa de recomendación",
+    "dashboard.overview.growBanner.tools.referral.description": "Convierta a sus clientes fieles en su mejor publicidad",
+    "dashboard.overview.growBanner.tools.weeklyRoutine.label": "Rutina semanal",
+    "dashboard.overview.growBanner.tools.weeklyRoutine.description": "Mantenga su ficha de Google actualizada y activa",
+    "dashboard.overview.growBanner.tools.priceCheck.label": "Comparación de precios",
+    "dashboard.overview.growBanner.tools.priceCheck.description": "Vea cómo se comparan sus precios con los de la zona",
+    "dashboard.overview.growBanner.button": "Ver todas las formas de crecer",
     "dashboard.overview.assistantUnavailablePrefix": "El asistente no está disponible en este momento: {message}",
     "dashboard.overview.atAGlanceHeading": "De un vistazo",
     "dashboard.overview.googleRatingLabel": "Calificación de Google",

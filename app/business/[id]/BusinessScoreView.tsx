@@ -3,7 +3,7 @@
 import { ReactNode, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { IconUsers, IconChevronDown, IconRefresh } from "@tabler/icons-react";
+import { IconUsers, IconChevronDown, IconRefresh, IconTicket, IconCalendarCheck, IconTag } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
@@ -18,7 +18,7 @@ import type { BusinessRecord, ScoreHistoryRow, ScoreSnapshot } from "@/app/actio
 import { diffProfileSnapshots, type ProfileSnapshot } from "@/lib/profileChanges";
 import { formatOpeningHours } from "@/lib/hours";
 import { diffBreakdowns, resolveChangeDisplay } from "@/lib/scoreChanges";
-import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
+import { t, tPlural, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
 import {
   GRADE_THRESHOLDS,
   type CategoryResult,
@@ -524,6 +524,13 @@ function ListingChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
   );
 }
 
+interface GrowBannerTool {
+  icon: typeof IconTicket;
+  labelKey: MessageKey;
+  descriptionKey: MessageKey;
+  href: string;
+}
+
 /**
  * Compact, always-shown reminder that PostScore's growth tools help
  * every business regardless of its current score — deliberately placed
@@ -537,21 +544,67 @@ function GrowMoreCustomersBanner({ businessId, breakdown }: { businessId: string
   const locale = useLocale();
   const hasScore = breakdown.categories.some((c) => c.possiblePoints > 0);
 
+  const tools: GrowBannerTool[] = [
+    {
+      icon: IconTicket,
+      labelKey: "dashboard.overview.growBanner.tools.coupons.label",
+      descriptionKey: "dashboard.overview.growBanner.tools.coupons.description",
+      href: `/business/${businessId}/growth?tab=coupons`,
+    },
+    {
+      icon: IconUsers,
+      labelKey: "dashboard.overview.growBanner.tools.referral.label",
+      descriptionKey: "dashboard.overview.growBanner.tools.referral.description",
+      href: `/business/${businessId}/growth?tab=referral`,
+    },
+    {
+      icon: IconCalendarCheck,
+      labelKey: "dashboard.overview.growBanner.tools.weeklyRoutine.label",
+      descriptionKey: "dashboard.overview.growBanner.tools.weeklyRoutine.description",
+      href: `/business/${businessId}/growth#weekly-routine`,
+    },
+    {
+      icon: IconTag,
+      labelKey: "dashboard.overview.growBanner.tools.priceCheck.label",
+      descriptionKey: "dashboard.overview.growBanner.tools.priceCheck.description",
+      href: `/business/${businessId}/pricing`,
+    },
+  ];
+
   return (
-    <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+    <Card className="flex flex-col gap-3 border-brass/25 bg-brass/[0.04] p-4">
       <div>
-        <h2 className="font-serif text-base font-semibold text-ink">
+        <h2 className="font-serif text-[14px] font-semibold text-ink">
           {t(locale, "dashboard.overview.growBanner.heading")}
         </h2>
-        <p className="mt-1 text-sm text-ink-soft">
+        <p className="mt-0.5 text-[12.5px] text-ink-soft">
           {hasScore
             ? t(locale, "dashboard.overview.growBanner.subtextWithScore", { score: breakdown.total })
             : t(locale, "dashboard.overview.growBanner.subtextNoScore")}
         </p>
       </div>
+
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {tools.map((tool) => (
+          <Link
+            key={tool.labelKey}
+            href={tool.href}
+            className="flex items-start gap-2.5 rounded-lg border border-transparent p-2 transition-colors hover:border-brass/30 hover:bg-white"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brass/15 text-brass">
+              <tool.icon size={14} />
+            </span>
+            <div className="min-w-0">
+              <div className="text-[12.5px] font-semibold text-ink">{t(locale, tool.labelKey)}</div>
+              <div className="mt-0.5 text-[11.5px] text-ink-soft">{t(locale, tool.descriptionKey)}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
+
       <Link
         href={`/business/${businessId}/growth#ways-to-grow`}
-        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-brass bg-brass px-[15px] py-[7px] text-[13px] font-medium text-white transition-colors hover:bg-[#a5772a]"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-brass bg-brass px-3.5 py-[6px] text-[12.5px] font-medium text-white transition-colors hover:bg-[#a5772a] sm:w-fit sm:self-end"
       >
         {t(locale, "dashboard.overview.growBanner.button")}
       </Link>
