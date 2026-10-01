@@ -865,7 +865,6 @@ export type MessageKey =
   | "dashboard.overview.growBanner.tools.weeklyRoutine.description"
   | "dashboard.overview.growBanner.tools.priceCheck.label"
   | "dashboard.overview.growBanner.tools.priceCheck.description"
-  | "dashboard.overview.growBanner.button"
   | "dashboard.overview.assistantUnavailablePrefix"
   | "dashboard.overview.atAGlanceHeading"
   | "dashboard.overview.googleRatingLabel"
@@ -3176,7 +3175,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.growBanner.tools.weeklyRoutine.description": "Keep your Google listing fresh and active",
     "dashboard.overview.growBanner.tools.priceCheck.label": "Price check",
     "dashboard.overview.growBanner.tools.priceCheck.description": "See how your prices compare nearby",
-    "dashboard.overview.growBanner.button": "See all ways to grow",
     "dashboard.overview.assistantUnavailablePrefix": "The assistant isn't available right now: {message}",
     "dashboard.overview.atAGlanceHeading": "At a glance",
     "dashboard.overview.googleRatingLabel": "Google rating",
@@ -5454,7 +5452,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.growBanner.tools.weeklyRoutine.description": "Mantenga su ficha de Google actualizada y activa",
     "dashboard.overview.growBanner.tools.priceCheck.label": "Comparación de precios",
     "dashboard.overview.growBanner.tools.priceCheck.description": "Vea cómo se comparan sus precios con los de la zona",
-    "dashboard.overview.growBanner.button": "Ver todas las formas de crecer",
     "dashboard.overview.assistantUnavailablePrefix": "El asistente no está disponible en este momento: {message}",
     "dashboard.overview.atAGlanceHeading": "De un vistazo",
     "dashboard.overview.googleRatingLabel": "Calificación de Google",

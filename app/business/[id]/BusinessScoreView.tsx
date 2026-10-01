@@ -584,12 +584,12 @@ function GrowMoreCustomersBanner({ businessId, breakdown }: { businessId: string
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
         {tools.map((tool) => (
           <Link
             key={tool.labelKey}
             href={tool.href}
-            className="flex items-start gap-2.5 rounded-lg border border-transparent p-2 transition-colors hover:border-brass/30 hover:bg-white"
+            className="flex h-full items-start gap-2.5 rounded-lg border border-brass/15 bg-white/60 p-2.5 transition-colors hover:border-brass/40 hover:bg-white"
           >
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brass/15 text-brass">
               <tool.icon size={14} />
@@ -601,13 +601,6 @@ function GrowMoreCustomersBanner({ businessId, breakdown }: { businessId: string
           </Link>
         ))}
       </div>
-
-      <Link
-        href={`/business/${businessId}/growth#ways-to-grow`}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-brass bg-brass px-3.5 py-[6px] text-[12.5px] font-medium text-white transition-colors hover:bg-[#a5772a] sm:w-fit sm:self-end"
-      >
-        {t(locale, "dashboard.overview.growBanner.button")}
-      </Link>
     </Card>
   );
 }
