@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
-import { MONTHLY_REPORTS_LIVE } from "@/lib/monthlyReportsFeatureFlag";
+import { isMonthlyReportsLive } from "@/lib/monthlyReportsFeatureFlag";
 import { normalizeLocale } from "@/lib/i18n";
 
 /** One real saved scan, exactly what the Reports page needs to plot the
@@ -25,7 +25,7 @@ export interface ReportsScoreRow {
  * feature — distinct from MonthlyRecap above, which is the in-app
  * scan-to-scan recap, not the emailed one. */
 export interface MonthlyEmailReportStatus {
-  /** See MONTHLY_REPORTS_LIVE. False means every field below is moot —
+  /** See isMonthlyReportsLive(). False means every field below is moot —
    * the UI must show an honest "coming soon" state regardless of them. */
   live: boolean;
   /** This business's own real monthly_report_enabled column. */
@@ -184,7 +184,7 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
     recap,
     gbpConnected: gbpStatus.status === "ok" && gbpStatus.connected,
     monthlyEmailReport: {
-      live: MONTHLY_REPORTS_LIVE,
+      live: isMonthlyReportsLive(),
       enabled: business.monthly_report_enabled,
       lastSentAt: lastReport?.sent_at ?? null,
     },

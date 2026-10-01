@@ -38,13 +38,16 @@ import type {
   MonthlyReportContent,
   ScoreMovement,
 } from "@/lib/monthlyReport";
-import { DEFAULT_LOCALE, formatMonthLabel, t, tPlural, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, reportCoverageMonth, t, tPlural, type Locale } from "@/lib/i18n";
 
 export interface MonthlyReportEmailProps {
   businessName: string;
-  /** ISO date this report represents — used only to format the visible
-   * "Month Year" heading and subject line. Never read from the system
-   * clock inside this file; the caller supplies the real send date. */
+  /** ISO date this report was SENT — the heading/subject label the
+   * calendar month BEFORE this (see reportCoverageMonth in
+   * lib/i18n/format.ts), since the report covers the month that just
+   * ended, not the month it happens to go out in. Never read from the
+   * system clock inside this file; the caller supplies the real send
+   * date. */
   reportDate: string;
   content: MonthlyReportContent;
   /** A real, working per-business unsubscribe URL — the real cron route
@@ -68,7 +71,8 @@ export interface MonthlyReportEmailProps {
  * separately hand-written string that could drift from what the body
  * actually says. */
 export function monthlyReportSubject(businessName: string, reportDate: string, locale: Locale = DEFAULT_LOCALE): string {
-  return t(locale, "report.subject", { businessName, month: formatMonthLabel(reportDate, locale) });
+  const { month, year } = reportCoverageMonth(reportDate, locale);
+  return t(locale, "report.subject", { businessName, month, year });
 }
 
 function capitalizeFirst(s: string): string {
@@ -322,12 +326,47 @@ function FocusSection({ content, locale }: { content: MonthlyReportContent; loca
   );
 }
 
-function CompetitorSection({ competitor, locale }: { competitor: MonthlyReportContent["competitor"]; locale: Locale }) {
+/**
+ * The cron now runs a fresh competitor scan for EVERY business every
+ * month (see app/api/cron/monthly-reports/route.ts), so a real current
+ * standing (content.competitorStanding) exists far more often than a
+ * full real MOVEMENT (content.competitor, which still needs a
+ * comparable PREVIOUS scan too — never available on a genuine first
+ * report, and not yet available on an "update" report whose previous
+ * period predates this always-scan behavior). Three real, honest
+ * states, in priority order:
+ *   1. A real movement exists (two comparable real points) — show it,
+ *      exactly as before.
+ *   2. No movement, but a real current standing exists — show it as an
+ *      honest "starting point," regardless of whether this is a first
+ *      report or an update report that simply has no comparable
+ *      previous scan yet.
+ *   3. Neither — the scan ran but found no comparable nearby
+ *      businesses (or genuinely failed) — say so plainly, never a
+ *      fabricated rank.
+ */
+function CompetitorSection({ content, locale }: { content: MonthlyReportContent; locale: Locale }) {
+  const competitor = content.competitor;
+
+  if (!competitor.available && content.competitorStanding) {
+    return (
+      <Section>
+        <Text style={labelStyle}>{t(locale, "report.competitorSection.label")}</Text>
+        <Text style={valueStyle}>
+          {t(locale, "report.competitorSection.currentStanding", {
+            rank: content.competitorStanding.rank,
+            total: content.competitorStanding.totalCompetitors,
+          })}
+        </Text>
+      </Section>
+    );
+  }
+
   if (!competitor.available) {
     return (
       <Section>
         <Text style={labelStyle}>{t(locale, "report.competitorSection.label")}</Text>
-        <Text style={mutedStyle}>{t(locale, "report.competitorSection.unavailable")}</Text>
+        <Text style={mutedStyle}>{t(locale, "report.competitorSection.noComparables")}</Text>
       </Section>
     );
   }
@@ -352,13 +391,23 @@ function CompetitorSection({ competitor, locale }: { competitor: MonthlyReportCo
   );
 }
 
-function ListingChangesSection({ listingChanges, locale }: { listingChanges: MonthlyReportContent["listingChanges"]; locale: Locale }) {
+/**
+ * A baseline (first) report always has listingChanges.available: false
+ * (structurally nothing to diff against) — shown here with its own
+ * "this sets your baseline" copy, distinct from an "update" report
+ * whose PREVIOUS scan simply predates listing-change tracking, which
+ * keeps the existing "not available for this comparison" wording.
+ */
+function ListingChangesSection({ content, locale }: { content: MonthlyReportContent; locale: Locale }) {
+  const listingChanges = content.listingChanges;
   if (!listingChanges.available) {
     return (
       <Section>
         <Text style={labelStyle}>{t(locale, "report.listingSection.label")}</Text>
         <Text style={mutedStyle}>
-          {t(locale, "report.listingSection.unavailable")}
+          {content.kind === "baseline"
+            ? t(locale, "report.listingSection.firstReport")
+            : t(locale, "report.listingSection.unavailable")}
         </Text>
       </Section>
     );
@@ -390,7 +439,7 @@ export function MonthlyReportEmail({
   unsubscribeUrl,
   locale = DEFAULT_LOCALE,
 }: MonthlyReportEmailProps) {
-  const monthLabel = formatMonthLabel(reportDate, locale);
+  const { month: coverageMonth, year: coverageYear } = reportCoverageMonth(reportDate, locale);
 
   return (
     <Html>
@@ -411,7 +460,7 @@ export function MonthlyReportEmail({
           }}
         >
           <Text style={{ color: "#6b7890", fontSize: "11.5px", letterSpacing: "0.06em", textTransform: "uppercase", margin: "0 0 4px" }}>
-            {t(locale, "report.monthHeading", { month: monthLabel })}
+            {t(locale, "report.monthHeading", { month: coverageMonth, year: coverageYear })}
           </Text>
           <Heading style={{ color: "#14243f", fontSize: "22px", margin: "0 0 18px" }}>{businessName}</Heading>
 
@@ -436,8 +485,8 @@ export function MonthlyReportEmail({
             unmeasuredNote={t(locale, "report.unmeasured.reviewCount")}
             locale={locale}
           />
-          <CompetitorSection competitor={content.competitor} locale={locale} />
-          <ListingChangesSection listingChanges={content.listingChanges} locale={locale} />
+          <CompetitorSection content={content} locale={locale} />
+          <ListingChangesSection content={content} locale={locale} />
 
           <Hr style={{ borderColor: "#e5e1d8", margin: "4px 0 20px" }} />
 

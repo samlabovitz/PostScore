@@ -4,10 +4,21 @@
 // async functions — a plain boolean constant there fails the build) so
 // both server actions and any future non-action code can import it.
 //
-// The Netlify scheduler that calls app/api/cron/monthly-reports on a
-// real cadence is a later, not-yet-built piece, so until this is true,
-// honestly nothing is being sent to anyone no matter what any individual
-// business's own monthly_report_enabled/monthly_reports state says. Flip
-// this env var once that scheduler is live; no code change needed here
-// when that happens.
-export const MONTHLY_REPORTS_LIVE = process.env.MONTHLY_REPORTS_LIVE === "true";
+// This is the ONE gate standing between a real scheduled run
+// (netlify/functions/monthly-reports-scheduler.mts →
+// monthly-reports-batch.mts → POST /api/cron/monthly-reports) and
+// actually emailing every business with monthly_report_enabled = true —
+// see that route's own handleCronRun, which checks this before doing
+// any real work. It deliberately does NOT gate the dev-only single-
+// business test route (send-one/route.ts) — that route calls
+// processBusiness() directly, bypassing handleCronRun entirely, so it
+// stays usable for testing regardless of this flag.
+//
+// A function, not a plain constant, so it re-reads process.env on every
+// call instead of freezing a value at first import — the same reasoning
+// as isGbpConnectPublic() in lib/googleBusinessProfile.ts, and what
+// lets this be unit-tested against different env values in the same
+// process (see monthlyReportsFeatureFlag.test.ts).
+export function isMonthlyReportsLive(): boolean {
+  return process.env.MONTHLY_REPORTS_LIVE === "true";
+}

@@ -12,9 +12,10 @@ function formatDate(iso: string, locale: Locale): string {
 }
 
 /** A plain "about a month later" estimate from the last real send —
- * never a promised exact date, since no scheduler cadence is wired up
- * yet (see MONTHLY_REPORTS_LIVE in app/actions/reports.ts) and even once
- * it is, a scheduler run time isn't a guarantee. UTC throughout so this
+ * never a promised exact date, since a scheduler run time (see
+ * netlify/functions/monthly-reports-scheduler.mts) isn't a guarantee,
+ * and the real send only goes out at all once isMonthlyReportsLive()
+ * (lib/monthlyReportsFeatureFlag.ts) is true. UTC throughout so this
  * can't drift a day depending on the server's local timezone, same
  * reasoning as formatMonthLabel in emails/MonthlyReportEmail.tsx. */
 function estimateNextReportDate(lastSentIso: string, locale: Locale): string {

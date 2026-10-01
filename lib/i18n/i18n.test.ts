@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { normalizeLocale } from "./locale";
 import { t, tPlural, type MessageKey } from "./messages";
-import { formatMonthLabel } from "./format";
+import { formatMonthLabel, reportCoverageMonth } from "./format";
 
 describe("normalizeLocale", () => {
   test("falls back to 'en' for a garbage value", () => {
@@ -77,5 +77,35 @@ describe("formatMonthLabel", () => {
 
   test("formats in Spanish", () => {
     expect(formatMonthLabel(SEPTEMBER_2026, "es")).toBe("septiembre de 2026");
+  });
+});
+
+describe("reportCoverageMonth", () => {
+  // A comfortably mid-day UTC timestamp — unambiguously October 1st in
+  // America/New_York too, so this is the exact worked example a monthly
+  // report fix is built around: sent "October 1, 2026," the report
+  // covers September, the month that just ended.
+  const SENT_OCTOBER_1_MIDDAY_UTC = "2026-10-01T14:00:00.000Z";
+
+  test("the month BEFORE the send date, in English", () => {
+    expect(reportCoverageMonth(SENT_OCTOBER_1_MIDDAY_UTC, "en")).toEqual({ month: "September", year: "2026" });
+  });
+
+  test("the month BEFORE the send date, in Spanish", () => {
+    expect(reportCoverageMonth(SENT_OCTOBER_1_MIDDAY_UTC, "es")).toEqual({ month: "septiembre", year: "2026" });
+  });
+
+  test("steps back across a year boundary (January -> December of the prior year)", () => {
+    expect(reportCoverageMonth("2027-01-01T14:00:00.000Z", "en")).toEqual({ month: "December", year: "2026" });
+  });
+
+  test("uses America/New_York, not UTC, to decide the send date's own calendar day", () => {
+    // 2026-10-01T02:00:00.000Z is 2026-09-30T22:00:00 in New York (EDT,
+    // UTC-4) — still September 30th there, even though the UTC calendar
+    // date already reads October 1st. A naive UTC-only computation would
+    // wrongly treat this as an October send and report "September"; the
+    // real New York calendar date is still September, so the month this
+    // covers is honestly August.
+    expect(reportCoverageMonth("2026-10-01T02:00:00.000Z", "en")).toEqual({ month: "August", year: "2026" });
   });
 });

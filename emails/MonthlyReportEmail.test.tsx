@@ -4,6 +4,7 @@ import { render } from "@react-email/components";
 import { MonthlyReportEmail, monthlyReportSubject } from "./MonthlyReportEmail";
 import {
   SAMPLE_BASELINE,
+  SAMPLE_BASELINE_WITH_COMPETITOR_STANDING,
   SAMPLE_DECLINE,
   SAMPLE_MISSING_DATA,
   SAMPLE_REAL_DELTAS,
@@ -75,6 +76,65 @@ describe("MonthlyReportEmail — first-ever report (baseline)", () => {
     // No real score movement exists yet on a first report — welcoming,
     // never earned-positive language that would imply a comparison.
     expect(html).not.toMatch(EARNED_POSITIVE_PHRASE);
+  });
+});
+
+describe("MonthlyReportEmail — competitor standing and listing changes on a first report", () => {
+  test("a first report whose scan found no comparable businesses says so plainly, never a fabricated rank", async () => {
+    const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} />);
+    expect(html).toContain("We couldn't find enough comparable businesses nearby to rank you this month.");
+  });
+
+  test("a first report with a REAL competitor scan shows the current standing as a starting point, never 'not tracked'", async () => {
+    const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE_WITH_COMPETITOR_STANDING} />);
+    expect(html).toContain("#4 of 11 nearby — your starting point.");
+    expect(html).toContain("Next month's report shows whether you moved up or down.");
+    expect(html).not.toContain("couldn't find enough comparable");
+  });
+
+  test("a first report's listing-changes section sets expectations for NEXT month, distinct from the predates-tracking wording", async () => {
+    const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} />);
+    expect(html).toContain("This report sets your baseline — listing changes are tracked starting next month.");
+    expect(html).not.toContain("predates listing-change tracking");
+  });
+
+  test("an UPDATE report with no comparable competitor scan shows the SAME honest 'no comparables' wording as a first report", async () => {
+    // SAMPLE_MISSING_DATA is a genuine update report (it has a real
+    // baseline) whose competitorDelta AND competitorStanding are both
+    // null — the cron always attempts a scan now, so the only reason
+    // this would stay null is a real "nothing comparable found" or
+    // failure, which gets the one honest message regardless of report
+    // kind — never a report-kind-specific euphemism.
+    const html = await renderToText(<MonthlyReportEmail {...SAMPLE_MISSING_DATA} />);
+    expect(html).toContain("We couldn't find enough comparable businesses nearby to rank you this month.");
+    expect(html).not.toContain("your starting point");
+    // Listing changes stay their own, separate real distinction: a
+    // genuine update report whose scans predate tracking keeps the
+    // original wording, never the first-report-only "sets your
+    // baseline" copy.
+    expect(html).toContain("Not available for this comparison — the previous scan predates listing-change tracking.");
+    expect(html).not.toContain("sets your baseline");
+  });
+
+  test("an UPDATE report with a real current standing but no comparable PREVIOUS scan shows the starting-point copy too", async () => {
+    // A business whose first-ever competitor scan happens on an UPDATE
+    // (non-baseline) report — e.g. the always-scan behavior shipped
+    // after their first monthly report already went out. No real
+    // movement exists yet (no comparable previous scan), but a real
+    // current standing does, and it must be shown exactly like a first
+    // report's starting point, not hidden behind "not tracked."
+    const current = SAMPLE_MISSING_DATA.content;
+    const updateWithStandingOnly: MonthlyReportContent = {
+      ...current,
+      kind: "update",
+      competitor: { available: false },
+      competitorStanding: { rank: 7, totalCompetitors: 15, topCompetitorReviewCount: 95 },
+    };
+    const html = await renderToText(
+      <MonthlyReportEmail {...SAMPLE_MISSING_DATA} content={updateWithStandingOnly} />
+    );
+    expect(html).toContain("#7 of 15 nearby — your starting point.");
+    expect(html).not.toContain("couldn't find enough comparable");
   });
 });
 
@@ -178,7 +238,7 @@ describe("MonthlyReportEmail — missing data", () => {
     expect(html).toContain(SAMPLE_MISSING_DATA.content.summary);
     expect(html.toLowerCase()).toContain("not measured this period");
     expect(html.toLowerCase()).toContain("not available for this comparison");
-    expect(html.toLowerCase()).toContain("not tracked this period");
+    expect(html.toLowerCase()).toContain("we couldn't find enough comparable businesses nearby");
 
     // The real, always-present score still renders normally even when
     // everything else is unavailable.
@@ -301,21 +361,25 @@ describe("MonthlyReportEmail — closing focus section", () => {
 });
 
 describe("monthlyReportSubject", () => {
-  test("derives a real subject line from the business name and report month", () => {
-    expect(monthlyReportSubject("Riverside Cafe", "2026-09-01T00:00:00.000Z")).toBe(
-      "Riverside Cafe — your September 2026 PostScore report"
+  // "2026-09-01T14:00:00.000Z" (10am EDT) is unambiguously September 1st
+  // in America/New_York — the report covers the month that just ended,
+  // August, not the month it's actually sent in (see reportCoverageMonth
+  // in lib/i18n/format.ts).
+  test("derives a real subject line from the business name and the month the report COVERS (one month before the send date)", () => {
+    expect(monthlyReportSubject("Riverside Cafe", "2026-09-01T14:00:00.000Z")).toBe(
+      "Riverside Cafe — your August 2026 recap"
     );
   });
 
   test("defaults to English when no locale is passed", () => {
-    expect(monthlyReportSubject("Riverside Cafe", "2026-09-01T00:00:00.000Z", "en")).toBe(
-      monthlyReportSubject("Riverside Cafe", "2026-09-01T00:00:00.000Z")
+    expect(monthlyReportSubject("Riverside Cafe", "2026-09-01T14:00:00.000Z", "en")).toBe(
+      monthlyReportSubject("Riverside Cafe", "2026-09-01T14:00:00.000Z")
     );
   });
 
   test("renders the real, reviewed Spanish subject line (word order and all) when locale is 'es'", () => {
-    expect(monthlyReportSubject("Riverside Cafe", "2026-09-01T00:00:00.000Z", "es")).toBe(
-      "Riverside Cafe — su informe PostScore de septiembre de 2026"
+    expect(monthlyReportSubject("Riverside Cafe", "2026-09-01T14:00:00.000Z", "es")).toBe(
+      "Riverside Cafe — Resumen de agosto de 2026"
     );
   });
 });
@@ -325,18 +389,20 @@ describe("MonthlyReportEmail — locale", () => {
     const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} locale="es" />);
 
     // report.monthHeading is now a single per-locale template
-    // ("Informe de {month}", not English's "{month} report" order) —
-    // interpolated into ONE string before it ever reaches JSX, so there's
-    // no hydration-comment boundary to work around here.
-    expect(html).toContain("Informe de septiembre de 2026");
+    // ("Resumen de {month} de {year}", not English's "{month} {year}
+    // recap" order) — interpolated into ONE string before it ever
+    // reaches JSX, so there's no hydration-comment boundary to work
+    // around here. SAMPLE_BASELINE is sent September 1st (NY-local) —
+    // the report covers August, the month that just ended.
+    expect(html).toContain("Resumen de agosto de 2026");
     expect(html).toContain(
       "Su punto de partida está definido — le damos la bienvenida a PostScore. Aquí es donde se encuentra hoy."
     );
   });
 
-  test("defaults to the English month heading ('{month} report' word order) when no locale is passed", async () => {
+  test("defaults to the English month heading ('{month} {year} recap' wording) when no locale is passed", async () => {
     const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} />);
-    expect(html).toContain("September 2026 report");
+    expect(html).toContain("August 2026 recap");
   });
 });
 
@@ -358,6 +424,7 @@ describe("MonthlyReportEmail — es plural rendering (real Spanish singular vs. 
       rating: { available: false },
       reviewCount: { available: true, current: 50 + delta, previous: 50, delta },
       competitor: { available: false },
+      competitorStanding: null,
       listingChanges: { available: false },
       isSteady: false,
       focus: { nothingNotable: true, pointers: [] },

@@ -120,6 +120,8 @@ describe("buildMonthlyReportContent — first-ever report (no baseline)", () => 
     // Nothing to diff against yet — structurally not applicable, not "no changes."
     expect(report.listingChanges).toEqual({ available: false });
     expect(report.competitor).toEqual({ available: false });
+    // No competitor snapshot was passed in — honestly never tracked.
+    expect(report.competitorStanding).toBeNull();
 
     expect(report.summary).toContain("Here's where you stand today");
     expect(report.summary).toContain("rating 4.5★");
@@ -137,6 +139,26 @@ describe("buildMonthlyReportContent — first-ever report (no baseline)", () => 
     expect(report.reviewCount).toEqual({ available: false });
     expect(report.summary).not.toContain("rating");
     expect(report.summary).toContain(`score ${current.total} (${current.grade})`);
+  });
+
+  test("a first report with a REAL competitor scan right now shows the current standing, never 'not tracked'", () => {
+    const current = scoreRow();
+    const standingNow = { rank: 3, totalCompetitors: 9, topCompetitorReviewCount: 250 };
+    // Still no previous report to diff against — competitorDelta stays
+    // null — but a real scan was just run, so competitorStanding must
+    // carry it through regardless.
+    const report = buildMonthlyReportContent(null, current, null, standingNow);
+
+    expect(report.kind).toBe("baseline");
+    expect(report.competitor).toEqual({ available: false });
+    expect(report.competitorStanding).toEqual(standingNow);
+  });
+
+  test("a first report with no competitor scan ever run has competitorStanding: null, never a fabricated rank", () => {
+    const current = scoreRow();
+    const report = buildMonthlyReportContent(null, current, null, null);
+
+    expect(report.competitorStanding).toBeNull();
   });
 });
 

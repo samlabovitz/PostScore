@@ -84,9 +84,24 @@ const UNSUBSCRIBE_URL_PLACEHOLDER = "https://postscore.app/unsubscribe?business=
  * no month-over-month comparison to make yet. */
 export const SAMPLE_BASELINE: MonthlyReportEmailProps = {
   businessName: "Riverside Cafe",
-  reportDate: "2026-09-01T00:00:00.000Z",
+  reportDate: "2026-09-01T14:00:00.000Z",
   unsubscribeUrl: UNSUBSCRIBE_URL_PLACEHOLDER,
   content: buildMonthlyReportContent(null, scoreRow({ id: "current", total: 78, grade: "C" }), null),
+};
+
+/** 1b. A first-ever report where the business HAS already used the
+ * Competitors feature on its own (so a real scan runs this cycle even
+ * with no previous monthly report to diff it against) — shows the real
+ * current standing as an honest "starting point," never "not tracked." */
+export const SAMPLE_BASELINE_WITH_COMPETITOR_STANDING: MonthlyReportEmailProps = {
+  businessName: "Riverside Cafe",
+  reportDate: "2026-09-01T14:00:00.000Z",
+  unsubscribeUrl: UNSUBSCRIBE_URL_PLACEHOLDER,
+  content: buildMonthlyReportContent(null, scoreRow({ id: "current", total: 78, grade: "C" }), null, {
+    rank: 4,
+    totalCompetitors: 11,
+    topCompetitorReviewCount: 210,
+  }),
 };
 
 /** 2. A quiet month — nothing measurable actually changed score/rating/
@@ -96,7 +111,7 @@ export const SAMPLE_BASELINE: MonthlyReportEmailProps = {
  * claims. */
 export const SAMPLE_STEADY: MonthlyReportEmailProps = {
   businessName: "Riverside Cafe",
-  reportDate: "2026-09-01T00:00:00.000Z",
+  reportDate: "2026-09-01T14:00:00.000Z",
   unsubscribeUrl: UNSUBSCRIBE_URL_PLACEHOLDER,
   content: buildMonthlyReportContent(
     scoreRow({ id: "baseline", createdAt: "2026-08-01T00:00:00.000Z" }),
@@ -114,7 +129,7 @@ export const SAMPLE_STEADY: MonthlyReportEmailProps = {
  * closing focus section entirely from data, with no general tip needed. */
 export const SAMPLE_REAL_DELTAS: MonthlyReportEmailProps = {
   businessName: "Riverside Cafe",
-  reportDate: "2026-09-01T00:00:00.000Z",
+  reportDate: "2026-09-01T14:00:00.000Z",
   unsubscribeUrl: UNSUBSCRIBE_URL_PLACEHOLDER,
   content: buildMonthlyReportContent(
     scoreRow({
@@ -150,7 +165,7 @@ export const SAMPLE_REAL_DELTAS: MonthlyReportEmailProps = {
  * website," leaving room for the section's one general tip. */
 export const SAMPLE_MISSING_DATA: MonthlyReportEmailProps = {
   businessName: "Riverside Cafe",
-  reportDate: "2026-09-01T00:00:00.000Z",
+  reportDate: "2026-09-01T14:00:00.000Z",
   unsubscribeUrl: UNSUBSCRIBE_URL_PLACEHOLDER,
   content: buildMonthlyReportContent(
     scoreRow({
@@ -187,7 +202,7 @@ export const SAMPLE_MISSING_DATA: MonthlyReportEmailProps = {
  * get its own named sample rather than living only inline in a test. */
 export const SAMPLE_DECLINE: MonthlyReportEmailProps = {
   businessName: "Riverside Cafe",
-  reportDate: "2026-09-01T00:00:00.000Z",
+  reportDate: "2026-09-01T14:00:00.000Z",
   unsubscribeUrl: UNSUBSCRIBE_URL_PLACEHOLDER,
   content: buildMonthlyReportContent(
     scoreRow({

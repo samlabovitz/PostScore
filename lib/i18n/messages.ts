@@ -109,13 +109,15 @@ export type MessageKey =
   | "report.focus.label"
   | "report.focus.nothingNotable"
   | "report.competitorSection.label"
-  | "report.competitorSection.unavailable"
+  | "report.competitorSection.noComparables"
+  | "report.competitorSection.currentStanding"
   | "report.competitorSection.rank"
   | "report.competitorSection.same"
   | "report.competitorSection.movedUp"
   | "report.competitorSection.movedDown"
   | "report.listingSection.label"
   | "report.listingSection.unavailable"
+  | "report.listingSection.firstReport"
   | "report.listingSection.none"
   | "report.baselineNote"
   | "report.footer.enabledForPrefix"
@@ -2157,8 +2159,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.shell.noBusinessSelected": "No business selected",
     "dashboard.shell.addBusinessToGetStarted": "+ Add a business to get started",
 
-    "report.subject": "{businessName} — your {month} PostScore report",
-    "report.monthHeading": "{month} report",
+    "report.subject": "{businessName} — your {month} {year} recap",
+    "report.monthHeading": "{month} {year} recap",
 
     "report.headline.baseline": "Your baseline is set — welcome to PostScore. Here's where you stand today.",
     "report.headline.steady": "A steady month — your presence held its ground.",
@@ -2199,7 +2201,10 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Nothing notable to flag this month — your listing and site are in strong shape across the board.",
 
     "report.competitorSection.label": "Competitor standing",
-    "report.competitorSection.unavailable": "Not tracked this period — no competitor scan is available to compare.",
+    "report.competitorSection.noComparables":
+      "We couldn't find enough comparable businesses nearby to rank you this month.",
+    "report.competitorSection.currentStanding":
+      "#{rank} of {total} nearby — your starting point. Next month's report shows whether you moved up or down.",
     "report.competitorSection.rank": "#{rank} of {total} nearby",
     "report.competitorSection.same": "Same as your last report.",
     "report.competitorSection.movedUp": "Moved up from #{rank} last report.",
@@ -2207,7 +2212,9 @@ export const messages: Record<Locale, LocaleMessages> = {
 
     "report.listingSection.label": "Listing changes",
     "report.listingSection.unavailable":
-      "Not available for this comparison — one of the two scans predates listing-change tracking, or this is your first report.",
+      "Not available for this comparison — the previous scan predates listing-change tracking.",
+    "report.listingSection.firstReport":
+      "This report sets your baseline — listing changes are tracked starting next month.",
     "report.listingSection.none": "No other listing changes detected this month.",
 
     "report.baselineNote":
@@ -4592,8 +4599,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.shell.noBusinessSelected": "Ningún negocio seleccionado",
     "dashboard.shell.addBusinessToGetStarted": "+ Agregar un negocio para empezar",
 
-    "report.subject": "{businessName} — su informe PostScore de {month}",
-    "report.monthHeading": "Informe de {month}",
+    "report.subject": "{businessName} — Resumen de {month} de {year}",
+    "report.monthHeading": "Resumen de {month} de {year}",
 
     "report.headline.baseline":
       "Su punto de partida está definido — le damos la bienvenida a PostScore. Aquí es donde se encuentra hoy.",
@@ -4638,8 +4645,10 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Nada notable que señalar este mes — su ficha y su sitio web están en muy buena forma en todos los aspectos.",
 
     "report.competitorSection.label": "Posición frente a la competencia",
-    "report.competitorSection.unavailable":
-      "Sin seguimiento en este período — no hay ningún análisis de la competencia disponible para comparar.",
+    "report.competitorSection.noComparables":
+      "No encontramos suficientes negocios comparables cerca para clasificarlo este mes.",
+    "report.competitorSection.currentStanding":
+      "#{rank} de {total} en la zona: su punto de partida. El informe del próximo mes mostrará si subió o bajó.",
     "report.competitorSection.rank": "#{rank} de {total} en la zona",
     "report.competitorSection.same": "Igual que en su último informe.",
     "report.competitorSection.movedUp": "Subió desde el puesto #{rank} del informe anterior.",
@@ -4647,7 +4656,9 @@ export const messages: Record<Locale, LocaleMessages> = {
 
     "report.listingSection.label": "Cambios en la ficha",
     "report.listingSection.unavailable":
-      "No disponible para esta comparación — uno de los dos análisis es anterior al seguimiento de cambios en la ficha, o este es su primer informe.",
+      "No disponible para esta comparación — el análisis anterior es anterior al seguimiento de cambios en la ficha.",
+    "report.listingSection.firstReport":
+      "Este informe establece su punto de partida: los cambios en su ficha se miden a partir del próximo mes.",
     "report.listingSection.none": "No se detectaron otros cambios en la ficha este mes.",
 
     "report.baselineNote":

@@ -169,6 +169,15 @@ export interface MonthlyReportContent {
   rating: MetricResult;
   reviewCount: MetricResult;
   competitor: CompetitorMovement;
+  /** The subject's real current competitor standing, independent of
+   * whether a previous scan exists to compare against — null when no
+   * competitor scan has ever been run. Exists so a baseline (first)
+   * report, which structurally has nothing to diff `competitor` against,
+   * can still show "here's where you stand today" instead of "not
+   * tracked" when a real scan was in fact just run. See
+   * emails/MonthlyReportEmail.tsx's CompetitorSection for the only place
+   * this is read — always alongside `kind === "baseline"`. */
+  competitorStanding: CompetitorSnapshot | null;
   listingChanges: ListingChangesResult;
   /** True only for an "update" report where every metric we could
    * actually measure showed no real change — the honest "you held
@@ -447,6 +456,12 @@ export function buildMonthlyReportContent(
   baseline: MonthlyReportScoreRow | null,
   current: MonthlyReportScoreRow,
   competitorDelta: CompetitorDelta | null,
+  /** The real current competitor standing, if a scan exists right now —
+   * independent of `competitorDelta`, which stays null whenever there's
+   * no comparable PREVIOUS scan to diff against (always true on a
+   * baseline report, by definition). Defaults to null so every existing
+   * caller that doesn't pass it keeps behaving exactly as before. */
+  currentCompetitorSnapshot: CompetitorSnapshot | null = null,
   locale: Locale = DEFAULT_LOCALE
 ): MonthlyReportContent {
   const competitor = competitorMovement(competitorDelta);
@@ -467,6 +482,7 @@ export function buildMonthlyReportContent(
       rating,
       reviewCount,
       competitor,
+      competitorStanding: currentCompetitorSnapshot,
       // Nothing to diff a first report against, structurally — not "no
       // changes found," genuinely not applicable.
       listingChanges: { available: false },
@@ -510,6 +526,7 @@ export function buildMonthlyReportContent(
     rating,
     reviewCount,
     competitor,
+    competitorStanding: currentCompetitorSnapshot,
     listingChanges: changes,
     isSteady,
     focus: buildFocus(current.breakdown, competitor, reviewCount, changes, locale),

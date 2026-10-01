@@ -26,9 +26,10 @@
 // that long before this route can honestly report it as unmeasured —
 // see lib/websiteAnalysis.ts), on top of an HTML fetch (up to ~8s, with
 // one retry), an HTTPS probe (~5s), a sitemap fetch (~6s), a Google
-// Places Details call, and — when this business has ever used the
-// Competitors feature — up to MAX_COMPETITORS (10) SEQUENTIAL Places
-// Details calls (lib/competitors.ts's findAndScoreCompetitors is
+// Places Details call, and — for EVERY business, every month (the
+// competitor scan always runs now, not just for businesses that have
+// used the feature before) — up to MAX_COMPETITORS (10) SEQUENTIAL
+// Places Details calls (lib/competitors.ts's findAndScoreCompetitors is
 // deliberately sequential, "so a single failed lookup is easy to
 // isolate"). Several of these run in parallel inside
 // saveBusinessWithClient, but PageSpeed's own worst case alone can
@@ -57,6 +58,7 @@ import {
 import type { Grade } from "@/lib/scoring";
 import { MonthlyReportEmail, monthlyReportSubject } from "@/emails/MonthlyReportEmail";
 import { sendEmail } from "@/lib/email";
+import { isMonthlyReportsLive } from "@/lib/monthlyReportsFeatureFlag";
 import { normalizeLocale } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -245,8 +247,9 @@ function describeRescanFailure(result: RescanBusinessResult): string {
 
 /**
  * Processes exactly one business: idempotency check, real re-scan,
- * real optional competitor scan, real baseline lookup, real content
- * build, real send, real log — every step using the same reused
+ * a real competitor scan (always attempted, never gated on whether this
+ * business has used the feature before), real baseline lookup, real
+ * content build, real send, real log — every step using the same reused
  * *WithClient logic the manual paths use. Never throws: every failure
  * mode is caught by the caller's per-business try/catch (see POST
  * below), so one business's real scan/send failure can never take down
@@ -337,38 +340,35 @@ export async function processBusiness(
     return { businessId, status: "failed", reason: `rescan reported success but score ${rescanResult.scoreId} could not be read back` };
   }
 
-  // 3c. Competitor scan — only if this business has EVER used the
-  // feature (a real saved competitor_scans row exists for it); otherwise
-  // the report honestly shows competitor data as unavailable rather than
-  // running the feature for the first time on the business's behalf.
+  // 3c. Competitor scan — run for EVERY business every month, not only
+  // ones that have used the feature before (the report must always
+  // include a real, current standing when one can be found, never only
+  // for businesses that happened to opt in earlier). Saved as a normal
+  // competitor_scans row either way, so next month's report can show
+  // real movement from it.
   let competitorDelta: CompetitorDelta | null = null;
-  const { data: everScanned, error: everScannedError } = await supabase
-    .from("competitor_scans")
-    .select("id")
-    .eq("business_id", businessId)
-    .limit(1)
-    .maybeSingle();
-
-  if (everScannedError) {
-    // Non-fatal: competitor data just stays unavailable for this report,
-    // same as a business that's never used the feature at all — this is
-    // a "nice to have" section, not core to the report's real value.
-    console.error(`[cron/monthly-reports] competitor-history check failed for ${businessId}: ${everScannedError.message}`);
-  } else if (everScanned) {
-    const competitorResult = await saveCompetitorScanWithClient(supabase, businessId);
-    if (competitorResult.status === "saved") {
-      const currentSnapshot = await readCompetitorSnapshotForScan(supabase, businessId, competitorResult.scanId);
-      const previousSnapshot = previousReport
-        ? await readCompetitorSnapshotAsOf(supabase, businessId, previousReport.sent_at)
-        : null;
-      // Both sides real, or neither — never a fabricated "previous."
-      if (currentSnapshot && previousSnapshot) {
-        competitorDelta = { previous: previousSnapshot, current: currentSnapshot };
-      }
+  // The real current standing independent of competitorDelta above —
+  // set whenever this scan found comparable competitors, even with no
+  // comparable previous scan to diff against yet (always true on a
+  // business's first report, and on its first scan after this
+  // always-scan behavior shipped). See buildMonthlyReportContent's own
+  // doc for why this is a separate field from competitorDelta.
+  let currentCompetitorSnapshot: CompetitorSnapshot | null = null;
+  const competitorResult = await saveCompetitorScanWithClient(supabase, businessId);
+  if (competitorResult.status === "saved") {
+    currentCompetitorSnapshot = await readCompetitorSnapshotForScan(supabase, businessId, competitorResult.scanId);
+    const previousSnapshot = previousReport
+      ? await readCompetitorSnapshotAsOf(supabase, businessId, previousReport.sent_at)
+      : null;
+    // Both sides real, or neither — never a fabricated "previous."
+    if (currentCompetitorSnapshot && previousSnapshot) {
+      competitorDelta = { previous: previousSnapshot, current: currentCompetitorSnapshot };
     }
-    // competitorResult.status !== "saved" (e.g. "no_data" — no comparable
-    // competitors found this run) is honestly left as unavailable too.
   }
+  // competitorResult.status !== "saved" (e.g. "no_data" — no comparable
+  // competitors found this run, or "not_found"/"error") is honestly
+  // left as no real standing at all — see CompetitorSection's own doc
+  // in emails/MonthlyReportEmail.tsx for the exact message that shows.
 
   // 3e. Real content, real email, real owner address.
   const { data: freshBusiness, error: freshBusinessError } = await supabase
@@ -391,7 +391,7 @@ export async function processBusiness(
     return { businessId, status: "failed", reason: "no real email on file for this business's owner" };
   }
 
-  const content = buildMonthlyReportContent(baselineRow, currentRow, competitorDelta, locale);
+  const content = buildMonthlyReportContent(baselineRow, currentRow, competitorDelta, currentCompetitorSnapshot, locale);
   const reportDate = now.toISOString();
   const businessName = freshBusiness.name ?? "Your business";
   // A real, working unsubscribe link — app/unsubscribe/page.tsx validates
@@ -465,6 +465,33 @@ export async function processBusiness(
 async function handleCronRun(request: NextRequest): Promise<NextResponse> {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // The real safety switch for a SCHEDULED run — isAuthorized above only
+  // proves the caller holds CRON_SECRET (i.e. it's really
+  // monthly-reports-batch.mts calling), not that this feature is
+  // actually meant to send real email to real owners yet. Previously
+  // nothing in this file ever checked isMonthlyReportsLive() at all —
+  // only the in-app "Reports" page UI (app/actions/reports.ts) did,
+  // which gates what an owner SEES, never whether the scheduled job
+  // itself sends. That gap is exactly why reports went out on schedule
+  // even while MONTHLY_REPORTS_LIVE was unset: the scheduler → batch →
+  // this route chain had no gate of its own to check it against. Log
+  // only, send nothing, when it isn't exactly "true" — the dev-only
+  // send-one route bypasses this route entirely (see its own doc
+  // comment) and is unaffected.
+  if (!isMonthlyReportsLive()) {
+    console.log("[cron/monthly-reports] isMonthlyReportsLive() is false — sending nothing this run (log only).");
+    const summary: CronRunSummary = {
+      pageSize: 0,
+      hasMore: false,
+      processed: 0,
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+      results: [],
+    };
+    return NextResponse.json(summary);
   }
 
   // Pagination so the real caller (netlify/functions/monthly-reports-batch.mts)

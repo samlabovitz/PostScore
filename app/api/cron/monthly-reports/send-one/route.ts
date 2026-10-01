@@ -11,7 +11,7 @@
 // isAuthorized there) — the one thing standing between this and a real,
 // live send to a real owner's real inbox, so it can't fire by accident.
 // Nothing here reads or validates monthly_report_enabled or
-// MONTHLY_REPORTS_LIVE — this is a deliberate, explicit, one-business
+// isMonthlyReportsLive() — this is a deliberate, explicit, one-business
 // test call, not a policy decision about whether reports are "live" for
 // real users, so it isn't gated by that flag. Only ever call this with a
 // businessId you already know is a safe test business.
