@@ -855,17 +855,12 @@ export type MessageKey =
   | "dashboard.overview.scoreOutOf100WithGrade"
   | "dashboard.overview.seeActionPlan"
   | "dashboard.overview.growBanner.heading"
-  | "dashboard.overview.growBanner.subtextWithScore"
-  | "dashboard.overview.growBanner.subtextNoScore"
-  | "dashboard.overview.growBanner.tools.coupons.label"
-  | "dashboard.overview.growBanner.tools.coupons.description"
-  | "dashboard.overview.growBanner.tools.referral.label"
-  | "dashboard.overview.growBanner.tools.referral.description"
-  | "dashboard.overview.growBanner.tools.weeklyRoutine.label"
-  | "dashboard.overview.growBanner.tools.weeklyRoutine.description"
-  | "dashboard.overview.growBanner.tools.priceCheck.label"
-  | "dashboard.overview.growBanner.tools.priceCheck.description"
-  | "dashboard.overview.growBanner.button"
+  | "dashboard.overview.growBanner.tools.coupons.shortLabel"
+  | "dashboard.overview.growBanner.tools.referral.shortLabel"
+  | "dashboard.overview.growBanner.tools.weeklyRoutine.shortLabel"
+  | "dashboard.overview.growBanner.tools.priceCheck.shortLabel"
+  | "dashboard.overview.growBanner.tools.reviewQrSign.shortLabel"
+  | "dashboard.overview.growBanner.tools.competitorCheck.shortLabel"
   | "dashboard.overview.assistantUnavailablePrefix"
   | "dashboard.overview.atAGlanceHeading"
   | "dashboard.overview.googleRatingLabel"
@@ -3164,19 +3159,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.scoreOutOf100WithGrade": "/ 100 · {grade}",
     "dashboard.overview.seeActionPlan": "See your action plan →",
     "dashboard.overview.growBanner.heading": "More customers, whatever your score",
-    "dashboard.overview.growBanner.subtextWithScore":
-      "You're at {score}/100. Whether your score is high or low, these tools help bring in more customers:",
-    "dashboard.overview.growBanner.subtextNoScore":
-      "Whether your score is high or low, these tools help bring in more customers:",
-    "dashboard.overview.growBanner.tools.coupons.label": "Coupons",
-    "dashboard.overview.growBanner.tools.coupons.description": "Give new customers a reason to try you",
-    "dashboard.overview.growBanner.tools.referral.label": "Referral program",
-    "dashboard.overview.growBanner.tools.referral.description": "Turn happy regulars into your best advertising",
-    "dashboard.overview.growBanner.tools.weeklyRoutine.label": "Weekly routine",
-    "dashboard.overview.growBanner.tools.weeklyRoutine.description": "Keep your Google listing fresh and active",
-    "dashboard.overview.growBanner.tools.priceCheck.label": "Price check",
-    "dashboard.overview.growBanner.tools.priceCheck.description": "See how your prices compare nearby",
-    "dashboard.overview.growBanner.button": "See all ways to grow",
+    "dashboard.overview.growBanner.tools.coupons.shortLabel": "Coupons",
+    "dashboard.overview.growBanner.tools.referral.shortLabel": "Referrals",
+    "dashboard.overview.growBanner.tools.weeklyRoutine.shortLabel": "Weekly routine",
+    "dashboard.overview.growBanner.tools.priceCheck.shortLabel": "Price check",
+    "dashboard.overview.growBanner.tools.reviewQrSign.shortLabel": "Review QR",
+    "dashboard.overview.growBanner.tools.competitorCheck.shortLabel": "Competitors",
     "dashboard.overview.assistantUnavailablePrefix": "The assistant isn't available right now: {message}",
     "dashboard.overview.atAGlanceHeading": "At a glance",
     "dashboard.overview.googleRatingLabel": "Google rating",
@@ -5443,18 +5431,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.projectedLabel": "Proyectada si se completan todas las sugerencias",
     "dashboard.overview.seeActionPlan": "Ver su plan de acción →",
     "dashboard.overview.growBanner.heading": "Más clientes, sin importar su puntuación",
-    "dashboard.overview.growBanner.subtextWithScore":
-      "Su puntuación es {score}/100. Ya sea alta o baja, estas herramientas ayudan a atraer más clientes:",
-    "dashboard.overview.growBanner.subtextNoScore": "Ya sea alta o baja, estas herramientas ayudan a atraer más clientes:",
-    "dashboard.overview.growBanner.tools.coupons.label": "Cupones",
-    "dashboard.overview.growBanner.tools.coupons.description": "Deles a los clientes nuevos un motivo para visitarlo",
-    "dashboard.overview.growBanner.tools.referral.label": "Programa de recomendación",
-    "dashboard.overview.growBanner.tools.referral.description": "Convierta a sus clientes fieles en su mejor publicidad",
-    "dashboard.overview.growBanner.tools.weeklyRoutine.label": "Rutina semanal",
-    "dashboard.overview.growBanner.tools.weeklyRoutine.description": "Mantenga su ficha de Google actualizada y activa",
-    "dashboard.overview.growBanner.tools.priceCheck.label": "Comparación de precios",
-    "dashboard.overview.growBanner.tools.priceCheck.description": "Vea cómo se comparan sus precios con los de la zona",
-    "dashboard.overview.growBanner.button": "Ver todas las formas de crecer",
+    "dashboard.overview.growBanner.tools.coupons.shortLabel": "Cupones",
+    "dashboard.overview.growBanner.tools.referral.shortLabel": "Recomendaciones",
+    "dashboard.overview.growBanner.tools.weeklyRoutine.shortLabel": "Rutina semanal",
+    "dashboard.overview.growBanner.tools.priceCheck.shortLabel": "Precios",
+    "dashboard.overview.growBanner.tools.reviewQrSign.shortLabel": "QR de reseñas",
+    "dashboard.overview.growBanner.tools.competitorCheck.shortLabel": "Competencia",
     "dashboard.overview.assistantUnavailablePrefix": "El asistente no está disponible en este momento: {message}",
     "dashboard.overview.atAGlanceHeading": "De un vistazo",
     "dashboard.overview.googleRatingLabel": "Calificación de Google",

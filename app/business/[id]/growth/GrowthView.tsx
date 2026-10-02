@@ -18,6 +18,7 @@ import type { BizProfile } from "@/config/bizProfiles";
 import type { PromoRow } from "@/lib/promos";
 import type { ReferralRow } from "@/lib/referrals";
 import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
+import { useScrollToHash } from "@/lib/useScrollToHash";
 
 // The builder generates a random coupon code and reads window.location
 // on first render — genuinely client-only state, not something that
@@ -119,6 +120,11 @@ export function GrowthView({
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
+  // A link straight to this page's own #weekly-routine/#ways-to-grow
+  // anchors (e.g. the Overview page's growth strip) needs this: Next's
+  // own scroll-to-hash can land before this client component has
+  // rendered the section, so the browser's native jump finds nothing.
+  useScrollToHash();
   // The Growth page's tab is URL-driven (?tab=coupons / ?tab=referral)
   // so a growth move's link (e.g. "start a coupon") can deep-link
   // straight to the right tab instead of just landing on this page's

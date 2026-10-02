@@ -3,7 +3,12 @@
 import { ReactNode, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { IconUsers, IconChevronDown, IconRefresh, IconTicket, IconCalendarCheck, IconTag } from "@tabler/icons-react";
+import {
+  IconUsers,
+  IconChevronDown,
+  IconRefresh,
+} from "@tabler/icons-react";
+import { buildGrowBannerTools } from "@/lib/growBannerTools";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
@@ -18,7 +23,7 @@ import type { BusinessRecord, ScoreHistoryRow, ScoreSnapshot } from "@/app/actio
 import { diffProfileSnapshots, type ProfileSnapshot } from "@/lib/profileChanges";
 import { formatOpeningHours } from "@/lib/hours";
 import { diffBreakdowns, resolveChangeDisplay } from "@/lib/scoreChanges";
-import { t, tPlural, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
+import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 import {
   GRADE_THRESHOLDS,
   type CategoryResult,
@@ -524,90 +529,62 @@ function ListingChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
   );
 }
 
-interface GrowBannerTool {
-  icon: typeof IconTicket;
-  labelKey: MessageKey;
-  descriptionKey: MessageKey;
-  href: string;
-}
-
 /**
  * Compact, always-shown reminder that PostScore's growth tools help
- * every business regardless of its current score — deliberately placed
- * right below the score so a strong scorer doesn't read the page as
- * "you're done." `hasScore` is false only in the genuine edge case where
- * literally nothing about the business was determinable (every category
- * has zero possiblePoints) — never for a real, low-but-computed total,
- * which is still an honest score worth naming in the first sentence.
+ * every business regardless of its current score — one slim horizontal
+ * strip right below the PostAI banner, styled as its matched pair
+ * (same border radius/border/padding feel), never a big promotional
+ * block. Just a heading and a row of tool chips — no description line,
+ * no score-dependent copy, no trailing link.
+ *
+ * At a real 1280px window with the sidebar showing, the available
+ * width here is ~918px (1280 - 250 sidebar - 80 main padding - 32 card
+ * padding). Verified with the real Inter font and real copy at this
+ * exact text-sm sizing: English fits one row even with real (not
+ * degenerate) chip padding; Spanish's real chip labels are long enough
+ * that even gaps/padding tightened to their practical floor still
+ * leave it short by a real ~58px. Rather than shrinking text below
+ * text-sm or dropping a chip, Spanish falls back to the same
+ * overflow-x-auto scrolling every narrower screen already uses.
  */
-function GrowMoreCustomersBanner({ businessId, breakdown }: { businessId: string; breakdown: ScoreBreakdown }) {
+function GrowMoreCustomersBanner({ businessId }: { businessId: string }) {
   const locale = useLocale();
-  const hasScore = breakdown.categories.some((c) => c.possiblePoints > 0);
-
-  const tools: GrowBannerTool[] = [
-    {
-      icon: IconTicket,
-      labelKey: "dashboard.overview.growBanner.tools.coupons.label",
-      descriptionKey: "dashboard.overview.growBanner.tools.coupons.description",
-      href: `/business/${businessId}/growth?tab=coupons`,
-    },
-    {
-      icon: IconUsers,
-      labelKey: "dashboard.overview.growBanner.tools.referral.label",
-      descriptionKey: "dashboard.overview.growBanner.tools.referral.description",
-      href: `/business/${businessId}/growth?tab=referral`,
-    },
-    {
-      icon: IconCalendarCheck,
-      labelKey: "dashboard.overview.growBanner.tools.weeklyRoutine.label",
-      descriptionKey: "dashboard.overview.growBanner.tools.weeklyRoutine.description",
-      href: `/business/${businessId}/growth#weekly-routine`,
-    },
-    {
-      icon: IconTag,
-      labelKey: "dashboard.overview.growBanner.tools.priceCheck.label",
-      descriptionKey: "dashboard.overview.growBanner.tools.priceCheck.description",
-      href: `/business/${businessId}/pricing`,
-    },
-  ];
+  const tools = buildGrowBannerTools(businessId);
 
   return (
-    <Card className="flex flex-col gap-3 border-brass/25 bg-brass/[0.04] p-4">
-      <div>
-        <h2 className="font-serif text-[14px] font-semibold text-ink">
+    <Card className="min-w-0 px-4 py-2.5">
+      {/* Never wraps — scrolls sideways instead whenever the real
+          content is wider than the strip (see this component's own
+          doc comment for why Spanish sometimes still is, even at
+          1280px), scrollbar hidden via the two arbitrary-value
+          utilities below so it reads as a clean strip, not a scroll
+          widget. The chip group is flex-1 + justify-evenly so it
+          spreads out to use whatever real extra width exists to the
+          right of the heading, rather than clumping to one side.
+          min-w-0 on the card and this row (flex items otherwise
+          default to a content-based minimum width, which would let
+          the unwrapped chip row force the card itself wider than its
+          column instead of staying put and scrolling internally). */}
+      <div
+        className="flex min-w-0 items-center gap-[2px] overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        <h2 className="shrink-0 whitespace-nowrap text-sm font-semibold text-ink">
           {t(locale, "dashboard.overview.growBanner.heading")}
         </h2>
-        <p className="mt-0.5 text-[12.5px] text-ink-soft">
-          {hasScore
-            ? t(locale, "dashboard.overview.growBanner.subtextWithScore", { score: breakdown.total })
-            : t(locale, "dashboard.overview.growBanner.subtextNoScore")}
-        </p>
-      </div>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {tools.map((tool) => (
-          <Link
-            key={tool.labelKey}
-            href={tool.href}
-            className="flex items-start gap-2.5 rounded-lg border border-transparent p-2 transition-colors hover:border-brass/30 hover:bg-white"
-          >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brass/15 text-brass">
-              <tool.icon size={14} />
-            </span>
-            <div className="min-w-0">
-              <div className="text-[12.5px] font-semibold text-ink">{t(locale, tool.labelKey)}</div>
-              <div className="mt-0.5 text-[11.5px] text-ink-soft">{t(locale, tool.descriptionKey)}</div>
-            </div>
-          </Link>
-        ))}
+        <div className="flex min-w-0 flex-1 items-center justify-evenly gap-[2px]">
+          {tools.map((tool) => (
+            <Link
+              key={tool.labelKey}
+              href={tool.href}
+              className="inline-flex shrink-0 items-center gap-[2px] whitespace-nowrap rounded-full border border-paper-deep bg-paper px-[4px] py-[2px] text-sm font-medium text-ink-soft transition-colors hover:border-brass hover:text-ink"
+            >
+              <tool.icon size={16} className="shrink-0 text-brass" />
+              {t(locale, tool.labelKey)}
+            </Link>
+          ))}
+        </div>
       </div>
-
-      <Link
-        href={`/business/${businessId}/growth#ways-to-grow`}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-brass bg-brass px-3.5 py-[6px] text-[12.5px] font-medium text-white transition-colors hover:bg-[#a5772a] sm:w-fit sm:self-end"
-      >
-        {t(locale, "dashboard.overview.growBanner.button")}
-      </Link>
     </Card>
   );
 }
@@ -705,8 +682,6 @@ export function BusinessScoreView({
         </div>
       </div>
 
-      <GrowMoreCustomersBanner businessId={businessId} breakdown={breakdown} />
-
       {assistant.status === "ok" ? (
         <AssistantLauncher
           businessId={businessId}
@@ -720,6 +695,8 @@ export function BusinessScoreView({
           {t(locale, "dashboard.overview.assistantUnavailablePrefix", { message: assistant.message })}
         </Card>
       )}
+
+      <GrowMoreCustomersBanner businessId={businessId} />
 
       <SectionHeading title={t(locale, "dashboard.overview.atAGlanceHeading")} />
       <Card className="p-5">

@@ -18,6 +18,7 @@ import {
 import { GetMoreReviews } from "./GetMoreReviews";
 import type { ReviewsPageData } from "@/app/actions/reviews";
 import { t, useLocale } from "@/lib/i18n";
+import { useScrollToHash } from "@/lib/useScrollToHash";
 
 function StatCard({
   icon: Icon,
@@ -125,6 +126,9 @@ export function ReviewsView({
   reviews: ReviewsPageData;
 }) {
   const locale = useLocale();
+  // A link straight to #get-more-reviews (e.g. the Overview page's
+  // growth strip) needs this — see useScrollToHash's own doc comment.
+  useScrollToHash();
   return (
     <div className="flex flex-col gap-8 nav:gap-10">
       <div>
@@ -143,10 +147,12 @@ export function ReviewsView({
         <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.websiteReviews.subtitle")}</p>
       </div>
 
-      <GetMoreReviews
-        businessName={reviews.businessName ?? t(locale, "dashboard.websiteReviews.businessNameFallback")}
-        placeId={reviews.placeId}
-      />
+      <div id="get-more-reviews" className="scroll-mt-20">
+        <GetMoreReviews
+          businessName={reviews.businessName ?? t(locale, "dashboard.websiteReviews.businessNameFallback")}
+          placeId={reviews.placeId}
+        />
+      </div>
 
       <ReviewSocialProof rating={reviews.rating} reviewCount={reviews.reviewCount} />
 
