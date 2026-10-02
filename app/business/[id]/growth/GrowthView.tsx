@@ -219,6 +219,15 @@ export function GrowthView({
             </p>
           </Card>
 
+          <div id="weekly-routine" className="scroll-mt-20">
+            <WeeklyChecklist
+              businessId={businessId}
+              items={weeklyChecklist.items}
+              initialCheckedItemIds={weeklyChecklist.checkedItemIds}
+              initialStreakWeeks={weeklyChecklist.streakWeeks}
+            />
+          </div>
+
           {actionPlan.error ? (
             <Card className="p-5 text-sm text-red">
               {t(locale, "dashboard.growth.view.actionPlanErrorPrefix", { error: actionPlan.error })}
@@ -264,15 +273,6 @@ export function GrowthView({
           )}
 
           <CompletedTasksCard completed={actionPlan.completed} />
-
-          <div id="weekly-routine" className="scroll-mt-20">
-            <WeeklyChecklist
-              businessId={businessId}
-              items={weeklyChecklist.items}
-              initialCheckedItemIds={weeklyChecklist.checkedItemIds}
-              initialStreakWeeks={weeklyChecklist.streakWeeks}
-            />
-          </div>
 
           {growthMoves.length > 0 && (
             <div id="ways-to-grow" className="flex flex-col gap-6 scroll-mt-20 nav:gap-8">
