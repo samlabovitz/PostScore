@@ -6,15 +6,20 @@ import { scoreBusinessById, getScoreHistory } from "@/app/actions/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
 import { getLatestCompetitorSnapshot } from "@/app/actions/competitors";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
+import { getGrowthMoveSignals } from "@/app/actions/growthMoves";
+import { getWeeklyChecklistState } from "@/app/actions/weeklyChecklist";
+import { buildGrowthMoves } from "@/lib/growthMoves";
 import { businessRowToScoringInput } from "@/lib/scoring";
 import { bizProfile, resolveBizProfile } from "@/config/bizProfiles";
 import { priceLevelToSymbol } from "@/lib/priceLevel";
+import { buildWeeklyChecklistItems } from "@/lib/weeklyChecklist";
 import { callAnthropicChat } from "@/lib/anthropicClient";
 import {
   ASSISTANT_MAX_TOKENS,
   ASSISTANT_SYSTEM_RULES,
   MAX_ACTION_PLAN_TASKS_IN_CONTEXT,
   MAX_FIXED_ITEMS_IN_CONTEXT,
+  MAX_GROWTH_MOVES_IN_CONTEXT,
   MAX_HISTORY_MESSAGES,
   MAX_LOSING_CHECKS_IN_CONTEXT,
   MAX_SCORE_HISTORY_IN_CONTEXT,
@@ -26,8 +31,10 @@ import {
   type AssistantCompetitorSummary,
   type AssistantExcludedCheck,
   type AssistantFixedItem,
+  type AssistantGrowthMove,
   type AssistantLosingCheck,
   type AssistantScoreHistoryEntry,
+  type AssistantWeeklyRoutineSummary,
 } from "@/lib/assistant";
 import { DEFAULT_LOCALE, normalizeLocale, t, type Locale } from "@/lib/i18n";
 
@@ -83,10 +90,11 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
   // `locale` BEFORE scoring — scoreBusinessById needs the real locale to
   // produce Spanish-language check labels/explanations for a Spanish
   // business, not English ones re-labeled after the fact.
-  const [summaryResult, scoreHistoryRows, gbpStatus] = await Promise.all([
+  const [summaryResult, scoreHistoryRows, gbpStatus, checklistStateResult] = await Promise.all([
     getBusinessSummary(businessId),
     getScoreHistory(businessId),
     getGbpConnectionStatus(businessId),
+    getWeeklyChecklistState(businessId),
   ]);
 
   if (summaryResult.status === "unauthenticated") {
@@ -155,6 +163,41 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
         };
       })()
     : { available: false, scanAt: null, subjectRank: null, entries: [] };
+
+  // Loads the signals and builds the moves in two steps (rather than the
+  // one-shot getGrowthMoves the Growth page uses) because the context
+  // block needs BOTH: the real moves, and the real underlying numbers/
+  // dates behind them, so buildAssistantContextText can state each move's
+  // reason in plain, owner-safe language instead of echoing
+  // GrowthMove.signal's debug text. Same loader, same single set of
+  // queries — the snapshot already fetched above is passed straight
+  // through so this never issues a second, identical
+  // getLatestCompetitorSnapshot query (see getGrowthMoveSignals's own doc
+  // in app/actions/growthMoves.ts).
+  const signalsResult = await getGrowthMoveSignals(businessId, breakdown, profile.referralOk, snapshot);
+  const growthMoves: AssistantGrowthMove[] =
+    signalsResult.status === "ok"
+      ? buildGrowthMoves(signalsResult.signals, locale)
+          .slice(0, MAX_GROWTH_MOVES_IN_CONTEXT)
+          .map((m) => ({
+            id: m.id,
+            title: m.title,
+            why: m.why,
+            pricingAssessedAt: signalsResult.signals.pricingAssessedAt,
+            yourPhotoCount: signalsResult.signals.photoCount,
+            competitorMedianPhotoCount: signalsResult.signals.competitorPhotos.medianCompetitorPhotoCount,
+            weakWebsiteIssueLabels: signalsResult.signals.weakWebsiteIssueLabels,
+          }))
+      : [];
+
+  const weeklyRoutine: AssistantWeeklyRoutineSummary = {
+    items: buildWeeklyChecklistItems(locale).map((item) => ({
+      title: item.title,
+      checkedThisWeek:
+        checklistStateResult.status === "ok" && checklistStateResult.state.checkedItemIds.includes(item.id),
+    })),
+    streakWeeks: checklistStateResult.status === "ok" ? checklistStateResult.state.streakWeeks : 0,
+  };
 
   const losingChecks: AssistantLosingCheck[] = suggestions
     .slice(0, MAX_LOSING_CHECKS_IN_CONTEXT)
@@ -237,6 +280,8 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
       excludedChecks,
     },
     actionPlan: { topTasks },
+    growthMoves,
+    weeklyRoutine,
     competitors,
     profile: businessProfile,
     gbp: { connected: gbpStatus.status === "ok" && gbpStatus.connected },

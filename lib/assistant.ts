@@ -13,7 +13,8 @@
 import type { CategoryId, Confidence, Grade, HttpsCheckStatus } from "@/lib/scoring";
 import { CATEGORY_LABELS } from "@/lib/scoring";
 import type { TaskEffort } from "@/lib/actionPlan";
-import { DEFAULT_LOCALE, t, type Locale } from "@/lib/i18n";
+import type { GrowthMoveId } from "@/lib/growthMoves";
+import { DEFAULT_LOCALE, formatShortDate, t, type Locale } from "@/lib/i18n";
 
 // ---------------------------------------------------------------------------
 // Context shape — the compact, real-data summary the assistant is grounded in
@@ -170,10 +171,71 @@ export interface AssistantBusinessProfile {
   fixedItems: AssistantFixedItem[];
 }
 
+/**
+ * One real, currently-firing growth move (see lib/growthMoves.ts) —
+ * a customer-getting action PostScore has a genuine signal for, never
+ * a score-based suggestion. Deliberately carries `signal`, the exact
+ * same plain-English real fact GrowthMove.signal already records for
+ * tests/debugging, so the assistant can always say WHY a move is
+ * being suggested and never just assert it.
+ */
+export interface AssistantGrowthMove {
+  /** Which real move this is (see lib/growthMoves.ts) — the one field
+   * the two formatters below branch on, so the owner-facing
+   * destination and plain-language fact are both derived from the real
+   * move rather than parsed back out of a URL or a debug string. */
+  id: GrowthMoveId;
+  title: string;
+  why: string;
+  /** When a price check was last actually run in PostScore, or null if
+   * never — carried as the raw timestamp, never a pre-formatted
+   * string, so buildAssistantContextText can render it with
+   * formatShortDate in the owner's own locale. run_price_check only. */
+  pricingAssessedAt: string | null;
+  /** This listing's own real Google photo count.
+   * add_photos_vs_competitors only. */
+  yourPhotoCount: number | null;
+  /** Median real photo count among competitors in the last saved scan.
+   * add_photos_vs_competitors only. */
+  competitorMedianPhotoCount: number | null;
+  /** Real, already-localized labels of the website checks currently
+   * below full points. improve_website only. */
+  weakWebsiteIssueLabels: string[];
+}
+
+export interface AssistantWeeklyRoutineItem {
+  title: string;
+  /** True only when the owner has actually checked this item off for
+   * the CURRENT real week — a self-reported log PostScore cannot
+   * independently verify (see lib/weeklyChecklist.ts's own module
+   * doc). False must never be read as "the owner hasn't done this" —
+   * only as "not logged yet." */
+  checkedThisWeek: boolean;
+}
+
+export interface AssistantWeeklyRoutineSummary {
+  /** All 5 habits, in lib/weeklyChecklist.ts's fixed display order —
+   * this list is always exactly 5 long (a hardcoded set of habits, not
+   * a growable table), so unlike the capped lists above it needs no
+   * cap constant. */
+  items: AssistantWeeklyRoutineItem[];
+  /** Consecutive fully-checked-off PAST weeks (never counts the
+   * current, still-in-progress week) — see computeStreakWeeks in
+   * lib/weeklyChecklist.ts. 0 means no real streak to mention. */
+  streakWeeks: number;
+}
+
 export interface AssistantBusinessContext {
   listing: AssistantListingSummary;
   score: AssistantScoreSummary;
   actionPlan: AssistantActionPlanSummary;
+  /** Every growth move currently firing for this business — see
+   * lib/growthMoves.ts. Capped by the caller (see
+   * MAX_GROWTH_MOVES_IN_CONTEXT) so the prompt can never grow
+   * unbounded if more moves are added later; every real business
+   * today fires at most a handful. */
+  growthMoves: AssistantGrowthMove[];
+  weeklyRoutine: AssistantWeeklyRoutineSummary;
   competitors: AssistantCompetitorSummary;
   profile: AssistantBusinessProfile;
   /** Whether this business has connected its Google Business Profile
@@ -236,6 +298,68 @@ HOW TO ANSWER:
 
 function formatEffort(effort: TaskEffort): string {
   return effort.replace(/_/g, " ");
+}
+
+/**
+ * Where in PostScore a growth move is actually done, named the way the
+ * owner's own screen names it — the real localized nav label, and the
+ * real localized tab label where the move targets a specific tab.
+ * Deliberately NOT derived from GrowthMove.href: a raw URL (with a
+ * business id in it) is useless to an owner being told where to go, and
+ * the model should never read an id out of the context block, let alone
+ * repeat one back. Every label here comes from a message key the real
+ * UI already renders, so this can never name a page that doesn't exist
+ * or drift from what the sidebar/tab strip actually says.
+ */
+function growthMoveDestination(id: GrowthMoveId, locale: Locale): string {
+  const page = (key: Parameters<typeof t>[1]) => `"${t(locale, key)}"`;
+  switch (id) {
+    case "start_coupon":
+      return `${page("dashboard.nav.growth")} page, ${page("dashboard.growth.view.tabCoupons")} tab`;
+    case "start_referral":
+      return `${page("dashboard.nav.growth")} page, ${page("dashboard.growth.view.tabReferral")} tab`;
+    case "run_price_check":
+      return `${page("dashboard.nav.pricing")} page`;
+    case "add_photos_vs_competitors":
+      // Photos are added on Google itself, not in PostScore — the move
+      // links to Overview, where the real step-by-step instructions
+      // already live (see buildGrowthMoves's own comment).
+      return `${page("dashboard.nav.overview")} page`;
+    case "build_starter_site":
+    case "improve_website":
+      return `${page("dashboard.nav.website")} page`;
+  }
+}
+
+/**
+ * The real fact that made a move fire, stated the way it could safely be
+ * repeated to the owner — never GrowthMove.signal, which is deliberately
+ * debug text (column names, raw ISO timestamps, "row") meant for tests
+ * and tracing, not for a model that may quote it verbatim.
+ *
+ * The coupon/referral wordings are carefully scoped to what PostScore can
+ * actually observe: that nothing has been created HERE. PostScore has no
+ * way to know whether the owner runs offers or referrals through some
+ * other channel, so claiming they don't would be a fabrication of exactly
+ * the kind rule 3 forbids.
+ */
+function growthMoveOwnerFact(move: AssistantGrowthMove, locale: Locale): string {
+  switch (move.id) {
+    case "start_coupon":
+      return "No coupon has been created in PostScore yet. PostScore can't see offers run anywhere else, so don't tell the owner they aren't running any promotions — only that they haven't built one here.";
+    case "start_referral":
+      return "No referral program has been set up in PostScore yet. Same caveat as coupons: PostScore can't see a referral scheme run anywhere else.";
+    case "run_price_check":
+      return move.pricingAssessedAt === null
+        ? "A price check has never been run in PostScore."
+        : `The last price check in PostScore was run on ${formatShortDate(move.pricingAssessedAt, locale)}.`;
+    case "add_photos_vs_competitors":
+      return `This listing has ${move.yourPhotoCount ?? 0} photo(s) on Google; the median among the competitors in the last saved scan is ${move.competitorMedianPhotoCount ?? 0}.`;
+    case "improve_website":
+      return `These website checks are currently below full points: ${move.weakWebsiteIssueLabels.join(", ")}.`;
+    case "build_starter_site":
+      return "There's no website on file for this business.";
+  }
 }
 
 /**
@@ -324,6 +448,33 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
       lines.push(`- ${t.label} (+${t.promisedPoints} pts, ${formatEffort(t.effort)}): ${t.action}`);
     }
   }
+
+  lines.push("GROWTH MOVES (bring in customers; never change the score):");
+  lines.push(
+    "Each move below is backed by a real fact about activity inside PostScore only — never about what the owner does outside it. Page and tab names are exactly what the owner sees on their own screen; use those names when pointing them somewhere."
+  );
+  if (context.growthMoves.length === 0) {
+    lines.push("- No growth moves are currently firing for this business.");
+  } else {
+    for (const m of context.growthMoves) {
+      lines.push(
+        `- ${m.title}: ${m.why} Where in PostScore: ${growthMoveDestination(m.id, locale)}. Why it's showing: ${growthMoveOwnerFact(m, locale)}`
+      );
+    }
+  }
+
+  lines.push("WEEKLY ROUTINE (owner self-reported, resets Mondays):");
+  lines.push(
+    "These are the owner's own checkmarks only — PostScore cannot see whether they actually posted an update, replied to a review, or added a photo. An item marked \"not checked off\" means the owner hasn't logged it yet this week, NOT that they haven't really done it — never say or imply the owner failed to do something just because it isn't checked off."
+  );
+  for (const item of context.weeklyRoutine.items) {
+    lines.push(`- ${item.title}: ${item.checkedThisWeek ? "checked off this week" : "not checked off this week"}.`);
+  }
+  lines.push(
+    context.weeklyRoutine.streakWeeks > 0
+      ? `Streak: ${context.weeklyRoutine.streakWeeks} consecutive past week(s) fully checked off.`
+      : "No current streak."
+  );
 
   lines.push("Competitors:");
   if (!context.competitors.available) {
@@ -432,6 +583,14 @@ export const MAX_LOSING_CHECKS_IN_CONTEXT = 12;
 /** How many open action-plan tasks to include — mirrors WEEKLY_PLAN_CAP's
  * "enough to feel real, few enough to stay cheap" reasoning. */
 export const MAX_ACTION_PLAN_TASKS_IN_CONTEXT = 5;
+
+/** How many growth moves to include — every real business today fires
+ * at most a handful (the moves are mostly mutually exclusive by
+ * construction, see buildGrowthMoves in lib/growthMoves.ts), but kept
+ * as an explicit cap, same reasoning as MAX_LOSING_CHECKS_IN_CONTEXT,
+ * so the prompt can never grow unbounded if more moves are added
+ * later. */
+export const MAX_GROWTH_MOVES_IN_CONTEXT = 8;
 
 /** How many saved scans' worth of score history to include in the
  * persisted-memory block — enough to show a real trend without resending

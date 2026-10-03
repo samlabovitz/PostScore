@@ -62,7 +62,7 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   const promosResult = await listActivePromos(params.id);
   const initialPromos = promosResult.status === "ok" ? promosResult.promos : [];
 
-  const growthMovesResult = await getGrowthMoves(params.id, scored.result.breakdown, locale);
+  const growthMovesResult = await getGrowthMoves(params.id, scored.result.breakdown, profile.referralOk, locale);
   const growthMoves = growthMovesResult.status === "ok" ? growthMovesResult.moves : [];
 
   const checklistStateResult = await getWeeklyChecklistState(params.id);

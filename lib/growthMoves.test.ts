@@ -37,6 +37,17 @@ describe("buildGrowthMoves", () => {
     expect(ids(NOTHING_TO_DO)).not.toContain("start_referral");
   });
 
+  test("start_referral never fires when referralOk is false, even with no referral ever created — e.g. lawyer, where referral-fee arrangements are professionally restricted", () => {
+    expect(
+      ids({ ...NOTHING_TO_DO, hasEverCreatedReferral: false, referralOk: false })
+    ).not.toContain("start_referral");
+  });
+
+  test("start_referral still fires when referralOk is left unset — defaults to true for fixtures/callers that predate this field", () => {
+    // NOTHING_TO_DO never sets referralOk at all, proving the omitted-field default.
+    expect(ids({ ...NOTHING_TO_DO, hasEverCreatedReferral: false })).toContain("start_referral");
+  });
+
   test("run_price_check always shows — never-run and already-run variants", () => {
     const neverRun = buildGrowthMoves({ ...NOTHING_TO_DO, pricingAssessedAt: null }, "en");
     const neverRunMove = neverRun.find((m) => m.id === "run_price_check");

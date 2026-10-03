@@ -62,6 +62,36 @@ const BASE_CONTEXT: AssistantBusinessContext = {
       },
     ],
   },
+  growthMoves: [
+    {
+      id: "start_coupon",
+      title: "Start a coupon",
+      why: "Give new customers a reason to try you.",
+      pricingAssessedAt: null,
+      yourPhotoCount: 12,
+      competitorMedianPhotoCount: null,
+      weakWebsiteIssueLabels: [],
+    },
+    {
+      id: "run_price_check",
+      title: "Re-check your prices against competitors",
+      why: "Local prices move with the seasons.",
+      pricingAssessedAt: "2026-09-24T16:29:18.231+00:00",
+      yourPhotoCount: 12,
+      competitorMedianPhotoCount: null,
+      weakWebsiteIssueLabels: [],
+    },
+  ],
+  weeklyRoutine: {
+    items: [
+      { title: "Post an update", checkedThisWeek: true },
+      { title: "Reply to reviews", checkedThisWeek: false },
+      { title: "Share your review link", checkedThisWeek: false },
+      { title: "Add a photo", checkedThisWeek: false },
+      { title: "Check your hours", checkedThisWeek: true },
+    ],
+    streakWeeks: 3,
+  },
   competitors: {
     available: true,
     scanAt: "1/2/2026",
@@ -206,6 +236,165 @@ describe("buildAssistantContextText", () => {
     const text = buildAssistantContextText(oneScore);
     expect(text).toContain("only one saved score so far");
     expect(text).toContain("No trend to compare yet.");
+  });
+
+  test("lists each firing growth move with its title, why, and the real page/tab the owner actually sees", () => {
+    const text = buildAssistantContextText(BASE_CONTEXT);
+    expect(text).toContain("GROWTH MOVES (bring in customers; never change the score):");
+    expect(text).toContain("Start a coupon: Give new customers a reason to try you.");
+    expect(text).toContain('Where in PostScore: "Growth" page, "Coupons" tab.');
+    expect(text).toContain('Where in PostScore: "Pricing" page.');
+  });
+
+  test("names the real localized page and tab in Spanish, never an English-only label", () => {
+    const text = buildAssistantContextText(BASE_CONTEXT, "es");
+    expect(text).toContain('"Crecimiento" page, "Cupones" tab');
+    expect(text).toContain('"Precios" page');
+  });
+
+  test("names every growth-move destination from the real UI's own labels, for every move id", () => {
+    const ids = [
+      "start_coupon",
+      "start_referral",
+      "run_price_check",
+      "add_photos_vs_competitors",
+      "build_starter_site",
+      "improve_website",
+    ] as const;
+    for (const id of ids) {
+      const text = buildAssistantContextText({
+        ...BASE_CONTEXT,
+        growthMoves: [{ ...BASE_CONTEXT.growthMoves[0], id }],
+      });
+      // Every move resolves to a real named destination — never an
+      // empty label, and never a URL.
+      expect(text).toMatch(/Where in PostScore: "[^"]+" page/);
+      expect(text).not.toContain("/business/");
+    }
+  });
+
+  test("states each move's reason as a plain owner-safe fact — no column names, no 'row', no raw URL, no ISO timestamp", () => {
+    const text = buildAssistantContextText(BASE_CONTEXT);
+    expect(text).not.toContain("/business/");
+    expect(text).not.toContain("pricing_assessed_at");
+    expect(text).not.toContain(" row ");
+    // No ISO-8601 timestamp anywhere in the rendered context.
+    expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+  });
+
+  test("renders a real last-price-check date through the locale's own short-date format", () => {
+    const en = buildAssistantContextText(BASE_CONTEXT);
+    expect(en).toContain("The last price check in PostScore was run on Sep 24, 2026.");
+
+    const es = buildAssistantContextText(BASE_CONTEXT, "es");
+    expect(es).toContain("24 sept 2026");
+    expect(es).not.toContain("2026-09-24T16:29:18.231+00:00");
+  });
+
+  test("says a price check has never been run, rather than printing a null date", () => {
+    const neverRun: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      growthMoves: [{ ...BASE_CONTEXT.growthMoves[1], pricingAssessedAt: null }],
+    };
+    const text = buildAssistantContextText(neverRun);
+    expect(text).toContain("A price check has never been run in PostScore.");
+    expect(text).not.toContain("null");
+  });
+
+  test("scopes the coupon/referral facts to PostScore, never claiming the owner runs no promotions at all", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      growthMoves: [
+        { ...BASE_CONTEXT.growthMoves[0], id: "start_coupon" },
+        { ...BASE_CONTEXT.growthMoves[0], id: "start_referral" },
+      ],
+    });
+    expect(text).toContain("No coupon has been created in PostScore yet.");
+    expect(text).toContain("PostScore can't see offers run anywhere else");
+    expect(text).toContain("No referral program has been set up in PostScore yet.");
+  });
+
+  test("carries the same real numbers and labels the photo/website moves are built from", () => {
+    const photos = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      growthMoves: [
+        {
+          ...BASE_CONTEXT.growthMoves[0],
+          id: "add_photos_vs_competitors",
+          yourPhotoCount: 4,
+          competitorMedianPhotoCount: 9,
+        },
+      ],
+    });
+    expect(photos).toContain("This listing has 4 photo(s) on Google");
+    expect(photos).toContain("the median among the competitors in the last saved scan is 9");
+
+    const website = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      growthMoves: [
+        {
+          ...BASE_CONTEXT.growthMoves[0],
+          id: "improve_website",
+          weakWebsiteIssueLabels: ["Performance & mobile", "Contact & conversion"],
+        },
+      ],
+    });
+    expect(website).toContain("Performance & mobile, Contact & conversion");
+  });
+
+  test("always states that growth-move facts describe activity inside PostScore only", () => {
+    for (const context of [BASE_CONTEXT, { ...BASE_CONTEXT, growthMoves: [] }]) {
+      expect(buildAssistantContextText(context)).toContain(
+        "backed by a real fact about activity inside PostScore only"
+      );
+    }
+  });
+
+  test("says plainly when no growth moves are firing, rather than inventing one", () => {
+    const noMoves: AssistantBusinessContext = { ...BASE_CONTEXT, growthMoves: [] };
+    const text = buildAssistantContextText(noMoves);
+    expect(text).toContain("No growth moves are currently firing for this business.");
+  });
+
+  test("reports each weekly-routine item as checked or not checked off this week, with the real streak", () => {
+    const text = buildAssistantContextText(BASE_CONTEXT);
+    expect(text).toContain("WEEKLY ROUTINE (owner self-reported, resets Mondays):");
+    expect(text).toContain("Post an update: checked off this week.");
+    expect(text).toContain("Reply to reviews: not checked off this week.");
+    expect(text).toContain("Share your review link: not checked off this week.");
+    expect(text).toContain("Add a photo: not checked off this week.");
+    expect(text).toContain("Check your hours: checked off this week.");
+    expect(text).toContain("Streak: 3 consecutive past week(s) fully checked off.");
+  });
+
+  test("reports no current streak honestly when there isn't one", () => {
+    const noStreak: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      weeklyRoutine: { ...BASE_CONTEXT.weeklyRoutine, streakWeeks: 0 },
+    };
+    const text = buildAssistantContextText(noStreak);
+    expect(text).toContain("No current streak.");
+    expect(text).not.toContain("Streak: 0");
+  });
+
+  test("always states the weekly routine is owner self-reported and that an unchecked item is never read as 'hasn't done it'", () => {
+    for (const context of [
+      BASE_CONTEXT,
+      { ...BASE_CONTEXT, growthMoves: [] },
+      {
+        ...BASE_CONTEXT,
+        weeklyRoutine: {
+          items: BASE_CONTEXT.weeklyRoutine.items.map((item) => ({ ...item, checkedThisWeek: false })),
+          streakWeeks: 0,
+        },
+      },
+    ]) {
+      const text = buildAssistantContextText(context);
+      expect(text).toContain(
+        "PostScore cannot see whether they actually posted an update, replied to a review, or added a photo."
+      );
+      expect(text).toContain('NOT that they haven\'t really done it');
+    }
   });
 });
 

@@ -7,6 +7,7 @@
 // app/actions/growthMoves.ts for the real signals it's given.
 
 import { DEFAULT_LOCALE, formatShortDate, t, type Locale } from "@/lib/i18n";
+import type { ScoreBreakdown } from "@/lib/scoring";
 
 export type GrowthMoveId =
   | "start_coupon"
@@ -57,6 +58,18 @@ export interface CompetitorPhotoSignal {
 
 export interface GrowthMoveSignals {
   businessId: string;
+  /** Whether suggesting a referral program is appropriate for this
+   * business's type at all — the exact same flag that already hides
+   * the Growth page's own "Refer a friend" tab (BizProfile.referralOk,
+   * config/bizProfiles.ts), false today only for lawyer (referral-fee
+   * arrangements are restricted under most states' rules of
+   * professional conduct). Gates start_referral below so this growth
+   * move can never suggest something the app elsewhere refuses to let
+   * the business actually do. Optional and defaults to true ONLY so
+   * existing test fixtures built before this field existed keep
+   * compiling/passing unchanged — every real caller (see
+   * app/actions/growthMoves.ts) always passes the real resolved value. */
+  referralOk?: boolean;
   /** True the moment a promos row has EVER existed for this business —
    * active or ended, never just "currently running." See the promos
    * table / app/actions/promos.ts. */
@@ -109,6 +122,25 @@ export function competitorPhotoCounts(
   return entries.filter((e) => !e.isSubject && e.photoCount !== null).map((e) => e.photoCount as number);
 }
 
+/** Real, localized labels of any determinable-but-below-full website
+ * quality checks — see GrowthMoveSignals.weakWebsiteIssueLabels. Lives
+ * here (not in app/actions/growthMoves.ts, a "use server" file where
+ * every export must be async) so the real signals loader AND anything
+ * else needing the exact same classification (e.g.
+ * scripts/preview-assistant-context.ts, which can't call the
+ * session-authenticated server action directly) share one real
+ * implementation, never two that could quietly drift apart. */
+export function weakWebsiteIssueLabels(breakdown: ScoreBreakdown): string[] {
+  return breakdown.checks
+    .filter(
+      (c) =>
+        (c.id === "website.performance_mobile" || c.id === "website.contact_conversion") &&
+        c.earnedPoints !== null &&
+        c.earnedPoints < c.maxPoints
+    )
+    .map((c) => c.label);
+}
+
 /**
  * Builds every growth move that genuinely fires for this business right
  * now — each gated on one real signal, never a guess. Order is fixed
@@ -138,7 +170,7 @@ export function buildGrowthMoves(signals: GrowthMoveSignals, locale: Locale = DE
     });
   }
 
-  if (!signals.hasEverCreatedReferral) {
+  if ((signals.referralOk ?? true) && !signals.hasEverCreatedReferral) {
     moves.push({
       id: "start_referral",
       title: t(locale, "dashboard.growth.moves.startReferral.title"),
