@@ -139,6 +139,65 @@ describe("buildAssistantContextText", () => {
     expect(text).toContain("Mobile-friendly");
   });
 
+  test("rounds every points value to at most 1 decimal, even a raw floating-point sum like 14.399999999999999", () => {
+    const floatArtifact: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      score: {
+        ...BASE_CONTEXT.score,
+        total: 74,
+        categories: [
+          { id: "visibility", label: "Visibility & Reputation", relativeScore: 62, earnedPoints: 14.399999999999999, possiblePoints: 34.00000000000001 },
+        ],
+        losingChecks: [
+          {
+            checkId: "visibility.review_count",
+            label: "Review count",
+            category: "visibility",
+            earnedPoints: 6.999999999999999,
+            maxPoints: 18,
+            explanation: "58 reviews on Google (full credit at 150+).",
+          },
+        ],
+      },
+      actionPlan: {
+        topTasks: [
+          {
+            label: "Uses HTTPS",
+            category: "website",
+            promisedPoints: 6.000000000000001,
+            action: "Move your website to HTTPS.",
+            effort: "quick_win",
+          },
+        ],
+      },
+      profile: {
+        ...BASE_CONTEXT.profile,
+        fixedItems: [{ label: "Photos on listing", pointsGained: 5.999999999999999, verifiedAt: "1/15/2026" }],
+      },
+    };
+    const text = buildAssistantContextText(floatArtifact);
+    expect(text).not.toContain("14.399999999999999");
+    expect(text).not.toContain("34.00000000000001");
+    expect(text).not.toContain("6.999999999999999");
+    expect(text).not.toContain("6.000000000000001");
+    expect(text).not.toContain("5.999999999999999");
+    // Each of these is only a hair off a whole number (ordinary binary
+    // floating-point error), so Number.isInteger still reads them as
+    // non-integers and they round to N.0 — exactly how the UI's own
+    // formatPoints would render the same raw values, never a bare
+    // integer it didn't actually earn.
+    expect(text).toContain("14.4/34.0 pts earned in this category");
+    expect(text).toContain("Review count: 7.0/18 pts");
+    expect(text).toContain("Uses HTTPS (+6.0 pts");
+    expect(text).toContain("Photos on listing (+6.0 pts");
+  });
+
+  test("prints a whole-number points value bare, with no trailing .0", () => {
+    const text = buildAssistantContextText(BASE_CONTEXT);
+    expect(text).toContain("74/100 (Grade C)");
+    expect(text).not.toContain("74.0/100");
+  });
+
   test("includes real competitor entries with price level, when a scan is available", () => {
     const text = buildAssistantContextText(BASE_CONTEXT);
     expect(text).toContain("Downtown Diner: PostScore 88 (B), Google price level: $$");

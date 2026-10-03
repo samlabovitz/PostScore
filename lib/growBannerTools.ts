@@ -25,19 +25,35 @@ export interface GrowBannerTool {
  * use a #hash anchor on that section's own id, scrolled into view on
  * mount by useScrollToHash (lib/useScrollToHash.ts) since Next's own
  * scroll-to-hash isn't reliable across a fresh client navigation.
+ *
+ * `referralOk` must be the caller's own already-resolved
+ * BizProfile.referralOk (config/bizProfiles.ts) — the exact same flag
+ * that already hides the Growth page's own "Refer a friend" tab, false
+ * today only for lawyer (referral-fee arrangements are restricted under
+ * most states' rules of professional conduct). The Referrals chip is
+ * suppressed when it's false, so the Overview strip never links to a
+ * tab that silently isn't there for this business (see
+ * segmentFromParam in GrowthView.tsx, which falls back to the default
+ * "plan" segment for ?tab=referral when referralOk is false).
  */
-export function buildGrowBannerTools(businessId: string): GrowBannerTool[] {
-  return [
+export function buildGrowBannerTools(businessId: string, referralOk: boolean): GrowBannerTool[] {
+  const tools: GrowBannerTool[] = [
     {
       icon: IconTicket,
       labelKey: "dashboard.overview.growBanner.tools.coupons.shortLabel",
       href: `/business/${businessId}/growth?tab=coupons`,
     },
-    {
+  ];
+
+  if (referralOk) {
+    tools.push({
       icon: IconUsers,
       labelKey: "dashboard.overview.growBanner.tools.referral.shortLabel",
       href: `/business/${businessId}/growth?tab=referral`,
-    },
+    });
+  }
+
+  tools.push(
     {
       icon: IconCalendarCheck,
       labelKey: "dashboard.overview.growBanner.tools.weeklyRoutine.shortLabel",
@@ -57,6 +73,8 @@ export function buildGrowBannerTools(businessId: string): GrowBannerTool[] {
       icon: IconTrophy,
       labelKey: "dashboard.overview.growBanner.tools.competitorCheck.shortLabel",
       href: `/business/${businessId}/competitors`,
-    },
-  ];
+    }
+  );
+
+  return tools;
 }

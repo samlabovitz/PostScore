@@ -301,6 +301,26 @@ function formatEffort(effort: TaskEffort): string {
 }
 
 /**
+ * Renders a points value the same way the UI does (see formatPoints in
+ * components/scoring/CategoryCard.tsx, intentionally duplicated here
+ * rather than imported — that file is a .tsx component module, and
+ * this one is shared by server actions and the preview script, neither
+ * of which should pull in React/JSX). A whole number prints bare; any
+ * other value rounds to exactly one decimal.
+ *
+ * This matters because several REAL DATA CONTEXT points values (every
+ * category's earnedPoints/possiblePoints, in particular) are plain
+ * floating-point sums of several already-rounded check values — summing
+ * e.g. several numbers already rounded to one decimal can still produce
+ * a result like 14.399999999999999 from ordinary binary floating-point
+ * error. Rounding here, at render time, fixes how the number reads in
+ * the prompt without touching the real breakdown math anywhere else.
+ */
+function formatPoints(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+/**
  * Where in PostScore a growth move is actually done, named the way the
  * owner's own screen names it — the real localized nav label, and the
  * real localized tab label where the move targets a specific tab.
@@ -379,7 +399,7 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
   const lines: string[] = [];
   lines.push("=== REAL DATA CONTEXT ===");
   lines.push(`Business: ${context.listing.name ?? "Unnamed business"} (${context.listing.categoryLabel})`);
-  lines.push(`PostScore: ${context.score.total}/100 (Grade ${context.score.grade})`);
+  lines.push(`PostScore: ${formatPoints(context.score.total)}/100 (Grade ${context.score.grade})`);
 
   lines.push("");
   lines.push("=== WHAT WE KNOW ABOUT THIS BUSINESS (persisted memory, carries across sessions) ===");
@@ -399,18 +419,20 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
       : "Typical job/ticket value range: not entered yet."
   );
   if (context.profile.scoreHistory.length >= 2) {
-    const trend = context.profile.scoreHistory.map((h) => `${h.date}: ${h.total} (${h.grade})`).join(" -> ");
+    const trend = context.profile.scoreHistory
+      .map((h) => `${h.date}: ${formatPoints(h.total)} (${h.grade})`)
+      .join(" -> ");
     lines.push(`Score history (oldest to newest, real saved scans): ${trend}.`);
   } else if (context.profile.scoreHistory.length === 1) {
     const only = context.profile.scoreHistory[0];
-    lines.push(`Score history: only one saved score so far — ${only.date}: ${only.total} (${only.grade}). No trend to compare yet.`);
+    lines.push(`Score history: only one saved score so far — ${only.date}: ${formatPoints(only.total)} (${only.grade}). No trend to compare yet.`);
   } else {
     lines.push("Score history: no saved scans yet.");
   }
   if (context.profile.fixedItems.length > 0) {
     lines.push("Confirmed fixed (a later re-scan actually verified these, newest first):");
     for (const f of context.profile.fixedItems) {
-      lines.push(`- ${f.label} (+${f.pointsGained} pts, confirmed ${f.verifiedAt ?? "on an earlier date"})`);
+      lines.push(`- ${f.label} (+${formatPoints(f.pointsGained)} pts, confirmed ${f.verifiedAt ?? "on an earlier date"})`);
     }
   } else {
     lines.push("Confirmed fixed: nothing confirmed fixed yet.");
@@ -420,13 +442,13 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
   lines.push("Category breakdown:");
   for (const c of context.score.categories) {
     const relative = c.relativeScore !== null ? `${Math.round(c.relativeScore)}/100` : "not enough data to score";
-    lines.push(`- ${c.label}: ${relative} (${c.earnedPoints}/${c.possiblePoints} pts earned in this category)`);
+    lines.push(`- ${c.label}: ${relative} (${formatPoints(c.earnedPoints)}/${formatPoints(c.possiblePoints)} pts earned in this category)`);
   }
 
   if (context.score.losingChecks.length > 0) {
     lines.push("Checks currently losing points (biggest opportunity first):");
     for (const c of context.score.losingChecks) {
-      lines.push(`- [${t(locale, CATEGORY_LABELS[c.category])}] ${c.label}: ${c.earnedPoints ?? 0}/${c.maxPoints} pts — ${c.explanation}`);
+      lines.push(`- [${t(locale, CATEGORY_LABELS[c.category])}] ${c.label}: ${formatPoints(c.earnedPoints ?? 0)}/${formatPoints(c.maxPoints)} pts — ${c.explanation}`);
     }
   } else {
     lines.push("No checks are currently losing points — every determinable check is at full points.");
@@ -445,7 +467,7 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
     lines.push("- No open tasks.");
   } else {
     for (const t of context.actionPlan.topTasks) {
-      lines.push(`- ${t.label} (+${t.promisedPoints} pts, ${formatEffort(t.effort)}): ${t.action}`);
+      lines.push(`- ${t.label} (+${formatPoints(t.promisedPoints)} pts, ${formatEffort(t.effort)}): ${t.action}`);
     }
   }
 

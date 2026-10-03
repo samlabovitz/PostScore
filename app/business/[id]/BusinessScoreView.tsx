@@ -547,9 +547,9 @@ function ListingChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
  * text-sm or dropping a chip, Spanish falls back to the same
  * overflow-x-auto scrolling every narrower screen already uses.
  */
-function GrowMoreCustomersBanner({ businessId }: { businessId: string }) {
+function GrowMoreCustomersBanner({ businessId, referralOk }: { businessId: string; referralOk: boolean }) {
   const locale = useLocale();
-  const tools = buildGrowBannerTools(businessId);
+  const tools = buildGrowBannerTools(businessId, referralOk);
 
   return (
     <Card className="min-w-0 px-4 py-2.5">
@@ -607,6 +607,7 @@ export function BusinessScoreView({
   assistant,
   benchmark,
   gbpConnected,
+  referralOk,
 }: {
   businessId: string;
   business: BusinessRecord;
@@ -616,6 +617,11 @@ export function BusinessScoreView({
   assistant: AssistantEmbedData;
   benchmark: GetLocalBenchmarkResult;
   gbpConnected: boolean;
+  /** BizProfile.referralOk (config/bizProfiles.ts) — the same flag that
+   * already hides the Growth page's own "Refer a friend" tab. Passed
+   * through to the growth strip's Referrals chip so it never links to a
+   * tab that isn't there for this business (lawyer today). */
+  referralOk: boolean;
 }) {
   const locale = useLocale();
   const { breakdown, projectedBreakdown } = result;
@@ -696,7 +702,7 @@ export function BusinessScoreView({
         </Card>
       )}
 
-      <GrowMoreCustomersBanner businessId={businessId} />
+      <GrowMoreCustomersBanner businessId={businessId} referralOk={referralOk} />
 
       <SectionHeading title={t(locale, "dashboard.overview.atAGlanceHeading")} />
       <Card className="p-5">

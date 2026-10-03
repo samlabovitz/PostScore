@@ -6,6 +6,7 @@ import { getBusinessSummary } from "@/app/actions/businesses";
 import { getAssistantPageData } from "@/app/actions/assistant";
 import { getLocalBenchmark } from "@/app/actions/competitors";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
+import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale, t } from "@/lib/i18n";
 import { BusinessScoreView, type AssistantEmbedData } from "./BusinessScoreView";
 
@@ -27,6 +28,12 @@ export default async function BusinessPage({ params }: { params: { id: string } 
   }
 
   const locale = normalizeLocale(summary.business.language);
+  const profile = resolveBizProfile(
+    summary.business.category,
+    summary.business.primary_type,
+    summary.business.business_type_override,
+    locale
+  );
 
   const scored = await scoreBusinessById(params.id, locale);
 
@@ -81,6 +88,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
         assistant={assistant}
         benchmark={benchmark}
         gbpConnected={gbpStatus.status === "ok" && gbpStatus.connected}
+        referralOk={profile.referralOk}
       />
     </DashboardShell>
   );
