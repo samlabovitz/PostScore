@@ -107,6 +107,7 @@ const BASE_CONTEXT: AssistantBusinessContext = {
     autoDetectedBusinessType: "Restaurant & Food Service",
     autoDetectedBusinessTypeId: "restaurant",
     businessTypeOverridden: false,
+    referralOk: true,
     location: "123 River St, Springfield",
     services: ["Brunch", "Catering"],
     avgJobValueLow: 15,
@@ -262,6 +263,26 @@ describe("buildAssistantContextText", () => {
     expect(text).toContain('Business type: Liquor & Wine Store (owner-corrected from Google\'s auto-detected "General Business")');
   });
 
+  test("states plainly why the referral tab isn't available, forbids proactively suggesting it, but allows an honest answer if asked", () => {
+    const noReferral: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      profile: { ...BASE_CONTEXT.profile, referralOk: false },
+    };
+    const text = buildAssistantContextText(noReferral);
+    expect(text).toContain('The Growth page\'s "Refer a friend" tab is not offered for this business type');
+    expect(text).toContain("referral-fee arrangements are restricted for attorneys under most states' rules of professional conduct");
+    expect(text).toContain("Never PROACTIVELY suggest or bring up a referral program for this business");
+    expect(text).toContain("If the owner directly asks about setting one up, answer honestly");
+    expect(text).toContain("suggest they check their own state bar's rules before running any referral program");
+    expect(text).toContain("Give no other legal advice beyond that");
+  });
+
+  test("says nothing about referral-tab availability when it IS available, rather than cluttering every context", () => {
+    const text = buildAssistantContextText(BASE_CONTEXT);
+    expect(BASE_CONTEXT.profile.referralOk).toBe(true);
+    expect(text).not.toContain("Refer a friend\" tab is not offered");
+  });
+
   test("is honest when no services, job value, score history, or fixed items are on file", () => {
     const empty: AssistantBusinessContext = {
       ...BASE_CONTEXT,
@@ -271,6 +292,7 @@ describe("buildAssistantContextText", () => {
         autoDetectedBusinessType: "Restaurant & Food Service",
         autoDetectedBusinessTypeId: "restaurant",
         businessTypeOverridden: false,
+        referralOk: true,
         location: null,
         services: [],
         avgJobValueLow: null,
@@ -455,6 +477,35 @@ describe("buildAssistantContextText", () => {
       expect(text).toContain('NOT that they haven\'t really done it');
     }
   });
+
+  test("states the real photo count plainly when it's below Google's 10-photo API cap", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: { ...BASE_CONTEXT.listing, photoCount: 7 },
+    });
+    expect(text).toContain("Photos on listing: 7.");
+    expect(text).not.toContain("or more");
+  });
+
+  test("states the photo count as a lower bound, never an exact number, once it hits Google's 10-photo API cap", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: { ...BASE_CONTEXT.listing, photoCount: 10 },
+    });
+    expect(text).toContain("Photos on listing: 10 or more");
+    expect(text).toContain("Google's own data only shares up to 10 photos per listing in this field, so this is a lower bound, not an exact count");
+    // Never a bare "10." immediately after the lower-bound phrasing —
+    // i.e. never silently drops back to stating it as an exact count.
+    expect(text).not.toMatch(/Photos on listing: 10\./);
+  });
+
+  test("still says honestly when no photo count was returned by Google at all", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: { ...BASE_CONTEXT.listing, photoCount: null },
+    });
+    expect(text).toContain("Photos on listing: not returned by Google.");
+  });
 });
 
 describe("buildAssistantStarterPrompts", () => {
@@ -527,10 +578,87 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
       "Growth page's Refer a friend tab",
       "the Pricing page",
       "the Competitors page",
-      "starter-site builder",
+      // Note: this wording changed from the original "starter-site
+      // builder" to the UI's own real label, "starter-site generator"
+      // (see dashboard.website.collapsible.title, "Starter website
+      // generator") — Day 3 step 2 also split this bullet in two, so
+      // the no-website generator and an existing-but-weak website's
+      // own score breakdown are never conflated.
+      "starter-site generator",
     ]) {
       expect(ASSISTANT_SYSTEM_RULES).toContain(phrase);
     }
     expect(ASSISTANT_SYSTEM_RULES).toContain("never invent a feature, page, or tab that isn't listed here");
+  });
+
+  test("points an EXISTING weak website to the Website page's score breakdown, never the no-website starter-site generator", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("An EXISTING website that's losing points");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("the Website page's own score breakdown");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("never the starter-site generator, which is only for a business with no website at all");
+  });
+
+  test("points building a weekly habit to the Growth page's weekly routine checklist", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain('the Growth page\'s "Your weekly routine" checklist');
+  });
+
+  test("points 'what should I do this week' to This week's plan, and bigger work to Bigger projects", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain('the Growth page\'s "This week\'s plan"');
+    expect(ASSISTANT_SYSTEM_RULES).toContain('"Bigger projects" on the same page');
+  });
+
+  test("points adding photos to the Overview page's real Photos check, matching where add_photos_vs_competitors actually sends owners", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain('the Overview page\'s "Photos" check');
+    expect(ASSISTANT_SYSTEM_RULES).toContain('"Where your points are"');
+  });
+
+  test("never proactively suggests the referral tab when unavailable, but allows an honest answer if the owner asks", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("ONLY when the REAL DATA CONTEXT below doesn't say that tab is unavailable");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("never PROACTIVELY suggest or bring up a referral program");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("if the owner directly ASKS about one, answer honestly using the real reason given in REAL DATA CONTEXT");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("Never give any legal advice beyond what's stated there");
+  });
+
+  test("does not default to reviews as the first-listed tool mapping", () => {
+    const mappingsBlock = ASSISTANT_SYSTEM_RULES.slice(ASSISTANT_SYSTEM_RULES.indexOf("BE A GUIDE TO POSTSCORE'S OWN TOOLS"));
+    const firstBulletIndex = mappingsBlock.indexOf("\n   - ");
+    const firstBullet = mappingsBlock.slice(firstBulletIndex, mappingsBlock.indexOf("\n", firstBulletIndex + 1));
+    expect(firstBullet.toLowerCase()).not.toContain("review");
+  });
+
+  test("rule 8 describes weekly-routine items only as checked/not-checked, never as a real claim about what the owner did", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("WEEKLY ROUTINE: EXACTLY WHAT YOU CAN SEE");
+    expect(ASSISTANT_SYSTEM_RULES).toContain('"checked off" or "not checked off yet this week."');
+    expect(ASSISTANT_SYSTEM_RULES).toContain("you only ever know whether they logged it, never whether they really did it");
+  });
+
+  test("rule 9 forbids promising points for growth moves, and scopes the coupon/referral facts to PostScore only", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("GROWTH MOVES: CUSTOMERS, NEVER SCORE");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("never promise or imply points for doing one");
+    expect(ASSISTANT_SYSTEM_RULES).toContain('never say the owner "doesn\'t run promotions" or "has no referral program"');
+  });
+
+  test("rule 9 says real action-plan points DO apply when a growth move overlaps a real losing check", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("BUT when the exact same real-world fix ALSO appears elsewhere in REAL DATA CONTEXT as a losing check or an action-plan task");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("Improve your website");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("Performance & mobile");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("adding photos overlapping a Photos check");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("the action plan's real points genuinely do apply to that fix — quote those real numbers, never deny or omit them");
+  });
+
+  test("rule 10 forbids implying memory of past conversations and requires variety within this one", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("VARIETY, WITHIN THIS CONVERSATION ONLY");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("don't imply you remember a past chat");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("don't repeat a recommendation you've already given");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("at most one review-related suggestion unless they specifically asked about reviews");
+  });
+
+  test("rule 10 requires an honest admission when no different real option is left, rather than inventing or repeating one", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("If REAL DATA CONTEXT genuinely has no different real option left to offer, say so honestly");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("rather than inventing a new one or just repeating what you already said");
+  });
+
+  test("rule 3 forbids stating an exact photo count once REAL DATA CONTEXT already describes it as a capped lower bound", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain('An exact photo count once REAL DATA CONTEXT already describes it as "X or more"');
+    expect(ASSISTANT_SYSTEM_RULES).toContain("Google's own data caps there");
   });
 });

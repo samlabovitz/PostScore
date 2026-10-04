@@ -243,6 +243,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     autoDetectedBusinessType: autoDetectedProfile.label,
     autoDetectedBusinessTypeId: autoDetectedProfile.id,
     businessTypeOverridden: businessTypeOverride !== null,
+    referralOk: profile.referralOk,
     location: summaryResult.business.address ?? null,
     services: summaryResult.business.services ?? [],
     avgJobValueLow: summaryResult.business.avg_job_value_low ?? null,

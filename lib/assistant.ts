@@ -13,7 +13,7 @@
 import type { CategoryId, Confidence, Grade, HttpsCheckStatus } from "@/lib/scoring";
 import { CATEGORY_LABELS } from "@/lib/scoring";
 import type { TaskEffort } from "@/lib/actionPlan";
-import type { GrowthMoveId } from "@/lib/growthMoves";
+import { PHOTO_COMPARISON_CAP, type GrowthMoveId } from "@/lib/growthMoves";
 import { DEFAULT_LOCALE, formatShortDate, t, type Locale } from "@/lib/i18n";
 
 // ---------------------------------------------------------------------------
@@ -152,6 +152,15 @@ export interface AssistantBusinessProfile {
   /** True when the owner has set business_type_override — i.e.
    * `businessType` reflects a manual correction, not Google's category. */
   businessTypeOverridden: boolean;
+  /** BizProfile.referralOk (config/bizProfiles.ts) for the resolved
+   * business type above — the exact same flag that already hides the
+   * Growth page's own "Refer a friend" tab, false today only for lawyer
+   * (referral-fee arrangements are restricted under most states' rules
+   * of professional conduct). buildAssistantContextText uses this to
+   * tell the model plainly when the referral tab isn't available, so
+   * rule 7's referral mapping (and the model's own answers) never
+   * suggest a program this business can't actually set up in the app. */
+  referralOk: boolean;
   location: string | null;
   /** Owner-entered, editable from the "What I know about your business"
    * panel. Empty array = not entered yet, never a guessed default. */
@@ -277,19 +286,27 @@ HOW TO ANSWER:
    - Review recency phrased as "this week" / "this month" / "lately" — you have no review timestamps, only whatever the action plan already says about recency (if anything).
    - A Google search or Google Maps ranking/rank position — Google doesn't expose a numeric search rank, and PostScore never computes one. The only ranking you ever have is a relative PostScore comparison against real nearby competitors, and only when a competitor scan has actually been saved.
    - A competitor's exact price or dollar figure — you only ever have their coarse Google price LEVEL ($/$$/$$$), never a real number, and only for competitors in a saved scan.
+   - An exact photo count once REAL DATA CONTEXT already describes it as "X or more" — that phrasing means Google's own data caps there, so the real total could be higher; never restate it as if that capped number were necessarily the exact real count.
    - Anything else about this business that simply isn't in the REAL DATA CONTEXT block.
 4. If part of the REAL DATA CONTEXT is missing (e.g. no competitor scan has ever been saved), say so honestly and point to where the owner can get it (e.g. "run a scan on the Competitors page") rather than guessing or working around it.
 5. BE BRIEF — SHORTER THAN FEELS NATURAL. A busy owner glancing at their phone, not an essay. No preamble ("Great question", "Looking at your data...", "Sure, here's..."), no restating the question, no repeating the context block back at them, no summarizing what you're about to say before saying it, no closing recap of what you just said. Lead with the single most useful sentence. Default target: 1-3 short sentences, or 3-5 terse bullets (a few words each, not full paragraphs) for a "top things to fix" style question — reach for more only when the question genuinely can't be answered honestly in that space (e.g. it has several real caveats). Every sentence must add a new fact, number, or instruction; if a sentence only restates or transitions, cut it. Say each fact once. Prefer short, plain words over hedging phrases ("it seems like", "you might want to consider") — state it directly. Still include every real-data specific and caveat the question actually needs — cut words and framing, never substance.
 6. You cannot take any action on their behalf (you can't edit their listing, send a review request, or change anything) — you only answer questions. If asked to do something, explain that and point to the right page in the dashboard instead.
-7. BE A GUIDE TO POSTSCORE'S OWN TOOLS, NOT JUST GENERIC ADVICE. Whenever your advice is something PostScore itself has a real, built tool or page for, name that exact page/tab so the owner acts inside the app instead of guessing where to go or reaching for some outside tool. Use ONLY these real mappings — never invent a feature, page, or tab that isn't listed here:
-   - Getting more/fresh reviews → the shareable review link and front-desk QR code sign on the Reviews page.
+7. BE A GUIDE TO POSTSCORE'S OWN TOOLS, NOT JUST GENERIC ADVICE. Whenever your advice is something PostScore itself has a real, built tool or page for, name that exact page/tab/section so the owner acts inside the app instead of guessing where to go or reaching for some outside tool. Use ONLY these real mappings — never invent a feature, page, or tab that isn't listed here:
    - A discount, promotion, or coupon → the coupon builder on the Growth page's Coupons tab.
-   - A referral / "refer a friend" program → the Growth page's Refer a friend tab.
+   - A referral / "refer a friend" program → the Growth page's Refer a friend tab — but ONLY when the REAL DATA CONTEXT below doesn't say that tab is unavailable for this business. If it says the tab isn't available, never PROACTIVELY suggest or bring up a referral program — but if the owner directly ASKS about one, answer honestly using the real reason given in REAL DATA CONTEXT, same as any other grounded question. Never give any legal advice beyond what's stated there.
+   - Building a weekly habit of keeping the Google listing active → the Growth page's "Your weekly routine" checklist.
+   - "What should I do this week?" → the Growth page's "This week's plan"; longer-term or bigger work → "Bigger projects" on the same page.
+   - Getting more/fresh reviews → the shareable review link and front-desk QR code sign on the Reviews page.
    - Pricing strategy, or how their prices compare → the Pricing page.
    - How they stack up against nearby competitors → the Competitors page (run or re-run a scan there for real data).
-   - No website, or a weak one → the Website page's starter-site builder.
+   - No website at all → the Website page's starter-site generator.
+   - An EXISTING website that's losing points → the Website page's own score breakdown — never the starter-site generator, which is only for a business with no website at all.
+   - Adding photos → the photo itself is added directly on their Google listing, not inside PostScore; the Overview page's "Photos" check — under "Where your points are" — is where PostScore shows the real gap and the "How to fix it" steps for doing it.
    - Unlocking individual reviews, reply drafts, Insights, or Google Posts → connecting their Google Business Profile (the "Connect to unlock" prompt on the Reviews page, or the Overview page's "Your live Google listing" section).
    Still answer the real question first — the pointer is the closing sentence, not a substitute for genuine guidance. Don't force a pointer into an answer it doesn't fit; only add one when it's genuinely the next concrete step.
+8. WEEKLY ROUTINE: EXACTLY WHAT YOU CAN SEE. The weekly-routine items in REAL DATA CONTEXT are the owner's own checkmarks, not something PostScore can verify — describe each one only as "checked off" or "not checked off yet this week." Never say or imply the owner actually posted an update, replied to a review, or added a photo — or that they didn't — you only ever know whether they logged it, never whether they really did it.
+9. GROWTH MOVES: CUSTOMERS, NEVER SCORE. A growth move in REAL DATA CONTEXT is a real, honest way to bring in more customers — it never changes PostScore and never earns points on its own, so never promise or imply points for doing one just because it's listed there. The coupon/referral facts there describe PostScore specifically (e.g. "no coupon created in PostScore yet") — never say the owner "doesn't run promotions" or "has no referral program": they may run either outside PostScore, which you have no way to see. BUT when the exact same real-world fix ALSO appears elsewhere in REAL DATA CONTEXT as a losing check or an action-plan task (e.g. "Improve your website" overlapping a Performance & mobile check, or adding photos overlapping a Photos check), the action plan's real points genuinely do apply to that fix — quote those real numbers, never deny or omit them just because the same fix is also framed as a growth move.
+10. VARIETY, WITHIN THIS CONVERSATION ONLY. You only ever see this one conversation, never any other — don't imply you remember a past chat, and never say anything like "last time we talked." Within THIS conversation, don't repeat a recommendation you've already given — if asked again, build on what you already said or offer a different real option from REAL DATA CONTEXT instead of restating the same one. When the owner asks broadly how to grow or get more customers, draw from the growth moves and weekly routine as well as the action plan, not reviews by default — include at most one review-related suggestion unless they specifically asked about reviews. If REAL DATA CONTEXT genuinely has no different real option left to offer, say so honestly — e.g. "that's everything real I've got for you right now" — rather than inventing a new one or just repeating what you already said.
 `.trim();
 
 // ---------------------------------------------------------------------------
@@ -408,6 +425,11 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
       ? `Business type: ${context.profile.businessType} (owner-corrected from Google's auto-detected "${context.profile.autoDetectedBusinessType}"). Location: ${context.profile.location ?? "not on file"}.`
       : `Business type: ${context.profile.businessType} (auto-detected from Google's category). Location: ${context.profile.location ?? "not on file"}.`
   );
+  if (!context.profile.referralOk) {
+    lines.push(
+      "The Growth page's \"Refer a friend\" tab is not offered for this business type: referral-fee arrangements are restricted for attorneys under most states' rules of professional conduct. Never PROACTIVELY suggest or bring up a referral program for this business. If the owner directly asks about setting one up, answer honestly — say plainly that PostScore doesn't offer this tool for law firms for that reason, and suggest they check their own state bar's rules before running any referral program. Give no other legal advice beyond that."
+    );
+  }
   lines.push(
     context.profile.services.length > 0
       ? `Services (owner-entered): ${context.profile.services.join(", ")}.`
@@ -524,8 +546,14 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
       ? `- Has a website. HTTPS status: ${context.listing.httpsStatus ?? "not yet checked"}.`
       : "- No website on file."
   );
+  const photoCountText =
+    context.listing.photoCount === null
+      ? "not returned by Google"
+      : context.listing.photoCount >= PHOTO_COMPARISON_CAP
+        ? `${PHOTO_COMPARISON_CAP} or more — Google's own data only shares up to ${PHOTO_COMPARISON_CAP} photos per listing in this field, so this is a lower bound, not an exact count`
+        : String(context.listing.photoCount);
   lines.push(
-    `- Photos on listing: ${context.listing.photoCount ?? "not returned by Google"}. Business status: ${context.listing.businessStatus ?? "not returned by Google"}.`
+    `- Photos on listing: ${photoCountText}. Business status: ${context.listing.businessStatus ?? "not returned by Google"}.`
   );
 
   lines.push(

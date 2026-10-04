@@ -386,6 +386,7 @@ async function main() {
     autoDetectedBusinessType: autoDetectedProfile.label,
     autoDetectedBusinessTypeId: autoDetectedProfile.id,
     businessTypeOverridden: businessTypeOverride !== null,
+    referralOk: profile.referralOk,
     location: summary.address ?? null,
     services: summary.services ?? [],
     avgJobValueLow: summary.avg_job_value_low ?? null,
