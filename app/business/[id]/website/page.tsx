@@ -25,8 +25,22 @@ export default async function WebsitePage({ params }: { params: { id: string } }
   // defaults to this same locale but the owner can switch it — so the
   // profile/FAQ are resolved once per language here, and the client
   // side (WebsiteGeneratorSection) picks between them at render time.
-  const profileEn = resolveBizProfile(data.category, data.primaryType, data.businessTypeOverride, "en");
-  const profileEs = resolveBizProfile(data.category, data.primaryType, data.businessTypeOverride, "es");
+  const profileEn = resolveBizProfile(
+    data.category,
+    data.primaryType,
+    data.businessTypeOverride,
+    "en",
+    data.categories,
+    data.businessName
+  );
+  const profileEs = resolveBizProfile(
+    data.category,
+    data.primaryType,
+    data.businessTypeOverride,
+    "es",
+    data.categories,
+    data.businessName
+  );
   const faqEn = renderFaq(profileEn.faq, { name: data.businessName, address: data.address });
   const faqEs = renderFaq(profileEs.faq, { name: data.businessName, address: data.address });
   const hasWebsite = !!data.website && data.website.trim().length > 0;

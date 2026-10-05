@@ -23,6 +23,11 @@ export interface WebsitePageData {
   businessName: string | null;
   address: string | null;
   category: string | null;
+  /** Every real secondary Google type for this business — feeds
+   * resolveBizProfile()'s secondary-Google-type lawyer check (see
+   * isLikelyLawFirm in config/bizProfiles.ts) for this page's own FAQ
+   * rendering, same real data already fetched for `category` above. */
+  categories: string[] | null;
   primaryType: string | null;
   businessTypeOverride: string | null;
   /** The business's own real language column — display-only, passed
@@ -170,7 +175,14 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const businessRow = data as BusinessScoringRow;
   const hasWebsite = !!data.website && data.website.trim().length > 0;
   const locale = normalizeLocale(data.language);
-  const profile = resolveBizProfile(data.category, data.primary_type, data.business_type_override, locale);
+  const profile = resolveBizProfile(
+    data.category,
+    data.primary_type,
+    data.business_type_override,
+    locale,
+    data.categories,
+    data.name
+  );
 
   const realInput = businessRowToScoringInput(businessRow);
   const realBreakdown = scoreBusiness(realInput, locale);
@@ -207,6 +219,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       businessName: data.name,
       address: data.address,
       category: data.category,
+      categories: data.categories,
       primaryType: data.primary_type,
       businessTypeOverride: data.business_type_override,
       language: data.language,

@@ -117,17 +117,35 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     return { status: "error", message: scored.message };
   }
 
+  // scored.business (from scoreBusinessById, already awaited above)
+  // already selects categories/name as part of its own wider real-data
+  // query — reused here rather than widening summaryResult's own
+  // getBusinessSummary select a second time for the same two columns.
+  //
+  // autoDetectedProfile deliberately passes `categories` (real Google
+  // type data) but NOT `name` — its one job is showing "what Google's
+  // own data says" as an honest contrast against an owner's override
+  // (see AssistantBusinessProfile.autoDetectedBusinessType's own doc).
+  // A business's own NAME isn't Google category data, so including it
+  // here would risk a confusing "owner-corrected from Google's
+  // auto-detected X" when X and the override happen to be the same
+  // profile — name-based detection stays reserved for the real
+  // resolution path below (`profile`), the one callers actually use.
   const autoDetectedProfile = bizProfile(
     summaryResult.business.category,
     summaryResult.business.primary_type,
-    locale
+    locale,
+    scored.business.categories,
+    null
   );
   const businessTypeOverride = summaryResult.business.business_type_override ?? null;
   const profile = resolveBizProfile(
     summaryResult.business.category,
     summaryResult.business.primary_type,
     businessTypeOverride,
-    locale
+    locale,
+    scored.business.categories,
+    scored.business.name
   );
   const input = businessRowToScoringInput(scored.business);
   const { breakdown, suggestions } = scored.result;

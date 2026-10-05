@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { bizProfile, bizProfileById, getBizProfileOptions } from "./bizProfiles";
+import { bizProfile, bizProfileById, getBizProfileOptions, resolveBizProfile } from "./bizProfiles";
 
 const NEW_TYPE_IDS = [
   "home_services",
@@ -202,5 +202,72 @@ describe("Day 2 step 2b — short-keyword word-boundary matching", () => {
 
   test('"Splash pad" is not nail_salon (the "lash" inside "splash" false match)', () => {
     expect(bizProfile("Splash pad", null).id).not.toBe("nail_salon");
+  });
+});
+
+describe("Fix D — conservative law-firm auto-detection beyond the primary category", () => {
+  test("a legal Google type in SECONDARY types alone (never the primary) resolves to lawyer — the real Kimmel & Silverman shape: category/primaryType both say Consultant", () => {
+    const profile = bizProfile("Consultant", "consultant", "en", ["consultant", "lawyer"], null);
+    expect(profile.id).toBe("lawyer");
+  });
+
+  test("a legal Google type (legal_services) anywhere in secondary types resolves to lawyer", () => {
+    const profile = bizProfile("Consultant", "consultant", "en", ["consultant", "legal_services"], null);
+    expect(profile.id).toBe("lawyer");
+  });
+
+  test('name "Law Offices of X" with a non-legal (consultant) Google type still resolves to lawyer', () => {
+    const profile = bizProfile("Consultant", "consultant", "en", null, "Law Offices of Jane Smith");
+    expect(profile.id).toBe("lawyer");
+  });
+
+  test('name "Kimmel & Silverman PC, Delaware Lemon Law Firm" with a Consultant Google type resolves to lawyer — the real audit case', () => {
+    const profile = bizProfile(
+      "Consultant",
+      "consultant",
+      "en",
+      null,
+      "Kimmel & Silverman PC, Delaware Lemon Law Firm"
+    );
+    expect(profile.id).toBe("lawyer");
+  });
+
+  test('name matches "attorney(s)" / "lawyer(s)" / "Esq." too, each a whole word, not just "law firm"/"law office(s)"', () => {
+    expect(bizProfile(null, null, "en", null, "Smith & Jones Attorneys at Law").id).toBe("lawyer");
+    expect(bizProfile(null, null, "en", null, "Jane Smith, Attorney").id).toBe("lawyer");
+    expect(bizProfile(null, null, "en", null, "City Lawyers Group").id).toBe("lawyer");
+    expect(bizProfile(null, null, "en", null, "John Smith, Esq.").id).toBe("lawyer");
+  });
+
+  test('"Lawn Care Pros" is NOT detected as a law firm — "law" is only a prefix of "Lawn", never the word "law"', () => {
+    const profile = bizProfile("Landscaper", "landscaper", "en", null, "Lawn Care Pros");
+    expect(profile.id).not.toBe("lawyer");
+  });
+
+  test('"Lawson\'s Bakery" is NOT detected as a law firm — "law" is only a prefix of "Lawson\'s"', () => {
+    const profile = bizProfile("Bakery", "bakery", "en", null, "Lawson's Bakery");
+    expect(profile.id).not.toBe("lawyer");
+  });
+
+  test("an unrelated secondary type list with no real legal type never triggers lawyer detection", () => {
+    const profile = bizProfile("Consultant", "consultant", "en", ["consultant", "tutoring_service"], null);
+    expect(profile.id).not.toBe("lawyer");
+  });
+
+  test("resolveBizProfile: a manual override to some OTHER type still wins even when the name/secondary types say lawyer", () => {
+    const profile = resolveBizProfile(
+      "Consultant",
+      "consultant",
+      "consultant",
+      "en",
+      ["lawyer"],
+      "Law Offices of Jane Smith"
+    );
+    expect(profile.id).toBe("consultant");
+  });
+
+  test("resolveBizProfile: a manual override TO lawyer still wins even with no secondary-type or name signal at all", () => {
+    const profile = resolveBizProfile("Restaurant", "restaurant", "lawyer", "en", null, "Joe's Diner");
+    expect(profile.id).toBe("lawyer");
   });
 });

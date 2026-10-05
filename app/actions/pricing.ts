@@ -313,7 +313,9 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
     row.category,
     row.primary_type,
     row.business_type_override,
-    locale
+    locale,
+    row.categories,
+    row.name
   ).label;
   const prompt = buildPricingPrompt({
     businessTypeLabel,

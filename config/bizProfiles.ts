@@ -2468,8 +2468,12 @@ interface BusinessTypeOption {
    * no keyword is reused across two entries.
    */
   match: string[];
-  /** Representative Google Places type slugs — informational metadata,
-   * not a rewiring of lib/competitors.ts's own matching. */
+  /** Representative Google Places type slugs — informational metadata
+   * for most profiles (not a rewiring of lib/competitors.ts's own
+   * matching), but for "lawyer" specifically ALSO the real set
+   * bizProfile()'s secondary-Google-type check (see isLikelyLawFirm)
+   * matches a business's full real `categories` list against, not just
+   * its single primary type. */
   placesType: string[];
   /** Which hand-written content this type's coupons/offers/growth ideas/
    * FAQ/pricing tips/referral rules actually come from. */
@@ -2898,11 +2902,70 @@ function keywordMatches(haystack: string, keyword: string): boolean {
   return new RegExp(`\\b${escaped}s?\\b`).test(haystack);
 }
 
+/**
+ * Whole words/phrases a real law firm's own business name genuinely
+ * uses — never a bare "law" stem, which would also match "Lawn Care"
+ * or "Lawson's Bakery". Every alternative requires a real word boundary
+ * on both sides (`\b`), so "Lawn"/"Lawson's" can never match "law firm"/
+ * "law office(s)"/"lawyer(s)" — none of those phrases are substrings of
+ * either name. Case-insensitive since a real business name's casing is
+ * never guaranteed.
+ */
+const LAWYER_NAME_PATTERN = /\blaw\s+(?:firm|offices?)\b|\battorneys?\b|\blawyers?\b|\besq\.?\b/i;
+
+/**
+ * Conservative, lawyer-specific signal Google's own free-text category/
+ * primary-type sometimes misses entirely (see Kimmel & Silverman PC,
+ * Delaware Lemon Law Firm — real category "Consultant", real primary
+ * type "consultant", neither of which contains any lawyer keyword) —
+ * checked against two REAL, independent facts instead:
+ *   1. Any of the business's REAL Google types (primary type, plus every
+ *      secondary type in `categories` — Google often tags a listing with
+ *      several) is a real legal Places type slug ("lawyer"/
+ *      "legal_services", taken from the "lawyer" BusinessTypeOption's
+ *      own placesType — never a second, separately-maintained list).
+ *   2. The business's own real name matches LAWYER_NAME_PATTERN above.
+ * Both are strong, specific, low-false-positive signals — never a bare
+ * substring like "law" — so this is safe to let override a looser
+ * generic-category match (e.g. "Consultant") elsewhere in bizProfile().
+ */
+function isLikelyLawFirm(
+  primaryType: string | null | undefined,
+  categories: string[] | null | undefined,
+  name: string | null | undefined
+): boolean {
+  const lawyerOption = BUSINESS_TYPE_OPTIONS.find((o) => o.id === "lawyer");
+  const legalPlacesTypes = new Set((lawyerOption?.placesType ?? []).map((t) => t.toLowerCase()));
+  const realGoogleTypes = [primaryType, ...(categories ?? [])].filter((t): t is string => !!t);
+  if (realGoogleTypes.some((t) => legalPlacesTypes.has(t.toLowerCase()))) return true;
+  return !!name && LAWYER_NAME_PATTERN.test(name);
+}
+
 export function bizProfile(
   category: string | null | undefined,
   primaryType?: string | null,
-  locale: Locale = DEFAULT_LOCALE
+  locale: Locale = DEFAULT_LOCALE,
+  /** Every real secondary Google type for this business (businesses.
+   * categories) — optional and appended last so every existing caller
+   * keeps compiling and behaving identically without passing it; only
+   * feeds isLikelyLawFirm's secondary-type check above. */
+  categories?: string[] | null,
+  /** The business's own real name — optional, same reasoning as
+   * `categories`; only feeds isLikelyLawFirm's name-pattern check. */
+  name?: string | null
 ): BizProfile {
+  // Checked FIRST, ahead of the generic keyword loop below: a real
+  // secondary Google type or a real name match is strong enough
+  // evidence to correctly override a looser generic match (e.g.
+  // "Consultant") the loop would otherwise return for a real law firm
+  // Google itself mis-categorized. An owner's own manual correction
+  // still always wins over this — see resolveBizProfile(), which only
+  // ever calls this function as the no-override fallback.
+  if (isLikelyLawFirm(primaryType, categories, name)) {
+    const lawyerOption = BUSINESS_TYPE_OPTIONS.find((o) => o.id === "lawyer")!;
+    return localizeBizProfile(buildResolvedProfileSource(lawyerOption), locale);
+  }
+
   const haystack = `${category ?? ""} ${primaryType ?? ""}`.toLowerCase();
   if (!haystack.trim()) return localizeBizProfile(buildResolvedProfileSource(DEFAULT_OPTION), locale);
 
@@ -2955,9 +3018,14 @@ export function resolveBizProfile(
   category: string | null | undefined,
   primaryType: string | null | undefined,
   override?: string | null,
-  locale: Locale = DEFAULT_LOCALE
+  locale: Locale = DEFAULT_LOCALE,
+  /** Same optional, appended-last reasoning as bizProfile()'s own
+   * `categories`/`name` params — only used when there's no override to
+   * apply, since a manual correction always wins regardless of either. */
+  categories?: string[] | null,
+  name?: string | null
 ): BizProfile {
-  return bizProfileById(override, locale) ?? bizProfile(category, primaryType, locale);
+  return bizProfileById(override, locale) ?? bizProfile(category, primaryType, locale, categories, name);
 }
 
 /** Best-effort city extraction from a Google formatted address (typically

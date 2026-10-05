@@ -19,7 +19,14 @@ export default async function PricingPage({ params }: { params: { id: string } }
 
   const { business } = summary;
   const locale = normalizeLocale(business.language);
-  const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override, locale);
+  const profile = resolveBizProfile(
+    business.category,
+    business.primary_type,
+    business.business_type_override,
+    locale,
+    business.categories,
+    business.name
+  );
   const [pricesResult, assessmentResult] = await Promise.all([
     getPrices(params.id),
     getPricingAssessment(params.id),

@@ -421,9 +421,19 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
   lines.push("");
   lines.push("=== WHAT WE KNOW ABOUT THIS BUSINESS (persisted memory, carries across sessions) ===");
   lines.push(
-    context.profile.businessTypeOverridden
-      ? `Business type: ${context.profile.businessType} (owner-corrected from Google's auto-detected "${context.profile.autoDetectedBusinessType}"). Location: ${context.profile.location ?? "not on file"}.`
-      : `Business type: ${context.profile.businessType} (auto-detected from Google's category). Location: ${context.profile.location ?? "not on file"}.`
+    !context.profile.businessTypeOverridden
+      ? `Business type: ${context.profile.businessType} (auto-detected from Google's category). Location: ${context.profile.location ?? "not on file"}.`
+      : context.profile.businessTypeId === context.profile.autoDetectedBusinessTypeId
+        ? // The owner's own real override happens to land on the exact
+          // same profile Google's own data (now, with the improved
+          // detection — see Fix D in config/bizProfiles.ts) would also
+          // suggest. Saying "owner-corrected from Google's auto-detected
+          // X" here would be literally true but read as if the owner
+          // fixed a mistake that no longer exists — never claim a real
+          // override is "just" auto-detection, but don't invent a
+          // disagreement that isn't real either.
+          `Business type: ${context.profile.businessType} (set by the owner; matches Google's category). Location: ${context.profile.location ?? "not on file"}.`
+        : `Business type: ${context.profile.businessType} (owner-corrected from Google's auto-detected "${context.profile.autoDetectedBusinessType}"). Location: ${context.profile.location ?? "not on file"}.`
   );
   if (!context.profile.referralOk) {
     lines.push(

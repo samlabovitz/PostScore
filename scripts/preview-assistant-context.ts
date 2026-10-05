@@ -285,9 +285,25 @@ async function main() {
     process.exit(1);
   }
 
-  const autoDetectedProfile = bizProfile(summary.category, summary.primary_type, locale);
+  // Mirrors app/actions/assistant.ts's own loadContext() exactly,
+  // including the `name` omission on autoDetectedProfile specifically —
+  // see that file's own comment for why.
+  const autoDetectedProfile = bizProfile(
+    summary.category,
+    summary.primary_type,
+    locale,
+    scored.business.categories,
+    null
+  );
   const businessTypeOverride = summary.business_type_override ?? null;
-  const profile = resolveBizProfile(summary.category, summary.primary_type, businessTypeOverride, locale);
+  const profile = resolveBizProfile(
+    summary.category,
+    summary.primary_type,
+    businessTypeOverride,
+    locale,
+    scored.business.categories,
+    scored.business.name
+  );
   const { input } = scored;
   const { breakdown, suggestions } = scored.result;
 

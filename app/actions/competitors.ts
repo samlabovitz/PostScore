@@ -122,7 +122,9 @@ export async function getCompetitorsWithClient(
       row.category,
       row.primary_type,
       row.business_type_override,
-      locale
+      locale,
+      row.categories,
+      row.name
     ).competitorNoun;
     return {
       status: "ok",
@@ -370,7 +372,7 @@ export async function getLocalBenchmark(businessId: string): Promise<GetLocalBen
 
   const { data: business, error: businessError } = await supabase
     .from("businesses")
-    .select("category, primary_type, business_type_override, language")
+    .select("name, category, categories, primary_type, business_type_override, language")
     .eq("id", businessId)
     .single();
 
@@ -382,7 +384,9 @@ export async function getLocalBenchmark(businessId: string): Promise<GetLocalBen
     business.category,
     business.primary_type,
     business.business_type_override,
-    normalizeLocale(business.language)
+    normalizeLocale(business.language),
+    business.categories,
+    business.name
   ).competitorNoun;
 
   const snapshot = await getLatestCompetitorSnapshot(businessId);

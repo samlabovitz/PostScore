@@ -32,7 +32,9 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     summary.business.category,
     summary.business.primary_type,
     summary.business.business_type_override,
-    locale
+    locale,
+    summary.business.categories,
+    summary.business.name
   );
 
   const scored = await scoreBusinessById(params.id, locale);

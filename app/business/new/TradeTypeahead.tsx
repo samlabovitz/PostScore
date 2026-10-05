@@ -70,8 +70,8 @@ export function TradeTypeahead({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const autoDetectedLabel = useMemo(
-    () => bizProfile(place.primaryCategory, place.primaryType, locale).label,
-    [place.primaryCategory, place.primaryType, locale]
+    () => bizProfile(place.primaryCategory, place.primaryType, locale, place.categories, place.name).label,
+    [place.primaryCategory, place.primaryType, place.categories, place.name, locale]
   );
 
   const committedLabel = pick ? (tradeLabel(pick.tradeId, locale) ?? autoDetectedLabel) : autoDetectedLabel;

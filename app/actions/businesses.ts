@@ -280,6 +280,12 @@ export interface BusinessSummary {
    */
   category?: string | null;
   primary_type?: string | null;
+  /** Every real secondary Google type for this business (not just the
+   * primary) — feeds bizProfile()'s secondary-Google-type lawyer check
+   * (see isLikelyLawFirm in config/bizProfiles.ts). Optional for the
+   * same reason category/primary_type are: only getBusinessSummary()
+   * itself always populates it. */
+  categories?: string[] | null;
   /**
    * The owner's manual correction of business type, when Google's own
    * category/primary_type resolves to the wrong (often too-generic)
@@ -344,7 +350,7 @@ export async function getBusinessSummary(businessId: string): Promise<GetBusines
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, category, primary_type, business_type_override, trade_id, phone, services, avg_job_value_low, avg_job_value_high, language"
+      "id, name, address, category, categories, primary_type, business_type_override, trade_id, phone, services, avg_job_value_low, avg_job_value_high, language"
     )
     .eq("id", businessId)
     .single();

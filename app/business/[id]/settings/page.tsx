@@ -59,9 +59,27 @@ export default async function SettingsPage({ params }: { params: { id: string } 
   // this whole section never actually renders yet.
   const subscriptionPeriodEndDate: string | null = null;
 
-  const autoDetectedProfile = bizProfile(business.category, business.primary_type, locale);
+  // `name` deliberately omitted here — autoDetectedProfile's one job is
+  // showing "what Google's own category data says," as honest contrast
+  // against the owner's correction below; a business's own name isn't
+  // Google category data (see the same reasoning in loadContext(),
+  // app/actions/assistant.ts).
+  const autoDetectedProfile = bizProfile(
+    business.category,
+    business.primary_type,
+    locale,
+    business.categories,
+    null
+  );
   const businessTypeOverride = business.business_type_override ?? null;
-  const profile = resolveBizProfile(business.category, business.primary_type, businessTypeOverride, locale);
+  const profile = resolveBizProfile(
+    business.category,
+    business.primary_type,
+    businessTypeOverride,
+    locale,
+    business.categories,
+    business.name
+  );
   const tradeName = business.trade_id ? tradeLabel(business.trade_id, locale) : null;
 
   return (

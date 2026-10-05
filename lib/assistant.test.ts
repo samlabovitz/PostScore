@@ -248,7 +248,7 @@ describe("buildAssistantContextText", () => {
     expect(text).toContain("Photos on listing (+6 pts, confirmed 1/15/2026)");
   });
 
-  test("notes an owner-corrected business type honestly, including what Google actually detected", () => {
+  test("notes an owner-corrected business type honestly, including what Google actually detected, when the override DIFFERS from auto-detection", () => {
     const overridden: AssistantBusinessContext = {
       ...BASE_CONTEXT,
       profile: {
@@ -256,11 +256,41 @@ describe("buildAssistantContextText", () => {
         businessType: "Liquor & Wine Store",
         businessTypeId: "default",
         autoDetectedBusinessType: "General Business",
+        autoDetectedBusinessTypeId: "default_auto", // deliberately different id from businessTypeId above
         businessTypeOverridden: true,
       },
     };
     const text = buildAssistantContextText(overridden);
     expect(text).toContain('Business type: Liquor & Wine Store (owner-corrected from Google\'s auto-detected "General Business")');
+    expect(text).not.toContain("set by the owner; matches Google's category");
+  });
+
+  test("says the override MATCHES Google's category, never 'owner-corrected,' when the real override resolves to the SAME profile id auto-detection now does — the real Kimmel & Silverman shape", () => {
+    // A real business can have BOTH a genuine manual override AND an
+    // improved auto-detection (see Fix D — isLikelyLawFirm in
+    // config/bizProfiles.ts) that independently lands on the exact same
+    // real profile, from the business's own real secondary Google types
+    // (Kimmel & Silverman PC, Delaware Lemon Law Firm: override "lawyer",
+    // and its real `categories` array already includes "lawyer" too).
+    // "Owner-corrected from Google's auto-detected X" would be
+    // literally true but read as if the owner fixed a mistake that no
+    // longer exists — this must say the override simply matches,
+    // never silently drop the fact that it's still a real override.
+    const overriddenMatchingAutoDetect: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      profile: {
+        ...BASE_CONTEXT.profile,
+        businessType: "Law Firm",
+        businessTypeId: "lawyer",
+        autoDetectedBusinessType: "Law Firm",
+        autoDetectedBusinessTypeId: "lawyer",
+        businessTypeOverridden: true,
+      },
+    };
+    const text = buildAssistantContextText(overriddenMatchingAutoDetect);
+    expect(text).toContain("Business type: Law Firm (set by the owner; matches Google's category).");
+    expect(text).not.toContain("owner-corrected from Google's auto-detected");
+    expect(text).not.toContain("Business type: Law Firm (auto-detected from Google's category)");
   });
 
   test("states plainly why the referral tab isn't available, forbids proactively suggesting it, but allows an honest answer if asked", () => {
