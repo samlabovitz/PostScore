@@ -332,7 +332,7 @@ async function main() {
         const subjectRank = sorted.findIndex((e) => e.isSubject) + 1;
         return {
           available: true,
-          scanAt: new Date(snapshot.createdAt).toLocaleDateString(),
+          scanAt: formatShortDate(snapshot.createdAt, locale),
           subjectRank: subjectRank > 0 ? subjectRank : null,
           entries: sorted.map((e) => ({
             name: e.name ?? "Unnamed business",
@@ -393,7 +393,7 @@ async function main() {
   const fixedItems: AssistantFixedItem[] = completed.slice(0, MAX_FIXED_ITEMS_IN_CONTEXT).map((c) => ({
     label: c.label,
     pointsGained: c.pointsGained,
-    verifiedAt: c.verifiedAt ? new Date(c.verifiedAt).toLocaleDateString() : null,
+    verifiedAt: c.verifiedAt ? formatShortDate(c.verifiedAt, locale) : null,
   }));
 
   const businessProfile: AssistantBusinessProfile = {

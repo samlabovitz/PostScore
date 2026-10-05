@@ -284,7 +284,7 @@ async function loadBusinessContext(businessId: string, localeOverride?: Locale):
         const subjectRank = sorted.findIndex((e) => e.isSubject) + 1;
         return {
           available: true,
-          scanAt: new Date(snapshot.createdAt).toLocaleDateString(),
+          scanAt: formatShortDate(snapshot.createdAt, locale),
           subjectRank: subjectRank > 0 ? subjectRank : null,
           entries: sorted.map((e) => ({
             name: e.name ?? "Unnamed business",
@@ -343,7 +343,7 @@ async function loadBusinessContext(businessId: string, localeOverride?: Locale):
   const fixedItems: AssistantFixedItem[] = completed.slice(0, 8).map((c) => ({
     label: c.label,
     pointsGained: c.pointsGained,
-    verifiedAt: c.verifiedAt ? new Date(c.verifiedAt).toLocaleDateString() : null,
+    verifiedAt: c.verifiedAt ? formatShortDate(c.verifiedAt, locale) : null,
   }));
 
   const businessProfile: AssistantBusinessProfile = {

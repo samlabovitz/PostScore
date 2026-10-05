@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { normalizeLocale } from "./locale";
 import { t, tPlural, type MessageKey } from "./messages";
-import { formatMonthLabel, reportCoverageMonth } from "./format";
+import { DEFAULT_BUSINESS_TIMEZONE, formatMonthLabel, formatShortDate, reportCoverageMonth } from "./format";
 
 describe("normalizeLocale", () => {
   test("falls back to 'en' for a garbage value", () => {
@@ -107,5 +107,38 @@ describe("reportCoverageMonth", () => {
     // real New York calendar date is still September, so the month this
     // covers is honestly August.
     expect(reportCoverageMonth("2026-10-01T02:00:00.000Z", "en")).toEqual({ month: "August", year: "2026" });
+  });
+});
+describe("formatShortDate", () => {
+  test("formats a comfortably mid-day UTC timestamp the same regardless of timezone", () => {
+    expect(formatShortDate("2026-09-28T14:00:00.000Z", "en")).toBe("Sep 28, 2026");
+    expect(formatShortDate("2026-09-28T14:00:00.000Z", "es")).toBe("28 sept 2026");
+  });
+
+  // Day 3 round 2's real bug: a scan saved late in the evening US-Eastern
+  // (9:30pm on Sep 30) is already past midnight UTC (1:30am Oct 1) — the
+  // old implementation (no timeZone pin, i.e. whatever the server
+  // process's own ambient timezone happens to be) could show "Oct 1" for
+  // a scan the business owner saved on the evening of the 30th. Default
+  // business timezone is America/New_York until a real per-business one
+  // exists (see DEFAULT_BUSINESS_TIMEZONE's own doc).
+  const LATE_EVENING_SEP_30_EASTERN = "2026-10-01T01:30:00.000Z"; // 9:30pm EDT on Sep 30
+
+  test("a timestamp late in the evening US-Eastern still shows the business's own real local day, not the UTC-rolled-over day", () => {
+    expect(formatShortDate(LATE_EVENING_SEP_30_EASTERN, "en")).toBe("Sep 30, 2026");
+    expect(formatShortDate(LATE_EVENING_SEP_30_EASTERN, "es")).toBe("30 sept 2026");
+  });
+
+  test("defaults to DEFAULT_BUSINESS_TIMEZONE (America/New_York) when no timeZone is passed", () => {
+    expect(DEFAULT_BUSINESS_TIMEZONE).toBe("America/New_York");
+    expect(formatShortDate(LATE_EVENING_SEP_30_EASTERN, "en", DEFAULT_BUSINESS_TIMEZONE)).toBe(
+      formatShortDate(LATE_EVENING_SEP_30_EASTERN, "en")
+    );
+  });
+
+  test("an explicit timeZone override still works, for whenever a real per-business timezone exists", () => {
+    // In real UTC, this same moment IS already Oct 1 — passing UTC
+    // explicitly proves the parameter is real, not a no-op.
+    expect(formatShortDate(LATE_EVENING_SEP_30_EASTERN, "en", "UTC")).toBe("Oct 1, 2026");
   });
 });

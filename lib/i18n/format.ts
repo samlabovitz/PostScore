@@ -53,18 +53,41 @@ export function reportCoverageMonth(sendDate: string, locale: Locale): { month: 
 }
 
 /**
+ * No business has a stored timezone column today (see
+ * businesses/supabase/schema.sql — confirmed empty of any tz column),
+ * and this server process's own runtime timezone is incidental (Vercel
+ * defaults to UTC) and has nothing to do with where the business
+ * actually is — so every owner-facing date about a specific moment
+ * (a scan, a price check, a confirmed fix) falls back to this single
+ * constant until a real per-business timezone exists. Same fallback,
+ * same reasoning, as WEEKLY_CHECKLIST_TIMEZONE in
+ * lib/weeklyChecklist.ts (a different feature, independently arriving
+ * at the identical answer) — if a real per-business timezone is ever
+ * added, thread it through formatShortDate's `timeZone` parameter
+ * below instead of this constant.
+ */
+export const DEFAULT_BUSINESS_TIMEZONE = "America/New_York";
+
+/**
  * Formats an ISO timestamp as a short, locale-appropriate date — e.g.
  * "Sep 28, 2026" (en) or "28 sept 2026" (es). Unlike formatMonthLabel,
  * this is for a real moment in time (e.g. pricing_assessed_at), not a
- * UTC-midnight calendar date, so it deliberately does NOT pin
- * timeZone: "UTC" — it renders in whatever timezone the process runs
- * in, same as every other "when did this happen" timestamp display in
- * the app.
+ * UTC-midnight calendar date.
+ *
+ * `timeZone` defaults to DEFAULT_BUSINESS_TIMEZONE rather than the
+ * server process's own ambient timezone — load-bearing, not decoration:
+ * a scan saved late in the evening US-Eastern (e.g. 11:30pm on the
+ * 30th) is already past midnight UTC (12:30am the 1st), so formatting
+ * in whatever timezone the process happens to run in could silently
+ * roll the displayed date forward a full day from the business's own
+ * real local day. Every caller gets this fix automatically; pass an
+ * explicit `timeZone` only once a real per-business one exists.
  */
-export function formatShortDate(date: string, locale: Locale): string {
+export function formatShortDate(date: string, locale: Locale, timeZone: string = DEFAULT_BUSINESS_TIMEZONE): string {
   return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone,
   }).format(new Date(date));
 }
