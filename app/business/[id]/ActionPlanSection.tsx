@@ -415,12 +415,23 @@ export function TaskCard({
 /**
  * A growth move's card — visually similar to TaskCard, but never has a
  * status pill, points, or a mark-done button, since a growth move never
- * earns points and PostScore has no way to verify a customer-getting
- * habit the way it verifies a scoring check. The badge is the one thing
- * that must never be skipped: it's what keeps a growth move from being
- * mistaken for a scored action plan item.
+ * earns points on its own and PostScore has no way to verify a
+ * customer-getting habit the way it verifies a scoring check. The badge
+ * is the one thing that must never be skipped: it's what keeps a
+ * growth move from being mistaken for a scored action plan item.
+ *
+ * `overlapsActionPlan` is real, live data (see
+ * growthMoveOverlapsActionPlan in lib/growthMoveOverlap.ts), never a
+ * static per-move assumption: true only when this move's real
+ * underlying check is CURRENTLY an open task in "This week's plan" or
+ * "Bigger projects" — e.g. "Improve your website" while a real
+ * Performance & mobile task is still open, or adding photos while the
+ * listing genuinely has zero. When true, the badge says so (still no
+ * points number here — the real number is quoted on the real task card
+ * above, never duplicated or guessed at here) instead of the
+ * flatly-false "doesn't change your score."
  */
-export function GrowthMoveCard({ move }: { move: GrowthMove }) {
+export function GrowthMoveCard({ move, overlapsActionPlan }: { move: GrowthMove; overlapsActionPlan: boolean }) {
   const locale = useLocale();
   const [expanded, setExpanded] = useState(false);
 
@@ -429,7 +440,7 @@ export function GrowthMoveCard({ move }: { move: GrowthMove }) {
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-semibold text-ink">{move.title}</span>
         <Pill variant="neutral" className="!px-2 !py-0.5 text-[10px]">
-          {t(locale, "dashboard.growth.moves.badge")}
+          {t(locale, overlapsActionPlan ? "dashboard.growth.moves.badgeAlsoScored" : "dashboard.growth.moves.badge")}
         </Pill>
       </div>
 

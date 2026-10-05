@@ -427,6 +427,7 @@ export type MessageKey =
   | "dashboard.growth.view.tabReferral"
   | "dashboard.growth.moves.sectionHeading"
   | "dashboard.growth.moves.badge"
+  | "dashboard.growth.moves.badgeAlsoScored"
   | "dashboard.growth.moves.goLabel"
   | "dashboard.growth.moves.startCoupon.title"
   | "dashboard.growth.moves.startCoupon.why"
@@ -2640,6 +2641,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.view.tabReferral": "Refer a friend",
     "dashboard.growth.moves.sectionHeading": "Ways to bring in more customers",
     "dashboard.growth.moves.badge": "Brings in customers — doesn't change your score",
+    "dashboard.growth.moves.badgeAlsoScored": "Brings in customers — the same fix also raises your score (see your plan above)",
     "dashboard.growth.moves.goLabel": "Go do this",
     "dashboard.growth.moves.startCoupon.title": "Start a coupon or promo",
     "dashboard.growth.moves.startCoupon.why":
@@ -4999,6 +5001,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.view.tabReferral": "Recomiende a un amigo",
     "dashboard.growth.moves.sectionHeading": "Formas de atraer más clientes",
     "dashboard.growth.moves.badge": "Atrae clientes: no cambia su puntuación",
+    "dashboard.growth.moves.badgeAlsoScored": "Atrae clientes: esta misma mejora también sube su puntuación (véala en su plan de arriba)",
     "dashboard.growth.moves.goLabel": "Ir a hacerlo",
     "dashboard.growth.moves.startCoupon.title": "Cree un cupón o promoción",
     "dashboard.growth.moves.startCoupon.why":

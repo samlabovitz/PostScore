@@ -12,6 +12,7 @@ import { TaskListCard, GrowthMoveCard, CompletedTasksCard } from "../ActionPlanS
 import { WeeklyChecklist } from "./WeeklyChecklist";
 import type { ActionPlanTask, CompletedTask } from "@/lib/actionPlan";
 import type { GrowthMove } from "@/lib/growthMoves";
+import { growthMoveOverlapsActionPlan } from "@/lib/growthMoveOverlap";
 import type { WeeklyChecklistItem, WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
 import type { ScoreBreakdown } from "@/lib/scoring";
 import type { BizProfile } from "@/config/bizProfiles";
@@ -152,6 +153,11 @@ export function GrowthView({
   // truly empty — the only time that happens for a business with real
   // remaining gaps is when there simply aren't any left to show.
   const hasNoRemainingScoreGaps = actionPlan.tasks.length === 0;
+  // Every real open score-gap task on this page, "This week's plan" and
+  // "Bigger projects" together — the live source of truth a growth
+  // move's badge checks itself against (see growthMoveOverlapsActionPlan
+  // in lib/growthMoveOverlap.ts), never a separate/stale copy.
+  const openActionPlanTasks = [...actionPlan.weeklyTasks, ...actionPlan.laterTasks];
 
   const options: SegmentedControlOption<Segment>[] = [
     { value: "plan", label: t(locale, "dashboard.growth.view.tabPlan") },
@@ -280,7 +286,11 @@ export function GrowthView({
               <Card className="p-5">
                 <div className="flex flex-col divide-y divide-paper-line">
                   {growthMoves.map((move) => (
-                    <GrowthMoveCard key={move.id} move={move} />
+                    <GrowthMoveCard
+                      key={move.id}
+                      move={move}
+                      overlapsActionPlan={growthMoveOverlapsActionPlan(move.id, openActionPlanTasks)}
+                    />
                   ))}
                 </div>
               </Card>
