@@ -985,10 +985,17 @@ export type MessageKey =
   | "dashboard.assistant.starterPrompts.whatsChangedSinceStart"
   | "dashboard.assistant.starterPrompts.whyCategoryLosingPoints"
   | "dashboard.assistant.starterPrompts.compareToCompetitorsAvailable"
-  | "dashboard.assistant.starterPrompts.compareToCompetitorsUnavailable"
   | "dashboard.assistant.starterPrompts.howToGetMoreReviews"
-  | "dashboard.assistant.starterPrompts.ratingGoodEnough"
-  | "dashboard.assistant.starterPrompts.startBuildingRatingFromZero"
+  | "dashboard.assistant.starterPrompts.howToImproveRating"
+  | "dashboard.assistant.starterPrompts.coupon"
+  | "dashboard.assistant.starterPrompts.referral"
+  | "dashboard.assistant.starterPrompts.priceCheckNeverRun"
+  | "dashboard.assistant.starterPrompts.priceCheckRecheck"
+  | "dashboard.assistant.starterPrompts.improveWebsite"
+  | "dashboard.assistant.starterPrompts.needWebsite"
+  | "dashboard.assistant.starterPrompts.addPhotos"
+  | "dashboard.assistant.starterPrompts.weeklyRoutineWhatToDo"
+  | "dashboard.assistant.starterPrompts.weeklyRoutineKeepGoing"
   | "dashboard.assistant.memory.noSavedScans"
   | "dashboard.assistant.memory.onlyOneScore"
   | "dashboard.assistant.memory.pointsSinceDate"
@@ -3298,11 +3305,17 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.starterPrompts.whatsChangedSinceStart": "What's changed since I started?",
     "dashboard.assistant.starterPrompts.whyCategoryLosingPoints": "Why is my {category} section losing points?",
     "dashboard.assistant.starterPrompts.compareToCompetitorsAvailable": "How do I compare to my nearby competitors?",
-    "dashboard.assistant.starterPrompts.compareToCompetitorsUnavailable": "How can I compare to my nearby competitors?",
     "dashboard.assistant.starterPrompts.howToGetMoreReviews": "How do I get more Google reviews?",
-    "dashboard.assistant.starterPrompts.ratingGoodEnough":
-      "Is my rating good enough, or should I focus on getting more reviews?",
-    "dashboard.assistant.starterPrompts.startBuildingRatingFromZero": "How do I start building a rating from zero reviews?",
+    "dashboard.assistant.starterPrompts.howToImproveRating": "How do I improve my Google rating?",
+    "dashboard.assistant.starterPrompts.coupon": "What kind of coupon or promo would work for my business?",
+    "dashboard.assistant.starterPrompts.referral": "How could a referral program work for my business?",
+    "dashboard.assistant.starterPrompts.priceCheckNeverRun": "Should I run a price check against nearby competitors?",
+    "dashboard.assistant.starterPrompts.priceCheckRecheck": "Should I re-check my prices against competitors?",
+    "dashboard.assistant.starterPrompts.improveWebsite": "What's the fastest way to improve my website?",
+    "dashboard.assistant.starterPrompts.needWebsite": "Do I need a website, and how do I get one?",
+    "dashboard.assistant.starterPrompts.addPhotos": "What photos should I add to my Google listing?",
+    "dashboard.assistant.starterPrompts.weeklyRoutineWhatToDo": "What should I do for my weekly routine?",
+    "dashboard.assistant.starterPrompts.weeklyRoutineKeepGoing": "How do I keep my weekly routine going?",
     "dashboard.assistant.memory.noSavedScans": "No saved scans yet.",
     "dashboard.assistant.memory.onlyOneScore": "Only one saved score so far — {total}/100 on {date}. No trend yet.",
     "dashboard.assistant.memory.pointsSinceDate": "{delta} pts since {date}",
@@ -5564,12 +5577,19 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.starterPrompts.whatsChangedSinceStart": "¿Qué ha cambiado desde que empecé?",
     "dashboard.assistant.starterPrompts.whyCategoryLosingPoints": "¿Por qué mi sección de {category} está perdiendo puntos?",
     "dashboard.assistant.starterPrompts.compareToCompetitorsAvailable": "¿Cómo me comparo con mis competidores cercanos?",
-    "dashboard.assistant.starterPrompts.compareToCompetitorsUnavailable": "¿Cómo puedo compararme con mis competidores cercanos?",
     "dashboard.assistant.starterPrompts.howToGetMoreReviews": "¿Cómo consigo más reseñas de Google?",
-    "dashboard.assistant.starterPrompts.ratingGoodEnough":
-      "¿Mi calificación es suficiente, o debería enfocarme en conseguir más reseñas?",
-    "dashboard.assistant.starterPrompts.startBuildingRatingFromZero":
-      "¿Cómo empiezo a construir una calificación desde cero reseñas?",
+    "dashboard.assistant.starterPrompts.howToImproveRating": "¿Cómo mejoro mi calificación de Google?",
+    "dashboard.assistant.starterPrompts.coupon": "¿Qué tipo de cupón o promoción funcionaría para mi negocio?",
+    "dashboard.assistant.starterPrompts.referral": "¿Cómo podría funcionar un programa de referidos para mi negocio?",
+    "dashboard.assistant.starterPrompts.priceCheckNeverRun":
+      "¿Debería hacer una verificación de precios frente a la competencia cercana?",
+    "dashboard.assistant.starterPrompts.priceCheckRecheck":
+      "¿Debería volver a verificar mis precios frente a la competencia?",
+    "dashboard.assistant.starterPrompts.improveWebsite": "¿Cuál es la forma más rápida de mejorar mi sitio web?",
+    "dashboard.assistant.starterPrompts.needWebsite": "¿Necesito un sitio web, y cómo consigo uno?",
+    "dashboard.assistant.starterPrompts.addPhotos": "¿Qué fotos debería agregar a mi ficha de Google?",
+    "dashboard.assistant.starterPrompts.weeklyRoutineWhatToDo": "¿Qué debería hacer para mi rutina semanal?",
+    "dashboard.assistant.starterPrompts.weeklyRoutineKeepGoing": "¿Cómo mantengo mi rutina semanal?",
     "dashboard.assistant.memory.noSavedScans": "Aún no hay análisis guardados.",
     "dashboard.assistant.memory.onlyOneScore":
       "Solo una puntuación guardada hasta ahora — {total}/100 el {date}. Aún no hay tendencia.",

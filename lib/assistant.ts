@@ -15,6 +15,7 @@ import { CATEGORY_LABELS } from "@/lib/scoring";
 import type { TaskEffort } from "@/lib/actionPlan";
 import { PHOTO_COMPARISON_CAP, type GrowthMoveId } from "@/lib/growthMoves";
 import { DEFAULT_LOCALE, formatShortDate, t, type Locale } from "@/lib/i18n";
+import { weekStartFor } from "@/lib/weeklyChecklist";
 
 // ---------------------------------------------------------------------------
 // Context shape — the compact, real-data summary the assistant is grounded in
@@ -579,55 +580,221 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
 // Starter prompts — clickable examples tailored to this business's real data
 // ---------------------------------------------------------------------------
 
+type StarterPromptKind = "score" | "review" | "growth" | "routine" | "history" | "competitors";
+
+interface StarterPromptCandidate {
+  id: string;
+  text: string;
+  kinds: StarterPromptKind[];
+}
+
+/** One prompt per real, currently-firing growth move (lib/growthMoves.ts)
+ * — null for start_referral when `referralOk` is false, a defensive
+ * second check alongside buildGrowthMoves' own referralOk gate so this
+ * business type can never surface a referral question through either
+ * path. */
+function growthMovePromptCandidate(
+  move: AssistantGrowthMove,
+  locale: Locale,
+  referralOk: boolean
+): StarterPromptCandidate | null {
+  switch (move.id) {
+    case "start_coupon":
+      return { id: "coupon", text: t(locale, "dashboard.assistant.starterPrompts.coupon"), kinds: ["growth"] };
+    case "start_referral":
+      return referralOk
+        ? { id: "referral", text: t(locale, "dashboard.assistant.starterPrompts.referral"), kinds: ["growth"] }
+        : null;
+    case "run_price_check":
+      return {
+        id: "priceCheck",
+        text: t(
+          locale,
+          move.pricingAssessedAt === null
+            ? "dashboard.assistant.starterPrompts.priceCheckNeverRun"
+            : "dashboard.assistant.starterPrompts.priceCheckRecheck"
+        ),
+        kinds: ["growth"],
+      };
+    case "improve_website":
+      return { id: "improveWebsite", text: t(locale, "dashboard.assistant.starterPrompts.improveWebsite"), kinds: ["growth"] };
+    case "build_starter_site":
+      return { id: "needWebsite", text: t(locale, "dashboard.assistant.starterPrompts.needWebsite"), kinds: ["growth"] };
+    case "add_photos_vs_competitors":
+      return { id: "addPhotos", text: t(locale, "dashboard.assistant.starterPrompts.addPhotos"), kinds: ["growth"] };
+  }
+}
+
 /**
- * A small set of example questions the assistant can genuinely answer
- * well — either grounded in this business's real data, or as clearly
- * labeled general guidance. Deliberately never suggests a question the
- * assistant would have to decline (e.g. "what's my Google rank?").
+ * Every real, currently-eligible starter prompt for this business, each
+ * tied to one genuine signal in `context` — never a question invented
+ * just to fill a slot. `now` is explicit (never read from the ambient
+ * clock), same pattern as buildWeeklyChecklistState in
+ * lib/weeklyChecklist.ts, so the real caller (app/actions/assistant.ts,
+ * always "today") and scripts/tests can both ask for a specific week's
+ * ordering — e.g. "this week" vs. "next week."
+ *
+ * The surfaces that render this (AssistantLauncher, AssistantView's chat
+ * footer) only ever show the first 3 as clickable buttons via a blind
+ * `.slice(0, 3)` — only the empty-state screen shows the full list. So
+ * the first up-to-3 entries are chosen to be different KINDS: at most
+ * one score question, at most one review question (the review signal
+ * itself picks whichever of review count/rating is losing more, and
+ * folds "why is my {category}…" in as review-related whenever that
+ * category is Visibility & Reputation, so the two can never double up),
+ * and at least one growth-move-or-routine prompt whenever any is
+ * eligible. Which eligible prompts land in those first 3 rotates
+ * deterministically by the real calendar week (the business's own
+ * Monday, via weekStartFor) so the same 3 don't go stale forever, but
+ * stay identical for every call within the same week.
+ *
+ * When fewer than 3 real, kind-distinct prompts exist, the result is
+ * simply shorter than 3 — never padded with a signal-less question, and
+ * the (same-kind) leftovers are dropped entirely rather than appended,
+ * since a caller's blind `.slice(0, 3)` would otherwise mistake one of
+ * them for part of the diverse first-3 set. Once a genuine 3-deep,
+ * kind-distinct set exists, every other real candidate (extra growth
+ * moves, routine prompts, history, competitors) is still appended after
+ * it, so the empty-state's full list stays as rich as the real data
+ * allows.
  *
  * Genuinely dual-purpose text: each string is rendered as a clickable
  * button label AND, if clicked, sent to the model verbatim as the
  * owner's own message — resolved through `t()` exactly ONCE here, so
  * the button and the sent message can never drift apart into two
- * different languages. The category name interpolated into
- * "whyCategoryLosingPoints" (CATEGORY_LABELS) resolves in the same
- * locale too.
+ * different languages.
  */
 export function buildAssistantStarterPrompts(
   context: AssistantBusinessContext,
-  locale: Locale = DEFAULT_LOCALE
+  locale: Locale = DEFAULT_LOCALE,
+  now: Date = new Date()
 ): string[] {
-  const prompts: string[] = [
-    t(locale, "dashboard.assistant.starterPrompts.whatsHurtingScore"),
-    t(locale, "dashboard.assistant.starterPrompts.top3ThisWeek"),
-  ];
+  const candidates: StarterPromptCandidate[] = [];
 
-  if (context.profile.scoreHistory.length >= 2 || context.profile.fixedItems.length > 0) {
-    prompts.push(t(locale, "dashboard.assistant.starterPrompts.whatsChangedSinceStart"));
+  if (context.score.losingChecks.length > 0) {
+    candidates.push({
+      id: "whatsHurtingScore",
+      text: t(locale, "dashboard.assistant.starterPrompts.whatsHurtingScore"),
+      kinds: ["score"],
+    });
+  }
+  if (context.actionPlan.topTasks.length > 0) {
+    candidates.push({
+      id: "top3ThisWeek",
+      text: t(locale, "dashboard.assistant.starterPrompts.top3ThisWeek"),
+      kinds: ["score"],
+    });
   }
 
-  const topLoss = context.score.losingChecks[0];
-  if (topLoss) {
-    prompts.push(
-      t(locale, "dashboard.assistant.starterPrompts.whyCategoryLosingPoints", {
-        category: t(locale, CATEGORY_LABELS[topLoss.category]),
-      })
+  // Whichever of review count/rating is losing MORE points decides the
+  // one dedicated review prompt (never both) — see AT MOST ONE REVIEW
+  // PROMPT above.
+  const reviewCountCheck = context.score.losingChecks.find((c) => c.checkId === "visibility.review_count");
+  const ratingCheck = context.score.losingChecks.find((c) => c.checkId === "visibility.rating");
+  const pointsGap = (c: AssistantLosingCheck | undefined) => (c ? c.maxPoints - (c.earnedPoints ?? 0) : -1);
+  const hasDedicatedReviewSignal = reviewCountCheck !== undefined || ratingCheck !== undefined;
+  if (hasDedicatedReviewSignal) {
+    candidates.push(
+      pointsGap(ratingCheck) > pointsGap(reviewCountCheck)
+        ? { id: "howToImproveRating", text: t(locale, "dashboard.assistant.starterPrompts.howToImproveRating"), kinds: ["review"] }
+        : { id: "howToGetMoreReviews", text: t(locale, "dashboard.assistant.starterPrompts.howToGetMoreReviews"), kinds: ["review"] }
     );
   }
 
-  prompts.push(
-    context.competitors.available
-      ? t(locale, "dashboard.assistant.starterPrompts.compareToCompetitorsAvailable")
-      : t(locale, "dashboard.assistant.starterPrompts.compareToCompetitorsUnavailable")
-  );
-  prompts.push(t(locale, "dashboard.assistant.starterPrompts.howToGetMoreReviews"));
-  prompts.push(
-    context.listing.rating !== null
-      ? t(locale, "dashboard.assistant.starterPrompts.ratingGoodEnough")
-      : t(locale, "dashboard.assistant.starterPrompts.startBuildingRatingFromZero")
-  );
+  // Suppressed when the top loss is Visibility & Reputation AND the
+  // dedicated review prompt above already covers it — otherwise this
+  // and that prompt would both count as "review" and could double up.
+  const topLoss = context.score.losingChecks[0];
+  if (topLoss && (topLoss.category !== "visibility" || !hasDedicatedReviewSignal)) {
+    candidates.push({
+      id: "whyCategoryLosingPoints",
+      text: t(locale, "dashboard.assistant.starterPrompts.whyCategoryLosingPoints", {
+        category: t(locale, CATEGORY_LABELS[topLoss.category]),
+      }),
+      kinds: topLoss.category === "visibility" ? ["score", "review"] : ["score"],
+    });
+  }
 
-  return prompts;
+  for (const move of context.growthMoves) {
+    const candidate = growthMovePromptCandidate(move, locale, context.profile.referralOk);
+    if (candidate) candidates.push(candidate);
+  }
+
+  if (context.weeklyRoutine.items.every((item) => !item.checkedThisWeek)) {
+    candidates.push({
+      id: "weeklyRoutineWhatToDo",
+      text: t(locale, "dashboard.assistant.starterPrompts.weeklyRoutineWhatToDo"),
+      kinds: ["routine"],
+    });
+  }
+  if (context.weeklyRoutine.streakWeeks > 0) {
+    candidates.push({
+      id: "weeklyRoutineKeepGoing",
+      text: t(locale, "dashboard.assistant.starterPrompts.weeklyRoutineKeepGoing"),
+      kinds: ["routine"],
+    });
+  }
+
+  if (context.profile.scoreHistory.length >= 2 || context.profile.fixedItems.length > 0) {
+    candidates.push({
+      id: "whatsChangedSinceStart",
+      text: t(locale, "dashboard.assistant.starterPrompts.whatsChangedSinceStart"),
+      kinds: ["history"],
+    });
+  }
+  if (context.competitors.available) {
+    candidates.push({
+      id: "compareToCompetitors",
+      text: t(locale, "dashboard.assistant.starterPrompts.compareToCompetitorsAvailable"),
+      kinds: ["competitors"],
+    });
+  }
+
+  if (candidates.length === 0) return [];
+
+  // Deterministic weekly rotation. Bug fixed here: an earlier version
+  // seeded this with Number(weekStartFor(now).replace(/-/g, "")) — the
+  // literal YYYY-MM-DD digits as a number — which jumps unevenly across
+  // month boundaries (e.g. 20261026 -> 20261102 is a jump of 76, not 7)
+  // and, worse, jumps by EXACTLY `candidates.length` within a month far
+  // too easily (any 7-day span that doesn't cross a month boundary is a
+  // jump of exactly 7, so a business with exactly 7 candidates — e.g.
+  // Hudson Shears — got offset = seed % 7 landing on the SAME value this
+  // week and next week, defeating the whole rotation). Fixed by counting
+  // real whole weeks since the epoch instead: consecutive Mondays are
+  // always exactly 7 days apart regardless of month/year boundaries, so
+  // this index always increments by exactly 1 from one real week to the
+  // next, which (for any candidates.length > 1) can never collide with
+  // the previous week's offset mod candidates.length.
+  const [weekYear, weekMonth, weekDay] = weekStartFor(now).split("-").map(Number);
+  const daysSinceEpoch = Math.floor(Date.UTC(weekYear, weekMonth - 1, weekDay) / (24 * 60 * 60 * 1000));
+  const weekIndex = Math.floor(daysSinceEpoch / 7);
+  const offset = weekIndex % candidates.length;
+  const rotated = [...candidates.slice(offset), ...candidates.slice(0, offset)];
+
+  const selected: StarterPromptCandidate[] = [];
+  const usedKinds = new Set<StarterPromptKind>();
+  for (const candidate of rotated) {
+    if (selected.length >= 3) break;
+    if (candidate.kinds.some((kind) => (kind === "score" || kind === "review") && usedKinds.has(kind))) continue;
+    selected.push(candidate);
+    for (const kind of candidate.kinds) usedKinds.add(kind);
+  }
+
+  const isGrowthOrRoutine = (c: StarterPromptCandidate) => c.kinds.includes("growth") || c.kinds.includes("routine");
+  if (selected.length === 3 && !selected.some(isGrowthOrRoutine)) {
+    const mustInclude = rotated.find(isGrowthOrRoutine);
+    if (mustInclude) {
+      const neutralIndex = selected.findIndex((c) => c.kinds.includes("history") || c.kinds.includes("competitors"));
+      selected[neutralIndex !== -1 ? neutralIndex : selected.length - 1] = mustInclude;
+    }
+  }
+
+  if (selected.length < 3) return selected.map((c) => c.text);
+
+  const selectedIds = new Set(selected.map((c) => c.id));
+  const rest = rotated.filter((c) => !selectedIds.has(c.id));
+  return [...selected, ...rest].map((c) => c.text);
 }
 
 // ---------------------------------------------------------------------------

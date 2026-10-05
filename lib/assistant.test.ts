@@ -540,44 +540,358 @@ describe("buildAssistantContextText", () => {
 });
 
 describe("buildAssistantStarterPrompts", () => {
-  test("returns a non-empty, deduplicated-feeling set of concrete questions", () => {
-    const prompts = buildAssistantStarterPrompts(BASE_CONTEXT);
-    expect(prompts.length).toBeGreaterThan(3);
-    expect(new Set(prompts).size).toBe(prompts.length);
+  // A real Monday, and the same day 2/4/6/8 weeks later — every helper
+  // below that needs "a different week" just offsets by whole weeks
+  // from this anchor so the business's real Monday (weekStartFor) moves
+  // too.
+  const WEEK_1 = new Date("2026-10-05T12:00:00Z");
+  const weeksLater = (n: number) => new Date(WEEK_1.getTime() + n * 7 * 24 * 60 * 60 * 1000);
+
+  const SCORE_PROMPTS = [
+    "What's hurting my score the most right now?",
+    "What are the top 3 things I should fix this week?",
+  ];
+  const REVIEW_PROMPTS = ["How do I get more Google reviews?", "How do I improve my Google rating?"];
+  const GROWTH_OR_ROUTINE_PROMPTS = [
+    "What kind of coupon or promo would work for my business?",
+    "Should I re-check my prices against competitors?",
+    "Should I run a price check against nearby competitors?",
+    "What's the fastest way to improve my website?",
+    "Do I need a website, and how do I get one?",
+    "What photos should I add to my Google listing?",
+    "How do I keep my weekly routine going?",
+    "What should I do for my weekly routine?",
+  ];
+
+  test("only suggests 'what's hurting my score' when a check is actually losing points", () => {
+    expect(buildAssistantStarterPrompts(BASE_CONTEXT, "en", WEEK_1)).toContain(SCORE_PROMPTS[0]);
+
+    const nothingLosing: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      score: { ...BASE_CONTEXT.score, losingChecks: [] },
+    };
+    expect(buildAssistantStarterPrompts(nothingLosing, "en", WEEK_1)).not.toContain(SCORE_PROMPTS[0]);
   });
 
-  test("tailors one prompt to the business's real biggest-opportunity category", () => {
-    const prompts = buildAssistantStarterPrompts(BASE_CONTEXT);
-    expect(prompts.some((p) => p.includes("Visibility & Reputation"))).toBe(true);
+  test("only suggests 'top 3 things to fix' when there are real open action-plan tasks", () => {
+    expect(buildAssistantStarterPrompts(BASE_CONTEXT, "en", WEEK_1)).toContain(SCORE_PROMPTS[1]);
+
+    const noTasks: AssistantBusinessContext = { ...BASE_CONTEXT, actionPlan: { topTasks: [] } };
+    expect(buildAssistantStarterPrompts(noTasks, "en", WEEK_1)).not.toContain(SCORE_PROMPTS[1]);
   });
 
-  test("phrases the competitor prompt differently when no scan is saved yet", () => {
-    const noCompetitors: AssistantBusinessContext = {
+  test("ties the review prompt to whichever of review count/rating is losing more points, and never shows both at once", () => {
+    const ratingLosesMore: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      score: {
+        ...BASE_CONTEXT.score,
+        losingChecks: [
+          { checkId: "visibility.rating", label: "Star rating", category: "visibility", earnedPoints: 2, maxPoints: 18, explanation: "x" },
+          { checkId: "visibility.review_count", label: "Review count", category: "visibility", earnedPoints: 15, maxPoints: 18, explanation: "x" },
+        ],
+      },
+    };
+    const prompts = buildAssistantStarterPrompts(ratingLosesMore, "en", WEEK_1);
+    expect(prompts).toContain("How do I improve my Google rating?");
+    expect(prompts.filter((p) => REVIEW_PROMPTS.includes(p)).length).toBe(1);
+  });
+
+  test("never shows 2 review prompts, even when the top loss is Visibility & Reputation itself (review count)", () => {
+    // BASE_CONTEXT's top losing check is visibility.review_count, so
+    // "Why is my Visibility & Reputation section losing points?" must
+    // be suppressed in favor of the one dedicated review prompt.
+    const prompts = buildAssistantStarterPrompts(BASE_CONTEXT, "en", WEEK_1);
+    const reviewRelated = prompts.filter(
+      (p) => REVIEW_PROMPTS.includes(p) || p === "Why is my Visibility & Reputation section losing points?"
+    );
+    expect(reviewRelated.length).toBe(1);
+  });
+
+  test("falls back to the generic category question when the top loss IS Visibility & Reputation but isn't review count/rating", () => {
+    const recencyIsTopLoss: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      score: {
+        ...BASE_CONTEXT.score,
+        losingChecks: [
+          { checkId: "visibility.review_recency", label: "Review recency", category: "visibility", earnedPoints: 0, maxPoints: 4, explanation: "x" },
+        ],
+      },
+    };
+    const prompts = buildAssistantStarterPrompts(recencyIsTopLoss, "en", WEEK_1);
+    expect(prompts).toContain("Why is my Visibility & Reputation section losing points?");
+  });
+
+  test("asks about the real top losing category when it isn't reviews", () => {
+    const websiteIsTopLoss: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      score: {
+        ...BASE_CONTEXT.score,
+        losingChecks: [{ checkId: "website.https", label: "Uses HTTPS", category: "website", earnedPoints: 0, maxPoints: 6, explanation: "x" }],
+      },
+    };
+    expect(buildAssistantStarterPrompts(websiteIsTopLoss, "en", WEEK_1)).toContain(
+      "Why is my Website section losing points?"
+    );
+  });
+
+  test("competitors prompt only appears when a scan has actually been saved", () => {
+    expect(buildAssistantStarterPrompts(BASE_CONTEXT, "en", WEEK_1)).toContain(
+      "How do I compare to my nearby competitors?"
+    );
+    const noScan: AssistantBusinessContext = {
       ...BASE_CONTEXT,
       competitors: { available: false, scanAt: null, subjectRank: null, entries: [] },
     };
-    const prompts = buildAssistantStarterPrompts(noCompetitors);
-    expect(prompts).toContain("How can I compare to my nearby competitors?");
-    expect(prompts).not.toContain("How do I compare to my nearby competitors?");
+    expect(buildAssistantStarterPrompts(noScan, "en", WEEK_1)).not.toContain(
+      "How do I compare to my nearby competitors?"
+    );
+  });
+
+  test("one prompt per real fired growth move", () => {
+    // BASE_CONTEXT fires start_coupon and run_price_check (already run once).
+    const prompts = buildAssistantStarterPrompts(BASE_CONTEXT, "en", WEEK_1);
+    expect(prompts).toContain("What kind of coupon or promo would work for my business?");
+    expect(prompts).toContain("Should I re-check my prices against competitors?");
+  });
+
+  test("a law firm (referral not offered) never gets a referral prompt, even if a referral move somehow fired", () => {
+    const lawFirm: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      profile: { ...BASE_CONTEXT.profile, referralOk: false },
+      growthMoves: [
+        ...BASE_CONTEXT.growthMoves,
+        {
+          id: "start_referral",
+          title: "Start a referral program",
+          why: "x",
+          pricingAssessedAt: null,
+          yourPhotoCount: null,
+          competitorMedianPhotoCount: null,
+          weakWebsiteIssueLabels: [],
+        },
+      ],
+    };
+    const prompts = buildAssistantStarterPrompts(lawFirm, "en", WEEK_1);
+    expect(prompts.some((p) => /referral/i.test(p))).toBe(false);
+  });
+
+  test("a no-website business gets the 'do I need a website' prompt, never improve_website's wording", () => {
+    const noWebsite: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      growthMoves: [
+        {
+          id: "build_starter_site",
+          title: "Build a starter site",
+          why: "x",
+          pricingAssessedAt: null,
+          yourPhotoCount: null,
+          competitorMedianPhotoCount: null,
+          weakWebsiteIssueLabels: [],
+        },
+      ],
+    };
+    const prompts = buildAssistantStarterPrompts(noWebsite, "en", WEEK_1);
+    expect(prompts).toContain("Do I need a website, and how do I get one?");
+    expect(prompts).not.toContain("What's the fastest way to improve my website?");
+  });
+
+  test("an existing website losing points gets the improve_website prompt, never the no-website wording", () => {
+    const weakWebsite: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      growthMoves: [
+        {
+          id: "improve_website",
+          title: "Improve your website",
+          why: "x",
+          pricingAssessedAt: null,
+          yourPhotoCount: null,
+          competitorMedianPhotoCount: null,
+          weakWebsiteIssueLabels: ["Performance & mobile"],
+        },
+      ],
+    };
+    const prompts = buildAssistantStarterPrompts(weakWebsite, "en", WEEK_1);
+    expect(prompts).toContain("What's the fastest way to improve my website?");
+    expect(prompts).not.toContain("Do I need a website, and how do I get one?");
+  });
+
+  test("weekly routine: nothing checked off yet gets the 'what should I do' prompt", () => {
+    const nothingChecked: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      weeklyRoutine: { items: BASE_CONTEXT.weeklyRoutine.items.map((i) => ({ ...i, checkedThisWeek: false })), streakWeeks: 0 },
+    };
+    expect(buildAssistantStarterPrompts(nothingChecked, "en", WEEK_1)).toContain(
+      "What should I do for my weekly routine?"
+    );
+  });
+
+  test("weekly routine: a real streak gets the 'keep it going' prompt", () => {
+    // BASE_CONTEXT has streakWeeks: 3.
+    expect(buildAssistantStarterPrompts(BASE_CONTEXT, "en", WEEK_1)).toContain(
+      "How do I keep my weekly routine going?"
+    );
+  });
+
+  test("the first 3 shown are always different kinds: at most one score question, at most one review question", () => {
+    for (let i = 0; i < 8; i++) {
+      const first3 = buildAssistantStarterPrompts(BASE_CONTEXT, "en", weeksLater(i)).slice(0, 3);
+      expect(first3.filter((p) => SCORE_PROMPTS.includes(p)).length).toBeLessThanOrEqual(1);
+      expect(first3.filter((p) => REVIEW_PROMPTS.includes(p)).length).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test("at least one growth-move-or-routine prompt lands in the first 3 whenever any is eligible", () => {
+    for (let i = 0; i < 8; i++) {
+      const first3 = buildAssistantStarterPrompts(BASE_CONTEXT, "en", weeksLater(i)).slice(0, 3);
+      expect(first3.some((p) => GROWTH_OR_ROUTINE_PROMPTS.includes(p))).toBe(true);
+    }
+  });
+
+  test("rotation is deterministic: the same real week always returns the same order, a different week returns a different first 3", () => {
+    const laterInSameWeek = new Date("2026-10-08T23:00:00Z");
+    expect(buildAssistantStarterPrompts(BASE_CONTEXT, "en", WEEK_1)).toEqual(
+      buildAssistantStarterPrompts(BASE_CONTEXT, "en", laterInSameWeek)
+    );
+
+    const firstThrees = new Set(
+      Array.from({ length: 8 }, (_, i) => buildAssistantStarterPrompts(BASE_CONTEXT, "en", weeksLater(i)).slice(0, 3).join("|"))
+    );
+    expect(firstThrees.size).toBeGreaterThan(1);
+  });
+
+  test("never pads below 3 with a signal-less prompt — returns nothing when nothing real qualifies", () => {
+    const noRealSignal: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      score: { ...BASE_CONTEXT.score, losingChecks: [] },
+      actionPlan: { topTasks: [] },
+      growthMoves: [],
+      weeklyRoutine: { items: BASE_CONTEXT.weeklyRoutine.items.map((i) => ({ ...i, checkedThisWeek: true })), streakWeeks: 0 },
+      competitors: { available: false, scanAt: null, subjectRank: null, entries: [] },
+      profile: { ...BASE_CONTEXT.profile, scoreHistory: [{ total: 74, grade: "C", date: "2/1/2026" }], fixedItems: [] },
+    };
+    expect(buildAssistantStarterPrompts(noRealSignal, "en", WEEK_1)).toEqual([]);
+  });
+
+  test("a business with nothing losing and no growth moves still gets a sensible real set from whatever real signal remains", () => {
+    const nothingLosingNoMoves: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      score: { ...BASE_CONTEXT.score, losingChecks: [] },
+      actionPlan: { topTasks: [] },
+      growthMoves: [],
+      weeklyRoutine: { items: BASE_CONTEXT.weeklyRoutine.items.map((i) => ({ ...i, checkedThisWeek: false })), streakWeeks: 0 },
+    };
+    const prompts = buildAssistantStarterPrompts(nothingLosingNoMoves, "en", WEEK_1);
+    expect(prompts.length).toBeGreaterThan(0);
+    expect(prompts).toContain("What should I do for my weekly routine?");
+    expect(prompts.some((p) => SCORE_PROMPTS.includes(p) || REVIEW_PROMPTS.includes(p))).toBe(false);
   });
 
   test("never suggests a question the assistant would have to decline, like a search rank", () => {
-    const prompts = buildAssistantStarterPrompts(BASE_CONTEXT);
+    const prompts = buildAssistantStarterPrompts(BASE_CONTEXT, "en", WEEK_1);
     expect(prompts.some((p) => /rank|search position/i.test(p))).toBe(false);
   });
 
   test("only suggests a 'what's changed' prompt when there's real history or fixed items to talk about", () => {
-    expect(buildAssistantStarterPrompts(BASE_CONTEXT)).toContain("What's changed since I started?");
+    expect(buildAssistantStarterPrompts(BASE_CONTEXT, "en", WEEK_1)).toContain("What's changed since I started?");
 
     const nothingYet: AssistantBusinessContext = {
       ...BASE_CONTEXT,
-      profile: {
-        ...BASE_CONTEXT.profile,
-        scoreHistory: [{ total: 74, grade: "C", date: "2/1/2026" }],
-        fixedItems: [],
-      },
+      profile: { ...BASE_CONTEXT.profile, scoreHistory: [{ total: 74, grade: "C", date: "2/1/2026" }], fixedItems: [] },
     };
-    expect(buildAssistantStarterPrompts(nothingYet)).not.toContain("What's changed since I started?");
+    expect(buildAssistantStarterPrompts(nothingYet, "en", WEEK_1)).not.toContain("What's changed since I started?");
+  });
+
+  // Regression test for a real bug the live check (scripts/live-check-
+  // postai.ts) found: Hudson Shears' starter prompts were IDENTICAL this
+  // week and next week, even with 7 real eligible prompts to rotate
+  // through. Root cause: the old rotation seeded on
+  // Number(weekStartFor(now).replace(/-/g, "")) — the raw YYYY-MM-DD
+  // digits — and any 7-day span that stays within one calendar month is
+  // a jump of exactly 7 in that number, which collides exactly with
+  // `% 7` for a business with exactly 7 eligible candidates (Hudson's
+  // real case). Fixed by seeding on a real whole-weeks-since-epoch
+  // index instead, which always increments by exactly 1 from one real
+  // week to the next (see buildAssistantStarterPrompts's own comment).
+  test("rotation bug fix: Hudson Shears' exact real eligible set (7 prompts, no competitor scan, no history, no streak) differs between two real consecutive weeks that stay within the same month", () => {
+    const hudsonShears: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      score: {
+        ...BASE_CONTEXT.score,
+        total: 37,
+        grade: "F",
+        losingChecks: [
+          {
+            checkId: "visibility.review_count",
+            label: "Review count",
+            category: "visibility",
+            earnedPoints: 1,
+            maxPoints: 18,
+            explanation: "10 reviews on Google (full credit at 150+).",
+          },
+        ],
+      },
+      actionPlan: {
+        topTasks: [
+          { label: "Get more reviews", category: "visibility", promisedPoints: 17, action: "Ask for reviews.", effort: "quick_win" },
+        ],
+      },
+      growthMoves: [
+        {
+          id: "start_coupon",
+          title: "Start a coupon",
+          why: "x",
+          pricingAssessedAt: null,
+          yourPhotoCount: 10,
+          competitorMedianPhotoCount: null,
+          weakWebsiteIssueLabels: [],
+        },
+        {
+          id: "start_referral",
+          title: "Start a referral program",
+          why: "x",
+          pricingAssessedAt: null,
+          yourPhotoCount: 10,
+          competitorMedianPhotoCount: null,
+          weakWebsiteIssueLabels: [],
+        },
+        {
+          id: "run_price_check",
+          title: "Run a price check",
+          why: "x",
+          pricingAssessedAt: null,
+          yourPhotoCount: 10,
+          competitorMedianPhotoCount: null,
+          weakWebsiteIssueLabels: [],
+        },
+      ],
+      weeklyRoutine: {
+        items: BASE_CONTEXT.weeklyRoutine.items.map((i) => ({ ...i, checkedThisWeek: false })),
+        streakWeeks: 0,
+      },
+      competitors: { available: false, scanAt: null, subjectRank: null, entries: [] },
+      profile: { ...BASE_CONTEXT.profile, referralOk: true, scoreHistory: [], fixedItems: [] },
+    };
+
+    const thisWeek = buildAssistantStarterPrompts(hudsonShears, "en", WEEK_1);
+    const nextWeek = buildAssistantStarterPrompts(hudsonShears, "en", weeksLater(1));
+
+    expect(thisWeek).toHaveLength(7);
+    expect(new Set(thisWeek)).toEqual(
+      new Set([
+        "What's hurting my score the most right now?",
+        "What are the top 3 things I should fix this week?",
+        "How do I get more Google reviews?",
+        "What kind of coupon or promo would work for my business?",
+        "How could a referral program work for my business?",
+        "Should I run a price check against nearby competitors?",
+        "What should I do for my weekly routine?",
+      ])
+    );
+    // The actual bug: these two were identical before the fix.
+    expect(thisWeek).not.toEqual(nextWeek);
+    // Still the exact same 7 real candidates either week — only the
+    // ORDER (and so which 3 are first) may change.
+    expect(new Set(nextWeek)).toEqual(new Set(thisWeek));
   });
 });
 
