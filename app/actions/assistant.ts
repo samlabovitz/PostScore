@@ -16,7 +16,6 @@ import { buildWeeklyChecklistItems } from "@/lib/weeklyChecklist";
 import { callAnthropicChat, AnthropicApiError } from "@/lib/anthropicClient";
 import {
   ASSISTANT_MAX_TOKENS,
-  ASSISTANT_SYSTEM_RULES,
   MAX_ACTION_PLAN_TASKS_IN_CONTEXT,
   MAX_FIXED_ITEMS_IN_CONTEXT,
   MAX_GROWTH_MOVES_IN_CONTEXT,
@@ -24,8 +23,8 @@ import {
   MAX_LOSING_CHECKS_IN_CONTEXT,
   MAX_SCORE_HISTORY_IN_CONTEXT,
   anthropicFailureMessage,
-  buildAssistantContextText,
   buildAssistantStarterPrompts,
+  buildAssistantSystemPrompt,
   type AssistantActionPlanTask,
   type AssistantBusinessContext,
   type AssistantBusinessProfile,
@@ -37,7 +36,7 @@ import {
   type AssistantScoreHistoryEntry,
   type AssistantWeeklyRoutineSummary,
 } from "@/lib/assistant";
-import { DEFAULT_LOCALE, normalizeLocale, t, type Locale } from "@/lib/i18n";
+import { formatShortDate, normalizeLocale, t, type Locale } from "@/lib/i18n";
 
 export interface AssistantMessageRow {
   id: string;
@@ -243,7 +242,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     .map((h) => ({
       total: h.total,
       grade: h.grade as AssistantScoreHistoryEntry["grade"],
-      date: new Date(h.created_at).toLocaleDateString(),
+      date: formatShortDate(h.created_at, locale),
     }))
     .reverse();
 
@@ -451,33 +450,7 @@ export async function sendAssistantMessage(
   const oldestFirst = ((historyRows ?? []) as AssistantMessageRow[]).slice().reverse();
   const recentTurns =
     oldestFirst.length > 0 && oldestFirst[0].role === "assistant" ? oldestFirst.slice(1) : oldestFirst;
-  // Named in English on purpose (t(DEFAULT_LOCALE, ...), not t(loaded.locale, ...))
-  // — the instruction itself is English-language model instructions, same
-  // as ASSISTANT_SYSTEM_RULES; only the owner-facing UI is ever localized.
-  //
-  // The second sentence exists because ASSISTANT_SYSTEM_RULES (rule 7) and
-  // buildAssistantContextText() both hardcode English PostScore page/tab/
-  // section names ("Reviews page", "Growth page's Coupons tab", "Overview
-  // page's ... connect prompt", "What I know about your business" panel,
-  // etc.) as part of the model's real tool-mapping instructions — those
-  // names are never re-localized in the prompt itself. Rather than
-  // hardcoding a second English->locale name table here (which could drift
-  // from the actual localized nav labels in lib/i18n/messages.ts), the
-  // model is told to translate any such name it cites into the owner's own
-  // language — it already reliably does this given an explicit instruction.
-  const languageName = t(DEFAULT_LOCALE, `language.${loaded.locale}`);
-  // "usted" vs. "tú" is a Spanish-specific formality distinction with no
-  // English equivalent, so it's gated to es specifically rather than
-  // folded into the generic (any-locale) sentences above it.
-  const formalityDirective =
-    loaded.locale === "es"
-      ? ` Use the formal "usted" form throughout your answer — never "tú" or its conjugations.`
-      : "";
-  const languageDirective =
-    loaded.locale === DEFAULT_LOCALE
-      ? ""
-      : `\n\nIMPORTANT: Respond in ${languageName}. Always write your entire answer in ${languageName}, even if the owner writes in English or the data above contains English. This also applies to any PostScore page, tab, section, or button name you mention to point the owner somewhere in the app (e.g. "Reviews page", "Growth page", "Competitors page") — those names appear in English above, but the owner's own PostScore app is displayed in ${languageName}, so translate every such name into ${languageName} too. Never cite a page, tab, section, or button name in English.${formalityDirective}`;
-  const system = `${ASSISTANT_SYSTEM_RULES}\n\n${buildAssistantContextText(loaded.context, loaded.locale)}${languageDirective}`;
+  const system = buildAssistantSystemPrompt(loaded.context, loaded.locale);
 
   let replyText: string;
   try {

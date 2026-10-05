@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { AnthropicApiError, callAnthropicChat, sanitizeApiKey } from "./anthropicClient";
+import { AnthropicApiError, callAnthropicChat, sanitizeApiKey, trimToLastCompleteSentence } from "./anthropicClient";
 
 describe("sanitizeApiKey", () => {
   test("leaves an already-clean key unchanged", () => {
@@ -134,5 +134,79 @@ describe("callAnthropicChat — failure shape (AnthropicApiError)", () => {
         errorType: null,
       }
     );
+  });
+
+  test("a real reply cut off by max_tokens is trimmed back to its last complete sentence before being returned", async () => {
+    mockFetchOnce(
+      200,
+      {},
+      {
+        type: "message",
+        stop_reason: "max_tokens",
+        content: [
+          {
+            type: "text",
+            text: "Share your review link with 3 or more happy customers. Each fresh review strengthens your credibility. Your weekly rout",
+          },
+        ],
+      }
+    );
+
+    const reply = await callAnthropicChat({ system: "s", messages: [{ role: "user", content: "hi" }] });
+    expect(reply).toBe(
+      "Share your review link with 3 or more happy customers. Each fresh review strengthens your credibility."
+    );
+    expect(reply.endsWith("Your weekly rout")).toBe(false);
+  });
+
+  test("a reply that finishes naturally (stop_reason end_turn) is returned exactly as-is, even if it would look trimmable", async () => {
+    mockFetchOnce(
+      200,
+      {},
+      {
+        type: "message",
+        stop_reason: "end_turn",
+        content: [{ type: "text", text: "Your rating is 4.5 stars from 58 reviews" }],
+      }
+    );
+
+    const reply = await callAnthropicChat({ system: "s", messages: [{ role: "user", content: "hi" }] });
+    expect(reply).toBe("Your rating is 4.5 stars from 58 reviews");
+  });
+});
+
+describe("trimToLastCompleteSentence", () => {
+  test("cuts a reply back to the last full sentence, dropping a trailing partial one", () => {
+    expect(trimToLastCompleteSentence("First sentence. Second sentence. Third partial cla")).toBe(
+      "First sentence. Second sentence."
+    );
+  });
+
+  test("keeps a trailing closing character (quote, parenthesis, or markdown bold marker) right after the sentence end", () => {
+    expect(trimToLastCompleteSentence('He said "stop." Then he le')).toBe('He said "stop."');
+    expect(trimToLastCompleteSentence("Check the Pricing page (it's free.) Then do mo")).toBe(
+      "Check the Pricing page (it's free.)"
+    );
+    expect(trimToLastCompleteSentence("Go to the **Pricing page.** Then conti")).toBe("Go to the **Pricing page.**");
+  });
+
+  test("an earlier decimal number doesn't get mistaken for the cutoff point — the LAST real sentence end wins", () => {
+    expect(trimToLastCompleteSentence("That's worth 4.2 points. The next step is unfinis")).toBe(
+      "That's worth 4.2 points."
+    );
+  });
+
+  test("a reply with no sentence-ending punctuation at all is returned unchanged rather than emptied out", () => {
+    expect(trimToLastCompleteSentence("This never reaches a real sentence end at all")).toBe(
+      "This never reaches a real sentence end at all"
+    );
+  });
+
+  test("a fully complete reply is returned unchanged", () => {
+    expect(trimToLastCompleteSentence("A complete answer with no cutoff.")).toBe("A complete answer with no cutoff.");
+  });
+
+  test("trims trailing whitespace even on an otherwise-complete reply", () => {
+    expect(trimToLastCompleteSentence("Complete sentence.   \n")).toBe("Complete sentence.");
   });
 });

@@ -3,7 +3,9 @@ import {
   ASSISTANT_SYSTEM_RULES,
   anthropicFailureMessage,
   buildAssistantContextText,
+  buildAssistantLanguageDirective,
   buildAssistantStarterPrompts,
+  buildAssistantSystemPrompt,
   type AssistantBusinessContext,
 } from "./assistant";
 
@@ -131,8 +133,17 @@ describe("buildAssistantContextText", () => {
 
   test("includes losing checks with their real explanations, never invented ones", () => {
     const text = buildAssistantContextText(BASE_CONTEXT);
-    expect(text).toContain("Review count: 6.9/18 pts — 58 reviews on Google (full credit at 150+).");
-    expect(text).toContain("Uses HTTPS: 0/6 pts");
+    expect(text).toContain("Review count: 6.9/18 pts — losing 11.1 — 58 reviews on Google (full credit at 150+).");
+    expect(text).toContain("Uses HTTPS: 0/6 pts — losing 6 —");
+  });
+
+  test("precomputes each losing check's missing points (max - earned) so the model never has to subtract itself", () => {
+    const text = buildAssistantContextText(BASE_CONTEXT);
+    // 18 - 6.9 = 11.1, 6 - 0 = 6 — both stated explicitly, never left for
+    // the model to compute from the earned/max pair alone.
+    expect(text).toContain("losing 11.1");
+    expect(text).toContain("losing 6");
+    expect(text).toContain('"losing N" is precomputed — never recompute it yourself');
   });
 
   test("names excluded (not-yet-scored) checks honestly rather than omitting them", () => {
@@ -348,6 +359,11 @@ describe("buildAssistantContextText", () => {
     const text = buildAssistantContextText(oneScore);
     expect(text).toContain("only one saved score so far");
     expect(text).toContain("No trend to compare yet.");
+  });
+
+  test("states plainly that score history is totals only, with no reason for a change recorded (BASE_CONTEXT has 2 real entries)", () => {
+    const text = buildAssistantContextText(BASE_CONTEXT);
+    expect(text).toContain("Score history is totals only — no reason for any change between scans is recorded.");
   });
 
   test("lists each firing growth move with its title, why, and the real page/tab the owner actually sees", () => {
@@ -972,8 +988,15 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
 
   test("rule 8 describes weekly-routine items only as checked/not-checked, never as a real claim about what the owner did", () => {
     expect(ASSISTANT_SYSTEM_RULES).toContain("WEEKLY ROUTINE: EXACTLY WHAT YOU CAN SEE");
-    expect(ASSISTANT_SYSTEM_RULES).toContain('"checked off" or "not checked off yet this week."');
+    expect(ASSISTANT_SYSTEM_RULES).toContain('"you\'ve checked off X this week" or "you haven\'t checked off X this week."');
     expect(ASSISTANT_SYSTEM_RULES).toContain("you only ever know whether they logged it, never whether they really did it");
+  });
+
+  test("rule 8 explicitly forbids habitual/ongoing-claim phrasings beyond the checkbox itself", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("forbidden phrasings include");
+    expect(ASSISTANT_SYSTEM_RULES).toContain('"you\'re already replying,"');
+    expect(ASSISTANT_SYSTEM_RULES).toContain('"you\'ve been posting,"');
+    expect(ASSISTANT_SYSTEM_RULES).toContain('"you\'re staying on top of,"');
   });
 
   test("rule 9 forbids promising points for growth moves, and scopes the coupon/referral facts to PostScore only", () => {
@@ -1005,6 +1028,47 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
   test("rule 3 forbids stating an exact photo count once REAL DATA CONTEXT already describes it as a capped lower bound", () => {
     expect(ASSISTANT_SYSTEM_RULES).toContain('An exact photo count once REAL DATA CONTEXT already describes it as "X or more"');
     expect(ASSISTANT_SYSTEM_RULES).toContain("Google's own data caps there");
+  });
+
+  test("rule 7b states how the coupon/referral/reviews/price-check tools actually work, citing the real files, with no automatic tracking claimed", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("HOW POSTSCORE'S TOOLS ACTUALLY WORK");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("app/business/[id]/growth/CouponBuilder.tsx");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("app/business/[id]/growth/ReferralBuilder.tsx");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("app/business/[id]/website-reviews/GetMoreReviews.tsx");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("app/actions/pricing.ts");
+    expect(ASSISTANT_SYSTEM_RULES).toContain('manually taps "+1 Redeemed"');
+    expect(ASSISTANT_SYSTEM_RULES).toContain("no working redeem page behind it");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("there is no POS, booking, or automatic detection of any redemption");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("There is no trackable link or QR code for referrals at all");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("PostScore has no analytics here at all");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("never describe any of these four tools doing anything beyond what's stated here");
+  });
+
+  test("rule 11 requires quoting points/counts/dates/labels exactly and never recomputing or embellishing", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("QUOTE EXACTLY, NEVER CALCULATE OR EMBELLISH");
+    expect(ASSISTANT_SYSTEM_RULES).toContain('never "slower than average," "below average," or "poor" unless REAL DATA CONTEXT itself says so');
+    expect(ASSISTANT_SYSTEM_RULES).toContain("never subtract earned from max yourself");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("count and list exactly what REAL DATA CONTEXT gives");
+  });
+
+  test("rule 5's brevity target now has a concrete hard cap: ~150 words, at most 4 bullets", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("HARD TARGET: under ~150 words, at most 4 bullets");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("even then never exceed 4 bullets");
+  });
+
+  test("rule 1b forbids inventing a cause for a score change — totals only, no reasons recorded", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("Score history is TOTALS ONLY — it never records WHY a score moved between two scans");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("NEVER invent or guess a cause unless REAL DATA CONTEXT separately states one");
+  });
+
+  test("the law-firm referral restriction extends to coupon ideas — never a referral reward/credit in any form", () => {
+    const noReferral: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      profile: { ...BASE_CONTEXT.profile, referralOk: false },
+    };
+    const text = buildAssistantContextText(noReferral);
+    expect(text).toContain("This restriction applies to referral-style incentives in ANY form, not just the Refer a friend tab");
+    expect(text).toContain("never suggest a referral reward, a referral credit, or any \"refer a friend\" discount as part of a coupon or promo idea either");
   });
 });
 
@@ -1043,6 +1107,52 @@ describe("anthropicFailureMessage", () => {
     );
     expect(anthropicFailureMessage(429, "es")).toBe(
       "PostAI está recibiendo muchas solicitudes en este momento. Inténtelo de nuevo en un minuto."
+    );
+  });
+});
+
+describe("buildAssistantLanguageDirective", () => {
+  test("is empty for the default (English) locale — ASSISTANT_SYSTEM_RULES is already English", () => {
+    expect(buildAssistantLanguageDirective("en")).toBe("");
+  });
+
+  test("instructs the model to answer in Spanish, including translating page/tab names, for es", () => {
+    const directive = buildAssistantLanguageDirective("es");
+    expect(directive).toContain("Respond in");
+    expect(directive).toContain("Spanish");
+    expect(directive).toContain("translate every such name");
+  });
+
+  test("only the Spanish directive adds the usted-only formality instruction", () => {
+    expect(buildAssistantLanguageDirective("es")).toContain('Use the formal "usted" form');
+    expect(buildAssistantLanguageDirective("es")).toContain('never "tú"');
+  });
+
+  test("the Spanish directive distinguishes puntuación (PostScore score) from calificación (Google rating) and forbids swapping them", () => {
+    const directive = buildAssistantLanguageDirective("es");
+    expect(directive).toContain('"puntuación" means ONLY the PostScore score');
+    expect(directive).toContain('"calificación" means ONLY the Google star rating');
+    expect(directive).toContain("Never swap these two terms");
+  });
+
+  test("the English directive has no puntuación/calificación note — it's Spanish-specific", () => {
+    expect(buildAssistantLanguageDirective("en")).not.toContain("puntuación");
+  });
+});
+
+describe("buildAssistantSystemPrompt", () => {
+  test("concatenates the real rules, the real context text, and the real language directive, in that order", () => {
+    const system = buildAssistantSystemPrompt(BASE_CONTEXT, "en");
+    expect(system.startsWith(ASSISTANT_SYSTEM_RULES)).toBe(true);
+    expect(system).toContain(buildAssistantContextText(BASE_CONTEXT, "en"));
+    // English has no language directive to append.
+    expect(system).toBe(`${ASSISTANT_SYSTEM_RULES}\n\n${buildAssistantContextText(BASE_CONTEXT, "en")}`);
+  });
+
+  test("appends the real Spanish language directive for es, after the rules and context", () => {
+    const system = buildAssistantSystemPrompt(BASE_CONTEXT, "es");
+    expect(system).toBe(
+      `${ASSISTANT_SYSTEM_RULES}\n\n${buildAssistantContextText(BASE_CONTEXT, "es")}${buildAssistantLanguageDirective("es")}`
     );
   });
 });

@@ -78,7 +78,7 @@ import {
   buildWeeklyChecklistState,
   type WeeklyCheckRow,
 } from "../lib/weeklyChecklist";
-import { normalizeLocale, type Locale } from "../lib/i18n";
+import { formatShortDate, normalizeLocale, type Locale } from "../lib/i18n";
 import {
   buildAssistantContextText,
   MAX_ACTION_PLAN_TASKS_IN_CONTEXT,
@@ -387,7 +387,7 @@ async function main() {
   const scoreHistoryRows = await readScoreHistory(businessId);
   const scoreHistory: AssistantScoreHistoryEntry[] = scoreHistoryRows
     .slice(0, MAX_SCORE_HISTORY_IN_CONTEXT)
-    .map((h) => ({ total: h.total, grade: h.grade as AssistantScoreHistoryEntry["grade"], date: new Date(h.created_at).toLocaleDateString() }))
+    .map((h) => ({ total: h.total, grade: h.grade as AssistantScoreHistoryEntry["grade"], date: formatShortDate(h.created_at, locale) }))
     .reverse();
 
   const fixedItems: AssistantFixedItem[] = completed.slice(0, MAX_FIXED_ITEMS_IN_CONTEXT).map((c) => ({

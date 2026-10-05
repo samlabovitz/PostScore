@@ -50,6 +50,36 @@ function getApiKey(): string {
 
 interface RawMessageResponse {
   content?: Array<{ type: string; text?: string }>;
+  /** "max_tokens" means the API stopped mid-reply because it hit the
+   * request's own max_tokens cap, not because it actually finished —
+   * see trimToLastCompleteSentence below, the one place callAnthropicChat
+   * reads this. */
+  stop_reason?: string | null;
+}
+
+/**
+ * Trims a reply that was cut off by a real max_tokens stop back to its
+ * last complete sentence, so the owner is never shown a reply ending
+ * mid-word or mid-clause (see callAnthropicChat below — only called
+ * when the API's own `stop_reason` says max_tokens was hit; a reply
+ * that finished naturally is never touched). Finds the LAST sentence-
+ * ending punctuation (. ! ?) anywhere in the text — correct even though
+ * earlier periods may be decimals or abbreviations, since any period
+ * before the real cutoff point is necessarily inside an already-
+ * complete sentence — and keeps any immediately-trailing closing
+ * character (a quote, parenthesis, or markdown **bold** marker) so it
+ * doesn't strand an unmatched one. Best-effort: a reply with no
+ * sentence-ending punctuation at all (e.g. cut off within the very
+ * first clause) is returned unchanged rather than emptied out, since an
+ * incomplete-but-real answer is still more useful than nothing.
+ */
+export function trimToLastCompleteSentence(text: string): string {
+  const trimmed = text.trimEnd();
+  const lastEnd = Math.max(trimmed.lastIndexOf("."), trimmed.lastIndexOf("!"), trimmed.lastIndexOf("?"));
+  if (lastEnd === -1) return trimmed;
+  let end = lastEnd + 1;
+  while (end < trimmed.length && /["')*]/.test(trimmed[end])) end++;
+  return trimmed.slice(0, end);
 }
 
 /**
@@ -156,6 +186,15 @@ export interface ChatTurn {
  * Same model, same honest-error-on-failure behavior; callers are
  * responsible for keeping `messages` short (see MAX_HISTORY_MESSAGES in
  * app/actions/assistant.ts) to keep input tokens — and cost — bounded.
+ *
+ * Unlike callAnthropicMessage above, this trims the reply (see
+ * trimToLastCompleteSentence) whenever the API's own `stop_reason` says
+ * it stopped because it hit `maxTokens`, not because it actually
+ * finished — the owner should never see an answer ending mid-sentence.
+ * callAnthropicMessage is left untouched: its one real caller
+ * (assessPricing in app/actions/pricing.ts) parses a structured format
+ * that this trim could break, and that call isn't the one the live
+ * check (scripts/live-check-postai.ts) found cutting off.
  */
 export async function callAnthropicChat(params: {
   system: string;
@@ -186,5 +225,5 @@ export async function callAnthropicChat(params: {
   if (!text) {
     throw new Error("Anthropic API returned no text content.");
   }
-  return text;
+  return data.stop_reason === "max_tokens" ? trimToLastCompleteSentence(text) : text;
 }

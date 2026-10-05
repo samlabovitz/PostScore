@@ -37,3 +37,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scratch output from scripts/live-check-postai.ts — never a project artifact
+scripts/.live-check-postai-output.json
