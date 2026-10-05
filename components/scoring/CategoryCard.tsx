@@ -76,7 +76,7 @@ export function CategoryCard({ category }: { category: CategoryResult }) {
                           : "text-ink-soft"
                     )}
                   >
-                    {formatPoints(check.earnedPoints)} / {check.maxPoints}
+                    {formatPoints(check.earnedPoints)} / {formatPoints(check.maxPoints)}
                   </span>
                   <Pill variant={pill.variant}>{t(locale, pill.labelKey)}</Pill>
                 </div>

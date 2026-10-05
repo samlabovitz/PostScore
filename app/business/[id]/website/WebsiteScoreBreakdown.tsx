@@ -109,7 +109,7 @@ function CheckRow({
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
           <span className="text-sm font-medium text-ink">{check.label}</span>
           <span className={cn("shrink-0 text-sm font-semibold tabular-nums", style.points)}>
-            {state === "excluded" ? "—" : formatPoints(check.earnedPoints)} / {check.maxPoints}
+            {state === "excluded" ? "—" : formatPoints(check.earnedPoints)} / {formatPoints(check.maxPoints)}
           </span>
         </div>
 

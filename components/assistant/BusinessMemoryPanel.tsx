@@ -20,6 +20,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
+import { formatPoints } from "@/components/scoring/CategoryCard";
 import { updateBusinessProfile, updateBusinessTypeOverride } from "@/app/actions/businesses";
 import { getBizProfileOptions } from "@/config/bizProfiles";
 import type { AssistantBusinessProfile } from "@/lib/assistant";
@@ -79,10 +80,10 @@ function FixedItems({ items }: { items: AssistantBusinessProfile["fixedItems"] }
           <span className="shrink-0 tabular-nums text-ink-mute">
             {item.verifiedAt
               ? t(locale, "dashboard.assistant.memory.pointsGainedWithDate", {
-                  points: item.pointsGained,
+                  points: formatPoints(item.pointsGained),
                   date: item.verifiedAt,
                 })
-              : t(locale, "dashboard.assistant.memory.pointsGainedNoDate", { points: item.pointsGained })}
+              : t(locale, "dashboard.assistant.memory.pointsGainedNoDate", { points: formatPoints(item.pointsGained) })}
           </span>
         </li>
       ))}
