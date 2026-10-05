@@ -44,6 +44,57 @@ export function splitAssistantContent(content: string): Array<{ general: boolean
     });
 }
 
+/**
+ * Splits one paragraph's real text into plain/bold runs wherever the
+ * model used `**markdown bold**` — the model is never instructed to
+ * produce markdown, but it does anyway (e.g. bolding a page name), and
+ * until now nothing here ever parsed it: this component rendered the
+ * raw string as-is, literal asterisks included, since there was no
+ * bold-rendering logic at all. Non-greedy (`.+?`) so two separate bold
+ * spans in one paragraph don't collapse into one; the `s` flag lets a
+ * bold span cross a soft line break within the same paragraph (a
+ * paragraph can itself contain real newlines — see the whitespace-pre-
+ * wrap rendering below). A genuinely unmatched `**` (no real closing
+ * pair) is left as literal text rather than guessed at.
+ *
+ * Uses `[^]+?` rather than `.+?` with the `s` (dotAll) flag — this
+ * project's configured TS target doesn't support that flag, and `[^]`
+ * (an empty negated character class, matching literally any character)
+ * is a long-standing, widely-supported way to get the same
+ * "dot matches newlines too" behavior without it.
+ */
+export function parseInlineBold(text: string): Array<{ bold: boolean; text: string }> {
+  const parts: Array<{ bold: boolean; text: string }> = [];
+  const pattern = /\*\*([^]+?)\*\*/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ bold: false, text: text.slice(lastIndex, match.index) });
+    }
+    parts.push({ bold: true, text: match[1] });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) {
+    parts.push({ bold: false, text: text.slice(lastIndex) });
+  }
+  return parts;
+}
+
+/** Renders one paragraph's real text with any `**bold**` spans as real
+ * `<strong>` elements (see parseInlineBold above) — shared by both the
+ * normal and general-guidance paragraph styles below so bold renders
+ * identically in either. */
+function FormattedText({ text }: { text: string }) {
+  return (
+    <>
+      {parseInlineBold(text).map((run, i) =>
+        run.bold ? <strong key={i}>{run.text}</strong> : <span key={i}>{run.text}</span>
+      )}
+    </>
+  );
+}
+
 export function AssistantMessageContent({ content }: { content: string }) {
   const locale = useLocale();
   const parts = splitAssistantContent(content);
@@ -56,11 +107,13 @@ export function AssistantMessageContent({ content }: { content: string }) {
               <IconInfoCircle size={12} />
               {t(locale, "dashboard.assistant.generalGuidanceLabel")}
             </div>
-            <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-ink-soft">{part.text}</p>
+            <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-ink-soft">
+              <FormattedText text={part.text} />
+            </p>
           </div>
         ) : (
           <p key={i} className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-ink">
-            {part.text}
+            <FormattedText text={part.text} />
           </p>
         )
       )}

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   ASSISTANT_SYSTEM_RULES,
+  anthropicFailureMessage,
   buildAssistantContextText,
   buildAssistantStarterPrompts,
   type AssistantBusinessContext,
@@ -690,5 +691,44 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
   test("rule 3 forbids stating an exact photo count once REAL DATA CONTEXT already describes it as a capped lower bound", () => {
     expect(ASSISTANT_SYSTEM_RULES).toContain('An exact photo count once REAL DATA CONTEXT already describes it as "X or more"');
     expect(ASSISTANT_SYSTEM_RULES).toContain("Google's own data caps there");
+  });
+});
+
+describe("anthropicFailureMessage", () => {
+  test("a 401 (auth failure) gets the short, honest, generic unavailable message", () => {
+    expect(anthropicFailureMessage(401)).toBe(
+      "PostAI isn't available right now. Please try again in a few minutes."
+    );
+  });
+
+  test("a 500 (server error) gets the same generic unavailable message as a 401", () => {
+    expect(anthropicFailureMessage(500)).toBe(anthropicFailureMessage(401));
+  });
+
+  test("a 429 (rate limited) gets its own distinct message, never the generic one", () => {
+    expect(anthropicFailureMessage(429)).toBe(
+      "PostAI is getting a lot of requests right now. Please try again in a minute."
+    );
+    expect(anthropicFailureMessage(429)).not.toBe(anthropicFailureMessage(401));
+  });
+
+  test("never contains the real HTTP status, a request id, or any other technical detail — only ever one of two fixed, reviewed strings", () => {
+    for (const status of [401, 403, 404, 429, 500, 503, 0]) {
+      const message = anthropicFailureMessage(status);
+      expect(message).not.toMatch(/\b\d{3}\b/); // no 3-digit status-looking number anywhere
+      expect(message.toLowerCase()).not.toContain("request_id");
+      expect(message.toLowerCase()).not.toContain("request-id");
+      expect(message.toLowerCase()).not.toContain("error_type");
+      expect(message.toLowerCase()).not.toContain("anthropic api");
+    }
+  });
+
+  test("resolves the Spanish (usted) wording for both the generic and rate-limit cases", () => {
+    expect(anthropicFailureMessage(401, "es")).toBe(
+      "PostAI no está disponible en este momento. Inténtelo de nuevo en unos minutos."
+    );
+    expect(anthropicFailureMessage(429, "es")).toBe(
+      "PostAI está recibiendo muchas solicitudes en este momento. Inténtelo de nuevo en un minuto."
+    );
   });
 });

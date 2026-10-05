@@ -676,3 +676,31 @@ export const MAX_HISTORY_MESSAGES = 12;
  * "General guidance:" paragraph, when one applies) won't get cut off
  * mid-sentence. */
 export const ASSISTANT_MAX_TOKENS = 300;
+
+// ---------------------------------------------------------------------------
+// Failed-request copy — what the owner sees when the Anthropic call itself fails
+// ---------------------------------------------------------------------------
+
+/**
+ * The short, honest, translated message the owner sees when a chat
+ * request to Anthropic fails — never the raw technical error (status
+ * code, API error type, request id, or response body). See
+ * sendAssistantMessage in app/actions/assistant.ts, the one real
+ * caller: it logs the full real detail server-side separately, then
+ * calls this with only the numeric HTTP status from the failure (see
+ * AnthropicApiError in lib/anthropicClient.ts) — deliberately never the
+ * error object itself, so it's structurally impossible for this
+ * function to leak anything technical into what it returns, only ever
+ * one of two fixed, already-reviewed strings.
+ *
+ * A rate limit (429) gets its own honest "try again in a minute"
+ * wording — the one real failure mode where "try again shortly" is
+ * actually the right advice, vs. every other failure (auth, server
+ * error, network), where a few minutes is the more honest expectation.
+ */
+export function anthropicFailureMessage(status: number, locale: Locale = DEFAULT_LOCALE): string {
+  return t(
+    locale,
+    status === 429 ? "dashboard.assistant.errorAnthropicRateLimited" : "dashboard.assistant.errorAnthropicUnavailable"
+  );
+}

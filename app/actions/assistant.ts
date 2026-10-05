@@ -13,7 +13,7 @@ import { businessRowToScoringInput } from "@/lib/scoring";
 import { bizProfile, resolveBizProfile } from "@/config/bizProfiles";
 import { priceLevelToSymbol } from "@/lib/priceLevel";
 import { buildWeeklyChecklistItems } from "@/lib/weeklyChecklist";
-import { callAnthropicChat } from "@/lib/anthropicClient";
+import { callAnthropicChat, AnthropicApiError } from "@/lib/anthropicClient";
 import {
   ASSISTANT_MAX_TOKENS,
   ASSISTANT_SYSTEM_RULES,
@@ -23,6 +23,7 @@ import {
   MAX_HISTORY_MESSAGES,
   MAX_LOSING_CHECKS_IN_CONTEXT,
   MAX_SCORE_HISTORY_IN_CONTEXT,
+  anthropicFailureMessage,
   buildAssistantContextText,
   buildAssistantStarterPrompts,
   type AssistantActionPlanTask,
@@ -486,9 +487,27 @@ export async function sendAssistantMessage(
       maxTokens: ASSISTANT_MAX_TOKENS,
     });
   } catch (err) {
+    // The owner only ever sees a short, honest, translated message (see
+    // anthropicFailureMessage in lib/assistant.ts — it's handed only a
+    // numeric status, never this error object, so it's structurally
+    // unable to leak anything technical). The full real detail (status,
+    // API error type, request id) is logged server-side only, for
+    // whoever's actually debugging a real outage. A failed request is
+    // never saved as an assistant reply — this returns here, before the
+    // "assistant" role insert below ever runs.
+    if (err instanceof AnthropicApiError) {
+      console.error(
+        `[assistant] Anthropic API call failed: status=${err.status} type=${err.errorType ?? "unknown"} requestId=${err.requestId ?? "none"}`
+      );
+      return { status: "error", message: anthropicFailureMessage(err.status, loaded.locale) };
+    }
+    console.error("[assistant] Unexpected error calling Anthropic:", err);
     return {
       status: "error",
-      message: err instanceof Error ? err.message : t(loaded.locale, "dashboard.assistant.errorCouldNotGetReply"),
+      // Not a shaped Anthropic failure (e.g. a network error before any
+      // response) — no real status to report, so this always reads as
+      // the generic "isn't available" case, never the rate-limit one.
+      message: anthropicFailureMessage(0, loaded.locale),
     };
   }
 

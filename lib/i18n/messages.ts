@@ -972,6 +972,8 @@ export type MessageKey =
   | "dashboard.assistant.errorCouldNotStartConversation"
   | "dashboard.assistant.errorCouldNotSaveMessage"
   | "dashboard.assistant.errorCouldNotGetReply"
+  | "dashboard.assistant.errorAnthropicUnavailable"
+  | "dashboard.assistant.errorAnthropicRateLimited"
   // Starter-prompt questions (lib/assistant.ts's buildAssistantStarterPrompts).
   // Genuinely dual-purpose: rendered as button labels AND sent to the
   // model verbatim as the user's message when clicked — resolved ONCE
@@ -3289,6 +3291,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.errorCouldNotStartConversation": "Could not start a new conversation.",
     "dashboard.assistant.errorCouldNotSaveMessage": "Could not save your message.",
     "dashboard.assistant.errorCouldNotGetReply": "Couldn't get a reply.",
+    "dashboard.assistant.errorAnthropicUnavailable": "PostAI isn't available right now. Please try again in a few minutes.",
+    "dashboard.assistant.errorAnthropicRateLimited": "PostAI is getting a lot of requests right now. Please try again in a minute.",
     "dashboard.assistant.starterPrompts.whatsHurtingScore": "What's hurting my score the most right now?",
     "dashboard.assistant.starterPrompts.top3ThisWeek": "What are the top 3 things I should fix this week?",
     "dashboard.assistant.starterPrompts.whatsChangedSinceStart": "What's changed since I started?",
@@ -5553,6 +5557,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.errorCouldNotStartConversation": "No se pudo iniciar una nueva conversación.",
     "dashboard.assistant.errorCouldNotSaveMessage": "No se pudo guardar su mensaje.",
     "dashboard.assistant.errorCouldNotGetReply": "No se pudo obtener una respuesta.",
+    "dashboard.assistant.errorAnthropicUnavailable": "PostAI no está disponible en este momento. Inténtelo de nuevo en unos minutos.",
+    "dashboard.assistant.errorAnthropicRateLimited": "PostAI está recibiendo muchas solicitudes en este momento. Inténtelo de nuevo en un minuto.",
     "dashboard.assistant.starterPrompts.whatsHurtingScore": "¿Qué es lo que más está perjudicando mi puntuación ahora mismo?",
     "dashboard.assistant.starterPrompts.top3ThisWeek": "¿Cuáles son las 3 cosas principales que debería solucionar esta semana?",
     "dashboard.assistant.starterPrompts.whatsChangedSinceStart": "¿Qué ha cambiado desde que empecé?",

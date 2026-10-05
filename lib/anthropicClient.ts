@@ -53,6 +53,58 @@ interface RawMessageResponse {
 }
 
 /**
+ * A failed Anthropic API call, carrying the real technical details
+ * structured (HTTP status, the API's own error `type`, and its
+ * `request-id` response header, when present) rather than only as text
+ * baked into `.message` — so a caller can branch on `status` (e.g. 429
+ * rate-limited vs. anything else) without parsing a string, and can log
+ * the full real detail server-side while showing the owner a short,
+ * honest, translated message instead (see sendAssistantMessage in
+ * app/actions/assistant.ts). `.message` itself stays in the original
+ * `Anthropic API request failed (${status}): ${body}` shape, so any
+ * existing caller that only ever read `.message` (e.g. assessPricing in
+ * app/actions/pricing.ts) keeps working unchanged.
+ */
+export class AnthropicApiError extends Error {
+  readonly status: number;
+  /** The API's own real error type (e.g. "authentication_error",
+   * "rate_limit_error") — null when the response body wasn't valid
+   * JSON or didn't carry one. */
+  readonly errorType: string | null;
+  /** Anthropic's own `request-id` response header — null when absent
+   * (e.g. the request never reached Anthropic at all). Worth logging
+   * alongside any report to Anthropic support. */
+  readonly requestId: string | null;
+
+  constructor(status: number, errorType: string | null, requestId: string | null, rawBody: string) {
+    super(`Anthropic API request failed (${status}): ${rawBody}`);
+    this.name = "AnthropicApiError";
+    this.status = status;
+    this.errorType = errorType;
+    this.requestId = requestId;
+  }
+}
+
+/** Real status/type/request-id out of a failed response, for
+ * AnthropicApiError above — shared by both call functions below so
+ * they parse a failed response identically. `requestId` is read from
+ * the response's own header (present on every real Anthropic response,
+ * success or failure), not the body. */
+async function throwAnthropicApiError(res: Response): Promise<never> {
+  const requestId = res.headers.get("request-id");
+  const rawBody = await res.text();
+  let errorType: string | null = null;
+  try {
+    const parsed = JSON.parse(rawBody) as { error?: { type?: string } };
+    errorType = parsed?.error?.type ?? null;
+  } catch {
+    // Not JSON (e.g. an upstream proxy error page) — errorType stays
+    // null; rawBody is still captured in full for server-side logging.
+  }
+  throw new AnthropicApiError(res.status, errorType, requestId, rawBody);
+}
+
+/**
  * Sends a single-turn message to Claude and returns its full text reply.
  * `system` carries the role/constraints; `userMessage` carries the real
  * data for this call. Throws on any non-2xx response or a reply with no
@@ -80,8 +132,7 @@ export async function callAnthropicMessage(params: {
   });
 
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Anthropic API request failed (${res.status}): ${body}`);
+    await throwAnthropicApiError(res);
   }
 
   const data = (await res.json()) as RawMessageResponse;
@@ -127,8 +178,7 @@ export async function callAnthropicChat(params: {
   });
 
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Anthropic API request failed (${res.status}): ${body}`);
+    await throwAnthropicApiError(res);
   }
 
   const data = (await res.json()) as RawMessageResponse;
