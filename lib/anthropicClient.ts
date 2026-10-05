@@ -12,11 +12,34 @@ const ANTHROPIC_VERSION = "2023-06-01";
 // owner clicks "Assess my pricing".
 const MODEL = "claude-haiku-4-5-20251001";
 
+/**
+ * Strips whitespace and a single matching pair of stray leading/
+ * trailing quote characters from a raw env-var value. Harmless/no-op
+ * for an already-clean key; fixes the case where some .env tooling, a
+ * copy-paste, or a hosting dashboard's env-var UI leaves the value
+ * wrapped in literal `"`/`'` characters or padded with whitespace —
+ * which Anthropic's API rejects outright as an invalid x-api-key
+ * (the literal quote/space characters become part of the header
+ * value) rather than something it can tolerate or warn about.
+ * Exported so this exact sanitization is directly testable.
+ */
+export function sanitizeApiKey(raw: string): string {
+  let key = raw.trim();
+  if (
+    key.length >= 2 &&
+    ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'")))
+  ) {
+    key = key.slice(1, -1).trim();
+  }
+  return key;
+}
+
 function getApiKey(): string {
   if (typeof window !== "undefined") {
     throw new Error("Anthropic API calls must run on the server.");
   }
-  const key = process.env.ANTHROPIC_API_KEY;
+  const raw = process.env.ANTHROPIC_API_KEY;
+  const key = raw ? sanitizeApiKey(raw) : "";
   if (!key || key === "YOUR_KEY_HERE") {
     throw new Error(
       "ANTHROPIC_API_KEY is not set. Add your real key to .env.local."
