@@ -362,6 +362,7 @@ async function main() {
   const checklistState = buildWeeklyChecklistState(weeklyCheckRows);
   const weeklyRoutine: AssistantWeeklyRoutineSummary = {
     items: buildWeeklyChecklistItems(locale).map((item) => ({
+      id: item.id,
       title: item.title,
       checkedThisWeek: checklistState.checkedItemIds.has(item.id),
     })),
@@ -403,6 +404,12 @@ async function main() {
     autoDetectedBusinessTypeId: autoDetectedProfile.id,
     businessTypeOverridden: businessTypeOverride !== null,
     referralOk: profile.referralOk,
+    couponPresets: profile.couponPresets.map((p) => ({ label: p.label, description: p.description })),
+    referralPresets: profile.referralPresets.map((p) => ({
+      referrerReward: p.referrerReward,
+      friendReward: p.friendReward,
+      description: p.description,
+    })),
     location: summary.address ?? null,
     services: summary.services ?? [],
     avgJobValueLow: summary.avg_job_value_low ?? null,

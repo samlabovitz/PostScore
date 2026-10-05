@@ -312,6 +312,7 @@ async function loadBusinessContext(businessId: string, localeOverride?: Locale):
   const checklistState = buildWeeklyChecklistState(weeklyCheckRows);
   const weeklyRoutine: AssistantWeeklyRoutineSummary = {
     items: buildWeeklyChecklistItems(locale).map((item) => ({
+      id: item.id,
       title: item.title,
       checkedThisWeek: checklistState.checkedItemIds.has(item.id),
     })),
@@ -353,6 +354,12 @@ async function loadBusinessContext(businessId: string, localeOverride?: Locale):
     autoDetectedBusinessTypeId: autoDetectedProfile.id,
     businessTypeOverridden: businessTypeOverride !== null,
     referralOk: profile.referralOk,
+    couponPresets: profile.couponPresets.map((p) => ({ label: p.label, description: p.description })),
+    referralPresets: profile.referralPresets.map((p) => ({
+      referrerReward: p.referrerReward,
+      friendReward: p.friendReward,
+      description: p.description,
+    })),
     location: summary.address ?? null,
     services: summary.services ?? [],
     avgJobValueLow: summary.avg_job_value_low ?? null,
@@ -485,11 +492,37 @@ function collectFlags(answer: string, locale: Locale, flagLabel: string, context
     flags.push("Mentions the starter-site generator for Modern Liquors, which already has a website.");
   }
 
+  const referralPattern = /referral|refer a friend|referido|recomendaci[oó]n/i;
+  const automaticPattern = /\bautomatic(ally)?\b|autom[aá]ticamente/i;
+  const shareableLinkPattern = /shareable link|enlace compartible/i;
+  const sentences = answer.split(/(?<=[.!?])\s+/);
+  const shareableLinkNearReferral = sentences.some(
+    (s) => referralPattern.test(s) && shareableLinkPattern.test(s)
+  );
+  if ((referralPattern.test(answer) && automaticPattern.test(answer)) || shareableLinkNearReferral) {
+    flags.push('Mentions "automatic"/a shareable link in the same sentence as a referral mention — the real referral tool has neither.');
+  }
+
+  if (/none (of (these|them)|change your score)|no cambia(n)? su puntuación/i.test(answer)) {
+    flags.push('Uses a blanket "none change your score" claim — check each growth move\'s own real Score impact line; even one real overlap makes this false.');
+  }
+
+  const routineItemCount = answer.match(
+    /\b(uno|una|dos|tres|cuatro|cinco|seis|one|two|three|four|five|six|\d+)\s+(items?|tareas?|cosas?|habits?|hábitos?)\b/i
+  );
+  if (routineItemCount && /routine|rutina|checklist|weekly|semanal/i.test(answer)) {
+    const n = routineItemCount[1].toLowerCase();
+    if (!["5", "five", "cinco"].includes(n)) {
+      flags.push(`States "${routineItemCount[0]}" near a routine mention — the real weekly routine always has exactly 5 items.`);
+    }
+  }
+
   if (
-    /referral|refer a friend|referido|recomendaci[oó]n/i.test(answer) &&
-    /\bautomatic(ally)?\b|autom[aá]ticamente|shareable link|enlace compartible/i.test(answer)
+    (/\bNOT slow\b/i.test(contextText) || /\bNO lento\b/i.test(contextText)) &&
+    /\b(slow|slower|lento|lenta)\b/i.test(answer) &&
+    /(mobile|speed|velocidad|móvil)/i.test(answer)
   ) {
-    flags.push('Mentions "automatic"/a shareable link near a referral mention — the real referral tool has neither.');
+    flags.push('Says "slow"/"lento" near mobile speed, but the real rating is AVERAGE (the context explicitly says NOT slow / NO lento).');
   }
 
   // (?!n) excludes "ya están" (plural "are" — e.g. "templates that are
@@ -657,6 +690,18 @@ async function main() {
     ]);
     console.log(`A: ${r.answer}`);
     probeReports.push({ businessName: "Lamonsoff", label: "Should I start a referral program?", turns: [r] });
+
+    console.log("\n=== Probe: Lamonsoff — Should I connect my Google Business Profile? ===");
+    const [r2] = await runConversation(lamonsoffContext.context, lamonsoffContext.locale, "lamonsoff", [
+      "Should I connect my Google Business Profile?",
+    ]);
+    console.log(`A: ${r2.answer}`);
+    if (r2.flags.length > 0) console.log(`FLAGS: ${r2.flags.join(" | ")}`);
+    probeReports.push({
+      businessName: "Lamonsoff",
+      label: "Should I connect my Google Business Profile?",
+      turns: [r2],
+    });
   }
 
   if (santaFeContext) {

@@ -15,7 +15,7 @@ import { CATEGORY_LABELS } from "@/lib/scoring";
 import type { TaskEffort } from "@/lib/actionPlan";
 import { PHOTO_COMPARISON_CAP, type GrowthMoveId } from "@/lib/growthMoves";
 import { DEFAULT_LOCALE, formatShortDate, t, type Locale } from "@/lib/i18n";
-import { weekStartFor } from "@/lib/weeklyChecklist";
+import { weekStartFor, type WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
 
 // ---------------------------------------------------------------------------
 // Context shape — the compact, real-data summary the assistant is grounded in
@@ -131,6 +131,23 @@ export interface AssistantFixedItem {
  * `businessTypeOverridden` are the only genuinely new owner-entered facts;
  * everything else here is derived, never invented.
  */
+/** One real, built-in coupon quick pick for this business type — mirrors
+ * CouponPreset (config/bizProfiles.ts) minus its internal `id`, which
+ * the model never needs to see or repeat. */
+export interface AssistantOfferPreset {
+  label: string;
+  description: string;
+}
+
+/** One real, built-in referral reward pair for this business type —
+ * mirrors ReferralPreset (config/bizProfiles.ts) minus its internal
+ * `id`. */
+export interface AssistantReferralPreset {
+  referrerReward: string;
+  friendReward: string;
+  description: string;
+}
+
 export interface AssistantBusinessProfile {
   /** The resolved label actually in effect — the owner's override when
    * one is set, otherwise the Google-category auto-detection (see
@@ -162,6 +179,19 @@ export interface AssistantBusinessProfile {
    * rule 7's referral mapping (and the model's own answers) never
    * suggest a program this business can't actually set up in the app. */
   referralOk: boolean;
+  /** This business type's real, built-in coupon quick picks (BizProfile.
+   * couponPresets in config/bizProfiles.ts) — the exact same options the
+   * Coupons tab's own picker shows, already resolved in this business's
+   * real locale. Lets the model name a REAL built-in option instead of
+   * inventing one or describing a generic idea as if PostScore built it
+   * (see rule 7b-style honesty). Never empty — every business type has
+   * at least one. */
+  couponPresets: AssistantOfferPreset[];
+  /** This business type's real, built-in referral reward pairs
+   * (BizProfile.referralPresets) — empty whenever referralOk is false,
+   * since the Refer a friend builder never mounts for this business
+   * type and so has nothing to preset. */
+  referralPresets: AssistantReferralPreset[];
   location: string | null;
   /** Owner-entered, editable from the "What I know about your business"
    * panel. Empty array = not entered yet, never a guessed default. */
@@ -214,6 +244,12 @@ export interface AssistantGrowthMove {
 }
 
 export interface AssistantWeeklyRoutineItem {
+  /** The real, stable item id (see WEEKLY_CHECKLIST_ITEM_IDS in
+   * lib/weeklyChecklist.ts) — used by buildAssistantContextText to
+   * state exactly where each habit is actually done (see
+   * WEEKLY_ROUTINE_DONE_ON below), never derived by matching on the
+   * (localized, so locale-fragile) title text. */
+  id: WeeklyChecklistItemId;
   title: string;
   /** True only when the owner has actually checked this item off for
    * the CURRENT real week — a self-reported log PostScore cannot
@@ -303,7 +339,8 @@ HOW TO ANSWER:
    - No website at all → the Website page's starter-site generator.
    - An EXISTING website that's losing points → the Website page's own score breakdown — never the starter-site generator, which is only for a business with no website at all.
    - Adding photos → the photo itself is added directly on their Google listing, not inside PostScore; the Overview page's "Photos" check — under "Where your points are" — is where PostScore shows the real gap and the "How to fix it" steps for doing it.
-   - Unlocking individual reviews, reply drafts, Insights, or Google Posts → connecting their Google Business Profile (the "Connect to unlock" prompt on the Reviews page, or the Overview page's "Your live Google listing" section).
+   - Individual reviews, reply drafts, reply-rate stats, Insights, a leads estimate, or Google Posts tracking → NONE of these are live yet, connected or not — they're all a later update (see the real "Google Business Profile connection" line below for the exact wording). If not yet connected, connecting it (the "Connect to unlock" prompt on the Reviews page, or the Overview page's "Your live Google listing" section) is still the real first step toward them eventually — but never say connecting itself "unlocks" any of these; say plainly none of them are available yet.
+   - Getting a review link/QR code to share — never requires connecting Google Business Profile; it already works today regardless (see rule 7's reviews bullet above).
    Still answer the real question first — the pointer is the closing sentence, not a substitute for genuine guidance. Don't force a pointer into an answer it doesn't fit; only add one when it's genuinely the next concrete step.
 7b. HOW POSTSCORE'S TOOLS ACTUALLY WORK. This is read directly from the real UI/action code, not a guess — never describe any of these four tools doing anything beyond what's stated here:
    - Coupon builder (Growth page's Coupons tab; app/business/[id]/growth/CouponBuilder.tsx, lib/coupons.ts, lib/couponImage.ts, app/actions/promos.ts): generates a downloadable coupon image (offer text, a short code, a QR code) from fixed, business-type-specific preset templates — never an AI-generated or adaptive suggestion. Saving it creates a tracked row, but the QR code's link has no working redeem page behind it — it's just a tidier way to hand the code to a customer, nothing more. The redemption count only ever goes up when the owner or staff manually taps "+1 Redeemed" — there is no POS, booking, or automatic detection of any redemption.
@@ -311,8 +348,9 @@ HOW TO ANSWER:
    - Reviews page link + QR sign (app/business/[id]/website-reviews/GetMoreReviews.tsx, lib/reviews.ts, lib/reviewSignImage.ts): gives the owner Google's own real "write a review" link for their listing, plus a printable QR code of that same link. PostScore has no analytics here at all — it never knows whether the link or QR was ever used, scanned, or led to a review.
    - Price check (Pricing page; app/actions/pricing.ts, lib/pricing.ts): on an explicit click, assesses each owner-entered service against real nearby competitor price-LEVEL data ($/$$/$$$, never an exact price) and labels each result as grounded in real local data or a general estimate.
    If you're unsure whether a tool does something beyond this list, say only what the owner will see on that page (a form, a download, a tally they update by hand) and nothing more — never "automatically," never a tracked link, never an AI suggestion, unless this section says so.
+7c. REAL OFFER PRESETS, NAMED HONESTLY. REAL DATA CONTEXT's "REAL OFFER PRESETS" section lists this business type's actual, built-in coupon and (when available) referral quick picks — the exact options the real Coupons/Refer a friend builders show. When you name a specific PostScore built-in option, it MUST be one of these exact presets — never invent a preset that isn't listed there. Any OTHER coupon/promo/referral idea you suggest (a different discount, a different angle) is your own general guidance and MUST follow rule 2's "General guidance:" labeling — never presented as if PostScore built it.
 8. WEEKLY ROUTINE: EXACTLY WHAT YOU CAN SEE. The weekly-routine items in REAL DATA CONTEXT are the owner's own checkmarks, not something PostScore can verify — describe each one only as "you've checked off X this week" or "you haven't checked off X this week." Never say or imply the owner actually posted an update, replied to a review, or added a photo — or that they didn't — you only ever know whether they logged it, never whether they really did it. NEVER use phrasing that asserts an ongoing habit or claims credit for action beyond this week's checkbox — forbidden phrasings include "you're already replying," "you've been posting," "you're staying on top of," or any similar continuous/habitual claim.
-9. GROWTH MOVES: CUSTOMERS, NEVER SCORE. A growth move in REAL DATA CONTEXT is a real, honest way to bring in more customers — it never changes PostScore and never earns points on its own, so never promise or imply points for doing one just because it's listed there. The coupon/referral facts there describe PostScore specifically (e.g. "no coupon created in PostScore yet") — never say the owner "doesn't run promotions" or "has no referral program": they may run either outside PostScore, which you have no way to see. BUT when the exact same real-world fix ALSO appears elsewhere in REAL DATA CONTEXT as a losing check or an action-plan task (e.g. "Improve your website" overlapping a Performance & mobile check, or adding photos overlapping a Photos check), the action plan's real points genuinely do apply to that fix — quote those real numbers, never deny or omit them just because the same fix is also framed as a growth move.
+9. GROWTH MOVES: CHECK EACH ONE'S OWN "SCORE IMPACT" LINE — NEVER GENERALIZE. Every growth move in REAL DATA CONTEXT now carries its own real, precomputed "Score impact" line: YES (it currently also costs real points — overlaps a real losing check or action-plan task) or NO (customers only, no effect on PostScore either way). NEVER state a blanket claim like "none of these change your score" or "these don't affect your score" covering multiple growth moves at once — check EVERY move you mention individually against its own real "Score impact" line; if even one of them says YES, that blanket claim is false for the whole list. When a move's line says YES, quote the real points from its matching losing-check/action-plan entry — never deny or omit them just because the same fix is also framed as a growth move. The coupon/referral facts there describe PostScore specifically (e.g. "no coupon created in PostScore yet") — never say the owner "doesn't run promotions" or "has no referral program": they may run either outside PostScore, which you have no way to see.
 10. VARIETY, WITHIN THIS CONVERSATION ONLY. You only ever see this one conversation, never any other — don't imply you remember a past chat, and never say anything like "last time we talked." Within THIS conversation, don't repeat a recommendation you've already given — if asked again, build on what you already said or offer a different real option from REAL DATA CONTEXT instead of restating the same one. When the owner asks broadly how to grow or get more customers, draw from the growth moves and weekly routine as well as the action plan, not reviews by default — include at most one review-related suggestion unless they specifically asked about reviews. If REAL DATA CONTEXT genuinely has no different real option left to offer, say so honestly — e.g. "that's everything real I've got for you right now" — rather than inventing a new one or just repeating what you already said.
 11. QUOTE EXACTLY, NEVER CALCULATE OR EMBELLISH. Every point value, count, date, and data label in REAL DATA CONTEXT is already exact and already computed — use those numbers and words VERBATIM, never recompute or round them yourself, and never rephrase a neutral label into a stronger or weaker claim (REAL DATA CONTEXT's "average" must stay "average" — never "slower than average," "below average," or "poor" unless REAL DATA CONTEXT itself says so). Every losing check already states how many points it's missing ("losing N pts") — never subtract earned from max yourself, and never state a total that doesn't match the real numbers given. When listing items (weekly routine items, action-plan tasks, growth moves), count and list exactly what REAL DATA CONTEXT gives — never more, never fewer, never merged or skipped.
 `.trim();
@@ -346,6 +384,43 @@ function formatPoints(value: number): string {
 }
 
 /**
+ * The real website.performance_mobile check's explanation ends in a bare
+ * "fast"/"average"/"slow" (or rápido/promedio/lento) — Google's own
+ * CrUX real-visitor classification (see RATING_CURVE in lib/scoring.ts).
+ * "average" reads, in isolation, as a vague synonym for "not great" —
+ * the live check (scripts/live-check-postai.ts) found the model
+ * paraphrasing it as "slower than average" or "averaging slow load
+ * times," which isn't what the real data says. This spells out, ONLY in
+ * the context sent to the model (never in the real check explanation
+ * shown elsewhere in the app), which of Google's three real bands this
+ * is and isn't, so there's no room left to misread it.
+ */
+const MOBILE_SPEED_CLARIFICATIONS: Record<string, Record<string, string>> = {
+  en: {
+    fast: "FAST (the best of Google's three real-visitor bands: fast / average / slow)",
+    average: "AVERAGE (the middle of Google's three real-visitor bands: fast / average / slow — NOT slow)",
+    slow: "SLOW (the worst of Google's three real-visitor bands: fast / average / slow)",
+  },
+  es: {
+    rápido: "RÁPIDO (la mejor de las tres franjas reales de Google: rápido / promedio / lento)",
+    promedio: "PROMEDIO (la franja intermedia de las tres franjas reales de Google: rápido / promedio / lento — NO lento)",
+    lento: "LENTO (la peor de las tres franjas reales de Google: rápido / promedio / lento)",
+  },
+};
+
+function clarifyCheckExplanation(checkId: string, explanation: string, locale: Locale): string {
+  if (checkId !== "website.performance_mobile") return explanation;
+  const clarifications = MOBILE_SPEED_CLARIFICATIONS[locale] ?? MOBILE_SPEED_CLARIFICATIONS.en;
+  for (const [word, clarified] of Object.entries(clarifications)) {
+    const pattern = new RegExp(`\\b${word}\\.$`, "i");
+    if (pattern.test(explanation)) {
+      return explanation.replace(pattern, `${clarified}.`);
+    }
+  }
+  return explanation;
+}
+
+/**
  * Where in PostScore a growth move is actually done, named the way the
  * owner's own screen names it — the real localized nav label, and the
  * real localized tab label where the move targets a specific tab.
@@ -356,6 +431,32 @@ function formatPoints(value: number): string {
  * UI already renders, so this can never name a page that doesn't exist
  * or drift from what the sidebar/tab strip actually says.
  */
+/**
+ * Where each real weekly-routine habit is ACTUALLY done — four of the
+ * five happen directly on the owner's real Google Business Profile,
+ * outside PostScore entirely (see lib/weeklyChecklist.ts's real howTo
+ * text for each item); only "Share your review link" is something
+ * PostScore itself provides (the Reviews page's real shareable link/QR
+ * code). Spelled out explicitly so the model never conflates, say,
+ * "Post an update or offer" with building a PostScore coupon — those
+ * are two entirely different things done in two entirely different
+ * places.
+ */
+function weeklyRoutineDoneOn(id: WeeklyChecklistItemId): string {
+  switch (id) {
+    case "post_update":
+      return "Done directly on the owner's real Google Business Profile (Google itself, e.g. business.google.com) — NOT inside PostScore, and NOT the same thing as a PostScore coupon/promo.";
+    case "reply_reviews":
+      return "Done directly on Google (via the owner's real Google Business Profile) — not inside PostScore.";
+    case "share_review_link":
+      return "Done using PostScore's own real shareable review link/QR code sign, on the Reviews page.";
+    case "add_photo":
+      return "Done directly on the owner's real Google Business Profile (uploading a photo on Google itself) — not inside PostScore.";
+    case "check_hours":
+      return "Done directly on the owner's real Google Business Profile (Google itself) — not inside PostScore.";
+  }
+}
+
 function growthMoveDestination(id: GrowthMoveId, locale: Locale): string {
   const page = (key: Parameters<typeof t>[1]) => `"${t(locale, key)}"`;
   switch (id) {
@@ -388,6 +489,36 @@ function growthMoveDestination(id: GrowthMoveId, locale: Locale): string {
  * other channel, so claiming they don't would be a fabrication of exactly
  * the kind rule 3 forbids.
  */
+/**
+ * Whether this move's real-world fix ALSO currently costs this business
+ * real PostScore points — computed from the real losing checks, never
+ * left for the model to infer (see rule 9's "quote the data, don't
+ * generalize" requirement). build_starter_site, start_coupon,
+ * start_referral, and run_price_check never overlap score by
+ * construction (none of them correspond to any real scoring check).
+ * improve_website only ever fires when weakWebsiteIssueLabels is
+ * non-empty (see buildGrowthMoves in lib/growthMoves.ts), i.e. those
+ * exact website checks are already currently losing points, so it
+ * always overlaps. add_photos_vs_competitors is the one genuinely
+ * conditional case: it fires purely from a competitor-photo-count
+ * comparison, independent of whether the real completeness.photos
+ * scoring check happens to be losing points too — so it's checked
+ * directly against the real losing-checks list.
+ */
+function growthMoveOverlapsScore(move: AssistantGrowthMove, losingChecks: AssistantLosingCheck[]): boolean {
+  switch (move.id) {
+    case "improve_website":
+      return true;
+    case "add_photos_vs_competitors":
+      return losingChecks.some((c) => c.checkId === "completeness.photos");
+    case "build_starter_site":
+    case "start_coupon":
+    case "start_referral":
+    case "run_price_check":
+      return false;
+  }
+}
+
 function growthMoveOwnerFact(move: AssistantGrowthMove, locale: Locale): string {
   switch (move.id) {
     case "start_coupon":
@@ -445,7 +576,7 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
   );
   if (!context.profile.referralOk) {
     lines.push(
-      "The Growth page's \"Refer a friend\" tab is not offered for this business type: referral-fee arrangements are restricted for attorneys under most states' rules of professional conduct. Never PROACTIVELY suggest or bring up a referral program for this business. If the owner directly asks about setting one up, answer honestly — say plainly that PostScore doesn't offer this tool for law firms for that reason, and suggest they check their own state bar's rules before running any referral program. Give no other legal advice beyond that. This restriction applies to referral-style incentives in ANY form, not just the Refer a friend tab — never suggest a referral reward, a referral credit, or any \"refer a friend\" discount as part of a coupon or promo idea either; if asked for coupon ideas, offer only non-referral promotions (e.g. a first-visit discount, a seasonal offer)."
+      "The Growth page's \"Refer a friend\" tab is not offered for this business type: referral-fee arrangements are restricted for attorneys under most states' rules of professional conduct. Never PROACTIVELY suggest or bring up a referral program for this business. If the owner directly asks about setting one up, answer honestly — say plainly that PostScore doesn't offer this tool for law firms for that reason, and suggest they check their own state bar's rules before running any referral program. Give no other legal advice beyond that. This restriction applies to referral-style incentives in ANY form, not just the Refer a friend tab — never suggest a referral reward, a referral credit, or any \"refer a friend\" discount as part of a coupon or promo idea either; if asked for coupon ideas, offer only non-referral promotions (e.g. a first-visit discount, a seasonal offer). MORE BROADLY: never state or imply that ANY marketing tactic — a coupon, a promo, an ad, or anything else — is unrestricted or definitively allowed for this business. Attorney advertising and solicitation rules vary significantly by state bar, and PostScore has no way to know this business's specific state rules beyond the one referral-fee restriction stated above. If the owner asks whether some tactic is allowed, say honestly that attorney advertising rules vary by state bar and they should check their own state bar's rules first — never say a tactic has \"no restrictions\" or is simply \"fine to do.\""
     );
   }
   lines.push(
@@ -491,8 +622,9 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
     for (const c of context.score.losingChecks) {
       const earned = c.earnedPoints ?? 0;
       const missing = c.maxPoints - earned;
+      const explanation = clarifyCheckExplanation(c.checkId, c.explanation, locale);
       lines.push(
-        `- [${t(locale, CATEGORY_LABELS[c.category])}] ${c.label}: ${formatPoints(earned)}/${formatPoints(c.maxPoints)} pts — losing ${formatPoints(missing)} — ${c.explanation}`
+        `- [${t(locale, CATEGORY_LABELS[c.category])}] ${c.label}: ${formatPoints(earned)}/${formatPoints(c.maxPoints)} pts — losing ${formatPoints(missing)} — ${explanation}`
       );
     }
   } else {
@@ -516,7 +648,7 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
     }
   }
 
-  lines.push("GROWTH MOVES (bring in customers; never change the score):");
+  lines.push("GROWTH MOVES (ways to bring in customers — each one's own \"Score impact\" line below says whether it ALSO affects PostScore; never generalize across all of them):");
   lines.push(
     "Each move below is backed by a real fact about activity inside PostScore only — never about what the owner does outside it. Page and tab names are exactly what the owner sees on their own screen; use those names when pointing them somewhere."
   );
@@ -524,18 +656,41 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
     lines.push("- No growth moves are currently firing for this business.");
   } else {
     for (const m of context.growthMoves) {
+      const overlaps = growthMoveOverlapsScore(m, context.score.losingChecks);
       lines.push(
-        `- ${m.title}: ${m.why} Where in PostScore: ${growthMoveDestination(m.id, locale)}. Why it's showing: ${growthMoveOwnerFact(m, locale)}`
+        `- ${m.title}: ${m.why} Where in PostScore: ${growthMoveDestination(m.id, locale)}. Why it's showing: ${growthMoveOwnerFact(m, locale)} Score impact: ${
+          overlaps
+            ? "YES, this one ALSO currently costs real points — see the matching entry in \"Checks currently losing points\" or the action plan above for the exact numbers."
+            : "NO — this is a customer-getting move only; it does not affect this business's PostScore either way."
+        }`
       );
     }
   }
 
-  lines.push("WEEKLY ROUTINE (owner self-reported, resets Mondays):");
+  lines.push(
+    "REAL OFFER PRESETS (this business type's own built-in quick picks — name ONLY these when describing a PostScore built-in option; any other idea is YOUR general guidance, not a PostScore feature):"
+  );
+  lines.push("- Coupon quick picks (Growth page's Coupons tab):");
+  for (const preset of context.profile.couponPresets) {
+    lines.push(`  - "${preset.label}" — ${preset.description}`);
+  }
+  if (context.profile.referralOk) {
+    lines.push("- Referral quick picks (Growth page's Refer a friend tab):");
+    for (const preset of context.profile.referralPresets) {
+      lines.push(`  - Referrer gets "${preset.referrerReward}", friend gets "${preset.friendReward}" — ${preset.description}`);
+    }
+  }
+
+  lines.push(
+    `WEEKLY ROUTINE (owner self-reported, resets Mondays — exactly ${context.weeklyRoutine.items.length} items, logged on the Growth page under "Your weekly routine" — this is a DIFFERENT section from "This week's plan," which is the score-based action plan above):`
+  );
   lines.push(
     "These are the owner's own checkmarks only — PostScore cannot see whether they actually posted an update, replied to a review, or added a photo. An item marked \"not checked off\" means the owner hasn't logged it yet this week, NOT that they haven't really done it — never say or imply the owner failed to do something just because it isn't checked off."
   );
   for (const item of context.weeklyRoutine.items) {
-    lines.push(`- ${item.title}: ${item.checkedThisWeek ? "checked off this week" : "not checked off this week"}.`);
+    lines.push(
+      `- ${item.title}: ${item.checkedThisWeek ? "checked off this week" : "not checked off this week"}. ${weeklyRoutineDoneOn(item.id)}`
+    );
   }
   lines.push(
     context.weeklyRoutine.streakWeeks > 0
@@ -581,8 +736,8 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
 
   lines.push(
     context.gbp.connected
-      ? "Google Business Profile connection: connected. Individual reviews, reply drafts, Insights, and Google Posts are still not synced yet (a later update) — don't invent numbers for them even though it's connected."
-      : "Google Business Profile connection: not connected. Individual reviews, reply drafts, reply-rate stats, Insights (views/calls/clicks), the leads estimate, and Google Posts all require connecting it first — point the owner to the Reviews page or Overview page's connect prompt."
+      ? "Google Business Profile connection: connected — but connecting only stores the real OAuth token today; it does NOT itself unlock anything yet. Individual reviews, reply drafts, reply-rate stats, Insights (views/calls/clicks), a leads estimate, and Google Posts tracking are ALL still not built/synced (a later update) — this is true connected or not, so never say connecting \"unlocks\" any of these. The shareable review link and QR code sign on the Reviews page already work right now and never required this connection at all."
+      : "Google Business Profile connection: not connected. Connecting it (Reviews page or Overview page's connect prompt) only stores a real OAuth token — it does NOT itself unlock individual reviews, reply drafts, reply-rate stats, Insights (views/calls/clicks), a leads estimate, or Google Posts tracking; none of those are built/synced yet, connected or not (a later update). The shareable review link and QR code sign on the Reviews page already work right now with no connection needed at all."
   );
 
   return lines.join("\n");

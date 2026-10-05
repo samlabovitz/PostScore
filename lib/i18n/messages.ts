@@ -3285,7 +3285,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.couldNotLoadPastConversations": "Couldn't load past conversations.",
     "dashboard.assistant.couldNotLoadConversation": "Couldn't load this conversation.",
     "dashboard.assistant.groundedInScore":
-      "Grounded in your real PostScore ({total}/100) — general tips are always labeled, nothing is fabricated.",
+      "Grounded in your real PostScore ({total}/100) — general tips are always labeled, and it only uses data PostScore actually has.",
     "dashboard.assistant.continuingConversation": "Continuing this conversation",
     "dashboard.assistant.newConversationSavedNote": "New conversation — past chats are saved",
     "dashboard.assistant.backToChat": "Back to chat",
@@ -5557,7 +5557,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.couldNotLoadPastConversations": "No se pudieron cargar las conversaciones anteriores.",
     "dashboard.assistant.couldNotLoadConversation": "No se pudo cargar esta conversación.",
     "dashboard.assistant.groundedInScore":
-      "Basado en su PostScore real ({total}/100) — los consejos generales siempre se etiquetan, nada es inventado.",
+      "Basado en su PostScore real ({total}/100) — los consejos generales siempre se etiquetan, y solo usa los datos que PostScore realmente tiene.",
     "dashboard.assistant.continuingConversation": "Continuando esta conversación",
     "dashboard.assistant.newConversationSavedNote": "Nueva conversación — los chats anteriores se guardan",
     "dashboard.assistant.backToChat": "Volver al chat",

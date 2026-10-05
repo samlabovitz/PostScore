@@ -7,6 +7,7 @@ import {
   buildAssistantStarterPrompts,
   buildAssistantSystemPrompt,
   type AssistantBusinessContext,
+  type AssistantGrowthMove,
 } from "./assistant";
 
 const BASE_CONTEXT: AssistantBusinessContext = {
@@ -87,11 +88,11 @@ const BASE_CONTEXT: AssistantBusinessContext = {
   ],
   weeklyRoutine: {
     items: [
-      { title: "Post an update", checkedThisWeek: true },
-      { title: "Reply to reviews", checkedThisWeek: false },
-      { title: "Share your review link", checkedThisWeek: false },
-      { title: "Add a photo", checkedThisWeek: false },
-      { title: "Check your hours", checkedThisWeek: true },
+      { id: "post_update", title: "Post an update", checkedThisWeek: true },
+      { id: "reply_reviews", title: "Reply to reviews", checkedThisWeek: false },
+      { id: "share_review_link", title: "Share your review link", checkedThisWeek: false },
+      { id: "add_photo", title: "Add a photo", checkedThisWeek: false },
+      { id: "check_hours", title: "Check your hours", checkedThisWeek: true },
     ],
     streakWeeks: 3,
   },
@@ -111,6 +112,12 @@ const BASE_CONTEXT: AssistantBusinessContext = {
     autoDetectedBusinessTypeId: "restaurant",
     businessTypeOverridden: false,
     referralOk: true,
+    couponPresets: [
+      { label: "10% off your next visit", description: "A simple loyalty nudge for returning diners." },
+    ],
+    referralPresets: [
+      { referrerReward: "$10 off your next visit", friendReward: "15% off their first visit", description: "The classic restaurant referral." },
+    ],
     location: "123 River St, Springfield",
     services: ["Brunch", "Catering"],
     avgJobValueLow: 15,
@@ -144,6 +151,73 @@ describe("buildAssistantContextText", () => {
     expect(text).toContain("losing 11.1");
     expect(text).toContain("losing 6");
     expect(text).toContain('"losing N" is precomputed — never recompute it yourself');
+  });
+
+  test("clarifies the real website.performance_mobile check's bare category word so 'average' can't be misread as slow", () => {
+    const mobileAverage: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      score: {
+        ...BASE_CONTEXT.score,
+        losingChecks: [
+          {
+            checkId: "website.performance_mobile",
+            label: "Mobile speed",
+            category: "website",
+            earnedPoints: 6,
+            maxPoints: 10,
+            explanation: "Real visitors on phones over the last 28 days (Google Chrome data): average.",
+          },
+        ],
+      },
+    };
+    const text = buildAssistantContextText(mobileAverage);
+    expect(text).toContain(
+      "AVERAGE (the middle of Google's three real-visitor bands: fast / average / slow — NOT slow)."
+    );
+    expect(text).not.toMatch(/:\s*average\.$/m);
+  });
+
+  test("clarifies fast/slow the same way, and in Spanish too (rápido/promedio/lento)", () => {
+    const mobileSlowEs: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      score: {
+        ...BASE_CONTEXT.score,
+        losingChecks: [
+          {
+            checkId: "website.performance_mobile",
+            label: "Velocidad móvil",
+            category: "website",
+            earnedPoints: 0,
+            maxPoints: 10,
+            explanation: "Visitantes reales en teléfonos durante los últimos 28 días (datos de Google Chrome): lento.",
+          },
+        ],
+      },
+    };
+    const text = buildAssistantContextText(mobileSlowEs, "es");
+    expect(text).toContain("LENTO (la peor de las tres franjas reales de Google: rápido / promedio / lento).");
+  });
+
+  test("never clarifies any OTHER check's explanation, even if it happens to end in the word 'average'", () => {
+    const otherCheck: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      score: {
+        ...BASE_CONTEXT.score,
+        losingChecks: [
+          {
+            checkId: "visibility.rating",
+            label: "Star rating",
+            category: "visibility",
+            earnedPoints: 5,
+            maxPoints: 10,
+            explanation: "Your rating is currently average.",
+          },
+        ],
+      },
+    };
+    const text = buildAssistantContextText(otherCheck);
+    expect(text).toContain("Your rating is currently average.");
+    expect(text).not.toContain("NOT slow");
   });
 
   test("names excluded (not-yet-scored) checks honestly rather than omitting them", () => {
@@ -240,7 +314,15 @@ describe("buildAssistantContextText", () => {
     };
     const text = buildAssistantContextText(connected);
     expect(text).toContain("Google Business Profile connection: connected");
-    expect(text).toContain("still not synced yet");
+    expect(text).toContain("it does NOT itself unlock anything yet");
+    expect(text).toContain("are ALL still not built/synced (a later update) — this is true connected or not");
+  });
+
+  test("says the shareable review link/QR sign never needed a GBP connection at all, connected or not", () => {
+    const connected: AssistantBusinessContext = { ...BASE_CONTEXT, gbp: { connected: true } };
+    const notConnected: AssistantBusinessContext = { ...BASE_CONTEXT, gbp: { connected: false } };
+    expect(buildAssistantContextText(connected)).toContain("never required this connection at all");
+    expect(buildAssistantContextText(notConnected)).toContain("with no connection needed at all");
   });
 
   test("reflects zero open tasks honestly when the action plan is empty", () => {
@@ -335,6 +417,8 @@ describe("buildAssistantContextText", () => {
         autoDetectedBusinessTypeId: "restaurant",
         businessTypeOverridden: false,
         referralOk: true,
+        couponPresets: [],
+        referralPresets: [],
         location: null,
         services: [],
         avgJobValueLow: null,
@@ -368,10 +452,82 @@ describe("buildAssistantContextText", () => {
 
   test("lists each firing growth move with its title, why, and the real page/tab the owner actually sees", () => {
     const text = buildAssistantContextText(BASE_CONTEXT);
-    expect(text).toContain("GROWTH MOVES (bring in customers; never change the score):");
+    expect(text).toContain('GROWTH MOVES (ways to bring in customers — each one\'s own "Score impact" line below says whether it ALSO affects PostScore; never generalize across all of them):');
     expect(text).toContain("Start a coupon: Give new customers a reason to try you.");
     expect(text).toContain('Where in PostScore: "Growth" page, "Coupons" tab.');
     expect(text).toContain('Where in PostScore: "Pricing" page.');
+  });
+
+  test("precomputes each growth move's real Score impact (YES when it overlaps a real losing check, NO otherwise)", () => {
+    const text = buildAssistantContextText(BASE_CONTEXT);
+    // BASE_CONTEXT's two growth moves (start_coupon, run_price_check) never overlap score.
+    expect(text).toContain("Score impact: NO — this is a customer-getting move only; it does not affect this business's PostScore either way.");
+
+    const withImproveWebsite: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      growthMoves: [
+        {
+          id: "improve_website",
+          title: "Improve your website",
+          why: "x",
+          pricingAssessedAt: null,
+          yourPhotoCount: null,
+          competitorMedianPhotoCount: null,
+          weakWebsiteIssueLabels: ["Performance & mobile"],
+        },
+      ],
+    };
+    const text2 = buildAssistantContextText(withImproveWebsite);
+    expect(text2).toContain('Score impact: YES, this one ALSO currently costs real points');
+  });
+
+  test("add_photos_vs_competitors' Score impact depends on whether completeness.photos is a real losing check — build_starter_site never overlaps", () => {
+    const addPhotosMove: AssistantGrowthMove = {
+      id: "add_photos_vs_competitors",
+      title: "Add photos",
+      why: "x",
+      pricingAssessedAt: null,
+      yourPhotoCount: 3,
+      competitorMedianPhotoCount: 10,
+      weakWebsiteIssueLabels: [],
+    };
+
+    const photosLosing: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      score: {
+        ...BASE_CONTEXT.score,
+        losingChecks: [
+          { checkId: "completeness.photos", label: "Photos", category: "completeness", earnedPoints: 2, maxPoints: 6, explanation: "x" },
+        ],
+      },
+      growthMoves: [addPhotosMove],
+    };
+    expect(buildAssistantContextText(photosLosing)).toContain("Score impact: YES, this one ALSO currently costs real points");
+
+    const photosNotLosing: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      score: { ...BASE_CONTEXT.score, losingChecks: [] },
+      growthMoves: [addPhotosMove],
+    };
+    expect(buildAssistantContextText(photosNotLosing)).toContain(
+      "Score impact: NO — this is a customer-getting move only"
+    );
+
+    const starterSite: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      growthMoves: [
+        {
+          id: "build_starter_site",
+          title: "Build a starter site",
+          why: "x",
+          pricingAssessedAt: null,
+          yourPhotoCount: null,
+          competitorMedianPhotoCount: null,
+          weakWebsiteIssueLabels: [],
+        },
+      ],
+    };
+    expect(buildAssistantContextText(starterSite)).toContain("Score impact: NO — this is a customer-getting move only");
   });
 
   test("names the real localized page and tab in Spanish, never an English-only label", () => {
@@ -486,13 +642,20 @@ describe("buildAssistantContextText", () => {
 
   test("reports each weekly-routine item as checked or not checked off this week, with the real streak", () => {
     const text = buildAssistantContextText(BASE_CONTEXT);
-    expect(text).toContain("WEEKLY ROUTINE (owner self-reported, resets Mondays):");
+    expect(text).toContain('exactly 5 items, logged on the Growth page under "Your weekly routine"');
+    expect(text).toContain('a DIFFERENT section from "This week\'s plan," which is the score-based action plan above');
     expect(text).toContain("Post an update: checked off this week.");
     expect(text).toContain("Reply to reviews: not checked off this week.");
     expect(text).toContain("Share your review link: not checked off this week.");
     expect(text).toContain("Add a photo: not checked off this week.");
     expect(text).toContain("Check your hours: checked off this week.");
     expect(text).toContain("Streak: 3 consecutive past week(s) fully checked off.");
+  });
+
+  test("states exactly where each weekly-routine item is actually done — four on real Google, one (the review link) inside PostScore", () => {
+    const text = buildAssistantContextText(BASE_CONTEXT);
+    expect(text).toContain("NOT the same thing as a PostScore coupon/promo");
+    expect(text).toContain("PostScore's own real shareable review link/QR code sign, on the Reviews page");
   });
 
   test("reports no current streak honestly when there isn't one", () => {
@@ -999,18 +1162,15 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
     expect(ASSISTANT_SYSTEM_RULES).toContain('"you\'re staying on top of,"');
   });
 
-  test("rule 9 forbids promising points for growth moves, and scopes the coupon/referral facts to PostScore only", () => {
-    expect(ASSISTANT_SYSTEM_RULES).toContain("GROWTH MOVES: CUSTOMERS, NEVER SCORE");
-    expect(ASSISTANT_SYSTEM_RULES).toContain("never promise or imply points for doing one");
+  test("rule 9 requires checking each growth move's own real Score impact line, and forbids a blanket 'none change your score' claim", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain('GROWTH MOVES: CHECK EACH ONE\'S OWN "SCORE IMPACT" LINE — NEVER GENERALIZE');
+    expect(ASSISTANT_SYSTEM_RULES).toContain('NEVER state a blanket claim like "none of these change your score"');
+    expect(ASSISTANT_SYSTEM_RULES).toContain("if even one of them says YES, that blanket claim is false for the whole list");
     expect(ASSISTANT_SYSTEM_RULES).toContain('never say the owner "doesn\'t run promotions" or "has no referral program"');
   });
 
-  test("rule 9 says real action-plan points DO apply when a growth move overlaps a real losing check", () => {
-    expect(ASSISTANT_SYSTEM_RULES).toContain("BUT when the exact same real-world fix ALSO appears elsewhere in REAL DATA CONTEXT as a losing check or an action-plan task");
-    expect(ASSISTANT_SYSTEM_RULES).toContain("Improve your website");
-    expect(ASSISTANT_SYSTEM_RULES).toContain("Performance & mobile");
-    expect(ASSISTANT_SYSTEM_RULES).toContain("adding photos overlapping a Photos check");
-    expect(ASSISTANT_SYSTEM_RULES).toContain("the action plan's real points genuinely do apply to that fix — quote those real numbers, never deny or omit them");
+  test("rule 9 says real action-plan points DO apply when a growth move's Score impact line says YES", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain('When a move\'s line says YES, quote the real points from its matching losing-check/action-plan entry — never deny or omit them');
   });
 
   test("rule 10 forbids implying memory of past conversations and requires variety within this one", () => {
@@ -1069,6 +1229,34 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
     const text = buildAssistantContextText(noReferral);
     expect(text).toContain("This restriction applies to referral-style incentives in ANY form, not just the Refer a friend tab");
     expect(text).toContain("never suggest a referral reward, a referral credit, or any \"refer a friend\" discount as part of a coupon or promo idea either");
+  });
+
+  test("the law-firm restriction now also forbids implying ANY marketing tactic (coupon, promo, ad) is unrestricted or allowed", () => {
+    const noReferral: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      profile: { ...BASE_CONTEXT.profile, referralOk: false },
+    };
+    const text = buildAssistantContextText(noReferral);
+    expect(text).toContain(
+      'never state or imply that ANY marketing tactic — a coupon, a promo, an ad, or anything else — is unrestricted or definitively allowed'
+    );
+    expect(text).toContain("attorney advertising rules vary by state bar");
+    expect(text).toContain('never say a tactic has "no restrictions" or is simply "fine to do."');
+  });
+
+  test("REAL OFFER PRESETS lists this business type's real coupon quick picks, and referral quick picks only when referralOk is true", () => {
+    const withReferral = buildAssistantContextText(BASE_CONTEXT);
+    expect(withReferral).toContain('REAL OFFER PRESETS (this business type\'s own built-in quick picks');
+    expect(withReferral).toContain('"10% off your next visit" — A simple loyalty nudge for returning diners.');
+    expect(withReferral).toContain('Referrer gets "$10 off your next visit", friend gets "15% off their first visit"');
+
+    const noReferral: AssistantBusinessContext = {
+      ...BASE_CONTEXT,
+      profile: { ...BASE_CONTEXT.profile, referralOk: false, referralPresets: [] },
+    };
+    const withoutReferral = buildAssistantContextText(noReferral);
+    expect(withoutReferral).toContain('"10% off your next visit" — A simple loyalty nudge for returning diners.');
+    expect(withoutReferral).not.toContain("Referral quick picks");
   });
 });
 

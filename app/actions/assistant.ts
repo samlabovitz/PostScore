@@ -210,6 +210,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
 
   const weeklyRoutine: AssistantWeeklyRoutineSummary = {
     items: buildWeeklyChecklistItems(locale).map((item) => ({
+      id: item.id,
       title: item.title,
       checkedThisWeek:
         checklistStateResult.status === "ok" && checklistStateResult.state.checkedItemIds.includes(item.id),
@@ -262,6 +263,12 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     autoDetectedBusinessTypeId: autoDetectedProfile.id,
     businessTypeOverridden: businessTypeOverride !== null,
     referralOk: profile.referralOk,
+    couponPresets: profile.couponPresets.map((p) => ({ label: p.label, description: p.description })),
+    referralPresets: profile.referralPresets.map((p) => ({
+      referrerReward: p.referrerReward,
+      friendReward: p.friendReward,
+      description: p.description,
+    })),
     location: summaryResult.business.address ?? null,
     services: summaryResult.business.services ?? [],
     avgJobValueLow: summaryResult.business.avg_job_value_low ?? null,

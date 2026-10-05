@@ -26,6 +26,8 @@ const PROFILE: AssistantBusinessProfile = {
   autoDetectedBusinessTypeId: "restaurant",
   businessTypeOverridden: false,
   referralOk: true,
+  couponPresets: [],
+  referralPresets: [],
   location: "123 River St, Springfield",
   services: [],
   avgJobValueLow: null,

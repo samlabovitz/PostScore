@@ -40,6 +40,22 @@ describe("t", () => {
   test("interpolates {name} placeholders from the given params", () => {
     expect(t("en", "report.fragment.gradeChanged", { grade: "B" })).toBe("your grade changed to B");
   });
+
+  // The PostAI panel's honest banner (AssistantView.tsx) — rewritten
+  // from an absolute guarantee ("nothing is fabricated") to a
+  // description of how it actually works, since an AI reply is never
+  // something this codebase can guarantee is error-free, only that it's
+  // grounded in real data with general tips labeled.
+  test("the PostAI banner describes how it works rather than guaranteeing it, in both locales", () => {
+    expect(t("en", "dashboard.assistant.groundedInScore", { total: 92 })).toBe(
+      "Grounded in your real PostScore (92/100) — general tips are always labeled, and it only uses data PostScore actually has."
+    );
+    expect(t("es", "dashboard.assistant.groundedInScore", { total: 92 })).toBe(
+      "Basado en su PostScore real (92/100) — los consejos generales siempre se etiquetan, y solo usa los datos que PostScore realmente tiene."
+    );
+    expect(t("en", "dashboard.assistant.groundedInScore", { total: 92 })).not.toContain("nothing is fabricated");
+    expect(t("es", "dashboard.assistant.groundedInScore", { total: 92 })).not.toContain("nada es inventado");
+  });
 });
 
 describe("tPlural", () => {
@@ -109,6 +125,7 @@ describe("reportCoverageMonth", () => {
     expect(reportCoverageMonth("2026-10-01T02:00:00.000Z", "en")).toEqual({ month: "August", year: "2026" });
   });
 });
+
 describe("formatShortDate", () => {
   test("formats a comfortably mid-day UTC timestamp the same regardless of timezone", () => {
     expect(formatShortDate("2026-09-28T14:00:00.000Z", "en")).toBe("Sep 28, 2026");
