@@ -35,6 +35,7 @@
 // getting the exact same English text this file used to hardcode.
 
 import { DEFAULT_LOCALE, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
+import { GOOGLE_PHOTO_CAP } from "@/lib/googlePhotoCap";
 
 // ---------------------------------------------------------------------------
 // Versioning
@@ -1049,11 +1050,19 @@ export const CHECKS: CheckDefinition[] = [
         };
       }
       const has = input.photoCount > 0;
+      // Google's own Place Details `photos` field never returns more
+      // than GOOGLE_PHOTO_CAP entries — once the real count hits that
+      // cap, it's a lower bound, not an exact total, so the explanation
+      // must say "or more" rather than implying the listing has exactly
+      // this many photos and not one more.
+      const atCap = input.photoCount >= GOOGLE_PHOTO_CAP;
       return {
         earnedPoints: has ? 4 : 0,
         confidence: "VERIFIED",
         explanation: has
-          ? tPlural(locale, "content.checks.completeness.photos.explanation.has", input.photoCount)
+          ? atCap
+            ? t(locale, "content.checks.completeness.photos.explanation.hasAtCap", { cap: GOOGLE_PHOTO_CAP })
+            : tPlural(locale, "content.checks.completeness.photos.explanation.has", input.photoCount)
           : t(locale, "content.checks.completeness.photos.explanation.none"),
       };
     },

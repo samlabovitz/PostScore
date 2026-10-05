@@ -169,14 +169,17 @@ describe("buildMonthlyReportContent — real deltas", () => {
       total: 70,
       grade: "C",
       createdAt: "2026-08-01T00:00:00.000Z",
-      profileSnapshot: { ...BASE_SNAPSHOT, rating: 4.2, reviewCount: 60, photoCount: 10 },
+      // Both below Google's real 10-photo API cap (lib/googlePhotoCap.ts)
+      // — a real-world-possible exact delta, not the impossible-to-collect
+      // 14 this fixture used before that cap was honestly handled.
+      profileSnapshot: { ...BASE_SNAPSHOT, rating: 4.2, reviewCount: 60, photoCount: 6 },
     });
     const current = scoreRow({
       id: "score-2",
       total: 84,
       grade: "B",
       createdAt: "2026-09-01T00:00:00.000Z",
-      profileSnapshot: { ...BASE_SNAPSHOT, rating: 4.6, reviewCount: 75, photoCount: 14 },
+      profileSnapshot: { ...BASE_SNAPSHOT, rating: 4.6, reviewCount: 75, photoCount: 9 },
     });
     const competitorDelta: CompetitorDelta = {
       previous: { rank: 5, totalCompetitors: 12, topCompetitorReviewCount: null },

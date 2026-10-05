@@ -8,6 +8,7 @@
 
 import { DEFAULT_LOCALE, formatShortDate, t, type Locale } from "@/lib/i18n";
 import type { ScoreBreakdown } from "@/lib/scoring";
+import { GOOGLE_PHOTO_CAP } from "@/lib/googlePhotoCap";
 
 export type GrowthMoveId =
   | "start_coupon"
@@ -35,17 +36,14 @@ export interface GrowthMove {
   signal: string;
 }
 
-/** Google's own Place Details `photos` field is documented to return at
- * most 10 photo references per listing — a real, hard cap on the raw
- * data PostScore collects (see photoCount in lib/google/places.ts),
- * never a PostScore-chosen limit. A business already at or above this
- * can't be honestly told it has "fewer" than a competitor's own
- * (possibly also capped) count, so the comparison never fires either
- * side of it. Exported so every other place a real photo count is
- * shown — the REAL DATA CONTEXT assistant prompt (lib/assistant.ts) in
- * particular — uses this exact same number, never a second hardcoded
- * "10" that could drift. */
-export const PHOTO_COMPARISON_CAP = 10;
+/** Re-exported under this module's own established name (every existing
+ * caller — lib/assistant.ts, scripts/preview-assistant-context.ts —
+ * already imports PHOTO_COMPARISON_CAP from here) for the real, shared
+ * constant defined once in lib/googlePhotoCap.ts. A business already at
+ * or above this can't be honestly told it has "fewer" than a
+ * competitor's own (possibly also capped) count, so the comparison
+ * never fires either side of it. */
+export const PHOTO_COMPARISON_CAP = GOOGLE_PHOTO_CAP;
 
 /** The latest saved competitor scan's real photo-count picture for this
  * business — median (not mean) so one photo-heavy or photo-empty
@@ -224,12 +222,21 @@ export function buildGrowthMoves(signals: GrowthMoveSignals, locale: Locale = DE
     yourPhotos < PHOTO_COMPARISON_CAP &&
     competitorMedian > yourPhotos
   ) {
+    // The real competitor count Google ever reports is capped the same
+    // way this business's own is (see GOOGLE_PHOTO_CAP's own doc) — a
+    // median that lands exactly at the cap is a lower bound, not their
+    // real total, so the copy says "or more" rather than implying they
+    // have exactly this many and not one more.
+    const competitorPhotosText =
+      competitorMedian >= PHOTO_COMPARISON_CAP
+        ? t(locale, "content.orMoreCount", { count: competitorMedian })
+        : String(competitorMedian);
     moves.push({
       id: "add_photos_vs_competitors",
       title: t(locale, "dashboard.growth.moves.addPhotos.title"),
       meta: null,
       why: t(locale, "dashboard.growth.moves.addPhotos.why", {
-        competitorPhotos: competitorMedian,
+        competitorPhotos: competitorPhotosText,
         yourPhotos,
       }),
       howTo: t(locale, "dashboard.growth.moves.addPhotos.howTo"),

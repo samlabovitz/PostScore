@@ -147,6 +147,21 @@ describe("confidence-aware scoring", () => {
     expect(photos.earnedPoints).toBe(0);
   });
 
+  test("below Google's photo-count cap, the photos explanation states the real exact count", () => {
+    const input: BusinessScoringInput = { ...PERFECT_INPUT, photoCount: 7 };
+    const breakdown = scoreBusiness(input);
+    const photos = breakdown.checks.find((c) => c.id === "completeness.photos")!;
+    expect(photos.explanation).toBe("7 photos on the listing.");
+  });
+
+  test("at Google's photo-count cap, the photos explanation says 'or more' rather than an exact count", () => {
+    const input: BusinessScoringInput = { ...PERFECT_INPUT, photoCount: 10 };
+    const breakdown = scoreBusiness(input);
+    const photos = breakdown.checks.find((c) => c.id === "completeness.photos")!;
+    expect(photos.explanation).toBe("10 or more photos on the listing.");
+    expect(photos.earnedPoints).toBe(4);
+  });
+
   test("a confirmed zero — no reviews, no rating — is scored as a real weakness, never excluded (the v1.4.0 fix)", () => {
     const input: BusinessScoringInput = {
       ...PERFECT_INPUT,

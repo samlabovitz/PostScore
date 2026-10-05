@@ -229,7 +229,9 @@ export type MessageKey =
   | "content.checks.completeness.photos.explanation.notFound"
   | "content.checks.completeness.photos.explanation.has.one"
   | "content.checks.completeness.photos.explanation.has.other"
+  | "content.checks.completeness.photos.explanation.hasAtCap"
   | "content.checks.completeness.photos.explanation.none"
+  | "content.orMoreCount"
   | "content.checks.completeness.business_status.label"
   | "content.checks.completeness.business_status.advice"
   | "content.checks.completeness.business_status.explanation.notFound"
@@ -320,6 +322,8 @@ export type MessageKey =
   | "content.listingChange.photos.added.other"
   | "content.listingChange.photos.removed.one"
   | "content.listingChange.photos.removed.other"
+  | "content.listingChange.photos.crossedCapUp"
+  | "content.listingChange.photos.crossedCapDown"
   | "content.listingChange.rating.rose"
   | "content.listingChange.rating.dropped"
   | "content.listingChange.reviews.gained.one"
@@ -2350,6 +2354,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.completeness.photos.explanation.notFound": "Google returned no photo data for this listing.",
     "content.checks.completeness.photos.explanation.has.one": "{count} photo on the listing.",
     "content.checks.completeness.photos.explanation.has.other": "{count} photos on the listing.",
+    "content.checks.completeness.photos.explanation.hasAtCap": "{cap} or more photos on the listing.",
+    "content.orMoreCount": "{count} or more",
     "content.checks.completeness.photos.explanation.none": "No photos on the listing.",
 
     "content.checks.completeness.business_status.label": "Operational status",
@@ -2489,6 +2495,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.listingChange.photos.added.other": "{count} photos added.",
     "content.listingChange.photos.removed.one": "A photo was removed.",
     "content.listingChange.photos.removed.other": "{count} photos were removed.",
+    "content.listingChange.photos.crossedCapUp": "Now {cap} or more photos.",
+    "content.listingChange.photos.crossedCapDown": "Fewer than {cap} photos now.",
     "content.listingChange.rating.rose": "Your rating rose from {previous}★ to {current}★.",
     "content.listingChange.rating.dropped": "Your rating dropped from {previous}★ to {current}★.",
     "content.listingChange.reviews.gained.one": "{count} new review.",
@@ -4766,7 +4774,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.completeness.photos.explanation.notFound": "Google no devolvió datos de fotos para esta ficha.",
     "content.checks.completeness.photos.explanation.has.one": "{count} foto en la ficha.",
     "content.checks.completeness.photos.explanation.has.other": "{count} fotos en la ficha.",
+    "content.checks.completeness.photos.explanation.hasAtCap": "{cap} fotos o más en la ficha.",
     "content.checks.completeness.photos.explanation.none": "No hay fotos en la ficha.",
+    "content.orMoreCount": "{count} o más",
     "content.checks.completeness.business_status.label": "Estado operativo",
     "content.checks.completeness.business_status.advice": "Asegúrese de que su Perfil de Negocio de Google aparezca como Operativo.",
     "content.checks.completeness.business_status.explanation.notFound": "Google no devolvió el estado del negocio para esta ficha.",
@@ -4856,6 +4866,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.listingChange.photos.added.other": "{count} fotos agregadas.",
     "content.listingChange.photos.removed.one": "Se eliminó una foto.",
     "content.listingChange.photos.removed.other": "Se eliminaron {count} fotos.",
+    "content.listingChange.photos.crossedCapUp": "Ahora tiene {cap} fotos o más.",
+    "content.listingChange.photos.crossedCapDown": "Ahora tiene menos de {cap} fotos.",
     "content.listingChange.rating.rose": "Su calificación subió de {previous}★ a {current}★.",
     "content.listingChange.rating.dropped": "Su calificación bajó de {previous}★ a {current}★.",
     "content.listingChange.reviews.gained.one": "{count} reseña nueva.",

@@ -18,6 +18,7 @@
 // used to hardcode.
 
 import { DEFAULT_LOCALE, t, tPlural, type Locale } from "@/lib/i18n";
+import { GOOGLE_PHOTO_CAP } from "@/lib/googlePhotoCap";
 
 export interface ProfileSnapshot {
   phone: string | null;
@@ -144,14 +145,39 @@ export function diffProfileSnapshots(
     current.photoCount !== null &&
     previous.photoCount !== current.photoCount
   ) {
-    const delta = current.photoCount - previous.photoCount;
-    changes.push({
-      field: "photos",
-      description:
-        delta > 0
-          ? tPlural(locale, "content.listingChange.photos.added", delta)
-          : tPlural(locale, "content.listingChange.photos.removed", Math.abs(delta)),
-    });
+    // Google's own Place Details `photos` field never returns more than
+    // GOOGLE_PHOTO_CAP entries — a reading at or above that cap is a
+    // lower bound, not the real total. An exact delta is only ever
+    // honest when NEITHER side is capped; once either is, the real
+    // magnitude (and, with both capped, even the real DIRECTION) is
+    // genuinely unknowable, never a fact this feed can state.
+    const prevAtCap = previous.photoCount >= GOOGLE_PHOTO_CAP;
+    const currAtCap = current.photoCount >= GOOGLE_PHOTO_CAP;
+    if (prevAtCap && currAtCap) {
+      // Both readings are capped lower bounds — whether anything real
+      // changed between them can't be known, so this is omitted
+      // entirely rather than silently implying "no change" as if that
+      // were a real, confirmed fact.
+    } else if (!prevAtCap && currAtCap) {
+      changes.push({
+        field: "photos",
+        description: t(locale, "content.listingChange.photos.crossedCapUp", { cap: GOOGLE_PHOTO_CAP }),
+      });
+    } else if (prevAtCap && !currAtCap) {
+      changes.push({
+        field: "photos",
+        description: t(locale, "content.listingChange.photos.crossedCapDown", { cap: GOOGLE_PHOTO_CAP }),
+      });
+    } else {
+      const delta = current.photoCount - previous.photoCount;
+      changes.push({
+        field: "photos",
+        description:
+          delta > 0
+            ? tPlural(locale, "content.listingChange.photos.added", delta)
+            : tPlural(locale, "content.listingChange.photos.removed", Math.abs(delta)),
+      });
+    }
   }
 
   if (previous.rating !== null && current.rating !== null && previous.rating !== current.rating) {

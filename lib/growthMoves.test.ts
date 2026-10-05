@@ -78,6 +78,29 @@ describe("buildGrowthMoves", () => {
     expect(move!.why).toContain("4");
   });
 
+  test("add_photos_vs_competitors says the competitor median is '10 or more', never an exact number, once it's at Google's photo-count cap", () => {
+    const signals: GrowthMoveSignals = {
+      ...NOTHING_TO_DO,
+      photoCount: 3,
+      competitorPhotos: { scanAvailable: true, medianCompetitorPhotoCount: 10 },
+    };
+    const move = buildGrowthMoves(signals, "en").find((m) => m.id === "add_photos_vs_competitors");
+    expect(move).toBeDefined();
+    expect(move!.why).toContain("10 or more");
+    expect(move!.why).toContain("3");
+  });
+
+  test("add_photos_vs_competitors states the exact competitor median below Google's photo-count cap", () => {
+    const signals: GrowthMoveSignals = {
+      ...NOTHING_TO_DO,
+      photoCount: 3,
+      competitorPhotos: { scanAvailable: true, medianCompetitorPhotoCount: 9 },
+    };
+    const move = buildGrowthMoves(signals, "en").find((m) => m.id === "add_photos_vs_competitors");
+    expect(move!.why).not.toContain("or more");
+    expect(move!.why).toContain("9");
+  });
+
   test("add_photos_vs_competitors never fires with no competitor scan on file", () => {
     const signals: GrowthMoveSignals = {
       ...NOTHING_TO_DO,
