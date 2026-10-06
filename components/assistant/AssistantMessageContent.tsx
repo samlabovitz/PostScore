@@ -9,26 +9,29 @@
 import { IconInfoCircle } from "@tabler/icons-react";
 import { t, useLocale } from "@/lib/i18n";
 
-// Deliberately NEVER locale-dependent — ASSISTANT_SYSTEM_RULES rule 2
-// (lib/assistant.ts) explicitly instructs the model to always emit this
-// exact English marker verbatim as a literal control token, even when
-// the rest of its answer is in Spanish (see the "respond in {language}"
-// directive in app/actions/assistant.ts). Only the VISIBLE heading
-// rendered below the parsed marker is translated (see
+// ASSISTANT_SYSTEM_RULES rule 2 (lib/assistant.ts) instructs the model
+// to emit a literal control-token marker verbatim at the start of any
+// general-guidance paragraph — English "General guidance:" for an
+// English answer, but exactly "Consejo general:" for a Spanish one
+// (see buildAssistantLanguageDirective's own es-specific override) —
+// never a translation/paraphrase of whichever one applies. Both are
+// recognized here, case-insensitively — this never needs to know which
+// locale the content itself is in, only to recognize either literal
+// token. The VISIBLE heading rendered below the parsed marker is a
+// separate, always-translated label (see
 // dashboard.assistant.generalGuidanceLabel — "Orientación general" in
-// es); the marker string itself must stay this one stable English token
-// on both sides (model output + parser) or detection breaks.
-const GENERAL_GUIDANCE_PREFIX = "general guidance:";
+// es) — independent of which raw marker was actually stripped.
+const GENERAL_GUIDANCE_PREFIXES = ["general guidance:", "consejo general:"];
 
 /**
  * Splits one assistant reply into paragraphs, pulling out any paragraph
- * the model has labeled "General guidance:" (see ASSISTANT_SYSTEM_RULES
- * in lib/assistant.ts) so it can render visibly distinct from the
- * data-grounded parts of the answer — the same labeling discipline the
- * Pricing page's "general estimate" badge uses, just for free-form text
- * instead of a fixed field. The marker itself is always English (see
- * GENERAL_GUIDANCE_PREFIX above) regardless of the reply's own language
- * — `text` after stripping it can be in any language.
+ * the model has labeled with the real general-guidance marker for
+ * whichever language it answered in (see GENERAL_GUIDANCE_PREFIXES
+ * above) so it can render visibly distinct from the data-grounded parts
+ * of the answer — the same labeling discipline the Pricing page's
+ * "general estimate" badge uses, just for free-form text instead of a
+ * fixed field. `text` after stripping the marker can be in any
+ * language.
  */
 export function splitAssistantContent(content: string): Array<{ general: boolean; text: string }> {
   return content
@@ -37,8 +40,9 @@ export function splitAssistantContent(content: string): Array<{ general: boolean
     .filter((p) => p.length > 0)
     .map((paragraph) => {
       const lower = paragraph.toLowerCase();
-      if (lower.startsWith(GENERAL_GUIDANCE_PREFIX)) {
-        return { general: true, text: paragraph.slice(GENERAL_GUIDANCE_PREFIX.length).trim() };
+      const prefix = GENERAL_GUIDANCE_PREFIXES.find((p) => lower.startsWith(p));
+      if (prefix) {
+        return { general: true, text: paragraph.slice(prefix.length).trim() };
       }
       return { general: false, text: paragraph };
     });

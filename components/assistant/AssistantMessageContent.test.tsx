@@ -3,16 +3,18 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { LocaleProvider } from "@/lib/i18n";
 import { AssistantMessageContent, parseInlineBold, splitAssistantContent } from "./AssistantMessageContent";
 
-// Step L7 beat 3: the model is instructed (ASSISTANT_SYSTEM_RULES rule 2 in
-// lib/assistant.ts) to always emit the "General guidance:" marker verbatim
-// in English, even when answering in Spanish — the parser below must stay
-// tied to that one stable English token regardless of locale, and only the
-// VISIBLE heading (dashboard.assistant.generalGuidanceLabel) is translated.
+// Day 3 PostAI-leftovers fix: a Spanish reply now uses its OWN exact
+// marker, "Consejo general:" — never the English "General guidance:"
+// (see buildAssistantLanguageDirective's es-specific override in
+// lib/assistant.ts) — so the parser must recognize BOTH literal tokens,
+// case-insensitively, regardless of which one a given reply actually
+// used. Only the VISIBLE heading (dashboard.assistant.generalGuidanceLabel)
+// is translated; the raw marker itself is always stripped from the body.
 
-describe("splitAssistantContent — English marker stays stable across locales", () => {
-  test("strips the English marker from a Spanish-language reply", () => {
+describe("splitAssistantContent — recognizes each language's own real general-guidance marker", () => {
+  test("strips the Spanish marker from a Spanish-language reply", () => {
     const spanishReply =
-      "Su calificación es 4.3 con 58 reseñas.\n\nGeneral guidance: Considere publicar actualizaciones semanales en su Perfil de Negocio de Google para mantener su ficha activa.";
+      "Su calificación es 4.3 con 58 reseñas.\n\nConsejo general: Considere publicar actualizaciones semanales en su Perfil de Negocio de Google para mantener su ficha activa.";
 
     const parts = splitAssistantContent(spanishReply);
 
@@ -25,17 +27,31 @@ describe("splitAssistantContent — English marker stays stable across locales",
     ]);
   });
 
-  test("still matches case-insensitively when the model varies the marker's casing", () => {
-    const parts = splitAssistantContent("GENERAL GUIDANCE: Texto en español aquí.");
-    expect(parts).toEqual([{ general: true, text: "Texto en español aquí." }]);
+  test("strips the English marker from an English-language reply", () => {
+    const parts = splitAssistantContent("General guidance: Post a weekly update to your listing.");
+    expect(parts).toEqual([{ general: true, text: "Post a weekly update to your listing." }]);
+  });
+
+  test("still matches case-insensitively for either marker", () => {
+    expect(splitAssistantContent("CONSEJO GENERAL: Texto en español aquí.")).toEqual([
+      { general: true, text: "Texto en español aquí." },
+    ]);
+    expect(splitAssistantContent("GENERAL GUIDANCE: English text here.")).toEqual([
+      { general: true, text: "English text here." },
+    ]);
+  });
+
+  test("defensively still recognizes the English marker even inside an otherwise-Spanish reply, in case the model ever slips", () => {
+    const parts = splitAssistantContent("General guidance: Considere anunciarse localmente.");
+    expect(parts).toEqual([{ general: true, text: "Considere anunciarse localmente." }]);
   });
 });
 
 describe("AssistantMessageContent — Spanish body renders under the translated heading", () => {
-  test("es locale: English marker is parsed away, translated heading + Spanish body both render", () => {
+  test("es locale: the real Spanish marker is parsed away, translated heading + Spanish body both render", () => {
     const html = renderToStaticMarkup(
       <LocaleProvider locale="es">
-        <AssistantMessageContent content="General guidance: Considere anunciarse localmente." />
+        <AssistantMessageContent content="Consejo general: Considere anunciarse localmente." />
       </LocaleProvider>
     );
 
@@ -43,11 +59,11 @@ describe("AssistantMessageContent — Spanish body renders under the translated 
     expect(html).toContain("Orientación general");
     // ...the Spanish body renders...
     expect(html).toContain("Considere anunciarse localmente.");
-    // ...and the literal English marker never leaks into the visible output.
-    expect(html).not.toContain("General guidance:");
+    // ...and the literal Spanish marker never leaks into the visible output.
+    expect(html).not.toContain("Consejo general:");
   });
 
-  test("en locale: same marker still renders under the English heading", () => {
+  test("en locale: the English marker still renders under the English heading", () => {
     const html = renderToStaticMarkup(
       <LocaleProvider locale="en">
         <AssistantMessageContent content="General guidance: Post a weekly update to your listing." />

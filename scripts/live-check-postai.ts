@@ -38,6 +38,9 @@
 //
 // Usage (from the project root):
 //   npx tsx scripts/live-check-postai.ts
+// Or, to re-run just some businesses (still real, billed API calls — just
+// fewer of them), pass their flagLabels:
+//   npx tsx scripts/live-check-postai.ts blue-bottle santa-fe
 
 import * as fs from "fs";
 import * as path from "path";
@@ -587,13 +590,20 @@ async function main() {
   const businessReports: BusinessReport[] = [];
   const probeReports: ProbeReport[] = [];
 
-  const businesses: Array<{ id: string; localeOverride?: Locale; flagLabel: string }> = [
+  const allBusinesses: Array<{ id: string; localeOverride?: Locale; flagLabel: string }> = [
     { id: "d27760e1-436d-413c-a6cf-cb8e1eb907ba", flagLabel: "hudson-shears" }, // Hudson Shears
     { id: "6d81975c-c576-4947-ae38-83575013c10c", flagLabel: "modern-liquors" }, // Modern Liquors
     { id: "32c870c5-7880-43d1-bab3-e2c6f1dba677", flagLabel: "lamonsoff" }, // Lamonsoff
     { id: "ac28ea59-cd8c-48b6-8013-a393e5bd489d", flagLabel: "blue-bottle" }, // Blue Bottle Coffee
     { id: "43545a36-eacd-47c3-94d9-6ee83ce90aea", localeOverride: "es", flagLabel: "santa-fe" }, // Santa Fe (Spanish)
   ];
+
+  // Optional CLI filter, e.g. `npx tsx scripts/live-check-postai.ts blue-bottle santa-fe`
+  // to re-run just a couple of businesses (billed real API calls) without
+  // touching the other three. No args = every business, same as before.
+  const onlyFlagLabels = process.argv.slice(2);
+  const businesses =
+    onlyFlagLabels.length > 0 ? allBusinesses.filter((b) => onlyFlagLabels.includes(b.flagLabel)) : allBusinesses;
 
   let hudsonContext: { context: AssistantBusinessContext; locale: Locale } | null = null;
   let modernLiquorsContext: { context: AssistantBusinessContext; locale: Locale } | null = null;

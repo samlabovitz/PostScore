@@ -709,6 +709,33 @@ describe("buildAssistantContextText", () => {
     expect(text).not.toMatch(/Photos on listing: 10\./);
   });
 
+  test("the real Blue Bottle Coffee case: an unreachable website is spelled out plainly, never left as a bare status the model could read past", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: { ...BASE_CONTEXT.listing, websitePresent: true, httpsStatus: "unreachable" },
+    });
+    expect(text).toContain("Reachability on the last check: UNREACHABLE");
+    expect(text).toContain('the last check could NOT load this site at all');
+    expect(text).toContain('Never call this website "live" or "working"');
+  });
+
+  test("never claims live/working for a website whose reachability hasn't even been checked yet", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: { ...BASE_CONTEXT.listing, websitePresent: true, httpsStatus: null },
+    });
+    expect(text).toContain("not yet checked");
+    expect(text).toContain('Never assume or say it\'s "live" or "working."');
+  });
+
+  test("a real, successfully-checked HTTPS site is still stated plainly as reachable", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: { ...BASE_CONTEXT.listing, websitePresent: true, httpsStatus: "https" },
+    });
+    expect(text).toContain("Reachability on the last check: https (the last check reached this site successfully)");
+  });
+
   test("still says honestly when no photo count was returned by Google at all", () => {
     const text = buildAssistantContextText({
       ...BASE_CONTEXT,
@@ -1090,6 +1117,11 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
     expect(ASSISTANT_SYSTEM_RULES).toContain('"General guidance:"');
   });
 
+  test("rule 2 defers to the language directive for a non-English marker, rather than forcing English unconditionally", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("that language has its OWN exact marker text");
+    expect(ASSISTANT_SYSTEM_RULES).toContain('never English\'s "General guidance:" in a non-English answer');
+  });
+
   test("instructs the assistant not to recite panel-visible identity facts back to the owner", () => {
     expect(ASSISTANT_SYSTEM_RULES).toContain("DON'T RECITE WHAT THE OWNER CAN ALREADY SEE");
     expect(ASSISTANT_SYSTEM_RULES).toContain("What I know about your business");
@@ -1216,6 +1248,22 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
     expect(ASSISTANT_SYSTEM_RULES).toContain("even then never exceed 4 bullets");
   });
 
+  test("the real Santa Fe case: rule 11 now forbids claiming a coupon/referral/price check is part of the weekly routine", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain(
+      "The weekly routine specifically has exactly five possible items (posting an update, replying to reviews, sharing the review link, adding a photo, checking hours)"
+    );
+    expect(ASSISTANT_SYSTEM_RULES).toContain(
+      "a coupon, a referral, a price check, or any other growth move is NEVER part of the weekly routine"
+    );
+    expect(ASSISTANT_SYSTEM_RULES).toContain('never say or imply anything else is "on," "part of," or "included in" the weekly routine');
+  });
+
+  test("rule 12: a review only raises the average when its own stars exceed the CURRENT average — fixes the wrong '4-star reviews will lift it' claim", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("RATING MATH: ONLY A HIGHER-THAN-CURRENT-AVERAGE REVIEW RAISES THE AVERAGE");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("a review at or below the current average holds it flat or pulls it down, never up");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("say instead that only reviews above the current average would raise it");
+  });
+
   test("rule 1b forbids inventing a cause for a score change — totals only, no reasons recorded", () => {
     expect(ASSISTANT_SYSTEM_RULES).toContain("Score history is TOTALS ONLY — it never records WHY a score moved between two scans");
     expect(ASSISTANT_SYSTEM_RULES).toContain("NEVER invent or guess a cause unless REAL DATA CONTEXT separately states one");
@@ -1325,6 +1373,24 @@ describe("buildAssistantLanguageDirective", () => {
 
   test("the English directive has no puntuación/calificación note — it's Spanish-specific", () => {
     expect(buildAssistantLanguageDirective("en")).not.toContain("puntuación");
+  });
+
+  test("the Spanish directive overrides the general-guidance marker to the real Spanish text, 'Consejo general:' — never the English one", () => {
+    const directive = buildAssistantLanguageDirective("es");
+    expect(directive).toContain('becomes exactly "Consejo general:" in Spanish');
+    expect(directive).toContain('never the English "General guidance:"');
+  });
+
+  test("the Spanish directive forbids leaving English jargon (e.g. 'built-in') in an otherwise-Spanish answer", () => {
+    const directive = buildAssistantLanguageDirective("es");
+    expect(directive).toContain("never leave an English word in place");
+    expect(directive).toContain('never "built-in"');
+  });
+
+  test("the English directive has neither the marker override nor the anti-jargon note — both are Spanish-specific", () => {
+    const directive = buildAssistantLanguageDirective("en");
+    expect(directive).not.toContain("Consejo general");
+    expect(directive).not.toContain("built-in");
   });
 });
 
