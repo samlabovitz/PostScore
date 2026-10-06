@@ -1,22 +1,28 @@
-// Dev-only, READ-ONLY preview of the monthly report email for one real
-// business. Builds content via the exact same real function the cron
-// route uses (buildMonthlyReportContent, lib/monthlyReport.ts) and
-// renders the exact same real email component (MonthlyReportEmail,
+// Dev-only, READ-ONLY (by default — see --fresh-scan below) preview of
+// the monthly report email for one real business. Builds content via
+// the exact same real function the cron route uses
+// (buildMonthlyReportContent, lib/monthlyReport.ts) and renders the
+// exact same real email component (MonthlyReportEmail,
 // emails/MonthlyReportEmail.tsx) with the business's own real locale —
 // never a second, hand-written reimplementation of either that could
 // drift from what a real send actually looks like.
 //
-// Never re-scans the BUSINESS itself, never sends email, and never
-// writes a monthly_reports row — reads the business's LATEST already-
-// saved `scores` row as-is (never re-scored). The ONE real write this
-// script does make is a genuine competitor scan (saveCompetitorScanWithClient,
-// the exact same real function the cron route calls) — the real cron
-// now runs this every month for every business (see app/api/cron/
-// monthly-reports/route.ts), so previewing without it would show a
-// different "competitor standing" section than the real report will.
-// That scan inserts a normal competitor_scans row, same as the
-// Competitors page's own "Save this scan" button — real, billed Google
-// Places Details calls, not a mock.
+// Never sends email and never writes a monthly_reports row. Reads the
+// business's LATEST already-saved `scores` row as-is (never re-scored).
+//
+// DEFAULT (no flags): fully no-cost and read-only. Competitor standing
+// comes from the latest already-SAVED competitor scan, if any — no
+// Google Places API calls, no new database row. This is what you want
+// for routine previewing (and the only mode scripts/preview-report.ts
+// should ever be run in without a deliberate reason).
+//
+// --fresh-scan: runs a REAL, billed competitor scan right now
+// (saveCompetitorScanWithClient, the exact same real function the cron
+// route calls) and writes a genuine new competitor_scans row — same
+// real, billed Google Places Details calls the Competitors page's own
+// "Save this scan" button makes. Only pass this when you deliberately
+// want to preview against brand-new competitor data; routine preview
+// runs should use the no-cost default instead.
 //
 // Writes the rendered HTML to ~/Desktop/report-preview-{business
 // name}.html instead of emailing it, so you can open it straight in a
@@ -25,6 +31,7 @@
 // Usage (from the project root):
 //   npx tsx scripts/preview-report.ts <businessId>
 //   npx tsx scripts/preview-report.ts <businessId> --baseline
+//   npx tsx scripts/preview-report.ts <businessId> --fresh-scan
 //
 // --baseline forces this to render as a genuine FIRST (baseline)
 // report, ignoring any real monthly_reports history for this business —
@@ -40,7 +47,7 @@
 //
 // Finding a businessId: open that business's Overview page in the app —
 // the id is the segment right after /business/ in the URL
-// (postscore.app/business/<businessId>).
+// (postscoree.netlify.app/business/<businessId>).
 
 import * as fs from "fs";
 import * as os from "os";
@@ -125,9 +132,10 @@ async function readCompetitorSnapshotForScan(businessId: string, scanId: string)
  * the cron route now calls for every business every month
  * (saveCompetitorScanWithClient, app/actions/competitors.ts) — and
  * reads back the real standing it just saved. Real, billed Google
- * Places Details calls; a real new competitor_scans row. null only
- * when the scan genuinely found no comparable nearby businesses, or
- * failed outright — never a stale read of some OLDER scan. */
+ * Places Details calls; a real new competitor_scans row. Only called
+ * when --fresh-scan is explicitly passed (see main()) — null only when
+ * the scan genuinely found no comparable nearby businesses, or failed
+ * outright — never a stale read of some OLDER scan. */
 async function runFreshCompetitorScan(businessId: string): Promise<CompetitorSnapshot | null> {
   const result = await saveCompetitorScanWithClient(supabase, businessId);
   if (result.status !== "saved") return null;
@@ -135,9 +143,11 @@ async function runFreshCompetitorScan(businessId: string): Promise<CompetitorSna
 }
 
 /** The real competitor standing as of the last scan at or before
- * `cutoffIso` — same real best-effort heuristic as the cron route's own
- * readCompetitorSnapshotAsOf, used to find "what did standing look like
- * around the previous report." */
+ * `cutoffIso` (default: now, i.e. the latest scan period) — no Google
+ * API calls, no database write. Same real best-effort heuristic used
+ * both for "what did standing look like around the previous report"
+ * and, with cutoff=now, as this script's own no-cost DEFAULT source of
+ * current competitor standing. */
 async function readCompetitorSnapshotAsOf(businessId: string, cutoffIso: string): Promise<CompetitorSnapshot | null> {
   const { data, error } = await supabase
     .from("competitor_scans")
@@ -154,12 +164,13 @@ async function readCompetitorSnapshotAsOf(businessId: string, cutoffIso: string)
 async function main() {
   const args = process.argv.slice(2);
   const forceBaseline = args.includes("--baseline");
+  const freshScan = args.includes("--fresh-scan");
   const businessId = args.find((a) => !a.startsWith("--"));
   const localeOverrideArg = args.find((a) => a.startsWith("--locale="));
   const localeOverride = localeOverrideArg ? localeOverrideArg.slice("--locale=".length) : null;
 
   if (!businessId) {
-    console.error("Usage: npx tsx scripts/preview-report.ts <businessId> [--baseline] [--locale=es]");
+    console.error("Usage: npx tsx scripts/preview-report.ts <businessId> [--baseline] [--fresh-scan] [--locale=es]");
     process.exit(1);
   }
 
@@ -197,7 +208,15 @@ async function main() {
     }
   }
 
-  const currentCompetitorSnapshot = await runFreshCompetitorScan(businessId);
+  const reportDate = new Date().toISOString();
+
+  // DEFAULT: the latest already-SAVED scan, no Google calls, no write.
+  // --fresh-scan deliberately opts into a real, billed scan instead —
+  // see this script's own top-of-file doc.
+  const currentCompetitorSnapshot = freshScan
+    ? await runFreshCompetitorScan(businessId)
+    : await readCompetitorSnapshotAsOf(businessId, reportDate);
+
   let competitorDelta: CompetitorDelta | null = null;
   if (currentCompetitorSnapshot && previousReportSentAt) {
     const previousSnapshot = await readCompetitorSnapshotAsOf(businessId, previousReportSentAt);
@@ -214,10 +233,9 @@ async function main() {
   const content = buildMonthlyReportContent(baselineRow, currentRow, competitorDelta, currentCompetitorSnapshot, locale);
 
   const businessName = business.name ?? "Your business";
-  const reportDate = new Date().toISOString();
   // Obviously fake — this is a preview file, never a real send, so the
   // unsubscribe link must never look like a working one.
-  const unsubscribeUrl = `https://postscore.app/unsubscribe?business=${businessId}&token=PREVIEW-NOT-REAL`;
+  const unsubscribeUrl = `https://postscoree.netlify.app/unsubscribe?business=${businessId}&token=PREVIEW-NOT-REAL`;
 
   // MonthlyReportEmail.tsx relies on Next's own build pipeline to inject
   // the JSX runtime automatically (tsconfig's "jsx": "preserve" is a
@@ -237,7 +255,9 @@ async function main() {
   const outPath = path.join(os.homedir(), "Desktop", `report-preview-${safeName}.html`);
   fs.writeFileSync(outPath, html, "utf-8");
 
-  console.log(`${businessName}: ${content.kind} report, locale "${locale}"${forceBaseline ? " (forced baseline)" : ""}`);
+  console.log(
+    `${businessName}: ${content.kind} report, locale "${locale}"${forceBaseline ? " (forced baseline)" : ""} — competitor data: ${freshScan ? "FRESH scan just run (billed)" : "latest saved scan (no cost)"}`
+  );
   console.log(`Subject: ${subject}`);
   console.log(`Wrote ${outPath}`);
 }

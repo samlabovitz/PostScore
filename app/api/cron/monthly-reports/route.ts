@@ -398,7 +398,15 @@ export async function processBusiness(
   // this exact businessId+token pair (the real per-business
   // unsubscribe_token from supabase/schema.sql, never a guessable id
   // alone) and flips monthly_report_enabled off, no login required.
-  const siteUrl = process.env.SITE_URL ?? "http://localhost:3000";
+  //
+  // Falls back to the real deployed site (postscoree.netlify.app), not
+  // localhost — this route only ever runs server-side against real
+  // owners' real email addresses, so a missing/unset SITE_URL must
+  // never silently send a real owner a localhost link. Still: set
+  // SITE_URL explicitly in the real deployment's env vars (see
+  // .env.example) so this fallback is never actually relied on, and so
+  // the domain can move without a code change.
+  const siteUrl = process.env.SITE_URL ?? "https://postscoree.netlify.app";
   const unsubscribeUrl = `${siteUrl}/unsubscribe?business=${businessId}&token=${freshBusiness.unsubscribe_token}`;
 
   // 3f — RESERVE before sending, not after. The idempotency pre-check
