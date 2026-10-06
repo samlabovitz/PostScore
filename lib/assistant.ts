@@ -480,7 +480,7 @@ function weeklyRoutineDoneOn(id: WeeklyChecklistItemId): string {
   }
 }
 
-function growthMoveDestination(id: GrowthMoveId, locale: Locale): string {
+export function growthMoveDestination(id: GrowthMoveId, locale: Locale): string {
   const page = (key: Parameters<typeof t>[1]) => `"${t(locale, key)}"`;
   switch (id) {
     case "start_coupon":
@@ -528,8 +528,16 @@ function growthMoveDestination(id: GrowthMoveId, locale: Locale): string {
  * scoring check happens to be losing points too — so it's checked
  * directly against the real losing-checks list.
  */
-function growthMoveOverlapsScore(move: AssistantGrowthMove, losingChecks: AssistantLosingCheck[]): boolean {
-  switch (move.id) {
+/**
+ * Exported (and kept duck-typed on `losingChecks` — just needs a real
+ * `checkId` per entry) so other real callers can reuse this exact same
+ * decision without re-deriving it — see buildFocus in
+ * lib/monthlyReport.ts, which calls this with the real
+ * generateSuggestions() output (Suggestion[], which also has a real
+ * `checkId` field) rather than PostAI's own AssistantLosingCheck[].
+ */
+export function growthMoveOverlapsScore(moveId: GrowthMoveId, losingChecks: Array<{ checkId: string }>): boolean {
+  switch (moveId) {
     case "improve_website":
       return true;
     case "add_photos_vs_competitors":
@@ -679,7 +687,7 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
     lines.push("- No growth moves are currently firing for this business.");
   } else {
     for (const m of context.growthMoves) {
-      const overlaps = growthMoveOverlapsScore(m, context.score.losingChecks);
+      const overlaps = growthMoveOverlapsScore(m.id, context.score.losingChecks);
       lines.push(
         `- ${m.title}: ${m.why} Where in PostScore: ${growthMoveDestination(m.id, locale)}. Why it's showing: ${growthMoveOwnerFact(m, locale)} Score impact: ${
           overlaps

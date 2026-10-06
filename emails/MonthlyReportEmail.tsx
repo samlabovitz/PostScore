@@ -297,20 +297,21 @@ function ScoreVisual({ score, locale }: { score: MonthlyReportContent["score"]; 
  * The closing "This month & what to focus on" section. Its ONLY job is
  * to display content.focus exactly as the pure builder assembled it —
  * this component makes no selection or phrasing decisions of its own.
- * The "this month" line reuses buildHeadline(content), the same real,
- * honest recap already shown at the top — never a second, differently-
- * worded summary that could drift from it. Below that, either every
- * real pointer the builder found (each one already traced back to a
- * real check, a real competitor gap, a real detected change, or the
- * one fixed general tip — see lib/monthlyReport.ts's buildFocus), or,
- * when there genuinely was nothing to flag, an honest line saying so —
- * never a fabricated concern to fill the space.
+ * Deliberately does NOT repeat buildHeadline(content) here — that exact
+ * sentence is already the big bold line right under the business name
+ * above (see MonthlyReportEmail below); showing it a second time here
+ * read as a duplicated, copy-pasted line rather than two distinct
+ * pieces of content. Below the label, either every real pointer the
+ * builder found (each one already traced back to a real check, a real
+ * growth move, or the real weekly-routine recap — see
+ * lib/monthlyReport.ts's buildFocus), or, when there genuinely was
+ * nothing to flag, an honest line saying so — never a fabricated
+ * concern to fill the space.
  */
 function FocusSection({ content, locale }: { content: MonthlyReportContent; locale: Locale }) {
   return (
     <Section>
       <Text style={labelStyle}>{t(locale, "report.focus.label")}</Text>
-      <Text style={{ ...valueStyle, margin: "0 0 10px" }}>{buildHeadline(content, locale)}</Text>
       {content.focus.nothingNotable ? (
         <Text style={mutedStyle}>
           {t(locale, "report.focus.nothingNotable")}
@@ -333,7 +334,7 @@ function FocusSection({ content, locale }: { content: MonthlyReportContent; loca
  * full real MOVEMENT (content.competitor, which still needs a
  * comparable PREVIOUS scan too — never available on a genuine first
  * report, and not yet available on an "update" report whose previous
- * period predates this always-scan behavior). Three real, honest
+ * period predates this always-scan behavior). Four real, honest
  * states, in priority order:
  *   1. A real movement exists (two comparable real points) — show it,
  *      exactly as before.
@@ -341,8 +342,14 @@ function FocusSection({ content, locale }: { content: MonthlyReportContent; loca
  *      honest "starting point," regardless of whether this is a first
  *      report or an update report that simply has no comparable
  *      previous scan yet.
- *   3. Neither — the scan ran but found no comparable nearby
- *      businesses (or genuinely failed) — say so plainly, never a
+ *   3. Neither, and this business has never had a competitor scan
+ *      saved at all (content.hasSavedCompetitorScan is false) — say so
+ *      plainly and point to the Competitors page, rather than implying
+ *      a search ran and failed when none was ever attempted (the real
+ *      Santa Fe case this was fixed for — Day 4 Part 2c).
+ *   4. Neither, but at least one real scan DOES exist for this
+ *      business — a search genuinely ran and found no comparable
+ *      nearby businesses (or failed outright) — say so plainly, never a
  *      fabricated rank.
  */
 function CompetitorSection({ content, locale }: { content: MonthlyReportContent; locale: Locale }) {
@@ -366,7 +373,12 @@ function CompetitorSection({ content, locale }: { content: MonthlyReportContent;
     return (
       <Section>
         <Text style={labelStyle}>{t(locale, "report.competitorSection.label")}</Text>
-        <Text style={mutedStyle}>{t(locale, "report.competitorSection.noComparables")}</Text>
+        <Text style={mutedStyle}>
+          {t(
+            locale,
+            content.hasSavedCompetitorScan ? "report.competitorSection.noComparables" : "report.competitorSection.noScanYet"
+          )}
+        </Text>
       </Section>
     );
   }

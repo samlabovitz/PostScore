@@ -30,7 +30,14 @@ export function formatMonthLabel(date: string, locale: Locale): string {
  * {year} recap") via t() instead of this function dictating the
  * sentence.
  */
-export function reportCoverageMonth(sendDate: string, locale: Locale): { month: string; year: string } {
+/** Shared by reportCoverageMonth/reportCoverageMonthIndex/
+ * reportCoverageMonthRange below — the real calendar month BEFORE
+ * `sendDate`, computed off `sendDate`'s America/New_York-local calendar
+ * date, never UTC (see reportCoverageMonth's own doc for why). Returns
+ * the covered month as a real (year, 0-based month) pair — the one
+ * computation every caller below needs, each just presenting it
+ * differently. */
+function coveredYearMonth(sendDate: string): { year: number; month0: number } {
   const sendDateParts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     year: "numeric",
@@ -39,8 +46,14 @@ export function reportCoverageMonth(sendDate: string, locale: Locale): { month: 
   const sendYear = Number(sendDateParts.find((p) => p.type === "year")!.value);
   const sendMonth = Number(sendDateParts.find((p) => p.type === "month")!.value); // 1-12, NY-local
 
-  const coveredMonthIndex0 = sendMonth === 1 ? 11 : sendMonth - 2; // 0-based, for Date.UTC
-  const coveredYear = sendMonth === 1 ? sendYear - 1 : sendYear;
+  return {
+    month0: sendMonth === 1 ? 11 : sendMonth - 2, // 0-based, for Date.UTC
+    year: sendMonth === 1 ? sendYear - 1 : sendYear,
+  };
+}
+
+export function reportCoverageMonth(sendDate: string, locale: Locale): { month: string; year: string } {
+  const { year: coveredYear, month0: coveredMonthIndex0 } = coveredYearMonth(sendDate);
   // Noon UTC on the 1st of the covered month — nowhere near a DST/date
   // boundary in any real timezone, so formatting this below can never
   // roll it back/forward to a different month.
@@ -50,6 +63,39 @@ export function reportCoverageMonth(sendDate: string, locale: Locale): { month: 
     month: new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(reference),
     year: String(coveredYear),
   };
+}
+
+/**
+ * A real, monotonically-increasing index for the covered month
+ * (`year * 12 + month0`) — NEVER the raw "YYYYMM" digits, which jump
+ * unevenly across year boundaries (see buildAssistantStarterPrompts'
+ * own real rotation-bug fix in lib/assistant.ts for why that matters).
+ * This index always increments by exactly 1 from one real covered
+ * month to the next, which is what lets a caller (e.g.
+ * lib/monthlyReport.ts's buildFocus) deterministically rotate "which
+ * eligible thing to show" by real calendar month without ever
+ * colliding two different months onto the same pick.
+ */
+export function reportCoverageMonthIndex(sendDate: string): number {
+  const { year, month0 } = coveredYearMonth(sendDate);
+  return year * 12 + month0;
+}
+
+/**
+ * The covered month's real calendar-day boundaries, as plain
+ * "YYYY-MM-DD" date strings — `start` is the 1st of the covered month,
+ * `end` is the 1st of the FOLLOWING month (an exclusive upper bound),
+ * both in the covered month's own America/New_York-local calendar day.
+ * Built for a `gte(start).lt(end)` range query against a plain DATE
+ * column (e.g. weekly_checks.week_start) — never a timestamp comparison,
+ * since DATE columns have no timezone of their own to reconcile against.
+ */
+export function reportCoverageMonthRange(sendDate: string): { start: string; end: string } {
+  const { year, month0 } = coveredYearMonth(sendDate);
+  const toDateString = (y: number, m0: number) => new Date(Date.UTC(y, m0, 1)).toISOString().slice(0, 10);
+  const nextMonth0 = month0 === 11 ? 0 : month0 + 1;
+  const nextYear = month0 === 11 ? year + 1 : year;
+  return { start: toDateString(year, month0), end: toDateString(nextYear, nextMonth0) };
 }
 
 /**

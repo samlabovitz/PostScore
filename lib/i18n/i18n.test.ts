@@ -1,7 +1,14 @@
 import { describe, expect, test } from "vitest";
 import { normalizeLocale } from "./locale";
 import { t, tPlural, type MessageKey } from "./messages";
-import { DEFAULT_BUSINESS_TIMEZONE, formatMonthLabel, formatShortDate, reportCoverageMonth } from "./format";
+import {
+  DEFAULT_BUSINESS_TIMEZONE,
+  formatMonthLabel,
+  formatShortDate,
+  reportCoverageMonth,
+  reportCoverageMonthIndex,
+  reportCoverageMonthRange,
+} from "./format";
 
 describe("normalizeLocale", () => {
   test("falls back to 'en' for a garbage value", () => {
@@ -123,6 +130,37 @@ describe("reportCoverageMonth", () => {
     // real New York calendar date is still September, so the month this
     // covers is honestly August.
     expect(reportCoverageMonth("2026-10-01T02:00:00.000Z", "en")).toEqual({ month: "August", year: "2026" });
+  });
+});
+
+describe("reportCoverageMonthIndex", () => {
+  const SENT_OCTOBER_1_MIDDAY_UTC = "2026-10-01T14:00:00.000Z"; // covers September 2026
+
+  test("is a real, monotonically-increasing year*12+month0 — never the raw YYYYMM digits", () => {
+    // September 2026 is month0 = 8 (0-based) -> 2026 * 12 + 8.
+    expect(reportCoverageMonthIndex(SENT_OCTOBER_1_MIDDAY_UTC)).toBe(2026 * 12 + 8);
+  });
+
+  test("increments by exactly 1 from one real covered month to the next, even across a year boundary", () => {
+    const decemberIndex = reportCoverageMonthIndex("2027-01-01T14:00:00.000Z"); // covers December 2026
+    const januaryIndex = reportCoverageMonthIndex("2027-02-01T14:00:00.000Z"); // covers January 2027
+    expect(januaryIndex - decemberIndex).toBe(1);
+  });
+});
+
+describe("reportCoverageMonthRange", () => {
+  test("returns the covered month's real start (1st) and end (1st of the next month, exclusive)", () => {
+    expect(reportCoverageMonthRange("2026-10-01T14:00:00.000Z")).toEqual({
+      start: "2026-09-01",
+      end: "2026-10-01",
+    });
+  });
+
+  test("crosses a real year boundary correctly", () => {
+    expect(reportCoverageMonthRange("2027-01-01T14:00:00.000Z")).toEqual({
+      start: "2026-12-01",
+      end: "2027-01-01",
+    });
   });
 });
 

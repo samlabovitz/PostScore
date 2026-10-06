@@ -10,7 +10,7 @@ import {
   SAMPLE_REAL_DELTAS,
   SAMPLE_STEADY,
 } from "./sampleMonthlyReportContent";
-import { GENERAL_FOCUS_TIPS, type MonthlyReportContent } from "@/lib/monthlyReport";
+import type { MonthlyReportContent } from "@/lib/monthlyReport";
 import { CHECKS } from "@/lib/scoring";
 import { DEFAULT_LOCALE, t } from "@/lib/i18n";
 
@@ -83,6 +83,20 @@ describe("MonthlyReportEmail — competitor standing and listing changes on a fi
   test("a first report whose scan found no comparable businesses says so plainly, never a fabricated rank", async () => {
     const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} />);
     expect(html).toContain("We couldn't find enough comparable businesses nearby to rank you this month.");
+  });
+
+  test("Day 4 Part 2c fix: a business that has NEVER had a scan saved gets the honest 'no scan yet' pointer, never the 'couldn't find enough comparable' wording (the real Santa Fe case)", async () => {
+    const neverScanned: MonthlyReportContent = { ...SAMPLE_BASELINE.content, hasSavedCompetitorScan: false };
+    const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} content={neverScanned} />);
+    expect(html).toContain("No competitor scan yet — run one on the Competitors page.");
+    expect(html).not.toContain("We couldn't find enough comparable businesses nearby to rank you this month.");
+  });
+
+  test("Day 4 Part 2c fix: a business with at least one real past scan still gets the original 'ran but found nothing' wording", async () => {
+    const hasScanned: MonthlyReportContent = { ...SAMPLE_BASELINE.content, hasSavedCompetitorScan: true };
+    const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} content={hasScanned} />);
+    expect(html).toContain("We couldn't find enough comparable businesses nearby to rank you this month.");
+    expect(html).not.toContain("No competitor scan yet");
   });
 
   test("a first report with a REAL competitor scan shows the current standing as a starting point, never 'not tracked'", async () => {
@@ -264,13 +278,10 @@ describe("MonthlyReportEmail — missing data", () => {
 });
 
 describe("MonthlyReportEmail — closing focus section", () => {
-  test("baseline: shows the real headline plus this scan's own real focus pointers", async () => {
+  test("baseline: shows the label plus this scan's own real focus pointers (score, growth move, routine)", async () => {
     const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} />);
 
     expect(html).toContain("This month & what to focus on");
-    // The "this month" line reuses the same real headline shown up top —
-    // never a second, separately-worded summary.
-    expect(html).toContain("Your baseline is set");
     expect(SAMPLE_BASELINE.content.focus.pointers.length).toBeGreaterThan(0);
     for (const pointer of SAMPLE_BASELINE.content.focus.pointers) {
       expect(html).toContain(pointer.text);
@@ -278,85 +289,86 @@ describe("MonthlyReportEmail — closing focus section", () => {
     expect(html).not.toMatch(CELEBRATORY_WORDS);
   });
 
-  test("steady month: focus pointers still surface real gaps even though the score/rating/reviews held steady", async () => {
-    const html = await renderToText(<MonthlyReportEmail {...SAMPLE_STEADY} />);
-
-    expect(SAMPLE_STEADY.content.focus.nothingNotable).toBe(false);
-    expect(SAMPLE_STEADY.content.focus.pointers.some((p) => p.kind === "competitor_gap")).toBe(true);
-    for (const pointer of SAMPLE_STEADY.content.focus.pointers) {
-      expect(html).toContain(pointer.text);
-    }
-    expect(html).not.toMatch(CELEBRATORY_WORDS);
+  test("Day 4 Part 2d fix: the top headline sentence is never repeated as the focus section's own first line", async () => {
+    const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} />);
+    const headline = "Your baseline is set";
+    const occurrences = html.split(headline).length - 1;
+    expect(occurrences).toBe(1);
   });
 
-  test("real deltas: a genuine listing change and competitor gap both surface as real, specific pointers", async () => {
-    const html = await renderToText(<MonthlyReportEmail {...SAMPLE_REAL_DELTAS} />);
-
-    const kinds = SAMPLE_REAL_DELTAS.content.focus.pointers.map((p) => p.kind);
-    expect(kinds).toContain("competitor_gap");
-    expect(kinds).toContain("listing_issue");
-    expect(html).toContain("more reviews than you");
-    expect(html).toContain("Your phone number changed.");
-    expect(html).not.toMatch(CELEBRATORY_WORDS);
+  test("a growth move that does NOT overlap score renders the Growth page's own honest 'doesn't change your score' badge", async () => {
+    const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} />);
+    expect(html).toContain("Start a coupon");
+    expect(html).toContain("doesn't change your score");
   });
 
-  test("missing data: the section still works from the one real fact available (score) and never fabricates competitor/listing pointers", async () => {
-    const html = await renderToText(<MonthlyReportEmail {...SAMPLE_MISSING_DATA} />);
-
-    const kinds = SAMPLE_MISSING_DATA.content.focus.pointers.map((p) => p.kind);
-    expect(kinds).not.toContain("competitor_gap");
-    expect(kinds).not.toContain("listing_issue");
-    for (const pointer of SAMPLE_MISSING_DATA.content.focus.pointers) {
-      expect(html).toContain(pointer.text);
-    }
-    expect(html).not.toMatch(CELEBRATORY_WORDS);
+  test("a growth move that DOES overlap a real losing check renders the 'also raises your score' badge instead", async () => {
+    // Deciding WHICH pointers appear (including skipping a growth move
+    // that would duplicate the score-gap item already shown — see
+    // lib/monthlyReport.test.ts's own Part 2b dedup tests) is
+    // buildFocus's job, already covered there; this test's only job is
+    // confirming the render pipeline prints a growth_move pointer's
+    // badge text correctly end-to-end, so it supplies its own
+    // non-colliding pointer directly rather than relying on a sample
+    // whose real top task happens to be a website check too.
+    const content: MonthlyReportContent = {
+      ...SAMPLE_REAL_DELTAS.content,
+      focus: {
+        nothingNotable: false,
+        pointers: [
+          {
+            kind: "growth_move",
+            text: "Improve your website: Your site is losing points on real checks. Brings in customers — the same fix also raises your score (see your plan above)",
+          },
+        ],
+      },
+    };
+    const html = await renderToText(<MonthlyReportEmail {...SAMPLE_REAL_DELTAS} content={content} />);
+    expect(html).toContain("Improve your website");
+    expect(html).toContain("also raises your score");
   });
 
-  test("no orphan advice: every focus pointer shown across all four sample states traces back to a real check/fact in that same sample's own data", () => {
-    const samples = [SAMPLE_BASELINE, SAMPLE_STEADY, SAMPLE_REAL_DELTAS, SAMPLE_MISSING_DATA];
-    const generalTipTexts = GENERAL_FOCUS_TIPS().map((t) => t.text);
+  test("the routine pointer's real checked-off count renders, including the honest zero case", async () => {
+    const baselineHtml = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} />);
+    expect(baselineHtml).toMatch(/checked off 3 weekly routine item/i);
 
+    const missingDataHtml = await renderToText(<MonthlyReportEmail {...SAMPLE_MISSING_DATA} />);
+    expect(missingDataHtml).toContain("Nothing checked off on your weekly routine yet this month");
+  });
+
+  test("no growth move firing (SAMPLE_DECLINE) means no growth_move pointer at all — never fabricated", () => {
+    expect(SAMPLE_DECLINE.content.focus.pointers.some((p) => p.kind === "growth_move")).toBe(false);
+  });
+
+  test("never shows more than 3 pointers, and the removed pointer kinds (competitor_gap/listing_issue/general_tip) never appear again", () => {
+    const samples = [SAMPLE_BASELINE, SAMPLE_STEADY, SAMPLE_REAL_DELTAS, SAMPLE_MISSING_DATA, SAMPLE_DECLINE];
     for (const sample of samples) {
-      const content = sample.content;
-      expect(content.focus.pointers.length).toBeLessThanOrEqual(3);
-
-      for (const pointer of content.focus.pointers) {
-        if (pointer.kind === "score_gap") {
-          // Must name a real, currently-defined scoring check — never an
-          // invented or stale checkId — and its shown text must actually
-          // be that check's own real label/advice, not a paraphrase.
-          expect(pointer.checkId).toBeTruthy();
-          const checkDef = CHECKS.find((c) => c.id === pointer.checkId);
-          expect(checkDef).toBeDefined();
-          expect(pointer.text).toContain(t(DEFAULT_LOCALE, checkDef!.labelKey));
-          expect(pointer.text).toContain(t(DEFAULT_LOCALE, checkDef!.adviceKey));
-        } else if (pointer.kind === "competitor_gap") {
-          // The competitor must be real (available, subject not #1) and
-          // the review count must be real too.
-          expect(content.competitor.available).toBe(true);
-          if (content.competitor.available) {
-            expect(content.competitor.current.rank).toBeGreaterThan(1);
-            expect(content.competitor.current.topCompetitorReviewCount).not.toBeNull();
-          }
-          expect(content.reviewCount.available).toBe(true);
-        } else if (pointer.kind === "listing_issue") {
-          // The exact description must appear verbatim among this
-          // sample's own real detected listing changes — never a
-          // separately-invented sentence.
-          expect(content.listingChanges.available).toBe(true);
-          if (content.listingChanges.available) {
-            const descriptions = content.listingChanges.changes.map((c) => c.description);
-            expect(descriptions.some((d) => pointer.text.includes(d))).toBe(true);
-          }
-        } else if (pointer.kind === "general_tip") {
-          // The ONE allowed exception — must be verbatim one of the
-          // fixed, vetted tips, never a claim about this business.
-          expect(generalTipTexts).toContain(pointer.text);
-        } else {
-          throw new Error(`Unexpected focus pointer kind: ${pointer.kind}`);
-        }
+      expect(sample.content.focus.pointers.length).toBeLessThanOrEqual(3);
+      for (const pointer of sample.content.focus.pointers) {
+        expect(["score_gap", "growth_move", "routine"]).toContain(pointer.kind);
       }
     }
+  });
+
+  test("no orphan advice: every score_gap pointer names a real, currently-defined scoring check (or the real merged-reviews id), never an invented one", () => {
+    const samples = [SAMPLE_BASELINE, SAMPLE_STEADY, SAMPLE_REAL_DELTAS, SAMPLE_MISSING_DATA, SAMPLE_DECLINE];
+    for (const sample of samples) {
+      const scoreGap = sample.content.focus.pointers.find((p) => p.kind === "score_gap");
+      if (!scoreGap) continue;
+      expect(scoreGap.checkId).toBeTruthy();
+      if (scoreGap.checkId === "visibility.reviews_merged") continue;
+      const checkDef = CHECKS.find((c) => c.id === scoreGap.checkId);
+      expect(checkDef).toBeDefined();
+    }
+  });
+
+  test("a business with no open task, no firing growth move, and no readable routine data gets the honest 'nothing notable' line, never fabricated content", async () => {
+    const emptyContent: MonthlyReportContent = {
+      ...SAMPLE_BASELINE.content,
+      focus: { nothingNotable: true, pointers: [] },
+    };
+    const html = await renderToText(<MonthlyReportEmail {...SAMPLE_BASELINE} content={emptyContent} />);
+    expect(html).toContain(t(DEFAULT_LOCALE, "report.focus.nothingNotable"));
   });
 });
 
@@ -425,6 +437,7 @@ describe("MonthlyReportEmail — es plural rendering (real Spanish singular vs. 
       reviewCount: { available: true, current: 50 + delta, previous: 50, delta },
       competitor: { available: false },
       competitorStanding: null,
+      hasSavedCompetitorScan: true,
       listingChanges: { available: false },
       isSteady: false,
       focus: { nothingNotable: true, pointers: [] },

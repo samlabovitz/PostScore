@@ -1,12 +1,12 @@
 import { describe, expect, test } from "vitest";
 import {
   buildMonthlyReportContent,
-  GENERAL_FOCUS_TIPS,
   type CompetitorDelta,
+  type MonthlyReportFocusInputs,
   type MonthlyReportScoreRow,
 } from "./monthlyReport";
 import type { ProfileSnapshot } from "./profileChanges";
-import { generateSuggestions, scoreBusiness, type BusinessScoringInput } from "./scoring";
+import { scoreBusiness, type BusinessScoringInput } from "./scoring";
 
 const BASE_SNAPSHOT: ProfileSnapshot = {
   phone: "+1-555-100-2000",
@@ -60,33 +60,6 @@ function scoringInput(overrides: Partial<BusinessScoringInput> = {}): BusinessSc
     },
     ...overrides,
   };
-}
-
-/** A genuinely perfect BusinessScoringInput — every check reaches full
- * points, so generateSuggestions() returns nothing. Used only to test
- * the honest "nothing notable" state (see buildFocus). */
-function perfectScoringInput(): BusinessScoringInput {
-  return scoringInput({
-    rating: 4.9,
-    reviewCount: 200,
-    mostRecentReviewDaysAgo: 0,
-    websiteAnalysis: {
-      ...scoringInput().websiteAnalysis!,
-      content: {
-        hasTitle: true,
-        hasMetaDescription: true,
-        hasViewportTag: true,
-        headingCount: 4,
-        visibleTextLength: 600,
-        hasPhoneLink: true,
-        hasEmailLink: true,
-        hasCtaText: true,
-        isLikelyClientRenderedShell: false,
-        renderedContentSignals: null,
-      },
-      mobilePerformance: { method: "lab", fieldCategory: null, labScore: 100 },
-    },
-  });
 }
 
 function scoreRow(overrides: Partial<MonthlyReportScoreRow> = {}): MonthlyReportScoreRow {
@@ -356,80 +329,196 @@ describe("buildMonthlyReportContent — missing profile-snapshot data", () => {
 });
 
 describe("buildMonthlyReportContent — closing focus section", () => {
-  test("score_gap pointers come directly from this scan's own real breakdown, biggest opportunity first", () => {
-    const current = scoreRow({ id: "current" });
-    const report = buildMonthlyReportContent(null, current, null);
+  const current = scoreRow({ id: "current" });
 
-    const realSuggestions = generateSuggestions(current.breakdown).filter((s) => s.promisedPoints > 0);
-    expect(realSuggestions.length).toBeGreaterThan(0);
+  function withFocus(focusInputs: MonthlyReportFocusInputs) {
+    return buildMonthlyReportContent(null, current, null, null, "en", focusInputs);
+  }
 
-    const scoreGapPointers = report.focus.pointers.filter((p) => p.kind === "score_gap");
-    expect(scoreGapPointers[0]?.checkId).toBe(realSuggestions[0].checkId);
-    expect(scoreGapPointers[0]?.text).toContain(realSuggestions[0].label);
-    expect(scoreGapPointers[0]?.text).toContain(realSuggestions[0].advice);
-  });
-
-  test("a real competitor review-count gap only becomes a pointer when the subject isn't already #1 and every real fact is available", () => {
-    const baseline = scoreRow({ id: "baseline" });
-    const current = scoreRow({ id: "current" });
-
-    const rank1 = buildMonthlyReportContent(baseline, current, {
-      previous: { rank: 1, totalCompetitors: 5, topCompetitorReviewCount: null },
-      current: { rank: 1, totalCompetitors: 5, topCompetitorReviewCount: 999 },
+  test("the score_gap pointer comes from the real, already action-plan-merged top task — never recomputed from the raw breakdown", () => {
+    const report = withFocus({
+      topActionPlanTask: { checkId: "visibility.reviews_merged", label: "Reviews", action: "Ask recent customers for a review." },
+      growthMoves: [],
+      monthIndex: 0,
+      routineCheckedCount: null,
     });
-    // Already #1 — there's no real "top competitor" gap to report, no
-    // matter how high topCompetitorReviewCount is.
-    expect(rank1.focus.pointers.some((p) => p.kind === "competitor_gap")).toBe(false);
+    const scoreGaps = report.focus.pointers.filter((p) => p.kind === "score_gap");
+    expect(scoreGaps).toHaveLength(1);
+    expect(scoreGaps[0].checkId).toBe("visibility.reviews_merged");
+    expect(scoreGaps[0].text).toContain("Reviews");
+    expect(scoreGaps[0].text).toContain("Ask recent customers for a review.");
+  });
 
-    const rank2WithGap = buildMonthlyReportContent(baseline, current, {
-      previous: { rank: 2, totalCompetitors: 5, topCompetitorReviewCount: null },
-      current: { rank: 2, totalCompetitors: 5, topCompetitorReviewCount: current.profileSnapshot!.reviewCount! + 30 },
+  test("never shows 2 review items — the score slot is capped to exactly one, even when it's the merged reviews card", () => {
+    const report = withFocus({
+      topActionPlanTask: { checkId: "visibility.reviews_merged", label: "Reviews", action: "Ask for reviews." },
+      growthMoves: [],
+      monthIndex: 0,
+      routineCheckedCount: null,
     });
-    const gapPointer = rank2WithGap.focus.pointers.find((p) => p.kind === "competitor_gap");
-    expect(gapPointer?.text).toContain("30 more reviews");
+    expect(report.focus.pointers.filter((p) => p.kind === "score_gap")).toHaveLength(1);
   });
 
-  test("a listing_issue pointer only surfaces for an operationally-notable change (phone/website/status), never a cosmetic one alone", () => {
-    const baseline = scoreRow({ id: "baseline" });
-    const currentPhotosOnly = scoreRow({ id: "current", profileSnapshot: { ...BASE_SNAPSHOT, photoCount: 20 } });
-    const photosOnlyReport = buildMonthlyReportContent(baseline, currentPhotosOnly, null);
-    expect(photosOnlyReport.focus.pointers.some((p) => p.kind === "listing_issue")).toBe(false);
-
-    const currentPhoneChanged = scoreRow({ id: "current", profileSnapshot: { ...BASE_SNAPSHOT, phone: "+1-555-999-0000" } });
-    const phoneChangedReport = buildMonthlyReportContent(baseline, currentPhoneChanged, null);
-    const issuePointer = phoneChangedReport.focus.pointers.find((p) => p.kind === "listing_issue");
-    expect(issuePointer?.text).toContain("Your phone number changed.");
+  test("no open action-plan task means no score_gap pointer at all — never fabricated", () => {
+    const report = withFocus({ topActionPlanTask: null, growthMoves: [], monthIndex: 0, routineCheckedCount: null });
+    expect(report.focus.pointers.some((p) => p.kind === "score_gap")).toBe(false);
   });
 
-  test("fills a remaining slot with the one fixed, clearly-labeled general tip when real pointers don't fill the section", () => {
-    const current = scoreRow({ id: "current" });
-    // Baseline report: competitor and listing-change pointers are
-    // structurally unavailable, so with 2+ real score gaps this scan's
-    // breakdown always leaves exactly one slot for the general tip.
-    const report = buildMonthlyReportContent(null, current, null);
-
-    const generalTips = report.focus.pointers.filter((p) => p.kind === "general_tip");
-    expect(generalTips.length).toBe(1);
-    expect(GENERAL_FOCUS_TIPS().map((t) => t.text)).toContain(generalTips[0].text);
-  });
-
-  test("never shows more than 3 pointers total, even when every real source has something to say", () => {
-    const baseline = scoreRow({ id: "baseline" });
-    const current = scoreRow({ id: "current", profileSnapshot: { ...BASE_SNAPSHOT, phone: "+1-555-999-0000" } });
-    const report = buildMonthlyReportContent(baseline, current, {
-      previous: { rank: 2, totalCompetitors: 5, topCompetitorReviewCount: null },
-      current: { rank: 2, totalCompetitors: 5, topCompetitorReviewCount: current.profileSnapshot!.reviewCount! + 50 },
+  test("the growth-move pointer uses the Growth page's own honest badge text — customers-only vs. also-raises-score", () => {
+    const customersOnly = withFocus({
+      topActionPlanTask: null,
+      growthMoves: [{ id: "start_coupon", title: "Start a coupon", why: "Give new customers a reason to try you." }],
+      monthIndex: 0,
+      routineCheckedCount: null,
     });
-    // Real candidates here: 2 score gaps + 1 competitor gap + 1 listing
-    // issue = 4 — the cap must still hold at 3.
-    expect(report.focus.pointers.length).toBeLessThanOrEqual(3);
+    const customersPointer = customersOnly.focus.pointers.find((p) => p.kind === "growth_move");
+    expect(customersPointer?.text).toContain("Start a coupon");
+    expect(customersPointer?.text).toContain("doesn't change your score");
+
+    const alsoScore = withFocus({
+      topActionPlanTask: null,
+      growthMoves: [{ id: "improve_website", title: "Improve your website", why: "Your site is losing points." }],
+      monthIndex: 0,
+      routineCheckedCount: null,
+    });
+    const alsoScorePointer = alsoScore.focus.pointers.find((p) => p.kind === "growth_move");
+    expect(alsoScorePointer?.text).toContain("also raises your score");
+  });
+
+  test("Day 4 Part 2b fix: a growth move that just repeats the score-gap task already shown is skipped, not duplicated (the real Lamonsoff case)", () => {
+    // The exact real shape that regressed: the score-gap item IS a
+    // website check, and the only firing growth move is improve_website
+    // — before the fix, this showed "Performance & mobile" as the score
+    // gap AND "Improve your website" as a growth move, two bullets about
+    // the identical real action.
+    const report = withFocus({
+      topActionPlanTask: {
+        checkId: "website.performance_mobile",
+        label: "Performance & mobile",
+        action: "Speed up your website, especially on mobile.",
+      },
+      growthMoves: [{ id: "improve_website", title: "Improve your website", why: "Your site is losing points." }],
+      monthIndex: 0,
+      routineCheckedCount: null,
+    });
+    expect(report.focus.pointers.some((p) => p.kind === "growth_move")).toBe(false);
+    expect(report.focus.pointers.filter((p) => p.kind === "score_gap")).toHaveLength(1);
+  });
+
+  test("Day 4 Part 2b fix: rotation skips a duplicate move and takes the next eligible one instead of showing nothing", () => {
+    const report = withFocus({
+      topActionPlanTask: {
+        checkId: "website.performance_mobile",
+        label: "Performance & mobile",
+        action: "Speed up your website, especially on mobile.",
+      },
+      growthMoves: [
+        { id: "improve_website", title: "Improve your website", why: "Your site is losing points." },
+        { id: "start_coupon", title: "Start a coupon", why: "Give new customers a reason to try you." },
+      ],
+      monthIndex: 0,
+      routineCheckedCount: null,
+    });
+    const growthMove = report.focus.pointers.find((p) => p.kind === "growth_move");
+    expect(growthMove?.text).toContain("Start a coupon");
+  });
+
+  test("Day 4 Part 2b fix: add_photos_vs_competitors is skipped only when the score gap is specifically completeness.photos", () => {
+    const duplicate = withFocus({
+      topActionPlanTask: { checkId: "completeness.photos", label: "Photos", action: "Add more photos." },
+      growthMoves: [{ id: "add_photos_vs_competitors", title: "Add photos", why: "Competitors show more." }],
+      monthIndex: 0,
+      routineCheckedCount: null,
+    });
+    expect(duplicate.focus.pointers.some((p) => p.kind === "growth_move")).toBe(false);
+
+    const notDuplicate = withFocus({
+      topActionPlanTask: { checkId: "visibility.rating", label: "Star rating", action: "Ask for reviews." },
+      growthMoves: [{ id: "add_photos_vs_competitors", title: "Add photos", why: "Competitors show more." }],
+      monthIndex: 0,
+      routineCheckedCount: null,
+    });
+    expect(notDuplicate.focus.pointers.some((p) => p.kind === "growth_move")).toBe(true);
+  });
+
+  test("rotates which firing growth move is shown deterministically by the real recap month — same month same pick, next month a different one", () => {
+    const moves = [
+      { id: "start_coupon" as const, title: "Coupon", why: "x" },
+      { id: "run_price_check" as const, title: "Price check", why: "x" },
+      { id: "build_starter_site" as const, title: "Starter site", why: "x" },
+    ];
+    const pickFor = (monthIndex: number) =>
+      withFocus({ topActionPlanTask: null, growthMoves: moves, monthIndex, routineCheckedCount: null }).focus.pointers.find(
+        (p) => p.kind === "growth_move"
+      )?.text;
+
+    const september = 2026 * 12 + 8; // a real, arbitrary month index
+    expect(pickFor(september)).toBe(pickFor(september));
+
+    const picks = new Set([pickFor(september), pickFor(september + 1), pickFor(september + 2), pickFor(september + 3)]);
+    expect(picks.size).toBeGreaterThan(1);
+  });
+
+  test("a law firm's real growth-move list never includes a referral move (referralOk respected upstream) — so no referral pointer can ever surface", () => {
+    // A law firm's real buildGrowthMoves() output never contains
+    // start_referral in the first place (gated on referralOk there) —
+    // this fixture mirrors exactly what the real caller would pass for
+    // one: every OTHER move, but never that one.
+    const report = withFocus({
+      topActionPlanTask: null,
+      growthMoves: [
+        { id: "start_coupon", title: "Coupon", why: "x" },
+        { id: "run_price_check", title: "Price check", why: "x" },
+      ],
+      monthIndex: 0,
+      routineCheckedCount: null,
+    });
+    expect(report.focus.pointers.some((p) => p.text.toLowerCase().includes("referral"))).toBe(false);
+  });
+
+  test("no firing growth move means no growth_move pointer at all", () => {
+    const report = withFocus({ topActionPlanTask: null, growthMoves: [], monthIndex: 0, routineCheckedCount: null });
+    expect(report.focus.pointers.some((p) => p.kind === "growth_move")).toBe(false);
+  });
+
+  test("the routine pointer states the real checked-off count, never a claim the owner actually posted/replied/added anything", () => {
+    const withCount = withFocus({ topActionPlanTask: null, growthMoves: [], monthIndex: 0, routineCheckedCount: 6 });
+    const pointer = withCount.focus.pointers.find((p) => p.kind === "routine");
+    expect(pointer?.text).toContain("6");
+    expect(pointer?.text).toMatch(/checked off/i);
+    expect(pointer?.text).not.toMatch(/posted|replied|added a photo/i);
+  });
+
+  test("a real zero still gets an honest pointer to the real checklist, never silently omitted", () => {
+    const zero = withFocus({ topActionPlanTask: null, growthMoves: [], monthIndex: 0, routineCheckedCount: 0 });
+    const pointer = zero.focus.pointers.find((p) => p.kind === "routine");
+    expect(pointer?.text).toContain("Your weekly routine");
+    expect(pointer?.text).not.toMatch(/posted|replied|added a photo/i);
+  });
+
+  test("a genuinely unreadable routine count (null) produces no routine pointer at all — never a fabricated zero", () => {
+    const report = withFocus({ topActionPlanTask: null, growthMoves: [], monthIndex: 0, routineCheckedCount: null });
+    expect(report.focus.pointers.some((p) => p.kind === "routine")).toBe(false);
+  });
+
+  test("shows all 3 when all three real sources are present, and never more than 3", () => {
+    const report = withFocus({
+      topActionPlanTask: { checkId: "visibility.reviews_merged", label: "Reviews", action: "Ask for reviews." },
+      growthMoves: [{ id: "start_coupon", title: "Coupon", why: "x" }],
+      monthIndex: 0,
+      routineCheckedCount: 3,
+    });
+    expect(report.focus.pointers).toHaveLength(3);
     expect(report.focus.nothingNotable).toBe(false);
   });
 
-  test("says so honestly, with no pointers at all, when a real scan genuinely has nothing to flag", () => {
-    const current = scoreRow({ id: "current", breakdown: scoreBusiness(perfectScoringInput()) });
-    expect(generateSuggestions(current.breakdown).length).toBe(0);
+  test("never pads: no open task, no firing growth move, and no readable routine data shows nothing at all, honestly", () => {
+    const report = withFocus({ topActionPlanTask: null, growthMoves: [], monthIndex: 0, routineCheckedCount: null });
+    expect(report.focus.nothingNotable).toBe(true);
+    expect(report.focus.pointers).toEqual([]);
+  });
 
+  test("omitting focusInputs entirely (the default) is the same honest 'nothing to show' — never a fabricated default", () => {
     const report = buildMonthlyReportContent(null, current, null);
     expect(report.focus.nothingNotable).toBe(true);
     expect(report.focus.pointers).toEqual([]);

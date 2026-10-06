@@ -109,6 +109,7 @@ export type MessageKey =
   | "report.focus.label"
   | "report.focus.nothingNotable"
   | "report.competitorSection.label"
+  | "report.competitorSection.noScanYet"
   | "report.competitorSection.noComparables"
   | "report.competitorSection.currentStanding"
   | "report.competitorSection.rank"
@@ -396,11 +397,10 @@ export type MessageKey =
   | "content.actionPlan.fallback.fix"
   // --- Email-only glue (lib/monthlyReport.ts) ---
   | "report.focus.biggestOpportunity"
-  | "report.focus.alsoWorthALook"
-  | "report.focus.listingIssue"
-  | "report.focus.competitorGap.one"
-  | "report.focus.competitorGap.other"
-  | "report.focus.generalTip"
+  | "report.focus.growthMove"
+  | "report.focus.routineNonePointer"
+  | "report.focus.routineCheckedCount.one"
+  | "report.focus.routineCheckedCount.other"
   | "report.summary.reviewsGained.one"
   | "report.summary.reviewsGained.other"
   | "report.summary.reviewsLost"
@@ -2070,7 +2070,7 @@ export type PluralKeyBase =
   | "content.listingChange.photos.added"
   | "content.listingChange.photos.removed"
   | "content.listingChange.reviews.gained"
-  | "report.focus.competitorGap"
+  | "report.focus.routineCheckedCount"
   | "report.summary.reviewsGained"
   | "report.summary.listingChanges"
   | "dashboard.website.excludedPoints"
@@ -2210,6 +2210,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Nothing notable to flag this month — your listing and site are in strong shape across the board.",
 
     "report.competitorSection.label": "Competitor standing",
+    "report.competitorSection.noScanYet": "No competitor scan yet — run one on the Competitors page.",
     "report.competitorSection.noComparables":
       "We couldn't find enough comparable businesses nearby to rank you this month.",
     "report.competitorSection.currentStanding":
@@ -2619,14 +2620,13 @@ export const messages: Record<Locale, LocaleMessages> = {
 
     // --- report.* — email-only glue extracted from lib/monthlyReport.ts.
     "report.focus.biggestOpportunity": "Your biggest opportunity: {label} — {advice}",
-    "report.focus.alsoWorthALook": "Also worth a look: {label} — {advice}",
-    "report.focus.listingIssue": "Listing change worth a look: {description}",
-    "report.focus.competitorGap.one":
-      "The top-ranked business near you has {count} more review than you — closing that gap moves your ranking.",
-    "report.focus.competitorGap.other":
-      "The top-ranked business near you has {count} more reviews than you — closing that gap moves your ranking.",
-    "report.focus.generalTip":
-      "General tip: posting an update or offer to your Google Business Profile every so often helps keep your listing active in local search — this isn't something we currently measure, so treat it as general guidance, not a status report.",
+    "report.focus.growthMove": "{title}: {why} {badge}",
+    "report.focus.routineNonePointer":
+      "Nothing checked off on your weekly routine yet this month — see \"Your weekly routine\" on the Growth page for 5 quick habits that keep your listing active.",
+    "report.focus.routineCheckedCount.one":
+      "You checked off {count} weekly routine item this month — see \"Your weekly routine\" on the Growth page to keep it going.",
+    "report.focus.routineCheckedCount.other":
+      "You checked off {count} weekly routine items this month — see \"Your weekly routine\" on the Growth page to keep it going.",
     "report.summary.reviewsGained.one": "{count} new review",
     "report.summary.reviewsGained.other": "{count} new reviews",
     "report.summary.reviewsLost": "your review count dropped by {count}",
@@ -4660,6 +4660,8 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Nada notable que señalar este mes — su ficha y su sitio web están en muy buena forma en todos los aspectos.",
 
     "report.competitorSection.label": "Posición frente a la competencia",
+    "report.competitorSection.noScanYet":
+      "Todavía no hay una comparación con la competencia — ejecute una en la página Competidores.",
     "report.competitorSection.noComparables":
       "No encontramos suficientes negocios comparables cerca para clasificarlo este mes.",
     "report.competitorSection.currentStanding":
@@ -4997,11 +4999,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.fallback.fix": "Consulte la explicación de esta comprobación para saber exactamente qué falta.",
 
     "report.focus.biggestOpportunity": "Su mayor oportunidad: {label} — {advice}",
-    "report.focus.alsoWorthALook": "También vale la pena revisar: {label} — {advice}",
-    "report.focus.listingIssue": "Cambio en la ficha que vale la pena revisar: {description}",
-    "report.focus.competitorGap.one": "El negocio mejor posicionado cerca de usted tiene {count} reseña más que usted — cerrar esa brecha mejora su posición.",
-    "report.focus.competitorGap.other": "El negocio mejor posicionado cerca de usted tiene {count} reseñas más que usted — cerrar esa brecha mejora su posición.",
-    "report.focus.generalTip": "Consejo general: publicar de vez en cuando una novedad u oferta en su Perfil de Negocio de Google ayuda a mantener su ficha activa en las búsquedas locales — esto no es algo que midamos actualmente, así que tómelo como una orientación general, no como un informe de estado.",
+    "report.focus.growthMove": "{title}: {why} {badge}",
+    "report.focus.routineNonePointer":
+      "Todavía no ha marcado nada en su rutina semanal este mes — consulte \"Su rutina semanal\" en la página Crecimiento para 5 hábitos rápidos que mantienen activa su ficha.",
+    "report.focus.routineCheckedCount.one":
+      "Marcó {count} tarea de su rutina semanal este mes — consulte \"Su rutina semanal\" en la página Crecimiento para seguir así.",
+    "report.focus.routineCheckedCount.other":
+      "Marcó {count} tareas de su rutina semanal este mes — consulte \"Su rutina semanal\" en la página Crecimiento para seguir así.",
     "report.summary.reviewsGained.one": "{count} reseña nueva",
     "report.summary.reviewsGained.other": "{count} reseñas nuevas",
     "report.summary.reviewsLost": "su número de reseñas bajó en {count}",

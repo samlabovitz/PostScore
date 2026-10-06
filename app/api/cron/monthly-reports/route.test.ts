@@ -20,7 +20,9 @@ vi.mock("@/lib/email", () => ({ sendEmail: vi.fn() }));
 // lib/websiteScreenshotUpload.ts — same reasoning as the two mocks above.
 vi.mock("@/app/actions/businesses", () => ({ saveBusinessWithClient: vi.fn() }));
 
-import { POST } from "./route";
+import { POST, computeTopActionPlanTask } from "./route";
+import { scoreBusiness, type BusinessScoringInput } from "@/lib/scoring";
+import type { TaskRow } from "@/lib/actionPlan";
 
 // Guards against the exact real regression this route's own comments
 // describe: reports going out on a real schedule even while
@@ -86,5 +88,69 @@ describe("POST /api/cron/monthly-reports — the real isMonthlyReportsLive() gat
     const res = await POST(authorizedRequest());
     expect(res.status).toBe(200);
     expect((await res.json()).sent).toBe(0);
+  });
+});
+
+describe("computeTopActionPlanTask — Day 4 Part 2a: a stale saved task for a check that's no longer scored never appears", () => {
+  // A genuinely strong business: a website on file, but no analysis at
+  // all — the same real shape as the exact case that regressed
+  // (Lamonsoff): website.performance_mobile (and every other
+  // website-analysis check) is structurally NOT_FOUND today, so
+  // generateSuggestions() never includes it as a real suggestion,
+  // regardless of what's sitting in the `tasks` table from whenever it
+  // WAS last measured and losing points.
+  const input: BusinessScoringInput = {
+    rating: 4.9,
+    reviewCount: 200,
+    mostRecentReviewDaysAgo: 1,
+    phone: "+1-555-000-0000",
+    address: "123 Main St",
+    openingHours: ["Mon-Fri 9-5"],
+    website: "https://example.com",
+    httpsStatus: "https",
+    categories: ["restaurant"],
+    primaryCategory: "Restaurant",
+    photoCount: 12,
+    businessStatus: "OPERATIONAL",
+    websiteAnalysis: null,
+  };
+
+  test("a stale 'pending_verification' row for a now-NOT_FOUND check never surfaces as the top task", () => {
+    const breakdown = scoreBusiness(input);
+    // This row would have been written back when performance_mobile was
+    // still measured and losing points — stale now that the real
+    // website_analysis_json has since gone missing/unmeasured.
+    const staleTaskRows: TaskRow[] = [
+      {
+        id: "stale-1",
+        check_id: "website.performance_mobile",
+        status: "pending_verification",
+        promised_points: 10,
+        marked_done_at: "2026-01-01T00:00:00.000Z",
+        verified_at: null,
+        marked_metric_value: null,
+      },
+    ];
+    const top = computeTopActionPlanTask(breakdown, staleTaskRows, input, "en");
+    expect(top).toBeNull();
+  });
+
+  test("control: the same stale row DOES surface when the check is genuinely still losing points in the live breakdown", () => {
+    const roughInput: BusinessScoringInput = { ...input, websiteAnalysis: null, website: null };
+    const taskRows: TaskRow[] = [
+      {
+        id: "t1",
+        check_id: "visibility.rating",
+        status: "pending_verification",
+        promised_points: 5,
+        marked_done_at: "2026-01-01T00:00:00.000Z",
+        verified_at: null,
+        marked_metric_value: null,
+      },
+    ];
+    const lowRatingInput: BusinessScoringInput = { ...roughInput, rating: 3.0 };
+    const lowRatingBreakdown = scoreBusiness(lowRatingInput);
+    const top = computeTopActionPlanTask(lowRatingBreakdown, taskRows, lowRatingInput, "en");
+    expect(top).not.toBeNull();
   });
 });

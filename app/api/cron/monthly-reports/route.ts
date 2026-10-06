@@ -53,13 +53,27 @@ import {
   buildMonthlyReportContent,
   type CompetitorDelta,
   type CompetitorSnapshot,
+  type FocusGrowthMove,
+  type FocusTopActionPlanTask,
+  type MonthlyReportFocusInputs,
   type MonthlyReportScoreRow,
 } from "@/lib/monthlyReport";
-import type { Grade } from "@/lib/scoring";
+import {
+  businessRowToScoringInput,
+  generateSuggestions,
+  getScoreWithSuggestions,
+  type BusinessScoringRow,
+  type Grade,
+  type ScoreBreakdown,
+} from "@/lib/scoring";
+import { buildProfileSnapshot } from "@/lib/profileChanges";
+import { buildActionPlan, mergeReviewTasks, type TaskRow } from "@/lib/actionPlan";
+import { resolveBizProfile } from "@/config/bizProfiles";
+import { buildGrowthMoves, competitorPhotoCounts, median, weakWebsiteIssueLabels, type GrowthMoveSignals } from "@/lib/growthMoves";
 import { MonthlyReportEmail, monthlyReportSubject } from "@/emails/MonthlyReportEmail";
 import { sendEmail } from "@/lib/email";
 import { isMonthlyReportsLive } from "@/lib/monthlyReportsFeatureFlag";
-import { normalizeLocale } from "@/lib/i18n";
+import { normalizeLocale, reportCoverageMonthIndex, reportCoverageMonthRange, type Locale } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -222,6 +236,150 @@ async function readCompetitorSnapshotAsOf(
   return readCompetitorSnapshotForScan(supabase, businessId, data.scan_id);
 }
 
+/**
+ * Whether this business has EVER had a real competitor scan saved —
+ * independent of whether THIS run's own scan found a usable standing.
+ * Lets the email tell apart "no scan has ever been attempted" from "a
+ * scan genuinely ran and found nothing comparable" (see
+ * MonthlyReportContent.hasSavedCompetitorScan's own doc — Day 4 Part
+ * 2c, fixed after the real Santa Fe case: 0 competitor_scans rows ever,
+ * shown the same generic "couldn't find enough comparable" wording a
+ * genuine failed search would get).
+ */
+async function hasAnyCompetitorScan(
+  supabase: ReturnType<typeof createAdminClient>,
+  businessId: string
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("competitor_scans")
+    .select("scan_id")
+    .eq("business_id", businessId)
+    .limit(1)
+    .maybeSingle();
+  return !error && data !== null;
+}
+
+/** Real, non-subject photo counts from THIS run's own competitor scan —
+ * mirrors competitorPhotoCounts' own filter (lib/growthMoves.ts), just
+ * read via the admin client instead of a session client (same reasoning
+ * as every other read in this file: no session exists in a cron
+ * context). Used only for the growth-move signals below; a genuinely
+ * empty array (no scan, or a scan with no usable photo counts) is a
+ * real, honest "no data," never fabricated. */
+async function readCompetitorPhotoCountsForScan(
+  supabase: ReturnType<typeof createAdminClient>,
+  businessId: string,
+  scanId: string
+): Promise<number[]> {
+  const { data, error } = await supabase
+    .from("competitor_scans")
+    .select("is_subject, photo_count")
+    .eq("business_id", businessId)
+    .eq("scan_id", scanId);
+  if (error || !data) return [];
+  return competitorPhotoCounts(data.map((r) => ({ isSubject: r.is_subject, photoCount: r.photo_count })));
+}
+
+/** Mirrors the `tasks` table select inside getActionPlan
+ * (app/actions/actionPlan.ts) — same real table/columns, read via the
+ * admin client since getActionPlan itself is session-gated (no session
+ * exists in a cron context). */
+export async function readTaskRows(supabase: ReturnType<typeof createAdminClient>, businessId: string): Promise<TaskRow[]> {
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("id, check_id, status, promised_points, marked_done_at, verified_at, marked_metric_value")
+    .eq("business_id", businessId);
+  if (error) return [];
+  return (data ?? []) as TaskRow[];
+}
+
+/**
+ * The real, already action-plan-merged (review cards combined into one)
+ * biggest-opportunity task for the closing focus section — built from
+ * the SAME real pure functions (buildActionPlan, mergeReviewTasks) the
+ * Action Plan/Growth pages use, never a separately re-derived ranking.
+ * null when there are no open tasks at all.
+ */
+export function computeTopActionPlanTask(
+  breakdown: ScoreBreakdown,
+  taskRows: TaskRow[],
+  input: ReturnType<typeof businessRowToScoringInput>,
+  locale: Locale
+): FocusTopActionPlanTask | null {
+  const suggestions = generateSuggestions(breakdown, locale);
+  const rawTasks = buildActionPlan(breakdown, suggestions, taskRows, input, locale);
+  const mergedTasks = mergeReviewTasks(rawTasks, breakdown, input, locale);
+  const top = mergedTasks[0];
+  if (!top) return null;
+  return { checkId: top.checkId, label: top.label, action: top.action };
+}
+
+/**
+ * This business's real, currently-firing growth moves, for the closing
+ * focus section — built from the SAME real signals/pure function
+ * (getGrowthMoveSignals's real query shape + buildGrowthMoves) the
+ * Growth page uses. getGrowthMoveSignals itself is session-gated (no
+ * session exists in a cron context), so its real reads are mirrored
+ * here via the admin client — same established pattern as
+ * scripts/preview-assistant-context.ts's own readGrowthMoveSignals —
+ * never a different DECISION about which moves fire, only a different
+ * client reading the identical real rows.
+ */
+export async function computeFiringGrowthMoves(
+  supabase: ReturnType<typeof createAdminClient>,
+  businessId: string,
+  breakdown: ScoreBreakdown,
+  referralOk: boolean,
+  competitorScanId: string | null,
+  locale: Locale
+): Promise<FocusGrowthMove[]> {
+  const [businessResult, promoResult, referralResult, photoCounts] = await Promise.all([
+    supabase.from("businesses").select("photo_count, pricing_assessed_at, website").eq("id", businessId).single(),
+    supabase.from("promos").select("id").eq("business_id", businessId).limit(1),
+    supabase.from("referrals").select("id").eq("business_id", businessId).limit(1),
+    competitorScanId ? readCompetitorPhotoCountsForScan(supabase, businessId, competitorScanId) : Promise.resolve([]),
+  ]);
+
+  const hasWebsiteCheck = breakdown.checks.find((c) => c.id === "website.has_website");
+  const signals: GrowthMoveSignals = {
+    businessId,
+    referralOk,
+    hasEverCreatedPromo: (promoResult.data?.length ?? 0) > 0,
+    hasEverCreatedReferral: (referralResult.data?.length ?? 0) > 0,
+    pricingAssessedAt: businessResult.data?.pricing_assessed_at ?? null,
+    photoCount: businessResult.data?.photo_count ?? null,
+    competitorPhotos: { scanAvailable: competitorScanId !== null, medianCompetitorPhotoCount: median(photoCounts) },
+    hasWebsite: (businessResult.data?.website ?? null) !== null,
+    hasWebsiteTaskOpen: hasWebsiteCheck ? (hasWebsiteCheck.earnedPoints ?? 0) < hasWebsiteCheck.maxPoints : false,
+    weakWebsiteIssueLabels: weakWebsiteIssueLabels(breakdown),
+  };
+
+  return buildGrowthMoves(signals, locale).map((m) => ({ id: m.id, title: m.title, why: m.why }));
+}
+
+/**
+ * How many real weekly_checks rows exist for this business within the
+ * real recap month (see reportCoverageMonthRange) — a real, honest
+ * count of check-off EVENTS, never deduplicated per habit (the same
+ * habit checked off in two different real weeks within the month is
+ * two real events). null only when this genuinely couldn't be read.
+ */
+export async function readRoutineCheckedCount(
+  supabase: ReturnType<typeof createAdminClient>,
+  businessId: string,
+  reportDate: string
+): Promise<number | null> {
+  const { start, end } = reportCoverageMonthRange(reportDate);
+  const { count, error } = await supabase
+    .from("weekly_checks")
+    .select("item_id", { count: "exact", head: true })
+    .eq("business_id", businessId)
+    .gte("week_start", start)
+    .lt("week_start", end);
+  if (error) return null;
+  return count ?? 0;
+}
+
 function describeRescanFailure(result: RescanBusinessResult): string {
   switch (result.status) {
     case "not_found":
@@ -354,8 +512,10 @@ export async function processBusiness(
   // always-scan behavior shipped). See buildMonthlyReportContent's own
   // doc for why this is a separate field from competitorDelta.
   let currentCompetitorSnapshot: CompetitorSnapshot | null = null;
+  let competitorScanId: string | null = null;
   const competitorResult = await saveCompetitorScanWithClient(supabase, businessId);
   if (competitorResult.status === "saved") {
+    competitorScanId = competitorResult.scanId;
     currentCompetitorSnapshot = await readCompetitorSnapshotForScan(supabase, businessId, competitorResult.scanId);
     const previousSnapshot = previousReport
       ? await readCompetitorSnapshotAsOf(supabase, businessId, previousReport.sent_at)
@@ -369,11 +529,25 @@ export async function processBusiness(
   // competitors found this run, or "not_found"/"error") is honestly
   // left as no real standing at all — see CompetitorSection's own doc
   // in emails/MonthlyReportEmail.tsx for the exact message that shows.
+  //
+  // This run's own scan succeeding already proves a scan exists — only
+  // worth a separate existence check when THIS run came up empty, to
+  // tell apart "never scanned at all" from "a real scan just found
+  // nothing comparable."
+  const hasSavedCompetitorScan =
+    competitorScanId !== null || (await hasAnyCompetitorScan(supabase, businessId));
 
-  // 3e. Real content, real email, real owner address.
+  // 3e. Real content, real email, real owner address. Select extended
+  // beyond the original name/owner_id/unsubscribe_token/language to
+  // also cover everything the closing focus section's real sources need
+  // (business-type resolution, growth-move signals, action-plan
+  // scoring input) — one query, reused for all of it, never a second
+  // "duplicated" business read.
   const { data: freshBusiness, error: freshBusinessError } = await supabase
     .from("businesses")
-    .select("name, owner_id, unsubscribe_token, language")
+    .select(
+      "name, owner_id, unsubscribe_token, language, category, primary_type, business_type_override, categories, phone, address, opening_hours, website, photo_count, business_status, https_status, website_analysis_json, rating, review_count"
+    )
     .eq("id", businessId)
     .single();
 
@@ -391,8 +565,76 @@ export async function processBusiness(
     return { businessId, status: "failed", reason: "no real email on file for this business's owner" };
   }
 
-  const content = buildMonthlyReportContent(baselineRow, currentRow, competitorDelta, currentCompetitorSnapshot, locale);
   const reportDate = now.toISOString();
+
+  // Real inputs for the closing focus section — see
+  // MonthlyReportFocusInputs' own doc in lib/monthlyReport.ts. Every one
+  // of these reuses the SAME real pure functions/decisions the Growth/
+  // Action-Plan pages use; only the DATA ACCESS is mirrored here via the
+  // admin client (those pages' own actions are session-gated, and no
+  // session exists in a cron context) — same established pattern as
+  // scripts/preview-assistant-context.ts.
+  // Only profile.referralOk is needed here (never a second business-type
+  // DECISION) — resolveBizProfile() already falls back to the real
+  // Google-category auto-detection on its own when there's no override,
+  // so bizProfile() itself never needs calling separately in this file.
+  const profile = resolveBizProfile(
+    freshBusiness.category,
+    freshBusiness.primary_type,
+    freshBusiness.business_type_override ?? null,
+    locale,
+    freshBusiness.categories,
+    freshBusiness.name
+  );
+  const scoringInput = businessRowToScoringInput(freshBusiness as unknown as BusinessScoringRow);
+
+  // LIVE score — the exact same scoreBusinessWithClient/
+  // getScoreWithSuggestions path the Growth/Website/PostAI pages call,
+  // run fresh on the business row this run just refreshed — never the
+  // saved scores.breakdown_json blob. currentRow.breakdown SHOULD
+  // already equal this (freshBusiness was re-read right after the real
+  // rescan above), but computing it live here makes that an explicit
+  // guarantee rather than an implicit one, and is what actually fixes
+  // this for scripts/preview-report.ts's own no-rescan default mode,
+  // which mirrors this same pattern (Day 4 Part 2a — the real Lamonsoff
+  // case: a stale saved breakdown disagreeing with the live dashboard).
+  const liveResult = getScoreWithSuggestions(scoringInput, locale);
+  const currentForDisplay: MonthlyReportScoreRow = {
+    id: currentRow.id,
+    total: liveResult.breakdown.total,
+    grade: liveResult.breakdown.grade,
+    createdAt: currentRow.createdAt,
+    profileSnapshot: buildProfileSnapshot(freshBusiness),
+    breakdown: liveResult.breakdown,
+  };
+
+  const taskRows = await readTaskRows(supabase, businessId);
+  const topActionPlanTask = computeTopActionPlanTask(currentForDisplay.breakdown, taskRows, scoringInput, locale);
+  const growthMoves = await computeFiringGrowthMoves(
+    supabase,
+    businessId,
+    currentForDisplay.breakdown,
+    profile.referralOk,
+    competitorScanId,
+    locale
+  );
+  const routineCheckedCount = await readRoutineCheckedCount(supabase, businessId, reportDate);
+  const focusInputs: MonthlyReportFocusInputs = {
+    topActionPlanTask,
+    growthMoves,
+    monthIndex: reportCoverageMonthIndex(reportDate),
+    routineCheckedCount,
+  };
+
+  const content = buildMonthlyReportContent(
+    baselineRow,
+    currentForDisplay,
+    competitorDelta,
+    currentCompetitorSnapshot,
+    locale,
+    focusInputs,
+    hasSavedCompetitorScan
+  );
   const businessName = freshBusiness.name ?? "Your business";
   // A real, working unsubscribe link — app/unsubscribe/page.tsx validates
   // this exact businessId+token pair (the real per-business

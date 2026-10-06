@@ -16,6 +16,8 @@
 
 import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "./profileChanges";
 import { generateSuggestions, type Grade, type ScoreBreakdown } from "./scoring";
+import { growthMoveOverlapsScore } from "./assistant";
+import type { GrowthMoveId } from "./growthMoves";
 import { DEFAULT_LOCALE, t, tPlural, type Locale } from "@/lib/i18n";
 
 /**
@@ -116,28 +118,31 @@ export type ListingChangesResult =
 /** What kind of real fact a closing focus pointer is grounded in —
  * exists so a caller (or a test) can verify every pointer traces back
  * to something real, never free-written advice. */
-export type FocusPointerKind = "score_gap" | "competitor_gap" | "listing_issue" | "general_tip";
+export type FocusPointerKind = "score_gap" | "growth_move" | "routine";
 
 /** One line in the closing "what to focus on" section. Every pointer is
- * assembled — never generated — from a real fact this scan already
- * produced:
- *   - "score_gap": a real check from THIS scan's own breakdown that's
- *     currently losing points, using that check's own real explanation/
- *     advice copy (see lib/scoring.ts's CHECKS) — never hand-written per
- *     report. `checkId` names exactly which real check, so this can
- *     always be traced back to the breakdown it came from.
- *   - "competitor_gap": a real, computed gap between the subject's own
- *     real current review count and the top-ranked competitor's real
- *     review count from the same competitor scan.
- *   - "listing_issue": a real, already-detected change from
- *     diffProfileSnapshots (the same list rendered under "Listing
- *     changes" elsewhere in the report) — never a separately-invented
- *     description.
- *   - "general_tip": the ONE exception to "grounded in this business's
- *     own data" — a fixed, vetted, evergreen tip from GENERAL_FOCUS_TIPS
- *     below, used only to fill a genuinely empty remaining slot, and
- *     never phrased as a claim about this specific business (no
- *     "checkId", since it isn't tied to one).
+ * assembled — never generated — from a real fact already computed by
+ * the SAME real sources the Growth/Action-Plan pages use, never a
+ * second, duplicated decision:
+ *   - "score_gap": the real, already action-plan-merged (review cards
+ *     combined into one) biggest-opportunity task — `checkId` names
+ *     exactly which real check (or the synthetic merged-reviews id),
+ *     so this can always be traced back to the breakdown it came from.
+ *     At most one of these ever appears, and it's the only pointer
+ *     kind that can ever be review-related.
+ *   - "growth_move": one real, currently-firing growth move (see
+ *     buildGrowthMoves in lib/growthMoves.ts) — which one rotates
+ *     deterministically by the real recap month (see
+ *     MonthlyReportFocusInputs.monthIndex) — framed with the exact
+ *     same honest "brings in customers, doesn't change your score" vs.
+ *     "also raises your score" badge text the Growth page itself uses
+ *     (dashboard.growth.moves.badge / badgeAlsoScored), decided by the
+ *     real growthMoveOverlapsScore() check, never asserted either way.
+ *   - "routine": a real recap of how many weekly_checks rows exist for
+ *     this business in the recap month — described only as "checked
+ *     off," never as a claim that the owner actually posted, replied,
+ *     or added a photo (the owner's own self-report, same honesty rule
+ *     as the Growth page's own weekly routine checklist).
  */
 export interface FocusPointer {
   kind: FocusPointerKind;
@@ -178,6 +183,18 @@ export interface MonthlyReportContent {
    * emails/MonthlyReportEmail.tsx's CompetitorSection for the only place
    * this is read — always alongside `kind === "baseline"`. */
   competitorStanding: CompetitorSnapshot | null;
+  /** Whether this business has EVER had a real competitor scan saved —
+   * independent of whether `competitorStanding`/`competitor` have a
+   * value right now. Lets the "no standing" case in
+   * emails/MonthlyReportEmail.tsx's CompetitorSection tell apart two
+   * very different real facts that both leave competitorStanding null:
+   * a scan has never been run at all (point to the Competitors page),
+   * vs. a scan genuinely ran and found no comparable nearby businesses
+   * (say that plainly instead). Defaults to true in
+   * buildMonthlyReportContent so every existing caller that doesn't
+   * pass it keeps getting the original "couldn't find enough
+   * comparable" wording. */
+  hasSavedCompetitorScan: boolean;
   listingChanges: ListingChangesResult;
   /** True only for an "update" report where every metric we could
    * actually measure showed no real change — the honest "you held
@@ -323,123 +340,191 @@ function buildMovementSummary(
   return `${capitalizeFirst(parts.join("; "))}.`;
 }
 
-/** A small, fixed, hand-vetted set of evergreen best-practice tips —
- * never generated, never claiming anything about a specific business's
- * own data. Used only as a last-resort filler (see buildFocus) when a
- * real scan genuinely didn't produce enough data-derived pointers to
- * fill the section, and always clearly framed as general guidance, not
- * a status report on this business. Deliberately covers ground the
- * scoring engine doesn't measure at all (e.g. Google Business Profile
- * posts aren't a scored check), so it can never contradict or duplicate
- * a real finding shown elsewhere in the same report. */
-export function GENERAL_FOCUS_TIPS(locale: Locale = DEFAULT_LOCALE): FocusPointer[] {
-  return [{ kind: "general_tip", text: t(locale, "report.focus.generalTip") }];
+/** The real, already action-plan-merged (review cards combined into
+ * one "reviews" card — see mergeReviewTasks in lib/actionPlan.ts)
+ * biggest-opportunity task, as computed by the SAME real pipeline the
+ * Action Plan/Growth pages use — the caller builds this from
+ * buildActionPlan + mergeReviewTasks, never a separately re-derived
+ * ranking. Only the fields buildFocus actually needs to phrase the
+ * pointer; null when there are no open tasks at all. */
+export interface FocusTopActionPlanTask {
+  checkId: string;
+  label: string;
+  action: string;
 }
 
-/** Caps how many of the biggest real, currently-losing checks from this
- * scan's own breakdown can become "score_gap" pointers — see
- * buildFocus's overall MAX_FOCUS_POINTERS cap for the section as a
- * whole. */
-const MAX_SCORE_GAP_POINTERS = 2;
-
-/** Real, currently-losing checks from this scan's own breakdown, biggest
- * opportunity first — literally generateSuggestions()'s own output
- * (the same real ranking the Website/action-plan pages already show
- * this business), never a separately hand-picked check. */
-function scoreGapPointers(breakdown: ScoreBreakdown, locale: Locale): FocusPointer[] {
-  return generateSuggestions(breakdown, locale)
-    .filter((s) => s.promisedPoints > 0)
-    .slice(0, MAX_SCORE_GAP_POINTERS)
-    .map((s, i) => ({
-      kind: "score_gap" as const,
-      text: t(locale, i === 0 ? "report.focus.biggestOpportunity" : "report.focus.alsoWorthALook", {
-        label: s.label,
-        advice: s.advice,
-      }),
-      checkId: s.checkId,
-    }));
+/** One real, currently-firing growth move (see buildGrowthMoves in
+ * lib/growthMoves.ts) — the caller passes these through completely
+ * unchanged (same real order, referralOk already respected since
+ * buildGrowthMoves itself never includes start_referral when it's
+ * false), never recomputed here. */
+export interface FocusGrowthMove {
+  id: GrowthMoveId;
+  title: string;
+  why: string;
 }
 
-/** A real, positive gap between the top-ranked business's real review
- * count and the subject's own real current review count, in the same
- * competitor scan — null (no pointer) unless every real fact it needs
- * is actually available: a real competitor comparison, a real current
- * review count, the subject genuinely isn't already #1, and the top
- * competitor's own review count was itself real. Never estimated when
- * any of those is missing. */
-function competitorGapPointer(
-  competitor: CompetitorMovement,
-  reviewCount: MetricResult,
+/**
+ * Everything buildFocus needs beyond the scan's own breakdown — all of
+ * it real, already computed by the caller from the exact same real
+ * functions the Growth/Action-Plan pages use. Optional/defaulted on
+ * buildMonthlyReportContent so a caller that only needs the score/
+ * rating/competitor/listing sections (most tests) can omit it entirely
+ * — the focus section is then honestly empty rather than fabricated.
+ */
+export interface MonthlyReportFocusInputs {
+  topActionPlanTask: FocusTopActionPlanTask | null;
+  growthMoves: FocusGrowthMove[];
+  /**
+   * A real, monotonically-increasing month index (e.g.
+   * `year * 12 + month0`) — NEVER the raw "YYYYMM" digits, which jump
+   * unevenly across year boundaries and can collide with `% length`
+   * for some business/length combinations (the exact rotation bug
+   * buildAssistantStarterPrompts had and fixed — see lib/assistant.ts's
+   * own comment on it). This index incrementing by exactly 1 from one
+   * real recap month to the next is what guarantees the same month
+   * always picks the same growth move, and the next real month always
+   * picks a different one whenever more than one fires.
+   */
+  monthIndex: number;
+  /** How many real weekly_checks rows exist for this business within
+   * the recap month — null only when this genuinely couldn't be read
+   * (never fabricated as 0; a real, honest zero is a normal value). */
+  routineCheckedCount: number | null;
+}
+
+const EMPTY_FOCUS_INPUTS: MonthlyReportFocusInputs = {
+  topActionPlanTask: null,
+  growthMoves: [],
+  monthIndex: 0,
+  routineCheckedCount: null,
+};
+
+/** The real, already-merged top action-plan task — at most ONE pointer,
+ * and the only kind that can ever be review-related (mergeReviewTasks
+ * already combined rating/review_count/review_recency into one real
+ * card upstream, so this is never two separate review pointers). */
+function scoreGapPointer(topTask: FocusTopActionPlanTask | null, locale: Locale): FocusPointer | null {
+  if (!topTask) return null;
+  return {
+    kind: "score_gap",
+    text: t(locale, "report.focus.biggestOpportunity", { label: topTask.label, advice: topTask.action }),
+    checkId: topTask.checkId,
+  };
+}
+
+/**
+ * Whether a growth move's own real fix is the SAME real-world action as
+ * the score-gap task already shown above it — not merely "also moves
+ * the needle on some losing check" (that's growthMoveOverlapsScore's
+ * own, deliberately broader question, used for the badge text below).
+ * "improve_website" IS the website category's fix in general, so it
+ * duplicates any score-gap task that's itself a website.* check;
+ * "add_photos_vs_competitors" duplicates one specifically about
+ * completeness.photos. Every other move targets its own distinct real
+ * action (a coupon, a referral, a price check, a brand-new site) that
+ * never coincides with an action-plan task's own wording.
+ */
+function growthMoveDuplicatesTopTask(moveId: GrowthMoveId, topTaskCheckId: string): boolean {
+  switch (moveId) {
+    case "improve_website":
+      return topTaskCheckId.startsWith("website.");
+    case "add_photos_vs_competitors":
+      return topTaskCheckId === "completeness.photos";
+    default:
+      return false;
+  }
+}
+
+/**
+ * ONE real, currently-firing growth move — rotated deterministically by
+ * the real recap month (see MonthlyReportFocusInputs.monthIndex) so the
+ * same month always shows the same move and the next real month shows
+ * a different one whenever more than one qualifies. Framed with the
+ * exact same honest "brings in customers, doesn't change your score"
+ * vs. "also raises your score" badge text the Growth page itself shows
+ * (dashboard.growth.moves.badge / badgeAlsoScored) — decided by the
+ * real growthMoveOverlapsScore(), never asserted either way by this
+ * function.
+ *
+ * Skips any move that would just repeat the score-gap pointer already
+ * shown above it (see growthMoveDuplicatesTopTask) — rotation then
+ * advances to the next real move instead, wrapping around at most once;
+ * if every firing move duplicates the score gap, this honestly shows no
+ * growth-move pointer at all rather than a redundant one.
+ */
+function growthMovePointer(
+  moves: FocusGrowthMove[],
+  losingChecks: Array<{ checkId: string }>,
+  monthIndex: number,
+  topTaskCheckId: string | null,
   locale: Locale
 ): FocusPointer | null {
-  if (!competitor.available || !reviewCount.available) return null;
-  if (competitor.current.rank <= 1) return null;
-  const topReviews = competitor.current.topCompetitorReviewCount;
-  if (topReviews === null) return null;
-  const gap = topReviews - reviewCount.current;
-  if (gap <= 0) return null;
-  return {
-    kind: "competitor_gap",
-    text: tPlural(locale, "report.focus.competitorGap", gap),
-  };
+  if (moves.length === 0) return null;
+  const startIndex = ((monthIndex % moves.length) + moves.length) % moves.length;
+  for (let offset = 0; offset < moves.length; offset++) {
+    const move = moves[(startIndex + offset) % moves.length];
+    if (topTaskCheckId && growthMoveDuplicatesTopTask(move.id, topTaskCheckId)) continue;
+    const overlaps = growthMoveOverlapsScore(move.id, losingChecks);
+    const badge = t(locale, overlaps ? "dashboard.growth.moves.badgeAlsoScored" : "dashboard.growth.moves.badge");
+    return {
+      kind: "growth_move",
+      text: t(locale, "report.focus.growthMove", { title: move.title, why: move.why, badge }),
+    };
+  }
+  return null;
 }
 
-/** A real, already-detected listing change worth the owner's attention —
- * scoped to the fields most likely to actually matter operationally
- * (phone/website/status), never the full raw list already shown
- * elsewhere in the report (categories/photos churn is real but rarely
- * something to "focus on"). Picks diffProfileSnapshots' own first match,
- * never a separately-invented description. */
-function listingIssuePointer(listingChanges: ListingChangesResult, locale: Locale): FocusPointer | null {
-  if (!listingChanges.available) return null;
-  const notable = listingChanges.changes.find(
-    (c) => c.field === "phone" || c.field === "website" || c.field === "status"
-  );
-  if (!notable) return null;
-  return {
-    kind: "listing_issue",
-    text: t(locale, "report.focus.listingIssue", { description: notable.description }),
-  };
+/**
+ * A real recap of this business's own weekly_checks rows for the recap
+ * month — described only as "checked off," never as a claim the owner
+ * actually posted, replied, or added a photo (same self-report honesty
+ * rule as the Growth page's own weekly routine checklist). `null`
+ * (genuinely unreadable) means no pointer at all; a real zero still
+ * gets an honest pointer to the real checklist, never silently omitted.
+ */
+function routinePointer(checkedCount: number | null, locale: Locale): FocusPointer | null {
+  if (checkedCount === null) return null;
+  if (checkedCount === 0) {
+    return { kind: "routine", text: t(locale, "report.focus.routineNonePointer") };
+  }
+  return { kind: "routine", text: tPlural(locale, "report.focus.routineCheckedCount", checkedCount) };
 }
 
-/** How many pointers (data-derived plus, at most, one general tip) the
- * closing focus section ever shows — enough to feel like real,
- * actionable guidance without turning into a second action plan. */
+/** How many pointers the closing focus section can ever show — one
+ * score item, one growth move, one routine recap; never more, and
+ * never padded when fewer than 3 real candidates exist. */
 const MAX_FOCUS_POINTERS = 3;
 
 /**
  * Assembles the closing "what to focus on" section entirely from real
- * facts this scan already produced — never a generated paragraph. Every
- * pointer traces back to a real check (score_gap), a real computed
- * competitor gap (competitor_gap), or a real detected change
- * (listing_issue); the one allowed exception is a single fixed,
- * clearly-labeled evergreen tip used only to fill a genuinely empty
- * remaining slot (see GENERAL_FOCUS_TIPS). If literally nothing real
- * stood out, this says so honestly instead of inventing a concern or
- * forcing a generic tip into an otherwise-empty section.
+ * facts — a real action-plan top task (score_gap), a real firing
+ * growth move (growth_move), and a real weekly-routine recap (routine)
+ * — each at most once, never a generated paragraph and never padded
+ * with an invented concern. If literally none of the three real
+ * sources had anything (including a genuinely unreadable routine
+ * count), this says so honestly instead of forcing content into an
+ * otherwise-empty section.
  */
-function buildFocus(
-  breakdown: ScoreBreakdown,
-  competitor: CompetitorMovement,
-  reviewCount: MetricResult,
-  listingChanges: ListingChangesResult,
-  locale: Locale
-): MonthlyReportFocus {
-  const scoreGaps = scoreGapPointers(breakdown, locale);
-  const competitorGap = competitorGapPointer(competitor, reviewCount, locale);
-  const listingIssue = listingIssuePointer(listingChanges, locale);
+function buildFocus(breakdown: ScoreBreakdown, focusInputs: MonthlyReportFocusInputs, locale: Locale): MonthlyReportFocus {
+  const losingChecks = generateSuggestions(breakdown, locale);
 
   const pointers: FocusPointer[] = [];
-  if (scoreGaps[0]) pointers.push(scoreGaps[0]);
-  if (competitorGap) pointers.push(competitorGap);
-  if (listingIssue) pointers.push(listingIssue);
-  if (scoreGaps[1] && pointers.length < MAX_FOCUS_POINTERS) pointers.push(scoreGaps[1]);
+  const scoreGap = scoreGapPointer(focusInputs.topActionPlanTask, locale);
+  if (scoreGap) pointers.push(scoreGap);
+  const growthMove = growthMovePointer(
+    focusInputs.growthMoves,
+    losingChecks,
+    focusInputs.monthIndex,
+    focusInputs.topActionPlanTask?.checkId ?? null,
+    locale
+  );
+  if (growthMove) pointers.push(growthMove);
+  const routine = routinePointer(focusInputs.routineCheckedCount, locale);
+  if (routine) pointers.push(routine);
 
   if (pointers.length === 0) {
     return { nothingNotable: true, pointers: [] };
-  }
-  if (pointers.length < MAX_FOCUS_POINTERS) {
-    pointers.push(GENERAL_FOCUS_TIPS(locale)[0]);
   }
   return { nothingNotable: false, pointers: pointers.slice(0, MAX_FOCUS_POINTERS) };
 }
@@ -462,7 +547,18 @@ export function buildMonthlyReportContent(
    * baseline report, by definition). Defaults to null so every existing
    * caller that doesn't pass it keeps behaving exactly as before. */
   currentCompetitorSnapshot: CompetitorSnapshot | null = null,
-  locale: Locale = DEFAULT_LOCALE
+  locale: Locale = DEFAULT_LOCALE,
+  /** Real inputs for the closing focus section (see
+   * MonthlyReportFocusInputs) — defaults to "nothing real to show" so
+   * every existing caller that only cares about the score/rating/
+   * competitor/listing sections can omit this entirely. */
+  focusInputs: MonthlyReportFocusInputs = EMPTY_FOCUS_INPUTS,
+  /** Whether this business has EVER had a real competitor scan saved —
+   * see MonthlyReportContent.hasSavedCompetitorScan's own doc. Defaults
+   * to true so every existing caller that doesn't pass it keeps getting
+   * the original "couldn't find enough comparable" wording whenever
+   * currentCompetitorSnapshot is null. */
+  hasSavedCompetitorScan: boolean = true
 ): MonthlyReportContent {
   const competitor = competitorMovement(competitorDelta);
 
@@ -483,11 +579,12 @@ export function buildMonthlyReportContent(
       reviewCount,
       competitor,
       competitorStanding: currentCompetitorSnapshot,
+      hasSavedCompetitorScan,
       // Nothing to diff a first report against, structurally — not "no
       // changes found," genuinely not applicable.
       listingChanges: { available: false },
       isSteady: false,
-      focus: buildFocus(current.breakdown, competitor, reviewCount, { available: false }, locale),
+      focus: buildFocus(current.breakdown, focusInputs, locale),
     };
   }
 
@@ -527,8 +624,9 @@ export function buildMonthlyReportContent(
     reviewCount,
     competitor,
     competitorStanding: currentCompetitorSnapshot,
+    hasSavedCompetitorScan,
     listingChanges: changes,
     isSteady,
-    focus: buildFocus(current.breakdown, competitor, reviewCount, changes, locale),
+    focus: buildFocus(current.breakdown, focusInputs, locale),
   };
 }

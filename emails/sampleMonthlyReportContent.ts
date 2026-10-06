@@ -4,10 +4,25 @@
 // but structurally real MonthlyReportScoreRow fixtures — never a
 // hand-typed MonthlyReportContent object — so these can never drift from
 // what the real builder actually produces.
-import { buildMonthlyReportContent, type MonthlyReportScoreRow } from "@/lib/monthlyReport";
+import {
+  buildMonthlyReportContent,
+  type FocusTopActionPlanTask,
+  type MonthlyReportScoreRow,
+} from "@/lib/monthlyReport";
 import type { ProfileSnapshot } from "@/lib/profileChanges";
-import { scoreBusiness, type BusinessScoringInput } from "@/lib/scoring";
+import { generateSuggestions, scoreBusiness, type ScoreBreakdown, type BusinessScoringInput } from "@/lib/scoring";
 import type { MonthlyReportEmailProps } from "./MonthlyReportEmail";
+
+/** The real top action-plan task for a sample's own breakdown — reuses
+ * generateSuggestions() (the exact same real ranking the Action
+ * Plan/Website pages show) rather than hand-typing a label/action, so
+ * these previews can never drift from what a real scan would actually
+ * surface. null when the breakdown genuinely has nothing losing. */
+function realTopTask(breakdown: ScoreBreakdown): FocusTopActionPlanTask | null {
+  const top = generateSuggestions(breakdown, "en")[0];
+  if (!top) return null;
+  return { checkId: top.checkId, label: top.label, action: top.advice };
+}
 
 export const BASE_SNAPSHOT: ProfileSnapshot = {
   phone: "+1-555-201-4000",
@@ -82,11 +97,21 @@ const UNSUBSCRIBE_URL_PLACEHOLDER = "https://postscore.app/unsubscribe?business=
  * The closing focus section still draws on this scan's own real
  * breakdown (a real "biggest opportunity" pointer), even though there's
  * no month-over-month comparison to make yet. */
+const SAMPLE_MONTH_INDEX = 2026 * 12 + 8; // September 2026 (month0 = 8)
+
 export const SAMPLE_BASELINE: MonthlyReportEmailProps = {
   businessName: "Riverside Cafe",
   reportDate: "2026-09-01T14:00:00.000Z",
   unsubscribeUrl: UNSUBSCRIBE_URL_PLACEHOLDER,
-  content: buildMonthlyReportContent(null, scoreRow({ id: "current", total: 78, grade: "C" }), null),
+  content: (() => {
+    const current = scoreRow({ id: "current", total: 78, grade: "C" });
+    return buildMonthlyReportContent(null, current, null, null, "en", {
+      topActionPlanTask: realTopTask(current.breakdown),
+      growthMoves: [{ id: "start_coupon", title: "Start a coupon", why: "Give new customers a reason to try you." }],
+      monthIndex: SAMPLE_MONTH_INDEX,
+      routineCheckedCount: 3,
+    });
+  })(),
 };
 
 /** 1b. A first-ever report where the business HAS already used the
@@ -97,11 +122,22 @@ export const SAMPLE_BASELINE_WITH_COMPETITOR_STANDING: MonthlyReportEmailProps =
   businessName: "Riverside Cafe",
   reportDate: "2026-09-01T14:00:00.000Z",
   unsubscribeUrl: UNSUBSCRIBE_URL_PLACEHOLDER,
-  content: buildMonthlyReportContent(null, scoreRow({ id: "current", total: 78, grade: "C" }), null, {
-    rank: 4,
-    totalCompetitors: 11,
-    topCompetitorReviewCount: 210,
-  }),
+  content: (() => {
+    const current = scoreRow({ id: "current", total: 78, grade: "C" });
+    return buildMonthlyReportContent(
+      null,
+      current,
+      null,
+      { rank: 4, totalCompetitors: 11, topCompetitorReviewCount: 210 },
+      "en",
+      {
+        topActionPlanTask: realTopTask(current.breakdown),
+        growthMoves: [{ id: "run_price_check", title: "Run a price check", why: "Local prices move with the seasons." }],
+        monthIndex: SAMPLE_MONTH_INDEX,
+        routineCheckedCount: 5,
+      }
+    );
+  })(),
 };
 
 /** 2. A quiet month — nothing measurable actually changed score/rating/
@@ -113,14 +149,25 @@ export const SAMPLE_STEADY: MonthlyReportEmailProps = {
   businessName: "Riverside Cafe",
   reportDate: "2026-09-01T14:00:00.000Z",
   unsubscribeUrl: UNSUBSCRIBE_URL_PLACEHOLDER,
-  content: buildMonthlyReportContent(
-    scoreRow({ id: "baseline", createdAt: "2026-08-01T00:00:00.000Z" }),
-    scoreRow({ id: "current", createdAt: "2026-09-01T00:00:00.000Z" }),
-    {
-      previous: { rank: 3, totalCompetitors: 9, topCompetitorReviewCount: null },
-      current: { rank: 3, totalCompetitors: 9, topCompetitorReviewCount: 175 },
-    }
-  ),
+  content: (() => {
+    const current = scoreRow({ id: "current", createdAt: "2026-09-01T00:00:00.000Z" });
+    return buildMonthlyReportContent(
+      scoreRow({ id: "baseline", createdAt: "2026-08-01T00:00:00.000Z" }),
+      current,
+      {
+        previous: { rank: 3, totalCompetitors: 9, topCompetitorReviewCount: null },
+        current: { rank: 3, totalCompetitors: 9, topCompetitorReviewCount: 175 },
+      },
+      null,
+      "en",
+      {
+        topActionPlanTask: realTopTask(current.breakdown),
+        growthMoves: [{ id: "run_price_check", title: "Run a price check", why: "Local prices move with the seasons." }],
+        monthIndex: SAMPLE_MONTH_INDEX,
+        routineCheckedCount: 5,
+      }
+    );
+  })(),
 };
 
 /** 3. A genuinely good month — real improvement across every metric,
@@ -131,28 +178,39 @@ export const SAMPLE_REAL_DELTAS: MonthlyReportEmailProps = {
   businessName: "Riverside Cafe",
   reportDate: "2026-09-01T14:00:00.000Z",
   unsubscribeUrl: UNSUBSCRIBE_URL_PLACEHOLDER,
-  content: buildMonthlyReportContent(
-    scoreRow({
-      id: "baseline",
-      total: 70,
-      grade: "C",
-      createdAt: "2026-08-01T00:00:00.000Z",
-      profileSnapshot: { ...BASE_SNAPSHOT, rating: 4.2, reviewCount: 118, photoCount: 18 },
-      breakdown: scoreBusiness(scoringInput({ rating: 4.2, reviewCount: 118 })),
-    }),
-    scoreRow({
+  content: (() => {
+    const current = scoreRow({
       id: "current",
       total: 84,
       grade: "B",
       createdAt: "2026-09-01T00:00:00.000Z",
       profileSnapshot: { ...BASE_SNAPSHOT, rating: 4.6, reviewCount: 142, photoCount: 22, phone: "+1-555-201-4099" },
       breakdown: scoreBusiness(scoringInput({ rating: 4.6, reviewCount: 142 })),
-    }),
-    {
-      previous: { rank: 5, totalCompetitors: 12, topCompetitorReviewCount: null },
-      current: { rank: 2, totalCompetitors: 12, topCompetitorReviewCount: 190 },
-    }
-  ),
+    });
+    return buildMonthlyReportContent(
+      scoreRow({
+        id: "baseline",
+        total: 70,
+        grade: "C",
+        createdAt: "2026-08-01T00:00:00.000Z",
+        profileSnapshot: { ...BASE_SNAPSHOT, rating: 4.2, reviewCount: 118, photoCount: 18 },
+        breakdown: scoreBusiness(scoringInput({ rating: 4.2, reviewCount: 118 })),
+      }),
+      current,
+      {
+        previous: { rank: 5, totalCompetitors: 12, topCompetitorReviewCount: null },
+        current: { rank: 2, totalCompetitors: 12, topCompetitorReviewCount: 190 },
+      },
+      null,
+      "en",
+      {
+        topActionPlanTask: realTopTask(current.breakdown),
+        growthMoves: [{ id: "improve_website", title: "Improve your website", why: "Your site is losing points on real checks." }],
+        monthIndex: SAMPLE_MONTH_INDEX,
+        routineCheckedCount: 6,
+      }
+    );
+  })(),
 };
 
 /** 4. Missing data — no competitor scan this period, and NEITHER scan
@@ -167,18 +225,8 @@ export const SAMPLE_MISSING_DATA: MonthlyReportEmailProps = {
   businessName: "Riverside Cafe",
   reportDate: "2026-09-01T14:00:00.000Z",
   unsubscribeUrl: UNSUBSCRIBE_URL_PLACEHOLDER,
-  content: buildMonthlyReportContent(
-    scoreRow({
-      id: "baseline",
-      total: 70,
-      grade: "C",
-      createdAt: "2026-08-01T00:00:00.000Z",
-      profileSnapshot: null,
-      breakdown: scoreBusiness(
-        scoringInput({ website: null, httpsStatus: null, websiteAnalysis: null, rating: 4.3, reviewCount: 90 })
-      ),
-    }),
-    scoreRow({
+  content: (() => {
+    const current = scoreRow({
       id: "current",
       total: 85,
       grade: "B",
@@ -187,9 +235,30 @@ export const SAMPLE_MISSING_DATA: MonthlyReportEmailProps = {
       breakdown: scoreBusiness(
         scoringInput({ website: null, httpsStatus: null, websiteAnalysis: null, rating: 4.5, reviewCount: 100 })
       ),
-    }),
-    null
-  ),
+    });
+    return buildMonthlyReportContent(
+      scoreRow({
+        id: "baseline",
+        total: 70,
+        grade: "C",
+        createdAt: "2026-08-01T00:00:00.000Z",
+        profileSnapshot: null,
+        breakdown: scoreBusiness(
+          scoringInput({ website: null, httpsStatus: null, websiteAnalysis: null, rating: 4.3, reviewCount: 90 })
+        ),
+      }),
+      current,
+      null,
+      null,
+      "en",
+      {
+        topActionPlanTask: realTopTask(current.breakdown),
+        growthMoves: [{ id: "build_starter_site", title: "Build a starter site", why: "There's no website on file for this business." }],
+        monthIndex: SAMPLE_MONTH_INDEX,
+        routineCheckedCount: 0,
+      }
+    );
+  })(),
 };
 
 /** 5. A genuine decline — real drops in score, rating, reviews, and
@@ -204,26 +273,37 @@ export const SAMPLE_DECLINE: MonthlyReportEmailProps = {
   businessName: "Riverside Cafe",
   reportDate: "2026-09-01T14:00:00.000Z",
   unsubscribeUrl: UNSUBSCRIBE_URL_PLACEHOLDER,
-  content: buildMonthlyReportContent(
-    scoreRow({
-      id: "baseline",
-      total: 88,
-      grade: "B",
-      createdAt: "2026-08-01T00:00:00.000Z",
-      profileSnapshot: { ...BASE_SNAPSHOT, rating: 4.7, reviewCount: 100 },
-      breakdown: scoreBusiness(scoringInput({ rating: 4.7, reviewCount: 100 })),
-    }),
-    scoreRow({
+  content: (() => {
+    const current = scoreRow({
       id: "current",
       total: 74,
       grade: "C",
       createdAt: "2026-09-01T00:00:00.000Z",
       profileSnapshot: { ...BASE_SNAPSHOT, rating: 4.3, reviewCount: 95 },
       breakdown: scoreBusiness(scoringInput({ rating: 4.3, reviewCount: 95 })),
-    }),
-    {
-      previous: { rank: 2, totalCompetitors: 10, topCompetitorReviewCount: null },
-      current: { rank: 6, totalCompetitors: 10, topCompetitorReviewCount: 130 },
-    }
-  ),
+    });
+    return buildMonthlyReportContent(
+      scoreRow({
+        id: "baseline",
+        total: 88,
+        grade: "B",
+        createdAt: "2026-08-01T00:00:00.000Z",
+        profileSnapshot: { ...BASE_SNAPSHOT, rating: 4.7, reviewCount: 100 },
+        breakdown: scoreBusiness(scoringInput({ rating: 4.7, reviewCount: 100 })),
+      }),
+      current,
+      {
+        previous: { rank: 2, totalCompetitors: 10, topCompetitorReviewCount: null },
+        current: { rank: 6, totalCompetitors: 10, topCompetitorReviewCount: 130 },
+      },
+      null,
+      "en",
+      {
+        topActionPlanTask: realTopTask(current.breakdown),
+        growthMoves: [],
+        monthIndex: SAMPLE_MONTH_INDEX,
+        routineCheckedCount: 2,
+      }
+    );
+  })(),
 };
