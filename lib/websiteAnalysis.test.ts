@@ -260,6 +260,63 @@ describe("fetchWebsiteHtml: Day 4 Part 3b real reachability reasons", () => {
   });
 });
 
+describe("fetchWebsiteHtml: Day 4 Task 'timed_out' vs 'down' split (Colorful Yun Nan case)", () => {
+  test("an AbortError (our own timeout) reports 'timed_out', never 'down' — after retrying once per scheme", async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw abortError();
+    }) as unknown as typeof fetch;
+
+    const result = await fetchWebsiteHtml("example.com", fetchImpl);
+
+    expect(result.html).toBeNull();
+    expect(result.failureReason).toBe("timed_out");
+    // 2 attempts per scheme (https then http) x 2 schemes = 4.
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
+  });
+
+  test("a real connection error (not AbortError) is still 'down' and is never retried", async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new Error("getaddrinfo ENOTFOUND");
+    }) as unknown as typeof fetch;
+
+    const result = await fetchWebsiteHtml("example.com", fetchImpl);
+
+    expect(result.html).toBeNull();
+    expect(result.failureReason).toBe("down");
+    // 1 attempt per scheme (no retry on a non-timeout failure) x 2 schemes = 2.
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  test("a timeout on the first attempt that then succeeds on retry returns the real html", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockRejectedValueOnce(abortError())
+      .mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: async () => new TextEncoder().encode("<html>hi</html>").buffer,
+      }) as unknown as typeof fetch;
+
+    const result = await fetchWebsiteHtml("example.com", fetchImpl);
+
+    expect(result.html).toContain("hi");
+    expect(result.failureReason).toBeNull();
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  test("when the two schemes disagree between 'timed_out' and 'down', 'down' wins (it's more specific/actionable)", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockRejectedValueOnce(abortError()) // https attempt 1: timed out
+      .mockRejectedValueOnce(abortError()) // https attempt 2 (retry): timed out
+      .mockRejectedValueOnce(new Error("connection refused")) as unknown as typeof fetch; // http attempt: down, no retry
+
+    const result = await fetchWebsiteHtml("example.com", fetchImpl);
+
+    expect(result.html).toBeNull();
+    expect(result.failureReason).toBe("down");
+  });
+});
+
 // Day 4 Part 2d: ScreenshotOne failing or running out of quota mid-scan
 // must never throw or abort the rest of a scan's real results — these
 // pin down that captureScreenshotBytes/captureWebsiteScreenshots already

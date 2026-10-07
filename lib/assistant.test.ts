@@ -782,6 +782,26 @@ describe("buildAssistantContextText", () => {
     expect(ASSISTANT_SYSTEM_RULES).toContain("the site may be working completely fine for customers");
   });
 
+  test("Day 4 Task: a TIMED OUT check is never described as down, and says the site may be fine (Colorful Yun Nan case)", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: {
+        ...BASE_CONTEXT.listing,
+        websitePresent: true,
+        httpsStatus: "unreachable",
+        httpsUnreachableReason: "timed_out",
+      },
+    });
+    expect(text).toContain("TIMED OUT, not confirmed down");
+    expect(text).toContain("NEVER say or imply the site is down or that customers can't reach it");
+    expect(text).not.toContain("could NOT load this site at all");
+  });
+
+  test("Day 4 Task: the system rules name TIMED OUT alongside blocked/error as a fact about our own check, not the site", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("or TIMED OUT");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("A TIMEOUT in particular is never evidence the site is down");
+  });
+
   test("still says honestly when no photo count was returned by Google at all", () => {
     const text = buildAssistantContextText({
       ...BASE_CONTEXT,

@@ -5,6 +5,12 @@ function fakeResponse(ok: boolean, finalUrl: string, status = ok ? 200 : 500, bo
   return { ok, url: finalUrl, status, text: async () => body } as Response;
 }
 
+function abortError(): Error {
+  const err = new Error("The operation was aborted");
+  err.name = "AbortError";
+  return err;
+}
+
 describe("checkWebsiteHttps", () => {
   test("a working https:// endpoint returns 'https'", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(fakeResponse(true, "https://example.com/"));
@@ -89,5 +95,40 @@ describe("checkWebsiteHttps", () => {
     const result = await checkWebsiteHttps("   ", fetchImpl);
     expect(result).toEqual({ status: "unreachable", reason: "down" });
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  describe("Day 4 Task: 'timed_out' vs 'down' split (Colorful Yun Nan case)", () => {
+    test("an AbortError (our own timeout) is reported as 'timed_out', never 'down' — after retrying once on each scheme", async () => {
+      const fetchImpl = vi.fn().mockRejectedValue(abortError());
+      const result = await checkWebsiteHttps("http://example.com", fetchImpl);
+      expect(result).toEqual({ status: "unreachable", reason: "timed_out" });
+      // 2 attempts per scheme (https then http) x 2 schemes = 4.
+      expect(fetchImpl).toHaveBeenCalledTimes(4);
+    });
+
+    test("a real connection error (not AbortError) is still 'down' and is never retried", async () => {
+      const fetchImpl = vi.fn().mockRejectedValue(new Error("getaddrinfo ENOTFOUND"));
+      const result = await checkWebsiteHttps("http://example.com", fetchImpl);
+      expect(result).toEqual({ status: "unreachable", reason: "down" });
+      // 1 attempt per scheme (no retry on a non-timeout failure) x 2 schemes = 2.
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    test("a timeout on the first attempt that then succeeds on retry counts as reachable", async () => {
+      const fetchImpl = vi.fn().mockRejectedValueOnce(abortError()).mockResolvedValueOnce(fakeResponse(true, "https://example.com/"));
+      const result = await checkWebsiteHttps("https://example.com", fetchImpl);
+      expect(result).toEqual({ status: "https", reason: null });
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    test("when the two schemes disagree between 'timed_out' and 'down', 'down' wins (it's more specific/actionable)", async () => {
+      const fetchImpl = vi
+        .fn()
+        .mockRejectedValueOnce(abortError()) // https attempt 1: timed out
+        .mockRejectedValueOnce(abortError()) // https attempt 2 (retry): timed out
+        .mockRejectedValueOnce(new Error("connection refused")); // http attempt: down, no retry
+      const result = await checkWebsiteHttps("http://example.com", fetchImpl);
+      expect(result).toEqual({ status: "unreachable", reason: "down" });
+    });
   });
 });

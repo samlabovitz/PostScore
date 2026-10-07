@@ -12,11 +12,22 @@
 // see the `https_status` column added in supabase/schema.sql.
 
 import type { HttpsCheckStatus } from "./scoring";
-import { classifyUnreachableResponse, type ReachabilityFailureReason } from "./websiteReachability";
+import { classifyUnreachableResponse, moreSpecificReason, type ReachabilityFailureReason } from "./websiteReachability";
 
-/** Short enough that a slow or dead site can't hang a save for long,
- * long enough for a normal site's TLS handshake + redirect chain. */
-const TIMEOUT_MS = 5000;
+/** Widened from 5000ms (Day 4 Task "timed_out vs down" fix) — the real
+ * Colorful Yun Nan case showed a genuinely reachable site exceed the
+ * old budget while that same scan's PageSpeed call (30s budget)
+ * succeeded moments later. Still short enough that a truly dead site
+ * can't hang a save for long. */
+const TIMEOUT_MS = 8000;
+
+/** One retry when (and only when) the first attempt specifically timed
+ * out (see PROBE_RETRY_DELAY_MS) — a timeout is the one outcome that
+ * genuinely might just be a transient slow moment, worth a second real
+ * attempt. Never retries a confirmed "down"/http_error/blocked outcome
+ * — those already have a real answer, retrying wouldn't change it. */
+const MAX_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 500;
 
 /** Only read enough of a non-ok response to recognize a bot-challenge
  * page's own title/script text (see websiteReachability.ts) — never
@@ -33,13 +44,14 @@ type ProbeOutcome =
   | { kind: "ok"; finalUrl: string }
   | { kind: "failed"; reason: ReachabilityFailureReason };
 
-/** One GET request with a hard timeout, following redirects. Never
- * throws. Classifies any non-ok outcome into a real reason —
- * "down" when the request never got a response at all (timeout, DNS
- * error, connection refused, TLS error), "blocked_automated_check" or
- * "http_error" for a real response that wasn't `ok` (see
- * classifyUnreachableResponse). */
-async function probe(url: string, fetchImpl: typeof fetch): Promise<ProbeOutcome> {
+/** One single real attempt — no retry here (probe() below owns that).
+ * Never throws. Classifies any non-ok outcome into a real reason:
+ * "timed_out" specifically for an AbortError (our own timeout fired,
+ * no proof the site is actually down), "down" for any other thrown
+ * error (DNS failure, connection refused, TLS error — real evidence of
+ * a problem), or "blocked_automated_check"/"http_error" for a real
+ * response that wasn't `ok` (see classifyUnreachableResponse). */
+async function probeOnce(url: string, fetchImpl: typeof fetch): Promise<ProbeOutcome> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -57,37 +69,37 @@ async function probe(url: string, fetchImpl: typeof fetch): Promise<ProbeOutcome
       bodySnippet = null;
     }
     return { kind: "failed", reason: classifyUnreachableResponse(res.status, bodySnippet) };
-  } catch {
-    return { kind: "failed", reason: "down" };
+  } catch (err) {
+    const isTimeout = (err as { name?: string } | null)?.name === "AbortError";
+    return { kind: "failed", reason: isTimeout ? "timed_out" : "down" };
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** One GET request with a hard timeout, following redirects — retries
+ * exactly once, only on a timeout (see MAX_ATTEMPTS's own doc). */
+async function probe(url: string, fetchImpl: typeof fetch): Promise<ProbeOutcome> {
+  let last: ProbeOutcome = { kind: "failed", reason: "down" };
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    last = await probeOnce(url, fetchImpl);
+    if (last.kind === "ok" || last.reason !== "timed_out") return last;
+    if (attempt < MAX_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    }
+  }
+  return last;
 }
 
 export interface HttpsCheckResult {
   status: HttpsCheckStatus;
   /** Only set when status === "unreachable" — WHY neither the https://
    * nor the http:// attempt succeeded (see ReachabilityFailureReason's
-   * own doc). When both attempts failed differently, prefers
-   * "blocked_automated_check" over "http_error" over "down" — the most
-   * specific, actionable signal of the two real attempts wins, since an
-   * owner acting on "your site blocked our check" shouldn't be told
-   * "down" just because the OTHER scheme's attempt happened to time
-   * out. */
+   * own doc). When both attempts failed differently, moreSpecificReason
+   * picks the more specific/confident one — a mere "timed_out" on one
+   * scheme never suppresses a real "down"/http_error/blocked signal
+   * from the other. */
   reason: ReachabilityFailureReason | null;
-}
-
-const REASON_SPECIFICITY: Record<ReachabilityFailureReason, number> = {
-  blocked_automated_check: 2,
-  http_error: 1,
-  down: 0,
-};
-
-function moreSpecificReason(
-  a: ReachabilityFailureReason,
-  b: ReachabilityFailureReason
-): ReachabilityFailureReason {
-  return REASON_SPECIFICITY[a] >= REASON_SPECIFICITY[b] ? a : b;
 }
 
 /** A probe that got a real response but was rejected here anyway (e.g.

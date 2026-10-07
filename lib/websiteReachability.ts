@@ -2,12 +2,19 @@
 // used by both the HTTPS probe (lib/websiteHttps.ts) and the HTML
 // content fetch (lib/websiteAnalysis.ts's fetchWebsiteHtml), so both
 // probes tell the same real, honest story about a failure rather than
-// collapsing every cause into one "unreachable"/null. Three real,
+// collapsing every cause into one "unreachable"/null. Four real,
 // distinct causes:
-//   - "down": the request never got a real HTTP response at all — DNS
-//     failure, connection refused, timeout, TLS error. The site itself
-//     may genuinely be down, or at least PostScore's servers can't
-//     reach it right now.
+//   - "timed_out": our own request hit ITS OWN timeout with no
+//     response either way — an AbortError, specifically. This is NOT
+//     evidence the site is down: a slow-but-real site (a cold start, a
+//     momentary host/CDN hiccup) can easily outlast our budget while
+//     still being completely reachable a moment later. The real
+//     Colorful Yun Nan case this was added for: our probe timed out
+//     while the SAME scan's PageSpeed call (a far more generous 30s
+//     budget) succeeded moments later on the identical site.
+//   - "down": the request failed for any OTHER reason before getting a
+//     response — DNS failure, connection refused, TLS error. Real
+//     evidence something is actually broken, not just slow.
 //   - "blocked_automated_check": a real HTTP response came back, but
 //     it's a bot-detection/anti-automation response (403/429/503, or a
 //     known bot-challenge page like Cloudflare's "Just a moment...").
@@ -16,6 +23,12 @@
 //   - "http_error": a real HTTP response came back with some other
 //     non-2xx status (e.g. 404, 500) that isn't a bot-detection
 //     signature.
+//
+// Ranked from least to most confident/actionable (see
+// moreSpecificReason below): a bare timeout proves the least (we simply
+// gave up), a confirmed connection-level failure proves more, and an
+// actual HTTP response — even a bad one — proves the most, since the
+// target demonstrably answered.
 
 /** A handful of real, well-known phrases bot-challenge interstitials
  * use — Cloudflare's "Just a moment..." JS challenge chief among them,
@@ -39,15 +52,16 @@ const BOT_CHALLENGE_PHRASES = [
  * challenge serves while it's being solved). */
 const BLOCKED_STATUS_CODES = new Set([403, 429, 503]);
 
-export type ReachabilityFailureReason = "down" | "blocked_automated_check" | "http_error";
+export type ReachabilityFailureReason = "timed_out" | "down" | "blocked_automated_check" | "http_error";
 
 /**
  * Classifies a REAL received HTTP response that wasn't `ok` — never
- * called when there was no response at all (that's always "down",
- * decided by the caller before this is ever reached). `bodySnippet`
- * only needs to be the first page or so of the response body — just
- * enough to catch a bot-challenge page's own title/script text, bounded
- * by whatever the caller already fetched (never fetches more itself).
+ * called when there was no response at all (that's always "timed_out"
+ * or "down", decided by the caller before this is ever reached).
+ * `bodySnippet` only needs to be the first page or so of the response
+ * body — just enough to catch a bot-challenge page's own title/script
+ * text, bounded by whatever the caller already fetched (never fetches
+ * more itself).
  */
 export function classifyUnreachableResponse(status: number, bodySnippet: string | null): ReachabilityFailureReason {
   if (BLOCKED_STATUS_CODES.has(status)) return "blocked_automated_check";
@@ -56,6 +70,26 @@ export function classifyUnreachableResponse(status: number, bodySnippet: string 
     if (BOT_CHALLENGE_PHRASES.some((phrase) => lower.includes(phrase))) return "blocked_automated_check";
   }
   return "http_error";
+}
+
+/** Least to most confident/actionable — see this file's own top
+ * comment for why a bare timeout ranks below every other real reason. */
+const REASON_SPECIFICITY: Record<ReachabilityFailureReason, number> = {
+  timed_out: 0,
+  down: 1,
+  http_error: 2,
+  blocked_automated_check: 3,
+};
+
+/**
+ * When two separate attempts (e.g. the https:// and http:// probe, or
+ * two schemes of an HTML fetch) fail with DIFFERENT reasons, picks the
+ * more specific/confident one to report overall — never lets a mere
+ * timeout on one attempt suppress a real, confirmed signal (a block, an
+ * HTTP error, or even a genuine "down") from the other.
+ */
+export function moreSpecificReason(a: ReachabilityFailureReason, b: ReachabilityFailureReason): ReachabilityFailureReason {
+  return REASON_SPECIFICITY[a] >= REASON_SPECIFICITY[b] ? a : b;
 }
 
 /**
@@ -70,8 +104,14 @@ export function classifyUnreachableResponse(status: number, bodySnippet: string 
  */
 export function reachabilityReasonMessageKey(
   reason: ReachabilityFailureReason
-): "dashboard.website.reachabilityDown" | "dashboard.website.reachabilityBlocked" | "dashboard.website.reachabilityHttpError" {
+):
+  | "dashboard.website.reachabilityTimedOut"
+  | "dashboard.website.reachabilityDown"
+  | "dashboard.website.reachabilityBlocked"
+  | "dashboard.website.reachabilityHttpError" {
   switch (reason) {
+    case "timed_out":
+      return "dashboard.website.reachabilityTimedOut";
     case "down":
       return "dashboard.website.reachabilityDown";
     case "blocked_automated_check":

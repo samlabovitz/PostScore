@@ -24,9 +24,16 @@ import type {
   RenderedContentSignals,
   WebsiteContentSignals,
 } from "./scoring";
-import { classifyUnreachableResponse, type ReachabilityFailureReason } from "./websiteReachability";
+import { classifyUnreachableResponse, moreSpecificReason, type ReachabilityFailureReason } from "./websiteReachability";
 
-const HTML_FETCH_TIMEOUT_MS = 8000;
+/** Widened from 8000ms (Day 4 Task "timed_out vs down" fix) — see
+ * lib/websiteHttps.ts's own TIMEOUT_MS doc for the real Colorful Yun
+ * Nan case this addresses. */
+const HTML_FETCH_TIMEOUT_MS = 12000;
+/** One retry when (and only when) an attempt specifically timed out —
+ * same reasoning as lib/websiteHttps.ts's own MAX_ATTEMPTS. */
+const HTML_FETCH_MAX_ATTEMPTS = 2;
+const HTML_FETCH_RETRY_DELAY_MS = 500;
 /** Real Lighthouse audits genuinely take a while — this needs to be
  * generous enough that a normal site's audit can finish. */
 const PAGESPEED_TIMEOUT_MS = 30000;
@@ -101,16 +108,66 @@ export interface FetchWebsiteHtmlResult {
   /** WHY html is null — see ReachabilityFailureReason's own doc. Never
    * set when html is non-null. When both the https:// and http://
    * attempt fail differently, keeps the more specific/actionable of
-   * the two (blocked_automated_check over http_error over down) —
-   * same tie-break reasoning as lib/websiteHttps.ts's own. */
+   * the two via moreSpecificReason — a mere "timed_out" on one scheme
+   * never suppresses a real "down"/http_error/blocked signal from the
+   * other. */
   failureReason: ReachabilityFailureReason | null;
 }
 
-const REASON_SPECIFICITY: Record<ReachabilityFailureReason, number> = {
-  blocked_automated_check: 2,
-  http_error: 1,
-  down: 0,
-};
+type HtmlFetchOutcome = { kind: "ok"; html: string } | { kind: "failed"; reason: ReachabilityFailureReason };
+
+/** One single real attempt for one scheme — no retry here
+ * (fetchHtmlForScheme below owns that). Never throws. Distinguishes a
+ * bare timeout (AbortError — "timed_out", no proof the site is down)
+ * from any other thrown error ("down" — real evidence of a problem),
+ * same reasoning as lib/websiteHttps.ts's probeOnce. */
+async function fetchHtmlOnce(url: string, fetchImpl: typeof fetch): Promise<HtmlFetchOutcome> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), HTML_FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetchImpl(url, {
+      method: "GET",
+      redirect: "follow",
+      headers: { "User-Agent": "PostScoreBot/1.0 (+https://postscore.app)" },
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      let bodySnippet: string | null = null;
+      try {
+        bodySnippet = (await res.text()).slice(0, 4000);
+      } catch {
+        bodySnippet = null;
+      }
+      return { kind: "failed", reason: classifyUnreachableResponse(res.status, bodySnippet) };
+    }
+    try {
+      const buf = await res.arrayBuffer();
+      const bytes = buf.byteLength > MAX_HTML_BYTES ? buf.slice(0, MAX_HTML_BYTES) : buf;
+      return { kind: "ok", html: new TextDecoder("utf-8").decode(bytes) };
+    } catch {
+      return { kind: "failed", reason: "http_error" };
+    }
+  } catch (err) {
+    const isTimeout = (err as { name?: string } | null)?.name === "AbortError";
+    return { kind: "failed", reason: isTimeout ? "timed_out" : "down" };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Retries exactly once, only when the first attempt specifically
+ * timed out — same reasoning as lib/websiteHttps.ts's own probe(). */
+async function fetchHtmlForScheme(url: string, fetchImpl: typeof fetch): Promise<HtmlFetchOutcome> {
+  let last: HtmlFetchOutcome = { kind: "failed", reason: "down" };
+  for (let attempt = 1; attempt <= HTML_FETCH_MAX_ATTEMPTS; attempt++) {
+    last = await fetchHtmlOnce(url, fetchImpl);
+    if (last.kind === "ok" || last.reason !== "timed_out") return last;
+    if (attempt < HTML_FETCH_MAX_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, HTML_FETCH_RETRY_DELAY_MS));
+    }
+  }
+  return last;
+}
 
 /**
  * Fetches a website's real HTML for content analysis. A separate probe
@@ -130,39 +187,9 @@ export async function fetchWebsiteHtml(
 
   let worstReason: ReachabilityFailureReason | null = null;
   for (const scheme of ["https", "http"] as const) {
-    const res = await fetchWithTimeout(
-      withScheme(website, scheme),
-      HTML_FETCH_TIMEOUT_MS,
-      {
-        method: "GET",
-        redirect: "follow",
-        headers: { "User-Agent": "PostScoreBot/1.0 (+https://postscore.app)" },
-      },
-      fetchImpl
-    );
-    if (!res) {
-      worstReason = worstReason === null || REASON_SPECIFICITY[worstReason] < REASON_SPECIFICITY.down ? "down" : worstReason;
-      continue;
-    }
-    if (!res.ok) {
-      let bodySnippet: string | null = null;
-      try {
-        bodySnippet = (await res.text()).slice(0, 4000);
-      } catch {
-        bodySnippet = null;
-      }
-      const reason = classifyUnreachableResponse(res.status, bodySnippet);
-      worstReason = worstReason === null || REASON_SPECIFICITY[reason] > REASON_SPECIFICITY[worstReason] ? reason : worstReason;
-      continue;
-    }
-    try {
-      const buf = await res.arrayBuffer();
-      const bytes = buf.byteLength > MAX_HTML_BYTES ? buf.slice(0, MAX_HTML_BYTES) : buf;
-      return { html: new TextDecoder("utf-8").decode(bytes), failureReason: null };
-    } catch {
-      worstReason = worstReason === null || REASON_SPECIFICITY["http_error"] > REASON_SPECIFICITY[worstReason] ? "http_error" : worstReason;
-      continue;
-    }
+    const outcome = await fetchHtmlForScheme(withScheme(website, scheme), fetchImpl);
+    if (outcome.kind === "ok") return { html: outcome.html, failureReason: null };
+    worstReason = worstReason === null ? outcome.reason : moreSpecificReason(worstReason, outcome.reason);
   }
   return { html: null, failureReason: worstReason ?? "down" };
 }

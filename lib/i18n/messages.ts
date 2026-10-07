@@ -686,6 +686,7 @@ export type MessageKey =
   | "dashboard.website.couldntVerifyPrefix"
   | "dashboard.website.performanceTimedOut"
   | "dashboard.website.performanceHttpError"
+  | "dashboard.website.reachabilityTimedOut"
   | "dashboard.website.reachabilityDown"
   | "dashboard.website.reachabilityBlocked"
   | "dashboard.website.reachabilityHttpError"
@@ -2988,6 +2989,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.couldntVerifyPrefix": "Couldn't verify —",
     "dashboard.website.performanceTimedOut": "Couldn't measure — Google's speed test timed out on your site.",
     "dashboard.website.performanceHttpError": "Couldn't measure — Google's speed test couldn't complete right now.",
+    "dashboard.website.reachabilityTimedOut":
+      "Couldn't check — our check timed out. Your site may be working fine; open it yourself to confirm.",
     "dashboard.website.reachabilityDown": "Your site didn't respond when we checked.",
     "dashboard.website.reachabilityBlocked":
       "Your site blocked our automated check — it may be working fine for customers; open it yourself to confirm.",
@@ -5325,6 +5328,8 @@ export const messages: Record<Locale, LocaleMessages> = {
       "No pudimos medirlo — la prueba de velocidad de Google tardó demasiado en responder en su sitio.",
     "dashboard.website.performanceHttpError":
       "No pudimos medirlo — la prueba de velocidad de Google no pudo completarse en este momento.",
+    "dashboard.website.reachabilityTimedOut":
+      "No pudimos completar la verificación: se agotó el tiempo de espera. Es posible que su sitio funcione bien; ábralo usted para confirmarlo.",
     "dashboard.website.reachabilityDown": "Su sitio no respondió cuando lo verificamos.",
     "dashboard.website.reachabilityBlocked":
       "Su sitio bloqueó nuestra verificación automática — puede estar funcionando bien para los clientes; ábralo usted mismo para confirmarlo.",

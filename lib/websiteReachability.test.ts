@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { classifyUnreachableResponse } from "./websiteReachability";
+import { classifyUnreachableResponse, moreSpecificReason, reachabilityReasonMessageKey } from "./websiteReachability";
 
 describe("classifyUnreachableResponse", () => {
   test("403/429/503 are always blocked_automated_check, regardless of body", () => {
@@ -32,5 +32,34 @@ describe("classifyUnreachableResponse", () => {
 
   test("no body at all on a non-blocked status is http_error, never guessed as blocked", () => {
     expect(classifyUnreachableResponse(410, null)).toBe("http_error");
+  });
+});
+
+describe("moreSpecificReason — Day 4 Task: 'timed_out' ranks below every other real reason", () => {
+  test("timed_out never beats any other reason", () => {
+    expect(moreSpecificReason("timed_out", "down")).toBe("down");
+    expect(moreSpecificReason("down", "timed_out")).toBe("down");
+    expect(moreSpecificReason("timed_out", "http_error")).toBe("http_error");
+    expect(moreSpecificReason("timed_out", "blocked_automated_check")).toBe("blocked_automated_check");
+  });
+
+  test("full ranking order: blocked > http_error > down > timed_out", () => {
+    expect(moreSpecificReason("down", "http_error")).toBe("http_error");
+    expect(moreSpecificReason("http_error", "blocked_automated_check")).toBe("blocked_automated_check");
+    expect(moreSpecificReason("down", "blocked_automated_check")).toBe("blocked_automated_check");
+  });
+
+  test("a tie (same reason on both sides) returns that reason", () => {
+    expect(moreSpecificReason("timed_out", "timed_out")).toBe("timed_out");
+    expect(moreSpecificReason("down", "down")).toBe("down");
+  });
+});
+
+describe("reachabilityReasonMessageKey", () => {
+  test("maps every reason to its own distinct message key, including the new 'timed_out' one", () => {
+    expect(reachabilityReasonMessageKey("timed_out")).toBe("dashboard.website.reachabilityTimedOut");
+    expect(reachabilityReasonMessageKey("down")).toBe("dashboard.website.reachabilityDown");
+    expect(reachabilityReasonMessageKey("blocked_automated_check")).toBe("dashboard.website.reachabilityBlocked");
+    expect(reachabilityReasonMessageKey("http_error")).toBe("dashboard.website.reachabilityHttpError");
   });
 });
