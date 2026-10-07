@@ -36,6 +36,7 @@
 
 import { DEFAULT_LOCALE, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
 import { GOOGLE_PHOTO_CAP } from "@/lib/googlePhotoCap";
+import type { ReachabilityFailureReason } from "@/lib/websiteReachability";
 
 // ---------------------------------------------------------------------------
 // Versioning
@@ -205,6 +206,50 @@ export interface MobilePerformanceMeasurement {
   labScore: number | null;
 }
 
+/** Why a PageSpeed Insights attempt didn't produce a usable measurement
+ * — stored instead of collapsing straight to null, so the Website page
+ * and PostAI can explain the real cause (Day 4 Part 3a) rather than a
+ * bare "couldn't verify":
+ *   - "timed_out": every attempt (including the one retry) ran past
+ *     PageSpeed's own timeout with no response.
+ *   - "http_error": PageSpeed itself returned a non-ok HTTP response
+ *     (see `status`) that wasn't a timeout — a real PageSpeed-side
+ *     failure, not a statement about the target site.
+ *   - "no_api_key": PAGESPEED_API_KEY isn't configured — never
+ *     attempted at all.
+ *   - "error": some other failure (a thrown exception, malformed
+ *     response body) not covered by the above. */
+export interface MobilePerformanceFailure {
+  kind: "timed_out" | "http_error" | "no_api_key" | "error";
+  /** Only set when kind === "http_error" — the real HTTP status
+   * PageSpeed itself returned. */
+  status: number | null;
+}
+
+/**
+ * The one real mapping from a PageSpeed failure kind to its honest,
+ * owner-facing message key — shared by the Website page
+ * (WebsiteScoreBreakdown's CheckRow, for website.performance_mobile
+ * when excluded) and PostAI's own REAL DATA CONTEXT (lib/assistant.ts)
+ * (Day 4 Part 3c). null for "no_api_key"/"error" — neither is a fact
+ * about the OWNER's site worth a specific sentence (one is an internal
+ * config gap, the other a generic anomaly), so both fall back to the
+ * existing generic "couldn't verify" wording instead of a guessed-at
+ * specific one. */
+export function performanceFailureMessageKey(
+  failure: MobilePerformanceFailure
+): "dashboard.website.performanceTimedOut" | "dashboard.website.performanceHttpError" | null {
+  switch (failure.kind) {
+    case "timed_out":
+      return "dashboard.website.performanceTimedOut";
+    case "http_error":
+      return "dashboard.website.performanceHttpError";
+    case "no_api_key":
+    case "error":
+      return null;
+  }
+}
+
 /**
  * The frozen result of analyzing a business's live website — see
  * lib/websiteAnalysis.ts for how this gets collected (real network
@@ -229,6 +274,23 @@ export interface WebsiteAnalysis {
    * (real-user field data AND all 3 lab runs) failed or timed out —
    * excluded, never scored as a failure. */
   mobilePerformance: MobilePerformanceMeasurement | null;
+  /** WHY mobilePerformance is null — see MobilePerformanceFailure's own
+   * doc. Always null when mobilePerformance is non-null (a successful
+   * measurement has no failure to explain). null on a row saved before
+   * this field existed, even if mobilePerformance is also null there —
+   * an honestly unknown reason, not a guessed one. */
+  mobilePerformanceFailureReason: MobilePerformanceFailure | null;
+  /** WHY the server-side HTML fetch (content below) failed or was
+   * blocked — see ReachabilityFailureReason's own doc
+   * (lib/websiteReachability.ts). Always null when content is non-null.
+   * null on a row saved before this field existed. */
+  contentFetchFailureReason: ReachabilityFailureReason | null;
+  /** WHY the HTTPS probe came back "unreachable" (businesses.https_status
+   * — a separate column, not read or written by this module). Stored
+   * here, inside the existing website-analysis JSON, rather than as a
+   * new column (Day 4 Part 3b) — null whenever https_status isn't
+   * "unreachable", and null on a row saved before this field existed. */
+  httpsUnreachableReason: ReachabilityFailureReason | null;
   /** Public URL of a real captured screenshot. null = no
    * SCREENSHOT_API_KEY configured, or capture failed/was blocked. */
   screenshotUrl: string | null;
@@ -750,6 +812,9 @@ const PERFECT_WEBSITE_ANALYSIS: WebsiteAnalysis = {
     renderedContentSignals: null,
   },
   mobilePerformance: { method: "lab", fieldCategory: null, labScore: 100 },
+  mobilePerformanceFailureReason: null,
+  contentFetchFailureReason: null,
+  httpsUnreachableReason: null,
   screenshotUrl: null,
   additionalPages: [],
   lastScreenshotRefreshAt: null,
@@ -1855,6 +1920,22 @@ function parseMobilePerformance(value: unknown): MobilePerformanceMeasurement | 
   return null;
 }
 
+const MOBILE_PERFORMANCE_FAILURE_KINDS = new Set(["timed_out", "http_error", "no_api_key", "error"]);
+
+function parseMobilePerformanceFailure(value: unknown): MobilePerformanceFailure | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  if (typeof v.kind !== "string" || !MOBILE_PERFORMANCE_FAILURE_KINDS.has(v.kind)) return null;
+  return {
+    kind: v.kind as MobilePerformanceFailure["kind"],
+    status: typeof v.status === "number" ? v.status : null,
+  };
+}
+
+function isReachabilityFailureReason(value: unknown): value is ReachabilityFailureReason {
+  return value === "down" || value === "blocked_automated_check" || value === "http_error";
+}
+
 /** Narrows a stored website_analysis_json value back to the real shape,
  * degrading anything unexpected (a legacy row, a malformed value) to
  * null (never-analyzed) rather than trusting an unvalidated cast — same
@@ -1868,6 +1949,13 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
   const v = value as Record<string, unknown>;
   const content = parseWebsiteContentSignals(v.content);
   const mobilePerformance = parseMobilePerformance(v.mobilePerformance);
+  const mobilePerformanceFailureReason = parseMobilePerformanceFailure(v.mobilePerformanceFailureReason);
+  const contentFetchFailureReason = isReachabilityFailureReason(v.contentFetchFailureReason)
+    ? v.contentFetchFailureReason
+    : null;
+  const httpsUnreachableReason = isReachabilityFailureReason(v.httpsUnreachableReason)
+    ? v.httpsUnreachableReason
+    : null;
   const screenshotUrl = typeof v.screenshotUrl === "string" ? v.screenshotUrl : null;
   const additionalPages = parseAdditionalPages(v.additionalPages);
   const lastScreenshotRefreshAt = typeof v.lastScreenshotRefreshAt === "string" ? v.lastScreenshotRefreshAt : null;
@@ -1881,6 +1969,9 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
   return {
     content,
     mobilePerformance,
+    mobilePerformanceFailureReason,
+    contentFetchFailureReason,
+    httpsUnreachableReason,
     screenshotUrl,
     additionalPages,
     lastScreenshotRefreshAt,

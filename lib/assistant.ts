@@ -12,6 +12,7 @@
 
 import type { CategoryId, Confidence, Grade, HttpsCheckStatus } from "@/lib/scoring";
 import { CATEGORY_LABELS } from "@/lib/scoring";
+import type { ReachabilityFailureReason } from "@/lib/websiteReachability";
 import type { TaskEffort } from "@/lib/actionPlan";
 import { PHOTO_COMPARISON_CAP, type GrowthMoveId } from "@/lib/growthMoves";
 import { DEFAULT_LOCALE, formatShortDate, t, type Locale } from "@/lib/i18n";
@@ -31,6 +32,12 @@ export interface AssistantListingSummary {
   hoursPresent: boolean;
   websitePresent: boolean;
   httpsStatus: HttpsCheckStatus | null;
+  /** WHY httpsStatus is "unreachable" — see ReachabilityFailureReason's
+   * own doc (lib/websiteReachability.ts) and websiteReachabilityText's
+   * own doc for why this changes what the model is allowed to claim.
+   * null whenever httpsStatus isn't "unreachable", or on a legacy row
+   * saved before this field existed. */
+  httpsUnreachableReason: ReachabilityFailureReason | null;
   photoCount: number | null;
   businessStatus: string | null;
   categoriesCount: number;
@@ -325,6 +332,7 @@ HOW TO ANSWER:
    - A competitor's exact price or dollar figure — you only ever have their coarse Google price LEVEL ($/$$/$$$), never a real number, and only for competitors in a saved scan.
    - An exact photo count once REAL DATA CONTEXT already describes it as "X or more" — that phrasing means Google's own data caps there, so the real total could be higher; never restate it as if that capped number were necessarily the exact real count.
    - That a website is "live" or "working" — REAL DATA CONTEXT's "Reachability on the last check" line is the only source for this; if it says UNREACHABLE or "not yet checked," never say or imply the site is live/working regardless of what else looks fine (a website existing on file and a website actually loading are two different facts).
+   - That CUSTOMERS can't reach a website — never say or imply this unless REAL DATA CONTEXT's "Reachability on the last check" line is UNREACHABLE for the reason "no response at all" (the plain "the last check could NOT load this site at all" wording). If that same line instead says the check was BLOCKED (a bot-detection block, e.g. Cloudflare) or got an ERROR response, that is a fact about PostScore's own automated check, not about whether a real customer's browser can reach the site — say only that the automated check was blocked/got an error, that the site may be working completely fine for customers, and suggest the owner open it themselves to confirm.
    - Anything else about this business that simply isn't in the REAL DATA CONTEXT block.
 4. If part of the REAL DATA CONTEXT is missing (e.g. no competitor scan has ever been saved), say so honestly and point to where the owner can get it (e.g. "run a scan on the Competitors page") rather than guessing or working around it.
 5. BE BRIEF — SHORTER THAN FEELS NATURAL. A busy owner glancing at their phone, not an essay. No preamble ("Great question", "Looking at your data...", "Sure, here's..."), no restating the question, no repeating the context block back at them, no summarizing what you're about to say before saying it, no closing recap of what you just said. Lead with the single most useful sentence. HARD TARGET: under ~150 words, at most 4 bullets. Default target within that: 1-3 short sentences, or 3-4 terse bullets (a few words each, not full paragraphs) for a "top things to fix" style question — reach for more only when the question genuinely can't be answered honestly within ~150 words (e.g. it has several real caveats), and even then never exceed 4 bullets. Every sentence must add a new fact, number, or instruction; if a sentence only restates or transitions, cut it. Say each fact once. Prefer short, plain words over hedging phrases ("it seems like", "you might want to consider") — state it directly. Still include every real-data specific and caveat the question actually needs — cut words and framing, never substance.
@@ -429,15 +437,35 @@ function clarifyCheckExplanation(checkId: string, explanation: string, locale: L
  * the site "live"/"working" (the real Blue Bottle Coffee case this was
  * fixed for). Never touches the real https_status value itself, only
  * how it's explained here in the context.
+ *
+ * When unreachable, `reason` (Day 4 Part 3c) decides exactly how strong
+ * a claim is honest: "down" (no response at all) is the ONLY reason
+ * that justifies implying customers might not reach the site either —
+ * "blocked_automated_check" means PostScore's own automated check was
+ * blocked, which says nothing about whether a real customer's browser
+ * would be too, and "http_error" means the site returned a real error
+ * to OUR specific check, not a confirmed outage for every visitor.
+ * `reason === null` covers a legacy row saved before this field
+ * existed — stays exactly as cautious as the original, reason-less
+ * wording always was.
  */
-function websiteReachabilityText(httpsStatus: HttpsCheckStatus | null): string {
+function websiteReachabilityText(httpsStatus: HttpsCheckStatus | null, reason: ReachabilityFailureReason | null): string {
   switch (httpsStatus) {
     case "https":
       return "https (the last check reached this site successfully)";
     case "http_only":
       return "http_only (the last check reached this site, but not over HTTPS)";
     case "unreachable":
-      return 'UNREACHABLE — the last check could NOT load this site at all. Never call this website "live" or "working" unless a LATER check succeeds; say plainly it could not be reached last time.';
+      if (reason === "blocked_automated_check") {
+        return 'BLOCKED, not confirmed down — the last check was blocked by this site\'s own automated-traffic protection (e.g. Cloudflare), not proof the site is actually offline. The site may be working completely fine for a real customer\'s browser. NEVER say customers can\'t reach this site or that it\'s down — say only that PostScore\'s own automated check was blocked, and that the owner should open the site themselves to confirm it\'s working.';
+      }
+      if (reason === "http_error") {
+        return 'returned an ERROR on the last check (not a confirmed outage) — the site responded, but with a real error, to this one specific automated check. NEVER say customers can\'t reach this site based on this alone; say only that the last automated check got an error response.';
+      }
+      // reason === "down" or null (legacy row, no reason recorded) —
+      // the one case where "the site itself seems down" is an honest
+      // reading of the real data.
+      return 'UNREACHABLE — the last check could NOT load this site at all (no response). Never call this website "live" or "working" unless a LATER check succeeds; say plainly it could not be reached last time.';
     case null:
       return 'not yet checked — whether this site is currently reachable is unknown. Never assume or say it\'s "live" or "working."';
   }
@@ -752,7 +780,7 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
   );
   lines.push(
     context.listing.websitePresent
-      ? `- Has a website on file. Reachability on the last check: ${websiteReachabilityText(context.listing.httpsStatus)}.`
+      ? `- Has a website on file. Reachability on the last check: ${websiteReachabilityText(context.listing.httpsStatus, context.listing.httpsUnreachableReason)}.`
       : "- No website on file."
   );
   const photoCountText =

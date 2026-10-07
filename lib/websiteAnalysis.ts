@@ -17,7 +17,14 @@
 // exclude it from scoring, never fabricate a value or fail the save.
 
 import { analyzeWebsiteHtml } from "./websiteContentAnalysis";
-import type { FieldSpeedCategory, MobilePerformanceMeasurement, RenderedContentSignals, WebsiteContentSignals } from "./scoring";
+import type {
+  FieldSpeedCategory,
+  MobilePerformanceFailure,
+  MobilePerformanceMeasurement,
+  RenderedContentSignals,
+  WebsiteContentSignals,
+} from "./scoring";
+import { classifyUnreachableResponse, type ReachabilityFailureReason } from "./websiteReachability";
 
 const HTML_FETCH_TIMEOUT_MS = 8000;
 /** Real Lighthouse audits genuinely take a while — this needs to be
@@ -89,21 +96,39 @@ async function fetchWithTimeout(
   }
 }
 
+export interface FetchWebsiteHtmlResult {
+  html: string | null;
+  /** WHY html is null — see ReachabilityFailureReason's own doc. Never
+   * set when html is non-null. When both the https:// and http://
+   * attempt fail differently, keeps the more specific/actionable of
+   * the two (blocked_automated_check over http_error over down) —
+   * same tie-break reasoning as lib/websiteHttps.ts's own. */
+  failureReason: ReachabilityFailureReason | null;
+}
+
+const REASON_SPECIFICITY: Record<ReachabilityFailureReason, number> = {
+  blocked_automated_check: 2,
+  http_error: 1,
+  down: 0,
+};
+
 /**
  * Fetches a website's real HTML for content analysis. A separate probe
  * from lib/websiteHttps.ts's checkWebsiteHttps() on purpose — that
  * function has its own narrow, already-tested contract (just an
- * ok/redirect check), and this one needs the actual body. Returns null
- * (never throws) on any failure, including the site blocking automated
- * requests (e.g. Cloudflare bot protection) — that's a real, honest
- * "couldn't analyze," not a failure of the target's actual HTTPS/uptime.
+ * ok/redirect check), and this one needs the actual body. Never throws:
+ * any failure, including the site blocking automated requests (e.g.
+ * Cloudflare bot protection), degrades to html: null plus a real reason
+ * — that's a real, honest "couldn't analyze," not a failure of the
+ * target's actual HTTPS/uptime.
  */
 export async function fetchWebsiteHtml(
   website: string,
   fetchImpl: typeof fetch = fetch
-): Promise<string | null> {
-  if (!website || website.trim().length === 0) return null;
+): Promise<FetchWebsiteHtmlResult> {
+  if (!website || website.trim().length === 0) return { html: null, failureReason: "down" };
 
+  let worstReason: ReachabilityFailureReason | null = null;
   for (const scheme of ["https", "http"] as const) {
     const res = await fetchWithTimeout(
       withScheme(website, scheme),
@@ -115,16 +140,31 @@ export async function fetchWebsiteHtml(
       },
       fetchImpl
     );
-    if (!res || !res.ok) continue;
+    if (!res) {
+      worstReason = worstReason === null || REASON_SPECIFICITY[worstReason] < REASON_SPECIFICITY.down ? "down" : worstReason;
+      continue;
+    }
+    if (!res.ok) {
+      let bodySnippet: string | null = null;
+      try {
+        bodySnippet = (await res.text()).slice(0, 4000);
+      } catch {
+        bodySnippet = null;
+      }
+      const reason = classifyUnreachableResponse(res.status, bodySnippet);
+      worstReason = worstReason === null || REASON_SPECIFICITY[reason] > REASON_SPECIFICITY[worstReason] ? reason : worstReason;
+      continue;
+    }
     try {
       const buf = await res.arrayBuffer();
       const bytes = buf.byteLength > MAX_HTML_BYTES ? buf.slice(0, MAX_HTML_BYTES) : buf;
-      return new TextDecoder("utf-8").decode(bytes);
+      return { html: new TextDecoder("utf-8").decode(bytes), failureReason: null };
     } catch {
+      worstReason = worstReason === null || REASON_SPECIFICITY["http_error"] > REASON_SPECIFICITY[worstReason] ? "http_error" : worstReason;
       continue;
     }
   }
-  return null;
+  return { html: null, failureReason: worstReason ?? "down" };
 }
 
 /** A real internal page discovered on the homepage's nav or sitemap.xml,
@@ -338,18 +378,41 @@ function isFieldSpeedCategory(value: unknown): value is FieldSpeedCategory {
   return value === "FAST" || value === "AVERAGE" || value === "SLOW";
 }
 
+/** A single PageSpeed attempt's real outcome — see
+ * MobilePerformanceFailure in lib/scoring.ts for what each failure kind
+ * means to an owner. `error` covers both a thrown non-timeout exception
+ * (DNS/network failure reaching PageSpeed itself — rare, since this is
+ * a request to Google's own API, not the target site) and a malformed/
+ * unparsable response body. */
+type PageSpeedAttemptOutcome =
+  | { kind: "ok"; response: RawPageSpeedResponse }
+  | { kind: "timed_out" }
+  | { kind: "http_error"; status: number }
+  | { kind: "error" };
+
+/** HTTP statuses worth retrying — 429 (rate limited) and any 5xx
+ * (PageSpeed/Google-side failure) are plausibly transient; any other
+ * non-ok status (400, 404, …) means this exact request is malformed or
+ * the target can't be audited at all, so retrying it wastes a real
+ * call for no real chance of success. */
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || status >= 500;
+}
+
 /** One real HTTP call to PageSpeed Insights (mobile strategy) — the
  * low-level building block fetchMobilePerformance composes into the
- * real field-data-first, lab-median-fallback measurement below. Keeps
- * the same one-retry-on-network-failure resilience this module always
- * had (never retries a real HTTP error response, only a dropped
- * connection/timeout). Returns null — never throws — on any failure. */
+ * real field-data-first, lab-median-fallback measurement below.
+ * Retries once (PAGESPEED_MAX_ATTEMPTS) on a timeout, a thrown network
+ * error, OR a retryable HTTP status (429/5xx, see isRetryableStatus) —
+ * never on any other non-ok response, since that wouldn't be fixed by
+ * trying again. Never throws; always resolves to a real outcome,
+ * tracking exactly why on failure. */
 async function fetchPageSpeedRunOnce(
   website: string,
   apiKey: string,
   categories: readonly string[],
   fetchImpl: typeof fetch
-): Promise<RawPageSpeedResponse | null> {
+): Promise<PageSpeedAttemptOutcome> {
   const target = /^https?:\/\//i.test(website.trim()) ? website.trim() : `https://${website.trim()}`;
   const categoryParams = categories.map((c) => `&category=${encodeURIComponent(c)}`).join("");
   const url =
@@ -357,21 +420,39 @@ async function fetchPageSpeedRunOnce(
     `?url=${encodeURIComponent(target)}&key=${encodeURIComponent(apiKey)}` +
     `&strategy=mobile${categoryParams}`;
 
-  let res: Response | null = null;
+  let lastOutcome: PageSpeedAttemptOutcome = { kind: "error" };
+
   for (let attempt = 1; attempt <= PAGESPEED_MAX_ATTEMPTS; attempt++) {
-    res = await fetchWithTimeout(url, PAGESPEED_TIMEOUT_MS, { method: "GET" }, fetchImpl);
-    if (res) break;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), PAGESPEED_TIMEOUT_MS);
+    let shouldRetry = false;
+    try {
+      const res = await fetchImpl(url, { method: "GET", signal: controller.signal });
+      if (res.ok) {
+        try {
+          lastOutcome = { kind: "ok", response: (await res.json()) as RawPageSpeedResponse };
+        } catch {
+          lastOutcome = { kind: "error" };
+          shouldRetry = true;
+        }
+      } else {
+        lastOutcome = { kind: "http_error", status: res.status };
+        shouldRetry = isRetryableStatus(res.status);
+      }
+    } catch (err) {
+      lastOutcome = (err as { name?: string })?.name === "AbortError" ? { kind: "timed_out" } : { kind: "error" };
+      shouldRetry = true;
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (lastOutcome.kind === "ok" || !shouldRetry) break;
     if (attempt < PAGESPEED_MAX_ATTEMPTS) {
       await new Promise((resolve) => setTimeout(resolve, PAGESPEED_RETRY_DELAY_MS));
     }
   }
-  if (!res || !res.ok) return null;
 
-  try {
-    return (await res.json()) as RawPageSpeedResponse;
-  } catch {
-    return null;
-  }
+  return lastOutcome;
 }
 
 function extractLabScore(raw: RawPageSpeedResponse): number | null {
@@ -438,6 +519,9 @@ function median(values: number[]): number {
 
 export interface MobilePerformanceFetchResult {
   measurement: MobilePerformanceMeasurement | null;
+  /** WHY measurement is null — see MobilePerformanceFailure's own doc
+   * (lib/scoring.ts). Never set when measurement is non-null. */
+  failureReason: MobilePerformanceFailure | null;
   /** Only non-null when `categories` included "seo" or "accessibility"
    * (i.e. PAGESPEED_CSR_RECOVERY_CATEGORIES was requested) AND the
    * first run actually succeeded — see RenderedContentSignals in
@@ -454,9 +538,24 @@ export interface MobilePerformanceFetchResult {
 
 const EMPTY_MOBILE_PERFORMANCE_RESULT: MobilePerformanceFetchResult = {
   measurement: null,
+  failureReason: { kind: "no_api_key", status: null },
   renderedContentSignals: null,
   callCount: 0,
 };
+
+/** Picks the single most useful failure reason to store/show when
+ * every attempt failed — a real HTTP error PageSpeed itself returned
+ * is the most diagnostic (http_error), a clean timeout is still
+ * specific (timed_out), and anything else falls back to the generic
+ * "error". Scans every real attempt outcome, never just the last one,
+ * so (e.g.) a timeout on attempt 1 followed by a 500 on the retry
+ * reports the 500, not the timeout. */
+function pickFailureReason(outcomes: PageSpeedAttemptOutcome[]): MobilePerformanceFailure {
+  const httpError = outcomes.find((o): o is { kind: "http_error"; status: number } => o.kind === "http_error");
+  if (httpError) return { kind: "http_error", status: httpError.status };
+  if (outcomes.some((o) => o.kind === "timed_out")) return { kind: "timed_out", status: null };
+  return { kind: "error", status: null };
+}
 
 /**
  * The real measurement behind website.performance_mobile — see
@@ -488,15 +587,19 @@ export async function fetchMobilePerformance(
   categories: readonly string[] = PAGESPEED_DEFAULT_CATEGORIES,
   fetchImpl: typeof fetch = fetch
 ): Promise<MobilePerformanceFetchResult> {
-  if (!website || website.trim().length === 0 || !apiKey) return EMPTY_MOBILE_PERFORMANCE_RESULT;
+  if (!website || website.trim().length === 0) {
+    return { measurement: null, failureReason: null, renderedContentSignals: null, callCount: 0 };
+  }
+  if (!apiKey) return EMPTY_MOBILE_PERFORMANCE_RESULT;
 
   const first = await fetchPageSpeedRunOnce(website, apiKey, categories, fetchImpl);
-  const renderedContentSignals = first ? extractRenderedContentSignals(first, categories) : null;
+  const renderedContentSignals = first.kind === "ok" ? extractRenderedContentSignals(first.response, categories) : null;
 
-  const fieldCategory = first ? extractFieldCategory(first) : null;
+  const fieldCategory = first.kind === "ok" ? extractFieldCategory(first.response) : null;
   if (fieldCategory) {
     return {
       measurement: { method: "field", fieldCategory, labScore: null },
+      failureReason: null,
       renderedContentSignals,
       callCount: 1,
     };
@@ -506,20 +609,22 @@ export async function fetchMobilePerformance(
   // back to the honest lab measurement. We already have one attempt
   // (`first`); fire the other two in parallel rather than serially, so
   // this fallback costs one extra round-trip, not two.
-  const [secondRaw, thirdRaw] = await Promise.all([
+  const [second, third] = await Promise.all([
     fetchPageSpeedRunOnce(website, apiKey, categories, fetchImpl),
     fetchPageSpeedRunOnce(website, apiKey, categories, fetchImpl),
   ]);
-  const labScores = [first, secondRaw, thirdRaw]
-    .map((raw) => (raw ? extractLabScore(raw) : null))
+  const outcomes = [first, second, third];
+  const labScores = outcomes
+    .map((o) => (o.kind === "ok" ? extractLabScore(o.response) : null))
     .filter((s): s is number => s !== null);
 
   if (labScores.length === 0) {
-    return { measurement: null, renderedContentSignals, callCount: 3 };
+    return { measurement: null, failureReason: pickFailureReason(outcomes), renderedContentSignals, callCount: 3 };
   }
 
   return {
     measurement: { method: "lab", fieldCategory: null, labScore: median(labScores) },
+    failureReason: null,
     renderedContentSignals,
     callCount: 3,
   };
@@ -599,7 +704,12 @@ export async function captureWebsiteScreenshots(
 
 export interface WebsiteAnalysisCollection {
   content: WebsiteContentSignals | null;
+  /** WHY content is null — see ReachabilityFailureReason's own doc. */
+  contentFetchFailureReason: ReachabilityFailureReason | null;
   mobilePerformance: MobilePerformanceMeasurement | null;
+  /** WHY mobilePerformance is null — see MobilePerformanceFailure's own
+   * doc (lib/scoring.ts). */
+  mobilePerformanceFailureReason: MobilePerformanceFailure | null;
   screenshotBytes: Buffer | null;
   /** Up to MAX_ADDITIONAL_PAGES other real discovered pages, each with
    * its own best-effort screenshot — see AdditionalPageCapture. Always []
@@ -645,8 +755,8 @@ export async function collectWebsiteAnalysis(
   options: { captureScreenshots: boolean },
   fetchImpl: typeof fetch = fetch
 ): Promise<WebsiteAnalysisCollection> {
-  const htmlPromise = fetchWebsiteHtml(website, fetchImpl);
-  const contentPromise = htmlPromise.then((html) => (html ? analyzeWebsiteHtml(html) : null));
+  const htmlResultPromise = fetchWebsiteHtml(website, fetchImpl);
+  const contentPromise = htmlResultPromise.then((r) => (r.html ? analyzeWebsiteHtml(r.html) : null));
 
   const pageSpeedPromise = contentPromise.then((content) =>
     fetchMobilePerformance(
@@ -658,15 +768,17 @@ export async function collectWebsiteAnalysis(
   );
 
   const screenshotsPromise = options.captureScreenshots
-    ? htmlPromise.then((html) => captureWebsiteScreenshots(website, html, keys.screenshotApiKey, fetchImpl))
+    ? htmlResultPromise.then((r) => captureWebsiteScreenshots(website, r.html, keys.screenshotApiKey, fetchImpl))
     : Promise.resolve<WebsiteScreenshotCapture>({ screenshotBytes: null, additionalPages: [] });
 
-  const [contentResult, pageSpeedResult, screenshotsResult] = await Promise.allSettled([
+  const [htmlResult, contentResult, pageSpeedResult, screenshotsResult] = await Promise.allSettled([
+    htmlResultPromise,
     contentPromise,
     pageSpeedPromise,
     screenshotsPromise,
   ]);
 
+  const htmlFailureReason = htmlResult.status === "fulfilled" ? htmlResult.value.failureReason : "down";
   const baseContent = contentResult.status === "fulfilled" ? contentResult.value : null;
   const pageSpeed = pageSpeedResult.status === "fulfilled" ? pageSpeedResult.value : EMPTY_MOBILE_PERFORMANCE_RESULT;
   const screenshots =
@@ -686,7 +798,9 @@ export async function collectWebsiteAnalysis(
 
   return {
     content,
+    contentFetchFailureReason: content ? null : htmlFailureReason,
     mobilePerformance: pageSpeed.measurement,
+    mobilePerformanceFailureReason: pageSpeed.measurement ? null : pageSpeed.failureReason,
     screenshotBytes: screenshots.screenshotBytes,
     additionalPages: screenshots.additionalPages,
   };

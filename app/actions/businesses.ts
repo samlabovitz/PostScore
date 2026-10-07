@@ -109,7 +109,17 @@ export async function saveBusinessWithClient(
   // lack of one) back to a default. Explicitly null (not omitted) is
   // how the intake flow itself records "Something else"/no pick.
   businessTypeOverride?: string | null,
-  tradeId?: string | null
+  tradeId?: string | null,
+  // Deliberately last and explicit-only (never defaulted away by a
+  // `!== undefined` check the way language/businessTypeOverride are) —
+  // this is the one real way to force-skip a real, billed ScreenshotOne
+  // capture even on a business's first-ever analysis, used only by
+  // scripts/rescan-all.ts's --no-screenshots flag (Day 4 Part 2b) to
+  // protect a tight ScreenshotOne quota during a bulk re-scan. Every
+  // other caller (the intake flow, the interactive "Re-scan now"
+  // button, the monthly-report cron) omits this and keeps the real
+  // first-scan-only capture behavior unchanged.
+  skipScreenshots: boolean = false
 ): Promise<SaveBusinessResult> {
   if (businessTypeOverride != null && !bizProfileById(businessTypeOverride)) {
     return { status: "error", message: `"${businessTypeOverride}" isn't a supported business type.` };
@@ -131,9 +141,9 @@ export async function saveBusinessWithClient(
         ).data?.website_analysis_json ?? null
       )
     : null;
-  const captureScreenshots = existingAnalysis?.lastScreenshotRefreshAt == null;
+  const captureScreenshots = !skipScreenshots && existingAnalysis?.lastScreenshotRefreshAt == null;
 
-  const [httpsStatus, analysis] = await Promise.all([
+  const [httpsResult, analysis] = await Promise.all([
     place.website ? checkWebsiteHttps(place.website) : Promise.resolve(null),
     place.website
       ? collectWebsiteAnalysis(
@@ -146,6 +156,7 @@ export async function saveBusinessWithClient(
         )
       : Promise.resolve(null),
   ]);
+  const httpsStatus = httpsResult?.status ?? null;
 
   const checkedAt = new Date().toISOString();
   const websiteAnalysis: WebsiteAnalysis | null = analysis
@@ -153,6 +164,9 @@ export async function saveBusinessWithClient(
       ? {
           content: analysis.content,
           mobilePerformance: analysis.mobilePerformance,
+          mobilePerformanceFailureReason: analysis.mobilePerformanceFailureReason,
+          contentFetchFailureReason: analysis.contentFetchFailureReason,
+          httpsUnreachableReason: httpsResult?.reason ?? null,
           screenshotUrl: null, // filled in by the follow-up update below
           additionalPages: [], // filled in by the follow-up update below
           lastScreenshotRefreshAt: null, // filled in by the follow-up update below, once the capture attempt lands
@@ -167,6 +181,9 @@ export async function saveBusinessWithClient(
       : {
           content: analysis.content,
           mobilePerformance: analysis.mobilePerformance,
+          mobilePerformanceFailureReason: analysis.mobilePerformanceFailureReason,
+          contentFetchFailureReason: analysis.contentFetchFailureReason,
+          httpsUnreachableReason: httpsResult?.reason ?? null,
           // Regular re-scan: reuse whatever's already stored rather than
           // spending another ScreenshotOne call — see captureScreenshots above.
           screenshotUrl: existingAnalysis?.screenshotUrl ?? null,

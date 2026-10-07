@@ -6,13 +6,33 @@ import { formatPoints } from "@/components/scoring/CategoryCard";
 import { cn } from "@/lib/utils";
 import {
   gradeFromTotal,
+  performanceFailureMessageKey,
   type CategoryResult,
   type CheckResult,
   type Grade,
   type Suggestion,
   type WebsiteAnalysis,
 } from "@/lib/scoring";
+import { reachabilityReasonMessageKey } from "@/lib/websiteReachability";
 import { t, tPlural, useLocale, type MessageKey } from "@/lib/i18n";
+
+/** Checks whose "excluded" state has a real, specific reason worth its
+ * own honest sentence (Day 4 Part 3c) — mapped from the real stored
+ * reason fields on WebsiteAnalysis, never guessed. Every other excluded
+ * check keeps the existing generic "Couldn't verify — {explanation}"
+ * wording. */
+function excludedReasonMessageKey(check: CheckResult, websiteAnalysis: WebsiteAnalysis | null): MessageKey | null {
+  if (check.id === "website.performance_mobile") {
+    const failure = websiteAnalysis?.mobilePerformanceFailureReason;
+    return failure ? performanceFailureMessageKey(failure) : null;
+  }
+  if (check.id === "website.https" || check.id === "website.content_depth" || check.id === "website.contact_conversion") {
+    const reason =
+      check.id === "website.https" ? websiteAnalysis?.httpsUnreachableReason : websiteAnalysis?.contentFetchFailureReason;
+    return reason ? reachabilityReasonMessageKey(reason) : null;
+  }
+  return null;
+}
 
 /** "Infrastructure" checks first, "what's actually on the page" checks
  * second — a deliberate, honest-only grouping (no check is invented or
@@ -99,6 +119,7 @@ function CheckRow({
       : null;
   const recovered =
     check.id === "website.content_depth" ? websiteAnalysis?.content?.renderedContentSignals ?? null : null;
+  const excludedReasonKey = state === "excluded" ? excludedReasonMessageKey(check, websiteAnalysis) : null;
 
   return (
     <div className="flex items-start gap-3 py-4 first:pt-0 last:pb-0">
@@ -123,12 +144,12 @@ function CheckRow({
         </div>
 
         <p className="mt-2 text-[13px] text-ink-soft">
-          {state === "excluded" && (
+          {state === "excluded" && !excludedReasonKey && (
             <span className="mr-1.5 font-medium text-ink-mute">
               {t(locale, "dashboard.website.couldntVerifyPrefix")}
             </span>
           )}
-          {check.explanation}
+          {excludedReasonKey ? t(locale, excludedReasonKey) : check.explanation}
         </p>
 
         {(state === "partial" || state === "zero") && suggestion && (

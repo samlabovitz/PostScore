@@ -684,6 +684,11 @@ export type MessageKey =
   | "dashboard.website.technicalHeading"
   | "dashboard.website.contentContactHeading"
   | "dashboard.website.couldntVerifyPrefix"
+  | "dashboard.website.performanceTimedOut"
+  | "dashboard.website.performanceHttpError"
+  | "dashboard.website.reachabilityDown"
+  | "dashboard.website.reachabilityBlocked"
+  | "dashboard.website.reachabilityHttpError"
   | "dashboard.website.lighthouseScoreLabel"
   | "dashboard.website.signalTitle"
   | "dashboard.website.signalMeta"
@@ -2971,9 +2976,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.hideOtherPages": "Hide other pages",
     "dashboard.website.seeMorePages.one": "See {count} more page",
     "dashboard.website.seeMorePages.other": "See {count} more pages",
-    "dashboard.website.noPreviewCaptured": "We couldn't capture a preview of this site.",
+    "dashboard.website.noPreviewCaptured": "No screenshot captured yet.",
     "dashboard.website.noPreviewCapturedNote":
-      "Some sites block automated screenshot tools, or a preview hasn't been captured yet — this doesn't affect your Website score.",
+      "Some sites block automated screenshot tools, or a preview just hasn't been captured yet — this doesn't affect your Website score.",
     "dashboard.website.screenshotsCaptured": "Screenshots captured {date}",
     "dashboard.website.homepageLabel": "Homepage",
     "dashboard.website.scoreHeading": "Website score",
@@ -2981,6 +2986,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.technicalHeading": "Technical",
     "dashboard.website.contentContactHeading": "Content & contact",
     "dashboard.website.couldntVerifyPrefix": "Couldn't verify —",
+    "dashboard.website.performanceTimedOut": "Couldn't measure — Google's speed test timed out on your site.",
+    "dashboard.website.performanceHttpError": "Couldn't measure — Google's speed test couldn't complete right now.",
+    "dashboard.website.reachabilityDown": "Your site didn't respond when we checked.",
+    "dashboard.website.reachabilityBlocked":
+      "Your site blocked our automated check — it may be working fine for customers; open it yourself to confirm.",
+    "dashboard.website.reachabilityHttpError": "Your site returned an error when we checked it.",
     "dashboard.website.lighthouseScoreLabel": "Lighthouse mobile score",
     "dashboard.website.signalTitle": "Title",
     "dashboard.website.signalMeta": "Meta description",
@@ -5301,8 +5312,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.hideOtherPages": "Ocultar otras páginas",
     "dashboard.website.seeMorePages.one": "Ver {count} página más",
     "dashboard.website.seeMorePages.other": "Ver {count} páginas más",
-    "dashboard.website.noPreviewCaptured": "No pudimos capturar una vista previa de este sitio.",
-    "dashboard.website.noPreviewCapturedNote": "Algunos sitios bloquean las herramientas automáticas de captura, o aún no se ha capturado una vista previa — esto no afecta su puntuación de Sitio web.",
+    "dashboard.website.noPreviewCaptured": "Todavía no hay una captura de pantalla.",
+    "dashboard.website.noPreviewCapturedNote": "Algunos sitios bloquean las herramientas automáticas de captura, o simplemente todavía no se ha capturado una vista previa — esto no afecta su puntuación de Sitio web.",
     "dashboard.website.screenshotsCaptured": "Capturas tomadas el {date}",
     "dashboard.website.homepageLabel": "Página de inicio",
     "dashboard.website.scoreHeading": "Puntuación del sitio web",
@@ -5310,6 +5321,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.technicalHeading": "Técnico",
     "dashboard.website.contentContactHeading": "Contenido y contacto",
     "dashboard.website.couldntVerifyPrefix": "No se pudo verificar —",
+    "dashboard.website.performanceTimedOut":
+      "No pudimos medirlo — la prueba de velocidad de Google tardó demasiado en responder en su sitio.",
+    "dashboard.website.performanceHttpError":
+      "No pudimos medirlo — la prueba de velocidad de Google no pudo completarse en este momento.",
+    "dashboard.website.reachabilityDown": "Su sitio no respondió cuando lo verificamos.",
+    "dashboard.website.reachabilityBlocked":
+      "Su sitio bloqueó nuestra verificación automática — puede estar funcionando bien para los clientes; ábralo usted mismo para confirmarlo.",
+    "dashboard.website.reachabilityHttpError": "Su sitio devolvió un error cuando lo verificamos.",
     "dashboard.website.lighthouseScoreLabel": "Puntuación móvil de Lighthouse",
     "dashboard.website.signalTitle": "Título",
     "dashboard.website.signalMeta": "Meta descripción",

@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { fetchMobilePerformance } from "./websiteAnalysis";
+import { captureScreenshotBytes, captureWebsiteScreenshots, fetchMobilePerformance, fetchWebsiteHtml } from "./websiteAnalysis";
 
 // Day 3b: the real measurement behind website.performance_mobile — see
 // fetchMobilePerformance's own doc for the method order (URL-level field
@@ -7,8 +7,23 @@ import { fetchMobilePerformance } from "./websiteAnalysis";
 // this suite pins down. Every test drives fetchMobilePerformance through
 // its injectable `fetchImpl` param, never a real network call.
 
-function jsonResponse(body: unknown, ok = true): Response {
-  return { ok, json: async () => body } as unknown as Response;
+// Status defaults to 404 (non-retryable) rather than 500 when ok=false
+// — most existing fixtures in this file just want "a failed response,
+// resolved once, no retry," and 500/429 are now retryable (Day 4 Part
+// 3a), which would otherwise introduce a real PAGESPEED_RETRY_DELAY_MS
+// wait into tests that don't care about retry behavior at all.
+function jsonResponse(body: unknown, ok = true, status = ok ? 200 : 404): Response {
+  return { ok, status, json: async () => body } as unknown as Response;
+}
+
+/** A real AbortError, same as what fetch throws when its AbortSignal
+ * fires on timeout — distinguishing this from any other thrown error is
+ * exactly what lets fetchPageSpeedRunOnce report "timed_out" instead of
+ * the generic "error" (Day 4 Part 3a). */
+function abortError(): Error {
+  const err = new Error("The operation was aborted.");
+  err.name = "AbortError";
+  return err;
 }
 
 function labBody(score: number): unknown {
@@ -83,25 +98,202 @@ describe("fetchMobilePerformance: method order a) URL field -> b) origin field -
 });
 
 describe("fetchMobilePerformance: couldn't verify", () => {
-  test("null measurement when every attempt fails (no field data, all 3 lab runs fail)", async () => {
-    const fetchImpl = vi.fn(async () => jsonResponse({}, false));
+  test("null measurement when every attempt fails (no field data, all 3 lab runs fail) — reports the real http_error status", async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({}, false, 404));
 
     const result = await fetchMobilePerformance("example.com", "key", undefined, fetchImpl as unknown as typeof fetch);
 
     expect(result.measurement).toBeNull();
     expect(result.callCount).toBe(3);
+    expect(result.failureReason).toEqual({ kind: "http_error", status: 404 });
   });
 
-  test("no measurement and zero calls when no website or no API key is configured", async () => {
+  test("no measurement and zero calls when no website is given — no failure reason, since nothing was even attempted", async () => {
     const fetchImpl = vi.fn(async () => jsonResponse(labBody(90)));
 
     const noWebsite = await fetchMobilePerformance("", "key", undefined, fetchImpl as unknown as typeof fetch);
-    const noKey = await fetchMobilePerformance("example.com", undefined, undefined, fetchImpl as unknown as typeof fetch);
 
     expect(noWebsite.measurement).toBeNull();
     expect(noWebsite.callCount).toBe(0);
+    expect(noWebsite.failureReason).toBeNull();
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  test("Day 4 Part 3a: no PAGESPEED_API_KEY configured reports failureReason 'no_api_key', zero calls made", async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse(labBody(90)));
+
+    const noKey = await fetchMobilePerformance("example.com", undefined, undefined, fetchImpl as unknown as typeof fetch);
+
     expect(noKey.measurement).toBeNull();
     expect(noKey.callCount).toBe(0);
+    expect(noKey.failureReason).toEqual({ kind: "no_api_key", status: null });
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe("fetchMobilePerformance: Day 4 Part 3a retry on timeout, 429, and 5xx", () => {
+  test("a real timeout (AbortError) is retried once and reports 'timed_out' if it never recovers", async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw abortError();
+    });
+
+    const result = await fetchMobilePerformance("example.com", "key", undefined, fetchImpl as unknown as typeof fetch);
+
+    expect(result.measurement).toBeNull();
+    expect(result.failureReason).toEqual({ kind: "timed_out", status: null });
+    // 3 logical runs (first + 2 lab fallback), each internally retried
+    // once (2 real attempts) = 6 raw fetchImpl calls.
+    expect(fetchImpl).toHaveBeenCalledTimes(6);
+  }, 10000);
+
+  test("a 429 is retried and succeeds on the second attempt — never collapses to a permanent failure", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({}, false, 429))
+      .mockResolvedValue(jsonResponse(labBody(80)));
+
+    const result = await fetchMobilePerformance("example.com", "key", undefined, fetchImpl as unknown as typeof fetch);
+
+    expect(result.measurement).toEqual({ method: "lab", fieldCategory: null, labScore: 80 });
+    expect(result.failureReason).toBeNull();
+  }, 10000);
+
+  test("a 500 is retried and succeeds on the second attempt", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({}, false, 500))
+      .mockResolvedValue(jsonResponse(labBody(80)));
+
+    const result = await fetchMobilePerformance("example.com", "key", undefined, fetchImpl as unknown as typeof fetch);
+
+    expect(result.measurement).toEqual({ method: "lab", fieldCategory: null, labScore: 80 });
+  }, 10000);
+
+  test("a 400 (non-retryable) is NOT retried — one call, immediate http_error", async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({}, false, 400));
+
+    const result = await fetchMobilePerformance("example.com", "key", undefined, fetchImpl as unknown as typeof fetch);
+
+    expect(result.measurement).toBeNull();
+    expect(result.failureReason).toEqual({ kind: "http_error", status: 400 });
+    // 3 logical runs x 1 raw attempt each (no retry) = 3.
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
+
+  test("when attempts disagree on failure kind, the real http_error status wins over a timeout", async () => {
+    // first run: times out on both its own internal attempts -> timed_out
+    // second/third (parallel lab fallback): both come back with a real
+    // 503 -> http_error. The more diagnostic http_error should win.
+    let callNum = 0;
+    const fetchImpl = vi.fn(async () => {
+      callNum++;
+      if (callNum <= 2) throw abortError(); // first run's own 2 attempts
+      return jsonResponse({}, false, 503);
+    });
+
+    const result = await fetchMobilePerformance("example.com", "key", undefined, fetchImpl as unknown as typeof fetch);
+
+    expect(result.measurement).toBeNull();
+    expect(result.failureReason?.kind).toBe("http_error");
+    expect(result.failureReason?.status).toBe(503);
+  }, 10000);
+});
+
+describe("fetchWebsiteHtml: Day 4 Part 3b real reachability reasons", () => {
+  test("a real HTML fetch success returns the html with no failure reason", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      arrayBuffer: async () => new TextEncoder().encode("<html>hi</html>").buffer,
+    })) as unknown as typeof fetch;
+
+    const result = await fetchWebsiteHtml("example.com", fetchImpl);
+
+    expect(result.html).toContain("hi");
+    expect(result.failureReason).toBeNull();
+  });
+
+  test("both schemes throwing (DNS/connection failure) reports 'down'", async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new Error("getaddrinfo ENOTFOUND");
+    }) as unknown as typeof fetch;
+
+    const result = await fetchWebsiteHtml("example.com", fetchImpl);
+
+    expect(result.html).toBeNull();
+    expect(result.failureReason).toBe("down");
+  });
+
+  test("a 403 on both schemes reports 'blocked_automated_check'", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: false,
+      status: 403,
+      text: async () => "Forbidden",
+    })) as unknown as typeof fetch;
+
+    const result = await fetchWebsiteHtml("example.com", fetchImpl);
+
+    expect(result.html).toBeNull();
+    expect(result.failureReason).toBe("blocked_automated_check");
+  });
+
+  test("a 500 on both schemes reports 'http_error'", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: false,
+      status: 500,
+      text: async () => "Internal Server Error",
+    })) as unknown as typeof fetch;
+
+    const result = await fetchWebsiteHtml("example.com", fetchImpl);
+
+    expect(result.html).toBeNull();
+    expect(result.failureReason).toBe("http_error");
+  });
+
+  test("an empty website string reports 'down' without making any request", async () => {
+    const fetchImpl = vi.fn();
+
+    const result = await fetchWebsiteHtml("   ", fetchImpl as unknown as typeof fetch);
+
+    expect(result.html).toBeNull();
+    expect(result.failureReason).toBe("down");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+// Day 4 Part 2d: ScreenshotOne failing or running out of quota mid-scan
+// must never throw or abort the rest of a scan's real results — these
+// pin down that captureScreenshotBytes/captureWebsiteScreenshots already
+// degrade to null/empty rather than throwing, for exactly that case.
+describe("captureScreenshotBytes / captureWebsiteScreenshots: quota exhaustion never throws", () => {
+  test("a 402/429 'quota exceeded' response from ScreenshotOne degrades to null bytes, never throws", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 402, headers: new Headers() }) as unknown as Response);
+
+    const bytes = await captureScreenshotBytes("example.com", "key", fetchImpl as unknown as typeof fetch);
+
+    expect(bytes).toBeNull();
+  });
+
+  test("captureWebsiteScreenshots never throws when every real call (homepage + sitemap discovery) fails with quota exhaustion", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 429, headers: new Headers() }) as unknown as Response);
+
+    const result = await captureWebsiteScreenshots("example.com", null, "key", fetchImpl as unknown as typeof fetch);
+
+    expect(result.screenshotBytes).toBeNull();
+    expect(result.additionalPages).toEqual([]);
+  });
+
+  test("a discovered additional page whose own capture hits quota exhaustion still comes back as an honest null, never throws", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 402, headers: new Headers() }) as unknown as Response);
+
+    const result = await captureWebsiteScreenshots(
+      "example.com",
+      '<html><a href="/about">About us</a></html>',
+      "key",
+      fetchImpl as unknown as typeof fetch
+    );
+
+    expect(result.screenshotBytes).toBeNull();
+    expect(result.additionalPages).toHaveLength(1);
+    expect(result.additionalPages[0]).toMatchObject({ label: "About us", screenshotBytes: null });
   });
 });

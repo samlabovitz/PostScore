@@ -38,21 +38,33 @@ export interface UploadedWebsiteScreenshots {
   additionalPages: WebsiteAnalysisPage[];
 }
 
+/**
+ * Never throws — a storage/network hiccup here must degrade to
+ * screenshotUrl: null, exactly like a failed ScreenshotOne capture,
+ * never abort the real scan results (Places data, HTTPS, PageSpeed,
+ * scoring) the caller already has in hand (saveBusinessWithClient's own
+ * "still complete and save real results" contract — Part 2d).
+ */
 async function uploadOne(
   admin: ReturnType<typeof createAdminClient>,
   path: string,
   bytes: Buffer,
   logLabel: string
 ): Promise<string | null> {
-  const { error } = await admin.storage
-    .from(WEBSITE_SCREENSHOTS_BUCKET)
-    .upload(path, bytes, { contentType: "image/png", upsert: true });
+  try {
+    const { error } = await admin.storage
+      .from(WEBSITE_SCREENSHOTS_BUCKET)
+      .upload(path, bytes, { contentType: "image/png", upsert: true });
 
-  if (error) {
-    console.error(`[websiteScreenshotUpload] screenshot upload to "${path}" (${logLabel}) failed: ${error.message}`);
+    if (error) {
+      console.error(`[websiteScreenshotUpload] screenshot upload to "${path}" (${logLabel}) failed: ${error.message}`);
+      return null;
+    }
+    return admin.storage.from(WEBSITE_SCREENSHOTS_BUCKET).getPublicUrl(path).data.publicUrl;
+  } catch (err) {
+    console.error(`[websiteScreenshotUpload] screenshot upload to "${path}" (${logLabel}) threw: ${err}`);
     return null;
   }
-  return admin.storage.from(WEBSITE_SCREENSHOTS_BUCKET).getPublicUrl(path).data.publicUrl;
 }
 
 /**

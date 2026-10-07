@@ -66,7 +66,7 @@ export async function refreshWebsiteScreenshots(businessId: string): Promise<Ref
     }
   }
 
-  const html = await fetchWebsiteHtml(row.website);
+  const { html } = await fetchWebsiteHtml(row.website);
   const capture = await captureWebsiteScreenshots(row.website, html, process.env.SCREENSHOT_API_KEY);
   // Ownership invariant: uploadWebsiteScreenshots writes with the
   // service-role admin client, bypassing RLS — safe here because
@@ -80,6 +80,13 @@ export async function refreshWebsiteScreenshots(businessId: string): Promise<Ref
   const updated: WebsiteAnalysis = {
     content: existing?.content ?? null,
     mobilePerformance: existing?.mobilePerformance ?? null,
+    // Not touched by this action — this is a screenshot-only refresh,
+    // never a full re-scan — so the real failure reasons (if any) from
+    // whenever content/mobilePerformance were last actually measured
+    // carry forward unchanged, same as content/mobilePerformance above.
+    mobilePerformanceFailureReason: existing?.mobilePerformanceFailureReason ?? null,
+    contentFetchFailureReason: existing?.contentFetchFailureReason ?? null,
+    httpsUnreachableReason: existing?.httpsUnreachableReason ?? null,
     screenshotUrl,
     additionalPages,
     lastScreenshotRefreshAt,

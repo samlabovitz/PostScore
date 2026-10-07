@@ -21,6 +21,7 @@ const BASE_CONTEXT: AssistantBusinessContext = {
     hoursPresent: true,
     websitePresent: true,
     httpsStatus: "https",
+    httpsUnreachableReason: null,
     photoCount: 12,
     businessStatus: "OPERATIONAL",
     categoriesCount: 2,
@@ -734,6 +735,51 @@ describe("buildAssistantContextText", () => {
       listing: { ...BASE_CONTEXT.listing, websitePresent: true, httpsStatus: "https" },
     });
     expect(text).toContain("Reachability on the last check: https (the last check reached this site successfully)");
+  });
+
+  test("Day 4 Part 3c: a site BLOCKED by its own bot protection is never described as down, and says the site may be fine", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: {
+        ...BASE_CONTEXT.listing,
+        websitePresent: true,
+        httpsStatus: "unreachable",
+        httpsUnreachableReason: "blocked_automated_check",
+      },
+    });
+    expect(text).toContain("BLOCKED, not confirmed down");
+    expect(text).toContain("The site may be working completely fine for a real customer's browser");
+    expect(text).toContain("NEVER say customers can't reach this site or that it's down");
+    expect(text).not.toContain("could NOT load this site at all");
+  });
+
+  test("Day 4 Part 3c: a site that returned a real HTTP error is distinguished from a confirmed outage", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: {
+        ...BASE_CONTEXT.listing,
+        websitePresent: true,
+        httpsStatus: "unreachable",
+        httpsUnreachableReason: "http_error",
+      },
+    });
+    expect(text).toContain("returned an ERROR on the last check (not a confirmed outage)");
+    expect(text).toContain("NEVER say customers can't reach this site based on this alone");
+  });
+
+  test("Day 4 Part 3c: reason 'down' keeps the original strong 'could NOT load this site at all' wording", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: { ...BASE_CONTEXT.listing, websitePresent: true, httpsStatus: "unreachable", httpsUnreachableReason: "down" },
+    });
+    expect(text).toContain("UNREACHABLE");
+    expect(text).toContain("the last check could NOT load this site at all");
+  });
+
+  test("Day 4 Part 3c: the system rules never let 'customers can't reach' be said for a blocked or error reason", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("That CUSTOMERS can't reach a website");
+    expect(ASSISTANT_SYSTEM_RULES).toContain('unless REAL DATA CONTEXT\'s "Reachability on the last check" line is UNREACHABLE for the reason "no response at all"');
+    expect(ASSISTANT_SYSTEM_RULES).toContain("the site may be working completely fine for customers");
   });
 
   test("still says honestly when no photo count was returned by Google at all", () => {

@@ -289,7 +289,14 @@ export async function rescanBusiness(businessId: string): Promise<RescanBusiness
  */
 export async function rescanBusinessWithClient(
   supabase: SupabaseClient,
-  businessId: string
+  businessId: string,
+  // Forces saveBusinessWithClient to skip a real ScreenshotOne capture
+  // even on this business's first-ever website analysis — see its own
+  // doc comment (app/actions/businesses.ts). Omitted (not merely false)
+  // by the interactive "Re-scan now" path and the monthly-report cron,
+  // so neither one's real behavior changes; only
+  // scripts/rescan-all.ts's --no-screenshots flag passes true.
+  skipScreenshots: boolean = false
 ): Promise<RescanBusinessResult> {
   const { data: before, error: beforeError } = await supabase
     .from("businesses")
@@ -324,7 +331,15 @@ export async function rescanBusinessWithClient(
     return { status: "error", message: lookup.message };
   }
 
-  const saved = await saveBusinessWithClient(supabase, before.owner_id, lookup.place);
+  const saved = await saveBusinessWithClient(
+    supabase,
+    before.owner_id,
+    lookup.place,
+    undefined,
+    undefined,
+    undefined,
+    skipScreenshots
+  );
   if (saved.status !== "saved") {
     return saved.status === "unauthenticated"
       ? { status: "unauthenticated" }

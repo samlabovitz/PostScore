@@ -384,6 +384,7 @@ async function loadBusinessContext(businessId: string, localeOverride?: Locale):
       hoursPresent: !!scored.business.opening_hours && scored.business.opening_hours.length > 0,
       websitePresent: !!scored.business.website && scored.business.website.trim().length > 0,
       httpsStatus: input.httpsStatus,
+      httpsUnreachableReason: input.websiteAnalysis?.httpsUnreachableReason ?? null,
       photoCount: scored.business.photo_count,
       businessStatus: scored.business.business_status,
       categoriesCount: scored.business.categories?.length ?? 0,

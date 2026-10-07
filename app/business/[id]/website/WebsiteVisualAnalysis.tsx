@@ -281,7 +281,13 @@ export function WebsiteVisualAnalysis({
           <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
             {t(locale, "dashboard.website.visualAnalysisHeading")}
           </div>
-          <p className="text-sm text-ink-soft">{t(locale, "dashboard.website.visualAnalysisSubtitle")}</p>
+          {/* "What customers actually see..." is a real claim ONLY a
+              genuine screenshot backs up — never shown over the honest
+              empty state below (Day 4 Part 2c: no screenshot must never
+              be captioned as if one exists). */}
+          {websiteAnalysis?.screenshotUrl && (
+            <p className="text-sm text-ink-soft">{t(locale, "dashboard.website.visualAnalysisSubtitle")}</p>
+          )}
         </div>
         <RefreshScreenshotsControl
           businessId={businessId}
