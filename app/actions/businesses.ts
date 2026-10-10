@@ -119,7 +119,24 @@ export async function saveBusinessWithClient(
   // other caller (the intake flow, the interactive "Re-scan now"
   // button, the monthly-report cron) omits this and keeps the real
   // first-scan-only capture behavior unchanged.
-  skipScreenshots: boolean = false
+  skipScreenshots: boolean = false,
+  // Only ever computed and passed by rescanBusinessWithClient, via
+  // resolveListingWebsite (lib/googleListingWebsite.ts) — null (the
+  // default) clears any previous flag, a real ISO date sets/preserves
+  // it. The intake flow (first save) never passes this: there's nothing
+  // stored yet worth protecting, so the column simply stays null.
+  googleListingMissingWebsiteSince: string | null = null,
+  // Same "only ever computed by resolveListingWebsite" reasoning as
+  // googleListingMissingWebsiteSince above — null clears it, a real
+  // ISO date means a previously-suspected gap is now confirmed (or
+  // stays confirmed on a further scan).
+  googleListingWebsiteRemovedSince: string | null = null,
+  // Only ever computed by rescanBusinessWithClient via a real history
+  // lookup (findLastKnownWebsiteDate) — the REAL date Google last
+  // actually returned a website, never the date a flag was set. Null
+  // clears it (not confirmed, or confirmed with no determinable prior
+  // date — see supabase/schema.sql's own doc for the difference).
+  googleListingLastKnownWebsiteAt: string | null = null
 ): Promise<SaveBusinessResult> {
   if (businessTypeOverride != null && !bizProfileById(businessTypeOverride)) {
     return { status: "error", message: `"${businessTypeOverride}" isn't a supported business type.` };
@@ -224,6 +241,9 @@ export async function saveBusinessWithClient(
         https_checked_at: httpsStatus ? checkedAt : null,
         website_analysis_json: websiteAnalysis,
         website_analysis_checked_at: websiteAnalysis ? checkedAt : null,
+        google_listing_missing_website_since: googleListingMissingWebsiteSince,
+        google_listing_website_removed_since: googleListingWebsiteRemovedSince,
+        google_listing_last_known_website_at: googleListingLastKnownWebsiteAt,
         // Normalized right before the write — this is the actual trust
         // boundary (a "use server" action is callable with any payload,
         // not just what the intake page's own <select> offers), so a bad

@@ -1109,6 +1109,62 @@ alter table public.businesses
   add column if not exists website_analysis_json jsonb,
   add column if not exists website_analysis_checked_at timestamptz;
 
+-- Set only when a real re-scan's fresh Google Places Details lookup
+-- came back with NO website TWICE in a row (the real call, then one
+-- real retry — see resolveListingWebsite in lib/googleListingWebsite.ts
+-- and rescanBusinessWithClient in app/actions/scoring.ts) while the
+-- business already had a real website on file. The stored website is
+-- deliberately KEPT for scoring in that case — a single empty response
+-- from Google is never trusted as proof the listing actually lost its
+-- website (the real Endless Nails case this fixes) — this column is
+-- purely the honest, separate fact that Google's OWN listing didn't
+-- return one on our last check, shown on the Website page and to
+-- PostAI. Cleared back to null the moment a real lookup returns a
+-- website again. Null means "no such gap right now," not "never had
+-- one" — a business that's never had this problem simply stays null.
+alter table public.businesses
+  add column if not exists google_listing_missing_website_since timestamptz;
+
+-- Set only once a SUSPECTED missing website (the column above) gets
+-- CONFIRMED on a later, separate scan: google_listing_missing_website_since
+-- was already set from an earlier scan, and THIS scan's own fresh
+-- lookup + retry both came back empty too. At that point the stored
+-- website is cleared (set to null) and scored as no website on the
+-- listing — two separate real scans both coming back empty is real
+-- evidence, unlike the single-scan "give it the benefit of the doubt"
+-- case the other column covers. Stores the original
+-- google_listing_missing_website_since value, purely as an honest
+-- audit record of when this episode was first suspected — NEVER read
+-- for display (see google_listing_last_known_website_at below for the
+-- real date shown to an owner; conflating the two was a real bug —
+-- the suspected/confirmed date is often just when a scan happened to
+-- run, not when a real website was last actually seen). Non-null-ness
+-- here is the one real "is this business in the CONFIRMED state"
+-- signal. Cleared back to null the moment a real website is found
+-- again. Carried forward unchanged on every further scan that still
+-- finds nothing.
+alter table public.businesses
+  add column if not exists google_listing_website_removed_since timestamptz;
+
+-- The REAL date Google last actually returned a website for this
+-- business, used for the Website page's and PostAI's honest "it last
+-- showed one on {date}" line — see findLastKnownWebsiteDate in
+-- lib/googleListingWebsite.ts for exactly how this is computed (the
+-- most recent real `scores.profile_snapshot_json.website` strictly
+-- BEFORE the current CONFIRMED episode's own suspected-since date,
+-- which is guaranteed untouched by the "keep the website for one
+-- scan" logic). Only ever set at the exact moment a SUSPECTED gap is
+-- promoted to CONFIRMED (google_listing_website_removed_since above
+-- transitions from null to non-null); carried forward unchanged on
+-- every later scan that stays confirmed. Null means either "not
+-- currently confirmed missing" OR "confirmed, but no real prior
+-- website date could be found in history" — the Website page/PostAI
+-- must drop the date from the sentence in that second case, never
+-- guess (see dashboard.website.googleListingWebsiteRemovedUnknownDate).
+-- Cleared back to null the moment a real website is found again.
+alter table public.businesses
+  add column if not exists google_listing_last_known_website_at timestamptz;
+
 -- Public bucket for real website screenshots — one object per business,
 -- overwritten on each analysis at path "<business id>.png". Public read
 -- is fine here: the image is just a screenshot of the business's own

@@ -38,6 +38,24 @@ export interface AssistantListingSummary {
    * null whenever httpsStatus isn't "unreachable", or on a legacy row
    * saved before this field existed. */
   httpsUnreachableReason: ReachabilityFailureReason | null;
+  /** Non-null only the first scan to SUSPECT a gap — see
+   * resolveListingWebsite (lib/googleListingWebsite.ts). A fact about
+   * GOOGLE's listing, never about whether the site itself is
+   * reachable. Mutually exclusive with googleListingWebsiteRemovedSince
+   * below (never both set). */
+  googleListingMissingWebsiteSince: string | null;
+  /** Non-null once that suspicion is CONFIRMED on a later, separate
+   * scan — the website really is gone from the listing and scored
+   * accordingly. The one real "is this confirmed" signal; never used
+   * for the displayed date (see googleListingLastKnownWebsiteAt
+   * below) — that was a real bug this fixes. */
+  googleListingWebsiteRemovedSince: string | null;
+  /** The REAL date Google last actually returned a website — see
+   * findLastKnownWebsiteDate (lib/googleListingWebsite.ts). Used for
+   * the honest "it last showed one on {date}" line ONLY when
+   * non-null; when googleListingWebsiteRemovedSince is set but this
+   * is null, say so with no date rather than guess. */
+  googleListingLastKnownWebsiteAt: string | null;
   photoCount: number | null;
   businessStatus: string | null;
   categoriesCount: number;
@@ -333,6 +351,7 @@ HOW TO ANSWER:
    - An exact photo count once REAL DATA CONTEXT already describes it as "X or more" — that phrasing means Google's own data caps there, so the real total could be higher; never restate it as if that capped number were necessarily the exact real count.
    - That a website is "live" or "working" — REAL DATA CONTEXT's "Reachability on the last check" line is the only source for this; if it says UNREACHABLE or "not yet checked," never say or imply the site is live/working regardless of what else looks fine (a website existing on file and a website actually loading are two different facts).
    - That CUSTOMERS can't reach a website — never say or imply this unless REAL DATA CONTEXT's "Reachability on the last check" line is UNREACHABLE for the reason "no response at all" (the plain "the last check could NOT load this site at all" wording). If that same line instead says the check was BLOCKED (a bot-detection block, e.g. Cloudflare), got an ERROR response, or TIMED OUT, that is a fact about PostScore's own automated check, not about whether a real customer's browser can reach the site — say only that the automated check was blocked/got an error/timed out, that the site may be working completely fine for customers, and suggest the owner open it themselves to confirm. A TIMEOUT in particular is never evidence the site is down — it only means our own check ran out of time.
+   - That a business has NO website — if REAL DATA CONTEXT's own "GOOGLE'S OWN LISTING didn't return a website" line is present (a SUSPECTED, single-scan gap), that only means Google's listing data gap, never that the website is gone, broken, or unreachable; the "Has a website on file" line right above it already proves the opposite. Say only that Google's own listing may need the website re-added, and suggest checking the Google Business Profile. If instead the context's "no website on file" line is accompanied by a "GOOGLE'S OWN LISTING no longer shows a website at all — CONFIRMED" line, that IS a real, confirmed gap in Google's own listing data (two separate checks agreeing) — still never claim the business has no real website anywhere online, only that its Google Business Profile's website field is currently empty and should be re-added if they still have a site.
    - Anything else about this business that simply isn't in the REAL DATA CONTEXT block.
 4. If part of the REAL DATA CONTEXT is missing (e.g. no competitor scan has ever been saved), say so honestly and point to where the owner can get it (e.g. "run a scan on the Competitors page") rather than guessing or working around it.
 5. BE BRIEF — SHORTER THAN FEELS NATURAL. A busy owner glancing at their phone, not an essay. No preamble ("Great question", "Looking at your data...", "Sure, here's..."), no restating the question, no repeating the context block back at them, no summarizing what you're about to say before saying it, no closing recap of what you just said. Lead with the single most useful sentence. HARD TARGET: under ~150 words, at most 4 bullets. Default target within that: 1-3 short sentences, or 3-4 terse bullets (a few words each, not full paragraphs) for a "top things to fix" style question — reach for more only when the question genuinely can't be answered honestly within ~150 words (e.g. it has several real caveats), and even then never exceed 4 bullets. Every sentence must add a new fact, number, or instruction; if a sentence only restates or transitions, cut it. Say each fact once. Prefer short, plain words over hedging phrases ("it seems like", "you might want to consider") — state it directly. Still include every real-data specific and caveat the question actually needs — cut words and framing, never substance.
@@ -786,6 +805,18 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
       ? `- Has a website on file. Reachability on the last check: ${websiteReachabilityText(context.listing.httpsStatus, context.listing.httpsUnreachableReason)}.`
       : "- No website on file."
   );
+  if (context.listing.googleListingMissingWebsiteSince) {
+    lines.push(
+      "- GOOGLE'S OWN LISTING didn't return a website on our last check, even though a website is still on file above (kept from the last time Google DID return one — a single empty response is never trusted). This is a fact about Google's listing data, NOT about whether the site itself is reachable or working. NEVER say or imply this business has no website; say only that Google's own listing may need the website re-added, and suggest the owner check their Google Business Profile."
+    );
+  } else if (context.listing.googleListingWebsiteRemovedSince) {
+    const lastKnown = context.listing.googleListingLastKnownWebsiteAt;
+    lines.push(
+      lastKnown
+        ? `- GOOGLE'S OWN LISTING no longer shows a website at all — CONFIRMED on two separate real checks (it last showed one around ${formatShortDate(lastKnown, locale)}). This IS a confirmed gap in Google's own listing data, scored accordingly. Still never assume the business itself has no real website anywhere — say only that Google's Business Profile's website field is currently empty, and suggest the owner re-add it there if they still have a site.`
+        : "- GOOGLE'S OWN LISTING no longer shows a website at all — CONFIRMED on two separate real checks. We don't have a reliable record of when it last showed one, so never guess or state a date. This IS a confirmed gap in Google's own listing data, scored accordingly. Still never assume the business itself has no real website anywhere — say only that Google's Business Profile's website field is currently empty, and suggest the owner re-add it there if they still have a site."
+    );
+  }
   const photoCountText =
     context.listing.photoCount === null
       ? "not returned by Google"

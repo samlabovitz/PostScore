@@ -22,6 +22,9 @@ const BASE_CONTEXT: AssistantBusinessContext = {
     websitePresent: true,
     httpsStatus: "https",
     httpsUnreachableReason: null,
+    googleListingMissingWebsiteSince: null,
+    googleListingWebsiteRemovedSince: null,
+    googleListingLastKnownWebsiteAt: null,
     photoCount: 12,
     businessStatus: "OPERATIONAL",
     categoriesCount: 2,
@@ -800,6 +803,106 @@ describe("buildAssistantContextText", () => {
   test("Day 4 Task: the system rules name TIMED OUT alongside blocked/error as a fact about our own check, not the site", () => {
     expect(ASSISTANT_SYSTEM_RULES).toContain("or TIMED OUT");
     expect(ASSISTANT_SYSTEM_RULES).toContain("A TIMEOUT in particular is never evidence the site is down");
+  });
+
+  test("Google's listing missing a website on the last check: says so honestly, never claims no website (real Endless Nails fix)", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: {
+        ...BASE_CONTEXT.listing,
+        websitePresent: true,
+        httpsStatus: "https",
+        httpsUnreachableReason: null,
+        googleListingMissingWebsiteSince: "2026-10-07T08:09:29.562Z",
+      },
+    });
+    expect(text).toContain("Has a website on file");
+    expect(text).toContain("GOOGLE'S OWN LISTING didn't return a website");
+    expect(text).toContain("NEVER say or imply this business has no website");
+  });
+
+  test("no googleListingMissingWebsiteSince: the extra line is simply absent, never a false negative claim", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: { ...BASE_CONTEXT.listing, googleListingMissingWebsiteSince: null },
+    });
+    expect(text).not.toContain("GOOGLE'S OWN LISTING");
+  });
+
+  test("the system rules never let 'no website' be claimed when Google's listing gap is the only reason", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("That a business has NO website");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("Google's own listing may need the website re-added");
+  });
+
+  test("CONFIRMED removal, real date known: uses googleListingLastKnownWebsiteAt — the REAL history date — never googleListingWebsiteRemovedSince itself (the real Endless Nails bug: a manual restore's own timestamp had leaked into the banner)", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: {
+        ...BASE_CONTEXT.listing,
+        websitePresent: false,
+        httpsStatus: null,
+        httpsUnreachableReason: null,
+        googleListingMissingWebsiteSince: null,
+        // Deliberately DIFFERENT from the real date below — proves the
+        // sentence reads the real-history field, never this one.
+        googleListingWebsiteRemovedSince: "2026-10-09T08:02:52.559Z",
+        googleListingLastKnownWebsiteAt: "2026-10-06T21:51:04.879Z",
+      },
+    });
+    expect(text).toContain("No website on file");
+    expect(text).toContain("GOOGLE'S OWN LISTING no longer shows a website at all");
+    expect(text).toContain("CONFIRMED on two separate real checks");
+    expect(text).toContain("Oct 6, 2026"); // the REAL last-known-website date, not Oct 9 (when the flag/manual restore happened)
+    expect(text).not.toContain("Oct 9, 2026");
+    expect(text).not.toContain("GOOGLE'S OWN LISTING didn't return a website on our last check"); // the SUSPECTED wording, never both at once
+  });
+
+  test("CONFIRMED removal, real date UNKNOWN: drops the date entirely rather than guessing", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: {
+        ...BASE_CONTEXT.listing,
+        websitePresent: false,
+        httpsStatus: null,
+        httpsUnreachableReason: null,
+        googleListingMissingWebsiteSince: null,
+        googleListingWebsiteRemovedSince: "2026-10-09T08:02:52.559Z",
+        googleListingLastKnownWebsiteAt: null,
+      },
+    });
+    expect(text).toContain("GOOGLE'S OWN LISTING no longer shows a website at all");
+    expect(text).toContain("CONFIRMED on two separate real checks");
+    expect(text).toContain("don't have a reliable record of when it last showed one");
+    expect(text).toContain("never guess or state a date");
+    expect(text).not.toContain("it last showed one around");
+    // The CONFIRMED sentence itself must carry no date at all — scope
+    // the check to that one sentence, since the rest of the context
+    // (score history, price-check date, competitor scan date) has
+    // other real dates for unrelated reasons.
+    const confirmedSentence = text.split("\n").find((line) => line.includes("GOOGLE'S OWN LISTING no longer shows a website"));
+    expect(confirmedSentence).toBeDefined();
+    expect(confirmedSentence).not.toMatch(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}, \d{4}\b/);
+  });
+
+  test("SUSPECTED and CONFIRMED are mutually exclusive — SUSPECTED wins if somehow both were set (shouldn't happen, but never show both lines)", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: {
+        ...BASE_CONTEXT.listing,
+        websitePresent: true,
+        googleListingMissingWebsiteSince: "2026-10-09T08:02:52.559Z",
+        googleListingWebsiteRemovedSince: "2026-10-07T07:16:43.000Z",
+        googleListingLastKnownWebsiteAt: "2026-10-06T21:51:04.879Z",
+      },
+    });
+    const suspectedCount = text.split("didn't return a website on our last check").length - 1;
+    const confirmedCount = text.split("no longer shows a website at all").length - 1;
+    expect(suspectedCount + confirmedCount).toBe(1);
+  });
+
+  test("the system rules distinguish SUSPECTED from CONFIRMED Google-listing website gaps", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("CONFIRMED");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("two separate checks agreeing");
   });
 
   test("still says honestly when no photo count was returned by Google at all", () => {

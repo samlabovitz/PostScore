@@ -14,6 +14,7 @@ import { buildProfileSnapshot, diffProfileSnapshots, type ProfileChange, type Pr
 import { lookupBusinessByPlaceId, type OpeningHoursPeriod } from "@/lib/google/places";
 import { saveBusinessWithClient } from "@/app/actions/businesses";
 import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
+import { findLastKnownWebsiteDate, resolveListingWebsite } from "@/lib/googleListingWebsite";
 
 export interface BusinessRecord extends BusinessScoringRow {
   id: string;
@@ -30,6 +31,30 @@ export interface BusinessRecord extends BusinessScoringRow {
    * own language via lib/hours.ts's formatOpeningHours(), falling back
    * to the English opening_hours lines above when this is null. */
   opening_hours_periods: OpeningHoursPeriod[] | null;
+  /** Non-null only while this scan is the first to SUSPECT Google's
+   * listing lost its website (one real lookup + one real retry, both
+   * empty, despite a website already on file) — see
+   * resolveListingWebsite (lib/googleListingWebsite.ts) and
+   * supabase/schema.sql's own doc. Display-only, never used by
+   * scoring — the stored `website` column itself is always what
+   * scoring reads. */
+  google_listing_missing_website_since: string | null;
+  /** Non-null once a SUSPECTED gap (above) has been CONFIRMED on a
+   * later, separate scan — see resolveListingWebsite's own doc and
+   * supabase/schema.sql's for the real Endless Nails case this exists
+   * for. The one real "is this confirmed" signal — never read for
+   * display (see google_listing_last_known_website_at below for the
+   * real date). Display-only, never used by scoring. */
+  google_listing_website_removed_since: string | null;
+  /** The REAL date Google last actually returned a website, for the
+   * honest "it last showed one on {date}" line — see
+   * findLastKnownWebsiteDate (lib/googleListingWebsite.ts) and
+   * supabase/schema.sql's own doc. Null means either not currently
+   * confirmed missing, or confirmed with no determinable prior date —
+   * the two are told apart by google_listing_website_removed_since
+   * above, never guessed from this field alone. Display-only, never
+   * used by scoring. */
+  google_listing_last_known_website_at: string | null;
 }
 
 export type ScoreBusinessResult =
@@ -83,7 +108,7 @@ export async function scoreBusinessWithClient(
   const { data: business, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, phone, website, rating, review_count, category, categories, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language"
+      "id, name, address, phone, website, rating, review_count, category, categories, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at"
     )
     .eq("id", businessId)
     .single();
@@ -301,7 +326,7 @@ export async function rescanBusinessWithClient(
   const { data: before, error: beforeError } = await supabase
     .from("businesses")
     .select(
-      "owner_id, place_id, phone, website, opening_hours, categories, photo_count, rating, review_count, business_status, language"
+      "owner_id, place_id, phone, website, opening_hours, categories, photo_count, rating, review_count, business_status, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at"
     )
     .eq("id", businessId)
     .single();
@@ -331,14 +356,66 @@ export async function rescanBusinessWithClient(
     return { status: "error", message: lookup.message };
   }
 
+  // Google's fresh lookup came back with no website this time, but we
+  // already have one on file — a single empty response is never trusted
+  // as proof the listing actually lost its website (the real Endless
+  // Nails case this fixes), so retry once for real before deciding
+  // anything. See resolveListingWebsite (lib/googleListingWebsite.ts)
+  // for the exact decision this feeds.
+  let retryLookupWebsite: string | null | undefined;
+  if (!lookup.place.website && before.website) {
+    const retry = await lookupBusinessByPlaceId(before.place_id);
+    retryLookupWebsite = retry.status === "found" ? retry.place.website : null;
+  }
+  const resolvedWebsite = resolveListingWebsite(
+    before.website,
+    lookup.place.website,
+    retryLookupWebsite,
+    before.google_listing_missing_website_since,
+    before.google_listing_website_removed_since,
+    new Date().toISOString()
+  );
+  const placeToSave = { ...lookup.place, website: resolvedWebsite.website };
+
+  // The REAL "it last showed one on {date}" date — see
+  // findLastKnownWebsiteDate's own doc (lib/googleListingWebsite.ts) for
+  // why this must never reuse googleListingWebsiteRemovedSince itself
+  // (the real Endless Nails bug this fixes: a manual one-off restore's
+  // own timestamp had ended up in that field, then in the banner).
+  // Only computed via a real history lookup at the exact moment a
+  // SUSPECTED gap is newly promoted to CONFIRMED; carried forward
+  // unchanged on every later scan that stays confirmed; cleared
+  // whenever not currently confirmed missing.
+  let lastKnownWebsiteAt: string | null = null;
+  if (resolvedWebsite.googleListingWebsiteRemovedSince) {
+    if (before.google_listing_website_removed_since) {
+      // Already confirmed before this scan — carry the real date forward unchanged.
+      lastKnownWebsiteAt = before.google_listing_last_known_website_at;
+    } else {
+      // Newly confirmed THIS scan — look up the real history.
+      const { data: history } = await supabase
+        .from("scores")
+        .select("created_at, profile_snapshot_json")
+        .eq("business_id", businessId);
+      const snapshots = (history ?? []).map((row) => ({
+        website: (row.profile_snapshot_json as { website?: string | null } | null)?.website ?? null,
+        createdAt: row.created_at as string,
+      }));
+      lastKnownWebsiteAt = findLastKnownWebsiteDate(snapshots, resolvedWebsite.googleListingWebsiteRemovedSince);
+    }
+  }
+
   const saved = await saveBusinessWithClient(
     supabase,
     before.owner_id,
-    lookup.place,
+    placeToSave,
     undefined,
     undefined,
     undefined,
-    skipScreenshots
+    skipScreenshots,
+    resolvedWebsite.googleListingMissingWebsiteSince,
+    resolvedWebsite.googleListingWebsiteRemovedSince,
+    lastKnownWebsiteAt
   );
   if (saved.status !== "saved") {
     return saved.status === "unauthenticated"
@@ -353,7 +430,11 @@ export async function rescanBusinessWithClient(
 
   const currentSnapshot: ProfileSnapshot = buildProfileSnapshot({
     phone: lookup.place.phone,
-    website: lookup.place.website,
+    // The real, resolved website — never Google's raw empty response
+    // when that was overridden by resolveListingWebsite above, so the
+    // "what changed" diff never reports a website as removed when it
+    // was actually kept.
+    website: resolvedWebsite.website,
     opening_hours: lookup.place.openingHours,
     categories: lookup.place.categories,
     photo_count: lookup.place.photoCount,

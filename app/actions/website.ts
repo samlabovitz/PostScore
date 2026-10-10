@@ -46,6 +46,26 @@ export interface WebsitePageData {
   /** Real Google-listed website, if any — used only to detect whether
    * this business already has one; never overwritten by this page. */
   website: string | null;
+  /** Non-null only the first scan to SUSPECT Google's listing lost its
+   * website (one lookup + one retry, both empty, despite one kept on
+   * file for scoring) — see resolveListingWebsite in
+   * lib/googleListingWebsite.ts. An honest, separate fact about
+   * Google's OWN listing, never about whether this site is reachable. */
+  googleListingMissingWebsiteSince: string | null;
+  /** Non-null once that suspicion is CONFIRMED on a later, separate
+   * scan — the website is genuinely cleared and scored as missing at
+   * that point. The one real "is this confirmed" signal; never read
+   * for display — see googleListingLastKnownWebsiteAt below for the
+   * real date. Mutually exclusive with googleListingMissingWebsiteSince
+   * above (never both set at once). */
+  googleListingWebsiteRemovedSince: string | null;
+  /** The REAL date Google last actually returned a website — see
+   * findLastKnownWebsiteDate (lib/googleListingWebsite.ts). Shown as
+   * "it last showed one on {date}" ONLY when non-null; when
+   * googleListingWebsiteRemovedSince is set but this is null (no
+   * determinable prior date), show the no-date variant instead of
+   * guessing. */
+  googleListingLastKnownWebsiteAt: string | null;
   googleMapsUri: string | null;
   /** The real, frozen analysis of the live site (screenshot, PageSpeed,
    * content signals) — see WebsiteAnalysis in lib/scoring.ts. null if
@@ -163,7 +183,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "name, address, category, primary_type, business_type_override, phone, opening_hours, opening_hours_periods, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language"
+      "name, address, category, primary_type, business_type_override, phone, opening_hours, opening_hours_periods, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at"
     )
     .eq("id", businessId)
     .single();
@@ -229,6 +249,9 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       rating: data.rating,
       reviewCount: data.review_count,
       website: data.website,
+      googleListingMissingWebsiteSince: data.google_listing_missing_website_since,
+      googleListingWebsiteRemovedSince: data.google_listing_website_removed_since,
+      googleListingLastKnownWebsiteAt: data.google_listing_last_known_website_at,
       googleMapsUri: data.google_maps_uri,
       websiteAnalysis: realInput.websiteAnalysis,
       websiteCategory,

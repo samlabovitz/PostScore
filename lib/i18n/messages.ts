@@ -656,6 +656,9 @@ export type MessageKey =
   | "dashboard.website.businessFallback"
   | "dashboard.website.businessNameFallback"
   | "dashboard.website.pageTitle"
+  | "dashboard.website.googleListingMissingWebsite"
+  | "dashboard.website.googleListingWebsiteRemoved"
+  | "dashboard.website.googleListingWebsiteRemovedUnknownDate"
   | "dashboard.website.faqDraftHeading"
   | "dashboard.website.faqDraftIntro"
   | "dashboard.website.visualAnalysisHeading"
@@ -2965,6 +2968,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.businessFallback": "business",
     "dashboard.website.businessNameFallback": "Your business",
     "dashboard.website.pageTitle": "Website",
+    "dashboard.website.googleListingMissingWebsite":
+      "Google didn't return your website on our last check — make sure it's still on your Google Business Profile.",
+    "dashboard.website.googleListingWebsiteRemoved":
+      "Your Google listing no longer shows a website (it last showed one on {date}).",
+    "dashboard.website.googleListingWebsiteRemovedUnknownDate":
+      "Your Google listing no longer shows a website.",
     "dashboard.website.faqDraftHeading": "FAQ draft",
     "dashboard.website.faqDraftIntro":
       "A starter FAQ for your website, based on what customers of this kind of business typically ask — publishing tools are still coming together, but you're welcome to copy this in today.",
@@ -5309,6 +5318,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.businessFallback": "negocio",
     "dashboard.website.businessNameFallback": "Su negocio",
     "dashboard.website.pageTitle": "Sitio web",
+    "dashboard.website.googleListingMissingWebsite":
+      "Google no mostró su sitio web en nuestra última verificación — asegúrese de que todavía esté en su perfil de negocio de Google.",
+    "dashboard.website.googleListingWebsiteRemoved":
+      "Su ficha de Google ya no muestra un sitio web (la última vez que mostró uno fue el {date}).",
+    "dashboard.website.googleListingWebsiteRemovedUnknownDate":
+      "Su ficha de Google ya no muestra un sitio web.",
     "dashboard.website.faqDraftHeading": "Borrador de preguntas frecuentes",
     "dashboard.website.faqDraftIntro": "Una sección inicial de preguntas frecuentes para su sitio web, basada en lo que suelen preguntar los clientes de este tipo de negocio — las herramientas de publicación aún se están desarrollando, pero puede copiar esto hoy mismo.",
     "dashboard.website.visualAnalysisHeading": "Análisis visual",

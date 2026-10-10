@@ -7,7 +7,7 @@ import { resolveBizProfile, renderFaq } from "@/config/bizProfiles";
 import { WebsiteGeneratorSection } from "./WebsiteGeneratorSection";
 import { WebsiteVisualAnalysis } from "./WebsiteVisualAnalysis";
 import { WebsiteScoreBreakdown } from "./WebsiteScoreBreakdown";
-import { normalizeLocale, t } from "@/lib/i18n";
+import { formatShortDate, normalizeLocale, t } from "@/lib/i18n";
 
 export default async function WebsitePage({ params }: { params: { id: string } }) {
   const result = await getWebsitePageData(params.id);
@@ -112,6 +112,22 @@ export default async function WebsitePage({ params }: { params: { id: string } }
             {t(locale, "dashboard.website.pageTitle")}
           </h1>
         </div>
+
+        {data.googleListingMissingWebsiteSince && (
+          <div className="rounded-lg border border-amber/30 bg-amber/5 px-4 py-3 text-[13px] text-ink-soft">
+            {t(locale, "dashboard.website.googleListingMissingWebsite")}
+          </div>
+        )}
+
+        {data.googleListingWebsiteRemovedSince && (
+          <div className="rounded-lg border border-red/30 bg-red/5 px-4 py-3 text-[13px] text-ink-soft">
+            {data.googleListingLastKnownWebsiteAt
+              ? t(locale, "dashboard.website.googleListingWebsiteRemoved", {
+                  date: formatShortDate(data.googleListingLastKnownWebsiteAt, locale),
+                })
+              : t(locale, "dashboard.website.googleListingWebsiteRemovedUnknownDate")}
+          </div>
+        )}
 
         {hasWebsite ? (
           <>

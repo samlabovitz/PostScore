@@ -113,7 +113,7 @@ async function readAndScoreBusiness(businessId: string, locale: Locale) {
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, phone, website, rating, review_count, category, categories, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language"
+      "id, name, address, phone, website, rating, review_count, category, categories, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at"
     )
     .eq("id", businessId)
     .single();
@@ -432,6 +432,9 @@ async function main() {
       websitePresent: !!scored.business.website && scored.business.website.trim().length > 0,
       httpsStatus: input.httpsStatus,
       httpsUnreachableReason: input.websiteAnalysis?.httpsUnreachableReason ?? null,
+      googleListingMissingWebsiteSince: scored.business.google_listing_missing_website_since,
+      googleListingWebsiteRemovedSince: scored.business.google_listing_website_removed_since,
+      googleListingLastKnownWebsiteAt: scored.business.google_listing_last_known_website_at,
       photoCount: scored.business.photo_count,
       businessStatus: scored.business.business_status,
       categoriesCount: scored.business.categories?.length ?? 0,
