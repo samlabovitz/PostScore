@@ -31,8 +31,8 @@ const BASE_WEBSITE_ANALYSIS: WebsiteAnalysis = {
   screenshotUrl: null,
   additionalPages: [],
   lastScreenshotRefreshAt: null,
-  hasAboutPage: false,
-  hasServicesPage: false,
+  aboutPresence: null,
+  servicesPresence: null,
   checkedAt: "2026-10-01T00:00:00.000Z",
 };
 
@@ -45,6 +45,19 @@ function excludedCheck(id: string, label: string, maxPoints: number): CheckResul
     earnedPoints: null,
     confidence: "NOT_FOUND",
     explanation: "Generic fallback explanation.",
+    meta: null,
+  };
+}
+
+function zeroCheck(id: string, label: string, maxPoints: number, explanation: string): CheckResult {
+  return {
+    id,
+    label,
+    category: "website",
+    maxPoints,
+    earnedPoints: 0,
+    confidence: "VERIFIED",
+    explanation,
     meta: null,
   };
 }
@@ -225,5 +238,37 @@ describe("WebsiteScoreBreakdown — Day 4 Part 3c: honest reasons for an exclude
     expect(html).toContain(
       "Su sitio bloqueó nuestra verificación automática — puede estar funcionando bien para los clientes; ábralo usted mismo para confirmarlo."
     );
+  });
+});
+
+describe("WebsiteScoreBreakdown — Day 4 Task: about_presence/services_presence not_found now counts against the score", () => {
+  test("a real not_found renders as a genuine zero (0/1), not an excluded/gray row — no 'Couldn't verify' prefix, no 'excluded' wording", () => {
+    const check = zeroCheck(
+      "website.about_presence",
+      "About / our story",
+      1,
+      "No real About/Our Story content was found, on a dedicated page or your homepage. Add a page or section with a few real sentences about your business."
+    );
+    const html = renderToText(
+      <LocaleProvider locale="en">
+        <WebsiteScoreBreakdown websiteCategory={categoryWith(check)} websiteAnalysis={BASE_WEBSITE_ANALYSIS} websiteSuggestions={[]} />
+      </LocaleProvider>
+    );
+    expect(html).toContain("0");
+    expect(html).toContain("Add a page or section with a few real sentences about your business.");
+    expect(html).not.toContain("Couldn't verify —");
+    expect(html).not.toContain("Excluded from your score");
+    expect(html).not.toContain("excluded");
+  });
+
+  test("a couldnt_check (genuinely excluded) still shows the gray 'Couldn't verify' treatment — contrast case for the test above", () => {
+    const check = excludedCheck("website.about_presence", "About / our story", 1);
+    const websiteAnalysis: WebsiteAnalysis = { ...BASE_WEBSITE_ANALYSIS };
+    const html = renderToText(
+      <LocaleProvider locale="en">
+        <WebsiteScoreBreakdown websiteCategory={categoryWith(check)} websiteAnalysis={websiteAnalysis} websiteSuggestions={[]} />
+      </LocaleProvider>
+    );
+    expect(html).toContain("Couldn't verify —");
   });
 });

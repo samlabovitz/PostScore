@@ -194,8 +194,8 @@ describe("buildWeeklyPlan", () => {
       screenshotUrl: null,
       additionalPages: [],
       lastScreenshotRefreshAt: null,
-      hasAboutPage: false,
-      hasServicesPage: false,
+      aboutPresence: null,
+      servicesPresence: null,
       checkedAt: "2024-01-01T00:00:00.000Z",
     },
   };
@@ -245,8 +245,8 @@ describe("buildWeeklyPlan", () => {
         screenshotUrl: null,
         additionalPages: [],
         lastScreenshotRefreshAt: null,
-        hasAboutPage: true,
-        hasServicesPage: true,
+        aboutPresence: { state: "found", url: "https://example.com/about", locatedOnHomepage: false, reason: null, note: null },
+        servicesPresence: { state: "found", url: "https://example.com/services", locatedOnHomepage: false, reason: null, note: null },
         checkedAt: "2024-01-01T00:00:00.000Z",
       },
     };

@@ -36,7 +36,7 @@
 
 import { DEFAULT_LOCALE, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
 import { GOOGLE_PHOTO_CAP } from "@/lib/googlePhotoCap";
-import type { ReachabilityFailureReason } from "@/lib/websiteReachability";
+import { reachabilityReasonMessageKey, type ReachabilityFailureReason } from "@/lib/websiteReachability";
 
 // ---------------------------------------------------------------------------
 // Versioning
@@ -250,6 +250,55 @@ export function performanceFailureMessageKey(
   }
 }
 
+/** Three honest states for whether a real About/Our-Story or
+ * Services/Products page or homepage section was actually found — see
+ * website.about_presence/website.services_presence below. "found" means
+ * real, substantial content was actually read (see
+ * lib/pagePresenceDetection.ts for the word-count/listed-items rules);
+ * "not_found" means we looked (a dedicated page and/or the homepage)
+ * and genuinely didn't find enough; "couldnt_check" means a real
+ * attempt failed before we could tell either way (timeout/block/down/
+ * error on a MATCHED candidate page — never guessed). */
+export type PagePresenceState = "found" | "not_found" | "couldnt_check";
+
+/** Extra honest facts beyond the 3 core states, real enough to earn
+ * their own line on the Website page and their own sentence to PostAI:
+ * "pdf_only" (Services only) — a real PDF menu/services list was found
+ * and loads fine, but its content is never read (still counts as
+ * found: the list demonstrably exists for a real visitor, even though
+ * PostScore can't verify what's in it). "broken_link" — a nav/sitemap
+ * link that matched an About/Services keyword returns a real 404: the
+ * link itself is broken, which is stronger, more actionable evidence
+ * than a plain "nothing found," so it's reported as not_found with
+ * this specific note rather than folded into couldnt_check (which is
+ * reserved for genuinely inconclusive failures — timeouts, blocks,
+ * 5xx/other errors — see lib/websiteAnalysis.ts's detectPagePresence). */
+export type PagePresenceNote = "pdf_only" | "broken_link" | null;
+
+/** The real result of looking for About/Our-Story or Services/Products
+ * content — see lib/websiteAnalysis.ts's detectPagePresence for how
+ * this gets produced (candidate page discovery, an extra-page fetch
+ * with its own timeout/retry, PDF/404 handling, a homepage-section
+ * fallback) and lib/pagePresenceDetection.ts for the pure content rules
+ * (main-content-only word counts, real listed items). */
+export interface PagePresenceResult {
+  state: PagePresenceState;
+  /** The real URL where content was found/checked — a dedicated page's
+   * URL, or null when found in a homepage section (see
+   * locatedOnHomepage) or when nothing was ever fetched at all (a plain
+   * not_found with no matching link and no matching homepage heading). */
+  url: string | null;
+  /** True only when state === "found" and the real content lives in a
+   * section of the homepage itself, not a separate page. */
+  locatedOnHomepage: boolean;
+  /** Only set when state === "couldnt_check" — WHY (see
+   * ReachabilityFailureReason's own doc). Always null otherwise. */
+  reason: ReachabilityFailureReason | null;
+  /** See PagePresenceNote's own doc. Always null except the two real
+   * cases it documents. */
+  note: PagePresenceNote;
+}
+
 /**
  * The frozen result of analyzing a business's live website — see
  * lib/websiteAnalysis.ts for how this gets collected (real network
@@ -317,21 +366,16 @@ export interface WebsiteAnalysis {
    * field exists to make possible. Display only; scoreBusiness() never
    * reads it. */
   lastScreenshotRefreshAt: string | null;
-  /** True only when a real page was found in this site's nav links or
-   * sitemap.xml whose link text/URL matches an About/Our Story/Meet The
-   * Team synonym (see lib/websiteAnalysis.ts's detectPagePresence and
-   * ABOUT_PAGE_SYNONYMS) — never inferred from page content, only from a
-   * genuine discovered link. false covers every case where we can't
-   * confirm this: no matching page found, discovery didn't run, or a
-   * single-page site whose About content (if any) lives on the homepage
-   * where we can't detect it. website.about_presence below treats false
-   * identically to "unknown" — excluded, never scored as a failure —
-   * since a missing link is never proof of missing content. */
-  hasAboutPage: boolean;
-  /** Same real page-discovery signal as hasAboutPage, for a Services/
-   * Products/Menu-type page (see SERVICES_PAGE_SYNONYMS) — see
-   * website.services_presence. */
-  hasServicesPage: boolean;
+  /** The real result of looking for About/Our-Story content — see
+   * PagePresenceResult's own doc and lib/websiteAnalysis.ts's
+   * detectPagePresence for how it's produced. null on a row saved
+   * before this detection existed (always excluded/"not yet analyzed",
+   * same honest fallback as every other field saved before it existed
+   * — never guessed as a real not_found). */
+  aboutPresence: PagePresenceResult | null;
+  /** Same real detection as aboutPresence, for Services/Products/Menu
+   * content — see website.services_presence. */
+  servicesPresence: PagePresenceResult | null;
   /** ISO timestamp of collection — display only; scoreBusiness() never
    * reads this (it must stay clock-free), it's for UI "checked X ago"
    * copy. */
@@ -818,8 +862,8 @@ const PERFECT_WEBSITE_ANALYSIS: WebsiteAnalysis = {
   screenshotUrl: null,
   additionalPages: [],
   lastScreenshotRefreshAt: null,
-  hasAboutPage: true,
-  hasServicesPage: true,
+  aboutPresence: { state: "found", url: "https://example.com/about", locatedOnHomepage: false, reason: null, note: null },
+  servicesPresence: { state: "found", url: "https://example.com/services", locatedOnHomepage: false, reason: null, note: null },
   checkedAt: new Date(0).toISOString(),
 };
 
@@ -1531,12 +1575,10 @@ export const CHECKS: CheckDefinition[] = [
     category: "website",
     maxPoints: 1,
     adviceKey: "content.checks.website.about_presence.advice",
-    // Deliberately two-state, not three: a missing About *link* is never
-    // proof of a missing About *section* (it may just live on the
-    // homepage, which page discovery can't see into) — so there's no
-    // honest "real failure" here, only "found" or "couldn't verify." See
-    // WebsiteAnalysis.hasAboutPage's own doc comment for the exact
-    // real-page-discovery signal this reads.
+    // Real three-state detection (Day 4 Step 2c) — see PagePresenceResult's
+    // own doc and lib/websiteAnalysis.ts's detectPagePresence for how
+    // aboutPresence is actually produced (a dedicated page or a homepage
+    // section, with a real word-count/content check, never just a link).
     evaluate(input, locale) {
       if (!input.website || input.website.trim().length === 0) {
         return {
@@ -1552,23 +1594,55 @@ export const CHECKS: CheckDefinition[] = [
           explanation: t(locale, "content.checks.website.about_presence.explanation.notAnalyzed"),
         };
       }
-      if (input.websiteAnalysis.hasAboutPage) {
+      const presence = input.websiteAnalysis.aboutPresence;
+      if (!presence) {
+        // A row saved before this detection existed — honestly "not yet
+        // analyzed," never a guessed not_found.
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: t(locale, "content.checks.website.about_presence.explanation.notAnalyzed"),
+        };
+      }
+      if (presence.state === "found") {
         return {
           earnedPoints: 1,
           confidence: "VERIFIED",
-          explanation: t(locale, "content.checks.website.about_presence.explanation.found"),
+          explanation: presence.locatedOnHomepage
+            ? t(locale, "content.checks.website.about_presence.explanation.foundOnHomepage")
+            : t(locale, "content.checks.website.about_presence.explanation.foundOnPage", { url: presence.url ?? "" }),
         };
       }
+      if (presence.state === "couldnt_check") {
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: presence.reason
+            ? t(locale, reachabilityReasonMessageKey(presence.reason))
+            : t(locale, "content.checks.website.about_presence.explanation.notFound"),
+        };
+      }
+      // not_found — a real, confirmed absence (we looked, on a
+      // dedicated page and/or the homepage, and genuinely didn't find
+      // enough), unlike couldnt_check above (an inconclusive failure) —
+      // so this one counts against the score, VERIFIED at 0, same as
+      // any other real zero (e.g. website.https's http_only branch).
       return {
-        earnedPoints: null,
-        confidence: "NOT_FOUND",
-        explanation: t(locale, "content.checks.website.about_presence.explanation.notFound"),
+        earnedPoints: 0,
+        confidence: "VERIFIED",
+        explanation:
+          presence.note === "broken_link"
+            ? t(locale, "content.checks.website.about_presence.explanation.brokenLink", { url: presence.url ?? "" })
+            : t(locale, "content.checks.website.about_presence.explanation.notFound"),
       };
     },
     simulateFix: (input) => ({
       ...input,
       website: input.website || "https://example.com",
-      websiteAnalysis: { ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS), hasAboutPage: true },
+      websiteAnalysis: {
+        ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
+        aboutPresence: { state: "found", url: "https://example.com/about", locatedOnHomepage: false, reason: null, note: null },
+      },
     }),
   },
   {
@@ -1577,9 +1651,9 @@ export const CHECKS: CheckDefinition[] = [
     category: "website",
     maxPoints: 1,
     adviceKey: "content.checks.website.services_presence.advice",
-    // Same two-state reasoning as website.about_presence above — a
-    // missing Services/Products *link* is never proof there's no
-    // Services/Products *content*.
+    // Same real three-state detection as website.about_presence above —
+    // see servicesPresence's own doc. "pdf_only" is a real found: a real
+    // PDF menu/list loads fine, we just never read its content.
     evaluate(input, locale) {
       if (!input.website || input.website.trim().length === 0) {
         return {
@@ -1595,23 +1669,54 @@ export const CHECKS: CheckDefinition[] = [
           explanation: t(locale, "content.checks.website.services_presence.explanation.notAnalyzed"),
         };
       }
-      if (input.websiteAnalysis.hasServicesPage) {
+      const presence = input.websiteAnalysis.servicesPresence;
+      if (!presence) {
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: t(locale, "content.checks.website.services_presence.explanation.notAnalyzed"),
+        };
+      }
+      if (presence.state === "found") {
         return {
           earnedPoints: 1,
           confidence: "VERIFIED",
-          explanation: t(locale, "content.checks.website.services_presence.explanation.found"),
+          explanation:
+            presence.note === "pdf_only"
+              ? t(locale, "content.checks.website.services_presence.explanation.pdfOnly", { url: presence.url ?? "" })
+              : presence.locatedOnHomepage
+                ? t(locale, "content.checks.website.services_presence.explanation.foundOnHomepage")
+                : t(locale, "content.checks.website.services_presence.explanation.foundOnPage", { url: presence.url ?? "" }),
         };
       }
+      if (presence.state === "couldnt_check") {
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: presence.reason
+            ? t(locale, reachabilityReasonMessageKey(presence.reason))
+            : t(locale, "content.checks.website.services_presence.explanation.notFound"),
+        };
+      }
+      // not_found — see website.about_presence's own comment on this
+      // same branch: a real, confirmed absence counts against the
+      // score, VERIFIED at 0, unlike couldnt_check's genuine exclusion.
       return {
-        earnedPoints: null,
-        confidence: "NOT_FOUND",
-        explanation: t(locale, "content.checks.website.services_presence.explanation.notFound"),
+        earnedPoints: 0,
+        confidence: "VERIFIED",
+        explanation:
+          presence.note === "broken_link"
+            ? t(locale, "content.checks.website.services_presence.explanation.brokenLink", { url: presence.url ?? "" })
+            : t(locale, "content.checks.website.services_presence.explanation.notFound"),
       };
     },
     simulateFix: (input) => ({
       ...input,
       website: input.website || "https://example.com",
-      websiteAnalysis: { ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS), hasServicesPage: true },
+      websiteAnalysis: {
+        ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
+        servicesPresence: { state: "found", url: "https://example.com/services", locatedOnHomepage: false, reason: null, note: null },
+      },
     }),
   },
 ];
@@ -1933,7 +2038,28 @@ function parseMobilePerformanceFailure(value: unknown): MobilePerformanceFailure
 }
 
 function isReachabilityFailureReason(value: unknown): value is ReachabilityFailureReason {
-  return value === "down" || value === "blocked_automated_check" || value === "http_error";
+  return value === "timed_out" || value === "down" || value === "blocked_automated_check" || value === "http_error";
+}
+
+const PAGE_PRESENCE_STATES = new Set(["found", "not_found", "couldnt_check"]);
+const PAGE_PRESENCE_NOTES = new Set(["pdf_only", "broken_link"]);
+
+/** Narrows a stored PagePresenceResult back to the real shape, same
+ * fail-safe reasoning as parseWebsiteAnalysis itself — anything
+ * malformed or missing (including every row saved before this
+ * detection existed) degrades to null ("not yet analyzed"), never a
+ * guessed found/not_found. */
+function parsePagePresenceResult(value: unknown): PagePresenceResult | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  if (typeof v.state !== "string" || !PAGE_PRESENCE_STATES.has(v.state)) return null;
+  return {
+    state: v.state as PagePresenceState,
+    url: typeof v.url === "string" ? v.url : null,
+    locatedOnHomepage: v.locatedOnHomepage === true,
+    reason: isReachabilityFailureReason(v.reason) ? v.reason : null,
+    note: typeof v.note === "string" && PAGE_PRESENCE_NOTES.has(v.note) ? (v.note as PagePresenceNote) : null,
+  };
 }
 
 /** Narrows a stored website_analysis_json value back to the real shape,
@@ -1959,11 +2085,8 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
   const screenshotUrl = typeof v.screenshotUrl === "string" ? v.screenshotUrl : null;
   const additionalPages = parseAdditionalPages(v.additionalPages);
   const lastScreenshotRefreshAt = typeof v.lastScreenshotRefreshAt === "string" ? v.lastScreenshotRefreshAt : null;
-  // A row saved before this signal existed simply predates it — the
-  // honest fallback is false (same as "not found"), not a crash or a
-  // fabricated true.
-  const hasAboutPage = typeof v.hasAboutPage === "boolean" ? v.hasAboutPage : false;
-  const hasServicesPage = typeof v.hasServicesPage === "boolean" ? v.hasServicesPage : false;
+  const aboutPresence = parsePagePresenceResult(v.aboutPresence);
+  const servicesPresence = parsePagePresenceResult(v.servicesPresence);
   const checkedAt = typeof v.checkedAt === "string" ? v.checkedAt : null;
   if (checkedAt === null) return null;
   return {
@@ -1975,8 +2098,8 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
     screenshotUrl,
     additionalPages,
     lastScreenshotRefreshAt,
-    hasAboutPage,
-    hasServicesPage,
+    aboutPresence,
+    servicesPresence,
     checkedAt,
   };
 }

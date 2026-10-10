@@ -33,8 +33,8 @@ const BASE_ANALYSIS: WebsiteAnalysis = {
   screenshotUrl: null,
   additionalPages: [],
   lastScreenshotRefreshAt: null,
-  hasAboutPage: false,
-  hasServicesPage: false,
+  aboutPresence: null,
+  servicesPresence: null,
   checkedAt: "2026-10-01T00:00:00.000Z",
 };
 

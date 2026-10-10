@@ -39,7 +39,12 @@ function excludedReasonMessageKey(check: CheckResult, websiteAnalysis: WebsiteAn
  * moved out of its real category, this just orders the same live
  * checks for scanning). */
 const TECHNICAL_CHECK_IDS = ["website.has_website", "website.https", "website.performance_mobile"];
-const CONTENT_CHECK_IDS = ["website.content_depth", "website.contact_conversion"];
+const CONTENT_CHECK_IDS = [
+  "website.content_depth",
+  "website.contact_conversion",
+  "website.about_presence",
+  "website.services_presence",
+];
 
 /** Four visual states from the same real data, not a new taxonomy: a
  * check is "excluded" whenever it isn't confidently determined

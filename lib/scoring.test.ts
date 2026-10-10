@@ -12,6 +12,8 @@ import {
   type BusinessScoringInput,
   type WebsiteAnalysis,
 } from "./scoring";
+import { DEFAULT_LOCALE, t } from "./i18n";
+import { reachabilityReasonMessageKey } from "./websiteReachability";
 
 // A real, fully-good website analysis — see WebsiteAnalysis in
 // lib/scoring.ts and lib/websiteAnalysis.ts for how this gets collected
@@ -36,8 +38,8 @@ const GOOD_WEBSITE_ANALYSIS: WebsiteAnalysis = {
   screenshotUrl: "https://example.com/screenshot.png",
   additionalPages: [],
   lastScreenshotRefreshAt: "2024-01-01T00:00:00.000Z",
-  hasAboutPage: true,
-  hasServicesPage: true,
+  aboutPresence: { state: "found", url: "https://example.com/about", locatedOnHomepage: false, reason: null, note: null },
+  servicesPresence: { state: "found", url: "https://example.com/services", locatedOnHomepage: false, reason: null, note: null },
   checkedAt: "2024-01-01T00:00:00.000Z",
 };
 
@@ -270,6 +272,144 @@ describe("confidence-aware scoring", () => {
       const breakdown = scoreBusiness(fixed);
       const https = breakdown.checks.find((c) => c.id === "website.https")!;
       expect(https.earnedPoints).toBe(https.maxPoints);
+    });
+  });
+
+  describe("website.about_presence / website.services_presence (Day 4 Step 2c): real three-state detection", () => {
+    test("found on a dedicated page: VERIFIED, full point, explanation names the real URL", () => {
+      const input: BusinessScoringInput = {
+        ...PERFECT_INPUT,
+        websiteAnalysis: {
+          ...GOOD_WEBSITE_ANALYSIS,
+          aboutPresence: { state: "found", url: "https://example.com/about", locatedOnHomepage: false, reason: null, note: null },
+        },
+      };
+      const breakdown = scoreBusiness(input);
+      const check = breakdown.checks.find((c) => c.id === "website.about_presence")!;
+      expect(check.confidence).toBe("VERIFIED");
+      expect(check.earnedPoints).toBe(1);
+      expect(check.explanation).toContain("https://example.com/about");
+    });
+
+    test("found on the homepage (no dedicated page): VERIFIED, full point, explanation says homepage, not a URL", () => {
+      const input: BusinessScoringInput = {
+        ...PERFECT_INPUT,
+        websiteAnalysis: {
+          ...GOOD_WEBSITE_ANALYSIS,
+          aboutPresence: { state: "found", url: null, locatedOnHomepage: true, reason: null, note: null },
+        },
+      };
+      const breakdown = scoreBusiness(input);
+      const check = breakdown.checks.find((c) => c.id === "website.about_presence")!;
+      expect(check.earnedPoints).toBe(1);
+      expect(check.explanation.toLowerCase()).toContain("homepage");
+    });
+
+    test("a real PDF menu/list: Services is found (note pdf_only) — presence doesn't require readable content", () => {
+      const input: BusinessScoringInput = {
+        ...PERFECT_INPUT,
+        websiteAnalysis: {
+          ...GOOD_WEBSITE_ANALYSIS,
+          servicesPresence: { state: "found", url: "https://example.com/menu.pdf", locatedOnHomepage: false, reason: null, note: "pdf_only" },
+        },
+      };
+      const breakdown = scoreBusiness(input);
+      const check = breakdown.checks.find((c) => c.id === "website.services_presence")!;
+      expect(check.confidence).toBe("VERIFIED");
+      expect(check.earnedPoints).toBe(1);
+      expect(check.explanation).toContain("PDF");
+    });
+
+    test("not_found with no note: a real, confirmed zero — VERIFIED, 0/1, counts against the score, honest next-step explanation", () => {
+      const input: BusinessScoringInput = {
+        ...PERFECT_INPUT,
+        websiteAnalysis: {
+          ...GOOD_WEBSITE_ANALYSIS,
+          aboutPresence: { state: "not_found", url: null, locatedOnHomepage: false, reason: null, note: null },
+        },
+      };
+      const breakdown = scoreBusiness(input);
+      const check = breakdown.checks.find((c) => c.id === "website.about_presence")!;
+      expect(check.confidence).toBe("VERIFIED");
+      expect(check.earnedPoints).toBe(0);
+      expect(check.explanation.toLowerCase()).not.toContain("single-page"); // the old, now-inaccurate caveat must be gone
+      expect(check.explanation.toLowerCase()).not.toContain("excluded"); // not_found now counts against the score — never say "excluded"
+    });
+
+    test("not_found with note 'broken_link': a real, confirmed zero — its own honest explanation naming the broken URL, counts against the score", () => {
+      const input: BusinessScoringInput = {
+        ...PERFECT_INPUT,
+        websiteAnalysis: {
+          ...GOOD_WEBSITE_ANALYSIS,
+          servicesPresence: { state: "not_found", url: "https://example.com/services", locatedOnHomepage: false, reason: null, note: "broken_link" },
+        },
+      };
+      const breakdown = scoreBusiness(input);
+      const check = breakdown.checks.find((c) => c.id === "website.services_presence")!;
+      expect(check.confidence).toBe("VERIFIED");
+      expect(check.earnedPoints).toBe(0);
+      expect(check.explanation).toContain("https://example.com/services");
+      expect(check.explanation.toLowerCase()).toContain("broken");
+    });
+
+    test("couldnt_check (unlike not_found) is still genuinely excluded — NOT_FOUND, null points, never a zero", () => {
+      const input: BusinessScoringInput = {
+        ...PERFECT_INPUT,
+        websiteAnalysis: {
+          ...GOOD_WEBSITE_ANALYSIS,
+          aboutPresence: { state: "couldnt_check", url: "https://example.com/about", locatedOnHomepage: false, reason: "down", note: null },
+        },
+      };
+      const breakdown = scoreBusiness(input);
+      const check = breakdown.checks.find((c) => c.id === "website.about_presence")!;
+      expect(check.confidence).toBe("NOT_FOUND");
+      expect(check.earnedPoints).toBeNull();
+    });
+
+    test("couldnt_check reuses the SAME shared reachability message key as website.content_depth/contact_conversion's UI wording — never a separate, drifting string", () => {
+      for (const reason of ["timed_out", "down", "blocked_automated_check", "http_error"] as const) {
+        const input: BusinessScoringInput = {
+          ...PERFECT_INPUT,
+          websiteAnalysis: {
+            ...GOOD_WEBSITE_ANALYSIS,
+            aboutPresence: { state: "couldnt_check", url: "https://example.com/about", locatedOnHomepage: false, reason, note: null },
+          },
+        };
+        const breakdown = scoreBusiness(input);
+        const aboutCheck = breakdown.checks.find((c) => c.id === "website.about_presence")!;
+        expect(aboutCheck.confidence).toBe("NOT_FOUND");
+        expect(aboutCheck.earnedPoints).toBeNull();
+        // Same shared key WebsiteScoreBreakdown.tsx uses for
+        // content_depth/contact_conversion/https — proving about_presence
+        // reuses it directly rather than re-implementing its own wording.
+        expect(aboutCheck.explanation).toBe(t(DEFAULT_LOCALE, reachabilityReasonMessageKey(reason)));
+      }
+    });
+
+    test("a row saved before this detection existed (aboutPresence/servicesPresence null): excluded, 'not yet analyzed', never a guessed not_found", () => {
+      const input: BusinessScoringInput = {
+        ...PERFECT_INPUT,
+        websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, aboutPresence: null, servicesPresence: null },
+      };
+      const breakdown = scoreBusiness(input);
+      const about = breakdown.checks.find((c) => c.id === "website.about_presence")!;
+      const services = breakdown.checks.find((c) => c.id === "website.services_presence")!;
+      expect(about.confidence).toBe("NOT_FOUND");
+      expect(about.earnedPoints).toBeNull();
+      expect(services.confidence).toBe("NOT_FOUND");
+      expect(services.earnedPoints).toBeNull();
+    });
+
+    test("simulateFix reaches full points for both checks via a real found result", () => {
+      const input: BusinessScoringInput = {
+        ...PERFECT_INPUT,
+        websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, aboutPresence: null, servicesPresence: null },
+      };
+      const fixedAbout = applyCheckFix(input, "website.about_presence");
+      const fixedServices = applyCheckFix(fixedAbout, "website.services_presence");
+      const breakdown = scoreBusiness(fixedServices);
+      expect(breakdown.checks.find((c) => c.id === "website.about_presence")!.earnedPoints).toBe(1);
+      expect(breakdown.checks.find((c) => c.id === "website.services_presence")!.earnedPoints).toBe(1);
     });
   });
 });
@@ -650,10 +790,48 @@ describe("businessRowToScoringInput adapter", () => {
       screenshotUrl: null,
       additionalPages: [],
       lastScreenshotRefreshAt: null,
-      hasAboutPage: false,
-      hasServicesPage: false,
+      aboutPresence: null,
+      servicesPresence: null,
       checkedAt: "2024-01-01T00:00:00.000Z",
     });
+
+    const withTimedOut = businessRowToScoringInput({
+      rating: 4.2,
+      review_count: 30,
+      phone: null,
+      address: null,
+      opening_hours: null,
+      website: "https://mybiz.example",
+      https_status: "unreachable",
+      categories: null,
+      category: null,
+      photo_count: null,
+      business_status: null,
+      website_analysis_json: { ...GOOD_WEBSITE_ANALYSIS, httpsUnreachableReason: "timed_out" },
+    });
+    // Regression guard: isReachabilityFailureReason used to be missing
+    // "timed_out" entirely, silently collapsing a stored timed_out
+    // reason back to null on every read — exactly undoing the Day 4
+    // Task "timed_out vs down" fix for any row that round-tripped
+    // through the database.
+    expect(withTimedOut.websiteAnalysis?.httpsUnreachableReason).toBe("timed_out");
+
+    const withMalformedPresence = businessRowToScoringInput({
+      rating: 4.2,
+      review_count: 30,
+      phone: null,
+      address: null,
+      opening_hours: null,
+      website: "https://mybiz.example",
+      https_status: "https",
+      categories: null,
+      category: null,
+      photo_count: null,
+      business_status: null,
+      website_analysis_json: { ...GOOD_WEBSITE_ANALYSIS, aboutPresence: { state: "not_a_real_state" }, servicesPresence: "garbage" },
+    });
+    expect(withMalformedPresence.websiteAnalysis?.aboutPresence).toBeNull();
+    expect(withMalformedPresence.websiteAnalysis?.servicesPresence).toBeNull();
 
     const missing = businessRowToScoringInput({
       rating: 4.2,

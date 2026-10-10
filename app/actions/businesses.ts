@@ -170,12 +170,12 @@ export async function saveBusinessWithClient(
           screenshotUrl: null, // filled in by the follow-up update below
           additionalPages: [], // filled in by the follow-up update below
           lastScreenshotRefreshAt: null, // filled in by the follow-up update below, once the capture attempt lands
-          // No real page-discovery signal exists yet (see
-          // website.about_presence/website.services_presence in
-          // lib/scoring.ts) — honestly false, never guessed, until that
-          // detection is actually built.
-          hasAboutPage: false,
-          hasServicesPage: false,
+          // Real detection (Day 4 Step 2c) — see collectWebsiteAnalysis's
+          // own detectPagePresence. Always fresh, same as content above:
+          // unlike screenshots, this costs at most 2 extra, unbilled page
+          // fetches, so there's no reason to ever carry it forward stale.
+          aboutPresence: analysis.aboutPresence,
+          servicesPresence: analysis.servicesPresence,
           checkedAt,
         }
       : {
@@ -189,11 +189,10 @@ export async function saveBusinessWithClient(
           screenshotUrl: existingAnalysis?.screenshotUrl ?? null,
           additionalPages: existingAnalysis?.additionalPages ?? [],
           lastScreenshotRefreshAt: existingAnalysis?.lastScreenshotRefreshAt ?? null,
-          // Carried forward for the same reason as the fields above — once
-          // real detection exists, a regular re-scan shouldn't silently
-          // reset a previously-detected page back to false.
-          hasAboutPage: existingAnalysis?.hasAboutPage ?? false,
-          hasServicesPage: existingAnalysis?.hasServicesPage ?? false,
+          // Same real detection, freshly re-run on every regular re-scan
+          // too — see the first branch's own comment above.
+          aboutPresence: analysis.aboutPresence,
+          servicesPresence: analysis.servicesPresence,
           checkedAt,
         }
     : null;

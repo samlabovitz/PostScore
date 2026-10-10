@@ -1,5 +1,12 @@
 import { describe, expect, test, vi } from "vitest";
-import { captureScreenshotBytes, captureWebsiteScreenshots, fetchMobilePerformance, fetchWebsiteHtml } from "./websiteAnalysis";
+import {
+  captureScreenshotBytes,
+  captureWebsiteScreenshots,
+  detectPagePresence,
+  fetchMobilePerformance,
+  fetchWebsiteHtml,
+  newPresenceBudget,
+} from "./websiteAnalysis";
 
 // Day 3b: the real measurement behind website.performance_mobile — see
 // fetchMobilePerformance's own doc for the method order (URL-level field
@@ -352,5 +359,239 @@ describe("captureScreenshotBytes / captureWebsiteScreenshots: quota exhaustion n
     expect(result.screenshotBytes).toBeNull();
     expect(result.additionalPages).toHaveLength(1);
     expect(result.additionalPages[0]).toMatchObject({ label: "About us", screenshotBytes: null });
+  });
+});
+
+// Day 4 Step 2c: real About/Our-Story and Services/Products detection —
+// see lib/pagePresenceDetection.ts for the pure content rules this
+// builds on, and lib/scoring.ts's PagePresenceResult for what each
+// field means. Every test drives detectPagePresence directly through
+// an injectable fetchImpl, never a real network call.
+describe("detectPagePresence", () => {
+  const HOMEPAGE_URL = new URL("https://example.com/");
+  const NO_MATCH_HOMEPAGE_HTML = "<main><h1>Welcome</h1><p>Just a generic homepage.</p></main>";
+
+  function htmlResponse(html: string, status = 200): Response {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      headers: new Headers({ "content-type": "text/html" }),
+      text: async () => html,
+    } as unknown as Response;
+  }
+
+  function pdfResponse(): Response {
+    const text = vi.fn(async () => {
+      throw new Error("should never be called — PDF content must never be read");
+    });
+    return { ok: true, status: 200, headers: new Headers({ "content-type": "application/pdf" }), text } as unknown as Response;
+  }
+
+  test("a real PDF menu/list link: Services = found with note 'pdf_only', content never read", async () => {
+    const fetchImpl = vi.fn(async () => pdfResponse());
+    const candidates = [{ url: "https://example.com/menu.pdf", label: "Menu" }];
+
+    const result = await detectPagePresence(
+      "services",
+      NO_MATCH_HOMEPAGE_HTML,
+      HOMEPAGE_URL,
+      candidates,
+      newPresenceBudget(),
+      fetchImpl
+    );
+
+    expect(result).toEqual({
+      state: "found",
+      url: "https://example.com/menu.pdf",
+      locatedOnHomepage: false,
+      reason: null,
+      note: "pdf_only",
+    });
+  });
+
+  test("a real PDF link for About (not Services) falls through to the homepage section instead of guessing", async () => {
+    const fetchImpl = vi.fn(async () => pdfResponse());
+    const candidates = [{ url: "https://example.com/about.pdf", label: "About" }];
+    const homepageWithAboutSection = `<main><h2>About Us</h2><p>${"Real substantial about content. ".repeat(10)}</p></main>`;
+
+    const result = await detectPagePresence(
+      "about",
+      homepageWithAboutSection,
+      HOMEPAGE_URL,
+      candidates,
+      newPresenceBudget(),
+      fetchImpl
+    );
+
+    expect(result.state).toBe("found");
+    expect(result.locatedOnHomepage).toBe(true);
+  });
+
+  test("Day 4 Task: the real Red Bowl case — a thin Menu wrapper page that links to a real PDF menu: Services = found/pdf_only, evidence is the PDF URL", async () => {
+    // Red Bowl's real /menu/ page content (fetched directly for this
+    // fix): almost no real text, just a "View PDF Menu" button linking
+    // to the actual menu.
+    const wrapperHtml =
+      '<div class="et_pb_section"><p>Menu - Red Bowl Home Gallery Online Order Menu Contact Us Select Page Menu</p>' +
+      '<a class="et_pb_button" href="https://website-cdn.menusifu.com/wp-content/uploads/redbowlud.com/2026/07/Red-Bowl-menu.pdf">View PDF Menu</a>' +
+      "<p>Powered by Menusifu. Red Bowl Restaurant all rights reserved.</p></div>";
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(htmlResponse(wrapperHtml)) // the /menu/ wrapper page itself
+      .mockResolvedValueOnce(pdfResponse()); // following the "View PDF Menu" link
+    const candidates = [{ url: "https://www.redbowlud.com/menu/", label: "Menu" }];
+
+    const result = await detectPagePresence(
+      "services",
+      NO_MATCH_HOMEPAGE_HTML,
+      new URL("https://www.redbowlud.com/"),
+      candidates,
+      newPresenceBudget(),
+      fetchImpl
+    );
+
+    expect(result).toEqual({
+      state: "found",
+      url: "https://website-cdn.menusifu.com/wp-content/uploads/redbowlud.com/2026/07/Red-Bowl-menu.pdf",
+      locatedOnHomepage: false,
+      reason: null,
+      note: "pdf_only",
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(2); // the wrapper page, then the PDF — never more
+  });
+
+  test("the PDF-link fallback only fires for Services, never About", async () => {
+    const wrapperHtml =
+      '<p>Short.</p><a href="/our-brochure.pdf">View PDF Menu</a>'; // "menu" text is irrelevant for About
+    const fetchImpl = vi.fn().mockResolvedValueOnce(htmlResponse(wrapperHtml));
+    const candidates = [{ url: "https://example.com/about", label: "About" }];
+
+    const result = await detectPagePresence(
+      "about",
+      NO_MATCH_HOMEPAGE_HTML,
+      HOMEPAGE_URL,
+      candidates,
+      newPresenceBudget(),
+      fetchImpl
+    );
+
+    expect(result.state).toBe("not_found");
+    expect(fetchImpl).toHaveBeenCalledTimes(1); // never followed the PDF link for About
+  });
+
+  test("if the linked PDF candidate turns out NOT to be a real PDF (e.g. a 404), falls back to the honest not_found — never couldnt_check", async () => {
+    const wrapperHtml = '<p>Short.</p><a href="/menu.pdf">View PDF Menu</a>';
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(htmlResponse(wrapperHtml))
+      .mockResolvedValueOnce({ ok: false, status: 404 } as unknown as Response);
+    const candidates = [{ url: "https://example.com/menu", label: "Menu" }];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result).toEqual({ state: "not_found", url: "https://example.com/menu", locatedOnHomepage: false, reason: null, note: null });
+  });
+
+  test("a matched link that 404s: not_found with note 'broken_link' — never couldnt_check", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 404 }) as unknown as Response);
+    const candidates = [{ url: "https://example.com/about/our-story/", label: "Our Story" }];
+
+    const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result).toEqual({
+      state: "not_found",
+      url: "https://example.com/about/our-story/",
+      locatedOnHomepage: false,
+      reason: null,
+      note: "broken_link",
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(1); // never retried — a 404 is a real, final answer
+  });
+
+  test("an AbortError (timeout) on a matched link: couldnt_check/timed_out, after exactly one retry", async () => {
+    const fetchImpl = vi.fn().mockRejectedValue(abortError());
+    const candidates = [{ url: "https://example.com/services", label: "Services" }];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result).toEqual({
+      state: "couldnt_check",
+      url: "https://example.com/services",
+      locatedOnHomepage: false,
+      reason: "timed_out",
+      note: null,
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  test("a real connection error (not AbortError): couldnt_check/down, never retried", async () => {
+    const fetchImpl = vi.fn().mockRejectedValue(new Error("getaddrinfo ENOTFOUND"));
+    const candidates = [{ url: "https://example.com/about", label: "About" }];
+
+    const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("couldnt_check");
+    expect(result.reason).toBe("down");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  test("a bot-block (403) on a matched link: couldnt_check/blocked_automated_check", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 403, text: async () => "" }) as unknown as Response);
+    const candidates = [{ url: "https://example.com/services", label: "Services" }];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("couldnt_check");
+    expect(result.reason).toBe("blocked_automated_check");
+  });
+
+  test("a matched dedicated page that loads but is too thin: not_found, no note — an honest verified absence", async () => {
+    const fetchImpl = vi.fn(async () => htmlResponse("<main><h1>About</h1><p>Short.</p></main>"));
+    const candidates = [{ url: "https://example.com/about", label: "About" }];
+
+    const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result).toEqual({ state: "not_found", url: "https://example.com/about", locatedOnHomepage: false, reason: null, note: null });
+  });
+
+  test("a matched dedicated page with real substantial content: found, url points at the real page", async () => {
+    const html = `<main><h1>About Us</h1><p>${"Real substantial about content with real sentences. ".repeat(6)}</p></main>`;
+    const fetchImpl = vi.fn(async () => htmlResponse(html));
+    const candidates = [{ url: "https://example.com/about", label: "About" }];
+
+    const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result).toEqual({ state: "found", url: "https://example.com/about", locatedOnHomepage: false, reason: null, note: null });
+  });
+
+  test("no matching candidate link and no matching homepage section: honest not_found, zero network calls", async () => {
+    const fetchImpl = vi.fn();
+
+    const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, [], newPresenceBudget(), fetchImpl);
+
+    expect(result).toEqual({ state: "not_found", url: null, locatedOnHomepage: false, reason: null, note: null });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  test("about and services share one fetch budget — each candidate fetched exactly once, never double-fetched", async () => {
+    const fetchImpl = vi.fn(async () =>
+      htmlResponse(
+        `<main><h1>Real page</h1><p>${"Real substantial content with real sentences here. ".repeat(8)}</p><ul><li>Item one</li><li>Item two</li><li>Item three</li></ul></main>`
+      )
+    );
+    const candidates = [
+      { url: "https://example.com/about", label: "About" },
+      { url: "https://example.com/services", label: "Services" },
+    ];
+    const budget = newPresenceBudget();
+
+    const [about, services] = await Promise.all([
+      detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, budget, fetchImpl),
+      detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, budget, fetchImpl),
+    ]);
+
+    expect(about.state).toBe("found");
+    expect(services.state).toBe("found");
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 });

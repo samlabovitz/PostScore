@@ -298,14 +298,19 @@ export type MessageKey =
   | "content.checks.website.about_presence.advice"
   | "content.checks.website.about_presence.explanation.noWebsite"
   | "content.checks.website.about_presence.explanation.notAnalyzed"
-  | "content.checks.website.about_presence.explanation.found"
+  | "content.checks.website.about_presence.explanation.foundOnPage"
+  | "content.checks.website.about_presence.explanation.foundOnHomepage"
   | "content.checks.website.about_presence.explanation.notFound"
+  | "content.checks.website.about_presence.explanation.brokenLink"
   | "content.checks.website.services_presence.label"
   | "content.checks.website.services_presence.advice"
   | "content.checks.website.services_presence.explanation.noWebsite"
   | "content.checks.website.services_presence.explanation.notAnalyzed"
-  | "content.checks.website.services_presence.explanation.found"
+  | "content.checks.website.services_presence.explanation.foundOnPage"
+  | "content.checks.website.services_presence.explanation.foundOnHomepage"
+  | "content.checks.website.services_presence.explanation.pdfOnly"
   | "content.checks.website.services_presence.explanation.notFound"
+  | "content.checks.website.services_presence.explanation.brokenLink"
   // --- Shared content layer: listing-change descriptions (lib/profileChanges.ts) ---
   | "content.listingChange.phone.added"
   | "content.listingChange.phone.removed"
@@ -2475,11 +2480,14 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Add a real About or Our Story page (linked from your main navigation) — a short background/team page reassures visitors this is a real, established business.",
     "content.checks.website.about_presence.explanation.noWebsite": "Not applicable — no website on file to check.",
     "content.checks.website.about_presence.explanation.notAnalyzed":
-      "This site hasn't been analyzed yet — re-scan to check its real navigation.",
-    "content.checks.website.about_presence.explanation.found":
-      "Found a real About/Our Story page linked from this site's navigation or sitemap.",
+      "This site hasn't been analyzed yet — re-scan to check its real content.",
+    "content.checks.website.about_presence.explanation.foundOnPage": "Found real About/Our Story content at {url}.",
+    "content.checks.website.about_presence.explanation.foundOnHomepage":
+      "Found a real About/Our Story section on your homepage.",
     "content.checks.website.about_presence.explanation.notFound":
-      "Couldn't verify — no About/Our Story page was found in this site's navigation or sitemap. A single-page site may have this content on its homepage instead, which we can't detect. Excluded from your score, not counted against you.",
+      "No real About/Our Story content was found, on a dedicated page or your homepage. Add a page or section with a few real sentences about your business.",
+    "content.checks.website.about_presence.explanation.brokenLink":
+      "Your navigation links to an About page at {url}, but that page doesn't load (a broken link) — fix or remove it.",
 
     "content.checks.website.services_presence.label": "Services / products",
     "content.checks.website.services_presence.advice":
@@ -2487,11 +2495,16 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.services_presence.explanation.noWebsite":
       "Not applicable — no website on file to check.",
     "content.checks.website.services_presence.explanation.notAnalyzed":
-      "This site hasn't been analyzed yet — re-scan to check its real navigation.",
-    "content.checks.website.services_presence.explanation.found":
-      "Found a real Services/Products page linked from this site's navigation or sitemap.",
+      "This site hasn't been analyzed yet — re-scan to check its real content.",
+    "content.checks.website.services_presence.explanation.foundOnPage": "Found real Services/Products content at {url}.",
+    "content.checks.website.services_presence.explanation.foundOnHomepage":
+      "Found a real Services/Products section on your homepage.",
+    "content.checks.website.services_presence.explanation.pdfOnly":
+      "Found a real PDF menu/list at {url} — we can't read PDF content, but a visitor can.",
     "content.checks.website.services_presence.explanation.notFound":
-      "Couldn't verify — no Services/Products page was found in this site's navigation or sitemap. A single-page site may list these on its homepage instead, which we can't detect. Excluded from your score, not counted against you.",
+      "No real Services/Products content was found, on a dedicated page or your homepage. Add a page or section listing what you offer.",
+    "content.checks.website.services_presence.explanation.brokenLink":
+      "Your navigation links to a Services/Products page at {url}, but that page doesn't load (a broken link) — fix or remove it.",
 
     // --- content.listingChange.* — pure extraction of lib/profileChanges.ts's
     // diffProfileSnapshots() sentences, byte-for-byte.
@@ -4874,15 +4887,20 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.about_presence.label": "Acerca de / nuestra historia",
     "content.checks.website.about_presence.advice": "Agregue una página real de Acerca de o Nuestra historia (enlazada desde su navegación principal) — una breve página de antecedentes o de equipo les da confianza a los visitantes de que este es un negocio real y establecido.",
     "content.checks.website.about_presence.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para comprobar.",
-    "content.checks.website.about_presence.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para comprobar su navegación real.",
-    "content.checks.website.about_presence.explanation.found": "Se encontró una página real de Acerca de / Nuestra historia enlazada desde la navegación o el mapa del sitio.",
-    "content.checks.website.about_presence.explanation.notFound": "No se pudo verificar — no se encontró ninguna página de Acerca de / Nuestra historia en la navegación ni en el mapa del sitio. Un sitio de una sola página puede tener este contenido en su página de inicio, lo cual no podemos detectar. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.about_presence.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para comprobar su contenido real.",
+    "content.checks.website.about_presence.explanation.foundOnPage": "Se encontró contenido real de Acerca de / Nuestra historia en {url}.",
+    "content.checks.website.about_presence.explanation.foundOnHomepage": "Se encontró una sección real de Acerca de / Nuestra historia en su página de inicio.",
+    "content.checks.website.about_presence.explanation.notFound": "No se encontró contenido real de Acerca de / Nuestra historia, ni en una página dedicada ni en su página de inicio. Agregue una página o sección con algunas oraciones reales sobre su negocio.",
+    "content.checks.website.about_presence.explanation.brokenLink": "Su navegación enlaza a una página de Acerca de en {url}, pero esa página no carga (un enlace roto) — corríjalo o elimínelo.",
     "content.checks.website.services_presence.label": "Servicios / productos",
     "content.checks.website.services_presence.advice": "Agregue una página real de Servicios, Productos o Menú (enlazada desde su navegación principal) — tanto los visitantes como los motores de búsqueda buscan una lista clara de lo que ofrece.",
     "content.checks.website.services_presence.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para comprobar.",
-    "content.checks.website.services_presence.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para comprobar su navegación real.",
-    "content.checks.website.services_presence.explanation.found": "Se encontró una página real de Servicios / Productos enlazada desde la navegación o el mapa del sitio.",
-    "content.checks.website.services_presence.explanation.notFound": "No se pudo verificar — no se encontró ninguna página de Servicios / Productos en la navegación ni en el mapa del sitio. Un sitio de una sola página puede listarlos en su página de inicio, lo cual no podemos detectar. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.services_presence.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para comprobar su contenido real.",
+    "content.checks.website.services_presence.explanation.foundOnPage": "Se encontró contenido real de Servicios / Productos en {url}.",
+    "content.checks.website.services_presence.explanation.foundOnHomepage": "Se encontró una sección real de Servicios / Productos en su página de inicio.",
+    "content.checks.website.services_presence.explanation.pdfOnly": "Se encontró un menú/lista real en PDF en {url} — no podemos leer el contenido de un PDF, pero un visitante sí puede.",
+    "content.checks.website.services_presence.explanation.notFound": "No se encontró contenido real de Servicios / Productos, ni en una página dedicada ni en su página de inicio. Agregue una página o sección que liste lo que ofrece.",
+    "content.checks.website.services_presence.explanation.brokenLink": "Su navegación enlaza a una página de Servicios/Productos en {url}, pero esa página no carga (un enlace roto) — corríjalo o elimínelo.",
     "content.listingChange.phone.added": "Se agregó un número de teléfono a su ficha.",
     "content.listingChange.phone.removed": "Se eliminó el número de teléfono de su ficha.",
     "content.listingChange.phone.changed": "Su número de teléfono cambió.",

@@ -21,10 +21,21 @@ import type {
   FieldSpeedCategory,
   MobilePerformanceFailure,
   MobilePerformanceMeasurement,
+  PagePresenceResult,
   RenderedContentSignals,
   WebsiteContentSignals,
 } from "./scoring";
 import { classifyUnreachableResponse, moreSpecificReason, type ReachabilityFailureReason } from "./websiteReachability";
+import {
+  ABOUT_PAGE_KEYWORDS,
+  SERVICES_PAGE_KEYWORDS,
+  aboutContentPasses,
+  extractMainContentHtml,
+  extractVisibleText as extractMainContentVisibleText,
+  findKeywordSection,
+  findPdfMenuLink,
+  servicesContentPasses,
+} from "./pagePresenceDetection";
 
 /** Widened from 8000ms (Day 4 Task "timed_out vs down" fix) — see
  * lib/websiteHttps.ts's own TIMEOUT_MS doc for the real Colorful Yun
@@ -273,6 +284,238 @@ function normalizeHost(hostname: string): string {
 
 function normalizePath(pathname: string): string {
   return pathname.replace(/\/+$/, "") || "/";
+}
+
+// ---------------------------------------------------------------------
+// Day 4 Step 2c: real About/Our-Story and Services/Products detection.
+// See lib/pagePresenceDetection.ts for the pure content rules (main-
+// content-only word counts, real listed items, the heading-level-aware
+// section boundary) this calls into, and lib/scoring.ts's
+// PagePresenceResult/website.about_presence/website.services_presence
+// for how the result is scored and explained.
+// ---------------------------------------------------------------------
+
+/** Shared budget across both About and Services detection within one
+ * scan — caps real extra network requests at MAX_PRESENCE_EXTRA_FETCHES
+ * total, not per-kind, and caches by URL so a page that happens to
+ * match both keyword lists (unlikely but possible) is only ever
+ * fetched once. Raised from 2 to 3 for the real Red Bowl case: a
+ * matched Menu/Services page with too little real content of its own
+ * can still link out to a real PDF menu (see findPdfMenuLink in
+ * lib/pagePresenceDetection.ts) — following that ONE extra link is a
+ * 3rd fetch, never a 4th (About never spends more than 1, and this
+ * fallback only ever fires for Services' own candidate page). */
+const MAX_PRESENCE_EXTRA_FETCHES = 3;
+
+type PresenceFetchOutcome =
+  | { kind: "ok"; html: string }
+  | { kind: "pdf" }
+  | { kind: "broken_link" }
+  | { kind: "failed"; reason: ReachabilityFailureReason };
+
+/** One single real attempt at a matched candidate page — no retry here
+ * (fetchPresenceCandidate below owns that). Never throws. Same
+ * AbortError-vs-other-error timed_out/down split as every other probe
+ * in this file. A real 404 is reported as its own "broken_link" outcome
+ * (never folded into the generic http_error/couldnt_check bucket — a
+ * dead nav link is stronger, more actionable evidence than an
+ * inconclusive failure). A real PDF (by Content-Type, checked before
+ * reading any body) is reported as "pdf" without ever reading its
+ * content. */
+async function fetchPresenceCandidateOnce(url: string, fetchImpl: typeof fetch): Promise<PresenceFetchOutcome> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), HTML_FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetchImpl(url, {
+      method: "GET",
+      redirect: "follow",
+      headers: { "User-Agent": "PostScoreBot/1.0 (+https://postscore.app)" },
+      signal: controller.signal,
+    });
+    if (res.status === 404) return { kind: "broken_link" };
+    if (!res.ok) {
+      let bodySnippet: string | null = null;
+      try {
+        bodySnippet = (await res.text()).slice(0, 4000);
+      } catch {
+        bodySnippet = null;
+      }
+      return { kind: "failed", reason: classifyUnreachableResponse(res.status, bodySnippet) };
+    }
+    const contentType = res.headers.get("content-type") ?? "";
+    if (contentType.toLowerCase().includes("application/pdf")) return { kind: "pdf" };
+    const html = await res.text();
+    return { kind: "ok", html };
+  } catch (err) {
+    const isTimeout = (err as { name?: string } | null)?.name === "AbortError";
+    return { kind: "failed", reason: isTimeout ? "timed_out" : "down" };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Retries exactly once, only on a timeout — same reasoning as every
+ * other probe/fetch in this file. Never retries a 404/PDF/real non-
+ * timeout failure, since none of those would change on a second try. */
+async function fetchPresenceCandidate(url: string, fetchImpl: typeof fetch): Promise<PresenceFetchOutcome> {
+  let last: PresenceFetchOutcome = { kind: "failed", reason: "down" };
+  for (let attempt = 1; attempt <= HTML_FETCH_MAX_ATTEMPTS; attempt++) {
+    last = await fetchPresenceCandidateOnce(url, fetchImpl);
+    if (last.kind !== "failed" || last.reason !== "timed_out") return last;
+    if (attempt < HTML_FETCH_MAX_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, HTML_FETCH_RETRY_DELAY_MS));
+    }
+  }
+  return last;
+}
+
+function findPresenceCandidatePage(candidates: DiscoveredPage[], homepageUrl: URL, keywords: string[]): DiscoveredPage | null {
+  const homeHost = normalizeHost(homepageUrl.hostname);
+  const homePath = normalizePath(homepageUrl.pathname);
+  for (const c of candidates) {
+    let u: URL;
+    try {
+      u = new URL(c.url);
+    } catch {
+      continue;
+    }
+    if (normalizeHost(u.hostname) !== homeHost) continue;
+    const path = normalizePath(u.pathname);
+    if (path === homePath) continue;
+    const haystack = `${c.label} ${path}`;
+    const lower = haystack.toLowerCase();
+    if (keywords.some((kw) => lower.includes(kw))) {
+      return { url: `${u.origin}${u.pathname}`, label: c.label };
+    }
+  }
+  return null;
+}
+
+/** Shared mutable state for one scan's about+services detection — a
+ * single object so both calls (see detectPagePresence) draw from the
+ * same MAX_PRESENCE_EXTRA_FETCHES budget and never double-fetch the
+ * same URL. */
+export interface PresenceBudget {
+  fetchesUsed: number;
+  cache: Map<string, PresenceFetchOutcome>;
+}
+
+export function newPresenceBudget(): PresenceBudget {
+  return { fetchesUsed: 0, cache: new Map() };
+}
+
+async function fetchPresenceCandidateBudgeted(
+  url: string,
+  budget: PresenceBudget,
+  fetchImpl: typeof fetch
+): Promise<PresenceFetchOutcome | null> {
+  const cached = budget.cache.get(url);
+  if (cached) return cached;
+  if (budget.fetchesUsed >= MAX_PRESENCE_EXTRA_FETCHES) return null;
+  budget.fetchesUsed++;
+  const outcome = await fetchPresenceCandidate(url, fetchImpl);
+  budget.cache.set(url, outcome);
+  return outcome;
+}
+
+/**
+ * Real detection for whether a business's website has genuine
+ * About/Our-Story or Services/Products content — see
+ * lib/pagePresenceDetection.ts for the pure word-count/listed-items
+ * rules this applies, and PagePresenceResult's own doc (lib/scoring.ts)
+ * for exactly what each state/note means. Tries, in order:
+ *   1. A dedicated page discovered in the homepage's nav links or
+ *      sitemap.xml whose link text/URL matches a bilingual keyword —
+ *      fetched with its own timeout+retry (budgeted, see PresenceBudget).
+ *      A real PDF counts as found (Services only, note "pdf_only"); a
+ *      real 404 counts as not_found (note "broken_link"); any other
+ *      real failure (timeout/block/down/http_error) is couldnt_check.
+ *   1b. Services only: if that candidate page loaded but didn't have
+ *      enough real content of its own, and it links out to what looks
+ *      like a real PDF menu (see findPdfMenuLink), follow that ONE
+ *      link too (a 3rd possible budgeted fetch) and confirm it's a
+ *      real PDF before trusting it — the real Red Bowl case this
+ *      exists for: a bare "View PDF Menu" wrapper page.
+ *   2. A homepage section under a heading matching the same keywords
+ *      (see lib/pagePresenceDetection.ts's findKeywordSection) — only
+ *      tried when no dedicated page was discovered at all (or the
+ *      fetch budget ran out), since a matched link that fails to load
+ *      is real, specific evidence that must never be silently replaced
+ *      by a homepage guess.
+ *   3. Otherwise, honestly not_found — nothing discoverable either way.
+ * Never throws.
+ */
+export async function detectPagePresence(
+  kind: "about" | "services",
+  homepageHtml: string,
+  homepageUrl: URL,
+  candidates: DiscoveredPage[],
+  budget: PresenceBudget,
+  fetchImpl: typeof fetch
+): Promise<PagePresenceResult> {
+  const keywords = kind === "about" ? ABOUT_PAGE_KEYWORDS : SERVICES_PAGE_KEYWORDS;
+  const candidate = findPresenceCandidatePage(candidates, homepageUrl, keywords);
+
+  if (candidate) {
+    const outcome = await fetchPresenceCandidateBudgeted(candidate.url, budget, fetchImpl);
+    if (outcome) {
+      if (outcome.kind === "broken_link") {
+        return { state: "not_found", url: candidate.url, locatedOnHomepage: false, reason: null, note: "broken_link" };
+      }
+      if (outcome.kind === "pdf") {
+        // A real PDF counts as found content for Services only — a
+        // visitor can open and read it, even though PostScore never
+        // reads PDF content itself. For About, a PDF is not a
+        // meaningful result either way; fall through to the homepage
+        // section check below rather than guessing.
+        if (kind === "services") {
+          return { state: "found", url: candidate.url, locatedOnHomepage: false, reason: null, note: "pdf_only" };
+        }
+      } else if (outcome.kind === "failed") {
+        return { state: "couldnt_check", url: candidate.url, locatedOnHomepage: false, reason: outcome.reason, note: null };
+      } else {
+        const mainHtml = extractMainContentHtml(outcome.html);
+        const text = extractMainContentVisibleText(mainHtml);
+        const passes = kind === "about" ? aboutContentPasses(text) : servicesContentPasses(mainHtml, text);
+        if (passes) {
+          return { state: "found", url: candidate.url, locatedOnHomepage: false, reason: null, note: null };
+        }
+        // Real Red Bowl case: a Services candidate page can have too
+        // little real content of its own while still linking out to a
+        // real PDF menu (e.g. a bare "View PDF Menu" button). Follow
+        // that ONE link (budgeted, a 3rd possible fetch — see
+        // MAX_PRESENCE_EXTRA_FETCHES) and confirm it actually loads as
+        // a real PDF before trusting it. Any outcome other than a
+        // confirmed PDF (404, timeout, block, or just not a PDF) falls
+        // back to the plain not_found below — the wrapper page itself
+        // loaded fine and genuinely lacked content, which is still
+        // honest evidence; this fallback only ever upgrades that
+        // result, never turns it into a new failure state.
+        if (kind === "services") {
+          const pdfUrl = findPdfMenuLink(mainHtml, candidate.url);
+          if (pdfUrl) {
+            const pdfOutcome = await fetchPresenceCandidateBudgeted(pdfUrl, budget, fetchImpl);
+            if (pdfOutcome?.kind === "pdf") {
+              return { state: "found", url: pdfUrl, locatedOnHomepage: false, reason: null, note: "pdf_only" };
+            }
+          }
+        }
+        return { state: "not_found", url: candidate.url, locatedOnHomepage: false, reason: null, note: null };
+      }
+    }
+    // Budget exhausted (outcome === null) — fall through to the
+    // homepage-section check rather than spending a 3rd fetch.
+  }
+
+  const mainHomepageHtml = extractMainContentHtml(homepageHtml);
+  const section = findKeywordSection(mainHomepageHtml, keywords);
+  if (section) {
+    const passes = kind === "about" ? aboutContentPasses(section.text) : servicesContentPasses(section.html, section.text);
+    if (passes) {
+      return { state: "found", url: null, locatedOnHomepage: true, reason: null, note: null };
+    }
+  }
+  return { state: "not_found", url: null, locatedOnHomepage: false, reason: null, note: null };
 }
 
 /** Picks up to MAX_ADDITIONAL_PAGES real, same-domain candidates —
@@ -744,6 +987,12 @@ export interface WebsiteAnalysisCollection {
    * whatever's already stored rather than getting a fresh (possibly
    * empty) discovery result here. */
   additionalPages: AdditionalPageCapture[];
+  /** Real About/Our-Story detection — see PagePresenceResult's own doc
+   * (lib/scoring.ts) and detectPagePresence above. */
+  aboutPresence: PagePresenceResult;
+  /** Same real detection as aboutPresence, for Services/Products/Menu
+   * content. */
+  servicesPresence: PagePresenceResult;
 }
 
 /**
@@ -798,11 +1047,37 @@ export async function collectWebsiteAnalysis(
     ? htmlResultPromise.then((r) => captureWebsiteScreenshots(website, r.html, keys.screenshotApiKey, fetchImpl))
     : Promise.resolve<WebsiteScreenshotCapture>({ screenshotBytes: null, additionalPages: [] });
 
-  const [htmlResult, contentResult, pageSpeedResult, screenshotsResult] = await Promise.allSettled([
+  const presencePromise: Promise<{ about: PagePresenceResult; services: PagePresenceResult }> = htmlResultPromise.then(
+    async (r) => {
+      if (!r.html) {
+        const reason = r.failureReason ?? "down";
+        const couldntCheck: PagePresenceResult = { state: "couldnt_check", url: null, locatedOnHomepage: false, reason, note: null };
+        return { about: couldntCheck, services: couldntCheck };
+      }
+      const target = /^https?:\/\//i.test(website.trim()) ? website.trim() : `https://${website.trim()}`;
+      let homepageUrl: URL;
+      try {
+        homepageUrl = new URL(target);
+      } catch {
+        const notFound: PagePresenceResult = { state: "not_found", url: null, locatedOnHomepage: false, reason: null, note: null };
+        return { about: notFound, services: notFound };
+      }
+      const candidates = [...extractLinkCandidates(r.html, homepageUrl), ...(await fetchSitemapLocs(homepageUrl, fetchImpl))];
+      const budget = newPresenceBudget();
+      const [about, services] = await Promise.all([
+        detectPagePresence("about", r.html, homepageUrl, candidates, budget, fetchImpl),
+        detectPagePresence("services", r.html, homepageUrl, candidates, budget, fetchImpl),
+      ]);
+      return { about, services };
+    }
+  );
+
+  const [htmlResult, contentResult, pageSpeedResult, screenshotsResult, presenceResult] = await Promise.allSettled([
     htmlResultPromise,
     contentPromise,
     pageSpeedPromise,
     screenshotsPromise,
+    presencePromise,
   ]);
 
   const htmlFailureReason = htmlResult.status === "fulfilled" ? htmlResult.value.failureReason : "down";
@@ -810,6 +1085,8 @@ export async function collectWebsiteAnalysis(
   const pageSpeed = pageSpeedResult.status === "fulfilled" ? pageSpeedResult.value : EMPTY_MOBILE_PERFORMANCE_RESULT;
   const screenshots =
     screenshotsResult.status === "fulfilled" ? screenshotsResult.value : { screenshotBytes: null, additionalPages: [] };
+  const FALLBACK_PRESENCE: PagePresenceResult = { state: "couldnt_check", url: null, locatedOnHomepage: false, reason: "down", note: null };
+  const presence = presenceResult.status === "fulfilled" ? presenceResult.value : { about: FALLBACK_PRESENCE, services: FALLBACK_PRESENCE };
 
   // Only attach PageSpeed's recovered signals when the shell was
   // actually detected — the static-fetch fields (hasTitle etc.) on
@@ -830,5 +1107,7 @@ export async function collectWebsiteAnalysis(
     mobilePerformanceFailureReason: pageSpeed.measurement ? null : pageSpeed.failureReason,
     screenshotBytes: screenshots.screenshotBytes,
     additionalPages: screenshots.additionalPages,
+    aboutPresence: presence.about,
+    servicesPresence: presence.services,
   };
 }

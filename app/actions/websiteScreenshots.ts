@@ -92,8 +92,8 @@ export async function refreshWebsiteScreenshots(businessId: string): Promise<Ref
     lastScreenshotRefreshAt,
     // Not touched by this action — see the doc comment above.
     checkedAt: existing?.checkedAt ?? lastScreenshotRefreshAt,
-    hasAboutPage: existing?.hasAboutPage ?? false,
-    hasServicesPage: existing?.hasServicesPage ?? false,
+    aboutPresence: existing?.aboutPresence ?? null,
+    servicesPresence: existing?.servicesPresence ?? null,
   };
 
   const { error: updateError } = await supabase
