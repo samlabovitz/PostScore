@@ -21,8 +21,25 @@
 import type { WebsiteContentSignals } from "./scoring";
 import { WEBSITE_CTA_PHRASES } from "./scoring";
 
-function stripHtmlComments(html: string): string {
-  return html.replace(/<!--[\s\S]*?-->/g, " ");
+/**
+ * Strips every real markup that is NEVER visible to a real visitor —
+ * HTML comments, `<script>`, `<style>`, `<noscript>` (shown only to
+ * visitors with JavaScript disabled, not a real body fact), and
+ * `<template>` (inert by spec until cloned by JS). Comments are
+ * stripped FIRST: a naive `/<[^>]+>/` tag-stripper otherwise treats a
+ * comment's own opening tag (e.g. `<!--<p>real-looking text</p>-->`) as
+ * the first "tag," stopping at ITS `>` and leaking the comment's real
+ * text into "visible" content as if a real visitor could read it (Day
+ * 4 Task, the real Bagel Emporium case lib/pagePresenceDetection.ts's
+ * own stripNonVisibleMarkup fixes the same way).
+ */
+function stripNonVisibleMarkup(html: string): string {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<template[\s\S]*?<\/template>/gi, " ");
 }
 
 /** Below this many visible characters (and zero real headings), a page
@@ -82,20 +99,20 @@ function decodeBasicEntities(text: string): string {
     .replace(/&#39;|&apos;/gi, "'");
 }
 
-/** Strips <script>/<style> blocks (their text is never visible content),
- * then all remaining tags, decodes a few common entities, and collapses
- * whitespace — a deliberately simple approximation of "what a visitor
- * actually reads on the page." */
+/** Strips every non-visible markup kind (see stripNonVisibleMarkup),
+ * then all remaining tags, decodes a few common entities, and
+ * collapses whitespace — a deliberately simple approximation of "what
+ * a visitor actually reads on the page." Self-contained (re-strips
+ * comments/noscript/template even though `clean` below already has
+ * them removed) so this stays correct even if called directly on
+ * un-pre-processed HTML in the future. */
 function extractVisibleText(html: string): string {
-  const withoutScripts = html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ");
-  const withoutTags = withoutScripts.replace(/<[^>]+>/g, " ");
+  const withoutTags = stripNonVisibleMarkup(html).replace(/<[^>]+>/g, " ");
   return decodeBasicEntities(withoutTags).replace(/\s+/g, " ").trim();
 }
 
 export function analyzeWebsiteHtml(html: string): WebsiteContentSignals {
-  const clean = stripHtmlComments(html);
+  const clean = stripNonVisibleMarkup(html);
 
   const title = extractTag(clean, /<title[^>]*>([\s\S]*?)<\/title>/i);
   const hasTitle = !!title && decodeBasicEntities(title).trim().length > 0;

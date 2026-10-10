@@ -110,4 +110,28 @@ describe("analyzeWebsiteHtml", () => {
     const html = `<html><head><title>x</title></head><body><p>Learn more about our story.</p></body></html>`;
     expect(analyzeWebsiteHtml(html).hasCtaText).toBe(false);
   });
+
+  test("Day 4 Task: a commented-out <p> never leaks its text into visibleTextLength (real Bagel Emporium bug fix)", () => {
+    const realText = "Hi";
+    const commentedText =
+      '<!--<p style="text-align:center;">YOM KIPPUR PRE-ORDERING IS DONE BUT WE ARE OPEN MONDAY FOR WALK-INS, a genuinely long commented-out sentence that must never count.</p>-->';
+    const html = `<html><head><title>x</title></head><body><p>${realText}</p>${commentedText}</body></html>`;
+    const signals = analyzeWebsiteHtml(html);
+    expect(signals.visibleTextLength).toBeLessThan(10);
+  });
+
+  test("a heading hidden inside an HTML comment is never counted toward headingCount", () => {
+    const html = `<html><head><title>x</title></head><body><p>Hi</p><!-- <h2>Fake Heading</h2> --></body></html>`;
+    expect(analyzeWebsiteHtml(html).headingCount).toBe(0);
+  });
+
+  test("<noscript> fallback content never counts as real visible text", () => {
+    const html = `<html><head><title>x</title></head><body><p>Hi</p><noscript>Please enable JavaScript to view this site properly and see all our real content here.</noscript></body></html>`;
+    expect(analyzeWebsiteHtml(html).visibleTextLength).toBeLessThan(10);
+  });
+
+  test("<template> content is inert and never counts as real visible text", () => {
+    const html = `<html><head><title>x</title></head><body><p>Hi</p><template><p>Ghost content never actually rendered to a real visitor by the browser.</p></template></body></html>`;
+    expect(analyzeWebsiteHtml(html).visibleTextLength).toBeLessThan(10);
+  });
 });
