@@ -56,6 +56,84 @@ function getApiKey(): string {
   return key;
 }
 
+// Every real network call this module makes (search, details, nearby
+// search) goes through fetchPlacesApi below — bounded by a real
+// AbortController timeout, never able to hang indefinitely the way a
+// bare fetch() can on a stalled connection. A business's own re-scan
+// (app/actions/scoring.ts's rescanBusinessWithClient) used to be able to
+// sit blocked on exactly this for a very long time (a real incident,
+// not hypothetical) before finally throwing a generic "fetch failed" —
+// unlike every other probe in this codebase (lib/websiteHttps.ts,
+// lib/websiteAnalysis.ts, lib/pagePresenceDetection.ts), which already
+// bound every fetch this same way.
+const PLACES_TIMEOUT_MS = 10000;
+/** One retry — only on a timeout or a retryable (5xx) HTTP status,
+ * never on a 4xx (a bad request/key would just fail identically again)
+ * and never on any other thrown error (DNS failure, connection refused
+ * — also unlikely to resolve on an immediate retry). On final failure
+ * this throws a real Error; every caller here already has, or gets, a
+ * try/catch that turns this into an honest stored failure — never a
+ * hang, and never partial/fabricated data saved as if the call
+ * succeeded. */
+const PLACES_MAX_ATTEMPTS = 2;
+const PLACES_RETRY_DELAY_MS = 500;
+
+function isRetryablePlacesStatus(status: number): boolean {
+  return status >= 500;
+}
+
+type PlacesAttemptOutcome =
+  | { kind: "ok"; res: Response }
+  | { kind: "timed_out" }
+  | { kind: "http_error"; status: number; body: string }
+  | { kind: "network_error"; message: string };
+
+async function fetchPlacesOnce(url: string, init: RequestInit, fetchImpl: typeof fetch): Promise<PlacesAttemptOutcome> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PLACES_TIMEOUT_MS);
+  try {
+    const res = await fetchImpl(url, { ...init, signal: controller.signal });
+    if (res.ok) return { kind: "ok", res };
+    const body = await res.text();
+    return { kind: "http_error", status: res.status, body };
+  } catch (err) {
+    const isTimeout = (err as { name?: string } | null)?.name === "AbortError";
+    return isTimeout
+      ? { kind: "timed_out" }
+      : { kind: "network_error", message: err instanceof Error ? err.message : "Unknown error" };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * The one real place every Places API fetch goes through — see
+ * PLACES_MAX_ATTEMPTS's own doc for the retry rule. `label` is just for
+ * an honest, specific thrown message (e.g. "Google Places details").
+ */
+async function fetchPlacesApi(
+  url: string,
+  init: RequestInit,
+  label: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<Response> {
+  let last: PlacesAttemptOutcome = { kind: "network_error", message: "Unknown error" };
+  for (let attempt = 1; attempt <= PLACES_MAX_ATTEMPTS; attempt++) {
+    last = await fetchPlacesOnce(url, init, fetchImpl);
+    if (last.kind === "ok") return last.res;
+    const shouldRetry = last.kind === "timed_out" || (last.kind === "http_error" && isRetryablePlacesStatus(last.status));
+    if (!shouldRetry || attempt >= PLACES_MAX_ATTEMPTS) break;
+    await new Promise((resolve) => setTimeout(resolve, PLACES_RETRY_DELAY_MS));
+  }
+  if (last.kind === "timed_out") {
+    throw new Error(`${label} timed out after ${PLACES_MAX_ATTEMPTS} attempt(s).`);
+  }
+  if (last.kind === "http_error") {
+    throw new Error(`${label} failed (${last.status}): ${last.body}`);
+  }
+  throw new Error(`${label} failed: ${last.message}`);
+}
+
 export interface PlaceCandidate {
   placeId: string;
   name: string;
@@ -175,43 +253,41 @@ export interface NearbyCandidate {
   priceLevel: string | null;
 }
 
-async function searchPlaces(textQuery: string): Promise<RawSearchPlace[]> {
-  const res = await fetch(`${PLACES_API_BASE}/places:searchText`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": getApiKey(),
-      "X-Goog-FieldMask": SEARCH_FIELD_MASK,
+async function searchPlaces(textQuery: string, fetchImpl: typeof fetch = fetch): Promise<RawSearchPlace[]> {
+  const res = await fetchPlacesApi(
+    `${PLACES_API_BASE}/places:searchText`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": getApiKey(),
+        "X-Goog-FieldMask": SEARCH_FIELD_MASK,
+      },
+      body: JSON.stringify({ textQuery, maxResultCount: 5 }),
     },
-    body: JSON.stringify({ textQuery, maxResultCount: 5 }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Google Places search failed (${res.status}): ${body}`);
-  }
+    "Google Places search",
+    fetchImpl
+  );
 
   const data = (await res.json()) as { places?: RawSearchPlace[] };
   return data.places ?? [];
 }
 
 async function getPlaceDetails(
-  placeId: string
+  placeId: string,
+  fetchImpl: typeof fetch = fetch
 ): Promise<{ place: PlaceDetails; raw: RawDetailsPlace }> {
-  const res = await fetch(
+  const res = await fetchPlacesApi(
     `${PLACES_API_BASE}/places/${encodeURIComponent(placeId)}`,
     {
       headers: {
         "X-Goog-Api-Key": getApiKey(),
         "X-Goog-FieldMask": DETAILS_FIELD_MASK,
       },
-    }
+    },
+    "Google Places details",
+    fetchImpl
   );
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Google Places details failed (${res.status}): ${body}`);
-  }
 
   const raw = (await res.json()) as RawDetailsPlace;
   return { place: normalizeDetails(raw), raw };
@@ -285,7 +361,9 @@ export async function searchNearbyPlaces(params: {
    * compete with locally") should pass "DISTANCE" explicitly.
    */
   rankPreference?: "DISTANCE" | "POPULARITY";
-}): Promise<NearbyCandidate[]> {
+  },
+  fetchImpl: typeof fetch = fetch
+): Promise<NearbyCandidate[]> {
   const body: Record<string, unknown> = {
     maxResultCount: params.maxResultCount ?? 20,
     locationRestriction: {
@@ -302,20 +380,20 @@ export async function searchNearbyPlaces(params: {
     body.rankPreference = params.rankPreference;
   }
 
-  const res = await fetch(`${PLACES_API_BASE}/places:searchNearby`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": getApiKey(),
-      "X-Goog-FieldMask": NEARBY_SEARCH_FIELD_MASK,
+  const res = await fetchPlacesApi(
+    `${PLACES_API_BASE}/places:searchNearby`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": getApiKey(),
+        "X-Goog-FieldMask": NEARBY_SEARCH_FIELD_MASK,
+      },
+      body: JSON.stringify(body),
     },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Google Places nearby search failed (${res.status}): ${errText}`);
-  }
+    "Google Places nearby search",
+    fetchImpl
+  );
 
   const data = (await res.json()) as { places?: RawNearbyPlace[] };
   return (data.places ?? []).map(normalizeNearby);
@@ -324,17 +402,18 @@ export async function searchNearbyPlaces(params: {
 /** Look up a business by name + free-form location (e.g. "Blue Bottle Coffee", "Oakland, CA"). */
 export async function lookupBusiness(
   name: string,
-  location: string
+  location: string,
+  fetchImpl: typeof fetch = fetch
 ): Promise<PlaceLookupResult> {
   try {
-    const candidates = await searchPlaces(`${name} ${location}`.trim());
+    const candidates = await searchPlaces(`${name} ${location}`.trim(), fetchImpl);
 
     if (candidates.length === 0) {
       return { status: "no_results" };
     }
 
     if (candidates.length === 1) {
-      const { place, raw } = await getPlaceDetails(candidates[0].id);
+      const { place, raw } = await getPlaceDetails(candidates[0].id, fetchImpl);
       return { status: "found", place, raw };
     }
 
@@ -356,10 +435,11 @@ export async function lookupBusiness(
 
 /** Fetch full details for a specific place, e.g. after the caller picks one of several matches. */
 export async function lookupBusinessByPlaceId(
-  placeId: string
+  placeId: string,
+  fetchImpl: typeof fetch = fetch
 ): Promise<PlaceLookupResult> {
   try {
-    const { place, raw } = await getPlaceDetails(placeId);
+    const { place, raw } = await getPlaceDetails(placeId, fetchImpl);
     return { status: "found", place, raw };
   } catch (err) {
     return {
