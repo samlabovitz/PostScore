@@ -3,13 +3,16 @@ import {
   CATEGORY_WEIGHTS,
   CHECKS,
   CategoryId,
+  MAX_PERFORMANCE_CARRY_FORWARD_MS,
   applyCheckFix,
   businessRowToScoringInput,
+  carryForwardMobilePerformance,
   generateSuggestions,
   getScoreWithSuggestions,
   gradeFromTotal,
   scoreBusiness,
   type BusinessScoringInput,
+  type MobilePerformanceMeasurement,
   type WebsiteAnalysis,
 } from "./scoring";
 import { DEFAULT_LOCALE, t } from "./i18n";
@@ -1143,4 +1146,105 @@ describe("website.performance_mobile: field-vs-lab measurement (Day 3b)", () => 
     const check = fixed.checks.find((c) => c.id === "website.performance_mobile")!;
     expect(check.earnedPoints).toBe(10);
   });
+
+  // Oct 10 audit fix: PageSpeed carry-forward on a timeout — see
+  // carryForwardMobilePerformance's own doc for the real Blue Bottle
+  // Coffee case this fixes.
+  test("a carried-forward lab measurement still scores normally, but with the honest 'last measured {date}' wording", () => {
+    const breakdown = scoreBusiness(
+      withMeasurement({ method: "lab", fieldCategory: null, labScore: 27, measuredAt: "2026-10-06T20:40:00.000Z", carriedForward: true })
+    );
+    const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
+    expect(check.earnedPoints).toBe(1.6);
+    expect(check.confidence).toBe("VERIFIED");
+    expect(check.explanation).toContain("27/100");
+    expect(check.explanation.toLowerCase()).toContain("last measured");
+    expect(check.explanation).not.toContain("middle of 3 runs"); // the normal wording, replaced
+  });
+
+  test("a carried-forward field measurement also gets the 'last measured {date}' wording", () => {
+    const breakdown = scoreBusiness(
+      withMeasurement({ method: "field", fieldCategory: "SLOW", labScore: null, measuredAt: "2026-09-15T00:00:00.000Z", carriedForward: true })
+    );
+    const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
+    expect(check.earnedPoints).toBe(1.2);
+    expect(check.explanation.toLowerCase()).toContain("last measured");
+    expect(check.explanation).not.toContain("28 days"); // the normal field wording, replaced
+  });
+
+  test("a FRESH measurement (carriedForward false/absent) never gets the carried-forward wording, even with a real measuredAt", () => {
+    const breakdown = scoreBusiness(
+      withMeasurement({ method: "lab", fieldCategory: null, labScore: 50, measuredAt: new Date().toISOString() })
+    );
+    const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
+    expect(check.explanation.toLowerCase()).not.toContain("last measured");
+    expect(check.explanation).toContain("middle of 3 runs");
+  });
 });
+
+describe("carryForwardMobilePerformance (Oct 10 audit fix): the real Blue Bottle Coffee case", () => {
+  const NOW = new Date("2026-10-09T23:36:35.000Z");
+  const RECENT: MobilePerformanceMeasurement = {
+    method: "lab",
+    fieldCategory: null,
+    labScore: 27,
+    measuredAt: "2026-10-06T20:40:28.954Z", // ~3 days before NOW
+  };
+
+  test("a fresh successful measurement is always used as-is — no carry-forward needed", () => {
+    const fresh: MobilePerformanceMeasurement = { method: "lab", fieldCategory: null, labScore: 80, measuredAt: NOW.toISOString() };
+    const result = carryForwardMobilePerformance(fresh, null, RECENT, NOW);
+    expect(result.mobilePerformance).toEqual(fresh);
+    expect(result.mobilePerformanceFailureReason).toBeNull();
+  });
+
+  test("the real Blue Bottle case: this scan timed out, a real measurement from 3 days ago exists — reused, marked carriedForward, failure reason cleared", () => {
+    const result = carryForwardMobilePerformance(null, { kind: "timed_out", status: null }, RECENT, NOW);
+    expect(result.mobilePerformance).toEqual({ ...RECENT, carriedForward: true });
+    expect(result.mobilePerformanceFailureReason).toBeNull();
+  });
+
+  test("never reuses a measurement older than 30 days — excluded instead, failure reason preserved", () => {
+    const stale: MobilePerformanceMeasurement = { ...RECENT, measuredAt: "2026-08-01T00:00:00.000Z" };
+    const result = carryForwardMobilePerformance(null, { kind: "timed_out", status: null }, stale, NOW);
+    expect(result.mobilePerformance).toBeNull();
+    expect(result.mobilePerformanceFailureReason).toEqual({ kind: "timed_out", status: null });
+  });
+
+  test("exactly at the 30-day boundary still counts (inclusive)", () => {
+    const boundary: MobilePerformanceMeasurement = { ...RECENT, measuredAt: new Date(NOW.getTime() - MAX_PERFORMANCE_CARRY_FORWARD_MS).toISOString() };
+    const result = carryForwardMobilePerformance(null, { kind: "timed_out", status: null }, boundary, NOW);
+    expect(result.mobilePerformance).not.toBeNull();
+  });
+
+  test("never reuses on any OTHER failure kind — only a genuine timeout, never http_error/no_api_key/error", () => {
+    for (const failure of [
+      { kind: "http_error" as const, status: 500 },
+      { kind: "no_api_key" as const, status: null },
+      { kind: "error" as const, status: null },
+    ]) {
+      const result = carryForwardMobilePerformance(null, failure, RECENT, NOW);
+      expect(result.mobilePerformance).toBeNull();
+      expect(result.mobilePerformanceFailureReason).toEqual(failure);
+    }
+  });
+
+  test("the real Qamaria Yemeni Coffee Co. case: no failure at all (a genuinely fresh success) — carry-forward never even considered", () => {
+    const fresh: MobilePerformanceMeasurement = { method: "lab", fieldCategory: null, labScore: 26, measuredAt: NOW.toISOString() };
+    const result = carryForwardMobilePerformance(fresh, null, null, NOW);
+    expect(result.mobilePerformance).toEqual(fresh);
+  });
+
+  test("no prior measurement at all to reuse: honestly excluded, never fabricated", () => {
+    const result = carryForwardMobilePerformance(null, { kind: "timed_out", status: null }, null, NOW);
+    expect(result.mobilePerformance).toBeNull();
+    expect(result.mobilePerformanceFailureReason).toEqual({ kind: "timed_out", status: null });
+  });
+
+  test("a prior measurement with no measuredAt at all (a legacy row) is never reused", () => {
+    const legacy: MobilePerformanceMeasurement = { method: "lab", fieldCategory: null, labScore: 50 };
+    const result = carryForwardMobilePerformance(null, { kind: "timed_out", status: null }, legacy, NOW);
+    expect(result.mobilePerformance).toBeNull();
+  });
+});
+

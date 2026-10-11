@@ -34,7 +34,7 @@
 // DEFAULT_LOCALE, so every existing caller that doesn't pass one keeps
 // getting the exact same English text this file used to hardcode.
 
-import { DEFAULT_LOCALE, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
+import { DEFAULT_LOCALE, formatShortDate, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
 import { GOOGLE_PHOTO_CAP } from "@/lib/googlePhotoCap";
 import { reachabilityReasonMessageKey, type ReachabilityFailureReason } from "@/lib/websiteReachability";
 
@@ -204,6 +204,22 @@ export interface MobilePerformanceMeasurement {
   /** 0-100, the median of 3 real Lighthouse mobile-performance runs. Set
    * only when method === "lab"; null otherwise. */
   labScore: number | null;
+  /** Real ISO timestamp of when this measurement was actually taken —
+   * set by fetchMobilePerformance (lib/websiteAnalysis.ts) the moment a
+   * fresh field/lab measurement succeeds. Optional: absent on every
+   * fixture/test that doesn't care, and on any row saved before this
+   * field existed. Only ever READ when carriedForward is true below —
+   * see carryForwardMobilePerformance's own doc. */
+  measuredAt?: string;
+  /** True only when this measurement is a reused, out-of-date value
+   * carried forward because THIS scan's own PageSpeed attempt timed
+   * out and a real measurement from within the last 30 days existed to
+   * reuse (see carryForwardMobilePerformance below) — never set true
+   * for a measurement that was actually just taken this scan. Optional;
+   * absent/false both honestly mean "this is a fresh measurement" (or a
+   * row from before this field existed, same honest meaning either
+   * way). */
+  carriedForward?: boolean;
 }
 
 /** Why a PageSpeed Insights attempt didn't produce a usable measurement
@@ -248,6 +264,52 @@ export function performanceFailureMessageKey(
     case "error":
       return null;
   }
+}
+
+/** How far back a real prior measurement can still be honestly reused
+ * on a timeout — see carryForwardMobilePerformance's own doc. 30 real
+ * days: long enough that a single bad PageSpeed run never has to fall
+ * back to a flat "couldn't verify," short enough that a genuinely
+ * stale number is never passed off as current. */
+export const MAX_PERFORMANCE_CARRY_FORWARD_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Decides the real mobilePerformance/mobilePerformanceFailureReason
+ * pair to actually save for this scan — reusing a real PRIOR
+ * measurement, labeled honestly as "last measured {date}" (see
+ * website.performance_mobile's own evaluate()), rather than excluding
+ * the check outright, when and ONLY when:
+ *   - this scan's own PageSpeed attempt genuinely timed out (never on
+ *     any other failure kind — http_error/no_api_key/error are real,
+ *     different facts a stale reuse would misrepresent), AND
+ *   - a real prior measurement exists, with its own real measuredAt,
+ *     from within MAX_PERFORMANCE_CARRY_FORWARD_MS.
+ *
+ * The real Blue Bottle Coffee case this fixes: a single flaky PageSpeed
+ * timeout was swinging its total score up by double digits (excluding
+ * a real, recent 27/100 measurement entirely) purely because that one
+ * scan's own attempt happened to time out, not because anything about
+ * the site changed. Deliberately does NOT help the Qamaria Yemeni
+ * Coffee Co. case (a genuinely new real measurement succeeding for the
+ * first time, not a timeout reusing a stale one) — that's a different,
+ * real volatility problem (lab-score noise between runs), not this
+ * function's job.
+ */
+export function carryForwardMobilePerformance(
+  fresh: MobilePerformanceMeasurement | null,
+  freshFailureReason: MobilePerformanceFailure | null,
+  existing: MobilePerformanceMeasurement | null | undefined,
+  now: Date = new Date()
+): { mobilePerformance: MobilePerformanceMeasurement | null; mobilePerformanceFailureReason: MobilePerformanceFailure | null } {
+  if (fresh) return { mobilePerformance: fresh, mobilePerformanceFailureReason: null };
+  if (freshFailureReason?.kind !== "timed_out" || !existing?.measuredAt) {
+    return { mobilePerformance: null, mobilePerformanceFailureReason: freshFailureReason };
+  }
+  const age = now.getTime() - new Date(existing.measuredAt).getTime();
+  if (!Number.isFinite(age) || age < 0 || age > MAX_PERFORMANCE_CARRY_FORWARD_MS) {
+    return { mobilePerformance: null, mobilePerformanceFailureReason: freshFailureReason };
+  }
+  return { mobilePerformance: { ...existing, carriedForward: true }, mobilePerformanceFailureReason: null };
 }
 
 /** Three honest states for whether a real About/Our-Story or
@@ -1373,11 +1435,16 @@ export const CHECKS: CheckDefinition[] = [
       if (measurement.method === "lab" && measurement.labScore !== null) {
         const score = measurement.labScore;
         return {
-          earnedPoints: roundTo((score / 100) * 10, 1),
+          earnedPoints: roundTo((score / 100) * 6, 1),
           confidence: "VERIFIED",
-          explanation: t(locale, "content.checks.website.performance_mobile.explanation.lab", {
-            score: Math.round(score),
-          }),
+          explanation: lastMeasuredDate
+            ? t(locale, "content.checks.website.performance_mobile.explanation.labLastMeasured", {
+                score: Math.round(score),
+                date: lastMeasuredDate,
+              })
+            : t(locale, "content.checks.website.performance_mobile.explanation.lab", {
+                score: Math.round(score),
+              }),
           meta: { method: "lab" },
         };
       }
@@ -2044,11 +2111,13 @@ function isFieldSpeedCategory(value: unknown): value is FieldSpeedCategory {
 function parseMobilePerformance(value: unknown): MobilePerformanceMeasurement | null {
   if (!value || typeof value !== "object") return null;
   const v = value as Record<string, unknown>;
+  const measuredAt = typeof v.measuredAt === "string" ? v.measuredAt : undefined;
+  const carriedForward = v.carriedForward === true ? true : undefined;
   if (v.method === "field" && isFieldSpeedCategory(v.fieldCategory)) {
-    return { method: "field", fieldCategory: v.fieldCategory, labScore: null };
+    return { method: "field", fieldCategory: v.fieldCategory, labScore: null, measuredAt, carriedForward };
   }
   if (v.method === "lab" && typeof v.labScore === "number") {
-    return { method: "lab", fieldCategory: null, labScore: v.labScore };
+    return { method: "lab", fieldCategory: null, labScore: v.labScore, measuredAt, carriedForward };
   }
   return null;
 }

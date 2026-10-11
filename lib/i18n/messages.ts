@@ -257,6 +257,8 @@ export type MessageKey =
   | "content.checks.website.performance_mobile.explanation.noScore"
   | "content.checks.website.performance_mobile.explanation.field"
   | "content.checks.website.performance_mobile.explanation.lab"
+  | "content.checks.website.performance_mobile.explanation.fieldLastMeasured"
+  | "content.checks.website.performance_mobile.explanation.labLastMeasured"
   | "content.checks.website.performance_mobile.fieldCategory.fast"
   | "content.checks.website.performance_mobile.fieldCategory.average"
   | "content.checks.website.performance_mobile.fieldCategory.slow"
@@ -2427,6 +2429,10 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Real visitors on phones over the last 28 days (Google Chrome data): {category}.",
     "content.checks.website.performance_mobile.explanation.lab":
       "Simulated phone test, middle of 3 runs: {score}/100. Results can vary between tests.",
+    "content.checks.website.performance_mobile.explanation.fieldLastMeasured":
+      "Real visitors on phones (Google Chrome data) — last measured {date}: {category}. This scan's own speed check didn't respond in time, so we're showing the most recent real measurement instead of excluding this.",
+    "content.checks.website.performance_mobile.explanation.labLastMeasured":
+      "Simulated phone test — last measured {date}: {score}/100. This scan's own speed check didn't respond in time, so we're showing the most recent real measurement instead of excluding this.",
     "content.checks.website.performance_mobile.fieldCategory.fast": "fast",
     "content.checks.website.performance_mobile.fieldCategory.average": "average",
     "content.checks.website.performance_mobile.fieldCategory.slow": "slow",
@@ -4868,6 +4874,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.performance_mobile.explanation.noScore": "No se pudo obtener una medición real de velocidad para este sitio — o la comprobación de PageSpeed de PostScore aún no está configurada, o la API de Google PageSpeed Insights no pudo completar la auditoría (sin datos reales de usuarios y fallaron todas las pruebas simuladas). Se excluye de su puntuación, no se cuenta en su contra.",
     "content.checks.website.performance_mobile.explanation.field": "Visitantes reales en teléfonos durante los últimos 28 días (datos de Google Chrome): {category}.",
     "content.checks.website.performance_mobile.explanation.lab": "Prueba simulada en teléfono, valor medio de 3 pruebas: {score}/100. Los resultados pueden variar entre pruebas.",
+    "content.checks.website.performance_mobile.explanation.fieldLastMeasured": "Visitantes reales en teléfonos (datos de Google Chrome) — última medición el {date}: {category}. La comprobación de velocidad de este escaneo no respondió a tiempo, así que mostramos la medición real más reciente en lugar de excluir esto.",
+    "content.checks.website.performance_mobile.explanation.labLastMeasured": "Prueba simulada en teléfono — última medición el {date}: {score}/100. La comprobación de velocidad de este escaneo no respondió a tiempo, así que mostramos la medición real más reciente en lugar de excluir esto.",
     "content.checks.website.performance_mobile.fieldCategory.fast": "rápido",
     "content.checks.website.performance_mobile.fieldCategory.average": "promedio",
     "content.checks.website.performance_mobile.fieldCategory.slow": "lento",

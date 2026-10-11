@@ -10,6 +10,7 @@ import { uploadWebsiteScreenshots } from "@/lib/websiteScreenshotUpload";
 import { bizProfileById } from "@/config/bizProfiles";
 import {
   businessRowToScoringInput,
+  carryForwardMobilePerformance,
   parseWebsiteAnalysis,
   scoreBusiness,
   type BusinessScoringRow,
@@ -175,13 +176,27 @@ export async function saveBusinessWithClient(
   ]);
   const httpsStatus = httpsResult?.status ?? null;
 
+  // Only ever reuses a real PRIOR measurement when THIS scan's own
+  // PageSpeed attempt specifically timed out and that prior measurement
+  // is recent enough — see carryForwardMobilePerformance's own doc
+  // (lib/scoring.ts) for the real Blue Bottle Coffee case this fixes.
+  // Never applies when there's no website analysis at all (analysis is
+  // null) — existingAnalysis itself is also null in that case.
+  const { mobilePerformance, mobilePerformanceFailureReason } = analysis
+    ? carryForwardMobilePerformance(
+        analysis.mobilePerformance,
+        analysis.mobilePerformanceFailureReason,
+        existingAnalysis?.mobilePerformance
+      )
+    : { mobilePerformance: null, mobilePerformanceFailureReason: null };
+
   const checkedAt = new Date().toISOString();
   const websiteAnalysis: WebsiteAnalysis | null = analysis
     ? captureScreenshots
       ? {
           content: analysis.content,
-          mobilePerformance: analysis.mobilePerformance,
-          mobilePerformanceFailureReason: analysis.mobilePerformanceFailureReason,
+          mobilePerformance,
+          mobilePerformanceFailureReason,
           contentFetchFailureReason: analysis.contentFetchFailureReason,
           httpsUnreachableReason: httpsResult?.reason ?? null,
           screenshotUrl: null, // filled in by the follow-up update below
@@ -197,8 +212,8 @@ export async function saveBusinessWithClient(
         }
       : {
           content: analysis.content,
-          mobilePerformance: analysis.mobilePerformance,
-          mobilePerformanceFailureReason: analysis.mobilePerformanceFailureReason,
+          mobilePerformance,
+          mobilePerformanceFailureReason,
           contentFetchFailureReason: analysis.contentFetchFailureReason,
           httpsUnreachableReason: httpsResult?.reason ?? null,
           // Regular re-scan: reuse whatever's already stored rather than
