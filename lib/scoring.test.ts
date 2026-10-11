@@ -411,6 +411,72 @@ describe("confidence-aware scoring", () => {
       expect(breakdown.checks.find((c) => c.id === "website.about_presence")!.earnedPoints).toBe(1);
       expect(breakdown.checks.find((c) => c.id === "website.services_presence")!.earnedPoints).toBe(1);
     });
+
+    test("couldnt_check/js_rendered: excluded (NOT_FOUND, null points), its own honest wording — never counted against the score as a guessed zero", () => {
+      const input: BusinessScoringInput = {
+        ...PERFECT_INPUT,
+        websiteAnalysis: {
+          ...GOOD_WEBSITE_ANALYSIS,
+          aboutPresence: { state: "couldnt_check", url: null, locatedOnHomepage: false, reason: "js_rendered", note: null },
+          servicesPresence: { state: "couldnt_check", url: null, locatedOnHomepage: false, reason: "js_rendered", note: null },
+        },
+      };
+      const breakdown = scoreBusiness(input);
+      const about = breakdown.checks.find((c) => c.id === "website.about_presence")!;
+      const services = breakdown.checks.find((c) => c.id === "website.services_presence")!;
+      expect(about.confidence).toBe("NOT_FOUND");
+      expect(about.earnedPoints).toBeNull();
+      expect(about.explanation.toLowerCase()).toContain("javascript");
+      expect(services.confidence).toBe("NOT_FOUND");
+      expect(services.earnedPoints).toBeNull();
+      expect(services.explanation.toLowerCase()).toContain("javascript");
+      // Never the generic reachability wording — js_rendered is a real,
+      // different fact (the page loaded fine) from down/timed_out/etc.
+      expect(about.explanation.toLowerCase()).not.toContain("blocked");
+    });
+
+    test("Services found with note 'online_ordering': VERIFIED, full point, names the real ordering URL, honest about not reading the items", () => {
+      const input: BusinessScoringInput = {
+        ...PERFECT_INPUT,
+        websiteAnalysis: {
+          ...GOOD_WEBSITE_ANALYSIS,
+          servicesPresence: {
+            state: "found",
+            url: "https://www.toasttab.com/some-business",
+            locatedOnHomepage: false,
+            reason: null,
+            note: "online_ordering",
+          },
+        },
+      };
+      const breakdown = scoreBusiness(input);
+      const check = breakdown.checks.find((c) => c.id === "website.services_presence")!;
+      expect(check.confidence).toBe("VERIFIED");
+      expect(check.earnedPoints).toBe(1);
+      expect(check.explanation).toContain("https://www.toasttab.com/some-business");
+      expect(check.explanation.toLowerCase()).toContain("can't read");
+    });
+
+    test("Services found with note 'image_only': VERIFIED, full point, names the real menu URL, honest about it being an image", () => {
+      const input: BusinessScoringInput = {
+        ...PERFECT_INPUT,
+        websiteAnalysis: {
+          ...GOOD_WEBSITE_ANALYSIS,
+          servicesPresence: {
+            state: "found",
+            url: "https://example.com/newark-menus",
+            locatedOnHomepage: false,
+            reason: null,
+            note: "image_only",
+          },
+        },
+      };
+      const breakdown = scoreBusiness(input);
+      const check = breakdown.checks.find((c) => c.id === "website.services_presence")!;
+      expect(check.confidence).toBe("VERIFIED");
+      expect(check.earnedPoints).toBe(1);
+      expect(check.explanation.toLowerCase()).toContain("image");
+    });
   });
 });
 

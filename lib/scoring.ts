@@ -272,8 +272,25 @@ export type PagePresenceState = "found" | "not_found" | "couldnt_check";
  * than a plain "nothing found," so it's reported as not_found with
  * this specific note rather than folded into couldnt_check (which is
  * reserved for genuinely inconclusive failures — timeouts, blocks,
- * 5xx/other errors — see lib/websiteAnalysis.ts's detectPagePresence). */
-export type PagePresenceNote = "pdf_only" | "broken_link" | null;
+ * 5xx/other errors — see lib/websiteAnalysis.ts's detectPagePresence).
+ * "online_ordering" (Services only) — a real "Order online"/"View
+ * menu" link to this same brand or a known ordering platform (Toast,
+ * ChowNow, ...) loads fine; the menu demonstrably exists, we just
+ * can't read its text. "image_only" (Services only) — a real Menu/
+ * Services candidate page loads fine with real intro content, but its
+ * actual items are rendered as images, not text. */
+export type PagePresenceNote = "pdf_only" | "broken_link" | "online_ordering" | "image_only" | null;
+
+/** Why a page-presence check is couldnt_check — every real
+ * ReachabilityFailureReason (the page itself was unreachable), plus
+ * "js_rendered": the page loaded FINE (200), but its static HTML is a
+ * JS-framework loading shell with essentially no real text at all (see
+ * lib/pagePresenceDetection.ts's isLikelyJsRenderedShell) — a
+ * fundamentally different, non-reachability reason we genuinely can't
+ * see past, so it lives in its own union rather than widening
+ * ReachabilityFailureReason itself (which every OTHER reachability
+ * field in this file still uses unmodified). */
+export type PagePresenceFailureReason = ReachabilityFailureReason | "js_rendered";
 
 /** The real result of looking for About/Our-Story or Services/Products
  * content — see lib/websiteAnalysis.ts's detectPagePresence for how
@@ -292,12 +309,13 @@ export interface PagePresenceResult {
    * section of the homepage itself, not a separate page. */
   locatedOnHomepage: boolean;
   /** Only set when state === "couldnt_check" — WHY (see
-   * ReachabilityFailureReason's own doc). Always null otherwise. */
-  reason: ReachabilityFailureReason | null;
-  /** See PagePresenceNote's own doc. Always null except the two real
-   * cases it documents. */
+   * PagePresenceFailureReason's own doc). Always null otherwise. */
+  reason: PagePresenceFailureReason | null;
+  /** See PagePresenceNote's own doc. Always null except the real cases
+   * it documents. */
   note: PagePresenceNote;
 }
+
 
 /**
  * The frozen result of analyzing a business's live website — see
@@ -1617,9 +1635,12 @@ export const CHECKS: CheckDefinition[] = [
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
-          explanation: presence.reason
-            ? t(locale, reachabilityReasonMessageKey(presence.reason))
-            : t(locale, "content.checks.website.about_presence.explanation.notFound"),
+          explanation:
+            presence.reason === "js_rendered"
+              ? t(locale, "content.checks.website.about_presence.explanation.jsRendered")
+              : presence.reason
+                ? t(locale, reachabilityReasonMessageKey(presence.reason))
+                : t(locale, "content.checks.website.about_presence.explanation.notFound"),
         };
       }
       // not_found — a real, confirmed absence (we looked, on a
@@ -1684,18 +1705,25 @@ export const CHECKS: CheckDefinition[] = [
           explanation:
             presence.note === "pdf_only"
               ? t(locale, "content.checks.website.services_presence.explanation.pdfOnly", { url: presence.url ?? "" })
-              : presence.locatedOnHomepage
-                ? t(locale, "content.checks.website.services_presence.explanation.foundOnHomepage")
-                : t(locale, "content.checks.website.services_presence.explanation.foundOnPage", { url: presence.url ?? "" }),
+              : presence.note === "online_ordering"
+                ? t(locale, "content.checks.website.services_presence.explanation.onlineOrdering", { url: presence.url ?? "" })
+                : presence.note === "image_only"
+                  ? t(locale, "content.checks.website.services_presence.explanation.imageOnly", { url: presence.url ?? "" })
+                  : presence.locatedOnHomepage
+                    ? t(locale, "content.checks.website.services_presence.explanation.foundOnHomepage")
+                    : t(locale, "content.checks.website.services_presence.explanation.foundOnPage", { url: presence.url ?? "" }),
         };
       }
       if (presence.state === "couldnt_check") {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
-          explanation: presence.reason
-            ? t(locale, reachabilityReasonMessageKey(presence.reason))
-            : t(locale, "content.checks.website.services_presence.explanation.notFound"),
+          explanation:
+            presence.reason === "js_rendered"
+              ? t(locale, "content.checks.website.services_presence.explanation.jsRendered")
+              : presence.reason
+                ? t(locale, reachabilityReasonMessageKey(presence.reason))
+                : t(locale, "content.checks.website.services_presence.explanation.notFound"),
         };
       }
       // not_found — see website.about_presence's own comment on this
@@ -2041,8 +2069,16 @@ function isReachabilityFailureReason(value: unknown): value is ReachabilityFailu
   return value === "timed_out" || value === "down" || value === "blocked_automated_check" || value === "http_error";
 }
 
+/** Same real reasons as isReachabilityFailureReason, plus "js_rendered"
+ * — see PagePresenceFailureReason's own doc. Only ever used for
+ * PagePresenceResult.reason; every other reachability-typed field in
+ * this file keeps using isReachabilityFailureReason unmodified. */
+function isPagePresenceFailureReason(value: unknown): value is PagePresenceFailureReason {
+  return value === "js_rendered" || isReachabilityFailureReason(value);
+}
+
 const PAGE_PRESENCE_STATES = new Set(["found", "not_found", "couldnt_check"]);
-const PAGE_PRESENCE_NOTES = new Set(["pdf_only", "broken_link"]);
+const PAGE_PRESENCE_NOTES = new Set(["pdf_only", "broken_link", "online_ordering", "image_only"]);
 
 /** Narrows a stored PagePresenceResult back to the real shape, same
  * fail-safe reasoning as parseWebsiteAnalysis itself — anything
@@ -2057,7 +2093,7 @@ function parsePagePresenceResult(value: unknown): PagePresenceResult | null {
     state: v.state as PagePresenceState,
     url: typeof v.url === "string" ? v.url : null,
     locatedOnHomepage: v.locatedOnHomepage === true,
-    reason: isReachabilityFailureReason(v.reason) ? v.reason : null,
+    reason: isPagePresenceFailureReason(v.reason) ? v.reason : null,
     note: typeof v.note === "string" && PAGE_PRESENCE_NOTES.has(v.note) ? (v.note as PagePresenceNote) : null,
   };
 }

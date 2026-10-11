@@ -302,6 +302,7 @@ export type MessageKey =
   | "content.checks.website.about_presence.explanation.foundOnHomepage"
   | "content.checks.website.about_presence.explanation.notFound"
   | "content.checks.website.about_presence.explanation.brokenLink"
+  | "content.checks.website.about_presence.explanation.jsRendered"
   | "content.checks.website.services_presence.label"
   | "content.checks.website.services_presence.advice"
   | "content.checks.website.services_presence.explanation.noWebsite"
@@ -311,6 +312,9 @@ export type MessageKey =
   | "content.checks.website.services_presence.explanation.pdfOnly"
   | "content.checks.website.services_presence.explanation.notFound"
   | "content.checks.website.services_presence.explanation.brokenLink"
+  | "content.checks.website.services_presence.explanation.jsRendered"
+  | "content.checks.website.services_presence.explanation.onlineOrdering"
+  | "content.checks.website.services_presence.explanation.imageOnly"
   // --- Shared content layer: listing-change descriptions (lib/profileChanges.ts) ---
   | "content.listingChange.phone.added"
   | "content.listingChange.phone.removed"
@@ -2491,6 +2495,8 @@ export const messages: Record<Locale, LocaleMessages> = {
       "No real About/Our Story content was found, on a dedicated page or your homepage. Add a page or section with a few real sentences about your business.",
     "content.checks.website.about_presence.explanation.brokenLink":
       "Your navigation links to an About page at {url}, but that page doesn't load (a broken link) — fix or remove it.",
+    "content.checks.website.about_presence.explanation.jsRendered":
+      "Your site builds its content with JavaScript, so our check couldn't read it — open it yourself to confirm. Excluded from your score, not counted against you.",
 
     "content.checks.website.services_presence.label": "Services / products",
     "content.checks.website.services_presence.advice":
@@ -2508,6 +2514,12 @@ export const messages: Record<Locale, LocaleMessages> = {
       "No real Services/Products content was found, on a dedicated page or your homepage. Add a page or section listing what you offer.",
     "content.checks.website.services_presence.explanation.brokenLink":
       "Your navigation links to a Services/Products page at {url}, but that page doesn't load (a broken link) — fix or remove it.",
+    "content.checks.website.services_presence.explanation.jsRendered":
+      "Your site builds its content with JavaScript, so our check couldn't read it — open it yourself to confirm. Excluded from your score, not counted against you.",
+    "content.checks.website.services_presence.explanation.onlineOrdering":
+      "Found your online ordering menu at {url} — we confirmed it loads, but can't read the items.",
+    "content.checks.website.services_presence.explanation.imageOnly":
+      "Your menu is an image — customers can see it, but it's hard to read on phones and Google can't read it.",
 
     // --- content.listingChange.* — pure extraction of lib/profileChanges.ts's
     // diffProfileSnapshots() sentences, byte-for-byte.
@@ -4901,6 +4913,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.about_presence.explanation.foundOnHomepage": "Se encontró una sección real de Acerca de / Nuestra historia en su página de inicio.",
     "content.checks.website.about_presence.explanation.notFound": "No se encontró contenido real de Acerca de / Nuestra historia, ni en una página dedicada ni en su página de inicio. Agregue una página o sección con algunas oraciones reales sobre su negocio.",
     "content.checks.website.about_presence.explanation.brokenLink": "Su navegación enlaza a una página de Acerca de en {url}, pero esa página no carga (un enlace roto) — corríjalo o elimínelo.",
+    "content.checks.website.about_presence.explanation.jsRendered": "Su sitio genera su contenido con JavaScript, por lo que nuestra comprobación no pudo leerlo — ábralo usted mismo para confirmarlo. Se excluye de su puntuación, no se cuenta en su contra.",
     "content.checks.website.services_presence.label": "Servicios / productos",
     "content.checks.website.services_presence.advice": "Agregue una página real de Servicios, Productos o Menú (enlazada desde su navegación principal) — tanto los visitantes como los motores de búsqueda buscan una lista clara de lo que ofrece.",
     "content.checks.website.services_presence.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para comprobar.",
@@ -4910,6 +4923,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.services_presence.explanation.pdfOnly": "Se encontró un menú/lista real en PDF en {url} — no podemos leer el contenido de un PDF, pero un visitante sí puede.",
     "content.checks.website.services_presence.explanation.notFound": "No se encontró contenido real de Servicios / Productos, ni en una página dedicada ni en su página de inicio. Agregue una página o sección que liste lo que ofrece.",
     "content.checks.website.services_presence.explanation.brokenLink": "Su navegación enlaza a una página de Servicios/Productos en {url}, pero esa página no carga (un enlace roto) — corríjalo o elimínelo.",
+    "content.checks.website.services_presence.explanation.jsRendered": "Su sitio genera su contenido con JavaScript, por lo que nuestra comprobación no pudo leerlo — ábralo usted mismo para confirmarlo. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.services_presence.explanation.onlineOrdering": "Encontramos su menú de pedidos en línea en {url} — confirmamos que carga, pero no podemos leer los artículos.",
+    "content.checks.website.services_presence.explanation.imageOnly": "Su menú es una imagen — los clientes pueden verlo, pero es difícil de leer en teléfonos y Google no puede leerlo.",
     "content.listingChange.phone.added": "Se agregó un número de teléfono a su ficha.",
     "content.listingChange.phone.removed": "Se eliminó el número de teléfono de su ficha.",
     "content.listingChange.phone.changed": "Su número de teléfono cambió.",

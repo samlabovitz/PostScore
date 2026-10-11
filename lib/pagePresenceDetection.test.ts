@@ -4,12 +4,20 @@ import {
   SERVICES_PAGE_KEYWORDS,
   aboutContentPasses,
   countDistinctPrices,
+  countListItems,
   extractMainContentHtml,
   extractVisibleText,
   findKeywordSection,
+  findMenuPdfLink,
   findPdfMenuLink,
   hasRealListedItems,
+  isKnownOrderingPlatformHost,
+  isLikelyJsRenderedShell,
+  isMenuLabel,
+  looksLikeImageOnlyMenu,
+  looksLikeNonAboutTopicPage,
   matchesKeyword,
+  sameBrandHost,
   servicesContentPasses,
   wordCount,
 } from "./pagePresenceDetection";
@@ -77,6 +85,30 @@ describe("extractVisibleText — Day 4 Task: HTML comments/noscript/template are
     expect(text).not.toContain("color:red");
     expect(text).not.toContain("not real content");
     expect(text).toContain("Real content.");
+  });
+
+  // The real Pop Culture Vulture case: lib/websiteAnalysis.ts's own
+  // MAX_HTML_BYTES fetch cap can truncate a real, large page mid-way
+  // through a huge inline <script> (a SPA's embedded preload JSON) —
+  // leaving it with no matching </script> at all. Without this fix,
+  // everything after the cut (raw JS/JSON, including a generic
+  // "Page not found" error-page string template meant for a totally
+  // different route) leaked through as real visible text, which
+  // wrongly tripped looksLikePageNotFound in lib/websiteTrust.ts.
+  test("the real Pop Culture Vulture case: an UNTERMINATED <script> (a truncated real fetch) is stripped to the end of the string, never leaked as visible text", () => {
+    const html =
+      '<p>Real content.</p><script>window.__PRELOAD_TRANSLATIONS__ = {"common.pageNotFoundTitle":"Ooops! Page not found","common.other":"some more embedded JSON that never got a closing script tag because the real response was cut off mid-way through';
+    const text = extractVisibleText(html);
+    expect(text).not.toContain("Page not found");
+    expect(text).not.toContain("PRELOAD_TRANSLATIONS");
+    expect(text).toBe("Real content.");
+  });
+
+  test("a real, well-formed <script> later in the document is still stripped normally even when an earlier unterminated one exists", () => {
+    const html =
+      '<p>Real content.</p><script>var ok = "fine";</script><p>More real content.</p><script>window.unterminated = "cut off';
+    const text = extractVisibleText(html);
+    expect(text).toBe("Real content. More real content.");
   });
 });
 
@@ -337,6 +369,33 @@ describe("aboutContentPasses / servicesContentPasses thresholds", () => {
   });
 });
 
+describe("looksLikeNonAboutTopicPage — the real National 5 & 10 case", () => {
+  test("the real National 5 & 10 case: a page titled 'Location & Store Hours' is rejected even under an /about/ path", () => {
+    const html = "<html><head><title>Location &#038; Store Hours &#8211; National 5 and 10</title></head><body><h1>Location &#038; Store Hours</h1><p>We are open Monday through Saturday.</p></body></html>";
+    expect(looksLikeNonAboutTopicPage(html)).toBe(true);
+  });
+
+  test("a real About-Us page's title/h1 is never flagged", () => {
+    const html = "<html><head><title>About Us - Acme Hardware</title></head><body><h1>About Us</h1><p>Family owned since 1962...</p></body></html>";
+    expect(looksLikeNonAboutTopicPage(html)).toBe(false);
+  });
+
+  test("checks ONLY the title/h1, never the full body — a real About-Us narrative mentioning 'contact' or 'directions' in passing is never flagged", () => {
+    const html =
+      "<html><head><title>About Us</title></head><body><h1>About Us</h1><p>Feel free to contact us or get directions to our store — we'd love to see you!</p></body></html>";
+    expect(looksLikeNonAboutTopicPage(html)).toBe(false);
+  });
+
+  test("recognizes the Spanish equivalents too", () => {
+    const html = "<html><head><title>Horas y Ubicación</title></head><body><h1>Horas y Ubicación</h1></body></html>";
+    expect(looksLikeNonAboutTopicPage(html)).toBe(true);
+  });
+
+  test("a page with neither a real <title> nor <h1> is never flagged (nothing to check)", () => {
+    expect(looksLikeNonAboutTopicPage("<html><body><p>Some real content.</p></body></html>")).toBe(false);
+  });
+});
+
 describe("countDistinctPrices", () => {
   test("counts distinct dollar amounts, not raw occurrences", () => {
     expect(countDistinctPrices("$119 Unlimited Monthly, $103 5 Classes, $190 10 Classes, $25 Drop In")).toBe(4);
@@ -444,5 +503,275 @@ describe("servicesContentPasses still correctly says not_found for Red Bowl's ow
     const text = extractVisibleText(html);
     expect(wordCount(text)).toBeLessThan(60);
     expect(servicesContentPasses(html, text)).toBe(false);
+  });
+});
+
+// --- Oct 10 audit fixes ---------------------------------------------
+
+describe("ABOUT_PAGE_KEYWORDS / SERVICES_PAGE_KEYWORDS — new real-case keywords from the Oct 9 zero audit", () => {
+  test("bare 'mission' matches — the real El Diablo Burritos nav label", () => {
+    expect(matchesKeyword("MISSION", ABOUT_PAGE_KEYWORDS)).toBe("mission");
+  });
+
+  test("'practice areas' matches — the real law-firm services-page case", () => {
+    expect(matchesKeyword("Practice Areas", SERVICES_PAGE_KEYWORDS)).not.toBeNull();
+  });
+
+  test("'areas of practice' matches too — the real Law Offices of Gregg L. Smith nav label", () => {
+    expect(matchesKeyword("Additional Areas of Practice", SERVICES_PAGE_KEYWORDS)).not.toBeNull();
+  });
+
+  test("'classes' matches", () => {
+    expect(matchesKeyword("Class Schedule", SERVICES_PAGE_KEYWORDS)).not.toBeNull();
+  });
+
+  test("bare 'schedule' does NOT match on its own — the real Pardalis and Nohavicka false-positive this fixes (a 'Schedule a Free Consultation' CTA must never credit whatever page it points at)", () => {
+    expect(matchesKeyword("Schedule a Free Consultation", SERVICES_PAGE_KEYWORDS)).toBeNull();
+  });
+
+  test("'class schedule' matches", () => {
+    expect(matchesKeyword("Class Schedule", SERVICES_PAGE_KEYWORDS)).toBe("class schedule");
+  });
+
+  test("'catering' matches", () => {
+    expect(matchesKeyword("Catering", SERVICES_PAGE_KEYWORDS)).toBe("catering");
+  });
+
+  test("'rentals' and 'rental' both match", () => {
+    expect(matchesKeyword("Equipment Rentals", SERVICES_PAGE_KEYWORDS)).not.toBeNull();
+    expect(matchesKeyword("Rental Pricing", SERVICES_PAGE_KEYWORDS)).not.toBeNull();
+  });
+
+  test("Spanish 'áreas de práctica', 'clases', 'horario de clases', 'alquiler' all match", () => {
+    expect(matchesKeyword("Áreas de Práctica", SERVICES_PAGE_KEYWORDS)).not.toBeNull();
+    expect(matchesKeyword("Clases", SERVICES_PAGE_KEYWORDS)).not.toBeNull();
+    expect(matchesKeyword("Horario de Clases", SERVICES_PAGE_KEYWORDS)).not.toBeNull();
+    expect(matchesKeyword("Alquiler de Equipos", SERVICES_PAGE_KEYWORDS)).not.toBeNull();
+  });
+
+  test("Spanish bare 'misión' matches for About", () => {
+    expect(matchesKeyword("Misión", ABOUT_PAGE_KEYWORDS)).not.toBeNull();
+  });
+});
+
+describe("findKeywordSection — <li>-wrapped section labels (the real Modern Liquors Google Sites case)", () => {
+  // Modern Liquors' real shape: section labels are plain <li><p><span>
+  // text</span></p></li>, never a real <h#> tag and never bold/strong-
+  // wrapped — invisible to both findRealHeadings and findPseudoHeadings
+  // before this fix.
+  test("a keyword-matching <li> label is found as an About section boundary", () => {
+    const html = `<main><ul><li><p><span>Welcome to Modern Liquors</span></p></li></ul><p>Modern Liquors has been serving the community with the finest selection of wines, spirits, and beers. Whether you're planning a celebration or just looking for the perfect bottle to unwind, we've got you covered, every single day of the week.</p></main>`;
+    const section = findKeywordSection(html, ABOUT_PAGE_KEYWORDS);
+    expect(section).not.toBeNull();
+    expect(wordCount(section!.text)).toBeGreaterThanOrEqual(40);
+    expect(aboutContentPasses(section!.text)).toBe(true);
+  });
+
+  test("a keyword-matching <li> label is found as a Services section boundary, and the real product list inside counts", () => {
+    const html = `<main><ul><li><p><span>Our Products</span></p></li></ul><ul><li>Wines from around the world</li><li>Premium spirits and liqueurs</li><li>Craft, domestic, and imported beers</li><li>Non-alcoholic beverages</li><li>Local Delaware ciders</li><li>Seasonal holiday gift sets</li></ul></main>`;
+    const section = findKeywordSection(html, SERVICES_PAGE_KEYWORDS);
+    expect(section).not.toBeNull();
+    expect(countListItems(section!.html)).toBeGreaterThanOrEqual(6);
+    expect(servicesContentPasses(section!.html, section!.text)).toBe(true);
+  });
+
+  test("an UNRELATED <li> never becomes a false section boundary", () => {
+    // "Contact Us" matches no keyword, so it must never end the "Welcome
+    // to..." About section early — the real content after it still has
+    // to be captured for the word count to pass.
+    const html = `<main><ul><li><p><span>Welcome to Modern Liquors</span></p></li></ul><ul><li><p><span>Contact Us</span></p></li></ul><p>Modern Liquors has been serving the community with the finest selection of wines, spirits, and beers for many happy years now, with a wide and growing selection every single season, no matter what the occasion calls for or what your own personal taste happens to be.</p></main>`;
+    const section = findKeywordSection(html, ABOUT_PAGE_KEYWORDS);
+    expect(section).not.toBeNull();
+    expect(wordCount(section!.text)).toBeGreaterThanOrEqual(40);
+    expect(aboutContentPasses(section!.text)).toBe(true);
+  });
+
+  test("an <li> WRAPPING A SUB-LIST is never treated as a section-label heading", () => {
+    // A real nav-style <li> that contains its own nested <ul> (e.g. a
+    // dropdown) must never be promoted — this is wrapper content, not a
+    // short, standalone section label.
+    const html = `<main><ul><li>Services<ul><li>Haircuts</li><li>Color</li><li>Styling</li></ul></li></ul></main>`;
+    const section = findKeywordSection(html, SERVICES_PAGE_KEYWORDS);
+    // Nothing else in this fixture matches a real/pseudo heading either,
+    // so this must stay null — proving the nested-list <li> was skipped
+    // rather than wrongly becoming a (mis-scoped) section boundary.
+    expect(section).toBeNull();
+  });
+
+  test("an <li> over MAX_PSEUDO_HEADING_WORDS is never treated as a heading, even with a matching keyword", () => {
+    const longLabel =
+      "Welcome to our wonderful shop where we sell many wonderful things every single day of the week all year long for every single customer who walks in";
+    const html = `<main><ul><li>${longLabel}</li></ul></main>`;
+    expect(findKeywordSection(html, ABOUT_PAGE_KEYWORDS)).toBeNull();
+  });
+});
+
+describe("countListItems / servicesContentPasses — a real, large <li> list stands on its own (the real CTown Supermarkets case)", () => {
+  test("an honest 11-item department list passes even though it's short on words and has no prices", () => {
+    const html = `<main><ul><li>Grocery Store</li><li>Bakery</li><li>Deli</li><li>Prepared Foods</li><li>Fish</li><li>Florist</li><li>Beer</li><li>Western Union</li><li>Free Parking</li><li>Delivery</li><li>Phone Order</li></ul></main>`;
+    const text = extractVisibleText(html);
+    expect(wordCount(text)).toBeLessThan(60);
+    expect(countDistinctPrices(text)).toBe(0);
+    expect(countListItems(html)).toBe(11);
+    expect(servicesContentPasses(html, text)).toBe(true);
+  });
+
+  test("a borderline 4-item list still needs word-count or price corroboration — stays false on its own", () => {
+    const html = `<main><ul><li>Bakery</li><li>Deli</li><li>Fish</li><li>Beer</li></ul></main>`;
+    const text = extractVisibleText(html);
+    expect(countListItems(html)).toBe(4);
+    expect(servicesContentPasses(html, text)).toBe(false);
+  });
+
+  test("exactly MIN_LIST_ITEMS_SERVICES_STRONG (6) items passes on count alone", () => {
+    const html = `<main><ul><li>A</li><li>B</li><li>C</li><li>D</li><li>E</li><li>F</li></ul></main>`;
+    const text = extractVisibleText(html);
+    expect(countListItems(html)).toBe(6);
+    expect(servicesContentPasses(html, text)).toBe(true);
+  });
+});
+
+describe("isLikelyJsRenderedShell — the real Goldberg Hardware / Great Clips / Drybar - Midtown East cases", () => {
+  test("a bare Nuxt shell (Goldberg Hardware's real shape) is detected", () => {
+    const html = `<!DOCTYPE html><html><head></head><body><div id="__nuxt"></div><script>window.__NUXT__={serverRendered:false}</script></body></html>`;
+    expect(isLikelyJsRenderedShell(html)).toBe(true);
+  });
+
+  test("a bare React root (Great Clips' real shape) is detected", () => {
+    const html = `<!DOCTYPE html><html><head><title>Great Clips Hair Salon</title></head><body><div id="reactele"></div></body></html>`;
+    expect(isLikelyJsRenderedShell(html)).toBe(true);
+  });
+
+  test("a Next.js export with empty pageProps and only a loading spinner (Drybar's real shape) is detected", () => {
+    const html = `<html><body><div id="__next"><div class="MuiBackdrop-root"></div></div><script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{}}}</script></body></html>`;
+    expect(isLikelyJsRenderedShell(html)).toBe(true);
+  });
+
+  test("a real, fully server-rendered page with an unrelated id=\"app\" widget mount is NOT a shell", () => {
+    const html = `<html><body><main><h1>About Our Bakery</h1><p>We have been baking fresh bread and pastries in this neighborhood for over twenty happy years, using recipes passed down through three generations of our family.</p></main><div id="app"></div></body></html>`;
+    expect(isLikelyJsRenderedShell(html)).toBe(false);
+  });
+
+  test("a real thin page with NO app-root marker at all is never flagged, even with little text", () => {
+    const html = `<html><body><p>Closed for renovations.</p></body></html>`;
+    expect(isLikelyJsRenderedShell(html)).toBe(false);
+  });
+
+  test("a real <title> with several words never pushes a genuine shell over the threshold on its own", () => {
+    const html = `<html><head><title>Great Clips Hair Salon in Newark, DE - Suburban Plaza</title></head><body><div id="reactele"></div></body></html>`;
+    expect(isLikelyJsRenderedShell(html)).toBe(true);
+  });
+});
+
+describe("looksLikeImageOnlyMenu — the real Santa Fe Mexican Grill case", () => {
+  test("a page with many real <img> tags and no list/price text is an image-only menu", () => {
+    const html = `<main><p>Welcome to our menus page.</p><img src="a.jpg"><img src="b.jpg"><img src="c.jpg"></main>`;
+    expect(looksLikeImageOnlyMenu(html)).toBe(true);
+  });
+
+  test("a normal page with just one or two incidental photos is NOT flagged", () => {
+    const html = `<main><p>About our restaurant.</p><img src="hero.jpg"></main>`;
+    expect(looksLikeImageOnlyMenu(html)).toBe(false);
+  });
+});
+
+describe("sameBrandHost — eTLD+1 matching (the real Chipotle/QDOBA/Canadian Tire/CTown case)", () => {
+  test("a locator subdomain matches its own brand's apex domain", () => {
+    expect(sameBrandHost("locations.chipotle.com", "chipotle.com")).toBe(true);
+    expect(sameBrandHost("www.chipotle.com", "locations.chipotle.com")).toBe(true);
+  });
+
+  test("two different sibling subdomains of the same brand match", () => {
+    expect(sameBrandHost("corp.canadiantire.ca", "www.canadiantire.ca")).toBe(true);
+  });
+
+  test("an unrelated brand on the same TLD does NOT match", () => {
+    expect(sameBrandHost("locations.chipotle.com", "qdoba.com")).toBe(false);
+  });
+
+  test("a multi-label public suffix (co.uk) is handled correctly, not collapsed to the suffix itself", () => {
+    expect(sameBrandHost("shop.example.co.uk", "www.example.co.uk")).toBe(true);
+    expect(sameBrandHost("shop.example.co.uk", "www.other.co.uk")).toBe(false);
+  });
+});
+
+describe("isKnownOrderingPlatformHost — real third-party ordering platforms seen in the Oct 9 audit", () => {
+  test("recognizes Toast (Brew HaHa!'s real platform)", () => {
+    expect(isKnownOrderingPlatformHost("www.toasttab.com")).toBe(true);
+  });
+
+  test("recognizes a subdomain of a known platform", () => {
+    expect(isKnownOrderingPlatformHost("order.olo.com")).toBe(true);
+  });
+
+  test("does not recognize an unrelated host", () => {
+    expect(isKnownOrderingPlatformHost("example.com")).toBe(false);
+  });
+
+  test("never matches a host that merely CONTAINS a platform name as a substring", () => {
+    expect(isKnownOrderingPlatformHost("nottoasttab.com")).toBe(false);
+  });
+});
+
+// --- Oct 10 "found anywhere wins" fixes ------------------------------
+
+describe("countDistinctPrices / hasRealListedItems — trailing dollar sign (the real Modern Liquors case)", () => {
+  test("a trailing-$ price ('67.99$') counts, same as a leading one", () => {
+    expect(countDistinctPrices("We sell Kegs for 67.99$")).toBe(1);
+  });
+
+  test("a leading and trailing form of the SAME price count as one distinct value, not two", () => {
+    expect(countDistinctPrices("$25 today, or 25$ if you pay cash")).toBe(1);
+  });
+
+  test("hasRealListedItems recognizes a trailing-$ price with no real <li> items or sub-headings", () => {
+    const html = "<main><p>We sell Kegs for 67.99$</p></main>";
+    const text = extractVisibleText(html);
+    expect(hasRealListedItems(html, text)).toBe(true);
+  });
+});
+
+describe("isMenuLabel — gates the image-only-menu note to pages actually labeled Menu/Menú", () => {
+  test("'Menu' and 'Menú' match", () => {
+    expect(isMenuLabel("Menu")).toBe(true);
+    expect(isMenuLabel("Menú")).toBe(true);
+  });
+
+  test("the real Santa Fe plural label 'NEWARK MENUS' matches", () => {
+    expect(isMenuLabel("NEWARK MENUS")).toBe(true);
+  });
+
+  test("the real Brew HaHa! 'Catering' label does NOT match", () => {
+    expect(isMenuLabel("Catering")).toBe(false);
+  });
+
+  test("'Services' and 'Products' do not match", () => {
+    expect(isMenuLabel("Services")).toBe(false);
+    expect(isMenuLabel("Our Products")).toBe(false);
+  });
+});
+
+describe("findMenuPdfLink — a real menu PDF on ANY host, found directly on a page (the real QDOBA case)", () => {
+  test("a .pdf href on a totally different host, labeled with a real services keyword, matches", () => {
+    const html =
+      '<main><a href="https://assets.ctfassets.net/0tc4847zqy12/abc/Our-Menu-Take-Out-Menu.pdf">Download Our Menu</a></main>';
+    expect(findMenuPdfLink(html, "https://locations.qdoba.com/us/de/newark/58-e-main-st")).toBe(
+      "https://assets.ctfassets.net/0tc4847zqy12/abc/Our-Menu-Take-Out-Menu.pdf"
+    );
+  });
+
+  test("a .pdf link with NO menu-related label is never matched — avoids an unrelated PDF (e.g. a W-9 form)", () => {
+    const html = '<main><a href="/forms/w9.pdf">Download W-9 Form</a></main>';
+    expect(findMenuPdfLink(html, "https://example.com/")).toBeNull();
+  });
+
+  test("a menu-labeled link that ISN'T a .pdf is never matched — must be an actual PDF target", () => {
+    const html = '<main><a href="/menu">View Our Menu</a></main>';
+    expect(findMenuPdfLink(html, "https://example.com/")).toBeNull();
+  });
+
+  test("still matches via the narrower PDF_MENU_LINK_KEYWORDS label even without a plain services keyword", () => {
+    const html = '<main><a href="/files/x.pdf">View PDF Menu</a></main>';
+    expect(findMenuPdfLink(html, "https://example.com/")).toBe("https://example.com/files/x.pdf");
   });
 });
