@@ -14,6 +14,8 @@ import {
   type WebsiteAnalysis,
 } from "@/lib/scoring";
 import { reachabilityReasonMessageKey } from "@/lib/websiteReachability";
+import { hackSignsFor } from "@/lib/siteSecurity";
+import { SiteSecurityDetails } from "./SiteSecurityDetails";
 import { t, tPlural, useLocale, type MessageKey } from "@/lib/i18n";
 
 /** Checks whose "excluded" state has a real, specific reason worth its
@@ -109,10 +111,14 @@ function CheckRow({
   check,
   suggestion,
   websiteAnalysis,
+  siteUrl,
+  businessName,
 }: {
   check: CheckResult;
   suggestion: Suggestion | undefined;
   websiteAnalysis: WebsiteAnalysis | null;
+  siteUrl: string | null;
+  businessName: string | null;
 }) {
   const locale = useLocale();
   const state = deriveRowState(check);
@@ -135,9 +141,16 @@ function CheckRow({
   const recovered =
     check.id === "website.content_depth" ? websiteAnalysis?.content?.renderedContentSignals ?? null : null;
   const excludedReasonKey = state === "excluded" ? excludedReasonMessageKey(check, websiteAnalysis) : null;
+  // The full possible-hack explanation (Website page only) — real stored
+  // spam findings, see hackSignsFor / SiteSecurityDetails.
+  const spamFinding = check.id === "website.security" ? hackSignsFor(check, websiteAnalysis)[0] ?? null : null;
+  const trust = websiteAnalysis?.websiteTrust ?? null;
 
   return (
-    <div className="flex items-start gap-3 py-4 first:pt-0 last:pb-0">
+    <div
+      id={check.id === "website.security" ? "site-security" : undefined}
+      className="flex scroll-mt-20 items-start gap-3 py-4 first:pt-0 last:pb-0"
+    >
       <span className={cn("mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full", style.iconWrap)}>
         <Icon size={14} />
       </span>
@@ -167,8 +180,12 @@ function CheckRow({
           {excludedReasonKey ? t(locale, excludedReasonKey) : check.explanation}
         </p>
 
-        {(state === "partial" || state === "zero") && suggestion && (
+        {(state === "partial" || state === "zero") && suggestion && !spamFinding && (
           <p className="mt-1 text-[12.5px] text-ink-mute">{suggestion.advice}</p>
+        )}
+
+        {spamFinding && trust && (
+          <SiteSecurityDetails finding={spamFinding} trust={trust} siteUrl={siteUrl} businessName={businessName} />
         )}
 
         {performanceScore !== null && (
@@ -261,10 +278,16 @@ export function WebsiteScoreBreakdown({
   websiteCategory,
   websiteAnalysis,
   websiteSuggestions,
+  siteUrl = null,
+  businessName = null,
 }: {
   websiteCategory: CategoryResult | null;
   websiteAnalysis: WebsiteAnalysis | null;
   websiteSuggestions: Suggestion[];
+  /** The site that was actually analyzed (the listing's website, or a
+   * verified-elsewhere one) — named in the Site security detail. */
+  siteUrl?: string | null;
+  businessName?: string | null;
 }) {
   const locale = useLocale();
 
@@ -343,6 +366,8 @@ export function WebsiteScoreBreakdown({
                       check={check}
                       suggestion={websiteSuggestions.find((s) => s.checkId === check.id)}
                       websiteAnalysis={websiteAnalysis}
+                      siteUrl={siteUrl}
+                      businessName={businessName}
                     />
                   ))}
                 </div>

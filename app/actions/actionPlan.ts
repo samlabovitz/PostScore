@@ -2,8 +2,11 @@
 
 import { createClient } from "@/lib/supabase/server";
 import {
+  applyGrowthWebsiteRules,
   buildActionPlan,
   buildCompletedTasks,
+  buildWebsiteBanner,
+  GOOGLE_MISMATCH_CHECK_ID,
   buildConnectGbpWeeklyTask,
   buildWeeklyPlan,
   mergeReviewTasks,
@@ -13,6 +16,7 @@ import {
   type ActionPlanTask,
   type CompletedTask,
   type TaskRow,
+  type WebsiteBanner,
   type WeeklyPlan,
 } from "@/lib/actionPlan";
 import { estimateStarterSiteRange, type StarterSiteTemplateData } from "@/lib/starterSiteScoring";
@@ -23,7 +27,15 @@ import type { BusinessScoringInput, BusinessScoringRow, ScoreBreakdown, Suggesti
 import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
 
 export type GetActionPlanResult =
-  | ({ status: "ok"; tasks: ActionPlanTask[]; completed: CompletedTask[] } & WeeklyPlan)
+  | ({
+      status: "ok";
+      tasks: ActionPlanTask[];
+      completed: CompletedTask[];
+      /** The Growth page's one website summary banner — see
+       * buildWebsiteBanner (lib/actionPlan.ts). Null when there's nothing
+       * left to fix. */
+      websiteBanner: WebsiteBanner | null;
+    } & WeeklyPlan)
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
 
@@ -89,8 +101,10 @@ export async function getActionPlan(
   // mergeReviewTasks's and mergeWebsiteTasks's own docs for why.
   const reviewMerged = mergeReviewTasks(rawTasks, breakdown, input, locale);
 
+  // Only for a business with no website at all — never one whose real
+  // site was verified elsewhere (the real Bánh Mì Boy case).
   const starterSiteRange =
-    !input.website && starterSiteContext
+    !input.website && !input.verifiedElsewhereUrl && starterSiteContext
       ? estimateStarterSiteRange(
           breakdown,
           starterSiteContext.businessRow,
@@ -109,7 +123,16 @@ export async function getActionPlan(
         )
       : null;
 
-  const tasks = mergeWebsiteTasks(reviewMerged, breakdown, input, locale, starterSiteRange);
+  // Growth page / PostAI view (Step 2f): website.* tasks leave the plan
+  // (summarized by websiteBanner instead), except the Google-mismatch
+  // card. The monthly report builds its own plan from buildActionPlan
+  // directly and is deliberately unaffected.
+  const tasks = applyGrowthWebsiteRules(
+    mergeWebsiteTasks(reviewMerged, breakdown, input, locale, starterSiteRange),
+    input,
+    locale
+  );
+  const websiteBanner = buildWebsiteBanner(breakdown, input, starterSiteRange);
 
   // The connect_gbp "setup" item (see item 4/6 of Day 3 step 2e's
   // second pass): a real weekly-plan card, never a growth move (see
@@ -126,13 +149,16 @@ export async function getActionPlan(
       : null;
   const weeklyPlanCap = connectGbpTask ? WEEKLY_PLAN_CAP - 1 : WEEKLY_PLAN_CAP;
 
-  const weeklyPlan = buildWeeklyPlan(tasks, breakdown, input, weeklyPlanCap, locale);
+  // The Google-mismatch card always shows this week whenever it's open —
+  // exempt from the minimum and the cap (see buildWeeklyPlan).
+  const weeklyPlan = buildWeeklyPlan(tasks, breakdown, input, weeklyPlanCap, locale, [GOOGLE_MISMATCH_CHECK_ID]);
   const weeklyTasks = connectGbpTask ? [connectGbpTask, ...weeklyPlan.weeklyTasks] : weeklyPlan.weeklyTasks;
 
   return {
     status: "ok",
     tasks,
     completed: buildCompletedTasks(breakdown, rows),
+    websiteBanner,
     ...weeklyPlan,
     weeklyTasks,
   };

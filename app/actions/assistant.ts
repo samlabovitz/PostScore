@@ -8,7 +8,8 @@ import { getLatestCompetitorSnapshot } from "@/app/actions/competitors";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { getGrowthMoveSignals } from "@/app/actions/growthMoves";
 import { getWeeklyChecklistState } from "@/app/actions/weeklyChecklist";
-import { buildGrowthMoves } from "@/lib/growthMoves";
+import { buildGrowthMoves, withoutWebsiteGrowthMoves } from "@/lib/growthMoves";
+import { buildAssistantSiteSecurity } from "@/lib/siteSecurity";
 import { businessRowToScoringInput } from "@/lib/scoring";
 import { bizProfile, resolveBizProfile } from "@/config/bizProfiles";
 import { priceLevelToSymbol } from "@/lib/priceLevel";
@@ -195,7 +196,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
   const signalsResult = await getGrowthMoveSignals(businessId, breakdown, profile.referralOk, snapshot);
   const growthMoves: AssistantGrowthMove[] =
     signalsResult.status === "ok"
-      ? buildGrowthMoves(signalsResult.signals, locale)
+      ? withoutWebsiteGrowthMoves(buildGrowthMoves(signalsResult.signals, locale))
           .slice(0, MAX_GROWTH_MOVES_IN_CONTEXT)
           .map((m) => ({
             id: m.id,
@@ -310,6 +311,8 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
       excludedChecks,
     },
     actionPlan: { topTasks },
+    websiteSummary: actionPlanResult.status === "ok" ? actionPlanResult.websiteBanner : null,
+    siteSecurity: buildAssistantSiteSecurity(breakdown, input, locale),
     growthMoves,
     weeklyRoutine,
     competitors,

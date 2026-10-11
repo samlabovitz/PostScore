@@ -1,5 +1,12 @@
 import { describe, expect, test } from "vitest";
-import { buildGrowthMoves, competitorPhotoCounts, type GrowthMoveSignals } from "./growthMoves";
+import {
+  buildGrowthMoves,
+  buildPriceCheckMove,
+  competitorPhotoCounts,
+  withoutWebsiteGrowthMoves,
+  type GrowthMoveSignals,
+} from "./growthMoves";
+import { getBizProfileOptions, bizProfileById } from "@/config/bizProfiles";
 
 // A business with every growth-move signal turned "off" — nothing
 // should fire. Used as the base for flipping exactly one signal on at
@@ -244,5 +251,66 @@ describe("competitorPhotoCounts", () => {
       { isSubject: false, photoCount: 7 },
     ]);
     expect(counts.sort((a, b) => a - b)).toEqual([3, 7]);
+  });
+});
+
+describe("Day 4 Step 2f", () => {
+  test("build_starter_site never fires for a business whose real site was verified elsewhere (the real Bánh Mì Boy bug)", () => {
+    const noListingSite = { ...NOTHING_TO_DO, hasWebsite: false, hasWebsiteTaskOpen: false };
+    expect(ids(noListingSite)).toContain("build_starter_site");
+    expect(ids({ ...noListingSite, hasVerifiedWebsite: true })).not.toContain("build_starter_site");
+    // ...and is treated as the website it is: improve_website can fire for it.
+    expect(
+      ids({ ...noListingSite, hasVerifiedWebsite: true, weakWebsiteIssueLabels: ["Contact & conversion"] })
+    ).toContain("improve_website");
+  });
+
+  test("withoutWebsiteGrowthMoves drops only improve_website and build_starter_site", () => {
+    const all = buildGrowthMoves(
+      {
+        ...NOTHING_TO_DO,
+        hasEverCreatedPromo: false,
+        pricingAssessedAt: null,
+        weakWebsiteIssueLabels: ["Performance & mobile"],
+      },
+      "en"
+    );
+    expect(all.map((m) => m.id)).toContain("improve_website");
+    expect(withoutWebsiteGrowthMoves(all).map((m) => m.id)).toEqual(["start_coupon", "run_price_check"]);
+  });
+
+  test("the price check shows for EVERY one of the 39 business types, under every condition, with or without a website", () => {
+    const options = getBizProfileOptions("en");
+    expect(options.length).toBe(39);
+    for (const option of options) {
+      const profile = bizProfileById(option.id, "en")!;
+      for (const hasWebsite of [true, false]) {
+        for (const pricingAssessedAt of [null, "2026-09-01T00:00:00Z"]) {
+          for (const hasEverCreatedPromo of [true, false]) {
+            const moves = withoutWebsiteGrowthMoves(
+              buildGrowthMoves(
+                {
+                  ...NOTHING_TO_DO,
+                  referralOk: profile.referralOk,
+                  hasWebsite,
+                  hasWebsiteTaskOpen: !hasWebsite,
+                  pricingAssessedAt,
+                  hasEverCreatedPromo,
+                  photoCount: null,
+                },
+                "en"
+              )
+            );
+            expect(moves.map((m) => m.id), option.id).toContain("run_price_check");
+          }
+        }
+      }
+    }
+  });
+
+  test("buildPriceCheckMove: the never-run card is exactly 'Compare your prices to nearby competitors' (EN + ES)", () => {
+    expect(buildPriceCheckMove("biz-1", null, "en").title).toBe("Compare your prices to nearby competitors");
+    expect(buildPriceCheckMove("biz-1", null, "es").title).toBe("Compare sus precios con la competencia cercana");
+    expect(buildPriceCheckMove("biz-1", null, "en").href).toBe("/business/biz-1/pricing");
   });
 });

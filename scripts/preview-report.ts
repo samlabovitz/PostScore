@@ -264,7 +264,7 @@ async function computeFiringGrowthMoves(
   locale: ReturnType<typeof normalizeLocale>
 ): Promise<FocusGrowthMove[]> {
   const [businessResult, promoResult, referralResult, photoCounts] = await Promise.all([
-    supabase.from("businesses").select("photo_count, pricing_assessed_at, website").eq("id", businessId).single(),
+    supabase.from("businesses").select("photo_count, pricing_assessed_at, website, verified_website_url").eq("id", businessId).single(),
     supabase.from("promos").select("id").eq("business_id", businessId).limit(1),
     supabase.from("referrals").select("id").eq("business_id", businessId).limit(1),
     competitorScanId ? readCompetitorPhotoCountsForScan(businessId, competitorScanId) : Promise.resolve([]),
@@ -280,6 +280,7 @@ async function computeFiringGrowthMoves(
     photoCount: businessResult.data?.photo_count ?? null,
     competitorPhotos: { scanAvailable: competitorScanId !== null, medianCompetitorPhotoCount: median(photoCounts) },
     hasWebsite: (businessResult.data?.website ?? null) !== null,
+    hasVerifiedWebsite: !!businessResult.data?.verified_website_url,
     hasWebsiteTaskOpen: hasWebsiteCheck ? (hasWebsiteCheck.earnedPoints ?? 0) < hasWebsiteCheck.maxPoints : false,
     weakWebsiteIssueLabels: weakWebsiteIssueLabels(breakdown),
   };

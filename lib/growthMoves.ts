@@ -89,6 +89,13 @@ export interface GrowthMoveSignals {
   competitorPhotos: CompetitorPhotoSignal;
   /** businesses.website !== null. */
   hasWebsite: boolean;
+  /** businesses.verified_website_url is set — a real site found and
+   * verified elsewhere even though the listing shows none (the real
+   * Bánh Mì Boy case). Such a business HAS a website, so
+   * build_starter_site must never fire for it. Optional (defaults to
+   * false) only so fixtures built before this field existed still
+   * compile; every real loader passes the real value. */
+  hasVerifiedWebsite?: boolean;
   /** Whether website.has_website currently reads as an open score task
    * (earnedPoints below maxPoints) — always true in practice whenever
    * hasWebsite is false, since that check scores 0 with no website on
@@ -145,6 +152,51 @@ export function weakWebsiteIssueLabels(breakdown: ScoreBreakdown): string[] {
     .map((c) => c.label);
 }
 
+/** The price-check move — every business type, every condition (Step
+ * 2f): "Compare your prices to nearby competitors" until a price check
+ * has been run, then the same card as "Re-check your prices…" with its
+ * real last-checked date. Exported so the Growth page can still show it
+ * even if the rest of the growth signals fail to load. */
+export function buildPriceCheckMove(
+  businessId: string,
+  pricingAssessedAt: string | null,
+  locale: Locale = DEFAULT_LOCALE
+): GrowthMove {
+  const pricingHref = `/business/${businessId}/pricing`;
+  if (pricingAssessedAt === null) {
+    return {
+      id: "run_price_check",
+      title: t(locale, "dashboard.growth.moves.runPriceCheck.title"),
+      meta: null,
+      why: t(locale, "dashboard.growth.moves.runPriceCheck.why"),
+      howTo: t(locale, "dashboard.growth.moves.runPriceCheck.howTo"),
+      href: pricingHref,
+      signal: "pricing_assessed_at is null — a price check has never been run",
+    };
+  }
+  return {
+    id: "run_price_check",
+    title: t(locale, "dashboard.growth.moves.refreshPriceCheck.title"),
+    meta: t(locale, "dashboard.growth.moves.refreshPriceCheck.lastChecked", {
+      date: formatShortDate(pricingAssessedAt, locale),
+    }),
+    why: t(locale, "dashboard.growth.moves.refreshPriceCheck.why"),
+    howTo: t(locale, "dashboard.growth.moves.refreshPriceCheck.howTo"),
+    href: pricingHref,
+    signal: `pricing_assessed_at is ${pricingAssessedAt}`,
+  };
+}
+
+/** The website growth moves the Growth page and PostAI no longer show
+ * (Step 2f) — the Website page's own breakdown plus the Growth page's
+ * single website banner replace them. buildGrowthMoves itself still
+ * builds them, so the monthly report's rotating move is unchanged. */
+const WEBSITE_GROWTH_MOVE_IDS: readonly GrowthMoveId[] = ["improve_website", "build_starter_site"];
+
+export function withoutWebsiteGrowthMoves(moves: GrowthMove[]): GrowthMove[] {
+  return moves.filter((m) => !WEBSITE_GROWTH_MOVE_IDS.includes(m.id));
+}
+
 /**
  * Builds every growth move that genuinely fires for this business right
  * now — each gated on one real signal, never a guess. Order is fixed
@@ -189,30 +241,7 @@ export function buildGrowthMoves(signals: GrowthMoveSignals, locale: Locale = DE
   // Always shown, never removed from this section (see item 7) — just
   // two honest variants of the same real ask, depending on whether a
   // price check has ever been run.
-  const pricingHref = `/business/${signals.businessId}/pricing`;
-  if (signals.pricingAssessedAt === null) {
-    moves.push({
-      id: "run_price_check",
-      title: t(locale, "dashboard.growth.moves.runPriceCheck.title"),
-      meta: null,
-      why: t(locale, "dashboard.growth.moves.runPriceCheck.why"),
-      howTo: t(locale, "dashboard.growth.moves.runPriceCheck.howTo"),
-      href: pricingHref,
-      signal: "pricing_assessed_at is null — a price check has never been run",
-    });
-  } else {
-    moves.push({
-      id: "run_price_check",
-      title: t(locale, "dashboard.growth.moves.refreshPriceCheck.title"),
-      meta: t(locale, "dashboard.growth.moves.refreshPriceCheck.lastChecked", {
-        date: formatShortDate(signals.pricingAssessedAt, locale),
-      }),
-      why: t(locale, "dashboard.growth.moves.refreshPriceCheck.why"),
-      howTo: t(locale, "dashboard.growth.moves.refreshPriceCheck.howTo"),
-      href: pricingHref,
-      signal: `pricing_assessed_at is ${signals.pricingAssessedAt}`,
-    });
-  }
+  moves.push(buildPriceCheckMove(signals.businessId, signals.pricingAssessedAt, locale));
 
   const yourPhotos = signals.photoCount ?? 0;
   const competitorMedian = signals.competitorPhotos.medianCompetitorPhotoCount;
@@ -261,7 +290,8 @@ export function buildGrowthMoves(signals: GrowthMoveSignals, locale: Locale = DE
   // for the (currently unreachable in practice) case where it somehow
   // isn't.
   const websiteHref = `/business/${signals.businessId}/website`;
-  if (!signals.hasWebsite) {
+  const hasAnyWebsite = signals.hasWebsite || (signals.hasVerifiedWebsite ?? false);
+  if (!hasAnyWebsite) {
     if (!signals.hasWebsiteTaskOpen) {
       moves.push({
         id: "build_starter_site",

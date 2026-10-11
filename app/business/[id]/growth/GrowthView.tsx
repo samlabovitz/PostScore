@@ -10,7 +10,8 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/SegmentedControl";
 import { TaskListCard, GrowthMoveCard, CompletedTasksCard } from "../ActionPlanSection";
 import { WeeklyChecklist } from "./WeeklyChecklist";
-import type { ActionPlanTask, CompletedTask } from "@/lib/actionPlan";
+import type { ActionPlanTask, CompletedTask, WebsiteBanner } from "@/lib/actionPlan";
+import { formatPoints } from "@/components/scoring/CategoryCard";
 import type { GrowthMove } from "@/lib/growthMoves";
 import { growthMoveOverlapsActionPlan } from "@/lib/growthMoveOverlap";
 import type { WeeklyChecklistItem, WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
@@ -57,6 +58,44 @@ export function gradeTransitionLabel(from: string, to: string, locale: Locale): 
     : t(locale, "dashboard.growth.view.gradeChangeArrow", { from, to });
 }
 
+/** The Growth page's ONE website element besides the Google-mismatch
+ * card (Step 2f): every other website fix lives on the Website page,
+ * summarized here with real live numbers — or, with no website at all,
+ * the starter-site offer with its honest points range. */
+export function WebsiteBannerCard({ banner, businessId }: { banner: WebsiteBanner; businessId: string }) {
+  const locale = useLocale();
+  const href = `/business/${businessId}/website`;
+  return (
+    <Card className="flex flex-col gap-2 border-brass/30 bg-brass/5 p-5">
+      {banner.kind === "improve" ? (
+        <p className="text-sm text-ink">
+          {tPlural(locale, "dashboard.growth.websiteBanner.improve", banner.improvements, {
+            score: banner.score,
+            points: formatPoints(banner.points),
+          })}
+        </p>
+      ) : (
+        <>
+          <p className="text-sm font-semibold text-ink">{t(locale, "dashboard.growth.websiteBanner.getWebsite.title")}</p>
+          <p className="text-sm text-ink-soft">
+            {banner.high !== null
+              ? t(locale, "dashboard.growth.websiteBanner.getWebsite.range", {
+                  low: formatPoints(banner.low),
+                  high: formatPoints(banner.high),
+                })
+              : t(locale, "dashboard.growth.websiteBanner.getWebsite.single", { points: formatPoints(banner.low) })}
+          </p>
+        </>
+      )}
+      <Link href={href} className="w-fit text-[13px] font-medium text-brass hover:underline">
+        {banner.kind === "improve"
+          ? t(locale, "dashboard.growth.websiteBanner.openWebsitePage")
+          : t(locale, "dashboard.growth.websiteBanner.getWebsite.cta")}
+      </Link>
+    </Card>
+  );
+}
+
 function segmentFromParam(param: string | null, referralOk: boolean): Segment {
   if (param === "coupons") return "coupons";
   if (param === "referral" && referralOk) return "referral";
@@ -99,6 +138,12 @@ export function GrowthView({
     /** Set only when a weekly task is itself a range (currently only
      * the no-website starter-site card) — see WeeklyPlan's own doc. */
     weeklyProjectedBreakdownHigh: ScoreBreakdown | null;
+    /** Exactly the sum of the weekly cards' points — see
+     * WeeklyPlan.weeklyPointsWithinReach. */
+    weeklyPointsWithinReach: number;
+    /** The one website summary in "Bigger projects" — see
+     * buildWebsiteBanner (lib/actionPlan.ts). */
+    websiteBanner: WebsiteBanner | null;
     error?: string;
   };
   /** Every growth move currently firing for this business — real,
@@ -144,7 +189,7 @@ export function GrowthView({
   }
 
   const { weeklyProjectedBreakdown, weeklyProjectedBreakdownHigh } = actionPlan;
-  const pointsWithinReachLow = weeklyProjectedBreakdown.total - breakdown.total;
+  const pointsWithinReachLow = actionPlan.weeklyPointsWithinReach;
   const pointsWithinReachHigh = weeklyProjectedBreakdownHigh
     ? weeklyProjectedBreakdownHigh.total - breakdown.total
     : null;
@@ -152,7 +197,7 @@ export function GrowthView({
   // an honest weekly first step either, buildWeeklyPlan leaves the week
   // truly empty — the only time that happens for a business with real
   // remaining gaps is when there simply aren't any left to show.
-  const hasNoRemainingScoreGaps = actionPlan.tasks.length === 0;
+  const hasNoRemainingScoreGaps = actionPlan.tasks.length === 0 && actionPlan.websiteBanner === null;
   // Every real open score-gap task on this page, "This week's plan" and
   // "Bigger projects" together — the live source of truth a growth
   // move's badge checks itself against (see growthMoveOverlapsActionPlan
@@ -207,9 +252,9 @@ export function GrowthView({
                 label={t(locale, "dashboard.growth.view.statPointsWithinReach")}
                 value={
                   pointsWithinReachHigh !== null
-                    ? `+${Math.max(0, pointsWithinReachLow)}–${Math.max(0, pointsWithinReachHigh)}`
+                    ? `+${formatPoints(Math.max(0, pointsWithinReachLow))}–${formatPoints(Math.max(0, pointsWithinReachHigh))}`
                     : pointsWithinReachLow > 0
-                      ? `+${pointsWithinReachLow}`
+                      ? `+${formatPoints(pointsWithinReachLow)}`
                       : "0"
                 }
               />
@@ -265,16 +310,21 @@ export function GrowthView({
                   count: actionPlan.laterTasks.length,
                 })}
               />
-              <TaskListCard
-                tasks={actionPlan.laterTasks}
-                businessId={businessId}
-                lastScanAt={lastScanAt}
-                emptyMessage={
-                  hasNoRemainingScoreGaps
-                    ? t(locale, "dashboard.growth.view.fullPointsMessage")
-                    : t(locale, "dashboard.growth.view.laterEmptyMessage")
-                }
-              />
+              {actionPlan.websiteBanner && (
+                <WebsiteBannerCard banner={actionPlan.websiteBanner} businessId={businessId} />
+              )}
+              {(actionPlan.laterTasks.length > 0 || !actionPlan.websiteBanner) && (
+                <TaskListCard
+                  tasks={actionPlan.laterTasks}
+                  businessId={businessId}
+                  lastScanAt={lastScanAt}
+                  emptyMessage={
+                    hasNoRemainingScoreGaps
+                      ? t(locale, "dashboard.growth.view.fullPointsMessage")
+                      : t(locale, "dashboard.growth.view.laterEmptyMessage")
+                  }
+                />
+              )}
             </>
           )}
 

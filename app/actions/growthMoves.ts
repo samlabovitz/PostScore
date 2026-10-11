@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   buildGrowthMoves,
   competitorPhotoCounts,
+  withoutWebsiteGrowthMoves,
   median,
   weakWebsiteIssueLabels,
   type GrowthMove,
@@ -56,7 +57,7 @@ export async function getGrowthMoveSignals(
   }
 
   const [businessResult, promoResult, referralResult, resolvedSnapshot] = await Promise.all([
-    supabase.from("businesses").select("photo_count, pricing_assessed_at, website").eq("id", businessId).single(),
+    supabase.from("businesses").select("photo_count, pricing_assessed_at, website, verified_website_url").eq("id", businessId).single(),
     supabase.from("promos").select("id").eq("business_id", businessId).limit(1),
     supabase.from("referrals").select("id").eq("business_id", businessId).limit(1),
     snapshot !== undefined ? Promise.resolve(snapshot) : getLatestCompetitorSnapshot(businessId),
@@ -82,6 +83,7 @@ export async function getGrowthMoveSignals(
       medianCompetitorPhotoCount,
     },
     hasWebsite: businessResult.data.website !== null,
+    hasVerifiedWebsite: !!businessResult.data.verified_website_url,
     hasWebsiteTaskOpen: hasWebsiteCheck ? (hasWebsiteCheck.earnedPoints ?? 0) < hasWebsiteCheck.maxPoints : false,
     weakWebsiteIssueLabels: weakWebsiteIssueLabels(breakdown),
   };
@@ -97,7 +99,9 @@ export type GetGrowthMovesResult =
 
 /** Loads the real signals, then builds the real moves — the two call
  * sites (the Growth page, and PostAI's own context — see
- * app/actions/assistant.ts) both just need this. Takes the business's
+ * app/actions/assistant.ts) both just need this. Both show website
+ * work through the Website page instead of a growth move (Step 2f), so
+ * the website moves are dropped here — see withoutWebsiteGrowthMoves. Takes the business's
  * own already-computed breakdown rather than re-scoring, since every
  * caller has already scored the business once. See
  * getGrowthMoveSignals's own doc for `referralOk` and `snapshot`. */
@@ -110,5 +114,5 @@ export async function getGrowthMoves(
 ): Promise<GetGrowthMovesResult> {
   const result = await getGrowthMoveSignals(businessId, breakdown, referralOk, snapshot);
   if (result.status !== "ok") return result;
-  return { status: "ok", moves: buildGrowthMoves(result.signals, locale) };
+  return { status: "ok", moves: withoutWebsiteGrowthMoves(buildGrowthMoves(result.signals, locale)) };
 }

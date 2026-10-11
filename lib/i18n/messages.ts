@@ -365,6 +365,62 @@ export type MessageKey =
   | "growth.fix.addWebsiteToListing.step3"
   | "growth.fix.addWebsiteToListing.step4"
   | "growth.fix.addWebsiteToListing.note"
+  | "content.spamTopic.replica"
+  | "content.spamTopic.casino"
+  | "content.spamTopic.pharma"
+  | "content.spamTopic.payday_loan"
+  | "content.spamTopic.essay_writing"
+  | "content.spamTopic.crypto"
+  | "dashboard.hackedBanner.message"
+  | "dashboard.hackedBanner.link"
+  | "dashboard.website.security.needsWebPerson"
+  | "dashboard.website.security.whatWeFoundHeading"
+  | "dashboard.website.security.matchedPhrase"
+  | "dashboard.website.security.homepageOnly"
+  | "dashboard.website.security.hiddenYes"
+  | "dashboard.website.security.hiddenNo"
+  | "dashboard.website.security.domainsHeading"
+  | "dashboard.website.security.snippetHeading"
+  | "dashboard.website.security.whyHeading"
+  | "dashboard.website.security.why"
+  | "dashboard.website.security.stepsHeading"
+  | "dashboard.website.security.step1"
+  | "dashboard.website.security.step2"
+  | "dashboard.website.security.step3"
+  | "dashboard.website.security.step4"
+  | "dashboard.website.security.step5"
+  | "dashboard.website.security.safeBrowsingNotChecked"
+  | "dashboard.website.security.safeBrowsingClean"
+  | "dashboard.website.security.safeBrowsingFlagged"
+  | "dashboard.website.security.copyButton"
+  | "dashboard.website.security.copied"
+  | "dashboard.website.security.copyFallback"
+  | "dashboard.website.security.copy.title"
+  | "dashboard.website.security.copy.business"
+  | "dashboard.website.security.copy.site"
+  | "dashboard.website.security.copy.scanDate"
+  | "dashboard.website.security.copy.scope"
+  | "dashboard.website.security.copy.topic"
+  | "dashboard.website.security.copy.phrase"
+  | "dashboard.website.security.copy.hidden"
+  | "dashboard.website.security.copy.yes"
+  | "dashboard.website.security.copy.no"
+  | "dashboard.website.security.copy.domains"
+  | "dashboard.website.security.copy.noneFound"
+  | "dashboard.website.security.copy.snippet"
+  | "content.actionPlan.website.info_consistency.action.hours"
+  | "content.actionPlan.website.info_consistency.action.phone"
+  | "content.actionPlan.website.info_consistency.action.address"
+  | "content.actionPlan.website.info_consistency.action.generic"
+  | "content.actionPlan.website.info_consistency.why"
+  | "content.actionPlan.website.info_consistency.fix"
+  | "dashboard.growth.websiteBanner.improve.one"
+  | "dashboard.growth.websiteBanner.improve.other"
+  | "dashboard.growth.websiteBanner.openWebsitePage"
+  | "dashboard.growth.websiteBanner.getWebsite.title"
+  | "dashboard.growth.websiteBanner.getWebsite.range"
+  | "dashboard.growth.websiteBanner.getWebsite.single"
+  | "dashboard.growth.websiteBanner.getWebsite.cta"
   // --- Shared content layer: listing-change descriptions (lib/profileChanges.ts) ---
   | "content.listingChange.phone.added"
   | "content.listingChange.phone.removed"
@@ -2122,6 +2178,7 @@ export type MessageKey =
  * how a future locale with more categories, e.g. "few"/"many", would
  * still get a safe result even before every category is seeded for it). */
 export type PluralKeyBase =
+  | "dashboard.growth.websiteBanner.improve"
   | "report.fragment.scoreRose"
   | "report.fragment.scoreDropped"
   | "report.fragment.reviewsGained"
@@ -2599,12 +2656,11 @@ export const messages: Record<Locale, LocaleMessages> = {
       "No signs of hacking found in your site's own content. (Google Safe Browsing wasn't checked — not configured yet.)",
     "content.checks.website.security.explanation.safeBrowsingThreat":
       "Google Safe Browsing flags this site as a security risk ({types}) — this needs urgent attention.",
-    "content.checks.website.security.explanation.spamFound":
-      'We found signs your website may be hacked: "{snippet}"',
+    "content.checks.website.security.explanation.spamFound": "Spam content found on your site ({topic}) — signs it may be hacked.",
 
     "content.checks.website.info_consistency.label": "Matches your Google listing",
     "content.checks.website.info_consistency.advice":
-      "Update your website so its hours, phone number, and address match your real, current Google listing — a visitor who gets turned away by wrong info may not try again.",
+      "Check which is correct — your website or your Google listing — and update the other, so customers get the same hours, phone number, and address everywhere.",
     "content.checks.website.info_consistency.explanation.noWebsite": "Not applicable — no website on file to check.",
     "content.checks.website.info_consistency.explanation.notAnalyzed":
       "This site hasn't been analyzed yet — re-scan to compare it against your real Google listing.",
@@ -2656,6 +2712,62 @@ export const messages: Record<Locale, LocaleMessages> = {
     "growth.fix.addWebsiteToListing.step4": "Tap Save.",
     "growth.fix.addWebsiteToListing.note":
       "Google may take a few days to show the update publicly. Your next PostScore scan will confirm it went through.",
+    "content.spamTopic.replica": "replica watches",
+    "content.spamTopic.casino": "online casino",
+    "content.spamTopic.pharma": "online pharmacy",
+    "content.spamTopic.payday_loan": "payday loans",
+    "content.spamTopic.essay_writing": "essay-writing services",
+    "content.spamTopic.crypto": "crypto schemes",
+    "dashboard.hackedBanner.message": "Your website may be hacked — we found spam content on it.",
+    "dashboard.hackedBanner.link": "See what we found →",
+    "dashboard.website.security.needsWebPerson": "Needs a web person",
+    "dashboard.website.security.whatWeFoundHeading": "What we found",
+    "dashboard.website.security.matchedPhrase": "Spam phrase found: \"{phrase}\"",
+    "dashboard.website.security.homepageOnly": "We checked your homepage ({url}); other pages weren't checked.",
+    "dashboard.website.security.hiddenYes": "It was hidden from visitors — people don't see it, but search engines do. That's a common sign of injected spam.",
+    "dashboard.website.security.hiddenNo": "It was visible on the page.",
+    "dashboard.website.security.domainsHeading": "It links to these unrelated sites (don't visit them):",
+    "dashboard.website.security.snippetHeading": "The text we found:",
+    "dashboard.website.security.whyHeading": "Why it matters",
+    "dashboard.website.security.why": "Hidden spam like this can hurt your Google ranking, and Google may warn visitors away from your site.",
+    "dashboard.website.security.stepsHeading": "What to do",
+    "dashboard.website.security.step1": "Contact your website host or developer and share what we found.",
+    "dashboard.website.security.step2": "Have them remove the injected content.",
+    "dashboard.website.security.step3": "Change every admin and hosting password.",
+    "dashboard.website.security.step4": "Update the site's software and plugins.",
+    "dashboard.website.security.step5": "Once it's clean, your next PostScore scan will check it again.",
+    "dashboard.website.security.safeBrowsingNotChecked": "Google Safe Browsing: not checked yet.",
+    "dashboard.website.security.safeBrowsingClean": "Google Safe Browsing: no warning found.",
+    "dashboard.website.security.safeBrowsingFlagged": "Google Safe Browsing: this site is flagged.",
+    "dashboard.website.security.copyButton": "Copy details for your web person",
+    "dashboard.website.security.copied": "Copied",
+    "dashboard.website.security.copyFallback": "Your browser didn't allow copying — select the text below and copy it.",
+    "dashboard.website.security.copy.title": "Possible website hack — details from PostScore",
+    "dashboard.website.security.copy.business": "Business: {name}",
+    "dashboard.website.security.copy.site": "Website: {url}",
+    "dashboard.website.security.copy.scanDate": "Scan date: {date}",
+    "dashboard.website.security.copy.scope": "Checked: homepage only; other pages weren't checked.",
+    "dashboard.website.security.copy.topic": "Spam topic: {topic}",
+    "dashboard.website.security.copy.phrase": "Matched phrase: \"{phrase}\"",
+    "dashboard.website.security.copy.hidden": "Hidden from visitors: {value}",
+    "dashboard.website.security.copy.yes": "yes",
+    "dashboard.website.security.copy.no": "no",
+    "dashboard.website.security.copy.domains": "Unrelated sites it links to: {domains}",
+    "dashboard.website.security.copy.noneFound": "none found",
+    "dashboard.website.security.copy.snippet": "Text found: \"{snippet}\"",
+    "content.actionPlan.website.info_consistency.action.hours": "Your website and Google listing show different hours — check which is correct and update the other.",
+    "content.actionPlan.website.info_consistency.action.phone": "Your website and Google listing show different phone numbers — check which is correct and update the other.",
+    "content.actionPlan.website.info_consistency.action.address": "Your website and Google listing show different addresses — check which is correct and update the other.",
+    "content.actionPlan.website.info_consistency.action.generic": "Your website and Google listing show different information — check which is correct and update the other.",
+    "content.actionPlan.website.info_consistency.why": "Customers who get the wrong hours, phone number, or address may be turned away.",
+    "content.actionPlan.website.info_consistency.fix": "Decide which one is right, then update the other one — your website's own page, or your Google Business Profile's business information. Your next PostScore scan will confirm they match.",
+    "dashboard.growth.websiteBanner.improve.one": "Your website scores {score}/100 — {count} improvement available (up to ~+{points} pts on your PostScore).",
+    "dashboard.growth.websiteBanner.improve.other": "Your website scores {score}/100 — {count} improvements available (up to ~+{points} pts on your PostScore).",
+    "dashboard.growth.websiteBanner.openWebsitePage": "Open the Website page →",
+    "dashboard.growth.websiteBanner.getWebsite.title": "Get a website",
+    "dashboard.growth.websiteBanner.getWebsite.range": "You don't have a website yet — a starter site from PostScore could add ~+{low}–{high} pts to your PostScore.",
+    "dashboard.growth.websiteBanner.getWebsite.single": "You don't have a website yet — a starter site from PostScore could add ~+{points} pts to your PostScore.",
+    "dashboard.growth.websiteBanner.getWebsite.cta": "Build your starter site on the Website page →",
 
     // --- content.listingChange.* — pure extraction of lib/profileChanges.ts's
     // diffProfileSnapshots() sentences, byte-for-byte.
@@ -2856,9 +2968,9 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Nearby competitors average {competitorPhotos} photos; you have {yourPhotos}. More real photos give customers a better first impression before they ever visit.",
     "dashboard.growth.moves.addPhotos.howTo":
       "Add photos to your Google Business Profile: open it (search your business name on Google while signed in, or go to business.google.com) and choose Add photos. Storefront, interior, team, and your products or work make the biggest difference.",
-    "dashboard.growth.moves.buildStarterSite.title": "Build a free starter website",
+    "dashboard.growth.moves.buildStarterSite.title": "Build a PostScore starter website",
     "dashboard.growth.moves.buildStarterSite.noWebsite":
-      "You don't have a website on file. PostScore can build you a free starter page from your real Google listing in a few minutes.",
+      "You don't have a website on file. PostScore can build you a starter page from your real Google listing in a few minutes.",
     "dashboard.growth.moves.buildStarterSite.howTo":
       "Go to the Website page and use the starter-site builder — it turns your real Google listing data (hours, services, photos) into a live one-page site in minutes, no design work needed.",
     "dashboard.growth.moves.improveWebsite.title": "Improve your website",
@@ -3189,7 +3301,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.starter.subcopyNoWebsite":
       "No website is one of the biggest gaps in your PostScore. This builds a real, mobile-friendly one-page site from your actual Google listing data — nothing invented.",
     "dashboard.website.starter.subcopyUnderperforming":
-      "Your website's real, measured PostScore is lower than what this free starter template would score for the same business — see the visual analysis above for exactly why. A clean rebuild could score better.",
+      "Your website's real, measured PostScore is lower than what this PostScore starter template would score for the same business — see the visual analysis above for exactly why. A clean rebuild could score better.",
     "dashboard.website.starter.subcopyBackup":
       "You already have a website on file, so this is here if you ever want a simple backup or a fresh starting point — not something you need.",
     "dashboard.website.starter.taglineLabel": "Tagline",
@@ -5078,9 +5190,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.security.explanation.cleanChecked": "No se encontraron señales de hackeo, y Google Safe Browsing informa que este sitio está limpio.",
     "content.checks.website.security.explanation.cleanNotChecked": "No se encontraron señales de hackeo en el propio contenido de su sitio. (No se comprobó Google Safe Browsing — aún no está configurado.)",
     "content.checks.website.security.explanation.safeBrowsingThreat": "Google Safe Browsing marca este sitio como un riesgo de seguridad ({types}) — esto necesita atención urgente.",
-    "content.checks.website.security.explanation.spamFound": "Encontramos señales de que su sitio web podría estar hackeado: \"{snippet}\"",
+    "content.checks.website.security.explanation.spamFound": "Se encontró contenido spam en su sitio ({topic}) — señales de que podría estar hackeado.",
     "content.checks.website.info_consistency.label": "Coincide con su ficha de Google",
-    "content.checks.website.info_consistency.advice": "Actualice su sitio web para que sus horarios, número de teléfono y dirección coincidan con su ficha de Google real y actual — un visitante que se encuentre con información incorrecta puede no volver a intentarlo.",
+    "content.checks.website.info_consistency.advice": "Verifique cuál es el correcto — su sitio web o su ficha de Google — y actualice el otro, para que los clientes vean el mismo horario, teléfono y dirección en todas partes.",
     "content.checks.website.info_consistency.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para verificar.",
     "content.checks.website.info_consistency.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para compararlo con su ficha de Google real.",
     "content.checks.website.info_consistency.explanation.noComparableInfo": "Su sitio no indica horarios, teléfono o dirección de una manera que podamos comparar. Se excluye de su puntuación, no se cuenta en su contra.",
@@ -5111,6 +5223,62 @@ export const messages: Record<Locale, LocaleMessages> = {
     "growth.fix.addWebsiteToListing.step3": "Busque el campo Sitio web y pegue su sitio real: {url}",
     "growth.fix.addWebsiteToListing.step4": "Toque Guardar.",
     "growth.fix.addWebsiteToListing.note": "Google puede tardar unos días en mostrar la actualización públicamente. Su próximo escaneo de PostScore confirmará que se realizó correctamente.",
+    "content.spamTopic.replica": "relojes de imitación",
+    "content.spamTopic.casino": "casino en línea",
+    "content.spamTopic.pharma": "farmacia en línea",
+    "content.spamTopic.payday_loan": "préstamos de día de pago",
+    "content.spamTopic.essay_writing": "servicios de redacción de ensayos",
+    "content.spamTopic.crypto": "esquemas de criptomonedas",
+    "dashboard.hackedBanner.message": "Es posible que su sitio web haya sido hackeado — encontramos contenido spam en él.",
+    "dashboard.hackedBanner.link": "Vea lo que encontramos →",
+    "dashboard.website.security.needsWebPerson": "Necesita a un técnico web",
+    "dashboard.website.security.whatWeFoundHeading": "Lo que encontramos",
+    "dashboard.website.security.matchedPhrase": "Frase de spam encontrada: \"{phrase}\"",
+    "dashboard.website.security.homepageOnly": "Revisamos su página de inicio ({url}); las demás páginas no se revisaron.",
+    "dashboard.website.security.hiddenYes": "Estaba oculto para los visitantes — las personas no lo ven, pero los buscadores sí. Es una señal común de spam inyectado.",
+    "dashboard.website.security.hiddenNo": "Era visible en la página.",
+    "dashboard.website.security.domainsHeading": "Enlaza a estos sitios no relacionados (no los visite):",
+    "dashboard.website.security.snippetHeading": "El texto que encontramos:",
+    "dashboard.website.security.whyHeading": "Por qué es importante",
+    "dashboard.website.security.why": "El spam oculto como este puede perjudicar su posicionamiento en Google, y Google podría advertir a los visitantes que no entren a su sitio.",
+    "dashboard.website.security.stepsHeading": "Qué hacer",
+    "dashboard.website.security.step1": "Comuníquese con su proveedor de alojamiento o con su desarrollador web y comparta lo que encontramos.",
+    "dashboard.website.security.step2": "Pídales que eliminen el contenido inyectado.",
+    "dashboard.website.security.step3": "Cambie todas las contraseñas de administración y de alojamiento.",
+    "dashboard.website.security.step4": "Actualice el software y los complementos (plugins) del sitio.",
+    "dashboard.website.security.step5": "Una vez que esté limpio, su próximo escaneo de PostScore lo volverá a revisar.",
+    "dashboard.website.security.safeBrowsingNotChecked": "Navegación segura de Google: aún no se ha revisado.",
+    "dashboard.website.security.safeBrowsingClean": "Navegación segura de Google: no se encontró ninguna advertencia.",
+    "dashboard.website.security.safeBrowsingFlagged": "Navegación segura de Google: este sitio está marcado.",
+    "dashboard.website.security.copyButton": "Copiar los detalles para su técnico web",
+    "dashboard.website.security.copied": "Copiado",
+    "dashboard.website.security.copyFallback": "Su navegador no permitió copiar — seleccione el texto de abajo y cópielo.",
+    "dashboard.website.security.copy.title": "Posible hackeo del sitio web — detalles de PostScore",
+    "dashboard.website.security.copy.business": "Negocio: {name}",
+    "dashboard.website.security.copy.site": "Sitio web: {url}",
+    "dashboard.website.security.copy.scanDate": "Fecha del escaneo: {date}",
+    "dashboard.website.security.copy.scope": "Revisado: solo la página de inicio; las demás páginas no se revisaron.",
+    "dashboard.website.security.copy.topic": "Tema del spam: {topic}",
+    "dashboard.website.security.copy.phrase": "Frase encontrada: \"{phrase}\"",
+    "dashboard.website.security.copy.hidden": "Oculto para los visitantes: {value}",
+    "dashboard.website.security.copy.yes": "sí",
+    "dashboard.website.security.copy.no": "no",
+    "dashboard.website.security.copy.domains": "Sitios no relacionados a los que enlaza: {domains}",
+    "dashboard.website.security.copy.noneFound": "no se encontraron",
+    "dashboard.website.security.copy.snippet": "Texto encontrado: \"{snippet}\"",
+    "content.actionPlan.website.info_consistency.action.hours": "Su sitio web y su ficha de Google muestran horarios diferentes — verifique cuál es el correcto y actualice el otro.",
+    "content.actionPlan.website.info_consistency.action.phone": "Su sitio web y su ficha de Google muestran números de teléfono diferentes — verifique cuál es el correcto y actualice el otro.",
+    "content.actionPlan.website.info_consistency.action.address": "Su sitio web y su ficha de Google muestran direcciones diferentes — verifique cuál es la correcta y actualice la otra.",
+    "content.actionPlan.website.info_consistency.action.generic": "Su sitio web y su ficha de Google muestran información diferente — verifique cuál es la correcta y actualice la otra.",
+    "content.actionPlan.website.info_consistency.why": "Los clientes que reciben un horario, un teléfono o una dirección incorrectos podrían terminar yéndose a otro lugar.",
+    "content.actionPlan.website.info_consistency.fix": "Decida cuál es el correcto y luego actualice el otro — la página de su propio sitio web o la información de su Perfil de Negocio de Google. Su próximo escaneo de PostScore confirmará que coinciden.",
+    "dashboard.growth.websiteBanner.improve.one": "Su sitio web obtiene {score}/100 — {count} mejora disponible (hasta ~+{points} pts en su PostScore).",
+    "dashboard.growth.websiteBanner.improve.other": "Su sitio web obtiene {score}/100 — {count} mejoras disponibles (hasta ~+{points} pts en su PostScore).",
+    "dashboard.growth.websiteBanner.openWebsitePage": "Abrir la página Sitio web →",
+    "dashboard.growth.websiteBanner.getWebsite.title": "Obtenga un sitio web",
+    "dashboard.growth.websiteBanner.getWebsite.range": "Todavía no tiene sitio web — un sitio inicial de PostScore podría sumar ~+{low}–{high} pts a su PostScore.",
+    "dashboard.growth.websiteBanner.getWebsite.single": "Todavía no tiene sitio web — un sitio inicial de PostScore podría sumar ~+{points} pts a su PostScore.",
+    "dashboard.growth.websiteBanner.getWebsite.cta": "Cree su sitio inicial en la página Sitio web →",
     "content.listingChange.phone.added": "Se agregó un número de teléfono a su ficha.",
     "content.listingChange.phone.removed": "Se eliminó el número de teléfono de su ficha.",
     "content.listingChange.phone.changed": "Su número de teléfono cambió.",
@@ -5172,26 +5340,26 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.completeness.phone.why":
       "Un número de teléfono faltante es una de las formas más rápidas de perder a un cliente que está listo para llamar en ese momento.",
     "content.actionPlan.completeness.phone.action": "Agregue el número de teléfono de su negocio a su Perfil de Negocio de Google.",
-    "content.actionPlan.completeness.phone.fix": "En el Perfil de Negocio de Google: Editar perfil → Información de contacto → Número de teléfono.",
+    "content.actionPlan.completeness.phone.fix": "Actualice el número de teléfono en su Perfil de Negocio de Google.",
     "content.actionPlan.completeness.address.why":
       "Sin una dirección verificada, los clientes — y Google Maps — no pueden encontrarlo de forma fiable, lo que puede dejarlo fuera de los resultados de búsqueda locales por completo.",
     "content.actionPlan.completeness.address.action": "Agregue o corrija la dirección de su negocio en el Perfil de Negocio de Google.",
-    "content.actionPlan.completeness.address.fix": "En el Perfil de Negocio de Google: Editar perfil → Información de la empresa → Dirección.",
+    "content.actionPlan.completeness.address.fix": "Actualice la dirección en su Perfil de Negocio de Google.",
     "content.actionPlan.completeness.hours.why":
       "Los clientes suelen consultar el horario antes de visitar — si falta, muchos simplemente elegirán a un competidor que lo tenga indicado con claridad.",
     "content.actionPlan.completeness.hours.action": "Agregue el horario real de su negocio al Perfil de Negocio de Google.",
     "content.actionPlan.completeness.hours.fix":
-      "En el Perfil de Negocio de Google: Editar perfil → Información de la empresa → Horario de atención. Complete todos los días, incluidos los horarios de días festivos si son diferentes.",
+      "Agregue su horario de atención en su Perfil de Negocio de Google. Complete todos los días, incluidos los horarios de días festivos si son diferentes.",
     "content.actionPlan.completeness.website_link.why":
       "Enlazar su sitio web en su ficha de Google les da a los clientes una forma confiable más de obtener información y convertir, directamente desde los resultados de búsqueda.",
     "content.actionPlan.completeness.website_link.action": "Enlace la URL de su sitio web en su Perfil de Negocio de Google.",
     "content.actionPlan.completeness.website_link.fix":
-      "¿Aún no tiene un sitio? Cree uno en minutos con el generador de sitio inicial de la página de Sitio web. Una vez que tenga una URL, agréguela a su Perfil de Negocio de Google: Editar perfil → Información de la empresa → Sitio web.",
+      "¿Aún no tiene un sitio? Cree uno en minutos con el generador de sitio inicial de la página de Sitio web. Una vez que tenga una URL, agréguela como su sitio web en su Perfil de Negocio de Google.",
     "content.actionPlan.completeness.categories.why":
       "Las categorías son la forma en que Google relaciona su ficha con lo que la gente realmente busca — categorías más precisas significan más búsquedas relevantes en las que aparece.",
     "content.actionPlan.completeness.categories.action": "Agregue o amplíe las categorías de su negocio en el Perfil de Negocio de Google.",
     "content.actionPlan.completeness.categories.fix":
-      "En el Perfil de Negocio de Google: Editar perfil → Información de la empresa → Categoría. Agregue todas las categorías que describan genuinamente lo que ofrece, con la más específica como principal.",
+      "Agregue sus categorías en su Perfil de Negocio de Google: todas las que describan genuinamente lo que ofrece, con la más específica como principal.",
     "content.actionPlan.completeness.photos.why":
       "Las fichas con fotos reales reciben muchos más clics y llamadas — las fotos suelen ser la primera impresión real que un cliente tiene de su negocio.",
     "content.actionPlan.completeness.photos.action": "Agregue fotos reales y actuales de su negocio al Perfil de Negocio de Google.",
@@ -5304,9 +5472,9 @@ export const messages: Record<Locale, LocaleMessages> = {
       "La competencia cercana tiene en promedio {competitorPhotos} fotos; usted tiene {yourPhotos}. Más fotos reales le dan a los clientes una mejor primera impresión antes de visitarlo.",
     "dashboard.growth.moves.addPhotos.howTo":
       "Agregue fotos a su Perfil de Negocio de Google: ábralo (busque el nombre de su negocio en Google con su sesión iniciada, o vaya a business.google.com) y elija Agregar fotos. La fachada, el interior, su equipo y sus productos o trabajos son las que más ayudan.",
-    "dashboard.growth.moves.buildStarterSite.title": "Cree una página web inicial gratis",
+    "dashboard.growth.moves.buildStarterSite.title": "Cree una página web inicial con PostScore",
     "dashboard.growth.moves.buildStarterSite.noWebsite":
-      "No tiene un sitio web registrado. PostScore puede crearle una página inicial gratis a partir de su ficha real de Google en pocos minutos.",
+      "No tiene un sitio web registrado. PostScore puede crearle una página inicial a partir de su ficha real de Google en pocos minutos.",
     "dashboard.growth.moves.buildStarterSite.howTo":
       "Vaya a la página de Sitio web y use el creador de páginas iniciales — convierte los datos reales de su ficha de Google (horario, servicios, fotos) en un sitio de una página en minutos, sin necesidad de diseño.",
     "dashboard.growth.moves.improveWebsite.title": "Mejore su sitio web",
@@ -5589,7 +5757,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.starter.headlineUnderperforming": "Su sitio actual podría estar frenándolo",
     "dashboard.website.starter.headlineBackup": "Cree un sitio inicial de respaldo",
     "dashboard.website.starter.subcopyNoWebsite": "No tener un sitio web es una de las mayores deficiencias en su PostScore. Esto crea uno real, apto para móviles, de una sola página, a partir de los datos reales de su ficha de Google — nada inventado.",
-    "dashboard.website.starter.subcopyUnderperforming": "El PostScore real y medido de su sitio web es más bajo que el que obtendría esta plantilla inicial gratuita para el mismo negocio — vea el análisis visual de arriba para saber exactamente por qué. Una reconstrucción limpia podría obtener una mejor puntuación.",
+    "dashboard.website.starter.subcopyUnderperforming": "El PostScore real y medido de su sitio web es más bajo que el que obtendría esta plantilla inicial de PostScore para el mismo negocio — vea el análisis visual de arriba para saber exactamente por qué. Una reconstrucción limpia podría obtener una mejor puntuación.",
     "dashboard.website.starter.subcopyBackup": "Ya tiene un sitio web registrado, así que esto está aquí por si alguna vez quiere una copia de seguridad sencilla o un nuevo punto de partida — no es algo que necesite.",
     "dashboard.website.starter.taglineLabel": "Eslogan",
     "dashboard.website.starter.taglineOptionalHint": "(opcional — escriba el suyo)",

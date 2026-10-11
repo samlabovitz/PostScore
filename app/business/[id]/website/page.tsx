@@ -8,6 +8,8 @@ import { WebsiteGeneratorSection } from "./WebsiteGeneratorSection";
 import { WebsiteVisualAnalysis } from "./WebsiteVisualAnalysis";
 import { WebsiteScoreBreakdown } from "./WebsiteScoreBreakdown";
 import { formatShortDate, normalizeLocale, t } from "@/lib/i18n";
+import { HackedSiteBanner } from "@/components/scoring/HackedSiteBanner";
+import { hackSignsFor } from "@/lib/siteSecurity";
 
 export default async function WebsitePage({ params }: { params: { id: string } }) {
   const result = await getWebsitePageData(params.id);
@@ -83,8 +85,17 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       websiteCategory={data.websiteCategory}
       websiteAnalysis={data.websiteAnalysis}
       websiteSuggestions={data.websiteSuggestions}
+      siteUrl={data.website ?? data.verifiedWebsiteUrl}
+      businessName={data.businessName}
     />
   ) : null;
+
+  const showHackedBanner =
+    hasWebsite &&
+    hackSignsFor(
+      data.websiteCategory?.checks.find((c) => c.id === "website.security"),
+      data.websiteAnalysis
+    ).length > 0;
 
   return (
     <DashboardShell
@@ -98,6 +109,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       }}
     >
       <div className="flex flex-col gap-8 nav:gap-10">
+        {showHackedBanner && <HackedSiteBanner href="#site-security" />}
         <div>
           <Link
             href={`/business/${params.id}`}

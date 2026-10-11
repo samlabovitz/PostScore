@@ -17,6 +17,8 @@ import { GradeBadge } from "@/components/ui/GradeBadge";
 import { ScoreGauge } from "@/components/ui/ScoreGauge";
 import { StatTile } from "@/components/ui/StatTile";
 import { CategoryCard, formatPoints } from "@/components/scoring/CategoryCard";
+import { HackedSiteBanner } from "@/components/scoring/HackedSiteBanner";
+import { hackSignsFor } from "@/lib/siteSecurity";
 import { cn } from "@/lib/utils";
 import { rescanBusiness } from "@/app/actions/scoring";
 import type { BusinessRecord, ScoreHistoryRow, ScoreSnapshot } from "@/app/actions/scoring";
@@ -26,6 +28,7 @@ import { diffBreakdowns, resolveChangeDisplay } from "@/lib/scoreChanges";
 import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 import {
   GRADE_THRESHOLDS,
+  parseWebsiteAnalysis,
   type CategoryResult,
   type Grade,
   type ScoreBreakdown,
@@ -625,9 +628,16 @@ export function BusinessScoreView({
 }) {
   const locale = useLocale();
   const { breakdown, projectedBreakdown } = result;
+  // Real stored spam findings only — see hackSignsFor (lib/siteSecurity.ts).
+  const showHackedBanner =
+    hackSignsFor(
+      breakdown.checks.find((c) => c.id === "website.security"),
+      parseWebsiteAnalysis(business.website_analysis_json)
+    ).length > 0;
 
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
+      {showHackedBanner && <HackedSiteBanner href={`/business/${businessId}/website#site-security`} />}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-serif text-2xl font-semibold text-ink nav:text-[27px]">

@@ -37,6 +37,7 @@
 import { DEFAULT_LOCALE, formatShortDate, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
 import { GOOGLE_PHOTO_CAP } from "@/lib/googlePhotoCap";
 import { reachabilityReasonMessageKey, type ReachabilityFailureReason } from "@/lib/websiteReachability";
+import { spamTopic } from "@/lib/siteSecurity";
 import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type AbandonedSiteFinding, type InfoFieldFinding, type SpamFinding, type StaleNoticeFinding, type WebsiteKind } from "@/lib/websiteTrust";
 
 // ---------------------------------------------------------------------------
@@ -1130,7 +1131,7 @@ const PLACEHOLDER_HOURS = [
  * website.* quality check; only completeness.website_link (which reflects
  * the LISTING's own URL state) still ignores it.
  */
-function hasAnalyzableWebsite(input: BusinessScoringInput): boolean {
+export function hasAnalyzableWebsite(input: BusinessScoringInput): boolean {
   return (!!input.website && input.website.trim().length > 0) || !!input.verifiedElsewhereUrl;
 }
 
@@ -2102,7 +2103,10 @@ export const CHECKS: CheckDefinition[] = [
       return {
         earnedPoints: 0,
         confidence: "VERIFIED",
-        explanation: t(locale, "content.checks.website.security.explanation.spamFound", { snippet: spam.snippet }),
+        // One line only, everywhere — the full evidence (phrase, hidden,
+        // links, snippet, steps) lives on the Website page's Site
+        // security row (see lib/siteSecurity.ts).
+        explanation: t(locale, "content.checks.website.security.explanation.spamFound", { topic: spamTopic(spam.category, locale) }),
       };
     },
     simulateFix: (input) => ({

@@ -65,15 +65,19 @@ import {
   buildCompletedTasks,
   mergeReviewTasks,
   mergeWebsiteTasks,
+  applyGrowthWebsiteRules,
+  buildWebsiteBanner,
   type TaskRow,
 } from "../lib/actionPlan";
 import {
   buildGrowthMoves,
+  withoutWebsiteGrowthMoves,
   competitorPhotoCounts,
   median,
   weakWebsiteIssueLabels,
   type GrowthMoveSignals,
 } from "../lib/growthMoves";
+import { buildAssistantSiteSecurity } from "../lib/siteSecurity";
 import { buildWeeklyChecklistItems, buildWeeklyChecklistState, type WeeklyCheckRow } from "../lib/weeklyChecklist";
 import { formatShortDate, normalizeLocale, type Locale } from "../lib/i18n";
 import {
@@ -201,7 +205,7 @@ async function readGrowthMoveSignals(
   snapshot: CompetitorSnapshot | null
 ): Promise<GrowthMoveSignals> {
   const [businessResult, promoResult, referralResult] = await Promise.all([
-    supabase.from("businesses").select("photo_count, pricing_assessed_at, website").eq("id", businessId).single(),
+    supabase.from("businesses").select("photo_count, pricing_assessed_at, website, verified_website_url").eq("id", businessId).single(),
     supabase.from("promos").select("id").eq("business_id", businessId).limit(1),
     supabase.from("referrals").select("id").eq("business_id", businessId).limit(1),
   ]);
@@ -218,6 +222,7 @@ async function readGrowthMoveSignals(
     photoCount: businessResult.data?.photo_count ?? null,
     competitorPhotos: { scanAvailable: snapshot !== null, medianCompetitorPhotoCount: median(photoCounts) },
     hasWebsite: (businessResult.data?.website ?? null) !== null,
+    hasVerifiedWebsite: !!businessResult.data?.verified_website_url,
     hasWebsiteTaskOpen: hasWebsiteCheck ? (hasWebsiteCheck.earnedPoints ?? 0) < hasWebsiteCheck.maxPoints : false,
     weakWebsiteIssueLabels: weakWebsiteIssueLabels(breakdown),
   };
@@ -269,7 +274,8 @@ async function loadBusinessContext(businessId: string, localeOverride?: Locale):
   const taskRows = await readTaskRows(businessId);
   const rawTasks = buildActionPlan(breakdown, suggestions, taskRows, input, locale);
   const reviewMerged = mergeReviewTasks(rawTasks, breakdown, input, locale);
-  const tasks = mergeWebsiteTasks(reviewMerged, breakdown, input, locale, null);
+  const tasks = applyGrowthWebsiteRules(mergeWebsiteTasks(reviewMerged, breakdown, input, locale, null), input, locale);
+  const websiteSummary = buildWebsiteBanner(breakdown, input, null);
   const completed = buildCompletedTasks(breakdown, taskRows);
 
   const topTasks: AssistantActionPlanTask[] = tasks.slice(0, 5).map((t) => ({
@@ -301,7 +307,7 @@ async function loadBusinessContext(businessId: string, localeOverride?: Locale):
     : { available: false, scanAt: null, subjectRank: null, entries: [] };
 
   const growthSignals = await readGrowthMoveSignals(businessId, breakdown, profile.referralOk, snapshot);
-  const growthMoves: AssistantGrowthMove[] = buildGrowthMoves(growthSignals, locale).map((m) => ({
+  const growthMoves: AssistantGrowthMove[] = withoutWebsiteGrowthMoves(buildGrowthMoves(growthSignals, locale)).map((m) => ({
     id: m.id,
     title: m.title,
     why: m.why,
@@ -406,6 +412,8 @@ async function loadBusinessContext(businessId: string, localeOverride?: Locale):
       excludedChecks,
     },
     actionPlan: { topTasks },
+    websiteSummary,
+    siteSecurity: buildAssistantSiteSecurity(breakdown, input, locale),
     growthMoves,
     weeklyRoutine,
     competitors,

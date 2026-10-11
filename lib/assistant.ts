@@ -13,7 +13,7 @@
 import type { CategoryId, Confidence, Grade, HttpsCheckStatus } from "@/lib/scoring";
 import { CATEGORY_LABELS } from "@/lib/scoring";
 import type { ReachabilityFailureReason } from "@/lib/websiteReachability";
-import type { TaskEffort } from "@/lib/actionPlan";
+import type { TaskEffort, WebsiteBanner } from "@/lib/actionPlan";
 import { PHOTO_COMPARISON_CAP, type GrowthMoveId } from "@/lib/growthMoves";
 import { DEFAULT_LOCALE, formatShortDate, t, type Locale } from "@/lib/i18n";
 import { weekStartFor, type WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
@@ -300,6 +300,20 @@ export interface AssistantBusinessContext {
   listing: AssistantListingSummary;
   score: AssistantScoreSummary;
   actionPlan: AssistantActionPlanSummary;
+  /** The Growth page's website summary (Step 2f, see buildWebsiteBanner
+   * in lib/actionPlan.ts) — website fixes other than the Google mismatch
+   * are pointed to the Website page rather than listed step by step.
+   * Null when there's nothing left to fix. */
+  websiteSummary: WebsiteBanner | null;
+  /** Real stored signs the website may be hacked (see hackSignsFor in
+   * lib/siteSecurity.ts) — null when none were found. Only the
+   * homepage is ever checked. */
+  siteSecurity: {
+    topic: string;
+    matchedPhrase: string;
+    hidden: boolean;
+    domains: string[];
+  } | null;
   /** Every growth move currently firing for this business — see
    * lib/growthMoves.ts. Capped by the caller (see
    * MAX_GROWTH_MOVES_IN_CONTEXT) so the prompt can never grow
@@ -365,7 +379,7 @@ HOW TO ANSWER:
    - Pricing strategy, or how their prices compare → the Pricing page.
    - How they stack up against nearby competitors → the Competitors page (run or re-run a scan there for real data).
    - No website at all → the Website page's starter-site generator.
-   - An EXISTING website that's losing points → the Website page's own score breakdown — never the starter-site generator, which is only for a business with no website at all.
+   - An EXISTING website that's losing points → the Website page's own score breakdown — never the starter-site generator, which is only for a business with no website at all. For any website fix OTHER than "Matches your Google listing", don't list step-by-step instructions — say briefly what the Website page shows (REAL DATA CONTEXT's "WEBSITE SUMMARY" line) and point the owner there.
    - Adding photos → the photo itself is added directly on their Google listing, not inside PostScore; the Overview page's "Photos" check — under "Where your points are" — is where PostScore shows the real gap and the "How to fix it" steps for doing it.
    - Individual reviews, reply drafts, reply-rate stats, Insights, a leads estimate, or Google Posts tracking → NONE of these are live yet, connected or not — they're all a later update (see the real "Google Business Profile connection" line below for the exact wording). If not yet connected, connecting it (the "Connect to unlock" prompt on the Reviews page, or the Overview page's "Your live Google listing" section) is still the real first step toward them eventually — but never say connecting itself "unlocks" any of these; say plainly none of them are available yet.
    - Getting a review link/QR code to share — never requires connecting Google Business Profile; it already works today regardless (see rule 7's reviews bullet above).
@@ -729,6 +743,29 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
     }
   }
 
+  if (context.siteSecurity) {
+    const sec = context.siteSecurity;
+    lines.push(
+      `SITE SECURITY — signs the website MAY BE HACKED: spam content (${sec.topic}) was found on the homepage — matched phrase "${sec.matchedPhrase}"; ${sec.hidden ? "hidden from visitors (visible to search engines)" : "visible on the page"}${sec.domains.length > 0 ? `; links to unrelated sites: ${sec.domains.join(", ")}` : ""}. Only the homepage was checked — never imply the rest of the site is clean. Always say "may be hacked" / "signs of", never "is hacked". Keep it short and urgent, and point the owner to the Website page's Site security section, which has the full details, the steps for their web person, and a button to copy them.`
+    );
+  }
+
+  if (context.websiteSummary?.kind === "improve") {
+    lines.push(
+      `WEBSITE SUMMARY: the website scores ${context.websiteSummary.score}/100 on the Website page, with ${context.websiteSummary.improvements} improvement(s) available (up to ~+${formatPoints(context.websiteSummary.points)} pts on the PostScore, precomputed). The Website page's score breakdown has each fix — point the owner there instead of listing steps (the "Matches your Google listing" mismatch, if any, is in the action plan above and can be explained directly).`
+    );
+  } else if (context.websiteSummary?.kind === "get_website") {
+    const range =
+      context.websiteSummary.high !== null
+        ? `~+${formatPoints(context.websiteSummary.low)}–${formatPoints(context.websiteSummary.high)}`
+        : `~+${formatPoints(context.websiteSummary.low)}`;
+    lines.push(
+      `WEBSITE SUMMARY: no website at all. A starter site from the Website page's starter-site generator could add ${range} pts to the PostScore (precomputed) — point the owner there.`
+    );
+  } else {
+    lines.push("WEBSITE SUMMARY: nothing left to fix on the website right now (apart from any \"Matches your Google listing\" item in the action plan above).");
+  }
+
   lines.push("GROWTH MOVES (ways to bring in customers — each one's own \"Score impact\" line below says whether it ALSO affects PostScore; never generalize across all of them):");
   lines.push(
     "Each move below is backed by a real fact about activity inside PostScore only — never about what the owner does outside it. Page and tab names are exactly what the owner sees on their own screen; use those names when pointing them somewhere."
@@ -1023,6 +1060,16 @@ export function buildAssistantStarterPrompts(
   for (const move of context.growthMoves) {
     const candidate = growthMovePromptCandidate(move, locale, context.profile.referralOk);
     if (candidate) candidates.push(candidate);
+  }
+  // Website prompts now come from the website summary (Step 2f) — the
+  // website growth moves no longer reach PostAI — and only once, even if
+  // a caller still passes one of those moves.
+  if (context.websiteSummary && !candidates.some((c) => c.id === "improveWebsite" || c.id === "needWebsite")) {
+    candidates.push(
+      context.websiteSummary.kind === "improve"
+        ? { id: "improveWebsite", text: t(locale, "dashboard.assistant.starterPrompts.improveWebsite"), kinds: ["growth"] }
+        : { id: "needWebsite", text: t(locale, "dashboard.assistant.starterPrompts.needWebsite"), kinds: ["growth"] }
+    );
   }
 
   if (context.weeklyRoutine.items.every((item) => !item.checkedThisWeek)) {

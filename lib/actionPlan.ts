@@ -12,6 +12,7 @@
 
 import {
   applyCheckFix,
+  hasAnalyzableWebsite,
   scoreBusiness,
   type BusinessScoringInput,
   type CategoryId,
@@ -19,6 +20,7 @@ import {
   type Suggestion,
 } from "@/lib/scoring";
 import { DEFAULT_LOCALE, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
+import { keyForInfoConflict } from "@/lib/websiteTrust";
 
 /**
  * Whether a check's FULL points are realistically reachable within
@@ -1069,6 +1071,16 @@ export interface WeeklyPlan {
    * one. Null whenever nothing picked is a range (the common case),
    * in which case weeklyProjectedBreakdown alone is the whole story. */
   weeklyProjectedBreakdownHigh: ScoreBreakdown | null;
+  /**
+   * The real "Points within reach" number — always exactly the sum of
+   * weeklyTasks' displayed weightedPoints. Equal to
+   * weeklyProjectedBreakdown.total minus today's total whenever any
+   * non-pinned task is picked; when the ONLY picked task is a pinned one
+   * (see buildWeeklyPlan's `pinnedCheckIds`, e.g. a +0.3 Google-mismatch
+   * fix that doesn't move the rounded 0–100 total on its own), it's that
+   * task's real 1-decimal value instead of a rounded 0 or 1.
+   */
+  weeklyPointsWithinReach: number;
 }
 
 /**
@@ -1227,7 +1239,15 @@ export function buildWeeklyPlan(
   breakdown: ScoreBreakdown,
   input: BusinessScoringInput,
   cap: number = WEEKLY_PLAN_CAP,
-  locale: Locale = DEFAULT_LOCALE
+  locale: Locale = DEFAULT_LOCALE,
+  /**
+   * Quick-win tasks that ALWAYS appear this week whenever they're open —
+   * exempt from MIN_WEEKLY_HEADLINE_POINTS and from `cap` (an extra card,
+   * never taking another task's slot), and shown with their own real
+   * 1-decimal value rather than apportioned. Today only the Growth page's
+   * Google-mismatch card (GOOGLE_MISMATCH_CHECK_ID, Step 2f).
+   */
+  pinnedCheckIds: readonly string[] = []
 ): WeeklyPlan {
   const candidates = tasks
     .filter((t) => t.effort === "quick_win" || t.effort === "quick_win_action")
@@ -1238,7 +1258,11 @@ export function buildWeeklyPlan(
     })
     .sort((a, b) => b.weeklyWeightedPoints - a.weeklyWeightedPoints);
 
-  let picked = candidates.filter((c) => c.weeklyWeightedPoints >= MIN_WEEKLY_HEADLINE_POINTS).slice(0, Math.max(0, cap));
+  const pinned = candidates.filter((c) => pinnedCheckIds.includes(c.task.checkId));
+  let picked = candidates
+    .filter((c) => !pinnedCheckIds.includes(c.task.checkId))
+    .filter((c) => c.weeklyWeightedPoints >= MIN_WEEKLY_HEADLINE_POINTS)
+    .slice(0, Math.max(0, cap));
   const promotedCheckIds = new Set<string>();
 
   // No quick score task qualifies — promote the single best "Bigger
@@ -1253,15 +1277,34 @@ export function buildWeeklyPlan(
     }
   }
 
+  // Pinned tasks join AFTER the threshold/cap/promotion decisions above,
+  // so they never change which other tasks are picked.
+  const pinnedValues = pinned.map((p) => round1(p.weeklyWeightedPoints));
+  const pinnedTotal = round1(pinnedValues.reduce((sum, v) => sum + v, 0));
+  const unpinnedCount = picked.length;
+  picked = [...picked, ...pinned];
+
   const weeklyProjectedInput = picked.reduce((acc, { fix }) => (fix ? fix(acc) : acc), input);
   const weeklyProjectedBreakdown = scoreBusiness(weeklyProjectedInput);
   // The real target every displayed card must sum to — apportionToTotal
   // below is what actually guarantees that, not independent rounding.
+  // Pinned cards keep their own real value; the rest absorb the
+  // remainder, so the sum stays exact. With ONLY pinned cards there's
+  // nothing to absorb rounding, so "within reach" is their real value.
+  // If rounding left the integer delta SMALLER than the pinned cards'
+  // own value (e.g. 85.6 -> 86.4, both "86"), apportioning would push
+  // the other cards negative — instead every card shows its own real
+  // 1-decimal value and "within reach" is their exact sum.
   const targetDelta = weeklyProjectedBreakdown.total - breakdown.total;
-  const apportionedPoints = apportionToTotal(
-    picked.map((p) => p.weeklyWeightedPoints),
-    targetDelta
-  );
+  const unpinnedRaw = picked.slice(0, unpinnedCount).map((p) => p.weeklyWeightedPoints);
+  const canApportion = unpinnedCount > 0 && targetDelta - pinnedTotal >= 0;
+  const apportionedPoints = [
+    ...(canApportion ? apportionToTotal(unpinnedRaw, targetDelta - pinnedTotal) : unpinnedRaw.map(round1)),
+    ...pinnedValues,
+  ];
+  const weeklyPointsWithinReach = canApportion
+    ? targetDelta
+    : round1(apportionedPoints.reduce((sum, v) => sum + v, 0));
 
   // The HIGH-end projection: only meaningfully different from the LOW
   // one when a picked task is itself a range (currently only the
@@ -1321,5 +1364,161 @@ export function buildWeeklyPlan(
     laterTasks,
     weeklyProjectedBreakdown,
     weeklyProjectedBreakdownHigh,
+    weeklyPointsWithinReach,
+  };
+}
+
+// ---------------------------------------------------------------------
+// Growth page / PostAI website rules (Day 4 Step 2f)
+// ---------------------------------------------------------------------
+
+/** The one website check that stays on the Growth page as a card — a
+ * real mismatch between the website and the Google listing is a quick,
+ * owner-fixable problem that can turn customers away, unlike every other
+ * website check, which the Website page's own breakdown covers. */
+export const GOOGLE_MISMATCH_CHECK_ID = "website.info_consistency";
+
+const MISMATCH_ACTION_KEYS: Record<"hours" | "phone" | "address", MessageKey> = {
+  hours: "content.actionPlan.website.info_consistency.action.hours",
+  phone: "content.actionPlan.website.info_consistency.action.phone",
+  address: "content.actionPlan.website.info_consistency.action.address",
+};
+
+/** The real, currently-scored mismatched fields (never an overridden
+ * one, never a field missing from the site) — the same filter
+ * website.info_consistency itself scores on. */
+function mismatchedFields(input: BusinessScoringInput): Array<"hours" | "phone" | "address"> {
+  const trust = input.websiteAnalysis?.websiteTrust;
+  if (!trust) return [];
+  const overridden = new Set((input.websiteTrustOverrides ?? []).map((o) => o.key));
+  const fields = trust.infoConflicts
+    .filter((f) => f.comparison === "conflicts" && !overridden.has(keyForInfoConflict(f)))
+    .map((f) => f.field);
+  return (["hours", "phone", "address"] as const).filter((f) => fields.includes(f));
+}
+
+/**
+ * The Growth page's own view of the action plan (also what PostAI reads):
+ * every website.* task is removed — the Website page's breakdown already
+ * shows each one's advice, and the Growth page summarizes them in one
+ * banner instead (see buildWebsiteBanner) — EXCEPT the Google-mismatch
+ * card, which becomes a specific quick win built from the real mismatch
+ * (never assuming which side is correct). completeness.website_link
+ * stays (it's a Google LISTING fix); when a real site was verified
+ * elsewhere, it becomes a normal quick win showing the real "add your
+ * website to your Google listing" steps with that URL instead of the
+ * starter-site text.
+ *
+ * Deliberately NOT applied inside buildActionPlan itself — the monthly
+ * report reads buildActionPlan directly and is unchanged by this step.
+ */
+export function applyGrowthWebsiteRules(
+  tasks: ActionPlanTask[],
+  input: BusinessScoringInput,
+  locale: Locale = DEFAULT_LOCALE
+): ActionPlanTask[] {
+  const result: ActionPlanTask[] = [];
+  for (const task of tasks) {
+    if (task.checkId === GOOGLE_MISMATCH_CHECK_ID) {
+      const fields = mismatchedFields(input);
+      result.push({
+        ...task,
+        effort: "quick_win",
+        action:
+          fields.length > 0
+            ? fields.map((f) => t(locale, MISMATCH_ACTION_KEYS[f])).join(" ")
+            : t(locale, "content.actionPlan.website.info_consistency.action.generic"),
+        why: t(locale, "content.actionPlan.website.info_consistency.why"),
+        fix: t(locale, "content.actionPlan.website.info_consistency.fix"),
+        ownerActionOnGoogle: false,
+      });
+      continue;
+    }
+    if (task.category === "website") continue;
+    if (task.checkId === "completeness.website_link" && input.verifiedElsewhereUrl) {
+      result.push({
+        ...task,
+        // The site already exists — pasting its URL into the Google
+        // listing is a few minutes' work, so it competes as a normal
+        // quick win this week (minimum, cap and ranking all apply — not
+        // pinned like the Google mismatch). Points are still only
+        // credited once a real re-scan confirms the link (see
+        // markTaskDone/reconcileTasks).
+        effort: "quick_win",
+        action: t(locale, "growth.fix.addWebsiteToListing.heading"),
+        why: t(locale, "growth.fix.addWebsiteToListing.intro"),
+        fix: [
+          t(locale, "growth.fix.addWebsiteToListing.step1"),
+          t(locale, "growth.fix.addWebsiteToListing.step2"),
+          t(locale, "growth.fix.addWebsiteToListing.step3", { url: input.verifiedElsewhereUrl }),
+          t(locale, "growth.fix.addWebsiteToListing.step4"),
+        ].join(" "),
+        timingNote: t(locale, "growth.fix.addWebsiteToListing.note"),
+        ownerActionOnGoogle: true,
+      });
+      continue;
+    }
+    result.push(task);
+  }
+  return result;
+}
+
+export type WebsiteBanner =
+  | {
+      kind: "improve";
+      /** The Website page's own 0–100 Website score, rounded. */
+      score: number;
+      /** Website checks losing points, EXCLUDING the Google mismatch. */
+      improvements: number;
+      /** Real weighted PostScore gain from fixing all of them at once. */
+      points: number;
+    }
+  | {
+      kind: "get_website";
+      /** The starter-site range (same as the starter-site card used),
+       * or a single value when no template range could be computed. */
+      low: number;
+      high: number | null;
+    };
+
+/**
+ * The single website element on the Growth page besides the mismatch
+ * card — built only from live scoring. Null when there's nothing left to
+ * fix (Website at 100, or the Google mismatch is the only gap).
+ * `starterSiteRange` is getActionPlan's own template range for a
+ * business with no website at all (see mergeWebsiteTasks).
+ */
+export function buildWebsiteBanner(
+  breakdown: ScoreBreakdown,
+  input: BusinessScoringInput,
+  starterSiteRange: { low: number; high: number } | null = null
+): WebsiteBanner | null {
+  if (!hasAnalyzableWebsite(input)) {
+    if (starterSiteRange) {
+      return { kind: "get_website", low: round1(starterSiteRange.low), high: round1(starterSiteRange.high) };
+    }
+    const fix = fullMergeFix(WEBSITE_CHECK_IDS.filter((id) => breakdown.checks.some((c) => c.id === id)));
+    return { kind: "get_website", low: round1(weightedFixPoints(breakdown, input, fix)), high: null };
+  }
+
+  // "Website < max" is judged on the SAME rounded 0–100 number the
+  // Website page shows — a 99.6 reads as 100/100 there, so a banner
+  // saying "100/100 — 1 improvement" would contradict it.
+  const website = breakdown.categories.find((c) => c.id === "website");
+  if (!website || website.relativeScore === null || Math.round(website.relativeScore) >= 100) return null;
+  const losing = website.checks.filter(
+    (c) =>
+      c.id !== GOOGLE_MISMATCH_CHECK_ID &&
+      (c.confidence === "VERIFIED" || c.confidence === "LIKELY") &&
+      c.earnedPoints !== null &&
+      c.earnedPoints < c.maxPoints
+  );
+  if (losing.length === 0) return null;
+  const fixAll = (inp: BusinessScoringInput) => losing.reduce((acc, c) => applyCheckFix(acc, c.id), inp);
+  return {
+    kind: "improve",
+    score: Math.round(website.relativeScore),
+    improvements: losing.length,
+    points: round1(weightedFixPoints(breakdown, input, fixAll)),
   };
 }

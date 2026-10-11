@@ -59,6 +59,8 @@ const BASE_CONTEXT: AssistantBusinessContext = {
       { label: "Mobile-friendly", confidence: "NOT_FOUND", explanation: "Not yet implemented." },
     ],
   },
+  websiteSummary: null,
+  siteSecurity: null,
   actionPlan: {
     topTasks: [
       {
@@ -1577,5 +1579,41 @@ describe("buildAssistantSystemPrompt", () => {
     expect(system).toBe(
       `${ASSISTANT_SYSTEM_RULES}\n\n${buildAssistantContextText(BASE_CONTEXT, "es")}${buildAssistantLanguageDirective("es")}`
     );
+  });
+});
+
+describe("Day 4 Step 2f — PostAI points website fixes to the Website page", () => {
+  test("an 'improve' website summary is stated with its real numbers and a Website-page pointer", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      websiteSummary: { kind: "improve", score: 76, improvements: 5, points: 2.4 },
+    });
+    expect(text).toContain("WEBSITE SUMMARY: the website scores 76/100");
+    expect(text).toContain("5 improvement(s) available (up to ~+2.4 pts");
+    expect(text).toContain("point the owner there instead of listing steps");
+  });
+
+  test("no website: the starter-site range is stated", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      websiteSummary: { kind: "get_website", low: 12.3, high: 18.1 },
+    });
+    expect(text).toContain("~+12.3–18.1 pts");
+  });
+
+  test("the system rules tell PostAI not to list website steps other than the Google mismatch", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain('For any website fix OTHER than "Matches your Google listing", don\'t list step-by-step instructions');
+  });
+
+  test("website starter prompts come from the website summary, at most once", () => {
+    const improve = buildAssistantStarterPrompts(
+      { ...BASE_CONTEXT, growthMoves: [], websiteSummary: { kind: "improve", score: 76, improvements: 5, points: 2.4 } },
+      "en"
+    );
+    const none = buildAssistantStarterPrompts({ ...BASE_CONTEXT, growthMoves: [], websiteSummary: null }, "en");
+    const improveText = "What's the fastest way to improve my website?";
+    // Rotation may not surface every candidate, but it can never invent one.
+    expect(none).not.toContain(improveText);
+    expect(improve.filter((p) => p === improveText).length).toBeLessThanOrEqual(1);
   });
 });

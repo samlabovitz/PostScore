@@ -9,6 +9,7 @@ import { getWeeklyChecklistState } from "@/app/actions/weeklyChecklist";
 import { listActivePromos } from "@/app/actions/promos";
 import { getActiveReferral } from "@/app/actions/referrals";
 import { businessRowToScoringInput } from "@/lib/scoring";
+import { buildPriceCheckMove } from "@/lib/growthMoves";
 import { buildWeeklyChecklistItems } from "@/lib/weeklyChecklist";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale } from "@/lib/i18n";
@@ -70,7 +71,10 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   const initialPromos = promosResult.status === "ok" ? promosResult.promos : [];
 
   const growthMovesResult = await getGrowthMoves(params.id, scored.result.breakdown, profile.referralOk, locale);
-  const growthMoves = growthMovesResult.status === "ok" ? growthMovesResult.moves : [];
+  // The price check always shows for every business (Step 2f) — even if
+  // the rest of the growth signals couldn't load.
+  const growthMoves =
+    growthMovesResult.status === "ok" ? growthMovesResult.moves : [buildPriceCheckMove(params.id, null, locale)];
 
   const checklistStateResult = await getWeeklyChecklistState(params.id);
   const weeklyChecklist = {
@@ -96,6 +100,8 @@ export default async function GrowthPage({ params }: { params: { id: string } })
           laterTasks: [],
           weeklyProjectedBreakdown: scored.result.breakdown,
           weeklyProjectedBreakdownHigh: null,
+          weeklyPointsWithinReach: 0,
+          websiteBanner: null,
           error:
             actionPlanResult.status === "error"
               ? actionPlanResult.message

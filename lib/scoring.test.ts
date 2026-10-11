@@ -1432,14 +1432,18 @@ describe("website trust checks (Oct 10, PROPOSED)", () => {
       expect(a.explanation).not.toBe(b.explanation);
     });
 
-    test("the real Bánh Mì Boy case: hidden replica-watch spam -> 0, evidence named in the explanation", () => {
+    test("the real Bánh Mì Boy case: hidden replica-watch spam -> 0, a one-line summary naming the real topic (full evidence lives on the Website page)", () => {
       const input = withTrust({
         ...CLEAN_TRUST,
         spamSignals: [{ category: "replica", matchedPhrase: "replica richard mille", snippet: "...replica richard mille...", suspiciousLinks: ["https://fakewatchz.ru/x"], hidden: true }],
       });
       const check = scoreBusiness(input).checks.find((c) => c.id === "website.security")!;
       expect(check.earnedPoints).toBe(0);
-      expect(check.explanation).toContain("replica richard mille");
+      expect(check.explanation).toBe("Spam content found on your site (replica watches) — signs it may be hacked.");
+      expect(check.explanation).not.toContain("...replica richard mille...");
+      expect(scoreBusiness(input, "es").checks.find((c) => c.id === "website.security")!.explanation).toBe(
+        "Se encontró contenido spam en su sitio (relojes de imitación) — señales de que podría estar hackeado."
+      );
     });
 
     test("a real Google Safe Browsing threat -> 0, outranks a plain spam finding in explanation priority", () => {
