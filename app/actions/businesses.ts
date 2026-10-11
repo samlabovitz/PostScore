@@ -146,26 +146,36 @@ export async function saveBusinessWithClient(
   // Same owner+place key the upsert below conflicts on — this is how we
   // recognize "this exact business already exists" and read whatever
   // screenshot state it already has, before deciding whether this scan
-  // needs to spend a ScreenshotOne call at all.
-  const existingAnalysis = place.website
-    ? parseWebsiteAnalysis(
-        (
-          await supabase
-            .from("businesses")
-            .select("website_analysis_json")
-            .eq("owner_id", ownerId)
-            .eq("place_id", place.placeId)
-            .maybeSingle()
-        ).data?.website_analysis_json ?? null
-      )
-    : null;
+  // needs to spend a ScreenshotOne call at all. Also reads the stored
+  // verified_website_url (see below) — never written by this upsert, so
+  // a re-scan can never clobber it.
+  const existingRow = (
+    await supabase
+      .from("businesses")
+      .select("website_analysis_json, verified_website_url")
+      .eq("owner_id", ownerId)
+      .eq("place_id", place.placeId)
+      .maybeSingle()
+  ).data;
+  // The real site to analyze: the listing's own website when it has one,
+  // otherwise a stored verified-elsewhere site (the real Bánh Mì Boy
+  // case — no website on the listing, but banhmiboy.com verified by
+  // phone). Only the ANALYSIS uses this; the saved `website` column
+  // below stays the listing's own URL, so completeness.website_link
+  // still honestly reflects what the listing itself shows.
+  const verifiedWebsiteUrl =
+    typeof existingRow?.verified_website_url === "string" && existingRow.verified_website_url.trim().length > 0
+      ? existingRow.verified_website_url.trim()
+      : null;
+  const analysisUrl = place.website || verifiedWebsiteUrl;
+  const existingAnalysis = analysisUrl ? parseWebsiteAnalysis(existingRow?.website_analysis_json ?? null) : null;
   const captureScreenshots = !skipScreenshots && existingAnalysis?.lastScreenshotRefreshAt == null;
 
   const [httpsResult, analysis] = await Promise.all([
-    place.website ? checkWebsiteHttps(place.website) : Promise.resolve(null),
-    place.website
+    analysisUrl ? checkWebsiteHttps(analysisUrl) : Promise.resolve(null),
+    analysisUrl
       ? collectWebsiteAnalysis(
-          place.website,
+          analysisUrl,
           {
             pageSpeedApiKey: process.env.PAGESPEED_API_KEY,
             screenshotApiKey: process.env.SCREENSHOT_API_KEY,
@@ -682,7 +692,7 @@ export async function listMyBusinesses(): Promise<ListMyBusinessesResult> {
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, category, phone, website, rating, review_count, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, created_at, language"
+      "id, name, address, category, phone, website, rating, review_count, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, created_at, language"
     )
     .order("created_at", { ascending: false });
 

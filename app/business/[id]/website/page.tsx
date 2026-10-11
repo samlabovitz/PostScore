@@ -43,7 +43,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
   );
   const faqEn = renderFaq(profileEn.faq, { name: data.businessName, address: data.address });
   const faqEs = renderFaq(profileEs.faq, { name: data.businessName, address: data.address });
-  const hasWebsite = !!data.website && data.website.trim().length > 0;
+  const hasWebsite = (!!data.website && data.website.trim().length > 0) || !!data.verifiedWebsiteUrl;
   const businessName = data.businessName ?? t(locale, "dashboard.website.businessNameFallback");
 
   const generatorSection = (

@@ -320,7 +320,7 @@ async function main() {
   const { data: business, error: businessError } = await supabase
     .from("businesses")
     .select(
-      "id, name, language, category, primary_type, business_type_override, categories, phone, address, opening_hours, website, photo_count, business_status, https_status, website_analysis_json, rating, review_count"
+      "id, name, language, category, primary_type, business_type_override, categories, phone, address, opening_hours, website, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, rating, review_count"
     )
     .eq("id", businessId)
     .single();

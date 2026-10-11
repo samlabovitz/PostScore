@@ -1122,6 +1122,18 @@ const PLACEHOLDER_HOURS = [
   "Friday: 9:00 AM – 5:00 PM",
 ];
 
+/**
+ * Whether this business has a real website to analyze and score — the
+ * listing's own URL, OR a real site verified elsewhere by phone/address
+ * match (verifiedElsewhereUrl — the real Bánh Mì Boy case). A verified-
+ * elsewhere site is scored exactly like a listing website by every
+ * website.* quality check; only completeness.website_link (which reflects
+ * the LISTING's own URL state) still ignores it.
+ */
+function hasAnalyzableWebsite(input: BusinessScoringInput): boolean {
+  return (!!input.website && input.website.trim().length > 0) || !!input.verifiedElsewhereUrl;
+}
+
 export const CHECKS: CheckDefinition[] = [
   // --- Visibility & Reputation (40 pts) ------------------------------------
   {
@@ -1539,7 +1551,7 @@ export const CHECKS: CheckDefinition[] = [
     maxPoints: 6,
     adviceKey: "content.checks.website.https.advice",
     evaluate(input, locale) {
-      if (!input.website || input.website.trim().length === 0) {
+      if (!hasAnalyzableWebsite(input)) {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
@@ -1577,7 +1589,7 @@ export const CHECKS: CheckDefinition[] = [
       };
     },
     simulateFix: (input) => {
-      if (!input.website || input.website.trim().length === 0) {
+      if (!hasAnalyzableWebsite(input)) {
         return { ...input, website: "https://example.com", httpsStatus: "https" };
       }
       return { ...input, httpsStatus: "https" };
@@ -1593,7 +1605,7 @@ export const CHECKS: CheckDefinition[] = [
     maxPoints: 6,
     adviceKey: "content.checks.website.performance_mobile.advice",
     evaluate(input, locale) {
-      if (!input.website || input.website.trim().length === 0) {
+      if (!hasAnalyzableWebsite(input)) {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
@@ -1671,7 +1683,7 @@ export const CHECKS: CheckDefinition[] = [
     },
     simulateFix: (input) => ({
       ...input,
-      website: input.website || "https://example.com",
+      website: hasAnalyzableWebsite(input) ? input.website : "https://example.com",
       websiteAnalysis: {
         ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
         mobilePerformance: PERFECT_WEBSITE_ANALYSIS.mobilePerformance,
@@ -1685,7 +1697,7 @@ export const CHECKS: CheckDefinition[] = [
     maxPoints: 5,
     adviceKey: "content.checks.website.content_depth.advice",
     evaluate(input, locale) {
-      if (!input.website || input.website.trim().length === 0) {
+      if (!hasAnalyzableWebsite(input)) {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
@@ -1794,7 +1806,7 @@ export const CHECKS: CheckDefinition[] = [
     },
     simulateFix: (input) => ({
       ...input,
-      website: input.website || "https://example.com",
+      website: hasAnalyzableWebsite(input) ? input.website : "https://example.com",
       websiteAnalysis: {
         ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
         content: PERFECT_WEBSITE_ANALYSIS.content,
@@ -1808,7 +1820,7 @@ export const CHECKS: CheckDefinition[] = [
     maxPoints: 3,
     adviceKey: "content.checks.website.contact_conversion.advice",
     evaluate(input, locale) {
-      if (!input.website || input.website.trim().length === 0) {
+      if (!hasAnalyzableWebsite(input)) {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
@@ -1858,7 +1870,7 @@ export const CHECKS: CheckDefinition[] = [
     },
     simulateFix: (input) => ({
       ...input,
-      website: input.website || "https://example.com",
+      website: hasAnalyzableWebsite(input) ? input.website : "https://example.com",
       websiteAnalysis: {
         ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
         content: {
@@ -1880,7 +1892,7 @@ export const CHECKS: CheckDefinition[] = [
     // aboutPresence is actually produced (a dedicated page or a homepage
     // section, with a real word-count/content check, never just a link).
     evaluate(input, locale) {
-      if (!input.website || input.website.trim().length === 0) {
+      if (!hasAnalyzableWebsite(input)) {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
@@ -1941,7 +1953,7 @@ export const CHECKS: CheckDefinition[] = [
     },
     simulateFix: (input) => ({
       ...input,
-      website: input.website || "https://example.com",
+      website: hasAnalyzableWebsite(input) ? input.website : "https://example.com",
       websiteAnalysis: {
         ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
         aboutPresence: { state: "found", url: "https://example.com/about", locatedOnHomepage: false, reason: null, note: null },
@@ -1958,7 +1970,7 @@ export const CHECKS: CheckDefinition[] = [
     // see servicesPresence's own doc. "pdf_only" is a real found: a real
     // PDF menu/list loads fine, we just never read its content.
     evaluate(input, locale) {
-      if (!input.website || input.website.trim().length === 0) {
+      if (!hasAnalyzableWebsite(input)) {
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
@@ -2022,7 +2034,7 @@ export const CHECKS: CheckDefinition[] = [
     },
     simulateFix: (input) => ({
       ...input,
-      website: input.website || "https://example.com",
+      website: hasAnalyzableWebsite(input) ? input.website : "https://example.com",
       websiteAnalysis: {
         ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
         servicesPresence: { state: "found", url: "https://example.com/services", locatedOnHomepage: false, reason: null, note: null },
@@ -2057,8 +2069,7 @@ export const CHECKS: CheckDefinition[] = [
       // all, but a real, verified site DOES exist and WAS analyzed, so
       // these checks must still run against it rather than going
       // NOT_FOUND just because the listing itself shows nothing.
-      const hasAnalyzableWebsite = (!!input.website && input.website.trim().length > 0) || !!input.verifiedElsewhereUrl;
-      if (!hasAnalyzableWebsite) {
+      if (!hasAnalyzableWebsite(input)) {
         return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.security.explanation.noWebsite") };
       }
       const trust = input.websiteAnalysis?.websiteTrust;
@@ -2121,8 +2132,7 @@ export const CHECKS: CheckDefinition[] = [
       // all, but a real, verified site DOES exist and WAS analyzed, so
       // these checks must still run against it rather than going
       // NOT_FOUND just because the listing itself shows nothing.
-      const hasAnalyzableWebsite = (!!input.website && input.website.trim().length > 0) || !!input.verifiedElsewhereUrl;
-      if (!hasAnalyzableWebsite) {
+      if (!hasAnalyzableWebsite(input)) {
         return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.info_consistency.explanation.noWebsite") };
       }
       const trust = input.websiteAnalysis?.websiteTrust;
@@ -2179,8 +2189,7 @@ export const CHECKS: CheckDefinition[] = [
       // all, but a real, verified site DOES exist and WAS analyzed, so
       // these checks must still run against it rather than going
       // NOT_FOUND just because the listing itself shows nothing.
-      const hasAnalyzableWebsite = (!!input.website && input.website.trim().length > 0) || !!input.verifiedElsewhereUrl;
-      if (!hasAnalyzableWebsite) {
+      if (!hasAnalyzableWebsite(input)) {
         return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.notice_freshness.explanation.noWebsite") };
       }
       const trust = input.websiteAnalysis?.websiteTrust;
@@ -2224,8 +2233,7 @@ export const CHECKS: CheckDefinition[] = [
       // all, but a real, verified site DOES exist and WAS analyzed, so
       // these checks must still run against it rather than going
       // NOT_FOUND just because the listing itself shows nothing.
-      const hasAnalyzableWebsite = (!!input.website && input.website.trim().length > 0) || !!input.verifiedElsewhereUrl;
-      if (!hasAnalyzableWebsite) {
+      if (!hasAnalyzableWebsite(input)) {
         return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.site_freshness.explanation.noWebsite") };
       }
       const trust = input.websiteAnalysis?.websiteTrust;

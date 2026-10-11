@@ -1658,4 +1658,64 @@ describe("website trust checks (Oct 10, PROPOSED)", () => {
       }
     });
   });
+
+  // Decision (Oct 11): a verified-elsewhere site is scored EXACTLY like a
+  // listing website by every website.* check — the real Bánh Mì Boy case,
+  // whose https/speed/content/contact/About/Services were all measured
+  // but previously excluded. completeness.website_link still reflects
+  // only the LISTING's own URL, so it stays 0.
+  describe("a verified-elsewhere site gets every website check, scored like a listing website", () => {
+    const QUALITY_CHECKS = [
+      "website.https",
+      "website.performance_mobile",
+      "website.content_depth",
+      "website.contact_conversion",
+      "website.about_presence",
+      "website.services_presence",
+    ];
+    const listingInput: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, websiteTrust: CLEAN_TRUST },
+    };
+    const verifiedInput: BusinessScoringInput = {
+      ...listingInput,
+      website: null,
+      verifiedElsewhereUrl: "https://banhmiboy.com",
+    };
+
+    test("all 6 quality checks are scored (never NOT_FOUND) for a verified-elsewhere site", () => {
+      const breakdown = scoreBusiness(verifiedInput);
+      for (const id of QUALITY_CHECKS) {
+        expect(breakdown.checks.find((c) => c.id === id)!.confidence, id).not.toBe("NOT_FOUND");
+      }
+    });
+
+    test("every website.* check scores identically to the same site on the listing", () => {
+      const listing = scoreBusiness(listingInput);
+      const verified = scoreBusiness(verifiedInput);
+      for (const check of listing.checks.filter((c) => c.id.startsWith("website."))) {
+        const other = verified.checks.find((c) => c.id === check.id)!;
+        expect(other.earnedPoints, check.id).toBe(check.earnedPoints);
+        expect(other.confidence, check.id).toBe(check.confidence);
+      }
+    });
+
+    test("completeness.website_link stays 0 — the listing itself still has no URL", () => {
+      expect(scoreBusiness(listingInput).checks.find((c) => c.id === "completeness.website_link")!.earnedPoints).toBe(4);
+      expect(scoreBusiness(verifiedInput).checks.find((c) => c.id === "completeness.website_link")!.earnedPoints).toBe(0);
+    });
+
+    test("no listing website AND no verified site: all 6 quality checks stay honestly NOT_FOUND", () => {
+      const breakdown = scoreBusiness({ ...verifiedInput, verifiedElsewhereUrl: null });
+      for (const id of QUALITY_CHECKS) {
+        expect(breakdown.checks.find((c) => c.id === id)!.confidence, id).toBe("NOT_FOUND");
+      }
+    });
+
+    test("listing-only business is unaffected by verifiedElsewhereUrl being absent vs null", () => {
+      const withoutField: BusinessScoringInput = { ...listingInput };
+      delete withoutField.verifiedElsewhereUrl;
+      expect(scoreBusiness(withoutField)).toEqual(scoreBusiness({ ...listingInput, verifiedElsewhereUrl: null }));
+    });
+  });
 });

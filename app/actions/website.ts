@@ -46,6 +46,10 @@ export interface WebsitePageData {
   /** Real Google-listed website, if any — used only to detect whether
    * this business already has one; never overwritten by this page. */
   website: string | null;
+  /** A real site verified elsewhere (by phone/address match) when the
+   * Google listing itself shows none — see businesses.verified_website_url.
+   * The page treats either one as "this business has a real website." */
+  verifiedWebsiteUrl: string | null;
   /** Non-null only the first scan to SUSPECT Google's listing lost its
    * website (one lookup + one retry, both empty, despite one kept on
    * file for scoring) — see resolveListingWebsite in
@@ -183,7 +187,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "name, address, category, primary_type, business_type_override, phone, opening_hours, opening_hours_periods, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at"
+      "name, address, category, primary_type, business_type_override, phone, opening_hours, opening_hours_periods, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json"
     )
     .eq("id", businessId)
     .single();
@@ -193,7 +197,14 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   }
 
   const businessRow = data as BusinessScoringRow;
-  const hasWebsite = !!data.website && data.website.trim().length > 0;
+  const verifiedWebsiteUrl =
+    typeof data.verified_website_url === "string" && data.verified_website_url.trim().length > 0
+      ? data.verified_website_url.trim()
+      : null;
+  // A real site, on the listing OR verified elsewhere (the real Bánh Mì
+  // Boy case) — same definition website.has_website scores, so the page
+  // never pitches "build a website" to a business that already has one.
+  const hasWebsite = (!!data.website && data.website.trim().length > 0) || !!verifiedWebsiteUrl;
   const locale = normalizeLocale(data.language);
   const profile = resolveBizProfile(
     data.category,
@@ -249,6 +260,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       rating: data.rating,
       reviewCount: data.review_count,
       website: data.website,
+      verifiedWebsiteUrl,
       googleListingMissingWebsiteSince: data.google_listing_missing_website_since,
       googleListingWebsiteRemovedSince: data.google_listing_website_removed_since,
       googleListingLastKnownWebsiteAt: data.google_listing_last_known_website_at,

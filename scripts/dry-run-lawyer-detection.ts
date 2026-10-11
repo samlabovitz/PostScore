@@ -32,7 +32,7 @@ async function main() {
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, phone, website, rating, review_count, category, categories, primary_type, business_type_override, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language"
+      "id, name, address, phone, website, rating, review_count, category, categories, primary_type, business_type_override, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, google_maps_uri, language"
     );
 
   if (error || !data) {

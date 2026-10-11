@@ -61,7 +61,7 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "name, address, category, primary_type, place_id, rating, review_count, phone, opening_hours, website, categories, photo_count, business_status, https_status, website_analysis_json, language"
+      "name, address, category, primary_type, place_id, rating, review_count, phone, opening_hours, website, categories, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language"
     )
     .eq("id", businessId)
     .single();

@@ -546,7 +546,7 @@ export async function processBusiness(
   const { data: freshBusiness, error: freshBusinessError } = await supabase
     .from("businesses")
     .select(
-      "name, owner_id, unsubscribe_token, language, category, primary_type, business_type_override, categories, phone, address, opening_hours, website, photo_count, business_status, https_status, website_analysis_json, rating, review_count"
+      "name, owner_id, unsubscribe_token, language, category, primary_type, business_type_override, categories, phone, address, opening_hours, website, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, rating, review_count"
     )
     .eq("id", businessId)
     .single();
