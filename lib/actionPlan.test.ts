@@ -410,11 +410,18 @@ describe("buildWeeklyPlan: starter-site points range end to end", () => {
     // displayed number always agrees with weeklyProjectedBreakdown. Only
     // the HIGH end passes through unadjusted (see buildWeeklyPlan's own
     // doc) — it's an honest range, not a sum-matching figure.
+    //
+    // With a single task in the weekly plan, apportionToTotal rounds its
+    // displayed weightedPoints to match the real, WHOLE-NUMBER total
+    // delta (scoreBusiness().total is itself Math.round()-ed) — not an
+    // independent round-to-1-decimal of the raw delta. Those two usually
+    // agree, but not always: here the raw delta (44.0678) rounds to 44.1
+    // at 1 decimal while the real whole-number total only moves by 44.
     const realLowDelta = Math.max(
       0,
       rawWeightedTotal(scoreBusiness({ ...STRUGGLING_SALON_INPUT, ...range.lowOverlay })) - rawWeightedTotal(breakdown)
     );
-    expect(weekly.weeklyTasks[0].weightedPoints).toBe(round1(realLowDelta));
+    expect(weekly.weeklyTasks[0].weightedPoints).toBe(Math.round(realLowDelta));
     expect(weekly.weeklyTasks[0].weightedPointsHigh).toBe(30);
     expect(weekly.weeklyProjectedBreakdownHigh).not.toBeNull();
     // The HIGH projection (real HTTPS applied) scores at least as high

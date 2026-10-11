@@ -37,6 +37,7 @@
 import { DEFAULT_LOCALE, formatShortDate, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
 import { GOOGLE_PHOTO_CAP } from "@/lib/googlePhotoCap";
 import { reachabilityReasonMessageKey, type ReachabilityFailureReason } from "@/lib/websiteReachability";
+import { keyForInfoConflict, keyForStaleNotice, type AbandonedSiteFinding, type InfoFieldFinding, type SpamFinding, type StaleNoticeFinding, type WebsiteKind } from "@/lib/websiteTrust";
 
 // ---------------------------------------------------------------------------
 // Versioning
@@ -48,7 +49,7 @@ import { reachabilityReasonMessageKey, type ReachabilityFailureReason } from "@/
  * records the version that produced it, so historical scores stay
  * interpretable even after the formula evolves.
  */
-export const SCORING_VERSION = "1.6.0";
+export const SCORING_VERSION = "1.7.0";
 
 // ---------------------------------------------------------------------------
 // Core types
@@ -378,6 +379,85 @@ export interface PagePresenceResult {
   note: PagePresenceNote;
 }
 
+/**
+ * Real site-trust signals, collected once per scan alongside the rest
+ * of WebsiteAnalysis — see lib/websiteTrust.ts for the pure detection
+ * rules (spam-content/stale-notice/abandoned-site patterns, the info-
+ * consistency comparisons) and lib/websiteAnalysis.ts for the one real
+ * network call this adds (Google Safe Browsing). Every finding here
+ * carries its own real evidence (the exact matched text/URL) — never a
+ * summary — so the Website page and PostAI can both show owners exactly
+ * what was found, not just a verdict.
+ */
+export interface WebsiteTrustAnalysis {
+  /** Real hacked/injected spam content found anywhere in the page's raw
+   * HTML — see detectSpamSignals' own doc (lib/websiteTrust.ts). Empty
+   * when none found; never guessed. */
+  spamSignals: SpamFinding[];
+  /** Google Safe Browsing's own real verdict for this exact URL — null
+   * when GOOGLE_SAFE_BROWSING_API_KEY isn't configured (see
+   * safeBrowsingChecked below) or the check itself failed (a real
+   * network/API error, distinct from "not configured") — never treated
+   * as "clean" in either case, only as "not checked." */
+  safeBrowsingThreat: { threatFound: boolean; threatTypes: string[] } | null;
+  /** True only when a real Safe Browsing API call actually completed
+   * (success or failure) — false means no API key was configured, so
+   * website.security's own score relies on spamSignals alone and says
+   * so honestly. */
+  safeBrowsingChecked: boolean;
+  /** Always exactly 3 entries (phone, address, hours) — see
+   * compareListingInfo's own doc (lib/websiteTrust.ts). A field the
+   * site simply doesn't mention is "not_found_on_site," never treated
+   * as a conflict. */
+  infoConflicts: InfoFieldFinding[];
+  /** Real closure/holiday/event notices whose own date has already
+   * passed (with grace — see STALE_NOTICE_GRACE_DAYS) — see
+   * findStaleNotices' own doc. Empty when none found. */
+  staleNotices: StaleNoticeFinding[];
+  /** The newest real date found anywhere on the page, and any real
+   * unfilled-template leftovers — see detectAbandonedSignals' own doc.
+   * Both fields can independently be "nothing found," which is never
+   * itself evidence of abandonment (see website.site_freshness). */
+  abandonedSignals: AbandonedSiteFinding;
+  /** How the Google-listing website's own real hostname classifies —
+   * see classifyWebsiteKind's own doc (lib/websiteTrust.ts). null when
+   * there's no listing website at all to classify. Read by
+   * website.has_website: "independent" and "free_builder" both count as
+   * a real site; "directory" never does (the real Modern Liquors
+   * [free_builder, counts] vs. a Yelp/Facebook page [directory, never
+   * counts] distinction). */
+  websiteKind: WebsiteKind | null;
+  /** True only when the listing website's own page loaded fine (a real
+   * 200) but reads as a genuine "this page doesn't exist" error — see
+   * looksLikePageNotFound's own doc. The real Wonder The Grove Newark
+   * case. Always false when the page couldn't be read at all (blocked/
+   * timed out is a wholly different, already-honest couldnt_check
+   * story, never guessed as "probably broken"). */
+  listingLinkBroken: boolean;
+  /** ISO timestamp of this real scan — display only, same reasoning as
+   * WebsiteAnalysis.checkedAt below. */
+  checkedAt: string;
+}
+
+/** A real owner decision that a specific stale notice or info conflict
+ * finding is actually still accurate — removes that ONE finding's
+ * penalty on every future scan without suppressing the OTHER findings,
+ * or needing the underlying page content to stop matching. Matched
+ * against freshly-computed findings by `key` (see keyForStaleNotice/
+ * keyForInfoConflict in lib/websiteTrust.ts) — stable across re-scans
+ * even as exact wording drifts slightly, since it's keyed to the real
+ * finding identity (which notice, which field), not a byte-for-byte
+ * snapshot of its text. Stored as the owner (or, today, whoever is
+ * acting on the owner's behalf) actually provided it — never inferred
+ * or auto-generated. */
+export interface WebsiteTrustOverride {
+  key: string;
+  /** The real reason given for the override, shown back labeled on the
+   * Website page (e.g. "Marked accurate by the owner, Oct 10, 2026") —
+   * stored exactly as provided, never reworded. */
+  note: string;
+  overriddenAt: string;
+}
 
 /**
  * The frozen result of analyzing a business's live website — see
@@ -456,6 +536,16 @@ export interface WebsiteAnalysis {
   /** Same real detection as aboutPresence, for Services/Products/Menu
    * content — see website.services_presence. */
   servicesPresence: PagePresenceResult | null;
+  /** Real site-trust signals (hacked/injected spam, stale notices, an
+   * abandoned-looking site, and the site's own stated hours/phone/
+   * address vs. the Google listing) — see WebsiteTrustAnalysis's own
+   * doc and website.security/info_consistency/notice_freshness/
+   * site_freshness below. Optional (not just nullable) so every
+   * existing fixture/test and every row saved before this detection
+   * existed stays valid without a mass update — undefined and null both
+   * honestly mean "not yet analyzed," same fallback as every other
+   * field added here over time. */
+  websiteTrust?: WebsiteTrustAnalysis | null;
   /** ISO timestamp of collection — display only; scoreBusiness() never
    * reads this (it must stay clock-free), it's for UI "checked X ago"
    * copy. */
@@ -571,6 +661,15 @@ export interface BusinessScoringInput {
    */
   websiteAnalysis: WebsiteAnalysis | null;
   /**
+   * Real owner overrides on specific website.notice_freshness/
+   * info_consistency findings — see WebsiteTrustOverride's own doc.
+   * null/undefined/empty = no overrides on file, the honest default for
+   * every business today. Optional (not just nullable) for the same
+   * reason as WebsiteAnalysis.websiteTrust — avoids a mass fixture
+   * update across every existing test.
+   */
+  websiteTrustOverrides?: WebsiteTrustOverride[] | null;
+  /**
    * A real website found and verified separately from the Google
    * listing (by phone or address match, never a directory/marketplace
    * — see lib/websiteTrust.ts's compareListingInfo) — the real Bánh Mì
@@ -684,6 +783,23 @@ export const CATEGORY_LABELS: Record<CategoryId, MessageKey> = {
   website: "content.categories.website",
 };
 
+/** website stays at its original 30 (Oct 10 revision): the 4 new
+ * site-trust checks were fit INSIDE the existing 30 rather than growing
+ * the category — website.performance_mobile gave up 4 of its 10 points
+ * (now 6) to make room, and the 4 new checks themselves are
+ * deliberately light (security=2, info_consistency=1,
+ * notice_freshness=0.5, site_freshness=0.5 — 4 points total) since a
+ * hacked/stale/abandoned site is real, important evidence but
+ * shouldn't swing the Website category's own internal balance the way
+ * an earlier draft's 8/4/3/3 split would have. See
+ * ~/Desktop/website-trust-dry-run.md for the real effect across all 53
+ * businesses. These three weights are never required to sum to 100 —
+ * the real total (see scoreBusiness's own renormalization) always
+ * divides by whatever they actually sum to. (The separate, pre-existing
+ * completeness.website_link check is "the honest 'does the listing show
+ * a URL, period' fact" the Oct 10 proposal calls "Website link on
+ * listing" — it already lived in Completeness, not Website, before this
+ * session; see its own doc for the Oct 10 broken-link addition.) */
 export const CATEGORY_WEIGHTS: Record<CategoryId, number> = {
   visibility: 40,
   completeness: 30,
@@ -894,34 +1010,30 @@ const REVIEW_COUNT_CHECK_MAX_POINTS = 18;
 
 /**
  * website.performance_mobile's points for real-user field data (Google's
- * coarse FAST/AVERAGE/SLOW classification), on the check's own 10-point
- * scale:
+ * coarse FAST/AVERAGE/SLOW classification), on the check's own 6-point
+ * scale (Oct 10 revision: the check gave up 4 of its original 10 points
+ * to make room for the new site-trust checks — see CATEGORY_WEIGHTS'
+ * own doc — so these are the same original 10/6/2 proportions scaled by
+ * 0.6, never re-derived from scratch):
  *
- * - FAST -> 10 (full points): FAST is Google's TOP real-user category —
+ * - FAST -> 6 (full points): FAST is Google's TOP real-user category —
  *   real visitors' actual phones, over a real 28-day window, confirming
  *   this site is genuinely fast. That's at least as strong a claim as a
  *   single perfect (100/100) simulated lab run, so a fast site backed by
  *   real visitor data must be able to earn full points exactly like a
  *   perfect lab result — never capped below it just for being measured a
  *   different, more accurate way.
- * - AVERAGE -> 6: CrUX's "AVERAGE" ("needs improvement") lines up with
- *   the lab "slowish" band (50-79, i.e. 5.0-7.9 pts, using the existing
- *   earnedPoints = labScore/10 mapping); its midpoint is ~65 (6.5 pts) —
- *   rounded down to a clean 6 to stay honestly on the cautious side of
- *   "needs improvement," never rounding a middling result up toward
- *   "fast."
- * - SLOW -> 2: CrUX's "SLOW" ("poor") lines up with the lab "slow" band
- *   (<50, i.e. <5 pts); its midpoint is ~2.5. Real, sustained real-user
- *   evidence of poor Core Web Vitals is a stronger, more damning signal
- *   than one middling simulated run, so this rounds DOWN from the
- *   band's midpoint (2, not 3) rather than up — while still leaving
- *   room below for a genuinely catastrophic lab-measured site near 0,
- *   which SLOW field data alone doesn't confirm.
+ * - AVERAGE -> 3.6: CrUX's "AVERAGE" ("needs improvement") lines up with
+ *   the lab "slowish" band; same reasoning as before (stay on the
+ *   cautious side of "needs improvement," never rounding a middling
+ *   result up toward "fast"), just scaled to the new 6-point ceiling.
+ * - SLOW -> 1.2: CrUX's "SLOW" ("poor") lines up with the lab "slow"
+ *   band; same reasoning as before, scaled to the new ceiling.
  */
 const FIELD_CATEGORY_POINTS: Record<FieldSpeedCategory, number> = {
-  FAST: 10,
-  AVERAGE: 6,
-  SLOW: 2,
+  FAST: 6,
+  AVERAGE: 3.6,
+  SLOW: 1.2,
 };
 
 const FIELD_CATEGORY_LABEL_KEYS: Record<FieldSpeedCategory, MessageKey> = {
@@ -956,6 +1068,21 @@ const PERFECT_WEBSITE_ANALYSIS: WebsiteAnalysis = {
   lastScreenshotRefreshAt: null,
   aboutPresence: { state: "found", url: "https://example.com/about", locatedOnHomepage: false, reason: null, note: null },
   servicesPresence: { state: "found", url: "https://example.com/services", locatedOnHomepage: false, reason: null, note: null },
+  websiteTrust: {
+    spamSignals: [],
+    safeBrowsingThreat: null,
+    safeBrowsingChecked: true,
+    infoConflicts: [
+      { field: "phone", comparison: "matches", siteValue: "555-5555", googleValue: "555-5555" },
+      { field: "address", comparison: "matches", siteValue: "123 Main St", googleValue: "123 Main St" },
+      { field: "hours", comparison: "matches", siteValue: "see site", googleValue: "see listing" },
+    ],
+    staleNotices: [],
+    abandonedSignals: { newestDateFound: new Date().toISOString().slice(0, 10), templateLeftovers: [], looksAbandoned: false },
+    websiteKind: "independent",
+    listingLinkBroken: false,
+    checkedAt: new Date(0).toISOString(),
+  },
   checkedAt: new Date(0).toISOString(),
 };
 
@@ -1460,7 +1587,10 @@ export const CHECKS: CheckDefinition[] = [
     id: "website.performance_mobile",
     labelKey: "content.checks.website.performance_mobile.label",
     category: "website",
-    maxPoints: 10,
+    // Gave up 4 points (was 10) to make room for the 4 new site-trust
+    // checks inside Website's unchanged 30-point total — see
+    // CATEGORY_WEIGHTS' own doc.
+    maxPoints: 6,
     adviceKey: "content.checks.website.performance_mobile.advice",
     evaluate(input, locale) {
       if (!input.website || input.website.trim().length === 0) {
@@ -1485,6 +1615,12 @@ export const CHECKS: CheckDefinition[] = [
           explanation: t(locale, "content.checks.website.performance_mobile.explanation.noScore"),
         };
       }
+      // A carried-forward measurement (see carryForwardMobilePerformance)
+      // is real data, just not from THIS scan — said honestly as "last
+      // measured {date}" instead of the normal field/lab wording, for
+      // either method, before either branch below ever runs.
+      const lastMeasuredDate =
+        measurement.carriedForward && measurement.measuredAt ? formatShortDate(measurement.measuredAt, locale) : null;
       // Real-user field data (Chrome UX Report, either for this exact
       // URL or the site's whole origin — see fetchMobilePerformance in
       // lib/websiteAnalysis.ts) always wins when Google has it: it's
@@ -1495,9 +1631,14 @@ export const CHECKS: CheckDefinition[] = [
         return {
           earnedPoints: FIELD_CATEGORY_POINTS[category],
           confidence: "VERIFIED",
-          explanation: t(locale, "content.checks.website.performance_mobile.explanation.field", {
-            category: t(locale, FIELD_CATEGORY_LABEL_KEYS[category]),
-          }),
+          explanation: lastMeasuredDate
+            ? t(locale, "content.checks.website.performance_mobile.explanation.fieldLastMeasured", {
+                category: t(locale, FIELD_CATEGORY_LABEL_KEYS[category]),
+                date: lastMeasuredDate,
+              })
+            : t(locale, "content.checks.website.performance_mobile.explanation.field", {
+                category: t(locale, FIELD_CATEGORY_LABEL_KEYS[category]),
+              }),
           meta: { method: "field" },
         };
       }
@@ -1888,6 +2029,237 @@ export const CHECKS: CheckDefinition[] = [
       },
     }),
   },
+  // ---------------------------------------------------------------------
+  // Oct 10 site-trust checks (PROPOSED weights — see
+  // ~/Desktop/website-trust-dry-run.md for the real dry-run effect
+  // across all 53 businesses before these are finalized). All four read
+  // WebsiteAnalysis.websiteTrust (see its own doc) — a row saved before
+  // this detection existed has it undefined/null, same honest "not yet
+  // analyzed" fallback as every other field added here over time. See
+  // lib/websiteTrust.ts for the pure detection rules.
+  // ---------------------------------------------------------------------
+  {
+    id: "website.security",
+    labelKey: "content.checks.website.security.label",
+    category: "website",
+    // Oct 10 revision: fit inside Website's unchanged 30-point total
+    // (see CATEGORY_WEIGHTS' own doc) rather than growing the category.
+    // Still the heaviest of the 4 new trust checks — a hacked site is
+    // the single worst real finding possible (actively dangerous to a
+    // visitor, not just unpolished) — but no longer heavier than
+    // performance_mobile in raw points.
+    maxPoints: 2,
+    adviceKey: "content.checks.website.security.advice",
+    evaluate(input, locale) {
+      // Same "real site, just not necessarily on the listing" reasoning
+      // as website.has_website's own verifiedElsewhereUrl handling —
+      // the real Bánh Mì Boy case: no website on the Google listing at
+      // all, but a real, verified site DOES exist and WAS analyzed, so
+      // these checks must still run against it rather than going
+      // NOT_FOUND just because the listing itself shows nothing.
+      const hasAnalyzableWebsite = (!!input.website && input.website.trim().length > 0) || !!input.verifiedElsewhereUrl;
+      if (!hasAnalyzableWebsite) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.security.explanation.noWebsite") };
+      }
+      const trust = input.websiteAnalysis?.websiteTrust;
+      if (!trust) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.security.explanation.notAnalyzed") };
+      }
+      const threat = trust.safeBrowsingThreat;
+      if (trust.spamSignals.length === 0 && !threat?.threatFound) {
+        return {
+          earnedPoints: 2,
+          confidence: "VERIFIED",
+          explanation: t(
+            locale,
+            trust.safeBrowsingChecked
+              ? "content.checks.website.security.explanation.cleanChecked"
+              : "content.checks.website.security.explanation.cleanNotChecked"
+          ),
+        };
+      }
+      if (threat?.threatFound) {
+        return {
+          earnedPoints: 0,
+          confidence: "VERIFIED",
+          explanation: t(locale, "content.checks.website.security.explanation.safeBrowsingThreat", {
+            types: threat.threatTypes.join(", "),
+          }),
+        };
+      }
+      const spam = trust.spamSignals[0];
+      return {
+        earnedPoints: 0,
+        confidence: "VERIFIED",
+        explanation: t(locale, "content.checks.website.security.explanation.spamFound", { snippet: spam.snippet }),
+      };
+    },
+    simulateFix: (input) => ({
+      ...input,
+      websiteAnalysis: {
+        ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
+        websiteTrust: {
+          ...(input.websiteAnalysis?.websiteTrust ?? PERFECT_WEBSITE_ANALYSIS.websiteTrust!),
+          spamSignals: [],
+          safeBrowsingThreat: null,
+        },
+      },
+    }),
+  },
+  {
+    id: "website.info_consistency",
+    labelKey: "content.checks.website.info_consistency.label",
+    category: "website",
+    // Oct 10 revision: fit inside Website's unchanged 30-point total —
+    // see CATEGORY_WEIGHTS' own doc.
+    maxPoints: 1,
+    adviceKey: "content.checks.website.info_consistency.advice",
+    evaluate(input, locale) {
+      // Same "real site, just not necessarily on the listing" reasoning
+      // as website.has_website's own verifiedElsewhereUrl handling —
+      // the real Bánh Mì Boy case: no website on the Google listing at
+      // all, but a real, verified site DOES exist and WAS analyzed, so
+      // these checks must still run against it rather than going
+      // NOT_FOUND just because the listing itself shows nothing.
+      const hasAnalyzableWebsite = (!!input.website && input.website.trim().length > 0) || !!input.verifiedElsewhereUrl;
+      if (!hasAnalyzableWebsite) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.info_consistency.explanation.noWebsite") };
+      }
+      const trust = input.websiteAnalysis?.websiteTrust;
+      if (!trust) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.info_consistency.explanation.notAnalyzed") };
+      }
+      const overriddenKeys = new Set((input.websiteTrustOverrides ?? []).map((o) => o.key));
+      const determinable = trust.infoConflicts.filter((f) => f.comparison !== "not_found_on_site");
+      if (determinable.length === 0) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.info_consistency.explanation.noComparableInfo") };
+      }
+      const realConflicts = determinable.filter((f) => f.comparison === "conflicts" && !overriddenKeys.has(keyForInfoConflict(f)));
+      if (realConflicts.length === 0) {
+        return { earnedPoints: 1, confidence: "VERIFIED", explanation: t(locale, "content.checks.website.info_consistency.explanation.allMatch") };
+      }
+      const matchingCount = determinable.length - realConflicts.length;
+      const earnedPoints = roundTo(1 * (matchingCount / determinable.length), 1);
+      const first = realConflicts[0];
+      const fieldKey =
+        first.field === "phone"
+          ? "content.checks.website.info_consistency.explanation.conflictPhone"
+          : first.field === "address"
+            ? "content.checks.website.info_consistency.explanation.conflictAddress"
+            : "content.checks.website.info_consistency.explanation.conflictHours";
+      return {
+        earnedPoints,
+        confidence: "VERIFIED",
+        explanation: t(locale, fieldKey, { site: first.siteValue ?? "", google: first.googleValue ?? "" }),
+      };
+    },
+    simulateFix: (input) => ({
+      ...input,
+      websiteAnalysis: {
+        ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
+        websiteTrust: {
+          ...(input.websiteAnalysis?.websiteTrust ?? PERFECT_WEBSITE_ANALYSIS.websiteTrust!),
+          infoConflicts: PERFECT_WEBSITE_ANALYSIS.websiteTrust!.infoConflicts,
+        },
+      },
+    }),
+  },
+  {
+    id: "website.notice_freshness",
+    labelKey: "content.checks.website.notice_freshness.label",
+    category: "website",
+    // Oct 10 revision: fit inside Website's unchanged 30-point total —
+    // see CATEGORY_WEIGHTS' own doc.
+    maxPoints: 0.5,
+    adviceKey: "content.checks.website.notice_freshness.advice",
+    evaluate(input, locale) {
+      // Same "real site, just not necessarily on the listing" reasoning
+      // as website.has_website's own verifiedElsewhereUrl handling —
+      // the real Bánh Mì Boy case: no website on the Google listing at
+      // all, but a real, verified site DOES exist and WAS analyzed, so
+      // these checks must still run against it rather than going
+      // NOT_FOUND just because the listing itself shows nothing.
+      const hasAnalyzableWebsite = (!!input.website && input.website.trim().length > 0) || !!input.verifiedElsewhereUrl;
+      if (!hasAnalyzableWebsite) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.notice_freshness.explanation.noWebsite") };
+      }
+      const trust = input.websiteAnalysis?.websiteTrust;
+      if (!trust) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.notice_freshness.explanation.notAnalyzed") };
+      }
+      const overriddenKeys = new Set((input.websiteTrustOverrides ?? []).map((o) => o.key));
+      const active = trust.staleNotices.filter((n) => !overriddenKeys.has(keyForStaleNotice(n)));
+      if (active.length === 0) {
+        return { earnedPoints: 0.5, confidence: "VERIFIED", explanation: t(locale, "content.checks.website.notice_freshness.explanation.clean") };
+      }
+      return {
+        earnedPoints: 0,
+        confidence: "VERIFIED",
+        explanation: t(locale, "content.checks.website.notice_freshness.explanation.staleFound", { text: active[0].text }),
+      };
+    },
+    simulateFix: (input) => ({
+      ...input,
+      websiteAnalysis: {
+        ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
+        websiteTrust: {
+          ...(input.websiteAnalysis?.websiteTrust ?? PERFECT_WEBSITE_ANALYSIS.websiteTrust!),
+          staleNotices: [],
+        },
+      },
+    }),
+  },
+  {
+    id: "website.site_freshness",
+    labelKey: "content.checks.website.site_freshness.label",
+    category: "website",
+    // Oct 10 revision: fit inside Website's unchanged 30-point total —
+    // see CATEGORY_WEIGHTS' own doc.
+    maxPoints: 0.5,
+    adviceKey: "content.checks.website.site_freshness.advice",
+    evaluate(input, locale) {
+      // Same "real site, just not necessarily on the listing" reasoning
+      // as website.has_website's own verifiedElsewhereUrl handling —
+      // the real Bánh Mì Boy case: no website on the Google listing at
+      // all, but a real, verified site DOES exist and WAS analyzed, so
+      // these checks must still run against it rather than going
+      // NOT_FOUND just because the listing itself shows nothing.
+      const hasAnalyzableWebsite = (!!input.website && input.website.trim().length > 0) || !!input.verifiedElsewhereUrl;
+      if (!hasAnalyzableWebsite) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.site_freshness.explanation.noWebsite") };
+      }
+      const trust = input.websiteAnalysis?.websiteTrust;
+      if (!trust) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.site_freshness.explanation.notAnalyzed") };
+      }
+      const { looksAbandoned, newestDateFound, templateLeftovers } = trust.abandonedSignals;
+      if (!looksAbandoned) {
+        return { earnedPoints: 0.5, confidence: "VERIFIED", explanation: t(locale, "content.checks.website.site_freshness.explanation.clean") };
+      }
+      if (templateLeftovers.length > 0) {
+        return {
+          earnedPoints: 0,
+          confidence: "VERIFIED",
+          explanation: t(locale, "content.checks.website.site_freshness.explanation.templateLeftover", { text: templateLeftovers[0] }),
+        };
+      }
+      return {
+        earnedPoints: 0,
+        confidence: "VERIFIED",
+        explanation: t(locale, "content.checks.website.site_freshness.explanation.oldDate", { date: newestDateFound ?? "" }),
+      };
+    },
+    simulateFix: (input) => ({
+      ...input,
+      websiteAnalysis: {
+        ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
+        websiteTrust: {
+          ...(input.websiteAnalysis?.websiteTrust ?? PERFECT_WEBSITE_ANALYSIS.websiteTrust!),
+          abandonedSignals: PERFECT_WEBSITE_ANALYSIS.websiteTrust!.abandonedSignals,
+        },
+      },
+    }),
+  },
 ];
 
 function isDeterminable(confidence: Confidence): boolean {
@@ -2080,6 +2452,9 @@ export interface BusinessScoringRow {
    * column yet still type-checks — treated identically to null/legacy
    * data by parseWebsiteAnalysis: never analyzed. */
   website_analysis_json?: unknown;
+  /** Real owner overrides — see WebsiteTrustOverride's own doc. Same
+   * jsonb/optional reasoning as website_analysis_json above. */
+  website_trust_overrides_json?: unknown;
   /** A real, manually-verified alternate website — see
    * BusinessScoringInput.verifiedElsewhereUrl's own doc. Same
    * optional-for-un-migrated-callers reasoning as the other new
@@ -2271,6 +2646,7 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
   const lastScreenshotRefreshAt = typeof v.lastScreenshotRefreshAt === "string" ? v.lastScreenshotRefreshAt : null;
   const aboutPresence = parsePagePresenceResult(v.aboutPresence);
   const servicesPresence = parsePagePresenceResult(v.servicesPresence);
+  const websiteTrust = parseWebsiteTrust(v.websiteTrust);
   const checkedAt = typeof v.checkedAt === "string" ? v.checkedAt : null;
   if (checkedAt === null) return null;
   return {
@@ -2284,8 +2660,112 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
     lastScreenshotRefreshAt,
     aboutPresence,
     servicesPresence,
+    websiteTrust,
     checkedAt,
   };
+}
+
+const INFO_CONFLICT_FIELDS = new Set(["phone", "address", "hours"]);
+const INFO_CONFLICT_COMPARISONS = new Set(["matches", "conflicts", "not_found_on_site"]);
+
+function parseInfoFieldFinding(value: unknown): InfoFieldFinding | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  if (typeof v.field !== "string" || !INFO_CONFLICT_FIELDS.has(v.field)) return null;
+  if (typeof v.comparison !== "string" || !INFO_CONFLICT_COMPARISONS.has(v.comparison)) return null;
+  return {
+    field: v.field as InfoFieldFinding["field"],
+    comparison: v.comparison as InfoFieldFinding["comparison"],
+    siteValue: typeof v.siteValue === "string" ? v.siteValue : null,
+    googleValue: typeof v.googleValue === "string" ? v.googleValue : null,
+  };
+}
+
+function parseSpamFinding(value: unknown): SpamFinding | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  if (typeof v.category !== "string" || typeof v.matchedPhrase !== "string" || typeof v.snippet !== "string") return null;
+  return {
+    category: v.category as SpamFinding["category"],
+    matchedPhrase: v.matchedPhrase,
+    snippet: v.snippet,
+    suspiciousLinks: Array.isArray(v.suspiciousLinks) ? v.suspiciousLinks.filter((s): s is string => typeof s === "string") : [],
+    hidden: v.hidden === true,
+  };
+}
+
+function parseStaleNoticeFinding(value: unknown): StaleNoticeFinding | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  if (typeof v.text !== "string" || typeof v.resolvedDate !== "string") return null;
+  return { text: v.text, resolvedDate: v.resolvedDate };
+}
+
+function parseAbandonedSiteFinding(value: unknown): AbandonedSiteFinding {
+  if (!value || typeof value !== "object") return { newestDateFound: null, templateLeftovers: [], looksAbandoned: false };
+  const v = value as Record<string, unknown>;
+  return {
+    newestDateFound: typeof v.newestDateFound === "string" ? v.newestDateFound : null,
+    templateLeftovers: Array.isArray(v.templateLeftovers) ? v.templateLeftovers.filter((s): s is string => typeof s === "string") : [],
+    looksAbandoned: v.looksAbandoned === true,
+  };
+}
+
+/** Same fail-safe reasoning as parseWebsiteAnalysis itself — anything
+ * malformed or missing (including every row saved before this detection
+ * existed) degrades to null ("not yet analyzed"), never a guessed-at
+ * clean result. */
+function parseWebsiteTrust(value: unknown): WebsiteTrustAnalysis | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  const checkedAt = typeof v.checkedAt === "string" ? v.checkedAt : null;
+  if (checkedAt === null) return null;
+  const spamSignals = Array.isArray(v.spamSignals)
+    ? v.spamSignals.map(parseSpamFinding).filter((f): f is SpamFinding => f !== null)
+    : [];
+  const infoConflicts = Array.isArray(v.infoConflicts)
+    ? v.infoConflicts.map(parseInfoFieldFinding).filter((f): f is InfoFieldFinding => f !== null)
+    : [];
+  const staleNotices = Array.isArray(v.staleNotices)
+    ? v.staleNotices.map(parseStaleNoticeFinding).filter((f): f is StaleNoticeFinding => f !== null)
+    : [];
+  let safeBrowsingThreat: { threatFound: boolean; threatTypes: string[] } | null = null;
+  if (v.safeBrowsingThreat && typeof v.safeBrowsingThreat === "object") {
+    const sb = v.safeBrowsingThreat as Record<string, unknown>;
+    if (typeof sb.threatFound === "boolean") {
+      safeBrowsingThreat = {
+        threatFound: sb.threatFound,
+        threatTypes: Array.isArray(sb.threatTypes) ? sb.threatTypes.filter((s): s is string => typeof s === "string") : [],
+      };
+    }
+  }
+  const websiteKind =
+    v.websiteKind === "independent" || v.websiteKind === "free_builder" || v.websiteKind === "directory"
+      ? (v.websiteKind as WebsiteKind)
+      : null;
+  return {
+    spamSignals,
+    safeBrowsingThreat,
+    safeBrowsingChecked: v.safeBrowsingChecked === true,
+    infoConflicts,
+    staleNotices,
+    abandonedSignals: parseAbandonedSiteFinding(v.abandonedSignals),
+    websiteKind,
+    listingLinkBroken: v.listingLinkBroken === true,
+    checkedAt,
+  };
+}
+
+function parseWebsiteTrustOverrides(value: unknown): WebsiteTrustOverride[] | null {
+  if (!Array.isArray(value)) return null;
+  const overrides: WebsiteTrustOverride[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const v = item as Record<string, unknown>;
+    if (typeof v.key !== "string" || typeof v.note !== "string" || typeof v.overriddenAt !== "string") continue;
+    overrides.push({ key: v.key, note: v.note, overriddenAt: v.overriddenAt });
+  }
+  return overrides;
 }
 
 /** Maps a saved business row to scoring input. Pure. */
@@ -2305,6 +2785,7 @@ export function businessRowToScoringInput(row: BusinessScoringRow): BusinessScor
     photoCount: row.photo_count,
     businessStatus: row.business_status,
     websiteAnalysis: parseWebsiteAnalysis(row.website_analysis_json),
+    websiteTrustOverrides: parseWebsiteTrustOverrides(row.website_trust_overrides_json),
     verifiedElsewhereUrl: typeof row.verified_website_url === "string" ? row.verified_website_url : null,
   };
 }

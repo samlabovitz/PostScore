@@ -1380,3 +1380,25 @@ create policy "Users can delete weekly checks for their own businesses"
         and businesses.owner_id = auth.uid ()
     )
   );
+
+-- ---------------------------------------------------------------------------
+-- Site trust, freshness & consistency (lib/websiteTrust.ts,
+-- lib/scoring.ts's WebsiteTrustAnalysis / WebsiteTrustOverride, Oct 10).
+-- ---------------------------------------------------------------------------
+
+-- website_trust_overrides_json: an array of real WebsiteTrustOverride
+-- entries ({key, note, overriddenAt}) — an owner marking a specific
+-- stale notice or info conflict "still accurate," keyed by
+-- keyForStaleNotice/keyForInfoConflict (lib/websiteTrust.ts) so the
+-- same real finding is matched again on every future re-scan. Null/
+-- absent means no overrides — every finding scores normally.
+--
+-- verified_website_url: the real site an owner (or we) found and
+-- verified by phone/address match when the Google LISTING itself shows
+-- no website at all (the real Bánh Mì Boy case) — read only by
+-- website.has_website, never by completeness.website_link (which
+-- reflects only the listing's own URL state). Null means nothing's
+-- been verified this way.
+alter table public.businesses
+  add column if not exists website_trust_overrides_json jsonb,
+  add column if not exists verified_website_url text;

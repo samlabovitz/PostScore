@@ -169,8 +169,14 @@ export async function saveBusinessWithClient(
           {
             pageSpeedApiKey: process.env.PAGESPEED_API_KEY,
             screenshotApiKey: process.env.SCREENSHOT_API_KEY,
+            safeBrowsingApiKey: process.env.GOOGLE_SAFE_BROWSING_API_KEY,
           },
-          { captureScreenshots }
+          { captureScreenshots },
+          {
+            phone: place.phone,
+            address: place.formattedAddress,
+            openingHoursPeriods: place.openingHoursPeriods,
+          }
         )
       : Promise.resolve(null),
   ]);
@@ -208,6 +214,9 @@ export async function saveBusinessWithClient(
           // fetches, so there's no reason to ever carry it forward stale.
           aboutPresence: analysis.aboutPresence,
           servicesPresence: analysis.servicesPresence,
+          // Real site-trust signals (Oct 10) — same "always fresh" reasoning
+          // as aboutPresence/servicesPresence above.
+          websiteTrust: analysis.websiteTrust,
           checkedAt,
         }
       : {
@@ -225,6 +234,7 @@ export async function saveBusinessWithClient(
           // too — see the first branch's own comment above.
           aboutPresence: analysis.aboutPresence,
           servicesPresence: analysis.servicesPresence,
+          websiteTrust: analysis.websiteTrust,
           checkedAt,
         }
     : null;

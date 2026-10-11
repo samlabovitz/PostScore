@@ -323,6 +323,37 @@ export type MessageKey =
   | "content.checks.website.services_presence.explanation.jsRendered"
   | "content.checks.website.services_presence.explanation.onlineOrdering"
   | "content.checks.website.services_presence.explanation.imageOnly"
+  // --- content.checks.website.security/info_consistency/notice_freshness/site_freshness (lib/scoring.ts, lib/websiteTrust.ts) ---
+  | "content.checks.website.security.label"
+  | "content.checks.website.security.advice"
+  | "content.checks.website.security.explanation.noWebsite"
+  | "content.checks.website.security.explanation.notAnalyzed"
+  | "content.checks.website.security.explanation.cleanChecked"
+  | "content.checks.website.security.explanation.cleanNotChecked"
+  | "content.checks.website.security.explanation.safeBrowsingThreat"
+  | "content.checks.website.security.explanation.spamFound"
+  | "content.checks.website.info_consistency.label"
+  | "content.checks.website.info_consistency.advice"
+  | "content.checks.website.info_consistency.explanation.noWebsite"
+  | "content.checks.website.info_consistency.explanation.notAnalyzed"
+  | "content.checks.website.info_consistency.explanation.noComparableInfo"
+  | "content.checks.website.info_consistency.explanation.allMatch"
+  | "content.checks.website.info_consistency.explanation.conflictPhone"
+  | "content.checks.website.info_consistency.explanation.conflictAddress"
+  | "content.checks.website.info_consistency.explanation.conflictHours"
+  | "content.checks.website.notice_freshness.label"
+  | "content.checks.website.notice_freshness.advice"
+  | "content.checks.website.notice_freshness.explanation.noWebsite"
+  | "content.checks.website.notice_freshness.explanation.notAnalyzed"
+  | "content.checks.website.notice_freshness.explanation.clean"
+  | "content.checks.website.notice_freshness.explanation.staleFound"
+  | "content.checks.website.site_freshness.label"
+  | "content.checks.website.site_freshness.advice"
+  | "content.checks.website.site_freshness.explanation.noWebsite"
+  | "content.checks.website.site_freshness.explanation.notAnalyzed"
+  | "content.checks.website.site_freshness.explanation.clean"
+  | "content.checks.website.site_freshness.explanation.templateLeftover"
+  | "content.checks.website.site_freshness.explanation.oldDate"
   // --- dashboard.website.* fix-list / Growth card additions (Oct 10) ---
   | "dashboard.website.freeBuilderNote"
   | "dashboard.website.listingLinkBroken"
@@ -2555,6 +2586,59 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Found your online ordering menu at {url} — we confirmed it loads, but can't read the items.",
     "content.checks.website.services_presence.explanation.imageOnly":
       "Your menu is an image — customers can see it, but it's hard to read on phones and Google can't read it.",
+
+    "content.checks.website.security.label": "Site security",
+    "content.checks.website.security.advice":
+      "Have your website host or developer remove the injected content immediately and change every admin password — a hacked site can quietly harm your visitors and your Google ranking.",
+    "content.checks.website.security.explanation.noWebsite": "Not applicable — no website on file to check.",
+    "content.checks.website.security.explanation.notAnalyzed": "This site hasn't been analyzed yet — re-scan to run a real security check.",
+    "content.checks.website.security.explanation.cleanChecked":
+      "No signs of hacking found, and Google Safe Browsing reports this site as clean.",
+    "content.checks.website.security.explanation.cleanNotChecked":
+      "No signs of hacking found in your site's own content. (Google Safe Browsing wasn't checked — not configured yet.)",
+    "content.checks.website.security.explanation.safeBrowsingThreat":
+      "Google Safe Browsing flags this site as a security risk ({types}) — this needs urgent attention.",
+    "content.checks.website.security.explanation.spamFound":
+      'We found signs your website may be hacked: "{snippet}"',
+
+    "content.checks.website.info_consistency.label": "Matches your Google listing",
+    "content.checks.website.info_consistency.advice":
+      "Update your website so its hours, phone number, and address match your real, current Google listing — a visitor who gets turned away by wrong info may not try again.",
+    "content.checks.website.info_consistency.explanation.noWebsite": "Not applicable — no website on file to check.",
+    "content.checks.website.info_consistency.explanation.notAnalyzed":
+      "This site hasn't been analyzed yet — re-scan to compare it against your real Google listing.",
+    "content.checks.website.info_consistency.explanation.noComparableInfo":
+      "Your site doesn't state hours, phone, or address in a way we can compare. Excluded from your score, not counted against you.",
+    "content.checks.website.info_consistency.explanation.allMatch":
+      "Your website's hours, phone, and address match your Google listing.",
+    "content.checks.website.info_consistency.explanation.conflictPhone":
+      "Your website says {site}; Google says {google}.",
+    "content.checks.website.info_consistency.explanation.conflictAddress":
+      "Your website says {site}; Google says {google}.",
+    "content.checks.website.info_consistency.explanation.conflictHours":
+      "Your website says {site}; Google says {google}.",
+
+    "content.checks.website.notice_freshness.label": "Up-to-date notices",
+    "content.checks.website.notice_freshness.advice":
+      "Remove or update any closure/holiday notice once its date has passed — a stale \"we're closed\" banner reads as abandoned, not careful.",
+    "content.checks.website.notice_freshness.explanation.noWebsite": "Not applicable — no website on file to check.",
+    "content.checks.website.notice_freshness.explanation.notAnalyzed":
+      "This site hasn't been analyzed yet — re-scan to check for outdated notices.",
+    "content.checks.website.notice_freshness.explanation.clean": "No outdated closure/holiday notices found.",
+    "content.checks.website.notice_freshness.explanation.staleFound":
+      'This notice is now out of date: "{text}"',
+
+    "content.checks.website.site_freshness.label": "Site freshness",
+    "content.checks.website.site_freshness.advice":
+      "Refresh your site with a current update — a recent post, a new photo, or at least confirming everything still reads right — and replace any leftover template text.",
+    "content.checks.website.site_freshness.explanation.noWebsite": "Not applicable — no website on file to check.",
+    "content.checks.website.site_freshness.explanation.notAnalyzed":
+      "This site hasn't been analyzed yet — re-scan to check how current it looks.",
+    "content.checks.website.site_freshness.explanation.clean": "Your site looks actively maintained.",
+    "content.checks.website.site_freshness.explanation.templateLeftover":
+      'Unfilled template text found on your site: "{text}" — this reads as an unfinished, abandoned site.',
+    "content.checks.website.site_freshness.explanation.oldDate":
+      "The newest real date we could find on your site is {date} — over 2 years ago, which reads as abandoned.",
 
     "dashboard.website.freeBuilderNote":
       "Your site uses a free builder address — your own domain looks more trustworthy.",
@@ -4985,6 +5069,36 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.services_presence.explanation.jsRendered": "Su sitio genera su contenido con JavaScript, por lo que nuestra comprobación no pudo leerlo — ábralo usted mismo para confirmarlo. Se excluye de su puntuación, no se cuenta en su contra.",
     "content.checks.website.services_presence.explanation.onlineOrdering": "Encontramos su menú de pedidos en línea en {url} — confirmamos que carga, pero no podemos leer los artículos.",
     "content.checks.website.services_presence.explanation.imageOnly": "Su menú es una imagen — los clientes pueden verlo, pero es difícil de leer en teléfonos y Google no puede leerlo.",
+    "content.checks.website.security.label": "Seguridad del sitio",
+    "content.checks.website.security.advice": "Pida a su proveedor de alojamiento o desarrollador que elimine el contenido inyectado de inmediato y cambie todas las contraseñas de administrador — un sitio hackeado puede perjudicar silenciosamente a sus visitantes y a su posición en Google.",
+    "content.checks.website.security.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para verificar.",
+    "content.checks.website.security.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para ejecutar una verificación de seguridad real.",
+    "content.checks.website.security.explanation.cleanChecked": "No se encontraron señales de hackeo, y Google Safe Browsing informa que este sitio está limpio.",
+    "content.checks.website.security.explanation.cleanNotChecked": "No se encontraron señales de hackeo en el propio contenido de su sitio. (No se comprobó Google Safe Browsing — aún no está configurado.)",
+    "content.checks.website.security.explanation.safeBrowsingThreat": "Google Safe Browsing marca este sitio como un riesgo de seguridad ({types}) — esto necesita atención urgente.",
+    "content.checks.website.security.explanation.spamFound": "Encontramos señales de que su sitio web podría estar hackeado: \"{snippet}\"",
+    "content.checks.website.info_consistency.label": "Coincide con su ficha de Google",
+    "content.checks.website.info_consistency.advice": "Actualice su sitio web para que sus horarios, número de teléfono y dirección coincidan con su ficha de Google real y actual — un visitante que se encuentre con información incorrecta puede no volver a intentarlo.",
+    "content.checks.website.info_consistency.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para verificar.",
+    "content.checks.website.info_consistency.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para compararlo con su ficha de Google real.",
+    "content.checks.website.info_consistency.explanation.noComparableInfo": "Su sitio no indica horarios, teléfono o dirección de una manera que podamos comparar. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.info_consistency.explanation.allMatch": "Los horarios, el teléfono y la dirección de su sitio web coinciden con su ficha de Google.",
+    "content.checks.website.info_consistency.explanation.conflictPhone": "Su sitio web dice {site}; Google dice {google}.",
+    "content.checks.website.info_consistency.explanation.conflictAddress": "Su sitio web dice {site}; Google dice {google}.",
+    "content.checks.website.info_consistency.explanation.conflictHours": "Su sitio web dice {site}; Google dice {google}.",
+    "content.checks.website.notice_freshness.label": "Avisos actualizados",
+    "content.checks.website.notice_freshness.advice": "Elimine o actualice cualquier aviso de cierre/temporada una vez que su fecha haya pasado — un aviso de \"estamos cerrados\" desactualizado se percibe como abandono, no como cuidado.",
+    "content.checks.website.notice_freshness.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para verificar.",
+    "content.checks.website.notice_freshness.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para verificar si hay avisos desactualizados.",
+    "content.checks.website.notice_freshness.explanation.clean": "No se encontraron avisos de cierre/temporada desactualizados.",
+    "content.checks.website.notice_freshness.explanation.staleFound": "Este aviso ya está desactualizado: \"{text}\"",
+    "content.checks.website.site_freshness.label": "Actualidad del sitio",
+    "content.checks.website.site_freshness.advice": "Actualice su sitio con una publicación reciente, una foto nueva, o al menos confirme que todo sigue siendo correcto — y reemplace cualquier texto de plantilla sin completar.",
+    "content.checks.website.site_freshness.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para verificar.",
+    "content.checks.website.site_freshness.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para verificar qué tan actual se ve.",
+    "content.checks.website.site_freshness.explanation.clean": "Su sitio se ve activamente mantenido.",
+    "content.checks.website.site_freshness.explanation.templateLeftover": "Se encontró texto de plantilla sin completar en su sitio: \"{text}\" — esto se percibe como un sitio inacabado y abandonado.",
+    "content.checks.website.site_freshness.explanation.oldDate": "La fecha real más reciente que pudimos encontrar en su sitio es {date} — hace más de 2 años, lo cual se percibe como abandono.",
     "dashboard.website.freeBuilderNote": "Su sitio usa una dirección de un creador de sitios gratuito — su propio dominio se ve más confiable.",
     "dashboard.website.listingLinkBroken": "El enlace del sitio web en su ficha de Google abre una página de \"No encontrado\" — actualícelo.",
     "growth.fix.addWebsiteToListing.label": "PostScore lo guía · ~2–5 min",

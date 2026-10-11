@@ -15,9 +15,11 @@ import {
   type MobilePerformanceMeasurement,
   type WebsiteAnalysis,
   type WebsiteTrustAnalysis,
+  type WebsiteTrustOverride,
 } from "./scoring";
 import { DEFAULT_LOCALE, t } from "./i18n";
 import { reachabilityReasonMessageKey } from "./websiteReachability";
+import { keyForInfoConflict, keyForStaleNotice } from "./websiteTrust";
 
 // A real, fully-good website analysis — see WebsiteAnalysis in
 // lib/scoring.ts and lib/websiteAnalysis.ts for how this gets collected
@@ -119,7 +121,7 @@ describe("config integrity", () => {
     }
   });
 
-  test("category weights sum to 100", () => {
+  test("category weights sum to 100 (Oct 10 revision: the 4 new website.* site-trust checks were fit INSIDE Website's existing 30, not added on top — see CATEGORY_WEIGHTS' own doc)", () => {
     const total = Object.values(CATEGORY_WEIGHTS).reduce((a, b) => a + b, 0);
     expect(total).toBe(100);
   });
@@ -155,7 +157,34 @@ describe("scoreBusiness determinism", () => {
   });
 
   test("a business with every determinable check perfect scores 100 / A", () => {
-    const breakdown = scoreBusiness(PERFECT_INPUT);
+    // PERFECT_INPUT's own shared mobilePerformance.labScore (96, not 100)
+    // happens to round to a total of exactly 100 anyway (99.9 -> 100) —
+    // overridden to a true 100 here (and websiteTrust filled in clean)
+    // so this test asserts what its name says: every determinable check
+    // actually perfect, not a rounding coincidence.
+    const input: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      websiteAnalysis: {
+        ...GOOD_WEBSITE_ANALYSIS,
+        mobilePerformance: { method: "lab", fieldCategory: null, labScore: 100 },
+        websiteTrust: {
+          spamSignals: [],
+          safeBrowsingThreat: null,
+          safeBrowsingChecked: true,
+          infoConflicts: [
+            { field: "phone", comparison: "matches", siteValue: "555-5555", googleValue: "555-5555" },
+            { field: "address", comparison: "matches", siteValue: "123 Main St", googleValue: "123 Main St" },
+            { field: "hours", comparison: "matches", siteValue: "see site", googleValue: "see listing" },
+          ],
+          staleNotices: [],
+          abandonedSignals: { newestDateFound: "2026-01-01", templateLeftovers: [], looksAbandoned: false },
+          websiteKind: "independent",
+          listingLinkBroken: false,
+          checkedAt: "2024-01-01T00:00:00.000Z",
+        },
+      },
+    };
+    const breakdown = scoreBusiness(input);
     expect(breakdown.total).toBe(100);
     expect(breakdown.grade).toBe("A");
   });
@@ -591,10 +620,10 @@ describe("suggestion -> projected score guarantee", () => {
   test("fixing only Completeness-category suggestions moves the total by exactly the sum of their promised points", () => {
     // Completeness is the one category where none of its checks are
     // permanently NOT_FOUND, so its determinable weight always equals
-    // its full 30-point category weight — nothing to renormalize.
-    // Isolating fixes to this category is therefore the clean case
-    // where the naive "sum of promised points" and the actual total
-    // delta agree exactly.
+    // its full 30-point category weight — nothing to renormalize WITHIN
+    // the category. A raw completeness point is therefore worth exactly
+    // 100/(sum of all CATEGORY_WEIGHTS) of the overall total — a clean
+    // 1:1 relationship now that the three category weights sum to 100.
     const input: BusinessScoringInput = {
       ...STRUGGLING_INPUT,
       website: "https://example.com", // hold Website category constant and fully determinable
@@ -610,6 +639,7 @@ describe("suggestion -> projected score guarantee", () => {
     const fixedBreakdown = scoreBusiness(fixedInput);
 
     const promisedTotal = completenessSuggestions.reduce((sum, s) => sum + s.promisedPoints, 0);
+    expect(promisedTotal).toBeGreaterThan(0);
     expect(fixedBreakdown.total - breakdown.total).toBe(promisedTotal);
   });
 
@@ -820,7 +850,7 @@ describe("businessRowToScoringInput adapter", () => {
     expect(input.mostRecentReviewDaysAgo).toBeNull();
     expect(input.httpsStatus).toBe("https");
     const breakdown = scoreBusiness(input);
-    expect(breakdown.scoringVersion).toBe("1.6.0");
+    expect(breakdown.scoringVersion).toBe("1.7.0");
   });
 
   test("degrades an unexpected https_status value to null (excluded) rather than trusting a bad cast", () => {
@@ -883,6 +913,7 @@ describe("businessRowToScoringInput adapter", () => {
       lastScreenshotRefreshAt: null,
       aboutPresence: null,
       servicesPresence: null,
+      websiteTrust: null,
       checkedAt: "2024-01-01T00:00:00.000Z",
     });
 
@@ -1121,34 +1152,34 @@ describe("website.performance_mobile: field-vs-lab measurement (Day 3b)", () => 
     return { ...PERFECT_INPUT, websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, mobilePerformance: measurement } };
   }
 
-  test("real-user field data FAST earns the full 10/10, VERIFIED, tagged meta.method 'field'", () => {
+  test("real-user field data FAST earns the full 6/6, VERIFIED, tagged meta.method 'field'", () => {
     const breakdown = scoreBusiness(withMeasurement({ method: "field", fieldCategory: "FAST", labScore: null }));
     const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(10);
+    expect(check.earnedPoints).toBe(6);
     expect(check.confidence).toBe("VERIFIED");
     expect(check.meta).toEqual({ method: "field" });
     expect(check.explanation).toContain("fast");
     expect(check.explanation).toContain("28 days");
   });
 
-  test("real-user field data AVERAGE earns 6/10", () => {
+  test("real-user field data AVERAGE earns 3.6/6", () => {
     const breakdown = scoreBusiness(withMeasurement({ method: "field", fieldCategory: "AVERAGE", labScore: null }));
     const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(6);
+    expect(check.earnedPoints).toBe(3.6);
     expect(check.meta).toEqual({ method: "field" });
   });
 
-  test("real-user field data SLOW earns 2/10", () => {
+  test("real-user field data SLOW earns 1.2/6", () => {
     const breakdown = scoreBusiness(withMeasurement({ method: "field", fieldCategory: "SLOW", labScore: null }));
     const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(2);
+    expect(check.earnedPoints).toBe(1.2);
     expect(check.meta).toEqual({ method: "field" });
   });
 
-  test("a lab measurement (median of 3 runs) keeps the existing linear score/10 mapping, tagged meta.method 'lab'", () => {
+  test("a lab measurement (median of 3 runs) keeps the existing linear score/6 mapping, tagged meta.method 'lab'", () => {
     const breakdown = scoreBusiness(withMeasurement({ method: "lab", fieldCategory: null, labScore: 65 }));
     const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(6.5);
+    expect(check.earnedPoints).toBe(3.9);
     expect(check.confidence).toBe("VERIFIED");
     expect(check.meta).toEqual({ method: "lab" });
     expect(check.explanation).toContain("65/100");
@@ -1163,10 +1194,10 @@ describe("website.performance_mobile: field-vs-lab measurement (Day 3b)", () => 
     expect(check.meta).toBeNull();
   });
 
-  test("simulateFix reaches the full 10/10 (via a lab measurement — a field FAST now also reaches 10, so either honestly proves the guarantee)", () => {
+  test("simulateFix reaches the full 6/6 (via a lab measurement — a field FAST now also reaches 6, so either honestly proves the guarantee)", () => {
     const fixed = scoreBusiness(applyCheckFix(withMeasurement(null), "website.performance_mobile"));
     const check = fixed.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(10);
+    expect(check.earnedPoints).toBe(6);
   });
 
   // Oct 10 audit fix: PageSpeed carry-forward on a timeout — see
@@ -1270,6 +1301,13 @@ describe("carryForwardMobilePerformance (Oct 10 audit fix): the real Blue Bottle
   });
 });
 
+// Oct 10 site-trust detection (PROPOSED weights: website.security=8,
+// website.info_consistency=4, website.notice_freshness=3,
+// website.site_freshness=3) — see lib/websiteTrust.ts for the pure
+// detectors and WebsiteTrustAnalysis's own doc (above) for the frozen
+// shape these checks read. Every case here is built from
+// PERFECT_INPUT + CLEAN_TRUST with exactly one field perturbed, so each
+// test isolates a single real finding.
 describe("website trust checks (Oct 10, PROPOSED)", () => {
   function withTrust(trust: WebsiteTrustAnalysis | null, overrides?: BusinessScoringInput["websiteTrustOverrides"]): BusinessScoringInput {
     return {
@@ -1363,4 +1401,261 @@ describe("website trust checks (Oct 10, PROPOSED)", () => {
     });
   });
 
+  describe("website.security — PROPOSED heaviest check (hacked/spam + Safe Browsing)", () => {
+    test("no website at all -> NOT_FOUND, never penalized", () => {
+      const input: BusinessScoringInput = { ...PERFECT_INPUT, website: null, websiteAnalysis: null };
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.security")!;
+      expect(check.confidence).toBe("NOT_FOUND");
+      expect(check.earnedPoints).toBeNull();
+    });
+
+    test("couldn't read/analyze the site -> NOT_FOUND, never penalized", () => {
+      const input = withTrust(null);
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.security")!;
+      expect(check.confidence).toBe("NOT_FOUND");
+      expect(check.earnedPoints).toBeNull();
+    });
+
+    test("clean + Safe Browsing actually checked -> full credit, explanation says so", () => {
+      const input = withTrust({ ...CLEAN_TRUST, safeBrowsingChecked: true });
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.security")!;
+      expect(check.earnedPoints).toBe(2);
+    });
+
+    test("clean but Safe Browsing was never actually checked (no API key) -> still full credit, different honest explanation", () => {
+      const checkedTrue = withTrust({ ...CLEAN_TRUST, safeBrowsingChecked: true });
+      const checkedFalse = withTrust({ ...CLEAN_TRUST, safeBrowsingChecked: false });
+      const a = scoreBusiness(checkedTrue).checks.find((c) => c.id === "website.security")!;
+      const b = scoreBusiness(checkedFalse).checks.find((c) => c.id === "website.security")!;
+      expect(a.earnedPoints).toBe(2);
+      expect(b.earnedPoints).toBe(2);
+      expect(a.explanation).not.toBe(b.explanation);
+    });
+
+    test("the real Bánh Mì Boy case: hidden replica-watch spam -> 0, evidence named in the explanation", () => {
+      const input = withTrust({
+        ...CLEAN_TRUST,
+        spamSignals: [{ category: "replica", matchedPhrase: "replica richard mille", snippet: "...replica richard mille...", suspiciousLinks: ["https://fakewatchz.ru/x"], hidden: true }],
+      });
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.security")!;
+      expect(check.earnedPoints).toBe(0);
+      expect(check.explanation).toContain("replica richard mille");
+    });
+
+    test("a real Google Safe Browsing threat -> 0, outranks a plain spam finding in explanation priority", () => {
+      const input = withTrust({ ...CLEAN_TRUST, safeBrowsingThreat: { threatFound: true, threatTypes: ["MALWARE"] } });
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.security")!;
+      expect(check.earnedPoints).toBe(0);
+      expect(check.explanation).toContain("MALWARE");
+    });
+
+    test("applying this check's simulated fix reaches full credit", () => {
+      const input = withTrust({
+        ...CLEAN_TRUST,
+        spamSignals: [{ category: "replica", matchedPhrase: "replica richard mille", snippet: "x", suspiciousLinks: [], hidden: true }],
+      });
+      const fixed = applyCheckFix(input, "website.security");
+      const check = scoreBusiness(fixed).checks.find((c) => c.id === "website.security")!;
+      expect(check.earnedPoints).toBe(2);
+    });
   });
+
+  describe("website.info_consistency", () => {
+    test("no website -> NOT_FOUND", () => {
+      const input: BusinessScoringInput = { ...PERFECT_INPUT, website: null, websiteAnalysis: null };
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.info_consistency")!;
+      expect(check.confidence).toBe("NOT_FOUND");
+    });
+
+    test("no trust data yet -> NOT_FOUND", () => {
+      const input = withTrust(null);
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.info_consistency")!;
+      expect(check.confidence).toBe("NOT_FOUND");
+    });
+
+    test("nothing comparable at all on the site (every field not_found_on_site) -> NOT_FOUND, never penalized", () => {
+      const input = withTrust({
+        ...CLEAN_TRUST,
+        infoConflicts: [
+          { field: "phone", comparison: "not_found_on_site", siteValue: null, googleValue: "555-5555" },
+          { field: "address", comparison: "not_found_on_site", siteValue: null, googleValue: "123 Main St" },
+          { field: "hours", comparison: "not_found_on_site", siteValue: null, googleValue: null },
+        ],
+      });
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.info_consistency")!;
+      expect(check.confidence).toBe("NOT_FOUND");
+      expect(check.earnedPoints).toBeNull();
+    });
+
+    test("every determinable field matches -> full credit", () => {
+      const input = withTrust(CLEAN_TRUST);
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.info_consistency")!;
+      expect(check.earnedPoints).toBe(1);
+    });
+
+    test("a real phone conflict against the listing -> partial credit naming both values", () => {
+      const input = withTrust({
+        ...CLEAN_TRUST,
+        infoConflicts: [
+          { field: "phone", comparison: "conflicts", siteValue: "555-0000", googleValue: "555-5555" },
+          { field: "address", comparison: "matches", siteValue: "123 Main St", googleValue: "123 Main St" },
+          { field: "hours", comparison: "matches", siteValue: "see site", googleValue: "see listing" },
+        ],
+      });
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.info_consistency")!;
+      expect(check.earnedPoints).toBeCloseTo(1 * (2 / 3), 1);
+      expect(check.explanation).toContain("555-0000");
+      expect(check.explanation).toContain("555-5555");
+    });
+
+    test("owner override on a conflict removes its penalty, labeled as overridden", () => {
+      const conflict: WebsiteTrustAnalysis["infoConflicts"][number] = { field: "phone", comparison: "conflicts", siteValue: "555-0000", googleValue: "555-5555" };
+      const input = withTrust(
+        { ...CLEAN_TRUST, infoConflicts: [conflict, ...CLEAN_TRUST.infoConflicts.slice(1)] },
+        [{ key: keyForInfoConflict(conflict), note: "Still accurate — new second line.", overriddenAt: "2026-01-01T00:00:00.000Z" } satisfies WebsiteTrustOverride]
+      );
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.info_consistency")!;
+      expect(check.earnedPoints).toBe(1);
+    });
+  });
+
+  describe("website.notice_freshness", () => {
+    test("no website -> NOT_FOUND", () => {
+      const input: BusinessScoringInput = { ...PERFECT_INPUT, website: null, websiteAnalysis: null };
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.notice_freshness")!;
+      expect(check.confidence).toBe("NOT_FOUND");
+    });
+
+    test("no trust data yet -> NOT_FOUND", () => {
+      const input = withTrust(null);
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.notice_freshness")!;
+      expect(check.confidence).toBe("NOT_FOUND");
+    });
+
+    test("no stale notices -> full credit", () => {
+      const input = withTrust(CLEAN_TRUST);
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.notice_freshness")!;
+      expect(check.earnedPoints).toBe(0.5);
+    });
+
+    test("the real Bánh Mì Boy case: a past-dated 'CLOSED July 4th to 8th!!!' notice -> 0, exact text shown", () => {
+      const input = withTrust({ ...CLEAN_TRUST, staleNotices: [{ text: "CLOSED July 4th to 8th!!!", resolvedDate: "2026-07-04" }] });
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.notice_freshness")!;
+      expect(check.earnedPoints).toBe(0);
+      expect(check.explanation).toContain("CLOSED July 4th to 8th!!!");
+    });
+
+    test("owner override on the exact notice removes its penalty", () => {
+      const notice = { text: "CLOSED July 4th to 8th!!!", resolvedDate: "2026-07-04" };
+      const input = withTrust(
+        { ...CLEAN_TRUST, staleNotices: [notice] },
+        [{ key: keyForStaleNotice(notice), note: "Still accurate.", overriddenAt: "2026-01-01T00:00:00.000Z" }]
+      );
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.notice_freshness")!;
+      expect(check.earnedPoints).toBe(0.5);
+    });
+  });
+
+  describe("website.site_freshness", () => {
+    test("no website -> NOT_FOUND", () => {
+      const input: BusinessScoringInput = { ...PERFECT_INPUT, website: null, websiteAnalysis: null };
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.site_freshness")!;
+      expect(check.confidence).toBe("NOT_FOUND");
+    });
+
+    test("no trust data yet -> NOT_FOUND", () => {
+      const input = withTrust(null);
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.site_freshness")!;
+      expect(check.confidence).toBe("NOT_FOUND");
+    });
+
+    test("not abandoned -> full credit", () => {
+      const input = withTrust(CLEAN_TRUST);
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.site_freshness")!;
+      expect(check.earnedPoints).toBe(0.5);
+    });
+
+    test("the real Bánh Mì Boy case: a 'Please put widget here' template leftover -> 0, named in the explanation", () => {
+      const input = withTrust({
+        ...CLEAN_TRUST,
+        abandonedSignals: { newestDateFound: "2012-07-11", templateLeftovers: ["please put widget here"], looksAbandoned: true },
+      });
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.site_freshness")!;
+      expect(check.earnedPoints).toBe(0);
+      expect(check.explanation).toContain("please put widget here");
+    });
+
+    test("abandoned via an old date alone (no template leftovers) -> 0, the date itself is named", () => {
+      const input = withTrust({
+        ...CLEAN_TRUST,
+        abandonedSignals: { newestDateFound: "2015-03-01", templateLeftovers: [], looksAbandoned: true },
+      });
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.site_freshness")!;
+      expect(check.earnedPoints).toBe(0);
+      expect(check.explanation).toContain("2015-03-01");
+    });
+  });
+
+  // The real Bánh Mì Boy case: no website on the Google listing at all,
+  // but a real site exists and was analyzed via verifiedElsewhereUrl —
+  // these 4 checks must still run against it, not go NOT_FOUND just
+  // because input.website itself is empty (the same fallback
+  // website.has_website already had).
+  describe("the 4 new trust checks also run when verifiedElsewhereUrl is set, even with no listing website", () => {
+    function withVerifiedElsewhere(trust: WebsiteTrustAnalysis): BusinessScoringInput {
+      return {
+        ...PERFECT_INPUT,
+        website: null,
+        verifiedElsewhereUrl: "https://banhmiboy.com",
+        websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, websiteTrust: trust },
+      };
+    }
+
+    test("website.security finds real spam even with no listing website", () => {
+      const input = withVerifiedElsewhere({
+        ...CLEAN_TRUST,
+        spamSignals: [{ category: "replica", matchedPhrase: "replica richard mille", snippet: "x", suspiciousLinks: [], hidden: true }],
+      });
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.security")!;
+      expect(check.confidence).toBe("VERIFIED");
+      expect(check.earnedPoints).toBe(0);
+    });
+
+    test("website.info_consistency still compares real fields with no listing website", () => {
+      const input = withVerifiedElsewhere(CLEAN_TRUST);
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.info_consistency")!;
+      expect(check.confidence).toBe("VERIFIED");
+      expect(check.earnedPoints).toBe(1);
+    });
+
+    test("website.notice_freshness still finds a real stale notice with no listing website", () => {
+      const input = withVerifiedElsewhere({ ...CLEAN_TRUST, staleNotices: [{ text: "CLOSED July 4th to 8th!!!", resolvedDate: "2026-07-04" }] });
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.notice_freshness")!;
+      expect(check.confidence).toBe("VERIFIED");
+      expect(check.earnedPoints).toBe(0);
+    });
+
+    test("website.site_freshness still finds real abandoned signals with no listing website", () => {
+      const input = withVerifiedElsewhere({
+        ...CLEAN_TRUST,
+        abandonedSignals: { newestDateFound: "2012-07-11", templateLeftovers: ["please put widget here"], looksAbandoned: true },
+      });
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.site_freshness")!;
+      expect(check.confidence).toBe("VERIFIED");
+      expect(check.earnedPoints).toBe(0);
+    });
+
+    test("without verifiedElsewhereUrl AND no listing website, all 4 stay honestly NOT_FOUND", () => {
+      const input: BusinessScoringInput = {
+        ...PERFECT_INPUT,
+        website: null,
+        verifiedElsewhereUrl: null,
+        websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, websiteTrust: CLEAN_TRUST },
+      };
+      const breakdown = scoreBusiness(input);
+      for (const id of ["website.security", "website.info_consistency", "website.notice_freshness", "website.site_freshness"]) {
+        expect(breakdown.checks.find((c) => c.id === id)!.confidence).toBe("NOT_FOUND");
+      }
+    });
+  });
+});
