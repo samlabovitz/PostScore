@@ -570,6 +570,18 @@ export interface BusinessScoringInput {
    * below; never re-derived or estimated inside this module.
    */
   websiteAnalysis: WebsiteAnalysis | null;
+  /**
+   * A real website found and verified separately from the Google
+   * listing (by phone or address match, never a directory/marketplace
+   * — see lib/websiteTrust.ts's compareListingInfo) — the real Bánh Mì
+   * Boy case: no website on the listing at all, but banhmiboy.com's own
+   * page states the exact same phone number. Read by website.has_website
+   * only; website.listing_link never counts this — the listing itself
+   * still shows nothing. Today this is set manually (no automated
+   * web-search step exists in the scan pipeline); null/undefined means
+   * none on file. Optional for the same mass-fixture reason as above.
+   */
+  verifiedElsewhereUrl?: string | null;
 }
 
 /** A single check's result, always expressed on the same 0–100 point scale as the total. */
@@ -1172,18 +1184,25 @@ export const CHECKS: CheckDefinition[] = [
     category: "completeness",
     maxPoints: 4,
     adviceKey: "content.checks.completeness.website_link.advice",
+    // The honest "does the Google listing itself show a website URL,
+    // period" fact — kept deliberately separate from website.has_website
+    // (which asks "is it a real, verified site," and can score full
+    // marks via verifiedElsewhereUrl even when THIS check stays 0 — the
+    // real Bánh Mì Boy case). Oct 10 addition: a listed URL that loads
+    // fine but reads as a genuine "Page Not Found" (see
+    // looksLikePageNotFound, lib/websiteTrust.ts — the real Wonder The
+    // Grove Newark case) now also scores 0 here, since the link itself
+    // doesn't actually work for a visitor.
     evaluate(input, locale) {
       const has = !!input.website && input.website.trim().length > 0;
-      return {
-        earnedPoints: has ? 4 : 0,
-        confidence: "VERIFIED",
-        explanation: t(
-          locale,
-          has
-            ? "content.checks.completeness.website_link.explanation.present"
-            : "content.checks.completeness.website_link.explanation.missing"
-        ),
-      };
+      if (!has) {
+        return { earnedPoints: 0, confidence: "VERIFIED", explanation: t(locale, "content.checks.completeness.website_link.explanation.missing") };
+      }
+      const trust = input.websiteAnalysis?.websiteTrust;
+      if (trust?.listingLinkBroken) {
+        return { earnedPoints: 0, confidence: "VERIFIED", explanation: t(locale, "content.checks.completeness.website_link.explanation.broken") };
+      }
+      return { earnedPoints: 4, confidence: "VERIFIED", explanation: t(locale, "content.checks.completeness.website_link.explanation.present") };
     },
     simulateFix: (input) => ({ ...input, website: "https://example.com" }),
   },
@@ -1316,16 +1335,71 @@ export const CHECKS: CheckDefinition[] = [
     category: "website",
     maxPoints: 4,
     adviceKey: "content.checks.website.has_website.advice",
+    // Redefined (Oct 10): full credit for a real, verified site — the
+    // listing's own website when it's reachable, loads real content,
+    // and isn't a multi-business directory/marketplace (a free-builder
+    // address like Google Sites DOES count — see classifyWebsiteKind's
+    // own doc; only a true directory never does), OR a real site
+    // verified elsewhere by phone/address match (verifiedElsewhereUrl —
+    // the real Bánh Mì Boy case: no listing website at all, but
+    // banhmiboy.com's own page states the exact same phone number).
+    // website.listing_link below is the separate, honest "does the
+    // LISTING itself show a URL" fact this check used to conflate with
+    // "is there a real site."
     evaluate(input, locale) {
-      const has = !!input.website && input.website.trim().length > 0;
+      const hasListingWebsite = !!input.website && input.website.trim().length > 0;
+      const verifiedElsewhere = input.verifiedElsewhereUrl;
+
+      if (!hasListingWebsite) {
+        if (verifiedElsewhere) {
+          return {
+            earnedPoints: 4,
+            confidence: "VERIFIED",
+            explanation: t(locale, "content.checks.website.has_website.explanation.verifiedElsewhere", { url: verifiedElsewhere }),
+          };
+        }
+        return { earnedPoints: 0, confidence: "VERIFIED", explanation: t(locale, "content.checks.website.has_website.explanation.missing") };
+      }
+
+      const trust = input.websiteAnalysis?.websiteTrust;
+      if (!trust) {
+        // No trust data yet (a row from before this detection existed,
+        // or this scan's own fetch failed before reaching it) — fall
+        // back to the ORIGINAL, simple "a website is on file" credit
+        // rather than excluding the whole check. Never regress a
+        // business that's always scored full marks here just because
+        // the newer kind/broken-link classification hasn't run yet.
+        return { earnedPoints: 4, confidence: "VERIFIED", explanation: t(locale, "content.checks.website.has_website.explanation.present") };
+      }
+
+      if (trust.listingLinkBroken || trust.websiteKind === "directory") {
+        if (verifiedElsewhere) {
+          return {
+            earnedPoints: 4,
+            confidence: "VERIFIED",
+            explanation: t(locale, "content.checks.website.has_website.explanation.verifiedElsewhere", { url: verifiedElsewhere }),
+          };
+        }
+        return {
+          earnedPoints: 0,
+          confidence: "VERIFIED",
+          explanation: t(
+            locale,
+            trust.listingLinkBroken
+              ? "content.checks.website.has_website.explanation.listingBroken"
+              : "content.checks.website.has_website.explanation.directory"
+          ),
+        };
+      }
+
       return {
-        earnedPoints: has ? 4 : 0,
+        earnedPoints: 4,
         confidence: "VERIFIED",
         explanation: t(
           locale,
-          has
-            ? "content.checks.website.has_website.explanation.present"
-            : "content.checks.website.has_website.explanation.missing"
+          trust.websiteKind === "free_builder"
+            ? "content.checks.website.has_website.explanation.presentFreeBuilder"
+            : "content.checks.website.has_website.explanation.present"
         ),
       };
     },
@@ -2006,6 +2080,11 @@ export interface BusinessScoringRow {
    * column yet still type-checks — treated identically to null/legacy
    * data by parseWebsiteAnalysis: never analyzed. */
   website_analysis_json?: unknown;
+  /** A real, manually-verified alternate website — see
+   * BusinessScoringInput.verifiedElsewhereUrl's own doc. Same
+   * optional-for-un-migrated-callers reasoning as the other new
+   * columns here. */
+  verified_website_url?: string | null;
 }
 
 /** Narrows a stored https_status string back to the real union,
@@ -2226,5 +2305,6 @@ export function businessRowToScoringInput(row: BusinessScoringRow): BusinessScor
     photoCount: row.photo_count,
     businessStatus: row.business_status,
     websiteAnalysis: parseWebsiteAnalysis(row.website_analysis_json),
+    verifiedElsewhereUrl: typeof row.verified_website_url === "string" ? row.verified_website_url : null,
   };
 }

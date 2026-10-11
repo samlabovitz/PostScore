@@ -219,6 +219,7 @@ export type MessageKey =
   | "content.checks.completeness.website_link.advice"
   | "content.checks.completeness.website_link.explanation.present"
   | "content.checks.completeness.website_link.explanation.missing"
+  | "content.checks.completeness.website_link.explanation.broken"
   | "content.checks.completeness.categories.label"
   | "content.checks.completeness.categories.advice"
   | "content.checks.completeness.categories.explanation.hasList.one"
@@ -242,7 +243,12 @@ export type MessageKey =
   | "content.checks.website.has_website.label"
   | "content.checks.website.has_website.advice"
   | "content.checks.website.has_website.explanation.present"
+  | "content.checks.website.has_website.explanation.presentFreeBuilder"
+  | "content.checks.website.has_website.explanation.verifiedElsewhere"
+  | "content.checks.website.has_website.explanation.listingBroken"
+  | "content.checks.website.has_website.explanation.directory"
   | "content.checks.website.has_website.explanation.missing"
+  | "content.checks.website.has_website.explanation.notAnalyzed"
   | "content.checks.website.https.label"
   | "content.checks.website.https.advice"
   | "content.checks.website.https.explanation.noWebsite"
@@ -317,6 +323,17 @@ export type MessageKey =
   | "content.checks.website.services_presence.explanation.jsRendered"
   | "content.checks.website.services_presence.explanation.onlineOrdering"
   | "content.checks.website.services_presence.explanation.imageOnly"
+  // --- dashboard.website.* fix-list / Growth card additions (Oct 10) ---
+  | "dashboard.website.freeBuilderNote"
+  | "dashboard.website.listingLinkBroken"
+  | "growth.fix.addWebsiteToListing.label"
+  | "growth.fix.addWebsiteToListing.heading"
+  | "growth.fix.addWebsiteToListing.intro"
+  | "growth.fix.addWebsiteToListing.step1"
+  | "growth.fix.addWebsiteToListing.step2"
+  | "growth.fix.addWebsiteToListing.step3"
+  | "growth.fix.addWebsiteToListing.step4"
+  | "growth.fix.addWebsiteToListing.note"
   // --- Shared content layer: listing-change descriptions (lib/profileChanges.ts) ---
   | "content.listingChange.phone.added"
   | "content.listingChange.phone.removed"
@@ -2368,6 +2385,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.completeness.website_link.advice": "Link your website in your Google Business Profile.",
     "content.checks.completeness.website_link.explanation.present": "Website is linked on the listing.",
     "content.checks.completeness.website_link.explanation.missing": "No website linked on the listing.",
+    "content.checks.completeness.website_link.explanation.broken":
+      "The website link on your Google listing opens a \"Page Not Found\" page — update it.",
 
     "content.checks.completeness.categories.label": "Categories",
     "content.checks.completeness.categories.advice":
@@ -2401,8 +2420,18 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.has_website.label": "Has a website",
     "content.checks.website.has_website.advice":
       "Get a website for your business — it's one of the biggest trust signals for potential customers.",
-    "content.checks.website.has_website.explanation.present": "Business has a website on file.",
+    "content.checks.website.has_website.explanation.present": "Business has a real, verified website on file.",
+    "content.checks.website.has_website.explanation.presentFreeBuilder":
+      "Business has a real website on file. Your site uses a free builder address — your own domain looks more trustworthy.",
+    "content.checks.website.has_website.explanation.verifiedElsewhere":
+      "We found and verified your real website at {url} (matched by phone or address), even though it's not on your Google listing yet.",
+    "content.checks.website.has_website.explanation.listingBroken":
+      "The website link on your Google listing opens a \"Page Not Found\" page — it doesn't count as a real site until that's fixed.",
+    "content.checks.website.has_website.explanation.directory":
+      "The link on your Google listing goes to a directory/social page (not your own site) — it doesn't count as a real website.",
     "content.checks.website.has_website.explanation.missing": "No website on file.",
+    "content.checks.website.has_website.explanation.notAnalyzed":
+      "This site hasn't been analyzed yet — re-scan to verify it.",
 
     "content.checks.website.https.label": "Uses HTTPS",
     "content.checks.website.https.advice":
@@ -2526,6 +2555,22 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Found your online ordering menu at {url} — we confirmed it loads, but can't read the items.",
     "content.checks.website.services_presence.explanation.imageOnly":
       "Your menu is an image — customers can see it, but it's hard to read on phones and Google can't read it.",
+
+    "dashboard.website.freeBuilderNote":
+      "Your site uses a free builder address — your own domain looks more trustworthy.",
+    "dashboard.website.listingLinkBroken":
+      "The website link on your Google listing opens a \"Page Not Found\" page — update it.",
+
+    "growth.fix.addWebsiteToListing.label": "PostScore guides you · ~2–5 min",
+    "growth.fix.addWebsiteToListing.heading": "Add your website to your Google listing",
+    "growth.fix.addWebsiteToListing.intro":
+      "Your Google Business Profile doesn't show your real website yet — visitors searching for you on Google or Maps can't click through to it.",
+    "growth.fix.addWebsiteToListing.step1": "Open your Google Business Profile and select Edit profile.",
+    "growth.fix.addWebsiteToListing.step2": "Go to the Contact section.",
+    "growth.fix.addWebsiteToListing.step3": "Find the Website field and paste in your real site: {url}",
+    "growth.fix.addWebsiteToListing.step4": "Tap Save.",
+    "growth.fix.addWebsiteToListing.note":
+      "Google may take a few days to show the update publicly. Your next PostScore scan will confirm it went through.",
 
     // --- content.listingChange.* — pure extraction of lib/profileChanges.ts's
     // diffProfileSnapshots() sentences, byte-for-byte.
@@ -4836,6 +4881,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.completeness.website_link.advice": "Enlace su sitio web en su Perfil de Negocio de Google.",
     "content.checks.completeness.website_link.explanation.present": "El sitio web está enlazado en la ficha.",
     "content.checks.completeness.website_link.explanation.missing": "No hay ningún sitio web enlazado en la ficha.",
+    "content.checks.completeness.website_link.explanation.broken": "El enlace del sitio web en su ficha de Google abre una página de \"No encontrado\" — actualícelo.",
     "content.checks.completeness.categories.label": "Categorías",
     "content.checks.completeness.categories.advice": "Agregue categorías de negocio a su Perfil de Negocio de Google para que los clientes puedan encontrarlo por lo que ofrece.",
     "content.checks.completeness.categories.explanation.hasList.one": "{count} categoría en la ficha.",
@@ -4858,8 +4904,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.completeness.business_status.explanation.unrecognized": "La ficha tiene un estado no reconocido (\"{status}\") — no se puede evaluar con confianza.",
     "content.checks.website.has_website.label": "Tiene un sitio web",
     "content.checks.website.has_website.advice": "Consiga un sitio web para su negocio — es una de las señales de confianza más importantes para los clientes potenciales.",
-    "content.checks.website.has_website.explanation.present": "El negocio tiene un sitio web registrado.",
+    "content.checks.website.has_website.explanation.present": "El negocio tiene un sitio web real y verificado.",
+    "content.checks.website.has_website.explanation.presentFreeBuilder": "El negocio tiene un sitio web real registrado. Su sitio usa una dirección de un creador de sitios gratuito — su propio dominio se ve más confiable.",
+    "content.checks.website.has_website.explanation.verifiedElsewhere": "Encontramos y verificamos su sitio web real en {url} (coincide por teléfono o dirección), aunque todavía no está en su ficha de Google.",
+    "content.checks.website.has_website.explanation.listingBroken": "El enlace del sitio web en su ficha de Google abre una página de \"No encontrado\" — no cuenta como un sitio real hasta que se corrija.",
+    "content.checks.website.has_website.explanation.directory": "El enlace de su ficha de Google va a una página de directorio/red social (no a su propio sitio) — no cuenta como un sitio web real.",
     "content.checks.website.has_website.explanation.missing": "No hay ningún sitio web registrado.",
+    "content.checks.website.has_website.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para verificarlo.",
     "content.checks.website.https.label": "Usa HTTPS",
     "content.checks.website.https.advice": "Migre su sitio web a HTTPS — los navegadores marcan los sitios sin HTTPS como \"no seguro\", lo que le resta confianza.",
     "content.checks.website.https.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para comprobar.",
@@ -4934,6 +4985,16 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.services_presence.explanation.jsRendered": "Su sitio genera su contenido con JavaScript, por lo que nuestra comprobación no pudo leerlo — ábralo usted mismo para confirmarlo. Se excluye de su puntuación, no se cuenta en su contra.",
     "content.checks.website.services_presence.explanation.onlineOrdering": "Encontramos su menú de pedidos en línea en {url} — confirmamos que carga, pero no podemos leer los artículos.",
     "content.checks.website.services_presence.explanation.imageOnly": "Su menú es una imagen — los clientes pueden verlo, pero es difícil de leer en teléfonos y Google no puede leerlo.",
+    "dashboard.website.freeBuilderNote": "Su sitio usa una dirección de un creador de sitios gratuito — su propio dominio se ve más confiable.",
+    "dashboard.website.listingLinkBroken": "El enlace del sitio web en su ficha de Google abre una página de \"No encontrado\" — actualícelo.",
+    "growth.fix.addWebsiteToListing.label": "PostScore lo guía · ~2–5 min",
+    "growth.fix.addWebsiteToListing.heading": "Agregue su sitio web a su ficha de Google",
+    "growth.fix.addWebsiteToListing.intro": "Su Perfil de Negocio de Google todavía no muestra su sitio web real — las personas que lo buscan en Google o Maps no pueden hacer clic para visitarlo.",
+    "growth.fix.addWebsiteToListing.step1": "Abra su Perfil de Negocio de Google y seleccione Editar perfil.",
+    "growth.fix.addWebsiteToListing.step2": "Vaya a la sección Información de contacto.",
+    "growth.fix.addWebsiteToListing.step3": "Busque el campo Sitio web y pegue su sitio real: {url}",
+    "growth.fix.addWebsiteToListing.step4": "Toque Guardar.",
+    "growth.fix.addWebsiteToListing.note": "Google puede tardar unos días en mostrar la actualización públicamente. Su próximo escaneo de PostScore confirmará que se realizó correctamente.",
     "content.listingChange.phone.added": "Se agregó un número de teléfono a su ficha.",
     "content.listingChange.phone.removed": "Se eliminó el número de teléfono de su ficha.",
     "content.listingChange.phone.changed": "Su número de teléfono cambió.",

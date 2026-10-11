@@ -14,6 +14,7 @@ import {
   type BusinessScoringInput,
   type MobilePerformanceMeasurement,
   type WebsiteAnalysis,
+  type WebsiteTrustAnalysis,
 } from "./scoring";
 import { DEFAULT_LOCALE, t } from "./i18n";
 import { reachabilityReasonMessageKey } from "./websiteReachability";
@@ -43,7 +44,28 @@ const GOOD_WEBSITE_ANALYSIS: WebsiteAnalysis = {
   lastScreenshotRefreshAt: "2024-01-01T00:00:00.000Z",
   aboutPresence: { state: "found", url: "https://example.com/about", locatedOnHomepage: false, reason: null, note: null },
   servicesPresence: { state: "found", url: "https://example.com/services", locatedOnHomepage: false, reason: null, note: null },
+  websiteTrust: null,
   checkedAt: "2024-01-01T00:00:00.000Z",
+};
+
+// A fully-clean site-trust result (Oct 10 detection) — no spam, no
+// Safe Browsing threat, every comparable field matches the listing, no
+// stale notices, not abandoned. Used by the website-trust describe
+// block below to build each specific "one real finding" variant.
+const CLEAN_TRUST: WebsiteTrustAnalysis = {
+  spamSignals: [],
+  safeBrowsingThreat: null,
+  safeBrowsingChecked: true,
+  infoConflicts: [
+    { field: "phone", comparison: "matches", siteValue: "555-5555", googleValue: "555-5555" },
+    { field: "address", comparison: "matches", siteValue: "123 Main St", googleValue: "123 Main St" },
+    { field: "hours", comparison: "matches", siteValue: "see site", googleValue: "see listing" },
+  ],
+  staleNotices: [],
+  abandonedSignals: { newestDateFound: "2026-01-01", templateLeftovers: [], looksAbandoned: false },
+  websiteKind: "independent",
+  listingLinkBroken: false,
+  checkedAt: "2026-01-01T00:00:00.000Z",
 };
 
 // A business where every real, collectible field is present and good —
@@ -1248,3 +1270,97 @@ describe("carryForwardMobilePerformance (Oct 10 audit fix): the real Blue Bottle
   });
 });
 
+describe("website trust checks (Oct 10, PROPOSED)", () => {
+  function withTrust(trust: WebsiteTrustAnalysis | null, overrides?: BusinessScoringInput["websiteTrustOverrides"]): BusinessScoringInput {
+    return {
+      ...PERFECT_INPUT,
+      websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, websiteTrust: trust },
+      websiteTrustOverrides: overrides,
+    };
+  }
+
+  describe("website.has_website", () => {
+    test("no listing website, no verified-elsewhere site -> 0", () => {
+      const input: BusinessScoringInput = { ...PERFECT_INPUT, website: null, websiteAnalysis: null };
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.has_website")!;
+      expect(check.earnedPoints).toBe(0);
+    });
+
+    test("no listing website, but verifiedElsewhereUrl (the real Bánh Mì Boy case) -> full credit", () => {
+      const input: BusinessScoringInput = {
+        ...PERFECT_INPUT,
+        website: null,
+        websiteAnalysis: null,
+        verifiedElsewhereUrl: "https://banhmiboy.com",
+      };
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.has_website")!;
+      expect(check.earnedPoints).toBe(4);
+      expect(check.explanation).toContain("banhmiboy.com");
+    });
+
+    test("a listing website with NO trust data yet falls back to the original simple behavior -> full credit (never regress)", () => {
+      const input = withTrust(null);
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.has_website")!;
+      expect(check.earnedPoints).toBe(4);
+    });
+
+    test("a real 'Page Not Found' listing link, no verified-elsewhere site -> 0", () => {
+      const input = withTrust({ ...CLEAN_TRUST, listingLinkBroken: true });
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.has_website")!;
+      expect(check.earnedPoints).toBe(0);
+    });
+
+    test("a real 'Page Not Found' listing link, but verified-elsewhere site exists -> still full credit", () => {
+      const input = { ...withTrust({ ...CLEAN_TRUST, listingLinkBroken: true }), verifiedElsewhereUrl: "https://realsite.example" };
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.has_website")!;
+      expect(check.earnedPoints).toBe(4);
+    });
+
+    test("a multi-business directory (e.g. a Facebook page) never counts as a real site -> 0", () => {
+      const input = withTrust({ ...CLEAN_TRUST, websiteKind: "directory" });
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.has_website")!;
+      expect(check.earnedPoints).toBe(0);
+    });
+
+    test("a free website-builder address (e.g. Google Sites) DOES count as the owner's own site -> full credit", () => {
+      const input = withTrust({ ...CLEAN_TRUST, websiteKind: "free_builder" });
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.has_website")!;
+      expect(check.earnedPoints).toBe(4);
+      expect(check.explanation.toLowerCase()).toMatch(/free|builder/);
+    });
+
+    test("an independent domain, clean trust -> full credit", () => {
+      const input = withTrust(CLEAN_TRUST);
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.has_website")!;
+      expect(check.earnedPoints).toBe(4);
+    });
+  });
+
+  describe("completeness.website_link (the real 'does the listing show a URL' fact)", () => {
+    test("no website on the listing -> 0", () => {
+      const input: BusinessScoringInput = { ...PERFECT_INPUT, website: null, websiteAnalysis: null };
+      const check = scoreBusiness(input).checks.find((c) => c.id === "completeness.website_link")!;
+      expect(check.earnedPoints).toBe(0);
+    });
+
+    test("a website link with no trust data yet -> full credit (never regress)", () => {
+      const input = withTrust(null);
+      const check = scoreBusiness(input).checks.find((c) => c.id === "completeness.website_link")!;
+      expect(check.earnedPoints).toBe(4);
+    });
+
+    test("a real 'Page Not Found' listing link -> 0, even though has_website may still score via verifiedElsewhereUrl", () => {
+      const input = { ...withTrust({ ...CLEAN_TRUST, listingLinkBroken: true }), verifiedElsewhereUrl: "https://realsite.example" };
+      const breakdown = scoreBusiness(input);
+      expect(breakdown.checks.find((c) => c.id === "completeness.website_link")!.earnedPoints).toBe(0);
+      expect(breakdown.checks.find((c) => c.id === "website.has_website")!.earnedPoints).toBe(4);
+    });
+
+    test("a working listing link -> full credit", () => {
+      const input = withTrust(CLEAN_TRUST);
+      const check = scoreBusiness(input).checks.find((c) => c.id === "completeness.website_link")!;
+      expect(check.earnedPoints).toBe(4);
+    });
+  });
+
+  });
