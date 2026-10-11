@@ -745,6 +745,7 @@ export type MessageKey =
   | "dashboard.website.ptsAbbrev"
   | "dashboard.website.technicalHeading"
   | "dashboard.website.contentContactHeading"
+  | "dashboard.website.trustAccuracyHeading"
   | "dashboard.website.couldntVerifyPrefix"
   | "dashboard.website.performanceTimedOut"
   | "dashboard.website.performanceHttpError"
@@ -3155,6 +3156,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.ptsAbbrev": "pts",
     "dashboard.website.technicalHeading": "Technical",
     "dashboard.website.contentContactHeading": "Content & contact",
+    "dashboard.website.trustAccuracyHeading": "Trust & accuracy",
     "dashboard.website.couldntVerifyPrefix": "Couldn't verify —",
     "dashboard.website.performanceTimedOut": "Couldn't measure — Google's speed test timed out on your site.",
     "dashboard.website.performanceHttpError": "Couldn't measure — Google's speed test couldn't complete right now.",
@@ -5555,6 +5557,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.ptsAbbrev": "pts",
     "dashboard.website.technicalHeading": "Técnico",
     "dashboard.website.contentContactHeading": "Contenido y contacto",
+    "dashboard.website.trustAccuracyHeading": "Confianza y precisión",
     "dashboard.website.couldntVerifyPrefix": "No se pudo verificar —",
     "dashboard.website.performanceTimedOut":
       "No pudimos medirlo — la prueba de velocidad de Google tardó demasiado en responder en su sitio.",

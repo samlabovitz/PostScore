@@ -45,6 +45,16 @@ const CONTENT_CHECK_IDS = [
   "website.about_presence",
   "website.services_presence",
 ];
+/** Can visitors trust what the site says — the same four live trust
+ * checks the Overview's "Detailed checks" shows (spam/hacked content,
+ * info matching the Google listing, out-of-date notices, an abandoned
+ * site), rendered from the identical CheckResults. */
+const TRUST_CHECK_IDS = [
+  "website.security",
+  "website.info_consistency",
+  "website.notice_freshness",
+  "website.site_freshness",
+];
 
 /** Four visual states from the same real data, not a new taxonomy: a
  * check is "excluded" whenever it isn't confidently determined
@@ -235,8 +245,9 @@ function WebsiteScoreRing({ relativeScore, grade }: { relativeScore: number | nu
  * card): both read the exact same live websiteCategory
  * (scoreBusiness()'s real CategoryResult for "website"), so there's only
  * ever one set of numbers to keep in sync. Grouped into Technical
- * (infrastructure: has a website, HTTPS, performance) and Content &
- * contact (what's actually on the page) purely for scanning — every
+ * (infrastructure: has a website, HTTPS, performance), Content &
+ * contact (what's actually on the page) and Trust & accuracy (can
+ * visitors trust what it says) purely for scanning — every
  * check still renders with its own real state, never re-labeled.
  *
  * Three honest states, never collapsed (see RowState): a real pass is
@@ -270,6 +281,12 @@ export function WebsiteScoreBreakdown({
 
   const technicalChecks = websiteCategory.checks.filter((c) => TECHNICAL_CHECK_IDS.includes(c.id));
   const contentChecks = websiteCategory.checks.filter((c) => CONTENT_CHECK_IDS.includes(c.id));
+  const trustChecks = websiteCategory.checks.filter((c) => TRUST_CHECK_IDS.includes(c.id));
+  const groups: { headingKey: MessageKey; checks: CheckResult[] }[] = [
+    { headingKey: "dashboard.website.technicalHeading", checks: technicalChecks },
+    { headingKey: "dashboard.website.contentContactHeading", checks: contentChecks },
+    { headingKey: "dashboard.website.trustAccuracyHeading", checks: trustChecks },
+  ];
 
   return (
     <div>
@@ -311,41 +328,27 @@ export function WebsiteScoreBreakdown({
       </Card>
 
       <div className="flex flex-col gap-5">
-        <div>
-          <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-            {t(locale, "dashboard.website.technicalHeading")}
-          </div>
-          <Card className="p-5">
-            <div className="flex flex-col divide-y divide-paper-line">
-              {technicalChecks.map((check) => (
-                <CheckRow
-                  key={check.id}
-                  check={check}
-                  suggestion={websiteSuggestions.find((s) => s.checkId === check.id)}
-                  websiteAnalysis={websiteAnalysis}
-                />
-              ))}
+        {groups
+          .filter((group) => group.checks.length > 0)
+          .map((group) => (
+            <div key={group.headingKey}>
+              <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
+                {t(locale, group.headingKey)}
+              </div>
+              <Card className="p-5">
+                <div className="flex flex-col divide-y divide-paper-line">
+                  {group.checks.map((check) => (
+                    <CheckRow
+                      key={check.id}
+                      check={check}
+                      suggestion={websiteSuggestions.find((s) => s.checkId === check.id)}
+                      websiteAnalysis={websiteAnalysis}
+                    />
+                  ))}
+                </div>
+              </Card>
             </div>
-          </Card>
-        </div>
-
-        <div>
-          <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-            {t(locale, "dashboard.website.contentContactHeading")}
-          </div>
-          <Card className="p-5">
-            <div className="flex flex-col divide-y divide-paper-line">
-              {contentChecks.map((check) => (
-                <CheckRow
-                  key={check.id}
-                  check={check}
-                  suggestion={websiteSuggestions.find((s) => s.checkId === check.id)}
-                  websiteAnalysis={websiteAnalysis}
-                />
-              ))}
-            </div>
-          </Card>
-        </div>
+          ))}
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import {
   detectSpamSignals,
   extractCityFromAddress,
   findStaleNotices,
+  trimNoticeToSentences,
   keyForInfoConflict,
   keyForStaleNotice,
   looksLikePageNotFound,
@@ -826,5 +827,29 @@ describe("owner-override keys", () => {
 
     expect(keyForInfoConflict(finding)).toBe("info_conflict:phone");
     expect(keyForInfoConflict({ ...finding, siteValue: "999-9999" })).toBe(keyForInfoConflict(finding));
+  });
+});
+
+describe("trimNoticeToSentences — display-only trim of a stale notice to whole sentences", () => {
+  test("the real Bánh Mì Boy window starts at the notice, not mid-word, and drops the trailing hours/footer text", () => {
+    expect(
+      trimNoticeToSentences(
+        "ion. Finding great. CLOSED July 4th to 8th!!! Open Daily: Monday - Sunday: 11am - 7pm / (302) 525-2018 Facebook Twitter"
+      )
+    ).toBe("CLOSED July 4th to 8th!!!");
+  });
+
+  test("keeps a multi-word sentence whose keyword sits before the date", () => {
+    expect(trimNoticeToSentences("our menu. We will be closed for the holiday on Dec 25. See you soon")).toBe(
+      "We will be closed for the holiday on Dec 25."
+    );
+  });
+
+  test("no terminator after the date keeps the rest of the window", () => {
+    expect(trimNoticeToSentences("Thanks. Closed July 4th")).toBe("Closed July 4th");
+  });
+
+  test("no date found falls back to the original text unchanged", () => {
+    expect(trimNoticeToSentences("ion. Closed for renovation")).toBe("ion. Closed for renovation");
   });
 });

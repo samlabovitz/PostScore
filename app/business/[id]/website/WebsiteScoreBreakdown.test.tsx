@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LocaleProvider } from "@/lib/i18n";
 import type { CategoryResult, CheckResult, WebsiteAnalysis } from "@/lib/scoring";
+import { formatPoints } from "@/components/scoring/CategoryCard";
 import { WebsiteScoreBreakdown } from "./WebsiteScoreBreakdown";
 
 // renderToStaticMarkup HTML-entity-escapes text content (apostrophes
@@ -270,5 +271,70 @@ describe("WebsiteScoreBreakdown — Day 4 Task: about_presence/services_presence
       </LocaleProvider>
     );
     expect(html).toContain("Couldn't verify —");
+  });
+});
+
+describe("WebsiteScoreBreakdown — Day 4 Step 2e: Trust & accuracy group matches the Overview", () => {
+  function check(id: string, label: string, maxPoints: number, earnedPoints: number, explanation: string): CheckResult {
+    return { id, label, category: "website", maxPoints, earnedPoints, confidence: "VERIFIED", explanation, meta: null };
+  }
+  // Every live website.* check scoreBusiness produces — the Overview's
+  // "Detailed checks" lists all of them, so the Website page must too.
+  const ALL_WEBSITE_CHECKS: CheckResult[] = [
+    check("website.has_website", "Has a website", 4, 4, "Website found."),
+    check("website.https", "Secure (HTTPS)", 6, 6, "Loads over HTTPS."),
+    check("website.performance_mobile", "Mobile speed", 6, 5.9, "98/100."),
+    check("website.content_depth", "Content depth", 5, 3.5, "No viewport tag."),
+    check("website.contact_conversion", "Contact", 3, 1, "No click-to-call."),
+    check("website.about_presence", "About page", 1, 1, "Found About."),
+    check("website.services_presence", "Services page", 1, 1, "Found Services."),
+    check("website.security", "Site security", 2, 0, 'We found signs your website may be hacked: "replica richard mille"'),
+    check("website.info_consistency", "Matches your Google listing", 1, 0.5, "Your website says Monday: 11:00 AM–7:00 PM; Google says Monday: 10:00 AM–9:00 PM."),
+    check("website.notice_freshness", "Up-to-date notices", 0.5, 0, 'This notice is now out of date: "CLOSED July 4th to 8th!!!"'),
+    check("website.site_freshness", "Site freshness", 0.5, 0, 'Unfilled template text found on your site: "please put widget here"'),
+  ];
+  const earned = ALL_WEBSITE_CHECKS.reduce((sum, c) => sum + (c.earnedPoints ?? 0), 0);
+  const possible = ALL_WEBSITE_CHECKS.reduce((sum, c) => sum + c.maxPoints, 0);
+  const CATEGORY: CategoryResult = {
+    id: "website",
+    label: "Website",
+    weight: 30,
+    possiblePoints: possible,
+    earnedPoints: earned,
+    relativeScore: Math.round((earned / possible) * 100),
+    checks: ALL_WEBSITE_CHECKS,
+  };
+
+  function render(locale: "en" | "es") {
+    return renderToText(
+      <LocaleProvider locale={locale}>
+        <WebsiteScoreBreakdown websiteCategory={CATEGORY} websiteAnalysis={null} websiteSuggestions={[]} />
+      </LocaleProvider>
+    );
+  }
+
+  test("renders a Trust & accuracy group after Content & contact, with all 4 trust checks and their real explanations", () => {
+    const html = render("en");
+    const contentIdx = html.indexOf("Content & contact");
+    const trustIdx = html.indexOf("Trust & accuracy");
+    expect(contentIdx).toBeGreaterThan(-1);
+    expect(trustIdx).toBeGreaterThan(contentIdx);
+    for (const c of ALL_WEBSITE_CHECKS.slice(7)) {
+      expect(html.indexOf(c.label)).toBeGreaterThan(trustIdx);
+      expect(html).toContain(c.explanation);
+    }
+  });
+
+  test("every website check the Overview shows is rendered exactly once — so the rows add up to the same Website total", () => {
+    const html = render("en");
+    for (const c of ALL_WEBSITE_CHECKS) {
+      expect(html.split(`>${c.label}<`).length - 1, c.id).toBe(1);
+    }
+    expect(html).toContain(`>${formatPoints(earned)}<`);
+    expect(html).toContain(`/ ${formatPoints(possible)} pts`);
+  });
+
+  test("Spanish: the Trust & accuracy heading renders via t()", () => {
+    expect(render("es")).toContain("Confianza y precisión");
   });
 });

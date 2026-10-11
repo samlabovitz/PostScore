@@ -37,7 +37,7 @@
 import { DEFAULT_LOCALE, formatShortDate, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
 import { GOOGLE_PHOTO_CAP } from "@/lib/googlePhotoCap";
 import { reachabilityReasonMessageKey, type ReachabilityFailureReason } from "@/lib/websiteReachability";
-import { keyForInfoConflict, keyForStaleNotice, type AbandonedSiteFinding, type InfoFieldFinding, type SpamFinding, type StaleNoticeFinding, type WebsiteKind } from "@/lib/websiteTrust";
+import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type AbandonedSiteFinding, type InfoFieldFinding, type SpamFinding, type StaleNoticeFinding, type WebsiteKind } from "@/lib/websiteTrust";
 
 // ---------------------------------------------------------------------------
 // Versioning
@@ -2204,7 +2204,7 @@ export const CHECKS: CheckDefinition[] = [
       return {
         earnedPoints: 0,
         confidence: "VERIFIED",
-        explanation: t(locale, "content.checks.website.notice_freshness.explanation.staleFound", { text: active[0].text }),
+        explanation: t(locale, "content.checks.website.notice_freshness.explanation.staleFound", { text: trimNoticeToSentences(active[0].text) }),
       };
     },
     simulateFix: (input) => ({

@@ -279,6 +279,50 @@ export interface StaleNoticeFinding {
  * the site) — only past this grace period does it count as stale. */
 const STALE_NOTICE_GRACE_DAYS = 7;
 
+/**
+ * Trims a stale notice's raw text window (findStaleNotices captures a
+ * fixed character window, so it can start mid-word — the real Bánh Mì
+ * Boy case: "ion. Finding great. CLOSED July 4th to 8th!!! Open Daily…")
+ * down to the whole sentence(s) holding the notice itself: from the
+ * start of the sentence containing the keyword/date, through the end of
+ * the sentence containing the date. Display-only — the stored `text`
+ * stays exactly as found, so keyForStaleNotice (and any owner override
+ * keyed by it) is never affected. Falls back to the original text when
+ * no date is found in it.
+ */
+export function trimNoticeToSentences(text: string): string {
+  const dateRe = new RegExp(`\\b(${Object.keys(MONTH_NAMES).join("|")})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b`, "i");
+  const dateMatch = dateRe.exec(text);
+  if (!dateMatch || dateMatch.index === undefined) return text;
+  const dateStart = dateMatch.index;
+  const dateEnd = dateStart + dateMatch[0].length;
+
+  // The notice keyword nearest before the date (e.g. "CLOSED" in "CLOSED
+  // July 4th"), when it sits in the same stretch — otherwise the date itself.
+  const lower = text.toLowerCase();
+  let noticeStart = dateStart;
+  for (const keyword of NOTICE_KEYWORDS) {
+    const idx = lower.lastIndexOf(keyword, dateStart);
+    if (idx !== -1 && idx < noticeStart && dateStart - idx <= 40) noticeStart = idx;
+  }
+
+  // Sentence start: just past the last terminator (followed by whitespace)
+  // before the notice — never cutting inside the notice itself.
+  let start = 0;
+  const terminatorRe = /[.!?]+\s+/g;
+  let m: RegExpExecArray | null;
+  while ((m = terminatorRe.exec(text)) !== null && m.index + m[0].length <= noticeStart) {
+    start = m.index + m[0].length;
+  }
+
+  // Sentence end: the first terminator run after the date, else the end.
+  const endMatch = /[.!?]+(?=\s|$)/.exec(text.slice(dateEnd));
+  const end = endMatch && endMatch.index !== undefined ? dateEnd + endMatch.index + endMatch[0].length : text.length;
+
+  const trimmed = text.slice(start, end).trim();
+  return trimmed.length > 0 ? trimmed : text;
+}
+
 /** Finds a real month-name + day-number date near a notice keyword (see
  * NOTICE_KEYWORDS) within already-visible text, resolves it to a real
  * date (assuming the CURRENT year when the text itself names none — a

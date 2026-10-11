@@ -1554,6 +1554,24 @@ describe("website trust checks (Oct 10, PROPOSED)", () => {
       const check = scoreBusiness(input).checks.find((c) => c.id === "website.notice_freshness")!;
       expect(check.earnedPoints).toBe(0.5);
     });
+
+    test("the real stored raw window is shown trimmed to whole sentences — starts at 'CLOSED', never mid-word", () => {
+      const raw = "ion. Finding great. CLOSED July 4th to 8th!!! Open Daily: Monday - Sunday: 11am - 7pm / (302) 525-2018 Facebook Twitter";
+      const input = withTrust({ ...CLEAN_TRUST, staleNotices: [{ text: raw, resolvedDate: "2026-07-04" }] });
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.notice_freshness")!;
+      expect(check.explanation).toContain('"CLOSED July 4th to 8th!!!"');
+      expect(check.explanation).not.toContain("ion. Finding great");
+      expect(check.explanation).not.toContain("Facebook Twitter");
+    });
+
+    test("trimming is display-only: an override keyed by the stored raw text still matches", () => {
+      const notice = { text: "ion. Finding great. CLOSED July 4th to 8th!!! Open Daily", resolvedDate: "2026-07-04" };
+      const input = withTrust(
+        { ...CLEAN_TRUST, staleNotices: [notice] },
+        [{ key: keyForStaleNotice(notice), note: "Still accurate.", overriddenAt: "2026-01-01T00:00:00.000Z" }]
+      );
+      expect(scoreBusiness(input).checks.find((c) => c.id === "website.notice_freshness")!.earnedPoints).toBe(0.5);
+    });
   });
 
   describe("website.site_freshness", () => {
