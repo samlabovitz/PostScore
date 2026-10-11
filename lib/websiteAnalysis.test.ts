@@ -2,6 +2,9 @@ import { describe, expect, test, vi } from "vitest";
 import {
   captureScreenshotBytes,
   captureWebsiteScreenshots,
+  checkSafeBrowsing,
+  collectWebsiteAnalysis,
+  collectWebsiteTrust,
   detectPagePresence,
   fetchMobilePerformance,
   fetchWebsiteHtml,
@@ -51,7 +54,12 @@ describe("fetchMobilePerformance: method order a) URL field -> b) origin field -
 
     const result = await fetchMobilePerformance("example.com", "key", undefined, fetchImpl as unknown as typeof fetch);
 
-    expect(result.measurement).toEqual({ method: "field", fieldCategory: "FAST", labScore: null });
+    expect(result.measurement).toEqual({
+      method: "field",
+      fieldCategory: "FAST",
+      labScore: null,
+      measuredAt: expect.any(String),
+    });
     expect(result.callCount).toBe(1);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
@@ -61,7 +69,12 @@ describe("fetchMobilePerformance: method order a) URL field -> b) origin field -
 
     const result = await fetchMobilePerformance("example.com", "key", undefined, fetchImpl as unknown as typeof fetch);
 
-    expect(result.measurement).toEqual({ method: "field", fieldCategory: "AVERAGE", labScore: null });
+    expect(result.measurement).toEqual({
+      method: "field",
+      fieldCategory: "AVERAGE",
+      labScore: null,
+      measuredAt: expect.any(String),
+    });
     expect(result.callCount).toBe(1);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
@@ -84,7 +97,12 @@ describe("fetchMobilePerformance: method order a) URL field -> b) origin field -
 
     const result = await fetchMobilePerformance("example.com", "key", undefined, fetchImpl as unknown as typeof fetch);
 
-    expect(result.measurement).toEqual({ method: "lab", fieldCategory: null, labScore: 55 });
+    expect(result.measurement).toEqual({
+      method: "lab",
+      fieldCategory: null,
+      labScore: 55,
+      measuredAt: expect.any(String),
+    });
     expect(result.callCount).toBe(3);
     expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
@@ -99,7 +117,12 @@ describe("fetchMobilePerformance: method order a) URL field -> b) origin field -
 
     const result = await fetchMobilePerformance("example.com", "key", undefined, fetchImpl as unknown as typeof fetch);
 
-    expect(result.measurement).toEqual({ method: "lab", fieldCategory: null, labScore: 70 });
+    expect(result.measurement).toEqual({
+      method: "lab",
+      fieldCategory: null,
+      labScore: 70,
+      measuredAt: expect.any(String),
+    });
     expect(result.callCount).toBe(3);
   });
 });
@@ -161,7 +184,12 @@ describe("fetchMobilePerformance: Day 4 Part 3a retry on timeout, 429, and 5xx",
 
     const result = await fetchMobilePerformance("example.com", "key", undefined, fetchImpl as unknown as typeof fetch);
 
-    expect(result.measurement).toEqual({ method: "lab", fieldCategory: null, labScore: 80 });
+    expect(result.measurement).toEqual({
+      method: "lab",
+      fieldCategory: null,
+      labScore: 80,
+      measuredAt: expect.any(String),
+    });
     expect(result.failureReason).toBeNull();
   }, 10000);
 
@@ -173,7 +201,12 @@ describe("fetchMobilePerformance: Day 4 Part 3a retry on timeout, 429, and 5xx",
 
     const result = await fetchMobilePerformance("example.com", "key", undefined, fetchImpl as unknown as typeof fetch);
 
-    expect(result.measurement).toEqual({ method: "lab", fieldCategory: null, labScore: 80 });
+    expect(result.measurement).toEqual({
+      method: "lab",
+      fieldCategory: null,
+      labScore: 80,
+      measuredAt: expect.any(String),
+    });
   }, 10000);
 
   test("a 400 (non-retryable) is NOT retried — one call, immediate http_error", async () => {
@@ -593,5 +626,869 @@ describe("detectPagePresence", () => {
     expect(about.state).toBe("found");
     expect(services.state).toBe("found");
     expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  // --- Oct 10 audit fixes -------------------------------------------
+
+  const SHELL_HOMEPAGE_HTML = `<!DOCTYPE html><html><head><title>A Business</title></head><body><div id="__nuxt"></div><script>window.__NUXT__={serverRendered:false}</script></body></html>`;
+
+  test("a JS-rendered-shell homepage (Goldberg Hardware's real shape): both About and Services = couldnt_check/js_rendered, zero network calls", async () => {
+    const fetchImpl = vi.fn();
+
+    const [about, services] = await Promise.all([
+      detectPagePresence("about", SHELL_HOMEPAGE_HTML, HOMEPAGE_URL, [], newPresenceBudget(), fetchImpl),
+      detectPagePresence("services", SHELL_HOMEPAGE_HTML, HOMEPAGE_URL, [], newPresenceBudget(), fetchImpl),
+    ]);
+
+    expect(about).toEqual({ state: "couldnt_check", url: null, locatedOnHomepage: false, reason: "js_rendered", note: null });
+    expect(services).toEqual({ state: "couldnt_check", url: null, locatedOnHomepage: false, reason: "js_rendered", note: null });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  test("a matched candidate page that ITSELF turns out to be a JS-rendered shell: couldnt_check/js_rendered, never not_found", async () => {
+    const shellPageHtml = `<!DOCTYPE html><html><head><title>Services</title></head><body><div id="reactele"></div></body></html>`;
+    const fetchImpl = vi.fn(async () => htmlResponse(shellPageHtml));
+    const candidates = [{ url: "https://example.com/services", label: "Services" }];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result).toEqual({
+      state: "couldnt_check",
+      url: "https://example.com/services",
+      locatedOnHomepage: false,
+      reason: "js_rendered",
+      note: null,
+    });
+  });
+
+  test("the real Santa Fe Mexican Grill case: a Menu candidate page with real intro text but an image-gallery menu: Services = found/image_only", async () => {
+    const html =
+      "<main><p>This is the place where traditional Mexican cuisine meets the global culinary world, with real recipes.</p>" +
+      '<img src="a.jpg"><img src="b.jpg"><img src="c.jpg"><img src="d.jpg"></main>';
+    const fetchImpl = vi.fn(async () => htmlResponse(html));
+    const candidates = [{ url: "https://example.com/newark-menus", label: "NEWARK MENUS" }];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result).toEqual({
+      state: "found",
+      url: "https://example.com/newark-menus",
+      locatedOnHomepage: false,
+      reason: null,
+      note: "image_only",
+    });
+  });
+
+  test("the image-only fallback only fires for Services, never About", async () => {
+    const html = '<main><p>Short.</p><img src="a.jpg"><img src="b.jpg"><img src="c.jpg"></main>';
+    const fetchImpl = vi.fn(async () => htmlResponse(html));
+    const candidates = [{ url: "https://example.com/about", label: "About" }];
+
+    const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("not_found");
+    expect(result.note).toBeNull();
+  });
+
+  test("same-brand (eTLD+1) candidate matching: a locator subdomain's nav link to the brand's apex domain is still followed (the real Chipotle/QDOBA case)", async () => {
+    const html = `<main><h1>Our Menu</h1><p>${"Real menu content with real sentences describing every dish. ".repeat(6)}</p><ul><li>Item one</li><li>Item two</li><li>Item three</li></ul></main>`;
+    const fetchImpl = vi.fn(async () => htmlResponse(html));
+    // The homepage is locations.chipotle.com; the real nav link points
+    // at chipotle.com (apex) — a different exact host, same real brand.
+    const candidates = [{ url: "https://www.chipotle.com/menu", label: "Our Menu" }];
+
+    const result = await detectPagePresence(
+      "services",
+      NO_MATCH_HOMEPAGE_HTML,
+      new URL("https://locations.chipotle.com/de/newark/136-e-main-st"),
+      candidates,
+      newPresenceBudget(),
+      fetchImpl
+    );
+
+    expect(result.state).toBe("found");
+    expect(result.url).toBe("https://www.chipotle.com/menu");
+  });
+
+  test("an unrelated brand on a different host is still never followed", async () => {
+    const fetchImpl = vi.fn();
+    const candidates = [{ url: "https://qdoba.com/menu", label: "Our Menu" }];
+
+    const result = await detectPagePresence(
+      "services",
+      NO_MATCH_HOMEPAGE_HTML,
+      new URL("https://locations.chipotle.com/de/newark/136-e-main-st"),
+      candidates,
+      newPresenceBudget(),
+      fetchImpl
+    );
+
+    expect(result.state).toBe("not_found");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  test("the real Umami Express / Brew HaHa! case: no real dedicated page, but a real 'Order Online' link to a known third-party platform loads fine: Services = found/online_ordering", async () => {
+    const fetchImpl = vi.fn(async () => htmlResponse("<main><p>Confirmed real ordering page.</p></main>"));
+    const candidates = [{ url: "https://www.toasttab.com/umami-express", label: "Order Online" }];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result).toEqual({
+      state: "found",
+      url: "https://www.toasttab.com/umami-express",
+      locatedOnHomepage: false,
+      reason: null,
+      note: "online_ordering",
+    });
+  });
+
+  test("a same-brand 'Order Now' link also qualifies for the online-ordering fallback", async () => {
+    const fetchImpl = vi.fn(async () => htmlResponse("<main><p>Confirmed real ordering page.</p></main>"));
+    const candidates = [{ url: "https://order.example.com/start", label: "Order Now" }];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.note).toBe("online_ordering");
+  });
+
+  test("the online-ordering fallback never fires for About", async () => {
+    const fetchImpl = vi.fn();
+    const candidates = [{ url: "https://www.toasttab.com/some-business", label: "Order Online" }];
+
+    const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("not_found");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  test("an ordering link to an UNKNOWN off-domain host is never trusted, even with a matching label", async () => {
+    const fetchImpl = vi.fn();
+    const candidates = [{ url: "https://some-random-site.example.net/order", label: "Order Online" }];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("not_found");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  test("if the online-ordering link doesn't actually load (404), falls back to the honest not_found/broken_link — never fabricates a found", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 404 }) as unknown as Response);
+    const candidates = [{ url: "https://www.toasttab.com/closed-business", label: "Order Online" }];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("not_found");
+    expect(result.note).toBe("broken_link");
+  });
+
+  test("the real Brew HaHa! case: the online-ordering link exists but is BLOCKED (not just missing) — couldnt_check, never a confident not_found", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 403, text: async () => "" }) as unknown as Response);
+    const candidates = [{ url: "https://www.toasttab.com/brewhaha/order-online", label: "Order Online" }];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("couldnt_check");
+    expect(result.reason).toBe("blocked_automated_check");
+  });
+
+  test("worst case: a Services candidate fails content, its PDF/image fallbacks both fail, and the online-ordering fallback is what finally succeeds — exactly 3 fetches", async () => {
+    const thinCandidateHtml = "<main><p>Too short.</p></main>"; // no PDF link, no images, fails content
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(htmlResponse(thinCandidateHtml)) // the dedicated Services candidate
+      .mockResolvedValueOnce(htmlResponse("<main><p>Confirmed real ordering page.</p></main>")); // the ordering fallback
+    const candidates = [
+      { url: "https://example.com/services", label: "Services" },
+      { url: "https://www.toasttab.com/some-business", label: "Order Online" },
+    ];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.note).toBe("online_ordering");
+    expect(fetchImpl).toHaveBeenCalledTimes(2); // candidate page, then the ordering link — no PDF link existed to try
+  });
+});
+
+// --- Oct 10 "found anywhere wins" redesign ---------------------------
+
+describe("detectPagePresence — 'found anywhere wins' (multiple ranked candidates, budget 3)", () => {
+  const HOMEPAGE_URL = new URL("https://example.com/");
+  const NO_MATCH_HOMEPAGE_HTML = "<main><h1>Welcome</h1><p>Just a generic homepage.</p></main>";
+
+  function htmlResponse(html: string, status = 200): Response {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      headers: new Headers({ "content-type": "text/html" }),
+      text: async () => html,
+    } as unknown as Response;
+  }
+
+  function pdfResponse(): Response {
+    const text = vi.fn(async () => {
+      throw new Error("should never be called — PDF content must never be read");
+    });
+    return { ok: true, status: 200, headers: new Headers({ "content-type": "application/pdf" }), text } as unknown as Response;
+  }
+
+  const REAL_CONTENT = `<main><h1>Real</h1><p>${"Real substantial content with real sentences here. ".repeat(8)}</p><ul><li>Item one</li><li>Item two</li><li>Item three</li></ul></main>`;
+  const THIN_CONTENT = "<main><p>Too short.</p></main>";
+
+  test("the deepest/most-specific candidate is tried FIRST and wins immediately — the shallower one is never even fetched", async () => {
+    const candidates = [
+      { url: "https://example.com/new-york", label: "Practice Areas" }, // shallow hub, 1 segment
+      { url: "https://example.com/new-york/product-liability-lawyer", label: "Product Liability & Products" }, // deep, 2 segments
+    ];
+    const fetchImpl = vi.fn(async (url: RequestInfo | URL) => {
+      expect(url.toString()).toBe("https://example.com/new-york/product-liability-lawyer");
+      return htmlResponse(REAL_CONTENT);
+    });
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("found");
+    expect(result.url).toBe("https://example.com/new-york/product-liability-lawyer");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  test("the real Michael S. Lamonsoff PLLC case: the deep candidate's content fails, but a shallower one still passes — found anywhere wins, never stops at the first failure", async () => {
+    const calls: string[] = [];
+    const fetchImpl = vi.fn(async (url: RequestInfo | URL) => {
+      calls.push(url.toString());
+      return url.toString().includes("product-liability") ? htmlResponse(THIN_CONTENT) : htmlResponse(REAL_CONTENT);
+    });
+    const candidates = [
+      { url: "https://example.com/new-york/product-liability-lawyer", label: "Products" }, // deep but thin this time
+      { url: "https://example.com/new-york/more-practice-areas", label: "More Practice Areas" }, // also deep, real content
+    ];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("found");
+    expect(result.url).toBe("https://example.com/new-york/more-practice-areas");
+    expect(calls).toEqual([
+      "https://example.com/new-york/product-liability-lawyer",
+      "https://example.com/new-york/more-practice-areas",
+    ]);
+  });
+
+  test("every matched candidate unreadable (blocked): couldnt_check, never not_found — the real QDOBA About case restored via the homepage-section fallback when candidates are all blocked", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 403, text: async () => "" }) as unknown as Response);
+    const candidates = [{ url: "https://example.com/about-us", label: "About Us" }];
+    const homepageWithNoAboutSection = NO_MATCH_HOMEPAGE_HTML;
+
+    const result = await detectPagePresence("about", homepageWithNoAboutSection, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("couldnt_check");
+    expect(result.reason).toBe("blocked_automated_check");
+  });
+
+  test("the real QDOBA About case: the dedicated candidate is blocked, but the homepage's own section still passes — found/homepage, never couldnt_check", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 403, text: async () => "" }) as unknown as Response);
+    const candidates = [{ url: "https://example.com/about-us", label: "About Us" }];
+    const homepageWithAboutSection = `<main><h2>About Us</h2><p>${"Real substantial about content right here on the homepage. ".repeat(6)}</p></main>`;
+
+    const result = await detectPagePresence("about", homepageWithAboutSection, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result).toEqual({ state: "found", url: null, locatedOnHomepage: true, reason: null, note: null });
+  });
+
+  test("a mix of one unreadable candidate and one readable-but-thin candidate, nothing passes: couldnt_check wins over not_found", async () => {
+    const fetchImpl = vi.fn(async (url: RequestInfo | URL) =>
+      url.toString().includes("blocked") ? ({ ok: false, status: 403, text: async () => "" } as unknown as Response) : htmlResponse(THIN_CONTENT)
+    );
+    const candidates = [
+      { url: "https://example.com/services-blocked", label: "Services" },
+      { url: "https://example.com/services-thin", label: "Products" },
+    ];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("couldnt_check");
+    expect(result.reason).toBe("blocked_automated_check");
+  });
+
+  test("every matched candidate readable but genuinely thin, nothing unreadable: honest not_found", async () => {
+    const fetchImpl = vi.fn(async () => htmlResponse(THIN_CONTENT));
+    const candidates = [
+      { url: "https://example.com/services-a", label: "Products" },
+      { url: "https://example.com/services-b", label: "Shop" },
+    ];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("not_found");
+    expect(result.note).toBeNull();
+  });
+
+  test("the real Chipotle case: the matched candidate is itself a JS-rendered shell — never a hard stop, continues to the online-ordering fallback", async () => {
+    const shellHtml = `<!DOCTYPE html><html><head><title>Menu</title></head><body><div id="root"></div></body></html>`;
+    const fetchImpl = vi.fn(async (url: RequestInfo | URL) =>
+      url.toString().includes("order") ? htmlResponse("<main><p>Confirmed real ordering page.</p></main>") : htmlResponse(shellHtml)
+    );
+    const candidates = [
+      { url: "https://chipotle.com/menu", label: "Our Menu" },
+      { url: "https://order.chipotle.com/start", label: "Order Online" },
+    ];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, new URL("https://locations.chipotle.com/de/newark"), candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result).toEqual({
+      state: "found",
+      url: "https://order.chipotle.com/start",
+      locatedOnHomepage: false,
+      reason: null,
+      note: "online_ordering",
+    });
+  });
+
+  test("the real Brew HaHa! case: a non-Menu-labeled candidate (Catering) with lots of images does NOT get image_only — keeps looking, ends honestly not_found when nothing else matches", async () => {
+    const cateringWithImages = '<main><p>Short intro.</p><img src="a.jpg"><img src="b.jpg"><img src="c.jpg"></main>';
+    const fetchImpl = vi.fn(async () => htmlResponse(cateringWithImages));
+    const candidates = [{ url: "https://example.com/catering", label: "Catering" }];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("not_found");
+    expect(result.note).toBeNull(); // never image_only — "Catering" isn't labeled Menu
+  });
+
+  test("a Menu-labeled candidate with images DOES still get image_only (unaffected by the label gate)", async () => {
+    const menuWithImages = '<main><p>Real intro text about our menu offerings here.</p><img src="a.jpg"><img src="b.jpg"><img src="c.jpg"></main>';
+    const fetchImpl = vi.fn(async () => htmlResponse(menuWithImages));
+    const candidates = [{ url: "https://example.com/newark-menus", label: "NEWARK MENUS" }];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.note).toBe("image_only");
+  });
+
+  test("the real QDOBA PDF case: a menu-labeled .pdf link directly on the homepage, on a totally different host, found and confirmed as a real PDF", async () => {
+    const homepageWithPdfLink =
+      '<main><a href="https://assets.ctfassets.net/abc/Our-Menu-Take-Out-Menu.pdf">Download Our Menu</a></main>';
+    const fetchImpl = vi.fn(async () => pdfResponse());
+
+    const result = await detectPagePresence("services", homepageWithPdfLink, HOMEPAGE_URL, [], newPresenceBudget(), fetchImpl);
+
+    expect(result).toEqual({
+      state: "found",
+      url: "https://assets.ctfassets.net/abc/Our-Menu-Take-Out-Menu.pdf",
+      locatedOnHomepage: false,
+      reason: null,
+      note: "pdf_only",
+    });
+  });
+
+  test("worst case never exceeds the 3-fetch budget, even with several ranked candidates plus fallbacks available", async () => {
+    const fetchImpl = vi.fn(async () => htmlResponse(THIN_CONTENT));
+    const candidates = [
+      { url: "https://example.com/services-a", label: "Products" },
+      { url: "https://example.com/services-b", label: "Shop" },
+      { url: "https://example.com/services-c", label: "Pricing" },
+      { url: "https://example.com/order-now", label: "Order Now" },
+    ];
+
+    await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(fetchImpl.mock.calls.length).toBeLessThanOrEqual(3);
+  });
+
+  test("the real Santa Fe Mexican Grill regression: a core-keyword candidate (Menu) is tried BEFORE a longer-path secondary-only candidate (Catering), even though Catering's path is longer", async () => {
+    const calls: string[] = [];
+    const fetchImpl = vi.fn(async (url: RequestInfo | URL) => {
+      calls.push(url.toString());
+      return url.toString().includes("menu") ? htmlResponse(REAL_CONTENT) : htmlResponse(THIN_CONTENT);
+    });
+    const candidates = [
+      // Longer path, secondary-only ("catering") — must NOT be tried first.
+      { url: "https://example.com/private-events-catering-inquiry", label: "Private Events & Catering Inquiry" },
+      { url: "https://example.com/order-catering-online", label: "Order Catering Online" },
+      // Shorter path, but CORE ("menu") — must be tried first regardless.
+      { url: "https://example.com/menu", label: "Our Menu" },
+    ];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("found");
+    expect(result.url).toBe("https://example.com/menu");
+    expect(calls).toEqual(["https://example.com/menu"]);
+  });
+
+  test("a candidate matching BOTH a core and a secondary keyword (e.g. 'Catering Menu') ranks as core", async () => {
+    const calls: string[] = [];
+    const fetchImpl = vi.fn(async (url: RequestInfo | URL) => {
+      calls.push(url.toString());
+      return htmlResponse(REAL_CONTENT);
+    });
+    const candidates = [
+      { url: "https://example.com/private-events-catering-inquiry-longer-path-here", label: "Private Events & Catering Inquiry" }, // secondary only, longer path
+      { url: "https://example.com/catering-menu", label: "Catering Menu" }, // matches both "catering" and "menu"
+    ];
+
+    await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(calls[0]).toBe("https://example.com/catering-menu");
+  });
+});
+
+// Oct 10 false-positive fix: candidate matching for About must be
+// anchored to the label/path itself, not a bare substring that could
+// be a preposition inside unrelated CTA text — see
+// isStrictLabelOrPathMatch's own doc for the real Lamonsoff/Canadian
+// Tire/National 5 & 10 cases this fixes.
+describe("detectPagePresence — strict 'about' matching (no false positives from CTA text)", () => {
+  const HOMEPAGE_URL = new URL("https://example.com/");
+  const NO_MATCH_HOMEPAGE_HTML = "<main><h1>Welcome</h1><p>Just a generic homepage.</p></main>";
+  function htmlResponse(html: string): Response {
+    return { ok: true, status: 200, headers: new Headers({ "content-type": "text/html" }), text: async () => html } as unknown as Response;
+  }
+  const REAL_CONTENT = `<main><h1>Real</h1><p>${"Real substantial content with real sentences here. ".repeat(8)}</p></main>`;
+
+  test("the real Lamonsoff case: a CTA label using 'about' as a preposition is never credited as a real About page", async () => {
+    const fetchImpl = vi.fn(async () => htmlResponse(REAL_CONTENT));
+    const candidates = [{ url: "https://example.com/new-york/personal-injury-lawyer/wrongful-death/", label: "Learn More About Wrongful Death" }];
+
+    const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("not_found");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  test("a real 'About Us' label still matches normally", async () => {
+    const fetchImpl = vi.fn(async () => htmlResponse(REAL_CONTENT));
+    const candidates = [{ url: "https://example.com/about-us", label: "About Us" }];
+
+    const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("found");
+    expect(result.url).toBe("https://example.com/about-us");
+  });
+
+  test("a bare '/about' URL path segment matches even with an unrelated label", async () => {
+    const fetchImpl = vi.fn(async () => htmlResponse(REAL_CONTENT));
+    const candidates = [{ url: "https://example.com/about", label: "Learn More" }];
+
+    const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("found");
+  });
+
+  test("the real Canadian Tire / National 5 & 10 shape: an unrelated page whose path merely CONTAINS 'about' as a substring of a longer segment is rejected", async () => {
+    const fetchImpl = vi.fn(async () => htmlResponse(REAL_CONTENT));
+    // "about" is not its own path segment here ("location-store-hours"
+    // has no "about" at all, but this exercises a near-miss slug too).
+    const candidates = [{ url: "https://example.com/support/triangle-id-about-program.html", label: "Triangle Rewards Program Details" }];
+
+    const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("not_found");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  test("a more specific About keyword (e.g. 'our story') still uses the plain substring rule, unaffected by the strict 'about' rule", async () => {
+    const fetchImpl = vi.fn(async () => htmlResponse(REAL_CONTENT));
+    const candidates = [{ url: "https://example.com/company-info", label: "Read Our Story Here" }];
+
+    const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("found");
+  });
+
+  // Oct 10 follow-up: a label literally STARTING WITH "About" is no
+  // longer enough on its own when the URL is unambiguously a support/
+  // account/rewards/careers page — the real Canadian Tire case, where
+  // a real nav link labeled "About Triangle ID" points at a loyalty-
+  // rewards support page, not the business's own story.
+  test("the real Canadian Tire case: a label literally starting with 'About' is still rejected when the path is a support/rewards page", async () => {
+    const fetchImpl = vi.fn(async () => htmlResponse(REAL_CONTENT));
+    const candidates = [{ url: "https://triangle.example.com/en/support/triangle-id.html", label: "About Triangle ID" }];
+
+    const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("not_found");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  test("each excluded path segment (help/account/login/rewards/careers) is rejected even with a real 'About' label", async () => {
+    const fetchImpl = vi.fn(async () => htmlResponse(REAL_CONTENT));
+    const segments = ["help", "account", "login", "rewards", "careers", "career"];
+    for (const segment of segments) {
+      const candidates = [{ url: `https://example.com/${segment}/about-program`, label: "About Our Program" }];
+      const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+      expect(result.state).toBe("not_found");
+    }
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  test("a real About-Us page is still found even when an excluded-path candidate also exists on the same site", async () => {
+    const fetchImpl = vi.fn(async (url: RequestInfo | URL) => {
+      if (url.toString().includes("support")) throw new Error("should never fetch the excluded support page");
+      return htmlResponse(REAL_CONTENT);
+    });
+    const candidates = [
+      { url: "https://example.com/support/rewards-about.html", label: "About Our Rewards Program" },
+      { url: "https://example.com/about-us", label: "About Us" },
+    ];
+
+    const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("found");
+    expect(result.url).toBe("https://example.com/about-us");
+  });
+
+  // Oct 11 follow-up: the real National 5 & 10 case — a candidate
+  // whose URL path contains "about" is still rejected when the
+  // fetched page's OWN title/h1 is a different real topic.
+  test("the real National 5 & 10 case: /about/location-store-hours/ is rejected even though its path contains 'about'", async () => {
+    const hoursPageHtml =
+      '<html><head><title>Location &#038; Store Hours &#8211; National 5 and 10</title></head><body><main><h1>Location &#038; Store Hours</h1><p>We are open Monday through Saturday, 9am to 6pm, at our one real location in town.</p></main></body></html>';
+    const fetchImpl = vi.fn(async () => htmlResponse(hoursPageHtml));
+    const candidates = [{ url: "https://example.com/about/location-store-hours/", label: "About" }];
+
+    const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("not_found");
+  });
+
+  test("a real About-Us page under /about/ still passes normally (regression guard)", async () => {
+    const aboutPageHtml = `<html><head><title>About Us</title></head><body><main><h1>About Us</h1><p>${"Real substantial company story content here. ".repeat(8)}</p></main></body></html>`;
+    const fetchImpl = vi.fn(async () => htmlResponse(aboutPageHtml));
+    const candidates = [{ url: "https://example.com/about/", label: "About" }];
+
+    const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    expect(result.state).toBe("found");
+  });
+});
+
+// Oct 10: a multi-location chain's About/Services candidates can tie on
+// keyword tier and path depth — locationHint (this business's own
+// city) breaks that tie toward the candidate that actually names this
+// location, the real Santa Fe Mexican Grill - Newark case.
+describe("detectPagePresence — locationHint prefers this business's own location on a multi-location chain", () => {
+  const HOMEPAGE_URL = new URL("https://example.com/");
+  const NO_MATCH_HOMEPAGE_HTML = "<main><h1>Welcome</h1><p>Just a generic homepage.</p></main>";
+  function htmlResponse(html: string): Response {
+    return { ok: true, status: 200, headers: new Headers({ "content-type": "text/html" }), text: async () => html } as unknown as Response;
+  }
+  // Real listed items (<ul><li>...) — services content needs this to
+  // actually pass (not just a word-count minimum), same fixture shape
+  // as the "found anywhere wins" describe block above.
+  const REAL_CONTENT = `<main><h1>Real</h1><p>${"Real substantial content with real sentences here. ".repeat(8)}</p><ul><li>Item one</li><li>Item two</li><li>Item three</li></ul></main>`;
+
+  test("the real Santa Fe Mexican Grill - Newark case: 'Newark Menus' is tried before 'Wilmington Menus' when locationHint is 'Newark'", async () => {
+    const calls: string[] = [];
+    const fetchImpl = vi.fn(async (url: RequestInfo | URL) => {
+      calls.push(url.toString());
+      return htmlResponse(REAL_CONTENT);
+    });
+    const candidates = [
+      { url: "https://example.com/wilmington-menus", label: "Wilmington Menus" },
+      { url: "https://example.com/newark-menus", label: "Newark Menus" },
+    ];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl, "Newark");
+
+    expect(calls[0]).toBe("https://example.com/newark-menus");
+    expect(result.state).toBe("found");
+    expect(result.url).toBe("https://example.com/newark-menus");
+    expect(calls).toHaveLength(1); // the right one won immediately — the other location's page is never even fetched
+  });
+
+  test("without a locationHint, ranking falls back to the existing path-depth/length tiebreak (unchanged behavior)", async () => {
+    const calls: string[] = [];
+    const fetchImpl = vi.fn(async (url: RequestInfo | URL) => {
+      calls.push(url.toString());
+      return htmlResponse(REAL_CONTENT);
+    });
+    const candidates = [
+      { url: "https://example.com/wilmington-menus", label: "Wilmington Menus" },
+      { url: "https://example.com/newark-menus", label: "Newark Menus" },
+    ];
+
+    await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
+
+    // Both candidates tie on every existing tiebreak (same tier, same
+    // path segment count, same path length) — so without a hint, the
+    // first one in document order wins, same as before this change.
+    expect(calls[0]).toBe("https://example.com/wilmington-menus");
+  });
+
+  test("a locationHint that matches nothing never blocks a result — the candidate still wins on its own merits", async () => {
+    const fetchImpl = vi.fn(async () => htmlResponse(REAL_CONTENT));
+    const candidates = [{ url: "https://example.com/menu", label: "Menu" }];
+
+    const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl, "SomeOtherCity");
+
+    expect(result.state).toBe("found");
+  });
+});
+
+// Oct 10 site-trust collection — checkSafeBrowsing is the one real new
+// network call (Google Safe Browsing Lookup API v4); collectWebsiteTrust
+// orchestrates it alongside the pure lib/websiteTrust.ts detectors using
+// the homepage HTML collectWebsiteAnalysis already fetched, never a
+// second HTML fetch of its own.
+describe("checkSafeBrowsing", () => {
+  test("no API key configured -> { checked: false }, no network call made", async () => {
+    const fetchImpl = vi.fn();
+
+    const result = await checkSafeBrowsing("https://example.com", undefined, fetchImpl as unknown as typeof fetch);
+
+    expect(result).toEqual({ checked: false });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  test("a clean response (no matches) reports checked:true, threatFound:false", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({}) }) as unknown as Response);
+
+    const result = await checkSafeBrowsing("https://example.com", "test-key", fetchImpl as unknown as typeof fetch);
+
+    expect(result).toEqual({ checked: true, threatFound: false, threatTypes: [] });
+  });
+
+  test("a real match reports the real threat type(s), deduplicated", async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        ({
+          ok: true,
+          json: async () => ({ matches: [{ threatType: "SOCIAL_ENGINEERING" }, { threatType: "SOCIAL_ENGINEERING" }, { threatType: "MALWARE" }] }),
+        }) as unknown as Response
+    );
+
+    const result = await checkSafeBrowsing("https://evil.example", "test-key", fetchImpl as unknown as typeof fetch);
+
+    expect(result.checked).toBe(true);
+    if (result.checked) {
+      expect(result.threatFound).toBe(true);
+      expect(result.threatTypes.sort()).toEqual(["MALWARE", "SOCIAL_ENGINEERING"]);
+    }
+  });
+
+  test("a failed API call (e.g. 403 bad key) degrades to checked:false, never throws", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 403, json: async () => ({}) }) as unknown as Response);
+
+    const result = await checkSafeBrowsing("https://example.com", "bad-key", fetchImpl as unknown as typeof fetch);
+
+    expect(result).toEqual({ checked: false });
+  });
+
+  test("a network error degrades to checked:false, never throws", async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new Error("network down");
+    });
+
+    const result = await checkSafeBrowsing("https://example.com", "test-key", fetchImpl as unknown as typeof fetch);
+
+    expect(result).toEqual({ checked: false });
+  });
+});
+
+describe("collectWebsiteTrust", () => {
+  const NOW = new Date("2026-10-10T00:00:00Z");
+  const NO_GOOGLE = { phone: null, address: null, openingHoursPeriods: null };
+
+  test("the real Bánh Mì Boy shape: finds spam, a stale notice, and abandoned signals all at once", async () => {
+    const html = `
+      <html><head><style>.hm{display:table-column}</style></head>
+      <body>
+        <div class="banner">CLOSED July 4th to 8th!!! Call us at (302) 525-2018</div>
+        <div class="hm">Check out this <a href="https://fakewatchz.ru/x">replica richard mille</a></div>
+        <article><p>Posted July 11, 2012 - Welcome!</p></article>
+        <footer><div>Please put widget here</div></footer>
+      </body></html>
+    `;
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({}) }) as unknown as Response);
+
+    const trust = await collectWebsiteTrust(html, "banhmiboy.com", { phone: "+1 302-525-2018", address: null, openingHoursPeriods: null }, "test-key", NOW, fetchImpl as unknown as typeof fetch);
+
+    expect(trust.spamSignals.length).toBeGreaterThan(0);
+    expect(trust.spamSignals[0].category).toBe("replica");
+    expect(trust.staleNotices.length).toBeGreaterThan(0);
+    expect(trust.abandonedSignals.looksAbandoned).toBe(true);
+    expect(trust.infoConflicts.find((f) => f.field === "phone")?.comparison).toBe("matches");
+    expect(trust.websiteKind).toBe("independent");
+    expect(trust.listingLinkBroken).toBe(false);
+    expect(trust.checkedAt).toBe(NOW.toISOString());
+  });
+
+  test("a clean, independent site reports no findings and listingLinkBroken: false", async () => {
+    const html = `<html><body><p>Welcome to our real shop! Open daily 9am - 9pm.</p></body></html>`;
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({}) }) as unknown as Response);
+
+    const trust = await collectWebsiteTrust(html, "example.com", NO_GOOGLE, undefined, NOW, fetchImpl as unknown as typeof fetch);
+
+    expect(trust.spamSignals).toEqual([]);
+    expect(trust.staleNotices).toEqual([]);
+    expect(trust.abandonedSignals.looksAbandoned).toBe(false);
+    expect(trust.websiteKind).toBe("independent");
+    expect(trust.listingLinkBroken).toBe(false);
+    expect(trust.safeBrowsingChecked).toBe(false); // no key configured
+  });
+
+  test("a real 'Page Not Found' page sets listingLinkBroken: true", async () => {
+    const html = `<html><body><h1>Page Not Found</h1><p>The page you are looking for has been moved or deleted.</p></body></html>`;
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({}) }) as unknown as Response);
+
+    const trust = await collectWebsiteTrust(html, "example.com", NO_GOOGLE, undefined, NOW, fetchImpl as unknown as typeof fetch);
+
+    expect(trust.listingLinkBroken).toBe(true);
+  });
+
+  test("a directory-hosted address (e.g. Facebook) is classified as such regardless of its content", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({}) }) as unknown as Response);
+
+    const trust = await collectWebsiteTrust("<html><body>Real page</body></html>", "https://www.facebook.com/realbiz", NO_GOOGLE, undefined, NOW, fetchImpl as unknown as typeof fetch);
+
+    expect(trust.websiteKind).toBe("directory");
+  });
+
+  test("couldn't read the site at all (homepageHtml: null) -> an honestly empty trust result, never throws, never 'clean'", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({}) }) as unknown as Response);
+
+    const trust = await collectWebsiteTrust(null, "example.com", NO_GOOGLE, "test-key", NOW, fetchImpl as unknown as typeof fetch);
+
+    expect(trust.spamSignals).toEqual([]);
+    expect(trust.staleNotices).toEqual([]);
+    expect(trust.infoConflicts).toEqual([]);
+    expect(trust.listingLinkBroken).toBe(false);
+    // Safe Browsing is still checked even when our own HTML fetch failed
+    // — the URL itself can still be checked against Google's blocklists.
+    expect(trust.safeBrowsingChecked).toBe(true);
+  });
+
+  test("real Safe Browsing threat surfaces on the returned trust result", async () => {
+    const fetchImpl = vi.fn(
+      async () => ({ ok: true, json: async () => ({ matches: [{ threatType: "MALWARE" }] }) }) as unknown as Response
+    );
+
+    const trust = await collectWebsiteTrust("<html><body>hi</body></html>", "example.com", NO_GOOGLE, "test-key", NOW, fetchImpl as unknown as typeof fetch);
+
+    expect(trust.safeBrowsingChecked).toBe(true);
+    expect(trust.safeBrowsingThreat).toEqual({ threatFound: true, threatTypes: ["MALWARE"] });
+  });
+
+  // Oct 11: the real Bagel Emporium case — a phone/hours/address only
+  // ever stated on a dedicated Contact page, never the homepage, must
+  // still be found and compared before any conflict is reported.
+  test("contactPageHtml param: a phone found only on the Contact page resolves a would-be conflict into a match", async () => {
+    const homepageHtml = `<html><body><p>Need Catering? Call us: 914-222-4545</p></body></html>`;
+    const contactPageHtml = `<html><body><p>Call us: 914-333-0033</p></body></html>`;
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({}) }) as unknown as Response);
+
+    const trust = await collectWebsiteTrust(
+      homepageHtml,
+      "bagelemporium.com",
+      { phone: "+1 914-333-0033", address: null, openingHoursPeriods: null },
+      undefined,
+      NOW,
+      fetchImpl as unknown as typeof fetch,
+      contactPageHtml
+    );
+
+    const phone = trust.infoConflicts.find((f) => f.field === "phone")!;
+    expect(phone.comparison).toBe("matches");
+  });
+
+  test("contactPageHtml param: never merged into spam/stale-notice/abandoned-site detection, only info-consistency", async () => {
+    const homepageHtml = `<html><body><p>Welcome to our real shop!</p></body></html>`;
+    const contactPageHtml = `<html><body><p>replica richard mille CLOSED July 4th to 8th!!! Please put widget here</p></body></html>`;
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({}) }) as unknown as Response);
+
+    const trust = await collectWebsiteTrust(
+      homepageHtml,
+      "example.com",
+      NO_GOOGLE,
+      undefined,
+      NOW,
+      fetchImpl as unknown as typeof fetch,
+      contactPageHtml
+    );
+
+    expect(trust.spamSignals).toEqual([]);
+    expect(trust.staleNotices).toEqual([]);
+    expect(trust.abandonedSignals.looksAbandoned).toBe(false);
+  });
+
+  test("no contactPageHtml (null, the default) behaves exactly as before — homepage-only comparison", async () => {
+    const homepageHtml = `<html><body><p>Call us: 914-222-4545</p></body></html>`;
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({}) }) as unknown as Response);
+
+    const trust = await collectWebsiteTrust(
+      homepageHtml,
+      "bagelemporium.com",
+      { phone: "+1 914-333-0033", address: null, openingHoursPeriods: null },
+      undefined,
+      NOW,
+      fetchImpl as unknown as typeof fetch
+    );
+
+    const phone = trust.infoConflicts.find((f) => f.field === "phone")!;
+    // No "catering"-style label here, no contact page to check — a
+    // real, unlabeled, non-matching number is a genuine conflict.
+    expect(phone.comparison).toBe("conflicts");
+  });
+});
+
+describe("collectWebsiteAnalysis: the Contact page is fetched and shares the existing presence budget", () => {
+  const NOW_ISO_PREFIX = new Date().toISOString().slice(0, 4);
+
+  // Needs BOTH .text() (the homepage goes through fetchWebsiteHtml's
+  // own .arrayBuffer()-based reader; the Contact-page candidate fetch
+  // goes through fetchPresenceCandidate's .text()-based reader) so one
+  // mock response works for either real code path.
+  function htmlResponse(html: string): Response {
+    return {
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-type": "text/html" }),
+      text: async () => html,
+      arrayBuffer: async () => new TextEncoder().encode(html).buffer,
+    } as unknown as Response;
+  }
+
+  test("the real Bagel Emporium shape end-to-end: a linked Contact page is fetched and resolves the phone conflict", async () => {
+    const homepageHtml = `<html><body><p>Need Catering? Call us: 914-222-4545</p><a href="https://example.com/contact">Contact Us</a></body></html>`;
+    const contactHtml = `<html><body><p>Call us: 914-333-0033</p></body></html>`;
+    const calls: string[] = [];
+    const fetchImpl = vi.fn(async (url: RequestInfo | URL) => {
+      calls.push(url.toString());
+      if (url.toString().includes("/contact")) return htmlResponse(contactHtml);
+      return htmlResponse(homepageHtml);
+    });
+
+    const result = await collectWebsiteAnalysis(
+      "https://example.com",
+      { pageSpeedApiKey: undefined, screenshotApiKey: undefined, safeBrowsingApiKey: undefined },
+      { captureScreenshots: false },
+      { phone: "+1 914-333-0033", address: null, openingHoursPeriods: null },
+      fetchImpl as unknown as typeof fetch
+    );
+
+    expect(calls).toContain("https://example.com/contact");
+    const phone = result.websiteTrust.infoConflicts.find((f) => f.field === "phone")!;
+    expect(phone.comparison).toBe("matches");
+    expect(result.websiteTrust.checkedAt.slice(0, 4)).toBe(NOW_ISO_PREFIX);
+  });
+
+  test("no Contact link on the homepage — trust collection still completes normally, no extra fetch attempted", async () => {
+    const homepageHtml = `<html><body><p>Call us: 914-222-4545</p></body></html>`;
+    const calls: string[] = [];
+    const fetchImpl = vi.fn(async (url: RequestInfo | URL) => {
+      calls.push(url.toString());
+      return htmlResponse(homepageHtml);
+    });
+
+    const result = await collectWebsiteAnalysis(
+      "https://example.com",
+      { pageSpeedApiKey: undefined, screenshotApiKey: undefined, safeBrowsingApiKey: undefined },
+      { captureScreenshots: false },
+      { phone: "+1 914-333-0033", address: null, openingHoursPeriods: null },
+      fetchImpl as unknown as typeof fetch
+    );
+
+    expect(calls.every((c) => !c.includes("contact"))).toBe(true);
+    const phone = result.websiteTrust.infoConflicts.find((f) => f.field === "phone")!;
+    expect(phone.comparison).toBe("conflicts"); // 4545 is a real, non-secondary number here with no label
   });
 });
