@@ -4,6 +4,7 @@
 // rank them by real PostScore. No invented competitors, no invented
 // scores, no invented "rank" metric other than PostScore itself.
 
+import { businessWebsiteUrl } from "@/lib/businessWebsite";
 import {
   businessRowToScoringInput,
   scoreBusiness,
@@ -645,7 +646,7 @@ export async function findAndScoreCompetitors(
     distanceMeters: null,
     rating: subject.rating,
     reviewCount: subject.review_count,
-    hasWebsite: !!subject.website && subject.website.trim().length > 0,
+    hasWebsite: businessWebsiteUrl(subject) !== null,
     googleMapsUri: null,
     breakdown: subjectBreakdown,
     priceLevel: subject.priceLevel ?? null,

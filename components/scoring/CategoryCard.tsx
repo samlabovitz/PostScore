@@ -1,4 +1,5 @@
 import { IconAlertTriangle, IconCircleCheck, IconMinus } from "@tabler/icons-react";
+import { WebsiteCoverageNote } from "./WebsiteCoverageNote";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { cn } from "@/lib/utils";
@@ -39,7 +40,14 @@ export function formatPoints(value: number | null): string {
  * the full score breakdown (BusinessScoreView) and by any page that
  * wants to show just one category's real rubric (e.g. the Reviews page
  * showing only "visibility") without re-deriving or re-styling it. */
-export function CategoryCard({ category }: { category: CategoryResult }) {
+export function CategoryCard({
+  category,
+  hasWebsite = false,
+}: {
+  category: CategoryResult;
+  /** Only used by the Website category's "partly checked" note. */
+  hasWebsite?: boolean;
+}) {
   const locale = useLocale();
   return (
     <Card className="p-5">
@@ -53,6 +61,7 @@ export function CategoryCard({ category }: { category: CategoryResult }) {
           </span>
         </span>
       </div>
+      <WebsiteCoverageNote category={category} hasWebsite={hasWebsite} className="mt-1 text-[12px] text-ink-mute" />
 
       <div className="mt-4 flex flex-col divide-y divide-paper-line">
         {category.checks.map((check) => {

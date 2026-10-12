@@ -97,7 +97,7 @@ export async function uploadWebsiteScreenshots(
       usedSlugs.add(slug);
       pageScreenshotUrl = await uploadOne(admin, `${businessId}/${slug}.png`, page.screenshotBytes, page.label);
     }
-    additionalPages.push({ label: page.label, url: page.url, screenshotUrl: pageScreenshotUrl });
+    additionalPages.push({ label: page.label, url: page.url, screenshotUrl: pageScreenshotUrl, httpStatus: page.httpStatus ?? null });
   }
 
   return { screenshotUrl, additionalPages };

@@ -71,3 +71,4 @@ describe("HackedSiteBanner", () => {
     expect(es).toContain("Vea lo que encontramos →");
   });
 });
+

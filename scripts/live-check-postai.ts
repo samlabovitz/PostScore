@@ -78,6 +78,7 @@ import {
   type GrowthMoveSignals,
 } from "../lib/growthMoves";
 import { buildAssistantSiteSecurity } from "../lib/siteSecurity";
+import { businessWebsiteUrl, isWebsiteVerifiedElsewhereOnly } from "../lib/businessWebsite";
 import { buildWeeklyChecklistItems, buildWeeklyChecklistState, type WeeklyCheckRow } from "../lib/weeklyChecklist";
 import { formatShortDate, normalizeLocale, type Locale } from "../lib/i18n";
 import {
@@ -388,7 +389,8 @@ async function loadBusinessContext(businessId: string, localeOverride?: Locale):
       phonePresent: !!scored.business.phone && scored.business.phone.trim().length > 0,
       addressPresent: !!scored.business.address && scored.business.address.trim().length > 0,
       hoursPresent: !!scored.business.opening_hours && scored.business.opening_hours.length > 0,
-      websitePresent: !!scored.business.website && scored.business.website.trim().length > 0,
+      websitePresent: businessWebsiteUrl(scored.business) !== null,
+      verifiedWebsiteNotOnListing: isWebsiteVerifiedElsewhereOnly(scored.business) ? businessWebsiteUrl(scored.business) : null,
       httpsStatus: input.httpsStatus,
       httpsUnreachableReason: input.websiteAnalysis?.httpsUnreachableReason ?? null,
       googleListingMissingWebsiteSince: scored.business.google_listing_missing_website_since,

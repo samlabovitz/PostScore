@@ -38,7 +38,7 @@ import { DEFAULT_LOCALE, formatShortDate, t, tPlural, type Locale, type MessageK
 import { GOOGLE_PHOTO_CAP } from "@/lib/googlePhotoCap";
 import { reachabilityReasonMessageKey, type ReachabilityFailureReason } from "@/lib/websiteReachability";
 import { spamTopic } from "@/lib/siteSecurity";
-import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type AbandonedSiteFinding, type InfoFieldFinding, type SpamFinding, type StaleNoticeFinding, type WebsiteKind } from "@/lib/websiteTrust";
+import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type AbandonedSiteFinding, type EmbeddedMapFinding, type InfoFieldFinding, type SpamFinding, type StaleNoticeFinding, type WebsiteKind } from "@/lib/websiteTrust";
 
 // ---------------------------------------------------------------------------
 // Versioning
@@ -50,7 +50,7 @@ import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type Aban
  * records the version that produced it, so historical scores stay
  * interpretable even after the formula evolves.
  */
-export const SCORING_VERSION = "1.7.0";
+export const SCORING_VERSION = "1.8.0";
 
 // ---------------------------------------------------------------------------
 // Core types
@@ -108,6 +108,13 @@ export type HttpsCheckStatus = "https" | "http_only" | "unreachable";
  * inferred or guessed. Used by website.content_depth and
  * website.contact_conversion below.
  */
+/** A real social media profile the site links to (Step 2d) — e.g.
+ * { platform: "Instagram", url: "instagram.com/mainstreetsweets" }. */
+export interface SocialProfile {
+  platform: string;
+  url: string;
+}
+
 export interface WebsiteContentSignals {
   hasTitle: boolean;
   hasMetaDescription: boolean;
@@ -123,6 +130,13 @@ export interface WebsiteContentSignals {
   hasPhoneLink: boolean;
   /** A real mailto: link. */
   hasEmailLink: boolean;
+  /** A real link to the site's OWN contact page (Step 2d). Absent on
+   * rows saved before this was detected. */
+  hasContactPageLink?: boolean;
+  /** Real social media profiles linked from the homepage or the Contact
+   * page (Step 2d) — see detectSocialProfiles. Absent (undefined) on
+   * rows saved before this was detected: never read as "none found". */
+  socialProfiles?: SocialProfile[];
   /** A curated call-to-action phrase ("book now", "contact us", etc.)
    * found in the page's visible text. */
   hasCtaText: boolean;
@@ -222,6 +236,14 @@ export interface MobilePerformanceMeasurement {
    * row from before this field existed, same honest meaning either
    * way). */
   carriedForward?: boolean;
+  /** Step 2d: "origin" when this field measurement is Google's WHOLE-SITE
+   * real-visitor data, used because the business's own URL landed on an
+   * error page (a soft 404) — labeled "whole-site measurement". Absent =
+   * the URL's own data (or a lab score). */
+  fieldScope?: "origin";
+  /** Step 2d: why this measurement was carried forward — absent = a
+   * timeout (the original reason). */
+  carriedForwardReason?: "error_page";
 }
 
 /** Why a PageSpeed Insights attempt didn't produce a usable measurement
@@ -238,7 +260,10 @@ export interface MobilePerformanceMeasurement {
  *   - "error": some other failure (a thrown exception, malformed
  *     response body) not covered by the above. */
 export interface MobilePerformanceFailure {
-  kind: "timed_out" | "http_error" | "no_api_key" | "error";
+  /** Step 2d: "error_page" = PageSpeed loaded an error page (soft 404,
+   * runtime error, non-2xx main document, or another site) instead of
+   * the business's real page — never scored. */
+  kind: "timed_out" | "http_error" | "no_api_key" | "error" | "error_page";
   /** Only set when kind === "http_error" — the real HTTP status
    * PageSpeed itself returned. */
   status: number | null;
@@ -256,10 +281,12 @@ export interface MobilePerformanceFailure {
  * specific one. */
 export function performanceFailureMessageKey(
   failure: MobilePerformanceFailure
-): "dashboard.website.performanceTimedOut" | "dashboard.website.performanceHttpError" | null {
+): "dashboard.website.performanceTimedOut" | "dashboard.website.performanceHttpError" | "dashboard.website.performanceErrorPage" | null {
   switch (failure.kind) {
     case "timed_out":
       return "dashboard.website.performanceTimedOut";
+    case "error_page":
+      return "dashboard.website.performanceErrorPage";
     case "http_error":
       return "dashboard.website.performanceHttpError";
     case "no_api_key":
@@ -304,14 +331,23 @@ export function carryForwardMobilePerformance(
   now: Date = new Date()
 ): { mobilePerformance: MobilePerformanceMeasurement | null; mobilePerformanceFailureReason: MobilePerformanceFailure | null } {
   if (fresh) return { mobilePerformance: fresh, mobilePerformanceFailureReason: null };
-  if (freshFailureReason?.kind !== "timed_out" || !existing?.measuredAt) {
+  // Step 2d: an error-page run is just as unmeasured as a timeout — reuse
+  // a real measurement from the last 30 days the same way.
+  if ((freshFailureReason?.kind !== "timed_out" && freshFailureReason?.kind !== "error_page") || !existing?.measuredAt) {
     return { mobilePerformance: null, mobilePerformanceFailureReason: freshFailureReason };
   }
   const age = now.getTime() - new Date(existing.measuredAt).getTime();
   if (!Number.isFinite(age) || age < 0 || age > MAX_PERFORMANCE_CARRY_FORWARD_MS) {
     return { mobilePerformance: null, mobilePerformanceFailureReason: freshFailureReason };
   }
-  return { mobilePerformance: { ...existing, carriedForward: true }, mobilePerformanceFailureReason: null };
+  return {
+    mobilePerformance: {
+      ...existing,
+      carriedForward: true,
+      ...(freshFailureReason.kind === "error_page" ? { carriedForwardReason: "error_page" as const } : {}),
+    },
+    mobilePerformanceFailureReason: null,
+  };
 }
 
 /** Three honest states for whether a real About/Our-Story or
@@ -435,6 +471,19 @@ export interface WebsiteTrustAnalysis {
    * timed out is a wholly different, already-honest couldnt_check
    * story, never guessed as "probably broken"). */
   listingLinkBroken: boolean;
+  /** An embedded Google Map found on the homepage or Contact page (Step
+   * 2d) — readableAddress only when the map's own URL states a street
+   * address. Absent on rows saved before this was detected. */
+  embeddedMap?: EmbeddedMapFinding | null;
+  /** Step 2d: the error page the Google listing's website link actually
+   * opens in a real browser (PageSpeed's finalDisplayedUrl, e.g.
+   * "https://www.wonder.com/order/404") — set with listingLinkBroken. */
+  listingLinkErrorPageUrl?: string | null;
+  /** Step 2d: the error page an AUTOMATED browser (PageSpeed) was shown
+   * for this site — real people may well see the real page (the real
+   * Wonder case). Never marks the listing link broken; it means the
+   * page itself couldn't be checked by automated means. */
+  automatedErrorPageUrl?: string | null;
   /** ISO timestamp of this real scan — display only, same reasoning as
    * WebsiteAnalysis.checkedAt below. */
   checkedAt: string;
@@ -527,6 +576,13 @@ export interface WebsiteAnalysis {
    * field exists to make possible. Display only; scoreBusiness() never
    * reads it. */
   lastScreenshotRefreshAt: string | null;
+  /** The homepage's own HTTP status as ScreenshotOne saw it on the most
+   * recent capture (Step 2d) — a 4xx/5xx capture is never stored as an
+   * image. Absent/null on captures from before this was recorded. */
+  screenshotHttpStatus?: number | null;
+  /** The most recent capture's real ScreenshotOne usage — counted toward
+   * the monthly automatic-capture cap (see lib/screenshotBudget.ts). */
+  screenshotCaptureLog?: ScreenshotCaptureLog | null;
   /** The real result of looking for About/Our-Story content — see
    * PagePresenceResult's own doc and lib/websiteAnalysis.ts's
    * detectPagePresence for how it's produced. null on a row saved
@@ -563,6 +619,15 @@ export const SCREENSHOT_REFRESH_COOLDOWN_DAYS = 30;
 
 /** One other real internal page discovered alongside the homepage — see
  * WebsiteAnalysis.additionalPages. */
+export interface ScreenshotCaptureLog {
+  /** ISO time the capture ran. */
+  at: string;
+  /** Real ScreenshotOne requests made (homepage + discovered pages). */
+  calls: number;
+  /** "auto" = during a scan; "manual" = the Refresh screenshots button. */
+  source: "auto" | "manual";
+}
+
 export interface WebsiteAnalysisPage {
   /** Human-readable label for the UI (e.g. "Services", "About",
    * "Contact"), derived from the real nav link text or, failing that,
@@ -573,6 +638,8 @@ export interface WebsiteAnalysisPage {
   /** Public URL of a real captured screenshot of this page. null = the
    * capture failed or was blocked — shown honestly, not guessed. */
   screenshotUrl: string | null;
+  /** This page's own HTTP status as ScreenshotOne saw it (Step 2d). */
+  httpStatus?: number | null;
 }
 
 export type Grade = "A" | "B" | "C" | "D" | "F";
@@ -708,6 +775,12 @@ export interface CheckResult {
    * other check, and for performance_mobile itself whenever it's
    * NOT_FOUND (nothing was actually measured). */
   meta: Record<string, string> | null;
+  /** Step 2d: set ONLY when this check was excluded because we couldn't
+   * reach the site (bot-blocked, timed out, down/HTTP error, JavaScript-
+   * only, or an error page shown to automated checks) — never for "not
+   * checked yet" or "nothing to compare". Drives the "Based on {n} of
+   * {total} website checks" note. */
+  excludedReason?: "unreachable" | "not_checked_yet";
 }
 
 export interface CategoryResult {
@@ -1011,13 +1084,12 @@ const REVIEW_COUNT_CHECK_MAX_POINTS = 18;
 
 /**
  * website.performance_mobile's points for real-user field data (Google's
- * coarse FAST/AVERAGE/SLOW classification), on the check's own 6-point
- * scale (Oct 10 revision: the check gave up 4 of its original 10 points
- * to make room for the new site-trust checks — see CATEGORY_WEIGHTS'
- * own doc — so these are the same original 10/6/2 proportions scaled by
- * 0.6, never re-derived from scratch):
+ * coarse FAST/AVERAGE/SLOW classification), on the check's own 5-point
+ * scale (Oct 10 revision: 10 -> 6 to make room for the site-trust checks;
+ * Step 2d: 6 -> 5 for website.social_links — always the same original
+ * 10/6/2 proportions, i.e. 100% / 60% / 20%, never re-derived):
  *
- * - FAST -> 6 (full points): FAST is Google's TOP real-user category —
+ * - FAST -> 5 (full points): FAST is Google's TOP real-user category —
  *   real visitors' actual phones, over a real 28-day window, confirming
  *   this site is genuinely fast. That's at least as strong a claim as a
  *   single perfect (100/100) simulated lab run, so a fast site backed by
@@ -1031,10 +1103,13 @@ const REVIEW_COUNT_CHECK_MAX_POINTS = 18;
  * - SLOW -> 1.2: CrUX's "SLOW" ("poor") lines up with the lab "slow"
  *   band; same reasoning as before, scaled to the new ceiling.
  */
+// Step 2d: mobile speed is worth 5 (was 6) to make room for the new
+// 1-point website.social_links — same proportions (100% / 60% / 20%).
+const MOBILE_SPEED_MAX_POINTS = 5;
 const FIELD_CATEGORY_POINTS: Record<FieldSpeedCategory, number> = {
-  FAST: 6,
-  AVERAGE: 3.6,
-  SLOW: 1.2,
+  FAST: 5,
+  AVERAGE: 3,
+  SLOW: 1,
 };
 
 const FIELD_CATEGORY_LABEL_KEYS: Record<FieldSpeedCategory, MessageKey> = {
@@ -1057,6 +1132,7 @@ const PERFECT_WEBSITE_ANALYSIS: WebsiteAnalysis = {
     hasPhoneLink: true,
     hasEmailLink: true,
     hasCtaText: true,
+    socialProfiles: [{ platform: "Instagram", url: "instagram.com/example" }],
     isLikelyClientRenderedShell: false,
     renderedContentSignals: null,
   },
@@ -1133,6 +1209,46 @@ const PLACEHOLDER_HOURS = [
  */
 export function hasAnalyzableWebsite(input: BusinessScoringInput): boolean {
   return (!!input.website && input.website.trim().length > 0) || !!input.verifiedElsewhereUrl;
+}
+
+/** Step 2d: our own plain fetch couldn't access the site — it was
+ * bot-blocked, or the site showed automated checks an error page (see
+ * WebsiteTrustAnalysis.automatedErrorPageUrl). Exported for the Website
+ * page's row wording. */
+export function siteBlocksAutomatedChecks(input: Pick<BusinessScoringInput, "websiteAnalysis">): boolean {
+  const a = input.websiteAnalysis;
+  return a?.contentFetchFailureReason === "blocked_automated_check" || !!a?.websiteTrust?.automatedErrorPageUrl;
+}
+
+/**
+ * Step 2d: when the latest scan couldn't load the page itself (blocked
+ * by a bot check, timed out, down, or an HTTP error), every check that
+ * reads the page's content has nothing real to judge — its trust data
+ * was computed from no page at all, so an empty finding list is NOT a
+ * clean result. Such checks return this "couldn't check" result with the
+ * real stored reason (the same sentence the About/Services rows use),
+ * excluded from scoring — never a pass. Null when the page loaded.
+ */
+function pageCouldntBeChecked(input: BusinessScoringInput, locale: Locale): ReturnType<CheckDefinition["evaluate"]> | null {
+  const reason = input.websiteAnalysis?.contentFetchFailureReason ?? null;
+  if (!reason) return null;
+  return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, reachabilityReasonMessageKey(reason)) };
+}
+
+/**
+ * Step 2d: the page-content trust checks also can't judge a
+ * JavaScript-only site (the real Goldberg Hardware case) — our static
+ * fetch only sees an empty app shell, so an empty finding list there is
+ * NOT a pass. Couldn't check, excluded. Checked after a fetch failure,
+ * whose own reason sentence takes precedence.
+ */
+function pageContentUnreadable(input: BusinessScoringInput, locale: Locale): ReturnType<CheckDefinition["evaluate"]> | null {
+  const fetchFailure = pageCouldntBeChecked(input, locale);
+  if (fetchFailure) return fetchFailure;
+  if (input.websiteAnalysis?.content?.isLikelyClientRenderedShell) {
+    return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.trust.explanation.javascriptOnly") };
+  }
+  return null;
 }
 
 export const CHECKS: CheckDefinition[] = [
@@ -1340,11 +1456,27 @@ export const CHECKS: CheckDefinition[] = [
       }
       const trust = input.websiteAnalysis?.websiteTrust;
       if (trust?.listingLinkBroken) {
-        return { earnedPoints: 0, confidence: "VERIFIED", explanation: t(locale, "content.checks.completeness.website_link.explanation.broken") };
+        return {
+          earnedPoints: 0,
+          confidence: "VERIFIED",
+          explanation: trust.listingLinkErrorPageUrl
+            ? t(locale, "content.checks.completeness.website_link.explanation.brokenErrorPage", { url: trust.listingLinkErrorPageUrl })
+            : t(locale, "content.checks.completeness.website_link.explanation.broken"),
+        };
       }
       return { earnedPoints: 4, confidence: "VERIFIED", explanation: t(locale, "content.checks.completeness.website_link.explanation.present") };
     },
-    simulateFix: (input) => ({ ...input, website: "https://example.com" }),
+    // A broken listing link (Step 2d) is fixed too — the fix is a working link.
+    simulateFix: (input) => ({
+      ...input,
+      website: "https://example.com",
+      websiteAnalysis: input.websiteAnalysis?.websiteTrust
+        ? {
+            ...input.websiteAnalysis,
+            websiteTrust: { ...input.websiteAnalysis.websiteTrust, listingLinkBroken: false, listingLinkErrorPageUrl: null },
+          }
+        : input.websiteAnalysis,
+    }),
   },
   {
     id: "completeness.categories",
@@ -1537,13 +1669,28 @@ export const CHECKS: CheckDefinition[] = [
         confidence: "VERIFIED",
         explanation: t(
           locale,
-          trust.websiteKind === "free_builder"
-            ? "content.checks.website.has_website.explanation.presentFreeBuilder"
-            : "content.checks.website.has_website.explanation.present"
+          // Step 2d: the link is on file and scores as before, but the
+          // page itself showed automated checks an error page — say we
+          // couldn't check it, never that it's broken (the real Wonder case).
+          trust.automatedErrorPageUrl
+            ? "content.checks.website.has_website.explanation.presentAutomatedErrorPage"
+            : trust.websiteKind === "free_builder"
+              ? "content.checks.website.has_website.explanation.presentFreeBuilder"
+              : "content.checks.website.has_website.explanation.present"
         ),
       };
     },
-    simulateFix: (input) => ({ ...input, website: "https://example.com" }),
+    // A broken listing link (Step 2d) is fixed too — the fix is a working link.
+    simulateFix: (input) => ({
+      ...input,
+      website: "https://example.com",
+      websiteAnalysis: input.websiteAnalysis?.websiteTrust
+        ? {
+            ...input.websiteAnalysis,
+            websiteTrust: { ...input.websiteAnalysis.websiteTrust, listingLinkBroken: false, listingLinkErrorPageUrl: null },
+          }
+        : input.websiteAnalysis,
+    }),
   },
   {
     id: "website.https",
@@ -1603,7 +1750,7 @@ export const CHECKS: CheckDefinition[] = [
     // Gave up 4 points (was 10) to make room for the 4 new site-trust
     // checks inside Website's unchanged 30-point total — see
     // CATEGORY_WEIGHTS' own doc.
-    maxPoints: 6,
+    maxPoints: MOBILE_SPEED_MAX_POINTS,
     adviceKey: "content.checks.website.performance_mobile.advice",
     evaluate(input, locale) {
       if (!hasAnalyzableWebsite(input)) {
@@ -1618,6 +1765,17 @@ export const CHECKS: CheckDefinition[] = [
           earnedPoints: null,
           confidence: "NOT_FOUND",
           explanation: t(locale, "content.checks.website.performance_mobile.explanation.notAnalyzed"),
+        };
+      }
+      // Step 2d: a site our own fetch can't access (bot-blocked, or one
+      // that shows automated checks an error page) — no PageSpeed rating
+      // of any kind is trusted for it (real-visitor, whole-site, lab, or
+      // carried forward). Couldn't check, excluded, never counted against.
+      if (siteBlocksAutomatedChecks(input)) {
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: t(locale, "content.checks.website.performance_mobile.explanation.blockedSite"),
         };
       }
       const measurement = input.websiteAnalysis.mobilePerformance;
@@ -1645,13 +1803,22 @@ export const CHECKS: CheckDefinition[] = [
           earnedPoints: FIELD_CATEGORY_POINTS[category],
           confidence: "VERIFIED",
           explanation: lastMeasuredDate
-            ? t(locale, "content.checks.website.performance_mobile.explanation.fieldLastMeasured", {
-                category: t(locale, FIELD_CATEGORY_LABEL_KEYS[category]),
-                date: lastMeasuredDate,
-              })
-            : t(locale, "content.checks.website.performance_mobile.explanation.field", {
-                category: t(locale, FIELD_CATEGORY_LABEL_KEYS[category]),
-              }),
+            ? t(
+                locale,
+                measurement.carriedForwardReason === "error_page"
+                  ? "content.checks.website.performance_mobile.explanation.fieldLastMeasuredErrorPage"
+                  : "content.checks.website.performance_mobile.explanation.fieldLastMeasured",
+                { category: t(locale, FIELD_CATEGORY_LABEL_KEYS[category]), date: lastMeasuredDate }
+              )
+            : t(
+                locale,
+                // Step 2d: whole-site real-visitor data, used because this
+                // URL itself opens an error page — said so.
+                measurement.fieldScope === "origin"
+                  ? "content.checks.website.performance_mobile.explanation.fieldOrigin"
+                  : "content.checks.website.performance_mobile.explanation.field",
+                { category: t(locale, FIELD_CATEGORY_LABEL_KEYS[category]) }
+              ),
           meta: { method: "field" },
         };
       }
@@ -1663,13 +1830,16 @@ export const CHECKS: CheckDefinition[] = [
       if (measurement.method === "lab" && measurement.labScore !== null) {
         const score = measurement.labScore;
         return {
-          earnedPoints: roundTo((score / 100) * 6, 1),
+          earnedPoints: roundTo((score / 100) * MOBILE_SPEED_MAX_POINTS, 1),
           confidence: "VERIFIED",
           explanation: lastMeasuredDate
-            ? t(locale, "content.checks.website.performance_mobile.explanation.labLastMeasured", {
-                score: Math.round(score),
-                date: lastMeasuredDate,
-              })
+            ? t(
+                locale,
+                measurement.carriedForwardReason === "error_page"
+                  ? "content.checks.website.performance_mobile.explanation.labLastMeasuredErrorPage"
+                  : "content.checks.website.performance_mobile.explanation.labLastMeasured",
+                { score: Math.round(score), date: lastMeasuredDate }
+              )
             : t(locale, "content.checks.website.performance_mobile.explanation.lab", {
                 score: Math.round(score),
               }),
@@ -1853,7 +2023,8 @@ export const CHECKS: CheckDefinition[] = [
       // reliable signal, a literal tel:/mailto: href); CTA phrase-matching
       // is the fuzzier heuristic, so it's the one trimmed to make room for
       // website.about_presence/website.services_presence.
-      const hasContact = content.hasPhoneLink || content.hasEmailLink;
+      // Step 2d: a link to the site's own contact page counts too.
+      const hasContact = content.hasPhoneLink || content.hasEmailLink || content.hasContactPageLink === true;
       const earnedPoints = (hasContact ? 2 : 0) + (content.hasCtaText ? 1 : 0);
 
       const problems: string[] = [];
@@ -2052,6 +2223,55 @@ export const CHECKS: CheckDefinition[] = [
   // lib/websiteTrust.ts for the pure detection rules.
   // ---------------------------------------------------------------------
   {
+    // Step 2d: a real social media PROFILE linked from the site (never a
+    // share button or a bare platform homepage) — see
+    // detectSocialProfiles (lib/websiteContentAnalysis.ts).
+    id: "website.social_links",
+    labelKey: "content.checks.website.social_links.label",
+    category: "website",
+    maxPoints: 1,
+    adviceKey: "content.checks.website.social_links.advice",
+    evaluate(input, locale) {
+      if (!hasAnalyzableWebsite(input)) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.social_links.explanation.noWebsite") };
+      }
+      const couldntCheck = pageCouldntBeChecked(input, locale);
+      if (couldntCheck) return couldntCheck;
+      const content = input.websiteAnalysis?.content ?? null;
+      // Never analyzed, or saved before this detection existed — not a
+      // real "none found".
+      if (!content || content.socialProfiles === undefined) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.social_links.explanation.notAnalyzed") };
+      }
+      if (content.socialProfiles.length > 0) {
+        return {
+          earnedPoints: 1,
+          confidence: "VERIFIED",
+          explanation: t(locale, "content.checks.website.social_links.explanation.found", {
+            profiles: content.socialProfiles.map((p) => `${p.platform}: ${p.url}`).join(", "),
+          }),
+        };
+      }
+      // A JavaScript-rendered page's links may simply not be in the HTML
+      // we can read — honestly couldn't check, not a real "none".
+      if (content.isLikelyClientRenderedShell) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.social_links.explanation.clientRenderedShell") };
+      }
+      return { earnedPoints: 0, confidence: "VERIFIED", explanation: t(locale, "content.checks.website.social_links.explanation.none") };
+    },
+    simulateFix: (input) => ({
+      ...input,
+      website: hasAnalyzableWebsite(input) ? input.website : "https://example.com",
+      websiteAnalysis: {
+        ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
+        content: {
+          ...(input.websiteAnalysis?.content ?? PERFECT_WEBSITE_ANALYSIS.content!),
+          socialProfiles: [{ platform: "Instagram", url: "instagram.com/example" }],
+        },
+      },
+    }),
+  },
+  {
     id: "website.security",
     labelKey: "content.checks.website.security.label",
     category: "website",
@@ -2078,6 +2298,12 @@ export const CHECKS: CheckDefinition[] = [
         return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.security.explanation.notAnalyzed") };
       }
       const threat = trust.safeBrowsingThreat;
+      // A real Safe Browsing threat doesn't need the page — it still
+      // counts. Anything else needs the page itself.
+      if (!threat?.threatFound) {
+        const couldntCheck = pageContentUnreadable(input, locale);
+        if (couldntCheck) return couldntCheck;
+      }
       if (trust.spamSignals.length === 0 && !threat?.threatFound) {
         return {
           earnedPoints: 2,
@@ -2143,6 +2369,8 @@ export const CHECKS: CheckDefinition[] = [
       if (!trust) {
         return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.info_consistency.explanation.notAnalyzed") };
       }
+      const couldntCheck = pageContentUnreadable(input, locale);
+      if (couldntCheck) return couldntCheck;
       const overriddenKeys = new Set((input.websiteTrustOverrides ?? []).map((o) => o.key));
       const determinable = trust.infoConflicts.filter((f) => f.comparison !== "not_found_on_site");
       if (determinable.length === 0) {
@@ -2150,7 +2378,18 @@ export const CHECKS: CheckDefinition[] = [
       }
       const realConflicts = determinable.filter((f) => f.comparison === "conflicts" && !overriddenKeys.has(keyForInfoConflict(f)));
       if (realConflicts.length === 0) {
-        return { earnedPoints: 1, confidence: "VERIFIED", explanation: t(locale, "content.checks.website.info_consistency.explanation.allMatch") };
+        // Say where the address evidence came from when it was the map.
+        const addressFromMap = determinable.some((f) => f.field === "address" && f.source === "map");
+        return {
+          earnedPoints: 1,
+          confidence: "VERIFIED",
+          explanation: t(
+            locale,
+            addressFromMap
+              ? "content.checks.website.info_consistency.explanation.allMatchMap"
+              : "content.checks.website.info_consistency.explanation.allMatch"
+          ),
+        };
       }
       const matchingCount = determinable.length - realConflicts.length;
       const earnedPoints = roundTo(1 * (matchingCount / determinable.length), 1);
@@ -2159,7 +2398,9 @@ export const CHECKS: CheckDefinition[] = [
         first.field === "phone"
           ? "content.checks.website.info_consistency.explanation.conflictPhone"
           : first.field === "address"
-            ? "content.checks.website.info_consistency.explanation.conflictAddress"
+            ? first.source === "map"
+              ? "content.checks.website.info_consistency.explanation.conflictAddressMap"
+              : "content.checks.website.info_consistency.explanation.conflictAddress"
             : "content.checks.website.info_consistency.explanation.conflictHours";
       return {
         earnedPoints,
@@ -2200,6 +2441,8 @@ export const CHECKS: CheckDefinition[] = [
       if (!trust) {
         return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.notice_freshness.explanation.notAnalyzed") };
       }
+      const couldntCheck = pageContentUnreadable(input, locale);
+      if (couldntCheck) return couldntCheck;
       const overriddenKeys = new Set((input.websiteTrustOverrides ?? []).map((o) => o.key));
       const active = trust.staleNotices.filter((n) => !overriddenKeys.has(keyForStaleNotice(n)));
       if (active.length === 0) {
@@ -2244,6 +2487,8 @@ export const CHECKS: CheckDefinition[] = [
       if (!trust) {
         return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.site_freshness.explanation.notAnalyzed") };
       }
+      const couldntCheck = pageContentUnreadable(input, locale);
+      if (couldntCheck) return couldntCheck;
       const { looksAbandoned, newestDateFound, templateLeftovers } = trust.abandonedSignals;
       if (!looksAbandoned) {
         return { earnedPoints: 0.5, confidence: "VERIFIED", explanation: t(locale, "content.checks.website.site_freshness.explanation.clean") };
@@ -2320,6 +2565,13 @@ export function scoreBusiness(input: BusinessScoringInput, locale: Locale = DEFA
       confidence: result.confidence,
       explanation: result.explanation,
       meta: result.meta ?? null,
+      ...(result.earnedPoints === null
+        ? excludedBecauseUnreachable(def.id, input)
+          ? { excludedReason: "unreachable" as const }
+          : excludedBecauseNotCheckedYet(def.id, input)
+            ? { excludedReason: "not_checked_yet" as const }
+            : {}
+        : {}),
     };
   });
 
@@ -2369,6 +2621,73 @@ export function scoreBusiness(input: BusinessScoringInput, locale: Locale = DEFA
 // ---------------------------------------------------------------------------
 // Suggestion → score guarantee
 // ---------------------------------------------------------------------------
+
+/**
+ * Step 2d: was this (already excluded) website check excluded because we
+ * couldn't reach the site — as opposed to "not checked yet" or "nothing
+ * to compare"? Read only from the same stored facts that caused the
+ * exclusion; never guessed.
+ */
+/** Step 2d: excluded only because no scan has looked yet — the site was
+ * never analyzed, or this check was added after the last scan. */
+function excludedBecauseNotCheckedYet(checkId: string, input: BusinessScoringInput): boolean {
+  if (!checkId.startsWith("website.") || !hasAnalyzableWebsite(input)) return false;
+  const a = input.websiteAnalysis;
+  if (!a) return checkId !== "website.has_website";
+  if (checkId === "website.social_links") return a.content !== null && a.content.socialProfiles === undefined;
+  if (["website.security", "website.info_consistency", "website.notice_freshness", "website.site_freshness"].includes(checkId)) {
+    return !a.websiteTrust;
+  }
+  return false;
+}
+
+function excludedBecauseUnreachable(checkId: string, input: BusinessScoringInput): boolean {
+  const a = input.websiteAnalysis;
+  if (!checkId.startsWith("website.") || !hasAnalyzableWebsite(input) || !a) return false;
+  const pageUnreachable = !!a.contentFetchFailureReason || !!a.websiteTrust?.automatedErrorPageUrl;
+  const jsOnly = a.content?.isLikelyClientRenderedShell === true;
+  const presenceUnreachable = (p: PagePresenceResult | null) => p?.state === "couldnt_check" && p.reason !== null;
+  switch (checkId) {
+    case "website.https":
+      return input.httpsStatus === "unreachable";
+    case "website.performance_mobile": {
+      const kind = a.mobilePerformanceFailureReason?.kind;
+      return siteBlocksAutomatedChecks(input) || kind === "timed_out" || kind === "error_page" || kind === "http_error";
+    }
+    case "website.content_depth":
+    case "website.contact_conversion":
+    case "website.social_links":
+      return pageUnreachable || jsOnly;
+    case "website.about_presence":
+      return pageUnreachable || presenceUnreachable(a.aboutPresence);
+    case "website.services_presence":
+      return pageUnreachable || presenceUnreachable(a.servicesPresence);
+    case "website.security":
+    case "website.info_consistency":
+    case "website.notice_freshness":
+    case "website.site_freshness":
+      return pageUnreachable || jsOnly;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Step 2d: how many of a category's checks were actually scored (a real,
+ * determinable result) vs. excluded because we couldn't reach the site
+ * (see excludedBecauseUnreachable). Display only; scoring is unchanged.
+ * Used for the "Based on {n} of {total} website checks" label.
+ */
+export function categoryCheckCoverage(category: CategoryResult): { checked: number; total: number; unreachable: number } {
+  const checked = category.checks.filter(
+    (c) => (c.confidence === "VERIFIED" || c.confidence === "LIKELY") && c.earnedPoints !== null
+  ).length;
+  const unreachable = category.checks.filter((c) => c.excludedReason === "unreachable").length;
+  // "total" = what we could score plus what we couldn't reach — checks
+  // that simply weren't checked yet or had nothing to compare aren't
+  // counted as "couldn't be checked".
+  return { checked, total: checked + unreachable, unreachable };
+}
 
 /**
  * Generates the improvement suggestions for a breakdown. Every
@@ -2534,6 +2853,15 @@ function parseWebsiteContentSignals(value: unknown): WebsiteContentSignals | nul
     hasPhoneLink: v.hasPhoneLink as boolean,
     hasEmailLink: v.hasEmailLink as boolean,
     hasCtaText: v.hasCtaText as boolean,
+    ...(typeof v.hasContactPageLink === "boolean" ? { hasContactPageLink: v.hasContactPageLink } : {}),
+    ...(Array.isArray(v.socialProfiles)
+      ? {
+          socialProfiles: v.socialProfiles.filter(
+            (p): p is SocialProfile =>
+              !!p && typeof p === "object" && typeof (p as SocialProfile).platform === "string" && typeof (p as SocialProfile).url === "string"
+          ),
+        }
+      : {}),
     isLikelyClientRenderedShell:
       typeof v.isLikelyClientRenderedShell === "boolean" ? v.isLikelyClientRenderedShell : false,
     renderedContentSignals: v.renderedContentSignals ? parseRenderedContentSignals(v.renderedContentSignals) : null,
@@ -2580,15 +2908,30 @@ function parseMobilePerformance(value: unknown): MobilePerformanceMeasurement | 
   const measuredAt = typeof v.measuredAt === "string" ? v.measuredAt : undefined;
   const carriedForward = v.carriedForward === true ? true : undefined;
   if (v.method === "field" && isFieldSpeedCategory(v.fieldCategory)) {
-    return { method: "field", fieldCategory: v.fieldCategory, labScore: null, measuredAt, carriedForward };
+    return {
+      method: "field",
+      fieldCategory: v.fieldCategory,
+      labScore: null,
+      measuredAt,
+      carriedForward,
+      ...(v.fieldScope === "origin" ? { fieldScope: "origin" as const } : {}),
+      ...(v.carriedForwardReason === "error_page" ? { carriedForwardReason: "error_page" as const } : {}),
+    };
   }
   if (v.method === "lab" && typeof v.labScore === "number") {
-    return { method: "lab", fieldCategory: null, labScore: v.labScore, measuredAt, carriedForward };
+    return {
+      method: "lab",
+      fieldCategory: null,
+      labScore: v.labScore,
+      measuredAt,
+      carriedForward,
+      ...(v.carriedForwardReason === "error_page" ? { carriedForwardReason: "error_page" as const } : {}),
+    };
   }
   return null;
 }
 
-const MOBILE_PERFORMANCE_FAILURE_KINDS = new Set(["timed_out", "http_error", "no_api_key", "error"]);
+const MOBILE_PERFORMANCE_FAILURE_KINDS = new Set(["timed_out", "http_error", "no_api_key", "error", "error_page"]);
 
 function parseMobilePerformanceFailure(value: unknown): MobilePerformanceFailure | null {
   if (!value || typeof value !== "object") return null;
@@ -2656,6 +2999,8 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
   const screenshotUrl = typeof v.screenshotUrl === "string" ? v.screenshotUrl : null;
   const additionalPages = parseAdditionalPages(v.additionalPages);
   const lastScreenshotRefreshAt = typeof v.lastScreenshotRefreshAt === "string" ? v.lastScreenshotRefreshAt : null;
+  const screenshotHttpStatus = typeof v.screenshotHttpStatus === "number" ? v.screenshotHttpStatus : null;
+  const screenshotCaptureLog = parseScreenshotCaptureLog(v.screenshotCaptureLog);
   const aboutPresence = parsePagePresenceResult(v.aboutPresence);
   const servicesPresence = parsePagePresenceResult(v.servicesPresence);
   const websiteTrust = parseWebsiteTrust(v.websiteTrust);
@@ -2670,11 +3015,22 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
     screenshotUrl,
     additionalPages,
     lastScreenshotRefreshAt,
+    // Only present when stored (captures from before Step 2d have neither).
+    ...(screenshotHttpStatus !== null ? { screenshotHttpStatus } : {}),
+    ...(screenshotCaptureLog !== null ? { screenshotCaptureLog } : {}),
     aboutPresence,
     servicesPresence,
     websiteTrust,
     checkedAt,
   };
+}
+
+function parseScreenshotCaptureLog(value: unknown): ScreenshotCaptureLog | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  if (typeof v.at !== "string" || typeof v.calls !== "number") return null;
+  if (v.source !== "auto" && v.source !== "manual") return null;
+  return { at: v.at, calls: v.calls, source: v.source };
 }
 
 const INFO_CONFLICT_FIELDS = new Set(["phone", "address", "hours"]);
@@ -2690,6 +3046,7 @@ function parseInfoFieldFinding(value: unknown): InfoFieldFinding | null {
     comparison: v.comparison as InfoFieldFinding["comparison"],
     siteValue: typeof v.siteValue === "string" ? v.siteValue : null,
     googleValue: typeof v.googleValue === "string" ? v.googleValue : null,
+    ...(v.source === "map" ? { source: "map" as const } : {}),
   };
 }
 
@@ -2764,6 +3121,18 @@ function parseWebsiteTrust(value: unknown): WebsiteTrustAnalysis | null {
     abandonedSignals: parseAbandonedSiteFinding(v.abandonedSignals),
     websiteKind,
     listingLinkBroken: v.listingLinkBroken === true,
+    ...(typeof v.listingLinkErrorPageUrl === "string" ? { listingLinkErrorPageUrl: v.listingLinkErrorPageUrl } : {}),
+    ...(typeof v.automatedErrorPageUrl === "string" ? { automatedErrorPageUrl: v.automatedErrorPageUrl } : {}),
+    ...(v.embeddedMap && typeof v.embeddedMap === "object"
+      ? {
+          embeddedMap: {
+            readableAddress:
+              typeof (v.embeddedMap as Record<string, unknown>).readableAddress === "string"
+                ? ((v.embeddedMap as Record<string, unknown>).readableAddress as string)
+                : null,
+          },
+        }
+      : {}),
     checkedAt,
   };
 }

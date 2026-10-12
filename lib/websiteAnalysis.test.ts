@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import {
-  captureScreenshotBytes,
+  captureScreenshot,
   captureWebsiteScreenshots,
   checkSafeBrowsing,
   collectWebsiteAnalysis,
@@ -359,15 +359,16 @@ describe("fetchWebsiteHtml: Day 4 Task 'timed_out' vs 'down' split (Colorful Yun
 
 // Day 4 Part 2d: ScreenshotOne failing or running out of quota mid-scan
 // must never throw or abort the rest of a scan's real results — these
-// pin down that captureScreenshotBytes/captureWebsiteScreenshots already
+// pin down that captureScreenshot/captureWebsiteScreenshots already
 // degrade to null/empty rather than throwing, for exactly that case.
-describe("captureScreenshotBytes / captureWebsiteScreenshots: quota exhaustion never throws", () => {
+describe("captureScreenshot / captureWebsiteScreenshots: quota exhaustion never throws", () => {
   test("a 402/429 'quota exceeded' response from ScreenshotOne degrades to null bytes, never throws", async () => {
     const fetchImpl = vi.fn(async () => ({ ok: false, status: 402, headers: new Headers() }) as unknown as Response);
 
-    const bytes = await captureScreenshotBytes("example.com", "key", fetchImpl as unknown as typeof fetch);
+    const result = await captureScreenshot("example.com", "key", fetchImpl as unknown as typeof fetch);
 
-    expect(bytes).toBeNull();
+    expect(result.bytes).toBeNull();
+    expect(result.attempted).toBe(true);
   });
 
   test("captureWebsiteScreenshots never throws when every real call (homepage + sitemap discovery) fails with quota exhaustion", async () => {
@@ -1326,13 +1327,13 @@ describe("collectWebsiteTrust", () => {
     expect(trust.safeBrowsingChecked).toBe(false); // no key configured
   });
 
-  test("a real 'Page Not Found' page sets listingLinkBroken: true", async () => {
+  test("Step 2d: page text alone ('Page Not Found') no longer marks the listing link broken — only a genuine 404/410 does", async () => {
     const html = `<html><body><h1>Page Not Found</h1><p>The page you are looking for has been moved or deleted.</p></body></html>`;
     const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({}) }) as unknown as Response);
 
     const trust = await collectWebsiteTrust(html, "example.com", NO_GOOGLE, undefined, NOW, fetchImpl as unknown as typeof fetch);
 
-    expect(trust.listingLinkBroken).toBe(true);
+    expect(trust.listingLinkBroken).toBe(false);
   });
 
   test("a directory-hosted address (e.g. Facebook) is classified as such regardless of its content", async () => {
@@ -1471,6 +1472,24 @@ describe("collectWebsiteAnalysis: the Contact page is fetched and shares the exi
     expect(result.websiteTrust.checkedAt.slice(0, 4)).toBe(NOW_ISO_PREFIX);
   });
 
+  test("Step 2d: a click-to-call / email link only on the Contact page counts for contact_conversion", async () => {
+    const homepageHtml = `<html><head><meta name=viewport content=width=device-width><title>t</title></head><body><h1>Hi</h1><p>Call (302) 525-2018</p><a href="https://example.com/contact">Contact Us</a></body></html>`;
+    const contactHtml = `<html><body><a href=tel:+13025252018>Call</a> <a href=mailto:hi@example.com>Email</a></body></html>`;
+    const fetchImpl = vi.fn(async (url: RequestInfo | URL) =>
+      htmlResponse(url.toString().includes("/contact") ? contactHtml : homepageHtml)
+    );
+    const result = await collectWebsiteAnalysis(
+      "https://example.com",
+      { pageSpeedApiKey: undefined, screenshotApiKey: undefined, safeBrowsingApiKey: undefined },
+      { captureScreenshots: false },
+      { phone: null, address: null, openingHoursPeriods: null },
+      fetchImpl as unknown as typeof fetch
+    );
+    expect(result.content?.hasPhoneLink).toBe(true);
+    expect(result.content?.hasEmailLink).toBe(true);
+    expect(result.content?.hasViewportTag).toBe(true);
+  });
+
   test("no Contact link on the homepage — trust collection still completes normally, no extra fetch attempted", async () => {
     const homepageHtml = `<html><body><p>Call us: 914-222-4545</p></body></html>`;
     const calls: string[] = [];
@@ -1490,5 +1509,116 @@ describe("collectWebsiteAnalysis: the Contact page is fetched and shares the exi
     expect(calls.every((c) => !c.includes("contact"))).toBe(true);
     const phone = result.websiteTrust.infoConflicts.find((f) => f.field === "phone")!;
     expect(phone.comparison).toBe("conflicts"); // 4545 is a real, non-secondary number here with no label
+  });
+});
+
+describe("Step 2d: captureScreenshot reads the target page's HTTP status", () => {
+  const png = () => new Uint8Array([137, 80, 78, 71]).buffer;
+  function res(status: number | null, ok = true) {
+    const headers = new Headers({ "content-type": "image/png" });
+    if (status !== null) headers.set("X-ScreenshotOne-HTTP-Response-Status-Code", String(status));
+    return { ok, status: ok ? 200 : 500, headers, arrayBuffer: async () => png() } as unknown as Response;
+  }
+
+  test("asks ScreenshotOne for the status, and keeps a 200 capture", async () => {
+    const urls: string[] = [];
+    const fetchImpl = vi.fn(async (url: string) => {
+      urls.push(url);
+      return res(200);
+    });
+    const result = await captureScreenshot("example.com", "key", fetchImpl as unknown as typeof fetch);
+    expect(urls[0]).toContain("metadata_http_response_status_code=true");
+    expect(result.httpStatus).toBe(200);
+    expect(result.bytes).not.toBeNull();
+  });
+
+  test("a 404 (e.g. a 'Page Not Found' page) is recorded but the image is discarded", async () => {
+    const result = await captureScreenshot("example.com", "key", vi.fn(async () => res(404)) as unknown as typeof fetch);
+    expect(result.httpStatus).toBe(404);
+    expect(result.bytes).toBeNull();
+  });
+
+  test("a 503 is discarded too; no reported status keeps the image", async () => {
+    expect((await captureScreenshot("example.com", "key", vi.fn(async () => res(503)) as unknown as typeof fetch)).bytes).toBeNull();
+    const none = await captureScreenshot("example.com", "key", vi.fn(async () => res(null)) as unknown as typeof fetch);
+    expect(none.httpStatus).toBeNull();
+    expect(none.bytes).not.toBeNull();
+  });
+
+  test("no API key: nothing is called, nothing counted", async () => {
+    const fetchImpl = vi.fn();
+    const result = await captureScreenshot("example.com", undefined, fetchImpl as unknown as typeof fetch);
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(result.attempted).toBe(false);
+    const all = await captureWebsiteScreenshots("example.com", null, undefined, vi.fn(async () => res(200)) as unknown as typeof fetch);
+    expect(all.calls).toBe(0);
+  });
+});
+
+describe("Step 2d: an embedded map's address feeds Matches your Google listing", () => {
+  test("no address in the page text, but the map states it -> matches, source map", async () => {
+    const html = `<html><body><h1>Main Street Sweets</h1><p>Visit us in Newark!</p><iframe src="https://maps.google.com/maps?q=209+E+Main+St,+Newark,+DE+19711&output=embed"></iframe></body></html>`;
+    const trust = await collectWebsiteTrust(
+      html,
+      "https://example.com",
+      { phone: null, address: "209 E Main St, Newark, DE 19711, USA", openingHoursPeriods: null },
+      undefined,
+      new Date("2026-10-11T00:00:00Z"),
+      (async () => ({ ok: false, status: 404, headers: new Headers() })) as unknown as typeof fetch
+    );
+    const address = trust.infoConflicts.find((f) => f.field === "address")!;
+    expect(address.comparison).toBe("matches");
+    expect(address.source).toBe("map");
+    expect(trust.embeddedMap).toEqual({ readableAddress: "209 E Main St, Newark, DE 19711" });
+  });
+});
+
+describe("Step 2d correction: soft 404 seen only by PageSpeed", () => {
+  function psi(): Response {
+    const body = {
+      lighthouseResult: {
+        requestedUrl: "https://www.wonder.com/order/thegrove",
+        finalUrl: "https://www.wonder.com/order/thegrove",
+        finalDisplayedUrl: "https://www.wonder.com/order/404",
+        mainDocumentUrl: "https://www.wonder.com/order/thegrove",
+        categories: { performance: { score: 0.13 } },
+        audits: {},
+      },
+      loadingExperience: { overall_category: "SLOW" },
+      originLoadingExperience: { overall_category: "AVERAGE" },
+    };
+    return { ok: true, status: 200, headers: new Headers(), json: async () => body } as unknown as Response;
+  }
+  test("our own fetch bot-blocked -> URL-level real-visitor data is used (real people see the real page)", async () => {
+    const r = await fetchMobilePerformance("https://www.wonder.com/order/thegrove", "key", undefined, vi.fn(async () => psi()) as unknown as typeof fetch, true);
+    expect(r.measurement).toMatchObject({ method: "field", fieldCategory: "SLOW" });
+    expect(r.measurement?.fieldScope).toBeUndefined();
+    expect(r.softNotFoundUrl).toBe("https://www.wonder.com/order/404");
+  });
+  test("not blocked -> whole-site data, labeled; an error-page lab score is never used", async () => {
+    const r = await fetchMobilePerformance("https://www.wonder.com/order/thegrove", "key", undefined, vi.fn(async () => psi()) as unknown as typeof fetch, false);
+    expect(r.measurement).toMatchObject({ method: "field", fieldCategory: "AVERAGE", fieldScope: "origin" });
+  });
+});
+
+describe("Step 2d: only a genuine 404/410 is a missing page", () => {
+  const resp = (status: number, body = "") =>
+    ({ ok: false, status, headers: new Headers(), text: async () => body } as unknown as Response);
+  for (const status of [404, 410] as const) {
+    test(`${status} -> missingPageStatus ${status}`, async () => {
+      const r = await fetchWebsiteHtml("example.com", vi.fn(async () => resp(status)) as unknown as typeof fetch);
+      expect(r.html).toBeNull();
+      expect(r.missingPageStatus).toBe(status);
+    });
+  }
+  for (const status of [403, 429, 503, 500]) {
+    test(`${status} -> never a missing page`, async () => {
+      const r = await fetchWebsiteHtml("example.com", vi.fn(async () => resp(status)) as unknown as typeof fetch);
+      expect(r.missingPageStatus ?? null).toBeNull();
+    });
+  }
+  test("a 404 carrying a bot-challenge body is a block, not a missing page", async () => {
+    const r = await fetchWebsiteHtml("example.com", vi.fn(async () => resp(404, "Just a moment... Checking your browser")) as unknown as typeof fetch);
+    expect(r.missingPageStatus ?? null).toBeNull();
   });
 });

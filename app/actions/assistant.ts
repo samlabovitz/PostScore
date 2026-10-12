@@ -10,6 +10,7 @@ import { getGrowthMoveSignals } from "@/app/actions/growthMoves";
 import { getWeeklyChecklistState } from "@/app/actions/weeklyChecklist";
 import { buildGrowthMoves, withoutWebsiteGrowthMoves } from "@/lib/growthMoves";
 import { buildAssistantSiteSecurity } from "@/lib/siteSecurity";
+import { businessWebsiteUrl, isWebsiteVerifiedElsewhereOnly } from "@/lib/businessWebsite";
 import { businessRowToScoringInput } from "@/lib/scoring";
 import { bizProfile, resolveBizProfile } from "@/config/bizProfiles";
 import { priceLevelToSymbol } from "@/lib/priceLevel";
@@ -287,7 +288,8 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
       phonePresent: !!scored.business.phone && scored.business.phone.trim().length > 0,
       addressPresent: !!scored.business.address && scored.business.address.trim().length > 0,
       hoursPresent: !!scored.business.opening_hours && scored.business.opening_hours.length > 0,
-      websitePresent: !!scored.business.website && scored.business.website.trim().length > 0,
+      websitePresent: businessWebsiteUrl(scored.business) !== null,
+      verifiedWebsiteNotOnListing: isWebsiteVerifiedElsewhereOnly(scored.business) ? businessWebsiteUrl(scored.business) : null,
       httpsStatus: input.httpsStatus,
       httpsUnreachableReason: input.websiteAnalysis?.httpsUnreachableReason ?? null,
       googleListingMissingWebsiteSince: scored.business.google_listing_missing_website_since,

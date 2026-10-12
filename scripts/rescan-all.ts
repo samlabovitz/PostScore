@@ -70,7 +70,16 @@ for (const line of fs.readFileSync(".env.local", "utf-8").split("\n")) {
 
 import { createClient } from "@supabase/supabase-js";
 import { createRequire } from "module";
-import { parseWebsiteAnalysis, type ScoreBreakdown, type WebsiteAnalysis } from "../lib/scoring";
+import { businessRowToScoringInput, parseWebsiteAnalysis, scoreBusiness, type BusinessScoringRow, type ScoreBreakdown, type WebsiteAnalysis } from "../lib/scoring";
+import { businessWebsiteUrl } from "../lib/businessWebsite";
+import {
+  canAutoCapture,
+  MAX_SCREENSHOT_CALLS_PER_CAPTURE,
+  needsAutoScreenshot,
+  screenshotAutoMonthlyCap,
+  screenshotCallsThisMonth,
+} from "../lib/screenshotBudget";
+import { normalizeLocale } from "../lib/i18n";
 import type { rescanBusinessWithClient as RescanBusinessWithClientFn } from "../app/actions/scoring";
 import {
   mergeBusinessEntries,
@@ -124,7 +133,9 @@ interface BusinessRow {
   id: string;
   name: string | null;
   website: string | null;
+  verified_website_url?: string | null;
   website_analysis_json: unknown;
+  language?: string | null;
 }
 
 interface ScoreRow {
@@ -200,7 +211,7 @@ async function main() {
   const limitArg = args.find((a) => a.startsWith("--limit="));
   const limit = limitArg ? parseInt(limitArg.slice("--limit=".length), 10) : null;
 
-  let query = supabase.from("businesses").select("id, name, website, website_analysis_json");
+  let query = supabase.from("businesses").select("*");
   if (onlyIds) query = query.in("id", onlyIds);
   const { data: allBusinesses, error } = await query.order("created_at", { ascending: true });
   if (error || !allBusinesses) {
@@ -211,25 +222,74 @@ async function main() {
   const businesses: BusinessRow[] = limit ? allBusinesses.slice(0, limit) : allBusinesses;
 
   if (dryRun) {
-    // ScreenshotOne only ever fires when there's a real website to
-    // screenshot (app/actions/businesses.ts:229's `captureScreenshots
-    // && websiteAnalysis` gate) — a no-website business never triggers
-    // it regardless of website_analysis_json being null.
-    const firstTimeAnalysis = businesses.filter((b) => b.website_analysis_json === null && b.website);
+    // Step 2d: EXACTLY the rule a real scan uses (lib/screenshotBudget.ts,
+    // applied in saveBusinessWithClient): a business with a real website
+    // (listing or verified) that has no screenshot and never had a
+    // capture attempted, while this month's real ScreenshotOne usage —
+    // across EVERY business, not just this run's — leaves room under the
+    // cap. Each capture reserves its worst case before running, in run
+    // order, same as a real sequential run.
+    const { data: everyBusiness } = await supabase.from("businesses").select("website_analysis_json");
+    const usedThisMonth = screenshotCallsThisMonth((everyBusiness ?? []).map((r) => parseWebsiteAnalysis(r.website_analysis_json)));
+    const cap = screenshotAutoMonthlyCap();
+    const needCapture = businesses.filter(
+      (b) => businessWebsiteUrl(b) !== null && needsAutoScreenshot(parseWebsiteAnalysis(b.website_analysis_json))
+    );
+    let reserved = usedThisMonth;
+    const willCapture: BusinessRow[] = [];
+    if (!noScreenshots) {
+      for (const b of needCapture) {
+        if (!canAutoCapture(reserved, cap)) break;
+        willCapture.push(b);
+        reserved += MAX_SCREENSHOT_CALLS_PER_CAPTURE;
+      }
+    }
+    const willCaptureIds = new Set(willCapture.map((b) => b.id));
     console.log(`DRY RUN — would re-scan ${businesses.length} business(es):\n`);
     for (const b of businesses) {
-      const firstTime = b.website_analysis_json === null && b.website;
-      console.log(`  ${b.name ?? "(unnamed)"} (${b.id})${firstTime ? " — first-ever website analysis" : ""}`);
+      console.log(`  ${b.name ?? "(unnamed)"} (${b.id})${willCaptureIds.has(b.id) ? " — first screenshot capture" : ""}`);
     }
+
+    // What the CURRENT scoring code says about each business's already-
+    // stored data, vs. its latest saved score — no fetches, no writes.
+    // A rescan would also refresh the underlying data, so this isolates
+    // changes caused by code (e.g. Step 2d's blocked = couldn't check).
+    console.log(`\nScore changes from current scoring code on stored data (no fetch, nothing saved):`);
+    let changed = 0;
+    for (const b of businesses) {
+      const { data: latest } = await supabase
+        .from("scores")
+        .select("total, breakdown_json")
+        .eq("business_id", b.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!latest) continue;
+      const now = scoreBusiness(businessRowToScoringInput(b as unknown as BusinessScoringRow), normalizeLocale(b.language ?? null));
+      const before = (latest.breakdown_json as ScoreBreakdown | null)?.checks ?? [];
+      const reasons = now.checks
+        .map((c) => {
+          const old = before.find((x) => x.id === c.id);
+          const fmt = (v: number | null | undefined) => (v === null || v === undefined ? "not scored" : String(v));
+          return old && (old.earnedPoints ?? null) !== (c.earnedPoints ?? null) ? `${c.id}: ${fmt(old.earnedPoints)} -> ${fmt(c.earnedPoints)}` : null;
+        })
+        .filter((r): r is string => r !== null);
+      if (latest.total !== now.total || reasons.length > 0) {
+        changed++;
+        console.log(`  ${b.name ?? "(unnamed)"}: ${latest.total} -> ${now.total}${reasons.length ? ` (${reasons.join("; ")})` : ""}`);
+      }
+    }
+    if (changed === 0) console.log("  none");
+
     const placesCost = businesses.length * PLACES_DETAILS_COST_USD;
     console.log(`\nEstimated real, billed cost:`);
     console.log(`  Google Places Details: ${businesses.length} calls x $${PLACES_DETAILS_COST_USD.toFixed(2)} = $${placesCost.toFixed(2)}`);
     console.log(`  PageSpeed Insights: free (up to 3 calls/business)`);
     if (noScreenshots) {
-      console.log(`  ScreenshotOne: SKIPPED (--no-screenshots) — 0 calls, even for the ${firstTimeAnalysis.length} first-time business(es) above.`);
+      console.log(`  ScreenshotOne: SKIPPED (--no-screenshots) — 0 calls (${needCapture.length} business(es) still have no screenshot).`);
     } else {
       console.log(
-        `  ScreenshotOne: ${firstTimeAnalysis.length} business(es) being analyzed for the first time will also trigger up to 5 real, billed ScreenshotOne captures each (1 homepage + up to 4 discovered pages) — exact per-call rate not hardcoded in this codebase, so no dollar estimate is given for it. Pass --no-screenshots to skip these entirely.`
+        `  ScreenshotOne: ${willCapture.length} capture(s), up to ${willCapture.length * MAX_SCREENSHOT_CALLS_PER_CAPTURE} calls (1 homepage + up to 4 pages each). ${needCapture.length} business(es) have no screenshot; ${usedThisMonth} call(s) already used this month; monthly cap ${cap}${needCapture.length > willCapture.length ? ` — ${needCapture.length - willCapture.length} skipped by the cap, keeping "no screenshot yet"` : ""}. Pass --no-screenshots to skip all captures.`
       );
     }
     console.log(`\nNo real calls made, no writes made. Pass without --dry-run to actually run this.`);

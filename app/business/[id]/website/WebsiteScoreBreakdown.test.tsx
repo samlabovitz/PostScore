@@ -338,3 +338,25 @@ describe("WebsiteScoreBreakdown — Day 4 Step 2e: Trust & accuracy group matche
     expect(render("es")).toContain("Confianza y precisión");
   });
 });
+
+describe("Step 2d: no doubled or misplaced 'Couldn't verify —' prefix", () => {
+  function row(check: CheckResult, locale: "en" | "es" = "en") {
+    return renderToText(
+      <LocaleProvider locale={locale}>
+        <WebsiteScoreBreakdown websiteCategory={categoryWith(check)} websiteAnalysis={null} websiteSuggestions={[]} />
+      </LocaleProvider>
+    );
+  }
+  test("text that already starts with 'Couldn't verify —' isn't prefixed again (EN + ES)", () => {
+    const en = row({ ...excludedCheck("website.content_depth", "Content", 5), explanation: "Couldn't verify — this site renders its content with JavaScript." });
+    expect(en).not.toContain("Couldn't verify —Couldn't verify");
+    expect(en.match(/Couldn't verify —/g)!.length).toBe(1);
+    const es = row({ ...excludedCheck("website.content_depth", "Contenido", 5), explanation: "No se pudo verificar — este sitio muestra su contenido con JavaScript." }, "es");
+    expect(es.match(/No se pudo verificar —/g)!.length).toBe(1);
+  });
+  test("a 'not checked yet' row carries no prefix", () => {
+    const html = row({ ...excludedCheck("website.social_links", "Social media links", 1), explanation: "Not checked yet — your next PostScore scan will look for social media links.", excludedReason: "not_checked_yet" });
+    expect(html).not.toContain("Couldn't verify");
+    expect(html).toContain("Not checked yet");
+  });
+});

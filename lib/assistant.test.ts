@@ -1617,3 +1617,19 @@ describe("Day 4 Step 2f — PostAI points website fixes to the Website page", ()
     expect(improve.filter((p) => p === improveText).length).toBeLessThanOrEqual(1);
   });
 });
+
+describe("Step 2d — PostAI knows about a verified website that isn't on the listing", () => {
+  test("says it has a website, and that it's not on the Google listing yet", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: { ...BASE_CONTEXT.listing, websitePresent: true, verifiedWebsiteNotOnListing: "https://banhmiboy.com" },
+    });
+    expect(text).toContain("- Has a website on file (https://banhmiboy.com");
+    expect(text).toContain("NOT on the Google listing yet");
+    expect(text).not.toContain("- No website on file.");
+  });
+  test("a listing website is unchanged", () => {
+    const text = buildAssistantContextText({ ...BASE_CONTEXT, listing: { ...BASE_CONTEXT.listing, websitePresent: true } });
+    expect(text).toContain("- Has a website on file. Reachability");
+  });
+});

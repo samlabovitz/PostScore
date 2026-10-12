@@ -18,7 +18,9 @@ import { ScoreGauge } from "@/components/ui/ScoreGauge";
 import { StatTile } from "@/components/ui/StatTile";
 import { CategoryCard, formatPoints } from "@/components/scoring/CategoryCard";
 import { HackedSiteBanner } from "@/components/scoring/HackedSiteBanner";
+import { WebsiteCoverageNote } from "@/components/scoring/WebsiteCoverageNote";
 import { hackSignsFor } from "@/lib/siteSecurity";
+import { businessWebsiteUrl, isWebsiteVerifiedElsewhereOnly } from "@/lib/businessWebsite";
 import { cn } from "@/lib/utils";
 import { rescanBusiness } from "@/app/actions/scoring";
 import type { BusinessRecord, ScoreHistoryRow, ScoreSnapshot } from "@/app/actions/scoring";
@@ -50,7 +52,7 @@ function formatSignedPoints(value: number): string {
  * percentage) is read straight off the real breakdown; no category is
  * invented and no bar is drawn for a category with no determinable
  * checks. */
-function CategoryProgressRow({ category }: { category: CategoryResult }) {
+function CategoryProgressRow({ category, hasWebsite }: { category: CategoryResult; hasWebsite: boolean }) {
   const locale = useLocale();
   const pct = category.relativeScore;
   const strong = pct !== null && pct >= 80;
@@ -75,6 +77,7 @@ function CategoryProgressRow({ category }: { category: CategoryResult }) {
           />
         )}
       </div>
+      <WebsiteCoverageNote category={category} hasWebsite={hasWebsite} />
       {pct === null && (
         <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.overview.categoryNotDeterminable")}</p>
       )}
@@ -359,6 +362,10 @@ function ListingCard({ business }: { business: BusinessRecord }) {
               >
                 {business.website}
               </a>
+            ) : isWebsiteVerifiedElsewhereOnly(business) ? (
+              // A real site verified elsewhere (Step 2d) — honestly NOT on
+              // the Google listing itself, but never "no website".
+              t(locale, "dashboard.overview.verifiedWebsiteNotOnListing", { url: businessWebsiteUrl(business) ?? "" })
             ) : (
               notAvailable
             )
@@ -745,7 +752,7 @@ export function BusinessScoreView({
       <Card className="p-5">
         <div className="flex flex-col divide-y divide-paper-line">
           {breakdown.categories.map((category) => (
-            <CategoryProgressRow key={category.id} category={category} />
+            <CategoryProgressRow key={category.id} category={category} hasWebsite={businessWebsiteUrl(business) !== null} />
           ))}
         </div>
       </Card>
@@ -753,7 +760,7 @@ export function BusinessScoreView({
       <SectionHeading title={t(locale, "dashboard.overview.detailedChecksHeading")} />
       <div className="grid grid-cols-1 gap-4 nav:grid-cols-3">
         {breakdown.categories.map((category) => (
-          <CategoryCard key={category.id} category={category} />
+          <CategoryCard key={category.id} category={category} hasWebsite={businessWebsiteUrl(business) !== null} />
         ))}
       </div>
 

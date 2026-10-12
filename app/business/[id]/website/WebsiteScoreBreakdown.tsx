@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   gradeFromTotal,
   performanceFailureMessageKey,
+  siteBlocksAutomatedChecks,
   type CategoryResult,
   type CheckResult,
   type Grade,
@@ -16,6 +17,7 @@ import {
 import { reachabilityReasonMessageKey } from "@/lib/websiteReachability";
 import { hackSignsFor } from "@/lib/siteSecurity";
 import { SiteSecurityDetails } from "./SiteSecurityDetails";
+import { WebsiteCoverageNote } from "@/components/scoring/WebsiteCoverageNote";
 import { t, tPlural, useLocale, type MessageKey } from "@/lib/i18n";
 
 /** Checks whose "excluded" state has a real, specific reason worth its
@@ -25,10 +27,21 @@ import { t, tPlural, useLocale, type MessageKey } from "@/lib/i18n";
  * wording. */
 function excludedReasonMessageKey(check: CheckResult, websiteAnalysis: WebsiteAnalysis | null): MessageKey | null {
   if (check.id === "website.performance_mobile") {
+    if (siteBlocksAutomatedChecks({ websiteAnalysis })) return "content.checks.website.performance_mobile.explanation.blockedSite";
     const failure = websiteAnalysis?.mobilePerformanceFailureReason;
     return failure ? performanceFailureMessageKey(failure) : null;
   }
-  if (check.id === "website.https" || check.id === "website.content_depth" || check.id === "website.contact_conversion") {
+  if (
+    check.id === "website.https" ||
+    check.id === "website.content_depth" ||
+    check.id === "website.contact_conversion" ||
+    // Step 2d: page-content trust checks are "couldn't check" when the
+    // page itself couldn't be loaded — same stored reason.
+    check.id === "website.security" ||
+    check.id === "website.info_consistency" ||
+    check.id === "website.notice_freshness" ||
+    check.id === "website.site_freshness"
+  ) {
     const reason =
       check.id === "website.https" ? websiteAnalysis?.httpsUnreachableReason : websiteAnalysis?.contentFetchFailureReason;
     return reason ? reachabilityReasonMessageKey(reason) : null;
@@ -46,6 +59,7 @@ const CONTENT_CHECK_IDS = [
   "website.contact_conversion",
   "website.about_presence",
   "website.services_presence",
+  "website.social_links",
 ];
 /** Can visitors trust what the site says — the same four live trust
  * checks the Overview's "Detailed checks" shows (spam/hacked content,
@@ -70,6 +84,15 @@ const TRUST_CHECK_IDS = [
  * — the one non-negotiable rule the three required states still enforce
  * is that "excluded" never renders red and never claims a zero. */
 type RowState = "full" | "partial" | "zero" | "excluded";
+
+/** Step 2d: never "Couldn't verify —" in front of text that already
+ * starts with a couldn't-check phrase (the doubled-prefix bug), and never
+ * on a "not checked yet" row — nothing failed there, no scan has looked
+ * yet. */
+function showCouldntVerifyPrefix(check: CheckResult): boolean {
+  if (check.excludedReason === "not_checked_yet") return false;
+  return !/^\s*(couldn['’]t|could not|no se pudo|no pudimos)/i.test(check.explanation);
+}
 
 function deriveRowState(check: CheckResult): RowState {
   const determinable = check.confidence === "VERIFIED" || check.confidence === "LIKELY";
@@ -172,7 +195,7 @@ function CheckRow({
         </div>
 
         <p className="mt-2 text-[13px] text-ink-soft">
-          {state === "excluded" && !excludedReasonKey && (
+          {state === "excluded" && !excludedReasonKey && showCouldntVerifyPrefix(check) && (
             <span className="mr-1.5 font-medium text-ink-mute">
               {t(locale, "dashboard.website.couldntVerifyPrefix")}
             </span>
@@ -342,6 +365,8 @@ export function WebsiteScoreBreakdown({
               </span>
             )}
           </div>
+          {/* Only rendered for a business with a website (see page.tsx). */}
+          <WebsiteCoverageNote category={websiteCategory} hasWebsite className="text-[13px] font-medium text-ink-soft" />
           <p className="text-[13px] text-ink-soft">
             {excludedPoints > 0
               ? tPlural(locale, "dashboard.website.excludedPoints", excludedPoints)

@@ -1,5 +1,6 @@
 "use server";
 
+import { businessWebsiteUrl } from "@/lib/businessWebsite";
 import { createClient } from "@/lib/supabase/server";
 import { fetchWebsiteHtml, captureWebsiteScreenshots } from "@/lib/websiteAnalysis";
 import { uploadWebsiteScreenshots } from "@/lib/websiteScreenshotUpload";
@@ -45,14 +46,16 @@ export async function refreshWebsiteScreenshots(businessId: string): Promise<Ref
 
   const { data: row, error } = await supabase
     .from("businesses")
-    .select("website, website_analysis_json")
+    .select("website, verified_website_url, website_analysis_json")
     .eq("id", businessId)
     .single();
 
   if (error || !row) {
     return { status: "not_found" };
   }
-  if (!row.website || row.website.trim().length === 0) {
+  // The business's real website — the listing's URL or a verified one.
+  const siteUrl = businessWebsiteUrl(row);
+  if (!siteUrl) {
     return { status: "no_website" };
   }
 
@@ -66,8 +69,8 @@ export async function refreshWebsiteScreenshots(businessId: string): Promise<Ref
     }
   }
 
-  const { html } = await fetchWebsiteHtml(row.website);
-  const capture = await captureWebsiteScreenshots(row.website, html, process.env.SCREENSHOT_API_KEY);
+  const { html } = await fetchWebsiteHtml(siteUrl);
+  const capture = await captureWebsiteScreenshots(siteUrl, html, process.env.SCREENSHOT_API_KEY);
   // Ownership invariant: uploadWebsiteScreenshots writes with the
   // service-role admin client, bypassing RLS — safe here because
   // businessId was only ever obtained from the query above, RLS-scoped
@@ -78,6 +81,11 @@ export async function refreshWebsiteScreenshots(businessId: string): Promise<Ref
 
   const lastScreenshotRefreshAt = new Date().toISOString();
   const updated: WebsiteAnalysis = {
+    // Everything this screenshot-only refresh doesn't touch carries
+    // forward — including websiteTrust, which an earlier version of this
+    // object silently dropped (erasing the site-trust findings until the
+    // next full scan).
+    ...(existing ?? {}),
     content: existing?.content ?? null,
     mobilePerformance: existing?.mobilePerformance ?? null,
     // Not touched by this action — this is a screenshot-only refresh,
@@ -90,6 +98,8 @@ export async function refreshWebsiteScreenshots(businessId: string): Promise<Ref
     screenshotUrl,
     additionalPages,
     lastScreenshotRefreshAt,
+    screenshotHttpStatus: capture.screenshotHttpStatus ?? null,
+    screenshotCaptureLog: { at: lastScreenshotRefreshAt, calls: capture.calls ?? 0, source: "manual" },
     // Not touched by this action — see the doc comment above.
     checkedAt: existing?.checkedAt ?? lastScreenshotRefreshAt,
     aboutPresence: existing?.aboutPresence ?? null,

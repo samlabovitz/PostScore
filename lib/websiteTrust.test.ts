@@ -6,6 +6,7 @@ import {
   comparePhone,
   compareListingInfo,
   detectAbandonedSignals,
+  detectEmbeddedMap,
   detectSpamSignals,
   extractCityFromAddress,
   findStaleNotices,
@@ -851,5 +852,25 @@ describe("trimNoticeToSentences — display-only trim of a stale notice to whole
 
   test("no date found falls back to the original text unchanged", () => {
     expect(trimNoticeToSentences("ion. Closed for renovation")).toBe("ion. Closed for renovation");
+  });
+});
+
+describe("Step 2d additions: embedded Google Map", () => {
+  test("a readable address in the map URL is returned (q=, /place/, and pb !2s forms)", () => {
+    expect(detectEmbeddedMap(`<iframe src="https://maps.google.com/maps?q=209+E+Main+St,+Newark,+DE&output=embed"></iframe>`)).toEqual({
+      readableAddress: "209 E Main St, Newark, DE",
+    });
+    expect(detectEmbeddedMap(`<iframe src="https://www.google.com/maps/place/123+Elm+Street,+Dover/@39.1,-75.5,15z"></iframe>`)?.readableAddress).toBe("123 Elm Street, Dover");
+    expect(
+      detectEmbeddedMap(`<iframe data-src="https://www.google.com/maps/embed?pb=!1m18!1m12!3m3!1d3!2d-75.7!3d39.6!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2s45%20Market%20St%2C%20Newark!5e0!3m2!1sen!2sus!4v1"></iframe>`)?.readableAddress
+    ).toBe("45 Market St, Newark");
+  });
+  test("a map with only a place name or coordinates is recorded, never guessed into an address", () => {
+    expect(detectEmbeddedMap(`<iframe src="https://www.google.com/maps/embed?pb=!1m18!2sBanh%20Mi%20Boy!5e0!3m2!1sen!2sus"></iframe>`)).toEqual({ readableAddress: null });
+    expect(detectEmbeddedMap(`<iframe src="https://maps.google.com/maps?ll=39.6,-75.7&output=embed"></iframe>`)).toEqual({ readableAddress: null });
+  });
+  test("no map / non-map iframe -> null", () => {
+    expect(detectEmbeddedMap(`<iframe src="https://www.youtube.com/embed/x"></iframe>`)).toBeNull();
+    expect(detectEmbeddedMap(null)).toBeNull();
   });
 });

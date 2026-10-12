@@ -73,3 +73,70 @@ describe("WebsiteVisualAnalysis — Day 4 Part 2c: honest empty state when no sc
     expect(html).not.toContain("No screenshot captured yet.");
   });
 });
+
+describe("Step 2d: stale screenshot caption", () => {
+  const base: WebsiteAnalysis = {
+    content: null,
+    mobilePerformance: null,
+    mobilePerformanceFailureReason: null,
+    contentFetchFailureReason: "blocked_automated_check",
+    httpsUnreachableReason: null,
+    screenshotUrl: "https://x/shot.png",
+    additionalPages: [],
+    lastScreenshotRefreshAt: "2026-09-29T23:37:17Z",
+    aboutPresence: null,
+    servicesPresence: null,
+    checkedAt: "2026-10-11T18:22:02Z",
+  };
+  function renderIn(locale: "en" | "es", analysis: WebsiteAnalysis) {
+    return renderToStaticMarkup(
+      <LocaleProvider locale={locale}>
+        <WebsiteVisualAnalysis businessId="biz-1" websiteAnalysis={analysis} />
+      </LocaleProvider>
+    ).replace(/&#x27;/g, "'");
+  }
+
+  test("EN: the real Wonder case says the screenshot may be out of date, never 'what customers see'", () => {
+    const html = renderIn("en", base);
+    expect(html).toContain("Screenshot from Sep 29, 2026 — we couldn't load your site in our latest check, so it may be out of date.");
+    expect(html).not.toContain("What customers actually see");
+  });
+
+  test("ES: usted copy", () => {
+    expect(renderIn("es", base)).toContain("no pudimos cargar su sitio en nuestra última verificación");
+  });
+
+  test("a stored 404 capture isn't shown at all", () => {
+    const html = renderIn("en", { ...base, contentFetchFailureReason: null, lastScreenshotRefreshAt: new Date().toISOString(), screenshotHttpStatus: 404 });
+    expect(html).not.toContain("https://x/shot.png");
+  });
+});
+
+describe("Step 2d correction: a capture of an automated-only error page", () => {
+  test("isn't shown; the honest 'open it yourself' note is (EN + ES)", () => {
+    const analysis: WebsiteAnalysis = {
+      content: null,
+      mobilePerformance: null,
+      mobilePerformanceFailureReason: null,
+      contentFetchFailureReason: "blocked_automated_check",
+      httpsUnreachableReason: null,
+      screenshotUrl: "https://x/shot.png",
+      additionalPages: [],
+      lastScreenshotRefreshAt: new Date().toISOString(),
+      aboutPresence: null,
+      servicesPresence: null,
+      websiteTrust: { automatedErrorPageUrl: "https://www.wonder.com/order/404", listingLinkBroken: false } as unknown as WebsiteAnalysis["websiteTrust"],
+      checkedAt: new Date().toISOString(),
+    };
+    const render = (locale: "en" | "es") =>
+      renderToStaticMarkup(
+        <LocaleProvider locale={locale}>
+          <WebsiteVisualAnalysis businessId="biz-1" websiteAnalysis={analysis} siteUrl="https://www.wonder.com/order/thegrove" />
+        </LocaleProvider>
+      ).replace(/&#x27;/g, "'");
+    const en = render("en");
+    expect(en).not.toContain("https://x/shot.png");
+    expect(en).toContain("We couldn't capture this page — the site showed our automated check an error page instead of what customers see. Open it yourself: https://www.wonder.com/order/thegrove");
+    expect(render("es")).toContain("Ábrala usted mismo: https://www.wonder.com/order/thegrove");
+  });
+});

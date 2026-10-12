@@ -578,6 +578,32 @@ export interface CompletedTask {
   verifiedAt: string | null;
 }
 
+/** website.has_website's honest task text when the business already has
+ * a real website — see buildActionPlan. Null = the normal "get a
+ * website" copy applies (truly no website). */
+function hasWebsiteTaskText(input: BusinessScoringInput, locale: Locale): { action: string; why: string; fix: string } | null {
+  if (input.website && input.websiteAnalysis?.websiteTrust?.listingLinkBroken) {
+    return {
+      action: t(locale, "growth.fix.brokenListingLink.action"),
+      why: t(locale, "growth.fix.brokenListingLink.why"),
+      fix: t(locale, "growth.fix.brokenListingLink.fix"),
+    };
+  }
+  if (input.verifiedElsewhereUrl) {
+    return {
+      action: t(locale, "growth.fix.addWebsiteToListing.heading"),
+      why: t(locale, "growth.fix.addWebsiteToListing.intro"),
+      fix: [
+        t(locale, "growth.fix.addWebsiteToListing.step1"),
+        t(locale, "growth.fix.addWebsiteToListing.step2"),
+        t(locale, "growth.fix.addWebsiteToListing.step3", { url: input.verifiedElsewhereUrl }),
+        t(locale, "growth.fix.addWebsiteToListing.step4"),
+      ].join(" "),
+    };
+  }
+  return null;
+}
+
 /**
  * Builds the ordered action plan from a live breakdown. Reuses
  * generateSuggestions()'s own output directly — same filtering
@@ -601,16 +627,21 @@ export function buildActionPlan(
     const check = breakdown.checks.find((c) => c.id === s.checkId)!;
     const copy = ACTION_PLAN_COPY[s.checkId] ?? FALLBACK_COPY;
     const row = rowByCheckId.get(s.checkId);
+    // Step 2d (text only): "Get a website up" is wrong for a business that
+    // HAS one — a broken Google-listing link, or a real site verified
+    // elsewhere. Every plan built from this (including the monthly
+    // report's top task) gets the honest Google-listing action instead.
+    const websiteText = s.checkId === "website.has_website" ? hasWebsiteTaskText(input, locale) : null;
 
     return {
       checkId: s.checkId,
       category: s.category,
       label: s.label,
       problem: check.explanation,
-      why: t(locale, copy.why),
-      action: t(locale, copy.action),
-      fix: t(locale, copy.fix),
-      ownerActionOnGoogle: copy.ownerActionOnGoogle,
+      why: websiteText?.why ?? t(locale, copy.why),
+      action: websiteText?.action ?? t(locale, copy.action),
+      fix: websiteText?.fix ?? t(locale, copy.fix),
+      ownerActionOnGoogle: websiteText ? true : copy.ownerActionOnGoogle,
       promisedPoints: s.promisedPoints,
       status: row?.status === "pending_verification" ? "pending_verification" : "open",
       markedDoneAt: row?.marked_done_at ?? null,
@@ -773,6 +804,10 @@ export function mergeWebsiteTasks(
     highOverlay: Partial<BusinessScoringInput>;
   } | null = null
 ): ActionPlanTask[] {
+  // Only for a listing with NO website at all — a listing whose link is
+  // broken (Step 2d, the real Wonder case) keeps its own Google-listing
+  // fix card instead of a "build a starter site" offer.
+  if (input.website && input.website.trim().length > 0) return tasks;
   const websiteTasks = tasks.filter((task) => WEBSITE_CHECK_IDS.includes(task.checkId));
   if (websiteTasks.length < 2) return tasks;
 
@@ -1435,6 +1470,24 @@ export function applyGrowthWebsiteRules(
       continue;
     }
     if (task.category === "website") continue;
+    // Step 2d: the listing HAS a link, but it opens an error page — a
+    // quick Google-listing fix this week (competes normally).
+    if (
+      task.checkId === "completeness.website_link" &&
+      input.website &&
+      input.websiteAnalysis?.websiteTrust?.listingLinkBroken
+    ) {
+      result.push({
+        ...task,
+        effort: "quick_win",
+        action: t(locale, "growth.fix.brokenListingLink.action"),
+        why: t(locale, "growth.fix.brokenListingLink.why"),
+        fix: t(locale, "growth.fix.brokenListingLink.fix"),
+        timingNote: t(locale, "growth.fix.addWebsiteToListing.note"),
+        ownerActionOnGoogle: true,
+      });
+      continue;
+    }
     if (task.checkId === "completeness.website_link" && input.verifiedElsewhereUrl) {
       result.push({
         ...task,
@@ -1506,9 +1559,14 @@ export function buildWebsiteBanner(
   // saying "100/100 — 1 improvement" would contradict it.
   const website = breakdown.categories.find((c) => c.id === "website");
   if (!website || website.relativeScore === null || Math.round(website.relativeScore) >= 100) return null;
+  // A broken Google-listing link is fixed by the listing card this week
+  // (Step 2d), which also restores website.has_website — never counted
+  // twice in the banner.
+  const listingLinkBroken = !!input.website && input.websiteAnalysis?.websiteTrust?.listingLinkBroken === true;
   const losing = website.checks.filter(
     (c) =>
       c.id !== GOOGLE_MISMATCH_CHECK_ID &&
+      !(listingLinkBroken && c.id === "website.has_website") &&
       (c.confidence === "VERIFIED" || c.confidence === "LIKELY") &&
       c.earnedPoints !== null &&
       c.earnedPoints < c.maxPoints

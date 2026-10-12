@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { SCREENSHOT_REFRESH_COOLDOWN_DAYS, type WebsiteAnalysis, type WebsiteAnalysisPage } from "@/lib/scoring";
 import { refreshWebsiteScreenshots } from "@/app/actions/websiteScreenshots";
+import { screenshotFreshness, visibleAdditionalPages, visibleHomepageScreenshot } from "@/lib/screenshotFreshness";
 import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 
 const COOLDOWN_MS = SCREENSHOT_REFRESH_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
@@ -256,20 +257,28 @@ function ScreenshotLightbox({
 export function WebsiteVisualAnalysis({
   businessId,
   websiteAnalysis,
+  siteUrl = null,
 }: {
   businessId: string;
   websiteAnalysis: WebsiteAnalysis | null;
+  /** The site that was captured — named in the "open it yourself" note
+   * when the capture showed our automated check an error page. */
+  siteUrl?: string | null;
 }) {
   const locale = useLocale();
   const [expanded, setExpanded] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  const additionalPages = websiteAnalysis?.additionalPages ?? [];
+  // Step 2d: a capture whose stored status is 4xx/5xx is never shown,
+  // and a stale one is never captioned "what customers see".
+  const additionalPages = visibleAdditionalPages(websiteAnalysis);
   const hasAdditionalPages = additionalPages.length > 0;
+  const homepageScreenshotUrl = visibleHomepageScreenshot(websiteAnalysis);
+  const freshness = screenshotFreshness(websiteAnalysis);
 
   const lightboxPages: LightboxPage[] = websiteAnalysis
     ? [
-        { label: t(locale, "dashboard.website.homepageLabel"), screenshotUrl: websiteAnalysis.screenshotUrl },
+        { label: t(locale, "dashboard.website.homepageLabel"), screenshotUrl: homepageScreenshotUrl },
         ...additionalPages.map((p) => ({ label: p.label, screenshotUrl: p.screenshotUrl })),
       ]
     : [];
@@ -285,8 +294,22 @@ export function WebsiteVisualAnalysis({
               genuine screenshot backs up — never shown over the honest
               empty state below (Day 4 Part 2c: no screenshot must never
               be captioned as if one exists). */}
-          {websiteAnalysis?.screenshotUrl && (
+          {freshness.kind === "current" && (
             <p className="text-sm text-ink-soft">{t(locale, "dashboard.website.visualAnalysisSubtitle")}</p>
+          )}
+          {freshness.kind === "listing_link_error" && (
+            <p className="text-sm text-amber">{t(locale, "dashboard.website.screenshotListingLinkLabel")}</p>
+          )}
+          {(freshness.kind === "stale_unreachable" || freshness.kind === "stale_old") && (
+            <p className="text-sm text-amber">
+              {t(
+                locale,
+                freshness.kind === "stale_unreachable"
+                  ? "dashboard.website.screenshotStaleUnreachable"
+                  : "dashboard.website.screenshotStaleOld",
+                { date: formatCaptureDate(freshness.capturedAt, locale) }
+              )}
+            </p>
           )}
         </div>
         <RefreshScreenshotsControl
@@ -297,7 +320,7 @@ export function WebsiteVisualAnalysis({
 
       <div className="flex flex-col gap-1.5">
         <Card className="flex flex-col overflow-hidden p-0">
-          {websiteAnalysis?.screenshotUrl ? (
+          {homepageScreenshotUrl ? (
             <>
               <button
                 type="button"
@@ -307,7 +330,7 @@ export function WebsiteVisualAnalysis({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={websiteAnalysis.screenshotUrl}
+                  src={homepageScreenshotUrl}
                   alt={t(locale, "dashboard.website.homepageScreenshotAlt")}
                   className="max-h-[440px] w-full border-b border-paper-line object-cover object-top"
                 />
@@ -326,6 +349,15 @@ export function WebsiteVisualAnalysis({
                 </button>
               )}
             </>
+          ) : freshness.kind === "automated_error_page" ? (
+            // Step 2d: never show a picture of an error page our automated
+            // check was served — real customers may see the real page.
+            <div className="flex flex-col items-center justify-center gap-2 p-10 text-center">
+              <IconPhotoOff size={28} className="text-ink-mute" />
+              <p className="max-w-md text-sm text-ink-soft">
+                {t(locale, "dashboard.website.screenshotAutomatedErrorPage", { url: siteUrl ?? "" })}
+              </p>
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-2 p-10 text-center">
               <IconPhoto size={28} className="text-ink-mute" />

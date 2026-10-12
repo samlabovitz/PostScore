@@ -193,7 +193,11 @@ describe("applyGrowthWebsiteRules", () => {
     const { raw, tasks } = growthPlan(input);
     const before = raw.find((x) => x.checkId === "completeness.website_link");
     const after = tasks.find((x) => x.checkId === "completeness.website_link");
-    if (before && after) expect(after.effort).toBe(before.effort);
+    // Step 2d: a listing link that opens an error page is a quick Google-listing fix.
+    if (before && after) {
+      expect(after.effort).toBe("quick_win");
+      expect(after.action).toBe(t("en", "growth.fix.brokenListingLink.action"));
+    }
   });
 });
 
@@ -279,7 +283,7 @@ describe("buildWebsiteBanner", () => {
     // A barely-below-full speed score: real gap, but the Website page reads 100.
     const input: BusinessScoringInput = {
       ...BASE,
-      websiteAnalysis: { ...GOOD_ANALYSIS, mobilePerformance: { method: "lab", fieldCategory: null, labScore: 99 } },
+      websiteAnalysis: { ...GOOD_ANALYSIS, mobilePerformance: { method: "lab", fieldCategory: null, labScore: 98 } },
     };
     const { breakdown, banner } = growthPlan(input);
     const website = breakdown.categories.find((c) => c.id === "website")!;
@@ -304,5 +308,39 @@ describe("buildWebsiteBanner", () => {
       verifiedElsewhereUrl: "https://banhmiboy.com",
     };
     expect(growthPlan(verified).banner?.kind).toBe("improve");
+  });
+});
+
+describe("website.has_website task text never says 'Get a website up' when a site exists (Step 2d)", () => {
+  function hasWebsiteTask(input: BusinessScoringInput) {
+    const { breakdown, suggestions } = getScoreWithSuggestions(input, "en");
+    return buildActionPlan(breakdown, suggestions, [], input, "en").find((x) => x.checkId === "website.has_website");
+  }
+  test("broken listing link -> the broken-link action", () => {
+    const task = hasWebsiteTask({ ...BASE, websiteAnalysis: { ...GOOD_ANALYSIS, websiteTrust: { ...CLEAN_TRUST, listingLinkBroken: true } } });
+    expect(task?.action).toBe("Update the website link on your Google listing — it currently opens an error page.");
+    expect(task?.fix).not.toContain("starter-site");
+  });
+  test("truly no website -> the normal copy", () => {
+    const task = hasWebsiteTask({ ...BASE, website: null, httpsStatus: null, websiteAnalysis: null });
+    expect(task?.action).toBe(t("en", "content.actionPlan.website.has_website.action"));
+  });
+});
+
+describe("website banner hides when nothing scoreable is left (Step 2d, the Wonder case)", () => {
+  test("bot-blocked site with only couldn't-check website gaps -> no banner", () => {
+    const input: BusinessScoringInput = {
+      ...BASE,
+      websiteAnalysis: {
+        ...GOOD_ANALYSIS,
+        content: null,
+        contentFetchFailureReason: "blocked_automated_check",
+        mobilePerformance: { method: "field", fieldCategory: "SLOW", labScore: null },
+        aboutPresence: { state: "couldnt_check", url: null, locatedOnHomepage: false, reason: "blocked_automated_check", note: null },
+        servicesPresence: { state: "couldnt_check", url: null, locatedOnHomepage: false, reason: "blocked_automated_check", note: null },
+      },
+      httpsStatus: "unreachable",
+    };
+    expect(buildWebsiteBanner(getScoreWithSuggestions(input, "en").breakdown, input, null)).toBeNull();
   });
 });

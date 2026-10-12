@@ -502,6 +502,72 @@ export interface InfoFieldFinding {
   /** The listing's own real value, for display — null when the listing
    * itself has nothing to compare against for this field. */
   googleValue: string | null;
+  /** Where the site's value came from when it wasn't the page text —
+   * "map" = the address in an embedded Google Map's own URL (Step 2d). */
+  source?: "map";
+}
+
+/** An embedded Google Map found on the site (Step 2d). readableAddress is
+ * set ONLY when the map's own URL spells out a street address — never
+ * guessed from a place name or coordinates. */
+export interface EmbeddedMapFinding {
+  readableAddress: string | null;
+}
+
+/** A real street-address shape: a street number of 2+ digits followed
+ * by a word (same narrow evidence bar as compareAddress). */
+const STREET_ADDRESS_RE = /\b\d{2,}[A-Za-z]?\s+[A-Za-z]/;
+
+function mapUrlTextCandidates(rawSrc: string): string[] {
+  const src = rawSrc.replace(/&amp;/gi, "&");
+  const candidates: string[] = [];
+  let url: URL | null = null;
+  try {
+    url = new URL(src, "https://www.google.com/");
+  } catch {
+    url = null;
+  }
+  const decode = (v: string) => {
+    try {
+      return decodeURIComponent(v.replace(/\+/g, " "));
+    } catch {
+      return v.replace(/\+/g, " ");
+    }
+  };
+  if (url) {
+    for (const key of ["q", "query", "daddr", "address"]) {
+      const v = url.searchParams.get(key);
+      if (v) candidates.push(v);
+    }
+    const place = url.pathname.match(/\/maps\/(?:place|search)\/([^/@]+)/i);
+    if (place) candidates.push(decode(place[1]));
+    const pb = url.searchParams.get("pb");
+    if (pb) {
+      for (const part of pb.split("!")) {
+        if (part.startsWith("2s") && part.length > 5) candidates.push(decode(part.slice(2)));
+      }
+    }
+  }
+  return candidates.map((c) => c.replace(/\s+/g, " ").trim()).filter(Boolean);
+}
+
+/**
+ * Finds an embedded Google Map (an `<iframe>` whose src/data-src points
+ * at google.com/maps or maps.google.*). Returns null when there's none.
+ */
+export function detectEmbeddedMap(html: string | null): EmbeddedMapFinding | null {
+  if (!html) return null;
+  const iframes = html.match(/<iframe\b[^>]*>/gi) ?? [];
+  let found = false;
+  for (const tag of iframes) {
+    const srcMatch = tag.match(/\s(?:data-)?src\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i);
+    const src = srcMatch ? srcMatch[1] ?? srcMatch[2] ?? srcMatch[3] ?? "" : "";
+    if (!/(?:google\.[a-z.]+\/maps|maps\.google\.[a-z.]+)/i.test(src)) continue;
+    found = true;
+    const address = mapUrlTextCandidates(src).find((c) => STREET_ADDRESS_RE.test(c));
+    if (address) return { readableAddress: address };
+  }
+  return found ? { readableAddress: null } : null;
 }
 
 /** Normalizes a phone number down to its last 10 real digits — country

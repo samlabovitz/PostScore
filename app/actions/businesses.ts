@@ -1,6 +1,8 @@
 "use server";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { canAutoCapture, needsAutoScreenshot, screenshotAutoMonthlyCap } from "@/lib/screenshotBudget";
+import { loadScreenshotCallsThisMonth } from "@/lib/screenshotBudgetServer";
 import { createClient } from "@/lib/supabase/server";
 import type { PlaceDetails } from "@/lib/google/places";
 import { normalizeLocale, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n";
@@ -169,7 +171,15 @@ export async function saveBusinessWithClient(
       : null;
   const analysisUrl = place.website || verifiedWebsiteUrl;
   const existingAnalysis = analysisUrl ? parseWebsiteAnalysis(existingRow?.website_analysis_json ?? null) : null;
-  const captureScreenshots = !skipScreenshots && existingAnalysis?.lastScreenshotRefreshAt == null;
+  // Step 2d (see lib/screenshotBudget.ts): capture automatically only
+  // when this business has no screenshot and none was ever attempted —
+  // never because one is old — and only while this month's real
+  // ScreenshotOne usage leaves room under the cap. When skipped, the
+  // honest "no screenshot captured yet" state simply stays.
+  let captureScreenshots = !skipScreenshots && !!analysisUrl && needsAutoScreenshot(existingAnalysis);
+  if (captureScreenshots) {
+    captureScreenshots = canAutoCapture(await loadScreenshotCallsThisMonth(), screenshotAutoMonthlyCap());
+  }
 
   const [httpsResult, analysis] = await Promise.all([
     analysisUrl ? checkWebsiteHttps(analysisUrl) : Promise.resolve(null),
@@ -206,6 +216,24 @@ export async function saveBusinessWithClient(
       )
     : { mobilePerformance: null, mobilePerformanceFailureReason: null };
 
+  // Step 2d (corrected after the real Wonder case): a soft 404 seen only
+  // by PageSpeed's automated Chrome NEVER marks the Google listing link
+  // broken — sites like Wonder show automated browsers an error page
+  // while real people get the real page. It's recorded only as "this
+  // site shows automated checks an error page" (couldn't check).
+  // The ONE way our plain fetch marks the listing link broken (Step 2d):
+  // the listing's own URL answered a genuine 404 or 410. Never 403/429/
+  // 503 or any bot-challenge signal — those stay "couldn't check".
+  const listingLinkMissing =
+    !!analysis?.contentFetchMissingPageStatus && !!place.website && analysisUrl === place.website;
+  const websiteTrustForSave = analysis
+    ? {
+        ...analysis.websiteTrust,
+        ...(analysis.pageSpeedSoftNotFoundUrl ? { automatedErrorPageUrl: analysis.pageSpeedSoftNotFoundUrl } : {}),
+        ...(listingLinkMissing ? { listingLinkBroken: true, listingLinkErrorPageUrl: place.website } : {}),
+      }
+    : null;
+
   const checkedAt = new Date().toISOString();
   const websiteAnalysis: WebsiteAnalysis | null = analysis
     ? captureScreenshots
@@ -226,7 +254,7 @@ export async function saveBusinessWithClient(
           servicesPresence: analysis.servicesPresence,
           // Real site-trust signals (Oct 10) — same "always fresh" reasoning
           // as aboutPresence/servicesPresence above.
-          websiteTrust: analysis.websiteTrust,
+          websiteTrust: websiteTrustForSave ?? analysis.websiteTrust,
           checkedAt,
         }
       : {
@@ -244,7 +272,7 @@ export async function saveBusinessWithClient(
           // too — see the first branch's own comment above.
           aboutPresence: analysis.aboutPresence,
           servicesPresence: analysis.servicesPresence,
-          websiteTrust: analysis.websiteTrust,
+          websiteTrust: websiteTrustForSave ?? analysis.websiteTrust,
           checkedAt,
         }
     : null;
@@ -323,7 +351,14 @@ export async function saveBusinessWithClient(
     const { error: followUpError } = await supabase
       .from("businesses")
       .update({
-        website_analysis_json: { ...websiteAnalysis, screenshotUrl, additionalPages, lastScreenshotRefreshAt },
+        website_analysis_json: {
+          ...websiteAnalysis,
+          screenshotUrl,
+          additionalPages,
+          lastScreenshotRefreshAt,
+          screenshotHttpStatus: analysis?.screenshotHttpStatus ?? null,
+          screenshotCaptureLog: { at: lastScreenshotRefreshAt, calls: analysis?.screenshotCalls ?? 0, source: "auto" },
+        },
       })
       .eq("id", data.id);
 

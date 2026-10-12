@@ -365,6 +365,32 @@ export type MessageKey =
   | "growth.fix.addWebsiteToListing.step3"
   | "growth.fix.addWebsiteToListing.step4"
   | "growth.fix.addWebsiteToListing.note"
+  | "content.checks.website.trust.explanation.javascriptOnly"
+  | "dashboard.website.partlyChecked"
+  | "content.checks.website.performance_mobile.explanation.blockedSite"
+  | "content.checks.website.has_website.explanation.presentAutomatedErrorPage"
+  | "dashboard.website.screenshotAutomatedErrorPage"
+  | "dashboard.website.performanceErrorPage"
+  | "content.checks.website.performance_mobile.explanation.fieldOrigin"
+  | "content.checks.website.performance_mobile.explanation.fieldLastMeasuredErrorPage"
+  | "content.checks.website.performance_mobile.explanation.labLastMeasuredErrorPage"
+  | "content.checks.completeness.website_link.explanation.brokenErrorPage"
+  | "growth.fix.brokenListingLink.action"
+  | "growth.fix.brokenListingLink.why"
+  | "growth.fix.brokenListingLink.fix"
+  | "dashboard.website.screenshotListingLinkLabel"
+  | "content.checks.website.social_links.label"
+  | "content.checks.website.social_links.advice"
+  | "content.checks.website.social_links.explanation.noWebsite"
+  | "content.checks.website.social_links.explanation.notAnalyzed"
+  | "content.checks.website.social_links.explanation.found"
+  | "content.checks.website.social_links.explanation.none"
+  | "content.checks.website.social_links.explanation.clientRenderedShell"
+  | "content.checks.website.info_consistency.explanation.conflictAddressMap"
+  | "content.checks.website.info_consistency.explanation.allMatchMap"
+  | "dashboard.website.screenshotStaleUnreachable"
+  | "dashboard.website.screenshotStaleOld"
+  | "dashboard.overview.verifiedWebsiteNotOnListing"
   | "content.spamTopic.replica"
   | "content.spamTopic.casino"
   | "content.spamTopic.pharma"
@@ -2603,7 +2629,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Couldn't verify — this site renders its content with JavaScript, which our static check can't read. Excluded from your score, not counted against you.",
     "content.checks.website.contact_conversion.explanation.allGood":
       "A real contact link and a clear call-to-action are both present.",
-    "content.checks.website.contact_conversion.explanation.noContact": "no click-to-call phone or email link found",
+    "content.checks.website.contact_conversion.explanation.noContact": "no click-to-call phone, email, or contact page link found",
     "content.checks.website.contact_conversion.explanation.noCta": "no clear call-to-action found",
 
     "content.checks.website.about_presence.label": "About / our story",
@@ -2712,6 +2738,32 @@ export const messages: Record<Locale, LocaleMessages> = {
     "growth.fix.addWebsiteToListing.step4": "Tap Save.",
     "growth.fix.addWebsiteToListing.note":
       "Google may take a few days to show the update publicly. Your next PostScore scan will confirm it went through.",
+    "content.checks.website.trust.explanation.javascriptOnly": "Couldn't check — this site builds its content with JavaScript, so our check couldn't read it. Excluded from your score, not counted against you.",
+    "dashboard.website.partlyChecked": "Based on {n} of {total} website checks — the rest couldn't be checked.",
+    "content.checks.website.performance_mobile.explanation.blockedSite": "Couldn't check — this site blocks automated checks, so we can't measure its speed. Excluded from your score, not counted against you.",
+    "content.checks.website.has_website.explanation.presentAutomatedErrorPage": "Business has a real website on file. We couldn't check the page itself — this site shows automated checks an error page instead of what customers see.",
+    "dashboard.website.screenshotAutomatedErrorPage": "We couldn't capture this page — the site showed our automated check an error page instead of what customers see. Open it yourself: {url}",
+    "dashboard.website.performanceErrorPage": "PageSpeed reached an error page instead of your site, so we couldn't measure its speed.",
+    "content.checks.website.performance_mobile.explanation.fieldOrigin": "Real visitors on phones across your whole site over the last 28 days (Google Chrome data, whole-site measurement — this page's own link opens an error page): {category}.",
+    "content.checks.website.performance_mobile.explanation.fieldLastMeasuredErrorPage": "Real visitors on phones (Google Chrome data) — last measured {date}: {category}. This scan's speed check reached an error page instead of your site, so we're showing the most recent real measurement instead.",
+    "content.checks.website.performance_mobile.explanation.labLastMeasuredErrorPage": "Simulated phone test — last measured {date}: {score}/100. This scan's speed check reached an error page instead of your site, so we're showing the most recent real measurement instead.",
+    "content.checks.completeness.website_link.explanation.brokenErrorPage": "Your Google listing's website link opens a 'Page Not Found' page ({url}).",
+    "growth.fix.brokenListingLink.action": "Update the website link on your Google listing — it currently opens an error page.",
+    "growth.fix.brokenListingLink.why": "Customers who tap your website from Google land on a 'Page Not Found' page instead of yours.",
+    "growth.fix.brokenListingLink.fix": "In your Google Business Profile, select Edit profile and replace the Website link with your location's correct page. Open it yourself to confirm it works, then tap Save.",
+    "dashboard.website.screenshotListingLinkLabel": "What customers see when they click your Google listing link",
+    "content.checks.website.social_links.label": "Social media links",
+    "content.checks.website.social_links.advice": "Link your Instagram, Facebook, or other social profiles from your website (usually in the header or footer) so visitors can follow you.",
+    "content.checks.website.social_links.explanation.noWebsite": "Not applicable — no website on file to check.",
+    "content.checks.website.social_links.explanation.notAnalyzed": "Not checked yet — your next PostScore scan will look for social media links.",
+    "content.checks.website.social_links.explanation.found": "Social profiles linked from your site: {profiles}.",
+    "content.checks.website.social_links.explanation.none": "No links to your social media profiles found on your site — add them to your header or footer.",
+    "content.checks.website.social_links.explanation.clientRenderedShell": "Couldn't verify — this site renders its content with JavaScript, so its links weren't readable by our check. Excluded from your score, not counted against you.",
+    "content.checks.website.info_consistency.explanation.conflictAddressMap": "The map on your website shows {site}; Google says {google}.",
+    "content.checks.website.info_consistency.explanation.allMatchMap": "Your website's hours, phone, and address match your Google listing (address from the map on your website).",
+    "dashboard.website.screenshotStaleUnreachable": "Screenshot from {date} — we couldn't load your site in our latest check, so it may be out of date.",
+    "dashboard.website.screenshotStaleOld": "Screenshot from {date} — it's more than 30 days old, so it may be out of date.",
+    "dashboard.overview.verifiedWebsiteNotOnListing": "Verified website: {url} (not on your Google listing)",
     "content.spamTopic.replica": "replica watches",
     "content.spamTopic.casino": "online casino",
     "content.spamTopic.pharma": "online pharmacy",
@@ -5105,7 +5157,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.has_website.explanation.present": "El negocio tiene un sitio web real y verificado.",
     "content.checks.website.has_website.explanation.presentFreeBuilder": "El negocio tiene un sitio web real registrado. Su sitio usa una dirección de un creador de sitios gratuito — su propio dominio se ve más confiable.",
     "content.checks.website.has_website.explanation.verifiedElsewhere": "Encontramos y verificamos su sitio web real en {url} (coincide por teléfono o dirección), aunque todavía no está en su ficha de Google.",
-    "content.checks.website.has_website.explanation.listingBroken": "El enlace del sitio web en su ficha de Google abre una página de \"No encontrado\" — no cuenta como un sitio real hasta que se corrija.",
+    "content.checks.website.has_website.explanation.listingBroken": "El enlace del sitio web en su ficha de Google abre una página de error ('Page Not Found') — no cuenta como un sitio real hasta que se corrija.",
     "content.checks.website.has_website.explanation.directory": "El enlace de su ficha de Google va a una página de directorio/red social (no a su propio sitio) — no cuenta como un sitio web real.",
     "content.checks.website.has_website.explanation.missing": "No hay ningún sitio web registrado.",
     "content.checks.website.has_website.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para verificarlo.",
@@ -5160,7 +5212,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.contact_conversion.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para comprobar su información de contacto y llamadas a la acción reales.",
     "content.checks.website.contact_conversion.explanation.clientRenderedShell": "No se pudo verificar — este sitio muestra su contenido con JavaScript, que nuestra comprobación estática no puede leer. Se excluye de su puntuación, no se cuenta en su contra.",
     "content.checks.website.contact_conversion.explanation.allGood": "Hay un enlace de contacto real y una llamada a la acción clara.",
-    "content.checks.website.contact_conversion.explanation.noContact": "no se encontró un enlace de teléfono con clic para llamar ni de correo electrónico",
+    "content.checks.website.contact_conversion.explanation.noContact": "no se encontró un enlace de teléfono con clic para llamar, de correo electrónico ni a una página de contacto",
     "content.checks.website.contact_conversion.explanation.noCta": "no se encontró una llamada a la acción clara",
     "content.checks.website.about_presence.label": "Acerca de / nuestra historia",
     "content.checks.website.about_presence.advice": "Agregue una página real de Acerca de o Nuestra historia (enlazada desde su navegación principal) — una breve página de antecedentes o de equipo les da confianza a los visitantes de que este es un negocio real y establecido.",
@@ -5223,6 +5275,32 @@ export const messages: Record<Locale, LocaleMessages> = {
     "growth.fix.addWebsiteToListing.step3": "Busque el campo Sitio web y pegue su sitio real: {url}",
     "growth.fix.addWebsiteToListing.step4": "Toque Guardar.",
     "growth.fix.addWebsiteToListing.note": "Google puede tardar unos días en mostrar la actualización públicamente. Su próximo escaneo de PostScore confirmará que se realizó correctamente.",
+    "content.checks.website.trust.explanation.javascriptOnly": "No se pudo verificar — este sitio construye su contenido con JavaScript, así que nuestra comprobación no pudo leerlo. Se excluye de su puntuación, no se cuenta en su contra.",
+    "dashboard.website.partlyChecked": "Basado en {n} de {total} comprobaciones del sitio web — el resto no se pudo verificar.",
+    "content.checks.website.performance_mobile.explanation.blockedSite": "No se pudo verificar — este sitio bloquea las verificaciones automáticas, así que no podemos medir su velocidad. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.has_website.explanation.presentAutomatedErrorPage": "El negocio tiene un sitio web real registrado. No pudimos revisar la página en sí — este sitio muestra a las verificaciones automáticas una página de error en lugar de lo que ven los clientes.",
+    "dashboard.website.screenshotAutomatedErrorPage": "No pudimos capturar esta página — el sitio mostró a nuestra verificación automática una página de error en lugar de lo que ven los clientes. Ábrala usted mismo: {url}",
+    "dashboard.website.performanceErrorPage": "PageSpeed llegó a una página de error en lugar de su sitio, así que no pudimos medir su velocidad.",
+    "content.checks.website.performance_mobile.explanation.fieldOrigin": "Visitantes reales en teléfonos en todo su sitio durante los últimos 28 días (datos de Google Chrome, medición de todo el sitio — el enlace de esta página abre una página de error): {category}.",
+    "content.checks.website.performance_mobile.explanation.fieldLastMeasuredErrorPage": "Visitantes reales en teléfonos (datos de Google Chrome) — última medición el {date}: {category}. La comprobación de velocidad de este escaneo llegó a una página de error en lugar de su sitio, así que mostramos la medición real más reciente.",
+    "content.checks.website.performance_mobile.explanation.labLastMeasuredErrorPage": "Prueba simulada en teléfono — última medición el {date}: {score}/100. La comprobación de velocidad de este escaneo llegó a una página de error en lugar de su sitio, así que mostramos la medición real más reciente.",
+    "content.checks.completeness.website_link.explanation.brokenErrorPage": "El enlace del sitio web de su ficha de Google abre una página de error ('Page Not Found') ({url}).",
+    "growth.fix.brokenListingLink.action": "Actualice el enlace del sitio web en su ficha de Google — actualmente abre una página de error.",
+    "growth.fix.brokenListingLink.why": "Los clientes que tocan su sitio web desde Google llegan a una página de error ('Page Not Found') en lugar de la suya.",
+    "growth.fix.brokenListingLink.fix": "En su Perfil de Negocio de Google, reemplace el enlace de su sitio web por la página correcta de su local. Ábrala usted mismo para confirmar que funciona y guarde los cambios.",
+    "dashboard.website.screenshotListingLinkLabel": "Lo que ven los clientes cuando hacen clic en el enlace de su ficha de Google",
+    "content.checks.website.social_links.label": "Enlaces a redes sociales",
+    "content.checks.website.social_links.advice": "Enlace sus perfiles de Instagram, Facebook u otras redes sociales desde su sitio web (normalmente en el encabezado o el pie de página) para que los visitantes puedan seguirle.",
+    "content.checks.website.social_links.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para verificar.",
+    "content.checks.website.social_links.explanation.notAnalyzed": "Aún no se ha revisado — su próximo escaneo de PostScore buscará enlaces a redes sociales.",
+    "content.checks.website.social_links.explanation.found": "Perfiles sociales enlazados desde su sitio: {profiles}.",
+    "content.checks.website.social_links.explanation.none": "No se encontraron enlaces a sus perfiles de redes sociales en su sitio — agréguelos al encabezado o al pie de página.",
+    "content.checks.website.social_links.explanation.clientRenderedShell": "No se pudo verificar — este sitio muestra su contenido con JavaScript, así que nuestra comprobación no pudo leer sus enlaces. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.info_consistency.explanation.conflictAddressMap": "El mapa de su sitio web muestra {site}; Google dice {google}.",
+    "content.checks.website.info_consistency.explanation.allMatchMap": "Los horarios, el teléfono y la dirección de su sitio web coinciden con su ficha de Google (dirección tomada del mapa de su sitio web).",
+    "dashboard.website.screenshotStaleUnreachable": "Captura de pantalla del {date} — no pudimos cargar su sitio en nuestra última verificación, así que puede estar desactualizada.",
+    "dashboard.website.screenshotStaleOld": "Captura de pantalla del {date} — tiene más de 30 días, así que puede estar desactualizada.",
+    "dashboard.overview.verifiedWebsiteNotOnListing": "Sitio web verificado: {url} (no está en su ficha de Google)",
     "content.spamTopic.replica": "relojes de imitación",
     "content.spamTopic.casino": "casino en línea",
     "content.spamTopic.pharma": "farmacia en línea",

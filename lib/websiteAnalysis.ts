@@ -16,7 +16,7 @@
 // misconfigured check degrades to null so the caller can honestly
 // exclude it from scoring, never fabricate a value or fail the save.
 
-import { analyzeWebsiteHtml } from "./websiteContentAnalysis";
+import { analyzeWebsiteHtml, detectContactLinks, detectSocialProfiles } from "./websiteContentAnalysis";
 import type {
   FieldSpeedCategory,
   MobilePerformanceFailure,
@@ -50,12 +50,15 @@ import {
 } from "./pagePresenceDetection";
 import {
   classifyWebsiteKind,
+  compareAddress,
   compareListingInfo,
+  detectEmbeddedMap,
+  type EmbeddedMapFinding,
+  type InfoFieldFinding,
   detectAbandonedSignals,
   detectSpamSignals,
   extractCityFromAddress,
   findStaleNotices,
-  looksLikePageNotFound,
 } from "./websiteTrust";
 
 /** Widened from 8000ms (Day 4 Task "timed_out vs down" fix) — see
@@ -68,7 +71,9 @@ const HTML_FETCH_MAX_ATTEMPTS = 2;
 const HTML_FETCH_RETRY_DELAY_MS = 500;
 /** Real Lighthouse audits genuinely take a while — this needs to be
  * generous enough that a normal site's audit can finish. */
-const PAGESPEED_TIMEOUT_MS = 30000;
+// Step 2d: 60s — a slow real site (the real Wonder case: ~58s per run)
+// routinely needs it; 30s killed the run that carries real-visitor data.
+const PAGESPEED_TIMEOUT_MS = 60000;
 /** One retry after a timeout/network failure (never after a real HTTP
  * error response) — PageSpeed audits are intermittently slow enough to
  * blow even a 30s budget under load, and a single retry recovers most of
@@ -88,7 +93,7 @@ const MAX_HTML_BYTES = 2_000_000;
  * scan — keeps the added ScreenshotOne cost/time bounded regardless of
  * how big a site's nav or sitemap is. Total captures per scan is this
  * plus the one homepage screenshot. */
-const MAX_ADDITIONAL_PAGES = 4;
+export const MAX_ADDITIONAL_PAGES = 4;
 
 /** Only real discovered links whose visible text or URL path mentions one
  * of these count as a "key page" worth screenshotting — deliberately not
@@ -144,9 +149,15 @@ export interface FetchWebsiteHtmlResult {
    * never suppresses a real "down"/http_error/blocked signal from the
    * other. */
   failureReason: ReachabilityFailureReason | null;
+  /** Step 2d: set ONLY when the server genuinely answered 404 or 410 (a
+   * real missing page — never a bot block/challenge, which is
+   * classified "blocked_automated_check" and stays "couldn't check"). */
+  missingPageStatus?: 404 | 410 | null;
 }
 
-type HtmlFetchOutcome = { kind: "ok"; html: string } | { kind: "failed"; reason: ReachabilityFailureReason };
+type HtmlFetchOutcome =
+  | { kind: "ok"; html: string }
+  | { kind: "failed"; reason: ReachabilityFailureReason; status?: number };
 
 /** One single real attempt for one scheme — no retry here
  * (fetchHtmlForScheme below owns that). Never throws. Distinguishes a
@@ -170,7 +181,7 @@ async function fetchHtmlOnce(url: string, fetchImpl: typeof fetch): Promise<Html
       } catch {
         bodySnippet = null;
       }
-      return { kind: "failed", reason: classifyUnreachableResponse(res.status, bodySnippet) };
+      return { kind: "failed", reason: classifyUnreachableResponse(res.status, bodySnippet), status: res.status };
     }
     try {
       const buf = await res.arrayBuffer();
@@ -218,12 +229,16 @@ export async function fetchWebsiteHtml(
   if (!website || website.trim().length === 0) return { html: null, failureReason: "down" };
 
   let worstReason: ReachabilityFailureReason | null = null;
+  let missingPageStatus: 404 | 410 | null = null;
   for (const scheme of ["https", "http"] as const) {
     const outcome = await fetchHtmlForScheme(withScheme(website, scheme), fetchImpl);
     if (outcome.kind === "ok") return { html: outcome.html, failureReason: null };
     worstReason = worstReason === null ? outcome.reason : moreSpecificReason(worstReason, outcome.reason);
+    if (outcome.reason === "http_error" && (outcome.status === 404 || outcome.status === 410)) missingPageStatus = outcome.status;
   }
-  return { html: null, failureReason: worstReason ?? "down" };
+  // A bot block on either scheme outranks a 404 on the other — never
+  // call a link missing when we were blocked.
+  return { html: null, failureReason: worstReason ?? "down", missingPageStatus: worstReason === "http_error" ? missingPageStatus : null };
 }
 
 /** A real internal page discovered on the homepage's nav or sitemap.xml,
@@ -942,6 +957,9 @@ export interface AdditionalPageCapture {
   label: string;
   url: string;
   screenshotBytes: Buffer | null;
+  /** The target page's own HTTP status as ScreenshotOne saw it (Step
+   * 2d), when reported — a 4xx/5xx capture is discarded (bytes null). */
+  httpStatus?: number | null;
 }
 
 /** Captures a screenshot for each discovered page in parallel — bounded
@@ -957,13 +975,17 @@ async function captureAdditionalPageScreenshots(
 ): Promise<AdditionalPageCapture[]> {
   if (pages.length === 0) return [];
   const results = await Promise.allSettled(
-    pages.map((p) => captureScreenshotBytes(p.url, screenshotApiKey, fetchImpl))
+    pages.map((p) => captureScreenshot(p.url, screenshotApiKey, fetchImpl))
   );
-  const captured = pages.map((p, i) => ({
-    label: p.label,
-    url: p.url,
-    screenshotBytes: results[i].status === "fulfilled" ? results[i].value : null,
-  }));
+  const captured = pages.map((p, i) => {
+    const r = results[i];
+    return {
+      label: p.label,
+      url: p.url,
+      screenshotBytes: r.status === "fulfilled" ? r.value.bytes : null,
+      httpStatus: r.status === "fulfilled" ? r.value.httpStatus : null,
+    };
+  });
   console.log(
     `[websiteAnalysis] additional page captures: ${captured
       .map((c) => `${c.label}: ${c.screenshotBytes ? `${c.screenshotBytes.length} bytes` : "couldn't capture"}`)
@@ -978,8 +1000,23 @@ async function captureAdditionalPageScreenshots(
  * response. */
 interface RawPageSpeedResponse {
   lighthouseResult?: {
+    requestedUrl?: string;
+    finalUrl?: string;
+    /** Where the page ENDED UP after any client-side redirect — the real
+     * Wonder case: requested /order/thegrove (HTTP 200), displayed
+     * /order/404 ("Page Not Found"). */
+    finalDisplayedUrl?: string;
+    mainDocumentUrl?: string;
+    runtimeError?: { code?: string; message?: string };
     categories?: { performance?: { score?: number } };
-    audits?: Record<string, { score?: number | null; scoreDisplayMode?: string }>;
+    audits?: Record<
+      string,
+      {
+        score?: number | null;
+        scoreDisplayMode?: string;
+        details?: { items?: Array<{ url?: string; statusCode?: number; resourceType?: string }> };
+      }
+    >;
   };
   /** Real Chrome UX Report data for this exact URL, when Google has
    * enough real-visitor traffic to report it. */
@@ -1083,12 +1120,65 @@ function extractLabScore(raw: RawPageSpeedResponse): number | null {
  * both). A missing/malformed/"NONE" category means Google genuinely has
  * no field data at that level, not a real classification — never
  * treated as one. */
-function extractFieldCategory(raw: RawPageSpeedResponse): FieldSpeedCategory | null {
+function extractFieldCategory(
+  raw: RawPageSpeedResponse,
+  originOnly = false
+): { category: FieldSpeedCategory; scope: "url" | "origin" } | null {
   const urlCategory = raw.loadingExperience?.overall_category;
-  if (isFieldSpeedCategory(urlCategory)) return urlCategory;
+  if (!originOnly && isFieldSpeedCategory(urlCategory)) return { category: urlCategory, scope: "url" };
   const originCategory = raw.originLoadingExperience?.overall_category;
-  if (isFieldSpeedCategory(originCategory)) return originCategory;
+  if (isFieldSpeedCategory(originCategory)) return { category: originCategory, scope: "origin" };
   return null;
+}
+
+/** A displayed path that is an error page (Step 2d decision b). */
+const SOFT_404_PATH_RE = /(?:^|\/)(?:404|not-?found|page-not-found|error)(?:\/|\.html?|$)/i;
+
+function hostOf(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.replace(/^www\./i, "").toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Did this PageSpeed run actually load the business's REAL page (Step
+ * 2d)? A lab score only counts when there's no runtime error, the main
+ * document answered 2xx, the page stayed on the same site, and it didn't
+ * end up on an error page. `softNotFoundUrl` is set when the page landed
+ * on a same-site error path (a "soft 404" — HTTP 200, but "Page Not
+ * Found"), the evidence for a broken Google-listing link.
+ */
+export function assessPageSpeedRun(
+  raw: RawPageSpeedResponse,
+  requestedUrl: string
+): { loadedRealPage: boolean; softNotFoundUrl: string | null } {
+  const lr = raw.lighthouseResult;
+  if (!lr) return { loadedRealPage: false, softNotFoundUrl: null };
+  const requestedHost = hostOf(lr.requestedUrl ?? requestedUrl) ?? hostOf(requestedUrl);
+  const displayed = lr.finalDisplayedUrl ?? lr.finalUrl;
+  const displayedHost = hostOf(displayed);
+  let softNotFoundUrl: string | null = null;
+  if (displayed && displayedHost && displayedHost === requestedHost) {
+    try {
+      const displayedPath = new URL(displayed).pathname;
+      const requestedPath = new URL(lr.requestedUrl ?? requestedUrl).pathname;
+      if (displayedPath !== requestedPath && SOFT_404_PATH_RE.test(displayedPath)) softNotFoundUrl = displayed;
+    } catch {
+      softNotFoundUrl = null;
+    }
+  }
+  if (lr.runtimeError?.code) return { loadedRealPage: false, softNotFoundUrl };
+  if (softNotFoundUrl) return { loadedRealPage: false, softNotFoundUrl };
+  if (displayedHost && requestedHost && displayedHost !== requestedHost) return { loadedRealPage: false, softNotFoundUrl: null };
+  const documents = (lr.audits?.["network-requests"]?.details?.items ?? []).filter((i) => i.resourceType === "Document");
+  const main = documents.find((d) => d.url === (lr.mainDocumentUrl ?? lr.finalUrl)) ?? documents[0];
+  if (main && typeof main.statusCode === "number" && (main.statusCode < 200 || main.statusCode >= 300)) {
+    return { loadedRealPage: false, softNotFoundUrl: null };
+  }
+  return { loadedRealPage: true, softNotFoundUrl: null };
 }
 
 function extractRenderedContentSignals(
@@ -1144,6 +1234,9 @@ export interface MobilePerformanceFetchResult {
    * lib/scoring.ts for what each field means and how
    * website.content_depth uses them. */
   renderedContentSignals: RenderedContentSignals | null;
+  /** Step 2d: set when any PageSpeed run landed on a same-site error page
+   * (soft 404) — the page actually displayed. */
+  softNotFoundUrl?: string | null;
   /** Real PageSpeed Insights calls this measurement spent — 1 when the
    * first run already carried real-user field data, 3 when it didn't
    * and the median-of-3 lab fallback ran (see fetchMobilePerformance's
@@ -1201,7 +1294,12 @@ export async function fetchMobilePerformance(
   website: string,
   apiKey: string | undefined,
   categories: readonly string[] = PAGESPEED_DEFAULT_CATEGORIES,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = fetch,
+  /** Step 2d: our own plain fetch was bot-blocked. Then a soft 404 seen
+   * by PageSpeed is almost certainly shown ONLY to automated browsers
+   * (the real Wonder case — real people get the real page), so the URL's
+   * own real-visitor data is still the real page's and is used. */
+  ownFetchBlocked = false
 ): Promise<MobilePerformanceFetchResult> {
   if (!website || website.trim().length === 0) {
     return { measurement: null, failureReason: null, renderedContentSignals: null, callCount: 0 };
@@ -1211,31 +1309,66 @@ export async function fetchMobilePerformance(
   const first = await fetchPageSpeedRunOnce(website, apiKey, categories, fetchImpl);
   const renderedContentSignals = first.kind === "ok" ? extractRenderedContentSignals(first.response, categories) : null;
 
-  const fieldCategory = first.kind === "ok" ? extractFieldCategory(first.response) : null;
-  if (fieldCategory) {
-    return {
-      measurement: { method: "field", fieldCategory, labScore: null, measuredAt: new Date().toISOString() },
-      failureReason: null,
-      renderedContentSignals,
-      callCount: 1,
-    };
+  // Step 2d: real-visitor data is read from ANY successful run (not just
+  // the first), and when the URL itself lands on an error page (soft
+  // 404) only WHOLE-SITE data is used — the URL's own data describes an
+  // error page, not the business.
+  const fieldFrom = (outcomes: PageSpeedAttemptOutcome[], softNotFound: boolean) => {
+    for (const o of outcomes) {
+      if (o.kind !== "ok") continue;
+      const field = extractFieldCategory(o.response, softNotFound && !ownFetchBlocked);
+      if (field) return field;
+    }
+    return null;
+  };
+  // Labeled "whole-site measurement" only when whole-site data replaced a
+  // soft-404 URL's own data — ordinary origin fallback keeps its wording.
+  const fieldMeasurement = (field: { category: FieldSpeedCategory; scope: "url" | "origin" }, softNotFound: boolean): MobilePerformanceMeasurement => ({
+    method: "field",
+    fieldCategory: field.category,
+    labScore: null,
+    measuredAt: new Date().toISOString(),
+    ...(softNotFound && !ownFetchBlocked && field.scope === "origin" ? { fieldScope: "origin" as const } : {}),
+  });
+
+  if (first.kind === "ok") {
+    const firstSoft = assessPageSpeedRun(first.response, website).softNotFoundUrl;
+    const field = fieldFrom([first], firstSoft !== null);
+    if (field) {
+      return { measurement: fieldMeasurement(field, firstSoft !== null), failureReason: null, renderedContentSignals, callCount: 1, softNotFoundUrl: firstSoft };
+    }
   }
 
-  // No field data for this site (or the first run itself failed) — fall
-  // back to the honest lab measurement. We already have one attempt
-  // (`first`); fire the other two in parallel rather than serially, so
-  // this fallback costs one extra round-trip, not two.
+  // No field data from the first run (or it failed) — two more runs in
+  // parallel, then field data from any of them, else the lab median of
+  // the runs that genuinely loaded the business's real page.
   const [second, third] = await Promise.all([
     fetchPageSpeedRunOnce(website, apiKey, categories, fetchImpl),
     fetchPageSpeedRunOnce(website, apiKey, categories, fetchImpl),
   ]);
   const outcomes = [first, second, third];
+  const assessments = outcomes.map((o) => (o.kind === "ok" ? assessPageSpeedRun(o.response, website) : null));
+  const softNotFoundUrl = assessments.find((a) => a?.softNotFoundUrl)?.softNotFoundUrl ?? null;
+
+  const field = fieldFrom(outcomes, softNotFoundUrl !== null);
+  if (field) {
+    return { measurement: fieldMeasurement(field, softNotFoundUrl !== null), failureReason: null, renderedContentSignals, callCount: 3, softNotFoundUrl };
+  }
+
   const labScores = outcomes
-    .map((o) => (o.kind === "ok" ? extractLabScore(o.response) : null))
+    .map((o, i) => (o.kind === "ok" && assessments[i]?.loadedRealPage ? extractLabScore(o.response) : null))
     .filter((s): s is number => s !== null);
 
   if (labScores.length === 0) {
-    return { measurement: null, failureReason: pickFailureReason(outcomes), renderedContentSignals, callCount: 3 };
+    // Never a score from an error page.
+    const anyErrorPage = outcomes.some((o, i) => o.kind === "ok" && !assessments[i]?.loadedRealPage);
+    return {
+      measurement: null,
+      failureReason: anyErrorPage ? { kind: "error_page", status: null } : pickFailureReason(outcomes),
+      renderedContentSignals,
+      callCount: 3,
+      softNotFoundUrl,
+    };
   }
 
   return {
@@ -1243,6 +1376,7 @@ export async function fetchMobilePerformance(
     failureReason: null,
     renderedContentSignals,
     callCount: 3,
+    softNotFoundUrl,
   };
 }
 
@@ -1297,6 +1431,18 @@ export async function checkSafeBrowsing(
   } catch {
     return { checked: false };
   }
+}
+
+/** Step 2d: when an embedded map spells out a real street address, compare
+ * it like any other site address and keep whichever comparison is the
+ * better real evidence (matches > conflicts > not found) — marked
+ * source: "map" so the evidence can say so. */
+function withMapAddress(findings: InfoFieldFinding[], map: EmbeddedMapFinding | null, googleAddress: string | null): InfoFieldFinding[] {
+  if (!map?.readableAddress) return findings;
+  const fromMap: InfoFieldFinding = { ...compareAddress(map.readableAddress, googleAddress), source: "map" };
+  if (fromMap.comparison === "not_found_on_site") return findings;
+  const rank = { matches: 2, conflicts: 1, not_found_on_site: 0 } as const;
+  return findings.map((f) => (f.field === "address" && rank[fromMap.comparison] > rank[f.comparison] ? fromMap : f));
 }
 
 /**
@@ -1366,6 +1512,8 @@ export async function collectWebsiteTrust(
     };
   }
 
+  // Step 2d: an embedded Google Map's own URL can state the address.
+  const embeddedMap = detectEmbeddedMap(homepageHtml) ?? detectEmbeddedMap(contactPageHtml);
   const wholePageText = extractMainContentVisibleText(homepageHtml);
   const contactPageText = contactPageHtml ? extractMainContentVisibleText(contactPageHtml) : null;
   const [spamSignals, safeBrowsing] = await Promise.all([
@@ -1377,11 +1525,15 @@ export async function collectWebsiteTrust(
     spamSignals,
     safeBrowsingThreat: safeBrowsing.checked ? { threatFound: safeBrowsing.threatFound, threatTypes: safeBrowsing.threatTypes } : null,
     safeBrowsingChecked: safeBrowsing.checked,
-    infoConflicts: compareListingInfo(wholePageText, google, contactPageText),
+    infoConflicts: withMapAddress(compareListingInfo(wholePageText, google, contactPageText), embeddedMap, google.address),
+    embeddedMap,
     staleNotices: findStaleNotices(wholePageText, now),
     abandonedSignals: detectAbandonedSignals(wholePageText, now),
     websiteKind,
-    listingLinkBroken: looksLikePageNotFound(wholePageText),
+    // Step 2d: only a genuine HTTP 404/410 on the listing's own URL marks
+    // the link broken (set in saveBusinessWithClient) — never page text,
+    // which bot-protection and client-side routers can fake.
+    listingLinkBroken: false,
     checkedAt,
   };
 }
@@ -1393,35 +1545,60 @@ export async function collectWebsiteTrust(
  * null — never throws — when no key is configured, the call fails, or
  * the target blocks capture.
  */
-export async function captureScreenshotBytes(
+export interface ScreenshotResult {
+  bytes: Buffer | null;
+  /** The TARGET page's HTTP status as ScreenshotOne reported it
+   * (X-ScreenshotOne-HTTP-Response-Status-Code, via
+   * metadata_http_response_status_code=true) — null when it wasn't
+   * reported (e.g. DNS/network/timeout failures). */
+  httpStatus: number | null;
+  /** Whether a real (billed) ScreenshotOne request was made at all. */
+  attempted: boolean;
+}
+
+export async function captureScreenshot(
   website: string,
   apiKey: string | undefined,
   fetchImpl: typeof fetch = fetch
-): Promise<Buffer | null> {
-  if (!website || website.trim().length === 0 || !apiKey) return null;
+): Promise<ScreenshotResult> {
+  if (!website || website.trim().length === 0 || !apiKey) return { bytes: null, httpStatus: null, attempted: false };
 
   const target = /^https?:\/\//i.test(website.trim()) ? website.trim() : `https://${website.trim()}`;
   const url =
     "https://api.screenshotone.com/take" +
     `?access_key=${encodeURIComponent(apiKey)}&url=${encodeURIComponent(target)}` +
     "&viewport_width=1440&viewport_height=900&format=png&full_page=false" +
-    "&block_ads=true&block_cookie_banners=true&cache=false";
+    "&block_ads=true&block_cookie_banners=true&cache=false" +
+    "&metadata_http_response_status_code=true";
 
   const res = await fetchWithTimeout(url, SCREENSHOT_TIMEOUT_MS, { method: "GET" }, fetchImpl);
-  if (!res || !res.ok) return null;
+  if (!res) return { bytes: null, httpStatus: null, attempted: true };
+  const statusHeader = res.headers.get("x-screenshotone-http-response-status-code");
+  const parsedStatus = statusHeader ? Number.parseInt(statusHeader, 10) : NaN;
+  const httpStatus = Number.isFinite(parsedStatus) ? parsedStatus : null;
+  if (!res.ok) return { bytes: null, httpStatus, attempted: true };
   const contentType = res.headers.get("content-type") ?? "";
-  if (!contentType.startsWith("image/")) return null;
+  if (!contentType.startsWith("image/")) return { bytes: null, httpStatus, attempted: true };
+  // The target page itself answered with an error (e.g. a 404 "Page Not
+  // Found") — a picture of that is never shown as "what customers see".
+  if (httpStatus !== null && httpStatus >= 400) return { bytes: null, httpStatus, attempted: true };
 
   try {
     const buf = await res.arrayBuffer();
-    return Buffer.from(buf);
+    return { bytes: Buffer.from(buf), httpStatus, attempted: true };
   } catch {
-    return null;
+    return { bytes: null, httpStatus, attempted: true };
   }
 }
 
 export interface WebsiteScreenshotCapture {
   screenshotBytes: Buffer | null;
+  /** The homepage's own HTTP status as ScreenshotOne saw it — see
+   * ScreenshotResult.httpStatus. */
+  screenshotHttpStatus?: number | null;
+  /** How many real ScreenshotOne requests this capture made (homepage +
+   * each discovered page) — counted toward the monthly cap. */
+  calls?: number;
   /** Up to MAX_ADDITIONAL_PAGES other real discovered pages, each with
    * its own best-effort screenshot — see AdditionalPageCapture. */
   additionalPages: AdditionalPageCapture[];
@@ -1446,15 +1623,21 @@ export async function captureWebsiteScreenshots(
   fetchImpl: typeof fetch = fetch
 ): Promise<WebsiteScreenshotCapture> {
   const [screenshotResult, additionalPagesResult] = await Promise.allSettled([
-    captureScreenshotBytes(website, screenshotApiKey, fetchImpl),
+    captureScreenshot(website, screenshotApiKey, fetchImpl),
     discoverKeyPages(website, homepageHtml, fetchImpl).then((pages) =>
       captureAdditionalPageScreenshots(pages, screenshotApiKey, fetchImpl)
     ),
   ]);
 
+  const homepage = screenshotResult.status === "fulfilled" ? screenshotResult.value : null;
+  const additionalPages = additionalPagesResult.status === "fulfilled" ? additionalPagesResult.value : [];
   return {
-    screenshotBytes: screenshotResult.status === "fulfilled" ? screenshotResult.value : null,
-    additionalPages: additionalPagesResult.status === "fulfilled" ? additionalPagesResult.value : [],
+    screenshotBytes: homepage?.bytes ?? null,
+    screenshotHttpStatus: homepage?.httpStatus ?? null,
+    additionalPages,
+    // Every request made counts, successful or not (a failed capture is
+    // still a billed call). Without an API key nothing was called.
+    calls: screenshotApiKey ? 1 + additionalPages.length : 0,
   };
 }
 
@@ -1467,6 +1650,17 @@ export interface WebsiteAnalysisCollection {
    * doc (lib/scoring.ts). */
   mobilePerformanceFailureReason: MobilePerformanceFailure | null;
   screenshotBytes: Buffer | null;
+  /** See WebsiteScreenshotCapture.screenshotHttpStatus — null when no
+   * capture ran. */
+  screenshotHttpStatus: number | null;
+  /** Real ScreenshotOne requests this run made (0 when no capture ran). */
+  screenshotCalls: number;
+  /** Step 2d: the page PageSpeed actually displayed when the URL landed
+   * on a same-site error page (soft 404) — see assessPageSpeedRun. */
+  pageSpeedSoftNotFoundUrl: string | null;
+  /** Step 2d: our own plain fetch got a genuine 404/410 (never a bot
+   * block) — see FetchWebsiteHtmlResult.missingPageStatus. */
+  contentFetchMissingPageStatus: 404 | 410 | null;
   /** Up to MAX_ADDITIONAL_PAGES other real discovered pages, each with
    * its own best-effort screenshot — see AdditionalPageCapture. Always []
    * when options.captureScreenshots was false — a regular re-scan reuses
@@ -1536,14 +1730,15 @@ export async function collectWebsiteAnalysis(
   // text (see restrictToLocationWindow in lib/websiteTrust.ts).
   const locationHint = extractCityFromAddress(google.address);
   const htmlResultPromise = fetchWebsiteHtml(website, fetchImpl);
-  const contentPromise = htmlResultPromise.then((r) => (r.html ? analyzeWebsiteHtml(r.html) : null));
+  const contentPromise = htmlResultPromise.then((r) => (r.html ? analyzeWebsiteHtml(r.html, website) : null));
 
-  const pageSpeedPromise = contentPromise.then((content) =>
+  const pageSpeedPromise = Promise.all([htmlResultPromise, contentPromise]).then(([r, content]) =>
     fetchMobilePerformance(
       website,
       keys.pageSpeedApiKey,
       content?.isLikelyClientRenderedShell ? PAGESPEED_CSR_RECOVERY_CATEGORIES : PAGESPEED_DEFAULT_CATEGORIES,
-      fetchImpl
+      fetchImpl,
+      r.failureReason === "blocked_automated_check"
     )
   );
 
@@ -1603,13 +1798,14 @@ export async function collectWebsiteAnalysis(
     collectWebsiteTrust(r.html, website, google, keys.safeBrowsingApiKey, now, fetchImpl, contactPageHtml)
   );
 
-  const [htmlResult, contentResult, pageSpeedResult, screenshotsResult, presenceResult, trustResult] = await Promise.allSettled([
+  const [htmlResult, contentResult, pageSpeedResult, screenshotsResult, presenceResult, trustResult, contactPageResult] = await Promise.allSettled([
     htmlResultPromise,
     contentPromise,
     pageSpeedPromise,
     screenshotsPromise,
     presencePromise,
     trustPromise,
+    contactPageHtmlPromise,
   ]);
 
   const htmlFailureReason = htmlResult.status === "fulfilled" ? htmlResult.value.failureReason : "down";
@@ -1637,9 +1833,27 @@ export async function collectWebsiteAnalysis(
   // baseContent are left exactly as the crawl found them either way, so
   // the raw static result is never overwritten/lost even once recovery
   // succeeds (see RenderedContentSignals' doc comment in lib/scoring.ts).
+  // Step 2d: a click-to-call or email link on the site's own Contact
+  // page (already fetched above for the listing-match check) is just as
+  // real as one on the homepage.
+  const contactPageHtml = contactPageResult.status === "fulfilled" ? contactPageResult.value : null;
+  const contactPageLinks = contactPageHtml
+    ? detectContactLinks(contactPageHtml, website)
+    : { hasPhoneLink: false, hasEmailLink: false, hasContactPageLink: false, hasActionLinkText: false };
+  const contactPageSocial = contactPageHtml ? detectSocialProfiles(contactPageHtml) : [];
   const content: WebsiteContentSignals | null = baseContent
     ? {
         ...baseContent,
+        hasPhoneLink: baseContent.hasPhoneLink || contactPageLinks.hasPhoneLink,
+        hasEmailLink: baseContent.hasEmailLink || contactPageLinks.hasEmailLink,
+        hasContactPageLink: baseContent.hasContactPageLink === true || contactPageLinks.hasContactPageLink,
+        hasCtaText: baseContent.hasCtaText || contactPageLinks.hasActionLinkText,
+        socialProfiles: [
+          ...(baseContent.socialProfiles ?? []),
+          ...contactPageSocial.filter(
+            (p) => !(baseContent.socialProfiles ?? []).some((q) => q.url.toLowerCase() === p.url.toLowerCase())
+          ),
+        ],
         renderedContentSignals: baseContent.isLikelyClientRenderedShell ? pageSpeed.renderedContentSignals : null,
       }
     : null;
@@ -1650,6 +1864,10 @@ export async function collectWebsiteAnalysis(
     mobilePerformance: pageSpeed.measurement,
     mobilePerformanceFailureReason: pageSpeed.measurement ? null : pageSpeed.failureReason,
     screenshotBytes: screenshots.screenshotBytes,
+    screenshotHttpStatus: screenshots.screenshotHttpStatus ?? null,
+    screenshotCalls: screenshots.calls ?? 0,
+    pageSpeedSoftNotFoundUrl: pageSpeed.softNotFoundUrl ?? null,
+    contentFetchMissingPageStatus: htmlResult.status === "fulfilled" ? htmlResult.value.missingPageStatus ?? null : null,
     additionalPages: screenshots.additionalPages,
     aboutPresence: presence.about,
     servicesPresence: presence.services,

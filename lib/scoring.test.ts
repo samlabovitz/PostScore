@@ -850,7 +850,7 @@ describe("businessRowToScoringInput adapter", () => {
     expect(input.mostRecentReviewDaysAgo).toBeNull();
     expect(input.httpsStatus).toBe("https");
     const breakdown = scoreBusiness(input);
-    expect(breakdown.scoringVersion).toBe("1.7.0");
+    expect(breakdown.scoringVersion).toBe("1.8.0");
   });
 
   test("degrades an unexpected https_status value to null (excluded) rather than trusting a bad cast", () => {
@@ -1152,34 +1152,34 @@ describe("website.performance_mobile: field-vs-lab measurement (Day 3b)", () => 
     return { ...PERFECT_INPUT, websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, mobilePerformance: measurement } };
   }
 
-  test("real-user field data FAST earns the full 6/6, VERIFIED, tagged meta.method 'field'", () => {
+  test("real-user field data FAST earns the full 5/5, VERIFIED, tagged meta.method 'field'", () => {
     const breakdown = scoreBusiness(withMeasurement({ method: "field", fieldCategory: "FAST", labScore: null }));
     const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(6);
+    expect(check.earnedPoints).toBe(5);
     expect(check.confidence).toBe("VERIFIED");
     expect(check.meta).toEqual({ method: "field" });
     expect(check.explanation).toContain("fast");
     expect(check.explanation).toContain("28 days");
   });
 
-  test("real-user field data AVERAGE earns 3.6/6", () => {
+  test("real-user field data AVERAGE earns 3/5", () => {
     const breakdown = scoreBusiness(withMeasurement({ method: "field", fieldCategory: "AVERAGE", labScore: null }));
     const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(3.6);
+    expect(check.earnedPoints).toBe(3);
     expect(check.meta).toEqual({ method: "field" });
   });
 
-  test("real-user field data SLOW earns 1.2/6", () => {
+  test("real-user field data SLOW earns 1/5", () => {
     const breakdown = scoreBusiness(withMeasurement({ method: "field", fieldCategory: "SLOW", labScore: null }));
     const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(1.2);
+    expect(check.earnedPoints).toBe(1);
     expect(check.meta).toEqual({ method: "field" });
   });
 
-  test("a lab measurement (median of 3 runs) keeps the existing linear score/6 mapping, tagged meta.method 'lab'", () => {
+  test("a lab measurement (median of 3 runs) keeps the linear score/5 mapping (Step 2d: 6 -> 5), tagged meta.method 'lab'", () => {
     const breakdown = scoreBusiness(withMeasurement({ method: "lab", fieldCategory: null, labScore: 65 }));
     const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(3.9);
+    expect(check.earnedPoints).toBe(3.3);
     expect(check.confidence).toBe("VERIFIED");
     expect(check.meta).toEqual({ method: "lab" });
     expect(check.explanation).toContain("65/100");
@@ -1194,10 +1194,10 @@ describe("website.performance_mobile: field-vs-lab measurement (Day 3b)", () => 
     expect(check.meta).toBeNull();
   });
 
-  test("simulateFix reaches the full 6/6 (via a lab measurement — a field FAST now also reaches 6, so either honestly proves the guarantee)", () => {
+  test("simulateFix reaches the full 5/5 (via a lab measurement — a field FAST now also reaches 5, so either honestly proves the guarantee)", () => {
     const fixed = scoreBusiness(applyCheckFix(withMeasurement(null), "website.performance_mobile"));
     const check = fixed.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(6);
+    expect(check.earnedPoints).toBe(5);
   });
 
   // Oct 10 audit fix: PageSpeed carry-forward on a timeout — see
@@ -1208,7 +1208,7 @@ describe("website.performance_mobile: field-vs-lab measurement (Day 3b)", () => 
       withMeasurement({ method: "lab", fieldCategory: null, labScore: 27, measuredAt: "2026-10-06T20:40:00.000Z", carriedForward: true })
     );
     const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(1.6);
+    expect(check.earnedPoints).toBe(1.4);
     expect(check.confidence).toBe("VERIFIED");
     expect(check.explanation).toContain("27/100");
     expect(check.explanation.toLowerCase()).toContain("last measured");
@@ -1220,7 +1220,7 @@ describe("website.performance_mobile: field-vs-lab measurement (Day 3b)", () => 
       withMeasurement({ method: "field", fieldCategory: "SLOW", labScore: null, measuredAt: "2026-09-15T00:00:00.000Z", carriedForward: true })
     );
     const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(1.2);
+    expect(check.earnedPoints).toBe(1);
     expect(check.explanation.toLowerCase()).toContain("last measured");
     expect(check.explanation).not.toContain("28 days"); // the normal field wording, replaced
   });
@@ -1739,5 +1739,225 @@ describe("website trust checks (Oct 10, PROPOSED)", () => {
       delete withoutField.verifiedElsewhereUrl;
       expect(scoreBusiness(withoutField)).toEqual(scoreBusiness({ ...listingInput, verifiedElsewhereUrl: null }));
     });
+  });
+});
+
+// Step 2d: a blocked/failed page fetch means the page-content checks
+// have nothing real to judge — "couldn't check", never a pass.
+describe("blocked page = couldn't check (the real Wonder case)", () => {
+  const BLOCKED_TRUST: WebsiteTrustAnalysis = {
+    spamSignals: [],
+    safeBrowsingThreat: null,
+    safeBrowsingChecked: false,
+    infoConflicts: [],
+    staleNotices: [],
+    abandonedSignals: { newestDateFound: null, templateLeftovers: [], looksAbandoned: false },
+    websiteKind: "independent",
+    listingLinkBroken: false,
+    checkedAt: "2026-10-11T00:00:00.000Z",
+  };
+  const PAGE_CHECKS = ["website.security", "website.info_consistency", "website.notice_freshness", "website.site_freshness"];
+
+  for (const reason of ["blocked_automated_check", "timed_out", "down", "http_error"] as const) {
+    test(`${reason}: all 4 page-content trust checks are excluded with the stored reason`, () => {
+      const input: BusinessScoringInput = {
+        ...PERFECT_INPUT,
+        websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, content: null, contentFetchFailureReason: reason, websiteTrust: BLOCKED_TRUST },
+      };
+      const breakdown = scoreBusiness(input);
+      for (const id of PAGE_CHECKS) {
+        const check = breakdown.checks.find((c) => c.id === id)!;
+        expect(check.earnedPoints, id).toBeNull();
+        expect(check.confidence, id).toBe("NOT_FOUND");
+      }
+      const expected = {
+        blocked_automated_check: "Your site blocked our automated check",
+        timed_out: "our check timed out",
+        down: "Your site didn't respond",
+        http_error: "Your site returned an error",
+      }[reason];
+      expect(breakdown.checks.find((c) => c.id === "website.security")!.explanation).toContain(expected);
+    });
+  }
+
+  test("ES uses the same usted reason sentence", () => {
+    const input: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, content: null, contentFetchFailureReason: "blocked_automated_check", websiteTrust: BLOCKED_TRUST },
+    };
+    expect(scoreBusiness(input, "es").checks.find((c) => c.id === "website.site_freshness")!.explanation).toContain(
+      "Su sitio bloqueó nuestra verificación automática"
+    );
+  });
+
+  test("a real Google Safe Browsing threat still counts even when the page was blocked", () => {
+    const input: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      websiteAnalysis: {
+        ...GOOD_WEBSITE_ANALYSIS,
+        content: null,
+        contentFetchFailureReason: "blocked_automated_check",
+        websiteTrust: { ...BLOCKED_TRUST, safeBrowsingChecked: true, safeBrowsingThreat: { threatFound: true, threatTypes: ["MALWARE"] } },
+      },
+    };
+    const check = scoreBusiness(input).checks.find((c) => c.id === "website.security")!;
+    expect(check.earnedPoints).toBe(0);
+    expect(check.confidence).toBe("VERIFIED");
+  });
+
+  test("a page that loaded still scores normally", () => {
+    const input: BusinessScoringInput = { ...PERFECT_INPUT, websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, websiteTrust: { ...BLOCKED_TRUST, infoConflicts: [{ field: "phone", comparison: "matches", siteValue: "1", googleValue: "1" }] } } };
+    const breakdown = scoreBusiness(input);
+    expect(breakdown.checks.find((c) => c.id === "website.security")!.earnedPoints).toBe(2);
+    expect(breakdown.checks.find((c) => c.id === "website.site_freshness")!.earnedPoints).toBe(0.5);
+  });
+});
+
+describe("Step 2d additions: Website weights, social links, map evidence, contact page link", () => {
+  test("Website still totals 30: mobile speed 5 + social links 1", () => {
+    const website = scoreBusiness(PERFECT_INPUT).categories.find((c) => c.id === "website")!;
+    expect(website.checks.reduce((sum, c) => sum + c.maxPoints, 0)).toBe(30);
+    expect(website.checks.find((c) => c.id === "website.performance_mobile")!.maxPoints).toBe(5);
+    expect(website.checks.find((c) => c.id === "website.social_links")!.maxPoints).toBe(1);
+  });
+
+  function withContent(extra: Partial<NonNullable<WebsiteAnalysis["content"]>>, analysis: Partial<WebsiteAnalysis> = {}): BusinessScoringInput {
+    return { ...PERFECT_INPUT, websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, ...analysis, content: { ...GOOD_WEBSITE_ANALYSIS.content!, ...extra } } };
+  }
+  const social = (input: BusinessScoringInput, locale: "en" | "es" = "en") => scoreBusiness(input, locale).checks.find((c) => c.id === "website.social_links")!;
+
+  test("profiles found -> 1 pt, evidence lists them (EN + ES)", () => {
+    const input = withContent({ socialProfiles: [{ platform: "Instagram", url: "instagram.com/mainstreetsweets" }] });
+    expect(social(input).earnedPoints).toBe(1);
+    expect(social(input).explanation).toBe("Social profiles linked from your site: Instagram: instagram.com/mainstreetsweets.");
+    expect(social(input, "es").explanation).toContain("Perfiles sociales enlazados desde su sitio: Instagram: instagram.com/mainstreetsweets");
+  });
+  test("none found -> 0 with a short fix line", () => {
+    const check = social(withContent({ socialProfiles: [] }));
+    expect(check.earnedPoints).toBe(0);
+    expect(check.explanation).toContain("add them to your header or footer");
+  });
+  test("page blocked -> couldn't check, excluded", () => {
+    const check = social(withContent({}, { content: null, contentFetchFailureReason: "blocked_automated_check" }));
+    expect(check.earnedPoints).toBeNull();
+    expect(check.confidence).toBe("NOT_FOUND");
+  });
+  test("a row saved before detection existed is 'not checked yet', never 'none found'", () => {
+    const check = social(withContent({ socialProfiles: undefined }));
+    expect(check.earnedPoints).toBeNull();
+    expect(check.explanation).toContain("Not checked yet");
+  });
+  test("a JavaScript-rendered shell with no readable links is excluded", () => {
+    expect(social(withContent({ socialProfiles: [], isLikelyClientRenderedShell: true })).earnedPoints).toBeNull();
+  });
+
+  test("a link to the site's own contact page counts for contact_conversion", () => {
+    const check = scoreBusiness(withContent({ hasPhoneLink: false, hasEmailLink: false, hasContactPageLink: true, hasCtaText: true })).checks.find(
+      (c) => c.id === "website.contact_conversion"
+    )!;
+    expect(check.earnedPoints).toBe(3);
+  });
+
+  test("an address from the map on the website says so in the evidence", () => {
+    const trust = (address: WebsiteTrustAnalysis["infoConflicts"][number]): WebsiteTrustAnalysis => ({
+      spamSignals: [],
+      safeBrowsingThreat: null,
+      safeBrowsingChecked: false,
+      infoConflicts: [{ field: "phone", comparison: "matches", siteValue: "1", googleValue: "1" }, address],
+      staleNotices: [],
+      abandonedSignals: { newestDateFound: null, templateLeftovers: [], looksAbandoned: false },
+      websiteKind: "independent",
+      listingLinkBroken: false,
+      checkedAt: "2026-10-11T00:00:00Z",
+    });
+    const conflict = scoreBusiness(
+      withContent({}, { websiteTrust: trust({ field: "address", comparison: "conflicts", siteValue: "45 market st", googleValue: "209 E Main St", source: "map" }) })
+    ).checks.find((c) => c.id === "website.info_consistency")!;
+    expect(conflict.explanation).toBe("The map on your website shows 45 market st; Google says 209 E Main St.");
+    const match = scoreBusiness(
+      withContent({}, { websiteTrust: trust({ field: "address", comparison: "matches", siteValue: "209 e main", googleValue: "209 E Main St", source: "map" }) })
+    ).checks.find((c) => c.id === "website.info_consistency")!;
+    expect(match.explanation).toContain("(address from the map on your website)");
+  });
+});
+
+describe("Step 2d: sites that block automated checks — mobile speed couldn't check", () => {
+  const field = { method: "field" as const, fieldCategory: "SLOW" as const, labScore: null };
+  for (const [name, analysis] of [
+    ["bot-blocked fetch", { contentFetchFailureReason: "blocked_automated_check" as const, content: null }],
+    ["automated-only error page", { websiteTrust: { ...CLEAN_TRUST, automatedErrorPageUrl: "https://x.com/404" } }],
+  ] as const) {
+    test(`${name}: no rating of any kind is used — excluded, with the honest text (EN + ES)`, () => {
+      for (const mobilePerformance of [field, { ...field, carriedForward: true, measuredAt: "2026-10-01T00:00:00Z" }, { method: "lab" as const, fieldCategory: null, labScore: 80 }]) {
+        const input: BusinessScoringInput = { ...PERFECT_INPUT, websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, ...analysis, mobilePerformance } };
+        const check = scoreBusiness(input).checks.find((c) => c.id === "website.performance_mobile")!;
+        expect(check.earnedPoints).toBeNull();
+        expect(check.confidence).toBe("NOT_FOUND");
+        expect(check.explanation).toBe("Couldn't check — this site blocks automated checks, so we can't measure its speed. Excluded from your score, not counted against you.");
+        expect(scoreBusiness(input, "es").checks.find((c) => c.id === "website.performance_mobile")!.explanation).toContain("bloquea las verificaciones automáticas");
+      }
+    });
+  }
+  test("a site our fetch can read still scores speed normally", () => {
+    const input: BusinessScoringInput = { ...PERFECT_INPUT, websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, mobilePerformance: field } };
+    expect(scoreBusiness(input).checks.find((c) => c.id === "website.performance_mobile")!.earnedPoints).toBe(1);
+  });
+});
+
+describe("Step 2d: excludedReason 'unreachable' only for couldn't-reach exclusions", () => {
+  const reasonOf = (input: BusinessScoringInput, id: string) => scoreBusiness(input).checks.find((c) => c.id === id)!.excludedReason;
+  test("bot-blocked page: page-content checks are 'unreachable'", () => {
+    const input: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      httpsStatus: "unreachable",
+      websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, content: null, contentFetchFailureReason: "blocked_automated_check", websiteTrust: CLEAN_TRUST },
+    };
+    for (const id of ["website.https", "website.performance_mobile", "website.content_depth", "website.security", "website.social_links"]) {
+      expect(reasonOf(input, id), id).toBe("unreachable");
+    }
+    expect(reasonOf(input, "website.has_website")).toBeUndefined();
+  });
+  test("'not checked yet' (social) and 'nothing to compare' (listing match) are not", () => {
+    const input: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      websiteAnalysis: {
+        ...GOOD_WEBSITE_ANALYSIS,
+        content: { ...GOOD_WEBSITE_ANALYSIS.content!, socialProfiles: undefined },
+        websiteTrust: { ...CLEAN_TRUST, infoConflicts: [] },
+      },
+    };
+    expect(scoreBusiness(input).checks.find((c) => c.id === "website.social_links")!.earnedPoints).toBeNull();
+    expect(reasonOf(input, "website.social_links")).toBe("not_checked_yet");
+    expect(reasonOf(input, "website.info_consistency")).toBeUndefined();
+  });
+  test("JavaScript-only site: content checks are 'unreachable'", () => {
+    const input: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, content: { ...GOOD_WEBSITE_ANALYSIS.content!, isLikelyClientRenderedShell: true, socialProfiles: [] } },
+    };
+    expect(reasonOf(input, "website.content_depth")).toBe("unreachable");
+  });
+});
+
+describe("Step 2d: JavaScript-only sites — trust checks couldn't check (the Goldberg Hardware case)", () => {
+  const jsOnly = (trust: WebsiteTrustAnalysis): BusinessScoringInput => ({
+    ...PERFECT_INPUT,
+    websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, content: { ...GOOD_WEBSITE_ANALYSIS.content!, isLikelyClientRenderedShell: true, socialProfiles: [] }, websiteTrust: trust },
+  });
+  test("security, listing match, notices and freshness are excluded, never a pass (EN + ES), and count as unreachable", () => {
+    const input = jsOnly(CLEAN_TRUST);
+    for (const id of ["website.security", "website.info_consistency", "website.notice_freshness", "website.site_freshness"]) {
+      const check = scoreBusiness(input).checks.find((c) => c.id === id)!;
+      expect(check.earnedPoints, id).toBeNull();
+      expect(check.explanation, id).toBe("Couldn't check — this site builds its content with JavaScript, so our check couldn't read it. Excluded from your score, not counted against you.");
+      expect(check.excludedReason, id).toBe("unreachable");
+    }
+    expect(scoreBusiness(input, "es").checks.find((c) => c.id === "website.site_freshness")!.explanation).toContain("construye su contenido con JavaScript");
+  });
+  test("a real Google Safe Browsing threat still counts", () => {
+    const check = scoreBusiness(jsOnly({ ...CLEAN_TRUST, safeBrowsingChecked: true, safeBrowsingThreat: { threatFound: true, threatTypes: ["MALWARE"] } })).checks.find(
+      (c) => c.id === "website.security"
+    )!;
+    expect(check.earnedPoints).toBe(0);
   });
 });

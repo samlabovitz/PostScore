@@ -70,7 +70,11 @@ export default async function WebsitePage({ params }: { params: { id: string } }
   );
 
   const visualAnalysis = hasWebsite ? (
-    <WebsiteVisualAnalysis businessId={params.id} websiteAnalysis={data.websiteAnalysis} />
+    <WebsiteVisualAnalysis
+      businessId={params.id}
+      websiteAnalysis={data.websiteAnalysis}
+      siteUrl={data.website ?? data.verifiedWebsiteUrl}
+    />
   ) : null;
 
   // The one merged "how is your Website score built" section — reads the

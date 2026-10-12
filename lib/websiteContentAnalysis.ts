@@ -19,7 +19,7 @@
 // never a separate hand-tuned estimate for the template.
 
 import type { WebsiteContentSignals } from "./scoring";
-import { WEBSITE_CTA_PHRASES } from "./scoring";
+import { WEBSITE_CTA_PHRASES, type SocialProfile } from "./scoring";
 
 /**
  * Strips every real markup that is NEVER visible to a real visitor —
@@ -111,22 +111,179 @@ function extractVisibleText(html: string): string {
   return decodeBasicEntities(withoutTags).replace(/\s+/g, " ").trim();
 }
 
-export function analyzeWebsiteHtml(html: string): WebsiteContentSignals {
+/** One attribute's value from a single tag's raw text — quoted
+ * (single or double) or unquoted, case-insensitive name. */
+function attributeValue(tag: string, name: string): string | null {
+  const re = new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'>]+))`, "i");
+  const m = tag.match(re);
+  if (!m) return null;
+  return m[1] ?? m[2] ?? m[3] ?? null;
+}
+
+/**
+ * The content of the first `<meta name="{name}">` tag — Step 2d: in any
+ * attribute order (`content=… name=…` too), quoted or unquoted, and
+ * wherever it sits among the page's meta tags. Minified WordPress
+ * (Autoptimize, WP Rocket, Cloudflare) routinely strips quotes, which
+ * the old `name="…" content="…"`-only pattern silently missed.
+ */
+export function metaContent(html: string, name: string): string | null {
+  const metaTags = html.match(/<meta\b[^>]*>/gi) ?? [];
+  for (const tag of metaTags) {
+    if ((attributeValue(tag, "name") ?? "").toLowerCase() !== name.toLowerCase()) continue;
+    const content = attributeValue(tag, "content");
+    if (content !== null) return content;
+  }
+  return null;
+}
+
+interface AnchorLink {
+  href: string;
+  text: string;
+}
+
+/** Every real `<a href>` with its visible text — href quoted or unquoted. */
+function anchorLinks(html: string): AnchorLink[] {
+  const links: AnchorLink[] = [];
+  const re = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const href = attributeValue(` ${m[1]}`, "href");
+    if (!href) continue;
+    const text = decodeBasicEntities(m[2].replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+    links.push({ href: href.trim(), text });
+  }
+  return links;
+}
+
+/** A path that is the site's own contact page (EN + ES). */
+const CONTACT_PATH_RE = /^\/(?:[a-z]{2}\/)?(?:contact(?:-us|o|anos|enos)?|contact\.html|contactus|contáctenos|contactenos)\/?$/i;
+
+/** Visible link/button text that is itself an action (EN + ES) — exact
+ * short labels, so ordinary prose never counts. */
+const CONTACT_ACTION_TEXT_RE =
+  /^(?:contact(?: us)?|email(?: us)?|e-mail us|call(?: us| now)?|book(?: now| online| an appointment)?|order(?: now| online)?|contacto|contáctenos|contáctanos|contactenos|escríbanos|escribanos|llámenos|llamenos|llamar(?: ahora)?|reserve|reservar|reserve ahora|pedir|pida ahora|ordenar|ordene ahora)$/i;
+
+/**
+ * Real contact links (Step 2d): `tel:` / `mailto:` (quoted or unquoted),
+ * or a link to the site's OWN contact page (same host as `baseUrl`). When
+ * any such link's visible text is an action ("Contact us", "Call",
+ * "Book", "Order", "Llámenos"…), it also counts as a call-to-action.
+ * Used on the homepage AND on the already-fetched Contact page.
+ */
+export function detectContactLinks(
+  html: string,
+  baseUrl?: string | null
+): { hasPhoneLink: boolean; hasEmailLink: boolean; hasContactPageLink: boolean; hasActionLinkText: boolean } {
+  const clean = stripNonVisibleMarkup(html);
+  let base: URL | null = null;
+  try {
+    base = baseUrl ? new URL(/^https?:\/\//i.test(baseUrl) ? baseUrl : `https://${baseUrl}`) : null;
+  } catch {
+    base = null;
+  }
+  let hasPhoneLink = false;
+  let hasEmailLink = false;
+  let hasContactPageLink = false;
+  let hasActionLinkText = false;
+  for (const link of anchorLinks(clean)) {
+    const href = link.href.toLowerCase();
+    let isContact = false;
+    if (href.startsWith("tel:")) {
+      hasPhoneLink = isContact = true;
+    } else if (href.startsWith("mailto:")) {
+      hasEmailLink = isContact = true;
+    } else if (base) {
+      try {
+        const url = new URL(link.href, base);
+        const sameHost = url.hostname.replace(/^www\./i, "") === base.hostname.replace(/^www\./i, "");
+        if (sameHost && CONTACT_PATH_RE.test(decodeURIComponent(url.pathname))) hasContactPageLink = isContact = true;
+      } catch {
+        // not a real URL — not a contact link
+      }
+    }
+    if (isContact && CONTACT_ACTION_TEXT_RE.test(link.text.replace(/[!.→›»]+$/, "").trim())) hasActionLinkText = true;
+  }
+  return { hasPhoneLink, hasEmailLink, hasContactPageLink, hasActionLinkText };
+}
+
+/** Real social platforms and how a PROFILE (not a share button, post, or
+ * the bare platform homepage) looks on each. */
+const SOCIAL_PLATFORMS: Array<{ platform: string; hosts: string[]; profile: (segments: string[], url: URL) => boolean }> = [
+  {
+    platform: "Instagram",
+    hosts: ["instagram.com"],
+    profile: (s) => s.length >= 1 && !["p", "reel", "reels", "explore", "accounts", "share", "stories", "tv"].includes(s[0].toLowerCase()),
+  },
+  {
+    platform: "Facebook",
+    hosts: ["facebook.com", "fb.com", "fb.me", "m.facebook.com"],
+    profile: (s, u) =>
+      (s[0]?.toLowerCase() === "profile.php" && u.searchParams.has("id")) ||
+      (s.length >= 1 &&
+        !["sharer", "sharer.php", "share", "share.php", "dialog", "plugins", "tr", "login", "login.php", "home.php", "profile.php", "events", "watch", "hashtag", "groups"].includes(s[0].toLowerCase())),
+  },
+  { platform: "TikTok", hosts: ["tiktok.com"], profile: (s) => s.length >= 1 && s[0].startsWith("@") && s[0].length > 1 },
+  {
+    platform: "X/Twitter",
+    hosts: ["twitter.com", "x.com"],
+    profile: (s) => s.length >= 1 && !["intent", "share", "home", "i", "search", "hashtag", "login"].includes(s[0].toLowerCase()),
+  },
+  {
+    platform: "YouTube",
+    hosts: ["youtube.com", "m.youtube.com"],
+    profile: (s) => s.length >= 1 && (s[0].startsWith("@") || (["channel", "c", "user"].includes(s[0].toLowerCase()) && s.length >= 2)),
+  },
+  { platform: "LinkedIn", hosts: ["linkedin.com"], profile: (s) => s.length >= 2 && ["company", "in", "school"].includes(s[0].toLowerCase()) },
+  { platform: "Yelp", hosts: ["yelp.com"], profile: (s) => s.length >= 2 && s[0].toLowerCase() === "biz" },
+  { platform: "Pinterest", hosts: ["pinterest.com"], profile: (s) => s.length >= 1 && !["pin", "search", "ideas"].includes(s[0].toLowerCase()) },
+  { platform: "Threads", hosts: ["threads.net"], profile: (s) => s.length >= 1 && s[0].startsWith("@") },
+];
+
+function socialPlatformFor(hostname: string) {
+  const host = hostname.replace(/^www\./i, "").toLowerCase();
+  return SOCIAL_PLATFORMS.find((p) => p.hosts.some((h) => host === h || host.endsWith(`.${h}`)));
+}
+
+/**
+ * Real social media PROFILES the page links to (Step 2d) — never a share
+ * button (facebook.com/sharer…, twitter.com/intent…), a post/video, or a
+ * bare platform homepage. One entry per profile, displayed as
+ * "instagram.com/mainstreetsweets".
+ */
+export function detectSocialProfiles(html: string): SocialProfile[] {
+  const profiles: SocialProfile[] = [];
+  for (const link of anchorLinks(stripNonVisibleMarkup(html))) {
+    let url: URL;
+    try {
+      url = new URL(link.href);
+    } catch {
+      continue;
+    }
+    if (!/^https?:$/i.test(url.protocol)) continue;
+    const platform = socialPlatformFor(url.hostname);
+    if (!platform) continue;
+    const segments = url.pathname.split("/").filter(Boolean);
+    if (!platform.profile(segments, url)) continue;
+    const host = url.hostname.replace(/^(www|m)\./i, "").toLowerCase();
+    const path = segments[0]?.toLowerCase() === "profile.php" ? `profile.php?id=${url.searchParams.get("id")}` : segments.slice(0, platform.platform === "LinkedIn" || platform.platform === "Yelp" || (platform.platform === "YouTube" && !segments[0].startsWith("@")) ? 2 : 1).join("/");
+    const display = `${host}/${path}`;
+    if (!profiles.some((p) => p.url.toLowerCase() === display.toLowerCase())) profiles.push({ platform: platform.platform, url: display });
+  }
+  return profiles;
+}
+
+export function analyzeWebsiteHtml(html: string, baseUrl?: string | null): WebsiteContentSignals {
   const clean = stripNonVisibleMarkup(html);
 
   const title = extractTag(clean, /<title[^>]*>([\s\S]*?)<\/title>/i);
   const hasTitle = !!title && decodeBasicEntities(title).trim().length > 0;
 
-  const metaDescription = extractTag(
-    clean,
-    /<meta[^>]+name=["']description["'][^>]*content=["']([^"']*)["']/i
-  );
+  // Any attribute order, quoted or unquoted (Step 2d) — see metaContent.
+  const metaDescription = metaContent(clean, "description");
   const hasMetaDescription = !!metaDescription && metaDescription.trim().length > 0;
 
-  const viewportContent = extractTag(
-    clean,
-    /<meta[^>]+name=["']viewport["'][^>]*content=["']([^"']*)["']/i
-  );
+  const viewportContent = metaContent(clean, "viewport");
   const hasViewportTag = !!viewportContent && /width\s*=\s*device-width/i.test(viewportContent);
 
   const headingMatches = clean.match(/<h[1-6][\s>]/gi);
@@ -135,11 +292,13 @@ export function analyzeWebsiteHtml(html: string): WebsiteContentSignals {
   const visibleText = extractVisibleText(clean);
   const visibleTextLength = visibleText.length;
 
-  const hasPhoneLink = /href\s*=\s*["']tel:/i.test(clean);
-  const hasEmailLink = /href\s*=\s*["']mailto:/i.test(clean);
+  const { hasPhoneLink, hasEmailLink, hasContactPageLink, hasActionLinkText } = detectContactLinks(clean, baseUrl);
 
   const lowerText = visibleText.toLowerCase();
-  const hasCtaText = WEBSITE_CTA_PHRASES.some((phrase) => lowerText.includes(phrase));
+  // An action-labeled contact link/button ("Contact us", "Call", "Book",
+  // "Llámenos"…) is itself a real call-to-action (Step 2d).
+  const hasCtaText = WEBSITE_CTA_PHRASES.some((phrase) => lowerText.includes(phrase)) || hasActionLinkText;
+  const socialProfiles = detectSocialProfiles(clean);
 
   const isLikelyClientRenderedShell = detectClientRenderedShell(clean, visibleTextLength, headingCount);
 
@@ -151,7 +310,9 @@ export function analyzeWebsiteHtml(html: string): WebsiteContentSignals {
     visibleTextLength,
     hasPhoneLink,
     hasEmailLink,
+    hasContactPageLink,
     hasCtaText,
+    socialProfiles,
     isLikelyClientRenderedShell,
     // This module never calls PageSpeed — recovery (when isLikelyClientRenderedShell
     // is true) is layered on afterward by lib/websiteAnalysis.ts's

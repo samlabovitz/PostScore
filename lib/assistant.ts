@@ -31,6 +31,10 @@ export interface AssistantListingSummary {
   addressPresent: boolean;
   hoursPresent: boolean;
   websitePresent: boolean;
+  /** Set when the business's real website was verified elsewhere and is
+   * NOT on the Google listing yet (the real Bánh Mì Boy case) — the
+   * site's URL. Null when the website (if any) is the listing's own. */
+  verifiedWebsiteNotOnListing?: string | null;
   httpsStatus: HttpsCheckStatus | null;
   /** WHY httpsStatus is "unreachable" — see ReachabilityFailureReason's
    * own doc (lib/websiteReachability.ts) and websiteReachabilityText's
@@ -839,7 +843,11 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
   );
   lines.push(
     context.listing.websitePresent
-      ? `- Has a website on file. Reachability on the last check: ${websiteReachabilityText(context.listing.httpsStatus, context.listing.httpsUnreachableReason)}.`
+      ? `- Has a website on file${
+          context.listing.verifiedWebsiteNotOnListing
+            ? ` (${context.listing.verifiedWebsiteNotOnListing} — a real site verified elsewhere by phone/address match; it's NOT on the Google listing yet, so say "not on your Google listing yet", never that they have no website)`
+            : ""
+        }. Reachability on the last check: ${websiteReachabilityText(context.listing.httpsStatus, context.listing.httpsUnreachableReason)}.`
       : "- No website on file."
   );
   if (context.listing.googleListingMissingWebsiteSince) {
