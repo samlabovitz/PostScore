@@ -80,6 +80,7 @@ import {
   screenshotCallsThisMonth,
 } from "../lib/screenshotBudget";
 import { normalizeLocale } from "../lib/i18n";
+import { browserRenderMonthlyCap, browserRendersThisMonth, MAX_BROWSER_RENDERS_PER_SCAN } from "../lib/browserRender";
 import type { rescanBusinessWithClient as RescanBusinessWithClientFn } from "../app/actions/scoring";
 import {
   mergeBusinessEntries,
@@ -245,6 +246,31 @@ async function main() {
       }
     }
     const willCaptureIds = new Set(willCapture.map((b) => b.id));
+
+    // Step 2g: Browserless renders — the same rule a real scan uses: only
+    // a JavaScript-only page our fetch could reach (never bot-blocked),
+    // only with a key, up to MAX_BROWSER_RENDERS_PER_SCAN each, in run
+    // order, within this month's cap (across all businesses).
+    const hasBrowserlessKey = !!process.env.BROWSERLESS_API_KEY;
+    const everyAnalysis = (everyBusiness ?? []).map((r) => parseWebsiteAnalysis(r.website_analysis_json));
+    const rendersUsed = browserRendersThisMonth(everyAnalysis);
+    const renderCap = browserRenderMonthlyCap();
+    const renderCandidates = businesses.filter((b) => {
+      const a = parseWebsiteAnalysis(b.website_analysis_json);
+      const jsPresence = [a?.aboutPresence, a?.servicesPresence].some((p) => p?.state === "couldnt_check" && p.reason === "js_rendered");
+      return (
+        businessWebsiteUrl(b) !== null &&
+        !a?.contentFetchFailureReason &&
+        (a?.content?.isLikelyClientRenderedShell === true || jsPresence || (a?.readViaBrowserChecks?.length ?? 0) > 0)
+      );
+    });
+    let renderBudgetLeft = Math.max(0, renderCap - rendersUsed);
+    const renderPlan = renderCandidates.map((b) => {
+      const n = hasBrowserlessKey ? Math.min(MAX_BROWSER_RENDERS_PER_SCAN, renderBudgetLeft) : 0;
+      renderBudgetLeft -= n;
+      return { b, n };
+    });
+    const totalRenders = renderPlan.reduce((sum, p) => sum + p.n, 0);
     console.log(`DRY RUN — would re-scan ${businesses.length} business(es):\n`);
     for (const b of businesses) {
       console.log(`  ${b.name ?? "(unnamed)"} (${b.id})${willCaptureIds.has(b.id) ? " — first screenshot capture" : ""}`);
@@ -292,6 +318,11 @@ async function main() {
         `  ScreenshotOne: ${willCapture.length} capture(s), up to ${willCapture.length * MAX_SCREENSHOT_CALLS_PER_CAPTURE} calls (1 homepage + up to 4 pages each). ${needCapture.length} business(es) have no screenshot; ${usedThisMonth} call(s) already used this month; monthly cap ${cap}${needCapture.length > willCapture.length ? ` — ${needCapture.length - willCapture.length} skipped by the cap, keeping "no screenshot yet"` : ""}. Pass --no-screenshots to skip all captures.`
       );
     }
+    console.log(
+      hasBrowserlessKey
+        ? `  Browserless renders (JavaScript-only pages): up to ${totalRenders} render(s) for ${renderPlan.filter((p) => p.n > 0).length} business(es) — ${renderPlan.map((p) => `${p.b.name ?? "(unnamed)"}: up to ${p.n}`).join(", ") || "none"}. ${rendersUsed} used this month; monthly cap ${renderCap}${renderPlan.some((p) => p.n === 0) ? ` — ${renderPlan.filter((p) => p.n === 0).length} skipped by the cap, keeping "couldn't check"` : ""}.`
+        : `  Browserless renders: none (BROWSERLESS_API_KEY not set — JavaScript-only pages stay "couldn't check").`
+    );
     console.log(`\nNo real calls made, no writes made. Pass without --dry-run to actually run this.`);
     return;
   }

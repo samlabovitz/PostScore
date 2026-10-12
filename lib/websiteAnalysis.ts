@@ -16,7 +16,10 @@
 // misconfigured check degrades to null so the caller can honestly
 // exclude it from scoring, never fabricate a value or fail the save.
 
+import { POSTSCORE_USER_AGENT } from "./userAgent";
 import { analyzeWebsiteHtml, detectContactLinks, detectSocialProfiles } from "./websiteContentAnalysis";
+import { createRenderingFetch } from "./browserRender";
+import { BROWSER_READ_CHECK_IDS } from "./scoring";
 import type {
   FieldSpeedCategory,
   MobilePerformanceFailure,
@@ -36,7 +39,8 @@ import {
   aboutContentPasses,
   extractMainContentHtml,
   extractVisibleText as extractMainContentVisibleText,
-  findKeywordSection,
+  findKeywordSections,
+  explicitServicesSectionPasses,
   findMenuPdfLink,
   findPdfMenuLink,
   isKnownOrderingPlatformHost,
@@ -171,7 +175,7 @@ async function fetchHtmlOnce(url: string, fetchImpl: typeof fetch): Promise<Html
     const res = await fetchImpl(url, {
       method: "GET",
       redirect: "follow",
-      headers: { "User-Agent": "PostScoreBot/1.0 (+https://postscore.app)" },
+      headers: { "User-Agent": POSTSCORE_USER_AGENT },
       signal: controller.signal,
     });
     if (!res.ok) {
@@ -369,7 +373,7 @@ async function fetchPresenceCandidateOnce(url: string, fetchImpl: typeof fetch):
     const res = await fetchImpl(url, {
       method: "GET",
       redirect: "follow",
-      headers: { "User-Agent": "PostScoreBot/1.0 (+https://postscore.app)" },
+      headers: { "User-Agent": POSTSCORE_USER_AGENT },
       signal: controller.signal,
     });
     if (res.status === 404) return { kind: "broken_link" };
@@ -464,9 +468,18 @@ function isStrictLabelOrPathMatch(label: string, path: string, keyword: string):
  * just one keyword's own matcher. */
 const ABOUT_EXCLUDED_PATH_SEGMENTS = ["support", "help", "account", "login", "rewards", "careers", "career"];
 
-function isExcludedAboutPath(path: string): boolean {
+/** Step 2g: pages that are about the CORPORATION, not this business —
+ * charity/foundation/giving programs (the real Great Clips "Children's
+ * Miracle Network" case), networks, careers/jobs, franchising, investor
+ * relations, press/news — never count as About, matched on the link
+ * text or any path segment. */
+const NOT_ABOUT_THIS_BUSINESS_RE =
+  /\b(charit(y|ies|able)|foundation|giving|give-back|miracle|network|careers?|jobs?|franchis\w*|investors?|press|newsroom|news|media)\b/i;
+
+export function isExcludedAboutPath(path: string, label = ""): boolean {
   const segments = path.toLowerCase().split("/").filter(Boolean);
-  return segments.some((s) => ABOUT_EXCLUDED_PATH_SEGMENTS.includes(s));
+  if (segments.some((s) => ABOUT_EXCLUDED_PATH_SEGMENTS.includes(s))) return true;
+  return NOT_ABOUT_THIS_BUSINESS_RE.test(segments.join(" ").replace(/[-_]/g, " ")) || NOT_ABOUT_THIS_BUSINESS_RE.test(label);
 }
 
 /** Same-brand (eTLD+1, see sameBrandHost's own doc) rather than exact
@@ -528,7 +541,7 @@ function findAllMatchingCandidates(
     // covers, so this exclusion must apply universally per-candidate,
     // not just inside one keyword's own matcher). See
     // isExcludedAboutPath's own doc.
-    if (strictKeywords.includes("about") && isExcludedAboutPath(path)) continue;
+    if (strictKeywords.includes("about") && isExcludedAboutPath(path, c.label)) continue;
     const key = `${u.origin}${path}`;
     if (seen.has(key)) continue;
     const matchKeyword = (kw: string) =>
@@ -735,13 +748,16 @@ export async function detectPagePresence(
   // used as a ranking TIEBREAK (see findAllMatchingCandidates'
   // locationMatch), never a hard filter: a candidate that doesn't name
   // the city can still be tried and win if nothing else does.
-  locationHint?: string | null
+  locationHint?: string | null,
+  /** Step 2g: extra Services keywords (retail types — see
+   * RETAIL_SERVICES_KEYWORDS). Ignored for About. */
+  extraServicesKeywords: string[] = []
 ): Promise<PagePresenceResult> {
   if (isLikelyJsRenderedShell(homepageHtml)) {
     return { state: "couldnt_check", url: null, locatedOnHomepage: false, reason: "js_rendered", note: null };
   }
 
-  const keywords = kind === "about" ? ABOUT_PAGE_KEYWORDS : SERVICES_PAGE_KEYWORDS;
+  const keywords = kind === "about" ? ABOUT_PAGE_KEYWORDS : [...SERVICES_PAGE_KEYWORDS, ...extraServicesKeywords];
   const ranked = findAllMatchingCandidates(
     candidates,
     homepageUrl,
@@ -796,7 +812,11 @@ export async function detectPagePresence(
     const text = extractMainContentVisibleText(mainHtml);
     const passes = kind === "about" ? aboutContentPasses(text) : servicesContentPasses(mainHtml, text);
     if (passes) {
-      return { state: "found", url: candidate.url, locatedOnHomepage: false, reason: null, note: null };
+      // Step 2g: an About page on the brand's own site rather than this
+      // business's (a chain's corporate About) is said honestly.
+      const brandPage =
+        kind === "about" && normalizeHost(new URL(candidate.url).hostname) !== normalizeHost(homepageUrl.hostname);
+      return { state: "found", url: candidate.url, locatedOnHomepage: false, reason: null, note: brandPage ? "brand_page" : null };
     }
     if (kind === "services") {
       // Real Red Bowl case.
@@ -817,9 +837,12 @@ export async function detectPagePresence(
   }
 
   const mainHomepageHtml = extractMainContentHtml(homepageHtml);
-  const section = findKeywordSection(mainHomepageHtml, keywords);
-  if (section) {
-    const passes = kind === "about" ? aboutContentPasses(section.text) : servicesContentPasses(section.html, section.text);
+  // Every matching homepage section, until one genuinely passes (Step 2g).
+  for (const section of findKeywordSections(mainHomepageHtml, keywords)) {
+    const passes =
+      kind === "about"
+        ? aboutContentPasses(section.text)
+        : servicesContentPasses(section.html, section.text) || explicitServicesSectionPasses(section);
     if (passes) {
       return { state: "found", url: null, locatedOnHomepage: true, reason: null, note: null };
     }
@@ -1661,6 +1684,11 @@ export interface WebsiteAnalysisCollection {
   /** Step 2d: our own plain fetch got a genuine 404/410 (never a bot
    * block) — see FetchWebsiteHtmlResult.missingPageStatus. */
   contentFetchMissingPageStatus: 404 | 410 | null;
+  /** Step 2g: the checks whose findings below were read from the page as
+   * a browser shows it (Browserless render). */
+  readViaBrowserChecks: string[];
+  /** Step 2g: real Browserless renders this scan used. */
+  browserRenders: number;
   /** Up to MAX_ADDITIONAL_PAGES other real discovered pages, each with
    * its own best-effort screenshot — see AdditionalPageCapture. Always []
    * when options.captureScreenshots was false — a regular re-scan reuses
@@ -1712,8 +1740,21 @@ export interface WebsiteAnalysisCollection {
  */
 export async function collectWebsiteAnalysis(
   website: string,
-  keys: { pageSpeedApiKey: string | undefined; screenshotApiKey: string | undefined; safeBrowsingApiKey?: string | undefined },
-  options: { captureScreenshots: boolean },
+  keys: {
+    pageSpeedApiKey: string | undefined;
+    screenshotApiKey: string | undefined;
+    safeBrowsingApiKey?: string | undefined;
+    /** Step 2g: Browserless — absent = behave exactly as before. */
+    browserlessApiKey?: string | undefined;
+  },
+  options: {
+    captureScreenshots: boolean;
+    /** Step 2g: Browserless renders this scan may use (0 = none — the
+     * monthly cap is enforced by the caller). */
+    maxBrowserRenders?: number;
+    /** Step 2g: extra Services keywords for a retail-type business. */
+    extraServicesKeywords?: string[];
+  },
   google: {
     phone: string | null;
     address: string | null;
@@ -1781,7 +1822,7 @@ export async function collectWebsiteAnalysis(
     }
     const [about, services] = await Promise.all([
       detectPagePresence("about", r.html, disc.homepageUrl, disc.candidates, sharedPresenceBudget, fetchImpl, locationHint),
-      detectPagePresence("services", r.html, disc.homepageUrl, disc.candidates, sharedPresenceBudget, fetchImpl, locationHint),
+      detectPagePresence("services", r.html, disc.homepageUrl, disc.candidates, sharedPresenceBudget, fetchImpl, locationHint, options.extraServicesKeywords ?? []),
     ]);
     return { about, services };
   });
@@ -1858,8 +1899,64 @@ export async function collectWebsiteAnalysis(
       }
     : null;
 
+  // Step 2g: a JavaScript-only homepage our fetch COULD reach (never a
+  // bot-blocked one) is read again the way a browser shows it — only
+  // with a Browserless key and render allowance. Any failure or a
+  // rendered block/challenge page keeps the static "couldn't check".
+  const canRender = !htmlFailureReason && !!keys.browserlessApiKey && (options.maxBrowserRenders ?? 0) > 0;
+  const rendered =
+    canRender && baseContent?.isLikelyClientRenderedShell
+      ? await readPagesViaBrowser(
+          website,
+          keys.browserlessApiKey!,
+          options.maxBrowserRenders ?? 0,
+          google,
+          keys.safeBrowsingApiKey,
+          now,
+          fetchImpl,
+          locationHint,
+          options.extraServicesKeywords ?? []
+        )
+      : null;
+  // A readable homepage whose About/Services PAGE was flagged
+  // JavaScript-built (the real Great Clips case) — render just those.
+  const jsPresenceKinds = (["about", "services"] as const).filter(
+    (k) => presence[k].state === "couldnt_check" && presence[k].reason === "js_rendered"
+  );
+  const renderedPresence =
+    canRender && !baseContent?.isLikelyClientRenderedShell && jsPresenceKinds.length > 0 && htmlResult.status === "fulfilled" && htmlResult.value.html
+      ? await rereadPresenceViaBrowser(
+          website,
+          htmlResult.value.html,
+          jsPresenceKinds,
+          keys.browserlessApiKey!,
+          options.maxBrowserRenders ?? 0,
+          fetchImpl,
+          locationHint,
+          options.extraServicesKeywords ?? []
+        )
+      : null;
+
+  // A homepage rendered for About/Services also replaces the static
+  // homepage content, merged with the Contact page's links like above.
+  const presenceHomeContent: WebsiteContentSignals | null = renderedPresence?.homeContent
+    ? {
+        ...renderedPresence.homeContent,
+        hasPhoneLink: renderedPresence.homeContent.hasPhoneLink || contactPageLinks.hasPhoneLink,
+        hasEmailLink: renderedPresence.homeContent.hasEmailLink || contactPageLinks.hasEmailLink,
+        hasContactPageLink: renderedPresence.homeContent.hasContactPageLink === true || contactPageLinks.hasContactPageLink,
+        hasCtaText: renderedPresence.homeContent.hasCtaText || contactPageLinks.hasActionLinkText,
+        socialProfiles: [
+          ...(renderedPresence.homeContent.socialProfiles ?? []),
+          ...contactPageSocial.filter(
+            (p) => !(renderedPresence.homeContent!.socialProfiles ?? []).some((q) => q.url.toLowerCase() === p.url.toLowerCase())
+          ),
+        ],
+      }
+    : null;
+
   return {
-    content,
+    content: rendered?.content ?? presenceHomeContent ?? content,
     contentFetchFailureReason: content ? null : htmlFailureReason,
     mobilePerformance: pageSpeed.measurement,
     mobilePerformanceFailureReason: pageSpeed.measurement ? null : pageSpeed.failureReason,
@@ -1869,8 +1966,147 @@ export async function collectWebsiteAnalysis(
     pageSpeedSoftNotFoundUrl: pageSpeed.softNotFoundUrl ?? null,
     contentFetchMissingPageStatus: htmlResult.status === "fulfilled" ? htmlResult.value.missingPageStatus ?? null : null,
     additionalPages: screenshots.additionalPages,
-    aboutPresence: presence.about,
-    servicesPresence: presence.services,
-    websiteTrust,
+    aboutPresence: rendered?.about ?? renderedPresence?.about ?? presence.about,
+    servicesPresence: rendered?.services ?? renderedPresence?.services ?? presence.services,
+    websiteTrust: rendered?.websiteTrust ?? websiteTrust,
+    readViaBrowserChecks: rendered?.content != null ? [...BROWSER_READ_CHECK_IDS] : renderedPresence?.readChecks ?? [],
+    browserRenders: (rendered?.renders ?? 0) + (renderedPresence?.renders ?? 0),
   };
+}
+
+/**
+ * Step 2g: re-runs About/Services detection with the business's own
+ * JavaScript-built candidate pages rendered as a browser shows them —
+ * for a site whose homepage our static fetch CAN read. A result still
+ * "couldn't check" after rendering keeps the static one.
+ */
+async function rereadPresenceViaBrowser(
+  website: string,
+  homepageHtml: string,
+  kinds: ReadonlyArray<"about" | "services">,
+  apiKey: string,
+  maxRenders: number,
+  fetchImpl: typeof fetch,
+  locationHint: string | null,
+  extraServicesKeywords: string[] = []
+): Promise<{
+  about?: PagePresenceResult;
+  services?: PagePresenceResult;
+  /** The rendered homepage's own content signals, when the homepage itself
+   * had to be rendered — reused for content depth, contact and social. */
+  homeContent?: WebsiteContentSignals;
+  readChecks: string[];
+  renders: number;
+}> {
+  const rf = createRenderingFetch({ siteUrl: website, apiKey, maxRenders, baseFetch: fetchImpl });
+  const target = /^https?:\/\//i.test(website.trim()) ? website.trim() : `https://${website.trim()}`;
+  let homepageUrl: URL;
+  try {
+    homepageUrl = new URL(target);
+  } catch {
+    return { readChecks: [], renders: 0 };
+  }
+  // The homepage itself may read as a JavaScript shell to presence
+  // detection (the real Great Clips case) — then render it too, and look
+  // for About/Services in what a browser shows.
+  let pageHtml = homepageHtml;
+  let homeContent: WebsiteContentSignals | undefined;
+  if (isLikelyJsRenderedShell(homepageHtml)) {
+    const res = await rf.fetch(target);
+    const rendered = res.ok ? await res.text() : null;
+    if (!rendered || rf.renderCount() === 0 || isLikelyJsRenderedShell(rendered)) return { readChecks: [], renders: rf.renderCount() };
+    pageHtml = rendered;
+    // The same render (no extra one) also feeds content depth, contact &
+    // conversion and social links — the real Great Clips case.
+    const analyzed = analyzeWebsiteHtml(rendered, website);
+    if (!analyzed.isLikelyClientRenderedShell) homeContent = analyzed;
+  }
+  const candidates = [...extractLinkCandidates(pageHtml, homepageUrl), ...(await fetchSitemapLocs(homepageUrl, fetchImpl))];
+  const budget = newPresenceBudget();
+  const out: { about?: PagePresenceResult; services?: PagePresenceResult; homeContent?: WebsiteContentSignals; readChecks: string[]; renders: number } = {
+    readChecks: [],
+    renders: 0,
+  };
+  if (homeContent) {
+    out.homeContent = homeContent;
+    out.readChecks.push("website.content_depth", "website.contact_conversion", "website.social_links");
+  }
+  for (const kind of kinds) {
+    const result = await detectPagePresence(kind, pageHtml, homepageUrl, candidates, budget, rf.fetch, locationHint, extraServicesKeywords);
+    if (result.state !== "couldnt_check") {
+      out[kind] = result;
+      out.readChecks.push(kind === "about" ? "website.about_presence" : "website.services_presence");
+    }
+  }
+  out.renders = rf.renderCount();
+  return out;
+}
+
+/**
+ * Step 2g: re-reads a JavaScript-built site's pages as a browser shows
+ * them — homepage, About/Services candidates and the Contact page,
+ * rendered through Browserless (own-site HTML pages only, capped at
+ * `maxRenders`). Safe Browsing and every other host go through the
+ * normal fetch. Returns content: null (with the renders spent) when the
+ * homepage render failed, came back as a block/challenge page, or still
+ * reads as an empty app shell — the caller then keeps the static result.
+ */
+async function readPagesViaBrowser(
+  website: string,
+  apiKey: string,
+  maxRenders: number,
+  google: Parameters<typeof collectWebsiteTrust>[2],
+  safeBrowsingApiKey: string | undefined,
+  now: Date,
+  fetchImpl: typeof fetch,
+  locationHint: string | null,
+  extraServicesKeywords: string[] = []
+): Promise<{
+  content: WebsiteContentSignals | null;
+  about?: PagePresenceResult;
+  services?: PagePresenceResult;
+  websiteTrust?: WebsiteTrustAnalysis;
+  renders: number;
+}> {
+  const rf = createRenderingFetch({ siteUrl: website, apiKey, maxRenders, baseFetch: fetchImpl });
+  const target = /^https?:\/\//i.test(website.trim()) ? website.trim() : `https://${website.trim()}`;
+  let homepageUrl: URL;
+  try {
+    homepageUrl = new URL(target);
+  } catch {
+    return { content: null, renders: 0 };
+  }
+  const homeRes = await rf.fetch(target);
+  const homeHtml = homeRes.ok ? await homeRes.text() : null;
+  if (!homeHtml || rf.renderCount() === 0) return { content: null, renders: rf.renderCount() };
+  const homeContent = analyzeWebsiteHtml(homeHtml, website);
+  if (homeContent.isLikelyClientRenderedShell) return { content: null, renders: rf.renderCount() };
+
+  const candidates = [...extractLinkCandidates(homeHtml, homepageUrl), ...(await fetchSitemapLocs(homepageUrl, fetchImpl))];
+  const budget = newPresenceBudget();
+  const [about, services] = await Promise.all([
+    detectPagePresence("about", homeHtml, homepageUrl, candidates, budget, rf.fetch, locationHint),
+    detectPagePresence("services", homeHtml, homepageUrl, candidates, budget, rf.fetch, locationHint, extraServicesKeywords),
+  ]);
+  const contactCandidate = findContactPageCandidate(candidates, homepageUrl);
+  const contactOutcome = contactCandidate ? await fetchPresenceCandidateBudgeted(contactCandidate.url, budget, rf.fetch) : null;
+  const contactPageHtml = contactOutcome?.kind === "ok" ? contactOutcome.html : null;
+  const websiteTrust = await collectWebsiteTrust(homeHtml, website, google, safeBrowsingApiKey, now, fetchImpl, contactPageHtml);
+
+  const contactLinks = contactPageHtml
+    ? detectContactLinks(contactPageHtml, website)
+    : { hasPhoneLink: false, hasEmailLink: false, hasContactPageLink: false, hasActionLinkText: false };
+  const contactSocial = contactPageHtml ? detectSocialProfiles(contactPageHtml) : [];
+  const content: WebsiteContentSignals = {
+    ...homeContent,
+    hasPhoneLink: homeContent.hasPhoneLink || contactLinks.hasPhoneLink,
+    hasEmailLink: homeContent.hasEmailLink || contactLinks.hasEmailLink,
+    hasContactPageLink: homeContent.hasContactPageLink === true || contactLinks.hasContactPageLink,
+    hasCtaText: homeContent.hasCtaText || contactLinks.hasActionLinkText,
+    socialProfiles: [
+      ...(homeContent.socialProfiles ?? []),
+      ...contactSocial.filter((p) => !(homeContent.socialProfiles ?? []).some((q) => q.url.toLowerCase() === p.url.toLowerCase())),
+    ],
+  };
+  return { content, about, services, websiteTrust, renders: rf.renderCount() };
 }

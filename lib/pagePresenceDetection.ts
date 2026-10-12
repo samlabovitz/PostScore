@@ -246,6 +246,8 @@ export function matchesKeyword(haystack: string, keywords: string[]): string | n
 export interface ContentSection {
   text: string;
   html: string;
+  /** The matched heading's own text (Step 2g). */
+  heading?: string;
 }
 
 /** Below this many real words, a `<b>`/`<strong>`-wrapped paragraph
@@ -346,6 +348,19 @@ function findListItemPseudoHeadings(html: string, keywords: string[]): HeadingMa
  * when nothing matches at all.
  */
 export function findKeywordSection(mainContentHtml: string, keywords: string[]): ContentSection | null {
+  return findKeywordSections(mainContentHtml, keywords)[0] ?? null;
+}
+
+/**
+ * Step 2g: EVERY heading-bounded section whose heading matches one of
+ * `keywords`, in page order — the real Goldberg Hardware case: an early
+ * "Shop Local" heading (a single paragraph) matched the "shop" keyword
+ * first and hid the real "Services Offered" list further down, because
+ * only the first match was ever checked. Callers try each until one
+ * genuinely passes.
+ */
+export function findKeywordSections(mainContentHtml: string, keywords: string[]): ContentSection[] {
+  const sections: ContentSection[] = [];
   const headings = [
     ...findRealHeadings(mainContentHtml),
     ...findPseudoHeadings(mainContentHtml),
@@ -368,10 +383,17 @@ export function findKeywordSection(mainContentHtml: string, keywords: string[]):
     // still cost a bounded amount of work to scan.
     end = Math.min(end, start + 20000);
     const sectionHtml = mainContentHtml.slice(start, end);
-    return { text: extractVisibleText(sectionHtml), html: sectionHtml };
+    sections.push({ text: extractVisibleText(sectionHtml), html: sectionHtml, heading: headings[i].text });
   }
-  return null;
+  return sections;
 }
+
+/** Step 2g: extra Services/Products keywords for retail-type businesses
+ * (hardware, boutique, liquor, grocery, florist) — a store's "services"
+ * are its brands and departments ("Products" and "Shop" are already core
+ * keywords for every business). EN + ES. */
+export const RETAIL_SERVICES_KEYWORDS: string[] = ["brands", "our brands", "departments", "marcas", "nuestras marcas", "departamentos"];
+export const RETAIL_BUSINESS_TYPE_IDS: readonly string[] = ["hardware_store", "retail_boutique", "liquor_store", "grocery_market", "florist"];
 
 /** Real `<li>` elements in already-main-content-only HTML (see
  * extractMainContentHtml) — a site's own nav `<li>`s are already
@@ -470,6 +492,25 @@ export function looksLikeNonAboutTopicPage(html: string): boolean {
  * short. See MIN_DISTINCT_PRICES_SERVICES's own doc for the real case
  * this fixes.
  */
+/** Step 2g: a heading that explicitly titles a services/products/brands
+ * list (EN + ES) — "Services Offered", "Our Services", "Products",
+ * "Our Brands", "Servicios", "Productos", "Marcas". */
+const EXPLICIT_SERVICES_HEADING_RE =
+  /\b(services?(\s+offered)?|our\s+services|products|our\s+products|brands|our\s+brands|departments|servicios|productos|marcas|departamentos)\b/i;
+
+/**
+ * Step 2g: a homepage section under an EXPLICIT services/products/brands
+ * heading counts with at least MIN_LIST_ITEMS_SERVICES real list items —
+ * the real Goldberg Hardware case: "Services Offered" over a genuine
+ * 5-item list (key cutting, grill assembly, screen repair, …) that the
+ * general rule (60+ words or 6+ items) rejected for being short. A
+ * generic heading still needs the full servicesContentPasses evidence.
+ */
+export function explicitServicesSectionPasses(section: ContentSection): boolean {
+  if (!section.heading || !EXPLICIT_SERVICES_HEADING_RE.test(section.heading)) return false;
+  return countListItems(section.html) >= MIN_LIST_ITEMS_SERVICES;
+}
+
 export function servicesContentPasses(mainContentHtml: string, text: string): boolean {
   if (!hasRealListedItems(mainContentHtml, text)) return false;
   if (wordCount(text) >= MIN_WORDS_SERVICES || countDistinctPrices(text) >= MIN_DISTINCT_PRICES_SERVICES) return true;

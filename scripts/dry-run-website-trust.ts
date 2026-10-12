@@ -19,6 +19,7 @@
 // Usage (from the project root):
 //   npx tsx scripts/dry-run-website-trust.ts
 
+import { POSTSCORE_USER_AGENT } from "../lib/userAgent";
 import * as fs from "fs";
 
 for (const line of fs.readFileSync(".env.local", "utf-8").split("\n")) {
@@ -275,7 +276,7 @@ async function main() {
   let bagelEmporiumSection = "";
   try {
     const row = data.find((b) => (b.name ?? "").toLowerCase().includes("bagel emporium"))!;
-    const res = await fetch(row.website!, { headers: { "User-Agent": "Mozilla/5.0 (compatible; PostScoreBot/1.0)" } });
+    const res = await fetch(row.website!, { headers: { "User-Agent": POSTSCORE_USER_AGENT } });
     const html = await res.text();
     const text = extractVisibleText(extractMainContentHtml(html));
     const idx4545 = text.indexOf("914-222-4545");
@@ -304,13 +305,13 @@ async function main() {
   let colorfulYunNanSection = "";
   try {
     const row = data.find((b) => (b.name ?? "").toLowerCase().includes("yun nan"))!;
-    const res = await fetch(row.website!, { headers: { "User-Agent": "Mozilla/5.0 (compatible; PostScoreBot/1.0)" } });
+    const res = await fetch(row.website!, { headers: { "User-Agent": POSTSCORE_USER_AGENT } });
     const listedHtml = await res.text();
     const has894 = listedHtml.includes("894") && listedHtml.includes("1998");
     const has6743 = listedHtml.includes("6743");
     let secondSiteNote = "could not be re-verified live in this run";
     try {
-      const secondRes = await fetch("https://www.newarkcolorfulyunnan.com/", { headers: { "User-Agent": "Mozilla/5.0 (compatible; PostScoreBot/1.0)" } });
+      const secondRes = await fetch("https://www.newarkcolorfulyunnan.com/", { headers: { "User-Agent": POSTSCORE_USER_AGENT } });
       const secondHtml = await secondRes.text();
       const secondText = extractVisibleText(extractMainContentHtml(secondHtml));
       const idx = secondText.indexOf("894-1998");
@@ -333,7 +334,7 @@ async function main() {
   let popCultureVultureSection = "";
   try {
     const row = data.find((b) => (b.name ?? "").toLowerCase().includes("pop culture"))!;
-    const res = await fetch(row.website!, { redirect: "follow", headers: { "User-Agent": "Mozilla/5.0 (compatible; PostScoreBot/1.0)" } });
+    const res = await fetch(row.website!, { redirect: "follow", headers: { "User-Agent": POSTSCORE_USER_AGENT } });
     const html = await res.text();
     const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
     const plainText = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();

@@ -8,6 +8,7 @@ import {
   detectPagePresence,
   fetchMobilePerformance,
   fetchWebsiteHtml,
+  isExcludedAboutPath,
   newPresenceBudget,
 } from "./websiteAnalysis";
 
@@ -1620,5 +1621,33 @@ describe("Step 2d: only a genuine 404/410 is a missing page", () => {
   test("a 404 carrying a bot-challenge body is a block, not a missing page", async () => {
     const r = await fetchWebsiteHtml("example.com", vi.fn(async () => resp(404, "Just a moment... Checking your browser")) as unknown as typeof fetch);
     expect(r.missingPageStatus ?? null).toBeNull();
+  });
+});
+
+describe("Step 2g follow-ups", () => {
+  test("every plain fetch identifies as PostScoreBot/1.0 (+https://postscore.co)", async () => {
+    const agents: string[] = [];
+    const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
+      agents.push(String((init?.headers as Record<string, string>)?.["User-Agent"]));
+      return { ok: true, status: 200, headers: new Headers(), arrayBuffer: async () => new TextEncoder().encode("<p>hi</p>").buffer } as unknown as Response;
+    });
+    await fetchWebsiteHtml("example.com", fetchImpl as unknown as typeof fetch);
+    expect(agents[0]).toBe("PostScoreBot/1.0 (+https://postscore.co)");
+  });
+  test("corporate pages never count as About (charity, foundation, network, careers, franchising, investors, press)", () => {
+    for (const [path, label] of [
+      ["/about-us/giving/childrens-miracle-network", "About us"],
+      ["/foundation", "About our foundation"],
+      ["/about/careers", "About"],
+      ["/franchising/about", "About franchising"],
+      ["/investors/about", "About"],
+      ["/press", "About press"],
+      ["/about", "About our network"],
+    ]) {
+      expect(isExcludedAboutPath(path, label), `${path} ${label}`).toBe(true);
+    }
+    expect(isExcludedAboutPath("/about-us", "About Us")).toBe(false);
+    expect(isExcludedAboutPath("/our-story", "Our Story")).toBe(false);
+    expect(isExcludedAboutPath("/meet-the-team", "Meet the team")).toBe(false);
   });
 });

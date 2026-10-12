@@ -379,7 +379,7 @@ export type PagePresenceState = "found" | "not_found" | "couldnt_check";
  * can't read its text. "image_only" (Services only) — a real Menu/
  * Services candidate page loads fine with real intro content, but its
  * actual items are rendered as images, not text. */
-export type PagePresenceNote = "pdf_only" | "broken_link" | "online_ordering" | "image_only" | null;
+export type PagePresenceNote = "pdf_only" | "broken_link" | "online_ordering" | "image_only" | "brand_page" | null;
 
 /** Why a page-presence check is couldnt_check — every real
  * ReachabilityFailureReason (the page itself was unreachable), plus
@@ -583,6 +583,13 @@ export interface WebsiteAnalysis {
   /** The most recent capture's real ScreenshotOne usage — counted toward
    * the monthly automatic-capture cap (see lib/screenshotBudget.ts). */
   screenshotCaptureLog?: ScreenshotCaptureLog | null;
+  /** Step 2g: the checks whose findings were read from the page as a
+   * browser shows it (a JavaScript-built page rendered via Browserless) —
+   * their evidence says so. */
+  readViaBrowserChecks?: string[];
+  /** Step 2g: real Browserless renders used for this business in a
+   * calendar month ("YYYY-MM") — counted toward the monthly cap. */
+  browserRenderLog?: { month: string; renders: number } | null;
   /** The real result of looking for About/Our-Story content — see
    * PagePresenceResult's own doc and lib/websiteAnalysis.ts's
    * detectPagePresence for how it's produced. null on a row saved
@@ -2094,7 +2101,9 @@ export const CHECKS: CheckDefinition[] = [
           confidence: "VERIFIED",
           explanation: presence.locatedOnHomepage
             ? t(locale, "content.checks.website.about_presence.explanation.foundOnHomepage")
-            : t(locale, "content.checks.website.about_presence.explanation.foundOnPage", { url: presence.url ?? "" }),
+            : presence.note === "brand_page"
+              ? t(locale, "content.checks.website.about_presence.explanation.foundBrandPage", { url: presence.url ?? "" })
+              : t(locale, "content.checks.website.about_presence.explanation.foundOnPage", { url: presence.url ?? "" }),
         };
       }
       if (presence.state === "couldnt_check") {
@@ -2546,6 +2555,20 @@ export function checkLabelKey(checkId: string): MessageKey | null {
 // Core scoring
 // ---------------------------------------------------------------------------
 
+/** Step 2g: checks whose findings come from reading the page itself —
+ * the ones a Browserless render feeds for a JavaScript-built site. */
+export const BROWSER_READ_CHECK_IDS: readonly string[] = [
+  "website.content_depth",
+  "website.contact_conversion",
+  "website.about_presence",
+  "website.services_presence",
+  "website.social_links",
+  "website.security",
+  "website.info_consistency",
+  "website.notice_freshness",
+  "website.site_freshness",
+];
+
 /**
  * Scores a business from real Google Places-derived data. Pure and
  * deterministic: same input (and locale), same output, always. `locale`
@@ -2563,7 +2586,11 @@ export function scoreBusiness(input: BusinessScoringInput, locale: Locale = DEFA
       maxPoints: def.maxPoints,
       earnedPoints: result.earnedPoints,
       confidence: result.confidence,
-      explanation: result.explanation,
+      // Step 2g: findings read from the page as a browser shows it say so.
+      explanation:
+        result.earnedPoints !== null && (input.websiteAnalysis?.readViaBrowserChecks ?? []).includes(def.id)
+          ? `${result.explanation} ${t(locale, "content.checks.website.readViaBrowserNote")}`
+          : result.explanation,
       meta: result.meta ?? null,
       ...(result.earnedPoints === null
         ? excludedBecauseUnreachable(def.id, input)
@@ -2956,7 +2983,7 @@ function isPagePresenceFailureReason(value: unknown): value is PagePresenceFailu
 }
 
 const PAGE_PRESENCE_STATES = new Set(["found", "not_found", "couldnt_check"]);
-const PAGE_PRESENCE_NOTES = new Set(["pdf_only", "broken_link", "online_ordering", "image_only"]);
+const PAGE_PRESENCE_NOTES = new Set(["pdf_only", "broken_link", "online_ordering", "image_only", "brand_page"]);
 
 /** Narrows a stored PagePresenceResult back to the real shape, same
  * fail-safe reasoning as parseWebsiteAnalysis itself — anything
@@ -3017,6 +3044,14 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
     lastScreenshotRefreshAt,
     // Only present when stored (captures from before Step 2d have neither).
     ...(screenshotHttpStatus !== null ? { screenshotHttpStatus } : {}),
+    ...(Array.isArray(v.readViaBrowserChecks)
+      ? { readViaBrowserChecks: (v.readViaBrowserChecks as unknown[]).filter((x): x is string => typeof x === "string") }
+      : {}),
+    ...(v.browserRenderLog && typeof v.browserRenderLog === "object" &&
+    typeof (v.browserRenderLog as Record<string, unknown>).month === "string" &&
+    typeof (v.browserRenderLog as Record<string, unknown>).renders === "number"
+      ? { browserRenderLog: v.browserRenderLog as { month: string; renders: number } }
+      : {}),
     ...(screenshotCaptureLog !== null ? { screenshotCaptureLog } : {}),
     aboutPresence,
     servicesPresence,

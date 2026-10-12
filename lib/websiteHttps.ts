@@ -11,6 +11,7 @@
 // cached onto the business row rather than re-probed on every score —
 // see the `https_status` column added in supabase/schema.sql.
 
+import { POSTSCORE_USER_AGENT } from "./userAgent";
 import type { HttpsCheckStatus } from "./scoring";
 import { classifyUnreachableResponse, moreSpecificReason, type ReachabilityFailureReason } from "./websiteReachability";
 
@@ -59,7 +60,7 @@ async function probeOnce(url: string, fetchImpl: typeof fetch): Promise<ProbeOut
       method: "GET",
       redirect: "follow",
       signal: controller.signal,
-      headers: { "User-Agent": "PostScoreBot/1.0 (+https://postscore.app)" },
+      headers: { "User-Agent": POSTSCORE_USER_AGENT },
     });
     if (res.ok) return { kind: "ok", finalUrl: res.url };
     let bodySnippet: string | null = null;

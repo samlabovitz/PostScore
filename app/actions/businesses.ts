@@ -2,14 +2,16 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { canAutoCapture, needsAutoScreenshot, screenshotAutoMonthlyCap } from "@/lib/screenshotBudget";
-import { loadScreenshotCallsThisMonth } from "@/lib/screenshotBudgetServer";
+import { loadBrowserRendersThisMonth, loadScreenshotCallsThisMonth } from "@/lib/screenshotBudgetServer";
+import { browserRenderMonthlyCap, currentRenderMonth, rendersAllowedThisScan } from "@/lib/browserRender";
 import { createClient } from "@/lib/supabase/server";
 import type { PlaceDetails } from "@/lib/google/places";
 import { normalizeLocale, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n";
 import { checkWebsiteHttps } from "@/lib/websiteHttps";
 import { collectWebsiteAnalysis } from "@/lib/websiteAnalysis";
 import { uploadWebsiteScreenshots } from "@/lib/websiteScreenshotUpload";
-import { bizProfileById } from "@/config/bizProfiles";
+import { bizProfileById, resolveBizProfile } from "@/config/bizProfiles";
+import { RETAIL_BUSINESS_TYPE_IDS, RETAIL_SERVICES_KEYWORDS } from "@/lib/pagePresenceDetection";
 import {
   businessRowToScoringInput,
   carryForwardMobilePerformance,
@@ -154,7 +156,7 @@ export async function saveBusinessWithClient(
   const existingRow = (
     await supabase
       .from("businesses")
-      .select("website_analysis_json, verified_website_url")
+      .select("website_analysis_json, verified_website_url, business_type_override")
       .eq("owner_id", ownerId)
       .eq("place_id", place.placeId)
       .maybeSingle()
@@ -181,6 +183,28 @@ export async function saveBusinessWithClient(
     captureScreenshots = canAutoCapture(await loadScreenshotCallsThisMonth(), screenshotAutoMonthlyCap());
   }
 
+  // Step 2g: Browserless renders this scan may use — only with a key, and
+  // only while this month's real renders (all businesses) leave room
+  // under the cap. Whether a render actually happens is decided inside
+  // collectWebsiteAnalysis (JavaScript-only, reachable pages only).
+  const browserlessApiKey = process.env.BROWSERLESS_API_KEY || undefined;
+  const maxBrowserRenders =
+    browserlessApiKey && analysisUrl
+      ? rendersAllowedThisScan(await loadBrowserRendersThisMonth(), browserRenderMonthlyCap())
+      : 0;
+
+  // Step 2g: a retail-type business's "services" are its brands and
+  // departments — extra Services keywords for those types only.
+  const resolvedTypeId = resolveBizProfile(
+    place.primaryCategory,
+    place.primaryType,
+    businessTypeOverride !== undefined ? businessTypeOverride : existingRow?.business_type_override ?? null,
+    "en",
+    place.categories,
+    place.name
+  ).id;
+  const extraServicesKeywords = RETAIL_BUSINESS_TYPE_IDS.includes(resolvedTypeId) ? RETAIL_SERVICES_KEYWORDS : [];
+
   const [httpsResult, analysis] = await Promise.all([
     analysisUrl ? checkWebsiteHttps(analysisUrl) : Promise.resolve(null),
     analysisUrl
@@ -190,8 +214,9 @@ export async function saveBusinessWithClient(
             pageSpeedApiKey: process.env.PAGESPEED_API_KEY,
             screenshotApiKey: process.env.SCREENSHOT_API_KEY,
             safeBrowsingApiKey: process.env.GOOGLE_SAFE_BROWSING_API_KEY,
+            browserlessApiKey,
           },
-          { captureScreenshots },
+          { captureScreenshots, maxBrowserRenders, extraServicesKeywords },
           {
             phone: place.phone,
             address: place.formattedAddress,
@@ -234,6 +259,18 @@ export async function saveBusinessWithClient(
       }
     : null;
 
+  // Step 2g: record this month's real renders for this business (added to
+  // any earlier renders this same month), and whether the findings were
+  // read from the page as a browser shows it.
+  const renderMonth = currentRenderMonth();
+  const priorRenders = existingAnalysis?.browserRenderLog?.month === renderMonth ? existingAnalysis.browserRenderLog.renders : 0;
+  const browserReadFields = {
+    ...(analysis && analysis.readViaBrowserChecks.length > 0 ? { readViaBrowserChecks: analysis.readViaBrowserChecks } : {}),
+    ...(analysis && (analysis.browserRenders > 0 || priorRenders > 0)
+      ? { browserRenderLog: { month: renderMonth, renders: priorRenders + analysis.browserRenders } }
+      : {}),
+  };
+
   const checkedAt = new Date().toISOString();
   const websiteAnalysis: WebsiteAnalysis | null = analysis
     ? captureScreenshots
@@ -255,6 +292,7 @@ export async function saveBusinessWithClient(
           // Real site-trust signals (Oct 10) — same "always fresh" reasoning
           // as aboutPresence/servicesPresence above.
           websiteTrust: websiteTrustForSave ?? analysis.websiteTrust,
+          ...browserReadFields,
           checkedAt,
         }
       : {
@@ -273,6 +311,7 @@ export async function saveBusinessWithClient(
           aboutPresence: analysis.aboutPresence,
           servicesPresence: analysis.servicesPresence,
           websiteTrust: websiteTrustForSave ?? analysis.websiteTrust,
+          ...browserReadFields,
           checkedAt,
         }
     : null;

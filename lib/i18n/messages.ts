@@ -365,6 +365,8 @@ export type MessageKey =
   | "growth.fix.addWebsiteToListing.step3"
   | "growth.fix.addWebsiteToListing.step4"
   | "growth.fix.addWebsiteToListing.note"
+  | "content.checks.website.about_presence.explanation.foundBrandPage"
+  | "content.checks.website.readViaBrowserNote"
   | "content.checks.website.trust.explanation.javascriptOnly"
   | "dashboard.website.partlyChecked"
   | "content.checks.website.performance_mobile.explanation.blockedSite"
@@ -2738,6 +2740,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "growth.fix.addWebsiteToListing.step4": "Tap Save.",
     "growth.fix.addWebsiteToListing.note":
       "Google may take a few days to show the update publicly. Your next PostScore scan will confirm it went through.",
+    "content.checks.website.about_presence.explanation.foundBrandPage": "Found your brand's About page ({url}).",
+    "content.checks.website.readViaBrowserNote": "(Read from the page as a browser shows it.)",
     "content.checks.website.trust.explanation.javascriptOnly": "Couldn't check — this site builds its content with JavaScript, so our check couldn't read it. Excluded from your score, not counted against you.",
     "dashboard.website.partlyChecked": "Based on {n} of {total} website checks — the rest couldn't be checked.",
     "content.checks.website.performance_mobile.explanation.blockedSite": "Couldn't check — this site blocks automated checks, so we can't measure its speed. Excluded from your score, not counted against you.",
@@ -5275,6 +5279,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "growth.fix.addWebsiteToListing.step3": "Busque el campo Sitio web y pegue su sitio real: {url}",
     "growth.fix.addWebsiteToListing.step4": "Toque Guardar.",
     "growth.fix.addWebsiteToListing.note": "Google puede tardar unos días en mostrar la actualización públicamente. Su próximo escaneo de PostScore confirmará que se realizó correctamente.",
+    "content.checks.website.about_presence.explanation.foundBrandPage": "Encontramos la página Acerca de su marca ({url}).",
+    "content.checks.website.readViaBrowserNote": "(Leído de la página tal como la muestra un navegador.)",
     "content.checks.website.trust.explanation.javascriptOnly": "No se pudo verificar — este sitio construye su contenido con JavaScript, así que nuestra comprobación no pudo leerlo. Se excluye de su puntuación, no se cuenta en su contra.",
     "dashboard.website.partlyChecked": "Basado en {n} de {total} comprobaciones del sitio web — el resto no se pudo verificar.",
     "content.checks.website.performance_mobile.explanation.blockedSite": "No se pudo verificar — este sitio bloquea las verificaciones automáticas, así que no podemos medir su velocidad. Se excluye de su puntuación, no se cuenta en su contra.",

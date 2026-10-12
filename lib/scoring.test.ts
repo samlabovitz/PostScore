@@ -1961,3 +1961,32 @@ describe("Step 2d: JavaScript-only sites — trust checks couldn't check (the Go
     expect(check.earnedPoints).toBe(0);
   });
 });
+
+describe("Step 2g: evidence says when a check was read as a browser shows it", () => {
+  test("listed checks get the note (EN + ES); others don't", () => {
+    const input: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, websiteTrust: CLEAN_TRUST, readViaBrowserChecks: ["website.contact_conversion"] },
+    };
+    const contact = scoreBusiness(input).checks.find((c) => c.id === "website.contact_conversion")!;
+    expect(contact.explanation).toContain("(Read from the page as a browser shows it.)");
+    expect(scoreBusiness(input, "es").checks.find((c) => c.id === "website.contact_conversion")!.explanation).toContain("(Leído de la página tal como la muestra un navegador.)");
+    expect(scoreBusiness(input).checks.find((c) => c.id === "website.https")!.explanation).not.toContain("browser shows it");
+  });
+});
+
+describe("Step 2g: a chain's corporate About page is said honestly", () => {
+  test("note brand_page -> 'Found your brand's About page ({url})' (EN + ES), still counts", () => {
+    const input: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      websiteAnalysis: {
+        ...GOOD_WEBSITE_ANALYSIS,
+        aboutPresence: { state: "found", url: "https://www.greatclips.com/about-us", locatedOnHomepage: false, reason: null, note: "brand_page" },
+      },
+    };
+    const check = scoreBusiness(input).checks.find((c) => c.id === "website.about_presence")!;
+    expect(check.earnedPoints).toBe(1);
+    expect(check.explanation).toBe("Found your brand's About page (https://www.greatclips.com/about-us).");
+    expect(scoreBusiness(input, "es").checks.find((c) => c.id === "website.about_presence")!.explanation).toContain("Encontramos la página Acerca de su marca");
+  });
+});

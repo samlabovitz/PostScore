@@ -46,6 +46,13 @@ const BOT_CHALLENGE_PHRASES = [
   "ddos protection by",
 ];
 
+/** Step 2g: a page whose own text is a bot-protection challenge (e.g. a
+ * rendered page that came back as "Just a moment…") — never real content. */
+export function looksLikeBotChallenge(text: string): boolean {
+  const lower = text.toLowerCase();
+  return BOT_CHALLENGE_PHRASES.some((phrase) => lower.includes(phrase));
+}
+
 /** Status codes that are themselves a strong, well-known automated-
  * traffic-block signal regardless of body content — 403 (forbidden),
  * 429 (rate limited), and 503 (the status Cloudflare's own JS
