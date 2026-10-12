@@ -114,3 +114,25 @@ describe("Step 2d additions: social profiles", () => {
     expect(detectSocialProfiles(`<a href=/menu>Menu</a>`)).toEqual([]);
   });
 });
+
+describe("Step 2g: social links in unusual formats (the Chipotle store-locator case)", () => {
+  test("protocol-relative links are found", () => {
+    expect(detectSocialProfiles(`<a href="//www.instagram.com/chipotle">IG</a>`)).toEqual([{ platform: "Instagram", url: "instagram.com/chipotle" }]);
+  });
+  test("a social URL wrapped in a tracking/redirect link is found", () => {
+    expect(
+      detectSocialProfiles(`<a href="https://locations.chipotle.com/click?url=https%3A%2F%2Fwww.facebook.com%2Fchipotle&amp;ref=footer">FB</a>`)
+    ).toEqual([{ platform: "Facebook", url: "facebook.com/chipotle" }]);
+  });
+  test("entity-encoded hrefs and data-href icon buttons are found", () => {
+    expect(detectSocialProfiles(`<a href="https:&#x2F;&#x2F;twitter.com&#x2F;ChipotleTweets">X</a>`)).toEqual([
+      { platform: "X/Twitter", url: "twitter.com/ChipotleTweets" },
+    ]);
+    expect(detectSocialProfiles(`<a href="#" data-href="https://www.tiktok.com/@chipotle">TikTok</a>`)).toEqual([
+      { platform: "TikTok", url: "tiktok.com/@chipotle" },
+    ]);
+  });
+  test("share buttons inside a redirect are still not profiles", () => {
+    expect(detectSocialProfiles(`<a href="/out?u=https%3A%2F%2Fwww.facebook.com%2Fsharer%2Fsharer.php%3Fu%3Dx">Share</a>`)).toEqual([]);
+  });
+});

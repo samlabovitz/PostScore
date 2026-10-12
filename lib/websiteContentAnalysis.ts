@@ -140,6 +140,8 @@ export function metaContent(html: string, name: string): string | null {
 interface AnchorLink {
   href: string;
   text: string;
+  /** Step 2g: extra URLs some icon buttons keep in data attributes. */
+  dataUrls?: string[];
 }
 
 /** Every real `<a href>` with its visible text — href quoted or unquoted. */
@@ -149,9 +151,12 @@ function anchorLinks(html: string): AnchorLink[] {
   let m: RegExpExecArray | null;
   while ((m = re.exec(html)) !== null) {
     const href = attributeValue(` ${m[1]}`, "href");
-    if (!href) continue;
+    const dataUrls = ["data-href", "data-url", "data-link"]
+      .map((attr) => attributeValue(` ${m![1]}`, attr))
+      .filter((v): v is string => !!v);
+    if (!href && dataUrls.length === 0) continue;
     const text = decodeBasicEntities(m[2].replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
-    links.push({ href: href.trim(), text });
+    links.push({ href: (href ?? "").trim(), text, dataUrls });
   }
   return links;
 }
@@ -251,16 +256,51 @@ function socialPlatformFor(hostname: string) {
  * bare platform homepage. One entry per profile, displayed as
  * "instagram.com/mainstreetsweets".
  */
-export function detectSocialProfiles(html: string): SocialProfile[] {
-  const profiles: SocialProfile[] = [];
-  for (const link of anchorLinks(stripNonVisibleMarkup(html))) {
+/** Decodes the entities generated pages put in link addresses. */
+function decodeHrefEntities(href: string): string {
+  return href
+    .replace(/&amp;/gi, "&")
+    .replace(/&#x2f;|&#47;/gi, "/")
+    .replace(/&#x3a;|&#58;/gi, ":")
+    .replace(/&#x3f;|&#63;/gi, "?")
+    .replace(/&#x3d;|&#61;/gi, "=");
+}
+
+/**
+ * Step 2g: every real URL a link can lead to — its href (protocol-
+ * relative "//www.instagram.com/x" resolved), any data-href/data-url,
+ * and a social URL wrapped inside a tracking/redirect link's query
+ * string (store-locator platforms routinely wrap outbound links, e.g.
+ * ".../click?url=https%3A%2F%2Fwww.facebook.com%2Fchipotle").
+ */
+function linkTargetUrls(link: AnchorLink): URL[] {
+  const out: URL[] = [];
+  for (const raw of [link.href, ...(link.dataUrls ?? [])]) {
+    if (!raw) continue;
     let url: URL;
     try {
-      url = new URL(link.href);
+      url = new URL(decodeHrefEntities(raw).trim(), "https://placeholder.invalid/");
     } catch {
       continue;
     }
-    if (!/^https?:$/i.test(url.protocol)) continue;
+    if (!/^https?:$/i.test(url.protocol) || url.hostname === "placeholder.invalid") continue;
+    out.push(url);
+    url.searchParams.forEach((value) => {
+      if (!/^(https?:)?\/\//i.test(value)) return;
+      try {
+        const inner = new URL(value.startsWith("//") ? `https:${value}` : value);
+        if (/^https?:$/i.test(inner.protocol)) out.push(inner);
+      } catch {
+        // not a URL — ignore
+      }
+    });
+  }
+  return out;
+}
+
+export function detectSocialProfiles(html: string): SocialProfile[] {
+  const profiles: SocialProfile[] = [];
+  for (const url of anchorLinks(stripNonVisibleMarkup(html)).flatMap(linkTargetUrls)) {
     const platform = socialPlatformFor(url.hostname);
     if (!platform) continue;
     const segments = url.pathname.split("/").filter(Boolean);
