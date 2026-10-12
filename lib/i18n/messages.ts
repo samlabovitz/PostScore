@@ -2683,7 +2683,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.security.explanation.cleanNotChecked":
       "No signs of hacking found in your site's own content. (Google Safe Browsing wasn't checked — not configured yet.)",
     "content.checks.website.security.explanation.safeBrowsingThreat":
-      "Google Safe Browsing flags this site as a security risk ({types}) — this needs urgent attention.",
+      "Google has flagged this site as unsafe ({types}) — this needs urgent attention.",
     "content.checks.website.security.explanation.spamFound": "Spam content found on your site ({topic}) — signs it may be hacked.",
 
     "content.checks.website.info_consistency.label": "Matches your Google listing",
@@ -2794,7 +2794,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.security.step5": "Once it's clean, your next PostScore scan will check it again.",
     "dashboard.website.security.safeBrowsingNotChecked": "Google Safe Browsing: not checked yet.",
     "dashboard.website.security.safeBrowsingClean": "Google Safe Browsing: no warning found.",
-    "dashboard.website.security.safeBrowsingFlagged": "Google Safe Browsing: this site is flagged.",
+    "dashboard.website.security.safeBrowsingFlagged": "Google has flagged this site as unsafe.",
     "dashboard.website.security.copyButton": "Copy details for your web person",
     "dashboard.website.security.copied": "Copied",
     "dashboard.website.security.copyFallback": "Your browser didn't allow copying — select the text below and copy it.",
@@ -5245,7 +5245,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.security.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para ejecutar una verificación de seguridad real.",
     "content.checks.website.security.explanation.cleanChecked": "No se encontraron señales de hackeo, y Google Safe Browsing informa que este sitio está limpio.",
     "content.checks.website.security.explanation.cleanNotChecked": "No se encontraron señales de hackeo en el propio contenido de su sitio. (No se comprobó Google Safe Browsing — aún no está configurado.)",
-    "content.checks.website.security.explanation.safeBrowsingThreat": "Google Safe Browsing marca este sitio como un riesgo de seguridad ({types}) — esto necesita atención urgente.",
+    "content.checks.website.security.explanation.safeBrowsingThreat": "Google marcó este sitio como inseguro ({types}) — esto necesita atención urgente.",
     "content.checks.website.security.explanation.spamFound": "Se encontró contenido spam en su sitio ({topic}) — señales de que podría estar hackeado.",
     "content.checks.website.info_consistency.label": "Coincide con su ficha de Google",
     "content.checks.website.info_consistency.advice": "Verifique cuál es el correcto — su sitio web o su ficha de Google — y actualice el otro, para que los clientes vean el mismo horario, teléfono y dirección en todas partes.",
@@ -5333,7 +5333,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.security.step5": "Una vez que esté limpio, su próximo escaneo de PostScore lo volverá a revisar.",
     "dashboard.website.security.safeBrowsingNotChecked": "Navegación segura de Google: aún no se ha revisado.",
     "dashboard.website.security.safeBrowsingClean": "Navegación segura de Google: no se encontró ninguna advertencia.",
-    "dashboard.website.security.safeBrowsingFlagged": "Navegación segura de Google: este sitio está marcado.",
+    "dashboard.website.security.safeBrowsingFlagged": "Google marcó este sitio como inseguro.",
     "dashboard.website.security.copyButton": "Copiar los detalles para su técnico web",
     "dashboard.website.security.copied": "Copiado",
     "dashboard.website.security.copyFallback": "Su navegador no permitió copiar — seleccione el texto de abajo y cópielo.",

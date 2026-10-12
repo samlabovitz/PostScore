@@ -310,7 +310,23 @@ async function main() {
     const placesCost = businesses.length * PLACES_DETAILS_COST_USD;
     console.log(`\nEstimated real, billed cost:`);
     console.log(`  Google Places Details: ${businesses.length} calls x $${PLACES_DETAILS_COST_USD.toFixed(2)} = $${placesCost.toFixed(2)}`);
-    console.log(`  PageSpeed Insights: free (up to 3 calls/business)`);
+    // PageSpeed: one call per business with a real website (listing or
+    // verified), up to 3 when the first run has no real-visitor data.
+    const withSite = businesses.filter((b) => businessWebsiteUrl(b) !== null);
+    console.log(
+      `  PageSpeed Insights: free — ${withSite.length} business(es) with a website: ${withSite.length}–${withSite.length * 3} calls (1 each, up to 3 when there's no real-visitor data)`
+    );
+    // Safe Browsing: one call per business with a website, plus one more
+    // for each browser-read pass (it re-checks the rendered homepage).
+    const fullRenderPasses = renderPlan.filter((p) => {
+      const a = parseWebsiteAnalysis(p.b.website_analysis_json);
+      return p.n > 0 && (a?.content?.isLikelyClientRenderedShell === true || (a?.readViaBrowserChecks ?? []).includes("website.security"));
+    }).length;
+    console.log(
+      process.env.GOOGLE_SAFE_BROWSING_API_KEY
+        ? `  Google Safe Browsing: free — up to ${withSite.length + fullRenderPasses} call(s) (${withSite.length} + ${fullRenderPasses} for browser-read homepages)`
+        : `  Google Safe Browsing: none (GOOGLE_SAFE_BROWSING_API_KEY not set — "not checked yet")`
+    );
     if (noScreenshots) {
       console.log(`  ScreenshotOne: SKIPPED (--no-screenshots) — 0 calls (${needCapture.length} business(es) still have no screenshot).`);
     } else {

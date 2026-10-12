@@ -72,3 +72,11 @@ describe("HackedSiteBanner", () => {
   });
 });
 
+
+describe("Safe Browsing flagged wording", () => {
+  test("EN + ES", () => {
+    const flagged = { ...TRUST, safeBrowsingChecked: true, safeBrowsingThreat: { threatFound: true, threatTypes: ["MALWARE"] } } as unknown as WebsiteTrustAnalysis;
+    expect(render("en", <SiteSecurityDetails finding={FINDING} trust={flagged} siteUrl="https://x.com" businessName="X" />)).toContain("Google has flagged this site as unsafe.");
+    expect(render("es", <SiteSecurityDetails finding={FINDING} trust={flagged} siteUrl="https://x.com" businessName="X" />)).toContain("Google marcó este sitio como inseguro.");
+  });
+});

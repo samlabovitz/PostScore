@@ -1990,3 +1990,18 @@ describe("Step 2g: a chain's corporate About page is said honestly", () => {
     expect(scoreBusiness(input, "es").checks.find((c) => c.id === "website.about_presence")!.explanation).toContain("Encontramos la página Acerca de su marca");
   });
 });
+
+describe("Safe Browsing threat wording", () => {
+  test("EN + ES", () => {
+    const input: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, websiteTrust: { ...CLEAN_TRUST, safeBrowsingChecked: true, safeBrowsingThreat: { threatFound: true, threatTypes: ["MALWARE"] } } },
+    };
+    expect(scoreBusiness(input).checks.find((c) => c.id === "website.security")!.explanation).toBe(
+      "Google has flagged this site as unsafe (MALWARE) — this needs urgent attention."
+    );
+    expect(scoreBusiness(input, "es").checks.find((c) => c.id === "website.security")!.explanation).toBe(
+      "Google marcó este sitio como inseguro (MALWARE) — esto necesita atención urgente."
+    );
+  });
+});
