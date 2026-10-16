@@ -142,14 +142,18 @@ export interface PriceLevelComparison {
   }>;
 }
 
+/** The fields buildPriceLevelComparison reads — satisfied by a live
+ * RankedCompetitor or a saved competitor_scans row. */
+export type PriceLevelSource = Pick<RankedCompetitor, "isSubject" | "priceLevel" | "distanceMeters"> & { name: string | null };
+
 export function buildPriceLevelComparison(
-  ranked: RankedCompetitor[]
+  ranked: PriceLevelSource[]
 ): PriceLevelComparison {
   const subject = ranked.find((r) => r.isSubject) ?? null;
   const competitors = ranked
     .filter((r) => !r.isSubject)
     .map((r) => ({
-      name: r.name,
+      name: r.name ?? "Nearby business",
       symbol: priceLevelToSymbol(r.priceLevel),
       distanceMeters: r.distanceMeters,
     }));
@@ -420,4 +424,35 @@ export function parsePricingAssessmentResponse(
         : fallbackNote;
     return { service: s.service, price: s.price, tier, basis, guidance };
   });
+}
+
+/** A saved competitor_scans row, as much as the price check needs. */
+export interface SavedPriceLevelRow {
+  scan_id: string;
+  created_at: string;
+  is_subject: boolean;
+  name: string | null;
+  distance_meters: number | string | null;
+  price_level: string | null;
+}
+
+/**
+ * Part B: the price check reuses the latest SAVED competitor scan instead
+ * of a fresh paid scan on every "Assess my pricing". `rows` may span
+ * several scans in any order; only the newest scan is used. null when
+ * nothing is saved (the assessment then runs without local context, as
+ * it always has when no competitors are known).
+ */
+export function priceLevelContextFromSavedRows(rows: SavedPriceLevelRow[]): PriceLevelComparison | null {
+  if (rows.length === 0) return null;
+  const newest = rows.reduce((a, b) => (Date.parse(b.created_at) > Date.parse(a.created_at) ? b : a));
+  const latest = rows.filter((r) => r.scan_id === newest.scan_id);
+  return buildPriceLevelComparison(
+    latest.map((r) => ({
+      isSubject: r.is_subject,
+      name: r.name,
+      priceLevel: r.price_level,
+      distanceMeters: r.distance_meters === null ? null : Number(r.distance_meters),
+    }))
+  );
 }

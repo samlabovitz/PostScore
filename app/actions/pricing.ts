@@ -3,11 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import {
-  findAndScoreCompetitors,
-  type CompetitorSourceBusiness,
-} from "@/lib/competitors";
-import {
-  buildPriceLevelComparison,
+  priceLevelContextFromSavedRows,
+  type SavedPriceLevelRow,
   buildPricingPrompt,
   buildPricingSystemPrompt,
   parsePricingAssessmentPayload,
@@ -20,6 +17,7 @@ import {
 } from "@/lib/pricing";
 import { callAnthropicMessage } from "@/lib/anthropicClient";
 import { normalizeLocale, type Locale } from "@/lib/i18n";
+import { priceLevelToSymbol } from "@/lib/priceLevel";
 
 const PRICE_COLUMNS = "id, business_id, service, price, created_at";
 
@@ -277,40 +275,20 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
   const locale = normalizeLocale(row.language);
   const services = pricesResult.prices.map((p) => ({ service: p.service, price: p.price }));
 
-  // Real competitor price-level context, same matching logic as the
-  // Competitors page — genuinely comparable nearby businesses, not a
-  // guess. Honest to degrade to no context (null) if the scan can't run
-  // (e.g. no coordinates) rather than failing the whole assessment.
+  // Part B: real competitor price-level context from the latest SAVED
+  // competitor scan — never a fresh paid scan per "Assess". The owner's
+  // own level comes from the business row (always current). No saved
+  // scan → honestly no local context, same as a scan finding nothing.
   let priceLevelContext: PriceLevelComparison | null = null;
-  try {
-    const subject: CompetitorSourceBusiness = {
-      placeId: row.place_id,
-      name: row.name,
-      address: row.address,
-      lat: row.lat,
-      lng: row.lng,
-      primaryType: row.primary_type,
-      priceLevel: row.price_level,
-      rating: row.rating,
-      review_count: row.review_count,
-      phone: row.phone,
-      opening_hours: row.opening_hours,
-      website: row.website,
-      categories: row.categories,
-      category: row.category,
-      photo_count: row.photo_count,
-      business_status: row.business_status,
-      https_status: row.https_status,
-      website_analysis_json: row.website_analysis_json,
-      verified_website_url: row.verified_website_url,
-      website_trust_overrides_json: row.website_trust_overrides_json,
-    };
-    const scan = await findAndScoreCompetitors(subject, locale);
-    if (scan.status === "ok" && scan.ranked.length > 0) {
-      priceLevelContext = buildPriceLevelComparison(scan.ranked);
-    }
-  } catch {
-    priceLevelContext = null;
+  const { data: savedRows } = await supabase
+    .from("competitor_scans")
+    .select("scan_id, created_at, is_subject, name, distance_meters, price_level")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false })
+    .limit(60);
+  const saved = priceLevelContextFromSavedRows((savedRows ?? []) as SavedPriceLevelRow[]);
+  if (saved && saved.competitors.length > 0) {
+    priceLevelContext = { ...saved, subjectSymbol: priceLevelToSymbol(row.price_level) };
   }
 
   const businessTypeLabel = resolveBizProfile(
