@@ -1305,22 +1305,45 @@ export type MessageKey =
   | "dashboard.reports.emailOffMessage"
   | "dashboard.reports.emailFirstReportBaseline"
   | "dashboard.reports.emailLastSentNext"
-  | "dashboard.reports.chartRangeWeekly"
-  | "dashboard.reports.chartRange6Months"
   | "dashboard.reports.chartRangeAllTime"
-  | "dashboard.reports.chartRangeLabelWeek"
-  | "dashboard.reports.chartRangeLabel6Months"
-  | "dashboard.reports.chartRangeLabelAllTime"
   | "dashboard.reports.chartToday"
   | "dashboard.reports.chartDaysAgo.one"
   | "dashboard.reports.chartDaysAgo.other"
   | "dashboard.reports.chartNoHistoryYet"
   | "dashboard.reports.chartNotEnoughHistory"
-  | "dashboard.reports.chartChangeLabel"
-  | "dashboard.reports.chartTotalScansLabel"
   | "dashboard.reports.chartLastScanLabel"
-  | "dashboard.reports.chartMoreEarlier"
   | "dashboard.reports.chartAriaLabel"
+  | "dashboard.reports.chartRange30d"
+  | "dashboard.reports.chartRange90d"
+  | "dashboard.reports.chartRange1y"
+  | "dashboard.reports.chartViewOverall"
+  | "dashboard.reports.chartViewByCategory"
+  | "dashboard.reports.chartCategoryListing"
+  | "dashboard.reports.chartCategoryWebsite"
+  | "dashboard.reports.chartCategoryReviews"
+  | "dashboard.reports.chartAxisZoomed"
+  | "dashboard.reports.chartAxisZoomedCategories"
+  | "dashboard.reports.chartScoringUpdated"
+  | "dashboard.reports.chartScoringUpdatedCount"
+  | "dashboard.reports.chartScoringUpdatedTooltip"
+  | "dashboard.reports.chartSummaryChange"
+  | "dashboard.reports.chartIncludesScoringUpdate"
+  | "dashboard.reports.chartSummaryBest"
+  | "dashboard.reports.chartSummaryScans"
+  | "dashboard.reports.chartYesterday"
+  | "dashboard.reports.chartTooltipGrade"
+  | "dashboard.reports.chartPointAria"
+  | "dashboard.reports.chartHistoryHeading"
+  | "dashboard.reports.chartHistoryDate"
+  | "dashboard.reports.chartHistoryScore"
+  | "dashboard.reports.chartHistoryGrade"
+  | "dashboard.reports.chartHistoryChange"
+  | "dashboard.reports.chartHistoryFirstScan"
+  | "dashboard.reports.chartHistoryShowAll"
+  | "dashboard.reports.chartHistoryShowFewer"
+  | "dashboard.reports.chartWhatIsThis"
+  | "dashboard.reports.chartTooltipScansThatDay.one"
+  | "dashboard.reports.chartTooltipScansThatDay.other"
   // --- components/reports/VerifiedFixesCard.tsx.
   | "dashboard.reports.verifiedFixesConfirmedLabel"
   | "dashboard.reports.verifiedFixesConfirmedNote"
@@ -2251,6 +2274,7 @@ export type PluralKeyBase =
   | "dashboard.overview.pastConversations"
   | "dashboard.websiteReviews.reviewCountCaptionRemaining"
   | "dashboard.reports.chartDaysAgo"
+  | "dashboard.reports.chartTooltipScansThatDay"
   | "dashboard.assistant.historyMessageCount";
 
 // English is the dictionary every other locale falls back to via t()
@@ -3858,23 +3882,46 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.emailFirstReportBaseline":
       "On — your first report will be a baseline (no month-over-month comparison yet).",
     "dashboard.reports.emailLastSentNext": "Last sent {lastSent} · Next report around {nextReport}",
-    "dashboard.reports.chartRangeWeekly": "Weekly",
-    "dashboard.reports.chartRange6Months": "6 months",
     "dashboard.reports.chartRangeAllTime": "All time",
-    "dashboard.reports.chartRangeLabelWeek": "the last week",
-    "dashboard.reports.chartRangeLabel6Months": "the last 6 months",
-    "dashboard.reports.chartRangeLabelAllTime": "all time",
     "dashboard.reports.chartToday": "Today",
     "dashboard.reports.chartDaysAgo.one": "1 day ago",
     "dashboard.reports.chartDaysAgo.other": "{days} days ago",
     "dashboard.reports.chartNoHistoryYet":
       "You haven't run a scan yet — re-scan from the Overview page to start your history.",
-    "dashboard.reports.chartNotEnoughHistory": "Not enough history yet — your chart fills in as you re-scan.",
-    "dashboard.reports.chartChangeLabel": "Change · {range}",
-    "dashboard.reports.chartTotalScansLabel": "Total scans recorded",
+    "dashboard.reports.chartNotEnoughHistory": "Not enough scans in this range yet.",
     "dashboard.reports.chartLastScanLabel": "Last scan",
-    "dashboard.reports.chartMoreEarlier": "+{count} earlier",
     "dashboard.reports.chartAriaLabel": "Score over time, {count} scans, from {from} to {to}",
+    "dashboard.reports.chartRange30d": "30 days",
+    "dashboard.reports.chartRange90d": "90 days",
+    "dashboard.reports.chartRange1y": "1 year",
+    "dashboard.reports.chartViewOverall": "Overall",
+    "dashboard.reports.chartViewByCategory": "By category",
+    "dashboard.reports.chartCategoryListing": "Google listing",
+    "dashboard.reports.chartCategoryWebsite": "Website",
+    "dashboard.reports.chartCategoryReviews": "Reviews",
+    "dashboard.reports.chartAxisZoomed": "Score axis shows {min}–{max} — it doesn't start at 0.",
+    "dashboard.reports.chartAxisZoomedCategories": "Each line is a share of that category's own maximum. Axis shows {min}–{max}% — it doesn't start at 0.",
+    "dashboard.reports.chartScoringUpdated": "Scoring updated",
+    "dashboard.reports.chartScoringUpdatedCount": "Scoring updated ×{count}",
+    "dashboard.reports.chartScoringUpdatedTooltip": "PostScore improved how it checks websites — scores may shift slightly; this isn't a change at your business.",
+    "dashboard.reports.chartSummaryChange": "Change in this range",
+    "dashboard.reports.chartIncludesScoringUpdate": "includes a scoring update",
+    "dashboard.reports.chartSummaryBest": "Best score",
+    "dashboard.reports.chartSummaryScans": "Scans in this range",
+    "dashboard.reports.chartYesterday": "Yesterday",
+    "dashboard.reports.chartTooltipGrade": "Grade {grade}",
+    "dashboard.reports.chartPointAria": "{date}: score {score}, grade {grade}",
+    "dashboard.reports.chartHistoryHeading": "Scan history",
+    "dashboard.reports.chartHistoryDate": "Date",
+    "dashboard.reports.chartHistoryScore": "Score",
+    "dashboard.reports.chartHistoryGrade": "Grade",
+    "dashboard.reports.chartHistoryChange": "Change",
+    "dashboard.reports.chartHistoryFirstScan": "First scan",
+    "dashboard.reports.chartHistoryShowAll": "Show all {count}",
+    "dashboard.reports.chartHistoryShowFewer": "Show fewer",
+    "dashboard.reports.chartWhatIsThis": "What does this mean?",
+    "dashboard.reports.chartTooltipScansThatDay.one": "{count} scan this day",
+    "dashboard.reports.chartTooltipScansThatDay.other": "{count} scans this day — showing the latest",
     "dashboard.reports.verifiedFixesConfirmedLabel": "Action-plan fixes confirmed",
     "dashboard.reports.verifiedFixesConfirmedNote": "Confirmed by a real re-scan finding the check at full points.",
     "dashboard.reports.listingChangesDetectedLabel": "Listing changes detected",
@@ -6285,22 +6332,45 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.emailOffMessage": "Desactivado — no recibirá un informe mensual por correo.",
     "dashboard.reports.emailFirstReportBaseline": "Activado — su primer informe será un punto de partida (aún sin comparación de un mes a otro).",
     "dashboard.reports.emailLastSentNext": "Último envío {lastSent} · Próximo informe alrededor del {nextReport}",
-    "dashboard.reports.chartRangeWeekly": "Semanal",
-    "dashboard.reports.chartRange6Months": "6 meses",
     "dashboard.reports.chartRangeAllTime": "Todo el tiempo",
-    "dashboard.reports.chartRangeLabelWeek": "la última semana",
-    "dashboard.reports.chartRangeLabel6Months": "los últimos 6 meses",
-    "dashboard.reports.chartRangeLabelAllTime": "todo el tiempo",
     "dashboard.reports.chartToday": "Hoy",
     "dashboard.reports.chartDaysAgo.one": "hace 1 día",
     "dashboard.reports.chartDaysAgo.other": "hace {days} días",
     "dashboard.reports.chartNoHistoryYet": "Aún no ha realizado un análisis — vuelva a analizar desde la página de Resumen para empezar su historial.",
-    "dashboard.reports.chartNotEnoughHistory": "Aún no hay suficiente historial — su gráfico se completa a medida que vuelve a analizar.",
-    "dashboard.reports.chartChangeLabel": "Cambio · {range}",
-    "dashboard.reports.chartTotalScansLabel": "Total de análisis registrados",
+    "dashboard.reports.chartNotEnoughHistory": "Aún no hay suficientes análisis en este período.",
     "dashboard.reports.chartLastScanLabel": "Último análisis",
-    "dashboard.reports.chartMoreEarlier": "+{count} anteriores",
     "dashboard.reports.chartAriaLabel": "Puntuación a lo largo del tiempo, {count} análisis, de {from} a {to}",
+    "dashboard.reports.chartRange30d": "30 días",
+    "dashboard.reports.chartRange90d": "90 días",
+    "dashboard.reports.chartRange1y": "1 año",
+    "dashboard.reports.chartViewOverall": "General",
+    "dashboard.reports.chartViewByCategory": "Por categoría",
+    "dashboard.reports.chartCategoryListing": "Ficha de Google",
+    "dashboard.reports.chartCategoryWebsite": "Sitio web",
+    "dashboard.reports.chartCategoryReviews": "Reseñas",
+    "dashboard.reports.chartAxisZoomed": "El eje de puntuación muestra {min}–{max} — no empieza en 0.",
+    "dashboard.reports.chartAxisZoomedCategories": "Cada línea es una parte del máximo de esa categoría. El eje muestra {min}–{max}% — no empieza en 0.",
+    "dashboard.reports.chartScoringUpdated": "Método de puntuación actualizado",
+    "dashboard.reports.chartScoringUpdatedCount": "Método de puntuación actualizado ×{count}",
+    "dashboard.reports.chartScoringUpdatedTooltip": "PostScore mejoró la forma en que revisa los sitios web — las puntuaciones pueden variar un poco; esto no es un cambio en su negocio.",
+    "dashboard.reports.chartSummaryChange": "Cambio en este período",
+    "dashboard.reports.chartIncludesScoringUpdate": "incluye una actualización de la puntuación",
+    "dashboard.reports.chartSummaryBest": "Mejor puntuación",
+    "dashboard.reports.chartSummaryScans": "Análisis en este período",
+    "dashboard.reports.chartYesterday": "Ayer",
+    "dashboard.reports.chartTooltipGrade": "Calificación {grade}",
+    "dashboard.reports.chartPointAria": "{date}: puntuación {score}, calificación {grade}",
+    "dashboard.reports.chartHistoryHeading": "Historial de análisis",
+    "dashboard.reports.chartHistoryDate": "Fecha",
+    "dashboard.reports.chartHistoryScore": "Puntuación",
+    "dashboard.reports.chartHistoryGrade": "Calificación",
+    "dashboard.reports.chartHistoryChange": "Cambio",
+    "dashboard.reports.chartHistoryFirstScan": "Primer análisis",
+    "dashboard.reports.chartHistoryShowAll": "Mostrar los {count}",
+    "dashboard.reports.chartHistoryShowFewer": "Mostrar menos",
+    "dashboard.reports.chartWhatIsThis": "¿Qué significa esto?",
+    "dashboard.reports.chartTooltipScansThatDay.one": "{count} análisis este día",
+    "dashboard.reports.chartTooltipScansThatDay.other": "{count} análisis este día — se muestra el más reciente",
     "dashboard.reports.verifiedFixesConfirmedLabel": "Correcciones del plan de acción confirmadas",
     "dashboard.reports.verifiedFixesConfirmedNote":
       "Confirmado cuando un nuevo análisis real encuentra la comprobación con la puntuación completa.",

@@ -12,11 +12,14 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
   className,
+  size = "md",
 }: {
   options: SegmentedControlOption<T>[];
   value: T;
   onChange: (value: T) => void;
   className?: string;
+  /** "sm" fits four options in a 375px-wide phone screen. */
+  size?: "sm" | "md";
 }) {
   return (
     <div
@@ -34,7 +37,8 @@ export function SegmentedControl<T extends string>({
           aria-selected={value === option.value}
           onClick={() => onChange(option.value)}
           className={cn(
-            "rounded-lg px-4 py-2 text-[13px] font-medium transition-colors",
+            "rounded-lg font-medium transition-colors",
+            size === "sm" ? "px-2.5 py-1.5 text-[12.5px]" : "px-4 py-2 text-[13px]",
             value === option.value
               ? "bg-white text-ink shadow-card"
               : "text-ink-soft hover:text-ink"

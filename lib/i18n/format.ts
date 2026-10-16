@@ -239,3 +239,21 @@ export function formatCount(value: number, locale: Locale): string {
   const sign = n < 0 ? "-" : "";
   return sign + digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
+
+/** "2026-10-16" — the calendar day `date` falls on in `timeZone`
+ * (business-local, not UTC: a 9pm New York scan is still that day).
+ * Built from digits only, same as every formatter above. */
+export function zonedDayKey(date: string, timeZone: string = DEFAULT_BUSINESS_TIMEZONE): string {
+  const p = zonedParts(date, timeZone);
+  return `${p.year}-${String(p.month0 + 1).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
+}
+
+/** Whole calendar days from `date` to `now` in `timeZone` — 0 for the
+ * same local day, 1 for yesterday, regardless of the hour. */
+export function calendarDaysAgo(date: string, now: Date, timeZone: string = DEFAULT_BUSINESS_TIMEZONE): number {
+  const toUtcDay = (key: string) => {
+    const [y, m, d] = key.split("-").map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((toUtcDay(zonedDayKey(now.toISOString(), timeZone)) - toUtcDay(zonedDayKey(date, timeZone))) / 86_400_000);
+}

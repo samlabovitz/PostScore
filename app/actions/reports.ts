@@ -1,5 +1,6 @@
 "use server";
 
+import { parseChartCategories, type ChartCategoryId, type ChartCategoryScore } from "@/lib/scoreHistory";
 import { createClient } from "@/lib/supabase/server";
 import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
@@ -19,6 +20,12 @@ export interface ReportsScoreRow {
    * lib/profileChanges.ts). Null for any scan saved before that column
    * existed — callers must treat that honestly as "nothing to diff from." */
   profile_snapshot_json: ProfileSnapshot | null;
+  /** The SCORING_VERSION saved with this scan (null if none recorded). */
+  scoring_version: string | null;
+  /** This scan's three category scores, narrowed server-side from
+   * breakdown_json so the full check list never ships to the browser.
+   * null when the saved scan has no category breakdown. */
+  categories: Record<ChartCategoryId, ChartCategoryScore> | null;
 }
 
 /** The Reports page's real, staged status for the monthly EMAIL report
@@ -113,7 +120,7 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
 
   const { data: scores, error: scoresError } = await supabase
     .from("scores")
-    .select("id, total, grade, created_at, profile_snapshot_json")
+    .select("id, total, grade, created_at, profile_snapshot_json, scoring_version, breakdown_categories:breakdown_json->categories")
     .eq("business_id", businessId)
     .order("created_at", { ascending: true });
 
@@ -121,7 +128,21 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
     return { status: "not_found" };
   }
 
-  const history = (scores ?? []) as ReportsScoreRow[];
+  const history: ReportsScoreRow[] = (scores ?? []).map((row) => {
+    const r = row as Omit<ReportsScoreRow, "categories" | "scoring_version"> & {
+      scoring_version: unknown;
+      breakdown_categories: unknown;
+    };
+    return {
+      id: r.id,
+      total: r.total,
+      grade: r.grade,
+      created_at: r.created_at,
+      profile_snapshot_json: r.profile_snapshot_json,
+      scoring_version: typeof r.scoring_version === "string" && r.scoring_version.length > 0 ? r.scoring_version : null,
+      categories: parseChartCategories(r.breakdown_categories),
+    };
+  });
 
   let listingChangesDetected = 0;
   for (let i = 1; i < history.length; i++) {
