@@ -313,6 +313,46 @@ export function detectSocialProfiles(html: string): SocialProfile[] {
   return profiles;
 }
 
+const SCRIPT_SOCIAL_URL_RE =
+  /(?:instagram|facebook|twitter|x|tiktok|youtube|linkedin|pinterest|yelp)\.com\/[A-Za-z0-9_@.-]+/i;
+
+/**
+ * Signs that the page's footer is built by a script after load, so a
+ * plain fetch can't see its links — the real Chipotle (Yext Pages)
+ * case: the "Connect With Us" Instagram/Twitter/Facebook icons exist
+ * only inside a `<script type="module">` page-data blob
+ * (`c_footerSocialIcons`), never as `<a>` links in the HTML. Countable:
+ * an inline `<script>` whose text (URL-decoded) mentions "footer" AND
+ * contains a social profile URL. Both are required — plenty of normal
+ * sites' analytics scripts mention "footer" on their own.
+ */
+export function hasScriptBuiltFooterSigns(html: string): boolean {
+  const inlineScriptRe = /<script\b(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = inlineScriptRe.exec(html)) !== null) {
+    let body = m[1];
+    if (!/footer/i.test(body) && !/footer/i.test(safeDecodeUri(body))) continue;
+    body = safeDecodeUri(body);
+    if (/footer/i.test(body) && SCRIPT_SOCIAL_URL_RE.test(body)) return true;
+  }
+  return false;
+}
+
+function safeDecodeUri(text: string): string {
+  try {
+    return decodeURIComponent(text);
+  } catch {
+    // A stray "%" in ordinary script text — decode just the %XX runs.
+    return text.replace(/(?:%[0-9A-Fa-f]{2})+/g, (run) => {
+      try {
+        return decodeURIComponent(run);
+      } catch {
+        return run;
+      }
+    });
+  }
+}
+
 export function analyzeWebsiteHtml(html: string, baseUrl?: string | null): WebsiteContentSignals {
   const clean = stripNonVisibleMarkup(html);
 
@@ -353,6 +393,8 @@ export function analyzeWebsiteHtml(html: string, baseUrl?: string | null): Websi
     hasContactPageLink,
     hasCtaText,
     socialProfiles,
+    // Read from the RAW html — `clean` has scripts stripped.
+    scriptBuiltFooter: hasScriptBuiltFooterSigns(html),
     isLikelyClientRenderedShell,
     // This module never calls PageSpeed — recovery (when isLikelyClientRenderedShell
     // is true) is layered on afterward by lib/websiteAnalysis.ts's

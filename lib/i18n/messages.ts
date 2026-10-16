@@ -390,6 +390,7 @@ export type MessageKey =
   | "content.checks.website.social_links.explanation.found"
   | "content.checks.website.social_links.explanation.none"
   | "content.checks.website.social_links.explanation.clientRenderedShell"
+  | "content.checks.website.social_links.explanation.scriptBuiltFooter"
   | "content.checks.website.info_consistency.explanation.conflictAddressMap"
   | "content.checks.website.info_consistency.explanation.allMatchMap"
   | "dashboard.website.screenshotStaleUnreachable"
@@ -2773,6 +2774,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.social_links.explanation.found": "Social profiles linked from your site: {profiles}.",
     "content.checks.website.social_links.explanation.none": "No links to your social media profiles found on your site — add them to your header or footer.",
     "content.checks.website.social_links.explanation.clientRenderedShell": "Couldn't verify — this site renders its content with JavaScript, so its links weren't readable by our check. Excluded from your score, not counted against you.",
+    "content.checks.website.social_links.explanation.scriptBuiltFooter": "Couldn't verify — your site's footer is built by a script after the page loads, so its social links weren't readable by our check. Excluded from your score, not counted against you.",
     "content.checks.website.info_consistency.explanation.conflictAddressMap": "The map on your website shows {site}; Google says {google}.",
     "content.checks.website.info_consistency.explanation.allMatchMap": "Your website's hours, phone, and address match your Google listing (address from the map on your website).",
     "dashboard.website.screenshotStaleUnreachable": "Screenshot from {date} — we couldn't load your site in our latest check, so it may be out of date.",
@@ -5318,6 +5320,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.social_links.explanation.found": "Perfiles sociales enlazados desde su sitio: {profiles}.",
     "content.checks.website.social_links.explanation.none": "No se encontraron enlaces a sus perfiles de redes sociales en su sitio — agréguelos al encabezado o al pie de página.",
     "content.checks.website.social_links.explanation.clientRenderedShell": "No se pudo verificar — este sitio muestra su contenido con JavaScript, así que nuestra comprobación no pudo leer sus enlaces. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.social_links.explanation.scriptBuiltFooter": "No se pudo verificar — el pie de página de su sitio se genera con un script después de cargar la página, así que nuestra comprobación no pudo leer sus enlaces a redes sociales. Se excluye de su puntuación, no se cuenta en su contra.",
     "content.checks.website.info_consistency.explanation.conflictAddressMap": "El mapa de su sitio web muestra {site}; Google dice {google}.",
     "content.checks.website.info_consistency.explanation.allMatchMap": "Los horarios, el teléfono y la dirección de su sitio web coinciden con su ficha de Google (dirección tomada del mapa de su sitio web).",
     "dashboard.website.screenshotStaleUnreachable": "Captura de pantalla del {date} — no pudimos cargar su sitio en nuestra última verificación, así que puede estar desactualizada.",

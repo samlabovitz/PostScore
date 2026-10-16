@@ -137,6 +137,11 @@ export interface WebsiteContentSignals {
    * page (Step 2d) — see detectSocialProfiles. Absent (undefined) on
    * rows saved before this was detected: never read as "none found". */
   socialProfiles?: SocialProfile[];
+  /** The page's footer looks script-built (see
+   * hasScriptBuiltFooterSigns in lib/websiteContentAnalysis.ts) — when
+   * no social profiles were found, Social links is "couldn't check",
+   * not a zero. Absent on rows saved before this was detected. */
+  scriptBuiltFooter?: boolean;
   /** A curated call-to-action phrase ("book now", "contact us", etc.)
    * found in the page's visible text. */
   hasCtaText: boolean;
@@ -2312,6 +2317,11 @@ export const CHECKS: CheckDefinition[] = [
       if (content.isLikelyClientRenderedShell) {
         return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.social_links.explanation.clientRenderedShell") };
       }
+      // The real Chipotle case: the footer (and its social icons) is
+      // built by a script, so "none found" would be a guess, not a fact.
+      if (content.scriptBuiltFooter) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.social_links.explanation.scriptBuiltFooter") };
+      }
       return { earnedPoints: 0, confidence: "VERIFIED", explanation: t(locale, "content.checks.website.social_links.explanation.none") };
     },
     simulateFix: (input) => ({
@@ -2930,6 +2940,7 @@ function parseWebsiteContentSignals(value: unknown): WebsiteContentSignals | nul
     hasEmailLink: v.hasEmailLink as boolean,
     hasCtaText: v.hasCtaText as boolean,
     ...(typeof v.hasContactPageLink === "boolean" ? { hasContactPageLink: v.hasContactPageLink } : {}),
+    ...(typeof v.scriptBuiltFooter === "boolean" ? { scriptBuiltFooter: v.scriptBuiltFooter } : {}),
     ...(Array.isArray(v.socialProfiles)
       ? {
           socialProfiles: v.socialProfiles.filter(
