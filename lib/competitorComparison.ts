@@ -261,3 +261,16 @@ export function computeGaps(scan: SavedCompetitorScan): { leads: Gap[]; trails: 
     trails: unique.filter((g) => g.size < 0).sort((a, b) => a.size - b.size).slice(0, 3),
   };
 }
+
+/** The monthly report's competitor standing for one saved scan — rank by
+ * the SAME comparable score the Competitors page uses (rankBy overall),
+ * never the owner's full PostScore against listing-only competitors.
+ * `topReviewCount` is the #1 business's real review count (for the
+ * report's "the top business has N more reviews" pointer). null when the
+ * owner's own row isn't in the scan. */
+export function reportStanding(scan: SavedCompetitorScan): { rank: number; total: number; topReviewCount: number | null } | null {
+  const ranked = rankBy(scan, "overall");
+  const owner = ranked.find((r) => r.entry.isSubject);
+  if (!owner) return null;
+  return { rank: owner.rank, total: ranked.length, topReviewCount: ranked[0]?.entry.reviewCount ?? null };
+}

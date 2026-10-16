@@ -1,6 +1,6 @@
 "use client";
 
-import { categoryCheckCoverage, type CategoryResult } from "@/lib/scoring";
+import { categoryCheckCoverage, PARTLY_CHECKED_THRESHOLD, websitePointShare, type CategoryResult } from "@/lib/scoring";
 import { t, useLocale } from "@/lib/i18n";
 
 /**
@@ -32,7 +32,7 @@ export function WebsiteCoverageNote({
   const { checked, total, unreachable } = categoryCheckCoverage(category);
   // Only when checks were excluded because we couldn't reach the site.
   if (unreachable === 0 || checked === 0) return null;
-  const { share } = websitePointsCoverage(category);
+  const share = websitePointShare(category);
   return (
     <p className={className ?? "text-[12px] text-ink-mute"}>
       {share < PARTLY_CHECKED_THRESHOLD && scoreBasis !== null && (
@@ -45,13 +45,8 @@ export function WebsiteCoverageNote({
   );
 }
 
-/** v1.10.0: below this share of Website POINTS actually checkable, the
- * score is labeled "Partly checked — score based on X of 100 points". */
-export const PARTLY_CHECKED_THRESHOLD = 0.6;
-
 /** Share of the Website category's points we could actually check
- * (e.g. a bot-blocked site: 9 of 30 → 0.3). */
+ * (e.g. a bot-blocked site: 9 of 30 → 0.3) — see lib/scoring.ts. */
 export function websitePointsCoverage(category: CategoryResult): { share: number } {
-  const max = category.checks.reduce((sum, c) => sum + c.maxPoints, 0);
-  return { share: max > 0 ? category.possiblePoints / max : 1 };
+  return { share: websitePointShare(category) };
 }

@@ -1447,6 +1447,12 @@ function mismatchedFields(input: BusinessScoringInput): Array<"hours" | "phone" 
  * Deliberately NOT applied inside buildActionPlan itself — the monthly
  * report reads buildActionPlan directly and is unchanged by this step.
  */
+/** Spam found on the site, or a Google Safe Browsing flag. */
+export function siteShowsHackSigns(input: BusinessScoringInput): boolean {
+  const trust = input.websiteAnalysis?.websiteTrust;
+  return !!trust && (trust.spamSignals.length > 0 || !!trust.safeBrowsingThreat?.threatFound);
+}
+
 export function applyGrowthWebsiteRules(
   tasks: ActionPlanTask[],
   input: BusinessScoringInput,
@@ -1498,7 +1504,13 @@ export function applyGrowthWebsiteRules(
         // credited once a real re-scan confirms the link (see
         // markTaskDone/reconcileTasks).
         effort: "quick_win",
-        action: t(locale, "growth.fix.addWebsiteToListing.heading"),
+        // Don't send Google searchers to a site that shows hack signs
+        // without saying so — clean it first (same signs as the Website
+        // page's Site security row and the report's warning).
+        action: t(
+          locale,
+          siteShowsHackSigns(input) ? "growth.fix.addWebsiteToListing.headingHacked" : "growth.fix.addWebsiteToListing.heading"
+        ),
         why: t(locale, "growth.fix.addWebsiteToListing.intro"),
         fix: [
           t(locale, "growth.fix.addWebsiteToListing.step1"),

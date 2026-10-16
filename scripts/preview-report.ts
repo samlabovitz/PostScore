@@ -90,6 +90,8 @@ import { MonthlyReportEmail, monthlyReportSubject } from "../emails/MonthlyRepor
 import { normalizeLocale, reportCoverageMonthIndex, reportCoverageMonthRange } from "../lib/i18n";
 import { resolveBizProfile } from "../config/bizProfiles";
 import { runAndSaveCompetitorScanWithClient } from "../app/actions/competitors";
+import { buildReportExtras, reportTopTask, snapshotFromSavedRows } from "../lib/monthlyReportExtras";
+import { SAVED_SCAN_COLUMNS, type SavedScanRow } from "../lib/savedCompetitorScans";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -98,7 +100,7 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env
 async function readScoreRow(scoreId: string): Promise<MonthlyReportScoreRow | null> {
   const { data, error } = await supabase
     .from("scores")
-    .select("id, total, grade, created_at, breakdown_json, profile_snapshot_json")
+    .select("id, total, grade, created_at, breakdown_json, profile_snapshot_json, scoring_version")
     .eq("id", scoreId)
     .single();
   if (error || !data) return null;
@@ -109,6 +111,7 @@ async function readScoreRow(scoreId: string): Promise<MonthlyReportScoreRow | nu
     createdAt: data.created_at,
     profileSnapshot: data.profile_snapshot_json,
     breakdown: data.breakdown_json,
+    scoringVersion: data.scoring_version ?? null,
   };
 }
 
@@ -131,20 +134,11 @@ async function readLatestScoreRow(businessId: string): Promise<MonthlyReportScor
 async function readCompetitorSnapshotForScan(businessId: string, scanId: string): Promise<CompetitorSnapshot | null> {
   const { data, error } = await supabase
     .from("competitor_scans")
-    .select("is_subject, total, review_count")
+    .select(SAVED_SCAN_COLUMNS)
     .eq("business_id", businessId)
     .eq("scan_id", scanId);
-  if (error || !data || data.length === 0) return null;
-
-  const sorted = [...data].sort((a, b) => (b.total ?? -1) - (a.total ?? -1));
-  const subjectRank = sorted.findIndex((r) => r.is_subject);
-  if (subjectRank === -1) return null;
-
-  return {
-    rank: subjectRank + 1,
-    totalCompetitors: sorted.length,
-    topCompetitorReviewCount: sorted[0]?.review_count ?? null,
-  };
+  if (error || !data) return null;
+  return snapshotFromSavedRows(data as SavedScanRow[]);
 }
 
 /** Runs a REAL, fresh competitor scan — the exact same real function
@@ -251,9 +245,7 @@ function computeTopActionPlanTask(
   const suggestions = generateSuggestions(breakdown, locale);
   const rawTasks = buildActionPlan(breakdown, suggestions, taskRows, input, locale);
   const mergedTasks = mergeReviewTasks(rawTasks, breakdown, input, locale);
-  const top = mergedTasks[0];
-  if (!top) return null;
-  return { checkId: top.checkId, label: top.label, action: top.action };
+  return reportTopTask(mergedTasks, input, locale);
 }
 
 async function computeFiringGrowthMoves(
@@ -411,6 +403,7 @@ async function main() {
     createdAt: currentRow.createdAt,
     profileSnapshot: buildProfileSnapshot(business),
     breakdown: liveResult.breakdown,
+    scoringVersion: liveResult.breakdown.scoringVersion,
   };
 
   const taskRows = await readTaskRows(businessId);
@@ -437,7 +430,8 @@ async function main() {
     currentCompetitorSnapshot,
     locale,
     focusInputs,
-    hasSavedCompetitorScan
+    hasSavedCompetitorScan,
+    buildReportExtras(scoringInput, currentForDisplay.breakdown)
   );
 
   const businessName = business.name ?? "Your business";

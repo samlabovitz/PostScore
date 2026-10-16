@@ -40,7 +40,7 @@ export const BASE_SNAPSHOT: ProfileSnapshot = {
  * (website.contact_conversion), so every sample's breakdown always has
  * at least one real thing for the closing focus section to surface —
  * exactly the way a real, not-flawless small business's scan would. */
-function scoringInput(overrides: Partial<BusinessScoringInput> = {}): BusinessScoringInput {
+export function scoringInput(overrides: Partial<BusinessScoringInput> = {}): BusinessScoringInput {
   return {
     rating: BASE_SNAPSHOT.rating,
     reviewCount: BASE_SNAPSHOT.reviewCount,
@@ -82,7 +82,7 @@ function scoringInput(overrides: Partial<BusinessScoringInput> = {}): BusinessSc
   };
 }
 
-function scoreRow(overrides: Partial<MonthlyReportScoreRow> = {}): MonthlyReportScoreRow {
+export function scoreRow(overrides: Partial<MonthlyReportScoreRow> = {}): MonthlyReportScoreRow {
   return {
     id: "sample-score",
     total: 84,

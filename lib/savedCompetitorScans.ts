@@ -44,6 +44,10 @@ export interface CompetitorRankPoint {
   total: number | null;
 }
 
+/** Every competitor_scans column SavedScanRow needs. */
+export const SAVED_SCAN_COLUMNS =
+  "scan_id, created_at, is_subject, place_id, name, address, distance_meters, rating, review_count, has_website, total, grade, scoring_version, breakdown_json, price_level, photo_count";
+
 export interface SavedScanRow {
   scan_id: string;
   created_at: string;

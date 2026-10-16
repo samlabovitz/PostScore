@@ -470,6 +470,18 @@ export function competitorScanBlocker(
   return usableFallbackTypes(subject.fallbackPlaceTypes).length > 0 ? null : "category_too_generic";
 }
 
+/** The owner's business-type place types a scan searches INSTEAD of
+ * Google's own types — non-empty only when every type on the listing is
+ * generic (the real Shoe Tech case: "service" → laundry, tailor). Same
+ * rule as findAndScoreCompetitors; the Competitors page names them. */
+export function competitorFallbackTypes(
+  subject: Pick<CompetitorSourceBusiness, "primaryType" | "categories" | "fallbackPlaceTypes">
+): string[] {
+  const hasAnyTypeData = !!subject.primaryType || !!(subject.categories && subject.categories.length > 0);
+  if (!hasAnyTypeData || firstSpecificType([subject.primaryType, ...(subject.categories ?? [])])) return [];
+  return usableFallbackTypes(subject.fallbackPlaceTypes);
+}
+
 /** The owner's business-type place types that are real, specific search
  * types (never generic ones like "store"). */
 function usableFallbackTypes(types: string[] | null | undefined): string[] {

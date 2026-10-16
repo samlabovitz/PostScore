@@ -441,6 +441,9 @@ describe("MonthlyReportEmail — es plural rendering (real Spanish singular vs. 
       listingChanges: { available: false },
       isSteady: false,
       focus: { nothingNotable: true, pointers: [] },
+      comparability: "comparable",
+      securityAlert: null,
+      scoreBasis: null,
     };
   }
 

@@ -378,14 +378,32 @@ describe("buildMonthlyReportContent — closing focus section", () => {
     expect(customersPointer?.text).toContain("Start a coupon");
     expect(customersPointer?.text).toContain("doesn't change your score");
 
-    const alsoScore = withFocus({
+    // (improve_website is never a growth pointer any more — the
+    // report's website pointer covers it; see the next test.)
+    // A business losing points on photos (none on the listing).
+    const alsoScore = buildMonthlyReportContent(
+      null,
+      scoreRow({ id: "few-photos", breakdown: scoreBusiness(scoringInput({ photoCount: 0 })) }),
+      null,
+      null,
+      "en",
+      {
+        topActionPlanTask: null,
+        growthMoves: [{ id: "add_photos_vs_competitors", title: "Add photos", why: "Nearby businesses show more photos." }],
+        monthIndex: 0,
+        routineCheckedCount: null,
+      }
+    );
+    const alsoScorePointer = alsoScore.focus.pointers.find((p) => p.kind === "growth_move");
+    expect(alsoScorePointer?.text).toContain("also raises your score");
+
+    const website = withFocus({
       topActionPlanTask: null,
       growthMoves: [{ id: "improve_website", title: "Improve your website", why: "Your site is losing points." }],
       monthIndex: 0,
       routineCheckedCount: null,
     });
-    const alsoScorePointer = alsoScore.focus.pointers.find((p) => p.kind === "growth_move");
-    expect(alsoScorePointer?.text).toContain("also raises your score");
+    expect(website.focus.pointers.some((p) => p.kind === "growth_move")).toBe(false);
   });
 
   test("Day 4 Part 2b fix: a growth move that just repeats the score-gap task already shown is skipped, not duplicated (the real Lamonsoff case)", () => {

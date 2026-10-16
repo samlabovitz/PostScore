@@ -57,6 +57,7 @@ const DATA: Extract<GetCompetitorsResult, { status: "ok" }> = {
   ],
   refresh: { allowed: false, nextAvailableAt: "2026-11-15T13:00:00.000Z" },
   scanBlocker: null,
+  comparedViaTypes: [],
 };
 
 function render(data = DATA, locale: "en" | "es" = "en") {
@@ -135,6 +136,15 @@ describe("Competitors page", () => {
     expect(html).toContain("Pop Culture Vulture's Google category is too general to match reliably");
     expect(html).not.toContain("not run yet");
     expect(html).not.toContain("Run competitor scan");
+  });
+
+  test("scanned by the owner's business type (Shoe Tech): names the kinds of businesses compared, EN + ES", () => {
+    const shoeTech = { ...DATA, comparedViaTypes: ["laundry", "tailor"] };
+    expect(render(shoeTech)).toContain(
+      "Google's listing gives only a general category, so you're compared with the closest kinds of businesses nearby: dry cleaners and tailors."
+    );
+    expect(render(shoeTech, "es")).toContain("los negocios más parecidos de la zona: tintorerías y sastrerías.");
+    expect(render(DATA)).not.toContain("general category");
   });
 
   test("'Compared over time' hides with fewer than 2 saved scans", () => {

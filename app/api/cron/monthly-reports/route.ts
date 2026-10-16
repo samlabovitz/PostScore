@@ -74,6 +74,9 @@ import { buildGrowthMoves, competitorPhotoCounts, median, weakWebsiteIssueLabels
 import { MonthlyReportEmail, monthlyReportSubject } from "@/emails/MonthlyReportEmail";
 import { sendEmail } from "@/lib/email";
 import { isMonthlyReportsLive } from "@/lib/monthlyReportsFeatureFlag";
+import { buildReportExtras, reportTopTask, snapshotFromSavedRows } from "@/lib/monthlyReportExtras";
+import { SAVED_SCAN_COLUMNS, type SavedScanRow } from "@/lib/savedCompetitorScans";
+import { decideReportRecipient, reportSendEnv, reportSendPrecheck, type ReportSendPath } from "@/lib/reportSendPolicy";
 import { normalizeLocale, reportCoverageMonthIndex, reportCoverageMonthRange, type Locale } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -158,7 +161,7 @@ async function readScoreRow(
 ): Promise<MonthlyReportScoreRow | null> {
   const { data, error } = await supabase
     .from("scores")
-    .select("id, total, grade, created_at, breakdown_json, profile_snapshot_json")
+    .select("id, total, grade, created_at, breakdown_json, profile_snapshot_json, scoring_version")
     .eq("id", scoreId)
     .single();
 
@@ -175,6 +178,7 @@ async function readScoreRow(
     createdAt: data.created_at,
     profileSnapshot: data.profile_snapshot_json,
     breakdown: data.breakdown_json,
+    scoringVersion: data.scoring_version ?? null,
   };
 }
 
@@ -191,21 +195,12 @@ async function readCompetitorSnapshotForScan(
 ): Promise<CompetitorSnapshot | null> {
   const { data, error } = await supabase
     .from("competitor_scans")
-    .select("is_subject, total, review_count")
+    .select(SAVED_SCAN_COLUMNS)
     .eq("business_id", businessId)
     .eq("scan_id", scanId);
 
-  if (error || !data || data.length === 0) return null;
-
-  const sorted = [...data].sort((a, b) => (b.total ?? -1) - (a.total ?? -1));
-  const subjectRank = sorted.findIndex((r) => r.is_subject);
-  if (subjectRank === -1) return null;
-
-  return {
-    rank: subjectRank + 1,
-    totalCompetitors: sorted.length,
-    topCompetitorReviewCount: sorted[0]?.review_count ?? null,
-  };
+  if (error || !data) return null;
+  return snapshotFromSavedRows(data as SavedScanRow[]);
 }
 
 /**
@@ -310,9 +305,7 @@ export function computeTopActionPlanTask(
   const suggestions = generateSuggestions(breakdown, locale);
   const rawTasks = buildActionPlan(breakdown, suggestions, taskRows, input, locale);
   const mergedTasks = mergeReviewTasks(rawTasks, breakdown, input, locale);
-  const top = mergedTasks[0];
-  if (!top) return null;
-  return { checkId: top.checkId, label: top.label, action: top.action };
+  return reportTopTask(mergedTasks, input, locale);
 }
 
 /**
@@ -428,8 +421,31 @@ export async function processBusiness(
   supabase: ReturnType<typeof createAdminClient>,
   businessId: string,
   startOfMonthIso: string,
-  now: Date
+  now: Date,
+  /** Which path is sending — see lib/reportSendPolicy.ts for the rules
+   * every path follows. */
+  path: ReportSendPath = "scheduled"
 ): Promise<CronRunResult> {
+  // Send safety first — before any paid work (the re-scan below).
+  const precheck = reportSendPrecheck(path, reportSendEnv());
+  if (!precheck.allowed) {
+    return { businessId, status: "skipped", reason: precheck.reason };
+  }
+  // The owner's own opt-in is always respected, by every path (the
+  // scheduled batch already lists only opted-in businesses; send-one
+  // doesn't, so this is the real guard there).
+  const { data: optIn, error: optInError } = await supabase
+    .from("businesses")
+    .select("monthly_report_enabled")
+    .eq("id", businessId)
+    .maybeSingle();
+  if (optInError || !optIn) {
+    return { businessId, status: "failed", reason: "could not read this business's report opt-in" };
+  }
+  if (optIn.monthly_report_enabled !== true) {
+    return { businessId, status: "skipped", reason: "the owner has monthly reports turned off (monthly_report_enabled = false)" };
+  }
+
   // 3a. Idempotency first — a retry or double-trigger must never
   // double-send. Checked against the real table, not an in-memory guess.
   // This is a cheap early-exit, not the actual guarantee: it's a plain
@@ -621,6 +637,7 @@ export async function processBusiness(
     createdAt: currentRow.createdAt,
     profileSnapshot: buildProfileSnapshot(freshBusiness),
     breakdown: liveResult.breakdown,
+    scoringVersion: liveResult.breakdown.scoringVersion,
   };
 
   const taskRows = await readTaskRows(supabase, businessId);
@@ -648,7 +665,8 @@ export async function processBusiness(
     currentCompetitorSnapshot,
     locale,
     focusInputs,
-    hasSavedCompetitorScan
+    hasSavedCompetitorScan,
+    buildReportExtras(scoringInput, currentForDisplay.breakdown)
   );
   const businessName = freshBusiness.name ?? "Your business";
   // A real, working unsubscribe link — app/unsubscribe/page.tsx validates
@@ -665,6 +683,30 @@ export async function processBusiness(
   // the domain can move without a code change.
   const siteUrl = process.env.SITE_URL ?? "https://postscoree.netlify.app";
   const unsubscribeUrl = `${siteUrl}/unsubscribe?business=${businessId}&token=${freshBusiness.unsubscribe_token}`;
+
+  const decision = decideReportRecipient({
+    path,
+    env: reportSendEnv(),
+    ownerOptedIn: optIn.monthly_report_enabled === true,
+    ownerEmail: ownerUser.user.email ?? null,
+  });
+  if (!decision.allowed) {
+    return { businessId, status: "skipped", reason: decision.reason };
+  }
+  if (decision.mode === "test") {
+    // MONTHLY_REPORTS_LIVE is off: only the fixed test address, never the
+    // owner — and nothing is recorded as this owner's report for the
+    // month (no monthly_reports row), so a test can never block or stand
+    // in for the real one.
+    const testSend = await sendEmail({
+      to: decision.to,
+      subject: `[TEST — not sent to the owner] ${monthlyReportSubject(businessName, reportDate, locale)}`,
+      react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale }),
+    });
+    return testSend.status === "sent"
+      ? { businessId, status: "sent", reason: `test send to REPORT_TEST_EMAIL (MONTHLY_REPORTS_LIVE is off) — not sent to the owner` }
+      : { businessId, status: "failed", reason: `test email send failed: ${testSend.message}` };
+  }
 
   // 3f — RESERVE before sending, not after. The idempotency pre-check
   // above (3a) is only a check-then-act race: two truly concurrent runs
@@ -705,7 +747,7 @@ export async function processBusiness(
   }
 
   const sendResult = await sendEmail({
-    to: ownerUser.user.email,
+    to: decision.to,
     subject: monthlyReportSubject(businessName, reportDate, locale),
     react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale }),
   });

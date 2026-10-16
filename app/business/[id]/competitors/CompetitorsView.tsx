@@ -31,6 +31,7 @@ import { estimateLabelWidth, layoutLabels, shortName, type Lane, type LabelReque
 import { gradeFromTotal } from "@/lib/scoring";
 import { formatCount, formatShortDate, t, tPlural, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { placeTypeList } from "@/lib/placeTypeLabels";
 
 type OkResult = Extract<GetCompetitorsResult, { status: "ok" }>;
 
@@ -88,6 +89,14 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
       </div>
 
       {scan && scan.entries.some((e) => !e.isSubject) && <ScanInfo businessId={businessId} data={data} />}
+
+      {scan && scan.entries.some((e) => !e.isSubject) && data.comparedViaTypes.length > 0 && (
+        // Google's own types are all generic, so the scan searched the
+        // owner's business type instead (Shoe Tech: dry cleaners, tailors).
+        <p className="max-w-2xl text-sm text-ink-soft">
+          {t(locale, "dashboard.competitors.comparedViaFallback", { types: placeTypeList(data.comparedViaTypes, locale) })}
+        </p>
+      )}
 
       {!scan && data.scanBlocker ? (
         // We can't search at all (from saved data, no cost) — say why

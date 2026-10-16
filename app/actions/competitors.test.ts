@@ -187,3 +187,13 @@ describe("when a scan can't search at all (decided from saved data, no cost)", (
     expect(scanSpy).not.toHaveBeenCalled();
   });
 });
+
+import { competitorFallbackTypes } from "@/lib/competitors";
+
+describe("which types a scan compares by", () => {
+  test("Google's generic 'service' + owner type repair_dropoff → laundry, tailor; a specific Google type → none", () => {
+    expect(competitorFallbackTypes({ primaryType: "service", categories: ["service", "establishment"], fallbackPlaceTypes: ["laundry", "tailor"] })).toEqual(["laundry", "tailor"]);
+    expect(competitorFallbackTypes({ primaryType: "shoe_store", categories: ["shoe_store"], fallbackPlaceTypes: ["laundry", "tailor"] })).toEqual([]);
+    expect(competitorFallbackTypes({ primaryType: "store", categories: ["store"], fallbackPlaceTypes: [] })).toEqual([]);
+  });
+});

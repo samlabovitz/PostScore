@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import {
+  competitorFallbackTypes,
   competitorScanBlocker,
   findAndScoreCompetitors,
   MAX_COMPETITORS,
@@ -18,6 +19,7 @@ import {
   type CompetitorRankPoint,
   type SavedCompetitorScan,
   type SavedScanRow,
+  SAVED_SCAN_COLUMNS,
 } from "@/lib/savedCompetitorScans";
 
 export type { CompetitorRankPoint, SavedCompetitorEntry, SavedCompetitorScan } from "@/lib/savedCompetitorScans";
@@ -62,8 +64,7 @@ interface CompetitorBusinessRow {
 const BUSINESS_COLUMNS =
   "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, primary_type, business_type_override, price_level, lat, lng, language";
 
-const SCAN_COLUMNS =
-  "scan_id, created_at, is_subject, place_id, name, address, distance_meters, rating, review_count, has_website, total, grade, scoring_version, breakdown_json, price_level, photo_count";
+const SCAN_COLUMNS = SAVED_SCAN_COLUMNS;
 
 export type GetCompetitorsResult =
   | {
@@ -84,6 +85,10 @@ export type GetCompetitorsResult =
        * null. "category_too_generic": Google lists only a general type
        * like "store", so there's nothing specific to match on. */
       scanBlocker: "no_location" | "category_too_generic" | null;
+      /** The owner's business-type place types the scan searched because
+       * Google's own types are all generic — empty when Google's own
+       * category was used (see competitorFallbackTypes). */
+      comparedViaTypes: string[];
     }
   | { status: "not_found" }
   | { status: "unauthenticated" }
@@ -164,6 +169,11 @@ export async function getCompetitorsWithClient(
     scanBlocker: competitorScanBlocker({
       lat: row.lat,
       lng: row.lng,
+      primaryType: row.primary_type,
+      categories: row.categories,
+      fallbackPlaceTypes: ownerTypePlaceTypes(row.business_type_override),
+    }),
+    comparedViaTypes: competitorFallbackTypes({
       primaryType: row.primary_type,
       categories: row.categories,
       fallbackPlaceTypes: ownerTypePlaceTypes(row.business_type_override),

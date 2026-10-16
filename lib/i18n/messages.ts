@@ -159,6 +159,69 @@ export type MessageKey =
   | "dashboard.competitors.notChecked"
   | "dashboard.competitors.websiteCompareNote"
   | "dashboard.competitors.comparableNote"
+  | "dashboard.competitors.comparedViaFallback"
+  | "placeType.accounting"
+  | "placeType.amusement_center"
+  | "placeType.bakery"
+  | "placeType.banquet_hall"
+  | "placeType.bar"
+  | "placeType.barber_shop"
+  | "placeType.beauty_salon"
+  | "placeType.bowling_alley"
+  | "placeType.cafe"
+  | "placeType.car_repair"
+  | "placeType.car_wash"
+  | "placeType.child_care_agency"
+  | "placeType.clothing_store"
+  | "placeType.coffee_shop"
+  | "placeType.consultant"
+  | "placeType.convenience_store"
+  | "placeType.day_spa"
+  | "placeType.dentist"
+  | "placeType.doctor"
+  | "placeType.electrician"
+  | "placeType.fitness_center"
+  | "placeType.florist"
+  | "placeType.general_contractor"
+  | "placeType.gift_shop"
+  | "placeType.grocery_store"
+  | "placeType.gym"
+  | "placeType.hair_salon"
+  | "placeType.hardware_store"
+  | "placeType.hotel"
+  | "placeType.house_cleaning"
+  | "placeType.hvac_contractor"
+  | "placeType.landscaper"
+  | "placeType.laundry"
+  | "placeType.lawyer"
+  | "placeType.legal_services"
+  | "placeType.life_coach"
+  | "placeType.liquor_store"
+  | "placeType.lodging"
+  | "placeType.massage"
+  | "placeType.meal_takeaway"
+  | "placeType.medical_clinic"
+  | "placeType.motel"
+  | "placeType.nail_salon"
+  | "placeType.night_club"
+  | "placeType.pet_store"
+  | "placeType.photography_studio"
+  | "placeType.physiotherapist"
+  | "placeType.plumber"
+  | "placeType.preschool"
+  | "placeType.pub"
+  | "placeType.real_estate_agency"
+  | "placeType.restaurant"
+  | "placeType.roofing_contractor"
+  | "placeType.shoe_store"
+  | "placeType.spa"
+  | "placeType.supermarket"
+  | "placeType.tailor"
+  | "placeType.tattoo_parlor"
+  | "placeType.tutoring_service"
+  | "placeType.veterinary_care"
+  | "placeType.wedding_venue"
+  | "placeType.yoga_studio"
   | "dashboard.competitors.leadHeading"
   | "dashboard.competitors.trailHeading"
   | "dashboard.competitors.noLeads"
@@ -405,6 +468,7 @@ export type MessageKey =
   | "dashboard.website.listingLinkBroken"
   | "growth.fix.addWebsiteToListing.label"
   | "growth.fix.addWebsiteToListing.heading"
+  | "growth.fix.addWebsiteToListing.headingHacked"
   | "growth.fix.addWebsiteToListing.intro"
   | "growth.fix.addWebsiteToListing.step1"
   | "growth.fix.addWebsiteToListing.step2"
@@ -594,6 +658,28 @@ export type MessageKey =
   | "report.focus.routineNonePointer"
   | "report.focus.routineCheckedCount.one"
   | "report.focus.routineCheckedCount.other"
+  | "report.fact.competitor"
+  | "report.fact.rating"
+  | "report.fact.score"
+  | "report.summary.baseline"
+  | "report.fact.ratingStable"
+  | "report.fact.competitorStill"
+  | "report.fact.scoreUnchanged"
+  | "report.summary.steady"
+  | "report.summary.scoringUpdated"
+  | "report.fact.scoreTo"
+  | "report.fact.scoreToWithGrade"
+  | "report.headline.scoringUpdated"
+  | "report.score.scoringUpdated"
+  | "report.score.checksFlipped"
+  | "report.score.partlyChecked"
+  | "report.securityAlert.spam"
+  | "report.securityAlert.safeBrowsing"
+  | "report.competitorSection.basis"
+  | "report.focus.mismatch"
+  | "report.focus.websitePartlyChecked"
+  | "report.focus.website.one"
+  | "report.focus.website.other"
   | "report.summary.reviewsGained.one"
   | "report.summary.reviewsGained.other"
   | "report.summary.reviewsLost"
@@ -2303,6 +2389,7 @@ export type PluralKeyBase =
   | "content.listingChange.reviews.gained"
   | "report.focus.routineCheckedCount"
   | "report.summary.reviewsGained"
+  | "report.focus.website"
   | "report.summary.listingChanges"
   | "dashboard.website.excludedPoints"
   | "dashboard.actionPlan.weeklyReviewTarget"
@@ -2499,6 +2586,69 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.notChecked": "Not checked",
     "dashboard.competitors.websiteCompareNote": "Competitors' websites aren't checked, so Website compares only whether a site is listed on Google.",
     "dashboard.competitors.comparableNote": "Everyone is compared on what Google lists: rating, reviews, photos, hours, phone and whether a website is listed.",
+    "dashboard.competitors.comparedViaFallback": "Google's listing gives only a general category, so you're compared with the closest kinds of businesses nearby: {types}.",
+    "placeType.accounting": "accounting firms",
+    "placeType.amusement_center": "amusement centers",
+    "placeType.bakery": "bakeries",
+    "placeType.banquet_hall": "banquet halls",
+    "placeType.bar": "bars",
+    "placeType.barber_shop": "barbershops",
+    "placeType.beauty_salon": "beauty salons",
+    "placeType.bowling_alley": "bowling alleys",
+    "placeType.cafe": "cafés",
+    "placeType.car_repair": "auto repair shops",
+    "placeType.car_wash": "car washes",
+    "placeType.child_care_agency": "child care centers",
+    "placeType.clothing_store": "clothing stores",
+    "placeType.coffee_shop": "coffee shops",
+    "placeType.consultant": "consultants",
+    "placeType.convenience_store": "convenience stores",
+    "placeType.day_spa": "day spas",
+    "placeType.dentist": "dentists",
+    "placeType.doctor": "doctors",
+    "placeType.electrician": "electricians",
+    "placeType.fitness_center": "fitness centers",
+    "placeType.florist": "florists",
+    "placeType.general_contractor": "general contractors",
+    "placeType.gift_shop": "gift shops",
+    "placeType.grocery_store": "grocery stores",
+    "placeType.gym": "gyms",
+    "placeType.hair_salon": "hair salons",
+    "placeType.hardware_store": "hardware stores",
+    "placeType.hotel": "hotels",
+    "placeType.house_cleaning": "house cleaning services",
+    "placeType.hvac_contractor": "heating and cooling contractors",
+    "placeType.landscaper": "landscapers",
+    "placeType.laundry": "dry cleaners",
+    "placeType.lawyer": "lawyers",
+    "placeType.legal_services": "legal services",
+    "placeType.life_coach": "life coaches",
+    "placeType.liquor_store": "liquor stores",
+    "placeType.lodging": "places to stay",
+    "placeType.massage": "massage studios",
+    "placeType.meal_takeaway": "takeout restaurants",
+    "placeType.medical_clinic": "medical clinics",
+    "placeType.motel": "motels",
+    "placeType.nail_salon": "nail salons",
+    "placeType.night_club": "nightclubs",
+    "placeType.pet_store": "pet stores",
+    "placeType.photography_studio": "photography studios",
+    "placeType.physiotherapist": "physical therapists",
+    "placeType.plumber": "plumbers",
+    "placeType.preschool": "preschools",
+    "placeType.pub": "pubs",
+    "placeType.real_estate_agency": "real estate agencies",
+    "placeType.restaurant": "restaurants",
+    "placeType.roofing_contractor": "roofers",
+    "placeType.shoe_store": "shoe stores",
+    "placeType.spa": "spas",
+    "placeType.supermarket": "supermarkets",
+    "placeType.tailor": "tailors",
+    "placeType.tattoo_parlor": "tattoo studios",
+    "placeType.tutoring_service": "tutoring services",
+    "placeType.veterinary_care": "veterinarians",
+    "placeType.wedding_venue": "wedding venues",
+    "placeType.yoga_studio": "yoga studios",
     "dashboard.competitors.leadHeading": "Where you lead",
     "dashboard.competitors.trailHeading": "Where you trail",
     "dashboard.competitors.noLeads": "No clear lead over the local average in this scan.",
@@ -2856,6 +3006,7 @@ export const messages: Record<Locale, LocaleMessages> = {
 
     "growth.fix.addWebsiteToListing.label": "PostScore guides you · ~2–5 min",
     "growth.fix.addWebsiteToListing.heading": "Add your website to your Google listing",
+    "growth.fix.addWebsiteToListing.headingHacked": "Check and clean your site first — it shows signs it may be hacked. Then add your website to your Google listing.",
     "growth.fix.addWebsiteToListing.intro":
       "Your Google Business Profile doesn't show your real website yet — visitors searching for you on Google or Maps can't click through to it.",
     "growth.fix.addWebsiteToListing.step1": "Open your Google Business Profile and select Edit profile.",
@@ -3093,6 +3244,28 @@ export const messages: Record<Locale, LocaleMessages> = {
       "You checked off {count} weekly routine item this month — see \"Your weekly routine\" on the Growth page to keep it going.",
     "report.focus.routineCheckedCount.other":
       "You checked off {count} weekly routine items this month — see \"Your weekly routine\" on the Growth page to keep it going.",
+    "report.fact.competitor": "#{rank} of {total} nearby",
+    "report.fact.rating": "rating {value}",
+    "report.fact.score": "score {total} ({grade})",
+    "report.summary.baseline": "Here's where you stand today — {facts}. Month-over-month tracking starts with your next report.",
+    "report.fact.ratingStable": "rating stable at {value}",
+    "report.fact.competitorStill": "still #{rank} of {total} nearby",
+    "report.fact.scoreUnchanged": "score unchanged at {total} ({grade})",
+    "report.summary.steady": "You held steady this month — {facts}.",
+    "report.summary.scoringUpdated": "PostScore updated how it scores since your last report, so this isn't a like-for-like change — your score is now {total} ({grade})",
+    "report.fact.scoreTo": "{fragment} to {total}",
+    "report.fact.scoreToWithGrade": "{fragment} to {total} ({grade})",
+    "report.headline.scoringUpdated": "PostScore updated how it scores this month — here's where you stand.",
+    "report.score.scoringUpdated": "PostScore updated how it scores since your last report, so this isn't a like-for-like change — your score is now {total} ({grade}).",
+    "report.score.checksFlipped": "Some website checks couldn't be measured this time (or are measured again), which moved your score.",
+    "report.score.partlyChecked": "Partly checked — your site blocks our automated check, so this score is based on {points} of 100 points.",
+    "report.securityAlert.spam": "Warning: we found spam content on your website ({topic}) — a common sign it may have been hacked. See the Website page for what we found and what to do.",
+    "report.securityAlert.safeBrowsing": "Warning: Google Safe Browsing has flagged your website as unsafe ({types}) — it may have been hacked. See the Website page for what we found and what to do.",
+    "report.competitorSection.basis": "Compared on what Google lists for everyone.",
+    "report.focus.mismatch": "Your site says {site}, Google says {google} — update whichever is wrong.",
+    "report.focus.websitePartlyChecked": "Your website could only be partly checked (it blocks our automated check). See the Website page.",
+    "report.focus.website.one": "Your website scores {score}/100 — {count} improvement available (up to ~+{points} pts). See the Website page.",
+    "report.focus.website.other": "Your website scores {score}/100 — {count} improvements available (up to ~+{points} pts). See the Website page.",
     "report.summary.reviewsGained.one": "{count} new review",
     "report.summary.reviewsGained.other": "{count} new reviews",
     "report.summary.reviewsLost": "your review count dropped by {count}",
@@ -5226,6 +5399,69 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.notChecked": "No verificado",
     "dashboard.competitors.websiteCompareNote": "No revisamos los sitios web de la competencia, así que Sitio web solo compara si hay un sitio indicado en Google.",
     "dashboard.competitors.comparableNote": "Todos se comparan con lo que indica Google: calificación, reseñas, fotos, horario, teléfono y si hay un sitio web.",
+    "dashboard.competitors.comparedViaFallback": "La ficha de Google solo indica una categoría general, por lo que se le compara con los negocios más parecidos de la zona: {types}.",
+    "placeType.accounting": "despachos contables",
+    "placeType.amusement_center": "centros de entretenimiento",
+    "placeType.bakery": "panaderías",
+    "placeType.banquet_hall": "salones de banquetes",
+    "placeType.bar": "bares",
+    "placeType.barber_shop": "barberías",
+    "placeType.beauty_salon": "salones de belleza",
+    "placeType.bowling_alley": "boleras",
+    "placeType.cafe": "cafés",
+    "placeType.car_repair": "talleres mecánicos",
+    "placeType.car_wash": "autolavados",
+    "placeType.child_care_agency": "guarderías",
+    "placeType.clothing_store": "tiendas de ropa",
+    "placeType.coffee_shop": "cafeterías",
+    "placeType.consultant": "consultores",
+    "placeType.convenience_store": "tiendas de conveniencia",
+    "placeType.day_spa": "spas de día",
+    "placeType.dentist": "dentistas",
+    "placeType.doctor": "médicos",
+    "placeType.electrician": "electricistas",
+    "placeType.fitness_center": "centros de acondicionamiento físico",
+    "placeType.florist": "floristerías",
+    "placeType.general_contractor": "contratistas generales",
+    "placeType.gift_shop": "tiendas de regalos",
+    "placeType.grocery_store": "tiendas de comestibles",
+    "placeType.gym": "gimnasios",
+    "placeType.hair_salon": "peluquerías",
+    "placeType.hardware_store": "ferreterías",
+    "placeType.hotel": "hoteles",
+    "placeType.house_cleaning": "servicios de limpieza de casas",
+    "placeType.hvac_contractor": "contratistas de calefacción y aire acondicionado",
+    "placeType.landscaper": "paisajistas",
+    "placeType.laundry": "tintorerías",
+    "placeType.lawyer": "abogados",
+    "placeType.legal_services": "servicios legales",
+    "placeType.life_coach": "coaches de vida",
+    "placeType.liquor_store": "licorerías",
+    "placeType.lodging": "alojamientos",
+    "placeType.massage": "centros de masajes",
+    "placeType.meal_takeaway": "restaurantes de comida para llevar",
+    "placeType.medical_clinic": "clínicas médicas",
+    "placeType.motel": "moteles",
+    "placeType.nail_salon": "salones de uñas",
+    "placeType.night_club": "discotecas",
+    "placeType.pet_store": "tiendas de mascotas",
+    "placeType.photography_studio": "estudios de fotografía",
+    "placeType.physiotherapist": "fisioterapeutas",
+    "placeType.plumber": "plomeros",
+    "placeType.preschool": "preescolares",
+    "placeType.pub": "pubs",
+    "placeType.real_estate_agency": "agencias inmobiliarias",
+    "placeType.restaurant": "restaurantes",
+    "placeType.roofing_contractor": "techadores",
+    "placeType.shoe_store": "zapaterías",
+    "placeType.spa": "spas",
+    "placeType.supermarket": "supermercados",
+    "placeType.tailor": "sastrerías",
+    "placeType.tattoo_parlor": "estudios de tatuajes",
+    "placeType.tutoring_service": "servicios de tutoría",
+    "placeType.veterinary_care": "veterinarias",
+    "placeType.wedding_venue": "lugares para bodas",
+    "placeType.yoga_studio": "estudios de yoga",
     "dashboard.competitors.leadHeading": "Dónde lleva ventaja",
     "dashboard.competitors.trailHeading": "Dónde se queda atrás",
     "dashboard.competitors.noLeads": "En este análisis no hay una ventaja clara sobre el promedio local.",
@@ -5472,6 +5708,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.listingLinkBroken": "El enlace del sitio web en su ficha de Google abre una página de \"No encontrado\" — actualícelo.",
     "growth.fix.addWebsiteToListing.label": "PostScore lo guía · ~2–5 min",
     "growth.fix.addWebsiteToListing.heading": "Agregue su sitio web a su ficha de Google",
+    "growth.fix.addWebsiteToListing.headingHacked": "Primero revise y limpie su sitio — muestra señales de que puede haber sido hackeado. Después agregue su sitio web a su ficha de Google.",
     "growth.fix.addWebsiteToListing.intro": "Su Perfil de Negocio de Google todavía no muestra su sitio web real — las personas que lo buscan en Google o Maps no pueden hacer clic para visitarlo.",
     "growth.fix.addWebsiteToListing.step1": "Abra su Perfil de Negocio de Google y seleccione Editar perfil.",
     "growth.fix.addWebsiteToListing.step2": "Vaya a la sección Información de contacto.",
@@ -5703,6 +5940,28 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Marcó {count} tarea de su rutina semanal este mes — consulte \"Su rutina semanal\" en la página Crecimiento para seguir así.",
     "report.focus.routineCheckedCount.other":
       "Marcó {count} tareas de su rutina semanal este mes — consulte \"Su rutina semanal\" en la página Crecimiento para seguir así.",
+    "report.fact.competitor": "#{rank} de {total} en la zona",
+    "report.fact.rating": "calificación {value}",
+    "report.fact.score": "puntuación {total} ({grade})",
+    "report.summary.baseline": "Así es como está hoy — {facts}. El seguimiento de un mes a otro empieza con su próximo informe.",
+    "report.fact.ratingStable": "calificación estable en {value}",
+    "report.fact.competitorStill": "sigue en el puesto #{rank} de {total} en la zona",
+    "report.fact.scoreUnchanged": "puntuación sin cambios en {total} ({grade})",
+    "report.summary.steady": "Se mantuvo estable este mes — {facts}.",
+    "report.summary.scoringUpdated": "PostScore actualizó la forma en que calcula la puntuación desde su último informe, así que no es un cambio comparable — su puntuación ahora es {total} ({grade})",
+    "report.fact.scoreTo": "{fragment} a {total}",
+    "report.fact.scoreToWithGrade": "{fragment} a {total} ({grade})",
+    "report.headline.scoringUpdated": "PostScore actualizó la forma en que calcula la puntuación este mes — así es como está.",
+    "report.score.scoringUpdated": "PostScore actualizó la forma en que calcula la puntuación desde su último informe, así que no es un cambio comparable — su puntuación ahora es {total} ({grade}).",
+    "report.score.checksFlipped": "Algunas revisiones de su sitio web no se pudieron medir esta vez (o vuelven a medirse), y eso movió su puntuación.",
+    "report.score.partlyChecked": "Revisado en parte — su sitio bloquea nuestra revisión automática, así que esta puntuación se basa en {points} de 100 puntos.",
+    "report.securityAlert.spam": "Advertencia: encontramos contenido de spam en su sitio web ({topic}) — una señal común de que puede haber sido hackeado. Consulte la página Sitio web para ver lo que encontramos y qué hacer.",
+    "report.securityAlert.safeBrowsing": "Advertencia: la Navegación segura de Google marcó su sitio web como inseguro ({types}) — puede haber sido hackeado. Consulte la página Sitio web para ver lo que encontramos y qué hacer.",
+    "report.competitorSection.basis": "Comparado con lo que Google indica para todos.",
+    "report.focus.mismatch": "Su sitio dice {site} y Google dice {google} — actualice el que esté mal.",
+    "report.focus.websitePartlyChecked": "Su sitio web solo se pudo revisar en parte (bloquea nuestra revisión automática). Consulte la página Sitio web.",
+    "report.focus.website.one": "Su sitio web obtiene {score}/100 — {count} mejora disponible (hasta ~+{points} pts). Consulte la página Sitio web.",
+    "report.focus.website.other": "Su sitio web obtiene {score}/100 — {count} mejoras disponibles (hasta ~+{points} pts). Consulte la página Sitio web.",
     "report.summary.reviewsGained.one": "{count} reseña nueva",
     "report.summary.reviewsGained.other": "{count} reseñas nuevas",
     "report.summary.reviewsLost": "su número de reseñas bajó en {count}",

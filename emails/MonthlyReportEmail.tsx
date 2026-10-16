@@ -38,7 +38,8 @@ import type {
   MonthlyReportContent,
   ScoreMovement,
 } from "@/lib/monthlyReport";
-import { DEFAULT_LOCALE, reportCoverageMonth, t, tPlural, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, formatCount, reportCoverageMonth, t, tPlural, type Locale } from "@/lib/i18n";
+import { spamTopic } from "@/lib/siteSecurity";
 
 export interface MonthlyReportEmailProps {
   businessName: string;
@@ -167,6 +168,15 @@ export function buildHeadline(content: MonthlyReportContent, locale: Locale = DE
     return t(locale, "report.headline.steady");
   }
 
+  // Different scoring versions: never "your score rose/dropped" — today's
+  // real score, said plainly, plus any real review/rating change.
+  if (content.comparability === "scoring_updated") {
+    const real = [reviewFragment(content.reviewCount, locale), ratingFragment(content.rating, locale)].filter(
+      (f): f is string => f !== null
+    );
+    const lead = t(locale, "report.headline.scoringUpdated", { total: content.score.current.total, grade: content.score.current.grade });
+    return real.length > 0 ? `${lead} ${capitalizeFirst(real.join(` ${t(locale, "common.and")} `))}.` : lead;
+  }
   const fragments = [
     scoreFragment(content.score, locale),
     reviewFragment(content.reviewCount, locale),
@@ -176,7 +186,9 @@ export function buildHeadline(content: MonthlyReportContent, locale: Locale = DE
   ].filter((f): f is string => f !== null);
 
   const base = `${capitalizeFirst(fragments.slice(0, 2).join(` ${t(locale, "common.and")} `))}.`;
-  const tone = earnedTonePhrase(content.score.scoreDelta, locale);
+  // The tone phrase only when the two scores are a like-for-like
+  // comparison (same scoring version, no measured ↔ couldn't-check flips).
+  const tone = content.comparability === "comparable" ? earnedTonePhrase(content.score.scoreDelta, locale) : null;
   return tone ? `${base} ${tone}` : base;
 }
 
@@ -245,9 +257,20 @@ function MetricLine({
  * entirely rather than shown as "+0" — this bar never implies
  * month-over-month movement that isn't real.
  */
-function ScoreVisual({ score, locale }: { score: MonthlyReportContent["score"]; locale: Locale }) {
+function ScoreVisual({
+  score,
+  comparability,
+  scoreBasis,
+  locale,
+}: {
+  score: MonthlyReportContent["score"];
+  comparability: MonthlyReportContent["comparability"];
+  scoreBasis: number | null;
+  locale: Locale;
+}) {
   const pct = score.current.total;
-  const showDelta = score.scoreDelta !== null && score.scoreDelta !== 0;
+  const scoringUpdated = comparability === "scoring_updated";
+  const showDelta = !scoringUpdated && score.scoreDelta !== null && score.scoreDelta !== 0;
 
   return (
     <Section style={{ margin: "0 0 20px" }}>
@@ -289,6 +312,39 @@ function ScoreVisual({ score, locale }: { score: MonthlyReportContent["score"]; 
           </tr>
         </tbody>
       </table>
+      {scoringUpdated && (
+        <Text style={{ color: "#3a4a66", fontSize: "13px", lineHeight: "1.5", margin: "8px 0 0" }}>
+          {t(locale, "report.score.scoringUpdated", { total: score.current.total, grade: score.current.grade })}
+        </Text>
+      )}
+      {comparability === "checks_flipped" && (
+        <Text style={{ color: "#3a4a66", fontSize: "13px", lineHeight: "1.5", margin: "8px 0 0" }}>
+          {t(locale, "report.score.checksFlipped")}
+        </Text>
+      )}
+      {scoreBasis !== null && (
+        <Text style={{ color: "#3a4a66", fontSize: "13px", lineHeight: "1.5", margin: "8px 0 0" }}>
+          {t(locale, "report.score.partlyChecked", { points: scoreBasis })}
+        </Text>
+      )}
+    </Section>
+  );
+}
+
+/** Top-of-report warning (above the score) when Site security found spam
+ * on the site or Google Safe Browsing flags it — always "may", never "is". */
+function SecurityAlert({ content, locale }: { content: MonthlyReportContent; locale: Locale }) {
+  const alert = content.securityAlert;
+  if (!alert) return null;
+  return (
+    <Section
+      style={{ backgroundColor: "#fbeceb", border: "1px solid #e9b8b3", borderRadius: "8px", padding: "12px 14px", margin: "0 0 20px" }}
+    >
+      <Text style={{ color: "#8f2d24", fontSize: "14px", fontWeight: 600, lineHeight: "1.5", margin: 0 }}>
+        {alert.kind === "spam"
+          ? t(locale, "report.securityAlert.spam", { topic: spamTopic(alert.category, locale) })
+          : t(locale, "report.securityAlert.safeBrowsing", { types: alert.types.join(", ") })}
+      </Text>
     </Section>
   );
 }
@@ -365,6 +421,9 @@ function CompetitorSection({ content, locale }: { content: MonthlyReportContent;
             total: content.competitorStanding.totalCompetitors,
           })}
         </Text>
+        <Text style={{ ...valueStyle, fontSize: "12.5px", color: "#6b7890", marginTop: "-10px" }}>
+          {t(locale, "report.competitorSection.basis")}
+        </Text>
       </Section>
     );
   }
@@ -399,6 +458,9 @@ function CompetitorSection({ content, locale }: { content: MonthlyReportContent;
       <Text style={labelStyle}>{t(locale, "report.competitorSection.label")}</Text>
       <Text style={valueStyle}>{rankLine}</Text>
       <Text style={{ ...valueStyle, fontSize: "13px", marginTop: "-10px" }}>{deltaLine}</Text>
+      <Text style={{ ...valueStyle, fontSize: "12.5px", color: "#6b7890", marginTop: "-10px" }}>
+        {t(locale, "report.competitorSection.basis")}
+      </Text>
     </Section>
   );
 }
@@ -444,6 +506,26 @@ function ListingChangesSection({ content, locale }: { content: MonthlyReportCont
   );
 }
 
+/** React Email cuts preview text at this many characters. */
+const INBOX_PREVIEW_MAX = 150;
+
+/** The summary as inbox preview text, cut at a whole fact ("; "-joined)
+ * so it never ends mid-list on a dangling ";" — React Email would
+ * otherwise cut it at 150 characters wherever that falls. */
+export function inboxPreviewText(summary: string): string {
+  if (summary.length <= INBOX_PREVIEW_MAX) return summary;
+  const parts = summary.replace(/\.$/, "").split("; ");
+  let text = "";
+  for (const part of parts) {
+    const next = text ? `${text}; ${part}` : part;
+    if (next.length + 1 > INBOX_PREVIEW_MAX) break;
+    text = next;
+  }
+  if (text) return `${text}.`;
+  const cut = summary.slice(0, INBOX_PREVIEW_MAX - 1);
+  return `${cut.slice(0, cut.lastIndexOf(" ")).replace(/[;,—\s]+$/, "")}…`;
+}
+
 export function MonthlyReportEmail({
   businessName,
   reportDate,
@@ -454,13 +536,13 @@ export function MonthlyReportEmail({
   const { month: coverageMonth, year: coverageYear } = reportCoverageMonth(reportDate, locale);
 
   return (
-    <Html>
+    <Html lang={locale}>
       <Head />
       {/* The inbox preview snippet uses the fuller real summary sentence
           content.summary already computes — a separate, more detailed
           line from the short on-page headline below, but never a
           separately hand-written one that could drift from real content. */}
-      <Preview>{content.summary}</Preview>
+      <Preview>{inboxPreviewText(content.summary)}</Preview>
       <Body style={{ backgroundColor: "#f6f5f1", fontFamily: "Georgia, 'Times New Roman', serif", margin: 0, padding: "24px 0" }}>
         <Container
           style={{
@@ -482,7 +564,8 @@ export function MonthlyReportEmail({
 
           <Hr style={{ borderColor: "#e5e1d8", margin: "0 0 20px" }} />
 
-          <ScoreVisual score={content.score} locale={locale} />
+          <SecurityAlert content={content} locale={locale} />
+          <ScoreVisual score={content.score} comparability={content.comparability} scoreBasis={content.scoreBasis} locale={locale} />
           <MetricLine
             label={t(locale, "report.label.rating")}
             metric={content.rating}
@@ -493,7 +576,7 @@ export function MonthlyReportEmail({
           <MetricLine
             label={t(locale, "report.label.reviewCount")}
             metric={content.reviewCount}
-            format={(n) => `${n}`}
+            format={(n) => formatCount(n, locale)}
             unmeasuredNote={t(locale, "report.unmeasured.reviewCount")}
             locale={locale}
           />

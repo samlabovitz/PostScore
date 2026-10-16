@@ -18,7 +18,8 @@ import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "
 import { generateSuggestions, type Grade, type ScoreBreakdown } from "./scoring";
 import { growthMoveOverlapsScore } from "./assistant";
 import type { GrowthMoveId } from "./growthMoves";
-import { DEFAULT_LOCALE, t, tPlural, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, formatCount, t, tPlural, type Locale } from "@/lib/i18n";
+import type { SpamCategory } from "./websiteTrust";
 
 /**
  * One real saved scan, exactly the fields buildMonthlyReportContent
@@ -45,7 +46,55 @@ export interface MonthlyReportScoreRow {
    * but nothing here diffs it against the current scan's.
    */
   breakdown: ScoreBreakdown;
+  /** The SCORING_VERSION this score was computed with (null/absent if the
+   * row doesn't record one — never guessed). Two rows with different
+   * versions aren't a like-for-like comparison. */
+  scoringVersion?: string | null;
 }
+
+/**
+ * Whether two scores can honestly be compared as "progress":
+ *  - "scoring_updated": computed with different scoring versions, so
+ *    part of the change is PostScore's own update, not the business;
+ *  - "checks_flipped": same version, but a website check went measured ↔
+ *    couldn't check, which moves the score with nothing changing;
+ *  - "comparable": neither — the only case that earns a tone phrase.
+ */
+export type ScoreComparability = "comparable" | "scoring_updated" | "checks_flipped";
+
+export function scoreComparability(baseline: MonthlyReportScoreRow, current: MonthlyReportScoreRow): ScoreComparability {
+  // The row's own column, else the version saved inside its breakdown.
+  const fromVersion = baseline.scoringVersion ?? baseline.breakdown.scoringVersion;
+  const toVersion = current.scoringVersion ?? current.breakdown.scoringVersion;
+  if (fromVersion && toVersion && fromVersion !== toVersion) {
+    return "scoring_updated";
+  }
+  for (const c of current.breakdown.checks) {
+    if (!c.id.startsWith("website.")) continue;
+    const before = baseline.breakdown.checks.find((b) => b.id === c.id);
+    if (before && (before.earnedPoints === null) !== (c.earnedPoints === null)) return "checks_flipped";
+  }
+  return "comparable";
+}
+
+/** A top-of-report warning: spam found on the site, or a Google Safe
+ * Browsing flag — the same facts behind Site security on the Website page. */
+export type ReportSecurityAlert = { kind: "spam"; category: SpamCategory } | { kind: "safe_browsing"; types: string[] };
+
+/** Facts from the current scan the report states but doesn't diff —
+ * built by lib/monthlyReportExtras.ts (buildReportExtras) from the same
+ * data the app shows. */
+export interface ReportExtras {
+  securityAlert: ReportSecurityAlert | null;
+  /** "Partly checked — score based on X of 100 points" (scoring.ts's
+   * partlyCheckedScoreBasis), or null when the score isn't partly checked. */
+  scoreBasis: number | null;
+  /** The Growth page's website banner numbers — the report's only website
+   * pointer (besides a Google-listing mismatch). */
+  websiteImprovement: { score: number; improvements: number; points: number } | null;
+}
+
+export const EMPTY_REPORT_EXTRAS: ReportExtras = { securityAlert: null, scoreBasis: null, websiteImprovement: null };
 
 /** The subject business's real standing in one real competitor scan —
  * rank is 1-based, totalCompetitors includes the subject itself (e.g.
@@ -118,7 +167,7 @@ export type ListingChangesResult =
 /** What kind of real fact a closing focus pointer is grounded in —
  * exists so a caller (or a test) can verify every pointer traces back
  * to something real, never free-written advice. */
-export type FocusPointerKind = "score_gap" | "growth_move" | "routine";
+export type FocusPointerKind = "score_gap" | "growth_move" | "website" | "routine";
 
 /** One line in the closing "what to focus on" section. Every pointer is
  * assembled — never generated — from a real fact already computed by
@@ -203,6 +252,11 @@ export interface MonthlyReportContent {
    * counts against steadiness — this is about what moved among what we
    * could check, not a claim about what we couldn't. */
   isSteady: boolean;
+  /** null for a first (baseline) report — see ScoreComparability. */
+  comparability: ScoreComparability | null;
+  securityAlert: ReportSecurityAlert | null;
+  /** See ReportExtras.scoreBasis. */
+  scoreBasis: number | null;
   /** The closing "this month & what to focus on" section — see
    * MonthlyReportFocus. Assembled entirely from this same real content
    * (the current scan's breakdown, the real competitor/listing facts
@@ -248,30 +302,31 @@ function listingChanges(
   };
 }
 
-function competitorPhrase(competitor: CompetitorMovement): string | null {
+function competitorPhrase(competitor: CompetitorMovement, locale: Locale): string | null {
   if (!competitor.available) return null;
-  return `#${competitor.current.rank} of ${competitor.current.totalCompetitors} nearby`;
+  return t(locale, "report.fact.competitor", { rank: competitor.current.rank, total: competitor.current.totalCompetitors });
 }
 
-function buildBaselineSummary(current: MonthlyReportScoreRow, rating: MetricResult, competitor: CompetitorMovement): string {
+function buildBaselineSummary(current: MonthlyReportScoreRow, rating: MetricResult, competitor: CompetitorMovement, locale: Locale): string {
   const facts: string[] = [];
-  if (rating.available) facts.push(`rating ${formatRating(rating.current)}`);
-  const competitorFact = competitorPhrase(competitor);
+  if (rating.available) facts.push(t(locale, "report.fact.rating", { value: formatRating(rating.current) }));
+  const competitorFact = competitorPhrase(competitor, locale);
   if (competitorFact) facts.push(competitorFact);
-  facts.push(`score ${current.total} (${current.grade})`);
-  return `Here's where you stand today — ${facts.join(", ")}. Month-over-month tracking starts with your next report.`;
+  facts.push(t(locale, "report.fact.score", { total: current.total, grade: current.grade }));
+  return t(locale, "report.summary.baseline", { facts: facts.join(", ") });
 }
 
-function buildSteadySummary(current: MonthlyReportScoreRow, rating: MetricResult, competitor: CompetitorMovement): string {
+function buildSteadySummary(current: MonthlyReportScoreRow, rating: MetricResult, competitor: CompetitorMovement, locale: Locale): string {
   const facts: string[] = [];
   // "Stable" is a claim about a real comparison — only make it when we
   // actually have a confirmed zero delta, never just because we know
   // today's number with no known previous one to compare it to.
-  if (rating.available && rating.delta === 0) facts.push(`rating stable at ${formatRating(rating.current)}`);
-  const competitorFact = competitorPhrase(competitor);
-  if (competitorFact && competitor.available && competitor.rankDelta === 0) facts.push(`still ${competitorFact}`);
-  facts.push(`score unchanged at ${current.total} (${current.grade})`);
-  return `You held steady this month — ${facts.join(", ")}.`;
+  if (rating.available && rating.delta === 0) facts.push(t(locale, "report.fact.ratingStable", { value: formatRating(rating.current) }));
+  if (competitor.available && competitor.rankDelta === 0) {
+    facts.push(t(locale, "report.fact.competitorStill", { rank: competitor.current.rank, total: competitor.current.totalCompetitors }));
+  }
+  facts.push(t(locale, "report.fact.scoreUnchanged", { total: current.total, grade: current.grade }));
+  return t(locale, "report.summary.steady", { facts: facts.join(", ") });
 }
 
 function capitalizeFirst(s: string): string {
@@ -286,9 +341,18 @@ function buildMovementSummary(
   reviewCount: MetricResult,
   competitor: CompetitorMovement,
   changes: ListingChangesResult,
-  locale: Locale
+  locale: Locale,
+  comparability: ScoreComparability = "comparable"
 ): string {
   const parts: string[] = [];
+  // Different scoring versions: the score change isn't the business's —
+  // say so, with today's real numbers, and still report the real review
+  // and rating changes below.
+  if (comparability === "scoring_updated") {
+    parts.push(t(locale, "report.summary.scoringUpdated", { total: current.total, grade: current.grade }));
+    scoreDelta = 0;
+    gradeChanged = false;
+  }
 
   // Score/grade/rating/competitor phrasing below reuses the EXACT SAME
   // report.fragment.* keys the email headline (buildHeadline in
@@ -303,7 +367,11 @@ function buildMovementSummary(
       scoreDelta > 0 ? "report.fragment.scoreRose" : "report.fragment.scoreDropped",
       Math.abs(scoreDelta)
     );
-    parts.push(`${scoreFragment} to ${current.total}${gradeChanged ? ` (${current.grade})` : ""}`);
+    parts.push(
+      gradeChanged
+        ? t(locale, "report.fact.scoreToWithGrade", { fragment: scoreFragment, total: current.total, grade: current.grade })
+        : t(locale, "report.fact.scoreTo", { fragment: scoreFragment, total: current.total })
+    );
   } else if (gradeChanged) {
     parts.push(t(locale, "report.fragment.gradeChanged", { grade: current.grade }));
   }
@@ -319,8 +387,8 @@ function buildMovementSummary(
   if (reviewCount.available && reviewCount.delta !== null && reviewCount.delta !== 0) {
     parts.push(
       reviewCount.delta > 0
-        ? tPlural(locale, "report.summary.reviewsGained", reviewCount.delta)
-        : t(locale, "report.summary.reviewsLost", { count: Math.abs(reviewCount.delta) })
+        ? tPlural(locale, "report.summary.reviewsGained", reviewCount.delta, { count: formatCount(reviewCount.delta, locale) })
+        : t(locale, "report.summary.reviewsLost", { count: formatCount(Math.abs(reviewCount.delta), locale) })
     );
   }
 
@@ -406,6 +474,9 @@ const EMPTY_FOCUS_INPUTS: MonthlyReportFocusInputs = {
  * card upstream, so this is never two separate review pointers). */
 function scoreGapPointer(topTask: FocusTopActionPlanTask | null, locale: Locale): FocusPointer | null {
   if (!topTask) return null;
+  // "Review the explanation above…" means nothing in an email — never
+  // sent; no pointer rather than a vague one.
+  if (topTask.action.trim() === t(locale, "content.actionPlan.fallback.action").trim()) return null;
   return {
     kind: "score_gap",
     text: t(locale, "report.focus.biggestOpportunity", { label: topTask.label, advice: topTask.action }),
@@ -464,6 +535,9 @@ function growthMovePointer(
   const startIndex = ((monthIndex % moves.length) + moves.length) % moves.length;
   for (let offset = 0; offset < moves.length; offset++) {
     const move = moves[(startIndex + offset) % moves.length];
+    // Growth rule (Step 2f): website fixes live on the Website page — the
+    // report's website pointer is websitePointer below, never this move.
+    if (move.id === "improve_website") continue;
     if (topTaskCheckId && growthMoveDuplicatesTopTask(move.id, topTaskCheckId)) continue;
     const overlaps = growthMoveOverlapsScore(move.id, losingChecks);
     const badge = t(locale, overlaps ? "dashboard.growth.moves.badgeAlsoScored" : "dashboard.growth.moves.badge");
@@ -483,6 +557,26 @@ function growthMovePointer(
  * (genuinely unreadable) means no pointer at all; a real zero still
  * gets an honest pointer to the real checklist, never silently omitted.
  */
+/** The report's one website pointer — the Growth page's own banner line,
+ * from the same live numbers, pointing to the Website page. A partly
+ * checked site gets no points estimate (most of it couldn't be measured);
+ * otherwise the estimate is rounded to whole points. */
+function websitePointer(extras: ReportExtras, locale: Locale): FocusPointer | null {
+  if (extras.scoreBasis !== null) {
+    return { kind: "website", text: t(locale, "report.focus.websitePartlyChecked") };
+  }
+  const improvement = extras.websiteImprovement;
+  if (!improvement) return null;
+  return {
+    kind: "website",
+    text: tPlural(locale, "report.focus.website", improvement.improvements, {
+      score: improvement.score,
+      count: improvement.improvements,
+      points: Math.max(1, Math.round(improvement.points)),
+    }),
+  };
+}
+
 function routinePointer(checkedCount: number | null, locale: Locale): FocusPointer | null {
   if (checkedCount === null) return null;
   if (checkedCount === 0) {
@@ -506,7 +600,12 @@ const MAX_FOCUS_POINTERS = 3;
  * count), this says so honestly instead of forcing content into an
  * otherwise-empty section.
  */
-function buildFocus(breakdown: ScoreBreakdown, focusInputs: MonthlyReportFocusInputs, locale: Locale): MonthlyReportFocus {
+function buildFocus(
+  breakdown: ScoreBreakdown,
+  focusInputs: MonthlyReportFocusInputs,
+  locale: Locale,
+  extras: ReportExtras = EMPTY_REPORT_EXTRAS
+): MonthlyReportFocus {
   const losingChecks = generateSuggestions(breakdown, locale);
 
   const pointers: FocusPointer[] = [];
@@ -520,6 +619,8 @@ function buildFocus(breakdown: ScoreBreakdown, focusInputs: MonthlyReportFocusIn
     locale
   );
   if (growthMove) pointers.push(growthMove);
+  const website = websitePointer(extras, locale);
+  if (website) pointers.push(website);
   const routine = routinePointer(focusInputs.routineCheckedCount, locale);
   if (routine) pointers.push(routine);
 
@@ -558,7 +659,10 @@ export function buildMonthlyReportContent(
    * to true so every existing caller that doesn't pass it keeps getting
    * the original "couldn't find enough comparable" wording whenever
    * currentCompetitorSnapshot is null. */
-  hasSavedCompetitorScan: boolean = true
+  hasSavedCompetitorScan: boolean = true,
+  /** See ReportExtras (security alert, partly-checked basis, website
+   * pointer) — EMPTY_REPORT_EXTRAS for callers that don't pass it. */
+  extras: ReportExtras = EMPTY_REPORT_EXTRAS
 ): MonthlyReportContent {
   const competitor = competitorMovement(competitorDelta);
 
@@ -568,7 +672,7 @@ export function buildMonthlyReportContent(
 
     return {
       kind: "baseline",
-      summary: buildBaselineSummary(current, rating, competitor),
+      summary: buildBaselineSummary(current, rating, competitor, locale),
       score: {
         current: { total: current.total, grade: current.grade },
         previous: null,
@@ -584,7 +688,10 @@ export function buildMonthlyReportContent(
       // changes found," genuinely not applicable.
       listingChanges: { available: false },
       isSteady: false,
-      focus: buildFocus(current.breakdown, focusInputs, locale),
+      comparability: null,
+      securityAlert: extras.securityAlert,
+      scoreBasis: extras.scoreBasis,
+      focus: buildFocus(current.breakdown, focusInputs, locale, extras),
     };
   }
 
@@ -601,7 +708,9 @@ export function buildMonthlyReportContent(
   // COULD actually compare moved, not a claim about what we couldn't.
   const metricIsUnchanged = (metric: MetricResult): boolean =>
     !metric.available || metric.delta === null || metric.delta === 0;
+  const comparability = scoreComparability(baseline, current);
   const isSteady =
+    comparability === "comparable" &&
     scoreDelta === 0 &&
     !gradeChanged &&
     metricIsUnchanged(rating) &&
@@ -612,8 +721,8 @@ export function buildMonthlyReportContent(
   return {
     kind: "update",
     summary: isSteady
-      ? buildSteadySummary(current, rating, competitor)
-      : buildMovementSummary(scoreDelta, current, gradeChanged, rating, reviewCount, competitor, changes, locale),
+      ? buildSteadySummary(current, rating, competitor, locale)
+      : buildMovementSummary(scoreDelta, current, gradeChanged, rating, reviewCount, competitor, changes, locale, comparability),
     score: {
       current: { total: current.total, grade: current.grade },
       previous: { total: baseline.total, grade: baseline.grade },
@@ -627,6 +736,9 @@ export function buildMonthlyReportContent(
     hasSavedCompetitorScan,
     listingChanges: changes,
     isSteady,
-    focus: buildFocus(current.breakdown, focusInputs, locale),
+    comparability,
+    securityAlert: extras.securityAlert,
+    scoreBasis: extras.scoreBasis,
+    focus: buildFocus(current.breakdown, focusInputs, locale, extras),
   };
 }

@@ -2821,6 +2821,32 @@ export function scoreBasisPoints(categories: Pick<CategoryResult, "possiblePoint
   return roundTo(categories.reduce((sum, c) => sum + c.possiblePoints, 0), 1);
 }
 
+/** v1.10.0: below this share of Website POINTS actually checkable (for a
+ * site we couldn't fully reach), the score is labeled "Partly checked —
+ * score based on X of 100 points" — in the app and in the monthly email. */
+export const PARTLY_CHECKED_THRESHOLD = 0.6;
+
+/** Share (0–1) of the Website category's points we could actually check. */
+export function websitePointShare(category: CategoryResult): number {
+  const max = category.checks.reduce((sum, c) => sum + c.maxPoints, 0);
+  return max > 0 ? category.possiblePoints / max : 1;
+}
+
+/**
+ * The "score based on X of 100 points" number when the score is only
+ * partly checked — under PARTLY_CHECKED_THRESHOLD of Website points
+ * checkable because we couldn't reach the site (never for a business
+ * with no website, where nothing is "couldn't check") — else null. X is
+ * scoreBasisPoints: the sum of the category maxes shown.
+ */
+export function partlyCheckedScoreBasis(categories: CategoryResult[], hasWebsite: boolean): number | null {
+  const website = categories.find((c) => c.id === "website");
+  if (!website || !hasWebsite) return null;
+  const { checked, unreachable } = categoryCheckCoverage(website);
+  if (unreachable === 0 || checked === 0) return null;
+  return websitePointShare(website) < PARTLY_CHECKED_THRESHOLD ? scoreBasisPoints(categories) : null;
+}
+
 /**
  * Generates the improvement suggestions for a breakdown. Every
  * suggestion comes from a check that is currently losing points

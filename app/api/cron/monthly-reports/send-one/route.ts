@@ -8,13 +8,12 @@
 // uses, never a second reimplementation that could drift from it.
 //
 // Gated by the same CRON_SECRET bearer check as the batch route (see
-// isAuthorized there) — the one thing standing between this and a real,
-// live send to a real owner's real inbox, so it can't fire by accident.
-// Nothing here reads or validates monthly_report_enabled or
-// isMonthlyReportsLive() — this is a deliberate, explicit, one-business
-// test call, not a policy decision about whether reports are "live" for
-// real users, so it isn't gated by that flag. Only ever call this with a
-// businessId you already know is a safe test business.
+// isAuthorized there), AND by lib/reportSendPolicy.ts — the same rules
+// every sending path follows:
+//  - refused in production unless ALLOW_SEND_ONE=true;
+//  - always respects the owner's monthly_report_enabled opt-in;
+//  - with MONTHLY_REPORTS_LIVE off it sends only to REPORT_TEST_EMAIL,
+//    never to the owner, and records nothing as the owner's report.
 //
 // The locale is never a separate parameter here — it comes from the
 // SAME place the batch route reads it from inside processBusiness
@@ -56,7 +55,7 @@ async function handleSendOne(request: NextRequest): Promise<NextResponse> {
   // here so a test call is honestly subject to the same real guard.
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
 
-  const result: CronRunResult = await processBusiness(supabase, businessId, startOfMonth.toISOString(), now);
+  const result: CronRunResult = await processBusiness(supabase, businessId, startOfMonth.toISOString(), now, "send-one");
 
   return NextResponse.json(result);
 }
