@@ -19,7 +19,7 @@
 // never a separate hand-tuned estimate for the template.
 
 import type { WebsiteContentSignals } from "./scoring";
-import { WEBSITE_CTA_PHRASES, type SocialProfile } from "./scoring";
+import { WEBSITE_CTA_PHRASES, type ContactEvidence, type SocialProfile } from "./scoring";
 
 /**
  * Strips every real markup that is NEVER visible to a real visitor —
@@ -179,7 +179,7 @@ const CONTACT_ACTION_TEXT_RE =
 export function detectContactLinks(
   html: string,
   baseUrl?: string | null
-): { hasPhoneLink: boolean; hasEmailLink: boolean; hasContactPageLink: boolean; hasActionLinkText: boolean } {
+): { hasPhoneLink: boolean; hasEmailLink: boolean; hasContactPageLink: boolean; hasActionLinkText: boolean; evidence: ContactEvidence } {
   const clean = stripNonVisibleMarkup(html);
   let base: URL | null = null;
   try {
@@ -191,25 +191,34 @@ export function detectContactLinks(
   let hasEmailLink = false;
   let hasContactPageLink = false;
   let hasActionLinkText = false;
+  const evidence: ContactEvidence = { phoneLink: null, emailLink: null, contactPageLink: null, actionLinkText: null, ctaPhrase: null };
   for (const link of anchorLinks(clean)) {
     const href = link.href.toLowerCase();
     let isContact = false;
     if (href.startsWith("tel:")) {
       hasPhoneLink = isContact = true;
+      evidence.phoneLink ??= link.href.trim().slice(0, 120);
     } else if (href.startsWith("mailto:")) {
       hasEmailLink = isContact = true;
+      evidence.emailLink ??= link.href.trim().slice(0, 120);
     } else if (base) {
       try {
         const url = new URL(link.href, base);
         const sameHost = url.hostname.replace(/^www\./i, "") === base.hostname.replace(/^www\./i, "");
-        if (sameHost && CONTACT_PATH_RE.test(decodeURIComponent(url.pathname))) hasContactPageLink = isContact = true;
+        if (sameHost && CONTACT_PATH_RE.test(decodeURIComponent(url.pathname))) {
+          hasContactPageLink = isContact = true;
+          evidence.contactPageLink ??= `${url.origin}${url.pathname}`.slice(0, 200);
+        }
       } catch {
         // not a real URL — not a contact link
       }
     }
-    if (isContact && CONTACT_ACTION_TEXT_RE.test(link.text.replace(/[!.→›»]+$/, "").trim())) hasActionLinkText = true;
+    if (isContact && CONTACT_ACTION_TEXT_RE.test(link.text.replace(/[!.→›»]+$/, "").trim())) {
+      hasActionLinkText = true;
+      evidence.actionLinkText ??= link.text.trim().slice(0, 60);
+    }
   }
-  return { hasPhoneLink, hasEmailLink, hasContactPageLink, hasActionLinkText };
+  return { hasPhoneLink, hasEmailLink, hasContactPageLink, hasActionLinkText, evidence };
 }
 
 /** Real social platforms and how a PROFILE (not a share button, post, or
@@ -298,15 +307,65 @@ function linkTargetUrls(link: AnchorLink): URL[] {
   return out;
 }
 
+/**
+ * v1.10.0: platform-owned accounts that are never the business's own
+ * profile — the real Gregg L. Smith (linkedin.com/company/wix-com) and
+ * Yoga Love NY (facebook.com/wix, instagram.com/wix) cases, from "Made
+ * with Wix" footer badges. Compared after lower-casing and dropping
+ * "@", "-", "_" and ".".
+ */
+export const PLATFORM_ACCOUNT_HANDLES: ReadonlySet<string> = new Set([
+  // Site builders
+  "wix", "wixcom", "squarespace", "godaddy", "shopify", "weebly", "wordpress", "wordpressdotcom",
+  "webflow", "duda", "jimdo", "strikingly", "carrd", "googlesites",
+  // Ordering, booking and payment platforms
+  "toasttab", "toast", "square", "squareup", "clover", "chownow", "olo", "popmenu", "bentobox", "getbento",
+  "doordash", "ubereats", "grubhub", "opentable", "resy", "vagaro", "mindbody", "mindbodyonline", "booksy",
+  "fresha", "styleseat", "mailchimp",
+]);
+
+/** A social platform's OWN account on that same platform
+ * (instagram.com/instagram, x.com/x) — blocked only there, so a business
+ * that happens to be called "X" elsewhere still counts. */
+const OWN_PLATFORM_HANDLES: Record<string, readonly string[]> = {
+  Facebook: ["facebook", "meta"],
+  Instagram: ["instagram"],
+  "X/Twitter": ["x", "twitter"],
+  YouTube: ["youtube"],
+  LinkedIn: ["linkedin"],
+  TikTok: ["tiktok"],
+  Pinterest: ["pinterest"],
+  Yelp: ["yelp"],
+  Threads: ["threads"],
+};
+
+function normalizeHandle(handle: string): string {
+  return handle.toLowerCase().replace(/[@\-_.]/g, "");
+}
+
 export function detectSocialProfiles(html: string): SocialProfile[] {
   const profiles: SocialProfile[] = [];
   for (const url of anchorLinks(stripNonVisibleMarkup(html)).flatMap(linkTargetUrls)) {
     const platform = socialPlatformFor(url.hostname);
     if (!platform) continue;
-    const segments = url.pathname.split("/").filter(Boolean);
+    let segments = url.pathname.split("/").filter(Boolean);
+    // v1.10.0: Facebook's "pg/<page>/…" (old page prefix) is the page
+    // itself; "p/<name-id>" and "people/<name>/<id>" keep their prefix —
+    // never truncated to a bare "facebook.com/pg" or "facebook.com/p"
+    // (the real Pardalis and Red Bowl cases).
+    let keep = platform.platform === "LinkedIn" || platform.platform === "Yelp" || (platform.platform === "YouTube" && !segments[0]?.startsWith("@")) ? 2 : 1;
+    if (platform.platform === "Facebook" && segments.length >= 2) {
+      const first = segments[0].toLowerCase();
+      if (first === "pg") segments = segments.slice(1);
+      else if (first === "p") keep = 2;
+      else if (first === "people") keep = Math.min(3, segments.length);
+    }
     if (!platform.profile(segments, url)) continue;
+    const handle = keep >= 2 && platform.platform !== "Facebook" ? segments[1] ?? "" : segments[keep - 1] ?? "";
+    const normalized = normalizeHandle(handle);
+    if (PLATFORM_ACCOUNT_HANDLES.has(normalized) || (OWN_PLATFORM_HANDLES[platform.platform] ?? []).includes(normalized)) continue;
     const host = url.hostname.replace(/^(www|m)\./i, "").toLowerCase();
-    const path = segments[0]?.toLowerCase() === "profile.php" ? `profile.php?id=${url.searchParams.get("id")}` : segments.slice(0, platform.platform === "LinkedIn" || platform.platform === "Yelp" || (platform.platform === "YouTube" && !segments[0].startsWith("@")) ? 2 : 1).join("/");
+    const path = segments[0]?.toLowerCase() === "profile.php" ? `profile.php?id=${url.searchParams.get("id")}` : segments.slice(0, keep).join("/");
     const display = `${host}/${path}`;
     if (!profiles.some((p) => p.url.toLowerCase() === display.toLowerCase())) profiles.push({ platform: platform.platform, url: display });
   }
@@ -372,12 +431,16 @@ export function analyzeWebsiteHtml(html: string, baseUrl?: string | null): Websi
   const visibleText = extractVisibleText(clean);
   const visibleTextLength = visibleText.length;
 
-  const { hasPhoneLink, hasEmailLink, hasContactPageLink, hasActionLinkText } = detectContactLinks(clean, baseUrl);
+  const { hasPhoneLink, hasEmailLink, hasContactPageLink, hasActionLinkText, evidence } = detectContactLinks(clean, baseUrl);
 
   const lowerText = visibleText.toLowerCase();
   // An action-labeled contact link/button ("Contact us", "Call", "Book",
   // "Llámenos"…) is itself a real call-to-action (Step 2d).
-  const hasCtaText = WEBSITE_CTA_PHRASES.some((phrase) => lowerText.includes(phrase)) || hasActionLinkText;
+  const ctaPhrase = WEBSITE_CTA_PHRASES.find((phrase) => lowerText.includes(phrase)) ?? null;
+  const hasCtaText = ctaPhrase !== null || hasActionLinkText;
+  // v1.10.0: what actually counted for Contact & conversion, saved so an
+  // audit can show it (no effect on the score).
+  const contactEvidence: ContactEvidence = { ...evidence, ctaPhrase };
   const socialProfiles = detectSocialProfiles(clean);
 
   const isLikelyClientRenderedShell = detectClientRenderedShell(clean, visibleTextLength, headingCount);
@@ -395,6 +458,7 @@ export function analyzeWebsiteHtml(html: string, baseUrl?: string | null): Websi
     socialProfiles,
     // Read from the RAW html — `clean` has scripts stripped.
     scriptBuiltFooter: hasScriptBuiltFooterSigns(html),
+    contactEvidence,
     isLikelyClientRenderedShell,
     // This module never calls PageSpeed — recovery (when isLikelyClientRenderedShell
     // is true) is layered on afterward by lib/websiteAnalysis.ts's

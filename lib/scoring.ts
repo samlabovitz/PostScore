@@ -50,7 +50,7 @@ import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type Aban
  * records the version that produced it, so historical scores stay
  * interpretable even after the formula evolves.
  */
-export const SCORING_VERSION = "1.9.0";
+export const SCORING_VERSION = "1.10.0";
 
 // ---------------------------------------------------------------------------
 // Core types
@@ -142,6 +142,9 @@ export interface WebsiteContentSignals {
    * no social profiles were found, Social links is "couldn't check",
    * not a zero. Absent on rows saved before this was detected. */
   scriptBuiltFooter?: boolean;
+  /** v1.10.0: the exact link/phrase behind each Contact & conversion
+   * signal (audit evidence; never scored). Absent on older rows. */
+  contactEvidence?: ContactEvidence;
   /** A curated call-to-action phrase ("book now", "contact us", etc.)
    * found in the page's visible text. */
   hasCtaText: boolean;
@@ -428,6 +431,18 @@ export interface PagePresenceResult {
    * rule change can be re-graded from saved data. null when no matching
    * section/page was read. */
   counts?: PresenceCounts | null;
+}
+
+/** v1.10.0 — what counted for Contact & conversion: the first tel: and
+ * mailto: links, the first same-site contact-page link, the action text
+ * of a contact link ("Call us"), and the matched call-to-action phrase.
+ * null = that signal wasn't found. */
+export interface ContactEvidence {
+  phoneLink: string | null;
+  emailLink: string | null;
+  contactPageLink: string | null;
+  actionLinkText: string | null;
+  ctaPhrase: string | null;
 }
 
 /** v1.9.0 — see lib/pagePresenceDetection.ts's aboutDepth/servicesDepth. */
@@ -1806,10 +1821,33 @@ export const CHECKS: CheckDefinition[] = [
         };
       }
       // Step 2d: a site our own fetch can't access (bot-blocked, or one
-      // that shows automated checks an error page) — no PageSpeed rating
-      // of any kind is trusted for it (real-visitor, whole-site, lab, or
-      // carried forward). Couldn't check, excluded, never counted against.
+      // that shows automated checks an error page) — no LAB rating is
+      // trusted for it (it would measure the block page), nor a carried-
+      // forward lab one. v1.10.0: a REAL-VISITOR rating still counts —
+      // real Chrome visitors aren't blocked, so it's genuine (the real
+      // Qamaria / Wonder cases). Otherwise couldn't check, excluded,
+      // never counted against.
       if (siteBlocksAutomatedChecks(input)) {
+        // A real-visitor rating carried forward from a scan within the last
+        // 30 days (when this scan's own speed test timed out — see
+        // carryForwardMobilePerformance's 30-day limit) counts too, said
+        // with its date (the real Blue Bottle case).
+        const m = input.websiteAnalysis.mobilePerformance;
+        if (m && m.method === "field" && m.fieldCategory) {
+          const category = t(locale, FIELD_CATEGORY_LABEL_KEYS[m.fieldCategory]);
+          return {
+            earnedPoints: FIELD_CATEGORY_POINTS[m.fieldCategory],
+            confidence: "VERIFIED",
+            explanation:
+              m.carriedForward && m.measuredAt
+                ? t(locale, "content.checks.website.performance_mobile.explanation.fieldBlockedSiteLastMeasured", {
+                    category,
+                    date: formatShortDate(m.measuredAt, locale),
+                  })
+                : t(locale, "content.checks.website.performance_mobile.explanation.fieldBlockedSite", { category }),
+            meta: { method: "field" },
+          };
+        }
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
@@ -2773,6 +2811,17 @@ export function categoryCheckCoverage(category: CategoryResult): { checked: numb
 }
 
 /**
+ * v1.10.0: how many of the 100 possible points this score is actually
+ * based on — exactly the sum of the category maxes shown next to each
+ * category (determinable checks only). The "Partly checked — score based
+ * on X of 100 points" label always uses this, so it can never disagree
+ * with the category totals on screen.
+ */
+export function scoreBasisPoints(categories: Pick<CategoryResult, "possiblePoints">[]): number {
+  return roundTo(categories.reduce((sum, c) => sum + c.possiblePoints, 0), 1);
+}
+
+/**
  * Generates the improvement suggestions for a breakdown. Every
  * suggestion comes from a check that is currently losing points
  * (determinable confidence, earnedPoints < maxPoints); its
@@ -2941,6 +2990,7 @@ function parseWebsiteContentSignals(value: unknown): WebsiteContentSignals | nul
     hasCtaText: v.hasCtaText as boolean,
     ...(typeof v.hasContactPageLink === "boolean" ? { hasContactPageLink: v.hasContactPageLink } : {}),
     ...(typeof v.scriptBuiltFooter === "boolean" ? { scriptBuiltFooter: v.scriptBuiltFooter } : {}),
+    ...(parseContactEvidence(v.contactEvidence) ? { contactEvidence: parseContactEvidence(v.contactEvidence)! } : {}),
     ...(Array.isArray(v.socialProfiles)
       ? {
           socialProfiles: v.socialProfiles.filter(
@@ -3064,6 +3114,19 @@ function parsePagePresenceResult(value: unknown): PagePresenceResult | null {
     // older row reads back exactly as it was saved.
     depth: v.depth === "thin" || v.depth === "descriptive" ? v.depth : undefined,
     counts: parsePresenceCounts(v.counts) ?? undefined,
+  };
+}
+
+function parseContactEvidence(value: unknown): ContactEvidence | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  const str = (x: unknown) => (typeof x === "string" ? x : null);
+  return {
+    phoneLink: str(v.phoneLink),
+    emailLink: str(v.emailLink),
+    contactPageLink: str(v.contactPageLink),
+    actionLinkText: str(v.actionLinkText),
+    ctaPhrase: str(v.ctaPhrase),
   };
 }
 

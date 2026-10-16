@@ -14,8 +14,14 @@ export function WebsiteCoverageNote({
   category,
   hasWebsite,
   className,
+  scoreBasis = null,
 }: {
   category: CategoryResult;
+  /** v1.10.0: the whole score's basis — scoreBasisPoints(all categories)
+   * from lib/scoring.ts, i.e. the sum of the category maxes shown. The
+   * "Partly checked — score based on X of 100 points" label needs it;
+   * without it only the check-count line shows. */
+  scoreBasis?: number | null;
   /** A business with no website has nothing to check — its other website
    * checks are "not applicable", never "couldn't be checked". */
   hasWebsite: boolean;
@@ -26,9 +32,26 @@ export function WebsiteCoverageNote({
   const { checked, total, unreachable } = categoryCheckCoverage(category);
   // Only when checks were excluded because we couldn't reach the site.
   if (unreachable === 0 || checked === 0) return null;
+  const { share } = websitePointsCoverage(category);
   return (
     <p className={className ?? "text-[12px] text-ink-mute"}>
+      {share < PARTLY_CHECKED_THRESHOLD && scoreBasis !== null && (
+        <span className="font-semibold text-amber">
+          {t(locale, "dashboard.website.partlyCheckedPoints", { points: scoreBasis })}{" "}
+        </span>
+      )}
       {t(locale, "dashboard.website.partlyChecked", { n: checked, total })}
     </p>
   );
+}
+
+/** v1.10.0: below this share of Website POINTS actually checkable, the
+ * score is labeled "Partly checked — score based on X of 100 points". */
+export const PARTLY_CHECKED_THRESHOLD = 0.6;
+
+/** Share of the Website category's points we could actually check
+ * (e.g. a bot-blocked site: 9 of 30 → 0.3). */
+export function websitePointsCoverage(category: CategoryResult): { share: number } {
+  const max = category.checks.reduce((sum, c) => sum + c.maxPoints, 0);
+  return { share: max > 0 ? category.possiblePoints / max : 1 };
 }

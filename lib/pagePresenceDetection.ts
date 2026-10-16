@@ -467,6 +467,23 @@ export function stripSiteBuilderBoilerplate(text: string): string {
   return out.replace(/\s+/g, " ").trim();
 }
 
+/** v1.10.0: a team/staff roster page path ("/team", "/our-team",
+ * "/staff", "/stylists", "/providers", "/meet-the-team"). */
+export function isRosterPath(path: string): boolean {
+  return /(^|\/)(team|our-team|meet-the-team|staff|stylists|providers|barbers|artists|instructors|doctors)(\/|$)/i.test(path);
+}
+
+/** A roster with this many named entries or more is a list of people,
+ * not an About — see isRosterPath's call site in lib/websiteAnalysis.ts. */
+export const MAX_ROSTER_ENTRIES_FOR_ABOUT = 5;
+
+/** Words of prose OUTSIDE list items and sub-headings — what's left once
+ * a roster's own entries are removed. */
+export function proseWordsOutsideLists(mainContentHtml: string): number {
+  const withoutLists = mainContentHtml.replace(/<li\b[^>]*>[\s\S]*?<\/li>/gi, " ").replace(/<h[2-6]\b[^>]*>[\s\S]*?<\/h[2-6]>/gi, " ");
+  return wordCount(stripSiteBuilderBoilerplate(extractVisibleText(withoutLists)));
+}
+
 /** About: below this many words there's nothing to credit at all. */
 export const MIN_WORDS_ABOUT_THIN = 15;
 /** Services: a matched heading/page with no items needs at least this

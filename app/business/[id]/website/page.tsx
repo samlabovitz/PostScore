@@ -87,6 +87,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
   const scoreBreakdown = hasWebsite ? (
     <WebsiteScoreBreakdown
       websiteCategory={data.websiteCategory}
+      scoreBasis={data.scoreBasis}
       websiteAnalysis={data.websiteAnalysis}
       websiteSuggestions={data.websiteSuggestions}
       siteUrl={data.website ?? data.verifiedWebsiteUrl}

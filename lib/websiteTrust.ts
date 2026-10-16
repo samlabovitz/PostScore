@@ -741,13 +741,17 @@ export function compareAddress(siteText: string, googleAddress: string | null): 
     return { field: "address", comparison: "not_found_on_site", siteValue: null, googleValue: googleAddress };
   }
   const nearby = lower.slice(Math.max(0, numberIdx - 5), numberIdx + 40);
+  // What's shown starts AT the street number — the 5 characters before it
+  // are only for matching, and used to leak a label tail ("ress 29 main
+  // st", the real Ilda's Salon case). Matching itself is unchanged.
+  const shown = lower.slice(numberIdx, numberIdx + 40).trim();
   if (nearby.includes(tokens.streetWord)) {
-    return { field: "address", comparison: "matches", siteValue: nearby.trim(), googleValue: googleAddress };
+    return { field: "address", comparison: "matches", siteValue: shown, googleValue: googleAddress };
   }
   // A real street number exists on the page but the street name right
   // after it doesn't match — a genuine, specific conflict (a different
   // real address), not just "couldn't find an address at all."
-  return { field: "address", comparison: "conflicts", siteValue: nearby.trim(), googleValue: googleAddress };
+  return { field: "address", comparison: "conflicts", siteValue: shown, googleValue: googleAddress };
 }
 
 interface ParsedHoursEntry {

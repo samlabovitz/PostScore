@@ -850,7 +850,7 @@ describe("businessRowToScoringInput adapter", () => {
     expect(input.mostRecentReviewDaysAgo).toBeNull();
     expect(input.httpsStatus).toBe("https");
     const breakdown = scoreBusiness(input);
-    expect(breakdown.scoringVersion).toBe("1.9.0");
+    expect(breakdown.scoringVersion).toBe("1.10.0");
   });
 
   test("degrades an unexpected https_status value to null (excluded) rather than trusting a bad cast", () => {
@@ -1881,14 +1881,14 @@ describe("Step 2d additions: Website weights, social links, map evidence, contac
   });
 });
 
-describe("Step 2d: sites that block automated checks — mobile speed couldn't check", () => {
+describe("Step 2d / v1.10.0: sites that block automated checks — mobile speed", () => {
   const field = { method: "field" as const, fieldCategory: "SLOW" as const, labScore: null };
   for (const [name, analysis] of [
     ["bot-blocked fetch", { contentFetchFailureReason: "blocked_automated_check" as const, content: null }],
     ["automated-only error page", { websiteTrust: { ...CLEAN_TRUST, automatedErrorPageUrl: "https://x.com/404" } }],
   ] as const) {
-    test(`${name}: no rating of any kind is used — excluded, with the honest text (EN + ES)`, () => {
-      for (const mobilePerformance of [field, { ...field, carriedForward: true, measuredAt: "2026-10-01T00:00:00Z" }, { method: "lab" as const, fieldCategory: null, labScore: 80 }]) {
+    test(`${name}: lab ratings (fresh or carried forward) are never used — excluded, with the honest text (EN + ES)`, () => {
+      for (const mobilePerformance of [{ method: "lab" as const, fieldCategory: null, labScore: 80 }, { method: "lab" as const, fieldCategory: null, labScore: 80, carriedForward: true, measuredAt: "2026-10-01T00:00:00Z" }]) {
         const input: BusinessScoringInput = { ...PERFECT_INPUT, websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, ...analysis, mobilePerformance } };
         const check = scoreBusiness(input).checks.find((c) => c.id === "website.performance_mobile")!;
         expect(check.earnedPoints).toBeNull();
@@ -1898,6 +1898,42 @@ describe("Step 2d: sites that block automated checks — mobile speed couldn't c
       }
     });
   }
+  test("v1.10.0: this scan's own REAL-VISITOR rating still counts for a blocked site (real visitors aren't blocked)", () => {
+    for (const [, analysis] of [
+      ["bot-blocked fetch", { contentFetchFailureReason: "blocked_automated_check" as const, content: null }],
+      ["automated-only error page", { websiteTrust: { ...CLEAN_TRUST, automatedErrorPageUrl: "https://x.com/404" } }],
+    ] as const) {
+      const input: BusinessScoringInput = { ...PERFECT_INPUT, websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, ...analysis, mobilePerformance: field } };
+      const check = scoreBusiness(input).checks.find((c) => c.id === "website.performance_mobile")!;
+      expect(check.earnedPoints).toBe(1); // SLOW
+      expect(check.confidence).toBe("VERIFIED");
+      expect(check.explanation).toBe(
+        "Real visitors on phones over the last 28 days (Google Chrome data): slow. Your site blocks our own speed test, so this is real-visitor data only."
+      );
+      expect(scoreBusiness(input, "es").checks.find((c) => c.id === "website.performance_mobile")!.explanation).toContain(
+        "Su sitio bloquea nuestra propia prueba de velocidad"
+      );
+    }
+  });
+
+  test("v1.10.0: a real-visitor rating carried forward (≤ 30 days) counts for a blocked site, with 'last measured {date}' (EN + ES)", () => {
+    const input: BusinessScoringInput = {
+      ...PERFECT_INPUT,
+      websiteAnalysis: {
+        ...GOOD_WEBSITE_ANALYSIS,
+        contentFetchFailureReason: "blocked_automated_check",
+        content: null,
+        mobilePerformance: { method: "field", fieldCategory: "AVERAGE", labScore: null, carriedForward: true, measuredAt: "2026-10-16T14:35:47.310Z" },
+      },
+    };
+    const check = scoreBusiness(input).checks.find((c) => c.id === "website.performance_mobile")!;
+    expect(check.earnedPoints).toBe(3);
+    expect(check.explanation).toBe(
+      "Real visitors on phones (Google Chrome data), last measured Oct 16, 2026: average. Your site blocks our own speed test, so this is real-visitor data only."
+    );
+    expect(scoreBusiness(input, "es").checks.find((c) => c.id === "website.performance_mobile")!.explanation).toContain("última medición el 16 oct 2026");
+  });
+
   test("a site our fetch can read still scores speed normally", () => {
     const input: BusinessScoringInput = { ...PERFECT_INPUT, websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, mobilePerformance: field } };
     expect(scoreBusiness(input).checks.find((c) => c.id === "website.performance_mobile")!.earnedPoints).toBe(1);

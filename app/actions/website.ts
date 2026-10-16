@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   businessRowToScoringInput,
   generateSuggestions,
+  scoreBasisPoints,
   scoreBusiness,
   type BusinessScoringRow,
   type CategoryResult,
@@ -79,6 +80,8 @@ export interface WebsitePageData {
    * analysis section's itemized findings — the exact same CheckResults
    * scoreBusiness() produces everywhere else, never a parallel copy. */
   websiteCategory: CategoryResult | null;
+  /** v1.10.0: scoreBasisPoints(all categories) — see lib/scoring.ts. */
+  scoreBasis: number;
   /** This business's real, currently-losing Website suggestions — the
    * exact output of generateSuggestions(), filtered to the website
    * category, so the visual analysis section's "how to fix" copy is the
@@ -267,6 +270,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       googleMapsUri: data.google_maps_uri,
       websiteAnalysis: realInput.websiteAnalysis,
       websiteCategory,
+      scoreBasis: scoreBasisPoints(realBreakdown.categories),
       websiteSuggestions,
     },
     builderOffer,

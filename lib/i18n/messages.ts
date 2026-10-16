@@ -414,7 +414,10 @@ export type MessageKey =
   | "content.checks.website.readViaBrowserNote"
   | "content.checks.website.trust.explanation.javascriptOnly"
   | "dashboard.website.partlyChecked"
+  | "dashboard.website.partlyCheckedPoints"
   | "content.checks.website.performance_mobile.explanation.blockedSite"
+  | "content.checks.website.performance_mobile.explanation.fieldBlockedSite"
+  | "content.checks.website.performance_mobile.explanation.fieldBlockedSiteLastMeasured"
   | "content.checks.website.has_website.explanation.presentAutomatedErrorPage"
   | "dashboard.website.screenshotAutomatedErrorPage"
   | "dashboard.website.performanceErrorPage"
@@ -2863,7 +2866,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.readViaBrowserNote": "(Read from the page as a browser shows it.)",
     "content.checks.website.trust.explanation.javascriptOnly": "Couldn't check — this site builds its content with JavaScript, so our check couldn't read it. Excluded from your score, not counted against you.",
     "dashboard.website.partlyChecked": "Based on {n} of {total} website checks — the rest couldn't be checked.",
+    "dashboard.website.partlyCheckedPoints": "Partly checked — score based on {points} of 100 points.",
     "content.checks.website.performance_mobile.explanation.blockedSite": "Couldn't check — this site blocks automated checks, so we can't measure its speed. Excluded from your score, not counted against you.",
+    "content.checks.website.performance_mobile.explanation.fieldBlockedSite": "Real visitors on phones over the last 28 days (Google Chrome data): {category}. Your site blocks our own speed test, so this is real-visitor data only.",
+    "content.checks.website.performance_mobile.explanation.fieldBlockedSiteLastMeasured": "Real visitors on phones (Google Chrome data), last measured {date}: {category}. Your site blocks our own speed test, so this is real-visitor data only.",
     "content.checks.website.has_website.explanation.presentAutomatedErrorPage": "Business has a real website on file. We couldn't check the page itself — this site shows automated checks an error page instead of what customers see.",
     "dashboard.website.screenshotAutomatedErrorPage": "We couldn't capture this page — the site showed our automated check an error page instead of what customers see. Open it yourself: {url}",
     "dashboard.website.performanceErrorPage": "PageSpeed reached an error page instead of your site, so we couldn't measure its speed.",
@@ -3631,7 +3637,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.noPriorScanChanges":
       "No prior scan to compare yet — changes will show up here after your next scan.",
     "dashboard.overview.scoringUpdatedBetweenScans":
-      "Scoring was updated between these two scans ({previous} → {current}), so a check-by-check comparison isn't shown here — the total score above still reflects the real difference.",
+      "PostScore updated how it scores between these two scans, so a check-by-check comparison isn't shown — the total above still reflects the real difference.",
     "dashboard.overview.nothingChangedSinceLastScan": "Nothing changed since your last scan.",
     "dashboard.overview.updatedPillLabel": "Updated",
     "dashboard.overview.speedMeasurementMethodChanged": "Speed measurement updated to a more accurate method",
@@ -5473,7 +5479,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.readViaBrowserNote": "(Leído de la página tal como la muestra un navegador.)",
     "content.checks.website.trust.explanation.javascriptOnly": "No se pudo verificar — este sitio construye su contenido con JavaScript, así que nuestra comprobación no pudo leerlo. Se excluye de su puntuación, no se cuenta en su contra.",
     "dashboard.website.partlyChecked": "Basado en {n} de {total} comprobaciones del sitio web — el resto no se pudo verificar.",
+    "dashboard.website.partlyCheckedPoints": "Revisado en parte — puntuación basada en {points} de 100 puntos.",
     "content.checks.website.performance_mobile.explanation.blockedSite": "No se pudo verificar — este sitio bloquea las verificaciones automáticas, así que no podemos medir su velocidad. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.performance_mobile.explanation.fieldBlockedSite": "Visitantes reales en teléfonos durante los últimos 28 días (datos de Google Chrome): {category}. Su sitio bloquea nuestra propia prueba de velocidad, así que esto son solo datos de visitantes reales.",
+    "content.checks.website.performance_mobile.explanation.fieldBlockedSiteLastMeasured": "Visitantes reales en teléfonos (datos de Google Chrome), última medición el {date}: {category}. Su sitio bloquea nuestra propia prueba de velocidad, así que esto son solo datos de visitantes reales.",
     "content.checks.website.has_website.explanation.presentAutomatedErrorPage": "El negocio tiene un sitio web real registrado. No pudimos revisar la página en sí — este sitio muestra a las verificaciones automáticas una página de error en lugar de lo que ven los clientes.",
     "dashboard.website.screenshotAutomatedErrorPage": "No pudimos capturar esta página — el sitio mostró a nuestra verificación automática una página de error en lugar de lo que ven los clientes. Ábrala usted mismo: {url}",
     "dashboard.website.performanceErrorPage": "PageSpeed llegó a una página de error en lugar de su sitio, así que no pudimos medir su velocidad.",
@@ -6153,7 +6162,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.googleMapsLabel": "Google Maps",
     "dashboard.overview.viewOnGoogleMaps": "Ver en Google Maps",
     "dashboard.overview.noPriorScanChanges": "Aún no hay un análisis anterior con el que comparar — los cambios aparecerán aquí después de su próximo análisis.",
-    "dashboard.overview.scoringUpdatedBetweenScans": "El sistema de puntuación se actualizó entre estos dos análisis ({previous} → {current}), así que aquí no se muestra una comparación comprobación por comprobación — la puntuación total de arriba sigue reflejando la diferencia real.",
+    "dashboard.overview.scoringUpdatedBetweenScans": "PostScore actualizó la forma en que calcula la puntuación entre estos dos análisis, así que no se muestra una comparación punto por punto — el total de arriba sigue reflejando la diferencia real.",
     "dashboard.overview.nothingChangedSinceLastScan": "Nada cambió desde su último análisis.",
     "dashboard.overview.updatedPillLabel": "Actualizado",
     "dashboard.overview.speedMeasurementMethodChanged": "La medición de velocidad se actualizó a un método más preciso",

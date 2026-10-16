@@ -303,8 +303,11 @@ export function WebsiteScoreBreakdown({
   websiteSuggestions,
   siteUrl = null,
   businessName = null,
+  scoreBasis = null,
 }: {
   websiteCategory: CategoryResult | null;
+  /** See WebsiteCoverageNote's scoreBasis. */
+  scoreBasis?: number | null;
   websiteAnalysis: WebsiteAnalysis | null;
   websiteSuggestions: Suggestion[];
   /** The site that was actually analyzed (the listing's website, or a
@@ -366,7 +369,7 @@ export function WebsiteScoreBreakdown({
             )}
           </div>
           {/* Only rendered for a business with a website (see page.tsx). */}
-          <WebsiteCoverageNote category={websiteCategory} hasWebsite className="text-[13px] font-medium text-ink-soft" />
+          <WebsiteCoverageNote category={websiteCategory} hasWebsite scoreBasis={scoreBasis} className="text-[13px] font-medium text-ink-soft" />
           <p className="text-[13px] text-ink-soft">
             {excludedPoints > 0
               ? tPlural(locale, "dashboard.website.excludedPoints", excludedPoints)

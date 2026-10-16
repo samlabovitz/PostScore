@@ -31,6 +31,7 @@ import { formatCount, formatDateTime, formatShortDate, t, tPlural, useLocale, ty
 import {
   GRADE_THRESHOLDS,
   parseWebsiteAnalysis,
+  scoreBasisPoints,
   type CategoryResult,
   type Grade,
   type ScoreBreakdown,
@@ -52,7 +53,7 @@ function formatSignedPoints(value: number): string {
  * percentage) is read straight off the real breakdown; no category is
  * invented and no bar is drawn for a category with no determinable
  * checks. */
-function CategoryProgressRow({ category, hasWebsite }: { category: CategoryResult; hasWebsite: boolean }) {
+function CategoryProgressRow({ category, hasWebsite, scoreBasis }: { category: CategoryResult; hasWebsite: boolean; scoreBasis: number }) {
   const locale = useLocale();
   const pct = category.relativeScore;
   const strong = pct !== null && pct >= 80;
@@ -77,7 +78,7 @@ function CategoryProgressRow({ category, hasWebsite }: { category: CategoryResul
           />
         )}
       </div>
-      <WebsiteCoverageNote category={category} hasWebsite={hasWebsite} />
+      <WebsiteCoverageNote category={category} hasWebsite={hasWebsite} scoreBasis={scoreBasis} />
       {pct === null && (
         <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.overview.categoryNotDeterminable")}</p>
       )}
@@ -426,10 +427,7 @@ function ChangesFeed({
   if (current.scoring_version !== previous.scoring_version) {
     return (
       <Card className="p-5 text-sm text-ink-soft">
-        {t(locale, "dashboard.overview.scoringUpdatedBetweenScans", {
-          previous: previous.scoring_version,
-          current: current.scoring_version,
-        })}
+        {t(locale, "dashboard.overview.scoringUpdatedBetweenScans")}
       </Card>
     );
   }
@@ -752,7 +750,12 @@ export function BusinessScoreView({
       <Card className="p-5">
         <div className="flex flex-col divide-y divide-paper-line">
           {breakdown.categories.map((category) => (
-            <CategoryProgressRow key={category.id} category={category} hasWebsite={businessWebsiteUrl(business) !== null} />
+            <CategoryProgressRow
+              key={category.id}
+              category={category}
+              hasWebsite={businessWebsiteUrl(business) !== null}
+              scoreBasis={scoreBasisPoints(breakdown.categories)}
+            />
           ))}
         </div>
       </Card>
@@ -760,7 +763,12 @@ export function BusinessScoreView({
       <SectionHeading title={t(locale, "dashboard.overview.detailedChecksHeading")} />
       <div className="grid grid-cols-1 gap-4 nav:grid-cols-3">
         {breakdown.categories.map((category) => (
-          <CategoryCard key={category.id} category={category} hasWebsite={businessWebsiteUrl(business) !== null} />
+          <CategoryCard
+            key={category.id}
+            category={category}
+            hasWebsite={businessWebsiteUrl(business) !== null}
+            scoreBasis={scoreBasisPoints(breakdown.categories)}
+          />
         ))}
       </div>
 

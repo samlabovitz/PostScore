@@ -49,7 +49,12 @@ import {
   looksLikeImageOnlyMenu,
   looksLikeNonAboutTopicPage,
   SERVICES_PAGE_SECONDARY_KEYWORDS,
+  extractNamedItems,
+  isRosterPath,
+  MAX_ROSTER_ENTRIES_FOR_ABOUT,
   measurePresenceContent,
+  MIN_WORDS_ABOUT,
+  proseWordsOutsideLists,
   sameBrandHost,
   servicesDepth,
   stripSiteBuilderBoilerplate,
@@ -438,10 +443,23 @@ async function fetchPresenceCandidate(url: string, fetchImpl: typeof fetch): Pro
  * path is — see findAllMatchingCandidates' own doc for why this ordering
  * matters. */
 interface RankedCandidate extends DiscoveredPage {
+  /** v1.10.0: under the business's own location path (e.g. a chain's
+   * /white-plains page) — ranked ahead of everything else. */
+  sameLocation: boolean;
   tier: number;
   locationMatch: boolean;
   pathSegments: number;
   pathLength: number;
+}
+
+/** v1.10.0: a path to ONE product/item/event/post/offer rather than a
+ * list — "/products/<slug>", "/shop/products/<slug>", "/events/<slug>",
+ * "/blog/…", "/news/…", and single promotions: "/offer/<slug>",
+ * "/deals/<slug>", "/promo/<slug>", "/coupon/<slug>" (the real YogaSix
+ * "/offer/intro-offer-5-classes-for-99" case). The list pages themselves
+ * ("/products", "/events", "/offers", "/collections/all") are not. */
+export function isSingleItemPath(path: string): boolean {
+  return /(^|\/)(products?|items?|events?|blog|news|posts?|offers?|deals?|promos?|promotions?|coupons?)\/[^/]+/i.test(path);
 }
 
 /** The generic "label or path contains this keyword" substring rule —
@@ -536,7 +554,8 @@ function findAllMatchingCandidates(
   keywords: string[],
   secondaryKeywords: string[] = [],
   strictKeywords: string[] = [],
-  locationHint?: string | null
+  locationHint?: string | null,
+  kind: "about" | "services" | "other" = "other"
 ): DiscoveredPage[] {
   const homeHostExact = normalizeHost(homepageUrl.hostname);
   const homePath = normalizePath(homepageUrl.pathname);
@@ -562,6 +581,10 @@ function findAllMatchingCandidates(
     // not just inside one keyword's own matcher). See
     // isExcludedAboutPath's own doc.
     if (strictKeywords.includes("about") && isExcludedAboutPath(path, c.label)) continue;
+    // v1.10.0: Services is a list of what's offered — one product, item,
+    // event or blog post is never it (the real Coffee Labs tumbler page
+    // and YogaSix's other-location workshop page).
+    if (kind === "services" && isSingleItemPath(path)) continue;
     const key = `${u.origin}${path}`;
     if (seen.has(key)) continue;
     const matchKeyword = (kw: string) =>
@@ -578,9 +601,11 @@ function findAllMatchingCandidates(
     // candidate's own label/path names it, that candidate is preferred
     // over an equally-ranked one that doesn't.
     const locationMatch = !!lowerLocationHint && `${c.label} ${path}`.toLowerCase().includes(lowerLocationHint);
+    const sameLocation = homePath !== "/" && path.startsWith(`${homePath.replace(/\/$/, "")}/`);
     matches.push({
       url: `${u.origin}${u.pathname}`,
       label: c.label,
+      sameLocation,
       tier: matchesCore ? 0 : 1,
       locationMatch,
       pathSegments: path.split("/").filter(Boolean).length,
@@ -590,6 +615,7 @@ function findAllMatchingCandidates(
   return matches
     .sort(
       (a, b) =>
+        Number(b.sameLocation) - Number(a.sameLocation) ||
         a.tier - b.tier ||
         Number(b.locationMatch) - Number(a.locationMatch) ||
         b.pathSegments - a.pathSegments ||
@@ -784,7 +810,8 @@ export async function detectPagePresence(
     keywords,
     kind === "services" ? SERVICES_PAGE_SECONDARY_KEYWORDS : [],
     kind === "about" ? ["about"] : [],
-    locationHint
+    locationHint,
+    kind
   );
 
   let sawUnreadable = false;
@@ -839,6 +866,17 @@ export async function detectPagePresence(
       continue;
     }
     const mainHtml = extractMainContentHtml(outcome.html);
+    // v1.10.0: a team/staff roster is an About only when it's mostly
+    // prose — 40+ words outside its entries AND fewer than 5 named
+    // entries (the real LocalLuv /stylists case: a 29-stylist roster).
+    if (
+      kind === "about" &&
+      isRosterPath(new URL(candidate.url).pathname) &&
+      (proseWordsOutsideLists(mainHtml) < MIN_WORDS_ABOUT || extractNamedItems(mainHtml).length >= MAX_ROSTER_ENTRIES_FOR_ABOUT)
+    ) {
+      if (!notFoundEvidence) notFoundEvidence = { url: candidate.url, note: null };
+      continue;
+    }
     const text = stripSiteBuilderBoilerplate(extractMainContentVisibleText(mainHtml));
     const counts = measurePresenceContent(mainHtml, text);
     firstCounts ??= counts;
@@ -2151,6 +2189,17 @@ async function readPagesViaBrowser(
     hasEmailLink: homeContent.hasEmailLink || contactLinks.hasEmailLink,
     hasContactPageLink: homeContent.hasContactPageLink === true || contactLinks.hasContactPageLink,
     hasCtaText: homeContent.hasCtaText || contactLinks.hasActionLinkText,
+    // Fill evidence the homepage didn't have from the contact page.
+    ...(homeContent.contactEvidence
+      ? {
+          contactEvidence: {
+            ...homeContent.contactEvidence,
+            phoneLink: homeContent.contactEvidence.phoneLink ?? ("evidence" in contactLinks ? contactLinks.evidence.phoneLink : null),
+            emailLink: homeContent.contactEvidence.emailLink ?? ("evidence" in contactLinks ? contactLinks.evidence.emailLink : null),
+            actionLinkText: homeContent.contactEvidence.actionLinkText ?? ("evidence" in contactLinks ? contactLinks.evidence.actionLinkText : null),
+          },
+        }
+      : {}),
     socialProfiles: [
       ...(homeContent.socialProfiles ?? []),
       ...contactSocial.filter((p) => !(homeContent.socialProfiles ?? []).some((q) => q.url.toLowerCase() === p.url.toLowerCase())),

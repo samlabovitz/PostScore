@@ -335,7 +335,10 @@ describe("website banner hides when nothing scoreable is left (Step 2d, the Wond
         ...GOOD_ANALYSIS,
         content: null,
         contentFetchFailureReason: "blocked_automated_check",
-        mobilePerformance: { method: "field", fieldCategory: "SLOW", labScore: null },
+        // A LAB rating — never used for a blocked site — so the only gaps
+        // left really are couldn't-check ones. (v1.10.0: a fresh REAL-
+        // VISITOR rating would now be a real, scored gap.)
+        mobilePerformance: { method: "lab", fieldCategory: null, labScore: 30 },
         aboutPresence: { state: "couldnt_check", url: null, locatedOnHomepage: false, reason: "blocked_automated_check", note: null },
         servicesPresence: { state: "couldnt_check", url: null, locatedOnHomepage: false, reason: "blocked_automated_check", note: null },
       },

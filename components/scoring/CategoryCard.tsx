@@ -43,8 +43,11 @@ export function formatPoints(value: number | null): string {
 export function CategoryCard({
   category,
   hasWebsite = false,
+  scoreBasis = null,
 }: {
   category: CategoryResult;
+  /** See WebsiteCoverageNote's scoreBasis. */
+  scoreBasis?: number | null;
   /** Only used by the Website category's "partly checked" note. */
   hasWebsite?: boolean;
 }) {
@@ -61,7 +64,7 @@ export function CategoryCard({
           </span>
         </span>
       </div>
-      <WebsiteCoverageNote category={category} hasWebsite={hasWebsite} className="mt-1 text-[12px] text-ink-mute" />
+      <WebsiteCoverageNote category={category} hasWebsite={hasWebsite} scoreBasis={scoreBasis} className="mt-1 text-[12px] text-ink-mute" />
 
       <div className="mt-4 flex flex-col divide-y divide-paper-line">
         {category.checks.map((check) => {
