@@ -28,6 +28,7 @@ import {
 } from "@/app/actions/pricing";
 import {
   PRICE_TIERS,
+  formatTypicalRange,
   isPricingLanguageMismatch,
   type AssessmentBasis,
   type PriceLevelComparison,
@@ -145,11 +146,12 @@ function ServiceRow({
   onDelete,
 }: {
   row: PriceRow;
-  onSave: (id: string, service: string, price: number) => Promise<void>;
+  onSave: (id: string, service: string, price: number, size: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
   const locale = useLocale();
   const [service, setService] = useState(row.service);
+  const [size, setSize] = useState(row.size ?? "");
   const [priceText, setPriceText] = useState(String(row.price));
   const [deleting, setDeleting] = useState(false);
 
@@ -160,18 +162,28 @@ function ServiceRow({
       setPriceText(String(row.price));
       return;
     }
-    if (service.trim() === row.service && parsed === row.price) return;
-    void onSave(row.id, service.trim(), parsed);
+    if (service.trim() === row.service && parsed === row.price && size.trim() === (row.size ?? "")) return;
+    void onSave(row.id, service.trim(), parsed, size.trim());
   }
 
   return (
-    <div className="flex items-center gap-2.5 py-2 first:pt-0 last:pb-0">
+    <div className="flex flex-wrap items-center gap-2.5 py-2 first:pt-0 last:pb-0 sm:flex-nowrap">
       <input
         type="text"
         value={service}
         onChange={(e) => setService(e.target.value)}
         onBlur={commit}
-        className="min-w-0 flex-1 rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft"
+        className="min-w-0 flex-1 basis-full rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft sm:basis-0"
+      />
+      <input
+        type="text"
+        value={size}
+        maxLength={40}
+        onChange={(e) => setSize(e.target.value)}
+        onBlur={commit}
+        placeholder={t(locale, "dashboard.pricing.sizePlaceholder")}
+        aria-label={t(locale, "dashboard.pricing.sizeAriaLabel", { service: row.service })}
+        className="w-[104px] rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft"
       />
       <div className="flex items-center gap-1 text-sm text-ink-mute">
         <span>$</span>
@@ -214,6 +226,7 @@ function ServicesAndPrices({
 }) {
   const locale = useLocale();
   const [newService, setNewService] = useState("");
+  const [newSize, setNewSize] = useState("");
   const [newPrice, setNewPrice] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
@@ -229,18 +242,19 @@ function ServicesAndPrices({
       return;
     }
     setAddError(null);
-    const result = await addPriceRow(businessId, { service: newService.trim(), price: parsed });
+    const result = await addPriceRow(businessId, { service: newService.trim(), price: parsed, size: newSize.trim() });
     if (result.status === "ok") {
       setPrices((prev) => [...prev, result.row]);
       setNewService("");
+      setNewSize("");
       setNewPrice("");
     } else {
       setAddError(result.status === "error" ? result.message : t(locale, "dashboard.pricing.couldNotAddRow"));
     }
   }
 
-  async function handleSave(id: string, service: string, price: number) {
-    const result = await updatePriceRow(id, { service, price });
+  async function handleSave(id: string, service: string, price: number, size: string) {
+    const result = await updatePriceRow(id, { service, price, size });
     if (result.status === "ok") {
       setPrices((prev) => prev.map((p) => (p.id === id ? result.row : p)));
       setRowError(null);
@@ -272,7 +286,7 @@ function ServicesAndPrices({
       )}
       {rowError && <p className="mt-2 text-[12px] text-red">{rowError}</p>}
 
-      <div className="mt-4 flex items-center gap-2.5 border-t border-paper-line pt-4">
+      <div className="mt-4 flex flex-wrap items-center gap-2.5 border-t border-paper-line pt-4 sm:flex-nowrap">
         <input
           type="text"
           placeholder={t(locale, "dashboard.pricing.servicePlaceholder", {
@@ -280,7 +294,16 @@ function ServicesAndPrices({
           })}
           value={newService}
           onChange={(e) => setNewService(e.target.value)}
-          className="min-w-0 flex-1 rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft"
+          className="min-w-0 flex-1 basis-full rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft sm:basis-0"
+        />
+        <input
+          type="text"
+          value={newSize}
+          maxLength={40}
+          onChange={(e) => setNewSize(e.target.value)}
+          placeholder={t(locale, "dashboard.pricing.sizePlaceholder")}
+          aria-label={t(locale, "dashboard.pricing.sizeNewAriaLabel")}
+          className="w-[104px] rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft"
         />
         <div className="flex items-center gap-1 text-sm text-ink-mute">
           <span>$</span>
@@ -304,6 +327,7 @@ function ServicesAndPrices({
           {t(locale, "dashboard.pricing.examplesPrefix", { examples: pricingExamples.join(", ") })}
         </p>
       )}
+      <p className="mt-1 text-[12px] text-ink-mute">{t(locale, "dashboard.pricing.sizeHint")}</p>
       {addError && <p className="mt-2 text-[12px] text-red">{addError}</p>}
     </Card>
   );
@@ -383,15 +407,24 @@ function AssessmentResults({ result }: { result: StoredPricingAssessment }) {
           >
             <div className="flex items-center justify-between gap-3">
               <div className="text-[13.5px] font-semibold text-ink">
-                {a.service} <span className="font-normal text-ink-mute">— ${a.price.toFixed(2)}</span>
+                {a.service}
+                {a.size ? <span className="font-normal text-ink-soft"> ({a.size})</span> : null}{" "}
+                <span className="font-normal text-ink-mute">— ${a.price.toFixed(2)}</span>
               </div>
               <Pill variant={TIER_PILL_VARIANT[a.tier]} className="shrink-0">
                 {t(locale, TIER_LABEL_KEY[a.tier])}
               </Pill>
             </div>
             {a.basis !== "no_data" && (
-              <div className="mt-1">
+              <div className="mt-1 flex flex-wrap items-center gap-2">
                 <BasisBadge basis={a.basis} />
+                {/* Day 4b: the model's typical range — the tier above is
+                    computed from it (lib/pricing.ts tierFromRange). */}
+                {a.typicalLow !== undefined && a.typicalHigh !== undefined && (
+                  <span className="text-[12px] font-medium text-ink-soft">
+                    {t(locale, "dashboard.pricing.typicalRange", { range: formatTypicalRange(a.typicalLow, a.typicalHigh) })}
+                  </span>
+                )}
               </div>
             )}
             <p className="mt-1 text-[12.5px] text-ink-soft">{a.guidance}</p>

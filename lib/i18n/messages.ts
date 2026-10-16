@@ -2496,7 +2496,12 @@ export type MessageKey =
   | "dashboard.websiteOnly.needsListing.howTo"
   | "dashboard.websiteOnly.needsListing.website"
   | "dashboard.websiteOnly.listLabel"
-  | "content.checks.website.info_consistency.explanation.noListingInfo";
+  | "content.checks.website.info_consistency.explanation.noListingInfo"
+  | "dashboard.pricing.sizePlaceholder"
+  | "dashboard.pricing.sizeAriaLabel"
+  | "dashboard.pricing.sizeNewAriaLabel"
+  | "dashboard.pricing.sizeHint"
+  | "dashboard.pricing.typicalRange";
 
 /** The report/dashboard messages that vary by count — see tPlural below.
  * Each has a ".one" and ".other" MessageKey (the only two categories
@@ -4572,9 +4577,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.grocery_market.couponAngles.firstTime": "New shopper special: $10 off your first $40+ order",
     "bizProfiles.grocery_market.couponAngles.seasonal": "Seasonal produce sale: this week's fresh picks discounted",
     "bizProfiles.grocery_market.couponAngles.slowDay": "$5 off a $40+ basket on your slowest shopping day",
-    "bizProfiles.grocery_market.pricingExamples.example1": "Weekly Basket",
-    "bizProfiles.grocery_market.pricingExamples.example2": "Featured Special Item",
-    "bizProfiles.grocery_market.pricingExamples.example3": "Bulk/Case Item",
+    "bizProfiles.grocery_market.pricingExamples.example1": "Tropicana Orange Juice, 52 oz",
+    "bizProfiles.grocery_market.pricingExamples.example2": "Goya Black Beans, 15.5 oz can",
+    "bizProfiles.grocery_market.pricingExamples.example3": "Dozen large eggs (store brand)",
     "bizProfiles.grocery_market.faq.item1.question": "Does {businessName} offer delivery or curbside pickup?",
     "bizProfiles.grocery_market.faq.item1.answer": "Call us to ask about current delivery and pickup options.",
     "bizProfiles.grocery_market.faq.item2.question": "What are {businessName}'s hours near {city}?",
@@ -5504,6 +5509,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteOnly.needsListing.website": "See your website checks",
     "dashboard.websiteOnly.listLabel": "Website only",
     "content.checks.website.info_consistency.explanation.noListingInfo": "There's no Google listing to compare your site's hours, phone, and address against. Excluded from your score, not counted against you.",
+    "dashboard.pricing.sizePlaceholder": "Size (optional)",
+    "dashboard.pricing.sizeAriaLabel": "Size of {service}",
+    "dashboard.pricing.sizeNewAriaLabel": "Size of the new item",
+    "dashboard.pricing.sizeHint": "For packaged items, add the brand in the name and the size (e.g. 750 ml, 12 oz, family size) so we can judge the price.",
+    "dashboard.pricing.typicalRange": "Typical {range}",
   },
   es: {
     "language.en": "Inglés",
@@ -7371,9 +7381,9 @@ export const messages: Record<Locale, LocaleMessages> = {
       "10% de descuento en su primera compra",
     "bizProfiles.grocery_market.referralPresets.pct_off_both.description":
       "Simple y entendido por todos para una compra basada en canasta.",
-    "bizProfiles.grocery_market.pricingExamples.example1": "Canasta semanal",
-    "bizProfiles.grocery_market.pricingExamples.example2": "Artículo especial destacado",
-    "bizProfiles.grocery_market.pricingExamples.example3": "Artículo a granel/por caja",
+    "bizProfiles.grocery_market.pricingExamples.example1": "Jugo de naranja Tropicana, 52 oz",
+    "bizProfiles.grocery_market.pricingExamples.example2": "Frijoles negros Goya, lata de 15.5 oz",
+    "bizProfiles.grocery_market.pricingExamples.example3": "Docena de huevos grandes (marca de la tienda)",
     "bizProfiles.grocery_market.pricingTips.loss_leader_weekly_specials.label":
       "Use los especiales semanales como productos gancho",
     "bizProfiles.grocery_market.pricingTips.loss_leader_weekly_specials.description":
@@ -8540,6 +8550,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteOnly.needsListing.website": "Ver las revisiones de su sitio web",
     "dashboard.websiteOnly.listLabel": "Solo sitio web",
     "content.checks.website.info_consistency.explanation.noListingInfo": "No hay una ficha de Google con la que comparar el horario, el teléfono y la dirección de su sitio. Se excluye de su puntuación, no se cuenta en su contra.",
+    "dashboard.pricing.sizePlaceholder": "Tamaño (opcional)",
+    "dashboard.pricing.sizeAriaLabel": "Tamaño de {service}",
+    "dashboard.pricing.sizeNewAriaLabel": "Tamaño del artículo nuevo",
+    "dashboard.pricing.sizeHint": "Para artículos empacados, agregue la marca en el nombre y el tamaño (p. ej., 750 ml, 12 oz, tamaño familiar) para que podamos evaluar el precio.",
+    "dashboard.pricing.typicalRange": "Precio típico {range}",
   },
 };
 

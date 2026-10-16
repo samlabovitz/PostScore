@@ -19,7 +19,24 @@ import { callAnthropicMessage } from "@/lib/anthropicClient";
 import { normalizeLocale, t, type Locale } from "@/lib/i18n";
 import { priceLevelToSymbol } from "@/lib/priceLevel";
 
-const PRICE_COLUMNS = "id, business_id, service, price, created_at";
+const PRICE_COLUMNS_BASE = "id, business_id, service, price, created_at";
+// Day 4b: the optional size (prices.size — ~/Desktop/pricing-size.sql).
+const PRICE_COLUMNS = `${PRICE_COLUMNS_BASE}, size`;
+
+/** Postgres "column does not exist" — prices.size isn't added yet. Every
+ * read/write then retries without it, so the page keeps working. */
+function isMissingSizeColumn(error: { code?: string; message?: string } | null): boolean {
+  return (
+    !!error &&
+    (error.code === "42703" || (/\bsize\b/.test(error.message ?? "") && /does not exist|schema cache/i.test(error.message ?? "")))
+  );
+}
+
+/** An owner-typed size: trimmed, at most 40 characters, empty → null. */
+function cleanSize(size: string | null | undefined): string | null {
+  const trimmed = (size ?? "").trim().slice(0, 40);
+  return trimmed.length > 0 ? trimmed : null;
+}
 
 export type GetPricesResult =
   | { status: "ok"; prices: PriceRow[] }
@@ -38,17 +55,16 @@ export async function getPrices(businessId: string): Promise<GetPricesResult> {
     return { status: "unauthenticated" };
   }
 
-  const { data, error } = await supabase
-    .from("prices")
-    .select(PRICE_COLUMNS)
-    .eq("business_id", businessId)
-    .order("created_at", { ascending: true });
+  const read = (columns: string) =>
+    supabase.from("prices").select(columns).eq("business_id", businessId).order("created_at", { ascending: true });
+  let { data, error } = await read(PRICE_COLUMNS);
+  if (isMissingSizeColumn(error)) ({ data, error } = await read(PRICE_COLUMNS_BASE));
 
   if (error) {
     return { status: "error", message: error.message };
   }
 
-  return { status: "ok", prices: (data as PriceRow[]) ?? [] };
+  return { status: "ok", prices: ((data ?? []) as unknown as PriceRow[]).map((p) => ({ ...p, size: p.size ?? null })) };
 }
 
 export type SavePriceRowResult =
@@ -59,7 +75,7 @@ export type SavePriceRowResult =
 /** Adds a new service/price row. */
 export async function addPriceRow(
   businessId: string,
-  input: { service: string; price: number }
+  input: { service: string; price: number; size?: string | null }
 ): Promise<SavePriceRowResult> {
   const supabase = createClient();
 
@@ -71,23 +87,27 @@ export async function addPriceRow(
     return { status: "unauthenticated" };
   }
 
-  const { data, error } = await supabase
-    .from("prices")
-    .insert({ business_id: businessId, service: input.service, price: input.price })
-    .select(PRICE_COLUMNS)
-    .single();
+  const size = cleanSize(input.size);
+  const insert = (withSize: boolean) =>
+    supabase
+      .from("prices")
+      .insert({ business_id: businessId, service: input.service, price: input.price, ...(withSize ? { size } : {}) })
+      .select(withSize ? PRICE_COLUMNS : PRICE_COLUMNS_BASE)
+      .single();
+  let { data, error } = await insert(true);
+  if (isMissingSizeColumn(error)) ({ data, error } = await insert(false));
 
   if (error || !data) {
     return { status: "error", message: error?.message ?? "Could not save this row." };
   }
 
-  return { status: "ok", row: data as PriceRow };
+  return { status: "ok", row: { ...(data as unknown as PriceRow), size: (data as unknown as PriceRow).size ?? null } };
 }
 
 /** Edits an existing service/price row in place. */
 export async function updatePriceRow(
   priceId: string,
-  input: { service: string; price: number }
+  input: { service: string; price: number; size?: string | null }
 ): Promise<SavePriceRowResult> {
   const supabase = createClient();
 
@@ -99,18 +119,22 @@ export async function updatePriceRow(
     return { status: "unauthenticated" };
   }
 
-  const { data, error } = await supabase
-    .from("prices")
-    .update({ service: input.service, price: input.price })
-    .eq("id", priceId)
-    .select(PRICE_COLUMNS)
-    .single();
+  const size = cleanSize(input.size);
+  const update = (withSize: boolean) =>
+    supabase
+      .from("prices")
+      .update({ service: input.service, price: input.price, ...(withSize ? { size } : {}) })
+      .eq("id", priceId)
+      .select(withSize ? PRICE_COLUMNS : PRICE_COLUMNS_BASE)
+      .single();
+  let { data, error } = await update(true);
+  if (isMissingSizeColumn(error)) ({ data, error } = await update(false));
 
   if (error || !data) {
     return { status: "error", message: error?.message ?? "Could not save this row." };
   }
 
-  return { status: "ok", row: data as PriceRow };
+  return { status: "ok", row: { ...(data as unknown as PriceRow), size: (data as unknown as PriceRow).size ?? null } };
 }
 
 export type DeletePriceRowResult =
@@ -273,7 +297,7 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
 
   const row = business as PricingBusinessRow;
   const locale = normalizeLocale(row.language);
-  const services = pricesResult.prices.map((p) => ({ service: p.service, price: p.price }));
+  const services = pricesResult.prices.map((p) => ({ service: p.service, price: p.price, size: p.size ?? null }));
 
   // Part B: real competitor price-level context from the latest SAVED
   // competitor scan — never a fresh paid scan per "Assess". The owner's

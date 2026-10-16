@@ -137,17 +137,17 @@ describe("parsePricingAssessmentResponse", () => {
     { service: "Men's Haircut", price: 25 },
   ];
 
-  test("Day 4b: a fresh 'verified_local' reply is downgraded to general_estimate (keeping its tier), and services still match by order", () => {
+  test("Day 4b: the app computes the tier from the price and the model's range — the model's own tier/verified_local is ignored", () => {
     const raw = JSON.stringify({
       assessments: [
-        { service: "Women's Haircut", tier: "competitive", basis: "verified_local", guidance: "In line with nearby salons." },
-        { service: "Men's Haircut", tier: "under_market", basis: "verified_local", guidance: "Room to raise this a bit." },
+        { service: "Women's Haircut", tier: "premium", basis: "verified_local", typical_low: 40, typical_high: 60, guidance: "Check nearby salons." },
+        { service: "Men's Haircut", tier: "premium", basis: "general_estimate", typical_low: 30, typical_high: 40, guidance: "Room to raise this a bit." },
       ],
     });
     const result = parsePricingAssessmentResponse(raw, services);
     expect(result).toEqual([
-      { service: "Women's Haircut", price: 45, tier: "competitive", basis: "general_estimate", guidance: "In line with nearby salons." },
-      { service: "Men's Haircut", price: 25, tier: "under_market", basis: "general_estimate", guidance: "Room to raise this a bit." },
+      { service: "Women's Haircut", price: 45, tier: "competitive", basis: "general_estimate", guidance: "Check nearby salons.", typicalLow: 40, typicalHigh: 60 },
+      { service: "Men's Haircut", price: 25, tier: "under_market", basis: "general_estimate", guidance: "Room to raise this a bit.", typicalLow: 30, typicalHigh: 40 },
     ]);
     expect(result.some((r) => r.basis === "verified_local")).toBe(false);
   });
@@ -160,18 +160,20 @@ describe("parsePricingAssessmentResponse", () => {
     ];
     const raw = JSON.stringify({
       assessments: [
-        { service: "Tito's Vodka 750 ml", tier: "competitive", basis: "general_estimate", guidance: "Typical retail is roughly $20-28 — a general estimate, not verified locally." },
-        { service: "Bottle of Wine", tier: "no_data", basis: "no_data", guidance: "Too vague.", reason: "needs_brand_and_size" },
-        { service: "Josh Cabernet 750 ml", tier: "competitive", basis: "general_estimate", guidance: "Typical retail is roughly $14-20 — a general estimate, not verified locally." },
+        { service: "Tito's Vodka 750 ml", basis: "general_estimate", typical_low: 20, typical_high: 28, guidance: "Typical retail is roughly $20-28 — a general estimate, not verified locally." },
+        { service: "Bottle of Wine", basis: "no_data", guidance: "Too vague.", reason: "needs_brand_and_size" },
+        { service: "Josh Cabernet 750 ml", basis: "general_estimate", typical_low: 14, typical_high: 20, guidance: "Typical retail is roughly $14-20 — a general estimate, not verified locally." },
       ],
     });
 
     test("EN: 'Bottle of Wine' is no_data with our add-brand-and-size note; the specific rows on either side still match by order", () => {
       const result = parsePricingAssessmentResponse(raw, items, "en");
+      // Tiers computed from each range: $25 in $20–28 and $18 in $14–20
+      // both sit in the top 40% → upper-mid.
       expect(result.map((r) => [r.service, r.price, r.tier, r.basis])).toEqual([
-        ["Tito's Vodka 750 ml", 25, "competitive", "general_estimate"],
+        ["Tito's Vodka 750 ml", 25, "upper_mid", "general_estimate"],
         ["Bottle of Wine", 150, "no_data", "no_data"],
-        ["Josh Cabernet 750 ml", 18, "competitive", "general_estimate"],
+        ["Josh Cabernet 750 ml", 18, "upper_mid", "general_estimate"],
       ]);
       expect(result[1].guidance).toBe(
         "Add the brand and size (e.g. Tito's Vodka 750 ml) so we can check this price — without them, prices for this item vary too much to judge."
@@ -196,21 +198,21 @@ describe("parsePricingAssessmentResponse", () => {
     });
   });
 
-  test("a known branded/common item with no local data gets a labeled general_estimate, not no_data", () => {
-    const items = [{ service: "Cheez-Its (family size)", price: 7 }];
+  test("a known branded/common item with no local data gets a labeled general_estimate with its range, not no_data", () => {
+    const items = [{ service: "Cheez-Its", price: 7, size: "family size, 21 oz" }];
     const raw = JSON.stringify({
       assessments: [
         {
-          service: "Cheez-Its (family size)",
-          tier: "premium",
+          service: "Cheez-Its",
           basis: "general_estimate",
-          guidance: "Typical retail for Cheez-Its is roughly $3-5, so $7 reads high — this is a general estimate, not verified against local competitors.",
+          typical_low: 3,
+          typical_high: 5,
+          guidance: "Typical retail for a family-size box is about $3-5 — a general estimate, not verified against local competitors.",
         },
       ],
     });
     const result = parsePricingAssessmentResponse(raw, items);
-    expect(result[0].tier).toBe("premium");
-    expect(result[0].basis).toBe("general_estimate");
+    expect(result[0]).toMatchObject({ tier: "premium", basis: "general_estimate", typicalLow: 3, typicalHigh: 5, size: "family size, 21 oz" });
     expect(result[0].guidance.toLowerCase()).toContain("general estimate");
   });
 
@@ -227,11 +229,11 @@ describe("parsePricingAssessmentResponse", () => {
     expect(result[0].basis).toBe("no_data");
   });
 
-  test("a real tier with a missing/invalid basis degrades to general_estimate, never silently becomes verified_local", () => {
+  test("a missing or invalid basis with a usable range is still only ever a general_estimate, never verified_local", () => {
     const raw = JSON.stringify({
       assessments: [
-        { service: "Women's Haircut", tier: "competitive", guidance: "ok" }, // no basis field at all
-        { service: "Men's Haircut", tier: "competitive", basis: "made_up", guidance: "ok" },
+        { service: "Women's Haircut", typical_low: 40, typical_high: 60, guidance: "ok" }, // no basis field at all
+        { service: "Men's Haircut", basis: "made_up", typical_low: 20, typical_high: 30, guidance: "ok" },
       ],
     });
     const result = parsePricingAssessmentResponse(raw, services);
@@ -251,8 +253,8 @@ describe("parsePricingAssessmentResponse", () => {
   test("strips a markdown code fence before parsing", () => {
     const raw = "```json\n" + JSON.stringify({
       assessments: [
-        { service: "Women's Haircut", tier: "premium", basis: "verified_local", guidance: "Higher than nearby options." },
-        { service: "Men's Haircut", tier: "premium", basis: "verified_local", guidance: "Higher than nearby options." },
+        { service: "Women's Haircut", basis: "general_estimate", typical_low: 25, typical_high: 35, guidance: "Higher than typical." },
+        { service: "Men's Haircut", basis: "general_estimate", typical_low: 15, typical_high: 20, guidance: "Higher than typical." },
       ],
     }) + "\n```";
     const result = parsePricingAssessmentResponse(raw, services);
@@ -283,7 +285,7 @@ describe("parsePricingAssessmentResponse", () => {
   });
 
   test("falls back to no_data for every service when the assessments array is missing entries", () => {
-    const raw = JSON.stringify({ assessments: [{ service: "Women's Haircut", tier: "competitive", basis: "verified_local", guidance: "ok" }] });
+    const raw = JSON.stringify({ assessments: [{ service: "Women's Haircut", basis: "general_estimate", typical_low: 40, typical_high: 60, guidance: "ok" }] });
     const result = parsePricingAssessmentResponse(raw, services);
     expect(result[0].tier).toBe("competitive");
     expect(result[1].tier).toBe("no_data");
@@ -421,19 +423,17 @@ describe("buildPricingSystemPrompt", () => {
     expect(es).toContain("es una estimación general, no verificada con competidores locales");
   });
 
-  test("Spanish directive tells the model to keep JSON keys, tier values, and basis values in English", () => {
+  test("Spanish directive tells the model to keep JSON keys, basis values and the range numbers in English", () => {
     const es = buildPricingSystemPrompt("es");
-    expect(es).toContain('"service"');
-    expect(es).toContain('"tier"');
-    expect(es).toContain('"basis"');
-    expect(es).toContain('"guidance"');
+    for (const key of ['"service"', '"basis"', '"typical_low"', '"typical_high"', '"guidance"']) expect(es).toContain(key);
+    expect(es).toContain("plain numbers in US dollars");
   });
 });
 
 describe("pricingMaxTokens", () => {
   test("English maxTokens is unchanged by locale support", () => {
     expect(pricingMaxTokens(3, "en")).toBe(pricingMaxTokens(3));
-    expect(pricingMaxTokens(3)).toBe(Math.min(800, Math.max(260, 180 + 3 * 70)));
+    expect(pricingMaxTokens(3)).toBe(Math.min(900, Math.max(260, 180 + 3 * 85)));
   });
 
   test("Spanish gets ~1.3x the English maxTokens for the same service count", () => {
@@ -444,7 +444,7 @@ describe("pricingMaxTokens", () => {
 
   test("Spanish maxTokens still respects the same base bounds", () => {
     expect(pricingMaxTokens(0, "es")).toBe(Math.round(260 * 1.3));
-    expect(pricingMaxTokens(100, "es")).toBe(Math.round(800 * 1.3));
+    expect(pricingMaxTokens(100, "es")).toBe(Math.round(900 * 1.3));
   });
 });
 
@@ -539,5 +539,69 @@ describe("Day 4b: the rankings legend never promises local price data we don't h
       }
       expect(t(locale, "dashboard.pricing.introText").toLowerCase()).not.toMatch(/local/);
     }
+  });
+});
+
+import { formatTypicalRange, tierFromRange, validRange } from "./pricing";
+
+describe("Day 4b: the tier is computed in code from the typical range", () => {
+  test("under the range → under market; lower 60% → competitive; top 40% → upper-mid; over → premium", () => {
+    expect(tierFromRange(2.5, 3, 5)).toBe("under_market");
+    expect(tierFromRange(3, 3, 5)).toBe("competitive");
+    expect(tierFromRange(4.2, 3, 5)).toBe("competitive");
+    expect(tierFromRange(4.21, 3, 5)).toBe("upper_mid");
+    expect(tierFromRange(5, 3, 5)).toBe("upper_mid");
+    expect(tierFromRange(5.01, 3, 5)).toBe("premium");
+    expect(tierFromRange(4, 4, 4)).toBe("competitive");
+  });
+
+  test("an unusable range is never turned into a tier", () => {
+    for (const [low, high] of [[5, 3], [-1, 4], [0, 0], [1, 30], [NaN, 5], ["3", 5]] as Array<[unknown, unknown]>) {
+      expect(validRange(low, high), `${low}–${high}`).toBeNull();
+    }
+    expect(validRange(0, 4)).toEqual({ low: 0, high: 4 });
+    const result = parsePricingAssessmentResponse(
+      JSON.stringify({ assessments: [{ service: "Latte", basis: "general_estimate", typical_low: 9, typical_high: 2, guidance: "x" }] }),
+      [{ service: "Latte", price: 5 }]
+    );
+    expect(result[0]).toMatchObject({ tier: "no_data", basis: "no_data" });
+  });
+
+  test("the range is shown as 'Typical ~$X–$Y'", () => {
+    expect(formatTypicalRange(3, 5)).toBe("~$3–$5");
+    expect(formatTypicalRange(12.5, 18)).toBe("~$12.50–$18");
+    expect(formatTypicalRange(4, 4)).toBe("~$4");
+  });
+
+  test("the size goes into the prompt next to the item, and counts for the brand-and-size rule", () => {
+    const prompt = buildPricingPrompt({
+      businessTypeLabel: "Grocery / Market",
+      services: [{ service: "Tropicana Orange Juice", price: 5.49, size: "52 oz" }, { service: "Goya Black Beans", price: 1.59 }],
+      priceLevelContext: null,
+    });
+    expect(prompt).toContain("- Tropicana Orange Juice (size: 52 oz): $5.49");
+    expect(prompt).toContain("- Goya Black Beans: $1.59");
+    expect(buildPricingSystemPrompt()).toContain('given separately as "(size: …)"');
+  });
+
+  test("the model is told it doesn't pick the tier", () => {
+    const system = buildPricingSystemPrompt();
+    expect(system).toContain('"typical_low"');
+    expect(system).toContain("the app compares the owner's price to that range itself");
+    expect(system).not.toContain('"tier":"under_market"');
+  });
+
+  test("a stored assessment keeps its range; an old one without a range still shows its tier", () => {
+    const payload = parsePricingAssessmentPayload({
+      assessments: [
+        { service: "A", price: 7, tier: "premium", basis: "general_estimate", guidance: "g", typicalLow: 3, typicalHigh: 5 },
+        { service: "B", price: 7, tier: "competitive", basis: "general_estimate", guidance: "g" },
+      ],
+      priceLevelContext: null,
+      locale: "en",
+    })!;
+    expect(payload.assessments[0]).toMatchObject({ typicalLow: 3, typicalHigh: 5 });
+    expect(payload.assessments[1].tier).toBe("competitive");
+    expect(payload.assessments[1]).not.toHaveProperty("typicalLow");
   });
 });

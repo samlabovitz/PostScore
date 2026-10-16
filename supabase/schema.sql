@@ -614,6 +614,14 @@ create table if not exists public.prices (
 create index if not exists prices_business_id_idx
   on public.prices (business_id);
 
+-- Day 4b: an optional size per item ("750 ml", "family size") — sent to
+-- the price check with the item so packaged goods can be judged.
+alter table public.prices
+  add column if not exists size text;
+alter table public.prices drop constraint if exists prices_size_length_check;
+alter table public.prices add constraint prices_size_length_check
+  check (size is null or char_length(size) <= 40);
+
 alter table public.prices enable row level security;
 
 drop policy if exists "Users can view prices for their own businesses" on public.prices;
