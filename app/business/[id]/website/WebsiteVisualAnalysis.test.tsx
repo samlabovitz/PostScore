@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LocaleProvider } from "@/lib/i18n";
 import type { WebsiteAnalysis } from "@/lib/scoring";
@@ -61,7 +61,17 @@ describe("WebsiteVisualAnalysis — Day 4 Part 2c: honest empty state when no sc
     expect(html).not.toContain("What customers actually see");
   });
 
+  // Step 2d: a screenshot older than SCREENSHOT_STALE_AFTER_DAYS (30) is
+  // never captioned "what customers see", so the clock is pinned here —
+  // a fixed capture date with a moving "now" would silently turn this
+  // into the stale case once 30 real days passed.
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   test("a REAL screenshot: shows the 'what customers actually see' claim and the capture-date caption, since both are now true", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-01T00:00:00.000Z")); // 16 days after capture
     const html = render({
       ...BASE_ANALYSIS,
       screenshotUrl: "https://example.com/real-screenshot.png",
@@ -71,6 +81,19 @@ describe("WebsiteVisualAnalysis — Day 4 Part 2c: honest empty state when no sc
     expect(html).toContain("Screenshots captured");
     expect(html).toContain("https://example.com/real-screenshot.png");
     expect(html).not.toContain("No screenshot captured yet.");
+  });
+
+  test("Step 2d: the same screenshot once it's more than 30 days old is still shown, but captioned as possibly out of date — never 'what customers see'", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-20T00:00:00.000Z")); // 35 days after capture
+    const html = render({
+      ...BASE_ANALYSIS,
+      screenshotUrl: "https://example.com/real-screenshot.png",
+      lastScreenshotRefreshAt: "2026-09-15T00:00:00.000Z",
+    }).replace(/&#x27;/g, "'");
+    expect(html).toContain("https://example.com/real-screenshot.png");
+    expect(html).toContain("it's more than 30 days old, so it may be out of date.");
+    expect(html).not.toContain("What customers actually see when they visit your live site");
   });
 });
 
