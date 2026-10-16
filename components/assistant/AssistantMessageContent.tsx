@@ -6,8 +6,11 @@
 // server-only modules that throw if evaluated outside Next's server
 // build graph, which a plain Vitest render would otherwise hit.
 
+import Link from "next/link";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { t, useLocale } from "@/lib/i18n";
+import { parseReplyLinks } from "@/lib/postaiLinks";
+import { ANCHOR_HIGHLIGHT_EVENT } from "@/components/layout/AnchorHighlight";
 
 // ASSISTANT_SYSTEM_RULES rule 2 (lib/assistant.ts) instructs the model
 // to emit a literal control-token marker verbatim at the start of any
@@ -85,21 +88,53 @@ export function parseInlineBold(text: string): Array<{ bold: boolean; text: stri
   return parts;
 }
 
+/** Where reply links point, and what to do when one is clicked (close
+ * the chat overlay so the owner lands on the page). */
+export interface ReplyLinkContext {
+  businessId: string;
+  referralOk?: boolean;
+  onNavigate?: () => void;
+}
+
 /** Renders one paragraph's real text with any `**bold**` spans as real
  * `<strong>` elements (see parseInlineBold above) — shared by both the
  * normal and general-guidance paragraph styles below so bold renders
- * identically in either. */
-function FormattedText({ text }: { text: string }) {
+ * identically in either. PostAI link markers ([[link:…]], see
+ * lib/postaiLinks.ts) become same-tab links from the fixed allowlist;
+ * without a business to link to, markers and raw URLs are just dropped. */
+function FormattedText({ text, links }: { text: string; links?: ReplyLinkContext }) {
+  const locale = useLocale();
+  const segments = parseReplyLinks(text, links?.businessId ?? "", { referralOk: links?.referralOk });
   return (
     <>
-      {parseInlineBold(text).map((run, i) =>
-        run.bold ? <strong key={i}>{run.text}</strong> : <span key={i}>{run.text}</span>
+      {segments.map((segment, s) =>
+        segment.kind === "link" ? (
+          links ? (
+            <Link
+              key={s}
+              href={segment.href}
+              onClick={() => {
+                links.onNavigate?.();
+                // Same-page anchors don't fire "hashchange" under Next's
+                // client navigation — ask AnchorHighlight directly.
+                setTimeout(() => window.dispatchEvent(new Event(ANCHOR_HIGHLIGHT_EVENT)), 150);
+              }}
+              className="mx-0.5 my-0.5 inline-block max-w-full rounded-full border border-brass/40 bg-brass/10 px-2.5 py-1 align-baseline text-[12px] font-semibold text-ink no-underline transition-colors hover:border-brass hover:bg-brass/20"
+            >
+              {t(locale, segment.label)}
+            </Link>
+          ) : null
+        ) : (
+          parseInlineBold(segment.text).map((run, i) =>
+            run.bold ? <strong key={`${s}-${i}`}>{run.text}</strong> : <span key={`${s}-${i}`}>{run.text}</span>
+          )
+        )
       )}
     </>
   );
 }
 
-export function AssistantMessageContent({ content }: { content: string }) {
+export function AssistantMessageContent({ content, links }: { content: string; links?: ReplyLinkContext }) {
   const locale = useLocale();
   const parts = splitAssistantContent(content);
   return (
@@ -112,12 +147,12 @@ export function AssistantMessageContent({ content }: { content: string }) {
               {t(locale, "dashboard.assistant.generalGuidanceLabel")}
             </div>
             <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-ink-soft">
-              <FormattedText text={part.text} />
+              <FormattedText text={part.text} links={links} />
             </p>
           </div>
         ) : (
           <p key={i} className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-ink">
-            <FormattedText text={part.text} />
+            <FormattedText text={part.text} links={links} />
           </p>
         )
       )}

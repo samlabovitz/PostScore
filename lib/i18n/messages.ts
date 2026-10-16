@@ -1234,6 +1234,20 @@ export type MessageKey =
   // territory, not UI dictionary text.
   | "dashboard.assistant.closeAriaLabel"
   | "dashboard.assistant.generalGuidanceLabel"
+  | "dashboard.assistant.link.overview"
+  | "dashboard.assistant.link.mismatch"
+  | "dashboard.assistant.link.website"
+  | "dashboard.assistant.link.starterSite"
+  | "dashboard.assistant.link.reviews"
+  | "dashboard.assistant.link.connect"
+  | "dashboard.assistant.link.growth"
+  | "dashboard.assistant.link.weeklyRoutine"
+  | "dashboard.assistant.link.coupon"
+  | "dashboard.assistant.link.referral"
+  | "dashboard.assistant.link.competitors"
+  | "dashboard.assistant.link.pricing"
+  | "dashboard.assistant.link.reports"
+  | "dashboard.assistant.link.settings"
   | "dashboard.assistant.thinking"
   | "dashboard.assistant.yourBusinessFallback"
   | "dashboard.assistant.emptyStateHeadline"
@@ -3926,6 +3940,20 @@ export const messages: Record<Locale, LocaleMessages> = {
     // AssistantView.tsx, BusinessMemoryPanel.tsx.
     "dashboard.assistant.closeAriaLabel": "Close assistant",
     "dashboard.assistant.generalGuidanceLabel": "General guidance",
+    "dashboard.assistant.link.overview": "See how to fix it on the Overview →",
+    "dashboard.assistant.link.mismatch": "Compare your site and Google listing →",
+    "dashboard.assistant.link.website": "Fix this on the Website page →",
+    "dashboard.assistant.link.starterSite": "Build your starter site →",
+    "dashboard.assistant.link.reviews": "Get your review link and QR sign →",
+    "dashboard.assistant.link.connect": "Connect your Google Business Profile →",
+    "dashboard.assistant.link.growth": "Open this week's plan on Growth →",
+    "dashboard.assistant.link.weeklyRoutine": "Open your weekly routine →",
+    "dashboard.assistant.link.coupon": "Make a coupon →",
+    "dashboard.assistant.link.referral": "Make a referral card →",
+    "dashboard.assistant.link.competitors": "See the Competitors page →",
+    "dashboard.assistant.link.pricing": "Check your prices on the Pricing page →",
+    "dashboard.assistant.link.reports": "Open your Reports →",
+    "dashboard.assistant.link.settings": "Open Settings →",
     "dashboard.assistant.thinking": "Thinking…",
     "dashboard.assistant.yourBusinessFallback": "your business",
     "dashboard.assistant.emptyStateHeadline": "Ask anything about {business}'s presence",
@@ -6521,6 +6549,20 @@ export const messages: Record<Locale, LocaleMessages> = {
     // AssistantView.tsx, BusinessMemoryPanel.tsx.
     "dashboard.assistant.closeAriaLabel": "Cerrar asistente",
     "dashboard.assistant.generalGuidanceLabel": "Orientación general",
+    "dashboard.assistant.link.overview": "Vea cómo arreglarlo en el Resumen →",
+    "dashboard.assistant.link.mismatch": "Compare su sitio y su ficha de Google →",
+    "dashboard.assistant.link.website": "Arréglelo en la página Sitio web →",
+    "dashboard.assistant.link.starterSite": "Cree su sitio inicial →",
+    "dashboard.assistant.link.reviews": "Obtenga su enlace y letrero QR de reseñas →",
+    "dashboard.assistant.link.connect": "Conecte su Perfil de Negocio de Google →",
+    "dashboard.assistant.link.growth": "Abra el plan de esta semana en Crecimiento →",
+    "dashboard.assistant.link.weeklyRoutine": "Abra su rutina semanal →",
+    "dashboard.assistant.link.coupon": "Cree un cupón →",
+    "dashboard.assistant.link.referral": "Cree una tarjeta de referidos →",
+    "dashboard.assistant.link.competitors": "Vea la página Competencia →",
+    "dashboard.assistant.link.pricing": "Revise sus precios en la página Precios →",
+    "dashboard.assistant.link.reports": "Abra sus Informes →",
+    "dashboard.assistant.link.settings": "Abra Configuración →",
     "dashboard.assistant.thinking": "Pensando…",
     "dashboard.assistant.yourBusinessFallback": "su negocio",
     "dashboard.assistant.emptyStateHeadline": "Pregunte lo que sea sobre la presencia de {business}",

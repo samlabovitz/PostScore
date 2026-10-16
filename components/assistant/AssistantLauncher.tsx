@@ -110,6 +110,7 @@ export function AssistantLauncher({
           businessName={businessName}
           context={context}
           starterPrompts={starterPrompts}
+          onNavigate={() => setOpen(false)}
         />
       </AssistantOverlay>
     </>

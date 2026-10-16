@@ -5,6 +5,7 @@ import { Pill } from "@/components/ui/Pill";
 import { cn } from "@/lib/utils";
 import type { CategoryResult, Confidence } from "@/lib/scoring";
 import { t, useLocale, type MessageKey } from "@/lib/i18n";
+import { checkAnchorId } from "@/lib/postaiLinks";
 
 const CONFIDENCE_PILL: Record<Confidence, { variant: "green" | "brass" | "amber" | "neutral"; labelKey: MessageKey }> = {
   VERIFIED: { variant: "green", labelKey: "dashboard.overview.confidenceVerified" },
@@ -71,7 +72,11 @@ export function CategoryCard({
           const pill = CONFIDENCE_PILL[check.confidence];
           const isFull = check.earnedPoints !== null && check.earnedPoints >= check.maxPoints;
           return (
-            <div key={check.id} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
+            <div
+              key={check.id}
+              id={checkAnchorId(check.id)}
+              className="flex scroll-mt-20 flex-col gap-1 rounded-lg py-3 transition-colors duration-700 first:pt-0 last:pb-0"
+            >
               <div className="flex items-center justify-between gap-3">
                 <span className="flex items-center gap-2 text-sm font-medium text-ink">
                   <ConfidenceIcon confidence={check.confidence} />

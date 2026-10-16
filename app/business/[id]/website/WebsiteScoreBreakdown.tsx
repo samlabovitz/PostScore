@@ -19,6 +19,7 @@ import { hackSignsFor } from "@/lib/siteSecurity";
 import { SiteSecurityDetails } from "./SiteSecurityDetails";
 import { WebsiteCoverageNote } from "@/components/scoring/WebsiteCoverageNote";
 import { t, tPlural, useLocale, type MessageKey } from "@/lib/i18n";
+import { checkAnchorId } from "@/lib/postaiLinks";
 
 /** Checks whose "excluded" state has a real, specific reason worth its
  * own honest sentence (Day 4 Part 3c) — mapped from the real stored
@@ -171,8 +172,8 @@ function CheckRow({
 
   return (
     <div
-      id={check.id === "website.security" ? "site-security" : undefined}
-      className="flex scroll-mt-20 items-start gap-3 py-4 first:pt-0 last:pb-0"
+      id={checkAnchorId(check.id)}
+      className="flex scroll-mt-20 items-start gap-3 rounded-lg py-4 transition-colors duration-700 first:pt-0 last:pb-0"
     >
       <span className={cn("mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full", style.iconWrap)}>
         <Icon size={14} />

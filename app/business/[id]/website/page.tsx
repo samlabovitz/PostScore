@@ -114,7 +114,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       }}
     >
       <div className="flex flex-col gap-8 nav:gap-10">
-        {showHackedBanner && <HackedSiteBanner href="#site-security" />}
+        {showHackedBanner && <HackedSiteBanner href="#check-security" />}
         <div>
           <Link
             href={`/business/${params.id}`}
@@ -152,7 +152,9 @@ export default async function WebsitePage({ params }: { params: { id: string } }
             {scoreBreakdown}
           </>
         ) : null}
-        {generatorSection}
+        <div id="starter-site" className="scroll-mt-20">
+          {generatorSection}
+        </div>
       </div>
     </DashboardShell>
   );

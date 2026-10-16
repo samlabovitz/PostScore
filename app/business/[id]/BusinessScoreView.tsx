@@ -642,7 +642,7 @@ export function BusinessScoreView({
 
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
-      {showHackedBanner && <HackedSiteBanner href={`/business/${businessId}/website#site-security`} />}
+      {showHackedBanner && <HackedSiteBanner href={`/business/${businessId}/website#check-security`} />}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-serif text-2xl font-semibold text-ink nav:text-[27px]">

@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { IconMenu2 } from "@tabler/icons-react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { AnchorHighlight } from "@/components/layout/AnchorHighlight";
 import { cn } from "@/lib/utils";
 import type { BusinessSummary } from "@/app/actions/businesses";
 import { getCurrentUserEmail } from "@/app/actions/auth";
@@ -67,6 +68,7 @@ export function DashboardShell({
 
   return (
     <LocaleProvider locale={locale}>
+      <AnchorHighlight />
       <div className="min-h-screen bg-paper" data-locale={locale}>
         <div className="sticky top-0 z-30 flex h-14 items-center justify-between bg-ink px-4 nav:hidden">
           <button

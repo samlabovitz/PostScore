@@ -27,10 +27,10 @@ import {
 } from "@/app/actions/assistant";
 import type { AssistantBusinessContext } from "@/lib/assistant";
 import { BusinessMemoryPanel } from "@/components/assistant/BusinessMemoryPanel";
-import { AssistantMessageContent } from "@/components/assistant/AssistantMessageContent";
+import { AssistantMessageContent, type ReplyLinkContext } from "@/components/assistant/AssistantMessageContent";
 import { formatMonthDayTime, t, tPlural, useLocale } from "@/lib/i18n";
 
-function MessageBubble({ message }: { message: AssistantMessageRow }) {
+function MessageBubble({ message, links }: { message: AssistantMessageRow; links: ReplyLinkContext }) {
   const isUser = message.role === "user";
   return (
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
@@ -43,7 +43,7 @@ function MessageBubble({ message }: { message: AssistantMessageRow }) {
         {isUser ? (
           <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed">{message.content}</p>
         ) : (
-          <AssistantMessageContent content={message.content} />
+          <AssistantMessageContent content={message.content} links={links} />
         )}
       </div>
     </div>
@@ -187,13 +187,17 @@ export function AssistantView({
   businessName,
   context,
   starterPrompts,
+  onNavigate,
 }: {
   businessId: string;
   businessName: string | null;
   context: AssistantBusinessContext;
   starterPrompts: string[];
+  /** Called when the owner follows a link in a reply (closes the overlay). */
+  onNavigate?: () => void;
 }) {
   const locale = useLocale();
+  const links: ReplyLinkContext = { businessId, referralOk: context.profile.referralOk, onNavigate };
   const [messages, setMessages] = useState<AssistantMessageRow[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -412,7 +416,7 @@ export function AssistantView({
           ) : (
             <>
               {messages.map((m) => (
-                <MessageBubble key={m.id} message={m} />
+                <MessageBubble key={m.id} message={m} links={links} />
               ))}
               {sending && <TypingIndicator />}
             </>
