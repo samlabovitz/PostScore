@@ -25,6 +25,8 @@
 //      page) otherwise get counted as if they were real About/Services
 //      prose, which they aren't.
 
+import type { PresenceCounts, PresenceDepth } from "./scoring";
+
 export const ABOUT_PAGE_KEYWORDS: string[] = [
   "about us",
   "about",
@@ -364,7 +366,12 @@ export function findKeywordSections(mainContentHtml: string, keywords: string[])
   const headings = [
     ...findRealHeadings(mainContentHtml),
     ...findPseudoHeadings(mainContentHtml),
-    ...findListItemPseudoHeadings(mainContentHtml, keywords),
+    // v1.9.0: a list-item label ends a section when it names ANY known
+    // section, not just the one being searched — the real Modern Liquors
+    // case: "Welcome to Modern Liquors" ran straight on through "Our
+    // Products" and "Special Offers" because neither is an About word.
+    // A section still only STARTS at a heading matching `keywords`.
+    ...findListItemPseudoHeadings(mainContentHtml, [...SECTION_LABEL_KEYWORDS, ...keywords]),
   ].sort((a, b) => a.index - b.index);
   for (let i = 0; i < headings.length; i++) {
     if (!matchesKeyword(headings[i].text, keywords)) continue;
@@ -383,7 +390,11 @@ export function findKeywordSections(mainContentHtml: string, keywords: string[])
     // still cost a bounded amount of work to scan.
     end = Math.min(end, start + 20000);
     const sectionHtml = mainContentHtml.slice(start, end);
-    sections.push({ text: extractVisibleText(sectionHtml), html: sectionHtml, heading: headings[i].text });
+    sections.push({
+      text: stripSiteBuilderBoilerplate(extractVisibleText(sectionHtml)),
+      html: sectionHtml,
+      heading: headings[i].text,
+    });
   }
   return sections;
 }
@@ -394,6 +405,178 @@ export function findKeywordSections(mainContentHtml: string, keywords: string[])
  * keywords for every business). EN + ES. */
 export const RETAIL_SERVICES_KEYWORDS: string[] = ["brands", "our brands", "departments", "marcas", "nuestras marcas", "departamentos"];
 export const RETAIL_BUSINESS_TYPE_IDS: readonly string[] = ["hardware_store", "retail_boutique", "liquor_store", "grocery_market", "florist"];
+
+// ---------------------------------------------------------------------
+// v1.9.0 partial credit — About and Services/products score 0 / 0.5 / 1
+// from countable signals only (see ~/Desktop/about-products-readonly.md):
+// W words, N named items, D items with a specific, P distinct prices.
+// ---------------------------------------------------------------------
+
+/** Section names that aren't About or Services but still end a section
+ * when a page builder labels them as a list item (EN + ES). */
+export const OTHER_SECTION_LABEL_KEYWORDS: string[] = [
+  "contact",
+  "hours",
+  "location",
+  "special offers",
+  "specials",
+  "events",
+  "faq",
+  "gallery",
+  "reviews",
+  "testimonials",
+  "contacto",
+  "horario",
+  "ubicación",
+  "ofertas",
+  "especiales",
+  "eventos",
+  "preguntas frecuentes",
+  "galería",
+  "reseñas",
+];
+
+/** Every known section name — see findKeywordSections. */
+export const SECTION_LABEL_KEYWORDS: string[] = [
+  ...ABOUT_PAGE_KEYWORDS,
+  ...SERVICES_PAGE_KEYWORDS,
+  ...RETAIL_SERVICES_KEYWORDS,
+  ...OTHER_SECTION_LABEL_KEYWORDS,
+];
+
+/** A fixed list of site-builder chrome that isn't the business's own
+ * words — the real Modern Liquors (Google Sites) case, where the footer
+ * ("Report abuse", "Page details", …) has no <footer> tag and was being
+ * counted as products/About text. Removed before anything is counted. */
+export const SITE_BUILDER_BOILERPLATE_PHRASES: string[] = [
+  "Skip to main content",
+  "Skip to navigation",
+  "Search this site",
+  "Embedded Files",
+  "Report abuse",
+  "Page details",
+  "Page updated",
+  "Google Sites",
+];
+
+export function stripSiteBuilderBoilerplate(text: string): string {
+  let out = text;
+  for (const phrase of SITE_BUILDER_BOILERPLATE_PHRASES) {
+    out = out.split(new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi")).join(" ");
+  }
+  return out.replace(/\s+/g, " ").trim();
+}
+
+/** About: below this many words there's nothing to credit at all. */
+export const MIN_WORDS_ABOUT_THIN = 15;
+/** Services: a matched heading/page with no items needs at least this
+ * many words to count as a (thin) section rather than a bare label. */
+export const MIN_WORDS_SERVICES_THIN = 10;
+/** A line this short (or shorter) is a named item, not prose. */
+export const MAX_ITEM_LINE_WORDS = 8;
+/** An item of at least this many words carries its own description. */
+export const MIN_ITEM_DESCRIPTION_WORDS = 6;
+/** This many distinct named items stand on their own (approved v1.9.0
+ * change: keeps Goldberg Hardware's 5-item "Services Offered" at 1). */
+export const MIN_ITEMS_SERVICES_DESCRIPTIVE = 5;
+
+const ITEM_PRICE_RE = /\$\s?\d|\d\s?\$/;
+const ITEM_SIZE_RE =
+  /\b\d+(?:\.\d+)?\s?(?:ml|l|lt|liters?|litres?|oz|fl\.?\s?oz|lbs?|kg|g|pk|packs?|ct|count)\b|\b\d+[- ]?(?:pack|pk)\b/i;
+
+/**
+ * The distinct named items in a section or page (already main-content
+ * only): every leaf `<li>`, every sub-heading (`<h2>`-`<h6>`), and every
+ * run of two or more back-to-back short `<p>` lines (≤ MAX_ITEM_LINE_WORDS
+ * words each) — the Google Sites shape, where a list is plain paragraphs
+ * ("Wines from around the world", "Premium spirits and liqueurs", …).
+ * De-duplicated by text.
+ */
+export function extractNamedItems(html: string): string[] {
+  const items: string[] = [];
+  let working = html;
+  working = working.replace(/<li\b[^>]*>([\s\S]*?)<\/li>/gi, (whole, inner: string) => {
+    if (/<(ul|ol|li)\b/i.test(inner)) return whole;
+    const text = stripSiteBuilderBoilerplate(extractVisibleText(inner));
+    if (text) items.push(text);
+    return "\u0000";
+  });
+  working = working.replace(/<h([2-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi, (_whole, _lvl, inner: string) => {
+    const text = stripSiteBuilderBoilerplate(extractVisibleText(inner));
+    if (text) items.push(text);
+    return "\u0000";
+  });
+
+  const pRe = /<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+  let run: string[] = [];
+  let lastEnd = -1;
+  const flush = () => {
+    if (run.length >= 2) items.push(...run);
+    run = [];
+  };
+  let m: RegExpExecArray | null;
+  while ((m = pRe.exec(working)) !== null) {
+    const text = stripSiteBuilderBoilerplate(extractVisibleText(m[1]));
+    const between = lastEnd >= 0 ? working.slice(lastEnd, m.index) : "";
+    const adjacent = lastEnd >= 0 && !between.includes("\u0000") && extractVisibleText(between) === "";
+    if (!adjacent) flush();
+    const words = wordCount(text);
+    if (words >= 1 && words <= MAX_ITEM_LINE_WORDS) run.push(text);
+    else flush();
+    lastEnd = m.index + m[0].length;
+  }
+  flush();
+
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = item.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** An item carries a specific: a price, a size/unit, or its own
+ * description (MIN_ITEM_DESCRIPTION_WORDS+ words). */
+export function itemHasDetail(item: string): boolean {
+  return ITEM_PRICE_RE.test(item) || ITEM_SIZE_RE.test(item) || wordCount(item) >= MIN_ITEM_DESCRIPTION_WORDS;
+}
+
+/** W/N/D/P for a section or page — saved with every scan result so a
+ * future rule change can be graded from saved data. `text` must already
+ * be boilerplate-stripped visible text of `html`. */
+export function measurePresenceContent(html: string, text: string): PresenceCounts {
+  const items = extractNamedItems(html);
+  return {
+    words: wordCount(text),
+    items: items.length,
+    detailedItems: items.filter(itemHasDetail).length,
+    prices: countDistinctPrices(text),
+  };
+}
+
+/** About: 1 at MIN_WORDS_ABOUT (40)+ words, 0.5 at 15–39, else nothing. */
+export function aboutDepth(counts: PresenceCounts): PresenceDepth | null {
+  if (counts.words >= MIN_WORDS_ABOUT) return "descriptive";
+  if (counts.words >= MIN_WORDS_ABOUT_THIN) return "thin";
+  return null;
+}
+
+/** Services/products: 1 for N ≥ 3 with D ≥ 3, P ≥ 3, N ≥ 3 with W ≥ 60,
+ * or N ≥ 5; 0.5 for any named item or 10+ words; else nothing. */
+export function servicesDepth(counts: PresenceCounts): PresenceDepth | null {
+  const { words, items, detailedItems, prices } = counts;
+  if (
+    (items >= MIN_LIST_ITEMS_SERVICES && detailedItems >= MIN_LIST_ITEMS_SERVICES) ||
+    prices >= MIN_DISTINCT_PRICES_SERVICES ||
+    (items >= MIN_LIST_ITEMS_SERVICES && words >= MIN_WORDS_SERVICES) ||
+    items >= MIN_ITEMS_SERVICES_DESCRIPTIVE
+  ) {
+    return "descriptive";
+  }
+  if (items >= 1 || words >= MIN_WORDS_SERVICES_THIN) return "thin";
+  return null;
+}
 
 /** Real `<li>` elements in already-main-content-only HTML (see
  * extractMainContentHtml) — a site's own nav `<li>`s are already

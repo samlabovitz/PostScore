@@ -50,7 +50,7 @@ import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type Aban
  * records the version that produced it, so historical scores stay
  * interpretable even after the formula evolves.
  */
-export const SCORING_VERSION = "1.8.0";
+export const SCORING_VERSION = "1.9.0";
 
 // ---------------------------------------------------------------------------
 // Core types
@@ -414,6 +414,28 @@ export interface PagePresenceResult {
   /** See PagePresenceNote's own doc. Always null except the real cases
    * it documents. */
   note: PagePresenceNote;
+  /** v1.9.0: how much real content a found section/page has — "thin"
+   * scores 0.5, "descriptive" 1. Absent/null on a result saved before
+   * v1.9.0, and on the cases we can't count (a PDF menu, an image-only
+   * menu, an ordering link): those keep their full point. */
+  depth?: PresenceDepth | null;
+  /** v1.9.0: the counts the depth was decided from, saved so a future
+   * rule change can be re-graded from saved data. null when no matching
+   * section/page was read. */
+  counts?: PresenceCounts | null;
+}
+
+/** v1.9.0 — see lib/pagePresenceDetection.ts's aboutDepth/servicesDepth. */
+export type PresenceDepth = "thin" | "descriptive";
+
+/** v1.9.0 — countable signals for one About or Services/products result:
+ * W words, N distinct named items, D items with a price/size/
+ * description, P distinct prices. */
+export interface PresenceCounts {
+  words: number;
+  items: number;
+  detailedItems: number;
+  prices: number;
 }
 
 /**
@@ -1068,6 +1090,10 @@ interface CheckDefinition {
   /** i18n key for the copy shown on a suggestion generated from this
    * check while it's losing points — see content.checks.<id>.advice. */
   adviceKey: MessageKey;
+  /** v1.9.0: used instead of adviceKey when the check earned SOME but
+   * not all of its points (e.g. a brief About section scoring 0.5) —
+   * "add an About page" is the wrong advice when one already exists. */
+  partialAdviceKey?: MessageKey;
   evaluate(
     input: BusinessScoringInput,
     locale: Locale
@@ -2066,6 +2092,7 @@ export const CHECKS: CheckDefinition[] = [
     category: "website",
     maxPoints: 1,
     adviceKey: "content.checks.website.about_presence.advice",
+    partialAdviceKey: "content.checks.website.about_presence.explanation.thin",
     // Real three-state detection (Day 4 Step 2c) — see PagePresenceResult's
     // own doc and lib/websiteAnalysis.ts's detectPagePresence for how
     // aboutPresence is actually produced (a dedicated page or a homepage
@@ -2093,6 +2120,14 @@ export const CHECKS: CheckDefinition[] = [
           earnedPoints: null,
           confidence: "NOT_FOUND",
           explanation: t(locale, "content.checks.website.about_presence.explanation.notAnalyzed"),
+        };
+      }
+      if (presence.state === "found" && presence.depth === "thin") {
+        // v1.9.0: found, but brief (15–39 words) — see aboutDepth.
+        return {
+          earnedPoints: 0.5,
+          confidence: "VERIFIED",
+          explanation: t(locale, "content.checks.website.about_presence.explanation.thin"),
         };
       }
       if (presence.state === "found") {
@@ -2147,6 +2182,7 @@ export const CHECKS: CheckDefinition[] = [
     category: "website",
     maxPoints: 1,
     adviceKey: "content.checks.website.services_presence.advice",
+    partialAdviceKey: "content.checks.website.services_presence.explanation.thin",
     // Same real three-state detection as website.about_presence above —
     // see servicesPresence's own doc. "pdf_only" is a real found: a real
     // PDF menu/list loads fine, we just never read its content.
@@ -2171,6 +2207,16 @@ export const CHECKS: CheckDefinition[] = [
           earnedPoints: null,
           confidence: "NOT_FOUND",
           explanation: t(locale, "content.checks.website.services_presence.explanation.notAnalyzed"),
+        };
+      }
+      if (presence.state === "found" && presence.depth === "thin") {
+        // v1.9.0: found, but brief (bare names, no brands/sizes/prices) —
+        // see servicesDepth. A PDF, image-only or ordering-link menu is
+        // never "thin": we can't count it, so it keeps its point.
+        return {
+          earnedPoints: 0.5,
+          confidence: "VERIFIED",
+          explanation: t(locale, "content.checks.website.services_presence.explanation.thin"),
         };
       }
       if (presence.state === "found") {
@@ -2739,7 +2785,10 @@ export function generateSuggestions(breakdown: ScoreBreakdown, locale: Locale = 
         category: c.category,
         label: t(locale, def.labelKey),
         promisedPoints: roundTo(c.maxPoints - (c.earnedPoints ?? 0), 1),
-        advice: t(locale, def.adviceKey),
+        advice: t(
+          locale,
+          def.partialAdviceKey && (c.earnedPoints ?? 0) > 0 ? def.partialAdviceKey : def.adviceKey
+        ),
       };
     })
     .sort((a, b) => b.promisedPoints - a.promisedPoints);
@@ -3000,7 +3049,20 @@ function parsePagePresenceResult(value: unknown): PagePresenceResult | null {
     locatedOnHomepage: v.locatedOnHomepage === true,
     reason: isPagePresenceFailureReason(v.reason) ? v.reason : null,
     note: typeof v.note === "string" && PAGE_PRESENCE_NOTES.has(v.note) ? (v.note as PagePresenceNote) : null,
+    // Left undefined (not null) on a result saved before v1.9.0, so an
+    // older row reads back exactly as it was saved.
+    depth: v.depth === "thin" || v.depth === "descriptive" ? v.depth : undefined,
+    counts: parsePresenceCounts(v.counts) ?? undefined,
   };
+}
+
+function parsePresenceCounts(value: unknown): PresenceCounts | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  const num = (x: unknown) => (typeof x === "number" && Number.isFinite(x) && x >= 0 ? x : null);
+  const words = num(v.words), items = num(v.items), detailedItems = num(v.detailedItems), prices = num(v.prices);
+  if (words === null || items === null || detailedItems === null || prices === null) return null;
+  return { words, items, detailedItems, prices };
 }
 
 /** Narrows a stored website_analysis_json value back to the real shape,

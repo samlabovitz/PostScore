@@ -576,14 +576,22 @@ describe("findKeywordSection — <li>-wrapped section labels (the real Modern Li
   });
 
   test("an UNRELATED <li> never becomes a false section boundary", () => {
-    // "Contact Us" matches no keyword, so it must never end the "Welcome
-    // to..." About section early — the real content after it still has
-    // to be captured for the word count to pass.
-    const html = `<main><ul><li><p><span>Welcome to Modern Liquors</span></p></li></ul><ul><li><p><span>Contact Us</span></p></li></ul><p>Modern Liquors has been serving the community with the finest selection of wines, spirits, and beers for many happy years now, with a wide and growing selection every single season, no matter what the occasion calls for or what your own personal taste happens to be.</p></main>`;
+    // "Free parking" names no known section, so it must never end the
+    // "Welcome to..." About section early — the real content after it
+    // still has to be captured for the word count to pass. (v1.9.0: a
+    // KNOWN section label such as "Contact Us" does end it — see the
+    // next test.)
+    const html = `<main><ul><li><p><span>Welcome to Modern Liquors</span></p></li></ul><ul><li><p><span>Free parking</span></p></li></ul><p>Modern Liquors has been serving the community with the finest selection of wines, spirits, and beers for many happy years now, with a wide and growing selection every single season, no matter what the occasion calls for or what your own personal taste happens to be.</p></main>`;
     const section = findKeywordSection(html, ABOUT_PAGE_KEYWORDS);
     expect(section).not.toBeNull();
     expect(wordCount(section!.text)).toBeGreaterThanOrEqual(40);
     expect(aboutContentPasses(section!.text)).toBe(true);
+  });
+
+  test("v1.9.0: a KNOWN section label (\"Contact Us\") ends the About section", () => {
+    const html = `<main><ul><li><p><span>Welcome to Modern Liquors</span></p></li></ul><p>Your neighborhood bottle shop.</p><ul><li><p><span>Contact Us</span></p></li></ul><p>Call us at 302-319-8129 or visit us at 246 E Delaware Ave, Newark, DE 19711, any day of the week, for wines, spirits, beer and friendly advice on what to pick.</p></main>`;
+    const section = findKeywordSection(html, ABOUT_PAGE_KEYWORDS);
+    expect(section!.text).toBe("Your neighborhood bottle shop.");
   });
 
   test("an <li> WRAPPING A SUB-LIST is never treated as a section-label heading", () => {

@@ -524,7 +524,7 @@ describe("detectPagePresence", () => {
 
     const result = await detectPagePresence("services", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
 
-    expect(result).toEqual({ state: "not_found", url: "https://example.com/menu", locatedOnHomepage: false, reason: null, note: null });
+    expect(result).toEqual({ state: "not_found", url: "https://example.com/menu", locatedOnHomepage: false, reason: null, note: null, depth: null, counts: { words: 4, items: 0, detailedItems: 0, prices: 0 } });
   });
 
   test("a matched link that 404s: not_found with note 'broken_link' — never couldnt_check", async () => {
@@ -539,6 +539,8 @@ describe("detectPagePresence", () => {
       locatedOnHomepage: false,
       reason: null,
       note: "broken_link",
+      depth: null,
+      counts: null,
     });
     expect(fetchImpl).toHaveBeenCalledTimes(1); // never retried — a 404 is a real, final answer
   });
@@ -555,6 +557,8 @@ describe("detectPagePresence", () => {
       locatedOnHomepage: false,
       reason: "timed_out",
       note: null,
+      depth: null,
+      counts: null,
     });
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
@@ -586,7 +590,7 @@ describe("detectPagePresence", () => {
 
     const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
 
-    expect(result).toEqual({ state: "not_found", url: "https://example.com/about", locatedOnHomepage: false, reason: null, note: null });
+    expect(result).toEqual({ state: "not_found", url: "https://example.com/about", locatedOnHomepage: false, reason: null, note: null, depth: null, counts: { words: 2, items: 0, detailedItems: 0, prices: 0 } });
   });
 
   test("a matched dedicated page with real substantial content: found, url points at the real page", async () => {
@@ -596,7 +600,7 @@ describe("detectPagePresence", () => {
 
     const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
 
-    expect(result).toEqual({ state: "found", url: "https://example.com/about", locatedOnHomepage: false, reason: null, note: null });
+    expect(result).toEqual({ state: "found", url: "https://example.com/about", locatedOnHomepage: false, reason: null, note: null, depth: "descriptive", counts: { words: 44, items: 0, detailedItems: 0, prices: 0 } });
   });
 
   test("no matching candidate link and no matching homepage section: honest not_found, zero network calls", async () => {
@@ -604,7 +608,7 @@ describe("detectPagePresence", () => {
 
     const result = await detectPagePresence("about", NO_MATCH_HOMEPAGE_HTML, HOMEPAGE_URL, [], newPresenceBudget(), fetchImpl);
 
-    expect(result).toEqual({ state: "not_found", url: null, locatedOnHomepage: false, reason: null, note: null });
+    expect(result).toEqual({ state: "not_found", url: null, locatedOnHomepage: false, reason: null, note: null, depth: null, counts: null });
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
@@ -660,6 +664,8 @@ describe("detectPagePresence", () => {
       locatedOnHomepage: false,
       reason: "js_rendered",
       note: null,
+      depth: null,
+      counts: null,
     });
   });
 
@@ -892,7 +898,7 @@ describe("detectPagePresence — 'found anywhere wins' (multiple ranked candidat
 
     const result = await detectPagePresence("about", homepageWithAboutSection, HOMEPAGE_URL, candidates, newPresenceBudget(), fetchImpl);
 
-    expect(result).toEqual({ state: "found", url: null, locatedOnHomepage: true, reason: null, note: null });
+    expect(result).toEqual({ state: "found", url: null, locatedOnHomepage: true, reason: null, note: null, depth: "descriptive", counts: { words: 54, items: 0, detailedItems: 0, prices: 0 } });
   });
 
   test("a mix of one unreadable candidate and one readable-but-thin candidate, nothing passes: couldnt_check wins over not_found", async () => {

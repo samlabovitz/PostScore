@@ -502,7 +502,7 @@ describe("Day 4b: drink businesses get specific (brand + size) Price check examp
     ]);
     expect(resolveBizProfile("Liquor store", "liquor_store", null, "es").pricingExamples).toEqual([
       "Vodka Tito's 750 ml",
-      "Bud Light, paquete de 12 latas de 12 oz",
+      "Bud Light paquete de 12 latas (12 oz)",
       "Josh Cabernet 750 ml",
     ]);
   });

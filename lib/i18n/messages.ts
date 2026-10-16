@@ -323,6 +323,8 @@ export type MessageKey =
   | "content.checks.website.services_presence.explanation.jsRendered"
   | "content.checks.website.services_presence.explanation.onlineOrdering"
   | "content.checks.website.services_presence.explanation.imageOnly"
+  | "content.checks.website.services_presence.explanation.thin"
+  | "content.checks.website.about_presence.explanation.thin"
   // --- content.checks.website.security/info_consistency/notice_freshness/site_freshness (lib/scoring.ts, lib/websiteTrust.ts) ---
   | "content.checks.website.security.label"
   | "content.checks.website.security.advice"
@@ -2676,6 +2678,10 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Found your online ordering menu at {url} — we confirmed it loads, but can't read the items.",
     "content.checks.website.services_presence.explanation.imageOnly":
       "Your menu is an image — customers can see it, but it's hard to read on phones and Google can't read it.",
+    "content.checks.website.services_presence.explanation.thin":
+      "Found a products/services section, but it's brief — add descriptions, brands, sizes or prices so customers know what you offer.",
+    "content.checks.website.about_presence.explanation.thin":
+      "Found an About section, but it's short — a few more sentences about your story, your team or what makes you different would help.",
 
     "content.checks.website.security.label": "Site security",
     "content.checks.website.security.advice":
@@ -5247,6 +5253,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.services_presence.explanation.jsRendered": "Su sitio genera su contenido con JavaScript, por lo que nuestra comprobación no pudo leerlo — ábralo usted mismo para confirmarlo. Se excluye de su puntuación, no se cuenta en su contra.",
     "content.checks.website.services_presence.explanation.onlineOrdering": "Encontramos su menú de pedidos en línea en {url} — confirmamos que carga, pero no podemos leer los artículos.",
     "content.checks.website.services_presence.explanation.imageOnly": "Su menú es una imagen — los clientes pueden verlo, pero es difícil de leer en teléfonos y Google no puede leerlo.",
+    "content.checks.website.services_presence.explanation.thin": "Encontramos una sección de productos/servicios, pero es breve — agregue descripciones, marcas, tamaños o precios para que los clientes sepan lo que ofrece.",
+    "content.checks.website.about_presence.explanation.thin": "Encontramos una sección \"Acerca de\", pero es corta — unas oraciones más sobre su historia, su equipo o lo que lo distingue ayudarían.",
     "content.checks.website.security.label": "Seguridad del sitio",
     "content.checks.website.security.advice": "Pida a su proveedor de alojamiento o desarrollador que elimine el contenido inyectado de inmediato y cambie todas las contraseñas de administrador — un sitio hackeado puede perjudicar silenciosamente a sus visitantes y a su posición en Google.",
     "content.checks.website.security.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para verificar.",
@@ -6555,7 +6563,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.liquor_wine.referralPresets.case_discount_referral.description":
       "Premia específicamente a sus mejores clientes (los que compran por caja) por traer nuevos.",
     "bizProfiles.liquor_wine.pricingExamples.example1": "Vodka Tito's 750 ml",
-    "bizProfiles.liquor_wine.pricingExamples.example2": "Bud Light, paquete de 12 latas de 12 oz",
+    "bizProfiles.liquor_wine.pricingExamples.example2": "Bud Light paquete de 12 latas (12 oz)",
     "bizProfiles.liquor_wine.pricingExamples.example3": "Josh Cabernet 750 ml",
     "bizProfiles.liquor_wine.pricingTips.loss_leader_traffic.label":
       "Use algunos productos gancho para atraer tráfico",

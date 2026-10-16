@@ -850,7 +850,7 @@ describe("businessRowToScoringInput adapter", () => {
     expect(input.mostRecentReviewDaysAgo).toBeNull();
     expect(input.httpsStatus).toBe("https");
     const breakdown = scoreBusiness(input);
-    expect(breakdown.scoringVersion).toBe("1.8.0");
+    expect(breakdown.scoringVersion).toBe("1.9.0");
   });
 
   test("degrades an unexpected https_status value to null (excluded) rather than trusting a bad cast", () => {
@@ -2003,5 +2003,68 @@ describe("Safe Browsing threat wording", () => {
     expect(scoreBusiness(input, "es").checks.find((c) => c.id === "website.security")!.explanation).toBe(
       "Google marcó este sitio como inseguro (MALWARE) — esto necesita atención urgente."
     );
+  });
+});
+
+describe("v1.9.0: About and Services/products partial credit (0 / 0.5 / 1)", () => {
+  const COUNTS = { words: 16, items: 4, detailedItems: 0, prices: 0 };
+  const withPresence = (about: WebsiteAnalysis["aboutPresence"], services: WebsiteAnalysis["servicesPresence"]): BusinessScoringInput => ({
+    ...PERFECT_INPUT,
+    websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, aboutPresence: about, servicesPresence: services },
+  });
+  const THIN_HOME = { state: "found" as const, url: null, locatedOnHomepage: true, reason: null, note: null, depth: "thin" as const, counts: COUNTS };
+  const check = (input: BusinessScoringInput, id: string, locale: "en" | "es" = "en") =>
+    scoreBusiness(input, locale).checks.find((c) => c.id === id)!;
+
+  test("a thin About and a thin Services each earn 0.5, with the 'thin' explanation (EN)", () => {
+    const input = withPresence(THIN_HOME, THIN_HOME);
+    const about = check(input, "website.about_presence");
+    const services = check(input, "website.services_presence");
+    expect(about.earnedPoints).toBe(0.5);
+    expect(services.earnedPoints).toBe(0.5);
+    expect(about.explanation).toBe(
+      "Found an About section, but it's short — a few more sentences about your story, your team or what makes you different would help."
+    );
+    expect(services.explanation).toBe(
+      "Found a products/services section, but it's brief — add descriptions, brands, sizes or prices so customers know what you offer."
+    );
+  });
+
+  test("ES (usted)", () => {
+    const input = withPresence(THIN_HOME, THIN_HOME);
+    expect(check(input, "website.about_presence", "es").explanation).toBe(
+      'Encontramos una sección "Acerca de", pero es corta — unas oraciones más sobre su historia, su equipo o lo que lo distingue ayudarían.'
+    );
+    expect(check(input, "website.services_presence", "es").explanation).toBe(
+      "Encontramos una sección de productos/servicios, pero es breve — agregue descripciones, marcas, tamaños o precios para que los clientes sepan lo que ofrece."
+    );
+  });
+
+  test("a 0.5 suggests improving the section, not adding one", () => {
+    const suggestions = generateSuggestions(scoreBusiness(withPresence(THIN_HOME, THIN_HOME)));
+    const about = suggestions.find((s) => s.checkId === "website.about_presence")!;
+    expect(about.promisedPoints).toBe(0.5);
+    expect(about.advice).toContain("a few more sentences");
+  });
+
+  test("descriptive, and results saved before v1.9.0 (no depth), keep 1; PDF/image/ordering menus keep 1", () => {
+    const descriptive = { ...THIN_HOME, depth: "descriptive" as const };
+    expect(check(withPresence(descriptive, descriptive), "website.services_presence").earnedPoints).toBe(1);
+    const legacy = { state: "found" as const, url: "https://example.com/services", locatedOnHomepage: false, reason: null, note: null };
+    expect(check(withPresence(legacy, legacy), "website.services_presence").earnedPoints).toBe(1);
+    for (const note of ["pdf_only", "image_only", "online_ordering"] as const) {
+      expect(check(withPresence(legacy, { ...legacy, note }), "website.services_presence").earnedPoints).toBe(1);
+    }
+  });
+
+  test("saved counts read back from website_analysis_json; garbage counts are dropped", () => {
+    const row = (presence: unknown) =>
+      businessRowToScoringInput({
+        rating: null, review_count: null, phone: null, address: null, opening_hours: null, website: "https://example.com",
+        https_status: "https", categories: null, category: null, photo_count: null, business_status: null,
+        website_analysis_json: { ...GOOD_WEBSITE_ANALYSIS, aboutPresence: presence, servicesPresence: presence },
+      } as unknown as Parameters<typeof businessRowToScoringInput>[0]).websiteAnalysis!.aboutPresence;
+    expect(row(THIN_HOME)).toMatchObject({ depth: "thin", counts: COUNTS });
+    expect(row({ ...THIN_HOME, counts: { words: "lots" } })!.counts).toBeUndefined();
   });
 });

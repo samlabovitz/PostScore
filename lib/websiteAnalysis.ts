@@ -27,6 +27,7 @@ import type {
   PagePresenceFailureReason,
   PagePresenceNote,
   PagePresenceResult,
+  PresenceCounts,
   RenderedContentSignals,
   WebsiteContentSignals,
   WebsiteTrustAnalysis,
@@ -36,11 +37,10 @@ import {
   ABOUT_PAGE_KEYWORDS,
   ONLINE_ORDERING_LINK_KEYWORDS,
   SERVICES_PAGE_KEYWORDS,
-  aboutContentPasses,
+  aboutDepth,
   extractMainContentHtml,
   extractVisibleText as extractMainContentVisibleText,
   findKeywordSections,
-  explicitServicesSectionPasses,
   findMenuPdfLink,
   findPdfMenuLink,
   isKnownOrderingPlatformHost,
@@ -49,8 +49,10 @@ import {
   looksLikeImageOnlyMenu,
   looksLikeNonAboutTopicPage,
   SERVICES_PAGE_SECONDARY_KEYWORDS,
+  measurePresenceContent,
   sameBrandHost,
-  servicesContentPasses,
+  servicesDepth,
+  stripSiteBuilderBoilerplate,
 } from "./pagePresenceDetection";
 import {
   classifyWebsiteKind,
@@ -770,6 +772,14 @@ export async function detectPagePresence(
   let sawUnreadable = false;
   let unreadableEvidence: { url: string; reason: PagePresenceFailureReason } | null = null;
   let notFoundEvidence: { url: string; note: PagePresenceNote } | null = null;
+  // v1.9.0: the first matching section/page that has SOME real content
+  // but not enough to be descriptive (scores 0.5) — kept while we look
+  // for a descriptive one, returned only if none turns up.
+  let thinResult: PagePresenceResult | null = null;
+  // Counts from the first matching section/page read, saved even on a
+  // not_found so a future rule change can be graded from saved data.
+  let firstCounts: PresenceCounts | null = null;
+  const depthOf = (counts: PresenceCounts) => (kind === "about" ? aboutDepth(counts) : servicesDepth(counts));
 
   for (const candidate of ranked) {
     const outcome = await fetchPresenceCandidateBudgeted(candidate.url, budget, fetchImpl);
@@ -809,14 +819,16 @@ export async function detectPagePresence(
       continue;
     }
     const mainHtml = extractMainContentHtml(outcome.html);
-    const text = extractMainContentVisibleText(mainHtml);
-    const passes = kind === "about" ? aboutContentPasses(text) : servicesContentPasses(mainHtml, text);
-    if (passes) {
-      // Step 2g: an About page on the brand's own site rather than this
-      // business's (a chain's corporate About) is said honestly.
-      const brandPage =
-        kind === "about" && normalizeHost(new URL(candidate.url).hostname) !== normalizeHost(homepageUrl.hostname);
-      return { state: "found", url: candidate.url, locatedOnHomepage: false, reason: null, note: brandPage ? "brand_page" : null };
+    const text = stripSiteBuilderBoilerplate(extractMainContentVisibleText(mainHtml));
+    const counts = measurePresenceContent(mainHtml, text);
+    firstCounts ??= counts;
+    const depth = depthOf(counts);
+    // Step 2g: an About page on the brand's own site rather than this
+    // business's (a chain's corporate About) is said honestly.
+    const brandPage =
+      kind === "about" && normalizeHost(new URL(candidate.url).hostname) !== normalizeHost(homepageUrl.hostname);
+    if (depth === "descriptive") {
+      return { state: "found", url: candidate.url, locatedOnHomepage: false, reason: null, note: brandPage ? "brand_page" : null, depth, counts };
     }
     if (kind === "services") {
       // Real Red Bowl case.
@@ -833,18 +845,25 @@ export async function detectPagePresence(
         return { state: "found", url: candidate.url, locatedOnHomepage: false, reason: null, note: "image_only" };
       }
     }
+    if (depth === "thin") {
+      thinResult ??= { state: "found", url: candidate.url, locatedOnHomepage: false, reason: null, note: brandPage ? "brand_page" : null, depth, counts };
+      continue;
+    }
     if (!notFoundEvidence) notFoundEvidence = { url: candidate.url, note: null };
   }
 
   const mainHomepageHtml = extractMainContentHtml(homepageHtml);
-  // Every matching homepage section, until one genuinely passes (Step 2g).
+  // Every matching homepage section, until one is descriptive (Step 2g;
+  // v1.9.0 depth rule — see aboutDepth/servicesDepth).
   for (const section of findKeywordSections(mainHomepageHtml, keywords)) {
-    const passes =
-      kind === "about"
-        ? aboutContentPasses(section.text)
-        : servicesContentPasses(section.html, section.text) || explicitServicesSectionPasses(section);
-    if (passes) {
-      return { state: "found", url: null, locatedOnHomepage: true, reason: null, note: null };
+    const counts = measurePresenceContent(section.html, section.text);
+    firstCounts ??= counts;
+    const depth = depthOf(counts);
+    if (depth === "descriptive") {
+      return { state: "found", url: null, locatedOnHomepage: true, reason: null, note: null, depth, counts };
+    }
+    if (depth === "thin") {
+      thinResult ??= { state: "found", url: null, locatedOnHomepage: true, reason: null, note: null, depth, counts };
     }
   }
 
@@ -884,6 +903,10 @@ export async function detectPagePresence(
     }
   }
 
+  // A page we couldn't read might hold the full content, so "couldn't
+  // check" (excluded from the score) still wins over a thin find — a
+  // brief homepage blurb never costs a business half a point when its
+  // real page was just unreadable.
   if (sawUnreadable && unreadableEvidence) {
     return {
       state: "couldnt_check",
@@ -891,14 +914,19 @@ export async function detectPagePresence(
       locatedOnHomepage: false,
       reason: unreadableEvidence.reason,
       note: null,
+      depth: null,
+      counts: firstCounts,
     };
   }
+  if (thinResult) return thinResult;
   return {
     state: "not_found",
     url: notFoundEvidence?.url ?? null,
     locatedOnHomepage: false,
     reason: null,
     note: notFoundEvidence?.note ?? null,
+    depth: null,
+    counts: firstCounts,
   };
 }
 
