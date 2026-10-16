@@ -4,10 +4,10 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 // a scan goes through findAndScoreCompetitors (lib/competitors.ts); these
 // tests replace it with a spy so "no paid call" is checked directly.
 const scanSpy = vi.fn();
-vi.mock("@/lib/competitors", () => ({
-  findAndScoreCompetitors: (...args: unknown[]) => scanSpy(...args),
-  MAX_COMPETITORS: 10,
-}));
+vi.mock("@/lib/competitors", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/competitors")>("@/lib/competitors");
+  return { ...actual, findAndScoreCompetitors: (...args: unknown[]) => scanSpy(...args) };
+});
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -163,5 +163,27 @@ describe("the automatic first competitor scan", () => {
     const { client } = fakeSupabase({ businesses: [BUSINESS], competitor_scans: [] });
     scanSpy.mockRejectedValueOnce(new Error("Places down"));
     await expect(ensureFirstCompetitorScanWithClient(client, "biz")).resolves.toMatchObject({ status: "error" });
+  });
+});
+
+import { competitorScanBlocker } from "@/lib/competitors";
+
+describe("when a scan can't search at all (decided from saved data, no cost)", () => {
+  test("only generic Google types ('store', 'service') → category_too_generic; no coordinates → no_location; specific → null", () => {
+    const at = { lat: 39.68, lng: -75.75 };
+    expect(competitorScanBlocker({ ...at, primaryType: "store", categories: ["point_of_interest", "store", "establishment"] })).toBe("category_too_generic");
+    expect(competitorScanBlocker({ ...at, primaryType: "service", categories: ["service", "point_of_interest", "establishment"] })).toBe("category_too_generic");
+    expect(competitorScanBlocker({ ...at, primaryType: "liquor_store", categories: ["liquor_store", "store"] })).toBeNull();
+    expect(competitorScanBlocker({ lat: null, lng: null, primaryType: "liquor_store", categories: null })).toBe("no_location");
+  });
+
+  test("the page data says so for Pop Culture Vulture's 'store'-only listing — without any scan call", async () => {
+    const { client } = fakeSupabase({
+      businesses: [{ ...BUSINESS, name: "Pop Culture Vulture", primary_type: "store", categories: ["point_of_interest", "store", "establishment"] }],
+      competitor_scans: [],
+    });
+    const result = await getCompetitorsWithClient(client, "biz", NOW);
+    expect(result).toMatchObject({ status: "ok", latest: null, scanBlocker: "category_too_generic" });
+    expect(scanSpy).not.toHaveBeenCalled();
   });
 });

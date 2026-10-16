@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import {
+  competitorScanBlocker,
   findAndScoreCompetitors,
   MAX_COMPETITORS,
   type CompetitorSourceBusiness,
@@ -79,6 +80,10 @@ export type GetCompetitorsResult =
       /** Owner's rank per saved scan, oldest first (one point per scan). */
       rankHistory: CompetitorRankPoint[];
       refresh: RefreshAvailability;
+      /** Why a scan can't search at all (from saved data, no cost), or
+       * null. "category_too_generic": Google lists only a general type
+       * like "store", so there's nothing specific to match on. */
+      scanBlocker: "no_location" | "category_too_generic" | null;
     }
   | { status: "not_found" }
   | { status: "unauthenticated" }
@@ -111,7 +116,7 @@ export async function getCompetitorsWithClient(
 ): Promise<GetCompetitorsResult> {
   const { data: business, error } = await supabase
     .from("businesses")
-    .select("name, address, language, category, categories, primary_type, business_type_override")
+    .select("name, address, language, category, categories, primary_type, business_type_override, lat, lng")
     .eq("id", businessId)
     .single();
 
@@ -119,7 +124,10 @@ export async function getCompetitorsWithClient(
     return { status: "not_found" };
   }
 
-  const row = business as Pick<CompetitorBusinessRow, "name" | "address" | "language" | "category" | "categories" | "primary_type" | "business_type_override">;
+  const row = business as Pick<
+    CompetitorBusinessRow,
+    "name" | "address" | "language" | "category" | "categories" | "primary_type" | "business_type_override" | "lat" | "lng"
+  >;
   const locale = normalizeLocale(row.language);
   const competitorNoun = resolveBizProfile(
     row.category,
@@ -153,6 +161,7 @@ export async function getCompetitorsWithClient(
     latest,
     rankHistory: scans.map(rankPoint).reverse(),
     refresh: refreshAvailability(latest?.createdAt ?? null, now),
+    scanBlocker: competitorScanBlocker({ lat: row.lat, lng: row.lng, primaryType: row.primary_type, categories: row.categories }),
   };
 }
 

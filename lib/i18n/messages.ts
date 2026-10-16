@@ -126,6 +126,7 @@ export type MessageKey =
   // --- Dashboard: Competitors page (app/business/[id]/competitors/CompetitorsView.tsx) ---
   // Naming convention for the whole dashboard rollout: dashboard.<section>.<key>.
   | "dashboard.competitors.title"
+  | "dashboard.competitors.noneFoundNearby"
   | "dashboard.competitors.statComparableScore"
   | "dashboard.competitors.fullScoreNote"
   | "dashboard.competitors.fullScoreShort"
@@ -2465,6 +2466,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "report.footer.unsubscribeLinkText": "Unsubscribe from these reports",
 
     "dashboard.competitors.title": "Competitors",
+    "dashboard.competitors.noneFoundNearby": "We looked for similar businesses within {miles} mi and Google didn't list any. Scanned {date}.",
     "dashboard.competitors.statComparableScore": "Comparable score",
     "dashboard.competitors.fullScoreNote": "Your full PostScore is {score} — it also includes website checks we don't run on competitors.",
     "dashboard.competitors.fullScoreShort": "Full PostScore {score}",
@@ -5191,6 +5193,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "report.footer.unsubscribeLinkText": "Darse de baja de estos informes",
 
     "dashboard.competitors.title": "Competencia",
+    "dashboard.competitors.noneFoundNearby": "Buscamos negocios similares a menos de {miles} mi y Google no indicó ninguno. Analizado el {date}.",
     "dashboard.competitors.statComparableScore": "Puntuación comparable",
     "dashboard.competitors.fullScoreNote": "Su PostScore completo es {score} — también incluye revisiones del sitio web que no hacemos a la competencia.",
     "dashboard.competitors.fullScoreShort": "PostScore completo {score}",

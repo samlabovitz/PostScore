@@ -56,6 +56,7 @@ const DATA: Extract<GetCompetitorsResult, { status: "ok" }> = {
     { scanId: "s", createdAt: "2026-10-16T13:00:00Z", rank: 3, of: 3, total: 71 },
   ],
   refresh: { allowed: false, nextAvailableAt: "2026-11-15T13:00:00.000Z" },
+  scanBlocker: null,
 };
 
 function render(data = DATA, locale: "en" | "es" = "en") {
@@ -113,6 +114,27 @@ describe("Competitors page", () => {
     expect(html).toContain("Competitor scan not run yet");
     expect(html).toContain("Run competitor scan");
     expect(html).not.toContain("You're #");
+  });
+
+  test("a scan that searched and found none: the honest message with radius and date, the 30-day limit — never '#1 of 1' or 'not run yet' (EN + ES)", () => {
+    const none = {
+      ...DATA,
+      latest: { scanId: "n", createdAt: "2026-10-16T13:00:00Z", entries: [entry("Modern Liquors", 71, true)] },
+      rankHistory: [],
+    };
+    const html = render(none);
+    expect(html).toContain("We looked for similar businesses within 5 mi and Google didn't list any. Scanned Oct 16, 2026.");
+    expect(html).toContain("Available again on Nov 15, 2026");
+    expect(html).not.toContain("You're #");
+    expect(html).not.toContain("not run yet");
+    expect(render(none, "es")).toContain("Buscamos negocios similares a menos de 5 mi y Google no indicó ninguno. Analizado el 16 oct 2026.");
+  });
+
+  test("Google lists only a general category: say so — no 'not run yet', no Run button (it would fail the same way)", () => {
+    const html = render({ ...DATA, businessName: "Pop Culture Vulture", latest: null, rankHistory: [], refresh: { allowed: true, nextAvailableAt: null }, scanBlocker: "category_too_generic" });
+    expect(html).toContain("Pop Culture Vulture's Google category is too general to match reliably");
+    expect(html).not.toContain("not run yet");
+    expect(html).not.toContain("Run competitor scan");
   });
 
   test("'Compared over time' hides with fewer than 2 saved scans", () => {

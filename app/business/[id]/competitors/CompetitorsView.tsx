@@ -26,6 +26,7 @@ import {
   type MetricDef,
 } from "@/lib/competitorComparison";
 import { priceLevelToSymbol } from "@/lib/priceLevel";
+import { MAX_SEARCH_RADIUS_MILES } from "@/lib/competitorScanPolicy";
 import { estimateLabelWidth, layoutLabels, shortName, type Lane, type LabelRequest } from "@/lib/lineupLayout";
 import { gradeFromTotal } from "@/lib/scoring";
 import { formatCount, formatShortDate, t, tPlural, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
@@ -86,15 +87,45 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
         <p className="mt-1 max-w-2xl text-sm text-ink-soft">{t(locale, "dashboard.competitors.comparableNote")}</p>
       </div>
 
-      <ScanInfo businessId={businessId} data={data} />
+      {scan && scan.entries.some((e) => !e.isSubject) && <ScanInfo businessId={businessId} data={data} />}
 
-      {!scan ? (
+      {!scan && data.scanBlocker ? (
+        // We can't search at all (from saved data, no cost) — say why
+        // honestly; a "Run" button would only fail the same way.
+        <Card className="p-6 text-sm text-ink-soft">
+          {data.scanBlocker === "no_location"
+            ? t(locale, "dashboard.competitors.noCoordinatesError")
+            : t(locale, "dashboard.competitors.categoryTooGenericError", {
+                name: data.businessName ?? t(locale, "dashboard.competitors.thisBusinessFallback"),
+              })}
+        </Card>
+      ) : !scan ? (
         <Card className="flex flex-col items-start gap-3 p-6">
           <h2 className="font-serif text-lg font-semibold text-ink">{t(locale, "dashboard.competitors.notRunYet")}</h2>
           <p className="text-sm text-ink-soft">
             {t(locale, "dashboard.competitors.notRunYetBody", { competitorNoun: data.competitorNoun })}
           </p>
           <RefreshButton businessId={businessId} allowed label={t(locale, "dashboard.competitors.runFirstScan")} />
+        </Card>
+      ) : !scan.entries.some((e) => !e.isSubject) ? (
+        // A real scan searched every radius and Google listed no
+        // comparable business — never "#1 of 1", never "not run yet".
+        <Card className="flex flex-col items-start gap-3 p-6">
+          <p className="text-sm text-ink-soft">
+            {t(locale, "dashboard.competitors.noneFoundNearby", {
+              miles: MAX_SEARCH_RADIUS_MILES,
+              date: formatShortDate(scan.createdAt, locale),
+            })}
+          </p>
+          {data.refresh.allowed ? (
+            <RefreshButton businessId={businessId} allowed label={t(locale, "dashboard.competitors.refreshButton")} />
+          ) : (
+            <span className="text-[12.5px] text-ink-mute">
+              {t(locale, "dashboard.competitors.availableAgain", {
+                date: formatShortDate(data.refresh.nextAvailableAt ?? scan.createdAt, locale),
+              })}
+            </span>
+          )}
         </Card>
       ) : (
         <>

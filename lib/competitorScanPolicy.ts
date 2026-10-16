@@ -12,6 +12,11 @@
 //   (--with-competitors / --competitors-only).
 
 export const COMPETITOR_REFRESH_COOLDOWN_DAYS = 30;
+
+/** The widest search radius a competitor scan uses (lib/competitors.ts's
+ * last radius tier) — when nothing comparable turns up, this is how far
+ * we looked. */
+export const MAX_SEARCH_RADIUS_MILES = 5;
 const DAY_MS = 86_400_000;
 
 /** Google bills each Nearby Search Enterprise call at $35 per 1,000. */

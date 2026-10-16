@@ -4,6 +4,7 @@
 // rank them by real PostScore. No invented competitors, no invented
 // scores, no invented "rank" metric other than PostScore itself.
 
+import { MAX_SEARCH_RADIUS_MILES } from "@/lib/competitorScanPolicy";
 import { businessWebsiteUrl } from "@/lib/businessWebsite";
 import {
   businessRowToScoringInput,
@@ -58,7 +59,7 @@ const METERS_PER_MILE = 1609.34;
 const RADIUS_TIERS_METERS = [
   1.5 * METERS_PER_MILE,
   3 * METERS_PER_MILE,
-  5 * METERS_PER_MILE,
+  MAX_SEARCH_RADIUS_MILES * METERS_PER_MILE,
 ];
 
 function metersToMiles(meters: number): number {
@@ -447,6 +448,21 @@ function emptyResult(
  * returns them ranked strictly by that real PostScore — never a fabricated
  * "maps rank" or SEO metric.
  */
+/**
+ * Why a competitor scan can't search at all, decided from saved data
+ * alone (no network, no cost) with the exact rule findAndScoreCompetitors
+ * applies before searching: no saved coordinates, or only generic Google
+ * types ("store", "service", …) to match on. null = a scan can search.
+ */
+export function competitorScanBlocker(
+  subject: Pick<CompetitorSourceBusiness, "lat" | "lng" | "primaryType" | "categories">
+): "no_location" | "category_too_generic" | null {
+  if (subject.lat === null || subject.lng === null) return "no_location";
+  const hasAnyTypeData = !!subject.primaryType || !!(subject.categories && subject.categories.length > 0);
+  const specificType = firstSpecificType([subject.primaryType, ...(subject.categories ?? [])]);
+  return hasAnyTypeData && !specificType ? "category_too_generic" : null;
+}
+
 export async function findAndScoreCompetitors(
   subject: CompetitorSourceBusiness,
   locale: Locale
