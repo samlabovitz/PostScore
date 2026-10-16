@@ -16,6 +16,7 @@ import {
 } from "./pricing";
 import type { RankedCompetitor } from "./competitors";
 import { resolveBizProfile } from "../config/bizProfiles";
+import { t, type MessageKey } from "./i18n";
 
 describe("PRICE_TIERS / isPriceTierId / priceTierLabel", () => {
   test("has exactly 5 tiers ending with no_data", () => {
@@ -112,6 +113,8 @@ describe("buildPricingPrompt", () => {
     expect(prompt).toContain("Salon & Personal Care");
     expect(prompt).toContain("Women's Haircut: $45.00");
     expect(prompt).toContain("Your Google price level: $$");
+    // Day 4b: labeled as store-wide context, never a per-item basis.
+    expect(prompt).toContain("Store-wide context only");
     // Competitor identities are never sent — only the real price-level
     // distribution, collapsed to counts, to keep the prompt (and cost) low.
     expect(prompt).not.toContain("Nearby Salon");
@@ -134,7 +137,7 @@ describe("parsePricingAssessmentResponse", () => {
     { service: "Men's Haircut", price: 25 },
   ];
 
-  test("parses a well-formed verified_local response and matches services by order", () => {
+  test("Day 4b: a fresh 'verified_local' reply is downgraded to general_estimate (keeping its tier), and services still match by order", () => {
     const raw = JSON.stringify({
       assessments: [
         { service: "Women's Haircut", tier: "competitive", basis: "verified_local", guidance: "In line with nearby salons." },
@@ -143,9 +146,54 @@ describe("parsePricingAssessmentResponse", () => {
     });
     const result = parsePricingAssessmentResponse(raw, services);
     expect(result).toEqual([
-      { service: "Women's Haircut", price: 45, tier: "competitive", basis: "verified_local", guidance: "In line with nearby salons." },
-      { service: "Men's Haircut", price: 25, tier: "under_market", basis: "verified_local", guidance: "Room to raise this a bit." },
+      { service: "Women's Haircut", price: 45, tier: "competitive", basis: "general_estimate", guidance: "In line with nearby salons." },
+      { service: "Men's Haircut", price: 25, tier: "under_market", basis: "general_estimate", guidance: "Room to raise this a bit." },
     ]);
+    expect(result.some((r) => r.basis === "verified_local")).toBe(false);
+  });
+
+  describe("Day 4b: vague bottled/packaged items need brand and size", () => {
+    const items = [
+      { service: "Tito's Vodka 750 ml", price: 25 },
+      { service: "Bottle of Wine", price: 150 },
+      { service: "Josh Cabernet 750 ml", price: 18 },
+    ];
+    const raw = JSON.stringify({
+      assessments: [
+        { service: "Tito's Vodka 750 ml", tier: "competitive", basis: "general_estimate", guidance: "Typical retail is roughly $20-28 — a general estimate, not verified locally." },
+        { service: "Bottle of Wine", tier: "no_data", basis: "no_data", guidance: "Too vague.", reason: "needs_brand_and_size" },
+        { service: "Josh Cabernet 750 ml", tier: "competitive", basis: "general_estimate", guidance: "Typical retail is roughly $14-20 — a general estimate, not verified locally." },
+      ],
+    });
+
+    test("EN: 'Bottle of Wine' is no_data with our add-brand-and-size note; the specific rows on either side still match by order", () => {
+      const result = parsePricingAssessmentResponse(raw, items, "en");
+      expect(result.map((r) => [r.service, r.price, r.tier, r.basis])).toEqual([
+        ["Tito's Vodka 750 ml", 25, "competitive", "general_estimate"],
+        ["Bottle of Wine", 150, "no_data", "no_data"],
+        ["Josh Cabernet 750 ml", 18, "competitive", "general_estimate"],
+      ]);
+      expect(result[1].guidance).toBe(
+        "Add the brand and size (e.g. Tito's Vodka 750 ml) so we can check this price — without them, prices for this item vary too much to judge."
+      );
+      expect(result[0].guidance).toContain("$20-28");
+    });
+
+    test("ES: the same note comes back in Spanish, formal usted", () => {
+      const result = parsePricingAssessmentResponse(raw, items, "es");
+      expect(result[1].guidance).toBe(
+        "Agregue la marca y el tamaño (p. ej., Vodka Tito's 750 ml) para que podamos revisar este precio; sin ellos, los precios de este artículo varían demasiado para evaluarlo."
+      );
+    });
+
+    test("a needs_brand_and_size flag wins even if the model also sent a real tier — never a guessed tier", () => {
+      const result = parsePricingAssessmentResponse(
+        JSON.stringify({ assessments: [{ service: "Bottle of Wine", tier: "premium", basis: "general_estimate", guidance: "x", reason: "needs_brand_and_size" }] }),
+        [{ service: "Bottle of Wine", price: 150 }]
+      );
+      expect(result[0].tier).toBe("no_data");
+      expect(result[0].basis).toBe("no_data");
+    });
   });
 
   test("a known branded/common item with no local data gets a labeled general_estimate, not no_data", () => {
@@ -251,7 +299,7 @@ describe("parsePricingAssessmentPayload", () => {
           service: "Women's Haircut",
           price: 45,
           tier: "competitive",
-          basis: "verified_local",
+          basis: "general_estimate",
           guidance: "In line with nearby salons.",
         },
         {
@@ -305,8 +353,28 @@ describe("parsePricingAssessmentPayload", () => {
     expect(result).not.toBeNull();
     expect(result!.assessments).toEqual([
       { service: "Women's Haircut", price: 45, tier: "no_data", basis: "no_data", guidance: "x" },
-      { service: "Color", price: 90, tier: "premium", basis: "verified_local", guidance: "Above range." },
+      { service: "Color", price: 90, tier: "premium", basis: "general_estimate", guidance: "Above range." },
     ]);
+  });
+
+  test("Day 4b: a saved 'verified_local' item is shown as general_estimate (tier and guidance kept), without touching the saved data", () => {
+    const saved = {
+      assessments: [
+        { service: "Bottle of Wine", price: 150, tier: "competitive", basis: "verified_local", guidance: "In line with nearby stores." },
+        { service: "Bottle of Wine", price: 25, tier: "competitive", basis: "verified_local", guidance: "In line with nearby stores." },
+        { service: "Tito's Vodka 750 ml", price: 25, tier: "competitive", basis: "general_estimate", guidance: "Roughly $20-28." },
+      ],
+      priceLevelContext: null,
+      locale: "en",
+    };
+    const snapshot = JSON.parse(JSON.stringify(saved));
+    const result = parsePricingAssessmentPayload(saved);
+    expect(result!.assessments.map((a) => [a.service, a.price, a.tier, a.basis, a.guidance])).toEqual([
+      ["Bottle of Wine", 150, "competitive", "general_estimate", "In line with nearby stores."],
+      ["Bottle of Wine", 25, "competitive", "general_estimate", "In line with nearby stores."],
+      ["Tito's Vodka 750 ml", 25, "competitive", "general_estimate", "Roughly $20-28."],
+    ]);
+    expect(saved).toEqual(snapshot);
   });
 
   test("a stored entry from before the basis field existed degrades to general_estimate, never assumes verified_local", () => {
@@ -328,6 +396,18 @@ describe("parsePricingAssessmentPayload", () => {
 });
 
 describe("buildPricingSystemPrompt", () => {
+  test("Day 4b: the store-wide $ level is context only, verified_local is no longer offered, and vague bottled items must be flagged", () => {
+    const en = buildPricingSystemPrompt("en");
+    expect(en).toContain("Treat it as background context only: never base an item's tier on it");
+    expect(en).not.toContain('"verified_local"');
+    expect(en).toContain('"reason":"needs_brand_and_size"');
+    expect(en).toContain('"Bottle of Wine"');
+  });
+
+  test("Day 4b: the Spanish directive keeps the reason value in English", () => {
+    expect(buildPricingSystemPrompt("es")).toContain('neither is the "reason" value "needs_brand_and_size"');
+  });
+
   test("English prompt is unchanged by locale support — identical to the base prompt with no locale arg", () => {
     expect(buildPricingSystemPrompt("en")).toBe(buildPricingSystemPrompt());
   });
@@ -410,5 +490,54 @@ describe("assessPricing prompt assembly (as app/actions/pricing.ts builds it)", 
     expect(businessTypeLabel).toBe(resolveBizProfile("hair salon", null, null).label);
     expect(businessTypeLabel).toBe("Salon & Personal Care");
     expect(buildPricingSystemPrompt("en")).toBe(buildPricingSystemPrompt());
+  });
+});
+
+describe("Day 4b: drink businesses get specific (brand + size) Price check examples", () => {
+  test("liquor store (EN + ES)", () => {
+    expect(resolveBizProfile("Liquor store", "liquor_store", null, "en").pricingExamples).toEqual([
+      "Tito's Vodka 750 ml",
+      "Bud Light 12-pack 12 oz",
+      "Josh Cabernet 750 ml",
+    ]);
+    expect(resolveBizProfile("Liquor store", "liquor_store", null, "es").pricingExamples).toEqual([
+      "Vodka Tito's 750 ml",
+      "Bud Light, paquete de 12 latas de 12 oz",
+      "Josh Cabernet 750 ml",
+    ]);
+  });
+
+  test("wine shop and beer store use the same liquor examples", () => {
+    expect(resolveBizProfile("Wine shop", null, null, "en").pricingExamples[0]).toBe("Tito's Vodka 750 ml");
+    expect(resolveBizProfile("Beer store", null, null, "en").pricingExamples[0]).toBe("Tito's Vodka 750 ml");
+  });
+
+  test("a bar gets drink examples with sizes; a restaurant keeps its dish examples", () => {
+    expect(resolveBizProfile("Bar", "bar", null, "en").pricingExamples).toEqual([
+      "Bud Light draft (16 oz pint)",
+      "Tito's & soda",
+      "House red wine (6 oz glass)",
+    ]);
+    expect(resolveBizProfile("Bar", "bar", null, "es").pricingExamples[0]).toBe("Bud Light de barril (pinta de 16 oz)");
+    expect(resolveBizProfile("Restaurant", "restaurant", null, "en").pricingExamples).toEqual(["Entrée", "Appetizer", "Dessert"]);
+  });
+
+  test("a cafe's drink example carries a size", () => {
+    expect(resolveBizProfile("Coffee shop", "coffee_shop", null, "en").pricingExamples[0]).toBe("Latte (12 oz)");
+  });
+});
+
+describe("Day 4b: the rankings legend never promises local price data we don't have", () => {
+  test("no tier description (EN + ES) talks about a 'local range' or 'local prices'", () => {
+    for (const tier of PRICE_TIERS) {
+      expect(tier.description.toLowerCase()).not.toContain("local");
+    }
+    for (const locale of ["en", "es"] as const) {
+      for (const key of ["underMarket", "competitive", "upperMid", "premium", "noData"]) {
+        const text = t(locale, `dashboard.pricing.tier.${key}.description` as MessageKey).toLowerCase();
+        expect(text).not.toMatch(/local/);
+      }
+      expect(t(locale, "dashboard.pricing.introText").toLowerCase()).not.toMatch(/local/);
+    }
   });
 });

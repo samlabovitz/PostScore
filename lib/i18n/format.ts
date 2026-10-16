@@ -115,6 +115,68 @@ export function reportCoverageMonthRange(sendDate: string): { start: string; end
 export const DEFAULT_BUSINESS_TIMEZONE = "America/New_York";
 
 /**
+ * Day 4b: every owner-facing date about a real moment (a scan, a price
+ * check, a capture) is built HERE, by hand, from plain digits — never by
+ * handing a whole date to Intl/toLocaleString. Load-bearing: these
+ * strings render once on the server (Node) and again in the browser
+ * during hydration, and engines disagree on Intl's glue text — Node
+ * prints "Oct 16, 2026, 12:03 AM" where Safari prints "Oct 16, 2026 at
+ * 12:03 AM", and Spanish short months vary ("sep" vs "sept"). Any
+ * difference is a React hydration error. So Intl is only asked for the
+ * NUMERIC year/month/day/hour/minute in a fixed time zone (digits are
+ * the same in every engine), and the words and punctuation come from
+ * the tables below. Same output on any machine, any browser, any time
+ * zone.
+ */
+const MONTHS_SHORT: Record<Locale, readonly string[]> = {
+  en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+  es: ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sept", "oct", "nov", "dic"],
+};
+
+const MONTHS_LONG: Record<Locale, readonly string[]> = {
+  en: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+  es: ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
+};
+
+interface ZonedParts {
+  year: number;
+  /** 0-11 */
+  month0: number;
+  day: number;
+  /** 0-23 */
+  hour: number;
+  minute: number;
+}
+
+function zonedParts(date: string, timeZone: string): ZonedParts {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    hourCycle: "h23",
+  }).formatToParts(new Date(date));
+  const num = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((p) => p.type === type)?.value);
+  return {
+    year: num("year"),
+    month0: num("month") - 1,
+    day: num("day"),
+    // Some engines still report midnight as "24" under h23.
+    hour: num("hour") % 24,
+    minute: num("minute"),
+  };
+}
+
+function formatTime(p: ZonedParts, locale: Locale): string {
+  const mm = String(p.minute).padStart(2, "0");
+  if (locale === "es") return `${p.hour}:${mm}`;
+  const h12 = p.hour % 12 === 0 ? 12 : p.hour % 12;
+  return `${h12}:${mm} ${p.hour < 12 ? "AM" : "PM"}`;
+}
+
+/**
  * Formats an ISO timestamp as a short, locale-appropriate date — e.g.
  * "Sep 28, 2026" (en) or "28 sept 2026" (es). Unlike formatMonthLabel,
  * this is for a real moment in time (e.g. pricing_assessed_at), not a
@@ -130,10 +192,49 @@ export const DEFAULT_BUSINESS_TIMEZONE = "America/New_York";
  * explicit `timeZone` only once a real per-business one exists.
  */
 export function formatShortDate(date: string, locale: Locale, timeZone: string = DEFAULT_BUSINESS_TIMEZONE): string {
-  return new Intl.DateTimeFormat(locale, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone,
-  }).format(new Date(date));
+  const p = zonedParts(date, timeZone);
+  const month = MONTHS_SHORT[locale][p.month0];
+  return locale === "es" ? `${p.day} ${month} ${p.year}` : `${month} ${p.day}, ${p.year}`;
+}
+
+/** "October 16, 2026" (en) / "16 de octubre de 2026" (es). */
+export function formatLongDate(date: string, locale: Locale, timeZone: string = DEFAULT_BUSINESS_TIMEZONE): string {
+  const p = zonedParts(date, timeZone);
+  const month = MONTHS_LONG[locale][p.month0];
+  return locale === "es" ? `${p.day} de ${month} de ${p.year}` : `${month} ${p.day}, ${p.year}`;
+}
+
+/** "Oct 16" (en) / "16 oct" (es) — no year, e.g. chart axis labels. */
+export function formatMonthDay(date: string, locale: Locale, timeZone: string = DEFAULT_BUSINESS_TIMEZONE): string {
+  const p = zonedParts(date, timeZone);
+  const month = MONTHS_SHORT[locale][p.month0];
+  return locale === "es" ? `${p.day} ${month}` : `${month} ${p.day}`;
+}
+
+/** "Oct 16, 2026, 12:03 AM" (en) / "16 oct 2026, 0:03" (es). */
+export function formatDateTime(date: string, locale: Locale, timeZone: string = DEFAULT_BUSINESS_TIMEZONE): string {
+  return `${formatShortDate(date, locale, timeZone)}, ${formatTime(zonedParts(date, timeZone), locale)}`;
+}
+
+/** "Oct 16, 12:03 AM" (en) / "16 oct, 0:03" (es) — no year. */
+export function formatMonthDayTime(date: string, locale: Locale, timeZone: string = DEFAULT_BUSINESS_TIMEZONE): string {
+  return `${formatMonthDay(date, locale, timeZone)}, ${formatTime(zonedParts(date, timeZone), locale)}`;
+}
+
+/**
+ * A whole-number count (e.g. a Google review count) — "1,234" /
+ * "12,345" (en), "1234" / "12.345" (es: a period groups thousands, and
+ * a four-digit number isn't grouped, the standard Spanish style). Built
+ * by hand for the same reason as the dates above: toLocaleString() with
+ * no locale uses whatever language the server or the browser happens to
+ * run in, so a Spanish-language browser printing "1.234" over the
+ * server's "1,234" is a React hydration error. Rounds to a whole number.
+ */
+export function formatCount(value: number, locale: Locale): string {
+  const n = Math.round(value);
+  const digits = String(Math.abs(n));
+  const sign = n < 0 ? "-" : "";
+  if (locale === "es" && digits.length <= 4) return sign + digits;
+  const separator = locale === "es" ? "." : ",";
+  return sign + digits.replace(/\B(?=(\d{3})+(?!\d))/g, separator);
 }

@@ -28,7 +28,7 @@ import {
 import type { AssistantBusinessContext } from "@/lib/assistant";
 import { BusinessMemoryPanel } from "@/components/assistant/BusinessMemoryPanel";
 import { AssistantMessageContent } from "@/components/assistant/AssistantMessageContent";
-import { t, tPlural, useLocale } from "@/lib/i18n";
+import { formatMonthDayTime, t, tPlural, useLocale } from "@/lib/i18n";
 
 function MessageBubble({ message }: { message: AssistantMessageRow }) {
   const isUser = message.role === "user";
@@ -103,15 +103,6 @@ function EmptyState({
   );
 }
 
-function timeAgo(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 function HistoryList({
   loading,
   error,
@@ -155,7 +146,7 @@ function HistoryList({
             {c.preview || t(locale, "dashboard.assistant.newConversationFallback")}
           </span>
           <span className="text-[11.5px] text-ink-mute">
-            {timeAgo(c.startedAt)} ·{" "}
+            {formatMonthDayTime(c.startedAt, locale)} ·{" "}
             {tPlural(locale, "dashboard.assistant.historyMessageCount", c.messageCount, {
               count: c.messageCount,
             })}

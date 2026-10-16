@@ -1357,6 +1357,7 @@ export type MessageKey =
   | "dashboard.pricing.couldNotRemoveRow"
   | "dashboard.pricing.emptyServicesPrompt"
   | "dashboard.pricing.servicePlaceholder"
+  | "dashboard.pricing.needsBrandAndSize"
   | "dashboard.pricing.standardServiceFallback"
   | "dashboard.pricing.addServiceButton"
   | "dashboard.pricing.examplesPrefix"
@@ -1868,6 +1869,9 @@ export type MessageKey =
   | "bizProfileOptions.cafe.competitorNoun"
   | "bizProfileOptions.bar.label"
   | "bizProfileOptions.bar.competitorNoun"
+  | "bizProfileOptions.bar.pricingExamples.example1"
+  | "bizProfileOptions.bar.pricingExamples.example2"
+  | "bizProfileOptions.bar.pricingExamples.example3"
   | "bizProfileOptions.bakery.label"
   | "bizProfileOptions.bakery.competitorNoun"
   | "bizProfileOptions.liquor_store.label"
@@ -3876,21 +3880,21 @@ export const messages: Record<Locale, LocaleMessages> = {
     // above.
     "dashboard.pricing.pageTitle": "Price check",
     "dashboard.pricing.introText":
-      "Enter your prices and see how they compare to your local market — with advice on where you can adjust to bring more people in.",
+      "Enter your prices and see how they compare to what each item typically sells for — with advice on where you can adjust to bring more people in.",
     "dashboard.pricing.disclosureText":
-      "Optional and private. Prices aren't part of your score — this is just a tool. You type in what you charge; we compare it to local market data where we can find it, and give a clear estimate where we can't. We never guess a competitor's exact price.",
+      "Optional and private. Prices aren't part of your score — this is just a tool. You type in what you charge; we compare each item to its typical price as a clearly labeled general estimate, and show nearby businesses' Google price levels as context. We never guess a competitor's exact price.",
     "dashboard.pricing.rankingsHeading": "What the rankings mean",
     "dashboard.pricing.tier.underMarket.label": "Under market",
     "dashboard.pricing.tier.underMarket.description":
-      "Below the local range — there may be room to raise this price.",
+      "Below the typical price for this item — there may be room to raise this price.",
     "dashboard.pricing.tier.competitive.label": "Competitive",
-    "dashboard.pricing.tier.competitive.description": "Within the typical local range for this service.",
+    "dashboard.pricing.tier.competitive.description": "Within the typical price range for this item or service.",
     "dashboard.pricing.tier.upperMid.label": "Upper-mid",
-    "dashboard.pricing.tier.upperMid.description": "Toward the top of the local range.",
+    "dashboard.pricing.tier.upperMid.description": "Toward the top of the typical price range.",
     "dashboard.pricing.tier.premium.label": "Premium",
-    "dashboard.pricing.tier.premium.description": "Above the local range — fine if your reviews back it up.",
+    "dashboard.pricing.tier.premium.description": "Above the typical price range — fine if your reviews back it up.",
     "dashboard.pricing.tier.noData.label": "No market data",
-    "dashboard.pricing.tier.noData.description": "We couldn't find reliable local prices, so we won't guess.",
+    "dashboard.pricing.tier.noData.description": "We couldn't judge this price reliably — often because the brand or size is missing — so we won't guess.",
     "dashboard.pricing.basis.verifiedLocal.label": "Based on local price levels",
     "dashboard.pricing.basis.generalEstimate.label": "General estimate",
     "dashboard.pricing.servicesHeading": "Your services & prices",
@@ -3903,6 +3907,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.pricing.emptyServicesPrompt":
       "Add a service and what you charge for it below to get started.",
     "dashboard.pricing.servicePlaceholder": "e.g. {example}",
+    "dashboard.pricing.needsBrandAndSize": "Add the brand and size (e.g. Tito's Vodka 750 ml) so we can check this price — without them, prices for this item vary too much to judge.",
     "dashboard.pricing.standardServiceFallback": "Standard Service",
     "dashboard.pricing.addServiceButton": "Add",
     "dashboard.pricing.examplesPrefix": "Examples: {examples}",
@@ -4072,9 +4077,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.liquor_wine.couponAngles.firstTime": "New customer: 10% off your first purchase",
     "bizProfiles.liquor_wine.couponAngles.seasonal": "Holiday case discount: 15% off mixed cases through New Year's",
     "bizProfiles.liquor_wine.couponAngles.slowDay": "10% off purchases on your slowest weekday",
-    "bizProfiles.liquor_wine.pricingExamples.example1": "Bottle of Wine",
-    "bizProfiles.liquor_wine.pricingExamples.example2": "Six-Pack of Beer",
-    "bizProfiles.liquor_wine.pricingExamples.example3": "Case (12 bottles)",
+    "bizProfiles.liquor_wine.pricingExamples.example1": "Tito's Vodka 750 ml",
+    "bizProfiles.liquor_wine.pricingExamples.example2": "Bud Light 12-pack 12 oz",
+    "bizProfiles.liquor_wine.pricingExamples.example3": "Josh Cabernet 750 ml",
     "bizProfiles.liquor_wine.faq.item1.question": "Does {businessName} offer tastings or take special orders?",
     "bizProfiles.liquor_wine.faq.item1.answer": "Call or stop by to ask about upcoming tastings and special-order requests.",
     "bizProfiles.liquor_wine.faq.item2.question": "What are {businessName}'s hours near {city}?",
@@ -4144,7 +4149,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.cafe_bakery.couponAngles.firstTime": "First-time customer: free drink or pastry with any purchase",
     "bizProfiles.cafe_bakery.couponAngles.seasonal": "Seasonal drink or pastry: try it this month, 15% off",
     "bizProfiles.cafe_bakery.couponAngles.slowDay": "20% off orders during your slowest afternoon hours",
-    "bizProfiles.cafe_bakery.pricingExamples.example1": "Coffee/Espresso Drink",
+    "bizProfiles.cafe_bakery.pricingExamples.example1": "Latte (12 oz)",
     "bizProfiles.cafe_bakery.pricingExamples.example2": "Pastry/Baked Good",
     "bizProfiles.cafe_bakery.pricingExamples.example3": "Sandwich or Light Bite",
     "bizProfiles.cafe_bakery.faq.item1.question": "Does {businessName} have Wi-Fi or seating to work from?",
@@ -4401,6 +4406,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfileOptions.cafe.competitorNoun": "cafes",
     "bizProfileOptions.bar.label": "Bar / Pub",
     "bizProfileOptions.bar.competitorNoun": "bars",
+    "bizProfileOptions.bar.pricingExamples.example1": "Bud Light draft (16 oz pint)",
+    "bizProfileOptions.bar.pricingExamples.example2": "Tito's & soda",
+    "bizProfileOptions.bar.pricingExamples.example3": "House red wine (6 oz glass)",
     "bizProfileOptions.bakery.label": "Bakery",
     "bizProfileOptions.bakery.competitorNoun": "bakeries",
     "bizProfileOptions.liquor_store.label": "Liquor & Wine Store",
@@ -6295,21 +6303,21 @@ export const messages: Record<Locale, LocaleMessages> = {
     // --- Pricing page. Draft Spanish — pending your review.
     "dashboard.pricing.pageTitle": "Revisión de precios",
     "dashboard.pricing.introText":
-      "Ingrese sus precios y vea cómo se comparan con su mercado local — con consejos sobre dónde puede ajustar para atraer a más clientes.",
+      "Ingrese sus precios y vea cómo se comparan con lo que suele costar cada artículo — con consejos sobre dónde puede ajustar para atraer a más clientes.",
     "dashboard.pricing.disclosureText":
-      "Opcional y privado. Los precios no forman parte de su puntuación — es solo una herramienta. Usted ingresa lo que cobra; lo comparamos con datos del mercado local cuando podemos encontrarlos, y damos una estimación clara cuando no podemos. Nunca adivinamos el precio exacto de un competidor.",
+      "Opcional y privado. Los precios no forman parte de su puntuación — es solo una herramienta. Usted ingresa lo que cobra; comparamos cada artículo con su precio típico como una estimación general claramente indicada, y mostramos como contexto los niveles de precios de Google de los negocios cercanos. Nunca adivinamos el precio exacto de un competidor.",
     "dashboard.pricing.rankingsHeading": "Qué significan las clasificaciones",
     "dashboard.pricing.tier.underMarket.label": "Por debajo del mercado",
     "dashboard.pricing.tier.underMarket.description":
-      "Por debajo del rango local — puede haber margen para subir este precio.",
+      "Por debajo del precio típico de este artículo — puede haber margen para subir este precio.",
     "dashboard.pricing.tier.competitive.label": "Competitivo",
-    "dashboard.pricing.tier.competitive.description": "Dentro del rango local típico para este servicio.",
+    "dashboard.pricing.tier.competitive.description": "Dentro del rango de precios típico para este artículo o servicio.",
     "dashboard.pricing.tier.upperMid.label": "Medio-alto",
-    "dashboard.pricing.tier.upperMid.description": "Hacia la parte alta del rango local.",
+    "dashboard.pricing.tier.upperMid.description": "Hacia la parte alta del rango de precios típico.",
     "dashboard.pricing.tier.premium.label": "Premium",
-    "dashboard.pricing.tier.premium.description": "Por encima del rango local — está bien si sus reseñas lo respaldan.",
+    "dashboard.pricing.tier.premium.description": "Por encima del rango de precios típico — está bien si sus reseñas lo respaldan.",
     "dashboard.pricing.tier.noData.label": "Sin datos de mercado",
-    "dashboard.pricing.tier.noData.description": "No pudimos encontrar precios locales confiables, así que no vamos a adivinar.",
+    "dashboard.pricing.tier.noData.description": "No pudimos evaluar este precio con certeza — a menudo porque falta la marca o el tamaño — así que no vamos a adivinar.",
     "dashboard.pricing.basis.verifiedLocal.label": "Basado en niveles de precios locales",
     "dashboard.pricing.basis.generalEstimate.label": "Estimación general",
     "dashboard.pricing.servicesHeading": "Sus servicios y precios",
@@ -6322,6 +6330,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.pricing.emptyServicesPrompt":
       "Para empezar, agregue abajo un servicio y lo que cobra por él.",
     "dashboard.pricing.servicePlaceholder": "p. ej. {example}",
+    "dashboard.pricing.needsBrandAndSize": "Agregue la marca y el tamaño (p. ej., Vodka Tito's 750 ml) para que podamos revisar este precio; sin ellos, los precios de este artículo varían demasiado para evaluarlo.",
     "dashboard.pricing.standardServiceFallback": "Servicio estándar",
     "dashboard.pricing.addServiceButton": "Agregar",
     "dashboard.pricing.examplesPrefix": "Ejemplos: {examples}",
@@ -6545,9 +6554,9 @@ export const messages: Record<Locale, LocaleMessages> = {
       "10% de descuento en su primera compra",
     "bizProfiles.liquor_wine.referralPresets.case_discount_referral.description":
       "Premia específicamente a sus mejores clientes (los que compran por caja) por traer nuevos.",
-    "bizProfiles.liquor_wine.pricingExamples.example1": "Botella de vino",
-    "bizProfiles.liquor_wine.pricingExamples.example2": "Six-pack de cerveza",
-    "bizProfiles.liquor_wine.pricingExamples.example3": "Caja (12 botellas)",
+    "bizProfiles.liquor_wine.pricingExamples.example1": "Vodka Tito's 750 ml",
+    "bizProfiles.liquor_wine.pricingExamples.example2": "Bud Light, paquete de 12 latas de 12 oz",
+    "bizProfiles.liquor_wine.pricingExamples.example3": "Josh Cabernet 750 ml",
     "bizProfiles.liquor_wine.pricingTips.loss_leader_traffic.label":
       "Use algunos productos gancho para atraer tráfico",
     "bizProfiles.liquor_wine.pricingTips.loss_leader_traffic.description":
@@ -6672,7 +6681,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfiles.cafe_bakery.referralPresets.pct_off_both.friendReward": "15% de descuento en su primer pedido",
     "bizProfiles.cafe_bakery.referralPresets.pct_off_both.description":
       "Descuento directo en efectivo para un pedido típico de cafetería.",
-    "bizProfiles.cafe_bakery.pricingExamples.example1": "Café/bebida de espresso",
+    "bizProfiles.cafe_bakery.pricingExamples.example1": "Latte (12 oz)",
     "bizProfiles.cafe_bakery.pricingExamples.example2": "Repostería/producto horneado",
     "bizProfiles.cafe_bakery.pricingExamples.example3": "Sándwich o bocadillo ligero",
     "bizProfiles.cafe_bakery.pricingTips.anchor_specialty_drink.label":
@@ -7088,6 +7097,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfileOptions.bakery.competitorNoun": "panaderías",
     "bizProfileOptions.bar.label": "Bar / cantina",
     "bizProfileOptions.bar.competitorNoun": "bares",
+    "bizProfileOptions.bar.pricingExamples.example1": "Bud Light de barril (pinta de 16 oz)",
+    "bizProfileOptions.bar.pricingExamples.example2": "Tito's con soda",
+    "bizProfileOptions.bar.pricingExamples.example3": "Vino tinto de la casa (copa de 6 oz)",
     "bizProfileOptions.barbershop.label": "Barbería",
     "bizProfileOptions.barbershop.competitorNoun": "barberías",
     "bizProfileOptions.cafe.label": "Café / cafetería",
@@ -7679,7 +7691,7 @@ export function t(locale: Locale, key: MessageKey, params: Record<string, string
  * `count` always drives the REAL plural-category selection, but the
  * value actually interpolated for `{count}` in the template defaults to
  * `count` itself and can be overridden via `params.count` — e.g. passing
- * the locale-formatted `entry.reviewCount.toLocaleString()` ("1,234") as
+ * the locale-formatted `formatCount(entry.reviewCount, locale)` ("1,234") as
  * `params.count` while still passing the raw number as `count` so
  * Intl.PluralRules sees the real number, not a formatted string. Any
  * other `{name}` placeholder in the template comes from `params` the

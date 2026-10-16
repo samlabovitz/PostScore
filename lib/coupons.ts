@@ -5,6 +5,8 @@
 // and the QR's /redeem/<code> URL has no page behind it yet — both
 // still cosmetic/preview-only until a later pass.
 
+import { formatShortDate } from "@/lib/i18n/format";
+
 // Excludes 0/O/1/I so a customer or owner reading the code aloud (or
 // off a printed coupon) never has to guess which character it was.
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -44,10 +46,5 @@ export function formatExpiry(isoDate: string): string {
   const [year, month, day] = isoDate.split("-").map(Number);
   if (!year || !month || !day) return "No expiration set yet";
   const date = new Date(Date.UTC(year, month - 1, day));
-  return `Expires ${date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  })}`;
+  return `Expires ${formatShortDate(date.toISOString(), "en", "UTC")}`;
 }

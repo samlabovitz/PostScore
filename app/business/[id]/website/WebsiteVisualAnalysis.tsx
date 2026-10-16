@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { SCREENSHOT_REFRESH_COOLDOWN_DAYS, type WebsiteAnalysis, type WebsiteAnalysisPage } from "@/lib/scoring";
 import { refreshWebsiteScreenshots } from "@/app/actions/websiteScreenshots";
 import { screenshotFreshness, visibleAdditionalPages, visibleHomepageScreenshot } from "@/lib/screenshotFreshness";
-import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
+import { formatShortDate, t, tPlural, useLocale } from "@/lib/i18n";
 
 const COOLDOWN_MS = SCREENSHOT_REFRESH_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -27,23 +27,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * still in the future. */
 function daysRemainingUntil(targetMs: number): number {
   return Math.max(1, Math.ceil((targetMs - Date.now()) / DAY_MS));
-}
-
-/** "Sep 11, 2026" (or its real Spanish equivalent) — used only for the
- * honest "Screenshots captured ..." caption below, read from
- * lastScreenshotRefreshAt (the real capture date), never checkedAt
- * (which updates on every re-scan regardless of whether screenshots were
- * touched — see saveBusiness's doc comment). Same approach as
- * formatMonthLabel in lib/i18n/format.ts: a real Intl.DateTimeFormat
- * keyed off the business's own locale, not a hardcoded "en-US" — for
- * locale "en" this produces the exact same "Sep 11, 2026" style output
- * toLocaleDateString("en-US", ...) used to. Deliberately no timeZone
- * override (unlike formatMonthLabel's UTC pin): lastScreenshotRefreshAt
- * is a real timestamp, not a UTC-midnight-only date, so this keeps
- * reading it in whatever timezone the browser already runs in, exactly
- * as toLocaleDateString did before. */
-function formatCaptureDate(iso: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" }).format(new Date(iso));
 }
 
 /**
@@ -307,7 +290,7 @@ export function WebsiteVisualAnalysis({
                 freshness.kind === "stale_unreachable"
                   ? "dashboard.website.screenshotStaleUnreachable"
                   : "dashboard.website.screenshotStaleOld",
-                { date: formatCaptureDate(freshness.capturedAt, locale) }
+                { date: formatShortDate(freshness.capturedAt, locale) }
               )}
             </p>
           )}
@@ -377,7 +360,7 @@ export function WebsiteVisualAnalysis({
         {websiteAnalysis?.lastScreenshotRefreshAt && (
           <p className="px-0.5 text-[11.5px] text-ink-mute">
             {t(locale, "dashboard.website.screenshotsCaptured", {
-              date: formatCaptureDate(websiteAnalysis.lastScreenshotRefreshAt, locale),
+              date: formatShortDate(websiteAnalysis.lastScreenshotRefreshAt, locale),
             })}
           </p>
         )}

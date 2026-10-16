@@ -17,7 +17,7 @@ import {
 } from "@/lib/reviews";
 import { GetMoreReviews } from "./GetMoreReviews";
 import type { ReviewsPageData } from "@/app/actions/reviews";
-import { t, useLocale } from "@/lib/i18n";
+import { formatCount, t, useLocale } from "@/lib/i18n";
 import { useScrollToHash } from "@/lib/useScrollToHash";
 
 function StatCard({
@@ -68,7 +68,7 @@ function ReviewSocialProof({
         <StatCard
           icon={IconMessages}
           label={t(locale, "dashboard.websiteReviews.reviewVolumeLabel")}
-          value={reviewCount !== null ? reviewCount.toLocaleString() : "—"}
+          value={reviewCount !== null ? formatCount(reviewCount, locale) : "—"}
           percent={reviewCountProgressPercent(reviewCount)}
           caption={reviewCountCaption(reviewCount, locale)}
         />

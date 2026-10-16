@@ -35,7 +35,7 @@ import {
   type PriceTierId,
 } from "@/lib/pricing";
 import type { BizProfile } from "@/config/bizProfiles";
-import { t, useLocale, type MessageKey } from "@/lib/i18n";
+import { formatDateTime, t, useLocale, type MessageKey } from "@/lib/i18n";
 
 /**
  * Not a value judgment (premium isn't "bad") — just five visually
@@ -531,9 +531,7 @@ export function PricingView({
             ) : lastResult ? (
               <p className="text-[12px] text-ink-mute">
                 {t(locale, "dashboard.pricing.lastAssessed", {
-                  date: new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(
-                    new Date(lastResult.assessedAt)
-                  ),
+                  date: formatDateTime(lastResult.assessedAt, locale),
                 })}
               </p>
             ) : null}

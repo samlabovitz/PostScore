@@ -12,7 +12,7 @@ import { GradeBadge } from "@/components/ui/GradeBadge";
 import { cn } from "@/lib/utils";
 import { saveCompetitorScan } from "@/app/actions/competitors";
 import type { CompetitorScanResult, RankedCompetitor } from "@/lib/competitors";
-import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
+import { formatCount, t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 
 function milesLabel(meters: number, locale: Locale): string {
   const mi = meters / 1609.34;
@@ -31,7 +31,7 @@ function SignalChips({ entry }: { entry: RankedCompetitor }) {
         <IconMessageCircle size={12} />
         {entry.reviewCount !== null
           ? tPlural(locale, "dashboard.competitors.reviewCount", entry.reviewCount, {
-              count: entry.reviewCount.toLocaleString(),
+              count: formatCount(entry.reviewCount, locale),
             })
           : t(locale, "dashboard.competitors.noReviewCount")}
       </Pill>

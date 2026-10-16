@@ -18,19 +18,10 @@ import {
   type WeeklyMetricProgress,
 } from "@/lib/actionPlan";
 import type { GrowthMove } from "@/lib/growthMoves";
-import { t, useLocale, type Locale } from "@/lib/i18n";
+import { formatMonthDayTime, t, useLocale, type Locale } from "@/lib/i18n";
 
 function formatPoints(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
-
-function formatCheckedAt(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }
 
 type StatusVariant = "neutral" | "amber" | "green" | "red" | "brass";
@@ -118,7 +109,7 @@ function CurrentStatus({
 }) {
   const locale = useLocale();
   const checkedLabel = lastScanAt
-    ? t(locale, "dashboard.overview.actionPlan.checkedWithDate", { date: formatCheckedAt(lastScanAt) })
+    ? t(locale, "dashboard.overview.actionPlan.checkedWithDate", { date: formatMonthDayTime(lastScanAt, locale) })
     : t(locale, "dashboard.overview.actionPlan.checkedNoDate");
 
   // Nothing to compare yet, either way — the honest wait, plus the real

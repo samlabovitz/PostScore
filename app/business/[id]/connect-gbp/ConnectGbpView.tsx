@@ -18,7 +18,7 @@ import {
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { disconnectGbp } from "@/app/actions/gbp";
-import { t, useLocale, type Locale } from "@/lib/i18n";
+import { formatShortDate, t, useLocale, type Locale } from "@/lib/i18n";
 
 function buildUnlocks(
   locale: Locale
@@ -155,11 +155,7 @@ export function ConnectGbpView({
               <div className="text-[12.5px] text-ink-mute">
                 {connectedAt
                   ? t(locale, "dashboard.connectGbp.sinceDate", {
-                      date: new Intl.DateTimeFormat(locale, {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      }).format(new Date(connectedAt)),
+                      date: formatShortDate(connectedAt, locale),
                     })
                   : t(locale, "dashboard.connectGbp.connectedFallback")}{" "}
                 {t(locale, "dashboard.connectGbp.notWiredUpSuffix")}

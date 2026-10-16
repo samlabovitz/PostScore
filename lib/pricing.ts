@@ -28,27 +28,27 @@ export const PRICE_TIERS = [
   {
     id: "under_market",
     label: "Under market",
-    description: "Below the local range — there may be room to raise this price.",
+    description: "Below the typical price for this item — there may be room to raise this price.",
   },
   {
     id: "competitive",
     label: "Competitive",
-    description: "Within the typical local range for this service.",
+    description: "Within the typical price range for this item or service.",
   },
   {
     id: "upper_mid",
     label: "Upper-mid",
-    description: "Toward the top of the local range.",
+    description: "Toward the top of the typical price range.",
   },
   {
     id: "premium",
     label: "Premium",
-    description: "Above the local range — fine if your reviews back it up.",
+    description: "Above the typical price range — fine if your reviews back it up.",
   },
   {
     id: "no_data",
     label: "No market data",
-    description: "We couldn't find reliable local prices, so we won't guess.",
+    description: "We couldn't judge this price reliably — often because the brand or size is missing — so we won't guess.",
   },
 ] as const;
 
@@ -197,7 +197,10 @@ export function parsePricingAssessmentPayload(raw: unknown): PricingAssessmentPa
       service: e.service,
       price: e.price,
       tier,
-      basis,
+      // Day 4b: an assessment saved before the store-wide $ level stopped
+      // counting as item-level local data is shown as a general estimate
+      // (the saved row itself is left untouched).
+      basis: basis === "verified_local" ? "general_estimate" : basis,
       guidance: typeof e.guidance === "string" ? e.guidance : "",
     });
   }
@@ -263,6 +266,7 @@ export function buildPricingPrompt(input: PricingPromptInput): string {
   const lines: string[] = [];
   lines.push(`Business type: ${input.businessTypeLabel}`);
   if (input.priceLevelContext && input.priceLevelContext.competitors.length > 0) {
+    lines.push("Store-wide context only (Google rates whole businesses, never single items — do not base any item's tier on this):");
     lines.push(`Your Google price level: ${input.priceLevelContext.subjectSymbol ?? "not on file"}`);
     lines.push(`Nearby competitors' Google price levels: ${summarizeCompetitorPriceLevels(input.priceLevelContext)}`);
   } else {
@@ -280,19 +284,20 @@ export function buildPricingPrompt(input: PricingPromptInput): string {
  * parsePricingAssessmentResponse below and must never be translated. */
 const PRICING_SYSTEM_BASE = [
   "You are a pricing analyst for small local businesses. You assess whether the prices a business owner charges look low, competitive, high, or premium relative to their real market.",
-  "You will be given: the business's type, real Google price-level data ($/$$/$$$) for nearby same-category competitors where available, and the real prices the owner charges for each service.",
+  "You will be given: the business's type, real Google price-level data ($/$$/$$$) for this business and nearby same-category competitors where available, and the real prices the owner charges for each service.",
+  "Google's price level describes a WHOLE business compared with others nearby — never the price of any single item or service. Treat it as background context only: never base an item's tier on it, and never say an item's price was checked against local or competitor data.",
   "Frame your guidance in language natural for this business type — e.g. salons/restaurants think in per-service or per-dish menu prices, law firms think in flat-fee vs. hourly, a general/trades business thinks in per-job or per-service-call pricing.",
-  "For EACH service, decide independently which of three bases applies, and set \"basis\" to exactly one of these:",
-  '- "verified_local": you have real Google price-level data for nearby competitors that is genuinely relevant to this specific service. Base the tier and guidance on that real local signal.',
-  '- "general_estimate": there is no relevant local price-level data for this service, BUT it is a specific, widely known item with a genuinely knowable typical market price — e.g. a well-known branded product (a specific packaged snack, drink, etc.) or a standard, common menu item (a bacon-egg-and-cheese, a cup of coffee, a scoop of ice cream). Give an honest estimate of the typical price or range from general knowledge, and the guidance MUST explicitly say this is a general/typical estimate, not verified local data. Ordinary retailer/regional price variation is EXPECTED and does not disqualify a general estimate — that is exactly why you give a RANGE (e.g. "roughly $3-5") instead of one exact number. Example: for "Cheez-Its (family size)" priced at $7 with no local data, a correct response is {"tier":"premium","basis":"general_estimate","guidance":"Typical retail for a family-size box is roughly $3-5, so $7 reads high — this is a general estimate, not verified against local competitors."}. Reach for "general_estimate" whenever you can name even an approximate typical range — reserve "no_data" for services you genuinely cannot estimate at all.',
-  '- "no_data": neither real local data nor ANY reasonably knowable typical price/range exists for this item — it is too custom, unique, or variable to estimate at all (e.g. a fully bespoke package, a highly variable custom job). This should be rare for well-known consumer products or standard menu items. Set tier to "no_data" too — never guess a tier without a real basis.',
+  "For EACH service, decide independently which of two bases applies, and set \"basis\" to exactly one of these:",
+  '- "general_estimate": it is a specific, widely known item with a genuinely knowable typical market price — e.g. a well-known branded product (a specific packaged snack, drink, etc.) or a standard, common menu item (a bacon-egg-and-cheese, a cup of coffee, a scoop of ice cream). Give an honest estimate of the typical price or range from general knowledge, and the guidance MUST explicitly say this is a general/typical estimate, not verified local data. Ordinary retailer/regional price variation is EXPECTED and does not disqualify a general estimate — that is exactly why you give a RANGE (e.g. "roughly $3-5") instead of one exact number. Example: for "Cheez-Its (family size)" priced at $7 with no local data, a correct response is {"tier":"premium","basis":"general_estimate","guidance":"Typical retail for a family-size box is roughly $3-5, so $7 reads high — this is a general estimate, not verified against local competitors."}. Reach for "general_estimate" whenever you can name even an approximate typical range — reserve "no_data" for services you genuinely cannot estimate at all.',
+  '- "no_data": no reasonably knowable typical price/range exists for this item — it is too custom, unique, or variable to estimate at all (e.g. a fully bespoke package, a highly variable custom job). This should be rare for well-known consumer products or standard menu items. Set tier to "no_data" too — never guess a tier without a real basis.',
+  'SPECIFIC ENOUGH TO JUDGE: for a bottled, canned or packaged product (wine, spirits, beer, or any packaged good) the typical price depends mainly on its brand and size. If such an item\'s name is missing the brand or the size — e.g. "Bottle of Wine", "Whiskey", "Six-Pack of Beer", "Vodka 750 ml" — do NOT guess: set "tier" and "basis" to "no_data" and add "reason":"needs_brand_and_size". Services and made-to-order menu items (a haircut, a latte, an entrée) are not affected by this rule.',
   "CRITICAL HONESTY RULES:",
   "- Never invent a specific competitor's exact price or a fake 'local average' — you only ever have competitors' coarse $/$$/$$$ price LEVEL, never a real dollar figure for any of them.",
   "- A \"general_estimate\" must NEVER be presented as if it were verified local competitor data. Its guidance sentence must make clear it's a general/typical estimate.",
-  "- Prefer a general_estimate with an honest range over a lazy no_data — only use \"no_data\" when you truly have no reasonable sense of typical pricing, not merely because prices vary somewhat.",
+  "- Prefer a general_estimate with an honest range over a lazy no_data — only use \"no_data\" when you truly have no reasonable sense of typical pricing, not merely because prices vary somewhat. The one exception is the brand-and-size rule above: a vague bottled/packaged item is always no_data.",
   "- Guidance must be one short, concrete sentence — no filler, no fabricated statistics.",
   "Reply with ONLY valid JSON, no markdown fence, no commentary, in exactly this shape:",
-  '{"assessments":[{"service":"<same service name as given>","tier":"under_market"|"competitive"|"upper_mid"|"premium"|"no_data","basis":"verified_local"|"general_estimate"|"no_data","guidance":"<1 sentence>"}]}',
+  '{"assessments":[{"service":"<same service name as given>","tier":"under_market"|"competitive"|"upper_mid"|"premium"|"no_data","basis":"general_estimate"|"no_data","guidance":"<1 sentence>","reason":"needs_brand_and_size" (only when that rule applies; otherwise omit)}]}',
   "Return exactly one assessment per service given, in the same order they were given.",
 ].join("\n");
 
@@ -311,7 +316,7 @@ export function buildPricingSystemPrompt(locale: Locale = DEFAULT_LOCALE): strin
   if (locale !== "es") return PRICING_SYSTEM_BASE;
 
   const languageName = t(DEFAULT_LOCALE, "language.es");
-  const directive = `\n\nIMPORTANT: Write every "guidance" sentence in natural ${languageName}, using the formal "usted" register throughout — never "tú" or its conjugations. The JSON itself must otherwise stay exactly as specified above, in English: the field names ("service", "tier", "basis", "guidance"), and every "tier" and "basis" value, must remain the exact English strings listed — never translate those. The "service" field must echo the exact service name as given, unchanged. When "basis" is "general_estimate", the ${languageName} guidance must still clearly state that it is a general estimate, not verified local data (for example: "es una estimación general, no verificada con competidores locales").`;
+  const directive = `\n\nIMPORTANT: Write every "guidance" sentence in natural ${languageName}, using the formal "usted" register throughout — never "tú" or its conjugations. The JSON itself must otherwise stay exactly as specified above, in English: the field names ("service", "tier", "basis", "guidance"), and every "tier" and "basis" value, must remain the exact English strings listed — never translate those, and neither is the "reason" value "needs_brand_and_size". The "service" field must echo the exact service name as given, unchanged. When "basis" is "general_estimate", the ${languageName} guidance must still clearly state that it is a general estimate, not verified local data (for example: "es una estimación general, no verificada con competidores locales").`;
   return PRICING_SYSTEM_BASE + directive;
 }
 
@@ -347,6 +352,7 @@ interface RawAssessment {
   tier?: unknown;
   basis?: unknown;
   guidance?: unknown;
+  reason?: unknown;
 }
 
 /**
@@ -358,10 +364,17 @@ interface RawAssessment {
  * ensures a real tier can never end up paired with an invalid or
  * missing basis (it degrades to the more conservative
  * "general_estimate" rather than ever defaulting to "verified_local").
+ *
+ * Day 4b: a fresh reply's "verified_local" is always downgraded to
+ * "general_estimate" — the only local data we have is Google's
+ * store-wide $ level, which can't verify any single item's price. And
+ * an item the model flags "needs_brand_and_size" is always no_data with
+ * our own localized add-the-brand-and-size note, never a guessed tier.
  */
 export function parsePricingAssessmentResponse(
   raw: string,
-  services: Array<{ service: string; price: number }>
+  services: Array<{ service: string; price: number }>,
+  locale: Locale = DEFAULT_LOCALE
 ): PriceAssessment[] {
   const fallback = (service: string, price: number, note: string): PriceAssessment => ({
     service,
@@ -395,7 +408,12 @@ export function parsePricingAssessmentResponse(
   return services.map((s, i) => {
     const entry = assessments[i];
     if (!entry) return fallback(s.service, s.price, fallbackNote);
-    const { tier, basis } = normalizeTierAndBasis(entry.tier, entry.basis);
+    if (entry.reason === "needs_brand_and_size") {
+      return fallback(s.service, s.price, t(locale, "dashboard.pricing.needsBrandAndSize"));
+    }
+    const normalized = normalizeTierAndBasis(entry.tier, entry.basis);
+    const tier = normalized.tier;
+    const basis = normalized.basis === "verified_local" ? "general_estimate" : normalized.basis;
     const guidance =
       typeof entry.guidance === "string" && entry.guidance.trim().length > 0
         ? entry.guidance.trim()

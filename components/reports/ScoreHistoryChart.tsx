@@ -6,7 +6,7 @@ import { StatTile } from "@/components/ui/StatTile";
 import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/SegmentedControl";
 import { GRADE_THRESHOLDS } from "@/lib/scoring";
 import type { ReportsScoreRow } from "@/app/actions/reports";
-import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
+import { formatMonthDay, t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 
 type RangeKey = "week" | "6m" | "all";
 
@@ -39,9 +39,6 @@ function cutoffFor(range: RangeKey): number | null {
   return null;
 }
 
-function formatShortDate(iso: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(new Date(iso));
-}
 
 function daysAgoLabel(iso: string, locale: Locale): string {
   const days = Math.round((Date.now() - new Date(iso).getTime()) / 86_400_000);
@@ -138,7 +135,7 @@ function PointsLegend({ points }: { points: ReportsScoreRow[] }) {
           key={p.id}
           className="rounded-md bg-paper px-2 py-1 text-[11px] tabular-nums text-ink-soft"
         >
-          {formatShortDate(p.created_at, locale)} · {p.total} ({p.grade})
+          {formatMonthDay(p.created_at, locale)} · {p.total} ({p.grade})
         </span>
       ))}
       {hiddenCount > 0 && (
@@ -255,7 +252,7 @@ function Chart({ points }: { points: ReportsScoreRow[] }) {
       })}
 
       <text x={xFor(points[0].created_at)} y={CHART_HEIGHT - 6} textAnchor="start" fontSize={11} fill="#6b7890">
-        {formatShortDate(points[0].created_at, locale)}
+        {formatMonthDay(points[0].created_at, locale)}
       </text>
       <text
         x={xFor(points[points.length - 1].created_at)}
@@ -264,7 +261,7 @@ function Chart({ points }: { points: ReportsScoreRow[] }) {
         fontSize={11}
         fill="#6b7890"
       >
-        {formatShortDate(points[points.length - 1].created_at, locale)}
+        {formatMonthDay(points[points.length - 1].created_at, locale)}
       </text>
     </svg>
   );

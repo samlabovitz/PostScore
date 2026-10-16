@@ -5,11 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Toggle } from "@/components/ui/Toggle";
 import { setMonthlyReportEnabled } from "@/app/actions/businesses";
 import type { MonthlyEmailReportStatus } from "@/app/actions/reports";
-import { t, useLocale, type Locale } from "@/lib/i18n";
-
-function formatDate(iso: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(locale, { month: "long", day: "numeric", year: "numeric" }).format(new Date(iso));
-}
+import { formatLongDate, t, useLocale, type Locale } from "@/lib/i18n";
 
 /** A plain "about a month later" estimate from the last real send —
  * never a promised exact date, since a scheduler run time (see
@@ -21,7 +17,8 @@ function formatDate(iso: string, locale: Locale): string {
 function estimateNextReportDate(lastSentIso: string, locale: Locale): string {
   const d = new Date(lastSentIso);
   const next = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()));
-  return formatDate(next.toISOString(), locale);
+  // A UTC-midnight calendar date, so it is read in UTC, not New York.
+  return formatLongDate(next.toISOString(), locale, "UTC");
 }
 
 /**
@@ -106,7 +103,7 @@ function StatusLine({ status, enabled }: { status: MonthlyEmailReportStatus; ena
   return (
     <p className="mt-1 text-sm text-ink-soft">
       {t(locale, "dashboard.reports.emailLastSentNext", {
-        lastSent: formatDate(status.lastSentAt, locale),
+        lastSent: formatLongDate(status.lastSentAt, locale),
         nextReport: estimateNextReportDate(status.lastSentAt, locale),
       })}
     </p>

@@ -5,7 +5,7 @@
 // "aim for X" read on the same real rating/review-count data, distinct
 // from how those numbers actually earn points.
 
-import { DEFAULT_LOCALE, t, tPlural, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, formatCount, t, tPlural, type Locale } from "@/lib/i18n";
 
 /** The rating this app encourages aiming for, shown in the social-proof
  * section's progress bar and caption. Independent of RATING_CURVE in
@@ -65,7 +65,7 @@ export function reviewCountCaption(reviewCount: number | null, locale: Locale = 
   if (reviewCount >= REVIEW_COUNT_MILESTONE) {
     return t(locale, "dashboard.websiteReviews.reviewCountCaptionPassed", {
       milestone: REVIEW_COUNT_MILESTONE,
-      reviewCount: reviewCount.toLocaleString(),
+      reviewCount: formatCount(reviewCount, locale),
     });
   }
   const remaining = REVIEW_COUNT_MILESTONE - reviewCount;

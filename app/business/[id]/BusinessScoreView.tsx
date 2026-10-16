@@ -27,7 +27,7 @@ import type { BusinessRecord, ScoreHistoryRow, ScoreSnapshot } from "@/app/actio
 import { diffProfileSnapshots, type ProfileSnapshot } from "@/lib/profileChanges";
 import { formatOpeningHours } from "@/lib/hours";
 import { diffBreakdowns, resolveChangeDisplay } from "@/lib/scoreChanges";
-import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
+import { formatCount, formatDateTime, formatShortDate, t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 import {
   GRADE_THRESHOLDS,
   parseWebsiteAnalysis,
@@ -285,7 +285,7 @@ function SinceLastScanControl({ history }: { history: ScoreHistoryRow[] }) {
           <div className="flex flex-col divide-y divide-paper-line">
             {history.slice(0, 6).map((row) => (
               <div key={row.id} className="flex items-center justify-between py-2 text-sm">
-                <span className="text-ink-soft">{new Date(row.created_at).toLocaleDateString()}</span>
+                <span className="text-ink-soft">{formatShortDate(row.created_at, locale)}</span>
                 <span className="font-medium text-ink">
                   {row.total} · {row.grade}
                 </span>
@@ -348,7 +348,7 @@ function ListingCard({ business }: { business: BusinessRecord }) {
         />
         <ListingField
           label={t(locale, "dashboard.common.reviewsLabel")}
-          value={business.review_count !== null ? business.review_count.toLocaleString() : notAvailable}
+          value={business.review_count !== null ? formatCount(business.review_count, locale) : notAvailable}
         />
         <ListingField
           label={t(locale, "dashboard.common.websiteLabel")}
@@ -730,7 +730,7 @@ export function BusinessScoreView({
           />
           <StatTile
             label={t(locale, "dashboard.overview.googleReviewsLabel")}
-            value={business.review_count === null ? "—" : business.review_count.toLocaleString()}
+            value={business.review_count === null ? "—" : formatCount(business.review_count, locale)}
           />
           <LocalBenchmarkTile businessId={businessId} result={benchmark} />
         </div>
@@ -786,7 +786,7 @@ export function BusinessScoreView({
               {history.map((row) => (
                 <tr key={row.id} className="border-t border-paper-line">
                   <td className="py-2 text-ink">
-                    {new Date(row.created_at).toLocaleString()}
+                    {formatDateTime(row.created_at, locale)}
                   </td>
                   <td className="py-2 text-ink">{row.total}</td>
                   <td className="py-2 text-ink">{row.grade}</td>

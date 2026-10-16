@@ -2484,6 +2484,9 @@ interface BusinessTypeOption {
    * reused as-is. Omit to just use the content profile's own noun.
    */
   competitorNoun?: MessageKey;
+  /** Overrides the content profile's own Price check examples (e.g. a
+   * bar's drinks instead of the restaurant content's dishes). */
+  pricingExamples?: PricingExampleSource[];
 }
 
 /**
@@ -2549,6 +2552,11 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     placesType: ["bar", "pub", "night_club"],
     contentProfileId: "restaurant",
     competitorNoun: "bizProfileOptions.bar.competitorNoun",
+    pricingExamples: [
+      { id: "example1", text: "bizProfileOptions.bar.pricingExamples.example1" },
+      { id: "example2", text: "bizProfileOptions.bar.pricingExamples.example2" },
+      { id: "example3", text: "bizProfileOptions.bar.pricingExamples.example3" },
+    ],
   },
   {
     id: "bakery",
@@ -2864,6 +2872,7 @@ function buildResolvedProfileSource(option: BusinessTypeOption): BizProfileSourc
     match: option.match,
     placesType: option.placesType,
     competitorNoun: option.competitorNoun ?? content.competitorNoun,
+    pricingExamples: option.pricingExamples ?? content.pricingExamples,
   };
 }
 

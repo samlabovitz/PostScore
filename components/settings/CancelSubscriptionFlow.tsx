@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
+import { formatLongDate, t, useLocale, type MessageKey } from "@/lib/i18n";
 import type { CancellationFeedback, CancellationReasonCode } from "@/lib/subscription";
 
 const TEXT_MAX_LENGTH = 500;
@@ -30,12 +30,6 @@ const FOLLOW_UP_LABEL_KEY: Partial<Record<CancellationReasonCode, MessageKey>> =
   switching: "dashboard.cancelSubscription.switchingFollowUpLabel",
   other: "dashboard.cancelSubscription.otherFollowUpLabel",
 };
-
-function formatPeriodEndDate(iso: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(locale, { month: "long", day: "numeric", year: "numeric" }).format(
-    new Date(iso)
-  );
-}
 
 type FlowState =
   | { step: "reason" }
@@ -76,7 +70,7 @@ export function CancelSubscriptionFlow({
   const [improvement, setImprovement] = useState("");
 
   const followUpLabelKey = reasonCode ? FOLLOW_UP_LABEL_KEY[reasonCode] : undefined;
-  const formattedDate = formatPeriodEndDate(periodEndDate, locale);
+  const formattedDate = formatLongDate(periodEndDate, locale);
 
   async function handleConfirm() {
     setState({ step: "submitting" });

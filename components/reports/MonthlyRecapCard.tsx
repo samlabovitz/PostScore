@@ -9,11 +9,7 @@ import { cn } from "@/lib/utils";
 import { downloadDataUrl } from "@/lib/couponImage";
 import { renderRecapPng } from "@/lib/reportsRecapImage";
 import type { MonthlyRecap } from "@/app/actions/reports";
-import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
-
-function formatDate(iso: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" }).format(new Date(iso));
-}
+import { formatShortDate, t, tPlural, useLocale } from "@/lib/i18n";
 
 /**
  * A recap of what changed between the two most recent real scans — real
@@ -41,7 +37,7 @@ export function MonthlyRecapCard({
   }
 
   const { previous, current, scoreDelta, daysBetween, changes, changesUnavailable } = recap;
-  const dateRangeLabel = `${formatDate(previous.created_at, locale)} – ${formatDate(current.created_at, locale)} (${tPlural(locale, "dashboard.reports.recapDayCount", daysBetween)})`;
+  const dateRangeLabel = `${formatShortDate(previous.created_at, locale)} – ${formatShortDate(current.created_at, locale)} (${tPlural(locale, "dashboard.reports.recapDayCount", daysBetween)})`;
 
   return (
     <Card className="p-5">

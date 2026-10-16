@@ -340,7 +340,7 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
   let assessments: PriceAssessment[];
   try {
     const reply = await callAnthropicMessage({ system, userMessage: prompt, maxTokens });
-    assessments = parsePricingAssessmentResponse(reply, services);
+    assessments = parsePricingAssessmentResponse(reply, services, locale);
   } catch (err) {
     return {
       status: "error",
