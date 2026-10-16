@@ -27,7 +27,7 @@ import type { BusinessRecord, ScoreHistoryRow, ScoreSnapshot } from "@/app/actio
 import { diffProfileSnapshots, type ProfileSnapshot } from "@/lib/profileChanges";
 import { formatOpeningHours } from "@/lib/hours";
 import { diffBreakdowns, resolveChangeDisplay } from "@/lib/scoreChanges";
-import { formatCount, formatDateTime, formatShortDate, t, tPlural, useLocale, type Locale } from "@/lib/i18n";
+import { formatCount, formatDateTime, formatShortDate, t, tPlural, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 import {
   GRADE_THRESHOLDS,
   parseWebsiteAnalysis,
@@ -240,6 +240,7 @@ function GradeExplainer({ grade }: { grade: Grade }) {
  * scan history it was computed from. */
 function SinceLastScanControl({ history }: { history: ScoreHistoryRow[] }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const [open, setOpen] = useState(false);
 
   if (history.length < 2) {
@@ -286,7 +287,7 @@ function SinceLastScanControl({ history }: { history: ScoreHistoryRow[] }) {
           <div className="flex flex-col divide-y divide-paper-line">
             {history.slice(0, 6).map((row) => (
               <div key={row.id} className="flex items-center justify-between py-2 text-sm">
-                <span className="text-ink-soft">{formatShortDate(row.created_at, locale)}</span>
+                <span className="text-ink-soft">{formatShortDate(row.created_at, locale, timeZone)}</span>
                 <span className="font-medium text-ink">
                   {row.total} · {row.grade}
                 </span>
@@ -633,6 +634,7 @@ export function BusinessScoreView({
   profileTools: ProfileTools;
 }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const { breakdown, projectedBreakdown } = result;
   // Real stored spam findings only — see hackSignsFor (lib/siteSecurity.ts).
   const showHackedBanner =
@@ -795,7 +797,7 @@ export function BusinessScoreView({
               {history.map((row) => (
                 <tr key={row.id} className="border-t border-paper-line">
                   <td className="py-2 text-ink">
-                    {formatDateTime(row.created_at, locale)}
+                    {formatDateTime(row.created_at, locale, timeZone)}
                   </td>
                   <td className="py-2 text-ink">{row.total}</td>
                   <td className="py-2 text-ink">{row.grade}</td>

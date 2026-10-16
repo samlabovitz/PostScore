@@ -1,5 +1,6 @@
 "use server";
 
+import { withTimeZone } from "@/lib/businessTimeZone";
 import { ensureFirstCompetitorScanWithClient } from "@/app/actions/competitors";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
@@ -109,7 +110,7 @@ export async function scoreBusinessWithClient(
   const { data: business, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, phone, website, rating, review_count, category, categories, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json"
+      "id, name, address, phone, website, rating, review_count, category, categories, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng"
     )
     .eq("id", businessId)
     .single();
@@ -118,10 +119,13 @@ export async function scoreBusinessWithClient(
     return { status: "not_found" };
   }
 
-  const input = businessRowToScoringInput(business as BusinessScoringRow);
+  // The business's own time zone (Day 5 prep) — for DashboardShell and
+  // any date inside a check explanation.
+  const zoned = withTimeZone(business);
+  const input = businessRowToScoringInput(zoned as BusinessScoringRow);
   const result = getScoreWithSuggestions(input, locale);
 
-  return { status: "ok", business: business as BusinessRecord, result };
+  return { status: "ok", business: zoned as BusinessRecord, result };
 }
 
 export type SaveScoreSnapshotResult =

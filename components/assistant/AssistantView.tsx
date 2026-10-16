@@ -28,7 +28,7 @@ import {
 import type { AssistantBusinessContext } from "@/lib/assistant";
 import { BusinessMemoryPanel } from "@/components/assistant/BusinessMemoryPanel";
 import { AssistantMessageContent, type ReplyLinkContext } from "@/components/assistant/AssistantMessageContent";
-import { formatMonthDayTime, t, tPlural, useLocale } from "@/lib/i18n";
+import { formatMonthDayTime, t, tPlural, useLocale, useTimeZone } from "@/lib/i18n";
 
 function MessageBubble({ message, links }: { message: AssistantMessageRow; links: ReplyLinkContext }) {
   const isUser = message.role === "user";
@@ -115,6 +115,7 @@ function HistoryList({
   onOpen: (id: string) => void;
 }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   if (loading) {
     return (
       <div className="flex flex-1 items-center justify-center py-10 text-ink-mute">
@@ -146,7 +147,7 @@ function HistoryList({
             {c.preview || t(locale, "dashboard.assistant.newConversationFallback")}
           </span>
           <span className="text-[11.5px] text-ink-mute">
-            {formatMonthDayTime(c.startedAt, locale)} ·{" "}
+            {formatMonthDayTime(c.startedAt, locale, timeZone)} ·{" "}
             {tPlural(locale, "dashboard.assistant.historyMessageCount", c.messageCount, {
               count: c.messageCount,
             })}

@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Toggle } from "@/components/ui/Toggle";
 import { setMonthlyReportEnabled } from "@/app/actions/businesses";
 import type { MonthlyEmailReportStatus } from "@/app/actions/reports";
-import { formatLongDate, t, useLocale, type Locale } from "@/lib/i18n";
+import { formatLongDate, t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 
 /** A plain "about a month later" estimate from the last real send —
  * never a promised exact date, since a scheduler run time (see
@@ -91,6 +91,7 @@ export function MonthlyEmailReportCard({
 
 function StatusLine({ status, enabled }: { status: MonthlyEmailReportStatus; enabled: boolean }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   if (!status.live) {
     return <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.reports.emailComingSoon")}</p>;
   }
@@ -103,7 +104,7 @@ function StatusLine({ status, enabled }: { status: MonthlyEmailReportStatus; ena
   return (
     <p className="mt-1 text-sm text-ink-soft">
       {t(locale, "dashboard.reports.emailLastSentNext", {
-        lastSent: formatLongDate(status.lastSentAt, locale),
+        lastSent: formatLongDate(status.lastSentAt, locale, timeZone),
         nextReport: estimateNextReportDate(status.lastSentAt, locale),
       })}
     </p>

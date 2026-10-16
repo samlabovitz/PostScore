@@ -34,6 +34,7 @@ export default async function CompetitorsPage({ params }: { params: { id: string
         name: fetched.businessName,
         address: fetched.businessAddress,
         language: fetched.language,
+        time_zone: fetched.timeZone,
       }}
     >
       <CompetitorsView businessId={params.id} data={fetched} />

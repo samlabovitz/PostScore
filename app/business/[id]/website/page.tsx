@@ -111,6 +111,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
         category: data.category,
         primary_type: data.primaryType,
         language: data.language,
+        time_zone: data.timeZone,
       }}
     >
       <div className="flex flex-col gap-8 nav:gap-10">
@@ -140,7 +141,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
           <div className="rounded-lg border border-red/30 bg-red/5 px-4 py-3 text-[13px] text-ink-soft">
             {data.googleListingLastKnownWebsiteAt
               ? t(locale, "dashboard.website.googleListingWebsiteRemoved", {
-                  date: formatShortDate(data.googleListingLastKnownWebsiteAt, locale),
+                  date: formatShortDate(data.googleListingLastKnownWebsiteAt, locale, data.timeZone),
                 })
               : t(locale, "dashboard.website.googleListingWebsiteRemovedUnknownDate")}
           </div>

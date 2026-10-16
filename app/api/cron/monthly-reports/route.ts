@@ -43,6 +43,7 @@
 // 15-minute budget to make many small, safe calls here. See
 // netlify/functions/monthly-reports-batch.mts's own top comment for the
 // full reasoning.
+import { businessTimeZone } from "@/lib/businessTimeZone";
 import { getListingMode } from "@/lib/listingMode";
 import type { ProfileTools } from "@/lib/growBannerTools";
 import { timingSafeEqual } from "crypto";
@@ -330,7 +331,7 @@ export async function computeFiringGrowthMoves(
   locale: Locale
 ): Promise<FocusGrowthMove[]> {
   const [businessResult, promoResult, referralResult, photoCounts] = await Promise.all([
-    supabase.from("businesses").select("photo_count, pricing_assessed_at, website, verified_website_url").eq("id", businessId).single(),
+    supabase.from("businesses").select("photo_count, pricing_assessed_at, website, verified_website_url, lat, lng").eq("id", businessId).single(),
     supabase.from("promos").select("id").eq("business_id", businessId).limit(1),
     supabase.from("referrals").select("id").eq("business_id", businessId).limit(1),
     competitorScanId ? readCompetitorPhotoCountsForScan(supabase, businessId, competitorScanId) : Promise.resolve([]),
@@ -342,6 +343,7 @@ export async function computeFiringGrowthMoves(
     referralOk: profileTools.referralOk,
     couponsOk: profileTools.couponsOk,
     pricingOk: profileTools.pricingOk,
+    timeZone: businessTimeZone(businessResult.data?.lat, businessResult.data?.lng),
     hasEverCreatedPromo: (promoResult.data?.length ?? 0) > 0,
     hasEverCreatedReferral: (referralResult.data?.length ?? 0) > 0,
     pricingAssessedAt: businessResult.data?.pricing_assessed_at ?? null,

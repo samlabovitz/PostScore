@@ -71,6 +71,8 @@ export function buildWeeklyChecklistItems(locale: Locale = DEFAULT_LOCALE): Week
  * getWeeklyChecklistState in app/actions/weeklyChecklist.ts, the one
  * place this is read).
  */
+/** Only the fallback now: the routine resets at Monday 12:00 AM in each
+ * business's OWN time zone (app/actions/weeklyChecklist.ts passes it). */
 export const WEEKLY_CHECKLIST_TIMEZONE = "America/New_York";
 
 function localDateParts(date: Date, timeZone: string): { year: number; month: number; day: number } {

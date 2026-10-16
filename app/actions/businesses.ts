@@ -15,6 +15,7 @@ import { bizProfileById, resolveBizProfile } from "@/config/bizProfiles";
 import { extraServicesKeywordsFor } from "@/lib/pagePresenceDetection";
 import { isMissingColumnError, parseListingMode } from "@/lib/listingMode";
 import { parsePublicWebsiteUrl } from "@/lib/publicUrl";
+import { businessTimeZone } from "@/lib/businessTimeZone";
 import {
   businessRowToScoringInput,
   carryForwardMobilePerformance,
@@ -523,6 +524,10 @@ export interface BusinessSummary {
    * `businesses` row (e.g. an inline literal in a page.tsx) safely fall
    * back to DEFAULT_LOCALE via normalizeLocale(undefined). */
   language?: string | null;
+  /** The business's own IANA time zone (from its Google location — see
+   * lib/businessTimeZone.ts), for every date shown under DashboardShell.
+   * Optional: shapes built without it fall back to New York. */
+  time_zone?: string | null;
 }
 
 export type GetBusinessSummaryResult =
@@ -549,7 +554,7 @@ export async function getBusinessSummary(businessId: string): Promise<GetBusines
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, category, categories, primary_type, business_type_override, trade_id, phone, services, avg_job_value_low, avg_job_value_high, language"
+      "id, name, address, category, categories, primary_type, business_type_override, trade_id, phone, services, avg_job_value_low, avg_job_value_high, language, lat, lng"
     )
     .eq("id", businessId)
     .single();
@@ -558,7 +563,8 @@ export async function getBusinessSummary(businessId: string): Promise<GetBusines
     return { status: "not_found" };
   }
 
-  return { status: "ok", business: data as BusinessSummary };
+  const { lat, lng, ...rest } = data as BusinessSummary & { lat: number | null; lng: number | null };
+  return { status: "ok", business: { ...rest, time_zone: businessTimeZone(lat, lng) } };
 }
 
 export type UpdateBusinessProfileResult =

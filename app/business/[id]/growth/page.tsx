@@ -78,7 +78,7 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   // The price check always shows for every business (Step 2f) — even if
   // the rest of the growth signals couldn't load.
   const growthMoves =
-    growthMovesResult.status === "ok" ? growthMovesResult.moves : [buildPriceCheckMove(params.id, null, locale)];
+    growthMovesResult.status === "ok" ? growthMovesResult.moves : [buildPriceCheckMove(params.id, null, locale, business.time_zone)];
 
   const checklistStateResult = await getWeeklyChecklistState(params.id);
   const weeklyChecklist = {

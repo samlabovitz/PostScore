@@ -54,6 +54,7 @@
 // the id is the segment right after /business/ in the URL
 // (postscoree.netlify.app/business/<businessId>).
 
+import { businessTimeZone } from "../lib/businessTimeZone";
 import type { ProfileTools } from "../lib/growBannerTools";
 import * as fs from "fs";
 import * as os from "os";
@@ -257,7 +258,7 @@ async function computeFiringGrowthMoves(
   locale: ReturnType<typeof normalizeLocale>
 ): Promise<FocusGrowthMove[]> {
   const [businessResult, promoResult, referralResult, photoCounts] = await Promise.all([
-    supabase.from("businesses").select("photo_count, pricing_assessed_at, website, verified_website_url").eq("id", businessId).single(),
+    supabase.from("businesses").select("photo_count, pricing_assessed_at, website, verified_website_url, lat, lng").eq("id", businessId).single(),
     supabase.from("promos").select("id").eq("business_id", businessId).limit(1),
     supabase.from("referrals").select("id").eq("business_id", businessId).limit(1),
     competitorScanId ? readCompetitorPhotoCountsForScan(businessId, competitorScanId) : Promise.resolve([]),
@@ -269,6 +270,7 @@ async function computeFiringGrowthMoves(
     referralOk: profileTools.referralOk,
     couponsOk: profileTools.couponsOk,
     pricingOk: profileTools.pricingOk,
+    timeZone: businessTimeZone(businessResult.data?.lat, businessResult.data?.lng),
     hasEverCreatedPromo: (promoResult.data?.length ?? 0) > 0,
     hasEverCreatedReferral: (referralResult.data?.length ?? 0) > 0,
     pricingAssessedAt: businessResult.data?.pricing_assessed_at ?? null,

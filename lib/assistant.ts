@@ -305,6 +305,9 @@ export interface AssistantWeeklyRoutineSummary {
 }
 
 export interface AssistantBusinessContext {
+  /** The business's own IANA time zone, for every date in the context
+   * text (lib/businessTimeZone.ts). Omitted = New York. */
+  timeZone?: string;
   listing: AssistantListingSummary;
   score: AssistantScoreSummary;
   actionPlan: AssistantActionPlanSummary;
@@ -630,7 +633,7 @@ export function growthMoveOverlapsScore(moveId: GrowthMoveId, losingChecks: Arra
   }
 }
 
-function growthMoveOwnerFact(move: AssistantGrowthMove, locale: Locale): string {
+function growthMoveOwnerFact(move: AssistantGrowthMove, locale: Locale, timeZone?: string): string {
   switch (move.id) {
     case "start_coupon":
       return "No coupon has been created in PostScore yet. PostScore can't see offers run anywhere else, so don't tell the owner they aren't running any promotions — only that they haven't built one here.";
@@ -639,7 +642,7 @@ function growthMoveOwnerFact(move: AssistantGrowthMove, locale: Locale): string 
     case "run_price_check":
       return move.pricingAssessedAt === null
         ? "A price check has never been run in PostScore."
-        : `The last price check in PostScore was run on ${formatShortDate(move.pricingAssessedAt, locale)}.`;
+        : `The last price check in PostScore was run on ${formatShortDate(move.pricingAssessedAt, locale, timeZone)}.`;
     case "add_photos_vs_competitors":
       return `This listing has ${move.yourPhotoCount ?? 0} photo(s) on Google; the median among the competitors in the last saved scan is ${move.competitorMedianPhotoCount ?? 0}.`;
     case "improve_website":
@@ -805,7 +808,7 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
     for (const m of context.growthMoves) {
       const overlaps = growthMoveOverlapsScore(m.id, context.score.losingChecks);
       lines.push(
-        `- ${m.title}: ${m.why} Where in PostScore: ${growthMoveDestination(m.id, locale)}. Why it's showing: ${growthMoveOwnerFact(m, locale)} Score impact: ${
+        `- ${m.title}: ${m.why} Where in PostScore: ${growthMoveDestination(m.id, locale)}. Why it's showing: ${growthMoveOwnerFact(m, locale, context.timeZone)} Score impact: ${
           overlaps
             ? "YES, this one ALSO currently costs real points — see the matching entry in \"Checks currently losing points\" or the action plan above for the exact numbers."
             : "NO — this is a customer-getting move only; it does not affect this business's PostScore either way."
@@ -885,7 +888,7 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
     const lastKnown = context.listing.googleListingLastKnownWebsiteAt;
     lines.push(
       lastKnown
-        ? `- GOOGLE'S OWN LISTING no longer shows a website at all — CONFIRMED on two separate real checks (it last showed one around ${formatShortDate(lastKnown, locale)}). This IS a confirmed gap in Google's own listing data, scored accordingly. Still never assume the business itself has no real website anywhere — say only that Google's Business Profile's website field is currently empty, and suggest the owner re-add it there if they still have a site.`
+        ? `- GOOGLE'S OWN LISTING no longer shows a website at all — CONFIRMED on two separate real checks (it last showed one around ${formatShortDate(lastKnown, locale, context.timeZone)}). This IS a confirmed gap in Google's own listing data, scored accordingly. Still never assume the business itself has no real website anywhere — say only that Google's Business Profile's website field is currently empty, and suggest the owner re-add it there if they still have a site.`
         : "- GOOGLE'S OWN LISTING no longer shows a website at all — CONFIRMED on two separate real checks. We don't have a reliable record of when it last showed one, so never guess or state a date. This IS a confirmed gap in Google's own listing data, scored accordingly. Still never assume the business itself has no real website anywhere — say only that Google's Business Profile's website field is currently empty, and suggest the owner re-add it there if they still have a site."
     );
   }

@@ -1,5 +1,6 @@
 "use server";
 
+import { businessTimeZone } from "@/lib/businessTimeZone";
 import { createClient } from "@/lib/supabase/server";
 import {
   buildGrowthMoves,
@@ -58,7 +59,7 @@ export async function getGrowthMoveSignals(
   }
 
   const [businessResult, promoResult, referralResult, resolvedSnapshot] = await Promise.all([
-    supabase.from("businesses").select("photo_count, pricing_assessed_at, website, verified_website_url").eq("id", businessId).single(),
+    supabase.from("businesses").select("photo_count, pricing_assessed_at, website, verified_website_url, lat, lng").eq("id", businessId).single(),
     supabase.from("promos").select("id").eq("business_id", businessId).limit(1),
     supabase.from("referrals").select("id").eq("business_id", businessId).limit(1),
     snapshot !== undefined ? Promise.resolve(snapshot) : getLatestCompetitorSnapshot(businessId),
@@ -77,6 +78,7 @@ export async function getGrowthMoveSignals(
     referralOk: profileTools.referralOk,
     couponsOk: profileTools.couponsOk,
     pricingOk: profileTools.pricingOk,
+    timeZone: businessTimeZone(businessResult.data.lat, businessResult.data.lng),
     hasEverCreatedPromo: (promoResult.data?.length ?? 0) > 0,
     hasEverCreatedReferral: (referralResult.data?.length ?? 0) > 0,
     pricingAssessedAt: businessResult.data.pricing_assessed_at ?? null,

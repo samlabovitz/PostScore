@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { IconCheck, IconCopy } from "@tabler/icons-react";
 import { Pill } from "@/components/ui/Pill";
-import { t, useLocale } from "@/lib/i18n";
+import { t, useLocale, useTimeZone } from "@/lib/i18n";
 import {
   SITE_SECURITY_STEP_KEYS,
   siteSecurityCopyText,
@@ -33,9 +33,10 @@ export function SiteSecurityDetails({
   businessName: string | null;
 }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const [copyState, setCopyState] = useState<"idle" | "copied" | "fallback">("idle");
   const domains = spamDomains(finding.suspiciousLinks);
-  const copyText = siteSecurityCopyText({ businessName, siteUrl, finding, scannedAt: trust.checkedAt, locale });
+  const copyText = siteSecurityCopyText({ businessName, siteUrl, finding, scannedAt: trust.checkedAt, locale, timeZone });
 
   async function handleCopy() {
     try {

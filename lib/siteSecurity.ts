@@ -87,8 +87,10 @@ export function siteSecurityCopyText(params: {
   finding: SpamFinding;
   scannedAt: string | null;
   locale: Locale;
+  /** The business's own time zone for the scan date (omitted = New York). */
+  timeZone?: string;
 }): string {
-  const { businessName, siteUrl, finding, scannedAt, locale } = params;
+  const { businessName, siteUrl, finding, scannedAt, locale, timeZone } = params;
   const domains = spamDomains(finding.suspiciousLinks);
   const lines = [
     t(locale, "dashboard.website.security.copy.title"),
@@ -96,7 +98,7 @@ export function siteSecurityCopyText(params: {
     t(locale, "dashboard.website.security.copy.business", { name: businessName ?? "—" }),
     t(locale, "dashboard.website.security.copy.site", { url: siteUrl ?? "—" }),
     t(locale, "dashboard.website.security.copy.scanDate", {
-      date: scannedAt ? formatShortDate(scannedAt, locale) : "—",
+      date: scannedAt ? formatShortDate(scannedAt, locale, timeZone) : "—",
     }),
     t(locale, "dashboard.website.security.copy.scope"),
     "",

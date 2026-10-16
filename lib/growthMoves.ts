@@ -80,6 +80,9 @@ export interface GrowthMoveSignals {
    * same fixture reason as referralOk. */
   couponsOk?: boolean;
   pricingOk?: boolean;
+  /** The business's own time zone (lib/businessTimeZone.ts) for dates
+   * in a move's text. Omitted = New York. */
+  timeZone?: string | null;
   /** True the moment a promos row has EVER existed for this business —
    * active or ended, never just "currently running." See the promos
    * table / app/actions/promos.ts. */
@@ -166,7 +169,9 @@ export function weakWebsiteIssueLabels(breakdown: ScoreBreakdown): string[] {
 export function buildPriceCheckMove(
   businessId: string,
   pricingAssessedAt: string | null,
-  locale: Locale = DEFAULT_LOCALE
+  locale: Locale = DEFAULT_LOCALE,
+  /** The business's own time zone for the "last checked" date. */
+  timeZone?: string | null
 ): GrowthMove {
   const pricingHref = `/business/${businessId}/pricing`;
   if (pricingAssessedAt === null) {
@@ -184,7 +189,7 @@ export function buildPriceCheckMove(
     id: "run_price_check",
     title: t(locale, "dashboard.growth.moves.refreshPriceCheck.title"),
     meta: t(locale, "dashboard.growth.moves.refreshPriceCheck.lastChecked", {
-      date: formatShortDate(pricingAssessedAt, locale),
+      date: formatShortDate(pricingAssessedAt, locale, timeZone || undefined),
     }),
     why: t(locale, "dashboard.growth.moves.refreshPriceCheck.why"),
     howTo: t(locale, "dashboard.growth.moves.refreshPriceCheck.howTo"),
@@ -248,7 +253,7 @@ export function buildGrowthMoves(signals: GrowthMoveSignals, locale: Locale = DE
   // two honest variants of the same real ask, depending on whether a
   // price check has ever been run.
   if (signals.pricingOk ?? true) {
-    moves.push(buildPriceCheckMove(signals.businessId, signals.pricingAssessedAt, locale));
+    moves.push(buildPriceCheckMove(signals.businessId, signals.pricingAssessedAt, locale, signals.timeZone));
   }
 
   const yourPhotos = signals.photoCount ?? 0;

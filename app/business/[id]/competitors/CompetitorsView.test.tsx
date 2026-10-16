@@ -58,6 +58,7 @@ const DATA: Extract<GetCompetitorsResult, { status: "ok" }> = {
   refresh: { allowed: false, nextAvailableAt: "2026-11-15T13:00:00.000Z" },
   scanBlocker: null,
   comparedViaTypes: [],
+  timeZone: "America/New_York",
 };
 
 function render(data = DATA, locale: "en" | "es" = "en") {

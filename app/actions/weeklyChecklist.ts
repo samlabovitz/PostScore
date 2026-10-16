@@ -1,10 +1,10 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { businessTimeZone } from "@/lib/businessTimeZone";
 import {
   buildWeeklyChecklistState,
   weekStartFor,
-  WEEKLY_CHECKLIST_TIMEZONE,
   type WeeklyChecklistItemId,
   type WeeklyCheckRow,
 } from "@/lib/weeklyChecklist";
@@ -18,8 +18,8 @@ export interface WeeklyChecklistStateDTO {
   streakWeeks: number;
 }
 
-function toDTO(rows: WeeklyCheckRow[]): WeeklyChecklistStateDTO {
-  const state = buildWeeklyChecklistState(rows);
+function toDTO(rows: WeeklyCheckRow[], timeZone: string): WeeklyChecklistStateDTO {
+  const state = buildWeeklyChecklistState(rows, new Date(), timeZone);
   return {
     weekStart: state.weekStart,
     checkedItemIds: Array.from(state.checkedItemIds),
@@ -37,6 +37,13 @@ export type GetWeeklyChecklistStateResult =
  * current display state. Reads every row ever logged, not just the
  * current week, since the streak needs real history — a small, cheap
  * table (5 rows per business per week at most). */
+/** The business's own time zone (from its Google location; New York
+ * when unknown) — the weekly routine resets at Monday 12:00 AM there. */
+async function checklistTimeZone(supabase: ReturnType<typeof createClient>, businessId: string): Promise<string> {
+  const { data } = await supabase.from("businesses").select("lat, lng").eq("id", businessId).maybeSingle();
+  return businessTimeZone(data?.lat, data?.lng);
+}
+
 export async function getWeeklyChecklistState(businessId: string): Promise<GetWeeklyChecklistStateResult> {
   const supabase = createClient();
 
@@ -48,17 +55,16 @@ export async function getWeeklyChecklistState(businessId: string): Promise<GetWe
     return { status: "unauthenticated" };
   }
 
-  const { data, error } = await supabase
-    .from("weekly_checks")
-    .select("week_start, item_id")
-    .eq("business_id", businessId)
-    .order("week_start", { ascending: false });
+  const [{ data, error }, timeZone] = await Promise.all([
+    supabase.from("weekly_checks").select("week_start, item_id").eq("business_id", businessId).order("week_start", { ascending: false }),
+    checklistTimeZone(supabase, businessId),
+  ]);
 
   if (error) {
     return { status: "error", message: error.message };
   }
 
-  return { status: "ok", state: toDTO((data ?? []) as WeeklyCheckRow[]) };
+  return { status: "ok", state: toDTO((data ?? []) as WeeklyCheckRow[], timeZone) };
 }
 
 export type SetWeeklyCheckItemResult =
@@ -91,7 +97,8 @@ export async function setWeeklyCheckItem(
     return { status: "unauthenticated" };
   }
 
-  const weekStart = weekStartFor(new Date(), WEEKLY_CHECKLIST_TIMEZONE);
+  // The week resets at Monday 12:00 AM in the business's OWN time zone.
+  const weekStart = weekStartFor(new Date(), await checklistTimeZone(supabase, businessId));
 
   if (checked) {
     const { error } = await supabase.from("weekly_checks").upsert(

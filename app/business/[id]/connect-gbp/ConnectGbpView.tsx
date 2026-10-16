@@ -18,7 +18,7 @@ import {
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { disconnectGbp } from "@/app/actions/gbp";
-import { formatShortDate, t, useLocale, type Locale } from "@/lib/i18n";
+import { formatShortDate, t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 
 function buildUnlocks(
   locale: Locale
@@ -109,6 +109,7 @@ export function ConnectGbpView({
   oauthConfigured: boolean;
 }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const unlocks = buildUnlocks(locale);
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
@@ -155,7 +156,7 @@ export function ConnectGbpView({
               <div className="text-[12.5px] text-ink-mute">
                 {connectedAt
                   ? t(locale, "dashboard.connectGbp.sinceDate", {
-                      date: formatShortDate(connectedAt, locale),
+                      date: formatShortDate(connectedAt, locale, timeZone),
                     })
                   : t(locale, "dashboard.connectGbp.connectedFallback")}{" "}
                 {t(locale, "dashboard.connectGbp.notWiredUpSuffix")}

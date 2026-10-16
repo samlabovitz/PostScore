@@ -13,7 +13,7 @@ import {
   formatShortDate,
   t,
   tPlural,
-  useLocale,
+  useLocale, useTimeZone,
   type Locale,
   type MessageKey,
 } from "@/lib/i18n";
@@ -90,8 +90,8 @@ function signed(n: number): string {
   return n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0";
 }
 
-function lastScanLabel(iso: string, locale: Locale, now: Date): string {
-  const days = calendarDaysAgo(iso, now);
+function lastScanLabel(iso: string, locale: Locale, now: Date, timeZone: string): string {
+  const days = calendarDaysAgo(iso, now, timeZone);
   if (days <= 0) return t(locale, "dashboard.reports.chartToday");
   if (days === 1) return t(locale, "dashboard.reports.chartYesterday");
   return tPlural(locale, "dashboard.reports.chartDaysAgo", days, { days });
@@ -104,13 +104,14 @@ function lastScanLabel(iso: string, locale: Locale, now: Date): string {
  * value; a range with fewer than two days of scans says so honestly. */
 export function ScoreHistoryChart({ history }: { history: ReportsScoreRow[] }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const [range, setRange] = useState<RangeKey>(DEFAULT_RANGE);
   const [view, setView] = useState<ViewKey>("overall");
   // One clock for the whole render, so ranges, rows and "last scan" agree.
   const [now] = useState(() => new Date());
 
   const scans = useMemo(() => history.map(toScan), [history]);
-  const allDays = useMemo(() => dailyPoints(scans), [scans]);
+  const allDays = useMemo(() => dailyPoints(scans, timeZone), [scans, timeZone]);
   const days = useMemo(() => inRange(allDays, range, now), [allDays, range, now]);
   const scansInRange = useMemo(() => inRange(scans, range, now).length, [scans, range, now]);
   const summary = useMemo(() => summarizeRange(days, scansInRange), [days, scansInRange]);
@@ -168,13 +169,13 @@ export function ScoreHistoryChart({ history }: { history: ReportsScoreRow[] }) {
         <SummaryStat
           label={t(locale, "dashboard.reports.chartSummaryBest")}
           value={summary ? summary.best.total : "—"}
-          detail={summary ? formatShortDate(summary.best.createdAt, locale) : null}
+          detail={summary ? formatShortDate(summary.best.createdAt, locale, timeZone) : null}
         />
         <SummaryStat label={t(locale, "dashboard.reports.chartSummaryScans")} value={scansInRange} />
         <SummaryStat
           label={t(locale, "dashboard.reports.chartLastScanLabel")}
-          value={latest ? lastScanLabel(latest.createdAt, locale, now) : "—"}
-          detail={latest ? formatShortDate(latest.createdAt, locale) : null}
+          value={latest ? lastScanLabel(latest.createdAt, locale, now, timeZone) : "—"}
+          detail={latest ? formatShortDate(latest.createdAt, locale, timeZone) : null}
         />
       </div>
 
@@ -283,6 +284,7 @@ function gradeBandColor(min: number): string {
 
 function Chart({ points, view }: { points: DayPoint[]; view: ViewKey }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const [active, setActive] = useState<number | null>(null);
@@ -468,10 +470,10 @@ function Chart({ points, view }: { points: DayPoint[]; view: ViewKey }) {
           )}
 
           <text x={PAD.left} y={HEIGHT - 6} textAnchor="start" fontSize={11} fill={AXIS_TEXT}>
-            {formatMonthDay(points[0].createdAt, locale)}
+            {formatMonthDay(points[0].createdAt, locale, timeZone)}
           </text>
           <text x={PAD.left + innerW} y={HEIGHT - 6} textAnchor="end" fontSize={11} fill={AXIS_TEXT}>
-            {formatMonthDay(points[lastIndex].createdAt, locale)}
+            {formatMonthDay(points[lastIndex].createdAt, locale, timeZone)}
           </text>
 
           {/* Hit layer: the crosshair snaps to the nearest day, so the
@@ -514,7 +516,7 @@ function Chart({ points, view }: { points: DayPoint[]; view: ViewKey }) {
                   className="absolute left-1/2 top-full z-20 mt-1 w-[230px] -translate-x-1/2 whitespace-normal rounded-lg border border-paper-deep bg-white p-2.5 text-left text-[12px] font-normal leading-snug text-ink-soft shadow-card"
                 >
                   <span className="mb-1 block font-medium text-ink">
-                    {group.map((k) => formatShortDate(points[markers[k]].createdAt, locale)).join(" · ")}
+                    {group.map((k) => formatShortDate(points[markers[k]].createdAt, locale, timeZone)).join(" · ")}
                   </span>
                   {t(locale, "dashboard.reports.chartScoringUpdatedTooltip")}
                 </span>
@@ -531,6 +533,7 @@ function Chart({ points, view }: { points: DayPoint[]; view: ViewKey }) {
 
 function PointTooltip({ point, x, width, view }: { point: DayPoint; x: number; width: number; view: ViewKey }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const TIP_W = 196;
   const left = Math.min(Math.max(x - TIP_W / 2, 0), width - TIP_W);
   return (
@@ -539,7 +542,7 @@ function PointTooltip({ point, x, width, view }: { point: DayPoint; x: number; w
       className="pointer-events-none absolute z-10 rounded-lg border border-paper-deep bg-white p-3 shadow-card"
       style={{ left, top: PAD_BASE.top + 4, width: TIP_W }}
     >
-      <div className="text-[11.5px] text-ink-mute">{formatShortDate(point.createdAt, locale)}</div>
+      <div className="text-[11.5px] text-ink-mute">{formatShortDate(point.createdAt, locale, timeZone)}</div>
       <div className="mt-0.5 flex items-baseline gap-2">
         <span className="font-serif text-[22px] font-semibold leading-none text-ink tabular-nums">{point.total}</span>
         <span className="text-[12px] text-ink-soft">{t(locale, "dashboard.reports.chartTooltipGrade", { grade: point.grade })}</span>
@@ -573,6 +576,7 @@ function PointTooltip({ point, x, width, view }: { point: DayPoint; x: number; w
 
 function ScanHistory({ rows }: { rows: ReturnType<typeof historyRows> }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const [open, setOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const shown = showAll ? rows : rows.slice(0, HISTORY_PAGE);
@@ -603,7 +607,7 @@ function ScanHistory({ rows }: { rows: ReturnType<typeof historyRows> }) {
               {shown.map((row) => (
                 <tr key={row.id} className="border-t border-paper-line align-top">
                   <td className="py-2 pr-2 text-ink">
-                    <div className="tabular-nums">{formatDateTime(row.createdAt, locale)}</div>
+                    <div className="tabular-nums">{formatDateTime(row.createdAt, locale, timeZone)}</div>
                     {row.scoringUpdated && (
                       <span className="mt-1 inline-flex items-center gap-0.5 rounded-md bg-paper px-1.5 py-0.5 text-[11px] text-ink-soft">
                         {t(locale, "dashboard.reports.chartScoringUpdated")}

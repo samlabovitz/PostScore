@@ -139,3 +139,27 @@ describe("resolveToggleOutcome", () => {
     expect(outcome).toEqual({ kind: "reverted", checkedItemIds: [] });
   });
 });
+
+describe("each business's own Monday 12:00 AM (time zones)", () => {
+  // Monday Oct 19, 2026, 06:00 UTC = Monday 2:00 AM in New York, but
+  // still Sunday Oct 18, 11:00 PM in Los Angeles (PDT, UTC−7).
+  const SUNDAY_NIGHT_LA = new Date("2026-10-19T06:00:00Z");
+
+  test("New York has already reset; Los Angeles is still on the previous week", () => {
+    expect(weekStartFor(SUNDAY_NIGHT_LA, "America/New_York")).toBe("2026-10-19");
+    expect(weekStartFor(SUNDAY_NIGHT_LA, "America/Los_Angeles")).toBe("2026-10-12");
+  });
+
+  test("Los Angeles resets exactly at its own midnight Monday", () => {
+    expect(weekStartFor(new Date("2026-10-19T06:59:59Z"), "America/Los_Angeles")).toBe("2026-10-12");
+    expect(weekStartFor(new Date("2026-10-19T07:00:00Z"), "America/Los_Angeles")).toBe("2026-10-19");
+  });
+
+  test("an LA business's check made Sunday night counts for that week, not the next", () => {
+    const rows = [{ week_start: "2026-10-12", item_id: "post_update" }];
+    const la = buildWeeklyChecklistState(rows, SUNDAY_NIGHT_LA, "America/Los_Angeles");
+    expect(Array.from(la.checkedItemIds)).toEqual(["post_update"]);
+    const ny = buildWeeklyChecklistState(rows, SUNDAY_NIGHT_LA, "America/New_York");
+    expect(Array.from(ny.checkedItemIds)).toEqual([]);
+  });
+});

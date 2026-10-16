@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { SCREENSHOT_REFRESH_COOLDOWN_DAYS, type WebsiteAnalysis, type WebsiteAnalysisPage } from "@/lib/scoring";
 import { refreshWebsiteScreenshots } from "@/app/actions/websiteScreenshots";
 import { screenshotFreshness, visibleAdditionalPages, visibleHomepageScreenshot } from "@/lib/screenshotFreshness";
-import { formatShortDate, t, tPlural, useLocale } from "@/lib/i18n";
+import { formatShortDate, t, tPlural, useLocale, useTimeZone } from "@/lib/i18n";
 
 const COOLDOWN_MS = SCREENSHOT_REFRESH_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -249,6 +249,7 @@ export function WebsiteVisualAnalysis({
   siteUrl?: string | null;
 }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const [expanded, setExpanded] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
@@ -290,7 +291,7 @@ export function WebsiteVisualAnalysis({
                 freshness.kind === "stale_unreachable"
                   ? "dashboard.website.screenshotStaleUnreachable"
                   : "dashboard.website.screenshotStaleOld",
-                { date: formatShortDate(freshness.capturedAt, locale) }
+                { date: formatShortDate(freshness.capturedAt, locale, timeZone) }
               )}
             </p>
           )}
@@ -360,7 +361,7 @@ export function WebsiteVisualAnalysis({
         {websiteAnalysis?.lastScreenshotRefreshAt && (
           <p className="px-0.5 text-[11.5px] text-ink-mute">
             {t(locale, "dashboard.website.screenshotsCaptured", {
-              date: formatShortDate(websiteAnalysis.lastScreenshotRefreshAt, locale),
+              date: formatShortDate(websiteAnalysis.lastScreenshotRefreshAt, locale, timeZone),
             })}
           </p>
         )}

@@ -798,6 +798,10 @@ export interface BusinessScoringInput {
    * none on file. Optional for the same mass-fixture reason as above.
    */
   verifiedElsewhereUrl?: string | null;
+  /** The business's own IANA time zone — display only (the date in an
+   * explanation like "measured on Oct 3"); never changes any points.
+   * Set by server callers via lib/businessTimeZone.ts; omitted = New York. */
+  timeZone?: string | null;
 }
 
 /** A single check's result, always expressed on the same 0–100 point scale as the total. */
@@ -1842,7 +1846,7 @@ export const CHECKS: CheckDefinition[] = [
               m.carriedForward && m.measuredAt
                 ? t(locale, "content.checks.website.performance_mobile.explanation.fieldBlockedSiteLastMeasured", {
                     category,
-                    date: formatShortDate(m.measuredAt, locale),
+                    date: formatShortDate(m.measuredAt, locale, input.timeZone || undefined),
                   })
                 : t(locale, "content.checks.website.performance_mobile.explanation.fieldBlockedSite", { category }),
             meta: { method: "field" },
@@ -1867,7 +1871,9 @@ export const CHECKS: CheckDefinition[] = [
       // measured {date}" instead of the normal field/lab wording, for
       // either method, before either branch below ever runs.
       const lastMeasuredDate =
-        measurement.carriedForward && measurement.measuredAt ? formatShortDate(measurement.measuredAt, locale) : null;
+        measurement.carriedForward && measurement.measuredAt
+          ? formatShortDate(measurement.measuredAt, locale, input.timeZone || undefined)
+          : null;
       // Real-user field data (Chrome UX Report, either for this exact
       // URL or the site's whole origin — see fetchMobilePerformance in
       // lib/websiteAnalysis.ts) always wins when Google has it: it's
@@ -2927,6 +2933,8 @@ export function getScoreWithSuggestions(
  * dependency on the database client.
  */
 export interface BusinessScoringRow {
+  /** Computed (not a column): see BusinessScoringInput.timeZone. */
+  time_zone?: string | null;
   rating: number | null;
   review_count: number | null;
   phone: string | null;
@@ -3371,5 +3379,6 @@ export function businessRowToScoringInput(row: BusinessScoringRow): BusinessScor
     websiteAnalysis: parseWebsiteAnalysis(row.website_analysis_json),
     websiteTrustOverrides: parseWebsiteTrustOverrides(row.website_trust_overrides_json),
     verifiedElsewhereUrl: typeof row.verified_website_url === "string" ? row.verified_website_url : null,
+    timeZone: row.time_zone ?? null,
   };
 }

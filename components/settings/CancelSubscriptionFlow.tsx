@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { formatLongDate, t, useLocale, type MessageKey } from "@/lib/i18n";
+import { formatLongDate, t, useLocale, useTimeZone, type MessageKey } from "@/lib/i18n";
 import type { CancellationFeedback, CancellationReasonCode } from "@/lib/subscription";
 
 const TEXT_MAX_LENGTH = 500;
@@ -64,13 +64,14 @@ export function CancelSubscriptionFlow({
   onKeepPlan?: () => void;
 }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const [state, setState] = useState<FlowState>({ step: "reason" });
   const [reasonCode, setReasonCode] = useState<CancellationReasonCode | null>(null);
   const [detail, setDetail] = useState("");
   const [improvement, setImprovement] = useState("");
 
   const followUpLabelKey = reasonCode ? FOLLOW_UP_LABEL_KEY[reasonCode] : undefined;
-  const formattedDate = formatLongDate(periodEndDate, locale);
+  const formattedDate = formatLongDate(periodEndDate, locale, timeZone);
 
   async function handleConfirm() {
     setState({ step: "submitting" });

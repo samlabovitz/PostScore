@@ -36,6 +36,7 @@ export default async function WebsiteReviewsPage({ params }: { params: { id: str
         category: data.category,
         primary_type: data.primaryType,
         language: data.language,
+        time_zone: data.timeZone,
       }}
     >
       <ReviewsView businessId={params.id} reviews={data} />

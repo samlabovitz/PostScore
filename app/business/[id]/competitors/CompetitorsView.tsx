@@ -29,7 +29,7 @@ import { priceLevelToSymbol } from "@/lib/priceLevel";
 import { MAX_SEARCH_RADIUS_MILES } from "@/lib/competitorScanPolicy";
 import { estimateLabelWidth, layoutLabels, shortName, type Lane, type LabelRequest } from "@/lib/lineupLayout";
 import { gradeFromTotal } from "@/lib/scoring";
-import { formatCount, formatShortDate, t, tPlural, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
+import { formatCount, formatShortDate, t, tPlural, useLocale, useTimeZone, type Locale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { placeTypeList } from "@/lib/placeTypeLabels";
 
@@ -69,6 +69,7 @@ function formatMetric(m: MetricDef, v: number | null, locale: Locale, asShare = 
 
 export function CompetitorsView({ businessId, data }: { businessId: string; data: OkResult }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const [view, setView] = useState<CompareView>("overall");
   const scan = data.latest;
 
@@ -123,7 +124,7 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
           <p className="text-sm text-ink-soft">
             {t(locale, "dashboard.competitors.noneFoundNearby", {
               miles: MAX_SEARCH_RADIUS_MILES,
-              date: formatShortDate(scan.createdAt, locale),
+              date: formatShortDate(scan.createdAt, locale, timeZone),
             })}
           </p>
           {data.refresh.allowed ? (
@@ -131,7 +132,7 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
           ) : (
             <span className="text-[12.5px] text-ink-mute">
               {t(locale, "dashboard.competitors.availableAgain", {
-                date: formatShortDate(data.refresh.nextAvailableAt ?? scan.createdAt, locale),
+                date: formatShortDate(data.refresh.nextAvailableAt ?? scan.createdAt, locale, timeZone),
               })}
             </span>
           )}
@@ -169,12 +170,13 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
 
 function ScanInfo({ businessId, data }: { businessId: string; data: OkResult }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   if (!data.latest) return null;
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-paper-deep bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-[13px] text-ink-soft">
         <span className="font-medium text-ink">
-          {t(locale, "dashboard.competitors.scannedOn", { date: formatShortDate(data.latest.createdAt, locale) })}
+          {t(locale, "dashboard.competitors.scannedOn", { date: formatShortDate(data.latest.createdAt, locale, timeZone) })}
         </span>
         <span className="text-ink-mute"> · {t(locale, "dashboard.competitors.savedAutomatically")}</span>
       </div>
@@ -183,7 +185,7 @@ function ScanInfo({ businessId, data }: { businessId: string; data: OkResult }) 
       ) : (
         <span className="text-[12.5px] text-ink-mute">
           {t(locale, "dashboard.competitors.availableAgain", {
-            date: formatShortDate(data.refresh.nextAvailableAt ?? data.latest.createdAt, locale),
+            date: formatShortDate(data.refresh.nextAvailableAt ?? data.latest.createdAt, locale, timeZone),
           })}
         </span>
       )}
@@ -193,6 +195,7 @@ function ScanInfo({ businessId, data }: { businessId: string; data: OkResult }) 
 
 function RefreshButton({ businessId, allowed, label }: { businessId: string; allowed: boolean; label: string }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
@@ -203,7 +206,7 @@ function RefreshButton({ businessId, allowed, label }: { businessId: string; all
       const result = await refreshCompetitors(businessId);
       if (result.status === "saved") router.refresh();
       else if (result.status === "too_soon")
-        setMessage(t(locale, "dashboard.competitors.availableAgain", { date: formatShortDate(result.nextAvailableAt, locale) }));
+        setMessage(t(locale, "dashboard.competitors.availableAgain", { date: formatShortDate(result.nextAvailableAt, locale, timeZone) }));
       else if (result.status === "no_data") setMessage(t(locale, "dashboard.competitors.noComparableCompetitors"));
       else setMessage(t(locale, "dashboard.competitors.refreshError"));
     });
@@ -644,6 +647,7 @@ function CheckDetail({ entry }: { entry: SavedCompetitorEntry }) {
 
 function OverTime({ data }: { data: OkResult }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const points = [...data.rankHistory].reverse();
   return (
     <Card className="p-5">
@@ -651,7 +655,7 @@ function OverTime({ data }: { data: OkResult }) {
       <ul className="mt-3 flex flex-col">
         {points.map((p) => (
           <li key={p.scanId} className="flex items-center justify-between gap-3 border-t border-paper-line py-2 text-[13px] first:border-t-0">
-            <span className="text-ink-soft">{formatShortDate(p.createdAt, locale)}</span>
+            <span className="text-ink-soft">{formatShortDate(p.createdAt, locale, timeZone)}</span>
             <span className="font-medium tabular-nums text-ink">
               {p.rank === null ? "—" : t(locale, "dashboard.competitors.overTimeRank", { rank: p.rank, total: p.of })}
             </span>

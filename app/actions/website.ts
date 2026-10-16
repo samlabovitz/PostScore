@@ -18,6 +18,7 @@ import {
 } from "@/lib/starterSiteScoring";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale, type Locale } from "@/lib/i18n";
+import { businessTimeZone } from "@/lib/businessTimeZone";
 import type { OpeningHoursPeriod } from "@/lib/google/places";
 
 export interface WebsitePageData {
@@ -82,6 +83,8 @@ export interface WebsitePageData {
   websiteCategory: CategoryResult | null;
   /** v1.10.0: scoreBasisPoints(all categories) — see lib/scoring.ts. */
   scoreBasis: number;
+  /** The business's own time zone (lib/businessTimeZone.ts). */
+  timeZone: string;
   /** This business's real, currently-losing Website suggestions — the
    * exact output of generateSuggestions(), filtered to the website
    * category, so the visual analysis section's "how to fix" copy is the
@@ -190,7 +193,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "name, address, category, primary_type, business_type_override, phone, opening_hours, opening_hours_periods, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json"
+      "name, address, category, primary_type, business_type_override, phone, opening_hours, opening_hours_periods, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng"
     )
     .eq("id", businessId)
     .single();
@@ -199,7 +202,8 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
     return { status: "not_found" };
   }
 
-  const businessRow = data as BusinessScoringRow;
+  const timeZone = businessTimeZone(data.lat, data.lng);
+  const businessRow = { ...data, time_zone: timeZone } as BusinessScoringRow;
   const verifiedWebsiteUrl =
     typeof data.verified_website_url === "string" && data.verified_website_url.trim().length > 0
       ? data.verified_website_url.trim()
@@ -271,6 +275,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       websiteAnalysis: realInput.websiteAnalysis,
       websiteCategory,
       scoreBasis: scoreBasisPoints(realBreakdown.categories),
+      timeZone,
       websiteSuggestions,
     },
     builderOffer,

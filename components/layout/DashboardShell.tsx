@@ -67,7 +67,7 @@ export function DashboardShell({
   }, [locale]);
 
   return (
-    <LocaleProvider locale={locale}>
+    <LocaleProvider locale={locale} timeZone={business?.time_zone}>
       <AnchorHighlight />
       <div className="min-h-screen bg-paper" data-locale={locale}>
         <div className="sticky top-0 z-30 flex h-14 items-center justify-between bg-ink px-4 nav:hidden">

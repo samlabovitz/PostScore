@@ -1,5 +1,6 @@
 "use server";
 
+import { withTimeZone } from "@/lib/businessTimeZone";
 import { createClient } from "@/lib/supabase/server";
 import {
   businessRowToScoringInput,
@@ -18,6 +19,8 @@ export interface ReviewsPageData {
   /** The business's own real language column — display-only, passed
    * straight through to DashboardShell (which normalizes it). */
   language: string | null;
+  /** The business's own time zone (lib/businessTimeZone.ts). */
+  timeZone: string;
   /** Google's own place_id — the review link/QR are only ever built
    * from this real value, never guessed. */
   placeId: string | null;
@@ -61,7 +64,7 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "name, address, category, primary_type, place_id, rating, review_count, phone, opening_hours, website, categories, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language"
+      "name, address, category, primary_type, place_id, rating, review_count, phone, opening_hours, website, categories, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language, lat, lng"
     )
     .eq("id", businessId)
     .single();
@@ -70,7 +73,8 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
     return { status: "not_found" };
   }
 
-  const row = data as BusinessScoringRow & {
+  const row = withTimeZone(data) as BusinessScoringRow & {
+    time_zone: string;
     name: string | null;
     address: string | null;
     category: string | null;
@@ -101,6 +105,7 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
       category: row.category,
       primaryType: row.primary_type,
       language: row.language,
+      timeZone: row.time_zone,
       placeId: row.place_id,
       rating: row.rating,
       reviewCount: row.review_count,

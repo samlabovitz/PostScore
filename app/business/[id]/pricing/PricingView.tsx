@@ -36,7 +36,7 @@ import {
   type PriceTierId,
 } from "@/lib/pricing";
 import type { BizProfile } from "@/config/bizProfiles";
-import { formatDateTime, t, useLocale, type MessageKey } from "@/lib/i18n";
+import { formatDateTime, t, useLocale, useTimeZone, type MessageKey } from "@/lib/i18n";
 
 /**
  * Not a value judgment (premium isn't "bad") — just five visually
@@ -480,6 +480,7 @@ export function PricingView({
   initialAssessment: StoredPricingAssessment | null;
 }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const [prices, setPrices] = useState<PriceRow[]>(initialPrices);
   const [lastResult, setLastResult] = useState<StoredPricingAssessment | null>(initialAssessment);
   const [runState, setRunState] = useState<
@@ -570,7 +571,7 @@ export function PricingView({
               ) : lastResult ? (
                 <p className="text-[12px] text-ink-mute">
                   {t(locale, "dashboard.pricing.lastAssessed", {
-                    date: formatDateTime(lastResult.assessedAt, locale),
+                    date: formatDateTime(lastResult.assessedAt, locale, timeZone),
                   })}
                 </p>
               ) : null}

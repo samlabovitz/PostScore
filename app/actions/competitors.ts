@@ -3,6 +3,7 @@
 import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { businessTimeZone } from "@/lib/businessTimeZone";
 import {
   competitorFallbackTypes,
   competitorScanBlocker,
@@ -89,6 +90,8 @@ export type GetCompetitorsResult =
        * Google's own types are all generic — empty when Google's own
        * category was used (see competitorFallbackTypes). */
       comparedViaTypes: string[];
+      /** The business's own time zone (lib/businessTimeZone.ts). */
+      timeZone: string;
     }
   | { status: "not_found" }
   | { status: "unauthenticated" }
@@ -162,6 +165,7 @@ export async function getCompetitorsWithClient(
     businessName: row.name,
     businessAddress: row.address,
     language: row.language,
+    timeZone: businessTimeZone(row.lat, row.lng),
     competitorNoun,
     latest,
     rankHistory: scans.map(rankPoint).reverse(),

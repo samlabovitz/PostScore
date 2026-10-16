@@ -104,13 +104,12 @@ export function reportCoverageMonthRange(sendDate: string): { start: string; end
  * and this server process's own runtime timezone is incidental (Vercel
  * defaults to UTC) and has nothing to do with where the business
  * actually is — so every owner-facing date about a specific moment
- * (a scan, a price check, a confirmed fix) falls back to this single
- * constant until a real per-business timezone exists. Same fallback,
- * same reasoning, as WEEKLY_CHECKLIST_TIMEZONE in
- * lib/weeklyChecklist.ts (a different feature, independently arriving
- * at the identical answer) — if a real per-business timezone is ever
- * added, thread it through formatShortDate's `timeZone` parameter
- * below instead of this constant.
+ * (a scan, a price check, a confirmed fix) is shown in the business's
+ * OWN time zone — looked up from its Google location
+ * (lib/businessTimeZone.ts) and passed as `timeZone` (client components:
+ * useTimeZone()). This constant is only the fallback when that's
+ * unknown (no coordinates on file). The weekly routine resets at Monday
+ * 12:00 AM in the same business zone (lib/weeklyChecklist.ts).
  */
 export const DEFAULT_BUSINESS_TIMEZONE = "America/New_York";
 
@@ -188,8 +187,8 @@ function formatTime(p: ZonedParts, locale: Locale): string {
  * 30th) is already past midnight UTC (12:30am the 1st), so formatting
  * in whatever timezone the process happens to run in could silently
  * roll the displayed date forward a full day from the business's own
- * real local day. Every caller gets this fix automatically; pass an
- * explicit `timeZone` only once a real per-business one exists.
+ * real local day. Callers pass the business's own zone (see
+ * DEFAULT_BUSINESS_TIMEZONE); the default is only the unknown-zone fallback.
  */
 export function formatShortDate(date: string, locale: Locale, timeZone: string = DEFAULT_BUSINESS_TIMEZONE): string {
   const p = zonedParts(date, timeZone);

@@ -17,7 +17,7 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { WebsiteCoverageNote } from "@/components/scoring/WebsiteCoverageNote";
 import { recheckWebsiteOnlyBusiness } from "@/app/actions/businesses";
 import type { CategoryResult, Suggestion } from "@/lib/scoring";
-import { formatDateTime, t, useLocale, type MessageKey } from "@/lib/i18n";
+import { formatDateTime, t, useLocale, useTimeZone, type MessageKey } from "@/lib/i18n";
 
 export const GOOGLE_BUSINESS_PROFILE_URL = "https://www.google.com/business/";
 
@@ -47,6 +47,7 @@ export function WebsiteOnlyOverview({
   checkedAt: string | null;
 }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [recheckNote, setRecheckNote] = useState<string | null>(null);
@@ -110,7 +111,7 @@ export function WebsiteOnlyOverview({
           </Button>
           {checkedAt && (
             <span className="text-[12px] text-ink-mute">
-              {t(locale, "dashboard.websiteOnly.checkedAt", { date: formatDateTime(checkedAt, locale) })}
+              {t(locale, "dashboard.websiteOnly.checkedAt", { date: formatDateTime(checkedAt, locale, timeZone) })}
             </span>
           )}
         </div>

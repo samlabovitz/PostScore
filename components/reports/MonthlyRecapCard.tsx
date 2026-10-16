@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { downloadDataUrl } from "@/lib/couponImage";
 import { renderRecapPng } from "@/lib/reportsRecapImage";
 import type { MonthlyRecap } from "@/app/actions/reports";
-import { formatShortDate, t, tPlural, useLocale } from "@/lib/i18n";
+import { formatShortDate, t, tPlural, useLocale, useTimeZone } from "@/lib/i18n";
 
 /**
  * A recap of what changed between the two most recent real scans — real
@@ -27,6 +27,7 @@ export function MonthlyRecapCard({
   recap: MonthlyRecap | null;
 }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
 
   if (!recap) {
     return (
@@ -37,7 +38,7 @@ export function MonthlyRecapCard({
   }
 
   const { previous, current, scoreDelta, daysBetween, changes, changesUnavailable } = recap;
-  const dateRangeLabel = `${formatShortDate(previous.created_at, locale)} – ${formatShortDate(current.created_at, locale)} (${tPlural(locale, "dashboard.reports.recapDayCount", daysBetween)})`;
+  const dateRangeLabel = `${formatShortDate(previous.created_at, locale, timeZone)} – ${formatShortDate(current.created_at, locale, timeZone)} (${tPlural(locale, "dashboard.reports.recapDayCount", daysBetween)})`;
 
   return (
     <Card className="p-5">

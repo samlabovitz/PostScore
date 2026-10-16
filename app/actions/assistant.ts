@@ -107,6 +107,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
   }
 
   const locale = normalizeLocale(summaryResult.business.language);
+  const timeZone = summaryResult.business.time_zone ?? undefined;
   const scored = await scoreBusinessById(businessId, locale);
 
   if (scored.status === "unauthenticated") {
@@ -171,7 +172,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
         const subjectRank = sorted.findIndex((e) => e.isSubject) + 1;
         return {
           available: true,
-          scanAt: formatShortDate(snapshot.createdAt, locale),
+          scanAt: formatShortDate(snapshot.createdAt, locale, timeZone),
           subjectRank: subjectRank > 0 ? subjectRank : null,
           entries: sorted.map((e) => ({
             name: e.name ?? "Unnamed business",
@@ -245,7 +246,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     .map((h) => ({
       total: h.total,
       grade: h.grade as AssistantScoreHistoryEntry["grade"],
-      date: formatShortDate(h.created_at, locale),
+      date: formatShortDate(h.created_at, locale, timeZone),
     }))
     .reverse();
 
@@ -254,7 +255,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
       ? actionPlanResult.completed.slice(0, MAX_FIXED_ITEMS_IN_CONTEXT).map((c) => ({
           label: c.label,
           pointsGained: c.pointsGained,
-          verifiedAt: c.verifiedAt ? formatShortDate(c.verifiedAt, locale) : null,
+          verifiedAt: c.verifiedAt ? formatShortDate(c.verifiedAt, locale, timeZone) : null,
         }))
       : [];
 
@@ -282,6 +283,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
   };
 
   const context: AssistantBusinessContext = {
+    timeZone,
     listing: {
       name: scored.business.name,
       categoryLabel: profile.label,

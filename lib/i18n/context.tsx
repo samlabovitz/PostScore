@@ -2,6 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import { DEFAULT_LOCALE, type Locale } from "./locale";
+import { DEFAULT_BUSINESS_TIMEZONE } from "./format";
 
 // The active dashboard locale, made available to any client component
 // without prop-drilling it through every intermediate layer. Defaults to
@@ -9,6 +10,9 @@ import { DEFAULT_LOCALE, type Locale } from "./locale";
 // <LocaleProvider> still gets a real, safe Locale rather than undefined —
 // the same never-throws discipline as normalizeLocale() itself.
 const LocaleContext = createContext<Locale>(DEFAULT_LOCALE);
+// The business's own IANA time zone (from its Google location — see
+// lib/businessTimeZone.ts), for every date shown under the shell.
+const TimeZoneContext = createContext<string>(DEFAULT_BUSINESS_TIMEZONE);
 
 /**
  * Mounted once, in DashboardShell — the one client component every
@@ -16,8 +20,21 @@ const LocaleContext = createContext<Locale>(DEFAULT_LOCALE);
  * DashboardShell already computed via normalizeLocale(business?.language).
  * Nothing else in the app should need to construct this directly.
  */
-export function LocaleProvider({ locale, children }: { locale: Locale; children: ReactNode }) {
-  return <LocaleContext.Provider value={locale}>{children}</LocaleContext.Provider>;
+export function LocaleProvider({
+  locale,
+  timeZone,
+  children,
+}: {
+  locale: Locale;
+  /** The business's time zone; omitted/null falls back to New York. */
+  timeZone?: string | null;
+  children: ReactNode;
+}) {
+  return (
+    <LocaleContext.Provider value={locale}>
+      <TimeZoneContext.Provider value={timeZone || DEFAULT_BUSINESS_TIMEZONE}>{children}</TimeZoneContext.Provider>
+    </LocaleContext.Provider>
+  );
 }
 
 /** The active locale for whatever client component calls this — always a
@@ -26,4 +43,10 @@ export function LocaleProvider({ locale, children }: { locale: Locale; children:
  * business they already fetch, run through normalizeLocale() themselves. */
 export function useLocale(): Locale {
   return useContext(LocaleContext);
+}
+
+/** The business's time zone for dates — pass it to formatShortDate &
+ * co. Falls back to DEFAULT_BUSINESS_TIMEZONE (New York) when unknown. */
+export function useTimeZone(): string {
+  return useContext(TimeZoneContext);
 }

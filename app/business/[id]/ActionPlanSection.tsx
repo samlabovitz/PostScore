@@ -18,7 +18,7 @@ import {
   type WeeklyMetricProgress,
 } from "@/lib/actionPlan";
 import type { GrowthMove } from "@/lib/growthMoves";
-import { formatMonthDayTime, t, useLocale, type Locale } from "@/lib/i18n";
+import { formatMonthDayTime, t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 
 function formatPoints(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
@@ -108,8 +108,9 @@ function CurrentStatus({
   lastScanAt: string | null;
 }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const checkedLabel = lastScanAt
-    ? t(locale, "dashboard.overview.actionPlan.checkedWithDate", { date: formatMonthDayTime(lastScanAt, locale) })
+    ? t(locale, "dashboard.overview.actionPlan.checkedWithDate", { date: formatMonthDayTime(lastScanAt, locale, timeZone) })
     : t(locale, "dashboard.overview.actionPlan.checkedNoDate");
 
   // Nothing to compare yet, either way — the honest wait, plus the real
