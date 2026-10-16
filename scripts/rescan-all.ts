@@ -7,7 +7,7 @@
 // from either of those.
 //
 // Deliberately does LESS than the monthly-report cron: no competitor
-// scan (saveCompetitorScanWithClient is never called here), no email,
+// scan unless --with-competitors / --competitors-only (see below), no email,
 // no monthly_reports row. This script only ever touches the same three
 // tables a single "Re-scan now" click touches — businesses, scores,
 // tasks.
@@ -45,6 +45,17 @@
 //   npx tsx scripts/rescan-all.ts --limit=N
 //   npx tsx scripts/rescan-all.ts --no-screenshots
 //   npx tsx scripts/rescan-all.ts --only=<id,id> --dry-run
+//   npx tsx scripts/rescan-all.ts --with-competitors
+//   npx tsx scripts/rescan-all.ts --competitors-only --dry-run
+//   npx tsx scripts/rescan-all.ts --competitors-only --max-nearby-calls=70
+//
+// Competitor scans (Part B): NEVER run unless asked.
+// --with-competitors: after each business re-scan, also run one competitor
+// scan (1–3 Nearby Search calls, ~$0.035 each) when its last saved scan
+// is 30+ days old or missing.
+// --competitors-only: skip the business re-scan entirely; run one
+// competitor scan for each business with NO saved competitor scan (the
+// one-time backfill). Writes no rescan report.
 //
 // --dry-run: lists every business that WOULD be re-scanned, plus an
 // estimated total cost, then exits. No real API calls, no writes.
@@ -82,6 +93,9 @@ import {
 import { normalizeLocale } from "../lib/i18n";
 import { browserRenderMonthlyCap, browserRendersThisMonth, MAX_BROWSER_RENDERS_PER_SCAN } from "../lib/browserRender";
 import type { rescanBusinessWithClient as RescanBusinessWithClientFn } from "../app/actions/scoring";
+import type { runAndSaveCompetitorScanWithClient as RunCompetitorScanFn } from "../app/actions/competitors";
+import { competitorScanCostRange, competitorScanTargets, NEARBY_CALLS_PER_SCAN } from "../lib/competitorScanPolicy";
+import { nearbySearchCallCount } from "../lib/google/places";
 import {
   mergeBusinessEntries,
   parseExistingReport,
@@ -118,7 +132,29 @@ async function loadRescanBusinessWithClient(): Promise<typeof RescanBusinessWith
   return mod.rescanBusinessWithClient;
 }
 
+/** Same server-only workaround as above, for the competitor scan. */
+async function loadRunCompetitorScan(): Promise<typeof RunCompetitorScanFn> {
+  await loadRescanBusinessWithClient();
+  const mod = (await import("../app/actions/competitors")) as { runAndSaveCompetitorScanWithClient: typeof RunCompetitorScanFn };
+  return mod.runAndSaveCompetitorScanWithClient;
+}
+
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+
+/** Latest saved competitor scan time per business (null = never). */
+async function latestCompetitorScanTimes(ids: string[]): Promise<Map<string, string | null>> {
+  const out = new Map<string, string | null>(ids.map((id) => [id, null]));
+  const { data } = await supabase.from("competitor_scans").select("business_id, created_at").in("business_id", ids);
+  for (const row of (data ?? []) as Array<{ business_id: string; created_at: string }>) {
+    const prev = out.get(row.business_id);
+    if (!prev || row.created_at > prev) out.set(row.business_id, row.created_at);
+  }
+  return out;
+}
+
+function formatUsd(n: number): string {
+  return `$${n.toFixed(2)}`;
+}
 
 /** A short, polite pause between businesses — never hammer Google or
  * Supabase back-to-back across 50+ real, billed calls. */
@@ -221,6 +257,57 @@ async function main() {
   }
 
   const businesses: BusinessRow[] = limit ? allBusinesses.slice(0, limit) : allBusinesses;
+
+  const withCompetitors = args.includes("--with-competitors");
+  const competitorsOnly = args.includes("--competitors-only");
+  const scanTimes = await latestCompetitorScanTimes(businesses.map((b) => b.id));
+  const competitorTargets = new Set(
+    competitorScanTargets(
+      businesses.map((b) => ({ id: b.id, latestCompetitorScanAt: scanTimes.get(b.id) ?? null })),
+      { withCompetitors, competitorsOnly },
+      new Date()
+    )
+  );
+  const competitorCost = competitorScanCostRange(competitorTargets.size);
+  const competitorLine = () =>
+    competitorTargets.size === 0
+      ? `  Competitor scans: none${withCompetitors || competitorsOnly ? "" : " (pass --with-competitors or --competitors-only)"}`
+      : `  Competitor scans (Nearby Search Enterprise, $0.035/call): ${competitorTargets.size} scan(s) x 1–3 calls = ${formatUsd(competitorCost.min)}–${formatUsd(competitorCost.max)}`;
+
+  if (competitorsOnly) {
+    const targets = businesses.filter((b) => competitorTargets.has(b.id));
+    console.log(`${dryRun ? "DRY RUN — " : ""}Competitor scans only (businesses with no saved competitor scan): ${targets.length} of ${businesses.length}\n`);
+    for (const b of targets) console.log(`  ${b.name ?? "(unnamed)"} (${b.id})`);
+    console.log(`\nEstimated real, billed cost:\n${competitorLine()}\n  Business re-scans: none (--competitors-only)`);
+    if (dryRun) {
+      console.log(`\nNo real calls made, no writes made. Pass without --dry-run to actually run this.`);
+      return;
+    }
+    const runCompetitorScan = await loadRunCompetitorScan();
+    // --max-nearby-calls=N: a hard budget. Before each scan, stop if its
+    // worst case (3 calls) could push the real call count past N.
+    const maxArg = args.find((a) => a.startsWith("--max-nearby-calls="));
+    const maxCalls = maxArg ? parseInt(maxArg.slice("--max-nearby-calls=".length), 10) : null;
+    let saved = 0;
+    let stoppedAt: number | null = null;
+    for (let i = 0; i < targets.length; i++) {
+      const b = targets[i];
+      if (maxCalls !== null && nearbySearchCallCount() + NEARBY_CALLS_PER_SCAN.max > maxCalls) {
+        stoppedAt = i;
+        break;
+      }
+      const r = await runCompetitorScan(supabase, b.id, { enforceCooldown: false });
+      if (r.status === "saved") saved++;
+      console.log(`[${i + 1}/${targets.length}] ${b.name ?? "(unnamed)"}: ${r.status}${r.status === "error" ? ` — ${r.message}` : ""}`);
+      if (i < targets.length - 1) await new Promise((resolve) => setTimeout(resolve, PAUSE_BETWEEN_BUSINESSES_MS));
+    }
+    console.log(
+      `\nSaved ${saved} of ${targets.length} competitor scan(s). Real Nearby Search calls: ${nearbySearchCallCount()} (≈ ${formatUsd(nearbySearchCallCount() * 0.035)}).` +
+        (stoppedAt !== null ? ` Stopped at the --max-nearby-calls budget; ${targets.length - stoppedAt} business(es) not scanned yet.` : "") +
+        ` No business re-scans, no report written.`
+    );
+    return;
+  }
 
   if (dryRun) {
     // Step 2d: EXACTLY the rule a real scan uses (lib/screenshotBudget.ts,
@@ -339,11 +426,13 @@ async function main() {
         ? `  Browserless renders (JavaScript-only pages): up to ${totalRenders} render(s) for ${renderPlan.filter((p) => p.n > 0).length} business(es) — ${renderPlan.map((p) => `${p.b.name ?? "(unnamed)"}: up to ${p.n}`).join(", ") || "none"}. ${rendersUsed} used this month; monthly cap ${renderCap}${renderPlan.some((p) => p.n === 0) ? ` — ${renderPlan.filter((p) => p.n === 0).length} skipped by the cap, keeping "couldn't check"` : ""}.`
         : `  Browserless renders: none (BROWSERLESS_API_KEY not set — JavaScript-only pages stay "couldn't check").`
     );
+    console.log(competitorLine());
     console.log(`\nNo real calls made, no writes made. Pass without --dry-run to actually run this.`);
     return;
   }
 
   const rescanBusinessWithClient = await loadRescanBusinessWithClient();
+  const runCompetitorScan = competitorTargets.size > 0 ? await loadRunCompetitorScan() : null;
   const reports: BusinessReportLine[] = [];
 
   for (let i = 0; i < businesses.length; i++) {
@@ -369,6 +458,10 @@ async function main() {
       const after = await readScoreRow(result.scoreId);
       const afterWebsiteAnalysis = await readWebsiteAnalysis(b.id);
       console.log(`  OK: ${before?.total ?? "?"} -> ${after?.total ?? "?"}`);
+      if (runCompetitorScan && competitorTargets.has(b.id)) {
+        const c = await runCompetitorScan(supabase, b.id, { enforceCooldown: true });
+        console.log(`  Competitor scan: ${c.status}${c.status === "error" ? ` — ${c.message}` : ""}`);
+      }
       reports.push({ businessId: b.id, businessName, status: "ok", before, after, afterWebsiteAnalysis });
     }
 
@@ -407,7 +500,7 @@ async function main() {
 
   let finalEntries = freshEntries;
   let trailingContent = "";
-  let subtitle = `Re-scanned ${freshEntries.length} business(es). No competitor scans, no emails, no monthly_reports writes.`;
+  let subtitle = `Re-scanned ${freshEntries.length} business(es). ${competitorTargets.size > 0 ? `Competitor scans for up to ${competitorTargets.size} (--with-competitors)` : "No competitor scans"}, no emails, no monthly_reports writes.`;
 
   if (isPartialRun && fs.existsSync(outPath)) {
     const existingContent = fs.readFileSync(outPath, "utf-8");

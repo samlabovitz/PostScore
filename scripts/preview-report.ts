@@ -22,7 +22,7 @@
 // should ever be run in without a deliberate reason).
 //
 // --fresh-scan: runs a REAL, billed competitor scan right now
-// (saveCompetitorScanWithClient, the exact same real function the cron
+// (runAndSaveCompetitorScanWithClient, the exact same real function the cron
 // route calls) and writes a genuine new competitor_scans row — same
 // real, billed Google Places Details calls the Competitors page's own
 // "Save this scan" button makes. Only pass this when you deliberately
@@ -89,7 +89,7 @@ import { buildGrowthMoves, competitorPhotoCounts, median, weakWebsiteIssueLabels
 import { MonthlyReportEmail, monthlyReportSubject } from "../emails/MonthlyReportEmail";
 import { normalizeLocale, reportCoverageMonthIndex, reportCoverageMonthRange } from "../lib/i18n";
 import { resolveBizProfile } from "../config/bizProfiles";
-import { saveCompetitorScanWithClient } from "../app/actions/competitors";
+import { runAndSaveCompetitorScanWithClient } from "../app/actions/competitors";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -149,7 +149,7 @@ async function readCompetitorSnapshotForScan(businessId: string, scanId: string)
 
 /** Runs a REAL, fresh competitor scan — the exact same real function
  * the cron route now calls for every business every month
- * (saveCompetitorScanWithClient, app/actions/competitors.ts) — and
+ * (runAndSaveCompetitorScanWithClient, app/actions/competitors.ts) — and
  * reads back the real standing it just saved. Real, billed Google
  * Places Details calls; a real new competitor_scans row. Only called
  * when --fresh-scan is explicitly passed (see main()) — null only when
@@ -159,7 +159,7 @@ async function readCompetitorSnapshotForScan(businessId: string, scanId: string)
 async function runFreshCompetitorScan(
   businessId: string
 ): Promise<{ scanId: string | null; snapshot: CompetitorSnapshot | null }> {
-  const result = await saveCompetitorScanWithClient(supabase, businessId);
+  const result = await runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: false });
   if (result.status !== "saved") return { scanId: null, snapshot: null };
   return { scanId: result.scanId, snapshot: await readCompetitorSnapshotForScan(businessId, result.scanId) };
 }

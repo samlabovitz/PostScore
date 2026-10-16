@@ -6,11 +6,32 @@ import { createClient } from "@/lib/supabase/server";
 import {
   findAndScoreCompetitors,
   MAX_COMPETITORS,
-  type CompetitorScanResult,
   type CompetitorSourceBusiness,
 } from "@/lib/competitors";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale } from "@/lib/i18n";
+import { refreshAvailability, type RefreshAvailability } from "@/lib/competitorScanPolicy";
+import {
+  groupSavedScans,
+  rankPoint,
+  type CompetitorRankPoint,
+  type SavedCompetitorScan,
+  type SavedScanRow,
+} from "@/lib/savedCompetitorScans";
+
+export type { CompetitorRankPoint, SavedCompetitorEntry, SavedCompetitorScan } from "@/lib/savedCompetitorScans";
+
+// Part B (cost-first competitor scan): the Competitors page shows the
+// latest SAVED scan and never calls Google to render. A paid scan
+// (1–3 Nearby Search calls, ~$0.035 each) runs only:
+//   - once automatically, the first time a business has none
+//     (ensureFirstCompetitorScan),
+//   - on "Refresh competitors", at most once per 30 days
+//     (refreshCompetitors),
+//   - from the monthly report when the last scan is 30+ days old,
+//   - from scripts/rescan-all.ts only with --with-competitors /
+//     --competitors-only.
+// Every scan is saved (competitor_scans), so there's no separate "Save".
 
 interface CompetitorBusinessRow {
   place_id: string;
@@ -32,9 +53,16 @@ interface CompetitorBusinessRow {
   website_trust_overrides_json: unknown;
   primary_type: string | null;
   business_type_override: string | null;
+  price_level: string | null;
   lat: number | null;
   lng: number | null;
 }
+
+const BUSINESS_COLUMNS =
+  "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, primary_type, business_type_override, price_level, lat, lng, language";
+
+const SCAN_COLUMNS =
+  "scan_id, created_at, is_subject, place_id, name, address, distance_meters, rating, review_count, has_website, total, grade, scoring_version, breakdown_json, price_level, photo_count";
 
 export type GetCompetitorsResult =
   | {
@@ -46,16 +74,20 @@ export type GetCompetitorsResult =
       language: string | null;
       /** The resolved business-type profile's noun, e.g. "salons" — see config/bizProfiles.ts. */
       competitorNoun: string;
-      result: CompetitorScanResult;
+      /** The latest saved scan, or null when none has ever run. */
+      latest: SavedCompetitorScan | null;
+      /** Owner's rank per saved scan, oldest first (one point per scan). */
+      rankHistory: CompetitorRankPoint[];
+      refresh: RefreshAvailability;
     }
   | { status: "not_found" }
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
 
 /**
- * Loads a saved business (RLS-scoped to the current user) and runs the
- * live competitor scan against it. Never writes to the database — same
- * "free to view" model as scoreBusinessById.
+ * The Competitors page's data: the latest SAVED scan for a business
+ * (RLS-scoped), its rank history, and whether a refresh is allowed.
+ * Reads the database only — viewing the page never calls Google.
  */
 export async function getCompetitors(businessId: string): Promise<GetCompetitorsResult> {
   const supabase = createClient();
@@ -71,24 +103,15 @@ export async function getCompetitors(businessId: string): Promise<GetCompetitors
   return getCompetitorsWithClient(supabase, businessId);
 }
 
-/**
- * The real logic behind getCompetitors() — see scoreBusinessWithClient's
- * doc comment (app/actions/scoring.ts) for why this accepts an injected
- * client rather than creating its own. Reused by the monthly-report cron
- * route via the service-role admin client, so cron's competitor standing
- * comes from the exact same live-scan-and-rank logic
- * (lib/competitors.ts's findAndScoreCompetitors) the interactive
- * Competitors page uses — never a second implementation.
- */
+/** The real logic behind getCompetitors() — DB reads only. */
 export async function getCompetitorsWithClient(
   supabase: SupabaseClient,
-  businessId: string
+  businessId: string,
+  now: Date = new Date()
 ): Promise<GetCompetitorsResult> {
   const { data: business, error } = await supabase
     .from("businesses")
-    .select(
-      "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, primary_type, business_type_override, lat, lng, language"
-    )
+    .select("name, address, language, category, categories, primary_type, business_type_override")
     .eq("id", businessId)
     .single();
 
@@ -96,6 +119,85 @@ export async function getCompetitorsWithClient(
     return { status: "not_found" };
   }
 
+  const row = business as Pick<CompetitorBusinessRow, "name" | "address" | "language" | "category" | "categories" | "primary_type" | "business_type_override">;
+  const locale = normalizeLocale(row.language);
+  const competitorNoun = resolveBizProfile(
+    row.category,
+    row.primary_type,
+    row.business_type_override,
+    locale,
+    row.categories,
+    row.name
+  ).competitorNoun;
+
+  const { data: scanRows, error: scanError } = await supabase
+    .from("competitor_scans")
+    .select(SCAN_COLUMNS)
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false })
+    .limit(600);
+
+  if (scanError) {
+    return { status: "error", message: scanError.message };
+  }
+
+  const scans = groupSavedScans((scanRows ?? []) as SavedScanRow[]);
+  const latest = scans[0] ?? null;
+
+  return {
+    status: "ok",
+    businessName: row.name,
+    businessAddress: row.address,
+    language: row.language,
+    competitorNoun,
+    latest,
+    rankHistory: scans.map(rankPoint).reverse(),
+    refresh: refreshAvailability(latest?.createdAt ?? null, now),
+  };
+}
+
+export type SaveCompetitorScanResult =
+  | { status: "saved"; scanId: string }
+  | { status: "too_soon"; nextAvailableAt: string }
+  | { status: "no_data" }
+  | { status: "not_found" }
+  | { status: "unauthenticated" }
+  | { status: "error"; message: string };
+
+async function latestCompetitorScanAt(supabase: SupabaseClient, businessId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("competitor_scans")
+    .select("created_at")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  return data && data.length > 0 ? (data[0] as { created_at: string }).created_at : null;
+}
+
+/**
+ * Runs ONE paid competitor scan (1–3 Nearby Search calls) and saves one
+ * competitor_scans row per ranked entry (the business plus every scored
+ * competitor), tagged with a shared scan_id — never overwritten, so
+ * history accumulates like `scores`. With `enforceCooldown`, refuses
+ * (too_soon) when the last saved scan is under 30 days old.
+ */
+export async function runAndSaveCompetitorScanWithClient(
+  supabase: SupabaseClient,
+  businessId: string,
+  options: { enforceCooldown: boolean; now?: Date; scan?: typeof findAndScoreCompetitors } = { enforceCooldown: false }
+): Promise<SaveCompetitorScanResult> {
+  const now = options.now ?? new Date();
+  if (options.enforceCooldown) {
+    const availability = refreshAvailability(await latestCompetitorScanAt(supabase, businessId), now);
+    if (!availability.allowed && availability.nextAvailableAt) {
+      return { status: "too_soon", nextAvailableAt: availability.nextAvailableAt };
+    }
+  }
+
+  const { data: business, error } = await supabase.from("businesses").select(BUSINESS_COLUMNS).eq("id", businessId).single();
+  if (error || !business) {
+    return { status: "not_found" };
+  }
   const row = business as CompetitorBusinessRow;
   const subject: CompetitorSourceBusiness = {
     placeId: row.place_id,
@@ -104,6 +206,7 @@ export async function getCompetitorsWithClient(
     lat: row.lat,
     lng: row.lng,
     primaryType: row.primary_type,
+    priceLevel: row.price_level,
     rating: row.rating,
     review_count: row.review_count,
     phone: row.phone,
@@ -119,76 +222,18 @@ export async function getCompetitorsWithClient(
     website_trust_overrides_json: row.website_trust_overrides_json,
   };
 
+  let result;
   try {
-    const locale = normalizeLocale(row.language);
-    const result = await findAndScoreCompetitors(subject, locale);
-    const competitorNoun = resolveBizProfile(
-      row.category,
-      row.primary_type,
-      row.business_type_override,
-      locale,
-      row.categories,
-      row.name
-    ).competitorNoun;
-    return {
-      status: "ok",
-      businessName: row.name,
-      businessAddress: row.address,
-      language: row.language,
-      competitorNoun,
-      result,
-    };
+    result = await (options.scan ?? findAndScoreCompetitors)(subject, normalizeLocale(row.language));
   } catch (err) {
-    return {
-      status: "error",
-      message: err instanceof Error ? err.message : "Could not load competitors.",
-    };
+    return { status: "error", message: err instanceof Error ? err.message : "Could not scan competitors." };
   }
-}
-
-export type SaveCompetitorScanResult =
-  | { status: "saved"; scanId: string }
-  | { status: "no_data" }
-  | { status: "not_found" }
-  | { status: "unauthenticated" }
-  | { status: "error"; message: string };
-
-/**
- * Re-runs the live competitor scan and persists one row per ranked entry
- * (the saved business plus every scored competitor) into
- * competitor_scans, tagged with a shared scan_id — one snapshot in time,
- * never overwritten, so history can accumulate like `scores` does.
- */
-export async function saveCompetitorScan(businessId: string): Promise<SaveCompetitorScanResult> {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { status: "unauthenticated" };
-  }
-
-  return saveCompetitorScanWithClient(supabase, businessId);
-}
-
-/** The real logic behind saveCompetitorScan() — see getCompetitorsWithClient's
- * doc comment for why this accepts an injected client rather than
- * creating its own. Reused by the monthly-report cron route. */
-export async function saveCompetitorScanWithClient(
-  supabase: SupabaseClient,
-  businessId: string
-): Promise<SaveCompetitorScanResult> {
-  const fetched = await getCompetitorsWithClient(supabase, businessId);
-  if (fetched.status !== "ok") return fetched;
-  if (fetched.result.status !== "ok" || fetched.result.ranked.length === 0) {
+  if (result.status !== "ok" || result.ranked.length === 0) {
     return { status: "no_data" };
   }
 
   const scanId = randomUUID();
-
-  const rows = fetched.result.ranked.map((r) => ({
+  const rows = result.ranked.map((r) => ({
     scan_id: scanId,
     business_id: businessId,
     is_subject: r.isSubject,
@@ -207,37 +252,43 @@ export async function saveCompetitorScanWithClient(
     photo_count: r.photoCount,
   }));
 
-  const { error } = await supabase.from("competitor_scans").insert(rows);
-  if (error) {
-    return { status: "error", message: error.message };
+  const { error: insertError } = await supabase.from("competitor_scans").insert(rows);
+  if (insertError) {
+    return { status: "error", message: insertError.message };
   }
-
   return { status: "saved", scanId };
 }
 
-export interface CompetitorScanHistoryRow {
-  scan_id: string;
-  created_at: string;
-  is_subject: boolean;
-  name: string | null;
-  total: number | null;
-  grade: string | null;
+/** "Refresh competitors" — one paid scan, at most once per 30 days. */
+export async function refreshCompetitors(businessId: string): Promise<SaveCompetitorScanResult> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { status: "unauthenticated" };
+  }
+  return runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: true });
 }
 
-/** Most recent saved competitor scans for a business, newest first. RLS-scoped. */
-export async function getCompetitorScanHistory(
-  businessId: string
-): Promise<CompetitorScanHistoryRow[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("competitor_scans")
-    .select("scan_id, created_at, is_subject, name, total, grade")
-    .eq("business_id", businessId)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  if (error || !data) return [];
-  return data;
+/**
+ * The automatic first competitor scan: runs only when the business has
+ * NEVER had a saved scan, so it can run at most once per business.
+ * Called after an owner adds a business and after a manual re-scan —
+ * never from the bulk re-scan script or the monthly report. Never
+ * throws: a failed competitor scan must never fail the business save.
+ */
+export async function ensureFirstCompetitorScanWithClient(
+  supabase: SupabaseClient,
+  businessId: string,
+  run: typeof runAndSaveCompetitorScanWithClient = runAndSaveCompetitorScanWithClient
+): Promise<SaveCompetitorScanResult | { status: "skipped" }> {
+  try {
+    if ((await latestCompetitorScanAt(supabase, businessId)) !== null) return { status: "skipped" };
+    return await run(supabase, businessId, { enforceCooldown: false });
+  } catch (err) {
+    return { status: "error", message: err instanceof Error ? err.message : "Could not scan competitors." };
+  }
 }
 
 export interface CompetitorSnapshotEntry {

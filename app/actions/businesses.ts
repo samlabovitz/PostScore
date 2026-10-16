@@ -1,5 +1,6 @@
 "use server";
 
+import { ensureFirstCompetitorScanWithClient } from "@/app/actions/competitors";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { canAutoCapture, needsAutoScreenshot, screenshotAutoMonthlyCap } from "@/lib/screenshotBudget";
 import { loadBrowserRendersThisMonth, loadScreenshotCallsThisMonth } from "@/lib/screenshotBudgetServer";
@@ -76,7 +77,12 @@ export async function saveBusiness(
     return { status: "unauthenticated" };
   }
 
-  return saveBusinessWithClient(supabase, user.id, place, language, businessTypeOverride, tradeId);
+  const result = await saveBusinessWithClient(supabase, user.id, place, language, businessTypeOverride, tradeId);
+  // Part B: a newly added business gets its first competitor scan right
+  // away, so the Competitors page has real data — once ever (no-op when
+  // one is already saved). Never fails the save.
+  if (result.status === "saved") await ensureFirstCompetitorScanWithClient(supabase, result.businessId);
+  return result;
 }
 
 /**

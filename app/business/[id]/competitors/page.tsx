@@ -32,12 +32,7 @@ export default async function CompetitorsPage({ params }: { params: { id: string
         language: fetched.language,
       }}
     >
-      <CompetitorsView
-        businessId={params.id}
-        businessName={fetched.businessName}
-        competitorNoun={fetched.competitorNoun}
-        result={fetched.result}
-      />
+      <CompetitorsView businessId={params.id} data={fetched} />
     </DashboardShell>
   );
 }

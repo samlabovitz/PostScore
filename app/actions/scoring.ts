@@ -1,5 +1,6 @@
 "use server";
 
+import { ensureFirstCompetitorScanWithClient } from "@/app/actions/competitors";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -298,7 +299,12 @@ export async function rescanBusiness(businessId: string): Promise<RescanBusiness
     return { status: "unauthenticated" };
   }
 
-  return rescanBusinessWithClient(supabase, businessId);
+  const result = await rescanBusinessWithClient(supabase, businessId);
+  // Part B: the business's first competitor scan, once ever (no-op when
+  // one is already saved). Interactive only — the bulk re-scan script and
+  // the monthly report call rescanBusinessWithClient directly.
+  if (result.status === "ok") await ensureFirstCompetitorScanWithClient(supabase, businessId);
+  return result;
 }
 
 /**

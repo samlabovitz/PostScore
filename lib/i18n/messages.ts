@@ -126,13 +126,63 @@ export type MessageKey =
   // --- Dashboard: Competitors page (app/business/[id]/competitors/CompetitorsView.tsx) ---
   // Naming convention for the whole dashboard rollout: dashboard.<section>.<key>.
   | "dashboard.competitors.title"
-  | "dashboard.competitors.subtitle"
-  | "dashboard.competitors.categoryClause"
+  | "dashboard.competitors.statComparableScore"
+  | "dashboard.competitors.fullScoreNote"
+  | "dashboard.competitors.fullScoreShort"
+  | "dashboard.competitors.lineupTop"
+  | "dashboard.competitors.lineupLowest"
+  | "dashboard.competitors.lineupAverage"
+  | "dashboard.competitors.lineupZoomNote"
+  | "dashboard.competitors.lineupDotDetail"
+  | "dashboard.competitors.heroRank"
+  | "dashboard.competitors.heroNoRank"
+  | "dashboard.competitors.statLocalAverage"
+  | "dashboard.competitors.statTop"
+  | "dashboard.competitors.statRadius"
+  | "dashboard.competitors.lineupAria"
+  | "dashboard.competitors.lineupYou"
+  | "dashboard.competitors.viewOverall"
+  | "dashboard.competitors.viewListing"
+  | "dashboard.competitors.viewWebsite"
+  | "dashboard.competitors.viewReviews"
+  | "dashboard.competitors.compareHeading"
+  | "dashboard.competitors.compareYou"
+  | "dashboard.competitors.compareAverage"
+  | "dashboard.competitors.compareTop"
+  | "dashboard.competitors.compareOverallHint"
+  | "dashboard.competitors.shareHaveIt"
+  | "dashboard.competitors.yes"
+  | "dashboard.competitors.no"
+  | "dashboard.competitors.notCheckedForCompetitors"
+  | "dashboard.competitors.notListedByGoogle"
+  | "dashboard.competitors.notChecked"
+  | "dashboard.competitors.websiteCompareNote"
+  | "dashboard.competitors.comparableNote"
+  | "dashboard.competitors.leadHeading"
+  | "dashboard.competitors.trailHeading"
+  | "dashboard.competitors.noLeads"
+  | "dashboard.competitors.noTrails"
+  | "dashboard.competitors.gapLine"
+  | "dashboard.competitors.fixReviews"
+  | "dashboard.competitors.fixOverview"
+  | "dashboard.competitors.fixWebsite"
+  | "dashboard.competitors.listHeading"
+  | "dashboard.competitors.priceLevelLabel"
+  | "dashboard.competitors.showDetails"
+  | "dashboard.competitors.hideDetails"
+  | "dashboard.competitors.scannedOn"
+  | "dashboard.competitors.savedAutomatically"
+  | "dashboard.competitors.refreshButton"
+  | "dashboard.competitors.refreshing"
+  | "dashboard.competitors.availableAgain"
+  | "dashboard.competitors.refreshError"
+  | "dashboard.competitors.notRunYet"
+  | "dashboard.competitors.notRunYetBody"
+  | "dashboard.competitors.runFirstScan"
+  | "dashboard.competitors.overTimeHeading"
+  | "dashboard.competitors.overTimeRank"
   | "dashboard.competitors.backTo"
   | "dashboard.competitors.businessFallback"
-  | "dashboard.competitors.rankedHeading"
-  | "dashboard.competitors.rankSuffix"
-  | "dashboard.competitors.unscoredHeading"
   // --- lib/competitors.ts's own message strings (findAndScoreCompetitors),
   // threaded with the business's locale rather than always English.
   | "dashboard.competitors.thisBusinessFallback"
@@ -142,7 +192,6 @@ export type MessageKey =
   | "dashboard.competitors.noCategoryError"
   | "dashboard.competitors.nearbySearchFailedFallback"
   | "dashboard.competitors.unnamedListing"
-  | "dashboard.competitors.noUsableDetails"
   | "dashboard.competitors.temporarilyClosed"
   | "dashboard.competitors.permanentlyClosed"
   | "dashboard.competitors.closedListingReason"
@@ -154,7 +203,6 @@ export type MessageKey =
   | "dashboard.competitors.searchWidenedSuffix"
   | "dashboard.competitors.unscoredSuffix.one"
   | "dashboard.competitors.unscoredSuffix.other"
-  | "dashboard.competitors.nothingToCompare"
   | "dashboard.competitors.noRating"
   | "dashboard.competitors.reviewCount.one"
   | "dashboard.competitors.reviewCount.other"
@@ -163,13 +211,8 @@ export type MessageKey =
   | "dashboard.competitors.noWebsite"
   | "dashboard.competitors.milesSuffix"
   | "dashboard.competitors.yourBusiness"
-  | "dashboard.competitors.noAddress"
   | "dashboard.competitors.postscoreOutOf100"
-  | "dashboard.competitors.savingScan"
-  | "dashboard.competitors.saveScan"
-  | "dashboard.competitors.saved"
   | "dashboard.competitors.noComparableCompetitors"
-  | "dashboard.competitors.saveError"
   // --- Shared content layer: the 3 scoring category names
   // (lib/scoring.ts's CATEGORY_LABELS). Shared between the dashboard
   // (CategoryProgressRow, CategoryCard — all 3 of its importing pages)
@@ -2419,14 +2462,63 @@ export const messages: Record<Locale, LocaleMessages> = {
     "report.footer.unsubscribeLinkText": "Unsubscribe from these reports",
 
     "dashboard.competitors.title": "Competitors",
-    "dashboard.competitors.subtitle":
-      "Real nearby {competitorNoun}{categoryClause}, scored with the same PostScore engine and ranked strictly by that score.",
-    "dashboard.competitors.categoryClause": " in the same category ({categoryLabel})",
+    "dashboard.competitors.statComparableScore": "Comparable score",
+    "dashboard.competitors.fullScoreNote": "Your full PostScore is {score} — it also includes website checks we don't run on competitors.",
+    "dashboard.competitors.fullScoreShort": "Full PostScore {score}",
+    "dashboard.competitors.lineupTop": "#1 {name} · {score}",
+    "dashboard.competitors.lineupLowest": "Lowest: {name} · {score}",
+    "dashboard.competitors.lineupAverage": "Area average {score}",
+    "dashboard.competitors.lineupZoomNote": "Scale shows {min}–{max} — it doesn't start at 0.",
+    "dashboard.competitors.lineupDotDetail": "{name} · {score} · {distance}",
+    "dashboard.competitors.heroRank": "You're #{rank} of {total} nearby {competitorNoun}",
+    "dashboard.competitors.heroNoRank": "Your business isn't in this saved scan.",
+    "dashboard.competitors.statLocalAverage": "Local average",
+    "dashboard.competitors.statTop": "#1 nearby",
+    "dashboard.competitors.statRadius": "Within {miles} mi",
+    "dashboard.competitors.lineupAria": "Scores of you and {count} nearby businesses",
+    "dashboard.competitors.lineupYou": "You",
+    "dashboard.competitors.viewOverall": "Overall",
+    "dashboard.competitors.viewListing": "Google listing",
+    "dashboard.competitors.viewWebsite": "Website",
+    "dashboard.competitors.viewReviews": "Reviews",
+    "dashboard.competitors.compareHeading": "{category}: you vs. nearby",
+    "dashboard.competitors.compareYou": "You",
+    "dashboard.competitors.compareAverage": "Area average",
+    "dashboard.competitors.compareTop": "Top: {name}",
+    "dashboard.competitors.compareOverallHint": "Pick Google listing, Website or Reviews to compare check by check.",
+    "dashboard.competitors.shareHaveIt": "{percent}% have it",
+    "dashboard.competitors.yes": "Yes",
+    "dashboard.competitors.no": "No",
+    "dashboard.competitors.notCheckedForCompetitors": "Not checked for competitors",
+    "dashboard.competitors.notListedByGoogle": "Not listed by Google",
+    "dashboard.competitors.notChecked": "Not checked",
+    "dashboard.competitors.websiteCompareNote": "Competitors' websites aren't checked, so Website compares only whether a site is listed on Google.",
+    "dashboard.competitors.comparableNote": "Everyone is compared on what Google lists: rating, reviews, photos, hours, phone and whether a website is listed.",
+    "dashboard.competitors.leadHeading": "Where you lead",
+    "dashboard.competitors.trailHeading": "Where you trail",
+    "dashboard.competitors.noLeads": "No clear lead over the local average in this scan.",
+    "dashboard.competitors.noTrails": "Nothing where you clearly trail the local average.",
+    "dashboard.competitors.gapLine": "You {you} · area average {average}",
+    "dashboard.competitors.fixReviews": "Go to Reviews",
+    "dashboard.competitors.fixOverview": "Go to Overview",
+    "dashboard.competitors.fixWebsite": "Go to Website",
+    "dashboard.competitors.listHeading": "Ranked by {category}",
+    "dashboard.competitors.priceLevelLabel": "Price level",
+    "dashboard.competitors.showDetails": "Show details",
+    "dashboard.competitors.hideDetails": "Hide details",
+    "dashboard.competitors.scannedOn": "Scanned {date}",
+    "dashboard.competitors.savedAutomatically": "Every scan is saved to your history.",
+    "dashboard.competitors.refreshButton": "Refresh competitors",
+    "dashboard.competitors.refreshing": "Refreshing…",
+    "dashboard.competitors.availableAgain": "Available again on {date}",
+    "dashboard.competitors.refreshError": "Couldn't refresh competitors — please try again later.",
+    "dashboard.competitors.notRunYet": "Competitor scan not run yet",
+    "dashboard.competitors.notRunYetBody": "Run one scan to see where you stand against nearby {competitorNoun}.",
+    "dashboard.competitors.runFirstScan": "Run competitor scan",
+    "dashboard.competitors.overTimeHeading": "Compared over time",
+    "dashboard.competitors.overTimeRank": "#{rank} of {total}",
     "dashboard.competitors.backTo": "Back to {name}",
     "dashboard.competitors.businessFallback": "business",
-    "dashboard.competitors.rankedHeading": "Ranked by PostScore{rankSuffix}",
-    "dashboard.competitors.rankSuffix": " — you're #{rank} of {total}",
-    "dashboard.competitors.unscoredHeading": "Found nearby, but couldn't be scored",
     "dashboard.competitors.thisBusinessFallback": "this business",
     "dashboard.competitors.thisBusinessNameFallback": "This business",
     "dashboard.competitors.noCoordinatesError":
@@ -2437,7 +2529,6 @@ export const messages: Record<Locale, LocaleMessages> = {
       "This business has no category on file, so we can't tell which nearby businesses are genuinely comparable. Re-save it from Google Places to pick up its category.",
     "dashboard.competitors.nearbySearchFailedFallback": "Nearby search failed.",
     "dashboard.competitors.unnamedListing": "(unnamed listing)",
-    "dashboard.competitors.noUsableDetails": "Google Places returned no usable details for this listing.",
     "dashboard.competitors.temporarilyClosed": "temporarily closed",
     "dashboard.competitors.permanentlyClosed": "permanently closed",
     "dashboard.competitors.closedListingReason": "Google shows this listing as {status}.",
@@ -2455,8 +2546,6 @@ export const messages: Record<Locale, LocaleMessages> = {
       " {count} of them couldn't be scored — Google returned no usable details.",
     "dashboard.competitors.unscoredSuffix.other":
       " {count} of them couldn't be scored — Google returned no usable details.",
-    "dashboard.competitors.nothingToCompare":
-      "Your PostScore ({total}) is shown above with nothing to compare it to yet — widen your search area or check back later as more listings appear nearby.",
     "dashboard.competitors.noRating": "No rating",
     "dashboard.competitors.reviewCount.one": "{count} review",
     "dashboard.competitors.reviewCount.other": "{count} reviews",
@@ -2465,14 +2554,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.noWebsite": "No website",
     "dashboard.competitors.milesSuffix": " mi",
     "dashboard.competitors.yourBusiness": "Your business",
-    "dashboard.competitors.noAddress": "No address on file",
     "dashboard.competitors.postscoreOutOf100": "PostScore / 100",
-    "dashboard.competitors.savingScan": "Saving scan...",
-    "dashboard.competitors.saveScan": "Save this scan to history",
-    "dashboard.competitors.saved": "Saved.",
     "dashboard.competitors.noComparableCompetitors":
       "Nothing to save — no comparable competitors were found.",
-    "dashboard.competitors.saveError": "Could not save this scan.",
 
     // --- content.categories.* — lib/scoring.ts's CATEGORY_LABELS.
     "content.categories.visibility": "Visibility & Reputation",
@@ -5101,14 +5185,63 @@ export const messages: Record<Locale, LocaleMessages> = {
     "report.footer.unsubscribeLinkText": "Darse de baja de estos informes",
 
     "dashboard.competitors.title": "Competencia",
-    "dashboard.competitors.subtitle":
-      "Competidores reales cercanos{categoryClause}, evaluados con el mismo motor de PostScore y ordenados estrictamente por esa puntuación.",
-    "dashboard.competitors.categoryClause": " en la misma categoría ({categoryLabel})",
+    "dashboard.competitors.statComparableScore": "Puntuación comparable",
+    "dashboard.competitors.fullScoreNote": "Su PostScore completo es {score} — también incluye revisiones del sitio web que no hacemos a la competencia.",
+    "dashboard.competitors.fullScoreShort": "PostScore completo {score}",
+    "dashboard.competitors.lineupTop": "#1 {name} · {score}",
+    "dashboard.competitors.lineupLowest": "Más baja: {name} · {score}",
+    "dashboard.competitors.lineupAverage": "Promedio de la zona {score}",
+    "dashboard.competitors.lineupZoomNote": "La escala muestra {min}–{max} — no empieza en 0.",
+    "dashboard.competitors.lineupDotDetail": "{name} · {score} · {distance}",
+    "dashboard.competitors.heroRank": "Usted ocupa el puesto #{rank} de {total} {competitorNoun} de la zona",
+    "dashboard.competitors.heroNoRank": "Su negocio no aparece en este análisis guardado.",
+    "dashboard.competitors.statLocalAverage": "Promedio local",
+    "dashboard.competitors.statTop": "El #1 cercano",
+    "dashboard.competitors.statRadius": "A menos de {miles} mi",
+    "dashboard.competitors.lineupAria": "Puntuaciones suya y de {count} negocios cercanos",
+    "dashboard.competitors.lineupYou": "Usted",
+    "dashboard.competitors.viewOverall": "General",
+    "dashboard.competitors.viewListing": "Ficha de Google",
+    "dashboard.competitors.viewWebsite": "Sitio web",
+    "dashboard.competitors.viewReviews": "Reseñas",
+    "dashboard.competitors.compareHeading": "{category}: usted frente a la competencia cercana",
+    "dashboard.competitors.compareYou": "Usted",
+    "dashboard.competitors.compareAverage": "Promedio de la zona",
+    "dashboard.competitors.compareTop": "Líder: {name}",
+    "dashboard.competitors.compareOverallHint": "Elija Ficha de Google, Sitio web o Reseñas para comparar cada punto.",
+    "dashboard.competitors.shareHaveIt": "{percent}% lo tienen",
+    "dashboard.competitors.yes": "Sí",
+    "dashboard.competitors.no": "No",
+    "dashboard.competitors.notCheckedForCompetitors": "No se verifica para la competencia",
+    "dashboard.competitors.notListedByGoogle": "Google no lo indica",
+    "dashboard.competitors.notChecked": "No verificado",
+    "dashboard.competitors.websiteCompareNote": "No revisamos los sitios web de la competencia, así que Sitio web solo compara si hay un sitio indicado en Google.",
+    "dashboard.competitors.comparableNote": "Todos se comparan con lo que indica Google: calificación, reseñas, fotos, horario, teléfono y si hay un sitio web.",
+    "dashboard.competitors.leadHeading": "Dónde lleva ventaja",
+    "dashboard.competitors.trailHeading": "Dónde se queda atrás",
+    "dashboard.competitors.noLeads": "En este análisis no hay una ventaja clara sobre el promedio local.",
+    "dashboard.competitors.noTrails": "No hay nada en lo que esté claramente por debajo del promedio local.",
+    "dashboard.competitors.gapLine": "Usted {you} · promedio de la zona {average}",
+    "dashboard.competitors.fixReviews": "Ir a Reseñas",
+    "dashboard.competitors.fixOverview": "Ir al Resumen",
+    "dashboard.competitors.fixWebsite": "Ir a Sitio web",
+    "dashboard.competitors.listHeading": "Ordenados por {category}",
+    "dashboard.competitors.priceLevelLabel": "Nivel de precios",
+    "dashboard.competitors.showDetails": "Ver detalles",
+    "dashboard.competitors.hideDetails": "Ocultar detalles",
+    "dashboard.competitors.scannedOn": "Analizado el {date}",
+    "dashboard.competitors.savedAutomatically": "Cada análisis se guarda en su historial.",
+    "dashboard.competitors.refreshButton": "Actualizar competencia",
+    "dashboard.competitors.refreshing": "Actualizando…",
+    "dashboard.competitors.availableAgain": "Disponible de nuevo el {date}",
+    "dashboard.competitors.refreshError": "No se pudo actualizar la competencia — inténtelo más tarde.",
+    "dashboard.competitors.notRunYet": "Aún no se ha analizado la competencia",
+    "dashboard.competitors.notRunYetBody": "Haga un análisis para ver cómo se compara con {competitorNoun} de la zona.",
+    "dashboard.competitors.runFirstScan": "Analizar la competencia",
+    "dashboard.competitors.overTimeHeading": "Comparación en el tiempo",
+    "dashboard.competitors.overTimeRank": "#{rank} de {total}",
     "dashboard.competitors.backTo": "Volver a {name}",
     "dashboard.competitors.businessFallback": "negocio",
-    "dashboard.competitors.rankedHeading": "Ordenados por PostScore{rankSuffix}",
-    "dashboard.competitors.rankSuffix": " — usted es el #{rank} de {total}",
-    "dashboard.competitors.unscoredHeading": "Encontrados cerca, pero no se pudieron evaluar",
     "dashboard.competitors.thisBusinessFallback": "este negocio",
     "dashboard.competitors.thisBusinessNameFallback": "Este negocio",
     "dashboard.competitors.noCoordinatesError":
@@ -5119,7 +5252,6 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Este negocio no tiene una categoría registrada, por lo que no podemos saber qué negocios cercanos son realmente comparables. Vuelva a guardarlo desde Google Places para obtener su categoría.",
     "dashboard.competitors.nearbySearchFailedFallback": "La búsqueda de negocios cercanos falló.",
     "dashboard.competitors.unnamedListing": "(ficha sin nombre)",
-    "dashboard.competitors.noUsableDetails": "Google Places no devolvió detalles utilizables para esta ficha.",
     "dashboard.competitors.temporarilyClosed": "cerrado temporalmente",
     "dashboard.competitors.permanentlyClosed": "cerrado permanentemente",
     "dashboard.competitors.closedListingReason": "Google muestra esta ficha como {status}.",
@@ -5137,8 +5269,6 @@ export const messages: Record<Locale, LocaleMessages> = {
       " {count} de ellos no se pudo evaluar — Google no devolvió detalles utilizables.",
     "dashboard.competitors.unscoredSuffix.other":
       " {count} de ellos no se pudieron evaluar — Google no devolvió detalles utilizables.",
-    "dashboard.competitors.nothingToCompare":
-      "Su PostScore ({total}) se muestra arriba, pero aún no hay nada con qué compararlo — amplíe su área de búsqueda o vuelva más tarde a medida que aparezcan más negocios cerca.",
     "dashboard.competitors.noRating": "Sin calificación",
     "dashboard.competitors.reviewCount.one": "{count} reseña",
     "dashboard.competitors.reviewCount.other": "{count} reseñas",
@@ -5147,14 +5277,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.noWebsite": "Sin sitio web",
     "dashboard.competitors.milesSuffix": " mi",
     "dashboard.competitors.yourBusiness": "Su negocio",
-    "dashboard.competitors.noAddress": "Sin dirección registrada",
     "dashboard.competitors.postscoreOutOf100": "PostScore / 100",
-    "dashboard.competitors.savingScan": "Guardando análisis...",
-    "dashboard.competitors.saveScan": "Guardar este análisis en el historial",
-    "dashboard.competitors.saved": "Guardado.",
     "dashboard.competitors.noComparableCompetitors":
       "Nada que guardar — no se encontraron competidores comparables.",
-    "dashboard.competitors.saveError": "No se pudo guardar este análisis.",
 
     // --- content.categories.* — reviewed Spanish.
     "content.categories.visibility": "Visibilidad y reputación",
@@ -6109,7 +6234,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.saveScanToSeeRanking": "Guarde un análisis de la competencia para ver su posición local →",
     "dashboard.overview.noComparablePeers": "No se encontraron {competitorNoun} comparables en su último análisis.",
     "dashboard.overview.rankOfPeerCount": "#{rank} de {peerCount}",
-    "dashboard.overview.aheadOfNearby": "Por delante del {percentileAhead}% de {othersCount} {competitorNoun} cercanos",
+    "dashboard.overview.aheadOfNearby": "Por delante del {percentileAhead}% de {othersCount} {competitorNoun} de la zona",
     "dashboard.overview.smallSampleSuffix": " — muestra pequeña",
     "dashboard.overview.profileChecklistTitle": "Lista de verificación de perfil completo",
     "dashboard.overview.profileChecklistDescription": "Conecte su Perfil de Negocio de Google para ver exactamente qué campos faltan en su ficha, agregar soluciones directamente a su plan de acción y hacer seguimiento de la actualidad de las reseñas a partir de sus datos reales y en vivo de Google.",

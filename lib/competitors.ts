@@ -12,7 +12,6 @@ import {
   type ScoreBreakdown,
 } from "@/lib/scoring";
 import {
-  lookupBusinessByPlaceId,
   searchNearbyPlaces,
   type NearbyCandidate,
   type PlaceDetails,
@@ -51,7 +50,8 @@ const METERS_PER_MILE = 1609.34;
  * Search radius tiers, narrowest first — like Google Maps, we start by
  * asking "who is actually nearby" (~1.5 mi) and only widen if that
  * genuinely doesn't turn up enough comparable businesses. Each tier is a
- * separate Nearby Search call (cheap, Basic-tier fields only), so this
+ * separate Nearby Search call (~$0.035, and it carries every listing
+ * field competitors are scored on — no per-competitor Details call), so this
  * only costs more when the narrow search really did come up short — never
  * more than one call per tier, capped at three tiers total.
  */
@@ -575,66 +575,51 @@ export async function findAndScoreCompetitors(
   const scoredCompetitors: RankedCompetitor[] = [];
   const unscored: UnscoredCompetitor[] = [];
 
-  // Sequential on purpose: at most MAX_COMPETITORS Details calls, and
-  // keeping them sequential makes a single failed lookup easy to isolate
-  // and report honestly rather than tangling error handling across a
-  // Promise.all batch.
+  // Every comparable candidate is scored from its own Nearby Search
+  // listing — no network call inside this loop.
   for (const { candidate, distanceMeters } of comparable) {
-    const result = await lookupBusinessByPlaceId(candidate.placeId);
+    // Part B: the listing came back with the Nearby Search itself — no
+    // per-competitor Place Details call (and no extra cost).
+    const place = candidate.details;
 
-    if (result.status !== "found") {
-      unscored.push({
-        placeId: candidate.placeId,
-        name: candidate.name ?? t(locale, "dashboard.competitors.unnamedListing"),
-        address: candidate.formattedAddress,
-        distanceMeters,
-        reason:
-          result.status === "error"
-            ? result.message
-            : t(locale, "dashboard.competitors.noUsableDetails"),
-      });
-      continue;
-    }
-
-    // Re-check status at Details time too — Nearby Search data can be
-    // slightly stale, and we never want to score a closed business
+    // Never score a closed business
     // (temporarily or permanently — neither is a current competitor).
     // This candidate was already counted in `comparable` (and so in the
     // "we found N comparable businesses" message below), so it goes to
     // `unscored` rather than a silent continue — dropping it with no
     // record would let the reported count and radius overstate what's
     // actually shown, with no footnote explaining the gap.
-    if (isClosedStatus(result.place.businessStatus)) {
+    if (isClosedStatus(place.businessStatus)) {
       const closedLabel =
-        result.place.businessStatus === "CLOSED_TEMPORARILY"
+        place.businessStatus === "CLOSED_TEMPORARILY"
           ? t(locale, "dashboard.competitors.temporarilyClosed")
           : t(locale, "dashboard.competitors.permanentlyClosed");
       unscored.push({
         placeId: candidate.placeId,
-        name: result.place.name ?? candidate.name ?? t(locale, "dashboard.competitors.unnamedListing"),
-        address: result.place.formattedAddress ?? candidate.formattedAddress,
+        name: place.name ?? candidate.name ?? t(locale, "dashboard.competitors.unnamedListing"),
+        address: place.formattedAddress ?? candidate.formattedAddress,
         distanceMeters,
         reason: t(locale, "dashboard.competitors.closedListingReason", { status: closedLabel }),
       });
       continue;
     }
 
-    const row = placeDetailsToScoringRow(result.place);
+    const row = placeDetailsToScoringRow(place);
     const breakdown = scoreBusiness(businessRowToScoringInput(row), locale);
 
     scoredCompetitors.push({
       placeId: candidate.placeId,
-      name: result.place.name ?? candidate.name ?? "(unnamed listing)",
+      name: place.name ?? candidate.name ?? "(unnamed listing)",
       isSubject: false,
-      address: result.place.formattedAddress,
+      address: place.formattedAddress,
       distanceMeters,
-      rating: result.place.rating,
-      reviewCount: result.place.userRatingCount,
-      hasWebsite: !!result.place.website && result.place.website.trim().length > 0,
-      googleMapsUri: result.place.googleMapsUri,
+      rating: place.rating,
+      reviewCount: place.userRatingCount,
+      hasWebsite: !!place.website && place.website.trim().length > 0,
+      googleMapsUri: place.googleMapsUri,
       breakdown,
-      priceLevel: result.place.priceLevel,
-      photoCount: result.place.photoCount,
+      priceLevel: place.priceLevel,
+      photoCount: place.photoCount,
     });
   }
 

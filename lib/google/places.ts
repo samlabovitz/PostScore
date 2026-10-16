@@ -27,19 +27,32 @@ const DETAILS_FIELD_MASK = [
   "priceLevel",
 ].join(",");
 
-// Nearby Search is used only to find candidate competitors near a saved
-// business's coordinates, so the mask stays deliberately narrow (Basic-tier
-// fields only) — we don't pay for contact/atmosphere data on places we may
-// filter out before ever fetching their full Details.
+// Nearby Search returns every listing field competitors are scored on
+// (Part B, cost-first competitor scan): one Nearby Search Enterprise call
+// (~$0.035) replaces the old search + up to 10 Place Details calls
+// (~$0.24). Confirmed on a real Modern Liquors call (Oct 16, 2026):
+// rating, review count, website, phone, hours, photos (up to 10, the
+// same cap as Details), price level and business status all come back.
+// `priceLevel` already made this the Enterprise tier; no Atmosphere
+// fields are requested.
 const NEARBY_SEARCH_FIELD_MASK = [
   "places.id",
   "places.displayName",
   "places.formattedAddress",
+  "places.nationalPhoneNumber",
+  "places.internationalPhoneNumber",
+  "places.websiteUri",
+  "places.regularOpeningHours.weekdayDescriptions",
+  "places.regularOpeningHours.periods",
+  "places.rating",
+  "places.userRatingCount",
   "places.types",
   "places.primaryType",
   "places.primaryTypeDisplayName",
   "places.businessStatus",
   "places.location",
+  "places.googleMapsUri",
+  "places.photos",
   "places.priceLevel",
 ].join(",");
 
@@ -226,17 +239,9 @@ export interface RawDetailsPlace {
   priceLevel?: string;
 }
 
-interface RawNearbyPlace {
-  id: string;
-  displayName?: { text?: string };
-  formattedAddress?: string;
-  types?: string[];
-  primaryType?: string;
-  primaryTypeDisplayName?: { text?: string };
-  businessStatus?: string;
-  location?: { latitude?: number; longitude?: number };
-  priceLevel?: string;
-}
+/** Nearby Search now requests the same listing fields as Place
+ * Details, so a result has the same raw shape. */
+type RawNearbyPlace = RawDetailsPlace;
 
 /** A candidate returned by Nearby Search — deliberately thin (Basic fields
  * only). Callers filter/rank these and only fetch full Details for the
@@ -251,6 +256,9 @@ export interface NearbyCandidate {
   businessStatus: string | null;
   location: { lat: number; lng: number } | null;
   priceLevel: string | null;
+  /** The full listing, exactly as Place Details would map it — so a
+   * competitor is scored from this one search, never a second paid call. */
+  details: PlaceDetails;
 }
 
 async function searchPlaces(textQuery: string, fetchImpl: typeof fetch = fetch): Promise<RawSearchPlace[]> {
@@ -324,6 +332,13 @@ export function normalizeDetails(raw: RawDetailsPlace): PlaceDetails {
   };
 }
 
+/** Real Nearby Search calls made by this process — lets the bulk
+ * competitor backfill (scripts/rescan-all.ts) stop at a call budget. */
+let nearbySearchCalls = 0;
+export function nearbySearchCallCount(): number {
+  return nearbySearchCalls;
+}
+
 function normalizeNearby(raw: RawNearbyPlace): NearbyCandidate {
   return {
     placeId: raw.id,
@@ -338,6 +353,7 @@ function normalizeNearby(raw: RawNearbyPlace): NearbyCandidate {
         ? { lat: raw.location.latitude, lng: raw.location.longitude }
         : null,
     priceLevel: raw.priceLevel ?? null,
+    details: normalizeDetails(raw),
   };
 }
 
@@ -380,6 +396,7 @@ export async function searchNearbyPlaces(params: {
     body.rankPreference = params.rankPreference;
   }
 
+  nearbySearchCalls += 1;
   const res = await fetchPlacesApi(
     `${PLACES_API_BASE}/places:searchNearby`,
     {

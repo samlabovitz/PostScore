@@ -48,7 +48,8 @@ import { createElement } from "react";
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rescanBusinessWithClient, type RescanBusinessResult } from "@/app/actions/scoring";
-import { saveCompetitorScanWithClient } from "@/app/actions/competitors";
+import { runAndSaveCompetitorScanWithClient } from "@/app/actions/competitors";
+import { isScanFresh } from "@/lib/competitorScanPolicy";
 import {
   buildMonthlyReportContent,
   type CompetitorDelta,
@@ -499,7 +500,8 @@ export async function processBusiness(
     return { businessId, status: "failed", reason: `rescan reported success but score ${rescanResult.scoreId} could not be read back` };
   }
 
-  // 3c. Competitor scan — run for EVERY business every month, not only
+  // 3c. Competitor standing — for EVERY business every month (a fresh
+  // scan only when the last saved one is 30+ days old), not only
   // ones that have used the feature before (the report must always
   // include a real, current standing when one can be found, never only
   // for businesses that happened to opt in earlier). Saved as a normal
@@ -514,7 +516,19 @@ export async function processBusiness(
   // doc for why this is a separate field from competitorDelta.
   let currentCompetitorSnapshot: CompetitorSnapshot | null = null;
   let competitorScanId: string | null = null;
-  const competitorResult = await saveCompetitorScanWithClient(supabase, businessId);
+  // Part B: reuse a saved scan under 30 days old instead of paying for a
+  // new one; otherwise run (and save) one fresh scan.
+  const { data: latestScanRows } = await supabase
+    .from("competitor_scans")
+    .select("scan_id, created_at")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const latestScan = (latestScanRows ?? [])[0] as { scan_id: string; created_at: string } | undefined;
+  const competitorResult =
+    latestScan && isScanFresh(latestScan.created_at, new Date())
+      ? ({ status: "saved", scanId: latestScan.scan_id } as const)
+      : await runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: false });
   if (competitorResult.status === "saved") {
     competitorScanId = competitorResult.scanId;
     currentCompetitorSnapshot = await readCompetitorSnapshotForScan(supabase, businessId, competitorResult.scanId);
