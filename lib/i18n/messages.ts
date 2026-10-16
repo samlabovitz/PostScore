@@ -2690,7 +2690,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.security.explanation.noWebsite": "Not applicable — no website on file to check.",
     "content.checks.website.security.explanation.notAnalyzed": "This site hasn't been analyzed yet — re-scan to run a real security check.",
     "content.checks.website.security.explanation.cleanChecked":
-      "No signs of hacking found, and Google Safe Browsing reports this site as clean.",
+      "No signs of hacking found. Google Safe Browsing: no warning found.",
     "content.checks.website.security.explanation.cleanNotChecked":
       "No signs of hacking found in your site's own content. (Google Safe Browsing wasn't checked — not configured yet.)",
     "content.checks.website.security.explanation.safeBrowsingThreat":
@@ -5261,7 +5261,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.security.advice": "Pida a su proveedor de alojamiento o desarrollador que elimine el contenido inyectado de inmediato y cambie todas las contraseñas de administrador — un sitio hackeado puede perjudicar silenciosamente a sus visitantes y a su posición en Google.",
     "content.checks.website.security.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para verificar.",
     "content.checks.website.security.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para ejecutar una verificación de seguridad real.",
-    "content.checks.website.security.explanation.cleanChecked": "No se encontraron señales de hackeo, y Google Safe Browsing informa que este sitio está limpio.",
+    "content.checks.website.security.explanation.cleanChecked": "No se encontraron señales de hackeo. Navegación segura de Google: no se encontró ninguna advertencia.",
     "content.checks.website.security.explanation.cleanNotChecked": "No se encontraron señales de hackeo en el propio contenido de su sitio. (No se comprobó Google Safe Browsing — aún no está configurado.)",
     "content.checks.website.security.explanation.safeBrowsingThreat": "Google marcó este sitio como inseguro ({types}) — esto necesita atención urgente.",
     "content.checks.website.security.explanation.spamFound": "Se encontró contenido spam en su sitio ({topic}) — señales de que podría estar hackeado.",

@@ -313,11 +313,22 @@ async function fetchSitemapLocs(homepageUrl: URL, fetchImpl: typeof fetch): Prom
     return locMatches
       .map((m) => m.replace(/<\/?loc>/gi, "").trim())
       .filter((u) => u.length > 0)
+      // A sitemap index lists other sitemap FILES, not pages — the real
+      // Bánh Mì Boy (WordPress/Yoast) case: "menuscat-sitemap.xml"
+      // matched "menu" and its XML text was read as a Services page.
+      .filter((u) => !isXmlSitemapUrl(u))
       .slice(0, 200)
       .map((url) => ({ url, label: "" }));
   } catch {
     return [];
   }
+}
+
+/** True for a `.xml` / `.xml.gz` URL (query/hash ignored) — a sitemap
+ * file, never a page a customer reads. */
+export function isXmlSitemapUrl(url: string): boolean {
+  const path = url.split(/[?#]/)[0].toLowerCase();
+  return path.endsWith(".xml") || path.endsWith(".xml.gz");
 }
 
 function normalizeHost(hostname: string): string {
@@ -356,6 +367,9 @@ const MAX_PRESENCE_EXTRA_FETCHES = 3;
 type PresenceFetchOutcome =
   | { kind: "ok"; html: string }
   | { kind: "pdf" }
+  /** Loaded, but declared as something other than an HTML page (XML,
+   * JSON, an image, …) — never read as page content. */
+  | { kind: "not_html" }
   | { kind: "broken_link" }
   | { kind: "failed"; reason: ReachabilityFailureReason };
 
@@ -390,6 +404,10 @@ async function fetchPresenceCandidateOnce(url: string, fetchImpl: typeof fetch):
     }
     const contentType = res.headers.get("content-type") ?? "";
     if (contentType.toLowerCase().includes("application/pdf")) return { kind: "pdf" };
+    // Only an HTML page is read as page content. A missing Content-Type
+    // is still read (plenty of real servers omit it); a declared non-HTML
+    // type (text/xml, application/json, image/*, …) never is.
+    if (contentType && !/text\/html|application\/xhtml\+xml/i.test(contentType)) return { kind: "not_html" };
     const html = await res.text();
     return { kind: "ok", html };
   } catch (err) {
@@ -800,6 +818,8 @@ export async function detectPagePresence(
       }
       continue; // About: not meaningful either way — try the next source
     }
+
+    if (outcome.kind === "not_html") continue; // not a page — never evidence either way
 
     // outcome.kind === "ok"
     if (isLikelyJsRenderedShell(outcome.html)) {
