@@ -112,15 +112,15 @@ describe("formatCount — review counts render the same on server and browser", 
     ]);
   });
 
-  test("ES: period groups thousands; a four-digit count isn't grouped", () => {
+  test("ES: US-style grouping, same as English (never '12.345')", () => {
     expect([0, 7, 999, 1000, 1234, 12345, 1234567].map((n) => formatCount(n, "es"))).toEqual([
       "0",
       "7",
       "999",
-      "1000",
-      "1234",
-      "12.345",
-      "1.234.567",
+      "1,000",
+      "1,234",
+      "12,345",
+      "1,234,567",
     ]);
   });
 
@@ -135,7 +135,7 @@ describe("formatCount — review counts render the same on server and browser", 
     });
     try {
       expect(formatCount(12345, "en")).toBe("12,345");
-      expect(formatCount(12345, "es")).toBe("12.345");
+      expect(formatCount(12345, "es")).toBe("12,345");
     } finally {
       Object.defineProperty(proto, "toLocaleString", original);
     }
@@ -143,6 +143,6 @@ describe("formatCount — review counts render the same on server and browser", 
 
   test("rounds to a whole number and keeps a minus sign", () => {
     expect(formatCount(1234.6, "en")).toBe("1,235");
-    expect(formatCount(-12345, "es")).toBe("-12.345");
+    expect(formatCount(-12345, "es")).toBe("-12,345");
   });
 });

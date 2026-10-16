@@ -223,18 +223,19 @@ export function formatMonthDayTime(date: string, locale: Locale, timeZone: strin
 
 /**
  * A whole-number count (e.g. a Google review count) — "1,234" /
- * "12,345" (en), "1234" / "12.345" (es: a period groups thousands, and
- * a four-digit number isn't grouped, the standard Spanish style). Built
+ * "12,345" in both en and es: Spanish uses US-style grouping (a comma
+ * every three digits), the way our US Spanish-speaking owners read
+ * numbers — never "12.345". `locale` is kept so a future locale can
+ * differ. Built
  * by hand for the same reason as the dates above: toLocaleString() with
  * no locale uses whatever language the server or the browser happens to
  * run in, so a Spanish-language browser printing "1.234" over the
  * server's "1,234" is a React hydration error. Rounds to a whole number.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function formatCount(value: number, locale: Locale): string {
   const n = Math.round(value);
   const digits = String(Math.abs(n));
   const sign = n < 0 ? "-" : "";
-  if (locale === "es" && digits.length <= 4) return sign + digits;
-  const separator = locale === "es" ? "." : ",";
-  return sign + digits.replace(/\B(?=(\d{3})+(?!\d))/g, separator);
+  return sign + digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
