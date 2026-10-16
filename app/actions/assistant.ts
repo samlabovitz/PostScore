@@ -194,7 +194,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
   // through so this never issues a second, identical
   // getLatestCompetitorSnapshot query (see getGrowthMoveSignals's own doc
   // in app/actions/growthMoves.ts).
-  const signalsResult = await getGrowthMoveSignals(businessId, breakdown, profile.referralOk, snapshot);
+  const signalsResult = await getGrowthMoveSignals(businessId, breakdown, profile, snapshot);
   const growthMoves: AssistantGrowthMove[] =
     signalsResult.status === "ok"
       ? withoutWebsiteGrowthMoves(buildGrowthMoves(signalsResult.signals, locale))
@@ -265,6 +265,8 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     autoDetectedBusinessTypeId: autoDetectedProfile.id,
     businessTypeOverridden: businessTypeOverride !== null,
     referralOk: profile.referralOk,
+    couponsOk: profile.couponsOk,
+    pricingOk: profile.pricingOk,
     couponPresets: profile.couponPresets.map((p) => ({ label: p.label, description: p.description })),
     referralPresets: profile.referralPresets.map((p) => ({
       referrerReward: p.referrerReward,

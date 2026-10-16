@@ -96,8 +96,8 @@ export function WebsiteBannerCard({ banner, businessId }: { banner: WebsiteBanne
   );
 }
 
-function segmentFromParam(param: string | null, referralOk: boolean): Segment {
-  if (param === "coupons") return "coupons";
+function segmentFromParam(param: string | null, referralOk: boolean, couponsOk: boolean): Segment {
+  if (param === "coupons" && couponsOk) return "coupons";
   if (param === "referral" && referralOk) return "referral";
   return "plan";
 }
@@ -175,7 +175,7 @@ export function GrowthView({
   // so a growth move's link (e.g. "start a coupon") can deep-link
   // straight to the right tab instead of just landing on this page's
   // default "plan" segment.
-  const segment = segmentFromParam(searchParams.get("tab"), referralOk);
+  const segment = segmentFromParam(searchParams.get("tab"), referralOk, profile.couponsOk);
 
   function setSegment(next: Segment) {
     const params = new URLSearchParams(searchParams.toString());
@@ -204,10 +204,11 @@ export function GrowthView({
   // in lib/growthMoveOverlap.ts), never a separate/stale copy.
   const openActionPlanTasks = [...actionPlan.weeklyTasks, ...actionPlan.laterTasks];
 
-  const options: SegmentedControlOption<Segment>[] = [
-    { value: "plan", label: t(locale, "dashboard.growth.view.tabPlan") },
-    { value: "coupons", label: t(locale, "dashboard.growth.view.tabCoupons") },
-  ];
+  const options: SegmentedControlOption<Segment>[] = [{ value: "plan", label: t(locale, "dashboard.growth.view.tabPlan") }];
+  // A place of worship has no coupon tool (BizProfile.couponsOk).
+  if (profile.couponsOk) {
+    options.push({ value: "coupons", label: t(locale, "dashboard.growth.view.tabCoupons") });
+  }
   if (referralOk) {
     options.push({ value: "referral", label: t(locale, "dashboard.growth.view.tabReferral") });
   }
@@ -230,7 +231,7 @@ export function GrowthView({
         <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.growth.view.subtitle")}</p>
       </div>
 
-      <SegmentedControl options={options} value={segment} onChange={setSegment} />
+      {options.length > 1 && <SegmentedControl options={options} value={segment} onChange={setSegment} />}
 
       {segment === "plan" && (
         <div className="flex flex-col gap-6 nav:gap-8">
@@ -349,7 +350,7 @@ export function GrowthView({
         </div>
       )}
 
-      {segment === "coupons" && (
+      {segment === "coupons" && profile.couponsOk && (
         <CouponsSection
           businessId={businessId}
           businessName={businessName ?? t(locale, "dashboard.growth.view.businessNameFallback")}

@@ -89,4 +89,18 @@ describe("processBusiness applies the rules before any paid work or email", () =
     expect(rescan).not.toHaveBeenCalled();
     expect(sendEmail).not.toHaveBeenCalled();
   });
+
+  test("Day 2b: a website-only business (no Google listing) is skipped before the re-scan, never emailed", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("MONTHLY_REPORTS_LIVE", "true");
+    const chain: Record<string, unknown> = {};
+    for (const m of ["select", "eq"]) chain[m] = () => chain;
+    chain.maybeSingle = async () => ({ data: { monthly_report_enabled: true, listing_mode: "website_only" }, error: null });
+    const db = { from: () => chain } as never;
+    const r = await processBusiness(db, "biz", "2026-10-01T00:00:00Z", new Date(), "scheduled");
+    expect(r).toMatchObject({ status: "skipped" });
+    expect(r.reason).toContain("website-only");
+    expect(rescan).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
 });

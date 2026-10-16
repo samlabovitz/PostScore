@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
 import { getBusinessSummary } from "@/app/actions/businesses";
@@ -8,6 +9,9 @@ import { normalizeLocale } from "@/lib/i18n";
 import { PricingView } from "./PricingView";
 
 export default async function PricingPage({ params }: { params: { id: string } }) {
+  const websiteOnly = await websiteOnlyGuard(params.id, "pricing");
+  if (websiteOnly) return websiteOnly;
+
   const summary = await getBusinessSummary(params.id);
 
   if (summary.status === "unauthenticated") {

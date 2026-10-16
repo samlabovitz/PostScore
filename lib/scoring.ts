@@ -2476,6 +2476,12 @@ export const CHECKS: CheckDefinition[] = [
       if (couldntCheck) return couldntCheck;
       const overriddenKeys = new Set((input.websiteTrustOverrides ?? []).map((o) => o.key));
       const determinable = trust.infoConflicts.filter((f) => f.comparison !== "not_found_on_site");
+      // Day 2b: with no Google listing info at all (a website-only
+      // business), there's nothing to compare against — say that, not
+      // that the site is missing it. Same points (excluded) either way.
+      if (determinable.length === 0 && !input.phone && !input.address && !input.openingHours) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.info_consistency.explanation.noListingInfo") };
+      }
       if (determinable.length === 0) {
         return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.info_consistency.explanation.noComparableInfo") };
       }

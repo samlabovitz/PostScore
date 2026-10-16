@@ -36,12 +36,19 @@ function BusinessCard({ business, locale }: { business: MyBusinessRow; locale: L
             {business.address ?? t(locale, "dashboard.home.noAddressOnFile")}
           </div>
         </div>
-        <div className="shrink-0 text-right">
-          <div className="font-serif text-xl font-semibold text-ink">
-            {business.score ? business.score.total : "—"}
+        {business.websiteOnly ? (
+          // Day 2b: no Google listing, so no PostScore to show.
+          <div className="shrink-0 text-right text-[12px] font-medium text-ink-mute">
+            {t(locale, "dashboard.websiteOnly.listLabel")}
           </div>
-          <div className="text-[11px] text-ink-mute">/ 100</div>
-        </div>
+        ) : (
+          <div className="shrink-0 text-right">
+            <div className="font-serif text-xl font-semibold text-ink">
+              {business.score ? business.score.total : "—"}
+            </div>
+            <div className="text-[11px] text-ink-mute">/ 100</div>
+          </div>
+        )}
       </Card>
     </Link>
   );

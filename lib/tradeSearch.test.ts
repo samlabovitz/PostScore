@@ -12,9 +12,9 @@ describe("TRADES data integrity", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  test("every trade's businessTypeId is one of the 39 real ids in config/bizProfiles.ts", () => {
+  test("every trade's businessTypeId is one of the 44 real ids in config/bizProfiles.ts", () => {
     const realIds = new Set(getBizProfileOptions("en").map((o) => o.id));
-    expect(realIds.size).toBe(39);
+    expect(realIds.size).toBe(44);
     for (const trade of TRADES) {
       expect(realIds.has(trade.businessTypeId)).toBe(true);
     }
@@ -24,7 +24,7 @@ describe("TRADES data integrity", () => {
     const realIds = new Set(getBizProfileOptions("en").map((o) => o.id));
     // Every trade's businessTypeId already had to satisfy the
     // BusinessTypeId union at compile time — this just confirms the
-    // union's 39 members are exactly the real ids, neither more nor
+    // union's 44 members are exactly the real ids, neither more nor
     // fewer, by exercising one representative trade per id we know we
     // seeded (every real id appears on at least one trade above).
     const usedIds = new Set(TRADES.map((t) => t.businessTypeId as BusinessTypeId));

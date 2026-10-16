@@ -3,7 +3,7 @@ import { buildGrowBannerTools } from "./growBannerTools";
 
 describe("buildGrowBannerTools", () => {
   const businessId = "biz-123";
-  const tools = buildGrowBannerTools(businessId, true);
+  const tools = buildGrowBannerTools(businessId, { referralOk: true, couponsOk: true, pricingOk: true });
 
   test("builds exactly six chips, in order, when referralOk is true", () => {
     expect(tools.map((tool) => tool.labelKey)).toEqual([
@@ -51,7 +51,7 @@ describe("buildGrowBannerTools — referralOk gating", () => {
   const businessId = "biz-123";
 
   test("omits the Referrals chip (5 chips) when referralOk is false — e.g. lawyer, where referral-fee arrangements are professionally restricted", () => {
-    const tools = buildGrowBannerTools(businessId, false);
+    const tools = buildGrowBannerTools(businessId, { referralOk: false, couponsOk: true, pricingOk: true });
     expect(tools).toHaveLength(5);
     expect(tools.map((tool) => tool.labelKey)).not.toContain(
       "dashboard.overview.growBanner.tools.referral.shortLabel"
@@ -66,10 +66,21 @@ describe("buildGrowBannerTools — referralOk gating", () => {
   });
 
   test("includes the Referrals chip (6 chips) when referralOk is true — unchanged from before this flag existed", () => {
-    const tools = buildGrowBannerTools(businessId, true);
+    const tools = buildGrowBannerTools(businessId, { referralOk: true, couponsOk: true, pricingOk: true });
     expect(tools).toHaveLength(6);
     expect(tools.map((tool) => tool.labelKey)).toContain(
       "dashboard.overview.growBanner.tools.referral.shortLabel"
     );
+  });
+});
+
+describe("a place of worship (no coupons, referrals or price check)", () => {
+  test("only the tools that apply are offered", () => {
+    const tools = buildGrowBannerTools("b1", { referralOk: false, couponsOk: false, pricingOk: false });
+    const hrefs = tools.map((tool) => tool.href);
+    expect(hrefs.some((h) => h.includes("tab=coupons"))).toBe(false);
+    expect(hrefs.some((h) => h.includes("tab=referral"))).toBe(false);
+    expect(hrefs.some((h) => h.endsWith("/pricing"))).toBe(false);
+    expect(hrefs.some((h) => h.includes("#weekly-routine"))).toBe(true);
   });
 });

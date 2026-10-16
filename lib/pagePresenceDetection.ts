@@ -404,7 +404,48 @@ export function findKeywordSections(mainContentHtml: string, keywords: string[])
  * are its brands and departments ("Products" and "Shop" are already core
  * keywords for every business). EN + ES. */
 export const RETAIL_SERVICES_KEYWORDS: string[] = ["brands", "our brands", "departments", "marcas", "nuestras marcas", "departamentos"];
-export const RETAIL_BUSINESS_TYPE_IDS: readonly string[] = ["hardware_store", "retail_boutique", "liquor_store", "grocery_market", "florist"];
+export const RETAIL_BUSINESS_TYPE_IDS: readonly string[] = [
+  "hardware_store",
+  "retail_boutique",
+  "specialty_store",
+  "liquor_store",
+  "grocery_market",
+  "florist",
+];
+
+/** Day 2b: a community center's (JCC, YMCA) offering is its programs,
+ * memberships, activities, camps and schedules — labels that never say
+ * "services". Only for that type: a bare "schedule" matched unrelated
+ * "Schedule a consultation" links elsewhere (the Pardalis case), and
+ * "membership" would credit a gym's join page as services. EN + ES. The
+ * real Minnesota JCC links Membership, Schedules and Camps. */
+export const COMMUNITY_SERVICES_KEYWORDS: string[] = [
+  "programs",
+  "our programs",
+  "membership",
+  "memberships",
+  "activities",
+  "camps",
+  "camp",
+  "schedules",
+  "schedule",
+  "youth & teen",
+  "programas",
+  "nuestros programas",
+  "membresía",
+  "membresías",
+  "actividades",
+  "campamentos",
+  "campamento",
+  "horarios",
+];
+
+/** Extra Services keywords for a business type (none for most types). */
+export function extraServicesKeywordsFor(businessTypeId: string): string[] {
+  if (RETAIL_BUSINESS_TYPE_IDS.includes(businessTypeId)) return RETAIL_SERVICES_KEYWORDS;
+  if (businessTypeId === "community_center") return COMMUNITY_SERVICES_KEYWORDS;
+  return [];
+}
 
 // ---------------------------------------------------------------------
 // v1.9.0 partial credit — About and Services/products score 0 / 0.5 / 1

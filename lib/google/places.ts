@@ -4,7 +4,9 @@
 
 const PLACES_API_BASE = "https://places.googleapis.com/v1";
 
-const SEARCH_FIELD_MASK = "places.id,places.displayName,places.formattedAddress";
+// pureServiceAreaBusiness is in the same (Pro) tier as the address —
+// no extra cost — and lets the results say "no storefront".
+const SEARCH_FIELD_MASK = "places.id,places.displayName,places.formattedAddress,places.pureServiceAreaBusiness";
 
 const DETAILS_FIELD_MASK = [
   "id",
@@ -151,6 +153,9 @@ export interface PlaceCandidate {
   placeId: string;
   name: string;
   formattedAddress: string | null;
+  /** Google's own flag for a service-area business with no storefront
+   * (its address is hidden) — Day 2b. Absent on older results. */
+  serviceArea?: boolean;
 }
 
 /**
@@ -217,6 +222,7 @@ interface RawSearchPlace {
   id: string;
   displayName?: { text?: string };
   formattedAddress?: string;
+  pureServiceAreaBusiness?: boolean;
 }
 
 export interface RawDetailsPlace {
@@ -261,7 +267,38 @@ export interface NearbyCandidate {
   details: PlaceDetails;
 }
 
-async function searchPlaces(textQuery: string, fetchImpl: typeof fetch = fetch): Promise<RawSearchPlace[]> {
+/** Text Search calls made by this process (each ~$0.032, Pro tier). */
+let textSearchCalls = 0;
+export function textSearchCallCount(): number {
+  return textSearchCalls;
+}
+
+export interface TextSearchOptions {
+  /** Prefer results near a point (the owner's town) — a bias, not a filter. */
+  locationBias?: { lat: number; lng: number; radiusMeters: number } | null;
+}
+
+export async function searchPlaces(
+  textQuery: string,
+  fetchImpl: typeof fetch = fetch,
+  options: TextSearchOptions = {}
+): Promise<RawSearchPlace[]> {
+  textSearchCalls++;
+  const body: Record<string, unknown> = {
+    textQuery,
+    maxResultCount: 5,
+    // Day 2b: Google leaves out service-area businesses (no storefront —
+    // tutors, cleaners, mobile services) unless asked. Same price.
+    includePureServiceAreaBusinesses: true,
+  };
+  if (options.locationBias) {
+    body.locationBias = {
+      circle: {
+        center: { latitude: options.locationBias.lat, longitude: options.locationBias.lng },
+        radius: options.locationBias.radiusMeters,
+      },
+    };
+  }
   const res = await fetchPlacesApi(
     `${PLACES_API_BASE}/places:searchText`,
     {
@@ -271,7 +308,7 @@ async function searchPlaces(textQuery: string, fetchImpl: typeof fetch = fetch):
         "X-Goog-Api-Key": getApiKey(),
         "X-Goog-FieldMask": SEARCH_FIELD_MASK,
       },
-      body: JSON.stringify({ textQuery, maxResultCount: 5 }),
+      body: JSON.stringify(body),
     },
     "Google Places search",
     fetchImpl
@@ -434,19 +471,42 @@ export async function lookupBusiness(
       return { status: "found", place, raw };
     }
 
-    return {
-      status: "multiple",
-      candidates: candidates.map((c) => ({
-        placeId: c.id,
-        name: c.displayName?.text ?? "(unnamed listing)",
-        formattedAddress: c.formattedAddress ?? null,
-      })),
-    };
+    return { status: "multiple", candidates: candidates.map(toCandidate) };
   } catch (err) {
     return {
       status: "error",
       message: err instanceof Error ? err.message : "Unknown error",
     };
+  }
+}
+
+export function toCandidate(c: RawSearchPlace): PlaceCandidate {
+  return {
+    placeId: c.id,
+    name: c.displayName?.text ?? "(unnamed listing)",
+    formattedAddress: c.formattedAddress ?? null,
+    serviceArea: c.pureServiceAreaBusiness === true,
+  };
+}
+
+/**
+ * The owner's town as coordinates, for biasing a name-only search there
+ * (Geocoding API, ~$0.005). Null when the API isn't enabled for this
+ * key, finds nothing, or fails — the caller then just skips the bias.
+ */
+export async function geocodeTown(
+  location: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${encodeURIComponent(getApiKey())}`;
+    const res = await fetchImpl(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { status?: string; results?: Array<{ geometry?: { location?: { lat?: number; lng?: number } } }> };
+    const loc = data.status === "OK" ? data.results?.[0]?.geometry?.location : undefined;
+    return typeof loc?.lat === "number" && typeof loc?.lng === "number" ? { lat: loc.lat, lng: loc.lng } : null;
+  } catch {
+    return null;
   }
 }
 

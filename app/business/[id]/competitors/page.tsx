@@ -1,10 +1,14 @@
 import { notFound, redirect } from "next/navigation";
+import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
 import { getCompetitors } from "@/app/actions/competitors";
 import { CompetitorsView } from "./CompetitorsView";
 
 export default async function CompetitorsPage({ params }: { params: { id: string } }) {
+  const websiteOnly = await websiteOnlyGuard(params.id, "competitors");
+  if (websiteOnly) return websiteOnly;
+
   const fetched = await getCompetitors(params.id);
 
   if (fetched.status === "unauthenticated") {

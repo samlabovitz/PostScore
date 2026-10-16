@@ -396,7 +396,7 @@ describe("buildAssistantContextText", () => {
   test("states plainly why the referral tab isn't available, forbids proactively suggesting it, but allows an honest answer if asked", () => {
     const noReferral: AssistantBusinessContext = {
       ...BASE_CONTEXT,
-      profile: { ...BASE_CONTEXT.profile, referralOk: false },
+      profile: { ...BASE_CONTEXT.profile, businessTypeId: "lawyer", referralOk: false },
     };
     const text = buildAssistantContextText(noReferral);
     expect(text).toContain('The Growth page\'s "Refer a friend" tab is not offered for this business type');
@@ -1034,7 +1034,7 @@ describe("buildAssistantStarterPrompts", () => {
   test("a law firm (referral not offered) never gets a referral prompt, even if a referral move somehow fired", () => {
     const lawFirm: AssistantBusinessContext = {
       ...BASE_CONTEXT,
-      profile: { ...BASE_CONTEXT.profile, referralOk: false },
+      profile: { ...BASE_CONTEXT.profile, businessTypeId: "lawyer", referralOk: false },
       growthMoves: [
         ...BASE_CONTEXT.growthMoves,
         {
@@ -1443,7 +1443,7 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
   test("the law-firm referral restriction extends to coupon ideas — never a referral reward/credit in any form", () => {
     const noReferral: AssistantBusinessContext = {
       ...BASE_CONTEXT,
-      profile: { ...BASE_CONTEXT.profile, referralOk: false },
+      profile: { ...BASE_CONTEXT.profile, businessTypeId: "lawyer", referralOk: false },
     };
     const text = buildAssistantContextText(noReferral);
     expect(text).toContain("This restriction applies to referral-style incentives in ANY form, not just the Refer a friend tab");
@@ -1453,7 +1453,7 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
   test("the law-firm restriction now also forbids implying ANY marketing tactic (coupon, promo, ad) is unrestricted or allowed", () => {
     const noReferral: AssistantBusinessContext = {
       ...BASE_CONTEXT,
-      profile: { ...BASE_CONTEXT.profile, referralOk: false },
+      profile: { ...BASE_CONTEXT.profile, businessTypeId: "lawyer", referralOk: false },
     };
     const text = buildAssistantContextText(noReferral);
     expect(text).toContain(
@@ -1471,7 +1471,7 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
 
     const noReferral: AssistantBusinessContext = {
       ...BASE_CONTEXT,
-      profile: { ...BASE_CONTEXT.profile, referralOk: false, referralPresets: [] },
+      profile: { ...BASE_CONTEXT.profile, businessTypeId: "lawyer", referralOk: false, referralPresets: [] },
     };
     const withoutReferral = buildAssistantContextText(noReferral);
     expect(withoutReferral).toContain('"10% off your next visit" — A simple loyalty nudge for returning diners.');
@@ -1631,5 +1631,25 @@ describe("Step 2d — PostAI knows about a verified website that isn't on the li
   test("a listing website is unchanged", () => {
     const text = buildAssistantContextText({ ...BASE_CONTEXT, listing: { ...BASE_CONTEXT.listing, websitePresent: true } });
     expect(text).toContain("- Has a website on file. Reachability");
+  });
+});
+
+describe("Day 2b: tools a business type doesn't have", () => {
+  test("a place of worship: no coupon, referral or price-check suggestions, and no law-firm wording", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      profile: { ...BASE_CONTEXT.profile, businessTypeId: "place_of_worship", referralOk: false, couponsOk: false, pricingOk: false, couponPresets: [], referralPresets: [] },
+    });
+    expect(text).toContain("Coupons tab is not offered for this business type");
+    expect(text).toContain("price check is not offered for this business type");
+    expect(text).toContain("a referral reward doesn't fit how it works");
+    expect(text).not.toContain("attorneys");
+    expect(text).not.toContain("Coupon quick picks");
+  });
+
+  test("a regular business gets none of these notes", () => {
+    const text = buildAssistantContextText(BASE_CONTEXT);
+    expect(text).not.toContain("is not offered for this business type");
+    expect(text).toContain("Coupon quick picks");
   });
 });

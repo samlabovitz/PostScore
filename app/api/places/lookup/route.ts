@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { lookupBusiness, lookupBusinessByPlaceId } from "@/lib/google/places";
+import { lookupBusinessByPlaceId } from "@/lib/google/places";
+import { findBusiness } from "@/lib/google/businessSearch";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
+  // Every lookup is a paid Google call — signed-in owners only (the add
+  // page itself already requires sign-in).
+  const {
+    data: { user },
+  } = await createClient().auth.getUser();
+  if (!user) {
+    return NextResponse.json({ status: "error", message: "Please sign in again." }, { status: 401 });
+  }
+
   const body = await req.json().catch(() => null);
 
   if (!body || typeof body !== "object") {
@@ -11,10 +22,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { name, location, placeId } = body as {
+  const { name, location, placeId, ownerName, websiteUrl } = body as {
     name?: string;
     location?: string;
     placeId?: string;
+    ownerName?: string;
+    websiteUrl?: string;
   };
 
   // A specific place was picked from a disambiguation list — fetch its full details.
@@ -38,6 +51,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const result = await lookupBusiness(name.trim(), location.trim());
+  // Day 2b: the owner's name and website are optional extra ways to find
+  // a listing the plain name + town search misses (see findBusiness).
+  const result = await findBusiness({
+    name: name.trim().slice(0, 200),
+    location: location.trim().slice(0, 200),
+    ownerName: typeof ownerName === "string" ? ownerName.slice(0, 120) : null,
+    websiteUrl: typeof websiteUrl === "string" ? websiteUrl.slice(0, 2048) : null,
+  });
   return NextResponse.json(result);
 }

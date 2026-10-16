@@ -176,26 +176,19 @@ export type MessageKey =
   | "placeType.coffee_shop"
   | "placeType.consultant"
   | "placeType.convenience_store"
-  | "placeType.day_spa"
   | "placeType.dentist"
   | "placeType.doctor"
   | "placeType.electrician"
   | "placeType.fitness_center"
   | "placeType.florist"
-  | "placeType.general_contractor"
   | "placeType.gift_shop"
   | "placeType.grocery_store"
   | "placeType.gym"
   | "placeType.hair_salon"
   | "placeType.hardware_store"
   | "placeType.hotel"
-  | "placeType.house_cleaning"
-  | "placeType.hvac_contractor"
-  | "placeType.landscaper"
   | "placeType.laundry"
   | "placeType.lawyer"
-  | "placeType.legal_services"
-  | "placeType.life_coach"
   | "placeType.liquor_store"
   | "placeType.lodging"
   | "placeType.massage"
@@ -205,7 +198,6 @@ export type MessageKey =
   | "placeType.nail_salon"
   | "placeType.night_club"
   | "placeType.pet_store"
-  | "placeType.photography_studio"
   | "placeType.physiotherapist"
   | "placeType.plumber"
   | "placeType.preschool"
@@ -217,8 +209,6 @@ export type MessageKey =
   | "placeType.spa"
   | "placeType.supermarket"
   | "placeType.tailor"
-  | "placeType.tattoo_parlor"
-  | "placeType.tutoring_service"
   | "placeType.veterinary_care"
   | "placeType.wedding_venue"
   | "placeType.yoga_studio"
@@ -2375,7 +2365,138 @@ export type MessageKey =
   | "bizProfiles.tattoo_body_art.pricingTips.flash_vs_custom_pricing.label"
   | "bizProfiles.tattoo_body_art.pricingTips.flash_vs_custom_pricing.description"
   | "bizProfiles.tattoo_body_art.pricingTips.raise_when_booked_weeks_out.label"
-  | "bizProfiles.tattoo_body_art.pricingTips.raise_when_booked_weeks_out.description";
+  | "bizProfiles.tattoo_body_art.pricingTips.raise_when_booked_weeks_out.description"
+  | "bizProfileOptions.dessert_shop.label"
+  | "bizProfileOptions.dessert_shop.competitorNoun"
+  | "bizProfileOptions.dessert_shop.pricingExamples.example1"
+  | "bizProfileOptions.dessert_shop.pricingExamples.example2"
+  | "bizProfileOptions.dessert_shop.pricingExamples.example3"
+  | "bizProfileOptions.specialty_store.label"
+  | "bizProfileOptions.specialty_store.competitorNoun"
+  | "bizProfileOptions.specialty_store.pricingExamples.example1"
+  | "bizProfileOptions.specialty_store.pricingExamples.example2"
+  | "bizProfileOptions.specialty_store.pricingExamples.example3"
+  | "bizProfileOptions.community_center.label"
+  | "bizProfileOptions.community_center.competitorNoun"
+  | "bizProfileOptions.community_center.pricingExamples.example1"
+  | "bizProfileOptions.community_center.pricingExamples.example2"
+  | "bizProfileOptions.community_center.pricingExamples.example3"
+  | "bizProfiles.nonprofit.label"
+  | "bizProfiles.nonprofit.competitorNoun"
+  | "bizProfiles.nonprofit.couponPresets.free_event_guest.label"
+  | "bizProfiles.nonprofit.couponPresets.free_event_guest.description"
+  | "bizProfiles.nonprofit.couponPresets.shop_pct_off.label"
+  | "bizProfiles.nonprofit.couponPresets.shop_pct_off.description"
+  | "bizProfiles.nonprofit.couponPresets.first_session_free.label"
+  | "bizProfiles.nonprofit.couponPresets.first_session_free.description"
+  | "bizProfiles.nonprofit.offerTemplates.volunteer_open_day.label"
+  | "bizProfiles.nonprofit.offerTemplates.volunteer_open_day.description"
+  | "bizProfiles.nonprofit.offerTemplates.giving_drive.label"
+  | "bizProfiles.nonprofit.offerTemplates.giving_drive.description"
+  | "bizProfiles.nonprofit.couponAngles.firstTime"
+  | "bizProfiles.nonprofit.couponAngles.seasonal"
+  | "bizProfiles.nonprofit.couponAngles.slowDay"
+  | "bizProfiles.nonprofit.faq.item1.question"
+  | "bizProfiles.nonprofit.faq.item1.answer"
+  | "bizProfiles.nonprofit.faq.item2.question"
+  | "bizProfiles.nonprofit.faq.item2.answer"
+  | "bizProfiles.nonprofit.pricingExamples.example1"
+  | "bizProfiles.nonprofit.pricingExamples.example2"
+  | "bizProfiles.nonprofit.pricingExamples.example3"
+  | "bizProfiles.nonprofit.pricingTips.suggested_donation.label"
+  | "bizProfiles.nonprofit.pricingTips.suggested_donation.description"
+  | "bizProfiles.nonprofit.pricingTips.sliding_scale.label"
+  | "bizProfiles.nonprofit.pricingTips.sliding_scale.description"
+  | "bizProfiles.nonprofit.pricingTips.member_rate.label"
+  | "bizProfiles.nonprofit.pricingTips.member_rate.description"
+  | "bizProfiles.nonprofit.pricingTips.show_the_impact.label"
+  | "bizProfiles.nonprofit.pricingTips.show_the_impact.description"
+  | "bizProfiles.place_of_worship.label"
+  | "bizProfiles.place_of_worship.competitorNoun"
+  | "bizProfiles.place_of_worship.couponAngles.firstTime"
+  | "bizProfiles.place_of_worship.couponAngles.seasonal"
+  | "bizProfiles.place_of_worship.couponAngles.slowDay"
+  | "bizProfiles.place_of_worship.faq.item1.question"
+  | "bizProfiles.place_of_worship.faq.item1.answer"
+  | "bizProfiles.place_of_worship.faq.item2.question"
+  | "bizProfiles.place_of_worship.faq.item2.answer"
+  | "dashboard.pricing.notApplicable"
+  | "placeType.community_center"
+  | "placeType.non_profit_organization"
+  | "placeType.church"
+  | "placeType.mosque"
+  | "placeType.synagogue"
+  | "placeType.buddhist_temple"
+  | "placeType.hindu_temple"
+  | "placeType.ice_cream_shop"
+  | "placeType.donut_shop"
+  | "placeType.dessert_shop"
+  | "placeType.candy_store"
+  | "placeType.chocolate_shop"
+  | "placeType.juice_shop"
+  | "placeType.book_store"
+  | "placeType.jewelry_store"
+  | "placeType.sporting_goods_store"
+  | "placeType.bicycle_store"
+  | "placeType.toy_store"
+  | "placeType.electronics_store"
+  | "placeType.furniture_store"
+  | "placeType.home_goods_store"
+  | "placeType.department_store"
+  | "placeType.thrift_store"
+  | "placeType.body_art_service"
+  | "placeType.massage_spa"
+  | "placeType.painter"
+  | "dashboard.intake.moreWaysToggle"
+  | "dashboard.intake.moreWaysHelp"
+  | "dashboard.intake.ownerNameLabel"
+  | "dashboard.intake.ownerNamePlaceholder"
+  | "dashboard.intake.websiteFieldLabel"
+  | "dashboard.intake.websitePlaceholder"
+  | "dashboard.intake.serviceAreaTag"
+  | "dashboard.intake.foundVia.website_place_id"
+  | "dashboard.intake.foundVia.website_phone"
+  | "dashboard.intake.foundVia.owner_name"
+  | "dashboard.intake.foundVia.town_bias"
+  | "dashboard.intake.websiteOnly.heading"
+  | "dashboard.intake.websiteOnly.body"
+  | "dashboard.intake.websiteOnly.button"
+  | "dashboard.intake.websiteOnly.saving"
+  | "dashboard.intake.websiteOnly.invalidUrl"
+  | "dashboard.intake.websiteOnly.notEnabled"
+  | "dashboard.intake.websiteOnly.hint"
+  | "dashboard.intake.attachBanner"
+  | "dashboard.websiteOnly.pill"
+  | "dashboard.websiteOnly.scoreLabel"
+  | "dashboard.websiteOnly.notChecked"
+  | "dashboard.websiteOnly.notPostScore"
+  | "dashboard.websiteOnly.recheck"
+  | "dashboard.websiteOnly.rechecking"
+  | "dashboard.websiteOnly.tooSoon"
+  | "dashboard.websiteOnly.checkedAt"
+  | "dashboard.websiteOnly.firstFixLabel"
+  | "dashboard.websiteOnly.gbp.title"
+  | "dashboard.websiteOnly.gbp.why"
+  | "dashboard.websiteOnly.gbp.step1"
+  | "dashboard.websiteOnly.gbp.step2"
+  | "dashboard.websiteOnly.gbp.step3"
+  | "dashboard.websiteOnly.gbp.step4"
+  | "dashboard.websiteOnly.gbp.step5"
+  | "dashboard.websiteOnly.gbp.open"
+  | "dashboard.websiteOnly.linkListing"
+  | "dashboard.websiteOnly.websiteFixesHeading"
+  | "dashboard.websiteOnly.websiteFixesLink"
+  | "dashboard.websiteOnly.noWebsiteFixes"
+  | "dashboard.websiteOnly.needsListing.title"
+  | "dashboard.websiteOnly.needsListing.reason.growth"
+  | "dashboard.websiteOnly.needsListing.reason.reviews"
+  | "dashboard.websiteOnly.needsListing.reason.competitors"
+  | "dashboard.websiteOnly.needsListing.reason.pricing"
+  | "dashboard.websiteOnly.needsListing.reason.reports"
+  | "dashboard.websiteOnly.needsListing.howTo"
+  | "dashboard.websiteOnly.needsListing.website"
+  | "dashboard.websiteOnly.listLabel"
+  | "content.checks.website.info_consistency.explanation.noListingInfo";
 
 /** The report/dashboard messages that vary by count — see tPlural below.
  * Each has a ".one" and ".other" MessageKey (the only two categories
@@ -2617,26 +2738,19 @@ export const messages: Record<Locale, LocaleMessages> = {
     "placeType.coffee_shop": "coffee shops",
     "placeType.consultant": "consultants",
     "placeType.convenience_store": "convenience stores",
-    "placeType.day_spa": "day spas",
     "placeType.dentist": "dentists",
     "placeType.doctor": "doctors",
     "placeType.electrician": "electricians",
     "placeType.fitness_center": "fitness centers",
     "placeType.florist": "florists",
-    "placeType.general_contractor": "general contractors",
     "placeType.gift_shop": "gift shops",
     "placeType.grocery_store": "grocery stores",
     "placeType.gym": "gyms",
     "placeType.hair_salon": "hair salons",
     "placeType.hardware_store": "hardware stores",
     "placeType.hotel": "hotels",
-    "placeType.house_cleaning": "house cleaning services",
-    "placeType.hvac_contractor": "heating and cooling contractors",
-    "placeType.landscaper": "landscapers",
     "placeType.laundry": "dry cleaners",
     "placeType.lawyer": "lawyers",
-    "placeType.legal_services": "legal services",
-    "placeType.life_coach": "life coaches",
     "placeType.liquor_store": "liquor stores",
     "placeType.lodging": "places to stay",
     "placeType.massage": "massage studios",
@@ -2646,7 +2760,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "placeType.nail_salon": "nail salons",
     "placeType.night_club": "nightclubs",
     "placeType.pet_store": "pet stores",
-    "placeType.photography_studio": "photography studios",
     "placeType.physiotherapist": "physical therapists",
     "placeType.plumber": "plumbers",
     "placeType.preschool": "preschools",
@@ -2658,8 +2771,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "placeType.spa": "spas",
     "placeType.supermarket": "supermarkets",
     "placeType.tailor": "tailors",
-    "placeType.tattoo_parlor": "tattoo studios",
-    "placeType.tutoring_service": "tutoring services",
     "placeType.veterinary_care": "veterinarians",
     "placeType.wedding_venue": "wedding venues",
     "placeType.yoga_studio": "yoga studios",
@@ -4752,7 +4863,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfileOptions.nail_salon.competitorNoun": "nail salons",
     "bizProfileOptions.cafe.label": "Café / Coffee Shop",
     "bizProfileOptions.cafe.competitorNoun": "cafes",
-    "bizProfileOptions.bar.label": "Bar / Pub",
+    "bizProfileOptions.bar.label": "Bar, Pub & Nightclub",
     "bizProfileOptions.bar.competitorNoun": "bars",
     "bizProfileOptions.bar.pricingExamples.example1": "Bud Light draft (16 oz pint)",
     "bizProfileOptions.bar.pricingExamples.example2": "Tito's & soda",
@@ -5262,6 +5373,137 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Raise prices once you're booked weeks in advance",
     "bizProfiles.tattoo_body_art.pricingTips.raise_when_booked_weeks_out.description":
       "A backlog of bookings stretching weeks out is a clear sign your current pricing is below what demand for your work actually supports.",
+    "bizProfileOptions.dessert_shop.label": "Dessert & Sweets Shop",
+    "bizProfileOptions.dessert_shop.competitorNoun": "dessert shops",
+    "bizProfileOptions.dessert_shop.pricingExamples.example1": "Single scoop or small treat",
+    "bizProfileOptions.dessert_shop.pricingExamples.example2": "Dozen donuts or box of sweets",
+    "bizProfileOptions.dessert_shop.pricingExamples.example3": "Milkshake, smoothie, or bubble tea",
+    "bizProfileOptions.specialty_store.label": "Specialty Store",
+    "bizProfileOptions.specialty_store.competitorNoun": "specialty stores",
+    "bizProfileOptions.specialty_store.pricingExamples.example1": "Best-selling item",
+    "bizProfileOptions.specialty_store.pricingExamples.example2": "Gift card",
+    "bizProfileOptions.specialty_store.pricingExamples.example3": "Special order or repair",
+    "bizProfileOptions.community_center.label": "Community Center",
+    "bizProfileOptions.community_center.competitorNoun": "community centers",
+    "bizProfileOptions.community_center.pricingExamples.example1": "Adult monthly membership",
+    "bizProfileOptions.community_center.pricingExamples.example2": "Family membership",
+    "bizProfileOptions.community_center.pricingExamples.example3": "Summer day camp (per week)",
+    "bizProfiles.nonprofit.label": "Nonprofit & Charity",
+    "bizProfiles.nonprofit.competitorNoun": "nonprofits",
+    "bizProfiles.nonprofit.couponPresets.free_event_guest.label": "Free admission to our next event",
+    "bizProfiles.nonprofit.couponPresets.free_event_guest.description": "Invite a newcomer to a community event — admission is on us.",
+    "bizProfiles.nonprofit.couponPresets.shop_pct_off.label": "15% off at our shop or sale",
+    "bizProfiles.nonprofit.couponPresets.shop_pct_off.description": "For a thrift shop, bake sale, or merchandise table — every purchase still supports the mission.",
+    "bizProfiles.nonprofit.couponPresets.first_session_free.label": "First program session free",
+    "bizProfiles.nonprofit.couponPresets.first_session_free.description": "Waive the fee for a first class, workshop, or session so new families can try it.",
+    "bizProfiles.nonprofit.offerTemplates.volunteer_open_day.label": "Volunteer open day",
+    "bizProfiles.nonprofit.offerTemplates.volunteer_open_day.description": "Invite newcomers to a short, no-commitment volunteer shift with a clear start and end time.",
+    "bizProfiles.nonprofit.offerTemplates.giving_drive.label": "Giving drive with a visible goal",
+    "bizProfiles.nonprofit.offerTemplates.giving_drive.description": "Set a goal and share progress so supporters can see what their gift makes possible.",
+    "bizProfiles.nonprofit.couponAngles.firstTime": "Free admission to our next event for first-time visitors",
+    "bizProfiles.nonprofit.couponAngles.seasonal": "Join our year-end giving drive and see your impact",
+    "bizProfiles.nonprofit.couponAngles.slowDay": "Weekday volunteer shift — bring a friend",
+    "bizProfiles.nonprofit.faq.item1.question": "How can I support {businessName}?",
+    "bizProfiles.nonprofit.faq.item1.answer": "You can donate, volunteer, or come to one of our events — every kind of help moves our work forward in {city}.",
+    "bizProfiles.nonprofit.faq.item2.question": "How do I volunteer with {businessName}?",
+    "bizProfiles.nonprofit.faq.item2.answer": "Call us or stop by during our hours and we'll find a shift that fits your schedule.",
+    "bizProfiles.nonprofit.pricingExamples.example1": "Event ticket",
+    "bizProfiles.nonprofit.pricingExamples.example2": "Program or class fee",
+    "bizProfiles.nonprofit.pricingExamples.example3": "Annual membership dues",
+    "bizProfiles.nonprofit.pricingTips.suggested_donation.label": "Offer a suggested donation",
+    "bizProfiles.nonprofit.pricingTips.suggested_donation.description": "A suggested amount with a \"pay what you can\" option keeps events open to everyone while still setting expectations.",
+    "bizProfiles.nonprofit.pricingTips.sliding_scale.label": "Use a sliding scale for programs",
+    "bizProfiles.nonprofit.pricingTips.sliding_scale.description": "Fees tiered by household income keep programs accessible and let supporters who can pay more do so.",
+    "bizProfiles.nonprofit.pricingTips.member_rate.label": "Give members a lower rate",
+    "bizProfiles.nonprofit.pricingTips.member_rate.description": "A member price on events and programs makes membership worth renewing.",
+    "bizProfiles.nonprofit.pricingTips.show_the_impact.label": "Show what each amount pays for",
+    "bizProfiles.nonprofit.pricingTips.show_the_impact.description": "Tie each price or gift level to something concrete the money pays for, so people can picture their impact.",
+    "bizProfiles.place_of_worship.label": "Place of Worship",
+    "bizProfiles.place_of_worship.competitorNoun": "places of worship",
+    "bizProfiles.place_of_worship.couponAngles.firstTime": "Newcomers are always welcome",
+    "bizProfiles.place_of_worship.couponAngles.seasonal": "Join us for our seasonal services",
+    "bizProfiles.place_of_worship.couponAngles.slowDay": "Visit us at a midweek gathering",
+    "bizProfiles.place_of_worship.faq.item1.question": "When are services at {businessName}?",
+    "bizProfiles.place_of_worship.faq.item1.answer": "Service times are listed with our hours. Everyone is welcome, and you don't need to sign up in advance.",
+    "bizProfiles.place_of_worship.faq.item2.question": "Is {businessName} welcoming to newcomers?",
+    "bizProfiles.place_of_worship.faq.item2.answer": "Yes. Visitors are welcome at every service and gathering in {city} — come as you are.",
+    "dashboard.pricing.notApplicable": "Price checks don't apply to a place of worship, so there's nothing to compare here.",
+    "placeType.community_center": "community centers",
+    "placeType.non_profit_organization": "nonprofits",
+    "placeType.church": "churches",
+    "placeType.mosque": "mosques",
+    "placeType.synagogue": "synagogues",
+    "placeType.buddhist_temple": "Buddhist temples",
+    "placeType.hindu_temple": "Hindu temples",
+    "placeType.ice_cream_shop": "ice cream shops",
+    "placeType.donut_shop": "donut shops",
+    "placeType.dessert_shop": "dessert shops",
+    "placeType.candy_store": "candy stores",
+    "placeType.chocolate_shop": "chocolate shops",
+    "placeType.juice_shop": "juice bars",
+    "placeType.book_store": "bookstores",
+    "placeType.jewelry_store": "jewelry stores",
+    "placeType.sporting_goods_store": "sporting goods stores",
+    "placeType.bicycle_store": "bike shops",
+    "placeType.toy_store": "toy stores",
+    "placeType.electronics_store": "electronics stores",
+    "placeType.furniture_store": "furniture stores",
+    "placeType.home_goods_store": "home goods stores",
+    "placeType.department_store": "department stores",
+    "placeType.thrift_store": "thrift stores",
+    "placeType.body_art_service": "tattoo and piercing studios",
+    "placeType.massage_spa": "massage spas",
+    "placeType.painter": "painters",
+    "dashboard.intake.moreWaysToggle": "Can't find it? Add more details",
+    "dashboard.intake.moreWaysHelp": "If Google lists your business under your own name, or you serve customers without a storefront, these help us find it. Both are optional.",
+    "dashboard.intake.ownerNameLabel": "Owner's name (optional)",
+    "dashboard.intake.ownerNamePlaceholder": "e.g. Jane Smith",
+    "dashboard.intake.websiteFieldLabel": "Your website (optional)",
+    "dashboard.intake.websitePlaceholder": "e.g. yourbusiness.com",
+    "dashboard.intake.serviceAreaTag": "Serves this area — no storefront",
+    "dashboard.intake.foundVia.website_place_id": "Found from the Google Maps link on your website.",
+    "dashboard.intake.foundVia.website_phone": "Found by the phone number on your website — check that it's yours.",
+    "dashboard.intake.foundVia.owner_name": "Found by the owner's name — check that it's yours.",
+    "dashboard.intake.foundVia.town_bias": "Found by searching around {location} — check that it's yours.",
+    "dashboard.intake.websiteOnly.heading": "No Google listing? Score your website",
+    "dashboard.intake.websiteOnly.body": "We can check {website} on its own. You'll get a website score, clearly labeled as not a PostScore — your rating, reviews, photos and nearby competitors all need a Google Business Profile, and creating one will be your first fix.",
+    "dashboard.intake.websiteOnly.button": "Score my website only",
+    "dashboard.intake.websiteOnly.saving": "Checking your website…",
+    "dashboard.intake.websiteOnly.invalidUrl": "That website address doesn't look right — check it and try again.",
+    "dashboard.intake.websiteOnly.notEnabled": "Website-only scoring isn't switched on yet. Please try again later.",
+    "dashboard.intake.websiteOnly.hint": "No Google listing? Add your website under \"Add more details\" and we can score it on its own.",
+    "dashboard.intake.attachBanner": "Find the Google listing for {name}. Once you add it, {name} becomes a full PostScore business — its website history stays.",
+    "dashboard.websiteOnly.pill": "Website score — no Google listing",
+    "dashboard.websiteOnly.scoreLabel": "Website score",
+    "dashboard.websiteOnly.notChecked": "We couldn't check this website yet.",
+    "dashboard.websiteOnly.notPostScore": "This isn't a PostScore. A PostScore also counts your Google rating, reviews, photos and hours, and compares you with nearby businesses — all of that comes from a Google Business Profile.",
+    "dashboard.websiteOnly.recheck": "Re-check my website",
+    "dashboard.websiteOnly.rechecking": "Checking…",
+    "dashboard.websiteOnly.tooSoon": "You can re-check again in a few minutes.",
+    "dashboard.websiteOnly.checkedAt": "Website last checked {date}",
+    "dashboard.websiteOnly.firstFixLabel": "Your first fix",
+    "dashboard.websiteOnly.gbp.title": "Create your Google Business Profile",
+    "dashboard.websiteOnly.gbp.why": "It's free, and it's how most people find a local business on Google Search and Maps. It also unlocks your full PostScore.",
+    "dashboard.websiteOnly.gbp.step1": "Go to Google Business Profile and sign in with a Google account.",
+    "dashboard.websiteOnly.gbp.step2": "Add your business name and the category that fits best.",
+    "dashboard.websiteOnly.gbp.step3": "No storefront? Say you serve customers at their location and hide your address — you'll list the towns you serve instead.",
+    "dashboard.websiteOnly.gbp.step4": "Verify the listing — Google sends a code or asks for a short video.",
+    "dashboard.websiteOnly.gbp.step5": "Then come back and link it here. Your website history stays.",
+    "dashboard.websiteOnly.gbp.open": "Open Google Business Profile",
+    "dashboard.websiteOnly.linkListing": "Already have a listing? Link it",
+    "dashboard.websiteOnly.websiteFixesHeading": "Website fixes",
+    "dashboard.websiteOnly.websiteFixesLink": "See every website check",
+    "dashboard.websiteOnly.noWebsiteFixes": "Nothing to fix on the website checks we could run.",
+    "dashboard.websiteOnly.needsListing.title": "This page needs a Google listing",
+    "dashboard.websiteOnly.needsListing.reason.growth": "Your weekly plan, coupons and growth ideas are built from your Google listing's checks. Create a Google Business Profile and link it to get them.",
+    "dashboard.websiteOnly.needsListing.reason.reviews": "Reviews and your rating live on a Google Business Profile, and so does your review link. Create one and link it to see them here.",
+    "dashboard.websiteOnly.needsListing.reason.competitors": "Nearby competitors are found from your Google listing's location and category, so there's no comparison without one — never a made-up rank.",
+    "dashboard.websiteOnly.needsListing.reason.pricing": "The price check compares you with nearby businesses found through your Google listing. Create one and link it to use it.",
+    "dashboard.websiteOnly.needsListing.reason.reports": "Monthly reports track your PostScore, which needs a Google listing. Website-only businesses don't get monthly reports.",
+    "dashboard.websiteOnly.needsListing.howTo": "How to create a Google listing",
+    "dashboard.websiteOnly.needsListing.website": "See your website checks",
+    "dashboard.websiteOnly.listLabel": "Website only",
+    "content.checks.website.info_consistency.explanation.noListingInfo": "There's no Google listing to compare your site's hours, phone, and address against. Excluded from your score, not counted against you.",
   },
   es: {
     "language.en": "Inglés",
@@ -5444,26 +5686,19 @@ export const messages: Record<Locale, LocaleMessages> = {
     "placeType.coffee_shop": "cafeterías",
     "placeType.consultant": "consultores",
     "placeType.convenience_store": "tiendas de conveniencia",
-    "placeType.day_spa": "spas de día",
     "placeType.dentist": "dentistas",
     "placeType.doctor": "médicos",
     "placeType.electrician": "electricistas",
     "placeType.fitness_center": "centros de acondicionamiento físico",
     "placeType.florist": "floristerías",
-    "placeType.general_contractor": "contratistas generales",
     "placeType.gift_shop": "tiendas de regalos",
     "placeType.grocery_store": "tiendas de comestibles",
     "placeType.gym": "gimnasios",
     "placeType.hair_salon": "peluquerías",
     "placeType.hardware_store": "ferreterías",
     "placeType.hotel": "hoteles",
-    "placeType.house_cleaning": "servicios de limpieza de casas",
-    "placeType.hvac_contractor": "contratistas de calefacción y aire acondicionado",
-    "placeType.landscaper": "paisajistas",
     "placeType.laundry": "tintorerías",
     "placeType.lawyer": "abogados",
-    "placeType.legal_services": "servicios legales",
-    "placeType.life_coach": "coaches de vida",
     "placeType.liquor_store": "licorerías",
     "placeType.lodging": "alojamientos",
     "placeType.massage": "centros de masajes",
@@ -5473,7 +5708,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "placeType.nail_salon": "salones de uñas",
     "placeType.night_club": "discotecas",
     "placeType.pet_store": "tiendas de mascotas",
-    "placeType.photography_studio": "estudios de fotografía",
     "placeType.physiotherapist": "fisioterapeutas",
     "placeType.plumber": "plomeros",
     "placeType.preschool": "preescolares",
@@ -5485,8 +5719,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "placeType.spa": "spas",
     "placeType.supermarket": "supermercados",
     "placeType.tailor": "sastrerías",
-    "placeType.tattoo_parlor": "estudios de tatuajes",
-    "placeType.tutoring_service": "servicios de tutoría",
     "placeType.veterinary_care": "veterinarias",
     "placeType.wedding_venue": "lugares para bodas",
     "placeType.yoga_studio": "estudios de yoga",
@@ -7614,7 +7846,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "bizProfileOptions.auto_repair.competitorNoun": "talleres mecánicos",
     "bizProfileOptions.bakery.label": "Panadería",
     "bizProfileOptions.bakery.competitorNoun": "panaderías",
-    "bizProfileOptions.bar.label": "Bar / cantina",
+    "bizProfileOptions.bar.label": "Bar, cantina y club nocturno",
     "bizProfileOptions.bar.competitorNoun": "bares",
     "bizProfileOptions.bar.pricingExamples.example1": "Bud Light de barril (pinta de 16 oz)",
     "bizProfileOptions.bar.pricingExamples.example2": "Tito's con soda",
@@ -8177,6 +8409,137 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Suba los precios cuando tenga reservas con semanas de anticipación",
     "bizProfiles.tattoo_body_art.pricingTips.raise_when_booked_weeks_out.description":
       "Una lista de reservas que se extiende semanas es una señal clara de que su precio actual está por debajo de lo que realmente soporta la demanda de su trabajo.",
+    "bizProfileOptions.dessert_shop.label": "Tienda de postres y dulces",
+    "bizProfileOptions.dessert_shop.competitorNoun": "tiendas de postres",
+    "bizProfileOptions.dessert_shop.pricingExamples.example1": "Una bola de helado o un dulce pequeño",
+    "bizProfileOptions.dessert_shop.pricingExamples.example2": "Docena de donas o caja de dulces",
+    "bizProfileOptions.dessert_shop.pricingExamples.example3": "Batido, licuado o té de burbujas",
+    "bizProfileOptions.specialty_store.label": "Tienda especializada",
+    "bizProfileOptions.specialty_store.competitorNoun": "tiendas especializadas",
+    "bizProfileOptions.specialty_store.pricingExamples.example1": "Artículo más vendido",
+    "bizProfileOptions.specialty_store.pricingExamples.example2": "Tarjeta de regalo",
+    "bizProfileOptions.specialty_store.pricingExamples.example3": "Pedido especial o reparación",
+    "bizProfileOptions.community_center.label": "Centro comunitario",
+    "bizProfileOptions.community_center.competitorNoun": "centros comunitarios",
+    "bizProfileOptions.community_center.pricingExamples.example1": "Membresía mensual para adultos",
+    "bizProfileOptions.community_center.pricingExamples.example2": "Membresía familiar",
+    "bizProfileOptions.community_center.pricingExamples.example3": "Campamento de verano (por semana)",
+    "bizProfiles.nonprofit.label": "Organización sin fines de lucro",
+    "bizProfiles.nonprofit.competitorNoun": "organizaciones sin fines de lucro",
+    "bizProfiles.nonprofit.couponPresets.free_event_guest.label": "Entrada gratis a nuestro próximo evento",
+    "bizProfiles.nonprofit.couponPresets.free_event_guest.description": "Invite a alguien nuevo a un evento comunitario — la entrada corre por nuestra cuenta.",
+    "bizProfiles.nonprofit.couponPresets.shop_pct_off.label": "15% de descuento en nuestra tienda o venta",
+    "bizProfiles.nonprofit.couponPresets.shop_pct_off.description": "Para una tienda de segunda mano, venta de pasteles o mesa de artículos — cada compra sigue apoyando la misión.",
+    "bizProfiles.nonprofit.couponPresets.first_session_free.label": "Primera sesión del programa gratis",
+    "bizProfiles.nonprofit.couponPresets.first_session_free.description": "Exima la cuota de la primera clase, taller o sesión para que nuevas familias puedan probarlo.",
+    "bizProfiles.nonprofit.offerTemplates.volunteer_open_day.label": "Día abierto de voluntariado",
+    "bizProfiles.nonprofit.offerTemplates.volunteer_open_day.description": "Invite a personas nuevas a un turno corto de voluntariado, sin compromiso y con hora clara de inicio y fin.",
+    "bizProfiles.nonprofit.offerTemplates.giving_drive.label": "Campaña de donaciones con una meta visible",
+    "bizProfiles.nonprofit.offerTemplates.giving_drive.description": "Fije una meta y comparta el avance para que quienes apoyan vean lo que su donación hace posible.",
+    "bizProfiles.nonprofit.couponAngles.firstTime": "Entrada gratis a nuestro próximo evento para quienes nos visitan por primera vez",
+    "bizProfiles.nonprofit.couponAngles.seasonal": "Súmese a nuestra campaña de donaciones de fin de año y vea su impacto",
+    "bizProfiles.nonprofit.couponAngles.slowDay": "Turno de voluntariado entre semana — traiga a un amigo",
+    "bizProfiles.nonprofit.faq.item1.question": "¿Cómo puedo apoyar a {businessName}?",
+    "bizProfiles.nonprofit.faq.item1.answer": "Puede donar, ser voluntario o venir a uno de nuestros eventos — toda ayuda impulsa nuestro trabajo en {city}.",
+    "bizProfiles.nonprofit.faq.item2.question": "¿Cómo puedo ser voluntario en {businessName}?",
+    "bizProfiles.nonprofit.faq.item2.answer": "Llámenos o visítenos en nuestro horario y le buscaremos un turno que se adapte a su agenda.",
+    "bizProfiles.nonprofit.pricingExamples.example1": "Entrada a un evento",
+    "bizProfiles.nonprofit.pricingExamples.example2": "Cuota de programa o clase",
+    "bizProfiles.nonprofit.pricingExamples.example3": "Cuota anual de membresía",
+    "bizProfiles.nonprofit.pricingTips.suggested_donation.label": "Ofrezca una donación sugerida",
+    "bizProfiles.nonprofit.pricingTips.suggested_donation.description": "Una cantidad sugerida con la opción de \"pague lo que pueda\" mantiene los eventos abiertos a todos y aun así deja clara la expectativa.",
+    "bizProfiles.nonprofit.pricingTips.sliding_scale.label": "Use una escala variable para los programas",
+    "bizProfiles.nonprofit.pricingTips.sliding_scale.description": "Las cuotas escalonadas según el ingreso familiar mantienen los programas accesibles y permiten que quienes pueden pagar más lo hagan.",
+    "bizProfiles.nonprofit.pricingTips.member_rate.label": "Dé una tarifa menor a los miembros",
+    "bizProfiles.nonprofit.pricingTips.member_rate.description": "Un precio para miembros en eventos y programas hace que valga la pena renovar la membresía.",
+    "bizProfiles.nonprofit.pricingTips.show_the_impact.label": "Muestre qué cubre cada cantidad",
+    "bizProfiles.nonprofit.pricingTips.show_the_impact.description": "Relacione cada precio o nivel de donación con algo concreto que ese dinero cubre, para que la gente pueda imaginar su impacto.",
+    "bizProfiles.place_of_worship.label": "Lugar de culto",
+    "bizProfiles.place_of_worship.competitorNoun": "lugares de culto",
+    "bizProfiles.place_of_worship.couponAngles.firstTime": "Las personas nuevas siempre son bienvenidas",
+    "bizProfiles.place_of_worship.couponAngles.seasonal": "Acompáñenos en nuestros servicios de temporada",
+    "bizProfiles.place_of_worship.couponAngles.slowDay": "Visítenos en una reunión entre semana",
+    "bizProfiles.place_of_worship.faq.item1.question": "¿Cuándo son los servicios en {businessName}?",
+    "bizProfiles.place_of_worship.faq.item1.answer": "Los horarios de los servicios aparecen junto con nuestro horario. Todos son bienvenidos y no necesita inscribirse con anticipación.",
+    "bizProfiles.place_of_worship.faq.item2.question": "¿{businessName} recibe a personas nuevas?",
+    "bizProfiles.place_of_worship.faq.item2.answer": "Sí. Las visitas son bienvenidas en cada servicio y reunión en {city} — venga tal como es.",
+    "dashboard.pricing.notApplicable": "La revisión de precios no aplica a un lugar de culto, así que aquí no hay nada que comparar.",
+    "placeType.community_center": "centros comunitarios",
+    "placeType.non_profit_organization": "organizaciones sin fines de lucro",
+    "placeType.church": "iglesias",
+    "placeType.mosque": "mezquitas",
+    "placeType.synagogue": "sinagogas",
+    "placeType.buddhist_temple": "templos budistas",
+    "placeType.hindu_temple": "templos hindúes",
+    "placeType.ice_cream_shop": "heladerías",
+    "placeType.donut_shop": "tiendas de donas",
+    "placeType.dessert_shop": "tiendas de postres",
+    "placeType.candy_store": "dulcerías",
+    "placeType.chocolate_shop": "chocolaterías",
+    "placeType.juice_shop": "bares de jugos",
+    "placeType.book_store": "librerías",
+    "placeType.jewelry_store": "joyerías",
+    "placeType.sporting_goods_store": "tiendas de artículos deportivos",
+    "placeType.bicycle_store": "tiendas de bicicletas",
+    "placeType.toy_store": "jugueterías",
+    "placeType.electronics_store": "tiendas de electrónica",
+    "placeType.furniture_store": "mueblerías",
+    "placeType.home_goods_store": "tiendas de artículos para el hogar",
+    "placeType.department_store": "tiendas departamentales",
+    "placeType.thrift_store": "tiendas de segunda mano",
+    "placeType.body_art_service": "estudios de tatuajes y perforaciones",
+    "placeType.massage_spa": "spas de masajes",
+    "placeType.painter": "pintores",
+    "dashboard.intake.moreWaysToggle": "¿No lo encuentra? Agregue más datos",
+    "dashboard.intake.moreWaysHelp": "Si Google muestra su negocio con su propio nombre, o atiende a clientes sin un local, estos datos nos ayudan a encontrarlo. Ambos son opcionales.",
+    "dashboard.intake.ownerNameLabel": "Nombre del dueño (opcional)",
+    "dashboard.intake.ownerNamePlaceholder": "p. ej., Ana López",
+    "dashboard.intake.websiteFieldLabel": "Su sitio web (opcional)",
+    "dashboard.intake.websitePlaceholder": "p. ej., sunegocio.com",
+    "dashboard.intake.serviceAreaTag": "Atiende la zona — sin local",
+    "dashboard.intake.foundVia.website_place_id": "Encontrada a partir del enlace de Google Maps en su sitio web.",
+    "dashboard.intake.foundVia.website_phone": "Encontrada por el número de teléfono de su sitio web — verifique que sea la suya.",
+    "dashboard.intake.foundVia.owner_name": "Encontrada por el nombre del dueño — verifique que sea la suya.",
+    "dashboard.intake.foundVia.town_bias": "Encontrada buscando alrededor de {location} — verifique que sea la suya.",
+    "dashboard.intake.websiteOnly.heading": "¿No tiene ficha de Google? Califique su sitio web",
+    "dashboard.intake.websiteOnly.body": "Podemos revisar {website} por sí solo. Recibirá una puntuación del sitio web, marcada claramente como que no es un PostScore — su calificación, reseñas, fotos y competencia cercana necesitan un Perfil de Negocio de Google, y crearlo será su primera mejora.",
+    "dashboard.intake.websiteOnly.button": "Calificar solo mi sitio web",
+    "dashboard.intake.websiteOnly.saving": "Revisando su sitio web…",
+    "dashboard.intake.websiteOnly.invalidUrl": "Esa dirección web no parece correcta — revísela e intente de nuevo.",
+    "dashboard.intake.websiteOnly.notEnabled": "La calificación solo del sitio web aún no está activada. Intente de nuevo más tarde.",
+    "dashboard.intake.websiteOnly.hint": "¿No tiene ficha de Google? Agregue su sitio web en \"Agregue más datos\" y podremos calificarlo por sí solo.",
+    "dashboard.intake.attachBanner": "Busque la ficha de Google de {name}. Cuando la agregue, {name} tendrá un PostScore completo — su historial del sitio web se conserva.",
+    "dashboard.websiteOnly.pill": "Puntuación del sitio web — sin ficha de Google",
+    "dashboard.websiteOnly.scoreLabel": "Puntuación del sitio web",
+    "dashboard.websiteOnly.notChecked": "Todavía no pudimos revisar este sitio web.",
+    "dashboard.websiteOnly.notPostScore": "Esto no es un PostScore. Un PostScore también cuenta su calificación, reseñas, fotos y horario de Google, y lo compara con negocios cercanos — todo eso viene de un Perfil de Negocio de Google.",
+    "dashboard.websiteOnly.recheck": "Volver a revisar mi sitio web",
+    "dashboard.websiteOnly.rechecking": "Revisando…",
+    "dashboard.websiteOnly.tooSoon": "Podrá volver a revisarlo en unos minutos.",
+    "dashboard.websiteOnly.checkedAt": "Sitio web revisado por última vez: {date}",
+    "dashboard.websiteOnly.firstFixLabel": "Su primera mejora",
+    "dashboard.websiteOnly.gbp.title": "Cree su Perfil de Negocio de Google",
+    "dashboard.websiteOnly.gbp.why": "Es gratis, y es como la mayoría de la gente encuentra un negocio local en la Búsqueda de Google y Google Maps. También desbloquea su PostScore completo.",
+    "dashboard.websiteOnly.gbp.step1": "Vaya a Perfil de Negocio de Google e inicie sesión con una cuenta de Google.",
+    "dashboard.websiteOnly.gbp.step2": "Agregue el nombre de su negocio y la categoría que mejor le corresponda.",
+    "dashboard.websiteOnly.gbp.step3": "¿No tiene local? Indique que atiende a los clientes en su ubicación y oculte su dirección — en su lugar indicará las zonas que atiende.",
+    "dashboard.websiteOnly.gbp.step4": "Verifique la ficha — Google envía un código o pide un video corto.",
+    "dashboard.websiteOnly.gbp.step5": "Luego regrese y vincúlela aquí. Su historial del sitio web se conserva.",
+    "dashboard.websiteOnly.gbp.open": "Abrir Perfil de Negocio de Google",
+    "dashboard.websiteOnly.linkListing": "¿Ya tiene una ficha? Vincúlela",
+    "dashboard.websiteOnly.websiteFixesHeading": "Mejoras del sitio web",
+    "dashboard.websiteOnly.websiteFixesLink": "Ver todas las revisiones del sitio web",
+    "dashboard.websiteOnly.noWebsiteFixes": "No hay nada que mejorar en las revisiones del sitio web que pudimos hacer.",
+    "dashboard.websiteOnly.needsListing.title": "Esta página necesita una ficha de Google",
+    "dashboard.websiteOnly.needsListing.reason.growth": "Su plan semanal, cupones e ideas de crecimiento se basan en las revisiones de su ficha de Google. Cree un Perfil de Negocio de Google y vincúlelo para obtenerlos.",
+    "dashboard.websiteOnly.needsListing.reason.reviews": "Las reseñas y su calificación están en un Perfil de Negocio de Google, igual que su enlace para reseñas. Cree uno y vincúlelo para verlos aquí.",
+    "dashboard.websiteOnly.needsListing.reason.competitors": "La competencia cercana se encuentra a partir de la ubicación y la categoría de su ficha de Google, así que sin una no hay comparación — nunca una posición inventada.",
+    "dashboard.websiteOnly.needsListing.reason.pricing": "La revisión de precios lo compara con negocios cercanos encontrados mediante su ficha de Google. Cree una y vincúlela para usarla.",
+    "dashboard.websiteOnly.needsListing.reason.reports": "Los informes mensuales siguen su PostScore, que necesita una ficha de Google. Los negocios solo con sitio web no reciben informes mensuales.",
+    "dashboard.websiteOnly.needsListing.howTo": "Cómo crear una ficha de Google",
+    "dashboard.websiteOnly.needsListing.website": "Ver las revisiones de su sitio web",
+    "dashboard.websiteOnly.listLabel": "Solo sitio web",
+    "content.checks.website.info_consistency.explanation.noListingInfo": "No hay una ficha de Google con la que comparar el horario, el teléfono y la dirección de su sitio. Se excluye de su puntuación, no se cuenta en su contra.",
   },
 };
 

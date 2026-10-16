@@ -36,14 +36,23 @@ export interface GrowBannerTool {
  * segmentFromParam in GrowthView.tsx, which falls back to the default
  * "plan" segment for ?tab=referral when referralOk is false).
  */
-export function buildGrowBannerTools(businessId: string, referralOk: boolean): GrowBannerTool[] {
-  const tools: GrowBannerTool[] = [
-    {
+/** The business type's tools (BizProfile.referralOk/couponsOk/pricingOk). */
+export interface ProfileTools {
+  referralOk: boolean;
+  couponsOk: boolean;
+  pricingOk: boolean;
+}
+
+export function buildGrowBannerTools(businessId: string, profileTools: ProfileTools): GrowBannerTool[] {
+  const { referralOk, couponsOk, pricingOk } = profileTools;
+  const tools: GrowBannerTool[] = [];
+  if (couponsOk) {
+    tools.push({
       icon: IconTicket,
       labelKey: "dashboard.overview.growBanner.tools.coupons.shortLabel",
       href: `/business/${businessId}/growth?tab=coupons`,
-    },
-  ];
+    });
+  }
 
   if (referralOk) {
     tools.push({
@@ -53,17 +62,19 @@ export function buildGrowBannerTools(businessId: string, referralOk: boolean): G
     });
   }
 
-  tools.push(
-    {
-      icon: IconCalendarCheck,
-      labelKey: "dashboard.overview.growBanner.tools.weeklyRoutine.shortLabel",
-      href: `/business/${businessId}/growth#weekly-routine`,
-    },
-    {
+  tools.push({
+    icon: IconCalendarCheck,
+    labelKey: "dashboard.overview.growBanner.tools.weeklyRoutine.shortLabel",
+    href: `/business/${businessId}/growth#weekly-routine`,
+  });
+  if (pricingOk) {
+    tools.push({
       icon: IconTag,
       labelKey: "dashboard.overview.growBanner.tools.priceCheck.shortLabel",
       href: `/business/${businessId}/pricing`,
-    },
+    });
+  }
+  tools.push(
     {
       icon: IconQrcode,
       labelKey: "dashboard.overview.growBanner.tools.reviewQrSign.shortLabel",

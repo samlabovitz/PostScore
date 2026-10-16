@@ -93,6 +93,8 @@ export function parseInlineBold(text: string): Array<{ bold: boolean; text: stri
 export interface ReplyLinkContext {
   businessId: string;
   referralOk?: boolean;
+  couponsOk?: boolean;
+  pricingOk?: boolean;
   onNavigate?: () => void;
 }
 
@@ -104,7 +106,11 @@ export interface ReplyLinkContext {
  * without a business to link to, markers and raw URLs are just dropped. */
 function FormattedText({ text, links }: { text: string; links?: ReplyLinkContext }) {
   const locale = useLocale();
-  const segments = parseReplyLinks(text, links?.businessId ?? "", { referralOk: links?.referralOk });
+  const segments = parseReplyLinks(text, links?.businessId ?? "", {
+    referralOk: links?.referralOk,
+    couponsOk: links?.couponsOk,
+    pricingOk: links?.pricingOk,
+  });
   return (
     <>
       {segments.map((segment, s) =>

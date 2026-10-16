@@ -341,6 +341,13 @@ export async function rescanBusinessWithClient(
     return { status: "not_found" };
   }
 
+  // Day 2b: a website-only business has no Google listing to re-fetch —
+  // never a Places call for it (its website is re-checked by
+  // recheckWebsiteOnlyBusiness instead).
+  if (!before.place_id) {
+    return { status: "error", message: "This business has no Google listing — re-check its website instead." };
+  }
+
   const locale = normalizeLocale(before.language);
   const previousSnapshot: ProfileSnapshot = buildProfileSnapshot(before);
 

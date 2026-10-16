@@ -133,6 +133,18 @@ export interface BizProfile {
    */
   referralOk: boolean;
   /**
+   * False hides the Growth page's Coupons tab and the "Start a coupon"
+   * move — true for every type except place_of_worship, where a coupon
+   * doesn't fit how the place works.
+   */
+  couponsOk: boolean;
+  /**
+   * False turns the Pricing page's price check off (with an honest
+   * note) and drops the "Run a price check" move — again only
+   * place_of_worship today.
+   */
+  pricingOk: boolean;
+  /**
    * Ready-made referrer/friend reward pairs for the Refer a friend
    * builder — always populated when referralOk is true, always empty
    * when it's false (the referral segment never mounts in that case,
@@ -206,6 +218,10 @@ interface BizProfileSource {
   couponAngles: CouponAnglesSource;
   faq: FaqEntrySource[];
   referralOk: boolean;
+  /** See BizProfile.couponsOk — omitted means true. */
+  couponsOk?: boolean;
+  /** See BizProfile.pricingOk — omitted means true. */
+  pricingOk?: boolean;
   referralPresets: ReferralPresetSource[];
   pricingExamples: PricingExampleSource[];
   pricingTips: KeyedLabelDescriptionSource[];
@@ -248,6 +264,8 @@ function localizeBizProfile(source: BizProfileSource, locale: Locale): BizProfil
       answer: t(locale, f.answer),
     })),
     referralOk: source.referralOk,
+    couponsOk: source.couponsOk ?? true,
+    pricingOk: source.pricingOk ?? true,
     referralPresets: source.referralPresets.map((r) => ({
       id: r.id,
       referrerReward: t(locale, r.referrerReward),
@@ -277,7 +295,7 @@ const SALON_PROFILE: BizProfileSource = {
     "tanning",
     "massage",
   ],
-  placesType: ["hair_salon", "beauty_salon", "nail_salon", "barber_shop", "spa", "day_spa"],
+  placesType: ["hair_salon", "beauty_salon", "nail_salon", "barber_shop", "spa"],
   competitorNoun: "bizProfiles.salon.competitorNoun",
   couponPresets: [
     {
@@ -790,7 +808,7 @@ const LAWYER_PROFILE: BizProfileSource = {
   id: "lawyer",
   label: "bizProfiles.lawyer.label",
   match: ["lawyer", "attorney", "law firm", "law office", "legal services", "legal"],
-  placesType: ["lawyer", "legal_services"],
+  placesType: ["lawyer"],
   competitorNoun: "bizProfiles.lawyer.competitorNoun",
   couponPresets: [
     {
@@ -1001,7 +1019,7 @@ const PRACTITIONER_PROFILE: BizProfileSource = {
     "music lessons",
     "driving school",
   ],
-  placesType: ["consultant", "tutoring_service", "yoga_studio"],
+  placesType: ["consultant", "yoga_studio"],
   competitorNoun: "bizProfiles.practitioner.competitorNoun",
   couponPresets: [
     {
@@ -1207,7 +1225,7 @@ const TRADES_PROFILE: BizProfileSource = {
   id: "trades",
   label: "bizProfiles.trades.label",
   match: ["plumber", "plumbing", "electrician", "electrical", "auto repair", "mechanic", "landscap", "lawn care", "cleaning service", "house cleaning"],
-  placesType: ["plumber", "electrician", "car_repair", "landscaper", "house_cleaning"],
+  placesType: ["plumber", "electrician", "car_repair"],
   competitorNoun: "bizProfiles.trades.competitorNoun",
   couponPresets: [
     {
@@ -1523,8 +1541,10 @@ const HOME_SERVICES_PROFILE: BizProfileSource = {
     "renovation",
     "handyman",
     "home improvement",
+    "painter",
+    "moving company",
   ],
-  placesType: ["general_contractor", "roofing_contractor", "hvac_contractor"],
+  placesType: ["roofing_contractor", "painter"],
   competitorNoun: "bizProfiles.home_services.competitorNoun",
   couponPresets: [
     {
@@ -1763,6 +1783,17 @@ const RECREATION_PROFILE: BizProfileSource = {
     "axe throwing",
     "skating rink",
     "amusement",
+    "tour agency",
+    "tour operator",
+    "water sports",
+    "watersports",
+    "boat tour",
+    "karaoke",
+    "go-kart",
+    "go karting",
+    "indoor playground",
+    "adventure sports",
+    "water park",
   ],
   placesType: ["bowling_alley", "amusement_center"],
   competitorNoun: "bizProfiles.recreation.competitorNoun",
@@ -2196,7 +2227,7 @@ const CHILDCARE_PROFILE: BizProfileSource = {
 const LODGING_PROFILE: BizProfileSource = {
   id: "lodging",
   label: "bizProfiles.lodging.label",
-  match: ["hotel", "motel", "bed and breakfast", "hostel", "rv park", "campground", "glamping"],
+  match: ["hotel", "motel", "bed and breakfast", "hostel", "rv park", "campground", "glamping", "lodging", "inn", "guest house", "cottage", "farmstay"],
   placesType: ["lodging", "hotel", "motel"],
   competitorNoun: "bizProfiles.lodging.competitorNoun",
   couponPresets: [
@@ -2300,7 +2331,7 @@ const TATTOO_BODY_ART_PROFILE: BizProfileSource = {
   id: "tattoo_body_art",
   label: "bizProfiles.tattoo_body_art.label",
   match: ["tattoo", "piercing", "body art", "tattoo studio", "tattoo parlor", "microblading", "permanent makeup"],
-  placesType: ["tattoo_parlor"],
+  placesType: ["body_art_service"],
   competitorNoun: "bizProfiles.tattoo_body_art.competitorNoun",
   couponPresets: [
     {
@@ -2393,6 +2424,151 @@ const TATTOO_BODY_ART_PROFILE: BizProfileSource = {
 };
 
 /**
+ * Nonprofits and charities — food banks, community groups, arts and
+ * service organizations. The money model is donations, programs and
+ * events, so offers invite people in (a free event, a first session)
+ * rather than discount a purchase. Referral rewards are off: rewarding
+ * people for bringing in donors doesn't fit how giving works.
+ */
+const NONPROFIT_PROFILE: BizProfileSource = {
+  id: "nonprofit",
+  label: "bizProfiles.nonprofit.label",
+  match: [
+    "non-profit",
+    "nonprofit",
+    "non profit",
+    "charity",
+    "charitable",
+    "association or organization",
+    "food bank",
+    "food pantry",
+    "volunteer organization",
+  ],
+  placesType: ["non_profit_organization"],
+  competitorNoun: "bizProfiles.nonprofit.competitorNoun",
+  couponPresets: [
+    {
+      id: "free_event_guest",
+      label: "bizProfiles.nonprofit.couponPresets.free_event_guest.label",
+      description: "bizProfiles.nonprofit.couponPresets.free_event_guest.description",
+    },
+    {
+      id: "shop_pct_off",
+      label: "bizProfiles.nonprofit.couponPresets.shop_pct_off.label",
+      description: "bizProfiles.nonprofit.couponPresets.shop_pct_off.description",
+    },
+    {
+      id: "first_session_free",
+      label: "bizProfiles.nonprofit.couponPresets.first_session_free.label",
+      description: "bizProfiles.nonprofit.couponPresets.first_session_free.description",
+    },
+  ],
+  offerTemplates: [
+    {
+      id: "volunteer_open_day",
+      label: "bizProfiles.nonprofit.offerTemplates.volunteer_open_day.label",
+      description: "bizProfiles.nonprofit.offerTemplates.volunteer_open_day.description",
+    },
+    {
+      id: "giving_drive",
+      label: "bizProfiles.nonprofit.offerTemplates.giving_drive.label",
+      description: "bizProfiles.nonprofit.offerTemplates.giving_drive.description",
+    },
+  ],
+  couponAngles: {
+    firstTime: "bizProfiles.nonprofit.couponAngles.firstTime",
+    seasonal: "bizProfiles.nonprofit.couponAngles.seasonal",
+    slowDay: "bizProfiles.nonprofit.couponAngles.slowDay",
+  },
+  faq: [
+    { id: "item1", question: "bizProfiles.nonprofit.faq.item1.question", answer: "bizProfiles.nonprofit.faq.item1.answer" },
+    { id: "item2", question: "bizProfiles.nonprofit.faq.item2.question", answer: "bizProfiles.nonprofit.faq.item2.answer" },
+  ],
+  referralOk: false,
+  referralPresets: [],
+  pricingExamples: [
+    { id: "example1", text: "bizProfiles.nonprofit.pricingExamples.example1" },
+    { id: "example2", text: "bizProfiles.nonprofit.pricingExamples.example2" },
+    { id: "example3", text: "bizProfiles.nonprofit.pricingExamples.example3" },
+  ],
+  pricingTips: [
+    {
+      id: "suggested_donation",
+      label: "bizProfiles.nonprofit.pricingTips.suggested_donation.label",
+      description: "bizProfiles.nonprofit.pricingTips.suggested_donation.description",
+    },
+    {
+      id: "sliding_scale",
+      label: "bizProfiles.nonprofit.pricingTips.sliding_scale.label",
+      description: "bizProfiles.nonprofit.pricingTips.sliding_scale.description",
+    },
+    {
+      id: "member_rate",
+      label: "bizProfiles.nonprofit.pricingTips.member_rate.label",
+      description: "bizProfiles.nonprofit.pricingTips.member_rate.description",
+    },
+    {
+      id: "show_the_impact",
+      label: "bizProfiles.nonprofit.pricingTips.show_the_impact.label",
+      description: "bizProfiles.nonprofit.pricingTips.show_the_impact.description",
+    },
+  ],
+};
+
+/**
+ * Churches, mosques, synagogues, temples. Coupons, referral rewards and
+ * price checks don't fit a place of worship, so all three are off
+ * (couponsOk / referralOk / pricingOk) and their lists stay empty; the
+ * FAQ and the Growth page's listing work (hours, photos, reviews) still
+ * apply like anywhere else.
+ */
+const PLACE_OF_WORSHIP_PROFILE: BizProfileSource = {
+  id: "place_of_worship",
+  label: "bizProfiles.place_of_worship.label",
+  match: [
+    "church",
+    "mosque",
+    "synagogue",
+    "buddhist temple",
+    "hindu temple",
+    "shinto shrine",
+    "place of worship",
+    "parish",
+    "cathedral",
+    "gurdwara",
+    "kingdom hall",
+    "congregation",
+  ],
+  placesType: ["church", "mosque", "synagogue", "buddhist_temple", "hindu_temple"],
+  competitorNoun: "bizProfiles.place_of_worship.competitorNoun",
+  couponPresets: [],
+  offerTemplates: [],
+  couponAngles: {
+    firstTime: "bizProfiles.place_of_worship.couponAngles.firstTime",
+    seasonal: "bizProfiles.place_of_worship.couponAngles.seasonal",
+    slowDay: "bizProfiles.place_of_worship.couponAngles.slowDay",
+  },
+  faq: [
+    {
+      id: "item1",
+      question: "bizProfiles.place_of_worship.faq.item1.question",
+      answer: "bizProfiles.place_of_worship.faq.item1.answer",
+    },
+    {
+      id: "item2",
+      question: "bizProfiles.place_of_worship.faq.item2.question",
+      answer: "bizProfiles.place_of_worship.faq.item2.answer",
+    },
+  ],
+  referralOk: false,
+  couponsOk: false,
+  pricingOk: false,
+  referralPresets: [],
+  pricingExamples: [],
+  pricingTips: [],
+};
+
+/**
  * The hand-written content sources — coupons, offers, growth ideas, FAQ,
  * referral rules, pricing tips — every business type ultimately reuses.
  * Writing genuinely distinct monetization content for every one of the
@@ -2426,7 +2602,9 @@ type ContentProfileId =
   | "car_wash_detailing"
   | "childcare"
   | "lodging"
-  | "tattoo_body_art";
+  | "tattoo_body_art"
+  | "nonprofit"
+  | "place_of_worship";
 
 const CONTENT_PROFILES: Record<ContentProfileId, BizProfileSource> = {
   salon: SALON_PROFILE,
@@ -2449,6 +2627,8 @@ const CONTENT_PROFILES: Record<ContentProfileId, BizProfileSource> = {
   childcare: CHILDCARE_PROFILE,
   lodging: LODGING_PROFILE,
   tattoo_body_art: TATTOO_BODY_ART_PROFILE,
+  nonprofit: NONPROFIT_PROFILE,
+  place_of_worship: PLACE_OF_WORSHIP_PROFILE,
 };
 
 /**
@@ -2517,8 +2697,8 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
   {
     id: "spa",
     label: "bizProfileOptions.spa.label",
-    match: ["spa", "massage", "day spa"],
-    placesType: ["spa", "day_spa", "massage"],
+    match: ["spa", "massage", "day spa", "wellness", "sauna"],
+    placesType: ["spa", "massage", "massage_spa"],
     contentProfileId: "salon",
     competitorNoun: "bizProfileOptions.spa.competitorNoun",
   },
@@ -2533,16 +2713,32 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
   {
     id: "salon",
     label: SALON_PROFILE.label,
-    match: ["salon", "hair", "beauty", "tanning"],
+    match: ["salon", "hair", "beauty", "tanning", "beautician", "makeup artist"],
     placesType: ["hair_salon", "beauty_salon"],
     contentProfileId: "salon",
   },
 
   // Food & drink — narrow types first, generic "restaurant" last.
   {
+    id: "dessert_shop",
+    label: "bizProfileOptions.dessert_shop.label",
+    match: [
+      "ice cream", "gelato", "frozen yogurt", "froyo", "donut", "doughnut", "dessert", "candy", "chocolate",
+      "confectioner", "acai", "juice", "smoothie", "sweets shop",
+    ],
+    placesType: ["ice_cream_shop", "donut_shop", "dessert_shop", "candy_store", "chocolate_shop", "juice_shop"],
+    contentProfileId: "cafe_bakery",
+    competitorNoun: "bizProfileOptions.dessert_shop.competitorNoun",
+    pricingExamples: [
+      { id: "example1", text: "bizProfileOptions.dessert_shop.pricingExamples.example1" },
+      { id: "example2", text: "bizProfileOptions.dessert_shop.pricingExamples.example2" },
+      { id: "example3", text: "bizProfileOptions.dessert_shop.pricingExamples.example3" },
+    ],
+  },
+  {
     id: "cafe",
     label: "bizProfileOptions.cafe.label",
-    match: ["cafe", "café", "coffee", "espresso"],
+    match: ["cafe", "café", "coffee", "espresso", "tea house", "tea shop", "tea store", "bubble tea", "boba"],
     placesType: ["cafe", "coffee_shop"],
     contentProfileId: "cafe_bakery",
     competitorNoun: "bizProfileOptions.cafe.competitorNoun",
@@ -2550,7 +2746,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
   {
     id: "bar",
     label: "bizProfileOptions.bar.label",
-    match: ["bar", "pub", "tavern", "brewery", "taproom", "brewpub", "gastropub"],
+    match: ["bar", "pub", "tavern", "brewery", "taproom", "brewpub", "gastropub", "night club", "nightclub", "beer garden"],
     placesType: ["bar", "pub", "night_club"],
     contentProfileId: "restaurant",
     competitorNoun: "bizProfileOptions.bar.competitorNoun",
@@ -2563,7 +2759,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
   {
     id: "bakery",
     label: "bizProfileOptions.bakery.label",
-    match: ["bakery", "patisserie", "bakeshop"],
+    match: ["bakery", "patisserie", "bakeshop", "bagel", "pastry", "cake shop"],
     placesType: ["bakery"],
     contentProfileId: "cafe_bakery",
     competitorNoun: "bizProfileOptions.bakery.competitorNoun",
@@ -2579,7 +2775,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
   {
     id: "grocery_market",
     label: "bizProfileOptions.grocery_market.label",
-    match: ["grocery", "supermarket", "convenience store", "mini mart", "corner store"],
+    match: ["grocery", "supermarket", "convenience store", "mini mart", "corner store", "butcher", "meat market", "fish market", "farmers market", "general store", "hypermarket"],
     placesType: ["grocery_store", "supermarket", "convenience_store"],
     contentProfileId: "grocery_market",
     competitorNoun: "bizProfileOptions.grocery_market.competitorNoun",
@@ -2587,7 +2783,10 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
   {
     id: "restaurant",
     label: RESTAURANT_PROFILE.label,
-    match: ["restaurant", "pizza", "diner", "burger", "taco", "sushi", "deli", "food", "eatery", "grill", "bistro", "bbq", "cafeteria"],
+    match: [
+      "restaurant", "pizza", "diner", "burger", "taco", "sushi", "deli", "food", "eatery", "grill", "bistro", "bbq", "cafeteria",
+      "takeaway", "takeout", "meal delivery", "catering", "steak house", "noodle", "kebab", "hot dog", "sandwich", "salad",
+    ],
     placesType: ["restaurant", "meal_takeaway"],
     contentProfileId: "restaurant",
   },
@@ -2596,7 +2795,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
   {
     id: "hardware_store",
     label: "bizProfileOptions.hardware_store.label",
-    match: ["hardware store", "hardware"],
+    match: ["hardware store", "hardware", "building materials", "garden center"],
     placesType: ["hardware_store"],
     contentProfileId: "retail",
     competitorNoun: "bizProfileOptions.hardware_store.competitorNoun",
@@ -2617,11 +2816,51 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     contentProfileId: "retail",
     competitorNoun: "bizProfileOptions.retail_boutique.competitorNoun",
   },
+  {
+    id: "specialty_store",
+    label: "bizProfileOptions.specialty_store.label",
+    match: [
+      "book store", "bookstore", "jewelry", "jeweler", "sporting goods", "sportswear", "bicycle", "bike shop", "toy store",
+      "electronics", "cell phone", "cosmetics", "furniture", "home goods", "thrift", "department store", "discount store",
+      "record store", "music store", "comic", "hobby", "game store", "pawn", "variety store", "warehouse store",
+    ],
+    placesType: [
+      "book_store", "jewelry_store", "sporting_goods_store", "bicycle_store", "toy_store", "electronics_store",
+      "furniture_store", "home_goods_store", "department_store", "thrift_store",
+    ],
+    contentProfileId: "retail",
+    competitorNoun: "bizProfileOptions.specialty_store.competitorNoun",
+    pricingExamples: [
+      { id: "example1", text: "bizProfileOptions.specialty_store.pricingExamples.example1" },
+      { id: "example2", text: "bizProfileOptions.specialty_store.pricingExamples.example2" },
+      { id: "example3", text: "bizProfileOptions.specialty_store.pricingExamples.example3" },
+    ],
+  },
 
   // Health, fitness & pets — narrower types (pet_services' own "clinic"-
   // free keywords, dentist) ahead of the broad "medical_clinic" catch-all
   // so a "Veterinary Clinic" or dental listing doesn't match on "clinic"
   // first.
+  // Community centers (JCC, YMCA, rec centers) ahead of gym_fitness: a
+  // YMCA is often listed as a "gym" but runs on memberships, programs and
+  // camps. Reuses the gym's membership content with its own noun and
+  // price examples. Names are also checked (COMMUNITY_CENTER_NAME_PATTERN).
+  {
+    id: "community_center",
+    label: "bizProfileOptions.community_center.label",
+    match: [
+      "community center", "community centre", "recreation center", "rec center", "civic center", "cultural center",
+      "ymca", "ywca", "jcc", "jewish community center", "boys and girls club", "boys & girls club",
+    ],
+    placesType: ["community_center"],
+    contentProfileId: "gym_fitness",
+    competitorNoun: "bizProfileOptions.community_center.competitorNoun",
+    pricingExamples: [
+      { id: "example1", text: "bizProfileOptions.community_center.pricingExamples.example1" },
+      { id: "example2", text: "bizProfileOptions.community_center.pricingExamples.example2" },
+      { id: "example3", text: "bizProfileOptions.community_center.pricingExamples.example3" },
+    ],
+  },
   {
     id: "gym_fitness",
     label: "bizProfileOptions.gym_fitness.label",
@@ -2633,7 +2872,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
   {
     id: "pet_services",
     label: "bizProfileOptions.pet_services.label",
-    match: ["veterinary", "vet clinic", "pet grooming", "dog walking", "pet sitting", "kennel", "pet store"],
+    match: ["veterinary", "vet clinic", "pet grooming", "dog walking", "pet sitting", "kennel", "pet store", "pet care", "pet boarding", "dog daycare", "groomer"],
     placesType: ["veterinary_care", "pet_store"],
     contentProfileId: "default",
     competitorNoun: "bizProfileOptions.pet_services.competitorNoun",
@@ -2660,7 +2899,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     id: "lawyer",
     label: "bizProfileOptions.lawyer.label",
     match: ["lawyer", "attorney", "law firm", "law office", "legal services", "legal"],
-    placesType: ["lawyer", "legal_services"],
+    placesType: ["lawyer"],
     contentProfileId: "lawyer",
   },
   {
@@ -2691,15 +2930,15 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     id: "coach",
     label: "bizProfileOptions.coach.label",
     match: ["coach", "coaching"],
-    placesType: ["life_coach"],
+    placesType: [],
     contentProfileId: "practitioner",
     competitorNoun: "bizProfileOptions.coach.competitorNoun",
   },
   {
     id: "tutor_education",
     label: "bizProfileOptions.tutor_education.label",
-    match: ["tutor", "tutoring", "learning center", "test prep", "driving school", "music lessons"],
-    placesType: ["tutoring_service"],
+    match: ["tutor", "tutoring", "learning center", "test prep", "driving school", "music lessons", "lessons", "music school", "language school", "english teacher", "esl", "art school"],
+    placesType: [],
     contentProfileId: "practitioner",
     competitorNoun: "bizProfileOptions.tutor_education.competitorNoun",
   },
@@ -2707,7 +2946,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     id: "photographer",
     label: "bizProfileOptions.photographer.label",
     match: ["photographer", "photography", "photo studio"],
-    placesType: ["photography_studio"],
+    placesType: [],
     contentProfileId: "practitioner",
     competitorNoun: "bizProfileOptions.photographer.competitorNoun",
   },
@@ -2752,7 +2991,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     id: "landscaper",
     label: "bizProfileOptions.landscaper.label",
     match: ["landscap", "lawn care", "lawn service", "tree service"],
-    placesType: ["landscaper"],
+    placesType: [],
     contentProfileId: "trades",
     competitorNoun: "bizProfileOptions.landscaper.competitorNoun",
   },
@@ -2780,7 +3019,7 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     id: "cleaning_service",
     label: "bizProfileOptions.cleaning_service.label",
     match: ["cleaning service", "house cleaning", "janitorial", "maid service"],
-    placesType: ["house_cleaning"],
+    placesType: [],
     contentProfileId: "trades",
     competitorNoun: "bizProfileOptions.cleaning_service.competitorNoun",
   },
@@ -2843,6 +3082,21 @@ const BUSINESS_TYPE_OPTIONS: BusinessTypeOption[] = [
     match: TATTOO_BODY_ART_PROFILE.match,
     placesType: TATTOO_BODY_ART_PROFILE.placesType,
     contentProfileId: "tattoo_body_art",
+  },
+
+  {
+    id: "nonprofit",
+    label: NONPROFIT_PROFILE.label,
+    match: NONPROFIT_PROFILE.match,
+    placesType: NONPROFIT_PROFILE.placesType,
+    contentProfileId: "nonprofit",
+  },
+  {
+    id: "place_of_worship",
+    label: PLACE_OF_WORSHIP_PROFILE.label,
+    match: PLACE_OF_WORSHIP_PROFILE.match,
+    placesType: PLACE_OF_WORSHIP_PROFILE.placesType,
+    contentProfileId: "place_of_worship",
   },
 
   // Catch-all — empty match list, so it's never reached by the keyword
@@ -2932,23 +3186,36 @@ const LAWYER_NAME_PATTERN = /\blaw\s+(?:firm|offices?)\b|\battorneys?\b|\blawyer
  * checked against two REAL, independent facts instead:
  *   1. Any of the business's REAL Google types (primary type, plus every
  *      secondary type in `categories` — Google often tags a listing with
- *      several) is a real legal Places type slug ("lawyer"/
- *      "legal_services", taken from the "lawyer" BusinessTypeOption's
- *      own placesType — never a second, separately-maintained list).
+ *      several) is a legal type (LEGAL_GOOGLE_TYPES — kept apart from the
+ *      lawyer option's placesType, which must stay a searchable Table A
+ *      type, while listings can also carry "legal_services").
  *   2. The business's own real name matches LAWYER_NAME_PATTERN above.
  * Both are strong, specific, low-false-positive signals — never a bare
  * substring like "law" — so this is safe to let override a looser
  * generic-category match (e.g. "Consultant") elsewhere in bizProfile().
  */
+const LEGAL_GOOGLE_TYPES = new Set(["lawyer", "legal_services"]);
+
+/** A community center's own name — YMCA/YWCA/JCC listings are often
+ * typed "gym" by Google, so the name decides (whole words only). */
+const COMMUNITY_CENTER_NAME_PATTERN =
+  /\b(?:YMCA|YWCA|JCC|Jewish Community Center|Community Cent(?:er|re)|Rec(?:reation)? Cent(?:er|re)|Boys (?:&|and) Girls Club)\b/i;
+
+/** Google types too broad to say what a business is — skipped when the
+ * secondary types are tried (same idea as lib/competitors.ts). */
+const GENERIC_GOOGLE_TYPES = new Set(["store", "point_of_interest", "establishment", "service", "food", "food_store", "health", "finance"]);
+
+function optionForHaystack(haystack: string): BusinessTypeOption | null {
+  return BUSINESS_TYPE_OPTIONS.find((option) => option.match.some((keyword) => keywordMatches(haystack, keyword))) ?? null;
+}
+
 function isLikelyLawFirm(
   primaryType: string | null | undefined,
   categories: string[] | null | undefined,
   name: string | null | undefined
 ): boolean {
-  const lawyerOption = BUSINESS_TYPE_OPTIONS.find((o) => o.id === "lawyer");
-  const legalPlacesTypes = new Set((lawyerOption?.placesType ?? []).map((t) => t.toLowerCase()));
   const realGoogleTypes = [primaryType, ...(categories ?? [])].filter((t): t is string => !!t);
-  if (realGoogleTypes.some((t) => legalPlacesTypes.has(t.toLowerCase()))) return true;
+  if (realGoogleTypes.some((t) => LEGAL_GOOGLE_TYPES.has(t.toLowerCase()))) return true;
   return !!name && LAWYER_NAME_PATTERN.test(name);
 }
 
@@ -2977,13 +3244,22 @@ export function bizProfile(
     return localizeBizProfile(buildResolvedProfileSource(lawyerOption), locale);
   }
 
-  const haystack = `${category ?? ""} ${primaryType ?? ""}`.toLowerCase();
-  if (!haystack.trim()) return localizeBizProfile(buildResolvedProfileSource(DEFAULT_OPTION), locale);
+  if (name && COMMUNITY_CENTER_NAME_PATTERN.test(name)) {
+    const communityOption = BUSINESS_TYPE_OPTIONS.find((o) => o.id === "community_center")!;
+    return localizeBizProfile(buildResolvedProfileSource(communityOption), locale);
+  }
 
-  for (const option of BUSINESS_TYPE_OPTIONS) {
-    if (option.match.some((keyword) => keywordMatches(haystack, keyword))) {
-      return localizeBizProfile(buildResolvedProfileSource(option), locale);
-    }
+  const haystack = `${category ?? ""} ${primaryType ?? ""}`.toLowerCase();
+  const primaryMatch = haystack.trim() ? optionForHaystack(haystack) : null;
+  if (primaryMatch) return localizeBizProfile(buildResolvedProfileSource(primaryMatch), locale);
+
+  // Day 2b: before "General Business", try the listing's other Google
+  // types in Google's own order (the real Mochinut case: primary
+  // "donut_shop", also "bakery", "restaurant"), skipping generic ones.
+  for (const type of categories ?? []) {
+    if (!type || GENERIC_GOOGLE_TYPES.has(type) || type === primaryType) continue;
+    const match = optionForHaystack(`${type.replace(/_/g, " ")} ${type}`.toLowerCase());
+    if (match) return localizeBizProfile(buildResolvedProfileSource(match), locale);
   }
 
   return localizeBizProfile(buildResolvedProfileSource(DEFAULT_OPTION), locale);

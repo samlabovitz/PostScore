@@ -824,7 +824,7 @@ alter table public.businesses
 -- Named separately (rather than inline on the column above) so it can be
 -- dropped and re-added idempotently — constrained to the exact set of
 -- business type ids the app currently supports (see BUSINESS_TYPE_OPTIONS
--- in config/bizProfiles.ts, 39 types as of the expanded list below).
+-- in config/bizProfiles.ts, 44 types as of Day 2b).
 -- Update this list if a business type is ever added or removed there.
 alter table public.businesses drop constraint if exists businesses_business_type_override_check;
 alter table public.businesses add constraint businesses_business_type_override_check
@@ -832,16 +832,38 @@ alter table public.businesses add constraint businesses_business_type_override_c
     business_type_override is null
     or business_type_override in (
       'barbershop', 'spa', 'nail_salon', 'salon',
-      'cafe', 'bar', 'bakery', 'liquor_store', 'grocery_market', 'restaurant',
-      'hardware_store', 'florist', 'retail_boutique',
-      'gym_fitness', 'pet_services', 'dentist', 'medical_clinic',
+      'dessert_shop', 'cafe', 'bar', 'bakery', 'liquor_store', 'grocery_market', 'restaurant',
+      'hardware_store', 'florist', 'retail_boutique', 'specialty_store',
+      'community_center', 'gym_fitness', 'pet_services', 'dentist', 'medical_clinic',
       'lawyer', 'accountant', 'real_estate', 'consultant', 'coach', 'tutor_education', 'photographer', 'practitioner',
       'auto_repair', 'plumber', 'electrician', 'landscaper', 'cleaning_service',
       'home_services', 'repair_dropoff', 'recreation', 'events', 'car_wash_detailing',
       'childcare', 'lodging', 'tattoo_body_art',
+      'nonprofit', 'place_of_worship',
       'default'
     )
   );
+
+-- 2. Website-only businesses (no Google listing): a listing mode, and
+--    place_id may be empty only for those.
+alter table public.businesses
+  add column if not exists listing_mode text not null default 'google';
+alter table public.businesses drop constraint if exists businesses_listing_mode_check;
+alter table public.businesses add constraint businesses_listing_mode_check
+  check (listing_mode in ('google', 'website_only'));
+
+alter table public.businesses alter column place_id drop not null;
+alter table public.businesses drop constraint if exists businesses_listing_mode_place_id_check;
+alter table public.businesses add constraint businesses_listing_mode_place_id_check
+  check (
+    (listing_mode = 'google' and place_id is not null)
+    or (listing_mode = 'website_only' and place_id is null)
+  );
+
+-- One website-only business per owner per website.
+create unique index if not exists businesses_owner_website_only_idx
+  on public.businesses (owner_id, lower(website))
+  where listing_mode = 'website_only';
 
 -- The specific trade the owner picked at intake (lib/tradeSearch.ts's
 -- TRADES[].id, e.g. "roofer" or "shoe_repair") — set alongside

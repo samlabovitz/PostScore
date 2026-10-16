@@ -279,9 +279,9 @@ describe("Day 4 Step 2f", () => {
     expect(withoutWebsiteGrowthMoves(all).map((m) => m.id)).toEqual(["start_coupon", "run_price_check"]);
   });
 
-  test("the price check shows for EVERY one of the 39 business types, under every condition, with or without a website", () => {
+  test("the price check shows for every business type that has one (all but place_of_worship), under every condition", () => {
     const options = getBizProfileOptions("en");
-    expect(options.length).toBe(39);
+    expect(options.length).toBe(44);
     for (const option of options) {
       const profile = bizProfileById(option.id, "en")!;
       for (const hasWebsite of [true, false]) {
@@ -292,6 +292,8 @@ describe("Day 4 Step 2f", () => {
                 {
                   ...NOTHING_TO_DO,
                   referralOk: profile.referralOk,
+                  couponsOk: profile.couponsOk,
+                  pricingOk: profile.pricingOk,
                   hasWebsite,
                   hasWebsiteTaskOpen: !hasWebsite,
                   pricingAssessedAt,
@@ -301,7 +303,9 @@ describe("Day 4 Step 2f", () => {
                 "en"
               )
             );
-            expect(moves.map((m) => m.id), option.id).toContain("run_price_check");
+            if (profile.pricingOk) expect(moves.map((m) => m.id), option.id).toContain("run_price_check");
+            else expect(moves.map((m) => m.id), option.id).not.toContain("run_price_check");
+            if (!profile.couponsOk) expect(moves.map((m) => m.id), option.id).not.toContain("start_coupon");
           }
         }
       }

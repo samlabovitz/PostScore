@@ -68,16 +68,26 @@ export const POSTAI_LINK_TARGETS: Record<string, LinkTarget> = {
   settings: { path: "/settings", label: "dashboard.assistant.link.settings" },
 };
 
+/** Tools this business type doesn't have (BizProfile flags) — their
+ * links are dropped, never shown. */
+export interface LinkOptions {
+  referralOk?: boolean;
+  couponsOk?: boolean;
+  pricingOk?: boolean;
+}
+
 /** The link a target id resolves to for this business, or null when the
  * id isn't on the allowlist or isn't available for this business (the
  * referral tab, when referrals aren't offered for its type). */
 export function resolveLinkTarget(
   id: string,
   businessId: string,
-  options: { referralOk?: boolean } = {}
+  options: LinkOptions = {}
 ): { href: string; label: MessageKey } | null {
   if (!Object.prototype.hasOwnProperty.call(POSTAI_LINK_TARGETS, id)) return null;
   if (id === "growth.referral" && options.referralOk === false) return null;
+  if (id === "growth.coupon" && options.couponsOk === false) return null;
+  if (id === "pricing" && options.pricingOk === false) return null;
   if (!/^[A-Za-z0-9-]+$/.test(businessId)) return null;
   const target = POSTAI_LINK_TARGETS[id];
   return { href: `/business/${businessId}${target.path}${target.anchor ? `#${target.anchor}` : ""}`, label: target.label };
@@ -95,7 +105,7 @@ const RAW_URL = /(^|[^\w/])((?:https?:\/\/|www\.)[^\s)<>\]]+|\/business\/[^\s)<>
 
 /** The allowlist id for a raw in-app URL that is exactly one of this
  * business's targets, else null. */
-function idForRawUrl(url: string, businessId: string, options: { referralOk?: boolean }): string | null {
+function idForRawUrl(url: string, businessId: string, options: LinkOptions): string | null {
   const path = url.replace(/^https?:\/\/[^/]+/i, "").replace(/[.,;:!?]+$/, "");
   for (const id of Object.keys(POSTAI_LINK_TARGETS)) {
     if (resolveLinkTarget(id, businessId, options)?.href === path) return id;
@@ -113,7 +123,7 @@ function idForRawUrl(url: string, businessId: string, options: { referralOk?: bo
 export function parseReplyLinks(
   text: string,
   businessId: string,
-  options: { referralOk?: boolean } = {}
+  options: LinkOptions = {}
 ): ReplySegment[] {
   // Markdown links: keep the words, judge the URL like any raw URL.
   let working = text.replace(MARKDOWN_LINK, (_m, words: string) => words);

@@ -1,10 +1,14 @@
 import { notFound, redirect } from "next/navigation";
+import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
 import { getReviewsPageData } from "@/app/actions/reviews";
 import { ReviewsView } from "./ReviewsView";
 
 export default async function WebsiteReviewsPage({ params }: { params: { id: string } }) {
+  const websiteOnly = await websiteOnlyGuard(params.id, "reviews");
+  if (websiteOnly) return websiteOnly;
+
   const result = await getReviewsPageData(params.id);
 
   if (result.status === "unauthenticated") {

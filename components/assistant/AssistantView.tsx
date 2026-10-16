@@ -197,7 +197,13 @@ export function AssistantView({
   onNavigate?: () => void;
 }) {
   const locale = useLocale();
-  const links: ReplyLinkContext = { businessId, referralOk: context.profile.referralOk, onNavigate };
+  const links: ReplyLinkContext = {
+    businessId,
+    referralOk: context.profile.referralOk,
+    couponsOk: context.profile.couponsOk,
+    pricingOk: context.profile.pricingOk,
+    onNavigate,
+  };
   const [messages, setMessages] = useState<AssistantMessageRow[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");

@@ -13,6 +13,7 @@ import {
 import { getLatestCompetitorSnapshot, type CompetitorSnapshot } from "@/app/actions/competitors";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n";
 import type { ScoreBreakdown } from "@/lib/scoring";
+import type { ProfileTools } from "@/lib/growBannerTools";
 
 export type GetGrowthMoveSignalsResult =
   | { status: "ok"; signals: GrowthMoveSignals }
@@ -27,11 +28,11 @@ export type GetGrowthMoveSignalsResult =
  * or "what's the latest real value," so this stays cheap even though
  * it touches several different tables.
  *
- * `referralOk` must be the caller's own already-resolved
- * BizProfile.referralOk (config/bizProfiles.ts) — never re-derived
- * here, since every real caller has already computed it from the
- * business's category/type for its own purposes (e.g. deciding
- * whether to show the Growth page's "Refer a friend" tab).
+ * `profileTools` must be the caller's own already-resolved BizProfile
+ * (or its referralOk/couponsOk/pricingOk flags, config/bizProfiles.ts) —
+ * never re-derived here, since every real caller has already resolved
+ * the business type for its own purposes (e.g. deciding which Growth
+ * page tabs to show).
  *
  * `snapshot` is optional: omit it to fetch the latest competitor scan
  * here (the Growth page's own usage), or pass one a caller has already
@@ -43,7 +44,7 @@ export type GetGrowthMoveSignalsResult =
 export async function getGrowthMoveSignals(
   businessId: string,
   breakdown: ScoreBreakdown,
-  referralOk: boolean,
+  profileTools: ProfileTools,
   snapshot?: CompetitorSnapshot | null
 ): Promise<GetGrowthMoveSignalsResult> {
   const supabase = createClient();
@@ -73,7 +74,9 @@ export async function getGrowthMoveSignals(
 
   const signals: GrowthMoveSignals = {
     businessId,
-    referralOk,
+    referralOk: profileTools.referralOk,
+    couponsOk: profileTools.couponsOk,
+    pricingOk: profileTools.pricingOk,
     hasEverCreatedPromo: (promoResult.data?.length ?? 0) > 0,
     hasEverCreatedReferral: (referralResult.data?.length ?? 0) > 0,
     pricingAssessedAt: businessResult.data.pricing_assessed_at ?? null,
@@ -104,15 +107,15 @@ export type GetGrowthMovesResult =
  * the website moves are dropped here — see withoutWebsiteGrowthMoves. Takes the business's
  * own already-computed breakdown rather than re-scoring, since every
  * caller has already scored the business once. See
- * getGrowthMoveSignals's own doc for `referralOk` and `snapshot`. */
+ * getGrowthMoveSignals's own doc for `profileTools` and `snapshot`. */
 export async function getGrowthMoves(
   businessId: string,
   breakdown: ScoreBreakdown,
-  referralOk: boolean,
+  profileTools: ProfileTools,
   locale: Locale = DEFAULT_LOCALE,
   snapshot?: CompetitorSnapshot | null
 ): Promise<GetGrowthMovesResult> {
-  const result = await getGrowthMoveSignals(businessId, breakdown, referralOk, snapshot);
+  const result = await getGrowthMoveSignals(businessId, breakdown, profileTools, snapshot);
   if (result.status !== "ok") return result;
   return { status: "ok", moves: withoutWebsiteGrowthMoves(buildGrowthMoves(result.signals, locale)) };
 }

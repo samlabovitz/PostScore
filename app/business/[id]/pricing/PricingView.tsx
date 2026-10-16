@@ -495,74 +495,82 @@ export function PricingView({
           </h1>
           <Pill variant="brass">{profile.label}</Pill>
         </div>
-        <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">{t(locale, "dashboard.pricing.introText")}</p>
+        <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">
+          {t(locale, profile.pricingOk ? "dashboard.pricing.introText" : "dashboard.pricing.notApplicable")}
+        </p>
       </div>
 
-      <Card className="flex items-start gap-3 p-4">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink/5 text-ink-mute">
-          <IconTag size={16} />
-        </span>
-        <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.pricing.disclosureText")}</p>
-      </Card>
+      {/* A place of worship (BizProfile.pricingOk false) has no price
+          check — the intro above says so, and nothing below applies. */}
+      {profile.pricingOk && (
+        <>
+        <Card className="flex items-start gap-3 p-4">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink/5 text-ink-mute">
+            <IconTag size={16} />
+          </span>
+          <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.pricing.disclosureText")}</p>
+        </Card>
 
-      <PriceLegend />
+        <PriceLegend />
 
-      <div className="grid grid-cols-1 gap-6 nav:grid-cols-2 nav:items-start">
-        <div className="flex flex-col gap-4">
-          <SectionHeading title={t(locale, "dashboard.pricing.servicesHeading")} />
-          <ServicesAndPrices
-            businessId={businessId}
-            prices={prices}
-            setPrices={setPrices}
-            pricingExamples={profile.pricingExamples}
-          />
+        <div className="grid grid-cols-1 gap-6 nav:grid-cols-2 nav:items-start">
+          <div className="flex flex-col gap-4">
+            <SectionHeading title={t(locale, "dashboard.pricing.servicesHeading")} />
+            <ServicesAndPrices
+              businessId={businessId}
+              prices={prices}
+              setPrices={setPrices}
+              pricingExamples={profile.pricingExamples}
+            />
 
-          <div className="flex flex-col gap-2">
-            <Button variant="brass" onClick={handleAssess} disabled={prices.length === 0 || isWorking} className="w-fit">
-              <IconSparkles size={16} />
-              {isWorking
-                ? t(locale, "dashboard.pricing.assessingButton")
-                : lastResult
-                  ? t(locale, "dashboard.pricing.reassessButton")
-                  : t(locale, "dashboard.pricing.assessButton")}
-            </Button>
-            {runState.kind === "error" ? (
-              <p className="text-[12px] text-red">{runState.message}</p>
-            ) : lastResult ? (
-              <p className="text-[12px] text-ink-mute">
-                {t(locale, "dashboard.pricing.lastAssessed", {
-                  date: formatDateTime(lastResult.assessedAt, locale),
-                })}
-              </p>
-            ) : null}
+            <div className="flex flex-col gap-2">
+              <Button variant="brass" onClick={handleAssess} disabled={prices.length === 0 || isWorking} className="w-fit">
+                <IconSparkles size={16} />
+                {isWorking
+                  ? t(locale, "dashboard.pricing.assessingButton")
+                  : lastResult
+                    ? t(locale, "dashboard.pricing.reassessButton")
+                    : t(locale, "dashboard.pricing.assessButton")}
+              </Button>
+              {runState.kind === "error" ? (
+                <p className="text-[12px] text-red">{runState.message}</p>
+              ) : lastResult ? (
+                <p className="text-[12px] text-ink-mute">
+                  {t(locale, "dashboard.pricing.lastAssessed", {
+                    date: formatDateTime(lastResult.assessedAt, locale),
+                  })}
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <SectionHeading title={t(locale, "dashboard.pricing.assessmentHeading")} />
+            {lastResult ? (
+              <>
+                <div className="relative">
+                  <AssessmentResults result={lastResult} />
+                  {isWorking && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/70">
+                      <IconLoader2 size={22} className="animate-spin text-brass" />
+                    </div>
+                  )}
+                </div>
+                {showLanguageMismatch && (
+                  <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.pricing.languageMismatchNote")}</p>
+                )}
+              </>
+            ) : isWorking ? (
+              <AssessmentSkeleton />
+            ) : (
+              <AssessmentEmptyState />
+            )}
           </div>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <SectionHeading title={t(locale, "dashboard.pricing.assessmentHeading")} />
-          {lastResult ? (
-            <>
-              <div className="relative">
-                <AssessmentResults result={lastResult} />
-                {isWorking && (
-                  <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/70">
-                    <IconLoader2 size={22} className="animate-spin text-brass" />
-                  </div>
-                )}
-              </div>
-              {showLanguageMismatch && (
-                <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.pricing.languageMismatchNote")}</p>
-              )}
-            </>
-          ) : isWorking ? (
-            <AssessmentSkeleton />
-          ) : (
-            <AssessmentEmptyState />
-          )}
-        </div>
-      </div>
-
-      <PricingTips profile={profile} />
+        <PricingTips profile={profile} />
+        </>
+      )}
     </div>
   );
 }

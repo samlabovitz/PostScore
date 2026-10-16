@@ -208,6 +208,10 @@ export interface AssistantBusinessProfile {
    * rule 7's referral mapping (and the model's own answers) never
    * suggest a program this business can't actually set up in the app. */
   referralOk: boolean;
+  /** BizProfile.couponsOk / pricingOk — false only for a place of
+   * worship today (no Coupons tab, no price check). Omitted = true. */
+  couponsOk?: boolean;
+  pricingOk?: boolean;
   /** This business type's real, built-in coupon quick picks (BizProfile.
    * couponPresets in config/bizProfiles.ts) — the exact same options the
    * Coupons tab's own picker shows, already resolved in this business's
@@ -401,8 +405,8 @@ HOW TO ANSWER:
    - No website at all → the starter-site generator: [[link:website.starter_site]].
    - Google listing fixes whose "How to fix it" steps are on the Overview's check rows: [[link:listing.photos]], [[link:listing.hours]], [[link:listing.phone]], [[link:listing.address]], [[link:listing.categories]], [[link:listing.website_link]], [[link:listing.business_status]].
    - Getting more/fresh reviews (review link + QR sign): [[link:reviews]]. Connecting Google Business Profile: [[link:reviews.connect]].
-   - This week's plan / bigger projects: [[link:growth]]. Weekly routine: [[link:growth.weekly_routine]]. Coupon builder: [[link:growth.coupon]]. Referral card: [[link:growth.referral]] — never when REAL DATA CONTEXT says the referral tab isn't available.
-   - Competitor comparison: [[link:competitors]]. Prices: [[link:pricing]]. Monthly reports: [[link:reports]]. Business type or report settings: [[link:settings]].
+   - This week's plan / bigger projects: [[link:growth]]. Weekly routine: [[link:growth.weekly_routine]]. Coupon builder: [[link:growth.coupon]]. Referral card: [[link:growth.referral]]. Never use either when REAL DATA CONTEXT says that tab isn't offered for this business type.
+   - Competitor comparison: [[link:competitors]]. Prices: [[link:pricing]] (never when REAL DATA CONTEXT says the price check isn't offered). Monthly reports: [[link:reports]]. Business type or report settings: [[link:settings]].
 8. WEEKLY ROUTINE: EXACTLY WHAT YOU CAN SEE. The weekly-routine items in REAL DATA CONTEXT are the owner's own checkmarks, not something PostScore can verify — describe each one only as "you've checked off X this week" or "you haven't checked off X this week." Never say or imply the owner actually posted an update, replied to a review, or added a photo — or that they didn't — you only ever know whether they logged it, never whether they really did it. NEVER use phrasing that asserts an ongoing habit or claims credit for action beyond this week's checkbox — forbidden phrasings include "you're already replying," "you've been posting," "you're staying on top of," or any similar continuous/habitual claim.
 9. GROWTH MOVES: CHECK EACH ONE'S OWN "SCORE IMPACT" LINE — NEVER GENERALIZE. Every growth move in REAL DATA CONTEXT now carries its own real, precomputed "Score impact" line: YES (it currently also costs real points — overlaps a real losing check or action-plan task) or NO (customers only, no effect on PostScore either way). NEVER state a blanket claim like "none of these change your score" or "these don't affect your score" covering multiple growth moves at once — check EVERY move you mention individually against its own real "Score impact" line; if even one of them says YES, that blanket claim is false for the whole list. When a move's line says YES, quote the real points from its matching losing-check/action-plan entry — never deny or omit them just because the same fix is also framed as a growth move. The coupon/referral facts there describe PostScore specifically (e.g. "no coupon created in PostScore yet") — never say the owner "doesn't run promotions" or "has no referral program": they may run either outside PostScore, which you have no way to see.
 10. VARIETY, WITHIN THIS CONVERSATION ONLY. You only ever see this one conversation, never any other — don't imply you remember a past chat, and never say anything like "last time we talked." Within THIS conversation, don't repeat a recommendation you've already given — if asked again, build on what you already said or offer a different real option from REAL DATA CONTEXT instead of restating the same one. When the owner asks broadly how to grow or get more customers, draw from the growth moves and weekly routine as well as the action plan, not reviews by default — include at most one review-related suggestion unless they specifically asked about reviews. If REAL DATA CONTEXT genuinely has no different real option left to offer, say so honestly — e.g. "that's everything real I've got for you right now" — rather than inventing a new one or just repeating what you already said.
@@ -681,7 +685,20 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
           `Business type: ${context.profile.businessType} (set by the owner; matches Google's category). Location: ${context.profile.location ?? "not on file"}.`
         : `Business type: ${context.profile.businessType} (owner-corrected from Google's auto-detected "${context.profile.autoDetectedBusinessType}"). Location: ${context.profile.location ?? "not on file"}.`
   );
-  if (!context.profile.referralOk) {
+  if (!context.profile.referralOk && context.profile.businessTypeId !== "lawyer") {
+    lines.push(
+      "The Growth page's \"Refer a friend\" tab is not offered for this business type — a referral reward doesn't fit how it works. Never suggest a referral program or a referral reward of any kind."
+    );
+  }
+  if (context.profile.couponsOk === false) {
+    lines.push(
+      "The Growth page's Coupons tab is not offered for this business type. Never suggest a PostScore coupon, discount, or promo code. Inviting people (an open house, a community event) is fine as general guidance."
+    );
+  }
+  if (context.profile.pricingOk === false) {
+    lines.push("The Pricing page's price check is not offered for this business type. Never suggest running a price check or comparing prices.");
+  }
+  if (!context.profile.referralOk && context.profile.businessTypeId === "lawyer") {
     lines.push(
       "The Growth page's \"Refer a friend\" tab is not offered for this business type: referral-fee arrangements are restricted for attorneys under most states' rules of professional conduct. Never PROACTIVELY suggest or bring up a referral program for this business. If the owner directly asks about setting one up, answer honestly — say plainly that PostScore doesn't offer this tool for law firms for that reason, and suggest they check their own state bar's rules before running any referral program. Give no other legal advice beyond that. This restriction applies to referral-style incentives in ANY form, not just the Refer a friend tab — never suggest a referral reward, a referral credit, or any \"refer a friend\" discount as part of a coupon or promo idea either; if asked for coupon ideas, offer only non-referral promotions (e.g. a first-visit discount, a seasonal offer). MORE BROADLY: never state or imply that ANY marketing tactic — a coupon, a promo, an ad, or anything else — is unrestricted or definitively allowed for this business. Attorney advertising and solicitation rules vary significantly by state bar, and PostScore has no way to know this business's specific state rules beyond the one referral-fee restriction stated above. If the owner asks whether some tactic is allowed, say honestly that attorney advertising rules vary by state bar and they should check their own state bar's rules first — never say a tactic has \"no restrictions\" or is simply \"fine to do.\""
     );
@@ -800,9 +817,11 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
   lines.push(
     "REAL OFFER PRESETS (this business type's own built-in quick picks — name ONLY these when describing a PostScore built-in option; any other idea is YOUR general guidance, not a PostScore feature):"
   );
-  lines.push("- Coupon quick picks (Growth page's Coupons tab):");
-  for (const preset of context.profile.couponPresets) {
-    lines.push(`  - "${preset.label}" — ${preset.description}`);
+  if (context.profile.couponsOk !== false) {
+    lines.push("- Coupon quick picks (Growth page's Coupons tab):");
+    for (const preset of context.profile.couponPresets) {
+      lines.push(`  - "${preset.label}" — ${preset.description}`);
+    }
   }
   if (context.profile.referralOk) {
     lines.push("- Referral quick picks (Growth page's Refer a friend tab):");

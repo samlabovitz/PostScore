@@ -1,10 +1,14 @@
 import { notFound, redirect } from "next/navigation";
+import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { getReportsData } from "@/app/actions/reports";
 import { ReportsView } from "./ReportsView";
 
 export default async function ReportsPage({ params }: { params: { id: string } }) {
+  const websiteOnly = await websiteOnlyGuard(params.id, "reports");
+  if (websiteOnly) return websiteOnly;
+
   const summary = await getBusinessSummary(params.id);
 
   if (summary.status === "unauthenticated") {

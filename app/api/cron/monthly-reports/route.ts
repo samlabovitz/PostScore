@@ -43,6 +43,8 @@
 // 15-minute budget to make many small, safe calls here. See
 // netlify/functions/monthly-reports-batch.mts's own top comment for the
 // full reasoning.
+import { getListingMode } from "@/lib/listingMode";
+import type { ProfileTools } from "@/lib/growBannerTools";
 import { timingSafeEqual } from "crypto";
 import { createElement } from "react";
 import { NextResponse, type NextRequest } from "next/server";
@@ -323,7 +325,7 @@ export async function computeFiringGrowthMoves(
   supabase: ReturnType<typeof createAdminClient>,
   businessId: string,
   breakdown: ScoreBreakdown,
-  referralOk: boolean,
+  profileTools: ProfileTools,
   competitorScanId: string | null,
   locale: Locale
 ): Promise<FocusGrowthMove[]> {
@@ -337,7 +339,9 @@ export async function computeFiringGrowthMoves(
   const hasWebsiteCheck = breakdown.checks.find((c) => c.id === "website.has_website");
   const signals: GrowthMoveSignals = {
     businessId,
-    referralOk,
+    referralOk: profileTools.referralOk,
+    couponsOk: profileTools.couponsOk,
+    pricingOk: profileTools.pricingOk,
     hasEverCreatedPromo: (promoResult.data?.length ?? 0) > 0,
     hasEverCreatedReferral: (referralResult.data?.length ?? 0) > 0,
     pricingAssessedAt: businessResult.data?.pricing_assessed_at ?? null,
@@ -444,6 +448,11 @@ export async function processBusiness(
   }
   if (optIn.monthly_report_enabled !== true) {
     return { businessId, status: "skipped", reason: "the owner has monthly reports turned off (monthly_report_enabled = false)" };
+  }
+  // Day 2b: no Google listing, no PostScore — never a monthly report (and
+  // never the Google re-scan below).
+  if ((await getListingMode(supabase, businessId)) === "website_only") {
+    return { businessId, status: "skipped", reason: "website-only business (no Google listing) — monthly reports need a PostScore" };
   }
 
   // 3a. Idempotency first — a retry or double-trigger must never
@@ -605,7 +614,7 @@ export async function processBusiness(
   // admin client (those pages' own actions are session-gated, and no
   // session exists in a cron context) — same established pattern as
   // scripts/preview-assistant-context.ts.
-  // Only profile.referralOk is needed here (never a second business-type
+  // Only profile's referralOk/couponsOk/pricingOk are needed here (never a second business-type
   // DECISION) — resolveBizProfile() already falls back to the real
   // Google-category auto-detection on its own when there's no override,
   // so bizProfile() itself never needs calling separately in this file.
@@ -646,7 +655,7 @@ export async function processBusiness(
     supabase,
     businessId,
     currentForDisplay.breakdown,
-    profile.referralOk,
+    profile,
     competitorScanId,
     locale
   );

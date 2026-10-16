@@ -74,6 +74,12 @@ export interface GrowthMoveSignals {
    * compiling/passing unchanged — every real caller (see
    * app/actions/growthMoves.ts) always passes the real resolved value. */
   referralOk?: boolean;
+  /** BizProfile.couponsOk / pricingOk — false only for a place of
+   * worship today; gate start_coupon and the price-check move the same
+   * way referralOk gates start_referral. Optional (default true) for the
+   * same fixture reason as referralOk. */
+  couponsOk?: boolean;
+  pricingOk?: boolean;
   /** True the moment a promos row has EVER existed for this business —
    * active or ended, never just "currently running." See the promos
    * table / app/actions/promos.ts. */
@@ -214,7 +220,7 @@ export function buildGrowthMoves(signals: GrowthMoveSignals, locale: Locale = DE
   const moves: GrowthMove[] = [];
   const growthHref = `/business/${signals.businessId}/growth`;
 
-  if (!signals.hasEverCreatedPromo) {
+  if ((signals.couponsOk ?? true) && !signals.hasEverCreatedPromo) {
     moves.push({
       id: "start_coupon",
       title: t(locale, "dashboard.growth.moves.startCoupon.title"),
@@ -241,7 +247,9 @@ export function buildGrowthMoves(signals: GrowthMoveSignals, locale: Locale = DE
   // Always shown, never removed from this section (see item 7) — just
   // two honest variants of the same real ask, depending on whether a
   // price check has ever been run.
-  moves.push(buildPriceCheckMove(signals.businessId, signals.pricingAssessedAt, locale));
+  if (signals.pricingOk ?? true) {
+    moves.push(buildPriceCheckMove(signals.businessId, signals.pricingAssessedAt, locale));
+  }
 
   const yourPhotos = signals.photoCount ?? 0;
   const competitorMedian = signals.competitorPhotos.medianCompetitorPhotoCount;

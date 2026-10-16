@@ -64,6 +64,11 @@ export type BusinessTypeId =
   | "childcare"
   | "lodging"
   | "tattoo_body_art"
+  | "dessert_shop"
+  | "specialty_store"
+  | "community_center"
+  | "nonprofit"
+  | "place_of_worship"
   | "default";
 
 export interface TradeEntry {
@@ -76,6 +81,29 @@ export interface TradeEntry {
 }
 
 export const TRADES: TradeEntry[] = [
+  // ---- Day 2b: specialty stores, community, nonprofit, worship -----------
+  { id: "bookstore", nameEn: "Bookstore", nameEs: "Librería", synonymsEn: ["book shop", "used books"], synonymsEs: ["tienda de libros", "libros usados"], businessTypeId: "specialty_store" },
+  { id: "jewelry_store", nameEn: "Jewelry Store", nameEs: "Joyería", synonymsEn: ["jeweler", "engagement rings"], synonymsEs: ["joyero", "anillos de compromiso"], businessTypeId: "specialty_store" },
+  { id: "sporting_goods_store", nameEn: "Sporting Goods Store", nameEs: "Tienda de artículos deportivos", synonymsEn: ["sports store", "outdoor gear", "skate shop"], synonymsEs: ["tienda de deportes", "equipo para exteriores"], businessTypeId: "specialty_store" },
+  { id: "bicycle_shop", nameEn: "Bicycle Shop", nameEs: "Tienda de bicicletas", synonymsEn: ["bike shop", "bike store"], synonymsEs: ["bicicletería"], businessTypeId: "specialty_store" },
+  { id: "toy_store", nameEn: "Toy Store", nameEs: "Juguetería", synonymsEn: ["toy shop", "kids toys"], synonymsEs: ["tienda de juguetes"], businessTypeId: "specialty_store" },
+  { id: "electronics_store", nameEn: "Electronics Store", nameEs: "Tienda de electrónica", synonymsEn: ["cell phone store", "computer store"], synonymsEs: ["tienda de celulares", "tienda de computadoras"], businessTypeId: "specialty_store" },
+  { id: "furniture_store", nameEn: "Furniture Store", nameEs: "Mueblería", synonymsEn: ["home goods store", "mattress store"], synonymsEs: ["tienda de muebles", "artículos para el hogar"], businessTypeId: "specialty_store" },
+  { id: "thrift_store", nameEn: "Thrift / Consignment Store", nameEs: "Tienda de segunda mano", synonymsEn: ["consignment shop", "secondhand store", "vintage store"], synonymsEs: ["tienda de consignación", "tienda vintage"], businessTypeId: "specialty_store" },
+  { id: "record_store", nameEn: "Record / Music Store", nameEs: "Tienda de discos / música", synonymsEn: ["vinyl records", "music shop"], synonymsEs: ["discos de vinilo", "tienda de música"], businessTypeId: "specialty_store" },
+  { id: "comic_game_store", nameEn: "Comic & Game Store", nameEs: "Tienda de cómics y juegos", synonymsEn: ["comic book store", "hobby shop", "board game store"], synonymsEs: ["tienda de historietas", "tienda de juegos de mesa"], businessTypeId: "specialty_store" },
+  { id: "community_center", nameEn: "Community Center", nameEs: "Centro comunitario", synonymsEn: ["rec center", "recreation center", "civic center"], synonymsEs: ["centro recreativo", "centro cívico"], businessTypeId: "community_center" },
+  { id: "ymca_jcc", nameEn: "YMCA / JCC", nameEs: "YMCA / JCC", synonymsEn: ["Y", "Jewish Community Center", "YWCA"], synonymsEs: ["Centro Comunitario Judío"], businessTypeId: "community_center" },
+  { id: "boys_girls_club", nameEn: "Boys & Girls Club", nameEs: "Club de niños y niñas", synonymsEn: ["youth club", "youth center"], synonymsEs: ["centro juvenil"], businessTypeId: "community_center" },
+  { id: "nonprofit_organization", nameEn: "Nonprofit Organization", nameEs: "Organización sin fines de lucro", synonymsEn: ["charity", "non-profit", "community organization"], synonymsEs: ["organización benéfica", "ONG", "organización comunitaria"], businessTypeId: "nonprofit" },
+  { id: "food_bank", nameEn: "Food Bank / Pantry", nameEs: "Banco de alimentos", synonymsEn: ["food pantry", "soup kitchen"], synonymsEs: ["despensa de alimentos", "comedor comunitario"], businessTypeId: "nonprofit" },
+  { id: "animal_rescue", nameEn: "Animal Rescue / Shelter", nameEs: "Rescate / refugio de animales", synonymsEn: ["animal shelter", "pet adoption"], synonymsEs: ["refugio de animales", "adopción de mascotas"], businessTypeId: "nonprofit" },
+  { id: "arts_organization", nameEn: "Arts or Cultural Nonprofit", nameEs: "Organización cultural sin fines de lucro", synonymsEn: ["arts council", "community theater"], synonymsEs: ["consejo de artes", "teatro comunitario"], businessTypeId: "nonprofit" },
+  { id: "church", nameEn: "Church", nameEs: "Iglesia", synonymsEn: ["parish", "chapel", "congregation"], synonymsEs: ["parroquia", "capilla", "congregación"], businessTypeId: "place_of_worship" },
+  { id: "mosque", nameEn: "Mosque", nameEs: "Mezquita", synonymsEn: ["masjid", "islamic center"], synonymsEs: ["centro islámico"], businessTypeId: "place_of_worship" },
+  { id: "synagogue", nameEn: "Synagogue", nameEs: "Sinagoga", synonymsEn: ["temple", "shul"], synonymsEs: ["templo judío"], businessTypeId: "place_of_worship" },
+  { id: "temple", nameEn: "Temple (Buddhist, Hindu, Sikh)", nameEs: "Templo (budista, hindú, sij)", synonymsEn: ["buddhist temple", "hindu temple", "gurdwara"], synonymsEs: ["templo budista", "templo hindú"], businessTypeId: "place_of_worship" },
+
   // ---- Construction & home services -------------------------------
   // Most of these have no genuinely fitting existing type (see the gap
   // report's "Construction & Contractors" cluster); a handful of
@@ -397,16 +425,16 @@ export const TRADES: TradeEntry[] = [
   { id: "cidery_taproom", nameEn: "Cidery / Hard Cider Taproom", nameEs: "Sidrería", synonymsEn: ["hard cider bar"], synonymsEs: ["bar de sidra"], businessTypeId: "bar" },
   { id: "karaoke_bar", nameEn: "Karaoke Bar", nameEs: "Bar de karaoke", synonymsEn: ["karaoke lounge"], synonymsEs: ["bar de karaoke"], businessTypeId: "bar" },
   { id: "cafe_trade", nameEn: "Cafe / Coffee Shop", nameEs: "Cafetería", synonymsEn: ["coffee shop", "espresso bar"], synonymsEs: ["café", "cafetería de especialidad"], businessTypeId: "cafe" },
-  { id: "juice_bar", nameEn: "Juice Bar", nameEs: "Juguería", synonymsEn: ["fresh juice shop"], synonymsEs: ["jugos naturales"], businessTypeId: "cafe" },
-  { id: "smoothie_bar", nameEn: "Smoothie Bar", nameEs: "Bar de batidos", synonymsEn: ["smoothie shop"], synonymsEs: ["batidos"], businessTypeId: "cafe" },
-  { id: "ice_cream_shop", nameEn: "Ice Cream Shop", nameEs: "Heladería", synonymsEn: ["ice cream parlor", "gelato shop"], synonymsEs: ["helados", "gelatería"], businessTypeId: "cafe" },
-  { id: "frozen_yogurt_shop", nameEn: "Frozen Yogurt Shop", nameEs: "Yogurtería", synonymsEn: ["froyo shop"], synonymsEs: ["yogurt helado"], businessTypeId: "cafe" },
+  { id: "juice_bar", nameEn: "Juice Bar", nameEs: "Juguería", synonymsEn: ["fresh juice shop"], synonymsEs: ["jugos naturales"], businessTypeId: "dessert_shop" },
+  { id: "smoothie_bar", nameEn: "Smoothie Bar", nameEs: "Bar de batidos", synonymsEn: ["smoothie shop"], synonymsEs: ["batidos"], businessTypeId: "dessert_shop" },
+  { id: "ice_cream_shop", nameEn: "Ice Cream Shop", nameEs: "Heladería", synonymsEn: ["ice cream parlor", "gelato shop"], synonymsEs: ["helados", "gelatería"], businessTypeId: "dessert_shop" },
+  { id: "frozen_yogurt_shop", nameEn: "Frozen Yogurt Shop", nameEs: "Yogurtería", synonymsEn: ["froyo shop"], synonymsEs: ["yogurt helado"], businessTypeId: "dessert_shop" },
   { id: "bubble_tea_shop", nameEn: "Bubble Tea / Boba Shop", nameEs: "Tienda de té de burbujas", synonymsEn: ["boba shop"], synonymsEs: ["boba", "té de burbujas"], businessTypeId: "cafe" },
   { id: "kombucha_taproom", nameEn: "Kombucha Taproom", nameEs: "Bar de kombucha", synonymsEn: ["kombucha bar"], synonymsEs: ["kombucha"], businessTypeId: "cafe" },
   { id: "tea_shop", nameEn: "Tea Shop", nameEs: "Casa de té", synonymsEn: ["tea house"], synonymsEs: ["té"], businessTypeId: "cafe" },
   { id: "board_game_cafe", nameEn: "Board Game Cafe", nameEs: "Café de juegos de mesa", synonymsEn: ["tabletop game cafe"], synonymsEs: ["café de mesa"], businessTypeId: "cafe" },
   { id: "bakery_trade", nameEn: "Bakery", nameEs: "Panadería", synonymsEn: ["patisserie", "bakeshop"], synonymsEs: ["repostería"], businessTypeId: "bakery" },
-  { id: "donut_shop", nameEn: "Donut Shop", nameEs: "Tienda de donas", synonymsEn: ["doughnut shop"], synonymsEs: ["donas"], businessTypeId: "bakery" },
+  { id: "donut_shop", nameEn: "Donut Shop", nameEs: "Tienda de donas", synonymsEn: ["doughnut shop"], synonymsEs: ["donas"], businessTypeId: "dessert_shop" },
   { id: "bagel_shop", nameEn: "Bagel Shop", nameEs: "Tienda de bagels", synonymsEn: ["bagel bakery"], synonymsEs: ["bagels"], businessTypeId: "bakery" },
   { id: "winery", nameEn: "Winery", nameEs: "Viñedo / Bodega de vino", synonymsEn: ["wine tasting room"], synonymsEs: ["sala de cata de vino"], businessTypeId: "bar" },
   { id: "distillery", nameEn: "Distillery", nameEs: "Destilería", synonymsEn: ["distillery tasting room"], synonymsEs: ["sala de cata de licores"], businessTypeId: "bar" },
@@ -418,7 +446,7 @@ export const TRADES: TradeEntry[] = [
   { id: "seafood_market", nameEn: "Seafood Market", nameEs: "Pescadería", synonymsEn: ["fish market"], synonymsEs: ["mariscos frescos"], businessTypeId: "grocery_market" },
   { id: "cheese_shop", nameEn: "Cheese Shop", nameEs: "Quesería", synonymsEn: ["specialty cheese store"], synonymsEs: ["tienda de quesos"], businessTypeId: "grocery_market" },
   { id: "spice_shop", nameEn: "Spice Shop", nameEs: "Tienda de especias", synonymsEn: ["specialty spice store"], synonymsEs: ["especias"], businessTypeId: "grocery_market" },
-  { id: "candy_shop", nameEn: "Candy Shop", nameEs: "Dulcería", synonymsEn: ["chocolatier", "sweet shop"], synonymsEs: ["chocolatería", "dulces"], businessTypeId: "retail_boutique" },
+  { id: "candy_shop", nameEn: "Candy Shop", nameEs: "Dulcería", synonymsEn: ["chocolatier", "sweet shop"], synonymsEs: ["chocolatería", "dulces"], businessTypeId: "dessert_shop" },
   { id: "food_truck", nameEn: "Food Truck", nameEs: "Camión de comida", synonymsEn: ["food cart", "mobile food vendor"], synonymsEs: ["food truck", "carrito de comida"], businessTypeId: "restaurant" },
   { id: "food_hall_market", nameEn: "Food Hall / Market Stalls", nameEs: "Mercado gastronómico", synonymsEn: ["food market stalls"], synonymsEs: ["mercado de comida"], businessTypeId: "restaurant" },
   { id: "meal_prep_delivery", nameEn: "Meal Prep & Delivery Service", nameEs: "Servicio de comidas preparadas a domicilio", synonymsEn: ["meal prep company"], synonymsEs: ["comidas preparadas"], businessTypeId: "restaurant" },

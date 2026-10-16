@@ -9,6 +9,10 @@ import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale, t } from "@/lib/i18n";
 import { BusinessScoreView, type AssistantEmbedData } from "./BusinessScoreView";
+import { WebsiteOnlyOverview } from "./WebsiteOnlyOverview";
+import { getListingMode } from "@/lib/listingMode";
+import { createClient } from "@/lib/supabase/server";
+import { parseWebsiteAnalysis } from "@/lib/scoring";
 
 export default async function BusinessPage({ params }: { params: { id: string } }) {
   // getBusinessSummary is awaited separately (not folded into the
@@ -55,6 +59,25 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     );
   }
 
+  // Day 2b: no Google listing — the website alone, clearly labeled; no
+  // PostScore, grade, history, competitor rank or PostAI (all of those
+  // read the listing).
+  if ((await getListingMode(createClient(), params.id)) === "website_only") {
+    const websiteCategory = scored.result.breakdown.categories.find((c) => c.id === "website") ?? null;
+    return (
+      <DashboardShell business={scored.business}>
+        <WebsiteOnlyOverview
+          businessId={params.id}
+          businessName={scored.business.name}
+          website={scored.business.website}
+          websiteCategory={websiteCategory}
+          websiteFixes={scored.result.suggestions.filter((s) => s.category === "website")}
+          checkedAt={parseWebsiteAnalysis(scored.business.website_analysis_json)?.checkedAt ?? null}
+        />
+      </DashboardShell>
+    );
+  }
+
   const [history, recentSnapshots, assistantPageData, benchmark, gbpStatus] = await Promise.all([
     getScoreHistory(params.id),
     getRecentScoreSnapshots(params.id, 2),
@@ -90,7 +113,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
         assistant={assistant}
         benchmark={benchmark}
         gbpConnected={gbpStatus.status === "ok" && gbpStatus.connected}
-        referralOk={profile.referralOk}
+        profileTools={{ referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk }}
       />
     </DashboardShell>
   );

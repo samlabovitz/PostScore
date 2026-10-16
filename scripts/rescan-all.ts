@@ -256,7 +256,10 @@ async function main() {
     process.exit(1);
   }
 
-  const businesses: BusinessRow[] = limit ? allBusinesses.slice(0, limit) : allBusinesses;
+  // Day 2b: a website-only business (listing_mode = 'website_only') has
+  // no Google listing to re-fetch — never part of a bulk Google re-scan.
+  const googleBusinesses = allBusinesses.filter((b) => (b as { listing_mode?: string }).listing_mode !== "website_only");
+  const businesses: BusinessRow[] = limit ? googleBusinesses.slice(0, limit) : googleBusinesses;
 
   const withCompetitors = args.includes("--with-competitors");
   const competitorsOnly = args.includes("--competitors-only");

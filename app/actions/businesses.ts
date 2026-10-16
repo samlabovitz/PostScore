@@ -12,7 +12,9 @@ import { checkWebsiteHttps } from "@/lib/websiteHttps";
 import { collectWebsiteAnalysis } from "@/lib/websiteAnalysis";
 import { uploadWebsiteScreenshots } from "@/lib/websiteScreenshotUpload";
 import { bizProfileById, resolveBizProfile } from "@/config/bizProfiles";
-import { RETAIL_BUSINESS_TYPE_IDS, RETAIL_SERVICES_KEYWORDS } from "@/lib/pagePresenceDetection";
+import { extraServicesKeywordsFor } from "@/lib/pagePresenceDetection";
+import { isMissingColumnError, parseListingMode } from "@/lib/listingMode";
+import { parsePublicWebsiteUrl } from "@/lib/publicUrl";
 import {
   businessRowToScoringInput,
   carryForwardMobilePerformance,
@@ -64,7 +66,10 @@ export async function saveBusiness(
   // "Something else" (or never open the typeahead), so Google-category
   // auto-detection is what resolveBizProfile() falls back to either way.
   businessTypeOverride?: string | null,
-  tradeId?: string | null
+  tradeId?: string | null,
+  // Day 2b: the owner's website-only business that this Google listing
+  // belongs to — it becomes a normal business (same id, same history).
+  attachToBusinessId?: string | null
 ): Promise<SaveBusinessResult> {
   const supabase = createClient();
 
@@ -77,12 +82,216 @@ export async function saveBusiness(
     return { status: "unauthenticated" };
   }
 
+  if (attachToBusinessId) {
+    const attached = await attachListingToWebsiteOnly(supabase, user.id, attachToBusinessId, place.placeId);
+    if (attached.status !== "ok") return { status: "error", message: attached.message };
+  }
+
   const result = await saveBusinessWithClient(supabase, user.id, place, language, businessTypeOverride, tradeId);
   // Part B: a newly added business gets its first competitor scan right
   // away, so the Competitors page has real data — once ever (no-op when
   // one is already saved). Never fails the save.
   if (result.status === "saved") await ensureFirstCompetitorScanWithClient(supabase, result.businessId);
   return result;
+}
+
+/** The follow-up after a scan that attempted screenshots: upload them
+ * and record the attempt (shared by both save paths — see the comments
+ * inside on why an attempt is recorded even when it fails). */
+async function finishAutoScreenshots(
+  supabase: SupabaseClient,
+  businessId: string,
+  websiteAnalysis: WebsiteAnalysis,
+  analysis: Awaited<ReturnType<typeof collectWebsiteAnalysis>> | null
+): Promise<void> {
+  // Ownership invariant: every storage path uploadWebsiteScreenshots
+  // writes to is derived only from businessId, the id of the row the
+  // caller just saved for its owner — never from anything
+  // client-supplied. That's what makes it safe for that
+  // helper to write with the service-role client, which bypasses RLS
+  // entirely: ownership was already proven before we get here (by the
+  // interactive path's own session, or by the cron caller's own
+  // businesses-table lookup — see saveBusinessWithClient's doc comment).
+  //
+  // This runs (and stamps lastScreenshotRefreshAt below) even if
+  // analysis.screenshotBytes/additionalPages both came back empty — a
+  // capture ATTEMPT happened this scan, and that's what must be
+  // recorded, so a fully-failed first attempt doesn't get silently
+  // retried (and re-billed) on every regular re-scan afterward. The
+  // one honest way to retry a failed capture is the rate-limited
+  // "Refresh screenshots" action.
+  const { screenshotUrl, additionalPages } = await uploadWebsiteScreenshots(businessId, {
+    screenshotBytes: analysis?.screenshotBytes ?? null,
+    additionalPages: analysis?.additionalPages ?? [],
+  });
+
+  const lastScreenshotRefreshAt = new Date().toISOString();
+  const { error: followUpError } = await supabase
+    .from("businesses")
+    .update({
+      website_analysis_json: {
+        ...websiteAnalysis,
+        screenshotUrl,
+        additionalPages,
+        lastScreenshotRefreshAt,
+        screenshotHttpStatus: analysis?.screenshotHttpStatus ?? null,
+        screenshotCaptureLog: { at: lastScreenshotRefreshAt, calls: analysis?.screenshotCalls ?? 0, source: "auto" },
+      },
+    })
+    .eq("id", businessId);
+
+  if (followUpError) {
+    console.error(
+      `[saveBusiness] follow-up update writing screenshotUrl/additionalPages/lastScreenshotRefreshAt failed: ${followUpError.message}`
+    );
+  }
+}
+
+/**
+ * The website half of a save (Day 2b: shared by a normal Google-listing
+ * save and the website-only mode, so both analyze a site the same way):
+ * screenshot/render budgets, HTTPS, the full website analysis, and the
+ * saved WebsiteAnalysis. `listingWebsite` is the Google listing's own
+ * URL (null in website-only mode) — only it can be marked a broken link.
+ */
+async function analyzeWebsiteForSave(params: {
+  analysisUrl: string | null;
+  listingWebsite: string | null;
+  existingAnalysisJson: unknown;
+  skipScreenshots: boolean;
+  extraServicesKeywords: string[];
+  listingFacts: { phone: string | null; address: string | null; openingHoursPeriods: PlaceDetails["openingHoursPeriods"] };
+}) {
+  const { analysisUrl, listingWebsite, existingAnalysisJson, skipScreenshots, extraServicesKeywords, listingFacts } = params;
+  const existingAnalysis = analysisUrl ? parseWebsiteAnalysis(existingAnalysisJson ?? null) : null;
+  // Step 2d (see lib/screenshotBudget.ts): capture automatically only
+  // when this business has no screenshot and none was ever attempted —
+  // never because one is old — and only while this month's real
+  // ScreenshotOne usage leaves room under the cap. When skipped, the
+  // honest "no screenshot captured yet" state simply stays.
+  let captureScreenshots = !skipScreenshots && !!analysisUrl && needsAutoScreenshot(existingAnalysis);
+  if (captureScreenshots) {
+    captureScreenshots = canAutoCapture(await loadScreenshotCallsThisMonth(), screenshotAutoMonthlyCap());
+  }
+
+  // Step 2g: Browserless renders this scan may use — only with a key, and
+  // only while this month's real renders (all businesses) leave room
+  // under the cap. Whether a render actually happens is decided inside
+  // collectWebsiteAnalysis (JavaScript-only, reachable pages only).
+  const browserlessApiKey = process.env.BROWSERLESS_API_KEY || undefined;
+  const maxBrowserRenders =
+    browserlessApiKey && analysisUrl
+      ? rendersAllowedThisScan(await loadBrowserRendersThisMonth(), browserRenderMonthlyCap())
+      : 0;
+
+  const [httpsResult, analysis] = await Promise.all([
+    analysisUrl ? checkWebsiteHttps(analysisUrl) : Promise.resolve(null),
+    analysisUrl
+      ? collectWebsiteAnalysis(
+          analysisUrl,
+          {
+            pageSpeedApiKey: process.env.PAGESPEED_API_KEY,
+            screenshotApiKey: process.env.SCREENSHOT_API_KEY,
+            safeBrowsingApiKey: process.env.GOOGLE_SAFE_BROWSING_API_KEY,
+            browserlessApiKey,
+          },
+          { captureScreenshots, maxBrowserRenders, extraServicesKeywords },
+          listingFacts
+        )
+      : Promise.resolve(null),
+  ]);
+  const httpsStatus = httpsResult?.status ?? null;
+
+  // Only ever reuses a real PRIOR measurement when THIS scan's own
+  // PageSpeed attempt specifically timed out and that prior measurement
+  // is recent enough — see carryForwardMobilePerformance's own doc
+  // (lib/scoring.ts) for the real Blue Bottle Coffee case this fixes.
+  // Never applies when there's no website analysis at all (analysis is
+  // null) — existingAnalysis itself is also null in that case.
+  const { mobilePerformance, mobilePerformanceFailureReason } = analysis
+    ? carryForwardMobilePerformance(
+        analysis.mobilePerformance,
+        analysis.mobilePerformanceFailureReason,
+        existingAnalysis?.mobilePerformance
+      )
+    : { mobilePerformance: null, mobilePerformanceFailureReason: null };
+
+  // Step 2d (corrected after the real Wonder case): a soft 404 seen only
+  // by PageSpeed's automated Chrome NEVER marks the Google listing link
+  // broken — sites like Wonder show automated browsers an error page
+  // while real people get the real page. It's recorded only as "this
+  // site shows automated checks an error page" (couldn't check).
+  // The ONE way our plain fetch marks the listing link broken (Step 2d):
+  // the listing's own URL answered a genuine 404 or 410. Never 403/429/
+  // 503 or any bot-challenge signal — those stay "couldn't check".
+  const listingLinkMissing =
+    !!analysis?.contentFetchMissingPageStatus && !!listingWebsite && analysisUrl === listingWebsite;
+  const websiteTrustForSave = analysis
+    ? {
+        ...analysis.websiteTrust,
+        ...(analysis.pageSpeedSoftNotFoundUrl ? { automatedErrorPageUrl: analysis.pageSpeedSoftNotFoundUrl } : {}),
+        ...(listingLinkMissing ? { listingLinkBroken: true, listingLinkErrorPageUrl: listingWebsite } : {}),
+      }
+    : null;
+
+  // Step 2g: record this month's real renders for this business (added to
+  // any earlier renders this same month), and whether the findings were
+  // read from the page as a browser shows it.
+  const renderMonth = currentRenderMonth();
+  const priorRenders = existingAnalysis?.browserRenderLog?.month === renderMonth ? existingAnalysis.browserRenderLog.renders : 0;
+  const browserReadFields = {
+    ...(analysis && analysis.readViaBrowserChecks.length > 0 ? { readViaBrowserChecks: analysis.readViaBrowserChecks } : {}),
+    ...(analysis && (analysis.browserRenders > 0 || priorRenders > 0)
+      ? { browserRenderLog: { month: renderMonth, renders: priorRenders + analysis.browserRenders } }
+      : {}),
+  };
+
+  const checkedAt = new Date().toISOString();
+  const websiteAnalysis: WebsiteAnalysis | null = analysis
+    ? captureScreenshots
+      ? {
+          content: analysis.content,
+          mobilePerformance,
+          mobilePerformanceFailureReason,
+          contentFetchFailureReason: analysis.contentFetchFailureReason,
+          httpsUnreachableReason: httpsResult?.reason ?? null,
+          screenshotUrl: null, // filled in by the follow-up update below
+          additionalPages: [], // filled in by the follow-up update below
+          lastScreenshotRefreshAt: null, // filled in by the follow-up update below, once the capture attempt lands
+          // Real detection (Day 4 Step 2c) — see collectWebsiteAnalysis's
+          // own detectPagePresence. Always fresh, same as content above:
+          // unlike screenshots, this costs at most 2 extra, unbilled page
+          // fetches, so there's no reason to ever carry it forward stale.
+          aboutPresence: analysis.aboutPresence,
+          servicesPresence: analysis.servicesPresence,
+          // Real site-trust signals (Oct 10) — same "always fresh" reasoning
+          // as aboutPresence/servicesPresence above.
+          websiteTrust: websiteTrustForSave ?? analysis.websiteTrust,
+          ...browserReadFields,
+          checkedAt,
+        }
+      : {
+          content: analysis.content,
+          mobilePerformance,
+          mobilePerformanceFailureReason,
+          contentFetchFailureReason: analysis.contentFetchFailureReason,
+          httpsUnreachableReason: httpsResult?.reason ?? null,
+          // Regular re-scan: reuse whatever's already stored rather than
+          // spending another ScreenshotOne call — see captureScreenshots above.
+          screenshotUrl: existingAnalysis?.screenshotUrl ?? null,
+          additionalPages: existingAnalysis?.additionalPages ?? [],
+          lastScreenshotRefreshAt: existingAnalysis?.lastScreenshotRefreshAt ?? null,
+          // Same real detection, freshly re-run on every regular re-scan
+          // too — see the first branch's own comment above.
+          aboutPresence: analysis.aboutPresence,
+          servicesPresence: analysis.servicesPresence,
+          websiteTrust: websiteTrustForSave ?? analysis.websiteTrust,
+          ...browserReadFields,
+          checkedAt,
+        }
+    : null;
+
+  return { websiteAnalysis, httpsStatus, checkedAt, captureScreenshots, analysis };
 }
 
 /**
@@ -178,29 +387,10 @@ export async function saveBusinessWithClient(
       ? existingRow.verified_website_url.trim()
       : null;
   const analysisUrl = place.website || verifiedWebsiteUrl;
-  const existingAnalysis = analysisUrl ? parseWebsiteAnalysis(existingRow?.website_analysis_json ?? null) : null;
-  // Step 2d (see lib/screenshotBudget.ts): capture automatically only
-  // when this business has no screenshot and none was ever attempted —
-  // never because one is old — and only while this month's real
-  // ScreenshotOne usage leaves room under the cap. When skipped, the
-  // honest "no screenshot captured yet" state simply stays.
-  let captureScreenshots = !skipScreenshots && !!analysisUrl && needsAutoScreenshot(existingAnalysis);
-  if (captureScreenshots) {
-    captureScreenshots = canAutoCapture(await loadScreenshotCallsThisMonth(), screenshotAutoMonthlyCap());
-  }
-
-  // Step 2g: Browserless renders this scan may use — only with a key, and
-  // only while this month's real renders (all businesses) leave room
-  // under the cap. Whether a render actually happens is decided inside
-  // collectWebsiteAnalysis (JavaScript-only, reachable pages only).
-  const browserlessApiKey = process.env.BROWSERLESS_API_KEY || undefined;
-  const maxBrowserRenders =
-    browserlessApiKey && analysisUrl
-      ? rendersAllowedThisScan(await loadBrowserRendersThisMonth(), browserRenderMonthlyCap())
-      : 0;
 
   // Step 2g: a retail-type business's "services" are its brands and
-  // departments — extra Services keywords for those types only.
+  // departments; Day 2b: a community center's are its programs,
+  // memberships and camps — extra Services keywords for those types only.
   const resolvedTypeId = resolveBizProfile(
     place.primaryCategory,
     place.primaryType,
@@ -209,118 +399,16 @@ export async function saveBusinessWithClient(
     place.categories,
     place.name
   ).id;
-  const extraServicesKeywords = RETAIL_BUSINESS_TYPE_IDS.includes(resolvedTypeId) ? RETAIL_SERVICES_KEYWORDS : [];
+  const extraServicesKeywords = extraServicesKeywordsFor(resolvedTypeId);
 
-  const [httpsResult, analysis] = await Promise.all([
-    analysisUrl ? checkWebsiteHttps(analysisUrl) : Promise.resolve(null),
-    analysisUrl
-      ? collectWebsiteAnalysis(
-          analysisUrl,
-          {
-            pageSpeedApiKey: process.env.PAGESPEED_API_KEY,
-            screenshotApiKey: process.env.SCREENSHOT_API_KEY,
-            safeBrowsingApiKey: process.env.GOOGLE_SAFE_BROWSING_API_KEY,
-            browserlessApiKey,
-          },
-          { captureScreenshots, maxBrowserRenders, extraServicesKeywords },
-          {
-            phone: place.phone,
-            address: place.formattedAddress,
-            openingHoursPeriods: place.openingHoursPeriods,
-          }
-        )
-      : Promise.resolve(null),
-  ]);
-  const httpsStatus = httpsResult?.status ?? null;
-
-  // Only ever reuses a real PRIOR measurement when THIS scan's own
-  // PageSpeed attempt specifically timed out and that prior measurement
-  // is recent enough — see carryForwardMobilePerformance's own doc
-  // (lib/scoring.ts) for the real Blue Bottle Coffee case this fixes.
-  // Never applies when there's no website analysis at all (analysis is
-  // null) — existingAnalysis itself is also null in that case.
-  const { mobilePerformance, mobilePerformanceFailureReason } = analysis
-    ? carryForwardMobilePerformance(
-        analysis.mobilePerformance,
-        analysis.mobilePerformanceFailureReason,
-        existingAnalysis?.mobilePerformance
-      )
-    : { mobilePerformance: null, mobilePerformanceFailureReason: null };
-
-  // Step 2d (corrected after the real Wonder case): a soft 404 seen only
-  // by PageSpeed's automated Chrome NEVER marks the Google listing link
-  // broken — sites like Wonder show automated browsers an error page
-  // while real people get the real page. It's recorded only as "this
-  // site shows automated checks an error page" (couldn't check).
-  // The ONE way our plain fetch marks the listing link broken (Step 2d):
-  // the listing's own URL answered a genuine 404 or 410. Never 403/429/
-  // 503 or any bot-challenge signal — those stay "couldn't check".
-  const listingLinkMissing =
-    !!analysis?.contentFetchMissingPageStatus && !!place.website && analysisUrl === place.website;
-  const websiteTrustForSave = analysis
-    ? {
-        ...analysis.websiteTrust,
-        ...(analysis.pageSpeedSoftNotFoundUrl ? { automatedErrorPageUrl: analysis.pageSpeedSoftNotFoundUrl } : {}),
-        ...(listingLinkMissing ? { listingLinkBroken: true, listingLinkErrorPageUrl: place.website } : {}),
-      }
-    : null;
-
-  // Step 2g: record this month's real renders for this business (added to
-  // any earlier renders this same month), and whether the findings were
-  // read from the page as a browser shows it.
-  const renderMonth = currentRenderMonth();
-  const priorRenders = existingAnalysis?.browserRenderLog?.month === renderMonth ? existingAnalysis.browserRenderLog.renders : 0;
-  const browserReadFields = {
-    ...(analysis && analysis.readViaBrowserChecks.length > 0 ? { readViaBrowserChecks: analysis.readViaBrowserChecks } : {}),
-    ...(analysis && (analysis.browserRenders > 0 || priorRenders > 0)
-      ? { browserRenderLog: { month: renderMonth, renders: priorRenders + analysis.browserRenders } }
-      : {}),
-  };
-
-  const checkedAt = new Date().toISOString();
-  const websiteAnalysis: WebsiteAnalysis | null = analysis
-    ? captureScreenshots
-      ? {
-          content: analysis.content,
-          mobilePerformance,
-          mobilePerformanceFailureReason,
-          contentFetchFailureReason: analysis.contentFetchFailureReason,
-          httpsUnreachableReason: httpsResult?.reason ?? null,
-          screenshotUrl: null, // filled in by the follow-up update below
-          additionalPages: [], // filled in by the follow-up update below
-          lastScreenshotRefreshAt: null, // filled in by the follow-up update below, once the capture attempt lands
-          // Real detection (Day 4 Step 2c) — see collectWebsiteAnalysis's
-          // own detectPagePresence. Always fresh, same as content above:
-          // unlike screenshots, this costs at most 2 extra, unbilled page
-          // fetches, so there's no reason to ever carry it forward stale.
-          aboutPresence: analysis.aboutPresence,
-          servicesPresence: analysis.servicesPresence,
-          // Real site-trust signals (Oct 10) — same "always fresh" reasoning
-          // as aboutPresence/servicesPresence above.
-          websiteTrust: websiteTrustForSave ?? analysis.websiteTrust,
-          ...browserReadFields,
-          checkedAt,
-        }
-      : {
-          content: analysis.content,
-          mobilePerformance,
-          mobilePerformanceFailureReason,
-          contentFetchFailureReason: analysis.contentFetchFailureReason,
-          httpsUnreachableReason: httpsResult?.reason ?? null,
-          // Regular re-scan: reuse whatever's already stored rather than
-          // spending another ScreenshotOne call — see captureScreenshots above.
-          screenshotUrl: existingAnalysis?.screenshotUrl ?? null,
-          additionalPages: existingAnalysis?.additionalPages ?? [],
-          lastScreenshotRefreshAt: existingAnalysis?.lastScreenshotRefreshAt ?? null,
-          // Same real detection, freshly re-run on every regular re-scan
-          // too — see the first branch's own comment above.
-          aboutPresence: analysis.aboutPresence,
-          servicesPresence: analysis.servicesPresence,
-          websiteTrust: websiteTrustForSave ?? analysis.websiteTrust,
-          ...browserReadFields,
-          checkedAt,
-        }
-    : null;
+  const { websiteAnalysis, httpsStatus, checkedAt, captureScreenshots, analysis } = await analyzeWebsiteForSave({
+    analysisUrl,
+    listingWebsite: place.website,
+    existingAnalysisJson: existingRow?.website_analysis_json,
+    skipScreenshots,
+    extraServicesKeywords,
+    listingFacts: { phone: place.phone, address: place.formattedAddress, openingHoursPeriods: place.openingHoursPeriods },
+  });
 
   const { data, error } = await supabase
     .from("businesses")
@@ -371,47 +459,7 @@ export async function saveBusinessWithClient(
   }
 
   if (captureScreenshots && websiteAnalysis) {
-    // Ownership invariant: every storage path uploadWebsiteScreenshots
-    // writes to is derived only from data.id, the id just returned by
-    // the upsert above for a row owned by `ownerId` — never from
-    // anything client-supplied. That's what makes it safe for that
-    // helper to write with the service-role client, which bypasses RLS
-    // entirely: ownership was already proven before we get here (by the
-    // interactive path's own session, or by the cron caller's own
-    // businesses-table lookup — see saveBusinessWithClient's doc comment).
-    //
-    // This runs (and stamps lastScreenshotRefreshAt below) even if
-    // analysis.screenshotBytes/additionalPages both came back empty — a
-    // capture ATTEMPT happened this scan, and that's what must be
-    // recorded, so a fully-failed first attempt doesn't get silently
-    // retried (and re-billed) on every regular re-scan afterward. The
-    // one honest way to retry a failed capture is the rate-limited
-    // "Refresh screenshots" action.
-    const { screenshotUrl, additionalPages } = await uploadWebsiteScreenshots(data.id, {
-      screenshotBytes: analysis?.screenshotBytes ?? null,
-      additionalPages: analysis?.additionalPages ?? [],
-    });
-
-    const lastScreenshotRefreshAt = new Date().toISOString();
-    const { error: followUpError } = await supabase
-      .from("businesses")
-      .update({
-        website_analysis_json: {
-          ...websiteAnalysis,
-          screenshotUrl,
-          additionalPages,
-          lastScreenshotRefreshAt,
-          screenshotHttpStatus: analysis?.screenshotHttpStatus ?? null,
-          screenshotCaptureLog: { at: lastScreenshotRefreshAt, calls: analysis?.screenshotCalls ?? 0, source: "auto" },
-        },
-      })
-      .eq("id", data.id);
-
-    if (followUpError) {
-      console.error(
-        `[saveBusiness] follow-up update writing screenshotUrl/additionalPages/lastScreenshotRefreshAt failed: ${followUpError.message}`
-      );
-    }
+    await finishAutoScreenshots(supabase, data.id, websiteAnalysis, analysis);
   }
 
   return { status: "saved", businessId: data.id };
@@ -738,6 +786,9 @@ export interface MyBusinessRow {
    * business's row is somehow missing the scoring-relevant columns,
    * which shouldn't happen for a normally-saved business. */
   score: { total: number; grade: Grade } | null;
+  /** Day 2b: no Google listing — the list shows "Website only", never a
+   * PostScore (score is null for these). */
+  websiteOnly: boolean;
   /** The business's own real language column — display-only, passed
    * straight through. app/page.tsx uses this across the whole list to
    * decide the page's own locale (only when every business shares one
@@ -780,18 +831,218 @@ export async function listMyBusinesses(): Promise<ListMyBusinessesResult> {
     return { status: "ok", businesses: [] };
   }
 
+  // Read separately so the list still works before the Day 2b database
+  // update adds listing_mode (an error just means every row is "google").
+  const modes = await supabase.from("businesses").select("id, listing_mode");
+  const websiteOnlyIds = new Set(
+    (modes.error ? [] : (modes.data ?? []) as Array<{ id: string; listing_mode: unknown }>)
+      .filter((m) => parseListingMode(m.listing_mode) === "website_only")
+      .map((m) => m.id)
+  );
+
   const businesses: MyBusinessRow[] = data.map((row) => {
     const locale = normalizeLocale(row.language);
-    const breakdown = scoreBusiness(businessRowToScoringInput(row as BusinessScoringRow), locale);
+    const websiteOnly = websiteOnlyIds.has(row.id);
+    const breakdown = websiteOnly ? null : scoreBusiness(businessRowToScoringInput(row as BusinessScoringRow), locale);
     return {
       id: row.id,
       name: row.name,
       address: row.address,
       category: row.category,
-      score: { total: breakdown.total, grade: breakdown.grade },
+      score: breakdown ? { total: breakdown.total, grade: breakdown.grade } : null,
+      websiteOnly,
       language: row.language,
     };
   });
 
   return { status: "ok", businesses };
+}
+
+// ---------------------------------------------------------------------------
+// Day 2b: website-only businesses (no Google listing)
+// ---------------------------------------------------------------------------
+
+/**
+ * Turns the owner's website-only row into this Google listing's row
+ * (same id, so its history and settings stay) by giving it the place id
+ * first; saveBusinessWithClient's upsert then lands on it and fills in
+ * every listing field. Refused when it isn't the owner's website-only
+ * business, or the owner already added this listing separately.
+ */
+async function attachListingToWebsiteOnly(
+  supabase: SupabaseClient,
+  ownerId: string,
+  businessId: string,
+  placeId: string
+): Promise<{ status: "ok" } | { status: "error"; message: string }> {
+  const { data: row } = await supabase
+    .from("businesses")
+    .select("id, owner_id, listing_mode")
+    .eq("id", businessId)
+    .maybeSingle();
+  if (!row || row.owner_id !== ownerId || parseListingMode(row.listing_mode) !== "website_only") {
+    return { status: "error", message: "That business can't be linked to a Google listing." };
+  }
+  const { data: duplicate } = await supabase
+    .from("businesses")
+    .select("id")
+    .eq("owner_id", ownerId)
+    .eq("place_id", placeId)
+    .maybeSingle();
+  if (duplicate) return { status: "error", message: "You've already added this Google listing as a separate business." };
+  const { error } = await supabase
+    .from("businesses")
+    .update({ place_id: placeId, listing_mode: "google" })
+    .eq("id", businessId)
+    .eq("owner_id", ownerId);
+  return error ? { status: "error", message: error.message } : { status: "ok" };
+}
+
+export interface WebsiteOnlyInput {
+  name: string;
+  location: string;
+  websiteUrl: string;
+  language?: Locale;
+  businessTypeOverride?: string | null;
+  tradeId?: string | null;
+}
+
+export type SaveWebsiteOnlyResult =
+  | { status: "saved"; businessId: string }
+  | { status: "invalid_url" }
+  | { status: "not_enabled" }
+  | { status: "unauthenticated" }
+  | { status: "error"; message: string };
+
+/**
+ * Saves a business that has no Google listing: only its website is
+ * analyzed (the same analysis a listing's website gets), no Google call
+ * is made, and no `scores` row is written — there is no PostScore
+ * without a listing. Shown everywhere as "Website score — no Google
+ * listing". Needs the Day 2b database update (listing_mode, nullable
+ * place_id); before it, this returns not_enabled and saves nothing.
+ */
+export async function saveWebsiteOnlyBusinessWithClient(
+  supabase: SupabaseClient,
+  ownerId: string,
+  input: WebsiteOnlyInput,
+  skipScreenshots: boolean = false
+): Promise<SaveWebsiteOnlyResult> {
+  const url = parsePublicWebsiteUrl(input.websiteUrl);
+  if (!url) return { status: "invalid_url" };
+  const name = input.name.trim().slice(0, 200);
+  if (!name) return { status: "error", message: "A business name is required." };
+  if (input.businessTypeOverride != null && !bizProfileById(input.businessTypeOverride)) {
+    return { status: "error", message: `"${input.businessTypeOverride}" isn't a supported business type.` };
+  }
+
+  // Checked before any paid analysis: the column only exists after the
+  // database update.
+  const probe = await supabase.from("businesses").select("listing_mode").limit(1);
+  if (isMissingColumnError(probe.error)) return { status: "not_enabled" };
+
+  const typeId = resolveBizProfile(null, null, input.businessTypeOverride ?? null, "en", null, name).id;
+  const { websiteAnalysis, httpsStatus, checkedAt, captureScreenshots, analysis } = await analyzeWebsiteForSave({
+    analysisUrl: url.toString(),
+    listingWebsite: null,
+    existingAnalysisJson: null,
+    skipScreenshots,
+    extraServicesKeywords: extraServicesKeywordsFor(typeId),
+    listingFacts: { phone: null, address: null, openingHoursPeriods: null },
+  });
+
+  const { data, error } = await supabase
+    .from("businesses")
+    .insert({
+      owner_id: ownerId,
+      place_id: null,
+      listing_mode: "website_only",
+      name,
+      address: input.location.trim().slice(0, 200) || null,
+      website: url.toString(),
+      https_status: httpsStatus,
+      https_checked_at: httpsStatus ? checkedAt : null,
+      website_analysis_json: websiteAnalysis,
+      website_analysis_checked_at: websiteAnalysis ? checkedAt : null,
+      language: normalizeLocale(input.language),
+      business_type_override: input.businessTypeOverride ?? null,
+      trade_id: input.tradeId ?? null,
+    })
+    .select("id")
+    .single();
+  if (error || !data) {
+    if (isMissingColumnError(error) || error?.code === "23502") return { status: "not_enabled" };
+    return { status: "error", message: error?.message ?? "Save failed." };
+  }
+  if (captureScreenshots && websiteAnalysis) await finishAutoScreenshots(supabase, data.id, websiteAnalysis, analysis);
+  return { status: "saved", businessId: data.id };
+}
+
+export async function saveWebsiteOnlyBusiness(input: WebsiteOnlyInput): Promise<SaveWebsiteOnlyResult> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { status: "unauthenticated" };
+  return saveWebsiteOnlyBusinessWithClient(supabase, user.id, input);
+}
+
+export type RecheckWebsiteOnlyResult =
+  | { status: "ok" }
+  | { status: "too_soon" }
+  | { status: "not_found" }
+  | { status: "unauthenticated" }
+  | { status: "error"; message: string };
+
+/** A website re-check uses PageSpeed and render budget — at most one per
+ * this many minutes per business. */
+const WEBSITE_RECHECK_COOLDOWN_MINUTES = 10;
+
+/** "Re-check my website" for a website-only business — the website
+ * analysis again, no Google call (there's no listing to re-fetch). */
+export async function recheckWebsiteOnlyBusinessWithClient(
+  supabase: SupabaseClient,
+  businessId: string,
+  skipScreenshots: boolean = false
+): Promise<RecheckWebsiteOnlyResult> {
+  const { data: row } = await supabase
+    .from("businesses")
+    .select("id, name, website, listing_mode, website_analysis_json, website_analysis_checked_at, business_type_override")
+    .eq("id", businessId)
+    .maybeSingle();
+  if (!row || parseListingMode(row.listing_mode) !== "website_only") return { status: "not_found" };
+  const lastCheck = row.website_analysis_checked_at ? Date.parse(row.website_analysis_checked_at) : NaN;
+  if (Number.isFinite(lastCheck) && Date.now() - lastCheck < WEBSITE_RECHECK_COOLDOWN_MINUTES * 60_000) return { status: "too_soon" };
+  const url = parsePublicWebsiteUrl(row.website);
+  if (!url) return { status: "error", message: "This business's website address isn't valid." };
+  const typeId = resolveBizProfile(null, null, row.business_type_override ?? null, "en", null, row.name).id;
+  const { websiteAnalysis, httpsStatus, checkedAt, captureScreenshots, analysis } = await analyzeWebsiteForSave({
+    analysisUrl: url.toString(),
+    listingWebsite: null,
+    existingAnalysisJson: row.website_analysis_json,
+    skipScreenshots,
+    extraServicesKeywords: extraServicesKeywordsFor(typeId),
+    listingFacts: { phone: null, address: null, openingHoursPeriods: null },
+  });
+  const { error } = await supabase
+    .from("businesses")
+    .update({
+      https_status: httpsStatus,
+      https_checked_at: httpsStatus ? checkedAt : null,
+      website_analysis_json: websiteAnalysis,
+      website_analysis_checked_at: websiteAnalysis ? checkedAt : null,
+    })
+    .eq("id", businessId);
+  if (error) return { status: "error", message: error.message };
+  if (captureScreenshots && websiteAnalysis) await finishAutoScreenshots(supabase, businessId, websiteAnalysis, analysis);
+  return { status: "ok" };
+}
+
+export async function recheckWebsiteOnlyBusiness(businessId: string): Promise<RecheckWebsiteOnlyResult> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { status: "unauthenticated" };
+  return recheckWebsiteOnlyBusinessWithClient(supabase, businessId);
 }

@@ -139,3 +139,49 @@ ${GS_LABEL("Our Products")}
     expect(stripSiteBuilderBoilerplate("Fine wines. Report abuse")).toBe("Fine wines.");
   });
 });
+
+import { COMMUNITY_SERVICES_KEYWORDS, extraServicesKeywordsFor } from "./pagePresenceDetection";
+
+// Day 2b: the real Minnesota JCC homepage (minnesotajcc.org, fetched once
+// 2026-10-16). Its desktop menu "Programs · Events · Schedules · About"
+// is plain <li> text built by JavaScript — not links — so the menu alone
+// can never be followed. Its real links are Membership, Schedules, Camp.
+describe("Day 2b — community center Services keywords (only for that type)", () => {
+  const JCC_HOME = `<html><body><header><ul><li>Programs</li><li>Events</li><li>Schedules</li><li>About</li></ul>
+<a href="https://minnesotajcc.org/membership-special">Membership</a><a href="https://minnesotajcc.org/give">Donate</a></header>
+<main><h1>Welcome to the J</h1><p>Building Community, Together</p></main></body></html>`;
+  const candidates = [
+    { label: "Membership", url: "https://minnesotajcc.org/membership/" },
+    { label: "Schedules", url: "https://minnesotajcc.org/schedules/" },
+    { label: "Camp", url: "https://minnesotajcc.org/camps/" },
+    { label: "Donate", url: "https://minnesotajcc.org/give" },
+  ];
+  const MEMBERSHIP_PAGE = `<html><body><main><h1>Membership</h1><p>Join the J and get access to fitness, aquatics, classes and community programs for every age.</p>
+<ul><li>Adult membership — $89 per month, full facility access and group fitness classes</li>
+<li>Family membership — $139 per month, includes two adults and children under 26</li>
+<li>Senior membership — $69 per month for members 65 and older, with SilverSneakers accepted</li>
+<li>Youth membership — $39 per month for ages 12 to 18, includes teen center access</li></ul></main></body></html>`;
+  const fetchPages = (async (input: string | URL) => {
+    const url = String(input);
+    const html = url.includes("/membership") ? MEMBERSHIP_PAGE : "<html><body><main><p>Coming soon</p></main></body></html>";
+    return { ok: true, status: 200, url, headers: new Headers({ "content-type": "text/html" }), text: async () => html };
+  }) as unknown as typeof fetch;
+  const run = (extra: string[]) =>
+    detectPagePresence("services", JCC_HOME, new URL("https://minnesotajcc.org/"), candidates, newPresenceBudget(), fetchPages, null, extra);
+
+  test("with the community keywords, Services is found on the real Membership page", async () => {
+    const result = await run(extraServicesKeywordsFor("community_center"));
+    expect(result.state).toBe("found");
+    expect(result.url).toContain("/membership/");
+  });
+
+  test("without them (any other type), the same site has no Services page — unchanged behavior", async () => {
+    expect((await run(extraServicesKeywordsFor("restaurant"))).state).not.toBe("found");
+  });
+
+  test("the keyword list is bilingual and only used for community centers", () => {
+    expect(COMMUNITY_SERVICES_KEYWORDS).toEqual(expect.arrayContaining(["programs", "membership", "activities", "camps", "schedules", "programas", "membresía", "actividades", "campamentos", "horarios"]));
+    expect(extraServicesKeywordsFor("gym_fitness")).toEqual([]);
+    expect(extraServicesKeywordsFor("community_center")).toBe(COMMUNITY_SERVICES_KEYWORDS);
+  });
+});

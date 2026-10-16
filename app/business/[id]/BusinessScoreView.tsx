@@ -8,7 +8,7 @@ import {
   IconChevronDown,
   IconRefresh,
 } from "@tabler/icons-react";
-import { buildGrowBannerTools } from "@/lib/growBannerTools";
+import { buildGrowBannerTools, type ProfileTools } from "@/lib/growBannerTools";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
@@ -555,9 +555,9 @@ function ListingChangesFeed({ snapshots }: { snapshots: ScoreSnapshot[] }) {
  * text-sm or dropping a chip, Spanish falls back to the same
  * overflow-x-auto scrolling every narrower screen already uses.
  */
-function GrowMoreCustomersBanner({ businessId, referralOk }: { businessId: string; referralOk: boolean }) {
+function GrowMoreCustomersBanner({ businessId, profileTools }: { businessId: string; profileTools: ProfileTools }) {
   const locale = useLocale();
-  const tools = buildGrowBannerTools(businessId, referralOk);
+  const tools = buildGrowBannerTools(businessId, profileTools);
 
   return (
     <Card className="min-w-0 px-4 py-2.5">
@@ -615,7 +615,7 @@ export function BusinessScoreView({
   assistant,
   benchmark,
   gbpConnected,
-  referralOk,
+  profileTools,
 }: {
   businessId: string;
   business: BusinessRecord;
@@ -625,11 +625,12 @@ export function BusinessScoreView({
   assistant: AssistantEmbedData;
   benchmark: GetLocalBenchmarkResult;
   gbpConnected: boolean;
-  /** BizProfile.referralOk (config/bizProfiles.ts) — the same flag that
-   * already hides the Growth page's own "Refer a friend" tab. Passed
-   * through to the growth strip's Referrals chip so it never links to a
-   * tab that isn't there for this business (lawyer today). */
-  referralOk: boolean;
+  /** BizProfile.referralOk/couponsOk/pricingOk (config/bizProfiles.ts) —
+   * the same flags that hide the Growth page's Refer a friend / Coupons
+   * tabs and the price check. Passed through to the growth strip so it
+   * never links to a tool that isn't there for this business (lawyer:
+   * no referrals; place of worship: none of the three). */
+  profileTools: ProfileTools;
 }) {
   const locale = useLocale();
   const { breakdown, projectedBreakdown } = result;
@@ -717,7 +718,7 @@ export function BusinessScoreView({
         </Card>
       )}
 
-      <GrowMoreCustomersBanner businessId={businessId} referralOk={referralOk} />
+      <GrowMoreCustomersBanner businessId={businessId} profileTools={profileTools} />
 
       <SectionHeading title={t(locale, "dashboard.overview.atAGlanceHeading")} />
       <Card className="p-5">

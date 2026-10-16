@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
 import { getBusinessSummary } from "@/app/actions/businesses";
@@ -16,6 +17,9 @@ import { normalizeLocale } from "@/lib/i18n";
 import { GrowthView } from "./GrowthView";
 
 export default async function GrowthPage({ params }: { params: { id: string } }) {
+  const websiteOnly = await websiteOnlyGuard(params.id, "growth");
+  if (websiteOnly) return websiteOnly;
+
   const summary = await getBusinessSummary(params.id);
 
   if (summary.status === "unauthenticated") {
@@ -70,7 +74,7 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   const promosResult = await listActivePromos(params.id);
   const initialPromos = promosResult.status === "ok" ? promosResult.promos : [];
 
-  const growthMovesResult = await getGrowthMoves(params.id, scored.result.breakdown, profile.referralOk, locale);
+  const growthMovesResult = await getGrowthMoves(params.id, scored.result.breakdown, profile, locale);
   // The price check always shows for every business (Step 2f) — even if
   // the rest of the growth signals couldn't load.
   const growthMoves =

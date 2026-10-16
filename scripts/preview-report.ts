@@ -54,6 +54,7 @@
 // the id is the segment right after /business/ in the URL
 // (postscoree.netlify.app/business/<businessId>).
 
+import type { ProfileTools } from "../lib/growBannerTools";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -251,7 +252,7 @@ function computeTopActionPlanTask(
 async function computeFiringGrowthMoves(
   businessId: string,
   breakdown: ScoreBreakdown,
-  referralOk: boolean,
+  profileTools: ProfileTools,
   competitorScanId: string | null,
   locale: ReturnType<typeof normalizeLocale>
 ): Promise<FocusGrowthMove[]> {
@@ -265,7 +266,9 @@ async function computeFiringGrowthMoves(
   const hasWebsiteCheck = breakdown.checks.find((c) => c.id === "website.has_website");
   const signals: GrowthMoveSignals = {
     businessId,
-    referralOk,
+    referralOk: profileTools.referralOk,
+    couponsOk: profileTools.couponsOk,
+    pricingOk: profileTools.pricingOk,
     hasEverCreatedPromo: (promoResult.data?.length ?? 0) > 0,
     hasEverCreatedReferral: (referralResult.data?.length ?? 0) > 0,
     pricingAssessedAt: businessResult.data?.pricing_assessed_at ?? null,
@@ -411,7 +414,7 @@ async function main() {
   const growthMoves = await computeFiringGrowthMoves(
     businessId,
     currentForDisplay.breakdown,
-    profile.referralOk,
+    profile,
     competitorScanId,
     locale
   );

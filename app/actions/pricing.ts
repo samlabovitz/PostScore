@@ -16,7 +16,7 @@ import {
   type PricingAssessmentPayload,
 } from "@/lib/pricing";
 import { callAnthropicMessage } from "@/lib/anthropicClient";
-import { normalizeLocale, type Locale } from "@/lib/i18n";
+import { normalizeLocale, t, type Locale } from "@/lib/i18n";
 import { priceLevelToSymbol } from "@/lib/priceLevel";
 
 const PRICE_COLUMNS = "id, business_id, service, price, created_at";
@@ -291,14 +291,20 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
     priceLevelContext = { ...saved, subjectSymbol: priceLevelToSymbol(row.price_level) };
   }
 
-  const businessTypeLabel = resolveBizProfile(
+  const pricingProfile = resolveBizProfile(
     row.category,
     row.primary_type,
     row.business_type_override,
     locale,
     row.categories,
     row.name
-  ).label;
+  );
+  // No price check for a type it doesn't fit (a place of worship) —
+  // refused before the paid AI call, matching the Pricing page.
+  if (!pricingProfile.pricingOk) {
+    return { status: "error", message: t(locale, "dashboard.pricing.notApplicable") };
+  }
+  const businessTypeLabel = pricingProfile.label;
   const prompt = buildPricingPrompt({
     businessTypeLabel,
     services,
