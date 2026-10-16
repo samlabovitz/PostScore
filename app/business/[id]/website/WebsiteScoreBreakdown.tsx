@@ -18,8 +18,19 @@ import { reachabilityReasonMessageKey } from "@/lib/websiteReachability";
 import { hackSignsFor } from "@/lib/siteSecurity";
 import { SiteSecurityDetails } from "./SiteSecurityDetails";
 import { WebsiteCoverageNote } from "@/components/scoring/WebsiteCoverageNote";
-import { t, tPlural, useLocale, type MessageKey } from "@/lib/i18n";
+import { t, tPlural, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
 import { checkAnchorId } from "@/lib/postaiLinks";
+import { websiteFixPlan, type WebsiteFix, type WebsiteFixPlan } from "@/lib/websiteFixes";
+import { detectWebsiteBuilder, WEBSITE_BUILDER_NAMES } from "@/lib/websiteBuilder";
+
+function builderFromAddress(siteUrl: string | null) {
+  if (!siteUrl) return null;
+  try {
+    return detectWebsiteBuilder({ html: null, hostname: new URL(siteUrl).hostname });
+  } catch {
+    return null;
+  }
+}
 
 /** Checks whose "excluded" state has a real, specific reason worth its
  * own honest sentence (Day 4 Part 3c) — mapped from the real stored
@@ -131,15 +142,46 @@ function SignalChip({ label, value }: { label: MessageKey; value: boolean | null
   );
 }
 
+/** "PostScore guides you · ~5–10 min" / "Needs a web person" / … */
+function fixLabel(fix: WebsiteFix, locale: Locale): string {
+  if (fix.kind === "postscore_does") return t(locale, "dashboard.websiteFix.kind.postscoreDoes");
+  if (fix.kind === "web_person") return t(locale, "dashboard.websiteFix.kind.webPerson");
+  return t(locale, "dashboard.websiteFix.kind.guided", { min: fix.minutes?.min ?? 0, max: fix.minutes?.max ?? 0 });
+}
+
+/** "N fixes you can do yourself (~X–Y min) · M need a web person". */
+export function websiteFixSummary(plan: WebsiteFixPlan, locale: Locale): string {
+  const { selfCount: self, webPersonCount: web } = plan;
+  const minutes = { min: plan.selfMinutes.min, max: plan.selfMinutes.max };
+  if (self === 0 && web === 0) return t(locale, "dashboard.websiteFix.summary.none");
+  if (web === 0) {
+    return self === 1
+      ? t(locale, "dashboard.websiteFix.summary.selfOnly.one", minutes)
+      : t(locale, "dashboard.websiteFix.summary.selfOnly.other", { ...minutes, count: self });
+  }
+  if (self === 0) {
+    return web === 1
+      ? t(locale, "dashboard.websiteFix.summary.webOnly.one")
+      : t(locale, "dashboard.websiteFix.summary.webOnly.other", { count: web });
+  }
+  if (self === 1 && web === 1) return t(locale, "dashboard.websiteFix.summary.bothOne", minutes);
+  if (self === 1) return t(locale, "dashboard.websiteFix.summary.selfOne", { ...minutes, webCount: web });
+  if (web === 1) return t(locale, "dashboard.websiteFix.summary.webOne", { ...minutes, selfCount: self });
+  return t(locale, "dashboard.websiteFix.summary.both", { ...minutes, selfCount: self, webCount: web });
+}
+
 function CheckRow({
   check,
   suggestion,
+  fixes,
   websiteAnalysis,
   siteUrl,
   businessName,
 }: {
   check: CheckResult;
   suggestion: Suggestion | undefined;
+  /** This check's fix(es) — one per missing item (lib/websiteFixes.ts). */
+  fixes: WebsiteFix[];
   websiteAnalysis: WebsiteAnalysis | null;
   siteUrl: string | null;
   businessName: string | null;
@@ -206,6 +248,21 @@ function CheckRow({
 
         {(state === "partial" || state === "zero") && suggestion && !spamFinding && (
           <p className="mt-1 text-[12.5px] text-ink-mute">{suggestion.advice}</p>
+        )}
+        {fixes.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {fixes.map((fix, i) => (
+              <span
+                key={`${fix.gap ?? "fix"}-${i}`}
+                className={cn(
+                  "rounded-md px-1.5 py-0.5 text-[11.5px] font-medium",
+                  fix.kind === "web_person" ? "bg-ink/5 text-ink-soft" : "bg-brass/10 text-ink"
+                )}
+              >
+                {fixLabel(fix, locale)}
+              </span>
+            ))}
+          </div>
         )}
 
         {spamFinding && trust && (
@@ -328,6 +385,12 @@ export function WebsiteScoreBreakdown({
   // counted for or against.
   const totalMaxPoints = websiteCategory.checks.reduce((sum, c) => sum + c.maxPoints, 0);
   const excludedPoints = roundToOneDecimal(totalMaxPoints - websiteCategory.possiblePoints);
+  // Day 4 Step 3: every losing check as the fix(es) the owner faces.
+  // Saved on each scan; before a site's first scan with detection, its
+  // own address can still name a builder (sites.google.com, *.wixsite.com).
+  const fromAddress = websiteAnalysis?.builder ? null : builderFromAddress(siteUrl);
+  const builder = websiteAnalysis?.builder ?? (fromAddress?.id ? fromAddress : undefined);
+  const plan = websiteFixPlan(websiteCategory.checks, builder?.id ?? null);
 
   const technicalChecks = websiteCategory.checks.filter((c) => TECHNICAL_CHECK_IDS.includes(c.id));
   const contentChecks = websiteCategory.checks.filter((c) => CONTENT_CHECK_IDS.includes(c.id));
@@ -376,6 +439,14 @@ export function WebsiteScoreBreakdown({
               ? tPlural(locale, "dashboard.website.excludedPoints", excludedPoints)
               : t(locale, "dashboard.website.allVerified")}
           </p>
+          <p className="text-[13.5px] font-semibold text-ink">{websiteFixSummary(plan, locale)}</p>
+          <p className="text-[12.5px] text-ink-mute">
+            {builder === undefined
+              ? t(locale, "dashboard.websiteFix.builder.notYet")
+              : builder.id
+                ? t(locale, "dashboard.websiteFix.builder.detected", { builder: WEBSITE_BUILDER_NAMES[builder.id] })
+                : t(locale, "dashboard.websiteFix.builder.notDetected")}
+          </p>
         </div>
       </Card>
 
@@ -394,6 +465,7 @@ export function WebsiteScoreBreakdown({
                       key={check.id}
                       check={check}
                       suggestion={websiteSuggestions.find((s) => s.checkId === check.id)}
+                      fixes={plan.fixes.filter((f) => f.checkId === check.id)}
                       websiteAnalysis={websiteAnalysis}
                       siteUrl={siteUrl}
                       businessName={businessName}

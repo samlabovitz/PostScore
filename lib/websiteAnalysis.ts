@@ -16,6 +16,7 @@
 // misconfigured check degrades to null so the caller can honestly
 // exclude it from scoring, never fabricate a value or fail the save.
 
+import { detectWebsiteBuilder, type WebsiteBuilderDetection } from "@/lib/websiteBuilder";
 import { POSTSCORE_USER_AGENT } from "./userAgent";
 import { analyzeWebsiteHtml, detectContactLinks, detectSocialProfiles } from "./websiteContentAnalysis";
 import { createRenderingFetch } from "./browserRender";
@@ -1118,6 +1119,9 @@ interface RawPageSpeedResponse {
     mainDocumentUrl?: string;
     runtimeError?: { code?: string; message?: string };
     categories?: { performance?: { score?: number } };
+    /** Lighthouse's own platform detection ("wordpress", "wix", …) —
+     * Day 4 Step 3 builder detection reads its ids (no extra call). */
+    stackPacks?: Array<{ id?: string; title?: string }>;
     audits?: Record<
       string,
       {
@@ -1346,6 +1350,8 @@ export interface MobilePerformanceFetchResult {
   /** Step 2d: set when any PageSpeed run landed on a same-site error page
    * (soft 404) — the page actually displayed. */
   softNotFoundUrl?: string | null;
+  /** Lighthouse stack-pack ids from the first run (see websiteBuilder.ts). */
+  stackPackIds?: string[];
   /** Real PageSpeed Insights calls this measurement spent — 1 when the
    * first run already carried real-user field data, 3 when it didn't
    * and the median-of-3 lab fallback ran (see fetchMobilePerformance's
@@ -1417,6 +1423,10 @@ export async function fetchMobilePerformance(
 
   const first = await fetchPageSpeedRunOnce(website, apiKey, categories, fetchImpl);
   const renderedContentSignals = first.kind === "ok" ? extractRenderedContentSignals(first.response, categories) : null;
+  const stackPackIds =
+    first.kind === "ok"
+      ? (first.response.lighthouseResult?.stackPacks ?? []).map((p) => p.id ?? "").filter((id) => id.length > 0)
+      : [];
 
   // Step 2d: real-visitor data is read from ANY successful run (not just
   // the first), and when the URL itself lands on an error page (soft
@@ -1444,7 +1454,7 @@ export async function fetchMobilePerformance(
     const firstSoft = assessPageSpeedRun(first.response, website).softNotFoundUrl;
     const field = fieldFrom([first], firstSoft !== null);
     if (field) {
-      return { measurement: fieldMeasurement(field, firstSoft !== null), failureReason: null, renderedContentSignals, callCount: 1, softNotFoundUrl: firstSoft };
+      return { measurement: fieldMeasurement(field, firstSoft !== null), failureReason: null, renderedContentSignals, stackPackIds, callCount: 1, softNotFoundUrl: firstSoft };
     }
   }
 
@@ -1461,7 +1471,7 @@ export async function fetchMobilePerformance(
 
   const field = fieldFrom(outcomes, softNotFoundUrl !== null);
   if (field) {
-    return { measurement: fieldMeasurement(field, softNotFoundUrl !== null), failureReason: null, renderedContentSignals, callCount: 3, softNotFoundUrl };
+    return { measurement: fieldMeasurement(field, softNotFoundUrl !== null), failureReason: null, renderedContentSignals, stackPackIds, callCount: 3, softNotFoundUrl };
   }
 
   const labScores = outcomes
@@ -1475,6 +1485,7 @@ export async function fetchMobilePerformance(
       measurement: null,
       failureReason: anyErrorPage ? { kind: "error_page", status: null } : pickFailureReason(outcomes),
       renderedContentSignals,
+      stackPackIds,
       callCount: 3,
       softNotFoundUrl,
     };
@@ -1484,6 +1495,7 @@ export async function fetchMobilePerformance(
     measurement: { method: "lab", fieldCategory: null, labScore: median(labScores), measuredAt: new Date().toISOString() },
     failureReason: null,
     renderedContentSignals,
+    stackPackIds,
     callCount: 3,
     softNotFoundUrl,
   };
@@ -1775,6 +1787,8 @@ export interface WebsiteAnalysisCollection {
   readViaBrowserChecks: string[];
   /** Step 2g: real Browserless renders this scan used. */
   browserRenders: number;
+  /** Day 4 Step 3: the website builder, from data this scan already has. */
+  builder: WebsiteBuilderDetection;
   /** Up to MAX_ADDITIONAL_PAGES other real discovered pages, each with
    * its own best-effort screenshot — see AdditionalPageCapture. Always []
    * when options.captureScreenshots was false — a regular re-scan reuses
@@ -1824,6 +1838,14 @@ export interface WebsiteAnalysisCollection {
  * analysis), so they're unaffected by the sequencing above and still run
  * concurrently with PageSpeed.
  */
+function hostnameOf(url: string): string | null {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
+  }
+}
+
 export async function collectWebsiteAnalysis(
   website: string,
   keys: {
@@ -2057,6 +2079,11 @@ export async function collectWebsiteAnalysis(
     websiteTrust: rendered?.websiteTrust ?? websiteTrust,
     readViaBrowserChecks: rendered?.content != null ? [...BROWSER_READ_CHECK_IDS] : renderedPresence?.readChecks ?? [],
     browserRenders: (rendered?.renders ?? 0) + (renderedPresence?.renders ?? 0),
+    builder: detectWebsiteBuilder({
+      html: htmlResult.status === "fulfilled" ? htmlResult.value.html : null,
+      hostname: hostnameOf(website),
+      stackPackIds: pageSpeed.stackPackIds ?? [],
+    }),
   };
 }
 

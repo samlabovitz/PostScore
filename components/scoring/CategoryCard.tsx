@@ -3,30 +3,33 @@ import { WebsiteCoverageNote } from "./WebsiteCoverageNote";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { cn } from "@/lib/utils";
-import type { CategoryResult, Confidence } from "@/lib/scoring";
+import type { CategoryResult, CheckResult } from "@/lib/scoring";
 import { t, useLocale, type MessageKey } from "@/lib/i18n";
 import { checkAnchorId } from "@/lib/postaiLinks";
 
-const CONFIDENCE_PILL: Record<Confidence, { variant: "green" | "brass" | "amber" | "neutral"; labelKey: MessageKey }> = {
-  VERIFIED: { variant: "green", labelKey: "dashboard.overview.confidenceVerified" },
-  LIKELY: { variant: "brass", labelKey: "dashboard.overview.confidenceLikely" },
-  UNCERTAIN: { variant: "amber", labelKey: "dashboard.overview.confidenceUncertain" },
-  NOT_FOUND: { variant: "neutral", labelKey: "dashboard.overview.confidenceNotFound" },
+/** Day 4 Step 3: each row is labeled by its RESULT — never by how sure
+ * we are of it (the old green "Verified" read as a pass even at 0 / 1):
+ * full points → "Done", fewer → "Needs work", excluded → "Couldn't check". */
+type CheckOutcome = "done" | "needs_work" | "couldnt_check";
+
+export function checkOutcome(check: Pick<CheckResult, "earnedPoints" | "maxPoints">): CheckOutcome {
+  if (check.earnedPoints === null) return "couldnt_check";
+  return check.earnedPoints >= check.maxPoints ? "done" : "needs_work";
+}
+
+const OUTCOME_PILL: Record<CheckOutcome, { variant: "green" | "amber" | "neutral"; labelKey: MessageKey }> = {
+  done: { variant: "green", labelKey: "dashboard.checkResult.done" },
+  needs_work: { variant: "amber", labelKey: "dashboard.checkResult.needsWork" },
+  couldnt_check: { variant: "neutral", labelKey: "dashboard.checkResult.couldntCheck" },
 };
 
-/** A compact status symbol per confidence state — a solid green check for
- * anything actually verified, a muted dash for anything we don't (yet)
- * have data for, so the list reads at a glance before you get to the
- * per-check label and explanation. */
-function ConfidenceIcon({ confidence }: { confidence: Confidence }) {
-  switch (confidence) {
-    case "VERIFIED":
+function OutcomeIcon({ outcome }: { outcome: CheckOutcome }) {
+  switch (outcome) {
+    case "done":
       return <IconCircleCheck size={17} className="shrink-0 text-green" />;
-    case "LIKELY":
-      return <IconCircleCheck size={17} className="shrink-0 text-brass" />;
-    case "UNCERTAIN":
+    case "needs_work":
       return <IconAlertTriangle size={17} className="shrink-0 text-amber" />;
-    case "NOT_FOUND":
+    case "couldnt_check":
       return <IconMinus size={17} className="shrink-0 text-ink-mute" />;
   }
 }
@@ -69,7 +72,8 @@ export function CategoryCard({
 
       <div className="mt-4 flex flex-col divide-y divide-paper-line">
         {category.checks.map((check) => {
-          const pill = CONFIDENCE_PILL[check.confidence];
+          const outcome = checkOutcome(check);
+          const pill = OUTCOME_PILL[outcome];
           const isFull = check.earnedPoints !== null && check.earnedPoints >= check.maxPoints;
           return (
             <div
@@ -79,7 +83,7 @@ export function CategoryCard({
             >
               <div className="flex items-center justify-between gap-3">
                 <span className="flex items-center gap-2 text-sm font-medium text-ink">
-                  <ConfidenceIcon confidence={check.confidence} />
+                  <OutcomeIcon outcome={outcome} />
                   {check.label}
                 </span>
                 <div className="flex shrink-0 items-center gap-2">

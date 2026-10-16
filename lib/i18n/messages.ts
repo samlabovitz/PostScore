@@ -2501,7 +2501,34 @@ export type MessageKey =
   | "dashboard.pricing.sizeAriaLabel"
   | "dashboard.pricing.sizeNewAriaLabel"
   | "dashboard.pricing.sizeHint"
-  | "dashboard.pricing.typicalRange";
+  | "dashboard.pricing.typicalRange"
+  | "content.checks.website.content_depth.advice.title"
+  | "content.checks.website.content_depth.advice.meta"
+  | "content.checks.website.content_depth.advice.viewport"
+  | "content.checks.website.content_depth.advice.headings"
+  | "content.checks.website.content_depth.advice.thin"
+  | "content.checks.website.contact_conversion.advice.contact"
+  | "content.checks.website.contact_conversion.advice.cta"
+  | "content.checks.website.has_website.advice.listingBroken"
+  | "content.checks.website.has_website.advice.directory"
+  | "dashboard.websiteFix.kind.postscoreDoes"
+  | "dashboard.websiteFix.kind.guided"
+  | "dashboard.websiteFix.kind.webPerson"
+  | "dashboard.websiteFix.summary.both"
+  | "dashboard.websiteFix.summary.selfOnly.one"
+  | "dashboard.websiteFix.summary.selfOnly.other"
+  | "dashboard.websiteFix.summary.webOnly.one"
+  | "dashboard.websiteFix.summary.webOnly.other"
+  | "dashboard.websiteFix.summary.selfOne"
+  | "dashboard.websiteFix.summary.webOne"
+  | "dashboard.websiteFix.summary.bothOne"
+  | "dashboard.websiteFix.summary.none"
+  | "dashboard.websiteFix.builder.detected"
+  | "dashboard.websiteFix.builder.notDetected"
+  | "dashboard.websiteFix.builder.notYet"
+  | "dashboard.checkResult.done"
+  | "dashboard.checkResult.needsWork"
+  | "dashboard.checkResult.couldntCheck";
 
 /** The report/dashboard messages that vary by count — see tPlural below.
  * Each has a ".one" and ".other" MessageKey (the only two categories
@@ -5514,6 +5541,33 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.pricing.sizeNewAriaLabel": "Size of the new item",
     "dashboard.pricing.sizeHint": "For packaged items, add the brand in the name and the size (e.g. 750 ml, 12 oz, family size) so we can judge the price.",
     "dashboard.pricing.typicalRange": "Typical {range}",
+    "content.checks.website.content_depth.advice.title": "Add a page title in your site's SEO settings — it's the headline Google shows for your site.",
+    "content.checks.website.content_depth.advice.meta": "Add a meta description — one or two sentences about what you offer and where — in your site's SEO settings. Google often shows it under your name.",
+    "content.checks.website.content_depth.advice.viewport": "Your site isn't set up for phones (no mobile viewport tag). This is a theme or template setting — ask your web person to add it, or switch to a mobile-ready template.",
+    "content.checks.website.content_depth.advice.headings": "Break your homepage into sections with real headings (for example Menu, Hours, About) so visitors and Google can scan it.",
+    "content.checks.website.content_depth.advice.thin": "Add a few real paragraphs about what you offer, where you are and who you serve — your homepage has very little text.",
+    "content.checks.website.contact_conversion.advice.contact": "Add a tap-to-call phone link or an email link (for example in your header or footer) so visitors can reach you in one tap.",
+    "content.checks.website.contact_conversion.advice.cta": "Add a clear button near the top of your homepage, such as \"Call now\", \"Book an appointment\" or \"Order online\".",
+    "content.checks.website.has_website.advice.listingBroken": "Update the website link on your Google listing — it currently opens an error page.",
+    "content.checks.website.has_website.advice.directory": "Your Google listing links to a directory or social page, not your own site. Get a website and put its address on your listing.",
+    "dashboard.websiteFix.kind.postscoreDoes": "PostScore can do this for you",
+    "dashboard.websiteFix.kind.guided": "PostScore guides you · ~{min}–{max} min",
+    "dashboard.websiteFix.kind.webPerson": "Needs a web person",
+    "dashboard.websiteFix.summary.both": "{selfCount} fixes you can do yourself (~{min}–{max} min) · {webCount} need a web person",
+    "dashboard.websiteFix.summary.selfOnly.one": "1 fix you can do yourself (~{min}–{max} min)",
+    "dashboard.websiteFix.summary.selfOnly.other": "{count} fixes you can do yourself (~{min}–{max} min)",
+    "dashboard.websiteFix.summary.webOnly.one": "1 fix needs a web person",
+    "dashboard.websiteFix.summary.webOnly.other": "{count} fixes need a web person",
+    "dashboard.websiteFix.summary.selfOne": "1 fix you can do yourself (~{min}–{max} min) · {webCount} need a web person",
+    "dashboard.websiteFix.summary.webOne": "{selfCount} fixes you can do yourself (~{min}–{max} min) · 1 needs a web person",
+    "dashboard.websiteFix.summary.bothOne": "1 fix you can do yourself (~{min}–{max} min) · 1 needs a web person",
+    "dashboard.websiteFix.summary.none": "Nothing to fix on the website checks we could run.",
+    "dashboard.websiteFix.builder.detected": "Built with {builder}",
+    "dashboard.websiteFix.builder.notDetected": "Builder not detected",
+    "dashboard.websiteFix.builder.notYet": "Builder: checked on your next scan",
+    "dashboard.checkResult.done": "Done",
+    "dashboard.checkResult.needsWork": "Needs work",
+    "dashboard.checkResult.couldntCheck": "Couldn't check",
   },
   es: {
     "language.en": "Inglés",
@@ -8555,6 +8609,33 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.pricing.sizeNewAriaLabel": "Tamaño del artículo nuevo",
     "dashboard.pricing.sizeHint": "Para artículos empacados, agregue la marca en el nombre y el tamaño (p. ej., 750 ml, 12 oz, tamaño familiar) para que podamos evaluar el precio.",
     "dashboard.pricing.typicalRange": "Precio típico {range}",
+    "content.checks.website.content_depth.advice.title": "Agregue un título de página en la configuración SEO de su sitio — es el encabezado que Google muestra para su sitio.",
+    "content.checks.website.content_depth.advice.meta": "Agregue una meta descripción — una o dos frases sobre lo que ofrece y dónde — en la configuración SEO de su sitio. Google suele mostrarla debajo de su nombre.",
+    "content.checks.website.content_depth.advice.viewport": "Su sitio no está preparado para teléfonos (no tiene la etiqueta viewport para móviles). Es un ajuste del tema o la plantilla — pida a su encargado web que la agregue, o cambie a una plantilla adaptada a móviles.",
+    "content.checks.website.content_depth.advice.headings": "Divida su página de inicio en secciones con encabezados reales (por ejemplo Menú, Horario, Nosotros) para que los visitantes y Google puedan recorrerla.",
+    "content.checks.website.content_depth.advice.thin": "Agregue algunos párrafos reales sobre lo que ofrece, dónde está y a quién atiende — su página de inicio tiene muy poco texto.",
+    "content.checks.website.contact_conversion.advice.contact": "Agregue un enlace de teléfono para llamar con un toque o un enlace de correo (por ejemplo en el encabezado o el pie de página) para que los visitantes puedan contactarlo con un toque.",
+    "content.checks.website.contact_conversion.advice.cta": "Agregue un botón claro cerca de la parte superior de su página de inicio, como \"Llamar ahora\", \"Reservar una cita\" o \"Ordenar en línea\".",
+    "content.checks.website.has_website.advice.listingBroken": "Actualice el enlace del sitio web en su ficha de Google — actualmente abre una página de error.",
+    "content.checks.website.has_website.advice.directory": "Su ficha de Google enlaza a un directorio o una página social, no a su propio sitio. Consiga un sitio web y ponga su dirección en la ficha.",
+    "dashboard.websiteFix.kind.postscoreDoes": "PostScore puede hacerlo por usted",
+    "dashboard.websiteFix.kind.guided": "PostScore lo guía · ~{min}–{max} min",
+    "dashboard.websiteFix.kind.webPerson": "Necesita a un encargado web",
+    "dashboard.websiteFix.summary.both": "{selfCount} mejoras que puede hacer usted mismo (~{min}–{max} min) · {webCount} necesitan a un encargado web",
+    "dashboard.websiteFix.summary.selfOnly.one": "1 mejora que puede hacer usted mismo (~{min}–{max} min)",
+    "dashboard.websiteFix.summary.selfOnly.other": "{count} mejoras que puede hacer usted mismo (~{min}–{max} min)",
+    "dashboard.websiteFix.summary.webOnly.one": "1 mejora necesita a un encargado web",
+    "dashboard.websiteFix.summary.webOnly.other": "{count} mejoras necesitan a un encargado web",
+    "dashboard.websiteFix.summary.selfOne": "1 mejora que puede hacer usted mismo (~{min}–{max} min) · {webCount} necesitan a un encargado web",
+    "dashboard.websiteFix.summary.webOne": "{selfCount} mejoras que puede hacer usted mismo (~{min}–{max} min) · 1 necesita a un encargado web",
+    "dashboard.websiteFix.summary.bothOne": "1 mejora que puede hacer usted mismo (~{min}–{max} min) · 1 necesita a un encargado web",
+    "dashboard.websiteFix.summary.none": "No hay nada que mejorar en las revisiones del sitio que pudimos hacer.",
+    "dashboard.websiteFix.builder.detected": "Hecho con {builder}",
+    "dashboard.websiteFix.builder.notDetected": "No se detectó la plataforma",
+    "dashboard.websiteFix.builder.notYet": "Plataforma: se revisará en su próximo escaneo",
+    "dashboard.checkResult.done": "Listo",
+    "dashboard.checkResult.needsWork": "Por mejorar",
+    "dashboard.checkResult.couldntCheck": "No se pudo revisar",
   },
 };
 

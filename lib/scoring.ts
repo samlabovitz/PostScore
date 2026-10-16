@@ -34,6 +34,7 @@
 // DEFAULT_LOCALE, so every existing caller that doesn't pass one keeps
 // getting the exact same English text this file used to hardcode.
 
+import { isWebsiteBuilderId, type WebsiteBuilderDetection, type WebsiteBuilderId } from "@/lib/websiteBuilder";
 import { DEFAULT_LOCALE, formatShortDate, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
 import { GOOGLE_PHOTO_CAP } from "@/lib/googlePhotoCap";
 import { reachabilityReasonMessageKey, type ReachabilityFailureReason } from "@/lib/websiteReachability";
@@ -625,6 +626,10 @@ export interface WebsiteAnalysis {
   /** The most recent capture's real ScreenshotOne usage — counted toward
    * the monthly automatic-capture cap (see lib/screenshotBudget.ts). */
   screenshotCaptureLog?: ScreenshotCaptureLog | null;
+  /** Day 4 Step 3: the website builder detected on this scan (no extra
+   * request — lib/websiteBuilder.ts). `id: null` = scanned, not detected;
+   * absent = scanned before this existed. */
+  builder?: WebsiteBuilderDetection;
   /** Step 2g: the checks whose findings were read from the page as a
    * browser shows it (a JavaScript-built page rendered via Browserless) —
    * their evidence says so. */
@@ -834,6 +839,12 @@ export interface CheckResult {
    * checked yet" or "nothing to compare". Drives the "Based on {n} of
    * {total} website checks" note. */
   excludedReason?: "unreachable" | "not_checked_yet";
+  /** Day 4 Step 3: what exactly is missing, as stable codes (e.g.
+   * content depth "viewport"/"meta", contact "contact"/"cta", has-website
+   * "missing"/"directory"/"listing_broken"). Drives per-item advice and
+   * the fix labels (lib/websiteFixes.ts); never changes points. Absent
+   * when nothing specific applies, and on breakdowns saved before. */
+  gaps?: string[];
 }
 
 export interface CategoryResult {
@@ -1118,6 +1129,9 @@ interface CheckDefinition {
    * not all of its points (e.g. a brief About section scoring 0.5) —
    * "add an About page" is the wrong advice when one already exists. */
   partialAdviceKey?: MessageKey;
+  /** Day 4 Step 3: advice per missing item (CheckResult.gaps) — when a
+   * check reports gaps, only the advice for those gaps is shown. */
+  gapAdviceKeys?: Partial<Record<string, MessageKey>>;
   evaluate(
     input: BusinessScoringInput,
     locale: Locale
@@ -1128,6 +1142,8 @@ interface CheckDefinition {
     /** See CheckResult.meta's own doc — omitted (defaults to null) by
      * every check except website.performance_mobile. */
     meta?: Record<string, string> | null;
+    /** See CheckResult.gaps. */
+    gaps?: string[];
   };
   simulateFix(input: BusinessScoringInput): BusinessScoringInput;
 }
@@ -1664,6 +1680,10 @@ export const CHECKS: CheckDefinition[] = [
     category: "website",
     maxPoints: 4,
     adviceKey: "content.checks.website.has_website.advice",
+    gapAdviceKeys: {
+      listing_broken: "content.checks.website.has_website.advice.listingBroken",
+      directory: "content.checks.website.has_website.advice.directory",
+    },
     // Redefined (Oct 10): full credit for a real, verified site — the
     // listing's own website when it's reachable, loads real content,
     // and isn't a multi-business directory/marketplace (a free-builder
@@ -1687,7 +1707,7 @@ export const CHECKS: CheckDefinition[] = [
             explanation: t(locale, "content.checks.website.has_website.explanation.verifiedElsewhere", { url: verifiedElsewhere }),
           };
         }
-        return { earnedPoints: 0, confidence: "VERIFIED", explanation: t(locale, "content.checks.website.has_website.explanation.missing") };
+        return { earnedPoints: 0, confidence: "VERIFIED", explanation: t(locale, "content.checks.website.has_website.explanation.missing"), gaps: ["missing"] };
       }
 
       const trust = input.websiteAnalysis?.websiteTrust;
@@ -1718,6 +1738,7 @@ export const CHECKS: CheckDefinition[] = [
               ? "content.checks.website.has_website.explanation.listingBroken"
               : "content.checks.website.has_website.explanation.directory"
           ),
+          gaps: [trust.listingLinkBroken ? "listing_broken" : "directory"],
         };
       }
 
@@ -1949,6 +1970,13 @@ export const CHECKS: CheckDefinition[] = [
     category: "website",
     maxPoints: 5,
     adviceKey: "content.checks.website.content_depth.advice",
+    gapAdviceKeys: {
+      title: "content.checks.website.content_depth.advice.title",
+      meta: "content.checks.website.content_depth.advice.meta",
+      viewport: "content.checks.website.content_depth.advice.viewport",
+      headings: "content.checks.website.content_depth.advice.headings",
+      thin: "content.checks.website.content_depth.advice.thin",
+    },
     evaluate(input, locale) {
       if (!hasAnalyzableWebsite(input)) {
         return {
@@ -2026,7 +2054,13 @@ export const CHECKS: CheckDefinition[] = [
         }
         explanationParts.push(t(locale, "content.checks.website.content_depth.explanation.recoveredNote"));
 
-        return { earnedPoints, confidence: "VERIFIED", explanation: explanationParts.join(" ") };
+        const gaps = [
+          ...(recovered.hasTitle === false ? ["title"] : []),
+          ...(recovered.hasMetaDescription === false ? ["meta"] : []),
+          ...(recovered.hasViewportTag === false ? ["viewport"] : []),
+          ...(recovered.hasHeadings === false ? ["headings"] : []),
+        ];
+        return { earnedPoints, confidence: "VERIFIED", explanation: explanationParts.join(" "), gaps };
       }
       // Sub-point weights: title 1 / meta description 1 / viewport 1.5 /
       // has a real heading 1 / genuine text length 0.5 — sums to 5. Length
@@ -2042,15 +2076,32 @@ export const CHECKS: CheckDefinition[] = [
       const earnedPoints = roundTo(titlePts + metaPts + viewportPts + headingPts + lengthPts, 1);
 
       const missing: string[] = [];
-      if (!content.hasTitle) missing.push(t(locale, "content.checks.website.content_depth.explanation.gapNoTitle"));
-      if (!content.hasMetaDescription) missing.push(t(locale, "content.checks.website.content_depth.explanation.gapNoMeta"));
-      if (!content.hasViewportTag) missing.push(t(locale, "content.checks.website.content_depth.explanation.gapNoViewport"));
-      if (content.headingCount === 0) missing.push(t(locale, "content.checks.website.content_depth.explanation.gapNoHeadings"));
-      if (content.visibleTextLength <= THIN_CONTENT_CHARS) missing.push(t(locale, "content.checks.website.content_depth.explanation.gapThinContent"));
+      const gaps: string[] = [];
+      if (!content.hasTitle) {
+        missing.push(t(locale, "content.checks.website.content_depth.explanation.gapNoTitle"));
+        gaps.push("title");
+      }
+      if (!content.hasMetaDescription) {
+        missing.push(t(locale, "content.checks.website.content_depth.explanation.gapNoMeta"));
+        gaps.push("meta");
+      }
+      if (!content.hasViewportTag) {
+        missing.push(t(locale, "content.checks.website.content_depth.explanation.gapNoViewport"));
+        gaps.push("viewport");
+      }
+      if (content.headingCount === 0) {
+        missing.push(t(locale, "content.checks.website.content_depth.explanation.gapNoHeadings"));
+        gaps.push("headings");
+      }
+      if (content.visibleTextLength <= THIN_CONTENT_CHARS) {
+        missing.push(t(locale, "content.checks.website.content_depth.explanation.gapThinContent"));
+        gaps.push("thin");
+      }
 
       return {
         earnedPoints,
         confidence: "VERIFIED",
+        gaps,
         explanation:
           missing.length === 0
             ? t(locale, "content.checks.website.content_depth.explanation.allGood")
@@ -2072,6 +2123,10 @@ export const CHECKS: CheckDefinition[] = [
     category: "website",
     maxPoints: 3,
     adviceKey: "content.checks.website.contact_conversion.advice",
+    gapAdviceKeys: {
+      contact: "content.checks.website.contact_conversion.advice.contact",
+      cta: "content.checks.website.contact_conversion.advice.cta",
+    },
     evaluate(input, locale) {
       if (!hasAnalyzableWebsite(input)) {
         return {
@@ -2116,6 +2171,7 @@ export const CHECKS: CheckDefinition[] = [
       return {
         earnedPoints,
         confidence: "VERIFIED",
+        gaps: [...(hasContact ? [] : ["contact"]), ...(content.hasCtaText ? [] : ["cta"])],
         explanation:
           problems.length === 0
             ? t(locale, "content.checks.website.contact_conversion.explanation.allGood")
@@ -2698,6 +2754,7 @@ export function scoreBusiness(input: BusinessScoringInput, locale: Locale = DEFA
           ? `${result.explanation} ${t(locale, "content.checks.website.readViaBrowserNote")}`
           : result.explanation,
       meta: result.meta ?? null,
+      ...(result.gaps && result.gaps.length > 0 ? { gaps: result.gaps } : {}),
       ...(result.earnedPoints === null
         ? excludedBecauseUnreachable(def.id, input)
           ? { excludedReason: "unreachable" as const }
@@ -2872,9 +2929,29 @@ export function partlyCheckedScoreBasis(categories: CategoryResult[], hasWebsite
  * already-computed breakdown without it silently staying in whatever
  * locale that breakdown was originally built with.
  */
+/** Day 4 Step 3: a phone speed this good (90+/100, or real visitors
+ * "fast") gets no "speed up your site" fix — the gap is noise, not work. */
+export const SPEED_NO_ADVICE_FROM = 0.9;
+
+export function isMinorSpeedGap(check: Pick<CheckResult, "id" | "earnedPoints" | "maxPoints">): boolean {
+  return (
+    check.id === "website.performance_mobile" &&
+    check.earnedPoints !== null &&
+    check.earnedPoints / check.maxPoints >= SPEED_NO_ADVICE_FROM - 1e-9
+  );
+}
+
+/** The advice for exactly what's missing: one line per gap when the
+ * check reports gaps (and has advice for them), else the check's own. */
+function adviceFor(def: CheckDefinition, check: CheckResult, locale: Locale): string {
+  const perGap = (check.gaps ?? []).map((g) => def.gapAdviceKeys?.[g]).filter((k): k is MessageKey => !!k);
+  if (perGap.length > 0) return perGap.map((k) => t(locale, k)).join(" ");
+  return t(locale, def.partialAdviceKey && (check.earnedPoints ?? 0) > 0 ? def.partialAdviceKey : def.adviceKey);
+}
+
 export function generateSuggestions(breakdown: ScoreBreakdown, locale: Locale = DEFAULT_LOCALE): Suggestion[] {
   return breakdown.checks
-    .filter((c) => isDeterminable(c.confidence) && (c.earnedPoints ?? 0) < c.maxPoints)
+    .filter((c) => isDeterminable(c.confidence) && (c.earnedPoints ?? 0) < c.maxPoints && !isMinorSpeedGap(c))
     .map((c) => {
       const def = findCheck(c.id);
       return {
@@ -2882,10 +2959,7 @@ export function generateSuggestions(breakdown: ScoreBreakdown, locale: Locale = 
         category: c.category,
         label: t(locale, def.labelKey),
         promisedPoints: roundTo(c.maxPoints - (c.earnedPoints ?? 0), 1),
-        advice: t(
-          locale,
-          def.partialAdviceKey && (c.earnedPoints ?? 0) > 0 ? def.partialAdviceKey : def.adviceKey
-        ),
+        advice: adviceFor(def, c, locale),
       };
     })
     .sort((a, b) => b.promisedPoints - a.promisedPoints);
@@ -3229,6 +3303,14 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
       ? { browserRenderLog: v.browserRenderLog as { month: string; renders: number } }
       : {}),
     ...(screenshotCaptureLog !== null ? { screenshotCaptureLog } : {}),
+    ...(v.builder && typeof v.builder === "object"
+      ? {
+          builder: {
+            id: isWebsiteBuilderId((v.builder as Record<string, unknown>).id) ? ((v.builder as Record<string, unknown>).id as WebsiteBuilderId) : null,
+            source: (["generator", "assets", "hostname", "pagespeed"] as const).find((x) => x === (v.builder as Record<string, unknown>).source) ?? null,
+          },
+        }
+      : {}),
     aboutPresence,
     servicesPresence,
     websiteTrust,

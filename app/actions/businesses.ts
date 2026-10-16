@@ -269,6 +269,7 @@ async function analyzeWebsiteForSave(params: {
           // as aboutPresence/servicesPresence above.
           websiteTrust: websiteTrustForSave ?? analysis.websiteTrust,
           ...browserReadFields,
+          builder: analysis.builder,
           checkedAt,
         }
       : {
@@ -288,6 +289,7 @@ async function analyzeWebsiteForSave(params: {
           servicesPresence: analysis.servicesPresence,
           websiteTrust: websiteTrustForSave ?? analysis.websiteTrust,
           ...browserReadFields,
+          builder: analysis.builder,
           checkedAt,
         }
     : null;
