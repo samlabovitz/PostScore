@@ -1644,7 +1644,9 @@ const REPAIR_DROPOFF_PROFILE: BizProfileSource = {
     "appliance repair",
     "locksmith",
   ],
-  placesType: ["laundry"],
+  // Google has no shoe-repair or dry-cleaner place type; "laundry" and
+  // "tailor" are its real types for drop-off garment care and repair.
+  placesType: ["laundry", "tailor"],
   competitorNoun: "bizProfiles.repair_dropoff.competitorNoun",
   couponPresets: [
     {

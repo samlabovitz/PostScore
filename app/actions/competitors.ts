@@ -9,7 +9,7 @@ import {
   MAX_COMPETITORS,
   type CompetitorSourceBusiness,
 } from "@/lib/competitors";
-import { resolveBizProfile } from "@/config/bizProfiles";
+import { bizProfileById, resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale } from "@/lib/i18n";
 import { refreshAvailability, type RefreshAvailability } from "@/lib/competitorScanPolicy";
 import {
@@ -161,8 +161,20 @@ export async function getCompetitorsWithClient(
     latest,
     rankHistory: scans.map(rankPoint).reverse(),
     refresh: refreshAvailability(latest?.createdAt ?? null, now),
-    scanBlocker: competitorScanBlocker({ lat: row.lat, lng: row.lng, primaryType: row.primary_type, categories: row.categories }),
+    scanBlocker: competitorScanBlocker({
+      lat: row.lat,
+      lng: row.lng,
+      primaryType: row.primary_type,
+      categories: row.categories,
+      fallbackPlaceTypes: ownerTypePlaceTypes(row.business_type_override),
+    }),
   };
+}
+
+/** Google place types for the owner's PostScore business type (only used
+ * when Google's own listing types are all generic). */
+function ownerTypePlaceTypes(businessTypeOverride: string | null): string[] {
+  return bizProfileById(businessTypeOverride)?.placesType ?? [];
 }
 
 export type SaveCompetitorScanResult =
@@ -216,6 +228,7 @@ export async function runAndSaveCompetitorScanWithClient(
     lng: row.lng,
     primaryType: row.primary_type,
     priceLevel: row.price_level,
+    fallbackPlaceTypes: ownerTypePlaceTypes(row.business_type_override),
     rating: row.rating,
     review_count: row.review_count,
     phone: row.phone,

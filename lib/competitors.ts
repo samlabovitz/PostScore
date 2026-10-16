@@ -97,6 +97,12 @@ export interface CompetitorSourceBusiness extends BusinessScoringRow {
   lng: number | null;
   /** Google's machine-readable primary type slug, e.g. "hair_salon". */
   primaryType: string | null;
+  /** Google place types for the owner's own PostScore business type
+   * (business_type_override → that type's `placesType` in
+   * config/bizProfiles.ts). Used ONLY when every Google type on the
+   * listing is generic ("store", "service"); Google's own types win
+   * whenever one is specific. */
+  fallbackPlaceTypes?: string[] | null;
   /** The subject's own cached Google price-level enum (e.g.
    * "PRICE_LEVEL_MODERATE"), for the Pricing page's price-level
    * comparison. Optional/undefined for callers (like the Competitors
@@ -455,12 +461,19 @@ function emptyResult(
  * types ("store", "service", …) to match on. null = a scan can search.
  */
 export function competitorScanBlocker(
-  subject: Pick<CompetitorSourceBusiness, "lat" | "lng" | "primaryType" | "categories">
+  subject: Pick<CompetitorSourceBusiness, "lat" | "lng" | "primaryType" | "categories" | "fallbackPlaceTypes">
 ): "no_location" | "category_too_generic" | null {
   if (subject.lat === null || subject.lng === null) return "no_location";
   const hasAnyTypeData = !!subject.primaryType || !!(subject.categories && subject.categories.length > 0);
   const specificType = firstSpecificType([subject.primaryType, ...(subject.categories ?? [])]);
-  return hasAnyTypeData && !specificType ? "category_too_generic" : null;
+  if (!hasAnyTypeData || specificType) return null;
+  return usableFallbackTypes(subject.fallbackPlaceTypes).length > 0 ? null : "category_too_generic";
+}
+
+/** The owner's business-type place types that are real, specific search
+ * types (never generic ones like "store"). */
+function usableFallbackTypes(types: string[] | null | undefined): string[] {
+  return (types ?? []).filter((t) => !!t && !isGenericType(t));
 }
 
 export async function findAndScoreCompetitors(
@@ -478,7 +491,13 @@ export async function findAndScoreCompetitors(
   // GENERIC_TYPES wins.
   const hasAnyTypeData =
     !!subject.primaryType || !!(subject.categories && subject.categories.length > 0);
-  const specificType = firstSpecificType([subject.primaryType, ...(subject.categories ?? [])]);
+  const googleSpecificType = firstSpecificType([subject.primaryType, ...(subject.categories ?? [])]);
+  // Google's own types win when one is specific. Only when every type on
+  // the listing is generic do we fall back to the owner's PostScore
+  // business type (the real Shoe Tech case: Google says only "service";
+  // the owner set "repair & drop-off" → laundry / tailor).
+  const fallbackTypes = hasAnyTypeData && !googleSpecificType ? usableFallbackTypes(subject.fallbackPlaceTypes) : [];
+  const specificType = googleSpecificType ?? fallbackTypes[0] ?? null;
   const referenceDisplayName = subject.category ?? null;
 
   if (hasAnyTypeData && !specificType) {
@@ -524,7 +543,15 @@ export async function findAndScoreCompetitors(
   // just its exact type), so a genuine "beauty_salon" competitor to a
   // "hair_salon" isn't filtered out server-side before isSameCategory()
   // ever sees it.
-  const includedTypes = referenceType ? comparableTypesFor(referenceType) : undefined;
+  const includedTypes =
+    fallbackTypes.length > 0 ? fallbackTypes : referenceType ? comparableTypesFor(referenceType) : undefined;
+  // With the owner's fallback types, a candidate is comparable when its
+  // PRIMARY Google type is one of them (same "primary identity" rule as
+  // always, over the owner's whole type set).
+  const matchesCategory = (c: NearbyCandidate) =>
+    fallbackTypes.length > 0
+      ? !!c.primaryType && fallbackTypes.includes(c.primaryType)
+      : isSameCategory(c, { type: referenceType, displayName: referenceDisplayName });
   debugLog("includedTypes requested from Nearby Search:", includedTypes ?? "(none — no specific reference type)");
 
   // Start at the narrowest radius tier ("who is actually nearby") and
@@ -574,7 +601,7 @@ export async function findAndScoreCompetitors(
       .filter((c) => c.placeId !== subject.placeId)
       .filter((c) => !isClosedStatus(c.businessStatus))
       .filter((c) => c.location !== null)
-      .filter((c) => isSameCategory(c, { type: referenceType, displayName: referenceDisplayName }))
+      .filter(matchesCategory)
       .map((c) => ({
         candidate: c,
         distanceMeters: haversineMeters(subjectLocation, c.location as { lat: number; lng: number }),
