@@ -49,7 +49,10 @@ export function websiteFixesFor(check: CheckResult, builder: WebsiteBuilderId | 
 
   switch (check.id) {
     case "website.has_website":
-      if (gaps.includes("missing")) return [one("missing", { kind: "postscore_does", minutes: { min: 15, max: 30 } })];
+      // No website (or only a social page): the starter site.
+      if (gaps.includes("missing") || gaps.includes("social_page")) {
+        return [one(gaps.includes("missing") ? "missing" : "social_page", { kind: "postscore_does", minutes: { min: 15, max: 30 } })];
+      }
       return [one(gaps[0] ?? null, guided(5, 10))];
     case "website.https":
       return [one(null, hosted ? guided(5, 10) : webPerson)];

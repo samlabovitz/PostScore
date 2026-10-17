@@ -2528,7 +2528,14 @@ export type MessageKey =
   | "dashboard.websiteFix.builder.notYet"
   | "dashboard.checkResult.done"
   | "dashboard.checkResult.needsWork"
-  | "dashboard.checkResult.couldntCheck";
+  | "dashboard.checkResult.couldntCheck"
+  | "content.checks.website.has_website.explanation.socialPage"
+  | "content.checks.website.has_website.advice.socialPage"
+  | "dashboard.competitors.socialPageOnly"
+  | "content.checks.website.social_links.explanation.unconfirmed"
+  | "content.checks.website.social_links.explanation.backToSite"
+  | "content.checks.website.social_links.explanation.elsewhere"
+  | "content.checks.website.social_links.explanation.notFound";
 
 /** The report/dashboard messages that vary by count — see tPlural below.
  * Each has a ".one" and ".other" MessageKey (the only two categories
@@ -5568,6 +5575,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.checkResult.done": "Done",
     "dashboard.checkResult.needsWork": "Needs work",
     "dashboard.checkResult.couldntCheck": "Couldn't check",
+    "content.checks.website.has_website.explanation.socialPage": "Your Google listing links to your {platform} page, not a website. A {platform} page doesn't count as a website — customers can't find your full info, and you don't control it.",
+    "content.checks.website.has_website.advice.socialPage": "Get a website of your own — PostScore's starter site takes minutes — and put its address on your Google listing instead of the social page.",
+    "dashboard.competitors.socialPageOnly": "{platform} page only",
+    "content.checks.website.social_links.explanation.unconfirmed": "{platform}: {url} (link looks right — we couldn't open it to confirm)",
+    "content.checks.website.social_links.explanation.backToSite": "Your {platform} link sends visitors back to your website instead of your {platform} profile.",
+    "content.checks.website.social_links.explanation.elsewhere": "Your {platform} link goes to {host} instead of your {platform} profile.",
+    "content.checks.website.social_links.explanation.notFound": "Your {platform} link opens a page that doesn't exist on {platform}.",
   },
   es: {
     "language.en": "Inglés",
@@ -8636,6 +8650,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.checkResult.done": "Listo",
     "dashboard.checkResult.needsWork": "Por mejorar",
     "dashboard.checkResult.couldntCheck": "No se pudo revisar",
+    "content.checks.website.has_website.explanation.socialPage": "Su ficha de Google enlaza a su página de {platform}, no a un sitio web. Una página de {platform} no cuenta como sitio web — los clientes no encuentran toda su información y usted no la controla.",
+    "content.checks.website.has_website.advice.socialPage": "Consiga su propio sitio web — el sitio inicial de PostScore toma minutos — y ponga su dirección en su ficha de Google en lugar de la página social.",
+    "dashboard.competitors.socialPageOnly": "Solo página de {platform}",
+    "content.checks.website.social_links.explanation.unconfirmed": "{platform}: {url} (el enlace parece correcto — no pudimos abrirlo para confirmarlo)",
+    "content.checks.website.social_links.explanation.backToSite": "Su enlace de {platform} lleva a los visitantes de vuelta a su sitio web en lugar de a su perfil de {platform}.",
+    "content.checks.website.social_links.explanation.elsewhere": "Su enlace de {platform} lleva a {host} en lugar de a su perfil de {platform}.",
+    "content.checks.website.social_links.explanation.notFound": "Su enlace de {platform} abre una página que no existe en {platform}.",
   },
 };
 

@@ -367,7 +367,9 @@ export function detectSocialProfiles(html: string): SocialProfile[] {
     const host = url.hostname.replace(/^(www|m)\./i, "").toLowerCase();
     const path = segments[0]?.toLowerCase() === "profile.php" ? `profile.php?id=${url.searchParams.get("id")}` : segments.slice(0, keep).join("/");
     const display = `${host}/${path}`;
-    if (!profiles.some((p) => p.url.toLowerCase() === display.toLowerCase())) profiles.push({ platform: platform.platform, url: display });
+    if (!profiles.some((p) => p.url.toLowerCase() === display.toLowerCase())) {
+      profiles.push({ platform: platform.platform, url: display, href: url.toString() });
+    }
   }
   return profiles;
 }

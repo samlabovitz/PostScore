@@ -850,7 +850,7 @@ describe("businessRowToScoringInput adapter", () => {
     expect(input.mostRecentReviewDaysAgo).toBeNull();
     expect(input.httpsStatus).toBe("https");
     const breakdown = scoreBusiness(input);
-    expect(breakdown.scoringVersion).toBe("1.10.0");
+    expect(breakdown.scoringVersion).toBe("1.11.0");
   });
 
   test("degrades an unexpected https_status value to null (excluded) rather than trusting a bad cast", () => {

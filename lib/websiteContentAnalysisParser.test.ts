@@ -1,6 +1,10 @@
 import { describe, expect, test } from "vitest";
 import { analyzeWebsiteHtml, detectContactLinks, detectSocialProfiles, metaContent } from "./websiteContentAnalysis";
 
+/** Only what each profile is (platform + address) — v1.11.0 also stores
+ * the link address and its check result. */
+const bareProfiles = (ps: Array<{ platform: string; url: string }>) => ps.map(({ platform, url }) => ({ platform, url }));
+
 // Realistic minified WordPress output (Autoptimize / WP Rocket / Cloudflare
 // HTML minify strip attribute quotes and don't preserve attribute order).
 const MINIFIED_WP = `<!DOCTYPE html><html lang=en-US><head><meta charset=UTF-8><meta content="width=device-width, initial-scale=1" name=viewport><title>Bánh Mì Boy – Vietnamese Sandwiches</title><meta name=description content="Fresh banh mi in Newark, DE"><link rel=stylesheet href=https://banhmiboy.com/wp-content/cache/autoptimize/css/autoptimize_1.css><script>var wpAjax={"url":"x"}</script></head><body class="home page-template-default"><header class=site-header><nav><a href=https://banhmiboy.com/>Home</a><a href=https://banhmiboy.com/about-us/>About</a></nav></header><main><h1>Bánh Mì Boy</h1><h2>Menu</h2><p>Open Daily: Monday - Sunday: 11am - 7pm / <a href=tel:+13025252018>(302) 525-2018</a></p><p>Order online today and visit us.</p></main><footer><a href=mailto:hello@banhmiboy.com>Email us</a></footer></body></html>`;
@@ -99,7 +103,7 @@ describe("Step 2d additions: social profiles", () => {
         <a href="https://www.youtube.com/watch?v=abc">a video</a>
         <a href="https://www.tiktok.com/">TikTok</a>
       </footer>`;
-    expect(detectSocialProfiles(html)).toEqual([
+    expect(bareProfiles(detectSocialProfiles(html))).toEqual([
       { platform: "Instagram", url: "instagram.com/mainstreetsweets" },
       { platform: "Facebook", url: "facebook.com/MainStreetSweets" },
       { platform: "TikTok", url: "tiktok.com/@mainstreetsweets" },
@@ -110,29 +114,29 @@ describe("Step 2d additions: social profiles", () => {
     ]);
   });
   test("duplicates collapse; no social links -> []", () => {
-    expect(detectSocialProfiles(`<a href=https://instagram.com/x>1</a><a href=https://www.instagram.com/x/>2</a>`)).toHaveLength(1);
-    expect(detectSocialProfiles(`<a href=/menu>Menu</a>`)).toEqual([]);
+    expect(bareProfiles(detectSocialProfiles(`<a href=https://instagram.com/x>1</a><a href=https://www.instagram.com/x/>2</a>`))).toHaveLength(1);
+    expect(bareProfiles(detectSocialProfiles(`<a href=/menu>Menu</a>`))).toEqual([]);
   });
 });
 
 describe("Step 2g: social links in unusual formats (the Chipotle store-locator case)", () => {
   test("protocol-relative links are found", () => {
-    expect(detectSocialProfiles(`<a href="//www.instagram.com/chipotle">IG</a>`)).toEqual([{ platform: "Instagram", url: "instagram.com/chipotle" }]);
+    expect(bareProfiles(detectSocialProfiles(`<a href="//www.instagram.com/chipotle">IG</a>`))).toEqual([{ platform: "Instagram", url: "instagram.com/chipotle" }]);
   });
   test("a social URL wrapped in a tracking/redirect link is found", () => {
     expect(
-      detectSocialProfiles(`<a href="https://locations.chipotle.com/click?url=https%3A%2F%2Fwww.facebook.com%2Fchipotle&amp;ref=footer">FB</a>`)
+      bareProfiles(detectSocialProfiles(`<a href="https://locations.chipotle.com/click?url=https%3A%2F%2Fwww.facebook.com%2Fchipotle&amp;ref=footer">FB</a>`))
     ).toEqual([{ platform: "Facebook", url: "facebook.com/chipotle" }]);
   });
   test("entity-encoded hrefs and data-href icon buttons are found", () => {
-    expect(detectSocialProfiles(`<a href="https:&#x2F;&#x2F;twitter.com&#x2F;ChipotleTweets">X</a>`)).toEqual([
+    expect(bareProfiles(detectSocialProfiles(`<a href="https:&#x2F;&#x2F;twitter.com&#x2F;ChipotleTweets">X</a>`))).toEqual([
       { platform: "X/Twitter", url: "twitter.com/ChipotleTweets" },
     ]);
-    expect(detectSocialProfiles(`<a href="#" data-href="https://www.tiktok.com/@chipotle">TikTok</a>`)).toEqual([
+    expect(bareProfiles(detectSocialProfiles(`<a href="#" data-href="https://www.tiktok.com/@chipotle">TikTok</a>`))).toEqual([
       { platform: "TikTok", url: "tiktok.com/@chipotle" },
     ]);
   });
   test("share buttons inside a redirect are still not profiles", () => {
-    expect(detectSocialProfiles(`<a href="/out?u=https%3A%2F%2Fwww.facebook.com%2Fsharer%2Fsharer.php%3Fu%3Dx">Share</a>`)).toEqual([]);
+    expect(bareProfiles(detectSocialProfiles(`<a href="/out?u=https%3A%2F%2Fwww.facebook.com%2Fsharer%2Fsharer.php%3Fu%3Dx">Share</a>`))).toEqual([]);
   });
 });

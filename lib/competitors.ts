@@ -5,9 +5,9 @@
 // scores, no invented "rank" metric other than PostScore itself.
 
 import { MAX_SEARCH_RADIUS_MILES } from "@/lib/competitorScanPolicy";
-import { businessWebsiteUrl } from "@/lib/businessWebsite";
 import {
   businessRowToScoringInput,
+  isRealWebsite,
   scoreBusiness,
   type BusinessScoringRow,
   type ScoreBreakdown,
@@ -670,7 +670,8 @@ export async function findAndScoreCompetitors(
       distanceMeters,
       rating: place.rating,
       reviewCount: place.userRatingCount,
-      hasWebsite: !!place.website && place.website.trim().length > 0,
+      // v1.11.0: a Facebook/Instagram/Yelp page is not a website.
+      hasWebsite: isRealWebsite(place.website),
       googleMapsUri: place.googleMapsUri,
       breakdown,
       priceLevel: place.priceLevel,
@@ -686,7 +687,7 @@ export async function findAndScoreCompetitors(
     distanceMeters: null,
     rating: subject.rating,
     reviewCount: subject.review_count,
-    hasWebsite: businessWebsiteUrl(subject) !== null,
+    hasWebsite: isRealWebsite(subject.website) || isRealWebsite(subject.verified_website_url),
     googleMapsUri: null,
     breakdown: subjectBreakdown,
     priceLevel: subject.priceLevel ?? null,

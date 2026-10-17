@@ -16,6 +16,7 @@
 // misconfigured check degrades to null so the caller can honestly
 // exclude it from scoring, never fabricate a value or fail the save.
 
+import { checkSocialProfiles } from "@/lib/socialLinkCheck";
 import { detectWebsiteBuilder, type WebsiteBuilderDetection } from "@/lib/websiteBuilder";
 import { POSTSCORE_USER_AGENT } from "./userAgent";
 import { analyzeWebsiteHtml, detectContactLinks, detectSocialProfiles } from "./websiteContentAnalysis";
@@ -1789,6 +1790,8 @@ export interface WebsiteAnalysisCollection {
   browserRenders: number;
   /** Day 4 Step 3: the website builder, from data this scan already has. */
   builder: WebsiteBuilderDetection;
+  /** v1.11.0: plain requests spent checking social links this scan. */
+  socialLinkRequests: number;
   /** Up to MAX_ADDITIONAL_PAGES other real discovered pages, each with
    * its own best-effort screenshot — see AdditionalPageCapture. Always []
    * when options.captureScreenshots was false — a regular re-scan reuses
@@ -2063,8 +2066,17 @@ export async function collectWebsiteAnalysis(
       }
     : null;
 
+  // v1.11.0: each social link must lead to a real profile — one plain
+  // request per link (lib/socialLinkCheck.ts), result saved per link.
+  const finalContent = rendered?.content ?? presenceHomeContent ?? content;
+  const socialChecked =
+    finalContent && (finalContent.socialProfiles ?? []).length > 0
+      ? await checkSocialProfiles(finalContent.socialProfiles!, website, fetchImpl)
+      : null;
+
   return {
-    content: rendered?.content ?? presenceHomeContent ?? content,
+    content: socialChecked && finalContent ? { ...finalContent, socialProfiles: socialChecked.profiles } : finalContent,
+    socialLinkRequests: socialChecked?.requests ?? 0,
     contentFetchFailureReason: content ? null : htmlFailureReason,
     mobilePerformance: pageSpeed.measurement,
     mobilePerformanceFailureReason: pageSpeed.measurement ? null : pageSpeed.failureReason,

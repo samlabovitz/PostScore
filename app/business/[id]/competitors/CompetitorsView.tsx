@@ -67,6 +67,12 @@ function formatMetric(m: MetricDef, v: number | null, locale: Locale, asShare = 
   return v >= 1 ? t(locale, "dashboard.competitors.yes") : t(locale, "dashboard.competitors.no");
 }
 
+
+/** v1.11.0: the platform when this entry's listing links to a social page
+ * instead of a website ("Facebook page only"), from its saved breakdown. */
+function socialPlatformOf(entry: SavedCompetitorEntry): string | null {
+  return entry.breakdown?.checks.find((c) => c.id === "website.has_website")?.meta?.socialPlatform ?? null;
+}
 export function CompetitorsView({ businessId, data }: { businessId: string; data: OkResult }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
@@ -579,7 +585,9 @@ function CompetitorCard({ entry, rank, view }: { entry: SavedCompetitorEntry; ra
                 ? t(locale, "dashboard.competitors.notChecked")
                 : entry.hasWebsite
                   ? t(locale, "dashboard.competitors.hasWebsite")
-                  : t(locale, "dashboard.competitors.noWebsite")}
+                  : socialPlatformOf(entry)
+                    ? t(locale, "dashboard.competitors.socialPageOnly", { platform: socialPlatformOf(entry)! })
+                    : t(locale, "dashboard.competitors.noWebsite")}
             </span>
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">

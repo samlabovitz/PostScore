@@ -101,7 +101,7 @@ describe("collectWebsiteAnalysis with Browserless (Step 2g)", () => {
     expect(out.content?.isLikelyClientRenderedShell).toBe(false);
     expect(out.content?.hasPhoneLink).toBe(true);
     expect(out.content?.hasCtaText).toBe(true);
-    expect(out.content?.socialProfiles).toEqual([{ platform: "Instagram", url: "instagram.com/goldberghardware" }]);
+    expect(out.content?.socialProfiles).toMatchObject([{ platform: "Instagram", url: "instagram.com/goldberghardware" }]);
     expect(out.readViaBrowserChecks).toContain("website.contact_conversion");
     expect(out.browserRenders).toBeGreaterThan(0);
     expect(out.browserRenders).toBeLessThanOrEqual(4);

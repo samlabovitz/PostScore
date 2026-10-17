@@ -1294,6 +1294,45 @@ function hostMatches(hostname: string, list: string[]): boolean {
   return list.some((h) => host === h || host.endsWith(`.${h}`));
 }
 
+/** Social, link-in-bio, review and ordering pages — never the
+ * business's own website (Day 4b rule: "a social page is not a
+ * website"). Maps a host to the platform name shown to owners. */
+const SOCIAL_PAGE_PLATFORMS: Array<[string[], string]> = [
+  [["facebook.com", "fb.com", "fb.me"], "Facebook"],
+  [["instagram.com"], "Instagram"],
+  [["linktr.ee", "linktree.com"], "Linktree"],
+  [["yelp.com"], "Yelp"],
+  [["tiktok.com"], "TikTok"],
+  [["x.com", "twitter.com"], "X"],
+  [["youtube.com", "youtu.be"], "YouTube"],
+  [["linkedin.com"], "LinkedIn"],
+  [["pinterest.com"], "Pinterest"],
+  [["threads.net"], "Threads"],
+  [["nextdoor.com"], "Nextdoor"],
+  [["beacons.ai"], "Beacons"],
+  [["linkin.bio"], "Linkin.bio"],
+  [["doordash.com"], "DoorDash"],
+  [["grubhub.com"], "Grubhub"],
+  [["ubereats.com"], "Uber Eats"],
+  [["nailsites.com"], "NailSites"],
+  [["localsearch.com"], "Localsearch"],
+];
+
+/** The platform name when a "website" address is really a social,
+ * link-in-bio, review or ordering page (e.g. "Facebook"); null for a
+ * real website or anything unparsable. Pure — no fetch. */
+export function socialPagePlatform(url: string | null | undefined): string | null {
+  if (!url || !url.trim()) return null;
+  let host: string;
+  try {
+    host = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`).hostname;
+  } catch {
+    return null;
+  }
+  for (const [hosts, name] of SOCIAL_PAGE_PLATFORMS) if (hostMatches(host, hosts)) return name;
+  return null;
+}
+
 /** Classifies a website's real hostname — see FREE_BUILDER_HOSTS/
  * DIRECTORY_HOSTS' own docs. Anything not matching either list is
  * "independent": the owner's own real domain, whether or not we've

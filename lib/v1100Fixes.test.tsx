@@ -10,32 +10,32 @@ import { scoreBasisPoints, type CategoryResult, type CheckResult } from "./scori
 
 describe("1a — platform/builder accounts never count as the business's profile", () => {
   test("Gregg L. Smith: only Wix's LinkedIn → no profile at all", () => {
-    expect(detectSocialProfiles(`<a href="https://www.linkedin.com/company/wix-com">Made with Wix</a>`)).toEqual([]);
+    expect(bareProfiles(detectSocialProfiles(`<a href="https://www.linkedin.com/company/wix-com">Made with Wix</a>`))).toEqual([]);
   });
   test("Yoga Love NY: Wix's accounts dropped, its own kept", () => {
     const html = `<a href="https://facebook.com/yogalovenewyork">FB</a><a href="https://instagram.com/yoga.love.ny">IG</a>
       <a href="https://www.facebook.com/wix">f</a><a href="https://www.instagram.com/wix">i</a>`;
-    expect(detectSocialProfiles(html).map((p) => p.url)).toEqual(["facebook.com/yogalovenewyork", "instagram.com/yoga.love.ny"]);
+    expect(bareProfiles(detectSocialProfiles(html)).map((p) => p.url)).toEqual(["facebook.com/yogalovenewyork", "instagram.com/yoga.love.ny"]);
   });
   test("ordering/booking platforms and a platform's own account are dropped; a business named like a platform elsewhere is kept", () => {
-    expect(detectSocialProfiles(`<a href="https://instagram.com/toasttab">t</a><a href="https://x.com/x">x</a><a href="https://facebook.com/Square">s</a>`)).toEqual([]);
-    expect(detectSocialProfiles(`<a href="https://instagram.com/x">x</a>`)).toEqual([{ platform: "Instagram", url: "instagram.com/x" }]);
+    expect(bareProfiles(detectSocialProfiles(`<a href="https://instagram.com/toasttab">t</a><a href="https://x.com/x">x</a><a href="https://facebook.com/Square">s</a>`))).toEqual([]);
+    expect(bareProfiles(detectSocialProfiles(`<a href="https://instagram.com/x">x</a>`))).toEqual([{ platform: "Instagram", url: "instagram.com/x" }]);
   });
 });
 
 describe("1b — Facebook pg/, p/ and people/ paths keep the real page", () => {
   test("Pardalis: facebook.com/pg/newyorkcitylawyers/reviews → facebook.com/newyorkcitylawyers", () => {
-    expect(detectSocialProfiles(`<a href="https://www.facebook.com/pg/newyorkcitylawyers/reviews">FB</a>`)).toEqual([
+    expect(bareProfiles(detectSocialProfiles(`<a href="https://www.facebook.com/pg/newyorkcitylawyers/reviews">FB</a>`))).toEqual([
       { platform: "Facebook", url: "facebook.com/newyorkcitylawyers" },
     ]);
   });
   test("Red Bowl: facebook.com/p/Red-Bowl-100069632232812 keeps its p/ path (never a bare facebook.com/p)", () => {
-    expect(detectSocialProfiles(`<a href='https://www.facebook.com/p/Red-Bowl-100069632232812/?paipv=0&#038;eav=x'>FB</a>`)).toEqual([
+    expect(bareProfiles(detectSocialProfiles(`<a href='https://www.facebook.com/p/Red-Bowl-100069632232812/?paipv=0&#038;eav=x'>FB</a>`))).toEqual([
       { platform: "Facebook", url: "facebook.com/p/Red-Bowl-100069632232812" },
     ]);
   });
   test("people/<name>/<id> keeps all three parts", () => {
-    expect(detectSocialProfiles(`<a href="https://www.facebook.com/people/Joes-Diner/100012345/">FB</a>`)[0].url).toBe(
+    expect(bareProfiles(detectSocialProfiles(`<a href="https://www.facebook.com/people/Joes-Diner/100012345/">FB</a>`))[0].url).toBe(
       "facebook.com/people/Joes-Diner/100012345"
     );
   });
@@ -139,6 +139,10 @@ describe("6 — the saved site address starts at the street number", () => {
 });
 
 import { detectPagePresence, newPresenceBudget } from "./websiteAnalysis";
+
+/** Only what each profile is (platform + address) — v1.11.0 also stores
+ * the link address and its check result. */
+const bareProfiles = (ps: Array<{ platform: string; url: string }>) => ps.map(({ platform, url }) => ({ platform, url }));
 describe("3 — same-location pages rank first for a chain's location site", () => {
   test("yogasix.com/white-plains: /white-plains/about wins over the brand-wide /about", async () => {
     const story = `<html><body><main><h1>About</h1><p>${"Our White Plains studio opened in 2019 with heated classes, friendly teachers and a welcoming community for every level of practice. ".repeat(3)}</p></main></body></html>`;

@@ -39,6 +39,8 @@ import { DEFAULT_LOCALE, formatShortDate, t, tPlural, type Locale, type MessageK
 import { GOOGLE_PHOTO_CAP } from "@/lib/googlePhotoCap";
 import { reachabilityReasonMessageKey, type ReachabilityFailureReason } from "@/lib/websiteReachability";
 import { spamTopic } from "@/lib/siteSecurity";
+import { socialPagePlatform } from "@/lib/websiteTrust";
+import { socialProfileCounts } from "@/lib/socialLinkCheck";
 import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type AbandonedSiteFinding, type EmbeddedMapFinding, type InfoFieldFinding, type SpamFinding, type StaleNoticeFinding, type WebsiteKind } from "@/lib/websiteTrust";
 
 // ---------------------------------------------------------------------------
@@ -51,7 +53,7 @@ import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type Aban
  * records the version that produced it, so historical scores stay
  * interpretable even after the formula evolves.
  */
-export const SCORING_VERSION = "1.10.0";
+export const SCORING_VERSION = "1.11.0";
 
 // ---------------------------------------------------------------------------
 // Core types
@@ -114,6 +116,24 @@ export type HttpsCheckStatus = "https" | "http_only" | "unreachable";
 export interface SocialProfile {
   platform: string;
   url: string;
+  /** v1.11.0: the full address the site actually links to (for the
+   * one-request check below). Absent on profiles saved before. */
+  href?: string;
+  /** v1.11.0: what ONE plain request to `href` resolved to — saved so
+   * every result can be audited (lib/socialLinkCheck.ts). Absent = not
+   * checked (counts, as before). */
+  check?: SocialLinkCheck;
+}
+
+/** See lib/socialLinkCheck.ts. "profile" and "unconfirmed" (the
+ * platform blocked us but the address is a valid profile path) count;
+ * the rest don't. */
+export interface SocialLinkCheck {
+  result: "profile" | "unconfirmed" | "own_site" | "elsewhere" | "not_found";
+  /** Where the request ended up after redirects (null on a network error). */
+  finalUrl: string | null;
+  httpStatus: number | null;
+  checkedAt: string;
 }
 
 export interface WebsiteContentSignals {
@@ -1281,7 +1301,13 @@ const PLACEHOLDER_HOURS = [
  * the LISTING's own URL state) still ignores it.
  */
 export function hasAnalyzableWebsite(input: BusinessScoringInput): boolean {
-  return (!!input.website && input.website.trim().length > 0) || !!input.verifiedElsewhereUrl;
+  return isRealWebsite(input.website) || isRealWebsite(input.verifiedElsewhereUrl);
+}
+
+/** v1.11.0: an address that is a website at all — a Facebook/Instagram/
+ * Linktree/Yelp/ordering page is not (socialPagePlatform). */
+export function isRealWebsite(url: string | null | undefined): boolean {
+  return !!url && url.trim().length > 0 && socialPagePlatform(url) === null;
 }
 
 /** Step 2d: our own plain fetch couldn't access the site — it was
@@ -1681,6 +1707,7 @@ export const CHECKS: CheckDefinition[] = [
     maxPoints: 4,
     adviceKey: "content.checks.website.has_website.advice",
     gapAdviceKeys: {
+      social_page: "content.checks.website.has_website.advice.socialPage",
       listing_broken: "content.checks.website.has_website.advice.listingBroken",
       directory: "content.checks.website.has_website.advice.directory",
     },
@@ -1697,9 +1724,21 @@ export const CHECKS: CheckDefinition[] = [
     // "is there a real site."
     evaluate(input, locale) {
       const hasListingWebsite = !!input.website && input.website.trim().length > 0;
-      const verifiedElsewhere = input.verifiedElsewhereUrl;
+      // v1.11.0: a verified "website" that's itself a social page never counts.
+      const verifiedElsewhere = isRealWebsite(input.verifiedElsewhereUrl) ? input.verifiedElsewhereUrl : null;
+      // v1.11.0: the listing links to a social/profile page — not a website.
+      const listingPlatform = hasListingWebsite ? socialPagePlatform(input.website) : null;
+      if (listingPlatform && !verifiedElsewhere) {
+        return {
+          earnedPoints: 0,
+          confidence: "VERIFIED",
+          explanation: t(locale, "content.checks.website.has_website.explanation.socialPage", { platform: listingPlatform }),
+          gaps: ["social_page"],
+          meta: { socialPlatform: listingPlatform },
+        };
+      }
 
-      if (!hasListingWebsite) {
+      if (!hasListingWebsite || listingPlatform) {
         if (verifiedElsewhere) {
           return {
             earnedPoints: 4,
@@ -2403,14 +2442,31 @@ export const CHECKS: CheckDefinition[] = [
       if (!content || content.socialProfiles === undefined) {
         return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.social_links.explanation.notAnalyzed") };
       }
-      if (content.socialProfiles.length > 0) {
+      // v1.11.0: only links that lead to a real profile count (each one
+      // checked with a single plain request — lib/socialLinkCheck.ts).
+      const counted = content.socialProfiles.filter(socialProfileCounts);
+      const notCounted = content.socialProfiles.filter((p) => !socialProfileCounts(p));
+      const whyNot = notCounted.map((p) => socialLinkProblem(p, locale));
+      if (counted.length > 0) {
         return {
           earnedPoints: 1,
           confidence: "VERIFIED",
-          explanation: t(locale, "content.checks.website.social_links.explanation.found", {
-            profiles: content.socialProfiles.map((p) => `${p.platform}: ${p.url}`).join(", "),
-          }),
+          explanation: [
+            t(locale, "content.checks.website.social_links.explanation.found", {
+              profiles: counted
+                .map((p) =>
+                  p.check?.result === "unconfirmed"
+                    ? t(locale, "content.checks.website.social_links.explanation.unconfirmed", { platform: p.platform, url: p.url })
+                    : `${p.platform}: ${p.url}`
+                )
+                .join(", "),
+            }),
+            ...whyNot,
+          ].join(" "),
         };
+      }
+      if (notCounted.length > 0) {
+        return { earnedPoints: 0, confidence: "VERIFIED", explanation: whyNot.join(" ") };
       }
       // A JavaScript-rendered page's links may simply not be in the HTML
       // we can read — honestly couldn't check, not a real "none".
@@ -3107,15 +3163,55 @@ function parseWebsiteContentSignals(value: unknown): WebsiteContentSignals | nul
     ...(parseContactEvidence(v.contactEvidence) ? { contactEvidence: parseContactEvidence(v.contactEvidence)! } : {}),
     ...(Array.isArray(v.socialProfiles)
       ? {
-          socialProfiles: v.socialProfiles.filter(
-            (p): p is SocialProfile =>
-              !!p && typeof p === "object" && typeof (p as SocialProfile).platform === "string" && typeof (p as SocialProfile).url === "string"
-          ),
+          socialProfiles: v.socialProfiles
+            .filter(
+              (p): p is SocialProfile =>
+                !!p && typeof p === "object" && typeof (p as SocialProfile).platform === "string" && typeof (p as SocialProfile).url === "string"
+            )
+            .map((p) => ({
+              platform: p.platform,
+              url: p.url,
+              ...(typeof p.href === "string" ? { href: p.href } : {}),
+              ...(parseSocialLinkCheck(p.check) ? { check: parseSocialLinkCheck(p.check)! } : {}),
+            })),
         }
       : {}),
     isLikelyClientRenderedShell:
       typeof v.isLikelyClientRenderedShell === "boolean" ? v.isLikelyClientRenderedShell : false,
     renderedContentSignals: v.renderedContentSignals ? parseRenderedContentSignals(v.renderedContentSignals) : null,
+  };
+}
+
+/** Why a checked social link doesn't count, in the owner's words. */
+function socialLinkProblem(profile: SocialProfile, locale: Locale): string {
+  const host = (() => {
+    try {
+      return profile.check?.finalUrl ? new URL(profile.check.finalUrl).hostname.replace(/^www\./, "") : "";
+    } catch {
+      return "";
+    }
+  })();
+  switch (profile.check?.result) {
+    case "own_site":
+      return t(locale, "content.checks.website.social_links.explanation.backToSite", { platform: profile.platform });
+    case "elsewhere":
+      return t(locale, "content.checks.website.social_links.explanation.elsewhere", { platform: profile.platform, host });
+    default:
+      return t(locale, "content.checks.website.social_links.explanation.notFound", { platform: profile.platform });
+  }
+}
+
+function parseSocialLinkCheck(value: unknown): SocialLinkCheck | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  const results: SocialLinkCheck["result"][] = ["profile", "unconfirmed", "own_site", "elsewhere", "not_found"];
+  const result = results.find((r) => r === v.result);
+  if (!result || typeof v.checkedAt !== "string") return null;
+  return {
+    result,
+    finalUrl: typeof v.finalUrl === "string" ? v.finalUrl : null,
+    httpStatus: typeof v.httpStatus === "number" ? v.httpStatus : null,
+    checkedAt: v.checkedAt,
   };
 }
 
