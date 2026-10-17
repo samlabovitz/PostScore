@@ -26,7 +26,7 @@ export function ConnectToUnlockCard({
   const locale = useLocale();
   return (
     <Card className="flex items-start gap-3 p-4">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brass/10 text-brass">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ps-icon-tile">
         <IconLock size={16} />
       </span>
       <div className="flex-1">

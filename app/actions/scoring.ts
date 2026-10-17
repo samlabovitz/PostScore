@@ -1,6 +1,8 @@
 "use server";
 
 import { withTimeZone } from "@/lib/businessTimeZone";
+import { rescanAvailability } from "@/lib/rescanPolicy";
+import { diffBreakdowns } from "@/lib/scoreChanges";
 import { ensureFirstCompetitorScanWithClient } from "@/app/actions/competitors";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
@@ -268,7 +270,12 @@ export type RescanBusinessResult =
       tasksReopened: number;
       pointsConfirmed: number;
       changes: ProfileChange[];
+      /** Interactive re-scans only (rescanBusiness): the score before and
+       * after, whether PostScore's scoring version changed in between,
+       * and how many checks changed — for the honest summary toast. */
+      summary?: RescanSummary;
     }
+  | { status: "too_soon"; nextAvailableAt: string }
   | { status: "not_found" }
   | { status: "unauthenticated" }
   | { status: "no_results" }
@@ -292,6 +299,26 @@ export type RescanBusinessResult =
  *
  * Exactly one Google Places Details call per invocation.
  */
+export interface RescanSummary {
+  scoreBefore: number | null;
+  scoreAfter: number;
+  /** PostScore's scoring version changed between the two scans — the
+   * point difference isn't the business's doing. */
+  scoringUpdated: boolean;
+  checksChanged: number;
+}
+
+async function latestScore(supabase: SupabaseClient, businessId: string) {
+  const { data } = await supabase
+    .from("scores")
+    .select("total, scoring_version, breakdown_json, created_at")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data as { total: number; scoring_version: string; breakdown_json: ScoreBreakdown; created_at: string } | null;
+}
+
 export async function rescanBusiness(businessId: string): Promise<RescanBusinessResult> {
   const supabase = createClient();
 
@@ -303,12 +330,31 @@ export async function rescanBusiness(businessId: string): Promise<RescanBusiness
     return { status: "unauthenticated" };
   }
 
+  // One re-scan per business per 24 hours (lib/rescanPolicy.ts) — checked
+  // before any paid call.
+  const before = await latestScore(supabase, businessId);
+  const availability = rescanAvailability(before?.created_at ?? null, new Date());
+  if (!availability.allowed) return { status: "too_soon", nextAvailableAt: availability.nextAvailableAt! };
+
   const result = await rescanBusinessWithClient(supabase, businessId);
   // Part B: the business's first competitor scan, once ever (no-op when
   // one is already saved). Interactive only — the bulk re-scan script and
   // the monthly report call rescanBusinessWithClient directly.
   if (result.status === "ok") await ensureFirstCompetitorScanWithClient(supabase, businessId);
-  return result;
+  if (result.status !== "ok") return result;
+
+  const after = await latestScore(supabase, businessId);
+  if (!after) return result;
+  const scoringUpdated = !!before && before.scoring_version !== after.scoring_version;
+  return {
+    ...result,
+    summary: {
+      scoreBefore: before?.total ?? null,
+      scoreAfter: after.total,
+      scoringUpdated,
+      checksChanged: before && !scoringUpdated ? diffBreakdowns(before.breakdown_json, after.breakdown_json).length : 0,
+    },
+  };
 }
 
 /**

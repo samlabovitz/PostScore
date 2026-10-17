@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { Card } from "@/components/ui/Card";
-import { IconCircleCheck, IconCircleDashed } from "@tabler/icons-react";
-import { ConnectToUnlockCard } from "@/components/gbp/ConnectToUnlock";
+import { LINK_PILL_CLASS } from "@/components/ui/linkPill";
+import { IconCircleCheck, IconCircleDashed, IconLock } from "@tabler/icons-react";
 import { t, useLocale } from "@/lib/i18n";
 
 /**
@@ -31,8 +32,9 @@ export interface GbpListingField {
  * the prototype, structured now so Phase 2 can drop real field data in
  * without redesigning this component, but rendering nothing fabricated
  * today. Three real states, never a fourth invented one:
- *   1. Not connected → the same honest connect-to-unlock gate every
- *      other GBP-dependent feature uses.
+ *   1. Not connected → "Connect your Google Business Profile" (PostScore
+ *      Premium), linking to the connect page — read-only "coming soon"
+ *      (disabled button) until GBP_CONNECT_PUBLIC.
  *   2. Connected, but `fields` is null → Phase 1's actual state for
  *      every connected business today: we hold a token, but no code yet
  *      calls the Business Profile API to read real field completeness.
@@ -58,12 +60,29 @@ export function LiveListingSection({
   const locale = useLocale();
 
   if (!connected) {
+    // Compact, like the original connect box. Opens the connect page,
+    // which stays read-only "coming soon" until GBP_CONNECT_PUBLIC.
     return (
-      <ConnectToUnlockCard
-        businessId={businessId}
-        title={t(locale, "dashboard.overview.profileChecklistTitle")}
-        description={t(locale, "dashboard.overview.profileChecklistDescription")}
-      />
+      <Card className="flex items-start gap-3 p-4">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ps-icon-tile">
+          <IconLock size={16} aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <h3 className="text-[13px] font-semibold text-ink">{t(locale, "dashboard.overview.profileChecklistTitle")}</h3>
+            <span className="rounded-full bg-ink px-2 py-px text-[10.5px] font-semibold text-paper">
+              {t(locale, "dashboard.overview.connectPremiumPill")}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[12.5px] leading-snug text-ink-soft">{t(locale, "dashboard.overview.profileChecklistDescription")}</p>
+          <Link
+            href={`/business/${businessId}/connect-gbp`}
+            className={`mt-2 ${LINK_PILL_CLASS}`}
+          >
+            {t(locale, "dashboard.overview.seeWhatsIncluded")}
+          </Link>
+        </div>
+      </Card>
     );
   }
 

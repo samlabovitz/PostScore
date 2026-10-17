@@ -21,16 +21,7 @@ import { WebsiteCoverageNote } from "@/components/scoring/WebsiteCoverageNote";
 import { t, tPlural, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
 import { checkAnchorId } from "@/lib/postaiLinks";
 import { websiteFixPlan, type WebsiteFix, type WebsiteFixPlan } from "@/lib/websiteFixes";
-import { detectWebsiteBuilder, WEBSITE_BUILDER_NAMES } from "@/lib/websiteBuilder";
-
-function builderFromAddress(siteUrl: string | null) {
-  if (!siteUrl) return null;
-  try {
-    return detectWebsiteBuilder({ html: null, hostname: new URL(siteUrl).hostname });
-  } catch {
-    return null;
-  }
-}
+import { resolveWebsiteBuilder, WEBSITE_BUILDER_NAMES } from "@/lib/websiteBuilder";
 
 /** Checks whose "excluded" state has a real, specific reason worth its
  * own honest sentence (Day 4 Part 3c) — mapped from the real stored
@@ -388,8 +379,7 @@ export function WebsiteScoreBreakdown({
   // Day 4 Step 3: every losing check as the fix(es) the owner faces.
   // Saved on each scan; before a site's first scan with detection, its
   // own address can still name a builder (sites.google.com, *.wixsite.com).
-  const fromAddress = websiteAnalysis?.builder ? null : builderFromAddress(siteUrl);
-  const builder = websiteAnalysis?.builder ?? (fromAddress?.id ? fromAddress : undefined);
+  const builder = resolveWebsiteBuilder(websiteAnalysis?.builder, siteUrl);
   const plan = websiteFixPlan(websiteCategory.checks, builder?.id ?? null);
 
   const technicalChecks = websiteCategory.checks.filter((c) => TECHNICAL_CHECK_IDS.includes(c.id));
@@ -441,7 +431,7 @@ export function WebsiteScoreBreakdown({
           </p>
           <p className="text-[13.5px] font-semibold text-ink">{websiteFixSummary(plan, locale)}</p>
           <p className="text-[12.5px] text-ink-mute">
-            {builder === undefined
+            {builder === null
               ? t(locale, "dashboard.websiteFix.builder.notYet")
               : builder.id
                 ? t(locale, "dashboard.websiteFix.builder.detected", { builder: WEBSITE_BUILDER_NAMES[builder.id] })

@@ -339,7 +339,7 @@ export function BusinessMemoryPanel({
   return (
     <Card className="flex flex-col gap-4 p-5">
       <div className="flex items-center gap-2">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brass/10 text-brass">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ps-icon-tile">
           <IconBrain size={16} />
         </span>
         <div>

@@ -3,6 +3,7 @@ import { DashboardShell } from "@/components/layout/DashboardShell";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { isGbpOAuthConfigured } from "@/lib/googleBusinessProfile";
+import { canConnectGbp } from "@/lib/premium";
 import { ConnectGbpView } from "./ConnectGbpView";
 
 /**
@@ -41,6 +42,9 @@ export default async function ConnectGbpPage({
         justConnected={searchParams.connected === "1"}
         error={searchParams.error ?? null}
         oauthConfigured={isGbpOAuthConfigured()}
+        // Read-only "coming soon" unless GBP_CONNECT_PUBLIC=true and the
+        // account has Premium (see canConnectGbp).
+        connectOpen={canConnectGbp()}
       />
     </DashboardShell>
   );

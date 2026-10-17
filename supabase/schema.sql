@@ -1432,3 +1432,16 @@ create policy "Users can delete weekly checks for their own businesses"
 alter table public.businesses
   add column if not exists website_trust_overrides_json jsonb,
   add column if not exists verified_website_url text;
+
+-- Overview header: Google listing photo usage log (see lib/placePhotoBudget.ts).
+
+create table if not exists public.place_photo_loads (
+  id bigserial primary key,
+  business_id uuid not null references public.businesses (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists place_photo_loads_created_at_idx
+  on public.place_photo_loads (created_at);
+
+alter table public.place_photo_loads enable row level security;

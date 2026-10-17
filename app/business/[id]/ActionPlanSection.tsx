@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { wholePointRange } from "@/lib/pointRange";
 import { markTaskDone } from "@/app/actions/actionPlan";
 import {
   pendingCheckStatus,
@@ -299,12 +300,12 @@ export function TaskCard({
   // website.https that's often the only determinable check in its own
   // category. Showing this everywhere (weekly AND later) is what makes
   // a weekly card's points actually sum to "Points within reach".
+  const range = task.weightedPointsHigh !== null ? wholePointRange(task.weightedPoints, task.weightedPointsHigh) : null;
   const pointsLabel =
-    task.weightedPointsHigh !== null
-      ? t(locale, "dashboard.overview.actionPlan.pointsRangeOnceLive", {
-          low: formatPoints(task.weightedPoints),
-          high: formatPoints(task.weightedPointsHigh),
-        })
+    range !== null
+      ? range.high !== null
+        ? t(locale, "dashboard.overview.actionPlan.pointsRangeOnceLive", { low: range.low, high: range.high })
+        : t(locale, "dashboard.overview.actionPlan.pointsOnceLive", { points: range.low })
       : context === "weekly" && task.effort !== "quick_win"
         ? t(locale, "dashboard.overview.actionPlan.pointsThisWeek", { points: formatPoints(task.weightedPoints) })
         : t(locale, "dashboard.overview.actionPlan.pointsUpTo", { points: formatPoints(task.weightedPoints) });

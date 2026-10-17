@@ -94,7 +94,7 @@ export default async function Home() {
 
         {businesses.length === 0 ? (
           <Card className="flex flex-col items-center gap-3 p-10 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brass/10 text-brass">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full ps-icon-tile">
               <IconBuildingStore size={22} stroke={1.75} />
             </span>
             <h2 className="font-serif text-lg font-semibold text-ink">

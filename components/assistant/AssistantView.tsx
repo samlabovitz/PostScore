@@ -74,7 +74,7 @@ function EmptyState({
   const locale = useLocale();
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 py-10 text-center">
-      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brass/10 text-brass">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full ps-icon-tile">
         <IconMessageChatbot size={20} />
       </span>
       <div>

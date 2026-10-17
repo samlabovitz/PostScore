@@ -1160,7 +1160,6 @@ export type MessageKey =
   | "dashboard.overview.dateColumn"
   | "dashboard.overview.scoreColumn"
   | "dashboard.overview.gradeColumn"
-  | "dashboard.overview.versionColumn"
   | "dashboard.overview.actionPlan.toDo"
   | "dashboard.overview.actionPlan.completeThisWeek"
   | "dashboard.overview.actionPlan.inProgressFraction"
@@ -2535,7 +2534,97 @@ export type MessageKey =
   | "content.checks.website.social_links.explanation.unconfirmed"
   | "content.checks.website.social_links.explanation.backToSite"
   | "content.checks.website.social_links.explanation.elsewhere"
-  | "content.checks.website.social_links.explanation.notFound";
+  | "content.checks.website.social_links.explanation.notFound"
+  | "content.checks.visibility.rating.explanation.excellentMoreReviews"
+  | "content.checks.visibility.rating.explanation.lowRating"
+  | "content.checks.visibility.rating.advice.needsReviews"
+  | "content.checks.visibility.rating.advice.lowRating"
+  | "dashboard.checkResult.excellent"
+  | "dashboard.checkResult.good"
+  | "dashboard.rescan.lastScanned"
+  | "dashboard.rescan.updateOnlyOnRescan"
+  | "dashboard.rescan.never"
+  | "dashboard.rescan.freshToday"
+  | "dashboard.rescan.freshDays.one"
+  | "dashboard.rescan.freshDays.other"
+  | "dashboard.rescan.stale"
+  | "dashboard.rescan.nextAvailable"
+  | "dashboard.rescan.scanning"
+  | "dashboard.rescan.toastScore"
+  | "dashboard.rescan.toastScoreFirst"
+  | "dashboard.rescan.toastChecks.one"
+  | "dashboard.rescan.toastChecks.other"
+  | "dashboard.rescan.toastNoChecks"
+  | "dashboard.rescan.toastScoringUpdated"
+  | "dashboard.rescan.linkToOverview"
+  | "dashboard.rescan.competitorsSeparate"
+  | "dashboard.rescan.versionInfo"
+  | "dashboard.rescan.versionInfoAria"
+  | "dashboard.overview.biggestBoost"
+  | "dashboard.overview.seeHistory"
+  | "dashboard.overview.topIssue"
+  | "dashboard.overview.nothingLeftHere"
+  | "dashboard.overview.showChecks"
+  | "dashboard.overview.hideChecks"
+  | "dashboard.overview.showAllScans"
+  | "dashboard.overview.showFewerScans"
+  | "dashboard.overview.listingDetails"
+  | "dashboard.overview.header.viewLiveSite"
+  | "dashboard.overview.scoreCard.scoringUpdated"
+  | "dashboard.overview.tiles.reviewsSinceLastScan"
+  | "dashboard.overview.tiles.noNewReviews"
+  | "dashboard.overview.tiles.noWebsite"
+  | "dashboard.overview.tiles.fixes.one"
+  | "dashboard.overview.tiles.fixes.other"
+  | "dashboard.overview.tiles.nothingToFix"
+  | "dashboard.overview.breakdown.heading"
+  | "dashboard.overview.breakdown.caption"
+  | "dashboard.overview.breakdown.legendEarned"
+  | "dashboard.overview.breakdown.legendMissing"
+  | "dashboard.overview.recs.heading"
+  | "dashboard.overview.recs.viewAll"
+  | "dashboard.overview.recs.high"
+  | "dashboard.overview.recs.medium"
+  | "dashboard.overview.recs.points"
+  | "dashboard.overview.recs.pointsRange"
+  | "dashboard.overview.recs.seeCheck"
+  | "dashboard.overview.recs.improveWebsite"
+  | "dashboard.overview.recs.empty"
+  | "dashboard.overview.recs.unavailable"
+  | "dashboard.overview.recs.priorityNote"
+  | "dashboard.overview.studio.comingSoon"
+  | "dashboard.overview.studio.body"
+  | "dashboard.overview.photo.alt"
+  | "dashboard.overview.photo.viewOnMaps"
+  | "dashboard.overview.recs.startHereLabel"
+  | "dashboard.overview.recs.startHere"
+  | "dashboard.overview.sinceCard.heading"
+  | "dashboard.overview.sinceCard.lastScan"
+  | "dashboard.overview.sinceCard.now"
+  | "dashboard.overview.sinceCard.listingHeading"
+  | "dashboard.overview.sinceCard.checksHeading"
+  | "dashboard.overview.sinceCard.reportsLink"
+  | "dashboard.overview.breakdown.done.one"
+  | "dashboard.overview.breakdown.done.other"
+  | "dashboard.overview.breakdown.needsWork.one"
+  | "dashboard.overview.breakdown.needsWork.other"
+  | "dashboard.overview.breakdown.couldntCheck.one"
+  | "dashboard.overview.breakdown.couldntCheck.other"
+  | "dashboard.overview.band.points.one"
+  | "dashboard.overview.band.points.other"
+  | "dashboard.overview.studio.subtitle"
+  | "dashboard.overview.studio.website"
+  | "dashboard.overview.studio.menu"
+  | "dashboard.overview.studio.logo"
+  | "dashboard.overview.connectPremiumPill"
+  | "dashboard.overview.band.seeBreakdown"
+  | "dashboard.overview.scoringUpdatedVersionTip"
+  | "dashboard.overview.seeWhatsIncluded"
+  | "dashboard.overview.recs.pointsAbout"
+  | "dashboard.overview.actionPlan.pointsOnceLive"
+  | "dashboard.connectGbp.availableWithPremium"
+  | "dashboard.connectGbp.unlockSearchTermsTitle"
+  | "dashboard.connectGbp.unlockSearchTermsBody";
 
 /** The report/dashboard messages that vary by count — see tPlural below.
  * Each has a ".one" and ".other" MessageKey (the only two categories
@@ -2543,6 +2632,13 @@ export type MessageKey =
  * how a future locale with more categories, e.g. "few"/"many", would
  * still get a safe result even before every category is seeded for it). */
 export type PluralKeyBase =
+  | "dashboard.overview.band.points"
+  | "dashboard.overview.breakdown.done"
+  | "dashboard.overview.breakdown.needsWork"
+  | "dashboard.overview.breakdown.couldntCheck"
+  | "dashboard.overview.tiles.fixes"
+  | "dashboard.rescan.freshDays"
+  | "dashboard.rescan.toastChecks"
   | "dashboard.growth.websiteBanner.improve"
   | "report.fragment.scoreRose"
   | "report.fragment.scoreDropped"
@@ -3260,12 +3356,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.website.info_consistency.action.generic": "Your website and Google listing show different information — check which is correct and update the other.",
     "content.actionPlan.website.info_consistency.why": "Customers who get the wrong hours, phone number, or address may be turned away.",
     "content.actionPlan.website.info_consistency.fix": "Decide which one is right, then update the other one — your website's own page, or your Google Business Profile's business information. Your next PostScore scan will confirm they match.",
-    "dashboard.growth.websiteBanner.improve.one": "Your website scores {score}/100 — {count} improvement available (up to ~+{points} pts on your PostScore).",
-    "dashboard.growth.websiteBanner.improve.other": "Your website scores {score}/100 — {count} improvements available (up to ~+{points} pts on your PostScore).",
+    "dashboard.growth.websiteBanner.improve.one": "Your website scores {score}/100 — {count} improvement available (up to about +{points} pts on your PostScore).",
+    "dashboard.growth.websiteBanner.improve.other": "Your website scores {score}/100 — {count} improvements available (up to about +{points} pts on your PostScore).",
     "dashboard.growth.websiteBanner.openWebsitePage": "Open the Website page →",
     "dashboard.growth.websiteBanner.getWebsite.title": "Get a website",
-    "dashboard.growth.websiteBanner.getWebsite.range": "You don't have a website yet — a starter site from PostScore could add ~+{low}–{high} pts to your PostScore.",
-    "dashboard.growth.websiteBanner.getWebsite.single": "You don't have a website yet — a starter site from PostScore could add ~+{points} pts to your PostScore.",
+    "dashboard.growth.websiteBanner.getWebsite.range": "You don't have a website yet — a starter site from PostScore could add about +{low}–{high} pts to your PostScore.",
+    "dashboard.growth.websiteBanner.getWebsite.single": "You don't have a website yet — a starter site from PostScore could add about +{points} pts to your PostScore.",
     "dashboard.growth.websiteBanner.getWebsite.cta": "Build your starter site on the Website page →",
 
     // --- content.listingChange.* — pure extraction of lib/profileChanges.ts's
@@ -3428,8 +3524,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "report.competitorSection.basis": "Compared on what Google lists for everyone.",
     "report.focus.mismatch": "Your site says {site}, Google says {google} — update whichever is wrong.",
     "report.focus.websitePartlyChecked": "Your website could only be partly checked (it blocks our automated check). See the Website page.",
-    "report.focus.website.one": "Your website scores {score}/100 — {count} improvement available (up to ~+{points} pts). See the Website page.",
-    "report.focus.website.other": "Your website scores {score}/100 — {count} improvements available (up to ~+{points} pts). See the Website page.",
+    "report.focus.website.one": "Your website scores {score}/100 — {count} improvement available (up to about +{points} pts). See the Website page.",
+    "report.focus.website.other": "Your website scores {score}/100 — {count} improvements available (up to about +{points} pts). See the Website page.",
     "report.summary.reviewsGained.one": "{count} new review",
     "report.summary.reviewsGained.other": "{count} new reviews",
     "report.summary.reviewsLost": "your review count dropped by {count}",
@@ -4017,7 +4113,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.dateColumn": "Date",
     "dashboard.overview.scoreColumn": "Score",
     "dashboard.overview.gradeColumn": "Grade",
-    "dashboard.overview.versionColumn": "Version",
 
     "dashboard.overview.actionPlan.toDo": "To do",
     "dashboard.overview.actionPlan.completeThisWeek": "Complete this week",
@@ -4072,9 +4167,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.aheadOfNearby": "Ahead of {percentileAhead}% of {othersCount} nearby {competitorNoun}",
     "dashboard.overview.smallSampleSuffix": " — small sample",
 
-    "dashboard.overview.profileChecklistTitle": "Profile-completeness checklist",
+    "dashboard.overview.profileChecklistTitle": "Connect your Google Business Profile",
     "dashboard.overview.profileChecklistDescription":
-      "Connect your Google Business Profile to see exactly which listing fields are missing, add fixes straight to your action plan, and track review recency from your real, live Google data.",
+      "Let PostScore do the heavy lifting for you. Track your calls, views and reviews in one place, and get replies to reviews written for you.",
     "dashboard.overview.gbpConnectedNotWiredUp":
       "Google Business Profile connected. Live field-by-field completeness isn't wired up yet — that's a later update, not something broken here. We'll show your real checklist here once it ships.",
     "dashboard.overview.ptsAvailable": "+{points} pts available",
@@ -5582,6 +5677,96 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.social_links.explanation.backToSite": "Your {platform} link sends visitors back to your website instead of your {platform} profile.",
     "content.checks.website.social_links.explanation.elsewhere": "Your {platform} link goes to {host} instead of your {platform} profile.",
     "content.checks.website.social_links.explanation.notFound": "Your {platform} link opens a page that doesn't exist on {platform}.",
+    "content.checks.visibility.rating.explanation.excellentMoreReviews": "{rating}★ on Google. Your rating counts fully as you get more reviews ({count} now — full credit at {fullAt}+).",
+    "content.checks.visibility.rating.explanation.lowRating": "Rated {rating}★ on Google — below the 4.3★ or higher most customers look for.",
+    "content.checks.visibility.rating.advice.needsReviews": "Get more Google reviews — your star rating already counts fully once you have enough of them. Share your review link and QR sign from the Reviews page.",
+    "content.checks.visibility.rating.advice.lowRating": "Your star rating is below what most customers look for. Read what recent reviews mention, fix the service issues they raise, and reply to every review — especially the critical ones.",
+    "dashboard.checkResult.excellent": "Excellent",
+    "dashboard.checkResult.good": "Good",
+    "dashboard.rescan.lastScanned": "Last scanned {date}",
+    "dashboard.rescan.updateOnlyOnRescan": "Your score, history and competitor comparison update only when you re-scan.",
+    "dashboard.rescan.never": "Not scanned yet",
+    "dashboard.rescan.freshToday": "Scanned today",
+    "dashboard.rescan.freshDays.one": "Scanned 1 day ago",
+    "dashboard.rescan.freshDays.other": "Scanned {count} days ago",
+    "dashboard.rescan.stale": "Scanned {count} days ago — re-scan for current results",
+    "dashboard.rescan.nextAvailable": "Next re-scan available {time}",
+    "dashboard.rescan.scanning": "Scanning your listing, website and reviews… about 30–60 seconds",
+    "dashboard.rescan.toastScore": "Score {before} → {after}",
+    "dashboard.rescan.toastScoreFirst": "Score {after}",
+    "dashboard.rescan.toastChecks.one": "1 check changed",
+    "dashboard.rescan.toastChecks.other": "{count} checks changed",
+    "dashboard.rescan.toastNoChecks": "no checks changed",
+    "dashboard.rescan.toastScoringUpdated": "PostScore updated how it scores — your score is now {after}.",
+    "dashboard.rescan.linkToOverview": "Re-scan on the Overview",
+    "dashboard.rescan.competitorsSeparate": "Competitors refresh separately, once every 30 days.",
+    "dashboard.rescan.versionInfo": "Scoring version {version}",
+    "dashboard.rescan.versionInfoAria": "About this score",
+    "dashboard.overview.biggestBoost": "Biggest boost: up to +{points} pts · {label}",
+    "dashboard.overview.seeHistory": "See history",
+    "dashboard.overview.topIssue": "Top issue: {label}",
+    "dashboard.overview.nothingLeftHere": "Nothing left to fix here",
+    "dashboard.overview.showChecks": "See every check",
+    "dashboard.overview.hideChecks": "Hide checks",
+    "dashboard.overview.showAllScans": "Show all {count} scans",
+    "dashboard.overview.showFewerScans": "Show fewer",
+    "dashboard.overview.listingDetails": "Listing details",
+    "dashboard.overview.header.viewLiveSite": "View live site",
+    "dashboard.overview.scoreCard.scoringUpdated": "PostScore updated how it scores",
+    "dashboard.overview.tiles.reviewsSinceLastScan": "{delta} since last scan",
+    "dashboard.overview.tiles.noNewReviews": "No new reviews since last scan",
+    "dashboard.overview.tiles.noWebsite": "No website",
+    "dashboard.overview.tiles.fixes.one": "{count} fix",
+    "dashboard.overview.tiles.fixes.other": "{count} fixes",
+    "dashboard.overview.tiles.nothingToFix": "Nothing to fix",
+    "dashboard.overview.breakdown.heading": "Score breakdown",
+    "dashboard.overview.breakdown.caption": "The three categories add up to your score.",
+    "dashboard.overview.breakdown.legendEarned": "Points earned",
+    "dashboard.overview.breakdown.legendMissing": "Points missing",
+    "dashboard.overview.recs.heading": "Top recommendations",
+    "dashboard.overview.recs.viewAll": "View all",
+    "dashboard.overview.recs.high": "High priority",
+    "dashboard.overview.recs.medium": "Medium priority",
+    "dashboard.overview.recs.points": "+{points} pts",
+    "dashboard.overview.recs.pointsRange": "about +{low}–{high} pts",
+    "dashboard.overview.recs.seeCheck": "See this check →",
+    "dashboard.overview.recs.improveWebsite": "Improve your website",
+    "dashboard.overview.recs.empty": "Nothing open right now — every recommendation is done or waiting for your next re-scan.",
+    "dashboard.overview.recs.unavailable": "Your recommendations couldn't be loaded right now. See them on the Growth page.",
+    "dashboard.overview.recs.priorityNote": "High priority: worth {high}+ points on your score. Medium: {medium}+ points.",
+    "dashboard.overview.studio.comingSoon": "Coming soon",
+    "dashboard.overview.studio.body": "Build your website, design your menu or catalog, and create a logo, right inside PostScore.",
+    "dashboard.overview.photo.alt": "Photo of {name} from its Google listing",
+    "dashboard.overview.photo.viewOnMaps": "View this photo on Google Maps",
+    "dashboard.overview.recs.startHereLabel": "Start here:",
+    "dashboard.overview.recs.startHere": "your weekly plan on Growth",
+    "dashboard.overview.sinceCard.heading": "Since your last scan",
+    "dashboard.overview.sinceCard.lastScan": "Last scan · {date}",
+    "dashboard.overview.sinceCard.now": "Now",
+    "dashboard.overview.sinceCard.listingHeading": "On your Google listing",
+    "dashboard.overview.sinceCard.checksHeading": "Checks that went up or down",
+    "dashboard.overview.sinceCard.reportsLink": "See full history on Reports",
+    "dashboard.overview.breakdown.done.one": "{count} done",
+    "dashboard.overview.breakdown.done.other": "{count} done",
+    "dashboard.overview.breakdown.needsWork.one": "{count} needs work",
+    "dashboard.overview.breakdown.needsWork.other": "{count} need work",
+    "dashboard.overview.breakdown.couldntCheck.one": "{count} couldn't check",
+    "dashboard.overview.breakdown.couldntCheck.other": "{count} couldn't check",
+    "dashboard.overview.band.points.one": "{count} point",
+    "dashboard.overview.band.points.other": "{count} points",
+    "dashboard.overview.studio.subtitle": "Website, Menu & Logo Studio — the PostStudio add-on.",
+    "dashboard.overview.studio.website": "Website",
+    "dashboard.overview.studio.menu": "Menu & catalog",
+    "dashboard.overview.studio.logo": "Logo",
+    "dashboard.overview.connectPremiumPill": "PostScore Premium",
+    "dashboard.overview.band.seeBreakdown": "Score breakdown ↓",
+    "dashboard.overview.scoringUpdatedVersionTip": "PostScore updated how it scores (now version {version}) — scores may shift; this isn't a change at your business.",
+    "dashboard.overview.seeWhatsIncluded": "See what's included →",
+    "dashboard.overview.recs.pointsAbout": "about +{points} pts",
+    "dashboard.overview.actionPlan.pointsOnceLive": "About +{points} pts once it's live",
+    "dashboard.connectGbp.availableWithPremium": "Available with PostScore Premium — coming soon",
+    "dashboard.connectGbp.unlockSearchTermsTitle": "Search terms",
+    "dashboard.connectGbp.unlockSearchTermsBody": "See the exact words people typed on Google to find you.",
   },
   es: {
     "language.en": "Inglés",
@@ -6134,12 +6319,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.website.info_consistency.action.generic": "Su sitio web y su ficha de Google muestran información diferente — verifique cuál es la correcta y actualice la otra.",
     "content.actionPlan.website.info_consistency.why": "Los clientes que reciben un horario, un teléfono o una dirección incorrectos podrían terminar yéndose a otro lugar.",
     "content.actionPlan.website.info_consistency.fix": "Decida cuál es el correcto y luego actualice el otro — la página de su propio sitio web o la información de su Perfil de Negocio de Google. Su próximo escaneo de PostScore confirmará que coinciden.",
-    "dashboard.growth.websiteBanner.improve.one": "Su sitio web obtiene {score}/100 — {count} mejora disponible (hasta ~+{points} pts en su PostScore).",
-    "dashboard.growth.websiteBanner.improve.other": "Su sitio web obtiene {score}/100 — {count} mejoras disponibles (hasta ~+{points} pts en su PostScore).",
+    "dashboard.growth.websiteBanner.improve.one": "Su sitio web obtiene {score}/100 — {count} mejora disponible (hasta unos +{points} pts en su PostScore).",
+    "dashboard.growth.websiteBanner.improve.other": "Su sitio web obtiene {score}/100 — {count} mejoras disponibles (hasta unos +{points} pts en su PostScore).",
     "dashboard.growth.websiteBanner.openWebsitePage": "Abrir la página Sitio web →",
     "dashboard.growth.websiteBanner.getWebsite.title": "Obtenga un sitio web",
-    "dashboard.growth.websiteBanner.getWebsite.range": "Todavía no tiene sitio web — un sitio inicial de PostScore podría sumar ~+{low}–{high} pts a su PostScore.",
-    "dashboard.growth.websiteBanner.getWebsite.single": "Todavía no tiene sitio web — un sitio inicial de PostScore podría sumar ~+{points} pts a su PostScore.",
+    "dashboard.growth.websiteBanner.getWebsite.range": "Todavía no tiene sitio web — un sitio inicial de PostScore podría sumar unos +{low}–{high} pts a su PostScore.",
+    "dashboard.growth.websiteBanner.getWebsite.single": "Todavía no tiene sitio web — un sitio inicial de PostScore podría sumar unos +{points} pts a su PostScore.",
     "dashboard.growth.websiteBanner.getWebsite.cta": "Cree su sitio inicial en la página Sitio web →",
     "content.listingChange.phone.added": "Se agregó un número de teléfono a su ficha.",
     "content.listingChange.phone.removed": "Se eliminó el número de teléfono de su ficha.",
@@ -6298,8 +6483,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "report.competitorSection.basis": "Comparado con lo que Google indica para todos.",
     "report.focus.mismatch": "Su sitio dice {site} y Google dice {google} — actualice el que esté mal.",
     "report.focus.websitePartlyChecked": "Su sitio web solo se pudo revisar en parte (bloquea nuestra revisión automática). Consulte la página Sitio web.",
-    "report.focus.website.one": "Su sitio web obtiene {score}/100 — {count} mejora disponible (hasta ~+{points} pts). Consulte la página Sitio web.",
-    "report.focus.website.other": "Su sitio web obtiene {score}/100 — {count} mejoras disponibles (hasta ~+{points} pts). Consulte la página Sitio web.",
+    "report.focus.website.one": "Su sitio web obtiene {score}/100 — {count} mejora disponible (hasta unos +{points} pts). Consulte la página Sitio web.",
+    "report.focus.website.other": "Su sitio web obtiene {score}/100 — {count} mejoras disponibles (hasta unos +{points} pts). Consulte la página Sitio web.",
     "report.summary.reviewsGained.one": "{count} reseña nueva",
     "report.summary.reviewsGained.other": "{count} reseñas nuevas",
     "report.summary.reviewsLost": "su número de reseñas bajó en {count}",
@@ -6799,7 +6984,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.dateColumn": "Fecha",
     "dashboard.overview.scoreColumn": "Puntuación",
     "dashboard.overview.gradeColumn": "Nota",
-    "dashboard.overview.versionColumn": "Versión",
     "dashboard.overview.actionPlan.toDo": "Por hacer",
     "dashboard.overview.actionPlan.completeThisWeek": "Completar esta semana",
     "dashboard.overview.actionPlan.inProgressFraction": "En curso ({gained} de {targetDelta})",
@@ -6845,8 +7029,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.rankOfPeerCount": "#{rank} de {peerCount}",
     "dashboard.overview.aheadOfNearby": "Por delante del {percentileAhead}% de {othersCount} {competitorNoun} de la zona",
     "dashboard.overview.smallSampleSuffix": " — muestra pequeña",
-    "dashboard.overview.profileChecklistTitle": "Lista de verificación de perfil completo",
-    "dashboard.overview.profileChecklistDescription": "Conecte su Perfil de Negocio de Google para ver exactamente qué campos faltan en su ficha, agregar soluciones directamente a su plan de acción y hacer seguimiento de la actualidad de las reseñas a partir de sus datos reales y en vivo de Google.",
+    "dashboard.overview.profileChecklistTitle": "Conecte su Perfil de Negocio de Google",
+    "dashboard.overview.profileChecklistDescription": "Deje que PostScore haga el trabajo pesado por usted. Vea sus llamadas, visitas y reseñas en un solo lugar, y reciba respuestas a sus reseñas ya redactadas.",
     "dashboard.overview.gbpConnectedNotWiredUp": "Perfil de Negocio de Google conectado. La verificación de campos en vivo aún no está habilitada — es una actualización futura, no algo averiado aquí. Mostraremos su lista real aquí cuando esté disponible.",
     "dashboard.overview.ptsAvailable": "+{points} pts disponibles",
     "dashboard.overview.askPostAI": "Pregunte a PostAI",
@@ -8657,6 +8841,96 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.social_links.explanation.backToSite": "Su enlace de {platform} lleva a los visitantes de vuelta a su sitio web en lugar de a su perfil de {platform}.",
     "content.checks.website.social_links.explanation.elsewhere": "Su enlace de {platform} lleva a {host} en lugar de a su perfil de {platform}.",
     "content.checks.website.social_links.explanation.notFound": "Su enlace de {platform} abre una página que no existe en {platform}.",
+    "content.checks.visibility.rating.explanation.excellentMoreReviews": "{rating}★ en Google. Su calificación cuenta por completo a medida que obtiene más reseñas ({count} ahora — puntos completos a partir de {fullAt}).",
+    "content.checks.visibility.rating.explanation.lowRating": "Calificación de {rating}★ en Google — por debajo de las 4.3★ o más que buscan la mayoría de los clientes.",
+    "content.checks.visibility.rating.advice.needsReviews": "Consiga más reseñas en Google — su calificación ya cuenta por completo cuando tenga suficientes. Comparta su enlace y su letrero QR para reseñas desde la página Reseñas.",
+    "content.checks.visibility.rating.advice.lowRating": "Su calificación está por debajo de lo que buscan la mayoría de los clientes. Lea lo que mencionan las reseñas recientes, resuelva los problemas de servicio que señalan y responda a cada reseña — sobre todo a las críticas.",
+    "dashboard.checkResult.excellent": "Excelente",
+    "dashboard.checkResult.good": "Bien",
+    "dashboard.rescan.lastScanned": "Último escaneo: {date}",
+    "dashboard.rescan.updateOnlyOnRescan": "Su puntuación, su historial y la comparación con la competencia solo se actualizan cuando vuelve a escanear.",
+    "dashboard.rescan.never": "Aún no se ha escaneado",
+    "dashboard.rescan.freshToday": "Escaneado hoy",
+    "dashboard.rescan.freshDays.one": "Escaneado hace 1 día",
+    "dashboard.rescan.freshDays.other": "Escaneado hace {count} días",
+    "dashboard.rescan.stale": "Escaneado hace {count} días — vuelva a escanear para ver resultados actuales",
+    "dashboard.rescan.nextAvailable": "Próximo escaneo disponible: {time}",
+    "dashboard.rescan.scanning": "Escaneando su ficha, su sitio web y sus reseñas… unos 30 a 60 segundos",
+    "dashboard.rescan.toastScore": "Puntuación {before} → {after}",
+    "dashboard.rescan.toastScoreFirst": "Puntuación {after}",
+    "dashboard.rescan.toastChecks.one": "1 revisión cambió",
+    "dashboard.rescan.toastChecks.other": "{count} revisiones cambiaron",
+    "dashboard.rescan.toastNoChecks": "ninguna revisión cambió",
+    "dashboard.rescan.toastScoringUpdated": "PostScore actualizó la forma en que calcula la puntuación — su puntuación ahora es {after}.",
+    "dashboard.rescan.linkToOverview": "Volver a escanear en el Resumen",
+    "dashboard.rescan.competitorsSeparate": "La competencia se actualiza por separado, una vez cada 30 días.",
+    "dashboard.rescan.versionInfo": "Versión de puntuación {version}",
+    "dashboard.rescan.versionInfoAria": "Sobre esta puntuación",
+    "dashboard.overview.biggestBoost": "Mayor mejora: hasta +{points} pts · {label}",
+    "dashboard.overview.seeHistory": "Ver historial",
+    "dashboard.overview.topIssue": "Principal pendiente: {label}",
+    "dashboard.overview.nothingLeftHere": "Nada pendiente aquí",
+    "dashboard.overview.showChecks": "Ver todas las revisiones",
+    "dashboard.overview.hideChecks": "Ocultar revisiones",
+    "dashboard.overview.showAllScans": "Mostrar los {count} escaneos",
+    "dashboard.overview.showFewerScans": "Mostrar menos",
+    "dashboard.overview.listingDetails": "Detalles de la ficha",
+    "dashboard.overview.header.viewLiveSite": "Ver sitio en vivo",
+    "dashboard.overview.scoreCard.scoringUpdated": "PostScore actualizó su forma de calificar",
+    "dashboard.overview.tiles.reviewsSinceLastScan": "{delta} desde el último análisis",
+    "dashboard.overview.tiles.noNewReviews": "Sin reseñas nuevas desde el último análisis",
+    "dashboard.overview.tiles.noWebsite": "Sin sitio web",
+    "dashboard.overview.tiles.fixes.one": "{count} arreglo",
+    "dashboard.overview.tiles.fixes.other": "{count} arreglos",
+    "dashboard.overview.tiles.nothingToFix": "Nada que arreglar",
+    "dashboard.overview.breakdown.heading": "Desglose de la puntuación",
+    "dashboard.overview.breakdown.caption": "Las tres categorías suman su puntuación.",
+    "dashboard.overview.breakdown.legendEarned": "Puntos obtenidos",
+    "dashboard.overview.breakdown.legendMissing": "Puntos faltantes",
+    "dashboard.overview.recs.heading": "Recomendaciones principales",
+    "dashboard.overview.recs.viewAll": "Ver todo",
+    "dashboard.overview.recs.high": "Prioridad alta",
+    "dashboard.overview.recs.medium": "Prioridad media",
+    "dashboard.overview.recs.points": "+{points} pts",
+    "dashboard.overview.recs.pointsRange": "unos +{low}–{high} pts",
+    "dashboard.overview.recs.seeCheck": "Vea esta revisión →",
+    "dashboard.overview.recs.improveWebsite": "Mejore su sitio web",
+    "dashboard.overview.recs.empty": "No hay nada pendiente — cada recomendación está hecha o espera su próximo análisis.",
+    "dashboard.overview.recs.unavailable": "No se pudieron cargar sus recomendaciones. Véalas en la página Crecimiento.",
+    "dashboard.overview.recs.priorityNote": "Prioridad alta: vale {high}+ puntos en su puntuación. Media: {medium}+ puntos.",
+    "dashboard.overview.studio.comingSoon": "Próximamente",
+    "dashboard.overview.studio.body": "Cree su sitio web, diseñe su menú o catálogo y cree un logotipo, directamente en PostScore.",
+    "dashboard.overview.photo.alt": "Foto de {name} de su ficha de Google",
+    "dashboard.overview.photo.viewOnMaps": "Ver esta foto en Google Maps",
+    "dashboard.overview.recs.startHereLabel": "Empiece aquí:",
+    "dashboard.overview.recs.startHere": "su plan semanal en Crecimiento",
+    "dashboard.overview.sinceCard.heading": "Desde su último análisis",
+    "dashboard.overview.sinceCard.lastScan": "Último análisis · {date}",
+    "dashboard.overview.sinceCard.now": "Ahora",
+    "dashboard.overview.sinceCard.listingHeading": "En su ficha de Google",
+    "dashboard.overview.sinceCard.checksHeading": "Revisiones que subieron o bajaron",
+    "dashboard.overview.sinceCard.reportsLink": "Vea el historial completo en Informes",
+    "dashboard.overview.breakdown.done.one": "{count} completa",
+    "dashboard.overview.breakdown.done.other": "{count} completas",
+    "dashboard.overview.breakdown.needsWork.one": "{count} por mejorar",
+    "dashboard.overview.breakdown.needsWork.other": "{count} por mejorar",
+    "dashboard.overview.breakdown.couldntCheck.one": "{count} sin revisar",
+    "dashboard.overview.breakdown.couldntCheck.other": "{count} sin revisar",
+    "dashboard.overview.band.points.one": "{count} punto",
+    "dashboard.overview.band.points.other": "{count} puntos",
+    "dashboard.overview.studio.subtitle": "Estudio de sitio web, menú y logotipo — el complemento PostStudio.",
+    "dashboard.overview.studio.website": "Sitio web",
+    "dashboard.overview.studio.menu": "Menú y catálogo",
+    "dashboard.overview.studio.logo": "Logotipo",
+    "dashboard.overview.connectPremiumPill": "PostScore Premium",
+    "dashboard.overview.band.seeBreakdown": "Desglose ↓",
+    "dashboard.overview.scoringUpdatedVersionTip": "PostScore actualizó su forma de puntuar (ahora versión {version}): las puntuaciones pueden variar; esto no es un cambio en su negocio.",
+    "dashboard.overview.seeWhatsIncluded": "Ver qué incluye →",
+    "dashboard.overview.recs.pointsAbout": "unos +{points} pts",
+    "dashboard.overview.actionPlan.pointsOnceLive": "Aprox. +{points} pts cuando esté publicado",
+    "dashboard.connectGbp.availableWithPremium": "Disponible con PostScore Premium — próximamente",
+    "dashboard.connectGbp.unlockSearchTermsTitle": "Términos de búsqueda",
+    "dashboard.connectGbp.unlockSearchTermsBody": "Vea las palabras exactas que la gente escribió en Google para encontrarlo.",
   },
 };
 

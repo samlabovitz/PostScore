@@ -1589,7 +1589,7 @@ describe("Day 4 Step 2f — PostAI points website fixes to the Website page", ()
       websiteSummary: { kind: "improve", score: 76, improvements: 5, points: 2.4 },
     });
     expect(text).toContain("WEBSITE SUMMARY: the website scores 76/100");
-    expect(text).toContain("5 improvement(s) available (up to ~+2.4 pts");
+    expect(text).toContain("5 improvement(s) available (up to about +2 pts");
     expect(text).toContain("point the owner there instead of listing steps");
   });
 
@@ -1598,7 +1598,7 @@ describe("Day 4 Step 2f — PostAI points website fixes to the Website page", ()
       ...BASE_CONTEXT,
       websiteSummary: { kind: "get_website", low: 12.3, high: 18.1 },
     });
-    expect(text).toContain("~+12.3–18.1 pts");
+    expect(text).toContain("about +12–18 pts");
   });
 
   test("the system rules tell PostAI not to list website steps other than the Google mismatch", () => {

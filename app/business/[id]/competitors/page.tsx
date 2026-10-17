@@ -1,9 +1,12 @@
 import { notFound, redirect } from "next/navigation";
+import { ScanStatusStrip } from "@/components/scoring/ScanStatusStrip";
 import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
 import { getCompetitors } from "@/app/actions/competitors";
 import { CompetitorsView } from "./CompetitorsView";
+import { getLastScanAt } from "@/app/actions/scoring";
+import { normalizeLocale, t } from "@/lib/i18n";
 
 export default async function CompetitorsPage({ params }: { params: { id: string } }) {
   const websiteOnly = await websiteOnlyGuard(params.id, "competitors");
@@ -27,6 +30,7 @@ export default async function CompetitorsPage({ params }: { params: { id: string
     );
   }
 
+  const lastScanAt = await getLastScanAt(params.id);
   return (
     <DashboardShell
       business={{
@@ -37,7 +41,10 @@ export default async function CompetitorsPage({ params }: { params: { id: string
         time_zone: fetched.timeZone,
       }}
     >
-      <CompetitorsView businessId={params.id} data={fetched} />
+      <div className="flex flex-col gap-6">
+        <ScanStatusStrip businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} mode="link" note={t(normalizeLocale(fetched.language), "dashboard.rescan.competitorsSeparate")} />
+        <CompetitorsView businessId={params.id} data={fetched} />
+      </div>
     </DashboardShell>
   );
 }

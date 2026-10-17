@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { ScanStatusStrip } from "@/components/scoring/ScanStatusStrip";
 import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
@@ -114,6 +115,9 @@ export default async function GrowthPage({ params }: { params: { id: string } })
 
   return (
     <DashboardShell business={business}>
+      <div className="mb-6">
+        <ScanStatusStrip businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} mode="link" />
+      </div>
       <GrowthView
         businessId={params.id}
         businessName={business.name}

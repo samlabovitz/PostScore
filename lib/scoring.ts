@@ -1011,6 +1011,18 @@ const RATING_CURVE: Array<[rating: number, fraction: number]> = [
   [4.9, 1.0],
 ];
 
+/** Wording bands for a star rating (never changes points): 4.5★+ is
+ * "excellent", 4.3★+ "good", below that "low" — the only band where the
+ * rating itself needs work. */
+export const RATING_EXCELLENT_FROM = 4.5;
+export const RATING_GOOD_FROM = 4.3;
+export type RatingBand = "excellent" | "good" | "low";
+
+export function ratingBand(rating: number): RatingBand {
+  if (rating >= RATING_EXCELLENT_FROM) return "excellent";
+  return rating >= RATING_GOOD_FROM ? "good" : "low";
+}
+
 function ratingFraction(rating: number): number {
   const r = Math.max(0, Math.min(5, rating));
   for (let i = 0; i < RATING_CURVE.length - 1; i++) {
@@ -1358,6 +1370,10 @@ export const CHECKS: CheckDefinition[] = [
     category: "visibility",
     maxPoints: RATING_CHECK_MAX_POINTS,
     adviceKey: "content.checks.visibility.rating.advice",
+    gapAdviceKeys: {
+      needs_reviews: "content.checks.visibility.rating.advice.needsReviews",
+      low_rating: "content.checks.visibility.rating.advice.lowRating",
+    },
     evaluate(input, locale) {
       if (input.rating === null) {
         // Same reasoning as visibility.review_count: a successfully
@@ -1386,10 +1402,20 @@ export const CHECKS: CheckDefinition[] = [
       const earnedPoints = roundTo(ratingFrac * confidenceFactor * RATING_CHECK_MAX_POINTS, 1);
       const fullConfidence = confidenceFactor >= 1;
 
+      // Overview wording (no point change): a rating of 4.5★+ is never
+      // "needs work" — the only gap is review count; "needs work" means a
+      // rating actually below a good level (under 4.3★).
+      const band = ratingBand(input.rating);
       let explanation: string;
       if (input.reviewCount === null) {
         explanation = t(locale, "content.checks.visibility.rating.explanation.noReviewCountBackup", {
           rating: input.rating.toFixed(1),
+        });
+      } else if (!fullConfidence && band === "excellent") {
+        explanation = t(locale, "content.checks.visibility.rating.explanation.excellentMoreReviews", {
+          rating: input.rating.toFixed(1),
+          count: input.reviewCount,
+          fullAt: RATING_CONFIDENCE_FULL_AT_REVIEWS,
         });
       } else if (!fullConfidence) {
         explanation = tPlural(
@@ -1398,13 +1424,28 @@ export const CHECKS: CheckDefinition[] = [
           input.reviewCount,
           { rating: input.rating.toFixed(1) }
         );
+      } else if (band === "low") {
+        explanation = t(locale, "content.checks.visibility.rating.explanation.lowRating", { rating: input.rating.toFixed(1) });
       } else {
         explanation = t(locale, "content.checks.visibility.rating.explanation.confident", {
           rating: input.rating.toFixed(1),
         });
       }
 
-      return { earnedPoints, confidence: "VERIFIED", explanation };
+      const losing = earnedPoints < RATING_CHECK_MAX_POINTS;
+      return {
+        earnedPoints,
+        confidence: "VERIFIED",
+        explanation,
+        meta: { ratingBand: band },
+        // "needs_reviews": a good rating held back only by review count;
+        // "low_rating": the rating itself is below a good level.
+        ...(losing && band === "low"
+          ? { gaps: ["low_rating"] }
+          : losing && !fullConfidence
+            ? { gaps: ["needs_reviews"] }
+            : {}),
+      };
     },
     // Full points require both a strong star value AND enough reviews to
     // trust it — reviewCount is only raised if it's currently below the

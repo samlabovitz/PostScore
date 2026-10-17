@@ -21,7 +21,7 @@ import {
 } from "@/lib/actionPlan";
 import { estimateStarterSiteRange, type StarterSiteTemplateData } from "@/lib/starterSiteScoring";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
-import { isGbpConnectPublic } from "@/lib/googleBusinessProfile";
+import { canConnectGbp } from "@/lib/premium";
 import { businessRowToScoringInput, scoreBusiness } from "@/lib/scoring";
 import type { BusinessScoringInput, BusinessScoringRow, ScoreBreakdown, Suggestion } from "@/lib/scoring";
 import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
@@ -138,13 +138,13 @@ export async function getActionPlan(
   // second pass): a real weekly-plan card, never a growth move (see
   // lib/growthMoves.ts's own doc for why it moved here), shown only
   // while the business's Google Business Profile genuinely isn't
-  // connected AND GBP_CONNECT_PUBLIC=true (see isGbpConnectPublic's own
-  // doc — off by default until Google's OAuth app verification is
-  // approved, since an unverified app blocks non-test Google accounts).
+  // connected AND connecting is really available (canConnectGbp:
+  // GBP_CONNECT_PUBLIC=true — off until Google's OAuth app verification
+  // is approved — plus Premium), so it never points at a disabled button.
   // Takes one of the weekly plan's own slots.
   const gbpStatus = await getGbpConnectionStatus(businessId);
   const connectGbpTask =
-    isGbpConnectPublic() && gbpStatus.status === "ok" && !gbpStatus.connected
+    canConnectGbp() && gbpStatus.status === "ok" && !gbpStatus.connected
       ? buildConnectGbpWeeklyTask(businessId, locale)
       : null;
   const weeklyPlanCap = connectGbpTask ? WEEKLY_PLAN_CAP - 1 : WEEKLY_PLAN_CAP;

@@ -11,6 +11,7 @@
 // from the server action that calls the API.
 
 import type { CategoryId, Confidence, Grade, HttpsCheckStatus } from "@/lib/scoring";
+import { wholePointRange } from "@/lib/pointRange";
 import { CATEGORY_LABELS } from "@/lib/scoring";
 import type { ReachabilityFailureReason } from "@/lib/websiteReachability";
 import type { TaskEffort, WebsiteBanner } from "@/lib/actionPlan";
@@ -784,13 +785,12 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
 
   if (context.websiteSummary?.kind === "improve") {
     lines.push(
-      `WEBSITE SUMMARY: the website scores ${context.websiteSummary.score}/100 on the Website page, with ${context.websiteSummary.improvements} improvement(s) available (up to ~+${formatPoints(context.websiteSummary.points)} pts on the PostScore, precomputed). The Website page's score breakdown has each fix — point the owner there instead of listing steps (the "Matches your Google listing" mismatch, if any, is in the action plan above and can be explained directly).`
+      `WEBSITE SUMMARY: the website scores ${context.websiteSummary.score}/100 on the Website page, with ${context.websiteSummary.improvements} improvement(s) available (up to about +${wholePointRange(context.websiteSummary.points, null).low} pts on the PostScore, precomputed). The Website page's score breakdown has each fix — point the owner there instead of listing steps (the "Matches your Google listing" mismatch, if any, is in the action plan above and can be explained directly).`
     );
   } else if (context.websiteSummary?.kind === "get_website") {
-    const range =
-      context.websiteSummary.high !== null
-        ? `~+${formatPoints(context.websiteSummary.low)}–${formatPoints(context.websiteSummary.high)}`
-        : `~+${formatPoints(context.websiteSummary.low)}`;
+    // Whole points, as the app shows them ("about +29–31").
+    const whole = wholePointRange(context.websiteSummary.low, context.websiteSummary.high);
+    const range = whole.high !== null ? `about +${whole.low}–${whole.high}` : `about +${whole.low}`;
     lines.push(
       `WEBSITE SUMMARY: no website at all. A starter site from the Website page's starter-site generator could add ${range} pts to the PostScore (precomputed) — point the owner there.`
     );

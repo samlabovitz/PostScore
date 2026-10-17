@@ -1118,7 +1118,9 @@ describe("v1.3.0 rating confidence weighting", () => {
   test("explanation honestly names the review count while confidence is discounted, and drops the caveat once full", () => {
     const thin = scoreBusiness({ ...PERFECT_INPUT, rating: 5.0, reviewCount: 7 });
     const thinCheck = thin.checks.find((c) => c.id === "visibility.rating")!;
-    expect(thinCheck.explanation).toContain("7 review");
+    // Overview wording: a 5.0★ rating with few reviews names the count
+    // and the full-credit point ("7 now — full credit at 40+").
+    expect(thinCheck.explanation).toContain("(7 now — full credit at 40+)");
     expect(thinCheck.explanation.toLowerCase()).toContain("more reviews");
 
     const established = scoreBusiness({ ...PERFECT_INPUT, rating: 5.0, reviewCount: 200 });

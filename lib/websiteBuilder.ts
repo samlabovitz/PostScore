@@ -132,3 +132,21 @@ export function detectWebsiteBuilder(input: {
 export function isWebsiteBuilderId(value: unknown): value is WebsiteBuilderId {
   return typeof value === "string" && Object.prototype.hasOwnProperty.call(WEBSITE_BUILDER_NAMES, value);
 }
+
+/** The builder for the Website page's fix plan (and the Overview's fix
+ * count): what the last scan detected, or — before a site's first scan
+ * with detection — whatever its own address names (sites.google.com,
+ * *.wixsite.com). null when neither says. */
+export function resolveWebsiteBuilder(
+  saved: WebsiteBuilderDetection | null | undefined,
+  siteUrl: string | null
+): WebsiteBuilderDetection | null {
+  if (saved) return saved;
+  if (!siteUrl) return null;
+  try {
+    const fromAddress = detectWebsiteBuilder({ html: null, hostname: new URL(siteUrl).hostname });
+    return fromAddress.id ? fromAddress : null;
+  } catch {
+    return null;
+  }
+}

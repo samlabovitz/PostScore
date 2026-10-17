@@ -525,3 +525,71 @@ export async function lookupBusinessByPlaceId(
     };
   }
 }
+
+// ---------------------------------------------------------------------------
+// The listing's main photo (Overview header). Google's rules (Places API
+// policies + Place Photos docs, checked Oct 16, 2026): a photo name can't
+// be cached or stored — always use one from a fresh Place Details
+// response; the photo itself is Places content and isn't stored either;
+// the author attribution must be shown wherever the photo is, with a
+// way to see the source photo on Google Maps.
+//
+// Cost: a Details call asking ONLY for `photos` is the "Place Details
+// Essentials (IDs Only)" SKU — unlimited free. The photo request is the
+// "Place Details Photos" SKU — 1,000 free a month, then $7.00 / 1,000.
+// ---------------------------------------------------------------------------
+
+export interface PhotoAttribution {
+  displayName: string;
+  uri: string | null;
+}
+
+export interface ListingPhotoRef {
+  /** The photo resource name — use right away, never store. */
+  name: string;
+  attributions: PhotoAttribution[];
+  /** Google Maps page for this exact photo (required: users can view the source). */
+  googleMapsUri: string | null;
+}
+
+interface RawPhoto {
+  name?: string;
+  authorAttributions?: { displayName?: string; uri?: string }[];
+  googleMapsUri?: string;
+}
+
+/** Pure: the listing's first photo from a Details `photos` array, or null. */
+export function firstPhotoRef(photos: unknown): ListingPhotoRef | null {
+  if (!Array.isArray(photos) || photos.length === 0) return null;
+  const photo = photos[0] as RawPhoto;
+  if (typeof photo?.name !== "string" || !/^places\/[^/]+\/photos\/[^/]+$/.test(photo.name)) return null;
+  return {
+    name: photo.name,
+    attributions: (photo.authorAttributions ?? [])
+      .filter((a) => typeof a.displayName === "string" && a.displayName.trim() !== "")
+      .map((a) => ({ displayName: a.displayName!.trim(), uri: typeof a.uri === "string" && /^https:\/\//.test(a.uri) ? a.uri : null })),
+    googleMapsUri: typeof photo.googleMapsUri === "string" && /^https:\/\//.test(photo.googleMapsUri) ? photo.googleMapsUri : null,
+  };
+}
+
+/** Free (IDs Only SKU): the listing's first photo reference, fresh. */
+export async function getFirstPhotoRef(placeId: string, fetchImpl: typeof fetch = fetch): Promise<ListingPhotoRef | null> {
+  const res = await fetchPlacesApi(
+    `${PLACES_API_BASE}/places/${encodeURIComponent(placeId)}`,
+    { headers: { "X-Goog-Api-Key": getApiKey(), "X-Goog-FieldMask": "photos" }, cache: "no-store" },
+    "Google Places photos",
+    fetchImpl
+  );
+  const raw = (await res.json()) as { photos?: unknown };
+  return firstPhotoRef(raw.photos);
+}
+
+/** Paid (Place Details Photos SKU): a short-lived, key-free image URL for
+ * the photo. One attempt only — a retry could be billed twice. */
+export async function resolvePhotoUri(photoName: string, maxWidthPx: number, fetchImpl: typeof fetch = fetch): Promise<string | null> {
+  const url = `${PLACES_API_BASE}/${photoName}/media?maxWidthPx=${Math.round(maxWidthPx)}&skipHttpRedirect=true`;
+  const outcome = await fetchPlacesOnce(url, { headers: { "X-Goog-Api-Key": getApiKey() }, cache: "no-store" }, fetchImpl);
+  if (outcome.kind !== "ok") return null;
+  const data = (await outcome.res.json()) as { photoUri?: string };
+  return typeof data.photoUri === "string" && /^https:\/\//.test(data.photoUri) ? data.photoUri : null;
+}

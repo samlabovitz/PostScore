@@ -371,7 +371,7 @@ function AssessmentEmptyState() {
   const locale = useLocale();
   return (
     <Card className="flex flex-col items-center gap-2 border-dashed p-8 text-center">
-      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brass/10 text-brass">
+      <span className="flex h-10 w-10 items-center justify-center rounded-full ps-icon-tile">
         <IconSparkles size={18} />
       </span>
       <p className="max-w-[26ch] text-sm text-ink-soft">{t(locale, "dashboard.pricing.assessmentEmptyState")}</p>
@@ -451,7 +451,7 @@ function PricingTips({ profile }: { profile: BizProfile }) {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {profile.pricingTips.map((tip) => (
           <Card key={tip.id} className="flex items-start gap-3 p-4">
-            <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brass/10 text-brass">
+            <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ps-icon-tile">
               <IconBulb size={15} />
             </span>
             <div>

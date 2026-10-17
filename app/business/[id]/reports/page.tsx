@@ -1,9 +1,11 @@
 import { notFound, redirect } from "next/navigation";
+import { ScanStatusStrip } from "@/components/scoring/ScanStatusStrip";
 import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { getReportsData } from "@/app/actions/reports";
 import { ReportsView } from "./ReportsView";
+import { getLastScanAt } from "@/app/actions/scoring";
 
 export default async function ReportsPage({ params }: { params: { id: string } }) {
   const websiteOnly = await websiteOnlyGuard(params.id, "reports");
@@ -27,9 +29,13 @@ export default async function ReportsPage({ params }: { params: { id: string } }
     notFound();
   }
 
+  const lastScanAt = await getLastScanAt(params.id);
   return (
     <DashboardShell business={summary.business}>
-      <ReportsView businessId={params.id} businessName={summary.business.name} reports={reports} />
+      <div className="flex flex-col gap-6">
+        <ScanStatusStrip businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} mode="link" />
+        <ReportsView businessId={params.id} businessName={summary.business.name} reports={reports} />
+      </div>
     </DashboardShell>
   );
 }

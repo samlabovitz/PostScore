@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* The one icon-square style, app-wide: a light brass tint, a thin soft
+   border and a brass glyph (navy is kept for what should pop — headings,
+   key numbers, the score band, primary pills). Size and rounding stay on
+   each element. In components so a utility class can still override. */
+@layer components {
+  .ps-icon-tile {
+    background-color: color-mix(in srgb, var(--color-brass) 8%, white);
+    border: 1px solid color-mix(in srgb, var(--color-brass) 24%, white);
+    color: var(--color-brass);
+    box-shadow: 0 1px 2px rgba(20, 36, 63, 0.06);
+  }
+}
+
 :root {
   /* core brand tokens */
   --color-ink: #14243f;
@@ -30,5 +43,24 @@ body {
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+/* Overview score-breakdown bars: fill from the left once, on load. */
+@keyframes ps-bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.ps-bar-grow {
+  transform-origin: left center;
+  animation: ps-bar-grow 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ps-bar-grow {
+    animation: none;
   }
 }

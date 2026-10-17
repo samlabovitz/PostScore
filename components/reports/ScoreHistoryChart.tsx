@@ -196,7 +196,7 @@ function SummaryStat({ label, value, detail }: { label: string; value: ReactNode
 
 /** A small "what does this mean?" button: the text shows on hover, on
  * keyboard focus, and on tap (touch has no hover). */
-function InfoTip({ text, className }: { text: string; className?: string }) {
+export function InfoTip({ text, className }: { text: string; className?: string }) {
   const locale = useLocale();
   const [open, setOpen] = useState(false);
   return (

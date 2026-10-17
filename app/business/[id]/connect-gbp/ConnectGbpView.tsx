@@ -14,6 +14,7 @@ import {
   IconMessageCircle,
   IconChartBar,
   IconFilePencil,
+  IconSearch,
 } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -59,6 +60,11 @@ function buildUnlocks(
       title: t(locale, "dashboard.connectGbp.unlockPostsTrackingTitle"),
       body: t(locale, "dashboard.connectGbp.unlockPostsTrackingBody"),
     },
+    {
+      icon: IconSearch,
+      title: t(locale, "dashboard.connectGbp.unlockSearchTermsTitle"),
+      body: t(locale, "dashboard.connectGbp.unlockSearchTermsBody"),
+    },
   ];
 }
 
@@ -99,6 +105,7 @@ export function ConnectGbpView({
   justConnected,
   error,
   oauthConfigured,
+  connectOpen,
 }: {
   businessId: string;
   businessName: string | null;
@@ -107,6 +114,8 @@ export function ConnectGbpView({
   justConnected: boolean;
   error: string | null;
   oauthConfigured: boolean;
+  /** GBP_CONNECT_PUBLIC — false keeps the button disabled ("coming soon"). */
+  connectOpen: boolean;
 }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
@@ -123,9 +132,14 @@ export function ConnectGbpView({
             name: businessName ?? t(locale, "dashboard.common.businessFallback"),
           })}
         </Link>
-        <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
-          {t(locale, "dashboard.connectGbp.pageTitle")}
-        </h1>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <h1 className="font-serif text-2xl font-semibold text-ink nav:text-[27px]">
+            {t(locale, "dashboard.connectGbp.pageTitle")}
+          </h1>
+          <span className="rounded-full bg-ink px-2.5 py-0.5 text-[11px] font-semibold text-paper">
+            {t(locale, "dashboard.overview.connectPremiumPill")}
+          </span>
+        </div>
         <p className="mt-1 max-w-xl text-sm text-ink-soft">{t(locale, "dashboard.connectGbp.pageSubtitle")}</p>
       </div>
 
@@ -169,15 +183,20 @@ export function ConnectGbpView({
         </Card>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-3 nav:grid-cols-2">
+          {/* Eight cards, two per row: grid rows stretch, so each row's
+              cards match in height. The lift on hover is motion-safe. */}
+          <div className="grid grid-cols-1 gap-4 nav:grid-cols-2">
             {unlocks.map((u) => (
-              <Card key={u.title} className="flex items-start gap-3 p-4">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brass/10 text-brass">
-                  <u.icon size={16} />
+              <Card
+                key={u.title}
+                className="flex h-full items-start gap-3.5 p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_-14px_rgba(20,33,61,0.35)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              >
+                <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ps-icon-tile">
+                  <u.icon size={17} />
                 </span>
                 <div>
-                  <div className="text-[13px] font-semibold text-ink">{u.title}</div>
-                  <p className="mt-0.5 text-[12.5px] text-ink-mute">{u.body}</p>
+                  <div className="text-[13.5px] font-semibold text-ink">{u.title}</div>
+                  <p className="mt-1 text-[12.5px] leading-snug text-ink-mute">{u.body}</p>
                 </div>
               </Card>
             ))}
@@ -198,7 +217,17 @@ export function ConnectGbpView({
               <Link href={`/business/${businessId}`} className="text-sm font-medium text-ink-soft hover:text-ink">
                 {t(locale, "dashboard.connectGbp.skipForNow")}
               </Link>
-              {oauthConfigured ? (
+              {!connectOpen ? (
+                <div className="flex flex-col items-start gap-1.5 sm:items-end">
+                  <Button variant="brass" disabled aria-describedby="connect-gbp-availability">
+                    <IconBrandGoogle size={15} />
+                    {t(locale, "dashboard.common.connectGoogleBusinessProfile")}
+                  </Button>
+                  <span id="connect-gbp-availability" className="text-[12px] text-ink-soft">
+                    {t(locale, "dashboard.connectGbp.availableWithPremium")}
+                  </span>
+                </div>
+              ) : oauthConfigured ? (
                 <a href={`/api/gbp/connect?businessId=${businessId}`}>
                   <Button variant="brass">
                     <IconBrandGoogle size={15} />

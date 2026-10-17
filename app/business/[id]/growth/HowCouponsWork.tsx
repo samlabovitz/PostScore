@@ -53,7 +53,7 @@ export function HowCouponsWork() {
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {STEPS.map((step) => (
             <div key={step.titleKey} className="flex flex-col gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brass/10 text-brass">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg ps-icon-tile">
                 <step.icon size={16} />
               </span>
               <div className="text-[13px] font-semibold text-ink">{t(locale, step.titleKey)}</div>

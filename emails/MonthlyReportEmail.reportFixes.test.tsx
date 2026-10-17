@@ -238,7 +238,7 @@ describe("the focus item follows the Growth page's rules", () => {
   test("the website pointer is the Growth page's banner line", () => {
     const extras: ReportExtras = { ...EMPTY_REPORT_EXTRAS, websiteImprovement: { score: 72, improvements: 2, points: 3.5 } };
     const content = buildMonthlyReportContent(null, scoreRow(), null, null, "en", focus("en"), true, extras);
-    expect(content.focus.pointers.some((p) => p.text === "Your website scores 72/100 — 2 improvements available (up to ~+4 pts). See the Website page.")).toBe(true);
+    expect(content.focus.pointers.some((p) => p.text === "Your website scores 72/100 — 2 improvements available (up to about +4 pts). See the Website page.")).toBe(true);
   });
 });
 
@@ -283,7 +283,7 @@ describe("website pointer: no estimate when partly checked; whole points otherwi
   });
 
   test("fully checked → rounded to whole points", () => {
-    expect(pointer({ ...EMPTY_REPORT_EXTRAS, websiteImprovement: { score: 83, improvements: 2, points: 4.6 } })).toContain("(up to ~+5 pts)");
+    expect(pointer({ ...EMPTY_REPORT_EXTRAS, websiteImprovement: { score: 83, improvements: 2, points: 4.6 } })).toContain("(up to about +5 pts)");
   });
 });
 

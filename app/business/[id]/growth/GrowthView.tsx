@@ -12,6 +12,7 @@ import { TaskListCard, GrowthMoveCard, CompletedTasksCard } from "../ActionPlanS
 import { WeeklyChecklist } from "./WeeklyChecklist";
 import type { ActionPlanTask, CompletedTask, WebsiteBanner } from "@/lib/actionPlan";
 import { formatPoints } from "@/components/scoring/CategoryCard";
+import { websiteRangeText, wholePointRange } from "@/lib/pointRange";
 import type { GrowthMove } from "@/lib/growthMoves";
 import { growthMoveOverlapsActionPlan } from "@/lib/growthMoveOverlap";
 import type { WeeklyChecklistItem, WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
@@ -71,19 +72,14 @@ export function WebsiteBannerCard({ banner, businessId }: { banner: WebsiteBanne
         <p className="text-sm text-ink">
           {tPlural(locale, "dashboard.growth.websiteBanner.improve", banner.improvements, {
             score: banner.score,
-            points: formatPoints(banner.points),
+            points: wholePointRange(banner.points, null).low,
           })}
         </p>
       ) : (
         <>
           <p className="text-sm font-semibold text-ink">{t(locale, "dashboard.growth.websiteBanner.getWebsite.title")}</p>
           <p className="text-sm text-ink-soft">
-            {banner.high !== null
-              ? t(locale, "dashboard.growth.websiteBanner.getWebsite.range", {
-                  low: formatPoints(banner.low),
-                  high: formatPoints(banner.high),
-                })
-              : t(locale, "dashboard.growth.websiteBanner.getWebsite.single", { points: formatPoints(banner.low) })}
+            {websiteRangeText(locale, banner.low, banner.high)}
           </p>
         </>
       )}
@@ -253,7 +249,10 @@ export function GrowthView({
                 label={t(locale, "dashboard.growth.view.statPointsWithinReach")}
                 value={
                   pointsWithinReachHigh !== null
-                    ? `+${formatPoints(Math.max(0, pointsWithinReachLow))}–${formatPoints(Math.max(0, pointsWithinReachHigh))}`
+                    ? (() => {
+                        const range = wholePointRange(Math.max(0, pointsWithinReachLow), Math.max(0, pointsWithinReachHigh));
+                        return range.high !== null ? `+${range.low}–${range.high}` : `+${range.low}`;
+                      })()
                     : pointsWithinReachLow > 0
                       ? `+${formatPoints(pointsWithinReachLow)}`
                       : "0"
@@ -286,11 +285,13 @@ export function GrowthView({
             </Card>
           ) : (
             <>
-              <SectionHeading
-                title={t(locale, "dashboard.growth.view.weeklyPlanHeading", {
-                  count: actionPlan.weeklyTasks.length,
-                })}
-              />
+              <div id="weekly-plan" className="scroll-mt-20">
+                <SectionHeading
+                  title={t(locale, "dashboard.growth.view.weeklyPlanHeading", {
+                    count: actionPlan.weeklyTasks.length,
+                  })}
+                />
+              </div>
               <TaskListCard
                 tasks={actionPlan.weeklyTasks}
                 businessId={businessId}
