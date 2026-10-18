@@ -70,11 +70,11 @@ describe("rule 1 — a social media page is not a website", () => {
       latest: {
         scanId: "s", createdAt: "2026-10-16T12:00:00Z",
         entries: [
-          { placeId: "me", name: "Me", isSubject: true, address: null, distanceMeters: null, rating: 4.6, reviewCount: 50, hasWebsite: true, total: 80, grade: "B", scoringVersion: "1.11.0", breakdown: scoreBusiness(scoringInput()), priceLevel: null, photoCount: 10 },
-          { placeId: "r", name: "Rival Cafe", isSubject: false, address: null, distanceMeters: 300, rating: 4.5, reviewCount: 40, hasWebsite: false, total: breakdown.total, grade: breakdown.grade, scoringVersion: "1.11.0", breakdown, priceLevel: null, photoCount: 10 },
+          { placeId: "me", name: "Me", isSubject: true, address: null, distanceMeters: null, rating: 4.6, reviewCount: 50, hasWebsite: true, total: 80, grade: "B", scoringVersion: "1.11.0", breakdown: scoreBusiness(scoringInput()), priceLevel: null, photoCount: 10, websiteUrl: "https://example.com" },
+          { placeId: "r", name: "Rival Cafe", isSubject: false, address: null, distanceMeters: 300, rating: 4.5, reviewCount: 40, hasWebsite: false, total: breakdown.total, grade: breakdown.grade, scoringVersion: "1.11.0", breakdown, priceLevel: null, photoCount: 10, websiteUrl: null },
         ],
       },
-      rankHistory: [], refresh: { allowed: true, nextAvailableAt: null }, scanBlocker: null, comparedViaTypes: [], timeZone: "America/New_York",
+      rankHistory: [], refresh: { allowed: true, nextAvailableAt: null }, scanBlocker: null, comparedViaTypes: [], scoring: null, timeZone: "America/New_York",
     };
     const html = renderToStaticMarkup(<LocaleProvider locale="en"><CompetitorsView businessId="b" data={data} /></LocaleProvider>);
     expect(html).toContain("Facebook page only");

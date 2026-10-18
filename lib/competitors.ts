@@ -120,6 +120,19 @@ export interface RankedCompetitor {
   rating: number | null;
   reviewCount: number | null;
   hasWebsite: boolean;
+  /** The listing's website address as Google gives it — a real site or a
+   * social page (Facebook etc.; hasWebsite is false then), or null. */
+  websiteUrl?: string | null;
+  /** The listing facts this scan already got from Google — saved so the
+   * competitor's full score (lib/competitorFullScoring.ts) can check them
+   * and "matches your Google listing". Competitors only. */
+  listing?: {
+    phone: string | null;
+    openingHours: string[] | null;
+    openingHoursPeriods: PlaceDetails["openingHoursPeriods"];
+    categories: string[] | null;
+    businessStatus: string | null;
+  };
   googleMapsUri: string | null;
   breakdown: ScoreBreakdown;
   /** Google's raw price-level enum for this listing (e.g.
@@ -672,6 +685,14 @@ export async function findAndScoreCompetitors(
       reviewCount: place.userRatingCount,
       // v1.11.0: a Facebook/Instagram/Yelp page is not a website.
       hasWebsite: isRealWebsite(place.website),
+      websiteUrl: place.website ?? null,
+      listing: {
+        phone: place.phone,
+        openingHours: place.openingHours,
+        openingHoursPeriods: place.openingHoursPeriods,
+        categories: place.categories,
+        businessStatus: place.businessStatus,
+      },
       googleMapsUri: place.googleMapsUri,
       breakdown,
       priceLevel: place.priceLevel,
@@ -688,6 +709,7 @@ export async function findAndScoreCompetitors(
     rating: subject.rating,
     reviewCount: subject.review_count,
     hasWebsite: isRealWebsite(subject.website) || isRealWebsite(subject.verified_website_url),
+    websiteUrl: isRealWebsite(subject.website) ? subject.website : isRealWebsite(subject.verified_website_url) ? subject.verified_website_url : null,
     googleMapsUri: null,
     breakdown: subjectBreakdown,
     priceLevel: subject.priceLevel ?? null,

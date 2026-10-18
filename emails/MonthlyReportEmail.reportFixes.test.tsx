@@ -189,7 +189,9 @@ describe("competitor standing matches the Competitors page", () => {
     return {
       scan_id: "s", created_at: "2026-10-01T00:00:00Z", is_subject: isSubject, place_id: name, name, address: null,
       distance_meters: isSubject ? null : 500, rating: 4.5, review_count: reviews, has_website: true, total, grade: "B",
-      scoring_version: "1.10.0", breakdown_json: null, price_level: null, photo_count: 10,
+      // Same real breakdown for everyone → equal comparable scores, so the
+      // saved order (by total) decides — as before.
+      scoring_version: "1.10.0", breakdown_json: scoreBusiness(scoringInput()), price_level: null, photo_count: 10,
     };
   }
   test("rank and total come from reportStanding; the #1 business's reviews are kept", () => {

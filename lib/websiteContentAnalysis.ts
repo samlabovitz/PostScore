@@ -80,9 +80,18 @@ const CSR_SHELL_MARKERS: RegExp[] = [
  * of them is honestly a failure worth reporting.
  */
 function detectClientRenderedShell(html: string, visibleTextLength: number, headingCount: number): boolean {
-  if (visibleTextLength > CSR_SHELL_MAX_TEXT_CHARS || headingCount > 0) return false;
-  return CSR_SHELL_MARKERS.some((marker) => marker.test(html));
+  if (headingCount > 0) return false;
+  if (visibleTextLength <= CSR_SHELL_MAX_TEXT_CHARS && CSR_SHELL_MARKERS.some((marker) => marker.test(html))) return true;
+  // An EMPTY app mount point (e.g. Lovable/Vite's <div id="root"></div>)
+  // is a stronger signal than the marker alone, so a little badge or
+  // banner text (the real J & G Italian Deli case: "Edit with Lovable")
+  // doesn't hide that the page itself is built in the browser.
+  return visibleTextLength <= CSR_SHELL_EMPTY_MOUNT_MAX_TEXT_CHARS && CSR_SHELL_EMPTY_MOUNT.test(html);
 }
+
+/** An app mount point with nothing inside it. */
+const CSR_SHELL_EMPTY_MOUNT = /<div\b[^>]*\bid\s*=\s*["'](?:root|app|__next|__nuxt|___gatsby|svelte)["'][^>]*>\s*<\/div>/i;
+const CSR_SHELL_EMPTY_MOUNT_MAX_TEXT_CHARS = 300;
 
 function extractTag(html: string, re: RegExp): string | null {
   const match = html.match(re);

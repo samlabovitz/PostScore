@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { IconArrowLeft, IconArrowRight, IconChevronDown, IconRefresh, IconTrendingDown, IconTrendingUp } from "@tabler/icons-react";
+import { IconArrowLeft, IconArrowRight, IconChevronDown, IconRefresh, IconTrendingDown, IconTrendingUp, IconAlertCircle } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -11,15 +11,19 @@ import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/S
 import { refreshCompetitors, type GetCompetitorsResult } from "@/app/actions/competitors";
 import type { SavedCompetitorEntry, SavedCompetitorScan } from "@/lib/savedCompetitorScans";
 import {
-  COMPARABLE_CHECKS,
   COMPARE_VIEWS,
   FIX_PAGE,
   METRICS,
   compareMetric,
   computeGaps,
   entryScore,
+  VIEW_CATEGORY,
   heroSummary,
   metricValue,
+  websiteNotChecked,
+  websiteNotCheckedReason,
+  isFullScored,
+  checkStatus,
   rankBy,
   type CompareView,
   type Gap,
@@ -50,6 +54,33 @@ const BRASS = "#b8862f";
 
 function checkLabel(checkId: string, locale: Locale): string {
   return t(locale, `content.checks.${checkId}.label` as MessageKey);
+}
+
+/** The Website chip's value: "67%", "No website" / "Facebook page only",
+ * or "couldn't check" — never a made-up number. */
+function websiteChipValue(entry: SavedCompetitorEntry, score: number | null, locale: Locale): string {
+  if (entry.hasWebsite === false) {
+    const platform = socialPlatformOf(entry);
+    return platform ? t(locale, "dashboard.competitors.socialPageOnly", { platform }) : t(locale, "dashboard.competitors.noWebsite");
+  }
+  if (score !== null) return `${score}%`;
+  if (!isFullScored(entry)) return t(locale, "dashboard.competitors.websiteNotCheckedYet");
+  return t(locale, "dashboard.competitors.websiteCouldntCheckReason", { reason: reasonText(websiteNotCheckedReason(entry), locale) });
+}
+
+const KNOWN_REASONS = ["blocked", "timed_out", "js_only", "error_page", "unreachable", "no_address", "listing_facts", "speed_test"];
+
+/** An observed reason in words ("couldn't check" alone when none was recorded). */
+function reasonText(reason: string | null, locale: Locale): string {
+  return reason && KNOWN_REASONS.includes(reason)
+    ? t(locale, `dashboard.competitors.notCheckedReason.${reason}` as MessageKey)
+    : t(locale, "dashboard.competitors.notCheckedReason.unknown");
+}
+
+/** Full scoring ran and the site's website checks couldn't run (not merely
+ * "not checked yet") — the row mark and the page note. */
+function websiteCouldntBeChecked(entry: SavedCompetitorEntry): boolean {
+  return websiteNotChecked(entry) && isFullScored(entry);
 }
 
 function miles(meters: number | null, locale: Locale): string {
@@ -95,6 +126,8 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
         <p className="mt-1 max-w-2xl text-sm text-ink-soft">{t(locale, "dashboard.competitors.comparableNote")}</p>
       </div>
 
+      {data.scoring && <ScoringProgressNote progress={data.scoring} />}
+
       {scan && scan.entries.some((e) => !e.isSubject) && <ScanInfo businessId={businessId} data={data} />}
 
       {scan && scan.entries.some((e) => !e.isSubject) && data.comparedViaTypes.length > 0 && (
@@ -115,7 +148,7 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
                 name: data.businessName ?? t(locale, "dashboard.competitors.thisBusinessFallback"),
               })}
         </Card>
-      ) : !scan ? (
+      ) : !scan && data.scoring ? null : !scan ? (
         <Card className="flex flex-col items-start gap-3 p-6">
           <h2 className="font-serif text-lg font-semibold text-ink">{t(locale, "dashboard.competitors.notRunYet")}</h2>
           <p className="text-sm text-ink-soft">
@@ -170,6 +203,31 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
           {data.rankHistory.length >= 2 && <OverTime data={data} />}
         </>
       )}
+    </div>
+  );
+}
+
+/** "Checking 7 of 11 competitor websites…" while a scan is being fully
+ * scored in the background (the last finished results stay on the page
+ * meanwhile). Refreshes itself every few seconds while it runs. */
+function ScoringProgressNote({ progress }: { progress: NonNullable<OkResult["scoring"]> }) {
+  const locale = useLocale();
+  const router = useRouter();
+  const active = progress.status === "queued" || progress.status === "running";
+  useEffect(() => {
+    if (!active) return;
+    const timer = setInterval(() => router.refresh(), 5000);
+    return () => clearInterval(timer);
+  }, [active, router]);
+  return (
+    <div role="status" className="flex items-start gap-2.5 rounded-xl border border-paper-deep bg-white px-4 py-3 text-[13px] text-ink-soft">
+      {active ? <IconRefresh size={15} className="mt-0.5 shrink-0 animate-spin text-brass motion-reduce:animate-none" aria-hidden /> : <IconAlertCircle size={15} className="mt-0.5 shrink-0 text-ink-mute" aria-hidden />}
+      <span>
+        {active
+          ? t(locale, "dashboard.competitors.scoringProgress", { done: progress.done, total: progress.total })
+          : t(locale, "dashboard.competitors.scoringPaused", { done: progress.done, total: progress.total })}
+        {active && <span className="text-ink-mute"> {t(locale, progress.kind === "backfill" ? "dashboard.competitors.scoringProgressBackfill" : "dashboard.competitors.scoringProgressNew")}</span>}
+      </span>
     </div>
   );
 }
@@ -244,7 +302,7 @@ function Hero({ scan, competitorNoun }: { scan: SavedCompetitorScan; competitorN
       <Lineup scan={scan} />
 
       <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-paper-line pt-4 sm:grid-cols-4">
-        <Stat label={t(locale, "dashboard.competitors.statComparableScore")} value={hero.ownerScore ?? "—"} />
+        <Stat label={t(locale, "dashboard.competitors.statYourScore")} value={hero.ownerScore ?? "—"} />
         <Stat label={t(locale, "dashboard.competitors.statLocalAverage")} value={hero.localAverage ?? "—"} />
         <Stat label={t(locale, "dashboard.competitors.statTop")} value={hero.topScore ?? "—"} detail={hero.topName} />
         <Stat
@@ -253,11 +311,6 @@ function Hero({ scan, competitorNoun }: { scan: SavedCompetitorScan; competitorN
           detail={competitorNoun}
         />
       </div>
-      {hero.ownerFullScore !== null && hero.ownerFullScore !== hero.ownerScore && (
-        <p className="mt-3 text-[12.5px] text-ink-mute">
-          {t(locale, "dashboard.competitors.fullScoreNote", { score: hero.ownerFullScore })}
-        </p>
-      )}
     </Card>
   );
 }
@@ -268,7 +321,7 @@ const LINE_Y = 56;
 const LINEUP_DEFAULT_WIDTH = 600;
 const LANE_TOP: Record<Lane, number> = { above2: 0, above1: 18, below1: 72, below2: 90 };
 
-/** Every business as a dot at its comparable score on one line: you as
+/** Every business as a dot at its PostScore on one line: you as
  * the large brass dot; #1, the lowest and the area average labeled
  * (labels placed so they never overlap); hover or tap any dot for its
  * name, score and distance. Zoomed to the data. */
@@ -465,7 +518,6 @@ function Comparison({ scan, view }: { scan: SavedCompetitorScan; view: CompareVi
               </div>
             );
           })}
-          {view === "website" && <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.competitors.websiteCompareNote")}</p>}
         </div>
       )}
     </Card>
@@ -529,13 +581,18 @@ function LeadTrail({ scan, businessId }: { scan: SavedCompetitorScan; businessId
 }
 
 function RankedList({ scan, view }: { scan: SavedCompetitorScan; view: CompareView }) {
+  const locale = useLocale();
   const ranked = rankBy(scan, view);
+  const anyNotChecked = (view === "overall" || view === "website") && scan.entries.some(websiteCouldntBeChecked);
   return (
-    <ol className="flex flex-col gap-2.5">
-      {ranked.map((r) => (
-        <CompetitorCard key={r.entry.placeId} entry={r.entry} rank={r.rank} view={view} />
-      ))}
-    </ol>
+    <>
+      {anyNotChecked && <p className="mb-2.5 text-[12.5px] text-ink-soft">{t(locale, "dashboard.competitors.someWebsitesNotChecked")}</p>}
+      <ol className="flex flex-col gap-2.5">
+        {ranked.map((r) => (
+          <CompetitorCard key={r.entry.placeId} entry={r.entry} rank={r.rank} view={view} />
+        ))}
+      </ol>
+    </>
   );
 }
 
@@ -568,6 +625,12 @@ function CompetitorCard({ entry, rank, view }: { entry: SavedCompetitorEntry; ra
             {!entry.isSubject && entry.distanceMeters !== null && (
               <span className="text-[12px] text-ink-mute">{miles(entry.distanceMeters, locale)}</span>
             )}
+            {websiteCouldntBeChecked(entry) && (
+              <span className="inline-flex items-center gap-1 rounded-md border border-paper-deep bg-paper px-1.5 py-0.5 text-[11px] font-medium text-ink-soft">
+                <IconAlertCircle size={12} aria-hidden />
+                {t(locale, "dashboard.competitors.websiteCouldntBeCheckedReason", { reason: reasonText(websiteNotCheckedReason(entry), locale) })}
+              </span>
+            )}
           </div>
           <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] text-ink-soft">
             <span>
@@ -591,26 +654,26 @@ function CompetitorCard({ entry, rank, view }: { entry: SavedCompetitorEntry; ra
             </span>
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {categoryScores.map(({ v, score }) => (
-              <span key={v} className={cn("rounded-md px-1.5 py-0.5 text-[11.5px]", v === view ? "bg-ink/10 font-semibold text-ink" : "bg-paper text-ink-soft")}>
-                {t(locale, VIEW_LABEL[v])} {score === null ? "—" : `${score}%`}
-              </span>
-            ))}
+            {categoryScores.map(({ v, score }) =>
+              v === "website" ? (
+                <span key={v} className={cn("rounded-md px-1.5 py-0.5 text-[11.5px]", v === view ? "bg-[color:color-mix(in_srgb,var(--color-ink)_10%,transparent)] font-semibold text-ink" : "bg-paper text-ink-soft")}>
+                  {t(locale, VIEW_LABEL.website)} {websiteChipValue(entry, score, locale)}
+                </span>
+              ) : (
+                <span key={v} className={cn("rounded-md px-1.5 py-0.5 text-[11.5px]", v === view ? "bg-[color:color-mix(in_srgb,var(--color-ink)_10%,transparent)] font-semibold text-ink" : "bg-paper text-ink-soft")}>
+                  {t(locale, VIEW_LABEL[v])} {score === null ? "—" : `${score}%`}
+                </span>
+              )
+            )}
           </div>
         </div>
         <div className="shrink-0 text-right">
-          {/* Overall = the comparable score (same checks for everyone),
-              with the grade those points earn — never a full PostScore
-              next to listing-only ones. */}
+          {/* Overall = each business's full PostScore and grade — the
+              owner's is the same number as on the Overview. */}
           <div className="font-serif text-[22px] font-semibold leading-none text-ink tabular-nums">
             {viewScore === null ? "—" : view === "overall" ? viewScore : `${viewScore}%`}
           </div>
           {view === "overall" && viewScore !== null && <div className="mt-1 text-[11.5px] text-ink-mute">{gradeFromTotal(viewScore)}</div>}
-          {entry.isSubject && entry.total !== null && entry.total !== viewScore && view === "overall" && (
-            <div className="mt-1 whitespace-nowrap text-[11px] text-ink-mute">
-              {t(locale, "dashboard.competitors.fullScoreShort", { score: entry.total })}
-            </div>
-          )}
         </div>
       </div>
 
@@ -628,27 +691,49 @@ function CompetitorCard({ entry, rank, view }: { entry: SavedCompetitorEntry; ra
   );
 }
 
+/** Every check behind this business's PostScore, by category: rating,
+ * review and photo counts as values; the rest Done / Needs work /
+ * Couldn't check — the same checks as the owner's own score. */
 function CheckDetail({ entry }: { entry: SavedCompetitorEntry }) {
   const locale = useLocale();
+  if (!entry.breakdown) return null;
   return (
-    <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-1.5 border-t border-paper-line pt-3 sm:grid-cols-2">
-      {(["reviews", "listing", "website"] as const).flatMap((v) =>
-        COMPARABLE_CHECKS[v].map((checkId) => {
-          const m = METRICS.find((x) => x.checkId === checkId)!;
-          return (
-            <div key={checkId} className="flex items-center justify-between gap-3 text-[12.5px]">
-              <span className="text-ink-soft">{checkLabel(checkId, locale)}</span>
-              <span className="font-medium tabular-nums text-ink">{formatMetric(m, metricValue(entry, m), locale)}</span>
+    <div className="mt-3 flex flex-col gap-3 border-t border-paper-line pt-3">
+      {(["reviews", "listing", "website"] as const).map((v) => {
+        const checks = entry.breakdown!.checks.filter((c) => c.category === VIEW_CATEGORY[v]);
+        if (checks.length === 0) return null;
+        return (
+          <div key={v} className="flex flex-col gap-1.5">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-mute">{t(locale, VIEW_LABEL[v])}</div>
+            <div className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
+              {checks.map((c) => {
+                const m = METRICS.find((x) => x.checkId === c.id && x.kind !== "yesno");
+                const status = checkStatus(entry, c);
+                const social = c.id === "website.has_website" ? socialPlatformOf(entry) : null;
+                const value = social
+                  ? t(locale, "dashboard.competitors.socialPageOnly", { platform: social })
+                  : m && (status.kind === "done" || status.kind === "needs_work")
+                    ? formatMetric(m, metricValue(entry, m), locale)
+                    : status.kind === "done"
+                      ? t(locale, "dashboard.competitors.checkDone")
+                      : status.kind === "needs_work"
+                        ? t(locale, "dashboard.competitors.checkNeedsWork")
+                        : status.kind === "not_applicable"
+                          ? t(locale, "dashboard.competitors.checkNotApplicable")
+                          : status.kind === "not_checked_yet"
+                            ? t(locale, "dashboard.competitors.checkNotCheckedYet")
+                            : t(locale, "dashboard.competitors.checkCouldntCheckReason", { reason: reasonText(status.kind === "couldnt" ? status.reason : null, locale) });
+                return (
+                  <div key={c.id} className="flex items-start justify-between gap-3 text-[12.5px]">
+                    <span className="text-ink-soft">{checkLabel(c.id, locale)}</span>
+                    <span className={cn("text-right font-medium tabular-nums", status.kind === "done" && !social ? "text-green" : status.kind === "done" || status.kind === "needs_work" || social ? "text-ink" : "text-ink-mute")}>{value}</span>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })
-      )}
-      {!entry.isSubject && (
-        <div className="flex items-center justify-between gap-3 text-[12.5px] sm:col-span-2">
-          <span className="text-ink-soft">{t(locale, "dashboard.competitors.viewWebsite")}</span>
-          <span className="text-ink-mute">{t(locale, "dashboard.competitors.notCheckedForCompetitors")}</span>
-        </div>
-      )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -667,7 +752,7 @@ function OverTime({ data }: { data: OkResult }) {
             <span className="font-medium tabular-nums text-ink">
               {p.rank === null ? "—" : t(locale, "dashboard.competitors.overTimeRank", { rank: p.rank, total: p.of })}
             </span>
-            <span className="w-10 text-right tabular-nums text-ink-mute">{p.total ?? "—"}</span>
+            <span className="w-10 text-right tabular-nums text-ink-mute">{p.score ?? "—"}</span>
           </li>
         ))}
       </ul>

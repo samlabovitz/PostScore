@@ -102,6 +102,8 @@ import {
   type AssistantScoreHistoryEntry,
   type AssistantWeeklyRoutineSummary,
 } from "../lib/assistant";
+import { groupSavedScans, SAVED_SCAN_COLUMNS, type SavedScanRow } from "../lib/savedCompetitorScans";
+import { ownerStanding, rankBy } from "../lib/competitorComparison";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -173,26 +175,18 @@ async function readGbpConnected(businessId: string): Promise<boolean> {
 async function readLatestCompetitorSnapshot(businessId: string): Promise<CompetitorSnapshot | null> {
   const { data, error } = await supabase
     .from("competitor_scans")
-    .select("scan_id, created_at, is_subject, name, total, grade, price_level, photo_count")
+    .select(SAVED_SCAN_COLUMNS)
     .eq("business_id", businessId)
     .order("created_at", { ascending: false })
     .limit(50);
   if (error || !data || data.length === 0) return null;
 
-  const rows = data as Array<{
-    scan_id: string;
-    created_at: string;
-    is_subject: boolean;
-    name: string | null;
-    total: number | null;
-    grade: string | null;
-    price_level: string | null;
-    photo_count: number | null;
-  }>;
+  const rows = data as SavedScanRow[];
   const latestScanId = rows[0].scan_id;
   const latestRows = rows.filter((r) => r.scan_id === latestScanId);
 
   return {
+    scan: groupSavedScans(latestRows)[0],
     scanId: latestScanId,
     createdAt: rows[0].created_at,
     entries: latestRows.map((r) => ({
@@ -335,18 +329,18 @@ async function main() {
   const snapshot = await readLatestCompetitorSnapshot(businessId);
   const competitors: AssistantCompetitorSummary = snapshot
     ? (() => {
-        const sorted = [...snapshot.entries].sort((a, b) => (b.total ?? -1) - (a.total ?? -1));
-        const subjectRank = sorted.findIndex((e) => e.isSubject) + 1;
+        // Mirrors app/actions/assistant.ts: the shared rank (full PostScore).
+        const ranked = rankBy(snapshot.scan, "overall");
         return {
           available: true,
           scanAt: formatShortDate(snapshot.createdAt, locale),
-          subjectRank: subjectRank > 0 ? subjectRank : null,
-          entries: sorted.map((e) => ({
-            name: e.name ?? "Unnamed business",
-            isSubject: e.isSubject,
-            total: e.total,
-            grade: e.grade,
-            priceLevelSymbol: priceLevelToSymbol(e.priceLevel),
+          subjectRank: ownerStanding(snapshot.scan)?.rank ?? null,
+          entries: ranked.map(({ entry }) => ({
+            name: entry.name ?? "Unnamed business",
+            isSubject: entry.isSubject,
+            total: entry.total,
+            grade: entry.grade,
+            priceLevelSymbol: priceLevelToSymbol(entry.priceLevel),
           })),
         };
       })()

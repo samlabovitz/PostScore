@@ -82,6 +82,18 @@ const HTML_FETCH_TIMEOUT_MS = 12000;
  * same reasoning as lib/websiteHttps.ts's own MAX_ATTEMPTS. */
 const HTML_FETCH_MAX_ATTEMPTS = 2;
 const HTML_FETCH_RETRY_DELAY_MS = 500;
+/** The retry after a timeout waits longer — a slow site gets a real
+ * second chance before it's called "timed out". */
+const HTML_FETCH_RETRY_TIMEOUT_MS = 20000;
+/** Redirects followed by hand (more → "error page"). */
+const HTML_FETCH_MAX_REDIRECTS = 5;
+/** What a normal browser asks for — still identified honestly as
+ * PostScoreBot (POSTSCORE_USER_AGENT). */
+const HTML_FETCH_HEADERS = {
+  "User-Agent": POSTSCORE_USER_AGENT,
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+};
 /** Real Lighthouse audits genuinely take a while — this needs to be
  * generous enough that a normal site's audit can finish. */
 // Step 2d: 60s — a slow real site (the real Wonder case: ~58s per run)
@@ -177,16 +189,18 @@ type HtmlFetchOutcome =
  * bare timeout (AbortError — "timed_out", no proof the site is down)
  * from any other thrown error ("down" — real evidence of a problem),
  * same reasoning as lib/websiteHttps.ts's probeOnce. */
-async function fetchHtmlOnce(url: string, fetchImpl: typeof fetch): Promise<HtmlFetchOutcome> {
+async function fetchHtmlOnce(url: string, fetchImpl: typeof fetch, timeoutMs: number = HTML_FETCH_TIMEOUT_MS): Promise<HtmlFetchOutcome> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), HTML_FETCH_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetchImpl(url, {
-      method: "GET",
-      redirect: "follow",
-      headers: { "User-Agent": POSTSCORE_USER_AGENT },
-      signal: controller.signal,
-    });
+    // Redirects followed by hand, at most HTML_FETCH_MAX_REDIRECTS.
+    let current = url;
+    let res = await fetchImpl(current, { method: "GET", redirect: "manual", headers: HTML_FETCH_HEADERS, signal: controller.signal });
+    for (let hop = 0; res.status >= 300 && res.status < 400 && res.headers?.get?.("location"); hop++) {
+      if (hop >= HTML_FETCH_MAX_REDIRECTS) return { kind: "failed", reason: "http_error", status: res.status };
+      current = new URL(res.headers.get("location")!, current).toString();
+      res = await fetchImpl(current, { method: "GET", redirect: "manual", headers: HTML_FETCH_HEADERS, signal: controller.signal });
+    }
     if (!res.ok) {
       let bodySnippet: string | null = null;
       try {
@@ -212,11 +226,11 @@ async function fetchHtmlOnce(url: string, fetchImpl: typeof fetch): Promise<Html
 }
 
 /** Retries exactly once, only when the first attempt specifically
- * timed out — same reasoning as lib/websiteHttps.ts's own probe(). */
+ * timed out — with a longer timeout (HTML_FETCH_RETRY_TIMEOUT_MS). */
 async function fetchHtmlForScheme(url: string, fetchImpl: typeof fetch): Promise<HtmlFetchOutcome> {
   let last: HtmlFetchOutcome = { kind: "failed", reason: "down" };
   for (let attempt = 1; attempt <= HTML_FETCH_MAX_ATTEMPTS; attempt++) {
-    last = await fetchHtmlOnce(url, fetchImpl);
+    last = await fetchHtmlOnce(url, fetchImpl, attempt === 1 ? HTML_FETCH_TIMEOUT_MS : HTML_FETCH_RETRY_TIMEOUT_MS);
     if (last.kind === "ok" || last.reason !== "timed_out") return last;
     if (attempt < HTML_FETCH_MAX_ATTEMPTS) {
       await new Promise((resolve) => setTimeout(resolve, HTML_FETCH_RETRY_DELAY_MS));
@@ -235,6 +249,19 @@ async function fetchHtmlForScheme(url: string, fetchImpl: typeof fetch): Promise
  * — that's a real, honest "couldn't analyze," not a failure of the
  * target's actual HTTPS/uptime.
  */
+/** The same address with "www." added or removed, or null when it
+ * can't be parsed or is an IP address. */
+function toggleWww(website: string): string | null {
+  try {
+    const u = new URL(/^https?:\/\//i.test(website) ? website : `https://${website}`);
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(u.hostname) || !u.hostname.includes(".")) return null;
+    u.hostname = u.hostname.startsWith("www.") ? u.hostname.slice(4) : `www.${u.hostname}`;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchWebsiteHtml(
   website: string,
   fetchImpl: typeof fetch = fetch
@@ -243,8 +270,16 @@ export async function fetchWebsiteHtml(
 
   let worstReason: ReachabilityFailureReason | null = null;
   let missingPageStatus: 404 | 410 | null = null;
-  for (const scheme of ["https", "http"] as const) {
-    const outcome = await fetchHtmlForScheme(withScheme(website, scheme), fetchImpl);
+  // https ↔ http first; then, only if the site never answered at all
+  // (no response or timed out — never after a block or an error page),
+  // the www ↔ non-www variant of the same address.
+  const variants = (host: string) => (["https", "http"] as const).map((scheme) => withScheme(host, scheme));
+  const alternate = toggleWww(website);
+  const urls = [...variants(website), ...(alternate ? variants(alternate) : [])];
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i];
+    if (i >= 2 && worstReason !== "down" && worstReason !== "timed_out") break;
+    const outcome = await fetchHtmlForScheme(url, fetchImpl);
     if (outcome.kind === "ok") return { html: outcome.html, failureReason: null };
     worstReason = worstReason === null ? outcome.reason : moreSpecificReason(worstReason, outcome.reason);
     if (outcome.reason === "http_error" && (outcome.status === 404 || outcome.status === 410)) missingPageStatus = outcome.status;

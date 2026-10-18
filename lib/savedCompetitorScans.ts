@@ -2,6 +2,7 @@
 // and its tests use them. Pure — no database or network.
 
 import type { ScoreBreakdown } from "@/lib/scoring";
+import { ownerStanding } from "@/lib/competitorComparison";
 
 /** One business in a saved competitor scan — the owner's own row
  * (isSubject) or a competitor's. Exactly what was saved; nothing filled
@@ -25,6 +26,8 @@ export interface SavedCompetitorEntry {
   /** Google's price-level enum, or null when Google doesn't list one. */
   priceLevel: string | null;
   photoCount: number | null;
+  /** The website address checked (Google's, or the owner's own). */
+  websiteUrl: string | null;
 }
 
 export interface SavedCompetitorScan {
@@ -38,15 +41,17 @@ export interface SavedCompetitorScan {
 export interface CompetitorRankPoint {
   scanId: string;
   createdAt: string;
-  /** 1 = highest score; null if the owner's own row is missing. */
+  /** The shared rank (ownerStanding: comparable score); null if the
+   * owner's own row is missing. */
   rank: number | null;
   of: number;
-  total: number | null;
+  /** The owner's comparable score in that scan — the number it's ranked by. */
+  score: number | null;
 }
 
 /** Every competitor_scans column SavedScanRow needs. */
 export const SAVED_SCAN_COLUMNS =
-  "scan_id, created_at, is_subject, place_id, name, address, distance_meters, rating, review_count, has_website, total, grade, scoring_version, breakdown_json, price_level, photo_count";
+  "scan_id, created_at, is_subject, place_id, name, address, distance_meters, rating, review_count, has_website, total, grade, scoring_version, breakdown_json, price_level, photo_count, website_url";
 
 export interface SavedScanRow {
   scan_id: string;
@@ -65,6 +70,8 @@ export interface SavedScanRow {
   breakdown_json: unknown;
   price_level: string | null;
   photo_count: number | null;
+  /** The competitor's website address (competitor-website.sql). */
+  website_url?: string | null;
 }
 
 function toNumber(value: number | string | null): number | null {
@@ -95,6 +102,7 @@ function toEntry(row: SavedScanRow): SavedCompetitorEntry {
     breakdown: parseBreakdown(row.breakdown_json),
     priceLevel: row.price_level,
     photoCount: row.photo_count,
+    websiteUrl: row.website_url ?? null,
   };
 }
 
@@ -109,18 +117,20 @@ export function groupSavedScans(rows: SavedScanRow[]): SavedCompetitorScan[] {
     byScan.set(row.scan_id, scan);
   }
   const scans = Array.from(byScan.values());
-  for (const scan of scans) scan.entries.sort((a, b) => (b.total ?? -1) - (a.total ?? -1));
+  // Highest score first; ties in a fixed order (place id), never the
+  // database's row order — so a tied rank is the same on every page.
+  for (const scan of scans) scan.entries.sort((a, b) => (b.total ?? -1) - (a.total ?? -1) || a.placeId.localeCompare(b.placeId));
   return scans.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
 export function rankPoint(scan: SavedCompetitorScan): CompetitorRankPoint {
-  const index = scan.entries.findIndex((e) => e.isSubject);
+  const standing = ownerStanding(scan);
   return {
     scanId: scan.scanId,
     createdAt: scan.createdAt,
-    rank: index >= 0 ? index + 1 : null,
+    rank: standing?.rank ?? null,
     of: scan.entries.length,
-    total: index >= 0 ? scan.entries[index].total : null,
+    score: standing?.ownerScore ?? null,
   };
 }
 

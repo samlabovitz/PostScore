@@ -68,6 +68,7 @@ describe("dates show in the business's own zone", () => {
       refresh: { allowed: true, nextAvailableAt: null },
       scanBlocker: null,
       comparedViaTypes: [],
+      scoring: null,
       timeZone: "America/Los_Angeles",
     };
     const html = renderToStaticMarkup(

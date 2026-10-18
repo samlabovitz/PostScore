@@ -9,6 +9,8 @@ vi.mock("@/lib/competitors", async () => {
   return { ...actual, findAndScoreCompetitors: (...args: unknown[]) => scanSpy(...args) };
 });
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+// The owner's website check reads Supabase/Browserless — not under test here.
+vi.mock("@/lib/ownerWebsiteBasic", () => ({ ownerBasicWebsiteCheck: async () => ({ result: null, renders: 0 }) }));
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -26,7 +28,8 @@ function fakeSupabase(tables: Record<string, Rows[]>) {
     from(table: string) {
       const rows = tables[table] ?? [];
       const chain: Record<string, unknown> = {};
-      for (const m of ["select", "eq", "order", "limit", "in", "update"]) chain[m] = () => chain;
+      for (const m of ["select", "eq", "neq", "order", "limit", "in", "update"]) chain[m] = () => chain;
+      chain.maybeSingle = async () => ({ data: rows[0] ?? null, error: null });
       chain.insert = (payload: unknown[]) => {
         inserted[table] = [...(inserted[table] ?? []), ...payload];
         return chain;
@@ -53,6 +56,8 @@ const BUSINESS = {
   lat: 39.68,
   lng: -75.75,
 };
+const SAVED_BREAKDOWN = scoreBusiness(scoringInput());
+
 function savedRow(scanId: string, createdAt: string, isSubject: boolean, name: string, total: number) {
   return {
     scan_id: scanId,
@@ -68,7 +73,9 @@ function savedRow(scanId: string, createdAt: string, isSubject: boolean, name: s
     total,
     grade: "C",
     scoring_version: "1.9.0",
-    breakdown_json: null,
+    // Real saved rows always carry a breakdown (the comparable score is
+    // computed from it); the same one for everyone keeps the saved order.
+    breakdown_json: SAVED_BREAKDOWN,
     price_level: null,
     photo_count: 10,
   };
@@ -188,6 +195,8 @@ describe("when a scan can't search at all (decided from saved data, no cost)", (
   });
 });
 
+import { scoreBusiness } from "@/lib/scoring";
+import { scoringInput } from "@/emails/sampleMonthlyReportContent";
 import { competitorFallbackTypes } from "@/lib/competitors";
 
 describe("which types a scan compares by", () => {

@@ -1434,6 +1434,13 @@ alter table public.businesses
   add column if not exists verified_website_url text;
 
 -- Overview header: Google listing photo usage log (see lib/placePhotoBudget.ts).
+-- One row per paid Google photo load, so the app can stay under its
+-- monthly cap (PLACE_PHOTO_MONTHLY_CAP, default 900 — inside Google's
+-- 1,000 free photo loads a month). Until this table exists the app shows
+-- no photo and makes no paid call.
+--
+-- Row level security is on with no policies on purpose: only the server
+-- (service role) reads and writes this table; owners never see it.
 
 create table if not exists public.place_photo_loads (
   id bigserial primary key,
@@ -1445,3 +1452,80 @@ create index if not exists place_photo_loads_created_at_idx
   on public.place_photo_loads (created_at);
 
 alter table public.place_photo_loads enable row level security;
+
+-- Make the API see the new table right away.
+notify pgrst, 'reload schema';
+
+-- Competitors: basic website check (see lib/websiteBasicCheck.ts).
+-- Each saved competitor-scan row (competitors AND the owner's own row)
+-- keeps the website address that was checked and the result of ONE plain
+-- homepage fetch: loads OK, HTTPS, mobile viewport tag, page title + meta
+-- description, contact link, social profile links — or "couldn't check"
+-- (blocked / timed out / error page). Both columns stay empty for rows
+-- saved before this change and for businesses with no website.
+
+alter table public.competitor_scans
+  add column if not exists website_url text;
+
+alter table public.competitor_scans
+  add column if not exists website_basic_json jsonb;
+
+-- Make the API see the new columns right away.
+notify pgrst, 'reload schema';
+
+-- Competitors: full PostScore (see lib/competitorFullScoring.ts).
+-- 1) competitor_scans: the listing facts a scan already gets from Google
+--    (so "Matches your Google listing" can be checked on new scans), the
+--    competitor's full website analysis, and the new full score while it's
+--    being worked out (shown only once the whole scan is finished).
+alter table public.competitor_scans add column if not exists phone text;
+alter table public.competitor_scans add column if not exists opening_hours jsonb;
+alter table public.competitor_scans add column if not exists categories jsonb;
+alter table public.competitor_scans add column if not exists business_status text;
+alter table public.competitor_scans add column if not exists website_analysis_json jsonb;
+alter table public.competitor_scans add column if not exists pending_breakdown_json jsonb;
+
+-- 2) One row per scan being fully scored: progress for the Competitors
+--    page ("Checking 7 of 11 competitor websites…") and the PageSpeed
+--    calls used (for the daily budget). Written only by the server
+--    (service role); owners can read their own.
+create table if not exists public.competitor_scoring_jobs (
+  scan_id uuid primary key,
+  business_id uuid not null references public.businesses (id) on delete cascade,
+  -- 'new_scan': a fresh scan, shown only once scored; 'backfill': an existing
+  -- scan re-scored in place, its old results shown until this finishes.
+  kind text not null default 'new_scan' check (kind in ('new_scan', 'backfill')),
+  status text not null default 'queued' check (status in ('queued', 'running', 'done', 'failed')),
+  total integer not null default 0,
+  done integer not null default 0,
+  pagespeed_calls integer not null default 0,
+  error text,
+  started_at timestamptz,
+  finished_at timestamptz,
+  updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
+-- (for a table created by an earlier version of this file)
+alter table public.competitor_scoring_jobs add column if not exists kind text not null default 'new_scan';
+
+create index if not exists competitor_scoring_jobs_business_id_idx
+  on public.competitor_scoring_jobs (business_id, created_at desc);
+create index if not exists competitor_scoring_jobs_updated_at_idx
+  on public.competitor_scoring_jobs (updated_at);
+
+alter table public.competitor_scoring_jobs enable row level security;
+
+drop policy if exists "Users can view scoring jobs for their own businesses" on public.competitor_scoring_jobs;
+create policy "Users can view scoring jobs for their own businesses"
+  on public.competitor_scoring_jobs for select
+  using (
+    exists (
+      select 1 from public.businesses
+      where businesses.id = competitor_scoring_jobs.business_id
+        and businesses.owner_id = auth.uid ()
+    )
+  );
+
+-- Make the API see the new columns and table right away.
+notify pgrst, 'reload schema';

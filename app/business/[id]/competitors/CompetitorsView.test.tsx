@@ -8,14 +8,17 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 import { CompetitorsView } from "./CompetitorsView";
 import type { GetCompetitorsResult } from "@/app/actions/competitors";
 import type { SavedCompetitorEntry } from "@/lib/savedCompetitorScans";
-import type { ScoreBreakdown } from "@/lib/scoring";
+import { breakdownFromChecks, type CheckResult, type ScoreBreakdown } from "@/lib/scoring";
 
 function entry(name: string, total: number, owner = false, extra: Partial<SavedCompetitorEntry> = {}): SavedCompetitorEntry {
+  const c = (id: string, earnedPoints: number | null, maxPoints: number) =>
+    ({ id, label: id, category: id.split(".")[0], maxPoints, earnedPoints, confidence: earnedPoints === null ? "UNCERTAIN" : "VERIFIED", explanation: "", meta: null }) as CheckResult;
   const checks = [
-    { id: "visibility.rating", earnedPoints: 9, maxPoints: 10 },
-    { id: "visibility.review_count", earnedPoints: owner ? 1 : 7, maxPoints: 10 },
-    { id: "completeness.hours", earnedPoints: 3, maxPoints: 3 },
-    { id: "website.has_website", earnedPoints: 4, maxPoints: 4 },
+    c("visibility.rating", 9, 10),
+    c("visibility.review_count", owner ? 1 : 7, 10),
+    c("completeness.hours", 3, 3),
+    c("website.has_website", 4, 4),
+    c("website.https", 6, 6),
   ];
   return {
     placeId: name,
@@ -29,15 +32,17 @@ function entry(name: string, total: number, owner = false, extra: Partial<SavedC
     total,
     grade: "C",
     scoringVersion: "1.9.0",
-    breakdown: { total, grade: "C", scoringVersion: "1.9.0", categories: [], checks } as unknown as ScoreBreakdown,
+    breakdown: { ...breakdownFromChecks(checks), total, grade: "C", scoringVersion: "1.9.0" } as ScoreBreakdown,
     priceLevel: null,
     photoCount: 10,
+    websiteUrl: "https://example.com",
     ...extra,
   };
 }
 
 const DATA: Extract<GetCompetitorsResult, { status: "ok" }> = {
   status: "ok",
+  scoring: null,
   businessName: "Modern Liquors",
   businessAddress: null,
   language: "en",
@@ -52,8 +57,8 @@ const DATA: Extract<GetCompetitorsResult, { status: "ok" }> = {
     ],
   },
   rankHistory: [
-    { scanId: "a", createdAt: "2026-09-20T13:00:00Z", rank: 3, of: 3, total: 72 },
-    { scanId: "s", createdAt: "2026-10-16T13:00:00Z", rank: 3, of: 3, total: 71 },
+    { scanId: "a", createdAt: "2026-09-20T13:00:00Z", rank: 3, of: 3, score: 72 },
+    { scanId: "s", createdAt: "2026-10-16T13:00:00Z", rank: 3, of: 3, score: 71 },
   ],
   refresh: { allowed: false, nextAvailableAt: "2026-11-15T13:00:00.000Z" },
   scanBlocker: null,
@@ -80,12 +85,11 @@ describe("Competitors page", () => {
     expect(html).toContain("Compared over time");
   });
 
-  test("fairness: the hero shows the comparable score, with the full PostScore only as context", () => {
+  test("one score everywhere: the hero shows the owner's own PostScore — no separate 'comparable' number", () => {
     const html = render();
-    expect(html).toContain("Comparable score");
-    // Owner fixture: full PostScore 71, but on the shared checks it scores higher.
-    expect(html).toMatch(/Your full PostScore is 71 — it also includes website checks we don't run on competitors\./);
-    expect(html).toContain("Full PostScore 71");
+    expect(html).toMatch(/Your PostScore<\/span><span[^>]*>71</);
+    expect(html).not.toContain("Comparable score");
+    expect(html).not.toContain("Full PostScore");
   });
 
   test("lineup: #1, lowest and area average are labeled; a zoom note when the scale doesn't start at 0", () => {
@@ -164,5 +168,68 @@ describe("Competitors page", () => {
     expect(html).toContain("Usted ocupa el puesto #3 de 3 liquor stores de la zona");
     expect(html).toContain("Google no lo indica");
     expect(html).toContain("Dónde se queda atrás");
+  });
+});
+
+describe("Website chip and 'couldn't be checked'", () => {
+  test("the chip shows the full Website category; blocked sites are marked and the page says why — EN + ES", () => {
+    const latest = DATA.latest!;
+    const blocked = latest.entries[2];
+    const blockedChecks = [
+      ...blocked.breakdown!.checks
+        .filter((c) => c.id !== "website.https")
+        .map((c) => (c.id === "website.has_website" ? { ...c, meta: { fullScore: "1", websiteNotChecked: "blocked" } } : c)),
+      { id: "website.content_depth", label: "", category: "website", maxPoints: 4, earnedPoints: null, confidence: "UNCERTAIN", explanation: "", meta: null, excludedReason: "unreachable" } as CheckResult,
+    ];
+    const data = {
+      ...DATA,
+      latest: {
+        ...latest,
+        entries: [
+          latest.entries[0],
+          { ...latest.entries[1], hasWebsite: false, websiteUrl: null },
+          { ...blocked, breakdown: { ...breakdownFromChecks(blockedChecks), total: blocked.total, grade: "C", scoringVersion: "1.11.0" } as ScoreBreakdown },
+        ],
+      },
+    };
+    const html = render(data);
+    expect(html).toContain("Website 100%");
+    expect(html).toContain("Website No website");
+    expect(html).not.toContain("basic check");
+    expect(html).not.toContain("Not checked for competitors");
+    expect(render(data, "es")).toContain("Sitio web Sin sitio web");
+    expect(html).toContain("Website couldn’t be checked: the site blocks automated checks");
+    expect(html).toContain("Some websites couldn’t be checked — their rank is based on the other checks.");
+    expect(render(DATA)).not.toContain("Some websites couldn’t be checked");
+  });
+
+  test("a site with no measured website check: 'couldn't check' with the reason — never 100% from just having a site", () => {
+    const latest = DATA.latest!;
+    const e = latest.entries[0];
+    const checks = e.breakdown!.checks.filter((c) => c.id !== "website.https").map((c) =>
+      c.id === "website.has_website" ? { ...c, earnedPoints: null, confidence: "UNCERTAIN" as const, excludedReason: "unreachable" as const, meta: { websiteNotChecked: "blocked", fullScore: "1" } } : c
+    );
+    const blocked = { ...e, breakdown: { ...breakdownFromChecks(checks), total: e.total, grade: "C", scoringVersion: "1.11.0" } as ScoreBreakdown };
+    const html = render({ ...DATA, latest: { ...latest, entries: [blocked, ...latest.entries.slice(1)] } });
+    expect(html).toContain("Website couldn’t check: the site blocks automated checks");
+    expect(html).toContain("Website couldn’t be checked: the site blocks automated checks");
+    // The legacy shape (has_website measured, nothing else): still not 100%.
+    const onlyHasSite = e.breakdown!.checks.filter((c) => c.id !== "website.https");
+    const legacyEntry = { ...e, breakdown: { ...breakdownFromChecks(onlyHasSite), total: e.total, grade: "C", scoringVersion: "1.11.0" } as ScoreBreakdown };
+    const legacy = render({ ...DATA, latest: { ...latest, entries: [legacyEntry, ...latest.entries.slice(1)] } });
+    // Not reached by full scoring yet: "not checked yet" — no "couldn't" mark or note.
+    expect(legacy).toContain("Website not checked yet");
+    expect(legacy).not.toContain("couldn’t be checked");
+  });
+
+  test("while a scan is being scored: honest progress, and the last finished results stay", () => {
+    const html = render({ ...DATA, scoring: { scanId: "n", kind: "new_scan", status: "running", done: 7, total: 11, error: null } });
+    expect(html).toContain("Checking 7 of 11 competitor websites…");
+    expect(html).toContain("The new scan appears when every site is done.");
+    expect(html).toContain("Main Street Liquors");
+    const first = render({ ...DATA, latest: null, rankHistory: [], scoring: { scanId: "n", kind: "new_scan", status: "running", done: 2, total: 9, error: null } });
+    expect(first).toContain("Checking 2 of 9 competitor websites…");
+    expect(first).not.toContain("Run your first competitor scan");
+    expect(render({ ...DATA, scoring: { scanId: "n", kind: "backfill", status: "failed", done: 4, total: 10, error: "x" } })).toContain("paused (4 of 10 done)");
   });
 });

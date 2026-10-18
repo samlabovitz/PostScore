@@ -1,5 +1,6 @@
 "use server";
 
+import { requestCache } from "@/lib/requestCache";
 import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
@@ -22,6 +23,8 @@ import {
   type SavedScanRow,
   SAVED_SCAN_COLUMNS,
 } from "@/lib/savedCompetitorScans";
+import { ownerStanding } from "@/lib/competitorComparison";
+import { latestScoringProgress, unfinishedNewScanIds, withoutUnfinished, type ScoringProgress } from "@/lib/competitorScoringStatus";
 
 export type { CompetitorRankPoint, SavedCompetitorEntry, SavedCompetitorScan } from "@/lib/savedCompetitorScans";
 
@@ -77,8 +80,10 @@ export type GetCompetitorsResult =
       language: string | null;
       /** The resolved business-type profile's noun, e.g. "salons" — see config/bizProfiles.ts. */
       competitorNoun: string;
-      /** The latest saved scan, or null when none has ever run. */
+      /** The latest FULLY SCORED saved scan, or null when none is finished yet. */
       latest: SavedCompetitorScan | null;
+      /** A scan still being fully scored ("Checking 7 of 11…"), or null. */
+      scoring: ScoringProgress | null;
       /** Owner's rank per saved scan, oldest first (one point per scan). */
       rankHistory: CompetitorRankPoint[];
       refresh: RefreshAvailability;
@@ -122,11 +127,17 @@ export async function getCompetitorsWithClient(
   businessId: string,
   now: Date = new Date()
 ): Promise<GetCompetitorsResult> {
-  const { data: business, error } = await supabase
-    .from("businesses")
-    .select("name, address, language, category, categories, primary_type, business_type_override, lat, lng")
-    .eq("id", businessId)
-    .single();
+  // Every read needs only the id — run them together (each RLS-scoped).
+  const [{ data: business, error }, { data: scanRows, error: scanError }, unfinished, scoring] = await Promise.all([
+    supabase
+      .from("businesses")
+      .select("name, address, language, category, categories, primary_type, business_type_override, lat, lng")
+      .eq("id", businessId)
+      .single(),
+    supabase.from("competitor_scans").select(SCAN_COLUMNS).eq("business_id", businessId).order("created_at", { ascending: false }).limit(600),
+    unfinishedNewScanIds(supabase, businessId),
+    latestScoringProgress(supabase, businessId),
+  ]);
 
   if (error || !business) {
     return { status: "not_found" };
@@ -146,22 +157,21 @@ export async function getCompetitorsWithClient(
     row.name
   ).competitorNoun;
 
-  const { data: scanRows, error: scanError } = await supabase
-    .from("competitor_scans")
-    .select(SCAN_COLUMNS)
-    .eq("business_id", businessId)
-    .order("created_at", { ascending: false })
-    .limit(600);
-
   if (scanError) {
     return { status: "error", message: scanError.message };
   }
 
-  const scans = groupSavedScans((scanRows ?? []) as SavedScanRow[]);
+  // A new scan still being fully scored stays hidden — the last finished
+  // one is shown meanwhile, with honest progress. The 30-day refresh limit
+  // still counts it.
+  const allRows = (scanRows ?? []) as SavedScanRow[];
+  const scans = groupSavedScans(withoutUnfinished(allRows, unfinished));
   const latest = scans[0] ?? null;
+  const newestSavedAt = allRows[0]?.created_at ?? null;
 
   return {
     status: "ok",
+    scoring,
     businessName: row.name,
     businessAddress: row.address,
     language: row.language,
@@ -169,7 +179,7 @@ export async function getCompetitorsWithClient(
     competitorNoun,
     latest,
     rankHistory: scans.map(rankPoint).reverse(),
-    refresh: refreshAvailability(latest?.createdAt ?? null, now),
+    refresh: refreshAvailability(newestSavedAt, now),
     scanBlocker: competitorScanBlocker({
       lat: row.lat,
       lng: row.lng,
@@ -219,7 +229,13 @@ async function latestCompetitorScanAt(supabase: SupabaseClient, businessId: stri
 export async function runAndSaveCompetitorScanWithClient(
   supabase: SupabaseClient,
   businessId: string,
-  options: { enforceCooldown: boolean; now?: Date; scan?: typeof findAndScoreCompetitors } = { enforceCooldown: false }
+  options: {
+    enforceCooldown: boolean;
+    now?: Date;
+    scan?: typeof findAndScoreCompetitors;
+    /** Starts the background full scoring (tests replace it). */
+    startScoring?: (scanId: string, businessId: string, competitorCount: number) => Promise<void>;
+  } = { enforceCooldown: false }
 ): Promise<SaveCompetitorScanResult> {
   const now = options.now ?? new Date();
   if (options.enforceCooldown) {
@@ -286,13 +302,36 @@ export async function runAndSaveCompetitorScanWithClient(
     breakdown_json: r.breakdown,
     price_level: r.priceLevel,
     photo_count: r.photoCount,
+    website_url: r.websiteUrl ?? null,
+    phone: r.listing?.phone ?? null,
+    opening_hours: r.listing ? { weekday: r.listing.openingHours, periods: r.listing.openingHoursPeriods } : null,
+    categories: r.listing?.categories ?? null,
+    business_status: r.listing?.businessStatus ?? null,
   }));
 
   const { error: insertError } = await supabase.from("competitor_scans").insert(rows);
   if (insertError) {
     return { status: "error", message: insertError.message };
   }
+  // Each competitor's full PostScore is worked out in the background; the
+  // page keeps showing the last finished scan until this one is done.
+  try {
+    await (options.startScoring ?? defaultStartScoring)(scanId, businessId, result.ranked.filter((r) => !r.isSubject).length);
+  } catch (err) {
+    console.error(`[competitors] could not queue full scoring for ${scanId}:`, err);
+  }
   return { status: "saved", scanId };
+}
+
+async function defaultStartScoring(scanId: string, businessId: string, competitorCount: number): Promise<void> {
+  // Loaded only when a job actually starts (server-only modules).
+  const [{ createAdminClient }, { queueScoringJob }, { startCompetitorScoring }] = await Promise.all([
+    import("@/lib/supabase/admin"),
+    import("@/lib/competitorScoringJob"),
+    import("@/lib/competitorScoringTrigger"),
+  ]);
+  await queueScoringJob(createAdminClient(), scanId, businessId, "new_scan", competitorCount);
+  startCompetitorScoring(scanId);
 }
 
 /** "Refresh competitors" — one paid scan, at most once per 30 days. */
@@ -340,6 +379,9 @@ export interface CompetitorSnapshot {
   scanId: string;
   createdAt: string;
   entries: CompetitorSnapshotEntry[];
+  /** The same scan in the Competitors page's shape — what every rank is
+   * computed from (ownerStanding in lib/competitorComparison.ts). */
+  scan: SavedCompetitorScan;
 }
 
 /**
@@ -352,33 +394,25 @@ export interface CompetitorSnapshot {
  * the owner has never clicked "Save this scan," this honestly returns
  * null rather than silently running a live scan the owner didn't ask for.
  */
-export async function getLatestCompetitorSnapshot(businessId: string): Promise<CompetitorSnapshot | null> {
+async function getLatestCompetitorSnapshotUncached(businessId: string): Promise<CompetitorSnapshot | null> {
   const supabase = createClient();
 
-  const { data, error } = await supabase
-    .from("competitor_scans")
-    .select("scan_id, created_at, is_subject, name, total, grade, price_level, photo_count")
-    .eq("business_id", businessId)
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const [{ data, error }, unfinished] = await Promise.all([
+    supabase.from("competitor_scans").select(SAVED_SCAN_COLUMNS).eq("business_id", businessId).order("created_at", { ascending: false }).limit(50),
+    unfinishedNewScanIds(supabase, businessId),
+  ]);
 
   if (error || !data || data.length === 0) return null;
 
-  const rows = data as Array<{
-    scan_id: string;
-    created_at: string;
-    is_subject: boolean;
-    name: string | null;
-    total: number | null;
-    grade: string | null;
-    price_level: string | null;
-    photo_count: number | null;
-  }>;
+  const rows = withoutUnfinished(data as SavedScanRow[], unfinished);
+  if (rows.length === 0) return null;
 
   const latestScanId = rows[0].scan_id;
   const latestRows = rows.filter((r) => r.scan_id === latestScanId);
+  const scan = groupSavedScans(latestRows)[0];
 
   return {
+    scan,
     scanId: latestScanId,
     createdAt: rows[0].created_at,
     entries: latestRows.map((r) => ({
@@ -414,20 +448,25 @@ export interface LocalBenchmark {
   scanId: string;
   /** ISO timestamp of the scan this benchmark was computed from — callers format for display. */
   scanAt: string;
+  /** The owner's comparable score — the number the rank is based on. */
   subjectTotal: number;
   subjectGrade: string | null;
-  /** 1-based rank among the full peer set (this business included), highest PostScore first. */
+  /** 1-based rank among the full peer set (this business included) — the
+   * shared ownerStanding (comparable score), same as the Competitors page. */
   rank: number;
   /** Peer set size INCLUDING this business — the "Y" in "#X of Y", same convention the assistant's competitor context and the live Competitors page already use. */
   peerCount: number;
   /** Real nearby peers actually compared against — EXCLUDES this business itself, since a business isn't "nearby" itself. This is the N in "based on N nearby [type]". */
   othersCount: number;
-  /** How many of those other peers this business currently outscores (a tie doesn't count as "ahead of"). */
+  /** How many of those other peers this business outscores on the comparable score (a tie doesn't count as "ahead of"). */
   aheadCount: number;
   /** Rounded 0-100 percent of `othersCount` this business is ahead of. */
   percentileAhead: number;
   /** True when othersCount is below SMALL_SAMPLE_THRESHOLD — the UI must disclose this rather than present a small comparison as a definitive ranking. */
   smallSample: boolean;
+  /** Mean Google review count of the competitors in this scan that have
+   * one (rounded), or null when fewer than 3 do — a real average only. */
+  competitorReviewAverage: number | null;
 }
 
 export type GetLocalBenchmarkResult =
@@ -450,6 +489,14 @@ export type GetLocalBenchmarkResult =
  * resolveBizProfile so a manually-corrected type is reflected here too,
  * same as coupons/referrals/pricing.
  */
+/** Fewer competitors with a real review count than this → no average. */
+const MIN_REVIEW_AVERAGE_SAMPLE = 3;
+
+function competitorReviewAverage(scan: SavedCompetitorScan): number | null {
+  const counts = scan.entries.filter((e) => !e.isSubject && e.reviewCount !== null).map((e) => e.reviewCount as number);
+  return counts.length >= MIN_REVIEW_AVERAGE_SAMPLE ? Math.round(counts.reduce((a, b) => a + b, 0) / counts.length) : null;
+}
+
 export async function getLocalBenchmark(businessId: string): Promise<GetLocalBenchmarkResult> {
   const supabase = createClient();
 
@@ -485,23 +532,19 @@ export async function getLocalBenchmark(businessId: string): Promise<GetLocalBen
     return { status: "no_scan" };
   }
 
+  // The one shared rank (comparable score) — identical to the
+  // Competitors page, the monthly report and PostAI.
+  const standing = ownerStanding(snapshot.scan);
   const subject = snapshot.entries.find((e) => e.isSubject);
-  if (!subject || subject.total === null) {
+  if (!standing || !subject) {
     // Every real saved scan includes the subject with a real score — this
     // shouldn't happen, but if it somehow did, say there's nothing to
     // show rather than guess a number.
     return { status: "no_peers", competitorNoun };
   }
-  const subjectTotal = subject.total;
-
-  const others = snapshot.entries.filter((e) => !e.isSubject);
-  if (others.length === 0) {
+  if (standing.othersCount === 0) {
     return { status: "no_peers", competitorNoun };
   }
-
-  const sorted = [...snapshot.entries].sort((a, b) => (b.total ?? -1) - (a.total ?? -1));
-  const rank = sorted.findIndex((e) => e.isSubject) + 1;
-  const aheadCount = others.filter((e) => (e.total ?? -1) < subjectTotal).length;
 
   return {
     status: "ok",
@@ -509,14 +552,21 @@ export async function getLocalBenchmark(businessId: string): Promise<GetLocalBen
       competitorNoun,
       scanId: snapshot.scanId,
       scanAt: snapshot.createdAt,
-      subjectTotal,
+      subjectTotal: standing.ownerScore,
       subjectGrade: subject.grade,
-      rank,
-      peerCount: snapshot.entries.length,
-      othersCount: others.length,
-      aheadCount,
-      percentileAhead: Math.round((aheadCount / others.length) * 100),
-      smallSample: others.length < SMALL_SAMPLE_THRESHOLD,
+      rank: standing.rank,
+      peerCount: standing.of,
+      othersCount: standing.othersCount,
+      aheadCount: standing.aheadCount,
+      percentileAhead: Math.round((standing.aheadCount / standing.othersCount) * 100),
+      smallSample: standing.othersCount < SMALL_SAMPLE_THRESHOLD,
+      competitorReviewAverage: competitorReviewAverage(snapshot.scan),
     },
   };
+}
+
+/** Request-scoped (lib/requestCache.ts): one query per page render. */
+const getLatestCompetitorSnapshotCached = requestCache(getLatestCompetitorSnapshotUncached);
+export async function getLatestCompetitorSnapshot(...args: Parameters<typeof getLatestCompetitorSnapshotUncached>): Promise<Awaited<ReturnType<typeof getLatestCompetitorSnapshotUncached>>> {
+  return getLatestCompetitorSnapshotCached(...args);
 }

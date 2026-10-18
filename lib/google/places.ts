@@ -593,3 +593,17 @@ export async function resolvePhotoUri(photoName: string, maxWidthPx: number, fet
   const data = (await outcome.res.json()) as { photoUri?: string };
   return typeof data.photoUri === "string" && /^https:\/\//.test(data.photoUri) ? data.photoUri : null;
 }
+
+/** A place's website address only (Place Details, FieldMask websiteUri —
+ * Enterprise SKU). One attempt, never retried, so each call is billed at
+ * most once. null when Google lists no website or the call fails. */
+export async function getPlaceWebsiteUri(placeId: string, fetchImpl: typeof fetch = fetch): Promise<string | null> {
+  const outcome = await fetchPlacesOnce(
+    `${PLACES_API_BASE}/places/${encodeURIComponent(placeId)}`,
+    { headers: { "X-Goog-Api-Key": getApiKey(), "X-Goog-FieldMask": "websiteUri" }, cache: "no-store" },
+    fetchImpl
+  );
+  if (outcome.kind !== "ok") return null;
+  const data = (await outcome.res.json()) as { websiteUri?: unknown };
+  return typeof data.websiteUri === "string" && /^https?:\/\//i.test(data.websiteUri) ? data.websiteUri : null;
+}

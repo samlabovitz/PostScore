@@ -311,8 +311,9 @@ describe("fetchWebsiteHtml: Day 4 Task 'timed_out' vs 'down' split (Colorful Yun
 
     expect(result.html).toBeNull();
     expect(result.failureReason).toBe("timed_out");
-    // 2 attempts per scheme (https then http) x 2 schemes = 4.
-    expect(fetchImpl).toHaveBeenCalledTimes(4);
+    // 2 attempts per scheme (https then http) x 2 schemes x 2 hosts
+    // (example.com, then www.example.com — the site never answered) = 8.
+    expect(fetchImpl).toHaveBeenCalledTimes(8);
   });
 
   test("a real connection error (not AbortError) is still 'down' and is never retried", async () => {
@@ -324,8 +325,52 @@ describe("fetchWebsiteHtml: Day 4 Task 'timed_out' vs 'down' split (Colorful Yun
 
     expect(result.html).toBeNull();
     expect(result.failureReason).toBe("down");
-    // 1 attempt per scheme (no retry on a non-timeout failure) x 2 schemes = 2.
+    // 1 attempt per scheme (no retry on a non-timeout failure) x 2 schemes
+    // x 2 hosts (the www variant is tried when nothing answered) = 4.
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
+  });
+
+  test("a site that answers only on its www address is read (www ↔ non-www after https ↔ http)", async () => {
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (!url.includes("://www.")) throw new Error("getaddrinfo ENOTFOUND");
+      return new Response("<html><body>Real page</body></html>", { status: 200 });
+    }) as unknown as typeof fetch;
+    const result = await fetchWebsiteHtml("example.com", fetchImpl);
+    expect(result.html).toContain("Real page");
+    expect((fetchImpl as unknown as { mock: { calls: string[][] } }).mock.calls.map((c) => c[0])).toEqual([
+      "https://example.com",
+      "http://example.com",
+      "https://www.example.com/",
+    ]);
+  });
+
+  test("a block or an error page is never retried on another host — it's the site's real answer", async () => {
+    const fetchImpl = vi.fn(async () => new Response("Forbidden", { status: 403 })) as unknown as typeof fetch;
+    const result = await fetchWebsiteHtml("example.com", fetchImpl);
+    expect(result.failureReason).toBe("blocked_automated_check");
     expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  test("redirects are followed (up to 5) with normal browser Accept headers and the honest PostScoreBot user agent", async () => {
+    const seen: RequestInit[] = [];
+    const fetchImpl = vi.fn(async (url: string, init: RequestInit) => {
+      seen.push(init);
+      const hop = Number(new URL(url).searchParams.get("hop") ?? "0");
+      if (hop < 3) return new Response(null, { status: 301, headers: { location: `/?hop=${hop + 1}` } });
+      return new Response("<html><body>Arrived</body></html>", { status: 200 });
+    }) as unknown as typeof fetch;
+    const ok = await fetchWebsiteHtml("example.com", fetchImpl);
+    expect(ok.html).toContain("Arrived");
+    const headers = seen[0].headers as Record<string, string>;
+    expect(headers["User-Agent"]).toMatch(/^PostScoreBot\//);
+    expect(headers.Accept).toContain("text/html");
+    expect(headers["Accept-Language"]).toContain("en");
+    expect(seen[0].redirect).toBe("manual");
+
+    const loop = vi.fn(async () => new Response(null, { status: 302, headers: { location: "/again" } })) as unknown as typeof fetch;
+    const tooMany = await fetchWebsiteHtml("example.com", loop);
+    expect(tooMany.html).toBeNull();
+    expect(tooMany.failureReason).toBe("http_error");
   });
 
   test("a timeout on the first attempt that then succeeds on retry returns the real html", async () => {

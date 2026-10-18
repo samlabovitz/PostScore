@@ -1,10 +1,22 @@
 import { describe, expect, test } from "vitest";
-import { compareMetric, computeGaps, entryScore, heroSummary, metricValue, METRICS, rankBy } from "./competitorComparison";
+import { checkStatus, compareMetric, computeGaps, entryScore, heroSummary, isFullScored, metricValue, METRICS, rankBy } from "./competitorComparison";
 import type { SavedCompetitorEntry, SavedCompetitorScan } from "./savedCompetitorScans";
-import type { ScoreBreakdown } from "./scoring";
+import { breakdownFromChecks, type CheckResult, type ScoreBreakdown } from "./scoring";
 
-function check(id: string, earned: number | null, max: number) {
-  return { id, earnedPoints: earned, maxPoints: max };
+
+// The engine's own shape: a check that couldn't be done has no points and
+// an uncertain confidence, so the engine leaves it out.
+function check(id: string, earned: number | null, max: number): CheckResult {
+  return {
+    id,
+    label: id,
+    category: id.split(".")[0] as CheckResult["category"],
+    maxPoints: max,
+    earnedPoints: earned,
+    confidence: earned === null ? "UNCERTAIN" : "VERIFIED",
+    explanation: "",
+    meta: null,
+  };
 }
 function entry(
   name: string,
@@ -46,9 +58,10 @@ function entry(
     total: opts.total,
     grade: "C",
     scoringVersion: "1.9.0",
-    breakdown: { total: opts.total, grade: "C", scoringVersion: "1.9.0", categories: [], checks } as unknown as ScoreBreakdown,
+    breakdown: { ...breakdownFromChecks(checks), total: opts.total, grade: "C", scoringVersion: "1.9.0" } as ScoreBreakdown,
     priceLevel: null,
     photoCount: opts.photos,
+    websiteUrl: opts.website ? "https://example.com" : null,
   };
 }
 
@@ -66,43 +79,43 @@ const SCAN: SavedCompetitorScan = {
   ],
 };
 
-describe("category re-ranking", () => {
-  test("Overall ranks by the COMPARABLE score; Reviews and Website re-rank by that category's comparable checks", () => {
-    // Same checks for everyone: the owner is #2 here, not #4 as its full
-    // PostScore (71, with website checks competitors never get) suggested.
+describe("one full PostScore for everyone", () => {
+  test("Overall ranks by each business's full PostScore; a category view ranks by that category's own score", () => {
     expect(rankBy(SCAN, "overall").map((r) => [r.entry.name, r.score])).toEqual([
-      ["Main Street Liquors", 89],
-      ["Modern Liquors", 80],
-      ["Peddler's", 61],
-      ["Park N Shop", 58],
-      ["Newark Discount", 45],
+      ["Main Street Liquors", 88],
+      ["Park N Shop", 80],
+      ["Peddler's", 79],
+      ["Modern Liquors", 71],
+      ["Newark Discount", 60],
     ]);
-    // Website compares only "website listed" (owner's HTTPS etc. never count).
-    expect(rankBy(SCAN, "website").slice(0, 2).map((r) => r.entry.name).sort()).toEqual(["Main Street Liquors", "Modern Liquors"]);
     const reviews = rankBy(SCAN, "reviews");
-    expect(reviews[0].entry.name).toBe("Peddler's");
+    expect(reviews.map((r) => r.score)).toEqual([...reviews.map((r) => r.score)].sort((x, y) => (y ?? -1) - (x ?? -1)));
     // 4.5★ but only 15 reviews: last on Reviews, even below a 3.8★ store with 60.
     expect(reviews.find((r) => r.entry.isSubject)!.rank).toBe(5);
   });
 
-  test("the owner's full website checks don't inflate its Website score — same checks for everyone", () => {
-    expect(entryScore(OWNER, "website")).toBe(100); // has_website only
-    expect(entryScore(SCAN.entries[1], "website")).toBe(0);
+  test("a category score is the engine's own category score — the same number as the Overview's", () => {
+    const website = OWNER.breakdown!.categories.find((c) => c.id === "website")!;
+    expect(entryScore(OWNER, "website")).toBe(Math.round(website.relativeScore!));
+    expect(entryScore(SCAN.entries[1], "website")).toBe(0); // no website
   });
 
-  test("hero: comparable score, full PostScore for context only, local average WITHOUT the owner, #1, radius", () => {
+  test("hero: the owner's PostScore, the local average WITHOUT the owner, #1, radius", () => {
     const h = heroSummary(SCAN, "overall");
-    expect(h).toMatchObject({ rank: 2, of: 5, ownerScore: 80, ownerFullScore: 71, localAverage: 63, topScore: 89, topName: "Main Street Liquors" });
-    // (89 + 61 + 58 + 45) / 4 = 63 — the owner's 80 is not in it.
+    expect(h).toMatchObject({ rank: 4, of: 5, ownerScore: 71, localAverage: 77, topScore: 88, topName: "Main Street Liquors" });
+    // (88 + 80 + 79 + 60) / 4 = 76.75 — the owner's 71 is not in it.
     expect(h.radiusMiles).toBeCloseTo(1652 / 1609.344, 3);
+    expect(h).not.toHaveProperty("ownerFullScore");
   });
-});
 
-describe("fairness: everyone is compared on the same checks", () => {
-  test("the owner's extra website checks (e.g. HTTPS, scored only for the owner) never count", () => {
-    const withoutExtra = { ...OWNER, breakdown: { ...OWNER.breakdown!, checks: OWNER.breakdown!.checks.filter((c) => c.id !== "website.https") } };
-    expect(entryScore(OWNER, "overall")).toBe(entryScore(withoutExtra, "overall"));
-    expect(entryScore(OWNER, "overall")).not.toBe(OWNER.total);
+  test("a check that couldn't be done is left out — never 0, and never 100% from just having a site", () => {
+    // Competitors in the fixture have no HTTPS result: their only website
+    // fact is "has a website", so Website is couldn't-check (null) — not 100%.
+    const comp = SCAN.entries[0];
+    expect(comp.breakdown!.checks.find((c) => c.id === "website.https")!.earnedPoints).toBeNull();
+    expect(entryScore(comp, "website")).toBeNull();
+    // The owner has a measured HTTPS check, so its Website score is real.
+    expect(entryScore(OWNER, "website")).toBe(100);
   });
 });
 
@@ -153,5 +166,35 @@ describe("'not checked' handling", () => {
   test("website listed unknown stays unknown", () => {
     const m = METRICS.find((x) => x.checkId === "website.has_website")!;
     expect(metricValue({ ...SCAN.entries[0], hasWebsite: null, breakdown: null }, m)).toBeNull();
+  });
+});
+
+describe("statuses and the within-1-point rule", () => {
+  const fullScored = (e: SavedCompetitorEntry, reason: string | null): SavedCompetitorEntry => {
+    const checks = e.breakdown!.checks.map((c) =>
+      c.id === "website.has_website" ? { ...c, meta: { fullScore: "1", ...(reason ? { websiteNotChecked: reason } : {}) } } : c
+    );
+    return { ...e, breakdown: { ...breakdownFromChecks(checks), total: e.total, grade: e.grade ?? "C", scoringVersion: "1.11.0" } as ScoreBreakdown };
+  };
+
+  test("tied or within 1 point: the business whose website was fully checked ranks first", () => {
+    const blocked = fullScored(entry("Blocked Deli", { total: 95, rating: 4.5, reviews: 50, photos: 5, website: true }), "blocked");
+    const checked = { ...OWNER, total: 94 };
+    const ranked = rankBy({ scanId: "t", createdAt: "2026-10-18T00:00:00Z", entries: [blocked, checked] }, "overall");
+    expect(ranked.map((r) => r.entry.name)).toEqual(["Modern Liquors", "Blocked Deli"]);
+    // Two points apart: the score decides.
+    const far = rankBy({ scanId: "t", createdAt: "2026-10-18T00:00:00Z", entries: [{ ...blocked, total: 97 }, checked] }, "overall");
+    expect(far[0].entry.name).toBe("Blocked Deli");
+  });
+
+  test("Not checked yet vs Couldn't check (with the reason) vs Not applicable", () => {
+    const legacy = SCAN.entries[0];
+    const https = (e: SavedCompetitorEntry) => e.breakdown!.checks.find((c) => c.id === "website.https")!;
+    expect(checkStatus(legacy, https(legacy))).toEqual({ kind: "not_checked_yet" });
+    const timedOut = fullScored(legacy, "timed_out");
+    expect(checkStatus(timedOut, https(timedOut))).toEqual({ kind: "couldnt", reason: "timed_out" });
+    const noSite = SCAN.entries[1];
+    expect(checkStatus(noSite, https(noSite))).toEqual({ kind: "not_applicable" });
+    expect(isFullScored(OWNER)).toBe(true);
   });
 });

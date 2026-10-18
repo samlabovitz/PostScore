@@ -49,6 +49,7 @@ import type { ProfileTools } from "@/lib/growBannerTools";
 import { timingSafeEqual } from "crypto";
 import { createElement } from "react";
 import { NextResponse, type NextRequest } from "next/server";
+import { unfinishedNewScanIds, withoutUnfinished } from "@/lib/competitorScoringStatus";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rescanBusinessWithClient, type RescanBusinessResult } from "@/app/actions/scoring";
 import { runAndSaveCompetitorScanWithClient } from "@/app/actions/competitors";
@@ -222,17 +223,19 @@ async function readCompetitorSnapshotAsOf(
   businessId: string,
   cutoffIso: string
 ): Promise<CompetitorSnapshot | null> {
-  const { data, error } = await supabase
-    .from("competitor_scans")
-    .select("scan_id")
-    .eq("business_id", businessId)
-    .lte("created_at", cutoffIso)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error || !data) return null;
-  return readCompetitorSnapshotForScan(supabase, businessId, data.scan_id);
+  const [{ data, error }, unfinished] = await Promise.all([
+    supabase
+      .from("competitor_scans")
+      .select("scan_id")
+      .eq("business_id", businessId)
+      .lte("created_at", cutoffIso)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    unfinishedNewScanIds(supabase, businessId),
+  ]);
+  const finished = withoutUnfinished((data ?? []) as { scan_id: string }[], unfinished)[0];
+  if (error || !finished) return null;
+  return readCompetitorSnapshotForScan(supabase, businessId, finished.scan_id);
 }
 
 /**
@@ -558,7 +561,10 @@ export async function processBusiness(
       : await runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: false });
   if (competitorResult.status === "saved") {
     competitorScanId = competitorResult.scanId;
-    currentCompetitorSnapshot = await readCompetitorSnapshotForScan(supabase, businessId, competitorResult.scanId);
+    // The report uses the newest FULLY SCORED scan — a scan saved just now
+    // is still being scored in the background, so this may be the last
+    // finished one (same rule as the Competitors page and Overview).
+    currentCompetitorSnapshot = await readCompetitorSnapshotAsOf(supabase, businessId, new Date().toISOString());
     const previousSnapshot = previousReport
       ? await readCompetitorSnapshotAsOf(supabase, businessId, previousReport.sent_at)
       : null;
