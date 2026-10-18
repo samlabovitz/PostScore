@@ -170,8 +170,23 @@ describe("Google listing photo — Google's rules, cheapest option", () => {
   });
 
   test("server HTML has no image or placeholder (it loads after, only if there is one)", () => {
-    const html = render(<ListingPhoto businessId="b" businessName="Switch Skate & Snow" />);
-    expect(html).toBe("");
+    const html = render(
+      <ListingPhoto businessId="b" businessName="Switch Skate & Snow">
+        <h1>Switch Skate &amp; Snow</h1>
+      </ListingPhoto>
+    );
+    expect(html).toContain("<h1>Switch Skate &amp; Snow</h1>");
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain("Google Maps");
+  });
+
+  test("the photo credit is ONE small line under the header row — never squeezed under the photo", async () => {
+    const fs = await import("node:fs");
+    const src = fs.readFileSync("components/overview/ListingPhoto.tsx", "utf8");
+    expect(src).toMatch(/<figcaption className=\{cn\("max-w-full truncate whitespace-nowrap text-\[11px\] leading-tight text-ink-mute"/);
+    expect(src).not.toContain("max-w-[76px]");
+    // The credit comes after the row (photo + name block), not inside the photo column.
+    expect(src.indexOf("{children}")).toBeLessThan(src.indexOf("<figcaption"));
   });
 
   test("the browser code never holds the API key", async () => {
@@ -389,14 +404,13 @@ describe("connect card and business listing (tweaks)", () => {
     expect(es).toContain("PostScore Premium");
   });
 
-  test("the Premium card shows on the Overview (honest coming-soon); listing above At a glance, no rating/reviews rows", async () => {
+  test("the Premium card shows on the Overview (honest coming-soon); the listing lives in the header chips — no separate card", async () => {
     const fs = await import("node:fs");
     const view = fs.readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8");
     expect(view).not.toContain("gbpConnectPublic");
-    expect(view.indexOf("<ListingCard business={business} />")).toBeLessThan(view.indexOf('"dashboard.overview.atAGlanceHeading"'));
-    const listing = view.slice(view.indexOf("function ListingCard"), view.indexOf("function GrowMoreCustomersBanner"));
-    expect(listing).not.toContain("dashboard.common.ratingLabel");
-    expect(listing).not.toContain("dashboard.common.reviewsLabel");
+    expect(view).not.toContain("ListingCard");
+    expect(view).not.toContain("businessListingHeading");
+    expect(view.indexOf("<ListingChips business={business} now={now} />")).toBeLessThan(view.indexOf('"dashboard.overview.atAGlanceHeading"'));
     // The connect page is viewable (read-only until GBP_CONNECT_PUBLIC);
     // the real OAuth start stays behind the flag.
     const connectPage = fs.readFileSync("app/business/[id]/connect-gbp/page.tsx", "utf8");
@@ -576,5 +590,15 @@ describe("PostStudio wording: not only for restaurants", () => {
     expect(es).toContain("PostStudio");
     expect(en).toContain("tabler-icon-clipboard-list");
     expect(en).not.toContain("tabler-icon-tools-kitchen");
+  });
+});
+
+describe("listing photo survives React's dev double-run", () => {
+  test("one request, and its answer is never discarded by the first run's cleanup", async () => {
+    const fs = await import("node:fs");
+    const src = fs.readFileSync("components/overview/ListingPhoto.tsx", "utf8");
+    expect(src).toContain("if (!requested.current) {");
+    expect(src).toContain("if (mounted.current && body.photo) setPhoto(body.photo);");
+    expect(src).not.toMatch(/let cancelled = false/);
   });
 });

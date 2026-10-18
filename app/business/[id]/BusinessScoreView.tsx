@@ -1,17 +1,16 @@
 "use client";
 
-import { ReactNode, useState } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import { IconChevronDown, IconExternalLink } from "@tabler/icons-react";
-import { buildGrowBannerTools, type ProfileTools } from "@/lib/growBannerTools";
+import type { ProfileTools } from "@/lib/growBannerTools";
+import { GrowMoreCustomers } from "@/components/overview/GrowMoreCustomers";
 import { Card } from "@/components/ui/Card";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { HackedSiteBanner } from "@/components/scoring/HackedSiteBanner";
 import { hackSignsFor } from "@/lib/siteSecurity";
-import { businessWebsiteUrl, isWebsiteVerifiedElsewhereOnly } from "@/lib/businessWebsite";
+import { businessWebsiteUrl } from "@/lib/businessWebsite";
 import { cn } from "@/lib/utils";
 import type { BusinessRecord, ScoreHistoryRow, ScoreSnapshot } from "@/app/actions/scoring";
-import { formatOpeningHours } from "@/lib/hours";
 import { formatCount, formatDateTime, t, useLocale, useTimeZone } from "@/lib/i18n";
 import {
   parseWebsiteAnalysis,
@@ -22,6 +21,7 @@ import {
 import { AssistantLauncher } from "@/components/assistant/AssistantLauncher";
 import { ScoreBand } from "@/components/overview/ScoreBand";
 import { ListingPhoto } from "@/components/overview/ListingPhoto";
+import { ListingChips } from "@/components/overview/ListingChips";
 import { SinceLastScanCard } from "@/components/overview/SinceLastScanCard";
 import { NextRescanNote, RescanButton, RescanMessages, ScanFreshnessLine, useRescan } from "@/components/scoring/ScanStatusStrip";
 import { StatTile } from "@/components/ui/StatTile";
@@ -36,150 +36,7 @@ import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
 import { LiveListingSection } from "@/components/gbp/LiveListingSection";
 import { InfoTip } from "@/components/reports/ScoreHistoryChart";
 
-function ListingField({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-0.5 border-b border-paper-line py-3 last:border-b-0">
-      <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-        {label}
-      </span>
-      <span className="text-sm text-ink">{value}</span>
-    </div>
-  );
-}
 
-/** The real saved Google listing data — every field either shows what
- * Google actually returned or honestly says "Not available." No field
- * is guessed or left blank without explanation. */
-function ListingCard({ business }: { business: BusinessRecord }) {
-  const locale = useLocale();
-  const notAvailable = <span className="italic text-ink-mute">{t(locale, "dashboard.common.notAvailable")}</span>;
-  // Only Spanish tries the localized lines — English businesses keep
-  // reading the stored opening_hours weekday descriptions exactly as
-  // before, so English output stays byte-identical. formatOpeningHours
-  // itself falls back to null (and so, below, to opening_hours) whenever
-  // the structured data is missing or doesn't parse.
-  const localizedHours =
-    locale === "es" ? formatOpeningHours(business.opening_hours_periods, locale) : null;
-  const hoursLines = localizedHours ?? business.opening_hours;
-  return (
-    <Card className="p-5">
-      <div className="flex flex-col divide-y divide-paper-line">
-        <ListingField label={t(locale, "dashboard.common.addressLabel")} value={business.address ?? notAvailable} />
-        <ListingField label={t(locale, "dashboard.common.phoneLabel")} value={business.phone ?? notAvailable} />
-        <ListingField
-          label={t(locale, "dashboard.overview.hoursLabel")}
-          value={
-            hoursLines && hoursLines.length > 0 ? (
-              <div className="flex flex-col gap-0.5">
-                {hoursLines.map((line) => (
-                  <span key={line}>{line}</span>
-                ))}
-              </div>
-            ) : (
-              notAvailable
-            )
-          }
-        />
-        <ListingField
-          label={t(locale, "dashboard.common.websiteLabel")}
-          value={
-            business.website ? (
-              <a
-                href={business.website}
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium text-brass hover:underline"
-              >
-                {business.website}
-              </a>
-            ) : isWebsiteVerifiedElsewhereOnly(business) ? (
-              // A real site verified elsewhere (Step 2d) — honestly NOT on
-              // the Google listing itself, but never "no website".
-              t(locale, "dashboard.overview.verifiedWebsiteNotOnListing", { url: businessWebsiteUrl(business) ?? "" })
-            ) : (
-              notAvailable
-            )
-          }
-        />
-        {business.google_maps_uri && (
-          <ListingField
-            label={t(locale, "dashboard.overview.googleMapsLabel")}
-            value={
-              <a
-                href={business.google_maps_uri}
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium text-brass hover:underline"
-              >
-                {t(locale, "dashboard.overview.viewOnGoogleMaps")}
-              </a>
-            }
-          />
-        )}
-      </div>
-    </Card>
-  );
-}
-
-/**
- * Compact, always-shown reminder that PostScore's growth tools help
- * every business regardless of its current score — one slim horizontal
- * strip right below the PostAI banner, styled as its matched pair
- * (same border radius/border/padding feel), never a big promotional
- * block. Just a heading and a row of tool chips — no description line,
- * no score-dependent copy, no trailing link.
- *
- * At a real 1280px window with the sidebar showing, the available
- * width here is ~918px (1280 - 250 sidebar - 80 main padding - 32 card
- * padding). Verified with the real Inter font and real copy at this
- * exact text-sm sizing: English fits one row even with real (not
- * degenerate) chip padding; Spanish's real chip labels are long enough
- * that even gaps/padding tightened to their practical floor still
- * leave it short by a real ~58px. Rather than shrinking text below
- * text-sm or dropping a chip, Spanish falls back to the same
- * overflow-x-auto scrolling every narrower screen already uses.
- */
-function GrowMoreCustomersBanner({ businessId, profileTools }: { businessId: string; profileTools: ProfileTools }) {
-  const locale = useLocale();
-  const tools = buildGrowBannerTools(businessId, profileTools);
-
-  return (
-    <Card className="min-w-0 px-4 py-2.5">
-      {/* Never wraps — scrolls sideways instead whenever the real
-          content is wider than the strip (see this component's own
-          doc comment for why Spanish sometimes still is, even at
-          1280px), scrollbar hidden via the two arbitrary-value
-          utilities below so it reads as a clean strip, not a scroll
-          widget. The chip group is flex-1 + justify-evenly so it
-          spreads out to use whatever real extra width exists to the
-          right of the heading, rather than clumping to one side.
-          min-w-0 on the card and this row (flex items otherwise
-          default to a content-based minimum width, which would let
-          the unwrapped chip row force the card itself wider than its
-          column instead of staying put and scrolling internally). */}
-      <div
-        className="flex min-w-0 items-center gap-[2px] overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        <h2 className="shrink-0 whitespace-nowrap text-sm font-semibold text-ink">
-          {t(locale, "dashboard.overview.growBanner.heading")}
-        </h2>
-
-        <div className="flex min-w-0 flex-1 items-center justify-evenly gap-[2px]">
-          {tools.map((tool) => (
-            <Link
-              key={tool.labelKey}
-              href={tool.href}
-              className="inline-flex shrink-0 items-center gap-[2px] whitespace-nowrap rounded-full border border-paper-deep bg-paper px-[4px] py-[2px] text-sm font-medium text-ink-soft transition-colors hover:border-brass hover:text-ink"
-            >
-              <tool.icon size={16} className="shrink-0 text-brass" />
-              {t(locale, tool.labelKey)}
-            </Link>
-          ))}
-        </div>
-      </div>
-    </Card>
-  );
-}
 
 export type AssistantEmbedData =
   | {
@@ -252,14 +109,18 @@ export function BusinessScoreView({
       {/* Name and address on top, as before; the listing's own photo when
           Google has one; freshness and Re-scan on the right. */}
       <div id="rescan" className="flex scroll-mt-20 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3.5">
-          <ListingPhoto businessId={businessId} businessName={displayName} />
-          <div className="flex min-w-0 flex-col gap-1">
+        <ListingPhoto
+          businessId={businessId}
+          businessName={displayName}
+          footer={<ScanFreshnessLine lastScanAt={lastScanAt} now={now} scoringVersion={breakdown.scoringVersion} />}
+        >
+          <div className="flex min-w-0 flex-col gap-1.5">
             <h1 className="font-serif text-2xl font-semibold text-ink nav:text-[27px]">{displayName}</h1>
             <p className="text-sm text-ink-soft">{business.address ?? t(locale, "dashboard.overview.noAddressOnFile")}</p>
-            <ScanFreshnessLine lastScanAt={lastScanAt} now={now} scoringVersion={breakdown.scoringVersion} className="mt-1" />
+            {/* The Google listing at a glance (replaces the old "Business listing" card). */}
+            <ListingChips business={business} now={now} />
           </div>
-        </div>
+        </ListingPhoto>
         <div className="flex shrink-0 flex-col items-start gap-1.5 sm:items-end">
           <div className="flex flex-wrap items-center gap-2">
             {liveSiteUrl && (
@@ -309,12 +170,12 @@ export function BusinessScoreView({
         </Card>
       )}
 
-      <GrowMoreCustomersBanner businessId={businessId} profileTools={profileTools} />
-
-      <div className="flex flex-col gap-3">
-        <SectionHeading title={t(locale, "dashboard.overview.businessListingHeading")} />
-        <ListingCard business={business} />
-      </div>
+      <GrowMoreCustomers
+        businessId={businessId}
+        profileTools={profileTools}
+        reviewCount={business.review_count}
+        nearbyReviewAverage={benchmark.status === "ok" ? benchmark.benchmark.competitorReviewAverage : null}
+      />
 
       <SectionHeading title={t(locale, "dashboard.overview.atAGlanceHeading")} />
       <Card className="p-5">

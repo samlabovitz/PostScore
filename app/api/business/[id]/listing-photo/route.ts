@@ -57,7 +57,14 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       .select("id", { count: "exact", head: true })
       .gte("created_at", utcMonthStart(new Date()));
     // Fails closed: no log (e.g. table not created yet) → no paid call.
-    if (error || !canLoadPlacePhoto(count ?? null, placePhotoMonthlyCap())) return reply({ photo: null });
+    // Say why in the server log, so a missing photo is easy to trace.
+    if (error || count === null) {
+      console.warn(
+        `[listing-photo] no photo shown: the place_photo_loads usage log isn't available (${error?.code ?? "no count"}). Run supabase/schema.sql's place_photo_loads section.`
+      );
+      return reply({ photo: null });
+    }
+    if (!canLoadPlacePhoto(count, placePhotoMonthlyCap())) return reply({ photo: null });
     const { error: logError } = await admin.from("place_photo_loads").insert({ business_id: business.id });
     if (logError) return reply({ photo: null });
 

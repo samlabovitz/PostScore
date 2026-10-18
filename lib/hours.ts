@@ -136,3 +136,54 @@ export function formatOpeningHours(
     return `${name}: ${ranges.join(", ")}`;
   });
 }
+
+export type TodayHours =
+  | { kind: "open"; ranges: string[]; googleDay: number }
+  | { kind: "open24"; googleDay: number }
+  | { kind: "closed"; googleDay: number }
+  | { kind: "not_listed" };
+
+/** Google's day number (0 = Sunday) for `now` in the business's time zone. */
+export function googleDayIn(now: Date, timeZone: string): number {
+  const name = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone }).format(now);
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(name);
+}
+
+/**
+ * Today's hours in the business's own time zone — from Google's
+ * structured periods, or (when those are missing) the matching line of
+ * Google's own weekday text. Never guessed: nothing listed → "not_listed".
+ */
+export function todayHours(
+  periods: OpeningHoursPeriod[] | null,
+  weekdayLines: string[] | null,
+  now: Date,
+  timeZone: string,
+  locale: Locale
+): TodayHours {
+  const googleDay = googleDayIn(now, timeZone);
+  const valid = periods && periods.length > 0 ? validatePeriods(periods) : null;
+  if (valid) {
+    const today = valid.filter((p) => p.open.day === googleDay);
+    if (today.length === 0) return { kind: "closed", googleDay };
+    if (today.some((p) => !p.close)) return { kind: "open24", googleDay };
+    const tag = INTL_LOCALE_TAG[locale];
+    return {
+      kind: "open",
+      googleDay,
+      ranges: today.map((p) => `${timeFor(p.open.hour, p.open.minute, tag)} – ${timeFor(p.close!.hour, p.close!.minute, tag)}`),
+    };
+  }
+  // Google's weekday text runs Monday → Sunday.
+  const line = weekdayLines?.[DISPLAY_DAY_ORDER.indexOf(googleDay)];
+  if (!line) return { kind: "not_listed" };
+  const text = line.replace(/^[^:]+:\s*/, "").trim();
+  if (/^closed$/i.test(text)) return { kind: "closed", googleDay };
+  if (/open 24 hours/i.test(text)) return { kind: "open24", googleDay };
+  return { kind: "open", googleDay, ranges: [text] };
+}
+
+/** Which line of the Monday-first week list is today (for highlighting). */
+export function todayLineIndex(googleDay: number): number {
+  return DISPLAY_DAY_ORDER.indexOf(googleDay);
+}

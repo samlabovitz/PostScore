@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { getListingModeForPage } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
 import { scoreBusinessById, getScoreHistory, getRecentScoreSnapshots } from "@/app/actions/scoring";
@@ -10,8 +11,6 @@ import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale, t } from "@/lib/i18n";
 import { BusinessScoreView, type AssistantEmbedData } from "./BusinessScoreView";
 import { WebsiteOnlyOverview } from "./WebsiteOnlyOverview";
-import { getListingMode } from "@/lib/listingMode";
-import { createClient } from "@/lib/supabase/server";
 import { businessRowToScoringInput, parseWebsiteAnalysis } from "@/lib/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
 import { topRecommendations } from "@/lib/overviewTiles";
@@ -26,7 +25,14 @@ export default async function BusinessPage({ params }: { params: { id: string } 
   // produce Spanish-language check labels/explanations for a Spanish
   // business, not English ones re-labeled after the fact (same reasoning
   // as loadContext() in app/actions/assistant.ts).
-  const summary = await getBusinessSummary(params.id);
+  // The listing mode needs only the id — read it alongside the summary.
+  // Summary, listing mode and score together — the score reads the
+  // business's own language from its row ("business").
+  const [summary, listingMode, scored] = await Promise.all([
+    getBusinessSummary(params.id),
+    getListingModeForPage(params.id),
+    scoreBusinessById(params.id, "business"),
+  ]);
 
   if (summary.status === "unauthenticated") {
     redirect("/login");
@@ -46,7 +52,6 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     summary.business.name
   );
 
-  const scored = await scoreBusinessById(params.id, locale);
 
   if (scored.status === "unauthenticated") {
     redirect("/login");
@@ -67,7 +72,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
   // Day 2b: no Google listing — the website alone, clearly labeled; no
   // PostScore, grade, history, competitor rank or PostAI (all of those
   // read the listing).
-  if ((await getListingMode(createClient(), params.id)) === "website_only") {
+  if (listingMode === "website_only") {
     const websiteCategory = scored.result.breakdown.categories.find((c) => c.id === "website") ?? null;
     return (
       <DashboardShell business={scored.business}>
