@@ -39,3 +39,15 @@ export function scanFreshness(lastScanAt: string | null, now: Date, timeZone: st
   if (days === 0) return { kind: "today" };
   return days >= STALE_SCAN_DAYS ? { kind: "stale", days } : { kind: "days", days };
 }
+
+/** Pages other than the Overview show a re-scan notice only once the last
+ * scan is MORE than this old; within it, nothing at all. */
+export const RESCAN_NOTICE_AFTER_HOURS = 48;
+
+/** Whether Growth, Reviews, Website, Competitors, Pricing and Reports show
+ * the "Scanned N days ago — re-scan for current results" notice. */
+export function showRescanNotice(lastScanAt: string | null, now: Date): boolean {
+  if (!lastScanAt) return false;
+  const t = Date.parse(lastScanAt);
+  return Number.isFinite(t) && now.getTime() - t > RESCAN_NOTICE_AFTER_HOURS * 60 * 60 * 1000;
+}

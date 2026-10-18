@@ -1,5 +1,6 @@
 "use server";
 
+import { requestCache } from "@/lib/requestCache";
 import { createClient } from "@/lib/supabase/server";
 
 export interface GbpConnectionStatus {
@@ -18,7 +19,7 @@ export type GetGbpConnectionStatusResult =
  * connected? Never assumes yes — a missing row (or an error reading it)
  * is always treated as "not connected," never silently as connected.
  */
-export async function getGbpConnectionStatus(businessId: string): Promise<GetGbpConnectionStatusResult> {
+async function getGbpConnectionStatusUncached(businessId: string): Promise<GetGbpConnectionStatusResult> {
   const supabase = createClient();
 
   const {
@@ -73,4 +74,10 @@ export async function disconnectGbp(businessId: string): Promise<DisconnectGbpRe
   }
 
   return { status: "ok" };
+}
+
+/** Request-scoped (lib/requestCache.ts): one query per page render. */
+const getGbpConnectionStatusCached = requestCache(getGbpConnectionStatusUncached);
+export async function getGbpConnectionStatus(...args: Parameters<typeof getGbpConnectionStatusUncached>): Promise<Awaited<ReturnType<typeof getGbpConnectionStatusUncached>>> {
+  return getGbpConnectionStatusCached(...args);
 }

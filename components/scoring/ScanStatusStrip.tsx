@@ -8,9 +8,8 @@
 // render the same words (no hydration mismatch).
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { IconArrowRight, IconInfoCircle, IconRefresh } from "@tabler/icons-react";
+import { IconInfoCircle, IconRefresh } from "@tabler/icons-react";
 import { rescanBusiness, type RescanSummary } from "@/app/actions/scoring";
 import { rescanAvailability, scanFreshness } from "@/lib/rescanPolicy";
 import { cn } from "@/lib/utils";
@@ -199,48 +198,4 @@ export function NextRescanNote({ nextAt }: { nextAt: string | null }) {
   const timeZone = useTimeZone();
   if (!nextAt) return null;
   return <span className="text-[12px] text-ink-mute">{t(locale, "dashboard.rescan.nextAvailable", { time: formatDateTime(nextAt, locale, timeZone) })}</span>;
-}
-
-export function ScanStatusStrip({
-  businessId,
-  lastScanAt,
-  now,
-  scoringVersion = null,
-  mode,
-  note = null,
-}: {
-  businessId: string;
-  lastScanAt: string | null;
-  /** The server's "now" (ISO) — see the file comment. */
-  now: string;
-  scoringVersion?: string | null;
-  /** "button" on the Overview; "link" (to the Overview's button) elsewhere. */
-  mode: "button" | "link";
-  /** An extra page-specific line (e.g. Competitors' 30-day refresh). */
-  note?: string | null;
-}) {
-  const locale = useLocale();
-  const { state, run, nextAt } = useRescan(businessId, lastScanAt, now);
-
-  return (
-    <div id="rescan" className="flex scroll-mt-20 flex-col gap-2 rounded-xl border border-paper-deep bg-white px-4 py-3 shadow-card sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 flex-col gap-1">
-        <ScanFreshnessLine lastScanAt={lastScanAt} now={now} scoringVersion={scoringVersion} />
-        <p className="text-[12.5px] text-ink-mute">{t(locale, "dashboard.rescan.updateOnlyOnRescan")}</p>
-        {note && <p className="text-[12.5px] text-ink-mute">{note}</p>}
-        <RescanMessages state={state} />
-      </div>
-      <div className="flex shrink-0 flex-col items-start gap-1 sm:items-end">
-        {mode === "button" ? (
-          <RescanButton state={state} nextAt={nextAt} onClick={run} />
-        ) : (
-          <Link href={`/business/${businessId}#rescan`} className="inline-flex items-center gap-1 text-[13px] font-semibold text-ink hover:text-brass">
-            {t(locale, "dashboard.rescan.linkToOverview")}
-            <IconArrowRight size={14} />
-          </Link>
-        )}
-        <NextRescanNote nextAt={nextAt} />
-      </div>
-    </div>
-  );
 }

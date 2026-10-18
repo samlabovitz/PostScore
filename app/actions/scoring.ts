@@ -1,5 +1,6 @@
 "use server";
 
+import { requestCache } from "@/lib/requestCache";
 import { withTimeZone } from "@/lib/businessTimeZone";
 import { rescanAvailability } from "@/lib/rescanPolicy";
 import { diffBreakdowns } from "@/lib/scoreChanges";
@@ -73,9 +74,11 @@ export type ScoreBusinessResult =
  * on whatever the businesses table currently holds, so viewing a
  * business's page is free to do as often as you like.
  */
-export async function scoreBusinessById(
+async function scoreBusinessByIdUncached(
   businessId: string,
-  locale: Locale = DEFAULT_LOCALE
+  /** "business": the business's own language (read from the same row) —
+   * lets a page score without first waiting for the summary. */
+  locale: Locale | "business" = DEFAULT_LOCALE
 ): Promise<ScoreBusinessResult> {
   const supabase = createClient();
 
@@ -107,7 +110,7 @@ export async function scoreBusinessById(
 export async function scoreBusinessWithClient(
   supabase: SupabaseClient,
   businessId: string,
-  locale: Locale = DEFAULT_LOCALE
+  locale: Locale | "business" = DEFAULT_LOCALE
 ): Promise<ScoreBusinessResult> {
   const { data: business, error } = await supabase
     .from("businesses")
@@ -125,7 +128,7 @@ export async function scoreBusinessWithClient(
   // any date inside a check explanation.
   const zoned = withTimeZone(business);
   const input = businessRowToScoringInput(zoned as BusinessScoringRow);
-  const result = getScoreWithSuggestions(input, locale);
+  const result = getScoreWithSuggestions(input, locale === "business" ? normalizeLocale(business.language) : locale);
 
   return { status: "ok", business: zoned as BusinessRecord, result };
 }
@@ -522,7 +525,7 @@ export async function rescanBusinessWithClient(
  * yet" (see pendingCheckStatus in lib/actionPlan.ts). A single narrow
  * query rather than reusing getScoreHistory/getRecentScoreSnapshots,
  * since the Growth page needs only this one timestamp. */
-export async function getLastScanAt(businessId: string): Promise<string | null> {
+async function getLastScanAtUncached(businessId: string): Promise<string | null> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("scores")
@@ -545,7 +548,7 @@ export interface ScoreHistoryRow {
 }
 
 /** Most recent scans for a business, newest first. RLS-scoped to the current user. */
-export async function getScoreHistory(businessId: string): Promise<ScoreHistoryRow[]> {
+async function getScoreHistoryUncached(businessId: string): Promise<ScoreHistoryRow[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("scores")
@@ -594,4 +597,22 @@ export async function getRecentScoreSnapshots(
 
   if (error || !data) return [];
   return data as ScoreSnapshot[];
+}
+
+/** Request-scoped (lib/requestCache.ts): one query per page render. */
+const scoreBusinessByIdCached = requestCache(scoreBusinessByIdUncached);
+export async function scoreBusinessById(...args: Parameters<typeof scoreBusinessByIdUncached>): Promise<Awaited<ReturnType<typeof scoreBusinessByIdUncached>>> {
+  return scoreBusinessByIdCached(...args);
+}
+
+/** Request-scoped (lib/requestCache.ts): one query per page render. */
+const getScoreHistoryCached = requestCache(getScoreHistoryUncached);
+export async function getScoreHistory(...args: Parameters<typeof getScoreHistoryUncached>): Promise<Awaited<ReturnType<typeof getScoreHistoryUncached>>> {
+  return getScoreHistoryCached(...args);
+}
+
+/** Request-scoped (lib/requestCache.ts): one query per page render. */
+const getLastScanAtCached = requestCache(getLastScanAtUncached);
+export async function getLastScanAt(...args: Parameters<typeof getLastScanAtUncached>): Promise<Awaited<ReturnType<typeof getLastScanAtUncached>>> {
+  return getLastScanAtCached(...args);
 }

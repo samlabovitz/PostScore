@@ -6,7 +6,9 @@ vi.mock("@/app/actions/scoring", () => ({ rescanBusiness: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
 
 import { RESCAN_COOLDOWN_HOURS, rescanAvailability, scanFreshness } from "./rescanPolicy";
-import { freshnessLabel, rescanToast, ScanStatusStrip } from "@/components/scoring/ScanStatusStrip";
+import { freshnessLabel, NextRescanNote, RescanButton, rescanToast } from "@/components/scoring/ScanStatusStrip";
+import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
+import { RESCAN_NOTICE_AFTER_HOURS, showRescanNotice } from "@/lib/rescanPolicy";
 import { generateSuggestions, ratingBand, scoreBusiness, SCORING_VERSION } from "@/lib/scoring";
 import { scoringInput } from "@/emails/sampleMonthlyReportContent";
 import { CategoryCard, checkOutcome } from "@/components/scoring/CategoryCard";
@@ -27,12 +29,12 @@ describe("one re-scan per business per 24 hours", () => {
   test("the Overview shows 'Next re-scan available …' and disables the button", () => {
     const html = renderToStaticMarkup(
       <LocaleProvider locale="en" timeZone={NY}>
-        <ScanStatusStrip businessId="b" lastScanAt="2026-10-16T09:30:00Z" now={NOW.toISOString()} mode="button" scoringVersion="1.11.0" />
+        <RescanButton state={{ kind: "idle" }} nextAt="2026-10-17T09:30:00.000Z" onClick={() => {}} />
+        <NextRescanNote nextAt="2026-10-17T09:30:00.000Z" />
       </LocaleProvider>
     );
     expect(html).toContain("Next re-scan available Oct 17, 2026");
     expect(html).toMatch(/<button[^>]*disabled/);
-    expect(html).toContain("Your score, history and competitor comparison update only when you re-scan.");
   });
 });
 
@@ -49,14 +51,30 @@ describe("freshness, in the business's own time zone", () => {
     const lateLA = "2026-10-16T05:30:00Z"; // Oct 15, 10:30 PM in LA
     expect(scanFreshness(lateLA, new Date("2026-10-16T06:30:00Z"), "America/Los_Angeles").kind).toBe("today");
   });
-  test("other pages link to the Overview's button; Competitors adds its own refresh rule", () => {
-    const html = renderToStaticMarkup(
-      <LocaleProvider locale="en">
-        <ScanStatusStrip businessId="b" lastScanAt="2026-10-16T13:00:00Z" now={NOW.toISOString()} mode="link" note="Competitors refresh separately, once every 30 days." />
-      </LocaleProvider>
-    );
-    expect(html).toContain('href="/business/b#rescan"');
-    expect(html).toContain("Competitors refresh separately, once every 30 days.");
+  test("other pages: nothing within 48 hours; after that, 'Scanned N days ago' with a link to the Overview's button", () => {
+    expect(RESCAN_NOTICE_AFTER_HOURS).toBe(48);
+    const at = "2026-10-14T13:00:00Z";
+    expect(showRescanNotice(at, new Date("2026-10-16T13:00:00Z"))).toBe(false); // exactly 48 h
+    expect(showRescanNotice(at, new Date("2026-10-16T13:01:00Z"))).toBe(true);
+    expect(showRescanNotice(null, NOW)).toBe(false);
+    const render = (lastScanAt: string, now: string, timeZone = NY, locale: "en" | "es" = "en") =>
+      renderToStaticMarkup(
+        <LocaleProvider locale={locale} timeZone={timeZone}>
+          <StaleScanNotice businessId="b" lastScanAt={lastScanAt} now={now} />
+        </LocaleProvider>
+      );
+    expect(render("2026-10-15T13:00:00Z", NOW.toISOString())).toBe("");
+    const stale = render("2026-10-13T13:00:00Z", NOW.toISOString());
+    expect(stale).toContain("Scanned 3 days ago — re-scan for current results.");
+    expect(stale).toContain('href="/business/b#rescan"');
+    expect(stale).toContain("Re-scan on the Overview");
+    expect(render("2026-10-13T13:00:00Z", NOW.toISOString(), NY, "es")).toContain("Escaneado hace 3 días");
+    // Days are counted in the business's time zone: a late-evening scan in
+    // Los Angeles is a calendar day later than in New York.
+    // Scan: Oct 12, 11:30 PM in LA = Oct 13, 2:30 AM in New York.
+    // Now: Oct 15, 8:30 PM in LA = Oct 15, 11:30 PM in New York (69 h later).
+    expect(render("2026-10-13T06:30:00Z", "2026-10-16T03:30:00Z", "America/Los_Angeles")).toContain("Scanned 3 days ago");
+    expect(render("2026-10-13T06:30:00Z", "2026-10-16T03:30:00Z", NY)).toContain("Scanned 2 days ago");
   });
 });
 

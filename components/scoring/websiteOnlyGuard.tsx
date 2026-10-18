@@ -1,16 +1,21 @@
 // Day 2b: server-side guard for the pages that only work with a Google
 // listing. For a website-only business it returns the whole page (shell
-// + an honest "needs a Google listing" card) before any of that page's
-// own data loading runs; for every other business it returns null.
+// + an honest "needs a Google listing" card); for every other business it
+// returns null. Pages run it alongside their own (read-only) data loads,
+// so it never adds a wait of its own.
 
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { NeedsGoogleListing, type ListingOnlyPage } from "@/components/scoring/NeedsGoogleListing";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { getListingMode } from "@/lib/listingMode";
 import { createClient } from "@/lib/supabase/server";
+import { requestCache } from "@/lib/requestCache";
+
+/** The business's listing mode, read once per page render. */
+export const getListingModeForPage = requestCache((businessId: string) => getListingMode(createClient(), businessId));
 
 export async function websiteOnlyGuard(businessId: string, page: ListingOnlyPage) {
-  if ((await getListingMode(createClient(), businessId)) !== "website_only") return null;
+  if ((await getListingModeForPage(businessId)) !== "website_only") return null;
   const summary = await getBusinessSummary(businessId);
   return (
     <DashboardShell business={summary.status === "ok" ? summary.business : null}>

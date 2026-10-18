@@ -7,12 +7,21 @@ import { getPrices, getPricingAssessment } from "@/app/actions/pricing";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale } from "@/lib/i18n";
 import { PricingView } from "./PricingView";
+import { getLastScanAt } from "@/app/actions/scoring";
+import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
+import { showRescanNotice } from "@/lib/rescanPolicy";
 
 export default async function PricingPage({ params }: { params: { id: string } }) {
-  const websiteOnly = await websiteOnlyGuard(params.id, "pricing");
+  // Independent loads run together (prices, assessment and last scan
+  // need only the id too).
+  const [websiteOnly, summary, pricesResult, assessmentResult, lastScanAt] = await Promise.all([
+    websiteOnlyGuard(params.id, "pricing"),
+    getBusinessSummary(params.id),
+    getPrices(params.id),
+    getPricingAssessment(params.id),
+    getLastScanAt(params.id),
+  ]);
   if (websiteOnly) return websiteOnly;
-
-  const summary = await getBusinessSummary(params.id);
 
   if (summary.status === "unauthenticated") {
     redirect("/login");
@@ -31,10 +40,6 @@ export default async function PricingPage({ params }: { params: { id: string } }
     business.categories,
     business.name
   );
-  const [pricesResult, assessmentResult] = await Promise.all([
-    getPrices(params.id),
-    getPricingAssessment(params.id),
-  ]);
 
   if (pricesResult.status === "unauthenticated" || assessmentResult.status === "unauthenticated") {
     redirect("/login");
@@ -56,6 +61,11 @@ export default async function PricingPage({ params }: { params: { id: string } }
 
   return (
     <DashboardShell business={business}>
+      {showRescanNotice(lastScanAt, new Date()) && (
+        <div className="mb-6">
+          <StaleScanNotice businessId={business.id} lastScanAt={lastScanAt} now={new Date().toISOString()} />
+        </div>
+      )}
       <PricingView
         businessId={business.id}
         businessName={business.name}

@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { ScanStatusStrip } from "@/components/scoring/ScanStatusStrip";
+import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
 import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
@@ -9,10 +9,13 @@ import { getLastScanAt } from "@/app/actions/scoring";
 import { normalizeLocale, t } from "@/lib/i18n";
 
 export default async function CompetitorsPage({ params }: { params: { id: string } }) {
-  const websiteOnly = await websiteOnlyGuard(params.id, "competitors");
+  // Independent loads run together.
+  const [websiteOnly, fetched, lastScanAt] = await Promise.all([
+    websiteOnlyGuard(params.id, "competitors"),
+    getCompetitors(params.id),
+    getLastScanAt(params.id),
+  ]);
   if (websiteOnly) return websiteOnly;
-
-  const fetched = await getCompetitors(params.id);
 
   if (fetched.status === "unauthenticated") {
     redirect("/login");
@@ -30,7 +33,6 @@ export default async function CompetitorsPage({ params }: { params: { id: string
     );
   }
 
-  const lastScanAt = await getLastScanAt(params.id);
   return (
     <DashboardShell
       business={{
@@ -42,8 +44,10 @@ export default async function CompetitorsPage({ params }: { params: { id: string
       }}
     >
       <div className="flex flex-col gap-6">
-        <ScanStatusStrip businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} mode="link" note={t(normalizeLocale(fetched.language), "dashboard.rescan.competitorsSeparate")} />
+        <StaleScanNotice businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} />
         <CompetitorsView businessId={params.id} data={fetched} />
+        {/* Competitors have their own schedule, separate from re-scans. */}
+        <p className="-mt-2 text-[12.5px] text-ink-mute">{t(normalizeLocale(fetched.language), "dashboard.rescan.competitorsSeparate")}</p>
       </div>
     </DashboardShell>
   );

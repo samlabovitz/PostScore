@@ -3,7 +3,6 @@ import {
   IconTicket,
   IconCalendarCheck,
   IconTag,
-  IconQrcode,
   IconTrophy,
 } from "@tabler/icons-react";
 import type { MessageKey } from "@/lib/i18n";
@@ -11,7 +10,15 @@ import type { MessageKey } from "@/lib/i18n";
 export interface GrowBannerTool {
   icon: typeof IconTicket;
   labelKey: MessageKey;
+  /** One line under the tile's title. */
+  descKey: MessageKey;
   href: string;
+}
+
+/** The featured Reviews tile's button: the review link & QR sign (the
+ * Review QR tool folds into it). */
+export function reviewToolHref(businessId: string): string {
+  return `/business/${businessId}/website-reviews#get-more-reviews`;
 }
 
 /**
@@ -50,6 +57,7 @@ export function buildGrowBannerTools(businessId: string, profileTools: ProfileTo
     tools.push({
       icon: IconTicket,
       labelKey: "dashboard.overview.growBanner.tools.coupons.shortLabel",
+      descKey: "dashboard.overview.growBanner.tools.coupons.desc",
       href: `/business/${businessId}/growth?tab=coupons`,
     });
   }
@@ -58,6 +66,7 @@ export function buildGrowBannerTools(businessId: string, profileTools: ProfileTo
     tools.push({
       icon: IconUsers,
       labelKey: "dashboard.overview.growBanner.tools.referral.shortLabel",
+      descKey: "dashboard.overview.growBanner.tools.referral.desc",
       href: `/business/${businessId}/growth?tab=referral`,
     });
   }
@@ -65,27 +74,23 @@ export function buildGrowBannerTools(businessId: string, profileTools: ProfileTo
   tools.push({
     icon: IconCalendarCheck,
     labelKey: "dashboard.overview.growBanner.tools.weeklyRoutine.shortLabel",
+    descKey: "dashboard.overview.growBanner.tools.weeklyRoutine.desc",
     href: `/business/${businessId}/growth#weekly-routine`,
   });
   if (pricingOk) {
     tools.push({
       icon: IconTag,
       labelKey: "dashboard.overview.growBanner.tools.priceCheck.shortLabel",
+      descKey: "dashboard.overview.growBanner.tools.priceCheck.desc",
       href: `/business/${businessId}/pricing`,
     });
   }
-  tools.push(
-    {
-      icon: IconQrcode,
-      labelKey: "dashboard.overview.growBanner.tools.reviewQrSign.shortLabel",
-      href: `/business/${businessId}/website-reviews#get-more-reviews`,
-    },
-    {
-      icon: IconTrophy,
-      labelKey: "dashboard.overview.growBanner.tools.competitorCheck.shortLabel",
-      href: `/business/${businessId}/competitors`,
-    }
-  );
+  tools.push({
+    icon: IconTrophy,
+    labelKey: "dashboard.overview.growBanner.tools.competitorCheck.shortLabel",
+    descKey: "dashboard.overview.growBanner.tools.competitorCheck.desc",
+    href: `/business/${businessId}/competitors`,
+  });
 
   return tools;
 }

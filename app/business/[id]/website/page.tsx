@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { ScanStatusStrip } from "@/components/scoring/ScanStatusStrip";
+import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
 import Link from "next/link";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
@@ -14,7 +14,7 @@ import { HackedSiteBanner } from "@/components/scoring/HackedSiteBanner";
 import { hackSignsFor } from "@/lib/siteSecurity";
 
 export default async function WebsitePage({ params }: { params: { id: string } }) {
-  const result = await getWebsitePageData(params.id);
+  const [result, lastScanAt] = await Promise.all([getWebsitePageData(params.id), getLastScanAt(params.id)]);
 
   if (result.status === "unauthenticated") {
     redirect("/login");
@@ -104,7 +104,6 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       data.websiteAnalysis
     ).length > 0;
 
-  const lastScanAt = await getLastScanAt(params.id);
   return (
     <DashboardShell
       business={{
@@ -120,7 +119,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       <div className="flex flex-col gap-8 nav:gap-10">
         {showHackedBanner && <HackedSiteBanner href="#check-security" />}
         {/* Website-only businesses have no Google scans — no strip. */}
-        {lastScanAt && <ScanStatusStrip businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} mode="link" />}
+        {lastScanAt && <StaleScanNotice businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} />}
         <div>
           <Link
             href={`/business/${params.id}`}

@@ -106,23 +106,36 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
     return { status: "unauthenticated" };
   }
 
-  const { data: business, error: businessError } = await supabase
-    .from("businesses")
-    .select("name, monthly_report_enabled, language")
-    .eq("id", businessId)
-    .single();
+  // Every read below needs only the business id — run them together.
+  // (Each stays RLS-scoped: a business the user doesn't own returns
+  // nothing, so not_found below still holds.)
+  const [
+    { data: business, error: businessError },
+    { data: scores, error: scoresError },
+    { count: confirmedFixCount, error: tasksError },
+    gbpStatus,
+    { data: lastReport },
+  ] = await Promise.all([
+    supabase.from("businesses").select("name, monthly_report_enabled, language").eq("id", businessId).single(),
+    supabase
+      .from("scores")
+      .select("id, total, grade, created_at, profile_snapshot_json, scoring_version, breakdown_categories:breakdown_json->categories")
+      .eq("business_id", businessId)
+      .order("created_at", { ascending: true }),
+    // Best-effort: a failed count here shouldn't fail the whole page, same
+    // reasoning as reconcileActionPlanTasks in app/actions/scoring.ts.
+    supabase.from("tasks").select("id", { count: "exact", head: true }).eq("business_id", businessId).eq("status", "completed"),
+    getGbpConnectionStatus(businessId),
+    // Owners have real SELECT on monthly_reports (see supabase/schema.sql)
+    // — this is a plain RLS-scoped read, not a special case.
+    supabase.from("monthly_reports").select("sent_at").eq("business_id", businessId).order("sent_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
 
   if (businessError || !business) {
     return { status: "not_found" };
   }
 
   const locale = normalizeLocale(business.language);
-
-  const { data: scores, error: scoresError } = await supabase
-    .from("scores")
-    .select("id, total, grade, created_at, profile_snapshot_json, scoring_version, breakdown_categories:breakdown_json->categories")
-    .eq("business_id", businessId)
-    .order("created_at", { ascending: true });
 
   if (scoresError) {
     return { status: "not_found" };
@@ -175,26 +188,6 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
       changesUnavailable: !changesAvailable,
     };
   }
-
-  // Best-effort: a failed count here shouldn't fail the whole page, same
-  // reasoning as reconcileActionPlanTasks in app/actions/scoring.ts.
-  const { count: confirmedFixCount, error: tasksError } = await supabase
-    .from("tasks")
-    .select("id", { count: "exact", head: true })
-    .eq("business_id", businessId)
-    .eq("status", "completed");
-
-  const gbpStatus = await getGbpConnectionStatus(businessId);
-
-  // Owners have real SELECT on monthly_reports (see supabase/schema.sql)
-  // — this is a plain RLS-scoped read, not a special case.
-  const { data: lastReport } = await supabase
-    .from("monthly_reports")
-    .select("sent_at")
-    .eq("business_id", businessId)
-    .order("sent_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
 
   return {
     status: "ok",

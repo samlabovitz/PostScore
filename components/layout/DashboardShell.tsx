@@ -8,6 +8,7 @@ import { AnchorHighlight } from "@/components/layout/AnchorHighlight";
 import { cn } from "@/lib/utils";
 import type { BusinessSummary } from "@/app/actions/businesses";
 import { getCurrentUserEmail } from "@/app/actions/auth";
+import { rememberShellBusiness } from "@/components/layout/shellMemory";
 import { LocaleProvider, normalizeLocale, t } from "@/lib/i18n";
 
 export function DashboardShell({
@@ -23,6 +24,8 @@ export function DashboardShell({
   children: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
+  // For the next page's loading skeleton (components/layout/PageSkeleton.tsx).
+  useEffect(() => rememberShellBusiness(business), [business]);
   // No business (the home list, the intake page, a not-yet-loaded error
   // state) safely normalizes to DEFAULT_LOCALE — same never-throws
   // guarantee normalizeLocale() always gives.

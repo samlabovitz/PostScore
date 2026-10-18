@@ -5,6 +5,7 @@ import { getBusinessSummary } from "@/app/actions/businesses";
 import { scoreBusinessById, getScoreHistory } from "@/app/actions/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
 import { getLatestCompetitorSnapshot } from "@/app/actions/competitors";
+import { ownerStanding, rankBy } from "@/lib/competitorComparison";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { getGrowthMoveSignals } from "@/app/actions/growthMoves";
 import { getWeeklyChecklistState } from "@/app/actions/weeklyChecklist";
@@ -108,7 +109,9 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
 
   const locale = normalizeLocale(summaryResult.business.language);
   const timeZone = summaryResult.business.time_zone ?? undefined;
-  const scored = await scoreBusinessById(businessId, locale);
+  // "business": the same language as `locale` (both from the business's
+  // own row) — and the same call the Overview makes, so one request scores once.
+  const scored = await scoreBusinessById(businessId, "business");
 
   if (scored.status === "unauthenticated") {
     return { status: "unauthenticated" };
@@ -153,7 +156,16 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
   const input = businessRowToScoringInput(scored.business);
   const { breakdown, suggestions } = scored.result;
 
-  const actionPlanResult = await getActionPlan(businessId, input, breakdown, suggestions, locale);
+  // The action plan and the competitor scan → growth signals are
+  // independent — run them together.
+  const signalsPromise = getLatestCompetitorSnapshot(businessId).then(async (snap) => ({
+    snapshot: snap,
+    signals: await getGrowthMoveSignals(businessId, breakdown, profile, snap),
+  }));
+  const [actionPlanResult, { snapshot, signals: signalsResult }] = await Promise.all([
+    getActionPlan(businessId, input, breakdown, suggestions, locale),
+    signalsPromise,
+  ]);
   const topTasks: AssistantActionPlanTask[] =
     actionPlanResult.status === "ok"
       ? actionPlanResult.tasks.slice(0, MAX_ACTION_PLAN_TASKS_IN_CONTEXT).map((t) => ({
@@ -165,21 +177,21 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
         }))
       : [];
 
-  const snapshot = await getLatestCompetitorSnapshot(businessId);
   const competitors: AssistantCompetitorSummary = snapshot
     ? (() => {
-        const sorted = [...snapshot.entries].sort((a, b) => (b.total ?? -1) - (a.total ?? -1));
-        const subjectRank = sorted.findIndex((e) => e.isSubject) + 1;
+        // The one shared rank (full PostScore), and the list in that same
+        // order — identical to the Competitors page and the Overview.
+        const ranked = rankBy(snapshot.scan, "overall");
         return {
           available: true,
           scanAt: formatShortDate(snapshot.createdAt, locale, timeZone),
-          subjectRank: subjectRank > 0 ? subjectRank : null,
-          entries: sorted.map((e) => ({
-            name: e.name ?? "Unnamed business",
-            isSubject: e.isSubject,
-            total: e.total,
-            grade: e.grade,
-            priceLevelSymbol: priceLevelToSymbol(e.priceLevel),
+          subjectRank: ownerStanding(snapshot.scan)?.rank ?? null,
+          entries: ranked.map(({ entry }) => ({
+            name: entry.name ?? "Unnamed business",
+            isSubject: entry.isSubject,
+            total: entry.total,
+            grade: entry.grade,
+            priceLevelSymbol: priceLevelToSymbol(entry.priceLevel),
           })),
         };
       })()
@@ -195,7 +207,6 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
   // through so this never issues a second, identical
   // getLatestCompetitorSnapshot query (see getGrowthMoveSignals's own doc
   // in app/actions/growthMoves.ts).
-  const signalsResult = await getGrowthMoveSignals(businessId, breakdown, profile, snapshot);
   const growthMoves: AssistantGrowthMove[] =
     signalsResult.status === "ok"
       ? withoutWebsiteGrowthMoves(buildGrowthMoves(signalsResult.signals, locale))
@@ -355,14 +366,13 @@ export type GetAssistantPageDataResult =
  * menu (see getConversationHistory/getConversationMessages).
  */
 export async function getAssistantPageData(businessId: string): Promise<GetAssistantPageDataResult> {
-  const loaded = await loadContext(businessId);
-  if (loaded.status !== "ok") return loaded;
-
+  // The conversation count is independent of the context — load both together.
   const supabase = createClient();
-  const { count, error } = await supabase
-    .from("assistant_conversations")
-    .select("id", { count: "exact", head: true })
-    .eq("business_id", businessId);
+  const [loaded, { count, error }] = await Promise.all([
+    loadContext(businessId),
+    supabase.from("assistant_conversations").select("id", { count: "exact", head: true }).eq("business_id", businessId),
+  ]);
+  if (loaded.status !== "ok") return loaded;
 
   if (error) {
     return { status: "error", message: error.message };
