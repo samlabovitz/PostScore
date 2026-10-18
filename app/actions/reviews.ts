@@ -4,6 +4,7 @@ import { withTimeZone } from "@/lib/businessTimeZone";
 import { createClient } from "@/lib/supabase/server";
 import {
   businessRowToScoringInput,
+  parseWebsiteAnalysis,
   scoreBusiness,
   type BusinessScoringRow,
   type CategoryResult,
@@ -35,6 +36,9 @@ export interface ReviewsPageData {
    * gates the reply-assistant card between "connect to unlock" and an
    * honest "connected, syncing soon" state (see app/actions/gbp.ts). */
   gbpConnected: boolean;
+  /** Social profiles on the business's website whose link check found a
+   * real profile — the only ones a review sign may print as "Follow us". */
+  verifiedSocials: Array<{ platform: string; url: string }>;
 }
 
 export type GetReviewsPageDataResult =
@@ -42,6 +46,13 @@ export type GetReviewsPageDataResult =
   | { status: "not_found" }
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
+
+/** Profiles verified as real: their one-request check landed on an
+ * actual profile ("unconfirmed" — blocked by the platform — isn't). */
+function verifiedSocialProfiles(json: unknown): Array<{ platform: string; url: string }> {
+  const profiles = parseWebsiteAnalysis(json)?.content?.socialProfiles ?? [];
+  return profiles.filter((p) => p.check?.result === "profile").map((p) => ({ platform: p.platform, url: p.url }));
+}
 
 /**
  * Loads a saved business (RLS-scoped) and scores it live, the same way
@@ -111,6 +122,7 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
       reviewCount: row.review_count,
       visibilityCategory,
       gbpConnected: gbpStatus.status === "ok" && gbpStatus.connected,
+      verifiedSocials: verifiedSocialProfiles(row.website_analysis_json),
     },
   };
 }

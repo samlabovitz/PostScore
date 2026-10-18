@@ -294,7 +294,7 @@ describe("buildAssistantContextText", () => {
   test("includes real competitor entries with price level, when a scan is available", () => {
     const text = buildAssistantContextText(BASE_CONTEXT);
     expect(text).toContain("Downtown Diner: PostScore 88 (B), Google price level: $$");
-    expect(text).toContain("ranks #2 of 2");
+    expect(text).toContain("ranks #2 of 2 by PostScore");
   });
 
   test("is honest about a missing competitor scan rather than fabricating one", () => {

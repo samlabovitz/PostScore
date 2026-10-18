@@ -10,6 +10,7 @@ import { CategoryCard } from "@/components/scoring/CategoryCard";
 import { ConnectToUnlockCard } from "@/components/gbp/ConnectToUnlock";
 import {
   RATING_TARGET,
+  REVIEW_COUNT_MILESTONE,
   ratingCaption,
   ratingProgressPercent,
   reviewCountCaption,
@@ -17,6 +18,7 @@ import {
 } from "@/lib/reviews";
 import { GetMoreReviews } from "./GetMoreReviews";
 import type { ReviewsPageData } from "@/app/actions/reviews";
+import { PLANS, type Plan } from "@/lib/plan";
 import { formatCount, t, useLocale } from "@/lib/i18n";
 import { useScrollToHash } from "@/lib/useScrollToHash";
 
@@ -25,23 +27,29 @@ function StatCard({
   label,
   value,
   percent,
+  target,
   caption,
 }: {
   icon: typeof IconStar;
   label: string;
   value: string;
   percent: number | null;
+  /** Shown at the bar's right end, e.g. "4.5★ of 5" / "15 of 150". */
+  target: string | null;
   caption: string;
 }) {
   return (
-    <Card className="flex flex-col gap-3 p-5">
-      <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-        <Icon size={14} />
+    <Card className="flex flex-col gap-2 p-4 sm:p-5">
+      <div className="flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-ink-mute">
+        <Icon size={14} className="text-brass" aria-hidden />
         {label}
       </div>
-      <div className="font-serif text-4xl font-bold text-ink">{value}</div>
-      <ProgressBar percent={percent} />
-      <p className="text-[12.5px] text-ink-mute">{caption}</p>
+      <div className="font-serif text-[34px] font-bold leading-none text-ink">{value}</div>
+      <div className="mt-1 flex items-center gap-3">
+        <ProgressBar percent={percent} className="h-1.5 flex-1" />
+        {target && <span className="shrink-0 text-[12px] font-medium tabular-nums text-ink-soft">{target}</span>}
+      </div>
+      <p className="text-[12.5px] leading-snug text-ink-mute">{caption}</p>
     </Card>
   );
 }
@@ -57,12 +65,13 @@ function ReviewSocialProof({
   return (
     <div>
       <SectionHeading title={t(locale, "dashboard.websiteReviews.socialProofHeading")} className="mb-4" />
-      <div className="grid grid-cols-1 gap-5 nav:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard
           icon={IconStar}
           label={t(locale, "dashboard.websiteReviews.avgRatingLabel")}
           value={rating !== null ? `${rating.toFixed(1)} ★` : "—"}
           percent={ratingProgressPercent(rating)}
+          target={rating !== null ? t(locale, "dashboard.websiteReviews.socialProof.ofRating", { rating: rating.toFixed(1) }) : null}
           caption={ratingCaption(rating, locale)}
         />
         <StatCard
@@ -70,6 +79,14 @@ function ReviewSocialProof({
           label={t(locale, "dashboard.websiteReviews.reviewVolumeLabel")}
           value={reviewCount !== null ? formatCount(reviewCount, locale) : "—"}
           percent={reviewCountProgressPercent(reviewCount)}
+          target={
+            reviewCount !== null
+              ? t(locale, "dashboard.websiteReviews.socialProof.ofReviews", {
+                  count: formatCount(reviewCount, locale),
+                  target: formatCount(REVIEW_COUNT_MILESTONE, locale),
+                })
+              : null
+          }
           caption={reviewCountCaption(reviewCount, locale)}
         />
       </div>
@@ -118,12 +135,38 @@ function ComingSoonCard({
   );
 }
 
+/** Local dev only: switch this browser's plan to check each tier. */
+function DevPlanSwitch({ businessId, plan }: { businessId: string; plan: Plan }) {
+  const locale = useLocale();
+  const back = `/business/${businessId}/website-reviews`;
+  return (
+    <div data-testid="dev-plan-switch" className="flex flex-wrap items-center gap-1.5 rounded-lg border border-dashed border-ink-mute px-3 py-2 text-[12px] text-ink-soft">
+      <span>{t(locale, "dashboard.websiteReviews.devPlan.label")}</span>
+      {PLANS.map((p) => (
+        <a
+          key={p}
+          href={`/api/dev/plan?plan=${p}&back=${encodeURIComponent(back)}`}
+          aria-current={p === plan ? "true" : undefined}
+          className={p === plan ? "rounded-full bg-ink px-2 py-0.5 font-semibold text-white" : "rounded-full px-2 py-0.5 underline hover:text-ink"}
+        >
+          {p.charAt(0).toUpperCase() + p.slice(1)}
+        </a>
+      ))}
+    </div>
+  );
+}
+
 export function ReviewsView({
   businessId,
   reviews,
+  plan = "free",
+  devPlanSwitch = false,
 }: {
   businessId: string;
   reviews: ReviewsPageData;
+  plan?: Plan;
+  /** Show the dev-only plan switch (the page passes true only in local dev). */
+  devPlanSwitch?: boolean;
 }) {
   const locale = useLocale();
   // A link straight to #get-more-reviews (e.g. the Overview page's
@@ -141,16 +184,23 @@ export function ReviewsView({
             name: reviews.businessName ?? t(locale, "dashboard.websiteReviews.businessFallback"),
           })}
         </Link>
-        <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
+        <h1 className="mt-1.5 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
           {t(locale, "dashboard.websiteReviews.pageTitle")}
         </h1>
         <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.websiteReviews.subtitle")}</p>
       </div>
 
+      {devPlanSwitch && <DevPlanSwitch businessId={businessId} plan={plan} />}
+
       <div id="get-more-reviews" className="scroll-mt-20">
         <GetMoreReviews
-          businessName={reviews.businessName ?? t(locale, "dashboard.websiteReviews.businessNameFallback")}
+          businessId={businessId}
+          businessName={reviews.businessName}
           placeId={reviews.placeId}
+          rating={reviews.rating}
+          reviewCount={reviews.reviewCount}
+          verifiedSocials={reviews.verifiedSocials}
+          plan={plan}
         />
       </div>
 

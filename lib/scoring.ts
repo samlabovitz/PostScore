@@ -34,6 +34,7 @@
 // DEFAULT_LOCALE, so every existing caller that doesn't pass one keeps
 // getting the exact same English text this file used to hardcode.
 
+import { REVIEW_COUNT_FULL_CREDIT } from "@/lib/reviewTargets";
 import { isWebsiteBuilderId, type WebsiteBuilderDetection, type WebsiteBuilderId } from "@/lib/websiteBuilder";
 import { DEFAULT_LOCALE, formatShortDate, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
 import { GOOGLE_PHOTO_CAP } from "@/lib/googlePhotoCap";
@@ -1095,7 +1096,7 @@ function ratingConfidenceFactor(reviewCount: number | null): number {
  * fraction of credit instead of nearly half — full credit genuinely
  * requires sustained review volume, not just a few happy customers.
  */
-const REVIEW_COUNT_SATURATION = 150;
+const REVIEW_COUNT_SATURATION = REVIEW_COUNT_FULL_CREDIT;
 
 function reviewCountFraction(count: number): number {
   const c = Math.max(0, count);
@@ -2862,6 +2863,14 @@ export function scoreBusiness(input: BusinessScoringInput, locale: Locale = DEFA
     };
   });
 
+  return breakdownFromChecks(checks, locale);
+}
+
+/** Categories and the 0–100 total from a set of check results — the one
+ * place PostScore's weighting lives. scoreBusiness uses it, and so does
+ * re-totalling a competitor whose listing checks were saved earlier and
+ * whose website checks were just run (lib/competitorFullScoring.ts). */
+export function breakdownFromChecks(checks: CheckResult[], locale: Locale = DEFAULT_LOCALE): ScoreBreakdown {
   const categories: CategoryResult[] = (Object.keys(CATEGORY_WEIGHTS) as CategoryId[]).map(
     (categoryId) => {
       const categoryChecks = checks.filter((c) => c.category === categoryId);

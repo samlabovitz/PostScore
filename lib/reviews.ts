@@ -2,9 +2,10 @@
 // deliberately independent of lib/scoring.ts's own curves (the rubric
 // section reuses the real breakdown directly instead) — this module
 // only powers the separate "social proof" framing: a simple, honest
-// "aim for X" read on the same real rating/review-count data, distinct
-// from how those numbers actually earn points.
+// "aim for X" read on the same real rating/review-count data. The
+// review-count target is the scoring's own full-credit count.
 
+import { REVIEW_COUNT_FULL_CREDIT } from "@/lib/reviewTargets";
 import { DEFAULT_LOCALE, formatCount, t, tPlural, type Locale } from "@/lib/i18n";
 
 /** The rating this app encourages aiming for, shown in the social-proof
@@ -12,11 +13,10 @@ import { DEFAULT_LOCALE, formatCount, t, tPlural, type Locale } from "@/lib/i18n
  * lib/scoring.ts, which has its own, more granular point curve. */
 export const RATING_TARGET = 4.5;
 
-/** A round, motivating review-count milestone for the social-proof
- * section. Independent of REVIEW_COUNT_SATURATION in lib/scoring.ts
- * (150, where the scoring curve reaches full points) — this is a
- * simpler, earlier milestone meant to feel achievable. */
-export const REVIEW_COUNT_MILESTONE = 100;
+/** The review-count target on the social-proof bar: exactly where the
+ * score's review-count check reaches full points, so the page and the
+ * score never disagree. */
+export const REVIEW_COUNT_MILESTONE = REVIEW_COUNT_FULL_CREDIT;
 
 /** The Google-hosted "write a review" screen for a real place_id — the
  * same URL Google itself links to from a "Write a review" prompt.
@@ -24,6 +24,20 @@ export const REVIEW_COUNT_MILESTONE = 100;
  * fabricated or guessed link). */
 export function buildGoogleReviewUrl(placeId: string): string {
   return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
+}
+
+/** A one-line display form of the review link ("search.google.com/
+ * local/writereview…"); the full link is still what's copied. */
+export function shortReviewLink(url: string): string {
+  const bare = url.replace(/^https?:\/\//, "");
+  const q = bare.indexOf("?");
+  return q === -1 ? bare : `${bare.slice(0, q)}…`;
+}
+
+/** A text-message link with the review link prefilled (works on iOS
+ * and Android). */
+export function reviewSmsHref(url: string): string {
+  return `sms:?&body=${encodeURIComponent(url)}`;
 }
 
 /** Rating as a percent of the full 5-star scale, for the progress bar

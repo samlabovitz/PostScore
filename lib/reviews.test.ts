@@ -8,6 +8,7 @@ import {
   reviewCountCaption,
   reviewCountProgressPercent,
 } from "./reviews";
+import { REVIEW_COUNT_FULL_CREDIT } from "./reviewTargets";
 
 describe("buildGoogleReviewUrl", () => {
   test("builds the real Google write-a-review URL from a place_id", () => {
@@ -66,13 +67,20 @@ describe("ratingCaption", () => {
   });
 });
 
+describe("review-count target", () => {
+  test("is the scoring's own full-credit count (150), so the page and the score agree", () => {
+    expect(REVIEW_COUNT_MILESTONE).toBe(150);
+    expect(REVIEW_COUNT_MILESTONE).toBe(REVIEW_COUNT_FULL_CREDIT);
+  });
+});
+
 describe("reviewCountCaption", () => {
   test("is an honest empty state when there are no reviews", () => {
     expect(reviewCountCaption(null)).toContain("No reviews yet");
   });
 
   test("names exactly how many more are needed to reach the milestone", () => {
-    expect(reviewCountCaption(63)).toBe(`${REVIEW_COUNT_MILESTONE - 63} more reviews to reach ${REVIEW_COUNT_MILESTONE}.`);
+    expect(reviewCountCaption(63)).toBe(`${REVIEW_COUNT_MILESTONE - 63} more reviews to reach ${REVIEW_COUNT_MILESTONE} — full review credit in your score.`);
   });
 
   test("singularizes '1 more review'", () => {
@@ -81,7 +89,7 @@ describe("reviewCountCaption", () => {
 
   test("switches to a 'passed the milestone' framing with the real total, never overstates it", () => {
     const caption = reviewCountCaption(581);
-    expect(caption).toContain("581");
     expect(caption).toContain(`passed ${REVIEW_COUNT_MILESTONE}`);
+    expect(caption).toContain("full review credit");
   });
 });

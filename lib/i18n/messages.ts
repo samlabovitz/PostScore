@@ -127,9 +127,6 @@ export type MessageKey =
   // Naming convention for the whole dashboard rollout: dashboard.<section>.<key>.
   | "dashboard.competitors.title"
   | "dashboard.competitors.noneFoundNearby"
-  | "dashboard.competitors.statComparableScore"
-  | "dashboard.competitors.fullScoreNote"
-  | "dashboard.competitors.fullScoreShort"
   | "dashboard.competitors.lineupTop"
   | "dashboard.competitors.lineupLowest"
   | "dashboard.competitors.lineupAverage"
@@ -154,10 +151,8 @@ export type MessageKey =
   | "dashboard.competitors.shareHaveIt"
   | "dashboard.competitors.yes"
   | "dashboard.competitors.no"
-  | "dashboard.competitors.notCheckedForCompetitors"
   | "dashboard.competitors.notListedByGoogle"
   | "dashboard.competitors.notChecked"
-  | "dashboard.competitors.websiteCompareNote"
   | "dashboard.competitors.comparableNote"
   | "dashboard.competitors.comparedViaFallback"
   | "placeType.accounting"
@@ -496,7 +491,6 @@ export type MessageKey =
   | "content.checks.website.info_consistency.explanation.allMatchMap"
   | "dashboard.website.screenshotStaleUnreachable"
   | "dashboard.website.screenshotStaleOld"
-  | "dashboard.overview.verifiedWebsiteNotOnListing"
   | "content.spamTopic.replica"
   | "content.spamTopic.casino"
   | "content.spamTopic.pharma"
@@ -744,10 +738,7 @@ export type MessageKey =
   | "dashboard.growth.checklist.items.checkHours.title"
   | "dashboard.growth.checklist.items.checkHours.howTo"
   | "dashboard.growth.view.weeklyCardLabel"
-  | "dashboard.growth.view.statScoreToday"
   | "dashboard.growth.view.statProjected"
-  | "dashboard.growth.view.statPointsWithinReach"
-  | "dashboard.growth.view.statGrade"
   | "dashboard.growth.view.gradeStays"
   | "dashboard.growth.view.gradeChangeArrow"
   | "dashboard.growth.view.weeklyPlanNote.one"
@@ -1038,7 +1029,6 @@ export type MessageKey =
   | "dashboard.websiteReviews.businessFallback"
   | "dashboard.websiteReviews.pageTitle"
   | "dashboard.websiteReviews.subtitle"
-  | "dashboard.websiteReviews.businessNameFallback"
   | "dashboard.websiteReviews.socialProofHeading"
   | "dashboard.websiteReviews.avgRatingLabel"
   | "dashboard.websiteReviews.reviewVolumeLabel"
@@ -1057,15 +1047,7 @@ export type MessageKey =
   | "dashboard.websiteReviews.growthLeverHeading"
   | "dashboard.websiteReviews.growthLeverIntro"
   | "dashboard.websiteReviews.noPlaceIdMessage"
-  | "dashboard.websiteReviews.makeItEffortlessHeading"
-  | "dashboard.websiteReviews.shareableLinkLabel"
-  | "dashboard.websiteReviews.shareableLinkHelper"
-  | "dashboard.websiteReviews.qrCodeLabel"
   | "dashboard.websiteReviews.qrAlt"
-  | "dashboard.websiteReviews.downloadGenerating"
-  | "dashboard.websiteReviews.downloadButton"
-  | "dashboard.websiteReviews.downloadErrorFallback"
-  | "dashboard.websiteReviews.qrHelper"
   // --- Step L6 (beat 1): shared common.* additions for the smaller
   // sections below (backTo/fallback patterns + generic listing-field
   // labels reused across Overview and Intake, per explicit instruction
@@ -1119,7 +1101,6 @@ export type MessageKey =
   // not translated text.
   | "dashboard.overview.hoursClosed"
   | "dashboard.overview.hoursOpen24"
-  | "dashboard.overview.googleMapsLabel"
   | "dashboard.overview.viewOnGoogleMaps"
   | "dashboard.overview.noPriorScanChanges"
   | "dashboard.overview.scoringUpdatedBetweenScans"
@@ -1143,13 +1124,11 @@ export type MessageKey =
   | "dashboard.overview.growBanner.tools.referral.shortLabel"
   | "dashboard.overview.growBanner.tools.weeklyRoutine.shortLabel"
   | "dashboard.overview.growBanner.tools.priceCheck.shortLabel"
-  | "dashboard.overview.growBanner.tools.reviewQrSign.shortLabel"
   | "dashboard.overview.growBanner.tools.competitorCheck.shortLabel"
   | "dashboard.overview.assistantUnavailablePrefix"
   | "dashboard.overview.atAGlanceHeading"
   | "dashboard.overview.googleRatingLabel"
   | "dashboard.overview.googleReviewsLabel"
-  | "dashboard.overview.businessListingHeading"
   | "dashboard.overview.liveListingHeading"
   | "dashboard.overview.whatChangedHeading"
   | "dashboard.overview.scoreImpactHeading"
@@ -1189,7 +1168,6 @@ export type MessageKey =
   | "dashboard.overview.actionPlan.doThisLabel"
   | "dashboard.overview.actionPlan.howLabel"
   | "dashboard.overview.actionPlan.ownerActionOnGoogle"
-  | "dashboard.overview.actionPlan.setupBadgeLabel"
   | "dashboard.overview.actionPlan.saving"
   | "dashboard.overview.actionPlan.didThisAgain"
   | "dashboard.overview.actionPlan.didThis"
@@ -2624,7 +2602,192 @@ export type MessageKey =
   | "dashboard.overview.actionPlan.pointsOnceLive"
   | "dashboard.connectGbp.availableWithPremium"
   | "dashboard.connectGbp.unlockSearchTermsTitle"
-  | "dashboard.connectGbp.unlockSearchTermsBody";
+  | "dashboard.connectGbp.unlockSearchTermsBody"
+  | "dashboard.competitors.someWebsitesNotChecked"
+  | "dashboard.competitors.listingFactsNotSaved"
+  | "dashboard.competitors.statYourScore"
+  | "dashboard.competitors.checkDone"
+  | "dashboard.competitors.checkNeedsWork"
+  | "dashboard.competitors.scoringProgress"
+  | "dashboard.competitors.scoringProgressNew"
+  | "dashboard.competitors.scoringProgressBackfill"
+  | "dashboard.competitors.scoringPaused"
+  | "dashboard.competitors.notCheckedReason.blocked"
+  | "dashboard.competitors.notCheckedReason.timed_out"
+  | "dashboard.competitors.notCheckedReason.js_only"
+  | "dashboard.competitors.notCheckedReason.error_page"
+  | "dashboard.competitors.notCheckedReason.unreachable"
+  | "dashboard.competitors.websiteCouldntCheckReason"
+  | "dashboard.competitors.websiteCouldntBeCheckedReason"
+  | "dashboard.competitors.notCheckedReason.no_address"
+  | "dashboard.competitors.websiteNotCheckedYet"
+  | "dashboard.competitors.checkNotCheckedYet"
+  | "dashboard.competitors.checkNotApplicable"
+  | "dashboard.competitors.checkCouldntCheckReason"
+  | "dashboard.competitors.notCheckedReason.listing_facts"
+  | "dashboard.competitors.notCheckedReason.speed_test"
+  | "dashboard.competitors.notCheckedReason.unknown"
+  | "dashboard.rescan.staleNotice"
+  | "dashboard.overview.growBanner.tools.coupons.desc"
+  | "dashboard.overview.growBanner.tools.referral.desc"
+  | "dashboard.overview.growBanner.tools.weeklyRoutine.desc"
+  | "dashboard.overview.growBanner.tools.priceCheck.desc"
+  | "dashboard.overview.growBanner.tools.competitorCheck.desc"
+  | "dashboard.overview.growBanner.reviews.title"
+  | "dashboard.overview.growBanner.reviews.none"
+  | "dashboard.overview.growBanner.reviews.cta"
+  | "dashboard.overview.growBanner.reviews.vsNearby.one"
+  | "dashboard.overview.growBanner.reviews.vsNearby.other"
+  | "dashboard.overview.growBanner.reviews.countOnly.one"
+  | "dashboard.overview.growBanner.reviews.countOnly.other"
+  | "dashboard.shell.loading"
+  | "dashboard.overview.growBanner.tools.shop.shortLabel"
+  | "dashboard.overview.growBanner.tools.shop.desc"
+  | "dashboard.overview.listingChips.openToday"
+  | "dashboard.overview.listingChips.open24Today"
+  | "dashboard.overview.listingChips.closedToday"
+  | "dashboard.overview.listingChips.hoursNotListed"
+  | "dashboard.overview.listingChips.noPhone"
+  | "dashboard.overview.listingChips.noWebsite"
+  | "dashboard.overview.listingChips.notOnListing"
+  | "dashboard.overview.listingChips.notOnListingShort"
+  | "dashboard.growth.view.withinReach"
+  | "dashboard.growth.view.withinReachRange"
+  | "dashboard.growth.view.nothingWithinReach"
+  | "dashboard.growth.premiumConnect.title"
+  | "dashboard.websiteReviews.hero.design"
+  | "dashboard.websiteReviews.hero.downloadQr"
+  | "dashboard.websiteReviews.hero.locked"
+  | "dashboard.websiteReviews.studio.subtitle"
+  | "dashboard.websiteReviews.studio.basicSubtitle"
+  | "dashboard.websiteReviews.studio.preview"
+  | "dashboard.websiteReviews.studio.loadingFonts"
+  | "dashboard.websiteReviews.studio.close"
+  | "dashboard.websiteReviews.studio.premiumChip"
+  | "dashboard.websiteReviews.studio.premiumPreview"
+  | "dashboard.websiteReviews.studio.upgrade"
+  | "dashboard.websiteReviews.studio.backToMine"
+  | "dashboard.websiteReviews.studio.reset"
+  | "dashboard.websiteReviews.studio.section.style"
+  | "dashboard.websiteReviews.studio.section.size"
+  | "dashboard.websiteReviews.studio.section.layout"
+  | "dashboard.websiteReviews.studio.section.font"
+  | "dashboard.websiteReviews.studio.section.colors"
+  | "dashboard.websiteReviews.studio.section.text"
+  | "dashboard.websiteReviews.studio.section.logo"
+  | "dashboard.websiteReviews.studio.section.qr"
+  | "dashboard.websiteReviews.studio.section.extras"
+  | "dashboard.websiteReviews.studio.template.centered"
+  | "dashboard.websiteReviews.studio.template.split"
+  | "dashboard.websiteReviews.studio.template.minimal"
+  | "dashboard.websiteReviews.studio.template.banner"
+  | "dashboard.websiteReviews.studio.template.framed"
+  | "dashboard.websiteReviews.studio.size.tent"
+  | "dashboard.websiteReviews.studio.size.tentDesc"
+  | "dashboard.websiteReviews.studio.size.card4x6"
+  | "dashboard.websiteReviews.studio.size.card5x7"
+  | "dashboard.websiteReviews.studio.size.letter"
+  | "dashboard.websiteReviews.studio.size.letterDesc"
+  | "dashboard.websiteReviews.studio.size.cards4"
+  | "dashboard.websiteReviews.studio.size.cards4Desc"
+  | "dashboard.websiteReviews.studio.theme.classic"
+  | "dashboard.websiteReviews.studio.theme.classicDesc"
+  | "dashboard.websiteReviews.studio.theme.clean"
+  | "dashboard.websiteReviews.studio.theme.cleanDesc"
+  | "dashboard.websiteReviews.studio.theme.bold"
+  | "dashboard.websiteReviews.studio.theme.boldDesc"
+  | "dashboard.websiteReviews.studio.theme.fresh"
+  | "dashboard.websiteReviews.studio.theme.freshDesc"
+  | "dashboard.websiteReviews.studio.theme.custom"
+  | "dashboard.websiteReviews.studio.theme.customDesc"
+  | "dashboard.websiteReviews.studio.headlineFont"
+  | "dashboard.websiteReviews.studio.bodyFont"
+  | "dashboard.websiteReviews.studio.textSize"
+  | "dashboard.websiteReviews.studio.textSize.small"
+  | "dashboard.websiteReviews.studio.textSize.medium"
+  | "dashboard.websiteReviews.studio.textSize.large"
+  | "dashboard.websiteReviews.studio.colors.background"
+  | "dashboard.websiteReviews.studio.colors.text"
+  | "dashboard.websiteReviews.studio.colors.accent"
+  | "dashboard.websiteReviews.studio.contrast.text"
+  | "dashboard.websiteReviews.studio.contrast.accent"
+  | "dashboard.websiteReviews.studio.contrast.blocked"
+  | "dashboard.websiteReviews.studio.headline"
+  | "dashboard.websiteReviews.studio.headlineCustom"
+  | "dashboard.websiteReviews.studio.headlinePlaceholder"
+  | "dashboard.websiteReviews.studio.count"
+  | "dashboard.websiteReviews.studio.headlineCustomBilingual"
+  | "dashboard.websiteReviews.studio.subline"
+  | "dashboard.websiteReviews.studio.sublinePlaceholder"
+  | "dashboard.websiteReviews.studio.showName"
+  | "dashboard.websiteReviews.studio.showRating"
+  | "dashboard.websiteReviews.studio.ratingHint"
+  | "dashboard.websiteReviews.studio.ratingUnavailable"
+  | "dashboard.websiteReviews.studio.follow"
+  | "dashboard.websiteReviews.studio.followNone"
+  | "dashboard.websiteReviews.studio.followNoneVerified"
+  | "dashboard.websiteReviews.studio.language"
+  | "dashboard.websiteReviews.studio.language.en"
+  | "dashboard.websiteReviews.studio.language.es"
+  | "dashboard.websiteReviews.studio.language.both"
+  | "dashboard.websiteReviews.studio.logo.add"
+  | "dashboard.websiteReviews.studio.logo.replace"
+  | "dashboard.websiteReviews.studio.logo.hint"
+  | "dashboard.websiteReviews.studio.logo.remove"
+  | "dashboard.websiteReviews.studio.logo.top"
+  | "dashboard.websiteReviews.studio.logo.tooBig"
+  | "dashboard.websiteReviews.studio.logo.badType"
+  | "dashboard.websiteReviews.studio.logo.readError"
+  | "dashboard.websiteReviews.studio.logo.notRemembered"
+  | "dashboard.websiteReviews.studio.qr.dots"
+  | "dashboard.websiteReviews.studio.qr.dots.square"
+  | "dashboard.websiteReviews.studio.qr.dots.rounded"
+  | "dashboard.websiteReviews.studio.qr.dots.dots"
+  | "dashboard.websiteReviews.studio.qr.corners"
+  | "dashboard.websiteReviews.studio.qr.corners.square"
+  | "dashboard.websiteReviews.studio.qr.corners.rounded"
+  | "dashboard.websiteReviews.studio.qr.center"
+  | "dashboard.websiteReviews.studio.qr.center.none"
+  | "dashboard.websiteReviews.studio.qr.center.star"
+  | "dashboard.websiteReviews.studio.qr.center.logo"
+  | "dashboard.websiteReviews.studio.qr.centerNeedsLogo"
+  | "dashboard.websiteReviews.studio.border"
+  | "dashboard.websiteReviews.studio.border.none"
+  | "dashboard.websiteReviews.studio.border.thin"
+  | "dashboard.websiteReviews.studio.border.double"
+  | "dashboard.websiteReviews.studio.border.rounded"
+  | "dashboard.websiteReviews.studio.background"
+  | "dashboard.websiteReviews.studio.background.solid"
+  | "dashboard.websiteReviews.studio.background.pattern"
+  | "dashboard.websiteReviews.studio.radius"
+  | "dashboard.websiteReviews.studio.radius.none"
+  | "dashboard.websiteReviews.studio.radius.small"
+  | "dashboard.websiteReviews.studio.radius.large"
+  | "dashboard.websiteReviews.studio.downloadPdf"
+  | "dashboard.websiteReviews.studio.print"
+  | "dashboard.websiteReviews.studio.error.plan"
+  | "dashboard.websiteReviews.studio.error.failed"
+  | "dashboard.websiteReviews.studio.tentNote"
+  | "dashboard.websiteReviews.studio.cardsNote"
+  | "dashboard.websiteReviews.devPlan.label"
+  | "dashboard.websiteReviews.hero.linkLabel"
+  | "dashboard.websiteReviews.hero.copy"
+  | "dashboard.websiteReviews.hero.copied"
+  | "dashboard.websiteReviews.hero.copyFailed"
+  | "dashboard.websiteReviews.hero.open"
+  | "dashboard.websiteReviews.hero.text"
+  | "dashboard.websiteReviews.hero.ideaText"
+  | "dashboard.websiteReviews.hero.ideaReceipts"
+  | "dashboard.websiteReviews.hero.ideaSocial"
+  | "dashboard.websiteReviews.hero.youSend"
+  | "dashboard.websiteReviews.hero.scanLabel"
+  | "dashboard.websiteReviews.hero.downloadSign"
+  | "dashboard.websiteReviews.hero.printYourself"
+  | "dashboard.websiteReviews.hero.working"
+  | "dashboard.websiteReviews.hero.signError"
+  | "dashboard.websiteReviews.socialProof.ofRating"
+  | "dashboard.websiteReviews.socialProof.ofReviews"
+  | "dashboard.growth.checklist.progress";
 
 /** The report/dashboard messages that vary by count — see tPlural below.
  * Each has a ".one" and ".other" MessageKey (the only two categories
@@ -2632,6 +2795,8 @@ export type MessageKey =
  * how a future locale with more categories, e.g. "few"/"many", would
  * still get a safe result even before every category is seeded for it). */
 export type PluralKeyBase =
+  | "dashboard.overview.growBanner.reviews.vsNearby"
+  | "dashboard.overview.growBanner.reviews.countOnly"
   | "dashboard.overview.band.points"
   | "dashboard.overview.breakdown.done"
   | "dashboard.overview.breakdown.needsWork"
@@ -2824,9 +2989,6 @@ export const messages: Record<Locale, LocaleMessages> = {
 
     "dashboard.competitors.title": "Competitors",
     "dashboard.competitors.noneFoundNearby": "We looked for similar businesses within {miles} mi and Google didn't list any. Scanned {date}.",
-    "dashboard.competitors.statComparableScore": "Comparable score",
-    "dashboard.competitors.fullScoreNote": "Your full PostScore is {score} — it also includes website checks we don't run on competitors.",
-    "dashboard.competitors.fullScoreShort": "Full PostScore {score}",
     "dashboard.competitors.lineupTop": "#1 {name} · {score}",
     "dashboard.competitors.lineupLowest": "Lowest: {name} · {score}",
     "dashboard.competitors.lineupAverage": "Area average {score}",
@@ -2851,11 +3013,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.shareHaveIt": "{percent}% have it",
     "dashboard.competitors.yes": "Yes",
     "dashboard.competitors.no": "No",
-    "dashboard.competitors.notCheckedForCompetitors": "Not checked for competitors",
     "dashboard.competitors.notListedByGoogle": "Not listed by Google",
     "dashboard.competitors.notChecked": "Not checked",
-    "dashboard.competitors.websiteCompareNote": "Competitors' websites aren't checked, so Website compares only whether a site is listed on Google.",
-    "dashboard.competitors.comparableNote": "Everyone is compared on what Google lists: rating, reviews, photos, hours, phone and whether a website is listed.",
+    "dashboard.competitors.comparableNote": "Every business here gets the same full PostScore as yours — Google listing, reviews and website — so you’re compared like for like.",
     "dashboard.competitors.comparedViaFallback": "Google's listing gives only a general category, so you're compared with the closest kinds of businesses nearby: {types}.",
     "placeType.accounting": "accounting firms",
     "placeType.amusement_center": "amusement centers",
@@ -3306,7 +3466,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.info_consistency.explanation.allMatchMap": "Your website's hours, phone, and address match your Google listing (address from the map on your website).",
     "dashboard.website.screenshotStaleUnreachable": "Screenshot from {date} — we couldn't load your site in our latest check, so it may be out of date.",
     "dashboard.website.screenshotStaleOld": "Screenshot from {date} — it's more than 30 days old, so it may be out of date.",
-    "dashboard.overview.verifiedWebsiteNotOnListing": "Verified website: {url} (not on your Google listing)",
     "content.spamTopic.replica": "replica watches",
     "content.spamTopic.casino": "online casino",
     "content.spamTopic.pharma": "online pharmacy",
@@ -3623,10 +3782,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.checklist.items.checkHours.howTo":
       "Open your Google Business Profile → Business information → Hours, and confirm they're still accurate.",
     "dashboard.growth.view.weeklyCardLabel": "If you finish this week's plan",
-    "dashboard.growth.view.statScoreToday": "Score today",
     "dashboard.growth.view.statProjected": "Projected after plan",
-    "dashboard.growth.view.statPointsWithinReach": "Points within reach",
-    "dashboard.growth.view.statGrade": "Grade",
     "dashboard.growth.view.gradeStays": "Stays {article} {grade}",
     "dashboard.growth.view.gradeChangeArrow": "{from} → {to}",
     "dashboard.growth.view.weeklyPlanNote.one":
@@ -3982,9 +4138,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.backTo": "Back to {name}",
     "dashboard.websiteReviews.businessFallback": "business",
     "dashboard.websiteReviews.pageTitle": "Reviews & Replies",
-    "dashboard.websiteReviews.subtitle":
-      "Everything here is your real Google data, or clearly labeled as coming soon — nothing fabricated.",
-    "dashboard.websiteReviews.businessNameFallback": "Your business",
+    "dashboard.websiteReviews.subtitle": "Get more reviews and keep up with replies.",
     "dashboard.websiteReviews.socialProofHeading": "Your review social proof",
     "dashboard.websiteReviews.avgRatingLabel": "Average rating",
     "dashboard.websiteReviews.reviewVolumeLabel": "Review volume",
@@ -4009,16 +4163,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       "No matter your score, more reviews bring in more customers. Make leaving one effortless.",
     "dashboard.websiteReviews.noPlaceIdMessage":
       "We don't have a Google place ID on file for this business yet, so we can't build a real review link. Re-save it from a fresh Google Places lookup to pick one up.",
-    "dashboard.websiteReviews.makeItEffortlessHeading": "Make it effortless",
-    "dashboard.websiteReviews.shareableLinkLabel": "Shareable review link",
-    "dashboard.websiteReviews.shareableLinkHelper":
-      'Opens the real Google "write a review" screen for your listing. Text it to a customer, post it, or add it to a receipt or follow-up email — you send it yourself.',
-    "dashboard.websiteReviews.qrCodeLabel": "Front-desk QR code",
     "dashboard.websiteReviews.qrAlt": "Scan to leave a Google review",
-    "dashboard.websiteReviews.downloadGenerating": "Generating...",
-    "dashboard.websiteReviews.downloadButton": "Download",
-    "dashboard.websiteReviews.downloadErrorFallback": "Could not generate the image — try again.",
-    "dashboard.websiteReviews.qrHelper": "A print-ready sign for your counter or window — you print and place it yourself.",
 
     // --- Step L6 (beat 1): dashboard.common.* additions shared across
     // Overview and Intake (generic listing-field labels + fallback/backTo
@@ -4067,7 +4212,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.hoursLabel": "Hours",
     "dashboard.overview.hoursClosed": "Closed",
     "dashboard.overview.hoursOpen24": "Open 24 hours",
-    "dashboard.overview.googleMapsLabel": "Google Maps",
     "dashboard.overview.viewOnGoogleMaps": "View on Google Maps",
     "dashboard.overview.noPriorScanChanges":
       "No prior scan to compare yet — changes will show up here after your next scan.",
@@ -4096,13 +4240,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.growBanner.tools.referral.shortLabel": "Referrals",
     "dashboard.overview.growBanner.tools.weeklyRoutine.shortLabel": "Weekly routine",
     "dashboard.overview.growBanner.tools.priceCheck.shortLabel": "Price check",
-    "dashboard.overview.growBanner.tools.reviewQrSign.shortLabel": "Review QR",
     "dashboard.overview.growBanner.tools.competitorCheck.shortLabel": "Competitors",
     "dashboard.overview.assistantUnavailablePrefix": "The assistant isn't available right now: {message}",
     "dashboard.overview.atAGlanceHeading": "At a glance",
     "dashboard.overview.googleRatingLabel": "Google rating",
     "dashboard.overview.googleReviewsLabel": "Google reviews",
-    "dashboard.overview.businessListingHeading": "Business listing",
     "dashboard.overview.liveListingHeading": "Your live Google listing",
     "dashboard.overview.whatChangedHeading": "What changed since your last scan",
     "dashboard.overview.scoreImpactHeading": "Score impact since your last scan",
@@ -4149,7 +4291,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.actionPlan.howLabel": "How: ",
     "dashboard.overview.actionPlan.ownerActionOnGoogle":
       "This is a change you make yourself, on Google — PostScore can tell you exactly what to do, but we can't edit your listing for you.",
-    "dashboard.overview.actionPlan.setupBadgeLabel": "Setup — doesn't change your score",
     "dashboard.overview.actionPlan.saving": "Saving...",
     "dashboard.overview.actionPlan.didThisAgain": "I did this again",
     "dashboard.overview.actionPlan.didThis": "I did this",
@@ -4391,9 +4532,9 @@ export const messages: Record<Locale, LocaleMessages> = {
       "You're at {rating}★ — aim for {target}+ to build stronger trust at a glance.",
     "dashboard.websiteReviews.reviewCountCaptionNone":
       "No reviews yet — every review you get starts building this up.",
-    "dashboard.websiteReviews.reviewCountCaptionPassed": "You've passed {milestone} reviews — {reviewCount} total.",
-    "dashboard.websiteReviews.reviewCountCaptionRemaining.one": "{remaining} more review to reach {milestone}.",
-    "dashboard.websiteReviews.reviewCountCaptionRemaining.other": "{remaining} more reviews to reach {milestone}.",
+    "dashboard.websiteReviews.reviewCountCaptionPassed": "You've passed {milestone} reviews — full review credit in your score.",
+    "dashboard.websiteReviews.reviewCountCaptionRemaining.one": "{remaining} more review to reach {milestone} — full review credit in your score.",
+    "dashboard.websiteReviews.reviewCountCaptionRemaining.other": "{remaining} more reviews to reach {milestone} — full review credit in your score.",
 
     // --- Step L6 (beat 2), Part B: Reports section's own child components.
     "dashboard.reports.recapFirstScanMessage":
@@ -5767,6 +5908,191 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.connectGbp.availableWithPremium": "Available with PostScore Premium — coming soon",
     "dashboard.connectGbp.unlockSearchTermsTitle": "Search terms",
     "dashboard.connectGbp.unlockSearchTermsBody": "See the exact words people typed on Google to find you.",
+    "dashboard.competitors.someWebsitesNotChecked": "Some websites couldn’t be checked — their rank is based on the other checks.",
+    "dashboard.competitors.listingFactsNotSaved": "Couldn’t check: this scan didn’t save the listing’s phone and hours to compare with the website.",
+    "dashboard.competitors.statYourScore": "Your PostScore",
+    "dashboard.competitors.checkDone": "Done",
+    "dashboard.competitors.checkNeedsWork": "Needs work",
+    "dashboard.competitors.scoringProgress": "Checking {done} of {total} competitor websites…",
+    "dashboard.competitors.scoringProgressNew": "The new scan appears when every site is done.",
+    "dashboard.competitors.scoringProgressBackfill": "Scores update when every site is done.",
+    "dashboard.competitors.scoringPaused": "Checking competitor websites is paused ({done} of {total} done) — it continues on the next run.",
+    "dashboard.competitors.notCheckedReason.blocked": "the site blocks automated checks",
+    "dashboard.competitors.notCheckedReason.timed_out": "the site didn’t answer in time",
+    "dashboard.competitors.notCheckedReason.js_only": "the site is built with JavaScript only",
+    "dashboard.competitors.notCheckedReason.error_page": "the site showed an error page",
+    "dashboard.competitors.notCheckedReason.unreachable": "the site didn’t respond",
+    "dashboard.competitors.websiteCouldntCheckReason": "couldn’t check: {reason}",
+    "dashboard.competitors.websiteCouldntBeCheckedReason": "Website couldn’t be checked: {reason}",
+    "dashboard.competitors.notCheckedReason.no_address": "no website address was saved for it",
+    "dashboard.competitors.websiteNotCheckedYet": "not checked yet",
+    "dashboard.competitors.checkNotCheckedYet": "Not checked yet",
+    "dashboard.competitors.checkNotApplicable": "Not applicable",
+    "dashboard.competitors.checkCouldntCheckReason": "Couldn’t check: {reason}",
+    "dashboard.competitors.notCheckedReason.listing_facts": "the listing’s phone and hours weren’t saved with this scan",
+    "dashboard.competitors.notCheckedReason.speed_test": "Google’s speed test failed for this site",
+    "dashboard.competitors.notCheckedReason.unknown": "no result",
+    "dashboard.rescan.staleNotice": "Scanned {days} days ago — re-scan for current results.",
+    "dashboard.overview.growBanner.tools.coupons.desc": "Bring people back with a simple offer",
+    "dashboard.overview.growBanner.tools.referral.desc": "Turn happy customers into new ones",
+    "dashboard.overview.growBanner.tools.weeklyRoutine.desc": "A few minutes a week keeps your listing fresh",
+    "dashboard.overview.growBanner.tools.priceCheck.desc": "See how your prices compare nearby",
+    "dashboard.overview.growBanner.tools.competitorCheck.desc": "See who you’re up against nearby",
+    "dashboard.overview.growBanner.reviews.title": "Get more Google reviews",
+    "dashboard.overview.growBanner.reviews.none": "No Google reviews yet — your first ones count the most",
+    "dashboard.overview.growBanner.reviews.cta": "Get your review link & QR →",
+    "dashboard.overview.growBanner.reviews.vsNearby.one": "{count} review — businesses near you average {average}",
+    "dashboard.overview.growBanner.reviews.vsNearby.other": "{count} reviews — businesses near you average {average}",
+    "dashboard.overview.growBanner.reviews.countOnly.one": "{count} review · each new one helps your rating count fully",
+    "dashboard.overview.growBanner.reviews.countOnly.other": "{count} reviews · each new one helps your rating count fully",
+    "dashboard.shell.loading": "Loading…",
+    "dashboard.overview.growBanner.tools.shop.shortLabel": "Shop",
+    "dashboard.overview.growBanner.tools.shop.desc": "Signs, displays and tools for your storefront",
+    "dashboard.overview.listingChips.openToday": "Open today {hours}",
+    "dashboard.overview.listingChips.open24Today": "Open 24 hours today",
+    "dashboard.overview.listingChips.closedToday": "Closed today",
+    "dashboard.overview.listingChips.hoursNotListed": "Hours not listed on Google",
+    "dashboard.overview.listingChips.noPhone": "No phone on Google",
+    "dashboard.overview.listingChips.noWebsite": "No website",
+    "dashboard.overview.listingChips.notOnListing": "Your website isn’t on your Google listing yet",
+    "dashboard.overview.listingChips.notOnListingShort": "not on Google",
+    "dashboard.growth.view.withinReach": "+{points} within reach this week",
+    "dashboard.growth.view.withinReachRange": "+{low}–{high} within reach this week",
+    "dashboard.growth.view.nothingWithinReach": "Nothing new to gain this week",
+    "dashboard.growth.premiumConnect.title": "Unlock live Google insights",
+    "dashboard.websiteReviews.hero.design": "Design your review sign",
+    "dashboard.websiteReviews.hero.downloadQr": "Download QR (PNG)",
+    "dashboard.websiteReviews.hero.locked": "Print a review sign for your counter — Grow and up",
+    "dashboard.websiteReviews.studio.subtitle": "The preview updates as you edit. Your design is saved on this device.",
+    "dashboard.websiteReviews.studio.basicSubtitle": "Pick a style and a size. More designs come with Premium.",
+    "dashboard.websiteReviews.studio.preview": "Preview",
+    "dashboard.websiteReviews.studio.loadingFonts": "Loading fonts…",
+    "dashboard.websiteReviews.studio.close": "Close",
+    "dashboard.websiteReviews.studio.premiumChip": "Premium",
+    "dashboard.websiteReviews.studio.premiumPreview": "Premium preview — downloads stay on your current sign.",
+    "dashboard.websiteReviews.studio.upgrade": "Upgrade to Premium →",
+    "dashboard.websiteReviews.studio.backToMine": "Back to my sign",
+    "dashboard.websiteReviews.studio.reset": "Reset to default",
+    "dashboard.websiteReviews.studio.section.style": "Style",
+    "dashboard.websiteReviews.studio.section.size": "Size",
+    "dashboard.websiteReviews.studio.section.layout": "Layout",
+    "dashboard.websiteReviews.studio.section.font": "Font",
+    "dashboard.websiteReviews.studio.section.colors": "Colors",
+    "dashboard.websiteReviews.studio.section.text": "Text",
+    "dashboard.websiteReviews.studio.section.logo": "Logo",
+    "dashboard.websiteReviews.studio.section.qr": "QR style",
+    "dashboard.websiteReviews.studio.section.extras": "Extras",
+    "dashboard.websiteReviews.studio.template.centered": "Centered classic",
+    "dashboard.websiteReviews.studio.template.split": "Split",
+    "dashboard.websiteReviews.studio.template.minimal": "Minimal",
+    "dashboard.websiteReviews.studio.template.banner": "Bold banner",
+    "dashboard.websiteReviews.studio.template.framed": "Framed",
+    "dashboard.websiteReviews.studio.size.tent": "Desk tent card",
+    "dashboard.websiteReviews.studio.size.tentDesc": "Folds in half, reads from both sides",
+    "dashboard.websiteReviews.studio.size.card4x6": "4×6 card",
+    "dashboard.websiteReviews.studio.size.card5x7": "5×7 card",
+    "dashboard.websiteReviews.studio.size.letter": "Full page",
+    "dashboard.websiteReviews.studio.size.letterDesc": "8.5×11 in",
+    "dashboard.websiteReviews.studio.size.cards4": "4 cards per page",
+    "dashboard.websiteReviews.studio.size.cards4Desc": "With cut lines",
+    "dashboard.websiteReviews.studio.theme.classic": "Classic",
+    "dashboard.websiteReviews.studio.theme.classicDesc": "Navy + brass on cream",
+    "dashboard.websiteReviews.studio.theme.clean": "Clean",
+    "dashboard.websiteReviews.studio.theme.cleanDesc": "Black on white, ink-friendly",
+    "dashboard.websiteReviews.studio.theme.bold": "Bold",
+    "dashboard.websiteReviews.studio.theme.boldDesc": "White on navy",
+    "dashboard.websiteReviews.studio.theme.fresh": "Fresh",
+    "dashboard.websiteReviews.studio.theme.freshDesc": "Green on mint",
+    "dashboard.websiteReviews.studio.theme.custom": "Custom",
+    "dashboard.websiteReviews.studio.theme.customDesc": "Your own colors",
+    "dashboard.websiteReviews.studio.headlineFont": "Headline font",
+    "dashboard.websiteReviews.studio.bodyFont": "Body font",
+    "dashboard.websiteReviews.studio.textSize": "Text size",
+    "dashboard.websiteReviews.studio.textSize.small": "Small",
+    "dashboard.websiteReviews.studio.textSize.medium": "Medium",
+    "dashboard.websiteReviews.studio.textSize.large": "Large",
+    "dashboard.websiteReviews.studio.colors.background": "Background",
+    "dashboard.websiteReviews.studio.colors.text": "Text",
+    "dashboard.websiteReviews.studio.colors.accent": "Accent",
+    "dashboard.websiteReviews.studio.contrast.text": "Text and background are too close to read — pick a darker or lighter color.",
+    "dashboard.websiteReviews.studio.contrast.accent": "The accent color is too faint on this background.",
+    "dashboard.websiteReviews.studio.contrast.blocked": "Fix the colors to download or print.",
+    "dashboard.websiteReviews.studio.headline": "Headline",
+    "dashboard.websiteReviews.studio.headlineCustom": "Write my own",
+    "dashboard.websiteReviews.studio.headlinePlaceholder": "Your headline",
+    "dashboard.websiteReviews.studio.count": "{count}/{max}",
+    "dashboard.websiteReviews.studio.headlineCustomBilingual": "A custom headline prints as written, in one language.",
+    "dashboard.websiteReviews.studio.subline": "Extra line (optional)",
+    "dashboard.websiteReviews.studio.sublinePlaceholder": "e.g. Thank you for shopping local!",
+    "dashboard.websiteReviews.studio.showName": "Show business name",
+    "dashboard.websiteReviews.studio.showRating": "Show star rating",
+    "dashboard.websiteReviews.studio.ratingHint": "Your real Google rating: {rating}★",
+    "dashboard.websiteReviews.studio.ratingUnavailable": "Available when your Google rating is 4.0★ or higher.",
+    "dashboard.websiteReviews.studio.follow": "“Follow us” line",
+    "dashboard.websiteReviews.studio.followNone": "Don't show",
+    "dashboard.websiteReviews.studio.followNoneVerified": "No verified social profiles yet — only profiles we've confirmed are real can be printed.",
+    "dashboard.websiteReviews.studio.language": "Language",
+    "dashboard.websiteReviews.studio.language.en": "English",
+    "dashboard.websiteReviews.studio.language.es": "Spanish",
+    "dashboard.websiteReviews.studio.language.both": "Bilingual",
+    "dashboard.websiteReviews.studio.logo.add": "Add a logo",
+    "dashboard.websiteReviews.studio.logo.replace": "Replace",
+    "dashboard.websiteReviews.studio.logo.hint": "PNG, JPG or SVG, up to 2 MB. It stays on this device — never uploaded.",
+    "dashboard.websiteReviews.studio.logo.remove": "Remove",
+    "dashboard.websiteReviews.studio.logo.top": "Show at the top",
+    "dashboard.websiteReviews.studio.logo.tooBig": "That file is over 2 MB.",
+    "dashboard.websiteReviews.studio.logo.badType": "Use a PNG, JPG or SVG file.",
+    "dashboard.websiteReviews.studio.logo.readError": "Couldn't read that image.",
+    "dashboard.websiteReviews.studio.logo.notRemembered": "Over 500 KB, so it isn't remembered on this device — add it again next time.",
+    "dashboard.websiteReviews.studio.qr.dots": "Dot shape",
+    "dashboard.websiteReviews.studio.qr.dots.square": "Square",
+    "dashboard.websiteReviews.studio.qr.dots.rounded": "Rounded",
+    "dashboard.websiteReviews.studio.qr.dots.dots": "Dots",
+    "dashboard.websiteReviews.studio.qr.corners": "Corners",
+    "dashboard.websiteReviews.studio.qr.corners.square": "Square",
+    "dashboard.websiteReviews.studio.qr.corners.rounded": "Rounded",
+    "dashboard.websiteReviews.studio.qr.center": "Center",
+    "dashboard.websiteReviews.studio.qr.center.none": "None",
+    "dashboard.websiteReviews.studio.qr.center.star": "Star",
+    "dashboard.websiteReviews.studio.qr.center.logo": "Logo",
+    "dashboard.websiteReviews.studio.qr.centerNeedsLogo": "Add a logo first (Logo section).",
+    "dashboard.websiteReviews.studio.border": "Border",
+    "dashboard.websiteReviews.studio.border.none": "None",
+    "dashboard.websiteReviews.studio.border.thin": "Thin",
+    "dashboard.websiteReviews.studio.border.double": "Double",
+    "dashboard.websiteReviews.studio.border.rounded": "Rounded",
+    "dashboard.websiteReviews.studio.background": "Background",
+    "dashboard.websiteReviews.studio.background.solid": "Solid",
+    "dashboard.websiteReviews.studio.background.pattern": "Subtle pattern",
+    "dashboard.websiteReviews.studio.radius": "Corner radius",
+    "dashboard.websiteReviews.studio.radius.none": "Square",
+    "dashboard.websiteReviews.studio.radius.small": "Small",
+    "dashboard.websiteReviews.studio.radius.large": "Large",
+    "dashboard.websiteReviews.studio.downloadPdf": "Download PDF",
+    "dashboard.websiteReviews.studio.print": "Print",
+    "dashboard.websiteReviews.studio.error.plan": "Your plan doesn't include this sign.",
+    "dashboard.websiteReviews.studio.error.failed": "Couldn't create the sign — try again.",
+    "dashboard.websiteReviews.studio.tentNote": "Prints on one letter page — fold on the dashed line.",
+    "dashboard.websiteReviews.studio.cardsNote": "Cut along the dashed lines.",
+    "dashboard.websiteReviews.devPlan.label": "Test plan (local dev only):",
+    "dashboard.websiteReviews.hero.linkLabel": "Your review link",
+    "dashboard.websiteReviews.hero.copy": "Copy link",
+    "dashboard.websiteReviews.hero.copied": "Copied ✓",
+    "dashboard.websiteReviews.hero.copyFailed": "Couldn't copy — select the link and copy it.",
+    "dashboard.websiteReviews.hero.open": "Open link ↗",
+    "dashboard.websiteReviews.hero.text": "Text it",
+    "dashboard.websiteReviews.hero.ideaText": "Text it after a visit",
+    "dashboard.websiteReviews.hero.ideaReceipts": "Add to receipts & emails",
+    "dashboard.websiteReviews.hero.ideaSocial": "Post it on social",
+    "dashboard.websiteReviews.hero.youSend": "You share it yourself — PostScore doesn't message your customers.",
+    "dashboard.websiteReviews.hero.scanLabel": "Scan to leave a review",
+    "dashboard.websiteReviews.hero.downloadSign": "Download sign (PDF)",
+    "dashboard.websiteReviews.hero.printYourself": "You print and place it yourself.",
+    "dashboard.websiteReviews.hero.working": "Preparing…",
+    "dashboard.websiteReviews.hero.signError": "Couldn't create the sign — try again.",
+    "dashboard.websiteReviews.socialProof.ofRating": "{rating}★ of 5",
+    "dashboard.websiteReviews.socialProof.ofReviews": "{count} of {target}",
+    "dashboard.growth.checklist.progress": "{done} of {total} done this week · resets Monday",
   },
   es: {
     "language.en": "Inglés",
@@ -5900,9 +6226,6 @@ export const messages: Record<Locale, LocaleMessages> = {
 
     "dashboard.competitors.title": "Competencia",
     "dashboard.competitors.noneFoundNearby": "Buscamos negocios similares a menos de {miles} mi y Google no indicó ninguno. Analizado el {date}.",
-    "dashboard.competitors.statComparableScore": "Puntuación comparable",
-    "dashboard.competitors.fullScoreNote": "Su PostScore completo es {score} — también incluye revisiones del sitio web que no hacemos a la competencia.",
-    "dashboard.competitors.fullScoreShort": "PostScore completo {score}",
     "dashboard.competitors.lineupTop": "#1 {name} · {score}",
     "dashboard.competitors.lineupLowest": "Más baja: {name} · {score}",
     "dashboard.competitors.lineupAverage": "Promedio de la zona {score}",
@@ -5927,11 +6250,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.shareHaveIt": "{percent}% lo tienen",
     "dashboard.competitors.yes": "Sí",
     "dashboard.competitors.no": "No",
-    "dashboard.competitors.notCheckedForCompetitors": "No se verifica para la competencia",
     "dashboard.competitors.notListedByGoogle": "Google no lo indica",
     "dashboard.competitors.notChecked": "No verificado",
-    "dashboard.competitors.websiteCompareNote": "No revisamos los sitios web de la competencia, así que Sitio web solo compara si hay un sitio indicado en Google.",
-    "dashboard.competitors.comparableNote": "Todos se comparan con lo que indica Google: calificación, reseñas, fotos, horario, teléfono y si hay un sitio web.",
+    "dashboard.competitors.comparableNote": "Cada negocio recibe el mismo PostScore completo que el suyo —ficha de Google, reseñas y sitio web—, para compararlos en igualdad de condiciones.",
     "dashboard.competitors.comparedViaFallback": "La ficha de Google solo indica una categoría general, por lo que se le compara con los negocios más parecidos de la zona: {types}.",
     "placeType.accounting": "despachos contables",
     "placeType.amusement_center": "centros de entretenimiento",
@@ -6269,7 +6590,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.info_consistency.explanation.allMatchMap": "Los horarios, el teléfono y la dirección de su sitio web coinciden con su ficha de Google (dirección tomada del mapa de su sitio web).",
     "dashboard.website.screenshotStaleUnreachable": "Captura de pantalla del {date} — no pudimos cargar su sitio en nuestra última verificación, así que puede estar desactualizada.",
     "dashboard.website.screenshotStaleOld": "Captura de pantalla del {date} — tiene más de 30 días, así que puede estar desactualizada.",
-    "dashboard.overview.verifiedWebsiteNotOnListing": "Sitio web verificado: {url} (no está en su ficha de Google)",
     "content.spamTopic.replica": "relojes de imitación",
     "content.spamTopic.casino": "casino en línea",
     "content.spamTopic.pharma": "farmacia en línea",
@@ -6580,10 +6900,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.checklist.items.checkHours.howTo":
       "Abra su Perfil de Negocio de Google → Información del negocio → Horario, y confirme que siga siendo exacto.",
     "dashboard.growth.view.weeklyCardLabel": "Si completa el plan de esta semana",
-    "dashboard.growth.view.statScoreToday": "Puntuación de hoy",
     "dashboard.growth.view.statProjected": "Proyectada tras el plan",
-    "dashboard.growth.view.statPointsWithinReach": "Puntos a su alcance",
-    "dashboard.growth.view.statGrade": "Nota",
     "dashboard.growth.view.gradeStays": "Se mantiene en {grade}",
     "dashboard.growth.view.weeklyPlanNote.one": "Basado solo en {count} tarea de abajo — una semana realista, no todas las deficiencias a la vez. Consulte \"Proyectos más grandes\" para el plan a más largo plazo.",
     "dashboard.growth.view.weeklyPlanNote.other": "Basado solo en las {count} tareas de abajo — una semana realista, no todas las deficiencias a la vez. Consulte \"Proyectos más grandes\" para el plan a más largo plazo.",
@@ -6879,8 +7196,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.backTo": "Volver a {name}",
     "dashboard.websiteReviews.businessFallback": "negocio",
     "dashboard.websiteReviews.pageTitle": "Reseñas y respuestas",
-    "dashboard.websiteReviews.subtitle": "Todo lo que hay aquí son sus datos reales de Google, o está claramente marcado como próximamente — nada inventado.",
-    "dashboard.websiteReviews.businessNameFallback": "Su negocio",
+    "dashboard.websiteReviews.subtitle": "Consiga más reseñas y manténgase al día con las respuestas.",
     "dashboard.websiteReviews.socialProofHeading": "Su prueba social de reseñas",
     "dashboard.websiteReviews.avgRatingLabel": "Calificación promedio",
     "dashboard.websiteReviews.reviewVolumeLabel": "Volumen de reseñas",
@@ -6899,15 +7215,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.growthLeverHeading": "Consiga más reseñas — su palanca de crecimiento n.º 1",
     "dashboard.websiteReviews.growthLeverIntro": "Sea cual sea su puntuación, más reseñas atraen a más clientes. Haga que dejar una sea muy fácil.",
     "dashboard.websiteReviews.noPlaceIdMessage": "Aún no tenemos un ID de lugar de Google registrado para este negocio, así que no podemos crear un enlace de reseña real. Vuelva a guardarlo desde una búsqueda nueva en Google Places para obtener uno.",
-    "dashboard.websiteReviews.makeItEffortlessHeading": "Hágalo muy fácil",
-    "dashboard.websiteReviews.shareableLinkLabel": "Enlace de reseña para compartir",
-    "dashboard.websiteReviews.shareableLinkHelper": "Abre la pantalla real de Google para \"escribir una reseña\" de su ficha. Envíelo por mensaje a un cliente, publíquelo o agréguelo a un recibo o correo de seguimiento — usted mismo lo envía.",
-    "dashboard.websiteReviews.qrCodeLabel": "Código QR para el mostrador",
     "dashboard.websiteReviews.qrAlt": "Escanee para dejar una reseña en Google",
-    "dashboard.websiteReviews.downloadGenerating": "Generando...",
-    "dashboard.websiteReviews.downloadButton": "Descargar",
-    "dashboard.websiteReviews.downloadErrorFallback": "No se pudo generar la imagen — inténtelo de nuevo.",
-    "dashboard.websiteReviews.qrHelper": "Un cartel listo para imprimir para su mostrador o ventana — usted mismo lo imprime y lo coloca.",
 
     // --- Step L6 (beat 2): reviewed Spanish for the smaller dashboard
     // sections (Overview, Connect-GBP, Reports, Intake) + shared common.*
@@ -6944,7 +7252,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.hoursLabel": "Horario",
     "dashboard.overview.hoursClosed": "Cerrado",
     "dashboard.overview.hoursOpen24": "Abierto las 24 horas",
-    "dashboard.overview.googleMapsLabel": "Google Maps",
     "dashboard.overview.viewOnGoogleMaps": "Ver en Google Maps",
     "dashboard.overview.noPriorScanChanges": "Aún no hay un análisis anterior con el que comparar — los cambios aparecerán aquí después de su próximo análisis.",
     "dashboard.overview.scoringUpdatedBetweenScans": "PostScore actualizó la forma en que calcula la puntuación entre estos dos análisis, así que no se muestra una comparación punto por punto — el total de arriba sigue reflejando la diferencia real.",
@@ -6967,13 +7274,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.growBanner.tools.referral.shortLabel": "Recomendaciones",
     "dashboard.overview.growBanner.tools.weeklyRoutine.shortLabel": "Rutina semanal",
     "dashboard.overview.growBanner.tools.priceCheck.shortLabel": "Precios",
-    "dashboard.overview.growBanner.tools.reviewQrSign.shortLabel": "QR de reseñas",
     "dashboard.overview.growBanner.tools.competitorCheck.shortLabel": "Competencia",
     "dashboard.overview.assistantUnavailablePrefix": "El asistente no está disponible en este momento: {message}",
     "dashboard.overview.atAGlanceHeading": "De un vistazo",
     "dashboard.overview.googleRatingLabel": "Calificación de Google",
     "dashboard.overview.googleReviewsLabel": "Reseñas de Google",
-    "dashboard.overview.businessListingHeading": "Ficha del negocio",
     "dashboard.overview.liveListingHeading": "Su ficha de Google en vivo",
     "dashboard.overview.whatChangedHeading": "Qué cambió desde su último análisis",
     "dashboard.overview.scoreImpactHeading": "Impacto en la puntuación desde su último análisis",
@@ -7013,7 +7318,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.actionPlan.doThisLabel": "Haga esto: ",
     "dashboard.overview.actionPlan.howLabel": "Cómo: ",
     "dashboard.overview.actionPlan.ownerActionOnGoogle": "Este es un cambio que usted mismo hace, en Google — PostScore puede decirle exactamente qué hacer, pero no podemos editar su ficha por usted.",
-    "dashboard.overview.actionPlan.setupBadgeLabel": "Configuración: no cambia su puntuación",
     "dashboard.overview.actionPlan.saving": "Guardando...",
     "dashboard.overview.actionPlan.didThisAgain": "Lo hice de nuevo",
     "dashboard.overview.actionPlan.didThis": "Ya lo hice",
@@ -7237,9 +7541,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.ratingCaptionAtTarget": "Está en {rating}★ — en o por encima del {target}+ que buscan la mayoría de los clientes.",
     "dashboard.websiteReviews.ratingCaptionBelowTarget": "Está en {rating}★ — apunte a {target}+ para generar mayor confianza a primera vista.",
     "dashboard.websiteReviews.reviewCountCaptionNone": "Aún sin reseñas — cada reseña que consiga empieza a construir esto.",
-    "dashboard.websiteReviews.reviewCountCaptionPassed": "Ha superado las {milestone} reseñas — {reviewCount} en total.",
-    "dashboard.websiteReviews.reviewCountCaptionRemaining.one": "{remaining} reseña más para alcanzar {milestone}.",
-    "dashboard.websiteReviews.reviewCountCaptionRemaining.other": "{remaining} reseñas más para alcanzar {milestone}.",
+    "dashboard.websiteReviews.reviewCountCaptionPassed": "Ha superado las {milestone} reseñas — el máximo por reseñas en su puntuación.",
+    "dashboard.websiteReviews.reviewCountCaptionRemaining.one": "{remaining} reseña más para llegar a {milestone} — el máximo por reseñas en su puntuación.",
+    "dashboard.websiteReviews.reviewCountCaptionRemaining.other": "{remaining} reseñas más para llegar a {milestone} — el máximo por reseñas en su puntuación.",
 
     // --- Step L6 (beat 3): reviewed Spanish for the Reports children
     // (MonthlyRecapCard.tsx, MonthlyEmailReportCard.tsx, ScoreHistoryChart.tsx)
@@ -8931,6 +9235,191 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.connectGbp.availableWithPremium": "Disponible con PostScore Premium — próximamente",
     "dashboard.connectGbp.unlockSearchTermsTitle": "Términos de búsqueda",
     "dashboard.connectGbp.unlockSearchTermsBody": "Vea las palabras exactas que la gente escribió en Google para encontrarlo.",
+    "dashboard.competitors.someWebsitesNotChecked": "Algunos sitios web no se pudieron revisar; su posición se basa en las demás revisiones.",
+    "dashboard.competitors.listingFactsNotSaved": "No se pudo revisar: este análisis no guardó el teléfono ni el horario de la ficha para compararlos con el sitio web.",
+    "dashboard.competitors.statYourScore": "Su PostScore",
+    "dashboard.competitors.checkDone": "Hecho",
+    "dashboard.competitors.checkNeedsWork": "Necesita mejoras",
+    "dashboard.competitors.scoringProgress": "Revisando {done} de {total} sitios web de la competencia…",
+    "dashboard.competitors.scoringProgressNew": "El nuevo análisis aparecerá cuando terminen todos los sitios.",
+    "dashboard.competitors.scoringProgressBackfill": "Las puntuaciones se actualizarán cuando terminen todos los sitios.",
+    "dashboard.competitors.scoringPaused": "La revisión de los sitios de la competencia está en pausa ({done} de {total} listos); continuará en la próxima ejecución.",
+    "dashboard.competitors.notCheckedReason.blocked": "el sitio bloquea las revisiones automáticas",
+    "dashboard.competitors.notCheckedReason.timed_out": "el sitio no respondió a tiempo",
+    "dashboard.competitors.notCheckedReason.js_only": "el sitio está hecho solo con JavaScript",
+    "dashboard.competitors.notCheckedReason.error_page": "el sitio mostró una página de error",
+    "dashboard.competitors.notCheckedReason.unreachable": "el sitio no respondió",
+    "dashboard.competitors.websiteCouldntCheckReason": "no se pudo revisar: {reason}",
+    "dashboard.competitors.websiteCouldntBeCheckedReason": "No se pudo revisar el sitio web: {reason}",
+    "dashboard.competitors.notCheckedReason.no_address": "no se guardó la dirección de su sitio web",
+    "dashboard.competitors.websiteNotCheckedYet": "aún no revisado",
+    "dashboard.competitors.checkNotCheckedYet": "Aún no revisado",
+    "dashboard.competitors.checkNotApplicable": "No aplica",
+    "dashboard.competitors.checkCouldntCheckReason": "No se pudo revisar: {reason}",
+    "dashboard.competitors.notCheckedReason.listing_facts": "este análisis no guardó el teléfono ni el horario de la ficha",
+    "dashboard.competitors.notCheckedReason.speed_test": "la prueba de velocidad de Google falló para este sitio",
+    "dashboard.competitors.notCheckedReason.unknown": "sin resultado",
+    "dashboard.rescan.staleNotice": "Escaneado hace {days} días: vuelva a escanear para ver resultados actuales.",
+    "dashboard.overview.growBanner.tools.coupons.desc": "Haga que los clientes vuelvan con una oferta sencilla",
+    "dashboard.overview.growBanner.tools.referral.desc": "Convierta a sus clientes satisfechos en clientes nuevos",
+    "dashboard.overview.growBanner.tools.weeklyRoutine.desc": "Unos minutos a la semana mantienen su ficha al día",
+    "dashboard.overview.growBanner.tools.priceCheck.desc": "Vea cómo se comparan sus precios en la zona",
+    "dashboard.overview.growBanner.tools.competitorCheck.desc": "Vea con quién compite en su zona",
+    "dashboard.overview.growBanner.reviews.title": "Consiga más reseñas en Google",
+    "dashboard.overview.growBanner.reviews.none": "Aún no tiene reseñas en Google: las primeras son las que más cuentan",
+    "dashboard.overview.growBanner.reviews.cta": "Obtenga su enlace y QR de reseñas →",
+    "dashboard.overview.growBanner.reviews.vsNearby.one": "{count} reseña: los negocios de su zona tienen {average} en promedio",
+    "dashboard.overview.growBanner.reviews.vsNearby.other": "{count} reseñas: los negocios de su zona tienen {average} en promedio",
+    "dashboard.overview.growBanner.reviews.countOnly.one": "{count} reseña · cada reseña nueva ayuda a que su calificación cuente por completo",
+    "dashboard.overview.growBanner.reviews.countOnly.other": "{count} reseñas · cada reseña nueva ayuda a que su calificación cuente por completo",
+    "dashboard.shell.loading": "Cargando…",
+    "dashboard.overview.growBanner.tools.shop.shortLabel": "Tienda",
+    "dashboard.overview.growBanner.tools.shop.desc": "Letreros, exhibidores y herramientas para su local",
+    "dashboard.overview.listingChips.openToday": "Abierto hoy {hours}",
+    "dashboard.overview.listingChips.open24Today": "Abierto las 24 horas hoy",
+    "dashboard.overview.listingChips.closedToday": "Cerrado hoy",
+    "dashboard.overview.listingChips.hoursNotListed": "Horario no indicado en Google",
+    "dashboard.overview.listingChips.noPhone": "Sin teléfono en Google",
+    "dashboard.overview.listingChips.noWebsite": "Sin sitio web",
+    "dashboard.overview.listingChips.notOnListing": "Su sitio web aún no aparece en su ficha de Google",
+    "dashboard.overview.listingChips.notOnListingShort": "no está en Google",
+    "dashboard.growth.view.withinReach": "+{points} a su alcance esta semana",
+    "dashboard.growth.view.withinReachRange": "+{low}–{high} a su alcance esta semana",
+    "dashboard.growth.view.nothingWithinReach": "Nada nuevo que ganar esta semana",
+    "dashboard.growth.premiumConnect.title": "Desbloquee datos en vivo de Google",
+    "dashboard.websiteReviews.hero.design": "Diseñe su cartel de reseñas",
+    "dashboard.websiteReviews.hero.downloadQr": "Descargar QR (PNG)",
+    "dashboard.websiteReviews.hero.locked": "Imprima un cartel de reseñas para su mostrador — desde el plan Grow",
+    "dashboard.websiteReviews.studio.subtitle": "La vista previa se actualiza mientras edita. Su diseño se guarda en este dispositivo.",
+    "dashboard.websiteReviews.studio.basicSubtitle": "Elija un estilo y un tamaño. Hay más diseños con Premium.",
+    "dashboard.websiteReviews.studio.preview": "Vista previa",
+    "dashboard.websiteReviews.studio.loadingFonts": "Cargando fuentes…",
+    "dashboard.websiteReviews.studio.close": "Cerrar",
+    "dashboard.websiteReviews.studio.premiumChip": "Premium",
+    "dashboard.websiteReviews.studio.premiumPreview": "Vista previa Premium — las descargas siguen con su cartel actual.",
+    "dashboard.websiteReviews.studio.upgrade": "Mejorar a Premium →",
+    "dashboard.websiteReviews.studio.backToMine": "Volver a mi cartel",
+    "dashboard.websiteReviews.studio.reset": "Restablecer diseño",
+    "dashboard.websiteReviews.studio.section.style": "Estilo",
+    "dashboard.websiteReviews.studio.section.size": "Tamaño",
+    "dashboard.websiteReviews.studio.section.layout": "Diseño",
+    "dashboard.websiteReviews.studio.section.font": "Fuente",
+    "dashboard.websiteReviews.studio.section.colors": "Colores",
+    "dashboard.websiteReviews.studio.section.text": "Texto",
+    "dashboard.websiteReviews.studio.section.logo": "Logotipo",
+    "dashboard.websiteReviews.studio.section.qr": "Estilo del QR",
+    "dashboard.websiteReviews.studio.section.extras": "Detalles",
+    "dashboard.websiteReviews.studio.template.centered": "Clásico centrado",
+    "dashboard.websiteReviews.studio.template.split": "Dividido",
+    "dashboard.websiteReviews.studio.template.minimal": "Minimalista",
+    "dashboard.websiteReviews.studio.template.banner": "Franja destacada",
+    "dashboard.websiteReviews.studio.template.framed": "Con marco",
+    "dashboard.websiteReviews.studio.size.tent": "Tarjeta de mesa plegable",
+    "dashboard.websiteReviews.studio.size.tentDesc": "Se dobla y se lee por ambos lados",
+    "dashboard.websiteReviews.studio.size.card4x6": "Tarjeta 4×6",
+    "dashboard.websiteReviews.studio.size.card5x7": "Tarjeta 5×7",
+    "dashboard.websiteReviews.studio.size.letter": "Página completa",
+    "dashboard.websiteReviews.studio.size.letterDesc": "8.5×11 pulg.",
+    "dashboard.websiteReviews.studio.size.cards4": "4 tarjetas por página",
+    "dashboard.websiteReviews.studio.size.cards4Desc": "Con líneas de corte",
+    "dashboard.websiteReviews.studio.theme.classic": "Clásico",
+    "dashboard.websiteReviews.studio.theme.classicDesc": "Azul marino y dorado sobre crema",
+    "dashboard.websiteReviews.studio.theme.clean": "Limpio",
+    "dashboard.websiteReviews.studio.theme.cleanDesc": "Negro sobre blanco, ahorra tinta",
+    "dashboard.websiteReviews.studio.theme.bold": "Llamativo",
+    "dashboard.websiteReviews.studio.theme.boldDesc": "Blanco sobre azul marino",
+    "dashboard.websiteReviews.studio.theme.fresh": "Fresco",
+    "dashboard.websiteReviews.studio.theme.freshDesc": "Verde sobre menta",
+    "dashboard.websiteReviews.studio.theme.custom": "Personalizado",
+    "dashboard.websiteReviews.studio.theme.customDesc": "Sus propios colores",
+    "dashboard.websiteReviews.studio.headlineFont": "Fuente del título",
+    "dashboard.websiteReviews.studio.bodyFont": "Fuente del texto",
+    "dashboard.websiteReviews.studio.textSize": "Tamaño del texto",
+    "dashboard.websiteReviews.studio.textSize.small": "Pequeño",
+    "dashboard.websiteReviews.studio.textSize.medium": "Mediano",
+    "dashboard.websiteReviews.studio.textSize.large": "Grande",
+    "dashboard.websiteReviews.studio.colors.background": "Fondo",
+    "dashboard.websiteReviews.studio.colors.text": "Texto",
+    "dashboard.websiteReviews.studio.colors.accent": "Acento",
+    "dashboard.websiteReviews.studio.contrast.text": "El texto y el fondo se parecen demasiado para leerse — elija un color más oscuro o más claro.",
+    "dashboard.websiteReviews.studio.contrast.accent": "El color de acento se ve muy tenue sobre este fondo.",
+    "dashboard.websiteReviews.studio.contrast.blocked": "Corrija los colores para descargar o imprimir.",
+    "dashboard.websiteReviews.studio.headline": "Título",
+    "dashboard.websiteReviews.studio.headlineCustom": "Escribir el mío",
+    "dashboard.websiteReviews.studio.headlinePlaceholder": "Su título",
+    "dashboard.websiteReviews.studio.count": "{count}/{max}",
+    "dashboard.websiteReviews.studio.headlineCustomBilingual": "Un título propio se imprime tal como lo escribe, en un solo idioma.",
+    "dashboard.websiteReviews.studio.subline": "Línea adicional (opcional)",
+    "dashboard.websiteReviews.studio.sublinePlaceholder": "p. ej., ¡Gracias por comprar local!",
+    "dashboard.websiteReviews.studio.showName": "Mostrar nombre del negocio",
+    "dashboard.websiteReviews.studio.showRating": "Mostrar calificación",
+    "dashboard.websiteReviews.studio.ratingHint": "Su calificación real en Google: {rating}★",
+    "dashboard.websiteReviews.studio.ratingUnavailable": "Disponible cuando su calificación en Google sea de 4.0★ o más.",
+    "dashboard.websiteReviews.studio.follow": "Línea “Síganos”",
+    "dashboard.websiteReviews.studio.followNone": "No mostrar",
+    "dashboard.websiteReviews.studio.followNoneVerified": "Aún no hay perfiles sociales verificados — solo se pueden imprimir perfiles que hayamos confirmado como reales.",
+    "dashboard.websiteReviews.studio.language": "Idioma",
+    "dashboard.websiteReviews.studio.language.en": "Inglés",
+    "dashboard.websiteReviews.studio.language.es": "Español",
+    "dashboard.websiteReviews.studio.language.both": "Bilingüe",
+    "dashboard.websiteReviews.studio.logo.add": "Agregar logotipo",
+    "dashboard.websiteReviews.studio.logo.replace": "Reemplazar",
+    "dashboard.websiteReviews.studio.logo.hint": "PNG, JPG o SVG, hasta 2 MB. Se queda en este dispositivo — nunca se sube.",
+    "dashboard.websiteReviews.studio.logo.remove": "Quitar",
+    "dashboard.websiteReviews.studio.logo.top": "Mostrar arriba",
+    "dashboard.websiteReviews.studio.logo.tooBig": "Ese archivo supera los 2 MB.",
+    "dashboard.websiteReviews.studio.logo.badType": "Use un archivo PNG, JPG o SVG.",
+    "dashboard.websiteReviews.studio.logo.readError": "No se pudo leer esa imagen.",
+    "dashboard.websiteReviews.studio.logo.notRemembered": "Supera los 500 KB, así que no se guarda en este dispositivo — vuelva a agregarlo la próxima vez.",
+    "dashboard.websiteReviews.studio.qr.dots": "Forma de los puntos",
+    "dashboard.websiteReviews.studio.qr.dots.square": "Cuadrados",
+    "dashboard.websiteReviews.studio.qr.dots.rounded": "Redondeados",
+    "dashboard.websiteReviews.studio.qr.dots.dots": "Puntos",
+    "dashboard.websiteReviews.studio.qr.corners": "Esquinas",
+    "dashboard.websiteReviews.studio.qr.corners.square": "Rectas",
+    "dashboard.websiteReviews.studio.qr.corners.rounded": "Redondeadas",
+    "dashboard.websiteReviews.studio.qr.center": "Centro",
+    "dashboard.websiteReviews.studio.qr.center.none": "Ninguno",
+    "dashboard.websiteReviews.studio.qr.center.star": "Estrella",
+    "dashboard.websiteReviews.studio.qr.center.logo": "Logotipo",
+    "dashboard.websiteReviews.studio.qr.centerNeedsLogo": "Agregue primero un logotipo (sección Logotipo).",
+    "dashboard.websiteReviews.studio.border": "Borde",
+    "dashboard.websiteReviews.studio.border.none": "Ninguno",
+    "dashboard.websiteReviews.studio.border.thin": "Fino",
+    "dashboard.websiteReviews.studio.border.double": "Doble",
+    "dashboard.websiteReviews.studio.border.rounded": "Redondeado",
+    "dashboard.websiteReviews.studio.background": "Fondo",
+    "dashboard.websiteReviews.studio.background.solid": "Liso",
+    "dashboard.websiteReviews.studio.background.pattern": "Patrón suave",
+    "dashboard.websiteReviews.studio.radius": "Radio de esquinas",
+    "dashboard.websiteReviews.studio.radius.none": "Rectas",
+    "dashboard.websiteReviews.studio.radius.small": "Pequeño",
+    "dashboard.websiteReviews.studio.radius.large": "Grande",
+    "dashboard.websiteReviews.studio.downloadPdf": "Descargar PDF",
+    "dashboard.websiteReviews.studio.print": "Imprimir",
+    "dashboard.websiteReviews.studio.error.plan": "Su plan no incluye este cartel.",
+    "dashboard.websiteReviews.studio.error.failed": "No se pudo crear el cartel — inténtelo de nuevo.",
+    "dashboard.websiteReviews.studio.tentNote": "Se imprime en una hoja carta — doble por la línea punteada.",
+    "dashboard.websiteReviews.studio.cardsNote": "Corte por las líneas punteadas.",
+    "dashboard.websiteReviews.devPlan.label": "Plan de prueba (solo desarrollo local):",
+    "dashboard.websiteReviews.hero.linkLabel": "Su enlace de reseña",
+    "dashboard.websiteReviews.hero.copy": "Copiar enlace",
+    "dashboard.websiteReviews.hero.copied": "Copiado ✓",
+    "dashboard.websiteReviews.hero.copyFailed": "No se pudo copiar — seleccione el enlace y cópielo.",
+    "dashboard.websiteReviews.hero.open": "Abrir enlace ↗",
+    "dashboard.websiteReviews.hero.text": "Enviar por SMS",
+    "dashboard.websiteReviews.hero.ideaText": "Envíelo por SMS tras una visita",
+    "dashboard.websiteReviews.hero.ideaReceipts": "Agréguelo a recibos y correos",
+    "dashboard.websiteReviews.hero.ideaSocial": "Publíquelo en redes sociales",
+    "dashboard.websiteReviews.hero.youSend": "Usted mismo lo comparte — PostScore no envía mensajes a sus clientes.",
+    "dashboard.websiteReviews.hero.scanLabel": "Escanee para dejar una reseña",
+    "dashboard.websiteReviews.hero.downloadSign": "Descargar cartel (PDF)",
+    "dashboard.websiteReviews.hero.printYourself": "Usted mismo lo imprime y lo coloca.",
+    "dashboard.websiteReviews.hero.working": "Preparando…",
+    "dashboard.websiteReviews.hero.signError": "No se pudo crear el cartel — inténtelo de nuevo.",
+    "dashboard.websiteReviews.socialProof.ofRating": "{rating}★ de 5",
+    "dashboard.websiteReviews.socialProof.ofReviews": "{count} de {target}",
+    "dashboard.growth.checklist.progress": "{done} de {total} listos esta semana · se reinicia el lunes",
   },
 };
 

@@ -4,12 +4,19 @@ import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
 import { getReviewsPageData } from "@/app/actions/reviews";
 import { ReviewsView } from "./ReviewsView";
+import { getLastScanAt } from "@/app/actions/scoring";
+import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
+import { showRescanNotice } from "@/lib/rescanPolicy";
+import { getPlan } from "@/lib/premium";
 
 export default async function WebsiteReviewsPage({ params }: { params: { id: string } }) {
-  const websiteOnly = await websiteOnlyGuard(params.id, "reviews");
+  // Independent loads run together.
+  const [websiteOnly, result, lastScanAt] = await Promise.all([
+    websiteOnlyGuard(params.id, "reviews"),
+    getReviewsPageData(params.id),
+    getLastScanAt(params.id),
+  ]);
   if (websiteOnly) return websiteOnly;
-
-  const result = await getReviewsPageData(params.id);
 
   if (result.status === "unauthenticated") {
     redirect("/login");
@@ -39,7 +46,17 @@ export default async function WebsiteReviewsPage({ params }: { params: { id: str
         time_zone: data.timeZone,
       }}
     >
-      <ReviewsView businessId={params.id} reviews={data} />
+      {showRescanNotice(lastScanAt, new Date()) && (
+        <div className="mb-6">
+          <StaleScanNotice businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} />
+        </div>
+      )}
+      <ReviewsView
+        businessId={params.id}
+        reviews={data}
+        plan={getPlan()}
+        devPlanSwitch={process.env.NODE_ENV === "development"}
+      />
     </DashboardShell>
   );
 }
