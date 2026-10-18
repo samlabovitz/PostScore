@@ -7,7 +7,6 @@ import {
   buildCompletedTasks,
   buildWebsiteBanner,
   GOOGLE_MISMATCH_CHECK_ID,
-  buildConnectGbpWeeklyTask,
   buildWeeklyPlan,
   mergeReviewTasks,
   mergeWebsiteTasks,
@@ -20,8 +19,6 @@ import {
   type WeeklyPlan,
 } from "@/lib/actionPlan";
 import { estimateStarterSiteRange, type StarterSiteTemplateData } from "@/lib/starterSiteScoring";
-import { getGbpConnectionStatus } from "@/app/actions/gbp";
-import { canConnectGbp } from "@/lib/premium";
 import { businessRowToScoringInput, scoreBusiness } from "@/lib/scoring";
 import type { BusinessScoringInput, BusinessScoringRow, ScoreBreakdown, Suggestion } from "@/lib/scoring";
 import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
@@ -134,25 +131,13 @@ export async function getActionPlan(
   );
   const websiteBanner = buildWebsiteBanner(breakdown, input, starterSiteRange);
 
-  // The connect_gbp "setup" item (see item 4/6 of Day 3 step 2e's
-  // second pass): a real weekly-plan card, never a growth move (see
-  // lib/growthMoves.ts's own doc for why it moved here), shown only
-  // while the business's Google Business Profile genuinely isn't
-  // connected AND connecting is really available (canConnectGbp:
-  // GBP_CONNECT_PUBLIC=true — off until Google's OAuth app verification
-  // is approved — plus Premium), so it never points at a disabled button.
-  // Takes one of the weekly plan's own slots.
-  const gbpStatus = await getGbpConnectionStatus(businessId);
-  const connectGbpTask =
-    canConnectGbp() && gbpStatus.status === "ok" && !gbpStatus.connected
-      ? buildConnectGbpWeeklyTask(businessId, locale)
-      : null;
-  const weeklyPlanCap = connectGbpTask ? WEEKLY_PLAN_CAP - 1 : WEEKLY_PLAN_CAP;
-
+  // Connecting a Google Business Profile is a PostScore Premium feature, not
+  // a weekly task: the Growth page shows it as a small "Unlock live Google
+  // insights" card instead, so it never takes one of the plan's slots.
   // The Google-mismatch card always shows this week whenever it's open —
   // exempt from the minimum and the cap (see buildWeeklyPlan).
-  const weeklyPlan = buildWeeklyPlan(tasks, breakdown, input, weeklyPlanCap, locale, [GOOGLE_MISMATCH_CHECK_ID]);
-  const weeklyTasks = connectGbpTask ? [connectGbpTask, ...weeklyPlan.weeklyTasks] : weeklyPlan.weeklyTasks;
+  const weeklyPlan = buildWeeklyPlan(tasks, breakdown, input, WEEKLY_PLAN_CAP, locale, [GOOGLE_MISMATCH_CHECK_ID]);
+  const weeklyTasks = weeklyPlan.weeklyTasks;
 
   return {
     status: "ok",

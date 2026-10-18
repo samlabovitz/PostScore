@@ -526,6 +526,10 @@ export interface ActionPlanTask {
   /** Short caveat shown alongside this task — see ActionPlanCopy's
    * timingNote doc. Null for every task without one. */
   timingNote: string | null;
+  /** The merged reviews card's explanations, one per line (review count
+   * and rating each have their own "full credit at …"), so they're never
+   * run together into one confusing sentence. */
+  problemLines?: string[] | null;
   /**
    * This task's REAL contribution to the 0–100 total if its fix were
    * applied alone — i.e. exactly what it would move "Points within
@@ -711,6 +715,7 @@ export function mergeReviewTasks(
     category: "visibility",
     label: t(locale, "content.actionPlan.mergedReviews.title"),
     problem: reviewTasks.map((task) => task.problem).join(" "),
+    problemLines: reviewTasks.map((task) => task.problem),
     why: t(locale, "content.actionPlan.mergedReviews.why"),
     action: t(locale, "content.actionPlan.mergedReviews.action"),
     fix: t(locale, "content.actionPlan.mergedReviews.fix"),

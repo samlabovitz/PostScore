@@ -3,15 +3,13 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconArrowLeft, IconBrandGoogle, IconWorld } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
-import { StatTile } from "@/components/ui/StatTile";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/SegmentedControl";
 import { TaskListCard, GrowthMoveCard, CompletedTasksCard } from "../ActionPlanSection";
 import { WeeklyChecklist } from "./WeeklyChecklist";
 import type { ActionPlanTask, CompletedTask, WebsiteBanner } from "@/lib/actionPlan";
-import { formatPoints } from "@/components/scoring/CategoryCard";
 import { websiteRangeText, wholePointRange } from "@/lib/pointRange";
 import type { GrowthMove } from "@/lib/growthMoves";
 import { growthMoveOverlapsActionPlan } from "@/lib/growthMoveOverlap";
@@ -22,6 +20,9 @@ import type { PromoRow } from "@/lib/promos";
 import type { ReferralRow } from "@/lib/referrals";
 import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 import { useScrollToHash } from "@/lib/useScrollToHash";
+import { LINK_PILL_CLASS } from "@/components/ui/linkPill";
+import type { LinkOptions } from "@/lib/postaiLinks";
+import { cn } from "@/lib/utils";
 
 // The builder generates a random coupon code and reads window.location
 // on first render — genuinely client-only state, not something that
@@ -67,28 +68,99 @@ export function WebsiteBannerCard({ banner, businessId }: { banner: WebsiteBanne
   const locale = useLocale();
   const href = `/business/${businessId}/website`;
   return (
-    <Card className="flex flex-col gap-2 border-brass/30 bg-brass/5 p-5">
-      {banner.kind === "improve" ? (
-        <p className="text-sm text-ink">
-          {tPlural(locale, "dashboard.growth.websiteBanner.improve", banner.improvements, {
-            score: banner.score,
-            points: wholePointRange(banner.points, null).low,
-          })}
-        </p>
-      ) : (
-        <>
-          <p className="text-sm font-semibold text-ink">{t(locale, "dashboard.growth.websiteBanner.getWebsite.title")}</p>
-          <p className="text-sm text-ink-soft">
-            {websiteRangeText(locale, banner.low, banner.high)}
-          </p>
-        </>
-      )}
-      <Link href={href} className="w-fit text-[13px] font-medium text-brass hover:underline">
+    <div className="flex flex-col gap-3 rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:flex-row sm:items-center sm:justify-between sm:p-5">
+      <div className="flex min-w-0 items-start gap-3">
+        <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ps-icon-tile">
+          <IconWorld size={17} />
+        </span>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          {banner.kind === "improve" ? (
+            <p className="text-[13.5px] text-ink">
+              {tPlural(locale, "dashboard.growth.websiteBanner.improve", banner.improvements, {
+                score: banner.score,
+                points: wholePointRange(banner.points, null).low,
+              })}
+            </p>
+          ) : (
+            <>
+              <p className="text-[13.5px] font-semibold text-ink">{t(locale, "dashboard.growth.websiteBanner.getWebsite.title")}</p>
+              <p className="text-[13px] text-ink-soft">{websiteRangeText(locale, banner.low, banner.high)}</p>
+            </>
+          )}
+        </div>
+      </div>
+      <Link href={href} className={cn(LINK_PILL_CLASS, "shrink-0")}>
         {banner.kind === "improve"
           ? t(locale, "dashboard.growth.websiteBanner.openWebsitePage")
           : t(locale, "dashboard.growth.websiteBanner.getWebsite.cta")}
       </Link>
-    </Card>
+    </div>
+  );
+}
+
+/** "This week" at a glance: today's score → where the plan below gets it,
+ * on a soft brass bar — light, like the Overview's score card. */
+function ProjectedSummary({
+  today,
+  projected,
+  projectedHigh,
+  withinReach,
+  gradeNote,
+  note,
+}: {
+  today: number;
+  projected: number;
+  projectedHigh: number | null;
+  withinReach: string;
+  gradeNote: string;
+  note: string;
+}) {
+  const locale = useLocale();
+  const top = projectedHigh ?? projected;
+  return (
+    <section className="rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
+      <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">{t(locale, "dashboard.growth.view.weeklyCardLabel")}</div>
+      <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+        <div className="flex items-baseline gap-2 font-serif text-ink">
+          <span className="text-[34px] font-semibold leading-none tabular-nums">{today}</span>
+          <span aria-hidden className="text-[22px] text-brass">→</span>
+          <span className="text-[34px] font-semibold leading-none tabular-nums">{projectedHigh !== null ? `${projected}–${projectedHigh}` : projected}</span>
+          <span className="sr-only">{t(locale, "dashboard.growth.view.statProjected")}</span>
+        </div>
+        <div className="flex flex-col items-start gap-0.5 sm:items-end">
+          <span className="text-[14px] font-semibold text-ink">{withinReach}</span>
+          <span className="text-[12.5px] text-ink-soft">{gradeNote}</span>
+        </div>
+      </div>
+      {/* Today (solid) and this week's reach (soft) on a 0–100 bar. */}
+      <div className="relative mt-4 h-2.5 overflow-hidden rounded-full bg-paper-deep" role="img" aria-label={`${today} → ${top}`}>
+        <div className="absolute inset-y-0 left-0 rounded-full bg-[color:color-mix(in_srgb,var(--color-brass)_35%,white)]" style={{ width: `${Math.min(100, top)}%` }} />
+        <div className="absolute inset-y-0 left-0 rounded-full bg-brass" style={{ width: `${Math.min(100, today)}%` }} />
+      </div>
+      <p className="mt-3 text-[12px] text-ink-mute">{note}</p>
+    </section>
+  );
+}
+
+/** Connecting Google is a PostScore Premium feature — a small card, never
+ * one of the week's tasks. Links to the (read-only for now) Connect page. */
+function PremiumConnectCard({ businessId }: { businessId: string }) {
+  const locale = useLocale();
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-paper-deep bg-white px-4 py-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ps-icon-tile">
+          <IconBrandGoogle size={16} />
+        </span>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-[13.5px] font-semibold text-ink">{t(locale, "dashboard.growth.premiumConnect.title")}</span>
+          <span className="rounded-full bg-ink px-2 py-px text-[10.5px] font-semibold text-paper">{t(locale, "dashboard.overview.connectPremiumPill")}</span>
+        </div>
+      </div>
+      <Link href={`/business/${businessId}/connect-gbp`} className={LINK_PILL_CLASS}>
+        {t(locale, "dashboard.overview.seeWhatsIncluded")}
+      </Link>
+    </div>
   );
 }
 
@@ -111,6 +183,8 @@ export function GrowthView({
   initialPromos,
   initialReferral,
   lastScanAt,
+  gbpConnected = false,
+  linkOptions = {},
 }: {
   businessId: string;
   businessName: string | null;
@@ -125,6 +199,11 @@ export function GrowthView({
    * re-checked yet" apart from "checked, no real change" (see
    * pendingCheckStatus in lib/actionPlan.ts). */
   lastScanAt: string | null;
+  /** Connecting Google is Premium-only — when not connected, a small
+   * "Unlock live Google insights" card (never one of the plan's tasks). */
+  gbpConnected?: boolean;
+  /** Which tools this business has — for each task's fix link. */
+  linkOptions?: LinkOptions;
   actionPlan: {
     tasks: ActionPlanTask[];
     completed: CompletedTask[];
@@ -199,6 +278,14 @@ export function GrowthView({
   // move's badge checks itself against (see growthMoveOverlapsActionPlan
   // in lib/growthMoveOverlap.ts), never a separate/stale copy.
   const openActionPlanTasks = [...actionPlan.weeklyTasks, ...actionPlan.laterTasks];
+  // Whole points only: "+2 within reach this week".
+  const reach = wholePointRange(Math.max(0, pointsWithinReachLow), pointsWithinReachHigh !== null ? Math.max(0, pointsWithinReachHigh) : null);
+  const withinReachText =
+    pointsWithinReachLow <= 0 && pointsWithinReachHigh === null
+      ? t(locale, "dashboard.growth.view.nothingWithinReach")
+      : reach.high !== null
+        ? t(locale, "dashboard.growth.view.withinReachRange", { low: reach.low, high: reach.high })
+        : t(locale, "dashboard.growth.view.withinReach", { points: reach.low });
 
   const options: SegmentedControlOption<Segment>[] = [{ value: "plan", label: t(locale, "dashboard.growth.view.tabPlan") }];
   // A place of worship has no coupon tool (BizProfile.couponsOk).
@@ -231,44 +318,18 @@ export function GrowthView({
 
       {segment === "plan" && (
         <div className="flex flex-col gap-6 nav:gap-8">
-          <Card className="p-5">
-            <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-              {t(locale, "dashboard.growth.view.weeklyCardLabel")}
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-6 sm:grid-cols-4">
-              <StatTile label={t(locale, "dashboard.growth.view.statScoreToday")} value={breakdown.total} />
-              <StatTile
-                label={t(locale, "dashboard.growth.view.statProjected")}
-                value={
-                  weeklyProjectedBreakdownHigh
-                    ? `${weeklyProjectedBreakdown.total}–${weeklyProjectedBreakdownHigh.total}`
-                    : weeklyProjectedBreakdown.total
-                }
-              />
-              <StatTile
-                label={t(locale, "dashboard.growth.view.statPointsWithinReach")}
-                value={
-                  pointsWithinReachHigh !== null
-                    ? (() => {
-                        const range = wholePointRange(Math.max(0, pointsWithinReachLow), Math.max(0, pointsWithinReachHigh));
-                        return range.high !== null ? `+${range.low}–${range.high}` : `+${range.low}`;
-                      })()
-                    : pointsWithinReachLow > 0
-                      ? `+${formatPoints(pointsWithinReachLow)}`
-                      : "0"
-                }
-              />
-              <StatTile
-                label={t(locale, "dashboard.growth.view.statGrade")}
-                value={gradeTransitionLabel(breakdown.grade, weeklyProjectedBreakdown.grade, locale)}
-              />
-            </div>
-            <p className="mt-4 border-t border-paper-line pt-3 text-[12px] text-ink-mute">
-              {actionPlan.weeklyTasks.length > 0
+          <ProjectedSummary
+            today={breakdown.total}
+            projected={weeklyProjectedBreakdown.total}
+            projectedHigh={weeklyProjectedBreakdownHigh ? weeklyProjectedBreakdownHigh.total : null}
+            withinReach={withinReachText}
+            gradeNote={gradeTransitionLabel(breakdown.grade, weeklyProjectedBreakdown.grade, locale)}
+            note={
+              actionPlan.weeklyTasks.length > 0
                 ? tPlural(locale, "dashboard.growth.view.weeklyPlanNote", actionPlan.weeklyTasks.length)
-                : t(locale, "dashboard.growth.view.weeklyPlanNoteEmpty")}
-            </p>
-          </Card>
+                : t(locale, "dashboard.growth.view.weeklyPlanNoteEmpty")
+            }
+          />
 
           <div id="weekly-routine" className="scroll-mt-20">
             <WeeklyChecklist
@@ -292,11 +353,13 @@ export function GrowthView({
                   })}
                 />
               </div>
+              {!gbpConnected && <PremiumConnectCard businessId={businessId} />}
               <TaskListCard
                 tasks={actionPlan.weeklyTasks}
                 businessId={businessId}
                 context="weekly"
                 lastScanAt={lastScanAt}
+                linkOptions={linkOptions}
                 emptyMessage={
                   hasNoRemainingScoreGaps
                     ? t(locale, "dashboard.growth.view.fullPointsMessage")
@@ -320,6 +383,7 @@ export function GrowthView({
                   tasks={actionPlan.laterTasks}
                   businessId={businessId}
                   lastScanAt={lastScanAt}
+                  linkOptions={linkOptions}
                   emptyMessage={
                     hasNoRemainingScoreGaps
                       ? t(locale, "dashboard.growth.view.fullPointsMessage")
@@ -335,17 +399,11 @@ export function GrowthView({
           {growthMoves.length > 0 && (
             <div id="ways-to-grow" className="flex flex-col gap-6 scroll-mt-20 nav:gap-8">
               <SectionHeading title={t(locale, "dashboard.growth.moves.sectionHeading")} />
-              <Card className="p-5">
-                <div className="flex flex-col divide-y divide-paper-line">
-                  {growthMoves.map((move) => (
-                    <GrowthMoveCard
-                      key={move.id}
-                      move={move}
-                      overlapsActionPlan={growthMoveOverlapsActionPlan(move.id, openActionPlanTasks)}
-                    />
-                  ))}
-                </div>
-              </Card>
+              <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {growthMoves.map((move) => (
+                  <GrowthMoveCard key={move.id} move={move} overlapsActionPlan={growthMoveOverlapsActionPlan(move.id, openActionPlanTasks)} />
+                ))}
+              </ul>
             </div>
           )}
         </div>

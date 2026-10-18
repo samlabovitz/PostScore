@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { IconChevronDown, IconBrandGoogle, IconCircleCheck, IconArrowUpRight } from "@tabler/icons-react";
+import { IconChevronDown, IconBrandGoogle, IconCircleCheck, IconPhoto, IconTag, IconTicket, IconTrendingUp, IconUsers, IconWorld } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
-import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
+import { LINK_PILL_CLASS } from "@/components/ui/linkPill";
+import { taskFixLink } from "@/lib/overviewTiles";
+import type { LinkOptions } from "@/lib/postaiLinks";
 import { cn } from "@/lib/utils";
 import { wholePointRange } from "@/lib/pointRange";
 import { markTaskDone } from "@/app/actions/actionPlan";
@@ -21,8 +23,21 @@ import {
 import type { GrowthMove } from "@/lib/growthMoves";
 import { formatMonthDayTime, t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 
-function formatPoints(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+/** Points are always shown as whole numbers ("about +2 pts", never "+1.5"). */
+function wholePoints(value: number): number {
+  return wholePointRange(value, null).low;
+}
+
+const STATUS_PILL: Record<"neutral" | "amber" | "green" | "red" | "brass", string> = {
+  neutral: "border-paper-deep bg-paper text-ink-soft",
+  amber: "border-[color:color-mix(in_srgb,var(--color-amber)_35%,white)] bg-[color:color-mix(in_srgb,var(--color-amber)_12%,white)] text-ink",
+  green: "border-[color:color-mix(in_srgb,var(--color-green)_35%,white)] bg-[color:color-mix(in_srgb,var(--color-green)_10%,white)] text-green",
+  red: "border-[color:color-mix(in_srgb,var(--color-red)_35%,white)] bg-[color:color-mix(in_srgb,var(--color-red)_10%,white)] text-red",
+  brass: "border-[color:color-mix(in_srgb,var(--color-brass)_40%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_12%,white)] text-ink",
+};
+
+function StatusPill({ variant, children, className }: { variant: keyof typeof STATUS_PILL; children: React.ReactNode; className?: string }) {
+  return <span className={cn("inline-flex w-fit items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11.5px] font-semibold", STATUS_PILL[variant], className)}>{children}</span>;
 }
 
 type StatusVariant = "neutral" | "amber" | "green" | "red" | "brass";
@@ -119,7 +134,7 @@ function CurrentStatus({
   if (pendingStatus === "not_yet_checked" || metricProgress?.kind === "not_yet_checked") {
     return (
       <div className="rounded-lg bg-paper px-3 py-2.5">
-        <p className="text-[12.5px] text-ink-soft">{task.problem}</p>
+        <ProblemText task={task} />
         <p className="mt-1 text-[12px] text-ink-mute">
           {t(locale, "dashboard.overview.actionPlan.willCheckNextRescan")}
         </p>
@@ -172,9 +187,24 @@ function CurrentStatus({
 
   return (
     <div className="rounded-lg bg-paper px-3 py-2.5">
-      <p className="text-[12.5px] text-ink-soft">{task.problem}</p>
+      <ProblemText task={task} />
       {note && <p className="mt-1 text-[12px] text-ink-mute">{note}</p>}
     </div>
+  );
+}
+
+/** The check's own explanation — one line per check on the merged reviews
+ * card (review count and rating each have their own "full credit at …"). */
+function ProblemText({ task }: { task: ActionPlanTask }) {
+  const lines = task.problemLines && task.problemLines.length > 0 ? task.problemLines : [task.problem];
+  return (
+    <>
+      {lines.map((line) => (
+        <p key={line} className="text-[12.5px] text-ink-soft">
+          {line}
+        </p>
+      ))}
+    </>
   );
 }
 
@@ -187,79 +217,55 @@ type MarkState = { kind: "idle" } | { kind: "saving" } | { kind: "error"; messag
  * context, not derived purely from the task's own effort field. */
 export type TaskCardContext = "weekly" | "later";
 
-function effortBadge(
-  task: ActionPlanTask,
-  context: TaskCardContext,
-  locale: Locale
-): { label: string; variant: "green" | "amber" | "neutral" } {
-  if (task.effort === "quick_win") {
-    return { label: t(locale, "dashboard.overview.actionPlan.quickWin"), variant: "green" };
-  }
+function effortBadge(task: ActionPlanTask, context: TaskCardContext, locale: Locale): string {
+  if (task.effort === "quick_win") return t(locale, "dashboard.overview.actionPlan.quickWin");
   if (task.effort === "quick_win_action") {
-    return context === "weekly"
-      ? { label: t(locale, "dashboard.overview.actionPlan.thisWeeksAction"), variant: "green" }
-      : { label: t(locale, "dashboard.overview.actionPlan.ongoingOutcome"), variant: "neutral" };
+    return context === "weekly" ? t(locale, "dashboard.overview.actionPlan.thisWeeksAction") : t(locale, "dashboard.overview.actionPlan.ongoingOutcome");
   }
-  // longer_term
-  return context === "weekly"
-    ? { label: t(locale, "dashboard.overview.actionPlan.firstStep"), variant: "amber" }
-    : { label: t(locale, "dashboard.overview.actionPlan.longerTerm"), variant: "neutral" };
+  return context === "weekly" ? t(locale, "dashboard.overview.actionPlan.firstStep") : t(locale, "dashboard.overview.actionPlan.longerTerm");
 }
 
-/**
- * A "setup" task's card (currently only connect_gbp) — a real one-time
- * account action, not a score check, so it never has a status pill, a
- * points comparison, or an "I did this" checkbox to reconcile on a
- * re-scan. Shown inline with real score tasks in "This week's plan" but
- * visually distinct via its own badge — see TaskEffort's "setup" doc.
- */
-function SetupTaskCard({ task }: { task: ActionPlanTask }) {
-  const locale = useLocale();
-  return (
-    <div className="flex flex-col gap-2.5 py-4 first:pt-0 last:pb-0">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-semibold text-ink">{task.label}</span>
-        <Pill variant="neutral" className="!px-2 !py-0.5 text-[10px]">
-          {t(locale, "dashboard.overview.actionPlan.setupBadgeLabel")}
-        </Pill>
-      </div>
-      <p className="text-[12px] text-ink-mute">{task.why}</p>
-      {task.href && (
-        <Link
-          href={task.href}
-          className="flex w-fit items-center gap-1 text-[12.5px] font-medium text-brass hover:underline"
-        >
-          {t(locale, "dashboard.growth.moves.goLabel")}
-          <IconArrowUpRight size={13} />
-        </Link>
-      )}
-    </div>
-  );
+/** The small brass points chip — whole numbers only. Exported for tests. */
+export function taskPointsLabel(task: ActionPlanTask, context: TaskCardContext, locale: Locale): string {
+  // The real weighted contribution to the 0-100 total (see
+  // ActionPlanTask.weightedPoints) — what makes a weekly card's points
+  // add up to "within reach".
+  const range = task.weightedPointsHigh !== null ? wholePointRange(task.weightedPoints, task.weightedPointsHigh) : null;
+  if (range !== null) {
+    return range.high !== null
+      ? t(locale, "dashboard.overview.actionPlan.pointsRangeOnceLive", { low: range.low, high: range.high })
+      : t(locale, "dashboard.overview.actionPlan.pointsOnceLive", { points: range.low });
+  }
+  return context === "weekly" && task.effort !== "quick_win"
+    ? t(locale, "dashboard.overview.actionPlan.pointsThisWeek", { points: wholePoints(task.weightedPoints) })
+    : t(locale, "dashboard.overview.actionPlan.pointsUpTo", { points: wholePoints(task.weightedPoints) });
 }
+
+const POINTS_CHIP =
+  "inline-flex w-fit items-center whitespace-nowrap rounded-full border border-[color:color-mix(in_srgb,var(--color-brass)_40%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_10%,white)] px-2.5 py-0.5 text-[12px] font-semibold text-ink";
 
 export function TaskCard({
   task,
   businessId,
   context = "later",
   lastScanAt = null,
+  step = null,
+  linkOptions = {},
 }: {
   task: ActionPlanTask;
   businessId: string;
   context?: TaskCardContext;
-  /** When the business's most recent scan ran — see getLastScanAt() in
-   * app/actions/scoring.ts. Optional/defaults null so the (unused)
-   * ActionPlanSection wrapper below doesn't need updating; every real
-   * call site (GrowthView) always passes the true value. */
+  /** When the business's most recent scan ran — see getLastScanAt(). */
   lastScanAt?: string | null;
+  /** 1, 2, 3… in "This week's plan". */
+  step?: number | null;
+  /** Which tools this business has — for the fix link (same as PostAI's). */
+  linkOptions?: LinkOptions;
 }) {
   const router = useRouter();
   const locale = useLocale();
   const [expanded, setExpanded] = useState(false);
   const [state, setState] = useState<MarkState>({ kind: "idle" });
-
-  if (task.effort === "setup") {
-    return <SetupTaskCard task={task} />;
-  }
 
   async function handleMarkDone() {
     setState({ kind: "saving" });
@@ -275,8 +281,7 @@ export function TaskCard({
     } else {
       setState({
         kind: "error",
-        message:
-          failed.status === "error" ? failed.message : t(locale, "dashboard.overview.actionPlan.couldNotSave"),
+        message: failed.status === "error" ? failed.message : t(locale, "dashboard.overview.actionPlan.couldNotSave"),
       });
     }
   }
@@ -285,192 +290,170 @@ export function TaskCard({
   const pendingStatus = isPending ? pendingCheckStatus(task, lastScanAt) : null;
   const metricProgress = isPending ? weeklyMetricProgress(task, lastScanAt) : null;
   // Once a re-scan has actually looked at this task (whichever way it
-  // went), hand it back to the owner as a fresh weekly ask rather than
-  // leaving it stuck — see the button below. Prefers the real numeric
-  // verdict when one exists, same as the pill/status text below.
-  const checkedAlready = metricProgress
-    ? metricProgress.kind !== "not_yet_checked"
-    : pendingStatus !== null && pendingStatus !== "not_yet_checked";
+  // went), hand it back to the owner as a fresh weekly ask.
+  const checkedAlready = metricProgress ? metricProgress.kind !== "not_yet_checked" : pendingStatus !== null && pendingStatus !== "not_yet_checked";
   const canMarkAgain = isPending && checkedAlready;
-  const badge = effortBadge(task, context, locale);
   const status = taskStatus(task, pendingStatus, metricProgress, locale);
-  // The real weighted contribution to the 0-100 total (see
-  // ActionPlanTask.weightedPoints) — never the raw promisedPoints,
-  // which can differ a lot for a check like website.has_website or
-  // website.https that's often the only determinable check in its own
-  // category. Showing this everywhere (weekly AND later) is what makes
-  // a weekly card's points actually sum to "Points within reach".
-  const range = task.weightedPointsHigh !== null ? wholePointRange(task.weightedPoints, task.weightedPointsHigh) : null;
-  const pointsLabel =
-    range !== null
-      ? range.high !== null
-        ? t(locale, "dashboard.overview.actionPlan.pointsRangeOnceLive", { low: range.low, high: range.high })
-        : t(locale, "dashboard.overview.actionPlan.pointsOnceLive", { points: range.low })
-      : context === "weekly" && task.effort !== "quick_win"
-        ? t(locale, "dashboard.overview.actionPlan.pointsThisWeek", { points: formatPoints(task.weightedPoints) })
-        : t(locale, "dashboard.overview.actionPlan.pointsUpTo", { points: formatPoints(task.weightedPoints) });
   // The obtainable ask, front and center — a weekly target for a
   // gradual check, or the one-shot action itself when there isn't one.
   const headline = task.weeklyTarget ?? task.action;
+  // Where this is fixed — the same link PostAI and the Overview use. None
+  // when that's this Growth page itself.
+  const fix = task.effort === "setup" ? null : taskFixLink(task.checkId, businessId, linkOptions);
+  const fixLink = fix && !fix.href.startsWith(`/business/${businessId}/growth`) ? fix : null;
 
   return (
-    <div className="flex flex-col gap-2.5 py-4 first:pt-0 last:pb-0">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold text-ink">{task.label}</span>
-          <Pill variant={badge.variant} className="!px-2 !py-0.5 text-[10px]">
-            {badge.label}
-          </Pill>
-        </div>
-        <Pill variant={status.variant} className="shrink-0">
-          {status.label}
-        </Pill>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <p className="text-[13.5px] font-medium text-brass">{headline}</p>
-        <Pill variant="neutral" className="!px-2 !py-0.5 text-[10.5px]">
-          {pointsLabel}
-        </Pill>
-      </div>
-
-      <p className="text-[12px] text-ink-mute">{task.why}</p>
-
-      {task.mergedLabels && task.mergedLabels.length > 0 && (
-        <p className="text-[12px] text-ink-mute">
-          <span className="font-medium text-ink-soft">
-            {t(locale, "dashboard.overview.actionPlan.mergedReviewsHelpsLabel")}
-          </span>{" "}
-          {task.mergedLabels.join(", ")}
-        </p>
-      )}
-
-      {task.timingNote && <p className="text-[12px] italic text-ink-mute">{task.timingNote}</p>}
-
-      <button
-        type="button"
-        onClick={() => setExpanded((e) => !e)}
-        className="flex w-fit items-center gap-1 text-[12px] font-medium text-brass hover:underline"
-      >
-        {expanded
-          ? t(locale, "dashboard.overview.actionPlan.hideHowToFix")
-          : t(locale, "dashboard.overview.actionPlan.howToFixIt")}
-        <IconChevronDown size={13} className={cn("transition-transform", expanded && "rotate-180")} />
-      </button>
-
-      {expanded && (
-        <div className="rounded-lg bg-paper p-3 text-[13px] text-ink-soft">
-          <div className="mb-1.5">
-            <span className="font-medium text-ink">{t(locale, "dashboard.overview.actionPlan.doThisLabel")}</span>
-            {task.action}
+    <li className="rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
+      <div className="flex items-start gap-3">
+        {step !== null && (
+          <span aria-hidden className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-serif text-[14px] font-semibold text-ink ps-icon-tile">
+            {step}
+          </span>
+        )}
+        <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <h3 className="text-[14.5px] font-semibold text-ink">{task.label}</h3>
+              <span className="text-[11.5px] text-ink-mute">{effortBadge(task, context, locale)}</span>
+            </div>
+            <StatusPill variant={status.variant} className="shrink-0">
+              {status.label}
+            </StatusPill>
           </div>
+
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+            <p className="text-[13.5px] font-medium text-ink">{headline}</p>
+            <span className={POINTS_CHIP}>{taskPointsLabel(task, context, locale)}</span>
+          </div>
+
+          <p className="text-[12.5px] leading-snug text-ink-soft">{task.why}</p>
+
+          {task.mergedLabels && task.mergedLabels.length > 0 && (
+            <p className="text-[12px] text-ink-mute">
+              <span className="font-medium text-ink-soft">{t(locale, "dashboard.overview.actionPlan.mergedReviewsHelpsLabel")}</span>{" "}
+              {task.mergedLabels.join(", ")}
+            </p>
+          )}
+
+          {task.timingNote && <p className="text-[12px] italic text-ink-mute">{task.timingNote}</p>}
+
+          <CurrentStatus task={task} pendingStatus={pendingStatus} metricProgress={metricProgress} lastScanAt={lastScanAt} />
+
           <div>
-            <span className="font-medium text-ink">{t(locale, "dashboard.overview.actionPlan.howLabel")}</span>
-            {task.fix}
+            <button
+              type="button"
+              onClick={() => setExpanded((e) => !e)}
+              aria-expanded={expanded}
+              className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink hover:text-brass"
+            >
+              {expanded ? t(locale, "dashboard.overview.actionPlan.hideHowToFix") : t(locale, "dashboard.overview.actionPlan.howToFixIt")}
+              <IconChevronDown size={14} className={cn("transition-transform", expanded && "rotate-180")} aria-hidden />
+            </button>
+            {expanded && (
+              <div className="mt-2 rounded-xl border border-paper-line bg-paper p-3.5 text-[13px] leading-relaxed text-ink-soft">
+                <p className="mb-1.5">
+                  <span className="font-semibold text-ink">{t(locale, "dashboard.overview.actionPlan.doThisLabel")}</span>
+                  {task.action}
+                </p>
+                <p>
+                  <span className="font-semibold text-ink">{t(locale, "dashboard.overview.actionPlan.howLabel")}</span>
+                  {task.fix}
+                </p>
+                {task.ownerActionOnGoogle && (
+                  <p className="mt-2.5 flex items-start gap-1.5 border-t border-paper-line pt-2.5 text-[12px] text-ink-mute">
+                    <IconBrandGoogle size={14} className="mt-0.5 shrink-0" aria-hidden />
+                    <span>{t(locale, "dashboard.overview.actionPlan.ownerActionOnGoogle")}</span>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
-          {task.ownerActionOnGoogle && (
-            <div className="mt-2.5 flex items-start gap-1.5 border-t border-paper-line pt-2.5 text-[12px] text-ink-mute">
-              <IconBrandGoogle size={14} className="mt-0.5 shrink-0" />
-              <span>{t(locale, "dashboard.overview.actionPlan.ownerActionOnGoogle")}</span>
+
+          {(fixLink || !isPending || canMarkAgain) && (
+            <div className="flex flex-wrap items-center gap-2 border-t border-paper-line pt-3">
+              {fixLink && (
+                <Link href={fixLink.href} className={LINK_PILL_CLASS}>
+                  {fixLink.label ? t(locale, fixLink.label) : t(locale, "dashboard.overview.recs.seeCheck")}
+                </Link>
+              )}
+              {(!isPending || canMarkAgain) && (
+                <Button variant="default" size="sm" onClick={handleMarkDone} disabled={state.kind === "saving"}>
+                  {state.kind === "saving"
+                    ? t(locale, "dashboard.overview.actionPlan.saving")
+                    : canMarkAgain
+                      ? t(locale, "dashboard.overview.actionPlan.didThisAgain")
+                      : t(locale, "dashboard.overview.actionPlan.didThis")}
+                </Button>
+              )}
+              {state.kind === "error" && <span className="text-[12px] text-red">{state.message}</span>}
             </div>
           )}
         </div>
-      )}
-
-      <CurrentStatus
-        task={task}
-        pendingStatus={pendingStatus}
-        metricProgress={metricProgress}
-        lastScanAt={lastScanAt}
-      />
-
-      {(!isPending || canMarkAgain) && (
-        <div className="flex items-center gap-3">
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleMarkDone}
-            disabled={state.kind === "saving"}
-          >
-            {state.kind === "saving"
-              ? t(locale, "dashboard.overview.actionPlan.saving")
-              : canMarkAgain
-                ? t(locale, "dashboard.overview.actionPlan.didThisAgain")
-                : t(locale, "dashboard.overview.actionPlan.didThis")}
-          </Button>
-          {state.kind === "error" && <span className="text-[12px] text-red">{state.message}</span>}
-        </div>
-      )}
-    </div>
+      </div>
+    </li>
   );
 }
 
+const MOVE_ICON: Record<GrowthMove["id"], typeof IconTicket> = {
+  start_coupon: IconTicket,
+  start_referral: IconUsers,
+  run_price_check: IconTag,
+  add_photos_vs_competitors: IconPhoto,
+  build_starter_site: IconWorld,
+  improve_website: IconWorld,
+};
+
 /**
- * A growth move's card — visually similar to TaskCard, but never has a
- * status pill, points, or a mark-done button, since a growth move never
- * earns points on its own and PostScore has no way to verify a
- * customer-getting habit the way it verifies a scoring check. The badge
- * is the one thing that must never be skipped: it's what keeps a
- * growth move from being mistaken for a scored action plan item.
- *
- * `overlapsActionPlan` is real, live data (see
- * growthMoveOverlapsActionPlan in lib/growthMoveOverlap.ts), never a
- * static per-move assumption: true only when this move's real
- * underlying check is CURRENTLY an open task in "This week's plan" or
- * "Bigger projects" — e.g. "Improve your website" while a real
- * Performance & mobile task is still open, or adding photos while the
- * listing genuinely has zero. When true, the badge says so (still no
- * points number here — the real number is quoted on the real task card
- * above, never duplicated or guessed at here) instead of the
- * flatly-false "doesn't change your score."
+ * A growth move's card — never a status pill, points, or a mark-done
+ * button: a growth move never earns points on its own. The small neutral
+ * pill is the one thing that must never be skipped — it keeps a growth
+ * move from being mistaken for a scored task. `overlapsActionPlan` is real
+ * live data (growthMoveOverlapsActionPlan): when this move's real check
+ * is CURRENTLY an open task above, the pill says so instead of the
+ * flatly-false "doesn't change your score".
  */
 export function GrowthMoveCard({ move, overlapsActionPlan }: { move: GrowthMove; overlapsActionPlan: boolean }) {
   const locale = useLocale();
   const [expanded, setExpanded] = useState(false);
+  const Icon = MOVE_ICON[move.id] ?? IconTrendingUp;
 
   return (
-    <div className="flex flex-col gap-2.5 py-4 first:pt-0 last:pb-0">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-semibold text-ink">{move.title}</span>
-        <Pill variant="neutral" className="!px-2 !py-0.5 text-[10px]">
-          {t(locale, overlapsActionPlan ? "dashboard.growth.moves.badgeAlsoScored" : "dashboard.growth.moves.badge")}
-        </Pill>
-      </div>
-
-      {move.meta && <p className="text-[11px] text-ink-mute">{move.meta}</p>}
-      <p className="text-[12px] text-ink-mute">{move.why}</p>
-
-      <button
-        type="button"
-        onClick={() => setExpanded((e) => !e)}
-        className="flex w-fit items-center gap-1 text-[12px] font-medium text-brass hover:underline"
-      >
-        {expanded
-          ? t(locale, "dashboard.overview.actionPlan.hideHowToFix")
-          : t(locale, "dashboard.overview.actionPlan.howToFixIt")}
-        <IconChevronDown size={13} className={cn("transition-transform", expanded && "rotate-180")} />
-      </button>
-
-      {expanded && (
-        <div className="rounded-lg bg-paper p-3 text-[13px] text-ink-soft">
-          <p>{move.howTo}</p>
-          <Link
-            href={move.href}
-            className="mt-2.5 flex w-fit items-center gap-1 text-[12.5px] font-medium text-brass hover:underline"
-          >
-            {t(locale, "dashboard.growth.moves.goLabel")}
-            <IconArrowUpRight size={13} />
-          </Link>
+    <li className="flex min-w-0 flex-col gap-2.5 rounded-2xl border border-paper-deep bg-white p-4 shadow-card">
+      <div className="flex items-start gap-3">
+        <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ps-icon-tile">
+          <Icon size={17} />
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <h3 className="text-[14px] font-semibold text-ink">{move.title}</h3>
+          <StatusPill variant="neutral" className="!text-[10.5px] !font-medium">
+            {t(locale, overlapsActionPlan ? "dashboard.growth.moves.badgeAlsoScored" : "dashboard.growth.moves.badge")}
+          </StatusPill>
         </div>
-      )}
-    </div>
+      </div>
+      {move.meta && <p className="text-[11.5px] text-ink-mute">{move.meta}</p>}
+      <p className="text-[12.5px] leading-snug text-ink-soft">{move.why}</p>
+      <div>
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          aria-expanded={expanded}
+          className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink hover:text-brass"
+        >
+          {expanded ? t(locale, "dashboard.overview.actionPlan.hideHowToFix") : t(locale, "dashboard.overview.actionPlan.howToFixIt")}
+          <IconChevronDown size={14} className={cn("transition-transform", expanded && "rotate-180")} aria-hidden />
+        </button>
+        {expanded && <p className="mt-2 rounded-xl border border-paper-line bg-paper p-3.5 text-[13px] leading-relaxed text-ink-soft">{move.howTo}</p>}
+      </div>
+      <Link href={move.href} className={cn(LINK_PILL_CLASS, "mt-auto")}>
+        {t(locale, "dashboard.growth.moves.goLabel")} →
+      </Link>
+    </li>
   );
 }
 
-/** A card listing a set of tasks, or an honest empty-state message when
- * the set is empty — the caller supplies the message so a "nothing left
- * this week" state can read differently from a "nothing longer-term
- * either" state. */
+/** Tasks as separate cards (numbered in "This week's plan"), or an honest
+ * empty-state message — the caller supplies it so "nothing left this
+ * week" can read differently from "nothing longer-term either". */
 export function TaskListCard({
   tasks,
   businessId,
@@ -478,6 +461,7 @@ export function TaskListCard({
   footnote,
   context = "later",
   lastScanAt = null,
+  linkOptions = {},
 }: {
   tasks: ActionPlanTask[];
   businessId: string;
@@ -485,28 +469,29 @@ export function TaskListCard({
   footnote?: string;
   context?: TaskCardContext;
   lastScanAt?: string | null;
+  linkOptions?: LinkOptions;
 }) {
   if (tasks.length === 0) {
     return <Card className="p-5 text-sm text-ink-soft">{emptyMessage}</Card>;
   }
 
   return (
-    <Card className="p-5">
-      <div className="flex flex-col divide-y divide-paper-line">
-        {tasks.map((task) => (
+    <div className="flex flex-col gap-3">
+      <ol className="flex flex-col gap-3">
+        {tasks.map((task, i) => (
           <TaskCard
             key={task.checkId}
             task={task}
             businessId={businessId}
             context={context}
             lastScanAt={lastScanAt}
+            step={context === "weekly" ? i + 1 : null}
+            linkOptions={linkOptions}
           />
         ))}
-      </div>
-      {footnote && (
-        <p className="mt-4 border-t border-paper-line pt-3 text-[12px] text-ink-mute">{footnote}</p>
-      )}
-    </Card>
+      </ol>
+      {footnote && <p className="px-1 text-[12px] text-ink-mute">{footnote}</p>}
+    </div>
   );
 }
 
@@ -521,23 +506,17 @@ export function CompletedTasksCard({ completed }: { completed: CompletedTask[] }
       </div>
       <div className="flex flex-col divide-y divide-paper-line">
         {completed.map((task) => (
-          <div
-            key={task.checkId}
-            className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0"
-          >
+          <div key={task.checkId} className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
             <span className="flex items-center gap-2 text-sm text-ink">
-              <IconCircleCheck size={16} className="shrink-0 text-green" />
+              <IconCircleCheck size={16} className="shrink-0 text-green" aria-hidden />
               {task.label}
             </span>
-            <Pill variant="green" className="shrink-0">
-              {t(locale, "dashboard.overview.actionPlan.pointsConfirmed", {
-                points: formatPoints(task.pointsGained),
-              })}
-            </Pill>
+            <StatusPill variant="green" className="shrink-0">
+              {t(locale, "dashboard.overview.actionPlan.pointsConfirmed", { points: wholePoints(task.pointsGained) })}
+            </StatusPill>
           </div>
         ))}
       </div>
     </Card>
   );
 }
-

@@ -103,6 +103,12 @@ export interface Recommendation {
   linkLabel: MessageKey | null;
 }
 
+/** Where a check is fixed — the same link PostAI and the Overview use.
+ * label null = a check row on the Overview itself ("See this check"). */
+export function taskFixLink(checkId: string, businessId: string, options: LinkOptions): { href: string; label: MessageKey | null } {
+  return linkForCheck(checkId, businessId, options);
+}
+
 function linkForCheck(checkId: string, businessId: string, options: LinkOptions): { href: string; label: MessageKey | null } {
   const target =
     resolveLinkTarget(postaiTargetForCheck(checkId), businessId, options) ??

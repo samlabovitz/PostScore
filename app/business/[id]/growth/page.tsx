@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
-import { ScanStatusStrip } from "@/components/scoring/ScanStatusStrip";
+import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
+import { showRescanNotice } from "@/lib/rescanPolicy";
 import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
@@ -10,6 +11,7 @@ import { getGrowthMoves } from "@/app/actions/growthMoves";
 import { getWeeklyChecklistState } from "@/app/actions/weeklyChecklist";
 import { listActivePromos } from "@/app/actions/promos";
 import { getActiveReferral } from "@/app/actions/referrals";
+import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { businessRowToScoringInput } from "@/lib/scoring";
 import { buildPriceCheckMove } from "@/lib/growthMoves";
 import { buildWeeklyChecklistItems } from "@/lib/weeklyChecklist";
@@ -18,10 +20,15 @@ import { normalizeLocale } from "@/lib/i18n";
 import { GrowthView } from "./GrowthView";
 
 export default async function GrowthPage({ params }: { params: { id: string } }) {
-  const websiteOnly = await websiteOnlyGuard(params.id, "growth");
+  // Independent loads run together; see lib/requestCache.ts for why the
+  // repeated business/score reads cost one query each.
+  const [websiteOnly, summary, scored] = await Promise.all([
+    websiteOnlyGuard(params.id, "growth"),
+    getBusinessSummary(params.id),
+    // The score reads the business's own language from its row.
+    scoreBusinessById(params.id, "business"),
+  ]);
   if (websiteOnly) return websiteOnly;
-
-  const summary = await getBusinessSummary(params.id);
 
   if (summary.status === "unauthenticated") {
     redirect("/login");
@@ -41,7 +48,15 @@ export default async function GrowthPage({ params }: { params: { id: string } })
     business.name
   );
 
-  const scored = await scoreBusinessById(params.id, locale);
+  // These need only the business, not its score — start them now.
+  const promosPromise = listActivePromos(params.id);
+  const checklistPromise = getWeeklyChecklistState(params.id);
+  const lastScanPromise = getLastScanAt(params.id);
+  // Only businesses with referralOk ever see the Refer a friend segment
+  // (see GrowthView), so there's no reason to query it for the rest.
+  const referralPromise = profile.referralOk ? getActiveReferral(params.id) : Promise.resolve(null);
+  const gbpPromise = getGbpConnectionStatus(params.id);
+
 
   if (scored.status === "unauthenticated") {
     redirect("/login");
@@ -58,41 +73,33 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   }
 
   const input = businessRowToScoringInput(scored.business);
-  const actionPlanResult = await getActionPlan(
-    params.id,
-    input,
-    scored.result.breakdown,
-    scored.result.suggestions,
-    locale,
-    {
+  const [actionPlanResult, growthMovesResult, promosResult, checklistStateResult, lastScanAt, referralResult, gbpStatus] = await Promise.all([
+    getActionPlan(params.id, input, scored.result.breakdown, scored.result.suggestions, locale, {
       businessRow: scored.business,
       businessName: business.name ?? "Your business",
       googleMapsUri: scored.business.google_maps_uri ?? null,
       profileId: profile.id,
-    }
-  );
-
-  const promosResult = await listActivePromos(params.id);
+    }),
+    getGrowthMoves(params.id, scored.result.breakdown, profile, locale),
+    promosPromise,
+    checklistPromise,
+    lastScanPromise,
+    referralPromise,
+    gbpPromise,
+  ]);
   const initialPromos = promosResult.status === "ok" ? promosResult.promos : [];
 
-  const growthMovesResult = await getGrowthMoves(params.id, scored.result.breakdown, profile, locale);
   // The price check always shows for every business (Step 2f) — even if
   // the rest of the growth signals couldn't load.
   const growthMoves =
     growthMovesResult.status === "ok" ? growthMovesResult.moves : [buildPriceCheckMove(params.id, null, locale, business.time_zone)];
 
-  const checklistStateResult = await getWeeklyChecklistState(params.id);
   const weeklyChecklist = {
     items: buildWeeklyChecklistItems(locale),
     checkedItemIds: checklistStateResult.status === "ok" ? checklistStateResult.state.checkedItemIds : [],
     streakWeeks: checklistStateResult.status === "ok" ? checklistStateResult.state.streakWeeks : 0,
   };
 
-  const lastScanAt = await getLastScanAt(params.id);
-
-  // Only businesses with referralOk ever see the Refer a friend segment
-  // (see GrowthView), so there's no reason to query it for the rest.
-  const referralResult = profile.referralOk ? await getActiveReferral(params.id) : null;
   const initialReferral = referralResult?.status === "ok" ? referralResult.referral : null;
 
   const actionPlan =
@@ -115,9 +122,11 @@ export default async function GrowthPage({ params }: { params: { id: string } })
 
   return (
     <DashboardShell business={business}>
-      <div className="mb-6">
-        <ScanStatusStrip businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} mode="link" />
-      </div>
+      {showRescanNotice(lastScanAt, new Date()) && (
+        <div className="mb-6">
+          <StaleScanNotice businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} />
+        </div>
+      )}
       <GrowthView
         businessId={params.id}
         businessName={business.name}
@@ -131,6 +140,8 @@ export default async function GrowthPage({ params }: { params: { id: string } })
         initialPromos={initialPromos}
         initialReferral={initialReferral}
         lastScanAt={lastScanAt}
+        gbpConnected={gbpStatus.status === "ok" && gbpStatus.connected}
+        linkOptions={{ referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk }}
       />
     </DashboardShell>
   );

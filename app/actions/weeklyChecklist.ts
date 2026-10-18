@@ -1,5 +1,6 @@
 "use server";
 
+import { requestCache } from "@/lib/requestCache";
 import { createClient } from "@/lib/supabase/server";
 import { businessTimeZone } from "@/lib/businessTimeZone";
 import {
@@ -44,7 +45,7 @@ async function checklistTimeZone(supabase: ReturnType<typeof createClient>, busi
   return businessTimeZone(data?.lat, data?.lng);
 }
 
-export async function getWeeklyChecklistState(businessId: string): Promise<GetWeeklyChecklistStateResult> {
+async function getWeeklyChecklistStateUncached(businessId: string): Promise<GetWeeklyChecklistStateResult> {
   const supabase = createClient();
 
   const {
@@ -126,4 +127,10 @@ export async function setWeeklyCheckItem(
   }
 
   return getWeeklyChecklistState(businessId);
+}
+
+/** Request-scoped (lib/requestCache.ts): one query per page render. */
+const getWeeklyChecklistStateCached = requestCache(getWeeklyChecklistStateUncached);
+export async function getWeeklyChecklistState(...args: Parameters<typeof getWeeklyChecklistStateUncached>): Promise<Awaited<ReturnType<typeof getWeeklyChecklistStateUncached>>> {
+  return getWeeklyChecklistStateCached(...args);
 }
