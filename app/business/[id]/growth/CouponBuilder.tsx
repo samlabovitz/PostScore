@@ -324,7 +324,6 @@ export function CouponBuilder({
                 ? t(locale, "dashboard.growth.coupon.starting")
                 : t(locale, "dashboard.growth.coupon.startAndTrack")}
             </Button>
-            <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.growth.coupon.startExplain")}</p>
             {atLimit ? (
               <p className="text-[12px] text-ink-mute">
                 {tPlural(locale, "dashboard.growth.coupon.atLimitMessage", maxActive)}
@@ -334,7 +333,6 @@ export function CouponBuilder({
             ) : startState.kind === "error" ? (
               <p className="text-[12px] text-red">{startState.message}</p>
             ) : null}
-            <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.growth.coupon.disclaimer")}</p>
           </>
         }
       />

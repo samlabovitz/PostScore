@@ -53,6 +53,18 @@ export const PASS_ON_TEMPLATES: Record<PassOn, CardTemplate[]> = {
   digital: ["friendPass", "thankYou"],
 };
 
+/** Referral templates on the basic (Grow) card: each pass-on choice's
+ * first template (Give & Get, Friend pass). The rest are Premium. */
+export const BASIC_REFERRAL_TEMPLATES: CardTemplate[] = Array.from(new Set(PASS_ON.map((p) => PASS_ON_TEMPLATES[p][0])));
+
+/** The pass-on choice a referral template needs: Give & Get is the
+ * tear-in-half card; the others keep a non-tear choice (Single card by
+ * default). */
+export function passOnForTemplate(template: CardTemplate, current: PassOn): PassOn {
+  if (PASS_ON_TEMPLATES[current].includes(template)) return current;
+  return (PASS_ON.find((p) => PASS_ON_TEMPLATES[p].includes(template)) ?? current);
+}
+
 /** A referral card's template for its pass-on choice (keeping the
  * owner's pick when it fits). */
 export function referralTemplate(passOn: PassOn, requested: CardTemplate | null): CardTemplate {

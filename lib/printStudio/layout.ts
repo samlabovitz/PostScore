@@ -525,16 +525,16 @@ function frontFace(input: CardLayoutInput, m: Measurer, w: number, h: number, se
         const left = d.template === "giftCard" ? shape.x + unit * 0.07 + pad * 0.7 : pad;
 
         if (d.template === "giveGet") {
-          // Two equal halves with a perforation between them; the friend
+          // Two equal halves with a dashed tear line between them; the friend
           // half carries a small QR in its flow.
           if (landscape) {
             const half = w / 2;
-            els.push({ kind: "line", x1: half, y1: pad * 0.6, x2: half, y2: h - pad * 0.6, color: colors.text, width: 1, dash: false, dots: true });
+            els.push({ kind: "line", x1: half, y1: pad * 0.6, x2: half, y2: h - pad * 0.6, color: colors.text, width: 1, dash: true, dots: false });
             mainR = { x: pad, y: pad, w: half - 1.5 * pad, h: h - 2 * pad };
             sideR = { x: half + pad * 0.5, y: pad, w: half - 1.5 * pad, h: h - 2 * pad };
           } else {
             const half = h / 2;
-            els.push({ kind: "line", x1: pad * 0.6, y1: half, x2: w - pad * 0.6, y2: half, color: colors.text, width: 1, dash: false, dots: true });
+            els.push({ kind: "line", x1: pad * 0.6, y1: half, x2: w - pad * 0.6, y2: half, color: colors.text, width: 1, dash: true, dots: false });
             mainR = { x: pad, y: pad, w: w - 2 * pad, h: half - 1.5 * pad };
             sideR = { x: pad, y: half + pad * 0.5, w: w - 2 * pad, h: half - 1.5 * pad };
           }

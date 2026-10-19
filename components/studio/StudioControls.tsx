@@ -109,11 +109,11 @@ export function Choices<T extends string | number>({
   desc?: (o: T) => string | null;
   isLocked: (o: T) => boolean;
   onPick: (o: T, locked: boolean) => void;
-  cols?: 2 | 3 | 4;
+  cols?: 1 | 2 | 3 | 4;
   swatch?: (o: T) => ReactNode;
 }) {
   return (
-    <div role="radiogroup" className={cn("grid gap-1.5", cols === 4 ? "grid-cols-4" : cols === 3 ? "grid-cols-3" : "grid-cols-2")}>
+    <div role="radiogroup" className={cn("grid gap-1.5", cols === 4 ? "grid-cols-4" : cols === 3 ? "grid-cols-3" : cols === 1 ? "grid-cols-1" : "grid-cols-2")}>
       {options.map((o) => {
         const locked = isLocked(o);
         const checked = value === o;

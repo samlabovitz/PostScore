@@ -10,6 +10,7 @@ import type { Plan } from "@/lib/plan";
 import { EXAMPLES, needsFilling, type CardBusiness, type PassOn } from "@/lib/printStudio/design";
 import { ShareModal } from "./ShareModal";
 import { CardDesigner } from "./CardDesigner";
+import { PassOnChoice } from "./PassOnChoice";
 import type { BizProfile } from "@/config/bizProfiles";
 import type { StartReferralInput, StartReferralResult } from "@/app/actions/referrals";
 import { t, useLocale } from "@/lib/i18n";
@@ -18,6 +19,7 @@ export function ReferralBuilder({
   businessId,
   businessName,
   passOn,
+  onPassOnChange,
   profile,
   activeCount,
   maxActive,
@@ -29,6 +31,7 @@ export function ReferralBuilder({
   businessName: string;
   /** How customers pass it on (decides the card layout). */
   passOn: PassOn;
+  onPassOnChange: (passOn: PassOn) => void;
   profile: BizProfile;
   /** Whether a referral program is already active for this business —
    * drives the "Start & track this referral" disabled state and copy.
@@ -145,9 +148,13 @@ export function ReferralBuilder({
           code,
           subline: "",
           finePrint: "",
+          passOn,
         }}
+        onPassOnChange={onPassOnChange}
         fields={
           <>
+            <PassOnChoice value={passOn} onChange={onPassOnChange} />
+
             <div>
               <label className="mb-1 block text-[13px] font-medium text-ink-soft">
                 {t(locale, "dashboard.growth.referral.referrerRewardLabel")} <span className="text-red">*</span>
@@ -233,7 +240,6 @@ export function ReferralBuilder({
                 ? t(locale, "dashboard.growth.referral.starting")
                 : t(locale, "dashboard.growth.referral.startAndTrack")}
             </Button>
-            <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.growth.referral.startExplain")}</p>
             {atLimit ? (
               <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.growth.referral.atLimitMessage")}</p>
             ) : startState.kind === "success" ? (
@@ -241,7 +247,6 @@ export function ReferralBuilder({
             ) : startState.kind === "error" ? (
               <p className="text-[12px] text-red">{startState.message}</p>
             ) : null}
-            <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.growth.referral.disclaimer")}</p>
           </>
         }
       />

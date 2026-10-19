@@ -10,7 +10,7 @@ import type { Plan } from "@/lib/plan";
 import type { CardBusiness } from "@/lib/printStudio/design";
 import { PlanStrip } from "./CardDesigner";
 import { HowItWorks } from "./HowItWorks";
-import { PASS_ON_STORAGE_PREFIX, PassOnChoice } from "./PassOnChoice";
+import { PASS_ON_STORAGE_PREFIX } from "./PassOnChoice";
 import { PASS_ON, type PassOn } from "@/lib/printStudio/design";
 import { readStorage, writeStorage } from "@/lib/signStudio/design";
 
@@ -70,8 +70,6 @@ export function ReferralSection({
 
   return (
     <div className="flex flex-col gap-6">
-      <PassOnChoice value={passOn} onChange={setPassOn} />
-
       <HowItWorks kind="referral" passOn={passOn} businessId={businessId} />
 
       <PlanStrip plan={plan} />
@@ -79,6 +77,7 @@ export function ReferralSection({
       <ReferralBuilder
         businessId={businessId}
         passOn={passOn}
+        onPassOnChange={setPassOn}
         plan={plan}
         printBusiness={printBusiness}
         businessName={businessName}

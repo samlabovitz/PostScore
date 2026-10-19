@@ -97,6 +97,42 @@ describe("How customers pass a referral on", () => {
     expect(t).toContain("Give this half to a friend");
   });
 
+  it("tear-in-half: two balanced halves split by a dashed tear line, the SAME code on each", () => {
+    const front = layoutSingleCard({ design: referral({ passOn: "tear", template: "giveGet", size: "card4x6" }), business: BUSINESS, credit: false, logo: null, hasQr }, m).front;
+    const els = front.panels.flatMap((p) => p.elements);
+    const tear = els.find((e): e is Extract<typeof e, { kind: "line" }> => e.kind === "line" && e.dash && e.x1 === e.x2);
+    expect(tear).toBeDefined();
+    const split = tear!.x1;
+    const textEls = els.filter((e): e is Extract<typeof e, { kind: "text" }> => e.kind === "text");
+    const half = (left: boolean) => textEls.filter((e) => (e.x < split) === left);
+    const words = (left: boolean) => half(left).map((e) => e.text).join(" ");
+
+    const friend = words(true);
+    expect(friend).toContain("FOR YOUR FRIEND");
+    expect(friend).toContain("$10 off your first visit");
+    expect(friend).toContain("Referred by:");
+    const you = words(false);
+    expect(you).toContain("FOR YOU");
+    expect(you).toContain("$10 off your next visit");
+    expect(you).toContain("Unlocks when your friend uses their half");
+
+    // The same code, once on each half.
+    const codes = (left: boolean) => half(left).filter((e) => e.text.includes("EKPM-NRUG")).map((e) => e.text);
+    expect(codes(true)).toEqual(["Code EKPM-NRUG"]);
+    expect(codes(false)).toEqual(["Code EKPM-NRUG"]);
+
+    // A small QR on the friend half only.
+    const qrs = els.filter((e): e is Extract<typeof e, { kind: "qr" }> => e.kind === "qr");
+    expect(qrs).toHaveLength(1);
+    expect(qrs[0].x + qrs[0].size).toBeLessThanOrEqual(split);
+
+    // Equal weight: the two offers print at the same size, the tear line sits in the middle.
+    const friendOffer = half(true).find((e) => e.text.startsWith("$10"))!;
+    const yourReward = half(false).find((e) => e.text.startsWith("$10"))!;
+    expect(friendOffer.size).toBeCloseTo(yourReward.size, 5);
+    expect(split).toBeCloseTo(front.width / 2, 0);
+  });
+
   it("digital: shown on the friend's phone — no write-in line", () => {
     const t = texts(layoutSingleCard({ design: referral({ passOn: "digital", size: "card4x6" }), business: BUSINESS, credit: false, logo: null, hasQr }, m).front);
     expect(t).toContain("Show this on your phone at the register");

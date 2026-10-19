@@ -783,7 +783,6 @@ export type MessageKey =
   | "dashboard.growth.coupon.startErrorFallback"
   | "dashboard.growth.coupon.startLimitError.one"
   | "dashboard.growth.coupon.startLimitError.other"
-  | "dashboard.growth.coupon.disclaimer"
   | "dashboard.growth.coupon.shareModalTitle"
   | "dashboard.growth.activePromotions.redeemErrorFallback"
   | "dashboard.growth.activePromotions.endErrorFallback"
@@ -847,7 +846,6 @@ export type MessageKey =
   | "dashboard.growth.referral.startSuccess"
   | "dashboard.growth.referral.startErrorFallback"
   | "dashboard.growth.referral.startLimitError"
-  | "dashboard.growth.referral.disclaimer"
   | "dashboard.growth.activeReferral.redeemErrorFallback"
   | "dashboard.growth.activeReferral.endErrorFallback"
   | "dashboard.growth.activeReferral.heading"
@@ -2789,8 +2787,6 @@ export type MessageKey =
   | "dashboard.growth.howItWorks.coupon.step3"
   | "dashboard.growth.print.pngHiRes"
   | "dashboard.growth.print.show.howTo"
-  | "dashboard.growth.coupon.startExplain"
-  | "dashboard.growth.referral.startExplain"
   | "dashboard.growth.print.plan.free"
   | "dashboard.growth.print.plan.grow"
   | "dashboard.growth.print.plan.premium"
@@ -2824,6 +2820,9 @@ export type MessageKey =
   | "dashboard.growth.print.template.giveGet"
   | "dashboard.growth.print.template.friendPass"
   | "dashboard.growth.print.template.thankYou"
+  | "dashboard.growth.print.templateFor.giveGet"
+  | "dashboard.growth.print.templateFor.friendPass"
+  | "dashboard.growth.print.templateFor.thankYou"
   | "dashboard.growth.print.field.punches"
   | "dashboard.growth.print.field.qr"
   | "dashboard.growth.print.dest.review"
@@ -4173,7 +4172,6 @@ export const messages: Record<Locale, LocaleMessages> = {
       "You're already running {count} active coupon — end one in Active offers below before starting another.",
     "dashboard.growth.coupon.startLimitError.other":
       "You're already running {count} active coupons — end one in Active offers below before starting another.",
-    "dashboard.growth.coupon.disclaimer": "You print or share it yourself — PostScore doesn't post it to Google or text it to customers.",
     "dashboard.growth.coupon.shareModalTitle": "How to share your coupon",
 
     "dashboard.growth.activePromotions.redeemErrorFallback": "Couldn't log that — try again.",
@@ -4254,7 +4252,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.referral.startErrorFallback": "Couldn't start this — try again.",
     "dashboard.growth.referral.startLimitError":
       "You're already running a referral program — end it in Active referrals below before starting another.",
-    "dashboard.growth.referral.disclaimer": "You print or share it yourself — with a customer, who passes it to a friend. PostScore doesn't post it to Google, text anyone, or detect referrals.",
 
     "dashboard.growth.activeReferral.redeemErrorFallback": "Couldn't log that — try again.",
     "dashboard.growth.activeReferral.endErrorFallback": "Couldn't end this — try again.",
@@ -6419,8 +6416,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.howItWorks.coupon.step3": "Honor the offer and tap +1 in Active offers to keep count",
     "dashboard.growth.print.pngHiRes": "High-res (2×) for social",
     "dashboard.growth.print.show.howTo": "Tiny “how it works” line",
-    "dashboard.growth.coupon.startExplain": "Adds it to Active offers so you can count redemptions — PostScore doesn't see your register.",
-    "dashboard.growth.referral.startExplain": "Adds it to Active referrals so you can count redemptions — PostScore doesn't see your register.",
     "dashboard.growth.print.plan.free": "Free",
     "dashboard.growth.print.plan.grow": "Grow",
     "dashboard.growth.print.plan.premium": "Premium",
@@ -6435,7 +6430,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.print.codeFromAbove": "The card prints the code above — you check it by hand at the register.",
     "dashboard.growth.print.saved.premiumOnly": "Save up to 5 designs with Premium.",
     "dashboard.growth.print.lockedOutputs": "Print and download with Grow",
-    "dashboard.growth.print.redemptions": "You track redemptions at the register — PostScore doesn't see them.",
+    "dashboard.growth.print.redemptions": "You print or share it yourself and count redemptions here — PostScore doesn't see your register or text anyone.",
     "dashboard.growth.print.section.template": "Template",
     "dashboard.growth.print.section.size": "Size",
     "dashboard.growth.print.section.numbering": "Numbering",
@@ -6454,6 +6449,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.print.template.giveGet": "Give & Get (tear in half)",
     "dashboard.growth.print.template.friendPass": "Friend pass",
     "dashboard.growth.print.template.thankYou": "Thank-you card",
+    "dashboard.growth.print.templateFor.giveGet": "For the tear-in-half card",
+    "dashboard.growth.print.templateFor.friendPass": "For a single card or sharing digitally",
+    "dashboard.growth.print.templateFor.thankYou": "For a single card or sharing digitally",
     "dashboard.growth.print.field.punches": "Punches: {count}",
     "dashboard.growth.print.field.qr": "QR code opens",
     "dashboard.growth.print.dest.review": "Google review link",
@@ -7601,7 +7599,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.coupon.startErrorFallback": "No se pudo iniciar — inténtelo de nuevo.",
     "dashboard.growth.coupon.startLimitError.one": "Ya tiene {count} cupón activo — finalice uno en Ofertas activas abajo antes de iniciar otro.",
     "dashboard.growth.coupon.startLimitError.other": "Ya tiene {count} cupones activos — finalice uno en Ofertas activas abajo antes de iniciar otro.",
-    "dashboard.growth.coupon.disclaimer": "Usted mismo lo imprime o lo comparte — PostScore no lo publica en Google ni lo envía por mensaje a los clientes.",
     "dashboard.growth.coupon.shareModalTitle": "Cómo compartir su cupón",
     "dashboard.growth.activePromotions.redeemErrorFallback": "No se pudo registrar — inténtelo de nuevo.",
     "dashboard.growth.activePromotions.endErrorFallback": "No se pudo finalizar — inténtelo de nuevo.",
@@ -7665,7 +7662,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.referral.startSuccess": "Iniciado — toque +1 en Referidos activos abajo cada vez que se canjee uno.",
     "dashboard.growth.referral.startErrorFallback": "No se pudo iniciar — inténtelo de nuevo.",
     "dashboard.growth.referral.startLimitError": "Ya tiene un programa de referidos en marcha — finalícelo en Referidos activos abajo antes de iniciar otro.",
-    "dashboard.growth.referral.disclaimer": "Usted mismo la imprime o la comparte — con un cliente, que se la pasa a un amigo. PostScore no la publica en Google, no envía mensajes a nadie ni detecta referidos.",
     "dashboard.growth.activeReferral.redeemErrorFallback": "No se pudo registrar — inténtelo de nuevo.",
     "dashboard.growth.activeReferral.endErrorFallback": "No se pudo finalizar — inténtelo de nuevo.",
     "dashboard.growth.activeReferral.heading": "Referidos activos ({active}/{max})",
@@ -10073,8 +10069,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.howItWorks.coupon.step3": "Aplique la oferta y toque +1 en Ofertas activas para llevar la cuenta",
     "dashboard.growth.print.pngHiRes": "Alta resolución (2×) para redes",
     "dashboard.growth.print.show.howTo": "Línea pequeña de “cómo funciona”",
-    "dashboard.growth.coupon.startExplain": "Lo agrega a Ofertas activas para que pueda contar los canjes — PostScore no ve su caja.",
-    "dashboard.growth.referral.startExplain": "Lo agrega a Referidos activos para que pueda contar los canjes — PostScore no ve su caja.",
     "dashboard.growth.print.plan.free": "Gratis",
     "dashboard.growth.print.plan.grow": "Grow",
     "dashboard.growth.print.plan.premium": "Premium",
@@ -10089,7 +10083,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.print.codeFromAbove": "La tarjeta imprime el código de arriba — usted lo revisa a mano en la caja.",
     "dashboard.growth.print.saved.premiumOnly": "Guarde hasta 5 diseños con Premium.",
     "dashboard.growth.print.lockedOutputs": "Imprima y descargue con Grow",
-    "dashboard.growth.print.redemptions": "Usted lleva el control de los canjes en la caja — PostScore no los ve.",
+    "dashboard.growth.print.redemptions": "Usted mismo lo imprime o lo comparte y cuenta los canjes aquí — PostScore no ve su caja ni envía mensajes a nadie.",
     "dashboard.growth.print.section.template": "Plantilla",
     "dashboard.growth.print.section.size": "Tamaño",
     "dashboard.growth.print.section.numbering": "Numeración",
@@ -10108,6 +10102,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.print.template.giveGet": "Dé y reciba (se corta a la mitad)",
     "dashboard.growth.print.template.friendPass": "Pase de amigo",
     "dashboard.growth.print.template.thankYou": "Tarjeta de agradecimiento",
+    "dashboard.growth.print.templateFor.giveGet": "Para la tarjeta que se corta a la mitad",
+    "dashboard.growth.print.templateFor.friendPass": "Para una tarjeta única o para compartir en digital",
+    "dashboard.growth.print.templateFor.thankYou": "Para una tarjeta única o para compartir en digital",
     "dashboard.growth.print.field.punches": "Sellos: {count}",
     "dashboard.growth.print.field.qr": "El código QR abre",
     "dashboard.growth.print.dest.review": "Enlace de reseña de Google",

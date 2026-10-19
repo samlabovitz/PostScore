@@ -1,9 +1,9 @@
 "use client";
 
-// "How will customers pass it on?" — the referral designer's first
-// choice: a single card (default), a tear-in-half card, or sharing
-// digitally. The card layout and the "How it works" steps follow it.
-// Available on every plan.
+// "How will customers pass it on?" — the first choice in the referral
+// form (above Customize design): a single card (default), a tear-in-half
+// card, or sharing digitally. The card's template, the "How it works"
+// steps and the Share button follow it. Available on every plan.
 
 import { IconDeviceMobileMessage, IconId, IconScissors } from "@tabler/icons-react";
 import { PASS_ON, type PassOn } from "@/lib/printStudio/design";
@@ -18,12 +18,12 @@ export function PassOnChoice({ value, onChange }: { value: PassOn; onChange: (v:
   const locale = useLocale();
   const k = (key: string) => t(locale, `dashboard.growth.referral.passOn.${key}` as MessageKey);
   return (
-    <fieldset data-testid="pass-on" className="rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
+    <fieldset data-testid="pass-on" className="flex flex-col gap-2 border-b border-paper-line pb-4">
       <legend className="sr-only">{k("title")}</legend>
-      <h2 aria-hidden className="font-serif text-[17px] font-semibold text-ink">
+      <h3 aria-hidden className="text-[14px] font-semibold text-ink">
         {k("title")}
-      </h2>
-      <div role="radiogroup" className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+      </h3>
+      <div role="radiogroup" className="grid grid-cols-1 gap-2">
         {PASS_ON.map((option) => {
           const Icon = ICONS[option];
           const checked = value === option;

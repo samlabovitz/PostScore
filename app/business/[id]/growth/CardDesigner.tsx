@@ -69,6 +69,9 @@ import {
   PUNCHES_MAX,
   PUNCHES_MIN,
   PASS_ON_TEMPLATES,
+  BASIC_REFERRAL_TEMPLATES,
+  REFERRAL_TEMPLATES,
+  passOnForTemplate,
   SAVED_DESIGNS_MAX,
   SERIAL_MAX_COUNT,
   availableDestinations,
@@ -85,6 +88,7 @@ import {
   type CardDesign,
   type CardKind,
   type CardSize,
+  type CardTemplate,
   type CardText,
   type PassOn,
   type PrintStudioStore,
@@ -199,12 +203,28 @@ export function cardTabs(p: {
   logoNote: string | null;
   fileRef: React.RefObject<HTMLInputElement>;
   saved: ReactNode;
+  /** Referral: picking a template that needs another pass-on choice
+   * switches it (Give & Get = tear-in-half). */
+  onPassOn?: (passOn: PassOn) => void;
 }): DesignTab[] {
   const { locale, value, update, premium, business, logo } = p;
   const locked = !premium;
   const L = () => locked;
   const pick = <F extends keyof CardDesign>(field: F) => (o: CardDesign[F]) => update({ [field]: o } as Partial<CardDesign>, locked);
-  const templates = value.kind === "coupon" ? COUPON_TEMPLATES : PASS_ON_TEMPLATES[value.passOn];
+  // Referral: every template shows. On Grow, Give & Get and Friend pass
+  // are open (each is a pass-on choice's card); Thank-you carries the
+  // Premium lock instead of disappearing.
+  const referral = value.kind === "referral";
+  const templates = referral ? REFERRAL_TEMPLATES : COUPON_TEMPLATES;
+  const templateLocked = (o: CardTemplate) => (referral ? !premium && !BASIC_REFERRAL_TEMPLATES.includes(o) : locked);
+  const pickTemplate = (o: CardTemplate, isLocked: boolean) => {
+    if (!referral || isLocked) return update({ template: o }, isLocked);
+    const passOn = passOnForTemplate(o, value.passOn);
+    if (passOn !== value.passOn) p.onPassOn?.(passOn);
+    // The basic card's template follows the pass-on choice.
+    if (premium) update({ template: o }, false);
+    else p.onBasic({});
+  };
   const destinations = availableDestinations(business);
   const sheet = CARD_SHEETS[value.size];
   const pages = Math.ceil(value.serial.count / (sheet.cols * sheet.rows));
@@ -214,10 +234,19 @@ export function cardTabs(p: {
       id: "template",
       label: tp(locale, "tab.template"),
       icon: IconLayoutGrid,
-      locked,
+      locked: referral ? false : locked,
       content: (
         <>
-          <Choices name="template" value={value.template} options={templates} label={(o) => tp(locale, `template.${o}`)} isLocked={L} onPick={pick("template")} />
+          <Choices
+            name="template"
+            cols={referral ? 1 : 2}
+            value={value.template}
+            options={templates}
+            label={(o) => tp(locale, `template.${o}`)}
+            desc={referral ? (o) => tp(locale, `templateFor.${o}`) : undefined}
+            isLocked={templateLocked}
+            onPick={pickTemplate}
+          />
           {value.template === "loyalty" && (
             <label className="flex flex-col gap-1">
               <Label>{tp(locale, "field.punches", { count: value.punches })}</Label>
@@ -505,9 +534,11 @@ export interface CardDesignerProps {
   fields: ReactNode;
   /** The page's own actions under the outputs (Share, Save…). */
   actions: ReactNode;
+  /** Referral: a template pick that needs another pass-on choice. */
+  onPassOnChange?: (passOn: PassOn) => void;
 }
 
-export function CardDesigner({ kind, plan, businessId, business, text, fields, actions }: CardDesignerProps) {
+export function CardDesigner({ kind, plan, businessId, business, text, fields, actions, onPassOnChange }: CardDesignerProps) {
   const locale = useLocale();
   const lang: "en" | "es" = locale === "es" ? "es" : "en";
   const access = signAccess(plan);
@@ -747,7 +778,7 @@ export function CardDesigner({ kind, plan, businessId, business, text, fields, a
           readOnlyNote={canPrint ? null : tp(locale, "lockedOutputs")}
           onReset={resetDesign}
           onOpenLockedTab={(id) => setPremiumPreview((prev) => ({ ...(prev ?? {}), ...lockedSample(id, basicLook, business) }))}
-          tabs={cardTabs({ locale, value: panelValue, update, premium: studio, onBasic: setBasic, qrDest, onQrDest: setQr, business, logo, onLogo, logoNote, fileRef, saved })}
+          tabs={cardTabs({ locale, value: panelValue, update, premium: studio, onBasic: setBasic, qrDest, onQrDest: setQr, business, logo, onLogo, logoNote, fileRef, saved, onPassOn: onPassOnChange })}
         />
         {studio && <ContrastAlert problems={contrast} />}
       </div>
@@ -827,7 +858,8 @@ export function CardDesigner({ kind, plan, businessId, business, text, fields, a
           </p>
         )}
         {actions}
-        <p data-testid="redemptions" className="text-[11.5px] text-ink-mute">
+        {/* The one honesty line (printing, sharing, counting). */}
+        <p data-testid="redemptions" className="text-[12px] text-ink-mute">
           {tp(locale, "redemptions")}
         </p>
       </div>
