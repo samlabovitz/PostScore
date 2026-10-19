@@ -4,6 +4,7 @@ import {
   STARTER_SITE_THEME_GROUPS,
   buildStarterSiteHtml,
   cityFromAddress,
+  monthYear,
   starterSitePalette,
   type StarterSiteInput,
 } from "./starterSite";
@@ -47,6 +48,7 @@ const SALON: StarterSiteInput = {
   timeZone: "America/New_York",
   rating: 4.7,
   reviewCount: 10,
+  ratingAsOf: "2026-10-16T15:00:00Z",
   googleMapsUri: "https://maps.google.com/?cid=111",
   priceLevel: null,
   socialLinks: [],
@@ -160,10 +162,10 @@ describe("only real data on the page", () => {
     expect(html).toContain("Call now</a>");
     expect(html).toContain("Get directions</a>");
     expect(html).toContain('class="rating-badge"');
-    expect(html).toContain("4.7 · 10 Google reviews");
+    expect(html).toContain("4.7 · 10 Google reviews · Oct 2026");
     const low = buildStarterSiteHtml({ ...SALON, rating: 3.9 });
     expect(low).not.toContain('class="rating-badge"');
-    expect(low).toContain("3.9 average from 10 Google reviews");
+    expect(low).toContain("3.9★ from 10 Google reviews · as of Oct 2026");
   });
 
   test("at a glance: area only from a recognizable address, price only when Google has one", () => {
@@ -322,6 +324,47 @@ describe("our own website checks on the generated page", () => {
     for (const id of ["website.has_website", "website.https", "website.content_depth", "website.contact_conversion"]) {
       const check = website.checks.find((c) => c.id === id)!;
       expect(check.earnedPoints, id).toBe(check.maxPoints);
+    }
+  });
+});
+
+describe("ratings can't go stale in a downloaded file", () => {
+  test("toggle off (the default): no rating number anywhere — just a link to Google", () => {
+    const html = buildStarterSiteHtml({ ...SALON, show: { ...SALON.show, rating: false } });
+    expect(html).not.toMatch(/4\.7/);
+    expect(html).not.toContain('class="rating-badge"');
+    expect(html).not.toContain('class="score"');
+    expect(html).not.toMatch(/\d+ Google reviews?/);
+    expect(html).toContain("See what customers say on Google");
+    expect(html).toContain("Read our reviews on Google →");
+  });
+
+  test("toggle on: the rating with its date, in the block and the hero badge", () => {
+    const html = buildStarterSiteHtml(SALON);
+    expect(html).toContain("4.7★ from 10 Google reviews · as of Oct 2026");
+    expect(html).toContain("4.7 · 10 Google reviews · Oct 2026");
+    const es = buildStarterSiteHtml({ ...SALON, locale: "es" });
+    expect(es).toContain("4.7★ de 10 reseñas de Google · a octubre de 2026");
+  });
+
+  test("no date known: the number isn't printed at all", () => {
+    const html = buildStarterSiteHtml({ ...SALON, ratingAsOf: null });
+    expect(html).not.toMatch(/4\.7/);
+    expect(html).toContain("See what customers say on Google");
+  });
+
+  test("the month is the business's own (a late-night scan stays in its month)", () => {
+    expect(monthYear("2026-11-01T02:00:00Z", "en", "America/Los_Angeles")).toBe("Oct 2026");
+    expect(monthYear("2026-11-01T02:00:00Z", "es", "America/New_York")).toBe("octubre de 2026");
+  });
+
+  test("schema.org: LocalBusiness with name, address, phone, hours — never aggregateRating or reviews", () => {
+    for (const rating of [true, false]) {
+      const html = buildStarterSiteHtml({ ...SALON, show: { ...SALON.show, rating } });
+      const ld = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)![1]);
+      expect(ld).toMatchObject({ "@type": "LocalBusiness", name: "Hudson Shears", telephone: SALON.phone, address: SALON.address });
+      expect(ld.openingHoursSpecification.length).toBeGreaterThan(0);
+      expect(html).not.toMatch(/aggregateRating|"review"|ratingValue|reviewCount/);
     }
   });
 });

@@ -25,6 +25,7 @@ const PROPS = {
   priceLevel: "PRICE_LEVEL_INEXPENSIVE",
   socialLinks: [{ platform: "Instagram", url: "instagram.com/modernliquors" }],
   year: 2026,
+  ratingAsOf: "2026-10-16T15:00:00Z",
   profileId: "liquor_store",
   builderOfferReason: "no_website" as const,
 };
@@ -62,18 +63,29 @@ describe("starter site builder", () => {
       priceLevel: PROPS.priceLevel,
       socialLinks: PROPS.socialLinks,
       year: 2026,
+      ratingAsOf: PROPS.ratingAsOf,
       profileId: PROPS.profileId,
       themeId: "ink",
       customAccent: null,
       fontId: "classic",
       accentStyle: "dots",
-      show: { address: true, phone: true, hours: true, rating: true },
+      show: { address: true, phone: true, hours: true, rating: false },
       heroImage: null,
       contentImages: [],
     });
     expect(srcDoc).toBe(download);
     expect(download).toContain("© 2026 Modern Liquors");
     expect(download).toContain('href="https://instagram.com/modernliquors"');
+  });
+
+  test("\"Show my rating\" is off by default, with the re-download note", () => {
+    const html = render();
+    const label = html.indexOf("Show my rating");
+    const input = html.slice(html.lastIndexOf("<input", label), html.indexOf(">", html.lastIndexOf("<input", label)) + 1);
+    expect(input).toMatch(/^<input type="checkbox"/);
+    expect(input).not.toContain("checked");
+    expect(html).toContain("Downloaded sites don&#x27;t update — re-download after your rating changes.");
+    expect(html).not.toContain("4.5★");
   });
 
   test("themes grouped Classic · Bold · Light · Earthy, all 18; Style accents with 4 options + None", () => {

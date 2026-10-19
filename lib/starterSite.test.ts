@@ -23,6 +23,7 @@ const BASE: StarterSiteInput = {
   openingHoursPeriods: null,
   rating: 4.6,
   reviewCount: 120,
+  ratingAsOf: "2026-10-16T15:00:00Z",
   googleMapsUri: "https://maps.google.com/?cid=123",
   profileId: "restaurant",
   themeId: "ink",

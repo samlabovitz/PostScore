@@ -178,6 +178,7 @@ export function StarterSiteBuilder({
   priceLevel = null,
   socialLinks = [],
   year,
+  ratingAsOf = null,
   profileId,
   builderOfferReason,
   onSiteLocaleChange,
@@ -213,6 +214,8 @@ export function StarterSiteBuilder({
   socialLinks?: Array<{ platform: string; url: string }>;
   /** The copyright year for the footer (from the server, so both renders match). */
   year?: number;
+  /** When the rating was read from Google (the last scan) — "as of Oct 2026". */
+  ratingAsOf?: string | null;
   profileId: string;
   /** Why the builder is being offered — see BuilderOffer in
    * app/actions/website.ts. Drives the headline/subcopy only; the
@@ -247,7 +250,8 @@ export function StarterSiteBuilder({
   const [ownerHours, setOwnerHours] = useState<OwnerHours | null>(starterSiteHours);
   const [hoursEditorOpen, setHoursEditorOpen] = useState(false);
   const [showHours, setShowHours] = useState(googleHasHours || starterSiteHours !== null);
-  const [showRating, setShowRating] = useState(rating !== null);
+  // Off by default: a downloaded page can't update a printed rating.
+  const [showRating, setShowRating] = useState(false);
   const [heroImage, setHeroImage] = useState<{ dataUri: string; alt: string } | null>(null);
   const [contentImages, setContentImages] = useState<Array<{ dataUri: string; alt: string }>>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -313,6 +317,7 @@ export function StarterSiteBuilder({
         priceLevel,
         socialLinks,
         year,
+        ratingAsOf,
         profileId,
         themeId,
         customAccent,
@@ -343,6 +348,7 @@ export function StarterSiteBuilder({
       priceLevel,
       socialLinks,
       year,
+      ratingAsOf,
       profileId,
       themeId,
       customAccent,
@@ -821,6 +827,9 @@ export function StarterSiteBuilder({
                 onChange={setShowRating}
                 available={rating !== null}
               />
+              {rating !== null && (
+                <p className="-mt-1 pb-2 pl-[26px] text-[12px] text-ink-mute">{t(locale, "dashboard.website.starter.ratingStaleNote")}</p>
+              )}
             </div>
           </div>
         </Card>

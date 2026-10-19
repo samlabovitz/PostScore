@@ -36,6 +36,7 @@ export function WebsiteGeneratorSection({
   priceLevel,
   socialLinks,
   year,
+  ratingAsOf,
   profileId,
   builderOfferReason,
   hasWebsite,
@@ -59,6 +60,7 @@ export function WebsiteGeneratorSection({
   priceLevel: string | null;
   socialLinks: Array<{ platform: string; url: string }>;
   year: number;
+  ratingAsOf: string | null;
   profileId: string;
   builderOfferReason: "no_website" | "underperforming" | "backup";
   hasWebsite: boolean;
@@ -113,6 +115,7 @@ export function WebsiteGeneratorSection({
       priceLevel={priceLevel}
       socialLinks={socialLinks}
       year={year}
+      ratingAsOf={ratingAsOf}
       profileId={profileId}
       builderOfferReason={builderOfferReason}
       onSiteLocaleChange={setSiteLocale}

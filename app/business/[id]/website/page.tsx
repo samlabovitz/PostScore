@@ -71,6 +71,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       priceLevel={data.priceLevel}
       socialLinks={data.verifiedSocialLinks}
       year={new Date().getFullYear()}
+      ratingAsOf={lastScanAt}
       profileId={profileEn.id}
       builderOfferReason={builderOffer.reason}
       hasWebsite={hasWebsite}

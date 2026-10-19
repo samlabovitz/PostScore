@@ -331,6 +331,10 @@ export interface StarterSiteInput {
   /** Real link to the business's own Google listing, when on file —
    * used for "read our reviews" and "open in Google Maps". */
   googleMapsUri: string | null;
+  /** When the rating above was read from Google (the last scan), ISO. A
+   * downloaded page can't update itself, so a printed rating always says
+   * "as of {month}" — without this date the number isn't shown at all. */
+  ratingAsOf?: string | null;
   /** Google's own price level enum (lib/priceLevel.ts), when it has one. */
   priceLevel?: string | null;
   /** Social profiles verified to open the real profile (lib/socialLinkCheck.ts). */
@@ -355,6 +359,8 @@ export interface StarterSiteInput {
     address: boolean;
     phone: boolean;
     hours: boolean;
+    /** "Show my rating" — off by default; the Reviews block then links to
+     * Google without a number that could go stale. */
     rating: boolean;
   };
   /** An owner-uploaded photo for the hero background, as a data: URI —
@@ -382,6 +388,23 @@ export function cityFromAddress(address: string | null): string | null {
   if (stateZip < 2) return null;
   const city = parts[stateZip - 1];
   return city && !/\d/.test(city) ? `${city}, ${parts[stateZip].slice(0, 2)}` : null;
+}
+
+const MONTHS: Record<Locale, string[]> = {
+  en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+  es: ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
+};
+
+/** "Oct 2026" / "octubre de 2026", in the business's time zone (numeric
+ * date parts only, so server and browser agree). */
+export function monthYear(iso: string, locale: Locale, timeZone = "America/New_York"): string | null {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "numeric" }).formatToParts(date);
+  const month = Number(parts.find((p) => p.type === "month")?.value) - 1;
+  const year = parts.find((p) => p.type === "year")?.value;
+  if (!(month >= 0 && month < 12) || !year) return null;
+  return locale === "es" ? `${MONTHS.es[month]} de ${year}` : `${MONTHS.en[month]} ${year}`;
 }
 
 /** Only https:// links leave the page (an http:// one would break "HTTPS-ready"). */
@@ -476,7 +499,10 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   const schedule = input.ownerHours ?? ownerHoursFromGoogle(input.openingHoursPeriods);
   const showHours = input.show.hours && (!!schedule || (!!hoursLines && hoursLines.length > 0));
   const weekly = showHours && schedule && schedule.mode === "weekly" ? schedule : null;
-  const showRating = input.show.rating && input.rating !== null;
+  const tz = input.timeZone ?? "America/New_York";
+  const asOf = input.ratingAsOf ? monthYear(input.ratingAsOf, locale, tz) : null;
+  // The number only with its date — a downloaded page never updates.
+  const showRating = input.show.rating && input.rating !== null && asOf !== null;
   const rating = input.rating as number;
   const tagline = input.tagline.trim();
   const city = showAddress ? cityFromAddress(input.address) : null;
@@ -509,8 +535,8 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   }
   const ratingLabel = showRating
     ? input.reviewCount !== null
-      ? tPlural(locale, "starterSite.ratingBadge", input.reviewCount, { rating: rating.toFixed(1) })
-      : t(locale, "starterSite.ratingBadgeOnGoogle", { rating: rating.toFixed(1) })
+      ? tPlural(locale, "starterSite.ratingBadge", input.reviewCount, { rating: rating.toFixed(1), date: asOf as string })
+      : t(locale, "starterSite.ratingBadgeOnGoogle", { rating: rating.toFixed(1), date: asOf as string })
     : "";
   const ratingBadge =
     showRating && rating >= 4
@@ -582,19 +608,28 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
           </ul>
         </div>`);
   }
+  // Reviews: by default no number at all (it would go stale in a static
+  // file) — just a link to the live reviews on Google. "Show my rating"
+  // adds the number with the month it was read.
+  const reviewsLink = mapsUrl
+    ? `<a class="btn btn-outline" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(locale, "starterSite.seeReviewsOnGoogle"))}</a>`
+    : "";
   if (showRating) {
     const stars = starRowHtml(rating, t(locale, "starterSite.starsAria", { rating: rating.toFixed(1) }));
     const reviewsLine =
       input.reviewCount !== null
-        ? tPlural(locale, "starterSite.reviewsAverageFromCount", input.reviewCount, { rating: rating.toFixed(1) })
-        : t(locale, "starterSite.reviewsAverageOnGoogle", { rating: rating.toFixed(1) });
-    const reviewsLink = mapsUrl
-      ? `<a class="btn btn-outline" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(locale, "starterSite.seeReviewsOnGoogle"))}</a>`
-      : "";
+        ? tPlural(locale, "starterSite.ratingLine", input.reviewCount, { rating: rating.toFixed(1), date: asOf as string })
+        : t(locale, "starterSite.ratingLineOnGoogle", { rating: rating.toFixed(1), date: asOf as string });
     cards.push(`<div class="card card--reviews" id="reviews">
           <h2 class="sec-title">${secIcon("star")}${escapeHtml(t(locale, "starterSite.reviewsHeading"))}</h2>
           <div class="score-row"><span class="score">${rating.toFixed(1)}</span>${stars}</div>
           <p>${escapeHtml(reviewsLine)}</p>
+          ${reviewsLink}
+        </div>`);
+  } else if (reviewsLink) {
+    cards.push(`<div class="card card--reviews" id="reviews">
+          <h2 class="sec-title">${secIcon("star")}${escapeHtml(t(locale, "starterSite.reviewsHeading"))}</h2>
+          <p class="big">${escapeHtml(t(locale, "starterSite.reviewsCta"))}</p>
           ${reviewsLink}
         </div>`);
   }

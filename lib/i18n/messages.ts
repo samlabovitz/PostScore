@@ -3130,6 +3130,11 @@ export type MessageKey =
   // --- Starter site: owner hours + star row.
   | "starterSite.starsAria"
   | "starterSite.today"
+  | "starterSite.ratingLine.one"
+  | "starterSite.ratingLine.other"
+  | "starterSite.ratingLineOnGoogle"
+  | "starterSite.reviewsCta"
+  | "dashboard.website.starter.ratingStaleNote"
   | "starterSite.theme.sage"
   | "starterSite.theme.blush"
   | "starterSite.theme.sky"
@@ -3319,6 +3324,7 @@ export type PluralKeyBase =
   | "dashboard.competitors.unscoredSuffix"
   | "starterSite.reviewsAverageFromCount"
   | "starterSite.ratingBadge"
+  | "starterSite.ratingLine"
   | "content.checks.visibility.rating.explanation.lowConfidence"
   | "content.checks.visibility.review_count.explanation.nonzero"
   | "content.checks.completeness.categories.explanation.hasList"
@@ -4583,7 +4589,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.starter.includeAddress": "Address & map",
     "dashboard.website.starter.includePhone": "Phone (click-to-call)",
     "dashboard.website.starter.includeHours": "Hours",
-    "dashboard.website.starter.includeRating": "Rating & reviews",
+    "dashboard.website.starter.includeRating": "Show my rating",
     "dashboard.website.starter.livePreviewLabel": "Live preview — exactly what you'll download",
     "dashboard.website.starter.iframeTitle": "Live preview of your starter site",
     "dashboard.website.starter.downloadSiteButton": "Download site (HTML)",
@@ -6930,6 +6936,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.visit.gotIt": "Got it",
     "starterSite.starsAria": "{rating} out of 5 stars",
     "starterSite.today": "Today",
+    "starterSite.ratingLine.one": "{rating}★ from {count} Google review · as of {date}",
+    "starterSite.ratingLine.other": "{rating}★ from {count} Google reviews · as of {date}",
+    "starterSite.ratingLineOnGoogle": "{rating}★ on Google · as of {date}",
+    "starterSite.reviewsCta": "See what customers say on Google",
+    "dashboard.website.starter.ratingStaleNote": "Downloaded sites don't update — re-download after your rating changes.",
     "starterSite.theme.sage": "Sage & Cream",
     "starterSite.theme.blush": "Blush & Charcoal",
     "starterSite.theme.sky": "Sky & Navy",
@@ -6950,13 +6961,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "starterSite.opensTomorrow": "opens tomorrow at {time}",
     "starterSite.opensDay": "opens {day} at {time}",
     "starterSite.todayHours": "Today: {hours}",
-    "starterSite.ratingBadgeOnGoogle": "{rating} on Google",
+    "starterSite.ratingBadgeOnGoogle": "{rating} on Google · {date}",
     "starterSite.openInMaps": "Open in Google Maps →",
     "starterSite.followUs": "Follow us",
     "starterSite.copyright": "© {year} {name}",
     "starterSite.inCity": "{category} in {city}",
-    "starterSite.ratingBadge.one": "{rating} \u00b7 {count} Google review",
-    "starterSite.ratingBadge.other": "{rating} \u00b7 {count} Google reviews",
+    "starterSite.ratingBadge.one": "{rating} · {count} Google review · {date}",
+    "starterSite.ratingBadge.other": "{rating} · {count} Google reviews · {date}",
     "dashboard.website.starter.themeGroup.classic": "Classic",
     "dashboard.website.starter.themeGroup.bold": "Bold",
     "dashboard.website.starter.themeGroup.light": "Light",
@@ -8147,7 +8158,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.starter.includeAddress": "Dirección y mapa",
     "dashboard.website.starter.includePhone": "Teléfono (clic para llamar)",
     "dashboard.website.starter.includeHours": "Horario",
-    "dashboard.website.starter.includeRating": "Calificaci\u00f3n y rese\u00f1as",
+    "dashboard.website.starter.includeRating": "Mostrar mi calificación",
     "dashboard.website.starter.livePreviewLabel": "Vista previa en vivo — exactamente lo que descargará",
     "dashboard.website.starter.iframeTitle": "Vista previa en vivo de su sitio inicial",
     "dashboard.website.starter.downloadSiteButton": "Descargar sitio (HTML)",
@@ -10753,6 +10764,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.visit.gotIt": "Entendido",
     "starterSite.starsAria": "{rating} de 5 estrellas",
     "starterSite.today": "Hoy",
+    "starterSite.ratingLine.one": "{rating}★ de {count} reseña de Google · a {date}",
+    "starterSite.ratingLine.other": "{rating}★ de {count} reseñas de Google · a {date}",
+    "starterSite.ratingLineOnGoogle": "{rating}★ en Google · a {date}",
+    "starterSite.reviewsCta": "Vea lo que dicen los clientes en Google",
+    "dashboard.website.starter.ratingStaleNote": "Los sitios descargados no se actualizan — vuelva a descargarlo cuando cambie su calificación.",
     "starterSite.theme.sage": "Salvia y crema",
     "starterSite.theme.blush": "Rosa pálido y carbón",
     "starterSite.theme.sky": "Cielo y azul marino",
@@ -10773,13 +10789,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "starterSite.opensTomorrow": "abre mañana a las {time}",
     "starterSite.opensDay": "abre el {day} a las {time}",
     "starterSite.todayHours": "Hoy: {hours}",
-    "starterSite.ratingBadgeOnGoogle": "{rating} en Google",
+    "starterSite.ratingBadgeOnGoogle": "{rating} en Google · {date}",
     "starterSite.openInMaps": "Abrir en Google Maps →",
     "starterSite.followUs": "Síganos",
     "starterSite.copyright": "© {year} {name}",
     "starterSite.inCity": "{category} en {city}",
-    "starterSite.ratingBadge.one": "{rating} \u00b7 {count} rese\u00f1a de Google",
-    "starterSite.ratingBadge.other": "{rating} \u00b7 {count} rese\u00f1as de Google",
+    "starterSite.ratingBadge.one": "{rating} · {count} reseña de Google · {date}",
+    "starterSite.ratingBadge.other": "{rating} · {count} reseñas de Google · {date}",
     "dashboard.website.starter.themeGroup.classic": "Clásicos",
     "dashboard.website.starter.themeGroup.bold": "Llamativos",
     "dashboard.website.starter.themeGroup.light": "Claros",
