@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { CouponBuilder } from "./CouponBuilder";
 import { ActivePromotions } from "./ActivePromotions";
-import { HowCouponsWork } from "./HowCouponsWork";
 import { MoreWaysToBringPeopleIn } from "./MoreWaysToBringPeopleIn";
 import { incrementPromoRedemption, endPromo, startPromo } from "@/app/actions/promos";
 import { MAX_ACTIVE_PROMOS, type PromoRow } from "@/lib/promos";
 import type { BizProfile } from "@/config/bizProfiles";
+import type { Plan } from "@/lib/plan";
+import type { CardBusiness } from "@/lib/printStudio/design";
+import { PlanStrip } from "./CardDesigner";
+import { HowItWorks } from "./HowItWorks";
 
 export function CouponsSection({
   businessId,
@@ -15,12 +18,16 @@ export function CouponsSection({
   businessPhone,
   profile,
   initialPromos,
+  plan,
+  printBusiness,
 }: {
   businessId: string;
   businessName: string;
   businessPhone: string | null;
   profile: BizProfile;
   initialPromos: PromoRow[];
+  plan: Plan;
+  printBusiness: CardBusiness;
 }) {
   const [promos, setPromos] = useState<PromoRow[]>(initialPromos);
 
@@ -52,9 +59,14 @@ export function CouponsSection({
 
   return (
     <div className="flex flex-col gap-6">
-      <HowCouponsWork />
+      <HowItWorks kind="coupon" businessId={businessId} />
+
+      <PlanStrip plan={plan} />
 
       <CouponBuilder
+        businessId={businessId}
+        plan={plan}
+        printBusiness={printBusiness}
         businessName={businessName}
         businessPhone={businessPhone}
         profile={profile}

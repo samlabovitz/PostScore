@@ -426,6 +426,23 @@ async function getLatestCompetitorSnapshotUncached(businessId: string): Promise<
   };
 }
 
+/** The owner's shared rank (ownerStanding) in the finished competitor
+ * scan saved just before `latestScanId` — for "rank improved" on the
+ * report. null when there's no earlier scan. */
+export async function getPreviousCompetitorRank(businessId: string, latestScanId: string): Promise<number | null> {
+  const supabase = createClient();
+  const [{ data, error }, unfinished] = await Promise.all([
+    supabase.from("competitor_scans").select(SAVED_SCAN_COLUMNS).eq("business_id", businessId).order("created_at", { ascending: false }).limit(150),
+    unfinishedNewScanIds(supabase, businessId),
+  ]);
+  if (error || !data) return null;
+  const rows = withoutUnfinished(data as SavedScanRow[], unfinished);
+  const previousId = rows.find((r) => r.scan_id !== latestScanId)?.scan_id;
+  if (!previousId) return null;
+  const scan = groupSavedScans(rows.filter((r) => r.scan_id === previousId))[0];
+  return scan ? (ownerStanding(scan)?.rank ?? null) : null;
+}
+
 // ---------------------------------------------------------------------------
 // Local benchmark (Day 12c) — "where do I rank against my real local peers,"
 // computed entirely from the last SAVED competitor scan (getLatestCompetitor

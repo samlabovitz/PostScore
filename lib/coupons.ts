@@ -20,13 +20,6 @@ export function generateCouponCode(): string {
   return `${chars.slice(0, 4).join("")}-${chars.slice(4).join("")}`;
 }
 
-/** The URL the coupon's QR code encodes. Built from the page's own real
- * origin so it's a genuine, working-domain-shaped link, not a
- * fabricated placeholder. */
-export function buildRedeemUrl(origin: string, code: string): string {
-  return `${origin}/redeem/${code}`;
-}
-
 /** A sensible default expiry — `daysFromNow` days out, as an ISO
  * yyyy-mm-dd date ready for a native `<input type="date">`. Takes
  * `now` explicitly so it stays a pure, testable function. */

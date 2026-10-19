@@ -577,6 +577,11 @@ const LIQUOR_WINE_PROFILE: BizProfileSource = {
   ],
   pricingTips: [
     {
+      id: "state_rules",
+      label: "bizProfiles.liquor_wine.pricingTips.state_rules.label",
+      description: "bizProfiles.liquor_wine.pricingTips.state_rules.description",
+    },
+    {
       id: "loss_leader_traffic",
       label: "bizProfiles.liquor_wine.pricingTips.loss_leader_traffic.label",
       description: "bizProfiles.liquor_wine.pricingTips.loss_leader_traffic.description",

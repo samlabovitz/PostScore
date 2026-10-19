@@ -407,7 +407,7 @@ describe("buildPricingSystemPrompt", () => {
   });
 
   test("Day 4b: the Spanish directive keeps the reason value in English", () => {
-    expect(buildPricingSystemPrompt("es")).toContain('neither is the "reason" value "needs_brand_and_size"');
+    expect(buildPricingSystemPrompt("es")).toContain('neither are the "reason" values "needs_brand_and_size" and "collectible"');
   });
 
   test("English prompt is unchanged by locale support — identical to the base prompt with no locale arg", () => {
@@ -603,5 +603,60 @@ describe("Day 4b: the tier is computed in code from the typical range", () => {
     expect(payload.assessments[0]).toMatchObject({ typicalLow: 3, typicalHigh: 5 });
     expect(payload.assessments[1].tier).toBe("competitive");
     expect(payload.assessments[1]).not.toHaveProperty("typicalLow");
+  });
+});
+
+import { detectSize, isCollectibleItem, parsePricingAssessmentResponse as parseCollectible, priceMapGeometry, priceMapSummary } from "./pricing";
+
+describe("collectible / allocated bottles are never ranked", () => {
+  test("Pappy at $1,500: 'No market data' with the suggested-retail note — even if the model sent a range", () => {
+    const raw = JSON.stringify({
+      assessments: [
+        { service: "Pappy Van Winkle 15 Year 750 ml", basis: "general_estimate", typical_low: 100, typical_high: 130, guidance: "x" },
+        { service: "Blanton's Single Barrel 750 ml", basis: "no_data", reason: "collectible", suggested_retail: 65, guidance: "x" },
+      ],
+    });
+    const items = [
+      { service: "Pappy Van Winkle 15 Year 750 ml", price: 1500 },
+      { service: "Blanton's Single Barrel 750 ml", price: 140 },
+    ];
+    const [pappy, blantons] = parseCollectible(raw, items, "en");
+    expect([pappy.tier, pappy.basis, pappy.reason]).toEqual(["no_data", "no_data", "collectible"]);
+    expect(pappy.typicalLow).toBeUndefined();
+    expect(blantons.guidance).toBe(
+      "Suggested retail is about $65, but this is an allocated/collectible bottle — real prices vary widely, so we won't rank it."
+    );
+    expect(parseCollectible(raw, items, "es")[1].guidance).toContain("botella asignada/de colección");
+  });
+
+  test("detection: allocated names yes, everyday bottles no", () => {
+    for (const n of ["Pappy Van Winkle 23", "E.H. Taylor Small Batch", "George T. Stagg", "Weller 12"]) expect(isCollectibleItem(n), n).toBe(true);
+    for (const n of ["Tito's Vodka 750 ml", "Buffalo Trace 750 ml", "Josh Cabernet"]) expect(isCollectibleItem(n), n).toBe(false);
+  });
+});
+
+describe("price map helpers", () => {
+  test("summary: '3 items · 2 competitive · 0 under market · 1 needs details'", () => {
+    const base = { price: 1, basis: "general_estimate" as const, guidance: "" };
+    const s = priceMapSummary([
+      { ...base, service: "a", tier: "competitive" },
+      { ...base, service: "b", tier: "competitive" },
+      { ...base, service: "c", tier: "no_data", basis: "no_data", reason: "needs_brand_and_size" },
+    ]);
+    expect([s.items, s.competitive, s.underMarket, s.needsDetails, s.collectible]).toEqual([3, 2, 0, 1, 0]);
+  });
+
+  test("geometry: zones in order, marker inside the typical range sits between low and high, outliers clamp", () => {
+    const g = priceMapGeometry(25, 20, 28);
+    expect(0 < g.lowAt && g.lowAt < g.upperMidAt && g.upperMidAt < g.highAt && g.highAt < 1).toBe(true);
+    expect(g.markerAt).toBeGreaterThan(g.lowAt);
+    expect(g.markerAt).toBeLessThan(g.highAt);
+    expect(priceMapGeometry(1500, 100, 130)).toMatchObject({ markerAt: 1, clamped: true });
+  });
+
+  test("size is detected from the name", () => {
+    expect(detectSize("Tito's Vodka 750 ml")).toBe("750 ml");
+    expect(detectSize("Coke 12oz")).toBe("12 oz");
+    expect(detectSize("Haircut")).toBeNull();
   });
 });

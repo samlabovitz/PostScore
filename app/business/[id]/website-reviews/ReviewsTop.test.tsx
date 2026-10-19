@@ -119,7 +119,7 @@ describe("plan tiers on the page", () => {
 
 describe("Design your review sign", () => {
   const content = { businessName: "Modern Liquors", rating: 4.5, reviewCount: 15, verifiedSocials: [{ platform: "Instagram", url: "instagram.com/modernliquors" }] };
-  function renderStudio(access: "basic" | "studio", locale: "en" | "es" = "en", over: Partial<typeof content> = {}) {
+  function renderStudio(access: "basic" | "studio", locale: "en" | "es" = "en", over: Partial<typeof content> = {}, initialTab?: string) {
     return renderToStaticMarkup(
       <LocaleProvider locale={locale} timeZone="America/New_York">
         <SignStudio
@@ -135,55 +135,63 @@ describe("Design your review sign", () => {
           onLogoFile={() => {}}
           logoNote={null}
           onClose={() => {}}
+          initialTab={initialTab}
         />
       </LocaleProvider>
     );
   }
   const radios = (html: string, name: string) => Array.from(html.matchAll(new RegExp(`<input type="radio" name="${name}"[^>]*>`, "g"))).map((m) => m[0]);
+  const lockedTabs = (html: string) => Array.from(html.matchAll(/data-tab="(\w+)" data-locked="true"/g)).map((m) => m[1]);
 
-  test("Grow gets exactly 2 options — Style (Classic, Clean) and Size (tent, full page); everything else is a locked Premium preview", () => {
-    const html = renderStudio("basic");
-    const style = radios(html, "grow-theme");
-    const size = radios(html, "grow-size");
-    expect(style.filter((r) => !r.includes("data-locked"))).toHaveLength(2);
-    expect(size.filter((r) => !r.includes("data-locked"))).toHaveLength(2);
-    expect(text(html)).toContain("Pick a style and a size. More designs come with Premium.");
-    // Every other option is behind the lock.
-    for (const name of ["layout", "qrDots", "qrCorners", "qrCenter", "border", "background", "radius", "textSize", "language"]) {
-      const group = radios(html, name);
-      expect(group.length, name).toBeGreaterThan(0);
-      expect(group.every((r) => r.includes("data-locked")), name).toBe(true);
-    }
-    expect(text(html).match(/Premium/g)!.length).toBeGreaterThanOrEqual(8);
-    // No logo upload for Grow, and no Reset (nothing to reset).
-    expect(text(html)).not.toContain("Add a logo");
-    expect(text(html)).not.toContain("Reset to default");
+  test("the same compact tabbed panel: Template · Size · Text · Colors · QR · Extras", () => {
+    const html = renderStudio("studio");
+    expect(Array.from(html.matchAll(/data-tab="(\w+)"/g)).map((m) => m[1])).toEqual(["template", "size", "text", "colors", "qr", "extras"]);
+    expect(html).not.toContain("<details");
   });
 
-  test("Premium: the full Sign Studio, preview first, all sections, no locks, Reset", () => {
+  test("Grow: only Style + Size active; the rest carry the Premium lock", () => {
+    expect(lockedTabs(renderStudio("basic"))).toEqual(["template", "text", "qr", "extras"]);
+    expect(radios(renderStudio("basic", "en", {}, "size"), "grow-size").filter((r) => !r.includes("data-locked"))).toHaveLength(2);
+    expect(radios(renderStudio("basic", "en", {}, "colors"), "grow-theme").filter((r) => !r.includes("data-locked"))).toHaveLength(2);
+    expect(radios(renderStudio("basic"), "layout").every((r) => r.includes("data-locked"))).toBe(true);
+    expect(text(renderStudio("basic"))).toContain("Pick a style and a size. More designs come with Premium.");
+    expect(text(renderStudio("basic"))).not.toContain("Reset to default");
+  });
+
+  test("Premium: preview first, no locks, Reset inside the panel", () => {
     const html = renderStudio("studio");
-    const t = text(html);
-    expect(html.indexOf('data-testid="sign-preview"')).toBeLessThan(html.indexOf("Layout"));
-    for (const s of ["Layout", "Size", "Colors", "Font", "Text", "Logo", "QR style", "Extras", "Reset to default", "Add a logo", "Download PDF", "Print", "Download QR (PNG)"]) expect(t).toContain(s);
-    for (const s of ["Centered classic", "Split", "Minimal", "Bold banner", "Framed", "4 cards per page", "Playfair Display", "DM Serif Display", "Oswald"]) expect(t).toContain(s);
+    expect(html.indexOf('data-testid="sign-preview"')).toBeLessThan(html.indexOf('data-tab="template"'));
+    expect(lockedTabs(html)).toEqual([]);
     expect(html).not.toContain("data-locked");
-    expect(html).toMatch(/<details[^>]*open=""[^>]*>\s*<summary[^>]*>[\s\S]*?Layout/);
+    for (const s of ["Centered classic", "Split", "Minimal", "Bold banner", "Framed", "Reset to default", "Download PDF", "Print", "Download QR (PNG)"]) expect(text(html)).toContain(s);
     // Follow us offers only verified profiles — a list, never a text box.
-    expect(html).toMatch(/<option value="instagram.com\/modernliquors">Instagram: instagram.com\/modernliquors<\/option>/);
+    expect(renderStudio("studio", "en", {}, "text")).toMatch(/<option value="instagram.com\/modernliquors">Instagram: instagram.com\/modernliquors<\/option>/);
   });
 
   test("Follow us explains when there's no verified profile; rating only for 4.0★+", () => {
-    expect(text(renderStudio("studio", "en", { verifiedSocials: [] }))).toContain("No verified social profiles yet");
+    expect(text(renderStudio("studio", "en", { verifiedSocials: [] }, "text"))).toContain("No verified social profiles yet");
     expect(ratingOption(content, "en")).toEqual({ allowed: true, hint: "Your real Google rating: 4.5★" });
     expect(ratingOption({ ...content, rating: 3.9 }, "en").allowed).toBe(false);
-    expect(renderStudio("studio", "en", { rating: 3.9 })).toMatch(/type="checkbox" disabled=""[^>]*\/>[\s\S]{0,200}Show star rating/);
+    expect(renderStudio("studio", "en", { rating: 3.9 }, "text")).toMatch(/type="checkbox" disabled=""[^>]*\/>[\s\S]{0,200}Show star rating/);
   });
 
   test("Spanish", () => {
     const t = text(renderStudio("studio", "es"));
     expect(t).toContain("Diseñe su cartel de reseñas");
     expect(t).toContain("Restablecer diseño");
-    expect(t).toContain("¿Le gustó su visita? ¡Déjenos una reseña!");
+    expect(t).toContain("Plantilla");
+    expect(text(renderStudio("studio", "es", {}, "text"))).toContain("¿Le gustó su visita? ¡Déjenos una reseña!");
     expect(text(renderStudio("basic", "es"))).toContain("Elija un estilo y un tamaño.");
+  });
+});
+
+describe("review sign designer: Ask PostAI", () => {
+  test("'Confused? Ask PostAI →' opens PostAI with the review-sign question", () => {
+    const html = renderToStaticMarkup(
+      <LocaleProvider locale="en" timeZone="America/New_York">
+        <SignStudio access="studio" businessId="b1" reviewUrl={URL} content={{ businessName: "M", rating: 4.5, reviewCount: 15, verifiedSocials: [] }} basic={defaultBasicChoices()} onBasicChange={() => {}} design={defaultDesign("en")} onDesignChange={() => {}} logo={null} onLogoFile={() => {}} logoNote={null} onClose={() => {}} />
+      </LocaleProvider>
+    );
+    expect(html).toMatch(/href="\/business\/b1\?ask=review_sign"[^>]*>Confused\? Ask PostAI →/);
   });
 });

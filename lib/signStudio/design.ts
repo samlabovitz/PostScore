@@ -100,9 +100,14 @@ export const FONTS: Record<FontId, { family: string; regular: string; bold: stri
 };
 export const FONT_IDS = Object.keys(FONTS) as FontId[];
 
-/** The font files a design needs: headline bold, body regular, body bold. */
-export function designFontFiles(design: Pick<SignDesign, "headlineFont" | "bodyFont">): { headline: string; body: string; bodyBold: string } {
-  return { headline: FONTS[design.headlineFont].bold, body: FONTS[design.bodyFont].regular, bodyBold: FONTS[design.bodyFont].bold };
+/** The font file for each text role of a design. */
+export function designFontFiles(design: { headlineFont: FontId; bodyFont: FontId }): Record<"headline" | "headlineRegular" | "body" | "bodyBold", string> {
+  return {
+    headline: FONTS[design.headlineFont].bold,
+    headlineRegular: FONTS[design.headlineFont].regular,
+    body: FONTS[design.bodyFont].regular,
+    bodyBold: FONTS[design.bodyFont].bold,
+  };
 }
 
 // ---- Colors ----

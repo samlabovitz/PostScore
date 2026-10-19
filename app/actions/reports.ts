@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { isMonthlyReportsLive } from "@/lib/monthlyReportsFeatureFlag";
-import { normalizeLocale } from "@/lib/i18n";
+import { calendarDaysAgo, normalizeLocale } from "@/lib/i18n";
+import { businessTimeZone } from "@/lib/businessTimeZone";
 
 /** One real saved scan, exactly what the Reports page needs to plot the
  * score-over-time chart and diff listing changes — a narrower query than
@@ -47,6 +48,8 @@ export interface MonthlyRecap {
   previous: ReportsScoreRow;
   current: ReportsScoreRow;
   scoreDelta: number;
+  /** Calendar days between the two scans in the business's time zone
+   * (Oct 16 8pm → Oct 18 1am is 2 days, not "1 day" of elapsed hours). */
   daysBetween: number;
   changes: ProfileChange[];
   /** True when either scan predates profile-snapshot tracking — `changes`
@@ -72,6 +75,12 @@ export type GetReportsDataResult =
        * count of real listing-field changes detected across this
        * business's whole scan history. */
       listingChangesDetected: number;
+      /** When the period `listingChangesDetected` covers starts — the first
+       * scan that has a listing snapshot to compare from. null when no two
+       * scans can be compared yet. */
+      listingChangesSince: string | null;
+      /** The business's own time zone — every date and day count here uses it. */
+      timeZone: string;
       /** Built from the two most recent scans, whatever the real gap
        * between them happens to be — null when there's fewer than two. */
       recap: MonthlyRecap | null;
@@ -116,7 +125,7 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
     gbpStatus,
     { data: lastReport },
   ] = await Promise.all([
-    supabase.from("businesses").select("name, monthly_report_enabled, language").eq("id", businessId).single(),
+    supabase.from("businesses").select("name, monthly_report_enabled, language, lat, lng").eq("id", businessId).single(),
     supabase
       .from("scores")
       .select("id, total, grade, created_at, profile_snapshot_json, scoring_version, breakdown_categories:breakdown_json->categories")
@@ -136,6 +145,7 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
   }
 
   const locale = normalizeLocale(business.language);
+  const timeZone = businessTimeZone(business.lat, business.lng);
 
   if (scoresError) {
     return { status: "not_found" };
@@ -157,11 +167,15 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
     };
   });
 
+  // All-time (labeled "since {first comparable scan}" on the page) — the
+  // recap's "What changed" covers only its own two scans.
   let listingChangesDetected = 0;
+  let listingChangesSince: string | null = null;
   for (let i = 1; i < history.length; i++) {
     const prev = history[i - 1].profile_snapshot_json;
     const curr = history[i].profile_snapshot_json;
     if (prev && curr) {
+      listingChangesSince ??= history[i - 1].created_at;
       listingChangesDetected += diffProfileSnapshots(prev, curr, locale).length;
     }
   }
@@ -175,9 +189,7 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
       previous,
       current,
       scoreDelta: current.total - previous.total,
-      daysBetween: Math.round(
-        (new Date(current.created_at).getTime() - new Date(previous.created_at).getTime()) / 86_400_000
-      ),
+      daysBetween: calendarDaysAgo(previous.created_at, new Date(current.created_at), timeZone),
       changes: changesAvailable
         ? diffProfileSnapshots(
             previous.profile_snapshot_json as ProfileSnapshot,
@@ -195,6 +207,8 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
     history,
     confirmedFixCount: tasksError || confirmedFixCount === null ? 0 : confirmedFixCount,
     listingChangesDetected,
+    listingChangesSince,
+    timeZone,
     recap,
     gbpConnected: gbpStatus.status === "ok" && gbpStatus.connected,
     monthlyEmailReport: {

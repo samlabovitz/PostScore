@@ -5,6 +5,7 @@ const nextConfig = {
     // sure they ship with that serverless function.
     outputFileTracingIncludes: {
       "/api/business/[id]/review-sign": ["./public/sign-fonts/**/*.ttf"],
+      "/api/business/[id]/print-card": ["./public/sign-fonts/**/*.ttf"],
     },
   },
 };

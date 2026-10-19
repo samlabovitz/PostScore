@@ -17,3 +17,9 @@ import { cancelSubscription, type CancellationFeedback } from "@/lib/subscriptio
 export async function cancelSubscriptionAction(feedback: CancellationFeedback): Promise<void> {
   await cancelSubscription(feedback);
 }
+
+/** "Cancel at period end" from Settings (no survey). Throws until a real
+ * subscription exists — Settings only shows the button for one. */
+export async function cancelAtPeriodEndAction(): Promise<void> {
+  await cancelSubscription({ reasonCode: null, detail: null, improvement: null } as CancellationFeedback);
+}

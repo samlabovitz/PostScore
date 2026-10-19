@@ -10,6 +10,7 @@ import type { BusinessSummary } from "@/app/actions/businesses";
 import { getCurrentUserEmail } from "@/app/actions/auth";
 import { rememberShellBusiness } from "@/components/layout/shellMemory";
 import { LocaleProvider, normalizeLocale, t } from "@/lib/i18n";
+import { LegalLinks } from "@/components/legal/LegalPage";
 
 export function DashboardShell({
   business = null,
@@ -109,7 +110,12 @@ export function DashboardShell({
           onClose={() => setNavOpen(false)}
         />
 
-        <main className="min-w-0 p-4 sm:p-8 nav:ml-[250px] nav:p-10">{children}</main>
+        <main className="min-w-0 p-4 sm:p-8 nav:ml-[250px] nav:p-10">
+          {children}
+          <footer className="mt-12 border-t border-paper-line pt-4">
+            <LegalLinks locale={locale === "es" ? "es" : "en"} />
+          </footer>
+        </main>
 
         {/* Dev-only proof-of-wiring — never rendered in production. The
             data-locale attribute above on the root div is the real,

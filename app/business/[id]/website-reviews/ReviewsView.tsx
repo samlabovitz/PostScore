@@ -18,7 +18,8 @@ import {
 } from "@/lib/reviews";
 import { GetMoreReviews } from "./GetMoreReviews";
 import type { ReviewsPageData } from "@/app/actions/reviews";
-import { PLANS, type Plan } from "@/lib/plan";
+import type { Plan } from "@/lib/plan";
+import { DevPlanSwitch } from "@/components/studio/DevPlanSwitch";
 import { formatCount, t, useLocale } from "@/lib/i18n";
 import { useScrollToHash } from "@/lib/useScrollToHash";
 
@@ -135,27 +136,6 @@ function ComingSoonCard({
   );
 }
 
-/** Local dev only: switch this browser's plan to check each tier. */
-function DevPlanSwitch({ businessId, plan }: { businessId: string; plan: Plan }) {
-  const locale = useLocale();
-  const back = `/business/${businessId}/website-reviews`;
-  return (
-    <div data-testid="dev-plan-switch" className="flex flex-wrap items-center gap-1.5 rounded-lg border border-dashed border-ink-mute px-3 py-2 text-[12px] text-ink-soft">
-      <span>{t(locale, "dashboard.websiteReviews.devPlan.label")}</span>
-      {PLANS.map((p) => (
-        <a
-          key={p}
-          href={`/api/dev/plan?plan=${p}&back=${encodeURIComponent(back)}`}
-          aria-current={p === plan ? "true" : undefined}
-          className={p === plan ? "rounded-full bg-ink px-2 py-0.5 font-semibold text-white" : "rounded-full px-2 py-0.5 underline hover:text-ink"}
-        >
-          {p.charAt(0).toUpperCase() + p.slice(1)}
-        </a>
-      ))}
-    </div>
-  );
-}
-
 export function ReviewsView({
   businessId,
   reviews,
@@ -190,7 +170,7 @@ export function ReviewsView({
         <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.websiteReviews.subtitle")}</p>
       </div>
 
-      {devPlanSwitch && <DevPlanSwitch businessId={businessId} plan={plan} />}
+      {devPlanSwitch && <DevPlanSwitch plan={plan} backPath={`/business/${businessId}/website-reviews`} />}
 
       <div id="get-more-reviews" className="scroll-mt-20">
         <GetMoreReviews

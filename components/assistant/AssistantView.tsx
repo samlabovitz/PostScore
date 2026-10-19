@@ -189,10 +189,13 @@ export function AssistantView({
   context,
   starterPrompts,
   onNavigate,
+  initialDraft,
 }: {
   businessId: string;
   businessName: string | null;
   context: AssistantBusinessContext;
+  /** Typed into the box when the chat opens (an allowlisted question). */
+  initialDraft?: string;
   starterPrompts: string[];
   /** Called when the owner follows a link in a reply (closes the overlay). */
   onNavigate?: () => void;
@@ -207,7 +210,7 @@ export function AssistantView({
   };
   const [messages, setMessages] = useState<AssistantMessageRow[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(initialDraft ?? "");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resuming, setResuming] = useState(true);

@@ -18,6 +18,17 @@ export function weightedCategoryPoints(category: Pick<CategoryResult, "relativeS
   return Math.round(((category.relativeScore * category.weight) / 100) * 10) / 10;
 }
 
+/** Shares of the category's full points (every check's max): earned,
+ * missing, and couldn't-check (only when some points couldn't be checked).
+ * Exported for tests. */
+export function categoryBarShares(category: Pick<CategoryResult, "checks" | "earnedPoints" | "possiblePoints">) {
+  const max = category.checks.reduce((sum, c) => sum + c.maxPoints, 0);
+  if (max <= 0) return { earned: 0, missing: 0, unchecked: 0 };
+  const earned = Math.max(0, Math.min(1, category.earnedPoints / max));
+  const unchecked = Math.max(0, Math.min(1 - earned, (max - category.possiblePoints) / max));
+  return { earned, missing: Math.max(0, 1 - earned - unchecked), unchecked };
+}
+
 /** Done / needs work / couldn't check, per the same rule the check rows use. */
 export function categoryOutcomeCounts(category: Pick<CategoryResult, "checks">): { done: number; needsWork: number; couldntCheck: number } {
   let done = 0;

@@ -1,78 +1,34 @@
 "use client";
 
 import { useState } from "react";
-import { IconChevronDown, IconDownload, IconGift, IconRefresh, IconRocket } from "@tabler/icons-react";
+import { IconChevronDown, IconGift, IconRefresh, IconRocket, IconShare2 } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { generateCouponCode } from "@/lib/coupons";
-import { downloadDataUrl } from "@/lib/couponImage";
-import { renderReferralPng } from "@/lib/referralImage";
+import type { Plan } from "@/lib/plan";
+import { EXAMPLES, needsFilling, type CardBusiness, type PassOn } from "@/lib/printStudio/design";
+import { ShareModal } from "./ShareModal";
+import { CardDesigner } from "./CardDesigner";
 import type { BizProfile } from "@/config/bizProfiles";
 import type { StartReferralInput, StartReferralResult } from "@/app/actions/referrals";
 import { t, useLocale } from "@/lib/i18n";
 
-function ReferralPreview({
-  businessName,
-  referrerReward,
-  friendReward,
-  code,
-}: {
-  businessName: string;
-  referrerReward: string;
-  friendReward: string;
-  code: string;
-}) {
-  const locale = useLocale();
-  return (
-    <Card className="overflow-hidden p-0">
-      <div className="bg-ink px-5 py-3.5">
-        <div className="truncate text-[15px] font-bold text-white">{businessName}</div>
-        <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-brass">
-          {t(locale, "dashboard.growth.referral.previewBadge")}
-        </div>
-      </div>
-      <div className="flex flex-col gap-3 p-5">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="rounded-lg border border-paper-deep bg-paper p-3">
-            <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-ink-mute">
-              {t(locale, "dashboard.growth.referral.previewForYou")}
-            </div>
-            <div className="mt-1 font-serif text-lg font-bold leading-snug text-ink">
-              {referrerReward.trim() || t(locale, "dashboard.growth.referral.previewYourRewardPlaceholder")}
-            </div>
-          </div>
-          <div className="rounded-lg border border-paper-deep bg-paper p-3">
-            <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-ink-mute">
-              {t(locale, "dashboard.growth.referral.previewForFriend")}
-            </div>
-            <div className="mt-1 font-serif text-lg font-bold leading-snug text-ink">
-              {friendReward.trim() || t(locale, "dashboard.growth.referral.previewTheirRewardPlaceholder")}
-            </div>
-          </div>
-        </div>
-        <div className="mt-1 flex w-fit flex-col items-start gap-0.5 rounded-lg border border-brass/40 bg-brass/5 px-3 py-1.5">
-          <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-brass">
-            {t(locale, "dashboard.growth.referral.referralCodeLabel")}
-          </span>
-          <span className="font-mono text-sm font-bold text-ink">{code}</span>
-        </div>
-        <p className="text-[11px] text-ink-mute">
-          {t(locale, "dashboard.growth.referral.previewGiveCodeNote")}
-        </p>
-      </div>
-    </Card>
-  );
-}
-
 export function ReferralBuilder({
+  businessId,
   businessName,
+  passOn,
   profile,
   activeCount,
   maxActive,
   onStart,
+  plan,
+  printBusiness,
 }: {
+  businessId: string;
   businessName: string;
+  /** How customers pass it on (decides the card layout). */
+  passOn: PassOn;
   profile: BizProfile;
   /** Whether a referral program is already active for this business —
    * drives the "Start & track this referral" disabled state and copy.
@@ -81,22 +37,26 @@ export function ReferralBuilder({
   activeCount: number;
   maxActive: number;
   onStart: (input: StartReferralInput) => Promise<StartReferralResult>;
+  /** The account's plan — gates printing (lib/premium.ts getPlan()). */
+  plan: Plan;
+  /** What a printed card may show (the business's own facts). */
+  printBusiness: CardBusiness;
 }) {
   const locale = useLocale();
-  const firstPreset = profile.referralPresets[0];
-  const [referrerReward, setReferrerReward] = useState(() => firstPreset?.referrerReward ?? "");
-  const [friendReward, setFriendReward] = useState(() => firstPreset?.friendReward ?? "");
+  const lang = locale === "es" ? "es" : "en";
+  // Examples the owner must make their own — PostScore never picks an
+  // amount. (Quick picks below are the owner's own choice.)
+  const [referrerReward, setReferrerReward] = useState<string>(() => EXAMPLES.referrerReward[lang]);
+  const [friendReward, setFriendReward] = useState<string>(() => EXAMPLES.friendOffer[lang]);
   const [code, setCode] = useState(() => generateCouponCode());
   const [moreOpen, setMoreOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
-  const [downloadState, setDownloadState] = useState<
-    { kind: "idle" } | { kind: "working" } | { kind: "error"; message: string }
-  >({ kind: "idle" });
   const [startState, setStartState] = useState<
     { kind: "idle" } | { kind: "working" } | { kind: "success" } | { kind: "error"; message: string }
   >({ kind: "idle" });
 
-  const hasRequiredFields = referrerReward.trim().length > 0 && friendReward.trim().length > 0;
+  const hasRequiredFields = !needsFilling(referrerReward) && !needsFilling(friendReward);
   const atLimit = activeCount >= maxActive;
   const canStart = hasRequiredFields && !atLimit && startState.kind !== "working";
 
@@ -123,25 +83,6 @@ export function ReferralBuilder({
     }
   }
 
-  async function handleDownload() {
-    setDownloadState({ kind: "working" });
-    try {
-      const png = await renderReferralPng({
-        businessName,
-        referrerReward: referrerReward.trim(),
-        friendReward: friendReward.trim(),
-        code,
-      });
-      downloadDataUrl(png, `${code}-referral.png`);
-      setDownloadState({ kind: "idle" });
-    } catch (err) {
-      setDownloadState({
-        kind: "error",
-        message: err instanceof Error ? err.message : t(locale, "dashboard.growth.referral.downloadErrorFallback"),
-      });
-    }
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -164,9 +105,7 @@ export function ReferralBuilder({
             <Card key={preset.id} className="flex flex-col gap-3 p-4">
               <div className="flex flex-col gap-1 text-[13px]">
                 <div>
-                  <span className="font-semibold text-ink">
-                    {t(locale, "dashboard.growth.referral.presetYouGet")}
-                  </span>
+                  <span className="font-semibold text-ink">{t(locale, "dashboard.growth.referral.presetYouGet")}</span>
                   <span className="text-ink-soft">{preset.referrerReward}</span>
                 </div>
                 <div>
@@ -193,124 +132,125 @@ export function ReferralBuilder({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 nav:grid-cols-2">
-        <Card className="flex flex-col gap-4 p-5">
-          <div>
-            <label className="mb-1 block text-[13px] font-medium text-ink-soft">
-              {t(locale, "dashboard.growth.referral.referrerRewardLabel")} <span className="text-red">*</span>
-            </label>
-            <input
-              type="text"
-              value={referrerReward}
-              onChange={(e) => setReferrerReward(e.target.value)}
-              placeholder={t(locale, "dashboard.growth.referral.referrerRewardPlaceholder")}
-              className="w-full rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-[13px] font-medium text-ink-soft">
-              {t(locale, "dashboard.growth.referral.friendRewardLabel")} <span className="text-red">*</span>
-            </label>
-            <input
-              type="text"
-              value={friendReward}
-              onChange={(e) => setFriendReward(e.target.value)}
-              placeholder={t(locale, "dashboard.growth.referral.friendRewardPlaceholder")}
-              className="w-full rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft"
-            />
-          </div>
-
-          <div>
-            <button
-              type="button"
-              onClick={() => setMoreOpen((o) => !o)}
-              className="flex items-center gap-1 text-[12.5px] font-medium text-brass hover:underline"
-            >
-              {t(locale, "dashboard.growth.referral.moreOptions")}
-              <IconChevronDown
-                size={13}
-                className={cn("transition-transform", moreOpen && "rotate-180")}
+      <CardDesigner
+        kind="referral"
+        plan={plan}
+        businessId={businessId}
+        business={printBusiness}
+        text={{
+          offer: "",
+          friendOffer: friendReward,
+          referrerReward,
+          expiration: "",
+          code,
+          subline: "",
+          finePrint: "",
+        }}
+        fields={
+          <>
+            <div>
+              <label className="mb-1 block text-[13px] font-medium text-ink-soft">
+                {t(locale, "dashboard.growth.referral.referrerRewardLabel")} <span className="text-red">*</span>
+              </label>
+              <input
+                type="text"
+                value={referrerReward}
+                onChange={(e) => setReferrerReward(e.target.value)}
+                placeholder={t(locale, "dashboard.growth.referral.referrerRewardPlaceholder")}
+                className="w-full rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft"
               />
-            </button>
+            </div>
 
-            {moreOpen && (
-              <div className="mt-3 flex flex-col gap-4 border-t border-paper-line pt-4">
-                <div>
-                  <label className="mb-1 block text-[13px] font-medium text-ink-soft">
-                    {t(locale, "dashboard.growth.referral.referralCodeLabel")}
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={code}
-                      onChange={(e) => setCode(e.target.value.toUpperCase())}
-                      className="w-full rounded-lg border border-paper-deep bg-white px-3 py-2 font-mono text-sm text-ink outline-none focus:border-ink-soft"
-                    />
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="sm"
-                      onClick={() => setCode(generateCouponCode())}
-                      aria-label={t(locale, "dashboard.growth.referral.generateNewCodeAriaLabel")}
-                    >
-                      <IconRefresh size={14} />
-                    </Button>
+            <div>
+              <label className="mb-1 block text-[13px] font-medium text-ink-soft">
+                {t(locale, "dashboard.growth.referral.friendRewardLabel")} <span className="text-red">*</span>
+              </label>
+              <input
+                type="text"
+                value={friendReward}
+                onChange={(e) => setFriendReward(e.target.value)}
+                placeholder={t(locale, "dashboard.growth.referral.friendRewardPlaceholder")}
+                className="w-full rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft"
+              />
+            </div>
+
+            <div>
+              <button
+                type="button"
+                onClick={() => setMoreOpen((o) => !o)}
+                className="flex items-center gap-1 text-[12.5px] font-medium text-brass hover:underline"
+              >
+                {t(locale, "dashboard.growth.referral.moreOptions")}
+                <IconChevronDown size={13} className={cn("transition-transform", moreOpen && "rotate-180")} />
+              </button>
+
+              {moreOpen && (
+                <div className="mt-3 flex flex-col gap-4 border-t border-paper-line pt-4">
+                  <div>
+                    <label className="mb-1 block text-[13px] font-medium text-ink-soft">
+                      {t(locale, "dashboard.growth.referral.referralCodeLabel")}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={code}
+                        onChange={(e) => setCode(e.target.value.toUpperCase())}
+                        className="w-full rounded-lg border border-paper-deep bg-white px-3 py-2 font-mono text-sm text-ink outline-none focus:border-ink-soft"
+                      />
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        onClick={() => setCode(generateCouponCode())}
+                        aria-label={t(locale, "dashboard.growth.referral.generateNewCodeAriaLabel")}
+                      >
+                        <IconRefresh size={14} />
+                      </Button>
+                    </div>
+                    <p className="mt-1 text-[12px] text-ink-mute">
+                      {t(locale, "dashboard.growth.referral.codeAutoGeneratedNote")}
+                    </p>
                   </div>
-                  <p className="mt-1 text-[12px] text-ink-mute">
-                    {t(locale, "dashboard.growth.referral.codeAutoGeneratedNote")}
-                  </p>
                 </div>
+              )}
+            </div>
+          </>
+        }
+        actions={
+          <>
+            {passOn === "digital" && (
+              <div className="flex flex-col gap-1">
+                <Button variant="default" onClick={() => setShareOpen(true)} disabled={!hasRequiredFields} className="w-fit">
+                  <IconShare2 size={16} />
+                  {t(locale, "dashboard.growth.referral.share")}
+                </Button>
+                <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.growth.referral.shareHint")}</p>
               </div>
             )}
-          </div>
-        </Card>
-
-        <div className="flex flex-col gap-3">
-          <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-            {t(locale, "dashboard.growth.referral.livePreview")}
-          </div>
-          <ReferralPreview
-            businessName={businessName}
-            referrerReward={referrerReward}
-            friendReward={friendReward}
-            code={code}
-          />
-
-          <Button
-            variant="brass"
-            onClick={handleDownload}
-            disabled={!hasRequiredFields || downloadState.kind === "working"}
-          >
-            <IconDownload size={16} />
-            {downloadState.kind === "working"
-              ? t(locale, "dashboard.growth.referral.downloadGenerating")
-              : t(locale, "dashboard.growth.referral.downloadImage")}
-          </Button>
-          {!hasRequiredFields && (
-            <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.growth.referral.downloadHint")}</p>
-          )}
-          {downloadState.kind === "error" && (
-            <p className="text-[12px] text-red">{downloadState.message}</p>
-          )}
-
-          <Button variant="brass" onClick={handleStart} disabled={!canStart}>
-            <IconRocket size={16} />
-            {startState.kind === "working"
-              ? t(locale, "dashboard.growth.referral.starting")
-              : t(locale, "dashboard.growth.referral.startAndTrack")}
-          </Button>
-          {atLimit ? (
-            <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.growth.referral.atLimitMessage")}</p>
-          ) : startState.kind === "success" ? (
-            <p className="text-[12px] text-green">{t(locale, "dashboard.growth.referral.startSuccess")}</p>
-          ) : startState.kind === "error" ? (
-            <p className="text-[12px] text-red">{startState.message}</p>
-          ) : null}
-
-          <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.growth.referral.disclaimer")}</p>
-        </div>
-      </div>
+            <Button variant="brass" onClick={handleStart} disabled={!canStart}>
+              <IconRocket size={16} />
+              {startState.kind === "working"
+                ? t(locale, "dashboard.growth.referral.starting")
+                : t(locale, "dashboard.growth.referral.startAndTrack")}
+            </Button>
+            <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.growth.referral.startExplain")}</p>
+            {atLimit ? (
+              <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.growth.referral.atLimitMessage")}</p>
+            ) : startState.kind === "success" ? (
+              <p className="text-[12px] text-green">{t(locale, "dashboard.growth.referral.startSuccess")}</p>
+            ) : startState.kind === "error" ? (
+              <p className="text-[12px] text-red">{startState.message}</p>
+            ) : null}
+            <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.growth.referral.disclaimer")}</p>
+          </>
+        }
+      />
+      <ShareModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        title={t(locale, "dashboard.growth.referral.shareModalTitle")}
+        caption={t(locale, "dashboard.growth.referral.shareCaption", { business: businessName, friendReward: friendReward.trim(), code })}
+      />
     </div>
   );
 }

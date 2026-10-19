@@ -1,5 +1,5 @@
 // A real browser file download for generated text content (unlike the
-// image downloads in lib/couponImage.ts, this isn't a data: URL — the
+// image downloads in lib/download.ts, this isn't a data: URL — the
 // starter site's HTML can be large enough that a Blob + object URL is
 // the more robust choice). Browser-only, "use client" callers only.
 

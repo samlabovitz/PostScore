@@ -1400,9 +1400,10 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
     expect(ASSISTANT_SYSTEM_RULES).toContain("app/business/[id]/website-reviews/GetMoreReviews.tsx");
     expect(ASSISTANT_SYSTEM_RULES).toContain("app/actions/pricing.ts");
     expect(ASSISTANT_SYSTEM_RULES).toContain('manually taps "+1 Redeemed"');
-    expect(ASSISTANT_SYSTEM_RULES).toContain("no working redeem page behind it");
+    expect(ASSISTANT_SYSTEM_RULES).toContain('there is no "redeem" page');
     expect(ASSISTANT_SYSTEM_RULES).toContain("there is no POS, booking, or automatic detection of any redemption");
-    expect(ASSISTANT_SYSTEM_RULES).toContain("There is no trackable link or QR code for referrals at all");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("nothing that tracks a referral");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("never by the PostStudio add-on");
     expect(ASSISTANT_SYSTEM_RULES).toContain("PostScore has no analytics here at all");
     expect(ASSISTANT_SYSTEM_RULES).toContain("never describe any of these four tools doing anything beyond what's stated here");
   });

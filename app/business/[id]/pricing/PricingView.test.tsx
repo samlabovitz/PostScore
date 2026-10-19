@@ -70,3 +70,71 @@ describe("Day 4b: size and the typical range on the Pricing page", () => {
     expect(html).not.toContain("Size (optional)");
   });
 });
+
+describe("Price map and the cleaned-up layout", () => {
+  const LIQUOR: StoredPricingAssessment = {
+    assessments: [
+      { service: "Tito's Vodka", price: 24, size: "750 ml", tier: "upper_mid", basis: "general_estimate", guidance: "g1", typicalLow: 20, typicalHigh: 28 },
+      { service: "Josh Cabernet", price: 15, size: "750 ml", tier: "competitive", basis: "general_estimate", guidance: "g2", typicalLow: 13, typicalHigh: 20 },
+      { service: "Bottle of Wine", price: 12, tier: "no_data", basis: "no_data", guidance: "g3", reason: "needs_brand_and_size" },
+      { service: "Pappy Van Winkle 15", price: 1500, tier: "no_data", basis: "no_data", guidance: "g4", reason: "collectible", suggestedRetail: 120 },
+    ],
+    priceLevelContext: { subjectSymbol: null, competitors: [{ name: "Corner Wine", symbol: null, distanceMeters: 300 }] },
+    locale: "en",
+    assessedAt: "2026-10-16T12:00:00Z",
+  };
+  const view = (assessment: StoredPricingAssessment | null, locale: "en" | "es" = "en") =>
+    renderToStaticMarkup(
+      <LocaleProvider locale={locale}>
+        <PricingView businessId="b" businessName="Modern Liquors" profile={bizProfileById("liquor_store", locale)!} initialPrices={PRICES} initialAssessment={assessment} />
+      </LocaleProvider>
+    );
+
+  test("summary strip, a bar with a brass marker per ranked item, grey rows for the rest", () => {
+    const html = view(LIQUOR);
+    expect(html).toMatch(/data-testid="price-summary"[^>]*>4 items · 1 competitive · 0 under market · 1 upper-mid · 1 needs details · 1 collectible</);
+    expect(html.match(/data-testid="price-map-row"/g)).toHaveLength(2);
+    expect(html.match(/data-zone="/g)).toHaveLength(8);
+    expect(html).toContain('aria-label="Your price $24 · typical ~$20–$28"');
+    expect(html).toMatch(/data-testid="price-map-empty"[\s\S]*?Add brand \+ size/);
+    expect(html).toContain("Collectible — not ranked");
+    // The map sits above the one-line assessments.
+    expect(html.indexOf('data-testid="price-map"')).toBeLessThan(html.indexOf('data-testid="assessment-list"'));
+  });
+
+  test("assessments collapse to one line with an expandable 'Why'; the legend is small with ⓘ", () => {
+    const html = view(LIQUOR);
+    expect(html.match(/<details class="group rounded-lg border-l-4/g)).toHaveLength(4);
+    expect(html).toContain(">Why<");
+    expect(html).toContain('data-testid="price-legend"');
+    expect(html).toContain("What these mean");
+    expect(html).not.toContain("What the rankings mean");
+  });
+
+  test("no one has a Google price level → one line instead of a grid of dashes", () => {
+    const html = view(LIQUOR);
+    expect(html).toContain("Google doesn&#x27;t list price levels for nearby liquor stores yet.");
+    expect(html).not.toContain("Real Google price-level context");
+  });
+
+  test("the button, the empty state and the footnote say the same thing", () => {
+    const before = view(null);
+    expect(before.match(/Assess my pricing/g)!.length).toBe(3);
+    expect(before).not.toContain("Re-assess");
+    const after = view(LIQUOR);
+    expect(after).toContain("&quot;Re-assess my pricing&quot; above");
+    expect(after).not.toMatch(/[^-]Assess my pricing/);
+  });
+
+  test("liquor: the state-rules caveat leads the tips", () => {
+    const html = view(LIQUOR);
+    expect(html).toContain("Alcohol pricing rules (minimum pricing, case discounts, below-cost sales) vary by state — check yours.");
+  });
+
+  test("Spanish", () => {
+    const html = view(LIQUOR, "es");
+    expect(html).toContain("4 artículos · 1 competitivos");
+    expect(html).toContain("Agregue marca + tamaño");
+    expect(html).toContain("Por qué");
+  });
+});

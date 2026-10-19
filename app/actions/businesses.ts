@@ -908,3 +908,22 @@ const getBusinessSummaryCached = requestCache(getBusinessSummaryUncached);
 export async function getBusinessSummary(...args: Parameters<typeof getBusinessSummaryUncached>): Promise<Awaited<ReturnType<typeof getBusinessSummaryUncached>>> {
   return getBusinessSummaryCached(...args);
 }
+
+export type UnsubscribeAllResult = { status: "ok"; count: number } | { status: "unauthenticated" } | { status: "error"; message: string };
+
+/**
+ * "Unsubscribe from all PostScore emails": turns the monthly report off
+ * for every business this owner has (the only email PostScore sends —
+ * account emails like password resets are separate and only go out when
+ * asked for). Owner-scoped by RLS; sends nothing.
+ */
+export async function unsubscribeFromAllEmails(): Promise<UnsubscribeAllResult> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { status: "unauthenticated" };
+  const { data, error } = await supabase.from("businesses").update({ monthly_report_enabled: false }).eq("owner_id", user.id).select("id");
+  if (error) return { status: "error", message: error.message };
+  return { status: "ok", count: data?.length ?? 0 };
+}

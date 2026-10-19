@@ -37,7 +37,7 @@ const REVIEWS = task({
 });
 const MOVE: GrowthMove = { id: "start_coupon", title: "Start a coupon", meta: null, why: "Brings people back.", howTo: "Pick an offer.", href: "/business/b1/growth?tab=coupons", signal: "x" };
 
-function render(over: { gbpConnected?: boolean; locale?: "en" | "es" } = {}) {
+function render(over: { gbpConnected?: boolean; locale?: "en" | "es"; devPlanSwitch?: boolean } = {}) {
   return renderToStaticMarkup(
     <LocaleProvider locale={over.locale ?? "en"} timeZone="America/New_York">
       <GrowthView
@@ -51,6 +51,8 @@ function render(over: { gbpConnected?: boolean; locale?: "en" | "es" } = {}) {
         initialReferral={null}
         lastScanAt="2026-10-16T13:00:00Z"
         gbpConnected={over.gbpConnected ?? false}
+        devPlanSwitch={over.devPlanSwitch ?? false}
+        plan="grow"
         linkOptions={{ referralOk: true, couponsOk: true, pricingOk: true }}
         actionPlan={{
           tasks: [REVIEWS, task({})],
@@ -63,7 +65,7 @@ function render(over: { gbpConnected?: boolean; locale?: "en" | "es" } = {}) {
           websiteBanner: { kind: "improve", score: 72, improvements: 3, points: 4.1 } as never,
         }}
         growthMoves={[MOVE]}
-        weeklyChecklist={{ items: buildWeeklyChecklistItems(over.locale ?? "en"), checkedItemIds: ["post_update", "reply_reviews"], streakWeeks: 0 }}
+        weeklyChecklist={{ items: buildWeeklyChecklistItems(over.locale ?? "en"), checkedItemIds: ["post_update", "reply_reviews"], streakWeeks: 0, weekStart: "2026-10-12" }}
       />
     </LocaleProvider>
   ).replace(/&#x27;/g, "'");
@@ -138,5 +140,13 @@ describe("Growth → Action plan makeover", () => {
     expect(taskPointsLabel(task({ weightedPoints: 1.5 }), "weekly", "en")).toBe("Up to +2 pts");
     expect(taskPointsLabel(task({ weightedPoints: 1.4, effort: "quick_win_action" }), "weekly", "en")).toBe("About +1 pts this week");
     expect(taskPointsLabel(task({ weightedPoints: 29.2, weightedPointsHigh: 31.4 }), "weekly", "en")).toContain("+29–31");
+  });
+
+  test("the dev-only plan switch shows only when the page asks for it (local dev), and returns to Growth", () => {
+    expect(render()).not.toContain("dev-plan-switch");
+    const html = render({ devPlanSwitch: true });
+    expect(html).toContain("dev-plan-switch");
+    expect(html).toContain("/api/dev/plan?plan=premium&amp;back=%2Fbusiness%2Fb1%2Fgrowth");
+    expect(html).toMatch(/aria-current="true"[^>]*>Grow</);
   });
 });

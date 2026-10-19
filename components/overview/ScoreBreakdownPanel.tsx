@@ -15,7 +15,7 @@ import { IconArrowRight, IconChevronDown } from "@tabler/icons-react";
 import { CategoryCard, checkOutcome, formatPoints } from "@/components/scoring/CategoryCard";
 import { WebsiteCoverageNote } from "@/components/scoring/WebsiteCoverageNote";
 import { ANCHOR_HIGHLIGHT_EVENT, anchorScrollBehavior } from "@/components/layout/AnchorHighlight";
-import { categoryOutcomeCounts, postaiTargetForCheck, weightedCategoryPoints } from "@/lib/overviewTiles";
+import { categoryBarShares, categoryOutcomeCounts, postaiTargetForCheck, weightedCategoryPoints } from "@/lib/overviewTiles";
 import { checkAnchorId, resolveLinkTarget, type LinkOptions } from "@/lib/postaiLinks";
 import { isMinorSpeedGap, type CategoryResult } from "@/lib/scoring";
 import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
@@ -39,16 +39,9 @@ export function breakdownFixLinks(categories: CategoryResult[], businessId: stri
   return links;
 }
 
-/** Shares of the category's full points (every check's max): earned,
- * missing, and couldn't-check (only when some points couldn't be checked).
- * Exported for tests. */
-export function categoryBarShares(category: Pick<CategoryResult, "checks" | "earnedPoints" | "possiblePoints">) {
-  const max = category.checks.reduce((sum, c) => sum + c.maxPoints, 0);
-  if (max <= 0) return { earned: 0, missing: 0, unchecked: 0 };
-  const earned = Math.max(0, Math.min(1, category.earnedPoints / max));
-  const unchecked = Math.max(0, Math.min(1 - earned, (max - category.possiblePoints) / max));
-  return { earned, missing: Math.max(0, 1 - earned - unchecked), unchecked };
-}
+// categoryBarShares moved to lib/overviewTiles.ts (the PDF report uses it
+// on the server); re-exported here for existing imports.
+export { categoryBarShares } from "@/lib/overviewTiles";
 
 /** One rounded bar: solid brass (earned), cream track (missing), and a
  * short hatched end only when some points couldn't be checked. Fills

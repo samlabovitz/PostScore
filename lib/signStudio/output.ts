@@ -1,15 +1,16 @@
-// Browser only: the sign's outputs. The PDF always comes from the server
-// (which re-checks the plan); the owner's logo is then drawn into the
-// spots the server left for it, here on the device — the logo is never
-// uploaded. Also: print (the same PDF) and the plain QR PNG.
+// Browser only: printout outputs (review sign, coupon / referral cards).
+// The PDF always comes from the server (which re-checks the plan); the
+// owner's logo is then drawn into the spots the server left for it, here
+// on the device — the logo is never uploaded. Also: print (the same
+// PDF), a single card as PNG, and the plain QR PNG.
 
-import { downloadDataUrl } from "@/lib/couponImage";
+import { downloadDataUrl } from "@/lib/download";
 import { qrPngDataUrl, reviewQrGeometry, DEFAULT_QR_STYLE } from "@/lib/reviewQr";
 import type { StoredLogo } from "@/lib/signStudio/design";
 import type { LogoSlot } from "@/lib/signStudio/pdf";
 
 export class SignRequestError extends Error {
-  constructor(readonly reason: "plan_required" | "low_contrast" | "no_place_id" | "failed") {
+  constructor(readonly reason: string) {
     super(reason);
   }
 }
@@ -40,8 +41,8 @@ async function stampLogo(pdf: Uint8Array, slots: LogoSlot[], logo: StoredLogo): 
   const doc = await PDFDocument.load(pdf);
   const { bytes, png } = await logoImage(logo);
   const image = png ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
-  const page = doc.getPage(0);
   for (const s of slots) {
+    const page = doc.getPage(s.page ?? 0);
     // Fit inside the slot, keeping the logo's shape.
     const scale = Math.min(s.w / image.width, s.h / image.height);
     const w = image.width * scale;
@@ -54,16 +55,17 @@ async function stampLogo(pdf: Uint8Array, slots: LogoSlot[], logo: StoredLogo): 
   return doc.save();
 }
 
-/** The sign PDF for `design` from the server, with the logo drawn in. */
-export async function fetchSignPdf(businessId: string, design: unknown, logo: StoredLogo | null): Promise<Uint8Array> {
-  const res = await fetch(`/api/business/${encodeURIComponent(businessId)}/review-sign`, {
+/** A printout PDF from the server (`endpoint` re-checks the plan), with
+ * the logo drawn in. Errors carry the server's reason. */
+export async function fetchPrintPdf(endpoint: string, body: Record<string, unknown>, logo: StoredLogo | null): Promise<Uint8Array> {
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ design, logo: logo ? { aspect: logo.width / logo.height } : null }),
+    body: JSON.stringify({ ...body, logo: logo ? { aspect: logo.width / logo.height } : null }),
   });
   if (!res.ok) {
     const reason = ((await res.json().catch(() => null)) as { error?: string } | null)?.error;
-    throw new SignRequestError(reason === "plan_required" || reason === "low_contrast" || reason === "no_place_id" ? reason : "failed");
+    throw new SignRequestError(reason ?? "failed");
   }
   const bytes = new Uint8Array(await res.arrayBuffer());
   let slots: LogoSlot[] = [];
@@ -74,6 +76,41 @@ export async function fetchSignPdf(businessId: string, design: unknown, logo: St
   }
   return logo && slots.length > 0 ? stampLogo(bytes, slots, logo) : bytes;
 }
+
+/** The review sign PDF for `design`, with the logo drawn in. */
+export function fetchSignPdf(businessId: string, design: unknown, logo: StoredLogo | null): Promise<Uint8Array> {
+  return fetchPrintPdf(`/api/business/${encodeURIComponent(businessId)}/review-sign`, { design }, logo);
+}
+
+/** Draws a standalone SVG (fonts and images embedded) into a PNG. */
+export async function svgToPng(svg: string, width: number, height: number): Promise<string> {
+  const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+  try {
+    const img = new Image();
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("Could not draw the card."));
+      img.src = url;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(width);
+    canvas.height = Math.round(height);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas is not available.");
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/png");
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+export function bytesToBase64(bytes: Uint8Array): string {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...Array.from(bytes.subarray(i, i + 0x8000)));
+  return btoa(s);
+}
+
+export { downloadDataUrl };
 
 function pdfUrl(bytes: Uint8Array): string {
   return URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
@@ -90,10 +127,58 @@ export function downloadPdf(bytes: Uint8Array, fileName: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-/** Opens the print dialog with exactly that PDF (a hidden frame; a new
- * tab where the browser won't print from a frame). */
-export function printPdf(bytes: Uint8Array): void {
+export type PrintMode = "frame" | "tab";
+
+/** How to print a PDF in this browser. Chromium (Chrome, Edge, Brave,
+ * Opera on desktop/Android) prints a PDF loaded in a hidden frame. Safari,
+ * Firefox and every iOS browser print a frame's empty page instead (the
+ * "2 blank pages" bug), so they get the PDF in a new tab to print from.
+ * Pure — exported for tests. */
+export function printModeFor(userAgent: string): PrintMode {
+  const ios = /iPhone|iPad|iPod/.test(userAgent) || /CriOS|FxiOS|EdgiOS|OPiOS/.test(userAgent);
+  const chromium = /(Chrome|Chromium|Edg|OPR)\//.test(userAgent) && !/Firefox\//.test(userAgent);
+  return chromium && !ios ? "frame" : "tab";
+}
+
+export interface PrintJob {
+  mode: PrintMode;
+  /** The tab opened at the click (tab mode); null if a pop-up blocker refused it. */
+  tab: Window | null;
+}
+
+/** Call synchronously in the click handler — BEFORE awaiting the PDF —
+ * so the browser allows the new tab (tab mode). */
+export function startPrint(preparingText: string): PrintJob {
+  const mode = printModeFor(navigator.userAgent);
+  if (mode === "frame") return { mode, tab: null };
+  const tab = window.open("", "_blank");
+  try {
+    if (tab) {
+      tab.document.title = preparingText;
+      tab.document.body.style.cssText = "font:15px -apple-system,system-ui,sans-serif;color:#14243f;padding:24px";
+      tab.document.body.textContent = preparingText;
+    }
+  } catch {
+    // Writing into the blank tab isn't essential.
+  }
+  return { mode, tab };
+}
+
+/** Prints exactly the downloaded PDF. Returns what the owner should be
+ * told: nothing (the print dialog opened), the new-tab note, or that a
+ * pop-up blocker stopped it. */
+export function finishPrint(job: PrintJob, bytes: Uint8Array): "printing" | "tab" | "blocked" {
   const url = pdfUrl(bytes);
+  if (job.mode === "tab") {
+    if (!job.tab || job.tab.closed) {
+      URL.revokeObjectURL(url);
+      return "blocked";
+    }
+    job.tab.location.href = url;
+    // The tab keeps the PDF; free the URL much later.
+    setTimeout(() => URL.revokeObjectURL(url), 10 * 60_000);
+    return "tab";
+  }
   const frame = document.createElement("iframe");
   frame.setAttribute("aria-hidden", "true");
   frame.style.cssText = "position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0";
@@ -111,6 +196,16 @@ export function printPdf(bytes: Uint8Array): void {
     frame.remove();
     URL.revokeObjectURL(url);
   }, 120_000);
+  return "printing";
+}
+
+/** If printing fails after the tab opened, close the "Preparing…" tab. */
+export function cancelPrint(job: PrintJob): void {
+  try {
+    job.tab?.close();
+  } catch {
+    // Already gone.
+  }
 }
 
 /** The plain code (rounded navy dots, brass star) as a PNG. */

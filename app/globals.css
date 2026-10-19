@@ -64,3 +64,58 @@ body {
     animation: none;
   }
 }
+
+/* Growth celebrations: a gentle pop and the check badge appearing. */
+@keyframes ps-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.015); }
+  100% { transform: scale(1); }
+}
+@keyframes ps-badge {
+  0% { transform: scale(0.4); opacity: 0; }
+  70% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* Printing a designer page by accident (Cmd+P): never blank pages — hide
+   the app and print only the design ([data-print-design]) on one page.
+   The real Print button prints the generated PDF instead. */
+@media print {
+  @page {
+    margin: 0.5in;
+  }
+  html:has([data-print-design]),
+  body:has([data-print-design]) {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+  body:has([data-print-design]) *:not([data-print-design]):not([data-print-design] *):not(:has([data-print-design])) {
+    display: none !important;
+  }
+  body:has([data-print-design]) *:has([data-print-design]) {
+    position: static !important;
+    inset: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: none !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    transform: none !important;
+    display: block !important;
+  }
+  [data-print-design] {
+    display: block !important;
+    width: 100% !important;
+    max-width: 7.5in !important;
+    max-height: 10in !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

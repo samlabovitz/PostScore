@@ -1,5 +1,6 @@
 "use client";
 
+import { announceSaved } from "@/lib/savedEvent";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -50,6 +51,7 @@ export function BusinessLanguageToggle({
     setError(null);
     const result = await updateBusinessLanguage(businessId, next);
     if (result.status === "ok") {
+      announceSaved();
       router.refresh();
     } else {
       setPending(null);

@@ -52,6 +52,44 @@ export function validRange(low: unknown, high: unknown): { low: number; high: nu
   return { low, high };
 }
 
+/**
+ * Allocated / collectible bottles: their real shelf prices vary wildly
+ * (and far above suggested retail), so we never rank them. A safety net
+ * next to the model's own "collectible" flag.
+ */
+const COLLECTIBLE_PATTERNS: RegExp[] = [
+  /pappy\b|van winkle/i,
+  /\bweller\b/i,
+  /blanton'?s/i,
+  /e\.?\s?h\.?\s?taylor/i,
+  /\bstagg\b/i,
+  /eagle rare 1[0-9]/i,
+  /thomas h\.? handy/i,
+  /sazerac 18/i,
+  /antique collection/i,
+  /old fitzgerald/i,
+  /michter'?s (?:10|20|25)/i,
+  /yamazaki (?:18|25)|hibiki (?:21|30)|macallan (?:25|30)/i,
+  /\ballocated\b|limited (?:release|edition)|\bcollectible\b|rare bourbon/i,
+];
+
+export function isCollectibleItem(name: string): boolean {
+  return COLLECTIBLE_PATTERNS.some((re) => re.test(name));
+}
+
+/** A size written in the item's name ("Tito's Vodka 750 ml" → "750 ml"),
+ * for filling the size field. null when there isn't one. */
+export function detectSize(name: string): string | null {
+  const m = name.match(/(\d+(?:[.,]\d+)?)\s?(ml|mL|ML|l|L|oz|fl\.? ?oz|lb|lbs|g|kg|ct|pk|pack)\b/);
+  if (!m) return null;
+  const unit = m[2].toLowerCase().replace(/fl\.? ?oz/, "fl oz");
+  return `${m[1]} ${unit === "l" ? "L" : unit}`;
+}
+
+export function formatMoney(n: number): string {
+  return Number.isInteger(n) ? `$${n}` : `$${n.toFixed(2)}`;
+}
+
 /** "~$3–$5" / "~$12.50–$18" — whole dollars stay whole. */
 export function formatTypicalRange(low: number, high: number): string {
   const money = (n: number) => (Number.isInteger(n) ? `$${n}` : `$${n.toFixed(2)}`);
@@ -175,6 +213,11 @@ export interface PriceAssessment {
    * computed from. Absent on older assessments and on no_data. */
   typicalLow?: number;
   typicalHigh?: number;
+  /** Why an item has no ranking: it needs its brand and size, or it's an
+   * allocated/collectible bottle (never ranked against suggested retail). */
+  reason?: "needs_brand_and_size" | "collectible";
+  /** Collectibles: the suggested retail the note mentions, if known. */
+  suggestedRetail?: number;
 }
 
 /** Real, honest context: the business's own Google price level next to
@@ -256,6 +299,8 @@ export function parsePricingAssessmentPayload(raw: unknown): PricingAssessmentPa
       // (the saved row itself is left untouched).
       basis: basis === "verified_local" ? "general_estimate" : basis,
       guidance: typeof e.guidance === "string" ? e.guidance : "",
+      ...(tier === "no_data" && (e.reason === "needs_brand_and_size" || e.reason === "collectible") ? { reason: e.reason } : {}),
+      ...(typeof e.suggestedRetail === "number" && e.suggestedRetail > 0 ? { suggestedRetail: e.suggestedRetail } : {}),
     });
   }
   if (assessments.length === 0) return null;
@@ -347,6 +392,7 @@ const PRICING_SYSTEM_BASE = [
   '- "general_estimate": it is a specific, widely known item with a genuinely knowable typical market price — e.g. a well-known branded product (a specific packaged snack, drink, etc.) or a standard, common menu item (a bacon-egg-and-cheese, a cup of coffee, a scoop of ice cream). Give an honest typical range from general knowledge (typical_low, typical_high), and the guidance MUST explicitly say this is a general/typical estimate, not verified local data. Ordinary retailer/regional price variation is EXPECTED and does not disqualify a general estimate — that is exactly why you give a RANGE instead of one exact number. Example: for "Cheez-Its (size: family size, 21 oz)" priced at $7 with no local data, a correct response is {"basis":"general_estimate","typical_low":3,"typical_high":5,"guidance":"Typical retail for a family-size box is about $3-5 — a general estimate, not verified against local competitors; check what nearby stores charge before changing it."}. Reach for "general_estimate" whenever you can name even an approximate typical range — reserve "no_data" for services you genuinely cannot estimate at all.',
   '- "no_data": no reasonably knowable typical price/range exists for this item — it is too custom, unique, or variable to estimate at all (e.g. a fully bespoke package, a highly variable custom job). This should be rare for well-known consumer products or standard menu items. Omit typical_low/typical_high — never guess a range without a real basis.',
   'SPECIFIC ENOUGH TO JUDGE: for a bottled, canned or packaged product (wine, spirits, beer, or any packaged good) the typical price depends mainly on its brand and size. The size may be in the name or given separately as "(size: …)" — either counts. If such an item is missing the brand or the size — e.g. "Bottle of Wine", "Whiskey", "Six-Pack of Beer", "Vodka 750 ml" with no brand — do NOT guess: set "basis" to "no_data", omit the range, and add "reason":"needs_brand_and_size". Services and made-to-order menu items (a haircut, a latte, an entrée) are not affected by this rule.',
+  'ALLOCATED / COLLECTIBLE BOTTLES: an allocated, collectible or limited-release bottle (e.g. Pappy Van Winkle, the Buffalo Trace Antique Collection, Weller, Blanton\'s, rare or aged limited releases) sells far above suggested retail and varies wildly by store — never rank it. Set "basis" to "no_data", add "reason":"collectible", and give its suggested retail price as "suggested_retail" (a plain number in US dollars) if you know it; omit the range.',
   "CRITICAL HONESTY RULES:",
   "- Never invent a specific competitor's exact price or a fake 'local average' — you only ever have competitors' coarse $/$$/$$$ price LEVEL, never a real dollar figure for any of them.",
   "- A \"general_estimate\" must NEVER be presented as if it were verified local competitor data. Its guidance sentence must make clear it's a general/typical estimate.",
@@ -354,7 +400,7 @@ const PRICING_SYSTEM_BASE = [
   "- The range must be for THIS item at the given size, in US dollars — never a range for a different size or pack.",
   "- Guidance must be one short, concrete sentence — no filler, no fabricated statistics. Do not call the price low, fair, high or premium yourself (the app decides that from the range); say what the owner could check or do.",
   "Reply with ONLY valid JSON, no markdown fence, no commentary, in exactly this shape:",
-  '{"assessments":[{"service":"<same service name as given>","basis":"general_estimate"|"no_data","typical_low":<number, only with general_estimate>,"typical_high":<number, only with general_estimate>,"guidance":"<1 sentence>","reason":"needs_brand_and_size" (only when that rule applies; otherwise omit)}]}',
+  '{"assessments":[{"service":"<same service name as given>","basis":"general_estimate"|"no_data","typical_low":<number, only with general_estimate>,"typical_high":<number, only with general_estimate>,"guidance":"<1 sentence>","reason":"needs_brand_and_size"|"collectible" (only when that rule applies; otherwise omit),"suggested_retail":<number, only with "collectible">}]}',
   "Return exactly one assessment per service given, in the same order they were given.",
 ].join("\n");
 
@@ -373,7 +419,7 @@ export function buildPricingSystemPrompt(locale: Locale = DEFAULT_LOCALE): strin
   if (locale !== "es") return PRICING_SYSTEM_BASE;
 
   const languageName = t(DEFAULT_LOCALE, "language.es");
-  const directive = `\n\nIMPORTANT: Write every "guidance" sentence in natural ${languageName}, using the formal "usted" register throughout — never "tú" or its conjugations. The JSON itself must otherwise stay exactly as specified above, in English: the field names ("service", "basis", "typical_low", "typical_high", "guidance"), and every "basis" value, must remain the exact English strings listed — never translate those, and neither is the "reason" value "needs_brand_and_size". typical_low and typical_high stay plain numbers in US dollars. The "service" field must echo the exact service name as given, unchanged. When "basis" is "general_estimate", the ${languageName} guidance must still clearly state that it is a general estimate, not verified local data (for example: "es una estimación general, no verificada con competidores locales").`;
+  const directive = `\n\nIMPORTANT: Write every "guidance" sentence in natural ${languageName}, using the formal "usted" register throughout — never "tú" or its conjugations. The JSON itself must otherwise stay exactly as specified above, in English: the field names ("service", "basis", "typical_low", "typical_high", "guidance"), and every "basis" value, must remain the exact English strings listed — never translate those, and neither are the "reason" values "needs_brand_and_size" and "collectible". typical_low and typical_high stay plain numbers in US dollars. The "service" field must echo the exact service name as given, unchanged. When "basis" is "general_estimate", the ${languageName} guidance must still clearly state that it is a general estimate, not verified local data (for example: "es una estimación general, no verificada con competidores locales").`;
   return PRICING_SYSTEM_BASE + directive;
 }
 
@@ -412,6 +458,7 @@ interface RawAssessment {
   typical_high?: unknown;
   guidance?: unknown;
   reason?: unknown;
+  suggested_retail?: unknown;
 }
 
 /**
@@ -466,11 +513,25 @@ export function parsePricingAssessmentResponse(
     return services.map((s) => fallbackFor(s, fallbackNote));
   }
 
+  const collectible = (s: PricedItem, suggested: unknown, range: { low: number; high: number } | null): PriceAssessment => {
+    const retail = typeof suggested === "number" && Number.isFinite(suggested) && suggested > 0 ? suggested : range ? Math.round((range.low + range.high) / 2) : null;
+    return {
+      ...fallbackFor(s, retail !== null ? t(locale, "dashboard.pricing.collectibleNote", { price: formatMoney(retail) }) : t(locale, "dashboard.pricing.collectibleNoteNoPrice")),
+      reason: "collectible",
+      ...(retail !== null ? { suggestedRetail: retail } : {}),
+    };
+  };
+
   return services.map((s, i) => {
     const entry = assessments[i];
+    // Allocated/collectible bottles are never ranked against suggested
+    // retail — whether the model flagged it or our own list did.
+    if (entry?.reason === "collectible" || isCollectibleItem(s.service)) {
+      return collectible(s, entry?.suggested_retail, entry ? validRange(entry.typical_low, entry.typical_high) : null);
+    }
     if (!entry) return fallbackFor(s, fallbackNote);
     if (entry.reason === "needs_brand_and_size") {
-      return fallbackFor(s, t(locale, "dashboard.pricing.needsBrandAndSize"));
+      return { ...fallbackFor(s, t(locale, "dashboard.pricing.needsBrandAndSize")), reason: "needs_brand_and_size" };
     }
     // Day 4b: the tier is OURS — computed from the price and the model's
     // typical range. No usable range (or a no_data basis) → no tier.
@@ -528,4 +589,49 @@ export function priceLevelContextFromSavedRows(rows: SavedPriceLevelRow[]): Pric
       distanceMeters: r.distance_meters === null ? null : Number(r.distance_meters),
     }))
   );
+}
+
+
+// ---- Price map ----
+
+export interface PriceMapSummary {
+  items: number;
+  underMarket: number;
+  competitive: number;
+  upperMid: number;
+  premium: number;
+  needsDetails: number;
+  collectible: number;
+}
+
+/** "3 items · 2 competitive · 0 under market · 1 needs details". */
+export function priceMapSummary(assessments: PriceAssessment[]): PriceMapSummary {
+  const count = (tier: PriceTierId) => assessments.filter((a) => a.tier === tier).length;
+  return {
+    items: assessments.length,
+    underMarket: count("under_market"),
+    competitive: count("competitive"),
+    upperMid: count("upper_mid"),
+    premium: count("premium"),
+    needsDetails: assessments.filter((a) => a.tier === "no_data" && a.reason !== "collectible").length,
+    collectible: assessments.filter((a) => a.reason === "collectible").length,
+  };
+}
+
+/** Where things sit on a price-map bar (0–1 along the bar). The bar spans
+ * a little past the typical range so under-market and premium prices have
+ * room; the marker is clamped to the ends. */
+export function priceMapGeometry(price: number, low: number, high: number): { lowAt: number; upperMidAt: number; highAt: number; markerAt: number; clamped: boolean } {
+  const span = Math.max(high - low, high * 0.2, 1);
+  const min = Math.max(0, low - span * 0.5);
+  const max = high + span * 0.5;
+  const at = (v: number) => (v - min) / (max - min);
+  const raw = at(price);
+  return {
+    lowAt: at(low),
+    upperMidAt: at(low + (high - low) * UPPER_MID_FROM),
+    highAt: at(high),
+    markerAt: Math.min(1, Math.max(0, raw)),
+    clamped: raw < 0 || raw > 1,
+  };
 }

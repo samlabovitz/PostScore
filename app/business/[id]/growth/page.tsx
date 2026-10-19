@@ -14,10 +14,12 @@ import { getActiveReferral } from "@/app/actions/referrals";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { businessRowToScoringInput } from "@/lib/scoring";
 import { buildPriceCheckMove } from "@/lib/growthMoves";
-import { buildWeeklyChecklistItems } from "@/lib/weeklyChecklist";
+import { buildWeeklyChecklistItems, weekStartFor } from "@/lib/weeklyChecklist";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale } from "@/lib/i18n";
 import { GrowthView } from "./GrowthView";
+import { getPlan } from "@/lib/premium";
+import { getPrintStudioData } from "@/app/actions/printStudio";
 
 export default async function GrowthPage({ params }: { params: { id: string } }) {
   // Independent loads run together; see lib/requestCache.ts for why the
@@ -56,6 +58,10 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   // (see GrowthView), so there's no reason to query it for the rest.
   const referralPromise = profile.referralOk ? getActiveReferral(params.id) : Promise.resolve(null);
   const gbpPromise = getGbpConnectionStatus(params.id);
+  // The coupon and referral designers print the business's own facts
+  // (every plan sees the live preview; printing is gated by getPlan()).
+  const plan = getPlan();
+  const printPromise = getPrintStudioData(params.id);
 
 
   if (scored.status === "unauthenticated") {
@@ -73,7 +79,7 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   }
 
   const input = businessRowToScoringInput(scored.business);
-  const [actionPlanResult, growthMovesResult, promosResult, checklistStateResult, lastScanAt, referralResult, gbpStatus] = await Promise.all([
+  const [actionPlanResult, growthMovesResult, promosResult, checklistStateResult, lastScanAt, referralResult, gbpStatus, printData] = await Promise.all([
     getActionPlan(params.id, input, scored.result.breakdown, scored.result.suggestions, locale, {
       businessRow: scored.business,
       businessName: business.name ?? "Your business",
@@ -86,6 +92,7 @@ export default async function GrowthPage({ params }: { params: { id: string } })
     lastScanPromise,
     referralPromise,
     gbpPromise,
+    printPromise,
   ]);
   const initialPromos = promosResult.status === "ok" ? promosResult.promos : [];
 
@@ -98,6 +105,7 @@ export default async function GrowthPage({ params }: { params: { id: string } })
     items: buildWeeklyChecklistItems(locale),
     checkedItemIds: checklistStateResult.status === "ok" ? checklistStateResult.state.checkedItemIds : [],
     streakWeeks: checklistStateResult.status === "ok" ? checklistStateResult.state.streakWeeks : 0,
+    weekStart: checklistStateResult.status === "ok" ? checklistStateResult.state.weekStart : weekStartFor(new Date(), business.time_zone ?? undefined),
   };
 
   const initialReferral = referralResult?.status === "ok" ? referralResult.referral : null;
@@ -142,6 +150,9 @@ export default async function GrowthPage({ params }: { params: { id: string } })
         lastScanAt={lastScanAt}
         gbpConnected={gbpStatus.status === "ok" && gbpStatus.connected}
         linkOptions={{ referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk }}
+        plan={plan}
+        devPlanSwitch={process.env.NODE_ENV === "development"}
+        printBusiness={printData && printData.status === "ok" ? printData.business : null}
       />
     </DashboardShell>
   );

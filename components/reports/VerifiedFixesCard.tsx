@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { ConnectToUnlockTile } from "@/components/gbp/ConnectToUnlock";
-import { t, useLocale } from "@/lib/i18n";
+import { formatShortDate, t, useLocale, useTimeZone } from "@/lib/i18n";
 
 /**
  * "What we've verified so far" — deliberately NOT "what your
@@ -19,14 +19,21 @@ export function VerifiedFixesCard({
   businessId,
   confirmedFixCount,
   listingChangesDetected,
+  listingChangesSince = null,
+  latestPeriodChanges = null,
   gbpConnected,
 }: {
   businessId: string;
   confirmedFixCount: number;
   listingChangesDetected: number;
+  /** Start of the all-time count (first comparable scan). */
+  listingChangesSince?: string | null;
+  /** The recap's own count, so the two cards visibly agree. */
+  latestPeriodChanges?: number | null;
   gbpConnected: boolean;
 }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const reviewsRepliedToLabel = t(locale, "dashboard.reports.reviewsRepliedToLabel");
   const googlePostsPublishedLabel = t(locale, "dashboard.reports.googlePostsPublishedLabel");
   return (
@@ -40,7 +47,11 @@ export function VerifiedFixesCard({
         <VerifiedTile
           label={t(locale, "dashboard.reports.listingChangesDetectedLabel")}
           value={listingChangesDetected}
-          note={t(locale, "dashboard.reports.listingChangesDetectedNote")}
+          note={
+            listingChangesSince && latestPeriodChanges !== null
+              ? t(locale, "dashboard.reports.listingChangesSinceNote", { date: formatShortDate(listingChangesSince, locale, timeZone), count: latestPeriodChanges })
+              : t(locale, "dashboard.reports.listingChangesDetectedNote")
+          }
         />
         {gbpConnected ? (
           <PendingSyncTile label={reviewsRepliedToLabel} />

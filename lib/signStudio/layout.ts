@@ -4,6 +4,11 @@
 // same font files the PDF embeds.
 
 import { starPath } from "@/lib/reviewQr";
+import { mixColor, printable, wrap, type FontRole, type Measurer, type PrintPage, type SignElement } from "@/lib/signStudio/elements";
+import { qrInk } from "@/lib/signStudio/design";
+
+export type { FontRole, Measurer, SignElement, SignPanel, PrintPage } from "@/lib/signStudio/elements";
+export { printable, wrap } from "@/lib/signStudio/elements";
 import {
   CUSTOM_HEADLINE_MAX,
   FOLLOW_US,
@@ -22,38 +27,7 @@ import {
   type SignSize,
 } from "@/lib/signStudio/design";
 
-export type FontRole = "headline" | "body" | "bodyBold";
-
-export interface Measurer {
-  width(text: string, role: FontRole, size: number): number;
-  /** Whether the role's font can draw this character. */
-  supports(ch: string, role: FontRole): boolean;
-}
-
-export type SignElement =
-  | { kind: "rect"; x: number; y: number; w: number; h: number; r: number; fill: string | null; stroke: string | null; strokeWidth: number }
-  | { kind: "text"; x: number; y: number; text: string; size: number; role: FontRole; color: string }
-  | { kind: "path"; d: string; fill: string }
-  | { kind: "qr"; x: number; y: number; size: number }
-  | { kind: "logo"; x: number; y: number; w: number; h: number }
-  | { kind: "line"; x1: number; y1: number; x2: number; y2: number; color: string; width: number; dash: boolean };
-
-export interface SignPanel {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  /** 180 = printed upside down (the back of the tent card). */
-  rotate: 0 | 180;
-  elements: SignElement[];
-}
-
-export interface SignLayout {
-  width: number;
-  height: number;
-  panels: SignPanel[];
-  /** Page-level marks: the tent card's fold line, the 4-up cut lines. */
-  marks: SignElement[];
+export interface SignLayout extends PrintPage {
   /** The QR's printed width in points (the same on every panel). */
   qrPoints: number;
 }
@@ -79,46 +53,6 @@ const TEXT_SCALE = { small: 0.88, medium: 1, large: 1.14 } as const;
 const TILE = 1.14; // tile width / QR width
 
 // ---- Text helpers ----
-
-/** Keeps characters every font in the role can draw; collapses spaces. */
-export function printable(text: string, m: Measurer, role: FontRole): string {
-  let out = "";
-  for (const ch of text.normalize("NFC")) {
-    if (/\s/.test(ch)) out += " ";
-    else if (m.supports(ch, role)) out += ch;
-  }
-  return out.replace(/\s+/g, " ").trim();
-}
-
-/** Greedy wrap (overlong words are broken); null if more than maxLines. */
-export function wrap(text: string, m: Measurer, role: FontRole, size: number, maxWidth: number, maxLines: number): string[] | null {
-  const words = text
-    .split(" ")
-    .filter(Boolean)
-    .flatMap((word) => {
-      if (m.width(word, role, size) <= maxWidth) return [word];
-      const pieces: string[] = [];
-      let piece = "";
-      for (const ch of word) {
-        if (piece && m.width(piece + ch, role, size) > maxWidth) {
-          pieces.push(piece);
-          piece = ch;
-        } else piece += ch;
-      }
-      return piece ? [...pieces, piece] : pieces;
-    });
-  const lines: string[] = [];
-  let line = "";
-  for (const word of words) {
-    const next = line ? `${line} ${word}` : word;
-    if (line && m.width(next, role, size) > maxWidth) {
-      lines.push(line);
-      line = word;
-    } else line = next;
-  }
-  if (line) lines.push(line);
-  return lines.length > maxLines ? null : lines;
-}
 
 interface Block {
   lines: string[];
@@ -244,12 +178,6 @@ function ratingHeight(r: RatingLine | null): number {
   return r ? r.size * 1.45 : 0;
 }
 
-function mix(a: string, b: string, t: number): string {
-  const ch = (hex: string, i: number) => parseInt(hex.slice(i, i + 2), 16);
-  const out = [1, 3, 5].map((i) => Math.round(ch(a, i) + (ch(b, i) - ch(a, i)) * t));
-  return `#${out.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
-}
-
 function cornerRadius(design: SignDesign, w: number, h: number): number {
   const d = Math.min(w, h);
   return design.radius === "large" ? d * 0.05 : design.radius === "small" ? d * 0.02 : 0;
@@ -267,7 +195,7 @@ function decorate(ctx: Ctx, design: SignDesign, w: number, h: number, pad: numbe
     for (let y = step / 2; y < h; y += step)
       for (let x = (Math.round(y / step) % 2 ? step : step / 2); x < w; x += step)
         d += `M${(x - r).toFixed(2)} ${y.toFixed(2)}a${r.toFixed(2)} ${r.toFixed(2)} 0 1 1 ${(2 * r).toFixed(2)} 0a${r.toFixed(2)} ${r.toFixed(2)} 0 1 1 ${(-2 * r).toFixed(2)} 0Z`;
-    ctx.els.push({ kind: "path", d, fill: mix(colors.background, colors.accent, 0.2) });
+    ctx.els.push({ kind: "path", d, fill: mixColor(colors.background, colors.accent, 0.2) });
   }
   const radius = cornerRadius(design, w, h);
   let inset = pad;
@@ -295,7 +223,8 @@ function emitQrTile(ctx: Ctx, design: SignDesign, x: number, y: number, qr: numb
   const stroke = contrastRatio(ctx.colors.background, "#ffffff") < 1.15 ? ctx.colors.text : null;
   const r = Math.max(cornerRadius(design, panelMin, panelMin) * 0.8, design.radius === "none" ? 0 : pad * 0.8);
   ctx.els.push({ kind: "rect", x, y, w: qr + 2 * pad, h: qr + 2 * pad, r, fill: "#ffffff", stroke, strokeWidth: 0.8 });
-  ctx.els.push({ kind: "qr", x: x + pad, y: y + pad, size: qr });
+  const ink = qrInk(ctx.colors);
+  ctx.els.push({ kind: "qr", x: x + pad, y: y + pad, size: qr, qr: "main", ink, star: design.theme === "clean" ? ink : "#b8862f" });
 }
 
 function logoBox(input: LayoutInput, colW: number, base: number): { w: number; h: number } | null {

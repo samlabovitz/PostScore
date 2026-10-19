@@ -1,5 +1,6 @@
 "use client";
 
+import { announceSaved } from "@/lib/savedEvent";
 import { useState } from "react";
 import { BusinessTypeField } from "@/components/assistant/BusinessMemoryPanel";
 
@@ -43,13 +44,14 @@ export function BusinessTypeSetting({
       autoDetectedBusinessType={autoDetectedBusinessType}
       businessTypeOverridden={state.overridden}
       tradeName={state.tradeName}
-      onSaved={({ businessTypeId, overridden }) =>
+      onSaved={({ businessTypeId, overridden }) => {
         // A change through this dropdown always clears trade_id
         // server-side (see updateBusinessTypeOverride) — a specific
         // intake-typeahead trade can never survive a manual correction
         // here, so the locally-held trade name is cleared to match.
-        setState({ businessTypeId, overridden, tradeName: null })
-      }
+        setState({ businessTypeId, overridden, tradeName: null });
+        announceSaved();
+      }}
     />
   );
 }

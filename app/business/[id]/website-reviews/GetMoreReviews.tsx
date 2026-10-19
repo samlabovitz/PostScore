@@ -81,11 +81,11 @@ async function copyText(text: string): Promise<boolean> {
 
 /** The review-link QR in a white framed tile — rounded navy dots, the
  * exact link we copy. */
-export function ReviewQrTile({ reviewUrl, label }: { reviewUrl: string; label: string }) {
+export function ReviewQrTile({ reviewUrl, label, printable = false }: { reviewUrl: string; label: string; printable?: boolean }) {
   const locale = useLocale();
   const svg = useMemo(() => qrSvg(reviewQrGeometry(reviewUrl, DEFAULT_QR_STYLE), 168), [reviewUrl]);
   return (
-    <figure className="flex flex-col items-center gap-2">
+    <figure className="flex flex-col items-center gap-2" data-print-design={printable ? "" : undefined}>
       <div
         role="img"
         aria-label={t(locale, "dashboard.websiteReviews.qrAlt")}
@@ -257,7 +257,7 @@ export function GetMoreReviews({
 
           {/* Right: the QR tile and, by plan, the sign. */}
           <div className="flex flex-col items-center gap-3 rounded-xl border border-paper-deep bg-white p-4">
-            <ReviewQrTile reviewUrl={reviewUrl} label={t(locale, "dashboard.websiteReviews.hero.scanLabel")} />
+            <ReviewQrTile reviewUrl={reviewUrl} label={t(locale, "dashboard.websiteReviews.hero.scanLabel")} printable={!designing} />
             {access === "none" ? (
               <>
                 <button type="button" onClick={handleDownloadQr} className={cn(OUTLINE_BUTTON, "w-full")}>

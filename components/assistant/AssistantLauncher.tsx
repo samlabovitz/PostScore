@@ -11,7 +11,8 @@
 // see its own doc comment — so this only ever needs a COUNT of past
 // conversations for the entry point's subtitle, never their content.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { POSTAI_ASK_QUESTIONS, isPostaiAskId } from "@/lib/postaiAsk";
 import { IconChevronRight, IconSparkles } from "@tabler/icons-react";
 import { Pill } from "@/components/ui/Pill";
 import { AssistantView } from "@/components/assistant/AssistantView";
@@ -95,6 +96,24 @@ export function AssistantLauncher({
 }) {
   const locale = useLocale();
   const [open, setOpen] = useState(false);
+  const [initialDraft, setInitialDraft] = useState<string | undefined>(undefined);
+
+  // "Confused? Ask PostAI →" from a designer: ?ask=<allowlisted id> opens
+  // the chat with that question typed in. Read after mount (no hydration
+  // mismatch), then removed from the address.
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      const ask = url.searchParams.get("ask");
+      if (!isPostaiAskId(ask)) return;
+      setInitialDraft(t(locale, POSTAI_ASK_QUESTIONS[ask]));
+      setOpen(true);
+      url.searchParams.delete("ask");
+      window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+    } catch {
+      // No URL access: just don't prefill.
+    }
+  }, [locale]);
 
   return (
     <>
@@ -110,6 +129,7 @@ export function AssistantLauncher({
           businessName={businessName}
           context={context}
           starterPrompts={starterPrompts}
+          initialDraft={initialDraft}
           onNavigate={() => setOpen(false)}
         />
       </AssistantOverlay>

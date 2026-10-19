@@ -9,9 +9,13 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/SegmentedControl";
 import { TaskListCard, GrowthMoveCard, CompletedTasksCard } from "../ActionPlanSection";
 import { WeeklyChecklist } from "./WeeklyChecklist";
+import { WeeklyGoalCelebration } from "./WeeklyGoalCelebration";
 import type { ActionPlanTask, CompletedTask, WebsiteBanner } from "@/lib/actionPlan";
 import { websiteRangeText, wholePointRange } from "@/lib/pointRange";
 import type { GrowthMove } from "@/lib/growthMoves";
+import type { Plan } from "@/lib/plan";
+import type { CardBusiness } from "@/lib/printStudio/design";
+import { DevPlanSwitch } from "@/components/studio/DevPlanSwitch";
 import { growthMoveOverlapsActionPlan } from "@/lib/growthMoveOverlap";
 import type { WeeklyChecklistItem, WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
 import type { ScoreBreakdown } from "@/lib/scoring";
@@ -185,6 +189,9 @@ export function GrowthView({
   lastScanAt,
   gbpConnected = false,
   linkOptions = {},
+  plan = "free",
+  printBusiness = null,
+  devPlanSwitch = false,
 }: {
   businessId: string;
   businessName: string | null;
@@ -201,6 +208,12 @@ export function GrowthView({
   lastScanAt: string | null;
   /** Connecting Google is Premium-only — when not connected, a small
    * "Unlock live Google insights" card (never one of the plan's tasks). */
+  /** The account's plan (lib/premium.ts) — gates the Print Studio. */
+  plan?: Plan;
+  /** What a printed card may show (the business's own facts). */
+  printBusiness?: CardBusiness | null;
+  /** Show the dev-only plan switch (the page passes true only in local dev). */
+  devPlanSwitch?: boolean;
   gbpConnected?: boolean;
   /** Which tools this business has — for each task's fix link. */
   linkOptions?: LinkOptions;
@@ -236,6 +249,8 @@ export function GrowthView({
     items: WeeklyChecklistItem[];
     checkedItemIds: WeeklyChecklistItemId[];
     streakWeeks: number;
+    /** This routine week's Monday (business time zone). */
+    weekStart: string;
   };
 }) {
   const locale = useLocale();
@@ -296,6 +311,17 @@ export function GrowthView({
     options.push({ value: "referral", label: t(locale, "dashboard.growth.view.tabReferral") });
   }
 
+  // What a printed card may show; a bare fallback if it couldn't load.
+  const cardBusiness: CardBusiness = printBusiness ?? {
+    businessName: businessName ?? null,
+    placeId: null,
+    googleMapsUri: null,
+    website: null,
+    address: null,
+    hours: null,
+    icon: "star",
+  };
+
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
       <div>
@@ -314,22 +340,32 @@ export function GrowthView({
         <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.growth.view.subtitle")}</p>
       </div>
 
+      {devPlanSwitch && <DevPlanSwitch plan={plan} backPath={`/business/${businessId}/growth`} />}
+
       {options.length > 1 && <SegmentedControl options={options} value={segment} onChange={setSegment} />}
 
       {segment === "plan" && (
         <div className="flex flex-col gap-6 nav:gap-8">
-          <ProjectedSummary
+          <WeeklyGoalCelebration
+            businessId={businessId}
+            weekStart={weeklyChecklist.weekStart}
             today={breakdown.total}
             projected={weeklyProjectedBreakdown.total}
-            projectedHigh={weeklyProjectedBreakdownHigh ? weeklyProjectedBreakdownHigh.total : null}
-            withinReach={withinReachText}
-            gradeNote={gradeTransitionLabel(breakdown.grade, weeklyProjectedBreakdown.grade, locale)}
-            note={
-              actionPlan.weeklyTasks.length > 0
-                ? tPlural(locale, "dashboard.growth.view.weeklyPlanNote", actionPlan.weeklyTasks.length)
-                : t(locale, "dashboard.growth.view.weeklyPlanNoteEmpty")
-            }
-          />
+            lastScanAt={lastScanAt}
+          >
+            <ProjectedSummary
+              today={breakdown.total}
+              projected={weeklyProjectedBreakdown.total}
+              projectedHigh={weeklyProjectedBreakdownHigh ? weeklyProjectedBreakdownHigh.total : null}
+              withinReach={withinReachText}
+              gradeNote={gradeTransitionLabel(breakdown.grade, weeklyProjectedBreakdown.grade, locale)}
+              note={
+                actionPlan.weeklyTasks.length > 0
+                  ? tPlural(locale, "dashboard.growth.view.weeklyPlanNote", actionPlan.weeklyTasks.length)
+                  : t(locale, "dashboard.growth.view.weeklyPlanNoteEmpty")
+              }
+            />
+          </WeeklyGoalCelebration>
 
           <div id="weekly-routine" className="scroll-mt-20">
             <WeeklyChecklist
@@ -337,6 +373,7 @@ export function GrowthView({
               items={weeklyChecklist.items}
               initialCheckedItemIds={weeklyChecklist.checkedItemIds}
               initialStreakWeeks={weeklyChecklist.streakWeeks}
+              weekStart={weeklyChecklist.weekStart}
             />
           </div>
 
@@ -397,14 +434,14 @@ export function GrowthView({
           <CompletedTasksCard completed={actionPlan.completed} />
 
           {growthMoves.length > 0 && (
-            <div id="ways-to-grow" className="flex flex-col gap-6 scroll-mt-20 nav:gap-8">
-              <SectionHeading title={t(locale, "dashboard.growth.moves.sectionHeading")} />
-              <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {growthMoves.map((move) => (
-                  <GrowthMoveCard key={move.id} move={move} overlapsActionPlan={growthMoveOverlapsActionPlan(move.id, openActionPlanTasks)} />
-                ))}
-              </ul>
-            </div>
+          <div id="ways-to-grow" className="flex flex-col gap-6 scroll-mt-20 nav:gap-8">
+            <SectionHeading title={t(locale, "dashboard.growth.moves.sectionHeading")} />
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {growthMoves.map((move) => (
+                <GrowthMoveCard key={move.id} move={move} overlapsActionPlan={growthMoveOverlapsActionPlan(move.id, openActionPlanTasks)} />
+              ))}
+            </ul>
+          </div>
           )}
         </div>
       )}
@@ -416,6 +453,8 @@ export function GrowthView({
           businessPhone={businessPhone}
           profile={profile}
           initialPromos={initialPromos}
+          plan={plan}
+          printBusiness={cardBusiness}
         />
       )}
 
@@ -426,6 +465,8 @@ export function GrowthView({
           businessPhone={businessPhone}
           profile={profile}
           initialReferral={initialReferral}
+          plan={plan}
+          printBusiness={cardBusiness}
         />
       )}
     </div>

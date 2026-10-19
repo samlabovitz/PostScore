@@ -1,5 +1,6 @@
 "use client";
 
+import { announceSaved } from "@/lib/savedEvent";
 import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Toggle } from "@/components/ui/Toggle";
@@ -57,6 +58,7 @@ export function MonthlyEmailReportCard({
     const result = await setMonthlyReportEnabled(businessId, next);
     if (result.status === "ok") {
       setEnabled(result.enabled);
+      announceSaved();
     } else {
       setError(result.status === "error" ? result.message : t(locale, "dashboard.reports.emailSaveError"));
     }

@@ -14,10 +14,12 @@ export function ReportsView({
   businessId,
   businessName,
   reports,
+  shareHeadline,
 }: {
   businessId: string;
   businessName: string | null;
   reports: Extract<GetReportsDataResult, { status: "ok" }>;
+  shareHeadline: string | null;
 }) {
   const locale = useLocale();
   return (
@@ -43,16 +45,15 @@ export function ReportsView({
       <MonthlyEmailReportCard businessId={businessId} status={reports.monthlyEmailReport} />
 
       <SectionHeading title={t(locale, "dashboard.reports.monthlyRecapHeading")} />
-      <MonthlyRecapCard
-        businessName={businessName ?? t(locale, "dashboard.common.businessNameFallback")}
-        recap={reports.recap}
-      />
+      <MonthlyRecapCard businessId={businessId} recap={reports.recap} shareHeadline={shareHeadline} />
 
       <SectionHeading title={t(locale, "dashboard.reports.whatWeveVerifiedHeading")} />
       <VerifiedFixesCard
         businessId={businessId}
         confirmedFixCount={reports.confirmedFixCount}
         listingChangesDetected={reports.listingChangesDetected}
+        listingChangesSince={reports.listingChangesSince}
+        latestPeriodChanges={reports.recap && !reports.recap.changesUnavailable ? reports.recap.changes.length : null}
         gbpConnected={reports.gbpConnected}
       />
     </div>

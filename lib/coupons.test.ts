@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildRedeemUrl, defaultExpiryDate, formatExpiry, generateCouponCode } from "./coupons";
+import { defaultExpiryDate, formatExpiry, generateCouponCode } from "./coupons";
 
 describe("generateCouponCode", () => {
   test("matches XXXX-XXXX using only the unambiguous alphabet", () => {
@@ -11,14 +11,6 @@ describe("generateCouponCode", () => {
   test("is not constant", () => {
     const codes = new Set(Array.from({ length: 20 }, () => generateCouponCode()));
     expect(codes.size).toBeGreaterThan(1);
-  });
-});
-
-describe("buildRedeemUrl", () => {
-  test("joins the real origin with /redeem/<code>", () => {
-    expect(buildRedeemUrl("https://app.postscore.example", "ABCD-1234")).toBe(
-      "https://app.postscore.example/redeem/ABCD-1234"
-    );
   });
 });
 
