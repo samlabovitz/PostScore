@@ -3134,6 +3134,7 @@ export type MessageKey =
   | "starterSite.ratingLine.other"
   | "starterSite.ratingLineOnGoogle"
   | "starterSite.reviewsCta"
+  | "starterSite.basedIn"
   | "dashboard.website.starter.ratingStaleNote"
   | "starterSite.theme.sage"
   | "starterSite.theme.blush"
@@ -6940,6 +6941,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "starterSite.ratingLine.other": "{rating}★ from {count} Google reviews · as of {date}",
     "starterSite.ratingLineOnGoogle": "{rating}★ on Google · as of {date}",
     "starterSite.reviewsCta": "See what customers say on Google",
+    "starterSite.basedIn": "Based in {city}",
     "dashboard.website.starter.ratingStaleNote": "Downloaded sites don't update — re-download after your rating changes.",
     "starterSite.theme.sage": "Sage & Cream",
     "starterSite.theme.blush": "Blush & Charcoal",
@@ -10768,6 +10770,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "starterSite.ratingLine.other": "{rating}★ de {count} reseñas de Google · a {date}",
     "starterSite.ratingLineOnGoogle": "{rating}★ en Google · a {date}",
     "starterSite.reviewsCta": "Vea lo que dicen los clientes en Google",
+    "starterSite.basedIn": "Con sede en {city}",
     "dashboard.website.starter.ratingStaleNote": "Los sitios descargados no se actualizan — vuelva a descargarlo cuando cambie su calificación.",
     "starterSite.theme.sage": "Salvia y crema",
     "starterSite.theme.blush": "Rosa pálido y carbón",

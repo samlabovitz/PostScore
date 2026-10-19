@@ -179,6 +179,8 @@ export function StarterSiteBuilder({
   socialLinks = [],
   year,
   ratingAsOf = null,
+  storefront = true,
+  mapEmbed = null,
   profileId,
   builderOfferReason,
   onSiteLocaleChange,
@@ -216,6 +218,10 @@ export function StarterSiteBuilder({
   year?: number;
   /** When the rating was read from Google (the last scan) — "as of Oct 2026". */
   ratingAsOf?: string | null;
+  /** A real storefront (lib/starterSite.ts hasStorefront): street address, directions and map. */
+  storefront?: boolean;
+  /** Maps Embed API key + place id; null = no map, address and link only. */
+  mapEmbed?: { key: string; placeId: string } | null;
   profileId: string;
   /** Why the builder is being offered — see BuilderOffer in
    * app/actions/website.ts. Drives the headline/subcopy only; the
@@ -318,6 +324,8 @@ export function StarterSiteBuilder({
         socialLinks,
         year,
         ratingAsOf,
+        storefront,
+        mapEmbed,
         profileId,
         themeId,
         customAccent,
@@ -349,6 +357,8 @@ export function StarterSiteBuilder({
       socialLinks,
       year,
       ratingAsOf,
+      storefront,
+      mapEmbed,
       profileId,
       themeId,
       customAccent,

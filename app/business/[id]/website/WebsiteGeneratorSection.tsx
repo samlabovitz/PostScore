@@ -37,6 +37,8 @@ export function WebsiteGeneratorSection({
   socialLinks,
   year,
   ratingAsOf,
+  storefront,
+  mapEmbed,
   profileId,
   builderOfferReason,
   hasWebsite,
@@ -61,6 +63,8 @@ export function WebsiteGeneratorSection({
   socialLinks: Array<{ platform: string; url: string }>;
   year: number;
   ratingAsOf: string | null;
+  storefront: boolean;
+  mapEmbed: { key: string; placeId: string } | null;
   profileId: string;
   builderOfferReason: "no_website" | "underperforming" | "backup";
   hasWebsite: boolean;
@@ -116,6 +120,8 @@ export function WebsiteGeneratorSection({
       socialLinks={socialLinks}
       year={year}
       ratingAsOf={ratingAsOf}
+      storefront={storefront}
+      mapEmbed={mapEmbed}
       profileId={profileId}
       builderOfferReason={builderOfferReason}
       onSiteLocaleChange={setSiteLocale}

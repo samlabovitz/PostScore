@@ -335,6 +335,13 @@ export interface StarterSiteInput {
    * downloaded page can't update itself, so a printed rating always says
    * "as of {month}" — without this date the number isn't shown at all. */
   ratingAsOf?: string | null;
+  /** A real storefront customers can visit (see hasStorefront) — false
+   * for website-only and service-area businesses: then no street address,
+   * directions or map, just the city. Defaults to true. */
+  storefront?: boolean;
+  /** Maps Embed API (place mode) for the storefront map; null = just the
+   * address and an "Open in Google Maps" link. */
+  mapEmbed?: { key: string; placeId: string } | null;
   /** Google's own price level enum (lib/priceLevel.ts), when it has one. */
   priceLevel?: string | null;
   /** Social profiles verified to open the real profile (lib/socialLinkCheck.ts). */
@@ -381,13 +388,26 @@ function scriptJson(value: unknown): string {
 /** "Irvington, NY" from a US-style Google address ("20 W Main St #1,
  * Irvington, NY 10533, USA"); null when the shape isn't recognizable —
  * then the page just leaves the area out rather than guessing. */
-export function cityFromAddress(address: string | null): string | null {
+export function cityFromAddress(address: string | null, cityOnly = false): string | null {
   if (!address) return null;
   const parts = address.split(",").map((p) => p.trim());
-  const stateZip = parts.findIndex((p, i) => i >= 2 && /^[A-Z]{2}\s+\d{5}(-\d{4})?$/.test(p));
-  if (stateZip < 2) return null;
-  const city = parts[stateZip - 1];
-  return city && !/\d/.test(city) ? `${city}, ${parts[stateZip].slice(0, 2)}` : null;
+  // A storefront address has the street first; a service-area business's
+  // address (Google hides the street) can start with the city.
+  const first = cityOnly ? 1 : 2;
+  const state = parts.findIndex((p, i) => i >= first && (cityOnly ? /^[A-Z]{2}(\s+\d{5}(-\d{4})?)?$/ : /^[A-Z]{2}\s+\d{5}(-\d{4})?$/).test(p));
+  if (state < first) return null;
+  const city = parts[state - 1];
+  return city && !/\d/.test(city) ? `${city}, ${parts[state].slice(0, 2)}` : null;
+}
+
+/** A real storefront: a Google-listed business (not website-only) whose
+ * Google address starts with a street number. Google hides the street of
+ * a service-area business, so its address is just the area ("Newark, DE,
+ * USA") and this is false. */
+export function hasStorefront(params: { listingMode: "google" | "website_only"; placeId: string | null; address: string | null }): boolean {
+  if (params.listingMode !== "google" || !params.placeId || !params.address) return false;
+  const parts = params.address.split(",").map((p) => p.trim());
+  return parts.length >= 3 && /\d/.test(parts[0]);
 }
 
 const MONTHS: Record<Locale, string[]> = {
@@ -420,12 +440,12 @@ function safeHttpsUrl(url: string | null | undefined): string | null {
 function jsonLd(
   input: StarterSiteInput,
   name: string,
-  facts: { address: boolean; phone: boolean; schedule: OwnerHours | null; price: string | null; mapsUrl: string | null; social: string[]; description: string | null }
+  facts: { address: string | null; phone: boolean; schedule: OwnerHours | null; price: string | null; mapsUrl: string | null; social: string[]; description: string | null }
 ): string {
   const data: Record<string, unknown> = { "@context": "https://schema.org", "@type": "LocalBusiness", name };
   if (facts.description) data.description = facts.description;
   if (facts.phone && input.phone) data.telephone = input.phone;
-  if (facts.address && input.address) data.address = input.address;
+  if (facts.address) data.address = facts.address;
   if (facts.schedule) {
     const spec = openingHoursSpecification(facts.schedule);
     if (spec.length > 0) data.openingHoursSpecification = spec;
@@ -485,7 +505,10 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   const secIcon = (name: IconName) => (decorated ? `<span class="sec-ico">${iconSvg(name, 18)}</span>` : "");
 
   const name = input.businessName.trim() || t(locale, "starterSite.defaultBusinessName");
-  const showAddress = input.show.address && !!input.address;
+  const storefront = input.storefront ?? true;
+  // The street address (and directions, and the map) only for a real
+  // storefront; otherwise just the city.
+  const showAddress = input.show.address && !!input.address && storefront;
   const showPhone = input.show.phone && !!input.phone;
   // Spanish prefers the real structured hours, formatted honestly by
   // lib/hours.ts; when that can't produce a result (no structured data,
@@ -505,7 +528,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   const showRating = input.show.rating && input.rating !== null && asOf !== null;
   const rating = input.rating as number;
   const tagline = input.tagline.trim();
-  const city = showAddress ? cityFromAddress(input.address) : null;
+  const city = input.show.address ? (storefront ? cityFromAddress(input.address) : cityFromAddress(input.address, true) ?? cityFromAddress(input.address)) : null;
   const priceSymbol = priceLevelToSymbol(input.priceLevel ?? null);
   const price = priceSymbol === "Free" ? t(locale, "starterSite.priceFree") : priceSymbol;
   const mapsUrl = safeHttpsUrl(input.googleMapsUri);
@@ -636,12 +659,25 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   if (cards.length > 0) bands.push(`<div class="wrap split split--${cards.length}">\n        ${cards.join("\n        ")}\n      </div>`);
 
   const visit: string[] = [];
+  // The map: storefronts only, and only with the embed key — otherwise the
+  // address and link alone (never a broken iframe). Lazy-loaded, so it
+  // costs nothing until a visitor scrolls to it.
+  const mapSrc =
+    showAddress && input.mapEmbed && input.mapEmbed.key.trim() && /^[A-Za-z0-9_-]+$/.test(input.mapEmbed.placeId)
+      ? `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(input.mapEmbed.key.trim())}&q=place_id:${input.mapEmbed.placeId}`
+      : null;
   if (showAddress) {
-    visit.push(`<div class="card" id="location">
+    visit.push(`<div class="card${mapSrc ? " card--map" : ""}" id="location">
           <h2 class="sec-title">${secIcon("map")}${escapeHtml(t(locale, "starterSite.locationHeading"))}</h2>
+          ${mapSrc ? `<iframe class="map" src="${escapeHtml(mapSrc)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen title="${escapeHtml(t(locale, "starterSite.mapTitle", { name }))}"></iframe>` : ""}
           <p class="big">${escapeHtml(input.address as string)}</p>
           <p class="links"><a class="link" href="${escapeHtml(placeUrl as string)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(locale, "starterSite.openInMaps"))}</a>
           <a class="link" href="${directionsUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(locale, "starterSite.getDirectionsArrow"))}</a></p>
+        </div>`);
+  } else if (city) {
+    visit.push(`<div class="card" id="location">
+          <h2 class="sec-title">${secIcon("map")}${escapeHtml(t(locale, "starterSite.locationHeading"))}</h2>
+          <p class="big">${escapeHtml(t(locale, "starterSite.basedIn", { city }))}</p>
         </div>`);
   }
   if (showPhone) {
@@ -651,7 +687,10 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
           <p class="big"><a class="link" href="${telHref(input.phone as string)}">${escapeHtml(input.phone as string)}</a></p>
         </div>`);
   }
-  if (visit.length > 0) bands.push(`<div class="wrap split split--${visit.length}">\n        ${visit.join("\n        ")}\n      </div>`);
+  // With a map, the map card goes full width at the very bottom, just
+  // above the footer (contact first).
+  if (mapSrc) visit.reverse();
+  if (visit.length > 0) bands.push(`<div class="wrap split split--${mapSrc ? 1 : visit.length}">\n        ${visit.join("\n        ")}\n      </div>`);
 
   const sectionsHtml = bands.map((b, i) => `<section class="band${i % 2 === 0 ? " alt" : ""}">\n      ${b}\n    </section>`).join("\n    ");
   const firstBg = tiles.length > 0 ? c.pageBg : bands.length > 0 ? c.altBg : c.footerBg;
@@ -661,7 +700,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   const footCols: string[] = [];
   footCols.push(`<div>
         <div class="foot-name">${decorated ? iconSvg(businessIcon(input.profileId), 20) : ""}${escapeHtml(name)}</div>
-        ${showAddress ? `<p>${escapeHtml(input.address as string)}</p>` : ""}
+        ${showAddress ? `<p>${escapeHtml(input.address as string)}</p>` : city ? `<p>${escapeHtml(city)}</p>` : ""}
         ${showPhone ? `<p><a href="${telHref(input.phone as string)}">${escapeHtml(input.phone as string)}</a></p>` : ""}
       </div>`);
   if (summary.length > 0) {
@@ -690,7 +729,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="${fontsHref}" rel="stylesheet">
 <script type="application/ld+json">${jsonLd(input, name, {
-    address: showAddress,
+    address: showAddress ? (input.address as string) : city,
     phone: showPhone,
     schedule: showHours ? schedule : null,
     price: priceSymbol,
@@ -810,6 +849,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   .card p { margin: 0 0 8px; color: ${c.soft}; }
   .card p.big { font-size: 17px; color: ${c.ink}; font-weight: 600; }
   .links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+  .map { display: block; width: 100%; height: 320px; border: 0; border-radius: 12px; margin-bottom: 14px; background: ${c.altBg}; }
   .link { color: ${c.link}; font-weight: 700; text-decoration: none; font-size: 15px; }
 
   .gallery { display: grid; gap: 10px; }

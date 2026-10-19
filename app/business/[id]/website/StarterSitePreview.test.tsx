@@ -26,6 +26,8 @@ const PROPS = {
   socialLinks: [{ platform: "Instagram", url: "instagram.com/modernliquors" }],
   year: 2026,
   ratingAsOf: "2026-10-16T15:00:00Z",
+  storefront: true,
+  mapEmbed: { key: "test-embed-key", placeId: "ChIJ_modern" },
   profileId: "liquor_store",
   builderOfferReason: "no_website" as const,
 };
@@ -64,6 +66,8 @@ describe("starter site builder", () => {
       socialLinks: PROPS.socialLinks,
       year: 2026,
       ratingAsOf: PROPS.ratingAsOf,
+      storefront: true,
+      mapEmbed: PROPS.mapEmbed,
       profileId: PROPS.profileId,
       themeId: "ink",
       customAccent: null,
@@ -76,6 +80,8 @@ describe("starter site builder", () => {
     expect(srcDoc).toBe(download);
     expect(download).toContain("© 2026 Modern Liquors");
     expect(download).toContain('href="https://instagram.com/modernliquors"');
+    // Same map in the preview as in the download.
+    expect(srcDoc).toContain("maps/embed/v1/place?key=test-embed-key&amp;q=place_id:ChIJ_modern");
   });
 
   test("\"Show my rating\" is off by default, with the re-download note", () => {

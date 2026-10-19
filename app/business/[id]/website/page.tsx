@@ -72,6 +72,8 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       socialLinks={data.verifiedSocialLinks}
       year={new Date().getFullYear()}
       ratingAsOf={lastScanAt}
+      storefront={data.storefront}
+      mapEmbed={process.env.GOOGLE_MAPS_EMBED_KEY && data.storefront && data.placeId ? { key: process.env.GOOGLE_MAPS_EMBED_KEY, placeId: data.placeId } : null}
       profileId={profileEn.id}
       builderOfferReason={builderOffer.reason}
       hasWebsite={hasWebsite}

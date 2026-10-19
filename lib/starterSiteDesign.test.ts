@@ -4,6 +4,7 @@ import {
   STARTER_SITE_THEME_GROUPS,
   buildStarterSiteHtml,
   cityFromAddress,
+  hasStorefront,
   monthYear,
   starterSitePalette,
   type StarterSiteInput,
@@ -366,5 +367,55 @@ describe("ratings can't go stale in a downloaded file", () => {
       expect(ld.openingHoursSpecification.length).toBeGreaterThan(0);
       expect(html).not.toMatch(/aggregateRating|"review"|ratingValue|reviewCount/);
     }
+  });
+});
+
+describe("the storefront map", () => {
+  const KEY = { key: "test-embed-key", placeId: "ChIJ_test-Place_123" };
+
+  test("storefront + key: an embedded map (place mode, lazy) with the address and Google Maps link", () => {
+    const html = buildStarterSiteHtml({ ...SALON, storefront: true, mapEmbed: KEY });
+    expect(html).toContain('<iframe class="map" src="https://www.google.com/maps/embed/v1/place?key=test-embed-key&amp;q=place_id:ChIJ_test-Place_123" loading="lazy"');
+    const map = html.indexOf('<iframe class="map"');
+    expect(html.indexOf("20 W Main St #1", map)).toBeGreaterThan(map);
+    expect(html.indexOf("Open in Google Maps →", map)).toBeGreaterThan(map);
+    expect(map).toBeLessThan(html.indexOf('<footer class="site-footer">'));
+    expect(map).toBeGreaterThan(html.indexOf('id="reviews"'));
+    // Still fast: the only outside resources are the fonts and the lazy map.
+    expect(html.match(/<iframe/g)).toHaveLength(1);
+    expect(html).not.toMatch(/<script[^>]+src=/);
+  });
+
+  test("no key: the address and link, no iframe at all", () => {
+    for (const mapEmbed of [null, undefined, { key: "  ", placeId: "ChIJx" }]) {
+      const html = buildStarterSiteHtml({ ...SALON, storefront: true, mapEmbed });
+      expect(html).not.toContain("<iframe");
+      expect(html).toContain("20 W Main St #1, Irvington, NY 10533, USA");
+      expect(html).toContain("Open in Google Maps →");
+    }
+  });
+
+  test("no storefront (service area / website only): no map, no street, no directions — just the city", () => {
+    const html = buildStarterSiteHtml({ ...SALON, address: "Irvington, NY, USA", storefront: false, mapEmbed: KEY });
+    expect(html).not.toContain("<iframe");
+    expect(html).not.toContain("Get directions");
+    expect(html).not.toContain("maps/dir");
+    expect(html).toContain("Based in Irvington, NY");
+    const ld = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)![1]);
+    expect(ld.address).toBe("Irvington, NY");
+    const hidden = buildStarterSiteHtml({ ...SALON, storefront: false, mapEmbed: KEY });
+    expect(hidden).not.toContain("20 W Main St");
+    expect(hidden).toContain("Based in Irvington, NY");
+  });
+
+  test("what counts as a storefront", () => {
+    const place = "ChIJabc";
+    expect(hasStorefront({ listingMode: "google", placeId: place, address: "20 W Main St #1, Irvington, NY 10533, USA" })).toBe(true);
+    // Google hides a service-area business's street.
+    expect(hasStorefront({ listingMode: "google", placeId: place, address: "Irvington, NY, USA" })).toBe(false);
+    expect(hasStorefront({ listingMode: "google", placeId: place, address: "Irvington, NY 10533, USA" })).toBe(false);
+    expect(hasStorefront({ listingMode: "website_only", placeId: null, address: "20 W Main St, Irvington, NY 10533" })).toBe(false);
+    expect(hasStorefront({ listingMode: "google", placeId: "", address: "20 W Main St, Irvington, NY 10533, USA" })).toBe(false);
+    expect(hasStorefront({ listingMode: "google", placeId: place, address: null })).toBe(false);
   });
 });
