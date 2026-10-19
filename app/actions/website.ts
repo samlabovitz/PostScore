@@ -90,6 +90,12 @@ export interface WebsitePageData {
   starterSiteHours: OwnerHours | null;
   /** false until supabase/hours.sql has been run. */
   starterSiteHoursEnabled: boolean;
+  /** Google's price level enum (lib/priceLevel.ts), or null. */
+  priceLevel: string | null;
+  /** Social profiles on the business's site that a real request confirmed
+   * open the profile (lib/socialLinkCheck.ts) — the starter site links
+   * only these. */
+  verifiedSocialLinks: Array<{ platform: string; url: string }>;
   /** This business's real, currently-losing Website suggestions — the
    * exact output of generateSuggestions(), filtered to the website
    * category, so the visual analysis section's "how to fix" copy is the
@@ -198,7 +204,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "name, address, category, primary_type, business_type_override, phone, opening_hours, opening_hours_periods, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng"
+      "name, address, category, primary_type, business_type_override, phone, opening_hours, opening_hours_periods, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, price_level, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng"
     )
     .eq("id", businessId)
     .single();
@@ -291,6 +297,10 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       websiteSuggestions,
       starterSiteHours,
       starterSiteHoursEnabled,
+      priceLevel: (data as { price_level?: string | null }).price_level ?? null,
+      verifiedSocialLinks: (realInput.websiteAnalysis?.content?.socialProfiles ?? [])
+        .filter((p) => p.check?.result === "profile")
+        .map((p) => ({ platform: p.platform, url: p.url })),
     },
     builderOffer,
   };

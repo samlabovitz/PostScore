@@ -95,10 +95,10 @@ describe("buildStarterSiteHtml", () => {
 
   test("shows the real Google reviews link only when googleMapsUri is on file", () => {
     const withLink = buildStarterSiteHtml(BASE);
-    expect(withLink).toContain("See our reviews on Google");
+    expect(withLink).toContain("Read our reviews on Google");
 
     const withoutLink = buildStarterSiteHtml({ ...BASE, googleMapsUri: null });
-    expect(withoutLink).not.toContain("See our reviews on Google");
+    expect(withoutLink).not.toContain("Read our reviews on Google");
     expect(withoutLink).toContain("4.6");
   });
 

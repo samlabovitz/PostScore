@@ -68,6 +68,9 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       rating={data.rating}
       reviewCount={data.reviewCount}
       googleMapsUri={data.googleMapsUri}
+      priceLevel={data.priceLevel}
+      socialLinks={data.verifiedSocialLinks}
+      year={new Date().getFullYear()}
       profileId={profileEn.id}
       builderOfferReason={builderOffer.reason}
       hasWebsite={hasWebsite}

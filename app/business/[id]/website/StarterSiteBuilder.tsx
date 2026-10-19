@@ -20,12 +20,15 @@ import { cn } from "@/lib/utils";
 import {
   STARTER_SITE_FONTS,
   STARTER_SITE_THEMES,
+  STARTER_SITE_THEME_GROUPS,
   buildStarterSiteHtml,
   getStarterSiteTheme,
+  type StarterSiteThemeGroup,
   type TaglinePlacement,
   type TaglineSize,
 } from "@/lib/starterSite";
 import type { OpeningHoursPeriod } from "@/lib/google/places";
+import { ACCENT_STYLES, patternCss, type AccentStyle } from "@/lib/starterSiteArt";
 import { defaultOwnerHours, ownerHoursFromGoogle, sameSchedule, type OwnerHours } from "@/lib/ownerHours";
 import { HoursDifferNote, HoursGoogleTip, StarterHoursEditor } from "./StarterHoursEditor";
 import { downloadTextFile } from "@/lib/downloadFile";
@@ -51,7 +54,42 @@ const THEME_LABEL_KEY: Record<string, MessageKey> = {
   ocean: "starterSite.theme.ocean",
   berry: "starterSite.theme.berry",
   graphite: "starterSite.theme.graphite",
+  cobalt: "starterSite.theme.cobalt",
+  emerald: "starterSite.theme.emerald",
+  olive: "starterSite.theme.olive",
+  espresso: "starterSite.theme.espresso",
+  sage: "starterSite.theme.sage",
+  blush: "starterSite.theme.blush",
+  sky: "starterSite.theme.sky",
+  sand: "starterSite.theme.sand",
 };
+
+const THEME_GROUP_KEY: Record<StarterSiteThemeGroup, MessageKey> = {
+  classic: "dashboard.website.starter.themeGroup.classic",
+  bold: "dashboard.website.starter.themeGroup.bold",
+  light: "dashboard.website.starter.themeGroup.light",
+  earthy: "dashboard.website.starter.themeGroup.earthy",
+};
+
+const ACCENT_LABEL_KEY: Record<AccentStyle, MessageKey> = {
+  none: "dashboard.website.starter.accent.none",
+  dots: "dashboard.website.starter.accent.dots",
+  lines: "dashboard.website.starter.accent.lines",
+  waves: "dashboard.website.starter.accent.waves",
+  shapes: "dashboard.website.starter.accent.shapes",
+};
+
+/** The pattern itself as a small swatch (same CSS the site uses). */
+function patternStyle(style: AccentStyle, color: string): React.CSSProperties {
+  const out: Record<string, string> = {};
+  for (const decl of patternCss(style, color).split(/;\s*(?=[a-z-]+:)/)) {
+    const i = decl.indexOf(":");
+    if (i < 0) continue;
+    const prop = decl.slice(0, i).trim().replace(/-([a-z])/g, (_, ch: string) => ch.toUpperCase());
+    out[prop] = decl.slice(i + 1).trim().replace(/;$/, "");
+  }
+  return out;
+}
 
 /** Each value keeps the same " — short name / description" shape as the
  * English `.label` it replaces, since the compact tagline-font buttons
@@ -137,6 +175,9 @@ export function StarterSiteBuilder({
   rating,
   reviewCount,
   googleMapsUri,
+  priceLevel = null,
+  socialLinks = [],
+  year,
   profileId,
   builderOfferReason,
   onSiteLocaleChange,
@@ -166,6 +207,12 @@ export function StarterSiteBuilder({
   rating: number | null;
   reviewCount: number | null;
   googleMapsUri: string | null;
+  /** Google's price level enum, when it has one. */
+  priceLevel?: string | null;
+  /** Social profiles on file that were verified to open the real profile. */
+  socialLinks?: Array<{ platform: string; url: string }>;
+  /** The copyright year for the footer (from the server, so both renders match). */
+  year?: number;
   profileId: string;
   /** Why the builder is being offered — see BuilderOffer in
    * app/actions/website.ts. Drives the headline/subcopy only; the
@@ -191,6 +238,7 @@ export function StarterSiteBuilder({
   const [themeId, setThemeId] = useState(STARTER_SITE_THEMES[0].id);
   const [customAccent, setCustomAccent] = useState<string | null>(null);
   const [fontId, setFontId] = useState(STARTER_SITE_FONTS[0].id);
+  const [accentStyle, setAccentStyle] = useState<AccentStyle>("dots");
   const [showAddress, setShowAddress] = useState(!!address);
   const [showPhone, setShowPhone] = useState(!!phone);
   // Hours: Google's, or the owner's own for the website (never scored).
@@ -262,10 +310,14 @@ export function StarterSiteBuilder({
         rating,
         reviewCount,
         googleMapsUri,
+        priceLevel,
+        socialLinks,
+        year,
         profileId,
         themeId,
         customAccent,
         fontId,
+        accentStyle,
         show: { address: showAddress, phone: showPhone, hours: showHours, rating: showRating },
         heroImage,
         contentImages,
@@ -288,10 +340,14 @@ export function StarterSiteBuilder({
       rating,
       reviewCount,
       googleMapsUri,
+      priceLevel,
+      socialLinks,
+      year,
       profileId,
       themeId,
       customAccent,
       fontId,
+      accentStyle,
       showAddress,
       showPhone,
       showHours,
@@ -503,30 +559,32 @@ export function StarterSiteBuilder({
             <div className="mb-2 text-[13px] font-medium text-ink-soft">
               {t(locale, "dashboard.website.starter.colorThemeLabel")}
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              {STARTER_SITE_THEMES.map((theme) => {
-                const themeLabel = t(locale, THEME_LABEL_KEY[theme.id]);
-                return (
-                  <button
-                    key={theme.id}
-                    type="button"
-                    onClick={() => handleThemeSelect(theme.id)}
-                    title={themeLabel}
-                    aria-label={themeLabel}
-                    aria-pressed={themeId === theme.id}
-                    className={cn(
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all",
-                      themeId === theme.id ? "border-ink" : "border-transparent hover:border-paper-deep"
-                    )}
-                    style={{ backgroundColor: theme.heroBg }}
-                  >
-                    <span
-                      className="h-3.5 w-3.5 rounded-full ring-1 ring-white/40"
-                      style={{ backgroundColor: theme.accent }}
-                    />
-                  </button>
-                );
-              })}
+            <div className="flex flex-col gap-2.5">
+              {STARTER_SITE_THEME_GROUPS.map((group) => (
+                <div key={group} className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <div className="w-full text-[11.5px] text-ink-mute">{t(locale, THEME_GROUP_KEY[group])}</div>
+                  {STARTER_SITE_THEMES.filter((theme) => theme.group === group).map((theme) => {
+                    const themeLabel = t(locale, THEME_LABEL_KEY[theme.id]);
+                    return (
+                      <button
+                        key={theme.id}
+                        type="button"
+                        onClick={() => handleThemeSelect(theme.id)}
+                        title={themeLabel}
+                        aria-label={themeLabel}
+                        aria-pressed={themeId === theme.id}
+                        className={cn(
+                          "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all",
+                          themeId === theme.id ? "border-ink" : group === "light" ? "border-paper-deep hover:border-ink-soft" : "border-transparent hover:border-paper-deep"
+                        )}
+                        style={{ backgroundColor: theme.heroBg }}
+                      >
+                        <span className="h-3.5 w-3.5 rounded-full ring-1 ring-white/40" style={{ backgroundColor: theme.accent }} />
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
             <div className="mt-2.5 flex items-center gap-2">
               <input
@@ -570,6 +628,28 @@ export function StarterSiteBuilder({
                   )}
                 >
                   {t(locale, FONT_LABEL_KEY[font.id])}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-1 text-[13px] font-medium text-ink-soft">{t(locale, "dashboard.website.starter.accentsLabel")}</div>
+            <p className="mb-2 text-[12px] text-ink-mute">{t(locale, "dashboard.website.starter.accentsHelper")}</p>
+            <div className="flex flex-wrap gap-2">
+              {ACCENT_STYLES.map((style) => (
+                <button
+                  key={style}
+                  type="button"
+                  onClick={() => setAccentStyle(style)}
+                  aria-pressed={accentStyle === style}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-[12.5px] font-medium transition-colors",
+                    accentStyle === style ? "border-brass bg-brass/10 text-brass" : "border-paper-deep bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
+                  )}
+                >
+                  <span aria-hidden className="h-6 w-6 rounded-full border border-paper-line bg-white" style={patternStyle(style, effectiveAccent)} />
+                  {t(locale, ACCENT_LABEL_KEY[style])}
                 </button>
               ))}
             </div>

@@ -3130,6 +3130,44 @@ export type MessageKey =
   // --- Starter site: owner hours + star row.
   | "starterSite.starsAria"
   | "starterSite.today"
+  | "starterSite.theme.sage"
+  | "starterSite.theme.blush"
+  | "starterSite.theme.sky"
+  | "starterSite.theme.sand"
+  | "starterSite.theme.cobalt"
+  | "starterSite.theme.emerald"
+  | "starterSite.theme.olive"
+  | "starterSite.theme.espresso"
+  | "starterSite.callNow"
+  | "starterSite.glanceToday"
+  | "starterSite.glanceArea"
+  | "starterSite.glancePrice"
+  | "starterSite.priceFree"
+  | "starterSite.openNow"
+  | "starterSite.closedNow"
+  | "starterSite.openUntil"
+  | "starterSite.opensAt"
+  | "starterSite.opensTomorrow"
+  | "starterSite.opensDay"
+  | "starterSite.todayHours"
+  | "starterSite.ratingBadgeOnGoogle"
+  | "starterSite.openInMaps"
+  | "starterSite.followUs"
+  | "starterSite.copyright"
+  | "starterSite.inCity"
+  | "starterSite.ratingBadge.one"
+  | "starterSite.ratingBadge.other"
+  | "dashboard.website.starter.themeGroup.classic"
+  | "dashboard.website.starter.themeGroup.bold"
+  | "dashboard.website.starter.themeGroup.light"
+  | "dashboard.website.starter.themeGroup.earthy"
+  | "dashboard.website.starter.accentsLabel"
+  | "dashboard.website.starter.accentsHelper"
+  | "dashboard.website.starter.accent.none"
+  | "dashboard.website.starter.accent.dots"
+  | "dashboard.website.starter.accent.lines"
+  | "dashboard.website.starter.accent.waves"
+  | "dashboard.website.starter.accent.shapes"
   | "dashboard.website.starter.hours.add"
   | "dashboard.website.starter.hours.edit"
   | "dashboard.website.starter.hours.editForWebsite"
@@ -3280,6 +3318,7 @@ export type PluralKeyBase =
   | "dashboard.competitors.foundFewMessage"
   | "dashboard.competitors.unscoredSuffix"
   | "starterSite.reviewsAverageFromCount"
+  | "starterSite.ratingBadge"
   | "content.checks.visibility.rating.explanation.lowConfidence"
   | "content.checks.visibility.review_count.explanation.nonzero"
   | "content.checks.completeness.categories.explanation.hasList"
@@ -5136,7 +5175,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "starterSite.reviewsAverageFromCount.one": "{rating} average from {count} Google review",
     "starterSite.reviewsAverageFromCount.other": "{rating} average from {count} Google reviews",
     "starterSite.reviewsAverageOnGoogle": "{rating} average on Google",
-    "starterSite.seeReviewsOnGoogle": "See our reviews on Google →",
+    "starterSite.seeReviewsOnGoogle": "Read our reviews on Google →",
     "starterSite.defaultBusinessName": "Your Business",
     "starterSite.footerBuiltWith": "Site built with PostScore",
     "starterSite.mapTitle": "Map to {name}",
@@ -6891,6 +6930,44 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.visit.gotIt": "Got it",
     "starterSite.starsAria": "{rating} out of 5 stars",
     "starterSite.today": "Today",
+    "starterSite.theme.sage": "Sage & Cream",
+    "starterSite.theme.blush": "Blush & Charcoal",
+    "starterSite.theme.sky": "Sky & Navy",
+    "starterSite.theme.sand": "Sand & Terracotta",
+    "starterSite.theme.cobalt": "Cobalt & Citrus",
+    "starterSite.theme.emerald": "Emerald & Blush",
+    "starterSite.theme.olive": "Olive & Rust",
+    "starterSite.theme.espresso": "Espresso & Cream",
+    "starterSite.callNow": "Call now",
+    "starterSite.glanceToday": "Hours today",
+    "starterSite.glanceArea": "Area",
+    "starterSite.glancePrice": "Prices",
+    "starterSite.priceFree": "Free",
+    "starterSite.openNow": "Open now",
+    "starterSite.closedNow": "Closed now",
+    "starterSite.openUntil": "until {time}",
+    "starterSite.opensAt": "opens at {time}",
+    "starterSite.opensTomorrow": "opens tomorrow at {time}",
+    "starterSite.opensDay": "opens {day} at {time}",
+    "starterSite.todayHours": "Today: {hours}",
+    "starterSite.ratingBadgeOnGoogle": "{rating} on Google",
+    "starterSite.openInMaps": "Open in Google Maps →",
+    "starterSite.followUs": "Follow us",
+    "starterSite.copyright": "© {year} {name}",
+    "starterSite.inCity": "{category} in {city}",
+    "starterSite.ratingBadge.one": "{rating} \u00b7 {count} Google review",
+    "starterSite.ratingBadge.other": "{rating} \u00b7 {count} Google reviews",
+    "dashboard.website.starter.themeGroup.classic": "Classic",
+    "dashboard.website.starter.themeGroup.bold": "Bold",
+    "dashboard.website.starter.themeGroup.light": "Light",
+    "dashboard.website.starter.themeGroup.earthy": "Earthy",
+    "dashboard.website.starter.accentsLabel": "Style accents",
+    "dashboard.website.starter.accentsHelper": "Patterns, dividers, shapes and an icon for your type of business — drawn in code, no image files, so the page stays fast.",
+    "dashboard.website.starter.accent.none": "None",
+    "dashboard.website.starter.accent.dots": "Dots & curves",
+    "dashboard.website.starter.accent.lines": "Fine lines & angles",
+    "dashboard.website.starter.accent.waves": "Soft waves",
+    "dashboard.website.starter.accent.shapes": "Playful shapes",
     "dashboard.website.starter.hours.add": "Add your hours",
     "dashboard.website.starter.hours.edit": "Edit your hours",
     "dashboard.website.starter.hours.editForWebsite": "Edit for the website",
@@ -8070,7 +8147,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.starter.includeAddress": "Dirección y mapa",
     "dashboard.website.starter.includePhone": "Teléfono (clic para llamar)",
     "dashboard.website.starter.includeHours": "Horario",
-    "dashboard.website.starter.includeRating": "Calificación y reseñas",
+    "dashboard.website.starter.includeRating": "Calificaci\u00f3n y rese\u00f1as",
     "dashboard.website.starter.livePreviewLabel": "Vista previa en vivo — exactamente lo que descargará",
     "dashboard.website.starter.iframeTitle": "Vista previa en vivo de su sitio inicial",
     "dashboard.website.starter.downloadSiteButton": "Descargar sitio (HTML)",
@@ -8606,7 +8683,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "starterSite.reviewsAverageFromCount.one": "{rating} de promedio según {count} reseña de Google",
     "starterSite.reviewsAverageFromCount.other": "{rating} de promedio según {count} reseñas de Google",
     "starterSite.reviewsAverageOnGoogle": "{rating} de promedio en Google",
-    "starterSite.seeReviewsOnGoogle": "Vea nuestras reseñas en Google →",
+    "starterSite.seeReviewsOnGoogle": "Lea nuestras reseñas en Google →",
     "starterSite.defaultBusinessName": "Su negocio",
     "starterSite.footerBuiltWith": "Sitio creado con PostScore",
     "starterSite.mapTitle": "Mapa de {name}",
@@ -10676,6 +10753,44 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.visit.gotIt": "Entendido",
     "starterSite.starsAria": "{rating} de 5 estrellas",
     "starterSite.today": "Hoy",
+    "starterSite.theme.sage": "Salvia y crema",
+    "starterSite.theme.blush": "Rosa pálido y carbón",
+    "starterSite.theme.sky": "Cielo y azul marino",
+    "starterSite.theme.sand": "Arena y terracota",
+    "starterSite.theme.cobalt": "Cobalto y cítrico",
+    "starterSite.theme.emerald": "Esmeralda y rosa",
+    "starterSite.theme.olive": "Oliva y óxido",
+    "starterSite.theme.espresso": "Espresso y crema",
+    "starterSite.callNow": "Llamar ahora",
+    "starterSite.glanceToday": "Horario de hoy",
+    "starterSite.glanceArea": "Zona",
+    "starterSite.glancePrice": "Precios",
+    "starterSite.priceFree": "Gratis",
+    "starterSite.openNow": "Abierto ahora",
+    "starterSite.closedNow": "Cerrado ahora",
+    "starterSite.openUntil": "hasta las {time}",
+    "starterSite.opensAt": "abre a las {time}",
+    "starterSite.opensTomorrow": "abre mañana a las {time}",
+    "starterSite.opensDay": "abre el {day} a las {time}",
+    "starterSite.todayHours": "Hoy: {hours}",
+    "starterSite.ratingBadgeOnGoogle": "{rating} en Google",
+    "starterSite.openInMaps": "Abrir en Google Maps →",
+    "starterSite.followUs": "Síganos",
+    "starterSite.copyright": "© {year} {name}",
+    "starterSite.inCity": "{category} en {city}",
+    "starterSite.ratingBadge.one": "{rating} \u00b7 {count} rese\u00f1a de Google",
+    "starterSite.ratingBadge.other": "{rating} \u00b7 {count} rese\u00f1as de Google",
+    "dashboard.website.starter.themeGroup.classic": "Clásicos",
+    "dashboard.website.starter.themeGroup.bold": "Llamativos",
+    "dashboard.website.starter.themeGroup.light": "Claros",
+    "dashboard.website.starter.themeGroup.earthy": "Terrosos",
+    "dashboard.website.starter.accentsLabel": "Detalles de estilo",
+    "dashboard.website.starter.accentsHelper": "Patrones, divisores, formas y un ícono para su tipo de negocio — dibujados con código, sin archivos de imagen, para que la página siga siendo rápida.",
+    "dashboard.website.starter.accent.none": "Ninguno",
+    "dashboard.website.starter.accent.dots": "Puntos y curvas",
+    "dashboard.website.starter.accent.lines": "Líneas finas y ángulos",
+    "dashboard.website.starter.accent.waves": "Ondas suaves",
+    "dashboard.website.starter.accent.shapes": "Formas divertidas",
     "dashboard.website.starter.hours.add": "Agregar su horario",
     "dashboard.website.starter.hours.edit": "Editar su horario",
     "dashboard.website.starter.hours.editForWebsite": "Editar para el sitio web",

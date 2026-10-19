@@ -33,6 +33,9 @@ export function WebsiteGeneratorSection({
   rating,
   reviewCount,
   googleMapsUri,
+  priceLevel,
+  socialLinks,
+  year,
   profileId,
   builderOfferReason,
   hasWebsite,
@@ -53,6 +56,9 @@ export function WebsiteGeneratorSection({
   rating: number | null;
   reviewCount: number | null;
   googleMapsUri: string | null;
+  priceLevel: string | null;
+  socialLinks: Array<{ platform: string; url: string }>;
+  year: number;
   profileId: string;
   builderOfferReason: "no_website" | "underperforming" | "backup";
   hasWebsite: boolean;
@@ -104,6 +110,9 @@ export function WebsiteGeneratorSection({
       rating={rating}
       reviewCount={reviewCount}
       googleMapsUri={googleMapsUri}
+      priceLevel={priceLevel}
+      socialLinks={socialLinks}
+      year={year}
       profileId={profileId}
       builderOfferReason={builderOfferReason}
       onSiteLocaleChange={setSiteLocale}
