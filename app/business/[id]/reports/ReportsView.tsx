@@ -5,7 +5,9 @@ import { IconArrowLeft } from "@tabler/icons-react";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ScoreHistoryChart } from "@/components/reports/ScoreHistoryChart";
 import { MonthlyEmailReportCard } from "@/components/reports/MonthlyEmailReportCard";
-import { MonthlyRecapCard } from "@/components/reports/MonthlyRecapCard";
+import { WeeklyRecapCard } from "@/components/reports/WeeklyRecapCard";
+import { PastReports } from "@/components/reports/PastReports";
+import type { WeeklyRecapData } from "@/lib/weekly/weeklyData.server";
 import { VerifiedFixesCard } from "@/components/reports/VerifiedFixesCard";
 import type { GetReportsDataResult } from "@/app/actions/reports";
 import { t, useLocale } from "@/lib/i18n";
@@ -15,11 +17,18 @@ export function ReportsView({
   businessName,
   reports,
   shareHeadline,
+  weekly,
+  weekLabels,
+  rankNoun,
 }: {
   businessId: string;
   businessName: string | null;
   reports: Extract<GetReportsDataResult, { status: "ok" }>;
   shareHeadline: string | null;
+  /** The weekly recap (null only if the business couldn't be read). */
+  weekly: WeeklyRecapData | null;
+  weekLabels: Record<string, string>;
+  rankNoun: string;
 }) {
   const locale = useLocale();
   return (
@@ -42,10 +51,20 @@ export function ReportsView({
 
       <SectionHeading title={t(locale, "dashboard.reports.scoreOverTimeHeading")} />
       <ScoreHistoryChart history={reports.history} />
-      <MonthlyEmailReportCard businessId={businessId} status={reports.monthlyEmailReport} />
 
-      <SectionHeading title={t(locale, "dashboard.reports.monthlyRecapHeading")} />
-      <MonthlyRecapCard businessId={businessId} recap={reports.recap} shareHeadline={shareHeadline} />
+      {weekly && (
+        <>
+          <SectionHeading title={t(locale, "dashboard.reports.weekly.heading")} />
+          <WeeklyRecapCard businessId={businessId} view={weekly.view} weeks={weekly.weeks} weekLabels={weekLabels} rankNoun={rankNoun} shareHeadline={shareHeadline} />
+          <MonthlyEmailReportCard businessId={businessId} status={reports.monthlyEmailReport} />
+          <SectionHeading title={t(locale, "dashboard.reports.weekly.pastHeading")} />
+          {weekly.snapshotsEnabled ? (
+            <PastReports businessId={businessId} initial={weekly.past} />
+          ) : (
+            <p className="-mt-3 text-sm text-ink-soft">{t(locale, "dashboard.reports.weekly.pastNotReady")}</p>
+          )}
+        </>
+      )}
 
       <SectionHeading title={t(locale, "dashboard.reports.whatWeveVerifiedHeading")} />
       <VerifiedFixesCard

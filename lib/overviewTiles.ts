@@ -18,6 +18,29 @@ export function weightedCategoryPoints(category: Pick<CategoryResult, "relativeS
   return Math.round(((category.relativeScore * category.weight) / 100) * 10) / 10;
 }
 
+/** Whole points per category, as the Overview and the reports show them
+ * ("15 / 40"): rounded so the three still add up to the rounded total
+ * (largest remainder — 14.7 + 21.9 + 0 shows as 15 + 22 + 0 = 37).
+ * null for a category with nothing checkable. Same order as `categories`. */
+export function wholeCategoryPoints(categories: Array<Pick<CategoryResult, "relativeScore" | "weight">>): Array<number | null> {
+  const exact = categories.map((c) => (c.relativeScore === null ? null : (c.relativeScore * c.weight) / 100));
+  const known = exact.filter((v): v is number => v !== null);
+  const target = Math.round(known.reduce((a, b) => a + b, 0));
+  const floors = exact.map((v) => (v === null ? null : Math.floor(v)));
+  let left = target - floors.reduce<number>((a, b) => a + (b ?? 0), 0);
+  const order = exact
+    .map((v, i) => ({ i, rem: v === null ? -1 : v - Math.floor(v) }))
+    .filter((x) => x.rem >= 0)
+    .sort((a, b) => b.rem - a.rem || a.i - b.i);
+  const out = [...floors];
+  for (const { i } of order) {
+    if (left <= 0) break;
+    out[i] = (out[i] as number) + 1;
+    left--;
+  }
+  return out;
+}
+
 /** Shares of the category's full points (every check's max): earned,
  * missing, and couldn't-check (only when some points couldn't be checked).
  * Exported for tests. */

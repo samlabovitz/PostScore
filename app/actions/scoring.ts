@@ -11,9 +11,11 @@ import {
   businessRowToScoringInput,
   getScoreWithSuggestions,
   type BusinessScoringRow,
+  type ScanKind,
   type ScoreBreakdown,
   type ScoreWithSuggestions,
 } from "@/lib/scoring";
+import { isFullScan } from "@/lib/websiteRecheckPolicy";
 import { reconcileTasks, type TaskRow } from "@/lib/actionPlan";
 import { buildProfileSnapshot, diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
 import { lookupBusinessByPlaceId, type OpeningHoursPeriod } from "@/lib/google/places";
@@ -179,10 +181,13 @@ export async function saveScoreSnapshot(businessId: string): Promise<SaveScoreSn
  */
 export async function saveScoreSnapshotWithClient(
   supabase: SupabaseClient,
-  businessId: string
+  businessId: string,
+  /** "website_recheck" marks a website-only re-check (app/actions/websiteRecheck.ts). */
+  scanKind?: ScanKind
 ): Promise<SaveScoreSnapshotResult> {
   const scored = await scoreBusinessWithClient(supabase, businessId);
   if (scored.status !== "ok") return scored;
+  const breakdownJson: ScoreBreakdown = scanKind && scanKind !== "full" ? { ...scored.result.breakdown, scanKind } : scored.result.breakdown;
 
   const { data, error } = await supabase
     .from("scores")
@@ -190,7 +195,7 @@ export async function saveScoreSnapshotWithClient(
       business_id: businessId,
       total: scored.result.breakdown.total,
       grade: scored.result.breakdown.grade,
-      breakdown_json: scored.result.breakdown,
+      breakdown_json: breakdownJson,
       scoring_version: scored.result.breakdown.scoringVersion,
       profile_snapshot_json: buildProfileSnapshot(scored.business),
     })
@@ -311,6 +316,8 @@ export interface RescanSummary {
   checksChanged: number;
 }
 
+type SavedScore = { total: number; scoring_version: string; breakdown_json: ScoreBreakdown; created_at: string };
+
 async function latestScore(supabase: SupabaseClient, businessId: string) {
   const { data } = await supabase
     .from("scores")
@@ -319,7 +326,19 @@ async function latestScore(supabase: SupabaseClient, businessId: string) {
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return data as { total: number; scoring_version: string; breakdown_json: ScoreBreakdown; created_at: string } | null;
+  return data as SavedScore | null;
+}
+
+/** The latest FULL scan — the 1-a-day re-scan limit never counts a
+ * website-only re-check (at most 3 a day, so 10 rows always reach one). */
+async function latestFullScore(supabase: SupabaseClient, businessId: string) {
+  const { data } = await supabase
+    .from("scores")
+    .select("total, scoring_version, breakdown_json, created_at")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false })
+    .limit(10);
+  return ((data ?? []) as SavedScore[]).find((row) => isFullScan(row.breakdown_json)) ?? null;
 }
 
 export async function rescanBusiness(businessId: string): Promise<RescanBusinessResult> {
@@ -334,9 +353,9 @@ export async function rescanBusiness(businessId: string): Promise<RescanBusiness
   }
 
   // One re-scan per business per 24 hours (lib/rescanPolicy.ts) — checked
-  // before any paid call.
-  const before = await latestScore(supabase, businessId);
-  const availability = rescanAvailability(before?.created_at ?? null, new Date());
+  // before any paid call. Website-only re-checks don't count.
+  const [before, lastFull] = await Promise.all([latestScore(supabase, businessId), latestFullScore(supabase, businessId)]);
+  const availability = rescanAvailability(lastFull?.created_at ?? null, new Date());
   if (!availability.allowed) return { status: "too_soon", nextAvailableAt: availability.nextAvailableAt! };
 
   const result = await rescanBusinessWithClient(supabase, businessId);
@@ -545,6 +564,8 @@ export interface ScoreHistoryRow {
   grade: string;
   scoring_version: string;
   created_at: string;
+  /** "website_recheck" for a website-only re-check; null for a full scan. */
+  scan_kind?: string | null;
 }
 
 /** Most recent scans for a business, newest first. RLS-scoped to the current user. */
@@ -552,7 +573,7 @@ async function getScoreHistoryUncached(businessId: string): Promise<ScoreHistory
   const supabase = createClient();
   const { data, error } = await supabase
     .from("scores")
-    .select("id, total, grade, scoring_version, created_at")
+    .select("id, total, grade, scoring_version, created_at, scan_kind:breakdown_json->>scanKind")
     .eq("business_id", businessId)
     .order("created_at", { ascending: false })
     .limit(20);

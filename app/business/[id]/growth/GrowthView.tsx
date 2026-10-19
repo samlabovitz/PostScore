@@ -7,7 +7,7 @@ import { IconArrowLeft, IconBrandGoogle, IconWorld } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/SegmentedControl";
-import { TaskListCard, GrowthMoveCard, CompletedTasksCard } from "../ActionPlanSection";
+import { TaskListCard, GrowthMoveCard, CompletedTasksCard, type WebsiteRecheckProps } from "../ActionPlanSection";
 import { WeeklyChecklist } from "./WeeklyChecklist";
 import { WeeklyGoalCelebration } from "./WeeklyGoalCelebration";
 import type { ActionPlanTask, CompletedTask, WebsiteBanner } from "@/lib/actionPlan";
@@ -187,6 +187,7 @@ export function GrowthView({
   initialPromos,
   initialReferral,
   lastScanAt,
+  websiteRecheck = null,
   gbpConnected = false,
   linkOptions = {},
   plan = "free",
@@ -206,6 +207,8 @@ export function GrowthView({
    * re-checked yet" apart from "checked, no real change" (see
    * pendingCheckStatus in lib/actionPlan.ts). */
   lastScanAt: string | null;
+  /** Website re-checks left today ("Re-check my website" on website tasks). */
+  websiteRecheck?: WebsiteRecheckProps | null;
   /** Connecting Google is Premium-only — when not connected, a small
    * "Unlock live Google insights" card (never one of the plan's tasks). */
   /** The account's plan (lib/premium.ts) — gates the Print Studio. */
@@ -397,6 +400,7 @@ export function GrowthView({
                 context="weekly"
                 lastScanAt={lastScanAt}
                 linkOptions={linkOptions}
+                websiteRecheck={websiteRecheck}
                 emptyMessage={
                   hasNoRemainingScoreGaps
                     ? t(locale, "dashboard.growth.view.fullPointsMessage")
@@ -421,6 +425,7 @@ export function GrowthView({
                   businessId={businessId}
                   lastScanAt={lastScanAt}
                   linkOptions={linkOptions}
+                  websiteRecheck={websiteRecheck}
                   emptyMessage={
                     hasNoRemainingScoreGaps
                       ? t(locale, "dashboard.growth.view.fullPointsMessage")

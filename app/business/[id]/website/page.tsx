@@ -9,12 +9,14 @@ import { WebsiteGeneratorSection } from "./WebsiteGeneratorSection";
 import { WebsiteVisualAnalysis } from "./WebsiteVisualAnalysis";
 import { WebsiteScoreBreakdown } from "./WebsiteScoreBreakdown";
 import { getLastScanAt } from "@/app/actions/scoring";
+import { getWebsiteRecheckStatus } from "@/app/actions/websiteRecheck";
+import { WebsiteRecheck } from "@/components/scoring/WebsiteRecheck";
 import { formatShortDate, normalizeLocale, t } from "@/lib/i18n";
 import { HackedSiteBanner } from "@/components/scoring/HackedSiteBanner";
 import { hackSignsFor } from "@/lib/siteSecurity";
 
 export default async function WebsitePage({ params }: { params: { id: string } }) {
-  const [result, lastScanAt] = await Promise.all([getWebsitePageData(params.id), getLastScanAt(params.id)]);
+  const [result, lastScanAt, recheck] = await Promise.all([getWebsitePageData(params.id), getLastScanAt(params.id), getWebsiteRecheckStatus(params.id)]);
 
   if (result.status === "unauthenticated") {
     redirect("/login");
@@ -60,6 +62,9 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       address={data.address}
       openingHours={data.openingHours}
       openingHoursPeriods={data.openingHoursPeriods}
+      starterSiteHours={data.starterSiteHours}
+      starterSiteHoursEnabled={data.starterSiteHoursEnabled}
+      timeZone={data.timeZone}
       rating={data.rating}
       reviewCount={data.reviewCount}
       googleMapsUri={data.googleMapsUri}
@@ -153,6 +158,8 @@ export default async function WebsitePage({ params }: { params: { id: string } }
 
         {hasWebsite ? (
           <>
+            {/* Website-only businesses keep their own re-check (Overview). */}
+            {recheck.status === "ok" && <WebsiteRecheck businessId={params.id} initialLeft={recheck.availability.left} hasWebsite={recheck.hasWebsite} />}
             {visualAnalysis}
             {scoreBreakdown}
           </>

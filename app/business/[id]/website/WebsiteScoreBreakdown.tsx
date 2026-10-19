@@ -21,7 +21,8 @@ import { WebsiteCoverageNote } from "@/components/scoring/WebsiteCoverageNote";
 import { t, tPlural, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
 import { checkAnchorId } from "@/lib/postaiLinks";
 import { websiteFixPlan, type WebsiteFix, type WebsiteFixPlan } from "@/lib/websiteFixes";
-import { resolveWebsiteBuilder, WEBSITE_BUILDER_NAMES } from "@/lib/websiteBuilder";
+import { resolveWebsiteBuilder, WEBSITE_BUILDER_NAMES, type WebsiteBuilderId } from "@/lib/websiteBuilder";
+import { WebsiteFixGuide } from "@/components/scoring/WebsiteFixGuide";
 
 /** Checks whose "excluded" state has a real, specific reason worth its
  * own honest sentence (Day 4 Part 3c) — mapped from the real stored
@@ -168,9 +169,12 @@ function CheckRow({
   websiteAnalysis,
   siteUrl,
   businessName,
+  builderId,
 }: {
   check: CheckResult;
   suggestion: Suggestion | undefined;
+  /** The detected website builder (null: unknown or custom-coded). */
+  builderId: WebsiteBuilderId | null;
   /** This check's fix(es) — one per missing item (lib/websiteFixes.ts). */
   fixes: WebsiteFix[];
   websiteAnalysis: WebsiteAnalysis | null;
@@ -254,6 +258,10 @@ function CheckRow({
               </span>
             ))}
           </div>
+        )}
+
+        {(state === "partial" || state === "zero") && fixes.length > 0 && check.id !== "website.has_website" && (
+          <WebsiteFixGuide fixes={fixes} builder={builderId} siteUrl={siteUrl} />
         )}
 
         {spamFinding && trust && (
@@ -459,6 +467,7 @@ export function WebsiteScoreBreakdown({
                       websiteAnalysis={websiteAnalysis}
                       siteUrl={siteUrl}
                       businessName={businessName}
+                      builderId={builder?.id ?? null}
                     />
                   ))}
                 </div>

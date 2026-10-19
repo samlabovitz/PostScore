@@ -15,7 +15,7 @@ import { IconArrowRight, IconChevronDown } from "@tabler/icons-react";
 import { CategoryCard, checkOutcome, formatPoints } from "@/components/scoring/CategoryCard";
 import { WebsiteCoverageNote } from "@/components/scoring/WebsiteCoverageNote";
 import { ANCHOR_HIGHLIGHT_EVENT, anchorScrollBehavior } from "@/components/layout/AnchorHighlight";
-import { categoryBarShares, categoryOutcomeCounts, postaiTargetForCheck, weightedCategoryPoints } from "@/lib/overviewTiles";
+import { categoryBarShares, categoryOutcomeCounts, postaiTargetForCheck, wholeCategoryPoints } from "@/lib/overviewTiles";
 import { checkAnchorId, resolveLinkTarget, type LinkOptions } from "@/lib/postaiLinks";
 import { isMinorSpeedGap, type CategoryResult } from "@/lib/scoring";
 import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
@@ -64,15 +64,17 @@ function CategorySummary({
   hasWebsite,
   scoreBasis,
   websiteFixCount,
+  points,
 }: {
   businessId: string;
   category: CategoryResult;
   hasWebsite: boolean;
   scoreBasis: number;
   websiteFixCount: number | null;
+  /** Whole points (wholeCategoryPoints over all three categories). */
+  points: number | null;
 }) {
   const locale = useLocale();
-  const points = weightedCategoryPoints(category);
   const counts = categoryOutcomeCounts(category);
   // The check that needs work costing the most points (never an
   // "Excellent"/"Good" rating, never a tiny speed gap).
@@ -146,6 +148,7 @@ export function ScoreBreakdownPanel({
   const [expanded, setExpanded] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const fixLinks = breakdownFixLinks(categories, businessId, locale, linkOptions);
+  const wholePoints = wholeCategoryPoints(categories);
 
   useEffect(() => {
     if (open) {
@@ -201,9 +204,9 @@ export function ScoreBreakdownPanel({
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-5 nav:grid-cols-3">
-        {categories.map((category) => (
+        {categories.map((category, i) => (
           <div key={category.id} className="flex min-w-0 flex-col">
-            <CategorySummary businessId={businessId} category={category} hasWebsite={hasWebsite} scoreBasis={scoreBasis} websiteFixCount={websiteFixCount} />
+            <CategorySummary businessId={businessId} category={category} hasWebsite={hasWebsite} scoreBasis={scoreBasis} websiteFixCount={websiteFixCount} points={wholePoints[i]} />
             <div
               className={cn(
                 "grid transition-[grid-template-rows,opacity] ease-out motion-reduce:transition-none",

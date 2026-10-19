@@ -26,6 +26,8 @@
 import { t, tPlural, type Locale } from "./i18n";
 import { formatOpeningHours } from "./hours";
 import type { OpeningHoursPeriod } from "./google/places";
+import { appointmentOnlyLabel, hoursRows, openingHoursSpecification, ownerHoursFromGoogle, type OwnerHours } from "./ownerHours";
+import { starRowCss, starRowHtml } from "./starRating";
 
 /**
  * A curated color theme: a dark hero background (paired with white
@@ -385,6 +387,11 @@ export interface StarterSiteInput {
    * formatOpeningHours() can honestly produce Spanish lines from it;
    * null falls back to openingHours exactly as before. */
   openingHoursPeriods: OpeningHoursPeriod[] | null;
+  /** Hours the owner entered for the website (lib/ownerHours.ts) — used
+   * instead of Google's when set. Website only: never scored. */
+  ownerHours?: OwnerHours | null;
+  /** The business's time zone (IANA) — the site highlights "today" in it. */
+  timeZone?: string;
   rating: number | null;
   reviewCount: number | null;
   /** Real link to the business's own Google listing, when on file —
@@ -418,6 +425,31 @@ export interface StarterSiteInput {
   contentImages: Array<{ dataUri: string; alt: string }>;
 }
 
+/** JSON for a <script> tag: "<" escaped so text can't close the tag. */
+function scriptJson(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c");
+}
+
+/** schema.org LocalBusiness: only the facts the site itself shows. Hours
+ * are the owner's (or Google's) for this website — never a rating, since
+ * Google doesn't allow a business to mark up its own reviews. */
+function jsonLd(input: StarterSiteInput, name: string, showAddress: boolean, showPhone: boolean, schedule: OwnerHours | null): string {
+  const data: Record<string, unknown> = { "@context": "https://schema.org", "@type": "LocalBusiness", name };
+  if (showPhone && input.phone) data.telephone = input.phone;
+  if (showAddress && input.address) data.address = input.address;
+  if (schedule) {
+    const spec = openingHoursSpecification(schedule);
+    if (spec.length > 0) data.openingHoursSpecification = spec;
+  }
+  return scriptJson(data);
+}
+
+/** Highlights today's row, in the business's own time zone, when the page
+ * is viewed (Monday = 0, matching the table's data-day). */
+function todayScript(timeZone: string): string {
+  return `<script>(function(){try{var d=new Intl.DateTimeFormat("en-US",{timeZone:${scriptJson(timeZone)},weekday:"short"}).format(new Date());var i=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].indexOf(d);var r=document.querySelector('.hours tr[data-day="'+i+'"]');if(r)r.className="today";}catch(e){}})();</script>`;
+}
+
 export function buildStarterSiteHtml(input: StarterSiteInput): string {
   const locale = input.locale;
   const theme = getStarterSiteTheme(input.themeId);
@@ -435,7 +467,11 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   // never a guessed Spanish schedule.
   const hoursLines =
     (locale === "es" ? formatOpeningHours(input.openingHoursPeriods, locale) : null) ?? input.openingHours;
-  const showHours = input.show.hours && !!hoursLines && hoursLines.length > 0;
+  // A real weekly schedule (the owner's, else Google's structured hours)
+  // renders as a table with today highlighted; otherwise Google's plain
+  // lines as before.
+  const schedule = input.ownerHours ?? ownerHoursFromGoogle(input.openingHoursPeriods);
+  const showHours = input.show.hours && (!!schedule || (!!hoursLines && hoursLines.length > 0));
   const showRating = input.show.rating && input.rating !== null;
   const tagline = input.tagline.trim();
 
@@ -472,11 +508,29 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
       </section>`);
   }
 
-  if (showHours) {
+  if (showHours && schedule) {
+    const note = schedule.note.trim() ? `<p class="hours-note">${escapeHtml(schedule.note.trim())}</p>` : "";
+    const body =
+      schedule.mode === "appointment"
+        ? `<p class="hours-appointment">${escapeHtml(appointmentOnlyLabel(locale))}</p>`
+        : `<table class="hours">
+          <tbody>
+          ${hoursRows(schedule, locale)
+            .map((row) => `<tr data-day="${row.index}"><th scope="row">${escapeHtml(row.day)}</th><td>${escapeHtml(row.text)}</td></tr>`)
+            .join("\n          ")}
+          </tbody>
+        </table>`;
     sections.push(`
       <section class="card">
         <h2>${escapeHtml(t(locale, "starterSite.hoursHeading"))}</h2>
-        <ul class="hours">
+        ${body}
+        ${note}
+      </section>`);
+  } else if (showHours) {
+    sections.push(`
+      <section class="card">
+        <h2>${escapeHtml(t(locale, "starterSite.hoursHeading"))}</h2>
+        <ul class="hours-lines">
           ${(hoursLines as string[]).map((line) => `<li>${escapeHtml(line)}</li>`).join("\n          ")}
         </ul>
       </section>`);
@@ -503,7 +557,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   }
 
   if (showRating) {
-    const stars = "★".repeat(Math.max(0, Math.min(5, Math.round(input.rating as number))));
+    const stars = starRowHtml(input.rating, t(locale, "starterSite.starsAria", { rating: (input.rating as number).toFixed(1) }));
     const reviewsLine =
       input.reviewCount !== null
         ? tPlural(locale, "starterSite.reviewsAverageFromCount", input.reviewCount, {
@@ -516,7 +570,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
     sections.push(`
       <section class="card">
         <h2>${escapeHtml(t(locale, "starterSite.reviewsHeading"))}</h2>
-        <p class="stars" aria-hidden="true">${stars}</p>
+        <p class="stars-row">${stars}</p>
         <p>${escapeHtml(reviewsLine)}</p>
         ${reviewsLink}
       </section>`);
@@ -543,6 +597,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="${fontsHref}" rel="stylesheet">
+<script type="application/ld+json">${jsonLd(input, name, showAddress, showPhone, showHours ? schedule : null)}</script>
 <style>
   :root {
     color-scheme: light;
@@ -652,18 +707,45 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
     object-fit: cover;
     border-radius: 8px;
   }
-  .hours {
+  .hours-lines {
     list-style: none;
     margin: 0;
     padding: 0;
     color: ${theme.textSoft};
   }
-  .hours li {
+  .hours-lines li {
     padding: 6px 0;
     border-top: 1px solid ${theme.cardBorder};
     font-size: 14.5px;
   }
-  .hours li:first-child { border-top: none; }
+  .hours-lines li:first-child { border-top: none; }
+  .hours {
+    width: 100%;
+    border-collapse: collapse;
+    color: ${theme.textSoft};
+    font-size: 14.5px;
+  }
+  .hours th, .hours td {
+    padding: 7px 8px;
+    border-top: 1px solid ${theme.cardBorder};
+    text-align: left;
+    vertical-align: top;
+  }
+  .hours th { font-weight: 600; white-space: nowrap; }
+  .hours td { text-align: right; }
+  .hours tr:first-child th, .hours tr:first-child td { border-top: none; }
+  .hours tr.today th, .hours tr.today td {
+    background: ${accent}1a;
+    color: ${theme.heroBg};
+    font-weight: 700;
+  }
+  .hours tr.today th::after {
+    content: " · ${t(locale, "starterSite.today")}";
+    color: ${accent};
+    font-size: 12px;
+  }
+  .hours-note, .hours-appointment { margin-top: 10px !important; }
+  .hours-appointment { font-weight: 600; color: ${theme.heroBg} !important; }
   .link {
     color: ${accent};
     font-weight: 600;
@@ -677,11 +759,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
     border-radius: 8px;
     margin-top: 14px;
   }
-  .stars {
-    color: ${accent};
-    font-size: 20px;
-    letter-spacing: 2px;
-  }
+  ${starRowCss(accent, theme.cardBorder)}
   footer {
     text-align: center;
     padding: 20px;
@@ -699,6 +777,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
     ${sections.join("\n    ")}
   </main>
   <footer>${escapeHtml(t(locale, "starterSite.footerBuiltWith"))}</footer>
+${showHours && schedule && schedule.mode === "weekly" ? todayScript(input.timeZone ?? "America/New_York") : ""}
 </body>
 </html>
 `;

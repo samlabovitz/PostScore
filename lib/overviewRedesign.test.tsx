@@ -12,6 +12,7 @@ import {
   scoreChangeSinceLastScan,
   topRecommendations,
   weightedCategoryPoints,
+  wholeCategoryPoints,
 } from "./overviewTiles";
 import { scoreBusiness } from "@/lib/scoring";
 import { scoringInput } from "@/emails/sampleMonthlyReportContent";
@@ -201,6 +202,9 @@ describe("category points and review change (now in the breakdown and At a glanc
   test("each category's real share of the score — the three add up to the total", () => {
     const sum = breakdown.categories.reduce((s, c) => s + (weightedCategoryPoints(c) ?? 0), 0);
     expect(Math.round(sum)).toBe(breakdown.total);
+    // Whole points (as shown) still add up to the total.
+    expect(wholeCategoryPoints(breakdown.categories).reduce<number>((a, b) => a + (b ?? 0), 0)).toBe(breakdown.total);
+    expect(wholeCategoryPoints([{ relativeScore: 36.75, weight: 40 }, { relativeScore: 73, weight: 30 }, { relativeScore: 0, weight: 30 }])).toEqual([15, 22, 0]);
     expect(categoryOutcomeCounts(cat("completeness")).needsWork).toBe(0);
   });
 

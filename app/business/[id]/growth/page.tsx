@@ -6,6 +6,7 @@ import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Card } from "@/components/ui/Card";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { scoreBusinessById, getLastScanAt } from "@/app/actions/scoring";
+import { getWebsiteRecheckStatus } from "@/app/actions/websiteRecheck";
 import { getActionPlan } from "@/app/actions/actionPlan";
 import { getGrowthMoves } from "@/app/actions/growthMoves";
 import { getWeeklyChecklistState } from "@/app/actions/weeklyChecklist";
@@ -79,7 +80,7 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   }
 
   const input = businessRowToScoringInput(scored.business);
-  const [actionPlanResult, growthMovesResult, promosResult, checklistStateResult, lastScanAt, referralResult, gbpStatus, printData] = await Promise.all([
+  const [actionPlanResult, growthMovesResult, promosResult, checklistStateResult, lastScanAt, referralResult, gbpStatus, printData, recheckStatus] = await Promise.all([
     getActionPlan(params.id, input, scored.result.breakdown, scored.result.suggestions, locale, {
       businessRow: scored.business,
       businessName: business.name ?? "Your business",
@@ -93,6 +94,7 @@ export default async function GrowthPage({ params }: { params: { id: string } })
     referralPromise,
     gbpPromise,
     printPromise,
+    getWebsiteRecheckStatus(params.id),
   ]);
   const initialPromos = promosResult.status === "ok" ? promosResult.promos : [];
 
@@ -148,6 +150,7 @@ export default async function GrowthPage({ params }: { params: { id: string } })
         initialPromos={initialPromos}
         initialReferral={initialReferral}
         lastScanAt={lastScanAt}
+        websiteRecheck={recheckStatus.status === "ok" ? { left: recheckStatus.availability.left, hasWebsite: recheckStatus.hasWebsite } : null}
         gbpConnected={gbpStatus.status === "ok" && gbpStatus.connected}
         linkOptions={{ referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk }}
         plan={plan}

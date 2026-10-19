@@ -26,6 +26,8 @@ import {
   type TaglineSize,
 } from "@/lib/starterSite";
 import type { OpeningHoursPeriod } from "@/lib/google/places";
+import { defaultOwnerHours, ownerHoursFromGoogle, sameSchedule, type OwnerHours } from "@/lib/ownerHours";
+import { HoursDifferNote, HoursGoogleTip, StarterHoursEditor } from "./StarterHoursEditor";
 import { downloadTextFile } from "@/lib/downloadFile";
 import { resizeImageForEmbedding } from "@/lib/resizeImageForEmbedding";
 import { markTaskDone } from "@/app/actions/actionPlan";
@@ -130,6 +132,8 @@ export function StarterSiteBuilder({
   address,
   openingHours,
   openingHoursPeriods,
+  starterSiteHours = null,
+  timeZone = "America/New_York",
   rating,
   reviewCount,
   googleMapsUri,
@@ -153,6 +157,12 @@ export function StarterSiteBuilder({
    * section when the site language is Spanish (lib/hours.ts); null
    * falls back to openingHours exactly as before. */
   openingHoursPeriods: OpeningHoursPeriod[] | null;
+  /** Hours the owner saved for the website (supabase/hours.sql) — website only, never scored. */
+  starterSiteHours?: OwnerHours | null;
+  /** false until supabase/hours.sql has been run (saving then just isn't remembered). */
+  starterSiteHoursEnabled?: boolean;
+  /** The business's time zone — the site highlights today in it. */
+  timeZone?: string;
   rating: number | null;
   reviewCount: number | null;
   googleMapsUri: string | null;
@@ -183,7 +193,12 @@ export function StarterSiteBuilder({
   const [fontId, setFontId] = useState(STARTER_SITE_FONTS[0].id);
   const [showAddress, setShowAddress] = useState(!!address);
   const [showPhone, setShowPhone] = useState(!!phone);
-  const [showHours, setShowHours] = useState(!!openingHours && openingHours.length > 0);
+  // Hours: Google's, or the owner's own for the website (never scored).
+  const googleHasHours = !!openingHours && openingHours.length > 0;
+  const googleSchedule = useMemo(() => ownerHoursFromGoogle(openingHoursPeriods), [openingHoursPeriods]);
+  const [ownerHours, setOwnerHours] = useState<OwnerHours | null>(starterSiteHours);
+  const [hoursEditorOpen, setHoursEditorOpen] = useState(false);
+  const [showHours, setShowHours] = useState(googleHasHours || starterSiteHours !== null);
   const [showRating, setShowRating] = useState(rating !== null);
   const [heroImage, setHeroImage] = useState<{ dataUri: string; alt: string } | null>(null);
   const [contentImages, setContentImages] = useState<Array<{ dataUri: string; alt: string }>>([]);
@@ -242,6 +257,8 @@ export function StarterSiteBuilder({
         address,
         openingHours,
         openingHoursPeriods,
+        ownerHours,
+        timeZone,
         rating,
         reviewCount,
         googleMapsUri,
@@ -266,6 +283,8 @@ export function StarterSiteBuilder({
       address,
       openingHours,
       openingHoursPeriods,
+      ownerHours,
+      timeZone,
       rating,
       reviewCount,
       googleMapsUri,
@@ -662,13 +681,59 @@ export function StarterSiteBuilder({
                 onChange={setShowPhone}
                 available={!!phone}
               />
-              <ToggleRow
-                icon={IconClock}
-                label={t(locale, "dashboard.website.starter.includeHours")}
-                checked={showHours}
-                onChange={setShowHours}
-                available={!!openingHours && openingHours.length > 0}
-              />
+              <div data-testid="hours-row">
+                {googleHasHours || ownerHours ? (
+                  <ToggleRow
+                    icon={IconClock}
+                    label={t(locale, "dashboard.website.starter.includeHours")}
+                    checked={showHours}
+                    onChange={setShowHours}
+                    available
+                  />
+                ) : (
+                  <div className="flex items-center gap-2.5 py-2 text-sm text-ink">
+                    <IconClock size={15} className="ml-[26px] shrink-0" />
+                    <span className="flex-1">{t(locale, "dashboard.website.starter.includeHours")}</span>
+                    {!hoursEditorOpen && (
+                      <button type="button" onClick={() => setHoursEditorOpen(true)} className="rounded-md border border-ink px-2 py-0.5 text-[12px] font-semibold text-ink hover:bg-paper">
+                        {t(locale, "dashboard.website.starter.hours.add")}
+                      </button>
+                    )}
+                  </div>
+                )}
+                {(googleHasHours || ownerHours) && !hoursEditorOpen && (
+                  <div className="-mt-1 flex flex-wrap items-center gap-x-2 pb-2 pl-[26px] text-[12px]">
+                    <span className="text-ink-mute">
+                      {ownerHours ? t(locale, "dashboard.website.starter.hours.sourceOwner") : t(locale, "dashboard.website.starter.hours.sourceGoogle")}
+                    </span>
+                    <button type="button" onClick={() => setHoursEditorOpen(true)} className="font-semibold text-ink underline-offset-2 hover:underline">
+                      {googleHasHours ? t(locale, "dashboard.website.starter.hours.editForWebsite") : t(locale, "dashboard.website.starter.hours.edit")}
+                    </button>
+                  </div>
+                )}
+                {!hoursEditorOpen && ownerHours && googleSchedule && !sameSchedule(ownerHours, googleSchedule) && (
+                  <div className="pb-2 pl-[26px]">
+                    <HoursDifferNote />
+                  </div>
+                )}
+                {!hoursEditorOpen && ownerHours && !googleHasHours && (
+                  <div className="pb-2 pl-[26px]">
+                    <HoursGoogleTip businessId={businessId} />
+                  </div>
+                )}
+                {hoursEditorOpen && (
+                  <StarterHoursEditor
+                    businessId={businessId}
+                    initial={ownerHours ?? googleSchedule ?? defaultOwnerHours()}
+                    googleHours={googleSchedule}
+                    onApply={(next) => {
+                      setOwnerHours(next);
+                      setShowHours(next !== null || googleHasHours);
+                    }}
+                    onClose={() => setHoursEditorOpen(false)}
+                  />
+                )}
+              </div>
               <ToggleRow
                 icon={IconStar}
                 label={t(locale, "dashboard.website.starter.includeRating")}

@@ -18,6 +18,7 @@ import {
 } from "@/lib/starterSiteScoring";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale, type Locale } from "@/lib/i18n";
+import { sanitizeOwnerHours, type OwnerHours } from "@/lib/ownerHours";
 import { businessTimeZone } from "@/lib/businessTimeZone";
 import type { OpeningHoursPeriod } from "@/lib/google/places";
 
@@ -85,6 +86,10 @@ export interface WebsitePageData {
   scoreBasis: number;
   /** The business's own time zone (lib/businessTimeZone.ts). */
   timeZone: string;
+  /** Hours the owner entered for the starter website (supabase/hours.sql); website only, never scored. */
+  starterSiteHours: OwnerHours | null;
+  /** false until supabase/hours.sql has been run. */
+  starterSiteHoursEnabled: boolean;
   /** This business's real, currently-losing Website suggestions — the
    * exact output of generateSuggestions(), filtered to the website
    * category, so the visual analysis section's "how to fix" copy is the
@@ -202,6 +207,13 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
     return { status: "not_found" };
   }
 
+  // Owner-entered starter-site hours, read on their own so the page still
+  // works before supabase/hours.sql has been run (website only, never
+  // part of businessRow or scoring).
+  const hoursRow = await supabase.from("businesses").select("starter_site_hours").eq("id", businessId).maybeSingle();
+  const starterSiteHoursEnabled = !hoursRow.error;
+  const starterSiteHours = starterSiteHoursEnabled ? sanitizeOwnerHours((hoursRow.data as { starter_site_hours?: unknown } | null)?.starter_site_hours ?? null) : null;
+
   const timeZone = businessTimeZone(data.lat, data.lng);
   const businessRow = { ...data, time_zone: timeZone } as BusinessScoringRow;
   const verifiedWebsiteUrl =
@@ -277,6 +289,8 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       scoreBasis: scoreBasisPoints(realBreakdown.categories),
       timeZone,
       websiteSuggestions,
+      starterSiteHours,
+      starterSiteHoursEnabled,
     },
     builderOffer,
   };

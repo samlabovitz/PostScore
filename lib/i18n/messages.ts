@@ -3059,6 +3059,141 @@ export type MessageKey =
   | "dashboard.websiteReviews.socialProof.ofRating"
   | "dashboard.websiteReviews.socialProof.ofReviews"
   | "dashboard.growth.checklist.progress"
+  | "dashboard.reports.pdf.weeklyTitle"
+  | "dashboard.reports.pdf.changeLabelWeekly"
+  | "dashboard.reports.pdf.comparedWith"
+  | "dashboard.reports.pdf.comparedWithInWeek"
+  | "dashboard.reports.pdf.noNewScan"
+  | "dashboard.reports.pdf.noScanChanges"
+  | "dashboard.reports.pdf.routine"
+  | "dashboard.reports.pdf.nextPastWeek"
+  // --- Weekly recap, past reports, "Since your last visit".
+  | "dashboard.reports.weekly.heading"
+  | "dashboard.reports.weekly.title"
+  | "dashboard.reports.weekly.weekLabel"
+  | "dashboard.reports.weekly.thisWeek"
+  | "dashboard.reports.weekly.download"
+  | "dashboard.reports.weekly.downloadShort"
+  | "dashboard.reports.weekly.noScanThisWeek"
+  | "dashboard.reports.weekly.lastKnown"
+  | "dashboard.reports.weekly.noScansYet"
+  | "dashboard.reports.weekly.firstScan"
+  | "dashboard.reports.weekly.firstScanChip"
+  | "dashboard.reports.weekly.scoringUpdated"
+  | "dashboard.reports.weekly.scoringUpdatedChip"
+  | "dashboard.reports.weekly.noChange"
+  | "dashboard.reports.weekly.comparedWith"
+  | "dashboard.reports.weekly.comparedWithInWeek"
+  | "dashboard.reports.weekly.scoredWith"
+  | "dashboard.reports.weekly.recentScans"
+  | "dashboard.reports.weekly.whatChanged"
+  | "dashboard.reports.weekly.noScanChanges"
+  | "dashboard.reports.weekly.firstScanChanges"
+  | "dashboard.reports.weekly.categoryMove"
+  | "dashboard.reports.weekly.reviewsMove"
+  | "dashboard.reports.weekly.nothingMoved"
+  | "dashboard.reports.weekly.verifiedHeading"
+  | "dashboard.reports.weekly.statFixes"
+  | "dashboard.reports.weekly.statChanges"
+  | "dashboard.reports.weekly.statScans"
+  | "dashboard.reports.weekly.pastHeading"
+  | "dashboard.reports.weekly.pastNone"
+  | "dashboard.reports.weekly.pastNotReady"
+  | "dashboard.reports.weekly.year"
+  | "dashboard.reports.weekly.allYears"
+  | "dashboard.reports.weekly.showOlder"
+  | "dashboard.reports.weekly.loading"
+  | "dashboard.reports.weekly.pastError"
+  | "dashboard.visit.title"
+  | "dashboard.visit.noNewScan"
+  | "dashboard.visit.lastVisit"
+  | "dashboard.visit.runScan"
+  | "dashboard.visit.scanning"
+  | "dashboard.visit.scanDone"
+  | "dashboard.visit.scanError"
+  | "dashboard.visit.nextScan"
+  | "dashboard.visit.scoreNow"
+  | "dashboard.visit.scoreLine"
+  | "dashboard.visit.scoreLineNoDelta"
+  | "dashboard.visit.scoringUpdated"
+  | "dashboard.visit.rank"
+  | "dashboard.visit.rankWas"
+  | "dashboard.visit.fixes"
+  | "dashboard.visit.reviews"
+  | "dashboard.visit.newReviews"
+  | "dashboard.visit.noNewReviews"
+  | "dashboard.visit.fewerReviews"
+  | "dashboard.visit.ratingMove"
+  | "dashboard.visit.nextSteps"
+  | "dashboard.visit.downloadWeekly"
+  | "dashboard.visit.gotIt"
+  // --- Starter site: owner hours + star row.
+  | "starterSite.starsAria"
+  | "starterSite.today"
+  | "dashboard.website.starter.hours.add"
+  | "dashboard.website.starter.hours.edit"
+  | "dashboard.website.starter.hours.editForWebsite"
+  | "dashboard.website.starter.hours.sourceGoogle"
+  | "dashboard.website.starter.hours.sourceOwner"
+  | "dashboard.website.starter.hours.modeLabel"
+  | "dashboard.website.starter.hours.modeWeekly"
+  | "dashboard.website.starter.hours.modeAppointment"
+  | "dashboard.website.starter.hours.appointmentHelp"
+  | "dashboard.website.starter.hours.sameWeekdays"
+  | "dashboard.website.starter.hours.copyMonday"
+  | "dashboard.website.starter.hours.open"
+  | "dashboard.website.starter.hours.closed"
+  | "dashboard.website.starter.hours.allDay"
+  | "dashboard.website.starter.hours.opensAt"
+  | "dashboard.website.starter.hours.closesAt"
+  | "dashboard.website.starter.hours.addRange"
+  | "dashboard.website.starter.hours.removeRange"
+  | "dashboard.website.starter.hours.pastMidnight"
+  | "dashboard.website.starter.hours.errorSame"
+  | "dashboard.website.starter.hours.errorOverlap"
+  | "dashboard.website.starter.hours.noteLabel"
+  | "dashboard.website.starter.hours.optional"
+  | "dashboard.website.starter.hours.notePlaceholder"
+  | "dashboard.website.starter.hours.differ"
+  | "dashboard.website.starter.hours.websiteOnly"
+  | "dashboard.website.starter.hours.tip"
+  | "dashboard.website.starter.hours.tipLink"
+  | "dashboard.website.starter.hours.save"
+  | "dashboard.website.starter.hours.saving"
+  | "dashboard.website.starter.hours.cancel"
+  | "dashboard.website.starter.hours.useGoogle"
+  | "dashboard.website.starter.hours.notSaved"
+  | "dashboard.website.starter.hours.invalid"
+  // --- Website fix guides + "Re-check my website".
+  | "dashboard.websiteFix.guide.summaryBuilder"
+  | "dashboard.websiteFix.guide.summary"
+  | "dashboard.websiteFix.guide.official"
+  | "dashboard.websiteFix.guide.verified"
+  | "dashboard.websiteFix.guide.cantDo"
+  | "dashboard.websiteFix.guide.noBuilderGuide"
+  | "dashboard.websiteFix.guide.unknownBuilder"
+  | "dashboard.websiteFix.guide.askWebPerson"
+  | "dashboard.websiteFix.guide.messageLabel"
+  | "dashboard.websiteFix.guide.copy"
+  | "dashboard.websiteFix.guide.copied"
+  | "dashboard.websiteFix.guide.copyFailed"
+  | "dashboard.websiteRecheck.button"
+  | "dashboard.websiteRecheck.running"
+  | "dashboard.websiteRecheck.left"
+  | "dashboard.websiteRecheck.noneLeft"
+  | "dashboard.websiteRecheck.explain"
+  | "dashboard.websiteRecheck.progress"
+  | "dashboard.websiteRecheck.whatChanged"
+  | "dashboard.websiteRecheck.points"
+  | "dashboard.websiteRecheck.scoreLine"
+  | "dashboard.websiteRecheck.websiteLine"
+  | "dashboard.websiteRecheck.nothingChanged"
+  | "dashboard.websiteRecheck.publishHint"
+  | "dashboard.websiteRecheck.tasksConfirmed"
+  | "dashboard.websiteRecheck.limitReached"
+  | "dashboard.websiteRecheck.noWebsite"
+  | "dashboard.websiteRecheck.failed"
+  | "dashboard.websiteRecheck.seeWebsite"
   // --- Search demand (app/business/[id]/search-demand, lib/gbp/searchDemand.ts).
   | "dashboard.connectGbp.unlockSearchDemandTitle"
   | "dashboard.connectGbp.unlockSearchDemandBody"
@@ -4856,8 +4991,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.monthlyEmailReportLabel": "Monthly email report",
     "dashboard.reports.onLabel": "On",
     "dashboard.reports.offLabel": "Off",
-    "dashboard.reports.emailComingSoon":
-      "Coming soon — a real monthly recap of your PostScore, emailed to you automatically.",
+    "dashboard.reports.emailComingSoon": "Monthly email reports aren't sending yet — your choice is saved and will apply when they start.",
     "dashboard.reports.emailOffMessage": "Off — you won't receive a monthly email report.",
     "dashboard.reports.emailFirstReportBaseline":
       "On — your first report will be a baseline (no month-over-month comparison yet).",
@@ -6688,6 +6822,138 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.socialProof.ofRating": "{rating}★ of 5",
     "dashboard.websiteReviews.socialProof.ofReviews": "{count} of {target}",
     "dashboard.growth.checklist.progress": "{done} of {total} done this week · resets Monday",
+    "dashboard.reports.pdf.weeklyTitle": "Weekly report · {week}",
+    "dashboard.reports.pdf.changeLabelWeekly": "Change this week",
+    "dashboard.reports.pdf.comparedWith": "Compared with {date}",
+    "dashboard.reports.pdf.comparedWithInWeek": "Compared with this week's first scan ({date})",
+    "dashboard.reports.pdf.noNewScan": "No new scan this week — last scan {date}",
+    "dashboard.reports.pdf.noScanChanges": "Nothing was scanned this week, so there's nothing new to report.",
+    "dashboard.reports.pdf.routine": "Weekly routine: {done} of {total} done",
+    "dashboard.reports.pdf.nextPastWeek": "Next steps are about today — see them in this week's report.",
+    "dashboard.reports.weekly.heading": "Weekly recap",
+    "dashboard.reports.weekly.title": "Weekly report",
+    "dashboard.reports.weekly.weekLabel": "Week",
+    "dashboard.reports.weekly.thisWeek": "This week ({range})",
+    "dashboard.reports.weekly.download": "Download weekly report (PDF)",
+    "dashboard.reports.weekly.downloadShort": "Download",
+    "dashboard.reports.weekly.noScanThisWeek": "No new scan this week",
+    "dashboard.reports.weekly.lastKnown": "Last scan {date}: {score}",
+    "dashboard.reports.weekly.noScansYet": "No scans yet.",
+    "dashboard.reports.weekly.firstScan": "Your first scan — nothing earlier to compare with yet.",
+    "dashboard.reports.weekly.firstScanChip": "First scan",
+    "dashboard.reports.weekly.scoringUpdated": "PostScore's scoring was updated between these scans, so the two scores aren't compared.",
+    "dashboard.reports.weekly.scoringUpdatedChip": "Scoring updated",
+    "dashboard.reports.weekly.noChange": "No change",
+    "dashboard.reports.weekly.comparedWith": "Compared with {date}",
+    "dashboard.reports.weekly.comparedWithInWeek": "Compared with this week's first scan ({date})",
+    "dashboard.reports.weekly.scoredWith": "Scored with v{version}",
+    "dashboard.reports.weekly.recentScans": "Recent scans",
+    "dashboard.reports.weekly.whatChanged": "What changed",
+    "dashboard.reports.weekly.noScanChanges": "Nothing was scanned this week, so there's nothing new to report.",
+    "dashboard.reports.weekly.firstScanChanges": "Changes show from your next scan on.",
+    "dashboard.reports.weekly.categoryMove": "{category}: {from} → {to} ({change})",
+    "dashboard.reports.weekly.reviewsMove": "{change} reviews ({count} total)",
+    "dashboard.reports.weekly.nothingMoved": "No changes found between these two scans.",
+    "dashboard.reports.weekly.verifiedHeading": "What we've verified this week",
+    "dashboard.reports.weekly.statFixes": "Fixes confirmed",
+    "dashboard.reports.weekly.statChanges": "Listing changes",
+    "dashboard.reports.weekly.statScans": "Scans this week",
+    "dashboard.reports.weekly.pastHeading": "Past reports",
+    "dashboard.reports.weekly.pastNone": "Past weekly reports appear here after your first full week with a scan.",
+    "dashboard.reports.weekly.pastNotReady": "Past weekly reports aren't available yet.",
+    "dashboard.reports.weekly.year": "Year",
+    "dashboard.reports.weekly.allYears": "All years",
+    "dashboard.reports.weekly.showOlder": "Show older",
+    "dashboard.reports.weekly.loading": "Loading…",
+    "dashboard.reports.weekly.pastError": "Couldn't load older reports — try again.",
+    "dashboard.visit.title": "Since your last visit",
+    "dashboard.visit.noNewScan": "We haven't re-scanned since your last visit.",
+    "dashboard.visit.lastVisit": "Your last visit: {date}",
+    "dashboard.visit.runScan": "Run a fresh scan",
+    "dashboard.visit.scanning": "Scanning…",
+    "dashboard.visit.scanDone": "Fresh scan done — your pages are updated.",
+    "dashboard.visit.scanError": "Couldn't run the scan — try again from the Overview.",
+    "dashboard.visit.nextScan": "You can run your next scan {date} (one a day).",
+    "dashboard.visit.scoreNow": "Your PostScore now: {score}",
+    "dashboard.visit.scoreLine": "Since {date}: {from} → {to} ({change})",
+    "dashboard.visit.scoreLineNoDelta": "Since {date}: {from} → {to}",
+    "dashboard.visit.scoringUpdated": "PostScore's scoring was updated in between, so this isn't a like-for-like change.",
+    "dashboard.visit.rank": "Local rank",
+    "dashboard.visit.rankWas": "(was #{rank})",
+    "dashboard.visit.fixes": "Fixes confirmed",
+    "dashboard.visit.reviews": "Reviews",
+    "dashboard.visit.newReviews": "{change} new reviews",
+    "dashboard.visit.noNewReviews": "No new reviews",
+    "dashboard.visit.fewerReviews": "{count} fewer reviews showing on Google",
+    "dashboard.visit.ratingMove": "rating {from} → {to}",
+    "dashboard.visit.nextSteps": "Your next steps",
+    "dashboard.visit.downloadWeekly": "Download weekly report (PDF)",
+    "dashboard.visit.gotIt": "Got it",
+    "starterSite.starsAria": "{rating} out of 5 stars",
+    "starterSite.today": "Today",
+    "dashboard.website.starter.hours.add": "Add your hours",
+    "dashboard.website.starter.hours.edit": "Edit your hours",
+    "dashboard.website.starter.hours.editForWebsite": "Edit for the website",
+    "dashboard.website.starter.hours.sourceGoogle": "From your Google listing.",
+    "dashboard.website.starter.hours.sourceOwner": "Your hours for the website.",
+    "dashboard.website.starter.hours.modeLabel": "How you're open",
+    "dashboard.website.starter.hours.modeWeekly": "Set opening hours",
+    "dashboard.website.starter.hours.modeAppointment": "By appointment only",
+    "dashboard.website.starter.hours.appointmentHelp": "Your website will say “By appointment only” instead of a table of hours.",
+    "dashboard.website.starter.hours.sameWeekdays": "Same every weekday",
+    "dashboard.website.starter.hours.copyMonday": "Copy Monday to all",
+    "dashboard.website.starter.hours.open": "Open",
+    "dashboard.website.starter.hours.closed": "Closed",
+    "dashboard.website.starter.hours.allDay": "Open 24 hours",
+    "dashboard.website.starter.hours.opensAt": "{day} opens at",
+    "dashboard.website.starter.hours.closesAt": "{day} closes at",
+    "dashboard.website.starter.hours.addRange": "Add a second time",
+    "dashboard.website.starter.hours.removeRange": "Remove the second time",
+    "dashboard.website.starter.hours.pastMidnight": "Closes after midnight.",
+    "dashboard.website.starter.hours.errorSame": "The closing time has to be different from the opening time.",
+    "dashboard.website.starter.hours.errorOverlap": "The second time has to start after the first one ends.",
+    "dashboard.website.starter.hours.noteLabel": "Note",
+    "dashboard.website.starter.hours.optional": "(optional)",
+    "dashboard.website.starter.hours.notePlaceholder": "e.g. Walk-ins welcome · Holiday hours may vary",
+    "dashboard.website.starter.hours.differ": "These differ from your Google listing — customers may see conflicting hours. Update Google too.",
+    "dashboard.website.starter.hours.websiteOnly": "These hours go on your website only. They don't change your Google listing or your PostScore.",
+    "dashboard.website.starter.hours.tip": "Tip: add these to your Google Business Profile too — that's where most customers check hours, and it counts toward your score.",
+    "dashboard.website.starter.hours.tipLink": "See the step in your Action plan",
+    "dashboard.website.starter.hours.save": "Save hours",
+    "dashboard.website.starter.hours.saving": "Saving…",
+    "dashboard.website.starter.hours.cancel": "Close",
+    "dashboard.website.starter.hours.useGoogle": "Use my Google hours instead",
+    "dashboard.website.starter.hours.notSaved": "Your hours are in the preview and the download, but couldn't be saved for next time. Try again later.",
+    "dashboard.website.starter.hours.invalid": "Check the hours above — something isn't valid.",
+    "dashboard.websiteFix.guide.summaryBuilder": "How to fix this in {builder}",
+    "dashboard.websiteFix.guide.summary": "How to fix this",
+    "dashboard.websiteFix.guide.official": "Official help article",
+    "dashboard.websiteFix.guide.verified": "Last verified {date}",
+    "dashboard.websiteFix.guide.cantDo": "What {builder} can't do:",
+    "dashboard.websiteFix.guide.noBuilderGuide": "We don't have a {builder} guide checked against its official help for this yet, so here's what to ask for.",
+    "dashboard.websiteFix.guide.unknownBuilder": "We couldn't tell which website builder your site uses (or it's custom-built), so here's what to ask for.",
+    "dashboard.websiteFix.guide.askWebPerson": "Ask your web person to:",
+    "dashboard.websiteFix.guide.messageLabel": "Message you can send",
+    "dashboard.websiteFix.guide.copy": "Copy message",
+    "dashboard.websiteFix.guide.copied": "Copied ✓",
+    "dashboard.websiteFix.guide.copyFailed": "Couldn't copy — select the text and copy it.",
+    "dashboard.websiteRecheck.button": "Re-check my website",
+    "dashboard.websiteRecheck.running": "Re-checking…",
+    "dashboard.websiteRecheck.left": "{left} of {total} left today",
+    "dashboard.websiteRecheck.noneLeft": "All {total} website re-checks used today — more tomorrow",
+    "dashboard.websiteRecheck.explain": "Re-checks only your website (speed, security and content) — not your Google listing. Separate from the daily full re-scan.",
+    "dashboard.websiteRecheck.progress": "Checking your website — this usually takes 30–60 seconds ({seconds}s)",
+    "dashboard.websiteRecheck.whatChanged": "What changed",
+    "dashboard.websiteRecheck.points": "{points} pts",
+    "dashboard.websiteRecheck.scoreLine": "PostScore {before} → {after}",
+    "dashboard.websiteRecheck.websiteLine": "Website {before} → {after}",
+    "dashboard.websiteRecheck.nothingChanged": "Nothing changed on your website since the last check.",
+    "dashboard.websiteRecheck.publishHint": "Just published a fix? Some website builders take a few minutes to update the live site — try again in a little while.",
+    "dashboard.websiteRecheck.tasksConfirmed": "Fixes confirmed in your plan: {count} (+{points} pts)",
+    "dashboard.websiteRecheck.limitReached": "You've used all {total} website re-checks for today. Try again tomorrow.",
+    "dashboard.websiteRecheck.noWebsite": "There's no website on your listing to re-check.",
+    "dashboard.websiteRecheck.failed": "Couldn't re-check your website — try again in a few minutes. This didn't use a re-check.",
+    "dashboard.websiteRecheck.seeWebsite": "See your website results",
     "dashboard.connectGbp.unlockSearchDemandTitle": "Search demand & missed customers",
     "dashboard.connectGbp.unlockSearchDemandBody": "See how many people find you on Google each month, what they searched, and how many actually called, clicked or got directions.",
     "dashboard.connectGbp.unlockSearchDemandPreview": "See an example",
@@ -8194,7 +8460,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.monthlyEmailReportLabel": "Informe mensual por correo",
     "dashboard.reports.onLabel": "Activado",
     "dashboard.reports.offLabel": "Desactivado",
-    "dashboard.reports.emailComingSoon": "Próximamente — un resumen mensual real de su PostScore, enviado a su correo automáticamente.",
+    "dashboard.reports.emailComingSoon": "Los informes mensuales por correo todavía no se envían — su elección queda guardada y se aplicará cuando empiecen.",
     "dashboard.reports.emailOffMessage": "Desactivado — no recibirá un informe mensual por correo.",
     "dashboard.reports.emailFirstReportBaseline": "Activado — su primer informe será un punto de partida (aún sin comparación de un mes a otro).",
     "dashboard.reports.emailLastSentNext": "Último envío {lastSent} · Próximo informe alrededor del {nextReport}",
@@ -10341,6 +10607,138 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.socialProof.ofRating": "{rating}★ de 5",
     "dashboard.websiteReviews.socialProof.ofReviews": "{count} de {target}",
     "dashboard.growth.checklist.progress": "{done} de {total} listos esta semana · se reinicia el lunes",
+    "dashboard.reports.pdf.weeklyTitle": "Informe semanal · {week}",
+    "dashboard.reports.pdf.changeLabelWeekly": "Cambio esta semana",
+    "dashboard.reports.pdf.comparedWith": "Comparado con el {date}",
+    "dashboard.reports.pdf.comparedWithInWeek": "Comparado con el primer escaneo de esta semana ({date})",
+    "dashboard.reports.pdf.noNewScan": "Sin escaneo nuevo esta semana — último escaneo el {date}",
+    "dashboard.reports.pdf.noScanChanges": "No hubo escaneos esta semana, así que no hay novedades que informar.",
+    "dashboard.reports.pdf.routine": "Rutina semanal: {done} de {total} hechas",
+    "dashboard.reports.pdf.nextPastWeek": "Los próximos pasos son sobre hoy — véalos en el informe de esta semana.",
+    "dashboard.reports.weekly.heading": "Resumen semanal",
+    "dashboard.reports.weekly.title": "Informe semanal",
+    "dashboard.reports.weekly.weekLabel": "Semana",
+    "dashboard.reports.weekly.thisWeek": "Esta semana ({range})",
+    "dashboard.reports.weekly.download": "Descargar informe semanal (PDF)",
+    "dashboard.reports.weekly.downloadShort": "Descargar",
+    "dashboard.reports.weekly.noScanThisWeek": "Sin escaneo nuevo esta semana",
+    "dashboard.reports.weekly.lastKnown": "Último escaneo el {date}: {score}",
+    "dashboard.reports.weekly.noScansYet": "Todavía no hay escaneos.",
+    "dashboard.reports.weekly.firstScan": "Su primer escaneo — todavía no hay nada anterior con qué comparar.",
+    "dashboard.reports.weekly.firstScanChip": "Primer escaneo",
+    "dashboard.reports.weekly.scoringUpdated": "La puntuación de PostScore se actualizó entre estos escaneos, así que no se comparan las dos cifras.",
+    "dashboard.reports.weekly.scoringUpdatedChip": "Puntuación actualizada",
+    "dashboard.reports.weekly.noChange": "Sin cambios",
+    "dashboard.reports.weekly.comparedWith": "Comparado con el {date}",
+    "dashboard.reports.weekly.comparedWithInWeek": "Comparado con el primer escaneo de esta semana ({date})",
+    "dashboard.reports.weekly.scoredWith": "Puntuado con v{version}",
+    "dashboard.reports.weekly.recentScans": "Escaneos recientes",
+    "dashboard.reports.weekly.whatChanged": "Qué cambió",
+    "dashboard.reports.weekly.noScanChanges": "No hubo escaneos esta semana, así que no hay novedades que informar.",
+    "dashboard.reports.weekly.firstScanChanges": "Los cambios se mostrarán a partir de su próximo escaneo.",
+    "dashboard.reports.weekly.categoryMove": "{category}: {from} → {to} ({change})",
+    "dashboard.reports.weekly.reviewsMove": "{change} reseñas ({count} en total)",
+    "dashboard.reports.weekly.nothingMoved": "No se encontraron cambios entre estos dos escaneos.",
+    "dashboard.reports.weekly.verifiedHeading": "Lo que verificamos esta semana",
+    "dashboard.reports.weekly.statFixes": "Arreglos confirmados",
+    "dashboard.reports.weekly.statChanges": "Cambios en la ficha",
+    "dashboard.reports.weekly.statScans": "Escaneos esta semana",
+    "dashboard.reports.weekly.pastHeading": "Informes anteriores",
+    "dashboard.reports.weekly.pastNone": "Los informes semanales anteriores aparecerán aquí después de su primera semana completa con un escaneo.",
+    "dashboard.reports.weekly.pastNotReady": "Los informes semanales anteriores todavía no están disponibles.",
+    "dashboard.reports.weekly.year": "Año",
+    "dashboard.reports.weekly.allYears": "Todos los años",
+    "dashboard.reports.weekly.showOlder": "Mostrar anteriores",
+    "dashboard.reports.weekly.loading": "Cargando…",
+    "dashboard.reports.weekly.pastError": "No se pudieron cargar los informes anteriores — inténtelo de nuevo.",
+    "dashboard.visit.title": "Desde su última visita",
+    "dashboard.visit.noNewScan": "No hemos vuelto a escanear desde su última visita.",
+    "dashboard.visit.lastVisit": "Su última visita: {date}",
+    "dashboard.visit.runScan": "Hacer un escaneo nuevo",
+    "dashboard.visit.scanning": "Escaneando…",
+    "dashboard.visit.scanDone": "Escaneo nuevo listo — sus páginas están actualizadas.",
+    "dashboard.visit.scanError": "No se pudo hacer el escaneo — inténtelo de nuevo desde el Resumen.",
+    "dashboard.visit.nextScan": "Puede hacer su próximo escaneo el {date} (uno al día).",
+    "dashboard.visit.scoreNow": "Su PostScore ahora: {score}",
+    "dashboard.visit.scoreLine": "Desde el {date}: {from} → {to} ({change})",
+    "dashboard.visit.scoreLineNoDelta": "Desde el {date}: {from} → {to}",
+    "dashboard.visit.scoringUpdated": "La puntuación de PostScore se actualizó entretanto, así que no es un cambio comparable.",
+    "dashboard.visit.rank": "Posición local",
+    "dashboard.visit.rankWas": "(era #{rank})",
+    "dashboard.visit.fixes": "Arreglos confirmados",
+    "dashboard.visit.reviews": "Reseñas",
+    "dashboard.visit.newReviews": "{change} reseñas nuevas",
+    "dashboard.visit.noNewReviews": "Sin reseñas nuevas",
+    "dashboard.visit.fewerReviews": "{count} reseñas menos visibles en Google",
+    "dashboard.visit.ratingMove": "calificación {from} → {to}",
+    "dashboard.visit.nextSteps": "Sus próximos pasos",
+    "dashboard.visit.downloadWeekly": "Descargar informe semanal (PDF)",
+    "dashboard.visit.gotIt": "Entendido",
+    "starterSite.starsAria": "{rating} de 5 estrellas",
+    "starterSite.today": "Hoy",
+    "dashboard.website.starter.hours.add": "Agregar su horario",
+    "dashboard.website.starter.hours.edit": "Editar su horario",
+    "dashboard.website.starter.hours.editForWebsite": "Editar para el sitio web",
+    "dashboard.website.starter.hours.sourceGoogle": "De su ficha de Google.",
+    "dashboard.website.starter.hours.sourceOwner": "Su horario para el sitio web.",
+    "dashboard.website.starter.hours.modeLabel": "Cómo atiende",
+    "dashboard.website.starter.hours.modeWeekly": "Fijar horario",
+    "dashboard.website.starter.hours.modeAppointment": "Solo con cita previa",
+    "dashboard.website.starter.hours.appointmentHelp": "Su sitio web dirá “Solo con cita previa” en lugar de una tabla de horarios.",
+    "dashboard.website.starter.hours.sameWeekdays": "Igual todos los días de semana",
+    "dashboard.website.starter.hours.copyMonday": "Copiar el lunes a todos",
+    "dashboard.website.starter.hours.open": "Abierto",
+    "dashboard.website.starter.hours.closed": "Cerrado",
+    "dashboard.website.starter.hours.allDay": "Abierto las 24 horas",
+    "dashboard.website.starter.hours.opensAt": "{day} abre a las",
+    "dashboard.website.starter.hours.closesAt": "{day} cierra a las",
+    "dashboard.website.starter.hours.addRange": "Agregar otro horario",
+    "dashboard.website.starter.hours.removeRange": "Quitar el segundo horario",
+    "dashboard.website.starter.hours.pastMidnight": "Cierra después de la medianoche.",
+    "dashboard.website.starter.hours.errorSame": "La hora de cierre tiene que ser distinta de la de apertura.",
+    "dashboard.website.starter.hours.errorOverlap": "El segundo horario tiene que empezar después de que termine el primero.",
+    "dashboard.website.starter.hours.noteLabel": "Nota",
+    "dashboard.website.starter.hours.optional": "(opcional)",
+    "dashboard.website.starter.hours.notePlaceholder": "p. ej. Sin cita previa · El horario de feriados puede variar",
+    "dashboard.website.starter.hours.differ": "Este horario es distinto al de su ficha de Google — los clientes podrían ver horarios contradictorios. Actualice también Google.",
+    "dashboard.website.starter.hours.websiteOnly": "Este horario aparece solo en su sitio web. No cambia su ficha de Google ni su PostScore.",
+    "dashboard.website.starter.hours.tip": "Consejo: agréguelo también a su Perfil de Negocio de Google — ahí es donde la mayoría de los clientes consulta el horario, y cuenta para su puntuación.",
+    "dashboard.website.starter.hours.tipLink": "Ver el paso en su plan de acción",
+    "dashboard.website.starter.hours.save": "Guardar horario",
+    "dashboard.website.starter.hours.saving": "Guardando…",
+    "dashboard.website.starter.hours.cancel": "Cerrar",
+    "dashboard.website.starter.hours.useGoogle": "Usar mi horario de Google",
+    "dashboard.website.starter.hours.notSaved": "Su horario está en la vista previa y en la descarga, pero no se pudo guardar para la próxima vez. Inténtelo más tarde.",
+    "dashboard.website.starter.hours.invalid": "Revise el horario — algo no es válido.",
+    "dashboard.websiteFix.guide.summaryBuilder": "Cómo arreglarlo en {builder}",
+    "dashboard.websiteFix.guide.summary": "Cómo arreglarlo",
+    "dashboard.websiteFix.guide.official": "Artículo de ayuda oficial",
+    "dashboard.websiteFix.guide.verified": "Verificado por última vez el {date}",
+    "dashboard.websiteFix.guide.cantDo": "Lo que {builder} no permite:",
+    "dashboard.websiteFix.guide.noBuilderGuide": "Todavía no tenemos una guía de {builder} verificada con su ayuda oficial para esto, así que esto es lo que debe pedir.",
+    "dashboard.websiteFix.guide.unknownBuilder": "No pudimos saber con qué creador de sitios web está hecho su sitio (o es a medida), así que esto es lo que debe pedir.",
+    "dashboard.websiteFix.guide.askWebPerson": "Pídale a su encargado web que:",
+    "dashboard.websiteFix.guide.messageLabel": "Mensaje que puede enviar",
+    "dashboard.websiteFix.guide.copy": "Copiar mensaje",
+    "dashboard.websiteFix.guide.copied": "Copiado ✓",
+    "dashboard.websiteFix.guide.copyFailed": "No se pudo copiar — seleccione el texto y cópielo.",
+    "dashboard.websiteRecheck.button": "Volver a revisar mi sitio web",
+    "dashboard.websiteRecheck.running": "Revisando…",
+    "dashboard.websiteRecheck.left": "Quedan {left} de {total} hoy",
+    "dashboard.websiteRecheck.noneLeft": "Ya usó las {total} revisiones del sitio web de hoy — habrá más mañana",
+    "dashboard.websiteRecheck.explain": "Revisa solo su sitio web (velocidad, seguridad y contenido) — no su ficha de Google. Es aparte del escaneo completo diario.",
+    "dashboard.websiteRecheck.progress": "Revisando su sitio web — normalmente tarda de 30 a 60 segundos ({seconds} s)",
+    "dashboard.websiteRecheck.whatChanged": "Qué cambió",
+    "dashboard.websiteRecheck.points": "{points} pts",
+    "dashboard.websiteRecheck.scoreLine": "PostScore {before} → {after}",
+    "dashboard.websiteRecheck.websiteLine": "Sitio web {before} → {after}",
+    "dashboard.websiteRecheck.nothingChanged": "Nada cambió en su sitio web desde la última revisión.",
+    "dashboard.websiteRecheck.publishHint": "¿Acaba de publicar un cambio? Algunos creadores de sitios tardan unos minutos en actualizar el sitio publicado — inténtelo de nuevo en un rato.",
+    "dashboard.websiteRecheck.tasksConfirmed": "Arreglos confirmados en su plan: {count} (+{points} pts)",
+    "dashboard.websiteRecheck.limitReached": "Ya usó las {total} revisiones del sitio web de hoy. Inténtelo de nuevo mañana.",
+    "dashboard.websiteRecheck.noWebsite": "Su ficha no tiene un sitio web para revisar.",
+    "dashboard.websiteRecheck.failed": "No se pudo revisar su sitio web — inténtelo de nuevo en unos minutos. Esto no gastó una revisión.",
+    "dashboard.websiteRecheck.seeWebsite": "Ver los resultados de su sitio web",
     "dashboard.connectGbp.unlockSearchDemandTitle": "Demanda de búsqueda y clientes perdidos",
     "dashboard.connectGbp.unlockSearchDemandBody": "Vea cuántas personas lo encuentran en Google cada mes, qué buscaron y cuántas realmente llamaron, hicieron clic o pidieron indicaciones.",
     "dashboard.connectGbp.unlockSearchDemandPreview": "Ver un ejemplo",

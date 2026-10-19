@@ -11,6 +11,7 @@ import { getCurrentUserEmail } from "@/app/actions/auth";
 import { rememberShellBusiness } from "@/components/layout/shellMemory";
 import { LocaleProvider, normalizeLocale, t } from "@/lib/i18n";
 import { LegalLinks } from "@/components/legal/LegalPage";
+import { SinceLastVisit } from "@/components/visits/SinceLastVisit";
 
 export function DashboardShell({
   business = null,
@@ -116,6 +117,8 @@ export function DashboardShell({
             <LegalLinks locale={locale === "es" ? "es" : "en"} />
           </footer>
         </main>
+        {/* Once per browser session per business: "Since your last visit". */}
+        {business?.id && <SinceLastVisit businessId={business.id} />}
 
         {/* Dev-only proof-of-wiring — never rendered in production. The
             data-locale attribute above on the root div is the real,

@@ -11,7 +11,7 @@ import { formatCount, formatLongDate, formatShortDate, t, tPlural, type Locale }
 
 export const LETTER = { width: 612, height: 792 } as const;
 
-const C = {
+export const C = {
   ink: "#14243f",
   inkSoft: "#3a4a66",
   inkMute: "#6b7890",
@@ -64,6 +64,56 @@ export interface ReportData {
   changes: { listing: string[]; listingUnavailable: boolean; fixesConfirmed: number };
   nextSteps: ReportNextStep[];
   reviews: { rating: number | null; count: number | null; countChange: number | null; nearbyAverage: number | null };
+  /** The weekly report: same page, with the week in the header and the
+   * change box comparing the week's scan with the last scan before it. */
+  weekly?: WeeklyMeta;
+}
+
+export interface WeeklyMeta {
+  weekStart: string;
+  /** The week's Sunday. */
+  weekEnd: string;
+  /** No scan this week: when the last one ran (the page shows its numbers). */
+  noNewScanSince: string | null;
+  /** When the scan it's compared with ran (null: nothing to compare). */
+  comparedWith: string | null;
+  comparedInWeek: boolean;
+  /** Weekly routine items checked that week. */
+  routine: { done: number; total: number } | null;
+  /** A finished week: next steps are about today, so they're not shown. */
+  pastWeek: boolean;
+}
+
+/** "Oct 19–25, 2026" / "Sep 28 – Oct 4, 2026" / "Dec 29, 2025 – Jan 4, 2026" —
+ * a week's Monday–Sunday as plain calendar days. */
+export function compactWeekLabel(weekStart: string, weekEnd: string, locale: Locale): string {
+  const day = (ymd: string) => formatShortDate(`${ymd}T12:00:00Z`, locale, "UTC");
+  const [sy, sm] = weekStart.split("-");
+  const [ey, em] = weekEnd.split("-");
+  const endDay = String(Number(weekEnd.slice(8)));
+  if (sy === ey && sm === em) {
+    // "Oct 19–25, 2026" / "19–25 oct 2026"
+    const full = day(weekStart);
+    return locale === "es" ? full.replace(/^(\d+)/, `$1–${endDay}`) : full.replace(/(\d+), /, `$1–${endDay}, `);
+  }
+  if (sy === ey) {
+    const end = day(weekEnd);
+    const start = day(weekStart).replace(locale === "es" ? / \d{4}$/ : /, \d{4}$/, "");
+    return `${start} – ${end}`;
+  }
+  return `${day(weekStart)} – ${day(weekEnd)}`;
+}
+
+/** "postscore-weekly-modern-liquors-2026-10-12.pdf" */
+export function weeklyReportFileName(name: string, weekStart: string): string {
+  const slug = name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+  return `postscore-weekly-${slug || "business"}-${weekStart}.pdf`;
 }
 
 /** "Oct 16 – Oct 18, 2026 (2 days)" — dates and the day count in the
@@ -91,13 +141,13 @@ export function shareHeadline(data: Pick<ReportData, "locale" | "timeZone" | "pe
   return null;
 }
 
+/** Whole points, as the Overview shows them ("15 / 40"). */
 function formatPoints(value: number | null): string {
-  if (value === null) return "—";
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+  return value === null ? "—" : String(Math.round(value));
 }
 
 /** A ring arc from 12 o'clock, clockwise, as an SVG path (y down). */
-function arcPath(cx: number, cy: number, r: number, fraction: number): string {
+export function arcPath(cx: number, cy: number, r: number, fraction: number): string {
   const f = Math.max(0, Math.min(0.9999, fraction));
   const a = f * 2 * Math.PI;
   const x = cx + r * Math.sin(a);
@@ -106,7 +156,7 @@ function arcPath(cx: number, cy: number, r: number, fraction: number): string {
 }
 
 /** Five-point star (y down), centered at (cx, cy). */
-function starPath(cx: number, cy: number, r: number): string {
+export function starPath(cx: number, cy: number, r: number): string {
   const pts: string[] = [];
   for (let i = 0; i < 10; i++) {
     const rad = i % 2 === 0 ? r : r * 0.45;
@@ -149,7 +199,8 @@ export function layoutReport(data: ReportData, m: Measurer): PrintPage {
 
   // ---- Header band ----
   els.push({ kind: "rect", x: 0, y: 0, w: W, h: 6, r: 0, fill: C.brass, stroke: null, strokeWidth: 0 });
-  eyebrow(M, 40, t(locale, "dashboard.reports.pdf.title"));
+  const weekly = data.weekly ?? null;
+  eyebrow(M, 40, weekly ? t(locale, "dashboard.reports.pdf.weeklyTitle", { week: compactWeekLabel(weekly.weekStart, weekly.weekEnd, locale) }) : t(locale, "dashboard.reports.pdf.title"));
   rightText(W - M, 40, t(locale, "dashboard.reports.pdf.generated", { date: formatLongDate(data.generatedAt, locale, timeZone) }), 9, "body", C.inkMute);
   let y = para(M, 66, data.business.name, 22, "headline", C.ink, inner, 2, 1.15);
   if (data.business.address) y = para(M, y + 2, data.business.address, 10, "body", C.inkSoft, inner, 2);
@@ -175,13 +226,21 @@ export function layoutReport(data: ReportData, m: Measurer): PrintPage {
   const colX = M + 2 * ringR + 40;
   const colW = W - M - colX;
   let ry = y + 14;
-  eyebrow(colX, ry, t(locale, "dashboard.reports.pdf.changeLabel"));
+  eyebrow(colX, ry, t(locale, weekly ? "dashboard.reports.pdf.changeLabelWeekly" : "dashboard.reports.pdf.changeLabel"));
   ry += 20;
-  if (!data.period) {
+  // The weekly report labels what it compares with ("Compared with Oct 16"),
+  // never a "(0 days)" period.
+  const comparedLine = weekly?.comparedWith
+    ? t(locale, weekly.comparedInWeek ? "dashboard.reports.pdf.comparedWithInWeek" : "dashboard.reports.pdf.comparedWith", { date: formatShortDate(weekly.comparedWith, locale, timeZone) })
+    : null;
+  const periodLine = data.period ? comparedLine ?? (weekly ? null : periodLabel(data.period, locale, timeZone)) : null;
+  if (weekly?.noNewScanSince) {
+    ry = para(colX, ry, t(locale, "dashboard.reports.pdf.noNewScan", { date: formatShortDate(weekly.noNewScanSince, locale, timeZone) }), 11, "body", C.inkSoft, colW, 3);
+  } else if (!data.period) {
     ry = para(colX, ry, t(locale, "dashboard.reports.pdf.firstScan"), 11, "body", C.inkSoft, colW, 2);
   } else if (!data.period.comparable) {
     ry = para(colX, ry, t(locale, "dashboard.reports.pdf.scoringUpdated"), 10, "body", C.inkSoft, colW, 3);
-    ry = para(colX, ry + 2, periodLabel(data.period, locale, timeZone), 9, "body", C.inkMute, colW, 1);
+    if (periodLine) ry = para(colX, ry + 2, periodLine, 9, "body", C.inkMute, colW, 1);
   } else {
     const d = data.period.toScore - data.period.fromScore;
     const delta = d === 0 ? t(locale, "dashboard.reports.pdf.noChange") : d > 0 ? `+${d}` : String(d);
@@ -190,7 +249,7 @@ export function layoutReport(data: ReportData, m: Measurer): PrintPage {
     x += text(x, ry + 5, "→", 16, "body", C.inkMute) + 8;
     x += text(x, ry + 8, String(data.period.toScore), 26, "headline", C.ink) + 10;
     text(x, ry + 6, `(${delta})`, 13, "bodyBold", d > 0 ? C.green : d < 0 ? C.red : C.inkMute);
-    ry = para(colX, ry + 26, periodLabel(data.period, locale, timeZone), 9.5, "body", C.inkMute, colW, 1);
+    ry = periodLine ? para(colX, ry + 26, periodLine, 9.5, "body", C.inkMute, colW, 1) : ry + 26;
   }
   ry += 14;
   eyebrow(colX, ry, t(locale, "dashboard.reports.pdf.rankLabel"));
@@ -252,12 +311,14 @@ export function layoutReport(data: ReportData, m: Measurer): PrintPage {
   let ly = top;
   eyebrow(M, ly, t(locale, "dashboard.reports.recapWhatChangedHeading"));
   ly += 16;
-  if (data.period) ly = para(M, ly - 2, periodLabel(data.period, locale, timeZone), 8.5, "body", C.inkMute, leftW, 1) + 6;
+  if (data.period && periodLine && !weekly?.noNewScanSince) ly = para(M, ly - 2, periodLine, 8.5, "body", C.inkMute, leftW, 1) + 6;
   const changeLines = [
     ...data.changes.listing.slice(0, 4),
     ...(data.changes.fixesConfirmed > 0 ? [t(locale, "dashboard.reports.pdf.fixesConfirmed", { count: data.changes.fixesConfirmed })] : []),
   ];
-  if (!data.period) {
+  if (weekly?.noNewScanSince) {
+    ly = para(M, ly, t(locale, "dashboard.reports.pdf.noScanChanges"), 10, "body", C.inkSoft, leftW, 3);
+  } else if (!data.period) {
     ly = para(M, ly, t(locale, "dashboard.reports.pdf.firstScan"), 10, "body", C.inkSoft, leftW, 2);
   } else if (data.changes.listingUnavailable && changeLines.length === 0) {
     ly = para(M, ly, t(locale, "dashboard.reports.recapChangesUnavailable"), 10, "body", C.inkSoft, leftW, 3);
@@ -288,11 +349,17 @@ export function layoutReport(data: ReportData, m: Measurer): PrintPage {
     ly = para(M, ly, line, 9.5, "body", C.inkSoft, leftW, 1);
   }
   if (r.nearbyAverage !== null) ly = para(M, ly + 1, t(locale, "dashboard.reports.pdf.nearbyAverage", { count: formatCount(r.nearbyAverage, locale) }), 9.5, "body", C.inkSoft, leftW, 1);
+  // One line, only when it fits above the footer.
+  if (weekly?.routine && ly + 22 < LETTER.height - 70) {
+    para(M, ly + 12, t(locale, "dashboard.reports.pdf.routine", { done: weekly.routine.done, total: weekly.routine.total }), 9.5, "bodyBold", C.ink, leftW, 1);
+  }
 
   let ny = top;
   eyebrow(rightX, ny, t(locale, data.nextSteps.length >= 3 ? "dashboard.reports.pdf.nextHeading" : "dashboard.reports.pdf.nextHeadingFew"));
   ny += 16;
-  if (data.nextSteps.length === 0) {
+  if (weekly?.pastWeek) {
+    para(rightX, ny, t(locale, "dashboard.reports.pdf.nextPastWeek"), 10, "body", C.inkSoft, rightW, 3);
+  } else if (data.nextSteps.length === 0) {
     para(rightX, ny, t(locale, "dashboard.reports.pdf.nextNone"), 10, "body", C.inkSoft, rightW, 2);
   } else {
     data.nextSteps.slice(0, 3).forEach((step, i) => {

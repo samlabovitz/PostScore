@@ -345,7 +345,8 @@ describe("buildStarterSiteHtml: site language (locale)", () => {
       locale: "es",
       openingHoursPeriods: [{ open: { day: 1, hour: 9, minute: 0 }, close: { day: 1, hour: 17, minute: 0 } }],
     });
-    expect(html).toContain("Lunes: 9:00 a.m. – 5:00 p.m.");
+    // Structured hours render as a table (today highlighted).
+    expect(html).toContain('<th scope="row">Lunes</th><td>9:00 a.m. – 5:00 p.m.</td>');
     expect(html).not.toContain("Monday: 9:00 AM");
   });
 

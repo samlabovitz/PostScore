@@ -12,6 +12,7 @@ import type { LinkOptions } from "@/lib/postaiLinks";
 import { cn } from "@/lib/utils";
 import { wholePointRange } from "@/lib/pointRange";
 import { markTaskDone } from "@/app/actions/actionPlan";
+import { WebsiteRecheck } from "@/components/scoring/WebsiteRecheck";
 import {
   pendingCheckStatus,
   weeklyMetricProgress,
@@ -22,6 +23,12 @@ import {
 } from "@/lib/actionPlan";
 import type { GrowthMove } from "@/lib/growthMoves";
 import { formatMonthDayTime, t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
+
+/** What a website task needs for "Re-check my website". */
+export interface WebsiteRecheckProps {
+  left: number;
+  hasWebsite: boolean;
+}
 
 /** Points are always shown as whole numbers ("about +2 pts", never "+1.5"). */
 function wholePoints(value: number): number {
@@ -251,6 +258,7 @@ export function TaskCard({
   lastScanAt = null,
   step = null,
   linkOptions = {},
+  websiteRecheck = null,
 }: {
   task: ActionPlanTask;
   businessId: string;
@@ -261,6 +269,8 @@ export function TaskCard({
   step?: number | null;
   /** Which tools this business has — for the fix link (same as PostAI's). */
   linkOptions?: LinkOptions;
+  /** Website re-checks left today — website fixes get "Re-check my website". */
+  websiteRecheck?: WebsiteRecheckProps | null;
 }) {
   const router = useRouter();
   const locale = useLocale();
@@ -303,7 +313,7 @@ export function TaskCard({
   const fixLink = fix && !fix.href.startsWith(`/business/${businessId}/growth`) ? fix : null;
 
   return (
-    <li className="rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
+    <li id={`task-${task.checkId.replace(/\./g, "-")}`} className="scroll-mt-20 rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
       <div className="flex items-start gap-3">
         {step !== null && (
           <span aria-hidden className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-serif text-[14px] font-semibold text-ink ps-icon-tile">
@@ -388,6 +398,11 @@ export function TaskCard({
               {state.kind === "error" && <span className="text-[12px] text-red">{state.message}</span>}
             </div>
           )}
+          {websiteRecheck && task.checkId.startsWith("website.") && task.checkId !== "website.has_website" && (
+            <div className="border-t border-paper-line pt-3">
+              <WebsiteRecheck businessId={businessId} initialLeft={websiteRecheck.left} hasWebsite={websiteRecheck.hasWebsite} compact />
+            </div>
+          )}
         </div>
       </div>
     </li>
@@ -462,6 +477,7 @@ export function TaskListCard({
   context = "later",
   lastScanAt = null,
   linkOptions = {},
+  websiteRecheck = null,
 }: {
   tasks: ActionPlanTask[];
   businessId: string;
@@ -470,6 +486,7 @@ export function TaskListCard({
   context?: TaskCardContext;
   lastScanAt?: string | null;
   linkOptions?: LinkOptions;
+  websiteRecheck?: WebsiteRecheckProps | null;
 }) {
   if (tasks.length === 0) {
     return <Card className="p-5 text-sm text-ink-soft">{emptyMessage}</Card>;
@@ -487,6 +504,7 @@ export function TaskListCard({
             lastScanAt={lastScanAt}
             step={context === "weekly" ? i + 1 : null}
             linkOptions={linkOptions}
+            websiteRecheck={websiteRecheck}
           />
         ))}
       </ol>

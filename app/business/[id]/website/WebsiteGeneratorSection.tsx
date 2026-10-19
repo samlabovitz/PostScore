@@ -1,5 +1,6 @@
 "use client";
 
+import type { OwnerHours } from "@/lib/ownerHours";
 import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { CollapsibleGenerator } from "./CollapsibleGenerator";
@@ -26,6 +27,9 @@ export function WebsiteGeneratorSection({
   address,
   openingHours,
   openingHoursPeriods,
+  starterSiteHours,
+  starterSiteHoursEnabled,
+  timeZone,
   rating,
   reviewCount,
   googleMapsUri,
@@ -43,6 +47,9 @@ export function WebsiteGeneratorSection({
   address: string | null;
   openingHours: string[] | null;
   openingHoursPeriods: OpeningHoursPeriod[] | null;
+  starterSiteHours: OwnerHours | null;
+  starterSiteHoursEnabled: boolean;
+  timeZone: string;
   rating: number | null;
   reviewCount: number | null;
   googleMapsUri: string | null;
@@ -91,6 +98,9 @@ export function WebsiteGeneratorSection({
       address={address}
       openingHours={openingHours}
       openingHoursPeriods={openingHoursPeriods}
+      starterSiteHours={starterSiteHours}
+      starterSiteHoursEnabled={starterSiteHoursEnabled}
+      timeZone={timeZone}
       rating={rating}
       reviewCount={reviewCount}
       googleMapsUri={googleMapsUri}

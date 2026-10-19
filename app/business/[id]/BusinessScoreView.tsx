@@ -95,7 +95,10 @@ export function BusinessScoreView({
       parseWebsiteAnalysis(business.website_analysis_json)
     ).length > 0;
 
-  const lastScanAt = history[0]?.created_at ?? null;
+  // The last FULL scan: a website-only re-check refreshes the website
+  // part only, so it neither uses up the daily re-scan nor makes the
+  // Google listing data look fresh.
+  const lastScanAt = history.find((h) => h.scan_kind !== "website_recheck")?.created_at ?? null;
   const hasWebsite = businessWebsiteUrl(business) !== null;
   const liveSiteUrl = businessWebsiteUrl(business);
   const scoreBasis = scoreBasisPoints(breakdown.categories);

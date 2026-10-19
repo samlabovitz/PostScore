@@ -16,7 +16,8 @@ import { getActionPlan } from "@/app/actions/actionPlan";
 import { createClient } from "@/lib/supabase/server";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { businessRowToScoringInput } from "@/lib/scoring";
-import { categoryBarShares, categoryOutcomeCounts, topRecommendations, weightedCategoryPoints } from "@/lib/overviewTiles";
+import { topRecommendations } from "@/lib/overviewTiles";
+import { reportCategories } from "./reportCategories";
 import { recRangeText, wholePointRange } from "@/lib/pointRange";
 import { normalizeLocale, t, tPlural, type Locale } from "@/lib/i18n";
 import type { Recommendation } from "@/lib/overviewTiles";
@@ -96,11 +97,7 @@ export async function getReportData(businessId: string, now: Date = new Date()):
             comparable: recap.previous.scoring_version === recap.current.scoring_version,
           }
         : null,
-      categories: breakdown.categories.map((c) => {
-        const shares = categoryBarShares(c);
-        const counts = categoryOutcomeCounts(c);
-        return { label: c.label, points: weightedCategoryPoints(c), weight: c.weight, earned: shares.earned, unchecked: shares.unchecked, ...counts };
-      }),
+      categories: reportCategories(breakdown.categories),
       rank:
         benchmark.status === "ok"
           ? { rank: benchmark.benchmark.rank, of: benchmark.benchmark.peerCount, noun: benchmark.benchmark.competitorNoun, previousRank }

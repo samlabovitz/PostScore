@@ -11,7 +11,8 @@ import { layoutReport, type ReportData } from "./reportPdf";
 export async function buildReportPdf(data: ReportData): Promise<Uint8Array> {
   const fonts = await loadDesignFonts({ headlineFont: "playfair", bodyFont: "inter" }, readSignFont);
   const page = layoutReport(data, createMeasurer(fonts));
-  const { bytes } = await renderPdf([page], { qrs: {}, fontBytes: fonts, title: `${t(data.locale, "dashboard.reports.pdf.title")} — ${data.business.name}` });
+  const title = data.weekly ? t(data.locale, "dashboard.reports.weekly.title") : t(data.locale, "dashboard.reports.pdf.title");
+  const { bytes } = await renderPdf([page], { qrs: {}, fontBytes: fonts, title: `${title} — ${data.business.name}` });
   return bytes;
 }
 

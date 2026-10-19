@@ -88,7 +88,7 @@ describe("the one-page report", () => {
       "#3 of 10 nearby liquor stores",
       "up from #4",
       "Google listing",
-      "33.6 / 40",
+      "34 / 40",
       "2 couldn't check",
       "Rating changed from 4.5 to 4.6",
       "Action-plan fixes confirmed by a re-scan: 1",
