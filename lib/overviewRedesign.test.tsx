@@ -491,8 +491,8 @@ describe("whole-number point ranges and the connect page", () => {
     expect(closed).not.toContain("/api/gbp/connect");
     expect(closed).not.toMatch(/\$\d/);
     expect(render(<ConnectGbpView {...props} connectOpen={false} />, "es")).toContain("Disponible con PostScore Premium — próximamente");
-    // Eight cards (Search terms evens the grid), light icon tiles, Premium pill.
-    expect(closed.match(/rounded-lg ps-icon-tile/g)?.length).toBe(8);
+    // Nine cards (Search demand makes three rows of three), light icon tiles, Premium pill.
+    expect(closed.match(/rounded-lg ps-icon-tile/g)?.length).toBe(9);
     expect(closed).toContain("Search terms");
     expect(closed).toContain("See the exact words people typed on Google to find you.");
     expect(closed).toContain("PostScore Premium");

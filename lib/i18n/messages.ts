@@ -3059,7 +3059,66 @@ export type MessageKey =
   | "dashboard.websiteReviews.hero.signError"
   | "dashboard.websiteReviews.socialProof.ofRating"
   | "dashboard.websiteReviews.socialProof.ofReviews"
-  | "dashboard.growth.checklist.progress";
+  | "dashboard.growth.checklist.progress"
+  // --- Search demand (app/business/[id]/search-demand, lib/gbp/searchDemand.ts).
+  | "dashboard.connectGbp.unlockSearchDemandTitle"
+  | "dashboard.connectGbp.unlockSearchDemandBody"
+  | "dashboard.connectGbp.unlockSearchDemandPreview"
+  | "dashboard.searchDemand.pageTitle"
+  | "dashboard.searchDemand.pageSubtitle"
+  | "dashboard.searchDemand.example.badge"
+  | "dashboard.searchDemand.example.title"
+  | "dashboard.searchDemand.example.availability"
+  | "dashboard.searchDemand.example.caption"
+  | "dashboard.searchDemand.connectLink"
+  | "dashboard.searchDemand.awaiting.title"
+  | "dashboard.searchDemand.awaiting.body"
+  | "dashboard.searchDemand.toggle.label"
+  | "dashboard.searchDemand.toggle.weekly"
+  | "dashboard.searchDemand.toggle.monthly"
+  | "dashboard.searchDemand.funnel.title"
+  | "dashboard.searchDemand.funnel.weekOf"
+  | "dashboard.searchDemand.funnel.seen"
+  | "dashboard.searchDemand.funnel.seenSplit"
+  | "dashboard.searchDemand.funnel.acted"
+  | "dashboard.searchDemand.funnel.calls"
+  | "dashboard.searchDemand.funnel.website"
+  | "dashboard.searchDemand.funnel.directions"
+  | "dashboard.searchDemand.funnel.conversion"
+  | "dashboard.searchDemand.funnel.noViews"
+  | "dashboard.searchDemand.keywords.title"
+  | "dashboard.searchDemand.keywords.note"
+  | "dashboard.searchDemand.keywords.colTerm"
+  | "dashboard.searchDemand.keywords.colCount"
+  | "dashboard.searchDemand.keywords.colTrend"
+  | "dashboard.searchDemand.keywords.fewerThan"
+  | "dashboard.searchDemand.keywords.trend.up"
+  | "dashboard.searchDemand.keywords.trend.down"
+  | "dashboard.searchDemand.keywords.trend.flat"
+  | "dashboard.searchDemand.keywords.trend.none"
+  | "dashboard.searchDemand.area.title"
+  | "dashboard.searchDemand.area.subtitle"
+  | "dashboard.searchDemand.area.subtitleNoCity"
+  | "dashboard.searchDemand.area.colSearch"
+  | "dashboard.searchDemand.area.colVolume"
+  | "dashboard.searchDemand.area.source.dataforseo"
+  | "dashboard.searchDemand.area.source.google_keyword_planner"
+  | "dashboard.searchDemand.room.title"
+  | "dashboard.searchDemand.room.estimate"
+  | "dashboard.searchDemand.room.share"
+  | "dashboard.searchDemand.room.rest"
+  | "dashboard.searchDemand.room.caveat"
+  | "dashboard.searchDemand.room.unavailable"
+  | "dashboard.searchDemand.tips.title"
+  | "dashboard.searchDemand.tips.missing_term"
+  | "dashboard.searchDemand.tips.branded_heavy"
+  | "dashboard.searchDemand.tips.use_top_keyword"
+  | "dashboard.searchDemand.tips.near_me"
+  | "dashboard.searchDemand.tips.link.website_services"
+  | "dashboard.searchDemand.tips.link.website_content"
+  | "dashboard.searchDemand.tips.link.listing_categories"
+  | "dashboard.searchDemand.tips.link.listing_hours"
+  | "dashboard.searchDemand.tips.empty";
 
 /** The report/dashboard messages that vary by count — see tPlural below.
  * Each has a ".one" and ".other" MessageKey (the only two categories
@@ -6631,6 +6690,64 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.socialProof.ofRating": "{rating}★ of 5",
     "dashboard.websiteReviews.socialProof.ofReviews": "{count} of {target}",
     "dashboard.growth.checklist.progress": "{done} of {total} done this week · resets Monday",
+    "dashboard.connectGbp.unlockSearchDemandTitle": "Search demand & missed customers",
+    "dashboard.connectGbp.unlockSearchDemandBody": "See how many people find you on Google each month, what they searched, and how many actually called, clicked or got directions.",
+    "dashboard.connectGbp.unlockSearchDemandPreview": "See an example",
+    "dashboard.searchDemand.pageTitle": "Search demand",
+    "dashboard.searchDemand.pageSubtitle": "How people find you on Google, what they searched, and what they did next.",
+    "dashboard.searchDemand.example.badge": "Example",
+    "dashboard.searchDemand.example.title": "Example — these aren't your numbers",
+    "dashboard.searchDemand.example.availability": "Available with Premium once Google connection launches.",
+    "dashboard.searchDemand.example.caption": "Made-up data for a sample shop in Springfield, to show what you'll see after you connect.",
+    "dashboard.searchDemand.connectLink": "What connecting unlocks",
+    "dashboard.searchDemand.awaiting.title": "Connected — waiting for Google's numbers",
+    "dashboard.searchDemand.awaiting.body": "PostScore doesn't read Google's performance data yet. Your search terms, views and actions will show here once it does. Nothing is estimated in the meantime.",
+    "dashboard.searchDemand.toggle.label": "Period",
+    "dashboard.searchDemand.toggle.weekly": "Weekly",
+    "dashboard.searchDemand.toggle.monthly": "Monthly",
+    "dashboard.searchDemand.funnel.title": "Your Google funnel",
+    "dashboard.searchDemand.funnel.weekOf": "Week of {date}",
+    "dashboard.searchDemand.funnel.seen": "Seen on Google",
+    "dashboard.searchDemand.funnel.seenSplit": "{search} in Search · {maps} in Maps",
+    "dashboard.searchDemand.funnel.acted": "Took action",
+    "dashboard.searchDemand.funnel.calls": "Calls",
+    "dashboard.searchDemand.funnel.website": "Website clicks",
+    "dashboard.searchDemand.funnel.directions": "Directions",
+    "dashboard.searchDemand.funnel.conversion": "{percent} of views turned into a call, click or directions request",
+    "dashboard.searchDemand.funnel.noViews": "No views in this period, so there's no conversion rate.",
+    "dashboard.searchDemand.keywords.title": "What people searched to find you",
+    "dashboard.searchDemand.keywords.note": "Google reports search terms by month · {month}",
+    "dashboard.searchDemand.keywords.colTerm": "Search term",
+    "dashboard.searchDemand.keywords.colCount": "Times you showed up",
+    "dashboard.searchDemand.keywords.colTrend": "Trend",
+    "dashboard.searchDemand.keywords.fewerThan": "fewer than {n}",
+    "dashboard.searchDemand.keywords.trend.up": "Up from last month",
+    "dashboard.searchDemand.keywords.trend.down": "Down from last month",
+    "dashboard.searchDemand.keywords.trend.flat": "About the same as last month",
+    "dashboard.searchDemand.keywords.trend.none": "Not enough data to compare",
+    "dashboard.searchDemand.area.title": "Searches in your area",
+    "dashboard.searchDemand.area.subtitle": "Estimated monthly searches in {city} — estimate, not exact",
+    "dashboard.searchDemand.area.subtitleNoCity": "Estimated monthly searches near you — estimate, not exact",
+    "dashboard.searchDemand.area.colSearch": "Search",
+    "dashboard.searchDemand.area.colVolume": "Est. per month",
+    "dashboard.searchDemand.area.source.dataforseo": "Search volume estimates from DataForSEO · updated {date}",
+    "dashboard.searchDemand.area.source.google_keyword_planner": "Ranges from Google Ads Keyword Planner · updated {date}",
+    "dashboard.searchDemand.room.title": "Room to grow",
+    "dashboard.searchDemand.room.estimate": "Estimate",
+    "dashboard.searchDemand.room.share": "Your listing showed up for about {percent} of estimated local searches.",
+    "dashboard.searchDemand.room.rest": "The rest are searches you could be showing up for.",
+    "dashboard.searchDemand.room.caveat": "A rough comparison: your views also include people searching your name and people outside the area.",
+    "dashboard.searchDemand.room.unavailable": "Needs both your listing views and area search estimates.",
+    "dashboard.searchDemand.tips.title": "How to show up for more",
+    "dashboard.searchDemand.tips.missing_term": "Add “{term}” to your business description and website. People nearby search “{search}”, but it hasn't shown your listing.",
+    "dashboard.searchDemand.tips.branded_heavy": "{percent} of your search views come from people who already know your name. List what you sell in your categories and description so new customers find you too.",
+    "dashboard.searchDemand.tips.use_top_keyword": "“{keyword}” brings up your listing more than any other search that isn't your name. Use those words on your website's homepage and services page.",
+    "dashboard.searchDemand.tips.near_me": "People nearby search “{search}”. Keep your hours, address and categories complete so you show up for “near me” searches.",
+    "dashboard.searchDemand.tips.link.website_services": "Check your services page",
+    "dashboard.searchDemand.tips.link.website_content": "Check your website content",
+    "dashboard.searchDemand.tips.link.listing_categories": "Check your categories",
+    "dashboard.searchDemand.tips.link.listing_hours": "Check your hours",
+    "dashboard.searchDemand.tips.empty": "Tips appear once there are real search terms to work from.",
   },
   es: {
     "language.en": "Inglés",
@@ -10227,6 +10344,64 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.socialProof.ofRating": "{rating}★ de 5",
     "dashboard.websiteReviews.socialProof.ofReviews": "{count} de {target}",
     "dashboard.growth.checklist.progress": "{done} de {total} listos esta semana · se reinicia el lunes",
+    "dashboard.connectGbp.unlockSearchDemandTitle": "Demanda de búsqueda y clientes perdidos",
+    "dashboard.connectGbp.unlockSearchDemandBody": "Vea cuántas personas lo encuentran en Google cada mes, qué buscaron y cuántas realmente llamaron, hicieron clic o pidieron indicaciones.",
+    "dashboard.connectGbp.unlockSearchDemandPreview": "Ver un ejemplo",
+    "dashboard.searchDemand.pageTitle": "Demanda de búsqueda",
+    "dashboard.searchDemand.pageSubtitle": "Cómo lo encuentra la gente en Google, qué buscó y qué hizo después.",
+    "dashboard.searchDemand.example.badge": "Ejemplo",
+    "dashboard.searchDemand.example.title": "Ejemplo — estas no son sus cifras",
+    "dashboard.searchDemand.example.availability": "Disponible con Premium cuando se lance la conexión con Google.",
+    "dashboard.searchDemand.example.caption": "Datos inventados de una tienda de muestra en Springfield, para mostrarle lo que verá después de conectarse.",
+    "dashboard.searchDemand.connectLink": "Lo que desbloquea la conexión",
+    "dashboard.searchDemand.awaiting.title": "Conectado — esperando las cifras de Google",
+    "dashboard.searchDemand.awaiting.body": "PostScore todavía no lee los datos de rendimiento de Google. Sus términos de búsqueda, vistas y acciones aparecerán aquí cuando lo haga. Mientras tanto, no se estima nada.",
+    "dashboard.searchDemand.toggle.label": "Período",
+    "dashboard.searchDemand.toggle.weekly": "Semanal",
+    "dashboard.searchDemand.toggle.monthly": "Mensual",
+    "dashboard.searchDemand.funnel.title": "Su embudo en Google",
+    "dashboard.searchDemand.funnel.weekOf": "Semana del {date}",
+    "dashboard.searchDemand.funnel.seen": "Lo vieron en Google",
+    "dashboard.searchDemand.funnel.seenSplit": "{search} en la Búsqueda · {maps} en Maps",
+    "dashboard.searchDemand.funnel.acted": "Tomaron una acción",
+    "dashboard.searchDemand.funnel.calls": "Llamadas",
+    "dashboard.searchDemand.funnel.website": "Clics al sitio web",
+    "dashboard.searchDemand.funnel.directions": "Indicaciones",
+    "dashboard.searchDemand.funnel.conversion": "El {percent} de las vistas terminó en una llamada, un clic o una solicitud de indicaciones",
+    "dashboard.searchDemand.funnel.noViews": "No hubo vistas en este período, así que no hay tasa de conversión.",
+    "dashboard.searchDemand.keywords.title": "Lo que la gente buscó para encontrarlo",
+    "dashboard.searchDemand.keywords.note": "Google informa los términos de búsqueda por mes · {month}",
+    "dashboard.searchDemand.keywords.colTerm": "Término de búsqueda",
+    "dashboard.searchDemand.keywords.colCount": "Veces que apareció",
+    "dashboard.searchDemand.keywords.colTrend": "Tendencia",
+    "dashboard.searchDemand.keywords.fewerThan": "menos de {n}",
+    "dashboard.searchDemand.keywords.trend.up": "Sube respecto al mes pasado",
+    "dashboard.searchDemand.keywords.trend.down": "Baja respecto al mes pasado",
+    "dashboard.searchDemand.keywords.trend.flat": "Casi igual que el mes pasado",
+    "dashboard.searchDemand.keywords.trend.none": "No hay datos suficientes para comparar",
+    "dashboard.searchDemand.area.title": "Búsquedas en su zona",
+    "dashboard.searchDemand.area.subtitle": "Búsquedas mensuales estimadas en {city} — estimación, no exacta",
+    "dashboard.searchDemand.area.subtitleNoCity": "Búsquedas mensuales estimadas cerca de usted — estimación, no exacta",
+    "dashboard.searchDemand.area.colSearch": "Búsqueda",
+    "dashboard.searchDemand.area.colVolume": "Est. por mes",
+    "dashboard.searchDemand.area.source.dataforseo": "Estimaciones de volumen de búsqueda de DataForSEO · actualizado el {date}",
+    "dashboard.searchDemand.area.source.google_keyword_planner": "Rangos de Google Ads Keyword Planner · actualizado el {date}",
+    "dashboard.searchDemand.room.title": "Margen para crecer",
+    "dashboard.searchDemand.room.estimate": "Estimación",
+    "dashboard.searchDemand.room.share": "Su ficha apareció en aproximadamente el {percent} de las búsquedas locales estimadas.",
+    "dashboard.searchDemand.room.rest": "El resto son búsquedas en las que podría aparecer.",
+    "dashboard.searchDemand.room.caveat": "Es una comparación aproximada: sus vistas también incluyen a quienes buscan su nombre y a personas de fuera de la zona.",
+    "dashboard.searchDemand.room.unavailable": "Necesita tanto las vistas de su ficha como las estimaciones de búsquedas en su zona.",
+    "dashboard.searchDemand.tips.title": "Cómo aparecer en más búsquedas",
+    "dashboard.searchDemand.tips.missing_term": "Agregue “{term}” a la descripción de su negocio y a su sitio web. La gente cercana busca “{search}”, pero su ficha no ha aparecido.",
+    "dashboard.searchDemand.tips.branded_heavy": "El {percent} de sus vistas en búsquedas viene de personas que ya conocen su nombre. Indique lo que vende en sus categorías y descripción para que también lo encuentren clientes nuevos.",
+    "dashboard.searchDemand.tips.use_top_keyword": "“{keyword}” muestra su ficha más que cualquier otra búsqueda que no sea su nombre. Use esas palabras en la página principal y la de servicios de su sitio web.",
+    "dashboard.searchDemand.tips.near_me": "La gente cercana busca “{search}”. Mantenga completos su horario, dirección y categorías para aparecer en las búsquedas “cerca de mí”.",
+    "dashboard.searchDemand.tips.link.website_services": "Revisar su página de servicios",
+    "dashboard.searchDemand.tips.link.website_content": "Revisar el contenido de su sitio web",
+    "dashboard.searchDemand.tips.link.listing_categories": "Revisar sus categorías",
+    "dashboard.searchDemand.tips.link.listing_hours": "Revisar su horario",
+    "dashboard.searchDemand.tips.empty": "Los consejos aparecen cuando haya términos de búsqueda reales con los que trabajar.",
   },
 };
 

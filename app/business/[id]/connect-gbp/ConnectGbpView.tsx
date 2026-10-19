@@ -15,6 +15,8 @@ import {
   IconChartBar,
   IconFilePencil,
   IconSearch,
+  IconChartFunnel,
+  IconArrowRight,
 } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -22,8 +24,9 @@ import { disconnectGbp } from "@/app/actions/gbp";
 import { formatShortDate, t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 
 function buildUnlocks(
-  locale: Locale
-): Array<{ icon: typeof IconEdit; title: string; body: string }> {
+  locale: Locale,
+  businessId: string
+): Array<{ icon: typeof IconEdit; title: string; body: string; preview?: { href: string; label: string } }> {
   return [
     {
       icon: IconEdit,
@@ -64,6 +67,12 @@ function buildUnlocks(
       icon: IconSearch,
       title: t(locale, "dashboard.connectGbp.unlockSearchTermsTitle"),
       body: t(locale, "dashboard.connectGbp.unlockSearchTermsBody"),
+    },
+    {
+      icon: IconChartFunnel,
+      title: t(locale, "dashboard.connectGbp.unlockSearchDemandTitle"),
+      body: t(locale, "dashboard.connectGbp.unlockSearchDemandBody"),
+      preview: { href: `/business/${businessId}/search-demand`, label: t(locale, "dashboard.connectGbp.unlockSearchDemandPreview") },
     },
   ];
 }
@@ -119,7 +128,7 @@ export function ConnectGbpView({
 }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
-  const unlocks = buildUnlocks(locale);
+  const unlocks = buildUnlocks(locale, businessId);
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
       <div>
@@ -183,9 +192,11 @@ export function ConnectGbpView({
         </Card>
       ) : (
         <>
-          {/* Eight cards, two per row: grid rows stretch, so each row's
-              cards match in height. The lift on hover is motion-safe. */}
-          <div className="grid grid-cols-1 gap-4 nav:grid-cols-2">
+          {/* Nine cards: one per row on narrow screens, three per row from
+              lg up, so the grid always fills evenly. Grid rows stretch, so
+              each row's cards match in height. The lift on hover is
+              motion-safe. */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3" data-testid="connect-unlocks">
             {unlocks.map((u) => (
               <Card
                 key={u.title}
@@ -197,6 +208,15 @@ export function ConnectGbpView({
                 <div>
                   <div className="text-[13.5px] font-semibold text-ink">{u.title}</div>
                   <p className="mt-1 text-[12.5px] leading-snug text-ink-mute">{u.body}</p>
+                  {u.preview && (
+                    <Link
+                      href={u.preview.href}
+                      className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink-soft underline-offset-2 hover:text-ink hover:underline"
+                    >
+                      {u.preview.label}
+                      <IconArrowRight size={13} aria-hidden />
+                    </Link>
+                  )}
                 </div>
               </Card>
             ))}
