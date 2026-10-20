@@ -8,6 +8,7 @@
 
 import type { SavedCompetitorEntry, SavedCompetitorScan } from "@/lib/savedCompetitorScans";
 import type { CategoryId } from "@/lib/scoring";
+import { applyScope, type CompetitorScope } from "@/lib/competitorScope";
 
 export type CompareView = "overall" | "listing" | "website" | "reviews";
 export const COMPARE_VIEWS: readonly CompareView[] = ["overall", "listing", "website", "reviews"];
@@ -97,9 +98,11 @@ export interface RankedEntry {
 }
 
 /** Re-ranks a scan by the selected view (highest first; ties keep the
- * saved order — groupSavedScans makes that order fixed). */
-export function rankBy(scan: SavedCompetitorScan, view: CompareView): RankedEntry[] {
-  const scored = scan.entries.map((entry, i) => ({ entry, score: entryScore(entry, view), i }));
+ * saved order — groupSavedScans makes that order fixed). With a `scope`
+ * (lib/competitorScope.ts), only the competitors in that scope count. */
+export function rankBy(scan: SavedCompetitorScan, view: CompareView, scope?: CompetitorScope | null): RankedEntry[] {
+  const entries = scope ? applyScope(scan, scope).scan.entries : scan.entries;
+  const scored = entries.map((entry, i) => ({ entry, score: entryScore(entry, view), i }));
   scored.sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.i - b.i);
   if (view === "overall") {
     // Tied or within 1 point: a business whose website was fully checked
@@ -310,8 +313,8 @@ export interface OwnerStanding {
  * benchmark", Competitors page, monthly report, PostAI: rankBy(scan,
  * "overall") on each business's full PostScore. null when the owner's row
  * is missing or has no score. */
-export function ownerStanding(scan: SavedCompetitorScan): OwnerStanding | null {
-  const ranked = rankBy(scan, "overall");
+export function ownerStanding(scan: SavedCompetitorScan, scope?: CompetitorScope | null): OwnerStanding | null {
+  const ranked = rankBy(scan, "overall", scope);
   const owner = ranked.find((r) => r.entry.isSubject);
   if (!owner || owner.score === null) return null;
   const ownerScore = owner.score;
@@ -329,7 +332,7 @@ export function ownerStanding(scan: SavedCompetitorScan): OwnerStanding | null {
 /** The monthly report's competitor standing for one saved scan — the
  * shared ownerStanding. `topReviewCount` feeds the report's "the top
  * business has N more reviews" pointer. */
-export function reportStanding(scan: SavedCompetitorScan): { rank: number; total: number; topReviewCount: number | null } | null {
-  const standing = ownerStanding(scan);
+export function reportStanding(scan: SavedCompetitorScan, scope?: CompetitorScope | null): { rank: number; total: number; topReviewCount: number | null } | null {
+  const standing = ownerStanding(scan, scope);
   return standing ? { rank: standing.rank, total: standing.of, topReviewCount: standing.topReviewCount } : null;
 }

@@ -3,6 +3,8 @@
 
 import type { ScoreBreakdown } from "@/lib/scoring";
 import { ownerStanding } from "@/lib/competitorComparison";
+import type { CompetitorScope } from "@/lib/competitorScope";
+
 
 /** One business in a saved competitor scan — the owner's own row
  * (isSubject) or a competitor's. Exactly what was saved; nothing filled
@@ -51,7 +53,6 @@ export interface CompetitorRankPoint {
 
 /** Every competitor_scans column SavedScanRow needs. */
 export const SAVED_SCAN_COLUMNS =
-  "scan_id, created_at, is_subject, place_id, name, address, distance_meters, rating, review_count, has_website, total, grade, scoring_version, breakdown_json, price_level, photo_count, website_url";
 
 export interface SavedScanRow {
   scan_id: string;
@@ -123,13 +124,13 @@ export function groupSavedScans(rows: SavedScanRow[]): SavedCompetitorScan[] {
   return scans.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
-export function rankPoint(scan: SavedCompetitorScan): CompetitorRankPoint {
-  const standing = ownerStanding(scan);
+export function rankPoint(scan: SavedCompetitorScan, scope?: CompetitorScope | null): CompetitorRankPoint {
+  const standing = ownerStanding(scan, scope);
   return {
     scanId: scan.scanId,
     createdAt: scan.createdAt,
     rank: standing?.rank ?? null,
-    of: scan.entries.length,
+    of: standing?.of ?? scan.entries.length,
     score: standing?.ownerScore ?? null,
   };
 }

@@ -19,6 +19,40 @@ export type MessageKey =
   | "dashboard.nav.competitors"
   | "dashboard.nav.pricing"
   | "dashboard.nav.reports"
+  | "dashboard.competitors.groups.heading"
+  | "dashboard.competitors.groups.yourType"
+  | "dashboard.competitors.groups.change"
+  | "dashboard.competitors.groups.scopeLabel"
+  | "dashboard.competitors.groups.modeAuto"
+  | "dashboard.competitors.groups.modeDirect"
+  | "dashboard.competitors.groups.modeWide"
+  | "dashboard.competitors.groups.autoDirect"
+  | "dashboard.competitors.groups.direct"
+  | "dashboard.competitors.groups.also"
+  | "dashboard.competitors.groups.countsForMe"
+  | "dashboard.competitors.groups.noneInScan"
+  | "dashboard.competitors.groups.other"
+  | "dashboard.competitors.groups.byName"
+  | "dashboard.competitors.groups.notSaved"
+  | "dashboard.competitors.groups.allSameKind"
+  | "dashboard.niche.weThink"
+  | "dashboard.niche.suggest"
+  | "dashboard.niche.needsOwner"
+  | "dashboard.niche.looksRight"
+  | "dashboard.niche.change"
+  | "dashboard.niche.choose"
+  | "dashboard.niche.dismiss"
+  | "dashboard.niche.pickerLabel"
+  | "dashboard.niche.pickerHelp"
+  | "dashboard.niche.search"
+  | "dashboard.niche.current"
+  | "dashboard.niche.detected"
+  | "dashboard.niche.yours"
+  | "dashboard.niche.suggestedTag"
+  | "dashboard.niche.noMatches"
+  | "dashboard.niche.saved"
+  | "dashboard.niche.notSaved"
+  | "dashboard.niche.resetAuto"
   | "dashboard.websiteReviews.guide.heading"
   | "dashboard.websiteReviews.guide.whenTitle"
   | "dashboard.websiteReviews.guide.when1"
@@ -3528,6 +3562,40 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.competitors": "Competitors",
     "dashboard.nav.pricing": "Price check",
     "dashboard.nav.reports": "Reports",
+    "dashboard.competitors.groups.heading": "Who you're compared with",
+    "dashboard.competitors.groups.yourType": "Your type: {niche}",
+    "dashboard.competitors.groups.change": "Change",
+    "dashboard.competitors.groups.scopeLabel": "Rank against",
+    "dashboard.competitors.groups.modeAuto": "Automatic",
+    "dashboard.competitors.groups.modeDirect": "Direct only",
+    "dashboard.competitors.groups.modeWide": "Direct + areas I ticked",
+    "dashboard.competitors.groups.autoDirect": "{count} direct competitors nearby, so you're ranked against them only.",
+    "dashboard.competitors.groups.direct": "Direct competitors",
+    "dashboard.competitors.groups.also": "Also competes with",
+    "dashboard.competitors.groups.countsForMe": "Counts for me",
+    "dashboard.competitors.groups.noneInScan": "None in your last scan.",
+    "dashboard.competitors.groups.other": "Other similar businesses nearby",
+    "dashboard.competitors.groups.byName": "Sorted by business name for now — your next competitor refresh sorts them more precisely.",
+    "dashboard.competitors.groups.notSaved": "Shown here, but not saved yet — PostScore needs a quick update first.",
+    "dashboard.competitors.groups.allSameKind": "Every business in your last scan is the same kind as yours.",
+    "dashboard.niche.weThink": "We think you're {article} {niche}.",
+    "dashboard.niche.suggest": "We think you're {article} {suggested} (you chose {current}).",
+    "dashboard.niche.needsOwner": "Tell us what kind of {parent} you are, so we compare you with the right businesses.",
+    "dashboard.niche.looksRight": "Looks right",
+    "dashboard.niche.change": "Change",
+    "dashboard.niche.choose": "Choose",
+    "dashboard.niche.dismiss": "Not now",
+    "dashboard.niche.pickerLabel": "What kind of business is this?",
+    "dashboard.niche.pickerHelp": "Pick the closest match — it decides who you're compared with. Your PostScore doesn't change.",
+    "dashboard.niche.search": "Search types (e.g. skate shop, yoga, tacos)",
+    "dashboard.niche.current": "Current: {niche}",
+    "dashboard.niche.detected": "(we detected this)",
+    "dashboard.niche.yours": "(you chose this)",
+    "dashboard.niche.suggestedTag": "Suggested",
+    "dashboard.niche.noMatches": "No matching types — try another word, or pick the general type.",
+    "dashboard.niche.saved": "Saved.",
+    "dashboard.niche.notSaved": "Couldn't save yet — PostScore needs a quick update first. Your choice applies to this visit.",
+    "dashboard.niche.resetAuto": "Use automatic detection",
     "dashboard.websiteReviews.guide.heading": "Get more reviews, the right way",
     "dashboard.websiteReviews.guide.whenTitle": "When to ask",
     "dashboard.websiteReviews.guide.when1": "Right after the visit — at checkout or pickup, while the experience is fresh.",
@@ -7399,6 +7467,40 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.competitors": "Competencia",
     "dashboard.nav.pricing": "Revisión de precios",
     "dashboard.nav.reports": "Informes",
+    "dashboard.competitors.groups.heading": "Con quién se le compara",
+    "dashboard.competitors.groups.yourType": "Su tipo: {niche}",
+    "dashboard.competitors.groups.change": "Cambiar",
+    "dashboard.competitors.groups.scopeLabel": "Comparar con",
+    "dashboard.competitors.groups.modeAuto": "Automático",
+    "dashboard.competitors.groups.modeDirect": "Solo directos",
+    "dashboard.competitors.groups.modeWide": "Directos + áreas marcadas",
+    "dashboard.competitors.groups.autoDirect": "Hay {count} competidores directos cerca, así que se le compara solo con ellos.",
+    "dashboard.competitors.groups.direct": "Competidores directos",
+    "dashboard.competitors.groups.also": "También compite con",
+    "dashboard.competitors.groups.countsForMe": "Cuenta para mí",
+    "dashboard.competitors.groups.noneInScan": "Ninguno en su último análisis.",
+    "dashboard.competitors.groups.other": "Otros negocios similares cercanos",
+    "dashboard.competitors.groups.byName": "Por ahora se ordenan por el nombre del negocio — su próxima actualización de competidores los ordenará con más precisión.",
+    "dashboard.competitors.groups.notSaved": "Se muestra aquí, pero todavía no se guarda — PostScore necesita una actualización rápida primero.",
+    "dashboard.competitors.groups.allSameKind": "Todos los negocios de su último análisis son del mismo tipo que el suyo.",
+    "dashboard.niche.weThink": "Creemos que su negocio es: {niche}.",
+    "dashboard.niche.suggest": "Creemos que su negocio es: {suggested} (usted eligió {current}).",
+    "dashboard.niche.needsOwner": "Díganos qué tipo de {parent} es su negocio, para compararlo con los negocios correctos.",
+    "dashboard.niche.looksRight": "Es correcto",
+    "dashboard.niche.change": "Cambiar",
+    "dashboard.niche.choose": "Elegir",
+    "dashboard.niche.dismiss": "Ahora no",
+    "dashboard.niche.pickerLabel": "¿Qué tipo de negocio es?",
+    "dashboard.niche.pickerHelp": "Elija el más parecido — decide con quién se le compara. Su PostScore no cambia.",
+    "dashboard.niche.search": "Buscar tipos (p. ej. skate, yoga, tacos)",
+    "dashboard.niche.current": "Actual: {niche}",
+    "dashboard.niche.detected": "(lo detectamos)",
+    "dashboard.niche.yours": "(usted lo eligió)",
+    "dashboard.niche.suggestedTag": "Sugerido",
+    "dashboard.niche.noMatches": "No hay tipos que coincidan — pruebe otra palabra o elija el tipo general.",
+    "dashboard.niche.saved": "Guardado.",
+    "dashboard.niche.notSaved": "Todavía no se pudo guardar — PostScore necesita una actualización rápida primero. Su elección se aplica a esta visita.",
+    "dashboard.niche.resetAuto": "Usar la detección automática",
     "dashboard.websiteReviews.guide.heading": "Consiga más reseñas, de la manera correcta",
     "dashboard.websiteReviews.guide.whenTitle": "Cuándo pedirla",
     "dashboard.websiteReviews.guide.when1": "Justo después de la visita — al pagar o al recoger, mientras la experiencia está fresca.",

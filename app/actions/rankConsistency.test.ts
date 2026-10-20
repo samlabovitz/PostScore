@@ -81,8 +81,9 @@ describe("the same rank everywhere", () => {
       const src = fs.readFileSync(f, "utf8");
       expect(src, f).not.toMatch(/sort\(\(a, b\) => \(b\.total \?\? -1\) - \(a\.total \?\? -1\)\);\s*\n\s*const (?:rank|subjectRank) =/);
     }
-    expect(fs.readFileSync("app/actions/assistant.ts", "utf8")).toContain("ownerStanding(snapshot.scan)");
-    expect(fs.readFileSync("app/actions/competitors.ts", "utf8")).toContain("ownerStanding(snapshot.scan)");
+    // The shared function, with the business's competitor scope (lib/competitorScope.ts).
+    expect(fs.readFileSync("app/actions/assistant.ts", "utf8")).toContain("ownerStanding(snapshot.scan, competitorScope)");
+    expect(fs.readFileSync("app/actions/competitors.ts", "utf8")).toContain("ownerStanding(snapshot.scan, await loadCompetitorScope(supabase, businessId))");
   });
 });
 

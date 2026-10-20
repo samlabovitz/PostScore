@@ -14,6 +14,8 @@ import type { Locale } from "@/lib/i18n";
 import { SNAPSHOT_COLUMNS, snapshotFromWeek, weeksNeedingSnapshots, type WeeklySnapshotRow } from "./snapshots";
 import { buildWeekSummary, type WeeklyScan } from "./weeklyReport";
 import { weekBounds } from "./weeks";
+import { loadCompetitorScope } from "@/lib/businessNiche.server";
+
 
 /** Every saved scan for a business, oldest first. */
 export async function loadWeeklyScans(supabase: SupabaseClient, businessId: string): Promise<WeeklyScan[]> {
@@ -36,9 +38,10 @@ export async function loadWeeklyScans(supabase: SupabaseClient, businessId: stri
 /** The owner's local rank (shared ownerStanding / rankBy) from the latest
  * saved competitor scan at or before `at`, and the scan before that one. */
 export async function rankAt(supabase: SupabaseClient, businessId: string, at: string): Promise<{ rank: number; of: number; previous: number | null } | null> {
-  const [{ data, error }, unfinished] = await Promise.all([
+  const [{ data, error }, unfinished, scope] = await Promise.all([
     supabase.from("competitor_scans").select(SAVED_SCAN_COLUMNS).eq("business_id", businessId).lte("created_at", at).order("created_at", { ascending: false }).limit(150),
     unfinishedNewScanIds(supabase, businessId),
+    loadCompetitorScope(supabase, businessId),
   ]);
   if (error || !data) return null;
   const rows = withoutUnfinished(data as SavedScanRow[], unfinished);
@@ -46,7 +49,7 @@ export async function rankAt(supabase: SupabaseClient, businessId: string, at: s
   if (ids.length === 0) return null;
   const standing = (id: string) => {
     const scan = groupSavedScans(rows.filter((r) => r.scan_id === id))[0];
-    return scan ? ownerStanding(scan) : null;
+    return scan ? ownerStanding(scan, scope) : null;
   };
   const now = standing(ids[0]);
   if (!now) return null;

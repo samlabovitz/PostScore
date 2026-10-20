@@ -17,6 +17,10 @@ import { topRecommendations } from "@/lib/overviewTiles";
 import { websiteFixPlan } from "@/lib/websiteFixes";
 import { resolveWebsiteBuilder } from "@/lib/websiteBuilder";
 import { businessWebsiteUrl } from "@/lib/businessWebsite";
+import { createClient } from "@/lib/supabase/server";
+import { NicheBanner } from "@/components/niche/NicheBanner";
+import { nicheBannerKind } from "@/lib/businessNiche";
+import { loadBusinessNiche } from "@/lib/businessNiche.server";
 
 export default async function BusinessPage({ params }: { params: { id: string } }) {
   // getBusinessSummary is awaited separately (not folded into the
@@ -88,7 +92,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     );
   }
 
-  const [history, recentSnapshots, assistantPageData, benchmark, gbpStatus, actionPlan] = await Promise.all([
+  const [history, recentSnapshots, assistantPageData, benchmark, gbpStatus, actionPlan, niche] = await Promise.all([
     getScoreHistory(params.id),
     getRecentScoreSnapshots(params.id, 2),
     getAssistantPageData(params.id),
@@ -102,7 +106,9 @@ export default async function BusinessPage({ params }: { params: { id: string } 
       googleMapsUri: scored.business.google_maps_uri ?? null,
       profileId: profile.id,
     }),
+    loadBusinessNiche(createClient(), params.id),
   ]);
+  const bannerKind = niche ? nicheBannerKind(niche.resolved) : null;
 
   const linkOptions = { referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk };
   const recommendations =
@@ -133,6 +139,17 @@ export default async function BusinessPage({ params }: { params: { id: string } 
 
   return (
     <DashboardShell business={scored.business}>
+      {niche && bannerKind && (
+        <div className="mb-6">
+          <NicheBanner
+            businessId={params.id}
+            kind={bannerKind}
+            nicheId={niche.resolved.nicheId}
+            suggestion={niche.resolved.suggestion}
+            parentLabel={profile.label}
+          />
+        </div>
+      )}
       <BusinessScoreView
         businessId={params.id}
         business={scored.business}

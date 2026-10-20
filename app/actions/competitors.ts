@@ -25,6 +25,7 @@ import {
 } from "@/lib/savedCompetitorScans";
 import { ownerStanding } from "@/lib/competitorComparison";
 import { latestScoringProgress, unfinishedNewScanIds, withoutUnfinished, type ScoringProgress } from "@/lib/competitorScoringStatus";
+import { loadBusinessNiche, loadCompetitorScope, type BusinessNicheState } from "@/lib/businessNiche.server";
 
 export type { CompetitorRankPoint, SavedCompetitorEntry, SavedCompetitorScan } from "@/lib/savedCompetitorScans";
 
@@ -97,6 +98,8 @@ export type GetCompetitorsResult =
       comparedViaTypes: string[];
       /** The business's own time zone (lib/businessTimeZone.ts). */
       timeZone: string;
+      /** Niche + ranking scope (lib/businessNiche.ts); null if unreadable. */
+      niche?: BusinessNicheState | null;
     }
   | { status: "not_found" }
   | { status: "unauthenticated" }
@@ -128,7 +131,7 @@ export async function getCompetitorsWithClient(
   now: Date = new Date()
 ): Promise<GetCompetitorsResult> {
   // Every read needs only the id — run them together (each RLS-scoped).
-  const [{ data: business, error }, { data: scanRows, error: scanError }, unfinished, scoring] = await Promise.all([
+  const [{ data: business, error }, { data: scanRows, error: scanError }, unfinished, scoring, niche] = await Promise.all([
     supabase
       .from("businesses")
       .select("name, address, language, category, categories, primary_type, business_type_override, lat, lng")
@@ -137,6 +140,7 @@ export async function getCompetitorsWithClient(
     supabase.from("competitor_scans").select(SCAN_COLUMNS).eq("business_id", businessId).order("created_at", { ascending: false }).limit(600),
     unfinishedNewScanIds(supabase, businessId),
     latestScoringProgress(supabase, businessId),
+    loadBusinessNiche(supabase, businessId),
   ]);
 
   if (error || !business) {
@@ -178,7 +182,8 @@ export async function getCompetitorsWithClient(
     timeZone: businessTimeZone(row.lat, row.lng),
     competitorNoun,
     latest,
-    rankHistory: scans.map(rankPoint).reverse(),
+    rankHistory: scans.map((s) => rankPoint(s, niche?.scope)).reverse(),
+    niche,
     refresh: refreshAvailability(newestSavedAt, now),
     scanBlocker: competitorScanBlocker({
       lat: row.lat,
@@ -440,7 +445,7 @@ export async function getPreviousCompetitorRank(businessId: string, latestScanId
   const previousId = rows.find((r) => r.scan_id !== latestScanId)?.scan_id;
   if (!previousId) return null;
   const scan = groupSavedScans(rows.filter((r) => r.scan_id === previousId))[0];
-  return scan ? (ownerStanding(scan)?.rank ?? null) : null;
+  return scan ? (ownerStanding(scan, await loadCompetitorScope(supabase, businessId))?.rank ?? null) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -551,7 +556,7 @@ export async function getLocalBenchmark(businessId: string): Promise<GetLocalBen
 
   // The one shared rank (comparable score) — identical to the
   // Competitors page, the monthly report and PostAI.
-  const standing = ownerStanding(snapshot.scan);
+  const standing = ownerStanding(snapshot.scan, await loadCompetitorScope(supabase, businessId));
   const subject = snapshot.entries.find((e) => e.isSubject);
   if (!standing || !subject) {
     // Every real saved scan includes the subject with a real score — this

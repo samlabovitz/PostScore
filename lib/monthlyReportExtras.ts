@@ -18,6 +18,8 @@ import type { CompetitorSnapshot, FocusTopActionPlanTask, ReportExtras, ReportSe
 import { groupSavedScans, type SavedScanRow } from "@/lib/savedCompetitorScans";
 import { hasAnalyzableWebsite, partlyCheckedScoreBasis, type BusinessScoringInput, type ScoreBreakdown } from "@/lib/scoring";
 import { keyForInfoConflict } from "@/lib/websiteTrust";
+import type { CompetitorScope } from "@/lib/competitorScope";
+
 
 /** Spam or a Safe Browsing flag — only when Site security actually lost
  * its points this scan (the same facts the Website page shows). */
@@ -76,8 +78,8 @@ export function reportTopTask(tasks: ActionPlanTask[], input: BusinessScoringInp
 
 /** The owner's standing in one saved scan — the same ranking as the
  * Competitors page (reportStanding). */
-export function snapshotFromSavedRows(rows: SavedScanRow[]): CompetitorSnapshot | null {
+export function snapshotFromSavedRows(rows: SavedScanRow[], scope?: CompetitorScope | null): CompetitorSnapshot | null {
   const scan = groupSavedScans(rows)[0];
-  const standing = scan ? reportStanding(scan) : null;
+  const standing = scan ? reportStanding(scan, scope) : null;
   return standing ? { rank: standing.rank, totalCompetitors: standing.total, topCompetitorReviewCount: standing.topReviewCount } : null;
 }

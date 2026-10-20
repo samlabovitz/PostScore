@@ -36,6 +36,8 @@ import { gradeFromTotal } from "@/lib/scoring";
 import { formatCount, formatShortDate, t, tPlural, useLocale, useTimeZone, type Locale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { placeTypeList } from "@/lib/placeTypeLabels";
+import { applyScope, type CompetitorScope } from "@/lib/competitorScope";
+import { CompetitorGroups } from "./CompetitorGroups";
 
 type OkResult = Extract<GetCompetitorsResult, { status: "ok" }>;
 
@@ -108,7 +110,12 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
   const locale = useLocale();
   const timeZone = useTimeZone();
   const [view, setView] = useState<CompareView>("overall");
-  const scan = data.latest;
+  // Who the rank is against (lib/competitorScope.ts) — the same scope the
+  // Overview, reports and PostAI use; changing it here re-ranks saved data.
+  const [scope, setScope] = useState<CompetitorScope | null>(data.niche?.scope ?? null);
+  const latest = data.latest;
+  const scoped = latest && scope ? applyScope(latest, scope) : null;
+  const scan = scoped?.scan ?? latest;
 
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
@@ -128,9 +135,9 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
 
       {data.scoring && <ScoringProgressNote progress={data.scoring} />}
 
-      {scan && scan.entries.some((e) => !e.isSubject) && <ScanInfo businessId={businessId} data={data} />}
+      {latest && latest.entries.some((e) => !e.isSubject) && <ScanInfo businessId={businessId} data={data} />}
 
-      {scan && scan.entries.some((e) => !e.isSubject) && data.comparedViaTypes.length > 0 && (
+      {latest && latest.entries.some((e) => !e.isSubject) && data.comparedViaTypes.length > 0 && (
         // Google's own types are all generic, so the scan searched the
         // owner's business type instead (Shoe Tech: dry cleaners, tailors).
         <p className="max-w-2xl text-sm text-ink-soft">
@@ -156,14 +163,14 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
           </p>
           <RefreshButton businessId={businessId} allowed label={t(locale, "dashboard.competitors.runFirstScan")} />
         </Card>
-      ) : !scan.entries.some((e) => !e.isSubject) ? (
+      ) : !latest || !latest.entries.some((e) => !e.isSubject) ? (
         // A real scan searched every radius and Google listed no
         // comparable business — never "#1 of 1", never "not run yet".
         <Card className="flex flex-col items-start gap-3 p-6">
           <p className="text-sm text-ink-soft">
             {t(locale, "dashboard.competitors.noneFoundNearby", {
               miles: MAX_SEARCH_RADIUS_MILES,
-              date: formatShortDate(scan.createdAt, locale, timeZone),
+              date: formatShortDate((latest ?? scan).createdAt, locale, timeZone),
             })}
           </p>
           {data.refresh.allowed ? (
@@ -171,14 +178,20 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
           ) : (
             <span className="text-[12.5px] text-ink-mute">
               {t(locale, "dashboard.competitors.availableAgain", {
-                date: formatShortDate(data.refresh.nextAvailableAt ?? scan.createdAt, locale, timeZone),
+                date: formatShortDate(data.refresh.nextAvailableAt ?? (latest ?? scan).createdAt, locale, timeZone),
               })}
             </span>
           )}
         </Card>
       ) : (
         <>
-          <Hero scan={scan} competitorNoun={data.competitorNoun} />
+          {scan.entries.some((e) => !e.isSubject) && <Hero scan={scan} competitorNoun={data.competitorNoun} />}
+
+          {latest && scope && scoped && (
+            <CompetitorGroups businessId={businessId} scan={latest} scope={scope} scoped={scoped} enabled={!!data.niche?.enabled} onScopeChange={setScope} />
+          )}
+
+          {scan.entries.some((e) => !e.isSubject) && (<>
 
           <div className="flex flex-col gap-3">
             <SegmentedControl
@@ -201,6 +214,7 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
           </div>
 
           {data.rankHistory.length >= 2 && <OverTime data={data} />}
+          </>)}
         </>
       )}
     </div>

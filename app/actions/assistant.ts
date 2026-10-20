@@ -40,6 +40,9 @@ import {
   type AssistantWeeklyRoutineSummary,
 } from "@/lib/assistant";
 import { formatShortDate, normalizeLocale, t, type Locale } from "@/lib/i18n";
+import { loadCompetitorScope } from "@/lib/businessNiche.server";
+import { applyScope, scopeSummary } from "@/lib/competitorScope";
+
 
 export interface AssistantMessageRow {
   id: string;
@@ -162,9 +165,10 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     snapshot: snap,
     signals: await getGrowthMoveSignals(businessId, breakdown, profile, snap),
   }));
-  const [actionPlanResult, { snapshot, signals: signalsResult }] = await Promise.all([
+  const [actionPlanResult, { snapshot, signals: signalsResult }, competitorScope] = await Promise.all([
     getActionPlan(businessId, input, breakdown, suggestions, locale),
     signalsPromise,
+    loadCompetitorScope(createClient(), businessId),
   ]);
   const topTasks: AssistantActionPlanTask[] =
     actionPlanResult.status === "ok"
@@ -181,11 +185,12 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     ? (() => {
         // The one shared rank (full PostScore), and the list in that same
         // order — identical to the Competitors page and the Overview.
-        const ranked = rankBy(snapshot.scan, "overall");
+        const ranked = rankBy(snapshot.scan, "overall", competitorScope);
         return {
           available: true,
           scanAt: formatShortDate(snapshot.createdAt, locale, timeZone),
-          subjectRank: ownerStanding(snapshot.scan)?.rank ?? null,
+          subjectRank: ownerStanding(snapshot.scan, competitorScope)?.rank ?? null,
+          rankedAgainst: competitorScope ? scopeSummary(applyScope(snapshot.scan, competitorScope), competitorScope) : null,
           entries: ranked.map(({ entry }) => ({
             name: entry.name ?? "Unnamed business",
             isSubject: entry.isSubject,

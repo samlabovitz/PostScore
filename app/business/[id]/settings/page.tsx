@@ -19,6 +19,8 @@ import { hasActiveSubscription } from "@/lib/subscription";
 import { getPlan } from "@/lib/premium";
 import { REFUND_POLICY_SHORT, legalHref } from "@/lib/legal/policies";
 import { normalizeLocale, t, type MessageKey } from "@/lib/i18n";
+import { NichePicker } from "@/components/niche/NichePicker";
+import { loadBusinessNiche } from "@/lib/businessNiche.server";
 
 /**
  * Settings — owner-only (getBusinessSummary, RLS-scoped). Every control
@@ -43,9 +45,12 @@ export default async function SettingsPage({ params }: { params: { id: string } 
   const lang = locale === "es" ? "es" : "en";
   const plan = getPlan();
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [
+    {
+      data: { user },
+    },
+    niche,
+  ] = await Promise.all([supabase.auth.getUser(), loadBusinessNiche(supabase, params.id)]);
 
   const autoDetectedProfile = bizProfile(business.category, business.primary_type, locale, business.categories, null);
   const businessTypeOverride = business.business_type_override ?? null;
@@ -151,14 +156,18 @@ export default async function SettingsPage({ params }: { params: { id: string } 
             </SettingsSection>
 
             <SettingsSection id="business-type" icon="tag" title={k("nav.businessType")} helper={k("businessType.helper")}>
-              <BusinessTypeSetting
-                businessId={params.id}
-                initialBusinessTypeId={profile.id}
-                autoDetectedBusinessTypeId={autoDetectedProfile.id}
-                autoDetectedBusinessType={autoDetectedProfile.label}
-                initialOverridden={businessTypeOverride !== null}
-                initialTradeName={tradeName}
-              />
+              {niche ? (
+                <NichePicker businessId={params.id} nicheId={niche.resolved.nicheId} source={niche.resolved.source} suggestion={niche.resolved.suggestion} />
+              ) : (
+                <BusinessTypeSetting
+                  businessId={params.id}
+                  initialBusinessTypeId={profile.id}
+                  autoDetectedBusinessTypeId={autoDetectedProfile.id}
+                  autoDetectedBusinessType={autoDetectedProfile.label}
+                  initialOverridden={businessTypeOverride !== null}
+                  initialTradeName={tradeName}
+                />
+              )}
             </SettingsSection>
 
             <SettingsSection id="account" icon="account" title={k("nav.account")} helper={k("account.helper")}>

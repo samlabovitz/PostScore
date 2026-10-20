@@ -82,6 +82,9 @@ import { buildReportExtras, reportTopTask, snapshotFromSavedRows } from "@/lib/m
 import { SAVED_SCAN_COLUMNS, type SavedScanRow } from "@/lib/savedCompetitorScans";
 import { decideReportRecipient, reportSendEnv, reportSendPrecheck, type ReportSendPath } from "@/lib/reportSendPolicy";
 import { normalizeLocale, reportCoverageMonthIndex, reportCoverageMonthRange, type Locale } from "@/lib/i18n";
+import { loadCompetitorScope } from "@/lib/businessNiche.server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 
 export const dynamic = "force-dynamic";
 
@@ -204,7 +207,7 @@ async function readCompetitorSnapshotForScan(
     .eq("scan_id", scanId);
 
   if (error || !data) return null;
-  return snapshotFromSavedRows(data as SavedScanRow[]);
+  return snapshotFromSavedRows(data as SavedScanRow[], await loadCompetitorScope(supabase as unknown as SupabaseClient, businessId));
 }
 
 /**
