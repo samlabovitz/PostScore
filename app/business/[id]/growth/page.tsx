@@ -10,8 +10,6 @@ import { getWebsiteRecheckStatus } from "@/app/actions/websiteRecheck";
 import { getActionPlan } from "@/app/actions/actionPlan";
 import { getGrowthMoves } from "@/app/actions/growthMoves";
 import { getWeeklyChecklistState } from "@/app/actions/weeklyChecklist";
-import { listActivePromos } from "@/app/actions/promos";
-import { getActiveReferral } from "@/app/actions/referrals";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { businessRowToScoringInput } from "@/lib/scoring";
 import { buildPriceCheckMove } from "@/lib/growthMoves";
@@ -19,10 +17,16 @@ import { buildWeeklyChecklistItems, weekStartFor } from "@/lib/weeklyChecklist";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale } from "@/lib/i18n";
 import { GrowthView } from "./GrowthView";
-import { getPlan } from "@/lib/premium";
-import { getPrintStudioData } from "@/app/actions/printStudio";
+import { canConnectGbp, getPlan } from "@/lib/premium";
+import { SEARCH_DEMAND_EXAMPLE } from "@/lib/gbp/searchDemand";
+import { campaignsHref } from "@/lib/campaignsTabs";
 
-export default async function GrowthPage({ params }: { params: { id: string } }) {
+export default async function GrowthPage({ params, searchParams = {} }: { params: { id: string }; searchParams?: { tab?: string } }) {
+  // Coupons and referrals moved to the Campaigns page: old links to
+  // Growth's ?tab=coupons / ?tab=referral land on the matching tab there.
+  if (searchParams.tab === "coupons") redirect(campaignsHref(params.id, "coupons"));
+  if (searchParams.tab === "referral" || searchParams.tab === "referrals") redirect(campaignsHref(params.id, "referrals"));
+
   // Independent loads run together; see lib/requestCache.ts for why the
   // repeated business/score reads cost one query each.
   const [websiteOnly, summary, scored] = await Promise.all([
@@ -52,17 +56,11 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   );
 
   // These need only the business, not its score — start them now.
-  const promosPromise = listActivePromos(params.id);
   const checklistPromise = getWeeklyChecklistState(params.id);
   const lastScanPromise = getLastScanAt(params.id);
-  // Only businesses with referralOk ever see the Refer a friend segment
-  // (see GrowthView), so there's no reason to query it for the rest.
-  const referralPromise = profile.referralOk ? getActiveReferral(params.id) : Promise.resolve(null);
   const gbpPromise = getGbpConnectionStatus(params.id);
-  // The coupon and referral designers print the business's own facts
-  // (every plan sees the live preview; printing is gated by getPlan()).
+  // The Google Profile tab is Premium (Free/Grow see a preview).
   const plan = getPlan();
-  const printPromise = getPrintStudioData(params.id);
 
 
   if (scored.status === "unauthenticated") {
@@ -80,7 +78,7 @@ export default async function GrowthPage({ params }: { params: { id: string } })
   }
 
   const input = businessRowToScoringInput(scored.business);
-  const [actionPlanResult, growthMovesResult, promosResult, checklistStateResult, lastScanAt, referralResult, gbpStatus, printData, recheckStatus] = await Promise.all([
+  const [actionPlanResult, growthMovesResult, checklistStateResult, lastScanAt, gbpStatus, recheckStatus] = await Promise.all([
     getActionPlan(params.id, input, scored.result.breakdown, scored.result.suggestions, locale, {
       businessRow: scored.business,
       businessName: business.name ?? "Your business",
@@ -88,15 +86,11 @@ export default async function GrowthPage({ params }: { params: { id: string } })
       profileId: profile.id,
     }),
     getGrowthMoves(params.id, scored.result.breakdown, profile, locale),
-    promosPromise,
     checklistPromise,
     lastScanPromise,
-    referralPromise,
     gbpPromise,
-    printPromise,
     getWebsiteRecheckStatus(params.id),
   ]);
-  const initialPromos = promosResult.status === "ok" ? promosResult.promos : [];
 
   // The price check always shows for every business (Step 2f) — even if
   // the rest of the growth signals couldn't load.
@@ -110,7 +104,26 @@ export default async function GrowthPage({ params }: { params: { id: string } })
     weekStart: checklistStateResult.status === "ok" ? checklistStateResult.state.weekStart : weekStartFor(new Date(), business.time_zone ?? undefined),
   };
 
-  const initialReferral = referralResult?.status === "ok" ? referralResult.referral : null;
+  const gbpConnected = gbpStatus.status === "ok" && gbpStatus.connected;
+  const row = scored.business;
+  const googleProfile = {
+    listing: {
+      rating: row.rating,
+      reviewCount: row.review_count,
+      photoCount: row.photo_count,
+      hasHours: !!row.opening_hours && row.opening_hours.length > 0,
+      phone: row.phone,
+      website: row.website,
+      category: row.category,
+      googleMapsUri: row.google_maps_uri ?? null,
+    },
+    // Website-only businesses never reach this page (websiteOnlyGuard).
+    websiteOnly: false,
+    connected: gbpConnected,
+    // Same rule as search demand everywhere: example data under an
+    // "Example" watermark until the connection is live.
+    searchDemand: canConnectGbp() && gbpConnected ? ({ kind: "awaiting" } as const) : ({ kind: "preview", data: SEARCH_DEMAND_EXAMPLE } as const),
+  };
 
   const actionPlan =
     actionPlanResult.status === "ok"
@@ -140,22 +153,18 @@ export default async function GrowthPage({ params }: { params: { id: string } })
       <GrowthView
         businessId={params.id}
         businessName={business.name}
-        businessPhone={business.phone ?? null}
         profile={profile}
-        referralOk={profile.referralOk}
         breakdown={scored.result.breakdown}
+        googleProfile={googleProfile}
         actionPlan={actionPlan}
         growthMoves={growthMoves}
         weeklyChecklist={weeklyChecklist}
-        initialPromos={initialPromos}
-        initialReferral={initialReferral}
         lastScanAt={lastScanAt}
         websiteRecheck={recheckStatus.status === "ok" ? { left: recheckStatus.availability.left, hasWebsite: recheckStatus.hasWebsite } : null}
-        gbpConnected={gbpStatus.status === "ok" && gbpStatus.connected}
+        gbpConnected={gbpConnected}
         linkOptions={{ referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk }}
         plan={plan}
         devPlanSwitch={process.env.NODE_ENV === "development"}
-        printBusiness={printData && printData.status === "ok" ? printData.business : null}
       />
     </DashboardShell>
   );

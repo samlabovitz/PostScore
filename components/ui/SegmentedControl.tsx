@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 export interface SegmentedControlOption<T extends string> {
   value: T;
   label: string;
+  /** Optional icon after the label (e.g. a lock on a Premium tab). */
+  icon?: React.ReactNode;
 }
 
 export function SegmentedControl<T extends string>({
@@ -44,7 +46,14 @@ export function SegmentedControl<T extends string>({
               : "text-ink-soft hover:text-ink"
           )}
         >
-          {option.label}
+          {option.icon ? (
+            <span className="inline-flex items-center gap-1.5">
+              {option.label}
+              {option.icon}
+            </span>
+          ) : (
+            option.label
+          )}
         </button>
       ))}
     </div>

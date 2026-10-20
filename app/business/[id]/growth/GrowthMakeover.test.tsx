@@ -1,9 +1,10 @@
 import { describe, expect, test, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
+const nav = vi.hoisted(() => ({ query: "" }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ refresh: vi.fn(), replace: vi.fn(), push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(nav.query),
   usePathname: () => "/business/b1/growth",
 }));
 vi.mock("@/app/actions/actionPlan", () => ({ markTaskDone: vi.fn() }));
@@ -35,24 +36,27 @@ const REVIEWS = task({
   problem: "15 reviews on Google (full credit at 150+). 4.5★ on Google (full credit at 40+).",
   problemLines: ["15 reviews on Google (full credit at 150+).", "4.5★ on Google. Your rating counts fully as you get more reviews (15 now — full credit at 40+)."],
 });
-const MOVE: GrowthMove = { id: "start_coupon", title: "Start a coupon", meta: null, why: "Brings people back.", howTo: "Pick an offer.", href: "/business/b1/growth?tab=coupons", signal: "x" };
+const MOVE: GrowthMove = { id: "start_coupon", title: "Start a coupon", meta: null, why: "Brings people back.", howTo: "Pick an offer.", href: "/business/b1/campaigns?tab=coupons", signal: "x" };
 
-function render(over: { gbpConnected?: boolean; locale?: "en" | "es"; devPlanSwitch?: boolean } = {}) {
+function render(over: { gbpConnected?: boolean; locale?: "en" | "es"; devPlanSwitch?: boolean; plan?: "free" | "grow" | "premium" | "multi"; tab?: string } = {}) {
+  nav.query = over.tab ? `tab=${over.tab}` : "";
   return renderToStaticMarkup(
     <LocaleProvider locale={over.locale ?? "en"} timeZone="America/New_York">
       <GrowthView
         businessId="b1"
         businessName="Modern Liquors"
-        businessPhone={null}
         profile={bizProfileById("salon", over.locale ?? "en")!}
-        referralOk
         breakdown={today}
-        initialPromos={[]}
-        initialReferral={null}
+        googleProfile={{
+          listing: { rating: 4.5, reviewCount: 15, photoCount: 9, hasHours: true, phone: "+1 302-800-5116", website: null, category: "Liquor store", googleMapsUri: "https://maps.google.com/?cid=9" },
+          websiteOnly: false,
+          connected: false,
+          searchDemand: { kind: "awaiting" },
+        }}
         lastScanAt="2026-10-16T13:00:00Z"
         gbpConnected={over.gbpConnected ?? false}
         devPlanSwitch={over.devPlanSwitch ?? false}
-        plan="grow"
+        plan={over.plan ?? "grow"}
         linkOptions={{ referralOk: true, couponsOk: true, pricingOk: true }}
         actionPlan={{
           tasks: [REVIEWS, task({})],
@@ -126,7 +130,7 @@ describe("Growth → Action plan makeover", () => {
     expect(html).toContain("Open the Website page");
     expect(html).toContain("grid grid-cols-1 gap-3 sm:grid-cols-2");
     expect(html).toContain("doesn't change your score");
-    expect(html).toContain('href="/business/b1/growth?tab=coupons"');
+    expect(html).toContain('href="/business/b1/campaigns?tab=coupons"');
   });
 
   test("confirmed wins in whole points; Spanish renders", () => {
@@ -148,5 +152,38 @@ describe("Growth → Action plan makeover", () => {
     expect(html).toContain("dev-plan-switch");
     expect(html).toContain("/api/dev/plan?plan=premium&amp;back=%2Fbusiness%2Fb1%2Fgrowth");
     expect(html).toMatch(/aria-current="true"[^>]*>Grow</);
+  });
+});
+
+describe("Growth tabs: This week's plan · Google Profile", () => {
+  test("two tabs, no coupon or referral designer on Growth", () => {
+    const html = render();
+    expect(html).toMatch(/role="tab"[^>]*>This week's plan</);
+    expect(html).toContain("Google Profile");
+    expect(html).not.toMatch(/role="tab"[^>]*>(Coupons|Refer a friend)</);
+  });
+
+  test("Free and Grow: a lock on the Google Profile tab; Premium and Multi: no lock", () => {
+    for (const plan of ["free", "grow"] as const) expect(render({ plan })).toMatch(/Google Profile<svg[^>]*tabler-icon-lock/);
+    for (const plan of ["premium", "multi"] as const) expect(render({ plan })).not.toContain("tabler-icon-lock");
+  });
+
+  test("?tab=google-profile opens the tab: Free/Grow see the real listing + Unlock with Premium; Premium sees search demand", () => {
+    const grow = render({ tab: "google-profile" });
+    expect(grow).toContain('data-testid="google-profile-panel"');
+    expect(grow).not.toContain('id="weekly-plan"');
+    expect(grow).toContain("Unlock with Premium");
+    expect(grow).toContain("+1 302-800-5116");
+    expect(grow).toContain("4.5 ★ · 15 reviews");
+    expect(grow).not.toContain('data-testid="search-demand-awaiting"');
+    const premium = render({ tab: "google-profile", plan: "premium" });
+    expect(premium).not.toContain("Unlock with Premium");
+    expect(premium).toContain('data-testid="search-demand-awaiting"');
+  });
+
+  test("Spanish tab labels", () => {
+    const html = render({ locale: "es" });
+    expect(html).toContain("Plan de esta semana");
+    expect(html).toContain("Perfil de Google");
   });
 });

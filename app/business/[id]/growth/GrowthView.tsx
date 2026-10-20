@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
-import { IconArrowLeft, IconBrandGoogle, IconWorld } from "@tabler/icons-react";
+import { IconArrowLeft, IconBrandGoogle, IconLock, IconWorld } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/SegmentedControl";
@@ -13,39 +12,21 @@ import { WeeklyGoalCelebration } from "./WeeklyGoalCelebration";
 import type { ActionPlanTask, CompletedTask, WebsiteBanner } from "@/lib/actionPlan";
 import { websiteRangeText, wholePointRange } from "@/lib/pointRange";
 import type { GrowthMove } from "@/lib/growthMoves";
-import type { Plan } from "@/lib/plan";
-import type { CardBusiness } from "@/lib/printStudio/design";
+import { isPremiumPlan, type Plan } from "@/lib/plan";
+import { GoogleProfilePanel, type GoogleListingFacts } from "@/components/gbp/GoogleProfilePanel";
+import type { SearchDemandView } from "@/components/gbp/SearchDemandSection";
 import { DevPlanSwitch } from "@/components/studio/DevPlanSwitch";
 import { growthMoveOverlapsActionPlan } from "@/lib/growthMoveOverlap";
 import type { WeeklyChecklistItem, WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
 import type { ScoreBreakdown } from "@/lib/scoring";
 import type { BizProfile } from "@/config/bizProfiles";
-import type { PromoRow } from "@/lib/promos";
-import type { ReferralRow } from "@/lib/referrals";
 import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 import { useScrollToHash } from "@/lib/useScrollToHash";
 import { LINK_PILL_CLASS } from "@/components/ui/linkPill";
 import type { LinkOptions } from "@/lib/postaiLinks";
 import { cn } from "@/lib/utils";
 
-// The builder generates a random coupon code and reads window.location
-// on first render — genuinely client-only state, not something that
-// can (or should) match a server-rendered pass. Loading it with
-// ssr:false avoids a hydration mismatch entirely rather than papering
-// over it with an effect-delayed placeholder.
-const CouponsSection = dynamic(
-  () => import("./CouponsSection").then((m) => m.CouponsSection),
-  { ssr: false, loading: () => <Card className="p-8 text-sm text-ink-soft">Loading…</Card> }
-);
-
-// The referral builder generates a random code on first render — same
-// genuinely client-only state as the coupon builder, same ssr:false fix.
-const ReferralSection = dynamic(
-  () => import("./ReferralSection").then((m) => m.ReferralSection),
-  { ssr: false, loading: () => <Card className="p-8 text-sm text-ink-soft">Loading…</Card> }
-);
-
-type Segment = "plan" | "coupons" | "referral";
+type Segment = "plan" | "google-profile";
 
 /** "an" before a vowel-sounding grade letter (A, E, F), "a" before every
  * other grade (B, C, D) — English article agreement, not a scoring
@@ -168,40 +149,39 @@ function PremiumConnectCard({ businessId }: { businessId: string }) {
   );
 }
 
-function segmentFromParam(param: string | null, referralOk: boolean, couponsOk: boolean): Segment {
-  if (param === "coupons" && couponsOk) return "coupons";
-  if (param === "referral" && referralOk) return "referral";
-  return "plan";
+/** ?tab=google-profile opens the Google Profile tab; anything else is
+ * the plan. (Coupons and referrals moved to the Campaigns page — the
+ * Growth page redirects their old ?tab= links there.) */
+export function segmentFromParam(param: string | null): Segment {
+  return param === "google-profile" ? "google-profile" : "plan";
 }
 
 export function GrowthView({
   businessId,
   businessName,
-  businessPhone,
-  profile,
-  referralOk,
   breakdown,
   actionPlan,
   growthMoves,
   weeklyChecklist,
-  initialPromos,
-  initialReferral,
+  googleProfile,
   lastScanAt,
   websiteRecheck = null,
   gbpConnected = false,
   linkOptions = {},
   plan = "free",
-  printBusiness = null,
   devPlanSwitch = false,
 }: {
   businessId: string;
   businessName: string | null;
-  businessPhone: string | null;
   profile: BizProfile;
-  referralOk: boolean;
   breakdown: ScoreBreakdown;
-  initialPromos: PromoRow[];
-  initialReferral: ReferralRow | null;
+  /** The Google Profile tab's real data (see GoogleProfilePanel). */
+  googleProfile: {
+    listing: GoogleListingFacts | null;
+    websiteOnly: boolean;
+    connected: boolean;
+    searchDemand: SearchDemandView;
+  };
   /** When this business was last re-scanned — see getLastScanAt() in
    * app/actions/scoring.ts. Lets a still-pending task tell "hasn't been
    * re-checked yet" apart from "checked, no real change" (see
@@ -211,10 +191,9 @@ export function GrowthView({
   websiteRecheck?: WebsiteRecheckProps | null;
   /** Connecting Google is Premium-only — when not connected, a small
    * "Unlock live Google insights" card (never one of the plan's tasks). */
-  /** The account's plan (lib/premium.ts) — gates the Print Studio. */
+  /** The account's plan (lib/premium.ts) — the Google Profile tab is
+   * Premium (Free/Grow see a preview with a lock on the tab). */
   plan?: Plan;
-  /** What a printed card may show (the business's own facts). */
-  printBusiness?: CardBusiness | null;
   /** Show the dev-only plan switch (the page passes true only in local dev). */
   devPlanSwitch?: boolean;
   gbpConnected?: boolean;
@@ -264,11 +243,9 @@ export function GrowthView({
   // own scroll-to-hash can land before this client component has
   // rendered the section, so the browser's native jump finds nothing.
   useScrollToHash();
-  // The Growth page's tab is URL-driven (?tab=coupons / ?tab=referral)
-  // so a growth move's link (e.g. "start a coupon") can deep-link
-  // straight to the right tab instead of just landing on this page's
-  // default "plan" segment.
-  const segment = segmentFromParam(searchParams.get("tab"), referralOk, profile.couponsOk);
+  // The tab is in the URL (?tab=google-profile) so links and
+  // back/forward land on it.
+  const segment = segmentFromParam(searchParams.get("tab"));
 
   function setSegment(next: Segment) {
     const params = new URLSearchParams(searchParams.toString());
@@ -278,7 +255,7 @@ export function GrowthView({
       params.set("tab", next);
     }
     const query = params.toString();
-    router.replace(`/business/${businessId}/growth${query ? `?${query}` : ""}`, { scroll: false });
+    router.push(`/business/${businessId}/growth${query ? `?${query}` : ""}`, { scroll: false });
   }
 
   const { weeklyProjectedBreakdown, weeklyProjectedBreakdownHigh } = actionPlan;
@@ -305,25 +282,15 @@ export function GrowthView({
         ? t(locale, "dashboard.growth.view.withinReachRange", { low: reach.low, high: reach.high })
         : t(locale, "dashboard.growth.view.withinReach", { points: reach.low });
 
-  const options: SegmentedControlOption<Segment>[] = [{ value: "plan", label: t(locale, "dashboard.growth.view.tabPlan") }];
-  // A place of worship has no coupon tool (BizProfile.couponsOk).
-  if (profile.couponsOk) {
-    options.push({ value: "coupons", label: t(locale, "dashboard.growth.view.tabCoupons") });
-  }
-  if (referralOk) {
-    options.push({ value: "referral", label: t(locale, "dashboard.growth.view.tabReferral") });
-  }
-
-  // What a printed card may show; a bare fallback if it couldn't load.
-  const cardBusiness: CardBusiness = printBusiness ?? {
-    businessName: businessName ?? null,
-    placeId: null,
-    googleMapsUri: null,
-    website: null,
-    address: null,
-    hours: null,
-    icon: "star",
-  };
+  const options: SegmentedControlOption<Segment>[] = [
+    { value: "plan", label: t(locale, "dashboard.growth.view.tabPlan") },
+    {
+      value: "google-profile",
+      label: t(locale, "dashboard.growth.view.tabGoogleProfile"),
+      // Premium feature: a lock on the tab for Free and Grow.
+      icon: isPremiumPlan(plan) ? undefined : <IconLock size={13} aria-label={t(locale, "dashboard.googleProfile.needsPremium")} />,
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
@@ -345,7 +312,7 @@ export function GrowthView({
 
       {devPlanSwitch && <DevPlanSwitch plan={plan} backPath={`/business/${businessId}/growth`} />}
 
-      {options.length > 1 && <SegmentedControl options={options} value={segment} onChange={setSegment} />}
+      <SegmentedControl options={options} value={segment} onChange={setSegment} />
 
       {segment === "plan" && (
         <div className="flex flex-col gap-6 nav:gap-8">
@@ -451,27 +418,15 @@ export function GrowthView({
         </div>
       )}
 
-      {segment === "coupons" && profile.couponsOk && (
-        <CouponsSection
+      {segment === "google-profile" && (
+        <GoogleProfilePanel
           businessId={businessId}
-          businessName={businessName ?? t(locale, "dashboard.growth.view.businessNameFallback")}
-          businessPhone={businessPhone}
-          profile={profile}
-          initialPromos={initialPromos}
           plan={plan}
-          printBusiness={cardBusiness}
-        />
-      )}
-
-      {segment === "referral" && referralOk && (
-        <ReferralSection
-          businessId={businessId}
-          businessName={businessName ?? t(locale, "dashboard.growth.view.businessNameFallback")}
-          businessPhone={businessPhone}
-          profile={profile}
-          initialReferral={initialReferral}
-          plan={plan}
-          printBusiness={cardBusiness}
+          listing={googleProfile.listing}
+          websiteOnly={googleProfile.websiteOnly}
+          lastScanAt={lastScanAt}
+          connected={googleProfile.connected}
+          searchDemand={googleProfile.searchDemand}
         />
       )}
     </div>

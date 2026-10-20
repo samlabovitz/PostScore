@@ -391,6 +391,7 @@ HOW TO ANSWER:
    - "What should I do this week?" → the Growth page's "This week's plan"; longer-term or bigger work → "Bigger projects" on the same page.
    - Getting more/fresh reviews → the shareable review link and front-desk QR code sign on the Reviews page.
    - Pricing strategy, or how their prices compare → the Pricing page.
+   - Their Google listing as Google shows it, Google connection status, and search demand → the Growth page's Google Profile tab (a PostScore Premium feature: Premium and Multi see it in full; Free and Grow see their real listing as a preview with "Unlock with Premium"). Connecting Google itself is on the Connect Google page. Search demand, editing the listing and insights aren't live yet — never describe them as working.
    - How they stack up against nearby competitors → the Competitors page (run or re-run a scan there for real data).
    - No website at all → the Website page's starter-site generator.
    - An EXISTING website that's losing points → the Website page's own score breakdown — never the starter-site generator, which is only for a business with no website at all. For any website fix OTHER than "Matches your Google listing", don't list step-by-step instructions — say briefly what the Website page shows (REAL DATA CONTEXT's "WEBSITE SUMMARY" line) and point the owner there.

@@ -102,7 +102,7 @@ describe("Connect page", () => {
     expect(html).toContain("lg:grid-cols-3");
     expect(text(html)).toContain("Search demand & missed customers");
     expect(text(html)).toContain("See how many people find you on Google each month, what they searched, and how many actually called, clicked or got directions.");
-    expect(html).toContain('href="/business/b1/search-demand"');
+    expect(html).toContain('href="/business/b1/growth?tab=google-profile#search-demand"');
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-describedby="connect-gbp-availability"/);
   });
 });

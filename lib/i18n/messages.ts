@@ -24,6 +24,11 @@ export type MessageKey =
   | "dashboard.campaigns.tabReferrals"
   | "dashboard.campaigns.noneRunning"
   | "dashboard.campaigns.notForType"
+  | "dashboard.growth.view.tabGoogleProfile"
+  | "dashboard.googleProfile.unlockPremium"
+  | "dashboard.googleProfile.previewNote"
+  | "dashboard.googleProfile.seePlans"
+  | "dashboard.googleProfile.searchDemandSoonBody"
   | "dashboard.nav.campaigns"
   | "dashboard.common.comingSoon"
   | "dashboard.campaigns.title"
@@ -36,6 +41,34 @@ export type MessageKey =
   | "dashboard.campaigns.textBody"
   | "dashboard.campaigns.social"
   | "dashboard.campaigns.socialBody"
+  | "dashboard.googleProfile.listingHeading"
+  | "dashboard.googleProfile.listingAsOf"
+  | "dashboard.googleProfile.listingNoScan"
+  | "dashboard.googleProfile.websiteOnly"
+  | "dashboard.googleProfile.rowRating"
+  | "dashboard.googleProfile.ratingValue"
+  | "dashboard.googleProfile.rowPhotos"
+  | "dashboard.googleProfile.photosValue"
+  | "dashboard.googleProfile.rowHours"
+  | "dashboard.googleProfile.hoursListed"
+  | "dashboard.googleProfile.rowPhone"
+  | "dashboard.googleProfile.rowWebsite"
+  | "dashboard.googleProfile.rowCategory"
+  | "dashboard.googleProfile.notOnListing"
+  | "dashboard.googleProfile.openOnGoogle"
+  | "dashboard.googleProfile.connectHeading"
+  | "dashboard.googleProfile.connected"
+  | "dashboard.googleProfile.notConnected"
+  | "dashboard.googleProfile.connectBody"
+  | "dashboard.googleProfile.connectLink"
+  | "dashboard.googleProfile.featuresHeading"
+  | "dashboard.googleProfile.needsPremium"
+  | "dashboard.googleProfile.inPlanSoon"
+  | "dashboard.googleProfile.searchDemand"
+  | "dashboard.googleProfile.editing"
+  | "dashboard.googleProfile.editingBody"
+  | "dashboard.googleProfile.insights"
+  | "dashboard.googleProfile.insightsBody"
   | "dashboard.nav.account"
   | "dashboard.nav.logOut"
   // --- Per-business language toggle (BusinessLanguageToggle.tsx), inside
@@ -3406,6 +3439,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.campaigns.tabCoupons": "Coupons",
     "dashboard.campaigns.tabReferrals": "Referrals",
     "dashboard.campaigns.notForType": "Coupons and referral cards aren't part of the plan for your type of business.",
+    "dashboard.growth.view.tabGoogleProfile": "Google Profile",
+    "dashboard.googleProfile.unlockPremium": "Unlock with Premium",
+    "dashboard.googleProfile.previewNote": "A preview with your real Google listing. Premium adds search demand, editing your listing from here, and your insights.",
+    "dashboard.googleProfile.seePlans": "See plans →",
+    "dashboard.googleProfile.searchDemandSoonBody": "What people search for vs how many find and click you. Shown with example numbers until your Google connection is live.",
     "dashboard.nav.campaigns": "Campaigns",
     "dashboard.common.comingSoon": "Coming soon",
     "dashboard.campaigns.title": "Campaigns",
@@ -3419,6 +3457,34 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.campaigns.textBody": "Text an offer to customers who agreed to get texts.",
     "dashboard.campaigns.social": "Social posts",
     "dashboard.campaigns.socialBody": "Turn a coupon into a ready-to-post image.",
+    "dashboard.googleProfile.listingHeading": "What Google shows today",
+    "dashboard.googleProfile.listingAsOf": "From your last scan · {date}",
+    "dashboard.googleProfile.listingNoScan": "From your saved listing",
+    "dashboard.googleProfile.websiteOnly": "This business was added without a Google listing, so there's nothing from Google to show yet.",
+    "dashboard.googleProfile.rowRating": "Rating",
+    "dashboard.googleProfile.ratingValue": "{rating} ★ · {count} reviews",
+    "dashboard.googleProfile.rowPhotos": "Photos",
+    "dashboard.googleProfile.photosValue": "{count} on your listing",
+    "dashboard.googleProfile.rowHours": "Hours",
+    "dashboard.googleProfile.hoursListed": "Listed",
+    "dashboard.googleProfile.rowPhone": "Phone",
+    "dashboard.googleProfile.rowWebsite": "Website",
+    "dashboard.googleProfile.rowCategory": "Category",
+    "dashboard.googleProfile.notOnListing": "Not on your listing",
+    "dashboard.googleProfile.openOnGoogle": "Open your listing on Google →",
+    "dashboard.googleProfile.connectHeading": "Google connection",
+    "dashboard.googleProfile.connected": "Connected",
+    "dashboard.googleProfile.notConnected": "Not connected",
+    "dashboard.googleProfile.connectBody": "Connecting lets PostScore read your private Google insights and, later, edit your listing.",
+    "dashboard.googleProfile.connectLink": "Connect Google →",
+    "dashboard.googleProfile.featuresHeading": "With Premium",
+    "dashboard.googleProfile.needsPremium": "Needs Premium",
+    "dashboard.googleProfile.inPlanSoon": "In your plan · coming soon",
+    "dashboard.googleProfile.searchDemand": "Search demand",
+    "dashboard.googleProfile.editing": "Edit your listing from here",
+    "dashboard.googleProfile.editingBody": "Hours, phone, description and photos — without leaving PostScore.",
+    "dashboard.googleProfile.insights": "Insights funnel",
+    "dashboard.googleProfile.insightsBody": "Views → calls, website clicks and directions.",
     "dashboard.nav.account": "Account",
     "dashboard.nav.logOut": "Log out",
     "dashboard.nav.languageForBusinessLabel": "Language for this business",
@@ -7151,6 +7217,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.campaigns.tabCoupons": "Cupones",
     "dashboard.campaigns.tabReferrals": "Referidos",
     "dashboard.campaigns.notForType": "Los cupones y las tarjetas de referidos no forman parte del plan para su tipo de negocio.",
+    "dashboard.growth.view.tabGoogleProfile": "Perfil de Google",
+    "dashboard.googleProfile.unlockPremium": "Desbloquear con Premium",
+    "dashboard.googleProfile.previewNote": "Una vista previa con su ficha real de Google. Premium agrega la demanda de búsqueda, editar su ficha desde aquí y sus estadísticas.",
+    "dashboard.googleProfile.seePlans": "Ver planes →",
+    "dashboard.googleProfile.searchDemandSoonBody": "Lo que la gente busca frente a cuántos lo encuentran y hacen clic. Se muestra con números de ejemplo hasta que su conexión con Google esté activa.",
     "dashboard.nav.campaigns": "Campañas",
     "dashboard.common.comingSoon": "Próximamente",
     "dashboard.campaigns.title": "Campañas",
@@ -7164,6 +7235,34 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.campaigns.textBody": "Envíe una oferta por texto a los clientes que aceptaron recibirlos.",
     "dashboard.campaigns.social": "Publicaciones en redes sociales",
     "dashboard.campaigns.socialBody": "Convierta un cupón en una imagen lista para publicar.",
+    "dashboard.googleProfile.listingHeading": "Lo que Google muestra hoy",
+    "dashboard.googleProfile.listingAsOf": "De su último análisis · {date}",
+    "dashboard.googleProfile.listingNoScan": "De su ficha guardada",
+    "dashboard.googleProfile.websiteOnly": "Este negocio se agregó sin una ficha de Google, así que todavía no hay nada de Google que mostrar.",
+    "dashboard.googleProfile.rowRating": "Calificación",
+    "dashboard.googleProfile.ratingValue": "{rating} ★ · {count} reseñas",
+    "dashboard.googleProfile.rowPhotos": "Fotos",
+    "dashboard.googleProfile.photosValue": "{count} en su ficha",
+    "dashboard.googleProfile.rowHours": "Horario",
+    "dashboard.googleProfile.hoursListed": "Publicado",
+    "dashboard.googleProfile.rowPhone": "Teléfono",
+    "dashboard.googleProfile.rowWebsite": "Sitio web",
+    "dashboard.googleProfile.rowCategory": "Categoría",
+    "dashboard.googleProfile.notOnListing": "No figura en su ficha",
+    "dashboard.googleProfile.openOnGoogle": "Abrir su ficha en Google →",
+    "dashboard.googleProfile.connectHeading": "Conexión con Google",
+    "dashboard.googleProfile.connected": "Conectado",
+    "dashboard.googleProfile.notConnected": "No conectado",
+    "dashboard.googleProfile.connectBody": "Al conectarse, PostScore puede leer sus estadísticas privadas de Google y, más adelante, editar su ficha.",
+    "dashboard.googleProfile.connectLink": "Conectar Google →",
+    "dashboard.googleProfile.featuresHeading": "Con Premium",
+    "dashboard.googleProfile.needsPremium": "Requiere Premium",
+    "dashboard.googleProfile.inPlanSoon": "En su plan · próximamente",
+    "dashboard.googleProfile.searchDemand": "Demanda de búsqueda",
+    "dashboard.googleProfile.editing": "Editar su ficha desde aquí",
+    "dashboard.googleProfile.editingBody": "Horario, teléfono, descripción y fotos — sin salir de PostScore.",
+    "dashboard.googleProfile.insights": "Embudo de estadísticas",
+    "dashboard.googleProfile.insightsBody": "Vistas → llamadas, clics al sitio web y solicitudes de cómo llegar.",
     "dashboard.nav.account": "Cuenta",
     "dashboard.nav.logOut": "Cerrar sesión",
     "dashboard.nav.languageForBusinessLabel": "Idioma de este negocio",
