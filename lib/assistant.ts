@@ -135,6 +135,9 @@ export interface AssistantCompetitorSummary {
   entries: AssistantCompetitorEntry[];
   /** Who the rank is against (lib/competitorScope.ts scopeSummary). */
   rankedAgainst?: string | null;
+  /** The shared nearby review average (lib/competitorComparison.ts
+   * nearbyReviewAverage — same set as the rank); null when too few. */
+  nearbyReviewAverage?: number | null;
 }
 
 export interface AssistantScoreHistoryEntry {
@@ -870,6 +873,8 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
       `- From a saved scan on ${context.competitors.scanAt ?? "an earlier date"}. This business ranks #${context.competitors.subjectRank ?? "?"} of ${context.competitors.entries.length} by PostScore — every business here is scored with the same full PostScore (Google listing, reviews and website), exactly as the Competitors page and the Overview show it. A check that couldn't be done for a business (e.g. its website blocked automated checks) is left out of that business's score.`
     );
     if (context.competitors.rankedAgainst) lines.push(`- Ranked against: ${context.competitors.rankedAgainst}. Use this same set whenever you mention the rank.`);
+    if (context.competitors.nearbyReviewAverage != null)
+      lines.push(`- Nearby review average (the competitors this business is ranked against): ${context.competitors.nearbyReviewAverage} reviews. This is the number the Overview and reports show — quote it exactly, never compute your own average.`);
     for (const e of context.competitors.entries) {
       lines.push(
         `  - ${e.isSubject ? "[This business] " : ""}${e.name}: PostScore ${e.total ?? "—"} (${e.grade ?? "—"}), Google price level: ${e.priceLevelSymbol ?? "no data"}`

@@ -23,7 +23,7 @@ import {
   type SavedScanRow,
   SAVED_SCAN_COLUMNS,
 } from "@/lib/savedCompetitorScans";
-import { ownerStanding } from "@/lib/competitorComparison";
+import { nearbyReviewAverage, ownerStanding } from "@/lib/competitorComparison";
 import { latestScoringProgress, unfinishedNewScanIds, withoutUnfinished, type ScoringProgress } from "@/lib/competitorScoringStatus";
 import { loadBusinessNiche, loadCompetitorScope, type BusinessNicheState } from "@/lib/businessNiche.server";
 import { canRunScan, nextMonthStartUtc, placesSearchMonthlyCap } from "@/lib/placesSearchBudget";
@@ -544,16 +544,9 @@ export type GetLocalBenchmarkResult =
  * nearby matches (lib/competitors.ts's real matching logic, not
  * re-implemented or loosened here). Resolves the business-type noun with
  * resolveBizProfile so a manually-corrected type is reflected here too,
- * same as coupons/referrals/pricing.
+ * same as coupons/referrals/pricing. The nearby review average is the
+ * shared nearbyReviewAverage (same scope as the rank).
  */
-/** Fewer competitors with a real review count than this → no average. */
-const MIN_REVIEW_AVERAGE_SAMPLE = 3;
-
-function competitorReviewAverage(scan: SavedCompetitorScan): number | null {
-  const counts = scan.entries.filter((e) => !e.isSubject && e.reviewCount !== null).map((e) => e.reviewCount as number);
-  return counts.length >= MIN_REVIEW_AVERAGE_SAMPLE ? Math.round(counts.reduce((a, b) => a + b, 0) / counts.length) : null;
-}
-
 async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBenchmarkResult> {
   const supabase = createClient();
 
@@ -591,7 +584,8 @@ async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBe
 
   // The one shared rank (comparable score) — identical to the
   // Competitors page, the monthly report and PostAI.
-  const standing = ownerStanding(snapshot.scan, await loadCompetitorScope(supabase, businessId));
+  const scope = await loadCompetitorScope(supabase, businessId);
+  const standing = ownerStanding(snapshot.scan, scope);
   const subject = snapshot.entries.find((e) => e.isSubject);
   if (!standing || !subject) {
     // Every real saved scan includes the subject with a real score — this
@@ -617,7 +611,7 @@ async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBe
       aheadCount: standing.aheadCount,
       percentileAhead: Math.round((standing.aheadCount / standing.othersCount) * 100),
       smallSample: standing.othersCount < SMALL_SAMPLE_THRESHOLD,
-      competitorReviewAverage: competitorReviewAverage(snapshot.scan),
+      competitorReviewAverage: nearbyReviewAverage(snapshot.scan, scope),
     },
   };
 }

@@ -12,7 +12,7 @@ import { UpgradeProvider } from "./UpgradeContext";
 import { ShowcaseStrip } from "./ShowcaseStrip";
 import { UpgradeTrigger } from "./UpgradeTrigger";
 
-const FACTS: PromoFacts = { ...NO_FACTS, businessName: "Hudson Shears", score: 37, fixPoints: 18 };
+const FACTS: PromoFacts = { ...NO_FACTS, businessName: "Test Salon", score: 37, fixPoints: 18 };
 
 function ctx(plan: Plan, page: ShowcasePage | null, hiddenUntil: string | null = null, facts = FACTS): UpgradeContextData {
   const audience = page ? stripAudience(plan, page) : null;
@@ -31,7 +31,7 @@ describe("the showcase strip", () => {
     const overview = render(ctx("free", "overview"), <ShowcaseStrip />);
     expect(overview).toContain('data-audience="grow"');
     expect(text(overview)).toContain("Grow: fix it yourself, step by step");
-    expect(text(overview)).toContain("18 points of fixes waiting for Hudson Shears");
+    expect(text(overview)).toContain("18 points of fixes waiting for Test Salon");
     expect(text(overview)).toContain("See what's included");
     const reviews = render(ctx("free", "reviews"), <ShowcaseStrip />);
     expect(reviews).toContain('data-audience="premium"');

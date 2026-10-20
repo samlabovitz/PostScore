@@ -83,7 +83,8 @@ describe("the same rank everywhere", () => {
     }
     // The shared function, with the business's competitor scope (lib/competitorScope.ts).
     expect(fs.readFileSync("app/actions/assistant.ts", "utf8")).toContain("ownerStanding(snapshot.scan, competitorScope)");
-    expect(fs.readFileSync("app/actions/competitors.ts", "utf8")).toContain("ownerStanding(snapshot.scan, await loadCompetitorScope(supabase, businessId))");
+    const competitors = fs.readFileSync("app/actions/competitors.ts", "utf8");
+    expect(competitors).toContain("const scope = await loadCompetitorScope(supabase, businessId);\n  const standing = ownerStanding(snapshot.scan, scope);");
   });
 });
 

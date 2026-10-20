@@ -144,6 +144,24 @@ function mean(values: number[]): number | null {
   return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
 }
 
+/** An average needs at least this many competitors with a review count. */
+export const MIN_REVIEW_AVERAGE_SAMPLE = 3;
+
+/** THE nearby review average — the one number every place shows (the
+ * Overview, the Competitors page, reports and their PDF, PostAI and the
+ * upgrade lines): the mean review count of the competitors in the
+ * business's ranking scope (the same set the rank uses, lib/competitorScope.ts),
+ * the owner never included, rounded to a whole review. null when fewer
+ * than `minSample` competitors (default MIN_REVIEW_AVERAGE_SAMPLE) have a
+ * review count — the Competitors page's side-by-side table compares even
+ * one or two (minSample 1); with 3+ every place shows the same number. */
+export function nearbyReviewAverage(scan: SavedCompetitorScan, scope?: CompetitorScope | null, minSample: number = MIN_REVIEW_AVERAGE_SAMPLE): number | null {
+  const entries = scope ? applyScope(scan, scope).scan.entries : scan.entries;
+  const counts = entries.filter((e) => !e.isSubject && e.reviewCount !== null).map((e) => e.reviewCount as number);
+  if (counts.length === 0 || counts.length < minSample) return null;
+  return Math.round(counts.reduce((a, c) => a + c, 0) / counts.length);
+}
+
 export interface HeroSummary {
   rank: number | null;
   of: number;
@@ -240,7 +258,8 @@ export function compareMetric(scan: SavedCompetitorScan, m: MetricDef): MetricCo
   return {
     metric: m,
     owner: owner ? metricValue(owner, m) : null,
-    average: mean(values),
+    // Reviews: the shared nearby review average (the caller passes the scoped scan).
+    average: m.checkId === "visibility.review_count" ? nearbyReviewAverage(scan, null, 1) : mean(values),
     top: topComp ? metricValue(topComp.entry, m) : null,
     topName: topComp?.entry.name ?? null,
     sample: values.length,

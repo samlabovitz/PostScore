@@ -27,7 +27,7 @@ import { factsFromScore } from "./upgradeFacts";
 import type { ScoreWithSuggestions } from "./scoring";
 
 const FACTS: PromoFacts = {
-  businessName: "Hudson Shears",
+  businessName: "Test Salon",
   score: 37,
   fixPoints: 18,
   issueCount: 6,
@@ -180,7 +180,7 @@ describe("facts come from the real scan", () => {
       55
     );
     const facts = factsFromScore(
-      { name: "Hudson Shears", review_count: 10, website: "https://hudsonshears.wixsite.com/salon", website_analysis_json: null },
+      { name: "Test Salon", review_count: 10, website: "https://testsalon.wixsite.com/salon", website_analysis_json: null },
       r,
       { rank: 6, peerCount: 8, competitorReviewAverage: 83.6, competitorNoun: "salons" }
     );

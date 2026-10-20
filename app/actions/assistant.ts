@@ -5,7 +5,7 @@ import { getBusinessSummary } from "@/app/actions/businesses";
 import { scoreBusinessById, getScoreHistory } from "@/app/actions/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
 import { getLatestCompetitorSnapshot } from "@/app/actions/competitors";
-import { ownerStanding, rankBy } from "@/lib/competitorComparison";
+import { nearbyReviewAverage, ownerStanding, rankBy } from "@/lib/competitorComparison";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { getGrowthMoveSignals } from "@/app/actions/growthMoves";
 import { getWeeklyChecklistState } from "@/app/actions/weeklyChecklist";
@@ -191,6 +191,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
           scanAt: formatShortDate(snapshot.createdAt, locale, timeZone),
           subjectRank: ownerStanding(snapshot.scan, competitorScope)?.rank ?? null,
           rankedAgainst: competitorScope ? scopeSummary(applyScope(snapshot.scan, competitorScope), competitorScope) : null,
+          nearbyReviewAverage: nearbyReviewAverage(snapshot.scan, competitorScope),
           entries: ranked.map(({ entry }) => ({
             name: entry.name ?? "Unnamed business",
             isSubject: entry.isSubject,
