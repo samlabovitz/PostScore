@@ -21,6 +21,7 @@ export type MessageKey =
   | "dashboard.nav.reports"
   | "dashboard.settings.plans.heading"
   | "dashboard.settings.plans.current"
+  | "dashboard.settings.plans.bestValue"
   | "dashboard.settings.plans.price.free"
   | "dashboard.settings.plans.price.grow"
   | "dashboard.settings.plans.price.premium"
@@ -29,24 +30,50 @@ export type MessageKey =
   | "dashboard.settings.plans.tagline.grow"
   | "dashboard.settings.plans.tagline.premium"
   | "dashboard.settings.plans.tagline.multi"
-  | "dashboard.settings.plans.row.score"
+  | "dashboard.settings.plans.promise.free"
+  | "dashboard.settings.plans.promise.grow"
+  | "dashboard.settings.plans.promise.premium"
+  | "dashboard.settings.plans.bullet.free.score"
+  | "dashboard.settings.plans.bullet.free.problems"
+  | "dashboard.settings.plans.bullet.free.rank"
+  | "dashboard.settings.plans.bullet.free.reviewGap"
+  | "dashboard.settings.plans.bullet.grow.guides"
+  | "dashboard.settings.plans.bullet.grow.plan"
+  | "dashboard.settings.plans.bullet.grow.recheck"
+  | "dashboard.settings.plans.bullet.grow.tools"
+  | "dashboard.settings.plans.bullet.grow.postai"
+  | "dashboard.settings.plans.bullet.premium.fixes"
+  | "dashboard.settings.plans.bullet.premium.replies"
+  | "dashboard.settings.plans.bullet.premium.insights"
+  | "dashboard.settings.plans.bullet.premium.hub"
+  | "dashboard.settings.plans.bullet.premium.designs"
+  | "dashboard.settings.plans.bullet.premium.postai"
+  | "dashboard.settings.plans.bullet.multi.everything"
+  | "dashboard.settings.plans.bullet.multi.studio"
+  | "dashboard.settings.plans.bullet.multi.dashboard"
   | "dashboard.settings.plans.row.whatsWrong"
   | "dashboard.settings.plans.row.rank"
-  | "dashboard.settings.plans.row.reviews"
-  | "dashboard.settings.plans.row.fixGuides"
-  | "dashboard.settings.plans.row.weeklyPlan"
+  | "dashboard.settings.plans.row.fixes"
   | "dashboard.settings.plans.row.recheck"
-  | "dashboard.settings.plans.row.starterSite"
-  | "dashboard.settings.plans.row.printDesigns"
-  | "dashboard.settings.plans.row.noBranding"
+  | "dashboard.settings.plans.row.designs"
+  | "dashboard.settings.plans.row.hub"
+  | "dashboard.settings.plans.row.website"
   | "dashboard.settings.plans.row.postai"
-  | "dashboard.settings.plans.row.weeklyReports"
-  | "dashboard.settings.plans.row.gbp"
+  | "dashboard.settings.plans.row.doneForYou"
+  | "dashboard.settings.plans.row.reports"
   | "dashboard.settings.plans.row.postStudio"
   | "dashboard.settings.plans.row.locations"
-  | "dashboard.settings.plans.value.basicDesigns"
-  | "dashboard.settings.plans.value.everyDesign"
-  | "dashboard.settings.plans.value.comingSoon"
+  | "dashboard.settings.plans.value.basic"
+  | "dashboard.settings.plans.value.fullNoBranding"
+  | "dashboard.settings.plans.value.hubSoon"
+  | "dashboard.settings.plans.value.starterSite"
+  | "dashboard.settings.plans.value.starterDiscount"
+  | "dashboard.settings.plans.value.starterIncluded"
+  | "dashboard.settings.plans.value.monthlyLimit"
+  | "dashboard.settings.plans.value.unlimited"
+  | "dashboard.settings.plans.value.monthlyEmail"
+  | "dashboard.settings.plans.value.weeklyRecap"
+  | "dashboard.settings.plans.value.weeklyPdf"
   | "dashboard.settings.plans.value.needsGrow"
   | "dashboard.settings.plans.value.plus15"
   | "dashboard.settings.plans.value.plus8"
@@ -56,21 +83,7 @@ export type MessageKey =
   | "dashboard.settings.plans.cell.yes"
   | "dashboard.settings.plans.cell.preview"
   | "dashboard.settings.plans.cell.no"
-  | "dashboard.settings.plans.summary.freeScore"
-  | "dashboard.settings.plans.summary.freeWrong"
-  | "dashboard.settings.plans.summary.freeRank"
-  | "dashboard.settings.plans.summary.freeReviews"
-  | "dashboard.settings.plans.summary.freePreviews"
-  | "dashboard.settings.plans.summary.growGuides"
-  | "dashboard.settings.plans.summary.growPlan"
-  | "dashboard.settings.plans.summary.growTools"
-  | "dashboard.settings.plans.summary.growPostai"
-  | "dashboard.settings.plans.summary.premiumGrow"
-  | "dashboard.settings.plans.summary.premiumDesign"
-  | "dashboard.settings.plans.summary.premiumGbp"
-  | "dashboard.settings.plans.summary.premiumStudio"
-  | "dashboard.settings.plans.summary.multiPremium"
-  | "dashboard.settings.plans.summary.multiStudio"
+  | "dashboard.settings.plans.cell.soon"
   | "dashboard.niche.capped"
   | "dashboard.niche.savedUpdating"
   | "dashboard.niche.competitorsUpdated"
@@ -3624,56 +3637,69 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.reports": "Reports",
     "dashboard.settings.plans.heading": "Compare plans",
     "dashboard.settings.plans.current": "Your plan",
+    "dashboard.settings.plans.bestValue": "Best value",
     "dashboard.settings.plans.price.free": "$0",
     "dashboard.settings.plans.price.grow": "$25/mo",
     "dashboard.settings.plans.price.premium": "$50/mo",
     "dashboard.settings.plans.price.multi": "$150/mo",
     "dashboard.settings.plans.tagline.free": "Your free digital audit",
-    "dashboard.settings.plans.tagline.grow": "Start fixing it",
-    "dashboard.settings.plans.tagline.premium": "Every tool, fully unlocked",
-    "dashboard.settings.plans.tagline.multi": "Premium for up to 5 locations",
-    "dashboard.settings.plans.row.score": "Your PostScore and grade",
-    "dashboard.settings.plans.row.whatsWrong": "A full check of your Google listing, reviews and website — exactly what's wrong",
-    "dashboard.settings.plans.row.rank": "How you rank against nearby competitors — and whether you trail them",
-    "dashboard.settings.plans.row.reviews": "Your review link and QR code — businesses with more reviews win more customers",
-    "dashboard.settings.plans.row.fixGuides": "Step-by-step guides to fix every issue",
-    "dashboard.settings.plans.row.weeklyPlan": "Your weekly action plan and routine",
-    "dashboard.settings.plans.row.recheck": "Re-check your website after each fix",
-    "dashboard.settings.plans.row.starterSite": "A starter website, ready to publish",
-    "dashboard.settings.plans.row.printDesigns": "Coupons, referral cards and a review sign to print",
-    "dashboard.settings.plans.row.noBranding": "Every template, font and color — with no PostScore branding",
-    "dashboard.settings.plans.row.postai": "PostAI, your marketing assistant",
-    "dashboard.settings.plans.row.weeklyReports": "Weekly reports on your progress",
-    "dashboard.settings.plans.row.gbp": "Connect your Google Business Profile",
-    "dashboard.settings.plans.row.postStudio": "PostStudio: a full website we build and host (coming soon)",
+    "dashboard.settings.plans.tagline.grow": "Fix it yourself, step by step",
+    "dashboard.settings.plans.tagline.premium": "We do the work for you",
+    "dashboard.settings.plans.tagline.multi": "Premium for every location",
+    "dashboard.settings.plans.promise.free": "See exactly what's costing you customers.",
+    "dashboard.settings.plans.promise.grow": "We show you exactly how to fix every problem.",
+    "dashboard.settings.plans.promise.premium": "Connect Google and PostScore fixes things for you.",
+    "dashboard.settings.plans.bullet.free.score": "Your PostScore and grade, refreshed monthly",
+    "dashboard.settings.plans.bullet.free.problems": "Every problem on your Google listing, reviews and website",
+    "dashboard.settings.plans.bullet.free.rank": "How you rank against nearby competitors",
+    "dashboard.settings.plans.bullet.free.reviewGap": "Your review gap compared to businesses near you",
+    "dashboard.settings.plans.bullet.grow.guides": "Step-by-step fix guides for every issue",
+    "dashboard.settings.plans.bullet.grow.plan": "A weekly action plan that tells you what to do next",
+    "dashboard.settings.plans.bullet.grow.recheck": "Re-check your website as soon as you fix something",
+    "dashboard.settings.plans.bullet.grow.tools": "A starter website, plus basic review signs, coupons and referral cards",
+    "dashboard.settings.plans.bullet.grow.postai": "PostAI for your questions (monthly limit)",
+    "dashboard.settings.plans.bullet.premium.fixes": "One-click fixes to your Google listing: hours, info, photos (coming soon)",
+    "dashboard.settings.plans.bullet.premium.replies": "AI-drafted replies to every review, ready to post (coming soon)",
+    "dashboard.settings.plans.bullet.premium.insights": "See who searches for you and who calls or clicks (coming soon)",
+    "dashboard.settings.plans.bullet.premium.hub": "Your campaign hub: track every coupon and referral in one place, plus email, text and social campaigns (coming soon)",
+    "dashboard.settings.plans.bullet.premium.designs": "Every design tool unlocked, with no PostScore branding",
+    "dashboard.settings.plans.bullet.premium.postai": "Unlimited PostAI, and PostStudio websites at a discount (PostStudio coming soon)",
+    "dashboard.settings.plans.bullet.multi.everything": "Everything in Premium for up to 5 locations (+$25 each extra)",
+    "dashboard.settings.plans.bullet.multi.studio": "PostStudio included (coming soon)",
+    "dashboard.settings.plans.bullet.multi.dashboard": "All your locations in one dashboard (coming soon)",
+    "dashboard.settings.plans.row.whatsWrong": "See what's wrong + your score",
+    "dashboard.settings.plans.row.rank": "Rank vs. nearby competitors",
+    "dashboard.settings.plans.row.fixes": "Step-by-step fixes + weekly plan",
+    "dashboard.settings.plans.row.recheck": "Instant website re-checks",
+    "dashboard.settings.plans.row.designs": "Review signs, coupons, referral cards",
+    "dashboard.settings.plans.row.hub": "Campaign hub (all campaigns + email, text, social)",
+    "dashboard.settings.plans.row.website": "Website",
+    "dashboard.settings.plans.row.postai": "PostAI",
+    "dashboard.settings.plans.row.doneForYou": "Fixes done for you (Google connect)",
+    "dashboard.settings.plans.row.reports": "Reports",
+    "dashboard.settings.plans.row.postStudio": "PostStudio add-on: a full website we build and host (coming soon)",
     "dashboard.settings.plans.row.locations": "Locations",
-    "dashboard.settings.plans.value.basicDesigns": "Basic designs",
-    "dashboard.settings.plans.value.everyDesign": "Every design",
-    "dashboard.settings.plans.value.comingSoon": "Coming soon",
+    "dashboard.settings.plans.value.basic": "Basic",
+    "dashboard.settings.plans.value.fullNoBranding": "Full, no branding",
+    "dashboard.settings.plans.value.hubSoon": "✓ (email, text and social coming soon)",
+    "dashboard.settings.plans.value.starterSite": "Starter site",
+    "dashboard.settings.plans.value.starterDiscount": "Starter + PostStudio discount",
+    "dashboard.settings.plans.value.starterIncluded": "Starter + PostStudio included",
+    "dashboard.settings.plans.value.monthlyLimit": "Monthly limit",
+    "dashboard.settings.plans.value.unlimited": "Unlimited",
+    "dashboard.settings.plans.value.monthlyEmail": "Monthly email",
+    "dashboard.settings.plans.value.weeklyRecap": "Weekly recap",
+    "dashboard.settings.plans.value.weeklyPdf": "Weekly + PDF",
     "dashboard.settings.plans.value.needsGrow": "With Grow",
     "dashboard.settings.plans.value.plus15": "+$15/mo",
-    "dashboard.settings.plans.value.plus8": "+$8/mo (discount)",
+    "dashboard.settings.plans.value.plus8": "+$8/mo",
     "dashboard.settings.plans.value.included": "Included",
     "dashboard.settings.plans.value.one": "1",
-    "dashboard.settings.plans.value.upTo5": "Up to 5 (+$25/mo each extra)",
+    "dashboard.settings.plans.value.upTo5": "Up to 5 (+$25 each extra)",
     "dashboard.settings.plans.cell.yes": "Included",
     "dashboard.settings.plans.cell.preview": "Preview",
     "dashboard.settings.plans.cell.no": "Not included",
-    "dashboard.settings.plans.summary.freeScore": "Your PostScore and grade",
-    "dashboard.settings.plans.summary.freeWrong": "Exactly what's wrong with your Google listing, reviews and website",
-    "dashboard.settings.plans.summary.freeRank": "How you rank against nearby competitors",
-    "dashboard.settings.plans.summary.freeReviews": "Your review link and QR code — more reviews win more customers",
-    "dashboard.settings.plans.summary.freePreviews": "A preview of every tool Grow unlocks",
-    "dashboard.settings.plans.summary.growGuides": "Step-by-step guides to fix every issue",
-    "dashboard.settings.plans.summary.growPlan": "Your weekly action plan, routine and Re-check my website",
-    "dashboard.settings.plans.summary.growTools": "A starter website, plus coupons, referral cards and a review sign (basic designs)",
-    "dashboard.settings.plans.summary.growPostai": "PostAI and weekly reports",
-    "dashboard.settings.plans.summary.premiumGrow": "Everything in Grow",
-    "dashboard.settings.plans.summary.premiumDesign": "Every template, font and color, with no PostScore branding",
-    "dashboard.settings.plans.summary.premiumGbp": "Google Business Profile connection (coming soon)",
-    "dashboard.settings.plans.summary.premiumStudio": "PostStudio at a discount (coming soon)",
-    "dashboard.settings.plans.summary.multiPremium": "Everything in Premium, for up to 5 locations",
-    "dashboard.settings.plans.summary.multiStudio": "PostStudio included (coming soon)",
+    "dashboard.settings.plans.cell.soon": "Coming soon",
     "dashboard.niche.capped": "This month's competitor searches are used up — they start again on {date}.",
     "dashboard.niche.savedUpdating": "Saved — we'll update your competitors.",
     "dashboard.niche.competitorsUpdated": "Your competitors were updated for {niche}. Their full scores fill in over the next few minutes.",
@@ -7589,56 +7615,69 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.reports": "Informes",
     "dashboard.settings.plans.heading": "Comparar planes",
     "dashboard.settings.plans.current": "Su plan",
+    "dashboard.settings.plans.bestValue": "Mejor valor",
     "dashboard.settings.plans.price.free": "$0",
     "dashboard.settings.plans.price.grow": "$25/mes",
     "dashboard.settings.plans.price.premium": "$50/mes",
     "dashboard.settings.plans.price.multi": "$150/mes",
     "dashboard.settings.plans.tagline.free": "Su auditoría digital gratis",
-    "dashboard.settings.plans.tagline.grow": "Empiece a mejorarlo",
-    "dashboard.settings.plans.tagline.premium": "Todas las herramientas, sin límites",
-    "dashboard.settings.plans.tagline.multi": "Premium para hasta 5 ubicaciones",
-    "dashboard.settings.plans.row.score": "Su PostScore y su calificación",
-    "dashboard.settings.plans.row.whatsWrong": "Una revisión completa de su ficha de Google, sus reseñas y su sitio web — exactamente qué está mal",
-    "dashboard.settings.plans.row.rank": "Cómo se compara con los competidores cercanos — y si va detrás de ellos",
-    "dashboard.settings.plans.row.reviews": "Su enlace y código QR de reseñas — los negocios con más reseñas ganan más clientes",
-    "dashboard.settings.plans.row.fixGuides": "Guías paso a paso para corregir cada problema",
-    "dashboard.settings.plans.row.weeklyPlan": "Su plan de acción semanal y su rutina",
-    "dashboard.settings.plans.row.recheck": "Volver a revisar su sitio web después de cada arreglo",
-    "dashboard.settings.plans.row.starterSite": "Un sitio web inicial, listo para publicar",
-    "dashboard.settings.plans.row.printDesigns": "Cupones, tarjetas de referidos y un letrero de reseñas para imprimir",
-    "dashboard.settings.plans.row.noBranding": "Todas las plantillas, fuentes y colores — sin la marca PostScore",
-    "dashboard.settings.plans.row.postai": "PostAI, su asistente de marketing",
-    "dashboard.settings.plans.row.weeklyReports": "Informes semanales de su progreso",
-    "dashboard.settings.plans.row.gbp": "Conectar su Perfil de Negocio de Google",
-    "dashboard.settings.plans.row.postStudio": "PostStudio: un sitio web completo que construimos y alojamos (próximamente)",
+    "dashboard.settings.plans.tagline.grow": "Arréglelo usted mismo, paso a paso",
+    "dashboard.settings.plans.tagline.premium": "Nosotros hacemos el trabajo por usted",
+    "dashboard.settings.plans.tagline.multi": "Premium para cada una de sus ubicaciones",
+    "dashboard.settings.plans.promise.free": "Vea exactamente qué le está costando clientes.",
+    "dashboard.settings.plans.promise.grow": "Le mostramos exactamente cómo resolver cada problema.",
+    "dashboard.settings.plans.promise.premium": "Conecte Google y PostScore se encarga de los arreglos por usted.",
+    "dashboard.settings.plans.bullet.free.score": "Su PostScore y su calificación, actualizados cada mes",
+    "dashboard.settings.plans.bullet.free.problems": "Cada problema de su ficha de Google, sus reseñas y su sitio web",
+    "dashboard.settings.plans.bullet.free.rank": "Su posición frente a los competidores cercanos",
+    "dashboard.settings.plans.bullet.free.reviewGap": "Cuántas reseñas le faltan en comparación con los negocios cercanos",
+    "dashboard.settings.plans.bullet.grow.guides": "Guías paso a paso para resolver cada problema",
+    "dashboard.settings.plans.bullet.grow.plan": "Un plan de acción semanal que le indica qué hacer a continuación",
+    "dashboard.settings.plans.bullet.grow.recheck": "Vuelva a revisar su sitio web en cuanto arregle algo",
+    "dashboard.settings.plans.bullet.grow.tools": "Un sitio web inicial, además de letreros de reseñas, cupones y tarjetas de referidos básicos",
+    "dashboard.settings.plans.bullet.grow.postai": "PostAI para sus preguntas (límite mensual)",
+    "dashboard.settings.plans.bullet.premium.fixes": "Arreglos con un clic en su ficha de Google: horario, datos y fotos (próximamente)",
+    "dashboard.settings.plans.bullet.premium.replies": "Respuestas a cada reseña redactadas con IA, listas para publicar (próximamente)",
+    "dashboard.settings.plans.bullet.premium.insights": "Vea quién lo busca y quién lo llama o hace clic (próximamente)",
+    "dashboard.settings.plans.bullet.premium.hub": "Su centro de campañas: siga cada cupón y referido en un solo lugar, además de campañas por correo, mensaje de texto y redes sociales (próximamente)",
+    "dashboard.settings.plans.bullet.premium.designs": "Todas las herramientas de diseño, sin la marca PostScore",
+    "dashboard.settings.plans.bullet.premium.postai": "PostAI ilimitado y sitios web de PostStudio con descuento (PostStudio próximamente)",
+    "dashboard.settings.plans.bullet.multi.everything": "Todo lo de Premium para hasta 5 ubicaciones (+$25 por cada ubicación adicional)",
+    "dashboard.settings.plans.bullet.multi.studio": "PostStudio incluido (próximamente)",
+    "dashboard.settings.plans.bullet.multi.dashboard": "Todas sus ubicaciones en un solo panel (próximamente)",
+    "dashboard.settings.plans.row.whatsWrong": "Qué está mal y su puntuación",
+    "dashboard.settings.plans.row.rank": "Su posición frente a la competencia cercana",
+    "dashboard.settings.plans.row.fixes": "Arreglos paso a paso y plan semanal",
+    "dashboard.settings.plans.row.recheck": "Nuevas revisiones del sitio web al instante",
+    "dashboard.settings.plans.row.designs": "Letreros de reseñas, cupones y tarjetas de referidos",
+    "dashboard.settings.plans.row.hub": "Centro de campañas (todas sus campañas + correo, texto y redes sociales)",
+    "dashboard.settings.plans.row.website": "Sitio web",
+    "dashboard.settings.plans.row.postai": "PostAI",
+    "dashboard.settings.plans.row.doneForYou": "Arreglos que hacemos por usted (conexión con Google)",
+    "dashboard.settings.plans.row.reports": "Informes",
+    "dashboard.settings.plans.row.postStudio": "Complemento PostStudio: un sitio web completo que construimos y alojamos (próximamente)",
     "dashboard.settings.plans.row.locations": "Ubicaciones",
-    "dashboard.settings.plans.value.basicDesigns": "Diseños básicos",
-    "dashboard.settings.plans.value.everyDesign": "Todos los diseños",
-    "dashboard.settings.plans.value.comingSoon": "Próximamente",
+    "dashboard.settings.plans.value.basic": "Básico",
+    "dashboard.settings.plans.value.fullNoBranding": "Completo, sin marca",
+    "dashboard.settings.plans.value.hubSoon": "✓ (correo, texto y redes sociales: próximamente)",
+    "dashboard.settings.plans.value.starterSite": "Sitio inicial",
+    "dashboard.settings.plans.value.starterDiscount": "Sitio inicial + descuento en PostStudio",
+    "dashboard.settings.plans.value.starterIncluded": "Sitio inicial + PostStudio incluido",
+    "dashboard.settings.plans.value.monthlyLimit": "Límite mensual",
+    "dashboard.settings.plans.value.unlimited": "Ilimitado",
+    "dashboard.settings.plans.value.monthlyEmail": "Correo mensual",
+    "dashboard.settings.plans.value.weeklyRecap": "Resumen semanal",
+    "dashboard.settings.plans.value.weeklyPdf": "Semanal + PDF",
     "dashboard.settings.plans.value.needsGrow": "Con Grow",
     "dashboard.settings.plans.value.plus15": "+$15/mes",
-    "dashboard.settings.plans.value.plus8": "+$8/mes (descuento)",
+    "dashboard.settings.plans.value.plus8": "+$8/mes",
     "dashboard.settings.plans.value.included": "Incluido",
     "dashboard.settings.plans.value.one": "1",
-    "dashboard.settings.plans.value.upTo5": "Hasta 5 (+$25/mes por cada adicional)",
+    "dashboard.settings.plans.value.upTo5": "Hasta 5 (+$25 por cada adicional)",
     "dashboard.settings.plans.cell.yes": "Incluido",
     "dashboard.settings.plans.cell.preview": "Vista previa",
     "dashboard.settings.plans.cell.no": "No incluido",
-    "dashboard.settings.plans.summary.freeScore": "Su PostScore y su calificación",
-    "dashboard.settings.plans.summary.freeWrong": "Exactamente qué está mal en su ficha de Google, sus reseñas y su sitio web",
-    "dashboard.settings.plans.summary.freeRank": "Cómo se compara con los competidores cercanos",
-    "dashboard.settings.plans.summary.freeReviews": "Su enlace y código QR de reseñas — más reseñas ganan más clientes",
-    "dashboard.settings.plans.summary.freePreviews": "Una vista previa de cada herramienta que desbloquea Grow",
-    "dashboard.settings.plans.summary.growGuides": "Guías paso a paso para corregir cada problema",
-    "dashboard.settings.plans.summary.growPlan": "Su plan de acción semanal, su rutina y Volver a revisar su sitio web",
-    "dashboard.settings.plans.summary.growTools": "Un sitio web inicial, además de cupones, tarjetas de referidos y un letrero de reseñas (diseños básicos)",
-    "dashboard.settings.plans.summary.growPostai": "PostAI e informes semanales",
-    "dashboard.settings.plans.summary.premiumGrow": "Todo lo de Grow",
-    "dashboard.settings.plans.summary.premiumDesign": "Todas las plantillas, fuentes y colores, sin la marca PostScore",
-    "dashboard.settings.plans.summary.premiumGbp": "Conexión con el Perfil de Negocio de Google (próximamente)",
-    "dashboard.settings.plans.summary.premiumStudio": "PostStudio con descuento (próximamente)",
-    "dashboard.settings.plans.summary.multiPremium": "Todo lo de Premium, para hasta 5 ubicaciones",
-    "dashboard.settings.plans.summary.multiStudio": "PostStudio incluido (próximamente)",
+    "dashboard.settings.plans.cell.soon": "Próximamente",
     "dashboard.niche.capped": "Las búsquedas de competidores de este mes se agotaron — vuelven el {date}.",
     "dashboard.niche.savedUpdating": "Guardado — actualizaremos sus competidores.",
     "dashboard.niche.competitorsUpdated": "Sus competidores se actualizaron para {niche}. Sus puntuaciones completas se completan en los próximos minutos.",

@@ -128,32 +128,70 @@ other connect cards that live on `/connect-gbp` today).
 
 Plan is decided only by `getPlan()` (`lib/premium.ts`); pure rules in
 `lib/plan.ts`. Checkout isn't built yet, so every real account is Free today.
+The plan copy and comparison below live in `lib/planComparison.ts` +
+`dashboard.settings.plans.*` (Settings → Plan & billing → "Compare plans",
+`#compare-plans`); PostAI describes the plans the same way (`lib/assistant.ts`).
+Anything not built says "coming soon".
+
+**Free · $0 · "Your free digital audit"** — See exactly what's costing you customers.
+- Your PostScore and grade, refreshed monthly
+- Every problem on your Google listing, reviews and website
+- How you rank against nearby competitors
+- Your review gap compared to businesses near you
+
+**Grow · $25/mo · "Fix it yourself, step by step"** — We show you exactly how to fix every problem.
+- Step-by-step fix guides for every issue
+- A weekly action plan that tells you what to do next
+- Re-check your website as soon as you fix something
+- A starter website, plus basic review signs, coupons and referral cards
+- PostAI for your questions (monthly limit: 100 questions)
+
+**Premium · $50/mo · "We do the work for you"** (highlighted, "Best value") — Connect Google and PostScore fixes things for you.
+- One-click fixes to your Google listing: hours, info, photos (coming soon)
+- AI-drafted replies to every review, ready to post (coming soon)
+- See who searches for you and who calls or clicks (coming soon)
+- Your campaign hub: track every coupon and referral in one place, plus email, text and social campaigns (coming soon)
+- Every design tool unlocked, with no PostScore branding
+- Unlimited PostAI, and PostStudio websites at a discount (PostStudio coming soon)
+
+**Multi · $150/mo · "Premium for every location"**
+- Everything in Premium for up to 5 locations (+$25 each extra)
+- PostStudio included (coming soon)
+- All your locations in one dashboard (coming soon)
 
 | | Free | Grow | Premium | Multi |
 |---|---|---|---|---|
-| Price | $0 | $25/mo | $50/mo | $150/mo |
-| PostScore, category breakdown, every check (what's wrong + why it matters) | ✓ | ✓ | ✓ | ✓ |
-| Scans | first scan + 1 full re-scan/month | ✓ | ✓ | ✓ |
-| Rank among nearby competitors | ✓ | ✓ | ✓ | ✓ |
-| Action plan + weekly routine | preview | ✓ | ✓ | ✓ |
-| Fix guides (per builder) | which checks fail + the first step of every failing check's guide | ✓ | ✓ | ✓ |
-| Re-check my website | preview | ✓ | ✓ | ✓ |
-| Starter website (download anytime) | live preview with real data | ✓ | ✓ | ✓ |
-| Review link + QR code | ✓ (free for everyone, as today) | ✓ | ✓ | ✓ |
-| Review stats | preview | ✓ | ✓ | ✓ |
-| Print designs: review sign, coupons, referral cards | preview | basic | full (all templates, fonts, colors, no PostScore branding) | full |
-| Campaigns | preview | basic | full | full |
-| Weekly reports (recap, PDFs, past reports) | preview | ✓ | ✓ | ✓ |
-| Monthly email report | ✓ (respects `MONTHLY_REPORTS_LIVE`) | ✓ | ✓ | ✓ |
-| PostAI | preview | ✓ | ✓ | ✓ |
-| Price check | preview | ✓ | ✓ | ✓ |
-| Google Profile connect features | preview | preview | ✓ | ✓ |
-| PostStudio (website builder + hosting) | real-data preview | +$15/mo add-on | +$8/mo add-on ("PostStudio at a discount") | included |
-| Locations | 1 | 1 | 1 | up to 5, +$25/mo per extra |
+| See what's wrong + your score | ✓ | ✓ | ✓ | ✓ |
+| Rank vs. nearby competitors | ✓ | ✓ | ✓ | ✓ |
+| Step-by-step fixes + weekly plan | preview | ✓ | ✓ | ✓ |
+| Instant website re-checks | — | ✓ | ✓ | ✓ |
+| Review signs, coupons, referral cards | preview | basic | full, no branding | full, no branding |
+| Campaign hub (all campaigns + email, text, social) | preview | — | ✓ (email, text, social coming soon) | ✓ |
+| Website | preview | starter site | starter + PostStudio discount | starter + PostStudio included |
+| PostAI | — | 100 questions/month | unlimited | unlimited |
+| Fixes done for you (Google connect) | — | — | ✓ coming soon | ✓ coming soon |
+| Reports | monthly email | weekly recap | weekly + PDF | weekly + PDF |
+| PostStudio add-on (coming soon) | with Grow | +$15/mo | +$8/mo | included |
+| Locations | 1 | 1 | 1 | up to 5, +$25/mo each extra |
 
-**Free = a digital audit only.** Everything outside the audit shows a
-real-data preview with a short "Here's how PostScore fixes this — unlock with
-Grow" message showing what they'd get. Previews never use fake data.
+Desktop: the four plan cards and this table, Premium highlighted. Phone: one
+card per plan, the owner's current plan first, each with its own rows.
+
+### For step 5f to enforce (not gated yet)
+- **Campaigns:** the "All campaigns" tab (the campaign hub) is **Premium**.
+  Grow gets the Coupons and Referrals tabs (basic designs), each campaign's
+  +1 tally on its own tab. Free sees previews of all three tabs.
+- **PostAI:** Grow has a monthly question limit; Premium is unlimited.
+  Grow's limit: **100 questions/month** (decided). Cost per question today: PostAI
+  runs on Claude Haiku 4.5 ($1/M input, $5/M output tokens); each question
+  sends ~7.7k tokens of fixed rules + ~2–4k of the business's data + recent
+  history (≈ 10–13k input) and gets ≤ 450 output tokens → about
+  **$0.012–0.015 per question**, so 100 questions ≈ $1.50/month worst case
+  (~6% of Grow's $25). Caching the fixed rules (prompt caching) would cut
+  the input cost by roughly two thirds. At the limit, Grow sees: "You've
+  used this month's questions. Premium is unlimited."
+- **Reports:** downloadable PDF reports are **Premium**; Grow gets the weekly
+  recap on screen; Free gets the monthly email.
 
 **PostStudio**: anyone can open it and see a preview of their own site built
 from their real data; publishing needs the add-on (or Multi) **and** a
@@ -183,5 +221,5 @@ not built yet; it's step 5k-0 in the Day 5 plan.
 ### Where gating lives in code today
 - `getPlan()` / `hasPremium()` / `canConnectGbp()` — `lib/premium.ts`.
 - Print access (`none` / `basic` / `studio`) — `signAccess()` in `lib/signStudio/design.ts`, used by Sign Studio, the card designer, `/api/business/[id]/review-sign` and `/api/business/[id]/print-card`.
-- Settings → Plan feature list — `dashboard.settings.plan.feature.*` (today says Free includes the action plan and coupons/referrals; update when Free becomes audit-only).
+- Settings → Plan & billing copy and comparison — `lib/planComparison.ts` (wording only; describes the plans, gates nothing).
 - Everything else is currently open to every plan — see the Day 5 plan's gating section for the full list and the planned changes.

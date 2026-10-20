@@ -1,20 +1,25 @@
 // What each plan includes — the one source for Settings → Plan & billing
-// ("Compare plans" and the current-plan summary). Describes the plans
-// PostScore is building toward (Day 5 decisions, docs/product-structure.md);
-// actually gating features is step 5f. Anything not live yet says so
-// ("Coming soon") — never claimed as working. Pure.
+// (the plan cards and "Compare plans"), the promo box and the showcase
+// strip. Describes the plans PostScore is building toward
+// (docs/product-structure.md); actually gating features is step 5f.
+// Anything not live yet says so ("Coming soon") — never claimed as
+// working. Pure.
 
 import type { MessageKey } from "./i18n";
 import type { Plan } from "./plan";
 
 export const COMPARE_PLANS: Plan[] = ["free", "grow", "premium", "multi"];
 
-/** ✓, a real-data preview, not included, or a short value ("basic", "+$15/mo"). */
-export type Cell = { kind: "yes" } | { kind: "preview" } | { kind: "no" } | { kind: "text"; key: MessageKey };
+/** The plan the comparison highlights ("Best value"). */
+export const HIGHLIGHT_PLAN: Plan = "premium";
+
+/** ✓, a real-data preview, not included, ✓ but not built yet, or a short value. */
+export type Cell = { kind: "yes" } | { kind: "preview" } | { kind: "no" } | { kind: "soon" } | { kind: "text"; key: MessageKey };
 
 const yes: Cell = { kind: "yes" };
 const preview: Cell = { kind: "preview" };
 const no: Cell = { kind: "no" };
+const soon: Cell = { kind: "soon" };
 const text = (k: string): Cell => ({ kind: "text", key: `dashboard.settings.plans.value.${k}` as MessageKey });
 
 export interface CompareRow {
@@ -28,35 +33,47 @@ const row = (k: string, free: Cell, grow: Cell, premium: Cell, multi: Cell = pre
 });
 
 export const COMPARE_ROWS: CompareRow[] = [
-  row("score", yes, yes, yes),
   row("whatsWrong", yes, yes, yes),
   row("rank", yes, yes, yes),
-  row("reviews", yes, yes, yes),
-  row("fixGuides", preview, yes, yes),
-  row("weeklyPlan", preview, yes, yes),
-  row("recheck", preview, yes, yes),
-  row("starterSite", preview, yes, yes),
-  row("printDesigns", preview, text("basicDesigns"), text("everyDesign")),
-  row("noBranding", no, no, yes),
-  row("postai", preview, yes, yes),
-  row("weeklyReports", preview, yes, yes),
-  row("gbp", no, no, text("comingSoon")),
+  row("fixes", preview, yes, yes),
+  row("recheck", no, yes, yes),
+  row("designs", preview, text("basic"), text("fullNoBranding")),
+  // The hub itself (every running campaign + its tally) exists; email,
+  // text and social don't yet — the cell says so.
+  row("hub", preview, no, text("hubSoon")),
+  row("website", preview, text("starterSite"), text("starterDiscount"), text("starterIncluded")),
+  row("postai", no, text("monthlyLimit"), text("unlimited")),
+  row("doneForYou", no, no, soon),
+  row("reports", text("monthlyEmail"), text("weeklyRecap"), text("weeklyPdf")),
   row("postStudio", text("needsGrow"), text("plus15"), text("plus8"), text("included")),
   row("locations", text("one"), text("one"), text("one"), text("upTo5")),
 ];
 
-/** Each plan's name line: price and the one-line promise. */
-export const PLAN_HEADER: Record<Plan, { price: MessageKey; tagline: MessageKey }> = {
-  free: { price: "dashboard.settings.plans.price.free", tagline: "dashboard.settings.plans.tagline.free" },
-  grow: { price: "dashboard.settings.plans.price.grow", tagline: "dashboard.settings.plans.tagline.grow" },
-  premium: { price: "dashboard.settings.plans.price.premium", tagline: "dashboard.settings.plans.tagline.premium" },
-  multi: { price: "dashboard.settings.plans.price.multi", tagline: "dashboard.settings.plans.tagline.multi" },
+export interface PlanCopy {
+  price: MessageKey;
+  tagline: MessageKey;
+  /** The one-line promise (Multi has none). */
+  promise: MessageKey | null;
+  bullets: MessageKey[];
+}
+
+const k = (s: string) => `dashboard.settings.plans.${s}` as MessageKey;
+const bullets = (plan: Plan, ids: string[]) => ids.map((id) => k(`bullet.${plan}.${id}`));
+
+/** Each plan's card: price, tagline, promise and what it includes. */
+export const PLAN_COPY: Record<Plan, PlanCopy> = {
+  free: { price: k("price.free"), tagline: k("tagline.free"), promise: k("promise.free"), bullets: bullets("free", ["score", "problems", "rank", "reviewGap"]) },
+  grow: { price: k("price.grow"), tagline: k("tagline.grow"), promise: k("promise.grow"), bullets: bullets("grow", ["guides", "plan", "recheck", "tools", "postai"]) },
+  premium: {
+    price: k("price.premium"),
+    tagline: k("tagline.premium"),
+    promise: k("promise.premium"),
+    bullets: bullets("premium", ["fixes", "replies", "insights", "hub", "designs", "postai"]),
+  },
+  multi: { price: k("price.multi"), tagline: k("tagline.multi"), promise: null, bullets: bullets("multi", ["everything", "studio", "dashboard"]) },
 };
 
-/** The current plan's short summary (benefit-first). */
-export const PLAN_SUMMARY: Record<Plan, MessageKey[]> = {
-  free: ["dashboard.settings.plans.summary.freeScore", "dashboard.settings.plans.summary.freeWrong", "dashboard.settings.plans.summary.freeRank", "dashboard.settings.plans.summary.freeReviews", "dashboard.settings.plans.summary.freePreviews"],
-  grow: ["dashboard.settings.plans.summary.growGuides", "dashboard.settings.plans.summary.growPlan", "dashboard.settings.plans.summary.growTools", "dashboard.settings.plans.summary.growPostai"],
-  premium: ["dashboard.settings.plans.summary.premiumGrow", "dashboard.settings.plans.summary.premiumDesign", "dashboard.settings.plans.summary.premiumGbp", "dashboard.settings.plans.summary.premiumStudio"],
-  multi: ["dashboard.settings.plans.summary.multiPremium", "dashboard.settings.plans.summary.multiStudio"],
-};
+/** On a phone the plans stack, the current plan first. */
+export function phoneOrder(current: Plan): Plan[] {
+  return [current, ...COMPARE_PLANS.filter((p) => p !== current)];
+}

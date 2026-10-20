@@ -16,42 +16,72 @@ const wrap = (node: React.ReactNode, locale: "en" | "es" = "en") => renderToStat
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/&amp;/g, "&").replace(/\s+/g, " ");
 
 describe("Settings pieces", () => {
-  test("plan card: the current plan, its summary, and a 4-column Compare plans", () => {
+  test("plan card: the current plan's promise and bullets (exact copy), then Compare plans", () => {
     const html = wrap(<PlanCard plan="free" />);
     expect(html).toContain('data-testid="plan-card"');
     const t = text(html);
     expect(t).toContain("Your free digital audit");
-    expect(t).toContain("Exactly what's wrong with your Google listing, reviews and website");
+    expect(t).toContain("See exactly what's costing you customers.");
+    for (const s of ["Your PostScore and grade, refreshed monthly", "Every problem on your Google listing, reviews and website", "How you rank against nearby competitors", "Your review gap compared to businesses near you"]) expect(t).toContain(s);
     expect(t).toContain("Compare plans");
+    expect(html).toContain('id="compare-plans"');
     // The outdated Free lines are gone.
     expect(t).not.toContain("Weekly action plan and routine");
     expect(t).not.toContain("with a +1 tally you keep");
-    // Four columns, each with price + promise; the current one is marked.
-    for (const s of ["$0", "$25/mo", "$50/mo", "$150/mo", "Start fixing it", "Every tool, fully unlocked", "Premium for up to 5 locations"]) expect(t).toContain(s);
-    expect(html.match(/<th[^>]*scope="col"/g)).toHaveLength(5);
-    expect(html.match(/data-current="true"/g)).toHaveLength(1);
-    // ✓ / Preview / — cells and the PostStudio add-on line.
-    expect(t).toContain("Preview");
-    expect(t).toContain("Not included");
-    for (const s of ["With Grow", "+$15/mo", "+$8/mo (discount)", "Included", "Coming soon"]) expect(t).toContain(s);
-    expect(text(wrap(<PlanCard plan="premium" />))).toContain("Every template, font and color, with no PostScore branding");
   });
 
-  test("plan comparison: wording only — Free has no working tools; nothing not live is claimed as working", async () => {
+  test("Compare plans: four plans, Premium highlighted as Best value, the owner's plan marked, every row", () => {
+    const html = wrap(<PlanCard plan="grow" />);
+    const t = text(html);
+    for (const s of ["$0", "$25/mo", "$50/mo", "$150/mo", "Fix it yourself, step by step", "We do the work for you", "Premium for every location"]) expect(t).toContain(s);
+    expect(t).toContain("Connect Google and PostScore fixes things for you.");
+    expect(t).toContain("Everything in Premium for up to 5 locations (+$25 each extra)");
+    expect(html.match(/data-testid="best-value"/g)).toHaveLength(1);
+    expect(html).toMatch(/data-plan="premium"[^>]*class="[^"]*border-brass/);
+    expect(html.match(/<th[^>]*scope="col"/g)).toHaveLength(5);
+    expect(html.match(/data-highlight="true"/g)).toHaveLength(1);
+    expect(html).toMatch(/data-plan="grow" data-current="true"[^>]*order-first/);
+    for (const s of [
+      "See what's wrong + your score",
+      "Rank vs. nearby competitors",
+      "Step-by-step fixes + weekly plan",
+      "Instant website re-checks",
+      "Review signs, coupons, referral cards",
+      "Campaign hub (all campaigns + email, text, social)",
+      "Fixes done for you (Google connect)",
+      "Basic",
+      "Full, no branding",
+      "Starter + PostStudio discount",
+      "Monthly limit",
+      "Unlimited",
+      "Monthly email",
+      "Weekly recap",
+      "Weekly + PDF",
+      "+$15/mo",
+      "+$8/mo",
+      "Coming soon",
+      "Preview",
+      "Not included",
+    ])
+      expect(t).toContain(s);
+  });
+
+  test("plan wording only: Free has no working tools; nothing not built is claimed as working", async () => {
     const { COMPARE_ROWS } = await import("@/lib/planComparison");
     const freeYes = COMPARE_ROWS.filter((r) => r.cells.free.kind === "yes").map((r) => r.key.split(".").pop());
-    expect(freeYes).toEqual(["score", "whatsWrong", "rank", "reviews"]);
-    const postStudio = COMPARE_ROWS.find((r) => r.key.endsWith("postStudio"))!;
-    expect(postStudio.cells.multi).toEqual({ kind: "text", key: "dashboard.settings.plans.value.included" });
-    expect(COMPARE_ROWS.find((r) => r.key.endsWith(".gbp"))!.cells.premium).toEqual({ kind: "text", key: "dashboard.settings.plans.value.comingSoon" });
-    expect(text(wrap(<PlanCard plan="multi" />))).toContain("PostStudio included (coming soon)");
+    expect(freeYes).toEqual(["whatsWrong", "rank"]);
+    expect(COMPARE_ROWS.find((r) => r.key.endsWith(".doneForYou"))!.cells.premium).toEqual({ kind: "soon" });
+    expect(COMPARE_ROWS.find((r) => r.key.endsWith(".hub"))!.cells.premium).toEqual({ kind: "text", key: "dashboard.settings.plans.value.hubSoon" });
+    expect(COMPARE_ROWS.find((r) => r.key.endsWith(".postStudio"))!.cells.multi).toEqual({ kind: "text", key: "dashboard.settings.plans.value.included" });
   });
 
   test("plan card in Spanish (usted)", () => {
-    const t = text(wrap(<PlanCard plan="grow" />, "es"));
+    const t = text(wrap(<PlanCard plan="premium" />, "es"));
     expect(t).toContain("Comparar planes");
-    expect(t).toContain("Empiece a mejorarlo");
-    expect(t).toContain("$25/mes");
+    expect(t).toContain("Nosotros hacemos el trabajo por usted");
+    expect(t).toContain("Conecte Google y PostScore se encarga de los arreglos por usted.");
+    expect(t).toContain("$50/mes");
+    expect(t).toContain("Mejor valor");
   });
 
   test("cancel button: one click opens the confirm (2 clicks total)", () => {

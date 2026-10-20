@@ -6,14 +6,14 @@
 // button here does something real — or isn't shown.
 
 import { useEffect, useState, type ReactNode } from "react";
-import { IconBell, IconBuildingStore, IconCheck, IconCreditCard, IconTag, IconUser, IconUserCircle, type Icon } from "@tabler/icons-react";
+import { IconBell, IconBuildingStore, IconCheck, IconCreditCard, IconCrown, IconTag, IconUser, IconUserCircle, type Icon } from "@tabler/icons-react";
 import { Modal } from "@/components/ui/Modal";
 import { unsubscribeFromAllEmails } from "@/app/actions/businesses";
 import { SAVED_EVENT } from "@/lib/savedEvent";
 import type { Plan } from "@/lib/plan";
 import { t, useLocale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { COMPARE_PLANS, COMPARE_ROWS, PLAN_HEADER, PLAN_SUMMARY, type Cell } from "@/lib/planComparison";
+import { COMPARE_PLANS, COMPARE_ROWS, HIGHLIGHT_PLAN, PLAN_COPY, type Cell } from "@/lib/planComparison";
 
 /** Icons are named by a plain string key: the Settings page is a Server
  * Component, and a component (a function) can't be passed to a Client
@@ -114,50 +114,74 @@ export function SavedToast() {
 
 // ---- Plan & billing ----
 
-/** The current plan's summary, then "Compare plans": four columns (Free ·
- * Grow · Premium · Multi) with the current plan highlighted, stacking into
- * one card per plan on a phone. Rows come from lib/planComparison.ts. */
+/** The current plan's promise and what it includes, then "Compare plans":
+ * a card per plan (Premium marked "Best value", the owner's own plan
+ * labeled) and the comparison table — four columns on wider screens; on a
+ * phone the cards stack with the current plan first and each carries its
+ * own rows. #compare-plans opens it (every "See plans" link lands here).
+ * Copy comes from lib/planComparison.ts. */
 export function PlanCard({ plan }: { plan: Plan }) {
   const locale = useLocale();
-  const header = (p: Plan) => (
-    <>
-      <div className="flex flex-wrap items-baseline gap-x-1.5">
-        <span className="text-[14px] font-semibold text-ink">{t(locale, `dashboard.settings.plan.name.${p}` as MessageKey)}</span>
-        <span className="text-[12.5px] text-ink-soft">{t(locale, PLAN_HEADER[p].price)}</span>
-      </div>
-      <div className="text-[12px] font-medium text-brass">{t(locale, PLAN_HEADER[p].tagline)}</div>
-    </>
-  );
-  const hl = "bg-[color:color-mix(in_srgb,var(--color-brass)_12%,white)]";
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const sync = () => {
+      if (window.location.hash !== "#compare-plans") return;
+      setOpen(true);
+      requestAnimationFrame(() => document.getElementById("compare-plans")?.scrollIntoView({ block: "start" }));
+    };
+    sync();
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
+  const copy = PLAN_COPY[plan];
   return (
     <div data-testid="plan-card" className="flex flex-col gap-3 rounded-xl border border-[color:color-mix(in_srgb,var(--color-brass)_40%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_6%,white)] p-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[12px] font-semibold uppercase tracking-[0.07em] text-ink-soft">{t(locale, "dashboard.settings.plan.current")}</span>
         <span className="rounded-full bg-ink px-2.5 py-0.5 text-[12px] font-semibold text-white">{t(locale, `dashboard.settings.plan.name.${plan}` as MessageKey)}</span>
-        <span className="text-[12.5px] font-medium text-brass">{t(locale, PLAN_HEADER[plan].tagline)}</span>
+        <span className="text-[12.5px] font-medium text-brass">{t(locale, copy.tagline)}</span>
       </div>
+      {copy.promise && <p className="text-[13.5px] font-medium text-ink">{t(locale, copy.promise)}</p>}
       <ul className="flex flex-col gap-1.5" data-testid="plan-summary">
-        {PLAN_SUMMARY[plan].map((k) => (
+        {copy.bullets.map((k) => (
           <li key={k} className="flex items-start gap-2 text-[13px] text-ink">
             <IconCheck size={15} aria-hidden className="mt-0.5 shrink-0 text-green" />
             {t(locale, k)}
           </li>
         ))}
       </ul>
-      <details className="rounded-lg border border-paper-deep bg-white" data-testid="plan-compare">
+      <details
+        id="compare-plans"
+        open={open}
+        onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}
+        className="scroll-mt-20 rounded-lg border border-paper-deep bg-white"
+        data-testid="plan-compare"
+      >
         <summary className="cursor-pointer list-none px-3 py-2 text-[13px] font-semibold text-ink [&::-webkit-details-marker]:hidden">{t(locale, "dashboard.settings.plans.heading")} ▾</summary>
-        {/* Wide screens: one table, the current plan's column highlighted. */}
+        <div className="grid grid-cols-1 gap-3 border-t border-paper-line p-3 sm:grid-cols-2 xl:grid-cols-4">
+          {COMPARE_PLANS.map((p) => (
+            <PlanColumn key={p} plan={p} current={p === plan} />
+          ))}
+        </div>
+        {/* Wider screens: one table, four plan columns, Premium highlighted. */}
         <div className="hidden border-t border-paper-line md:block">
           <table className="w-full table-fixed border-collapse text-[12.5px]">
             <thead>
               <tr>
-                <th className="w-[32%] p-2.5 text-left" scope="col">
+                <th className="w-[30%] p-2.5 text-left" scope="col">
                   <span className="sr-only">{t(locale, "dashboard.settings.plans.heading")}</span>
                 </th>
                 {COMPARE_PLANS.map((p) => (
-                  <th key={p} scope="col" data-current={p === plan || undefined} className={cn("p-2.5 text-left align-top font-normal", p === plan && hl)}>
-                    {header(p)}
-                    {p === plan && <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-soft">{t(locale, "dashboard.settings.plans.current")}</div>}
+                  <th
+                    key={p}
+                    scope="col"
+                    data-current={p === plan || undefined}
+                    data-highlight={p === HIGHLIGHT_PLAN || undefined}
+                    className={cn("p-2.5 text-left align-top font-normal", p === HIGHLIGHT_PLAN && HIGHLIGHT_BG)}
+                  >
+                    <div className="text-[13.5px] font-semibold text-ink">{t(locale, `dashboard.settings.plan.name.${p}` as MessageKey)}</div>
+                    <div className="text-[12px] text-ink-soft">{t(locale, PLAN_COPY[p].price)}</div>
+                    {p === plan && <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-brass">{t(locale, "dashboard.settings.plans.current")}</div>}
                   </th>
                 ))}
               </tr>
@@ -169,7 +193,7 @@ export function PlanCard({ plan }: { plan: Plan }) {
                     {t(locale, r.key)}
                   </th>
                   {COMPARE_PLANS.map((p) => (
-                    <td key={p} className={cn("p-2.5 align-top", p === plan && hl)}>
+                    <td key={p} className={cn("p-2.5 align-top", p === HIGHLIGHT_PLAN && HIGHLIGHT_BG)}>
                       <PlanCell cell={r.cells[p]} />
                     </td>
                   ))}
@@ -178,26 +202,63 @@ export function PlanCard({ plan }: { plan: Plan }) {
             </tbody>
           </table>
         </div>
-        {/* Phones: one card per plan, the current plan first. */}
-        <div className="flex flex-col gap-3 border-t border-paper-line p-3 md:hidden">
-          {[plan, ...COMPARE_PLANS.filter((p) => p !== plan)].map((p) => (
-            <div key={p} className={cn("rounded-lg border p-3", p === plan ? "border-brass bg-[color:color-mix(in_srgb,var(--color-brass)_10%,white)]" : "border-paper-deep")}>
-              {header(p)}
-              {p === plan && <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-soft">{t(locale, "dashboard.settings.plans.current")}</div>}
-              <ul className="mt-2 flex flex-col gap-1.5">
-                {COMPARE_ROWS.map((r) => (
-                  <li key={r.key} className="flex items-start justify-between gap-3 text-[12.5px]">
-                    <span className="text-ink">{t(locale, r.key)}</span>
-                    <span className="shrink-0 text-right">
-                      <PlanCell cell={r.cells[p]} />
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
       </details>
+    </div>
+  );
+}
+
+const HIGHLIGHT_BG = "bg-[color:color-mix(in_srgb,var(--color-brass)_10%,white)]";
+
+/** One plan's card in "Compare plans". On a phone the owner's plan comes
+ * first (order-first) and the card lists the comparison rows itself. */
+function PlanColumn({ plan, current }: { plan: Plan; current: boolean }) {
+  const locale = useLocale();
+  const copy = PLAN_COPY[plan];
+  const best = plan === HIGHLIGHT_PLAN;
+  return (
+    <div
+      data-plan={plan}
+      data-current={current || undefined}
+      className={cn(
+        "flex flex-col gap-2 rounded-lg border p-3",
+        current && "order-first sm:order-none",
+        best ? cn("border-brass", HIGHLIGHT_BG) : "border-paper-deep bg-white"
+      )}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-1.5">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-[14px] font-semibold text-ink">{t(locale, `dashboard.settings.plan.name.${plan}` as MessageKey)}</span>
+          <span className="text-[12.5px] text-ink-soft">{t(locale, copy.price)}</span>
+        </div>
+        {best && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-ink px-2 py-0.5 text-[10.5px] font-semibold text-white" data-testid="best-value">
+            <IconCrown size={11} aria-hidden className="text-brass" />
+            {t(locale, "dashboard.settings.plans.bestValue")}
+          </span>
+        )}
+      </div>
+      <div className="text-[12px] font-semibold text-brass">{t(locale, copy.tagline)}</div>
+      {current && <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-soft">{t(locale, "dashboard.settings.plans.current")}</div>}
+      {copy.promise && <p className="text-[12.5px] font-medium text-ink">{t(locale, copy.promise)}</p>}
+      <ul className="flex flex-col gap-1">
+        {copy.bullets.map((k) => (
+          <li key={k} className="flex items-start gap-1.5 text-[12.5px] text-ink">
+            <IconCheck size={13} aria-hidden className="mt-0.5 shrink-0 text-green" />
+            {t(locale, k)}
+          </li>
+        ))}
+      </ul>
+      {/* Phones: this plan's comparison rows (the table takes over from md). */}
+      <ul className="mt-1 flex flex-col gap-1.5 border-t border-paper-line pt-2 md:hidden">
+        {COMPARE_ROWS.map((r) => (
+          <li key={r.key} className="flex items-start justify-between gap-3 text-[12px]">
+            <span className="text-ink-soft">{t(locale, r.key)}</span>
+            <span className="shrink-0 text-right">
+              <PlanCell cell={r.cells[plan]} />
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -209,6 +270,13 @@ function PlanCell({ cell }: { cell: Cell }) {
       <span className="inline-flex items-center text-green">
         <IconCheck size={16} aria-hidden />
         <span className="sr-only">{t(locale, "dashboard.settings.plans.cell.yes")}</span>
+      </span>
+    );
+  if (cell.kind === "soon")
+    return (
+      <span className="inline-flex flex-wrap items-center gap-1 text-green">
+        <IconCheck size={16} aria-hidden />
+        <span className="rounded-full border border-paper-deep bg-paper px-1.5 text-[11px] font-semibold text-ink-soft">{t(locale, "dashboard.settings.plans.cell.soon")}</span>
       </span>
     );
   if (cell.kind === "preview") return <span className="font-medium text-ink-soft">{t(locale, "dashboard.settings.plans.cell.preview")}</span>;
