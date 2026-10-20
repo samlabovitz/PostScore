@@ -151,6 +151,12 @@ export function ReferralBuilder({
           passOn,
         }}
         onPassOnChange={onPassOnChange}
+        onApplySaved={(saved) => {
+          // A saved design brings its own rewards and code back (pass-on via onPassOnChange).
+          if (saved.referrerReward) setReferrerReward(saved.referrerReward);
+          if (saved.friendOffer) setFriendReward(saved.friendOffer);
+          if (saved.code) setCode(saved.code);
+        }}
         fields={
           <>
             <PassOnChoice value={passOn} onChange={onPassOnChange} />

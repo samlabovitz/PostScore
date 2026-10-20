@@ -25,6 +25,7 @@ import {
   IconSparkles,
   IconTrash,
   IconCopy,
+  IconPencil,
   IconTypography,
 } from "@tabler/icons-react";
 import { CHOICE, CHOICE_OFF, CHOICE_ON, Choices, ContrastAlert, INPUT, Label, PremiumPreviewBanner, SELECT, Toggle, fetchSignFont, readLogoFile, usePrintFonts } from "@/components/studio/StudioControls";
@@ -72,16 +73,13 @@ import {
   BASIC_REFERRAL_TEMPLATES,
   REFERRAL_TEMPLATES,
   passOnForTemplate,
-  SAVED_DESIGNS_MAX,
   SERIAL_MAX_COUNT,
   availableDestinations,
   basicCardDesign,
   cardContrastProblems,
   defaultBasicCard,
   defaultCardDesign,
-  loadPrintStudio,
   missingFields,
-  savePrintStudio,
   todayIso,
   type BasicCard,
   type CardBusiness,
@@ -91,14 +89,29 @@ import {
   type CardTemplate,
   type CardText,
   type PassOn,
-  type PrintStudioStore,
   type QrDestination,
   referralTemplate,
 } from "@/lib/printStudio/design";
 import { CARD_ICONS, CARD_ICON_IDS, type CardIconId } from "@/lib/printStudio/icons";
 import { layoutCardSheets, layoutSingleCard, serialLabel } from "@/lib/printStudio/layout";
 import { cardQrUrl, cardQrs } from "@/lib/printStudio/qr";
-import { t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
+import { formatShortDate, t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
+import { designColors } from "@/lib/signStudio/design";
+import {
+  addSaved,
+  applySaved,
+  canSaveMore,
+  deleteSaved,
+  duplicateSaved,
+  loadCardStore,
+  renameSaved,
+  saveCardStore,
+  savedOfKind,
+  NAME_MAX,
+  type CardStore,
+  type SavedCardText,
+  type SavedDesign,
+} from "@/lib/printStudio/savedDesigns";
 import { cn } from "@/lib/utils";
 import { cancelPrint, finishPrint, startPrint, type PrintJob } from "@/lib/signStudio/output";
 import { BRASS_BUTTON, OUTLINE_BUTTON } from "../website-reviews/buttonStyles";
@@ -536,9 +549,11 @@ export interface CardDesignerProps {
   actions: ReactNode;
   /** Referral: a template pick that needs another pass-on choice. */
   onPassOnChange?: (passOn: PassOn) => void;
+  /** Selecting a saved design: put its text back into the page's form. */
+  onApplySaved?: (text: SavedCardText) => void;
 }
 
-export function CardDesigner({ kind, plan, businessId, business, text, fields, actions, onPassOnChange }: CardDesignerProps) {
+export function CardDesigner({ kind, plan, businessId, business, text, fields, actions, onPassOnChange, onApplySaved }: CardDesignerProps) {
   const locale = useLocale();
   const lang: "en" | "es" = locale === "es" ? "es" : "en";
   const access = signAccess(plan);
@@ -550,10 +565,10 @@ export function CardDesigner({ kind, plan, businessId, business, text, fields, a
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Remembered on this device: read after mount (no hydration mismatch).
-  const [store, setStore] = useState<PrintStudioStore>({ current: {}, basic: {}, saved: [] });
+  const [store, setStore] = useState<CardStore>({ current: {}, basic: {}, saved: [] });
   const [logo, setLogo] = useState<StoredLogo | null>(null);
   useEffect(() => {
-    setStore(loadPrintStudio(businessId, lang, name));
+    setStore(loadCardStore(businessId, lang, name));
     setLogo(parseStoredLogo(readStorage(LOGO_STORAGE_KEY)));
   }, [businessId, lang, name]);
   const [logoNote, setLogoNote] = useState<string | null>(null);
@@ -574,10 +589,20 @@ export function CardDesigner({ kind, plan, businessId, business, text, fields, a
   const basicLook = useMemo(() => basicCardDesign(basic, lang), [JSON.stringify(basic), lang]); // eslint-disable-line react-hooks/exhaustive-deps
   const shown: CardDesign = studio ? design : premiumPreview ? { ...basicLook, ...premiumPreview, ...pageText } : basicLook;
 
-  const persist = (next: PrintStudioStore) => {
+  // The screen updates at once; the (synchronous) storage write waits a
+  // moment so typing and clicking never wait on it.
+  const writeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const persist = (next: CardStore) => {
     setStore(next);
-    savePrintStudio(businessId, next);
+    if (writeTimer.current) clearTimeout(writeTimer.current);
+    writeTimer.current = setTimeout(() => saveCardStore(businessId, next), 250);
   };
+  useEffect(
+    () => () => {
+      if (writeTimer.current) clearTimeout(writeTimer.current);
+    },
+    []
+  );
   const setDesign = (patch: Partial<CardDesign>) => persist({ ...store, current: { ...store.current, [kind]: { ...storedDesign, ...patch } } });
   const setBasic = (patch: Partial<BasicCard>) => {
     setPremiumPreview(null);
@@ -620,9 +645,29 @@ export function CardDesigner({ kind, plan, businessId, business, text, fields, a
   const showLogo = studio || premiumPreview ? logo : null;
   const logoShape = showLogo ? { aspect: showLogo.width / showLogo.height } : null;
   const credit = !studio && premiumPreview === null;
-  const shownKey = JSON.stringify(shown);
+  const liveKey = JSON.stringify(shown);
+  // Typing updates the preview after a 150 ms pause (rebuilding the card is
+  // the slow part); picking a design or an option shows at once.
+  const [shownKey, setShownKey] = useState(liveKey);
+  const flushPreview = useRef(true);
+  useEffect(() => {
+    if (flushPreview.current) {
+      flushPreview.current = false;
+      setShownKey(liveKey);
+      return;
+    }
+    const id = setTimeout(() => setShownKey(liveKey), 150);
+    return () => clearTimeout(id);
+  }, [liveKey]);
+  const previewDesign = useMemo(() => JSON.parse(shownKey) as CardDesign, [shownKey]);
+  // The QR only changes with its destination and style — not with text.
+  const qrKey = JSON.stringify([previewDesign.qr, previewDesign.back.qr, previewDesign.qrDots, previewDesign.qrCorners, previewDesign.qrCenter, logoShape !== null, business.placeId, business.googleMapsUri, business.website]);
+  const qrs = useMemo(() => cardQrs(previewDesign, business, logoShape !== null), [qrKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const lastPreview = useRef<string | null>(null);
   const preview = useMemo(() => {
-    if (!fonts.measurer) return null;
+    // New fonts still loading: keep showing the last card, never a blank.
+    if (!fonts.measurer) return lastPreview.current;
+    const shown = previewDesign;
     try {
       const input = { design: shown, business, credit, logo: logoShape, hasQr: (d: QrDestination) => cardQrUrl(d, business) !== null };
       let page;
@@ -635,18 +680,20 @@ export function CardDesigner({ kind, plan, businessId, business, text, fields, a
         const single = layoutSingleCard(input, fonts.measurer);
         page = face === "back" && single.back ? single.back : single.front;
       }
-      return renderPageSvg(page, {
-        qrs: cardQrs(shown, business, logoShape !== null),
+      const svg = renderPageSvg(page, {
+        qrs,
         fontFiles: designFontFiles(shown),
         logoHref: showLogo?.dataUrl ?? null,
         watermark: premiumPreview ? ts(locale, "premiumChip") : null,
         transparent: view === "card",
       });
+      lastPreview.current = svg;
+      return svg;
     } catch {
-      return null;
+      return lastPreview.current;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fonts.measurer, shownKey, business, credit, showLogo, view, face, premiumPreview !== null, locale]);
+  }, [fonts.measurer, shownKey, qrs, business, credit, showLogo, view, face, premiumPreview !== null, locale]);
   const sheet = CARD_SHEETS[shown.size];
   const [aw, ah] = view === "sheet" ? LETTER : [sheet.w, sheet.h];
 
@@ -706,54 +753,53 @@ export function CardDesigner({ kind, plan, businessId, business, text, fields, a
     }
   }
 
+  // Saved designs: this card type's own list. Saving keeps the look AND the
+  // page's text; selecting brings both back in one update.
+  const [savedFlash, setSavedFlash] = useState(false);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pageTextNow: SavedCardText = {
+    offer: text.offer,
+    friendOffer: text.friendOffer,
+    referrerReward: text.referrerReward,
+    expiration: text.expiration,
+    code: text.code,
+    subline: text.subline,
+    finePrint: text.finePrint,
+    ...(kind === "referral" && text.passOn ? { passOn: text.passOn } : {}),
+  };
   const saveCurrent = () => {
-    const label = saveName.trim();
-    if (!label || store.saved.length >= SAVED_DESIGNS_MAX) return;
-    persist({ ...store, saved: [...store.saved, { id: `${Date.now()}`, name: label, design: storedDesign }] });
+    const next = addSaved(store, { name: saveName, kind, design: storedDesign, text: pageTextNow, now: new Date() });
+    if (next === store) return;
+    persist(next);
     setSaveName("");
+    setSavedFlash(true);
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    flashTimer.current = setTimeout(() => setSavedFlash(false), 2000);
+  };
+  const applySavedDesign = (id: string) => {
+    const applied = applySaved(store, id);
+    if (!applied) return;
+    flushPreview.current = true;
+    setPremiumPreview(null);
+    persist(applied.store);
+    if (applied.text) onApplySaved?.(applied.text);
+    if (kind === "referral" && applied.text?.passOn) onPassOnChange?.(applied.text.passOn);
   };
   const saved = studio ? (
-    <div className="flex flex-col gap-2">
-      {store.saved.length === 0 ? (
-        <p className="text-[12px] text-ink-mute">{tp(locale, "saved.none")}</p>
-      ) : (
-        <ul className="flex flex-col gap-1.5">
-          {store.saved.map((s) => (
-            <li key={s.id} className="flex items-center justify-between gap-2 rounded-lg border border-paper-deep bg-white px-2.5 py-1.5 text-[13px]">
-              <span className="min-w-0 truncate font-medium text-ink">{s.name}</span>
-              <span className="flex shrink-0 items-center gap-2 text-[12px]">
-                <button type="button" onClick={() => persist({ ...store, current: { ...store.current, [kind]: { ...s.design, kind } } })} className="font-semibold text-ink underline">
-                  {tp(locale, "saved.use")}
-                </button>
-                <button
-                  type="button"
-                  disabled={store.saved.length >= SAVED_DESIGNS_MAX}
-                  onClick={() => persist({ ...store, saved: [...store.saved, { id: `${Date.now()}`, name: tp(locale, "saved.copyOf", { name: s.name }).slice(0, 40), design: s.design }] })}
-                  aria-label={tp(locale, "saved.duplicate")}
-                  title={tp(locale, "saved.duplicate")}
-                  className="text-ink-soft hover:text-ink disabled:opacity-40"
-                >
-                  <IconCopy size={15} />
-                </button>
-                <button type="button" onClick={() => persist({ ...store, saved: store.saved.filter((x) => x.id !== s.id) })} aria-label={tp(locale, "saved.delete")} title={tp(locale, "saved.delete")} className="text-ink-soft hover:text-red">
-                  <IconTrash size={15} />
-                </button>
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-      {store.saved.length < SAVED_DESIGNS_MAX ? (
-        <div className="flex gap-2">
-          <input type="text" value={saveName} maxLength={40} onChange={(e) => setSaveName(e.target.value)} placeholder={tp(locale, "saved.name")} aria-label={tp(locale, "saved.name")} className={INPUT} />
-          <button type="button" onClick={saveCurrent} disabled={!saveName.trim()} className={OUTLINE_BUTTON}>
-            {tp(locale, "saved.save")}
-          </button>
-        </div>
-      ) : (
-        <p className="text-[12px] text-ink-mute">{tp(locale, "saved.full")}</p>
-      )}
-    </div>
+    <SavedDesignsList
+      items={savedOfKind(store, kind)}
+      locale={locale}
+      inUseKey={JSON.stringify(storedDesign)}
+      canSave={canSaveMore(store, kind)}
+      saveName={saveName}
+      onSaveName={setSaveName}
+      onSave={saveCurrent}
+      savedFlash={savedFlash}
+      onUse={applySavedDesign}
+      onRename={(id, nextName) => persist(renameSaved(store, id, nextName))}
+      onDuplicate={(id) => persist(duplicateSaved(store, id, (n) => tp(locale, "saved.copyOf", { name: n }), new Date()))}
+      onDelete={(id) => persist(deleteSaved(store, id))}
+    />
   ) : (
     <p className="text-[12px] text-ink-mute">{tp(locale, "saved.premiumOnly")}</p>
   );
@@ -863,6 +909,154 @@ export function CardDesigner({ kind, plan, businessId, business, text, fields, a
           {tp(locale, "redemptions")}
         </p>
       </div>
+    </div>
+  );
+}
+
+/** A saved design's thumbnail: its colors and headline font, in miniature. */
+function SavedThumb({ design }: { design: CardDesign }) {
+  const colors = designColors(design);
+  return (
+    <span aria-hidden className="flex h-9 w-14 shrink-0 flex-col justify-between overflow-hidden rounded border border-paper-deep p-1" style={{ background: colors.background }}>
+      <span className="h-1 w-6 rounded-sm" style={{ background: colors.accent }} />
+      <span className="truncate text-[8px] font-bold leading-none" style={{ color: colors.text }}>
+        {design.offer || design.friendOffer || "Aa"}
+      </span>
+    </span>
+  );
+}
+
+function SavedDesignsList({
+  items,
+  locale,
+  inUseKey,
+  canSave,
+  saveName,
+  onSaveName,
+  onSave,
+  savedFlash,
+  onUse,
+  onRename,
+  onDuplicate,
+  onDelete,
+}: {
+  items: SavedDesign[];
+  locale: Locale;
+  inUseKey: string;
+  canSave: boolean;
+  saveName: string;
+  onSaveName: (v: string) => void;
+  onSave: () => void;
+  savedFlash: boolean;
+  onUse: (id: string) => void;
+  onRename: (id: string, name: string) => void;
+  onDuplicate: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [renaming, setRenaming] = useState<{ id: string; value: string } | null>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
+  return (
+    <div className="flex flex-col gap-2" data-testid="saved-designs">
+      {items.length === 0 ? (
+        <p className="text-[12px] text-ink-mute">{tp(locale, "saved.none")}</p>
+      ) : (
+        <ul className="flex flex-col gap-1.5">
+          {items.map((s) => {
+            const inUse = JSON.stringify({ ...s.design }) === inUseKey;
+            return (
+              <li key={s.id} className="flex flex-col gap-1.5 rounded-lg border border-paper-deep bg-white px-2.5 py-2 text-[13px]">
+                <div className="flex items-center gap-2.5">
+                  <SavedThumb design={s.design} />
+                  <div className="min-w-0 flex-1">
+                    {renaming?.id === s.id ? (
+                      <form
+                        className="flex gap-1.5"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          onRename(s.id, renaming.value);
+                          setRenaming(null);
+                        }}
+                      >
+                        <input autoFocus value={renaming.value} maxLength={NAME_MAX} onChange={(e) => setRenaming({ id: s.id, value: e.target.value })} aria-label={tp(locale, "saved.rename")} className={INPUT} />
+                        <button type="submit" className="shrink-0 text-[12px] font-semibold text-ink underline">
+                          {tp(locale, "saved.renameSave")}
+                        </button>
+                      </form>
+                    ) : (
+                      <>
+                        <div className="truncate font-medium text-ink">{s.name}</div>
+                        <div className="text-[11.5px] text-ink-mute">
+                          {s.savedAt ? tp(locale, "saved.savedOn", { date: formatShortDate(s.savedAt, locale) }) : tp(locale, "saved.savedEarlier")}
+                          {inUse && <span className="ml-1.5 font-semibold text-ink-soft">· {tp(locale, "saved.inUse")}</span>}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <span className="flex shrink-0 items-center gap-2 text-[12px]">
+                    <button type="button" onClick={() => onUse(s.id)} className="font-semibold text-ink underline">
+                      {tp(locale, "saved.use")}
+                    </button>
+                    <button type="button" onClick={() => setRenaming({ id: s.id, value: s.name })} aria-label={tp(locale, "saved.rename")} title={tp(locale, "saved.rename")} className="text-ink-soft hover:text-ink">
+                      <IconPencil size={15} />
+                    </button>
+                    <button type="button" disabled={!canSave} onClick={() => onDuplicate(s.id)} aria-label={tp(locale, "saved.duplicate")} title={tp(locale, "saved.duplicate")} className="text-ink-soft hover:text-ink disabled:opacity-40">
+                      <IconCopy size={15} />
+                    </button>
+                    <button type="button" onClick={() => setConfirming(s.id)} aria-label={tp(locale, "saved.delete")} title={tp(locale, "saved.delete")} className="text-ink-soft hover:text-red">
+                      <IconTrash size={15} />
+                    </button>
+                  </span>
+                </div>
+                {confirming === s.id && (
+                  <div className="flex flex-wrap items-center gap-2 text-[12px]" role="alert">
+                    <span className="text-ink">{tp(locale, "saved.deleteConfirm", { name: s.name })}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onDelete(s.id);
+                        setConfirming(null);
+                      }}
+                      className="font-semibold text-red underline"
+                    >
+                      {tp(locale, "saved.deleteYes")}
+                    </button>
+                    <button type="button" onClick={() => setConfirming(null)} className="text-ink-soft underline">
+                      {tp(locale, "saved.cancel")}
+                    </button>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {canSave ? (
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={saveName}
+            maxLength={NAME_MAX}
+            onChange={(e) => onSaveName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onSave();
+            }}
+            placeholder={tp(locale, "saved.name")}
+            aria-label={tp(locale, "saved.name")}
+            className={INPUT}
+          />
+          <button type="button" onClick={onSave} disabled={!saveName.trim()} className={OUTLINE_BUTTON}>
+            {savedFlash ? tp(locale, "saved.savedOk") : tp(locale, "saved.save")}
+          </button>
+        </div>
+      ) : (
+        <p className="text-[12px] text-ink-mute">{tp(locale, "saved.full")}</p>
+      )}
+      {savedFlash && (
+        <p className="text-[12px] font-semibold text-green" role="status">
+          {tp(locale, "saved.savedOk")}
+        </p>
+      )}
+      <p className="text-[11.5px] text-ink-mute">{tp(locale, "saved.deviceNote")}</p>
     </div>
   );
 }

@@ -185,6 +185,15 @@ export function CouponBuilder({
           friendOffer: "",
           referrerReward: "",
         }}
+        onApplySaved={(saved) => {
+          // A saved design brings its own offer, expiry, code and fine print back.
+          if (saved.offer) setOffer(saved.offer);
+          setExpiry(saved.expiration);
+          if (saved.code) setCode(saved.code);
+          setInstructions(saved.subline);
+          setTerms(saved.finePrint);
+          setAngleId("custom");
+        }}
         fields={
           <>
             <div>

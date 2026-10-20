@@ -26,6 +26,16 @@ export type MessageKey =
   | "dashboard.niche.competitorsCapped"
   | "dashboard.niche.competitorsNone"
   | "dashboard.niche.competitorsFailed"
+  | "dashboard.growth.print.saved.savedOk"
+  | "dashboard.growth.print.saved.deviceNote"
+  | "dashboard.growth.print.saved.rename"
+  | "dashboard.growth.print.saved.renameSave"
+  | "dashboard.growth.print.saved.cancel"
+  | "dashboard.growth.print.saved.deleteConfirm"
+  | "dashboard.growth.print.saved.deleteYes"
+  | "dashboard.growth.print.saved.savedOn"
+  | "dashboard.growth.print.saved.savedEarlier"
+  | "dashboard.growth.print.saved.inUse"
   | "dashboard.competitors.groups.heading"
   | "dashboard.competitors.groups.yourType"
   | "dashboard.competitors.groups.change"
@@ -3576,6 +3586,16 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.niche.competitorsCapped": "This month's competitor searches are used up; yours will update on {date}. Until then, you're compared only with the saved ones that match {niche}.",
     "dashboard.niche.competitorsNone": "We searched near you and found no {niche} competitors yet.",
     "dashboard.niche.competitorsFailed": "Saved, but we couldn't update your competitors right now — try “Refresh competitors” later.",
+    "dashboard.growth.print.saved.savedOk": "Saved ✓",
+    "dashboard.growth.print.saved.deviceNote": "Saved on this device.",
+    "dashboard.growth.print.saved.rename": "Rename",
+    "dashboard.growth.print.saved.renameSave": "Save name",
+    "dashboard.growth.print.saved.cancel": "Cancel",
+    "dashboard.growth.print.saved.deleteConfirm": "Delete “{name}”?",
+    "dashboard.growth.print.saved.deleteYes": "Yes, delete",
+    "dashboard.growth.print.saved.savedOn": "Saved {date}",
+    "dashboard.growth.print.saved.savedEarlier": "Saved earlier (look only)",
+    "dashboard.growth.print.saved.inUse": "In use",
     "dashboard.competitors.groups.heading": "Who you're compared with",
     "dashboard.competitors.groups.yourType": "Your type: {niche}",
     "dashboard.competitors.groups.change": "Change",
@@ -7488,6 +7508,16 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.niche.competitorsCapped": "Las búsquedas de competidores de este mes se agotaron; las suyas se actualizarán el {date}. Hasta entonces, se le compara solo con los guardados que coinciden con {niche}.",
     "dashboard.niche.competitorsNone": "Buscamos cerca de usted y todavía no encontramos competidores del tipo {niche}.",
     "dashboard.niche.competitorsFailed": "Guardado, pero no pudimos actualizar sus competidores ahora — pruebe “Actualizar competidores” más tarde.",
+    "dashboard.growth.print.saved.savedOk": "Guardado ✓",
+    "dashboard.growth.print.saved.deviceNote": "Guardado en este dispositivo.",
+    "dashboard.growth.print.saved.rename": "Cambiar nombre",
+    "dashboard.growth.print.saved.renameSave": "Guardar nombre",
+    "dashboard.growth.print.saved.cancel": "Cancelar",
+    "dashboard.growth.print.saved.deleteConfirm": "¿Eliminar “{name}”?",
+    "dashboard.growth.print.saved.deleteYes": "Sí, eliminar",
+    "dashboard.growth.print.saved.savedOn": "Guardado el {date}",
+    "dashboard.growth.print.saved.savedEarlier": "Guardado antes (solo el diseño)",
+    "dashboard.growth.print.saved.inUse": "En uso",
     "dashboard.competitors.groups.heading": "Con quién se le compara",
     "dashboard.competitors.groups.yourType": "Su tipo: {niche}",
     "dashboard.competitors.groups.change": "Cambiar",
