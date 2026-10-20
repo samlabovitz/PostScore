@@ -35,6 +35,8 @@ import type { AssistantBusinessContext } from "@/lib/assistant";
 import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
 import { LiveListingSection } from "@/components/gbp/LiveListingSection";
 import { InfoTip } from "@/components/reports/ScoreHistoryChart";
+import { FreePostAIPreview, FreeReviewFocus, HoldingBack, RankUnlockLine } from "@/components/overview/FreeOverview";
+import type { Plan } from "@/lib/plan";
 
 
 
@@ -61,6 +63,8 @@ export function BusinessScoreView({
   recommendations,
   websiteFixCount,
   linkOptions,
+  plan = "grow",
+  freeRescanNextAt = null,
 }: {
   businessId: string;
   business: BusinessRecord;
@@ -85,6 +89,13 @@ export function BusinessScoreView({
   /** The Website page's own fix count (lib/websiteFixes.ts). */
   websiteFixCount: number;
   linkOptions: LinkOptions;
+  /** The account's plan (lib/premium.ts). Free is an audit: next steps
+   * become "What's holding your score back" (fixes are locked previews),
+   * reviews lead, PostAI is a locked preview, 1 re-scan a month. Grow and
+   * above see the Overview unchanged. */
+  plan?: Plan;
+  /** Free: when the month's free re-scan opens again (null = available). */
+  freeRescanNextAt?: string | null;
 }) {
   const locale = useLocale();
   const { breakdown, projectedBreakdown } = result;
@@ -102,7 +113,8 @@ export function BusinessScoreView({
   const hasWebsite = businessWebsiteUrl(business) !== null;
   const liveSiteUrl = businessWebsiteUrl(business);
   const scoreBasis = scoreBasisPoints(breakdown.categories);
-  const rescan = useRescan(businessId, lastScanAt, now);
+  const free = plan === "free";
+  const rescan = useRescan(businessId, lastScanAt, now, free ? freeRescanNextAt : null);
   const displayName = business.name ?? t(locale, "dashboard.overview.untitledBusiness");
 
   return (
@@ -139,7 +151,7 @@ export function BusinessScoreView({
             )}
             <RescanButton state={rescan.state} nextAt={rescan.nextAt} onClick={rescan.run} />
           </div>
-          <NextRescanNote nextAt={rescan.nextAt} />
+          <NextRescanNote nextAt={rescan.nextAt} monthly={rescan.monthly} />
         </div>
       </div>
 
@@ -159,7 +171,9 @@ export function BusinessScoreView({
         <RescanMessages state={rescan.state} />
       </div>
 
-      {assistant.status === "ok" ? (
+      {free ? (
+        <FreePostAIPreview starterPrompts={assistant.status === "ok" ? assistant.starterPrompts : []} />
+      ) : assistant.status === "ok" ? (
         <AssistantLauncher
           businessId={businessId}
           businessName={business.name}
@@ -173,12 +187,21 @@ export function BusinessScoreView({
         </Card>
       )}
 
-      <GrowMoreCustomers
-        businessId={businessId}
-        profileTools={profileTools}
-        reviewCount={business.review_count}
-        nearbyReviewAverage={benchmark.status === "ok" ? benchmark.benchmark.competitorReviewAverage : null}
-      />
+      {free ? (
+        <FreeReviewFocus
+          businessId={businessId}
+          reviewCount={business.review_count}
+          nearbyAverage={benchmark.status === "ok" ? benchmark.benchmark.competitorReviewAverage : null}
+          competitorNoun={benchmark.status === "ok" ? benchmark.benchmark.competitorNoun : null}
+        />
+      ) : (
+        <GrowMoreCustomers
+          businessId={businessId}
+          profileTools={profileTools}
+          reviewCount={business.review_count}
+          nearbyReviewAverage={benchmark.status === "ok" ? benchmark.benchmark.competitorReviewAverage : null}
+        />
+      )}
 
       <SectionHeading title={t(locale, "dashboard.overview.atAGlanceHeading")} />
       <Card className="p-5">
@@ -199,6 +222,7 @@ export function BusinessScoreView({
           </div>
           <LocalBenchmarkTile businessId={businessId} result={benchmark} />
         </div>
+        {free && <RankUnlockLine />}
       </Card>
 
       <ScoreBreakdownPanel
@@ -213,7 +237,11 @@ export function BusinessScoreView({
       {/* Side by side at equal height (each card centers its own content
           if shorter); stacked on mobile. PostStudio gets its own row. */}
       <div className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <TopRecommendations businessId={businessId} recommendations={recommendations} />
+        {free ? (
+          <HoldingBack suggestions={result.suggestions} checks={breakdown.checks} />
+        ) : (
+          <TopRecommendations businessId={businessId} recommendations={recommendations} />
+        )}
         <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} />
       </div>
       <StudioComingSoon businessId={businessId} />

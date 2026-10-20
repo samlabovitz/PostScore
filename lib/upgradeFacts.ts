@@ -5,15 +5,9 @@
 import { parseWebsiteAnalysis, type CheckResult, type ScoreWithSuggestions } from "@/lib/scoring";
 import { resolveWebsiteBuilder, WEBSITE_BUILDER_NAMES } from "@/lib/websiteBuilder";
 import { businessWebsiteUrl } from "@/lib/businessWebsite";
-import type { MissingIssue, PromoFacts } from "@/lib/upgradePromos";
+import { MISSING_BY_CHECK, type PromoFacts } from "@/lib/upgradePromos";
 
-const MISSING_CHECKS: Array<[string, MissingIssue]> = [
-  ["completeness.hours", "hours"],
-  ["completeness.phone", "phone"],
-  ["completeness.website_link", "website"],
-  ["completeness.photos", "photos"],
-  ["completeness.address", "address"],
-];
+const MISSING_CHECKS = Object.entries(MISSING_BY_CHECK);
 
 const known = (c: CheckResult) => c.confidence === "VERIFIED" || c.confidence === "LIKELY";
 

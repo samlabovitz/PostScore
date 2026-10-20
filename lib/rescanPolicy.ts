@@ -27,6 +27,24 @@ export function rescanAvailability(lastScanAt: string | null, now: Date): Rescan
   return { allowed: false, nextAvailableAt: new Date(next).toISOString() };
 }
 
+/** Free includes ONE owner re-scan per 30 days (the first scan doesn't
+ * count), on top of the 24-hour rule. Owner re-scans are logged in
+ * places_calls (kind "owner_rescan") — each is one Places Details call. */
+export const FREE_RESCAN_DAYS = 30;
+
+export type RescanGate = RescanAvailability & { limit: "daily" | "monthly" | null };
+
+/** Whether the owner may re-scan now: the 24-hour rule for everyone, and
+ * on Free also once per 30 days since their last owner re-scan. */
+export function rescanGate(free: boolean, lastFullScanAt: string | null, lastOwnerRescanAt: string | null, now: Date): RescanGate {
+  if (free && lastOwnerRescanAt) {
+    const next = Date.parse(lastOwnerRescanAt) + FREE_RESCAN_DAYS * 24 * HOUR_MS;
+    if (Number.isFinite(next) && now.getTime() < next) return { allowed: false, nextAvailableAt: new Date(next).toISOString(), limit: "monthly" };
+  }
+  const daily = rescanAvailability(lastFullScanAt, now);
+  return daily.allowed ? { ...daily, limit: null } : { ...daily, limit: "daily" };
+}
+
 export type ScanFreshness =
   | { kind: "never" }
   | { kind: "today" }

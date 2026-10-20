@@ -151,6 +151,27 @@ export type MessageKey =
   | "dashboard.upgrade.chip.starterSite"
   | "dashboard.upgrade.chip.printTools"
   | "dashboard.upgrade.chip.soon"
+  | "dashboard.upgrade.unlock.postai"
+  | "dashboard.free.holdingHeading"
+  | "dashboard.free.holdingSub"
+  | "dashboard.free.costs"
+  | "dashboard.free.costsOne"
+  | "dashboard.free.howToFix"
+  | "dashboard.free.hideFix"
+  | "dashboard.free.firstStep"
+  | "dashboard.free.moreSteps"
+  | "dashboard.free.noIssues"
+  | "dashboard.free.reviewHeading"
+  | "dashboard.free.reviewGap"
+  | "dashboard.free.reviewGapOne"
+  | "dashboard.free.reviewWhy"
+  | "dashboard.free.postaiTitle"
+  | "dashboard.free.postaiBody"
+  | "dashboard.free.postaiLocked"
+  | "dashboard.free.nextFreeRescan"
+  | "dashboard.free.rescanMonthly"
+  | "dashboard.free.lockedPreviewBadge"
+  | "dashboard.free.lockedPreviewSr"
   | "dashboard.niche.capped"
   | "dashboard.niche.savedUpdating"
   | "dashboard.niche.competitorsUpdated"
@@ -3832,6 +3853,27 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.chip.starterSite": "A starter website",
     "dashboard.upgrade.chip.printTools": "Print signs, coupons & cards",
     "dashboard.upgrade.chip.soon": "soon",
+    "dashboard.upgrade.unlock.postai": "Ask PostAI anything about your score and what to fix first — with Grow.",
+    "dashboard.free.holdingHeading": "What's holding your score back",
+    "dashboard.free.holdingSub": "The issues costing you the most points, from your latest scan.",
+    "dashboard.free.costs": "Costs you {points} pts",
+    "dashboard.free.costsOne": "Costs you 1 pt",
+    "dashboard.free.howToFix": "How to fix it",
+    "dashboard.free.hideFix": "Hide",
+    "dashboard.free.firstStep": "Step 1",
+    "dashboard.free.moreSteps": "Every step, for your setup",
+    "dashboard.free.noIssues": "Nothing is costing you points right now.",
+    "dashboard.free.reviewHeading": "Reviews: your biggest lever",
+    "dashboard.free.reviewGap": "You have {count} Google reviews. Nearby {noun} average {average} — {gap} more than you.",
+    "dashboard.free.reviewGapOne": "You have 1 Google review. Nearby {noun} average {average} — {gap} more than you.",
+    "dashboard.free.reviewWhy": "More recent reviews help you show up higher on Google and win more customers.",
+    "dashboard.free.postaiTitle": "PostAI, your marketing assistant",
+    "dashboard.free.postaiBody": "Ask anything about your score — PostAI answers with your own data.",
+    "dashboard.free.postaiLocked": "PostAI is part of Grow. See plans in Settings → Plan & billing.",
+    "dashboard.free.nextFreeRescan": "Next free re-scan: {date}",
+    "dashboard.free.rescanMonthly": "Free includes 1 re-scan a month.",
+    "dashboard.free.lockedPreviewBadge": "Preview",
+    "dashboard.free.lockedPreviewSr": "Preview of {title}. Part of Grow.",
     "dashboard.niche.capped": "This month's competitor searches are used up — they start again on {date}.",
     "dashboard.niche.savedUpdating": "Saved — we'll update your competitors.",
     "dashboard.niche.competitorsUpdated": "Your competitors were updated for {niche}. Their full scores fill in over the next few minutes.",
@@ -7875,6 +7917,27 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.chip.starterSite": "Un sitio web inicial",
     "dashboard.upgrade.chip.printTools": "Imprima letreros, cupones y tarjetas",
     "dashboard.upgrade.chip.soon": "pronto",
+    "dashboard.upgrade.unlock.postai": "Pregúntele a PostAI lo que quiera sobre su puntuación y qué arreglar primero, con Grow.",
+    "dashboard.free.holdingHeading": "Lo que está frenando su puntuación",
+    "dashboard.free.holdingSub": "Los problemas que más puntos le cuestan, según su último análisis.",
+    "dashboard.free.costs": "Le cuesta {points} pts",
+    "dashboard.free.costsOne": "Le cuesta 1 pt",
+    "dashboard.free.howToFix": "Cómo arreglarlo",
+    "dashboard.free.hideFix": "Ocultar",
+    "dashboard.free.firstStep": "Paso 1",
+    "dashboard.free.moreSteps": "Todos los pasos, según su caso",
+    "dashboard.free.noIssues": "Ahora mismo nada le está restando puntos.",
+    "dashboard.free.reviewHeading": "Reseñas: su mejor herramienta",
+    "dashboard.free.reviewGap": "Usted tiene {count} reseñas en Google. Los {noun} cercanos tienen {average} en promedio: {gap} más que usted.",
+    "dashboard.free.reviewGapOne": "Usted tiene 1 reseña en Google. Los {noun} cercanos tienen {average} en promedio: {gap} más que usted.",
+    "dashboard.free.reviewWhy": "Más reseñas recientes le ayudan a aparecer más arriba en Google y a ganar más clientes.",
+    "dashboard.free.postaiTitle": "PostAI, su asistente de marketing",
+    "dashboard.free.postaiBody": "Pregunte lo que quiera sobre su puntuación: PostAI responde con sus propios datos.",
+    "dashboard.free.postaiLocked": "PostAI está incluido en Grow. Vea los planes en Configuración → Plan y facturación.",
+    "dashboard.free.nextFreeRescan": "Próximo escaneo gratis: {date}",
+    "dashboard.free.rescanMonthly": "El plan Gratis incluye 1 escaneo al mes.",
+    "dashboard.free.lockedPreviewBadge": "Vista previa",
+    "dashboard.free.lockedPreviewSr": "Vista previa de {title}. Incluido en Grow.",
     "dashboard.niche.capped": "Las búsquedas de competidores de este mes se agotaron — vuelven el {date}.",
     "dashboard.niche.savedUpdating": "Guardado — actualizaremos sus competidores.",
     "dashboard.niche.competitorsUpdated": "Sus competidores se actualizaron para {niche}. Sus puntuaciones completas se completan en los próximos minutos.",

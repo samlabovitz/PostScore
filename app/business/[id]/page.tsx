@@ -2,6 +2,9 @@ import { notFound, redirect } from "next/navigation";
 import { getListingModeForPage } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { loadUpgradeContext } from "@/lib/upgradePromos.server";
+import { getPlan } from "@/lib/premium";
+import { rescanGate } from "@/lib/rescanPolicy";
+import { lastOwnerRescanAt } from "@/lib/placesSearchBudget.server";
 import { Card } from "@/components/ui/Card";
 import { scoreBusinessById, getScoreHistory, getRecentScoreSnapshots } from "@/app/actions/scoring";
 import { getBusinessSummary } from "@/app/actions/businesses";
@@ -93,7 +96,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     );
   }
 
-  const [history, recentSnapshots, assistantPageData, benchmark, gbpStatus, actionPlan, niche, upgrade] = await Promise.all([
+  const [history, recentSnapshots, assistantPageData, benchmark, gbpStatus, actionPlan, niche, upgrade, lastOwnerRescan] = await Promise.all([
     getScoreHistory(params.id),
     getRecentScoreSnapshots(params.id, 2),
     getAssistantPageData(params.id),
@@ -109,8 +112,12 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     }),
     loadBusinessNiche(createClient(), params.id),
     loadUpgradeContext(params.id, "overview"),
+    // Free: when the month's free re-scan was last used (no Google call).
+    getPlan() === "free" ? lastOwnerRescanAt(params.id) : Promise.resolve(null),
   ]);
   const bannerKind = niche ? nicheBannerKind(niche.resolved) : null;
+  const freeGate = rescanGate(upgrade.plan === "free", null, lastOwnerRescan, new Date());
+  const freeRescanNextAt = freeGate.limit === "monthly" ? freeGate.nextAvailableAt : null;
 
   const linkOptions = { referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk };
   const recommendations =
@@ -166,6 +173,8 @@ export default async function BusinessPage({ params }: { params: { id: string } 
         recommendations={recommendations}
         websiteFixCount={websiteFixCount}
         linkOptions={linkOptions}
+        plan={upgrade.plan}
+        freeRescanNextAt={freeRescanNextAt}
       />
     </DashboardShell>
   );

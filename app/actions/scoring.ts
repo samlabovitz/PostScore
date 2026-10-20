@@ -2,7 +2,8 @@
 
 import { requestCache } from "@/lib/requestCache";
 import { withTimeZone } from "@/lib/businessTimeZone";
-import { rescanAvailability } from "@/lib/rescanPolicy";
+import { rescanGate } from "@/lib/rescanPolicy";
+import { getPlan } from "@/lib/premium";
 import { diffBreakdowns } from "@/lib/scoreChanges";
 import { ensureFirstCompetitorScanWithClient } from "@/app/actions/competitors";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -283,7 +284,7 @@ export type RescanBusinessResult =
        * and how many checks changed — for the honest summary toast. */
       summary?: RescanSummary;
     }
-  | { status: "too_soon"; nextAvailableAt: string }
+  | { status: "too_soon"; nextAvailableAt: string; limit?: "daily" | "monthly" }
   | { status: "not_found" }
   | { status: "unauthenticated" }
   | { status: "no_results" }
@@ -352,13 +353,23 @@ export async function rescanBusiness(businessId: string): Promise<RescanBusiness
     return { status: "unauthenticated" };
   }
 
-  // One re-scan per business per 24 hours (lib/rescanPolicy.ts) — checked
-  // before any paid call. Website-only re-checks don't count.
-  const [before, lastFull] = await Promise.all([latestScore(supabase, businessId), latestFullScore(supabase, businessId)]);
-  const availability = rescanAvailability(lastFull?.created_at ?? null, new Date());
-  if (!availability.allowed) return { status: "too_soon", nextAvailableAt: availability.nextAvailableAt! };
+  // One re-scan per business per 24 hours, and on Free one owner re-scan
+  // per 30 days (lib/rescanPolicy.ts rescanGate) — checked before any paid
+  // call. Website-only re-checks don't count.
+  const free = getPlan() === "free";
+  // Loaded here (admin client, server only) so importing this file stays light.
+  const { lastOwnerRescanAt, logOwnerRescan } = await import("@/lib/placesSearchBudget.server");
+  const [before, lastFull, lastOwner] = await Promise.all([
+    latestScore(supabase, businessId),
+    latestFullScore(supabase, businessId),
+    free ? lastOwnerRescanAt(businessId) : Promise.resolve(null),
+  ]);
+  const gate = rescanGate(free, lastFull?.created_at ?? null, lastOwner, new Date());
+  if (!gate.allowed) return { status: "too_soon", nextAvailableAt: gate.nextAvailableAt!, limit: gate.limit ?? "daily" };
 
   const result = await rescanBusinessWithClient(supabase, businessId);
+  // One Places Details call — logged for every plan (Free's monthly count).
+  if (result.status === "ok") await logOwnerRescan(businessId);
   // Part B: the business's first competitor scan, once ever (no-op when
   // one is already saved). Interactive only — the bulk re-scan script and
   // the monthly report call rescanBusinessWithClient directly.

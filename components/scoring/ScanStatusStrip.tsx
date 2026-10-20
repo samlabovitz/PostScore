@@ -14,7 +14,7 @@ import { rescanBusiness, type RescanSummary } from "@/app/actions/scoring";
 import { rescanAvailability, scanFreshness } from "@/lib/rescanPolicy";
 import { cn } from "@/lib/utils";
 import { formatPoints } from "@/components/scoring/CategoryCard";
-import { formatDateTime, t, tPlural, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
+import { formatDateTime, formatShortDate, t, tPlural, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 
 export function freshnessLabel(lastScanAt: string | null, now: Date, timeZone: string, locale: Locale): { text: string; tone: "green" | "neutral" | "amber" } {
   const f = scanFreshness(lastScanAt, now, timeZone);
@@ -90,12 +90,13 @@ type RescanState =
   | { kind: "scanning" }
   | { kind: "done"; message: string }
   | { kind: "error"; message: string }
-  | { kind: "too_soon"; at: string };
+  | { kind: "too_soon"; at: string; monthly: boolean };
 
 /** The Re-scan action and its honest outcome, shared by the strip and
  * the Overview header. `nextAt` is when the next re-scan opens (null =
- * allowed now). */
-export function useRescan(businessId: string, lastScanAt: string | null, now: string) {
+ * allowed now). On Free, `freeNextAt` is when the month's free re-scan
+ * opens again (lib/rescanPolicy.ts rescanGate) — `monthly` says so. */
+export function useRescan(businessId: string, lastScanAt: string | null, now: string, freeNextAt: string | null = null) {
   const locale = useLocale();
   const router = useRouter();
   const availability = rescanAvailability(lastScanAt, new Date(now));
@@ -110,7 +111,7 @@ export function useRescan(businessId: string, lastScanAt: string | null, now: st
       setState({ kind: "done", message: result.summary ? `${rescanToast(result.summary, locale)}. ${details}` : details });
       router.refresh();
     } else if (result.status === "too_soon") {
-      setState({ kind: "too_soon", at: result.nextAvailableAt });
+      setState({ kind: "too_soon", at: result.nextAvailableAt, monthly: result.limit === "monthly" });
     } else if (result.status === "no_results") {
       setState({ kind: "error", message: t(locale, "dashboard.overview.rescanNoResultsError") });
     } else if (result.status === "error") {
@@ -120,8 +121,10 @@ export function useRescan(businessId: string, lastScanAt: string | null, now: st
     }
   }
 
-  const nextAt = state.kind === "too_soon" ? state.at : availability.allowed ? null : availability.nextAvailableAt;
-  return { state, run, nextAt };
+  const freeBlocked = freeNextAt !== null && Date.parse(freeNextAt) > Date.parse(now);
+  const nextAt = state.kind === "too_soon" ? state.at : freeBlocked ? freeNextAt : availability.allowed ? null : availability.nextAvailableAt;
+  const monthly = state.kind === "too_soon" ? state.monthly : freeBlocked;
+  return { state, run, nextAt, monthly };
 }
 
 /** Freshness chip · "Last scanned {date}" · scoring-version ⓘ. */
@@ -193,9 +196,15 @@ export function RescanButton({ state, nextAt, onClick }: { state: RescanState; n
   );
 }
 
-export function NextRescanNote({ nextAt }: { nextAt: string | null }) {
+export function NextRescanNote({ nextAt, monthly = false }: { nextAt: string | null; monthly?: boolean }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
   if (!nextAt) return null;
+  if (monthly)
+    return (
+      <span data-testid="next-free-rescan" className="text-[12px] text-ink-mute">
+        {t(locale, "dashboard.free.nextFreeRescan", { date: formatShortDate(nextAt, locale, timeZone) })}
+      </span>
+    );
   return <span className="text-[12px] text-ink-mute">{t(locale, "dashboard.rescan.nextAvailable", { time: formatDateTime(nextAt, locale, timeZone) })}</span>;
 }

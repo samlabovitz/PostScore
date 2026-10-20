@@ -453,8 +453,13 @@ describe("Overview layout and scan history (GBP card tweaks)", () => {
   test("recs + since-last-scan: equal height, side by side, stacked on mobile; PostStudio on its own row; no Version column", async () => {
     const fs = await import("node:fs");
     const view = fs.readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8");
+    // Free shows "What's holding your score back" in the recs' place (same grid).
     expect(view).toContain(`<div className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <TopRecommendations businessId={businessId} recommendations={recommendations} />
+        {free ? (
+          <HoldingBack suggestions={result.suggestions} checks={breakdown.checks} />
+        ) : (
+          <TopRecommendations businessId={businessId} recommendations={recommendations} />
+        )}
         <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} />
       </div>
       <StudioComingSoon businessId={businessId} />`);

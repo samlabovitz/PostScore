@@ -16,6 +16,7 @@ import { businessRowToScoringInput } from "@/lib/scoring";
 import { bizProfile, resolveBizProfile } from "@/config/bizProfiles";
 import { priceLevelToSymbol } from "@/lib/priceLevel";
 import { buildWeeklyChecklistItems } from "@/lib/weeklyChecklist";
+import { getPlan } from "@/lib/premium";
 import { callAnthropicChat, AnthropicApiError } from "@/lib/anthropicClient";
 import {
   ASSISTANT_MAX_TOKENS,
@@ -424,6 +425,9 @@ export async function sendAssistantMessage(
 ): Promise<SendAssistantMessageResult> {
   const loaded = await loadContext(businessId);
   if (loaded.status !== "ok") return loaded;
+  // Free is an audit: PostAI is a locked preview there, and no AI call is
+  // ever made for a Free account (docs/product-structure.md).
+  if (getPlan() === "free") return { status: "error", message: t(loaded.locale, "dashboard.free.postaiLocked") };
 
   const trimmed = message.trim();
   if (!trimmed) {

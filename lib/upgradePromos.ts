@@ -61,7 +61,7 @@ const U = (s: string) => `dashboard.upgrade.${s}` as MessageKey;
 // The Free "unlock" lines (saved for 5f) — each only when its data is real.
 // ---------------------------------------------------------------------------
 
-export type UnlockLineId = "missing" | "reviews" | "rank" | "website" | "plan" | "recheck" | "designs" | "hub" | "connect";
+export type UnlockLineId = "missing" | "reviews" | "rank" | "website" | "plan" | "recheck" | "designs" | "hub" | "connect" | "postai";
 
 export function unlockLine(id: UnlockLineId, f: PromoFacts, locale: Locale): string | null {
   switch (id) {
@@ -82,8 +82,29 @@ export function unlockLine(id: UnlockLineId, f: PromoFacts, locale: Locale): str
     case "designs":
     case "hub":
     case "connect":
+    case "postai":
       return t(locale, U(`unlock.${id}`));
   }
+}
+
+/** A basic listing field's check, when it is the kind of thing that can be
+ * entirely missing. */
+export const MISSING_BY_CHECK: Record<string, MissingIssue> = {
+  "completeness.hours": "hours",
+  "completeness.phone": "phone",
+  "completeness.website_link": "website",
+  "completeness.photos": "photos",
+  "completeness.address": "address",
+};
+
+/** The unlock line that matches one failing check (real data only; null
+ * when no line has data for it). */
+export function issueUnlockLine(checkId: string, fullyMissing: boolean, f: PromoFacts, locale: Locale): string | null {
+  const issue = MISSING_BY_CHECK[checkId];
+  if (issue && fullyMissing) return t(locale, U("unlock.missing"), { issue: t(locale, U(`missing.${issue}`)) });
+  if (checkId.startsWith("website.")) return unlockLine("website", f, locale) ?? unlockLine("recheck", f, locale);
+  if (checkId.startsWith("visibility.review") || checkId === "visibility.rating") return unlockLine("reviews", f, locale) ?? unlockLine("plan", f, locale);
+  return unlockLine("plan", f, locale);
 }
 
 // ---------------------------------------------------------------------------

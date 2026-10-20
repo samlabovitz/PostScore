@@ -59,7 +59,17 @@ data isn't available, the preview says so.
 - Storefront photo.
 - "Since your last visit" pop-up (`components/visits/SinceLastVisit.tsx`).
 - **PostStudio card**, "PostStudio — build your full website" (below the score and next steps), which opens the full-screen PostStudio page.
-- Today also hosts: the action plan preview (`ActionPlanSection`), the compact website Re-check, and PostAI (`AssistantLauncher`). Plan gating for these is in the Plans section below.
+- Also: PostAI (`AssistantLauncher`), "More customers" (`GrowMoreCustomers`), the Live listing section and scan history.
+- **On Free (5f, done)** — the Overview is the audit (`components/overview/FreeOverview.tsx`):
+  - score, grade and breakdown unchanged;
+  - "Your next steps" → **"What's holding your score back"**: the top 3 real issues (biggest first) with what each costs; "How to fix it" opens a `LockedPreview` of the fix guide's first step + the matching unlock line (`issueUnlockLine`);
+  - reviews first (`FreeReviewFocus`): the real review gap when they trail nearby competitors, and the review link & QR (free);
+  - competitor rank fully visible, plus "You're #N of M nearby…" when they trail;
+  - PostAI → a `LockedPreview` with their real starter questions — no AI call (`sendAssistantMessage` also refuses on Free, server-side);
+  - 1 owner re-scan per 30 days (+ the first scan) on top of the 24-hour rule — `rescanGate` in `lib/rescanPolicy.ts`, checked in `rescanBusiness` before any Google call; owner re-scans are logged in `places_calls` (kind `owner_rescan`, one Places Details call) and the note says "Next free re-scan: {date}";
+  - the Grow showcase strip stays at the bottom.
+  Grow, Premium and Multi see the Overview unchanged.
+- **`LockedPreview`** (`components/plan/LockedPreview.tsx`) is the shared locked feature for 5f: the real UI with the business's own data, read-only (`inert`), fading under a small lock, one unlock line (shown only when its data is real) and "Unlock with Grow/Premium", which opens the promo box. It never fetches anything itself.
 
 ### Growth — built
 Two tabs (`?tab=google-profile`):
