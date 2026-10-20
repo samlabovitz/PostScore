@@ -1,6 +1,8 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
+
+vi.mock("@/app/actions/upgradePromos", () => ({ hidePromo: vi.fn(async () => ({ status: "ok" })) }));
 
 import { LocaleProvider } from "@/lib/i18n";
 import { NO_FACTS, SHOWCASE_PAGES, stripAudience, type PromoFacts, type ShowcasePage } from "@/lib/upgradePromos";

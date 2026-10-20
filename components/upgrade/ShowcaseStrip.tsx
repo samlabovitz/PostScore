@@ -22,6 +22,7 @@ import {
   writeLocalHidden,
   type BoxAction,
 } from "@/lib/upgradePromos";
+import { hidePromo } from "@/app/actions/upgradePromos";
 import { useUpgrade } from "./UpgradeContext";
 import { PromoBox } from "./PromoBox";
 
@@ -32,8 +33,8 @@ export function ShowcaseStrip() {
   const locale = useLocale();
   const strip = up?.strip ?? null;
   const key = strip ? stripPromoKey(strip.page) : "";
-  // Hidden on this device: read after mount (the first render matches
-  // the server's).
+  // The database copy decides the first render (same on server and
+  // client); this device's copy is read after mount.
   const [hidden, setHidden] = useState(() => !!strip && isHidden(strip.hiddenUntil, new Date()));
   const [step, setStep] = useState(0);
   const [box, dispatch] = useReducer(boxReducer, BOX_CLOSED);
@@ -65,6 +66,7 @@ export function ShowcaseStrip() {
     if (!up || !strip) return;
     setHidden(true);
     writeLocalHidden(up.businessId, key, hiddenUntilFrom(new Date()));
+    hidePromo(up.businessId, key).catch(() => undefined);
   }
 
   const hideButton = (

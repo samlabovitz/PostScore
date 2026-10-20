@@ -4,16 +4,17 @@
 // nothing extra). Premium and Multi load nothing — they see no promos.
 
 import { getPlan } from "@/lib/premium";
+import { createClient } from "@/lib/supabase/server";
 import { scoreBusinessById } from "@/app/actions/scoring";
 import { getLocalBenchmark } from "@/app/actions/competitors";
 import { factsFromScore } from "@/lib/upgradeFacts";
 import { isPremiumPlan, type Plan } from "@/lib/plan";
-import { NO_FACTS, stripAudience, type PromoFacts, type ShowcasePage, type StripAudience } from "@/lib/upgradePromos";
+import { NO_FACTS, stripAudience, stripPromoKey, type PromoFacts, type ShowcasePage, type StripAudience } from "@/lib/upgradePromos";
 
 export interface UpgradeStrip {
   page: ShowcasePage;
   audience: StripAudience;
-  /** Hidden until this time; null = showing (kept on the device for now). */
+  /** Hidden until this time (database copy); null = showing. */
   hiddenUntil: string | null;
 }
 
@@ -34,14 +35,24 @@ async function loadFacts(businessId: string): Promise<PromoFacts> {
   }
 }
 
+async function loadHiddenUntil(businessId: string, key: string): Promise<string | null> {
+  try {
+    const { data, error } = await createClient().from("promo_dismissals").select("hidden_until").eq("business_id", businessId).eq("promo_key", key).maybeSingle();
+    // A missing table (SQL not run yet) reads as "not hidden".
+    return error || !data ? null : (data.hidden_until as string);
+  } catch {
+    return null;
+  }
+}
+
 /** Everything a page's promos need. `page` = a main page with the strip. */
 export async function loadUpgradeContext(businessId: string, page: ShowcasePage | null = null, plan: Plan = getPlan()): Promise<UpgradeContextData> {
   const audience = page ? stripAudience(plan, page) : null;
   if (isPremiumPlan(plan)) {
     // No upgrade promos; Premium may see the one PostStudio line.
-    const strip = page && audience ? { page, audience, hiddenUntil: null } : null;
+    const strip = page && audience ? { page, audience, hiddenUntil: await loadHiddenUntil(businessId, stripPromoKey(page)) } : null;
     return { businessId, plan, facts: NO_FACTS, strip };
   }
-  const facts = await loadFacts(businessId);
-  return { businessId, plan, facts, strip: page && audience ? { page, audience, hiddenUntil: null } : null };
+  const [facts, hiddenUntil] = await Promise.all([loadFacts(businessId), page && audience ? loadHiddenUntil(businessId, stripPromoKey(page)) : Promise.resolve(null)]);
+  return { businessId, plan, facts, strip: page && audience ? { page, audience, hiddenUntil } : null };
 }
