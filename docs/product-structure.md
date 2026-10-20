@@ -82,6 +82,13 @@ Two tabs (`?tab=google-profile`):
 
   Free and Grow see a lock on the tab; opening it shows their real listing as a preview with "Unlock with Premium" and the Premium features listed as locked. Connecting itself is on the Connect Google page (`/connect-gbp`) until Settings → Connections exists.
 
+**On Free (5f part 2, done)** — `app/business/[id]/growth/FreeGrowthPlan.tsx`:
+- the weekly routine, "This week's plan" and "Bigger projects" are `LockedPreview`s of their REAL content (task titles, what's wrong and the points visible; the steps and "I did this" locked), with "Your plan for this week is ready. Unlock it with Grow.";
+- no weekly-goal tracking or celebrations (`WeeklyGoalCelebration`, the routine's streak and completed-task celebrations don't render);
+- "Re-check my website" is a locked card (promo box, feature `recheck`); `recheckWebsite` also refuses on Free server-side (no PageSpeed);
+- links into Growth (`#weekly-plan`, `#weekly-routine`, `#task-…`) land on the matching preview;
+- the Google Profile tab stays the Premium preview. Grow, Premium and Multi are unchanged.
+
 ### Campaigns — built
 Three tabs (`?tab=coupons` / `?tab=referrals`), in `app/business/[id]/campaigns/`:
 - **All campaigns** (default): the running coupons and referral card (code, times used, +1); "Create a coupon" and "Create a referral card"; "Coming soon" cards for email, text and social campaigns.

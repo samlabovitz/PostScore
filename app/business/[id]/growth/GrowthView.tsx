@@ -9,6 +9,7 @@ import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/S
 import { TaskListCard, GrowthMoveCard, CompletedTasksCard, type WebsiteRecheckProps } from "../ActionPlanSection";
 import { WeeklyChecklist } from "./WeeklyChecklist";
 import { WeeklyGoalCelebration } from "./WeeklyGoalCelebration";
+import { FreeGrowthPlan } from "./FreeGrowthPlan";
 import type { ActionPlanTask, CompletedTask, WebsiteBanner } from "@/lib/actionPlan";
 import { websiteRangeText, wholePointRange } from "@/lib/pointRange";
 import type { GrowthMove } from "@/lib/growthMoves";
@@ -246,6 +247,8 @@ export function GrowthView({
   // The tab is in the URL (?tab=google-profile) so links and
   // back/forward land on it.
   const segment = segmentFromParam(searchParams.get("tab"));
+  // Free is an audit: the plan tab shows locked previews (FreeGrowthPlan).
+  const free = plan === "free";
 
   function setSegment(next: Segment) {
     const params = new URLSearchParams(searchParams.toString());
@@ -316,89 +319,123 @@ export function GrowthView({
 
       {segment === "plan" && (
         <div className="flex flex-col gap-6 nav:gap-8">
-          <WeeklyGoalCelebration
-            businessId={businessId}
-            weekStart={weeklyChecklist.weekStart}
-            today={breakdown.total}
-            projected={weeklyProjectedBreakdown.total}
-            lastScanAt={lastScanAt}
-          >
-            <ProjectedSummary
-              today={breakdown.total}
-              projected={weeklyProjectedBreakdown.total}
-              projectedHigh={weeklyProjectedBreakdownHigh ? weeklyProjectedBreakdownHigh.total : null}
-              withinReach={withinReachText}
-              gradeNote={gradeTransitionLabel(breakdown.grade, weeklyProjectedBreakdown.grade, locale)}
-              note={
-                actionPlan.weeklyTasks.length > 0
-                  ? tPlural(locale, "dashboard.growth.view.weeklyPlanNote", actionPlan.weeklyTasks.length)
-                  : t(locale, "dashboard.growth.view.weeklyPlanNoteEmpty")
-              }
-            />
-          </WeeklyGoalCelebration>
-
-          <div id="weekly-routine" className="scroll-mt-20">
-            <WeeklyChecklist
-              businessId={businessId}
-              items={weeklyChecklist.items}
-              initialCheckedItemIds={weeklyChecklist.checkedItemIds}
-              initialStreakWeeks={weeklyChecklist.streakWeeks}
-              weekStart={weeklyChecklist.weekStart}
-            />
-          </div>
-
-          {actionPlan.error ? (
-            <Card className="p-5 text-sm text-red">
-              {t(locale, "dashboard.growth.view.actionPlanErrorPrefix", { error: actionPlan.error })}
-            </Card>
+          {free ? (
+            <>
+              {/* Free: no weekly-goal tracking or celebrations; the plan,
+                  routine and projects are locked previews (FreeGrowthPlan). */}
+              <ProjectedSummary
+                today={breakdown.total}
+                projected={weeklyProjectedBreakdown.total}
+                projectedHigh={weeklyProjectedBreakdownHigh ? weeklyProjectedBreakdownHigh.total : null}
+                withinReach={withinReachText}
+                gradeNote={gradeTransitionLabel(breakdown.grade, weeklyProjectedBreakdown.grade, locale)}
+                note={
+                  actionPlan.weeklyTasks.length > 0
+                    ? tPlural(locale, "dashboard.growth.view.weeklyPlanNote", actionPlan.weeklyTasks.length)
+                    : t(locale, "dashboard.growth.view.weeklyPlanNoteEmpty")
+                }
+              />
+              {!gbpConnected && <PremiumConnectCard businessId={businessId} />}
+              {actionPlan.error ? (
+                <Card className="p-5 text-sm text-red">{t(locale, "dashboard.growth.view.actionPlanErrorPrefix", { error: actionPlan.error })}</Card>
+              ) : (
+                <FreeGrowthPlan
+                  weeklyTasks={actionPlan.weeklyTasks}
+                  laterTasks={actionPlan.laterTasks}
+                  websiteBanner={actionPlan.websiteBanner}
+                  routineItems={weeklyChecklist.items}
+                  weeklyHeading={t(locale, "dashboard.growth.view.weeklyPlanHeading", { count: actionPlan.weeklyTasks.length })}
+                  laterHeading={t(locale, "dashboard.growth.view.laterTasksHeading", { count: actionPlan.laterTasks.length })}
+                />
+              )}
+            </>
           ) : (
             <>
-              <div id="weekly-plan" className="scroll-mt-20">
-                <SectionHeading
-                  title={t(locale, "dashboard.growth.view.weeklyPlanHeading", {
-                    count: actionPlan.weeklyTasks.length,
-                  })}
-                />
-              </div>
-              {!gbpConnected && <PremiumConnectCard businessId={businessId} />}
-              <TaskListCard
-                tasks={actionPlan.weeklyTasks}
+              <WeeklyGoalCelebration
                 businessId={businessId}
-                context="weekly"
+                weekStart={weeklyChecklist.weekStart}
+                today={breakdown.total}
+                projected={weeklyProjectedBreakdown.total}
                 lastScanAt={lastScanAt}
-                linkOptions={linkOptions}
-                websiteRecheck={websiteRecheck}
-                emptyMessage={
-                  hasNoRemainingScoreGaps
-                    ? t(locale, "dashboard.growth.view.fullPointsMessage")
-                    : t(locale, "dashboard.growth.view.weeklyEmptyMessage")
-                }
-                footnote={
-                  actionPlan.weeklyTasks.length > 0 ? t(locale, "dashboard.growth.view.weeklyFootnote") : undefined
-                }
-              />
-
-              <SectionHeading
-                title={t(locale, "dashboard.growth.view.laterTasksHeading", {
-                  count: actionPlan.laterTasks.length,
-                })}
-              />
-              {actionPlan.websiteBanner && (
-                <WebsiteBannerCard banner={actionPlan.websiteBanner} businessId={businessId} />
-              )}
-              {(actionPlan.laterTasks.length > 0 || !actionPlan.websiteBanner) && (
-                <TaskListCard
-                  tasks={actionPlan.laterTasks}
-                  businessId={businessId}
-                  lastScanAt={lastScanAt}
-                  linkOptions={linkOptions}
-                  websiteRecheck={websiteRecheck}
-                  emptyMessage={
-                    hasNoRemainingScoreGaps
-                      ? t(locale, "dashboard.growth.view.fullPointsMessage")
-                      : t(locale, "dashboard.growth.view.laterEmptyMessage")
+              >
+                <ProjectedSummary
+                  today={breakdown.total}
+                  projected={weeklyProjectedBreakdown.total}
+                  projectedHigh={weeklyProjectedBreakdownHigh ? weeklyProjectedBreakdownHigh.total : null}
+                  withinReach={withinReachText}
+                  gradeNote={gradeTransitionLabel(breakdown.grade, weeklyProjectedBreakdown.grade, locale)}
+                  note={
+                    actionPlan.weeklyTasks.length > 0
+                      ? tPlural(locale, "dashboard.growth.view.weeklyPlanNote", actionPlan.weeklyTasks.length)
+                      : t(locale, "dashboard.growth.view.weeklyPlanNoteEmpty")
                   }
                 />
+              </WeeklyGoalCelebration>
+
+              <div id="weekly-routine" className="scroll-mt-20">
+                <WeeklyChecklist
+                  businessId={businessId}
+                  items={weeklyChecklist.items}
+                  initialCheckedItemIds={weeklyChecklist.checkedItemIds}
+                  initialStreakWeeks={weeklyChecklist.streakWeeks}
+                  weekStart={weeklyChecklist.weekStart}
+                />
+              </div>
+
+              {actionPlan.error ? (
+                <Card className="p-5 text-sm text-red">
+                  {t(locale, "dashboard.growth.view.actionPlanErrorPrefix", { error: actionPlan.error })}
+                </Card>
+              ) : (
+                <>
+                  <div id="weekly-plan" className="scroll-mt-20">
+                    <SectionHeading
+                      title={t(locale, "dashboard.growth.view.weeklyPlanHeading", {
+                        count: actionPlan.weeklyTasks.length,
+                      })}
+                    />
+                  </div>
+                  {!gbpConnected && <PremiumConnectCard businessId={businessId} />}
+                  <TaskListCard
+                    tasks={actionPlan.weeklyTasks}
+                    businessId={businessId}
+                    context="weekly"
+                    lastScanAt={lastScanAt}
+                    linkOptions={linkOptions}
+                    websiteRecheck={websiteRecheck}
+                    emptyMessage={
+                      hasNoRemainingScoreGaps
+                        ? t(locale, "dashboard.growth.view.fullPointsMessage")
+                        : t(locale, "dashboard.growth.view.weeklyEmptyMessage")
+                    }
+                    footnote={
+                      actionPlan.weeklyTasks.length > 0 ? t(locale, "dashboard.growth.view.weeklyFootnote") : undefined
+                    }
+                  />
+
+                  <SectionHeading
+                    title={t(locale, "dashboard.growth.view.laterTasksHeading", {
+                      count: actionPlan.laterTasks.length,
+                    })}
+                  />
+                  {actionPlan.websiteBanner && (
+                    <WebsiteBannerCard banner={actionPlan.websiteBanner} businessId={businessId} />
+                  )}
+                  {(actionPlan.laterTasks.length > 0 || !actionPlan.websiteBanner) && (
+                    <TaskListCard
+                      tasks={actionPlan.laterTasks}
+                      businessId={businessId}
+                      lastScanAt={lastScanAt}
+                      linkOptions={linkOptions}
+                      websiteRecheck={websiteRecheck}
+                      emptyMessage={
+                        hasNoRemainingScoreGaps
+                          ? t(locale, "dashboard.growth.view.fullPointsMessage")
+                          : t(locale, "dashboard.growth.view.laterEmptyMessage")
+                      }
+                    />
+                  )}
+                </>
               )}
             </>
           )}

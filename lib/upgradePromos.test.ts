@@ -83,7 +83,7 @@ describe("the promo box", () => {
   });
 
   test("no promos on Premium or Multi (Premium only for the PostStudio add-on); Grow isn't sold what it has", () => {
-    const features: PromoFeature[] = ["designs", "print", "reviewSign", "googleProfile", "campaignHub", "postStudio", "premium", "grow"];
+    const features: PromoFeature[] = ["designs", "print", "reviewSign", "googleProfile", "campaignHub", "postStudio", "recheck", "premium", "grow"];
     for (const f of features) {
       expect(promosFor("multi", f)).toBe(false);
       expect(promosFor("premium", f)).toBe(f === "postStudio");

@@ -111,7 +111,7 @@ export function issueUnlockLine(checkId: string, fullyMissing: boolean, f: Promo
 // The promo box: what opens when a locked thing is clicked.
 // ---------------------------------------------------------------------------
 
-export type PromoFeature = "designs" | "print" | "reviewSign" | "googleProfile" | "campaignHub" | "postStudio" | "premium" | "grow";
+export type PromoFeature = "designs" | "print" | "reviewSign" | "googleProfile" | "campaignHub" | "postStudio" | "recheck" | "premium" | "grow";
 
 export interface PromoLine {
   text: string;
@@ -127,7 +127,7 @@ export interface PromoContent {
 
 /** Which plan a feature needs. */
 export function featurePlan(feature: PromoFeature): "grow" | "premium" {
-  return feature === "print" || feature === "reviewSign" || feature === "grow" ? "grow" : "premium";
+  return feature === "print" || feature === "reviewSign" || feature === "recheck" || feature === "grow" ? "grow" : "premium";
 }
 
 export function promoContent(feature: PromoFeature, f: PromoFacts, locale: Locale): PromoContent {
@@ -151,6 +151,8 @@ export function promoContent(feature: PromoFeature, f: PromoFacts, locale: Local
       return named("print", [line(U("unlock.designs")), line(U("feature.print.b2"))]);
     case "reviewSign":
       return named("reviewSign", [...fact("reviews"), line(U("feature.reviewSign.b1")), line(U("feature.reviewSign.b2"))].slice(0, 3));
+    case "recheck":
+      return named("recheck", [...fact("website"), line(U("unlock.recheck"))]);
     case "googleProfile":
       return named("googleProfile", [line(U("feature.googleProfile.b1"), true), line(U("feature.googleProfile.b2"), true), line(U("feature.googleProfile.b3"), true)]);
     case "campaignHub":

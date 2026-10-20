@@ -172,6 +172,12 @@ export type MessageKey =
   | "dashboard.free.rescanMonthly"
   | "dashboard.free.lockedPreviewBadge"
   | "dashboard.free.lockedPreviewSr"
+  | "dashboard.free.stepsLocked"
+  | "dashboard.free.didThis"
+  | "dashboard.free.recheckBody"
+  | "dashboard.free.recheckLocked"
+  | "dashboard.free.routinePreviewNote"
+  | "dashboard.upgrade.feature.recheck.name"
   | "dashboard.niche.capped"
   | "dashboard.niche.savedUpdating"
   | "dashboard.niche.competitorsUpdated"
@@ -3874,6 +3880,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.rescanMonthly": "Free includes 1 re-scan a month.",
     "dashboard.free.lockedPreviewBadge": "Preview",
     "dashboard.free.lockedPreviewSr": "Preview of {title}. Part of Grow.",
+    "dashboard.free.stepsLocked": "Step-by-step guide",
+    "dashboard.free.didThis": "I did this",
+    "dashboard.free.recheckBody": "See your new website score as soon as you fix something.",
+    "dashboard.free.recheckLocked": "Re-checking your website is part of Grow. See plans in Settings → Plan & billing.",
+    "dashboard.free.routinePreviewNote": "5 quick habits that keep your Google listing active",
+    "dashboard.upgrade.feature.recheck.name": "Instant website re-checks",
     "dashboard.niche.capped": "This month's competitor searches are used up — they start again on {date}.",
     "dashboard.niche.savedUpdating": "Saved — we'll update your competitors.",
     "dashboard.niche.competitorsUpdated": "Your competitors were updated for {niche}. Their full scores fill in over the next few minutes.",
@@ -7938,6 +7950,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.rescanMonthly": "El plan Gratis incluye 1 escaneo al mes.",
     "dashboard.free.lockedPreviewBadge": "Vista previa",
     "dashboard.free.lockedPreviewSr": "Vista previa de {title}. Incluido en Grow.",
+    "dashboard.free.stepsLocked": "Guía paso a paso",
+    "dashboard.free.didThis": "Ya lo hice",
+    "dashboard.free.recheckBody": "Vea la nueva puntuación de su sitio en cuanto arregle algo.",
+    "dashboard.free.recheckLocked": "Volver a revisar su sitio web está incluido en Grow. Vea los planes en Configuración → Plan y facturación.",
+    "dashboard.free.routinePreviewNote": "5 hábitos rápidos que mantienen activa su ficha de Google",
+    "dashboard.upgrade.feature.recheck.name": "Revisiones del sitio al instante",
     "dashboard.niche.capped": "Las búsquedas de competidores de este mes se agotaron — vuelven el {date}.",
     "dashboard.niche.savedUpdating": "Guardado — actualizaremos sus competidores.",
     "dashboard.niche.competitorsUpdated": "Sus competidores se actualizaron para {niche}. Sus puntuaciones completas se completan en los próximos minutos.",
