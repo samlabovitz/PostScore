@@ -12,6 +12,7 @@ import { IconChevronDown, IconLock, IconRefresh, IconX, type Icon } from "@table
 import { readStorage, writeStorage } from "@/lib/signStudio/design";
 import { t, useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import { PremiumChip } from "./StudioControls";
 
 export interface DesignTab {
@@ -142,15 +143,19 @@ export function CustomizeDesign({
             </div>
             <div className="flex flex-col gap-3 overflow-y-auto p-3.5" role="tabpanel">
               {readOnlyNote && (
-                <p data-testid="panel-read-only" className="flex items-center gap-1.5 rounded-lg bg-paper px-2.5 py-1.5 text-[12px] font-medium text-ink">
-                  <IconLock size={13} className="text-brass" aria-hidden />
-                  {readOnlyNote}
-                </p>
+                <div data-testid="panel-read-only" className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-paper px-2.5 py-1.5 text-[12px] font-medium text-ink">
+                  <span className="flex items-center gap-1.5">
+                    <IconLock size={13} className="text-brass" aria-hidden />
+                    {readOnlyNote}
+                  </span>
+                  <UpgradeTrigger feature="print" />
+                </div>
               )}
               {current?.locked && !readOnlyNote && (
-                <p className="flex items-center gap-1.5 text-[12px] text-ink-soft">
+                <p className="flex flex-wrap items-center gap-1.5 text-[12px] text-ink-soft">
                   <PremiumChip />
                   {t(locale, "dashboard.studio.lockedTab")}
+                  <UpgradeTrigger feature="designs" />
                 </p>
               )}
               {/* Free: everything visible, nothing changeable. */}

@@ -12,6 +12,7 @@ import { LOGO_MAX_BYTES, LOGO_TYPES, type StoredLogo } from "@/lib/signStudio/de
 import type { FontRole, Measurer } from "@/lib/signStudio/elements";
 import { t, useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 
 const fontFiles = new Map<string, Promise<Uint8Array>>();
 
@@ -231,19 +232,15 @@ export function StudioDialog({
   );
 }
 
-/** Above a Grow user's watermarked preview of a Premium option. */
-export function PremiumPreviewBanner({ businessId, onBack }: { businessId: string; onBack: () => void }) {
+/** Above a Grow user's watermarked preview of a Premium option. "Unlock
+ * with Premium" opens the promo box (components/upgrade) — no checkout. */
+export function PremiumPreviewBanner({ onBack }: { businessId?: string; onBack: () => void }) {
   const locale = useLocale();
   return (
     <div className="flex w-full max-w-[26rem] flex-wrap items-center justify-between gap-2 rounded-lg border border-[color:color-mix(in_srgb,var(--color-brass)_40%,white)] bg-white px-3 py-2 text-[12px] text-ink">
       <span>{t(locale, "dashboard.websiteReviews.studio.premiumPreview")}</span>
       <span className="flex items-center gap-3">
-        <a
-          href={`/business/${businessId}/connect-gbp`}
-          className="inline-flex items-center rounded-lg border border-brass bg-brass px-2.5 py-1 font-semibold text-ink hover:bg-[#a5772a]"
-        >
-          {t(locale, "dashboard.websiteReviews.studio.upgrade")}
-        </a>
+        <UpgradeTrigger feature="designs" variant="button" label={t(locale, "dashboard.upgrade.trigger.unlockPremium")} />
         <button type="button" onClick={onBack} className="font-medium text-ink-soft underline">
           {t(locale, "dashboard.websiteReviews.studio.backToMine")}
         </button>

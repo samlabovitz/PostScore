@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
 import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { loadUpgradeContext } from "@/lib/upgradePromos.server";
 import { Card } from "@/components/ui/Card";
 import { getCompetitors } from "@/app/actions/competitors";
 import { CompetitorsView } from "./CompetitorsView";
@@ -10,10 +11,11 @@ import { normalizeLocale, t } from "@/lib/i18n";
 
 export default async function CompetitorsPage({ params }: { params: { id: string } }) {
   // Independent loads run together.
-  const [websiteOnly, fetched, lastScanAt] = await Promise.all([
+  const [websiteOnly, fetched, lastScanAt, upgrade] = await Promise.all([
     websiteOnlyGuard(params.id, "competitors"),
     getCompetitors(params.id),
     getLastScanAt(params.id),
+    loadUpgradeContext(params.id, "competitors"),
   ]);
   if (websiteOnly) return websiteOnly;
 
@@ -35,6 +37,7 @@ export default async function CompetitorsPage({ params }: { params: { id: string
 
   return (
     <DashboardShell
+      upgrade={upgrade}
       business={{
         id: params.id,
         name: fetched.businessName,

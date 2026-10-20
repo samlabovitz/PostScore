@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
 import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { loadUpgradeContext } from "@/lib/upgradePromos.server";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { getReportsData } from "@/app/actions/reports";
 import { ReportsView } from "./ReportsView";
@@ -17,7 +18,7 @@ import { resolveBizProfile } from "@/config/bizProfiles";
 export default async function ReportsPage({ params, searchParams }: { params: { id: string }; searchParams: { week?: string } }) {
   // Independent loads run together.
   const requestedWeek = typeof searchParams.week === "string" && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.week) ? searchParams.week : null;
-  const [websiteOnly, summary, reports, lastScanAt, benchmark, weekly] = await Promise.all([
+  const [websiteOnly, summary, reports, lastScanAt, benchmark, weekly, upgrade] = await Promise.all([
     websiteOnlyGuard(params.id, "reports"),
     getBusinessSummary(params.id),
     getReportsData(params.id),
@@ -25,6 +26,7 @@ export default async function ReportsPage({ params, searchParams }: { params: { 
     getLocalBenchmark(params.id),
     // Also freezes any finished week that has no snapshot yet.
     getWeeklyRecapWithClient(createClient(), params.id, requestedWeek),
+    loadUpgradeContext(params.id, "reports"),
   ]);
   if (websiteOnly) return websiteOnly;
 
@@ -71,7 +73,7 @@ export default async function ReportsPage({ params, searchParams }: { params: { 
   const weekLabels = Object.fromEntries((weekly?.weeks ?? []).map((w) => [w, compactWeekLabel(w, weekEndDay(w), locale)]));
 
   return (
-    <DashboardShell business={summary.business}>
+    <DashboardShell upgrade={upgrade} business={summary.business}>
       <div className="flex flex-col gap-6">
         <StaleScanNotice businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} />
         <ReportsView

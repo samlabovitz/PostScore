@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { loadUpgradeContext } from "@/lib/upgradePromos.server";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { listActivePromos } from "@/app/actions/promos";
 import { getActiveReferral } from "@/app/actions/referrals";
@@ -26,14 +27,15 @@ export default async function CampaignsPage({ params }: { params: { id: string }
   const locale = normalizeLocale(business.language);
   const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override, locale, business.categories, business.name);
   const plan = getPlan();
-  const [promos, referral, printData] = await Promise.all([
+  const [promos, referral, printData, upgrade] = await Promise.all([
     profile.couponsOk ? listActivePromos(params.id) : Promise.resolve(null),
     profile.referralOk ? getActiveReferral(params.id) : Promise.resolve(null),
     profile.couponsOk || profile.referralOk ? getPrintStudioData(params.id) : Promise.resolve(null),
+    loadUpgradeContext(params.id, "campaigns"),
   ]);
 
   return (
-    <DashboardShell business={business}>
+    <DashboardShell upgrade={upgrade} business={business}>
       <CampaignsView
         businessId={params.id}
         businessName={business.name}

@@ -192,6 +192,36 @@ card per plan, the owner's current plan first, each with its own rows.
   used this month's questions. Premium is unlimited."
 - **Reports:** downloadable PDF reports are **Premium**; Grow gets the weekly
   recap on screen; Free gets the monthly email.
+- The Free "unlock" lines (`dashboard.upgrade.unlock.*`, built by
+  `unlockLine()` in `lib/upgradePromos.ts` from real data only — a line
+  whose data is missing is never shown) are ready for the locked previews.
+
+### Upgrade promotion (Free and Grow only)
+All in `components/upgrade/` + `lib/upgradePromos.ts`; the data comes from
+`loadUpgradeContext()` (`lib/upgradePromos.server.ts`) through
+`DashboardShell`'s `upgrade` prop.
+- **Promo box** (`UpgradeTrigger` → `PromoBox`): opens only when the owner
+  clicks something locked — a popover beside it on desktop, a bottom sheet
+  on a phone. Title "{feature} · {plan}", 2–3 benefit lines (their real data
+  where we have it), "Coming soon" on anything not built, "See plans" (→
+  Settings → Compare plans) and "Not now". Closes with ×, Esc or a tap
+  outside; never modal, never opens by itself. Today it's on: the designers'
+  "Premium preview" bar and locked tabs, Free's read-only designer note, the
+  locked review sign (Free), the Google Profile tab's Premium card, and
+  Campaigns' "What's next". A 5f `LockedPreview` should render
+  `<UpgradeTrigger feature=…>` for its unlock button.
+- **Showcase strip** (`ShowcaseStrip`), above the footer of Overview, Growth,
+  Campaigns, Reviews, Website, Competitors, Price check and Reports: "Premium:
+  we do the work for you" + 3 rotating chips for that page ("soon" where not
+  built) + "See what's included" (the promo box with every Premium benefit).
+  Free sees Grow's benefits on Overview and Growth instead. × hides it for 14
+  days for that business (`promo_dismissals`, `supabase/promo-dismissals.sql`;
+  this device's localStorage until the SQL is run).
+- **Premium** sees no promos except one PostStudio line on the Website page;
+  **Multi** sees none.
+- Never: an upgrade page, pop-ups on page load, countdowns, fake discounts or
+  scarcity, blocking a core action, or anything that pretends to charge.
+- Premium items share one look: a subtle brass border and a small crown.
 
 **PostStudio**: anyone can open it and see a preview of their own site built
 from their real data; publishing needs the add-on (or Multi) **and** a
@@ -222,4 +252,5 @@ not built yet; it's step 5k-0 in the Day 5 plan.
 - `getPlan()` / `hasPremium()` / `canConnectGbp()` — `lib/premium.ts`.
 - Print access (`none` / `basic` / `studio`) — `signAccess()` in `lib/signStudio/design.ts`, used by Sign Studio, the card designer, `/api/business/[id]/review-sign` and `/api/business/[id]/print-card`.
 - Settings → Plan & billing copy and comparison — `lib/planComparison.ts` (wording only; describes the plans, gates nothing).
+- Upgrade promos (box + strip) — `lib/upgradePromos.ts`, `components/upgrade/`.
 - Everything else is currently open to every plan — see the Day 5 plan's gating section for the full list and the planned changes.

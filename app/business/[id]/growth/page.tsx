@@ -3,6 +3,7 @@ import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
 import { showRescanNotice } from "@/lib/rescanPolicy";
 import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { loadUpgradeContext } from "@/lib/upgradePromos.server";
 import { Card } from "@/components/ui/Card";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { scoreBusinessById, getLastScanAt } from "@/app/actions/scoring";
@@ -29,11 +30,12 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
 
   // Independent loads run together; see lib/requestCache.ts for why the
   // repeated business/score reads cost one query each.
-  const [websiteOnly, summary, scored] = await Promise.all([
+  const [websiteOnly, summary, scored, upgrade] = await Promise.all([
     websiteOnlyGuard(params.id, "growth"),
     getBusinessSummary(params.id),
     // The score reads the business's own language from its row.
     scoreBusinessById(params.id, "business"),
+    loadUpgradeContext(params.id, "growth"),
   ]);
   if (websiteOnly) return websiteOnly;
 
@@ -144,7 +146,7 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
         };
 
   return (
-    <DashboardShell business={business}>
+    <DashboardShell upgrade={upgrade} business={business}>
       {showRescanNotice(lastScanAt, new Date()) && (
         <div className="mb-6">
           <StaleScanNotice businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} />

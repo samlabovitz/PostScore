@@ -12,9 +12,13 @@ import { rememberShellBusiness } from "@/components/layout/shellMemory";
 import { LocaleProvider, normalizeLocale, t } from "@/lib/i18n";
 import { LegalLinks } from "@/components/legal/LegalPage";
 import { SinceLastVisit } from "@/components/visits/SinceLastVisit";
+import { UpgradeProvider } from "@/components/upgrade/UpgradeContext";
+import { ShowcaseStrip } from "@/components/upgrade/ShowcaseStrip";
+import type { UpgradeContextData } from "@/lib/upgradePromos.server";
 
 export function DashboardShell({
   business = null,
+  upgrade = null,
   children,
 }: {
   /** The business the current page is scoped to, if any — threaded down
@@ -23,6 +27,9 @@ export function DashboardShell({
    * LocaleProvider below so every client component under this shell can
    * read the business's own real locale via useLocale(). */
   business?: BusinessSummary | null;
+  /** The page's upgrade promos (lib/upgradePromos.server.ts): the promo
+   * box's real data, and the showcase strip on the main pages. */
+  upgrade?: UpgradeContextData | null;
   children: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
@@ -73,66 +80,69 @@ export function DashboardShell({
 
   return (
     <LocaleProvider locale={locale} timeZone={business?.time_zone}>
-      <AnchorHighlight />
-      <div className="min-h-screen bg-paper" data-locale={locale}>
-        <div className="sticky top-0 z-30 flex h-14 items-center justify-between bg-ink px-4 nav:hidden">
-          <button
-            type="button"
-            onClick={() => setNavOpen(true)}
-            aria-label={t(locale, "dashboard.shell.openMenuAriaLabel")}
-            className="rounded-md p-1.5 text-white hover:bg-white/[.07]"
-          >
-            <IconMenu2 size={22} />
-          </button>
-          <Link href="/" className="font-serif text-lg font-semibold">
-            <span className="text-white">Post</span>
-            <span className="text-brass">Score</span>
-          </Link>
-          <span className="w-[34px]" aria-hidden="true" />
-        </div>
+      <UpgradeProvider value={upgrade}>
+        <AnchorHighlight />
+        <div className="min-h-screen bg-paper" data-locale={locale}>
+          <div className="sticky top-0 z-30 flex h-14 items-center justify-between bg-ink px-4 nav:hidden">
+            <button
+              type="button"
+              onClick={() => setNavOpen(true)}
+              aria-label={t(locale, "dashboard.shell.openMenuAriaLabel")}
+              className="rounded-md p-1.5 text-white hover:bg-white/[.07]"
+            >
+              <IconMenu2 size={22} />
+            </button>
+            <Link href="/" className="font-serif text-lg font-semibold">
+              <span className="text-white">Post</span>
+              <span className="text-brass">Score</span>
+            </Link>
+            <span className="w-[34px]" aria-hidden="true" />
+          </div>
 
-        <div
-          className={cn(
-            "fixed inset-0 z-40 bg-ink/50 backdrop-blur-[1px] transition-opacity nav:hidden",
-            navOpen ? "opacity-100" : "pointer-events-none opacity-0"
-          )}
-          onClick={() => setNavOpen(false)}
-          aria-hidden="true"
-        />
+          <div
+            className={cn(
+              "fixed inset-0 z-40 bg-ink/50 backdrop-blur-[1px] transition-opacity nav:hidden",
+              navOpen ? "opacity-100" : "pointer-events-none opacity-0"
+            )}
+            onClick={() => setNavOpen(false)}
+            aria-hidden="true"
+          />
 
-        <Sidebar
-          business={business}
-          userEmail={userEmail}
-          className={cn(
-            "fixed inset-y-0 left-0 z-50 -translate-x-full transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] nav:translate-x-0",
-            navOpen && "translate-x-0"
-          )}
-          onNavigate={() => setNavOpen(false)}
-          onClose={() => setNavOpen(false)}
-        />
+          <Sidebar
+            business={business}
+            userEmail={userEmail}
+            className={cn(
+              "fixed inset-y-0 left-0 z-50 -translate-x-full transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] nav:translate-x-0",
+              navOpen && "translate-x-0"
+            )}
+            onNavigate={() => setNavOpen(false)}
+            onClose={() => setNavOpen(false)}
+          />
 
-        <main className="min-w-0 p-4 sm:p-8 nav:ml-[250px] nav:p-10">
-          {children}
-          <footer className="mt-12 border-t border-paper-line pt-4">
-            <LegalLinks locale={locale === "es" ? "es" : "en"} />
-          </footer>
-        </main>
-        {/* Once per browser session per business: "Since your last visit". */}
-        {business?.id && <SinceLastVisit businessId={business.id} />}
+          <main className="min-w-0 p-4 sm:p-8 nav:ml-[250px] nav:p-10">
+            {children}
+            {upgrade?.strip && <ShowcaseStrip />}
+            <footer className="mt-12 border-t border-paper-line pt-4">
+              <LegalLinks locale={locale === "es" ? "es" : "en"} />
+            </footer>
+          </main>
+          {/* Once per browser session per business: "Since your last visit". */}
+          {business?.id && <SinceLastVisit businessId={business.id} />}
 
-        {/* Dev-only proof-of-wiring — never rendered in production. The
+          {/* Dev-only proof-of-wiring — never rendered in production. The
             data-locale attribute above on the root div is the real,
             always-present readout (inspectable in tests/devtools); this
             badge is just a visible convenience while developing. */}
-        {process.env.NODE_ENV !== "production" && (
-          <div
-            aria-hidden="true"
-            className="fixed bottom-3 right-3 z-50 rounded-md bg-ink px-2 py-1 font-mono text-[11px] text-white/80 shadow-lg"
-          >
-            locale: {locale}
-          </div>
-        )}
-      </div>
+          {process.env.NODE_ENV !== "production" && (
+            <div
+              aria-hidden="true"
+              className="fixed bottom-3 right-3 z-50 rounded-md bg-ink px-2 py-1 font-mono text-[11px] text-white/80 shadow-lg"
+            >
+              locale: {locale}
+            </div>
+          )}
+        </div>
+      </UpgradeProvider>
     </LocaleProvider>
   );
 }

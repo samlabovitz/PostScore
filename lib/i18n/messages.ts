@@ -84,6 +84,73 @@ export type MessageKey =
   | "dashboard.settings.plans.cell.preview"
   | "dashboard.settings.plans.cell.no"
   | "dashboard.settings.plans.cell.soon"
+  | "dashboard.upgrade.unlock.missing"
+  | "dashboard.upgrade.unlock.reviews"
+  | "dashboard.upgrade.unlock.reviewsOne"
+  | "dashboard.upgrade.unlock.rank"
+  | "dashboard.upgrade.unlock.website"
+  | "dashboard.upgrade.unlock.websiteOne"
+  | "dashboard.upgrade.unlock.plan"
+  | "dashboard.upgrade.unlock.recheck"
+  | "dashboard.upgrade.unlock.designs"
+  | "dashboard.upgrade.unlock.hub"
+  | "dashboard.upgrade.unlock.connect"
+  | "dashboard.upgrade.missing.hours"
+  | "dashboard.upgrade.missing.phone"
+  | "dashboard.upgrade.missing.website"
+  | "dashboard.upgrade.missing.photos"
+  | "dashboard.upgrade.missing.address"
+  | "dashboard.upgrade.box.title"
+  | "dashboard.upgrade.box.seePlans"
+  | "dashboard.upgrade.box.notNow"
+  | "dashboard.upgrade.box.close"
+  | "dashboard.upgrade.box.soon"
+  | "dashboard.upgrade.box.noCheckout"
+  | "dashboard.upgrade.trigger.premium"
+  | "dashboard.upgrade.trigger.grow"
+  | "dashboard.upgrade.trigger.unlockPremium"
+  | "dashboard.upgrade.trigger.unlockGrow"
+  | "dashboard.upgrade.feature.designs.name"
+  | "dashboard.upgrade.feature.designs.b1"
+  | "dashboard.upgrade.feature.designs.b2"
+  | "dashboard.upgrade.feature.designs.b3"
+  | "dashboard.upgrade.feature.print.name"
+  | "dashboard.upgrade.feature.print.b2"
+  | "dashboard.upgrade.feature.reviewSign.name"
+  | "dashboard.upgrade.feature.reviewSign.b1"
+  | "dashboard.upgrade.feature.reviewSign.b2"
+  | "dashboard.upgrade.feature.googleProfile.name"
+  | "dashboard.upgrade.feature.googleProfile.b1"
+  | "dashboard.upgrade.feature.googleProfile.b2"
+  | "dashboard.upgrade.feature.googleProfile.b3"
+  | "dashboard.upgrade.feature.campaignHub.name"
+  | "dashboard.upgrade.feature.campaignHub.b1"
+  | "dashboard.upgrade.feature.campaignHub.b2"
+  | "dashboard.upgrade.feature.postStudio.name"
+  | "dashboard.upgrade.feature.postStudio.b1"
+  | "dashboard.upgrade.feature.postStudio.b2"
+  | "dashboard.upgrade.strip.premiumTitle"
+  | "dashboard.upgrade.strip.growTitle"
+  | "dashboard.upgrade.strip.fixPoints"
+  | "dashboard.upgrade.strip.seeIncluded"
+  | "dashboard.upgrade.strip.hide"
+  | "dashboard.upgrade.strip.label"
+  | "dashboard.upgrade.strip.postStudioLine"
+  | "dashboard.upgrade.chip.doneForYou"
+  | "dashboard.upgrade.chip.aiReplies"
+  | "dashboard.upgrade.chip.searchInsights"
+  | "dashboard.upgrade.chip.campaignHub"
+  | "dashboard.upgrade.chip.campaignChannels"
+  | "dashboard.upgrade.chip.designs"
+  | "dashboard.upgrade.chip.postai"
+  | "dashboard.upgrade.chip.postStudio"
+  | "dashboard.upgrade.chip.pdfReports"
+  | "dashboard.upgrade.chip.fixGuides"
+  | "dashboard.upgrade.chip.weeklyPlan"
+  | "dashboard.upgrade.chip.recheck"
+  | "dashboard.upgrade.chip.starterSite"
+  | "dashboard.upgrade.chip.printTools"
+  | "dashboard.upgrade.chip.soon"
   | "dashboard.niche.capped"
   | "dashboard.niche.savedUpdating"
   | "dashboard.niche.competitorsUpdated"
@@ -177,7 +244,6 @@ export type MessageKey =
   | "dashboard.growth.view.tabGoogleProfile"
   | "dashboard.googleProfile.unlockPremium"
   | "dashboard.googleProfile.previewNote"
-  | "dashboard.googleProfile.seePlans"
   | "dashboard.googleProfile.searchDemandSoonBody"
   | "dashboard.postStudio.leave"
   | "dashboard.postStudio.leaveConfirm"
@@ -3184,7 +3250,6 @@ export type MessageKey =
   | "dashboard.websiteReviews.studio.close"
   | "dashboard.websiteReviews.studio.premiumChip"
   | "dashboard.websiteReviews.studio.premiumPreview"
-  | "dashboard.websiteReviews.studio.upgrade"
   | "dashboard.websiteReviews.studio.backToMine"
   | "dashboard.websiteReviews.studio.reset"
   | "dashboard.websiteReviews.studio.section.style"
@@ -3700,6 +3765,73 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.cell.preview": "Preview",
     "dashboard.settings.plans.cell.no": "Not included",
     "dashboard.settings.plans.cell.soon": "Coming soon",
+    "dashboard.upgrade.unlock.missing": "Your listing is missing {issue}. Grow shows you exactly how to fix it, step by step.",
+    "dashboard.upgrade.unlock.reviews": "You have {n} reviews. Nearby {type} average {avg}. Grow gives you a plan to close the gap.",
+    "dashboard.upgrade.unlock.reviewsOne": "You have 1 review. Nearby {type} average {avg}. Grow gives you a plan to close the gap.",
+    "dashboard.upgrade.unlock.rank": "You're #{rank} of {total} nearby. See what's holding you back with Grow.",
+    "dashboard.upgrade.unlock.website": "Your website failed {n} checks. Grow shows how to fix each one in {builder}.",
+    "dashboard.upgrade.unlock.websiteOne": "Your website failed 1 check. Grow shows how to fix it in {builder}.",
+    "dashboard.upgrade.unlock.plan": "Your plan for this week is ready. Unlock it with Grow.",
+    "dashboard.upgrade.unlock.recheck": "Fixed something? With Grow, re-check right away instead of waiting a month.",
+    "dashboard.upgrade.unlock.designs": "Design and print your review sign, coupons and referral cards with Grow.",
+    "dashboard.upgrade.unlock.hub": "Track every campaign in one place, plus email, text and social campaigns — Premium.",
+    "dashboard.upgrade.unlock.connect": "Connect Google and let PostScore fix your listing for you. Premium, coming soon.",
+    "dashboard.upgrade.missing.hours": "your business hours",
+    "dashboard.upgrade.missing.phone": "a phone number",
+    "dashboard.upgrade.missing.website": "a link to your website",
+    "dashboard.upgrade.missing.photos": "photos",
+    "dashboard.upgrade.missing.address": "an address",
+    "dashboard.upgrade.box.title": "{feature} · {plan}",
+    "dashboard.upgrade.box.seePlans": "See plans",
+    "dashboard.upgrade.box.notNow": "Not now",
+    "dashboard.upgrade.box.close": "Close",
+    "dashboard.upgrade.box.soon": "Coming soon",
+    "dashboard.upgrade.box.noCheckout": "Plans launch soon — nothing is charged today.",
+    "dashboard.upgrade.trigger.premium": "What's in Premium?",
+    "dashboard.upgrade.trigger.grow": "What's in Grow?",
+    "dashboard.upgrade.trigger.unlockPremium": "Unlock with Premium",
+    "dashboard.upgrade.trigger.unlockGrow": "Unlock with Grow",
+    "dashboard.upgrade.feature.designs.name": "Every design tool",
+    "dashboard.upgrade.feature.designs.b1": "Every template, font and color",
+    "dashboard.upgrade.feature.designs.b2": "No PostScore branding on what you print",
+    "dashboard.upgrade.feature.designs.b3": "Double-sided cards, numbering and your own logo",
+    "dashboard.upgrade.feature.print.name": "Print your designs",
+    "dashboard.upgrade.feature.print.b2": "Basic templates in two sizes, with your own wording",
+    "dashboard.upgrade.feature.reviewSign.name": "Review sign",
+    "dashboard.upgrade.feature.reviewSign.b1": "Print a sign with your own review QR code",
+    "dashboard.upgrade.feature.reviewSign.b2": "Put it by your counter so every customer can leave a review",
+    "dashboard.upgrade.feature.googleProfile.name": "Google Profile",
+    "dashboard.upgrade.feature.googleProfile.b1": "One-click fixes to your Google listing",
+    "dashboard.upgrade.feature.googleProfile.b2": "See who searches for you and who calls or clicks",
+    "dashboard.upgrade.feature.googleProfile.b3": "AI-drafted replies to every review",
+    "dashboard.upgrade.feature.campaignHub.name": "Campaign hub",
+    "dashboard.upgrade.feature.campaignHub.b1": "Every coupon and referral card tracked in one place",
+    "dashboard.upgrade.feature.campaignHub.b2": "Email, text and social campaigns",
+    "dashboard.upgrade.feature.postStudio.name": "PostStudio",
+    "dashboard.upgrade.feature.postStudio.b1": "A full website we build and host",
+    "dashboard.upgrade.feature.postStudio.b2": "+$8/mo with Premium, included in Multi",
+    "dashboard.upgrade.strip.premiumTitle": "Premium: we do the work for you",
+    "dashboard.upgrade.strip.growTitle": "Grow: fix it yourself, step by step",
+    "dashboard.upgrade.strip.fixPoints": "{n} points of fixes waiting for {name}",
+    "dashboard.upgrade.strip.seeIncluded": "See what's included",
+    "dashboard.upgrade.strip.hide": "Hide for 14 days",
+    "dashboard.upgrade.strip.label": "Plans",
+    "dashboard.upgrade.strip.postStudioLine": "PostStudio: a full website we build and host — +$8/mo on Premium (coming soon)",
+    "dashboard.upgrade.chip.doneForYou": "Fixes done for you",
+    "dashboard.upgrade.chip.aiReplies": "AI-drafted review replies",
+    "dashboard.upgrade.chip.searchInsights": "Who searches for you",
+    "dashboard.upgrade.chip.campaignHub": "One hub for every campaign",
+    "dashboard.upgrade.chip.campaignChannels": "Email, text & social campaigns",
+    "dashboard.upgrade.chip.designs": "Every template, no branding",
+    "dashboard.upgrade.chip.postai": "Unlimited PostAI",
+    "dashboard.upgrade.chip.postStudio": "PostStudio at a discount",
+    "dashboard.upgrade.chip.pdfReports": "PDF reports for partners",
+    "dashboard.upgrade.chip.fixGuides": "Step-by-step fix guides",
+    "dashboard.upgrade.chip.weeklyPlan": "A weekly action plan",
+    "dashboard.upgrade.chip.recheck": "Instant website re-checks",
+    "dashboard.upgrade.chip.starterSite": "A starter website",
+    "dashboard.upgrade.chip.printTools": "Print signs, coupons & cards",
+    "dashboard.upgrade.chip.soon": "soon",
     "dashboard.niche.capped": "This month's competitor searches are used up — they start again on {date}.",
     "dashboard.niche.savedUpdating": "Saved — we'll update your competitors.",
     "dashboard.niche.competitorsUpdated": "Your competitors were updated for {niche}. Their full scores fill in over the next few minutes.",
@@ -3792,7 +3924,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.view.tabGoogleProfile": "Google Profile",
     "dashboard.googleProfile.unlockPremium": "Unlock with Premium",
     "dashboard.googleProfile.previewNote": "A preview with your real Google listing. Premium adds search demand, editing your listing from here, and your insights.",
-    "dashboard.googleProfile.seePlans": "See plans →",
     "dashboard.googleProfile.searchDemandSoonBody": "What people search for vs how many find and click you. Shown with example numbers until your Google connection is live.",
     "dashboard.postStudio.leave": "Leave PostStudio",
     "dashboard.postStudio.leaveConfirm": "Leave PostStudio? Your unsaved changes will be lost.",
@@ -7241,7 +7372,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.studio.close": "Close",
     "dashboard.websiteReviews.studio.premiumChip": "Premium",
     "dashboard.websiteReviews.studio.premiumPreview": "Premium preview — downloads stay on your current design.",
-    "dashboard.websiteReviews.studio.upgrade": "Upgrade to Premium →",
     "dashboard.websiteReviews.studio.backToMine": "Back to my design",
     "dashboard.websiteReviews.studio.reset": "Reset to default",
     "dashboard.websiteReviews.studio.section.style": "Style",
@@ -7678,6 +7808,73 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.cell.preview": "Vista previa",
     "dashboard.settings.plans.cell.no": "No incluido",
     "dashboard.settings.plans.cell.soon": "Próximamente",
+    "dashboard.upgrade.unlock.missing": "A su ficha le falta {issue}. Grow le muestra exactamente cómo arreglarlo, paso a paso.",
+    "dashboard.upgrade.unlock.reviews": "Usted tiene {n} reseñas. Los {type} cercanos tienen {avg} en promedio. Grow le da un plan para cerrar la diferencia.",
+    "dashboard.upgrade.unlock.reviewsOne": "Usted tiene 1 reseña. Los {type} cercanos tienen {avg} en promedio. Grow le da un plan para cerrar la diferencia.",
+    "dashboard.upgrade.unlock.rank": "Usted está en el puesto {rank} de {total} en su zona. Vea qué lo está frenando con Grow.",
+    "dashboard.upgrade.unlock.website": "Su sitio web no pasó {n} revisiones. Grow le muestra cómo arreglar cada una en {builder}.",
+    "dashboard.upgrade.unlock.websiteOne": "Su sitio web no pasó 1 revisión. Grow le muestra cómo arreglarla en {builder}.",
+    "dashboard.upgrade.unlock.plan": "Su plan para esta semana está listo. Desbloquéelo con Grow.",
+    "dashboard.upgrade.unlock.recheck": "¿Arregló algo? Con Grow, vuelva a revisar al instante en lugar de esperar un mes.",
+    "dashboard.upgrade.unlock.designs": "Diseñe e imprima su letrero de reseñas, sus cupones y sus tarjetas de referidos con Grow.",
+    "dashboard.upgrade.unlock.hub": "Siga cada campaña en un solo lugar, además de campañas por correo, mensaje de texto y redes sociales — Premium.",
+    "dashboard.upgrade.unlock.connect": "Conecte Google y deje que PostScore arregle su ficha por usted. Premium, próximamente.",
+    "dashboard.upgrade.missing.hours": "su horario de atención",
+    "dashboard.upgrade.missing.phone": "un número de teléfono",
+    "dashboard.upgrade.missing.website": "un enlace a su sitio web",
+    "dashboard.upgrade.missing.photos": "fotos",
+    "dashboard.upgrade.missing.address": "una dirección",
+    "dashboard.upgrade.box.title": "{feature} · {plan}",
+    "dashboard.upgrade.box.seePlans": "Ver planes",
+    "dashboard.upgrade.box.notNow": "Ahora no",
+    "dashboard.upgrade.box.close": "Cerrar",
+    "dashboard.upgrade.box.soon": "Próximamente",
+    "dashboard.upgrade.box.noCheckout": "Los planes llegan pronto: hoy no se cobra nada.",
+    "dashboard.upgrade.trigger.premium": "¿Qué incluye Premium?",
+    "dashboard.upgrade.trigger.grow": "¿Qué incluye Grow?",
+    "dashboard.upgrade.trigger.unlockPremium": "Desbloquear con Premium",
+    "dashboard.upgrade.trigger.unlockGrow": "Desbloquear con Grow",
+    "dashboard.upgrade.feature.designs.name": "Todas las herramientas de diseño",
+    "dashboard.upgrade.feature.designs.b1": "Todas las plantillas, fuentes y colores",
+    "dashboard.upgrade.feature.designs.b2": "Sin la marca PostScore en lo que imprima",
+    "dashboard.upgrade.feature.designs.b3": "Tarjetas de doble cara, numeración y su propio logotipo",
+    "dashboard.upgrade.feature.print.name": "Imprima sus diseños",
+    "dashboard.upgrade.feature.print.b2": "Plantillas básicas en dos tamaños, con su propio texto",
+    "dashboard.upgrade.feature.reviewSign.name": "Letrero de reseñas",
+    "dashboard.upgrade.feature.reviewSign.b1": "Imprima un letrero con el código QR de sus reseñas",
+    "dashboard.upgrade.feature.reviewSign.b2": "Póngalo junto a su mostrador para que cada cliente pueda dejar una reseña",
+    "dashboard.upgrade.feature.googleProfile.name": "Perfil de Google",
+    "dashboard.upgrade.feature.googleProfile.b1": "Arreglos con un clic en su ficha de Google",
+    "dashboard.upgrade.feature.googleProfile.b2": "Vea quién lo busca y quién lo llama o hace clic",
+    "dashboard.upgrade.feature.googleProfile.b3": "Respuestas a cada reseña redactadas con IA",
+    "dashboard.upgrade.feature.campaignHub.name": "Centro de campañas",
+    "dashboard.upgrade.feature.campaignHub.b1": "Cada cupón y tarjeta de referidos, en un solo lugar",
+    "dashboard.upgrade.feature.campaignHub.b2": "Campañas por correo, mensaje de texto y redes sociales",
+    "dashboard.upgrade.feature.postStudio.name": "PostStudio",
+    "dashboard.upgrade.feature.postStudio.b1": "Un sitio web completo que construimos y alojamos",
+    "dashboard.upgrade.feature.postStudio.b2": "+$8/mes con Premium, incluido en Multi",
+    "dashboard.upgrade.strip.premiumTitle": "Premium: nosotros hacemos el trabajo por usted",
+    "dashboard.upgrade.strip.growTitle": "Grow: arréglelo usted mismo, paso a paso",
+    "dashboard.upgrade.strip.fixPoints": "{n} puntos de mejora esperando a {name}",
+    "dashboard.upgrade.strip.seeIncluded": "Vea qué incluye",
+    "dashboard.upgrade.strip.hide": "Ocultar por 14 días",
+    "dashboard.upgrade.strip.label": "Planes",
+    "dashboard.upgrade.strip.postStudioLine": "PostStudio: un sitio web completo que construimos y alojamos — +$8/mes con Premium (próximamente)",
+    "dashboard.upgrade.chip.doneForYou": "Arreglos hechos por usted",
+    "dashboard.upgrade.chip.aiReplies": "Respuestas a reseñas redactadas con IA",
+    "dashboard.upgrade.chip.searchInsights": "Quién lo busca",
+    "dashboard.upgrade.chip.campaignHub": "Un solo lugar para cada campaña",
+    "dashboard.upgrade.chip.campaignChannels": "Campañas por correo, texto y redes",
+    "dashboard.upgrade.chip.designs": "Todas las plantillas, sin marca",
+    "dashboard.upgrade.chip.postai": "PostAI ilimitado",
+    "dashboard.upgrade.chip.postStudio": "PostStudio con descuento",
+    "dashboard.upgrade.chip.pdfReports": "Informes en PDF para socios",
+    "dashboard.upgrade.chip.fixGuides": "Guías de arreglos paso a paso",
+    "dashboard.upgrade.chip.weeklyPlan": "Un plan de acción semanal",
+    "dashboard.upgrade.chip.recheck": "Revisiones del sitio al instante",
+    "dashboard.upgrade.chip.starterSite": "Un sitio web inicial",
+    "dashboard.upgrade.chip.printTools": "Imprima letreros, cupones y tarjetas",
+    "dashboard.upgrade.chip.soon": "pronto",
     "dashboard.niche.capped": "Las búsquedas de competidores de este mes se agotaron — vuelven el {date}.",
     "dashboard.niche.savedUpdating": "Guardado — actualizaremos sus competidores.",
     "dashboard.niche.competitorsUpdated": "Sus competidores se actualizaron para {niche}. Sus puntuaciones completas se completan en los próximos minutos.",
@@ -7770,7 +7967,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.view.tabGoogleProfile": "Perfil de Google",
     "dashboard.googleProfile.unlockPremium": "Desbloquear con Premium",
     "dashboard.googleProfile.previewNote": "Una vista previa con su ficha real de Google. Premium agrega la demanda de búsqueda, editar su ficha desde aquí y sus estadísticas.",
-    "dashboard.googleProfile.seePlans": "Ver planes →",
     "dashboard.googleProfile.searchDemandSoonBody": "Lo que la gente busca frente a cuántos lo encuentran y hacen clic. Se muestra con números de ejemplo hasta que su conexión con Google esté activa.",
     "dashboard.postStudio.leave": "Salir de PostStudio",
     "dashboard.postStudio.leaveConfirm": "¿Salir de PostStudio? Se perderán los cambios sin guardar.",
@@ -11318,7 +11514,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.studio.close": "Cerrar",
     "dashboard.websiteReviews.studio.premiumChip": "Premium",
     "dashboard.websiteReviews.studio.premiumPreview": "Vista previa Premium — las descargas siguen con su diseño actual.",
-    "dashboard.websiteReviews.studio.upgrade": "Mejorar a Premium →",
     "dashboard.websiteReviews.studio.backToMine": "Volver a mi diseño",
     "dashboard.websiteReviews.studio.reset": "Restablecer diseño",
     "dashboard.websiteReviews.studio.section.style": "Estilo",

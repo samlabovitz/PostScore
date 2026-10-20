@@ -3,6 +3,7 @@ import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
 import Link from "next/link";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { loadUpgradeContext } from "@/lib/upgradePromos.server";
 import { getWebsitePageData } from "@/app/actions/website";
 import { resolveBizProfile, renderFaq } from "@/config/bizProfiles";
 import { WebsiteGeneratorSection } from "./WebsiteGeneratorSection";
@@ -16,7 +17,12 @@ import { HackedSiteBanner } from "@/components/scoring/HackedSiteBanner";
 import { hackSignsFor } from "@/lib/siteSecurity";
 
 export default async function WebsitePage({ params }: { params: { id: string } }) {
-  const [result, lastScanAt, recheck] = await Promise.all([getWebsitePageData(params.id), getLastScanAt(params.id), getWebsiteRecheckStatus(params.id)]);
+  const [result, lastScanAt, recheck, upgrade] = await Promise.all([
+    getWebsitePageData(params.id),
+    getLastScanAt(params.id),
+    getWebsiteRecheckStatus(params.id),
+    loadUpgradeContext(params.id, "website"),
+  ]);
 
   if (result.status === "unauthenticated") {
     redirect("/login");
@@ -117,6 +123,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
 
   return (
     <DashboardShell
+      upgrade={upgrade}
       business={{
         id: params.id,
         name: data.businessName,

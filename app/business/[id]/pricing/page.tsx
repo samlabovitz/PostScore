@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { loadUpgradeContext } from "@/lib/upgradePromos.server";
 import { Card } from "@/components/ui/Card";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { getPrices, getPricingAssessment } from "@/app/actions/pricing";
@@ -14,12 +15,13 @@ import { showRescanNotice } from "@/lib/rescanPolicy";
 export default async function PricingPage({ params }: { params: { id: string } }) {
   // Independent loads run together (prices, assessment and last scan
   // need only the id too).
-  const [websiteOnly, summary, pricesResult, assessmentResult, lastScanAt] = await Promise.all([
+  const [websiteOnly, summary, pricesResult, assessmentResult, lastScanAt, upgrade] = await Promise.all([
     websiteOnlyGuard(params.id, "pricing"),
     getBusinessSummary(params.id),
     getPrices(params.id),
     getPricingAssessment(params.id),
     getLastScanAt(params.id),
+    loadUpgradeContext(params.id, "pricing"),
   ]);
   if (websiteOnly) return websiteOnly;
 
@@ -60,7 +62,7 @@ export default async function PricingPage({ params }: { params: { id: string } }
   }
 
   return (
-    <DashboardShell business={business}>
+    <DashboardShell upgrade={upgrade} business={business}>
       {showRescanNotice(lastScanAt, new Date()) && (
         <div className="mb-6">
           <StaleScanNotice businessId={business.id} lastScanAt={lastScanAt} now={new Date().toISOString()} />

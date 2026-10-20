@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/SegmentedControl";
 import { DevPlanSwitch } from "@/components/studio/DevPlanSwitch";
 import { SectionTitle, SoonList, SoonRow } from "@/components/preview/PreviewParts";
+import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import type { BizProfile } from "@/config/bizProfiles";
 import type { Plan } from "@/lib/plan";
 import type { PromoRow } from "@/lib/promos";
@@ -105,7 +106,10 @@ export function CampaignsView({
             <Card className="p-5 text-sm text-ink-soft">{t(locale, "dashboard.campaigns.notForType")}</Card>
           )}
           <section>
-            <SectionTitle>{t(locale, "dashboard.campaigns.nextHeading")}</SectionTitle>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <SectionTitle>{t(locale, "dashboard.campaigns.nextHeading")}</SectionTitle>
+              <UpgradeTrigger feature="campaignHub" variant="chip" />
+            </div>
             <SoonList>
               <SoonRow title={t(locale, "dashboard.campaigns.email")} body={t(locale, "dashboard.campaigns.emailBody")} status={soon} />
               <SoonRow title={t(locale, "dashboard.campaigns.text")} body={t(locale, "dashboard.campaigns.textBody")} status={soon} />

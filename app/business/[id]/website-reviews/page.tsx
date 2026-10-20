@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { loadUpgradeContext } from "@/lib/upgradePromos.server";
 import { Card } from "@/components/ui/Card";
 import { getReviewsPageData } from "@/app/actions/reviews";
 import { ReviewsView } from "./ReviewsView";
@@ -11,10 +12,11 @@ import { getPlan } from "@/lib/premium";
 
 export default async function WebsiteReviewsPage({ params }: { params: { id: string } }) {
   // Independent loads run together.
-  const [websiteOnly, result, lastScanAt] = await Promise.all([
+  const [websiteOnly, result, lastScanAt, upgrade] = await Promise.all([
     websiteOnlyGuard(params.id, "reviews"),
     getReviewsPageData(params.id),
     getLastScanAt(params.id),
+    loadUpgradeContext(params.id, "reviews"),
   ]);
   if (websiteOnly) return websiteOnly;
 
@@ -36,6 +38,7 @@ export default async function WebsiteReviewsPage({ params }: { params: { id: str
 
   return (
     <DashboardShell
+      upgrade={upgrade}
       business={{
         id: params.id,
         name: data.businessName,

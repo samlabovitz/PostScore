@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getListingModeForPage } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { loadUpgradeContext } from "@/lib/upgradePromos.server";
 import { Card } from "@/components/ui/Card";
 import { scoreBusinessById, getScoreHistory, getRecentScoreSnapshots } from "@/app/actions/scoring";
 import { getBusinessSummary } from "@/app/actions/businesses";
@@ -92,7 +93,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     );
   }
 
-  const [history, recentSnapshots, assistantPageData, benchmark, gbpStatus, actionPlan, niche] = await Promise.all([
+  const [history, recentSnapshots, assistantPageData, benchmark, gbpStatus, actionPlan, niche, upgrade] = await Promise.all([
     getScoreHistory(params.id),
     getRecentScoreSnapshots(params.id, 2),
     getAssistantPageData(params.id),
@@ -107,6 +108,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
       profileId: profile.id,
     }),
     loadBusinessNiche(createClient(), params.id),
+    loadUpgradeContext(params.id, "overview"),
   ]);
   const bannerKind = niche ? nicheBannerKind(niche.resolved) : null;
 
@@ -138,7 +140,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
         };
 
   return (
-    <DashboardShell business={scored.business}>
+    <DashboardShell upgrade={upgrade} business={scored.business}>
       {niche && bannerKind && (
         <div className="mb-6">
           <NicheBanner

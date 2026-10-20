@@ -46,6 +46,7 @@ import {
 } from "@/lib/signStudio/design";
 import { t, useLocale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import { BRASS_BUTTON, OUTLINE_BUTTON } from "./buttonStyles";
 
 // The studio (font metrics + preview) loads only when opened.
@@ -266,7 +267,10 @@ export function GetMoreReviews({
                 </button>
                 <div data-testid="sign-locked" className="flex w-full items-start gap-2 rounded-lg border border-paper-deep bg-paper px-3 py-2 text-[12px] text-ink-soft">
                   <IconLock size={14} className="mt-px shrink-0 text-brass" aria-hidden />
-                  <span>{t(locale, "dashboard.websiteReviews.hero.locked")}</span>
+                  <span className="flex flex-col items-start gap-1">
+                    {t(locale, "dashboard.websiteReviews.hero.locked")}
+                    <UpgradeTrigger feature="reviewSign" />
+                  </span>
                 </div>
               </>
             ) : (

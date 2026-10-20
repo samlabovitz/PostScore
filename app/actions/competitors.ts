@@ -554,7 +554,7 @@ function competitorReviewAverage(scan: SavedCompetitorScan): number | null {
   return counts.length >= MIN_REVIEW_AVERAGE_SAMPLE ? Math.round(counts.reduce((a, b) => a + b, 0) / counts.length) : null;
 }
 
-export async function getLocalBenchmark(businessId: string): Promise<GetLocalBenchmarkResult> {
+async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBenchmarkResult> {
   const supabase = createClient();
 
   const {
@@ -620,6 +620,12 @@ export async function getLocalBenchmark(businessId: string): Promise<GetLocalBen
       competitorReviewAverage: competitorReviewAverage(snapshot.scan),
     },
   };
+}
+
+/** Request-scoped (lib/requestCache.ts): one query per page render. */
+const getLocalBenchmarkCached = requestCache(getLocalBenchmarkUncached);
+export async function getLocalBenchmark(...args: Parameters<typeof getLocalBenchmarkUncached>): Promise<Awaited<ReturnType<typeof getLocalBenchmarkUncached>>> {
+  return getLocalBenchmarkCached(...args);
 }
 
 /** Request-scoped (lib/requestCache.ts): one query per page render. */

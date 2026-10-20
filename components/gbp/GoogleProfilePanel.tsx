@@ -12,6 +12,7 @@ import Link from "next/link";
 import { IconLock } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { SectionTitle, SoonList, SoonRow } from "@/components/preview/PreviewParts";
+import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import { SearchDemandSection, type SearchDemandView } from "@/components/gbp/SearchDemandSection";
 import { isPremiumPlan, type Plan } from "@/lib/plan";
 import { formatShortDate, t, useLocale, useTimeZone } from "@/lib/i18n";
@@ -78,9 +79,7 @@ export function GoogleProfilePanel({
               <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.googleProfile.previewNote")}</p>
             </div>
           </div>
-          <Link href={`/business/${businessId}/settings#plan`} className={`${linkClass} shrink-0`}>
-            {t(locale, "dashboard.googleProfile.seePlans")}
-          </Link>
+          <UpgradeTrigger feature="googleProfile" className="shrink-0" />
         </Card>
       )}
 
