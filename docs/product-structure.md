@@ -19,23 +19,35 @@ account menu (`components/layout/AccountMenu.tsx`).
 
 | # | Tab | Route | Status |
 |---|-----|-------|--------|
-| 1 | Overview | `/business/[id]` | built |
-| 2 | Growth | `/business/[id]/growth` | built |
-| 3 | Campaigns | `/business/[id]/campaigns` | **new** (coupon + referral designers move here) |
+| 1 | Overview | `/business/[id]` | built (with the PostStudio card) |
+| 2 | Growth | `/business/[id]/growth` | built — tabs: This week's plan · Google Profile |
+| 3 | Campaigns | `/business/[id]/campaigns` | built — tabs: All campaigns · Coupons · Referrals |
 | 4 | Reviews | `/business/[id]/website-reviews` | built |
 | 5 | Website | `/business/[id]/website` | built |
 | 6 | Competitors | `/business/[id]/competitors` | built |
-| 7 | Price check | `/business/[id]/pricing` | built — **renamed** from "Pricing" (label only; `dashboard.nav.pricing`) so it isn't confused with plan pricing |
-| 8 | Google Profile | `/business/[id]/google-profile` | **new** (absorbs today's `/search-demand`; connect status) |
-| 9 | PostStudio | `/business/[id]/studio` | **new** (add-on) |
-| 10 | Reports | `/business/[id]/reports` | built |
-| — | Settings (account menu) | `/business/[id]/settings` | built; gains a **Connections** section |
+| 7 | Price check | `/business/[id]/pricing` | built — renamed from "Pricing" (label only; `dashboard.nav.pricing`) |
+| 8 | Reports | `/business/[id]/reports` | built |
+| — | Settings (account menu) | `/business/[id]/settings` | built; gains a **Connections** section (planned) |
 
-Rules for new tabs: always visible on every plan. Until built, the page shows
-the business's own real data in a preview of what the feature does, plus
-"Coming soon" (not built) or "Unlock with Grow / Premium / the PostStudio
-add-on" (built but gated). Nothing in a preview is invented — if real data
-isn't available, the preview says so instead of filling in examples.
+**Not sidebar tabs:**
+- **Google Profile** is a tab inside Growth: `/business/[id]/growth?tab=google-profile`.
+- **PostStudio** is a full-screen page with no sidebar, `/business/[id]/studio?from=…`, opened from the Overview card or the Website page's "Build it in PostStudio" link. "← Leave PostStudio" returns to where they came from (default: the Overview).
+
+**Old URLs redirect** (no broken links):
+
+| Old URL | Goes to |
+|---|---|
+| `/business/[id]/google-profile` | `/business/[id]/growth?tab=google-profile` |
+| `/business/[id]/search-demand` | `/business/[id]/growth?tab=google-profile#search-demand` |
+| `/business/[id]/growth?tab=coupons` | `/business/[id]/campaigns?tab=coupons` |
+| `/business/[id]/growth?tab=referral` | `/business/[id]/campaigns?tab=referrals` |
+
+Tabs live in the URL (`?tab=…`), so links and back/forward land on the right one.
+
+Rule for unbuilt features: always visible. They show the business's own real
+data plus "Coming soon" (not built) or the plan they need ("Unlock with
+Premium", the PostStudio price). Nothing in a preview is invented — if real
+data isn't available, the preview says so.
 
 ---
 
@@ -46,32 +58,32 @@ isn't available, the preview says so instead of filling in examples.
 - Top recommendations (the website one links to the Website page's 3-option chooser).
 - Storefront photo.
 - "Since your last visit" pop-up (`components/visits/SinceLastVisit.tsx`).
+- **PostStudio card**, "PostStudio — build your full website" (below the score and next steps), which opens the full-screen PostStudio page.
 - Today also hosts: the action plan preview (`ActionPlanSection`), the compact website Re-check, and PostAI (`AssistantLauncher`). Plan gating for these is in the Plans section below.
 
 ### Growth — built
-- Weekly plan, weekly routine, bigger projects, celebrations.
-- When an action is "run an offer", it links to **Campaigns** (instead of embedding the designers).
-- Website tasks link to the Website page's 3-option chooser.
+Two tabs (`?tab=google-profile`):
+- **This week's plan:** weekly plan, weekly routine, bigger projects, celebrations, ways to bring in customers. "Run an offer" ideas link to the right **Campaigns** tab; website tasks link to the Website page.
+- **Google Profile** (Premium), `components/gbp/GoogleProfilePanel.tsx`:
+  - what Google shows today (the real listing fields from the last scan);
+  - connect status;
+  - search demand;
+  - listing editing and the insights funnel ("coming soon").
 
-### Campaigns — new (move)
-- Coupon designer and referral card designer move here from Growth
-  (`app/business/[id]/growth/CouponBuilder.tsx`, `ReferralBuilder.tsx`,
-  `CardDesigner.tsx`, `CouponsSection.tsx`, `ReferralSection.tsx`,
-  `ActivePromotions.tsx`, `ActiveReferral.tsx`, `PassOnChoice.tsx`,
-  `ShareModal.tsx`, `HowItWorks.tsx`).
-- Active promotions / referral with their +1 tally.
-- Later: email, text and social campaigns (preview + "Coming soon").
+  Free and Grow see a lock on the tab; opening it shows their real listing as a preview with "Unlock with Premium" and the Premium features listed as locked. Connecting itself is on the Connect Google page (`/connect-gbp`) until Settings → Connections exists.
+
+### Campaigns — built
+Three tabs (`?tab=coupons` / `?tab=referrals`), in `app/business/[id]/campaigns/`:
+- **All campaigns** (default): the running coupons and referral card (code, times used, +1); "Create a coupon" and "Create a referral card"; "Coming soon" cards for email, text and social campaigns.
+- **Coupons:** the full coupon designer (`CouponsSection` → `CouponBuilder` + `CardDesigner`).
+- **Referrals:** the full referral card designer (`ReferralSection` → `ReferralBuilder`, `PassOnChoice`).
+
+Nothing is lost in the move: templates, pass-on options, double-sided, numbering, saved designs, sheet preview, How it works, Ask PostAI, tallies, and print gating (Free preview / Grow basic / Premium full via `signAccess`).
 
 ### Reviews — built
 - Review link, QR code, review sign designer (Sign Studio), review stats.
 - Later: reply to reviews (Premium, needs Google connect) — preview + "Coming soon".
 
-### Google Profile — new (Premium)
-- Connect status (connected / not connected / "Connect in Settings → Connections").
-- Live listing editing (Premium, needs connect).
-- Search demand: what people search vs how many find/click you (today's `/business/[id]/search-demand` moves here).
-- Insights funnel: views → calls / website clicks / directions.
-- Connecting itself lives in **Settings → Connections**, not here.
 
 ### Website — built (+ new chooser)
 - Site checks (visual analysis, score breakdown, security), per-builder fix guides, Re-check my website (3/day).
@@ -84,9 +96,17 @@ isn't available, the preview says so instead of filling in examples.
   With the add-on (or Multi), the card becomes "Continue in PostStudio →".
 - FAQ draft (today) stays under the options.
 
-### PostStudio — new (add-on)
-- Website builder + hosting (multi-page, hosted by PostScore, auto-refreshing rating/reviews/hours after every scan).
-- Later: Menu & catalog, Logo Studio (preview + "Coming soon").
+### PostStudio — full-screen page (add-on; not open yet)
+`/business/[id]/studio`, with no sidebar. A slim top bar shows PostStudio, the business name and "← Leave PostStudio" (it asks to confirm only if there are unsaved changes; there's no editor yet, so today it never asks).
+- **With PostStudio** (Multi until the add-on can be bought): "Your site checklist", the four page outlines, and "Building tools coming soon".
+- **Without it,** an honest info page:
+  - what PostStudio builds;
+  - "Your site checklist" from real data (✓ ready from the listing / ○ you'll add this; `lib/postStudio.ts`);
+  - the four page outlines (wireframes, labelled "not your real site yet");
+  - starter vs PostStudio comparison;
+  - the price for their plan, and "PostStudio isn't open yet — there's nothing to buy today";
+  - "Want something now? Use the free starter website →".
+- Later: website builder + hosting (auto-refreshing rating/reviews/hours after every scan), Menu & catalog, Logo Studio.
 
 ### Competitors — built
 Nearby competitors, rank, comparisons.

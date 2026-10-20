@@ -8,6 +8,8 @@ import { StarterSiteBuilder } from "./StarterSiteBuilder";
 import type { OpeningHoursPeriod } from "@/lib/google/places";
 import type { FaqEntry } from "@/config/bizProfiles";
 import { normalizeLocale, t, useLocale, type Locale } from "@/lib/i18n";
+import Link from "next/link";
+import { studioHref } from "@/lib/postStudio";
 
 /**
  * Owns the one piece of state the FAQ card and the starter-site
@@ -128,14 +130,28 @@ export function WebsiteGeneratorSection({
     />
   );
 
+  // The way into PostStudio from the Website page (full-screen; "Leave"
+  // comes back here).
+  const studioLink = (
+    <Link
+      href={studioHref(businessId, `/business/${businessId}/website`)}
+      className="w-fit text-sm font-semibold text-ink underline decoration-brass underline-offset-2 hover:decoration-ink"
+      data-testid="build-in-poststudio"
+    >
+      {t(locale, "dashboard.website.buildInPostStudio")}
+    </Link>
+  );
+
   return hasWebsite ? (
     <>
       {faqSection}
       <CollapsibleGenerator defaultExpanded={false}>{generator}</CollapsibleGenerator>
+      {studioLink}
     </>
   ) : (
     <>
       {generator}
+      {studioLink}
       {faqSection}
     </>
   );

@@ -216,7 +216,7 @@ export function BusinessScoreView({
         <TopRecommendations businessId={businessId} recommendations={recommendations} />
         <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} />
       </div>
-      <StudioComingSoon />
+      <StudioComingSoon businessId={businessId} />
 
       <SectionHeading title={t(locale, "dashboard.overview.liveListingHeading")} />
       <LiveListingSection businessId={businessId} connected={gbpConnected} />

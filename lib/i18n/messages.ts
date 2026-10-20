@@ -29,6 +29,65 @@ export type MessageKey =
   | "dashboard.googleProfile.previewNote"
   | "dashboard.googleProfile.seePlans"
   | "dashboard.googleProfile.searchDemandSoonBody"
+  | "dashboard.postStudio.leave"
+  | "dashboard.postStudio.leaveConfirm"
+  | "dashboard.postStudio.heroTitle"
+  | "dashboard.postStudio.heroBody"
+  | "dashboard.postStudio.checklistHeading"
+  | "dashboard.postStudio.ready"
+  | "dashboard.postStudio.youllAdd"
+  | "dashboard.postStudio.itemName"
+  | "dashboard.postStudio.itemCategory"
+  | "dashboard.postStudio.itemPhone"
+  | "dashboard.postStudio.itemAddress"
+  | "dashboard.postStudio.itemArea"
+  | "dashboard.postStudio.itemHours"
+  | "dashboard.postStudio.itemRating"
+  | "dashboard.postStudio.itemSocial"
+  | "dashboard.postStudio.itemPhotos"
+  | "dashboard.postStudio.itemAbout"
+  | "dashboard.postStudio.itemServices"
+  | "dashboard.postStudio.itemMenu"
+  | "dashboard.postStudio.itemBrand"
+  | "dashboard.postStudio.pagesHeading"
+  | "dashboard.postStudio.outlineNote"
+  | "dashboard.postStudio.pageHome"
+  | "dashboard.postStudio.pageAbout"
+  | "dashboard.postStudio.pageServices"
+  | "dashboard.postStudio.pageMenu"
+  | "dashboard.postStudio.pageContact"
+  | "dashboard.postStudio.blockHero"
+  | "dashboard.postStudio.blockGlance"
+  | "dashboard.postStudio.blockReviews"
+  | "dashboard.postStudio.blockMap"
+  | "dashboard.postStudio.blockStory"
+  | "dashboard.postStudio.blockPhotos"
+  | "dashboard.postStudio.blockServiceList"
+  | "dashboard.postStudio.blockMenuList"
+  | "dashboard.postStudio.blockCall"
+  | "dashboard.postStudio.blockContact"
+  | "dashboard.postStudio.blockSocial"
+  | "dashboard.postStudio.compareHeading"
+  | "dashboard.postStudio.colStarter"
+  | "dashboard.postStudio.rowPages"
+  | "dashboard.postStudio.starterPages"
+  | "dashboard.postStudio.studioPages"
+  | "dashboard.postStudio.rowHosting"
+  | "dashboard.postStudio.starterHosting"
+  | "dashboard.postStudio.studioHosting"
+  | "dashboard.postStudio.rowUpdates"
+  | "dashboard.postStudio.starterUpdates"
+  | "dashboard.postStudio.studioUpdates"
+  | "dashboard.postStudio.rowChecks"
+  | "dashboard.postStudio.starterChecks"
+  | "dashboard.postStudio.studioChecks"
+  | "dashboard.postStudio.buildingSoon"
+  | "dashboard.postStudio.buildingSoonBody"
+  | "dashboard.postStudio.starterNow"
+  | "dashboard.overview.postStudio.title"
+  | "dashboard.overview.postStudio.body"
+  | "dashboard.overview.postStudio.cta"
+  | "dashboard.website.buildInPostStudio"
   | "dashboard.nav.campaigns"
   | "dashboard.common.comingSoon"
   | "dashboard.campaigns.title"
@@ -69,6 +128,11 @@ export type MessageKey =
   | "dashboard.googleProfile.editingBody"
   | "dashboard.googleProfile.insights"
   | "dashboard.googleProfile.insightsBody"
+  | "dashboard.postStudio.priceFree"
+  | "dashboard.postStudio.priceGrow"
+  | "dashboard.postStudio.pricePremium"
+  | "dashboard.postStudio.priceMulti"
+  | "dashboard.postStudio.notOpenYet"
   | "dashboard.nav.account"
   | "dashboard.nav.logOut"
   // --- Per-business language toggle (BusinessLanguageToggle.tsx), inside
@@ -2596,7 +2660,6 @@ export type MessageKey =
   | "dashboard.overview.recs.unavailable"
   | "dashboard.overview.recs.priorityNote"
   | "dashboard.overview.studio.comingSoon"
-  | "dashboard.overview.studio.body"
   | "dashboard.overview.photo.alt"
   | "dashboard.overview.photo.viewOnMaps"
   | "dashboard.overview.recs.startHereLabel"
@@ -2615,10 +2678,6 @@ export type MessageKey =
   | "dashboard.overview.breakdown.couldntCheck.other"
   | "dashboard.overview.band.points.one"
   | "dashboard.overview.band.points.other"
-  | "dashboard.overview.studio.subtitle"
-  | "dashboard.overview.studio.website"
-  | "dashboard.overview.studio.menu"
-  | "dashboard.overview.studio.logo"
   | "dashboard.overview.connectPremiumPill"
   | "dashboard.overview.band.seeBreakdown"
   | "dashboard.overview.scoringUpdatedVersionTip"
@@ -3444,6 +3503,65 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleProfile.previewNote": "A preview with your real Google listing. Premium adds search demand, editing your listing from here, and your insights.",
     "dashboard.googleProfile.seePlans": "See plans →",
     "dashboard.googleProfile.searchDemandSoonBody": "What people search for vs how many find and click you. Shown with example numbers until your Google connection is live.",
+    "dashboard.postStudio.leave": "Leave PostStudio",
+    "dashboard.postStudio.leaveConfirm": "Leave PostStudio? Your unsaved changes will be lost.",
+    "dashboard.postStudio.heroTitle": "Build your full website",
+    "dashboard.postStudio.heroBody": "PostStudio builds a multi-page website from your real Google listing and hosts it for you — it stays up to date after every scan.",
+    "dashboard.postStudio.checklistHeading": "Your site checklist",
+    "dashboard.postStudio.ready": "Ready from your listing",
+    "dashboard.postStudio.youllAdd": "You'll add this",
+    "dashboard.postStudio.itemName": "Business name",
+    "dashboard.postStudio.itemCategory": "Category",
+    "dashboard.postStudio.itemPhone": "Phone number and Call button",
+    "dashboard.postStudio.itemAddress": "Address, directions and map",
+    "dashboard.postStudio.itemArea": "The area you serve",
+    "dashboard.postStudio.itemHours": "Hours",
+    "dashboard.postStudio.itemRating": "Google rating and review count, updated after every scan",
+    "dashboard.postStudio.itemSocial": "Social media links",
+    "dashboard.postStudio.itemPhotos": "Your photos",
+    "dashboard.postStudio.itemAbout": "Your story (About page)",
+    "dashboard.postStudio.itemServices": "Your services and prices",
+    "dashboard.postStudio.itemMenu": "Your menu",
+    "dashboard.postStudio.itemBrand": "Logo and colors",
+    "dashboard.postStudio.pagesHeading": "The 4 pages",
+    "dashboard.postStudio.outlineNote": "Page outlines — not your real site yet.",
+    "dashboard.postStudio.pageHome": "Home",
+    "dashboard.postStudio.pageAbout": "About",
+    "dashboard.postStudio.pageServices": "Services",
+    "dashboard.postStudio.pageMenu": "Menu",
+    "dashboard.postStudio.pageContact": "Contact",
+    "dashboard.postStudio.blockHero": "Name, tagline and Call now",
+    "dashboard.postStudio.blockGlance": "Open now, phone and area",
+    "dashboard.postStudio.blockReviews": "Rating and link to your Google reviews",
+    "dashboard.postStudio.blockMap": "Location and map",
+    "dashboard.postStudio.blockStory": "Your story",
+    "dashboard.postStudio.blockPhotos": "Photo gallery",
+    "dashboard.postStudio.blockServiceList": "Services with prices",
+    "dashboard.postStudio.blockMenuList": "Menu items with prices",
+    "dashboard.postStudio.blockCall": "Call to book or order",
+    "dashboard.postStudio.blockContact": "Phone, address and hours",
+    "dashboard.postStudio.blockSocial": "Social links",
+    "dashboard.postStudio.compareHeading": "Starter website vs PostStudio",
+    "dashboard.postStudio.colStarter": "Starter website",
+    "dashboard.postStudio.rowPages": "Pages",
+    "dashboard.postStudio.starterPages": "One page",
+    "dashboard.postStudio.studioPages": "Home, About, Services or Menu, Contact",
+    "dashboard.postStudio.rowHosting": "Where it lives",
+    "dashboard.postStudio.starterHosting": "You download it and host it yourself",
+    "dashboard.postStudio.studioHosting": "Hosted for you at yourname.postscore.site or your own domain",
+    "dashboard.postStudio.rowUpdates": "Rating and hours",
+    "dashboard.postStudio.starterUpdates": "Fixed when downloaded — re-download to update",
+    "dashboard.postStudio.studioUpdates": "Update automatically after every scan",
+    "dashboard.postStudio.rowChecks": "Website checks",
+    "dashboard.postStudio.starterChecks": "Strong on everything a single file can prove",
+    "dashboard.postStudio.studioChecks": "Built to pass every check (100/100)",
+    "dashboard.postStudio.buildingSoon": "Building tools coming soon",
+    "dashboard.postStudio.buildingSoonBody": "Your plan includes PostStudio. The editor for these pages is coming soon — it will start from this checklist and these outlines.",
+    "dashboard.postStudio.starterNow": "Want something now? Use the free starter website →",
+    "dashboard.overview.postStudio.title": "PostStudio — build your full website",
+    "dashboard.overview.postStudio.body": "A multi-page website made from your real Google listing and hosted for you. See what it would build.",
+    "dashboard.overview.postStudio.cta": "Open PostStudio",
+    "dashboard.website.buildInPostStudio": "Want a full site we host for you? Build it in PostStudio →",
     "dashboard.nav.campaigns": "Campaigns",
     "dashboard.common.comingSoon": "Coming soon",
     "dashboard.campaigns.title": "Campaigns",
@@ -3485,6 +3603,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleProfile.editingBody": "Hours, phone, description and photos — without leaving PostScore.",
     "dashboard.googleProfile.insights": "Insights funnel",
     "dashboard.googleProfile.insightsBody": "Views → calls, website clicks and directions.",
+    "dashboard.postStudio.priceFree": "Needs Grow ($25/mo) plus the PostStudio add-on (+$15/mo).",
+    "dashboard.postStudio.priceGrow": "Add PostStudio to Grow for +$15/mo.",
+    "dashboard.postStudio.pricePremium": "PostStudio at a discount: +$8/mo on Premium.",
+    "dashboard.postStudio.priceMulti": "Included in your Multi plan.",
+    "dashboard.postStudio.notOpenYet": "PostStudio isn't open yet — there's nothing to buy today.",
     "dashboard.nav.account": "Account",
     "dashboard.nav.logOut": "Log out",
     "dashboard.nav.languageForBusinessLabel": "Language for this business",
@@ -6453,7 +6576,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.recs.unavailable": "Your recommendations couldn't be loaded right now. See them on the Growth page.",
     "dashboard.overview.recs.priorityNote": "High priority: worth {high}+ points on your score. Medium: {medium}+ points.",
     "dashboard.overview.studio.comingSoon": "Coming soon",
-    "dashboard.overview.studio.body": "Build your website, design your menu or catalog, and create a logo, right inside PostScore.",
     "dashboard.overview.photo.alt": "Photo of {name} from its Google listing",
     "dashboard.overview.photo.viewOnMaps": "View this photo on Google Maps",
     "dashboard.overview.recs.startHereLabel": "Start here:",
@@ -6472,10 +6594,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.breakdown.couldntCheck.other": "{count} couldn't check",
     "dashboard.overview.band.points.one": "{count} point",
     "dashboard.overview.band.points.other": "{count} points",
-    "dashboard.overview.studio.subtitle": "Website, Menu & Logo Studio — the PostStudio add-on.",
-    "dashboard.overview.studio.website": "Website",
-    "dashboard.overview.studio.menu": "Menu & catalog",
-    "dashboard.overview.studio.logo": "Logo",
     "dashboard.overview.connectPremiumPill": "PostScore Premium",
     "dashboard.overview.band.seeBreakdown": "Score breakdown ↓",
     "dashboard.overview.scoringUpdatedVersionTip": "PostScore updated how it scores (now version {version}) — scores may shift; this isn't a change at your business.",
@@ -7222,6 +7340,65 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleProfile.previewNote": "Una vista previa con su ficha real de Google. Premium agrega la demanda de búsqueda, editar su ficha desde aquí y sus estadísticas.",
     "dashboard.googleProfile.seePlans": "Ver planes →",
     "dashboard.googleProfile.searchDemandSoonBody": "Lo que la gente busca frente a cuántos lo encuentran y hacen clic. Se muestra con números de ejemplo hasta que su conexión con Google esté activa.",
+    "dashboard.postStudio.leave": "Salir de PostStudio",
+    "dashboard.postStudio.leaveConfirm": "¿Salir de PostStudio? Se perderán los cambios sin guardar.",
+    "dashboard.postStudio.heroTitle": "Construya su sitio web completo",
+    "dashboard.postStudio.heroBody": "PostStudio construye un sitio web de varias páginas con su ficha real de Google y lo aloja por usted — se mantiene al día después de cada análisis.",
+    "dashboard.postStudio.checklistHeading": "La lista de su sitio",
+    "dashboard.postStudio.ready": "Listo con su ficha",
+    "dashboard.postStudio.youllAdd": "Usted lo agregará",
+    "dashboard.postStudio.itemName": "Nombre del negocio",
+    "dashboard.postStudio.itemCategory": "Categoría",
+    "dashboard.postStudio.itemPhone": "Teléfono y botón de llamar",
+    "dashboard.postStudio.itemAddress": "Dirección, cómo llegar y mapa",
+    "dashboard.postStudio.itemArea": "La zona que atiende",
+    "dashboard.postStudio.itemHours": "Horario",
+    "dashboard.postStudio.itemRating": "Calificación y número de reseñas de Google, actualizados después de cada análisis",
+    "dashboard.postStudio.itemSocial": "Enlaces a redes sociales",
+    "dashboard.postStudio.itemPhotos": "Sus fotos",
+    "dashboard.postStudio.itemAbout": "Su historia (página Acerca de)",
+    "dashboard.postStudio.itemServices": "Sus servicios y precios",
+    "dashboard.postStudio.itemMenu": "Su menú",
+    "dashboard.postStudio.itemBrand": "Logotipo y colores",
+    "dashboard.postStudio.pagesHeading": "Las 4 páginas",
+    "dashboard.postStudio.outlineNote": "Esquemas de las páginas — todavía no es su sitio real.",
+    "dashboard.postStudio.pageHome": "Inicio",
+    "dashboard.postStudio.pageAbout": "Acerca de",
+    "dashboard.postStudio.pageServices": "Servicios",
+    "dashboard.postStudio.pageMenu": "Menú",
+    "dashboard.postStudio.pageContact": "Contacto",
+    "dashboard.postStudio.blockHero": "Nombre, lema y Llamar ahora",
+    "dashboard.postStudio.blockGlance": "Abierto ahora, teléfono y zona",
+    "dashboard.postStudio.blockReviews": "Calificación y enlace a sus reseñas de Google",
+    "dashboard.postStudio.blockMap": "Ubicación y mapa",
+    "dashboard.postStudio.blockStory": "Su historia",
+    "dashboard.postStudio.blockPhotos": "Galería de fotos",
+    "dashboard.postStudio.blockServiceList": "Servicios con precios",
+    "dashboard.postStudio.blockMenuList": "Platos o productos con precios",
+    "dashboard.postStudio.blockCall": "Llamar para reservar o pedir",
+    "dashboard.postStudio.blockContact": "Teléfono, dirección y horario",
+    "dashboard.postStudio.blockSocial": "Redes sociales",
+    "dashboard.postStudio.compareHeading": "Sitio web inicial vs PostStudio",
+    "dashboard.postStudio.colStarter": "Sitio web inicial",
+    "dashboard.postStudio.rowPages": "Páginas",
+    "dashboard.postStudio.starterPages": "Una página",
+    "dashboard.postStudio.studioPages": "Inicio, Acerca de, Servicios o Menú, Contacto",
+    "dashboard.postStudio.rowHosting": "Dónde está",
+    "dashboard.postStudio.starterHosting": "Usted lo descarga y lo aloja",
+    "dashboard.postStudio.studioHosting": "Alojado por usted en sunombre.postscore.site o en su propio dominio",
+    "dashboard.postStudio.rowUpdates": "Calificación y horario",
+    "dashboard.postStudio.starterUpdates": "Fijos al descargar — vuelva a descargarlo para actualizar",
+    "dashboard.postStudio.studioUpdates": "Se actualizan solos después de cada análisis",
+    "dashboard.postStudio.rowChecks": "Revisiones del sitio web",
+    "dashboard.postStudio.starterChecks": "Bien en todo lo que un solo archivo puede demostrar",
+    "dashboard.postStudio.studioChecks": "Hecho para pasar todas las revisiones (100/100)",
+    "dashboard.postStudio.buildingSoon": "Herramientas para construir: próximamente",
+    "dashboard.postStudio.buildingSoonBody": "Su plan incluye PostStudio. El editor de estas páginas llegará pronto — empezará con esta lista y estos esquemas.",
+    "dashboard.postStudio.starterNow": "¿Quiere algo ya? Use el sitio web inicial gratuito →",
+    "dashboard.overview.postStudio.title": "PostStudio — construya su sitio web completo",
+    "dashboard.overview.postStudio.body": "Un sitio web de varias páginas hecho con su ficha real de Google y alojado por usted. Vea lo que construiría.",
+    "dashboard.overview.postStudio.cta": "Abrir PostStudio",
+    "dashboard.website.buildInPostStudio": "¿Quiere un sitio completo que alojemos por usted? Constrúyalo en PostStudio →",
     "dashboard.nav.campaigns": "Campañas",
     "dashboard.common.comingSoon": "Próximamente",
     "dashboard.campaigns.title": "Campañas",
@@ -7263,6 +7440,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleProfile.editingBody": "Horario, teléfono, descripción y fotos — sin salir de PostScore.",
     "dashboard.googleProfile.insights": "Embudo de estadísticas",
     "dashboard.googleProfile.insightsBody": "Vistas → llamadas, clics al sitio web y solicitudes de cómo llegar.",
+    "dashboard.postStudio.priceFree": "Requiere Grow ($25/mes) más el complemento PostStudio (+$15/mes).",
+    "dashboard.postStudio.priceGrow": "Agregue PostStudio a Grow por +$15/mes.",
+    "dashboard.postStudio.pricePremium": "PostStudio con descuento: +$8/mes con Premium.",
+    "dashboard.postStudio.priceMulti": "Incluido en su plan Multi.",
+    "dashboard.postStudio.notOpenYet": "PostStudio todavía no está disponible — hoy no hay nada que comprar.",
     "dashboard.nav.account": "Cuenta",
     "dashboard.nav.logOut": "Cerrar sesión",
     "dashboard.nav.languageForBusinessLabel": "Idioma de este negocio",
@@ -10330,7 +10512,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.recs.unavailable": "No se pudieron cargar sus recomendaciones. Véalas en la página Crecimiento.",
     "dashboard.overview.recs.priorityNote": "Prioridad alta: vale {high}+ puntos en su puntuación. Media: {medium}+ puntos.",
     "dashboard.overview.studio.comingSoon": "Próximamente",
-    "dashboard.overview.studio.body": "Cree su sitio web, diseñe su menú o catálogo y cree un logotipo, directamente en PostScore.",
     "dashboard.overview.photo.alt": "Foto de {name} de su ficha de Google",
     "dashboard.overview.photo.viewOnMaps": "Ver esta foto en Google Maps",
     "dashboard.overview.recs.startHereLabel": "Empiece aquí:",
@@ -10349,10 +10530,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.breakdown.couldntCheck.other": "{count} sin revisar",
     "dashboard.overview.band.points.one": "{count} punto",
     "dashboard.overview.band.points.other": "{count} puntos",
-    "dashboard.overview.studio.subtitle": "Estudio de sitio web, menú y logotipo — el complemento PostStudio.",
-    "dashboard.overview.studio.website": "Sitio web",
-    "dashboard.overview.studio.menu": "Menú y catálogo",
-    "dashboard.overview.studio.logo": "Logotipo",
     "dashboard.overview.connectPremiumPill": "PostScore Premium",
     "dashboard.overview.band.seeBreakdown": "Desglose ↓",
     "dashboard.overview.scoringUpdatedVersionTip": "PostScore actualizó su forma de puntuar (ahora versión {version}): las puntuaciones pueden variar; esto no es un cambio en su negocio.",

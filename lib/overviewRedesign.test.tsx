@@ -287,19 +287,15 @@ describe("score breakdown panel", () => {
 });
 
 describe("Studio", () => {
-  test("PostStudio: 'Coming soon', subtitle, Website · Menu & catalog · Logo — no button, no price", () => {
-    const html = render(<StudioComingSoon />);
-    expect(html).toContain("PostStudio");
-    expect(html).toContain("Coming soon");
-    expect(html).toContain("Website, Menu &amp; Logo Studio — the PostStudio add-on.");
-    expect(html).toContain("Build your website, design your menu or catalog, and create a logo, right inside PostScore.");
-    for (const chip of [">Website<", ">Menu &amp; catalog<", ">Logo<"]) expect(html).toContain(chip);
-    expect(html).not.toMatch(/<button|<a |upgrade|buy|\$|price(?! list)/i);
-    const es = render(<StudioComingSoon />, "es");
-    expect(es).toContain("PostStudio");
-    expect(es).toContain("Próximamente");
-    expect(es).toContain("el complemento PostStudio");
-    expect(es).toContain(">Logotipo<");
+  test("PostStudio: one clear card that opens the full-screen page (from the Overview); no price, no buy button", () => {
+    const html = render(<StudioComingSoon businessId="b1" />);
+    expect(html).toContain("PostStudio — build your full website");
+    expect(html).toContain('href="/business/b1/studio?from=%2Fbusiness%2Fb1"');
+    expect(html).toContain("Open PostStudio");
+    expect(html).not.toMatch(/<button|upgrade|buy|\$|price/i);
+    const es = render(<StudioComingSoon businessId="b1" />, "es");
+    expect(es).toContain("PostStudio — construya su sitio web completo");
+    expect(es).toContain("Abrir PostStudio");
   });
 });
 
@@ -461,7 +457,7 @@ describe("Overview layout and scan history (GBP card tweaks)", () => {
         <TopRecommendations businessId={businessId} recommendations={recommendations} />
         <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} />
       </div>
-      <StudioComingSoon />`);
+      <StudioComingSoon businessId={businessId} />`);
     expect(view).not.toContain("versionColumn");
     expect(view).toContain('"dashboard.overview.scoringUpdatedVersionTip", { version: row.scoring_version }');
   });
@@ -583,19 +579,6 @@ describe("small Overview fixes (link pill, empty since card, whole points)", () 
   });
 });
 
-describe("PostStudio wording: not only for restaurants", () => {
-  test("menu or catalog, 'Menu & catalog' chip with a neutral list icon — EN + ES", () => {
-    const en = render(<StudioComingSoon />);
-    expect(en).toContain("Build your website, design your menu or catalog, and create a logo, right inside PostScore.");
-    expect(en).toContain("Menu &amp; catalog");
-    const es = render(<StudioComingSoon />, "es");
-    expect(es).toContain("diseñe su menú o catálogo");
-    expect(es).toContain("Menú y catálogo");
-    expect(es).toContain("PostStudio");
-    expect(en).toContain("tabler-icon-clipboard-list");
-    expect(en).not.toContain("tabler-icon-tools-kitchen");
-  });
-});
 
 describe("listing photo survives React's dev double-run", () => {
   test("one request, and its answer is never discarded by the first run's cleanup", async () => {
