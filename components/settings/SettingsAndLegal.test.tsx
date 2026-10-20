@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 vi.mock("@/app/actions/businesses", () => ({ unsubscribeFromAllEmails: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ back: vi.fn(), push: vi.fn(), refresh: vi.fn() }) }));
 
 import { LocaleProvider } from "@/lib/i18n";
 import { CancelPlanButton, PlanCard, SettingsNav, UnsubscribeAllButton } from "./SettingsParts";

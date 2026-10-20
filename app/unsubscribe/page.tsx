@@ -20,6 +20,8 @@
 // does no further harm than an owner clicking it twice.
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card } from "@/components/ui/Card";
+import { BackLink } from "@/components/legal/BackLink";
+import { backLabel } from "@/lib/backLink";
 import { DEFAULT_LOCALE, normalizeLocale, t, type Locale } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -28,13 +30,18 @@ function UnsubscribeShell({
   title,
   message,
   tone,
+  locale = DEFAULT_LOCALE,
 }: {
   title: string;
   message: string;
   tone: "success" | "error";
+  locale?: Locale;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-paper px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-paper px-4">
+      <div className="mb-3 w-full max-w-sm">
+        <BackLink label={backLabel(locale)} />
+      </div>
       <Card className="w-full max-w-sm p-6 text-center">
         <div className="mb-6 font-serif text-xl font-semibold">
           <span className="text-ink">Post</span>
@@ -107,6 +114,7 @@ export default async function UnsubscribePage({
     if (updateError) {
       return (
         <UnsubscribeShell
+          locale={locale}
           title={t(locale, "dashboard.unsubscribe.updateFailedTitle")}
           message={t(locale, "dashboard.unsubscribe.updateFailedMessage")}
           tone="error"
@@ -117,6 +125,7 @@ export default async function UnsubscribePage({
 
   return (
     <UnsubscribeShell
+      locale={locale}
       title={t(locale, "dashboard.unsubscribe.successTitle")}
       message={t(locale, "dashboard.unsubscribe.successMessage", {
         name: business.name ?? t(locale, "dashboard.unsubscribe.thisBusinessFallback"),

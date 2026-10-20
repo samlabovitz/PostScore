@@ -3,6 +3,8 @@
 
 import Link from "next/link";
 import { legalHref, type PolicyLocale } from "@/lib/legal/policies";
+import { BackLink } from "./BackLink";
+import { backLabel } from "@/lib/backLink";
 
 interface Section {
   readonly heading: string;
@@ -13,7 +15,10 @@ interface Section {
 export function LegalPage({ locale, title, updated, intro, sections }: { locale: PolicyLocale; title: string; updated: string; intro?: string; sections: readonly Section[] }) {
   const other = locale === "es" ? "en" : "es";
   return (
-    <main className="min-h-screen bg-paper px-4 py-10">
+    <main className="min-h-screen bg-paper px-4 py-6 sm:py-10">
+      <div className="mx-auto mb-3 max-w-2xl">
+        <BackLink label={backLabel(locale)} />
+      </div>
       <article className="mx-auto max-w-2xl rounded-2xl border border-paper-deep bg-white p-6 shadow-card sm:p-8">
         <div className="flex items-start justify-between gap-3">
           <div>
