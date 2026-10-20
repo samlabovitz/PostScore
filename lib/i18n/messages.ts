@@ -19,6 +19,13 @@ export type MessageKey =
   | "dashboard.nav.competitors"
   | "dashboard.nav.pricing"
   | "dashboard.nav.reports"
+  | "dashboard.niche.capped"
+  | "dashboard.niche.savedUpdating"
+  | "dashboard.niche.competitorsUpdated"
+  | "dashboard.niche.competitorsTooSoon"
+  | "dashboard.niche.competitorsCapped"
+  | "dashboard.niche.competitorsNone"
+  | "dashboard.niche.competitorsFailed"
   | "dashboard.competitors.groups.heading"
   | "dashboard.competitors.groups.yourType"
   | "dashboard.competitors.groups.change"
@@ -3562,6 +3569,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.competitors": "Competitors",
     "dashboard.nav.pricing": "Price check",
     "dashboard.nav.reports": "Reports",
+    "dashboard.niche.capped": "This month's competitor searches are used up — they start again on {date}.",
+    "dashboard.niche.savedUpdating": "Saved — we'll update your competitors.",
+    "dashboard.niche.competitorsUpdated": "Your competitors were updated for {niche}. Their full scores fill in over the next few minutes.",
+    "dashboard.niche.competitorsTooSoon": "Your competitors can be searched again on {date} (once every 30 days). Until then, you're compared only with the saved ones that match {niche}.",
+    "dashboard.niche.competitorsCapped": "This month's competitor searches are used up; yours will update on {date}. Until then, you're compared only with the saved ones that match {niche}.",
+    "dashboard.niche.competitorsNone": "We searched near you and found no {niche} competitors yet.",
+    "dashboard.niche.competitorsFailed": "Saved, but we couldn't update your competitors right now — try “Refresh competitors” later.",
     "dashboard.competitors.groups.heading": "Who you're compared with",
     "dashboard.competitors.groups.yourType": "Your type: {niche}",
     "dashboard.competitors.groups.change": "Change",
@@ -7467,6 +7481,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.competitors": "Competencia",
     "dashboard.nav.pricing": "Revisión de precios",
     "dashboard.nav.reports": "Informes",
+    "dashboard.niche.capped": "Las búsquedas de competidores de este mes se agotaron — vuelven el {date}.",
+    "dashboard.niche.savedUpdating": "Guardado — actualizaremos sus competidores.",
+    "dashboard.niche.competitorsUpdated": "Sus competidores se actualizaron para {niche}. Sus puntuaciones completas se completan en los próximos minutos.",
+    "dashboard.niche.competitorsTooSoon": "Sus competidores se pueden buscar de nuevo el {date} (una vez cada 30 días). Hasta entonces, se le compara solo con los guardados que coinciden con {niche}.",
+    "dashboard.niche.competitorsCapped": "Las búsquedas de competidores de este mes se agotaron; las suyas se actualizarán el {date}. Hasta entonces, se le compara solo con los guardados que coinciden con {niche}.",
+    "dashboard.niche.competitorsNone": "Buscamos cerca de usted y todavía no encontramos competidores del tipo {niche}.",
+    "dashboard.niche.competitorsFailed": "Guardado, pero no pudimos actualizar sus competidores ahora — pruebe “Actualizar competidores” más tarde.",
     "dashboard.competitors.groups.heading": "Con quién se le compara",
     "dashboard.competitors.groups.yourType": "Su tipo: {niche}",
     "dashboard.competitors.groups.change": "Cambiar",

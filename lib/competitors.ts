@@ -103,6 +103,11 @@ export interface CompetitorSourceBusiness extends BusinessScoringRow {
    * listing is generic ("store", "service"); Google's own types win
    * whenever one is specific. */
   fallbackPlaceTypes?: string[] | null;
+  /** The business's niche (config/niches.ts), when it has one: `directTypes`
+   * are the niche's own Google types (the direct search — they win over a
+   * generic listing), `wideTypes` the ticked "also competes with" areas'
+   * types (ONE extra search at 3 mi). Absent = the search as before. */
+  niche?: { directTypes: string[]; wideTypes: string[] } | null;
   /** The subject's own cached Google price-level enum (e.g.
    * "PRICE_LEVEL_MODERATE"), for the Pricing page's price-level
    * comparison. Optional/undefined for callers (like the Competitors
@@ -173,6 +178,8 @@ export interface CompetitorScanResult {
   /** True if the narrowest radius tier didn't find enough comparable
    * competitors and the search had to widen. */
   searchWidened: boolean;
+  /** Google Places search calls this scan made (Nearby Search). */
+  placesCalls?: number;
   /** Subject + successfully scored competitors, sorted by real PostScore
    * descending. Empty when status !== "ok". */
   ranked: RankedCompetitor[];
@@ -521,8 +528,12 @@ export async function findAndScoreCompetitors(
   // the listing is generic do we fall back to the owner's PostScore
   // business type (the real Shoe Tech case: Google says only "service";
   // the owner set "repair & drop-off" → laundry / tailor).
-  const fallbackTypes = hasAnyTypeData && !googleSpecificType ? usableFallbackTypes(subject.fallbackPlaceTypes) : [];
-  const specificType = googleSpecificType ?? fallbackTypes[0] ?? null;
+  // A niche's own Google types are the direct search (e.g. a "Toy, game &
+  // hobby store" Google lists only as "service"); else the owner's type
+  // when Google's own types are all generic.
+  const nicheDirect = usableFallbackTypes(subject.niche?.directTypes);
+  const fallbackTypes = nicheDirect.length > 0 ? nicheDirect : hasAnyTypeData && !googleSpecificType ? usableFallbackTypes(subject.fallbackPlaceTypes) : [];
+  const specificType = nicheDirect[0] ?? googleSpecificType ?? fallbackTypes[0] ?? null;
   const referenceDisplayName = subject.category ?? null;
 
   if (hasAnyTypeData && !specificType) {
@@ -563,6 +574,7 @@ export async function findAndScoreCompetitors(
   type Comparable = { candidate: NearbyCandidate; distanceMeters: number };
   let comparable: Comparable[] = [];
   let searchWidened = false;
+  let placesCalls = 0;
 
   // Ask Google for every type in the subject's comparable family (not
   // just its exact type), so a genuine "beauty_salon" competitor to a
@@ -587,6 +599,7 @@ export async function findAndScoreCompetitors(
   for (let tier = 0; tier < RADIUS_TIERS_METERS.length; tier++) {
     let candidates: NearbyCandidate[];
     try {
+      placesCalls++;
       candidates = await searchNearbyPlaces({
         lat: subjectLocation.lat,
         lng: subjectLocation.lng,
@@ -638,6 +651,35 @@ export async function findAndScoreCompetitors(
 
     if (comparable.length >= MAX_COMPETITORS) break;
     if (tier < RADIUS_TIERS_METERS.length - 1) searchWidened = true;
+  }
+
+  // The ticked "also competes with" areas: ONE extra search at 3 mi for
+  // their Google types, nearest first, never repeating a direct result.
+  const wideTypes = usableFallbackTypes(subject.niche?.wideTypes).filter((t) => !fallbackTypes.includes(t)).slice(0, 50);
+  if (wideTypes.length > 0) {
+    try {
+      placesCalls++;
+      const wide = await searchNearbyPlaces({
+        lat: subjectLocation.lat,
+        lng: subjectLocation.lng,
+        radiusMeters: RADIUS_TIERS_METERS[1],
+        includedTypes: wideTypes,
+        maxResultCount: 20,
+        rankPreference: "DISTANCE",
+      });
+      const seen = new Set(comparable.map((c) => c.candidate.placeId));
+      const extra = wide
+        .filter((c) => c.placeId !== subject.placeId && !seen.has(c.placeId))
+        .filter((c) => !isClosedStatus(c.businessStatus))
+        .filter((c) => c.location !== null)
+        .filter((c) => !!c.primaryType && wideTypes.includes(c.primaryType))
+        .map((c) => ({ candidate: c, distanceMeters: haversineMeters(subjectLocation, c.location as { lat: number; lng: number }) }))
+        .sort((a, b) => a.distanceMeters - b.distanceMeters)
+        .slice(0, MAX_COMPETITORS);
+      comparable = [...comparable, ...extra];
+    } catch {
+      // The wider areas are extra: a failed search keeps the direct results.
+    }
   }
 
   const scoredCompetitors: RankedCompetitor[] = [];
@@ -756,5 +798,6 @@ export async function findAndScoreCompetitors(
     ranked,
     subjectRank,
     unscored,
+    placesCalls,
   };
 }

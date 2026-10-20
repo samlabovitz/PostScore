@@ -26,6 +26,9 @@ import {
 import { ownerStanding } from "@/lib/competitorComparison";
 import { latestScoringProgress, unfinishedNewScanIds, withoutUnfinished, type ScoringProgress } from "@/lib/competitorScoringStatus";
 import { loadBusinessNiche, loadCompetitorScope, type BusinessNicheState } from "@/lib/businessNiche.server";
+import { canRunScan, nextMonthStartUtc, placesSearchMonthlyCap } from "@/lib/placesSearchBudget";
+import { nicheSearchTypes } from "@/lib/competitorScope";
+
 
 export type { CompetitorRankPoint, SavedCompetitorEntry, SavedCompetitorScan } from "@/lib/savedCompetitorScans";
 
@@ -190,7 +193,8 @@ export async function getCompetitorsWithClient(
       lng: row.lng,
       primaryType: row.primary_type,
       categories: row.categories,
-      fallbackPlaceTypes: ownerTypePlaceTypes(row.business_type_override),
+      // A niche's own Google types make a generic listing searchable.
+      fallbackPlaceTypes: [...((niche && nicheSearchTypes(niche.scope)?.directTypes) ?? []), ...ownerTypePlaceTypes(row.business_type_override)],
     }),
     comparedViaTypes: competitorFallbackTypes({
       primaryType: row.primary_type,
@@ -207,8 +211,10 @@ function ownerTypePlaceTypes(businessTypeOverride: string | null): string[] {
 }
 
 export type SaveCompetitorScanResult =
-  | { status: "saved"; scanId: string }
+  | { status: "saved"; scanId: string; placesCalls?: number }
   | { status: "too_soon"; nextAvailableAt: string }
+  /** This month's Places search allowance (PLACES_SEARCH_MONTHLY_CAP) is used up. */
+  | { status: "capped"; nextAvailableAt: string }
   | { status: "no_data" }
   | { status: "not_found" }
   | { status: "unauthenticated" }
@@ -240,6 +246,10 @@ export async function runAndSaveCompetitorScanWithClient(
     scan?: typeof findAndScoreCompetitors;
     /** Starts the background full scoring (tests replace it). */
     startScoring?: (scanId: string, businessId: string, competitorCount: number) => Promise<void>;
+    /** This month's Places search calls so far (tests replace it). */
+    budget?: () => Promise<{ used: number }>;
+    /** Logs the calls a scan made (tests replace it). */
+    logCalls?: (businessId: string, calls: number) => Promise<void>;
   } = { enforceCooldown: false }
 ): Promise<SaveCompetitorScanResult> {
   const now = options.now ?? new Date();
@@ -250,7 +260,19 @@ export async function runAndSaveCompetitorScanWithClient(
     }
   }
 
-  const { data: business, error } = await supabase.from("businesses").select(BUSINESS_COLUMNS).eq("id", businessId).single();
+  // The month's Places search allowance: a scan runs only when even its
+  // worst case (4 calls) fits under PLACES_SEARCH_MONTHLY_CAP.
+  try {
+    const { used } = await (options.budget ?? defaultBudget)();
+    if (!canRunScan(used, placesSearchMonthlyCap())) return { status: "capped", nextAvailableAt: nextMonthStartUtc(now) };
+  } catch {
+    // An unreadable count never blocks a scan the cooldown allows.
+  }
+
+  const [{ data: business, error }, niche] = await Promise.all([
+    supabase.from("businesses").select(BUSINESS_COLUMNS).eq("id", businessId).single(),
+    loadBusinessNiche(supabase, businessId),
+  ]);
   if (error || !business) {
     return { status: "not_found" };
   }
@@ -277,6 +299,7 @@ export async function runAndSaveCompetitorScanWithClient(
     website_analysis_json: row.website_analysis_json,
     verified_website_url: row.verified_website_url,
     website_trust_overrides_json: row.website_trust_overrides_json,
+    niche: niche ? nicheSearchTypes(niche.scope) : null,
   };
 
   let result;
@@ -285,6 +308,8 @@ export async function runAndSaveCompetitorScanWithClient(
   } catch (err) {
     return { status: "error", message: err instanceof Error ? err.message : "Could not scan competitors." };
   }
+  // Every search call counts toward the month, found anything or not.
+  await (options.logCalls ?? logPlacesSearchCalls)(businessId, result.placesCalls ?? 0).catch(() => undefined);
   if (result.status !== "ok" || result.ranked.length === 0) {
     return { status: "no_data" };
   }
@@ -325,7 +350,17 @@ export async function runAndSaveCompetitorScanWithClient(
   } catch (err) {
     console.error(`[competitors] could not queue full scoring for ${scanId}:`, err);
   }
-  return { status: "saved", scanId };
+  return { status: "saved", scanId, placesCalls: result.placesCalls };
+}
+
+async function defaultBudget(): Promise<{ used: number }> {
+  const { placesSearchCallsThisMonth } = await import("@/lib/placesSearchBudget.server");
+  return placesSearchCallsThisMonth();
+}
+
+async function logPlacesSearchCalls(businessId: string, calls: number): Promise<void> {
+  const { logPlacesSearchCalls: log } = await import("@/lib/placesSearchBudget.server");
+  await log(businessId, calls);
 }
 
 async function defaultStartScoring(scanId: string, businessId: string, competitorCount: number): Promise<void> {

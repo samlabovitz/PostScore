@@ -285,6 +285,7 @@ function RefreshButton({ businessId, allowed, label }: { businessId: string; all
       if (result.status === "saved") router.refresh();
       else if (result.status === "too_soon")
         setMessage(t(locale, "dashboard.competitors.availableAgain", { date: formatShortDate(result.nextAvailableAt, locale, timeZone) }));
+      else if (result.status === "capped") setMessage(t(locale, "dashboard.niche.capped", { date: formatShortDate(result.nextAvailableAt, locale, timeZone) }));
       else if (result.status === "no_data") setMessage(t(locale, "dashboard.competitors.noComparableCompetitors"));
       else setMessage(t(locale, "dashboard.competitors.refreshError"));
     });

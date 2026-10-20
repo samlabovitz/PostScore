@@ -30,6 +30,8 @@ export interface SavedCompetitorEntry {
   photoCount: number | null;
   /** The website address checked (Google's, or the owner's own). */
   websiteUrl: string | null;
+  /** Google's types for this listing (saved by newer scans; null on older rows). */
+  types?: string[] | null;
 }
 
 export interface SavedCompetitorScan {
@@ -53,6 +55,7 @@ export interface CompetitorRankPoint {
 
 /** Every competitor_scans column SavedScanRow needs. */
 export const SAVED_SCAN_COLUMNS =
+  "scan_id, created_at, is_subject, place_id, name, address, distance_meters, rating, review_count, has_website, total, grade, scoring_version, breakdown_json, price_level, photo_count, website_url, categories";
 
 export interface SavedScanRow {
   scan_id: string;
@@ -73,6 +76,7 @@ export interface SavedScanRow {
   photo_count: number | null;
   /** The competitor's website address (competitor-website.sql). */
   website_url?: string | null;
+  categories?: string[] | null;
 }
 
 function toNumber(value: number | string | null): number | null {
@@ -104,6 +108,7 @@ function toEntry(row: SavedScanRow): SavedCompetitorEntry {
     priceLevel: row.price_level,
     photoCount: row.photo_count,
     websiteUrl: row.website_url ?? null,
+    types: Array.isArray(row.categories) ? row.categories : null,
   };
 }
 
