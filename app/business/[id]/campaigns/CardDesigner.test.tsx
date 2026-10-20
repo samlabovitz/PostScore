@@ -123,7 +123,9 @@ describe("the Customize design tabs", () => {
     expect(radios(byId.colors, "theme").filter((r) => !r.includes("data-locked"))).toHaveLength(2);
     expect(radios(byId.colors, "pattern").every((r) => r.includes("data-locked"))).toBe(true);
     // QR: where it goes is open; how it looks is Premium.
-    expect(byId.qr).toMatch(/<select[^>]*><option value="review"/);
+    expect(byId.qr).toMatch(/<select[^>]*><option value="listing"/);
+    // Never the review link on a discount/referral card (Google's review policy).
+    expect(byId.qr).not.toContain('<option value="review"');
     expect(radios(byId.qr, "qrDots").every((r) => r.includes("data-locked"))).toBe(true);
     expect(byId.qr).not.toContain('<option value="website"');
   });

@@ -1,6 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { qrLayers } from "@/lib/reviewQr";
-import { buildGoogleReviewUrl } from "@/lib/reviews";
 import { Raster, scanRaster } from "@/lib/qrRaster.testUtil";
 import { FONT_IDS, QR_CENTERS, QR_CORNERS, QR_DOTS } from "@/lib/signStudio/design";
 import { createMeasurer, loadDesignFonts } from "@/lib/signStudio/fonts";
@@ -11,7 +10,9 @@ import {
   CARD_SHEETS,
   CARD_SIZES,
   COUPON_TEMPLATES,
+  QR_DESTINATIONS,
   REFERRAL_TEMPLATES,
+  availableDestinations,
   basicCardDesign,
   cardContrastProblems,
   defaultBasicCard,
@@ -86,14 +87,24 @@ describe("every template and QR style scans back to exactly its link", () => {
       for (const qrCorners of QR_CORNERS)
         for (const qrCenter of QR_CENTERS) {
           const hasLogo = qrCenter === "logo";
-          const d = card({ template, qrDots, qrCorners, qrCenter, qr: "review", showLogo: hasLogo }, kind);
+          const d = card({ template, qrDots, qrCorners, qrCenter, qr: "listing", showLogo: hasLogo }, kind);
           const single = layoutSingleCard({ design: d, business: BUSINESS, credit: false, logo: hasLogo ? { aspect: 1.5 } : null, hasQr }, await measurer(d));
-          if (scanFace(single.front, d, "front", hasLogo) !== buildGoogleReviewUrl(BUSINESS.placeId!)) failures.push(`${qrDots}/${qrCorners}/${qrCenter}`);
+          if (scanFace(single.front, d, "front", hasLogo) !== cardQrUrl("listing", BUSINESS)) failures.push(`${qrDots}/${qrCorners}/${qrCenter}`);
         }
     expect(failures).toEqual([]);
   }, 60_000);
 
-  it.each(["review", "listing", "website"] as QrDestination[])("each destination: the %s QR opens exactly that link, front and back", async (dest) => {
+  it("a coupon or referral card's QR never leads to the review link (Google forbids rewards for reviews); a saved one falls back to the listing", () => {
+    expect(QR_DESTINATIONS).not.toContain("review");
+    expect(availableDestinations(BUSINESS)).not.toContain("review");
+    for (const kind of ["coupon", "referral"] as const) {
+      const d = effectiveCardDesign("premium", card({ qr: "review", doubleSided: true, back: { finePrint: true, address: true, hours: true, qr: "review", note: "" } }), kind, BUSINESS, "en")!.design;
+      expect(d.qr).toBe("listing");
+      expect(d.back.qr).toBe("listing");
+    }
+  });
+
+  it.each(["listing", "website"] as QrDestination[])("each destination: the %s QR opens exactly that link, front and back", async (dest) => {
     const d = card({ qr: dest, doubleSided: true, back: { finePrint: true, address: true, hours: true, qr: dest, note: "" } });
     const single = layoutSingleCard({ design: d, business: BUSINESS, credit: false, logo: null, hasQr }, await measurer(d));
     const expected = cardQrUrl(dest, BUSINESS);
@@ -261,7 +272,6 @@ describe("print quality", () => {
   const textEls = (page: PrintPage) => els(page).filter((e): e is Extract<typeof e, { kind: "text" }> => e.kind === "text");
 
   it("PNG pixel sizes: 300 DPI at the real card size, 2× for high-res", async () => {
-    const { pngPixels, PNG_DPI } = await import("@/app/business/[id]/growth/CardDesigner");
     const { pngPixels, PNG_DPI } = await import("@/app/business/[id]/campaigns/CardDesigner");
     expect(pngPixels("wallet", PNG_DPI.print)).toEqual({ width: 1050, height: 600 });
     expect(pngPixels("card4x6", PNG_DPI.print)).toEqual({ width: 1800, height: 1200 });

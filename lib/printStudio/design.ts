@@ -73,7 +73,11 @@ export function referralTemplate(passOn: PassOn, requested: CardTemplate | null)
 }
 
 export const CARD_SIZES: CardSize[] = ["wallet", "card4x6", "card5x7", "halfPage", "fullPage"];
-export const QR_DESTINATIONS: QrDestination[] = ["review", "listing", "website", "none"];
+/** Where a coupon or referral card's QR can lead. Never the review link:
+ * a discount or reward card that asks for a review reads as "a reward for
+ * a review", which Google's review policy forbids — the review QR lives on
+ * the review sign only. A saved "review" falls back to the listing. */
+export const QR_DESTINATIONS: QrDestination[] = ["listing", "website", "none"];
 export const CARD_CORNERS: CardCorners[] = ["square", "rounded", "notch"];
 export const CARD_BORDERS: CardBorder[] = ["none", "thin", "double", "dashed", "decorative"];
 export const CARD_PATTERNS: CardPattern[] = ["none", "dots", "lines", "confetti", "waves"];

@@ -17,6 +17,8 @@ import {
   reviewCountProgressPercent,
 } from "@/lib/reviews";
 import { GetMoreReviews } from "./GetMoreReviews";
+import { ReviewGuide } from "@/components/reviews/ReviewGuide";
+import { CounterTools } from "@/components/reviews/CounterTools";
 import type { ReviewsPageData } from "@/app/actions/reviews";
 import type { Plan } from "@/lib/plan";
 import { DevPlanSwitch } from "@/components/studio/DevPlanSwitch";
@@ -183,6 +185,12 @@ export function ReviewsView({
           plan={plan}
         />
       </div>
+
+      <div id="review-guide" className="scroll-mt-20">
+        <ReviewGuide placeId={reviews.placeId} />
+      </div>
+
+      <CounterTools plan={plan} />
 
       <ReviewSocialProof rating={reviews.rating} reviewCount={reviews.reviewCount} />
 

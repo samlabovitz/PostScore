@@ -19,6 +19,40 @@ export type MessageKey =
   | "dashboard.nav.competitors"
   | "dashboard.nav.pricing"
   | "dashboard.nav.reports"
+  | "dashboard.websiteReviews.guide.heading"
+  | "dashboard.websiteReviews.guide.whenTitle"
+  | "dashboard.websiteReviews.guide.when1"
+  | "dashboard.websiteReviews.guide.when2"
+  | "dashboard.websiteReviews.guide.when3"
+  | "dashboard.websiteReviews.guide.scriptTitle"
+  | "dashboard.websiteReviews.guide.scriptInEnglish"
+  | "dashboard.websiteReviews.guide.scriptInSpanish"
+  | "dashboard.websiteReviews.guide.copy"
+  | "dashboard.websiteReviews.guide.copied"
+  | "dashboard.websiteReviews.guide.whereTitle"
+  | "dashboard.websiteReviews.guide.where1"
+  | "dashboard.websiteReviews.guide.where2"
+  | "dashboard.websiteReviews.guide.where3"
+  | "dashboard.websiteReviews.guide.where4"
+  | "dashboard.websiteReviews.guide.replyTitle"
+  | "dashboard.websiteReviews.guide.replyBody"
+  | "dashboard.websiteReviews.guide.rule"
+  | "dashboard.websiteReviews.counter.heading"
+  | "dashboard.websiteReviews.counter.intro"
+  | "dashboard.websiteReviews.counter.nfc"
+  | "dashboard.websiteReviews.counter.nfcBody"
+  | "dashboard.websiteReviews.counter.tent"
+  | "dashboard.websiteReviews.counter.tentBody"
+  | "dashboard.websiteReviews.counter.sign"
+  | "dashboard.websiteReviews.counter.signBody"
+  | "dashboard.websiteReviews.counter.shopSoon"
+  | "dashboard.websiteReviews.counter.shopHeading"
+  | "dashboard.websiteReviews.counter.affiliateNote"
+  | "dashboard.websiteReviews.counter.view"
+  | "dashboard.websiteReviews.guide.scriptEn"
+  | "dashboard.websiteReviews.guide.scriptEnLink"
+  | "dashboard.websiteReviews.guide.scriptEs"
+  | "dashboard.websiteReviews.guide.scriptEsLink"
   | "dashboard.campaigns.tabAll"
   | "dashboard.campaigns.tabCoupons"
   | "dashboard.campaigns.tabReferrals"
@@ -3494,6 +3528,40 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.competitors": "Competitors",
     "dashboard.nav.pricing": "Price check",
     "dashboard.nav.reports": "Reports",
+    "dashboard.websiteReviews.guide.heading": "Get more reviews, the right way",
+    "dashboard.websiteReviews.guide.whenTitle": "When to ask",
+    "dashboard.websiteReviews.guide.when1": "Right after the visit — at checkout or pickup, while the experience is fresh.",
+    "dashboard.websiteReviews.guide.when2": "The same day, in a short text or email with your review link.",
+    "dashboard.websiteReviews.guide.when3": "Ask every customer the same way — Google doesn't allow asking only the ones you expect to be happy.",
+    "dashboard.websiteReviews.guide.scriptTitle": "What to say",
+    "dashboard.websiteReviews.guide.scriptInEnglish": "In English",
+    "dashboard.websiteReviews.guide.scriptInSpanish": "In Spanish",
+    "dashboard.websiteReviews.guide.copy": "Copy",
+    "dashboard.websiteReviews.guide.copied": "Copied",
+    "dashboard.websiteReviews.guide.whereTitle": "Where to put your QR code",
+    "dashboard.websiteReviews.guide.where1": "At the register or checkout counter",
+    "dashboard.websiteReviews.guide.where2": "On tables or in the waiting area",
+    "dashboard.websiteReviews.guide.where3": "On receipts, bags or take-out menus",
+    "dashboard.websiteReviews.guide.where4": "By the door, where people leave",
+    "dashboard.websiteReviews.guide.replyTitle": "Why replying matters",
+    "dashboard.websiteReviews.guide.replyBody": "Reply to every review. Thank people by name, and answer complaints calmly with what you'll do about it. Future customers read your replies, and Google sees an active business that cares.",
+    "dashboard.websiteReviews.guide.rule": "Never offer a discount or gift for a review — it's against Google's rules and can get reviews removed.",
+    "dashboard.websiteReviews.counter.heading": "Counter tools — coming soon",
+    "dashboard.websiteReviews.counter.intro": "Tools that make leaving a review easy — they never reward it.",
+    "dashboard.websiteReviews.counter.nfc": "Tap-to-review NFC stands and cards",
+    "dashboard.websiteReviews.counter.nfcBody": "Customers tap their phone to open your review page.",
+    "dashboard.websiteReviews.counter.tent": "QR table tents",
+    "dashboard.websiteReviews.counter.tentBody": "A stand-up QR code for every table.",
+    "dashboard.websiteReviews.counter.sign": "Counter signs",
+    "dashboard.websiteReviews.counter.signBody": "A sign by the register with your review QR code.",
+    "dashboard.websiteReviews.counter.shopSoon": "Our shop is coming soon.",
+    "dashboard.websiteReviews.counter.shopHeading": "Shop counter tools",
+    "dashboard.websiteReviews.counter.affiliateNote": "PostScore may earn a commission when you buy through these links.",
+    "dashboard.websiteReviews.counter.view": "View",
+    "dashboard.websiteReviews.guide.scriptEn": "Thanks so much for coming in today! If you have a minute, a quick Google review really helps a small business like ours.",
+    "dashboard.websiteReviews.guide.scriptEnLink": "Here's the link: {link}",
+    "dashboard.websiteReviews.guide.scriptEs": "¡Muchas gracias por visitarnos hoy! Si tiene un minuto, una breve reseña en Google ayuda mucho a un negocio pequeño como el nuestro.",
+    "dashboard.websiteReviews.guide.scriptEsLink": "Aquí tiene el enlace: {link}",
     "dashboard.campaigns.tabAll": "All campaigns",
     "dashboard.campaigns.tabCoupons": "Coupons",
     "dashboard.campaigns.tabReferrals": "Referrals",
@@ -3875,7 +3943,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     // label/advice/explanation text exactly, byte-for-byte.
     "content.checks.visibility.rating.label": "Star rating",
     "content.checks.visibility.rating.advice":
-      "Improve your average star rating — ask happy customers for reviews (more reviews also means your rating carries more weight) and follow up on negative ones.",
+      "Improve your average star rating — ask every recent customer for a review (more reviews also means your rating carries more weight) and follow up on negative ones.",
     "content.checks.visibility.rating.explanation.noReviews":
       "No Google reviews yet — this is the biggest thing holding your visibility back.",
     "content.checks.visibility.rating.explanation.notFound": "Google returned no star rating for this listing.",
@@ -4289,11 +4357,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.visibility.rating.why":
       "Your star rating is often the first thing a potential customer sees — a stronger average rating directly raises the odds they pick you over a nearby competitor.",
     "content.actionPlan.visibility.rating.action":
-      "Ask recent happy customers for a review, and reply to any negative ones so future customers see you take feedback seriously.",
+      "Ask your recent customers for a review, and reply to any negative ones so future customers see you take feedback seriously.",
     "content.actionPlan.visibility.rating.fix":
       "Go to the Reviews page → use the \"Get more reviews\" section: download your front-desk QR code or copy your review link and share it with customers right after a good visit. A steady trickle beats one big batch.",
     "content.actionPlan.visibility.rating.weeklyAction":
-      "Ask 3-5 of your happiest recent customers for a Google review this week — fresh reviews are the fastest real lever on your rating.",
+      "Ask 3-5 recent customers for a Google review this week — fresh reviews are the fastest real lever on your rating.",
     "content.actionPlan.visibility.review_count.why":
       "More reviews means more social proof — customers trust a business with dozens of reviews far more than one with a handful, even at the same star rating.",
     "content.actionPlan.visibility.review_count.action":
@@ -4501,7 +4569,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.checklist.items.replyReviews.title": "Reply to your new Google reviews",
     "dashboard.growth.checklist.items.replyReviews.howTo":
       "Open your Google Business Profile and reply to any new reviews — a short, genuine reply goes a long way, especially on a critical one.",
-    "dashboard.growth.checklist.items.shareReviewLink.title": "Share your review link with 3+ happy customers",
+    "dashboard.growth.checklist.items.shareReviewLink.title": "Share your review link with 3+ customers",
     "dashboard.growth.checklist.items.shareReviewLink.howTo":
       "Go to the Reviews page → copy your review link or QR code and send it to a few recent customers.",
     "dashboard.growth.checklist.items.addPhoto.title": "Add one new photo to your Google listing",
@@ -7331,6 +7399,40 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.competitors": "Competencia",
     "dashboard.nav.pricing": "Revisión de precios",
     "dashboard.nav.reports": "Informes",
+    "dashboard.websiteReviews.guide.heading": "Consiga más reseñas, de la manera correcta",
+    "dashboard.websiteReviews.guide.whenTitle": "Cuándo pedirla",
+    "dashboard.websiteReviews.guide.when1": "Justo después de la visita — al pagar o al recoger, mientras la experiencia está fresca.",
+    "dashboard.websiteReviews.guide.when2": "El mismo día, en un mensaje de texto o correo corto con su enlace de reseñas.",
+    "dashboard.websiteReviews.guide.when3": "Pídala a todos los clientes por igual — Google no permite pedirla solo a quienes usted cree que quedaron contentos.",
+    "dashboard.websiteReviews.guide.scriptTitle": "Qué decir",
+    "dashboard.websiteReviews.guide.scriptInEnglish": "En inglés",
+    "dashboard.websiteReviews.guide.scriptInSpanish": "En español",
+    "dashboard.websiteReviews.guide.copy": "Copiar",
+    "dashboard.websiteReviews.guide.copied": "Copiado",
+    "dashboard.websiteReviews.guide.whereTitle": "Dónde poner su código QR",
+    "dashboard.websiteReviews.guide.where1": "En la caja o el mostrador",
+    "dashboard.websiteReviews.guide.where2": "En las mesas o en la sala de espera",
+    "dashboard.websiteReviews.guide.where3": "En recibos, bolsas o menús para llevar",
+    "dashboard.websiteReviews.guide.where4": "Junto a la puerta, por donde sale la gente",
+    "dashboard.websiteReviews.guide.replyTitle": "Por qué responder importa",
+    "dashboard.websiteReviews.guide.replyBody": "Responda a todas las reseñas. Agradezca por su nombre a quien la dejó y conteste las quejas con calma, diciendo qué hará al respecto. Los futuros clientes leen sus respuestas, y Google ve un negocio activo que se preocupa.",
+    "dashboard.websiteReviews.guide.rule": "Nunca ofrezca un descuento ni un regalo a cambio de una reseña — va contra las reglas de Google y pueden eliminarse reseñas.",
+    "dashboard.websiteReviews.counter.heading": "Herramientas para el mostrador — próximamente",
+    "dashboard.websiteReviews.counter.intro": "Herramientas que facilitan dejar una reseña — nunca la premian.",
+    "dashboard.websiteReviews.counter.nfc": "Soportes y tarjetas NFC para dejar una reseña con un toque",
+    "dashboard.websiteReviews.counter.nfcBody": "Los clientes acercan su teléfono y se abre su página de reseñas.",
+    "dashboard.websiteReviews.counter.tent": "Tarjetas de mesa con QR",
+    "dashboard.websiteReviews.counter.tentBody": "Un código QR de pie para cada mesa.",
+    "dashboard.websiteReviews.counter.sign": "Letreros para el mostrador",
+    "dashboard.websiteReviews.counter.signBody": "Un letrero junto a la caja con su código QR de reseñas.",
+    "dashboard.websiteReviews.counter.shopSoon": "Nuestra tienda llegará pronto.",
+    "dashboard.websiteReviews.counter.shopHeading": "Compre herramientas para el mostrador",
+    "dashboard.websiteReviews.counter.affiliateNote": "PostScore puede recibir una comisión cuando compra a través de estos enlaces.",
+    "dashboard.websiteReviews.counter.view": "Ver",
+    "dashboard.websiteReviews.guide.scriptEn": "Thanks so much for coming in today! If you have a minute, a quick Google review really helps a small business like ours.",
+    "dashboard.websiteReviews.guide.scriptEnLink": "Here's the link: {link}",
+    "dashboard.websiteReviews.guide.scriptEs": "¡Muchas gracias por visitarnos hoy! Si tiene un minuto, una breve reseña en Google ayuda mucho a un negocio pequeño como el nuestro.",
+    "dashboard.websiteReviews.guide.scriptEsLink": "Aquí tiene el enlace: {link}",
     "dashboard.campaigns.tabAll": "Todas las campañas",
     "dashboard.campaigns.tabCoupons": "Cupones",
     "dashboard.campaigns.tabReferrals": "Referidos",
@@ -7717,7 +7819,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     // layer extracted in Step L3 (beat 1). Every en key added there has
     // a real, reviewed es value here; none were machine-translated.
     "content.checks.visibility.rating.label": "Calificación de estrellas",
-    "content.checks.visibility.rating.advice": "Mejore su calificación promedio de estrellas — pida reseñas a los clientes satisfechos (más reseñas también significa que su calificación tiene más peso) y dé seguimiento a las negativas.",
+    "content.checks.visibility.rating.advice": "Mejore su calificación promedio de estrellas — pida una reseña a cada cliente reciente (más reseñas también significa que su calificación tiene más peso) y dé seguimiento a las negativas.",
     "content.checks.visibility.rating.explanation.noReviews": "Aún no tiene reseñas en Google — esto es lo que más está frenando su visibilidad.",
     "content.checks.visibility.rating.explanation.notFound": "Google no devolvió ninguna calificación de estrellas para esta ficha.",
     "content.checks.visibility.rating.explanation.noReviewCountBackup": "Calificación de {rating}★ en Google, pero Google no devolvió un número de reseñas que la respalde — se muestra con menor confianza hasta que se verifique el volumen de reseñas.",
@@ -8015,11 +8117,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.visibility.rating.why":
       "Su calificación de estrellas suele ser lo primero que ve un cliente potencial — una mejor calificación promedio aumenta directamente las probabilidades de que lo elijan a usted en lugar de a un competidor cercano.",
     "content.actionPlan.visibility.rating.action":
-      "Pida una reseña a clientes satisfechos recientes y responda a las negativas para que los futuros clientes vean que toma en serio los comentarios.",
+      "Pida una reseña a sus clientes recientes y responda a las negativas para que los futuros clientes vean que toma en serio los comentarios.",
     "content.actionPlan.visibility.rating.fix":
       "Vaya a la página de Reseñas → use la sección \"Conseguir más reseñas\": descargue el código QR para su mostrador o copie su enlace de reseña y compártalo con los clientes justo después de una buena visita. Un flujo constante supera a un gran lote de una sola vez.",
     "content.actionPlan.visibility.rating.weeklyAction":
-      "Pida una reseña de Google a 3-5 de sus clientes recientes más satisfechos esta semana — las reseñas recientes son la palanca real más rápida para su calificación.",
+      "Pida una reseña de Google a 3-5 clientes recientes esta semana — las reseñas recientes son la palanca real más rápida para su calificación.",
     "content.actionPlan.visibility.review_count.why":
       "Más reseñas significa más prueba social — los clientes confían mucho más en un negocio con decenas de reseñas que en uno con un puñado, aun con la misma calificación de estrellas.",
     "content.actionPlan.visibility.review_count.action":
@@ -8224,7 +8326,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.checklist.items.replyReviews.howTo":
       "Abra su Perfil de Negocio de Google y responda las reseñas nuevas — una respuesta breve y genuina vale mucho, sobre todo en una reseña crítica.",
     "dashboard.growth.checklist.items.shareReviewLink.title":
-      "Comparta su enlace de reseñas con 3 o más clientes satisfechos",
+      "Comparta su enlace de reseñas con 3 o más clientes",
     "dashboard.growth.checklist.items.shareReviewLink.howTo":
       "Vaya a la página de Reseñas → copie su enlace de reseña o código QR y envíelo a algunos clientes recientes.",
     "dashboard.growth.checklist.items.addPhoto.title": "Agregue una foto nueva a su ficha de Google",
