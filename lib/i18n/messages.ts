@@ -19,6 +19,23 @@ export type MessageKey =
   | "dashboard.nav.competitors"
   | "dashboard.nav.pricing"
   | "dashboard.nav.reports"
+  | "dashboard.campaigns.tabAll"
+  | "dashboard.campaigns.tabCoupons"
+  | "dashboard.campaigns.tabReferrals"
+  | "dashboard.campaigns.noneRunning"
+  | "dashboard.campaigns.notForType"
+  | "dashboard.nav.campaigns"
+  | "dashboard.common.comingSoon"
+  | "dashboard.campaigns.title"
+  | "dashboard.campaigns.subtitle"
+  | "dashboard.campaigns.runningError"
+  | "dashboard.campaigns.nextHeading"
+  | "dashboard.campaigns.email"
+  | "dashboard.campaigns.emailBody"
+  | "dashboard.campaigns.text"
+  | "dashboard.campaigns.textBody"
+  | "dashboard.campaigns.social"
+  | "dashboard.campaigns.socialBody"
   | "dashboard.nav.account"
   | "dashboard.nav.logOut"
   // --- Per-business language toggle (BusinessLanguageToggle.tsx), inside
@@ -690,8 +707,6 @@ export type MessageKey =
   | "dashboard.growth.view.title"
   | "dashboard.growth.view.subtitle"
   | "dashboard.growth.view.tabPlan"
-  | "dashboard.growth.view.tabCoupons"
-  | "dashboard.growth.view.tabReferral"
   | "dashboard.growth.moves.sectionHeading"
   | "dashboard.growth.moves.badge"
   | "dashboard.growth.moves.badgeAlsoScored"
@@ -3385,8 +3400,25 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.reviews": "Reviews",
     "dashboard.nav.website": "Website",
     "dashboard.nav.competitors": "Competitors",
-    "dashboard.nav.pricing": "Pricing",
+    "dashboard.nav.pricing": "Price check",
     "dashboard.nav.reports": "Reports",
+    "dashboard.campaigns.tabAll": "All campaigns",
+    "dashboard.campaigns.tabCoupons": "Coupons",
+    "dashboard.campaigns.tabReferrals": "Referrals",
+    "dashboard.campaigns.notForType": "Coupons and referral cards aren't part of the plan for your type of business.",
+    "dashboard.nav.campaigns": "Campaigns",
+    "dashboard.common.comingSoon": "Coming soon",
+    "dashboard.campaigns.title": "Campaigns",
+    "dashboard.campaigns.subtitle": "Coupons and referral cards that bring customers in — and later, email, text and social campaigns.",
+    "dashboard.campaigns.runningError": "Couldn't load your running offers — try again in a moment.",
+    "dashboard.campaigns.noneRunning": "No campaigns running yet — open the Coupons or Referrals tab above to create one.",
+    "dashboard.campaigns.nextHeading": "Coming next",
+    "dashboard.campaigns.email": "Email campaigns",
+    "dashboard.campaigns.emailBody": "Send an offer to your customer list.",
+    "dashboard.campaigns.text": "Text message campaigns",
+    "dashboard.campaigns.textBody": "Text an offer to customers who agreed to get texts.",
+    "dashboard.campaigns.social": "Social posts",
+    "dashboard.campaigns.socialBody": "Turn a coupon into a ready-to-post image.",
     "dashboard.nav.account": "Account",
     "dashboard.nav.logOut": "Log out",
     "dashboard.nav.languageForBusinessLabel": "Language for this business",
@@ -4222,9 +4254,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.view.title": "Growth",
     "dashboard.growth.view.subtitle":
       "Raise your score and bring more customers through the door — everything you can act on, in one place.",
-    "dashboard.growth.view.tabPlan": "Action plan",
-    "dashboard.growth.view.tabCoupons": "Coupons",
-    "dashboard.growth.view.tabReferral": "Refer a friend",
+    "dashboard.growth.view.tabPlan": "This week's plan",
     "dashboard.growth.moves.sectionHeading": "Ways to bring in more customers",
     "dashboard.growth.moves.badge": "Brings in customers — doesn't change your score",
     "dashboard.growth.moves.badgeAlsoScored": "Brings in customers — the same fix also raises your score (see your plan above)",
@@ -7115,8 +7145,25 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.reviews": "Reseñas",
     "dashboard.nav.website": "Sitio web",
     "dashboard.nav.competitors": "Competencia",
-    "dashboard.nav.pricing": "Precios",
+    "dashboard.nav.pricing": "Revisión de precios",
     "dashboard.nav.reports": "Informes",
+    "dashboard.campaigns.tabAll": "Todas las campañas",
+    "dashboard.campaigns.tabCoupons": "Cupones",
+    "dashboard.campaigns.tabReferrals": "Referidos",
+    "dashboard.campaigns.notForType": "Los cupones y las tarjetas de referidos no forman parte del plan para su tipo de negocio.",
+    "dashboard.nav.campaigns": "Campañas",
+    "dashboard.common.comingSoon": "Próximamente",
+    "dashboard.campaigns.title": "Campañas",
+    "dashboard.campaigns.subtitle": "Cupones y tarjetas de referidos que atraen clientes — y más adelante, campañas por correo, texto y redes sociales.",
+    "dashboard.campaigns.runningError": "No se pudieron cargar sus ofertas en curso — inténtelo de nuevo en un momento.",
+    "dashboard.campaigns.noneRunning": "Todavía no hay campañas en curso — abra la pestaña Cupones o Referidos de arriba para crear una.",
+    "dashboard.campaigns.nextHeading": "Lo que viene",
+    "dashboard.campaigns.email": "Campañas por correo",
+    "dashboard.campaigns.emailBody": "Envíe una oferta a su lista de clientes.",
+    "dashboard.campaigns.text": "Campañas por mensaje de texto",
+    "dashboard.campaigns.textBody": "Envíe una oferta por texto a los clientes que aceptaron recibirlos.",
+    "dashboard.campaigns.social": "Publicaciones en redes sociales",
+    "dashboard.campaigns.socialBody": "Convierta un cupón en una imagen lista para publicar.",
     "dashboard.nav.account": "Cuenta",
     "dashboard.nav.logOut": "Cerrar sesión",
     "dashboard.nav.languageForBusinessLabel": "Idioma de este negocio",
@@ -7837,9 +7884,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.view.businessNameFallback": "Su negocio",
     "dashboard.growth.view.title": "Crecimiento",
     "dashboard.growth.view.subtitle": "Suba su puntuación y atraiga a más clientes por la puerta — todo lo que puede poner en práctica, en un solo lugar.",
-    "dashboard.growth.view.tabPlan": "Plan de acción",
-    "dashboard.growth.view.tabCoupons": "Cupones",
-    "dashboard.growth.view.tabReferral": "Recomiende a un amigo",
+    "dashboard.growth.view.tabPlan": "Plan de esta semana",
     "dashboard.growth.moves.sectionHeading": "Formas de atraer más clientes",
     "dashboard.growth.moves.badge": "Atrae clientes: no cambia su puntuación",
     "dashboard.growth.moves.badgeAlsoScored": "Atrae clientes: esta misma mejora también sube su puntuación (véala en su plan de arriba)",

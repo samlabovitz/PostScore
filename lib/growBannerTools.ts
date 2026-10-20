@@ -40,8 +40,8 @@ export function reviewToolHref(businessId: string): string {
  * most states' rules of professional conduct). The Referrals chip is
  * suppressed when it's false, so the Overview strip never links to a
  * tab that silently isn't there for this business (see
- * segmentFromParam in GrowthView.tsx, which falls back to the default
- * "plan" segment for ?tab=referral when referralOk is false).
+ * campaignsTabFromParam in lib/campaignsTabs.ts, which falls back to
+ * "All campaigns" for ?tab=referrals when referralOk is false).
  */
 /** The business type's tools (BizProfile.referralOk/couponsOk/pricingOk). */
 export interface ProfileTools {
@@ -58,7 +58,7 @@ export function buildGrowBannerTools(businessId: string, profileTools: ProfileTo
       icon: IconTicket,
       labelKey: "dashboard.overview.growBanner.tools.coupons.shortLabel",
       descKey: "dashboard.overview.growBanner.tools.coupons.desc",
-      href: `/business/${businessId}/growth?tab=coupons`,
+      href: `/business/${businessId}/campaigns?tab=coupons`,
     });
   }
 
@@ -67,7 +67,7 @@ export function buildGrowBannerTools(businessId: string, profileTools: ProfileTo
       icon: IconUsers,
       labelKey: "dashboard.overview.growBanner.tools.referral.shortLabel",
       descKey: "dashboard.overview.growBanner.tools.referral.desc",
-      href: `/business/${businessId}/growth?tab=referral`,
+      href: `/business/${businessId}/campaigns?tab=referrals`,
     });
   }
 

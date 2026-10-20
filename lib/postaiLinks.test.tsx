@@ -31,7 +31,7 @@ describe("markers → links for the current business", () => {
     const href = (id: string) => resolveLinkTarget(id, BIZ)?.href;
     expect(href("reviews")).toBe(`/business/${BIZ}/website-reviews#get-more-reviews`);
     expect(href("pricing")).toBe(`/business/${BIZ}/pricing`);
-    expect(href("growth.coupon")).toBe(`/business/${BIZ}/growth?tab=coupons`);
+    expect(href("growth.coupon")).toBe(`/business/${BIZ}/campaigns?tab=coupons`);
     expect(href("listing.mismatch")).toBe(`/business/${BIZ}/website#check-info_consistency`);
     expect(href("website.starter_site")).toBe(`/business/${BIZ}/website#starter-site`);
     expect(href("listing.photos")).toBe(`/business/${BIZ}#check-photos`);

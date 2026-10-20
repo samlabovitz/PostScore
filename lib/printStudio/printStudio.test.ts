@@ -262,6 +262,7 @@ describe("print quality", () => {
 
   it("PNG pixel sizes: 300 DPI at the real card size, 2× for high-res", async () => {
     const { pngPixels, PNG_DPI } = await import("@/app/business/[id]/growth/CardDesigner");
+    const { pngPixels, PNG_DPI } = await import("@/app/business/[id]/campaigns/CardDesigner");
     expect(pngPixels("wallet", PNG_DPI.print)).toEqual({ width: 1050, height: 600 });
     expect(pngPixels("card4x6", PNG_DPI.print)).toEqual({ width: 1800, height: 1200 });
     expect(pngPixels("wallet", PNG_DPI.hiRes)).toEqual({ width: 2100, height: 1200 });

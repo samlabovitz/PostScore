@@ -223,7 +223,7 @@ export function withoutWebsiteGrowthMoves(moves: GrowthMove[]): GrowthMove[] {
  */
 export function buildGrowthMoves(signals: GrowthMoveSignals, locale: Locale = DEFAULT_LOCALE): GrowthMove[] {
   const moves: GrowthMove[] = [];
-  const growthHref = `/business/${signals.businessId}/growth`;
+  const campaignsHref = `/business/${signals.businessId}/campaigns`;
 
   if ((signals.couponsOk ?? true) && !signals.hasEverCreatedPromo) {
     moves.push({
@@ -232,7 +232,7 @@ export function buildGrowthMoves(signals: GrowthMoveSignals, locale: Locale = DE
       meta: null,
       why: t(locale, "dashboard.growth.moves.startCoupon.why"),
       howTo: t(locale, "dashboard.growth.moves.startCoupon.howTo"),
-      href: `${growthHref}?tab=coupons`,
+      href: `${campaignsHref}?tab=coupons`,
       signal: "no promo row has ever been created for this business",
     });
   }
@@ -244,7 +244,7 @@ export function buildGrowthMoves(signals: GrowthMoveSignals, locale: Locale = DE
       meta: null,
       why: t(locale, "dashboard.growth.moves.startReferral.why"),
       howTo: t(locale, "dashboard.growth.moves.startReferral.howTo"),
-      href: `${growthHref}?tab=referral`,
+      href: `${campaignsHref}?tab=referrals`,
       signal: "no referral row has ever been created for this business",
     });
   }

@@ -399,7 +399,7 @@ describe("buildAssistantContextText", () => {
       profile: { ...BASE_CONTEXT.profile, businessTypeId: "lawyer", referralOk: false },
     };
     const text = buildAssistantContextText(noReferral);
-    expect(text).toContain('The Growth page\'s "Refer a friend" tab is not offered for this business type');
+    expect(text).toContain('The Campaigns page\'s "Referrals" tab is not offered for this business type');
     expect(text).toContain("referral-fee arrangements are restricted for attorneys under most states' rules of professional conduct");
     expect(text).toContain("Never PROACTIVELY suggest or bring up a referral program for this business");
     expect(text).toContain("If the owner directly asks about setting one up, answer honestly");
@@ -410,7 +410,7 @@ describe("buildAssistantContextText", () => {
   test("says nothing about referral-tab availability when it IS available, rather than cluttering every context", () => {
     const text = buildAssistantContextText(BASE_CONTEXT);
     expect(BASE_CONTEXT.profile.referralOk).toBe(true);
-    expect(text).not.toContain("Refer a friend\" tab is not offered");
+    expect(text).not.toContain("Referrals\" tab is not offered");
   });
 
   test("is honest when no services, job value, score history, or fixed items are on file", () => {
@@ -460,8 +460,8 @@ describe("buildAssistantContextText", () => {
     const text = buildAssistantContextText(BASE_CONTEXT);
     expect(text).toContain('GROWTH MOVES (ways to bring in customers — each one\'s own "Score impact" line below says whether it ALSO affects PostScore; never generalize across all of them):');
     expect(text).toContain("Start a coupon: Give new customers a reason to try you.");
-    expect(text).toContain('Where in PostScore: "Growth" page, "Coupons" tab.');
-    expect(text).toContain('Where in PostScore: "Pricing" page.');
+    expect(text).toContain('Where in PostScore: "Campaigns" page, "Coupons" tab.');
+    expect(text).toContain('Where in PostScore: "Price check" page.');
   });
 
   test("precomputes each growth move's real Score impact (YES when it overlaps a real losing check, NO otherwise)", () => {
@@ -538,8 +538,8 @@ describe("buildAssistantContextText", () => {
 
   test("names the real localized page and tab in Spanish, never an English-only label", () => {
     const text = buildAssistantContextText(BASE_CONTEXT, "es");
-    expect(text).toContain('"Crecimiento" page, "Cupones" tab');
-    expect(text).toContain('"Precios" page');
+    expect(text).toContain('"Campañas" page, "Cupones" tab');
+    expect(text).toContain('"Revisión de precios" page');
   });
 
   test("names every growth-move destination from the real UI's own labels, for every move id", () => {
@@ -1301,9 +1301,9 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
   test("points the assistant to PostScore's own real tools/pages, never an invented one", () => {
     for (const phrase of [
       "Reviews page",
-      "Growth page's Coupons tab",
-      "Growth page's Refer a friend tab",
-      "the Pricing page",
+      "Campaigns page's Coupons tab",
+      "Campaigns page's Referrals tab",
+      "the Price check page",
       "the Competitors page",
       // Note: this wording changed from the original "starter-site
       // builder" to the UI's own real label, "starter-site generator"
@@ -1395,8 +1395,8 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
 
   test("rule 7b states how the coupon/referral/reviews/price-check tools actually work, citing the real files, with no automatic tracking claimed", () => {
     expect(ASSISTANT_SYSTEM_RULES).toContain("HOW POSTSCORE'S TOOLS ACTUALLY WORK");
-    expect(ASSISTANT_SYSTEM_RULES).toContain("app/business/[id]/growth/CouponBuilder.tsx");
-    expect(ASSISTANT_SYSTEM_RULES).toContain("app/business/[id]/growth/ReferralBuilder.tsx");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("app/business/[id]/campaigns/CouponBuilder.tsx");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("app/business/[id]/campaigns/ReferralBuilder.tsx");
     expect(ASSISTANT_SYSTEM_RULES).toContain("app/business/[id]/website-reviews/GetMoreReviews.tsx");
     expect(ASSISTANT_SYSTEM_RULES).toContain("app/actions/pricing.ts");
     expect(ASSISTANT_SYSTEM_RULES).toContain('manually taps "+1 Redeemed"');
@@ -1447,7 +1447,7 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
       profile: { ...BASE_CONTEXT.profile, businessTypeId: "lawyer", referralOk: false },
     };
     const text = buildAssistantContextText(noReferral);
-    expect(text).toContain("This restriction applies to referral-style incentives in ANY form, not just the Refer a friend tab");
+    expect(text).toContain("This restriction applies to referral-style incentives in ANY form, not just the Referrals tab");
     expect(text).toContain("never suggest a referral reward, a referral credit, or any \"refer a friend\" discount as part of a coupon or promo idea either");
   });
 

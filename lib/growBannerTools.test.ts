@@ -18,12 +18,12 @@ describe("buildGrowBannerTools", () => {
 
   test("Coupons opens the Growth page with the coupon builder tab", () => {
     const tool = tools.find((t) => t.labelKey === "dashboard.overview.growBanner.tools.coupons.shortLabel");
-    expect(tool?.href).toBe(`/business/${businessId}/growth?tab=coupons`);
+    expect(tool?.href).toBe(`/business/${businessId}/campaigns?tab=coupons`);
   });
 
   test("Referrals opens the Growth page with the referral tab", () => {
     const tool = tools.find((t) => t.labelKey === "dashboard.overview.growBanner.tools.referral.shortLabel");
-    expect(tool?.href).toBe(`/business/${businessId}/growth?tab=referral`);
+    expect(tool?.href).toBe(`/business/${businessId}/campaigns?tab=referrals`);
   });
 
   test("Weekly routine opens the Growth page scrolled to the weekly routine section", () => {

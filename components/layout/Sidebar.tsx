@@ -10,6 +10,7 @@ import {
   IconUsers,
   IconTag,
   IconFileText,
+  IconSpeakerphone,
   IconX,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
@@ -17,13 +18,17 @@ import type { BusinessSummary } from "@/app/actions/businesses";
 import { AccountMenu } from "@/components/layout/AccountMenu";
 import { t, useLocale, type MessageKey } from "@/lib/i18n";
 
-const NAV_ITEMS: Array<{
+/** The sidebar, in order (docs/product-structure.md). Google Profile is a
+ * tab inside Growth, and PostStudio opens full-screen from the Overview —
+ * neither is a sidebar tab. */
+export const NAV_ITEMS: Array<{
   labelKey: MessageKey;
   icon: typeof IconLayoutDashboard;
   path: (businessId: string) => string;
 }> = [
   { labelKey: "dashboard.nav.overview", icon: IconLayoutDashboard, path: (id) => `/business/${id}` },
   { labelKey: "dashboard.nav.growth", icon: IconTrendingUp, path: (id) => `/business/${id}/growth` },
+  { labelKey: "dashboard.nav.campaigns", icon: IconSpeakerphone, path: (id) => `/business/${id}/campaigns` },
   { labelKey: "dashboard.nav.reviews", icon: IconStar, path: (id) => `/business/${id}/website-reviews` },
   { labelKey: "dashboard.nav.website", icon: IconWorld, path: (id) => `/business/${id}/website` },
   { labelKey: "dashboard.nav.competitors", icon: IconUsers, path: (id) => `/business/${id}/competitors` },
