@@ -13,6 +13,7 @@ import { SAVED_EVENT } from "@/lib/savedEvent";
 import type { Plan } from "@/lib/plan";
 import { t, useLocale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { COMPARE_PLANS, COMPARE_ROWS, PLAN_HEADER, PLAN_SUMMARY, type Cell } from "@/lib/planComparison";
 
 /** Icons are named by a plain string key: the Settings page is a Server
  * Component, and a component (a function) can't be passed to a Client
@@ -113,40 +114,83 @@ export function SavedToast() {
 
 // ---- Plan & billing ----
 
-/** What each plan includes — only things that exist (or say "coming soon"). */
-export const PLAN_FEATURES: Record<"free" | "grow" | "premium", MessageKey[]> = {
-  free: ["dashboard.settings.plan.feature.score", "dashboard.settings.plan.feature.plan", "dashboard.settings.plan.feature.offers", "dashboard.settings.plan.feature.preview"],
-  grow: ["dashboard.settings.plan.feature.everythingFree", "dashboard.settings.plan.feature.basicPrint"],
-  premium: ["dashboard.settings.plan.feature.everythingGrow", "dashboard.settings.plan.feature.fullDesigners", "dashboard.settings.plan.feature.gbp"],
-};
-
+/** The current plan's summary, then "Compare plans": four columns (Free ·
+ * Grow · Premium · Multi) with the current plan highlighted, stacking into
+ * one card per plan on a phone. Rows come from lib/planComparison.ts. */
 export function PlanCard({ plan }: { plan: Plan }) {
   const locale = useLocale();
-  const tier = plan === "multi" ? "premium" : plan;
+  const header = (p: Plan) => (
+    <>
+      <div className="flex flex-wrap items-baseline gap-x-1.5">
+        <span className="text-[14px] font-semibold text-ink">{t(locale, `dashboard.settings.plan.name.${p}` as MessageKey)}</span>
+        <span className="text-[12.5px] text-ink-soft">{t(locale, PLAN_HEADER[p].price)}</span>
+      </div>
+      <div className="text-[12px] font-medium text-brass">{t(locale, PLAN_HEADER[p].tagline)}</div>
+    </>
+  );
+  const hl = "bg-[color:color-mix(in_srgb,var(--color-brass)_12%,white)]";
   return (
     <div data-testid="plan-card" className="flex flex-col gap-3 rounded-xl border border-[color:color-mix(in_srgb,var(--color-brass)_40%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_6%,white)] p-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[12px] font-semibold uppercase tracking-[0.07em] text-ink-soft">{t(locale, "dashboard.settings.plan.current")}</span>
         <span className="rounded-full bg-ink px-2.5 py-0.5 text-[12px] font-semibold text-white">{t(locale, `dashboard.settings.plan.name.${plan}` as MessageKey)}</span>
+        <span className="text-[12.5px] font-medium text-brass">{t(locale, PLAN_HEADER[plan].tagline)}</span>
       </div>
-      <ul className="flex flex-col gap-1.5">
-        {PLAN_FEATURES[tier].map((k) => (
+      <ul className="flex flex-col gap-1.5" data-testid="plan-summary">
+        {PLAN_SUMMARY[plan].map((k) => (
           <li key={k} className="flex items-start gap-2 text-[13px] text-ink">
             <IconCheck size={15} aria-hidden className="mt-0.5 shrink-0 text-green" />
             {t(locale, k)}
           </li>
         ))}
       </ul>
-      <details className="group rounded-lg border border-paper-deep bg-white">
-        <summary className="cursor-pointer list-none px-3 py-2 text-[13px] font-semibold text-ink [&::-webkit-details-marker]:hidden">{t(locale, "dashboard.settings.plan.compare")} ▾</summary>
-        <div className="grid grid-cols-1 gap-3 border-t border-paper-line p-3 sm:grid-cols-3">
-          {(["free", "grow", "premium"] as const).map((p) => (
-            <div key={p} className={cn("rounded-lg p-2.5", p === tier && "bg-[color:color-mix(in_srgb,var(--color-brass)_10%,white)]")}>
-              <div className="text-[13px] font-semibold text-ink">{t(locale, `dashboard.settings.plan.name.${p}` as MessageKey)}</div>
-              <ul className="mt-1 flex flex-col gap-1">
-                {PLAN_FEATURES[p].map((k) => (
-                  <li key={k} className="text-[12px] leading-snug text-ink-soft">
-                    {t(locale, k)}
+      <details className="rounded-lg border border-paper-deep bg-white" data-testid="plan-compare">
+        <summary className="cursor-pointer list-none px-3 py-2 text-[13px] font-semibold text-ink [&::-webkit-details-marker]:hidden">{t(locale, "dashboard.settings.plans.heading")} ▾</summary>
+        {/* Wide screens: one table, the current plan's column highlighted. */}
+        <div className="hidden border-t border-paper-line md:block">
+          <table className="w-full table-fixed border-collapse text-[12.5px]">
+            <thead>
+              <tr>
+                <th className="w-[32%] p-2.5 text-left" scope="col">
+                  <span className="sr-only">{t(locale, "dashboard.settings.plans.heading")}</span>
+                </th>
+                {COMPARE_PLANS.map((p) => (
+                  <th key={p} scope="col" data-current={p === plan || undefined} className={cn("p-2.5 text-left align-top font-normal", p === plan && hl)}>
+                    {header(p)}
+                    {p === plan && <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-soft">{t(locale, "dashboard.settings.plans.current")}</div>}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {COMPARE_ROWS.map((r) => (
+                <tr key={r.key} className="border-t border-paper-line">
+                  <th scope="row" className="p-2.5 text-left font-normal text-ink">
+                    {t(locale, r.key)}
+                  </th>
+                  {COMPARE_PLANS.map((p) => (
+                    <td key={p} className={cn("p-2.5 align-top", p === plan && hl)}>
+                      <PlanCell cell={r.cells[p]} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* Phones: one card per plan, the current plan first. */}
+        <div className="flex flex-col gap-3 border-t border-paper-line p-3 md:hidden">
+          {[plan, ...COMPARE_PLANS.filter((p) => p !== plan)].map((p) => (
+            <div key={p} className={cn("rounded-lg border p-3", p === plan ? "border-brass bg-[color:color-mix(in_srgb,var(--color-brass)_10%,white)]" : "border-paper-deep")}>
+              {header(p)}
+              {p === plan && <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-soft">{t(locale, "dashboard.settings.plans.current")}</div>}
+              <ul className="mt-2 flex flex-col gap-1.5">
+                {COMPARE_ROWS.map((r) => (
+                  <li key={r.key} className="flex items-start justify-between gap-3 text-[12.5px]">
+                    <span className="text-ink">{t(locale, r.key)}</span>
+                    <span className="shrink-0 text-right">
+                      <PlanCell cell={r.cells[p]} />
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -156,6 +200,26 @@ export function PlanCard({ plan }: { plan: Plan }) {
       </details>
     </div>
   );
+}
+
+function PlanCell({ cell }: { cell: Cell }) {
+  const locale = useLocale();
+  if (cell.kind === "yes")
+    return (
+      <span className="inline-flex items-center text-green">
+        <IconCheck size={16} aria-hidden />
+        <span className="sr-only">{t(locale, "dashboard.settings.plans.cell.yes")}</span>
+      </span>
+    );
+  if (cell.kind === "preview") return <span className="font-medium text-ink-soft">{t(locale, "dashboard.settings.plans.cell.preview")}</span>;
+  if (cell.kind === "no")
+    return (
+      <span className="text-ink-mute">
+        <span aria-hidden>—</span>
+        <span className="sr-only">{t(locale, "dashboard.settings.plans.cell.no")}</span>
+      </span>
+    );
+  return <span className="font-medium text-ink">{t(locale, cell.key)}</span>;
 }
 
 /** Cancel at period end — rendered only for a real, paid subscription. */
