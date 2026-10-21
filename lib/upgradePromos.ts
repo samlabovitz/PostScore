@@ -142,7 +142,7 @@ export function issueUnlockLine(checkId: string, fullyMissing: boolean, f: Promo
 // The promo box: what opens when a locked thing is clicked.
 // ---------------------------------------------------------------------------
 
-export type PromoFeature = "designs" | "print" | "reviewSign" | "googleProfile" | "campaignHub" | "postStudio" | "recheck" | "premium" | "grow";
+export type PromoFeature = "designs" | "print" | "reviewSign" | "googleProfile" | "campaignHub" | "postStudio" | "recheck" | "replies" | "premium" | "grow";
 
 export interface PromoLine {
   text: string;
@@ -234,6 +234,10 @@ export function promoContent(feature: PromoFeature, f: PromoFacts, locale: Local
     case "campaignHub":
       // Email, text and social campaigns — Premium, not built yet.
       return named("campaignHub", [line(U("feature.campaignHub.b1"), true), line(U("feature.campaignHub.b2"), true)]);
+    case "replies":
+      // After the 3 free AI review reply drafts: Premium is unlimited;
+      // seeing every unanswered review and posting need Google connect.
+      return named("replies", [line(U("feature.replies.b1")), line(U("feature.replies.b2"), true)]);
     case "postStudio":
       return { plan, feature: { title: t(locale, U("feature.postStudio.name")), lines: [line(U("feature.postStudio.b1"), true), line(U("feature.postStudio.b2"))] }, plans: boxPlans("premium", locale) };
     case "premium":

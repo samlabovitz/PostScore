@@ -108,6 +108,7 @@ export function FreeReviews({
   reviewCount,
   goal,
   group,
+  children,
 }: {
   placeId: string | null;
   rating: number | null;
@@ -115,6 +116,8 @@ export function FreeReviews({
   /** The shared review goal (beat the leader) and its comparison group. */
   goal: ReviewGoal | null;
   group: string | null;
+  /** "Reply to a review" (the AI reply drafter), at the bottom. */
+  children?: React.ReactNode;
 }) {
   const locale = useLocale();
   const [copied, setCopied] = useState(false);
@@ -188,6 +191,7 @@ export function FreeReviews({
           </div>
         </div>
       )}
+      {children}
     </section>
   );
 }

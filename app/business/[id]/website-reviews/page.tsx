@@ -11,19 +11,22 @@ import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
 import { showRescanNotice } from "@/lib/rescanPolicy";
 import { getPlan } from "@/lib/premium";
 import { getLocalBenchmark } from "@/app/actions/competitors";
+import { getReplyDraftStatus } from "@/app/actions/reviewReplies";
 
 export default async function WebsiteReviewsPage({ params }: { params: { id: string } }) {
   // Free: this tab is locked — its showroom, before any of its own data loads.
   const showroom = await freeShowroom(params.id, "reviews");
   if (showroom) return showroom;
   // Independent loads run together.
-  const [websiteOnly, result, lastScanAt, upgrade, benchmark] = await Promise.all([
+  const [websiteOnly, result, lastScanAt, upgrade, benchmark, replyDrafts] = await Promise.all([
     websiteOnlyGuard(params.id, "reviews"),
     getReviewsPageData(params.id),
     getLastScanAt(params.id),
     loadUpgradeContext(params.id, "reviews"),
     // The shared nearby review average (DB only; request-cached).
     getLocalBenchmark(params.id),
+    // The AI review reply drafts left (DB only).
+    getReplyDraftStatus(params.id),
   ]);
   if (websiteOnly) return websiteOnly;
 
@@ -67,6 +70,7 @@ export default async function WebsiteReviewsPage({ params }: { params: { id: str
         plan={await getPlan()}
         nearby={benchmark.status === "ok" ? { goal: benchmark.benchmark.reviewGoal, group: benchmark.benchmark.reviewGroup } : null}
         devPlanSwitch={process.env.NODE_ENV === "development"}
+        replyDrafts={replyDrafts}
       />
     </DashboardShell>
   );

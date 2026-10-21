@@ -105,14 +105,19 @@ Nothing is lost in the move: templates, pass-on options, double-sided, numbering
 - Premium/Multi: everything, opening on All campaigns; email, text and social are coming soon.
 ### Reviews — built
 - Review link, QR code, review sign designer (Sign Studio), review stats.
-- Later: reply to reviews (Premium, needs Google connect) — preview + "Coming soon".
+- **Reply to a review** (AI reply drafts, built — option B, nothing from Google): the owner copies a review from Google and pastes it in (stars optional); PostAI drafts a short, polite reply in the business's language (thanks them, answers what they said; never an offer, discount or gift, never asks to change the review, never made-up facts — a draft that breaks a rule is refused and doesn't count); the owner edits it, then "Copy reply" + "Open my Google reviews" (their listing on Google Maps by place id). The pasted review is never saved, only the reply. `components/reviews/ReviewReplyDrafter.tsx`, `app/actions/reviewReplies.ts`, rules in `lib/reviewReplies.ts`.
+  - Where: the Free Overview's reviews section, and the Reviews page (Grow and up, in the reply assistant block).
+  - Limit: **3 free drafts per business, lifetime, on Free and Grow** ("2 of 3 free replies left"), counted on the server in `review_reply_drafts` (`supabase/review-reply-drafts.sql` — written only by the service role; a draft reserves its row first so two clicks can't pass the limit; failures don't count; each row records the PostAI tokens used). After 3: "You've used your 3 free replies." + the side-by-side plans box (feature `replies`: Premium = unlimited). Grow also sees "Unlimited with Premium". **Premium/Multi: unlimited.**
+  - Footer, Free/Grow: "Drafts only — paste it into Google yourself. With Premium, PostScore shows every review you haven't answered and posts replies for you (coming soon)." Premium/Multi: the same with "With Google connect…".
+  - Until the SQL is run the block says drafts aren't available (no button).
+- Later: every unanswered review + posting replies for them (Premium, needs Google connect) — "Coming soon".
 
 
 
 **By plan (5f part 3, done):**
 - Free and every plan: the review link, copy button, basic QR + PNG, rating/review count and the review goal (`ReviewGapLine`: beat the leader).
 - Free: the "right way" guide keeps the rule ("Never offer a discount or gift…") visible; the rest is a `LockedPreview` with the headings (when to ask, what to say, where to put the QR) and the details locked. The sign designer stays a preview; counter tools stay visible.
-- Grow: the guide fully open, the basic sign. Premium/Multi: the full designer + "AI-drafted replies to every review, ready to post (coming soon)".
+- Grow: the guide fully open, the basic sign. Premium/Multi: the full designer + "Unlimited replies; with Google connect, every unanswered review + posting for you (coming soon)". Grow and up: "Reply to a review" (above).
 ### Website — built (+ new chooser)
 - Site checks (visual analysis, score breakdown, security), per-builder fix guides, Re-check my website (3/day).
 - The **3 options** side by side: Fix your current site · Starter website · Build in PostStudio.
@@ -175,6 +180,7 @@ Anything not built says "coming soon".
 - Every problem on your Google listing, reviews and website
 - How you rank against nearby competitors
 - Your review gap compared to businesses near you
+- 3 free AI review replies to try
 
 **Grow · $25/mo · "Fix it yourself, step by step"** — We show you exactly how to fix every problem.
 - Step-by-step fix guides for every issue
@@ -186,7 +192,7 @@ Anything not built says "coming soon".
 
 **Premium · $50/mo · "We do the work for you"** (highlighted, "Best value") — Connect Google and PostScore fixes things for you.
 - One-click fixes to your Google listing: hours, info, photos (coming soon)
-- AI-drafted replies to every review, ready to post (coming soon)
+- Unlimited replies; with Google connect, every unanswered review + posting for you (coming soon)
 - See who searches for you and who calls or clicks (coming soon)
 - Email, text and social campaigns (coming soon)
 - Every design tool unlocked, with no PostScore branding
@@ -208,6 +214,7 @@ Anything not built says "coming soon".
 | Email, text & social campaigns | — | — | coming soon | coming soon |
 | Website | preview | starter site | starter + PostStudio discount | starter + PostStudio included |
 | PostAI | — | 100 questions/month | unlimited | unlimited |
+| AI review replies | 3 to try | 3 to try | unlimited · auto-post coming soon | unlimited · auto-post coming soon |
 | Fixes done for you (Google connect) | — | — | ✓ coming soon | ✓ coming soon |
 | Reports | monthly email | weekly recap | weekly + PDF | weekly + PDF |
 | PostStudio — your full website (coming soon) | $30/mo on its own | +$15/mo | +$8/mo | ✓ included |
@@ -225,7 +232,7 @@ highlighted. Phone: one card per plan, the owner's current plan first, each
 with its own rows; the PostStudio options stack.
 
 ### Free = the Overview audit + the Website page (5f, built)
-**Paid plans are unchanged by this redesign** (enforced page by page in `app/business/[id]/paidLayout.test.tsx`), except: the review goal (all plans), the Website page's two paths (PostStudio's card replaces Premium's bottom PostStudio line), "All campaigns" as the tracking home for Grow and up (Coupons/Referrals design only; only email, text and social are Premium), Premium/Multi's "AI-drafted replies — coming soon" on Reviews, and on Grow the designers' Grow/Premium marks, the "How to run it" guides, the Premium card at the bottom and the both-plans lock box. Locks on Grow keep their original look (one link / button / chip).
+**Paid plans are unchanged by this redesign** (enforced page by page in `app/business/[id]/paidLayout.test.tsx`), except: the review goal (all plans), the Website page's two paths (PostStudio's card replaces Premium's bottom PostStudio line), "All campaigns" as the tracking home for Grow and up (Coupons/Referrals design only; only email, text and social are Premium), Premium/Multi's replies line on Reviews, "Reply to a review" on Reviews (Grow and up), and on Grow the designers' Grow/Premium marks, the "How to run it" guides, the Premium card at the bottom and the both-plans lock box. Locks on Grow keep their original look (one link / button / chip).
 
 On Free the **Overview is the audit**, top to bottom:
 1. header + score hero ("{n} points are waiting to be fixed" instead of the projection);

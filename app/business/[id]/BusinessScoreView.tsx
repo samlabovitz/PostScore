@@ -36,6 +36,8 @@ import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
 import { LiveListingSection } from "@/components/gbp/LiveListingSection";
 import { InfoTip } from "@/components/reports/ScoreHistoryChart";
 import { FreePostAIShowroom, FreeReviews, RankUnlockLine, UnlockMore } from "@/components/overview/FreeOverview";
+import { ReviewReplyDrafter } from "@/components/reviews/ReviewReplyDrafter";
+import type { ReplyDraftStatus } from "@/app/actions/reviewReplies";
 import type { Plan } from "@/lib/plan";
 
 
@@ -65,6 +67,7 @@ export function BusinessScoreView({
   linkOptions,
   plan = "grow",
   freeRescanNextAt = null,
+  replyDrafts = null,
 }: {
   businessId: string;
   business: BusinessRecord;
@@ -95,6 +98,8 @@ export function BusinessScoreView({
   plan?: Plan;
   /** Free: when the month's free re-scan opens again (null = available). */
   freeRescanNextAt?: string | null;
+  /** Free: the AI review reply drafts left (the reviews section's drafter). */
+  replyDrafts?: ReplyDraftStatus | null;
 }) {
   const locale = useLocale();
   const { breakdown, projectedBreakdown } = result;
@@ -194,7 +199,9 @@ export function BusinessScoreView({
 
         <ScoreBreakdownPanel businessId={businessId} categories={breakdown.categories} hasWebsite={hasWebsite} scoreBasis={scoreBasis} audit websiteFixCount={null} />
 
-        <FreeReviews placeId={business.place_id ?? null} rating={business.rating} reviewCount={business.review_count} goal={reviewGoal} group={reviewGroup} />
+        <FreeReviews placeId={business.place_id ?? null} rating={business.rating} reviewCount={business.review_count} goal={reviewGoal} group={reviewGroup}>
+          {replyDrafts && <ReviewReplyDrafter businessId={businessId} plan="free" placeId={business.place_id ?? null} initial={replyDrafts} embedded />}
+        </FreeReviews>
 
         <GrowMoreCustomers
           businessId={businessId}

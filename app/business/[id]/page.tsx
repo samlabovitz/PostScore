@@ -25,6 +25,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NicheBanner } from "@/components/niche/NicheBanner";
 import { nicheBannerKind } from "@/lib/businessNiche";
 import { loadBusinessNiche } from "@/lib/businessNiche.server";
+import { getReplyDraftStatus } from "@/app/actions/reviewReplies";
 
 export default async function BusinessPage({ params }: { params: { id: string } }) {
   // getBusinessSummary is awaited separately (not folded into the
@@ -96,7 +97,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     );
   }
 
-  const [history, recentSnapshots, assistantPageData, benchmark, gbpStatus, actionPlan, niche, upgrade, lastOwnerRescan] = await Promise.all([
+  const [history, recentSnapshots, assistantPageData, benchmark, gbpStatus, actionPlan, niche, upgrade, lastOwnerRescan, replyDrafts] = await Promise.all([
     getScoreHistory(params.id),
     getRecentScoreSnapshots(params.id, 2),
     getAssistantPageData(params.id),
@@ -114,6 +115,8 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     loadUpgradeContext(params.id, "overview"),
     // Free: when the month's free re-scan was last used (no Google call).
     (await getPlan()) === "free" ? lastOwnerRescanAt(params.id) : Promise.resolve(null),
+    // Free: the AI review reply drafts left (DB only).
+    (await getPlan()) === "free" ? getReplyDraftStatus(params.id) : Promise.resolve(null),
   ]);
   const bannerKind = niche ? nicheBannerKind(niche.resolved) : null;
   const freeGate = rescanGate(upgrade.plan === "free", null, lastOwnerRescan, new Date());
@@ -175,6 +178,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
         linkOptions={linkOptions}
         plan={upgrade.plan}
         freeRescanNextAt={freeRescanNextAt}
+        replyDrafts={replyDrafts}
       />
     </DashboardShell>
   );

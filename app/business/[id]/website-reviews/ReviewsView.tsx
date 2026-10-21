@@ -25,6 +25,8 @@ import { reviewGoalText } from "@/lib/reviewGoal";
 import type { ReviewGoal } from "@/lib/competitorComparison";
 import { formatCount, t, useLocale } from "@/lib/i18n";
 import { useScrollToHash } from "@/lib/useScrollToHash";
+import { ReviewReplyDrafter } from "@/components/reviews/ReviewReplyDrafter";
+import type { ReplyDraftStatus } from "@/app/actions/reviewReplies";
 
 function StatCard({
   icon: Icon,
@@ -160,6 +162,7 @@ export function ReviewsView({
   reviews,
   plan = "free",
   nearby = null,
+  replyDrafts = null,
 }: {
   businessId: string;
   reviews: ReviewsPageData;
@@ -168,6 +171,8 @@ export function ReviewsView({
   nearby?: { goal: ReviewGoal | null; group: string } | null;
   /** Show the dev-only plan switch (the page passes true only in local dev). */
   devPlanSwitch?: boolean;
+  /** AI review reply drafts left (Grow and up; Free's page is a showroom). */
+  replyDrafts?: ReplyDraftStatus | null;
 }) {
   const locale = useLocale();
   // A link straight to #get-more-reviews (e.g. the Overview page's
@@ -229,6 +234,12 @@ export function ReviewsView({
             <IconCrown size={15} aria-hidden className="mt-0.5 shrink-0 text-brass" />
             {t(locale, "dashboard.settings.plans.bullet.premium.replies")}
           </p>
+        )}
+        {/* Paste a review, PostAI drafts the reply (3 free; Premium unlimited). */}
+        {replyDrafts && (
+          <div className="mb-3">
+            <ReviewReplyDrafter businessId={businessId} plan={plan} placeId={reviews.placeId} initial={replyDrafts} />
+          </div>
         )}
         {reviews.gbpConnected ? (
           <ComingSoonCard

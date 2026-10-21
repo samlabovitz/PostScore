@@ -37,6 +37,7 @@ export type MessageKey =
   | "dashboard.settings.plans.bullet.free.problems"
   | "dashboard.settings.plans.bullet.free.rank"
   | "dashboard.settings.plans.bullet.free.reviewGap"
+  | "dashboard.settings.plans.bullet.free.replies"
   | "dashboard.settings.plans.bullet.grow.guides"
   | "dashboard.settings.plans.bullet.grow.plan"
   | "dashboard.settings.plans.bullet.grow.recheck"
@@ -62,6 +63,9 @@ export type MessageKey =
   | "dashboard.settings.plans.row.postai"
   | "dashboard.settings.plans.row.doneForYou"
   | "dashboard.settings.plans.row.reports"
+  | "dashboard.settings.plans.row.replies"
+  | "dashboard.settings.plans.value.try3"
+  | "dashboard.settings.plans.value.repliesUnlimited"
   | "dashboard.settings.plans.row.postStudio"
   | "dashboard.settings.plans.row.locations"
   | "dashboard.settings.plans.value.basic"
@@ -125,6 +129,31 @@ export type MessageKey =
   | "dashboard.upgrade.feature.campaignHub.name"
   | "dashboard.upgrade.feature.campaignHub.b1"
   | "dashboard.upgrade.feature.campaignHub.b2"
+  | "dashboard.replies.heading"
+  | "dashboard.replies.intro"
+  | "dashboard.replies.reviewLabel"
+  | "dashboard.replies.reviewPlaceholder"
+  | "dashboard.replies.starsLabel"
+  | "dashboard.replies.starsNone"
+  | "dashboard.replies.draft"
+  | "dashboard.replies.drafting"
+  | "dashboard.replies.replyLabel"
+  | "dashboard.replies.copy"
+  | "dashboard.replies.copied"
+  | "dashboard.replies.open"
+  | "dashboard.replies.left"
+  | "dashboard.replies.unlimited"
+  | "dashboard.replies.unlimitedPremium"
+  | "dashboard.replies.usedUp"
+  | "dashboard.replies.footerFree"
+  | "dashboard.replies.footerPremium"
+  | "dashboard.replies.privacy"
+  | "dashboard.replies.errorInvalid"
+  | "dashboard.replies.errorRules"
+  | "dashboard.replies.errorUnavailable"
+  | "dashboard.upgrade.feature.replies.name"
+  | "dashboard.upgrade.feature.replies.b1"
+  | "dashboard.upgrade.feature.replies.b2"
   | "dashboard.upgrade.feature.postStudio.name"
   | "dashboard.upgrade.feature.postStudio.b1"
   | "dashboard.upgrade.feature.postStudio.b2"
@@ -3970,13 +3999,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.free.problems": "Every problem on your Google listing, reviews and website",
     "dashboard.settings.plans.bullet.free.rank": "How you rank against nearby competitors",
     "dashboard.settings.plans.bullet.free.reviewGap": "Your review gap compared to businesses near you",
+    "dashboard.settings.plans.bullet.free.replies": "3 free AI review replies to try",
     "dashboard.settings.plans.bullet.grow.guides": "Step-by-step fix guides for every issue",
     "dashboard.settings.plans.bullet.grow.plan": "A weekly action plan that tells you what to do next",
     "dashboard.settings.plans.bullet.grow.recheck": "Re-check your website as soon as you fix something",
     "dashboard.settings.plans.bullet.grow.tools": "A starter website, plus basic review signs, coupons and referral cards",
     "dashboard.settings.plans.bullet.grow.postai": "PostAI for your questions (monthly limit)",
     "dashboard.settings.plans.bullet.premium.fixes": "One-click fixes to your Google listing: hours, info, photos (coming soon)",
-    "dashboard.settings.plans.bullet.premium.replies": "AI-drafted replies to every review, ready to post (coming soon)",
+    "dashboard.settings.plans.bullet.premium.replies": "Unlimited replies; with Google connect, every unanswered review + posting for you (coming soon)",
     "dashboard.settings.plans.bullet.premium.insights": "See who searches for you and who calls or clicks (coming soon)",
     "dashboard.settings.plans.bullet.premium.channels": "Email, text and social campaigns (coming soon)",
     "dashboard.settings.plans.bullet.premium.designs": "Every design tool unlocked, with no PostScore branding",
@@ -3995,6 +4025,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.row.postai": "PostAI",
     "dashboard.settings.plans.row.doneForYou": "Fixes done for you (Google connect)",
     "dashboard.settings.plans.row.reports": "Reports",
+    "dashboard.settings.plans.row.replies": "AI review replies",
+    "dashboard.settings.plans.value.try3": "3 to try",
+    "dashboard.settings.plans.value.repliesUnlimited": "Unlimited · auto-post coming soon",
     "dashboard.settings.plans.row.postStudio": "PostStudio — your full website, built and hosted for you (coming soon)",
     "dashboard.settings.plans.row.locations": "Locations",
     "dashboard.settings.plans.value.basic": "Basic",
@@ -4058,6 +4091,31 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.feature.campaignHub.name": "Email, text & social campaigns",
     "dashboard.upgrade.feature.campaignHub.b1": "Send your offers to customers by email and text",
     "dashboard.upgrade.feature.campaignHub.b2": "Post them to your social pages from PostScore",
+    "dashboard.replies.heading": "Reply to a review",
+    "dashboard.replies.intro": "Copy a review from Google, paste it here, and PostAI drafts a short, polite reply you can edit.",
+    "dashboard.replies.reviewLabel": "Paste the review",
+    "dashboard.replies.reviewPlaceholder": "Paste the customer's review here…",
+    "dashboard.replies.starsLabel": "Stars (optional)",
+    "dashboard.replies.starsNone": "—",
+    "dashboard.replies.draft": "Draft a reply",
+    "dashboard.replies.drafting": "Drafting…",
+    "dashboard.replies.replyLabel": "Your reply — edit it before you post it",
+    "dashboard.replies.copy": "Copy reply",
+    "dashboard.replies.copied": "Copied",
+    "dashboard.replies.open": "Open my Google reviews",
+    "dashboard.replies.left": "{left} of {total} free replies left",
+    "dashboard.replies.unlimited": "Unlimited replies",
+    "dashboard.replies.unlimitedPremium": "Unlimited with Premium",
+    "dashboard.replies.usedUp": "You've used your {total} free replies.",
+    "dashboard.replies.footerFree": "Drafts only — paste it into Google yourself. With Premium, PostScore shows every review you haven't answered and posts replies for you (coming soon).",
+    "dashboard.replies.footerPremium": "Drafts only — paste it into Google yourself. With Google connect, PostScore will show every review you haven't answered and post replies for you (coming soon).",
+    "dashboard.replies.privacy": "We don't save the review you paste — only your reply.",
+    "dashboard.replies.errorInvalid": "Paste the review first (up to 2,000 characters).",
+    "dashboard.replies.errorRules": "PostAI couldn't write a reply that follows the rules (no offers, no asking to change the review). Please try again — it didn't use up a free reply.",
+    "dashboard.replies.errorUnavailable": "Reply drafts aren't available right now. Please try again later.",
+    "dashboard.upgrade.feature.replies.name": "Unlimited AI review replies",
+    "dashboard.upgrade.feature.replies.b1": "Draft a reply to every review, as many as you need",
+    "dashboard.upgrade.feature.replies.b2": "With Google connect: every review you haven't answered, and replies posted for you",
     "dashboard.upgrade.feature.postStudio.name": "PostStudio",
     "dashboard.upgrade.feature.postStudio.b1": "A full website we build and host",
     "dashboard.upgrade.feature.postStudio.b2": "$30/mo on its own · +$15 on Grow · +$8 on Premium · included in Multi",
@@ -8265,13 +8323,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.free.problems": "Cada problema de su ficha de Google, sus reseñas y su sitio web",
     "dashboard.settings.plans.bullet.free.rank": "Su posición frente a los competidores cercanos",
     "dashboard.settings.plans.bullet.free.reviewGap": "Cuántas reseñas le faltan en comparación con los negocios cercanos",
+    "dashboard.settings.plans.bullet.free.replies": "3 respuestas a reseñas con IA gratis para probar",
     "dashboard.settings.plans.bullet.grow.guides": "Guías paso a paso para resolver cada problema",
     "dashboard.settings.plans.bullet.grow.plan": "Un plan de acción semanal que le indica qué hacer a continuación",
     "dashboard.settings.plans.bullet.grow.recheck": "Vuelva a revisar su sitio web en cuanto arregle algo",
     "dashboard.settings.plans.bullet.grow.tools": "Un sitio web inicial, además de letreros de reseñas, cupones y tarjetas de referidos básicos",
     "dashboard.settings.plans.bullet.grow.postai": "PostAI para sus preguntas (límite mensual)",
     "dashboard.settings.plans.bullet.premium.fixes": "Arreglos con un clic en su ficha de Google: horario, datos y fotos (próximamente)",
-    "dashboard.settings.plans.bullet.premium.replies": "Respuestas a cada reseña redactadas con IA, listas para publicar (próximamente)",
+    "dashboard.settings.plans.bullet.premium.replies": "Respuestas ilimitadas; con la conexión a Google, cada reseña sin responder + las publicamos por usted (próximamente)",
     "dashboard.settings.plans.bullet.premium.insights": "Vea quién lo busca y quién lo llama o hace clic (próximamente)",
     "dashboard.settings.plans.bullet.premium.channels": "Campañas por correo, mensaje de texto y redes sociales (próximamente)",
     "dashboard.settings.plans.bullet.premium.designs": "Todas las herramientas de diseño, sin la marca PostScore",
@@ -8290,6 +8349,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.row.postai": "PostAI",
     "dashboard.settings.plans.row.doneForYou": "Arreglos que hacemos por usted (conexión con Google)",
     "dashboard.settings.plans.row.reports": "Informes",
+    "dashboard.settings.plans.row.replies": "Respuestas a reseñas con IA",
+    "dashboard.settings.plans.value.try3": "3 para probar",
+    "dashboard.settings.plans.value.repliesUnlimited": "Ilimitadas · publicación automática próximamente",
     "dashboard.settings.plans.row.postStudio": "PostStudio: su sitio web completo, construido y alojado por nosotros (próximamente)",
     "dashboard.settings.plans.row.locations": "Ubicaciones",
     "dashboard.settings.plans.value.basic": "Básico",
@@ -8353,6 +8415,31 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.feature.campaignHub.name": "Campañas por correo, texto y redes sociales",
     "dashboard.upgrade.feature.campaignHub.b1": "Envíe sus ofertas a sus clientes por correo y mensaje de texto",
     "dashboard.upgrade.feature.campaignHub.b2": "Publíquelas en sus redes sociales desde PostScore",
+    "dashboard.replies.heading": "Responder a una reseña",
+    "dashboard.replies.intro": "Copie una reseña de Google, péguela aquí y PostAI redactará una respuesta breve y amable que usted puede editar.",
+    "dashboard.replies.reviewLabel": "Pegue la reseña",
+    "dashboard.replies.reviewPlaceholder": "Pegue aquí la reseña del cliente…",
+    "dashboard.replies.starsLabel": "Estrellas (opcional)",
+    "dashboard.replies.starsNone": "—",
+    "dashboard.replies.draft": "Redactar una respuesta",
+    "dashboard.replies.drafting": "Redactando…",
+    "dashboard.replies.replyLabel": "Su respuesta: edítela antes de publicarla",
+    "dashboard.replies.copy": "Copiar respuesta",
+    "dashboard.replies.copied": "Copiada",
+    "dashboard.replies.open": "Abrir mis reseñas de Google",
+    "dashboard.replies.left": "Le quedan {left} de {total} respuestas gratis",
+    "dashboard.replies.unlimited": "Respuestas ilimitadas",
+    "dashboard.replies.unlimitedPremium": "Ilimitadas con Premium",
+    "dashboard.replies.usedUp": "Ya usó sus {total} respuestas gratis.",
+    "dashboard.replies.footerFree": "Solo borradores: péguelo usted en Google. Con Premium, PostScore le muestra cada reseña que no ha respondido y publica las respuestas por usted (próximamente).",
+    "dashboard.replies.footerPremium": "Solo borradores: péguelo usted en Google. Con la conexión a Google, PostScore le mostrará cada reseña que no ha respondido y publicará las respuestas por usted (próximamente).",
+    "dashboard.replies.privacy": "No guardamos la reseña que pega, solo su respuesta.",
+    "dashboard.replies.errorInvalid": "Primero pegue la reseña (hasta 2,000 caracteres).",
+    "dashboard.replies.errorRules": "PostAI no pudo escribir una respuesta que cumpla las reglas (sin ofertas, sin pedir que cambien la reseña). Inténtelo de nuevo; no usó una respuesta gratis.",
+    "dashboard.replies.errorUnavailable": "Los borradores de respuestas no están disponibles ahora. Inténtelo más tarde.",
+    "dashboard.upgrade.feature.replies.name": "Respuestas ilimitadas con IA",
+    "dashboard.upgrade.feature.replies.b1": "Redacte una respuesta para cada reseña, todas las que necesite",
+    "dashboard.upgrade.feature.replies.b2": "Con la conexión a Google: cada reseña que no ha respondido, y publicamos las respuestas por usted",
     "dashboard.upgrade.feature.postStudio.name": "PostStudio",
     "dashboard.upgrade.feature.postStudio.b1": "Un sitio web completo que construimos y alojamos",
     "dashboard.upgrade.feature.postStudio.b2": "$30/mes por sí solo · +$15 con Grow · +$8 con Premium · incluido en Multi",

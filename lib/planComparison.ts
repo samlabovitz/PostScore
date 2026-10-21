@@ -46,6 +46,9 @@ export const COMPARE_ROWS: CompareRow[] = [
   row("channels", no, no, soon),
   row("website", preview, text("starterSite"), text("starterDiscount"), text("starterIncluded")),
   row("postai", no, text("monthlyLimit"), text("unlimited")),
+  // AI review reply drafts (the owner pastes the review): 3 to try on Free
+  // and Grow; Premium unlimited, posting for them with Google connect soon.
+  row("replies", text("try3"), text("try3"), text("repliesUnlimited")),
   row("doneForYou", no, no, soon),
   row("reports", text("monthlyEmail"), text("weeklyRecap"), text("weeklyPdf")),
   // PostStudio (coming soon): $30/mo on its own (the free audit +
@@ -67,7 +70,7 @@ const bullets = (plan: Plan, ids: string[]) => ids.map((id) => k(`bullet.${plan}
 
 /** Each plan's card: price, tagline, promise and what it includes. */
 export const PLAN_COPY: Record<Plan, PlanCopy> = {
-  free: { price: k("price.free"), tagline: k("tagline.free"), promise: k("promise.free"), bullets: bullets("free", ["score", "problems", "rank", "reviewGap"]) },
+  free: { price: k("price.free"), tagline: k("tagline.free"), promise: k("promise.free"), bullets: bullets("free", ["score", "problems", "rank", "reviewGap", "replies"]) },
   grow: { price: k("price.grow"), tagline: k("tagline.grow"), promise: k("promise.grow"), bullets: bullets("grow", ["guides", "plan", "recheck", "tools", "tracking", "postai"]) },
   premium: {
     price: k("price.premium"),

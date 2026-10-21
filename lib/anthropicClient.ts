@@ -55,6 +55,13 @@ interface RawMessageResponse {
    * see trimToLastCompleteSentence below, the one place callAnthropicChat
    * reads this. */
   stop_reason?: string | null;
+  usage?: { input_tokens?: number; output_tokens?: number };
+}
+
+/** Tokens one call used (for cost tracking), when the API reports them. */
+export interface AnthropicUsage {
+  inputTokens: number | null;
+  outputTokens: number | null;
 }
 
 /**
@@ -145,6 +152,8 @@ export async function callAnthropicMessage(params: {
   system: string;
   userMessage: string;
   maxTokens?: number;
+  /** Receives the call's token usage (e.g. to record PostAI cost). */
+  onUsage?: (usage: AnthropicUsage) => void;
 }): Promise<string> {
   const res = await fetch(ANTHROPIC_API_BASE, {
     method: "POST",
@@ -166,6 +175,7 @@ export async function callAnthropicMessage(params: {
   }
 
   const data = (await res.json()) as RawMessageResponse;
+  params.onUsage?.({ inputTokens: data.usage?.input_tokens ?? null, outputTokens: data.usage?.output_tokens ?? null });
   const text = data.content?.find((block) => block.type === "text")?.text;
   if (!text) {
     throw new Error("Anthropic API returned no text content.");

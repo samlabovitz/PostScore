@@ -192,9 +192,31 @@ describe("Reviews", () => {
     expect(html).toContain('data-testid="sign-locked"');
   });
 
-  test("Premium and Multi see 'AI-drafted replies — coming soon'; Grow doesn't", () => {
-    for (const plan of ["premium", "multi"] as Plan[]) expect(text(view(plan)), plan).toContain("AI-drafted replies to every review, ready to post (coming soon)");
+  test("Premium and Multi see 'Unlimited replies; with Google connect … (coming soon)'; Grow doesn't", () => {
+    for (const plan of ["premium", "multi"] as Plan[]) expect(text(view(plan)), plan).toContain("Unlimited replies; with Google connect, every unanswered review + posting for you (coming soon)");
     expect(view("grow")).not.toContain("ai-replies-soon");
+  });
+
+  test("'Reply to a review' on the Reviews page (Grow and up), in the reply assistant block, only with the draft status", () => {
+    const withDrafts = (plan: Plan, left: number | null) =>
+      wrap(
+        <ReviewsView
+          businessId="b1"
+          plan={plan}
+          replyDrafts={{ status: "ok", used: left === null ? 7 : 3 - left, left }}
+          reviews={{ businessName: "Test Salon", address: null, category: null, primaryType: null, language: "en", timeZone: "America/New_York", placeId: "p1", rating: 4.6, reviewCount: 10, visibilityCategory: visibility, gbpConnected: false, verifiedSocials: [] }}
+        />,
+        plan
+      );
+    const grow = withDrafts("grow", 2);
+    expect(text(grow)).toContain("Reply to a review");
+    expect(text(grow)).toContain("2 of 3 free replies left");
+    expect(text(grow)).toContain("Unlimited with Premium");
+    expect(grow.indexOf('data-testid="review-reply-drafter"')).toBeGreaterThan(grow.indexOf("Reply assistant"));
+    const premium = text(withDrafts("premium", null));
+    expect(premium).toContain("Unlimited replies");
+    expect(premium).not.toMatch(/free replies left|Unlimited with Premium/);
+    expect(view("grow")).not.toContain("review-reply-drafter");
   });
 ;
 
