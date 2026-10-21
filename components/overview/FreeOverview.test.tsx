@@ -51,10 +51,10 @@ describe("Free re-scan: 1 a month (+ the first scan), on top of the 24-hour rule
 });
 
 describe("the Free Overview (the audit)", () => {
-  test("its own layout, in order: score, open breakdown, More customers (locked tiles), PostAI showroom, reviews, rank, Unlock more", () => {
+  test("its own layout, in order: score, open breakdown, reviews (biggest lever), More customers (locked tiles + both unlock buttons), PostAI showroom, rank, Unlock more — then the Grow + Premium cards from the shell", () => {
     const view = VIEW();
     const free = view.slice(view.indexOf("if (free) {"), view.indexOf("  return (\n    <div className=\"flex flex-col gap-5 nav:gap-6\">"));
-    const order = ["<ScoreBand", "freeWaitingPoints=", "<ScoreBreakdownPanel", "audit", "<GrowMoreCustomers", "locked", "<FreePostAIShowroom", "<FreeReviews", "<LocalBenchmarkTile", "<RankUnlockLine", "<UnlockMore"];
+    const order = ["<ScoreBand", "freeWaitingPoints=", "<ScoreBreakdownPanel", "audit", "<FreeReviews", "<GrowMoreCustomers", "locked", "<FreePostAIShowroom", "<LocalBenchmarkTile", "<RankUnlockLine", "<UnlockMore"];
     let at = -1;
     for (const piece of order) {
       const i = free.indexOf(piece, at + 1);
@@ -64,6 +64,12 @@ describe("the Free Overview (the audit)", () => {
     // None of the plan-only pieces run on Free.
     for (const live of ["<AssistantLauncher", "<TopRecommendations", "<StudioComingSoon", "<LiveListingSection", "<SinceLastScanCard"]) expect(free, live).not.toContain(live);
     expect(free).toContain("biggestBoost={null}");
+    // Each section once; the reviews section is the working free tools.
+    for (const piece of ["<FreeReviews", "<GrowMoreCustomers", "<FreePostAIShowroom", "<UnlockMore"]) expect(free.split(piece).length - 1, piece).toBe(1);
+    expect(readFileSync("components/overview/GrowMoreCustomers.tsx", "utf8")).toContain('<UpgradeTrigger feature="grow" variant="pair" />');
+    // The Grow + Premium cards follow the page (DashboardShell, after children).
+    const shell = readFileSync("components/layout/DashboardShell.tsx", "utf8");
+    expect(shell.indexOf("{children}")).toBeLessThan(shell.indexOf("<PromoCards />"));
   });
   test("Grow and above keep the Overview exactly as before", () => {
     const view = VIEW();
@@ -155,7 +161,7 @@ describe("reviews and rank on Free", () => {
 });
 
 describe("More customers + Unlock more on Free", () => {
-  test("same tiles as Grow; reviews works (→ #free-reviews), Competitors is free, the other tiles show a plan chip and open the promo box; the Overview's one big button pair", () => {
+  test("same tiles as Grow; on Free the Reviews tile shows short tips — no stats, goal, numbers or button (they're right above); Competitors is free, the other tiles show a plan chip and open the promo box; the Overview's one big button pair", () => {
     const html = render(
       <GrowMoreCustomers
         businessId="b1"
@@ -167,17 +173,33 @@ describe("More customers + Unlock more on Free", () => {
         locked
       />
     );
-    expect(html).toContain('href="#free-reviews"');
+    expect(text(html)).toContain("Get more Google reviews");
+    // Short tips instead of the stats and goal (the Reviews section above has them).
+    expect(text(html)).toContain("Ask every customer right after a good visit, put your QR code where people wait, and reply to reviews so customers see you care.");
+    expect(text(html)).toContain("Never offer a discount or gift for a review — it's against Google's rules.");
+    expect(html).not.toContain('data-testid="review-goal"');
+    expect(text(html)).not.toMatch(/Your goal|average|10 reviews/);
+    const tile = html.slice(html.indexOf("Get more Google reviews"), html.indexOf("rules.") + 6);
+    expect(text(tile)).not.toMatch(/\d/);
+    expect(text(html)).not.toContain("Get your review link & QR");
+    const es = text(render(<GrowMoreCustomers businessId="b1" profileTools={{ referralOk: true, couponsOk: true, pricingOk: true }} reviewCount={10} nearbyReviewAverage={57} goal={BEAT} group="nearby salons" locked />, "free", "es"));
+    expect(es).toContain("Pídale una reseña a cada cliente justo después de una buena visita");
+    expect(es).toContain("Nunca ofrezca un descuento o regalo a cambio de una reseña: va en contra de las reglas de Google.");
+    expect(html).not.toContain('href="#free-reviews"');
+    expect(html).not.toContain("review-sign");
     expect(html).toContain('href="/business/b1/competitors"');
     expect(html.match(/data-testid="locked-tool"/g)).toHaveLength(4);
     expect(html).not.toContain('href="/business/b1/campaigns');
     expect(html.match(/data-testid="unlock-grow-button"/g)).toHaveLength(1);
     expect(html).toMatch(/data-testid="unlock-premium-button"[\s\S]*?Best value/);
-    expect(text(html)).toContain("Your goal: beat Leader Salon — 90 reviews (80 more than you).");
     // The original design: no thumbnails.
     expect(html).not.toContain("drive-card");
     const grow = render(<GrowMoreCustomers businessId="b1" profileTools={{ referralOk: true, couponsOk: true, pricingOk: true }} reviewCount={10} nearbyReviewAverage={57} />, "grow");
     expect(grow).toContain('href="/business/b1/campaigns?tab=coupons"');
+    // Grow and up keep the button.
+    expect(text(grow)).toContain("Get your review link & QR →");
+    expect(text(grow)).toContain("10 reviews");
+    expect(text(grow)).not.toContain("Ask every customer right after a good visit");
     expect(grow).not.toContain("locked-tool");
     expect(grow).not.toContain("unlock-grow");
   });

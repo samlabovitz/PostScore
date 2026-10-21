@@ -160,9 +160,10 @@ export function BusinessScoreView({
 
   // Free = the audit — the whole product on Free — top to bottom: header
   // and score (with the points waiting to be fixed), the full breakdown
-  // open, "More customers" (the same tiles, locked, with two unlock
-  // buttons), the PostAI showroom, reviews (all free, with the review link,
-  // QR and the beat-the-leader goal), the competitor rank, then
+  // open, reviews ("your biggest lever": the beat-the-leader goal and the
+  // working free review link — copy, open, QR), "More customers" (the same
+  // tiles, locked, with two unlock buttons), the PostAI showroom, the
+  // competitor rank, then
   // "Unlock more with a plan" (every plan-only feature, hidden) and, from
   // the shell, the Grow + Premium cards.
   if (free) {
@@ -193,6 +194,8 @@ export function BusinessScoreView({
 
         <ScoreBreakdownPanel businessId={businessId} categories={breakdown.categories} hasWebsite={hasWebsite} scoreBasis={scoreBasis} audit websiteFixCount={null} />
 
+        <FreeReviews placeId={business.place_id ?? null} rating={business.rating} reviewCount={business.review_count} goal={reviewGoal} group={reviewGroup} />
+
         <GrowMoreCustomers
           businessId={businessId}
           profileTools={profileTools}
@@ -204,9 +207,6 @@ export function BusinessScoreView({
         />
 
         <FreePostAIShowroom starterPrompts={assistant.status === "ok" ? assistant.starterPrompts : []} />
-
-        <FreeReviews placeId={business.place_id ?? null} rating={business.rating} reviewCount={business.review_count} goal={reviewGoal} group={reviewGroup} />
-
 
         <SectionHeading title={t(locale, "dashboard.free.rankHeading")} />
         <Card className="p-5">

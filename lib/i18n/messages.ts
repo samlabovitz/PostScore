@@ -3185,6 +3185,8 @@ export type MessageKey =
   | "dashboard.overview.growBanner.reviews.title"
   | "dashboard.overview.growBanner.reviews.none"
   | "dashboard.overview.growBanner.reviews.cta"
+  | "dashboard.overview.growBanner.reviews.tips"
+  | "dashboard.overview.growBanner.reviews.tipsRule"
   | "dashboard.overview.growBanner.reviews.vsNearby.one"
   | "dashboard.overview.growBanner.reviews.vsNearby.other"
   | "dashboard.overview.growBanner.reviews.countOnly.one"
@@ -7557,6 +7559,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.growBanner.reviews.title": "Get more Google reviews",
     "dashboard.overview.growBanner.reviews.none": "No Google reviews yet — your first ones count the most",
     "dashboard.overview.growBanner.reviews.cta": "Get your review link & QR →",
+    "dashboard.overview.growBanner.reviews.tips": "Ask every customer right after a good visit, put your QR code where people wait, and reply to reviews so customers see you care.",
+    "dashboard.overview.growBanner.reviews.tipsRule": "Never offer a discount or gift for a review — it's against Google's rules.",
     "dashboard.overview.growBanner.reviews.vsNearby.one": "{count} review — businesses near you average {average}",
     "dashboard.overview.growBanner.reviews.vsNearby.other": "{count} reviews — businesses near you average {average}",
     "dashboard.overview.growBanner.reviews.countOnly.one": "{count} review · each new one helps your rating count fully",
@@ -11949,6 +11953,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.growBanner.reviews.title": "Consiga más reseñas en Google",
     "dashboard.overview.growBanner.reviews.none": "Aún no tiene reseñas en Google: las primeras son las que más cuentan",
     "dashboard.overview.growBanner.reviews.cta": "Obtenga su enlace y QR de reseñas →",
+    "dashboard.overview.growBanner.reviews.tips": "Pídale una reseña a cada cliente justo después de una buena visita, ponga su código QR donde la gente espera y responda a las reseñas para que sus clientes vean que le importan.",
+    "dashboard.overview.growBanner.reviews.tipsRule": "Nunca ofrezca un descuento o regalo a cambio de una reseña: va en contra de las reglas de Google.",
     "dashboard.overview.growBanner.reviews.vsNearby.one": "{count} reseña: los negocios de su zona tienen {average} en promedio",
     "dashboard.overview.growBanner.reviews.vsNearby.other": "{count} reseñas: los negocios de su zona tienen {average} en promedio",
     "dashboard.overview.growBanner.reviews.countOnly.one": "{count} reseña · cada reseña nueva ayuda a que su calificación cuente por completo",

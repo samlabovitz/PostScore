@@ -115,7 +115,14 @@ describe("Never a reward for a review", () => {
     "dashboard.websiteReviews.counter.heading",
     // The Campaigns guide's own "never reward reviews" rule (checked below).
     "dashboard.campaigns.guide.rule",
+    // Free Overview's "Get more Google reviews" tip line: the same rule.
+    "dashboard.overview.growBanner.reviews.tipsRule",
   ]);
+
+  test("the Free Overview's review tip line forbids rewarding reviews, in both languages", () => {
+    expect(messages.en["dashboard.overview.growBanner.reviews.tipsRule"]).toBe("Never offer a discount or gift for a review — it's against Google's rules.");
+    expect(messages.es["dashboard.overview.growBanner.reviews.tipsRule"]).toMatch(/^Nunca ofrezca un descuento o regalo a cambio de una reseña/);
+  });
 
   test("the Campaigns guide's rule forbids rewarding reviews, in both languages", () => {
     expect(messages.en["dashboard.campaigns.guide.rule"]).toMatch(/^Never reward reviews\. Don't give/);

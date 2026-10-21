@@ -39,7 +39,8 @@ export function GrowMoreCustomers({
   nearbyReviewAverage: number | null;
   /** Free: a showroom — the same tiles, but each tool shows a lock and
    * the plan it needs and opens the promo box; "Get more Google reviews"
-   * still works (the free review link & QR on the Overview). */
+   * shows short tips instead of the stats and goal, with no button (the
+   * Reviews section right above has the numbers, link and QR). */
   locked?: boolean;
   /** The shared review goal (beat the leader) and its comparison group. */
   goal?: ReviewGoal | null;
@@ -59,19 +60,33 @@ export function GrowMoreCustomers({
           </span>
           <div className="flex min-w-0 flex-col gap-1">
             <h3 className="text-base font-semibold text-ink">{t(locale, "dashboard.overview.growBanner.reviews.title")}</h3>
-            <p className="text-[13.5px] leading-snug text-ink-soft">{reviewStatLine(reviewCount, nearbyReviewAverage, locale)}</p>
-            {goal && group && (
-              <p className="text-[13px] font-semibold leading-snug text-ink" data-testid="review-goal">
-                {reviewGoalText(goal, group, locale).goal}
-              </p>
+            {locked ? (
+              // Free: the Reviews section right above has the stats, goal,
+              // link and QR — so here, short tips instead (no numbers).
+              <>
+                <p className="text-[13.5px] leading-snug text-ink-soft" data-testid="review-tips">{t(locale, "dashboard.overview.growBanner.reviews.tips")}</p>
+                <p className="text-[12px] leading-snug text-ink-mute" data-testid="review-tips-rule">{t(locale, "dashboard.overview.growBanner.reviews.tipsRule")}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-[13.5px] leading-snug text-ink-soft">{reviewStatLine(reviewCount, nearbyReviewAverage, locale)}</p>
+                {goal && group && (
+                  <p className="text-[13px] font-semibold leading-snug text-ink" data-testid="review-goal">
+                    {reviewGoalText(goal, group, locale).goal}
+                  </p>
+                )}
+              </>
             )}
           </div>
+          {/* Free: no button — the review link and QR are right above. */}
+          {!locked && (
           <Link
-            href={locked ? "#free-reviews" : reviewToolHref(businessId)}
+            href={reviewToolHref(businessId)}
             className="mt-auto inline-flex w-fit max-w-full items-center rounded-lg bg-brass px-3.5 py-2 text-[13.5px] font-semibold text-ink transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-brass)_85%,white)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             {t(locale, "dashboard.overview.growBanner.reviews.cta")}
           </Link>
+          )}
         </div>
 
         {/* The other tools — equal-height tiles that line up with the
