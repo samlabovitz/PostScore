@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { getPlan } from "@/lib/premium";
+import { DevPlanPill } from "@/components/dev/DevPlanPill";
 
 // Self-hosted (app/fonts, SIL Open Font License): Fraunces for headings,
 // page titles, business names and score numbers (`font-serif`), Inter for
@@ -46,6 +48,8 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${fraunces.variable} ${inter.variable} antialiased`}>
         {children}
+        {/* Development only — never in a production build. */}
+        {process.env.NODE_ENV === "development" && <DevPlanPill plan={getPlan()} />}
       </body>
     </html>
   );
