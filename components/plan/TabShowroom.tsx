@@ -78,9 +78,10 @@ function Sections({ tab, businessId, data }: { tab: ShowroomTab; businessId: str
     case "growth":
       return (
         <>
+          {/* Google Profile (Premium, coming soon) first, then the Grow sections. */}
+          <LockedPreview icon={IconBrandGoogle} title={t(locale, "dashboard.free.tile.google")} unlock={line("connect")} feature="googleProfile" soon rows={2} />
           <LockedPreview title={t(locale, "dashboard.free.actionPlanTitle")} summary={fixesSummary(f.issueCount ?? 0, f.fixPoints, locale)} unlock={line("plan")} rows={4} />
           <LockedPreview title={t(locale, "dashboard.growth.checklist.sectionHeading")} summary={t(locale, "dashboard.free.sumHabits", { count: ROUTINE_HABITS })} unlock={line("routine")} />
-          <LockedPreview icon={IconBrandGoogle} title={t(locale, "dashboard.free.tile.google")} unlock={line("connect")} feature="googleProfile" soon rows={2} />
           <LockedPreview title={t(locale, "dashboard.growth.moves.sectionHeading")} unlock={line("tools")} shape="card" />
         </>
       );

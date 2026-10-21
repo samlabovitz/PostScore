@@ -148,6 +148,29 @@ describe("no paid calls on Free, anywhere", () => {
   });
 });
 
+describe("showroom order", () => {
+  test("Growth: the locked Google Profile block (Premium, coming soon) comes first, right under the plans card", () => {
+    const html = render("growth");
+    const t = text(html);
+    const plansEnd = html.indexOf('data-testid="showroom-plans"');
+    const firstLocked = html.indexOf('data-testid="locked-preview"', plansEnd);
+    expect(text(html.slice(firstLocked, html.indexOf("</section>", firstLocked)))).toContain("Google Profile");
+    expect(t.indexOf("Google Profile")).toBeLessThan(t.indexOf("Your action plan"));
+  });
+
+  test("Campaigns: All campaigns (tracking) is Grow; only email, text and social are Premium (coming soon)", () => {
+    const html = render("campaigns");
+    const blocks = html.split('data-testid="locked-preview"').slice(1).map((b) => text(b.slice(0, b.indexOf("</section>"))));
+    const all = blocks.find((b) => b.includes("All campaigns"))!;
+    expect(all).toContain("Grow");
+    expect(all).toContain("Track every coupon and referral card in one place, with +1 for each one used — with Grow.");
+    const channels = blocks.find((b) => b.includes("Email, text and social campaigns"))!;
+    expect(channels).toContain("Premium");
+    expect(channels).toContain("Coming soon");
+    expect(text(html)).not.toContain("The campaign hub");
+  });
+});
+
 describe("designer previews in the showrooms", () => {
   test("a clear heading (icon, name, one line) with the Preview chip OUTSIDE the blurred area", async () => {
     const { DesignerPreview } = await import("./DesignerPreview");
