@@ -45,7 +45,7 @@ export type MessageKey =
   | "dashboard.settings.plans.bullet.premium.fixes"
   | "dashboard.settings.plans.bullet.premium.replies"
   | "dashboard.settings.plans.bullet.premium.insights"
-  | "dashboard.settings.plans.bullet.premium.hub"
+  | "dashboard.settings.plans.bullet.premium.channels"
   | "dashboard.settings.plans.bullet.premium.designs"
   | "dashboard.settings.plans.bullet.premium.postai"
   | "dashboard.settings.plans.bullet.multi.everything"
@@ -57,6 +57,7 @@ export type MessageKey =
   | "dashboard.settings.plans.row.recheck"
   | "dashboard.settings.plans.row.designs"
   | "dashboard.settings.plans.row.hub"
+  | "dashboard.settings.plans.row.channels"
   | "dashboard.settings.plans.row.website"
   | "dashboard.settings.plans.row.postai"
   | "dashboard.settings.plans.row.doneForYou"
@@ -65,7 +66,6 @@ export type MessageKey =
   | "dashboard.settings.plans.row.locations"
   | "dashboard.settings.plans.value.basic"
   | "dashboard.settings.plans.value.fullNoBranding"
-  | "dashboard.settings.plans.value.hubSoon"
   | "dashboard.settings.plans.value.starterSite"
   | "dashboard.settings.plans.value.starterDiscount"
   | "dashboard.settings.plans.value.starterIncluded"
@@ -135,11 +135,9 @@ export type MessageKey =
   | "dashboard.upgrade.strip.seeIncluded"
   | "dashboard.upgrade.strip.hide"
   | "dashboard.upgrade.strip.label"
-  | "dashboard.upgrade.strip.postStudioLine"
   | "dashboard.upgrade.chip.doneForYou"
   | "dashboard.upgrade.chip.aiReplies"
   | "dashboard.upgrade.chip.searchInsights"
-  | "dashboard.upgrade.chip.campaignHub"
   | "dashboard.upgrade.chip.campaignChannels"
   | "dashboard.upgrade.chip.designs"
   | "dashboard.upgrade.chip.postai"
@@ -177,7 +175,197 @@ export type MessageKey =
   | "dashboard.free.recheckBody"
   | "dashboard.free.recheckLocked"
   | "dashboard.free.routinePreviewNote"
+  | "dashboard.free.sumFixes"
+  | "dashboard.free.sumFixesOne"
+  | "dashboard.free.sumHabits"
+  | "dashboard.free.sumIdeas"
+  | "dashboard.free.sumIdeasOne"
+  | "dashboard.free.sumTools"
+  | "dashboard.free.sumCampaigns"
+  | "dashboard.free.sumCampaignsOne"
+  | "dashboard.free.sumChecks"
+  | "dashboard.free.lockedLabel"
+  | "dashboard.free.waitingPoints"
+  | "dashboard.free.waitingPointsOne"
+  | "dashboard.free.waitingNone"
+  | "dashboard.free.unlockMoreHeading"
+  | "dashboard.free.unlockMoreSub"
+  | "dashboard.free.actionPlanTitle"
+  | "dashboard.free.rankHeading"
+  | "dashboard.free.reviewsRatingCount"
+  | "dashboard.free.downloadQr"
+  | "dashboard.free.noQuickWins"
+  | "dashboard.free.liveListingTitle"
+  | "dashboard.free.postaiExampleLabel"
+  | "dashboard.free.postaiExampleNote"
+  | "dashboard.free.postaiExampleQuestion"
+  | "dashboard.free.postaiExampleAnswer"
+  | "dashboard.free.postaiPlaceholder"
+  | "dashboard.free.postaiSend"
+  | "dashboard.free.showroom.subtitle"
+  | "dashboard.free.showroom.backToAudit"
+  | "dashboard.free.showroom.starterSite"
+  | "dashboard.free.showroom.priceCheck"
+  | "dashboard.free.showroom.priceTips"
+  | "dashboard.free.showroom.weeklyRecap"
+  | "dashboard.free.showroom.pdfReports"
+  | "dashboard.upgrade.unlock.referrals"
+  | "dashboard.upgrade.unlock.reviewSign"
+  | "dashboard.upgrade.unlock.websiteFixes"
+  | "dashboard.upgrade.unlock.starterSite"
+  | "dashboard.upgrade.unlock.priceCheck"
+  | "dashboard.upgrade.unlock.priceTips"
+  | "dashboard.upgrade.unlock.weeklyRecap"
+  | "dashboard.upgrade.unlock.pdfReports"
+  | "dashboard.free.competitorsLocked"
+  | "dashboard.free.nicheSavedNoScan"
+  | "dashboard.free.priceCheckLocked"
+  | "dashboard.free.showroom.reviewLinkOnOverview"
+  | "dashboard.free.shotRefresh"
+  | "dashboard.free.tile.fixGuides"
+  | "dashboard.free.tile.yourWebsite"
+  | "dashboard.free.tile.reports"
+  | "dashboard.free.tile.reportsPdf"
+  | "dashboard.free.tile.hub"
+  | "dashboard.free.tile.google"
+  | "dashboard.free.tile.aiReplies"
+  | "dashboard.free.tile.postaiUnlimited"
+  | "dashboard.free.tile.postStudioPrice"
+  | "dashboard.free.tile.addOn"
+  | "dashboard.free.tile.reviewsCount"
+  | "dashboard.free.previewChip"
+  | "dashboard.free.designer.coupon"
+  | "dashboard.free.designer.referral"
+  | "dashboard.free.designer.sign"
+  | "dashboard.free.designer.signDesc"
+  | "dashboard.free.showroom.chip"
+  | "dashboard.free.showroom.withGrow"
+  | "dashboard.free.showroom.premiumAdds"
+  | "dashboard.free.showroom.growth.g1"
+  | "dashboard.free.showroom.growth.g2"
+  | "dashboard.free.showroom.growth.g3"
+  | "dashboard.free.showroom.growth.p1"
+  | "dashboard.free.showroom.growth.p2"
+  | "dashboard.free.showroom.growth.p3"
+  | "dashboard.free.showroom.campaigns.g1"
+  | "dashboard.free.showroom.campaigns.g2"
+  | "dashboard.free.showroom.campaigns.g3"
+  | "dashboard.free.showroom.campaigns.g4"
+  | "dashboard.upgrade.unlock.campaignGuides"
+  | "dashboard.campaigns.guide.heading"
+  | "dashboard.campaigns.guide.introCoupons"
+  | "dashboard.campaigns.guide.introReferrals"
+  | "dashboard.campaigns.guide.s1"
+  | "dashboard.campaigns.guide.s2"
+  | "dashboard.campaigns.guide.s3"
+  | "dashboard.campaigns.guide.s4"
+  | "dashboard.campaigns.guide.s5"
+  | "dashboard.campaigns.guide.coupons.s1"
+  | "dashboard.campaigns.guide.coupons.s2"
+  | "dashboard.campaigns.guide.coupons.s3"
+  | "dashboard.campaigns.guide.coupons.s4"
+  | "dashboard.campaigns.guide.coupons.s5"
+  | "dashboard.campaigns.guide.referrals.s1"
+  | "dashboard.campaigns.guide.referrals.s2"
+  | "dashboard.campaigns.guide.referrals.s3"
+  | "dashboard.campaigns.guide.referrals.s4"
+  | "dashboard.campaigns.guide.referrals.s5"
+  | "dashboard.campaigns.guide.rule"
+  | "dashboard.free.showroom.campaigns.p1"
+  | "dashboard.free.showroom.campaigns.p3"
+  | "dashboard.free.showroom.reviews.g1"
+  | "dashboard.free.showroom.reviews.g2"
+  | "dashboard.free.showroom.reviews.g3"
+  | "dashboard.free.showroom.reviews.p1"
+  | "dashboard.free.showroom.reviews.p2"
+  | "dashboard.free.showroom.pricing.g1"
+  | "dashboard.free.showroom.pricing.g2"
+  | "dashboard.free.showroom.pricing.g3"
+  | "dashboard.free.showroom.pricing.p1"
+  | "dashboard.free.showroom.reports.g1"
+  | "dashboard.free.showroom.reports.g2"
+  | "dashboard.free.showroom.reports.g3"
+  | "dashboard.free.showroom.reports.p1"
+  | "dashboard.free.web.openPreview"
+  | "dashboard.free.web.pathA"
+  | "dashboard.free.web.pathAIntroPaid"
+  | "dashboard.free.web.checksLeft"
+  | "dashboard.free.web.checksLeftOne"
+  | "dashboard.free.web.checksLeftNone"
+  | "dashboard.free.web.guidesLink"
+  | "dashboard.free.web.pathAIntro"
+  | "dashboard.free.web.yourBuilder"
+  | "dashboard.free.web.pathB"
+  | "dashboard.free.web.pathBIntro"
+  | "dashboard.free.web.pathBSocial"
+  | "dashboard.website.studioShowcase.title"
+  | "dashboard.website.studioShowcase.sub"
+  | "dashboard.website.studioShowcase.outlineNote"
+  | "dashboard.website.studioShowcase.rowPages"
+  | "dashboard.website.studioShowcase.rowHosting"
+  | "dashboard.website.studioShowcase.rowUpdates"
+  | "dashboard.website.studioShowcase.rowChecks"
+  | "dashboard.website.studioShowcase.starterPages"
+  | "dashboard.website.studioShowcase.studioPages"
+  | "dashboard.website.studioShowcase.starterHosting"
+  | "dashboard.website.studioShowcase.studioHosting"
+  | "dashboard.website.studioShowcase.starterUpdates"
+  | "dashboard.website.studioShowcase.studioUpdates"
+  | "dashboard.website.studioShowcase.starterChecks"
+  | "dashboard.website.studioShowcase.studioChecks"
+  | "dashboard.website.studioShowcase.price"
+  | "dashboard.website.studioShowcase.cta"
+  | "dashboard.website.studioShowcase.continueTitle"
+  | "dashboard.website.studioShowcase.continueSub"
+  | "dashboard.website.studioShowcase.continueCta"
+  | "dashboard.website.studioShowcase.headerLine"
+  | "dashboard.free.web.generatorHeading"
+  | "dashboard.free.web.scoreUnlock"
+  | "dashboard.free.web.previewTitle"
+  | "dashboard.free.web.previewWatermark"
+  | "dashboard.free.web.previewFooter"
+  | "dashboard.free.web.previewBack"
+  | "dashboard.free.web.previewBackShort"
+  | "dashboard.free.web.previewLabel"
+  | "dashboard.free.web.previewDownload"
+  | "dashboard.free.web.previewWaiting"
+  | "dashboard.free.web.faqTitle"
+  | "dashboard.free.web.fixGuidesTitle"
+  | "dashboard.free.web.recheckBody"
+  | "dashboard.free.web.downloadRefused"
+  | "dashboard.upgrade.unlock.faq"
+  | "dashboard.reviewGoal.average"
+  | "dashboard.reviewGoal.beat"
+  | "dashboard.reviewGoal.stretch"
+  | "dashboard.reviewGoal.nextUp"
+  | "dashboard.reviewGoal.lead"
+  | "dashboard.upgrade.unlock.reviewsGoal"
+  | "dashboard.upgrade.unlock.reviewsGoalOne"
+  | "dashboard.upgrade.box.plansHeading"
+  | "dashboard.upgrade.unlock.aiReplies"
+  | "dashboard.upgrade.unlock.postaiUnlimited"
+  | "dashboard.upgrade.unlock.reportsPremium"
+  | "dashboard.upgrade.unlock.routine"
+  | "dashboard.upgrade.unlock.projectsWebsite"
+  | "dashboard.upgrade.unlock.projectsWebsiteOne"
+  | "dashboard.upgrade.unlock.projects"
+  | "dashboard.upgrade.unlock.tools"
+  | "dashboard.upgrade.unlock.postStudio"
+  | "dashboard.upgrade.card.growTitle"
+  | "dashboard.upgrade.card.premiumTitle"
+  | "dashboard.upgrade.card.hideGrow"
+  | "dashboard.upgrade.card.hidePremium"
+  | "dashboard.upgrade.chip.reviewSign"
+  | "dashboard.upgrade.chip.couponsBasic"
+  | "dashboard.upgrade.chip.priceCheck"
+  | "dashboard.upgrade.chip.rankPlan"
+  | "dashboard.upgrade.chip.reportsWeekly"
+  | "dashboard.upgrade.chip.reviewPlan"
   | "dashboard.upgrade.feature.recheck.name"
+  | "dashboard.upgrade.unlock.projectsOne"
+  | "dashboard.upgrade.trigger.notInGrow"
+  | "dashboard.upgrade.trigger.postStudioGrow"
+  | "dashboard.upgrade.trigger.postStudioPremium"
   | "dashboard.niche.capped"
   | "dashboard.niche.savedUpdating"
   | "dashboard.niche.competitorsUpdated"
@@ -267,6 +455,16 @@ export type MessageKey =
   | "dashboard.campaigns.tabCoupons"
   | "dashboard.campaigns.tabReferrals"
   | "dashboard.campaigns.noneRunning"
+  | "dashboard.settings.plans.bullet.grow.tracking"
+  | "dashboard.upgrade.chip.trackAll"
+  | "dashboard.upgrade.unlock.tracking"
+  | "dashboard.campaigns.savedToast"
+  | "dashboard.campaigns.trackOnAll"
+  | "dashboard.campaigns.typeCoupon"
+  | "dashboard.campaigns.typeReferral"
+  | "dashboard.campaigns.started"
+  | "dashboard.campaigns.newBadge"
+  | "dashboard.campaigns.channelsTitle"
   | "dashboard.campaigns.notForType"
   | "dashboard.growth.view.tabGoogleProfile"
   | "dashboard.googleProfile.unlockPremium"
@@ -330,7 +528,6 @@ export type MessageKey =
   | "dashboard.overview.postStudio.title"
   | "dashboard.overview.postStudio.body"
   | "dashboard.overview.postStudio.cta"
-  | "dashboard.website.buildInPostStudio"
   | "dashboard.nav.campaigns"
   | "dashboard.common.comingSoon"
   | "dashboard.campaigns.title"
@@ -3115,6 +3312,8 @@ export type MessageKey =
   | "dashboard.growth.goalHit"
   | "dashboard.studio.customize"
   | "dashboard.studio.lockedTab"
+  | "dashboard.studio.planLegend"
+  | "dashboard.studio.growChip"
   | "dashboard.growth.print.tab.template"
   | "dashboard.growth.print.tab.size"
   | "dashboard.growth.print.tab.text"
@@ -3380,7 +3579,6 @@ export type MessageKey =
   | "dashboard.websiteReviews.studio.error.failed"
   | "dashboard.websiteReviews.studio.tentNote"
   | "dashboard.websiteReviews.studio.cardsNote"
-  | "dashboard.websiteReviews.devPlan.label"
   | "dashboard.websiteReviews.hero.linkLabel"
   | "dashboard.websiteReviews.hero.copy"
   | "dashboard.websiteReviews.hero.copied"
@@ -3753,7 +3951,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.premium.fixes": "One-click fixes to your Google listing: hours, info, photos (coming soon)",
     "dashboard.settings.plans.bullet.premium.replies": "AI-drafted replies to every review, ready to post (coming soon)",
     "dashboard.settings.plans.bullet.premium.insights": "See who searches for you and who calls or clicks (coming soon)",
-    "dashboard.settings.plans.bullet.premium.hub": "Your campaign hub: track every coupon and referral in one place, plus email, text and social campaigns (coming soon)",
+    "dashboard.settings.plans.bullet.premium.channels": "Email, text and social campaigns (coming soon)",
     "dashboard.settings.plans.bullet.premium.designs": "Every design tool unlocked, with no PostScore branding",
     "dashboard.settings.plans.bullet.premium.postai": "Unlimited PostAI, and PostStudio websites at a discount (PostStudio coming soon)",
     "dashboard.settings.plans.bullet.multi.everything": "Everything in Premium for up to 5 locations (+$25 each extra)",
@@ -3764,7 +3962,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.row.fixes": "Step-by-step fixes + weekly plan",
     "dashboard.settings.plans.row.recheck": "Instant website re-checks",
     "dashboard.settings.plans.row.designs": "Review signs, coupons, referral cards",
-    "dashboard.settings.plans.row.hub": "Campaign hub (all campaigns + email, text, social)",
+    "dashboard.settings.plans.row.hub": "Campaign hub (every coupon and referral, with +1)",
+    "dashboard.settings.plans.row.channels": "Email, text & social campaigns",
     "dashboard.settings.plans.row.website": "Website",
     "dashboard.settings.plans.row.postai": "PostAI",
     "dashboard.settings.plans.row.doneForYou": "Fixes done for you (Google connect)",
@@ -3773,7 +3972,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.row.locations": "Locations",
     "dashboard.settings.plans.value.basic": "Basic",
     "dashboard.settings.plans.value.fullNoBranding": "Full, no branding",
-    "dashboard.settings.plans.value.hubSoon": "✓ (email, text and social coming soon)",
     "dashboard.settings.plans.value.starterSite": "Starter site",
     "dashboard.settings.plans.value.starterDiscount": "Starter + PostStudio discount",
     "dashboard.settings.plans.value.starterIncluded": "Starter + PostStudio included",
@@ -3801,7 +3999,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.unlock.plan": "Your plan for this week is ready. Unlock it with Grow.",
     "dashboard.upgrade.unlock.recheck": "Fixed something? With Grow, re-check right away instead of waiting a month.",
     "dashboard.upgrade.unlock.designs": "Design and print your review sign, coupons and referral cards with Grow.",
-    "dashboard.upgrade.unlock.hub": "Track every campaign in one place, plus email, text and social campaigns — Premium.",
+    "dashboard.upgrade.unlock.hub": "Email, text and social campaigns — Premium, coming soon.",
     "dashboard.upgrade.unlock.connect": "Connect Google and let PostScore fix your listing for you. Premium, coming soon.",
     "dashboard.upgrade.missing.hours": "your business hours",
     "dashboard.upgrade.missing.phone": "a phone number",
@@ -3831,9 +4029,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.feature.googleProfile.b1": "One-click fixes to your Google listing",
     "dashboard.upgrade.feature.googleProfile.b2": "See who searches for you and who calls or clicks",
     "dashboard.upgrade.feature.googleProfile.b3": "AI-drafted replies to every review",
-    "dashboard.upgrade.feature.campaignHub.name": "Campaign hub",
-    "dashboard.upgrade.feature.campaignHub.b1": "Every coupon and referral card tracked in one place",
-    "dashboard.upgrade.feature.campaignHub.b2": "Email, text and social campaigns",
+    "dashboard.upgrade.feature.campaignHub.name": "Email, text & social campaigns",
+    "dashboard.upgrade.feature.campaignHub.b1": "Send your offers to customers by email and text",
+    "dashboard.upgrade.feature.campaignHub.b2": "Post them to your social pages from PostScore",
     "dashboard.upgrade.feature.postStudio.name": "PostStudio",
     "dashboard.upgrade.feature.postStudio.b1": "A full website we build and host",
     "dashboard.upgrade.feature.postStudio.b2": "+$8/mo with Premium, included in Multi",
@@ -3843,11 +4041,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.strip.seeIncluded": "See what's included",
     "dashboard.upgrade.strip.hide": "Hide for 14 days",
     "dashboard.upgrade.strip.label": "Plans",
-    "dashboard.upgrade.strip.postStudioLine": "PostStudio: a full website we build and host — +$8/mo on Premium (coming soon)",
     "dashboard.upgrade.chip.doneForYou": "Fixes done for you",
     "dashboard.upgrade.chip.aiReplies": "AI-drafted review replies",
     "dashboard.upgrade.chip.searchInsights": "Who searches for you",
-    "dashboard.upgrade.chip.campaignHub": "One hub for every campaign",
     "dashboard.upgrade.chip.campaignChannels": "Email, text & social campaigns",
     "dashboard.upgrade.chip.designs": "Every template, no branding",
     "dashboard.upgrade.chip.postai": "Unlimited PostAI",
@@ -3856,7 +4052,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.chip.fixGuides": "Step-by-step fix guides",
     "dashboard.upgrade.chip.weeklyPlan": "A weekly action plan",
     "dashboard.upgrade.chip.recheck": "Instant website re-checks",
-    "dashboard.upgrade.chip.starterSite": "A starter website",
+    "dashboard.upgrade.chip.starterSite": "Download your starter website",
     "dashboard.upgrade.chip.printTools": "Print signs, coupons & cards",
     "dashboard.upgrade.chip.soon": "soon",
     "dashboard.upgrade.unlock.postai": "Ask PostAI anything about your score and what to fix first — with Grow.",
@@ -3885,7 +4081,197 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.recheckBody": "See your new website score as soon as you fix something.",
     "dashboard.free.recheckLocked": "Re-checking your website is part of Grow. See plans in Settings → Plan & billing.",
     "dashboard.free.routinePreviewNote": "5 quick habits that keep your Google listing active",
+    "dashboard.free.sumFixes": "{count} fixes · {points} pts",
+    "dashboard.free.sumFixesOne": "1 fix · {points} pts",
+    "dashboard.free.sumHabits": "{count} weekly habits",
+    "dashboard.free.sumIdeas": "{count} ideas",
+    "dashboard.free.sumIdeasOne": "1 idea",
+    "dashboard.free.sumTools": "{count} tools",
+    "dashboard.free.sumCampaigns": "{count} running campaigns",
+    "dashboard.free.sumCampaignsOne": "1 running campaign",
+    "dashboard.free.sumChecks": "{count} website checks",
+    "dashboard.free.lockedLabel": "Locked",
+    "dashboard.free.waitingPoints": "{points} points are waiting to be fixed",
+    "dashboard.free.waitingPointsOne": "1 point is waiting to be fixed",
+    "dashboard.free.waitingNone": "Nothing is costing you points right now.",
+    "dashboard.free.unlockMoreHeading": "Unlock more with a plan",
+    "dashboard.free.unlockMoreSub": "Everything below is part of a plan — each shows what's waiting for your business.",
+    "dashboard.free.actionPlanTitle": "Your action plan",
+    "dashboard.free.rankHeading": "How you rank nearby",
+    "dashboard.free.reviewsRatingCount": "{rating}★ from {count} reviews",
+    "dashboard.free.downloadQr": "Download QR (PNG)",
+    "dashboard.free.noQuickWins": "No quick wins this week — your next gains are in Bigger projects.",
+    "dashboard.free.liveListingTitle": "Your live Google listing",
+    "dashboard.free.postaiExampleLabel": "Example answer",
+    "dashboard.free.postaiExampleNote": "A general example — with Grow, PostAI answers with your own numbers.",
+    "dashboard.free.postaiExampleQuestion": "What should I fix first?",
+    "dashboard.free.postaiExampleAnswer": "Start with the fixes worth the most points. For most local businesses that's a complete Google listing (hours, phone, photos) and a steady flow of new reviews — then the website basics.",
+    "dashboard.free.postaiPlaceholder": "Ask PostAI about your score…",
+    "dashboard.free.postaiSend": "Send",
+    "dashboard.free.showroom.subtitle": "A preview of what this does for {name} — unlock it to use it.",
+    "dashboard.free.showroom.backToAudit": "Back to your audit",
+    "dashboard.free.showroom.starterSite": "Download your starter website",
+    "dashboard.free.showroom.priceCheck": "Your price check",
+    "dashboard.free.showroom.priceTips": "Pricing tips",
+    "dashboard.free.showroom.weeklyRecap": "Weekly recap",
+    "dashboard.free.showroom.pdfReports": "PDF reports",
+    "dashboard.upgrade.unlock.referrals": "Reward customers for every friend they bring — with Grow.",
+    "dashboard.upgrade.unlock.reviewSign": "Print a review sign with your QR code for your counter — with Grow.",
+    "dashboard.upgrade.unlock.websiteFixes": "See how to fix every website check, step by step — with Grow.",
+    "dashboard.upgrade.unlock.starterSite": "Build and preview your starter website free on your Website page — download it with Grow.",
+    "dashboard.upgrade.unlock.priceCheck": "Check your prices against businesses near you — with Grow.",
+    "dashboard.upgrade.unlock.priceTips": "Get pricing tips for your type of business — with Grow.",
+    "dashboard.upgrade.unlock.weeklyRecap": "See what changed each week and what to do next — with Grow.",
+    "dashboard.upgrade.unlock.pdfReports": "Download PDF reports for partners and landlords — Premium.",
+    "dashboard.free.competitorsLocked": "Refreshing your competitors is part of Grow. Your saved list and rank stay here for free.",
+    "dashboard.free.nicheSavedNoScan": "Saved. Your competitor list updates with Grow — your rank below now uses this type.",
+    "dashboard.free.priceCheckLocked": "The price check is part of Grow. See plans in Settings → Plan & billing.",
+    "dashboard.free.showroom.reviewLinkOnOverview": "Your free review link and QR code are on your Overview →",
+    "dashboard.free.shotRefresh": "Refresh screenshots",
+    "dashboard.free.tile.fixGuides": "Step-by-step fix guides for {builder}",
+    "dashboard.free.tile.yourWebsite": "your website",
+    "dashboard.free.tile.reports": "Weekly reports",
+    "dashboard.free.tile.reportsPdf": "PDF on Premium",
+    "dashboard.free.tile.hub": "Email, text and social campaigns",
+    "dashboard.free.tile.google": "Google Profile: fixes done for you + search insights",
+    "dashboard.free.tile.aiReplies": "AI-drafted review replies",
+    "dashboard.free.tile.postaiUnlimited": "Unlimited PostAI",
+    "dashboard.free.tile.postStudioPrice": "+$15 on Grow · +$8 on Premium",
+    "dashboard.free.tile.addOn": "Add-on",
+    "dashboard.free.tile.reviewsCount": "{count} reviews",
+    "dashboard.free.previewChip": "Preview",
+    "dashboard.free.designer.coupon": "Coupon designer",
+    "dashboard.free.designer.referral": "Referral card designer",
+    "dashboard.free.designer.sign": "Review sign designer",
+    "dashboard.free.designer.signDesc": "A printable sign with your own review QR code",
+    "dashboard.free.showroom.chip": "Grow · more with Premium",
+    "dashboard.free.showroom.withGrow": "With Grow",
+    "dashboard.free.showroom.premiumAdds": "Premium adds",
+    "dashboard.free.showroom.growth.g1": "A weekly plan that tells you what to do next",
+    "dashboard.free.showroom.growth.g2": "Step-by-step guides for every issue",
+    "dashboard.free.showroom.growth.g3": "A weekly routine for your Google listing",
+    "dashboard.free.showroom.growth.p1": "Google Profile connection — fixes done for you (coming soon)",
+    "dashboard.free.showroom.growth.p2": "See who searches for you, and who calls or clicks (coming soon)",
+    "dashboard.free.showroom.growth.p3": "Unlimited PostAI",
+    "dashboard.free.showroom.campaigns.g1": "Coupons and referral cards (2 styles, 2 sizes)",
+    "dashboard.free.showroom.campaigns.g2": "Track every coupon and referral in one place, with +1 for each one used",
+    "dashboard.free.showroom.campaigns.g3": "Ready-made offers for your type of business",
+    "dashboard.free.showroom.campaigns.g4": "Step-by-step guides to run, share, print and track your program",
+    "dashboard.upgrade.unlock.campaignGuides": "A 5-step guide for each program: pick the offer, print, share, track and refresh it — with Grow.",
+    "dashboard.campaigns.guide.heading": "How to run it",
+    "dashboard.campaigns.guide.introCoupons": "Five steps from idea to redeemed coupons.",
+    "dashboard.campaigns.guide.introReferrals": "Five steps to get customers bringing friends.",
+    "dashboard.campaigns.guide.s1": "Pick an offer that fits your business",
+    "dashboard.campaigns.guide.s2": "Design and print it",
+    "dashboard.campaigns.guide.s3": "Share it",
+    "dashboard.campaigns.guide.s4": "Redeem and track it",
+    "dashboard.campaigns.guide.s5": "End it or refresh it",
+    "dashboard.campaigns.guide.coupons.s1": "Choose something you can afford to give often and that brings people back: a small discount, a free add-on, or a deal on a slow day. Keep it simple enough to explain in one sentence, and add an end date.",
+    "dashboard.campaigns.guide.coupons.s2": "Design it in the designer below, then print. A wallet card fits in a purse or wallet; a 4×6 card works at the counter or in a bag. Thicker paper (cardstock, 65–110 lb) feels like real value. Print a test page at home first — at home is fine for a few dozen; for a few hundred, a print shop is cheaper and looks sharper.",
+    "dashboard.campaigns.guide.coupons.s3": "Hand one over at the counter, tuck one in bags or with receipts, text it to regulars, and post it on your social pages. What to say: \"Here's something for your next visit — just bring this card back.\"",
+    "dashboard.campaigns.guide.coupons.s4": "When a customer uses one, take the card and tap +1 Redeemed on All campaigns. The count shows you whether the offer is actually bringing people in.",
+    "dashboard.campaigns.guide.coupons.s5": "End it on its date, or sooner if few people use it after a few weeks. If it worked, run it again later; if not, try a different offer. Running the same coupon forever teaches customers to wait for it.",
+    "dashboard.campaigns.guide.referrals.s1": "Pick a reward for the friend and one for the customer who sent them. It should be worth the trip but affordable for every new customer it brings — the same amount on both sides is easy to explain.",
+    "dashboard.campaigns.guide.referrals.s2": "Design the card in the designer below, then print. A wallet card is easy to pass to a friend; a 4×6 card works at the counter. Thicker paper (cardstock, 65–110 lb) feels worth keeping. Print a test page at home first — at home is fine for a few dozen; for a few hundred, a print shop is cheaper and looks sharper.",
+    "dashboard.campaigns.guide.referrals.s3": "Give cards to happy customers at checkout, add one to receipts or bags, text them to regulars and post on social. What to say: \"If you know someone who'd like us, give them this — you both get a reward.\"",
+    "dashboard.campaigns.guide.referrals.s4": "When a new customer brings a card, reward both of them and tap +1 Redeemed on All campaigns. The count shows how many new customers the program brings.",
+    "dashboard.campaigns.guide.referrals.s5": "Keep it running while friends keep coming in. If it goes quiet for a few weeks, refresh it: a new reward, a new design, or a reminder to your regulars.",
+    "dashboard.campaigns.guide.rule": "Never reward reviews. Don't give discounts, gifts or entries for leaving a review — Google doesn't allow it and can remove reviews. Ask every customer the same way, and keep rewards for visits and referrals only.",
+    "dashboard.free.showroom.campaigns.p1": "Every template, font, color and logo — no PostScore branding",
+    "dashboard.free.showroom.campaigns.p3": "Email, text and social campaigns (coming soon)",
+    "dashboard.free.showroom.reviews.g1": "The review guide and what to say",
+    "dashboard.free.showroom.reviews.g2": "A basic review sign with your QR code",
+    "dashboard.free.showroom.reviews.g3": "Where to put your QR code",
+    "dashboard.free.showroom.reviews.p1": "AI-drafted replies to every review (coming soon)",
+    "dashboard.free.showroom.reviews.p2": "The full sign designer, with no PostScore branding",
+    "dashboard.free.showroom.pricing.g1": "Compare your prices with businesses nearby",
+    "dashboard.free.showroom.pricing.g2": "The price map",
+    "dashboard.free.showroom.pricing.g3": "Pricing tips for your type of business",
+    "dashboard.free.showroom.pricing.p1": "Unlimited PostAI pricing questions",
+    "dashboard.free.showroom.reports.g1": "A weekly recap of what changed",
+    "dashboard.free.showroom.reports.g2": "Your score and rank over time",
+    "dashboard.free.showroom.reports.g3": "What to do next, every week",
+    "dashboard.free.showroom.reports.p1": "Downloadable PDF reports for partners and landlords",
+    "dashboard.free.web.openPreview": "Open full preview",
+    "dashboard.free.web.pathA": "Keep your current website — fix it with PostScore",
+    "dashboard.free.web.pathAIntroPaid": "Fix every issue and aim for a perfect 100/100 — step by step, in {builder}.",
+    "dashboard.free.web.checksLeft": "{count} checks left to fix",
+    "dashboard.free.web.checksLeftOne": "1 check left to fix",
+    "dashboard.free.web.checksLeftNone": "Every check passes — keep it that way.",
+    "dashboard.free.web.guidesLink": "How to fix each check, step by step",
+    "dashboard.free.web.pathAIntro": "Like your site? Fix every issue and aim for a perfect 100/100 — PostScore shows you exactly how, in {builder}.",
+    "dashboard.free.web.yourBuilder": "your site builder",
+    "dashboard.free.web.pathB": "Or start fresh with a new website",
+    "dashboard.free.web.pathBIntro": "Rather replace your current site? Build a new one instead.",
+    "dashboard.free.web.pathBSocial": "A {platform} page isn't a website — build a real one.",
+    "dashboard.website.studioShowcase.title": "Want a full website? Build it with PostStudio.",
+    "dashboard.website.studioShowcase.sub": "Multi-page, hosted for you, and it updates your rating and hours after every scan.",
+    "dashboard.website.studioShowcase.outlineNote": "Page outlines — not a real site yet",
+    "dashboard.website.studioShowcase.rowPages": "Pages",
+    "dashboard.website.studioShowcase.rowHosting": "Hosting",
+    "dashboard.website.studioShowcase.rowUpdates": "Auto-updates",
+    "dashboard.website.studioShowcase.rowChecks": "Website checks",
+    "dashboard.website.studioShowcase.starterPages": "1",
+    "dashboard.website.studioShowcase.studioPages": "4",
+    "dashboard.website.studioShowcase.starterHosting": "You host it",
+    "dashboard.website.studioShowcase.studioHosting": "Hosted for you",
+    "dashboard.website.studioShowcase.starterUpdates": "No — re-download",
+    "dashboard.website.studioShowcase.studioUpdates": "After every scan",
+    "dashboard.website.studioShowcase.starterChecks": "What one file can pass",
+    "dashboard.website.studioShowcase.studioChecks": "Built to pass every check",
+    "dashboard.website.studioShowcase.price": "+$15 on Grow · +$8 on Premium · included in Multi",
+    "dashboard.website.studioShowcase.cta": "See PostStudio",
+    "dashboard.website.studioShowcase.continueTitle": "Your full website is in PostStudio",
+    "dashboard.website.studioShowcase.continueSub": "Multi-page and hosted for you — pick up where you left off.",
+    "dashboard.website.studioShowcase.continueCta": "Continue in PostStudio",
+    "dashboard.website.studioShowcase.headerLine": "Need more than one page?",
+    "dashboard.free.web.generatorHeading": "Build your starter website — try it free",
+    "dashboard.free.web.scoreUnlock": "See exactly what's wrong and how to fix each one — Grow.",
+    "dashboard.free.web.previewTitle": "Your starter website — preview",
+    "dashboard.free.web.previewWatermark": "Preview · Made with PostScore · Download with Grow",
+    "dashboard.free.web.previewFooter": "© PostScore preview",
+    "dashboard.free.web.previewBack": "Back to PostScore",
+    "dashboard.free.web.previewBackShort": "Back",
+    "dashboard.free.web.previewLabel": "Preview of your starter website",
+    "dashboard.free.web.previewDownload": "Download with Grow",
+    "dashboard.free.web.previewWaiting": "Open the preview from your Website page (\"Open full preview\").",
+    "dashboard.free.web.faqTitle": "FAQ draft for your website",
+    "dashboard.free.web.fixGuidesTitle": "How to fix each check, step by step",
+    "dashboard.free.web.recheckBody": "See your new website score as soon as you fix something.",
+    "dashboard.free.web.downloadRefused": "Downloading your site is part of Grow.",
+    "dashboard.upgrade.unlock.faq": "A ready-to-use FAQ for your website, written for your business — with Grow.",
+    "dashboard.reviewGoal.average": "{group} average {avg} reviews.",
+    "dashboard.reviewGoal.beat": "Your goal: beat {name} — {count} reviews ({gap} more than you).",
+    "dashboard.reviewGoal.stretch": "Stretch goal: beat {name} — {count} reviews ({gap} more than you).",
+    "dashboard.reviewGoal.nextUp": "Next up: {name}, {count} reviews.",
+    "dashboard.reviewGoal.lead": "You lead nearby with {count} reviews — keep the gap ({gap} ahead of {name}).",
+    "dashboard.upgrade.unlock.reviewsGoal": "You have {n} reviews. Your goal: beat {name} ({count}). Grow gives you a plan to get there.",
+    "dashboard.upgrade.unlock.reviewsGoalOne": "You have 1 review. Your goal: beat {name} ({count}). Grow gives you a plan to get there.",
+    "dashboard.upgrade.box.plansHeading": "Choose a plan",
+    "dashboard.upgrade.unlock.aiReplies": "Get an AI-drafted reply to every review, ready to post — Premium, coming soon.",
+    "dashboard.upgrade.unlock.postaiUnlimited": "Ask PostAI as often as you like — unlimited on Premium.",
+    "dashboard.upgrade.unlock.reportsPremium": "A weekly recap with Grow, and PDF reports to share with Premium.",
+    "dashboard.upgrade.unlock.routine": "Your weekly routine is ready — unlock it with Grow.",
+    "dashboard.upgrade.unlock.projectsWebsite": "{count} website fixes worth about {points} points. Grow shows you how.",
+    "dashboard.upgrade.unlock.projectsWebsiteOne": "1 website fix worth about {points} points. Grow shows you how.",
+    "dashboard.upgrade.unlock.projects": "{count} bigger projects worth about {points} points. Grow shows you how.",
+    "dashboard.upgrade.unlock.tools": "Grow gives you a referral program and price check tools.",
+    "dashboard.upgrade.unlock.postStudio": "A full website we build and host for you — PostStudio, coming soon.",
+    "dashboard.upgrade.card.growTitle": "Fix it yourself, step by step",
+    "dashboard.upgrade.card.premiumTitle": "We do the work for you",
+    "dashboard.upgrade.card.hideGrow": "Hide the Grow card for 14 days",
+    "dashboard.upgrade.card.hidePremium": "Hide the Premium card for 14 days",
+    "dashboard.upgrade.chip.reviewSign": "Print a review sign",
+    "dashboard.upgrade.chip.couponsBasic": "Coupons & referral cards",
+    "dashboard.upgrade.chip.priceCheck": "Price check tools",
+    "dashboard.upgrade.chip.rankPlan": "A plan to pass competitors",
+    "dashboard.upgrade.chip.reportsWeekly": "Weekly recap",
+    "dashboard.upgrade.chip.reviewPlan": "A plan to get more reviews",
     "dashboard.upgrade.feature.recheck.name": "Instant website re-checks",
+    "dashboard.upgrade.unlock.projectsOne": "1 bigger project worth about {points} points. Grow shows you how.",
+    "dashboard.upgrade.trigger.notInGrow": "Not included in Grow",
+    "dashboard.upgrade.trigger.postStudioGrow": "Add with Grow · +$15",
+    "dashboard.upgrade.trigger.postStudioPremium": "Add with Premium · +$8",
     "dashboard.niche.capped": "This month's competitor searches are used up — they start again on {date}.",
     "dashboard.niche.savedUpdating": "Saved — we'll update your competitors.",
     "dashboard.niche.competitorsUpdated": "Your competitors were updated for {niche}. Their full scores fill in over the next few minutes.",
@@ -4037,13 +4423,22 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.postStudio.title": "PostStudio — build your full website",
     "dashboard.overview.postStudio.body": "A multi-page website made from your real Google listing and hosted for you. See what it would build.",
     "dashboard.overview.postStudio.cta": "Open PostStudio",
-    "dashboard.website.buildInPostStudio": "Want a full site we host for you? Build it in PostStudio →",
     "dashboard.nav.campaigns": "Campaigns",
     "dashboard.common.comingSoon": "Coming soon",
     "dashboard.campaigns.title": "Campaigns",
     "dashboard.campaigns.subtitle": "Coupons and referral cards that bring customers in — and later, email, text and social campaigns.",
     "dashboard.campaigns.runningError": "Couldn't load your running offers — try again in a moment.",
-    "dashboard.campaigns.noneRunning": "No campaigns running yet — open the Coupons or Referrals tab above to create one.",
+    "dashboard.campaigns.noneRunning": "No campaigns running yet — design one on the Coupons or Referrals tab and save it to start tracking.",
+    "dashboard.settings.plans.bullet.grow.tracking": "Track every coupon and referral in one place",
+    "dashboard.upgrade.chip.trackAll": "Track every coupon and referral in one place",
+    "dashboard.upgrade.unlock.tracking": "Track every coupon and referral card in one place, with +1 for each one used — with Grow.",
+    "dashboard.campaigns.savedToast": "Saved — track it on All campaigns",
+    "dashboard.campaigns.trackOnAll": "You'll track redemptions on All campaigns.",
+    "dashboard.campaigns.typeCoupon": "Coupon",
+    "dashboard.campaigns.typeReferral": "Referral card",
+    "dashboard.campaigns.started": "Started {date}",
+    "dashboard.campaigns.newBadge": "New",
+    "dashboard.campaigns.channelsTitle": "Email, text and social campaigns",
     "dashboard.campaigns.nextHeading": "Coming next",
     "dashboard.campaigns.email": "Email campaigns",
     "dashboard.campaigns.emailBody": "Send an offer to your customer list.",
@@ -5037,17 +5432,17 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.coupon.optionalHint": "(optional)",
     "dashboard.growth.coupon.share": "Share",
     "dashboard.growth.coupon.starting": "Starting…",
-    "dashboard.growth.coupon.startAndTrack": "Save & start tracking",
+    "dashboard.growth.coupon.startAndTrack": "Save & start tracking →",
     "dashboard.growth.coupon.atLimitMessage.one":
-      "You can run up to {count} coupon at once. End one in Active offers below to start a new one.",
+      "You can run up to {count} coupon at once. End one on All campaigns to start a new one.",
     "dashboard.growth.coupon.atLimitMessage.other":
-      "You can run up to {count} coupons at once. End one in Active offers below to start a new one.",
-    "dashboard.growth.coupon.startSuccess": "Started — tap +1 in Active offers below each time one is redeemed.",
+      "You can run up to {count} coupons at once. End one on All campaigns to start a new one.",
+    "dashboard.growth.coupon.startSuccess": "Saved — track it on All campaigns.",
     "dashboard.growth.coupon.startErrorFallback": "Couldn't start this — try again.",
     "dashboard.growth.coupon.startLimitError.one":
-      "You're already running {count} active coupon — end one in Active offers below before starting another.",
+      "You're already running {count} active coupon — end one on All campaigns before starting another.",
     "dashboard.growth.coupon.startLimitError.other":
-      "You're already running {count} active coupons — end one in Active offers below before starting another.",
+      "You're already running {count} active coupons — end one on All campaigns before starting another.",
     "dashboard.growth.coupon.shareModalTitle": "How to share your coupon",
 
     "dashboard.growth.activePromotions.redeemErrorFallback": "Couldn't log that — try again.",
@@ -5075,7 +5470,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       "They show the image or code — on their phone or printed — at checkout.",
     "dashboard.growth.howCouponsWork.step3Title": "3. Tap to log it",
     "dashboard.growth.howCouponsWork.step3Body":
-      'Staff taps "+1 Redeemed" in Active offers. That\'s the entire tracking system.',
+      'Staff taps "+1 Redeemed" on All campaigns. That\'s the entire tracking system.',
     "dashboard.growth.howCouponsWork.modalTitle": "Running a coupon — what you need",
     "dashboard.growth.howCouponsWork.modalBuildLabel": "Build.",
     "dashboard.growth.howCouponsWork.modalBuildBody": "Write your offer (or start from a quick pick), set an expiry, and design a printable coupon with your code — and, if you want, a QR to your Google listing, review link or website.",
@@ -5087,7 +5482,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       "They bring the image or code in — on their phone or printed — and show it at checkout.",
     "dashboard.growth.howCouponsWork.modalStaffLabel": "Staff taps +1.",
     "dashboard.growth.howCouponsWork.modalStaffBody":
-      'Whoever\'s at the register taps "+1 Redeemed" on that coupon in Active offers.',
+      'Whoever\'s at the register taps "+1 Redeemed" on that coupon on All campaigns.',
     "dashboard.growth.howCouponsWork.modalHonestNote":
       "Be honest with yourself about what this is: the redemption count is a simple stored tally that a human increments by hand. It is not a POS integration and nothing detects a redemption automatically — if staff forgets to tap it, that redemption isn't counted.",
 
@@ -5121,13 +5516,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.referral.generateNewCodeAriaLabel": "Generate a new code",
     "dashboard.growth.referral.codeAutoGeneratedNote": "Auto-generated — edit it if you'd rather use your own.",
     "dashboard.growth.referral.starting": "Starting…",
-    "dashboard.growth.referral.startAndTrack": "Save & start tracking",
+    "dashboard.growth.referral.startAndTrack": "Save & start tracking →",
     "dashboard.growth.referral.atLimitMessage":
-      "You can run 1 referral program at a time. End it in Active referrals below to start a new one.",
-    "dashboard.growth.referral.startSuccess": "Started — tap +1 in Active referrals below each time one is redeemed.",
+      "You can run 1 referral program at a time. End it on All campaigns to start a new one.",
+    "dashboard.growth.referral.startSuccess": "Saved — track it on All campaigns.",
     "dashboard.growth.referral.startErrorFallback": "Couldn't start this — try again.",
     "dashboard.growth.referral.startLimitError":
-      "You're already running a referral program — end it in Active referrals below before starting another.",
+      "You're already running a referral program — end it on All campaigns before starting another.",
 
     "dashboard.growth.activeReferral.redeemErrorFallback": "Couldn't log that — try again.",
     "dashboard.growth.activeReferral.endErrorFallback": "Couldn't end this — try again.",
@@ -5234,7 +5629,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.signalViewport": "Viewport",
     "dashboard.website.signalHeadings": "Headings",
     "dashboard.website.outOf100": "/ 100",
-    "dashboard.website.collapsible.title": "Starter website generator",
+    "dashboard.website.collapsible.title": "Build a one-page starter site →",
     "dashboard.website.collapsible.subtitle":
       "— build a backup or fresh starting point from your real listing data",
     "dashboard.website.collapsible.hide": "Hide starter website generator",
@@ -5288,7 +5683,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.starter.includeRating": "Show my rating",
     "dashboard.website.starter.livePreviewLabel": "Live preview — exactly what you'll download",
     "dashboard.website.starter.iframeTitle": "Live preview of your starter site",
-    "dashboard.website.starter.downloadSiteButton": "Download site (HTML)",
+    "dashboard.website.starter.downloadSiteButton": "Download your site",
     "dashboard.website.starter.downloadHelper":
       "A single, real HTML file — the same one shown above, with your chosen color theme, font, tagline, and sections baked right in. Open it in any browser, or upload it to any host to make it live.",
     "dashboard.website.starter.howToPublishHeading": "How to publish it",
@@ -7242,13 +7637,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.referral.passOn.digitalDesc": "An image and a text message the customer forwards. The friend shows it on their phone.",
     "dashboard.growth.howItWorks.referral.single.step1": "Give a card to a happy customer — they write their name on “Referred by”.",
     "dashboard.growth.howItWorks.referral.single.step2": "They give the whole card to a friend.",
-    "dashboard.growth.howItWorks.referral.single.step3": "The friend brings it in for their discount. The name on the card is who referred them — give that customer their reward on their next visit, then tap +1 in Active referrals.",
+    "dashboard.growth.howItWorks.referral.single.step3": "The friend brings it in for their discount. The name on the card is who referred them — give that customer their reward on their next visit, then tap +1 on All campaigns.",
     "dashboard.growth.howItWorks.referral.tear.step1": "Give a card to a happy customer.",
     "dashboard.growth.howItWorks.referral.tear.step2": "They tear it, keep “For you” and give the “For your friend” half to someone new.",
-    "dashboard.growth.howItWorks.referral.tear.step3": "The friend brings their half in for the discount. Both halves carry the same code, so you know who referred them — give the customer their reward when they show their “For you” half, then tap +1 in Active referrals.",
+    "dashboard.growth.howItWorks.referral.tear.step3": "The friend brings their half in for the discount. Both halves carry the same code, so you know who referred them — give the customer their reward when they show their “For you” half, then tap +1 on All campaigns.",
     "dashboard.growth.howItWorks.referral.digital.step1": "Share the card image and message with a happy customer.",
     "dashboard.growth.howItWorks.referral.digital.step2": "They forward it to a friend, with their name in the message.",
-    "dashboard.growth.howItWorks.referral.digital.step3": "The friend shows it on their phone at the register. The sender (or the name in the message) is who referred them — give that customer their reward on their next visit, then tap +1 in Active referrals.",
+    "dashboard.growth.howItWorks.referral.digital.step3": "The friend shows it on their phone at the register. The sender (or the name in the message) is who referred them — give that customer their reward on their next visit, then tap +1 on All campaigns.",
     "dashboard.growth.referral.share": "Share",
     "dashboard.growth.referral.shareModalTitle": "Share your referral offer",
     "dashboard.growth.referral.shareCaption": "Hi! {business} gives friends {friendReward}. Show this message at the register — code {code}. Referred by: [your name]",
@@ -7264,6 +7659,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.goalHit": "You hit this week's goal: {start} → {now} (+{diff})",
     "dashboard.studio.customize": "Customize design",
     "dashboard.studio.lockedTab": "Try these with a watermarked preview — printing them needs Premium.",
+    "dashboard.studio.planLegend": "Grow: 2 styles · 2 sizes · basic QR. Premium: every template, font, color, logo, double-sided, numbering — and no PostScore branding.",
+    "dashboard.studio.growChip": "Grow",
     "dashboard.growth.print.tab.template": "Template",
     "dashboard.growth.print.tab.size": "Size",
     "dashboard.growth.print.tab.text": "Text",
@@ -7274,7 +7671,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.howItWorks.heading": "How it works",
     "dashboard.growth.howItWorks.coupon.step1": "Print and hand out (or share the image)",
     "dashboard.growth.howItWorks.coupon.step2": "Customer shows it at the register",
-    "dashboard.growth.howItWorks.coupon.step3": "Honor the offer and tap +1 in Active offers to keep count",
+    "dashboard.growth.howItWorks.coupon.step3": "Honor the offer and tap +1 on All campaigns to keep count",
     "dashboard.growth.print.pngHiRes": "High-res (2×) for social",
     "dashboard.growth.print.show.howTo": "Tiny “how it works” line",
     "dashboard.growth.print.plan.free": "Free",
@@ -7529,7 +7926,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.studio.error.failed": "Couldn't create the sign — try again.",
     "dashboard.websiteReviews.studio.tentNote": "Prints on one letter page — fold on the dashed line.",
     "dashboard.websiteReviews.studio.cardsNote": "Cut along the dashed lines.",
-    "dashboard.websiteReviews.devPlan.label": "Test plan (local dev only):",
     "dashboard.websiteReviews.hero.linkLabel": "Your review link",
     "dashboard.websiteReviews.hero.copy": "Copy link",
     "dashboard.websiteReviews.hero.copied": "Copied ✓",
@@ -7823,7 +8219,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.premium.fixes": "Arreglos con un clic en su ficha de Google: horario, datos y fotos (próximamente)",
     "dashboard.settings.plans.bullet.premium.replies": "Respuestas a cada reseña redactadas con IA, listas para publicar (próximamente)",
     "dashboard.settings.plans.bullet.premium.insights": "Vea quién lo busca y quién lo llama o hace clic (próximamente)",
-    "dashboard.settings.plans.bullet.premium.hub": "Su centro de campañas: siga cada cupón y referido en un solo lugar, además de campañas por correo, mensaje de texto y redes sociales (próximamente)",
+    "dashboard.settings.plans.bullet.premium.channels": "Campañas por correo, mensaje de texto y redes sociales (próximamente)",
     "dashboard.settings.plans.bullet.premium.designs": "Todas las herramientas de diseño, sin la marca PostScore",
     "dashboard.settings.plans.bullet.premium.postai": "PostAI ilimitado y sitios web de PostStudio con descuento (PostStudio próximamente)",
     "dashboard.settings.plans.bullet.multi.everything": "Todo lo de Premium para hasta 5 ubicaciones (+$25 por cada ubicación adicional)",
@@ -7834,7 +8230,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.row.fixes": "Arreglos paso a paso y plan semanal",
     "dashboard.settings.plans.row.recheck": "Nuevas revisiones del sitio web al instante",
     "dashboard.settings.plans.row.designs": "Letreros de reseñas, cupones y tarjetas de referidos",
-    "dashboard.settings.plans.row.hub": "Centro de campañas (todas sus campañas + correo, texto y redes sociales)",
+    "dashboard.settings.plans.row.hub": "Centro de campañas (cada cupón y referido, con +1)",
+    "dashboard.settings.plans.row.channels": "Campañas por correo, texto y redes sociales",
     "dashboard.settings.plans.row.website": "Sitio web",
     "dashboard.settings.plans.row.postai": "PostAI",
     "dashboard.settings.plans.row.doneForYou": "Arreglos que hacemos por usted (conexión con Google)",
@@ -7843,7 +8240,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.row.locations": "Ubicaciones",
     "dashboard.settings.plans.value.basic": "Básico",
     "dashboard.settings.plans.value.fullNoBranding": "Completo, sin marca",
-    "dashboard.settings.plans.value.hubSoon": "✓ (correo, texto y redes sociales: próximamente)",
     "dashboard.settings.plans.value.starterSite": "Sitio inicial",
     "dashboard.settings.plans.value.starterDiscount": "Sitio inicial + descuento en PostStudio",
     "dashboard.settings.plans.value.starterIncluded": "Sitio inicial + PostStudio incluido",
@@ -7871,7 +8267,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.unlock.plan": "Su plan para esta semana está listo. Desbloquéelo con Grow.",
     "dashboard.upgrade.unlock.recheck": "¿Arregló algo? Con Grow, vuelva a revisar al instante en lugar de esperar un mes.",
     "dashboard.upgrade.unlock.designs": "Diseñe e imprima su letrero de reseñas, sus cupones y sus tarjetas de referidos con Grow.",
-    "dashboard.upgrade.unlock.hub": "Siga cada campaña en un solo lugar, además de campañas por correo, mensaje de texto y redes sociales — Premium.",
+    "dashboard.upgrade.unlock.hub": "Campañas por correo, texto y redes sociales — Premium, próximamente.",
     "dashboard.upgrade.unlock.connect": "Conecte Google y deje que PostScore arregle su ficha por usted. Premium, próximamente.",
     "dashboard.upgrade.missing.hours": "su horario de atención",
     "dashboard.upgrade.missing.phone": "un número de teléfono",
@@ -7901,9 +8297,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.feature.googleProfile.b1": "Arreglos con un clic en su ficha de Google",
     "dashboard.upgrade.feature.googleProfile.b2": "Vea quién lo busca y quién lo llama o hace clic",
     "dashboard.upgrade.feature.googleProfile.b3": "Respuestas a cada reseña redactadas con IA",
-    "dashboard.upgrade.feature.campaignHub.name": "Centro de campañas",
-    "dashboard.upgrade.feature.campaignHub.b1": "Cada cupón y tarjeta de referidos, en un solo lugar",
-    "dashboard.upgrade.feature.campaignHub.b2": "Campañas por correo, mensaje de texto y redes sociales",
+    "dashboard.upgrade.feature.campaignHub.name": "Campañas por correo, texto y redes sociales",
+    "dashboard.upgrade.feature.campaignHub.b1": "Envíe sus ofertas a sus clientes por correo y mensaje de texto",
+    "dashboard.upgrade.feature.campaignHub.b2": "Publíquelas en sus redes sociales desde PostScore",
     "dashboard.upgrade.feature.postStudio.name": "PostStudio",
     "dashboard.upgrade.feature.postStudio.b1": "Un sitio web completo que construimos y alojamos",
     "dashboard.upgrade.feature.postStudio.b2": "+$8/mes con Premium, incluido en Multi",
@@ -7913,11 +8309,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.strip.seeIncluded": "Vea qué incluye",
     "dashboard.upgrade.strip.hide": "Ocultar por 14 días",
     "dashboard.upgrade.strip.label": "Planes",
-    "dashboard.upgrade.strip.postStudioLine": "PostStudio: un sitio web completo que construimos y alojamos — +$8/mes con Premium (próximamente)",
     "dashboard.upgrade.chip.doneForYou": "Arreglos hechos por usted",
     "dashboard.upgrade.chip.aiReplies": "Respuestas a reseñas redactadas con IA",
     "dashboard.upgrade.chip.searchInsights": "Quién lo busca",
-    "dashboard.upgrade.chip.campaignHub": "Un solo lugar para cada campaña",
     "dashboard.upgrade.chip.campaignChannels": "Campañas por correo, texto y redes",
     "dashboard.upgrade.chip.designs": "Todas las plantillas, sin marca",
     "dashboard.upgrade.chip.postai": "PostAI ilimitado",
@@ -7926,7 +8320,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.chip.fixGuides": "Guías de arreglos paso a paso",
     "dashboard.upgrade.chip.weeklyPlan": "Un plan de acción semanal",
     "dashboard.upgrade.chip.recheck": "Revisiones del sitio al instante",
-    "dashboard.upgrade.chip.starterSite": "Un sitio web inicial",
+    "dashboard.upgrade.chip.starterSite": "Descargue su sitio web inicial",
     "dashboard.upgrade.chip.printTools": "Imprima letreros, cupones y tarjetas",
     "dashboard.upgrade.chip.soon": "pronto",
     "dashboard.upgrade.unlock.postai": "Pregúntele a PostAI lo que quiera sobre su puntuación y qué arreglar primero, con Grow.",
@@ -7955,7 +8349,197 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.recheckBody": "Vea la nueva puntuación de su sitio en cuanto arregle algo.",
     "dashboard.free.recheckLocked": "Volver a revisar su sitio web está incluido en Grow. Vea los planes en Configuración → Plan y facturación.",
     "dashboard.free.routinePreviewNote": "5 hábitos rápidos que mantienen activa su ficha de Google",
+    "dashboard.free.sumFixes": "{count} arreglos · {points} pts",
+    "dashboard.free.sumFixesOne": "1 arreglo · {points} pts",
+    "dashboard.free.sumHabits": "{count} hábitos semanales",
+    "dashboard.free.sumIdeas": "{count} ideas",
+    "dashboard.free.sumIdeasOne": "1 idea",
+    "dashboard.free.sumTools": "{count} herramientas",
+    "dashboard.free.sumCampaigns": "{count} campañas activas",
+    "dashboard.free.sumCampaignsOne": "1 campaña activa",
+    "dashboard.free.sumChecks": "{count} revisiones del sitio",
+    "dashboard.free.lockedLabel": "Bloqueado",
+    "dashboard.free.waitingPoints": "{points} puntos esperan a que los arregle",
+    "dashboard.free.waitingPointsOne": "1 punto espera a que lo arregle",
+    "dashboard.free.waitingNone": "Ahora mismo nada le está restando puntos.",
+    "dashboard.free.unlockMoreHeading": "Desbloquee más con un plan",
+    "dashboard.free.unlockMoreSub": "Todo lo de abajo forma parte de un plan; cada sección muestra lo que espera a su negocio.",
+    "dashboard.free.actionPlanTitle": "Su plan de acción",
+    "dashboard.free.rankHeading": "Su posición en la zona",
+    "dashboard.free.reviewsRatingCount": "{rating}★ de {count} reseñas",
+    "dashboard.free.downloadQr": "Descargar QR (PNG)",
+    "dashboard.free.noQuickWins": "No hay arreglos rápidos esta semana: sus próximos avances están en Proyectos más grandes.",
+    "dashboard.free.liveListingTitle": "Su ficha de Google en vivo",
+    "dashboard.free.postaiExampleLabel": "Respuesta de ejemplo",
+    "dashboard.free.postaiExampleNote": "Un ejemplo general: con Grow, PostAI responde con sus propios datos.",
+    "dashboard.free.postaiExampleQuestion": "¿Qué debo arreglar primero?",
+    "dashboard.free.postaiExampleAnswer": "Empiece por los arreglos que valen más puntos. Para la mayoría de los negocios locales eso es una ficha de Google completa (horario, teléfono, fotos) y un flujo constante de reseñas nuevas; después, lo básico del sitio web.",
+    "dashboard.free.postaiPlaceholder": "Pregúntele a PostAI sobre su puntuación…",
+    "dashboard.free.postaiSend": "Enviar",
+    "dashboard.free.showroom.subtitle": "Una vista previa de lo que esto hace por {name}; desbloquéelo para usarlo.",
+    "dashboard.free.showroom.backToAudit": "Volver a su auditoría",
+    "dashboard.free.showroom.starterSite": "Descargue su sitio web inicial",
+    "dashboard.free.showroom.priceCheck": "Su revisión de precios",
+    "dashboard.free.showroom.priceTips": "Consejos de precios",
+    "dashboard.free.showroom.weeklyRecap": "Resumen semanal",
+    "dashboard.free.showroom.pdfReports": "Informes en PDF",
+    "dashboard.upgrade.unlock.referrals": "Premie a sus clientes por cada amigo que traigan, con Grow.",
+    "dashboard.upgrade.unlock.reviewSign": "Imprima un letrero de reseñas con su código QR para su mostrador, con Grow.",
+    "dashboard.upgrade.unlock.websiteFixes": "Vea cómo arreglar cada revisión del sitio, paso a paso, con Grow.",
+    "dashboard.upgrade.unlock.starterSite": "Cree y vea su sitio web inicial gratis en su página Sitio web; descárguelo con Grow.",
+    "dashboard.upgrade.unlock.priceCheck": "Compare sus precios con los de negocios cercanos, con Grow.",
+    "dashboard.upgrade.unlock.priceTips": "Obtenga consejos de precios para su tipo de negocio, con Grow.",
+    "dashboard.upgrade.unlock.weeklyRecap": "Vea qué cambió cada semana y qué hacer después, con Grow.",
+    "dashboard.upgrade.unlock.pdfReports": "Descargue informes en PDF para socios y propietarios: Premium.",
+    "dashboard.free.competitorsLocked": "Actualizar su competencia está incluido en Grow. Su lista guardada y su posición siguen aquí gratis.",
+    "dashboard.free.nicheSavedNoScan": "Guardado. Su lista de competidores se actualiza con Grow; su posición ya usa este tipo.",
+    "dashboard.free.priceCheckLocked": "La revisión de precios está incluida en Grow. Vea los planes en Configuración → Plan y facturación.",
+    "dashboard.free.showroom.reviewLinkOnOverview": "Su enlace de reseñas y su código QR gratis están en su Resumen →",
+    "dashboard.free.shotRefresh": "Actualizar capturas",
+    "dashboard.free.tile.fixGuides": "Guías paso a paso para {builder}",
+    "dashboard.free.tile.yourWebsite": "su sitio web",
+    "dashboard.free.tile.reports": "Informes semanales",
+    "dashboard.free.tile.reportsPdf": "PDF con Premium",
+    "dashboard.free.tile.hub": "Campañas por correo, texto y redes sociales",
+    "dashboard.free.tile.google": "Perfil de Google: arreglos hechos por usted + búsquedas",
+    "dashboard.free.tile.aiReplies": "Respuestas a reseñas redactadas con IA",
+    "dashboard.free.tile.postaiUnlimited": "PostAI ilimitado",
+    "dashboard.free.tile.postStudioPrice": "+$15 con Grow · +$8 con Premium",
+    "dashboard.free.tile.addOn": "Complemento",
+    "dashboard.free.tile.reviewsCount": "{count} reseñas",
+    "dashboard.free.previewChip": "Vista previa",
+    "dashboard.free.designer.coupon": "Diseñador de cupones",
+    "dashboard.free.designer.referral": "Diseñador de tarjetas de referidos",
+    "dashboard.free.designer.sign": "Diseñador de letreros de reseñas",
+    "dashboard.free.designer.signDesc": "Un letrero para imprimir con su propio código QR de reseñas",
+    "dashboard.free.showroom.chip": "Grow · más con Premium",
+    "dashboard.free.showroom.withGrow": "Con Grow",
+    "dashboard.free.showroom.premiumAdds": "Premium agrega",
+    "dashboard.free.showroom.growth.g1": "Un plan semanal que le dice qué hacer a continuación",
+    "dashboard.free.showroom.growth.g2": "Guías paso a paso para cada problema",
+    "dashboard.free.showroom.growth.g3": "Una rutina semanal para su ficha de Google",
+    "dashboard.free.showroom.growth.p1": "Conexión con el Perfil de Google: arreglos hechos por usted (próximamente)",
+    "dashboard.free.showroom.growth.p2": "Vea quién lo busca y quién llama o hace clic (próximamente)",
+    "dashboard.free.showroom.growth.p3": "PostAI ilimitado",
+    "dashboard.free.showroom.campaigns.g1": "Cupones y tarjetas de referidos (2 estilos, 2 tamaños)",
+    "dashboard.free.showroom.campaigns.g2": "Siga cada cupón y referido en un solo lugar, con +1 por cada uno usado",
+    "dashboard.free.showroom.campaigns.g3": "Ofertas listas para su tipo de negocio",
+    "dashboard.free.showroom.campaigns.g4": "Guías paso a paso para lanzar, compartir, imprimir y medir su programa",
+    "dashboard.upgrade.unlock.campaignGuides": "Una guía de 5 pasos para cada programa: elegir la oferta, imprimir, compartir, medir y renovar — con Grow.",
+    "dashboard.campaigns.guide.heading": "Cómo hacerlo funcionar",
+    "dashboard.campaigns.guide.introCoupons": "Cinco pasos desde la idea hasta los cupones canjeados.",
+    "dashboard.campaigns.guide.introReferrals": "Cinco pasos para que sus clientes traigan amigos.",
+    "dashboard.campaigns.guide.s1": "Elija una oferta que le convenga a su negocio",
+    "dashboard.campaigns.guide.s2": "Diséñela e imprímala",
+    "dashboard.campaigns.guide.s3": "Compártala",
+    "dashboard.campaigns.guide.s4": "Canjee y lleve la cuenta",
+    "dashboard.campaigns.guide.s5": "Termínela o renuévela",
+    "dashboard.campaigns.guide.coupons.s1": "Elija algo que pueda dar con frecuencia y que haga volver a la gente: un pequeño descuento, un extra gratis o una oferta para un día flojo. Que se explique en una sola frase, y póngale fecha de vencimiento.",
+    "dashboard.campaigns.guide.coupons.s2": "Diséñelo en el diseñador de abajo y luego imprímalo. La tarjeta de bolsillo cabe en una cartera; la tarjeta 4×6 sirve en el mostrador o dentro de una bolsa. El papel grueso (cartulina, 65–110 lb) se siente de valor. Imprima primero una página de prueba en casa: en casa basta para unas decenas; para unos cientos, una imprenta sale más barata y se ve mejor.",
+    "dashboard.campaigns.guide.coupons.s3": "Entregue uno en el mostrador, póngalo en las bolsas o con los recibos, envíelo por mensaje de texto a sus clientes habituales y publíquelo en sus redes. Qué decir: \"Esto es para su próxima visita; solo traiga esta tarjeta.\"",
+    "dashboard.campaigns.guide.coupons.s4": "Cuando un cliente lo use, quédese con la tarjeta y toque +1 Canjeado en Todas las campañas. La cuenta le muestra si la oferta de verdad atrae gente.",
+    "dashboard.campaigns.guide.coupons.s5": "Termínela en su fecha, o antes si casi nadie la usa después de unas semanas. Si funcionó, repítala más adelante; si no, pruebe otra oferta. Un cupón que nunca termina enseña a los clientes a esperarlo.",
+    "dashboard.campaigns.guide.referrals.s1": "Elija una recompensa para el amigo y otra para el cliente que lo recomendó. Debe valer la visita, pero ser costeable por cada cliente nuevo que llegue; la misma cantidad para ambos es fácil de explicar.",
+    "dashboard.campaigns.guide.referrals.s2": "Diseñe la tarjeta en el diseñador de abajo y luego imprímala. La tarjeta de bolsillo es fácil de pasar a un amigo; la tarjeta 4×6 sirve en el mostrador. El papel grueso (cartulina, 65–110 lb) hace que valga la pena guardarla. Imprima primero una página de prueba en casa: en casa basta para unas decenas; para unos cientos, una imprenta sale más barata y se ve mejor.",
+    "dashboard.campaigns.guide.referrals.s3": "Entregue tarjetas a los clientes contentos al pagar, póngalas con los recibos o en las bolsas, envíelas por mensaje de texto a sus clientes habituales y publíquelas en sus redes. Qué decir: \"Si conoce a alguien a quien le gustaría venir, déle esto; los dos reciben una recompensa.\"",
+    "dashboard.campaigns.guide.referrals.s4": "Cuando llegue un cliente nuevo con una tarjeta, premie a los dos y toque +1 Canjeado en Todas las campañas. La cuenta le muestra cuántos clientes nuevos trae el programa.",
+    "dashboard.campaigns.guide.referrals.s5": "Manténgalo mientras sigan llegando amigos. Si pasan unas semanas sin movimiento, renuévelo: una nueva recompensa, un nuevo diseño o un recordatorio a sus clientes habituales.",
+    "dashboard.campaigns.guide.rule": "Nunca premie las reseñas. No dé descuentos, regalos ni sorteos a cambio de dejar una reseña: Google no lo permite y puede eliminar reseñas. Pídales a todos sus clientes de la misma manera, y reserve las recompensas para visitas y referidos.",
+    "dashboard.free.showroom.campaigns.p1": "Todas las plantillas, fuentes, colores y logotipo, sin la marca PostScore",
+    "dashboard.free.showroom.campaigns.p3": "Campañas por correo, texto y redes sociales (próximamente)",
+    "dashboard.free.showroom.reviews.g1": "La guía de reseñas y qué decir",
+    "dashboard.free.showroom.reviews.g2": "Un letrero de reseñas básico con su código QR",
+    "dashboard.free.showroom.reviews.g3": "Dónde poner su código QR",
+    "dashboard.free.showroom.reviews.p1": "Respuestas a cada reseña redactadas con IA (próximamente)",
+    "dashboard.free.showroom.reviews.p2": "El diseñador completo de letreros, sin la marca PostScore",
+    "dashboard.free.showroom.pricing.g1": "Compare sus precios con los de negocios cercanos",
+    "dashboard.free.showroom.pricing.g2": "El mapa de precios",
+    "dashboard.free.showroom.pricing.g3": "Consejos de precios para su tipo de negocio",
+    "dashboard.free.showroom.pricing.p1": "Preguntas ilimitadas sobre precios a PostAI",
+    "dashboard.free.showroom.reports.g1": "Un resumen semanal de lo que cambió",
+    "dashboard.free.showroom.reports.g2": "Su puntuación y su posición a lo largo del tiempo",
+    "dashboard.free.showroom.reports.g3": "Qué hacer después, cada semana",
+    "dashboard.free.showroom.reports.p1": "Informes en PDF para socios y propietarios",
+    "dashboard.free.web.openPreview": "Abrir vista previa completa",
+    "dashboard.free.web.pathA": "Conserve su sitio web actual — arréglelo con PostScore",
+    "dashboard.free.web.pathAIntroPaid": "Arregle cada problema y apunte a un 100/100 perfecto — paso a paso, en {builder}.",
+    "dashboard.free.web.checksLeft": "Le quedan {count} revisiones por arreglar",
+    "dashboard.free.web.checksLeftOne": "Le queda 1 revisión por arreglar",
+    "dashboard.free.web.checksLeftNone": "Todas las revisiones están bien: manténgalo así.",
+    "dashboard.free.web.guidesLink": "Cómo arreglar cada revisión, paso a paso",
+    "dashboard.free.web.pathAIntro": "¿Le gusta su sitio? Arregle cada problema y apunte a un 100/100 perfecto — PostScore le muestra exactamente cómo, en {builder}.",
+    "dashboard.free.web.yourBuilder": "su creador de sitios",
+    "dashboard.free.web.pathB": "O empiece de cero con un sitio web nuevo",
+    "dashboard.free.web.pathBIntro": "¿Prefiere reemplazar su sitio actual? Cree uno nuevo.",
+    "dashboard.free.web.pathBSocial": "Una página de {platform} no es un sitio web: cree uno de verdad.",
+    "dashboard.website.studioShowcase.title": "¿Quiere un sitio web completo? Créelo con PostStudio.",
+    "dashboard.website.studioShowcase.sub": "Con varias páginas, alojado por nosotros, y actualiza su calificación y horario después de cada análisis.",
+    "dashboard.website.studioShowcase.outlineNote": "Esquemas de páginas, todavía no es un sitio real",
+    "dashboard.website.studioShowcase.rowPages": "Páginas",
+    "dashboard.website.studioShowcase.rowHosting": "Alojamiento",
+    "dashboard.website.studioShowcase.rowUpdates": "Actualización automática",
+    "dashboard.website.studioShowcase.rowChecks": "Revisiones del sitio",
+    "dashboard.website.studioShowcase.starterPages": "1",
+    "dashboard.website.studioShowcase.studioPages": "4",
+    "dashboard.website.studioShowcase.starterHosting": "Usted lo aloja",
+    "dashboard.website.studioShowcase.studioHosting": "Lo alojamos por usted",
+    "dashboard.website.studioShowcase.starterUpdates": "No — vuelva a descargarlo",
+    "dashboard.website.studioShowcase.studioUpdates": "Después de cada análisis",
+    "dashboard.website.studioShowcase.starterChecks": "Lo que un solo archivo puede cumplir",
+    "dashboard.website.studioShowcase.studioChecks": "Hecho para pasar cada revisión",
+    "dashboard.website.studioShowcase.price": "+$15 en Grow · +$8 en Premium · incluido en Multi",
+    "dashboard.website.studioShowcase.cta": "Ver PostStudio",
+    "dashboard.website.studioShowcase.continueTitle": "Su sitio web completo está en PostStudio",
+    "dashboard.website.studioShowcase.continueSub": "Con varias páginas y alojado por nosotros; continúe donde lo dejó.",
+    "dashboard.website.studioShowcase.continueCta": "Continuar en PostStudio",
+    "dashboard.website.studioShowcase.headerLine": "¿Necesita más de una página?",
+    "dashboard.free.web.generatorHeading": "Cree su sitio web inicial — pruébelo gratis",
+    "dashboard.free.web.scoreUnlock": "Vea exactamente qué falla y cómo arreglar cada punto — Grow.",
+    "dashboard.free.web.previewTitle": "Su sitio web inicial: vista previa",
+    "dashboard.free.web.previewWatermark": "Vista previa · Hecho con PostScore · Descárguelo con Grow",
+    "dashboard.free.web.previewFooter": "© Vista previa de PostScore",
+    "dashboard.free.web.previewBack": "Volver a PostScore",
+    "dashboard.free.web.previewBackShort": "Volver",
+    "dashboard.free.web.previewLabel": "Vista previa de su sitio web inicial",
+    "dashboard.free.web.previewDownload": "Descárguelo con Grow",
+    "dashboard.free.web.previewWaiting": "Abra la vista previa desde su página Sitio web (\"Abrir vista previa completa\").",
+    "dashboard.free.web.faqTitle": "Borrador de preguntas frecuentes para su sitio",
+    "dashboard.free.web.fixGuidesTitle": "Cómo arreglar cada revisión, paso a paso",
+    "dashboard.free.web.recheckBody": "Vea la nueva puntuación de su sitio en cuanto arregle algo.",
+    "dashboard.free.web.downloadRefused": "Descargar su sitio está incluido en Grow.",
+    "dashboard.upgrade.unlock.faq": "Unas preguntas frecuentes listas para su sitio, escritas para su negocio, con Grow.",
+    "dashboard.reviewGoal.average": "Los {group} tienen {avg} reseñas en promedio.",
+    "dashboard.reviewGoal.beat": "Su meta: superar a {name}: {count} reseñas ({gap} más que usted).",
+    "dashboard.reviewGoal.stretch": "Meta ambiciosa: superar a {name}: {count} reseñas ({gap} más que usted).",
+    "dashboard.reviewGoal.nextUp": "Siguiente: {name}, {count} reseñas.",
+    "dashboard.reviewGoal.lead": "Usted lidera en su zona con {count} reseñas: mantenga la ventaja ({gap} más que {name}).",
+    "dashboard.upgrade.unlock.reviewsGoal": "Usted tiene {n} reseñas. Su meta: superar a {name} ({count}). Grow le da un plan para lograrlo.",
+    "dashboard.upgrade.unlock.reviewsGoalOne": "Usted tiene 1 reseña. Su meta: superar a {name} ({count}). Grow le da un plan para lograrlo.",
+    "dashboard.upgrade.box.plansHeading": "Elija un plan",
+    "dashboard.upgrade.unlock.aiReplies": "Reciba una respuesta redactada con IA para cada reseña, lista para publicar: Premium, próximamente.",
+    "dashboard.upgrade.unlock.postaiUnlimited": "Pregúntele a PostAI cuantas veces quiera: ilimitado con Premium.",
+    "dashboard.upgrade.unlock.reportsPremium": "Un resumen semanal con Grow e informes en PDF para compartir con Premium.",
+    "dashboard.upgrade.unlock.routine": "Su rutina semanal está lista: desbloquéela con Grow.",
+    "dashboard.upgrade.unlock.projectsWebsite": "{count} arreglos del sitio web que valen unos {points} puntos. Grow le muestra cómo.",
+    "dashboard.upgrade.unlock.projectsWebsiteOne": "1 arreglo del sitio web que vale unos {points} puntos. Grow le muestra cómo.",
+    "dashboard.upgrade.unlock.projects": "{count} proyectos más grandes que valen unos {points} puntos. Grow le muestra cómo.",
+    "dashboard.upgrade.unlock.tools": "Grow le da un programa de referidos y herramientas para revisar precios.",
+    "dashboard.upgrade.unlock.postStudio": "Un sitio web completo que construimos y alojamos por usted: PostStudio, próximamente.",
+    "dashboard.upgrade.card.growTitle": "Arréglelo usted mismo, paso a paso",
+    "dashboard.upgrade.card.premiumTitle": "Nosotros hacemos el trabajo por usted",
+    "dashboard.upgrade.card.hideGrow": "Ocultar la tarjeta de Grow por 14 días",
+    "dashboard.upgrade.card.hidePremium": "Ocultar la tarjeta de Premium por 14 días",
+    "dashboard.upgrade.chip.reviewSign": "Imprima un letrero de reseñas",
+    "dashboard.upgrade.chip.couponsBasic": "Cupones y tarjetas de referidos",
+    "dashboard.upgrade.chip.priceCheck": "Herramientas de precios",
+    "dashboard.upgrade.chip.rankPlan": "Un plan para superar a la competencia",
+    "dashboard.upgrade.chip.reportsWeekly": "Resumen semanal",
+    "dashboard.upgrade.chip.reviewPlan": "Un plan para conseguir más reseñas",
     "dashboard.upgrade.feature.recheck.name": "Revisiones del sitio al instante",
+    "dashboard.upgrade.unlock.projectsOne": "1 proyecto más grande que vale unos {points} puntos. Grow le muestra cómo.",
+    "dashboard.upgrade.trigger.notInGrow": "No incluido en Grow",
+    "dashboard.upgrade.trigger.postStudioGrow": "Agregar con Grow · +$15",
+    "dashboard.upgrade.trigger.postStudioPremium": "Agregar con Premium · +$8",
     "dashboard.niche.capped": "Las búsquedas de competidores de este mes se agotaron — vuelven el {date}.",
     "dashboard.niche.savedUpdating": "Guardado — actualizaremos sus competidores.",
     "dashboard.niche.competitorsUpdated": "Sus competidores se actualizaron para {niche}. Sus puntuaciones completas se completan en los próximos minutos.",
@@ -8107,13 +8691,22 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.postStudio.title": "PostStudio — construya su sitio web completo",
     "dashboard.overview.postStudio.body": "Un sitio web de varias páginas hecho con su ficha real de Google y alojado por usted. Vea lo que construiría.",
     "dashboard.overview.postStudio.cta": "Abrir PostStudio",
-    "dashboard.website.buildInPostStudio": "¿Quiere un sitio completo que alojemos por usted? Constrúyalo en PostStudio →",
     "dashboard.nav.campaigns": "Campañas",
     "dashboard.common.comingSoon": "Próximamente",
     "dashboard.campaigns.title": "Campañas",
     "dashboard.campaigns.subtitle": "Cupones y tarjetas de referidos que atraen clientes — y más adelante, campañas por correo, texto y redes sociales.",
     "dashboard.campaigns.runningError": "No se pudieron cargar sus ofertas en curso — inténtelo de nuevo en un momento.",
-    "dashboard.campaigns.noneRunning": "Todavía no hay campañas en curso — abra la pestaña Cupones o Referidos de arriba para crear una.",
+    "dashboard.campaigns.noneRunning": "Todavía no hay campañas en curso: diseñe una en la pestaña Cupones o Referidos y guárdela para empezar a contar.",
+    "dashboard.settings.plans.bullet.grow.tracking": "Siga cada cupón y referido en un solo lugar",
+    "dashboard.upgrade.chip.trackAll": "Siga cada cupón y referido en un solo lugar",
+    "dashboard.upgrade.unlock.tracking": "Siga cada cupón y tarjeta de referidos en un solo lugar, con +1 por cada uno usado — con Grow.",
+    "dashboard.campaigns.savedToast": "Guardado: sígalo en Todas las campañas",
+    "dashboard.campaigns.trackOnAll": "Llevará la cuenta de los canjes en Todas las campañas.",
+    "dashboard.campaigns.typeCoupon": "Cupón",
+    "dashboard.campaigns.typeReferral": "Tarjeta de referidos",
+    "dashboard.campaigns.started": "Iniciada el {date}",
+    "dashboard.campaigns.newBadge": "Nueva",
+    "dashboard.campaigns.channelsTitle": "Campañas por correo, texto y redes sociales",
     "dashboard.campaigns.nextHeading": "Lo que viene",
     "dashboard.campaigns.email": "Campañas por correo",
     "dashboard.campaigns.emailBody": "Envíe una oferta a su lista de clientes.",
@@ -8983,13 +9576,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.coupon.optionalHint": "(opcional)",
     "dashboard.growth.coupon.share": "Compartir",
     "dashboard.growth.coupon.starting": "Iniciando…",
-    "dashboard.growth.coupon.startAndTrack": "Guardar y empezar a contar",
-    "dashboard.growth.coupon.atLimitMessage.one": "Puede tener hasta {count} cupón activo a la vez. Finalice uno en Ofertas activas abajo para iniciar uno nuevo.",
-    "dashboard.growth.coupon.atLimitMessage.other": "Puede tener hasta {count} cupones activos a la vez. Finalice uno en Ofertas activas abajo para iniciar uno nuevo.",
-    "dashboard.growth.coupon.startSuccess": "Iniciada — toque +1 en Ofertas activas abajo cada vez que se canjee una.",
+    "dashboard.growth.coupon.startAndTrack": "Guardar y empezar a contar →",
+    "dashboard.growth.coupon.atLimitMessage.one": "Puede tener hasta {count} cupón activo a la vez. Finalice uno en Todas las campañas para iniciar uno nuevo.",
+    "dashboard.growth.coupon.atLimitMessage.other": "Puede tener hasta {count} cupones activos a la vez. Finalice uno en Todas las campañas para iniciar uno nuevo.",
+    "dashboard.growth.coupon.startSuccess": "Guardado: sígalo en Todas las campañas.",
     "dashboard.growth.coupon.startErrorFallback": "No se pudo iniciar — inténtelo de nuevo.",
-    "dashboard.growth.coupon.startLimitError.one": "Ya tiene {count} cupón activo — finalice uno en Ofertas activas abajo antes de iniciar otro.",
-    "dashboard.growth.coupon.startLimitError.other": "Ya tiene {count} cupones activos — finalice uno en Ofertas activas abajo antes de iniciar otro.",
+    "dashboard.growth.coupon.startLimitError.one": "Ya tiene {count} cupón activo — finalice uno en Todas las campañas antes de iniciar otro.",
+    "dashboard.growth.coupon.startLimitError.other": "Ya tiene {count} cupones activos — finalice uno en Todas las campañas antes de iniciar otro.",
     "dashboard.growth.coupon.shareModalTitle": "Cómo compartir su cupón",
     "dashboard.growth.activePromotions.redeemErrorFallback": "No se pudo registrar — inténtelo de nuevo.",
     "dashboard.growth.activePromotions.endErrorFallback": "No se pudo finalizar — inténtelo de nuevo.",
@@ -9011,7 +9604,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.howCouponsWork.step2Title": "2. El cliente lo trae",
     "dashboard.growth.howCouponsWork.step2Body": "Muestran la imagen o el código — en su teléfono o impreso — al pagar.",
     "dashboard.growth.howCouponsWork.step3Title": "3. Púlselo para registrarlo",
-    "dashboard.growth.howCouponsWork.step3Body": "El personal pulsa \"+1 Canjeado\" en Ofertas activas. Ese es todo el sistema de seguimiento.",
+    "dashboard.growth.howCouponsWork.step3Body": "El personal pulsa \"+1 Canjeado\" en Todas las campañas. Ese es todo el sistema de seguimiento.",
     "dashboard.growth.howCouponsWork.modalTitle": "Cómo llevar un cupón — lo que necesita",
     "dashboard.growth.howCouponsWork.modalBuildLabel": "Cree.",
     "dashboard.growth.howCouponsWork.modalBuildBody": "Escriba su oferta (o parta de una sugerencia rápida), fije un vencimiento y diseñe un cupón para imprimir con su código — y, si quiere, un QR a su ficha de Google, enlace de reseña o sitio web.",
@@ -9020,7 +9613,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.howCouponsWork.modalCustomerLabel": "El cliente lo muestra.",
     "dashboard.growth.howCouponsWork.modalCustomerBody": "Traen la imagen o el código — en su teléfono o impreso — y lo muestran al pagar.",
     "dashboard.growth.howCouponsWork.modalStaffLabel": "El personal pulsa +1.",
-    "dashboard.growth.howCouponsWork.modalStaffBody": "Quien esté en la caja pulsa \"+1 Canjeado\" en ese cupón en Ofertas activas.",
+    "dashboard.growth.howCouponsWork.modalStaffBody": "Quien esté en la caja pulsa \"+1 Canjeado\" en ese cupón en Todas las campañas.",
     "dashboard.growth.howCouponsWork.modalHonestNote": "Sea honesto consigo mismo sobre lo que es esto: el conteo de canjes es un simple registro almacenado que una persona incrementa a mano. No es una integración con el punto de venta y nada detecta un canje automáticamente — si el personal olvida marcarlo, ese canje no se cuenta.",
     "dashboard.growth.moreWays.heading": "Más formas de atraer gente",
     "dashboard.growth.moreWays.googlePostTitle": "Redacte una publicación de Google",
@@ -9048,11 +9641,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.referral.generateNewCodeAriaLabel": "Generar un código nuevo",
     "dashboard.growth.referral.codeAutoGeneratedNote": "Generado automáticamente — edítelo si prefiere usar el suyo.",
     "dashboard.growth.referral.starting": "Iniciando…",
-    "dashboard.growth.referral.startAndTrack": "Guardar y empezar a contar",
-    "dashboard.growth.referral.atLimitMessage": "Puede tener 1 programa de referidos a la vez. Finalícelo en Referidos activos abajo para iniciar uno nuevo.",
-    "dashboard.growth.referral.startSuccess": "Iniciado — toque +1 en Referidos activos abajo cada vez que se canjee uno.",
+    "dashboard.growth.referral.startAndTrack": "Guardar y empezar a contar →",
+    "dashboard.growth.referral.atLimitMessage": "Puede tener 1 programa de referidos a la vez. Finalícelo en Todas las campañas para iniciar uno nuevo.",
+    "dashboard.growth.referral.startSuccess": "Guardado: sígalo en Todas las campañas.",
     "dashboard.growth.referral.startErrorFallback": "No se pudo iniciar — inténtelo de nuevo.",
-    "dashboard.growth.referral.startLimitError": "Ya tiene un programa de referidos en marcha — finalícelo en Referidos activos abajo antes de iniciar otro.",
+    "dashboard.growth.referral.startLimitError": "Ya tiene un programa de referidos en marcha — finalícelo en Todas las campañas antes de iniciar otro.",
     "dashboard.growth.activeReferral.redeemErrorFallback": "No se pudo registrar — inténtelo de nuevo.",
     "dashboard.growth.activeReferral.endErrorFallback": "No se pudo finalizar — inténtelo de nuevo.",
     "dashboard.growth.activeReferral.heading": "Referidos activos ({active}/{max})",
@@ -9150,7 +9743,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.signalViewport": "Viewport",
     "dashboard.website.signalHeadings": "Encabezados",
     "dashboard.website.outOf100": "/ 100",
-    "dashboard.website.collapsible.title": "Generador de sitio web inicial",
+    "dashboard.website.collapsible.title": "Cree un sitio inicial de una página →",
     "dashboard.website.collapsible.subtitle": "— cree una copia de seguridad o un punto de partida nuevo a partir de los datos reales de su ficha",
     "dashboard.website.collapsible.hide": "Ocultar el generador de sitio web inicial",
     "dashboard.website.starter.taglineSizeSmall": "Pequeño",
@@ -9198,7 +9791,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.starter.includeRating": "Mostrar mi calificación",
     "dashboard.website.starter.livePreviewLabel": "Vista previa en vivo — exactamente lo que descargará",
     "dashboard.website.starter.iframeTitle": "Vista previa en vivo de su sitio inicial",
-    "dashboard.website.starter.downloadSiteButton": "Descargar sitio (HTML)",
+    "dashboard.website.starter.downloadSiteButton": "Descargue su sitio",
     "dashboard.website.starter.downloadHelper": "Un único archivo HTML real — el mismo que se muestra arriba, con el tema de color, la fuente, el eslogan y las secciones que eligió ya integrados. Ábralo en cualquier navegador, o súbalo a cualquier alojamiento para ponerlo en vivo.",
     "dashboard.website.starter.howToPublishHeading": "Cómo publicarlo",
     "dashboard.website.starter.publishStep1": "1. Descargue el archivo de arriba.",
@@ -11411,13 +12004,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.referral.passOn.digitalDesc": "Una imagen y un mensaje de texto que el cliente reenvía. El amigo lo muestra en su teléfono.",
     "dashboard.growth.howItWorks.referral.single.step1": "Entregue una tarjeta a un cliente contento — escribe su nombre en “Referido por”.",
     "dashboard.growth.howItWorks.referral.single.step2": "Le da la tarjeta entera a un amigo.",
-    "dashboard.growth.howItWorks.referral.single.step3": "El amigo la trae para su descuento. El nombre en la tarjeta es quien lo refirió — dé a ese cliente su recompensa en su próxima visita y luego toque +1 en Referidos activos.",
+    "dashboard.growth.howItWorks.referral.single.step3": "El amigo la trae para su descuento. El nombre en la tarjeta es quien lo refirió — dé a ese cliente su recompensa en su próxima visita y luego toque +1 en Todas las campañas.",
     "dashboard.growth.howItWorks.referral.tear.step1": "Entregue una tarjeta a un cliente contento.",
     "dashboard.growth.howItWorks.referral.tear.step2": "La corta, se queda “Para usted” y le da la mitad “Para su amigo” a alguien nuevo.",
-    "dashboard.growth.howItWorks.referral.tear.step3": "El amigo trae su mitad para el descuento. Las dos mitades tienen el mismo código, así que sabe quién lo refirió — dé al cliente su recompensa cuando muestre su mitad “Para usted” y luego toque +1 en Referidos activos.",
+    "dashboard.growth.howItWorks.referral.tear.step3": "El amigo trae su mitad para el descuento. Las dos mitades tienen el mismo código, así que sabe quién lo refirió — dé al cliente su recompensa cuando muestre su mitad “Para usted” y luego toque +1 en Todas las campañas.",
     "dashboard.growth.howItWorks.referral.digital.step1": "Comparta la imagen de la tarjeta y el mensaje con un cliente contento.",
     "dashboard.growth.howItWorks.referral.digital.step2": "La reenvía a un amigo, con su nombre en el mensaje.",
-    "dashboard.growth.howItWorks.referral.digital.step3": "El amigo lo muestra en su teléfono en la caja. Quien lo envió (o el nombre del mensaje) es quien lo refirió — dé a ese cliente su recompensa en su próxima visita y luego toque +1 en Referidos activos.",
+    "dashboard.growth.howItWorks.referral.digital.step3": "El amigo lo muestra en su teléfono en la caja. Quien lo envió (o el nombre del mensaje) es quien lo refirió — dé a ese cliente su recompensa en su próxima visita y luego toque +1 en Todas las campañas.",
     "dashboard.growth.referral.share": "Compartir",
     "dashboard.growth.referral.shareModalTitle": "Comparta su oferta de referidos",
     "dashboard.growth.referral.shareCaption": "¡Hola! {business} le da a los amigos {friendReward}. Muestre este mensaje en la caja — código {code}. Referido por: [su nombre]",
@@ -11433,6 +12026,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.goalHit": "Alcanzó la meta de esta semana: {start} → {now} (+{diff})",
     "dashboard.studio.customize": "Personalizar diseño",
     "dashboard.studio.lockedTab": "Pruébelas con una vista previa con marca de agua — imprimirlas requiere Premium.",
+    "dashboard.studio.planLegend": "Grow: 2 estilos · 2 tamaños · QR básico. Premium: todas las plantillas, fuentes, colores, logotipo, doble cara, numeración, y sin la marca PostScore.",
+    "dashboard.studio.growChip": "Grow",
     "dashboard.growth.print.tab.template": "Plantilla",
     "dashboard.growth.print.tab.size": "Tamaño",
     "dashboard.growth.print.tab.text": "Texto",
@@ -11443,7 +12038,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.howItWorks.heading": "Cómo funciona",
     "dashboard.growth.howItWorks.coupon.step1": "Imprímalo y entréguelo (o comparta la imagen)",
     "dashboard.growth.howItWorks.coupon.step2": "El cliente lo muestra en la caja",
-    "dashboard.growth.howItWorks.coupon.step3": "Aplique la oferta y toque +1 en Ofertas activas para llevar la cuenta",
+    "dashboard.growth.howItWorks.coupon.step3": "Aplique la oferta y toque +1 en Todas las campañas para llevar la cuenta",
     "dashboard.growth.print.pngHiRes": "Alta resolución (2×) para redes",
     "dashboard.growth.print.show.howTo": "Línea pequeña de “cómo funciona”",
     "dashboard.growth.print.plan.free": "Gratis",
@@ -11698,7 +12293,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.studio.error.failed": "No se pudo crear el cartel — inténtelo de nuevo.",
     "dashboard.websiteReviews.studio.tentNote": "Se imprime en una hoja carta — doble por la línea punteada.",
     "dashboard.websiteReviews.studio.cardsNote": "Corte por las líneas punteadas.",
-    "dashboard.websiteReviews.devPlan.label": "Plan de prueba (solo desarrollo local):",
     "dashboard.websiteReviews.hero.linkLabel": "Su enlace de reseña",
     "dashboard.websiteReviews.hero.copy": "Copiar enlace",
     "dashboard.websiteReviews.hero.copied": "Copiado ✓",
