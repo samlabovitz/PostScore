@@ -69,7 +69,7 @@ data isn't available, the preview says so.
   - 1 owner re-scan per 30 days (+ the first scan) on top of the 24-hour rule — `rescanGate` in `lib/rescanPolicy.ts`, checked in `rescanBusiness` before any Google call; owner re-scans are logged in `places_calls` (kind `owner_rescan`, one Places Details call) and the note says "Next free re-scan: {date}";
   - the Grow showcase strip stays at the bottom.
   Grow, Premium and Multi see the Overview unchanged.
-- **`LockedPreview`** (`components/plan/LockedPreview.tsx`) is the shared locked feature for 5f: the real UI with the business's own data, read-only (`inert`), fading under a small lock, one unlock line (shown only when its data is real) and "Unlock with Grow/Premium", which opens the promo box. It never fetches anything itself.
+- **`LockedPreview`** (`components/plan/LockedPreview.tsx`) is the shared locked feature for 5f: the real UI with the business's own data, read-only (`inert`), fading under a small lock, one unlock line (shown only when its data is real) and a small "See plans", which opens the promo box. It never fetches anything itself.
 
 ### Growth — built
 Two tabs (`?tab=google-profile`):
@@ -91,23 +91,34 @@ Two tabs (`?tab=google-profile`):
 
 ### Campaigns — built
 Three tabs (`?tab=coupons` / `?tab=referrals`), in `app/business/[id]/campaigns/`:
-- **All campaigns** (default): the running coupons and referral card (code, times used, +1); "Create a coupon" and "Create a referral card"; "Coming soon" cards for email, text and social campaigns.
+- **All campaigns** (default on Grow, Premium and Multi) — the tracking home: every running coupon and referral card with its type, code, start date, times used, +1, Share and End (there's no pause). Then email, text and social campaigns: Premium and coming soon — a lock + "Premium" chip on Grow, "Coming soon" on Premium. The rows live in `CampaignsView`, so nothing moved in the data: existing campaigns keep their tallies.
 - **Coupons:** the full coupon designer (`CouponsSection` → `CouponBuilder` + `CardDesigner`).
 - **Referrals:** the full referral card designer (`ReferralSection` → `ReferralBuilder`, `PassOnChoice`).
 
 Nothing is lost in the move: templates, pass-on options, double-sided, numbering, saved designs, sheet preview, How it works, Ask PostAI, tallies, and print gating (Free preview / Grow basic / Premium full via `signAccess`).
 
+
+**By plan (5f part 3, done):**
+- **Coupons / Referrals** — design only (no tracking lists there). "Save & start tracking →" with "You'll track redemptions on All campaigns." under it; after saving, a toast "Saved — track it on All campaigns" and All campaigns opens with the new one highlighted at the top for a few seconds.
+- Free: the Campaigns showroom (see "Free" below): "All campaigns" (tracking, Grow) and "Email, text and social campaigns" (Premium, coming soon) as locked blocks, the locked "How to run it" guide, then the real designers as blurred previews (no saving, printing, sharing or tally).
+- Grow: opens on All campaigns (every running coupon and referral, +1); Coupons + Referrals (basic designs) with the "How to run it" guide (step 4 points to All campaigns). Email, text and social: Premium.
+- Premium/Multi: everything, opening on All campaigns; email, text and social are coming soon.
 ### Reviews — built
 - Review link, QR code, review sign designer (Sign Studio), review stats.
 - Later: reply to reviews (Premium, needs Google connect) — preview + "Coming soon".
 
 
+
+**By plan (5f part 3, done):**
+- Free and every plan: the review link, copy button, basic QR + PNG, rating/review count and the review goal (`ReviewGapLine`: beat the leader).
+- Free: the "right way" guide keeps the rule ("Never offer a discount or gift…") visible; the rest is a `LockedPreview` with the headings (when to ask, what to say, where to put the QR) and the details locked. The sign designer stays a preview; counter tools stay visible.
+- Grow: the guide fully open, the basic sign. Premium/Multi: the full designer + "AI-drafted replies to every review, ready to post (coming soon)".
 ### Website — built (+ new chooser)
 - Site checks (visual analysis, score breakdown, security), per-builder fix guides, Re-check my website (3/day).
 - The **3 options** side by side: Fix your current site · Starter website · Build in PostStudio.
 - **No website, or only a Facebook/social page: never an empty page.** It leads with:
   1. an honest header ("You don't have a website yet — it's one of the biggest gaps in your PostScore", with the real points it costs them);
-  2. the Starter website generator with a live real-data preview (Grow/Premium: full use + download; Free: preview + "Unlock with Grow");
+  2. the Starter website generator with a live real-data preview (Grow/Premium: full use + download; Free: full use + a watermarked full preview, download with Grow);
   3. directly under it, the PostStudio card comparing starter vs PostStudio, with "Build it in PostStudio →" and the add-on price for their plan.
 
   With the add-on (or Multi), the card becomes "Continue in PostStudio →".
@@ -161,13 +172,14 @@ Anything not built says "coming soon".
 - A weekly action plan that tells you what to do next
 - Re-check your website as soon as you fix something
 - A starter website, plus basic review signs, coupons and referral cards
+- Track every coupon and referral in one place
 - PostAI for your questions (monthly limit: 100 questions)
 
 **Premium · $50/mo · "We do the work for you"** (highlighted, "Best value") — Connect Google and PostScore fixes things for you.
 - One-click fixes to your Google listing: hours, info, photos (coming soon)
 - AI-drafted replies to every review, ready to post (coming soon)
 - See who searches for you and who calls or clicks (coming soon)
-- Your campaign hub: track every coupon and referral in one place, plus email, text and social campaigns (coming soon)
+- Email, text and social campaigns (coming soon)
 - Every design tool unlocked, with no PostScore branding
 - Unlimited PostAI, and PostStudio websites at a discount (PostStudio coming soon)
 
@@ -183,7 +195,8 @@ Anything not built says "coming soon".
 | Step-by-step fixes + weekly plan | preview | ✓ | ✓ | ✓ |
 | Instant website re-checks | — | ✓ | ✓ | ✓ |
 | Review signs, coupons, referral cards | preview | basic | full, no branding | full, no branding |
-| Campaign hub (all campaigns + email, text, social) | preview | — | ✓ (email, text, social coming soon) | ✓ |
+| Campaign hub (every coupon and referral, with +1) | preview | ✓ | ✓ | ✓ |
+| Email, text & social campaigns | — | — | coming soon | coming soon |
 | Website | preview | starter site | starter + PostStudio discount | starter + PostStudio included |
 | PostAI | — | 100 questions/month | unlimited | unlimited |
 | Fixes done for you (Google connect) | — | — | ✓ coming soon | ✓ coming soon |
@@ -194,10 +207,62 @@ Anything not built says "coming soon".
 Desktop: the four plan cards and this table, Premium highlighted. Phone: one
 card per plan, the owner's current plan first, each with its own rows.
 
+### Free = the Overview audit + the Website page (5f, built)
+**Paid plans are unchanged by this redesign** (enforced page by page in `app/business/[id]/paidLayout.test.tsx`), except: the review goal (all plans), the Website page's two paths (PostStudio's card replaces Premium's bottom PostStudio line), "All campaigns" as the tracking home for Grow and up (Coupons/Referrals design only; only email, text and social are Premium), Premium/Multi's "AI-drafted replies — coming soon" on Reviews, and on Grow the designers' Grow/Premium marks, the "How to run it" guides, the Premium card at the bottom and the both-plans lock box. Locks on Grow keep their original look (one link / button / chip).
+
+On Free the **Overview is the audit**, top to bottom:
+1. header + score hero ("{n} points are waiting to be fixed" instead of the projection);
+2. the score breakdown, open: every check, what's wrong and the points it costs (no fix links);
+3. "More customers, whatever your score" (the original design, no thumbnails): the same tiles as Grow; "Get more Google reviews" works (→ `#free-reviews`) and shows the review goal line; Competitors is free (a normal link); Coupons, Referrals, Weekly routine and Price check show a lock + "Grow" chip and open the promo box; the section ends with the big pair "Unlock with Grow" / "Unlock with Premium" ("Best value");
+4. PostAI showroom: real starter questions and one labeled, generic "Example answer" — the questions, the box and Send open the promo box; `sendAssistantMessage` refuses on Free (no AI call);
+5. reviews: rating + count, the **review goal** (below), the working free review link (copy, open) and QR (PNG) — `#free-reviews`;
+6. competitor rank, with "You're #N of M nearby…" when they trail;
+7. "Unlock more with a plan" — 12 locked tiles (2 columns; 1 on a phone), each with its plan chip, a real count where there is one, skeleton rows with the feature's real icon, its OWN unlock line and a small "See plans": action plan, weekly routine, fix guides for their builder, Re-check, **downloading** the starter website (building it is free on the Website page), price check, weekly reports (PDF on Premium), campaign hub (coming soon), Google Profile fixes + insights (coming soon), AI review replies (coming soon), unlimited PostAI, PostStudio (add-on "+$15 on Grow · +$8 on Premium", coming soon);
+8. the Grow + Premium ("Best value") promo cards.
+
+**Website page — two paths, every plan** (`app/business/[id]/website/page.tsx` + `WebsiteGeneratorSection`):
+- **Free:** the screenshot ("What customers see on your website", "Captured {date}", Refresh locked) → ONE compact website score card (`WebsiteScoreCompact`: ring, "83/100 · 25/30 pts · B", each check with only a status chip — Done / Needs work / Couldn't check — and its points, halves as "½ / ½"; "See exactly what's wrong and how to fix each one — Grow" + "See plans") → **A) "Keep your current website — fix it with PostScore"** ("Like your site? Fix every issue and aim for a perfect 100/100 — PostScore shows you exactly how, in {builder}."): the locked step-by-step fix guides, Re-check and FAQ draft → **B) "Or start fresh with a new website"** ("Rather replace your current site? Build a new one instead."): the starter generator, open ("Build your starter website — try it free", the quiet "Need more than one page? PostStudio →"), then the PostStudio card. No "How to publish it" / "Mark as published" on Free.
+- **Grow / Premium / Multi:** the screenshot (with "See more pages" and Refresh) → the website score + FULL breakdown (each check's per-builder fix steps live in it) → **A)** "Fix every issue and aim for a perfect 100/100 — step by step, in {builder}.": "{n} checks left to fix" + "How to fix each check, step by step ↑" (to the breakdown), Re-check my website (N of 3 left today), the FAQ draft → **B)** the starter generator COLLAPSED ("Build a one-page starter site →"; full use, download, and the publish steps inside), then the PostStudio card (Grow/Premium: the add-on price + "Coming soon"; Multi: "Continue in PostStudio →").
+- **No website, or only a social page** (`socialPagePlatform`): no path A; B leads with the honest "no website yet" header (social: "A Facebook page isn't a website — build a real one."), and the generator is open on every plan.
+
+- **Builder layout (all plans):** options on the left; the live preview on the right stays in view (sticky, about the viewport tall, the site scrolls inside its frame); under it ONE row: "Open full preview" (left) and "Download your site" (right — on Free a locked button with a small "Grow" chip that opens the plans box). On a phone the preview comes first (fixed height, inner scroll), the options below. The download goes through `POST /api/business/[id]/starter-site` (owner via RLS; `starterSiteDownload` in `lib/starterSiteDownload.ts` refuses Free with 403 `plan_required`).
+- "Open full preview" opens `/business/[id]/website/preview` in a new tab (owner only — anyone else gets "not found"; `noindex, nofollow`). A slim fixed bar above the site (never under the watermark): "← Back to PostScore" (a plain link to the Website page, so it works in a new tab), "Preview of your starter website", and on Free "Download with Grow" (opens the plans box). The Website page posts the site it built to that tab (same origin, `postMessage` handshake); it shows in a sandboxed frame under a light, widely spaced, unclickable watermark "Preview · Made with PostScore · Download with Grow" (pointer-events none, so the map and its links work) and a "© PostScore preview" footer.
+- The storefront map (Maps Embed API, `GOOGLE_MAPS_EMBED_KEY`) loads eagerly: a `loading="lazy"` map inside the preview frames (iframe `srcdoc`) never started, which left a blank box. The address, "Open in Google Maps" and "Get directions" always show under it; without a key there's no map frame at all. The previews allow popups to escape the sandbox, so those links open normally. Honest limit: the preview HTML is built in the browser, so a technical user could copy it; the server only gates the download.
+
+**Review goal = beat the leader** (`reviewGoal` / `reviewLeader` in `lib/competitorComparison.ts`, text in `lib/reviewGoal.ts`, the group name from `scopeGroupLabel`): "{Group} average {n} reviews." + "Your goal: beat {leader} — {n} reviews ({gap} more than you)." When the leader has more than 3× the average it's a "Stretch goal" plus "Next up: {name}, {n} reviews." When they lead: "You lead nearby with {n} reviews — keep the gap." No line with fewer than 3 competitors. Shown on the Overview, Reviews, Competitors, the report + PDF, "Since your last visit", the Growth review task, the Free unlock line and PostAI (quoted, never recomputed).
+
+**Dev plan switcher:** one floating pill (bottom-left, every page, `components/dev/DevPlanPill.tsx` from the root layout) — development only (the layout, the component and `/api/dev/plan` all check `NODE_ENV`); collapsible, remembered on the device. The old per-page "Test plan" bars are gone.
+
+**Tabs on Free** (`lib/freeTabs.ts`): Overview, Competitors (read-only — Refresh is locked; `refreshCompetitors` refuses on Free), Website and Settings are open. Growth, Campaigns, Reviews, Price check and Reports show a lock in the sidebar and render their **showroom** (`components/plan/TabShowroom.tsx` via `freeShowroom()`, called first in each page, so old deep links land there and none of the tab's own data — or paid calls — loads):
+- the tab name and the chip "Grow · more with Premium";
+- ONE "With Grow" (3 bullets; Campaigns 4) | "Premium adds" (crown, "Best value", 1–3 bullets, "coming soon" where not built) card with the big button pair — the page's only plan comparison, so showroom pages have **no** promo cards at the bottom;
+- the tab's sections as fully hidden `LockedPreview`s with real counts. Campaigns: "All campaigns" (Grow) and email/text/social (Premium, coming soon) first, then the locked "How to run it" guide (step headings only), then the REAL coupon and referral designers (`DesignerPreview`: Customize panel open, every option marked Grow or Premium, under a light 2.5px blur, not clickable — a click opens the promo box — with a clear, never-blurred heading above each: icon, "Coupon designer" / "Referral card designer", a one-line description and a small "Preview" chip; sections are ≥32px apart with a thin rule between them). Reviews: a link to the free review link & QR on the Overview, the locked guide and the real "Review sign designer" the same way. Growth shows the locked Google Profile block (Premium, coming soon) first, right under the plans card, then the action plan, routine and the rest.
+
+**Locks (item 15 — less advertising, always both plans):**
+- At most ONE full Grow vs Premium comparison per page with the two big buttons (`<UpgradeTrigger variant="pair">`): the showroom's top card; on the Overview, "More customers" + the bottom promo cards.
+- Every other lock is small (`UpgradeTrigger`'s default): a lock chip naming the plan ("Grow", or "Premium" with a crown; "Add-on" for PostStudio) and a "See plans" text link (`plain` drops the chip where the block already names its plan, e.g. `LockedPreview`). Locked actions (`UpgradeButton`) keep their own look.
+- Any lock click opens the side-by-side box: both plans always, Premium "Best value", the clicked feature's plan highlighted (Premium-only features lead with Premium).
+- One unlock line per section, never repeated on a page.
+- Every locked footer is the same `LockFooter` (`components/plan/LockedPreview.tsx`): the unlock line left (max 2 lines), "See plans →" right as a small pill that never wraps, ≥16px apart, vertically centered; on a phone the link drops below the line, left-aligned. Locked tiles stretch to the row's height with the footer pinned to the bottom. Used by `LockedPreview`, the PostAI showroom, the rank line and the compact website score.
+
+**Designer plan marks (Grow and the showroom):** every Customize option is marked "Grow" or "Premium" (crown), with the legend "Grow: 2 styles · 2 sizes · basic QR. Premium: every template, font, color, logo, double-sided, numbering — and no PostScore branding." On Grow, Premium options stay visible with the crown + lock and preview with a watermark.
+
+**Campaign guides (Grow and up):** each Coupons/Referrals tab has a collapsible "How to run it" (`app/business/[id]/campaigns/HowToRunIt.tsx`): 1) pick an offer, 2) design and print (wallet or 4×6, cardstock, home vs print shop), 3) share it (counter, receipts, text, social; what to say), 4) redeem and track with +1, 5) end or refresh it — plus "Never reward reviews". Free sees it as a locked block in the showroom.
+
+**Two levels of locked content (Free and Grow):**
+- *Advice* (suggestions, steps, plans, routine, guides, ways to grow, the review guide's details): `LockedPreview` — only the title, a lock, a real count and ONE unlock line are readable; the content is never rendered into the page (blurred placeholder shapes only).
+- *Tools* (coupon/referral/sign designers, PostAI): visible with their real data; Save, Print, Download, Share and Send open the promo box (`UpgradeButton`).
+
+**No paid calls on Free:** PostAI (`sendAssistantMessage`), Re-check (`recheckWebsite`), the AI price check (`assessPricing`), competitor refresh and the niche re-scan (`refreshCompetitors`, `updateCompetitorsForNiche`) all refuse on Free server-side; Free never triggers a screenshot capture. Free keeps 1 owner re-scan per 30 days (+ the first scan).
+
+**Promo cards** (bottom of the Overview and unlocked pages, `PromoCards`; never on showroom pages): Free sees Grow + Premium side by side (stacked on a phone), Premium always shown with "Best value"; Grow sees Premium; Premium and Multi nothing (on the Website page, PostStudio's one mention is its card in path B). Each card has page-relevant chips, "See plans" (the promo box) and × (hidden 14 days, per card and page, `promo_dismissals` + the device).
+
+**Fonts:** self-hosted in `app/fonts` (SIL OFL) via `next/font/local` — Fraunces 400–700 (`font-serif`: headings, page titles, business names, score numbers) and Inter 400–600 (`font-sans`). They used to come from `next/font/google`, which falls back to a metric-matched sans silently when the download fails at server start.
+
 ### For step 5f to enforce (not gated yet)
-- **Campaigns:** the "All campaigns" tab (the campaign hub) is **Premium**.
-  Grow gets the Coupons and Referrals tabs (basic designs), each campaign's
-  +1 tally on its own tab. Free sees previews of all three tabs.
+- **Campaigns:** "All campaigns" (tracking every coupon and referral, +1)
+  is Grow and up; only its email, text and social campaigns are Premium
+  (coming soon). Coupons and Referrals are design only. Free sees previews.
 - **PostAI:** Grow has a monthly question limit; Premium is unlimited.
   Grow's limit: **100 questions/month** (decided). Cost per question today: PostAI
   runs on Claude Haiku 4.5 ($1/M input, $5/M output tokens); each question
@@ -217,24 +282,22 @@ card per plan, the owner's current plan first, each with its own rows.
 All in `components/upgrade/` + `lib/upgradePromos.ts`; the data comes from
 `loadUpgradeContext()` (`lib/upgradePromos.server.ts`) through
 `DashboardShell`'s `upgrade` prop.
-- **Promo box** (`UpgradeTrigger` → `PromoBox`): opens only when the owner
-  clicks something locked — a popover beside it on desktop, a bottom sheet
-  on a phone. Title "{feature} · {plan}", 2–3 benefit lines (their real data
-  where we have it), "Coming soon" on anything not built, "See plans" (→
-  Settings → Compare plans) and "Not now". Closes with ×, Esc or a tap
-  outside; never modal, never opens by itself. Today it's on: the designers'
-  "Premium preview" bar and locked tabs, Free's read-only designer note, the
-  locked review sign (Free), the Google Profile tab's Premium card, and
-  Campaigns' "What's next". A 5f `LockedPreview` should render
-  `<UpgradeTrigger feature=…>` for its unlock button.
-- **Showcase strip** (`ShowcaseStrip`), above the footer of Overview, Growth,
-  Campaigns, Reviews, Website, Competitors, Price check and Reports: "Premium:
-  we do the work for you" + 3 rotating chips for that page ("soon" where not
-  built) + "See what's included" (the promo box with every Premium benefit).
-  Free sees Grow's benefits on Overview and Growth instead. × hides it for 14
-  days for that business (`promo_dismissals`, `supabase/promo-dismissals.sql`;
-  this device's localStorage until the SQL is run).
-- **Premium** sees no promos except one PostStudio line on the Website page;
+- **Promo box** (`UpgradeTrigger` / `UpgradeButton` → `PromoBox`): opens only
+  when the owner clicks something locked — a popover beside it on desktop, a
+  bottom sheet on a phone. It ALWAYS shows Grow and Premium side by side
+  (price, tagline, key benefits, Premium "Best value", "See plans" under
+  each → Settings → Compare plans), the clicked plan highlighted, led by the
+  feature's own title and lines (their real data where we have it, "Coming
+  soon" on anything not built). Closes with ×, "Not now", Esc or a tap
+  outside; never modal, never opens by itself. Small lock + "See plans" by
+  default; the big button pair only where a page has its one comparison.
+- **Promo cards** (`PromoCards`, replaced the old showcase strip) above the
+  footer of the Overview and the unlocked main pages (never the showrooms):
+  page-relevant chips ("soon" where not built), "See plans" and × (hidden for
+  14 days for that business: `promo_dismissals`,
+  `supabase/promo-dismissals.sql`; this device's localStorage until the SQL
+  is run).
+- **Premium** sees no promo cards (on the Website page, PostStudio's one mention is its card in path B);
   **Multi** sees none.
 - Never: an upgrade page, pop-ups on page load, countdowns, fake discounts or
   scarcity, blocking a core action, or anything that pretends to charge.
