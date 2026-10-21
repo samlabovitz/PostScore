@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { ActivePromotions } from "./ActivePromotions";
 import { ActiveReferral } from "./ActiveReferral";
@@ -10,28 +9,35 @@ import { MAX_ACTIVE_PROMOS, type PromoRow } from "@/lib/promos";
 import { MAX_ACTIVE_REFERRALS, type ReferralRow } from "@/lib/referrals";
 import { t, useLocale } from "@/lib/i18n";
 
-/** "All campaigns": every running coupon and referral card with its code,
- * times used and +1 — the same rows and server actions the designers use,
- * so a tally is the same number on every tab. Creating one happens on the
- * Coupons and Referrals tabs (the tabs above are the way in). */
+/** "All campaigns" — the tracking home (Grow and up): every running coupon
+ * and referral card with its type, code, start date, times used, +1, Share
+ * and End. The rows live in CampaignsView, so one saved on the Coupons or
+ * Referrals tab (design only) shows up here at once, highlighted. */
 export function AllCampaigns({
   businessName,
   businessPhone,
   couponsOk,
   referralOk,
-  initialPromos,
-  initialReferral,
+  promos,
+  referral,
+  onPromosChange,
+  onReferralChange,
+  highlightId = null,
 }: {
   businessName: string;
   businessPhone: string | null;
   couponsOk: boolean;
   referralOk: boolean;
-  initialPromos: PromoRow[];
-  initialReferral: ReferralRow | null;
+  promos: PromoRow[];
+  referral: ReferralRow | null;
+  onPromosChange: (update: (prev: PromoRow[]) => PromoRow[]) => void;
+  onReferralChange: (update: (prev: ReferralRow | null) => ReferralRow | null) => void;
+  /** Just saved: highlighted for a few seconds. */
+  highlightId?: string | null;
 }) {
   const locale = useLocale();
-  const [promos, setPromos] = useState<PromoRow[]>(initialPromos);
-  const [referral, setReferral] = useState<ReferralRow | null>(initialReferral);
+  const setPromos = onPromosChange;
+  const setReferral = onReferralChange;
 
   async function redeemPromo(id: string) {
     const result = await incrementPromoRedemption(id);
@@ -50,7 +56,7 @@ export function AllCampaigns({
   }
   async function endTheReferral(id: string) {
     const result = await endReferral(id);
-    if (result.status === "ok") setReferral(null);
+    if (result.status === "ok") setReferral(() => null);
     return result;
   }
 
@@ -64,13 +70,14 @@ export function AllCampaigns({
     );
   }
 
+  const referralFirst = showReferral && referral?.id === highlightId;
   return (
-    <div className="flex flex-col gap-6">
+    <div className={referralFirst ? "flex flex-col-reverse gap-6" : "flex flex-col gap-6"}>
       {showPromos && (
-        <ActivePromotions promos={promos} businessName={businessName} businessPhone={businessPhone} maxActive={MAX_ACTIVE_PROMOS} onRedeem={redeemPromo} onEnd={endOnePromo} />
+        <ActivePromotions promos={promos} businessName={businessName} businessPhone={businessPhone} maxActive={MAX_ACTIVE_PROMOS} onRedeem={redeemPromo} onEnd={endOnePromo} highlightId={highlightId} />
       )}
       {showReferral && (
-        <ActiveReferral referral={referral} businessName={businessName} businessPhone={businessPhone} maxActive={MAX_ACTIVE_REFERRALS} onRedeem={redeemReferral} onEnd={endTheReferral} />
+        <ActiveReferral referral={referral} businessName={businessName} businessPhone={businessPhone} maxActive={MAX_ACTIVE_REFERRALS} onRedeem={redeemReferral} onEnd={endTheReferral} highlighted={!!referral && referral.id === highlightId} />
       )}
     </div>
   );

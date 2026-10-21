@@ -5,6 +5,7 @@ import {
   IconArrowDown,
   IconCalendarStats,
   IconChevronDown,
+  IconLock,
   IconRefresh,
   IconRocket,
   IconShare2,
@@ -13,7 +14,8 @@ import {
   IconUserPlus,
 } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
+import { UpgradeButton } from "@/components/upgrade/UpgradeTrigger";
 import { cn } from "@/lib/utils";
 import { defaultExpiryDate, formatExpiry, generateCouponCode } from "@/lib/coupons";
 import { buildShareCaption } from "@/lib/promos";
@@ -62,6 +64,7 @@ const ANGLES: OfferAngle[] = [
 ];
 
 export function CouponBuilder({
+  preview = false,
   businessId,
   businessName,
   businessPhone,
@@ -72,6 +75,8 @@ export function CouponBuilder({
   plan,
   printBusiness,
 }: {
+  /** The Free showroom page: the top cards hidden, Customize open. */
+  preview?: boolean;
   businessId: string;
   businessName: string;
   businessPhone: string | null;
@@ -112,6 +117,9 @@ export function CouponBuilder({
 
   const hasRequiredFields = !needsFilling(offer) && expiry.length > 0;
   const atLimit = activeCount >= maxActive;
+  // Free: a showroom — the designer works, but saving, sharing and
+  // tracking open the promo box instead (5f).
+  const showroom = plan === "free";
   const canStart = hasRequiredFields && !atLimit && startState.kind !== "working";
 
   async function handleStart() {
@@ -153,6 +161,7 @@ export function CouponBuilder({
         <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">{t(locale, "dashboard.growth.coupon.intro")}</p>
       </div>
 
+      {!preview && (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {ANGLES.map((angle) => (
           <Card key={angle.id} className="flex flex-col gap-3 p-4">
@@ -170,9 +179,11 @@ export function CouponBuilder({
           </Card>
         ))}
       </div>
+      )}
 
       <CardDesigner
         kind="coupon"
+        showroom={preview}
         plan={plan}
         businessId={businessId}
         business={printBusiness}
@@ -318,6 +329,19 @@ export function CouponBuilder({
         }
         actions={
           <>
+            {showroom ? (
+              <>
+                <UpgradeButton feature="print" className={buttonClasses("default", "default", "w-fit")}>
+                  <IconLock size={16} aria-hidden />
+                  {t(locale, "dashboard.growth.coupon.share")}
+                </UpgradeButton>
+                <UpgradeButton feature="print" className={buttonClasses("brass")}>
+                  <IconLock size={16} aria-hidden />
+                  {t(locale, "dashboard.growth.coupon.startAndTrack")}
+                </UpgradeButton>
+              </>
+            ) : (
+              <>
             <Button
               variant="default"
               onClick={() => setShareOpen(true)}
@@ -333,10 +357,14 @@ export function CouponBuilder({
                 ? t(locale, "dashboard.growth.coupon.starting")
                 : t(locale, "dashboard.growth.coupon.startAndTrack")}
             </Button>
+              </>
+            )}
             {atLimit ? (
               <p className="text-[12px] text-ink-mute">
                 {tPlural(locale, "dashboard.growth.coupon.atLimitMessage", maxActive)}
               </p>
+            ) : startState.kind === "idle" && !showroom ? (
+              <p className="text-[12px] text-ink-mute" data-testid="track-on-all">{t(locale, "dashboard.campaigns.trackOnAll")}</p>
             ) : startState.kind === "success" ? (
               <p className="text-[12px] text-green">{t(locale, "dashboard.growth.coupon.startSuccess")}</p>
             ) : startState.kind === "error" ? (

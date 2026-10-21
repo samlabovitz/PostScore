@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ReferralBuilder } from "./ReferralBuilder";
-import { ActiveReferral } from "./ActiveReferral";
-import { incrementReferralRedemption, endReferral, startReferral } from "@/app/actions/referrals";
+import { startReferral } from "@/app/actions/referrals";
 import { MAX_ACTIVE_REFERRALS, type ReferralRow } from "@/lib/referrals";
 import type { BizProfile } from "@/config/bizProfiles";
 import type { Plan } from "@/lib/plan";
@@ -17,21 +16,24 @@ import { readStorage, writeStorage } from "@/lib/signStudio/design";
 export function ReferralSection({
   businessId,
   businessName,
-  businessPhone,
   profile,
-  initialReferral,
+  referral,
   plan,
   printBusiness,
+  onStarted,
 }: {
   businessId: string;
   businessName: string;
-  businessPhone: string | null;
+  /** Kept for the shared section props (sharing now lives on All campaigns). */
+  businessPhone?: string | null;
   profile: BizProfile;
-  initialReferral: ReferralRow | null;
+  /** The running referral card (owned by CampaignsView; tracked on All campaigns). */
+  referral: ReferralRow | null;
   plan: Plan;
   printBusiness: CardBusiness;
+  /** Saved: CampaignsView shows it on All campaigns and goes there. */
+  onStarted?: (referral: ReferralRow) => void;
 }) {
-  const [referral, setReferral] = useState<ReferralRow | null>(initialReferral);
   // How customers pass it on — remembered on this device; Single card by
   // default (read after mount, so no hydration mismatch).
   const [passOn, setPassOnState] = useState<PassOn>("single");
@@ -46,27 +48,33 @@ export function ReferralSection({
 
   async function handleStart(input: Parameters<typeof startReferral>[1]) {
     const result = await startReferral(businessId, input);
-    if (result.status === "ok") {
-      setReferral(result.referral);
-    }
+    if (result.status === "ok") onStarted?.(result.referral);
     return result;
   }
 
-  async function handleRedeem(referralId: string) {
-    const result = await incrementReferralRedemption(referralId);
-    if (result.status === "ok") {
-      setReferral((prev) => (prev ? { ...prev, redemptions: result.redemptions } : prev));
-    }
-    return result;
-  }
-
-  async function handleEnd(referralId: string) {
-    const result = await endReferral(referralId);
-    if (result.status === "ok") {
-      setReferral(null);
-    }
-    return result;
-  }
+  // Free: a showroom — the real designer with the business's own name,
+  // lightly faded; Save, Print, Download and Share open the promo box (the
+  // builder and CardDesigner swap them on Free). No running list or tally.
+  if (plan === "free")
+    return (
+      <div className="flex flex-col gap-6" data-testid="designer-showroom">
+        <HowItWorks kind="referral" passOn={passOn} businessId={businessId} />
+        <div className="opacity-90">
+          <ReferralBuilder
+            businessId={businessId}
+            passOn={passOn}
+            onPassOnChange={setPassOn}
+            plan={plan}
+            printBusiness={printBusiness}
+            businessName={businessName}
+            profile={profile}
+            activeCount={referral ? 1 : 0}
+            maxActive={MAX_ACTIVE_REFERRALS}
+            onStart={handleStart}
+          />
+        </div>
+      </div>
+    );
 
   return (
     <div className="flex flex-col gap-6">
@@ -85,15 +93,6 @@ export function ReferralSection({
         activeCount={referral ? 1 : 0}
         maxActive={MAX_ACTIVE_REFERRALS}
         onStart={handleStart}
-      />
-
-      <ActiveReferral
-        referral={referral}
-        businessName={businessName}
-        businessPhone={businessPhone}
-        maxActive={MAX_ACTIVE_REFERRALS}
-        onRedeem={handleRedeem}
-        onEnd={handleEnd}
       />
     </div>
   );

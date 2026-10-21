@@ -9,7 +9,8 @@ import { formatExpiry } from "@/lib/coupons";
 import { buildShareCaption, redemptionLabel, type PromoRow } from "@/lib/promos";
 import { ShareModal } from "./ShareModal";
 import type { EndPromoResult, IncrementRedemptionResult } from "@/app/actions/promos";
-import { t, useLocale } from "@/lib/i18n";
+import { formatShortDate, t, useLocale, useTimeZone } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 type RedeemState = { kind: "idle" } | { kind: "saving" } | { kind: "error"; message: string };
 type EndState = { kind: "idle" } | { kind: "confirming" } | { kind: "saving" } | { kind: "error"; message: string };
@@ -20,14 +21,17 @@ function PromoCard({
   businessPhone,
   onRedeem,
   onEnd,
+  highlighted = false,
 }: {
   promo: PromoRow;
   businessName: string;
   businessPhone: string | null;
   onRedeem: (id: string) => Promise<IncrementRedemptionResult>;
   onEnd: (id: string) => Promise<EndPromoResult>;
+  highlighted?: boolean;
 }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const [redeemState, setRedeemState] = useState<RedeemState>({ kind: "idle" });
   const [endState, setEndState] = useState<EndState>({ kind: "idle" });
   const [shareOpen, setShareOpen] = useState(false);
@@ -67,12 +71,21 @@ function PromoCard({
   const expiryLabel = formatExpiry(promo.expiry ?? "");
 
   return (
-    <div className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0">
+    <div
+      data-testid="campaign-row"
+      data-highlighted={highlighted || undefined}
+      className={cn("flex flex-col gap-3 py-4 transition-colors duration-700 first:pt-0 last:pb-0", highlighted && "-mx-3 rounded-lg bg-[color:color-mix(in_srgb,var(--color-brass)_14%,white)] px-3 first:pt-3 last:pb-3")}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-semibold text-ink">{promo.offer}</div>
+          <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink">
+            {promo.offer}
+            <span className="rounded-full border border-paper-deep bg-white px-2 py-px text-[11px] font-semibold text-ink-soft">{t(locale, "dashboard.campaigns.typeCoupon")}</span>
+            {highlighted && <span className="rounded-full bg-ink px-2 py-px text-[11px] font-semibold text-white">{t(locale, "dashboard.campaigns.newBadge")}</span>}
+          </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-ink-soft">
             <span className="font-mono text-ink">{promo.code}</span>
+            <span>{t(locale, "dashboard.campaigns.started", { date: formatShortDate(promo.created_at, locale, timeZone) })}</span>
             <span className="text-red">{expiryLabel}</span>
           </div>
         </div>
@@ -145,6 +158,7 @@ export function ActivePromotions({
   maxActive,
   onRedeem,
   onEnd,
+  highlightId = null,
 }: {
   promos: PromoRow[];
   businessName: string;
@@ -152,6 +166,7 @@ export function ActivePromotions({
   maxActive: number;
   onRedeem: (id: string) => Promise<IncrementRedemptionResult>;
   onEnd: (id: string) => Promise<EndPromoResult>;
+  highlightId?: string | null;
 }) {
   const locale = useLocale();
   return (
@@ -174,6 +189,7 @@ export function ActivePromotions({
                 businessPhone={businessPhone}
                 onRedeem={onRedeem}
                 onEnd={onEnd}
+                highlighted={promo.id === highlightId}
               />
             ))}
           </div>

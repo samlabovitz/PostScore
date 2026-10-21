@@ -41,7 +41,7 @@ export function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 /** One upcoming feature: its name, what it does, and its real status. */
-export function SoonRow({ title, body, status, href, linkLabel }: { title: string; body?: string; status: string; href?: string; linkLabel?: string }) {
+export function SoonRow({ title, body, status, href, linkLabel }: { title: string; body?: string; status: React.ReactNode; href?: string; linkLabel?: string }) {
   return (
     <li className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0">

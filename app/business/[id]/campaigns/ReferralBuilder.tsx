@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { IconChevronDown, IconGift, IconRefresh, IconRocket, IconShare2 } from "@tabler/icons-react";
+import { IconLock, IconChevronDown, IconGift, IconRefresh, IconRocket, IconShare2 } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
+import { UpgradeButton } from "@/components/upgrade/UpgradeTrigger";
 import { cn } from "@/lib/utils";
 import { generateCouponCode } from "@/lib/coupons";
 import type { Plan } from "@/lib/plan";
@@ -16,6 +17,7 @@ import type { StartReferralInput, StartReferralResult } from "@/app/actions/refe
 import { t, useLocale } from "@/lib/i18n";
 
 export function ReferralBuilder({
+  preview = false,
   businessId,
   businessName,
   passOn,
@@ -27,6 +29,8 @@ export function ReferralBuilder({
   plan,
   printBusiness,
 }: {
+  /** The Free showroom page: the top cards hidden, Customize open. */
+  preview?: boolean;
   businessId: string;
   businessName: string;
   /** How customers pass it on (decides the card layout). */
@@ -61,6 +65,9 @@ export function ReferralBuilder({
 
   const hasRequiredFields = !needsFilling(referrerReward) && !needsFilling(friendReward);
   const atLimit = activeCount >= maxActive;
+  // Free: a showroom — the designer works, but saving, sharing and
+  // tracking open the promo box instead (5f).
+  const showroom = plan === "free";
   const canStart = hasRequiredFields && !atLimit && startState.kind !== "working";
 
   async function handleStart() {
@@ -137,6 +144,7 @@ export function ReferralBuilder({
 
       <CardDesigner
         kind="referral"
+        showroom={preview}
         plan={plan}
         businessId={businessId}
         business={printBusiness}
@@ -159,7 +167,7 @@ export function ReferralBuilder({
         }}
         fields={
           <>
-            <PassOnChoice value={passOn} onChange={onPassOnChange} />
+            {!preview && <PassOnChoice value={passOn} onChange={onPassOnChange} />}
 
             <div>
               <label className="mb-1 block text-[13px] font-medium text-ink-soft">
@@ -231,6 +239,21 @@ export function ReferralBuilder({
         }
         actions={
           <>
+            {showroom ? (
+              <>
+                {passOn === "digital" && (
+                  <UpgradeButton feature="print" className={buttonClasses("default", "default", "w-fit")}>
+                    <IconLock size={16} aria-hidden />
+                    {t(locale, "dashboard.growth.referral.share")}
+                  </UpgradeButton>
+                )}
+                <UpgradeButton feature="print" className={buttonClasses("brass")}>
+                  <IconLock size={16} aria-hidden />
+                  {t(locale, "dashboard.growth.referral.startAndTrack")}
+                </UpgradeButton>
+              </>
+            ) : (
+              <>
             {passOn === "digital" && (
               <div className="flex flex-col gap-1">
                 <Button variant="default" onClick={() => setShareOpen(true)} disabled={!hasRequiredFields} className="w-fit">
@@ -246,8 +269,12 @@ export function ReferralBuilder({
                 ? t(locale, "dashboard.growth.referral.starting")
                 : t(locale, "dashboard.growth.referral.startAndTrack")}
             </Button>
+              </>
+            )}
             {atLimit ? (
               <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.growth.referral.atLimitMessage")}</p>
+            ) : startState.kind === "idle" && !showroom ? (
+              <p className="text-[12px] text-ink-mute" data-testid="track-on-all">{t(locale, "dashboard.campaigns.trackOnAll")}</p>
             ) : startState.kind === "success" ? (
               <p className="text-[12px] text-green">{t(locale, "dashboard.growth.referral.startSuccess")}</p>
             ) : startState.kind === "error" ? (

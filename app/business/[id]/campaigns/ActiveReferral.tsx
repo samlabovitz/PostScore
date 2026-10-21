@@ -9,7 +9,8 @@ import { buildReferralShareCaption, type ReferralRow } from "@/lib/referrals";
 import { redemptionLabel } from "@/lib/promos";
 import { ShareModal } from "./ShareModal";
 import type { EndReferralResult, IncrementReferralRedemptionResult } from "@/app/actions/referrals";
-import { t, useLocale } from "@/lib/i18n";
+import { formatShortDate, t, useLocale, useTimeZone } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 type RedeemState = { kind: "idle" } | { kind: "saving" } | { kind: "error"; message: string };
 type EndState = { kind: "idle" } | { kind: "confirming" } | { kind: "saving" } | { kind: "error"; message: string };
@@ -21,6 +22,7 @@ export function ActiveReferral({
   maxActive,
   onRedeem,
   onEnd,
+  highlighted = false,
 }: {
   referral: ReferralRow | null;
   businessName: string;
@@ -28,7 +30,10 @@ export function ActiveReferral({
   maxActive: number;
   onRedeem: (id: string) => Promise<IncrementReferralRedemptionResult>;
   onEnd: (id: string) => Promise<EndReferralResult>;
+  /** Just saved: highlighted for a few seconds. */
+  highlighted?: boolean;
 }) {
+  const timeZone = useTimeZone();
   const locale = useLocale();
   const [redeemState, setRedeemState] = useState<RedeemState>({ kind: "idle" });
   const [endState, setEndState] = useState<EndState>({ kind: "idle" });
@@ -78,8 +83,13 @@ export function ActiveReferral({
           {t(locale, "dashboard.growth.activeReferral.emptyState")}
         </Card>
       ) : (
-        <Card className="p-5">
+        <Card className={cn("p-5 transition-colors duration-700", highlighted && "bg-[color:color-mix(in_srgb,var(--color-brass)_14%,white)]")} data-testid="campaign-row" data-highlighted={highlighted || undefined}>
           <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-paper-deep bg-white px-2 py-px text-[11px] font-semibold text-ink-soft">{t(locale, "dashboard.campaigns.typeReferral")}</span>
+              {highlighted && <span className="rounded-full bg-ink px-2 py-px text-[11px] font-semibold text-white">{t(locale, "dashboard.campaigns.newBadge")}</span>}
+              <span className="text-[12.5px] text-ink-soft">{t(locale, "dashboard.campaigns.started", { date: formatShortDate(referral.created_at, locale, timeZone) })}</span>
+            </div>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex flex-col gap-1">
                 <div className="text-sm">

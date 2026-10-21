@@ -3,14 +3,14 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { useEffect, useState } from "react";
+import { IconArrowLeft, IconCheck, IconCrown, IconLock } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/SegmentedControl";
-import { DevPlanSwitch } from "@/components/studio/DevPlanSwitch";
+import { HowToRunIt } from "./HowToRunIt";
 import { SectionTitle, SoonList, SoonRow } from "@/components/preview/PreviewParts";
-import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import type { BizProfile } from "@/config/bizProfiles";
-import type { Plan } from "@/lib/plan";
+import { isPremiumPlan, type Plan } from "@/lib/plan";
 import type { PromoRow } from "@/lib/promos";
 import type { ReferralRow } from "@/lib/referrals";
 import type { CardBusiness } from "@/lib/printStudio/design";
@@ -35,7 +35,6 @@ export function CampaignsView({
   loadFailed = false,
   plan,
   printBusiness,
-  devPlanSwitch = false,
 }: {
   businessId: string;
   businessName: string | null;
@@ -46,12 +45,27 @@ export function CampaignsView({
   loadFailed?: boolean;
   plan: Plan;
   printBusiness: CardBusiness | null;
-  devPlanSwitch?: boolean;
 }) {
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
+  // "All campaigns" is the tracking home on Grow and up (where they open);
+  // only its email, text and social campaigns are Premium (coming soon).
+  const premium = isPremiumPlan(plan);
   const tab = campaignsTabFromParam(searchParams.get("tab"), profile);
+  // The running campaigns live here, so a save on a designer tab shows up
+  // on All campaigns at once (same rows and actions as before — no data
+  // moves).
+  const [promos, setPromos] = useState<PromoRow[]>(initialPromos);
+  const [referral, setReferral] = useState<ReferralRow | null>(initialReferral);
+  // After "Save & start tracking": a toast, and the new one highlighted at
+  // the top of All campaigns for a few seconds.
+  const [justSaved, setJustSaved] = useState<string | null>(null);
+  useEffect(() => {
+    if (!justSaved) return;
+    const timer = window.setTimeout(() => setJustSaved(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [justSaved]);
   const name = businessName ?? t(locale, "dashboard.common.businessNameFallback");
   const hasTools = profile.couponsOk || profile.referralOk;
 
@@ -64,6 +78,11 @@ export function CampaignsView({
     router.push(`/business/${businessId}/campaigns${query ? `?${query}` : ""}`, { scroll: false });
   }
 
+  function saved(id: string) {
+    setJustSaved(id);
+    setTab("all");
+  }
+
   const options: SegmentedControlOption<CampaignsTab>[] = [{ value: "all", label: t(locale, "dashboard.campaigns.tabAll") }];
   if (profile.couponsOk) options.push({ value: "coupons", label: t(locale, "dashboard.campaigns.tabCoupons") });
   if (profile.referralOk) options.push({ value: "referrals", label: t(locale, "dashboard.campaigns.tabReferrals") });
@@ -71,6 +90,16 @@ export function CampaignsView({
   // What a printed card may show; a bare fallback if it couldn't load.
   const cardBusiness: CardBusiness = printBusiness ?? { businessName, placeId: null, googleMapsUri: null, website: null, address: null, hours: null, icon: "star" };
   const soon = t(locale, "dashboard.common.comingSoon");
+  // Email, text and social: Premium, not built yet — Grow sees the plan.
+  const channelStatus = premium ? (
+    soon
+  ) : (
+    <span className="inline-flex items-center gap-1" data-testid="channel-premium">
+      <IconLock size={11} aria-hidden className="text-brass" />
+      <IconCrown size={11} aria-hidden className="text-brass" />
+      {t(locale, "dashboard.settings.plan.name.premium")}
+    </span>
+  );
 
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
@@ -82,8 +111,6 @@ export function CampaignsView({
         <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">{t(locale, "dashboard.campaigns.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-ink-soft">{t(locale, "dashboard.campaigns.subtitle")}</p>
       </div>
-
-      {devPlanSwitch && hasTools && <DevPlanSwitch plan={plan} backPath={`/business/${businessId}/campaigns`} />}
 
       {options.length > 1 && <SegmentedControl options={options} value={tab} onChange={setTab} />}
 
@@ -98,33 +125,66 @@ export function CampaignsView({
                 businessPhone={businessPhone}
                 couponsOk={profile.couponsOk}
                 referralOk={profile.referralOk}
-                initialPromos={initialPromos}
-                initialReferral={initialReferral}
+                promos={promos}
+                referral={referral}
+                onPromosChange={setPromos}
+                onReferralChange={setReferral}
+                highlightId={justSaved}
               />
             )
           ) : (
             <Card className="p-5 text-sm text-ink-soft">{t(locale, "dashboard.campaigns.notForType")}</Card>
           )}
           <section>
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <SectionTitle>{t(locale, "dashboard.campaigns.nextHeading")}</SectionTitle>
-              <UpgradeTrigger feature="campaignHub" variant="chip" />
-            </div>
+            <SectionTitle>{t(locale, "dashboard.campaigns.nextHeading")}</SectionTitle>
             <SoonList>
-              <SoonRow title={t(locale, "dashboard.campaigns.email")} body={t(locale, "dashboard.campaigns.emailBody")} status={soon} />
-              <SoonRow title={t(locale, "dashboard.campaigns.text")} body={t(locale, "dashboard.campaigns.textBody")} status={soon} />
-              <SoonRow title={t(locale, "dashboard.campaigns.social")} body={t(locale, "dashboard.campaigns.socialBody")} status={soon} />
+              <SoonRow title={t(locale, "dashboard.campaigns.email")} body={t(locale, "dashboard.campaigns.emailBody")} status={channelStatus} />
+              <SoonRow title={t(locale, "dashboard.campaigns.text")} body={t(locale, "dashboard.campaigns.textBody")} status={channelStatus} />
+              <SoonRow title={t(locale, "dashboard.campaigns.social")} body={t(locale, "dashboard.campaigns.socialBody")} status={channelStatus} />
             </SoonList>
           </section>
         </div>
       )}
 
+      {/* Grow: the five-step guide, collapsed, above the designer. */}
+      {plan === "grow" && (tab === "coupons" || tab === "referrals") && <HowToRunIt kind={tab} />}
+
       {tab === "coupons" && (
-        <CouponsSection businessId={businessId} businessName={name} businessPhone={businessPhone} profile={profile} initialPromos={initialPromos} plan={plan} printBusiness={cardBusiness} />
+        <CouponsSection
+          businessId={businessId}
+          businessName={name}
+          businessPhone={businessPhone}
+          profile={profile}
+          promos={promos}
+          plan={plan}
+          printBusiness={cardBusiness}
+          onStarted={(promo) => {
+            setPromos((prev) => [promo, ...prev]);
+            saved(promo.id);
+          }}
+        />
       )}
 
       {tab === "referrals" && (
-        <ReferralSection businessId={businessId} businessName={name} businessPhone={businessPhone} profile={profile} initialReferral={initialReferral} plan={plan} printBusiness={cardBusiness} />
+        <ReferralSection
+          businessId={businessId}
+          businessName={name}
+          businessPhone={businessPhone}
+          profile={profile}
+          referral={referral}
+          plan={plan}
+          printBusiness={cardBusiness}
+          onStarted={(row) => {
+            setReferral(row);
+            saved(row.id);
+          }}
+        />
+      )}
+      {justSaved && (
+        <div role="status" data-testid="saved-toast" className="fixed inset-x-4 bottom-4 z-50 mx-auto flex w-fit items-center gap-2 rounded-full bg-ink px-4 py-2 text-[13px] font-semibold text-white shadow-card">
+          <IconCheck size={15} aria-hidden />
+          {t(locale, "dashboard.campaigns.savedToast")}
+        </div>
       )}
     </div>
   );
