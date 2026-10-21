@@ -361,3 +361,57 @@ not built yet; it's step 5k-0 in the Day 5 plan.
 - Settings → Plan & billing copy and comparison — `lib/planComparison.ts` (wording only; describes the plans, gates nothing).
 - Upgrade promos (box + strip) — `lib/upgradePromos.ts`, `components/upgrade/`.
 - Everything else is currently open to every plan — see the Day 5 plan's gating section for the full list and the planned changes.
+
+## Google Maps Platform terms compliance — MUST fix before launch
+
+Full review: `~/Desktop/places-storage-review.md` (2026-10-21). Plain reading of Google's published terms, not legal advice. **Nothing changed yet.**
+
+**What the terms allow.**
+- Maps Platform Terms §3.2.3: no scraping — never "copy and save business names, addresses, or user reviews" — and no caching except where the Service Specific Terms allow it.
+- Service Specific Terms §14.3 (Places): only latitude/longitude may be cached, for up to 30 days.
+- Places policies: place IDs may be stored indefinitely; reviews and photos need author attribution; Places data shown without a Google Map needs the Google logo.
+- Sources: https://cloud.google.com/maps-platform/terms · https://cloud.google.com/maps-platform/terms/maps-service-terms · https://developers.google.com/maps/documentation/places/web-service/policies
+
+**What we store today that isn't allowed** (kept forever):
+- `businesses.lat`/`lng` (30-day max);
+- `businesses` name, address, phone, website, category/categories, primary type, hours, status, Maps URL, price level, photo count, rating, review count — the values that came from Google;
+- `scores.profile_snapshot_json` (a per-scan history of those fields);
+- `competitor_scans` (other businesses' name, address, phone, hours, categories, status, rating, review count, every scan) — the biggest exposure.
+
+Allowed: place IDs; owner-entered data; our own website checks (`website_analysis_json`); photos (fetched fresh, never stored). Unclear: our computed scores/grades (derived from Places content). Missing: the Google logo next to Places data shown without a map. Review replies are already compliant: the owner pastes the review, nothing from Google is fetched or stored.
+
+**Proposed redesign.**
+1. **Keep:** place IDs; PostScore's own computed results (score, grade, each check's pass/fail and points, rank); website-derived data; owner-entered data; reply drafts.
+2. **Fetch live (or within allowed limits) instead of storing:** the listing's display fields (name, address, phone, hours, rating, review count) once per visit, held in memory for that request/session only; competitor names/ratings when the Competitors page or a report is shown; lat/lng kept at most 30 days, or replaced by the derived time zone.
+3. **History becomes our own data:** "what changed" compares our check results (e.g. "hours: listed → missing"), not stored Google values. Drop the raw fields from `profile_snapshot_json` and `competitor_scans`, with a one-time cleanup (SQL to review first).
+4. **Attribution:** the Google Maps logo (per Google's attribution guidelines) next to Places data shown without a map — Overview, Competitors, Website, reports, PDFs and emails; author attribution wherever reviews or photos are shown.
+
+**Open questions for Google Maps Platform support.**
+1. May we store a business's own listing fields when the verified owner has connected or confirmed them in PostScore (is that our customer's content)?
+2. Are scores and pass/fail results computed from Places fields "content created from Google Maps Content" (§3.2.3(c)), and may we keep them?
+3. May we keep a per-scan history of a business's own rating and review count, or only our derived results?
+4. For competitor comparisons: may we store competitor place IDs + our computed scores, and show names/ratings only by fetching them live?
+5. Is there a data agreement or partner program for listing-audit / local-SEO tools that allows storing this data?
+6. May review text the owner pastes from Google be sent to an AI model to draft their reply (no storage)? And may a review fetched live through the Places API be used the same way?
+7. Exactly where the Google logo is required (web dashboard, PDF reports, emails).
+
+**Estimated extra live-fetch cost per month** (list prices, first volume tier; each SKU has 1,000 free calls/month, shared with today's scans). Assumptions per business: ~12 dashboard visits a month (1 Place Details Enterprise call each, $0.020), ~6 Competitors/report views (1 Nearby Search Enterprise call each, $0.035), monthly scans unchanged.
+
+| | 100 businesses | 1,000 businesses |
+|---|---|---|
+| Listing fields (Place Details Enterprise; scans already use ~100 / ~1,000 of its 1,000 free) | 1,200 calls, ~300 billable → ~$6 | 12,000 calls, all billable → ~$240 |
+| Competitors live (Nearby Search Enterprise; scans already use ~400 / ~4,000 of its 1,000 free) | 600 calls, within the free 1,000 → ~$0 | 6,000 calls, all billable → ~$210 |
+| **Total extra** | **~$6/mo** | **~$450/mo** |
+
+Caching the live result for the length of one visit (in memory, not the database), and fetching competitors only when that tab is opened, keeps it near these numbers. Confirm prices on Google's pricing list before deciding.
+
+## Launch checklist
+
+1. **Google Maps Platform terms compliance** (above): get answers from Google support, then build the storage redesign, the cleanup SQL and the Google attribution. Blocks launch.
+2. Remove `PLAN_SWITCHER_EMAILS` from production (testing only).
+3. Checkout and billing as in `docs/billing-compliance.md` (lawyer review).
+4. Run every pending `supabase/*.sql` file, including `review-reply-drafts.sql`.
+5. Search demand: its own launch checklist in `docs/search-demand.md` §4.
+6. File the POSTSCORE trademark (Class 42, ~$350).
+7. Decide LLC vs personal ownership.
+8. Get Google Maps Platform's written answer on storage (case opened Oct 21).

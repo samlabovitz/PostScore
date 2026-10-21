@@ -273,8 +273,8 @@ describe("plan copy and PostAI", () => {
       expect(ASSISTANT_SYSTEM_RULES).toContain(s);
   });
 
-  test("docs: reply drafts", () => {
+  test("docs: reply drafts, the compliance section and the launch checklist", () => {
     const doc = readFileSync("docs/product-structure.md", "utf8");
-    for (const s of ["**Reply to a review**", "review-reply-drafts.sql", "3 free AI review replies to try"]) expect(doc).toContain(s);
+    for (const s of ["**Reply to a review**", "## Google Maps Platform terms compliance — MUST fix before launch", "**Open questions for Google Maps Platform support.**", "**Estimated extra live-fetch cost per month**", "## Launch checklist", "review-reply-drafts.sql"]) expect(doc).toContain(s);
   });
 });
