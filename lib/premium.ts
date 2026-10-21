@@ -12,9 +12,9 @@
 
 import { requestCache } from "@/lib/requestCache";
 import { cookies } from "next/headers";
-import { isPlan, isPremiumPlan, type Plan } from "@/lib/plan";
+import { isPlan, isPremiumPlan, type Addon, type Plan } from "@/lib/plan";
 
-export { PLANS, isPremiumPlan, type Plan } from "@/lib/plan";
+export { PLANS, isPremiumPlan, type Addon, type Plan } from "@/lib/plan";
 export const DEV_PLAN_COOKIE = "ps_dev_plan";
 
 type PlanEnv = { NODE_ENV?: string; POSTSCORE_DEV_PLAN?: string; PLAN_SWITCHER_EMAILS?: string };
@@ -76,6 +76,14 @@ export async function getPlan(env: PlanEnv = process.env): Promise<Plan> {
   }
   if (env.NODE_ENV !== "development" && (!devCookie || switcherEmails(env).length === 0)) return "free";
   return resolvePlan(env, devCookie, await canSwitchPlan(env));
+}
+
+/** The current account's add-ons. Server only. No checkout exists yet, so
+ * no account has one; when it ships this reads the subscription's add-ons
+ * (e.g. "PostStudio only" = getPlan() "free" + ["poststudio"]) and
+ * hasPostStudio(plan, addons) is already right. */
+export async function getAddons(): Promise<Addon[]> {
+  return [];
 }
 
 export function hasPremium(plan: Plan): boolean {

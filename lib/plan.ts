@@ -12,3 +12,13 @@ export function isPlan(value: unknown): value is Plan {
 export function isPremiumPlan(plan: Plan): boolean {
   return plan === "premium" || plan === "multi";
 }
+
+/** Add-ons bought on top of a plan. PostStudio is the only one: on its own
+ * ("PostStudio only" = plan "free" + addon "poststudio", $30/mo) or added to
+ * Grow (+$15) or Premium (+$8); Multi includes it. */
+export type Addon = "poststudio";
+export const ADDONS: Addon[] = ["poststudio"];
+
+export function isAddon(value: unknown): value is Addon {
+  return typeof value === "string" && (ADDONS as string[]).includes(value);
+}

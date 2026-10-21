@@ -4,8 +4,9 @@
 // generator (Free, Grow, and Premium without the add-on): what PostStudio
 // adds, four wireframe page outlines with the business's own name (clearly
 // outlines, not a fake site), a compact starter-vs-PostStudio comparison,
-// the price on each plan and an honest "Coming soon". One button opens the
-// full-screen PostStudio page. With PostStudio (Multi) it's just "Continue
+// the price ($30/mo on its own, or added to a plan) and an honest "Coming
+// soon". "Add PostStudio" opens the PostStudio box (the ways to get it —
+// nothing is charged); "See PostStudio" opens the full-screen page. With PostStudio (Multi) it's just "Continue
 // in PostStudio →", no upsell. "PostStudio" is never translated.
 
 import Link from "next/link";
@@ -13,6 +14,7 @@ import { IconArrowRight, IconLayoutDashboard } from "@tabler/icons-react";
 import { hasPostStudio, pageOutlines, studioHref } from "@/lib/postStudio";
 import { t, useLocale, type MessageKey } from "@/lib/i18n";
 import type { Plan } from "@/lib/plan";
+import { UpgradeButton } from "@/components/upgrade/UpgradeTrigger";
 
 const K = (key: string) => `dashboard.website.studioShowcase.${key}` as MessageKey;
 const ROWS = [
@@ -109,10 +111,15 @@ export function PostStudioShowcase({
         <p className="text-[13px] font-semibold text-ink" data-testid="poststudio-price">
           {t(locale, K("price"))}
         </p>
-        <Link href={href} data-testid="poststudio-cta" className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-lg bg-ink px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-ink/90">
-          {t(locale, K("cta"))}
-          <IconArrowRight size={15} aria-hidden />
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <UpgradeButton feature="postStudio" testId="poststudio-add" className="inline-flex w-fit shrink-0 items-center rounded-lg border border-brass bg-brass px-4 py-2.5 text-[13px] font-semibold text-ink hover:bg-[#a5772a] disabled:hidden">
+            {t(locale, K("add"))}
+          </UpgradeButton>
+          <Link href={href} data-testid="poststudio-cta" className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-lg bg-ink px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-ink/90">
+            {t(locale, K("cta"))}
+            <IconArrowRight size={15} aria-hidden />
+          </Link>
+        </div>
       </div>
     </section>
   );

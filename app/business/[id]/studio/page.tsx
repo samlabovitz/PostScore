@@ -7,19 +7,23 @@ import { LeavePostStudio } from "@/components/studio/LeavePostStudio";
 import { getWebsitePageData } from "@/app/actions/website";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { cityFromAddress } from "@/lib/starterSite";
-import { getPlan } from "@/lib/premium";
+import { getAddons, getPlan } from "@/lib/premium";
+import { PostStudioFeatures, PostStudioOptions } from "@/components/studio/PostStudioOptions";
 import { postStudioPriceKey } from "@/lib/navPlans";
-import { hasPostStudio, leaveHref, pageOutlines, siteChecklist } from "@/lib/postStudio";
+import { hasPostStudio, leaveHref, siteChecklist } from "@/lib/postStudio";
 import { LocaleProvider, normalizeLocale, t, type MessageKey } from "@/lib/i18n";
 
 /**
  * PostStudio: a focused full-screen page (no sidebar) opened from the
- * Overview or the Website page. The studio itself isn't built: with
- * PostStudio in the plan (Multi, until the add-on can be bought) it shows
- * the site checklist, the four page outlines and "Building tools coming
- * soon"; without it, the same real-data checklist and outlines as an
- * honest info page with the price for their plan. Nothing here is a
- * fake site — the outlines are wireframes and say so.
+ * Overview or the Website page. PostStudio = Website + Menu & catalog +
+ * Logo Studio (three tiles; no page outlines). The studio itself isn't
+ * built: with PostStudio (Multi, or the add-on once checkout ships — on its
+ * own "PostStudio only", or on Grow/Premium) it shows the site checklist,
+ * what PostStudio includes and "Building tools coming soon"; without it,
+ * the same checklist and tiles as an honest info page with the price for
+ * their plan and the ways to get it ($30/mo on its own, Grow + PostStudio
+ * $40, Premium + PostStudio $58, included in Multi). Nothing here is a
+ * fake site.
  */
 export default async function PostStudioPage({ params, searchParams = {} }: { params: { id: string }; searchParams?: { from?: string } }) {
   const result = await getWebsitePageData(params.id);
@@ -32,7 +36,7 @@ export default async function PostStudioPage({ params, searchParams = {} }: { pa
   const name = data.businessName ?? tr("dashboard.common.businessNameFallback");
   const profile = resolveBizProfile(data.category, data.primaryType, data.businessTypeOverride, locale, data.categories, data.businessName);
   const plan = await getPlan();
-  const included = hasPostStudio(plan);
+  const included = hasPostStudio(plan, await getAddons());
   const checklist = siteChecklist({
     businessName: data.businessName,
     category: data.category,
@@ -45,7 +49,6 @@ export default async function PostStudioPage({ params, searchParams = {} }: { pa
     verifiedSocialCount: data.verifiedSocialLinks.length,
     profileId: profile.id,
   });
-  const outlines = pageOutlines(profile.id, data.storefront);
   const compare: Array<[MessageKey, MessageKey, MessageKey]> = [
     ["dashboard.postStudio.rowPages", "dashboard.postStudio.starterPages", "dashboard.postStudio.studioPages"],
     ["dashboard.postStudio.rowHosting", "dashboard.postStudio.starterHosting", "dashboard.postStudio.studioHosting"],
@@ -81,6 +84,7 @@ export default async function PostStudioPage({ params, searchParams = {} }: { pa
             <Card className="flex flex-col gap-1 border-brass/40 bg-brass/5 p-4">
               <p className="text-sm font-semibold text-ink" data-testid="studio-price">{tr(postStudioPriceKey(plan))}</p>
               <p className="text-[13px] text-ink-soft">{tr("dashboard.postStudio.notOpenYet")}</p>
+              <PostStudioOptions plan={plan} className="mt-3" />
             </Card>
           )}
 
@@ -108,29 +112,8 @@ export default async function PostStudioPage({ params, searchParams = {} }: { pa
           </section>
 
           <section>
-            <SectionTitle>{tr("dashboard.postStudio.pagesHeading")}</SectionTitle>
-            <p className="mb-3 text-[12.5px] text-ink-mute">{tr("dashboard.postStudio.outlineNote")}</p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" data-testid="page-outlines">
-              {outlines.map((page) => (
-                <div key={page.title} className="rounded-xl border border-dashed border-ink-mute/50 bg-white p-4" aria-label={tr(page.title)}>
-                  <div className="mb-3 flex items-center gap-2">
-                    <span aria-hidden className="flex gap-1">
-                      <span className="h-2 w-2 rounded-full bg-paper-deep" />
-                      <span className="h-2 w-2 rounded-full bg-paper-deep" />
-                      <span className="h-2 w-2 rounded-full bg-paper-deep" />
-                    </span>
-                    <span className="text-[13px] font-semibold text-ink">{tr(page.title)}</span>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {page.blocks.map((block) => (
-                      <div key={block} className="rounded-md border border-paper-deep bg-paper px-3 py-2.5 text-[12px] text-ink-soft">
-                        {tr(block)}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <SectionTitle>{tr("dashboard.postStudio.includesHeading")}</SectionTitle>
+            <PostStudioFeatures />
           </section>
 
           {!included && (

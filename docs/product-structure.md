@@ -119,22 +119,31 @@ Nothing is lost in the move: templates, pass-on options, double-sided, numbering
 - **No website, or only a Facebook/social page: never an empty page.** It leads with:
   1. an honest header ("You don't have a website yet — it's one of the biggest gaps in your PostScore", with the real points it costs them);
   2. the Starter website generator with a live real-data preview (Grow/Premium: full use + download; Free: full use + a watermarked full preview, download with Grow);
-  3. directly under it, the PostStudio card comparing starter vs PostStudio, with "Build it in PostStudio →" and the add-on price for their plan.
+  3. directly under it, the PostStudio card comparing starter vs PostStudio, with the prices ("$30/mo on its own · +$15 on Grow · +$8 on Premium · included in Multi"), "Add PostStudio" (opens the PostStudio box) and "See PostStudio →" (the full-screen page).
 
   With the add-on (or Multi), the card becomes "Continue in PostStudio →".
 - FAQ draft (today) stays under the options.
 
-### PostStudio — full-screen page (add-on; not open yet)
+### PostStudio — full-screen page (its own option or an add-on; not open yet)
+**PostStudio = Website + Menu & catalog + Logo Studio** (all coming soon), shown everywhere as three compact tiles (`PostStudioFeatures` in `components/studio/PostStudioOptions.tsx`, icon + title + one line):
+- **Website:** a multi-page site, hosted for you on your own domain, updated after every scan;
+- **Menu & catalog:** your menu or product list, always up to date, with a QR code that never changes;
+- **Logo Studio:** upload your logo or make a simple one, used across your site and printouts.
+
 `/business/[id]/studio`, with no sidebar. A slim top bar shows PostStudio, the business name and "← Leave PostStudio" (it asks to confirm only if there are unsaved changes; there's no editor yet, so today it never asks).
-- **With PostStudio** (Multi until the add-on can be bought): "Your site checklist", the four page outlines, and "Building tools coming soon".
+- **With PostStudio** (`hasPostStudio(plan, await getAddons())`: Multi, or the add-on once checkout ships — "PostStudio only" is plan Free + addon `poststudio`): "Your site checklist", "What PostStudio includes" (the three tiles), and "Building tools coming soon".
 - **Without it,** an honest info page:
   - what PostStudio builds;
   - "Your site checklist" from real data (✓ ready from the listing / ○ you'll add this; `lib/postStudio.ts`);
-  - the four page outlines (wireframes, labelled "not your real site yet");
+  - "What PostStudio includes": the three tiles (no page outlines here or in the PostStudio box; the Website page's PostStudio card keeps its four wireframe outlines);
   - starter vs PostStudio comparison;
-  - the price for their plan, and "PostStudio isn't open yet — there's nothing to buy today";
+  - the price for their plan, and "PostStudio isn't open yet — there's nothing to buy today", with the ways to get it side by side (PostStudio only $30/mo · Grow + PostStudio $40/mo · Premium + PostStudio $58/mo, Best value · Included in Multi), their plan highlighted;
   - "Want something now? Use the free starter website →".
 - Later: website builder + hosting (auto-refreshing rating/reviews/hours after every scan), Menu & catalog, Logo Studio.
+- **Booking + online ordering connections** (plan only, `docs/day5-website-studio-plan.md` §10):
+  - **Phase 1, at PostStudio launch:** a setup question ("Do you take bookings or sell online?") with tools recommended by business type (salons/spas/barbers: Square Appointments, Vagaro, Booksy, Fresha, GlossGenius; services/lessons: Calendly, Acuity; fitness: Mindbody; restaurants: Toast, Square Online, Clover; retail: Square Online, Shopify); step-by-step guides from each provider's official help docs (links + "last verified" date) to create an account and find the booking/ordering link or button code; the owner pastes the link/embed code and PostScore validates it (a real URL on that provider's domain, it loads, no unsafe scripts — only allowlisted provider embeds, never arbitrary scripts), then adds "Book now" / "Order online" on every page plus a Book/Order page. It counts toward the website "Contact & conversion" check once a re-scan confirms it. Honest: PostScore doesn't take payments or bookings itself; the provider does.
+  - **Phase 2, after launch:** an official Square API connection (OAuth) to show real services/prices/products and keep them synced; other providers only if they offer official APIs. Cost + terms review first.
+  - Build order: right after "Custom domains".
 
 ### Competitors — built
 Nearby competitors, rank, comparisons.
@@ -201,11 +210,19 @@ Anything not built says "coming soon".
 | PostAI | — | 100 questions/month | unlimited | unlimited |
 | Fixes done for you (Google connect) | — | — | ✓ coming soon | ✓ coming soon |
 | Reports | monthly email | weekly recap | weekly + PDF | weekly + PDF |
-| PostStudio add-on (coming soon) | with Grow | +$15/mo | +$8/mo | included |
+| PostStudio — your full website (coming soon) | $30/mo on its own | +$15/mo | +$8/mo | ✓ included |
 | Locations | 1 | 1 | 1 | up to 5, +$25/mo each extra |
 
-Desktop: the four plan cards and this table, Premium highlighted. Phone: one
-card per plan, the owner's current plan first, each with its own rows.
+**PostStudio — your full website** (coming soon), its own section under the
+four plan cards (`PostStudioSection` in `components/settings/SettingsParts.tsx`,
+the options from `components/studio/PostStudioOptions.tsx`):
+- a multi-page site, hosted for you, your own domain, rating/hours updated after every scan, built to pass every website check;
+- the ways to get it: **PostStudio only $30/mo** (the free audit + PostStudio; Grow/Premium tools stay locked — plan `free` + addon `poststudio`) · Grow + PostStudio $40/mo (+$15) · Premium + PostStudio $58/mo (+$8, Best value) · included in Multi; the owner's plan highlighted;
+- "PostStudio is coming soon — nothing is charged today."
+
+Desktop: the four plan cards, the PostStudio section and this table, Premium
+highlighted. Phone: one card per plan, the owner's current plan first, each
+with its own rows; the PostStudio options stack.
 
 ### Free = the Overview audit + the Website page (5f, built)
 **Paid plans are unchanged by this redesign** (enforced page by page in `app/business/[id]/paidLayout.test.tsx`), except: the review goal (all plans), the Website page's two paths (PostStudio's card replaces Premium's bottom PostStudio line), "All campaigns" as the tracking home for Grow and up (Coupons/Referrals design only; only email, text and social are Premium), Premium/Multi's "AI-drafted replies — coming soon" on Reviews, and on Grow the designers' Grow/Premium marks, the "How to run it" guides, the Premium card at the bottom and the both-plans lock box. Locks on Grow keep their original look (one link / button / chip).
@@ -217,7 +234,7 @@ On Free the **Overview is the audit**, top to bottom:
 4. PostAI showroom: real starter questions and one labeled, generic "Example answer" — the questions, the box and Send open the promo box; `sendAssistantMessage` refuses on Free (no AI call);
 5. reviews: rating + count, the **review goal** (below), the working free review link (copy, open) and QR (PNG) — `#free-reviews`;
 6. competitor rank, with "You're #N of M nearby…" when they trail;
-7. "Unlock more with a plan" — 12 locked tiles (2 columns; 1 on a phone), each with its plan chip, a real count where there is one, skeleton rows with the feature's real icon, its OWN unlock line and a small "See plans": action plan, weekly routine, fix guides for their builder, Re-check, **downloading** the starter website (building it is free on the Website page), price check, weekly reports (PDF on Premium), campaign hub (coming soon), Google Profile fixes + insights (coming soon), AI review replies (coming soon), unlimited PostAI, PostStudio (add-on "+$15 on Grow · +$8 on Premium", coming soon);
+7. "Unlock more with a plan" — 12 locked tiles (2 columns; 1 on a phone), each with its plan chip, a real count where there is one, skeleton rows with the feature's real icon, its OWN unlock line and a small "See plans": action plan, weekly routine, fix guides for their builder, Re-check, **downloading** the starter website (building it is free on the Website page), price check, weekly reports (PDF on Premium), campaign hub (coming soon), Google Profile fixes + insights (coming soon), AI review replies (coming soon), unlimited PostAI, PostStudio ("$30/mo alone · +$15 on Grow · +$8 on Premium", coming soon; its lock opens the PostStudio box);
 8. the Grow + Premium ("Best value") promo cards.
 
 **Website page — two paths, every plan** (`app/business/[id]/website/page.tsx` + `WebsiteGeneratorSection`):
@@ -241,7 +258,9 @@ On Free the **Overview is the audit**, top to bottom:
 **Locks (item 15 — less advertising, always both plans):**
 - At most ONE full Grow vs Premium comparison per page with the two big buttons (`<UpgradeTrigger variant="pair">`): the showroom's top card; on the Overview, "More customers" + the bottom promo cards.
 - Every other lock is small (`UpgradeTrigger`'s default): a lock chip naming the plan ("Grow", or "Premium" with a crown; "Add-on" for PostStudio) and a "See plans" text link (`plain` drops the chip where the block already names its plan, e.g. `LockedPreview`). Locked actions (`UpgradeButton`) keep their own look.
+- **Every promo box is never cut off** (`PromoBox`, the one box behind every lock): fixed and fully on screen — centered on desktop, a bottom sheet on a phone — at most the viewport height minus a margin; the title + × and the footer stay visible while the middle scrolls. No backdrop; the page keeps working.
 - Any lock click opens the side-by-side box: both plans always, Premium "Best value", the clicked feature's plan highlighted (Premium-only features lead with Premium).
+- **PostStudio has its own box** (every PostStudio lock, tile and "Add PostStudio", on every plan that doesn't have it): the three tiles (Website, Menu & catalog, Logo Studio), then the three ways side by side — "PostStudio only" $30/mo · "Grow + PostStudio" $40/mo · "Premium + PostStudio" $58/mo (Best value) — plus "Included in Multi", the plan they're on highlighted (Free → PostStudio only), and the footer "Coming soon — nothing is charged today."
 - One unlock line per section, never repeated on a page.
 - Every locked footer is the same `LockFooter` (`components/plan/LockedPreview.tsx`): the unlock line left (max 2 lines), "See plans →" right as a small pill that never wraps, ≥16px apart, vertically centered; on a phone the link drops below the line, left-aligned. Locked tiles stretch to the row's height with the footer pinned to the bottom. Used by `LockedPreview`, the PostAI showroom, the rank line and the compact website score.
 
@@ -283,8 +302,9 @@ All in `components/upgrade/` + `lib/upgradePromos.ts`; the data comes from
 `loadUpgradeContext()` (`lib/upgradePromos.server.ts`) through
 `DashboardShell`'s `upgrade` prop.
 - **Promo box** (`UpgradeTrigger` / `UpgradeButton` → `PromoBox`): opens only
-  when the owner clicks something locked — a popover beside it on desktop, a
-  bottom sheet on a phone. It ALWAYS shows Grow and Premium side by side
+  when the owner clicks something locked — centered on desktop, a bottom
+  sheet on a phone, never cut off (header and footer fixed, the middle
+  scrolls). It ALWAYS shows Grow and Premium side by side
   (price, tagline, key benefits, Premium "Best value", "See plans" under
   each → Settings → Compare plans), the clicked plan highlighted, led by the
   feature's own title and lines (their real data where we have it, "Coming

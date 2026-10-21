@@ -74,7 +74,6 @@ export type MessageKey =
   | "dashboard.settings.plans.value.monthlyEmail"
   | "dashboard.settings.plans.value.weeklyRecap"
   | "dashboard.settings.plans.value.weeklyPdf"
-  | "dashboard.settings.plans.value.needsGrow"
   | "dashboard.settings.plans.value.plus15"
   | "dashboard.settings.plans.value.plus8"
   | "dashboard.settings.plans.value.included"
@@ -490,8 +489,7 @@ export type MessageKey =
   | "dashboard.postStudio.itemServices"
   | "dashboard.postStudio.itemMenu"
   | "dashboard.postStudio.itemBrand"
-  | "dashboard.postStudio.pagesHeading"
-  | "dashboard.postStudio.outlineNote"
+  | "dashboard.postStudio.includesHeading"
   | "dashboard.postStudio.pageHome"
   | "dashboard.postStudio.pageAbout"
   | "dashboard.postStudio.pageServices"
@@ -573,6 +571,33 @@ export type MessageKey =
   | "dashboard.postStudio.pricePremium"
   | "dashboard.postStudio.priceMulti"
   | "dashboard.postStudio.notOpenYet"
+  | "dashboard.postStudioPlans.title"
+  | "dashboard.postStudioPlans.sub"
+  | "dashboard.postStudioPlans.bullet.pages"
+  | "dashboard.postStudioPlans.bullet.hosted"
+  | "dashboard.postStudioPlans.bullet.domain"
+  | "dashboard.postStudioPlans.bullet.updates"
+  | "dashboard.postStudioPlans.bullet.checks"
+  | "dashboard.postStudioPlans.perMonth"
+  | "dashboard.postStudioPlans.option.solo.name"
+  | "dashboard.postStudioPlans.option.solo.note"
+  | "dashboard.postStudioPlans.option.grow.name"
+  | "dashboard.postStudioPlans.option.grow.note"
+  | "dashboard.postStudioPlans.option.premium.name"
+  | "dashboard.postStudioPlans.option.premium.note"
+  | "dashboard.postStudioPlans.option.multi"
+  | "dashboard.postStudioPlans.yourPlan"
+  | "dashboard.postStudioPlans.footer"
+  | "dashboard.postStudioPlans.box.title"
+  | "dashboard.postStudioPlans.box.sub"
+  | "dashboard.postStudioPlans.feature.website.title"
+  | "dashboard.postStudioPlans.feature.website.body"
+  | "dashboard.postStudioPlans.feature.menu.title"
+  | "dashboard.postStudioPlans.feature.menu.body"
+  | "dashboard.postStudioPlans.feature.logo.title"
+  | "dashboard.postStudioPlans.feature.logo.body"
+  | "dashboard.settings.plans.value.alone30"
+  | "dashboard.website.studioShowcase.add"
   | "dashboard.nav.account"
   | "dashboard.nav.logOut"
   // --- Per-business language toggle (BusinessLanguageToggle.tsx), inside
@@ -3968,7 +3993,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.row.postai": "PostAI",
     "dashboard.settings.plans.row.doneForYou": "Fixes done for you (Google connect)",
     "dashboard.settings.plans.row.reports": "Reports",
-    "dashboard.settings.plans.row.postStudio": "PostStudio add-on: a full website we build and host (coming soon)",
+    "dashboard.settings.plans.row.postStudio": "PostStudio — your full website, built and hosted for you (coming soon)",
     "dashboard.settings.plans.row.locations": "Locations",
     "dashboard.settings.plans.value.basic": "Basic",
     "dashboard.settings.plans.value.fullNoBranding": "Full, no branding",
@@ -3980,7 +4005,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.value.monthlyEmail": "Monthly email",
     "dashboard.settings.plans.value.weeklyRecap": "Weekly recap",
     "dashboard.settings.plans.value.weeklyPdf": "Weekly + PDF",
-    "dashboard.settings.plans.value.needsGrow": "With Grow",
     "dashboard.settings.plans.value.plus15": "+$15/mo",
     "dashboard.settings.plans.value.plus8": "+$8/mo",
     "dashboard.settings.plans.value.included": "Included",
@@ -4034,7 +4058,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.feature.campaignHub.b2": "Post them to your social pages from PostScore",
     "dashboard.upgrade.feature.postStudio.name": "PostStudio",
     "dashboard.upgrade.feature.postStudio.b1": "A full website we build and host",
-    "dashboard.upgrade.feature.postStudio.b2": "+$8/mo with Premium, included in Multi",
+    "dashboard.upgrade.feature.postStudio.b2": "$30/mo on its own · +$15 on Grow · +$8 on Premium · included in Multi",
     "dashboard.upgrade.strip.premiumTitle": "Premium: we do the work for you",
     "dashboard.upgrade.strip.growTitle": "Grow: fix it yourself, step by step",
     "dashboard.upgrade.strip.fixPoints": "{n} points of fixes waiting for {name}",
@@ -4136,7 +4160,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.tile.google": "Google Profile: fixes done for you + search insights",
     "dashboard.free.tile.aiReplies": "AI-drafted review replies",
     "dashboard.free.tile.postaiUnlimited": "Unlimited PostAI",
-    "dashboard.free.tile.postStudioPrice": "+$15 on Grow · +$8 on Premium",
+    "dashboard.free.tile.postStudioPrice": "$30/mo alone · +$15 on Grow · +$8 on Premium",
     "dashboard.free.tile.addOn": "Add-on",
     "dashboard.free.tile.reviewsCount": "{count} reviews",
     "dashboard.free.previewChip": "Preview",
@@ -4219,7 +4243,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.studioShowcase.studioUpdates": "After every scan",
     "dashboard.website.studioShowcase.starterChecks": "What one file can pass",
     "dashboard.website.studioShowcase.studioChecks": "Built to pass every check",
-    "dashboard.website.studioShowcase.price": "+$15 on Grow · +$8 on Premium · included in Multi",
+    "dashboard.website.studioShowcase.price": "$30/mo on its own · +$15 on Grow · +$8 on Premium · included in Multi",
     "dashboard.website.studioShowcase.cta": "See PostStudio",
     "dashboard.website.studioShowcase.continueTitle": "Your full website is in PostStudio",
     "dashboard.website.studioShowcase.continueSub": "Multi-page and hosted for you — pick up where you left off.",
@@ -4256,7 +4280,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.unlock.projectsWebsiteOne": "1 website fix worth about {points} points. Grow shows you how.",
     "dashboard.upgrade.unlock.projects": "{count} bigger projects worth about {points} points. Grow shows you how.",
     "dashboard.upgrade.unlock.tools": "Grow gives you a referral program and price check tools.",
-    "dashboard.upgrade.unlock.postStudio": "A full website we build and host for you — PostStudio, coming soon.",
+    "dashboard.upgrade.unlock.postStudio": "A full website we build and host for you — $30/mo on its own, or add it to Grow or Premium. PostStudio, coming soon.",
     "dashboard.upgrade.card.growTitle": "Fix it yourself, step by step",
     "dashboard.upgrade.card.premiumTitle": "We do the work for you",
     "dashboard.upgrade.card.hideGrow": "Hide the Grow card for 14 days",
@@ -4385,8 +4409,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.postStudio.itemServices": "Your services and prices",
     "dashboard.postStudio.itemMenu": "Your menu",
     "dashboard.postStudio.itemBrand": "Logo and colors",
-    "dashboard.postStudio.pagesHeading": "The 4 pages",
-    "dashboard.postStudio.outlineNote": "Page outlines — not your real site yet.",
+    "dashboard.postStudio.includesHeading": "What PostStudio includes",
     "dashboard.postStudio.pageHome": "Home",
     "dashboard.postStudio.pageAbout": "About",
     "dashboard.postStudio.pageServices": "Services",
@@ -4474,11 +4497,38 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleProfile.editingBody": "Hours, phone, description and photos — without leaving PostScore.",
     "dashboard.googleProfile.insights": "Insights funnel",
     "dashboard.googleProfile.insightsBody": "Views → calls, website clicks and directions.",
-    "dashboard.postStudio.priceFree": "Needs Grow ($25/mo) plus the PostStudio add-on (+$15/mo).",
-    "dashboard.postStudio.priceGrow": "Add PostStudio to Grow for +$15/mo.",
-    "dashboard.postStudio.pricePremium": "PostStudio at a discount: +$8/mo on Premium.",
+    "dashboard.postStudio.priceFree": "PostStudio on its own: $30/mo with your free audit — or add it to Grow (+$15/mo) or Premium (+$8/mo).",
+    "dashboard.postStudio.priceGrow": "Add PostStudio to Grow for +$15/mo ($40/mo total).",
+    "dashboard.postStudio.pricePremium": "PostStudio at a discount: +$8/mo on Premium ($58/mo total).",
     "dashboard.postStudio.priceMulti": "Included in your Multi plan.",
     "dashboard.postStudio.notOpenYet": "PostStudio isn't open yet — there's nothing to buy today.",
+    "dashboard.postStudioPlans.title": "PostStudio — your full website",
+    "dashboard.postStudioPlans.sub": "Its own option: get PostStudio with the free audit, or add it to a plan.",
+    "dashboard.postStudioPlans.bullet.pages": "A multi-page website: Home, About, Services (or Menu) and Contact",
+    "dashboard.postStudioPlans.bullet.hosted": "Hosted for you — nothing to set up",
+    "dashboard.postStudioPlans.bullet.domain": "Your own domain (yourbusiness.com)",
+    "dashboard.postStudioPlans.bullet.updates": "Your rating and hours update after every scan",
+    "dashboard.postStudioPlans.bullet.checks": "Built to pass every website check",
+    "dashboard.postStudioPlans.perMonth": "${amount}/mo",
+    "dashboard.postStudioPlans.option.solo.name": "PostStudio only",
+    "dashboard.postStudioPlans.option.solo.note": "The free audit + PostStudio",
+    "dashboard.postStudioPlans.option.grow.name": "Grow + PostStudio",
+    "dashboard.postStudioPlans.option.grow.note": "Grow + ${addOn}/mo for PostStudio",
+    "dashboard.postStudioPlans.option.premium.name": "Premium + PostStudio",
+    "dashboard.postStudioPlans.option.premium.note": "Premium + ${addOn}/mo for PostStudio",
+    "dashboard.postStudioPlans.option.multi": "Included in Multi",
+    "dashboard.postStudioPlans.yourPlan": "Your plan",
+    "dashboard.postStudioPlans.footer": "Coming soon — nothing is charged today.",
+    "dashboard.postStudioPlans.box.title": "PostStudio: your website, menu and logo",
+    "dashboard.postStudioPlans.box.sub": "Everything you need online, made from your real Google listing.",
+    "dashboard.postStudioPlans.feature.website.title": "Website",
+    "dashboard.postStudioPlans.feature.website.body": "A multi-page site, hosted for you on your own domain, updated after every scan.",
+    "dashboard.postStudioPlans.feature.menu.title": "Menu & catalog",
+    "dashboard.postStudioPlans.feature.menu.body": "Your menu or product list, always up to date, with a QR code that never changes.",
+    "dashboard.postStudioPlans.feature.logo.title": "Logo Studio",
+    "dashboard.postStudioPlans.feature.logo.body": "Upload your logo or make a simple one, used across your site and printouts.",
+    "dashboard.settings.plans.value.alone30": "$30/mo on its own",
+    "dashboard.website.studioShowcase.add": "Add PostStudio",
     "dashboard.nav.account": "Account",
     "dashboard.nav.logOut": "Log out",
     "dashboard.nav.languageForBusinessLabel": "Language for this business",
@@ -8236,7 +8286,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.row.postai": "PostAI",
     "dashboard.settings.plans.row.doneForYou": "Arreglos que hacemos por usted (conexión con Google)",
     "dashboard.settings.plans.row.reports": "Informes",
-    "dashboard.settings.plans.row.postStudio": "Complemento PostStudio: un sitio web completo que construimos y alojamos (próximamente)",
+    "dashboard.settings.plans.row.postStudio": "PostStudio: su sitio web completo, construido y alojado por nosotros (próximamente)",
     "dashboard.settings.plans.row.locations": "Ubicaciones",
     "dashboard.settings.plans.value.basic": "Básico",
     "dashboard.settings.plans.value.fullNoBranding": "Completo, sin marca",
@@ -8248,7 +8298,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.value.monthlyEmail": "Correo mensual",
     "dashboard.settings.plans.value.weeklyRecap": "Resumen semanal",
     "dashboard.settings.plans.value.weeklyPdf": "Semanal + PDF",
-    "dashboard.settings.plans.value.needsGrow": "Con Grow",
     "dashboard.settings.plans.value.plus15": "+$15/mes",
     "dashboard.settings.plans.value.plus8": "+$8/mes",
     "dashboard.settings.plans.value.included": "Incluido",
@@ -8302,7 +8351,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.feature.campaignHub.b2": "Publíquelas en sus redes sociales desde PostScore",
     "dashboard.upgrade.feature.postStudio.name": "PostStudio",
     "dashboard.upgrade.feature.postStudio.b1": "Un sitio web completo que construimos y alojamos",
-    "dashboard.upgrade.feature.postStudio.b2": "+$8/mes con Premium, incluido en Multi",
+    "dashboard.upgrade.feature.postStudio.b2": "$30/mes por sí solo · +$15 con Grow · +$8 con Premium · incluido en Multi",
     "dashboard.upgrade.strip.premiumTitle": "Premium: nosotros hacemos el trabajo por usted",
     "dashboard.upgrade.strip.growTitle": "Grow: arréglelo usted mismo, paso a paso",
     "dashboard.upgrade.strip.fixPoints": "{n} puntos de mejora esperando a {name}",
@@ -8404,7 +8453,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.tile.google": "Perfil de Google: arreglos hechos por usted + búsquedas",
     "dashboard.free.tile.aiReplies": "Respuestas a reseñas redactadas con IA",
     "dashboard.free.tile.postaiUnlimited": "PostAI ilimitado",
-    "dashboard.free.tile.postStudioPrice": "+$15 con Grow · +$8 con Premium",
+    "dashboard.free.tile.postStudioPrice": "$30/mes solo · +$15 con Grow · +$8 con Premium",
     "dashboard.free.tile.addOn": "Complemento",
     "dashboard.free.tile.reviewsCount": "{count} reseñas",
     "dashboard.free.previewChip": "Vista previa",
@@ -8487,7 +8536,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.studioShowcase.studioUpdates": "Después de cada análisis",
     "dashboard.website.studioShowcase.starterChecks": "Lo que un solo archivo puede cumplir",
     "dashboard.website.studioShowcase.studioChecks": "Hecho para pasar cada revisión",
-    "dashboard.website.studioShowcase.price": "+$15 en Grow · +$8 en Premium · incluido en Multi",
+    "dashboard.website.studioShowcase.price": "$30/mes por sí solo · +$15 en Grow · +$8 en Premium · incluido en Multi",
     "dashboard.website.studioShowcase.cta": "Ver PostStudio",
     "dashboard.website.studioShowcase.continueTitle": "Su sitio web completo está en PostStudio",
     "dashboard.website.studioShowcase.continueSub": "Con varias páginas y alojado por nosotros; continúe donde lo dejó.",
@@ -8524,7 +8573,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.unlock.projectsWebsiteOne": "1 arreglo del sitio web que vale unos {points} puntos. Grow le muestra cómo.",
     "dashboard.upgrade.unlock.projects": "{count} proyectos más grandes que valen unos {points} puntos. Grow le muestra cómo.",
     "dashboard.upgrade.unlock.tools": "Grow le da un programa de referidos y herramientas para revisar precios.",
-    "dashboard.upgrade.unlock.postStudio": "Un sitio web completo que construimos y alojamos por usted: PostStudio, próximamente.",
+    "dashboard.upgrade.unlock.postStudio": "Un sitio web completo que construimos y alojamos por usted: $30/mes por sí solo, o agréguelo a Grow o Premium. PostStudio, próximamente.",
     "dashboard.upgrade.card.growTitle": "Arréglelo usted mismo, paso a paso",
     "dashboard.upgrade.card.premiumTitle": "Nosotros hacemos el trabajo por usted",
     "dashboard.upgrade.card.hideGrow": "Ocultar la tarjeta de Grow por 14 días",
@@ -8653,8 +8702,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.postStudio.itemServices": "Sus servicios y precios",
     "dashboard.postStudio.itemMenu": "Su menú",
     "dashboard.postStudio.itemBrand": "Logotipo y colores",
-    "dashboard.postStudio.pagesHeading": "Las 4 páginas",
-    "dashboard.postStudio.outlineNote": "Esquemas de las páginas — todavía no es su sitio real.",
+    "dashboard.postStudio.includesHeading": "Lo que incluye PostStudio",
     "dashboard.postStudio.pageHome": "Inicio",
     "dashboard.postStudio.pageAbout": "Acerca de",
     "dashboard.postStudio.pageServices": "Servicios",
@@ -8742,11 +8790,38 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleProfile.editingBody": "Horario, teléfono, descripción y fotos — sin salir de PostScore.",
     "dashboard.googleProfile.insights": "Embudo de estadísticas",
     "dashboard.googleProfile.insightsBody": "Vistas → llamadas, clics al sitio web y solicitudes de cómo llegar.",
-    "dashboard.postStudio.priceFree": "Requiere Grow ($25/mes) más el complemento PostStudio (+$15/mes).",
-    "dashboard.postStudio.priceGrow": "Agregue PostStudio a Grow por +$15/mes.",
-    "dashboard.postStudio.pricePremium": "PostStudio con descuento: +$8/mes con Premium.",
+    "dashboard.postStudio.priceFree": "PostStudio por sí solo: $30/mes con su auditoría gratis, o agréguelo a Grow (+$15/mes) o Premium (+$8/mes).",
+    "dashboard.postStudio.priceGrow": "Agregue PostStudio a Grow por +$15/mes ($40/mes en total).",
+    "dashboard.postStudio.pricePremium": "PostStudio con descuento: +$8/mes con Premium ($58/mes en total).",
     "dashboard.postStudio.priceMulti": "Incluido en su plan Multi.",
     "dashboard.postStudio.notOpenYet": "PostStudio todavía no está disponible — hoy no hay nada que comprar.",
+    "dashboard.postStudioPlans.title": "PostStudio: su sitio web completo",
+    "dashboard.postStudioPlans.sub": "Una opción propia: obtenga PostStudio con la auditoría gratis o agréguelo a un plan.",
+    "dashboard.postStudioPlans.bullet.pages": "Un sitio web de varias páginas: Inicio, Nosotros, Servicios (o Menú) y Contacto",
+    "dashboard.postStudioPlans.bullet.hosted": "Lo alojamos por usted; no tiene que configurar nada",
+    "dashboard.postStudioPlans.bullet.domain": "Su propio dominio (sunegocio.com)",
+    "dashboard.postStudioPlans.bullet.updates": "Su calificación y horario se actualizan después de cada análisis",
+    "dashboard.postStudioPlans.bullet.checks": "Hecho para pasar cada revisión del sitio web",
+    "dashboard.postStudioPlans.perMonth": "${amount}/mes",
+    "dashboard.postStudioPlans.option.solo.name": "Solo PostStudio",
+    "dashboard.postStudioPlans.option.solo.note": "La auditoría gratis + PostStudio",
+    "dashboard.postStudioPlans.option.grow.name": "Grow + PostStudio",
+    "dashboard.postStudioPlans.option.grow.note": "Grow + ${addOn}/mes por PostStudio",
+    "dashboard.postStudioPlans.option.premium.name": "Premium + PostStudio",
+    "dashboard.postStudioPlans.option.premium.note": "Premium + ${addOn}/mes por PostStudio",
+    "dashboard.postStudioPlans.option.multi": "Incluido en Multi",
+    "dashboard.postStudioPlans.yourPlan": "Su plan",
+    "dashboard.postStudioPlans.footer": "Próximamente: hoy no se cobra nada.",
+    "dashboard.postStudioPlans.box.title": "PostStudio: su sitio web, menú y logo",
+    "dashboard.postStudioPlans.box.sub": "Todo lo que necesita en línea, hecho con su ficha real de Google.",
+    "dashboard.postStudioPlans.feature.website.title": "Sitio web",
+    "dashboard.postStudioPlans.feature.website.body": "Un sitio de varias páginas, alojado por nosotros en su propio dominio, actualizado después de cada análisis.",
+    "dashboard.postStudioPlans.feature.menu.title": "Menú y catálogo",
+    "dashboard.postStudioPlans.feature.menu.body": "Su menú o lista de productos, siempre al día, con un código QR que nunca cambia.",
+    "dashboard.postStudioPlans.feature.logo.title": "Logo Studio",
+    "dashboard.postStudioPlans.feature.logo.body": "Suba su logo o cree uno sencillo, que se usa en todo su sitio e impresos.",
+    "dashboard.settings.plans.value.alone30": "$30/mes por sí solo",
+    "dashboard.website.studioShowcase.add": "Agregar PostStudio",
     "dashboard.nav.account": "Cuenta",
     "dashboard.nav.logOut": "Cerrar sesión",
     "dashboard.nav.languageForBusinessLabel": "Idioma de este negocio",

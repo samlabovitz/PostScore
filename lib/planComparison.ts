@@ -13,14 +13,15 @@ export const COMPARE_PLANS: Plan[] = ["free", "grow", "premium", "multi"];
 /** The plan the comparison highlights ("Best value"). */
 export const HIGHLIGHT_PLAN: Plan = "premium";
 
-/** ✓, a real-data preview, not included, ✓ but not built yet, or a short value. */
-export type Cell = { kind: "yes" } | { kind: "preview" } | { kind: "no" } | { kind: "soon" } | { kind: "text"; key: MessageKey };
+/** ✓, a real-data preview, not included, ✓ but not built yet, or a short
+ * value (with a ✓ in front when `check`). */
+export type Cell = { kind: "yes" } | { kind: "preview" } | { kind: "no" } | { kind: "soon" } | { kind: "text"; key: MessageKey; check?: boolean };
 
 const yes: Cell = { kind: "yes" };
 const preview: Cell = { kind: "preview" };
 const no: Cell = { kind: "no" };
 const soon: Cell = { kind: "soon" };
-const text = (k: string): Cell => ({ kind: "text", key: `dashboard.settings.plans.value.${k}` as MessageKey });
+const text = (k: string, check = false): Cell => ({ kind: "text", key: `dashboard.settings.plans.value.${k}` as MessageKey, ...(check ? { check } : {}) });
 
 export interface CompareRow {
   key: MessageKey;
@@ -47,7 +48,9 @@ export const COMPARE_ROWS: CompareRow[] = [
   row("postai", no, text("monthlyLimit"), text("unlimited")),
   row("doneForYou", no, no, soon),
   row("reports", text("monthlyEmail"), text("weeklyRecap"), text("weeklyPdf")),
-  row("postStudio", text("needsGrow"), text("plus15"), text("plus8"), text("included")),
+  // PostStudio (coming soon): $30/mo on its own (the free audit +
+  // PostStudio), +$15 on Grow, +$8 on Premium, included in Multi.
+  row("postStudio", text("alone30"), text("plus15"), text("plus8"), text("included", true)),
   row("locations", text("one"), text("one"), text("one"), text("upTo5")),
 ];
 

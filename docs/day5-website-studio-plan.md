@@ -88,7 +88,7 @@ For a business with a good site, the same three options stay available in a coll
 | (a) Fix your current site | (b) Starter website | (c) Build a full site in PostStudio |
 |---|---|---|
 | Per-builder fix guides for the checks they fail, with Re-check after each fix | The one-page generator (themes, accents, photos, hours, map, download) | Multi-page, hosted, auto-refreshing |
-| **Grow+**. Free sees which checks fail and the first step of every failing check's guide | **Included in Grow and Premium.** Free sees a live preview of their own site with their real data + "Unlock with Grow" | **Add-on** (+$15 Grow / +$8 Premium; included in Multi). Everyone sees a preview of their new site with their real data |
+| **Grow+**. Free sees which checks fail and the first step of every failing check's guide | **Included in Grow and Premium.** Free sees a live preview of their own site with their real data + "Unlock with Grow" | **Its own option or an add-on** ("PostStudio only" $30/mo = the free audit + PostStudio; +$15 Grow = $40; +$8 Premium = $58; included in Multi). Everyone sees a preview of their new site with their real data |
 | Hidden when there's no website, or it's only a social page (nothing to fix) | **Prominent**: never below PostStudio, never collapsed when there's no website | — |
 
 ### No-website businesses: the page is never empty
@@ -111,8 +111,8 @@ When a business has **no website, or only a Facebook/social page**, the Website 
    | Website checks | Strong on everything a file can prove | Built to pass all of them (100/100) |
 
    The button "Build it in PostStudio →" opens their **real-data PostStudio preview** (`/studio`).
-   - Without the add-on, the card shows the price **for their plan**: "+$15/mo on Grow", "+$8/mo on Premium — PostStudio at a discount", "Included in Multi". On Free, it shows the price on Grow ("Grow + PostStudio: $40/mo").
-   - The card has an "Add PostStudio" button. Checkout isn't built yet, and "never a button that doesn't do something real" applies, so until then it says "PostStudio is coming soon" and links to Settings → Plan with the price. Once checkout exists, it starts the real add-on purchase.
+   - Without PostStudio, the card shows every price: "$30/mo on its own · +$15 on Grow · +$8 on Premium · included in Multi".
+   - The card has an "Add PostStudio" button that opens the **PostStudio box** (its own box, not Grow vs Premium): what PostStudio includes — three tiles: Website, Menu & catalog, Logo Studio — and the three ways side by side — "PostStudio only" $30/mo · "Grow + PostStudio" $40/mo · "Premium + PostStudio" $58/mo (Best value) — plus "Included in Multi", with the plan they're on highlighted (Free → PostStudio only). Footer: "Coming soon — nothing is charged today." Checkout isn't built, so nothing in it buys anything; once checkout exists, each option starts the real purchase.
 4. **With the add-on (or Multi):** the card becomes "Continue in PostStudio →", with no upsell. If a site is already published, it shows the site's live address and status.
 
 The page is never blank and never shows a fake site: every preview uses only their real listing data, and empty fields are hidden.
@@ -348,7 +348,7 @@ create policy "Owners read their studio publishes" on public.studio_publishes fo
   using (exists (select 1 from public.studio_sites s join public.businesses b on b.id = s.business_id where s.id = studio_publishes.site_id and b.owner_id = auth.uid()));
 ```
 
-Billing for the add-on lives with the subscription work (checkout isn't built): one `addons` field on the subscription row (e.g. `poststudio: true`), read by a new `hasPostStudio(plan, addons)` next to `getPlan()`.
+Billing for the add-on lives with the subscription work (checkout isn't built): one `addons` field on the subscription row (e.g. `poststudio: true`). The code is already shaped for it: `getAddons()` next to `getPlan()` in `lib/premium.ts` (returns `[]` until checkout ships) and `hasPostStudio(plan, addons)` in `lib/postStudio.ts`. **"PostStudio only" ($30/mo) = plan `"free"` + addon `"poststudio"`** — the free audit plus PostStudio; Grow and Premium tools stay locked.
 
 ---
 
@@ -359,7 +359,7 @@ Everything goes through `getPlan()` (plus `hasPostStudio()` for the add-on), mat
 - **Grow** = how to fix it.
 - **Premium** = Grow + full designers + Google Profile connect.
 - **Multi** = Premium for multiple locations, PostStudio included.
-- **PostStudio:** everyone can open it and see their real-data preview; **publishing** needs the add-on or Multi.
+- **PostStudio:** everyone can open it and see their real-data preview; **publishing** needs PostStudio — on its own ("PostStudio only", $30/mo, plan Free + the add-on), added to Grow (+$15) or Premium (+$8), or Multi.
 
 ### Open to everyone today that must change (plan only — not changed)
 
@@ -397,9 +397,10 @@ Everything goes through `getPlan()` (plus `hasPostStudio()` for the add-on), mat
 4. **Competitor rank and list stay free** (part of the audit).
 5. **The first step of every failing check's guide is shown on Free**; the full guides need Grow.
 6. **Monthly email reports stay available on Free**, as today, and still respect `MONTHLY_REPORTS_LIVE`.
-7. **PostStudio add-on:**
-   - +$15/mo on Grow;
-   - +$8/mo on Premium, shown as "PostStudio at a discount" on the Premium card;
+7. **PostStudio** (coming soon; never sold before checkout exists):
+   - **PostStudio only — $30/mo:** the free audit (everything in Free) + PostStudio (multi-page site, hosting, custom domain, auto-updates after every scan). Grow/Premium tools stay locked. In code: plan `"free"` + addon `"poststudio"`;
+   - +$15/mo on Grow ($40 total);
+   - +$8/mo on Premium ($58 total), shown as "PostStudio at a discount" on the Premium card — the best value;
    - included in Multi.
 8. **Multi:** up to **5 locations**, +$25/mo per extra location.
 9. **Ownership verification**, new, at the moment of a sensitive action only. See below and step 5k-0.
@@ -462,11 +463,11 @@ PostScore doesn't verify ownership today: anyone can add any business and scan i
 | Ownership verification (Twilio Verify, ~$0.05–0.06 per successful check, one-time per user + business) | ~$0.60 once | ~$6 once | ~$60 once |
 | **Total (monthly)** | **~$7** | **~$7** | **~$40–45** |
 
-Revenue at $15/site: 10 sites $150 · 100 sites $1,500 · 1,000 sites $15,000.
+Revenue at $15/site: 10 sites $150 · 100 sites $1,500 · 1,000 sites $15,000 (more for "PostStudio only" sites at $30/mo).
 
 **Not at launch:**
-- free-form HTML/code blocks or third-party scripts/widgets;
-- online booking, ordering or payments (calls and links only, as on the starter site);
+- free-form HTML/code blocks or arbitrary third-party scripts/widgets (only the allowlisted booking/ordering embeds in §10);
+- taking bookings, orders or payments ourselves — the owner's provider does that (§10 connects their link or button);
 - blogs, multi-language sites in one site (EN *or* ES per site at launch), or e-commerce carts;
 - buying domains for owners (they keep their registrar);
 - email hosting;
@@ -585,6 +586,11 @@ create policy "Users read their own verifications" on public.business_verificati
 - Build: requires a verified owner (5k-0); Cloudflare for SaaS hostnames, `studio_domains`, status polling, the four registrar guides.
 - Check: connect a test domain you own and watch the status go pending → active with SSL; the registrar steps match what you see.
 
+**5l+ — Booking and online ordering connections (Phase 1, at PostStudio launch).**
+- Build: §10 Phase 1 — the setup question, the provider recommendations by business type, the step-by-step provider guides (official help-doc links + "last verified" date), the link/embed validation (allowlisted provider domains only), the "Book now" / "Order online" button on every page + the Book/Order page, and counting it toward "Contact & conversion" once a re-scan confirms it.
+- Check: paste a real Square Appointments link and a Calendly embed — both validate and show the button + page; a link from a non-provider domain, a dead link and an embed with an extra `<script>` are all refused with a plain reason; the re-scan of the published site credits the check.
+- Phase 2 (Square API) is a later step, after a cost + terms review.
+
 **5m — Auto-refresh after scans.**
 - Build: after every scan, republish with the new rating, review count, hours and copyright year (`reason: 'scan_refresh'`), with no PageSpeed call.
 - Check: re-scan Modern Liquors and see the live site show the new review count and `data_refreshed_at` update.
@@ -592,3 +598,34 @@ create policy "Users read their own verifications" on public.business_verificati
 **5n — Plan gating for PostStudio.**
 - Build: `hasPostStudio()`; preview for everyone, publish for the add-on or Multi; the cancel flow from §5 (paused → basic card → export).
 - Check: with the dev plan switch, Free and Grow-without-add-on can preview but not publish; Multi can; a simulated cancel goes to the basic card and "Download my site" still works.
+
+---
+
+## 10. Booking + online ordering connections (plan only — not built)
+
+PostScore never takes bookings, orders or payments itself — the owner's own provider does. PostStudio connects that provider so every page has a clear "Book now" or "Order online" button. Said plainly in the app: "Bookings and payments go through {provider}, not PostScore."
+
+### Phase 1 — at PostStudio launch
+1. **Setup question:** "Do you take bookings or sell online?" (Bookings · Online orders · Both · Not now). We then recommend tools by business type (from the business profile):
+   - salons, spas, barbers: Square Appointments, Vagaro, Booksy, Fresha, GlossGenius;
+   - services and lessons: Calendly, Acuity;
+   - fitness: Mindbody;
+   - restaurants: Toast, Square Online, Clover;
+   - retail: Square Online, Shopify.
+   An owner who already uses another tool picks "I use something else" and pastes a plain link (links work for any provider; embeds only for allowlisted ones).
+2. **Step-by-step guides** for each recommended provider, written from that provider's official help docs, with links to those docs and a "last verified {date}" line: create an account, set up services/menu/products, and find the booking/ordering link or the button/embed code. Re-verified on a schedule; a guide past its date says so instead of guessing.
+3. **The owner pastes the link or embed code; PostScore validates it:**
+   - a real `https://` URL on that provider's own domain (a per-provider allowlist of domains);
+   - it loads (server-side fetch, status 200, not a parked/expired page);
+   - embed code only from the allowlisted provider snippets, parsed — not stored as raw HTML — and re-rendered from our own template; any other script, inline handler, iframe from another domain, or tracking pixel is refused. **Never arbitrary scripts.**
+   - Then PostStudio adds a **"Book now" / "Order online" button on every page** (header + Contact) and a **Book/Order page** (the provider's allowlisted embed, or a big button to their page when there's no embed).
+4. **Scoring:** it counts toward the website "Contact & conversion" check only once a re-scan of the published site confirms the button/link is there and works — never credited just because it was saved.
+5. **Honest copy:** PostScore doesn't take payments or bookings; the provider does, under the provider's own terms and fees.
+
+### Phase 2 — after launch
+- An **official Square API connection (OAuth)** to show real services, prices and products on the site and keep them synced after changes.
+- Other providers only if they offer official, documented APIs — no scraping.
+- Before building: a cost review (API limits, any partner fees, our hosting/sync cost) and a terms review (each provider's developer terms, data use, display rules).
+
+Build order: step **5l+**, right after "Custom domains" (§9).
+

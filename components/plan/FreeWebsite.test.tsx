@@ -248,13 +248,17 @@ describe("PostStudio on the Website page: one card, no publishing steps on Free"
       for (const page of ["Home", "About", "Services", "Contact"]) expect(t).toContain(page);
       expect(t).toContain("Page outlines — not a real site yet");
       for (const row of ["Pages", "Hosting", "Auto-updates", "Website checks", "Built to pass every check"]) expect(t).toContain(row);
-      expect(t).toContain("+$15 on Grow · +$8 on Premium · included in Multi");
+      expect(t).toContain("$30/mo on its own · +$15 on Grow · +$8 on Premium · included in Multi");
       expect(t).toContain("Coming soon");
+      // "Add PostStudio" opens the PostStudio box (a button, not a checkout).
+      expect(html).toMatch(/<button[^>]*data-testid="poststudio-add"[^>]*>Add PostStudio<\/button>/);
       expect(html.match(/<a /g)).toHaveLength(1);
       expect(html).toContain('href="/business/b1/studio?from=%2Fbusiness%2Fb1%2Fwebsite"');
       expect(t).toContain("See PostStudio");
     }
     expect(text(card("free", "es"))).toContain("¿Quiere un sitio web completo? Créelo con PostStudio.");
+    expect(text(card("free", "es"))).toContain("Agregar PostStudio");
+    expect(text(card("free", "es"))).toContain("$30/mes por sí solo");
   });
 
   test("with PostStudio (Multi): 'Continue in PostStudio →', no upsell", () => {

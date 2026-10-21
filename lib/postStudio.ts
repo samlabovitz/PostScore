@@ -4,7 +4,7 @@
 // where "Leave PostStudio" goes back to. Pure.
 
 import type { MessageKey } from "./i18n";
-import type { Plan } from "./plan";
+import type { Addon, Plan } from "./plan";
 
 export interface ChecklistFacts {
   businessName: string | null;
@@ -64,9 +64,32 @@ export function pageOutlines(profileId: string, storefront: boolean): Array<{ ti
   ];
 }
 
-/** Until the add-on can be bought, only Multi includes PostStudio. */
-export function hasPostStudio(plan: Plan): boolean {
-  return plan === "multi";
+/** PostStudio is in the account: Multi includes it; any other plan has it
+ * with the "poststudio" add-on — Free + add-on is "PostStudio only". Until
+ * checkout ships no account has an add-on (lib/premium.ts getAddons). */
+export function hasPostStudio(plan: Plan, addons: readonly Addon[] = []): boolean {
+  return plan === "multi" || addons.includes("poststudio");
+}
+
+// ---------------------------------------------------------------------------
+// The ways to get PostStudio (coming soon — nothing can be bought yet).
+// ---------------------------------------------------------------------------
+
+/** "solo" = PostStudio only (the free audit + PostStudio). */
+export type PostStudioOption = "solo" | "grow" | "premium" | "multi";
+export const POSTSTUDIO_OPTIONS: PostStudioOption[] = ["solo", "grow", "premium", "multi"];
+
+/** Monthly prices in dollars: the add-on on top of each plan and the total.
+ * Multi includes PostStudio (no add-on price). */
+export const POSTSTUDIO_PRICES: Record<Exclude<PostStudioOption, "multi">, { addOn: number; total: number }> = {
+  solo: { addOn: 30, total: 30 },
+  grow: { addOn: 15, total: 40 },
+  premium: { addOn: 8, total: 58 },
+};
+
+/** The option that matches the plan they're on (Free → PostStudio only). */
+export function postStudioOptionFor(plan: Plan): PostStudioOption {
+  return plan === "free" ? "solo" : plan;
 }
 
 /** Where "Leave PostStudio" goes: the page they came from (?from=), only

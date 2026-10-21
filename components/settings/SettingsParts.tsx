@@ -14,6 +14,7 @@ import type { Plan } from "@/lib/plan";
 import { t, useLocale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { COMPARE_PLANS, COMPARE_ROWS, HIGHLIGHT_PLAN, PLAN_COPY, type Cell } from "@/lib/planComparison";
+import { PostStudioBullets, PostStudioOptions } from "@/components/studio/PostStudioOptions";
 
 /** Icons are named by a plain string key: the Settings page is a Server
  * Component, and a component (a function) can't be passed to a Client
@@ -163,6 +164,7 @@ export function PlanCard({ plan }: { plan: Plan }) {
             <PlanColumn key={p} plan={p} current={p === plan} />
           ))}
         </div>
+        <PostStudioSection plan={plan} />
         {/* Wider screens: one table, four plan columns, Premium highlighted. */}
         <div className="hidden border-t border-paper-line md:block">
           <table className="w-full table-fixed border-collapse text-[12.5px]">
@@ -204,6 +206,27 @@ export function PlanCard({ plan }: { plan: Plan }) {
         </div>
       </details>
     </div>
+  );
+}
+
+/** Under the four plan cards: PostStudio, its own option — what it is,
+ * the ways to get it ($30 alone · Grow +$15 · Premium +$8 · in Multi),
+ * and "Coming soon". Nothing here can be bought. */
+function PostStudioSection({ plan }: { plan: Plan }) {
+  const locale = useLocale();
+  return (
+    <section data-testid="plan-poststudio" className="flex flex-col gap-3 border-t border-paper-line p-3">
+      <div className="flex flex-col gap-0.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-[14px] font-semibold text-ink">{t(locale, "dashboard.postStudioPlans.title")}</h3>
+          <span className="rounded-full border border-paper-deep bg-paper px-2 py-0.5 text-[10.5px] font-semibold text-ink-soft">{t(locale, "dashboard.common.comingSoon")}</span>
+        </div>
+        <p className="text-[12.5px] text-ink-soft">{t(locale, "dashboard.postStudioPlans.sub")}</p>
+      </div>
+      <PostStudioBullets />
+      <PostStudioOptions plan={plan} />
+      <p className="text-[11.5px] text-ink-mute">{t(locale, "dashboard.postStudioPlans.footer")}</p>
+    </section>
   );
 }
 
@@ -287,7 +310,12 @@ function PlanCell({ cell }: { cell: Cell }) {
         <span className="sr-only">{t(locale, "dashboard.settings.plans.cell.no")}</span>
       </span>
     );
-  return <span className="font-medium text-ink">{t(locale, cell.key)}</span>;
+  return (
+    <span className={cn("font-medium text-ink", cell.check && "inline-flex items-center gap-1")}>
+      {cell.check && <IconCheck size={16} aria-hidden className="shrink-0 text-green" />}
+      {t(locale, cell.key)}
+    </span>
+  );
 }
 
 /** Cancel at period end — rendered only for a real, paid subscription. */

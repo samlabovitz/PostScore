@@ -78,7 +78,45 @@ describe("Settings pieces", () => {
     expect([hub.free, hub.grow, hub.premium, hub.multi]).toEqual([{ kind: "preview" }, { kind: "yes" }, { kind: "yes" }, { kind: "yes" }]);
     const channels = COMPARE_ROWS.find((r) => r.key.endsWith(".channels"))!.cells;
     expect([channels.free, channels.grow, channels.premium, channels.multi]).toEqual([{ kind: "no" }, { kind: "no" }, { kind: "soon" }, { kind: "soon" }]);
-    expect(COMPARE_ROWS.find((r) => r.key.endsWith(".postStudio"))!.cells.multi).toEqual({ kind: "text", key: "dashboard.settings.plans.value.included" });
+    const studio = COMPARE_ROWS.find((r) => r.key.endsWith(".postStudio"))!.cells;
+    expect([studio.free, studio.grow, studio.premium, studio.multi]).toEqual([
+      { kind: "text", key: "dashboard.settings.plans.value.alone30" },
+      { kind: "text", key: "dashboard.settings.plans.value.plus15" },
+      { kind: "text", key: "dashboard.settings.plans.value.plus8" },
+      { kind: "text", key: "dashboard.settings.plans.value.included", check: true },
+    ]);
+  });
+
+  test("Compare plans: a PostStudio section under the four plan cards — what it is, the ways to get it, coming soon; the table row", () => {
+    const html = wrap(<PlanCard plan="free" />);
+    const t = text(html);
+    const section = html.indexOf('data-testid="plan-poststudio"');
+    expect(section).toBeGreaterThan(html.lastIndexOf('data-plan="multi"'));
+    expect(section).toBeLessThan(html.indexOf("<table"));
+    for (const s of [
+      "PostStudio — your full website",
+      "Coming soon",
+      "A multi-page website: Home, About, Services (or Menu) and Contact",
+      "Hosted for you — nothing to set up",
+      "Your own domain (yourbusiness.com)",
+      "Your rating and hours update after every scan",
+      "Built to pass every website check",
+      "PostStudio only $30/mo The free audit + PostStudio",
+      "Grow + PostStudio $40/mo Grow + $15/mo for PostStudio",
+      "Premium + PostStudio $58/mo Premium + $8/mo for PostStudio",
+      "Included in Multi",
+      "Coming soon — nothing is charged today.",
+      "PostStudio — your full website, built and hosted for you (coming soon)",
+      "$30/mo on its own",
+    ])
+      expect(t).toContain(s);
+    // Free's own option (PostStudio only) is highlighted; nothing to buy.
+    expect(html).toMatch(/data-option="solo" data-highlighted="true"/);
+    expect(html).not.toMatch(/data-option="(grow|premium)" data-highlighted/);
+    expect(t).not.toMatch(/Buy|Checkout|Subscribe/i);
+    expect(wrap(<PlanCard plan="premium" />)).toMatch(/data-option="premium" data-highlighted="true"/);
+    const es = text(wrap(<PlanCard plan="grow" />, "es"));
+    for (const s of ["PostStudio: su sitio web completo", "Solo PostStudio", "$30/mes", "Grow + PostStudio", "$40/mes", "$58/mes", "Incluido en Multi", "Próximamente: hoy no se cobra nada.", "$30/mes por sí solo", "Su plan"]) expect(es).toContain(s);
   });
 
   test("plan card in Spanish (usted)", () => {

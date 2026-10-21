@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactElement } from "react";
-import type { Plan } from "@/lib/plan";
+import type { Addon, Plan } from "@/lib/plan";
 
 const state = vi.hoisted(() => ({
   plan: "free" as Plan,
+  addons: [] as Addon[],
   query: "",
   promos: { status: "ok", promos: [] as unknown[] } as { status: string; promos?: unknown[] },
   referral: { status: "ok", referral: null as unknown } as { status: string; referral?: unknown },
@@ -24,7 +25,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/business/b1/campaigns",
 }));
 vi.mock("@/components/layout/DashboardShell", () => ({ DashboardShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
-vi.mock("@/lib/premium", () => ({ getPlan: () => state.plan }));
+vi.mock("@/lib/premium", () => ({ getPlan: () => state.plan, getAddons: async () => state.addons }));
 vi.mock("@/app/actions/businesses", () => ({
   getBusinessSummary: async () => ({
     status: "ok",
@@ -199,7 +200,7 @@ describe("PostStudio: full-screen page", () => {
     expect(leaveHref("b1", "/business/b1/growth?tab=google-profile")).toBe("/business/b1/growth?tab=google-profile");
   });
 
-  test("checklist from real data: ✓ from the listing, ○ the owner adds; outlines clearly not a real site; no starter-site preview", async () => {
+  test("checklist from real data: ✓ from the listing, ○ the owner adds; what PostStudio includes (Website, Menu & catalog, Logo Studio) — no page outlines; no starter-site preview", async () => {
     const html = await render();
     const items = Array.from(html.matchAll(/data-ready="(true|false)"[\s\S]*?<span class="text-sm font-medium text-ink">([^<]+)</g)).map((m) => [m[2].replace(/&amp;/g, "&"), m[1] === "true"]);
     expect(items).toEqual([
@@ -215,8 +216,11 @@ describe("PostStudio: full-screen page", () => {
       ["Your services and prices", false],
       ["Logo and colors", false],
     ]);
-    expect(text(html)).toContain("Page outlines — not your real site yet.");
-    for (const page of ["Home", "About", "Services", "Contact"]) expect(html).toContain(`aria-label="${page}"`);
+    expect(text(html)).toContain("What PostStudio includes");
+    for (const s of ["Website", "Menu & catalog", "Logo Studio"]) expect(text(html)).toContain(s);
+    expect(html).toContain('data-testid="poststudio-features"');
+    expect(html).not.toContain('data-testid="page-outlines"');
+    expect(text(html)).not.toMatch(/Page outlines|The 4 pages/);
     expect(html).not.toContain("<iframe");
     expect(html).not.toContain("srcDoc");
   });
@@ -227,11 +231,14 @@ describe("PostStudio: full-screen page", () => {
       const html = await render();
       return text(html.match(/data-testid="studio-price">([^<]+)</)?.[1] ?? "");
     };
-    expect(await price("free")).toBe("Needs Grow ($25/mo) plus the PostStudio add-on (+$15/mo).");
-    expect(await price("grow")).toBe("Add PostStudio to Grow for +$15/mo.");
-    expect(await price("premium")).toBe("PostStudio at a discount: +$8/mo on Premium.");
+    expect(await price("free")).toBe("PostStudio on its own: $30/mo with your free audit — or add it to Grow (+$15/mo) or Premium (+$8/mo).");
+    expect(await price("grow")).toBe("Add PostStudio to Grow for +$15/mo ($40/mo total).");
+    expect(await price("premium")).toBe("PostStudio at a discount: +$8/mo on Premium ($58/mo total).");
     state.plan = "grow";
     const t = text(await render());
+    // The ways to get it, with their plan highlighted.
+    for (const s of ["PostStudio only", "$30/mo", "Grow + PostStudio", "$40/mo", "Premium + PostStudio", "$58/mo", "Included in Multi"]) expect(t).toContain(s);
+    expect(await render()).toMatch(/data-option="grow" data-highlighted="true"/);
     expect(t).toContain("PostStudio isn't open yet — there's nothing to buy today.");
     expect(t).toContain("Starter website vs PostStudio");
     expect(t).toContain("Want something now? Use the free starter website →");
@@ -242,6 +249,15 @@ describe("PostStudio: full-screen page", () => {
     expect(text(multi)).toContain("Building tools coming soon");
     expect(multi).not.toContain('data-testid="studio-price"');
     expect(multi).not.toContain("Starter website vs PostStudio");
+  });
+
+  test("PostStudio only (Free + the poststudio add-on, once checkout ships): the studio is theirs", async () => {
+    state.plan = "free";
+    state.addons = ["poststudio"];
+    const html = await render();
+    state.addons = [];
+    expect(html).toContain('data-testid="studio-included"');
+    expect(html).not.toContain('data-testid="studio-price"');
   });
 
   test("a service-area business: the area instead of the address; a café gets a Menu page", () => {
@@ -256,6 +272,6 @@ describe("PostStudio: full-screen page", () => {
   test("Spanish", async () => {
     state.website = { ...WEBSITE, language: "es" };
     const t = text(await render());
-    for (const s of ["Salir de PostStudio", "La lista de su sitio", "Listo con su ficha", "Usted lo agregará", "Esquemas de las páginas — todavía no es su sitio real."]) expect(t).toContain(s);
+    for (const s of ["Salir de PostStudio", "La lista de su sitio", "Listo con su ficha", "Usted lo agregará", "Lo que incluye PostStudio", "Menú y catálogo"]) expect(t).toContain(s);
   });
 });
