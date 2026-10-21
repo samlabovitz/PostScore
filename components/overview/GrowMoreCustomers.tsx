@@ -7,7 +7,10 @@
 // real; nothing here is score-dependent. Light theme, PostScore palette.
 
 import Link from "next/link";
-import { IconArrowRight, IconBuildingStore, IconStar } from "@tabler/icons-react";
+import { IconArrowRight, IconBuildingStore, IconLock, IconStar } from "@tabler/icons-react";
+import { UpgradeButton, UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
+import { reviewGoalText } from "@/lib/reviewGoal";
+import type { ReviewGoal } from "@/lib/competitorComparison";
 import { buildGrowBannerTools, reviewToolHref, type ProfileTools } from "@/lib/growBannerTools";
 import { formatCount, t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 
@@ -25,12 +28,22 @@ export function GrowMoreCustomers({
   profileTools,
   reviewCount,
   nearbyReviewAverage,
+  locked = false,
+  goal = null,
+  group = null,
 }: {
   businessId: string;
   profileTools: ProfileTools;
   reviewCount: number | null;
   /** Mean review count of nearby competitors (saved scan), or null. */
   nearbyReviewAverage: number | null;
+  /** Free: a showroom — the same tiles, but each tool shows a lock and
+   * the plan it needs and opens the promo box; "Get more Google reviews"
+   * still works (the free review link & QR on the Overview). */
+  locked?: boolean;
+  /** The shared review goal (beat the leader) and its comparison group. */
+  goal?: ReviewGoal | null;
+  group?: string | null;
 }) {
   const locale = useLocale();
   const tools = buildGrowBannerTools(businessId, profileTools);
@@ -47,9 +60,14 @@ export function GrowMoreCustomers({
           <div className="flex min-w-0 flex-col gap-1">
             <h3 className="text-base font-semibold text-ink">{t(locale, "dashboard.overview.growBanner.reviews.title")}</h3>
             <p className="text-[13.5px] leading-snug text-ink-soft">{reviewStatLine(reviewCount, nearbyReviewAverage, locale)}</p>
+            {goal && group && (
+              <p className="text-[13px] font-semibold leading-snug text-ink" data-testid="review-goal">
+                {reviewGoalText(goal, group, locale).goal}
+              </p>
+            )}
           </div>
           <Link
-            href={reviewToolHref(businessId)}
+            href={locked ? "#free-reviews" : reviewToolHref(businessId)}
             className="mt-auto inline-flex w-fit max-w-full items-center rounded-lg bg-brass px-3.5 py-2 text-[13.5px] font-semibold text-ink transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-brass)_85%,white)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             {t(locale, "dashboard.overview.growBanner.reviews.cta")}
@@ -61,21 +79,39 @@ export function GrowMoreCustomers({
         <ul className="grid h-full min-w-0 auto-rows-fr grid-cols-1 gap-2.5 sm:grid-cols-2">
           {tools.map((tool) => (
             <li key={tool.labelKey} className="min-w-0">
-              <Link
-                href={tool.href}
-                className="group flex h-full min-w-0 items-start gap-3 rounded-xl border border-paper-deep bg-white p-3 transition duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--color-brass)_50%,white)] hover:shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-              >
-                <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ps-icon-tile">
-                  <tool.icon size={17} />
-                </span>
-                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="flex items-center justify-between gap-2 text-[13.5px] font-semibold text-ink">
-                    <span className="min-w-0 break-words">{t(locale, tool.labelKey)}</span>
-                    <IconArrowRight size={14} className="shrink-0 text-ink-mute transition-colors group-hover:text-brass" aria-hidden />
+              {locked && !tool.labelKey.endsWith("competitorCheck.shortLabel") ? (
+                <UpgradeButton feature="grow" testId="locked-tool" className="group flex h-full min-w-0 items-start gap-3 rounded-xl border border-paper-deep bg-white p-3 transition duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--color-brass)_50%,white)] hover:shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass motion-reduce:transition-none motion-reduce:hover:translate-y-0 w-full text-left">
+                  <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ps-icon-tile">
+                    <tool.icon size={17} />
                   </span>
-                  <span className="break-words text-[12.5px] leading-snug text-ink-soft">{t(locale, tool.descKey)}</span>
-                </span>
-              </Link>
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="flex items-center justify-between gap-2 text-[13.5px] font-semibold text-ink">
+                      <span className="min-w-0 break-words">{t(locale, tool.labelKey)}</span>
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-paper-deep bg-paper px-1.5 py-px text-[10.5px] font-semibold text-ink-soft">
+                        <IconLock size={10} aria-hidden className="text-brass" />
+                        {t(locale, "dashboard.settings.plan.name.grow")}
+                      </span>
+                    </span>
+                    <span className="break-words text-[12.5px] leading-snug text-ink-soft">{t(locale, tool.descKey)}</span>
+                  </span>
+                </UpgradeButton>
+              ) : (
+                <Link
+                  href={tool.href}
+                  className="group flex h-full min-w-0 items-start gap-3 rounded-xl border border-paper-deep bg-white p-3 transition duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--color-brass)_50%,white)] hover:shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                >
+                  <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ps-icon-tile">
+                    <tool.icon size={17} />
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="flex items-center justify-between gap-2 text-[13.5px] font-semibold text-ink">
+                      <span className="min-w-0 break-words">{t(locale, tool.labelKey)}</span>
+                      <IconArrowRight size={14} className="shrink-0 text-ink-mute transition-colors group-hover:text-brass" aria-hidden />
+                    </span>
+                    <span className="break-words text-[12.5px] leading-snug text-ink-soft">{t(locale, tool.descKey)}</span>
+                  </span>
+                </Link>
+              )}
             </li>
           ))}
           {/* Shop: announced, not live — no link, no arrow, until the
@@ -98,6 +134,11 @@ export function GrowMoreCustomers({
           </li>
         </ul>
       </div>
+      {locked && (
+        <div className="mt-4 flex flex-col gap-2 border-t border-paper-line pt-4 sm:flex-row sm:items-center sm:justify-end" data-testid="more-customers-unlock">
+          <UpgradeTrigger feature="grow" variant="pair" />
+        </div>
+      )}
     </section>
   );
 }

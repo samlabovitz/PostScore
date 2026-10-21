@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { freeShowroom } from "@/components/plan/freeShowroom";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { loadUpgradeContext } from "@/lib/upgradePromos.server";
 import { getBusinessSummary } from "@/app/actions/businesses";
@@ -19,6 +20,9 @@ import { CampaignsView } from "./CampaignsView";
  * full).
  */
 export default async function CampaignsPage({ params }: { params: { id: string } }) {
+  // Free: this tab is locked — its showroom, before any of its own data loads.
+  const showroom = await freeShowroom(params.id, "campaigns");
+  if (showroom) return showroom;
   const summary = await getBusinessSummary(params.id);
   if (summary.status === "unauthenticated") redirect("/login");
   if (summary.status === "not_found") notFound();
@@ -46,7 +50,6 @@ export default async function CampaignsPage({ params }: { params: { id: string }
         loadFailed={promos?.status === "error" || referral?.status === "error"}
         plan={plan}
         printBusiness={printData && printData.status === "ok" ? printData.business : null}
-        devPlanSwitch={process.env.NODE_ENV === "development"}
       />
     </DashboardShell>
   );

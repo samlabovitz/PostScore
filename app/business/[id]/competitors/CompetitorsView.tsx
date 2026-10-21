@@ -3,14 +3,16 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { IconArrowLeft, IconArrowRight, IconChevronDown, IconRefresh, IconTrendingDown, IconTrendingUp, IconAlertCircle } from "@tabler/icons-react";
+import { IconLock, IconArrowLeft, IconArrowRight, IconChevronDown, IconRefresh, IconTrendingDown, IconTrendingUp, IconAlertCircle } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
+import { UpgradeButton, UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
+import { useUpgrade } from "@/components/upgrade/UpgradeContext";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/SegmentedControl";
 import { refreshCompetitors, type GetCompetitorsResult } from "@/app/actions/competitors";
 import type { SavedCompetitorEntry, SavedCompetitorScan } from "@/lib/savedCompetitorScans";
-import {
+import { reviewGoal,
   COMPARE_VIEWS,
   FIX_PAGE,
   METRICS,
@@ -36,8 +38,9 @@ import { gradeFromTotal } from "@/lib/scoring";
 import { formatCount, formatShortDate, t, tPlural, useLocale, useTimeZone, type Locale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { placeTypeList } from "@/lib/placeTypeLabels";
-import { applyScope, type CompetitorScope } from "@/lib/competitorScope";
+import { scopeGroupLabel, applyScope, type CompetitorScope } from "@/lib/competitorScope";
 import { CompetitorGroups } from "./CompetitorGroups";
+import { reviewGoalText } from "@/lib/reviewGoal";
 
 type OkResult = Extract<GetCompetitorsResult, { status: "ok" }>;
 
@@ -186,6 +189,7 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
       ) : (
         <>
           {scan.entries.some((e) => !e.isSubject) && <Hero scan={scan} competitorNoun={data.competitorNoun} />}
+          {latest && <CompetitorsReviewGoal scan={latest} scope={scope} noun={data.competitorNoun} />}
 
           {latest && scope && scoped && (
             <CompetitorGroups businessId={businessId} scan={latest} scope={scope} scoped={scoped} enabled={!!data.niche?.enabled} onScopeChange={setScope} />
@@ -277,6 +281,7 @@ function RefreshButton({ businessId, allowed, label }: { businessId: string; all
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
+  const upgrade = useUpgrade();
 
   function run() {
     setMessage(null);
@@ -291,6 +296,19 @@ function RefreshButton({ businessId, allowed, label }: { businessId: string; all
     });
   }
 
+  // Free: the saved list and rank stay (the audit); refreshing them
+  // (Places searches) is Grow — the button opens the promo box.
+  if (upgrade?.plan === "free")
+    return (
+      <div className="flex flex-col items-start gap-1.5 sm:items-end">
+        <UpgradeButton feature="grow" testId="competitors-refresh-locked" className={buttonClasses("default", "sm")}>
+          <IconLock size={14} aria-hidden />
+          {label}
+        </UpgradeButton>
+        <UpgradeTrigger feature="grow" />
+      </div>
+    );
+
   return (
     <div className="flex flex-col items-start gap-1 sm:items-end">
       <Button variant="default" size="sm" onClick={run} disabled={!allowed || pending}>
@@ -299,6 +317,23 @@ function RefreshButton({ businessId, allowed, label }: { businessId: string; all
       </Button>
       {message && <span className="text-[12px] text-ink-soft">{message}</span>}
     </div>
+  );
+}
+
+/** The review goal (beat the leader), from the same scan and scope as the
+ * rank above — re-ranks with the scope like everything else here. */
+function CompetitorsReviewGoal({ scan, scope, noun }: { scan: SavedCompetitorScan; scope: CompetitorScope | null; noun: string }) {
+  const locale = useLocale();
+  const own = scan.entries.find((e) => e.isSubject)?.reviewCount ?? null;
+  const goal = reviewGoal(scan, scope, own);
+  if (!goal) return null;
+  const text = reviewGoalText(goal, scopeGroupLabel(scan, scope, locale, noun), locale);
+  return (
+    <Card className="flex flex-col gap-1 p-4" data-testid="competitors-review-goal">
+      <p className="text-[13px] text-ink-soft">{text.average}</p>
+      <p className="text-[14px] font-semibold text-ink">{text.goal}</p>
+      {text.nextUp && <p className="text-[13px] text-ink">{text.nextUp}</p>}
+    </Card>
   );
 }
 

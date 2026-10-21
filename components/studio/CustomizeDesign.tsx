@@ -33,7 +33,13 @@ export function CustomizeDesign({
   onOpenLockedTab,
   alwaysOpen = false,
   initialTab,
+  startOpen = false,
+  legend = null,
 }: {
+  /** Open from the start (the Free showroom). */
+  startOpen?: boolean;
+  /** One line at the top of the panel (the Grow / Premium split). */
+  legend?: string | null;
   /** The tab shown first (before the remembered one loads). */
   initialTab?: string;
   /** Shown open inline, with no summary row (the sign designer dialog). */
@@ -50,7 +56,7 @@ export function CustomizeDesign({
 }) {
   const locale = useLocale();
   const panelId = useId();
-  const [open, setOpen] = useState(alwaysOpen);
+  const [open, setOpen] = useState(alwaysOpen || startOpen);
   const [tab, setTab] = useState(initialTab ?? tabs[0]?.id ?? "");
   // The remembered tab is read after mount (no hydration mismatch).
   useEffect(() => {
@@ -108,6 +114,11 @@ export function CustomizeDesign({
                 : "fixed inset-x-0 bottom-0 z-40 max-h-[62vh] rounded-t-2xl shadow-card nav:static nav:z-auto nav:mt-2 nav:max-h-none nav:rounded-xl",
             )}
           >
+            {legend && (
+              <p data-testid="plan-legend" className="border-b border-paper-line bg-paper px-3 py-2 text-[12px] leading-snug text-ink-soft">
+                {legend}
+              </p>
+            )}
             <div className="flex items-center gap-1 border-b border-paper-line px-2 pt-2">
               <div role="tablist" className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto pb-2">
                 {tabs.map((x) => (

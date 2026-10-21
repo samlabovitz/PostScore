@@ -5,6 +5,7 @@
 // supabase/business-niches.sql is run these return "not_enabled".
 
 import { createClient } from "@/lib/supabase/server";
+import { getPlan } from "@/lib/premium";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { nicheById } from "@/lib/niches";
 import { availableAreas, safeScopeMode, type ScopeMode } from "@/lib/competitorScope";
@@ -63,6 +64,8 @@ export type UpdateCompetitorsResult =
   | { status: "too_soon"; nextAvailableAt: string }
   | { status: "capped"; nextAvailableAt: string }
   | { status: "none_found" }
+  /** Free: no competitor search — the saved list is narrowed to the new type. */
+  | { status: "locked" }
   | { status: "error" };
 
 /** After a niche change: ONE competitor search for this business only
@@ -73,6 +76,7 @@ export type UpdateCompetitorsResult =
 export async function updateCompetitorsForNiche(businessId: string): Promise<UpdateCompetitorsResult> {
   const supabase = await authed();
   if (!supabase) return { status: "error" };
+  if (getPlan() === "free") return { status: "locked" };
   const { runAndSaveCompetitorScanWithClient } = await import("@/app/actions/competitors");
   const result = await runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: true });
   if (result.status === "saved") return { status: "updated", placesCalls: result.placesCalls ?? 0 };

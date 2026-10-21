@@ -2,8 +2,11 @@ import { notFound, redirect } from "next/navigation";
 import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
 import { showRescanNotice } from "@/lib/rescanPolicy";
 import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
+import { freeShowroom } from "@/components/plan/freeShowroom";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { loadUpgradeContext } from "@/lib/upgradePromos.server";
+import { getLocalBenchmark } from "@/app/actions/competitors";
+import { reviewGoalLines } from "@/lib/reviewGoal";
 import { Card } from "@/components/ui/Card";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { scoreBusinessById, getLastScanAt } from "@/app/actions/scoring";
@@ -27,6 +30,9 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
   // Growth's ?tab=coupons / ?tab=referral land on the matching tab there.
   if (searchParams.tab === "coupons") redirect(campaignsHref(params.id, "coupons"));
   if (searchParams.tab === "referral" || searchParams.tab === "referrals") redirect(campaignsHref(params.id, "referrals"));
+  // Free: this tab is locked — its showroom, before any of its own data loads.
+  const showroom = await freeShowroom(params.id, "growth");
+  if (showroom) return showroom;
 
   // Independent loads run together; see lib/requestCache.ts for why the
   // repeated business/score reads cost one query each.
@@ -80,7 +86,7 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
   }
 
   const input = businessRowToScoringInput(scored.business);
-  const [actionPlanResult, growthMovesResult, checklistStateResult, lastScanAt, gbpStatus, recheckStatus] = await Promise.all([
+  const [actionPlanResult, growthMovesResult, checklistStateResult, lastScanAt, gbpStatus, recheckStatus, benchmark] = await Promise.all([
     getActionPlan(params.id, input, scored.result.breakdown, scored.result.suggestions, locale, {
       businessRow: scored.business,
       businessName: business.name ?? "Your business",
@@ -92,6 +98,8 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
     lastScanPromise,
     gbpPromise,
     getWebsiteRecheckStatus(params.id),
+    // The shared review goal for the review task (DB only, request-cached).
+    getLocalBenchmark(params.id),
   ]);
 
   // The price check always shows for every business (Step 2f) — even if
@@ -153,6 +161,7 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
         </div>
       )}
       <GrowthView
+        reviewGoalLines={benchmark.status === "ok" && benchmark.benchmark.reviewGoal ? reviewGoalLines(benchmark.benchmark.reviewGoal, benchmark.benchmark.reviewGroup, locale) : []}
         businessId={params.id}
         businessName={business.name}
         profile={profile}

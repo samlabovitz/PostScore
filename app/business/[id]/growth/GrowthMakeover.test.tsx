@@ -117,12 +117,13 @@ describe("Growth → Action plan makeover", () => {
     expect(html).toContain("full credit at 40+).</p>");
   });
 
-  test("Google connect is a small Premium card (not a task) — and gone once connected", () => {
+  test("Google connect is a small Premium card (not a task) — and gone once connected (Grow too, as before)", () => {
     const html = render();
     expect(html).toContain("Unlock live Google insights");
     expect(html).toContain('href="/business/b1/connect-gbp"');
     expect(html).toContain("PostScore Premium");
     expect(render({ gbpConnected: true })).not.toContain("Unlock live Google insights");
+    expect(render({ plan: "premium" })).toContain("Unlock live Google insights");
   });
 
   test("bigger projects: website row with the link-button style; ways to grow: 2-column cards with the neutral pill", () => {
@@ -146,12 +147,8 @@ describe("Growth → Action plan makeover", () => {
     expect(taskPointsLabel(task({ weightedPoints: 29.2, weightedPointsHigh: 31.4 }), "weekly", "en")).toContain("+29–31");
   });
 
-  test("the dev-only plan switch shows only when the page asks for it (local dev), and returns to Growth", () => {
-    expect(render()).not.toContain("dev-plan-switch");
-    const html = render({ devPlanSwitch: true });
-    expect(html).toContain("dev-plan-switch");
-    expect(html).toContain("/api/dev/plan?plan=premium&amp;back=%2Fbusiness%2Fb1%2Fgrowth");
-    expect(html).toMatch(/aria-current="true"[^>]*>Grow</);
+  test("no per-page plan switch any more — the one dev-only pill lives in the root layout", () => {
+    expect(render({ devPlanSwitch: true })).not.toContain("dev-plan-switch");
   });
 });
 

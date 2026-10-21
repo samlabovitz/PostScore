@@ -26,6 +26,8 @@ import { findLastKnownWebsiteDate, resolveListingWebsite } from "@/lib/googleLis
 
 export interface BusinessRecord extends BusinessScoringRow {
   id: string;
+  /** Google's place id (null for a website-only business). */
+  place_id?: string | null;
   name: string | null;
   address: string | null;
   google_maps_uri: string | null;
@@ -118,7 +120,7 @@ export async function scoreBusinessWithClient(
   const { data: business, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, phone, website, rating, review_count, category, categories, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng"
+      "id, place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng"
     )
     .eq("id", businessId)
     .single();

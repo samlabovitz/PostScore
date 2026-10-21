@@ -17,6 +17,7 @@ import {
 } from "@/lib/pricing";
 import { callAnthropicMessage } from "@/lib/anthropicClient";
 import { normalizeLocale, t, type Locale } from "@/lib/i18n";
+import { getPlan } from "@/lib/premium";
 import { priceLevelToSymbol } from "@/lib/priceLevel";
 
 const PRICE_COLUMNS_BASE = "id, business_id, service, price, created_at";
@@ -270,6 +271,11 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
 
   if (!user) {
     return { status: "unauthenticated" };
+  }
+  // Free: the AI price check (Anthropic + Places) never runs.
+  if (getPlan() === "free") {
+    const { data: row } = await supabase.from("businesses").select("language").eq("id", businessId).maybeSingle();
+    return { status: "error", message: t(normalizeLocale(row?.language), "dashboard.free.priceCheckLocked") };
   }
 
   const [{ data: business, error: businessError }, pricesResult] = await Promise.all([

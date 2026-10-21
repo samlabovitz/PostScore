@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  IconLock,
   IconLayoutDashboard,
   IconTrendingUp,
   IconStar,
@@ -13,6 +14,8 @@ import {
   IconSpeakerphone,
   IconX,
 } from "@tabler/icons-react";
+import { navLocked } from "@/lib/freeTabs";
+import type { Plan } from "@/lib/plan";
 import { cn } from "@/lib/utils";
 import type { BusinessSummary } from "@/app/actions/businesses";
 import { AccountMenu } from "@/components/layout/AccountMenu";
@@ -44,6 +47,9 @@ interface SidebarProps {
   /** The logged-in user's email, if known yet — see DashboardShell and
    * AccountMenu's own doc comments. */
   userEmail?: string | null;
+  /** The account's plan — on Free every tab but Overview and Competitors
+   * shows a small lock and opens its showroom (lib/freeTabs.ts). */
+  plan?: Plan | null;
   className?: string;
   onNavigate?: () => void;
   onClose?: () => void;
@@ -57,7 +63,7 @@ function isNavActive(pathname: string, href: string): boolean {
   return href.split("/").length > 3 && pathname.startsWith(`${href}/`);
 }
 
-export function Sidebar({ business = null, userEmail = null, className, onNavigate, onClose }: SidebarProps) {
+export function Sidebar({ business = null, userEmail = null, plan = null, className, onNavigate, onClose }: SidebarProps) {
   const pathname = usePathname();
   const locale = useLocale();
 
@@ -138,6 +144,12 @@ export function Sidebar({ business = null, userEmail = null, className, onNaviga
             >
               <Icon size={18} stroke={1.75} />
               {label}
+              {navLocked(plan, labelKey) && (
+                <>
+                  <IconLock size={13} stroke={2} aria-hidden data-testid="nav-lock" className={cn("ml-auto shrink-0", isActive ? "text-white" : "text-brass")} />
+                  <span className="sr-only">{t(locale, "dashboard.free.lockedLabel")}</span>
+                </>
+              )}
             </Link>
           );
         })}

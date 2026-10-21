@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
   website: {} as Record<string, unknown>,
 }));
 
+vi.mock("@/app/actions/websiteScreenshots", () => ({ refreshWebsiteScreenshots: vi.fn() }));
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => {
     throw new Error(`REDIRECT ${url}`);
@@ -90,8 +91,12 @@ beforeEach(() => {
 });
 
 describe("Campaigns: coupons + referrals moved off Growth", () => {
-  test("the page hands the existing rows over untouched — tallies keep their counts — and the plan for gating", async () => {
-    for (const plan of ["free", "grow", "premium"] as const) {
+  test("Free gets the Campaigns showroom (no rows loaded); Grow+ get the existing rows untouched — tallies keep their counts — and the plan", async () => {
+    state.plan = "free";
+    const showroom = (await CampaignsPage({ params: { id: "b1" } })) as ReactElement;
+    const room = (showroom.props as { children: ReactElement }).children;
+    expect((room.props as { tab: string }).tab).toBe("campaigns");
+    for (const plan of ["grow", "premium"] as const) {
       state.plan = plan;
       const page = (await CampaignsPage({ params: { id: "b1" } })) as ReactElement;
       const view = (page.props as { children: ReactElement }).children;
@@ -103,7 +108,7 @@ describe("Campaigns: coupons + referrals moved off Growth", () => {
   });
 
   test("All campaigns lists the real running coupon and referral card with code, times used and +1 — no create buttons or + icons", () => {
-    const html = wrap(<AllCampaigns businessName="Hudson Shears" businessPhone={null} couponsOk referralOk initialPromos={[PROMO]} initialReferral={REFERRAL} />);
+    const html = wrap(<AllCampaigns businessName="Hudson Shears" businessPhone={null} couponsOk referralOk promos={[PROMO]} onPromosChange={() => undefined} onReferralChange={() => undefined} referral={REFERRAL} />);
     const t = text(html);
     expect(t).toContain("20% off your next cut");
     expect(t).toContain("HUD20");
@@ -116,41 +121,52 @@ describe("Campaigns: coupons + referrals moved off Growth", () => {
     expect(html).not.toContain("tabler-icon-plus");
   });
 
-  test("nothing running: one empty state pointing to the tabs above (EN + ES)", () => {
-    const en = text(wrap(<AllCampaigns businessName="Hudson Shears" businessPhone={null} couponsOk referralOk initialPromos={[]} initialReferral={null} />));
-    expect(en.trim()).toBe("No campaigns running yet — open the Coupons or Referrals tab above to create one.");
-    const es = text(wrap(<AllCampaigns businessName="Hudson Shears" businessPhone={null} couponsOk referralOk initialPromos={[]} initialReferral={null} />, "es"));
-    expect(es.trim()).toBe("Todavía no hay campañas en curso — abra la pestaña Cupones o Referidos de arriba para crear una.");
+  test("nothing running: one empty state pointing to the design tabs (EN + ES)", () => {
+    const en = text(wrap(<AllCampaigns businessName="Hudson Shears" businessPhone={null} couponsOk referralOk promos={[]} onPromosChange={() => undefined} onReferralChange={() => undefined} referral={null} />));
+    expect(en.trim()).toBe("No campaigns running yet — design one on the Coupons or Referrals tab and save it to start tracking.");
+    const es = text(wrap(<AllCampaigns businessName="Hudson Shears" businessPhone={null} couponsOk referralOk promos={[]} onPromosChange={() => undefined} onReferralChange={() => undefined} referral={null} />, "es"));
+    expect(es.trim()).toBe("Todavía no hay campañas en curso: diseñe una en la pestaña Cupones o Referidos y guárdela para empezar a contar.");
   });
 
   test("only a coupon running: the coupon list, no empty referral box", () => {
-    const t = text(wrap(<AllCampaigns businessName="Hudson Shears" businessPhone={null} couponsOk referralOk initialPromos={[PROMO]} initialReferral={null} />));
+    const t = text(wrap(<AllCampaigns businessName="Hudson Shears" businessPhone={null} couponsOk referralOk promos={[PROMO]} onPromosChange={() => undefined} onReferralChange={() => undefined} referral={null} />));
     expect(t).toContain("20% off your next cut");
     expect(t).not.toContain("Active referrals");
     expect(t).not.toContain("No campaigns running yet");
   });
 
-  test("tabs come from the URL: All campaigns (default) · Coupons · Referrals; old ?tab=referral still works", () => {
+  test("tabs come from the URL: Grow and Premium open on All campaigns (the tracking home); old ?tab=referral still works", () => {
     expect(campaignsTabFromParam(null, SALON)).toBe("all");
     expect(campaignsTabFromParam("coupons", SALON)).toBe("coupons");
     expect(campaignsTabFromParam("referrals", SALON)).toBe("referrals");
     expect(campaignsTabFromParam("referral", SALON)).toBe("referrals");
     expect(campaignsTabFromParam("referrals", { couponsOk: true, referralOk: false })).toBe("all");
     expect(campaignsTabFromParam("nonsense", SALON)).toBe("all");
-    const view = (query: string) => {
+    const view = (query: string, plan: "grow" | "premium" = "grow") => {
       state.query = query;
-      return wrap(<CampaignsView businessId="b1" businessName="Hudson Shears" businessPhone={null} profile={SALON} initialPromos={[]} initialReferral={null} plan="grow" printBusiness={null} />);
+      return wrap(<CampaignsView businessId="b1" businessName="Hudson Shears" businessPhone={null} profile={SALON} initialPromos={[]} initialReferral={null} plan={plan} printBusiness={null} />);
     };
-    const all = view("");
-    expect(all).toMatch(/role="tab" aria-selected="true"[^>]*>All campaigns</);
-    expect(text(all).match(/Coming soon/g)).toHaveLength(3);
+    for (const plan of ["grow", "premium"] as const) {
+      const all = view("", plan);
+      expect(all, plan).toMatch(/role="tab" aria-selected="true"[^>]*>All campaigns</);
+      expect(all, plan).not.toContain("locked-preview");
+      // Email, text and social: Premium — a lock + "Premium" chip on Grow, "Coming soon" on Premium.
+      if (plan === "grow") {
+        expect(all.match(/data-testid="channel-premium"/g)).toHaveLength(3);
+        expect(text(all)).not.toContain("Coming soon");
+      } else {
+        expect(text(all).match(/Coming soon/g)).toHaveLength(3);
+        expect(all).not.toContain("channel-premium");
+      }
+    }
     expect(view("tab=coupons")).toMatch(/role="tab" aria-selected="true"[^>]*>Coupons</);
     expect(view("tab=referrals")).toMatch(/role="tab" aria-selected="true"[^>]*>Referrals</);
-    expect(text(view("tab=coupons"))).not.toContain("Coming soon");
+    state.query = "";
   });
 
   test("Spanish tabs", () => {
-    const es = wrap(<CampaignsView businessId="b1" businessName="Hudson Shears" businessPhone={null} profile={bizProfileById("salon", "es")!} initialPromos={[]} initialReferral={null} plan="grow" printBusiness={null} />, "es");
+    state.query = "";
+    const es = wrap(<CampaignsView businessId="b1" businessName="Hudson Shears" businessPhone={null} profile={bizProfileById("salon", "es")!} initialPromos={[]} initialReferral={null} plan="premium" printBusiness={null} />, "es");
     for (const label of ["Todas las campañas", "Cupones", "Referidos", "Próximamente"]) expect(es).toContain(label);
   });
 });

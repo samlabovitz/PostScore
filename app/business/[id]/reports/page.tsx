@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
 import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
+import { freeShowroom } from "@/components/plan/freeShowroom";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { loadUpgradeContext } from "@/lib/upgradePromos.server";
 import { getBusinessSummary } from "@/app/actions/businesses";
@@ -16,6 +17,9 @@ import { weekEndDay } from "@/lib/weekly/weeks";
 import { resolveBizProfile } from "@/config/bizProfiles";
 
 export default async function ReportsPage({ params, searchParams }: { params: { id: string }; searchParams: { week?: string } }) {
+  // Free: this tab is locked — its showroom, before any of its own data loads.
+  const showroom = await freeShowroom(params.id, "reports");
+  if (showroom) return showroom;
   // Independent loads run together.
   const requestedWeek = typeof searchParams.week === "string" && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.week) ? searchParams.week : null;
   const [websiteOnly, summary, reports, lastScanAt, benchmark, weekly, upgrade] = await Promise.all([

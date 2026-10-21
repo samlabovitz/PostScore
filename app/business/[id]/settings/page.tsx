@@ -69,7 +69,7 @@ export default async function SettingsPage({ params }: { params: { id: string } 
   ];
 
   return (
-    <DashboardShell business={business}>
+    <DashboardShell business={business} plan={plan}>
       <div className="flex flex-col gap-6">
         <div>
           <Link href={`/business/${params.id}`} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink">

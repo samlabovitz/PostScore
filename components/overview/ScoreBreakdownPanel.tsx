@@ -131,6 +131,7 @@ export function ScoreBreakdownPanel({
   hasWebsite,
   scoreBasis,
   linkOptions,
+  audit = false,
   websiteFixCount = null,
 }: {
   businessId: string;
@@ -140,14 +141,18 @@ export function ScoreBreakdownPanel({
   linkOptions?: LinkOptions;
   /** The Website page's fix count (lib/websiteFixes.ts), or null to hide it. */
   websiteFixCount?: number | null;
+  /** Free: open from the start (the audit), with no fix links — what's
+   * wrong and the points each costs, never how to fix it. */
+  audit?: boolean;
 }) {
   const locale = useLocale();
   // `mounted` keeps the rows in the page while the close animation runs.
-  const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  // The audit (Free) starts open — same on the server and in the browser.
+  const [open, setOpen] = useState(audit);
+  const [mounted, setMounted] = useState(audit);
+  const [expanded, setExpanded] = useState(audit);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const fixLinks = breakdownFixLinks(categories, businessId, locale, linkOptions);
+  const fixLinks = audit ? {} : breakdownFixLinks(categories, businessId, locale, linkOptions);
   const wholePoints = wholeCategoryPoints(categories);
 
   useEffect(() => {

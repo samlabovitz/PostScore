@@ -148,6 +148,7 @@ export function ScoreBand({
   projectedScore,
   projectedGrade,
   biggestBoost,
+  freeWaitingPoints,
 }: {
   businessId: string;
   score: number;
@@ -157,6 +158,10 @@ export function ScoreBand({
   projectedScore: number;
   projectedGrade: Grade;
   biggestBoost: Suggestion | null;
+  /** Free: the points waiting to be fixed (the scoring's own projection)
+   * replace the projected score, with no suggestion shown; undefined on
+   * Grow and above. */
+  freeWaitingPoints?: number | null;
 }) {
   const locale = useLocale();
   return (
@@ -187,27 +192,42 @@ export function ScoreBand({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 rounded-xl border border-[color:color-mix(in_srgb,var(--color-paper)_10%,transparent)] bg-[color:color-mix(in_srgb,var(--color-paper)_5%,transparent)] p-4">
-          <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)]">{t(locale, "dashboard.overview.projectedLabel")}</div>
-          <div className="flex items-baseline gap-2">
-            <span className="font-serif text-2xl font-bold text-paper">{projectedScore}</span>
-            <span className="text-sm text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)]">{t(locale, "dashboard.overview.scoreOutOf100WithGrade", { grade: projectedGrade })}</span>
+        {freeWaitingPoints !== undefined ? (
+          <div data-testid="free-waiting" className="flex flex-col justify-center gap-1 rounded-xl border border-[color:color-mix(in_srgb,var(--color-paper)_10%,transparent)] bg-[color:color-mix(in_srgb,var(--color-paper)_5%,transparent)] p-4">
+            {freeWaitingPoints && freeWaitingPoints > 0 ? (
+              <>
+                <span className="font-serif text-2xl font-bold text-brass">+{freeWaitingPoints}</span>
+                <span className="text-[13px] font-medium text-paper">
+                  {freeWaitingPoints === 1 ? t(locale, "dashboard.free.waitingPointsOne") : t(locale, "dashboard.free.waitingPoints", { points: freeWaitingPoints })}
+                </span>
+              </>
+            ) : (
+              <span className="text-[13px] font-medium text-paper">{t(locale, "dashboard.free.waitingNone")}</span>
+            )}
           </div>
-          <Link href={`/business/${businessId}/growth`} className="w-fit text-[12.5px] font-medium text-[color:color-mix(in_srgb,var(--color-paper)_80%,transparent)] hover:text-paper hover:underline">
-            {t(locale, "dashboard.overview.seeActionPlan")}
-          </Link>
-          {biggestBoost && (
-            <Link
-              href={`/business/${businessId}/growth`}
-              className="mt-1 inline-flex w-fit max-w-full items-center gap-1.5 rounded-full border border-[color:color-mix(in_srgb,var(--color-brass)_50%,transparent)] bg-[color:color-mix(in_srgb,var(--color-brass)_15%,transparent)] px-3 py-1 text-[12.5px] font-semibold text-paper hover:bg-[color:color-mix(in_srgb,var(--color-brass)_25%,transparent)]"
-            >
-              <IconSparkles size={14} className="shrink-0 text-brass" />
-              <span className="truncate">
-                {t(locale, "dashboard.overview.biggestBoost", { points: boostPoints(biggestBoost.promisedPoints), label: biggestBoost.label })}
-              </span>
+        ) : (
+          <div className="flex flex-col gap-2 rounded-xl border border-[color:color-mix(in_srgb,var(--color-paper)_10%,transparent)] bg-[color:color-mix(in_srgb,var(--color-paper)_5%,transparent)] p-4">
+            <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)]">{t(locale, "dashboard.overview.projectedLabel")}</div>
+            <div className="flex items-baseline gap-2">
+              <span className="font-serif text-2xl font-bold text-paper">{projectedScore}</span>
+              <span className="text-sm text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)]">{t(locale, "dashboard.overview.scoreOutOf100WithGrade", { grade: projectedGrade })}</span>
+            </div>
+            <Link href={`/business/${businessId}/growth`} className="w-fit text-[12.5px] font-medium text-[color:color-mix(in_srgb,var(--color-paper)_80%,transparent)] hover:text-paper hover:underline">
+              {t(locale, "dashboard.overview.seeActionPlan")}
             </Link>
-          )}
-        </div>
+            {biggestBoost && (
+              <Link
+                href={`/business/${businessId}/growth`}
+                className="mt-1 inline-flex w-fit max-w-full items-center gap-1.5 rounded-full border border-[color:color-mix(in_srgb,var(--color-brass)_50%,transparent)] bg-[color:color-mix(in_srgb,var(--color-brass)_15%,transparent)] px-3 py-1 text-[12.5px] font-semibold text-paper hover:bg-[color:color-mix(in_srgb,var(--color-brass)_25%,transparent)]"
+              >
+                <IconSparkles size={14} className="shrink-0 text-brass" />
+                <span className="truncate">
+                  {t(locale, "dashboard.overview.biggestBoost", { points: boostPoints(biggestBoost.promisedPoints), label: biggestBoost.label })}
+                </span>
+              </Link>
+            )}
+          </div>
+        )}
 
         <SinceLastScanControl history={history} />
       </div>

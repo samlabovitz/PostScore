@@ -28,7 +28,7 @@ import {
   IconPencil,
   IconTypography,
 } from "@tabler/icons-react";
-import { CHOICE, CHOICE_OFF, CHOICE_ON, Choices, ContrastAlert, INPUT, Label, PremiumPreviewBanner, SELECT, Toggle, fetchSignFont, readLogoFile, usePrintFonts } from "@/components/studio/StudioControls";
+import { PlanMarksContext, CHOICE, CHOICE_OFF, CHOICE_ON, Choices, ContrastAlert, INPUT, Label, PremiumPreviewBanner, SELECT, Toggle, fetchSignFont, readLogoFile, usePrintFonts } from "@/components/studio/StudioControls";
 import { CustomizeDesign, type DesignTab } from "@/components/studio/CustomizeDesign";
 import type { Plan } from "@/lib/plan";
 import {
@@ -113,6 +113,7 @@ import {
   type SavedDesign,
 } from "@/lib/printStudio/savedDesigns";
 import { cn } from "@/lib/utils";
+import { UpgradeButton, UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import { cancelPrint, finishPrint, startPrint, type PrintJob } from "@/lib/signStudio/output";
 import { BRASS_BUTTON, OUTLINE_BUTTON } from "../website-reviews/buttonStyles";
 
@@ -551,9 +552,11 @@ export interface CardDesignerProps {
   onPassOnChange?: (passOn: PassOn) => void;
   /** Selecting a saved design: put its text back into the page's form. */
   onApplySaved?: (text: SavedCardText) => void;
+  /** A Free showroom: the Customize panel shown open, on Template. */
+  showroom?: boolean;
 }
 
-export function CardDesigner({ kind, plan, businessId, business, text, fields, actions, onPassOnChange, onApplySaved }: CardDesignerProps) {
+export function CardDesigner({ kind, plan, businessId, business, text, fields, actions, onPassOnChange, onApplySaved, showroom = false }: CardDesignerProps) {
   const locale = useLocale();
   const lang: "en" | "es" = locale === "es" ? "es" : "en";
   const access = signAccess(plan);
@@ -789,6 +792,7 @@ export function CardDesigner({ kind, plan, businessId, business, text, fields, a
     <SavedDesignsList
       items={savedOfKind(store, kind)}
       locale={locale}
+      locked={signAccess(plan) === "none"}
       inUseKey={JSON.stringify(storedDesign)}
       canSave={canSaveMore(store, kind)}
       saveName={saveName}
@@ -818,14 +822,19 @@ export function CardDesigner({ kind, plan, businessId, business, text, fields, a
       {/* Left: the page's fields, then one "Customize design" row. */}
       <div className="flex min-w-0 flex-col gap-4 rounded-2xl border border-paper-deep bg-white p-5 shadow-card">
         {fields}
+        <PlanMarksContext.Provider value={!studio}>
         <CustomizeDesign
           summary={summary}
+          alwaysOpen={showroom}
+          initialTab={showroom ? "template" : undefined}
+          legend={studio ? null : t(locale, "dashboard.studio.planLegend")}
           storageKey={`postscore.designTab.${kind}.v1`}
           readOnlyNote={canPrint ? null : tp(locale, "lockedOutputs")}
           onReset={resetDesign}
           onOpenLockedTab={(id) => setPremiumPreview((prev) => ({ ...(prev ?? {}), ...lockedSample(id, basicLook, business) }))}
           tabs={cardTabs({ locale, value: panelValue, update, premium: studio, onBasic: setBasic, qrDest, onQrDest: setQr, business, logo, onLogo, logoNote, fileRef, saved, onPassOn: onPassOnChange })}
         />
+        </PlanMarksContext.Provider>
         {studio && <ContrastAlert problems={contrast} />}
       </div>
 
@@ -863,29 +872,50 @@ export function CardDesigner({ kind, plan, businessId, business, text, fields, a
         {!preview && <p className="text-[12px] text-ink-soft">{fonts.failed ? ts(locale, "error.failed") : ts(locale, "loadingFonts")}</p>}
         {shown.doubleSided && <p className="text-center text-[12px] font-medium text-ink-soft">{tp(locale, "doubleTip")}</p>}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => run("pdf")} disabled={busy !== null || blocked} className={BRASS_BUTTON}>
-            {canPrint ? <IconDownload size={15} aria-hidden /> : <IconLock size={15} aria-hidden />}
-            {busy === "pdf" ? t(locale, "dashboard.websiteReviews.hero.working") : ts(locale, "downloadPdf")}
-          </button>
-          <button type="button" onClick={() => run("print")} disabled={busy !== null || blocked} className={OUTLINE_BUTTON}>
-            {canPrint ? <IconPrinter size={15} aria-hidden /> : <IconLock size={15} aria-hidden />}
-            {ts(locale, "print")}
-          </button>
-          <button type="button" onClick={() => run("png")} disabled={busy !== null || blocked} className={OUTLINE_BUTTON}>
-            {canPrint ? <IconPhotoDown size={15} aria-hidden /> : <IconLock size={15} aria-hidden />}
-            {tp(locale, "png")}
-          </button>
-          <label className={cn("flex items-center gap-1.5 text-[12px] text-ink-soft", !canPrint && "opacity-60")}>
-            <input type="checkbox" checked={hiRes} disabled={!canPrint} onChange={(e) => setHiRes(e.target.checked)} className="h-3.5 w-3.5 accent-[#b8862f]" />
-            {tp(locale, "pngHiRes")}
-          </label>
-        </div>
+        {/* Free: a showroom — the buttons are there, and open the promo box. */}
+        {!canPrint ? (
+          <div className="flex flex-wrap items-center gap-2" data-testid="outputs-showroom">
+            <UpgradeButton feature="print" className={BRASS_BUTTON}>
+              <IconLock size={15} aria-hidden />
+              {ts(locale, "downloadPdf")}
+            </UpgradeButton>
+            <UpgradeButton feature="print" className={OUTLINE_BUTTON}>
+              <IconLock size={15} aria-hidden />
+              {ts(locale, "print")}
+            </UpgradeButton>
+            <UpgradeButton feature="print" className={OUTLINE_BUTTON}>
+              <IconLock size={15} aria-hidden />
+              {tp(locale, "png")}
+            </UpgradeButton>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => run("pdf")} disabled={busy !== null || blocked} className={BRASS_BUTTON}>
+              {canPrint ? <IconDownload size={15} aria-hidden /> : <IconLock size={15} aria-hidden />}
+              {busy === "pdf" ? t(locale, "dashboard.websiteReviews.hero.working") : ts(locale, "downloadPdf")}
+            </button>
+            <button type="button" onClick={() => run("print")} disabled={busy !== null || blocked} className={OUTLINE_BUTTON}>
+              {canPrint ? <IconPrinter size={15} aria-hidden /> : <IconLock size={15} aria-hidden />}
+              {ts(locale, "print")}
+            </button>
+            <button type="button" onClick={() => run("png")} disabled={busy !== null || blocked} className={OUTLINE_BUTTON}>
+              {canPrint ? <IconPhotoDown size={15} aria-hidden /> : <IconLock size={15} aria-hidden />}
+              {tp(locale, "png")}
+            </button>
+            <label className={cn("flex items-center gap-1.5 text-[12px] text-ink-soft", !canPrint && "opacity-60")}>
+              <input type="checkbox" checked={hiRes} disabled={!canPrint} onChange={(e) => setHiRes(e.target.checked)} className="h-3.5 w-3.5 accent-[#b8862f]" />
+              {tp(locale, "pngHiRes")}
+            </label>
+          </div>
+        )}
         {!canPrint ? (
           <p data-testid="outputs-locked" className="flex items-center gap-1.5 text-[12.5px] font-medium text-ink">
             <IconLock size={14} className="text-brass" aria-hidden />
             {tp(locale, "lockedOutputs")}
           </p>
+        ) : null}
+        {!canPrint ? (
+          <UpgradeTrigger feature="print" />
         ) : missing.length > 0 ? (
           <ul className="text-[12px] text-amber">
             {missing.map((m) => (
@@ -929,6 +959,7 @@ function SavedThumb({ design }: { design: CardDesign }) {
 function SavedDesignsList({
   items,
   locale,
+  locked = false,
   inUseKey,
   canSave,
   saveName,
@@ -942,6 +973,8 @@ function SavedDesignsList({
 }: {
   items: SavedDesign[];
   locale: Locale;
+  /** Free: saving opens the promo box (a showroom, 5f). */
+  locked?: boolean;
   inUseKey: string;
   canSave: boolean;
   saveName: string;
@@ -1044,9 +1077,16 @@ function SavedDesignsList({
             aria-label={tp(locale, "saved.name")}
             className={INPUT}
           />
-          <button type="button" onClick={onSave} disabled={!saveName.trim()} className={OUTLINE_BUTTON}>
-            {savedFlash ? tp(locale, "saved.savedOk") : tp(locale, "saved.save")}
-          </button>
+          {locked ? (
+            <UpgradeButton feature="print" className={OUTLINE_BUTTON}>
+              <IconLock size={14} aria-hidden />
+              {tp(locale, "saved.save")}
+            </UpgradeButton>
+          ) : (
+            <button type="button" onClick={onSave} disabled={!saveName.trim()} className={OUTLINE_BUTTON}>
+              {savedFlash ? tp(locale, "saved.savedOk") : tp(locale, "saved.save")}
+            </button>
+          )}
         </div>
       ) : (
         <p className="text-[12px] text-ink-mute">{tp(locale, "saved.full")}</p>

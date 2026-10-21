@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
+import { freeShowroom } from "@/components/plan/freeShowroom";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { loadUpgradeContext } from "@/lib/upgradePromos.server";
 import { Card } from "@/components/ui/Card";
@@ -13,6 +14,9 @@ import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
 import { showRescanNotice } from "@/lib/rescanPolicy";
 
 export default async function PricingPage({ params }: { params: { id: string } }) {
+  // Free: this tab is locked — its showroom, before any of its own data loads.
+  const showroom = await freeShowroom(params.id, "pricing");
+  if (showroom) return showroom;
   // Independent loads run together (prices, assessment and last scan
   // need only the id too).
   const [websiteOnly, summary, pricesResult, assessmentResult, lastScanAt, upgrade] = await Promise.all([

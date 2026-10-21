@@ -144,7 +144,9 @@ export function NichePicker({
                 ? t(locale, "dashboard.niche.competitorsCapped", { date: formatShortDate(competitors.nextAvailableAt, locale, timeZone), niche: nicheLabel(current, locale) })
                 : competitors.status === "none_found"
                   ? t(locale, "dashboard.niche.competitorsNone", { niche: nicheLabel(current, locale) })
-                  : t(locale, "dashboard.niche.competitorsFailed")}
+                  : competitors.status === "locked"
+                    ? t(locale, "dashboard.free.nicheSavedNoScan")
+                    : t(locale, "dashboard.niche.competitorsFailed")}
         </p>
       )}
     </div>

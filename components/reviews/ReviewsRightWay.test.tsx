@@ -113,7 +113,14 @@ describe("Never a reward for a review", () => {
     "dashboard.websiteReviews.guide.rule",
     "dashboard.websiteReviews.counter.intro",
     "dashboard.websiteReviews.counter.heading",
+    // The Campaigns guide's own "never reward reviews" rule (checked below).
+    "dashboard.campaigns.guide.rule",
   ]);
+
+  test("the Campaigns guide's rule forbids rewarding reviews, in both languages", () => {
+    expect(messages.en["dashboard.campaigns.guide.rule"]).toMatch(/^Never reward reviews\. Don't give/);
+    expect(messages.es["dashboard.campaigns.guide.rule"]).toMatch(/^Nunca premie las reseñas\. No dé/);
+  });
 
   test("no message, in either language, pairs a reward with asking for a review", () => {
     const offenders: string[] = [];

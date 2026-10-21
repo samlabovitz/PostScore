@@ -36,10 +36,10 @@ const wrap = (node: React.ReactNode, locale: "en" | "es" = "en") =>
     </LocaleProvider>
   );
 function coupons(plan: Plan, locale: "en" | "es" = "en") {
-  return wrap(<CouponsSection businessId="b1" businessName="Modern Liquors" businessPhone={null} profile={bizProfileById("salon", locale)!} initialPromos={[]} plan={plan} printBusiness={BUSINESS} />, locale);
+  return wrap(<CouponsSection businessId="b1" businessName="Modern Liquors" businessPhone={null} profile={bizProfileById("salon", locale)!} promos={[]} plan={plan} printBusiness={BUSINESS} />, locale);
 }
 function referral(plan: Plan, locale: "en" | "es" = "en") {
-  return wrap(<ReferralSection businessId="b1" businessName="Modern Liquors" businessPhone={null} profile={bizProfileById("salon", locale)!} initialReferral={null} plan={plan} printBusiness={BUSINESS} />, locale);
+  return wrap(<ReferralSection businessId="b1" businessName="Modern Liquors" businessPhone={null} profile={bizProfileById("salon", locale)!} referral={null} plan={plan} printBusiness={BUSINESS} />, locale);
 }
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&#x27;/g, "'").replace(/\s+/g, " ");
 const radios = (html: string, name: string) => Array.from(html.matchAll(new RegExp(`<input type="radio" name="${name}"[^>]*>`, "g"))).map((m) => m[0]);
@@ -76,7 +76,10 @@ describe.each([
     const html = render("grow");
     expect(html.indexOf('data-testid="how-it-works"')).toBeLessThan(html.indexOf('data-testid="plan-strip"'));
     expect(html.match(/<li class="flex items-start gap-2.5">/g)).toHaveLength(3);
-    for (const [plan, current] of [["free", "Free"], ["grow", "Grow"], ["premium", "Premium"], ["multi", "Premium"]] as const) {
+    // Free sees the designer as a showroom instead (no plan strip).
+    expect(render("free")).not.toContain('data-testid="plan-strip"');
+    expect(render("free")).toContain('data-testid="designer-showroom"');
+    for (const [plan, current] of [["grow", "Grow"], ["premium", "Premium"], ["multi", "Premium"]] as const) {
       const strip = render(plan).match(/data-testid="plan-strip"[\s\S]*?<\/div><\/div><\/div>/)![0];
       expect(text(strip)).toContain("2 styles, 2 sizes, print");
       expect(strip).toMatch(new RegExp(`aria-current="true"[^>]*><span[^>]*>${current}`));
@@ -90,12 +93,15 @@ describe.each([
     expect(html).not.toContain("<details");
   });
 
-  test("Free: preview, but Download / Print / PNG are locked — 'Print and download with Grow'", () => {
+  test("Free: a showroom — the designer is there; Download / Print / PNG / Share / Save are locks that open the promo box", () => {
     const html = render("free");
+    expect(html).toContain('data-testid="designer-showroom"');
     expect(html).toContain('data-testid="outputs-locked"');
     expect(text(html)).toContain("Print and download with Grow");
-    expect(html).toMatch(/<button type="button" disabled=""[^>]*>[\s\S]*?Download PDF/);
-    expect(html).toContain("High-res (2×) for social");
+    // Without upgrade data (this test) the locks render disabled; on the page they open the promo box.
+    expect(html).toMatch(/data-testid="upgrade-button" data-feature="print"[^>]*>[\s\S]*?Download PDF/);
+    expect(text(html)).toContain("Save & start tracking");
+    expect(html).toMatch(/data-testid="upgrade-button" data-feature="print"[^>]*>(?:(?!<\/button>)[\s\S])*Save &amp; start tracking/);
   });
 
   test("buttons say exactly what happens", () => {
@@ -178,7 +184,7 @@ describe("referral: how customers pass it on", () => {
     expect(steps("single")).toContain("The name on the card is who referred them");
     expect(steps("tear")).toContain("Both halves carry the same code, so you know who referred them");
     expect(steps("digital")).toContain("The sender (or the name in the message) is who referred them");
-    for (const p of ["single", "tear", "digital"] as const) expect(steps(p)).toContain("tap +1 in Active referrals");
+    for (const p of ["single", "tear", "digital"] as const) expect(steps(p)).toContain("tap +1 on All campaigns");
   });
 
   test("Share (image + message) appears for the digital option", async () => {

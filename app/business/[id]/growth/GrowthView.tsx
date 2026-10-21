@@ -6,17 +6,16 @@ import { IconArrowLeft, IconBrandGoogle, IconLock, IconWorld } from "@tabler/ico
 import { Card } from "@/components/ui/Card";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/SegmentedControl";
-import { TaskListCard, GrowthMoveCard, CompletedTasksCard, type WebsiteRecheckProps } from "../ActionPlanSection";
+import { TaskListCard, GrowthMoveCard, CompletedTasksCard, ReviewGoalLinesContext, type WebsiteRecheckProps } from "../ActionPlanSection";
 import { WeeklyChecklist } from "./WeeklyChecklist";
 import { WeeklyGoalCelebration } from "./WeeklyGoalCelebration";
-import { FreeGrowthPlan } from "./FreeGrowthPlan";
+import { FreeGrowthMoves, FreeGrowthPlan } from "./FreeGrowthPlan";
 import type { ActionPlanTask, CompletedTask, WebsiteBanner } from "@/lib/actionPlan";
 import { websiteRangeText, wholePointRange } from "@/lib/pointRange";
 import type { GrowthMove } from "@/lib/growthMoves";
 import { isPremiumPlan, type Plan } from "@/lib/plan";
 import { GoogleProfilePanel, type GoogleListingFacts } from "@/components/gbp/GoogleProfilePanel";
 import type { SearchDemandView } from "@/components/gbp/SearchDemandSection";
-import { DevPlanSwitch } from "@/components/studio/DevPlanSwitch";
 import { growthMoveOverlapsActionPlan } from "@/lib/growthMoveOverlap";
 import type { WeeklyChecklistItem, WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
 import type { ScoreBreakdown } from "@/lib/scoring";
@@ -158,6 +157,7 @@ export function segmentFromParam(param: string | null): Segment {
 }
 
 export function GrowthView({
+  reviewGoalLines = [],
   businessId,
   businessName,
   breakdown,
@@ -170,7 +170,6 @@ export function GrowthView({
   gbpConnected = false,
   linkOptions = {},
   plan = "free",
-  devPlanSwitch = false,
 }: {
   businessId: string;
   businessName: string | null;
@@ -235,6 +234,8 @@ export function GrowthView({
     /** This routine week's Monday (business time zone). */
     weekStart: string;
   };
+  /** The shared review goal in words (lib/reviewGoal.ts) for the review task. */
+  reviewGoalLines?: string[];
 }) {
   const locale = useLocale();
   const router = useRouter();
@@ -296,68 +297,32 @@ export function GrowthView({
   ];
 
   return (
-    <div className="flex flex-col gap-6 nav:gap-8">
-      <div>
-        <Link
-          href={`/business/${businessId}`}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
-        >
-          <IconArrowLeft size={15} />
-          {t(locale, "dashboard.growth.view.backTo", {
-            name: businessName ?? t(locale, "dashboard.growth.view.businessFallback"),
-          })}
-        </Link>
-        <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
-          {t(locale, "dashboard.growth.view.title")}
-        </h1>
-        <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.growth.view.subtitle")}</p>
-      </div>
+    <ReviewGoalLinesContext.Provider value={reviewGoalLines}>
+      <div className="flex flex-col gap-6 nav:gap-8">
+        <div>
+          <Link
+            href={`/business/${businessId}`}
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
+          >
+            <IconArrowLeft size={15} />
+            {t(locale, "dashboard.growth.view.backTo", {
+              name: businessName ?? t(locale, "dashboard.growth.view.businessFallback"),
+            })}
+          </Link>
+          <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
+            {t(locale, "dashboard.growth.view.title")}
+          </h1>
+          <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.growth.view.subtitle")}</p>
+        </div>
 
-      {devPlanSwitch && <DevPlanSwitch plan={plan} backPath={`/business/${businessId}/growth`} />}
+        <SegmentedControl options={options} value={segment} onChange={setSegment} />
 
-      <SegmentedControl options={options} value={segment} onChange={setSegment} />
-
-      {segment === "plan" && (
-        <div className="flex flex-col gap-6 nav:gap-8">
-          {free ? (
-            <>
-              {/* Free: no weekly-goal tracking or celebrations; the plan,
-                  routine and projects are locked previews (FreeGrowthPlan). */}
-              <ProjectedSummary
-                today={breakdown.total}
-                projected={weeklyProjectedBreakdown.total}
-                projectedHigh={weeklyProjectedBreakdownHigh ? weeklyProjectedBreakdownHigh.total : null}
-                withinReach={withinReachText}
-                gradeNote={gradeTransitionLabel(breakdown.grade, weeklyProjectedBreakdown.grade, locale)}
-                note={
-                  actionPlan.weeklyTasks.length > 0
-                    ? tPlural(locale, "dashboard.growth.view.weeklyPlanNote", actionPlan.weeklyTasks.length)
-                    : t(locale, "dashboard.growth.view.weeklyPlanNoteEmpty")
-                }
-              />
-              {!gbpConnected && <PremiumConnectCard businessId={businessId} />}
-              {actionPlan.error ? (
-                <Card className="p-5 text-sm text-red">{t(locale, "dashboard.growth.view.actionPlanErrorPrefix", { error: actionPlan.error })}</Card>
-              ) : (
-                <FreeGrowthPlan
-                  weeklyTasks={actionPlan.weeklyTasks}
-                  laterTasks={actionPlan.laterTasks}
-                  websiteBanner={actionPlan.websiteBanner}
-                  routineItems={weeklyChecklist.items}
-                  weeklyHeading={t(locale, "dashboard.growth.view.weeklyPlanHeading", { count: actionPlan.weeklyTasks.length })}
-                  laterHeading={t(locale, "dashboard.growth.view.laterTasksHeading", { count: actionPlan.laterTasks.length })}
-                />
-              )}
-            </>
-          ) : (
-            <>
-              <WeeklyGoalCelebration
-                businessId={businessId}
-                weekStart={weeklyChecklist.weekStart}
-                today={breakdown.total}
-                projected={weeklyProjectedBreakdown.total}
-                lastScanAt={lastScanAt}
-              >
+        {segment === "plan" && (
+          <div className="flex flex-col gap-6 nav:gap-8">
+            {free ? (
+              <>
+                {/* Free: no weekly-goal tracking or celebrations; the plan,
+                    routine and projects are locked previews (FreeGrowthPlan). */}
                 <ProjectedSummary
                   today={breakdown.total}
                   projected={weeklyProjectedBreakdown.total}
@@ -370,102 +335,139 @@ export function GrowthView({
                       : t(locale, "dashboard.growth.view.weeklyPlanNoteEmpty")
                   }
                 />
-              </WeeklyGoalCelebration>
-
-              <div id="weekly-routine" className="scroll-mt-20">
-                <WeeklyChecklist
+                {actionPlan.error ? (
+                  <Card className="p-5 text-sm text-red">{t(locale, "dashboard.growth.view.actionPlanErrorPrefix", { error: actionPlan.error })}</Card>
+                ) : (
+                  <FreeGrowthPlan
+                    weeklyTasks={actionPlan.weeklyTasks}
+                    laterTasks={actionPlan.laterTasks}
+                    websiteBanner={actionPlan.websiteBanner}
+                    routineItems={weeklyChecklist.items}
+                    weeklyHeading={t(locale, "dashboard.growth.view.weeklyPlanHeading", { count: actionPlan.weeklyTasks.length })}
+                    laterHeading={t(locale, "dashboard.growth.view.laterTasksHeading", { count: actionPlan.laterTasks.length })}
+                  />
+                )}
+              </>
+            ) : (
+              <>
+                <WeeklyGoalCelebration
                   businessId={businessId}
-                  items={weeklyChecklist.items}
-                  initialCheckedItemIds={weeklyChecklist.checkedItemIds}
-                  initialStreakWeeks={weeklyChecklist.streakWeeks}
                   weekStart={weeklyChecklist.weekStart}
-                />
-              </div>
+                  today={breakdown.total}
+                  projected={weeklyProjectedBreakdown.total}
+                  lastScanAt={lastScanAt}
+                >
+                  <ProjectedSummary
+                    today={breakdown.total}
+                    projected={weeklyProjectedBreakdown.total}
+                    projectedHigh={weeklyProjectedBreakdownHigh ? weeklyProjectedBreakdownHigh.total : null}
+                    withinReach={withinReachText}
+                    gradeNote={gradeTransitionLabel(breakdown.grade, weeklyProjectedBreakdown.grade, locale)}
+                    note={
+                      actionPlan.weeklyTasks.length > 0
+                        ? tPlural(locale, "dashboard.growth.view.weeklyPlanNote", actionPlan.weeklyTasks.length)
+                        : t(locale, "dashboard.growth.view.weeklyPlanNoteEmpty")
+                    }
+                  />
+                </WeeklyGoalCelebration>
 
-              {actionPlan.error ? (
-                <Card className="p-5 text-sm text-red">
-                  {t(locale, "dashboard.growth.view.actionPlanErrorPrefix", { error: actionPlan.error })}
-                </Card>
-              ) : (
-                <>
-                  <div id="weekly-plan" className="scroll-mt-20">
-                    <SectionHeading
-                      title={t(locale, "dashboard.growth.view.weeklyPlanHeading", {
-                        count: actionPlan.weeklyTasks.length,
-                      })}
-                    />
-                  </div>
-                  {!gbpConnected && <PremiumConnectCard businessId={businessId} />}
-                  <TaskListCard
-                    tasks={actionPlan.weeklyTasks}
+                <div id="weekly-routine" className="scroll-mt-20">
+                  <WeeklyChecklist
                     businessId={businessId}
-                    context="weekly"
-                    lastScanAt={lastScanAt}
-                    linkOptions={linkOptions}
-                    websiteRecheck={websiteRecheck}
-                    emptyMessage={
-                      hasNoRemainingScoreGaps
-                        ? t(locale, "dashboard.growth.view.fullPointsMessage")
-                        : t(locale, "dashboard.growth.view.weeklyEmptyMessage")
-                    }
-                    footnote={
-                      actionPlan.weeklyTasks.length > 0 ? t(locale, "dashboard.growth.view.weeklyFootnote") : undefined
-                    }
+                    items={weeklyChecklist.items}
+                    initialCheckedItemIds={weeklyChecklist.checkedItemIds}
+                    initialStreakWeeks={weeklyChecklist.streakWeeks}
+                    weekStart={weeklyChecklist.weekStart}
                   />
+                </div>
 
-                  <SectionHeading
-                    title={t(locale, "dashboard.growth.view.laterTasksHeading", {
-                      count: actionPlan.laterTasks.length,
-                    })}
-                  />
-                  {actionPlan.websiteBanner && (
-                    <WebsiteBannerCard banner={actionPlan.websiteBanner} businessId={businessId} />
-                  )}
-                  {(actionPlan.laterTasks.length > 0 || !actionPlan.websiteBanner) && (
+                {actionPlan.error ? (
+                  <Card className="p-5 text-sm text-red">
+                    {t(locale, "dashboard.growth.view.actionPlanErrorPrefix", { error: actionPlan.error })}
+                  </Card>
+                ) : (
+                  <>
+                    <div id="weekly-plan" className="scroll-mt-20">
+                      <SectionHeading
+                        title={t(locale, "dashboard.growth.view.weeklyPlanHeading", {
+                          count: actionPlan.weeklyTasks.length,
+                        })}
+                      />
+                    </div>
+                    {!gbpConnected && <PremiumConnectCard businessId={businessId} />}
                     <TaskListCard
-                      tasks={actionPlan.laterTasks}
+                      tasks={actionPlan.weeklyTasks}
                       businessId={businessId}
+                      context="weekly"
                       lastScanAt={lastScanAt}
                       linkOptions={linkOptions}
                       websiteRecheck={websiteRecheck}
                       emptyMessage={
                         hasNoRemainingScoreGaps
                           ? t(locale, "dashboard.growth.view.fullPointsMessage")
-                          : t(locale, "dashboard.growth.view.laterEmptyMessage")
+                          : t(locale, "dashboard.growth.view.weeklyEmptyMessage")
+                      }
+                      footnote={
+                        actionPlan.weeklyTasks.length > 0 ? t(locale, "dashboard.growth.view.weeklyFootnote") : undefined
                       }
                     />
-                  )}
-                </>
-              )}
-            </>
-          )}
 
-          <CompletedTasksCard completed={actionPlan.completed} />
+                    <SectionHeading
+                      title={t(locale, "dashboard.growth.view.laterTasksHeading", {
+                        count: actionPlan.laterTasks.length,
+                      })}
+                    />
+                    {actionPlan.websiteBanner && (
+                      <WebsiteBannerCard banner={actionPlan.websiteBanner} businessId={businessId} />
+                    )}
+                    {(actionPlan.laterTasks.length > 0 || !actionPlan.websiteBanner) && (
+                      <TaskListCard
+                        tasks={actionPlan.laterTasks}
+                        businessId={businessId}
+                        lastScanAt={lastScanAt}
+                        linkOptions={linkOptions}
+                        websiteRecheck={websiteRecheck}
+                        emptyMessage={
+                          hasNoRemainingScoreGaps
+                            ? t(locale, "dashboard.growth.view.fullPointsMessage")
+                            : t(locale, "dashboard.growth.view.laterEmptyMessage")
+                        }
+                      />
+                    )}
+                  </>
+                )}
+              </>
+            )}
 
-          {growthMoves.length > 0 && (
-          <div id="ways-to-grow" className="flex flex-col gap-6 scroll-mt-20 nav:gap-8">
-            <SectionHeading title={t(locale, "dashboard.growth.moves.sectionHeading")} />
-            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {growthMoves.map((move) => (
-                <GrowthMoveCard key={move.id} move={move} overlapsActionPlan={growthMoveOverlapsActionPlan(move.id, openActionPlanTasks)} />
-              ))}
-            </ul>
+            {!free && <CompletedTasksCard completed={actionPlan.completed} />}
+
+            {free && growthMoves.length > 0 && <FreeGrowthMoves count={growthMoves.length} heading={t(locale, "dashboard.growth.moves.sectionHeading")} />}
+
+            {!free && growthMoves.length > 0 && (
+            <div id="ways-to-grow" className="flex flex-col gap-6 scroll-mt-20 nav:gap-8">
+              <SectionHeading title={t(locale, "dashboard.growth.moves.sectionHeading")} />
+              <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {growthMoves.map((move) => (
+                  <GrowthMoveCard key={move.id} move={move} overlapsActionPlan={growthMoveOverlapsActionPlan(move.id, openActionPlanTasks)} />
+                ))}
+              </ul>
+            </div>
+            )}
           </div>
-          )}
-        </div>
-      )}
+        )}
 
-      {segment === "google-profile" && (
-        <GoogleProfilePanel
-          businessId={businessId}
-          plan={plan}
-          listing={googleProfile.listing}
-          websiteOnly={googleProfile.websiteOnly}
-          lastScanAt={lastScanAt}
-          connected={googleProfile.connected}
-          searchDemand={googleProfile.searchDemand}
-        />
-      )}
-    </div>
+        {segment === "google-profile" && (
+          <GoogleProfilePanel
+            businessId={businessId}
+            plan={plan}
+            listing={googleProfile.listing}
+            websiteOnly={googleProfile.websiteOnly}
+            lastScanAt={lastScanAt}
+            connected={googleProfile.connected}
+            searchDemand={googleProfile.searchDemand}
+          />
+        )}
+      </div>
+    </ReviewGoalLinesContext.Provider>
   );
 }

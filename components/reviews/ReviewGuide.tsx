@@ -5,6 +5,9 @@
 // it has one), where to put the QR code, why replying matters — and the
 // one rule: never a discount or gift for a review (Google's policy).
 
+import { LockedPreview } from "@/components/plan/LockedPreview";
+import { useUpgrade } from "@/components/upgrade/UpgradeContext";
+import { NO_FACTS, unlockLine } from "@/lib/upgradePromos";
 import { useState } from "react";
 import { IconAlertTriangle, IconCheck, IconCopy } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
@@ -53,7 +56,22 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
 
 const g = (key: string) => `dashboard.websiteReviews.guide.${key}` as MessageKey;
 
-export function ReviewGuide({ placeId }: { placeId: string | null }) {
+/** Free: the rule stays visible to everyone; the rest is a LockedPreview
+ * with only the section headings — the details are never in the page. */
+function LockedGuide() {
+  const locale = useLocale();
+  const facts = useUpgrade()?.facts ?? NO_FACTS;
+  const sections = ["whenTitle", "scriptTitle", "whereTitle"];
+  return (
+    <LockedPreview
+      title={t(locale, g("heading"))}
+      labels={sections.map((k) => t(locale, g(k)))}
+      unlock={unlockLine("reviews", facts, locale) ?? unlockLine("plan", facts, locale)}
+    />
+  );
+}
+
+export function ReviewGuide({ placeId, locked = false }: { placeId: string | null; locked?: boolean }) {
   const locale = useLocale();
   const bullets = (keys: string[]) => (
     <ul className="flex list-disc flex-col gap-1 pl-5 text-[13px] text-ink-soft marker:text-brass">
@@ -78,31 +96,38 @@ export function ReviewGuide({ placeId }: { placeId: string | null }) {
         <p className="text-[13px] font-semibold text-ink">{t(locale, g("rule"))}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 nav:grid-cols-2">
-        <Block title={t(locale, g("whenTitle"))}>{bullets(["when1", "when2", "when3"])}</Block>
-        <Block title={t(locale, g("whereTitle"))}>{bullets(["where1", "where2", "where3", "where4"])}</Block>
-      </div>
+      {locked ? (
+        <LockedGuide />
+      ) : (
+        <>
 
-      <Block title={t(locale, g("scriptTitle"))}>
-        <div className="flex flex-col gap-2.5">
-          {scripts.map(({ lang, label }) => {
-            const text = reviewScript(lang, placeId);
-            return (
-              <div key={lang} className="rounded-lg border border-paper-line bg-paper p-3" lang={lang}>
-                <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-mute">{t(locale, label)}</span>
-                  <CopyButton text={text} />
-                </div>
-                <p className="break-words text-[13px] text-ink">{text}</p>
-              </div>
-            );
-          })}
-        </div>
-      </Block>
+          <div className="grid grid-cols-1 gap-5 nav:grid-cols-2">
+            <Block title={t(locale, g("whenTitle"))}>{bullets(["when1", "when2", "when3"])}</Block>
+            <Block title={t(locale, g("whereTitle"))}>{bullets(["where1", "where2", "where3", "where4"])}</Block>
+          </div>
 
-      <Block title={t(locale, g("replyTitle"))}>
-        <p className="text-[13px] text-ink-soft">{t(locale, g("replyBody"))}</p>
-      </Block>
+          <Block title={t(locale, g("scriptTitle"))}>
+            <div className="flex flex-col gap-2.5">
+              {scripts.map(({ lang, label }) => {
+                const text = reviewScript(lang, placeId);
+                return (
+                  <div key={lang} className="rounded-lg border border-paper-line bg-paper p-3" lang={lang}>
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-mute">{t(locale, label)}</span>
+                      <CopyButton text={text} />
+                    </div>
+                    <p className="break-words text-[13px] text-ink">{text}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </Block>
+
+          <Block title={t(locale, g("replyTitle"))}>
+            <p className="text-[13px] text-ink-soft">{t(locale, g("replyBody"))}</p>
+          </Block>
+        </>
+      )}
     </Card>
   );
 }

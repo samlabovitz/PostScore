@@ -5,7 +5,8 @@ import { getBusinessSummary } from "@/app/actions/businesses";
 import { scoreBusinessById, getScoreHistory } from "@/app/actions/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
 import { getLatestCompetitorSnapshot } from "@/app/actions/competitors";
-import { nearbyReviewAverage, ownerStanding, rankBy } from "@/lib/competitorComparison";
+import { nearbyReviewAverage, ownerStanding, rankBy, reviewGoal } from "@/lib/competitorComparison";
+import { reviewGoalLines } from "@/lib/reviewGoal";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { getGrowthMoveSignals } from "@/app/actions/growthMoves";
 import { getWeeklyChecklistState } from "@/app/actions/weeklyChecklist";
@@ -42,7 +43,7 @@ import {
 } from "@/lib/assistant";
 import { formatShortDate, normalizeLocale, t, type Locale } from "@/lib/i18n";
 import { loadCompetitorScope } from "@/lib/businessNiche.server";
-import { applyScope, scopeSummary } from "@/lib/competitorScope";
+import { scopeGroupLabel, applyScope, scopeSummary } from "@/lib/competitorScope";
 
 
 export interface AssistantMessageRow {
@@ -193,6 +194,11 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
           subjectRank: ownerStanding(snapshot.scan, competitorScope)?.rank ?? null,
           rankedAgainst: competitorScope ? scopeSummary(applyScope(snapshot.scan, competitorScope), competitorScope) : null,
           nearbyReviewAverage: nearbyReviewAverage(snapshot.scan, competitorScope),
+          // The shared review goal in words — PostAI quotes it, never computes its own.
+          reviewGoalLines: (() => {
+            const goal = reviewGoal(snapshot.scan, competitorScope, scored.business.review_count);
+            return goal ? reviewGoalLines(goal, scopeGroupLabel(snapshot.scan, competitorScope, locale, profile.competitorNoun), locale) : [];
+          })(),
           entries: ranked.map(({ entry }) => ({
             name: entry.name ?? "Unnamed business",
             isSubject: entry.isSubject,

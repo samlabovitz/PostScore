@@ -4,6 +4,8 @@ import { priceLevelContextFromSavedRows } from "@/lib/pricing";
 // Part B: "Assess my pricing" uses the latest SAVED competitor scan's
 // price levels — never a fresh paid scan.
 const scanSpy = vi.fn();
+// A paid plan: on Free the price check refuses before any of this runs.
+vi.mock("@/lib/premium", () => ({ getPlan: () => "grow" }));
 vi.mock("@/lib/competitors", () => ({ findAndScoreCompetitors: (...a: unknown[]) => scanSpy(...a), MAX_COMPETITORS: 10 }));
 const prompts: string[] = [];
 vi.mock("@/lib/anthropicClient", () => ({

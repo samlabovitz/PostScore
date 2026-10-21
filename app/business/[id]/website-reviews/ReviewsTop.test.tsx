@@ -101,12 +101,8 @@ describe("plan tiers on the page", () => {
     expect(html).not.toContain('data-testid="sign-locked"');
   });
 
-  test("the dev-only plan switch shows only when the page asks for it (local dev)", () => {
-    expect(render()).not.toContain("dev-plan-switch");
-    const html = render({ dev: true, plan: "grow" });
-    expect(html).toContain("dev-plan-switch");
-    expect(html).toContain("/api/dev/plan?plan=premium&amp;back=%2Fbusiness%2Fb1%2Fwebsite-reviews");
-    expect(html).toMatch(/aria-current="true"[^>]*>Grow</);
+  test("no per-page plan switch any more — the one dev-only pill lives in the root layout", () => {
+    expect(render({ dev: true })).not.toContain("dev-plan-switch");
   });
 
   test("Spanish", () => {

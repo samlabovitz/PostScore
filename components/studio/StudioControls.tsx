@@ -5,8 +5,8 @@
 // top on phones, collapsible option groups), option grids with Premium
 // locks, toggles, and the print fonts for the live preview.
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { IconLock, IconX } from "@tabler/icons-react";
+import { useEffect, useRef, useState, type ReactNode, createContext, useContext } from "react";
+import { IconCrown, IconLock, IconX } from "@tabler/icons-react";
 import { createMeasurer, loadFontFiles } from "@/lib/signStudio/fonts";
 import { LOGO_MAX_BYTES, LOGO_TYPES, type StoredLogo } from "@/lib/signStudio/design";
 import type { FontRole, Measurer } from "@/lib/signStudio/elements";
@@ -49,14 +49,35 @@ export function usePrintFonts(files: Record<FontRole, string>): { measurer: Meas
   return { measurer: ready?.measurer ?? null, bytes: ready?.bytes ?? null, failed };
 }
 
+/** On Free and Grow every designer option says which plan it's in: a
+ * "Grow" chip on the basic ones, the crown "Premium" chip on the rest. */
+export const PlanMarksContext = createContext(false);
+
 export function PremiumChip() {
   const locale = useLocale();
   return (
-    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-[color:color-mix(in_srgb,var(--color-brass)_40%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_10%,white)] px-1.5 py-px text-[10px] font-semibold text-ink">
-      <IconLock size={10} aria-hidden />
+    <span data-testid="premium-chip" className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-[color:color-mix(in_srgb,var(--color-brass)_40%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_10%,white)] px-1.5 py-px text-[10px] font-semibold text-ink">
+      <IconCrown size={10} aria-hidden className="text-brass" />
+      <IconLock size={9} aria-hidden />
       {t(locale, "dashboard.websiteReviews.studio.premiumChip")}
     </span>
   );
+}
+
+export function GrowChip() {
+  const locale = useLocale();
+  return (
+    <span data-testid="grow-chip" className="inline-flex shrink-0 items-center rounded-full border border-paper-deep bg-white px-1.5 py-px text-[10px] font-semibold text-ink-soft">
+      {t(locale, "dashboard.studio.growChip")}
+    </span>
+  );
+}
+
+/** The chip for one option: Premium when locked; Grow when plans are marked. */
+function PlanChip({ locked }: { locked?: boolean }) {
+  const marks = useContext(PlanMarksContext);
+  if (locked) return <PremiumChip />;
+  return marks ? <GrowChip /> : null;
 }
 
 export function Section({ title, locked, open, onOpen, children }: { title: string; locked?: boolean; open?: boolean; onOpen?: () => void; children: ReactNode }) {
@@ -70,7 +91,7 @@ export function Section({ title, locked, open, onOpen, children }: { title: stri
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-1 text-[13.5px] font-semibold text-ink [&::-webkit-details-marker]:hidden">
         <span className="flex items-center gap-2">
           {title}
-          {locked && <PremiumChip />}
+          <PlanChip locked={locked} />
         </span>
         <span aria-hidden className="text-ink-mute transition-transform group-open:rotate-180">
           ▾
@@ -124,7 +145,7 @@ export function Choices<T extends string | number>({
             <span className="flex flex-wrap items-center gap-1.5 text-[12.5px] font-semibold text-ink">
               {swatch?.(o)}
               <span className="min-w-0">{label(o)}</span>
-              {locked && <PremiumChip />}
+              <PlanChip locked={locked} />
             </span>
             {desc?.(o) && <span className="text-[11px] leading-snug text-ink-mute">{desc(o)}</span>}
           </label>
@@ -148,7 +169,7 @@ export function Toggle({ checked, disabled, onChange, label, hint, locked }: { c
       <span className="flex min-w-0 flex-col">
         <span className="flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-ink">
           {label}
-          {locked && <PremiumChip />}
+          <PlanChip locked={locked} />
         </span>
         {hint && <span className="break-words text-[11.5px] text-ink-mute">{hint}</span>}
       </span>
@@ -167,6 +188,7 @@ export function StudioDialog({
   options,
   footer,
   headerExtra,
+  inline = false,
 }: {
   title: string;
   subtitle: string;
@@ -175,10 +197,13 @@ export function StudioDialog({
   options: ReactNode;
   footer: ReactNode;
   headerExtra?: ReactNode;
+  /** Shown in place (a showroom), not as a modal: no backdrop, no close. */
+  inline?: boolean;
 }) {
   const locale = useLocale();
   const dialogRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    if (inline) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     const overflow = document.body.style.overflow;
@@ -190,7 +215,23 @@ export function StudioDialog({
       document.body.style.overflow = overflow;
       previous?.focus?.();
     };
-  }, [onClose]);
+  }, [onClose, inline]);
+
+  if (inline)
+    return (
+      <div data-testid="studio-inline" className="flex w-full flex-col overflow-hidden rounded-2xl border border-paper-deep bg-white shadow-card">
+        <div className="border-b border-paper-line px-4 py-3 sm:px-5">
+          <h2 className="font-serif text-lg font-semibold text-ink">{title}</h2>
+          <p className="text-[12.5px] text-ink-soft">{subtitle}</p>
+          {headerExtra}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="flex flex-col items-center gap-2 bg-paper-deep p-4">{preview}</div>
+          <div className="flex flex-col px-4 pb-3 sm:px-5">{options}</div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 border-t border-paper-line px-4 py-3 sm:px-5">{footer}</div>
+      </div>
+    );
 
   return (
     <div

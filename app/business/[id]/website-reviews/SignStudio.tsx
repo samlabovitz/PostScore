@@ -63,7 +63,7 @@ import { t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { cancelPrint, finishPrint, startPrint, type PrintJob } from "@/lib/signStudio/output";
 import { BRASS_BUTTON, OUTLINE_BUTTON } from "./buttonStyles";
-import {
+import { PlanMarksContext,
   CHOICE,
   CHOICE_OFF,
   CHOICE_ON,
@@ -440,6 +440,8 @@ export interface SignStudioProps {
   onClose: () => void;
   /** The options tab shown first (tests; otherwise the remembered one). */
   initialTab?: string;
+  /** The Free showroom: shown in place, not as a dialog. */
+  inline?: boolean;
 }
 
 export function SignStudio(props: SignStudioProps) {
@@ -599,6 +601,7 @@ export function SignStudio(props: SignStudioProps) {
 
   return (
     <StudioDialog
+      inline={props.inline}
       title={t(locale, "dashboard.websiteReviews.hero.design")}
       subtitle={studio ? tk(locale, "subtitle") : tk(locale, "basicSubtitle")}
       headerExtra={
@@ -625,8 +628,10 @@ export function SignStudio(props: SignStudioProps) {
       }
       options={
         <>
+          <PlanMarksContext.Provider value={!studio}>
           <CustomizeDesign
             alwaysOpen
+            legend={studio ? null : t(locale, "dashboard.studio.planLegend")}
             initialTab={props.initialTab}
             summary=""
             tabs={tabs}
@@ -644,6 +649,7 @@ export function SignStudio(props: SignStudioProps) {
               )
             }
           />
+          </PlanMarksContext.Provider>
           {studio && <ContrastAlert problems={problems} />}
         </>
       }

@@ -58,7 +58,7 @@ const IDEAS = [
   { icon: IconBrandInstagram, key: "dashboard.websiteReviews.hero.ideaSocial" },
 ] as const;
 
-async function copyText(text: string): Promise<boolean> {
+export async function copyText(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
     return true;
@@ -100,6 +100,7 @@ export function ReviewQrTile({ reviewUrl, label, printable = false }: { reviewUr
 }
 
 export function GetMoreReviews({
+  showroom = false,
   businessId,
   businessName,
   placeId,
@@ -108,6 +109,8 @@ export function GetMoreReviews({
   verifiedSocials,
   plan,
 }: {
+  /** The Free showroom: the sign designer shown open, in place. */
+  showroom?: boolean;
   businessId: string;
   /** The listing's real name; null prints no name on the sign. */
   businessName: string | null;
@@ -182,7 +185,8 @@ export function GetMoreReviews({
     copyTimer.current = setTimeout(() => setCopy("idle"), ok ? 2000 : 5000);
   }
 
-  const [designing, setDesigning] = useState(false);
+  // The Free showroom shows the sign designer open, in place.
+  const [designing, setDesigning] = useState(showroom);
   const [download, setDownload] = useState<"idle" | "working" | "error">("idle");
   async function handleDownloadSign() {
     if (!reviewUrl || access === "none") return;
@@ -296,6 +300,7 @@ export function GetMoreReviews({
 
       {designing && reviewUrl && access !== "none" && (
         <SignStudio
+          inline={showroom}
           access={access}
           businessId={businessId}
           reviewUrl={reviewUrl}

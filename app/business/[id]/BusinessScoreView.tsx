@@ -35,7 +35,7 @@ import type { AssistantBusinessContext } from "@/lib/assistant";
 import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
 import { LiveListingSection } from "@/components/gbp/LiveListingSection";
 import { InfoTip } from "@/components/reports/ScoreHistoryChart";
-import { FreePostAIPreview, FreeReviewFocus, HoldingBack, RankUnlockLine } from "@/components/overview/FreeOverview";
+import { FreePostAIShowroom, FreeReviews, RankUnlockLine, UnlockMore } from "@/components/overview/FreeOverview";
 import type { Plan } from "@/lib/plan";
 
 
@@ -89,10 +89,9 @@ export function BusinessScoreView({
   /** The Website page's own fix count (lib/websiteFixes.ts). */
   websiteFixCount: number;
   linkOptions: LinkOptions;
-  /** The account's plan (lib/premium.ts). Free is an audit: next steps
-   * become "What's holding your score back" (fixes are locked previews),
-   * reviews lead, PostAI is a locked preview, 1 re-scan a month. Grow and
-   * above see the Overview unchanged. */
+  /** The account's plan (lib/premium.ts). Free gets its own layout (the
+   * audit — see FreeOverviewLayout below); Grow and above see the Overview
+   * unchanged. */
   plan?: Plan;
   /** Free: when the month's free re-scan opens again (null = available). */
   freeRescanNextAt?: string | null;
@@ -117,43 +116,120 @@ export function BusinessScoreView({
   const rescan = useRescan(businessId, lastScanAt, now, free ? freeRescanNextAt : null);
   const displayName = business.name ?? t(locale, "dashboard.overview.untitledBusiness");
 
+  const header = (
+    <>
+    {/* Name and address on top, as before; the listing's own photo when
+        Google has one; freshness and Re-scan on the right. */}
+    <div id="rescan" className="flex scroll-mt-20 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <ListingPhoto
+        businessId={businessId}
+        businessName={displayName}
+        footer={<ScanFreshnessLine lastScanAt={lastScanAt} now={now} scoringVersion={breakdown.scoringVersion} />}
+      >
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <h1 className="font-serif text-2xl font-semibold text-ink nav:text-[27px]">{displayName}</h1>
+          <p className="text-sm text-ink-soft">{business.address ?? t(locale, "dashboard.overview.noAddressOnFile")}</p>
+          {/* The Google listing at a glance (replaces the old "Business listing" card). */}
+          <ListingChips business={business} now={now} />
+        </div>
+      </ListingPhoto>
+      <div className="flex shrink-0 flex-col items-start gap-1.5 sm:items-end">
+        <div className="flex flex-wrap items-center gap-2">
+          {liveSiteUrl && (
+            <a
+              href={liveSiteUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-paper-deep bg-white px-[13px] py-[7px] text-[13px] font-semibold text-ink transition-colors hover:border-ink-soft"
+            >
+              <IconExternalLink size={14} />
+              {t(locale, "dashboard.overview.header.viewLiveSite")}
+            </a>
+          )}
+          <RescanButton state={rescan.state} nextAt={rescan.nextAt} onClick={rescan.run} />
+        </div>
+        <NextRescanNote nextAt={rescan.nextAt} monthly={rescan.monthly} />
+      </div>
+    </div>
+    </>
+  );
+
+  // The shared review goal (beat the leader), same scope as the rank.
+  const reviewGoal = benchmark.status === "ok" ? benchmark.benchmark.reviewGoal : null;
+  const reviewGroup = benchmark.status === "ok" ? benchmark.benchmark.reviewGroup : null;
+
+  // Free = the audit — the whole product on Free — top to bottom: header
+  // and score (with the points waiting to be fixed), the full breakdown
+  // open, "More customers" (the same tiles, locked, with two unlock
+  // buttons), the PostAI showroom, reviews (all free, with the review link,
+  // QR and the beat-the-leader goal), the competitor rank, then
+  // "Unlock more with a plan" (every plan-only feature, hidden) and, from
+  // the shell, the Grow + Premium cards.
+  if (free) {
+    const waiting = Math.round(projectedBreakdown.total - breakdown.total);
+    const websiteChecks = breakdown.checks.filter(
+      (c) => c.category === "website" && (c.confidence === "VERIFIED" || c.confidence === "LIKELY") && c.earnedPoints !== null && c.earnedPoints < c.maxPoints
+    ).length;
+    return (
+      <div data-testid="free-overview" className="flex flex-col gap-5 nav:gap-6">
+        {showHackedBanner && <HackedSiteBanner href={`/business/${businessId}/website#check-security`} />}
+
+        {header}
+
+        <div className="flex flex-col gap-2">
+          <ScoreBand
+            businessId={businessId}
+            score={breakdown.total}
+            grade={breakdown.grade}
+            history={history}
+            projectedScore={projectedBreakdown.total}
+            projectedGrade={projectedBreakdown.grade}
+            biggestBoost={null}
+            freeWaitingPoints={waiting > 0 ? waiting : 0}
+          />
+          <p className="px-1 text-[12px] text-ink-soft">{t(locale, "dashboard.rescan.updateOnlyOnRescan")}</p>
+          <RescanMessages state={rescan.state} />
+        </div>
+
+        <ScoreBreakdownPanel businessId={businessId} categories={breakdown.categories} hasWebsite={hasWebsite} scoreBasis={scoreBasis} audit websiteFixCount={null} />
+
+        <GrowMoreCustomers
+          businessId={businessId}
+          profileTools={profileTools}
+          reviewCount={business.review_count}
+          nearbyReviewAverage={benchmark.status === "ok" ? benchmark.benchmark.competitorReviewAverage : null}
+          goal={reviewGoal}
+          group={reviewGroup}
+          locked
+        />
+
+        <FreePostAIShowroom starterPrompts={assistant.status === "ok" ? assistant.starterPrompts : []} />
+
+        <FreeReviews placeId={business.place_id ?? null} rating={business.rating} reviewCount={business.review_count} goal={reviewGoal} group={reviewGroup} />
+
+
+        <SectionHeading title={t(locale, "dashboard.free.rankHeading")} />
+        <Card className="p-5">
+          <LocalBenchmarkTile businessId={businessId} result={benchmark} />
+          <RankUnlockLine />
+        </Card>
+
+        <UnlockMore
+          fixCount={result.suggestions.length}
+          fixPoints={waiting > 0 ? waiting : null}
+          hasWebsite={hasWebsite}
+          websiteChecks={websiteChecks}
+          pricingOk={profileTools.pricingOk}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-5 nav:gap-6">
       {showHackedBanner && <HackedSiteBanner href={`/business/${businessId}/website#check-security`} />}
 
-      {/* Name and address on top, as before; the listing's own photo when
-          Google has one; freshness and Re-scan on the right. */}
-      <div id="rescan" className="flex scroll-mt-20 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <ListingPhoto
-          businessId={businessId}
-          businessName={displayName}
-          footer={<ScanFreshnessLine lastScanAt={lastScanAt} now={now} scoringVersion={breakdown.scoringVersion} />}
-        >
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <h1 className="font-serif text-2xl font-semibold text-ink nav:text-[27px]">{displayName}</h1>
-            <p className="text-sm text-ink-soft">{business.address ?? t(locale, "dashboard.overview.noAddressOnFile")}</p>
-            {/* The Google listing at a glance (replaces the old "Business listing" card). */}
-            <ListingChips business={business} now={now} />
-          </div>
-        </ListingPhoto>
-        <div className="flex shrink-0 flex-col items-start gap-1.5 sm:items-end">
-          <div className="flex flex-wrap items-center gap-2">
-            {liveSiteUrl && (
-              <a
-                href={liveSiteUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-paper-deep bg-white px-[13px] py-[7px] text-[13px] font-semibold text-ink transition-colors hover:border-ink-soft"
-              >
-                <IconExternalLink size={14} />
-                {t(locale, "dashboard.overview.header.viewLiveSite")}
-              </a>
-            )}
-            <RescanButton state={rescan.state} nextAt={rescan.nextAt} onClick={rescan.run} />
-          </div>
-          <NextRescanNote nextAt={rescan.nextAt} monthly={rescan.monthly} />
-        </div>
-      </div>
+      {header}
 
       <div className="flex flex-col gap-2">
         <ScoreBand
@@ -171,9 +247,7 @@ export function BusinessScoreView({
         <RescanMessages state={rescan.state} />
       </div>
 
-      {free ? (
-        <FreePostAIPreview starterPrompts={assistant.status === "ok" ? assistant.starterPrompts : []} />
-      ) : assistant.status === "ok" ? (
+      {assistant.status === "ok" ? (
         <AssistantLauncher
           businessId={businessId}
           businessName={business.name}
@@ -187,21 +261,14 @@ export function BusinessScoreView({
         </Card>
       )}
 
-      {free ? (
-        <FreeReviewFocus
-          businessId={businessId}
-          reviewCount={business.review_count}
-          nearbyAverage={benchmark.status === "ok" ? benchmark.benchmark.competitorReviewAverage : null}
-          competitorNoun={benchmark.status === "ok" ? benchmark.benchmark.competitorNoun : null}
-        />
-      ) : (
-        <GrowMoreCustomers
-          businessId={businessId}
-          profileTools={profileTools}
-          reviewCount={business.review_count}
-          nearbyReviewAverage={benchmark.status === "ok" ? benchmark.benchmark.competitorReviewAverage : null}
-        />
-      )}
+      <GrowMoreCustomers
+        businessId={businessId}
+        profileTools={profileTools}
+        reviewCount={business.review_count}
+        nearbyReviewAverage={benchmark.status === "ok" ? benchmark.benchmark.competitorReviewAverage : null}
+        goal={reviewGoal}
+        group={reviewGroup}
+      />
 
       <SectionHeading title={t(locale, "dashboard.overview.atAGlanceHeading")} />
       <Card className="p-5">
@@ -222,7 +289,6 @@ export function BusinessScoreView({
           </div>
           <LocalBenchmarkTile businessId={businessId} result={benchmark} />
         </div>
-        {free && <RankUnlockLine />}
       </Card>
 
       <ScoreBreakdownPanel
@@ -237,11 +303,7 @@ export function BusinessScoreView({
       {/* Side by side at equal height (each card centers its own content
           if shorter); stacked on mobile. PostStudio gets its own row. */}
       <div className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        {free ? (
-          <HoldingBack suggestions={result.suggestions} checks={breakdown.checks} />
-        ) : (
-          <TopRecommendations businessId={businessId} recommendations={recommendations} />
-        )}
+        <TopRecommendations businessId={businessId} recommendations={recommendations} />
         <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} />
       </div>
       <StudioComingSoon businessId={businessId} />

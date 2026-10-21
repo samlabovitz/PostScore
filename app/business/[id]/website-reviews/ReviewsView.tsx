@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { IconArrowLeft, IconMessage2, IconMessageCircle, IconMessages, IconStar } from "@tabler/icons-react";
+import { IconArrowLeft, IconCrown, IconMessage2, IconMessageCircle, IconMessages, IconStar } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -20,8 +20,9 @@ import { GetMoreReviews } from "./GetMoreReviews";
 import { ReviewGuide } from "@/components/reviews/ReviewGuide";
 import { CounterTools } from "@/components/reviews/CounterTools";
 import type { ReviewsPageData } from "@/app/actions/reviews";
-import type { Plan } from "@/lib/plan";
-import { DevPlanSwitch } from "@/components/studio/DevPlanSwitch";
+import { isPremiumPlan, type Plan } from "@/lib/plan";
+import { reviewGoalText } from "@/lib/reviewGoal";
+import type { ReviewGoal } from "@/lib/competitorComparison";
 import { formatCount, t, useLocale } from "@/lib/i18n";
 import { useScrollToHash } from "@/lib/useScrollToHash";
 
@@ -138,15 +139,33 @@ function ComingSoonCard({
   );
 }
 
+/** The review gap vs nearby competitors — free on every plan: the area
+ * average and the real goal (beat the leader / stretch / you lead), from
+ * the shared reviewGoal (same competitors as the rank). */
+export function ReviewGapLine({ goal, group }: { goal: ReviewGoal | null; group: string | null }) {
+  const locale = useLocale();
+  if (!goal || !group) return null;
+  const text = reviewGoalText(goal, group, locale);
+  return (
+    <div data-testid="review-gap" data-trailing={goal.kind !== "lead" || undefined} className="mt-4 flex flex-col gap-1 rounded-lg border border-paper-deep bg-white px-4 py-3">
+      <p className="text-[13px] text-ink-soft">{text.average}</p>
+      <p className="text-[13.5px] font-semibold text-ink">{text.goal}</p>
+      {text.nextUp && <p className="text-[13px] text-ink">{text.nextUp}</p>}
+    </div>
+  );
+}
+
 export function ReviewsView({
   businessId,
   reviews,
   plan = "free",
-  devPlanSwitch = false,
+  nearby = null,
 }: {
   businessId: string;
   reviews: ReviewsPageData;
   plan?: Plan;
+  /** The shared review goal and its comparison group, or null. */
+  nearby?: { goal: ReviewGoal | null; group: string } | null;
   /** Show the dev-only plan switch (the page passes true only in local dev). */
   devPlanSwitch?: boolean;
 }) {
@@ -172,8 +191,6 @@ export function ReviewsView({
         <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.websiteReviews.subtitle")}</p>
       </div>
 
-      {devPlanSwitch && <DevPlanSwitch plan={plan} backPath={`/business/${businessId}/website-reviews`} />}
-
       <div id="get-more-reviews" className="scroll-mt-20">
         <GetMoreReviews
           businessId={businessId}
@@ -187,12 +204,15 @@ export function ReviewsView({
       </div>
 
       <div id="review-guide" className="scroll-mt-20">
-        <ReviewGuide placeId={reviews.placeId} />
+        <ReviewGuide placeId={reviews.placeId} locked={plan === "free"} />
       </div>
 
       <CounterTools plan={plan} />
 
-      <ReviewSocialProof rating={reviews.rating} reviewCount={reviews.reviewCount} />
+      <div>
+        <ReviewSocialProof rating={reviews.rating} reviewCount={reviews.reviewCount} />
+        <ReviewGapLine goal={nearby?.goal ?? null} group={nearby?.group ?? null} />
+      </div>
 
       <div>
         <SectionHeading title={t(locale, "dashboard.websiteReviews.rubricHeading")} className="mb-4" />
@@ -203,6 +223,13 @@ export function ReviewsView({
         <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
           {t(locale, "dashboard.websiteReviews.replyAssistantLabel")}
         </div>
+        {/* Premium/Multi: an honest coming-soon Premium feature. */}
+        {isPremiumPlan(plan) && (
+          <p data-testid="ai-replies-soon" className="mb-2 flex items-start gap-2 rounded-lg border border-[color:color-mix(in_srgb,var(--color-brass)_45%,white)] bg-white px-3 py-2 text-[13px] text-ink">
+            <IconCrown size={15} aria-hidden className="mt-0.5 shrink-0 text-brass" />
+            {t(locale, "dashboard.settings.plans.bullet.premium.replies")}
+          </p>
+        )}
         {reviews.gbpConnected ? (
           <ComingSoonCard
             icon={IconMessageCircle}

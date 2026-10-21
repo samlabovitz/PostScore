@@ -3,7 +3,7 @@ import { DashboardShell } from "@/components/layout/DashboardShell";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { isGbpOAuthConfigured } from "@/lib/googleBusinessProfile";
-import { canConnectGbp } from "@/lib/premium";
+import { canConnectGbp, getPlan } from "@/lib/premium";
 import { ConnectGbpView } from "./ConnectGbpView";
 
 /**
@@ -33,7 +33,7 @@ export default async function ConnectGbpPage({
   const connectedAt = gbp.status === "ok" ? gbp.connectedAt : null;
 
   return (
-    <DashboardShell business={summary.business}>
+    <DashboardShell business={summary.business} plan={getPlan()}>
       <ConnectGbpView
         businessId={params.id}
         businessName={summary.business.name}
