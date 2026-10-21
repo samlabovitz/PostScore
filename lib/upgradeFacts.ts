@@ -6,6 +6,7 @@ import { parseWebsiteAnalysis, type CheckResult, type ScoreWithSuggestions } fro
 import { resolveWebsiteBuilder, WEBSITE_BUILDER_NAMES } from "@/lib/websiteBuilder";
 import { businessWebsiteUrl } from "@/lib/businessWebsite";
 import { MISSING_BY_CHECK, type PromoFacts } from "@/lib/upgradePromos";
+import type { ReviewGoal } from "@/lib/competitorComparison";
 
 const MISSING_CHECKS = Object.entries(MISSING_BY_CHECK);
 
@@ -15,7 +16,7 @@ const known = (c: CheckResult) => c.confidence === "VERIFIED" || c.confidence ==
 export function factsFromScore(
   business: { name: string | null; review_count: number | null; website: string | null; website_analysis_json?: unknown; verified_website_url?: string | null },
   result: ScoreWithSuggestions,
-  benchmark: { rank: number; peerCount: number; competitorReviewAverage: number | null; competitorNoun: string } | null
+  benchmark: { rank: number; peerCount: number; competitorReviewAverage: number | null; competitorNoun: string; reviewGoal?: ReviewGoal | null } | null
 ): PromoFacts {
   const checks = result.breakdown.checks;
   const missing = MISSING_CHECKS.map(([id, issue]) => ({ issue, check: checks.find((c) => c.id === id) }))
@@ -37,6 +38,7 @@ export function factsFromScore(
     reviewCount: business.review_count,
     reviewAvg: benchmark?.competitorReviewAverage != null ? Math.round(benchmark.competitorReviewAverage) : null,
     competitorNoun: benchmark?.competitorNoun ?? null,
+    reviewLeader: benchmark?.reviewGoal && benchmark.reviewGoal.kind !== "lead" ? { name: benchmark.reviewGoal.leader.name, count: benchmark.reviewGoal.leader.reviewCount } : null,
   };
 }
 

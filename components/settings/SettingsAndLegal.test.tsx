@@ -47,7 +47,9 @@ describe("Settings pieces", () => {
       "Step-by-step fixes + weekly plan",
       "Instant website re-checks",
       "Review signs, coupons, referral cards",
-      "Campaign hub (all campaigns + email, text, social)",
+      "Campaign hub (every coupon and referral, with +1)",
+      "Email, text & social campaigns",
+      "Track every coupon and referral in one place",
       "Fixes done for you (Google connect)",
       "Basic",
       "Full, no branding",
@@ -71,7 +73,11 @@ describe("Settings pieces", () => {
     const freeYes = COMPARE_ROWS.filter((r) => r.cells.free.kind === "yes").map((r) => r.key.split(".").pop());
     expect(freeYes).toEqual(["whatsWrong", "rank"]);
     expect(COMPARE_ROWS.find((r) => r.key.endsWith(".doneForYou"))!.cells.premium).toEqual({ kind: "soon" });
-    expect(COMPARE_ROWS.find((r) => r.key.endsWith(".hub"))!.cells.premium).toEqual({ kind: "text", key: "dashboard.settings.plans.value.hubSoon" });
+    // The campaign hub (every coupon and referral, +1) is Grow and up; email, text and social are Premium, coming soon.
+    const hub = COMPARE_ROWS.find((r) => r.key.endsWith(".hub"))!.cells;
+    expect([hub.free, hub.grow, hub.premium, hub.multi]).toEqual([{ kind: "preview" }, { kind: "yes" }, { kind: "yes" }, { kind: "yes" }]);
+    const channels = COMPARE_ROWS.find((r) => r.key.endsWith(".channels"))!.cells;
+    expect([channels.free, channels.grow, channels.premium, channels.multi]).toEqual([{ kind: "no" }, { kind: "no" }, { kind: "soon" }, { kind: "soon" }]);
     expect(COMPARE_ROWS.find((r) => r.key.endsWith(".postStudio"))!.cells.multi).toEqual({ kind: "text", key: "dashboard.settings.plans.value.included" });
   });
 

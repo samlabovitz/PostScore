@@ -2,16 +2,17 @@
 // pushy:
 // - the promo box opens ONLY when the owner clicks something locked (or
 //   "See what's included" on the strip) — never by itself;
-// - the showcase strip sits at the bottom of the main pages, can be
-//   hidden for 14 days, and is never shown on Premium or Multi (except one
-//   PostStudio line on the Website page for Premium);
+// - the promo cards sit at the bottom of the main pages (Free: Grow and
+//   Premium side by side; Grow: Premium), each hidden for 14 days on its
+//   own, never on Premium or Multi (PostStudio has its own card on the
+//   Website page), and never on the Free showrooms;
 // - every number comes from the business's own data, and a line whose
 //   data is missing is left out; anything not built says "Coming soon".
 // Checkout doesn't exist: nothing here charges or pretends to — "See
 // plans" opens Settings → Plan & billing → Compare plans. Pure.
 
 import { t, type Locale, type MessageKey } from "./i18n";
-import { isPremiumPlan, type Plan } from "./plan";
+import type { Plan } from "./plan";
 import { PLAN_COPY } from "./planComparison";
 
 export type ShowcasePage = "overview" | "growth" | "campaigns" | "reviews" | "website" | "competitors" | "pricing" | "reports";
@@ -36,6 +37,8 @@ export interface PromoFacts {
   reviewAvg: number | null;
   /** The plural noun for competitors ("salons"), in the business's language. */
   competitorNoun: string | null;
+  /** The review leader to beat (the shared reviewGoal), when they trail. */
+  reviewLeader: { name: string; count: number } | null;
 }
 
 export type MissingIssue = "hours" | "phone" | "website" | "photos" | "address";
@@ -53,6 +56,7 @@ export const NO_FACTS: PromoFacts = {
   reviewCount: null,
   reviewAvg: null,
   competitorNoun: null,
+  reviewLeader: null,
 };
 
 const U = (s: string) => `dashboard.upgrade.${s}` as MessageKey;
@@ -61,16 +65,16 @@ const U = (s: string) => `dashboard.upgrade.${s}` as MessageKey;
 // The Free "unlock" lines (saved for 5f) — each only when its data is real.
 // ---------------------------------------------------------------------------
 
-export type UnlockLineId = "missing" | "reviews" | "rank" | "website" | "plan" | "recheck" | "designs" | "hub" | "connect" | "postai";
+export type UnlockLineId = "missing" | "reviews" | "rank" | "website" | "plan" | "recheck" | "designs" | "hub" | "connect" | "postai" | "routine" | "tools" | "postStudio" | "referrals" | "reviewSign" | "websiteFixes" | "starterSite" | "priceCheck" | "priceTips" | "weeklyRecap" | "pdfReports" | "aiReplies" | "postaiUnlimited" | "reportsPremium" | "faq" | "campaignGuides" | "tracking";
 
 export function unlockLine(id: UnlockLineId, f: PromoFacts, locale: Locale): string | null {
   switch (id) {
     case "missing":
       return f.missingIssue ? t(locale, U("unlock.missing"), { issue: t(locale, U(`missing.${f.missingIssue}`)) }) : null;
     case "reviews":
-      // Only when there IS a gap to close.
-      if (f.reviewCount === null || f.reviewAvg === null || !f.competitorNoun || f.reviewCount >= f.reviewAvg) return null;
-      return t(locale, U(f.reviewCount === 1 ? "unlock.reviewsOne" : "unlock.reviews"), { n: f.reviewCount, type: f.competitorNoun, avg: f.reviewAvg });
+      // Only when there IS a leader to beat (the shared review goal).
+      if (f.reviewCount === null || !f.reviewLeader || f.reviewCount >= f.reviewLeader.count) return null;
+      return t(locale, U(f.reviewCount === 1 ? "unlock.reviewsGoalOne" : "unlock.reviewsGoal"), { n: f.reviewCount, name: f.reviewLeader.name, count: f.reviewLeader.count });
     case "rank":
       return f.rank !== null && f.total !== null && f.total > 1 && f.rank > 1 ? t(locale, U("unlock.rank"), { rank: f.rank, total: f.total }) : null;
     case "website":
@@ -83,8 +87,35 @@ export function unlockLine(id: UnlockLineId, f: PromoFacts, locale: Locale): str
     case "hub":
     case "connect":
     case "postai":
+    case "routine":
+    case "tools":
+    case "postStudio":
+    case "referrals":
+    case "reviewSign":
+    case "websiteFixes":
+    case "starterSite":
+    case "priceCheck":
+    case "priceTips":
+    case "weeklyRecap":
+    case "pdfReports":
+    case "aiReplies":
+    case "postaiUnlimited":
+    case "reportsPremium":
+    case "faq":
+    case "campaignGuides":
+    case "tracking":
       return t(locale, U(`unlock.${id}`));
   }
+}
+
+/** Growth's "Bigger projects" line, from its real counts: "{n} website
+ * fixes worth about {pts} points…" (website work), else "{n} bigger
+ * projects worth about {pts} points…"; null when there's nothing. */
+export function projectsUnlockLine(count: number, points: number, website: boolean, locale: Locale): string | null {
+  if (count <= 0 || points <= 0) return null;
+  const pts = Math.round(points);
+  if (website) return count === 1 ? t(locale, U("unlock.projectsWebsiteOne"), { points: pts }) : t(locale, U("unlock.projectsWebsite"), { count, points: pts });
+  return count === 1 ? t(locale, U("unlock.projectsOne"), { points: pts }) : t(locale, U("unlock.projects"), { count, points: pts });
 }
 
 /** A basic listing field's check, when it is the kind of thing that can be
@@ -117,21 +148,67 @@ export interface PromoLine {
   text: string;
   soon: boolean;
 }
+
+/** One plan in the promo box: name, price, tagline, its key benefits. */
+export interface PromoPlan {
+  plan: "grow" | "premium";
+  name: string;
+  price: string;
+  tagline: string;
+  bullets: string[];
+  /** Premium is always "Best value". */
+  best: boolean;
+  /** The plan the owner clicked (or the one the feature needs). */
+  highlighted: boolean;
+}
+
+/** What the promo box shows: an optional feature header (a feature-specific
+ * lock leads with its own title and benefit lines), then ALWAYS both plans
+ * side by side — Grow and Premium — with the clicked plan highlighted. A
+ * Premium-only feature lists Premium first, Grow after as the cheaper
+ * option. Every lock in the app shows both plans. */
 export interface PromoContent {
   /** The plan it needs (PostStudio is an add-on shown with Premium). */
   plan: "grow" | "premium";
-  title: string;
-  promise: string | null;
-  lines: PromoLine[];
+  feature: { title: string; lines: PromoLine[] } | null;
+  plans: PromoPlan[];
 }
+
+/** The key benefits shown per plan (4–5 each, from the plan copy). */
+const BOX_BULLETS: Record<"grow" | "premium", string[]> = {
+  grow: ["guides", "plan", "tools", "tracking", "postai"],
+  premium: ["designs", "postai", "fixes", "replies", "channels"],
+};
 
 /** Which plan a feature needs. */
 export function featurePlan(feature: PromoFeature): "grow" | "premium" {
   return feature === "print" || feature === "reviewSign" || feature === "recheck" || feature === "grow" ? "grow" : "premium";
 }
 
-export function promoContent(feature: PromoFeature, f: PromoFacts, locale: Locale): PromoContent {
-  const plan = featurePlan(feature);
+function boxPlans(highlight: "grow" | "premium", locale: Locale): PromoPlan[] {
+  const order: Array<"grow" | "premium"> = highlight === "premium" ? ["premium", "grow"] : ["grow", "premium"];
+  return order.map((plan) => {
+    const copy = PLAN_COPY[plan];
+    return {
+      plan,
+      name: t(locale, `dashboard.settings.plan.name.${plan}` as MessageKey),
+      price: t(locale, copy.price),
+      tagline: t(locale, copy.tagline),
+      bullets: BOX_BULLETS[plan].map((id) => t(locale, `dashboard.settings.plans.bullet.${plan}.${id}` as MessageKey)),
+      best: plan === "premium",
+      highlighted: plan === highlight,
+    };
+  });
+}
+
+/** Premium-only features: their Grow button reads "Not included in Grow".
+ * (PostStudio is an add-on on both plans.) */
+export function premiumOnly(feature: PromoFeature): boolean {
+  return featurePlan(feature) === "premium" && feature !== "postStudio";
+}
+
+export function promoContent(feature: PromoFeature, f: PromoFacts, locale: Locale, highlight?: "grow" | "premium"): PromoContent {
+  const plan = highlight ?? featurePlan(feature);
   const planName = t(locale, `dashboard.settings.plan.name.${plan}` as MessageKey);
   const line = (key: MessageKey, soon = false): PromoLine => ({ text: t(locale, key), soon });
   const fact = (id: UnlockLineId): PromoLine[] => {
@@ -140,9 +217,8 @@ export function promoContent(feature: PromoFeature, f: PromoFacts, locale: Local
   };
   const named = (id: string, lines: PromoLine[]): PromoContent => ({
     plan,
-    title: t(locale, U("box.title"), { feature: t(locale, U(`feature.${id}.name`)), plan: planName }),
-    promise: null,
-    lines,
+    feature: { title: t(locale, U("box.title"), { feature: t(locale, U(`feature.${id}.name`)), plan: planName }), lines },
+    plans: boxPlans(plan, locale),
   });
   switch (feature) {
     case "designs":
@@ -156,32 +232,28 @@ export function promoContent(feature: PromoFeature, f: PromoFacts, locale: Local
     case "googleProfile":
       return named("googleProfile", [line(U("feature.googleProfile.b1"), true), line(U("feature.googleProfile.b2"), true), line(U("feature.googleProfile.b3"), true)]);
     case "campaignHub":
-      return named("campaignHub", [line(U("feature.campaignHub.b1")), line(U("feature.campaignHub.b2"), true)]);
+      // Email, text and social campaigns — Premium, not built yet.
+      return named("campaignHub", [line(U("feature.campaignHub.b1"), true), line(U("feature.campaignHub.b2"), true)]);
     case "postStudio":
-      return { plan, title: t(locale, U("feature.postStudio.name")), promise: null, lines: [line(U("feature.postStudio.b1"), true), line(U("feature.postStudio.b2"))] };
+      return { plan, feature: { title: t(locale, U("feature.postStudio.name")), lines: [line(U("feature.postStudio.b1"), true), line(U("feature.postStudio.b2"))] }, plans: boxPlans("premium", locale) };
     case "premium":
     case "grow": {
-      const copy = PLAN_COPY[plan];
-      // Grow leads with up to two of the business's own real gaps.
+      // A plain "Unlock with Grow/Premium": both plans; Grow leads with up
+      // to two of the business's own real gaps above them.
       const facts = plan === "grow" ? (["missing", "rank", "reviews", "website"] as UnlockLineId[]).flatMap(fact).slice(0, 2) : [];
-      return {
-        plan,
-        title: `${planName} · ${t(locale, copy.price)}`,
-        promise: copy.promise ? t(locale, copy.promise) : null,
-        lines: [...facts, ...copy.bullets.map((k) => line(k))],
-      };
+      return { plan, feature: facts.length > 0 ? { title: t(locale, U("box.plansHeading")), lines: facts } : null, plans: boxPlans(plan, locale) };
     }
   }
 }
 
 /** The box opens only on a click on something locked (or "See what's
  * included"), and closes with ×, "Not now", Esc or a tap outside. */
-export type BoxState = { open: false } | { open: true; feature: PromoFeature };
-export type BoxAction = { type: "lockedClick"; feature: PromoFeature } | { type: "close"; reason: "x" | "notNow" | "esc" | "outside" };
+export type BoxState = { open: false } | { open: true; feature: PromoFeature; highlight?: "grow" | "premium" };
+export type BoxAction = { type: "lockedClick"; feature: PromoFeature; highlight?: "grow" | "premium" } | { type: "close"; reason: "x" | "notNow" | "esc" | "outside" };
 export const BOX_CLOSED: BoxState = { open: false };
 
 export function boxReducer(state: BoxState, action: BoxAction): BoxState {
-  if (action.type === "lockedClick") return { open: true, feature: action.feature };
+  if (action.type === "lockedClick") return action.highlight ? { open: true, feature: action.feature, highlight: action.highlight } : { open: true, feature: action.feature };
   return BOX_CLOSED;
 }
 
@@ -194,19 +266,18 @@ export function promosFor(plan: Plan, feature: PromoFeature): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// The showcase strip at the bottom of the main pages.
+// The promo cards at the bottom of the main pages.
 // ---------------------------------------------------------------------------
 
-export type StripAudience = "grow" | "premium" | "postStudio";
+export type PromoCardKind = "grow" | "premium";
 
-/** Free sees Grow (their next step) on the Overview and Growth, Premium
- * elsewhere; Grow sees Premium; Premium only a PostStudio line on the
- * Website page; Multi nothing. */
-export function stripAudience(plan: Plan, page: ShowcasePage): StripAudience | null {
-  if (plan === "multi") return null;
-  if (isPremiumPlan(plan)) return page === "website" ? "postStudio" : null;
-  if (plan === "free" && (page === "overview" || page === "growth")) return "grow";
-  return "premium";
+/** Free: Grow AND Premium (Premium always shown, "Best value"); Grow: the
+ * Premium card; Premium and Multi: nothing (on the Website page PostStudio
+ * has its own card in path B — one mention). The same on every page. */
+export function promoCardsFor(plan: Plan): PromoCardKind[] {
+  if (plan === "multi" || plan === "premium") return [];
+  if (plan === "grow") return ["premium"];
+  return ["grow", "premium"];
 }
 
 export interface Chip {
@@ -218,18 +289,29 @@ const chip = (id: string, soon = false): Chip => ({ key: U(`chip.${id}`), soon }
 const PREMIUM_CHIPS: Record<ShowcasePage, Chip[]> = {
   overview: [chip("doneForYou", true), chip("aiReplies", true), chip("postai"), chip("designs")],
   growth: [chip("doneForYou", true), chip("searchInsights", true), chip("postai"), chip("aiReplies", true)],
-  campaigns: [chip("campaignHub"), chip("campaignChannels", true), chip("designs"), chip("postai")],
+  campaigns: [chip("campaignChannels", true), chip("designs"), chip("postai"), chip("doneForYou", true)],
   reviews: [chip("aiReplies", true), chip("designs"), chip("postai"), chip("doneForYou", true)],
   website: [chip("postStudio", true), chip("doneForYou", true), chip("postai"), chip("searchInsights", true)],
   competitors: [chip("searchInsights", true), chip("doneForYou", true), chip("postai"), chip("aiReplies", true)],
-  pricing: [chip("postai"), chip("searchInsights", true), chip("doneForYou", true), chip("campaignHub")],
+  pricing: [chip("postai"), chip("searchInsights", true), chip("doneForYou", true), chip("campaignChannels", true)],
   reports: [chip("pdfReports"), chip("searchInsights", true), chip("postai"), chip("doneForYou", true)],
 };
-const GROW_CHIPS: Chip[] = [chip("fixGuides"), chip("weeklyPlan"), chip("recheck"), chip("starterSite"), chip("printTools")];
+const GROW_CHIPS: Record<ShowcasePage, Chip[]> = {
+  overview: [chip("fixGuides"), chip("weeklyPlan"), chip("recheck"), chip("starterSite")],
+  growth: [chip("weeklyPlan"), chip("fixGuides"), chip("recheck"), chip("printTools")],
+  campaigns: [chip("couponsBasic"), chip("trackAll"), chip("printTools"), chip("weeklyPlan")],
+  reviews: [chip("reviewSign"), chip("reviewPlan"), chip("weeklyPlan"), chip("fixGuides")],
+  website: [chip("starterSite"), chip("recheck"), chip("fixGuides"), chip("weeklyPlan")],
+  competitors: [chip("rankPlan"), chip("fixGuides"), chip("weeklyPlan"), chip("reviewPlan")],
+  pricing: [chip("priceCheck"), chip("weeklyPlan"), chip("fixGuides"), chip("couponsBasic")],
+  reports: [chip("reportsWeekly"), chip("weeklyPlan"), chip("fixGuides"), chip("recheck")],
+};
 
-export function stripChips(audience: StripAudience, page: ShowcasePage): Chip[] {
-  if (audience === "grow") return GROW_CHIPS;
-  if (audience === "premium") return PREMIUM_CHIPS[page];
+/** A card's chips for this page (Grow or Premium; PostStudio has none). */
+export function cardChips(kind: PromoCardKind, page: ShowcasePage, plan: Plan | null = null): Chip[] {
+  if (kind === "grow") return GROW_CHIPS[page];
+  // Free's Website page already has its one PostStudio card — no chip too.
+  if (kind === "premium") return plan === "free" && page === "website" ? PREMIUM_CHIPS[page].filter((c) => !c.key.endsWith(".postStudio")) : PREMIUM_CHIPS[page];
   return [];
 }
 
@@ -247,12 +329,15 @@ export function visibleChips(chips: Chip[], step: number, count = 3): Chip[] {
 export const PROMO_HIDE_DAYS = 14;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export function stripPromoKey(page: ShowcasePage): string {
-  return `strip.${page}`;
+const CARD_KINDS: PromoCardKind[] = ["grow", "premium"];
+
+/** Each card is hidden on its own, per page: "card.grow.overview". */
+export function cardPromoKey(kind: PromoCardKind, page: ShowcasePage): string {
+  return `card.${kind}.${page}`;
 }
 
 export function isValidPromoKey(key: string): boolean {
-  return SHOWCASE_PAGES.some((p) => stripPromoKey(p) === key);
+  return SHOWCASE_PAGES.some((page) => CARD_KINDS.some((kind) => cardPromoKey(kind, page) === key));
 }
 
 export function hiddenUntilFrom(now: Date): string {

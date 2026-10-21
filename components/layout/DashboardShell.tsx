@@ -13,12 +13,14 @@ import { LocaleProvider, normalizeLocale, t } from "@/lib/i18n";
 import { LegalLinks } from "@/components/legal/LegalPage";
 import { SinceLastVisit } from "@/components/visits/SinceLastVisit";
 import { UpgradeProvider } from "@/components/upgrade/UpgradeContext";
-import { ShowcaseStrip } from "@/components/upgrade/ShowcaseStrip";
+import { PromoCards } from "@/components/upgrade/PromoCards";
 import type { UpgradeContextData } from "@/lib/upgradePromos.server";
+import type { Plan } from "@/lib/plan";
 
 export function DashboardShell({
   business = null,
   upgrade = null,
+  plan = null,
   children,
 }: {
   /** The business the current page is scoped to, if any — threaded down
@@ -28,8 +30,11 @@ export function DashboardShell({
    * read the business's own real locale via useLocale(). */
   business?: BusinessSummary | null;
   /** The page's upgrade promos (lib/upgradePromos.server.ts): the promo
-   * box's real data, and the showcase strip on the main pages. */
+   * box's real data, and the promo cards on the main pages. */
   upgrade?: UpgradeContextData | null;
+  /** The account's plan, for the sidebar's locks when `upgrade` isn't
+   * passed (e.g. Settings). */
+  plan?: Plan | null;
   children: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
@@ -111,6 +116,7 @@ export function DashboardShell({
           <Sidebar
             business={business}
             userEmail={userEmail}
+          plan={upgrade?.plan ?? plan}
             className={cn(
               "fixed inset-y-0 left-0 z-50 -translate-x-full transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] nav:translate-x-0",
               navOpen && "translate-x-0"
@@ -121,7 +127,7 @@ export function DashboardShell({
 
           <main className="min-w-0 p-4 sm:p-8 nav:ml-[250px] nav:p-10">
             {children}
-            {upgrade?.strip && <ShowcaseStrip />}
+            {upgrade && upgrade.cards.length > 0 && <PromoCards />}
             <footer className="mt-12 border-t border-paper-line pt-4">
               <LegalLinks locale={locale === "es" ? "es" : "en"} />
             </footer>

@@ -21,6 +21,17 @@ const sizeClasses: Record<ButtonSize, string> = {
   sm: "text-[13px] px-[15px] py-[7px]",
 };
 
+/** The same classes as <Button> — for a control that must look like one
+ * (e.g. a locked action opening the promo box). */
+export function buttonClasses(variant: ButtonVariant = "default", size: ButtonSize = "default", className?: string): string {
+  return cn(
+    "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors disabled:pointer-events-none disabled:opacity-45",
+    variantClasses[variant],
+    sizeClasses[size],
+    className
+  );
+}
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   function Button(
     { className, variant = "default", size = "default", ...props },
@@ -29,12 +40,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
-        className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors disabled:pointer-events-none disabled:opacity-45",
-          variantClasses[variant],
-          sizeClasses[size],
-          className
-        )}
+        className={buttonClasses(variant, size, className)}
         {...props}
       />
     );

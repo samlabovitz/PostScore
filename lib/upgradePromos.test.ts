@@ -14,9 +14,9 @@ import {
   promoStorageKey,
   promosFor,
   readLocalHidden,
-  stripAudience,
-  stripChips,
-  stripPromoKey,
+  promoCardsFor,
+  cardChips,
+  cardPromoKey,
   unlockLine,
   visibleChips,
   writeLocalHidden,
@@ -39,38 +39,38 @@ const FACTS: PromoFacts = {
   reviewCount: 10,
   reviewAvg: 84,
   competitorNoun: "salons",
+  reviewLeader: { name: "Leader Salon", count: 57 },
 };
 
-describe("who sees the showcase strip", () => {
-  test("Free: Grow on Overview and Growth, Premium elsewhere; Grow: Premium everywhere", () => {
-    expect(stripAudience("free", "overview")).toBe("grow");
-    expect(stripAudience("free", "growth")).toBe("grow");
-    for (const page of SHOWCASE_PAGES.filter((p) => p !== "overview" && p !== "growth")) expect(stripAudience("free", page)).toBe("premium");
-    for (const page of SHOWCASE_PAGES) expect(stripAudience("grow", page)).toBe("premium");
+describe("who sees which promo card", () => {
+  test("Free: Grow and Premium; Grow: Premium; Premium and Multi: none (PostStudio has its own Website card)", () => {
+    expect(promoCardsFor("free")).toEqual(["grow", "premium"]);
+    expect(promoCardsFor("grow")).toEqual(["premium"]);
+    expect(promoCardsFor("premium")).toEqual([]);
+    expect(promoCardsFor("multi")).toEqual([]);
   });
 
-  test("Premium: only the PostStudio line on the Website page; Multi: nothing", () => {
-    for (const page of SHOWCASE_PAGES) {
-      expect(stripAudience("premium", page)).toBe(page === "website" ? "postStudio" : null);
-      expect(stripAudience("multi", page)).toBeNull();
-    }
+  test("Free's Website page has no PostStudio chip (its own PostStudio card is the one mention); Grow keeps it, as before", () => {
+    expect(cardChips("premium", "website", "free").some((c) => c.key.endsWith(".postStudio"))).toBe(false);
+    expect(cardChips("premium", "website", "grow")[0].key).toBe("dashboard.upgrade.chip.postStudio");
   });
 
-  test("each page's chips are relevant to it, and 3 show at a time, rotating one by one", () => {
-    expect(stripChips("premium", "reviews")[0].key).toBe("dashboard.upgrade.chip.aiReplies");
-    expect(stripChips("premium", "campaigns")[0].key).toBe("dashboard.upgrade.chip.campaignHub");
-    expect(stripChips("premium", "website")[0].key).toBe("dashboard.upgrade.chip.postStudio");
-    const chips = stripChips("premium", "overview");
+  test("each card's chips are relevant to the page; 3 show at a time, rotating one by one", () => {
+    expect(cardChips("premium", "reviews")[0].key).toBe("dashboard.upgrade.chip.aiReplies");
+    expect(cardChips("premium", "campaigns")[0].key).toBe("dashboard.upgrade.chip.campaignChannels");
+    expect(cardChips("grow", "campaigns").map((c) => c.key)).toContain("dashboard.upgrade.chip.trackAll");
+    expect(cardChips("grow", "reviews")[0].key).toBe("dashboard.upgrade.chip.reviewSign");
+    expect(cardChips("grow", "pricing")[0].key).toBe("dashboard.upgrade.chip.priceCheck");
+    const chips = cardChips("premium", "overview");
     expect(visibleChips(chips, 0)).toEqual(chips.slice(0, 3));
     expect(visibleChips(chips, 1)).toEqual(chips.slice(1, 4));
-    expect(visibleChips(chips, chips.length)).toEqual(chips.slice(0, 3));
   });
 
-  test("anything not built is marked soon (AI replies, done-for-you fixes, search insights, email/text/social, PostStudio)", () => {
-    const all = SHOWCASE_PAGES.flatMap((p) => stripChips("premium", p));
+  test("anything not built is marked soon", () => {
+    const all = SHOWCASE_PAGES.flatMap((p) => cardChips("premium", p));
     for (const id of ["aiReplies", "doneForYou", "searchInsights", "campaignChannels", "postStudio"])
       expect(all.filter((c) => c.key.endsWith(`.${id}`)).every((c) => c.soon), id).toBe(true);
-    for (const id of ["postai", "designs", "campaignHub", "pdfReports"]) expect(all.filter((c) => c.key.endsWith(`.${id}`)).every((c) => !c.soon), id).toBe(true);
+    expect(SHOWCASE_PAGES.flatMap((p) => cardChips("grow", p)).every((c) => !c.soon)).toBe(true);
   });
 });
 
@@ -94,64 +94,69 @@ describe("the promo box", () => {
 
   test("title names the feature and the plan; not-built lines say Coming soon", () => {
     const g = promoContent("googleProfile", FACTS, "en");
-    expect(g.title).toBe("Google Profile · Premium");
-    expect(g.lines.every((l) => l.soon)).toBe(true);
+    expect(g.feature?.title).toBe("Google Profile · Premium");
+    expect(g.feature?.lines.every((l) => l.soon)).toBe(true);
     const hub = promoContent("campaignHub", FACTS, "en");
-    expect(hub.lines.map((l) => [l.text, l.soon])).toEqual([
-      ["Every coupon and referral card tracked in one place", false],
-      ["Email, text and social campaigns", true],
+    // Only email, text and social campaigns are Premium now — and not built yet.
+    expect(hub.feature?.title).toBe("Email, text & social campaigns · Premium");
+    expect(hub.feature?.lines.map((l) => [l.text, l.soon])).toEqual([
+      ["Send your offers to customers by email and text", true],
+      ["Post them to your social pages from PostScore", true],
     ]);
-    expect(promoContent("designs", FACTS, "en").title).toBe("Every design tool · Premium");
-    expect(promoContent("reviewSign", FACTS, "es").title).toBe("Letrero de reseñas · Grow");
+    expect(promoContent("designs", FACTS, "en").feature?.title).toBe("Every design tool · Premium");
+    expect(promoContent("reviewSign", FACTS, "es").feature?.title).toBe("Letrero de reseñas · Grow");
+  });
+
+  test("ALWAYS both plans side by side: Premium marked Best value, the clicked plan highlighted", () => {
+    for (const f of ["designs", "print", "reviewSign", "googleProfile", "campaignHub", "postStudio", "recheck", "premium", "grow"] as PromoFeature[]) {
+      const c = promoContent(f, FACTS, "en");
+      expect(c.plans.map((p) => p.plan).sort(), f).toEqual(["grow", "premium"]);
+      expect(c.plans.find((p) => p.plan === "premium")?.best, f).toBe(true);
+      expect(c.plans.filter((p) => p.highlighted), f).toHaveLength(1);
+    }
+    // Premium-only features lead with Premium; a Grow click highlights Grow.
+    expect(promoContent("campaignHub", FACTS, "en").plans[0].plan).toBe("premium");
+    expect(promoContent("print", FACTS, "en").plans[0].plan).toBe("grow");
+    expect(promoContent("campaignHub", FACTS, "en", "grow").plans.find((p) => p.highlighted)?.plan).toBe("grow");
   });
 
   test("uses the business's real numbers, and leaves a line out when its data is missing", () => {
     const sign = promoContent("reviewSign", FACTS, "en");
-    expect(sign.lines[0].text).toBe("You have 10 reviews. Nearby salons average 84. Grow gives you a plan to close the gap.");
+    expect(sign.feature?.lines[0].text).toBe("You have 10 reviews. Your goal: beat Leader Salon (57). Grow gives you a plan to get there.");
     const noData = promoContent("reviewSign", NO_FACTS, "en");
-    expect(noData.lines.map((l) => l.text)).toEqual(["Print a sign with your own review QR code", "Put it by your counter so every customer can leave a review"]);
+    expect(noData.feature?.lines.map((l) => l.text)).toEqual(["Print a sign with your own review QR code", "Put it by your counter so every customer can leave a review"]);
     const grow = promoContent("grow", FACTS, "en");
-    expect(grow.title).toBe("Grow · $25/mo");
-    expect(grow.promise).toBe("We show you exactly how to fix every problem.");
-    expect(grow.lines.slice(0, 2).map((l) => l.text)).toEqual([
+    expect(grow.feature?.lines.map((l) => l.text)).toEqual([
       "Your listing is missing your business hours. Grow shows you exactly how to fix it, step by step.",
       "You're #6 of 8 nearby. See what's holding you back with Grow.",
     ]);
-    // Without data: only the plan's own lines — no numbers at all.
-    const plain = promoContent("grow", NO_FACTS, "en");
-    expect(plain.lines.map((l) => l.text)).toEqual([
-      "Step-by-step fix guides for every issue",
-      "A weekly action plan that tells you what to do next",
-      "Re-check your website as soon as you fix something",
-      "A starter website, plus basic review signs, coupons and referral cards",
-      "PostAI for your questions (monthly limit)",
-    ]);
-    const premium = promoContent("premium", FACTS, "en");
-    expect(premium.title).toBe("Premium · $50/mo");
-    expect(premium.lines).toHaveLength(6);
+    // Without data: no feature lines at all — just the two plans.
+    expect(promoContent("grow", NO_FACTS, "en").feature).toBeNull();
   });
 });
 
 describe("the Free unlock lines (real data only)", () => {
   test("each line with real data", () => {
     expect(unlockLine("missing", FACTS, "en")).toBe("Your listing is missing your business hours. Grow shows you exactly how to fix it, step by step.");
-    expect(unlockLine("reviews", FACTS, "en")).toBe("You have 10 reviews. Nearby salons average 84. Grow gives you a plan to close the gap.");
+    expect(unlockLine("reviews", FACTS, "en")).toBe("You have 10 reviews. Your goal: beat Leader Salon (57). Grow gives you a plan to get there.");
     expect(unlockLine("rank", FACTS, "en")).toBe("You're #6 of 8 nearby. See what's holding you back with Grow.");
     expect(unlockLine("website", FACTS, "en")).toBe("Your website failed 4 checks. Grow shows how to fix each one in Wix.");
     expect(unlockLine("plan", FACTS, "en")).toBe("Your plan for this week is ready. Unlock it with Grow.");
     expect(unlockLine("recheck", FACTS, "en")).toBe("Fixed something? With Grow, re-check right away instead of waiting a month.");
     expect(unlockLine("designs", FACTS, "en")).toBe("Design and print your review sign, coupons and referral cards with Grow.");
-    expect(unlockLine("hub", FACTS, "en")).toBe("Track every campaign in one place, plus email, text and social campaigns — Premium.");
+    expect(unlockLine("hub", FACTS, "en")).toBe("Email, text and social campaigns — Premium, coming soon.");
+    expect(unlockLine("tracking", FACTS, "en")).toBe("Track every coupon and referral card in one place, with +1 for each one used — with Grow.");
     expect(unlockLine("connect", FACTS, "en")).toBe("Connect Google and let PostScore fix your listing for you. Premium, coming soon.");
   });
 
   test("hidden when the data is missing or there's no gap; singular for 1", () => {
     for (const id of ["missing", "reviews", "rank", "website", "plan"] as const) expect(unlockLine(id, NO_FACTS, "en"), id).toBeNull();
     expect(unlockLine("reviews", { ...FACTS, reviewCount: 90 }, "en")).toBeNull();
+    expect(unlockLine("reviews", { ...FACTS, reviewLeader: null }, "en")).toBeNull();
     expect(unlockLine("rank", { ...FACTS, rank: 1 }, "en")).toBeNull();
     expect(unlockLine("website", { ...FACTS, builderName: null }, "en")).toBeNull();
     expect(unlockLine("website", { ...FACTS, websiteFailed: 1 }, "en")).toBe("Your website failed 1 check. Grow shows how to fix it in Wix.");
-    expect(unlockLine("reviews", { ...FACTS, reviewCount: 1 }, "en")).toBe("You have 1 review. Nearby salons average 84. Grow gives you a plan to close the gap.");
+    expect(unlockLine("reviews", { ...FACTS, reviewCount: 1 }, "en")).toBe("You have 1 review. Your goal: beat Leader Salon (57). Grow gives you a plan to get there.");
   });
 
   test("Spanish (usted)", () => {
@@ -182,7 +187,13 @@ describe("facts come from the real scan", () => {
     const facts = factsFromScore(
       { name: "Test Salon", review_count: 10, website: "https://testsalon.wixsite.com/salon", website_analysis_json: null },
       r,
-      { rank: 6, peerCount: 8, competitorReviewAverage: 83.6, competitorNoun: "salons" }
+      {
+        rank: 6,
+        peerCount: 8,
+        competitorReviewAverage: 83.6,
+        competitorNoun: "salons",
+        reviewGoal: { kind: "beat", average: 84, leader: { name: "Leader Salon", reviewCount: 57, rating: null }, ownCount: 10, gap: 47, nextUp: null, runnerUp: null },
+      }
     );
     expect(facts).toEqual({ ...FACTS, issueCount: 3, websiteFailed: 2 });
   });
@@ -197,7 +208,7 @@ describe("facts come from the real scan", () => {
   });
 });
 
-describe("hiding the strip for 14 days", () => {
+describe("hiding a card for 14 days", () => {
   const store = new Map<string, string>();
   afterEach(() => {
     store.clear();
@@ -216,11 +227,11 @@ describe("hiding the strip for 14 days", () => {
 
   test("per business and page on this device; storage errors never break the page", () => {
     (globalThis as { window?: unknown }).window = { localStorage: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) } };
-    writeLocalHidden("b1", stripPromoKey("reviews"), "2026-11-03T12:00:00.000Z");
-    expect(readLocalHidden("b1", "strip.reviews")).toBe("2026-11-03T12:00:00.000Z");
-    expect(readLocalHidden("b2", "strip.reviews")).toBeNull();
-    expect(readLocalHidden("b1", "strip.website")).toBeNull();
-    expect(promoStorageKey("b1", "strip.reviews")).toBe("postscore.promoHidden.b1.strip.reviews");
+    writeLocalHidden("b1", cardPromoKey("premium", "reviews"), "2026-11-03T12:00:00.000Z");
+    expect(readLocalHidden("b1", "card.premium.reviews")).toBe("2026-11-03T12:00:00.000Z");
+    expect(readLocalHidden("b2", "card.premium.reviews")).toBeNull();
+    expect(readLocalHidden("b1", "card.grow.reviews")).toBeNull();
+    expect(promoStorageKey("b1", "card.premium.reviews")).toBe("postscore.promoHidden.b1.card.premium.reviews");
     (globalThis as { window?: unknown }).window = {
       localStorage: {
         getItem: () => {
@@ -231,13 +242,14 @@ describe("hiding the strip for 14 days", () => {
         },
       },
     };
-    expect(readLocalHidden("b1", "strip.reviews")).toBeNull();
-    expect(() => writeLocalHidden("b1", "strip.reviews", "x")).not.toThrow();
+    expect(readLocalHidden("b1", "card.premium.reviews")).toBeNull();
+    expect(() => writeLocalHidden("b1", "card.premium.reviews", "x")).not.toThrow();
   });
 
-  test("only the strip keys can be saved", () => {
-    for (const p of SHOWCASE_PAGES) expect(isValidPromoKey(stripPromoKey(p))).toBe(true);
-    expect(isValidPromoKey("strip.settings")).toBe(false);
+  test("only the card keys can be saved", () => {
+    for (const p of SHOWCASE_PAGES) for (const k of ["grow", "premium"] as const) expect(isValidPromoKey(cardPromoKey(k, p))).toBe(true);
+    expect(isValidPromoKey("card.grow.settings")).toBe(false);
+    expect(isValidPromoKey("strip.reviews")).toBe(false);
     expect(isValidPromoKey("anything")).toBe(false);
   });
 });

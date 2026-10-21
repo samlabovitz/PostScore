@@ -9,11 +9,13 @@ import { scoreBusinessById } from "@/app/actions/scoring";
 import { getLocalBenchmark } from "@/app/actions/competitors";
 import { factsFromScore } from "@/lib/upgradeFacts";
 import { isPremiumPlan, type Plan } from "@/lib/plan";
-import { NO_FACTS, stripAudience, stripPromoKey, type PromoFacts, type ShowcasePage, type StripAudience } from "@/lib/upgradePromos";
+import { cardPromoKey, NO_FACTS, promoCardsFor, type PromoCardKind, type PromoFacts, type ShowcasePage } from "@/lib/upgradePromos";
 
-export interface UpgradeStrip {
+export interface UpgradeCard {
+  kind: PromoCardKind;
   page: ShowcasePage;
-  audience: StripAudience;
+  /** The hide key (lib/upgradePromos.ts cardPromoKey). */
+  key: string;
   /** Hidden until this time (database copy); null = showing. */
   hiddenUntil: string | null;
 }
@@ -22,7 +24,8 @@ export interface UpgradeContextData {
   businessId: string;
   plan: Plan;
   facts: PromoFacts;
-  strip: UpgradeStrip | null;
+  /** The promo cards at the bottom of this page (empty off the main pages). */
+  cards: UpgradeCard[];
 }
 
 async function loadFacts(businessId: string): Promise<PromoFacts> {
@@ -35,24 +38,25 @@ async function loadFacts(businessId: string): Promise<PromoFacts> {
   }
 }
 
-async function loadHiddenUntil(businessId: string, key: string): Promise<string | null> {
+/** Hidden-until for each key (one query); a missing table (SQL not run)
+ * or any error reads as "not hidden". */
+async function loadHiddenUntil(businessId: string, keys: string[]): Promise<Record<string, string>> {
+  if (keys.length === 0) return {};
   try {
-    const { data, error } = await createClient().from("promo_dismissals").select("hidden_until").eq("business_id", businessId).eq("promo_key", key).maybeSingle();
-    // A missing table (SQL not run yet) reads as "not hidden".
-    return error || !data ? null : (data.hidden_until as string);
+    const { data, error } = await createClient().from("promo_dismissals").select("promo_key, hidden_until").eq("business_id", businessId).in("promo_key", keys);
+    if (error || !data) return {};
+    return Object.fromEntries(data.map((r) => [r.promo_key as string, r.hidden_until as string]));
   } catch {
-    return null;
+    return {};
   }
 }
 
 /** Everything a page's promos need. `page` = a main page with the strip. */
 export async function loadUpgradeContext(businessId: string, page: ShowcasePage | null = null, plan: Plan = getPlan()): Promise<UpgradeContextData> {
-  const audience = page ? stripAudience(plan, page) : null;
-  if (isPremiumPlan(plan)) {
-    // No upgrade promos; Premium may see the one PostStudio line.
-    const strip = page && audience ? { page, audience, hiddenUntil: await loadHiddenUntil(businessId, stripPromoKey(page)) } : null;
-    return { businessId, plan, facts: NO_FACTS, strip };
-  }
-  const [facts, hiddenUntil] = await Promise.all([loadFacts(businessId), page && audience ? loadHiddenUntil(businessId, stripPromoKey(page)) : Promise.resolve(null)]);
-  return { businessId, plan, facts, strip: page && audience ? { page, audience, hiddenUntil } : null };
+  const kinds = page ? promoCardsFor(plan) : [];
+  const keys = page ? kinds.map((kind) => cardPromoKey(kind, page)) : [];
+  // Premium and Multi load no facts — they see no upgrade promos.
+  const [facts, hidden] = await Promise.all([isPremiumPlan(plan) ? Promise.resolve(NO_FACTS) : loadFacts(businessId), loadHiddenUntil(businessId, keys)]);
+  const cards = page ? kinds.map((kind) => ({ kind, page, key: cardPromoKey(kind, page), hiddenUntil: hidden[cardPromoKey(kind, page)] ?? null })) : [];
+  return { businessId, plan, facts, cards };
 }

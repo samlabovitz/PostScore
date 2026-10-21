@@ -38,9 +38,11 @@ export const COMPARE_ROWS: CompareRow[] = [
   row("fixes", preview, yes, yes),
   row("recheck", no, yes, yes),
   row("designs", preview, text("basic"), text("fullNoBranding")),
-  // The hub itself (every running campaign + its tally) exists; email,
-  // text and social don't yet — the cell says so.
-  row("hub", preview, no, text("hubSoon")),
+  // "All campaigns" — every running coupon and referral card with its +1
+  // tally — is Grow and up. Email, text and social campaigns are Premium
+  // and not built yet.
+  row("hub", preview, yes, yes),
+  row("channels", no, no, soon),
   row("website", preview, text("starterSite"), text("starterDiscount"), text("starterIncluded")),
   row("postai", no, text("monthlyLimit"), text("unlimited")),
   row("doneForYou", no, no, soon),
@@ -63,12 +65,12 @@ const bullets = (plan: Plan, ids: string[]) => ids.map((id) => k(`bullet.${plan}
 /** Each plan's card: price, tagline, promise and what it includes. */
 export const PLAN_COPY: Record<Plan, PlanCopy> = {
   free: { price: k("price.free"), tagline: k("tagline.free"), promise: k("promise.free"), bullets: bullets("free", ["score", "problems", "rank", "reviewGap"]) },
-  grow: { price: k("price.grow"), tagline: k("tagline.grow"), promise: k("promise.grow"), bullets: bullets("grow", ["guides", "plan", "recheck", "tools", "postai"]) },
+  grow: { price: k("price.grow"), tagline: k("tagline.grow"), promise: k("promise.grow"), bullets: bullets("grow", ["guides", "plan", "recheck", "tools", "tracking", "postai"]) },
   premium: {
     price: k("price.premium"),
     tagline: k("tagline.premium"),
     promise: k("promise.premium"),
-    bullets: bullets("premium", ["fixes", "replies", "insights", "hub", "designs", "postai"]),
+    bullets: bullets("premium", ["fixes", "replies", "insights", "channels", "designs", "postai"]),
   },
   multi: { price: k("price.multi"), tagline: k("tagline.multi"), promise: null, bullets: bullets("multi", ["everything", "studio", "dashboard"]) },
 };
