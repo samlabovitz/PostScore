@@ -30,7 +30,7 @@ export async function recheckWebsite(businessId: string): Promise<WebsiteRecheck
   if (!user) return { status: "unauthenticated" };
   // Free is an audit: a Re-check (PageSpeed and site checks) never runs
   // for a Free account — Growth and the Website page show it locked.
-  if (getPlan() === "free") {
+  if ((await getPlan()) === "free") {
     const { data } = await supabase.from("businesses").select("language").eq("id", businessId).maybeSingle();
     return { status: "error", message: t(normalizeLocale(data?.language), "dashboard.free.recheckLocked") };
   }

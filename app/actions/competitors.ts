@@ -385,7 +385,7 @@ export async function refreshCompetitors(businessId: string): Promise<SaveCompet
     return { status: "unauthenticated" };
   }
   // Free keeps its saved list and rank; refreshing (Places searches) is Grow.
-  if (getPlan() === "free") {
+  if ((await getPlan()) === "free") {
     const { data: row } = await supabase.from("businesses").select("language").eq("id", businessId).maybeSingle();
     return { status: "error", message: t(normalizeLocale(row?.language), "dashboard.free.competitorsLocked") };
   }

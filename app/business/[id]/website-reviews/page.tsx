@@ -64,7 +64,7 @@ export default async function WebsiteReviewsPage({ params }: { params: { id: str
       <ReviewsView
         businessId={params.id}
         reviews={data}
-        plan={getPlan()}
+        plan={await getPlan()}
         nearby={benchmark.status === "ok" ? { goal: benchmark.benchmark.reviewGoal, group: benchmark.benchmark.reviewGroup } : null}
         devPlanSwitch={process.env.NODE_ENV === "development"}
       />

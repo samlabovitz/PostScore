@@ -136,7 +136,7 @@ describe("no paid calls on Free, anywhere", () => {
     const guard = (file: string, fn: string, before: string) => {
       const src = readFileSync(file, "utf8");
       const body = src.slice(src.indexOf(`export async function ${fn}(`));
-      const g = body.indexOf('getPlan() === "free"');
+      const g = body.indexOf('(await getPlan()) === "free"');
       expect(g, `${fn} guard`).toBeGreaterThan(0);
       expect(g, `${fn} before ${before}`).toBeLessThan(body.indexOf(before));
     };

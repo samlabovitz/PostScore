@@ -31,7 +31,7 @@ export default async function PostStudioPage({ params, searchParams = {} }: { pa
   const tr = (key: MessageKey, vars?: Record<string, string | number>) => t(locale, key, vars);
   const name = data.businessName ?? tr("dashboard.common.businessNameFallback");
   const profile = resolveBizProfile(data.category, data.primaryType, data.businessTypeOverride, locale, data.categories, data.businessName);
-  const plan = getPlan();
+  const plan = await getPlan();
   const included = hasPostStudio(plan);
   const checklist = siteChecklist({
     businessName: data.businessName,

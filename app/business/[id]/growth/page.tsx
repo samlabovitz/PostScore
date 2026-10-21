@@ -21,7 +21,7 @@ import { buildWeeklyChecklistItems, weekStartFor } from "@/lib/weeklyChecklist";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale } from "@/lib/i18n";
 import { GrowthView } from "./GrowthView";
-import { canConnectGbp, getPlan } from "@/lib/premium";
+import { canConnectGbp, getPlan, hasPremium } from "@/lib/premium";
 import { SEARCH_DEMAND_EXAMPLE } from "@/lib/gbp/searchDemand";
 import { campaignsHref } from "@/lib/campaignsTabs";
 
@@ -68,7 +68,7 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
   const lastScanPromise = getLastScanAt(params.id);
   const gbpPromise = getGbpConnectionStatus(params.id);
   // The Google Profile tab is Premium (Free/Grow see a preview).
-  const plan = getPlan();
+  const plan = await getPlan();
 
 
   if (scored.status === "unauthenticated") {
@@ -132,7 +132,7 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
     connected: gbpConnected,
     // Same rule as search demand everywhere: example data under an
     // "Example" watermark until the connection is live.
-    searchDemand: canConnectGbp() && gbpConnected ? ({ kind: "awaiting" } as const) : ({ kind: "preview", data: SEARCH_DEMAND_EXAMPLE } as const),
+    searchDemand: canConnectGbp(hasPremium(await getPlan())) && gbpConnected ? ({ kind: "awaiting" } as const) : ({ kind: "preview", data: SEARCH_DEMAND_EXAMPLE } as const),
   };
 
   const actionPlan =

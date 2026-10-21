@@ -340,19 +340,12 @@ describe("the starter site builder layout (all plans)", () => {
 });
 
 describe("dev plan pill", () => {
-  test("renders in development: every plan, the current one highlighted", () => {
-    vi.stubEnv("NODE_ENV", "development");
+  test("renders every plan, the current one highlighted (the layout decides when — lib/premium.ts canSwitchPlan)", () => {
     const html = renderToStaticMarkup(<DevPlanPill plan="grow" />);
     expect(html).toContain('data-testid="dev-plan-pill"');
     expect(html).toMatch(/aria-pressed="true"[^>]*>Grow</);
     for (const p of ["Free", "Premium", "Multi"]) expect(html).toContain(p);
-  });
-  test("absent in production — and the root layout and /api/dev/plan only act in development", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    expect(renderToStaticMarkup(<DevPlanPill plan="grow" />)).toBe("");
-    expect(readFileSync("app/layout.tsx", "utf8")).toContain('process.env.NODE_ENV === "development" && <DevPlanPill');
-    const { GET } = await import("@/app/api/dev/plan/route");
-    const res = GET({ nextUrl: new URL("http://localhost/api/dev/plan?plan=premium"), url: "http://localhost/api/dev/plan?plan=premium" } as never);
-    expect(res.status).toBe(404);
+    expect(readFileSync("app/layout.tsx", "utf8")).toContain("{(await canSwitchPlan()) && <DevPlanPill plan={await getPlan()} />}");
   });
 });
+

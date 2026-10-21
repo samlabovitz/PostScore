@@ -19,7 +19,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   if (data.status === "not_found") return NextResponse.json({ error: "not_found" }, { status: 404 });
   const kind = body?.kind === "referral" ? "referral" : "coupon";
   const locale = data.locale === "es" ? "es" : "en";
-  const common = { plan: getPlan(), kind, requested: body?.design, business: data.business, locale } as const;
+  const common = { plan: await getPlan(), kind, requested: body?.design, business: data.business, locale } as const;
 
   if (body?.format === "design") {
     const resolved = await resolveCard(common);

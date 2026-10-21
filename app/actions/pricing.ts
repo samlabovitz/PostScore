@@ -273,7 +273,7 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
     return { status: "unauthenticated" };
   }
   // Free: the AI price check (Anthropic + Places) never runs.
-  if (getPlan() === "free") {
+  if ((await getPlan()) === "free") {
     const { data: row } = await supabase.from("businesses").select("language").eq("id", businessId).maybeSingle();
     return { status: "error", message: t(normalizeLocale(row?.language), "dashboard.free.priceCheckLocked") };
   }

@@ -30,7 +30,7 @@ export default async function CampaignsPage({ params }: { params: { id: string }
   const { business } = summary;
   const locale = normalizeLocale(business.language);
   const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override, locale, business.categories, business.name);
-  const plan = getPlan();
+  const plan = await getPlan();
   const [promos, referral, printData, upgrade] = await Promise.all([
     profile.couponsOk ? listActivePromos(params.id) : Promise.resolve(null),
     profile.referralOk ? getActiveReferral(params.id) : Promise.resolve(null),

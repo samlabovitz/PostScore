@@ -414,11 +414,11 @@ describe("connect card and business listing (tweaks)", () => {
     // The connect page is viewable (read-only until GBP_CONNECT_PUBLIC);
     // the real OAuth start stays behind the flag.
     const connectPage = fs.readFileSync("app/business/[id]/connect-gbp/page.tsx", "utf8");
-    expect(connectPage).toContain("connectOpen={canConnectGbp()}");
+    expect(connectPage).toContain("connectOpen={canConnectGbp(hasPremium(await getPlan()))}");
     expect(connectPage).not.toContain("google-premium");
     const connectRoute = fs.readFileSync("app/api/gbp/connect/route.ts", "utf8");
-    expect(connectRoute.indexOf("if (!canConnectGbp())")).toBeGreaterThan(-1);
-    expect(connectRoute.indexOf("if (!canConnectGbp())")).toBeLessThan(connectRoute.indexOf("buildGbpAuthUrl({"));
+    expect(connectRoute.indexOf("if (!canConnectGbp(hasPremium(await getPlan())))")).toBeGreaterThan(-1);
+    expect(connectRoute.indexOf("if (!canConnectGbp(hasPremium(await getPlan())))")).toBeLessThan(connectRoute.indexOf("buildGbpAuthUrl({"));
   });
 });
 
@@ -508,7 +508,7 @@ describe("whole-number point ranges and the connect page", () => {
 describe("Premium gate for the real Google connect", () => {
   test("works only with GBP_CONNECT_PUBLIC=true AND Premium; a local dev server may test it; production never without Premium", async () => {
     const { canConnectGbp, hasPremium } = await import("@/lib/premium");
-    expect(hasPremium()).toBe(false);
+    expect(hasPremium("free")).toBe(false);
     expect(canConnectGbp(false, { GBP_CONNECT_PUBLIC: "true", NODE_ENV: "production" })).toBe(false);
     expect(canConnectGbp(true, { GBP_CONNECT_PUBLIC: "true", NODE_ENV: "production" })).toBe(true);
     expect(canConnectGbp(true, { NODE_ENV: "production" })).toBe(false);

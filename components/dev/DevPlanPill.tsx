@@ -1,9 +1,11 @@
 "use client";
 
-// Development only: one small floating pill (bottom-left, every page) to
-// switch this browser's plan — Free · Grow · Premium · Multi — via
-// /api/dev/plan, which reloads the page. Never renders in production (and
-// /api/dev/plan answers 404 there; lib/premium.ts ignores the cookie).
+// One small floating pill (bottom-left, every page) to switch this
+// browser's plan — Free · Grow · Premium · Multi — via /api/dev/plan, which
+// reloads the page. The root layout renders it only when the server allows
+// switching (lib/premium.ts canSwitchPlan): always in local development; in
+// production only for a signed-in PLAN_SWITCHER_EMAILS user. The route and
+// getPlan() check the same thing, so hiding it isn't the protection.
 // Collapses to a tiny icon; the collapsed state is kept on this device.
 
 import { useEffect, useState } from "react";
@@ -28,8 +30,6 @@ export function DevPlanPill({ plan }: { plan: Plan }) {
       // Storage blocked: start expanded.
     }
   }, []);
-  if (process.env.NODE_ENV !== "development") return null;
-
   function setAndRemember(next: boolean) {
     setCollapsed(next);
     try {

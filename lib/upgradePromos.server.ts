@@ -52,7 +52,8 @@ async function loadHiddenUntil(businessId: string, keys: string[]): Promise<Reco
 }
 
 /** Everything a page's promos need. `page` = a main page with the strip. */
-export async function loadUpgradeContext(businessId: string, page: ShowcasePage | null = null, plan: Plan = getPlan()): Promise<UpgradeContextData> {
+export async function loadUpgradeContext(businessId: string, page: ShowcasePage | null = null, planArg?: Plan): Promise<UpgradeContextData> {
+  const plan = planArg ?? (await getPlan());
   const kinds = page ? promoCardsFor(plan) : [];
   const keys = page ? kinds.map((kind) => cardPromoKey(kind, page)) : [];
   // Premium and Multi load no facts — they see no upgrade promos.

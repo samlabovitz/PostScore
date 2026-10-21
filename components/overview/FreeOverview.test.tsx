@@ -79,7 +79,7 @@ describe("the Free Overview (the audit)", () => {
   test("PostAI can't be sent on Free: the server refuses before any AI call", () => {
     const fn = readFileSync("app/actions/assistant.ts", "utf8");
     const send = fn.slice(fn.indexOf("export async function sendAssistantMessage("));
-    expect(send.indexOf('if (getPlan() === "free") return')).toBeLessThan(send.indexOf("callAnthropicChat("));
+    expect(send.indexOf('if ((await getPlan()) === "free") return')).toBeLessThan(send.indexOf("callAnthropicChat("));
   });
 });
 

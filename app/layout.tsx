@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { getPlan } from "@/lib/premium";
+import { canSwitchPlan, getPlan } from "@/lib/premium";
 import { DevPlanPill } from "@/components/dev/DevPlanPill";
 
 // Self-hosted (app/fonts, SIL Open Font License): Fraunces for headings,
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   description: "Postscore dashboard",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -48,8 +48,8 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${fraunces.variable} ${inter.variable} antialiased`}>
         {children}
-        {/* Development only — never in a production build. */}
-        {process.env.NODE_ENV === "development" && <DevPlanPill plan={getPlan()} />}
+        {/* Development, or (production) only a PLAN_SWITCHER_EMAILS user — checked on the server. */}
+        {(await canSwitchPlan()) && <DevPlanPill plan={await getPlan()} />}
       </body>
     </html>
   );

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
   const { data } = page;
   const result = await buildSignPdf({
-    plan: getPlan(),
+    plan: await getPlan(),
     requested: body?.design,
     logo: body?.logo,
     placeId: data.placeId,

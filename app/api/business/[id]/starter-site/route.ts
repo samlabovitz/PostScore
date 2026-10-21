@@ -25,7 +25,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   } catch {
     // Bad body → 400 below.
   }
-  const result = starterSiteDownload(getPlan(), html);
+  const result = starterSiteDownload(await getPlan(), html);
   if (result.status !== "ok") return NextResponse.json({ error: result.status }, { status: result.status === "plan_required" ? 403 : 400 });
   return new NextResponse(result.html, { status: 200, headers: { "content-type": "text/html; charset=utf-8", "content-disposition": "attachment" } });
 }

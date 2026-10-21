@@ -358,7 +358,7 @@ export async function rescanBusiness(businessId: string): Promise<RescanBusiness
   // One re-scan per business per 24 hours, and on Free one owner re-scan
   // per 30 days (lib/rescanPolicy.ts rescanGate) — checked before any paid
   // call. Website-only re-checks don't count.
-  const free = getPlan() === "free";
+  const free = (await getPlan()) === "free";
   // Loaded here (admin client, server only) so importing this file stays light.
   const { lastOwnerRescanAt, logOwnerRescan } = await import("@/lib/placesSearchBudget.server");
   const [before, lastFull, lastOwner] = await Promise.all([

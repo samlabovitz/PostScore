@@ -43,7 +43,7 @@ export default async function SettingsPage({ params }: { params: { id: string } 
   const { business } = summary;
   const locale = normalizeLocale(business.language);
   const lang = locale === "es" ? "es" : "en";
-  const plan = getPlan();
+  const plan = await getPlan();
   const supabase = createClient();
   const [
     {

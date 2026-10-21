@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { buildGbpAuthUrl, isGbpOAuthConfigured } from "@/lib/googleBusinessProfile";
-import { canConnectGbp } from "@/lib/premium";
+import { canConnectGbp, getPlan, hasPremium } from "@/lib/premium";
 
 export async function GET(req: NextRequest) {
   const businessId = req.nextUrl.searchParams.get("businessId");
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   // Not open (GBP_CONNECT_PUBLIC + Premium — see canConnectGbp) → back
   // to the read-only connect page, never Google's consent screen.
-  if (!canConnectGbp()) {
+  if (!canConnectGbp(hasPremium(await getPlan()))) {
     return NextResponse.redirect(new URL(`/business/${businessId}/connect-gbp`, req.url));
   }
 

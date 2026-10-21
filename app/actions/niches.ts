@@ -76,7 +76,7 @@ export type UpdateCompetitorsResult =
 export async function updateCompetitorsForNiche(businessId: string): Promise<UpdateCompetitorsResult> {
   const supabase = await authed();
   if (!supabase) return { status: "error" };
-  if (getPlan() === "free") return { status: "locked" };
+  if ((await getPlan()) === "free") return { status: "locked" };
   const { runAndSaveCompetitorScanWithClient } = await import("@/app/actions/competitors");
   const result = await runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: true });
   if (result.status === "saved") return { status: "updated", placesCalls: result.placesCalls ?? 0 };

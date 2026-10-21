@@ -144,8 +144,8 @@ describe("no paid calls on Free from Growth", () => {
   test("the website Re-check action refuses on Free before any PageSpeed / site check", () => {
     const src = readFileSync("app/actions/websiteRecheck.ts", "utf8");
     const fn = src.slice(src.indexOf("export async function recheckWebsite("));
-    expect(fn.indexOf('if (getPlan() === "free")')).toBeGreaterThan(0);
-    expect(fn.indexOf('if (getPlan() === "free")')).toBeLessThan(fn.indexOf("recheckWebsiteWithClient"));
+    expect(fn.indexOf('if ((await getPlan()) === "free")')).toBeGreaterThan(0);
+    expect(fn.indexOf('if ((await getPlan()) === "free")')).toBeLessThan(fn.indexOf("recheckWebsiteWithClient"));
   });
   test("on Free the Growth page returns its showroom FIRST, before any of its own data loads", () => {
     const page = readFileSync("app/business/[id]/growth/page.tsx", "utf8");

@@ -433,7 +433,7 @@ export async function sendAssistantMessage(
   if (loaded.status !== "ok") return loaded;
   // Free is an audit: PostAI is a locked preview there, and no AI call is
   // ever made for a Free account (docs/product-structure.md).
-  if (getPlan() === "free") return { status: "error", message: t(loaded.locale, "dashboard.free.postaiLocked") };
+  if ((await getPlan()) === "free") return { status: "error", message: t(loaded.locale, "dashboard.free.postaiLocked") };
 
   const trimmed = message.trim();
   if (!trimmed) {

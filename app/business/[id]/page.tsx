@@ -113,7 +113,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     loadBusinessNiche(createClient(), params.id),
     loadUpgradeContext(params.id, "overview"),
     // Free: when the month's free re-scan was last used (no Google call).
-    getPlan() === "free" ? lastOwnerRescanAt(params.id) : Promise.resolve(null),
+    (await getPlan()) === "free" ? lastOwnerRescanAt(params.id) : Promise.resolve(null),
   ]);
   const bannerKind = niche ? nicheBannerKind(niche.resolved) : null;
   const freeGate = rescanGate(upgrade.plan === "free", null, lastOwnerRescan, new Date());

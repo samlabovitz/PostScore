@@ -17,7 +17,7 @@ import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale } from "@/lib/i18n";
 
 export async function freeShowroom(businessId: string, tab: ShowroomTab) {
-  const plan = getPlan();
+  const plan = await getPlan();
   if (!tabLocked(plan, tab)) return null;
   const [summary, upgrade, print, reviews] = await Promise.all([
     getBusinessSummary(businessId),
