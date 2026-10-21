@@ -13,7 +13,8 @@ import {
   type CompetitorSourceBusiness,
 } from "@/lib/competitors";
 import { bizProfileById, resolveBizProfile } from "@/config/bizProfiles";
-import { normalizeLocale } from "@/lib/i18n";
+import { normalizeLocale, t } from "@/lib/i18n";
+import { getPlan } from "@/lib/premium";
 import { refreshAvailability, type RefreshAvailability } from "@/lib/competitorScanPolicy";
 import {
   groupSavedScans,
@@ -23,11 +24,11 @@ import {
   type SavedScanRow,
   SAVED_SCAN_COLUMNS,
 } from "@/lib/savedCompetitorScans";
-import { nearbyReviewAverage, ownerStanding } from "@/lib/competitorComparison";
+import { nearbyReviewAverage, ownerStanding, reviewGoal, type ReviewGoal } from "@/lib/competitorComparison";
 import { latestScoringProgress, unfinishedNewScanIds, withoutUnfinished, type ScoringProgress } from "@/lib/competitorScoringStatus";
 import { loadBusinessNiche, loadCompetitorScope, type BusinessNicheState } from "@/lib/businessNiche.server";
 import { canRunScan, nextMonthStartUtc, placesSearchMonthlyCap } from "@/lib/placesSearchBudget";
-import { nicheSearchTypes } from "@/lib/competitorScope";
+import { scopeGroupLabel, nicheSearchTypes } from "@/lib/competitorScope";
 
 
 export type { CompetitorRankPoint, SavedCompetitorEntry, SavedCompetitorScan } from "@/lib/savedCompetitorScans";
@@ -383,6 +384,11 @@ export async function refreshCompetitors(businessId: string): Promise<SaveCompet
   if (!user) {
     return { status: "unauthenticated" };
   }
+  // Free keeps its saved list and rank; refreshing (Places searches) is Grow.
+  if (getPlan() === "free") {
+    const { data: row } = await supabase.from("businesses").select("language").eq("id", businessId).maybeSingle();
+    return { status: "error", message: t(normalizeLocale(row?.language), "dashboard.free.competitorsLocked") };
+  }
   return runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: true });
 }
 
@@ -524,6 +530,11 @@ export interface LocalBenchmark {
   /** Mean Google review count of the competitors in this scan that have
    * one (rounded), or null when fewer than 3 do — a real average only. */
   competitorReviewAverage: number | null;
+  /** The review goal (beat the leader / stretch / you lead) — the shared
+   * reviewGoal(), same scope as the rank; null below 3 competitors. */
+  reviewGoal: ReviewGoal | null;
+  /** The comparison group in words (lib/competitorScope.ts scopeGroupLabel). */
+  reviewGroup: string;
 }
 
 export type GetLocalBenchmarkResult =
@@ -560,7 +571,7 @@ async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBe
 
   const { data: business, error: businessError } = await supabase
     .from("businesses")
-    .select("name, category, categories, primary_type, business_type_override, language")
+    .select("name, category, categories, primary_type, business_type_override, language, review_count")
     .eq("id", businessId)
     .single();
 
@@ -612,6 +623,9 @@ async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBe
       percentileAhead: Math.round((standing.aheadCount / standing.othersCount) * 100),
       smallSample: standing.othersCount < SMALL_SAMPLE_THRESHOLD,
       competitorReviewAverage: nearbyReviewAverage(snapshot.scan, scope),
+      // The business's current count (its row); the scan's own as a fallback.
+      reviewGoal: reviewGoal(snapshot.scan, scope, (business as { review_count?: number | null }).review_count ?? snapshot.scan.entries.find((e) => e.isSubject)?.reviewCount ?? null),
+      reviewGroup: scopeGroupLabel(snapshot.scan, scope, normalizeLocale(business.language), competitorNoun),
     },
   };
 }

@@ -146,6 +146,12 @@ export function SinceLastVisitBody({ businessId, data }: { businessId: string; d
                 </span>
               )}
             </dd>
+            {/* The goal (beat the leader) — the shared wording, then "Next up". */}
+            {(data.reviewGoalLines ?? []).slice(1).map((line) => (
+              <dd key={line} className="mt-0.5 text-[12.5px] font-medium text-ink" data-testid="visit-review-goal">
+                {line}
+              </dd>
+            ))}
           </div>
         )}
       </dl>

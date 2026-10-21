@@ -218,6 +218,9 @@ export interface SinceLastVisitData {
   rank: { now: number; then: number | null; of: number } | null;
   fixesConfirmed: number;
   reviews: { count: number | null; countChange: number | null; rating: number | null; ratingChange: number | null };
+  /** The shared review goal in words (average, goal, next up) — empty when
+   * there's no goal (fewer than 3 competitors). */
+  reviewGoalLines?: string[];
   nextSteps: Array<{ title: string; detail: string; points: string }>;
   /** The 1-a-day full re-scan (website re-checks don't count). */
   rescan: { allowed: boolean; nextAvailableAt: string | null };
@@ -231,7 +234,7 @@ export async function openBusinessVisitWithClient(
   supabase: SupabaseClient,
   userId: string,
   businessId: string,
-  deps: { nextSteps: () => Promise<SinceLastVisitData["nextSteps"]> },
+  deps: { nextSteps: () => Promise<SinceLastVisitData["nextSteps"]>; reviewGoalLines?: () => Promise<string[]> },
   now: Date = new Date()
 ): Promise<VisitResult> {
   const business = await loadBusiness(supabase, businessId);
@@ -252,11 +255,12 @@ export async function openBusinessVisitWithClient(
   const c = s.comparison;
   const { data: recent } = await supabase.from("scores").select("created_at, scan_kind:breakdown_json->>scanKind").eq("business_id", businessId).order("created_at", { ascending: false }).limit(10);
   const lastFull = ((recent ?? []) as Array<{ created_at: string; scan_kind: string | null }>).find((r) => r.scan_kind !== "website_recheck")?.created_at ?? null;
-  const [rankNow, rankThen, fixes, nextSteps] = await Promise.all([
+  const [rankNow, rankThen, fixes, nextSteps, reviewGoalLines] = await Promise.all([
     rankAt(supabase, businessId, now.toISOString()),
     rankAt(supabase, businessId, lastSeenAt),
     fixesConfirmedBetween(supabase, businessId, lastSeenAt, now.toISOString()),
     s.noNewScan ? Promise.resolve([]) : deps.nextSteps(),
+    deps.reviewGoalLines ? deps.reviewGoalLines().catch(() => []) : Promise.resolve([] as string[]),
   ]);
   return {
     status: "ok",
@@ -274,6 +278,7 @@ export async function openBusinessVisitWithClient(
       rank: rankNow ? { now: rankNow.rank, then: rankThen?.rank ?? null, of: rankNow.of } : null,
       fixesConfirmed: fixes,
       reviews: c ? c.reviews : { count: null, countChange: null, rating: null, ratingChange: null },
+      reviewGoalLines,
       nextSteps: nextSteps.slice(0, 2),
       rescan: rescanAvailability(lastFull, now),
     },

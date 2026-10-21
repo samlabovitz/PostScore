@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, createContext, useContext } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { IconChevronDown, IconBrandGoogle, IconCircleCheck, IconPhoto, IconTag, IconTicket, IconTrendingUp, IconUsers, IconWorld } from "@tabler/icons-react";
@@ -200,9 +200,17 @@ function CurrentStatus({
   );
 }
 
+/** The review goal in words (lib/reviewGoal.ts), for the review task —
+ * provided by the Growth page; empty elsewhere. */
+export const ReviewGoalLinesContext = createContext<string[]>([]);
+
+const isReviewTask = (task: ActionPlanTask) => task.checkId === "reviews.merged" || task.checkId === "visibility.review_count";
+
 /** The check's own explanation — one line per check on the merged reviews
- * card (review count and rating each have their own "full credit at …"). */
+ * card (review count and rating each have their own "full credit at …") —
+ * and, on the review task, the goal: beat the leader (shared wording). */
 function ProblemText({ task }: { task: ActionPlanTask }) {
+  const goalLines = useContext(ReviewGoalLinesContext);
   const lines = task.problemLines && task.problemLines.length > 0 ? task.problemLines : [task.problem];
   return (
     <>
@@ -211,6 +219,12 @@ function ProblemText({ task }: { task: ActionPlanTask }) {
           {line}
         </p>
       ))}
+      {isReviewTask(task) &&
+        goalLines.slice(1).map((line) => (
+          <p key={line} className="text-[12.5px] font-semibold text-ink" data-testid="task-review-goal">
+            {line}
+          </p>
+        ))}
     </>
   );
 }

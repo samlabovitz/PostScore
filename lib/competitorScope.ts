@@ -166,3 +166,17 @@ export function nicheSearchTypes(scope: CompetitorScope): { directTypes: string[
   }
   return { directTypes: n.googleTypes, wideTypes: Array.from(wide) };
 }
+
+/** The comparison group the scope actually uses, in words, for review and
+ * rank lines: "skate & snow shop and sporting goods businesses nearby" —
+ * the niche plus the areas in use — or, without a niche, the business
+ * type's own noun ("nearby salons"). */
+export function scopeGroupLabel(scan: SavedCompetitorScan, scope: CompetitorScope | null | undefined, locale: Locale, fallbackNoun: string): string {
+  const fallback = locale === "es" ? `${fallbackNoun} cercanos` : `nearby ${fallbackNoun}`;
+  if (!scope || isGeneralNiche(scope.nicheId) || !nicheById(scope.nicheId)) return fallback;
+  const result = applyScope(scan, scope);
+  const niche = nicheLabel(scope.nicheId, locale).toLowerCase();
+  const parts = [niche, ...(result.effective === "wide" ? result.areasUsed.filter((a) => a !== scope.parent).map((a) => areaPhrase(a, scope, locale)) : [])];
+  const list = joinList(parts, locale) ?? niche;
+  return locale === "es" ? `negocios cercanos de ${list}` : `${list} businesses nearby`;
+}

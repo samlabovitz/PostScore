@@ -63,7 +63,7 @@ export interface ReportData {
   rank: { rank: number; of: number; noun: string; previousRank: number | null } | null;
   changes: { listing: string[]; listingUnavailable: boolean; fixesConfirmed: number };
   nextSteps: ReportNextStep[];
-  reviews: { rating: number | null; count: number | null; countChange: number | null; nearbyAverage: number | null };
+  reviews: { rating: number | null; count: number | null; countChange: number | null; nearbyAverage: number | null; goalLines?: string[] };
   /** The weekly report: same page, with the week in the header and the
    * change box comparing the week's scan with the last scan before it. */
   weekly?: WeeklyMeta;
@@ -348,7 +348,12 @@ export function layoutReport(data: ReportData, m: Measurer): PrintPage {
     const line = r.countChange === 0 ? t(locale, "dashboard.reports.pdf.reviewNoChange") : t(locale, "dashboard.reports.pdf.reviewChange", { change });
     ly = para(M, ly, line, 9.5, "body", C.inkSoft, leftW, 1);
   }
-  if (r.nearbyAverage !== null) ly = para(M, ly + 1, t(locale, "dashboard.reports.pdf.nearbyAverage", { count: formatCount(r.nearbyAverage, locale) }), 9.5, "body", C.inkSoft, leftW, 1);
+  // The area average AND the goal (beat the leader) — the shared wording.
+  if (r.goalLines && r.goalLines.length > 0) {
+    r.goalLines.forEach((line, i) => {
+      ly = para(M, ly + 1, line, 9.5, i === 1 ? "bodyBold" : "body", i === 1 ? C.ink : C.inkSoft, leftW, 2);
+    });
+  } else if (r.nearbyAverage !== null) ly = para(M, ly + 1, t(locale, "dashboard.reports.pdf.nearbyAverage", { count: formatCount(r.nearbyAverage, locale) }), 9.5, "body", C.inkSoft, leftW, 1);
   // One line, only when it fits above the footer.
   if (weekly?.routine && ly + 22 < LETTER.height - 70) {
     para(M, ly + 12, t(locale, "dashboard.reports.pdf.routine", { done: weekly.routine.done, total: weekly.routine.total }), 9.5, "bodyBold", C.ink, leftW, 1);

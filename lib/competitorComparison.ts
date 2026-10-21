@@ -162,6 +162,60 @@ export function nearbyReviewAverage(scan: SavedCompetitorScan, scope?: Competito
   return Math.round(counts.reduce((a, c) => a + c, 0) / counts.length);
 }
 
+/** A competitor in a review comparison (real values from the saved scan). */
+export interface ReviewRival {
+  name: string;
+  reviewCount: number;
+  rating: number | null;
+}
+
+/** When the leader has more than this × the average, it's a stretch goal. */
+export const STRETCH_LEADER_FACTOR = 3;
+
+function rivalsInScope(scan: SavedCompetitorScan, scope?: CompetitorScope | null): ReviewRival[] {
+  const entries = scope ? applyScope(scan, scope).scan.entries : scan.entries;
+  return entries
+    .filter((e) => !e.isSubject && e.reviewCount !== null)
+    .map((e) => ({ name: e.name ?? "", reviewCount: e.reviewCount as number, rating: e.rating ?? null }))
+    .sort((a, b) => b.reviewCount - a.reviewCount || a.name.localeCompare(b.name));
+}
+
+/** THE review leader — the competitor with the most reviews among the SAME
+ * competitors the rank and nearbyReviewAverage use. null with fewer than
+ * MIN_REVIEW_AVERAGE_SAMPLE competitors (same rule as the average). */
+export function reviewLeader(scan: SavedCompetitorScan, scope?: CompetitorScope | null): ReviewRival | null {
+  const rivals = rivalsInScope(scan, scope);
+  return rivals.length >= MIN_REVIEW_AVERAGE_SAMPLE ? rivals[0] : null;
+}
+
+/** The review goal everywhere review gaps appear:
+ * - "beat": beat the leader ({gap} more than you);
+ * - "stretch": the leader has more than 3× the average (e.g. a big chain) —
+ *   still the goal, plus `nextUp`: the nearest competitor above you;
+ * - "lead": you already have the most — keep the gap over `runnerUp`.
+ * null when there are fewer than 3 competitors in scope, or no own count. */
+export interface ReviewGoal {
+  kind: "beat" | "stretch" | "lead";
+  average: number;
+  leader: ReviewRival;
+  ownCount: number;
+  /** beat/stretch: leader − you; lead: you − the runner-up. */
+  gap: number;
+  nextUp: ReviewRival | null;
+  runnerUp: ReviewRival | null;
+}
+
+export function reviewGoal(scan: SavedCompetitorScan, scope: CompetitorScope | null | undefined, ownCount: number | null): ReviewGoal | null {
+  const average = nearbyReviewAverage(scan, scope);
+  const leader = reviewLeader(scan, scope);
+  if (average === null || leader === null || ownCount === null) return null;
+  if (ownCount >= leader.reviewCount) return { kind: "lead", average, leader, ownCount, gap: ownCount - leader.reviewCount, nextUp: null, runnerUp: leader };
+  const stretch = leader.reviewCount > STRETCH_LEADER_FACTOR * average;
+  const above = rivalsInScope(scan, scope).filter((r) => r.reviewCount > ownCount && r !== leader && r.name !== leader.name);
+  const nextUp = stretch && above.length > 0 ? above[above.length - 1] : null;
+  return { kind: stretch ? "stretch" : "beat", average, leader, ownCount, gap: leader.reviewCount - ownCount, nextUp, runnerUp: null };
+}
+
 export interface HeroSummary {
   rank: number | null;
   of: number;

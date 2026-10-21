@@ -7,6 +7,7 @@
 // RLS-scoped through each action: a business the user doesn't own is
 // not_found.
 
+import { reviewGoalLines } from "@/lib/reviewGoal";
 import "server-only";
 import { scoreBusinessById } from "@/app/actions/scoring";
 import { getBusinessSummary } from "@/app/actions/businesses";
@@ -113,6 +114,8 @@ export async function getReportData(businessId: string, now: Date = new Date()):
         count: business.review_count,
         countChange: typeof latestReviews === "number" && typeof previousReviews === "number" ? latestReviews - previousReviews : null,
         nearbyAverage: benchmark.status === "ok" ? benchmark.benchmark.competitorReviewAverage : null,
+        // The shared review goal (beat the leader), in the report's words.
+        goalLines: benchmark.status === "ok" && benchmark.benchmark.reviewGoal ? reviewGoalLines(benchmark.benchmark.reviewGoal, benchmark.benchmark.reviewGroup, locale) : [],
       },
     },
   };

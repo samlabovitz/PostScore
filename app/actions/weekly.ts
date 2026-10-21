@@ -18,10 +18,17 @@ export async function openBusinessVisit(businessId: string): Promise<VisitResult
   } = await supabase.auth.getUser();
   if (!user) return { status: "unauthenticated" };
   const [{ openBusinessVisitWithClient }, { getReportData }] = await Promise.all([import("@/lib/weekly/weeklyData.server"), import("@/lib/reports/reportData.server")]);
+  // One report load for both the next steps and the review goal.
+  let report: ReturnType<typeof getReportData> | null = null;
+  const loadReport = () => (report ??= getReportData(businessId));
   return openBusinessVisitWithClient(supabase, user.id, businessId, {
     nextSteps: async () => {
-      const report = await getReportData(businessId);
-      return report.status === "ok" ? report.data.nextSteps : [];
+      const r = await loadReport();
+      return r.status === "ok" ? r.data.nextSteps : [];
+    },
+    reviewGoalLines: async () => {
+      const r = await loadReport();
+      return r.status === "ok" ? (r.data.reviews.goalLines ?? []) : [];
     },
   });
 }
