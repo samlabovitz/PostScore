@@ -1,20 +1,24 @@
 import { notFound, redirect } from "next/navigation";
+import type { ReactNode } from "react";
 import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
 import Link from "next/link";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { loadUpgradeContext } from "@/lib/upgradePromos.server";
+import { LockedPreview } from "@/components/plan/LockedPreview";
 import { getWebsitePageData } from "@/app/actions/website";
 import { resolveBizProfile, renderFaq } from "@/config/bizProfiles";
 import { WebsiteGeneratorSection } from "./WebsiteGeneratorSection";
 import { WebsiteVisualAnalysis } from "./WebsiteVisualAnalysis";
-import { WebsiteScoreBreakdown } from "./WebsiteScoreBreakdown";
+import { WebsiteScoreBreakdown, WebsiteScoreCompact } from "./WebsiteScoreBreakdown";
 import { getLastScanAt } from "@/app/actions/scoring";
 import { getWebsiteRecheckStatus } from "@/app/actions/websiteRecheck";
 import { WebsiteRecheck } from "@/components/scoring/WebsiteRecheck";
 import { formatShortDate, normalizeLocale, t } from "@/lib/i18n";
 import { HackedSiteBanner } from "@/components/scoring/HackedSiteBanner";
 import { hackSignsFor } from "@/lib/siteSecurity";
+import { socialPagePlatform } from "@/lib/websiteTrust";
+import { resolveWebsiteBuilder, WEBSITE_BUILDER_NAMES } from "@/lib/websiteBuilder";
 
 export default async function WebsitePage({ params }: { params: { id: string } }) {
   const [result, lastScanAt, recheck, upgrade] = await Promise.all([
@@ -56,10 +60,17 @@ export default async function WebsitePage({ params }: { params: { id: string } }
   const faqEn = renderFaq(profileEn.faq, { name: data.businessName, address: data.address });
   const faqEs = renderFaq(profileEs.faq, { name: data.businessName, address: data.address });
   const hasWebsite = (!!data.website && data.website.trim().length > 0) || !!data.verifiedWebsiteUrl;
+  // Free: the page is open — a compact score, the starter site and the
+  // screenshot card — with the how-to, Re-check, FAQ and download locked.
+  const free = upgrade.plan === "free";
   const businessName = data.businessName ?? t(locale, "dashboard.website.businessNameFallback");
 
-  const generatorSection = (
+  const generatorSection = (pathA: ReactNode) => (
     <WebsiteGeneratorSection
+      realSite={realSite}
+      socialPlatform={socialPlatform}
+      builderName={builderName}
+      pathA={pathA}
       businessId={params.id}
       businessName={businessName}
       businessLanguage={data.language}
@@ -82,9 +93,10 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       mapEmbed={process.env.GOOGLE_MAPS_EMBED_KEY && data.storefront && data.placeId ? { key: process.env.GOOGLE_MAPS_EMBED_KEY, placeId: data.placeId } : null}
       profileId={profileEn.id}
       builderOfferReason={builderOffer.reason}
-      hasWebsite={hasWebsite}
       faqEn={faqEn}
       faqEs={faqEs}
+      free={free}
+      plan={upgrade.plan}
     />
   );
 
@@ -93,6 +105,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       businessId={params.id}
       websiteAnalysis={data.websiteAnalysis}
       siteUrl={data.website ?? data.verifiedWebsiteUrl}
+      locked={free}
     />
   ) : null;
 
@@ -113,6 +126,20 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       businessName={data.businessName}
     />
   ) : null;
+
+  // Website checks still losing points (known) — path A's progress and the
+  // count on Free's locked guides.
+  const checksLeft = (data.websiteCategory?.checks ?? []).filter(
+    (c) => (c.confidence === "VERIFIED" || c.confidence === "LIKELY") && c.earnedPoints !== null && c.earnedPoints < c.maxPoints
+  ).length;
+
+  // Free's two paths: "fix it" only for a real site — not for none, and not
+  // for a social page standing in for one (lib/websiteTrust.ts).
+  const siteUrl = data.website ?? data.verifiedWebsiteUrl;
+  const socialPlatform = hasWebsite ? socialPagePlatform(siteUrl) : null;
+  const realSite = hasWebsite && socialPlatform === null;
+  const builder = resolveWebsiteBuilder(data.websiteAnalysis?.builder, siteUrl);
+  const builderName = builder?.id ? WEBSITE_BUILDER_NAMES[builder.id] : null;
 
   const showHackedBanner =
     hasWebsite &&
@@ -169,17 +196,57 @@ export default async function WebsitePage({ params }: { params: { id: string } }
           </div>
         )}
 
-        {hasWebsite ? (
+        {free ? (
+          // Free: the screenshot → the compact score → A) fix the current site
+          // (locked how-to, Re-check, FAQ) → B) start fresh (the starter site,
+          // open, then PostStudio). No real site: only B.
           <>
-            {/* Website-only businesses keep their own re-check (Overview). */}
-            {recheck.status === "ok" && <WebsiteRecheck businessId={params.id} initialLeft={recheck.availability.left} hasWebsite={recheck.hasWebsite} />}
             {visualAnalysis}
-            {scoreBreakdown}
+            {hasWebsite && <WebsiteScoreCompact websiteCategory={data.websiteCategory} />}
+            {generatorSection(
+              <>
+                <LockedPreview
+                  title={t(locale, "dashboard.free.web.fixGuidesTitle")}
+                  summary={checksLeft > 0 ? t(locale, "dashboard.free.sumChecks", { count: checksLeft }) : null}
+                  unlock={t(locale, "dashboard.upgrade.unlock.websiteFixes")}
+                  rows={Math.min(Math.max(checksLeft, 2), 4)}
+                />
+                <LockedPreview compact feature="recheck" title={t(locale, "dashboard.websiteRecheck.button")} unlock={t(locale, "dashboard.free.web.recheckBody")} />
+              </>
+            )}
           </>
-        ) : null}
-        <div id="starter-site" className="scroll-mt-20">
-          {generatorSection}
-        </div>
+        ) : (
+          // Grow, Premium and Multi: the screenshot → the score + full
+          // breakdown (each check's step-by-step fix is in it) → A) fix the
+          // current site: progress, the guides, Re-check (N of 3 left today),
+          // FAQ → B) start fresh: the starter site (collapsed next to a real
+          // site), then PostStudio. No real site: only B, generator open.
+          <>
+            {visualAnalysis}
+            <div id="website-checks" className="scroll-mt-20">
+              {scoreBreakdown}
+            </div>
+            {generatorSection(
+              <>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1" data-testid="checks-left">
+                  <span className="text-[14px] font-semibold text-ink">
+                    {checksLeft === 0
+                      ? t(locale, "dashboard.free.web.checksLeftNone")
+                      : checksLeft === 1
+                        ? t(locale, "dashboard.free.web.checksLeftOne")
+                        : t(locale, "dashboard.free.web.checksLeft", { count: checksLeft })}
+                  </span>
+                  {checksLeft > 0 && (
+                    <a href="#website-checks" className="text-[13px] font-semibold text-ink underline decoration-brass underline-offset-2 hover:decoration-ink">
+                      {t(locale, "dashboard.free.web.guidesLink")} ↑
+                    </a>
+                  )}
+                </div>
+                {recheck.status === "ok" && <WebsiteRecheck businessId={params.id} initialLeft={recheck.availability.left} hasWebsite={recheck.hasWebsite} />}
+              </>
+            )}
+          </>
+        )}
       </div>
     </DashboardShell>
   );

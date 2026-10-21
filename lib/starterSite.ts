@@ -660,8 +660,9 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
 
   const visit: string[] = [];
   // The map: storefronts only, and only with the embed key — otherwise the
-  // address and link alone (never a broken iframe). Lazy-loaded, so it
-  // costs nothing until a visitor scrolls to it.
+  // address and links alone (never a broken iframe); the address, "Open in
+  // Google Maps" and "Get directions" always show under it. NOT lazy-loaded:
+  // a lazy map inside the preview frames (an iframe srcdoc) never starts.
   const mapSrc =
     showAddress && input.mapEmbed && input.mapEmbed.key.trim() && /^[A-Za-z0-9_-]+$/.test(input.mapEmbed.placeId)
       ? `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(input.mapEmbed.key.trim())}&q=place_id:${input.mapEmbed.placeId}`
@@ -669,7 +670,7 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   if (showAddress) {
     visit.push(`<div class="card${mapSrc ? " card--map" : ""}" id="location">
           <h2 class="sec-title">${secIcon("map")}${escapeHtml(t(locale, "starterSite.locationHeading"))}</h2>
-          ${mapSrc ? `<iframe class="map" src="${escapeHtml(mapSrc)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen title="${escapeHtml(t(locale, "starterSite.mapTitle", { name }))}"></iframe>` : ""}
+          ${mapSrc ? `<iframe class="map" src="${escapeHtml(mapSrc)}" referrerpolicy="no-referrer-when-downgrade" allowfullscreen title="${escapeHtml(t(locale, "starterSite.mapTitle", { name }))}"></iframe>` : ""}
           <p class="big">${escapeHtml(input.address as string)}</p>
           <p class="links"><a class="link" href="${escapeHtml(placeUrl as string)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(locale, "starterSite.openInMaps"))}</a>
           <a class="link" href="${directionsUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(locale, "starterSite.getDirectionsArrow"))}</a></p>

@@ -373,15 +373,18 @@ describe("ratings can't go stale in a downloaded file", () => {
 describe("the storefront map", () => {
   const KEY = { key: "test-embed-key", placeId: "ChIJ_test-Place_123" };
 
-  test("storefront + key: an embedded map (place mode, lazy) with the address and Google Maps link", () => {
+  test("storefront + key: an embedded map (place mode, loaded eagerly) with the address, Google Maps link and directions", () => {
     const html = buildStarterSiteHtml({ ...SALON, storefront: true, mapEmbed: KEY });
-    expect(html).toContain('<iframe class="map" src="https://www.google.com/maps/embed/v1/place?key=test-embed-key&amp;q=place_id:ChIJ_test-Place_123" loading="lazy"');
+    expect(html).toContain('<iframe class="map" src="https://www.google.com/maps/embed/v1/place?key=test-embed-key&amp;q=place_id:ChIJ_test-Place_123" referrerpolicy="no-referrer-when-downgrade"');
+    // Never lazy: a lazy map inside the preview frames (srcdoc) never loads.
+    expect(html).not.toMatch(/<iframe class="map"[^>]*loading="lazy"/);
     const map = html.indexOf('<iframe class="map"');
     expect(html.indexOf("20 W Main St #1", map)).toBeGreaterThan(map);
     expect(html.indexOf("Open in Google Maps →", map)).toBeGreaterThan(map);
+    expect(html.indexOf("https://www.google.com/maps/dir/?api=1", map)).toBeGreaterThan(map);
     expect(map).toBeLessThan(html.indexOf('<footer class="site-footer">'));
     expect(map).toBeGreaterThan(html.indexOf('id="reviews"'));
-    // Still fast: the only outside resources are the fonts and the lazy map.
+    // Still fast: the only outside resources are the fonts and the map.
     expect(html.match(/<iframe/g)).toHaveLength(1);
     expect(html).not.toMatch(/<script[^>]+src=/);
   });

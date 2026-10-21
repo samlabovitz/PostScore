@@ -1,6 +1,7 @@
 "use client";
 
 import { IconAlertTriangle, IconCheck, IconMinus, IconX } from "@tabler/icons-react";
+import { LockFooter } from "@/components/plan/LockedPreview";
 import { Card } from "@/components/ui/Card";
 import { formatPoints } from "@/components/scoring/CategoryCard";
 import { cn } from "@/lib/utils";
@@ -476,6 +477,66 @@ export function WebsiteScoreBreakdown({
           ))}
       </div>
     </div>
+  );
+}
+
+const STATUS_CHIP: Record<RowState, { key: MessageKey; className: string }> = {
+  full: { key: "dashboard.checkResult.done", className: "bg-green/10 text-green" },
+  partial: { key: "dashboard.checkResult.needsWork", className: "bg-amber/10 text-amber" },
+  zero: { key: "dashboard.checkResult.needsWork", className: "bg-red/10 text-red" },
+  excluded: { key: "dashboard.checkResult.couldntCheck", className: "bg-ink/5 text-ink-mute" },
+};
+
+/** Points with a half shown as "½" (0.5 → "½", 2.5 → "2½"); others as usual. */
+export function halfPoints(n: number | null): string {
+  if (n === null) return "—";
+  const whole = Math.floor(n);
+  return Math.abs(n - whole - 0.5) < 1e-9 ? `${whole > 0 ? whole : ""}½` : formatPoints(n);
+}
+
+/** Free: ONE compact card — the website score ring (score · points ·
+ * grade) and each check's name with only a status chip and its points.
+ * No explanations, measurements, fix counts or time estimates (Grow). */
+export function WebsiteScoreCompact({ websiteCategory }: { websiteCategory: CategoryResult | null }) {
+  const locale = useLocale();
+  if (!websiteCategory) return null;
+  const grade = websiteCategory.relativeScore !== null ? gradeFromTotal(websiteCategory.relativeScore) : null;
+  return (
+    <Card className="flex flex-col gap-4 p-5" data-testid="website-score-compact">
+      <div className="flex items-center gap-4">
+        <WebsiteScoreRing relativeScore={websiteCategory.relativeScore} grade={grade} />
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">{t(locale, "dashboard.website.scoreHeading")}</div>
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <span className="font-serif text-xl font-bold text-ink">
+              {websiteCategory.relativeScore === null ? "—" : Math.round(websiteCategory.relativeScore)}/100
+            </span>
+            <span className="text-sm text-ink-mute">
+              · {formatPoints(websiteCategory.earnedPoints)}/{formatPoints(websiteCategory.possiblePoints)} {t(locale, "dashboard.website.ptsAbbrev")}
+            </span>
+            {grade && <span className="text-sm font-bold text-ink">· {grade}</span>}
+          </div>
+        </div>
+      </div>
+      <ul className="flex flex-col divide-y divide-paper-line">
+        {websiteCategory.checks.map((check) => {
+          const state = deriveRowState(check);
+          const chip = STATUS_CHIP[state];
+          return (
+            <li key={check.id} className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0" data-testid="compact-check">
+              <span className="min-w-0 text-[13.5px] text-ink">{check.label}</span>
+              <span className="flex shrink-0 items-center gap-2">
+                <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", chip.className)}>{t(locale, chip.key)}</span>
+                <span className="min-w-[3.5rem] whitespace-nowrap text-right text-[12.5px] font-semibold tabular-nums text-ink-soft">
+                  {state === "excluded" ? "—" : halfPoints(check.earnedPoints)} / {halfPoints(check.maxPoints)}
+                </span>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <LockFooter line={t(locale, "dashboard.free.web.scoreUnlock")} feature="grow" plain inset />
+    </Card>
   );
 }
 

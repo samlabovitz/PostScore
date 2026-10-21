@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
+import { IconLock,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
@@ -12,7 +12,8 @@ import {
 } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
+import { UpgradeButton, UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import { cn } from "@/lib/utils";
 import { SCREENSHOT_REFRESH_COOLDOWN_DAYS, type WebsiteAnalysis, type WebsiteAnalysisPage } from "@/lib/scoring";
 import { refreshWebsiteScreenshots } from "@/app/actions/websiteScreenshots";
@@ -241,9 +242,12 @@ export function WebsiteVisualAnalysis({
   businessId,
   websiteAnalysis,
   siteUrl = null,
+  locked = false,
 }: {
   businessId: string;
   websiteAnalysis: WebsiteAnalysis | null;
+  /** Free: shown as is, but "Refresh screenshots" is a lock (promo box). */
+  locked?: boolean;
   /** The site that was captured — named in the "open it yourself" note
    * when the capture showed our automated check an error page. */
   siteUrl?: string | null;
@@ -296,10 +300,21 @@ export function WebsiteVisualAnalysis({
             </p>
           )}
         </div>
-        <RefreshScreenshotsControl
-          businessId={businessId}
-          lastScreenshotRefreshAt={websiteAnalysis?.lastScreenshotRefreshAt ?? null}
-        />
+        {locked ? (
+          // Free: a new capture is a paid call — the button is a lock.
+          <div className="flex flex-col items-start gap-1.5 nav:items-end">
+            <UpgradeButton feature="recheck" testId="shot-refresh-locked" className={buttonClasses("default", "sm")}>
+              <IconLock size={13} aria-hidden className="text-brass" />
+              {t(locale, "dashboard.website.refreshScreenshotsButton")}
+            </UpgradeButton>
+            <UpgradeTrigger feature="recheck" />
+          </div>
+        ) : (
+          <RefreshScreenshotsControl
+            businessId={businessId}
+            lastScreenshotRefreshAt={websiteAnalysis?.lastScreenshotRefreshAt ?? null}
+          />
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5">

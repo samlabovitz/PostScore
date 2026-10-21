@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -13,9 +14,11 @@ import {
   IconStar,
   IconWand,
   IconX,
+  IconExternalLink,
+  IconLock,
 } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import {
   STARTER_SITE_FONTS,
@@ -32,6 +35,8 @@ import { ACCENT_STYLES, patternCss, type AccentStyle } from "@/lib/starterSiteAr
 import { defaultOwnerHours, ownerHoursFromGoogle, sameSchedule, type OwnerHours } from "@/lib/ownerHours";
 import { HoursDifferNote, HoursGoogleTip, StarterHoursEditor } from "./StarterHoursEditor";
 import { downloadTextFile } from "@/lib/downloadFile";
+import { UpgradeButton } from "@/components/upgrade/UpgradeTrigger";
+import { PREVIEW_HTML, PREVIEW_READY } from "./preview/StarterPreviewFrame";
 import { resizeImageForEmbedding } from "@/lib/resizeImageForEmbedding";
 import { markTaskDone } from "@/app/actions/actionPlan";
 import { normalizeLocale, t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
@@ -183,7 +188,9 @@ export function StarterSiteBuilder({
   mapEmbed = null,
   profileId,
   builderOfferReason,
+  postStudioHref = null,
   onSiteLocaleChange,
+  free = false,
 }: {
   businessId: string;
   businessName: string;
@@ -227,10 +234,15 @@ export function StarterSiteBuilder({
    * app/actions/website.ts. Drives the headline/subcopy only; the
    * generator itself is identical in every case. */
   builderOfferReason: "no_website" | "underperforming" | "backup";
+  /** The quiet "Need more than one page? PostStudio →" (null: they have it). */
+  postStudioHref?: string | null;
   /** Lets a parent (the FAQ section, which shares no other state with
    * this component) mirror the generated site's chosen language — see
    * WebsiteGeneratorSection.tsx. */
   onSiteLocaleChange?: (locale: Locale) => void;
+  /** Free: everything can be customized; the download is locked and "Open
+   * full preview" shows a watermarked preview instead. */
+  free?: boolean;
 }) {
   const locale = useLocale();
   const router = useRouter();
@@ -373,8 +385,32 @@ export function StarterSiteBuilder({
     ]
   );
 
-  function handleDownload() {
-    downloadTextFile(html, `${slugify(businessName)}-website.html`, "text/html");
+  // The download goes through the server, which checks the plan (Free is
+  // refused there too) — /api/business/[id]/starter-site.
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  async function handleDownload() {
+    setDownloadError(null);
+    try {
+      const res = await fetch(`/api/business/${businessId}/starter-site`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ html }) });
+      if (!res.ok) throw new Error(res.status === 403 ? t(locale, "dashboard.free.web.downloadRefused") : String(res.status));
+      downloadTextFile(await res.text(), `${slugify(businessName)}-website.html`, "text/html");
+    } catch (err) {
+      setDownloadError(err instanceof Error && err.message.length > 3 ? err.message : t(locale, "dashboard.website.starter.downloadHelper"));
+    }
+  }
+
+  /** Free: the full one-page preview in a new tab (watermarked, owner only).
+   * The tab says when it's ready; the site is then posted to it alone. */
+  function openFullPreview() {
+    const win = window.open(`/business/${businessId}/website/preview`, "_blank");
+    if (!win) return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== win || event.origin !== window.location.origin || event.data?.type !== PREVIEW_READY) return;
+      win.postMessage({ type: PREVIEW_HTML, html }, window.location.origin);
+      window.removeEventListener("message", onMessage);
+    };
+    window.addEventListener("message", onMessage);
+    window.setTimeout(() => window.removeEventListener("message", onMessage), 60_000);
   }
 
   const [markState, setMarkState] = useState<
@@ -400,10 +436,13 @@ export function StarterSiteBuilder({
       <div>
         <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-brass">
           <IconWand size={14} />
-          {t(locale, "dashboard.website.starter.eyebrow")}
+          {/* Free: "try it free" — up top, never a buried dropdown. */}
+          {free && builderOfferReason === "no_website" ? t(locale, "dashboard.free.web.generatorHeading") : t(locale, "dashboard.website.starter.eyebrow")}
         </div>
-        <h2 className="mt-1.5 font-serif text-2xl font-bold text-ink">
-          {builderOfferReason === "no_website"
+        <h2 className="mt-1.5 font-serif text-2xl font-bold text-ink" data-testid="starter-heading">
+          {free && builderOfferReason !== "no_website"
+            ? t(locale, "dashboard.free.web.generatorHeading")
+            : builderOfferReason === "no_website"
             ? t(locale, "dashboard.website.starter.headlineNoWebsite")
             : builderOfferReason === "underperforming"
               ? t(locale, "dashboard.website.starter.headlineUnderperforming")
@@ -416,6 +455,15 @@ export function StarterSiteBuilder({
               ? t(locale, "dashboard.website.starter.subcopyUnderperforming")
               : t(locale, "dashboard.website.starter.subcopyBackup")}
         </p>
+        {/* The page's one other PostStudio mention: a quiet line. */}
+        {postStudioHref && (
+          <p className="mt-1.5 text-[13px] text-ink-soft" data-testid="poststudio-line">
+            {t(locale, "dashboard.website.studioShowcase.headerLine")}{" "}
+            <Link href={postStudioHref} className="font-semibold text-ink underline decoration-brass underline-offset-2 hover:decoration-ink">
+              PostStudio →
+            </Link>
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-6 nav:grid-cols-2">
@@ -844,26 +892,49 @@ export function StarterSiteBuilder({
           </div>
         </Card>
 
-        <div className="flex flex-col gap-3">
-          <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-            {t(locale, "dashboard.website.starter.livePreviewLabel")}
+        {/* The preview: first on a phone (fixed height, scrolls inside);
+            on desktop it stays in view (sticky) while the options scroll. */}
+        <div className="order-first nav:order-none" data-testid="starter-preview-column">
+          <div className="flex flex-col gap-3 nav:sticky nav:top-6 nav:h-[calc(100vh-3rem)]">
+            <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
+              {t(locale, "dashboard.website.starter.livePreviewLabel")}
+            </div>
+            <Card className="flex min-h-0 overflow-hidden p-0 nav:flex-1">
+              <iframe
+                title={t(locale, "dashboard.website.starter.iframeTitle")}
+                srcDoc={html}
+                sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+                className="h-[480px] w-full border-0 nav:h-full"
+              />
+            </Card>
+            {/* ONE row: the full preview (left), the download (right). */}
+            <div className="flex flex-wrap items-center justify-between gap-2" data-testid="starter-actions">
+              <Button variant="default" onClick={openFullPreview} className="w-fit" data-testid="open-full-preview">
+                <IconExternalLink size={16} />
+                {t(locale, "dashboard.free.web.openPreview")}
+              </Button>
+              {free ? (
+                <UpgradeButton feature="grow" testId="starter-download-locked" className={buttonClasses("brass")}>
+                  <IconLock size={16} aria-hidden />
+                  {t(locale, "dashboard.website.starter.downloadSiteButton")}
+                  <span className="rounded-full bg-white/80 px-1.5 py-px text-[10.5px] font-semibold text-ink">{t(locale, "dashboard.settings.plan.name.grow")}</span>
+                </UpgradeButton>
+              ) : (
+                <Button variant="brass" onClick={handleDownload}>
+                  <IconDownload size={16} />
+                  {t(locale, "dashboard.website.starter.downloadSiteButton")}
+                </Button>
+              )}
+            </div>
+            {!free && downloadError && <p className="text-[12px] text-red">{downloadError}</p>}
+            {!free && <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.website.starter.downloadHelper")}</p>}
           </div>
-          <Card className="overflow-hidden p-0">
-            <iframe
-              title={t(locale, "dashboard.website.starter.iframeTitle")}
-              srcDoc={html}
-              sandbox="allow-scripts allow-popups"
-              className="h-[420px] w-full border-0"
-            />
-          </Card>
-          <Button variant="brass" onClick={handleDownload}>
-            <IconDownload size={16} />
-            {t(locale, "dashboard.website.starter.downloadSiteButton")}
-          </Button>
-          <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.website.starter.downloadHelper")}</p>
         </div>
       </div>
 
+      {/* Publishing only makes sense once the site can be downloaded (Grow and up). */}
+      {!free && (
+        <>
       <Card className="p-5">
         <div className="text-[13px] font-semibold text-ink">
           {t(locale, "dashboard.website.starter.howToPublishHeading")}
@@ -911,6 +982,8 @@ export function StarterSiteBuilder({
               : t(locale, "dashboard.website.starter.markAsPublished")}
         </Button>
       </Card>
+        </>
+      )}
     </div>
   );
 }
