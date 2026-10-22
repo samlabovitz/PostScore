@@ -116,6 +116,7 @@ export type GetCompetitorsResult =
  * Reads the database only — viewing the page never calls Google.
  */
 export async function getCompetitors(businessId: string): Promise<GetCompetitorsResult> {
+  const plan = await getPlan();
   const supabase = createClient();
 
   const {
@@ -126,14 +127,15 @@ export async function getCompetitors(businessId: string): Promise<GetCompetitors
     return { status: "unauthenticated" };
   }
 
-  return getCompetitorsWithClient(supabase, businessId);
+  return getCompetitorsWithClient(supabase, businessId, new Date(), plan);
 }
 
 /** The real logic behind getCompetitors() — DB reads only. */
 export async function getCompetitorsWithClient(
   supabase: SupabaseClient,
   businessId: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  plan: Plan | null = null
 ): Promise<GetCompetitorsResult> {
   // Every read needs only the id — run them together (each RLS-scoped).
   const [{ data: business, error }, { data: scanRows, error: scanError }, unfinished, scoring, niche] = await Promise.all([
@@ -189,7 +191,14 @@ export async function getCompetitorsWithClient(
     latest,
     rankHistory: scans.map((s) => rankPoint(s, niche?.scope)).reverse(),
     niche,
-    refresh: refreshAvailability(newestSavedAt, now),
+    // Free: "Refresh" only when the latest scan found no competitors (the
+    // one exception — right away, no cooldown).
+    refresh:
+      plan === "free"
+        ? latest && !latest.entries.some((e) => !e.isSubject)
+          ? { allowed: true, nextAvailableAt: null }
+          : { allowed: false, nextAvailableAt: null }
+        : refreshAvailability(newestSavedAt, now),
     scanBlocker: competitorScanBlocker({
       lat: row.lat,
       lng: row.lng,
@@ -308,11 +317,18 @@ export async function runAndSaveCompetitorScanWithClient(
   try {
     result = await (options.scan ?? findAndScoreCompetitors)(subject, normalizeLocale(row.language));
   } catch (err) {
+    console.error(`[competitors] scan threw for ${businessId}:`, err instanceof Error ? err.message : err);
     return { status: "error", message: err instanceof Error ? err.message : "Could not scan competitors." };
   }
   // Every search call counts toward the month, found anything or not.
   await (options.logCalls ?? logPlacesSearchCalls)(businessId, result.placesCalls ?? 0).catch(() => undefined);
-  if (result.status !== "ok" || result.ranked.length === 0) {
+  // "Didn't run" is never shown as "found none": a failed search or a scan
+  // that couldn't search (no location, only generic types) says so.
+  if (result.status !== "ok") {
+    if (result.status === "error") console.error(`[competitors] scan failed for ${businessId}: ${result.message}`);
+    return { status: "error", message: result.message };
+  }
+  if (result.ranked.length === 0) {
     return { status: "no_data" };
   }
 
@@ -377,6 +393,16 @@ async function defaultStartScoring(scanId: string, businessId: string, competito
 }
 
 /** "Refresh competitors" — one paid scan, at most once per 30 days. */
+/** Whether the latest saved scan found no competitors at all (only the
+ * business itself); null when there's no scan. */
+async function latestScanFoundNone(supabase: SupabaseClient, businessId: string): Promise<boolean | null> {
+  const { data } = await supabase.from("competitor_scans").select("scan_id").eq("business_id", businessId).order("created_at", { ascending: false }).limit(1);
+  const scanId = (data ?? [])[0]?.scan_id as string | undefined;
+  if (!scanId) return null;
+  const { count } = await supabase.from("competitor_scans").select("id", { count: "exact", head: true }).eq("scan_id", scanId).eq("is_subject", false);
+  return (count ?? 0) === 0;
+}
+
 export async function refreshCompetitors(businessId: string): Promise<SaveCompetitorScanResult> {
   const supabase = createClient();
   const {
@@ -385,8 +411,14 @@ export async function refreshCompetitors(businessId: string): Promise<SaveCompet
   if (!user) {
     return { status: "unauthenticated" };
   }
-  // Free keeps its saved list and rank; refreshing (Places searches) is Grow.
+  // Free keeps its saved list and rank; refreshing (Places searches) is
+  // Grow — except when the latest scan came back with NO competitors (or
+  // there's none yet): then Free may search again right away.
   if ((await getPlan()) === "free") {
+    const latestAt = await latestCompetitorScanAt(supabase, businessId);
+    if (latestAt === null || (await latestScanFoundNone(supabase, businessId)) === true) {
+      return runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: false });
+    }
     const { data: row } = await supabase.from("businesses").select("language").eq("id", businessId).maybeSingle();
     return { status: "error", message: t(normalizeLocale(row?.language), "dashboard.free.competitorsLocked") };
   }
@@ -409,11 +441,15 @@ export async function refreshCompetitorsOnRescanWithClient(
   run: typeof runAndSaveCompetitorScanWithClient = runAndSaveCompetitorScanWithClient
 ): Promise<"refreshed" | "skipped"> {
   try {
-    if (plan === "free") return "skipped";
-    if (!rescanRefreshesCompetitors(plan, await latestCompetitorScanAt(supabase, businessId), now)) return "skipped";
+    // Free searches only when there's no scan yet or the latest found none.
+    const latestAt = await latestCompetitorScanAt(supabase, businessId);
+    const foundNone = plan === "free" && latestAt !== null ? (await latestScanFoundNone(supabase, businessId)) === true : false;
+    if (!rescanRefreshesCompetitors(plan, latestAt, now, foundNone)) return "skipped";
     const result = await run(supabase, businessId, { enforceCooldown: false, now });
+    if (result.status === "error") console.error(`[competitors] re-scan competitor search failed for ${businessId}: ${result.message}`);
     return result.status === "saved" ? "refreshed" : "skipped";
-  } catch {
+  } catch (err) {
+    console.error(`[competitors] re-scan competitor search threw for ${businessId}:`, err instanceof Error ? err.message : err);
     return "skipped";
   }
 }
@@ -432,8 +468,11 @@ export async function ensureFirstCompetitorScanWithClient(
 ): Promise<SaveCompetitorScanResult | { status: "skipped" }> {
   try {
     if ((await latestCompetitorScanAt(supabase, businessId)) !== null) return { status: "skipped" };
-    return await run(supabase, businessId, { enforceCooldown: false });
+    const result = await run(supabase, businessId, { enforceCooldown: false });
+    if (result.status === "error") console.error(`[competitors] first competitor scan failed for ${businessId}: ${result.message}`);
+    return result;
   } catch (err) {
+    console.error(`[competitors] first competitor scan threw for ${businessId}:`, err instanceof Error ? err.message : err);
     return { status: "error", message: err instanceof Error ? err.message : "Could not scan competitors." };
   }
 }

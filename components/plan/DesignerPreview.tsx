@@ -7,6 +7,8 @@
 // inside can be clicked or focused (inert); one transparent button over it
 // opens the promo box. Above it, never blurred: its icon, name, one
 // line and a small "Preview" chip. Nothing is saved, printed or shared — no calls.
+// Never printable either: the designers drop data-print-design in a showroom
+// (so Cmd+P never prints the design alone) and the preview is print:hidden.
 
 import type { ReactNode } from "react";
 import { IconEye, type Icon as TablerIcon } from "@tabler/icons-react";
@@ -49,7 +51,7 @@ export function DesignerPreview({
         </div>
       </div>
       <div className="relative overflow-hidden rounded-2xl">
-        <div {...INERT} aria-hidden="true" data-testid="designer-preview-content" className="pointer-events-none select-none blur-[2.5px]">
+        <div {...INERT} aria-hidden="true" data-testid="designer-preview-content" className="pointer-events-none select-none blur-[2.5px] print:hidden">
           {children}
         </div>
         <UpgradeButton feature={feature} testId="designer-preview-open" className="absolute inset-0 h-full w-full cursor-pointer bg-transparent">

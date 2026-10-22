@@ -199,7 +199,7 @@ describe("Free PostAI never gives the paid step-by-step fixes", () => {
     expect(freeAnswerLeaksFix("Sure! Tap Photos, and upload at least five bright photos of your storefront.", [context.actionPlan.topTasks[0].action])).toBe(true);
     expect(freeAnswerLeaksFix("Photos help customers trust you — the step-by-step plan is on Grow.", [context.actionPlan.topTasks[0].action])).toBe(false);
     const send = readFileSync("app/actions/assistant.ts", "utf8");
-    expect(send).toContain('if (freeAnswerLeaksFix(replyText, fixes)) replyText = t(loaded.locale, "dashboard.free.postaiFixOnGrow");');
+    expect(send).toContain('return freeAnswerLeaksFix(stripped, fixes) ? t(loaded.locale, "dashboard.free.postaiFixOnGrow") : stripped;');
   });
 
   test("the server reserves a Free question before any AI call, and a 4th returns limit", () => {
@@ -234,7 +234,7 @@ describe("the counters (EN + ES)", () => {
     expect(ok).toContain("Ask questions about your score — 3 free questions a week.");
     expect(ok).toContain("2 of 3 free questions left · resets Oct 27, 2026");
     const used = wrap(<FreePostAI businessId="b1" starterPrompts={[]} initial={{ status: "ok", left: 0, resetsAt: RESET }} />);
-    expect(text(used)).toContain("You've used this week's free questions. They reset Oct 27, 2026 — or ask up to 100 a month on Grow.");
+    expect(text(used)).toContain("You've used this week's free questions. They reset Oct 27, 2026 — or ask more on Grow.");
     expect(used).toContain('href="/business/b1/settings#compare-plans"');
     expect(used).not.toContain('data-testid="postai-question"');
     const paused = text(wrap(<FreePostAI businessId="b1" starterPrompts={[]} initial={{ status: "paused", left: 2, resetsAt: RESET, until: "2026-11-01T00:00:00.000Z" }} />));

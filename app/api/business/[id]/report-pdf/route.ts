@@ -5,6 +5,8 @@
 import { NextResponse } from "next/server";
 import { getReportData } from "@/lib/reports/reportData.server";
 import { buildReportPdf, reportFileName } from "@/lib/reports/reportPdf.server";
+import { getPlan } from "@/lib/premium";
+import { isPremiumPlan } from "@/lib/plan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +16,8 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   if (result.status === "unauthenticated") return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   if (result.status === "not_found") return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (result.status === "error") return NextResponse.json({ error: "error" }, { status: 500 });
+  // The PDF report is Premium (Settings → Compare plans: "Weekly + PDF").
+  if (!isPremiumPlan(await getPlan())) return NextResponse.json({ error: "premium_only" }, { status: 403 });
   const bytes = await buildReportPdf(result.data);
   return new NextResponse(bytes as BodyInit, {
     headers: {

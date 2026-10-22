@@ -23,19 +23,28 @@ import { competitorPageLines, rescanCompetitorsLine, rescanCompetitorsToast } fr
 const NOW = new Date("2026-10-22T12:00:00Z");
 const daysAgo = (d: number) => new Date(NOW.getTime() - d * 86_400_000).toISOString();
 
-/** competitor_scans → the latest scan time (or none); counts queries. */
-function db(latest: string | null) {
+/** competitor_scans → the latest scan (time, and how many competitors it
+ * found); counts queries. */
+function db(latest: string | null, competitors = 5) {
   const seen = { queries: 0 };
-  const chain = {
-    select: () => chain,
-    eq: () => chain,
-    order: () => chain,
-    limit: async () => {
-      seen.queries += 1;
-      return { data: latest ? [{ created_at: latest }] : [], error: null };
-    },
+  const chain = (): Record<string, unknown> => {
+    let counting = false;
+    const c: Record<string, unknown> = {
+      select: (_cols: string, opts?: { count?: string }) => ((counting = !!opts?.count), c),
+      eq: () => c,
+      order: () => c,
+      limit: async () => {
+        seen.queries += 1;
+        return { data: latest ? [{ created_at: latest, scan_id: "s1" }] : [], error: null };
+      },
+      then: (resolve: (v: unknown) => void) => {
+        seen.queries += 1;
+        resolve(counting ? { count: competitors, error: null } : { data: [], error: null });
+      },
+    };
+    return c;
   };
-  return { client: { from: () => chain } as unknown as SupabaseClient, seen };
+  return { client: { from: () => chain() } as unknown as SupabaseClient, seen };
 }
 
 const saved = () => vi.fn(async () => ({ status: "saved" as const, scanId: "s1" }));
@@ -60,21 +69,27 @@ describe("Free: 1 owner re-scan every 7 days, enforced server-side", () => {
   });
 });
 
-describe("Free re-scans make no competitor Nearby Search calls", () => {
-  test("never runs a competitor scan — not even a database lookup — and never reaches Nearby Search", async () => {
+describe("Free re-scans make no competitor Nearby Search calls — except when the latest scan found none", () => {
+  test("a saved scan with competitors: never a competitor search on Free, never reaches Nearby Search", async () => {
     nearbySpy.mockClear();
-    for (const latest of [null, daysAgo(1), daysAgo(400)]) {
-      const { client, seen } = db(latest);
+    for (const latest of [daysAgo(1), daysAgo(400)]) {
       const run = saved();
-      expect(await refreshCompetitorsOnRescanWithClient(client, "b1", "free", NOW, run)).toBe("skipped");
+      expect(await refreshCompetitorsOnRescanWithClient(db(latest, 6).client, "b1", "free", NOW, run)).toBe("skipped");
       expect(run).not.toHaveBeenCalled();
-      expect(seen.queries).toBe(0);
     }
-    // The real scan path too: nothing reaches findAndScoreCompetitors.
-    const { client } = db(null);
-    expect(await refreshCompetitorsOnRescanWithClient(client, "b1", "free", NOW)).toBe("skipped");
+    expect(await refreshCompetitorsOnRescanWithClient(db(daysAgo(1), 6).client, "b1", "free", NOW)).toBe("skipped");
     expect(nearbySpy).not.toHaveBeenCalled();
-    expect(rescanRefreshesCompetitors("free", null, NOW)).toBe(false);
+    expect(rescanRefreshesCompetitors("free", daysAgo(1), NOW)).toBe(false);
+  });
+
+  test("the one exception: the latest scan came back with NO competitors (or there's none yet) → search again right away", async () => {
+    const none = saved();
+    expect(await refreshCompetitorsOnRescanWithClient(db(daysAgo(1), 0).client, "b1", "free", NOW, none)).toBe("refreshed");
+    expect(none).toHaveBeenCalledTimes(1);
+    const first = saved();
+    expect(await refreshCompetitorsOnRescanWithClient(db(null).client, "b1", "free", NOW, first)).toBe("refreshed");
+    expect(rescanRefreshesCompetitors("free", daysAgo(1), NOW, true)).toBe(true);
+    expect(rescanRefreshesCompetitors("free", null, NOW)).toBe(true);
   });
 });
 

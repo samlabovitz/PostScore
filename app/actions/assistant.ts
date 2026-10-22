@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { scoreBusinessById, getScoreHistory } from "@/app/actions/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
-import { getLatestCompetitorSnapshot } from "@/app/actions/competitors";
+import { getLatestCompetitorSnapshot, getLocalBenchmark } from "@/app/actions/competitors";
 import { nearbyReviewAverage, ownerStanding, rankBy, reviewGoal } from "@/lib/competitorComparison";
 import { reviewGoalLines } from "@/lib/reviewGoal";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
@@ -46,6 +46,10 @@ import {
 } from "@/lib/assistant";
 import { formatShortDate, normalizeLocale, t, type Locale } from "@/lib/i18n";
 import { confirmFreeAiWithClient, releaseFreeAiWithClient, reserveFreeAi } from "@/lib/freeAiUsage.server";
+import { featureMapFor, featureMapText } from "@/lib/postaiFeatureMap";
+import { postaiMonth, postaiMonthlyLeft, postaiMonthlyLimit } from "@/lib/postaiLimits";
+import { answerWithFactCheck, buildPostaiFacts } from "@/lib/postaiFacts";
+import { planFactsText } from "@/lib/planFacts";
 import { loadCompetitorScope } from "@/lib/businessNiche.server";
 import { scopeGroupLabel, applyScope, scopeSummary } from "@/lib/competitorScope";
 
@@ -171,10 +175,12 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     snapshot: snap,
     signals: await getGrowthMoveSignals(businessId, breakdown, profile, snap),
   }));
-  const [actionPlanResult, { snapshot, signals: signalsResult }, competitorScope] = await Promise.all([
+  const [actionPlanResult, { snapshot, signals: signalsResult }, competitorScope, benchmark, plan] = await Promise.all([
     getActionPlan(businessId, input, breakdown, suggestions, locale),
     signalsPromise,
     loadCompetitorScope(createClient(), businessId),
+    getLocalBenchmark(businessId),
+    getPlan(),
   ]);
   const topTasks: AssistantActionPlanTask[] =
     actionPlanResult.status === "ok"
@@ -352,9 +358,52 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     competitors,
     profile: businessProfile,
     gbp: { connected: gbpStatus.status === "ok" && gbpStatus.connected },
+    planGuide: await planGuideFor(profile, businessWebsiteUrl(scored.business) !== null),
+    // The facts every answer is checked against (lib/postaiFacts.ts).
+    facts: buildPostaiFacts(breakdown, {
+      plan,
+      // The Overview's own projections: "Biggest boost", "Projected
+      // score" and the Growth plan cards' points (Free: points waiting).
+      biggestBoost: suggestions[0] ?? null,
+      projectedScore: scored.result.projectedBreakdown.total,
+      tasks: actionPlanResult.status === "ok" ? actionPlanResult.tasks.slice(0, MAX_ACTION_PLAN_TASKS_IN_CONTEXT) : [],
+      websiteBanner: actionPlanResult.status === "ok" ? actionPlanResult.websiteBanner : null,
+      // The Overview's "How you rank nearby" card, exactly (same call, same scope).
+      rankCard:
+        benchmark.status === "ok"
+          ? {
+              othersCount: benchmark.benchmark.othersCount,
+              percentileAhead: benchmark.benchmark.percentileAhead,
+              smallSample: benchmark.benchmark.smallSample,
+              noun: benchmark.benchmark.competitorNoun,
+              scope: competitors.available ? (competitors.rankedAgainst ?? null) : null,
+            }
+          : null,
+      rating: scored.business.rating,
+      reviewCount: scored.business.review_count,
+      hasWebsite: businessWebsiteUrl(scored.business) !== null,
+      rank: competitors.subjectRank ? { rank: competitors.subjectRank, of: competitors.entries.length } : null,
+      nearbyReviewAverage: competitors.nearbyReviewAverage ?? null,
+      competitors: snapshot
+        ? rankBy(snapshot.scan, "overall", competitorScope).map(({ entry }) => ({ name: entry.name ?? "Unnamed business", total: entry.total, reviews: entry.reviewCount, rating: entry.rating, isSubject: entry.isSubject }))
+        : [],
+    }),
   };
 
   return { status: "ok", context, locale };
+}
+
+/** The owner's plan for PostAI: where every feature is on it (rules 7f),
+ * the plan facts from "Compare plans" (rule 7g), and how many businesses
+ * the owner has (Multi is only mentioned for more than one). */
+async function planGuideFor(profile: { couponsOk: boolean; referralOk: boolean; pricingOk: boolean }, hasWebsite: boolean): Promise<NonNullable<AssistantBusinessContext["planGuide"]>> {
+  const plan = await getPlan();
+  const { count } = await createClient().from("businesses").select("id", { count: "exact", head: true });
+  return {
+    featureMap: featureMapText(plan, featureMapFor(plan, { couponsOk: profile.couponsOk, referralOk: profile.referralOk, pricingOk: profile.pricingOk, hasWebsite })),
+    planFacts: planFactsText(),
+    businessCount: count ?? 1,
+  };
 }
 
 export type GetAssistantPageDataResult =
@@ -405,7 +454,15 @@ export async function getAssistantPageData(businessId: string): Promise<GetAssis
 
 export type SendAssistantMessageResult =
   /** `free`: Free only — questions left this week and when they reset. */
-  | { status: "ok"; userMessage: AssistantMessageRow; reply: AssistantMessageRow; conversationId: string; free?: { left: number; resetsAt: string } }
+  | {
+      status: "ok";
+      userMessage: AssistantMessageRow;
+      reply: AssistantMessageRow;
+      conversationId: string;
+      free?: { left: number; resetsAt: string };
+      /** Grow: questions left this month and when they reset. */
+      monthly?: { left: number; total: number; resetsAt: string };
+    }
   /** Free: this week's 3 questions are used — no AI call was made. */
   | { status: "limit"; resetsAt: string }
   /** Free: the month's Free AI budget (FREE_AI_MONTHLY_CAP) is used up. */
@@ -443,7 +500,18 @@ export async function sendAssistantMessage(
   if (!message.trim()) {
     return { status: "error", message: t(loaded.locale, "dashboard.assistant.errorTypeQuestionFirst") };
   }
-  if ((await getPlan()) !== "free") return sendWithContext(loaded, businessId, message, conversationId, false);
+  const plan = await getPlan();
+  if (plan !== "free") {
+    // Grow: 100 a month, checked before any AI call (a failed call saves no
+    // answer, so it never counts).
+    const limit = postaiMonthlyLimit(plan);
+    if (limit === null) return sendWithContext(loaded, businessId, message, conversationId, false);
+    const month = postaiMonth(new Date());
+    const used = await postaiAnswersSince(businessId, month.start);
+    if (used >= limit) return { status: "limit", resetsAt: month.resetsAt };
+    const result = await sendWithContext(loaded, businessId, message, conversationId, false);
+    return result.status === "ok" ? { ...result, monthly: { left: postaiMonthlyLeft(limit, used + 1), total: limit, resetsAt: month.resetsAt } } : result;
+  }
 
   // Free: 3 questions a week (lib/freeAiUsage.server.ts) — reserved BEFORE
   // any AI call; a 4th is refused without calling the AI, and a failed
@@ -462,6 +530,26 @@ export async function sendAssistantMessage(
   }
   await confirmFreeAiWithClient(reservation.db, reservation.id);
   return { ...result, free: { left: reservation.left, resetsAt: reservation.resetsAt } };
+}
+
+/** PostAI answers saved for this business since `since` — one per question
+ * that really got an answer. */
+async function postaiAnswersSince(businessId: string, since: string): Promise<number> {
+  const { count } = await createClient()
+    .from("assistant_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("business_id", businessId)
+    .eq("role", "assistant")
+    .gte("created_at", since);
+  return count ?? 0;
+}
+
+/** Grow's questions left this month (the chat's counter); null on other plans. */
+export async function getPostaiMonthlyStatus(businessId: string): Promise<{ left: number; total: number; resetsAt: string } | null> {
+  const limit = postaiMonthlyLimit(await getPlan());
+  if (limit === null) return null;
+  const month = postaiMonth(new Date());
+  return { left: postaiMonthlyLeft(limit, await postaiAnswersSince(businessId, month.start)), total: limit, resetsAt: month.resetsAt };
 }
 
 /** The send itself (both plans). `free`: the Free prompt (no fix steps),
@@ -535,11 +623,25 @@ async function sendWithContext(
 
   let replyText: string;
   try {
-    replyText = await callAnthropicChat({
-      system,
-      messages: recentTurns.map((m) => ({ role: m.role, content: m.content })),
-      maxTokens: ASSISTANT_MAX_TOKENS,
-    });
+    // Free: no link markers, and never the paid step-by-step fix text — an
+    // answer that repeats it is replaced with the honest pointer to Grow.
+    const fixes = loaded.context.actionPlan.topTasks.map((task) => task.action).filter(Boolean);
+    const clean = (text: string) => {
+      if (!free) return text;
+      const stripped = stripLinkMarkers(text);
+      return freeAnswerLeaksFix(stripped, fixes) ? t(loaded.locale, "dashboard.free.postaiFixOnGrow") : stripped;
+    };
+    const messages = recentTurns.map((m) => ({ role: m.role, content: m.content }));
+    const ask = (msgs: typeof messages) => callAnthropicChat({ system, messages: msgs, maxTokens: ASSISTANT_MAX_TOKENS });
+    // Every number and claim is checked against the facts; a wrong answer
+    // is asked again once, then replaced with a facts-only answer.
+    if (loaded.context.facts) {
+      const checked = await answerWithFactCheck({ ask, messages, facts: loaded.context.facts, promptText: system, locale: loaded.locale, clean });
+      if (checked.issues.length > 0) console.warn(`[assistant] fact check ${checked.fallback ? "failed twice — facts-only answer" : "fixed on retry"} for ${businessId}: ${checked.issues.join("; ")}`);
+      replyText = checked.answer;
+    } else {
+      replyText = clean(await ask(messages));
+    }
   } catch (err) {
     // The owner only ever sees a short, honest, translated message (see
     // anthropicFailureMessage in lib/assistant.ts — it's handed only a
@@ -565,13 +667,6 @@ async function sendWithContext(
     };
   }
 
-  // Free: no link markers, and never the paid step-by-step fix text — an
-  // answer that repeats it is replaced with the honest pointer to Grow.
-  if (free) {
-    replyText = stripLinkMarkers(replyText);
-    const fixes = loaded.context.actionPlan.topTasks.map((task) => task.action).filter(Boolean);
-    if (freeAnswerLeaksFix(replyText, fixes)) replyText = t(loaded.locale, "dashboard.free.postaiFixOnGrow");
-  }
 
   const { data: replyRow, error: replyError } = await supabase
     .from("assistant_messages")

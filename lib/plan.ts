@@ -31,3 +31,10 @@ export function isAddon(value: unknown): value is Addon {
 export function backgroundPlan(_ownerId?: string | null, env: { NODE_ENV?: string; POSTSCORE_DEV_PLAN?: string } = process.env): Plan {
   return env.NODE_ENV === "development" && isPlan(env.POSTSCORE_DEV_PLAN) ? env.POSTSCORE_DEV_PLAN : "free";
 }
+
+/** Locations (businesses) an account's plan includes — Settings → Compare
+ * plans: 1 on Free, Grow and Premium; up to 5 on Multi (+$25/mo each extra
+ * — not purchasable yet, so 5 is the limit for now). */
+export function locationLimit(plan: Plan): number {
+  return plan === "multi" ? 5 : 1;
+}

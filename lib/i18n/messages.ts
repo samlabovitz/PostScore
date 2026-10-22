@@ -66,6 +66,7 @@ export type MessageKey =
   | "dashboard.settings.plans.row.replies"
   | "dashboard.settings.plans.value.perWeek3"
   | "dashboard.settings.plans.value.perWeek10"
+  | "dashboard.settings.plans.value.perMonth100"
   | "dashboard.replies.leftWeeklyGrow"
   | "dashboard.replies.usedUpWeeklyGrow"
   | "dashboard.settings.plans.value.repliesUnlimited"
@@ -227,6 +228,50 @@ export type MessageKey =
   | "dashboard.free.sumChecks"
   | "dashboard.free.lockedLabel"
   | "dashboard.free.waitingPoints"
+  | "dashboard.assistant.fallback.intro"
+  | "dashboard.assistant.fallback.score"
+  | "dashboard.assistant.fallback.reviews"
+  | "dashboard.assistant.fallback.noReviews"
+  | "dashboard.assistant.fallback.website"
+  | "dashboard.assistant.fallback.noWebsite"
+  | "dashboard.assistant.fallback.rank"
+  | "dashboard.assistant.fallback.more"
+  | "dashboard.assistant.monthlyLeft"
+  | "dashboard.assistant.monthlyUsedUp"
+  | "dashboard.addBusiness.locationLimit"
+  | "dashboard.addBusiness.locationLimitMulti"
+  | "dashboard.free.planList.fixGuides.h"
+  | "dashboard.free.planList.fixGuides.l"
+  | "dashboard.free.planList.recheck.h"
+  | "dashboard.free.planList.recheck.l"
+  | "dashboard.free.planList.starterSite.h"
+  | "dashboard.free.planList.starterSite.l"
+  | "dashboard.free.planList.priceCheck.h"
+  | "dashboard.free.planList.priceCheck.l"
+  | "dashboard.free.planList.reviewScripts.h"
+  | "dashboard.free.planList.reviewScripts.l"
+  | "dashboard.free.planList.campaigns.h"
+  | "dashboard.free.planList.campaigns.l"
+  | "dashboard.free.planList.recap.h"
+  | "dashboard.free.planList.recap.l"
+  | "dashboard.free.planList.moreDrafts.h"
+  | "dashboard.free.planList.moreDrafts.l"
+  | "dashboard.free.planList.postaiUnlimited.h"
+  | "dashboard.free.planList.postaiUnlimited.l"
+  | "dashboard.free.planList.unlimitedDrafts.h"
+  | "dashboard.free.planList.unlimitedDrafts.l"
+  | "dashboard.free.planList.designs.h"
+  | "dashboard.free.planList.designs.l"
+  | "dashboard.free.planList.pdfReports.h"
+  | "dashboard.free.planList.pdfReports.l"
+  | "dashboard.free.planList.googleProfile.h"
+  | "dashboard.free.planList.googleProfile.l"
+  | "dashboard.free.planList.aiReplies.h"
+  | "dashboard.free.planList.aiReplies.l"
+  | "dashboard.free.planList.campaignHub.h"
+  | "dashboard.free.planList.campaignHub.l"
+  | "dashboard.free.planList.postStudio.h"
+  | "dashboard.free.planList.postStudio.l"
   | "dashboard.free.fixPlan.seeEverything"
   | "dashboard.free.fixPlan.hideEverything"
   | "dashboard.free.tile.repliesPostedForYou"
@@ -4048,7 +4093,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.tagline.multi": "Premium for every location",
     "dashboard.settings.plans.promise.free": "See exactly what's costing you customers.",
     "dashboard.settings.plans.promise.grow": "We show you exactly how to fix every problem.",
-    "dashboard.settings.plans.promise.premium": "Connect Google and PostScore fixes things for you.",
+    "dashboard.settings.plans.promise.premium": "Unlimited PostAI and replies, and every design tool. Connecting Google so PostScore fixes things for you is coming soon.",
     "dashboard.settings.plans.bullet.free.score": "Your PostScore and grade, with a free re-scan every week",
     "dashboard.settings.plans.bullet.free.problems": "Every problem on your Google listing, reviews and website",
     "dashboard.settings.plans.bullet.free.rank": "How you rank against nearby competitors",
@@ -4058,7 +4103,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.grow.plan": "A weekly action plan that tells you what to do next",
     "dashboard.settings.plans.bullet.grow.recheck": "Re-check your website as soon as you fix something",
     "dashboard.settings.plans.bullet.grow.tools": "A starter website, plus basic review signs, coupons and referral cards",
-    "dashboard.settings.plans.bullet.grow.postai": "PostAI for your questions (monthly limit)",
+    "dashboard.settings.plans.bullet.grow.postai": "PostAI for your questions (100 a month)",
     "dashboard.settings.plans.bullet.premium.fixes": "One-click fixes to your Google listing: hours, info, photos (coming soon)",
     "dashboard.settings.plans.bullet.premium.replies": "Unlimited replies; with Google connect, every unanswered review + posting for you (coming soon)",
     "dashboard.settings.plans.bullet.premium.insights": "See who searches for you and who calls or clicks (coming soon)",
@@ -4082,6 +4127,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.row.replies": "AI review replies",
     "dashboard.settings.plans.value.perWeek3": "3 a week",
     "dashboard.settings.plans.value.perWeek10": "10 a week",
+    "dashboard.settings.plans.value.perMonth100": "100 a month",
     "dashboard.settings.plans.value.repliesUnlimited": "Unlimited · auto-post coming soon",
     "dashboard.settings.plans.row.postStudio": "PostStudio — your full website, built and hosted for you (coming soon)",
     "dashboard.settings.plans.row.locations": "Locations",
@@ -4241,13 +4287,57 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.sumChecks": "{count} website checks",
     "dashboard.free.lockedLabel": "Locked",
     "dashboard.free.waitingPoints": "{points} points are waiting to be fixed",
+    "dashboard.assistant.fallback.intro": "Here's what I can tell you for sure from your last scan.",
+    "dashboard.assistant.fallback.score": "Your PostScore is {total}/100 (grade {grade}).",
+    "dashboard.assistant.fallback.reviews": "You have {count} Google reviews at {rating}★; the review count gets full credit at {fullAt}+ reviews.",
+    "dashboard.assistant.fallback.noReviews": "You don't have any Google reviews yet.",
+    "dashboard.assistant.fallback.website": "Your listing has a website.",
+    "dashboard.assistant.fallback.noWebsite": "Your business doesn't have a website yet.",
+    "dashboard.assistant.fallback.rank": "You rank #{rank} of {of} among nearby competitors.",
+    "dashboard.assistant.fallback.more": "For the details, open the Score breakdown on your Overview — or ask me again in a different way.",
+    "dashboard.assistant.monthlyLeft": "{left} of {total} questions left this month",
+    "dashboard.assistant.monthlyUsedUp": "You've used this month's {total} questions. They reset {date} — or ask unlimited questions on Premium.",
+    "dashboard.addBusiness.locationLimit": "Your plan includes {count} location. Multi covers up to 5 locations — see Settings → Compare plans.",
+    "dashboard.addBusiness.locationLimitMulti": "Multi includes up to {count} locations. More locations ($25/mo each) aren't available to add yet.",
+    "dashboard.free.planList.fixGuides.h": "Fix your website step by step",
+    "dashboard.free.planList.fixGuides.l": "Guides written for {builder}, check by check.",
+    "dashboard.free.planList.recheck.h": "See your fixes count right away",
+    "dashboard.free.planList.recheck.l": "Re-check your website as soon as you change something — no waiting for your next re-scan.",
+    "dashboard.free.planList.starterSite.h": "A one-page website, ready today",
+    "dashboard.free.planList.starterSite.l": "Download your starter site and put it online anywhere.",
+    "dashboard.free.planList.priceCheck.h": "Know if your prices fit your area",
+    "dashboard.free.planList.priceCheck.l": "Price check compares your prices with nearby competitors' price levels, plus pricing tips for your type of business.",
+    "dashboard.free.planList.reviewScripts.h": "Know exactly what to say to get reviews",
+    "dashboard.free.planList.reviewScripts.l": "Ready-to-copy scripts for asking customers, in English and Spanish — plus when to ask and where to put your QR code.",
+    "dashboard.free.planList.campaigns.h": "Run a coupon or referral card that works",
+    "dashboard.free.planList.campaigns.l": "Print it, track every use with +1, and follow a step-by-step guide to running it.",
+    "dashboard.free.planList.recap.h": "See how your week went",
+    "dashboard.free.planList.recap.l": "A weekly recap on the Reports page: your score, reviews and rank, and the fixes we confirmed.",
+    "dashboard.free.planList.moreDrafts.h": "Reply to more reviews",
+    "dashboard.free.planList.moreDrafts.l": "10 AI review reply drafts a week (3 on Free).",
+    "dashboard.free.planList.postaiUnlimited.h": "Ask PostAI anything, anytime",
+    "dashboard.free.planList.postaiUnlimited.l": "Unlimited questions about your score, reviews and customers.",
+    "dashboard.free.planList.unlimitedDrafts.h": "A reply for every review",
+    "dashboard.free.planList.unlimitedDrafts.l": "Unlimited AI review reply drafts.",
+    "dashboard.free.planList.designs.h": "Signs and cards with your own look",
+    "dashboard.free.planList.designs.l": "Every template and option for review signs, coupons and referral cards — no PostScore branding.",
+    "dashboard.free.planList.pdfReports.h": "A report you can print or share",
+    "dashboard.free.planList.pdfReports.l": "Download your weekly report as a PDF.",
+    "dashboard.free.planList.googleProfile.h": "Google listing fixes done for you",
+    "dashboard.free.planList.googleProfile.l": "Connect Google to fix your hours, info and photos in one click, and see who searches for you and calls.",
+    "dashboard.free.planList.aiReplies.h": "Replies posted for you",
+    "dashboard.free.planList.aiReplies.l": "See every review you haven't answered and post replies from PostScore.",
+    "dashboard.free.planList.campaignHub.h": "Email, text and social campaigns",
+    "dashboard.free.planList.campaignHub.l": "Send your offers to customers from one place.",
+    "dashboard.free.planList.postStudio.h": "Your full website, built and hosted",
+    "dashboard.free.planList.postStudio.l": "PostStudio: a multi-page site on your own domain — $30/mo on its own, less with a plan.",
     "dashboard.free.fixPlan.seeEverything": "See everything in each plan",
     "dashboard.free.fixPlan.hideEverything": "Hide the full list",
     "dashboard.free.tile.repliesPostedForYou": "AI review replies posted for you",
     "dashboard.free.postaiFixOnGrow": "I can explain what this means and why it matters to your customers — the full step-by-step plan to fix it is on Grow (Settings → Compare plans).",
     "dashboard.free.postai.line": "Ask questions about your score — 3 free questions a week.",
     "dashboard.free.postai.left": "{left} of {total} free questions left · resets {date}",
-    "dashboard.free.postai.usedUp": "You've used this week's free questions. They reset {date} — or ask up to 100 a month on Grow.",
+    "dashboard.free.postai.usedUp": "You've used this week's free questions. They reset {date} — or ask more on Grow.",
     "dashboard.free.postai.thinking": "PostAI is thinking…",
     "dashboard.free.postai.you": "You",
     "dashboard.free.ai.paused": "Free AI answers are paused until {date} — upgrade for unlimited.",
@@ -8428,7 +8518,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.tagline.multi": "Premium para cada una de sus ubicaciones",
     "dashboard.settings.plans.promise.free": "Vea exactamente qué le está costando clientes.",
     "dashboard.settings.plans.promise.grow": "Le mostramos exactamente cómo resolver cada problema.",
-    "dashboard.settings.plans.promise.premium": "Conecte Google y PostScore se encarga de los arreglos por usted.",
+    "dashboard.settings.plans.promise.premium": "PostAI y respuestas ilimitadas, y todas las herramientas de diseño. Conectar Google para que PostScore haga los arreglos por usted llega próximamente.",
     "dashboard.settings.plans.bullet.free.score": "Su PostScore y su calificación, con un escaneo gratis cada semana",
     "dashboard.settings.plans.bullet.free.problems": "Cada problema de su ficha de Google, sus reseñas y su sitio web",
     "dashboard.settings.plans.bullet.free.rank": "Su posición frente a los competidores cercanos",
@@ -8438,7 +8528,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.grow.plan": "Un plan de acción semanal que le indica qué hacer a continuación",
     "dashboard.settings.plans.bullet.grow.recheck": "Vuelva a revisar su sitio web en cuanto arregle algo",
     "dashboard.settings.plans.bullet.grow.tools": "Un sitio web inicial, además de letreros de reseñas, cupones y tarjetas de referidos básicos",
-    "dashboard.settings.plans.bullet.grow.postai": "PostAI para sus preguntas (límite mensual)",
+    "dashboard.settings.plans.bullet.grow.postai": "PostAI para sus preguntas (100 al mes)",
     "dashboard.settings.plans.bullet.premium.fixes": "Arreglos con un clic en su ficha de Google: horario, datos y fotos (próximamente)",
     "dashboard.settings.plans.bullet.premium.replies": "Respuestas ilimitadas; con la conexión a Google, cada reseña sin responder + las publicamos por usted (próximamente)",
     "dashboard.settings.plans.bullet.premium.insights": "Vea quién lo busca y quién lo llama o hace clic (próximamente)",
@@ -8462,6 +8552,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.row.replies": "Respuestas a reseñas con IA",
     "dashboard.settings.plans.value.perWeek3": "3 por semana",
     "dashboard.settings.plans.value.perWeek10": "10 por semana",
+    "dashboard.settings.plans.value.perMonth100": "100 al mes",
     "dashboard.settings.plans.value.repliesUnlimited": "Ilimitadas · publicación automática próximamente",
     "dashboard.settings.plans.row.postStudio": "PostStudio: su sitio web completo, construido y alojado por nosotros (próximamente)",
     "dashboard.settings.plans.row.locations": "Ubicaciones",
@@ -8621,13 +8712,57 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.sumChecks": "{count} revisiones del sitio",
     "dashboard.free.lockedLabel": "Bloqueado",
     "dashboard.free.waitingPoints": "{points} puntos esperan a que los arregle",
+    "dashboard.assistant.fallback.intro": "Esto es lo que puedo decirle con certeza de su último escaneo.",
+    "dashboard.assistant.fallback.score": "Su PostScore es {total}/100 (nota {grade}).",
+    "dashboard.assistant.fallback.reviews": "Tiene {count} reseñas en Google con {rating}★; la cantidad de reseñas recibe el crédito completo a partir de {fullAt}.",
+    "dashboard.assistant.fallback.noReviews": "Todavía no tiene reseñas en Google.",
+    "dashboard.assistant.fallback.website": "Su ficha tiene un sitio web.",
+    "dashboard.assistant.fallback.noWebsite": "Su negocio todavía no tiene sitio web.",
+    "dashboard.assistant.fallback.rank": "Está en el puesto {rank} de {of} entre la competencia cercana.",
+    "dashboard.assistant.fallback.more": "Para ver los detalles, abra el desglose de la puntuación en su Resumen, o pregúnteme de otra manera.",
+    "dashboard.assistant.monthlyLeft": "Le quedan {left} de {total} preguntas este mes",
+    "dashboard.assistant.monthlyUsedUp": "Ya usó las {total} preguntas de este mes. Se renuevan el {date} — o haga preguntas ilimitadas con Premium.",
+    "dashboard.addBusiness.locationLimit": "Su plan incluye {count} ubicación. Multi cubre hasta 5 ubicaciones — vea Configuración → Comparar planes.",
+    "dashboard.addBusiness.locationLimitMulti": "Multi incluye hasta {count} ubicaciones. Aún no se pueden agregar más ubicaciones ($25/mes cada una).",
+    "dashboard.free.planList.fixGuides.h": "Arregle su sitio web paso a paso",
+    "dashboard.free.planList.fixGuides.l": "Guías escritas para {builder}, revisión por revisión.",
+    "dashboard.free.planList.recheck.h": "Vea sus arreglos reflejados al instante",
+    "dashboard.free.planList.recheck.l": "Vuelva a revisar su sitio en cuanto cambie algo, sin esperar a su próximo escaneo.",
+    "dashboard.free.planList.starterSite.h": "Un sitio web de una página, listo hoy",
+    "dashboard.free.planList.starterSite.l": "Descargue su sitio inicial y publíquelo donde quiera.",
+    "dashboard.free.planList.priceCheck.h": "Sepa si sus precios encajan en su zona",
+    "dashboard.free.planList.priceCheck.l": "La revisión de precios compara sus precios con el nivel de precios de la competencia cercana, con consejos de precios para su tipo de negocio.",
+    "dashboard.free.planList.reviewScripts.h": "Sepa exactamente qué decir para conseguir reseñas",
+    "dashboard.free.planList.reviewScripts.l": "Textos listos para copiar para pedirlas, en inglés y español, además de cuándo pedirlas y dónde poner su código QR.",
+    "dashboard.free.planList.campaigns.h": "Lance un cupón o una tarjeta de referidos que funcione",
+    "dashboard.free.planList.campaigns.l": "Imprímala, lleve la cuenta de cada uso con +1 y siga una guía paso a paso.",
+    "dashboard.free.planList.recap.h": "Vea cómo le fue en la semana",
+    "dashboard.free.planList.recap.l": "Un resumen semanal en la página de Informes: su puntuación, reseñas y posición, y los arreglos que confirmamos.",
+    "dashboard.free.planList.moreDrafts.h": "Responda a más reseñas",
+    "dashboard.free.planList.moreDrafts.l": "10 borradores de respuesta con IA por semana (3 en el plan Gratis).",
+    "dashboard.free.planList.postaiUnlimited.h": "Pregunte a PostAI lo que quiera, cuando quiera",
+    "dashboard.free.planList.postaiUnlimited.l": "Preguntas ilimitadas sobre su puntuación, sus reseñas y sus clientes.",
+    "dashboard.free.planList.unlimitedDrafts.h": "Una respuesta para cada reseña",
+    "dashboard.free.planList.unlimitedDrafts.l": "Borradores ilimitados de respuestas a reseñas con IA.",
+    "dashboard.free.planList.designs.h": "Letreros y tarjetas con su propio estilo",
+    "dashboard.free.planList.designs.l": "Todas las plantillas y opciones para letreros de reseñas, cupones y tarjetas de referidos, sin la marca PostScore.",
+    "dashboard.free.planList.pdfReports.h": "Un informe que puede imprimir o compartir",
+    "dashboard.free.planList.pdfReports.l": "Descargue su informe semanal en PDF.",
+    "dashboard.free.planList.googleProfile.h": "Arreglos de su ficha de Google, hechos por nosotros",
+    "dashboard.free.planList.googleProfile.l": "Conecte Google para arreglar su horario, sus datos y sus fotos con un clic, y vea quién le busca y le llama.",
+    "dashboard.free.planList.aiReplies.h": "Respuestas que publicamos por usted",
+    "dashboard.free.planList.aiReplies.l": "Vea cada reseña sin responder y publique respuestas desde PostScore.",
+    "dashboard.free.planList.campaignHub.h": "Campañas por correo, texto y redes sociales",
+    "dashboard.free.planList.campaignHub.l": "Envíe sus ofertas a sus clientes desde un solo lugar.",
+    "dashboard.free.planList.postStudio.h": "Su sitio web completo, creado y alojado",
+    "dashboard.free.planList.postStudio.l": "PostStudio: un sitio de varias páginas con su propio dominio — $30/mes por sí solo, menos con un plan.",
     "dashboard.free.fixPlan.seeEverything": "Ver todo lo que incluye cada plan",
     "dashboard.free.fixPlan.hideEverything": "Ocultar la lista completa",
     "dashboard.free.tile.repliesPostedForYou": "Respuestas a reseñas con IA que publicamos por usted",
     "dashboard.free.postaiFixOnGrow": "Puedo explicarle qué significa esto y por qué importa a sus clientes — el plan completo paso a paso para arreglarlo está en Grow (Configuración → Comparar planes).",
     "dashboard.free.postai.line": "Haga preguntas sobre su puntuación — 3 preguntas gratis por semana.",
     "dashboard.free.postai.left": "Le quedan {left} de {total} preguntas gratis · se renuevan el {date}",
-    "dashboard.free.postai.usedUp": "Ya usó las preguntas gratis de esta semana. Se renuevan el {date} — o haga hasta 100 al mes con Grow.",
+    "dashboard.free.postai.usedUp": "Ya usó las preguntas gratis de esta semana. Se renuevan el {date} — o haga más preguntas con Grow.",
     "dashboard.free.postai.thinking": "PostAI está pensando…",
     "dashboard.free.postai.you": "Usted",
     "dashboard.free.ai.paused": "Las respuestas gratis con IA están en pausa hasta el {date} — mejore su plan para usarlas sin límite.",

@@ -1055,7 +1055,7 @@ function ratingFraction(rating: number): number {
  * that only needs enough reviews to rule out a small, unrepresentative
  * sample, not the same volume a strong reputation requires.
  */
-const RATING_CONFIDENCE_FULL_AT_REVIEWS = 40;
+export const RATING_CONFIDENCE_FULL_AT_REVIEWS = 40;
 
 /**
  * Review count → confidence multiplier applied to the rating check's
@@ -1102,7 +1102,7 @@ function ratingConfidenceFactor(reviewCount: number | null): number {
  * fraction of credit instead of nearly half — full credit genuinely
  * requires sustained review volume, not just a few happy customers.
  */
-const REVIEW_COUNT_SATURATION = REVIEW_COUNT_FULL_CREDIT;
+export const REVIEW_COUNT_SATURATION = REVIEW_COUNT_FULL_CREDIT;
 
 function reviewCountFraction(count: number): number {
   const c = Math.max(0, count);

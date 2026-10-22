@@ -295,7 +295,7 @@ describe("plan copy and PostAI", () => {
   });
 
   test("PostAI knows: paste a review, 3 a week on Free, 10 a week on Grow, unlimited on Premium/Multi, never posts today, nothing from Google", () => {
-    for (const s of ['"Reply to a review"', "pastes it in", "Free gets 3 drafts a week and Grow 10 a week per business", "10 AI review reply drafts a week", "Premium and Multi are unlimited", "never say PostScore posts replies today", "the pasted review isn't saved"])
+    for (const s of ['"Reply to a review"', "pastes it in", "Free gets 3 drafts a week and Grow 10 a week per business", "Premium and Multi are unlimited", "never say PostScore posts replies today", "the pasted review isn't saved"])
       expect(ASSISTANT_SYSTEM_RULES).toContain(s);
   });
 

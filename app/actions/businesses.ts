@@ -5,7 +5,9 @@ import { ensureFirstCompetitorScanWithClient } from "@/app/actions/competitors";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { PlaceDetails } from "@/lib/google/places";
-import { normalizeLocale, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n";
+import { normalizeLocale, SUPPORTED_LOCALES, t, type Locale } from "@/lib/i18n";
+import { getPlan } from "@/lib/premium";
+import { locationLimit, type Plan } from "@/lib/plan";
 import { analyzeWebsiteForSave } from "@/lib/websiteAnalysisForSave";
 import type { collectWebsiteAnalysis } from "@/lib/websiteAnalysis";
 import { uploadWebsiteScreenshots } from "@/lib/websiteScreenshotUpload";
@@ -77,6 +79,13 @@ export async function saveBusiness(
 
   if (userError || !user) {
     return { status: "unauthenticated" };
+  }
+
+  // A NEW location is limited by the plan (re-saving one they already have,
+  // or attaching a listing to their website-only business, isn't new).
+  if (!attachToBusinessId) {
+    const limited = await locationLimitMessage(supabase, user.id, place.placeId, language);
+    if (limited) return { status: "error", message: limited };
   }
 
   if (attachToBusinessId) {
@@ -840,7 +849,31 @@ export async function saveWebsiteOnlyBusiness(input: WebsiteOnlyInput): Promise<
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { status: "unauthenticated" };
+  const limited = await locationLimitMessage(supabase, user.id, null, input.language);
+  if (limited) return { status: "error", message: limited };
   return saveWebsiteOnlyBusinessWithClient(supabase, user.id, input);
+}
+
+/** Why this account can't add another location on its plan (null when it
+ * can) — Settings → Compare plans: 1 location on Free, Grow and Premium,
+ * up to 5 on Multi. Checked on the server before anything is saved. */
+export async function locationLimitMessageWithClient(
+  supabase: SupabaseClient,
+  ownerId: string,
+  placeId: string | null,
+  plan: Plan,
+  locale: Locale = "en"
+): Promise<string | null> {
+  const limit = locationLimit(plan);
+  const { data } = await supabase.from("businesses").select("id, place_id").eq("owner_id", ownerId);
+  const rows = (data ?? []) as Array<{ id: string; place_id: string | null }>;
+  if (placeId && rows.some((r) => r.place_id === placeId)) return null;
+  if (rows.length < limit) return null;
+  return plan === "multi" ? t(locale, "dashboard.addBusiness.locationLimitMulti", { count: limit }) : t(locale, "dashboard.addBusiness.locationLimit", { count: limit });
+}
+
+async function locationLimitMessage(supabase: SupabaseClient, ownerId: string, placeId: string | null, language?: Locale): Promise<string | null> {
+  return locationLimitMessageWithClient(supabase, ownerId, placeId, await getPlan(), normalizeLocale(language));
 }
 
 export type RecheckWebsiteOnlyResult =

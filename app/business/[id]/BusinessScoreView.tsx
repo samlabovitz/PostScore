@@ -40,6 +40,7 @@ import { FreeReviews, FreeSection, RankUnlockLine } from "@/components/overview/
 import { FixPlanBox } from "@/components/overview/FixPlanUpsell";
 import { FreePostAI } from "@/components/overview/FreePostAI";
 import { freeWaitingPoints } from "@/lib/freeUpsell";
+import { freeSection } from "@/lib/freeOverviewSections";
 import type { FreeAiAllowance } from "@/lib/freeAiAllowance";
 import { ReviewReplyDrafter } from "@/components/reviews/ReviewReplyDrafter";
 import type { ReplyDraftStatus } from "@/app/actions/reviewReplies";
@@ -53,6 +54,8 @@ export type AssistantEmbedData =
       context: AssistantBusinessContext;
       starterPrompts: string[];
       conversationCount: number;
+      /** Grow: PostAI questions left this month. */
+      monthly?: { left: number; total: number; resetsAt: string } | null;
     }
   | { status: "unavailable"; message: string }
   /** Free: only the showroom's starter prompts — no business context
@@ -199,7 +202,7 @@ export function BusinessScoreView({
         {header}
 
         {/* A. Your score: the score card and the re-scan message. */}
-        <FreeSection id="score" title={t(locale, "dashboard.free.section.score.title")} body={t(locale, "dashboard.free.section.score.body")}>
+        <FreeSection id="score" title={t(locale, freeSection("score").titleKey)} body={t(locale, freeSection("score").bodyKey)}>
           <ScoreBand
             businessId={businessId}
             score={breakdown.total}
@@ -215,7 +218,7 @@ export function BusinessScoreView({
 
         {/* C. What's behind the score: the breakdown (collapsed), then the
             competitor rank. */}
-        <FreeSection id="behind" title={t(locale, "dashboard.free.section.behind.title")} body={t(locale, "dashboard.free.section.behind.body")}>
+        <FreeSection id="behind" title={t(locale, freeSection("behind").titleKey)} body={t(locale, freeSection("behind").bodyKey)}>
           <ScoreBreakdownPanel businessId={businessId} categories={breakdown.categories} hasWebsite={hasWebsite} scoreBasis={scoreBasis} audit websiteFixCount={null} lastScanAt={lastScanAt} />
           <Card className="p-5" data-testid="free-rank">
             <h3 className="mb-3 font-serif text-[15px] font-semibold text-ink">{t(locale, "dashboard.free.rankHeading")}</h3>
@@ -227,7 +230,7 @@ export function BusinessScoreView({
 
         {/* D. Free tools: Reviews (link, QR, reply drafts), then PostAI —
             3 free questions a week. */}
-        <FreeSection id="tools" title={t(locale, "dashboard.free.section.tools.title")} body={t(locale, "dashboard.free.section.tools.body")}>
+        <FreeSection id="tools" title={t(locale, freeSection("tools").titleKey)} body={t(locale, freeSection("tools").bodyKey)}>
           <FreeReviews placeId={business.place_id ?? null} rating={business.rating} reviewCount={business.review_count} goal={reviewGoal} group={reviewGroup}>
             {replyDrafts && <ReviewReplyDrafter businessId={businessId} plan="free" placeId={business.place_id ?? null} initial={replyDrafts} embedded />}
           </FreeReviews>
@@ -237,8 +240,8 @@ export function BusinessScoreView({
             customers tiles, then the collapsed "See everything in each
             plan") — every "How to fix this" row and "See how to fix it"
             scrolls down to it. */}
-        <FreeSection id="earn" title={t(locale, "dashboard.free.section.earn.title")} body={t(locale, "dashboard.free.section.earn.body")}>
-          <FixPlanBox businessId={businessId} extras={{ hasWebsite }}>
+        <FreeSection id="earn" title={t(locale, freeSection("earn").titleKey)} body={t(locale, freeSection("earn").bodyKey)}>
+          <FixPlanBox businessId={businessId} extras={{ hasWebsite, pricingOk: profileTools.pricingOk, campaignsOk: profileTools.couponsOk || profileTools.referralOk }}>
             <GrowMoreCustomers
               businessId={businessId}
               profileTools={profileTools}
@@ -284,6 +287,7 @@ export function BusinessScoreView({
           context={assistant.context}
           starterPrompts={assistant.starterPrompts}
           conversationCount={assistant.conversationCount}
+          monthly={assistant.monthly ?? null}
         />
       ) : (
         <Card className="p-5 text-sm text-ink-soft">

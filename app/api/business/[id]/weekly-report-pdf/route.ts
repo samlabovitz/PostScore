@@ -10,6 +10,8 @@ import { weeklyReportDataWithClient } from "@/lib/weekly/weeklyData.server";
 import { getReportData } from "@/lib/reports/reportData.server";
 import { buildReportPdf } from "@/lib/reports/reportPdf.server";
 import { weeklyReportFileName } from "@/lib/reports/reportPdf";
+import { getPlan } from "@/lib/premium";
+import { isPremiumPlan } from "@/lib/plan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +22,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  // The PDF report is Premium (Settings → Compare plans: "Weekly + PDF").
+  if (!isPremiumPlan(await getPlan())) return NextResponse.json({ error: "premium_only" }, { status: 403 });
   const week = new URL(request.url).searchParams.get("week");
   const data = await weeklyReportDataWithClient(supabase, params.id, week && /^\d{4}-\d{2}-\d{2}$/.test(week) ? week : null, {
     current: async () => {

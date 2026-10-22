@@ -43,6 +43,7 @@
 //   npx tsx scripts/live-check-postai.ts blue-bottle santa-fe
 
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 
 for (const line of fs.readFileSync(".env.local", "utf-8").split("\n")) {
@@ -97,8 +98,22 @@ import {
   type AssistantWeeklyRoutineSummary,
 } from "../lib/assistant";
 import { groupSavedScans, SAVED_SCAN_COLUMNS, type SavedScanRow } from "../lib/savedCompetitorScans";
-import { ownerStanding, rankBy } from "../lib/competitorComparison";
+import { nearbyReviewAverage, ownerStanding, rankBy } from "../lib/competitorComparison";
+import { loadCompetitorScope } from "../lib/businessNiche.server";
+import { applyScope, scopeSummary } from "../lib/competitorScope";
+import { MAX_COMPETITORS } from "../lib/competitors";
+import type { PostaiFacts } from "../lib/postaiFacts";
+import * as React from "react";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { AssistantMessageContent } from "../components/assistant/AssistantMessageContent";
+import { LocaleProvider } from "../lib/i18n";
+import { answerWithFactCheck, buildPostaiFacts, checkAnswerFacts } from "../lib/postaiFacts";
 import { callAnthropicChat, type ChatTurn } from "../lib/anthropicClient";
+import { buildFreeAssistantSystemPrompt, freeAnswerLeaksFix, stripLinkMarkers } from "../lib/assistant";
+import { featureMapFor, featureMapText, type FeatureEntry } from "../lib/postaiFeatureMap";
+import { planFacts, planFactsText } from "../lib/planFacts";
+import type { Plan } from "../lib/plan";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -237,6 +252,10 @@ interface LoadedBusiness {
   businessName: string;
   context: AssistantBusinessContext;
   locale: Locale;
+  /** For --plan-check: this business type's tools and whether it has a site. */
+  tools?: { couponsOk: boolean; referralOk: boolean; pricingOk: boolean; hasWebsite: boolean };
+  /** The facts for one plan (the projections differ per plan). */
+  factsFor: (plan: Plan) => PostaiFacts;
 }
 
 /** Builds the exact real AssistantBusinessContext for one business — same
@@ -282,14 +301,20 @@ async function loadBusinessContext(businessId: string, localeOverride?: Locale):
   }));
 
   const snapshot = await readLatestCompetitorSnapshot(businessId);
+  // The owner's competitor scope — the same one the Overview's rank card,
+  // the Competitors page and the app's PostAI use (it was missing here,
+  // which gave "#7 of 13" instead of the Overview's "#4 of 5").
+  const competitorScope = await loadCompetitorScope(supabase, businessId);
   const competitors: AssistantCompetitorSummary = snapshot
     ? (() => {
         // Mirrors app/actions/assistant.ts: the shared rank (full PostScore).
-        const ranked = rankBy(snapshot.scan, "overall");
+        const ranked = rankBy(snapshot.scan, "overall", competitorScope);
         return {
           available: true,
           scanAt: formatShortDate(snapshot.createdAt, locale),
-          subjectRank: ownerStanding(snapshot.scan)?.rank ?? null,
+          subjectRank: ownerStanding(snapshot.scan, competitorScope)?.rank ?? null,
+          rankedAgainst: competitorScope ? scopeSummary(applyScope(snapshot.scan, competitorScope), competitorScope) : null,
+          nearbyReviewAverage: nearbyReviewAverage(snapshot.scan, competitorScope),
           entries: ranked.map(({ entry }) => ({
             name: entry.name ?? "Unnamed business",
             isSubject: entry.isSubject,
@@ -417,7 +442,44 @@ async function loadBusinessContext(businessId: string, localeOverride?: Locale):
     gbp: { connected: gbpConnected },
   };
 
-  return { businessName: summary.name ?? "Unnamed business", context, locale };
+  // The same facts block the app builds (app/actions/assistant.ts), with
+  // the Overview rank card exactly as getLocalBenchmark builds it.
+  const standing = snapshot ? ownerStanding(snapshot.scan, competitorScope) : null;
+  const factsFor = (plan: Plan) =>
+    buildPostaiFacts(breakdown, {
+      plan,
+      rating: scored.business.rating,
+      reviewCount: scored.business.review_count,
+      hasWebsite: businessWebsiteUrl(scored.business) !== null,
+      rank: competitors.subjectRank ? { rank: competitors.subjectRank, of: competitors.entries.length } : null,
+      rankCard:
+        standing && standing.othersCount > 0
+          ? {
+              othersCount: standing.othersCount,
+              percentileAhead: Math.round((standing.aheadCount / standing.othersCount) * 100),
+              smallSample: standing.othersCount < MAX_COMPETITORS,
+              noun: profile.competitorNoun,
+              scope: competitors.available ? (competitors.rankedAgainst ?? null) : null,
+            }
+          : null,
+      nearbyReviewAverage: snapshot ? nearbyReviewAverage(snapshot.scan, competitorScope) : null,
+      competitors: snapshot
+        ? rankBy(snapshot.scan, "overall", competitorScope).map(({ entry }) => ({ name: entry.name ?? "Unnamed business", total: entry.total, reviews: entry.reviewCount, rating: entry.rating, isSubject: entry.isSubject }))
+        : [],
+      biggestBoost: suggestions[0] ?? null,
+      projectedScore: scored.result.projectedBreakdown.total,
+      tasks: tasks.slice(0, 5),
+      websiteBanner: websiteSummary,
+    });
+  context.facts = factsFor("free");
+
+  return {
+    businessName: summary.name ?? "Unnamed business",
+    context,
+    factsFor,
+    locale,
+    tools: { couponsOk: profile.couponsOk, referralOk: profile.referralOk, pricingOk: profile.pricingOk, hasWebsite: businessWebsiteUrl(scored.business) !== null },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -591,7 +653,409 @@ interface ProbeReport {
   turns: TurnResult[];
 }
 
+// ---------------------------------------------------------------------------
+// --plan-check <business name>: PostAI's plan-aware answers on Free, Grow and
+// Premium for one real business, written to ~/Desktop. Real model calls
+// (billed, Haiku), never saved, never counted against any owner's weekly
+// allowance (nothing is written to free_ai_usage or anywhere else).
+// ---------------------------------------------------------------------------
+
+/** Where "Compare plans" and the code don't match (checked by hand). */
+const PLAN_DISAGREEMENTS = [
+  "Fixed Oct 22: Grow's PostAI \"100 a month\" is now enforced on the server (it wasn't limited at all before).",
+  "Fixed Oct 22: locations — 1 on Free, Grow and Premium, up to 5 on Multi — is now enforced when a business is added (before, any account could add any number). Existing accounts with more keep them.",
+  "Fixed Oct 22: the PDF report is now Premium only, matching \"Weekly + PDF\" (before, Grow could download it and the routes didn't check the plan).",
+  "Still different: Compare plans says Multi can add locations beyond 5 at +$25/mo each, but there's no checkout, so Multi stops at 5 for now.",
+];
+
+const PLAN_QUESTIONS = [
+  "What kind of coupon or promo would work for my business?",
+  "How can I get more customers in the store today?",
+  "Where's my review QR code?",
+  "Should I run a price check against nearby competitors?",
+  "How do I fix my photos?",
+];
+const UPGRADE_QUESTIONS = ["Why should I upgrade?", "What's the difference between Grow and Premium?", "Is Premium worth it for me?"];
+
+function planGuide(plan: Plan, loaded: LoadedBusiness, businessCount: number) {
+  const entries = featureMapFor(plan, loaded.tools!);
+  return { entries, guide: { featureMap: featureMapText(plan, entries), planFacts: planFactsText(), businessCount } };
+}
+
+/** Automatic flags (aids — every answer is still read by hand). */
+function planFlags(plan: Plan, question: string, answer: string, entries: FeatureEntry[], fixes: string[]): string[] {
+  const flags: string[] = [];
+  const goTo = (place: string) => new RegExp(`(go to|open|head (over )?to|visit|check out|use|click)( the| your)? ${place}( tab| page)?`, "i");
+  for (const e of entries.filter((x) => x.status === "locked")) {
+    const tabName = /the (.+?) tab/.exec(e.where)?.[1];
+    if (tabName && goTo(tabName).test(answer) && new RegExp(e.name.split(" ")[0], "i").test(answer)) flags.push(`points to a locked place as usable: ${e.name} (${tabName})`);
+  }
+  if (plan === "free" && /reviews (tab|page)/i.test(answer) && /QR/i.test(question)) flags.push("Free: says the QR code is on the Reviews tab (it's on the Overview)");
+  if (plan === "free" && /price check/i.test(question) && goTo("Price check").test(answer)) flags.push("Free: sends the owner to Price check (locked)");
+  if (plan === "free" && (freeAnswerLeaksFix(answer, fixes) || /^\s*(\d+[.)]|step \d)/im.test(answer))) flags.push("Free: gives step-by-step fix steps");
+  // Per paragraph: every paragraph that mentions an offer says they can write their own.
+  for (const para of answer.split(/\n\s*\n|\n(?=\s*[-*] |\s*\*\*)/)) {
+    if (/coupon|promo|quick pick|referral|store credit|% off/i.test(para) && /(design|quick pick|for example|e\.g\.)/i.test(para) && !/(your own|own offer|own reward|own wording|any amount|own amount|any reward|write (your|an) offer|make your own|create your own|any offer|whatever)/i.test(para))
+      flags.push(`an offer/referral paragraph without "write your own": "${para.trim().slice(0, 90)}…"`);
+  }
+  if (plan === "free" && /(track (redemptions|uses|how many)|tap(ping)? "?\+1|print (it|the card|them)|save (it|the coupon))/i.test(answer) && !/on Grow/i.test(answer)) flags.push("Free: implies saving/printing/tracking works on Free");
+  if (/precomputed/i.test(answer)) flags.push("internal jargon (\"precomputed\")");
+  if (/general guidance:|consejo general:/i.test(answer)) flags.push("uses a 'General guidance:' label");
+  return flags;
+}
+
+const SOON_WORDS = ["one-click", "posts replies", "posting replies", "post replies", "replies for you", "automatic replies", "search and call", "insights", "email, text", "text and social", "postStudio", "locations in one dashboard", "auto-post", "fixes your listing", "fix your listing", "auto-fix"];
+const sentences = (text: string) => text.split(/(?<=[.!?])\s+|\n+/).map((x) => x.trim()).filter(Boolean);
+/** "N pts"/"N points" numbers the answer states that aren't in the prompt (made-up arithmetic). */
+function inventedPoints(answer: string, system: string): string[] {
+  const nums = Array.from(answer.matchAll(/(\d+(?:\.\d+)?)\s*(?:pts|points|puntos)/gi), (m) => m[1]);
+  return nums.filter((n) => !new RegExp(`(^|[^\\d.])${n.replace(".", "\\.")}([^\\d]|$)`).test(system));
+}
+function upgradeFlags(answer: string, system: string): string[] {
+  const flags: string[] = [];
+  for (const sentence of sentences(answer)) {
+    if (/^\**\s*coming soon/i.test(sentence)) continue;
+    for (const w of SOON_WORDS) if (sentence.toLowerCase().includes(w.toLowerCase())) flags.push(`a coming-soon feature outside the "Coming soon:" line: "${sentence.slice(0, 120)}"`);
+  }
+  if (!/^\s*\**\s*coming soon/im.test(answer) && /coming soon/i.test(answer)) flags.push("coming soon mixed into the text instead of its own line");
+  const prices = new Set(["$0", "$25", "$50", "$150", "$30", "$15", "$8", "$40", "$58"]);
+  for (const m of answer.match(/\$\d+/g) ?? []) if (!prices.has(m)) flags.push(`a price not in PLAN FACTS: ${m}`);
+  for (const n of inventedPoints(answer, system)) flags.push(`a points number not in the data: ${n}`);
+  if (/precomputed/i.test(answer)) flags.push("internal jargon (\"precomputed\")");
+  if (/(don't|do not|doesn't|can't) (have|see|access)[^.]{0,40}(plan|pricing|details|information)/i.test(answer)) flags.push("hedges about not having plan info");
+  if (/general guidance:/i.test(answer)) flags.push("uses a 'General guidance:' label");
+  return Array.from(new Set(flags));
+}
+
+async function ask(system: string, question: string, plan: Plan, fixes: string[]): Promise<string> {
+  const raw = await callAnthropicChat({ system, messages: [{ role: "user", content: question }], maxTokens: ASSISTANT_MAX_TOKENS });
+  if (plan !== "free") return raw.trim();
+  // Exactly what the server does with a Free answer (app/actions/assistant.ts).
+  const cleaned = stripLinkMarkers(raw);
+  return freeAnswerLeaksFix(cleaned, fixes) ? "[replaced on the server: repeated the paid fix steps]" : cleaned;
+}
+
+async function planCheck(name: string) {
+  const { data: rows } = await supabase.from("businesses").select("id, name, owner_id").ilike("name", `%${name}%`).limit(1);
+  const row = (rows ?? [])[0] as { id: string; name: string; owner_id: string } | undefined;
+  if (!row) throw new Error(`No business matching "${name}".`);
+  const { count } = await supabase.from("businesses").select("id", { count: "exact", head: true }).eq("owner_id", row.owner_id);
+  const loaded = await loadBusinessContext(row.id);
+  const fixes = loaded.context.actionPlan.topTasks.map((t) => t.action).filter(Boolean);
+  const out: string[] = [`# PostAI plan check — ${loaded.businessName}`, "", `Live answers from ${new Date().toISOString().slice(0, 16).replace("T", " ")} UTC (Claude Haiku 4.5, the app's real prompt and context). ⚠ marks an automatic flag.`, ""];
+  let flagged = 0;
+  for (const plan of ["free", "grow", "premium"] as Plan[]) {
+    const { entries, guide } = planGuide(plan, loaded, count ?? 1);
+    const context = { ...loaded.context, planGuide: guide };
+    const system = plan === "free" ? buildFreeAssistantSystemPrompt(context, loaded.locale) : buildAssistantSystemPrompt(context, loaded.locale);
+    out.push(`## ${plan[0].toUpperCase()}${plan.slice(1)}`, "");
+    for (const q of PLAN_QUESTIONS) {
+      const answer = await ask(system, q, plan, fixes);
+      const flags = [...planFlags(plan, q, answer, entries, fixes), ...inventedPoints(answer, system).map((n) => `a points number not in the data: ${n}`)];
+      flagged += flags.length;
+      out.push(`### ${q}`, "", answer, "", ...(flags.length ? flags.map((f) => `> ⚠ ${f}`) : ["> ✓ no flags"]), "");
+    }
+  }
+  fs.writeFileSync(path.join(os.homedir(), "Desktop", "postai-plan-check.md"), out.join("\n"));
+
+  // Upgrade questions — Free.
+  const { guide } = planGuide("free", loaded, count ?? 1);
+  const context = { ...loaded.context, planGuide: guide };
+  const system = buildFreeAssistantSystemPrompt(context, loaded.locale);
+  const up: string[] = [`# PostAI upgrade answers — ${loaded.businessName} on Free`, "", "⚠ marks an automatic flag (coming-soon presented as available, an invented price, hedging about plan info).", ""];
+  let upFlagged = 0;
+  for (const q of UPGRADE_QUESTIONS) {
+    const answer = await ask(system, q, "free", fixes);
+    const flags = upgradeFlags(answer, system);
+    upFlagged += flags.length;
+    up.push(`## ${q}`, "", answer, "", ...(flags.length ? flags.map((f) => `> ⚠ ${f}`) : ["> ✓ no flags"]), "");
+  }
+  fs.writeFileSync(path.join(os.homedir(), "Desktop", "postai-upgrade-check.md"), up.join("\n"));
+  console.log(`plan check: ${flagged} flag(s); upgrade check: ${upFlagged} flag(s)`);
+}
+
+/** --plan-facts: the plan table PostAI sees, to ~/Desktop/plan-facts.md. */
+function writePlanFacts(disagreements: string[]) {
+  const out = ["# Plan facts PostAI sees", "", 'Read straight from Settings → Plan & billing → "Compare plans" (lib/planComparison.ts) — the same config the page shows.', ""];
+  for (const p of planFacts("en")) {
+    out.push(`## ${p.name} — ${p.price}`, "", `*${p.tagline}*${p.promise ? ` — ${p.promise}` : ""}`, "", "| Feature | Value | Status |", "|---|---|---|");
+    for (const f of p.features) out.push(`| ${f.feature} | ${f.value ?? (f.status === "available" ? "✓" : f.status === "preview" ? "Preview" : f.status === "not included" ? "—" : "")}${f.soonValue ? ` · **coming soon:** ${f.soonValue}` : ""} | ${f.status === "coming soon" ? "**Coming soon**" : f.status} |`);
+    out.push("", "Plan card bullets:", ...p.bullets.map((b) => `- ${b.text}${b.soon ? " — **coming soon**" : ""}`), "");
+  }
+  out.push("## Where Compare plans and the code disagree", "", ...disagreements.map((d) => `- ${d}`), "");
+  fs.writeFileSync(path.join(os.homedir(), "Desktop", "plan-facts.md"), out.join("\n"));
+}
+
+// ---------------------------------------------------------------------------
+// --accuracy: 15 fact-heavy questions — Mini Shop on Free, Umami on Grow,
+// Hair express on Premium — through the app's own fact check
+// (answerWithFactCheck: check, retry once, facts-only fallback). Written to
+// ~/Desktop/postai-accuracy-check.md with pass/fail per answer. Real model
+// calls (Haiku), never saved, never counted against any allowance.
+// ---------------------------------------------------------------------------
+
+const ACCURACY_QUESTIONS = [
+  "How many reviews do I need for full credit?",
+  "What's my star rating, and is it good?",
+  "Why is my score what it is?",
+  "How do I compare to nearby competitors on reviews?",
+  "Do I have a website, and how is it affecting my score?",
+];
+
+async function accuracyCheck() {
+  const runs: Array<{ match: string; plan: Plan }> = [
+    { match: "Mini Shop", plan: "free" },
+    { match: "Umami", plan: "grow" },
+    { match: "Hair express", plan: "premium" },
+  ];
+  const out: string[] = ["# PostAI accuracy check", "", `${new Date().toISOString().slice(0, 16).replace("T", " ")} UTC — Claude Haiku 4.5, the app's real prompt, context and fact check (check → one retry → facts-only fallback). **PASS** = the answer shown to the owner matches the facts; **FAIL** = Haiku needed the facts-only fallback (it failed twice).`, ""];
+  let pass = 0;
+  let total = 0;
+  let firstTryOk = 0;
+  for (const run of runs) {
+    const { data: rows } = await supabase.from("businesses").select("id, owner_id").ilike("name", `%${run.match}%`).limit(1);
+    const row = (rows ?? [])[0] as { id: string; owner_id: string } | undefined;
+    if (!row) throw new Error(`No business matching "${run.match}".`);
+    const { count } = await supabase.from("businesses").select("id", { count: "exact", head: true }).eq("owner_id", row.owner_id);
+    const loaded = await loadBusinessContext(row.id);
+    const { guide } = planGuide(run.plan, loaded, count ?? 1);
+    const context = { ...loaded.context, planGuide: guide, facts: loaded.factsFor(run.plan) };
+    const system = run.plan === "free" ? buildFreeAssistantSystemPrompt(context, loaded.locale) : buildAssistantSystemPrompt(context, loaded.locale);
+    const fixes = loaded.context.actionPlan.topTasks.map((t) => t.action).filter(Boolean);
+    const clean = (text: string) => {
+      if (run.plan !== "free") return text.trim();
+      const stripped = stripLinkMarkers(text);
+      return freeAnswerLeaksFix(stripped, fixes) ? "[replaced on the server: repeated the paid fix steps]" : stripped;
+    };
+    out.push(`## ${loaded.businessName} — ${run.plan[0].toUpperCase()}${run.plan.slice(1)}`, "");
+    for (const q of ACCURACY_QUESTIONS) {
+      const checked = await answerWithFactCheck({
+        ask: (messages) => callAnthropicChat({ system, messages, maxTokens: ASSISTANT_MAX_TOKENS }),
+        messages: [{ role: "user", content: q }],
+        facts: context.facts!,
+        promptText: system,
+        locale: loaded.locale,
+        clean,
+      });
+      total += 1;
+      const ok = !checked.fallback;
+      if (ok) pass += 1;
+      if (checked.attempts === 1) firstTryOk += 1;
+      const residual = ok ? checkAnswerFacts(checked.answer, context.facts!, system) : [];
+      out.push(
+        `### ${ok ? "PASS" : "FAIL"} — ${q}`,
+        "",
+        checked.answer,
+        "",
+        checked.attempts === 1 ? "> ✓ right the first time" : checked.fallback ? `> ✗ wrong twice → facts-only answer shown. Last problems: ${checked.issues.join("; ")}` : `> ↻ first answer had: ${checked.issues.join("; ")} — fixed on the retry`,
+        ...(residual.length ? [`> ⚠ ${residual.join("; ")}`] : []),
+        ""
+      );
+    }
+  }
+  out.splice(3, 0, `**${pass} of ${total} pass** (${firstTryOk} right the first time, ${pass - firstTryOk} fixed on the retry, ${total - pass} needed the facts-only fallback).`, "");
+  fs.writeFileSync(path.join(os.homedir(), "Desktop", "postai-accuracy-check.md"), out.join("\n"));
+  console.log(`accuracy: ${pass}/${total} pass, ${firstTryOk} first try`);
+}
+
+// ---------------------------------------------------------------------------
+// --final: every check in ONE file, ~/Desktop/postai-final-check.md —
+// accuracy (15), upgrade (3, Mini Shop on Free) and plan (15, Mini Shop on
+// Free, Grow and Premium). Every answer goes through the app's own fact
+// check (answerWithFactCheck), exactly like the server. The automatic flags
+// are the checker's rules (facts, "up to" projections, the Overview rank,
+// "X of W" units, "Google counts…", Free: no preview printing / no
+// competitor re-runs) plus the plan and upgrade flags. Real model calls
+// (Haiku), never saved, never counted against any allowance.
+// ---------------------------------------------------------------------------
+
+/** The answer through the chat's real renderer (AssistantView →
+ * AssistantMessageContent with the business's links): every [[link:…]]
+ * marker must come out as a real link, never as literal text. */
+// tsx compiles the components' JSX to React.createElement (classic runtime).
+(globalThis as { React?: typeof React }).React = React;
+
+function linkFlags(answer: string, businessId: string, locale: Locale, tools: LoadedBusiness["tools"]): { flags: string[]; links: number } {
+  const markers = Array.from(answer.matchAll(/\[\[link:[^\]]*\]\]/g)).length;
+  if (markers === 0) return { flags: [], links: 0 };
+  const html = renderToStaticMarkup(
+    createElement(LocaleProvider, {
+      locale,
+      children: createElement(AssistantMessageContent, { content: answer, links: { businessId, referralOk: tools?.referralOk ?? true, couponsOk: tools?.couponsOk ?? true, pricingOk: tools?.pricingOk ?? true } }),
+    })
+  );
+  const hrefs = Array.from(html.matchAll(/<a [^>]*href="\/business\//g)).length;
+  const flags: string[] = [];
+  if (/\[\[link/.test(html)) flags.push("a [[link:…]] marker shows as literal text in the chat");
+  if (hrefs === 0) flags.push(`${markers} link marker(s), but no link rendered`);
+  return { flags, links: hrefs };
+}
+
+interface Checked {
+  answer: string;
+  attempts: number;
+  fallback: boolean;
+  firstIssues: string[];
+  /** The drafts the fact check turned down (shown in the report). */
+  rejected: string[];
+  flags: string[];
+}
+
+async function checkedAnswer(system: string, facts: PostaiFacts, question: string, locale: Locale, plan: Plan, fixes: string[]): Promise<Omit<Checked, "flags"> & { residual: string[] }> {
+  const clean = (text: string) => {
+    if (plan !== "free") return text.trim();
+    const stripped = stripLinkMarkers(text);
+    return freeAnswerLeaksFix(stripped, fixes) ? "[replaced on the server: repeated the paid fix steps]" : stripped;
+  };
+  const r = await answerWithFactCheck({
+    ask: (messages) => callAnthropicChat({ system, messages, maxTokens: ASSISTANT_MAX_TOKENS }),
+    messages: [{ role: "user", content: question }],
+    facts,
+    promptText: system,
+    locale,
+    clean,
+  });
+  return { answer: r.answer, attempts: r.attempts, fallback: r.fallback, firstIssues: r.attempts > 1 ? r.issues : [], rejected: r.rejected, residual: r.fallback ? [] : checkAnswerFacts(r.answer, facts, system) };
+}
+
+function checkedLines(c: Checked): string[] {
+  return [
+    c.answer,
+    "",
+    c.attempts === 1 ? "> ✓ fact check: right the first time" : c.fallback ? `> ✗ fact check: wrong twice → facts-only answer shown. Problems: ${c.firstIssues.join("; ")}` : `> ↻ fact check caught: ${c.firstIssues.join("; ")} — fixed on the retry`,
+    ...(c.flags.length ? c.flags.map((f) => `> ⚠ ${f}`) : ["> ✓ no flags"]),
+    ...c.rejected.flatMap((draft, i) => ["", `<details><summary>Rejected draft ${i + 1}</summary>`, "", draft, "", "</details>"]),
+    "",
+  ];
+}
+
+async function businessRow(match: string) {
+  const { data: rows } = await supabase.from("businesses").select("id, owner_id").ilike("name", `%${match}%`).limit(1);
+  const row = (rows ?? [])[0] as { id: string; owner_id: string } | undefined;
+  if (!row) throw new Error(`No business matching "${match}".`);
+  const { count } = await supabase.from("businesses").select("id", { count: "exact", head: true }).eq("owner_id", row.owner_id);
+  return { id: row.id, count: count ?? 1 };
+}
+
+async function finalCheck() {
+  const sections: string[][] = [];
+  const tally = { answers: 0, firstTry: 0, retried: 0, fallback: 0, flagged: 0 };
+  const count = (c: Checked) => {
+    tally.answers += 1;
+    if (c.attempts === 1) tally.firstTry += 1;
+    else if (c.fallback) tally.fallback += 1;
+    else tally.retried += 1;
+    if (c.flags.length > 0) tally.flagged += 1;
+  };
+  const rankNotes: string[] = [];
+  const linkTally = { markersAnswers: 0, links: 0 };
+
+  // 1. Accuracy — 15.
+  const acc: string[] = ["## 1. Accuracy (15)", ""];
+  for (const run of [
+    { match: "Mini Shop", plan: "free" as Plan },
+    { match: "Umami", plan: "grow" as Plan },
+    { match: "Hair express", plan: "premium" as Plan },
+  ]) {
+    const row = await businessRow(run.match);
+    const loaded = await loadBusinessContext(row.id);
+    const facts = loaded.factsFor(run.plan);
+    const { guide } = planGuide(run.plan, loaded, row.count);
+    const context = { ...loaded.context, planGuide: guide, facts };
+    const system = run.plan === "free" ? buildFreeAssistantSystemPrompt(context, loaded.locale) : buildAssistantSystemPrompt(context, loaded.locale);
+    const fixes = loaded.context.actionPlan.topTasks.map((t) => t.action).filter(Boolean);
+    rankNotes.push(`- ${loaded.businessName}: ${facts.rank ? `#${facts.rank.rank} of ${facts.rank.of}` : "no rank"}${facts.rankCard?.scope ? ` — ranked against ${facts.rankCard.scope}` : ""}. Projections PostAI may state: ${facts.projections.length ? facts.projections.map((p) => `up to +${p.high ? `${p.upTo}–${p.high}` : p.upTo} (${p.where})`).join(", ") : "none"}.`);
+    acc.push(`### ${loaded.businessName} — ${run.plan[0].toUpperCase()}${run.plan.slice(1)}`, "");
+    for (const q of ACCURACY_QUESTIONS) {
+      const r = await checkedAnswer(system, facts, q, loaded.locale, run.plan, fixes);
+      const lf = linkFlags(r.answer, row.id, loaded.locale, loaded.tools);
+      linkTally.markersAnswers += lf.links > 0 || lf.flags.length > 0 ? 1 : 0;
+      linkTally.links += lf.links;
+      const c: Checked = { ...r, flags: [...r.residual, ...lf.flags] };
+      count(c);
+      acc.push(`#### ${q}`, "", ...checkedLines(c));
+    }
+  }
+  sections.push(acc);
+
+  // 2 + 3. Mini Shop: upgrade (Free) and plan (Free, Grow, Premium).
+  const row = await businessRow("Mini Shop");
+  const loaded = await loadBusinessContext(row.id);
+  const fixes = loaded.context.actionPlan.topTasks.map((t) => t.action).filter(Boolean);
+
+  const up: string[] = [`## 2. Upgrade answers — ${loaded.businessName} on Free (3)`, ""];
+  {
+    const facts = loaded.factsFor("free");
+    const { guide } = planGuide("free", loaded, row.count);
+    const context = { ...loaded.context, planGuide: guide, facts };
+    const system = buildFreeAssistantSystemPrompt(context, loaded.locale);
+    for (const q of UPGRADE_QUESTIONS) {
+      const r = await checkedAnswer(system, facts, q, loaded.locale, "free", fixes);
+      const c: Checked = { ...r, flags: Array.from(new Set([...r.residual, ...upgradeFlags(r.answer, system)])) };
+      count(c);
+      up.push(`### ${q}`, "", ...checkedLines(c));
+    }
+  }
+  sections.push(up);
+
+  const pl: string[] = [`## 3. Plan answers — ${loaded.businessName} on Free, Grow and Premium (15)`, ""];
+  for (const plan of ["free", "grow", "premium"] as Plan[]) {
+    const facts = loaded.factsFor(plan);
+    const { entries, guide } = planGuide(plan, loaded, row.count);
+    const context = { ...loaded.context, planGuide: guide, facts };
+    const system = plan === "free" ? buildFreeAssistantSystemPrompt(context, loaded.locale) : buildAssistantSystemPrompt(context, loaded.locale);
+    pl.push(`### ${plan[0].toUpperCase()}${plan.slice(1)}`, "");
+    for (const q of PLAN_QUESTIONS) {
+      const r = await checkedAnswer(system, facts, q, loaded.locale, plan, fixes);
+      const lf = linkFlags(r.answer, row.id, loaded.locale, loaded.tools);
+      linkTally.markersAnswers += lf.links > 0 || lf.flags.length > 0 ? 1 : 0;
+      linkTally.links += lf.links;
+      const c: Checked = { ...r, flags: Array.from(new Set([...r.residual, ...planFlags(plan, q, r.answer, entries, fixes), ...lf.flags])) };
+      count(c);
+      pl.push(`#### ${q}`, "", ...checkedLines(c));
+    }
+  }
+  sections.push(pl);
+
+  const out = [
+    "# PostAI final check",
+    "",
+    `${new Date().toISOString().slice(0, 16).replace("T", " ")} UTC — Claude Haiku 4.5, the app's real prompt, context and fact check (check → one retry → facts-only fallback), exactly as the server runs it.`,
+    "",
+    `**${tally.answers} answers: ${tally.firstTry} right the first time, ${tally.retried} fixed on the retry, ${tally.fallback} needed the facts-only fallback; ${tally.flagged} with a remaining ⚠ flag.**`,
+    "",
+    "Automatic flags: every fact (score, rating, reviews, thresholds, rank, \"N ahead\"), \"no reviews\" / \"low rating\" / website claims, point gains (only the app's own projections, always \"up to\"), the Overview rank, category units (\"X of W\", never N/100 except the PostScore and the Website page score), \"Google counts…\" for the 40+/150+ thresholds, Free: printing a preview or any way around a lock, Free: re-running competitors, plus the plan flags (locked places, step-by-step on Free, offers) and the upgrade flags (coming soon, prices, points). Every answer is still read by hand.",
+    "",
+    `Link markers: ${linkTally.markersAnswers} answer(s) used [[link:…]] markers; rendered through the chat's real AssistantMessageContent they became ${linkTally.links} real link(s) (any marker left as text would be flagged ⚠). Free answers have their markers removed on the server, as in the app.`,
+    "",
+    "Rank and projections each business's PostAI gets (the Overview's own):",
+    ...rankNotes,
+    "",
+    ...sections.flat(),
+  ];
+  fs.writeFileSync(path.join(os.homedir(), "Desktop", "postai-final-check.md"), out.join("\n"));
+  console.log(`final: ${tally.answers} answers, ${tally.firstTry} first try, ${tally.retried} retried, ${tally.fallback} fallback, ${tally.flagged} flagged`);
+}
+
 async function main() {
+  if (process.argv.includes("--final")) {
+    await finalCheck();
+    return;
+  }
+  if (process.argv.includes("--accuracy")) {
+    await accuracyCheck();
+    return;
+  }
+  if (process.argv.includes("--plan-facts")) {
+    writePlanFacts(PLAN_DISAGREEMENTS);
+    console.log("wrote ~/Desktop/plan-facts.md");
+    return;
+  }
+  const planCheckIndex = process.argv.indexOf("--plan-check");
+  if (planCheckIndex !== -1) {
+    await planCheck(process.argv[planCheckIndex + 1] ?? "Mini Shop");
+    return;
+  }
   const now = new Date();
   const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 

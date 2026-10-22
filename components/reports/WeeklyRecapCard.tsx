@@ -19,6 +19,7 @@ import {
   IconMinus,
   IconStar,
   IconTrophy,
+  IconLock,
 } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -28,6 +29,9 @@ import type { WeeklyView } from "@/lib/weekly/weeklyView";
 import type { ChartCategoryId } from "@/lib/scoreHistory";
 import { downloadWeeklyPdf } from "./weeklyPdfDownload";
 import { ShareGoodNews } from "./ShareGoodNews";
+import { useUpgrade } from "@/components/upgrade/UpgradeContext";
+import { UpgradeButton } from "@/components/upgrade/UpgradeTrigger";
+import { isPremiumPlan } from "@/lib/plan";
 
 const k = (key: string) => `dashboard.reports.weekly.${key}` as MessageKey;
 const CATEGORY_KEY: Record<ChartCategoryId, MessageKey> = {
@@ -119,6 +123,11 @@ export function WeeklyRecapCard({
   const timeZone = useTimeZone();
   const router = useRouter();
   const [pdf, setPdf] = useState<"idle" | "working" | "error">("idle");
+  // The PDF report is Premium (Settings → Compare plans: "Weekly + PDF");
+  // below Premium the button is a locked Premium feature. The download
+  // routes refuse it on the server too.
+  const upgrade = useUpgrade();
+  const pdfLocked = !!upgrade && !isPremiumPlan(upgrade.plan);
   const chip = changeChip(view, locale);
   const shownScore = view.score ?? view.lastKnown?.score ?? null;
   const moved = view.categories.filter((c) => c.before !== null && c.after !== null && c.before !== c.after);
@@ -147,10 +156,22 @@ export function WeeklyRecapCard({
           </select>
         </label>
         <span className="flex flex-wrap items-start gap-2">
-          <Button variant="default" size="sm" onClick={download} disabled={pdf === "working"}>
-            <IconDownload size={14} />
-            {pdf === "working" ? t(locale, "dashboard.reports.recapPreparingDownload") : t(locale, k("download"))}
-          </Button>
+          {pdfLocked ? (
+            <UpgradeButton
+              feature="premium"
+              testId="weekly-pdf-locked"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-paper-deep bg-white px-3 py-1.5 text-[12.5px] font-semibold text-ink hover:border-ink-soft"
+            >
+              <IconLock size={13} aria-hidden className="text-brass" />
+              {t(locale, k("download"))}
+              <span className="rounded-full bg-paper px-1.5 py-px text-[10.5px] font-semibold text-ink-soft">{t(locale, "dashboard.settings.plan.name.premium")}</span>
+            </UpgradeButton>
+          ) : (
+            <Button variant="default" size="sm" onClick={download} disabled={pdf === "working"} data-testid="weekly-pdf-download">
+              <IconDownload size={14} />
+              {pdf === "working" ? t(locale, "dashboard.reports.recapPreparingDownload") : t(locale, k("download"))}
+            </Button>
+          )}
           {shareHeadline && view.isCurrentWeek && view.score !== null && view.grade && <ShareGoodNews headline={shareHeadline} score={view.score} grade={view.grade} />}
         </span>
       </div>

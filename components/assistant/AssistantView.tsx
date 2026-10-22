@@ -28,7 +28,8 @@ import {
 import type { AssistantBusinessContext } from "@/lib/assistant";
 import { BusinessMemoryPanel } from "@/components/assistant/BusinessMemoryPanel";
 import { AssistantMessageContent, type ReplyLinkContext } from "@/components/assistant/AssistantMessageContent";
-import { formatMonthDayTime, t, tPlural, useLocale, useTimeZone } from "@/lib/i18n";
+import { formatMonthDayTime, formatShortDate, t, tPlural, useLocale, useTimeZone } from "@/lib/i18n";
+import Link from "next/link";
 
 function MessageBubble({ message, links }: { message: AssistantMessageRow; links: ReplyLinkContext }) {
   const isUser = message.role === "user";
@@ -190,7 +191,10 @@ export function AssistantView({
   starterPrompts,
   onNavigate,
   initialDraft,
+  monthly: initialMonthly = null,
 }: {
+  /** Grow: questions left this month (100 a month); null elsewhere. */
+  monthly?: { left: number; total: number; resetsAt: string } | null;
   businessId: string;
   businessName: string | null;
   context: AssistantBusinessContext;
@@ -200,6 +204,8 @@ export function AssistantView({
   /** Called when the owner follows a link in a reply (closes the overlay). */
   onNavigate?: () => void;
 }) {
+  const [monthly, setMonthly] = useState(initialMonthly);
+  const monthlyTimeZone = useTimeZone();
   const locale = useLocale();
   const links: ReplyLinkContext = {
     businessId,
@@ -270,6 +276,7 @@ export function AssistantView({
     setSending(false);
 
     if (result.status === "ok") {
+      if (result.monthly) setMonthly(result.monthly);
       setConversationId(result.conversationId);
       setMessages((prev) => [
         ...prev.filter((m) => m.id !== optimisticId),
@@ -281,9 +288,12 @@ export function AssistantView({
       setHistory(null);
     } else {
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
-      setError(
-        result.status === "error" ? result.message : t(locale, "dashboard.assistant.couldNotReachFallback")
-      );
+      if (result.status === "limit") {
+        // Grow's 100 a month is used: no AI call was made.
+        setMonthly((m) => ({ left: 0, total: m?.total ?? 100, resetsAt: result.resetsAt }));
+      } else {
+        setError(result.status === "error" ? result.message : t(locale, "dashboard.assistant.couldNotReachFallback"));
+      }
       setDraft(trimmed);
     }
   }
@@ -451,6 +461,20 @@ export function AssistantView({
               </div>
             )}
             {error && <p className="mb-2 text-[12px] text-red">{error}</p>}
+            {monthly && monthly.left <= 0 ? (
+              <p data-testid="postai-monthly-used-up" className="mb-2 rounded-lg border border-[color:color-mix(in_srgb,var(--color-brass)_35%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_6%,white)] p-3 text-[13px] text-ink">
+                {t(locale, "dashboard.assistant.monthlyUsedUp", { total: monthly.total, date: formatShortDate(monthly.resetsAt, locale, monthlyTimeZone) })}{" "}
+                <Link href={`/business/${businessId}/settings#compare-plans`} className="font-semibold underline decoration-brass underline-offset-2">
+                  {t(locale, "dashboard.upgrade.box.seePlans")}
+                </Link>
+              </p>
+            ) : (
+              monthly && (
+                <p data-testid="postai-monthly-left" className="mb-2 text-[12px] text-ink-mute">
+                  {t(locale, "dashboard.assistant.monthlyLeft", { left: monthly.left, total: monthly.total })}
+                </p>
+              )
+            )}
             <form
               className="flex items-end gap-2.5"
               onSubmit={(e) => {
@@ -475,7 +499,7 @@ export function AssistantView({
               <Button
                 type="submit"
                 variant="brass"
-                disabled={sending || resuming || !draft.trim()}
+                disabled={sending || resuming || !draft.trim() || (!!monthly && monthly.left <= 0)}
                 className="shrink-0"
               >
                 {sending ? <IconLoader2 size={16} className="animate-spin" /> : <IconSend2 size={16} />}

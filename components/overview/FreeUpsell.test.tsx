@@ -38,7 +38,7 @@ describe("the upgrade box shows only on Free", () => {
       '<FreeSection id="score"', "<ScoreBand", "<RescanMessages",
       '<FreeSection id="behind"', "<ScoreBreakdownPanel", "<LocalBenchmarkTile",
       '<FreeSection id="tools"', "<FreeReviews", "<FreePostAI ",
-      '<FreeSection id="earn"', "<FixPlanBox", "extras={{ hasWebsite }}", "<GrowMoreCustomers", "embedded", "</FixPlanBox>",
+      '<FreeSection id="earn"', "<FixPlanBox", "extras={{ hasWebsite, pricingOk: profileTools.pricingOk, campaignsOk: profileTools.couponsOk || profileTools.referralOk }}", "<GrowMoreCustomers", "embedded", "</FixPlanBox>",
     ];
     let at = -1;
     for (const piece of order) {
@@ -98,30 +98,41 @@ describe("the upgrade box shows only on Free", () => {
     expect(text(combined("es"))).toContain("Recupere sus puntos faltantes, paso a paso");
   });
 
-  test("third part: a collapsed “See everything in each plan” row — the full list with real plan badges and “Coming soon”, no extra buttons", () => {
-    const html = wrap(<FixPlanBox businessId="b1" extras={{ hasWebsite: true }} />);
+  test("third part: a collapsed “See everything in each plan” — grouped Grow / Premium / Add-on, an outcome headline + one plain line, real badges and “Coming soon”, no extra buttons", () => {
+    const html = wrap(<FixPlanBox businessId="b1" extras={{ hasWebsite: true, pricingOk: true, campaignsOk: true }} />);
     const button = html.match(/<button[^>]*data-testid="fix-plan-extras-toggle"[^>]*>[\s\S]*?<\/button>/)![0];
     expect(button).toContain('aria-expanded="false"');
     expect(text(button)).toContain("See everything in each plan");
-    expect(html).toMatch(/<ul id="[^"]+" hidden=""[^>]*data-testid="fix-plan-extras-list"/);
-    const row = (id: string) => text(html.match(new RegExp(`<li[^>]*data-testid="plan-extra-${id}"[^>]*>[\\s\\S]*?</li>`))![0]);
-    expect(row("fixGuides")).toMatch(/Step-by-step fix guides for .* Grow/);
-    expect(row("recheck")).toContain("Grow");
-    expect(row("starterSite")).toContain("Grow");
-    expect(row("reports")).toContain("Premium");
-    expect(row("campaignHub")).toMatch(/Coming soon.*Premium/);
-    expect(row("googleProfile")).toMatch(/Coming soon.*Premium/);
-    expect(row("aiReplies")).toMatch(/AI review replies posted for you.*Coming soon.*Premium/);
-    expect(row("postaiUnlimited")).toContain("Unlimited PostAI");
+    expect(html).toMatch(/<div id="[^"]+" hidden=""[^>]*data-testid="fix-plan-extras-list"/);
+    const group = (g: string) => html.slice(html.indexOf(`data-testid="plan-group-${g}"`));
+    expect(html.indexOf('data-testid="plan-group-grow"')).toBeLessThan(html.indexOf('data-testid="plan-group-premium"'));
+    expect(html.indexOf('data-testid="plan-group-premium"')).toBeLessThan(html.indexOf('data-testid="plan-group-addOn"'));
+    const row = (id: string) => text(html.match(new RegExp(`<li[^>]*data-testid="plan-extra-${id}"[^>]*>[\\s\\S]*?</li>`))![0]).trim();
+    expect(row("starterSite")).toBe("A one-page website, ready today Download your starter site and put it online anywhere. Grow");
+    expect(row("priceCheck")).toMatch(/^Know if your prices fit your area Price check compares your prices with nearby competitors' price levels, plus pricing tips for your type of business\. Grow$/);
+    expect(row("reviewScripts")).toContain("Ready-to-copy scripts for asking customers, in English and Spanish");
+    expect(row("moreDrafts")).toContain("10 AI review reply drafts a week (3 on Free).");
+    expect(row("fixGuides")).toMatch(/Guides written for .+, check by check\./);
+    expect(row("pdfReports")).toMatch(/Download your weekly report as a PDF\. Premium$/);
+    expect(row("googleProfile")).toMatch(/Coming soon Premium$/);
+    expect(row("aiReplies")).toMatch(/Coming soon Premium$/);
+    expect(row("campaignHub")).toMatch(/Coming soon Premium$/);
     expect(row("postaiUnlimited")).not.toContain("Coming soon");
-    expect(row("postStudio")).toMatch(/Coming soon.*Add-on/);
-    // Still only the two "See plans" buttons.
+    expect(row("postStudio")).toMatch(/\$30\/mo on its own.*Coming soon Add-on$/);
+    expect(group("addOn")).toContain('data-testid="plan-extra-postStudio"');
+    // Only the two "See plans" buttons.
     expect(html.match(/href="\/business\/b1\/settings#compare-plans"/g)).toHaveLength(2);
-    // No website: no fix guides or re-check.
-    const noSite = wrap(<FixPlanBox businessId="b1" extras={{ hasWebsite: false }} />);
-    expect(noSite).not.toContain('data-testid="plan-extra-fixGuides"');
-    expect(noSite).not.toContain('data-testid="plan-extra-recheck"');
-    expect(text(wrap(<FixPlanBox businessId="b1" extras={{ hasWebsite: true }} />, "es"))).toContain("Ver todo lo que incluye cada plan");
+    // Only what this business has: no website → no fix guides or re-check; no price check / campaigns where they don't apply.
+    const lean = wrap(<FixPlanBox businessId="b1" extras={{ hasWebsite: false, pricingOk: false, campaignsOk: false }} />);
+    for (const id of ["fixGuides", "recheck", "priceCheck", "campaigns"]) expect(lean, id).not.toContain(`data-testid="plan-extra-${id}"`);
+    const es = text(wrap(<FixPlanBox businessId="b1" extras={{ hasWebsite: true }} />, "es"));
+    expect(es).toContain("Ver todo lo que incluye cada plan");
+    expect(es).toContain("Un sitio web de una página, listo hoy");
+  });
+
+  test("Free Overview: no separate Grow/Premium promo cards under the combined card (they stay elsewhere)", () => {
+    const page = readFileSync("app/business/[id]/page.tsx", "utf8");
+    expect(page).toContain("upgrade={free ? { ...upgrade, cards: [] } : upgrade}");
   });
 
   test("outside Free the More customers banner keeps its own card and unlock row", () => {

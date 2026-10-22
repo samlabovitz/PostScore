@@ -206,3 +206,30 @@ describe("which types a scan compares by", () => {
     expect(competitorFallbackTypes({ primaryType: "store", categories: ["store"], fallbackPlaceTypes: [] })).toEqual([]);
   });
 });
+
+describe("a search that didn't run is never shown as “found none”", () => {
+  test("the month's cap reached: 'capped' (with the date it resumes) — no Nearby Search call, nothing saved", async () => {
+    const { client, inserted } = fakeSupabase({ businesses: [BUSINESS], competitor_scans: [] });
+    const result = await runAndSaveCompetitorScanWithClient(client, "biz", { enforceCooldown: false, now: NOW, budget: async () => ({ used: 800 }), logCalls: async () => undefined });
+    expect(result).toEqual({ status: "capped", nextAvailableAt: "2026-11-01T00:00:00.000Z" });
+    expect(scanSpy).not.toHaveBeenCalled();
+    expect(inserted.competitor_scans).toBeUndefined();
+  });
+
+  test("a failed search: 'error' with the reason (logged) — never 'no_data'", async () => {
+    scanSpy.mockResolvedValue({ status: "error", message: "Google Places nearby search failed (503).", ranked: [], unscored: [], placesCalls: 1 });
+    const { client } = fakeSupabase({ businesses: [BUSINESS], competitor_scans: [] });
+    const result = await runAndSaveCompetitorScanWithClient(client, "biz", { enforceCooldown: false, now: NOW, budget: async () => ({ used: 0 }), logCalls: async () => undefined });
+    expect(result).toEqual({ status: "error", message: "Google Places nearby search failed (503)." });
+  });
+
+  test("the Competitors page: Free gets “Refresh” only when the latest scan found no competitors (the one exception)", async () => {
+    const none = fakeSupabase({ businesses: [BUSINESS], competitor_scans: [savedRow("s", "2026-10-15T18:00:00Z", true, "Modern Liquors", 72)] });
+    const found = fakeSupabase({ businesses: [BUSINESS], competitor_scans: [savedRow("s", "2026-10-15T18:00:00Z", true, "Modern Liquors", 72), savedRow("s", "2026-10-15T18:00:00Z", false, "Main Street Liquors", 80)] });
+    const a = await getCompetitorsWithClient(none.client, "biz", NOW, "free");
+    const b = await getCompetitorsWithClient(found.client, "biz", NOW, "free");
+    if (a.status !== "ok" || b.status !== "ok") throw new Error("expected ok");
+    expect(a.refresh.allowed).toBe(true);
+    expect(b.refresh.allowed).toBe(false);
+  });
+});

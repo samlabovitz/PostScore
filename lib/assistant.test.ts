@@ -141,7 +141,9 @@ describe("buildAssistantContextText", () => {
   test("includes the real score, grade, and category breakdown", () => {
     const text = buildAssistantContextText(BASE_CONTEXT);
     expect(text).toContain("74/100 (Grade C)");
-    expect(text).toContain("Visibility & Reputation: 62/100");
+    // In points, never a 0–100 category score (the Overview's "X of W").
+    expect(text).toContain("Visibility & Reputation: 25 of 40 points");
+    expect(text).not.toContain("62/100");
   });
 
   test("includes losing checks with their real explanations, never invented ones", () => {
@@ -279,7 +281,7 @@ describe("buildAssistantContextText", () => {
     // non-integers and they round to N.0 — exactly how the UI's own
     // formatPoints would render the same raw values, never a bare
     // integer it didn't actually earn.
-    expect(text).toContain("14.4/34.0 pts earned in this category");
+    expect(text).toContain("14.4 of 34.0 points");
     expect(text).toContain("Review count: 7.0/18 pts");
     expect(text).toContain("Uses HTTPS (+6.0 pts");
     expect(text).toContain("Photos on listing (+6.0 pts");
@@ -327,8 +329,8 @@ describe("buildAssistantContextText", () => {
   test("says the shareable review link/QR sign never needed a GBP connection at all, connected or not", () => {
     const connected: AssistantBusinessContext = { ...BASE_CONTEXT, gbp: { connected: true } };
     const notConnected: AssistantBusinessContext = { ...BASE_CONTEXT, gbp: { connected: false } };
-    expect(buildAssistantContextText(connected)).toContain("never required this connection at all");
-    expect(buildAssistantContextText(notConnected)).toContain("with no connection needed at all");
+    expect(buildAssistantContextText(connected)).toContain("never required this connection");
+    expect(buildAssistantContextText(notConnected)).toContain("with no connection needed");
   });
 
   test("reflects zero open tasks honestly when the action plan is empty", () => {
@@ -1284,13 +1286,14 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
     }
   });
 
-  test("requires general guidance to be labeled with the exact prefix the UI parses", () => {
-    expect(ASSISTANT_SYSTEM_RULES).toContain('"General guidance:"');
+  test("never asks for a “General guidance:” label (the UI still styles one if it ever appears)", () => {
+    expect(ASSISTANT_SYSTEM_RULES).not.toMatch(/MUST start a new paragraph beginning with the exact marker/);
+    expect(ASSISTANT_SYSTEM_RULES).toContain("Never put a label in front of a paragraph");
   });
 
-  test("rule 2 defers to the language directive for a non-English marker, rather than forcing English unconditionally", () => {
-    expect(ASSISTANT_SYSTEM_RULES).toContain("that language has its OWN exact marker text");
-    expect(ASSISTANT_SYSTEM_RULES).toContain('never English\'s "General guidance:" in a non-English answer');
+  test("rule 2: general ideas written naturally — never a label like “General guidance:” or “Consejo general:”", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain("2. GENERAL IDEAS, WRITTEN NATURALLY.");
+    expect(ASSISTANT_SYSTEM_RULES).toContain('no "General guidance:", "Consejo general:", "Note:" or similar headings');
   });
 
   test("instructs the assistant not to recite panel-visible identity facts back to the owner", () => {
@@ -1466,7 +1469,7 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
 
   test("REAL OFFER PRESETS lists this business type's real coupon quick picks, and referral quick picks only when referralOk is true", () => {
     const withReferral = buildAssistantContextText(BASE_CONTEXT);
-    expect(withReferral).toContain('REAL OFFER PRESETS (this business type\'s own built-in quick picks');
+    expect(withReferral).toContain("REAL OFFER PRESETS (this business type's built-in quick picks — EXAMPLES only; the owner can write any offer, wording and amount of their own.");
     expect(withReferral).toContain('"10% off your next visit" — A simple loyalty nudge for returning diners.');
     expect(withReferral).toContain('Referrer gets "$10 off your next visit", friend gets "15% off their first visit"');
 
@@ -1547,10 +1550,10 @@ describe("buildAssistantLanguageDirective", () => {
     expect(buildAssistantLanguageDirective("en")).not.toContain("puntuación");
   });
 
-  test("the Spanish directive overrides the general-guidance marker to the real Spanish text, 'Consejo general:' — never the English one", () => {
+  test("the Spanish directive: no paragraph labels (no “Consejo general:”) — write naturally", () => {
     const directive = buildAssistantLanguageDirective("es");
-    expect(directive).toContain('becomes exactly "Consejo general:" in Spanish');
-    expect(directive).toContain('never the English "General guidance:"');
+    expect(directive).toContain('Never start a paragraph with a label such as "Consejo general:"');
+    expect(directive).not.toContain("becomes exactly");
   });
 
   test("the Spanish directive forbids leaving English jargon (e.g. 'built-in') in an otherwise-Spanish answer", () => {

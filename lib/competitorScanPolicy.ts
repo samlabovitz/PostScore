@@ -86,12 +86,14 @@ export function competitorScanCostRange(scans: number): { min: number; max: numb
  * - Premium and Multi: every re-scan;
  * - Grow: when the last saved competitor scan is GROW_RESCAN_COMPETITOR_DAYS
  *   or more old (or there isn't one);
- * - Free: never — Free competitors are never refreshed after the first
- *   scan (not by a re-scan, the monthly report or scripts/rescan-all.ts). */
+ * - Free: never after a first scan that found competitors (not by a
+ *   re-scan, the monthly report or scripts/rescan-all.ts). The one
+ *   exception: when there's no scan yet, or the latest one came back with
+ *   NO competitors, Free may search again right away. */
 export const GROW_RESCAN_COMPETITOR_DAYS = 7;
 
-export function rescanRefreshesCompetitors(plan: Plan, latestCompetitorScanAt: string | null, now: Date): boolean {
-  if (plan === "free") return false;
+export function rescanRefreshesCompetitors(plan: Plan, latestCompetitorScanAt: string | null, now: Date, latestFoundNone = false): boolean {
+  if (plan === "free") return latestCompetitorScanAt === null || latestFoundNone;
   if (plan === "premium" || plan === "multi") return true;
   if (!latestCompetitorScanAt) return true;
   const age = now.getTime() - Date.parse(latestCompetitorScanAt);

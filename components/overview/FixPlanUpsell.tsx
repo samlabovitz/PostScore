@@ -10,7 +10,7 @@
 import Link from "next/link";
 import { useId, useState } from "react";
 import { IconArrowRight, IconChevronDown, IconCrown, IconLock, IconRocket } from "@tabler/icons-react";
-import { planExtraBadge, planExtrasFor } from "@/lib/planFeatures";
+import { planExtraBadge, planExtraGroups, type PlanExtraOptions } from "@/lib/planFeatures";
 import { useUpgrade } from "@/components/upgrade/UpgradeContext";
 import { jumpToAnchor } from "@/components/layout/AnchorHighlight";
 import { FIX_PLAN_ANCHOR } from "@/lib/freeUpsell";
@@ -69,7 +69,7 @@ const PREMIUM_BORDER = "border-[color:color-mix(in_srgb,var(--color-brass)_45%,w
  * the card's only upgrade buttons), a soft divider, then `children` —
  * the "More customers, whatever your score" tool tiles (GrowMoreCustomers
  * embedded). "See how to fix it" and every locked row scroll here. */
-export function FixPlanBox({ businessId, children, extras = null }: { businessId: string; children?: React.ReactNode; extras?: { hasWebsite: boolean } | null }) {
+export function FixPlanBox({ businessId, children, extras = null }: { businessId: string; children?: React.ReactNode; extras?: PlanExtraOptions | null }) {
   const locale = useLocale();
   const builderName = useUpgrade()?.facts.builderName ?? null;
   const [showAll, setShowAll] = useState(false);
@@ -150,25 +150,37 @@ export function FixPlanBox({ businessId, children, extras = null }: { businessId
               {t(locale, showAll ? "dashboard.free.fixPlan.hideEverything" : "dashboard.free.fixPlan.seeEverything")}
               <IconChevronDown size={18} aria-hidden className={cn("shrink-0 text-ink-soft transition-transform", showAll && "rotate-180")} />
             </button>
-            <ul id={listId} hidden={!showAll} className={cn("mt-2 flex-col divide-y divide-paper-line", showAll && "flex")} data-testid="fix-plan-extras-list">
-              {planExtrasFor(extras.hasWebsite).map((extra) => {
-                const badge = planExtraBadge(extra);
-                return (
-                  <li key={extra.id} data-testid={`plan-extra-${extra.id}`} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
-                    <span className="min-w-0 text-[13.5px] text-ink">
-                      {t(locale, extra.titleKey, { builder: builderName ?? t(locale, "dashboard.free.tile.yourWebsite") })}
-                    </span>
-                    <span className="flex shrink-0 items-center gap-1.5">
-                      {extra.soon && <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-semibold text-ink-soft">{t(locale, "dashboard.common.comingSoon")}</span>}
-                      <span className="inline-flex items-center gap-1 rounded-full border border-paper-deep bg-white px-2 py-0.5 text-[11px] font-semibold text-ink">
-                        <IconLock size={10} aria-hidden className="text-brass" />
-                        {badge === "addOn" ? t(locale, "dashboard.free.tile.addOn") : t(locale, `dashboard.settings.plan.name.${badge}` as MessageKey)}
-                      </span>
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+            <div id={listId} hidden={!showAll} className={cn("mt-3 flex-col gap-4", showAll && "flex")} data-testid="fix-plan-extras-list">
+              {planExtraGroups(extras).map(({ group, extras: rows }) => (
+                <div key={group} data-testid={`plan-group-${group}`}>
+                  <h4 className="text-[11.5px] font-semibold uppercase tracking-[0.07em] text-ink-soft">
+                    {group === "addOn" ? t(locale, "dashboard.free.tile.addOn") : t(locale, `dashboard.settings.plan.name.${group}` as MessageKey)}
+                  </h4>
+                  <ul className="mt-1 flex flex-col divide-y divide-paper-line">
+                    {rows.map((extra) => {
+                      const badge = planExtraBadge(extra);
+                      return (
+                        <li key={extra.id} data-testid={`plan-extra-${extra.id}`} className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 py-2.5">
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[13.5px] font-semibold text-ink">{t(locale, extra.headlineKey)}</span>
+                            <span className="block text-[12.5px] leading-snug text-ink-soft">
+                              {t(locale, extra.lineKey, { builder: builderName ?? t(locale, "dashboard.free.tile.yourWebsite") })}
+                            </span>
+                          </span>
+                          <span className="flex shrink-0 items-center gap-1.5">
+                            {extra.soon && <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-semibold text-ink-soft">{t(locale, "dashboard.common.comingSoon")}</span>}
+                            <span className="inline-flex items-center gap-1 rounded-full border border-paper-deep bg-white px-2 py-0.5 text-[11px] font-semibold text-ink">
+                              <IconLock size={10} aria-hidden className="text-brass" />
+                              {badge === "addOn" ? t(locale, "dashboard.free.tile.addOn") : t(locale, `dashboard.settings.plan.name.${badge}` as MessageKey)}
+                            </span>
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))}
+            </div>
           </div>
         </>
       )}

@@ -45,7 +45,7 @@ export const COMPARE_ROWS: CompareRow[] = [
   row("hub", preview, yes, yes),
   row("channels", no, no, soon),
   row("website", preview, text("starterSite"), text("starterDiscount"), text("starterIncluded")),
-  row("postai", text("perWeek3"), text("monthlyLimit"), text("unlimited")),
+  row("postai", text("perWeek3"), text("perMonth100"), text("unlimited")),
   // AI review reply drafts (the owner pastes the review): 3 a week on Free,
   // 10 a week on Grow; Premium unlimited, posting for them with Google
   // connect soon.

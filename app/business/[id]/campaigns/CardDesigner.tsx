@@ -864,7 +864,7 @@ export function CardDesigner({ kind, plan, businessId, business, text, fields, a
         {premiumPreview && <PremiumPreviewBanner businessId={businessId} onBack={() => setPremiumPreview(null)} />}
         <div
           data-testid="card-preview"
-          data-print-design
+          data-print-design={showroom ? undefined : ""}
           className={cn("mx-auto w-full [&>svg]:block", view === "sheet" && "bg-white shadow-card")}
           style={{ aspectRatio: `${aw} / ${ah}`, maxWidth: view === "sheet" ? "24rem" : "32rem" }}
           dangerouslySetInnerHTML={{ __html: preview ?? "" }}

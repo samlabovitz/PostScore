@@ -196,6 +196,25 @@ describe("designer previews in the showrooms", () => {
     expect(heading).not.toContain("blur-");
     expect(html.indexOf("preview-chip")).toBeLessThan(html.indexOf("designer-preview-content"));
   });
+  test("Free can never print a preview: no data-print-design in a showroom, and the preview is print:hidden", async () => {
+    const { DesignerPreview } = await import("./DesignerPreview");
+    const { IconTicket } = await import("@tabler/icons-react");
+    const html = renderToStaticMarkup(
+      <LocaleProvider locale="en">
+        <UpgradeProvider value={{ businessId: "b1", plan: "free", facts: FACTS, cards: [] }}>
+          <DesignerPreview icon={IconTicket} title="Coupon designer" description="x">
+            <p>DESIGNER</p>
+          </DesignerPreview>
+        </UpgradeProvider>
+      </LocaleProvider>
+    );
+    const at = html.indexOf('data-testid="designer-preview-content"');
+    const tag = html.slice(html.lastIndexOf("<", at), html.indexOf(">", at));
+    expect(tag).toContain("print:hidden");
+    // Cmd+P prints only [data-print-design] (app/globals.css): showrooms drop it.
+    expect(readFileSync("app/business/[id]/campaigns/CardDesigner.tsx", "utf8")).toContain('data-print-design={showroom ? undefined : ""}');
+    expect(readFileSync("app/business/[id]/website-reviews/SignStudio.tsx", "utf8")).toContain('data-print-design={props.inline ? undefined : ""}');
+  });
   test("each designer is named; sections are ≥32px apart with a thin rule between them", () => {
     const src = readFileSync("components/plan/TabShowroom.tsx", "utf8");
     for (const k of ["dashboard.free.designer.coupon", "dashboard.free.designer.referral", "dashboard.free.designer.sign"]) expect(src).toContain(k);

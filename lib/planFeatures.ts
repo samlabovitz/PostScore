@@ -1,32 +1,59 @@
-// What each plan adds, beyond the combined upgrade card's plans and tools —
-// the "See everything in each plan" list at the bottom of that card on the
-// Free Overview. Which plan unlocks each one comes from the same rule the
-// promo boxes use (lib/upgradePromos.ts featurePlan), never a second list.
-// Pure.
+// What each plan adds — the "See everything in each plan" list at the
+// bottom of the Free Overview's combined upgrade card: an outcome
+// headline and one plain line of what the owner actually gets, grouped by
+// plan. Only features that exist today, or are honestly marked coming
+// soon (see ~/Desktop/plan-facts.md and lib/planComparison.ts). Which plan
+// unlocks each one comes from the same rule the promo boxes use
+// (lib/upgradePromos.ts featurePlan), never a second list. Pure.
 
 import { featurePlan, type PromoFeature } from "@/lib/upgradePromos";
 import type { MessageKey } from "@/lib/i18n";
 
 export interface PlanExtra {
   id: string;
+  /** The outcome headline and the one plain line under it. */
+  headlineKey: MessageKey;
+  lineKey: MessageKey;
+  /** The plain feature name (PostAI's feature map). */
   titleKey: MessageKey;
   /** The promo feature that decides the plan badge; "addOn" = PostStudio. */
   feature: PromoFeature | "addOn";
   soon: boolean;
-  /** Only shown when the business has a website. */
-  needsWebsite?: boolean;
+  /** Only when the business has a website / this business type has the tool. */
+  needs?: "website" | "pricing" | "campaigns";
 }
 
+const k = (id: string, part: "h" | "l") => `dashboard.free.planList.${id}.${part}` as MessageKey;
+const extra = (id: string, titleKey: MessageKey, feature: PlanExtra["feature"], soon = false, needs?: PlanExtra["needs"]): PlanExtra => ({
+  id,
+  headlineKey: k(id, "h"),
+  lineKey: k(id, "l"),
+  titleKey,
+  feature,
+  soon,
+  ...(needs ? { needs } : {}),
+});
+
 export const PLAN_EXTRAS: PlanExtra[] = [
-  { id: "fixGuides", titleKey: "dashboard.free.tile.fixGuides", feature: "grow", soon: false, needsWebsite: true },
-  { id: "recheck", titleKey: "dashboard.websiteRecheck.button", feature: "recheck", soon: false, needsWebsite: true },
-  { id: "starterSite", titleKey: "dashboard.free.showroom.starterSite", feature: "grow", soon: false },
-  { id: "reports", titleKey: "dashboard.free.tile.reports", feature: "premium", soon: false },
-  { id: "campaignHub", titleKey: "dashboard.free.tile.hub", feature: "campaignHub", soon: true },
-  { id: "googleProfile", titleKey: "dashboard.free.tile.google", feature: "googleProfile", soon: true },
-  { id: "aiReplies", titleKey: "dashboard.free.tile.repliesPostedForYou", feature: "premium", soon: true },
-  { id: "postaiUnlimited", titleKey: "dashboard.free.tile.postaiUnlimited", feature: "premium", soon: false },
-  { id: "postStudio", titleKey: "dashboard.overview.postStudio.title", feature: "addOn", soon: true },
+  // Grow
+  extra("fixGuides", "dashboard.free.tile.fixGuides", "grow", false, "website"),
+  extra("recheck", "dashboard.websiteRecheck.button", "recheck", false, "website"),
+  extra("starterSite", "dashboard.free.showroom.starterSite", "grow"),
+  extra("priceCheck", "dashboard.nav.pricing", "grow", false, "pricing"),
+  extra("reviewScripts", "dashboard.websiteReviews.guide.scriptTitle", "grow"),
+  extra("campaigns", "dashboard.campaigns.guide.heading", "grow", false, "campaigns"),
+  extra("recap", "dashboard.free.tile.reports", "grow"),
+  extra("moreDrafts", "dashboard.replies.heading", "grow"),
+  // Premium
+  extra("postaiUnlimited", "dashboard.free.tile.postaiUnlimited", "premium"),
+  extra("unlimitedDrafts", "dashboard.replies.unlimited", "premium"),
+  extra("designs", "dashboard.settings.plans.row.designs", "designs"),
+  extra("pdfReports", "dashboard.settings.plans.row.reports", "premium"),
+  extra("googleProfile", "dashboard.free.tile.google", "googleProfile", true),
+  extra("aiReplies", "dashboard.free.tile.repliesPostedForYou", "replies", true),
+  extra("campaignHub", "dashboard.free.tile.hub", "campaignHub", true),
+  // Add-on
+  extra("postStudio", "dashboard.overview.postStudio.title", "addOn", true),
 ];
 
 /** The badge on each row: the plan that unlocks it, or "addOn". */
@@ -34,6 +61,24 @@ export function planExtraBadge(extra: PlanExtra): "grow" | "premium" | "addOn" {
   return extra.feature === "addOn" ? "addOn" : featurePlan(extra.feature);
 }
 
-export function planExtrasFor(hasWebsite: boolean): PlanExtra[] {
-  return PLAN_EXTRAS.filter((extra) => hasWebsite || !extra.needsWebsite);
+export interface PlanExtraOptions {
+  hasWebsite: boolean;
+  pricingOk?: boolean;
+  campaignsOk?: boolean;
+}
+
+export function planExtrasFor(o: PlanExtraOptions | boolean): PlanExtra[] {
+  const opts: PlanExtraOptions = typeof o === "boolean" ? { hasWebsite: o } : o;
+  return PLAN_EXTRAS.filter(
+    (e) =>
+      (e.needs !== "website" || opts.hasWebsite) &&
+      (e.needs !== "pricing" || opts.pricingOk !== false) &&
+      (e.needs !== "campaigns" || opts.campaignsOk !== false)
+  );
+}
+
+/** The list in plan groups, in order: Grow, Premium, Add-on. */
+export function planExtraGroups(o: PlanExtraOptions): Array<{ group: "grow" | "premium" | "addOn"; extras: PlanExtra[] }> {
+  const list = planExtrasFor(o);
+  return (["grow", "premium", "addOn"] as const).map((group) => ({ group, extras: list.filter((e) => planExtraBadge(e) === group) })).filter((g) => g.extras.length > 0);
 }

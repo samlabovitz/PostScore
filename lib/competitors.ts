@@ -5,6 +5,7 @@
 // scores, no invented "rank" metric other than PostScore itself.
 
 import { MAX_SEARCH_RADIUS_MILES } from "@/lib/competitorScanPolicy";
+import { MAX_CALLS_PER_SCAN } from "@/lib/placesSearchBudget";
 import {
   businessRowToScoringInput,
   isRealWebsite,
@@ -239,6 +240,52 @@ const GENERIC_TYPES = new Set([
 function isGenericType(type: string): boolean {
   return GENERIC_TYPES.has(type);
 }
+
+/**
+ * Broad food tags: real Google types, but they say HOW a place serves
+ * (takeout, delivery) or that it's "a restaurant", not WHAT it serves —
+ * nearby competitors carry their cuisine as the primary type
+ * ("sushi_restaurant", "pizza_restaurant") with takeout as a secondary
+ * tag. A listing whose only specific types are these (Umami Express,
+ * primary "meal_takeaway") is compared with nearby food places of any
+ * cuisine instead of requiring the same primary tag — the real bug that
+ * found no competitors for a takeout sushi shop.
+ */
+const BROAD_FOOD_TYPES = new Set(["restaurant", "meal_takeaway", "meal_delivery"]);
+/** What a broad food search asks Nearby Search for. */
+export const BROAD_FOOD_SEARCH_TYPES = ["restaurant", "meal_takeaway", "meal_delivery"];
+
+/** A place whose primary type makes it a food-service competitor. */
+export function isFoodServiceType(type: string | null | undefined): boolean {
+  return !!type && (BROAD_FOOD_TYPES.has(type) || type.endsWith("_restaurant") || type === "fast_food_restaurant");
+}
+
+/** The first specific type that ISN'T a broad food tag (a listing's
+ * secondary "sushi_restaurant" beats its primary "meal_takeaway"). */
+function firstNonBroadType(types: Array<string | null | undefined>): string | null {
+  for (const t of types) {
+    if (t && !isGenericType(t) && !BROAD_FOOD_TYPES.has(t)) return t;
+  }
+  return null;
+}
+
+/** Broadening only (never a direct match): sweets, bakeries and cafés
+ * compete for the same treat/coffee visit — a donut shop with no other
+ * donut shop nearby is compared with bakeries, dessert and coffee places. */
+const BROADER_FAMILIES: string[][] = [
+  ["bakery", "donut_shop", "dessert_shop", "ice_cream_shop", "cafe", "coffee_shop", "bagel_shop", "juice_shop", "tea_house", "confectionery", "chocolate_shop", "candy_store", "cake_shop"],
+];
+
+/** The broader types to try when too few competitors turned up. */
+export function broaderTypesFor(referenceType: string | null, food: boolean): string[] {
+  if (food) return BROAD_FOOD_SEARCH_TYPES;
+  if (!referenceType) return [];
+  return BROADER_FAMILIES.find((f) => f.includes(referenceType)) ?? comparableTypesFor(referenceType);
+}
+
+/** Fewer comparable competitors than this after the radius tiers → one
+ * broader-type search (within the per-scan call limit). */
+export const MIN_COMPETITORS_BEFORE_BROADENING = 3;
 
 /** The first type in `types` that isn't in GENERIC_TYPES, or null if
  * every type present is too generic to match on (or the list is empty).
@@ -533,7 +580,12 @@ export async function findAndScoreCompetitors(
   // when Google's own types are all generic.
   const nicheDirect = usableFallbackTypes(subject.niche?.directTypes);
   const fallbackTypes = nicheDirect.length > 0 ? nicheDirect : hasAnyTypeData && !googleSpecificType ? usableFallbackTypes(subject.fallbackPlaceTypes) : [];
-  const specificType = nicheDirect[0] ?? googleSpecificType ?? fallbackTypes[0] ?? null;
+  // A broad food tag as the primary type: prefer a more specific type
+  // further down the listing; with none, compare with food places of any
+  // cuisine (broadFood).
+  const googleNonBroad = firstNonBroadType([subject.primaryType, ...(subject.categories ?? [])]);
+  const broadFood = nicheDirect.length === 0 && fallbackTypes.length === 0 && !!googleSpecificType && BROAD_FOOD_TYPES.has(googleSpecificType) && !googleNonBroad;
+  const specificType = nicheDirect[0] ?? (googleSpecificType && BROAD_FOOD_TYPES.has(googleSpecificType) ? (googleNonBroad ?? googleSpecificType) : googleSpecificType) ?? fallbackTypes[0] ?? null;
   const referenceDisplayName = subject.category ?? null;
 
   if (hasAnyTypeData && !specificType) {
@@ -581,14 +633,16 @@ export async function findAndScoreCompetitors(
   // "hair_salon" isn't filtered out server-side before isSameCategory()
   // ever sees it.
   const includedTypes =
-    fallbackTypes.length > 0 ? fallbackTypes : referenceType ? comparableTypesFor(referenceType) : undefined;
+    fallbackTypes.length > 0 ? fallbackTypes : broadFood ? BROAD_FOOD_SEARCH_TYPES : referenceType ? comparableTypesFor(referenceType) : undefined;
   // With the owner's fallback types, a candidate is comparable when its
   // PRIMARY Google type is one of them (same "primary identity" rule as
   // always, over the owner's whole type set).
   const matchesCategory = (c: NearbyCandidate) =>
     fallbackTypes.length > 0
       ? !!c.primaryType && fallbackTypes.includes(c.primaryType)
-      : isSameCategory(c, { type: referenceType, displayName: referenceDisplayName });
+      : broadFood
+        ? isFoodServiceType(c.primaryType)
+        : isSameCategory(c, { type: referenceType, displayName: referenceDisplayName });
   debugLog("includedTypes requested from Nearby Search:", includedTypes ?? "(none — no specific reference type)");
 
   // Start at the narrowest radius tier ("who is actually nearby") and
@@ -609,11 +663,9 @@ export async function findAndScoreCompetitors(
         rankPreference: "DISTANCE",
       });
     } catch (err) {
-      return emptyResult(
-        "error",
-        err instanceof Error ? err.message : t(locale, "dashboard.competitors.nearbySearchFailedFallback"),
-        categoryLabel
-      );
+      // Never silent: logged on the server, and the scan says it failed.
+      console.error(`[competitors] Nearby Search failed for ${subject.name ?? subject.placeId} (tier ${tier}):`, err instanceof Error ? err.message : err);
+      return { ...emptyResult("error", err instanceof Error ? err.message : t(locale, "dashboard.competitors.nearbySearchFailedFallback"), categoryLabel), placesCalls };
     }
 
     if (DEBUG_COMPETITORS) {
@@ -653,10 +705,47 @@ export async function findAndScoreCompetitors(
     if (tier < RADIUS_TIERS_METERS.length - 1) searchWidened = true;
   }
 
+  // Too few after every radius: ONE broader-type search at the widest
+  // radius (food: any cuisine, takeout or delivery; others: the type's
+  // comparable family) — within the per-scan call limit, so the month's
+  // PLACES_SEARCH_MONTHLY_CAP check before the scan still covers it.
+  const foodSubject = broadFood || isFoodServiceType(referenceType) || fallbackTypes.some((x) => isFoodServiceType(x));
+  const broaderTypes = foodSubject ? BROAD_FOOD_SEARCH_TYPES : broaderTypesFor(referenceType, false).filter((x) => !(includedTypes ?? []).includes(x));
+  let broadened = false;
+  if (comparable.length < MIN_COMPETITORS_BEFORE_BROADENING && broaderTypes.length > 0 && !(foodSubject && broadFood) && placesCalls < MAX_CALLS_PER_SCAN) {
+    try {
+      placesCalls++;
+      const broader = await searchNearbyPlaces({
+        lat: subjectLocation.lat,
+        lng: subjectLocation.lng,
+        radiusMeters: RADIUS_TIERS_METERS[RADIUS_TIERS_METERS.length - 1],
+        includedTypes: broaderTypes,
+        maxResultCount: 20,
+        rankPreference: "DISTANCE",
+      });
+      const seen = new Set(comparable.map((c) => c.candidate.placeId));
+      const accept = (c: NearbyCandidate) => (foodSubject ? isFoodServiceType(c.primaryType) : !!c.primaryType && broaderTypes.includes(c.primaryType));
+      const extra = broader
+        .filter((c) => c.placeId !== subject.placeId && !seen.has(c.placeId))
+        .filter((c) => !isClosedStatus(c.businessStatus))
+        .filter((c) => c.location !== null)
+        .filter(accept)
+        .map((c) => ({ candidate: c, distanceMeters: haversineMeters(subjectLocation, c.location as { lat: number; lng: number }) }))
+        .sort((a, b) => a.distanceMeters - b.distanceMeters)
+        .slice(0, MAX_COMPETITORS - comparable.length);
+      comparable = [...comparable, ...extra];
+      broadened = extra.length > 0;
+      searchWidened = searchWidened || broadened;
+      debugLog(`broader search (${broaderTypes.join(", ")}): ${broader.length} raw, ${extra.length} added`);
+    } catch (err) {
+      console.error(`[competitors] broader Nearby Search failed for ${subject.name ?? subject.placeId}:`, err instanceof Error ? err.message : err);
+    }
+  }
+
   // The ticked "also competes with" areas: ONE extra search at 3 mi for
   // their Google types, nearest first, never repeating a direct result.
   const wideTypes = usableFallbackTypes(subject.niche?.wideTypes).filter((t) => !fallbackTypes.includes(t)).slice(0, 50);
-  if (wideTypes.length > 0) {
+  if (wideTypes.length > 0 && placesCalls < MAX_CALLS_PER_SCAN) {
     try {
       placesCalls++;
       const wide = await searchNearbyPlaces({
@@ -677,8 +766,10 @@ export async function findAndScoreCompetitors(
         .sort((a, b) => a.distanceMeters - b.distanceMeters)
         .slice(0, MAX_COMPETITORS);
       comparable = [...comparable, ...extra];
-    } catch {
-      // The wider areas are extra: a failed search keeps the direct results.
+    } catch (err) {
+      // The wider areas are extra: a failed search keeps the direct
+      // results — but it's logged, never swallowed.
+      console.error(`[competitors] "also competes with" Nearby Search failed for ${subject.name ?? subject.placeId}:`, err instanceof Error ? err.message : err);
     }
   }
 

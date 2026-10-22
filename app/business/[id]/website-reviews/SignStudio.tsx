@@ -600,7 +600,7 @@ export function SignStudio(props: SignStudioProps) {
           {premiumPreview && <PremiumPreviewBanner businessId={businessId} onBack={() => setPremiumPreview(null)} />}
           <div
             data-testid="sign-preview"
-            data-print-design
+            data-print-design={props.inline ? undefined : ""}
             className="relative w-full max-w-[22rem] bg-white shadow-card md:max-w-[26rem] [&>svg]:block"
             style={{ aspectRatio: `${w} / ${h}` }}
             dangerouslySetInnerHTML={{ __html: preview ?? "" }}

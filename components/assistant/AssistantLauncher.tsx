@@ -87,12 +87,15 @@ export function AssistantLauncher({
   context,
   starterPrompts,
   conversationCount,
+  monthly = null,
 }: {
   businessId: string;
   businessName: string | null;
   context: AssistantBusinessContext;
   starterPrompts: string[];
   conversationCount: number;
+  /** Grow: questions left this month. */
+  monthly?: { left: number; total: number; resetsAt: string } | null;
 }) {
   const locale = useLocale();
   const [open, setOpen] = useState(false);
@@ -131,6 +134,7 @@ export function AssistantLauncher({
           starterPrompts={starterPrompts}
           initialDraft={initialDraft}
           onNavigate={() => setOpen(false)}
+          monthly={monthly}
         />
       </AssistantOverlay>
     </>

@@ -8,7 +8,7 @@ import { lastOwnerRescanAt } from "@/lib/placesSearchBudget.server";
 import { Card } from "@/components/ui/Card";
 import { scoreBusinessById, getScoreHistory, getRecentScoreSnapshots } from "@/app/actions/scoring";
 import { getBusinessSummary } from "@/app/actions/businesses";
-import { getAssistantPageData } from "@/app/actions/assistant";
+import { getAssistantPageData, getPostaiMonthlyStatus } from "@/app/actions/assistant";
 import { getLocalBenchmark } from "@/app/actions/competitors";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { resolveBizProfile } from "@/config/bizProfiles";
@@ -99,7 +99,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     );
   }
 
-  const [history, recentSnapshots, assistantPageData, benchmark, gbpStatus, actionPlan, niche, upgrade, lastOwnerRescan, replyDrafts, freePostai] = await Promise.all([
+  const [history, recentSnapshots, assistantPageData, benchmark, gbpStatus, actionPlan, niche, upgrade, lastOwnerRescan, replyDrafts, freePostai, postaiMonthly] = await Promise.all([
     getScoreHistory(params.id),
     getRecentScoreSnapshots(params.id, 2),
     getAssistantPageData(params.id),
@@ -121,6 +121,8 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     (await getPlan()) === "free" ? getReplyDraftStatus(params.id) : Promise.resolve(null),
     // Free: PostAI questions left this week (DB only).
     (await getPlan()) === "free" ? freeAiAllowance(params.id, "postai") : Promise.resolve(null),
+    // Grow: PostAI questions left this month (DB only).
+    getPostaiMonthlyStatus(params.id),
   ]);
   const bannerKind = niche ? nicheBannerKind(niche.resolved) : null;
   const freeGate = rescanGate(upgrade.plan === "free", null, lastOwnerRescan, new Date());
@@ -144,6 +146,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
           context: assistantPageData.context,
           starterPrompts: assistantPageData.starterPrompts,
           conversationCount: assistantPageData.conversationCount,
+          monthly: postaiMonthly,
         }
       : {
           status: "unavailable",
@@ -160,7 +163,10 @@ export default async function BusinessPage({ params }: { params: { id: string } 
   const free = upgrade.plan === "free";
 
   return (
-    <DashboardShell upgrade={upgrade} business={scored.business}>
+    // Free: the combined upgrade card is the Overview's one upgrade prompt —
+    // no Grow/Premium promo cards under it (they stay on Website and
+    // Competitors, and on every page for Grow).
+    <DashboardShell upgrade={free ? { ...upgrade, cards: [] } : upgrade} business={scored.business}>
       {niche && bannerKind && (
         <div className="mb-6">
           <NicheBanner
