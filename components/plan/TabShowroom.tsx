@@ -149,8 +149,6 @@ function Sections({ tab, businessId, data }: { tab: ShowroomTab; businessId: str
                 businessId={businessId}
                 businessName={data.reviews.businessName}
                 placeId={data.reviews.placeId}
-                rating={data.reviews.rating}
-                reviewCount={data.reviews.reviewCount}
                 verifiedSocials={data.reviews.verifiedSocials}
                 plan="grow"
               />

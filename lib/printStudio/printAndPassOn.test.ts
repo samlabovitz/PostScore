@@ -43,7 +43,7 @@ describe("Print: the same PDF as Download, by the path that works in each browse
   });
 
   it("page counts match the design: tent card 1, 8-up sheet 1, double-sided 2", async () => {
-    const sign = await buildSignPdf({ plan: "premium", requested: { ...defaultDesign("en"), size: "tent" }, logo: null, placeId: "x", content: { businessName: "M", rating: null, reviewCount: null, verifiedSocials: [] }, locale: "en" });
+    const sign = await buildSignPdf({ plan: "premium", requested: { ...defaultDesign("en"), size: "tent" }, logo: null, placeId: "x", content: { businessName: "M", verifiedSocials: [] }, locale: "en" });
     if (sign.status !== "ok") throw new Error(sign.status);
     expect((await PDFDocument.load(sign.bytes)).getPageCount()).toBe(1);
     for (const [doubleSided, pages] of [[false, 1], [true, 2]] as const) {

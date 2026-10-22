@@ -15,6 +15,7 @@ import { SectionTitle, SoonList, SoonRow } from "@/components/preview/PreviewPar
 import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import { SearchDemandSection, type SearchDemandView } from "@/components/gbp/SearchDemandSection";
 import { isPremiumPlan, type Plan } from "@/lib/plan";
+import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 import { formatShortDate, t, useLocale, useTimeZone } from "@/lib/i18n";
 
 export interface GoogleListingFacts {
@@ -103,11 +104,16 @@ export function GoogleProfilePanel({
                   </div>
                 ))}
               </dl>
-              {listing.googleMapsUri && /^https:\/\//.test(listing.googleMapsUri) && (
-                <a href={listing.googleMapsUri} target="_blank" rel="noopener noreferrer" className={`${linkClass} mt-3 inline-block`}>
-                  {t(locale, "dashboard.googleProfile.openOnGoogle")}
-                </a>
-              )}
+              {/* A link to Google Maps doesn't replace the logo (only a visible map does). */}
+              <GoogleMapsAttribution className="mt-3">
+                {listing.googleMapsUri && /^https:\/\//.test(listing.googleMapsUri) && (
+                  <a href={listing.googleMapsUri} target="_blank" rel="noopener noreferrer" className={`${linkClass} inline-block`}>
+                    {t(locale, "dashboard.googleProfile.openOnGoogle")}
+                  </a>
+                )}
+              </GoogleMapsAttribution>
+              {/* Changes made on Google show up here after a re-scan. */}
+              <p data-testid="after-google-change" className="mt-2 text-[12px] text-ink-mute">{t(locale, "dashboard.rescan.afterGoogleChange")}</p>
             </>
           )}
         </Card>

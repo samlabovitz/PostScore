@@ -24,7 +24,7 @@ import { POST } from "@/app/api/business/[id]/review-sign/route";
 import { buildSignPdf } from "@/lib/signStudio/build.server";
 import { basicDesign, defaultDesign, type SignDesign } from "@/lib/signStudio/design";
 
-const CONTENT = { businessName: "Modern Liquors", rating: 4.5, reviewCount: 15, verifiedSocials: [] };
+const CONTENT = { businessName: "Modern Liquors", verifiedSocials: [] };
 const PREMIUM_DESIGN: SignDesign = { ...defaultDesign("en"), template: "banner", size: "cards4", theme: "bold", headlineFont: "oswald", qrCenter: "logo", logoTop: true };
 
 function post(body: unknown) {

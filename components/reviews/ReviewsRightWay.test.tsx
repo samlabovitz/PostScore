@@ -8,7 +8,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { LocaleProvider, messages } from "@/lib/i18n";
-import { ReviewGuide, reviewScript } from "./ReviewGuide";
+import { REVIEW_GUIDE_OPEN_KEY, ReviewGuide, readGuideOpen, rememberGuideOpen, reviewScript } from "./ReviewGuide";
 import { CounterTools } from "./CounterTools";
 import { ReviewsView } from "@/app/business/[id]/website-reviews/ReviewsView";
 import { COUNTER_TOOL_PRODUCTS, visibleCounterProducts, type CounterToolProduct } from "@/lib/counterTools";
@@ -64,6 +64,60 @@ describe("Get more reviews, the right way", () => {
     expect(html).toContain('data-testid="review-guide"');
     expect(html).toContain('data-testid="counter-tools"');
     expect(html.indexOf('id="get-more-reviews"')).toBeLessThan(html.indexOf('data-testid="review-guide"'));
+  });
+});
+
+describe("the guide is collapsible, closed by default", () => {
+  const content = (html: string) => html.match(/<div[^>]*data-testid="review-guide-content"[^>]*>/)?.[0] ?? "";
+  const beforeContent = (html: string) => html.slice(0, html.indexOf('data-testid="review-guide-content"'));
+
+  test("closed: one header button (title, summary, chevron) with aria-expanded, the rule still visible, the rest hidden", () => {
+    const html = wrap(<ReviewGuide placeId={PLACE_ID} />);
+    const button = html.match(/<button[^>]*data-testid="review-guide-toggle"[^>]*>[\s\S]*?<\/button>/)?.[0] ?? "";
+    expect(button).toContain('aria-expanded="false"');
+    expect(button).toContain('type="button"');
+    expect(html).toMatch(/<h2[^>]*><button/);
+    const id = button.match(/aria-controls="([^"]+)"/)![1];
+    expect(content(html)).toContain(`id="${id}"`);
+    expect(content(html)).toContain('hidden=""');
+    expect(text(button)).toContain("Get more reviews, the right way");
+    expect(text(button)).toContain("When to ask, what to say, where to put your QR code");
+    expect(button).toContain("<svg");
+    // The rule sits outside the hidden part.
+    expect(text(beforeContent(html))).toContain("Never offer a discount or gift for a review — it's against Google's rules and can get reviews removed.");
+    expect(html).toContain('data-open="false"');
+  });
+
+  test("Spanish (usted) summary", () => {
+    const t = text(wrap(<ReviewGuide placeId={PLACE_ID} />, "es"));
+    expect(t).toContain("Cuándo pedirla, qué decir, dónde poner su código QR");
+    expect(messages.es["dashboard.websiteReviews.guide.summary"]).not.toMatch(/\btu\b|\bpide\b/i);
+  });
+
+  test("Free: the same header and rule; the contents stay locked inside", () => {
+    const html = wrap(<ReviewGuide placeId={PLACE_ID} locked />);
+    expect(html).toContain('data-testid="review-guide-toggle"');
+    expect(text(beforeContent(html))).toContain("When to ask, what to say, where to put your QR code");
+    expect(text(beforeContent(html))).toContain("Never offer a discount or gift for a review");
+    expect(html.slice(html.indexOf('data-testid="review-guide-content"'))).toContain('data-testid="locked-preview-content"');
+    expect(text(html)).not.toContain("Thanks so much for coming in today");
+  });
+
+  test("open/closed is remembered per device; blocked storage means closed, never a crash", () => {
+    const store = new Map<string, string>();
+    const fake = () => ({ getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) });
+    expect(readGuideOpen(fake)).toBe(false);
+    rememberGuideOpen(true, fake);
+    expect(store.get(REVIEW_GUIDE_OPEN_KEY)).toBe("1");
+    expect(readGuideOpen(fake)).toBe(true);
+    rememberGuideOpen(false, fake);
+    expect(readGuideOpen(fake)).toBe(false);
+    const blocked = () => {
+      throw new Error("SecurityError");
+    };
+    expect(readGuideOpen(blocked)).toBe(false);
+    expect(() => rememberGuideOpen(true, blocked)).not.toThrow();
+    expect(readGuideOpen(() => null)).toBe(false);
   });
 });
 

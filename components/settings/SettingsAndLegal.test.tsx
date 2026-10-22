@@ -22,7 +22,7 @@ describe("Settings pieces", () => {
     const t = text(html);
     expect(t).toContain("Your free digital audit");
     expect(t).toContain("See exactly what's costing you customers.");
-    for (const s of ["Your PostScore and grade, refreshed monthly", "Every problem on your Google listing, reviews and website", "How you rank against nearby competitors", "Your review gap compared to businesses near you"]) expect(t).toContain(s);
+    for (const s of ["Your PostScore and grade, with a free re-scan every week", "Every problem on your Google listing, reviews and website", "How you rank against nearby competitors", "Your review gap compared to businesses near you"]) expect(t).toContain(s);
     expect(t).toContain("Compare plans");
     expect(html).toContain('id="compare-plans"');
     // The outdated Free lines are gone.

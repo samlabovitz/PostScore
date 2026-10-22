@@ -2,6 +2,7 @@
 // cards) and the single-card PNG. Fonts come from the same files the PDF
 // embeds: @font-face on /sign-fonts, or embedded data for a PNG.
 
+import { GOOGLE_MAPS_LOGO_RATIO } from "@/lib/google/mapsLogoPng";
 import { qrSvgMarkup, type ReviewQrGeometry } from "@/lib/reviewQr";
 import { designFontFiles, type SignDesign } from "@/lib/signStudio/design";
 import { FONT_ROLES, ITALIC_SKEW, shapePath, type FontRole, type PrintPage, type SignElement } from "@/lib/signStudio/elements";
@@ -79,6 +80,8 @@ export function renderPageSvg(page: PrintPage, opts: RenderSvgOptions): string {
         return opts.logoHref
           ? `<image href="${opts.logoHref}" x="${n(el.x)}" y="${n(el.y)}" width="${n(el.w)}" height="${n(el.h)}" preserveAspectRatio="xMidYMid meet"/>`
           : "";
+      case "googleMapsLogo":
+        return `<image href="/google/GoogleMaps_Logo_Gray.svg" x="${n(el.x)}" y="${n(el.y)}" width="${n(el.h * GOOGLE_MAPS_LOGO_RATIO)}" height="${n(el.h)}" aria-label="Google Maps"/>`;
       case "line":
         return `<line x1="${n(el.x1)}" y1="${n(el.y1)}" x2="${n(el.x2)}" y2="${n(el.y2)}" stroke="${el.color}" stroke-width="${n(el.width)}"${
           el.dots ? ` stroke-dasharray="0.1 ${n(el.width * 3)}" stroke-linecap="round"` : el.dash ? ` stroke-dasharray="6 4"` : ""

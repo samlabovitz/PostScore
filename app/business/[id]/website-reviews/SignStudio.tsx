@@ -48,7 +48,6 @@ import {
   designFontFiles,
   headlineText,
   qrStyleOf,
-  ratingAllowed,
   signFileName,
   type BasicChoices,
   type SignContent,
@@ -82,13 +81,6 @@ import { AskPostAI } from "@/components/studio/AskPostAI";
 
 const K = "dashboard.websiteReviews.studio.";
 const tk = (locale: Locale, key: string, vars?: Record<string, string | number>) => t(locale, `${K}${key}` as MessageKey, vars);
-
-/** Whether the rating may print, as the studio explains it. */
-export function ratingOption(content: SignContent, locale: Locale): { allowed: boolean; hint: string } {
-  return ratingAllowed(content.rating, content.reviewCount)
-    ? { allowed: true, hint: tk(locale, "ratingHint", { rating: content.rating.toFixed(1) }) }
-    : { allowed: false, hint: tk(locale, "ratingUnavailable") };
-}
 
 function sizeDesc(size: SignSize, locale: Locale): string | null {
   if (size === "tent") return tk(locale, "size.tentDesc");
@@ -135,7 +127,6 @@ function useSignTabContents({
     <F extends keyof SignDesign>(field: F) =>
     (o: SignDesign[F], isLocked: boolean) =>
       update({ [field]: o } as Partial<SignDesign>, isLocked);
-  const rating = ratingOption(content, locale);
   const signLang = value.language === "es" ? "es" : "en";
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -270,13 +261,6 @@ function useSignTabContents({
           <span className="text-right text-[11.5px] tabular-nums text-ink-mute">{tk(locale, "count", { count: value.subline.length, max: SUBLINE_MAX })}</span>
         </label>
         <Toggle checked={value.showName} onChange={(v) => update({ showName: v }, locked)} label={tk(locale, "showName")} hint={content.businessName} />
-        <Toggle
-          checked={value.showRating && rating.allowed}
-          disabled={!rating.allowed}
-          onChange={(v) => update({ showRating: v }, locked)}
-          label={tk(locale, "showRating")}
-          hint={rating.hint}
-        />
         <label className="flex flex-col gap-1">
           <Label>{tk(locale, "follow")}</Label>
           {content.verifiedSocials.length === 0 ? (

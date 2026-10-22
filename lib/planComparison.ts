@@ -45,10 +45,11 @@ export const COMPARE_ROWS: CompareRow[] = [
   row("hub", preview, yes, yes),
   row("channels", no, no, soon),
   row("website", preview, text("starterSite"), text("starterDiscount"), text("starterIncluded")),
-  row("postai", no, text("monthlyLimit"), text("unlimited")),
-  // AI review reply drafts (the owner pastes the review): 3 to try on Free
-  // and Grow; Premium unlimited, posting for them with Google connect soon.
-  row("replies", text("try3"), text("try3"), text("repliesUnlimited")),
+  row("postai", text("perWeek3"), text("monthlyLimit"), text("unlimited")),
+  // AI review reply drafts (the owner pastes the review): 3 a week on Free,
+  // 10 a week on Grow; Premium unlimited, posting for them with Google
+  // connect soon.
+  row("replies", text("perWeek3"), text("perWeek10"), text("repliesUnlimited")),
   row("doneForYou", no, no, soon),
   row("reports", text("monthlyEmail"), text("weeklyRecap"), text("weeklyPdf")),
   // PostStudio (coming soon): $30/mo on its own (the free audit +

@@ -30,6 +30,9 @@ import {
   anthropicFailureMessage,
   buildAssistantStarterPrompts,
   buildAssistantSystemPrompt,
+  buildFreeAssistantSystemPrompt,
+  freeAnswerLeaksFix,
+  stripLinkMarkers,
   type AssistantActionPlanTask,
   type AssistantBusinessContext,
   type AssistantBusinessProfile,
@@ -42,6 +45,7 @@ import {
   type AssistantWeeklyRoutineSummary,
 } from "@/lib/assistant";
 import { formatShortDate, normalizeLocale, t, type Locale } from "@/lib/i18n";
+import { confirmFreeAiWithClient, releaseFreeAiWithClient, reserveFreeAi } from "@/lib/freeAiUsage.server";
 import { loadCompetitorScope } from "@/lib/businessNiche.server";
 import { scopeGroupLabel, applyScope, scopeSummary } from "@/lib/competitorScope";
 
@@ -400,7 +404,12 @@ export async function getAssistantPageData(businessId: string): Promise<GetAssis
 }
 
 export type SendAssistantMessageResult =
-  | { status: "ok"; userMessage: AssistantMessageRow; reply: AssistantMessageRow; conversationId: string }
+  /** `free`: Free only — questions left this week and when they reset. */
+  | { status: "ok"; userMessage: AssistantMessageRow; reply: AssistantMessageRow; conversationId: string; free?: { left: number; resetsAt: string } }
+  /** Free: this week's 3 questions are used — no AI call was made. */
+  | { status: "limit"; resetsAt: string }
+  /** Free: the month's Free AI budget (FREE_AI_MONTHLY_CAP) is used up. */
+  | { status: "paused"; until: string }
   | { status: "unauthenticated" }
   | { status: "not_found" }
   | { status: "error"; message: string };
@@ -431,14 +440,40 @@ export async function sendAssistantMessage(
 ): Promise<SendAssistantMessageResult> {
   const loaded = await loadContext(businessId);
   if (loaded.status !== "ok") return loaded;
-  // Free is an audit: PostAI is a locked preview there, and no AI call is
-  // ever made for a Free account (docs/product-structure.md).
-  if ((await getPlan()) === "free") return { status: "error", message: t(loaded.locale, "dashboard.free.postaiLocked") };
-
-  const trimmed = message.trim();
-  if (!trimmed) {
+  if (!message.trim()) {
     return { status: "error", message: t(loaded.locale, "dashboard.assistant.errorTypeQuestionFirst") };
   }
+  if ((await getPlan()) !== "free") return sendWithContext(loaded, businessId, message, conversationId, false);
+
+  // Free: 3 questions a week (lib/freeAiUsage.server.ts) — reserved BEFORE
+  // any AI call; a 4th is refused without calling the AI, and a failed
+  // call gives the question back.
+  const {
+    data: { user },
+  } = await createClient().auth.getUser();
+  const reservation = await reserveFreeAi(businessId, user?.id ?? null, "postai");
+  if (reservation.status === "limit") return { status: "limit", resetsAt: reservation.resetsAt };
+  if (reservation.status === "paused") return { status: "paused", until: reservation.until };
+  if (reservation.status !== "ok" || !reservation.db) return { status: "error", message: t(loaded.locale, "dashboard.assistant.couldNotReachFallback") };
+  const result = await sendWithContext(loaded, businessId, message, conversationId, true);
+  if (result.status !== "ok") {
+    await releaseFreeAiWithClient(reservation.db, reservation.id);
+    return result;
+  }
+  await confirmFreeAiWithClient(reservation.db, reservation.id);
+  return { ...result, free: { left: reservation.left, resetsAt: reservation.resetsAt } };
+}
+
+/** The send itself (both plans). `free`: the Free prompt (no fix steps),
+ * and the answer is cleaned and checked before it's saved. */
+async function sendWithContext(
+  loaded: Extract<LoadContextResult, { status: "ok" }>,
+  businessId: string,
+  message: string,
+  conversationId: string | null,
+  free: boolean
+): Promise<SendAssistantMessageResult> {
+  const trimmed = message.trim();
 
   const supabase = createClient();
 
@@ -496,7 +531,7 @@ export async function sendAssistantMessage(
   const oldestFirst = ((historyRows ?? []) as AssistantMessageRow[]).slice().reverse();
   const recentTurns =
     oldestFirst.length > 0 && oldestFirst[0].role === "assistant" ? oldestFirst.slice(1) : oldestFirst;
-  const system = buildAssistantSystemPrompt(loaded.context, loaded.locale);
+  const system = free ? buildFreeAssistantSystemPrompt(loaded.context, loaded.locale) : buildAssistantSystemPrompt(loaded.context, loaded.locale);
 
   let replyText: string;
   try {
@@ -528,6 +563,14 @@ export async function sendAssistantMessage(
       // the generic "isn't available" case, never the rate-limit one.
       message: anthropicFailureMessage(0, loaded.locale),
     };
+  }
+
+  // Free: no link markers, and never the paid step-by-step fix text — an
+  // answer that repeats it is replaced with the honest pointer to Grow.
+  if (free) {
+    replyText = stripLinkMarkers(replyText);
+    const fixes = loaded.context.actionPlan.topTasks.map((task) => task.action).filter(Boolean);
+    if (freeAnswerLeaksFix(replyText, fixes)) replyText = t(loaded.locale, "dashboard.free.postaiFixOnGrow");
   }
 
   const { data: replyRow, error: replyError } = await supabase

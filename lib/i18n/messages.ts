@@ -64,7 +64,10 @@ export type MessageKey =
   | "dashboard.settings.plans.row.doneForYou"
   | "dashboard.settings.plans.row.reports"
   | "dashboard.settings.plans.row.replies"
-  | "dashboard.settings.plans.value.try3"
+  | "dashboard.settings.plans.value.perWeek3"
+  | "dashboard.settings.plans.value.perWeek10"
+  | "dashboard.replies.leftWeeklyGrow"
+  | "dashboard.replies.usedUpWeeklyGrow"
   | "dashboard.settings.plans.value.repliesUnlimited"
   | "dashboard.settings.plans.row.postStudio"
   | "dashboard.settings.plans.row.locations"
@@ -195,7 +198,17 @@ export type MessageKey =
   | "dashboard.free.postaiBody"
   | "dashboard.free.postaiLocked"
   | "dashboard.free.nextFreeRescan"
-  | "dashboard.free.rescanMonthly"
+  | "dashboard.free.rescanWeekly"
+  | "dashboard.rescan.snapshot"
+  | "dashboard.rescan.snapshotChanged"
+  | "dashboard.rescan.snapshotRescanLink"
+  | "dashboard.rescan.snapshotNextAt"
+  | "dashboard.rescan.snapshotPaidDaily"
+  | "dashboard.rescan.snapshotOld"
+  | "dashboard.rescan.afterGoogleChange"
+  | "dashboard.overview.breakdown.asOf"
+  | "dashboard.overview.breakdown.seeAll"
+  | "dashboard.overview.breakdown.hideAll"
   | "dashboard.free.lockedPreviewBadge"
   | "dashboard.free.lockedPreviewSr"
   | "dashboard.free.stepsLocked"
@@ -214,6 +227,47 @@ export type MessageKey =
   | "dashboard.free.sumChecks"
   | "dashboard.free.lockedLabel"
   | "dashboard.free.waitingPoints"
+  | "dashboard.free.fixPlan.seeEverything"
+  | "dashboard.free.fixPlan.hideEverything"
+  | "dashboard.free.tile.repliesPostedForYou"
+  | "dashboard.free.postaiFixOnGrow"
+  | "dashboard.free.postai.line"
+  | "dashboard.free.postai.left"
+  | "dashboard.free.postai.usedUp"
+  | "dashboard.free.postai.thinking"
+  | "dashboard.free.postai.you"
+  | "dashboard.free.ai.paused"
+  | "dashboard.replies.leftWeekly"
+  | "dashboard.replies.usedUpWeekly"
+  | "dashboard.rescan.competitorsLine.free"
+  | "dashboard.rescan.competitorsLine.grow"
+  | "dashboard.rescan.competitorsLine.growNow"
+  | "dashboard.rescan.competitorsLine.premium"
+  | "dashboard.rescan.toastCompetitors.refreshed"
+  | "dashboard.rescan.toastCompetitors.free"
+  | "dashboard.rescan.toastCompetitors.growLater"
+  | "dashboard.rescan.toastCompetitors.notUpdated"
+  | "dashboard.competitors.lastUpdated"
+  | "dashboard.competitors.neverUpdated"
+  | "dashboard.competitors.freeNoUpdate"
+  | "dashboard.competitors.growNext"
+  | "dashboard.competitors.growNextNow"
+  | "dashboard.free.section.score.title"
+  | "dashboard.free.section.score.body"
+  | "dashboard.free.section.earn.title"
+  | "dashboard.free.section.earn.body"
+  | "dashboard.free.section.behind.title"
+  | "dashboard.free.section.behind.body"
+  | "dashboard.free.section.tools.title"
+  | "dashboard.free.section.tools.body"
+  | "dashboard.free.reviewsWhat"
+  | "dashboard.free.fixPlan.line"
+  | "dashboard.free.fixPlan.seeHow"
+  | "dashboard.free.fixPlan.lockedRow"
+  | "dashboard.free.fixPlan.placeholder"
+  | "dashboard.free.fixPlan.heading"
+  | "dashboard.free.fixPlan.grow"
+  | "dashboard.free.fixPlan.premium"
   | "dashboard.free.waitingPointsOne"
   | "dashboard.free.waitingNone"
   | "dashboard.free.unlockMoreHeading"
@@ -446,6 +500,7 @@ export type MessageKey =
   | "dashboard.niche.notSaved"
   | "dashboard.niche.resetAuto"
   | "dashboard.websiteReviews.guide.heading"
+  | "dashboard.websiteReviews.guide.summary"
   | "dashboard.websiteReviews.guide.whenTitle"
   | "dashboard.websiteReviews.guide.when1"
   | "dashboard.websiteReviews.guide.when2"
@@ -1588,7 +1643,6 @@ export type MessageKey =
   | "dashboard.website.starter.includeAddress"
   | "dashboard.website.starter.includePhone"
   | "dashboard.website.starter.includeHours"
-  | "dashboard.website.starter.includeRating"
   | "dashboard.website.starter.livePreviewLabel"
   | "dashboard.website.starter.iframeTitle"
   | "dashboard.website.starter.downloadSiteButton"
@@ -3586,9 +3640,6 @@ export type MessageKey =
   | "dashboard.websiteReviews.studio.subline"
   | "dashboard.websiteReviews.studio.sublinePlaceholder"
   | "dashboard.websiteReviews.studio.showName"
-  | "dashboard.websiteReviews.studio.showRating"
-  | "dashboard.websiteReviews.studio.ratingHint"
-  | "dashboard.websiteReviews.studio.ratingUnavailable"
   | "dashboard.websiteReviews.studio.follow"
   | "dashboard.websiteReviews.studio.followNone"
   | "dashboard.websiteReviews.studio.followNoneVerified"
@@ -3722,14 +3773,9 @@ export type MessageKey =
   | "dashboard.visit.downloadWeekly"
   | "dashboard.visit.gotIt"
   // --- Starter site: owner hours + star row.
-  | "starterSite.starsAria"
   | "starterSite.today"
-  | "starterSite.ratingLine.one"
-  | "starterSite.ratingLine.other"
-  | "starterSite.ratingLineOnGoogle"
   | "starterSite.reviewsCta"
   | "starterSite.basedIn"
-  | "dashboard.website.starter.ratingStaleNote"
   | "starterSite.theme.sage"
   | "starterSite.theme.blush"
   | "starterSite.theme.sky"
@@ -3741,8 +3787,6 @@ export type MessageKey =
   | "starterSite.callNow"
   | "starterSite.glanceToday"
   | "starterSite.glanceArea"
-  | "starterSite.glancePrice"
-  | "starterSite.priceFree"
   | "starterSite.openNow"
   | "starterSite.closedNow"
   | "starterSite.openUntil"
@@ -3750,13 +3794,10 @@ export type MessageKey =
   | "starterSite.opensTomorrow"
   | "starterSite.opensDay"
   | "starterSite.todayHours"
-  | "starterSite.ratingBadgeOnGoogle"
   | "starterSite.openInMaps"
   | "starterSite.followUs"
   | "starterSite.copyright"
   | "starterSite.inCity"
-  | "starterSite.ratingBadge.one"
-  | "starterSite.ratingBadge.other"
   | "dashboard.website.starter.themeGroup.classic"
   | "dashboard.website.starter.themeGroup.bold"
   | "dashboard.website.starter.themeGroup.light"
@@ -3770,8 +3811,6 @@ export type MessageKey =
   | "dashboard.website.starter.accent.shapes"
   | "dashboard.website.starter.hours.add"
   | "dashboard.website.starter.hours.edit"
-  | "dashboard.website.starter.hours.editForWebsite"
-  | "dashboard.website.starter.hours.sourceGoogle"
   | "dashboard.website.starter.hours.sourceOwner"
   | "dashboard.website.starter.hours.modeLabel"
   | "dashboard.website.starter.hours.modeWeekly"
@@ -3799,9 +3838,26 @@ export type MessageKey =
   | "dashboard.website.starter.hours.save"
   | "dashboard.website.starter.hours.saving"
   | "dashboard.website.starter.hours.cancel"
-  | "dashboard.website.starter.hours.useGoogle"
+  | "dashboard.website.starter.hours.remove"
   | "dashboard.website.starter.hours.notSaved"
   | "dashboard.website.starter.hours.invalid"
+  | "dashboard.website.starter.details.heading"
+  | "dashboard.website.starter.details.introPrefilled"
+  | "dashboard.website.starter.details.intro"
+  | "dashboard.website.starter.details.name"
+  | "dashboard.website.starter.details.category"
+  | "dashboard.website.starter.details.address"
+  | "dashboard.website.starter.details.phone"
+  | "dashboard.website.starter.details.confirm"
+  | "dashboard.website.starter.details.saving"
+  | "dashboard.website.starter.details.providedByYou"
+  | "dashboard.website.starter.details.statusConfirmed"
+  | "dashboard.website.starter.details.statusNotConfirmed"
+  | "dashboard.website.starter.section.language"
+  | "dashboard.website.starter.section.look"
+  | "dashboard.website.starter.details.notSaved"
+  | "dashboard.website.starter.details.nameRequired"
+  | "dashboard.website.starter.details.confirmFirst"
   // --- Website fix guides + "Re-check my website".
   | "dashboard.websiteFix.guide.summaryBuilder"
   | "dashboard.websiteFix.guide.summary"
@@ -3918,8 +3974,6 @@ export type PluralKeyBase =
   | "dashboard.competitors.foundFewMessage"
   | "dashboard.competitors.unscoredSuffix"
   | "starterSite.reviewsAverageFromCount"
-  | "starterSite.ratingBadge"
-  | "starterSite.ratingLine"
   | "content.checks.visibility.rating.explanation.lowConfidence"
   | "content.checks.visibility.review_count.explanation.nonzero"
   | "content.checks.completeness.categories.explanation.hasList"
@@ -3995,11 +4049,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.promise.free": "See exactly what's costing you customers.",
     "dashboard.settings.plans.promise.grow": "We show you exactly how to fix every problem.",
     "dashboard.settings.plans.promise.premium": "Connect Google and PostScore fixes things for you.",
-    "dashboard.settings.plans.bullet.free.score": "Your PostScore and grade, refreshed monthly",
+    "dashboard.settings.plans.bullet.free.score": "Your PostScore and grade, with a free re-scan every week",
     "dashboard.settings.plans.bullet.free.problems": "Every problem on your Google listing, reviews and website",
     "dashboard.settings.plans.bullet.free.rank": "How you rank against nearby competitors",
     "dashboard.settings.plans.bullet.free.reviewGap": "Your review gap compared to businesses near you",
-    "dashboard.settings.plans.bullet.free.replies": "3 free AI review replies to try",
+    "dashboard.settings.plans.bullet.free.replies": "3 PostAI questions and 3 AI review replies a week",
     "dashboard.settings.plans.bullet.grow.guides": "Step-by-step fix guides for every issue",
     "dashboard.settings.plans.bullet.grow.plan": "A weekly action plan that tells you what to do next",
     "dashboard.settings.plans.bullet.grow.recheck": "Re-check your website as soon as you fix something",
@@ -4026,7 +4080,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.row.doneForYou": "Fixes done for you (Google connect)",
     "dashboard.settings.plans.row.reports": "Reports",
     "dashboard.settings.plans.row.replies": "AI review replies",
-    "dashboard.settings.plans.value.try3": "3 to try",
+    "dashboard.settings.plans.value.perWeek3": "3 a week",
+    "dashboard.settings.plans.value.perWeek10": "10 a week",
     "dashboard.settings.plans.value.repliesUnlimited": "Unlimited · auto-post coming soon",
     "dashboard.settings.plans.row.postStudio": "PostStudio — your full website, built and hosted for you (coming soon)",
     "dashboard.settings.plans.row.locations": "Locations",
@@ -4154,10 +4209,20 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.reviewGapOne": "You have 1 Google review. Nearby {noun} average {average} — {gap} more than you.",
     "dashboard.free.reviewWhy": "More recent reviews help you show up higher on Google and win more customers.",
     "dashboard.free.postaiTitle": "PostAI, your marketing assistant",
-    "dashboard.free.postaiBody": "Ask anything about your score — PostAI answers with your own data.",
+    "dashboard.free.postaiBody": "Ask questions about your score and get answers based on your own data. On Free you can see an example answer; asking your own questions is on Grow.",
     "dashboard.free.postaiLocked": "PostAI is part of Grow. See plans in Settings → Plan & billing.",
     "dashboard.free.nextFreeRescan": "Next free re-scan: {date}",
-    "dashboard.free.rescanMonthly": "Free includes 1 re-scan a month.",
+    "dashboard.free.rescanWeekly": "Free includes 1 re-scan a week.",
+    "dashboard.rescan.snapshot": "Your score and Google listing info are a snapshot from your last scan.",
+    "dashboard.rescan.snapshotChanged": "Changed something on Google?",
+    "dashboard.rescan.snapshotRescanLink": "Re-scan to update your score and breakdown.",
+    "dashboard.rescan.snapshotNextAt": "Next re-scan available {date}.",
+    "dashboard.rescan.snapshotPaidDaily": "Paid plans can re-scan every day",
+    "dashboard.rescan.snapshotOld": "Your score is {count} days old.",
+    "dashboard.rescan.afterGoogleChange": "After you make this change on Google, re-scan to see your new score.",
+    "dashboard.overview.breakdown.asOf": "As of your last scan, {date}",
+    "dashboard.overview.breakdown.seeAll": "See all {count} checks",
+    "dashboard.overview.breakdown.hideAll": "Hide checks",
     "dashboard.free.lockedPreviewBadge": "Preview",
     "dashboard.free.lockedPreviewSr": "Preview of {title}. Part of Grow.",
     "dashboard.free.stepsLocked": "Step-by-step guide",
@@ -4176,6 +4241,49 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.sumChecks": "{count} website checks",
     "dashboard.free.lockedLabel": "Locked",
     "dashboard.free.waitingPoints": "{points} points are waiting to be fixed",
+    "dashboard.free.fixPlan.seeEverything": "See everything in each plan",
+    "dashboard.free.fixPlan.hideEverything": "Hide the full list",
+    "dashboard.free.tile.repliesPostedForYou": "AI review replies posted for you",
+    "dashboard.free.postaiFixOnGrow": "I can explain what this means and why it matters to your customers — the full step-by-step plan to fix it is on Grow (Settings → Compare plans).",
+    "dashboard.free.postai.line": "Ask questions about your score — 3 free questions a week.",
+    "dashboard.free.postai.left": "{left} of {total} free questions left · resets {date}",
+    "dashboard.free.postai.usedUp": "You've used this week's free questions. They reset {date} — or ask up to 100 a month on Grow.",
+    "dashboard.free.postai.thinking": "PostAI is thinking…",
+    "dashboard.free.postai.you": "You",
+    "dashboard.free.ai.paused": "Free AI answers are paused until {date} — upgrade for unlimited.",
+    "dashboard.replies.leftWeekly": "{left} of {total} free drafts left · resets {date}",
+    "dashboard.replies.leftWeeklyGrow": "{left} of {total} drafts left this week · resets {date}",
+    "dashboard.replies.usedUpWeeklyGrow": "You've used this week's {total} drafts. They reset {date} — or draft unlimited replies on Premium.",
+    "dashboard.replies.usedUpWeekly": "You've used this week's free drafts. They reset {date} — or get 10 a week on Grow, unlimited on Premium.",
+    "dashboard.rescan.competitorsLine.free": "Re-scans update your own score. Competitors don't update on Free — upgrade to refresh them.",
+    "dashboard.rescan.competitorsLine.grow": "Competitors update once a week. Next competitor update: {date}.",
+    "dashboard.rescan.competitorsLine.growNow": "Competitors update once a week. Your next re-scan updates them too.",
+    "dashboard.rescan.competitorsLine.premium": "Every re-scan also updates your competitors.",
+    "dashboard.rescan.toastCompetitors.refreshed": "Competitors updated too.",
+    "dashboard.rescan.toastCompetitors.free": "Competitors don't update on Free.",
+    "dashboard.rescan.toastCompetitors.growLater": "Competitors weren't updated this time — they update once a week.",
+    "dashboard.rescan.toastCompetitors.notUpdated": "Competitors couldn't be updated this time.",
+    "dashboard.competitors.lastUpdated": "Competitors last updated {date}.",
+    "dashboard.competitors.neverUpdated": "Competitors haven't been scanned yet.",
+    "dashboard.competitors.freeNoUpdate": "Competitors don't update on the Free plan.",
+    "dashboard.competitors.growNext": "Next update: {date}.",
+    "dashboard.competitors.growNextNow": "Next update: with your next re-scan.",
+    "dashboard.free.section.score.title": "Your score",
+    "dashboard.free.section.score.body": "How customers see your business online, from 0 to 100.",
+    "dashboard.free.section.earn.title": "Earn more points and more customers",
+    "dashboard.free.section.earn.body": "Upgrade to fix every issue step by step and get tools that bring people in.",
+    "dashboard.free.section.behind.title": "What's behind your score",
+    "dashboard.free.section.behind.body": "Every check we ran, grouped into three areas.",
+    "dashboard.free.section.tools.title": "Free tools you can use now",
+    "dashboard.free.section.tools.body": "Included with your free account.",
+    "dashboard.free.reviewsWhat": "Get more Google reviews with your review link and QR code, and draft replies to your reviews — {count} free drafts a week.",
+    "dashboard.free.fixPlan.line": "Get the step-by-step plan to earn these points back",
+    "dashboard.free.fixPlan.seeHow": "See how to fix it",
+    "dashboard.free.fixPlan.lockedRow": "How to fix this — on Grow and Premium",
+    "dashboard.free.fixPlan.placeholder": "Here is exactly what to change, where to change it, and how many points it earns back.",
+    "dashboard.free.fixPlan.heading": "Earn back your missing points, step by step",
+    "dashboard.free.fixPlan.grow": "Your step-by-step plan to fix every issue, plus basic designs",
+    "dashboard.free.fixPlan.premium": "We do the work for you, plus full designs",
     "dashboard.free.waitingPointsOne": "1 point is waiting to be fixed",
     "dashboard.free.waitingNone": "Nothing is costing you points right now.",
     "dashboard.free.unlockMoreHeading": "Unlock more with a plan",
@@ -4408,6 +4516,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.niche.notSaved": "Couldn't save yet — PostScore needs a quick update first. Your choice applies to this visit.",
     "dashboard.niche.resetAuto": "Use automatic detection",
     "dashboard.websiteReviews.guide.heading": "Get more reviews, the right way",
+    "dashboard.websiteReviews.guide.summary": "When to ask, what to say, where to put your QR code",
     "dashboard.websiteReviews.guide.whenTitle": "When to ask",
     "dashboard.websiteReviews.guide.when1": "Right after the visit — at checkout or pickup, while the experience is fresh.",
     "dashboard.websiteReviews.guide.when2": "The same day, in a short text or email with your review link.",
@@ -5786,11 +5895,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.starter.removePhotoAriaLabel": "Remove photo",
     "dashboard.website.starter.photoErrorFallback": "Couldn't process that photo — try a different image file.",
     "dashboard.website.starter.whatToIncludeLabel": "What to include",
-    "dashboard.website.starter.whatToIncludeHint": "(all from your real listing)",
+    "dashboard.website.starter.whatToIncludeHint": "Choose what shows on your website. Address and phone come from your business details above.",
     "dashboard.website.starter.includeAddress": "Address & map",
     "dashboard.website.starter.includePhone": "Phone (click-to-call)",
     "dashboard.website.starter.includeHours": "Hours",
-    "dashboard.website.starter.includeRating": "Show my rating",
     "dashboard.website.starter.livePreviewLabel": "Live preview — exactly what you'll download",
     "dashboard.website.starter.iframeTitle": "Live preview of your starter site",
     "dashboard.website.starter.downloadSiteButton": "Download your site",
@@ -7989,9 +8097,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.studio.subline": "Extra line (optional)",
     "dashboard.websiteReviews.studio.sublinePlaceholder": "e.g. Thank you for shopping local!",
     "dashboard.websiteReviews.studio.showName": "Show business name",
-    "dashboard.websiteReviews.studio.showRating": "Show star rating",
-    "dashboard.websiteReviews.studio.ratingHint": "Your real Google rating: {rating}★",
-    "dashboard.websiteReviews.studio.ratingUnavailable": "Available when your Google rating is 4.0★ or higher.",
     "dashboard.websiteReviews.studio.follow": "“Follow us” line",
     "dashboard.websiteReviews.studio.followNone": "Don't show",
     "dashboard.websiteReviews.studio.followNoneVerified": "No verified social profiles yet — only profiles we've confirmed are real can be printed.",
@@ -8123,14 +8228,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.visit.nextSteps": "Your next steps",
     "dashboard.visit.downloadWeekly": "Download weekly report (PDF)",
     "dashboard.visit.gotIt": "Got it",
-    "starterSite.starsAria": "{rating} out of 5 stars",
     "starterSite.today": "Today",
-    "starterSite.ratingLine.one": "{rating}★ from {count} Google review · as of {date}",
-    "starterSite.ratingLine.other": "{rating}★ from {count} Google reviews · as of {date}",
-    "starterSite.ratingLineOnGoogle": "{rating}★ on Google · as of {date}",
     "starterSite.reviewsCta": "See what customers say on Google",
     "starterSite.basedIn": "Based in {city}",
-    "dashboard.website.starter.ratingStaleNote": "Downloaded sites don't update — re-download after your rating changes.",
     "starterSite.theme.sage": "Sage & Cream",
     "starterSite.theme.blush": "Blush & Charcoal",
     "starterSite.theme.sky": "Sky & Navy",
@@ -8142,8 +8242,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "starterSite.callNow": "Call now",
     "starterSite.glanceToday": "Hours today",
     "starterSite.glanceArea": "Area",
-    "starterSite.glancePrice": "Prices",
-    "starterSite.priceFree": "Free",
     "starterSite.openNow": "Open now",
     "starterSite.closedNow": "Closed now",
     "starterSite.openUntil": "until {time}",
@@ -8151,13 +8249,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "starterSite.opensTomorrow": "opens tomorrow at {time}",
     "starterSite.opensDay": "opens {day} at {time}",
     "starterSite.todayHours": "Today: {hours}",
-    "starterSite.ratingBadgeOnGoogle": "{rating} on Google · {date}",
     "starterSite.openInMaps": "Open in Google Maps →",
     "starterSite.followUs": "Follow us",
     "starterSite.copyright": "© {year} {name}",
     "starterSite.inCity": "{category} in {city}",
-    "starterSite.ratingBadge.one": "{rating} · {count} Google review · {date}",
-    "starterSite.ratingBadge.other": "{rating} · {count} Google reviews · {date}",
     "dashboard.website.starter.themeGroup.classic": "Classic",
     "dashboard.website.starter.themeGroup.bold": "Bold",
     "dashboard.website.starter.themeGroup.light": "Light",
@@ -8171,8 +8266,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.starter.accent.shapes": "Playful shapes",
     "dashboard.website.starter.hours.add": "Add your hours",
     "dashboard.website.starter.hours.edit": "Edit your hours",
-    "dashboard.website.starter.hours.editForWebsite": "Edit for the website",
-    "dashboard.website.starter.hours.sourceGoogle": "From your Google listing.",
     "dashboard.website.starter.hours.sourceOwner": "Your hours for the website.",
     "dashboard.website.starter.hours.modeLabel": "How you're open",
     "dashboard.website.starter.hours.modeWeekly": "Set opening hours",
@@ -8200,9 +8293,26 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.starter.hours.save": "Save hours",
     "dashboard.website.starter.hours.saving": "Saving…",
     "dashboard.website.starter.hours.cancel": "Close",
-    "dashboard.website.starter.hours.useGoogle": "Use my Google hours instead",
+    "dashboard.website.starter.hours.remove": "Take hours off the website",
     "dashboard.website.starter.hours.notSaved": "Your hours are in the preview and the download, but couldn't be saved for next time. Try again later.",
     "dashboard.website.starter.hours.invalid": "Check the hours above — something isn't valid.",
+    "dashboard.website.starter.details.heading": "Your business details",
+    "dashboard.website.starter.details.introPrefilled": "Filled in from your Google listing. Check or edit them, then confirm — your website uses only details you confirm.",
+    "dashboard.website.starter.details.intro": "Provided by you — these go on your website. Edit them anytime, then confirm again.",
+    "dashboard.website.starter.details.name": "Business name",
+    "dashboard.website.starter.details.category": "Type of business",
+    "dashboard.website.starter.details.address": "Address",
+    "dashboard.website.starter.details.phone": "Phone",
+    "dashboard.website.starter.details.confirm": "Confirm details",
+    "dashboard.website.starter.details.saving": "Saving…",
+    "dashboard.website.starter.details.providedByYou": "Provided by you",
+    "dashboard.website.starter.details.statusConfirmed": "Confirmed",
+    "dashboard.website.starter.details.statusNotConfirmed": "Not confirmed yet",
+    "dashboard.website.starter.section.language": "Language",
+    "dashboard.website.starter.section.look": "Look & feel",
+    "dashboard.website.starter.details.notSaved": "Confirmed for this visit, but couldn't be saved for next time. Try again later.",
+    "dashboard.website.starter.details.nameRequired": "Add your business name first.",
+    "dashboard.website.starter.details.confirmFirst": "Confirm your business details above to download.",
     "dashboard.websiteFix.guide.summaryBuilder": "How to fix this in {builder}",
     "dashboard.websiteFix.guide.summary": "How to fix this",
     "dashboard.websiteFix.guide.official": "Official help article",
@@ -8319,11 +8429,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.promise.free": "Vea exactamente qué le está costando clientes.",
     "dashboard.settings.plans.promise.grow": "Le mostramos exactamente cómo resolver cada problema.",
     "dashboard.settings.plans.promise.premium": "Conecte Google y PostScore se encarga de los arreglos por usted.",
-    "dashboard.settings.plans.bullet.free.score": "Su PostScore y su calificación, actualizados cada mes",
+    "dashboard.settings.plans.bullet.free.score": "Su PostScore y su calificación, con un escaneo gratis cada semana",
     "dashboard.settings.plans.bullet.free.problems": "Cada problema de su ficha de Google, sus reseñas y su sitio web",
     "dashboard.settings.plans.bullet.free.rank": "Su posición frente a los competidores cercanos",
     "dashboard.settings.plans.bullet.free.reviewGap": "Cuántas reseñas le faltan en comparación con los negocios cercanos",
-    "dashboard.settings.plans.bullet.free.replies": "3 respuestas a reseñas con IA gratis para probar",
+    "dashboard.settings.plans.bullet.free.replies": "3 preguntas a PostAI y 3 respuestas a reseñas con IA por semana",
     "dashboard.settings.plans.bullet.grow.guides": "Guías paso a paso para resolver cada problema",
     "dashboard.settings.plans.bullet.grow.plan": "Un plan de acción semanal que le indica qué hacer a continuación",
     "dashboard.settings.plans.bullet.grow.recheck": "Vuelva a revisar su sitio web en cuanto arregle algo",
@@ -8350,7 +8460,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.row.doneForYou": "Arreglos que hacemos por usted (conexión con Google)",
     "dashboard.settings.plans.row.reports": "Informes",
     "dashboard.settings.plans.row.replies": "Respuestas a reseñas con IA",
-    "dashboard.settings.plans.value.try3": "3 para probar",
+    "dashboard.settings.plans.value.perWeek3": "3 por semana",
+    "dashboard.settings.plans.value.perWeek10": "10 por semana",
     "dashboard.settings.plans.value.repliesUnlimited": "Ilimitadas · publicación automática próximamente",
     "dashboard.settings.plans.row.postStudio": "PostStudio: su sitio web completo, construido y alojado por nosotros (próximamente)",
     "dashboard.settings.plans.row.locations": "Ubicaciones",
@@ -8478,10 +8589,20 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.reviewGapOne": "Usted tiene 1 reseña en Google. Los {noun} cercanos tienen {average} en promedio: {gap} más que usted.",
     "dashboard.free.reviewWhy": "Más reseñas recientes le ayudan a aparecer más arriba en Google y a ganar más clientes.",
     "dashboard.free.postaiTitle": "PostAI, su asistente de marketing",
-    "dashboard.free.postaiBody": "Pregunte lo que quiera sobre su puntuación: PostAI responde con sus propios datos.",
+    "dashboard.free.postaiBody": "Haga preguntas sobre su puntuación y reciba respuestas basadas en sus propios datos. En el plan Gratis puede ver una respuesta de ejemplo; hacer sus propias preguntas es parte de Grow.",
     "dashboard.free.postaiLocked": "PostAI está incluido en Grow. Vea los planes en Configuración → Plan y facturación.",
     "dashboard.free.nextFreeRescan": "Próximo escaneo gratis: {date}",
-    "dashboard.free.rescanMonthly": "El plan Gratis incluye 1 escaneo al mes.",
+    "dashboard.free.rescanWeekly": "El plan Gratis incluye 1 escaneo por semana.",
+    "dashboard.rescan.snapshot": "Su puntuación y la información de su ficha de Google son una instantánea de su último escaneo.",
+    "dashboard.rescan.snapshotChanged": "¿Cambió algo en Google?",
+    "dashboard.rescan.snapshotRescanLink": "Vuelva a escanear para actualizar su puntuación y el desglose.",
+    "dashboard.rescan.snapshotNextAt": "Próximo escaneo disponible el {date}.",
+    "dashboard.rescan.snapshotPaidDaily": "Los planes de pago pueden escanear todos los días",
+    "dashboard.rescan.snapshotOld": "Su puntuación tiene {count} días.",
+    "dashboard.rescan.afterGoogleChange": "Después de hacer este cambio en Google, vuelva a escanear para ver su nueva puntuación.",
+    "dashboard.overview.breakdown.asOf": "Según su último escaneo, {date}",
+    "dashboard.overview.breakdown.seeAll": "Ver las {count} revisiones",
+    "dashboard.overview.breakdown.hideAll": "Ocultar revisiones",
     "dashboard.free.lockedPreviewBadge": "Vista previa",
     "dashboard.free.lockedPreviewSr": "Vista previa de {title}. Incluido en Grow.",
     "dashboard.free.stepsLocked": "Guía paso a paso",
@@ -8500,6 +8621,49 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.sumChecks": "{count} revisiones del sitio",
     "dashboard.free.lockedLabel": "Bloqueado",
     "dashboard.free.waitingPoints": "{points} puntos esperan a que los arregle",
+    "dashboard.free.fixPlan.seeEverything": "Ver todo lo que incluye cada plan",
+    "dashboard.free.fixPlan.hideEverything": "Ocultar la lista completa",
+    "dashboard.free.tile.repliesPostedForYou": "Respuestas a reseñas con IA que publicamos por usted",
+    "dashboard.free.postaiFixOnGrow": "Puedo explicarle qué significa esto y por qué importa a sus clientes — el plan completo paso a paso para arreglarlo está en Grow (Configuración → Comparar planes).",
+    "dashboard.free.postai.line": "Haga preguntas sobre su puntuación — 3 preguntas gratis por semana.",
+    "dashboard.free.postai.left": "Le quedan {left} de {total} preguntas gratis · se renuevan el {date}",
+    "dashboard.free.postai.usedUp": "Ya usó las preguntas gratis de esta semana. Se renuevan el {date} — o haga hasta 100 al mes con Grow.",
+    "dashboard.free.postai.thinking": "PostAI está pensando…",
+    "dashboard.free.postai.you": "Usted",
+    "dashboard.free.ai.paused": "Las respuestas gratis con IA están en pausa hasta el {date} — mejore su plan para usarlas sin límite.",
+    "dashboard.replies.leftWeekly": "Le quedan {left} de {total} borradores gratis · se renuevan el {date}",
+    "dashboard.replies.leftWeeklyGrow": "Le quedan {left} de {total} borradores esta semana · se renuevan el {date}",
+    "dashboard.replies.usedUpWeeklyGrow": "Ya usó los {total} borradores de esta semana. Se renuevan el {date} — o prepare respuestas sin límite con Premium.",
+    "dashboard.replies.usedUpWeekly": "Ya usó los borradores gratis de esta semana. Se renuevan el {date} — o tenga 10 por semana con Grow y sin límite con Premium.",
+    "dashboard.rescan.competitorsLine.free": "Los escaneos actualizan su propia puntuación. La competencia no se actualiza en el plan Gratis — mejore su plan para actualizarla.",
+    "dashboard.rescan.competitorsLine.grow": "La competencia se actualiza una vez por semana. Próxima actualización de la competencia: {date}.",
+    "dashboard.rescan.competitorsLine.growNow": "La competencia se actualiza una vez por semana. Su próximo escaneo también la actualizará.",
+    "dashboard.rescan.competitorsLine.premium": "Cada escaneo también actualiza a su competencia.",
+    "dashboard.rescan.toastCompetitors.refreshed": "La competencia también se actualizó.",
+    "dashboard.rescan.toastCompetitors.free": "La competencia no se actualiza en el plan Gratis.",
+    "dashboard.rescan.toastCompetitors.growLater": "La competencia no se actualizó esta vez — se actualiza una vez por semana.",
+    "dashboard.rescan.toastCompetitors.notUpdated": "Esta vez no se pudo actualizar la competencia.",
+    "dashboard.competitors.lastUpdated": "Competencia actualizada por última vez el {date}.",
+    "dashboard.competitors.neverUpdated": "Aún no se ha analizado a la competencia.",
+    "dashboard.competitors.freeNoUpdate": "La competencia no se actualiza en el plan Gratis.",
+    "dashboard.competitors.growNext": "Próxima actualización: {date}.",
+    "dashboard.competitors.growNextNow": "Próxima actualización: con su próximo escaneo.",
+    "dashboard.free.section.score.title": "Su puntuación",
+    "dashboard.free.section.score.body": "Cómo ven los clientes su negocio en línea, de 0 a 100.",
+    "dashboard.free.section.earn.title": "Gane más puntos y más clientes",
+    "dashboard.free.section.earn.body": "Mejore su plan para arreglar cada problema paso a paso y obtener herramientas que atraen clientes.",
+    "dashboard.free.section.behind.title": "Qué hay detrás de su puntuación",
+    "dashboard.free.section.behind.body": "Cada revisión que hicimos, agrupada en tres áreas.",
+    "dashboard.free.section.tools.title": "Herramientas gratis que puede usar ahora",
+    "dashboard.free.section.tools.body": "Incluidas en su cuenta gratis.",
+    "dashboard.free.reviewsWhat": "Consiga más reseñas en Google con su enlace y código QR, y prepare respuestas a sus reseñas — {count} borradores gratis por semana.",
+    "dashboard.free.fixPlan.line": "Obtenga el plan paso a paso para recuperar estos puntos",
+    "dashboard.free.fixPlan.seeHow": "Vea cómo arreglarlo",
+    "dashboard.free.fixPlan.lockedRow": "Cómo arreglarlo — en Grow y Premium",
+    "dashboard.free.fixPlan.placeholder": "Aquí verá exactamente qué cambiar, dónde cambiarlo y cuántos puntos recupera.",
+    "dashboard.free.fixPlan.heading": "Recupere sus puntos faltantes, paso a paso",
+    "dashboard.free.fixPlan.grow": "Su plan paso a paso para arreglar cada problema, más diseños básicos",
+    "dashboard.free.fixPlan.premium": "Nosotros hacemos el trabajo por usted, más diseños completos",
     "dashboard.free.waitingPointsOne": "1 punto espera a que lo arregle",
     "dashboard.free.waitingNone": "Ahora mismo nada le está restando puntos.",
     "dashboard.free.unlockMoreHeading": "Desbloquee más con un plan",
@@ -8732,6 +8896,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.niche.notSaved": "Todavía no se pudo guardar — PostScore necesita una actualización rápida primero. Su elección se aplica a esta visita.",
     "dashboard.niche.resetAuto": "Usar la detección automática",
     "dashboard.websiteReviews.guide.heading": "Consiga más reseñas, de la manera correcta",
+    "dashboard.websiteReviews.guide.summary": "Cuándo pedirla, qué decir, dónde poner su código QR",
     "dashboard.websiteReviews.guide.whenTitle": "Cuándo pedirla",
     "dashboard.websiteReviews.guide.when1": "Justo después de la visita — al pagar o al recoger, mientras la experiencia está fresca.",
     "dashboard.websiteReviews.guide.when2": "El mismo día, en un mensaje de texto o correo corto con su enlace de reseñas.",
@@ -9950,11 +10115,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.starter.removePhotoAriaLabel": "Quitar foto",
     "dashboard.website.starter.photoErrorFallback": "No se pudo procesar esa foto — pruebe con un archivo de imagen diferente.",
     "dashboard.website.starter.whatToIncludeLabel": "Qué incluir",
-    "dashboard.website.starter.whatToIncludeHint": "(todo de su ficha real)",
+    "dashboard.website.starter.whatToIncludeHint": "Elija qué aparece en su sitio web. La dirección y el teléfono vienen de los datos de su negocio, arriba.",
     "dashboard.website.starter.includeAddress": "Dirección y mapa",
     "dashboard.website.starter.includePhone": "Teléfono (clic para llamar)",
     "dashboard.website.starter.includeHours": "Horario",
-    "dashboard.website.starter.includeRating": "Mostrar mi calificación",
     "dashboard.website.starter.livePreviewLabel": "Vista previa en vivo — exactamente lo que descargará",
     "dashboard.website.starter.iframeTitle": "Vista previa en vivo de su sitio inicial",
     "dashboard.website.starter.downloadSiteButton": "Descargue su sitio",
@@ -12412,9 +12576,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.studio.subline": "Línea adicional (opcional)",
     "dashboard.websiteReviews.studio.sublinePlaceholder": "p. ej., ¡Gracias por comprar local!",
     "dashboard.websiteReviews.studio.showName": "Mostrar nombre del negocio",
-    "dashboard.websiteReviews.studio.showRating": "Mostrar calificación",
-    "dashboard.websiteReviews.studio.ratingHint": "Su calificación real en Google: {rating}★",
-    "dashboard.websiteReviews.studio.ratingUnavailable": "Disponible cuando su calificación en Google sea de 4.0★ o más.",
     "dashboard.websiteReviews.studio.follow": "Línea “Síganos”",
     "dashboard.websiteReviews.studio.followNone": "No mostrar",
     "dashboard.websiteReviews.studio.followNoneVerified": "Aún no hay perfiles sociales verificados — solo se pueden imprimir perfiles que hayamos confirmado como reales.",
@@ -12546,14 +12707,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.visit.nextSteps": "Sus próximos pasos",
     "dashboard.visit.downloadWeekly": "Descargar informe semanal (PDF)",
     "dashboard.visit.gotIt": "Entendido",
-    "starterSite.starsAria": "{rating} de 5 estrellas",
     "starterSite.today": "Hoy",
-    "starterSite.ratingLine.one": "{rating}★ de {count} reseña de Google · a {date}",
-    "starterSite.ratingLine.other": "{rating}★ de {count} reseñas de Google · a {date}",
-    "starterSite.ratingLineOnGoogle": "{rating}★ en Google · a {date}",
     "starterSite.reviewsCta": "Vea lo que dicen los clientes en Google",
     "starterSite.basedIn": "Con sede en {city}",
-    "dashboard.website.starter.ratingStaleNote": "Los sitios descargados no se actualizan — vuelva a descargarlo cuando cambie su calificación.",
     "starterSite.theme.sage": "Salvia y crema",
     "starterSite.theme.blush": "Rosa pálido y carbón",
     "starterSite.theme.sky": "Cielo y azul marino",
@@ -12565,8 +12721,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "starterSite.callNow": "Llamar ahora",
     "starterSite.glanceToday": "Horario de hoy",
     "starterSite.glanceArea": "Zona",
-    "starterSite.glancePrice": "Precios",
-    "starterSite.priceFree": "Gratis",
     "starterSite.openNow": "Abierto ahora",
     "starterSite.closedNow": "Cerrado ahora",
     "starterSite.openUntil": "hasta las {time}",
@@ -12574,13 +12728,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "starterSite.opensTomorrow": "abre mañana a las {time}",
     "starterSite.opensDay": "abre el {day} a las {time}",
     "starterSite.todayHours": "Hoy: {hours}",
-    "starterSite.ratingBadgeOnGoogle": "{rating} en Google · {date}",
     "starterSite.openInMaps": "Abrir en Google Maps →",
     "starterSite.followUs": "Síganos",
     "starterSite.copyright": "© {year} {name}",
     "starterSite.inCity": "{category} en {city}",
-    "starterSite.ratingBadge.one": "{rating} · {count} reseña de Google · {date}",
-    "starterSite.ratingBadge.other": "{rating} · {count} reseñas de Google · {date}",
     "dashboard.website.starter.themeGroup.classic": "Clásicos",
     "dashboard.website.starter.themeGroup.bold": "Llamativos",
     "dashboard.website.starter.themeGroup.light": "Claros",
@@ -12594,8 +12745,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.starter.accent.shapes": "Formas divertidas",
     "dashboard.website.starter.hours.add": "Agregar su horario",
     "dashboard.website.starter.hours.edit": "Editar su horario",
-    "dashboard.website.starter.hours.editForWebsite": "Editar para el sitio web",
-    "dashboard.website.starter.hours.sourceGoogle": "De su ficha de Google.",
     "dashboard.website.starter.hours.sourceOwner": "Su horario para el sitio web.",
     "dashboard.website.starter.hours.modeLabel": "Cómo atiende",
     "dashboard.website.starter.hours.modeWeekly": "Fijar horario",
@@ -12623,9 +12772,26 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.starter.hours.save": "Guardar horario",
     "dashboard.website.starter.hours.saving": "Guardando…",
     "dashboard.website.starter.hours.cancel": "Cerrar",
-    "dashboard.website.starter.hours.useGoogle": "Usar mi horario de Google",
+    "dashboard.website.starter.hours.remove": "Quitar el horario del sitio web",
     "dashboard.website.starter.hours.notSaved": "Su horario está en la vista previa y en la descarga, pero no se pudo guardar para la próxima vez. Inténtelo más tarde.",
     "dashboard.website.starter.hours.invalid": "Revise el horario — algo no es válido.",
+    "dashboard.website.starter.details.heading": "Datos de su negocio",
+    "dashboard.website.starter.details.introPrefilled": "Tomados de su ficha de Google. Revíselos o edítelos y luego confírmelos — su sitio web usa solo los datos que usted confirme.",
+    "dashboard.website.starter.details.intro": "Proporcionados por usted — estos van en su sitio web. Puede editarlos cuando quiera y volver a confirmarlos.",
+    "dashboard.website.starter.details.name": "Nombre del negocio",
+    "dashboard.website.starter.details.category": "Tipo de negocio",
+    "dashboard.website.starter.details.address": "Dirección",
+    "dashboard.website.starter.details.phone": "Teléfono",
+    "dashboard.website.starter.details.confirm": "Confirmar datos",
+    "dashboard.website.starter.details.saving": "Guardando…",
+    "dashboard.website.starter.details.providedByYou": "Proporcionados por usted",
+    "dashboard.website.starter.details.statusConfirmed": "Confirmados",
+    "dashboard.website.starter.details.statusNotConfirmed": "Aún sin confirmar",
+    "dashboard.website.starter.section.language": "Idioma",
+    "dashboard.website.starter.section.look": "Apariencia",
+    "dashboard.website.starter.details.notSaved": "Confirmados para esta visita, pero no se pudieron guardar para la próxima vez. Inténtelo más tarde.",
+    "dashboard.website.starter.details.nameRequired": "Primero agregue el nombre de su negocio.",
+    "dashboard.website.starter.details.confirmFirst": "Confirme los datos de su negocio arriba para descargar.",
     "dashboard.websiteFix.guide.summaryBuilder": "Cómo arreglarlo en {builder}",
     "dashboard.websiteFix.guide.summary": "Cómo arreglarlo",
     "dashboard.websiteFix.guide.official": "Artículo de ayuda oficial",

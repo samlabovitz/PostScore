@@ -8,37 +8,25 @@
 // render these.
 
 import { useState } from "react";
+import { FREE_REPLY_DRAFTS } from "@/lib/reviewReplies";
 import {
-  IconBrandGoogle,
-  IconCalendarCheck,
   IconCopy,
   IconDownload,
   IconExternalLink,
-  IconFileText,
-  IconLayout,
   IconLink,
-  IconListCheck,
-  IconLock,
-  IconMessageCircle,
-  IconRefresh,
-  IconSparkles,
-  IconSpeakerphone,
   IconStar,
-  IconTag,
-  IconTools,
-  IconWorldWww,
 } from "@tabler/icons-react";
 import { buildGoogleReviewUrl, shortReviewLink } from "@/lib/reviews";
 import { NO_FACTS, unlockLine } from "@/lib/upgradePromos";
 import { formatCount, t, useLocale, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { LockFooter, LockedPreview } from "@/components/plan/LockedPreview";
+import { LockFooter } from "@/components/plan/LockedPreview";
 import { useUpgrade } from "@/components/upgrade/UpgradeContext";
-import { UpgradeButton } from "@/components/upgrade/UpgradeTrigger";
 import { reviewStatLine } from "@/components/overview/GrowMoreCustomers";
 import { reviewGoalText } from "@/lib/reviewGoal";
 import type { ReviewGoal } from "@/lib/competitorComparison";
 import { copyText, ReviewQrTile } from "@/app/business/[id]/website-reviews/GetMoreReviews";
+import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 
 /** "3 fixes · 13 pts" — real counts only; null when there's nothing. */
 export function fixesSummary(count: number, points: number | null, locale: Locale): string | null {
@@ -51,50 +39,18 @@ export function fixesSummary(count: number, points: number | null, locale: Local
  * questions and ONE clearly labeled, generic example answer. Nothing is
  * sent: the questions, the box and Send open the promo box, and the server
  * refuses PostAI on Free anyway (app/actions/assistant.ts). No AI call. */
-export function FreePostAIShowroom({ starterPrompts }: { starterPrompts: string[] }) {
-  const locale = useLocale();
-  const facts = useUpgrade()?.facts ?? NO_FACTS;
-  const line = unlockLine("postai", facts, locale);
+/** A Free Overview section: a heading and one plain sentence, then its
+ * cards (same style for every section). */
+export function FreeSection({ id, title, body, children }: { id: string; title: string; body: string; children: React.ReactNode }) {
   return (
-    <section data-testid="postai-showroom" className="flex flex-col gap-3 rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
-      <div className="flex items-start gap-2.5">
-        <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ps-icon-tile">
-          <IconSparkles size={17} />
-        </span>
-        <div className="min-w-0">
-          <h2 className="font-serif text-lg font-semibold text-ink">{t(locale, "dashboard.free.postaiTitle")}</h2>
-          <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.free.postaiBody")}</p>
-        </div>
+    <section data-testid={`free-section-${id}`} aria-labelledby={`free-section-${id}-title`} className="flex flex-col gap-3">
+      <div>
+        <h2 id={`free-section-${id}-title`} className="font-serif text-xl font-semibold text-ink">
+          {title}
+        </h2>
+        <p className="text-[13px] text-ink-soft">{body}</p>
       </div>
-      {starterPrompts.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {starterPrompts.slice(0, 3).map((prompt) => (
-            <UpgradeButton key={prompt} feature="grow" className="rounded-full border border-paper-deep bg-paper px-3 py-1 text-left text-[12.5px] text-ink hover:border-ink-soft">
-              {prompt}
-            </UpgradeButton>
-          ))}
-        </div>
-      )}
-      <div className="flex flex-col gap-2 rounded-xl bg-paper p-3" data-testid="postai-example">
-        <div className="self-end rounded-2xl rounded-br-md bg-ink px-3 py-2 text-[13px] text-white">{t(locale, "dashboard.free.postaiExampleQuestion")}</div>
-        <div className="flex flex-col gap-1 self-start rounded-2xl rounded-bl-md border border-paper-deep bg-white px-3 py-2">
-          <span className="w-fit rounded-full bg-[color:color-mix(in_srgb,var(--color-brass)_18%,white)] px-2 py-px text-[10.5px] font-semibold uppercase tracking-[0.06em] text-ink">
-            {t(locale, "dashboard.free.postaiExampleLabel")}
-          </span>
-          <p className="text-[13px] leading-snug text-ink">{t(locale, "dashboard.free.postaiExampleAnswer")}</p>
-          <p className="text-[11.5px] text-ink-mute">{t(locale, "dashboard.free.postaiExampleNote")}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <UpgradeButton feature="grow" testId="postai-input" className="flex min-w-0 flex-1 items-center rounded-lg border border-paper-deep bg-white px-3 py-2 text-left text-[13px] text-ink-mute">
-          <span className="truncate">{t(locale, "dashboard.free.postaiPlaceholder")}</span>
-        </UpgradeButton>
-        <UpgradeButton feature="grow" testId="postai-send" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-ink px-3 py-2 text-[13px] font-semibold text-white">
-          <IconLock size={13} aria-hidden />
-          {t(locale, "dashboard.free.postaiSend")}
-        </UpgradeButton>
-      </div>
-      <LockFooter line={line} feature="grow" inset />
+      <div className="flex flex-col gap-4">{children}</div>
     </section>
   );
 }
@@ -133,6 +89,7 @@ export function FreeReviews({
         </span>
         <div className="flex min-w-0 flex-col gap-1">
           <h2 className="font-serif text-lg font-semibold text-ink">{t(locale, "dashboard.free.reviewHeading")}</h2>
+          {children && <p data-testid="reviews-what" className="text-[13px] text-ink-soft">{t(locale, "dashboard.free.reviewsWhat", { count: FREE_REPLY_DRAFTS })}</p>}
           {rating !== null && reviewCount !== null && (
             <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.free.reviewsRatingCount", { rating: rating.toFixed(1), count: formatCount(reviewCount, locale) })}</p>
           )}
@@ -192,6 +149,8 @@ export function FreeReviews({
         </div>
       )}
       {children}
+      {/* The rating, count and nearby numbers come from Google. */}
+      <GoogleMapsAttribution className="mt-0" />
     </section>
   );
 }
@@ -207,73 +166,3 @@ export function RankUnlockLine() {
   );
 }
 
-/** "Unlock more with a plan": every plan-only feature as a locked tile —
- * its plan chip, a real count where there is one, skeleton rows with the
- * feature's real icon (the advice itself is never in the page), and its
- * OWN unlock line and promo box. 2 columns on desktop, 1 on a phone. */
-export function UnlockMore({
-  fixCount,
-  fixPoints,
-  hasWebsite,
-  websiteChecks,
-  pricingOk = true,
-}: {
-  fixCount: number;
-  fixPoints: number | null;
-  hasWebsite: boolean;
-  websiteChecks: number;
-  pricingOk?: boolean;
-}) {
-  const locale = useLocale();
-  const facts = useUpgrade()?.facts ?? NO_FACTS;
-  const line = (id: Parameters<typeof unlockLine>[0]) => unlockLine(id, facts, locale);
-  const premium = t(locale, "dashboard.settings.plan.name.premium");
-  return (
-    <section data-testid="unlock-more" className="flex flex-col gap-3">
-      <div>
-        <h2 className="font-serif text-xl font-semibold text-ink">{t(locale, "dashboard.free.unlockMoreHeading")}</h2>
-        <p className="mt-0.5 text-[13px] text-ink-soft">{t(locale, "dashboard.free.unlockMoreSub")}</p>
-      </div>
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <LockedPreview icon={IconListCheck} title={t(locale, "dashboard.free.actionPlanTitle")} summary={fixesSummary(fixCount, fixPoints, locale)} unlock={line("plan")} rows={Math.min(Math.max(fixCount, 2), 4)} />
-        <LockedPreview icon={IconCalendarCheck} title={t(locale, "dashboard.growth.checklist.sectionHeading")} summary={t(locale, "dashboard.free.sumHabits", { count: 5 })} unlock={line("routine")} />
-        {hasWebsite && (
-          <LockedPreview
-            icon={IconTools}
-            title={t(locale, "dashboard.free.tile.fixGuides", { builder: facts.builderName ?? t(locale, "dashboard.free.tile.yourWebsite") })}
-            summary={websiteChecks > 0 ? t(locale, "dashboard.free.sumChecks", { count: websiteChecks }) : null}
-            unlock={line("website") ?? line("websiteFixes")}
-            rows={Math.min(Math.max(websiteChecks, 2), 4)}
-          />
-        )}
-        {hasWebsite && <LockedPreview icon={IconRefresh} title={t(locale, "dashboard.websiteRecheck.button")} unlock={line("recheck")} feature="recheck" rows={2} />}
-        <LockedPreview icon={IconLayout} title={t(locale, "dashboard.free.showroom.starterSite")} unlock={line("starterSite")} rows={2} />
-        {pricingOk && <LockedPreview icon={IconTag} title={t(locale, "dashboard.free.showroom.priceCheck")} unlock={line("priceCheck")} rows={3} />}
-        <LockedPreview icon={IconFileText} title={t(locale, "dashboard.free.tile.reports")} summary={t(locale, "dashboard.free.tile.reportsPdf")} unlock={line("reportsPremium")} rows={2} />
-        <LockedPreview icon={IconSpeakerphone} title={t(locale, "dashboard.free.tile.hub")} unlock={line("hub")} feature="campaignHub" soon rows={3} />
-        <LockedPreview icon={IconBrandGoogle} title={t(locale, "dashboard.free.tile.google")} unlock={line("connect")} feature="googleProfile" soon rows={2} />
-        <LockedPreview
-          icon={IconMessageCircle}
-          title={t(locale, "dashboard.free.tile.aiReplies")}
-          summary={facts.reviewCount ? t(locale, "dashboard.free.tile.reviewsCount", { count: facts.reviewCount }) : null}
-          unlock={line("aiReplies")}
-          feature="premium"
-          planLabel={premium}
-          soon
-          rows={3}
-        />
-        <LockedPreview icon={IconSparkles} title={t(locale, "dashboard.free.tile.postaiUnlimited")} unlock={line("postaiUnlimited")} feature="premium" planLabel={premium} rows={2} />
-        <LockedPreview
-          icon={IconWorldWww}
-          title={t(locale, "dashboard.overview.postStudio.title")}
-          summary={t(locale, "dashboard.free.tile.postStudioPrice")}
-          unlock={line("postStudio")}
-          feature="postStudio"
-          planLabel={t(locale, "dashboard.free.tile.addOn")}
-          soon
-          rows={2}
-        />
-      </div>
-    </section>
-  );
-}

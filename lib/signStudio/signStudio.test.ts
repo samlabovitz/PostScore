@@ -34,8 +34,6 @@ import { layoutSign, PAGE_POINTS, type Measurer, type SignLayout } from "@/lib/s
 const URL = buildGoogleReviewUrl("ChIJN1t_tDeuEmsRUsoyG83frY4");
 const CONTENT: SignContent = {
   businessName: "Modern Liquors",
-  rating: 4.5,
-  reviewCount: 15,
   verifiedSocials: [{ platform: "Instagram", url: "instagram.com/modernliquors" }],
 };
 const CUSTOM = { background: "#fdf6ec", text: "#3b1d0e", accent: "#a0461c" };
@@ -137,7 +135,6 @@ describe("layout", () => {
               headline: "custom",
               customHeadline: "W".repeat(50),
               subline: "Thank you so much for shopping local with our family business this year!!",
-              showRating: true,
               follow: CONTENT.verifiedSocials[0].url,
               logoTop: true,
             });
@@ -162,11 +159,15 @@ describe("layout", () => {
     expect(four.marks).toHaveLength(2);
   });
 
-  it("rating only from a real 4.0★+ Google rating; Follow us only from a verified profile; no PostScore on Premium signs", async () => {
+  it("never prints the Google rating; Follow us only from a verified profile; no PostScore on Premium signs", async () => {
     const m = await measurer(design());
     const t = (d: SignDesign, c: SignContent = CONTENT, credit = false) => texts(layoutSign({ design: d, content: c, credit, logo: null }, m)).join(" ");
-    expect(t(design({ showRating: true }))).toContain("4.5");
-    expect(t(design({ showRating: true }), { ...CONTENT, rating: 3.9 })).not.toMatch(/3\.9|on Google/);
+    // Printing Google Maps content off-platform isn't allowed: an old
+    // design asking for the rating prints the QR and headline only.
+    const old = sanitizeDesign({ ...design(), showRating: true }, "en");
+    expect(old).not.toHaveProperty("showRating");
+    for (const d of [old, design({ language: "both" }), basicDesign({ theme: "classic", size: "tent" }, "en")]) expect(t(d)).not.toMatch(/★|on Google|en Google|\d[.,]\d/);
+    expect(t(old)).toContain("Loved your visit? Leave us a review!");
     expect(t(design({ follow: "instagram.com/modernliquors" }))).toContain("Follow us · instagram.com/modernliquors");
     expect(t(design({ follow: "instagram.com/someone-else" }))).not.toContain("Follow us");
     expect(t(design({ language: "both" }))).toContain("Toma 30 segundos");
@@ -192,12 +193,12 @@ describe("plans", () => {
     expect(effectiveDesign("grow", { theme: "clean", size: "letter", template: "banner" }, CONTENT, "es")!.design).toEqual(basicDesign({ theme: "clean", size: "letter" }, "es"));
   });
 
-  it("Premium keeps its design, but never an unverified Follow us or a sub-4.0 rating", () => {
-    const premium = effectiveDesign("premium", design({ template: "banner", follow: "instagram.com/fake", showRating: true }), { ...CONTENT, rating: 3.8 }, "en")!;
+  it("Premium keeps its design, but never an unverified Follow us or the Google rating", () => {
+    const premium = effectiveDesign("premium", { ...design({ template: "banner", follow: "instagram.com/fake" }), showRating: true }, CONTENT, "en")!;
     expect(premium.credit).toBe(false);
     expect(premium.design.template).toBe("banner");
     expect(premium.design.follow).toBeNull();
-    expect(premium.design.showRating).toBe(false);
+    expect(premium.design).not.toHaveProperty("showRating");
   });
 });
 

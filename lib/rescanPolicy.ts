@@ -12,6 +12,9 @@ import { calendarDaysAgo } from "@/lib/i18n/format";
 
 export const RESCAN_COOLDOWN_HOURS = 24;
 export const STALE_SCAN_DAYS = 30;
+/** The Overview's snapshot message turns amber ("Your score is N days
+ * old") from this age on. */
+export const SNAPSHOT_OLD_DAYS = 7;
 const HOUR_MS = 3_600_000;
 
 export interface RescanAvailability {
@@ -27,19 +30,20 @@ export function rescanAvailability(lastScanAt: string | null, now: Date): Rescan
   return { allowed: false, nextAvailableAt: new Date(next).toISOString() };
 }
 
-/** Free includes ONE owner re-scan per 30 days (the first scan doesn't
+/** Free includes ONE owner re-scan per 7 days (the first scan doesn't
  * count), on top of the 24-hour rule. Owner re-scans are logged in
  * places_calls (kind "owner_rescan") — each is one Places Details call. */
-export const FREE_RESCAN_DAYS = 30;
+export const FREE_RESCAN_DAYS = 7;
 
-export type RescanGate = RescanAvailability & { limit: "daily" | "monthly" | null };
+export type RescanGate = RescanAvailability & { limit: "daily" | "weekly" | null };
 
 /** Whether the owner may re-scan now: the 24-hour rule for everyone, and
- * on Free also once per 30 days since their last owner re-scan. */
+ * on Free also once per 7 days since their last owner re-scan. Checked
+ * server-side in rescanBusiness before any Google call. */
 export function rescanGate(free: boolean, lastFullScanAt: string | null, lastOwnerRescanAt: string | null, now: Date): RescanGate {
   if (free && lastOwnerRescanAt) {
     const next = Date.parse(lastOwnerRescanAt) + FREE_RESCAN_DAYS * 24 * HOUR_MS;
-    if (Number.isFinite(next) && now.getTime() < next) return { allowed: false, nextAvailableAt: new Date(next).toISOString(), limit: "monthly" };
+    if (Number.isFinite(next) && now.getTime() < next) return { allowed: false, nextAvailableAt: new Date(next).toISOString(), limit: "weekly" };
   }
   const daily = rescanAvailability(lastFullScanAt, now);
   return daily.allowed ? { ...daily, limit: null } : { ...daily, limit: "daily" };
@@ -68,4 +72,11 @@ export function showRescanNotice(lastScanAt: string | null, now: Date): boolean 
   if (!lastScanAt) return false;
   const t = Date.parse(lastScanAt);
   return Number.isFinite(t) && now.getTime() - t > RESCAN_NOTICE_AFTER_HOURS * 60 * 60 * 1000;
+}
+
+/** Days since the last scan in the business's own time zone (null =
+ * never scanned) — the snapshot message's "Your score is N days old". */
+export function scanAgeDays(lastScanAt: string | null, now: Date, timeZone: string): number | null {
+  if (!lastScanAt) return null;
+  return Math.max(0, calendarDaysAgo(lastScanAt, now, timeZone));
 }

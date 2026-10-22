@@ -30,10 +30,7 @@ const DATA: StarterSiteTemplateData = {
   category: "Hair Salon",
   phone: "+1-555-000-0000",
   address: "123 Main St",
-  openingHours: ["Mon-Fri 9-5"],
-  rating: 3.2,
-  reviewCount: 8,
-  googleMapsUri: "https://maps.google.com/?cid=123",
+  placeId: "ChIJ_test",
   profileId: "salon",
 };
 

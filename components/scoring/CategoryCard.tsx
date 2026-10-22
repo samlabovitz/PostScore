@@ -6,6 +6,7 @@ import { Pill } from "@/components/ui/Pill";
 import { cn } from "@/lib/utils";
 import type { CategoryResult, CheckResult } from "@/lib/scoring";
 import { t, useLocale, type MessageKey } from "@/lib/i18n";
+import { LockedFixRow } from "@/components/overview/FixPlanUpsell";
 import { checkAnchorId } from "@/lib/postaiLinks";
 
 /** Day 4 Step 3: each row is labeled by its RESULT — never by how sure
@@ -60,6 +61,7 @@ export function CategoryCard({
   scoreBasis = null,
   embedded = false,
   fixLinks,
+  lockedFixes = false,
 }: {
   category: CategoryResult;
   /** See WebsiteCoverageNote's scoreBasis. */
@@ -72,10 +74,13 @@ export function CategoryCard({
   /** Overview: a "how to fix it" link per check id, shown on rows that
    * need work (PostAI's link targets — lib/postaiLinks.ts). */
   fixLinks?: Record<string, { href: string; label: string }>;
+  /** Free (the audit): a locked, blurred "How to fix this" row on rows
+   * that need work — never the advice itself. */
+  lockedFixes?: boolean;
 }) {
   const locale = useLocale();
   if (embedded) {
-    return <CheckRows category={category} fixLinks={fixLinks} />;
+    return <CheckRows category={category} fixLinks={fixLinks} lockedFixes={lockedFixes} />;
   }
   return (
     <Card className="p-5">
@@ -98,7 +103,7 @@ export function CategoryCard({
   );
 }
 
-function CheckRows({ category, fixLinks }: { category: CategoryResult; fixLinks?: Record<string, { href: string; label: string }> }) {
+function CheckRows({ category, fixLinks, lockedFixes = false }: { category: CategoryResult; fixLinks?: Record<string, { href: string; label: string }>; lockedFixes?: boolean }) {
   const locale = useLocale();
   return (
   <div className="flex flex-col divide-y divide-paper-line">
@@ -142,6 +147,7 @@ function CheckRows({ category, fixLinks }: { category: CategoryResult; fixLinks?
               {fixLinks[check.id].label}
             </Link>
           )}
+          {outcome === "needs_work" && lockedFixes && <LockedFixRow blurred className="ml-[25px] mt-1" />}
         </div>
       );
     })}

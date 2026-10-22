@@ -169,7 +169,9 @@ describe("the PostStudio box (its own, not Grow vs Premium)", () => {
     expect(tr("dashboard.postStudioPlans.footer")).toBe("Coming soon — nothing is charged today.");
     expect(tr("dashboard.postStudioPlans.box.title")).toBe("PostStudio: your website, menu and logo");
     expect(readFileSync("app/business/[id]/website/PostStudioShowcase.tsx", "utf8")).toContain('<UpgradeButton feature="postStudio" testId="poststudio-add"');
-    expect(readFileSync("components/overview/FreeOverview.tsx", "utf8")).toContain('feature="postStudio"');
+    // Free Overview: PostStudio is listed (badge "Add-on", Coming soon) in the
+    // combined card's "See everything in each plan" — no button of its own.
+    expect(readFileSync("lib/planFeatures.ts", "utf8")).toContain('{ id: "postStudio", titleKey: "dashboard.overview.postStudio.title", feature: "addOn", soon: true }');
   });
 
   test("Spanish (usted)", () => {

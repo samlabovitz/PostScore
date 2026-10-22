@@ -24,6 +24,7 @@ import {
   type OwnerHours,
 } from "@/lib/ownerHours";
 import { saveStarterSiteHours } from "@/app/actions/starterSiteHours";
+import { withDevReason } from "@/lib/saveFailure";
 
 const k = (key: string) => `dashboard.website.starter.hours.${key}` as MessageKey;
 const SELECT = "rounded-md border border-paper-deep bg-white px-1.5 py-1 text-[12.5px] text-ink outline-none focus:border-ink-soft";
@@ -71,6 +72,7 @@ export function StarterHoursEditor({
   businessId,
   initial,
   googleHours,
+  canRemove = false,
   onApply,
   onClose,
 }: {
@@ -79,7 +81,10 @@ export function StarterHoursEditor({
   initial: OwnerHours;
   /** Google's hours as a schedule (null when Google has none). */
   googleHours: OwnerHours | null;
-  /** The hours to use on the website now (null = back to Google's). */
+  /** Owner hours are on the website now: offer to take them off. */
+  canRemove?: boolean;
+  /** The hours to use on the website now (null = no hours on the site;
+   * Google's hours never go there). */
   onApply: (hours: OwnerHours | null) => void;
   onClose: () => void;
 }) {
@@ -97,13 +102,13 @@ export function StarterHoursEditor({
   async function persist(next: OwnerHours | null) {
     setSave({ kind: "saving" });
     onApply(next);
-    const result = await saveStarterSiteHours(businessId, next).catch(() => ({ status: "error" as const, message: "" }));
+    const result = await saveStarterSiteHours(businessId, next).catch(() => ({ status: "error" as const, message: "", reason: "the server action failed" }));
     if (result.status === "ok") {
       setSave({ kind: "idle" });
       onClose();
     } else if (result.status === "not_enabled" || result.status === "error") {
       // Still on the preview and in the download — just not remembered.
-      setSave({ kind: "error", message: t(locale, k("notSaved")) });
+      setSave({ kind: "error", message: withDevReason(t(locale, k("notSaved")), result.reason) });
     } else {
       setSave({ kind: "error", message: t(locale, k("invalid")) });
     }
@@ -217,9 +222,9 @@ export function StarterHoursEditor({
         <Button variant="default" size="sm" onClick={onClose}>
           {t(locale, k("cancel"))}
         </Button>
-        {googleHours && (
+        {canRemove && (
           <button type="button" onClick={() => persist(null)} className="text-[12.5px] font-medium text-ink-soft underline hover:text-ink">
-            {t(locale, k("useGoogle"))}
+            {t(locale, k("remove"))}
           </button>
         )}
       </div>

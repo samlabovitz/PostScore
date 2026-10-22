@@ -94,3 +94,8 @@ export function buildGrowBannerTools(businessId: string, profileTools: ProfileTo
 
   return tools;
 }
+
+/** The "More customers" banner's featured Reviews tile and its
+ * announced-but-not-live Shop tile. */
+export const GROW_BANNER_REVIEWS_LABEL_KEY: MessageKey = "dashboard.overview.growBanner.reviews.title";
+export const GROW_BANNER_SHOP_LABEL_KEY: MessageKey = "dashboard.overview.growBanner.tools.shop.shortLabel";

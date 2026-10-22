@@ -1,3 +1,5 @@
+import type { Plan } from "@/lib/plan";
+
 // When a paid competitor scan may run (Part B, cost-first competitor
 // scan — see ~/Desktop/auto-competitors-plan.md). Pure: no network, no
 // database, so every rule is testable on its own.
@@ -59,12 +61,16 @@ export interface RescanCompetitorFlags {
 /** Which businesses the bulk re-scan should run a competitor scan for.
  * Without a flag: none, ever. */
 export function competitorScanTargets(
-  businesses: Array<{ id: string; latestCompetitorScanAt: string | null }>,
+  businesses: Array<{ id: string; latestCompetitorScanAt: string | null; plan: Plan }>,
   flags: RescanCompetitorFlags,
   now: Date
 ): string[] {
   if (flags.competitorsOnly) return businesses.filter((b) => b.latestCompetitorScanAt === null).map((b) => b.id);
-  if (flags.withCompetitors) return businesses.filter((b) => refreshAvailability(b.latestCompetitorScanAt, now).allowed).map((b) => b.id);
+  // Free: never refreshed after the first scan — only a missing first scan.
+  if (flags.withCompetitors)
+    return businesses
+      .filter((b) => (b.plan === "free" ? b.latestCompetitorScanAt === null : refreshAvailability(b.latestCompetitorScanAt, now).allowed))
+      .map((b) => b.id);
   return [];
 }
 
@@ -74,4 +80,28 @@ export function competitorScanCostRange(scans: number): { min: number; max: numb
     min: scans * NEARBY_CALLS_PER_SCAN.min * NEARBY_SEARCH_COST_USD,
     max: scans * NEARBY_CALLS_PER_SCAN.max * NEARBY_SEARCH_COST_USD,
   };
+}
+
+/** Whether an owner re-scan also refreshes competitors (Nearby Search):
+ * - Premium and Multi: every re-scan;
+ * - Grow: when the last saved competitor scan is GROW_RESCAN_COMPETITOR_DAYS
+ *   or more old (or there isn't one);
+ * - Free: never — Free competitors are never refreshed after the first
+ *   scan (not by a re-scan, the monthly report or scripts/rescan-all.ts). */
+export const GROW_RESCAN_COMPETITOR_DAYS = 7;
+
+export function rescanRefreshesCompetitors(plan: Plan, latestCompetitorScanAt: string | null, now: Date): boolean {
+  if (plan === "free") return false;
+  if (plan === "premium" || plan === "multi") return true;
+  if (!latestCompetitorScanAt) return true;
+  const age = now.getTime() - Date.parse(latestCompetitorScanAt);
+  return !Number.isFinite(age) || age >= GROW_RESCAN_COMPETITOR_DAYS * DAY_MS;
+}
+
+/** Grow: when a re-scan will next refresh competitors (the last saved
+ * scan + GROW_RESCAN_COMPETITOR_DAYS; null = the next re-scan does). */
+export function growNextCompetitorUpdate(latestCompetitorScanAt: string | null): string | null {
+  if (!latestCompetitorScanAt) return null;
+  const next = Date.parse(latestCompetitorScanAt) + GROW_RESCAN_COMPETITOR_DAYS * DAY_MS;
+  return Number.isFinite(next) ? new Date(next).toISOString() : null;
 }

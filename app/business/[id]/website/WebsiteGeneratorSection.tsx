@@ -1,6 +1,7 @@
 "use client";
 
 import type { OwnerHours } from "@/lib/ownerHours";
+import type { StarterSiteDetails } from "@/lib/starterSiteDetails";
 import { useState, type ReactNode } from "react";
 import { Card } from "@/components/ui/Card";
 import { CollapsibleGenerator } from "./CollapsibleGenerator";
@@ -34,18 +35,15 @@ export function WebsiteGeneratorSection({
   category,
   phone,
   address,
-  openingHours,
   openingHoursPeriods,
   starterSiteHours,
   starterSiteHoursEnabled,
+  starterSiteDetails,
+  starterSiteDetailsEnabled,
   timeZone,
-  rating,
-  reviewCount,
-  googleMapsUri,
-  priceLevel,
+  placeId,
   socialLinks,
   year,
-  ratingAsOf,
   storefront,
   mapEmbed,
   profileId,
@@ -77,18 +75,15 @@ export function WebsiteGeneratorSection({
   category: string | null;
   phone: string | null;
   address: string | null;
-  openingHours: string[] | null;
   openingHoursPeriods: OpeningHoursPeriod[] | null;
   starterSiteHours: OwnerHours | null;
   starterSiteHoursEnabled: boolean;
+  starterSiteDetails: StarterSiteDetails | null;
+  starterSiteDetailsEnabled: boolean;
   timeZone: string;
-  rating: number | null;
-  reviewCount: number | null;
-  googleMapsUri: string | null;
-  priceLevel: string | null;
+  placeId: string | null;
   socialLinks: Array<{ platform: string; url: string }>;
   year: number;
-  ratingAsOf: string | null;
   storefront: boolean;
   mapEmbed: { key: string; placeId: string } | null;
   profileId: string;
@@ -135,18 +130,15 @@ export function WebsiteGeneratorSection({
       category={category}
       phone={phone}
       address={address}
-      openingHours={openingHours}
       openingHoursPeriods={openingHoursPeriods}
       starterSiteHours={starterSiteHours}
       starterSiteHoursEnabled={starterSiteHoursEnabled}
+      starterSiteDetails={starterSiteDetails}
+      starterSiteDetailsEnabled={starterSiteDetailsEnabled}
       timeZone={timeZone}
-      rating={rating}
-      reviewCount={reviewCount}
-      googleMapsUri={googleMapsUri}
-      priceLevel={priceLevel}
+      placeId={placeId}
       socialLinks={socialLinks}
       year={year}
-      ratingAsOf={ratingAsOf}
       storefront={storefront}
       mapEmbed={mapEmbed}
       profileId={profileId}

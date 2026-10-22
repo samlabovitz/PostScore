@@ -177,17 +177,31 @@ describe("Google listing photo — Google's rules, cheapest option", () => {
       </ListingPhoto>
     );
     expect(html).toContain("<h1>Switch Skate &amp; Snow</h1>");
-    expect(html).not.toContain("<img");
-    expect(html).not.toContain("Google Maps");
+    // Only Google's logo (the name and address are Google Maps data).
+    expect(html.match(/<img/g)).toHaveLength(1);
+    expect(html).toMatch(/<img src="\/google\/GoogleMaps_Logo_Gray.svg" alt="Google Maps"/);
   });
 
   test("the photo credit is ONE small line under the header row — never squeezed under the photo", async () => {
     const fs = await import("node:fs");
     const src = fs.readFileSync("components/overview/ListingPhoto.tsx", "utf8");
-    expect(src).toMatch(/<figcaption className=\{cn\("max-w-full truncate whitespace-nowrap text-\[11px\] leading-tight text-ink-mute"/);
+    expect(src).toContain('<figcaption className="flex min-w-0 max-w-full items-center gap-2.5 text-[11px] leading-tight text-ink-mute">');
     expect(src).not.toContain("max-w-[76px]");
     // The credit comes after the row (photo + name block), not inside the photo column.
     expect(src.indexOf("{children}")).toBeLessThan(src.indexOf("<figcaption"));
+  });
+
+  test("the credit line: author · the Google Maps logo (never the plain text), centered on the scan line; the logo even before the photo loads", async () => {
+    const { ListingPhotoView } = await import("@/components/overview/ListingPhoto");
+    const photo = { uri: "https://example.com/p.jpg", googleMapsUri: null, attributions: [{ displayName: "Hair express on Broadway", uri: null }] } as never;
+    const line = (loaded: boolean) => {
+      const html = render(<ListingPhotoView businessName="Hair Express" photo={photo} loaded={loaded} footer={<span>Last scanned</span>}><h1>Hair Express</h1></ListingPhotoView>);
+      return html.slice(html.indexOf("<figcaption"), html.indexOf("</figcaption>"));
+    };
+    expect(line(true)).toMatch(/Hair express on Broadway ·<\/span><img src="\/google\/GoogleMaps_Logo_Gray.svg" alt="Google Maps" translate="no"/);
+    expect(line(true)).not.toMatch(/>Google Maps</);
+    expect(line(false)).not.toContain("Hair express");
+    expect(line(false)).toContain('alt="Google Maps"');
   });
 
   test("the browser code never holds the API key", async () => {

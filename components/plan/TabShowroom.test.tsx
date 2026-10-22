@@ -132,7 +132,7 @@ describe("the showrooms", () => {
 });
 
 describe("no paid calls on Free, anywhere", () => {
-  test("PostAI, Re-check, the price check, competitor refresh and the niche re-scan all refuse on Free server-side", () => {
+  test("Re-check, the price check, competitor refresh and the niche re-scan all refuse on Free server-side; PostAI reserves one of 3 weekly questions first", () => {
     const guard = (file: string, fn: string, before: string) => {
       const src = readFileSync(file, "utf8");
       const body = src.slice(src.indexOf(`export async function ${fn}(`));
@@ -140,7 +140,12 @@ describe("no paid calls on Free, anywhere", () => {
       expect(g, `${fn} guard`).toBeGreaterThan(0);
       expect(g, `${fn} before ${before}`).toBeLessThan(body.indexOf(before));
     };
-    guard("app/actions/assistant.ts", "sendAssistantMessage", "callAnthropicChat(");
+    // PostAI on Free: 3 questions a week, reserved before any AI call
+    // (components/overview/FreeAi.test.tsx has the full rules).
+    const assistant = readFileSync("app/actions/assistant.ts", "utf8");
+    const send = assistant.slice(assistant.indexOf("export async function sendAssistantMessage("));
+    expect(send.indexOf('(await getPlan()) !== "free"')).toBeLessThan(send.indexOf('reserveFreeAi('));
+    expect(send.indexOf('reserveFreeAi(')).toBeLessThan(send.indexOf("callAnthropicChat("));
     guard("app/actions/websiteRecheck.ts", "recheckWebsite", "recheckWebsiteWithClient");
     guard("app/actions/pricing.ts", "assessPricing", "callAnthropicMessage(");
     guard("app/actions/competitors.ts", "refreshCompetitors", "runAndSaveCompetitorScanWithClient(");

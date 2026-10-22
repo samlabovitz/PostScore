@@ -21,6 +21,7 @@ import {
   type PDFPage,
 } from "pdf-lib";
 import { qrLayers, type ReviewQrGeometry } from "@/lib/reviewQr";
+import { GOOGLE_MAPS_LOGO_PNG_BASE64, GOOGLE_MAPS_LOGO_RATIO } from "@/lib/google/mapsLogoPng";
 import { designFontFiles, type SignDesign } from "@/lib/signStudio/design";
 import { FONT_ROLES, ITALIC_SKEW, mixColor, roundedRectPath, shapeCommands, type CardShape, type FontRole, type PrintPage, type SignElement, type SignPanel } from "@/lib/signStudio/elements";
 import { NO_LIGATURES, fontkit, type FontBytes } from "@/lib/signStudio/fonts";
@@ -98,6 +99,9 @@ export async function renderPdf(pages: PrintPage[], opts: RenderPdfOptions): Pro
   };
   const fonts = {} as Record<FontRole, PDFFont>;
   for (const role of FONT_ROLES) fonts[role] = await embed(opts.fontBytes[role]);
+  // Google's attribution logo, embedded once, only when a page uses it.
+  const needsGoogleLogo = pages.some((pg) => [...pg.panels.flatMap((p) => p.elements), ...pg.marks].some((el) => el.kind === "googleMapsLogo"));
+  const googleLogo = needsGoogleLogo ? await doc.embedPng(Buffer.from(GOOGLE_MAPS_LOGO_PNG_BASE64, "base64")) : null;
   const logoSlots: LogoSlot[] = [];
 
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
@@ -188,6 +192,9 @@ export async function renderPdf(pages: PrintPage[], opts: RenderPdfOptions): Pro
         }
         case "logo":
           slot(panel, el.x, el.y, el.w, el.h);
+          return;
+        case "googleMapsLogo":
+          if (googleLogo) pg.drawImage(googleLogo, { x: el.x, y: panelH - el.y - el.h, width: el.h * GOOGLE_MAPS_LOGO_RATIO, height: el.h });
           return;
         case "line":
           pg.drawLine({

@@ -210,7 +210,7 @@ describe("Reviews", () => {
       );
     const grow = withDrafts("grow", 2);
     expect(text(grow)).toContain("Reply to a review");
-    expect(text(grow)).toContain("2 of 3 free replies left");
+    expect(text(grow)).toContain("2 of 10 free replies left");
     expect(text(grow)).toContain("Unlimited with Premium");
     expect(grow.indexOf('data-testid="review-reply-drafter"')).toBeGreaterThan(grow.indexOf("Reply assistant"));
     const premium = text(withDrafts("premium", null));

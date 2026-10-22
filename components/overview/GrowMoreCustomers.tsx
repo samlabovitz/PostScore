@@ -10,8 +10,9 @@ import Link from "next/link";
 import { IconArrowRight, IconBuildingStore, IconLock, IconStar } from "@tabler/icons-react";
 import { UpgradeButton, UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import { reviewGoalText } from "@/lib/reviewGoal";
+import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 import type { ReviewGoal } from "@/lib/competitorComparison";
-import { buildGrowBannerTools, reviewToolHref, type ProfileTools } from "@/lib/growBannerTools";
+import { buildGrowBannerTools, GROW_BANNER_REVIEWS_LABEL_KEY, GROW_BANNER_SHOP_LABEL_KEY, reviewToolHref, type ProfileTools } from "@/lib/growBannerTools";
 import { formatCount, t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 
 /** The Reviews tile's one real stat line. Pure; exported for tests. */
@@ -31,6 +32,7 @@ export function GrowMoreCustomers({
   locked = false,
   goal = null,
   group = null,
+  embedded = false,
 }: {
   businessId: string;
   profileTools: ProfileTools;
@@ -45,13 +47,21 @@ export function GrowMoreCustomers({
   /** The shared review goal (beat the leader) and its comparison group. */
   goal?: ReviewGoal | null;
   group?: string | null;
+  /** Free: the bottom half of the combined upgrade card (FixPlanBox) — no
+   * card of its own and no "Unlock with Grow / Premium" row (the plan
+   * tiles above are the card's one set of upgrade buttons). */
+  embedded?: boolean;
 }) {
   const locale = useLocale();
   const tools = buildGrowBannerTools(businessId, profileTools);
 
   return (
-    <section className="rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
-      <h2 className="font-serif text-lg font-semibold text-ink">{t(locale, "dashboard.overview.growBanner.heading")}</h2>
+    <section data-testid="more-customers" className={embedded ? "" : "rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5"}>
+      {embedded ? (
+        <h3 className="font-serif text-lg font-semibold text-ink">{t(locale, "dashboard.overview.growBanner.heading")}</h3>
+      ) : (
+        <h2 className="font-serif text-lg font-semibold text-ink">{t(locale, "dashboard.overview.growBanner.heading")}</h2>
+      )}
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         {/* Featured: Reviews. */}
         <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-[color:color-mix(in_srgb,var(--color-brass)_30%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_6%,white)] p-4 sm:p-5">
@@ -59,7 +69,7 @@ export function GrowMoreCustomers({
             <IconStar size={20} />
           </span>
           <div className="flex min-w-0 flex-col gap-1">
-            <h3 className="text-base font-semibold text-ink">{t(locale, "dashboard.overview.growBanner.reviews.title")}</h3>
+            <h3 className="text-base font-semibold text-ink">{t(locale, GROW_BANNER_REVIEWS_LABEL_KEY)}</h3>
             {locked ? (
               // Free: the Reviews section right above has the stats, goal,
               // link and QR — so here, short tips instead (no numbers).
@@ -79,13 +89,16 @@ export function GrowMoreCustomers({
             )}
           </div>
           {/* Free: no button — the review link and QR are right above. */}
+          {/* The stats are Google's: the logo on the button's line, right. */}
           {!locked && (
+          <GoogleMapsAttribution className="mt-auto">
           <Link
             href={reviewToolHref(businessId)}
-            className="mt-auto inline-flex w-fit max-w-full items-center rounded-lg bg-brass px-3.5 py-2 text-[13.5px] font-semibold text-ink transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-brass)_85%,white)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            className="inline-flex w-fit max-w-full items-center rounded-lg bg-brass px-3.5 py-2 text-[13.5px] font-semibold text-ink transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-brass)_85%,white)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             {t(locale, "dashboard.overview.growBanner.reviews.cta")}
           </Link>
+          </GoogleMapsAttribution>
           )}
         </div>
 
@@ -138,7 +151,7 @@ export function GrowMoreCustomers({
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] font-semibold text-ink-soft">
-                  <span className="min-w-0 break-words">{t(locale, "dashboard.overview.growBanner.tools.shop.shortLabel")}</span>
+                  <span className="min-w-0 break-words">{t(locale, GROW_BANNER_SHOP_LABEL_KEY)}</span>
                   <span className="rounded-full border border-paper-deep bg-white px-2 py-px text-[10.5px] font-semibold text-ink-soft">
                     {t(locale, "dashboard.overview.studio.comingSoon")}
                   </span>
@@ -149,7 +162,7 @@ export function GrowMoreCustomers({
           </li>
         </ul>
       </div>
-      {locked && (
+      {locked && !embedded && (
         <div className="mt-4 flex flex-col gap-2 border-t border-paper-line pt-4 sm:flex-row sm:items-center sm:justify-end" data-testid="more-customers-unlock">
           <UpgradeTrigger feature="grow" variant="pair" />
         </div>

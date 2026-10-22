@@ -10,7 +10,9 @@ import { readFileSync } from "node:fs";
 
 const read = (f: string) => readFileSync(f, "utf8");
 /** Every component tag in order (icons left out). */
-const tags = (src: string) => Array.from(src.matchAll(/<([A-Z][A-Za-z]+)/g), (m) => m[1]).filter((tag) => !tag.startsWith("Icon"));
+// The Google Maps attribution (required by Google's terms, tested in
+// lib/googleMapsAttribution.test.tsx) is left out of the layout lists.
+const tags = (src: string) => Array.from(src.matchAll(/<([A-Z][A-Za-z]+)/g), (m) => m[1]).filter((tag) => !tag.startsWith("Icon") && tag !== "GoogleMapsAttribution");
 const without = (list: string[], drop: string[]) => list.filter((tag) => !drop.includes(tag));
 
 describe("paid plans keep their pre-batch layout, page by page", () => {
@@ -22,7 +24,7 @@ describe("paid plans keep their pre-batch layout, page by page", () => {
     )).toEqual(["HackedSiteBanner", "ScoreBand", "RescanMessages", "AssistantLauncher", "GrowMoreCustomers", "LocalBenchmarkTile", "ScoreBreakdownPanel", "TopRecommendations", "SinceLastScanCard", "StudioComingSoon", "LiveListingSection", "ScanHistory"]);
     // The header is the same block as before, just shared with Free.
     expect(paid.indexOf("{header}")).toBeLessThan(paid.indexOf("<ScoreBand"));
-    expect(paid).not.toMatch(/FreePostAIShowroom|FreeReviews|UnlockMore|locked\b/);
+    expect(paid).not.toMatch(/FreePostAI|FreeReviews|UnlockMore|locked\b/);
   });
 
   test("Growth: celebration, routine, Premium connect card (Grow too), plan, bigger projects, completed, ways to grow, Google Profile", () => {

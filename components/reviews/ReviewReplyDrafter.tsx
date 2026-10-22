@@ -5,17 +5,19 @@
 // in the business's language; the owner edits it, copies it and posts it
 // on Google themselves ("Open my Google reviews"). Nothing is fetched from
 // Google, and the pasted review isn't saved — only the reply.
-// Free and Grow: 3 free drafts per business (counted on the server), then
-// the plans box (Premium = unlimited). Premium and Multi: unlimited.
+// Free: 3 drafts a week (on the Free re-scan clock), counted on the server
+// before any AI call, and paused when the month's Free AI budget is used.
+// Grow: 10 drafts a week on the same clock, then the plans box (Premium =
+// unlimited). Premium and Multi: unlimited.
 
 import { useState } from "react";
 import { IconCopy, IconExternalLink, IconMessageCircle, IconSparkles } from "@tabler/icons-react";
 import { draftReviewReply, type ReplyDraftStatus } from "@/app/actions/reviewReplies";
 import { copyText } from "@/app/business/[id]/website-reviews/GetMoreReviews";
 import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
-import { FREE_REPLY_DRAFTS, googleReviewsHref, MAX_REVIEW_CHARS } from "@/lib/reviewReplies";
+import { FREE_REPLY_DRAFTS, googleReviewsHref, MAX_REVIEW_CHARS, replyDraftLimit } from "@/lib/reviewReplies";
 import { isPremiumPlan, type Plan } from "@/lib/plan";
-import { t, useLocale, type MessageKey } from "@/lib/i18n";
+import { formatShortDate, t, useLocale, useTimeZone, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const K = (key: string) => `dashboard.replies.${key}` as MessageKey;
@@ -43,6 +45,12 @@ export function ReviewReplyDrafter({
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [message, setMessage] = useState<MessageKey | null>(null);
+  const [resetsAt, setResetsAt] = useState<string | null>(initial.status === "ok" ? (initial.resetsAt ?? null) : null);
+  const [pausedUntil, setPausedUntil] = useState<string | null>(initial.status === "ok" ? (initial.pausedUntil ?? null) : null);
+  const weekly = plan === "free" || plan === "grow";
+  const total = replyDraftLimit(plan) ?? FREE_REPLY_DRAFTS;
+  const timeZone = useTimeZone();
+  const date = (iso: string | null) => (iso ? formatShortDate(iso, locale, timeZone) : "");
   const premium = isPremiumPlan(plan);
   const available = initial.status === "ok";
   const usedUp = !premium && left !== null && left <= 0;
@@ -58,7 +66,11 @@ export function ReviewReplyDrafter({
       if (result.status === "ok") {
         setReply(result.reply);
         setLeft(result.left);
-      } else if (result.status === "limit") setLeft(0);
+        if (result.resetsAt) setResetsAt(result.resetsAt);
+      } else if (result.status === "limit") {
+        setLeft(0);
+        if (result.resetsAt) setResetsAt(result.resetsAt);
+      } else if (result.status === "paused") setPausedUntil(result.until);
       else setMessage(K(result.status === "invalid" ? "errorInvalid" : result.status === "error" ? "errorRules" : "errorUnavailable"));
     } catch {
       setMessage(K("errorUnavailable"));
@@ -80,7 +92,11 @@ export function ReviewReplyDrafter({
         </div>
         {available && (
           <span data-testid="replies-left" className="rounded-full border border-paper-deep bg-paper px-2 py-0.5 text-[11.5px] font-semibold text-ink-soft">
-            {premium ? t(locale, K("unlimited")) : t(locale, K("left"), { left: left ?? 0, total: FREE_REPLY_DRAFTS })}
+            {premium
+              ? t(locale, K("unlimited"))
+              : weekly && resetsAt
+                ? t(locale, K(plan === "grow" ? "leftWeeklyGrow" : "leftWeekly"), { left: left ?? 0, total, date: date(resetsAt) })
+                : t(locale, K("left"), { left: left ?? 0, total })}
           </span>
         )}
       </div>
@@ -88,9 +104,16 @@ export function ReviewReplyDrafter({
 
       {!available ? (
         <p data-testid="replies-unavailable" className="text-[13px] text-ink-soft">{t(locale, K("errorUnavailable"))}</p>
+      ) : weekly && pausedUntil ? (
+        <div data-testid="replies-paused" className="flex flex-col gap-2 rounded-xl border border-[color:color-mix(in_srgb,var(--color-amber)_40%,white)] bg-[color:color-mix(in_srgb,var(--color-amber)_8%,white)] p-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[13px] font-medium text-ink">{t(locale, "dashboard.free.ai.paused", { date: date(pausedUntil) })}</p>
+          <UpgradeTrigger feature="replies" label={t(locale, K("unlimitedPremium"))} />
+        </div>
       ) : usedUp ? (
         <div data-testid="replies-used-up" className="flex flex-col gap-2 rounded-xl border border-[color:color-mix(in_srgb,var(--color-brass)_35%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_6%,white)] p-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[13px] font-medium text-ink">{t(locale, K("usedUp"), { total: FREE_REPLY_DRAFTS })}</p>
+          <p className="text-[13px] font-medium text-ink">
+            {weekly && resetsAt ? t(locale, K(plan === "grow" ? "usedUpWeeklyGrow" : "usedUpWeekly"), { date: date(resetsAt), total }) : t(locale, K("usedUp"), { total })}
+          </p>
           <UpgradeTrigger feature="replies" label={t(locale, K("unlimitedPremium"))} />
         </div>
       ) : (

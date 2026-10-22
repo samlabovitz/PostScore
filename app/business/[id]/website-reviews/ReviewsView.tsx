@@ -26,6 +26,7 @@ import type { ReviewGoal } from "@/lib/competitorComparison";
 import { formatCount, t, useLocale } from "@/lib/i18n";
 import { useScrollToHash } from "@/lib/useScrollToHash";
 import { ReviewReplyDrafter } from "@/components/reviews/ReviewReplyDrafter";
+import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 import type { ReplyDraftStatus } from "@/app/actions/reviewReplies";
 
 function StatCard({
@@ -96,6 +97,7 @@ function ReviewSocialProof({
           caption={reviewCountCaption(reviewCount, locale)}
         />
       </div>
+      <GoogleMapsAttribution />
 
       <div className="mt-5 rounded-xl bg-paper-deep/40 p-4">
         <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.websiteReviews.ratingVolumeExplainer")}</p>
@@ -201,8 +203,6 @@ export function ReviewsView({
           businessId={businessId}
           businessName={reviews.businessName}
           placeId={reviews.placeId}
-          rating={reviews.rating}
-          reviewCount={reviews.reviewCount}
           verifiedSocials={reviews.verifiedSocials}
           plan={plan}
         />

@@ -14,6 +14,8 @@ import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale, t } from "@/lib/i18n";
 import { BusinessScoreView, type AssistantEmbedData } from "./BusinessScoreView";
+import { withoutAdvice } from "@/lib/freeUpsell";
+import { freeAiAllowance } from "@/lib/freeAiUsage.server";
 import { WebsiteOnlyOverview } from "./WebsiteOnlyOverview";
 import { businessRowToScoringInput, parseWebsiteAnalysis } from "@/lib/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
@@ -97,7 +99,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     );
   }
 
-  const [history, recentSnapshots, assistantPageData, benchmark, gbpStatus, actionPlan, niche, upgrade, lastOwnerRescan, replyDrafts] = await Promise.all([
+  const [history, recentSnapshots, assistantPageData, benchmark, gbpStatus, actionPlan, niche, upgrade, lastOwnerRescan, replyDrafts, freePostai] = await Promise.all([
     getScoreHistory(params.id),
     getRecentScoreSnapshots(params.id, 2),
     getAssistantPageData(params.id),
@@ -117,10 +119,12 @@ export default async function BusinessPage({ params }: { params: { id: string } 
     (await getPlan()) === "free" ? lastOwnerRescanAt(params.id) : Promise.resolve(null),
     // Free: the AI review reply drafts left (DB only).
     (await getPlan()) === "free" ? getReplyDraftStatus(params.id) : Promise.resolve(null),
+    // Free: PostAI questions left this week (DB only).
+    (await getPlan()) === "free" ? freeAiAllowance(params.id, "postai") : Promise.resolve(null),
   ]);
   const bannerKind = niche ? nicheBannerKind(niche.resolved) : null;
   const freeGate = rescanGate(upgrade.plan === "free", null, lastOwnerRescan, new Date());
-  const freeRescanNextAt = freeGate.limit === "monthly" ? freeGate.nextAvailableAt : null;
+  const freeRescanNextAt = freeGate.limit === "weekly" ? freeGate.nextAvailableAt : null;
 
   const linkOptions = { referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk };
   const recommendations =
@@ -149,6 +153,12 @@ export default async function BusinessPage({ params }: { params: { id: string } 
               : t(locale, "dashboard.overview.assistantDataErrorFallback"),
         };
 
+  // Free: the page gets only what the Free Overview shows — the score
+  // without any fix advice, no recommendations, and PostAI's starter
+  // prompts without the business context — so no real fix text is ever
+  // in a Free page's HTML (lib/freeUpsell.ts).
+  const free = upgrade.plan === "free";
+
   return (
     <DashboardShell upgrade={upgrade} business={scored.business}>
       {niche && bannerKind && (
@@ -165,20 +175,21 @@ export default async function BusinessPage({ params }: { params: { id: string } 
       <BusinessScoreView
         businessId={params.id}
         business={scored.business}
-        result={scored.result}
+        result={free ? withoutAdvice(scored.result) : scored.result}
         history={history}
         recentSnapshots={recentSnapshots}
-        assistant={assistant}
+        assistant={free && assistant.status === "ok" ? { status: "showroom", starterPrompts: assistant.starterPrompts } : assistant}
         benchmark={benchmark}
         gbpConnected={gbpStatus.status === "ok" && gbpStatus.connected}
         profileTools={{ referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk }}
         now={new Date().toISOString()}
-        recommendations={recommendations}
+        recommendations={free ? null : recommendations}
         websiteFixCount={websiteFixCount}
         linkOptions={linkOptions}
         plan={upgrade.plan}
         freeRescanNextAt={freeRescanNextAt}
         replyDrafts={replyDrafts}
+        freePostai={freePostai}
       />
     </DashboardShell>
   );

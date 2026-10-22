@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconArrowDownRight, IconArrowUpRight, IconDownload, IconRefresh } from "@tabler/icons-react";
 import { Modal } from "@/components/ui/Modal";
+import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { formatDateTime, formatShortDate, t, useLocale, type MessageKey } from "@/lib/i18n";
@@ -155,6 +156,8 @@ export function SinceLastVisitBody({ businessId, data }: { businessId: string; d
           </div>
         )}
       </dl>
+      {/* The rank and reviews are Google Maps data. */}
+      {(data.rank || data.reviews.countChange !== null) && <GoogleMapsAttribution className="mt-0" />}
 
       {data.nextSteps.length > 0 && (
         <div>

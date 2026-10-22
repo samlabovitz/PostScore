@@ -56,8 +56,13 @@ describe("listing chips", () => {
     expect(html).toContain('href="https://jgdeli.com/"');
     expect(html).toContain("jgdeli.com");
     expect(html).toContain("View on Google Maps");
-    // Wraps on narrow screens instead of scrolling sideways.
-    expect(html).toContain("flex min-w-0 flex-wrap items-center gap-1.5");
+    // One row: never wraps; swipes sideways below 1024px, fits on one line from lg.
+    const row = html.match(/<div data-testid="listing-chips" class="([^"]+)"/)![1];
+    for (const c of ["flex-nowrap", "overflow-x-auto", "lg:overflow-visible"]) expect(row).toContain(c);
+    expect(row).not.toContain("flex-wrap ");
+    // The website chip shows the domain, truncates, and has the full URL on hover.
+    expect(html).toMatch(/<a href="https:\/\/jgdeli.com\/"[^>]*class="[^"]*max-w-\[16rem\][^"]*"[^>]*title="https:\/\/jgdeli.com\/"/);
+    expect(html).toMatch(/title="Open today 11:00 AM – 10:00 PM"/);
   });
 
   test("missing data is said plainly; a Facebook page is not a website — EN + ES", () => {

@@ -7,6 +7,12 @@ import {
   getStarterSiteTheme,
   type StarterSiteInput,
 } from "./starterSite";
+import { defaultOwnerHours, type OwnerHours } from "./ownerHours";
+
+const MONDAY_9_TO_5: OwnerHours = {
+  ...defaultOwnerHours(),
+  days: defaultOwnerHours().days.map((d, i) => (i === 0 ? { open: true, allDay: false, ranges: [{ open: "09:00", close: "17:00" }] } : { ...d, open: false, ranges: [] })),
+};
 
 const BASE: StarterSiteInput = {
   locale: "en",
@@ -19,17 +25,13 @@ const BASE: StarterSiteInput = {
   taglinePlacement: "below",
   phone: "+1 555-123-4567",
   address: "742 Evergreen Terrace, Springfield",
-  openingHours: ["Monday: 9:00 AM – 5:00 PM"],
-  openingHoursPeriods: null,
-  rating: 4.6,
-  reviewCount: 120,
-  ratingAsOf: "2026-10-16T15:00:00Z",
-  googleMapsUri: "https://maps.google.com/?cid=123",
+  ownerHours: MONDAY_9_TO_5,
+  placeId: "ChIJN1t_tDeuEmsRUsoyG83frY4",
   profileId: "restaurant",
   themeId: "ink",
   customAccent: null,
   fontId: "classic",
-  show: { address: true, phone: true, hours: true, rating: true },
+  show: { address: true, phone: true, hours: true },
   heroImage: null,
   contentImages: [],
 };
@@ -79,28 +81,28 @@ describe("buildStarterSiteHtml", () => {
     expect(html).not.toContain("tel:");
   });
 
-  test("omits hours/rating/address sections cleanly when none of the data exists", () => {
+  test("omits hours/reviews/address sections cleanly when none of the data exists", () => {
     const html = buildStarterSiteHtml({
       ...BASE,
       phone: null,
       address: null,
-      openingHours: null,
-      rating: null,
-      reviewCount: null,
-      googleMapsUri: null,
-      show: { address: true, phone: true, hours: true, rating: true },
+      ownerHours: null,
+      placeId: null,
+      show: { address: true, phone: true, hours: true },
     });
     expect(html).not.toContain("<section");
     expect(html).not.toContain('class="ctas"');
   });
 
-  test("shows the real Google reviews link only when googleMapsUri is on file", () => {
+  test("reviews: a link to the live Google listing by place ID — never Google's rating or count", () => {
     const withLink = buildStarterSiteHtml(BASE);
     expect(withLink).toContain("Read our reviews on Google");
+    expect(withLink).toContain("https://www.google.com/maps/search/?api=1&amp;query=Rosa&#39;s%20Cafe&amp;query_place_id=ChIJN1t_tDeuEmsRUsoyG83frY4");
+    expect(withLink).not.toMatch(/★|rating-badge|class="score"|aggregateRating|priceRange/);
 
-    const withoutLink = buildStarterSiteHtml({ ...BASE, googleMapsUri: null });
+    const withoutLink = buildStarterSiteHtml({ ...BASE, placeId: null });
     expect(withoutLink).not.toContain("Read our reviews on Google");
-    expect(withoutLink).toContain("4.6");
+    expect(withoutLink).not.toContain('id="reviews"');
   });
 
   test("CTA wording is type-aware: booking language for salon/practitioner", () => {
@@ -340,20 +342,15 @@ describe("buildStarterSiteHtml: site language (locale)", () => {
     expect(html).toContain("Llame para reservar");
   });
 
-  test("Spanish hours use the real structured periods, not the English weekday lines", () => {
-    const html = buildStarterSiteHtml({
-      ...BASE,
-      locale: "es",
-      openingHoursPeriods: [{ open: { day: 1, hour: 9, minute: 0 }, close: { day: 1, hour: 17, minute: 0 } }],
-    });
-    // Structured hours render as a table (today highlighted).
+  test("Spanish hours: the owner's own hours, in Spanish", () => {
+    const html = buildStarterSiteHtml({ ...BASE, locale: "es" });
+    // A table (today highlighted).
     expect(html).toContain('<th scope="row">Lunes</th><td>9:00 a.m. – 5:00 p.m.</td>');
-    expect(html).not.toContain("Monday: 9:00 AM");
   });
 
-  test("Spanish falls back to the English hours lines when there's no structured data", () => {
-    const html = buildStarterSiteHtml({ ...BASE, locale: "es", openingHoursPeriods: null });
-    expect(html).toContain("Monday: 9:00 AM – 5:00 PM");
+  test("hours: only the owner's — none entered, no Hours section", () => {
+    const html = buildStarterSiteHtml({ ...BASE, ownerHours: null });
+    expect(html).not.toContain('id="hours"');
   });
 
   test("a Spanish site with no name falls back to the Spanish default business name", () => {

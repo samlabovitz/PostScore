@@ -12,6 +12,7 @@ import { IconArrowDown, IconArrowUp, IconChevronDown, IconSparkles } from "@tabl
 import { AnimatedScoreRing } from "@/components/overview/AnimatedScoreRing";
 import { jumpToAnchor } from "@/components/layout/AnchorHighlight";
 import { BREAKDOWN_ANCHOR } from "@/components/overview/ScoreBreakdownPanel";
+import { SeeHowToFix } from "@/components/overview/FixPlanUpsell";
 import { formatPoints } from "@/components/scoring/CategoryCard";
 import { GRADE_THRESHOLDS, type Grade, type Suggestion } from "@/lib/scoring";
 import { scoreChangeSinceLastScan } from "@/lib/overviewTiles";
@@ -200,6 +201,9 @@ export function ScoreBand({
                 <span className="text-[13px] font-medium text-paper">
                   {freeWaitingPoints === 1 ? t(locale, "dashboard.free.waitingPointsOne") : t(locale, "dashboard.free.waitingPoints", { points: freeWaitingPoints })}
                 </span>
+                {/* Free: the way to those points — the upgrade box after
+                    the Score breakdown. */}
+                <SeeHowToFix />
               </>
             ) : (
               <span className="text-[13px] font-medium text-paper">{t(locale, "dashboard.free.waitingNone")}</span>

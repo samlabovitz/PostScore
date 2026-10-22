@@ -95,6 +95,7 @@ import { browserRenderMonthlyCap, browserRendersThisMonth, MAX_BROWSER_RENDERS_P
 import type { rescanBusinessWithClient as RescanBusinessWithClientFn } from "../app/actions/scoring";
 import type { runAndSaveCompetitorScanWithClient as RunCompetitorScanFn } from "../app/actions/competitors";
 import { competitorScanCostRange, competitorScanTargets, NEARBY_CALLS_PER_SCAN } from "../lib/competitorScanPolicy";
+import { backgroundPlan } from "../lib/plan";
 import { nearbySearchCallCount } from "../lib/google/places";
 import {
   mergeBusinessEntries,
@@ -266,7 +267,9 @@ async function main() {
   const scanTimes = await latestCompetitorScanTimes(businesses.map((b) => b.id));
   const competitorTargets = new Set(
     competitorScanTargets(
-      businesses.map((b) => ({ id: b.id, latestCompetitorScanAt: scanTimes.get(b.id) ?? null })),
+      // Free (today: every account — no checkout yet) is never refreshed
+      // after its first competitor scan (lib/plan.ts backgroundPlan).
+      businesses.map((b) => ({ id: b.id, latestCompetitorScanAt: scanTimes.get(b.id) ?? null, plan: backgroundPlan((b as { owner_id?: string }).owner_id ?? null) })),
       { withCompetitors, competitorsOnly },
       new Date()
     )

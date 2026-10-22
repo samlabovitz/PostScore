@@ -54,6 +54,9 @@ export type SignElement =
    * link on the front and the Google listing on the back). */
   | { kind: "qr"; x: number; y: number; size: number; qr: string; ink: string; star: string }
   | { kind: "logo"; x: number; y: number; w: number; h: number }
+  /** Google's "Google Maps" attribution logo (the report PDF), drawn from
+   * Google's own file, unmodified (lib/google/mapsLogoPng.ts). */
+  | { kind: "googleMapsLogo"; x: number; y: number; h: number }
   | { kind: "line"; x1: number; y1: number; x2: number; y2: number; color: string; width: number; dash: boolean; dots?: boolean };
 
 export interface SignPanel {

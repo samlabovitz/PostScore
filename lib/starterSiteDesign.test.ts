@@ -5,7 +5,6 @@ import {
   buildStarterSiteHtml,
   cityFromAddress,
   hasStorefront,
-  monthYear,
   starterSitePalette,
   type StarterSiteInput,
 } from "./starterSite";
@@ -43,15 +42,9 @@ const SALON: StarterSiteInput = {
   taglinePlacement: "below",
   phone: "+1 914-591-3737",
   address: "20 W Main St #1, Irvington, NY 10533, USA",
-  openingHours: null,
-  openingHoursPeriods: null,
   ownerHours: WEEK,
   timeZone: "America/New_York",
-  rating: 4.7,
-  reviewCount: 10,
-  ratingAsOf: "2026-10-16T15:00:00Z",
-  googleMapsUri: "https://maps.google.com/?cid=111",
-  priceLevel: null,
+  placeId: "ChIJ_salon111",
   socialLinks: [],
   year: 2026,
   profileId: "salon",
@@ -59,7 +52,7 @@ const SALON: StarterSiteInput = {
   customAccent: null,
   fontId: "classic",
   accentStyle: "dots",
-  show: { address: true, phone: true, hours: true, rating: true },
+  show: { address: true, phone: true, hours: true },
   heroImage: null,
   contentImages: [],
 };
@@ -155,36 +148,32 @@ describe("open now (the exact script the page runs)", () => {
 });
 
 describe("only real data on the page", () => {
-  test("hero: name, category + city, Call now, Get directions, rating badge only at 4.0+", () => {
+  test("hero: name, category + city, Call now, Get directions — no Google rating badge", () => {
     const html = buildStarterSiteHtml(SALON);
     expect(html).toContain("<h1>Hudson Shears</h1>");
     expect(html).toContain('<div class="category">Beauty salon in Irvington, NY</div>');
     expect(html).toContain('href="tel:+19145913737">');
     expect(html).toContain("Call now</a>");
     expect(html).toContain("Get directions</a>");
-    expect(html).toContain('class="rating-badge"');
-    expect(html).toContain("4.7 · 10 Google reviews · Oct 2026");
-    const low = buildStarterSiteHtml({ ...SALON, rating: 3.9 });
-    expect(low).not.toContain('class="rating-badge"');
-    expect(low).toContain("3.9★ from 10 Google reviews · as of Oct 2026");
+    expect(html).not.toContain('class="rating-badge"');
   });
 
-  test("at a glance: area only from a recognizable address, price only when Google has one", () => {
+  test("at a glance: area only from a recognizable address; never Google's price level", () => {
     expect(cityFromAddress("20 W Main St #1, Irvington, NY 10533, USA")).toBe("Irvington, NY");
     expect(cityFromAddress("742 Evergreen Terrace, Springfield")).toBeNull();
     expect(cityFromAddress(null)).toBeNull();
-    const none = buildStarterSiteHtml(SALON);
-    expect(none).not.toContain("Prices</div>");
-    const priced = buildStarterSiteHtml({ ...SALON, priceLevel: "PRICE_LEVEL_MODERATE" });
-    expect(priced).toContain('Prices</div><div class="tile-value">$$</div>');
-    expect(priced).toContain('"priceRange":"$$"');
+    const html = buildStarterSiteHtml(SALON);
+    expect(html).not.toContain("Prices</div>");
+    expect(html).not.toContain("priceRange");
     expect(buildStarterSiteHtml({ ...SALON, address: "Somewhere" })).not.toContain("Area</div>");
   });
 
-  test("reviews: real rating, partial stars, count, link to Google — never quoted review text", () => {
+  test("reviews: a link to the live listing — never Google's rating, stars, count or review text", () => {
     const html = buildStarterSiteHtml(SALON);
-    expect(html).toContain('<span class="score">4.7</span>');
-    expect(html).toContain('style="width:70%"');
+    expect(html).not.toContain('class="score"');
+    expect(html).not.toContain('style="width:');
+    expect(html).not.toMatch(/\d+ Google reviews?|★/);
+    expect(html).toContain("See what customers say on Google");
     expect(html).toContain("Read our reviews on Google →");
     expect(html).not.toMatch(/<blockquote|“[^”]+”/);
     expect(html).not.toContain("aggregateRating");
@@ -193,7 +182,7 @@ describe("only real data on the page", () => {
   test("location without a map key: address + Open in Google Maps, no iframe", () => {
     const html = buildStarterSiteHtml(SALON);
     expect(html).toContain("Open in Google Maps →");
-    expect(html).toContain('href="https://maps.google.com/?cid=111"');
+    expect(html).toContain('href="https://www.google.com/maps/search/?api=1&amp;query=Hudson%20Shears&amp;query_place_id=ChIJ_salon111"');
     expect(html).not.toContain("<iframe");
     expect(html).not.toContain("output=embed");
   });
@@ -255,10 +244,7 @@ describe("our own website checks on the generated page", () => {
         category: "Liquor store",
         phone: "+1 302-800-5116",
         address: "246 E Delaware Ave, Newark, DE 19711, USA",
-        rating: 4.5,
-        reviewCount: 15,
         profileId: "liquor_store",
-        priceLevel: "PRICE_LEVEL_INEXPENSIVE",
         themeId: "sky",
         accentStyle: "waves",
       },
@@ -272,8 +258,6 @@ describe("our own website checks on the generated page", () => {
         category: "Cafetería",
         phone: "+1 305-555-0142",
         address: "100 SW 8th St, Miami, FL 33130, USA",
-        rating: 4.2,
-        reviewCount: 88,
         profileId: "cafe",
         themeId: "sand",
         accentStyle: "shapes",
@@ -329,44 +313,21 @@ describe("our own website checks on the generated page", () => {
   });
 });
 
-describe("ratings can't go stale in a downloaded file", () => {
-  test("toggle off (the default): no rating number anywhere — just a link to Google", () => {
-    const html = buildStarterSiteHtml({ ...SALON, show: { ...SALON.show, rating: false } });
-    expect(html).not.toMatch(/4\.7/);
-    expect(html).not.toContain('class="rating-badge"');
-    expect(html).not.toContain('class="score"');
-    expect(html).not.toMatch(/\d+ Google reviews?/);
-    expect(html).toContain("See what customers say on Google");
-    expect(html).toContain("Read our reviews on Google →");
-  });
-
-  test("toggle on: the rating with its date, in the block and the hero badge", () => {
-    const html = buildStarterSiteHtml(SALON);
-    expect(html).toContain("4.7★ from 10 Google reviews · as of Oct 2026");
-    expect(html).toContain("4.7 · 10 Google reviews · Oct 2026");
-    const es = buildStarterSiteHtml({ ...SALON, locale: "es" });
-    expect(es).toContain("4.7★ de 10 reseñas de Google · a octubre de 2026");
-  });
-
-  test("no date known: the number isn't printed at all", () => {
-    const html = buildStarterSiteHtml({ ...SALON, ratingAsOf: null });
-    expect(html).not.toMatch(/4\.7/);
-    expect(html).toContain("See what customers say on Google");
-  });
-
-  test("the month is the business's own (a late-night scan stays in its month)", () => {
-    expect(monthYear("2026-11-01T02:00:00Z", "en", "America/Los_Angeles")).toBe("Oct 2026");
-    expect(monthYear("2026-11-01T02:00:00Z", "es", "America/New_York")).toBe("octubre de 2026");
-  });
-
-  test("schema.org: LocalBusiness with name, address, phone, hours — never aggregateRating or reviews", () => {
-    for (const rating of [true, false]) {
-      const html = buildStarterSiteHtml({ ...SALON, show: { ...SALON.show, rating } });
-      const ld = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)![1]);
-      expect(ld).toMatchObject({ "@type": "LocalBusiness", name: "Hudson Shears", telephone: SALON.phone, address: SALON.address });
-      expect(ld.openingHoursSpecification.length).toBeGreaterThan(0);
-      expect(html).not.toMatch(/aggregateRating|"review"|ratingValue|reviewCount/);
+describe("no Google content on the owner's own site", () => {
+  test("no Google rating, count, stars or price anywhere — just a link to Google", () => {
+    for (const locale of ["en", "es"] as const) {
+      const html = buildStarterSiteHtml({ ...SALON, locale });
+      expect(html).not.toMatch(/rating-badge|class="score"|\d+ (Google reviews?|reseñas de Google)|★|priceRange/);
     }
+    expect(buildStarterSiteHtml(SALON)).toContain("Read our reviews on Google →");
+  });
+
+  test("schema.org: LocalBusiness with name, address, phone, the owner's hours — never aggregateRating or reviews", () => {
+    const html = buildStarterSiteHtml(SALON);
+    const ld = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)![1]);
+    expect(ld).toMatchObject({ "@type": "LocalBusiness", name: "Hudson Shears", telephone: SALON.phone, address: SALON.address });
+    expect(ld.openingHoursSpecification.length).toBeGreaterThan(0);
+    expect(html).not.toMatch(/aggregateRating|"review"|ratingValue|reviewCount/);
   });
 });
 

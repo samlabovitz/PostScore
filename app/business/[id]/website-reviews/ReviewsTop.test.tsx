@@ -9,7 +9,7 @@ vi.mock("next/navigation", () => ({
 
 import { LocaleProvider } from "@/lib/i18n";
 import { ReviewsView } from "./ReviewsView";
-import { SignStudio, ratingOption } from "./SignStudio";
+import { SignStudio } from "./SignStudio";
 import { scoreBusiness } from "@/lib/scoring";
 import { scoringInput } from "@/emails/sampleMonthlyReportContent";
 import { buildGoogleReviewUrl, shortReviewLink } from "@/lib/reviews";
@@ -114,7 +114,7 @@ describe("plan tiers on the page", () => {
 });
 
 describe("Design your review sign", () => {
-  const content = { businessName: "Modern Liquors", rating: 4.5, reviewCount: 15, verifiedSocials: [{ platform: "Instagram", url: "instagram.com/modernliquors" }] };
+  const content = { businessName: "Modern Liquors", verifiedSocials: [{ platform: "Instagram", url: "instagram.com/modernliquors" }] };
   function renderStudio(access: "basic" | "studio", locale: "en" | "es" = "en", over: Partial<typeof content> = {}, initialTab?: string) {
     return renderToStaticMarkup(
       <LocaleProvider locale={locale} timeZone="America/New_York">
@@ -164,11 +164,9 @@ describe("Design your review sign", () => {
     expect(renderStudio("studio", "en", {}, "text")).toMatch(/<option value="instagram.com\/modernliquors">Instagram: instagram.com\/modernliquors<\/option>/);
   });
 
-  test("Follow us explains when there's no verified profile; rating only for 4.0★+", () => {
+  test("Follow us explains when there's no verified profile; no Google rating option", () => {
     expect(text(renderStudio("studio", "en", { verifiedSocials: [] }, "text"))).toContain("No verified social profiles yet");
-    expect(ratingOption(content, "en")).toEqual({ allowed: true, hint: "Your real Google rating: 4.5★" });
-    expect(ratingOption({ ...content, rating: 3.9 }, "en").allowed).toBe(false);
-    expect(renderStudio("studio", "en", { rating: 3.9 }, "text")).toMatch(/type="checkbox" disabled=""[^>]*\/>[\s\S]{0,200}Show star rating/);
+    for (const locale of ["en", "es"] as const) expect(text(renderStudio("studio", locale, {}, "text"))).not.toMatch(/star rating|calificación|★/i);
   });
 
   test("Spanish", () => {
@@ -185,7 +183,7 @@ describe("review sign designer: Ask PostAI", () => {
   test("'Confused? Ask PostAI →' opens PostAI with the review-sign question", () => {
     const html = renderToStaticMarkup(
       <LocaleProvider locale="en" timeZone="America/New_York">
-        <SignStudio access="studio" businessId="b1" reviewUrl={URL} content={{ businessName: "M", rating: 4.5, reviewCount: 15, verifiedSocials: [] }} basic={defaultBasicChoices()} onBasicChange={() => {}} design={defaultDesign("en")} onDesignChange={() => {}} logo={null} onLogoFile={() => {}} logoNote={null} onClose={() => {}} />
+        <SignStudio access="studio" businessId="b1" reviewUrl={URL} content={{ businessName: "M", verifiedSocials: [] }} basic={defaultBasicChoices()} onBasicChange={() => {}} design={defaultDesign("en")} onDesignChange={() => {}} logo={null} onLogoFile={() => {}} logoNote={null} onClose={() => {}} />
       </LocaleProvider>
     );
     expect(html).toMatch(/href="\/business\/b1\?ask=review_sign"[^>]*>Confused\? Ask PostAI →/);

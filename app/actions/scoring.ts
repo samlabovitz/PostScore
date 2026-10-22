@@ -5,7 +5,8 @@ import { withTimeZone } from "@/lib/businessTimeZone";
 import { rescanGate } from "@/lib/rescanPolicy";
 import { getPlan } from "@/lib/premium";
 import { diffBreakdowns } from "@/lib/scoreChanges";
-import { ensureFirstCompetitorScanWithClient } from "@/app/actions/competitors";
+import { refreshCompetitorsOnRescanWithClient } from "@/app/actions/competitors";
+import type { Plan } from "@/lib/plan";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -286,7 +287,7 @@ export type RescanBusinessResult =
        * and how many checks changed — for the honest summary toast. */
       summary?: RescanSummary;
     }
-  | { status: "too_soon"; nextAvailableAt: string; limit?: "daily" | "monthly" }
+  | { status: "too_soon"; nextAvailableAt: string; limit?: "daily" | "weekly" }
   | { status: "not_found" }
   | { status: "unauthenticated" }
   | { status: "no_results" }
@@ -317,6 +318,12 @@ export interface RescanSummary {
    * point difference isn't the business's doing. */
   scoringUpdated: boolean;
   checksChanged: number;
+  /** Whether this re-scan also refreshed competitors (by plan — Free
+   * never, Grow weekly, Premium/Multi always). */
+  competitors?: "refreshed" | "skipped";
+  /** The plan the re-scan ran on — the toast says what that means for
+   * competitors. */
+  plan?: Plan;
 }
 
 type SavedScore = { total: number; scoring_version: string; breakdown_json: ScoreBreakdown; created_at: string };
@@ -356,9 +363,10 @@ export async function rescanBusiness(businessId: string): Promise<RescanBusiness
   }
 
   // One re-scan per business per 24 hours, and on Free one owner re-scan
-  // per 30 days (lib/rescanPolicy.ts rescanGate) — checked before any paid
+  // per 7 days (lib/rescanPolicy.ts rescanGate) — checked before any paid
   // call. Website-only re-checks don't count.
-  const free = (await getPlan()) === "free";
+  const plan = await getPlan();
+  const free = plan === "free";
   // Loaded here (admin client, server only) so importing this file stays light.
   const { lastOwnerRescanAt, logOwnerRescan } = await import("@/lib/placesSearchBudget.server");
   const [before, lastFull, lastOwner] = await Promise.all([
@@ -372,11 +380,12 @@ export async function rescanBusiness(businessId: string): Promise<RescanBusiness
   const result = await rescanBusinessWithClient(supabase, businessId);
   // One Places Details call — logged for every plan (Free's monthly count).
   if (result.status === "ok") await logOwnerRescan(businessId);
-  // Part B: the business's first competitor scan, once ever (no-op when
-  // one is already saved). Interactive only — the bulk re-scan script and
-  // the monthly report call rescanBusinessWithClient directly.
-  if (result.status === "ok") await ensureFirstCompetitorScanWithClient(supabase, businessId);
   if (result.status !== "ok") return result;
+  // Competitors, by plan: Premium/Multi every re-scan, Grow weekly, Free
+  // never (Free re-scans make no Nearby Search call). Interactive only —
+  // the bulk re-scan script and the monthly report call
+  // rescanBusinessWithClient directly.
+  const competitors = await refreshCompetitorsOnRescanWithClient(supabase, businessId, plan);
 
   const after = await latestScore(supabase, businessId);
   if (!after) return result;
@@ -388,6 +397,8 @@ export async function rescanBusiness(businessId: string): Promise<RescanBusiness
       scoreAfter: after.total,
       scoringUpdated,
       checksChanged: before && !scoringUpdated ? diffBreakdowns(before.breakdown_json, after.breakdown_json).length : 0,
+      competitors,
+      plan,
     },
   };
 }

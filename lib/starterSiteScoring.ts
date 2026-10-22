@@ -24,10 +24,8 @@ export interface StarterSiteTemplateData {
   category: string | null;
   phone: string | null;
   address: string | null;
-  openingHours: string[] | null;
-  rating: number | null;
-  reviewCount: number | null;
-  googleMapsUri: string | null;
+  /** Storable; the template's reviews link uses it. */
+  placeId: string | null;
   profileId: string;
 }
 
@@ -99,13 +97,10 @@ export function buildTemplateScoringInput(
     taglinePlacement: "below",
     phone: data.phone,
     address: data.address,
-    openingHours: data.openingHours,
-    // Not needed for a scoring-only estimate — never shown to the
-    // owner, and analyzeWebsiteHtml() doesn't parse hours text.
-    openingHoursPeriods: null,
-    rating: data.rating,
-    reviewCount: data.reviewCount,
-    googleMapsUri: data.googleMapsUri,
+    // The site shows only hours the owner enters (none by default), and
+    // no Google rating; analyzeWebsiteHtml() reads neither.
+    ownerHours: null,
+    placeId: data.placeId,
     profileId: data.profileId,
     themeId: STARTER_SITE_THEMES[0].id,
     customAccent: null,
@@ -113,8 +108,7 @@ export function buildTemplateScoringInput(
     show: {
       address: !!data.address,
       phone: !!data.phone,
-      hours: !!data.openingHours && data.openingHours.length > 0,
-      rating: data.rating !== null,
+      hours: false,
     },
     // Compares against the builder's default, no-customization state —
     // no photos uploaded yet.

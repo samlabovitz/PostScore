@@ -16,26 +16,21 @@ const PROPS = {
   category: "Liquor store",
   phone: "+1 302-800-5116",
   address: "246 E Delaware Ave, Newark, DE 19711, USA",
-  openingHours: ["Monday: 11:00 AM – 10:00 PM"],
   openingHoursPeriods: [{ open: { day: 1, hour: 11, minute: 0 }, close: { day: 1, hour: 22, minute: 0 } }],
   timeZone: "America/New_York",
-  rating: 4.5,
-  reviewCount: 15,
-  googleMapsUri: "https://maps.google.com/?cid=5",
-  priceLevel: "PRICE_LEVEL_INEXPENSIVE",
+  placeId: "ChIJ_modern",
   socialLinks: [{ platform: "Instagram", url: "instagram.com/modernliquors" }],
   year: 2026,
-  ratingAsOf: "2026-10-16T15:00:00Z",
   storefront: true,
   mapEmbed: { key: "test-embed-key", placeId: "ChIJ_modern" },
   profileId: "liquor_store",
   builderOfferReason: "no_website" as const,
 };
 
-const render = (locale: "en" | "es" = "en") =>
+const render = (locale: "en" | "es" = "en", over: Partial<Parameters<typeof StarterSiteBuilder>[0]> = {}) =>
   renderToStaticMarkup(
     <LocaleProvider locale={locale} timeZone="America/New_York">
-      <StarterSiteBuilder {...PROPS} />
+      <StarterSiteBuilder {...PROPS} {...over} />
     </LocaleProvider>
   );
 
@@ -55,17 +50,11 @@ describe("starter site builder", () => {
       taglinePlacement: "below",
       phone: PROPS.phone,
       address: PROPS.address,
-      openingHours: PROPS.openingHours,
-      openingHoursPeriods: PROPS.openingHoursPeriods,
       ownerHours: null,
       timeZone: PROPS.timeZone,
-      rating: PROPS.rating,
-      reviewCount: PROPS.reviewCount,
-      googleMapsUri: PROPS.googleMapsUri,
-      priceLevel: PROPS.priceLevel,
+      placeId: PROPS.placeId,
       socialLinks: PROPS.socialLinks,
       year: 2026,
-      ratingAsOf: PROPS.ratingAsOf,
       storefront: true,
       mapEmbed: PROPS.mapEmbed,
       profileId: PROPS.profileId,
@@ -73,7 +62,7 @@ describe("starter site builder", () => {
       customAccent: null,
       fontId: "classic",
       accentStyle: "dots",
-      show: { address: true, phone: true, hours: true, rating: false },
+      show: { address: true, phone: true, hours: false },
       heroImage: null,
       contentImages: [],
     });
@@ -84,14 +73,12 @@ describe("starter site builder", () => {
     expect(srcDoc).toContain("maps/embed/v1/place?key=test-embed-key&amp;q=place_id:ChIJ_modern");
   });
 
-  test("\"Show my rating\" is off by default, with the re-download note", () => {
+  test("no Google rating, count or price on the site, and no “Show my rating” option", () => {
     const html = render();
-    const label = html.indexOf("Show my rating");
-    const input = html.slice(html.lastIndexOf("<input", label), html.indexOf(">", html.lastIndexOf("<input", label)) + 1);
-    expect(input).toMatch(/^<input type="checkbox"/);
-    expect(input).not.toContain("checked");
-    expect(html).toContain("Downloaded sites don&#x27;t update — re-download after your rating changes.");
-    expect(html).not.toContain("4.5★");
+    const srcDoc = unescapeAttr(html.match(/srcDoc="([^"]*)"/i)![1]);
+    expect(srcDoc).not.toMatch(/4[.,]5\s*(★|·)|★|Google reviews|reseñas de Google|priceRange|Prices<\/div>|rating-badge/);
+    expect(html).not.toContain("Show my rating");
+    expect(html).not.toContain("re-download after your rating changes");
   });
 
   test("themes grouped Classic · Bold · Light · Earthy, all 18; Style accents with 4 options + None", () => {

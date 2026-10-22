@@ -8,7 +8,9 @@ const state = vi.hoisted(() => ({
   user: { id: "u1" } as { id: string } | null,
   owns: true,
   plan: "free" as Plan,
-  rows: [] as Array<{ id: string; business_id: string; status: string; reply?: string; input_tokens?: number | null; output_tokens?: number | null; stars?: number | null }>,
+  rows: [] as Array<{ id: string; business_id: string; status: string; created_at?: string; reply?: string; input_tokens?: number | null; output_tokens?: number | null; stars?: number | null }>,
+  /** The week's anchor (the last owner re-scan / first scan). */
+  anchor: null as string | null,
   tableMissing: false,
   ai: "Thank you so much for the kind words about your haircut, Ana! We're glad you loved it." as string | Error,
   aiCalls: [] as Array<{ system: string; userMessage: string }>,
@@ -28,13 +30,22 @@ vi.mock("@/lib/supabase/admin", () => ({
         select: () => ({
           single: async () => {
             if (state.tableMissing) return { data: null, error: { message: "relation does not exist" } };
-            const r = { id: `r${state.nextId++}`, ...row } as (typeof state.rows)[number];
+            const r = { id: `r${state.nextId++}`, created_at: new Date().toISOString(), ...row } as (typeof state.rows)[number];
             state.rows.push(r);
             return { data: { id: r.id }, error: null };
           },
         }),
       }),
-      select: () => ({ eq: async (_c: string, id: string) => (state.tableMissing ? { count: null, error: { message: "missing" } } : { count: state.rows.filter((r) => r.business_id === id).length, error: null }) }),
+      select: () => {
+        const filters: Array<(r: (typeof state.rows)[number]) => boolean> = [];
+        const q = {
+          eq: (_c: string, id: string) => (filters.push((r) => r.business_id === id), q),
+          gte: (_c: string, since: string) => (filters.push((r) => (r.created_at ?? new Date().toISOString()) >= since), q),
+          then: (resolve: (v: unknown) => void) =>
+            resolve(state.tableMissing ? { count: null, error: { message: "missing" } } : { count: state.rows.filter((r) => filters.every((f) => f(r))).length, error: null }),
+        };
+        return q;
+      },
       delete: () => ({ eq: async (_c: string, id: string) => void (state.rows = state.rows.filter((r) => r.id !== id)) }),
       update: (patch: Record<string, unknown>) => ({ eq: async (_c: string, id: string) => void Object.assign(state.rows.find((r) => r.id === id)!, patch) }),
     }),
@@ -49,6 +60,10 @@ vi.mock("@/lib/anthropicClient", () => ({
   },
 }));
 vi.mock("@/lib/premium", () => ({ getPlan: async () => state.plan }));
+vi.mock("@/lib/freeAiUsage.server", async () => ({
+  ...(await vi.importActual<typeof import("@/lib/freeAiUsage.server")>("@/lib/freeAiUsage.server")),
+  freeAllowanceAnchor: async () => state.anchor,
+}));
 
 import { cleanReply, cleanReviewInput, draftsLeft, FREE_REPLY_DRAFTS, googleReviewsHref, replyBreaksRules, replyDraftLimit, replySystemPrompt, replyUserMessage } from "./reviewReplies";
 import { draftReviewReply, getReplyDraftStatus } from "@/app/actions/reviewReplies";
@@ -67,17 +82,19 @@ beforeEach(() => {
   state.tableMissing = false;
   state.ai = "Thank you so much for the kind words about your haircut! We're glad you loved it.";
   state.aiCalls = [];
+  state.anchor = new Date(Date.now() - 2 * 86_400_000).toISOString();
 });
 
 describe("the rules (pure)", () => {
-  test("3 free drafts per business on Free and Grow; Premium and Multi unlimited", () => {
+  test("per week: 3 on Free, 10 on Grow; Premium and Multi unlimited", () => {
     expect(FREE_REPLY_DRAFTS).toBe(3);
     expect(replyDraftLimit("free")).toBe(3);
-    expect(replyDraftLimit("grow")).toBe(3);
+    expect(replyDraftLimit("grow")).toBe(10);
     expect(replyDraftLimit("premium")).toBeNull();
     expect(replyDraftLimit("multi")).toBeNull();
     expect(draftsLeft("free", 1)).toBe(2);
-    expect(draftsLeft("grow", 5)).toBe(0);
+    expect(draftsLeft("grow", 5)).toBe(5);
+    expect(draftsLeft("grow", 12)).toBe(0);
     expect(draftsLeft("premium", 99)).toBeNull();
   });
 
@@ -110,42 +127,46 @@ describe("the rules (pure)", () => {
 });
 
 describe("the server counter (review_reply_drafts)", () => {
-  test("Free: 3 drafts, then 'limit' — PostAI isn't called past the limit; each draft records its tokens", async () => {
-    for (const left of [2, 1, 0]) {
-      const r = await draftReviewReply("b1", "Great haircut, very friendly!", 5);
-      expect(r).toEqual({ status: "ok", reply: "Thank you so much for the kind words about your haircut! We're glad you loved it.", left });
-    }
-    expect(state.rows.map((r) => [r.status, r.input_tokens, r.output_tokens])).toEqual([
-      ["ok", 320, 60],
-      ["ok", 320, 60],
-      ["ok", 320, 60],
-    ]);
-    expect(await draftReviewReply("b1", "Another review", null)).toEqual({ status: "limit" });
-    expect(state.aiCalls).toHaveLength(3);
-    expect(state.rows).toHaveLength(3);
-    expect(await getReplyDraftStatus("b1")).toEqual({ status: "ok", used: 3, left: 0 });
+  const old = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+
+  test("Grow: 10 drafts a week (the Free re-scan clock), then 'limit' — PostAI isn't called past it; last week's don't count; each draft records its tokens", async () => {
+    state.plan = "grow";
+    // 9 this week, 5 last week.
+    state.rows = [
+      ...Array.from({ length: 9 }, (_, i) => ({ id: `w${i}`, business_id: "b1", status: "ok", created_at: old(1) })),
+      ...Array.from({ length: 5 }, (_, i) => ({ id: `o${i}`, business_id: "b1", status: "ok", created_at: old(5) })),
+    ];
+    const resetsAt = new Date(Date.parse(state.anchor!) + 7 * 86_400_000).toISOString();
+    expect(await draftReviewReply("b1", "Great haircut, very friendly!", 5)).toEqual({ status: "ok", reply: "Thank you so much for the kind words about your haircut! We're glad you loved it.", left: 0, resetsAt });
+    expect(state.rows.at(-1)).toMatchObject({ status: "ok", input_tokens: 320, output_tokens: 60 });
+    expect(await draftReviewReply("b1", "Another review", null)).toEqual({ status: "limit", resetsAt });
+    expect(state.aiCalls).toHaveLength(1);
+    expect(await getReplyDraftStatus("b1")).toEqual({ status: "ok", used: 10, left: 0, resetsAt });
   });
 
-  test("Grow has the same 3; Premium and Multi are unlimited", async () => {
+  test("Grow has 10 a week; Premium and Multi are unlimited", async () => {
+    expect(replyDraftLimit("grow")).toBe(10);
     state.plan = "grow";
-    state.rows = [1, 2, 3].map((i) => ({ id: `x${i}`, business_id: "b1", status: "ok" }));
+    state.rows = Array.from({ length: 10 }, (_, i) => ({ id: `x${i}`, business_id: "b1", status: "ok", created_at: old(1) }));
     expect((await draftReviewReply("b1", "Nice", null)).status).toBe("limit");
     for (const plan of ["premium", "multi"] as Plan[]) {
       state.plan = plan;
       const r = await draftReviewReply("b1", "Nice place", 4);
       expect(r).toMatchObject({ status: "ok", left: null });
     }
-    expect(await getReplyDraftStatus("b1")).toEqual({ status: "ok", used: 5, left: null });
+    expect(await getReplyDraftStatus("b1")).toEqual({ status: "ok", used: 12, left: null });
   });
 
   test("two clicks at once can't both pass the limit (the row is reserved before counting)", async () => {
-    state.rows = [1, 2].map((i) => ({ id: `x${i}`, business_id: "b1", status: "ok" }));
+    state.plan = "grow";
+    state.rows = Array.from({ length: 9 }, (_, i) => ({ id: `x${i}`, business_id: "b1", status: "ok", created_at: old(1) }));
     const results = await Promise.all([draftReviewReply("b1", "One", null), draftReviewReply("b1", "Two", null)]);
     expect(results.filter((r) => r.status === "ok")).toHaveLength(1);
-    expect(state.rows).toHaveLength(3);
+    expect(state.rows).toHaveLength(10);
   });
 
   test("a failed or rule-breaking draft doesn't use up a free reply", async () => {
+    state.plan = "grow";
     state.ai = new Error("overloaded");
     expect(await draftReviewReply("b1", "Great", 5)).toEqual({ status: "unavailable" });
     state.ai = "Thanks! Here's 10% off your next visit.";
@@ -154,6 +175,7 @@ describe("the server counter (review_reply_drafts)", () => {
   });
 
   test("the pasted review is never saved — only the stars and the reply", async () => {
+    state.plan = "grow";
     await draftReviewReply("b1", "SECRET-REVIEW-TEXT from a customer", 2);
     expect(JSON.stringify(state.rows)).not.toContain("SECRET-REVIEW-TEXT");
     expect(state.rows[0]).toMatchObject({ stars: 2, status: "ok" });
@@ -225,8 +247,9 @@ describe("the drafter", () => {
     ]);
   });
 
-  test("Grow: the same 3, plus 'Unlimited with Premium'; Premium/Multi: unlimited, no promo", () => {
-    expect(text(render("grow", { status: "ok", used: 0, left: 3 }))).toMatch(/3 of 3 free replies left[\s\S]*Unlimited with Premium/);
+  test("Grow: 10 a week with the reset date, plus 'Unlimited with Premium'; at 0 the weekly reset message; Premium/Multi: unlimited, no promo", () => {
+    expect(text(render("grow", { status: "ok", used: 3, left: 7, resetsAt: "2026-10-27T15:00:00.000Z" }))).toMatch(/7 of 10 drafts left this week · resets Oct 27, 2026[\s\S]*Unlimited with Premium/);
+    expect(text(render("grow", { status: "ok", used: 10, left: 0, resetsAt: "2026-10-27T15:00:00.000Z" }))).toContain("You've used this week's 10 drafts. They reset Oct 27, 2026 — or draft unlimited replies on Premium.");
     for (const plan of ["premium", "multi"] as Plan[]) {
       const t = text(render(plan, { status: "ok", used: 12, left: null }));
       expect(t, plan).toContain("Unlimited replies");
@@ -258,23 +281,26 @@ describe("the drafter", () => {
 });
 
 describe("plan copy and PostAI", () => {
-  test("Free's bullets add '3 free AI review replies to try'; Premium: unlimited + Google connect coming soon; the Compare row", () => {
-    expect(PLAN_COPY.free.bullets.map((k) => t("en", k))).toContain("3 free AI review replies to try");
+  test("Free's bullets add '3 PostAI questions and 3 AI review replies a week'; Premium: unlimited + Google connect coming soon; the Compare row (3 a week / 10 a week)", () => {
+    expect(PLAN_COPY.free.bullets.map((k) => t("en", k))).toContain("3 PostAI questions and 3 AI review replies a week");
     expect(t("en", "dashboard.settings.plans.bullet.premium.replies")).toBe("Unlimited replies; with Google connect, every unanswered review + posting for you (coming soon)");
     const row = COMPARE_ROWS.find((r) => r.key.endsWith(".replies"))!;
     expect(t("en", row.key)).toBe("AI review replies");
-    expect([row.cells.free, row.cells.grow, row.cells.premium, row.cells.multi].map((c) => (c.kind === "text" ? t("en", c.key) : c.kind))).toEqual(["3 to try", "3 to try", "Unlimited · auto-post coming soon", "Unlimited · auto-post coming soon"]);
+    expect([row.cells.free, row.cells.grow, row.cells.premium, row.cells.multi].map((c) => (c.kind === "text" ? t("en", c.key) : c.kind))).toEqual(["3 a week", "10 a week", "Unlimited · auto-post coming soon", "Unlimited · auto-post coming soon"]);
     expect(t("es", row.key)).toBe("Respuestas a reseñas con IA");
-    expect(t("es", "dashboard.settings.plans.bullet.free.replies")).toBe("3 respuestas a reseñas con IA gratis para probar");
+    expect(t("es", "dashboard.settings.plans.bullet.free.replies")).toBe("3 preguntas a PostAI y 3 respuestas a reseñas con IA por semana");
+    // Free's PostAI cell, too.
+    const postai = COMPARE_ROWS.find((r) => r.key.endsWith(".postai"))!;
+    expect(postai.cells.free.kind === "text" ? t("en", postai.cells.free.key) : postai.cells.free.kind).toBe("3 a week");
   });
 
-  test("PostAI knows: paste a review, 3 free (Free/Grow), unlimited on Premium/Multi, never posts today, nothing from Google", () => {
-    for (const s of ['"Reply to a review"', "pastes it in", "3 free drafts per business (lifetime)", "Premium and Multi are unlimited", "never say PostScore posts replies today", "the pasted review isn't saved"])
+  test("PostAI knows: paste a review, 3 a week on Free, 10 a week on Grow, unlimited on Premium/Multi, never posts today, nothing from Google", () => {
+    for (const s of ['"Reply to a review"', "pastes it in", "Free gets 3 drafts a week and Grow 10 a week per business", "10 AI review reply drafts a week", "Premium and Multi are unlimited", "never say PostScore posts replies today", "the pasted review isn't saved"])
       expect(ASSISTANT_SYSTEM_RULES).toContain(s);
   });
 
   test("docs: reply drafts, the compliance section and the launch checklist", () => {
     const doc = readFileSync("docs/product-structure.md", "utf8");
-    for (const s of ["**Reply to a review**", "## Google Maps Platform terms compliance — MUST fix before launch", "**Open questions for Google Maps Platform support.**", "**Estimated extra live-fetch cost per month**", "## Launch checklist", "review-reply-drafts.sql"]) expect(doc).toContain(s);
+    for (const s of ["**Reply to a review**", "## Google Maps Platform terms compliance — MUST fix before launch", "**Open questions for Google Maps Platform support**", "**Estimated extra live-fetch cost per month**", "## Launch checklist", "review-reply-drafts.sql"]) expect(doc).toContain(s);
   });
 });

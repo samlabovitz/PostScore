@@ -36,7 +36,6 @@ export interface SignDesign {
   customHeadline: string;
   subline: string;
   showName: boolean;
-  showRating: boolean;
   /** The verified social profile to print as "Follow us", by its address
    * — only ever one of the profiles we've verified (the server checks). */
   follow: string | null;
@@ -66,8 +65,6 @@ export const SIGN_LANGUAGES: SignLanguage[] = ["en", "es", "both"];
 
 export const CUSTOM_HEADLINE_MAX = 50;
 export const SUBLINE_MAX = 80;
-/** The real Google rating must be at least this to appear on a sign. */
-export const SIGN_RATING_MIN = 4.0;
 /** 1.5 inches — the smallest QR any size or option combination prints. */
 export const MIN_QR_POINTS = 108;
 /** Logos: what may be added, and what's remembered on this device. */
@@ -164,7 +161,6 @@ export const HEADLINES: Record<Exclude<SignHeadline, "custom">, { en: string; es
   howWeDid: { en: "Tell us how we did", es: "Cuéntenos cómo lo hicimos" },
 };
 export const FOOTER = { en: "Takes 30 seconds · Opens Google reviews", es: "Toma 30 segundos · Abre las reseñas de Google" };
-export const ON_GOOGLE = { en: "on Google", es: "en Google" };
 export const FOLLOW_US = { en: "Follow us", es: "Síganos" };
 export const MADE_WITH = "Made with PostScore";
 
@@ -187,7 +183,6 @@ export function defaultDesign(locale: "en" | "es"): SignDesign {
     customHeadline: "",
     subline: "",
     showName: true,
-    showRating: false,
     follow: null,
     language: locale,
     logoTop: false,
@@ -260,7 +255,6 @@ export function sanitizeDesign(input: unknown, locale: "en" | "es"): SignDesign 
     customHeadline: text(v.customHeadline, CUSTOM_HEADLINE_MAX),
     subline: text(v.subline, SUBLINE_MAX),
     showName: typeof v.showName === "boolean" ? v.showName : d.showName,
-    showRating: typeof v.showRating === "boolean" ? v.showRating : d.showRating,
     follow: typeof v.follow === "string" && v.follow.length <= 300 ? v.follow : null,
     language: pick(v.language, SIGN_LANGUAGES, d.language),
     logoTop: typeof v.logoTop === "boolean" ? v.logoTop : d.logoTop,
@@ -280,15 +274,8 @@ export function sanitizeBasicChoices(input: unknown): BasicChoices {
 
 export interface SignContent {
   businessName: string | null;
-  rating: number | null;
-  reviewCount: number | null;
   /** Social profiles verified as real (their link check found a profile). */
   verifiedSocials: Array<{ platform: string; url: string }>;
-}
-
-/** The star rating may appear only when Google's real rating is 4.0+. */
-export function ratingAllowed(rating: number | null, reviewCount: number | null): rating is number {
-  return rating !== null && rating >= SIGN_RATING_MIN && rating <= 5 && (reviewCount ?? 0) > 0;
 }
 
 export interface EffectiveDesign {
@@ -301,15 +288,16 @@ export interface EffectiveDesign {
  * What a plan actually prints for a requested design — the one rule the
  * PDF route enforces, whatever the browser sent. Free: nothing. Grow:
  * only its two choices (Style, Size) are read; everything else is the
- * fixed basic sign. Premium/Multi: the full design, with the rating and
- * "Follow us" kept honest against the real data.
+ * fixed basic sign. Premium/Multi: the full design, with "Follow us" kept
+ * honest against the real data. No sign ever prints the Google rating:
+ * printing Google Maps content off-platform isn't allowed (see the
+ * compliance section of docs/product-structure.md).
  */
 export function effectiveDesign(plan: Plan, requested: unknown, content: SignContent, locale: "en" | "es"): EffectiveDesign | null {
   const access = signAccess(plan);
   if (access === "none") return null;
   if (access === "basic") return { design: basicDesign(sanitizeBasicChoices(requested), locale), credit: true };
   const design = sanitizeDesign(requested, locale);
-  if (!ratingAllowed(content.rating, content.reviewCount)) design.showRating = false;
   if (design.follow && !content.verifiedSocials.some((s) => s.url === design.follow)) design.follow = null;
   return { design, credit: false };
 }

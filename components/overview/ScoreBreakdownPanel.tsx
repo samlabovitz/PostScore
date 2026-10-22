@@ -13,12 +13,13 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { IconArrowRight, IconChevronDown } from "@tabler/icons-react";
 import { CategoryCard, checkOutcome, formatPoints } from "@/components/scoring/CategoryCard";
+import { LockedFixRow } from "@/components/overview/FixPlanUpsell";
 import { WebsiteCoverageNote } from "@/components/scoring/WebsiteCoverageNote";
 import { ANCHOR_HIGHLIGHT_EVENT, anchorScrollBehavior } from "@/components/layout/AnchorHighlight";
 import { categoryBarShares, categoryOutcomeCounts, postaiTargetForCheck, wholeCategoryPoints } from "@/lib/overviewTiles";
 import { checkAnchorId, resolveLinkTarget, type LinkOptions } from "@/lib/postaiLinks";
 import { isMinorSpeedGap, type CategoryResult } from "@/lib/scoring";
-import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
+import { formatShortDate, t, tPlural, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export const BREAKDOWN_ANCHOR = "score-breakdown";
@@ -65,9 +66,12 @@ function CategorySummary({
   scoreBasis,
   websiteFixCount,
   points,
+  audit,
 }: {
   businessId: string;
   category: CategoryResult;
+  /** Free: a locked "How to fix this" row under the top issue. */
+  audit: boolean;
   hasWebsite: boolean;
   scoreBasis: number;
   websiteFixCount: number | null;
@@ -105,6 +109,7 @@ function CategorySummary({
             ? t(locale, "dashboard.overview.topIssue", { label: topIssue.label })
             : t(locale, "dashboard.overview.nothingLeftHere")}
       </p>
+      {audit && category.relativeScore !== null && topIssue && <LockedFixRow />}
       <WebsiteCoverageNote category={category} hasWebsite={hasWebsite} scoreBasis={scoreBasis} className="text-[12px] text-ink-soft" />
       {category.id === "website" && websiteFixCount !== null && (
         // The Website page's own fix count (same plan, same builder rule).
@@ -133,6 +138,7 @@ export function ScoreBreakdownPanel({
   linkOptions,
   audit = false,
   websiteFixCount = null,
+  lastScanAt = null,
 }: {
   businessId: string;
   categories: CategoryResult[];
@@ -141,16 +147,22 @@ export function ScoreBreakdownPanel({
   linkOptions?: LinkOptions;
   /** The Website page's fix count (lib/websiteFixes.ts), or null to hide it. */
   websiteFixCount?: number | null;
-  /** Free: open from the start (the audit), with no fix links — what's
-   * wrong and the points each costs, never how to fix it. */
+  /** Free (the audit): no fix links — what's wrong and the points each
+   * costs, never how to fix it; a locked "How to fix this" row instead.
+   * The checks start hidden behind an obvious gold "See all N checks"
+   * button and a clickable bottom strip. */
   audit?: boolean;
+  /** When the score was scanned — "As of your last scan, {date}". */
+  lastScanAt?: string | null;
 }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   // `mounted` keeps the rows in the page while the close animation runs.
-  // The audit (Free) starts open — same on the server and in the browser.
-  const [open, setOpen] = useState(audit);
-  const [mounted, setMounted] = useState(audit);
-  const [expanded, setExpanded] = useState(audit);
+  // Every plan starts collapsed — same on the server and in the browser.
+  const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const checkCount = categories.reduce((sum, c) => sum + c.checks.length, 0);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const fixLinks = audit ? {} : breakdownFixLinks(categories, businessId, locale, linkOptions);
   const wholePoints = wholeCategoryPoints(categories);
@@ -196,22 +208,42 @@ export function ScoreBreakdownPanel({
         <div>
           <h2 className="font-serif text-lg font-semibold text-ink">{t(locale, "dashboard.overview.breakdown.heading")}</h2>
           <p className="text-[12.5px] text-ink-soft">{t(locale, "dashboard.overview.breakdown.caption")}</p>
+          {lastScanAt && (
+            <p data-testid="breakdown-as-of" className="mt-0.5 text-[12px] text-ink-mute">
+              {t(locale, "dashboard.overview.breakdown.asOf", { date: formatShortDate(lastScanAt, locale, timeZone) })}
+            </p>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-paper-deep bg-white px-3 py-1.5 text-[13px] font-semibold text-ink transition-colors hover:border-ink-soft"
-        >
-          {open ? t(locale, "dashboard.overview.hideChecks") : t(locale, "dashboard.overview.showChecks")}
-          <IconChevronDown size={15} className={cn("transition-transform duration-300 motion-reduce:transition-none", open && "rotate-180")} />
-        </button>
+        {audit ? (
+          // Free: an obvious gold button with the real number of checks.
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-controls={`${BREAKDOWN_ANCHOR}-checks`}
+            data-testid="breakdown-toggle"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-brass bg-brass px-3.5 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-brass)_85%,white)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            {open ? t(locale, "dashboard.overview.breakdown.hideAll") : t(locale, "dashboard.overview.breakdown.seeAll", { count: checkCount })}
+            <IconChevronDown size={15} aria-hidden className={cn("transition-transform duration-300 motion-reduce:transition-none", open && "rotate-180")} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-paper-deep bg-white px-3 py-1.5 text-[13px] font-semibold text-ink transition-colors hover:border-ink-soft"
+          >
+            {open ? t(locale, "dashboard.overview.hideChecks") : t(locale, "dashboard.overview.showChecks")}
+            <IconChevronDown size={15} className={cn("transition-transform duration-300 motion-reduce:transition-none", open && "rotate-180")} />
+          </button>
+        )}
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-5 nav:grid-cols-3">
+      <div id={`${BREAKDOWN_ANCHOR}-checks`} className="mt-4 grid grid-cols-1 gap-x-6 gap-y-5 nav:grid-cols-3">
         {categories.map((category, i) => (
           <div key={category.id} className="flex min-w-0 flex-col">
-            <CategorySummary businessId={businessId} category={category} hasWebsite={hasWebsite} scoreBasis={scoreBasis} websiteFixCount={websiteFixCount} points={wholePoints[i]} />
+            <CategorySummary businessId={businessId} category={category} hasWebsite={hasWebsite} scoreBasis={scoreBasis} websiteFixCount={websiteFixCount} points={wholePoints[i]} audit={audit} />
             <div
               className={cn(
                 "grid transition-[grid-template-rows,opacity] ease-out motion-reduce:transition-none",
@@ -222,7 +254,7 @@ export function ScoreBreakdownPanel({
               <div className="min-h-0 overflow-hidden">
                 {mounted && (
                   <div className="mt-3 border-t border-paper-line pt-3">
-                    <CategoryCard category={category} embedded fixLinks={fixLinks} />
+                    <CategoryCard category={category} embedded fixLinks={fixLinks} lockedFixes={audit} />
                   </div>
                 )}
               </div>
@@ -231,12 +263,38 @@ export function ScoreBreakdownPanel({
         ))}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-paper-line pt-3 text-[11.5px] text-ink-soft">
-        <LegendSwatch className="bg-brass" label={t(locale, "dashboard.overview.breakdown.legendEarned")} />
-        <LegendSwatch className="bg-paper-deep" label={t(locale, "dashboard.overview.breakdown.legendMissing")} />
-        <LegendSwatch style={{ backgroundImage: STRIPES }} className="bg-paper-deep" label={t(locale, "dashboard.checkResult.couldntCheck")} />
-      </div>
+      {audit ? (
+        // Free: the whole bottom strip opens and closes the checks too.
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-controls={`${BREAKDOWN_ANCHOR}-checks`}
+          data-testid="breakdown-strip"
+          className="-mx-4 -mb-4 mt-4 flex w-[calc(100%+2rem)] flex-wrap items-center gap-x-4 gap-y-1.5 rounded-b-2xl border-t border-paper-line px-4 pb-3.5 pt-3 text-left text-[11.5px] text-ink-soft transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-brass)_7%,white)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brass sm:-mx-5 sm:-mb-5 sm:w-[calc(100%+2.5rem)] sm:px-5"
+        >
+          <Legend locale={locale} />
+          <span className="ml-auto inline-flex items-center gap-1 text-[12px] font-semibold text-ink">
+            {open ? t(locale, "dashboard.overview.breakdown.hideAll") : t(locale, "dashboard.overview.breakdown.seeAll", { count: checkCount })}
+            <IconChevronDown size={14} aria-hidden className={cn("text-brass transition-transform duration-300 motion-reduce:transition-none", open && "rotate-180")} />
+          </span>
+        </button>
+      ) : (
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-paper-line pt-3 text-[11.5px] text-ink-soft">
+          <Legend locale={locale} />
+        </div>
+      )}
     </section>
+  );
+}
+
+function Legend({ locale }: { locale: Locale }) {
+  return (
+    <>
+      <LegendSwatch className="bg-brass" label={t(locale, "dashboard.overview.breakdown.legendEarned")} />
+      <LegendSwatch className="bg-paper-deep" label={t(locale, "dashboard.overview.breakdown.legendMissing")} />
+      <LegendSwatch style={{ backgroundImage: STRIPES }} className="bg-paper-deep" label={t(locale, "dashboard.checkResult.couldntCheck")} />
+    </>
   );
 }
 

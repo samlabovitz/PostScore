@@ -7,7 +7,8 @@ import { Card } from "@/components/ui/Card";
 import { getCompetitors } from "@/app/actions/competitors";
 import { CompetitorsView } from "./CompetitorsView";
 import { getLastScanAt } from "@/app/actions/scoring";
-import { normalizeLocale, t } from "@/lib/i18n";
+import { normalizeLocale } from "@/lib/i18n";
+import { competitorPageLines } from "@/lib/competitorSchedule";
 
 export default async function CompetitorsPage({ params }: { params: { id: string } }) {
   // Independent loads run together.
@@ -49,8 +50,10 @@ export default async function CompetitorsPage({ params }: { params: { id: string
       <div className="flex flex-col gap-6">
         <StaleScanNotice businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} />
         <CompetitorsView businessId={params.id} data={fetched} />
-        {/* Competitors have their own schedule, separate from re-scans. */}
-        <p className="-mt-2 text-[12.5px] text-ink-mute">{t(normalizeLocale(fetched.language), "dashboard.rescan.competitorsSeparate")}</p>
+        {/* When competitors update, by plan (lib/competitorScanPolicy.ts). */}
+        <p data-testid="competitors-schedule" className="-mt-2 text-[12.5px] text-ink-mute">
+          {competitorPageLines(upgrade.plan, fetched.latest?.createdAt ?? null, normalizeLocale(fetched.language), fetched.timeZone, new Date()).join(" ")}
+        </p>
       </div>
     </DashboardShell>
   );

@@ -4,15 +4,28 @@
 // script in English and Spanish (with the business's real review link when
 // it has one), where to put the QR code, why replying matters — and the
 // one rule: never a discount or gift for a review (Google's policy).
+// Collapsible, closed by default: the header row (title, a one-line
+// summary, chevron) opens and closes it, remembered per device; the rule
+// stays visible either way. Collapsed content stays in the page, hidden.
 
 import { LockedPreview } from "@/components/plan/LockedPreview";
 import { useUpgrade } from "@/components/upgrade/UpgradeContext";
 import { NO_FACTS, unlockLine } from "@/lib/upgradePromos";
-import { useState } from "react";
-import { IconAlertTriangle, IconCheck, IconCopy } from "@tabler/icons-react";
-import { Card } from "@/components/ui/Card";
+import { useEffect, useId, useState } from "react";
+import { IconAlertTriangle, IconCheck, IconChevronDown, IconCopy } from "@tabler/icons-react";
 import { buildGoogleReviewUrl } from "@/lib/reviews";
 import { t, useLocale, type MessageKey } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import { readRememberedOpen, rememberOpen, type ToggleStorage } from "@/lib/rememberedToggle";
+
+/** Open/closed, per device (not per business). */
+export const REVIEW_GUIDE_OPEN_KEY = "postscore.reviewGuide.open";
+
+/** Was the guide left open on this device? Closed when unknown or blocked. */
+export const readGuideOpen = (storage?: () => ToggleStorage | null): boolean => readRememberedOpen(REVIEW_GUIDE_OPEN_KEY, false, storage);
+
+/** Remember open/closed on this device; blocked storage is fine. */
+export const rememberGuideOpen = (open: boolean, storage?: () => ToggleStorage | null): void => rememberOpen(REVIEW_GUIDE_OPEN_KEY, open, storage);
 
 /** The ask-for-a-review script in one language, with the real link. */
 export function reviewScript(lang: "en" | "es", placeId: string | null): string {
@@ -87,47 +100,77 @@ export function ReviewGuide({ placeId, locked = false }: { placeId: string | nul
   // The owner's own language first.
   if (locale === "es") scripts.reverse();
 
+  // Closed on the server and the first render; the remembered state after.
+  const [open, setOpen] = useState(false);
+  const contentId = useId();
+  useEffect(() => {
+    if (readGuideOpen()) setOpen(true);
+  }, []);
+  function toggle() {
+    const next = !open;
+    setOpen(next);
+    rememberGuideOpen(next);
+  }
+
   return (
-    <Card className="flex flex-col gap-5 p-5" data-testid="review-guide">
-      <h2 className="font-serif text-lg font-semibold text-ink">{t(locale, g("heading"))}</h2>
+    <div className="flex flex-col rounded-xl border border-paper-deep bg-white shadow-card" data-testid="review-guide" data-open={open ? "true" : "false"}>
+      {/* The whole header row is the toggle. */}
+      <h2>
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={open}
+          aria-controls={contentId}
+          data-testid="review-guide-toggle"
+          className="flex w-full items-center gap-3 rounded-xl px-5 pb-2 pt-5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
+        >
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="font-serif text-lg font-semibold text-ink">{t(locale, g("heading"))}</span>
+            <span className="text-[13px] font-normal text-ink-soft">{t(locale, g("summary"))}</span>
+          </span>
+          <IconChevronDown size={20} aria-hidden className={cn("shrink-0 text-ink-soft transition-transform", open && "rotate-180")} />
+        </button>
+      </h2>
 
-      <div className="flex items-start gap-2.5 rounded-lg border border-amber/40 bg-amber/5 px-3.5 py-2.5" data-testid="review-rule">
-        <IconAlertTriangle size={17} className="mt-0.5 shrink-0 text-amber" aria-hidden />
-        <p className="text-[13px] font-semibold text-ink">{t(locale, g("rule"))}</p>
-      </div>
+      {/* The rule: visible open or closed. */}
+      <p className={cn("flex items-start gap-1.5 px-5 text-[12.5px] font-medium leading-snug text-ink", open ? "pb-4" : "pb-5")} data-testid="review-rule">
+        <IconAlertTriangle size={14} className="mt-px shrink-0 text-amber" aria-hidden />
+        <span>{t(locale, g("rule"))}</span>
+      </p>
 
-      {locked ? (
-        <LockedGuide />
-      ) : (
-        <>
-
-          <div className="grid grid-cols-1 gap-5 nav:grid-cols-2">
-            <Block title={t(locale, g("whenTitle"))}>{bullets(["when1", "when2", "when3"])}</Block>
-            <Block title={t(locale, g("whereTitle"))}>{bullets(["where1", "where2", "where3", "where4"])}</Block>
-          </div>
-
-          <Block title={t(locale, g("scriptTitle"))}>
-            <div className="flex flex-col gap-2.5">
-              {scripts.map(({ lang, label }) => {
-                const text = reviewScript(lang, placeId);
-                return (
-                  <div key={lang} className="rounded-lg border border-paper-line bg-paper p-3" lang={lang}>
-                    <div className="mb-1.5 flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-mute">{t(locale, label)}</span>
-                      <CopyButton text={text} />
-                    </div>
-                    <p className="break-words text-[13px] text-ink">{text}</p>
-                  </div>
-                );
-              })}
+      <div id={contentId} hidden={!open} data-testid="review-guide-content" className={cn("flex-col gap-5 px-5 pb-5", open && "flex")}>
+        {locked ? (
+          <LockedGuide />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-5 nav:grid-cols-2">
+              <Block title={t(locale, g("whenTitle"))}>{bullets(["when1", "when2", "when3"])}</Block>
+              <Block title={t(locale, g("whereTitle"))}>{bullets(["where1", "where2", "where3", "where4"])}</Block>
             </div>
-          </Block>
 
-          <Block title={t(locale, g("replyTitle"))}>
-            <p className="text-[13px] text-ink-soft">{t(locale, g("replyBody"))}</p>
-          </Block>
-        </>
-      )}
-    </Card>
+            <Block title={t(locale, g("scriptTitle"))}>
+              <div className="flex flex-col gap-2.5">
+                {scripts.map(({ lang, label }) => {
+                  const text = reviewScript(lang, placeId);
+                  return (
+                    <div key={lang} className="rounded-lg border border-paper-line bg-paper p-3" lang={lang}>
+                      <div className="mb-1.5 flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-mute">{t(locale, label)}</span>
+                        <CopyButton text={text} />
+                      </div>
+                      <p className="break-words text-[13px] text-ink">{text}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </Block>
+
+            <Block title={t(locale, g("replyTitle"))}>
+              <p className="text-[13px] text-ink-soft">{t(locale, g("replyBody"))}</p>
+            </Block>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

@@ -26,6 +26,7 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
   Link,
   Preview,
   Section,
@@ -65,6 +66,30 @@ export interface MonthlyReportEmailProps {
    * existing caller/sample that doesn't pass this keeps rendering exactly
    * as before. */
   locale?: Locale;
+  /** Absolute URL of Google's "Google Maps" attribution logo
+   * (public/google/GoogleMaps_Logo_Gray_2x.png on the site) — required next
+   * to the Google data in this email. Without it (previews) the email uses
+   * Google's text attribution "Google Maps" instead. */
+  googleMapsLogoUrl?: string | null;
+}
+
+/** "Google Maps" attribution for the rating, reviews, competitors and
+ * listing changes above it (Google Maps attribution guidelines): the
+ * official Gray logo at 16px tall with 10px clear space (5px below), or,
+ * with no logo URL, the text "Google Maps" — Roboto/sans-serif, 400,
+ * 13px, #5E5E5E, one line, never translated. */
+function GoogleMapsAttribution({ logoUrl }: { logoUrl: string | null }) {
+  return (
+    <Section style={{ padding: "10px 10px 5px", margin: "0 0 12px" }}>
+      {logoUrl ? (
+        <Img src={logoUrl} alt="Google Maps" width="87" height="16" style={{ display: "block", height: "16px", width: "87px" }} />
+      ) : (
+        <span translate="no" aria-label="Google Maps" style={{ fontFamily: "Roboto, Arial, sans-serif", fontWeight: 400, fontSize: "13px", letterSpacing: "normal", whiteSpace: "nowrap", color: "#5E5E5E" }}>
+          Google Maps
+        </span>
+      )}
+    </Section>
+  );
 }
 
 /** The exact subject line every report uses — exported so the real send
@@ -532,6 +557,7 @@ export function MonthlyReportEmail({
   content,
   unsubscribeUrl,
   locale = DEFAULT_LOCALE,
+  googleMapsLogoUrl = null,
 }: MonthlyReportEmailProps) {
   const { month: coverageMonth, year: coverageYear } = reportCoverageMonth(reportDate, locale);
 
@@ -582,6 +608,7 @@ export function MonthlyReportEmail({
           />
           <CompetitorSection content={content} locale={locale} />
           <ListingChangesSection content={content} locale={locale} />
+          <GoogleMapsAttribution logoUrl={googleMapsLogoUrl} />
 
           <Hr style={{ borderColor: "#e5e1d8", margin: "4px 0 20px" }} />
 

@@ -15,7 +15,8 @@ import {
 import { bizProfileById, resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale, t } from "@/lib/i18n";
 import { getPlan } from "@/lib/premium";
-import { refreshAvailability, type RefreshAvailability } from "@/lib/competitorScanPolicy";
+import { refreshAvailability, rescanRefreshesCompetitors, type RefreshAvailability } from "@/lib/competitorScanPolicy";
+import type { Plan } from "@/lib/plan";
 import {
   groupSavedScans,
   rankPoint,
@@ -390,6 +391,31 @@ export async function refreshCompetitors(businessId: string): Promise<SaveCompet
     return { status: "error", message: t(normalizeLocale(row?.language), "dashboard.free.competitorsLocked") };
   }
   return runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: true });
+}
+
+/**
+ * The competitor part of an owner re-scan, by plan
+ * (lib/competitorScanPolicy.ts rescanRefreshesCompetitors): Premium and
+ * Multi every re-scan, Grow once a week, Free never (no Nearby Search
+ * call at all). Still bounded by the month's Places search cap inside
+ * runAndSaveCompetitorScanWithClient. Never throws: a failed competitor
+ * scan must never fail the re-scan.
+ */
+export async function refreshCompetitorsOnRescanWithClient(
+  supabase: SupabaseClient,
+  businessId: string,
+  plan: Plan,
+  now: Date = new Date(),
+  run: typeof runAndSaveCompetitorScanWithClient = runAndSaveCompetitorScanWithClient
+): Promise<"refreshed" | "skipped"> {
+  try {
+    if (plan === "free") return "skipped";
+    if (!rescanRefreshesCompetitors(plan, await latestCompetitorScanAt(supabase, businessId), now)) return "skipped";
+    const result = await run(supabase, businessId, { enforceCooldown: false, now });
+    return result.status === "saved" ? "refreshed" : "skipped";
+  } catch {
+    return "skipped";
+  }
 }
 
 /**

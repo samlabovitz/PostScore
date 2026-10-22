@@ -19,6 +19,7 @@ import {
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale, type Locale } from "@/lib/i18n";
 import { sanitizeOwnerHours, type OwnerHours } from "@/lib/ownerHours";
+import { sanitizeStarterSiteDetails, type StarterSiteDetails } from "@/lib/starterSiteDetails";
 import { businessTimeZone } from "@/lib/businessTimeZone";
 import { hasStorefront } from "@/lib/starterSite";
 import { getListingMode } from "@/lib/listingMode";
@@ -92,6 +93,11 @@ export interface WebsitePageData {
   starterSiteHours: OwnerHours | null;
   /** false until supabase/hours.sql has been run. */
   starterSiteHoursEnabled: boolean;
+  /** The name/type/address/phone the owner confirmed for the starter
+   * website, "provided by you" (supabase/starter-site-details.sql). */
+  starterSiteDetails: StarterSiteDetails | null;
+  /** false until supabase/starter-site-details.sql has been run. */
+  starterSiteDetailsEnabled: boolean;
   /** A real storefront (lib/starterSite.ts hasStorefront) — street address,
    * directions and the map on the starter site; false for website-only and
    * service-area businesses. */
@@ -227,6 +233,10 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const hoursRow = await supabase.from("businesses").select("starter_site_hours").eq("id", businessId).maybeSingle();
   const starterSiteHoursEnabled = !hoursRow.error;
   const starterSiteHours = starterSiteHoursEnabled ? sanitizeOwnerHours((hoursRow.data as { starter_site_hours?: unknown } | null)?.starter_site_hours ?? null) : null;
+  // The owner-confirmed details, the same way (supabase/starter-site-details.sql).
+  const detailsRow = await supabase.from("businesses").select("starter_site_details").eq("id", businessId).maybeSingle();
+  const starterSiteDetailsEnabled = !detailsRow.error;
+  const starterSiteDetails = starterSiteDetailsEnabled ? sanitizeStarterSiteDetails((detailsRow.data as { starter_site_details?: unknown } | null)?.starter_site_details ?? null) : null;
 
   const timeZone = businessTimeZone(data.lat, data.lng);
   const businessRow = { ...data, time_zone: timeZone } as BusinessScoringRow;
@@ -266,10 +276,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       category: data.category,
       phone: data.phone,
       address: data.address,
-      openingHours: data.opening_hours,
-      rating: data.rating,
-      reviewCount: data.review_count,
-      googleMapsUri: data.google_maps_uri,
+      placeId: data.place_id || null,
       profileId: profile.id,
     },
     locale
@@ -305,6 +312,8 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       websiteSuggestions,
       starterSiteHours,
       starterSiteHoursEnabled,
+      starterSiteDetails,
+      starterSiteDetailsEnabled,
       priceLevel: (data as { price_level?: string | null }).price_level ?? null,
       storefront: hasStorefront({ listingMode: await getListingMode(supabase, businessId), placeId: data.place_id, address: data.address }),
       placeId: data.place_id || null,

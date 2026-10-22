@@ -45,6 +45,7 @@
 // full reasoning.
 import { businessTimeZone } from "@/lib/businessTimeZone";
 import { getListingMode } from "@/lib/listingMode";
+import { backgroundPlan } from "@/lib/plan";
 import type { ProfileTools } from "@/lib/growBannerTools";
 import { timingSafeEqual } from "crypto";
 import { createElement } from "react";
@@ -550,7 +551,9 @@ export async function processBusiness(
   let currentCompetitorSnapshot: CompetitorSnapshot | null = null;
   let competitorScanId: string | null = null;
   // Part B: reuse a saved scan under 30 days old instead of paying for a
-  // new one; otherwise run (and save) one fresh scan.
+  // new one; otherwise run (and save) one fresh scan. Free: never
+  // refreshed after the first scan — any saved scan is reused as is.
+  const free = backgroundPlan() === "free";
   const { data: latestScanRows } = await supabase
     .from("competitor_scans")
     .select("scan_id, created_at")
@@ -559,7 +562,7 @@ export async function processBusiness(
     .limit(1);
   const latestScan = (latestScanRows ?? [])[0] as { scan_id: string; created_at: string } | undefined;
   const competitorResult =
-    latestScan && isScanFresh(latestScan.created_at, new Date())
+    latestScan && (free || isScanFresh(latestScan.created_at, new Date()))
       ? ({ status: "saved", scanId: latestScan.scan_id } as const)
       : await runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: false });
   if (competitorResult.status === "saved") {
@@ -721,7 +724,7 @@ export async function processBusiness(
     const testSend = await sendEmail({
       to: decision.to,
       subject: `[TEST — not sent to the owner] ${monthlyReportSubject(businessName, reportDate, locale)}`,
-      react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale }),
+      react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale, googleMapsLogoUrl: `${siteUrl}/google/GoogleMaps_Logo_Gray_2x.png` }),
     });
     return testSend.status === "sent"
       ? { businessId, status: "sent", reason: `test send to REPORT_TEST_EMAIL (MONTHLY_REPORTS_LIVE is off) — not sent to the owner` }
@@ -769,7 +772,7 @@ export async function processBusiness(
   const sendResult = await sendEmail({
     to: decision.to,
     subject: monthlyReportSubject(businessName, reportDate, locale),
-    react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale }),
+    react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale, googleMapsLogoUrl: `${siteUrl}/google/GoogleMaps_Logo_Gray_2x.png` }),
   });
 
   if (sendResult.status !== "sent") {

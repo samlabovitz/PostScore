@@ -110,10 +110,8 @@ export async function getActionPlan(
             category: input.primaryCategory,
             phone: input.phone,
             address: input.address,
-            openingHours: input.openingHours,
-            rating: input.rating,
-            reviewCount: input.reviewCount,
-            googleMapsUri: starterSiteContext.googleMapsUri,
+            // Scoring only: the reviews link doesn't change the analysis.
+            placeId: null,
             profileId: starterSiteContext.profileId,
           } satisfies StarterSiteTemplateData,
           locale

@@ -6,6 +6,7 @@
 // ownerStanding rank (rankBy), the action plan's top recommendations and
 // the two most recent saved scans. Nothing here is invented for print.
 
+import { GOOGLE_MAPS_LOGO_RATIO } from "@/lib/google/mapsLogoPng";
 import { printable, wrap, type FontRole, type Measurer, type PrintPage, type SignElement } from "@/lib/signStudio/elements";
 import { formatCount, formatLongDate, formatShortDate, t, tPlural, type Locale } from "@/lib/i18n";
 
@@ -202,8 +203,17 @@ export function layoutReport(data: ReportData, m: Measurer): PrintPage {
   const weekly = data.weekly ?? null;
   eyebrow(M, 40, weekly ? t(locale, "dashboard.reports.pdf.weeklyTitle", { week: compactWeekLabel(weekly.weekStart, weekly.weekEnd, locale) }) : t(locale, "dashboard.reports.pdf.title"));
   rightText(W - M, 40, t(locale, "dashboard.reports.pdf.generated", { date: formatLongDate(data.generatedAt, locale, timeZone) }), 9, "body", C.inkMute);
-  let y = para(M, 66, data.business.name, 22, "headline", C.ink, inner, 2, 1.15);
-  if (data.business.address) y = para(M, y + 2, data.business.address, 10, "body", C.inkSoft, inner, 2);
+  // Google Maps attribution (the name, address, rating, reviews and the
+  // nearby businesses come from Google Places): the official Gray logo
+  // (Google's pack has no full-color one), top right of the header, 12pt
+  // tall = 16px, Google's minimum, with ≥10pt clear space — the name and
+  // address wrap short of it.
+  const logoH = 12;
+  const logoW = logoH * GOOGLE_MAPS_LOGO_RATIO;
+  els.push({ kind: "googleMapsLogo", x: W - M - logoW, y: 54, h: logoH });
+  const headW = inner - logoW - 14;
+  let y = para(M, 66, data.business.name, 22, "headline", C.ink, headW, 2, 1.15);
+  if (data.business.address) y = para(M, y + 2, data.business.address, 10, "body", C.inkSoft, headW, 2);
   y += 10;
   rule(y);
   y += 22;

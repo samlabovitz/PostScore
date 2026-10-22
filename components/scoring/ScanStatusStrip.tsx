@@ -11,7 +11,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconInfoCircle, IconRefresh } from "@tabler/icons-react";
 import { rescanBusiness, type RescanSummary } from "@/app/actions/scoring";
-import { rescanAvailability, scanFreshness } from "@/lib/rescanPolicy";
+import Link from "next/link";
+import { rescanCompetitorsLine, rescanCompetitorsToast } from "@/lib/competitorSchedule";
+import type { Plan } from "@/lib/plan";
+import { rescanAvailability, scanAgeDays, scanFreshness, SNAPSHOT_OLD_DAYS } from "@/lib/rescanPolicy";
 import { cn } from "@/lib/utils";
 import { formatPoints } from "@/components/scoring/CategoryCard";
 import { formatDateTime, formatShortDate, t, tPlural, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
@@ -79,6 +82,14 @@ export function rescanToast(summary: RescanSummary, locale: Locale): string {
   return `${score} · ${checks}`;
 }
 
+/** The re-scan toast's first sentences: the score line, then whether
+ * competitors were updated this time (by plan). */
+export function rescanHeadline(summary: RescanSummary, locale: Locale): string {
+  const score = `${rescanToast(summary, locale)}.`;
+  if (!summary.plan || !summary.competitors) return score;
+  return `${score} ${rescanCompetitorsToast(summary.plan, summary.competitors, locale)}`;
+}
+
 const TONE: Record<"green" | "neutral" | "amber", string> = {
   green: "bg-[color:color-mix(in_srgb,var(--color-green)_10%,transparent)] text-green",
   neutral: "bg-[color:color-mix(in_srgb,var(--color-ink)_5%,transparent)] text-ink-soft",
@@ -90,12 +101,12 @@ type RescanState =
   | { kind: "scanning" }
   | { kind: "done"; message: string }
   | { kind: "error"; message: string }
-  | { kind: "too_soon"; at: string; monthly: boolean };
+  | { kind: "too_soon"; at: string; weekly: boolean };
 
 /** The Re-scan action and its honest outcome, shared by the strip and
  * the Overview header. `nextAt` is when the next re-scan opens (null =
- * allowed now). On Free, `freeNextAt` is when the month's free re-scan
- * opens again (lib/rescanPolicy.ts rescanGate) — `monthly` says so. */
+ * allowed now). On Free, `freeNextAt` is when the week's free re-scan
+ * opens again (lib/rescanPolicy.ts rescanGate) — `weekly` says so. */
 export function useRescan(businessId: string, lastScanAt: string | null, now: string, freeNextAt: string | null = null) {
   const locale = useLocale();
   const router = useRouter();
@@ -108,10 +119,10 @@ export function useRescan(businessId: string, lastScanAt: string | null, now: st
     if (result.status === "ok") {
       // The score line, plus what the scan confirmed (tasks, listing changes).
       const details = summarizeRescan(result.tasksConfirmed, result.pointsConfirmed, result.tasksReopened, result.changes.length, locale);
-      setState({ kind: "done", message: result.summary ? `${rescanToast(result.summary, locale)}. ${details}` : details });
+      setState({ kind: "done", message: result.summary ? `${rescanHeadline(result.summary, locale)} ${details}` : details });
       router.refresh();
     } else if (result.status === "too_soon") {
-      setState({ kind: "too_soon", at: result.nextAvailableAt, monthly: result.limit === "monthly" });
+      setState({ kind: "too_soon", at: result.nextAvailableAt, weekly: result.limit === "weekly" });
     } else if (result.status === "no_results") {
       setState({ kind: "error", message: t(locale, "dashboard.overview.rescanNoResultsError") });
     } else if (result.status === "error") {
@@ -123,8 +134,8 @@ export function useRescan(businessId: string, lastScanAt: string | null, now: st
 
   const freeBlocked = freeNextAt !== null && Date.parse(freeNextAt) > Date.parse(now);
   const nextAt = state.kind === "too_soon" ? state.at : freeBlocked ? freeNextAt : availability.allowed ? null : availability.nextAvailableAt;
-  const monthly = state.kind === "too_soon" ? state.monthly : freeBlocked;
-  return { state, run, nextAt, monthly };
+  const weekly = state.kind === "too_soon" ? state.weekly : freeBlocked;
+  return { state, run, nextAt, weekly };
 }
 
 /** Freshness chip · "Last scanned {date}" · scoring-version ⓘ. */
@@ -180,11 +191,98 @@ export function RescanMessages({ state }: { state: RescanState }) {
   return null;
 }
 
+/** The Overview's "Re-scan now" button — the snapshot message links here. */
+export const RESCAN_BUTTON_ID = "rescan-now";
+
+/** The plans destination every promo box's "See plans" uses. */
+const plansHref = (businessId: string) => `/business/${businessId}/settings#compare-plans`;
+
+/**
+ * Under the "Last scanned" line on the Overview: the score is a snapshot
+ * from the last scan. Re-scan available → links to the Re-scan button;
+ * not yet → "Next re-scan available {date}" (and on Free, "Paid plans can
+ * re-scan every day" → the plans). 7+ days old → amber, "Your score is
+ * N days old." `now` comes from the server (no hydration mismatch).
+ */
+export function SnapshotNotice({ businessId, lastScanAt, now, nextAt, free }: { businessId: string; lastScanAt: string | null; now: string; nextAt: string | null; free: boolean }) {
+  const locale = useLocale();
+  const timeZone = useTimeZone();
+  const days = scanAgeDays(lastScanAt, new Date(now), timeZone);
+  const old = days !== null && days >= SNAPSHOT_OLD_DAYS;
+  const linkClass = "font-semibold text-ink underline decoration-brass underline-offset-2 hover:decoration-ink";
+  return (
+    <p
+      data-testid="snapshot-notice"
+      data-state={nextAt ? "waiting" : "available"}
+      data-old={old ? "true" : "false"}
+      className={cn(
+        "text-[12.5px] leading-snug",
+        old ? "rounded-lg border border-[color:color-mix(in_srgb,var(--color-amber)_40%,white)] bg-[color:color-mix(in_srgb,var(--color-amber)_8%,white)] px-3 py-2 text-ink" : "text-ink-soft"
+      )}
+    >
+      {old && <span className="font-semibold text-amber">{t(locale, "dashboard.rescan.snapshotOld", { count: days! })} </span>}
+      {t(locale, "dashboard.rescan.snapshot")}{" "}
+      {nextAt ? (
+        <>
+          <span data-testid="snapshot-next">{t(locale, "dashboard.rescan.snapshotNextAt", { date: formatShortDate(nextAt, locale, timeZone) })}</span>
+          {free && (
+            <>
+              {" "}
+              <Link href={plansHref(businessId)} data-testid="snapshot-paid-daily" className={linkClass}>
+                {t(locale, "dashboard.rescan.snapshotPaidDaily")}
+              </Link>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          {t(locale, "dashboard.rescan.snapshotChanged")}{" "}
+          <a
+            href={`#${RESCAN_BUTTON_ID}`}
+            data-testid="snapshot-rescan-link"
+            onClick={(e) => {
+              const button = document.getElementById(RESCAN_BUTTON_ID);
+              if (!button) return;
+              e.preventDefault();
+              button.scrollIntoView({ behavior: "smooth", block: "center" });
+              button.focus({ preventScroll: true });
+            }}
+            className={linkClass}
+          >
+            {t(locale, "dashboard.rescan.snapshotRescanLink")}
+          </a>
+        </>
+      )}
+    </p>
+  );
+}
+
+/** Beside the Re-scan button, one line per plan on what a re-scan does
+ * for competitors; Free and Grow link to the plans. */
+export function RescanCompetitorsNote({ businessId, plan, latestCompetitorScanAt, now }: { businessId: string; plan: Plan; latestCompetitorScanAt: string | null; now: string }) {
+  const locale = useLocale();
+  const timeZone = useTimeZone();
+  return (
+    <p data-testid="rescan-competitors-note" data-plan={plan} className="max-w-[22rem] text-[12px] leading-snug text-ink-soft sm:text-right">
+      {rescanCompetitorsLine(plan, latestCompetitorScanAt, locale, timeZone, new Date(now))}
+      {(plan === "free" || plan === "grow") && (
+        <>
+          {" "}
+          <Link href={plansHref(businessId)} className="font-semibold text-ink underline decoration-brass underline-offset-2 hover:decoration-ink">
+            {t(locale, "dashboard.upgrade.box.seePlans")}
+          </Link>
+        </>
+      )}
+    </p>
+  );
+}
+
 export function RescanButton({ state, nextAt, onClick }: { state: RescanState; nextAt: string | null; onClick: () => void }) {
   const locale = useLocale();
   return (
     // Navy text on brass (4.8:1) — white on brass is only 3.2:1.
     <button
+      id={RESCAN_BUTTON_ID}
       type="button"
       onClick={onClick}
       disabled={state.kind === "scanning" || nextAt !== null}
@@ -196,11 +294,11 @@ export function RescanButton({ state, nextAt, onClick }: { state: RescanState; n
   );
 }
 
-export function NextRescanNote({ nextAt, monthly = false }: { nextAt: string | null; monthly?: boolean }) {
+export function NextRescanNote({ nextAt, weekly = false }: { nextAt: string | null; weekly?: boolean }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
   if (!nextAt) return null;
-  if (monthly)
+  if (weekly)
     return (
       <span data-testid="next-free-rescan" className="text-[12px] text-ink-mute">
         {t(locale, "dashboard.free.nextFreeRescan", { date: formatShortDate(nextAt, locale, timeZone) })}

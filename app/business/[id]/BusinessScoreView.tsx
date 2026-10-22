@@ -23,9 +23,10 @@ import { ScoreBand } from "@/components/overview/ScoreBand";
 import { ListingPhoto } from "@/components/overview/ListingPhoto";
 import { ListingChips } from "@/components/overview/ListingChips";
 import { SinceLastScanCard } from "@/components/overview/SinceLastScanCard";
-import { NextRescanNote, RescanButton, RescanMessages, ScanFreshnessLine, useRescan } from "@/components/scoring/ScanStatusStrip";
+import { NextRescanNote, RescanCompetitorsNote, RescanButton, RescanMessages, ScanFreshnessLine, SnapshotNotice, useRescan } from "@/components/scoring/ScanStatusStrip";
 import { StatTile } from "@/components/ui/StatTile";
 import { LocalBenchmarkTile } from "@/components/dashboard/LocalBenchmarkTile";
+import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 import { ScoreBreakdownPanel } from "@/components/overview/ScoreBreakdownPanel";
 import { TopRecommendations } from "@/components/overview/TopRecommendations";
 import { StudioComingSoon } from "@/components/overview/StudioComingSoon";
@@ -35,7 +36,11 @@ import type { AssistantBusinessContext } from "@/lib/assistant";
 import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
 import { LiveListingSection } from "@/components/gbp/LiveListingSection";
 import { InfoTip } from "@/components/reports/ScoreHistoryChart";
-import { FreePostAIShowroom, FreeReviews, RankUnlockLine, UnlockMore } from "@/components/overview/FreeOverview";
+import { FreeReviews, FreeSection, RankUnlockLine } from "@/components/overview/FreeOverview";
+import { FixPlanBox } from "@/components/overview/FixPlanUpsell";
+import { FreePostAI } from "@/components/overview/FreePostAI";
+import { freeWaitingPoints } from "@/lib/freeUpsell";
+import type { FreeAiAllowance } from "@/lib/freeAiAllowance";
 import { ReviewReplyDrafter } from "@/components/reviews/ReviewReplyDrafter";
 import type { ReplyDraftStatus } from "@/app/actions/reviewReplies";
 import type { Plan } from "@/lib/plan";
@@ -49,7 +54,10 @@ export type AssistantEmbedData =
       starterPrompts: string[];
       conversationCount: number;
     }
-  | { status: "unavailable"; message: string };
+  | { status: "unavailable"; message: string }
+  /** Free: only the showroom's starter prompts — no business context
+   * (it carries fix details) ever reaches a Free page. */
+  | { status: "showroom"; starterPrompts: string[] };
 
 export function BusinessScoreView({
   businessId,
@@ -68,6 +76,7 @@ export function BusinessScoreView({
   plan = "grow",
   freeRescanNextAt = null,
   replyDrafts = null,
+  freePostai = null,
 }: {
   businessId: string;
   business: BusinessRecord;
@@ -100,6 +109,8 @@ export function BusinessScoreView({
   freeRescanNextAt?: string | null;
   /** Free: the AI review reply drafts left (the reviews section's drafter). */
   replyDrafts?: ReplyDraftStatus | null;
+  /** Free: PostAI questions left this week (DB only — no AI call). */
+  freePostai?: FreeAiAllowance | null;
 }) {
   const locale = useLocale();
   const { breakdown, projectedBreakdown } = result;
@@ -125,36 +136,43 @@ export function BusinessScoreView({
     <>
     {/* Name and address on top, as before; the listing's own photo when
         Google has one; freshness and Re-scan on the right. */}
-    <div id="rescan" className="flex scroll-mt-20 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div id="rescan" className="scroll-mt-20">
       <ListingPhoto
         businessId={businessId}
         businessName={displayName}
         footer={<ScanFreshnessLine lastScanAt={lastScanAt} now={now} scoringVersion={breakdown.scoringVersion} />}
+        // The Google listing at a glance, on its own full-width row: one
+        // line on a desktop (replaces the old "Business listing" card).
+        chips={<ListingChips business={business} now={now} />}
+        // The score is a snapshot: re-scan to update it (replaces the old
+        // grey line under the score card).
+        note={<SnapshotNotice businessId={businessId} lastScanAt={lastScanAt} now={now} nextAt={rescan.nextAt} free={free} />}
+        aside={
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              {liveSiteUrl && (
+                <a
+                  href={liveSiteUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-paper-deep bg-white px-[13px] py-[7px] text-[13px] font-semibold text-ink transition-colors hover:border-ink-soft"
+                >
+                  <IconExternalLink size={14} />
+                  {t(locale, "dashboard.overview.header.viewLiveSite")}
+                </a>
+              )}
+              <RescanButton state={rescan.state} nextAt={rescan.nextAt} onClick={rescan.run} />
+            </div>
+            <NextRescanNote nextAt={rescan.nextAt} weekly={rescan.weekly} />
+            <RescanCompetitorsNote businessId={businessId} plan={plan} latestCompetitorScanAt={benchmark.status === "ok" ? benchmark.benchmark.scanAt : null} now={now} />
+          </>
+        }
       >
         <div className="flex min-w-0 flex-col gap-1.5">
           <h1 className="font-serif text-2xl font-semibold text-ink nav:text-[27px]">{displayName}</h1>
           <p className="text-sm text-ink-soft">{business.address ?? t(locale, "dashboard.overview.noAddressOnFile")}</p>
-          {/* The Google listing at a glance (replaces the old "Business listing" card). */}
-          <ListingChips business={business} now={now} />
         </div>
       </ListingPhoto>
-      <div className="flex shrink-0 flex-col items-start gap-1.5 sm:items-end">
-        <div className="flex flex-wrap items-center gap-2">
-          {liveSiteUrl && (
-            <a
-              href={liveSiteUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-paper-deep bg-white px-[13px] py-[7px] text-[13px] font-semibold text-ink transition-colors hover:border-ink-soft"
-            >
-              <IconExternalLink size={14} />
-              {t(locale, "dashboard.overview.header.viewLiveSite")}
-            </a>
-          )}
-          <RescanButton state={rescan.state} nextAt={rescan.nextAt} onClick={rescan.run} />
-        </div>
-        <NextRescanNote nextAt={rescan.nextAt} monthly={rescan.monthly} />
-      </div>
     </div>
     </>
   );
@@ -163,26 +181,25 @@ export function BusinessScoreView({
   const reviewGoal = benchmark.status === "ok" ? benchmark.benchmark.reviewGoal : null;
   const reviewGroup = benchmark.status === "ok" ? benchmark.benchmark.reviewGroup : null;
 
-  // Free = the audit — the whole product on Free — top to bottom: header
-  // and score (with the points waiting to be fixed), the full breakdown
-  // open, reviews ("your biggest lever": the beat-the-leader goal and the
-  // working free review link — copy, open, QR), "More customers" (the same
-  // tiles, locked, with two unlock buttons), the PostAI showroom, the
-  // competitor rank, then
-  // "Unlock more with a plan" (every plan-only feature, hidden) and, from
-  // the shell, the Grow + Premium cards.
+  // Free = the audit, in four headed sections, in this order: A. Your
+  // score (score card, re-scan message); C. What's behind your score (the
+  // breakdown, checks behind a gold "See all N checks"; the competitor
+  // rank); D. Free tools (Reviews; PostAI, 3 questions a week); B. Earn
+  // more points and more customers, last (one card: the plans + the
+  // locked More customers tiles; then "See everything in each plan").
+  // The shell adds the Grow + Premium cards after.
   if (free) {
-    const waiting = Math.round(projectedBreakdown.total - breakdown.total);
-    const websiteChecks = breakdown.checks.filter(
-      (c) => c.category === "website" && (c.confidence === "VERIFIED" || c.confidence === "LIKELY") && c.earnedPoints !== null && c.earnedPoints < c.maxPoints
-    ).length;
+    // Every point the score is missing (100 − score): the step-by-step
+    // plan on Grow and Premium covers each one.
+    const waiting = freeWaitingPoints(breakdown.total);
     return (
       <div data-testid="free-overview" className="flex flex-col gap-5 nav:gap-6">
         {showHackedBanner && <HackedSiteBanner href={`/business/${businessId}/website#check-security`} />}
 
         {header}
 
-        <div className="flex flex-col gap-2">
+        {/* A. Your score: the score card and the re-scan message. */}
+        <FreeSection id="score" title={t(locale, "dashboard.free.section.score.title")} body={t(locale, "dashboard.free.section.score.body")}>
           <ScoreBand
             businessId={businessId}
             score={breakdown.total}
@@ -193,41 +210,48 @@ export function BusinessScoreView({
             biggestBoost={null}
             freeWaitingPoints={waiting > 0 ? waiting : 0}
           />
-          <p className="px-1 text-[12px] text-ink-soft">{t(locale, "dashboard.rescan.updateOnlyOnRescan")}</p>
           <RescanMessages state={rescan.state} />
-        </div>
+        </FreeSection>
 
-        <ScoreBreakdownPanel businessId={businessId} categories={breakdown.categories} hasWebsite={hasWebsite} scoreBasis={scoreBasis} audit websiteFixCount={null} />
+        {/* C. What's behind the score: the breakdown (collapsed), then the
+            competitor rank. */}
+        <FreeSection id="behind" title={t(locale, "dashboard.free.section.behind.title")} body={t(locale, "dashboard.free.section.behind.body")}>
+          <ScoreBreakdownPanel businessId={businessId} categories={breakdown.categories} hasWebsite={hasWebsite} scoreBasis={scoreBasis} audit websiteFixCount={null} lastScanAt={lastScanAt} />
+          <Card className="p-5" data-testid="free-rank">
+            <h3 className="mb-3 font-serif text-[15px] font-semibold text-ink">{t(locale, "dashboard.free.rankHeading")}</h3>
+            <LocalBenchmarkTile businessId={businessId} result={benchmark} />
+            <RankUnlockLine />
+            <GoogleMapsAttribution />
+          </Card>
+        </FreeSection>
 
-        <FreeReviews placeId={business.place_id ?? null} rating={business.rating} reviewCount={business.review_count} goal={reviewGoal} group={reviewGroup}>
-          {replyDrafts && <ReviewReplyDrafter businessId={businessId} plan="free" placeId={business.place_id ?? null} initial={replyDrafts} embedded />}
-        </FreeReviews>
+        {/* D. Free tools: Reviews (link, QR, reply drafts), then PostAI —
+            3 free questions a week. */}
+        <FreeSection id="tools" title={t(locale, "dashboard.free.section.tools.title")} body={t(locale, "dashboard.free.section.tools.body")}>
+          <FreeReviews placeId={business.place_id ?? null} rating={business.rating} reviewCount={business.review_count} goal={reviewGoal} group={reviewGroup}>
+            {replyDrafts && <ReviewReplyDrafter businessId={businessId} plan="free" placeId={business.place_id ?? null} initial={replyDrafts} embedded />}
+          </FreeReviews>
+          {freePostai && <FreePostAI businessId={businessId} starterPrompts={assistant.status === "unavailable" ? [] : assistant.starterPrompts} initial={freePostai} />}
+        </FreeSection>
+        {/* B. Earn more, last: ONE card (the plans, then the More
+            customers tiles, then the collapsed "See everything in each
+            plan") — every "How to fix this" row and "See how to fix it"
+            scrolls down to it. */}
+        <FreeSection id="earn" title={t(locale, "dashboard.free.section.earn.title")} body={t(locale, "dashboard.free.section.earn.body")}>
+          <FixPlanBox businessId={businessId} extras={{ hasWebsite }}>
+            <GrowMoreCustomers
+              businessId={businessId}
+              profileTools={profileTools}
+              reviewCount={business.review_count}
+              nearbyReviewAverage={benchmark.status === "ok" ? benchmark.benchmark.competitorReviewAverage : null}
+              goal={reviewGoal}
+              group={reviewGroup}
+              locked
+              embedded
+            />
+          </FixPlanBox>
+        </FreeSection>
 
-        <GrowMoreCustomers
-          businessId={businessId}
-          profileTools={profileTools}
-          reviewCount={business.review_count}
-          nearbyReviewAverage={benchmark.status === "ok" ? benchmark.benchmark.competitorReviewAverage : null}
-          goal={reviewGoal}
-          group={reviewGroup}
-          locked
-        />
-
-        <FreePostAIShowroom starterPrompts={assistant.status === "ok" ? assistant.starterPrompts : []} />
-
-        <SectionHeading title={t(locale, "dashboard.free.rankHeading")} />
-        <Card className="p-5">
-          <LocalBenchmarkTile businessId={businessId} result={benchmark} />
-          <RankUnlockLine />
-        </Card>
-
-        <UnlockMore
-          fixCount={result.suggestions.length}
-          fixPoints={waiting > 0 ? waiting : null}
-          hasWebsite={hasWebsite}
-          websiteChecks={websiteChecks}
-          pricingOk={profileTools.pricingOk}
-        />
       </div>
     );
   }
@@ -250,7 +274,6 @@ export function BusinessScoreView({
           // (generateSuggestions order) — never a decorative number.
           biggestBoost={result.suggestions[0] ?? null}
         />
-        <p className="px-1 text-[12px] text-ink-soft">{t(locale, "dashboard.rescan.updateOnlyOnRescan")}</p>
         <RescanMessages state={rescan.state} />
       </div>
 
@@ -264,7 +287,7 @@ export function BusinessScoreView({
         />
       ) : (
         <Card className="p-5 text-sm text-ink-soft">
-          {t(locale, "dashboard.overview.assistantUnavailablePrefix", { message: assistant.message })}
+          {t(locale, "dashboard.overview.assistantUnavailablePrefix", { message: assistant.status === "unavailable" ? assistant.message : "" })}
         </Card>
       )}
 
@@ -296,6 +319,7 @@ export function BusinessScoreView({
           </div>
           <LocalBenchmarkTile businessId={businessId} result={benchmark} />
         </div>
+        <GoogleMapsAttribution />
       </Card>
 
       <ScoreBreakdownPanel
@@ -305,6 +329,7 @@ export function BusinessScoreView({
         scoreBasis={scoreBasis}
         linkOptions={linkOptions}
         websiteFixCount={websiteFixCount}
+        lastScanAt={lastScanAt}
       />
 
       {/* Side by side at equal height (each card centers its own content

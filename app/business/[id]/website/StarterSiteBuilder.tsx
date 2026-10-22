@@ -11,7 +11,6 @@ import {
   IconPhone,
   IconPhoto,
   IconRocket,
-  IconStar,
   IconWand,
   IconX,
   IconExternalLink,
@@ -34,6 +33,9 @@ import type { OpeningHoursPeriod } from "@/lib/google/places";
 import { ACCENT_STYLES, patternCss, type AccentStyle } from "@/lib/starterSiteArt";
 import { defaultOwnerHours, ownerHoursFromGoogle, sameSchedule, type OwnerHours } from "@/lib/ownerHours";
 import { HoursDifferNote, HoursGoogleTip, StarterHoursEditor } from "./StarterHoursEditor";
+import { StarterSiteDetailsForm } from "./StarterSiteDetailsForm";
+import { DESIGNER_COLOR_INPUT, DESIGNER_HELP, DESIGNER_INPUT, DESIGNER_LABEL, DesignerSection, designerChip } from "./DesignerSection";
+import { sameDetails, type StarterSiteDetailFields, type StarterSiteDetails } from "@/lib/starterSiteDetails";
 import { downloadTextFile } from "@/lib/downloadFile";
 import { UpgradeButton } from "@/components/upgrade/UpgradeTrigger";
 import { PREVIEW_HTML, PREVIEW_READY } from "./preview/StarterPreviewFrame";
@@ -142,27 +144,29 @@ interface ToggleRowProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   available: boolean;
+  /** A small link on the right (hours: "Add your hours"). */
+  action?: React.ReactNode;
 }
 
-function ToggleRow({ icon: Icon, label, checked, onChange, available }: ToggleRowProps) {
+/** Every "What to include" row: checkbox · icon · label, aligned; the
+ * right side says why it's off ("Not on file") or holds a small link. */
+function ToggleRow({ icon: Icon, label, checked, onChange, available, action }: ToggleRowProps) {
   const locale = useLocale();
   return (
-    <label
-      className={`flex items-center gap-2.5 py-2 text-sm ${available ? "text-ink" : "cursor-not-allowed text-ink-mute"}`}
-    >
-      <input
-        type="checkbox"
-        checked={available && checked}
-        disabled={!available}
-        onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 accent-brass disabled:opacity-40"
-      />
-      <Icon size={15} className="shrink-0" />
-      <span className="flex-1">{label}</span>
-      {!available && (
-        <span className="text-[11px] text-ink-mute">{t(locale, "dashboard.website.starter.notOnFile")}</span>
-      )}
-    </label>
+    <div className="flex min-h-10 items-center gap-3 py-1.5">
+      <label className={cn("flex min-w-0 flex-1 items-center gap-3 text-sm", available ? "cursor-pointer text-ink" : "cursor-not-allowed text-ink-mute")}>
+        <input
+          type="checkbox"
+          checked={available && checked}
+          disabled={!available}
+          onChange={(e) => onChange(e.target.checked)}
+          className="h-4 w-4 shrink-0 accent-brass disabled:opacity-40"
+        />
+        <Icon size={15} className="shrink-0" aria-hidden />
+        <span className="min-w-0 flex-1">{label}</span>
+      </label>
+      {action ?? (!available && <span className="shrink-0 text-[12px] text-ink-mute">{t(locale, "dashboard.website.starter.notOnFile")}</span>)}
+    </div>
   );
 }
 
@@ -173,17 +177,13 @@ export function StarterSiteBuilder({
   category,
   phone,
   address,
-  openingHours,
   openingHoursPeriods,
   starterSiteHours = null,
+  starterSiteDetails = null,
   timeZone = "America/New_York",
-  rating,
-  reviewCount,
-  googleMapsUri,
-  priceLevel = null,
+  placeId = null,
   socialLinks = [],
   year,
-  ratingAsOf = null,
   storefront = true,
   mapEmbed = null,
   profileId,
@@ -199,32 +199,30 @@ export function StarterSiteBuilder({
    * chrome around the generator always follows the dashboard's own
    * locale (useLocale()), never this. */
   businessLanguage: string | null;
+  /** Google's name/type/address/phone: only the pre-fill for "Your
+   * business details" — the site uses what the owner confirms. */
   category: string | null;
   phone: string | null;
   address: string | null;
-  openingHours: string[] | null;
-  /** Google's structured regularOpeningHours.periods — see
-   * lib/google/places.ts. Preferred for the generated site's Hours
-   * section when the site language is Spanish (lib/hours.ts); null
-   * falls back to openingHours exactly as before. */
+  /** Google's hours — only to pre-fill the hours editor and to flag owner
+   * hours that differ; never put on the site. */
   openingHoursPeriods: OpeningHoursPeriod[] | null;
   /** Hours the owner saved for the website (supabase/hours.sql) — website only, never scored. */
   starterSiteHours?: OwnerHours | null;
   /** false until supabase/hours.sql has been run (saving then just isn't remembered). */
   starterSiteHoursEnabled?: boolean;
+  /** The details the owner confirmed (supabase/starter-site-details.sql). */
+  starterSiteDetails?: StarterSiteDetails | null;
+  /** false until supabase/starter-site-details.sql has been run. */
+  starterSiteDetailsEnabled?: boolean;
   /** The business's time zone — the site highlights today in it. */
   timeZone?: string;
-  rating: number | null;
-  reviewCount: number | null;
-  googleMapsUri: string | null;
-  /** Google's price level enum, when it has one. */
-  priceLevel?: string | null;
+  /** The Google place ID: the site's reviews link and map. */
+  placeId?: string | null;
   /** Social profiles on file that were verified to open the real profile. */
   socialLinks?: Array<{ platform: string; url: string }>;
   /** The copyright year for the footer (from the server, so both renders match). */
   year?: number;
-  /** When the rating was read from Google (the last scan) — "as of Oct 2026". */
-  ratingAsOf?: string | null;
   /** A real storefront (lib/starterSite.ts hasStorefront): street address, directions and map. */
   storefront?: boolean;
   /** Maps Embed API key + place id; null = no map, address and link only. */
@@ -260,16 +258,24 @@ export function StarterSiteBuilder({
   const [customAccent, setCustomAccent] = useState<string | null>(null);
   const [fontId, setFontId] = useState(STARTER_SITE_FONTS[0].id);
   const [accentStyle, setAccentStyle] = useState<AccentStyle>("dots");
-  const [showAddress, setShowAddress] = useState(!!address);
-  const [showPhone, setShowPhone] = useState(!!phone);
-  // Hours: Google's, or the owner's own for the website (never scored).
-  const googleHasHours = !!openingHours && openingHours.length > 0;
+  // The details on the site: the owner's confirmed ones, else Google's as
+  // a pre-fill to confirm or edit. No Google content goes on the owner's
+  // own site — the download waits for the confirmation.
+  const [details, setDetails] = useState<StarterSiteDetailFields>(
+    () =>
+      starterSiteDetails
+        ? { name: starterSiteDetails.name, category: starterSiteDetails.category, address: starterSiteDetails.address, phone: starterSiteDetails.phone }
+        : { name: businessName, category: category ?? "", address: address ?? "", phone: phone ?? "" }
+  );
+  const [confirmedDetails, setConfirmedDetails] = useState<StarterSiteDetailFields | null>(starterSiteDetails);
+  const detailsConfirmed = confirmedDetails !== null && sameDetails(confirmedDetails, details);
+  const [showAddress, setShowAddress] = useState(!!details.address);
+  const [showPhone, setShowPhone] = useState(!!details.phone);
+  // Hours: only the owner's own (never scored, never Google's).
   const googleSchedule = useMemo(() => ownerHoursFromGoogle(openingHoursPeriods), [openingHoursPeriods]);
   const [ownerHours, setOwnerHours] = useState<OwnerHours | null>(starterSiteHours);
   const [hoursEditorOpen, setHoursEditorOpen] = useState(false);
-  const [showHours, setShowHours] = useState(googleHasHours || starterSiteHours !== null);
-  // Off by default: a downloaded page can't update a printed rating.
-  const [showRating, setShowRating] = useState(false);
+  const [showHours, setShowHours] = useState(starterSiteHours !== null);
   const [heroImage, setHeroImage] = useState<{ dataUri: string; alt: string } | null>(null);
   const [contentImages, setContentImages] = useState<Array<{ dataUri: string; alt: string }>>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -279,7 +285,7 @@ export function StarterSiteBuilder({
     setPhotoError(null);
     try {
       const dataUri = await resizeImageForEmbedding(file, 1600);
-      setHeroImage({ dataUri, alt: t(siteLocale, "starterSite.heroPhotoAlt", { name: businessName }) });
+      setHeroImage({ dataUri, alt: t(siteLocale, "starterSite.heroPhotoAlt", { name: details.name.trim() || businessName }) });
     } catch {
       setPhotoError(t(locale, "dashboard.website.starter.photoErrorFallback"));
     }
@@ -293,7 +299,7 @@ export function StarterSiteBuilder({
       const dataUri = await resizeImageForEmbedding(file, 1000);
       setContentImages((prev) => [
         ...prev,
-        { dataUri, alt: t(siteLocale, "starterSite.contentPhotoAlt", { name: businessName }) },
+        { dataUri, alt: t(siteLocale, "starterSite.contentPhotoAlt", { name: details.name.trim() || businessName }) },
       ]);
     } catch {
       setPhotoError(t(locale, "dashboard.website.starter.photoErrorFallback"));
@@ -316,26 +322,20 @@ export function StarterSiteBuilder({
     () =>
       buildStarterSiteHtml({
         locale: siteLocale,
-        businessName,
-        category,
+        businessName: details.name,
+        category: details.category.trim() || null,
         tagline,
         taglineFontId,
         taglineColor,
         taglineSize,
         taglinePlacement,
-        phone,
-        address,
-        openingHours,
-        openingHoursPeriods,
+        phone: details.phone.trim() || null,
+        address: details.address.trim() || null,
         ownerHours,
         timeZone,
-        rating,
-        reviewCount,
-        googleMapsUri,
-        priceLevel,
+        placeId,
         socialLinks,
         year,
-        ratingAsOf,
         storefront,
         mapEmbed,
         profileId,
@@ -343,32 +343,23 @@ export function StarterSiteBuilder({
         customAccent,
         fontId,
         accentStyle,
-        show: { address: showAddress, phone: showPhone, hours: showHours, rating: showRating },
+        show: { address: showAddress, phone: showPhone, hours: showHours },
         heroImage,
         contentImages,
       }),
     [
       siteLocale,
-      businessName,
-      category,
+      details,
       tagline,
       taglineFontId,
       taglineColor,
       taglineSize,
       taglinePlacement,
-      phone,
-      address,
-      openingHours,
-      openingHoursPeriods,
       ownerHours,
       timeZone,
-      rating,
-      reviewCount,
-      googleMapsUri,
-      priceLevel,
+      placeId,
       socialLinks,
       year,
-      ratingAsOf,
       storefront,
       mapEmbed,
       profileId,
@@ -379,7 +370,6 @@ export function StarterSiteBuilder({
       showAddress,
       showPhone,
       showHours,
-      showRating,
       heroImage,
       contentImages,
     ]
@@ -389,11 +379,12 @@ export function StarterSiteBuilder({
   // refused there too) — /api/business/[id]/starter-site.
   const [downloadError, setDownloadError] = useState<string | null>(null);
   async function handleDownload() {
+    if (!detailsConfirmed) return;
     setDownloadError(null);
     try {
       const res = await fetch(`/api/business/${businessId}/starter-site`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ html }) });
       if (!res.ok) throw new Error(res.status === 403 ? t(locale, "dashboard.free.web.downloadRefused") : String(res.status));
-      downloadTextFile(await res.text(), `${slugify(businessName)}-website.html`, "text/html");
+      downloadTextFile(await res.text(), `${slugify(details.name.trim() || businessName)}-website.html`, "text/html");
     } catch (err) {
       setDownloadError(err instanceof Error && err.message.length > 3 ? err.message : t(locale, "dashboard.website.starter.downloadHelper"));
     }
@@ -467,430 +458,314 @@ export function StarterSiteBuilder({
       </div>
 
       <div className="grid grid-cols-1 gap-6 nav:grid-cols-2">
-        <Card className="flex flex-col gap-4 p-5">
-          <div>
-            <div className="mb-2 text-[13px] font-medium text-ink-soft">
-              {t(locale, "dashboard.website.starter.siteLanguageLabel")}
+        {/* The options: numbered section cards, 24px apart. */}
+        <div className="flex min-w-0 flex-col gap-6" data-testid="starter-options">
+          <DesignerSection id="language" number={1} title={t(locale, "dashboard.website.starter.section.language")} defaultOpen>
+            <div className="flex flex-col gap-1.5">
+              <span className={DESIGNER_LABEL}>{t(locale, "dashboard.website.starter.siteLanguageLabel")}</span>
+              <div className="flex flex-wrap gap-2">
+                {(["en", "es"] as const).map((option) => (
+                  <button key={option} type="button" onClick={() => setSiteLocale(option)} aria-pressed={siteLocale === option} className={designerChip(siteLocale === option)}>
+                    {option === "es"
+                      ? t(locale, "dashboard.website.starter.siteLanguageSpanishOption")
+                      : t(locale, "dashboard.website.starter.siteLanguageEnglishOption")}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex gap-1">
-              {(["en", "es"] as const).map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setSiteLocale(option)}
-                  aria-pressed={siteLocale === option}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors",
-                    siteLocale === option
-                      ? "border-brass bg-brass/10 text-brass"
-                      : "border-paper-deep bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
-                  )}
-                >
-                  {option === "es"
-                    ? t(locale, "dashboard.website.starter.siteLanguageSpanishOption")
-                    : t(locale, "dashboard.website.starter.siteLanguageEnglishOption")}
-                </button>
-              ))}
-            </div>
-          </div>
+          </DesignerSection>
 
-          <div>
-            <label className="mb-1 block text-[13px] font-medium text-ink-soft">
-              {t(locale, "dashboard.website.starter.taglineLabel")}{" "}
-              <span className="font-normal text-ink-mute">
-                {t(locale, "dashboard.website.starter.taglineOptionalHint")}
-              </span>
-            </label>
-            <input
-              type="text"
-              value={tagline}
-              onChange={(e) => setTagline(e.target.value)}
-              placeholder={t(locale, "dashboard.website.starter.taglinePlaceholder")}
-              maxLength={120}
-              className="w-full rounded-lg border border-paper-deep bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink-soft"
+          <DesignerSection id="details" number={2} title={t(locale, "dashboard.website.starter.details.heading")} defaultOpen>
+            <StarterSiteDetailsForm
+              businessId={businessId}
+              fields={details}
+              onChange={(next) => {
+                // A field filled in for the first time can show right away.
+                if (!details.address.trim() && next.address.trim()) setShowAddress(true);
+                if (!details.phone.trim() && next.phone.trim()) setShowPhone(true);
+                setDetails(next);
+              }}
+              confirmed={detailsConfirmed}
+              prefilled={confirmedDetails === null}
+              onConfirmed={setConfirmedDetails}
             />
-            <p className="mt-1 text-[12px] text-ink-mute">{t(locale, "dashboard.website.starter.taglineHelper")}</p>
+          </DesignerSection>
 
-            {tagline.trim().length > 0 && (
-              <div className="mt-3 flex flex-col gap-3 rounded-lg border border-paper-line bg-paper p-3">
-                <div className="text-[12px] font-medium text-ink-soft">
-                  {t(locale, "dashboard.website.starter.taglineStyleLabel")}
-                </div>
-
-                <div>
-                  <div className="mb-1.5 text-[11.5px] text-ink-mute">
-                    {t(locale, "dashboard.website.starter.taglineFontLabel")}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {STARTER_SITE_FONTS.map((font) => {
-                      const fontLabel = t(locale, FONT_LABEL_KEY[font.id]);
-                      return (
-                        <button
-                          key={font.id}
-                          type="button"
-                          onClick={() => setTaglineFontId(font.id)}
-                          title={fontLabel}
-                          className={cn(
-                            "rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition-colors",
-                            taglineFontId === font.id
-                              ? "border-brass bg-brass/10 text-brass"
-                              : "border-paper-deep bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
-                          )}
-                        >
-                          {fontLabel.split(" — ")[0]}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-end gap-4">
-                  <div>
-                    <div className="mb-1.5 text-[11.5px] text-ink-mute">
-                      {t(locale, "dashboard.website.starter.colorLabel")}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={taglineColor ?? "#cbd5e6"}
-                        onChange={(e) => setTaglineColor(e.target.value)}
-                        aria-label={t(locale, "dashboard.website.starter.taglineColorAriaLabel")}
-                        className="h-8 w-10 cursor-pointer rounded border border-paper-deep bg-white p-0.5"
-                      />
-                      {taglineColor !== null && (
-                        <button
-                          type="button"
-                          onClick={() => setTaglineColor(null)}
-                          className="text-[11px] font-medium text-ink-mute hover:text-ink"
-                        >
-                          {t(locale, "dashboard.website.starter.reset")}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="mb-1.5 text-[11.5px] text-ink-mute">
-                      {t(locale, "dashboard.website.starter.sizeLabel")}
-                    </div>
-                    <div className="flex gap-1">
-                      {TAGLINE_SIZES.map((s) => (
-                        <button
-                          key={s.value}
-                          type="button"
-                          onClick={() => setTaglineSize(s.value)}
-                          className={cn(
-                            "rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition-colors",
-                            taglineSize === s.value
-                              ? "border-brass bg-brass/10 text-brass"
-                              : "border-paper-deep bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
-                          )}
-                        >
-                          {t(locale, s.labelKey)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="mb-1.5 text-[11.5px] text-ink-mute">
-                      {t(locale, "dashboard.website.starter.placementLabel")}
-                    </div>
-                    <div className="flex gap-1">
-                      {TAGLINE_PLACEMENTS.map((p) => (
-                        <button
-                          key={p.value}
-                          type="button"
-                          onClick={() => setTaglinePlacement(p.value)}
-                          className={cn(
-                            "rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition-colors",
-                            taglinePlacement === p.value
-                              ? "border-brass bg-brass/10 text-brass"
-                              : "border-paper-deep bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
-                          )}
-                        >
-                          {t(locale, p.labelKey)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <div className="mb-2 text-[13px] font-medium text-ink-soft">
-              {t(locale, "dashboard.website.starter.colorThemeLabel")}
-            </div>
-            <div className="flex flex-col gap-2.5">
-              {STARTER_SITE_THEME_GROUPS.map((group) => (
-                <div key={group} className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                  <div className="w-full text-[11.5px] text-ink-mute">{t(locale, THEME_GROUP_KEY[group])}</div>
-                  {STARTER_SITE_THEMES.filter((theme) => theme.group === group).map((theme) => {
-                    const themeLabel = t(locale, THEME_LABEL_KEY[theme.id]);
-                    return (
-                      <button
-                        key={theme.id}
-                        type="button"
-                        onClick={() => handleThemeSelect(theme.id)}
-                        title={themeLabel}
-                        aria-label={themeLabel}
-                        aria-pressed={themeId === theme.id}
-                        className={cn(
-                          "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all",
-                          themeId === theme.id ? "border-ink" : group === "light" ? "border-paper-deep hover:border-ink-soft" : "border-transparent hover:border-paper-deep"
-                        )}
-                        style={{ backgroundColor: theme.heroBg }}
-                      >
-                        <span className="h-3.5 w-3.5 rounded-full ring-1 ring-white/40" style={{ backgroundColor: theme.accent }} />
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-            <div className="mt-2.5 flex items-center gap-2">
-              <input
-                type="color"
-                value={effectiveAccent}
-                onChange={(e) => setCustomAccent(e.target.value)}
-                aria-label={t(locale, "dashboard.website.starter.customAccentAriaLabel")}
-                className="h-8 w-10 cursor-pointer rounded border border-paper-deep bg-white p-0.5"
-              />
-              <p className="text-[12px] text-ink-mute">
-                {t(locale, THEME_LABEL_KEY[currentTheme.id])}
-                {customAccent !== null && t(locale, "dashboard.website.starter.customAccentSuffix")}
-              </p>
-              {customAccent !== null && (
-                <button
-                  type="button"
-                  onClick={() => setCustomAccent(null)}
-                  className="text-[11px] font-medium text-ink-mute hover:text-ink"
-                >
-                  {t(locale, "dashboard.website.starter.reset")}
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <div className="mb-2 text-[13px] font-medium text-ink-soft">
-              {t(locale, "dashboard.website.starter.fontSectionLabel")}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {STARTER_SITE_FONTS.map((font) => (
-                <button
-                  key={font.id}
-                  type="button"
-                  onClick={() => setFontId(font.id)}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-left text-[12.5px] font-medium transition-colors",
-                    fontId === font.id
-                      ? "border-brass bg-brass/10 text-brass"
-                      : "border-paper-deep bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
-                  )}
-                >
-                  {t(locale, FONT_LABEL_KEY[font.id])}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <div className="mb-1 text-[13px] font-medium text-ink-soft">{t(locale, "dashboard.website.starter.accentsLabel")}</div>
-            <p className="mb-2 text-[12px] text-ink-mute">{t(locale, "dashboard.website.starter.accentsHelper")}</p>
-            <div className="flex flex-wrap gap-2">
-              {ACCENT_STYLES.map((style) => (
-                <button
-                  key={style}
-                  type="button"
-                  onClick={() => setAccentStyle(style)}
-                  aria-pressed={accentStyle === style}
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-[12.5px] font-medium transition-colors",
-                    accentStyle === style ? "border-brass bg-brass/10 text-brass" : "border-paper-deep bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
-                  )}
-                >
-                  <span aria-hidden className="h-6 w-6 rounded-full border border-paper-line bg-white" style={patternStyle(style, effectiveAccent)} />
-                  {t(locale, ACCENT_LABEL_KEY[style])}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <div className="mb-1 text-[13px] font-medium text-ink-soft">
-              {t(locale, "dashboard.website.starter.photosLabel")}{" "}
-              <span className="font-normal text-ink-mute">
-                {t(locale, "dashboard.website.starter.photosOptionalHint")}
-              </span>
-            </div>
-            <p className="mb-2 text-[12px] text-ink-mute">{t(locale, "dashboard.website.starter.photosHelper")}</p>
-
-            <div className="flex flex-col gap-3">
-              <div>
-                <div className="mb-1.5 text-[11.5px] text-ink-mute">
-                  {t(locale, "dashboard.website.starter.heroPhotoLabel")}
-                </div>
-                {heroImage ? (
-                  <div className="flex items-center gap-2.5">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={heroImage.dataUri}
-                      alt=""
-                      className="h-14 w-20 rounded-md object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setHeroImage(null)}
-                      className="inline-flex items-center gap-1 text-[12px] font-medium text-ink-mute hover:text-ink"
-                    >
-                      <IconX size={13} /> {t(locale, "dashboard.website.starter.removePhoto")}
-                    </button>
-                  </div>
-                ) : (
-                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-paper-deep px-3 py-2 text-[12.5px] font-medium text-ink-soft hover:border-ink-soft hover:text-ink">
-                    <IconPhoto size={15} />
-                    {t(locale, "dashboard.website.starter.uploadHeroPhoto")}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handleHeroImageSelect(e.target.files?.[0] ?? null)}
-                    />
-                  </label>
-                )}
-              </div>
-
-              <div>
-                <div className="mb-1.5 text-[11.5px] text-ink-mute">
-                  {t(locale, "dashboard.website.starter.contentPhotosLabel", {
-                    current: contentImages.length,
-                    max: MAX_CONTENT_IMAGES,
-                  })}
-                </div>
-                <div className="flex flex-wrap items-center gap-2.5">
-                  {contentImages.map((img, i) => (
-                    <div key={i} className="relative">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={img.dataUri} alt="" className="h-14 w-14 rounded-md object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removeContentImage(i)}
-                        aria-label={t(locale, "dashboard.website.starter.removePhotoAriaLabel")}
-                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-paper-deep bg-white text-ink-mute hover:text-ink"
-                      >
-                        <IconX size={12} />
-                      </button>
-                    </div>
-                  ))}
-                  {contentImages.length < MAX_CONTENT_IMAGES && (
-                    <label className="inline-flex h-14 w-14 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-paper-deep text-ink-mute hover:border-ink-soft hover:text-ink">
-                      <IconPhoto size={16} />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => handleContentImageSelect(e.target.files?.[0] ?? null)}
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
-
-              {photoError && <p className="text-[12px] text-red">{photoError}</p>}
-            </div>
-          </div>
-
-          <div>
-            <div className="mb-1 text-[13px] font-medium text-ink-soft">
-              {t(locale, "dashboard.website.starter.whatToIncludeLabel")}{" "}
-              <span className="font-normal text-ink-mute">
-                {t(locale, "dashboard.website.starter.whatToIncludeHint")}
-              </span>
-            </div>
-            <div className="flex flex-col divide-y divide-paper-line">
-              <ToggleRow
-                icon={IconMapPin}
-                label={t(locale, "dashboard.website.starter.includeAddress")}
-                checked={showAddress}
-                onChange={setShowAddress}
-                available={!!address}
-              />
-              <ToggleRow
-                icon={IconPhone}
-                label={t(locale, "dashboard.website.starter.includePhone")}
-                checked={showPhone}
-                onChange={setShowPhone}
-                available={!!phone}
-              />
-              <div data-testid="hours-row">
-                {googleHasHours || ownerHours ? (
+          <DesignerSection id="include" number={3} title={t(locale, "dashboard.website.starter.whatToIncludeLabel")}>
+            <div data-testid="starter-include" className="flex flex-col gap-1">
+              <p className={DESIGNER_HELP}>{t(locale, "dashboard.website.starter.whatToIncludeHint")}</p>
+              <div className="flex flex-col divide-y divide-paper-line">
+                <ToggleRow
+                  icon={IconMapPin}
+                  label={t(locale, "dashboard.website.starter.includeAddress")}
+                  checked={showAddress}
+                  onChange={setShowAddress}
+                  available={!!details.address.trim()}
+                />
+                <ToggleRow
+                  icon={IconPhone}
+                  label={t(locale, "dashboard.website.starter.includePhone")}
+                  checked={showPhone}
+                  onChange={setShowPhone}
+                  available={!!details.phone.trim()}
+                />
+                <div data-testid="hours-row">
+                  {/* Same row as the others; the checkbox waits for hours. */}
                   <ToggleRow
                     icon={IconClock}
                     label={t(locale, "dashboard.website.starter.includeHours")}
                     checked={showHours}
                     onChange={setShowHours}
-                    available
+                    available={ownerHours !== null}
+                    action={
+                      hoursEditorOpen ? null : (
+                        <button type="button" onClick={() => setHoursEditorOpen(true)} className="shrink-0 text-[12px] font-semibold text-ink underline decoration-brass underline-offset-2 hover:decoration-ink">
+                          {t(locale, ownerHours ? "dashboard.website.starter.hours.edit" : "dashboard.website.starter.hours.add")}
+                        </button>
+                      )
+                    }
                   />
-                ) : (
-                  <div className="flex items-center gap-2.5 py-2 text-sm text-ink">
-                    <IconClock size={15} className="ml-[26px] shrink-0" />
-                    <span className="flex-1">{t(locale, "dashboard.website.starter.includeHours")}</span>
-                    {!hoursEditorOpen && (
-                      <button type="button" onClick={() => setHoursEditorOpen(true)} className="rounded-md border border-ink px-2 py-0.5 text-[12px] font-semibold text-ink hover:bg-paper">
-                        {t(locale, "dashboard.website.starter.hours.add")}
-                      </button>
-                    )}
-                  </div>
-                )}
-                {(googleHasHours || ownerHours) && !hoursEditorOpen && (
-                  <div className="-mt-1 flex flex-wrap items-center gap-x-2 pb-2 pl-[26px] text-[12px]">
-                    <span className="text-ink-mute">
-                      {ownerHours ? t(locale, "dashboard.website.starter.hours.sourceOwner") : t(locale, "dashboard.website.starter.hours.sourceGoogle")}
-                    </span>
-                    <button type="button" onClick={() => setHoursEditorOpen(true)} className="font-semibold text-ink underline-offset-2 hover:underline">
-                      {googleHasHours ? t(locale, "dashboard.website.starter.hours.editForWebsite") : t(locale, "dashboard.website.starter.hours.edit")}
-                    </button>
-                  </div>
-                )}
-                {!hoursEditorOpen && ownerHours && googleSchedule && !sameSchedule(ownerHours, googleSchedule) && (
-                  <div className="pb-2 pl-[26px]">
-                    <HoursDifferNote />
-                  </div>
-                )}
-                {!hoursEditorOpen && ownerHours && !googleHasHours && (
-                  <div className="pb-2 pl-[26px]">
-                    <HoursGoogleTip businessId={businessId} />
-                  </div>
-                )}
-                {hoursEditorOpen && (
-                  <StarterHoursEditor
-                    businessId={businessId}
-                    initial={ownerHours ?? googleSchedule ?? defaultOwnerHours()}
-                    googleHours={googleSchedule}
-                    onApply={(next) => {
-                      setOwnerHours(next);
-                      setShowHours(next !== null || googleHasHours);
-                    }}
-                    onClose={() => setHoursEditorOpen(false)}
-                  />
-                )}
+                  {ownerHours && !hoursEditorOpen && <p className={cn(DESIGNER_HELP, "-mt-1 pb-2 pl-[50px]")}>{t(locale, "dashboard.website.starter.hours.sourceOwner")}</p>}
+                  {!hoursEditorOpen && ownerHours && googleSchedule && !sameSchedule(ownerHours, googleSchedule) && (
+                    <div className="pb-2 pl-[50px]">
+                      <HoursDifferNote />
+                    </div>
+                  )}
+                  {!hoursEditorOpen && ownerHours && !googleSchedule && (
+                    <div className="pb-2 pl-[50px]">
+                      <HoursGoogleTip businessId={businessId} />
+                    </div>
+                  )}
+                  {hoursEditorOpen && (
+                    <StarterHoursEditor
+                      businessId={businessId}
+                      initial={ownerHours ?? googleSchedule ?? defaultOwnerHours()}
+                      googleHours={googleSchedule}
+                      canRemove={ownerHours !== null}
+                      onApply={(next) => {
+                        setOwnerHours(next);
+                        setShowHours(next !== null);
+                      }}
+                      onClose={() => setHoursEditorOpen(false)}
+                    />
+                  )}
+                </div>
               </div>
-              <ToggleRow
-                icon={IconStar}
-                label={t(locale, "dashboard.website.starter.includeRating")}
-                checked={showRating}
-                onChange={setShowRating}
-                available={rating !== null}
+            </div>
+          </DesignerSection>
+
+          <DesignerSection id="look" number={4} title={t(locale, "dashboard.website.starter.section.look")}>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor={`${businessId}-tagline`} className={DESIGNER_LABEL}>
+                {t(locale, "dashboard.website.starter.taglineLabel")}{" "}
+                <span className="font-normal text-ink-mute">{t(locale, "dashboard.website.starter.taglineOptionalHint")}</span>
+              </label>
+              <input
+                id={`${businessId}-tagline`}
+                type="text"
+                value={tagline}
+                onChange={(e) => setTagline(e.target.value)}
+                placeholder={t(locale, "dashboard.website.starter.taglinePlaceholder")}
+                maxLength={120}
+                className={DESIGNER_INPUT}
               />
-              {rating !== null && (
-                <p className="-mt-1 pb-2 pl-[26px] text-[12px] text-ink-mute">{t(locale, "dashboard.website.starter.ratingStaleNote")}</p>
+              <p className={DESIGNER_HELP}>{t(locale, "dashboard.website.starter.taglineHelper")}</p>
+
+              {tagline.trim().length > 0 && (
+                <div className="mt-1.5 flex flex-col gap-3 rounded-lg border border-paper-line bg-paper p-3">
+                  <div className={DESIGNER_LABEL}>{t(locale, "dashboard.website.starter.taglineStyleLabel")}</div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <div className={DESIGNER_HELP}>{t(locale, "dashboard.website.starter.taglineFontLabel")}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {STARTER_SITE_FONTS.map((font) => {
+                        const fontLabel = t(locale, FONT_LABEL_KEY[font.id]);
+                        return (
+                          <button key={font.id} type="button" onClick={() => setTaglineFontId(font.id)} title={fontLabel} aria-pressed={taglineFontId === font.id} className={designerChip(taglineFontId === font.id)}>
+                            {fontLabel.split(" — ")[0]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-end gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <div className={DESIGNER_HELP}>{t(locale, "dashboard.website.starter.colorLabel")}</div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={taglineColor ?? "#cbd5e6"}
+                          onChange={(e) => setTaglineColor(e.target.value)}
+                          aria-label={t(locale, "dashboard.website.starter.taglineColorAriaLabel")}
+                          className={DESIGNER_COLOR_INPUT}
+                        />
+                        {taglineColor !== null && (
+                          <button type="button" onClick={() => setTaglineColor(null)} className="text-[12px] font-medium text-ink-mute hover:text-ink">
+                            {t(locale, "dashboard.website.starter.reset")}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <div className={DESIGNER_HELP}>{t(locale, "dashboard.website.starter.sizeLabel")}</div>
+                      <div className="flex flex-wrap gap-2">
+                        {TAGLINE_SIZES.map((s) => (
+                          <button key={s.value} type="button" onClick={() => setTaglineSize(s.value)} aria-pressed={taglineSize === s.value} className={designerChip(taglineSize === s.value)}>
+                            {t(locale, s.labelKey)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <div className={DESIGNER_HELP}>{t(locale, "dashboard.website.starter.placementLabel")}</div>
+                      <div className="flex flex-wrap gap-2">
+                        {TAGLINE_PLACEMENTS.map((p) => (
+                          <button key={p.value} type="button" onClick={() => setTaglinePlacement(p.value)} aria-pressed={taglinePlacement === p.value} className={designerChip(taglinePlacement === p.value)}>
+                            {t(locale, p.labelKey)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
-          </div>
-        </Card>
+
+            <div className="flex flex-col gap-1.5 border-t border-paper-line pt-3">
+              <div className={DESIGNER_LABEL}>{t(locale, "dashboard.website.starter.colorThemeLabel")}</div>
+              <div className="flex flex-col gap-2.5">
+                {STARTER_SITE_THEME_GROUPS.map((group) => (
+                  <div key={group} className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <div className={cn(DESIGNER_HELP, "w-full")}>{t(locale, THEME_GROUP_KEY[group])}</div>
+                    {STARTER_SITE_THEMES.filter((theme) => theme.group === group).map((theme) => {
+                      const themeLabel = t(locale, THEME_LABEL_KEY[theme.id]);
+                      return (
+                        <button
+                          key={theme.id}
+                          type="button"
+                          onClick={() => handleThemeSelect(theme.id)}
+                          title={themeLabel}
+                          aria-label={themeLabel}
+                          aria-pressed={themeId === theme.id}
+                          className={cn(
+                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all",
+                            themeId === theme.id ? "border-ink" : group === "light" ? "border-paper-deep hover:border-ink-soft" : "border-transparent hover:border-paper-deep"
+                          )}
+                          style={{ backgroundColor: theme.heroBg }}
+                        >
+                          <span className="h-3.5 w-3.5 rounded-full ring-1 ring-white/40" style={{ backgroundColor: theme.accent }} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  type="color"
+                  value={effectiveAccent}
+                  onChange={(e) => setCustomAccent(e.target.value)}
+                  aria-label={t(locale, "dashboard.website.starter.customAccentAriaLabel")}
+                  className={DESIGNER_COLOR_INPUT}
+                />
+                <p className={DESIGNER_HELP}>
+                  {t(locale, THEME_LABEL_KEY[currentTheme.id])}
+                  {customAccent !== null && t(locale, "dashboard.website.starter.customAccentSuffix")}
+                </p>
+                {customAccent !== null && (
+                  <button type="button" onClick={() => setCustomAccent(null)} className="text-[12px] font-medium text-ink-mute hover:text-ink">
+                    {t(locale, "dashboard.website.starter.reset")}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5 border-t border-paper-line pt-3">
+              <div className={DESIGNER_LABEL}>{t(locale, "dashboard.website.starter.fontSectionLabel")}</div>
+              <div className="flex flex-wrap gap-2">
+                {STARTER_SITE_FONTS.map((font) => (
+                  <button key={font.id} type="button" onClick={() => setFontId(font.id)} aria-pressed={fontId === font.id} className={designerChip(fontId === font.id)}>
+                    {t(locale, FONT_LABEL_KEY[font.id])}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5 border-t border-paper-line pt-3">
+              <div className={DESIGNER_LABEL}>{t(locale, "dashboard.website.starter.accentsLabel")}</div>
+              <p className={DESIGNER_HELP}>{t(locale, "dashboard.website.starter.accentsHelper")}</p>
+              <div className="flex flex-wrap gap-2">
+                {ACCENT_STYLES.map((style) => (
+                  <button key={style} type="button" onClick={() => setAccentStyle(style)} aria-pressed={accentStyle === style} className={cn(designerChip(accentStyle === style), "py-1 pl-1.5")}>
+                    <span aria-hidden className="h-6 w-6 shrink-0 rounded-full border border-paper-line bg-white" style={patternStyle(style, effectiveAccent)} />
+                    {t(locale, ACCENT_LABEL_KEY[style])}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </DesignerSection>
+
+          <DesignerSection id="photos" number={5} title={t(locale, "dashboard.website.starter.photosLabel")}>
+            <p className={DESIGNER_HELP}>
+              <span className="font-medium">{t(locale, "dashboard.website.starter.photosOptionalHint")}</span> {t(locale, "dashboard.website.starter.photosHelper")}
+            </p>
+
+            <div className="flex flex-col gap-1.5">
+              <div className={DESIGNER_LABEL}>{t(locale, "dashboard.website.starter.heroPhotoLabel")}</div>
+              {heroImage ? (
+                <div className="flex items-center gap-2.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={heroImage.dataUri} alt="" className="h-14 w-20 rounded-md object-cover" />
+                  <button type="button" onClick={() => setHeroImage(null)} className="inline-flex items-center gap-1 text-[12px] font-medium text-ink-mute hover:text-ink">
+                    <IconX size={13} /> {t(locale, "dashboard.website.starter.removePhoto")}
+                  </button>
+                </div>
+              ) : (
+                <label className="inline-flex h-10 w-fit cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-paper-deep px-3 text-[12.5px] font-medium text-ink-soft hover:border-ink-soft hover:text-ink">
+                  <IconPhoto size={15} />
+                  {t(locale, "dashboard.website.starter.uploadHeroPhoto")}
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleHeroImageSelect(e.target.files?.[0] ?? null)} />
+                </label>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <div className={DESIGNER_LABEL}>
+                {t(locale, "dashboard.website.starter.contentPhotosLabel", {
+                  current: contentImages.length,
+                  max: MAX_CONTENT_IMAGES,
+                })}
+              </div>
+              <div className="flex flex-wrap items-center gap-2.5">
+                {contentImages.map((img, i) => (
+                  <div key={i} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img.dataUri} alt="" className="h-14 w-14 rounded-md object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeContentImage(i)}
+                      aria-label={t(locale, "dashboard.website.starter.removePhotoAriaLabel")}
+                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-paper-deep bg-white text-ink-mute hover:text-ink"
+                    >
+                      <IconX size={12} />
+                    </button>
+                  </div>
+                ))}
+                {contentImages.length < MAX_CONTENT_IMAGES && (
+                  <label className="inline-flex h-14 w-14 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-paper-deep text-ink-mute hover:border-ink-soft hover:text-ink">
+                    <IconPhoto size={16} />
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleContentImageSelect(e.target.files?.[0] ?? null)} />
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {photoError && <p className="text-[12px] text-red">{photoError}</p>}
+          </DesignerSection>
+        </div>
 
         {/* The preview: first on a phone (fixed height, scrolls inside);
             on desktop it stays in view (sticky) while the options scroll. */}
@@ -920,12 +795,17 @@ export function StarterSiteBuilder({
                   <span className="rounded-full bg-white/80 px-1.5 py-px text-[10.5px] font-semibold text-ink">{t(locale, "dashboard.settings.plan.name.grow")}</span>
                 </UpgradeButton>
               ) : (
-                <Button variant="brass" onClick={handleDownload}>
+                <Button variant="brass" onClick={handleDownload} disabled={!detailsConfirmed} data-testid="starter-download">
                   <IconDownload size={16} />
                   {t(locale, "dashboard.website.starter.downloadSiteButton")}
                 </Button>
               )}
             </div>
+            {!free && !detailsConfirmed && (
+              <p data-testid="confirm-details-first" className="text-[12px] text-ink-soft">
+                {t(locale, "dashboard.website.starter.details.confirmFirst")}
+              </p>
+            )}
             {!free && downloadError && <p className="text-[12px] text-red">{downloadError}</p>}
             {!free && <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.website.starter.downloadHelper")}</p>}
           </div>

@@ -7,6 +7,7 @@
 // compared with the last scan before the week — never a fabricated
 // comparison, never "(0 days)".
 
+import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -222,6 +223,8 @@ export function WeeklyRecapCard({
             )}
           </ul>
         )}
+        {/* Listing changes and the review count come from Google. */}
+        {(view.listingChanges.length > 0 || (view.reviews.countChange ?? 0) !== 0) && <GoogleMapsAttribution />}
       </div>
 
       {/* What we've verified this week */}

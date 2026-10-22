@@ -104,8 +104,6 @@ export function GetMoreReviews({
   businessId,
   businessName,
   placeId,
-  rating,
-  reviewCount,
   verifiedSocials,
   plan,
 }: {
@@ -115,8 +113,6 @@ export function GetMoreReviews({
   /** The listing's real name; null prints no name on the sign. */
   businessName: string | null;
   placeId: string | null;
-  rating: number | null;
-  reviewCount: number | null;
   verifiedSocials: Array<{ platform: string; url: string }>;
   plan: Plan;
 }) {
@@ -124,8 +120,8 @@ export function GetMoreReviews({
   const reviewUrl = placeId ? buildGoogleReviewUrl(placeId) : null;
   const access = signAccess(plan);
   const content: SignContent = useMemo(
-    () => ({ businessName, rating, reviewCount, verifiedSocials }),
-    [businessName, rating, reviewCount, verifiedSocials]
+    () => ({ businessName, verifiedSocials }),
+    [businessName, verifiedSocials]
   );
 
   // Sign choices: defaults on the server and first paint, then this

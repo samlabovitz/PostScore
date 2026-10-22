@@ -22,6 +22,7 @@ import {
   type WeeklyMetricProgress,
 } from "@/lib/actionPlan";
 import type { GrowthMove } from "@/lib/growthMoves";
+import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 import { formatMonthDayTime, t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 
 /** What a website task needs for "Re-check my website". */
@@ -386,7 +387,10 @@ export function TaskCard({
                 {task.ownerActionOnGoogle && (
                   <p className="mt-2.5 flex items-start gap-1.5 border-t border-paper-line pt-2.5 text-[12px] text-ink-mute">
                     <IconBrandGoogle size={14} className="mt-0.5 shrink-0" aria-hidden />
-                    <span>{t(locale, "dashboard.overview.actionPlan.ownerActionOnGoogle")}</span>
+                    <span>
+                      {t(locale, "dashboard.overview.actionPlan.ownerActionOnGoogle")}{" "}
+                      <span data-testid="after-google-change" className="font-medium text-ink-soft">{t(locale, "dashboard.rescan.afterGoogleChange")}</span>
+                    </span>
                   </p>
                 )}
               </div>
@@ -522,9 +526,21 @@ export function TaskListCard({
           />
         ))}
       </ol>
-      {footnote && <p className="px-1 text-[12px] text-ink-mute">{footnote}</p>}
+      {/* Listing tasks quote the Google listing (reviews, rating, hours…):
+          the logo shares the footnote's line. */}
+      {tasks.some(showsListingData) ? (
+        <GoogleMapsAttribution className="mt-0 px-1">{footnote && <p className="text-[12px] text-ink-mute">{footnote}</p>}</GoogleMapsAttribution>
+      ) : (
+        footnote && <p className="px-1 text-[12px] text-ink-mute">{footnote}</p>
+      )}
     </div>
   );
+}
+
+/** A task about the Google listing (not the website), or the website task
+ * that compares against Google's listing. */
+function showsListingData(task: ActionPlanTask): boolean {
+  return !task.checkId.startsWith("website.") || task.checkId.includes("google");
 }
 
 export function CompletedTasksCard({ completed }: { completed: CompletedTask[] }) {

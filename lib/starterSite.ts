@@ -1,5 +1,6 @@
 // Pure builder for the Website page's starter-site generator: takes
-// real, already-saved Google data plus a few owner customizations
+// the business details the owner confirmed (or typed) plus a few owner
+// customizations
 // (tagline — with its own font/color/size/placement, which sections to
 // show, a color theme with an optional accent override, a font
 // pairing) and returns a complete, self-contained HTML document as a
@@ -7,9 +8,9 @@
 // always produces the exact same file, so the live preview (an iframe
 // srcDoc) and the downloaded file are always identical.
 //
-// Nothing here is fabricated: every fact on the page is either a real
-// field from the saved business or text the owner typed themselves
-// (the tagline). A field the owner chooses to hide, or that was never
+// Nothing here is fabricated: every fact on the page is something the
+// owner provided — the details they confirmed or edited (name, type,
+// address, phone), the hours they entered, the tagline. A field the owner chooses to hide, or that was never
 // on file, is simply omitted — never replaced with a placeholder that
 // could be mistaken for real information. Color/font/tagline styling
 // are pure presentation choices with no bearing on what's shown.
@@ -17,19 +18,17 @@
 // The generated site's own fixed text (CTAs, section headings, footer,
 // <html lang>) follows `locale` on StarterSiteInput — the site's own
 // "Site language" choice (StarterSiteBuilder.tsx), independent of the
-// dashboard's own UI locale. Hours specifically prefer the real
-// structured openingHoursPeriods, formatted via lib/hours.ts, when the
-// site language is Spanish; the plain openingHours weekday-description
-// lines (always English, from Google) are the fallback whenever the
-// structured data can't honestly produce a Spanish line.
+// dashboard's own UI locale.
+//
+// No Google Maps content goes on the owner's own site (Google Maps
+// Platform terms §3.2.3; docs/product-structure.md, compliance): no
+// Google rating, review count, price level or Google hours. Hours are
+// only the owner's own (the hours editor); reviews are a link to the
+// live listing by place ID; the map is Google's own embed.
 
-import { t, tPlural, type Locale } from "./i18n";
-import { formatOpeningHours } from "./hours";
-import type { OpeningHoursPeriod } from "./google/places";
-import { appointmentOnlyLabel, hoursRows, openingHoursSpecification, ownerHoursFromGoogle, type OwnerHours } from "./ownerHours";
-import { starRowCss, starRowHtml } from "./starRating";
+import { t, type Locale } from "./i18n";
+import { appointmentOnlyLabel, hoursRows, openingHoursSpecification, type OwnerHours } from "./ownerHours";
 import { contrastRatio, mix, readableOn, readableOnAll, textOn } from "./color";
-import { priceLevelToSymbol } from "./priceLevel";
 import { businessIcon, dividerSvg, headingShapeCss, iconSvg, patternCss, safeAccentStyle, type AccentStyle, type IconName } from "./starterSiteArt";
 import { hoursScript, hoursSummary } from "./starterSiteHours";
 
@@ -297,11 +296,10 @@ function telHref(phone: string): string {
 export interface StarterSiteInput {
   /** The generated site's own language — independent of the dashboard's
    * UI locale. Controls every fixed string in the output (CTAs, section
-   * headings, footer, <html lang>) and which of openingHours /
-   * openingHoursPeriods is preferred for the Hours section. */
+   * headings, footer, <html lang>). */
   locale: Locale;
   businessName: string;
-  /** The business's real Google category display name, e.g. "Hair Salon". */
+  /** The type of business as the owner confirmed it, e.g. "Hair Salon". */
   category: string | null;
   /** Owner-written, optional — never invented on their behalf. */
   tagline: string;
@@ -312,29 +310,17 @@ export interface StarterSiteInput {
   taglineColor: string | null;
   taglineSize: TaglineSize;
   taglinePlacement: TaglinePlacement;
+  /** The owner's confirmed (or edited) phone and address. */
   phone: string | null;
   address: string | null;
-  openingHours: string[] | null;
-  /** Google's structured regularOpeningHours.periods (see
-   * lib/google/places.ts) — preferred over the plain openingHours lines
-   * above whenever `locale` is "es" and lib/hours.ts's
-   * formatOpeningHours() can honestly produce Spanish lines from it;
-   * null falls back to openingHours exactly as before. */
-  openingHoursPeriods: OpeningHoursPeriod[] | null;
-  /** Hours the owner entered for the website (lib/ownerHours.ts) — used
-   * instead of Google's when set. Website only: never scored. */
+  /** Hours the owner entered for the website (lib/ownerHours.ts) — the
+   * only hours the site shows. Website only: never scored. */
   ownerHours?: OwnerHours | null;
   /** The business's time zone (IANA) — "open now" and today's row use it. */
   timeZone?: string;
-  rating: number | null;
-  reviewCount: number | null;
-  /** Real link to the business's own Google listing, when on file —
-   * used for "read our reviews" and "open in Google Maps". */
-  googleMapsUri: string | null;
-  /** When the rating above was read from Google (the last scan), ISO. A
-   * downloaded page can't update itself, so a printed rating always says
-   * "as of {month}" — without this date the number isn't shown at all. */
-  ratingAsOf?: string | null;
+  /** The Google place ID (storable) — "Read our reviews on Google" and
+   * "Open in Google Maps" link to the live listing through it. */
+  placeId: string | null;
   /** A real storefront customers can visit (see hasStorefront) — false
    * for website-only and service-area businesses: then no street address,
    * directions or map, just the city. Defaults to true. */
@@ -342,8 +328,6 @@ export interface StarterSiteInput {
   /** Maps Embed API (place mode) for the storefront map; null = just the
    * address and an "Open in Google Maps" link. */
   mapEmbed?: { key: string; placeId: string } | null;
-  /** Google's own price level enum (lib/priceLevel.ts), when it has one. */
-  priceLevel?: string | null;
   /** Social profiles verified to open the real profile (lib/socialLinkCheck.ts). */
   socialLinks?: Array<{ platform: string; url: string }>;
   /** The copyright year (passed in so the output stays deterministic). */
@@ -366,9 +350,6 @@ export interface StarterSiteInput {
     address: boolean;
     phone: boolean;
     hours: boolean;
-    /** "Show my rating" — off by default; the Reviews block then links to
-     * Google without a number that could go stale. */
-    rating: boolean;
   };
   /** An owner-uploaded photo for the hero background, as a data: URI —
    * see StarterSiteBuilder.tsx for how it's captured/resized client-side.
@@ -410,23 +391,6 @@ export function hasStorefront(params: { listingMode: "google" | "website_only"; 
   return parts.length >= 3 && /\d/.test(parts[0]);
 }
 
-const MONTHS: Record<Locale, string[]> = {
-  en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-  es: ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
-};
-
-/** "Oct 2026" / "octubre de 2026", in the business's time zone (numeric
- * date parts only, so server and browser agree). */
-export function monthYear(iso: string, locale: Locale, timeZone = "America/New_York"): string | null {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "numeric" }).formatToParts(date);
-  const month = Number(parts.find((p) => p.type === "month")?.value) - 1;
-  const year = parts.find((p) => p.type === "year")?.value;
-  if (!(month >= 0 && month < 12) || !year) return null;
-  return locale === "es" ? `${MONTHS.es[month]} de ${year}` : `${MONTHS.en[month]} ${year}`;
-}
-
 /** Only https:// links leave the page (an http:// one would break "HTTPS-ready"). */
 function safeHttpsUrl(url: string | null | undefined): string | null {
   if (!url) return null;
@@ -435,12 +399,12 @@ function safeHttpsUrl(url: string | null | undefined): string | null {
 }
 
 /** schema.org LocalBusiness: only the facts the site itself shows. Hours
- * are the owner's (or Google's) for this website — never a rating, since
- * Google doesn't allow a business to mark up its own reviews. */
+ * are the owner's for this website — never a rating, since Google
+ * doesn't allow a business to mark up its own reviews. */
 function jsonLd(
   input: StarterSiteInput,
   name: string,
-  facts: { address: string | null; phone: boolean; schedule: OwnerHours | null; price: string | null; mapsUrl: string | null; social: string[]; description: string | null }
+  facts: { address: string | null; phone: boolean; schedule: OwnerHours | null; mapsUrl: string | null; social: string[]; description: string | null }
 ): string {
   const data: Record<string, unknown> = { "@context": "https://schema.org", "@type": "LocalBusiness", name };
   if (facts.description) data.description = facts.description;
@@ -450,7 +414,6 @@ function jsonLd(
     const spec = openingHoursSpecification(facts.schedule);
     if (spec.length > 0) data.openingHoursSpecification = spec;
   }
-  if (facts.price) data.priceRange = facts.price;
   if (facts.mapsUrl) data.hasMap = facts.mapsUrl;
   if (facts.social.length > 0) data.sameAs = facts.social;
   return scriptJson(data);
@@ -510,28 +473,17 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   // storefront; otherwise just the city.
   const showAddress = input.show.address && !!input.address && storefront;
   const showPhone = input.show.phone && !!input.phone;
-  // Spanish prefers the real structured hours, formatted honestly by
-  // lib/hours.ts; when that can't produce a result (no structured data,
-  // or it doesn't parse), this falls back to the plain English lines —
-  // never a guessed Spanish schedule.
-  const hoursLines =
-    (locale === "es" ? formatOpeningHours(input.openingHoursPeriods, locale) : null) ?? input.openingHours;
-  // A real weekly schedule (the owner's, else Google's structured hours)
-  // renders as a table with today highlighted; otherwise Google's plain
-  // lines as before.
-  const schedule = input.ownerHours ?? ownerHoursFromGoogle(input.openingHoursPeriods);
-  const showHours = input.show.hours && (!!schedule || (!!hoursLines && hoursLines.length > 0));
+  // Only the owner's own hours (a table with today highlighted).
+  const schedule = input.ownerHours ?? null;
+  const showHours = input.show.hours && !!schedule;
   const weekly = showHours && schedule && schedule.mode === "weekly" ? schedule : null;
-  const tz = input.timeZone ?? "America/New_York";
-  const asOf = input.ratingAsOf ? monthYear(input.ratingAsOf, locale, tz) : null;
-  // The number only with its date — a downloaded page never updates.
-  const showRating = input.show.rating && input.rating !== null && asOf !== null;
-  const rating = input.rating as number;
   const tagline = input.tagline.trim();
   const city = input.show.address ? (storefront ? cityFromAddress(input.address) : cityFromAddress(input.address, true) ?? cityFromAddress(input.address)) : null;
-  const priceSymbol = priceLevelToSymbol(input.priceLevel ?? null);
-  const price = priceSymbol === "Free" ? t(locale, "starterSite.priceFree") : priceSymbol;
-  const mapsUrl = safeHttpsUrl(input.googleMapsUri);
+  // The live Google listing, by place ID (Google Maps URLs).
+  const mapsUrl =
+    input.placeId && /^[A-Za-z0-9_-]+$/.test(input.placeId)
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&query_place_id=${input.placeId}`
+      : null;
   const social = (input.socialLinks ?? []).flatMap((s) => {
     const url = safeHttpsUrl(s.url);
     return url ? [{ platform: s.platform, url }] : [];
@@ -556,17 +508,6 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
       `<a class="btn ${showPhone ? "btn-secondary" : "btn-primary"}" href="${directionsUrl}" target="_blank" rel="noopener noreferrer">${ico("pin", 18)}${escapeHtml(t(locale, "starterSite.getDirections"))}</a>`
     );
   }
-  const ratingLabel = showRating
-    ? input.reviewCount !== null
-      ? tPlural(locale, "starterSite.ratingBadge", input.reviewCount, { rating: rating.toFixed(1), date: asOf as string })
-      : t(locale, "starterSite.ratingBadgeOnGoogle", { rating: rating.toFixed(1), date: asOf as string })
-    : "";
-  const ratingBadge =
-    showRating && rating >= 4
-      ? mapsUrl
-        ? `<a class="rating-badge" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer"><span class="badge-star">★</span>${escapeHtml(ratingLabel)}</a>`
-        : `<span class="rating-badge"><span class="badge-star">★</span>${escapeHtml(ratingLabel)}</span>`
-      : "";
   const taglineHtml = tagline ? `<p class="tagline tagline--${input.taglinePlacement}">${escapeHtml(tagline)}</p>` : "";
   const nameHtml = `<h1>${escapeHtml(name)}</h1>`;
   const categoryHtml = categoryCity ? `<div class="category">${escapeHtml(categoryCity)}</div>` : "";
@@ -585,9 +526,6 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   }
   if (city) {
     tiles.push(`<div class="tile"><span class="tile-ico">${iconSvg("pin", 20)}</span><div><div class="tile-label">${escapeHtml(t(locale, "starterSite.glanceArea"))}</div><div class="tile-value">${escapeHtml(city)}</div></div></div>`);
-  }
-  if (price) {
-    tiles.push(`<div class="tile"><span class="tile-ico">${iconSvg("tag", 20)}</span><div><div class="tile-label">${escapeHtml(t(locale, "starterSite.glancePrice"))}</div><div class="tile-value">${escapeHtml(price)}</div></div></div>`);
   }
 
   // ---- Content bands (alternate ones get the pattern)
@@ -623,37 +561,14 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
           ${body}
           ${note}
         </div>`);
-  } else if (showHours) {
-    cards.push(`<div class="card" id="hours">
-          <h2 class="sec-title">${secIcon("clock")}${escapeHtml(t(locale, "starterSite.hoursHeading"))}</h2>
-          <ul class="hours-lines">
-            ${(hoursLines as string[]).map((line) => `<li>${escapeHtml(line)}</li>`).join("\n            ")}
-          </ul>
-        </div>`);
   }
-  // Reviews: by default no number at all (it would go stale in a static
-  // file) — just a link to the live reviews on Google. "Show my rating"
-  // adds the number with the month it was read.
-  const reviewsLink = mapsUrl
-    ? `<a class="btn btn-outline" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(locale, "starterSite.seeReviewsOnGoogle"))}</a>`
-    : "";
-  if (showRating) {
-    const stars = starRowHtml(rating, t(locale, "starterSite.starsAria", { rating: rating.toFixed(1) }));
-    const reviewsLine =
-      input.reviewCount !== null
-        ? tPlural(locale, "starterSite.ratingLine", input.reviewCount, { rating: rating.toFixed(1), date: asOf as string })
-        : t(locale, "starterSite.ratingLineOnGoogle", { rating: rating.toFixed(1), date: asOf as string });
-    cards.push(`<div class="card card--reviews" id="reviews">
-          <h2 class="sec-title">${secIcon("star")}${escapeHtml(t(locale, "starterSite.reviewsHeading"))}</h2>
-          <div class="score-row"><span class="score">${rating.toFixed(1)}</span>${stars}</div>
-          <p>${escapeHtml(reviewsLine)}</p>
-          ${reviewsLink}
-        </div>`);
-  } else if (reviewsLink) {
+  // Reviews: never Google's rating or count on the owner's own site —
+  // just a link to the live reviews on Google.
+  if (mapsUrl) {
     cards.push(`<div class="card card--reviews" id="reviews">
           <h2 class="sec-title">${secIcon("star")}${escapeHtml(t(locale, "starterSite.reviewsHeading"))}</h2>
           <p class="big">${escapeHtml(t(locale, "starterSite.reviewsCta"))}</p>
-          ${reviewsLink}
+          <a class="btn btn-outline" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(locale, "starterSite.seeReviewsOnGoogle"))}</a>
         </div>`);
   }
   if (cards.length > 0) bands.push(`<div class="wrap split split--${cards.length}">\n        ${cards.join("\n        ")}\n      </div>`);
@@ -733,7 +648,6 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
     address: showAddress ? (input.address as string) : city,
     phone: showPhone,
     schedule: showHours ? schedule : null,
-    price: priceSymbol,
     mapsUrl,
     social: social.map((s) => s.url),
     description: tagline || categoryCity || null,
@@ -796,13 +710,6 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   .hero .tagline--above { margin-top: 0; margin-bottom: 12px; }`
       : ""
   }
-  .rating-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    margin-top: 18px; padding: 6px 14px; border-radius: 999px;
-    border: 1px solid ${c.heroSoft}66;
-    color: ${c.heroText}; font-size: 14px; font-weight: 600; text-decoration: none;
-  }
-  .badge-star { color: ${c.heroAccent}; font-size: 16px; line-height: 1; }
   .hero .ctas { margin-top: 28px; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -882,9 +789,6 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   .hours-note, .hours-appointment { margin-top: 10px !important; }
   .hours-appointment { font-weight: 600; color: ${c.ink} !important; }
 
-  .score-row { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
-  .score { font-family: ${font.heading.cssFamily}; font-size: 46px; font-weight: 700; line-height: 1; color: ${c.ink}; }
-  ${starRowCss(c.accent, c.border)}
 
   .site-footer { background: ${c.footerBg}; color: ${c.footerText}; padding: 40px 0 24px; font-size: 14px; }
   .foot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; }
@@ -910,7 +814,6 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
     <div class="hero-inner">
     ${typeBadge}
     ${heroBody.join("\n    ")}
-    ${ratingBadge}
     ${heroCtas.length > 0 ? `<div class="ctas">${heroCtas.join("\n      ")}</div>` : ""}
     </div>
     ${decorated ? dividerSvg(style, firstBg) : ""}

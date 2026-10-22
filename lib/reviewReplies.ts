@@ -5,20 +5,22 @@
 // pasted text is the owner's own input and is never saved; only the draft
 // (the owner's reply) is kept, as a row that also counts the free drafts.
 //
-// Every plan can try 3 drafts per business (lifetime, counted on the
-// server); Premium and Multi are unlimited. Pure.
+// Per business, per week (the Free re-scan clock — lib/freeAiAllowance.ts),
+// counted on the server: Free 3, Grow 10; Premium and Multi unlimited. Pure.
 
 import type { Locale } from "./i18n";
 import { isPremiumPlan, type Plan } from "./plan";
 
-/** Free drafts per business, lifetime (Free and Grow). */
+/** Free: drafts per business per week. */
 export const FREE_REPLY_DRAFTS = 3;
+/** Grow: drafts per business per week. */
+export const GROW_REPLY_DRAFTS = 10;
 export const MAX_REVIEW_CHARS = 2000;
 export const MAX_REPLY_CHARS = 1200;
 
 /** The plan's draft limit; null = unlimited (Premium, Multi). */
 export function replyDraftLimit(plan: Plan): number | null {
-  return isPremiumPlan(plan) ? null : FREE_REPLY_DRAFTS;
+  return isPremiumPlan(plan) ? null : plan === "grow" ? GROW_REPLY_DRAFTS : FREE_REPLY_DRAFTS;
 }
 
 /** Drafts left, or null when unlimited. Never negative. */

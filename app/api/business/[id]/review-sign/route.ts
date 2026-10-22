@@ -25,7 +25,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     requested: body?.design,
     logo: body?.logo,
     placeId: data.placeId,
-    content: { businessName: data.businessName, rating: data.rating, reviewCount: data.reviewCount, verifiedSocials: data.verifiedSocials },
+    content: { businessName: data.businessName, verifiedSocials: data.verifiedSocials },
     locale: normalizeLocale(data.language),
   });
   if (result.status === "plan_required") return NextResponse.json({ error: "plan_required" }, { status: 403 });

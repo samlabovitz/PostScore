@@ -10,6 +10,7 @@ import { UpgradeButton, UpgradeTrigger } from "@/components/upgrade/UpgradeTrigg
 import { useUpgrade } from "@/components/upgrade/UpgradeContext";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/SegmentedControl";
+import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 import { refreshCompetitors, type GetCompetitorsResult } from "@/app/actions/competitors";
 import type { SavedCompetitorEntry, SavedCompetitorScan } from "@/lib/savedCompetitorScans";
 import { reviewGoal,
@@ -215,6 +216,7 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
               className="mb-3"
             />
             <RankedList scan={scan} view={view} />
+            <GoogleMapsAttribution />
           </div>
 
           {data.rankHistory.length >= 2 && <OverTime data={data} />}
@@ -361,6 +363,8 @@ function Hero({ scan, competitorNoun }: { scan: SavedCompetitorScan; competitorN
           detail={competitorNoun}
         />
       </div>
+      {/* Competitor names and listings come from Google. */}
+      <GoogleMapsAttribution />
     </Card>
   );
 }

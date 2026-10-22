@@ -13,7 +13,6 @@ import {
   type OwnerHours,
 } from "./ownerHours";
 import { buildStarterSiteHtml, type StarterSiteInput } from "./starterSite";
-import { starFills, starRowHtml } from "./starRating";
 import { businessRowToScoringInput, scoreBusiness, type BusinessScoringRow } from "./scoring";
 
 const withDay = (h: OwnerHours, i: number, day: Partial<OwnerHours["days"][number]>): OwnerHours => ({ ...h, days: h.days.map((d, j) => (j === i ? { ...d, ...day } : d)) });
@@ -117,16 +116,12 @@ const SITE: StarterSiteInput = {
   taglinePlacement: "below",
   phone: "(914) 555-0100",
   address: "1 Main St, Hudson, NY",
-  openingHours: null,
-  openingHoursPeriods: null,
-  rating: 4.7,
-  reviewCount: 38,
-  googleMapsUri: null,
+  placeId: null,
   profileId: "salon",
   themeId: "ink",
   customAccent: null,
   fontId: "classic",
-  show: { address: true, phone: true, hours: true, rating: true },
+  show: { address: true, phone: true, hours: true },
   heroImage: null,
   contentImages: [],
 };
@@ -134,7 +129,7 @@ const SITE: StarterSiteInput = {
 describe("the starter site with owner hours", () => {
   const owner = { ...defaultOwnerHours(), note: "Walk-ins welcome · Holiday hours may vary" };
 
-  test("no Google hours → no Hours section; owner hours → a table, today highlighted in the business's zone", () => {
+  test("no owner hours → no Hours section; owner hours → a table, today highlighted in the business's zone", () => {
     expect(buildStarterSiteHtml(SITE)).not.toContain("<h2>Hours</h2>");
     const html = buildStarterSiteHtml({ ...SITE, ownerHours: owner, timeZone: "America/New_York" });
     expect(html).toContain('<table class="hours">');
@@ -174,22 +169,5 @@ describe("the starter site with owner hours", () => {
     expect(input.openingHours).toBeNull();
     const hours = scoreBusiness(input, "en").checks.find((c) => c.id === "completeness.hours")!;
     expect(hours.earnedPoints ?? 0).toBe(0);
-  });
-});
-
-describe("stars match the real rating", () => {
-  test("4.7 → 4 full stars and a 70% star; never rounded up to 5", () => {
-    expect(starFills(4.7)).toEqual([1, 1, 1, 1, 0.7]);
-    expect(starFills(5)).toEqual([1, 1, 1, 1, 1]);
-    expect(starFills(3.25)).toEqual([1, 1, 1, 0.3, 0]);
-    expect(starFills(null)).toEqual([0, 0, 0, 0, 0]);
-  });
-
-  test("the starter site's Reviews block draws them that way, with an accessible label (when the owner shows the rating)", () => {
-    const html = buildStarterSiteHtml({ ...SITE, ratingAsOf: "2026-10-16T15:00:00Z", show: { ...SITE.show, rating: true } });
-    expect(html).toContain('role="img" aria-label="4.7 out of 5 stars"');
-    expect(html.match(/class="star-fill" style="width:100%"/g)).toHaveLength(4);
-    expect(html).toContain('class="star-fill" style="width:70%"');
-    expect(starRowHtml(4.7, "x")).not.toContain("★★★★★");
   });
 });

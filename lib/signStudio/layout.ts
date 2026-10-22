@@ -3,7 +3,6 @@
 // they match. Pure: text is measured through a Measurer backed by the
 // same font files the PDF embeds.
 
-import { starPath } from "@/lib/reviewQr";
 import { mixColor, printable, wrap, type FontRole, type Measurer, type PrintPage, type SignElement } from "@/lib/signStudio/elements";
 import { qrInk } from "@/lib/signStudio/design";
 
@@ -16,11 +15,9 @@ import {
   HEADLINES,
   MADE_WITH,
   MIN_QR_POINTS,
-  ON_GOOGLE,
   SUBLINE_MAX,
   contrastRatio,
   designColors,
-  ratingAllowed,
   type SignColors,
   type SignContent,
   type SignDesign,
@@ -64,15 +61,8 @@ interface Block {
   band: boolean;
 }
 
-interface RatingLine {
-  number: string;
-  rest: string;
-  size: number;
-}
-
 interface TextSet {
   top: Block[];
-  rating: RatingLine | null;
   bottom: Block[];
   footer: Block;
 }
@@ -117,12 +107,6 @@ function buildText(input: LayoutInput, m: Measurer, width: number, base: number,
   }
   if (design.subline.trim() && !push(bottom, design.subline.slice(0, SUBLINE_MAX), "body", base * 0.42 * f, 2)) return null;
 
-  let rating: RatingLine | null = null;
-  if (design.showRating && ratingAllowed(content.rating, content.reviewCount)) {
-    const n = content.rating.toFixed(1);
-    rating = { number: langs[0] === "es" ? n.replace(".", ",") : n, rest: langs.map((l) => ON_GOOGLE[l]).join(" · "), size: base * 0.45 * f };
-  }
-
   const follow = design.follow ? content.verifiedSocials.find((s) => s.url === design.follow) : null;
   if (follow && !push(bottom, `${langs.map((l) => FOLLOW_US[l]).join(" / ")} · ${follow.url}`, "body", base * 0.36 * f, 2)) return null;
 
@@ -130,7 +114,7 @@ function buildText(input: LayoutInput, m: Measurer, width: number, base: number,
   const footerLines = langs.map((l) => FOOTER[l]);
   const fs = footerLines.some((l) => m.width(l, "body", footerSize) > width) ? footerSize * 0.85 : footerSize;
   const footer: Block = { lines: footerLines, role: "body", size: fs, lineHeight: fs * 1.35, gapAfter: 0, band: false };
-  return { top, rating, bottom, footer };
+  return { top, bottom, footer };
 }
 
 // ---- Drawing helpers ----
@@ -156,26 +140,6 @@ function emitBlock(ctx: Ctx, b: Block, colX: number, colW: number, top: number, 
 function blockColor(ctx: Ctx, b: Block): string {
   if (b.band) return ctx.colors.background;
   return b.role === "bodyBold" ? ctx.colors.accent : ctx.colors.text;
-}
-
-function emitRating(ctx: Ctx, r: RatingLine, colX: number, colW: number, top: number): number {
-  const starW = r.size * 0.95;
-  const wNum = ctx.m.width(r.number, "bodyBold", r.size);
-  const rest = ` ${r.rest}`;
-  const wRest = ctx.m.width(rest, "body", r.size);
-  const total = wNum + r.size * 0.12 + starW + wRest;
-  let x = ctx.align === "middle" ? colX + (colW - total) / 2 : colX;
-  const baseline = top + r.size;
-  ctx.els.push({ kind: "text", x, y: baseline, text: r.number, size: r.size, role: "bodyBold", color: ctx.colors.text });
-  x += wNum + r.size * 0.12;
-  ctx.els.push({ kind: "path", d: starPath(x + starW / 2, baseline - r.size * 0.36, starW / 2, starW * 0.21), fill: ctx.colors.accent });
-  x += starW;
-  ctx.els.push({ kind: "text", x, y: baseline, text: rest, size: r.size, role: "body", color: ctx.colors.text });
-  return top + r.size * 1.45;
-}
-
-function ratingHeight(r: RatingLine | null): number {
-  return r ? r.size * 1.45 : 0;
 }
 
 function cornerRadius(design: SignDesign, w: number, h: number): number {
@@ -267,7 +231,7 @@ function stackPanel(input: LayoutInput, m: Measurer, w: number, h: number): Pane
     const logo = logoBox(input, colW, base * f);
     const bandPad = design.template === "banner" ? base * 0.45 * f : 0;
     const topH = (logo ? logo.h + base * 0.35 * f : 0) + setHeight(text.top) + 2 * bandPad;
-    const midH = setHeight(text.bottom) + ratingHeight(text.rating);
+    const midH = setHeight(text.bottom);
     const footerH = blockHeight(text.footer) + (input.credit ? 8 : 0);
     const gap = base * 0.45;
     const room = h - 2 * inset - topH - midH - footerH - 2 * gap;
@@ -292,7 +256,6 @@ function stackPanel(input: LayoutInput, m: Measurer, w: number, h: number): Pane
     y += bandPad;
     if (design.template === "banner") y += gap;
     for (const b of text.bottom) y = emitBlock(ctx, b, colX, colW, y, blockColor(ctx, b));
-    if (text.rating) y = emitRating(ctx, text.rating, colX, colW, y);
     y += gap * (design.template === "banner" ? 0 : 1);
     const qrX = align === "middle" ? (w - qr * TILE) / 2 : colX;
     const remaining = h - inset - footerH - gap - y;
@@ -334,7 +297,7 @@ function sidePanel(input: LayoutInput, m: Measurer, w: number, h: number): Panel
       const logo = logoBox(input, colW, base * f);
       const colBlocks = bandOn ? colText.bottom : [...colText.top, ...colText.bottom];
       const colH =
-        (logo ? logo.h + base * 0.35 * f : 0) + setHeight(colBlocks) + ratingHeight(colText.rating) + base * 0.4 + blockHeight(colText.footer);
+        (logo ? logo.h + base * 0.35 * f : 0) + setHeight(colBlocks) + base * 0.4 + blockHeight(colText.footer);
       if (colH > areaH) continue;
       if (bandOn) {
         ctx.els.push({ kind: "rect", x: inset * 0.6, y: inset * 0.6, w: w - inset * 1.2, h: bandH + inset * 0.4, r: cornerRadius(design, w, h), fill: ctx.colors.text, stroke: null, strokeWidth: 0 });
@@ -349,7 +312,6 @@ function sidePanel(input: LayoutInput, m: Measurer, w: number, h: number): Panel
         y += logo.h + base * 0.35 * f;
       }
       for (const b of colBlocks) y = emitBlock(ctx, b, inset, colW, y, blockColor(ctx, b));
-      if (colText.rating) y = emitRating(ctx, colText.rating, inset, colW, y);
       emitBlock(ctx, colText.footer, inset, colW, y + base * 0.4, ctx.colors.text);
       emitQrTile(ctx, design, w - inset - tile, areaTop + (areaH - tile) / 2, qr, Math.min(w, h));
       if (input.credit) emitCredit(ctx, w, h, inset);

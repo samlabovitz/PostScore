@@ -66,7 +66,8 @@ data isn't available, the preview says so.
   - reviews first (`FreeReviewFocus`): the real review gap when they trail nearby competitors, and the review link & QR (free);
   - competitor rank fully visible, plus "You're #N of M nearby…" when they trail;
   - PostAI → a `LockedPreview` with their real starter questions — no AI call (`sendAssistantMessage` also refuses on Free, server-side);
-  - 1 owner re-scan per 30 days (+ the first scan) on top of the 24-hour rule — `rescanGate` in `lib/rescanPolicy.ts`, checked in `rescanBusiness` before any Google call; owner re-scans are logged in `places_calls` (kind `owner_rescan`, one Places Details call) and the note says "Next free re-scan: {date}";
+  - 1 owner re-scan per 7 days (+ the first scan) on top of the 24-hour rule — `rescanGate` in `lib/rescanPolicy.ts`, checked in `rescanBusiness` before any Google call; owner re-scans are logged in `places_calls` (kind `owner_rescan`, one Places Details call) and the note says "Next free re-scan: {date}";
+  - Free competitors are never refreshed after the first scan — not by a re-scan (no Nearby Search), the monthly report (reuses the saved scan) or `scripts/rescan-all.ts`. Grow re-scans also refresh competitors when the last refresh is 7+ days old; Premium and Multi on every re-scan (`rescanRefreshesCompetitors` in `lib/competitorScanPolicy.ts`), all still under `PLACES_SEARCH_MONTHLY_CAP`. Outside a request there's no stored plan yet (no checkout), so the cron and the script treat every account as Free (`backgroundPlan` in `lib/plan.ts`);
   - the Grow showcase strip stays at the bottom.
   Grow, Premium and Multi see the Overview unchanged.
 - **`LockedPreview`** (`components/plan/LockedPreview.tsx`) is the shared locked feature for 5f: the real UI with the business's own data, read-only (`inert`), fading under a small lock, one unlock line (shown only when its data is real) and a small "See plans", which opens the promo box. It never fetches anything itself.
@@ -279,7 +280,7 @@ On Free the **Overview is the audit**, top to bottom:
 - *Advice* (suggestions, steps, plans, routine, guides, ways to grow, the review guide's details): `LockedPreview` — only the title, a lock, a real count and ONE unlock line are readable; the content is never rendered into the page (blurred placeholder shapes only).
 - *Tools* (coupon/referral/sign designers, PostAI): visible with their real data; Save, Print, Download, Share and Send open the promo box (`UpgradeButton`).
 
-**No paid calls on Free:** PostAI (`sendAssistantMessage`), Re-check (`recheckWebsite`), the AI price check (`assessPricing`), competitor refresh and the niche re-scan (`refreshCompetitors`, `updateCompetitorsForNiche`) all refuse on Free server-side; Free never triggers a screenshot capture. Free keeps 1 owner re-scan per 30 days (+ the first scan).
+**Paid calls on Free:** only the weekly AI allowance — 3 PostAI questions and 3 review reply drafts per business per week, on the Free re-scan clock, reserved in `free_ai_usage` before any AI call (`lib/freeAiUsage.server.ts`, `supabase/free-ai-usage.sql`), with a failed call given back and `FREE_AI_MONTHLY_CAP` (default 500 Free calls a month, all Free accounts) pausing them until the 1st. Free PostAI gets the same real data minus the step-by-step fix text, a Free rule (explain what it means and why, then point to Grow), no link markers, and an answer that repeats a fix step is replaced. Everything else refuses on Free server-side: Re-check (`recheckWebsite`), the AI price check (`assessPricing`), competitor refresh and the niche re-scan (`refreshCompetitors`, `updateCompetitorsForNiche`) all refuse on Free server-side; Free never triggers a screenshot capture. Free keeps 1 owner re-scan per 7 days (+ the first scan), and its re-scans make no competitor (Nearby Search) calls.
 
 **Promo cards** (bottom of the Overview and unlocked pages, `PromoCards`; never on showroom pages): Free sees Grow + Premium side by side (stacked on a phone), Premium always shown with "Best value"; Grow sees Premium; Premium and Multi nothing (on the Website page, PostStudio's one mention is its card in path B). Each card has page-relevant chips, "See plans" (the promo box) and × (hidden 14 days, per card and page, `promo_dismissals` + the device).
 
@@ -364,7 +365,13 @@ not built yet; it's step 5k-0 in the Day 5 plan.
 
 ## Google Maps Platform terms compliance — MUST fix before launch
 
-Full review: `~/Desktop/places-storage-review.md` (2026-10-21). Plain reading of Google's published terms, not legal advice. **Nothing changed yet.**
+Full review: `~/Desktop/places-storage-review.md` (2026-10-21). Plain reading of Google's published terms, not legal advice. Google Maps Platform support's reply (Oct 21, 2026): `docs/google-maps-support-reply-2026-10-21.md`. **Storage not changed yet; attribution added (below).**
+
+**Where it stands (after Google support's reply, Oct 21, 2026).**
+- **Owner-entered first-party data is NOT restricted** (confirmed by Google): details the owner types in, edits or explicitly confirms in PostScore are their own data and can be stored.
+- **Stored derived scores are uncertain:** §3.2.3(c) ("no creating content from Google Maps Content") may cover scores, grades and pass/fail results computed from Places data. **Pending legal counsel + Google Maps Platform Sales** — until then, plan as if derived history must come from owner-provided and website data.
+- **Attribution: done** — the official Google Maps logo next to Places data shown without a map (see "Attribution (built)").
+- **Off-platform: no Google content** — nothing from Google is printed or put on the owner's own website (see "Off-platform (built)").
 
 **What the terms allow.**
 - Maps Platform Terms §3.2.3: no scraping — never "copy and save business names, addresses, or user reviews" — and no caching except where the Service Specific Terms allow it.
@@ -378,15 +385,32 @@ Full review: `~/Desktop/places-storage-review.md` (2026-10-21). Plain reading of
 - `scores.profile_snapshot_json` (a per-scan history of those fields);
 - `competitor_scans` (other businesses' name, address, phone, hours, categories, status, rating, review count, every scan) — the biggest exposure.
 
-Allowed: place IDs; owner-entered data; our own website checks (`website_analysis_json`); photos (fetched fresh, never stored). Unclear: our computed scores/grades (derived from Places content). Missing: the Google logo next to Places data shown without a map. Review replies are already compliant: the owner pastes the review, nothing from Google is fetched or stored.
+Allowed: place IDs; owner-entered data (confirmed by Google support); our own website checks (`website_analysis_json`); photos (fetched fresh, never stored). Uncertain: our computed scores/grades (derived from Places content) — pending legal counsel + Sales. Review replies are already compliant: the owner pastes the review, nothing from Google is fetched or stored.
 
-**Proposed redesign.**
-1. **Keep:** place IDs; PostScore's own computed results (score, grade, each check's pass/fail and points, rank); website-derived data; owner-entered data; reply drafts.
-2. **Fetch live (or within allowed limits) instead of storing:** the listing's display fields (name, address, phone, hours, rating, review count) once per visit, held in memory for that request/session only; competitor names/ratings when the Competitors page or a report is shown; lat/lng kept at most 30 days, or replaced by the derived time zone.
-3. **History becomes our own data:** "what changed" compares our check results (e.g. "hours: listed → missing"), not stored Google values. Drop the raw fields from `profile_snapshot_json` and `competitor_scans`, with a one-time cleanup (SQL to review first).
-4. **Attribution:** the Google Maps logo (per Google's attribution guidelines) next to Places data shown without a map — Overview, Competitors, Website, reports, PDFs and emails; author attribution wherever reviews or photos are shown.
+**Plan (no code yet).**
+- **(a) Owner-provided details at setup (B8):** during setup the owner enters, or explicitly edits/confirms, their own business details — name, address or service area, phone, website, hours, category. Stored as **"provided by you"** (with who/when), shown with that label, and used for scoring and the starter site instead of stored Google values. Google's current values are shown beside each field, fetched live, as suggestions only.
+- **(b) Google data shown live:** listing values not confirmed by the owner (rating, review count, photos count, other businesses' details) are fetched when shown and kept only for that request/visit, never in the database; lat/lng kept at most 30 days or replaced by the derived time zone. Competitors: store place IDs only and fetch names/ratings live.
+- **(c) Google connect for Premium:** the Business Profile API (owner OAuth, its own terms) for the owner's own reviews, replies and insights.
+- **(d) Score history from owner-provided + website data where possible:** "what changed" and the score history use the owner's confirmed details and our own website checks; anything that can only come from Places (rating, review count, competitors) waits for counsel/Sales before it's kept as history. Then drop the raw Google fields from `profile_snapshot_json` and `competitor_scans` (cleanup SQL to review first).
 
-**Open questions for Google Maps Platform support.**
+**Attribution (built).** `components/google/GoogleMapsAttribution.tsx` — Google's official Gray "Google Maps" logo (`public/google/`, from Google's attribution asset pack, unmodified). The pack has no full-color logo — only Gray, Dark Gray, White and outlined versions — and the policy asks for the non-outlined one on plain backgrounds, so Gray it is. 16px tall (Google's minimum; max 19), 10px clear space (5px below), alt "Google Maps", `translate="no"`. On cards it's a quiet footnote at the bottom right (`GoogleMapsAttribution`), sharing a line with the card's small text or button where there is one; in a line of text it's `GoogleMapsLogo`, vertically centered. A "View on Google Maps" link doesn't replace it — the policy's only exemption is content shown on a visible Google Map. Where it is:
+- Overview: the header — at the end of the scan line ("Last scanned … · photo author · logo"; the chip row untouched), also when there's no photo; Free's reviews section (bottom); the paid "Get more Google reviews" tile (on the button's line); the rank card (Free) and "At a glance" (paid), bottom;
+- Competitors: the bottom of the hero card and under the ranked list;
+- Website: under "Your business details" while they're still Google's pre-fill (the generated site itself carries no Google content — see "Off-platform");
+- Reviews: under the rating/review stats;
+- Reports: the weekly recap, when it lists listing or review changes;
+- PDF reports (monthly + weekly): the Gray logo top right of the header, 12pt (= 16px, the minimum), embedded from Google's PNG (`lib/google/mapsLogoPng.ts`);
+- Monthly email: the Gray logo at 16px (hosted `…/google/GoogleMaps_Logo_Gray_2x.png`) under the rating, reviews, competitors and listing changes; text "Google Maps" when no URL (previews);
+- Growth: the task lists that include Google listing tasks (on the footnote's line), and the Google profile panel's listing (on the "Open on Google" line);
+- "Since your last visit": under the rank and reviews.
+
+**Off-platform (built).** Printing or publishing Google content outside our app is the riskiest use, so none goes there:
+- **Printed review sign:** no Google rating, ever — the "Show star rating" option is gone and the PDF route no longer receives the rating. The sign keeps the QR, headline, name and "Follow us".
+- **Downloaded starter site:** no Google rating, review count, price level or Google hours. Hours = only the owner's own (the hours editor; Google's hours only pre-fill it). Reviews = a "Read our reviews on Google" link to the live listing by place ID (Google Maps URLs). The map stays Google's own Maps Embed (it carries Google's attribution).
+- **Name, type of business, address, phone on the site:** "Your business details" shows them as editable inputs pre-filled from Google; the owner edits or confirms them, and they're saved as **"provided by you"** (`businesses.starter_site_details`, `supabase/starter-site-details.sql`, with the confirmation time). The site uses only the owner's values, and the download waits for the confirmation.
+- **Gray area for legal counsel:** pre-fill + confirm. Google confirmed owner-entered first-party data isn't restricted, but a value pre-filled from Places and confirmed unchanged may still count as Google Maps Content. Ask counsel whether confirm-as-is is enough, or the fields should start empty (with Google's value shown beside each as a hint).
+
+**Open questions for Google Maps Platform support** (sent Oct 21; reply in `docs/google-maps-support-reply-2026-10-21.md` — owner-entered data confirmed OK; derived scores → counsel + Sales).
 1. May we store a business's own listing fields when the verified owner has connected or confirmed them in PostScore (is that our customer's content)?
 2. Are scores and pass/fail results computed from Places fields "content created from Google Maps Content" (§3.2.3(c)), and may we keep them?
 3. May we keep a per-scan history of a business's own rating and review count, or only our derived results?
@@ -407,11 +431,14 @@ Caching the live result for the length of one visit (in memory, not the database
 
 ## Launch checklist
 
-1. **Google Maps Platform terms compliance** (above): get answers from Google support, then build the storage redesign, the cleanup SQL and the Google attribution. Blocks launch.
+1. **Google Maps Platform terms compliance** (above): attribution done; no Google content on the printed sign or the starter site done; owner-provided details at setup (B8), live Google data, the cleanup SQL; derived-score history after legal counsel + Sales. Blocks launch.
 2. Remove `PLAN_SWITCHER_EMAILS` from production (testing only).
 3. Checkout and billing as in `docs/billing-compliance.md` (lawyer review).
-4. Run every pending `supabase/*.sql` file, including `review-reply-drafts.sql`.
+4. Run every pending `supabase/*.sql` file, including `review-reply-drafts.sql`, `starter-site-details.sql` and `free-ai-usage.sql`.
 5. Search demand: its own launch checklist in `docs/search-demand.md` §4.
 6. File the POSTSCORE trademark (Class 42, ~$350).
 7. Decide LLC vs personal ownership.
-8. Get Google Maps Platform's written answer on storage (case opened Oct 21).
+8. ~~Get Google Maps Platform's written answer on storage (case opened Oct 21).~~ Answered Oct 21 (`docs/google-maps-support-reply-2026-10-21.md`): owner-entered data OK; §3.2.3(c) → legal counsel + Sales.
+9. Legal counsel: derived scores and score history (§3.2.3(c)), and whether pre-fill + confirm makes the starter-site details the owner's own.
+10. Contact Google Maps Platform Sales (https://mapsplatform.google.com/contact-us/) about terms for derived scores and history, if counsel says it's needed.
+11. `lib/plan.ts` background-job plan lookup must read the real subscription plan once Stripe is live (monthly report + rescan-all currently treat everyone as Free for competitors).
