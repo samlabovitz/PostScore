@@ -132,7 +132,7 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
     connected: gbpConnected,
     // Same rule as search demand everywhere: example data under an
     // "Example" watermark until the connection is live.
-    searchDemand: canConnectGbp(hasPremium(await getPlan())) && gbpConnected ? ({ kind: "awaiting" } as const) : ({ kind: "preview", data: SEARCH_DEMAND_EXAMPLE } as const),
+    searchDemand: canConnectGbp() && hasPremium(await getPlan()) && gbpConnected ? ({ kind: "awaiting" } as const) : ({ kind: "preview", data: SEARCH_DEMAND_EXAMPLE } as const),
   };
 
   const actionPlan =

@@ -28,8 +28,9 @@ import { NicheBanner } from "@/components/niche/NicheBanner";
 import { nicheBannerKind } from "@/lib/businessNiche";
 import { loadBusinessNiche } from "@/lib/businessNiche.server";
 import { getReplyDraftStatus } from "@/app/actions/reviewReplies";
+import { gbpReplyCheckState } from "@/lib/gbpReplyCheck";
 
-export default async function BusinessPage({ params }: { params: { id: string } }) {
+export default async function BusinessPage({ params, searchParams = {} }: { params: { id: string }; searchParams?: { gbp?: string } }) {
   // getBusinessSummary is awaited separately (not folded into the
   // Promise.all below) because its business.language is needed to derive
   // `locale` BEFORE scoring — scoreBusinessById needs the real locale to
@@ -196,6 +197,7 @@ export default async function BusinessPage({ params }: { params: { id: string } 
         freeRescanNextAt={freeRescanNextAt}
         replyDrafts={replyDrafts}
         freePostai={freePostai}
+        gbpReplyCheck={free ? gbpReplyCheckState(upgrade.plan, gbpStatus, searchParams.gbp) : null}
       />
     </DashboardShell>
   );

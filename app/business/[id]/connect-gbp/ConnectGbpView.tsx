@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   IconArrowLeft,
   IconBrandGoogle,
@@ -20,7 +18,8 @@ import {
 } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { disconnectGbp } from "@/app/actions/gbp";
+import { GbpDisconnectButton } from "@/components/gbp/GbpDisconnectButton";
+import type { GbpConnectResult } from "@/lib/gbpLanding";
 import { formatShortDate, t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 
 function buildUnlocks(
@@ -77,35 +76,6 @@ function buildUnlocks(
   ];
 }
 
-function DisconnectControl({ businessId }: { businessId: string }) {
-  const router = useRouter();
-  const locale = useLocale();
-  const [state, setState] = useState<"idle" | "working" | "error">("idle");
-
-  async function handleDisconnect() {
-    setState("working");
-    const result = await disconnectGbp(businessId);
-    if (result.status === "ok") {
-      router.refresh();
-    } else {
-      setState("error");
-    }
-  }
-
-  return (
-    <div className="flex items-center gap-3">
-      <Button variant="default" size="sm" onClick={handleDisconnect} disabled={state === "working"}>
-        {state === "working"
-          ? t(locale, "dashboard.connectGbp.disconnecting")
-          : t(locale, "dashboard.connectGbp.disconnect")}
-      </Button>
-      {state === "error" && (
-        <span className="text-sm text-red">{t(locale, "dashboard.connectGbp.disconnectError")}</span>
-      )}
-    </div>
-  );
-}
-
 export function ConnectGbpView({
   businessId,
   businessName,
@@ -121,9 +91,10 @@ export function ConnectGbpView({
   connected: boolean;
   connectedAt: string | null;
   justConnected: boolean;
-  error: string | null;
+  /** A failed connect's code (lib/gbpLanding.ts) — shown as our own words. */
+  error: GbpConnectResult | null;
   oauthConfigured: boolean;
-  /** GBP_CONNECT_PUBLIC — false keeps the button disabled ("coming soon"). */
+  /** GBP_CONNECT_PUBLIC and Premium — false keeps the button disabled ("coming soon"). */
   connectOpen: boolean;
 }) {
   const locale = useLocale();
@@ -162,7 +133,7 @@ export function ConnectGbpView({
       {error && (
         <Card className="flex items-center gap-3 border-red/30 bg-red/5 p-4">
           <IconAlertTriangle size={20} className="shrink-0 text-red" />
-          <p className="text-sm text-ink">{error}</p>
+          <p className="text-sm text-ink">{t(locale, `dashboard.gbpResult.${error}`)}</p>
         </Card>
       )}
 
@@ -187,7 +158,7 @@ export function ConnectGbpView({
             </div>
           </div>
           <div className="mt-4 border-t border-paper-line pt-4">
-            <DisconnectControl businessId={businessId} />
+            <GbpDisconnectButton businessId={businessId} />
           </div>
         </Card>
       ) : (

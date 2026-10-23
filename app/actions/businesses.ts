@@ -6,7 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { PlaceDetails } from "@/lib/google/places";
 import { normalizeLocale, SUPPORTED_LOCALES, t, type Locale } from "@/lib/i18n";
-import { getPlan } from "@/lib/premium";
+import { getPlan, unlimitedBusinessesAllowed } from "@/lib/premium";
 import { locationLimit, type Plan } from "@/lib/plan";
 import { analyzeWebsiteForSave } from "@/lib/websiteAnalysisForSave";
 import type { collectWebsiteAnalysis } from "@/lib/websiteAnalysis";
@@ -84,7 +84,7 @@ export async function saveBusiness(
   // A NEW location is limited by the plan (re-saving one they already have,
   // or attaching a listing to their website-only business, isn't new).
   if (!attachToBusinessId) {
-    const limited = await locationLimitMessage(supabase, user.id, place.placeId, language);
+    const limited = await locationLimitMessage(supabase, user.id, user.email, place.placeId, language);
     if (limited) return { status: "error", message: limited };
   }
 
@@ -849,7 +849,7 @@ export async function saveWebsiteOnlyBusiness(input: WebsiteOnlyInput): Promise<
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { status: "unauthenticated" };
-  const limited = await locationLimitMessage(supabase, user.id, null, input.language);
+  const limited = await locationLimitMessage(supabase, user.id, user.email, null, input.language);
   if (limited) return { status: "error", message: limited };
   return saveWebsiteOnlyBusinessWithClient(supabase, user.id, input);
 }
@@ -862,8 +862,11 @@ export async function locationLimitMessageWithClient(
   ownerId: string,
   placeId: string | null,
   plan: Plan,
-  locale: Locale = "en"
+  locale: Locale = "en",
+  /** Testing exception (unlimitedBusinessesAllowed): no limit at all. */
+  unlimited: boolean = false
 ): Promise<string | null> {
+  if (unlimited) return null;
   const limit = locationLimit(plan);
   const { data } = await supabase.from("businesses").select("id, place_id").eq("owner_id", ownerId);
   const rows = (data ?? []) as Array<{ id: string; place_id: string | null }>;
@@ -872,8 +875,8 @@ export async function locationLimitMessageWithClient(
   return plan === "multi" ? t(locale, "dashboard.addBusiness.locationLimitMulti", { count: limit }) : t(locale, "dashboard.addBusiness.locationLimit", { count: limit });
 }
 
-async function locationLimitMessage(supabase: SupabaseClient, ownerId: string, placeId: string | null, language?: Locale): Promise<string | null> {
-  return locationLimitMessageWithClient(supabase, ownerId, placeId, await getPlan(), normalizeLocale(language));
+async function locationLimitMessage(supabase: SupabaseClient, ownerId: string, email: string | null | undefined, placeId: string | null, language?: Locale): Promise<string | null> {
+  return locationLimitMessageWithClient(supabase, ownerId, placeId, await getPlan(), normalizeLocale(language), unlimitedBusinessesAllowed(process.env, email));
 }
 
 export type RecheckWebsiteOnlyResult =

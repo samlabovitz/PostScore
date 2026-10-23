@@ -3278,6 +3278,17 @@ export type MessageKey =
   | "dashboard.overview.recs.pointsAbout"
   | "dashboard.overview.actionPlan.pointsOnceLive"
   | "dashboard.connectGbp.availableWithPremium"
+  | "dashboard.gbpReplyCheck.title"
+  | "dashboard.gbpReplyCheck.body"
+  | "dashboard.gbpReplyCheck.connect"
+  | "dashboard.gbpReplyCheck.notConfigured"
+  | "dashboard.gbpReplyCheck.connected"
+  | "dashboard.gbpReplyCheck.connectedBody"
+  | "dashboard.gbpResult.connected"
+  | "dashboard.gbpResult.denied"
+  | "dashboard.gbpResult.failed"
+  | "dashboard.gbpResult.setup"
+  | "dashboard.gbpDisconnect.notRevoked"
   | "dashboard.connectGbp.unlockSearchTermsTitle"
   | "dashboard.connectGbp.unlockSearchTermsBody"
   | "dashboard.competitors.someWebsitesNotChecked"
@@ -7780,6 +7791,17 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.recs.pointsAbout": "about +{points} pts",
     "dashboard.overview.actionPlan.pointsOnceLive": "About +{points} pts once it's live",
     "dashboard.connectGbp.availableWithPremium": "Available with PostScore Premium — coming soon",
+    "dashboard.gbpReplyCheck.title": "Count your review replies",
+    "dashboard.gbpReplyCheck.body": "Connect Google so PostScore can check how many of your reviews you've replied to, for the “Replying to reviews” check. Read-only: PostScore never posts or changes anything on Google.",
+    "dashboard.gbpReplyCheck.connect": "Connect Google",
+    "dashboard.gbpReplyCheck.notConfigured": "Connecting Google isn't set up here yet.",
+    "dashboard.gbpReplyCheck.connected": "Google connected",
+    "dashboard.gbpReplyCheck.connectedBody": "The “Replying to reviews” check isn't live yet. Once it is, it counts toward your score. Read-only: PostScore never posts or changes anything on Google.",
+    "dashboard.gbpResult.connected": "Google connected.",
+    "dashboard.gbpResult.denied": "You didn't approve access, so nothing was connected.",
+    "dashboard.gbpResult.failed": "Couldn't connect Google. Please try again.",
+    "dashboard.gbpResult.setup": "Connecting Google isn't set up here yet.",
+    "dashboard.gbpDisconnect.notRevoked": "Disconnected, and your Google data was deleted from PostScore. Google didn't confirm the access was removed, so you can also remove PostScore at myaccount.google.com/permissions.",
     "dashboard.connectGbp.unlockSearchTermsTitle": "Search terms",
     "dashboard.connectGbp.unlockSearchTermsBody": "See the exact words people typed on Google to find you.",
     "dashboard.competitors.someWebsitesNotChecked": "Some websites couldn’t be checked — their rank is based on the other checks.",
@@ -12304,6 +12326,17 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.recs.pointsAbout": "unos +{points} pts",
     "dashboard.overview.actionPlan.pointsOnceLive": "Aprox. +{points} pts cuando esté publicado",
     "dashboard.connectGbp.availableWithPremium": "Disponible con PostScore Premium — próximamente",
+    "dashboard.gbpReplyCheck.title": "Cuente sus respuestas a reseñas",
+    "dashboard.gbpReplyCheck.body": "Conecte Google para que PostScore pueda revisar a cuántas de sus reseñas ha respondido, para el punto “Respuestas a reseñas”. Solo lectura: PostScore nunca publica ni cambia nada en Google.",
+    "dashboard.gbpReplyCheck.connect": "Conectar Google",
+    "dashboard.gbpReplyCheck.notConfigured": "La conexión con Google aún no está configurada aquí.",
+    "dashboard.gbpReplyCheck.connected": "Google conectado",
+    "dashboard.gbpReplyCheck.connectedBody": "El punto “Respuestas a reseñas” aún no está activo. Cuando lo esté, contará en su puntuación. Solo lectura: PostScore nunca publica ni cambia nada en Google.",
+    "dashboard.gbpResult.connected": "Google conectado.",
+    "dashboard.gbpResult.denied": "No aprobó el acceso, así que no se conectó nada.",
+    "dashboard.gbpResult.failed": "No se pudo conectar Google. Inténtelo de nuevo.",
+    "dashboard.gbpResult.setup": "La conexión con Google aún no está configurada aquí.",
+    "dashboard.gbpDisconnect.notRevoked": "Desconectado, y sus datos de Google se borraron de PostScore. Google no confirmó que se quitó el acceso, así que también puede quitar PostScore en myaccount.google.com/permissions.",
     "dashboard.connectGbp.unlockSearchTermsTitle": "Términos de búsqueda",
     "dashboard.connectGbp.unlockSearchTermsBody": "Vea las palabras exactas que la gente escribió en Google para encontrarlo.",
     "dashboard.competitors.someWebsitesNotChecked": "Algunos sitios web no se pudieron revisar; su posición se basa en las demás revisiones.",

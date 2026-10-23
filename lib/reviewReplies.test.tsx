@@ -274,7 +274,7 @@ describe("the drafter", () => {
   test("on the Free Overview: inside the reviews section; on the Reviews page for Grow and up", () => {
     const view = readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8");
     const free = view.slice(view.indexOf("if (free) {"), view.indexOf('  return (\n    <div className="flex flex-col gap-5 nav:gap-6">'));
-    expect(free).toMatch(/<FreeReviews [^>]*>\s*\{replyDrafts && <ReviewReplyDrafter businessId=\{businessId\} plan="free"[^>]*embedded \/>\}\s*<\/FreeReviews>/);
+    expect(free).toMatch(/<FreeReviews [^>]*>\s*\{replyDrafts && <ReviewReplyDrafter businessId=\{businessId\} plan="free"[^>]*embedded \/>\}\s*\{gbpReplyCheck && <GbpReplyCheckConnect businessId=\{businessId\} state=\{gbpReplyCheck\} \/>\}\s*<\/FreeReviews>/);
     expect(readFileSync("app/business/[id]/page.tsx", "utf8")).toContain('(await getPlan()) === "free" ? getReplyDraftStatus(params.id) : Promise.resolve(null)');
     expect(readFileSync("app/business/[id]/website-reviews/page.tsx", "utf8")).toContain("replyDrafts={replyDrafts}");
   });

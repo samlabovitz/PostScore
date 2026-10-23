@@ -28,6 +28,7 @@ import { useScrollToHash } from "@/lib/useScrollToHash";
 import { ReviewReplyDrafter } from "@/components/reviews/ReviewReplyDrafter";
 import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 import type { ReplyDraftStatus } from "@/app/actions/reviewReplies";
+import { GbpReplyCheckConnect, type GbpReplyCheckState } from "@/components/gbp/GbpReplyCheckConnect";
 
 function StatCard({
   icon: Icon,
@@ -165,6 +166,7 @@ export function ReviewsView({
   plan = "free",
   nearby = null,
   replyDrafts = null,
+  gbpReplyCheck = null,
 }: {
   businessId: string;
   reviews: ReviewsPageData;
@@ -175,6 +177,8 @@ export function ReviewsView({
   devPlanSwitch?: boolean;
   /** AI review reply drafts left (Grow and up; Free's page is a showroom). */
   replyDrafts?: ReplyDraftStatus | null;
+  /** Grow: connect Google for the "Replying to reviews" check (null = hidden). */
+  gbpReplyCheck?: GbpReplyCheckState | null;
 }) {
   const locale = useLocale();
   // A link straight to #get-more-reviews (e.g. the Overview page's
@@ -222,6 +226,14 @@ export function ReviewsView({
       <div>
         <SectionHeading title={t(locale, "dashboard.websiteReviews.rubricHeading")} className="mb-4" />
         <CategoryCard category={reviews.visibilityCategory} />
+        {/* Grow: connect Google for the read-only "Replying to reviews"
+            check (null when switched off, and on Premium — Premium
+            connects from the Google Profile page). */}
+        {gbpReplyCheck && (
+          <div className="mt-3">
+            <GbpReplyCheckConnect businessId={businessId} state={gbpReplyCheck} />
+          </div>
+        )}
       </div>
 
       <div>

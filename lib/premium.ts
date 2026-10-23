@@ -35,6 +35,15 @@ export function switcherAllowed(env: PlanEnv, email: string | null | undefined):
   return !!email && list.length > 0 && list.includes(email.trim().toLowerCase());
 }
 
+/** Pure: testing exception to the location limit — an account whose email
+ * is in PLAN_SWITCHER_EMAILS can add unlimited businesses, on any plan.
+ * Listed emails only (no development shortcut); an empty list means no
+ * one. Removing PLAN_SWITCHER_EMAILS at launch removes this too. */
+export function unlimitedBusinessesAllowed(env: PlanEnv, email: string | null | undefined): boolean {
+  const list = switcherEmails(env);
+  return !!email && list.length > 0 && list.includes(email.trim().toLowerCase());
+}
+
 /** Pure: the plan for this request. Until checkout exists that's Free,
  * except for someone allowed to switch (see above), where the switch
  * cookie (then, in development, the env var) picks one for testing. */
@@ -91,13 +100,18 @@ export function hasPremium(plan: Plan): boolean {
 }
 
 /**
- * The real Google Business Profile connect (OAuth) works only when
- * GBP_CONNECT_PUBLIC=true AND the account has Premium. A local dev
- * server (NODE_ENV=development) with GBP_CONNECT_PUBLIC=true also lets
- * it through, so the flow can still be tested before checkout exists;
- * a production build never does.
+ * May this account connect a Google Business Profile? Every plan can —
+ * Free and Grow only so the read-only "Replying to reviews" check can
+ * count toward their score. GBP_CONNECT_PUBLIC=true is the one master
+ * switch for everyone; off, nobody connects.
  */
-export function canConnectGbp(premium: boolean, env: { GBP_CONNECT_PUBLIC?: string; NODE_ENV?: string } = process.env): boolean {
-  if (env.GBP_CONNECT_PUBLIC !== "true") return false;
-  return premium || env.NODE_ENV === "development";
+export function canConnectGbp(env: { GBP_CONNECT_PUBLIC?: string; NODE_ENV?: string } = process.env): boolean {
+  return env.GBP_CONNECT_PUBLIC === "true";
+}
+
+/** The Google Profile page (the Growth page's Google Profile tab and its
+ * connect page) is Premium and Multi only; Free and Grow see it as a
+ * locked Premium preview, connected or not. */
+export function canUseGoogleProfilePage(plan: Plan): boolean {
+  return isPremiumPlan(plan);
 }

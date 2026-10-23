@@ -1023,27 +1023,20 @@ alter table public.tasks
 -- ---------------------------------------------------------------------------
 
 -- One row per business, never one row per historical connect attempt —
--- reconnecting (see disconnectGbp + a fresh connect in app/actions/gbp.ts)
--- upserts this same row rather than accumulating a connection history.
--- Tokens are stored in plain columns, protected only by the same RLS
--- every other owner-scoped table here relies on (no column-level
--- encryption) — consistent with this app's existing security model, but
--- worth revisiting with a real secrets-management approach (e.g.
--- Supabase Vault) before this phase starts handling real access tokens
--- with real scopes in production.
+-- reconnecting upserts this same row rather than accumulating a
+-- connection history. This row holds only what the app shows (status,
+-- since when, granted scope). The OAuth tokens live encrypted in
+-- public.gbp_tokens, readable only by the service role — see
+-- supabase/gbp-tokens.sql, which also drops the old plain-text token
+-- columns from this table. Only the server writes this table.
 create table if not exists public.gbp_connections (
   id uuid primary key default gen_random_uuid(),
   business_id uuid not null references public.businesses (id) on delete cascade,
   status text not null default 'connected' check (status in ('connected', 'error')),
   -- Google resource names (e.g. "accounts/123", "accounts/123/locations/456").
-  -- Both null in Phase 1: resolving which GBP location maps to this
-  -- business is a real API call (Account Management API) that happens in
-  -- the later phase once Google approves API access.
+  -- Null until location matching is built.
   google_account_id text,
   google_location_id text,
-  access_token text not null,
-  refresh_token text,
-  token_expires_at timestamptz,
   -- Space-separated OAuth scopes actually granted, exactly as Google
   -- returned them — never assumed from what was requested, since a user
   -- can grant a narrower set on Google's own consent screen.
@@ -1057,56 +1050,12 @@ create unique index if not exists gbp_connections_business_id_unique
 
 alter table public.gbp_connections enable row level security;
 
--- Ownership inherited from the business this connection belongs to, same
--- pattern as every other owner-scoped table in this file. This is also
--- the real security boundary for the OAuth callback (app/api/gbp/callback):
--- the callback's insert only succeeds if the logged-in user actually owns
--- the business_id encoded in the OAuth "state" param, so a tampered state
--- value naming someone else's business is rejected here, not just in
--- application code.
+-- Owners may read their own status row. No insert/update/delete
+-- policies: the server writes it after a real token exchange, and
+-- disconnect goes through the server so the token is revoked at Google.
 drop policy if exists "Users can view gbp connections for their own businesses" on public.gbp_connections;
 create policy "Users can view gbp connections for their own businesses"
   on public.gbp_connections for select
-  using (
-    exists (
-      select 1 from public.businesses
-      where businesses.id = gbp_connections.business_id
-        and businesses.owner_id = auth.uid ()
-    )
-  );
-
-drop policy if exists "Users can insert gbp connections for their own businesses" on public.gbp_connections;
-create policy "Users can insert gbp connections for their own businesses"
-  on public.gbp_connections for insert
-  with check (
-    exists (
-      select 1 from public.businesses
-      where businesses.id = gbp_connections.business_id
-        and businesses.owner_id = auth.uid ()
-    )
-  );
-
-drop policy if exists "Users can update gbp connections for their own businesses" on public.gbp_connections;
-create policy "Users can update gbp connections for their own businesses"
-  on public.gbp_connections for update
-  using (
-    exists (
-      select 1 from public.businesses
-      where businesses.id = gbp_connections.business_id
-        and businesses.owner_id = auth.uid ()
-    )
-  )
-  with check (
-    exists (
-      select 1 from public.businesses
-      where businesses.id = gbp_connections.business_id
-        and businesses.owner_id = auth.uid ()
-    )
-  );
-
-drop policy if exists "Users can delete gbp connections for their own businesses" on public.gbp_connections;
-create policy "Users can delete gbp connections for their own businesses"
-  on public.gbp_connections for delete
   using (
     exists (
       select 1 from public.businesses

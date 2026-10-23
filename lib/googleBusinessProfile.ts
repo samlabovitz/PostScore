@@ -9,6 +9,7 @@
 
 const GOOGLE_OAUTH_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_OAUTH_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
+const GOOGLE_OAUTH_REVOKE_ENDPOINT = "https://oauth2.googleapis.com/revoke";
 
 /**
  * The Business Profile management scope. This is the one scope Phase 2
@@ -24,12 +25,34 @@ function readEnv(name: "GOOGLE_OAUTH_CLIENT_ID" | "GOOGLE_OAUTH_CLIENT_SECRET"):
   return value;
 }
 
-/** Whether both OAuth env vars are real (not missing, not the
- * .env.example placeholder) — the UI uses this to show an honest "not
- * configured in this environment yet" state instead of sending the
- * owner into a Google redirect that can only fail. */
+/**
+ * The redirect URI Google sends the owner back to. Built from SITE_URL
+ * (e.g. https://postscoree.netlify.app), never from the request's host, so
+ * it always matches one registered on the Google Cloud OAuth client. A
+ * local dev server without SITE_URL uses http://localhost:3000. Null in
+ * production without SITE_URL — connecting then stays off.
+ */
+export function gbpRedirectUri(env: { SITE_URL?: string; NODE_ENV?: string } = process.env): string | null {
+  const site = env.SITE_URL?.trim().replace(/\/+$/, "");
+  if (site) return `${site}/api/gbp/callback`;
+  if (env.NODE_ENV === "development") return "http://localhost:3000/api/gbp/callback";
+  return null;
+}
+
+/** Whether everything the connect needs is set: both OAuth env vars (not
+ * missing, not the .env.example placeholder), the token encryption key
+ * (32 bytes) and a redirect URI. The UI uses this to show an honest "not
+ * configured in this environment yet" state instead of sending the owner
+ * into a Google redirect that can only fail. */
 export function isGbpOAuthConfigured(): boolean {
-  return readEnv("GOOGLE_OAUTH_CLIENT_ID") !== null && readEnv("GOOGLE_OAUTH_CLIENT_SECRET") !== null;
+  const key = process.env.GBP_TOKEN_ENCRYPTION_KEY?.trim();
+  return (
+    readEnv("GOOGLE_OAUTH_CLIENT_ID") !== null &&
+    readEnv("GOOGLE_OAUTH_CLIENT_SECRET") !== null &&
+    !!key &&
+    Buffer.from(key, "base64").length === 32 &&
+    gbpRedirectUri() !== null
+  );
 }
 
 /** Whether the weekly-plan "Connect your Google Business Profile" item
@@ -58,16 +81,14 @@ function getOAuthConfig(): { clientId: string; clientSecret: string } {
 }
 
 /**
- * Builds the real Google OAuth consent-screen URL. `state` carries the
- * business id through the redirect round trip — see the RLS-is-the-real-
- * boundary note on the gbp_connections table in supabase/schema.sql for
- * why a plain (unsigned) state value is safe here: the callback's DB
- * write can only ever succeed for a business the logged-in user actually
- * owns, tampered state or not. `access_type=offline` + `prompt=consent`
- * ask Google for a refresh token every time, not just on first consent,
- * so reconnecting after a disconnect doesn't leave us without one.
+ * Builds the real Google OAuth consent-screen URL. `state` is the signed
+ * state from lib/gbpSecurity.ts (user + business + nonce), and
+ * `codeChallenge` the PKCE S256 challenge — the callback rejects any
+ * mismatch. `access_type=offline` + `prompt=consent` ask Google for a
+ * refresh token every time, not just on first consent, so reconnecting
+ * after a disconnect doesn't leave us without one.
  */
-export function buildGbpAuthUrl(params: { redirectUri: string; state: string }): string {
+export function buildGbpAuthUrl(params: { redirectUri: string; state: string; codeChallenge: string }): string {
   const { clientId } = getOAuthConfig();
   const url = new URL(GOOGLE_OAUTH_AUTH_ENDPOINT);
   url.searchParams.set("client_id", clientId);
@@ -77,6 +98,8 @@ export function buildGbpAuthUrl(params: { redirectUri: string; state: string }):
   url.searchParams.set("access_type", "offline");
   url.searchParams.set("prompt", "consent");
   url.searchParams.set("state", params.state);
+  url.searchParams.set("code_challenge", params.codeChallenge);
+  url.searchParams.set("code_challenge_method", "S256");
   return url.toString();
 }
 
@@ -113,6 +136,8 @@ interface RawTokenResponse {
 export async function exchangeGbpAuthCode(params: {
   code: string;
   redirectUri: string;
+  /** The PKCE verifier from this browser's connect cookie. */
+  codeVerifier: string;
 }): Promise<GbpTokenResult> {
   const { clientId, clientSecret } = getOAuthConfig();
 
@@ -125,6 +150,7 @@ export async function exchangeGbpAuthCode(params: {
       client_secret: clientSecret,
       redirect_uri: params.redirectUri,
       grant_type: "authorization_code",
+      code_verifier: params.codeVerifier,
     }).toString(),
   });
 
@@ -142,4 +168,27 @@ export async function exchangeGbpAuthCode(params: {
     expiresAt: new Date(Date.now() + (data.expires_in ?? 3600) * 1000).toISOString(),
     scope: data.scope ?? GBP_OAUTH_SCOPE,
   };
+}
+
+export type GbpRevokeResult = "revoked" | "already_invalid" | "failed";
+
+/**
+ * Revokes a token at Google (a refresh token revokes the whole grant, so
+ * PostScore disappears from the owner's Google account permissions).
+ * "already_invalid" when Google says the token is no longer valid (e.g.
+ * the owner removed access themselves); "failed" on any other error.
+ */
+export async function revokeGbpToken(token: string, fetchImpl: typeof fetch = fetch): Promise<GbpRevokeResult> {
+  try {
+    const res = await fetchImpl(GOOGLE_OAUTH_REVOKE_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ token }).toString(),
+    });
+    if (res.ok) return "revoked";
+    const data = (await res.json().catch(() => ({}))) as RawTokenResponse;
+    return data.error === "invalid_token" ? "already_invalid" : "failed";
+  } catch {
+    return "failed";
+  }
 }

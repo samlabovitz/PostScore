@@ -12,8 +12,10 @@ import { showRescanNotice } from "@/lib/rescanPolicy";
 import { getPlan } from "@/lib/premium";
 import { getLocalBenchmark } from "@/app/actions/competitors";
 import { getReplyDraftStatus } from "@/app/actions/reviewReplies";
+import { getGbpConnectionStatus } from "@/app/actions/gbp";
+import { gbpReplyCheckState } from "@/lib/gbpReplyCheck";
 
-export default async function WebsiteReviewsPage({ params }: { params: { id: string } }) {
+export default async function WebsiteReviewsPage({ params, searchParams = {} }: { params: { id: string }; searchParams?: { gbp?: string } }) {
   // Free: this tab is locked — its showroom, before any of its own data loads.
   const showroom = await freeShowroom(params.id, "reviews");
   if (showroom) return showroom;
@@ -45,6 +47,9 @@ export default async function WebsiteReviewsPage({ params }: { params: { id: str
   }
 
   const { data } = result;
+  const plan = await getPlan();
+  // Request-cached: the same read getReviewsPageData already made.
+  const gbpReplyCheck = gbpReplyCheckState(plan, await getGbpConnectionStatus(params.id), searchParams.gbp);
 
   return (
     <DashboardShell
@@ -67,7 +72,8 @@ export default async function WebsiteReviewsPage({ params }: { params: { id: str
       <ReviewsView
         businessId={params.id}
         reviews={data}
-        plan={await getPlan()}
+        plan={plan}
+        gbpReplyCheck={gbpReplyCheck}
         nearby={benchmark.status === "ok" ? { goal: benchmark.benchmark.reviewGoal, group: benchmark.benchmark.reviewGroup } : null}
         devPlanSwitch={process.env.NODE_ENV === "development"}
         replyDrafts={replyDrafts}

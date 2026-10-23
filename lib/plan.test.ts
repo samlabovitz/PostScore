@@ -14,9 +14,9 @@ describe("plans", () => {
     expect(resolvePlan({ NODE_ENV: "development" }, "platinum")).toBe("free");
   });
 
-  it("Premium and Multi have Premium; GBP connect still needs GBP_CONNECT_PUBLIC", () => {
+  it("Premium and Multi have Premium; GBP connect needs only GBP_CONNECT_PUBLIC", () => {
     expect([hasPremium("free"), hasPremium("grow"), hasPremium("premium"), hasPremium("multi")]).toEqual([false, false, true, true]);
-    expect(canConnectGbp(true, { GBP_CONNECT_PUBLIC: "true", NODE_ENV: "production" })).toBe(true);
-    expect(canConnectGbp(true, { NODE_ENV: "production" })).toBe(false);
+    expect(canConnectGbp({ GBP_CONNECT_PUBLIC: "true", NODE_ENV: "production" })).toBe(true);
+    expect(canConnectGbp({ NODE_ENV: "production" })).toBe(false);
   });
 });

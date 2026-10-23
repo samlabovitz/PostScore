@@ -43,6 +43,7 @@ import { freeWaitingPoints } from "@/lib/freeUpsell";
 import { freeSection } from "@/lib/freeOverviewSections";
 import type { FreeAiAllowance } from "@/lib/freeAiAllowance";
 import { ReviewReplyDrafter } from "@/components/reviews/ReviewReplyDrafter";
+import { GbpReplyCheckConnect, type GbpReplyCheckState } from "@/components/gbp/GbpReplyCheckConnect";
 import type { ReplyDraftStatus } from "@/app/actions/reviewReplies";
 import type { Plan } from "@/lib/plan";
 
@@ -80,6 +81,7 @@ export function BusinessScoreView({
   freeRescanNextAt = null,
   replyDrafts = null,
   freePostai = null,
+  gbpReplyCheck = null,
 }: {
   businessId: string;
   business: BusinessRecord;
@@ -114,6 +116,8 @@ export function BusinessScoreView({
   replyDrafts?: ReplyDraftStatus | null;
   /** Free: PostAI questions left this week (DB only — no AI call). */
   freePostai?: FreeAiAllowance | null;
+  /** Free: connect Google for the "Replying to reviews" check (null = hidden). */
+  gbpReplyCheck?: GbpReplyCheckState | null;
 }) {
   const locale = useLocale();
   const { breakdown, projectedBreakdown } = result;
@@ -233,6 +237,7 @@ export function BusinessScoreView({
         <FreeSection id="tools" title={t(locale, freeSection("tools").titleKey)} body={t(locale, freeSection("tools").bodyKey)}>
           <FreeReviews placeId={business.place_id ?? null} rating={business.rating} reviewCount={business.review_count} goal={reviewGoal} group={reviewGroup}>
             {replyDrafts && <ReviewReplyDrafter businessId={businessId} plan="free" placeId={business.place_id ?? null} initial={replyDrafts} embedded />}
+            {gbpReplyCheck && <GbpReplyCheckConnect businessId={businessId} state={gbpReplyCheck} />}
           </FreeReviews>
           {freePostai && <FreePostAI businessId={businessId} starterPrompts={assistant.status === "unavailable" ? [] : assistant.starterPrompts} initial={freePostai} />}
         </FreeSection>

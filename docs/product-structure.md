@@ -433,6 +433,7 @@ Caching the live result for the length of one visit (in memory, not the database
 
 1. **Google Maps Platform terms compliance** (above): attribution done; no Google content on the printed sign or the starter site done; owner-provided details at setup (B8), live Google data, the cleanup SQL; derived-score history after legal counsel + Sales. Blocks launch.
 2. Remove `PLAN_SWITCHER_EMAILS` from production (testing only).
+   - remove PLAN_SWITCHER_EMAILS — also removes the unlimited-businesses test exception
 3. Checkout and billing as in `docs/billing-compliance.md` (lawyer review).
 4. Run every pending `supabase/*.sql` file, including `review-reply-drafts.sql`, `starter-site-details.sql` and `free-ai-usage.sql`.
 5. Search demand: its own launch checklist in `docs/search-demand.md` §4.

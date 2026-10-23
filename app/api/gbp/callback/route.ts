@@ -1,49 +1,30 @@
 // Where Google redirects back to after the owner approves (or declines)
 // access on Google's own consent screen. Exchanges the real code for
-// real tokens and stores them — never marks a business "connected"
-// without an actual successful token exchange.
+// real tokens and stores them encrypted — never marks a business
+// "connected" without an actual successful token exchange.
+//
+// Rejected before anything is exchanged or stored: a state whose
+// signature is wrong or that's expired, a state started by another
+// PostScore user, a nonce that doesn't match this browser's cookie, or a
+// business the signed-in user doesn't own (lib/gbpSecurity.ts).
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { exchangeGbpAuthCode } from "@/lib/googleBusinessProfile";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { exchangeGbpAuthCode, gbpRedirectUri, isGbpOAuthConfigured } from "@/lib/googleBusinessProfile";
+import { GBP_OAUTH_COOKIE, checkGbpCallback } from "@/lib/gbpSecurity";
+import { gbpLandingPath, type GbpConnectResult } from "@/lib/gbpLanding";
+import { saveGbpConnection } from "@/lib/gbpTokens.server";
+import { canConnectGbp, getPlan } from "@/lib/premium";
 
 export async function GET(req: NextRequest) {
-  const code = req.nextUrl.searchParams.get("code");
-  // The business id, carried through the redirect round trip — see the
-  // RLS note on gbp_connections in supabase/schema.sql for why this
-  // doesn't need to be signed: the upsert below can only ever succeed
-  // for a business the logged-in user actually owns.
-  const state = req.nextUrl.searchParams.get("state");
-  const googleError = req.nextUrl.searchParams.get("error");
+  const params = req.nextUrl.searchParams;
 
-  if (!state) {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
-  function connectPageUrl(params: Record<string, string>) {
-    const url = new URL(`/business/${state}/connect-gbp`, req.url);
-    for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
-    return url;
-  }
-
-  if (googleError) {
-    // The owner clicked "Cancel" on Google's own consent screen, or
-    // Google itself rejected the request — either way, graceful and
-    // honest, never treated as a connection.
-    return NextResponse.redirect(
-      connectPageUrl({
-        error:
-          googleError === "access_denied"
-            ? "You didn't approve access, so nothing was connected."
-            : `Google returned an error: ${googleError}`,
-      })
-    );
-  }
-
-  if (!code) {
-    return NextResponse.redirect(
-      connectPageUrl({ error: "Google didn't return an authorization code." })
-    );
+  // Every way out clears the one-time cookie.
+  function done(path: string) {
+    const res = NextResponse.redirect(new URL(path, req.url));
+    res.cookies.set(GBP_OAUTH_COOKIE, "", { path: "/api/gbp", maxAge: 0 });
+    return res;
   }
 
   const supabase = createClient();
@@ -52,47 +33,53 @@ export async function GET(req: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    return done("/login");
+  }
+
+  const check = checkGbpCallback({
+    state: params.get("state"),
+    cookieValue: req.cookies.get(GBP_OAUTH_COOKIE)?.value ?? null,
+    userId: user.id,
+  });
+  if (!check.ok) {
+    return done("/");
+  }
+
+  const businessId = check.businessId;
+  const { data: business } = await supabase
+    .from("businesses")
+    .select("id")
+    .eq("id", businessId)
+    .eq("owner_id", user.id)
+    .maybeSingle();
+  if (!business) {
+    return done("/");
+  }
+
+  const plan = await getPlan();
+  const land = (result: GbpConnectResult) => done(gbpLandingPath(businessId, plan, result));
+
+  const googleError = params.get("error");
+  if (googleError) {
+    // "Cancel" on Google's consent screen, or Google refused the request.
+    return land(googleError === "access_denied" ? "denied" : "failed");
+  }
+
+  const code = params.get("code");
+  if (!code) {
+    return land("failed");
+  }
+
+  const redirectUri = gbpRedirectUri();
+  if (!canConnectGbp() || !isGbpOAuthConfigured() || !redirectUri) {
+    return land("setup");
   }
 
   try {
-    const redirectUri = new URL("/api/gbp/callback", req.url).toString();
-    const tokens = await exchangeGbpAuthCode({ code, redirectUri });
-
-    // Google only re-sends a refresh_token when it feels like it should
-    // (in practice: reliably, since we pass prompt=consent, but never
-    // trust that blindly) — never overwrite a working refresh_token with
-    // null just because this particular exchange didn't return a new one.
-    const { data: existing } = await supabase
-      .from("gbp_connections")
-      .select("refresh_token")
-      .eq("business_id", state)
-      .maybeSingle();
-
-    const { error } = await supabase.from("gbp_connections").upsert(
-      {
-        business_id: state,
-        status: "connected",
-        access_token: tokens.accessToken,
-        refresh_token: tokens.refreshToken ?? existing?.refresh_token ?? null,
-        token_expires_at: tokens.expiresAt,
-        scope: tokens.scope,
-        connected_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "business_id" }
-    );
-
-    if (error) {
-      return NextResponse.redirect(connectPageUrl({ error: error.message }));
-    }
-
-    return NextResponse.redirect(connectPageUrl({ connected: "1" }));
-  } catch (err) {
-    return NextResponse.redirect(
-      connectPageUrl({
-        error: err instanceof Error ? err.message : "Could not complete the Google connection.",
-      })
-    );
+    const tokens = await exchangeGbpAuthCode({ code, redirectUri, codeVerifier: check.codeVerifier });
+    const saved = await saveGbpConnection(createAdminClient(), { businessId, userId: user.id, tokens });
+    return land(saved.ok ? "connected" : "failed");
+  } catch {
+    return land("failed");
   }
 }

@@ -367,4 +367,33 @@ describe("locations: what Compare plans promises", () => {
     expect(await locationLimitMessageWithClient(db(Array.from({ length: 5 }, (_, i) => ({ id: `${i}`, place_id: `p${i + 10}` }))), "u1", "p1", "multi")).toContain("Multi includes up to 5 locations");
     expect(await locationLimitMessageWithClient(db([{ id: "a", place_id: "p0" }]), "u1", "p1", "free", "es")).toContain("Su plan incluye 1 ubicación");
   });
+
+  test("testing exception: an email in PLAN_SWITCHER_EMAILS adds unlimited businesses on any plan; everyone else keeps the limits", async () => {
+    const { unlimitedBusinessesAllowed } = await import("@/lib/premium");
+    const env = { NODE_ENV: "production", PLAN_SWITCHER_EMAILS: "tester@example.com, other@example.com" };
+    expect(unlimitedBusinessesAllowed(env, "Tester@Example.com")).toBe(true);
+    expect(unlimitedBusinessesAllowed(env, "owner@example.com")).toBe(false);
+    expect(unlimitedBusinessesAllowed(env, null)).toBe(false);
+    expect(unlimitedBusinessesAllowed({ NODE_ENV: "production" }, "tester@example.com")).toBe(false);
+    // No development shortcut: unlisted is limited even on a local dev server.
+    expect(unlimitedBusinessesAllowed({ NODE_ENV: "development" }, "tester@example.com")).toBe(false);
+
+    vi.doMock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+    vi.doMock("@/app/actions/competitors", () => ({ ensureFirstCompetitorScanWithClient: vi.fn() }));
+    const { locationLimitMessageWithClient } = await import("@/app/actions/businesses");
+    const db = (n: number) => ({ from: () => ({ select: () => ({ eq: async () => ({ data: Array.from({ length: n }, (_, i) => ({ id: `${i}`, place_id: `p${i + 10}` })), error: null }) }) }) }) as never;
+    for (const plan of ["free", "grow", "premium"] as const) {
+      expect(await locationLimitMessageWithClient(db(1), "u1", "p1", plan, "en", true)).toBeNull();
+      expect(await locationLimitMessageWithClient(db(1), "u1", "p1", plan, "en", false)).toContain("Your plan includes 1 location");
+    }
+    expect(await locationLimitMessageWithClient(db(12), "u1", "p1", "multi", "en", true)).toBeNull();
+    expect(await locationLimitMessageWithClient(db(5), "u1", "p1", "multi", "en", false)).toContain("Multi includes up to 5 locations");
+
+    // Wired into the one server-side check both "add business" actions use,
+    // from the signed-in user's email — no email in code.
+    const src = readFileSync("app/actions/businesses.ts", "utf8");
+    expect(src).toContain("unlimitedBusinessesAllowed(process.env, email)");
+    expect(src.match(/locationLimitMessage\(supabase, user\.id, user\.email,/g)).toHaveLength(2);
+    expect(src + readFileSync("lib/premium.ts", "utf8")).not.toMatch(/[\w.+-]+@(?!example\.com)[\w-]+\.[a-z]{2,}/i);
+  });
 });

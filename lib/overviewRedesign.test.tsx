@@ -428,11 +428,11 @@ describe("connect card and business listing (tweaks)", () => {
     // The connect page is viewable (read-only until GBP_CONNECT_PUBLIC);
     // the real OAuth start stays behind the flag.
     const connectPage = fs.readFileSync("app/business/[id]/connect-gbp/page.tsx", "utf8");
-    expect(connectPage).toContain("connectOpen={canConnectGbp(hasPremium(await getPlan()))}");
+    expect(connectPage).toContain("connectOpen={canConnectGbp() && profilePage}");
     expect(connectPage).not.toContain("google-premium");
     const connectRoute = fs.readFileSync("app/api/gbp/connect/route.ts", "utf8");
-    expect(connectRoute.indexOf("if (!canConnectGbp(hasPremium(await getPlan())))")).toBeGreaterThan(-1);
-    expect(connectRoute.indexOf("if (!canConnectGbp(hasPremium(await getPlan())))")).toBeLessThan(connectRoute.indexOf("buildGbpAuthUrl({"));
+    expect(connectRoute.indexOf("if (!canConnectGbp())")).toBeGreaterThan(-1);
+    expect(connectRoute.indexOf("if (!canConnectGbp())")).toBeLessThan(connectRoute.indexOf("buildGbpAuthUrl({"));
   });
 });
 
@@ -497,6 +497,7 @@ describe("whole-number point ranges and the connect page", () => {
 
   test("connect page: disabled button + 'coming soon' line until GBP_CONNECT_PUBLIC; otherwise exactly as before", async () => {
     vi.doMock("@/app/actions/gbp", () => ({ disconnectGbp: vi.fn() }));
+    vi.doMock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
     const { ConnectGbpView } = await import("@/app/business/[id]/connect-gbp/ConnectGbpView");
     const props = { businessId: "b1", businessName: "Shop", connected: false, connectedAt: null, justConnected: false, error: null, oauthConfigured: true };
     const closed = render(<ConnectGbpView {...props} connectOpen={false} />);
@@ -519,15 +520,12 @@ describe("whole-number point ranges and the connect page", () => {
   });
 });
 
-describe("Premium gate for the real Google connect", () => {
-  test("works only with GBP_CONNECT_PUBLIC=true AND Premium; a local dev server may test it; production never without Premium", async () => {
-    const { canConnectGbp, hasPremium } = await import("@/lib/premium");
-    expect(hasPremium("free")).toBe(false);
-    expect(canConnectGbp(false, { GBP_CONNECT_PUBLIC: "true", NODE_ENV: "production" })).toBe(false);
-    expect(canConnectGbp(true, { GBP_CONNECT_PUBLIC: "true", NODE_ENV: "production" })).toBe(true);
-    expect(canConnectGbp(true, { NODE_ENV: "production" })).toBe(false);
-    expect(canConnectGbp(false, { GBP_CONNECT_PUBLIC: "true", NODE_ENV: "development" })).toBe(true);
-    expect(canConnectGbp(false, { NODE_ENV: "development" })).toBe(false);
+describe("the real Google connect: GBP_CONNECT_PUBLIC is the one switch", () => {
+  test("on for every plan when GBP_CONNECT_PUBLIC=true; off for everyone otherwise", async () => {
+    const { canConnectGbp } = await import("@/lib/premium");
+    expect(canConnectGbp({ GBP_CONNECT_PUBLIC: "true", NODE_ENV: "production" })).toBe(true);
+    expect(canConnectGbp({ NODE_ENV: "production" })).toBe(false);
+    expect(canConnectGbp({ NODE_ENV: "development" })).toBe(false);
   });
 });
 

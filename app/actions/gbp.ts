@@ -45,16 +45,17 @@ async function getGbpConnectionStatusUncached(businessId: string): Promise<GetGb
 }
 
 export type DisconnectGbpResult =
-  | { status: "ok" }
+  | { status: "ok"; revoked: boolean }
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
 
 /**
- * A real, owner-initiated disconnect — deletes the stored tokens rather
- * than just flipping a flag, so there's nothing left to leak or misuse.
- * RLS (the same owner-scoped delete policy every other table here uses)
- * is what actually guarantees this can only ever touch the caller's own
- * business.
+ * A real, owner-initiated disconnect: revokes PostScore's access at
+ * Google, then deletes the stored tokens and every GBP-derived value
+ * (lib/gbpTokens.server.ts). Tokens are readable only by the service
+ * role, so the owner check happens here first. `revoked: false` means
+ * Google didn't confirm the revoke — the data is still deleted, and the
+ * UI points the owner to their Google account permissions.
  */
 export async function disconnectGbp(businessId: string): Promise<DisconnectGbpResult> {
   const supabase = createClient();
@@ -67,13 +68,29 @@ export async function disconnectGbp(businessId: string): Promise<DisconnectGbpRe
     return { status: "unauthenticated" };
   }
 
-  const { error } = await supabase.from("gbp_connections").delete().eq("business_id", businessId);
+  const { data: business } = await supabase
+    .from("businesses")
+    .select("id")
+    .eq("id", businessId)
+    .eq("owner_id", user.id)
+    .maybeSingle();
 
-  if (error) {
-    return { status: "error", message: error.message };
+  if (!business) {
+    return { status: "error", message: "not_found" };
   }
 
-  return { status: "ok" };
+  // Loaded here, not at the top: client components import this file's
+  // actions, and these two modules are server-only.
+  const [{ createAdminClient }, { disconnectGbpData }] = await Promise.all([
+    import("@/lib/supabase/admin"),
+    import("@/lib/gbpTokens.server"),
+  ]);
+  const result = await disconnectGbpData(createAdminClient(), businessId);
+  if (!result.ok) {
+    return { status: "error", message: "delete_failed" };
+  }
+
+  return { status: "ok", revoked: result.revoke !== "failed" };
 }
 
 /** Request-scoped (lib/requestCache.ts): one query per page render. */
