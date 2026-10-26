@@ -50,6 +50,17 @@
 // instead of the business's own real stored `language` column — never
 // writes that column, just overrides which language THIS preview uses.
 //
+// --testing-mode (no businessId): who the scheduled job would email this
+// month in testing mode (MONTHLY_REPORTS_LIVE not "true") — the 3 picked
+// businesses (their "[TEST]" reports go ONLY to REPORT_TEST_EMAIL),
+// whether each would need a paid re-scan, and a check that ZERO normal
+// owner reports would go out. Sends nothing, writes nothing, renders nothing.
+//
+// --live-check <businessId> [--plan=grow]: whether this business would get
+// its report in LIVE mode (MONTHLY_REPORTS_LIVE=true). Uses the same plan
+// the job sees (backgroundPlan — Free for everyone until subscriptions
+// ship) unless --plan simulates one. Sends nothing.
+//
 // Finding a businessId: open that business's Overview page in the app —
 // the id is the segment right after /business/ in the URL
 // (postscoree.netlify.app/business/<businessId>).
@@ -94,6 +105,9 @@ import { resolveBizProfile } from "../config/bizProfiles";
 import { runAndSaveCompetitorScanWithClient } from "../app/actions/competitors";
 import { buildReportExtras, reportTopTask, snapshotFromSavedRows } from "../lib/monthlyReportExtras";
 import { SAVED_SCAN_COLUMNS, type SavedScanRow } from "../lib/savedCompetitorScans";
+import { decideReportRecipient, reportPlanCheck, reportSendEnv, reportTestEmail, type ReportSendEnv } from "../lib/reportSendPolicy";
+import { planTestRun, readRecentScoreId, runMonth, TEST_RESCAN_MAX_AGE_DAYS } from "../lib/monthlyReportTestRun";
+import { backgroundPlan, isPlan } from "../lib/plan";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -297,8 +311,78 @@ async function readRoutineCheckedCount(businessId: string, reportDate: string): 
   return count ?? 0;
 }
 
+/** --testing-mode: the scheduled job's testing-mode pick, read-only. */
+async function previewTestingMode() {
+  const env: ReportSendEnv = { ...reportSendEnv(), MONTHLY_REPORTS_LIVE: undefined };
+  const now = new Date();
+  console.log(`Testing mode preview for ${runMonth(now)} (MONTHLY_REPORTS_LIVE in .env.local: ${JSON.stringify(process.env.MONTHLY_REPORTS_LIVE ?? null)})`);
+  const testEmail = reportTestEmail(env);
+  console.log(`REPORT_TEST_EMAIL: ${testEmail ? "set" : "MISSING — the job would send nothing"}`);
+
+  const plan = await planTestRun(supabase, now);
+  if (plan.noHistoryTable) console.log("(monthly_report_test_runs not found — run supabase/monthly-report-test-runs.sql; picks can repeat month to month)");
+  if (plan.alreadyPicked) console.log(`This month's test reports already went out: ${plan.alreadyPicked.join(", ")} — the job would send nothing more.`);
+  console.log(`Last month's picks (avoided): ${plan.lastMonth.length ? plan.lastMonth.join(", ") : "none"}`);
+  console.log(`\nWould pick ${plan.picked.length}:`);
+  for (const b of plan.picked) {
+    const recent = await readRecentScoreId(supabase, b.id, now);
+    console.log(`  - ${b.name ?? "(no name)"} (${b.id}) — ${recent ? `score under ${TEST_RESCAN_MAX_AGE_DAYS} days old, no re-scan` : "re-scan due (Places Details + PageSpeed)"}`);
+  }
+
+  // Every business's send decision in testing mode: the 3 picks go out as
+  // "[TEST]" reports to REPORT_TEST_EMAIL; everything else is the owner path.
+  const { data: all } = await supabase.from("businesses").select("id, monthly_report_enabled");
+  let ownerReports = 0;
+  let testReports = 0;
+  for (const b of (all ?? []) as Array<{ id: string; monthly_report_enabled: boolean }>) {
+    const picked = plan.picked.some((p) => p.id === b.id);
+    // Any non-null owner address: a "live" decision would show up as one.
+    const d = decideReportRecipient({ path: picked ? "scheduled-test" : "scheduled", env, ownerOptedIn: b.monthly_report_enabled === true, ownerEmail: "owner@placeholder.invalid" });
+    if (!d.allowed) continue;
+    if (d.mode === "live") ownerReports++;
+    else testReports++;
+  }
+  console.log(`\nNormal owner reports in testing mode: ${ownerReports} (of ${all?.length ?? 0} businesses checked)`);
+  console.log(`"[TEST]" reports, all to REPORT_TEST_EMAIL: ${testReports}`);
+  console.log("Nothing was sent or written.");
+}
+
+/** --live-check: would this business get its report in live mode? */
+async function previewLiveCheck(businessId: string, planArg: string | null) {
+  const { data: b } = await supabase.from("businesses").select("id, name, owner_id, monthly_report_enabled, listing_mode").eq("id", businessId).maybeSingle();
+  if (!b) {
+    console.error(`Could not find business ${businessId}`);
+    process.exit(1);
+  }
+  const plan = planArg && isPlan(planArg) ? planArg : backgroundPlan(b.owner_id);
+  const env: ReportSendEnv = { ...reportSendEnv(), MONTHLY_REPORTS_LIVE: "true" };
+  const { data: owner } = await supabase.auth.admin.getUserById(b.owner_id);
+  const planCheck = reportPlanCheck(plan);
+  const d = decideReportRecipient({ path: "scheduled", env, ownerOptedIn: b.monthly_report_enabled === true, ownerEmail: owner?.user?.email ?? null });
+  const verdict =
+    b.listing_mode === "website_only"
+      ? "SKIPPED — website-only"
+      : !planCheck.allowed
+        ? `SKIPPED — ${planCheck.reason}`
+        : !d.allowed
+          ? `SKIPPED — ${d.reason}`
+          : "INCLUDED — report goes to the owner";
+  console.log(`${b.name} (${b.id}), plan ${plan}${planArg ? " (simulated)" : " (what the job sees)"}, live mode: ${verdict}`);
+  console.log("Nothing was sent.");
+}
+
 async function main() {
   const args = process.argv.slice(2);
+  if (args.includes("--testing-mode")) return previewTestingMode();
+  if (args.includes("--live-check")) {
+    const id = args.find((a) => !a.startsWith("--"));
+    const planArg = args.find((a) => a.startsWith("--plan="))?.slice("--plan=".length) ?? null;
+    if (!id) {
+      console.error("Usage: npx tsx scripts/preview-report.ts <businessId> --live-check [--plan=grow]");
+      process.exit(1);
+    }
+    return previewLiveCheck(id, planArg);
+  }
   const forceBaseline = args.includes("--baseline");
   const freshScan = args.includes("--fresh-scan");
   const businessId = args.find((a) => !a.startsWith("--"));
@@ -306,7 +390,7 @@ async function main() {
   const localeOverride = localeOverrideArg ? localeOverrideArg.slice("--locale=".length) : null;
 
   if (!businessId) {
-    console.error("Usage: npx tsx scripts/preview-report.ts <businessId> [--baseline] [--fresh-scan] [--locale=es]");
+    console.error("Usage: npx tsx scripts/preview-report.ts <businessId> [--baseline] [--fresh-scan] [--locale=es] | --testing-mode | <businessId> --live-check [--plan=grow]");
     process.exit(1);
   }
 

@@ -7,6 +7,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { IconBell, IconBuildingStore, IconCheck, IconCreditCard, IconCrown, IconTag, IconUser, IconUserCircle, type Icon } from "@tabler/icons-react";
+import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { unsubscribeFromAllEmails } from "@/app/actions/businesses";
 import { SAVED_EVENT } from "@/lib/savedEvent";
@@ -356,6 +357,24 @@ export function CancelPlanButton({ onConfirm }: { onConfirm: () => Promise<void>
 }
 
 // ---- Email ----
+
+/** Settings → Email on Free: no monthly report toggle (Free gets no report
+ * emails — lib/plan.ts planIncludesMonthlyReports), just where they come
+ * from, linking to Compare plans. */
+export function MonthlyEmailFreeNote({ businessId }: { businessId: string }) {
+  const locale = useLocale();
+  return (
+    <Card data-testid="monthly-email-free" className="p-5">
+      <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-mute">{t(locale, "dashboard.settings.monthlyEmailHeading")}</div>
+      <p className="mt-1 text-sm text-ink-soft">
+        {t(locale, "dashboard.settings.email.freeNote")}{" "}
+        <a href={`/business/${businessId}/settings#compare-plans`} className="font-semibold text-ink underline-offset-2 hover:underline">
+          {t(locale, "dashboard.upgrade.box.seePlans")}
+        </a>
+      </p>
+    </Card>
+  );
+}
 
 export function UnsubscribeAllButton() {
   const locale = useLocale();

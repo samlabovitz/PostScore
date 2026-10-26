@@ -132,7 +132,7 @@ describe("Free never refreshes competitors outside re-scans either (monthly repo
 
   test("the monthly report reuses any saved scan on Free (never pays for a refresh)", () => {
     const cron = readFileSync("app/api/cron/monthly-reports/route.ts", "utf8");
-    expect(cron).toContain('const free = backgroundPlan() === "free";');
+    expect(cron).toContain('const free = backgroundPlan(optIn.owner_id ?? null) === "free";');
     expect(cron).toContain("latestScan && (free || isScanFresh(latestScan.created_at, new Date()))");
   });
 

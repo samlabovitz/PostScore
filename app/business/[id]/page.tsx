@@ -29,6 +29,7 @@ import { nicheBannerKind } from "@/lib/businessNiche";
 import { loadBusinessNiche } from "@/lib/businessNiche.server";
 import { getReplyDraftStatus } from "@/app/actions/reviewReplies";
 import { gbpReplyCheckState } from "@/lib/gbpReplyCheck";
+import { isMonthlyReportsLive } from "@/lib/monthlyReportsFeatureFlag";
 
 export default async function BusinessPage({ params, searchParams = {} }: { params: { id: string }; searchParams?: { gbp?: string } }) {
   // getBusinessSummary is awaited separately (not folded into the
@@ -197,6 +198,7 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
         freeRescanNextAt={freeRescanNextAt}
         replyDrafts={replyDrafts}
         freePostai={freePostai}
+        monthlyReportsLive={isMonthlyReportsLive()}
         gbpReplyCheck={free ? gbpReplyCheckState(upgrade.plan, gbpStatus, searchParams.gbp) : null}
       />
     </DashboardShell>

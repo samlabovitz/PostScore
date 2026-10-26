@@ -42,8 +42,13 @@ describe("POST /api/cron/monthly-reports — the real isMonthlyReportsLive() gat
   const originalCronSecret = process.env.CRON_SECRET;
   const originalLiveFlag = process.env.MONTHLY_REPORTS_LIVE;
 
+  const originalTestEmail = process.env.REPORT_TEST_EMAIL;
+
   beforeEach(() => {
     process.env.CRON_SECRET = "test-cron-secret-for-unit-tests";
+    // Testing mode with no REPORT_TEST_EMAIL sends nothing at all (see
+    // testingMode.test.ts for the 3 test sends when it is set).
+    delete process.env.REPORT_TEST_EMAIL;
   });
 
   afterEach(() => {
@@ -51,6 +56,8 @@ describe("POST /api/cron/monthly-reports — the real isMonthlyReportsLive() gat
     else process.env.CRON_SECRET = originalCronSecret;
     if (originalLiveFlag === undefined) delete process.env.MONTHLY_REPORTS_LIVE;
     else process.env.MONTHLY_REPORTS_LIVE = originalLiveFlag;
+    if (originalTestEmail === undefined) delete process.env.REPORT_TEST_EMAIL;
+    else process.env.REPORT_TEST_EMAIL = originalTestEmail;
   });
 
   function authorizedRequest(): NextRequest {

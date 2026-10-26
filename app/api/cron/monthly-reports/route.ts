@@ -76,12 +76,21 @@ import { buildProfileSnapshot } from "@/lib/profileChanges";
 import { buildActionPlan, mergeReviewTasks, type TaskRow } from "@/lib/actionPlan";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { buildGrowthMoves, competitorPhotoCounts, median, weakWebsiteIssueLabels, type GrowthMoveSignals } from "@/lib/growthMoves";
-import { MonthlyReportEmail, monthlyReportSubject } from "@/emails/MonthlyReportEmail";
+import { MonthlyReportEmail, monthlyReportSubject, testReportSubject } from "@/emails/MonthlyReportEmail";
 import { sendEmail } from "@/lib/email";
 import { isMonthlyReportsLive } from "@/lib/monthlyReportsFeatureFlag";
 import { buildReportExtras, reportTopTask, snapshotFromSavedRows } from "@/lib/monthlyReportExtras";
 import { SAVED_SCAN_COLUMNS, type SavedScanRow } from "@/lib/savedCompetitorScans";
-import { decideReportRecipient, reportSendEnv, reportSendPrecheck, type ReportSendPath } from "@/lib/reportSendPolicy";
+import {
+  decideReportRecipient,
+  isTestingMode,
+  reportPlanCheck,
+  reportSendEnv,
+  reportSendPrecheck,
+  reportTestEmail,
+  type ReportSendPath,
+} from "@/lib/reportSendPolicy";
+import { planTestRun, readRecentScoreId, runMonth } from "@/lib/monthlyReportTestRun";
 import { normalizeLocale, reportCoverageMonthIndex, reportCoverageMonthRange, type Locale } from "@/lib/i18n";
 import { loadCompetitorScope } from "@/lib/businessNiche.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -158,6 +167,74 @@ interface CronRunSummary {
   skipped: number;
   failed: number;
   results: CronRunResult[];
+}
+
+// ---------------------------------------------------------------------------
+// TESTING MODE (MONTHLY_REPORTS_LIVE not exactly "true") — see
+// lib/reportSendPolicy.ts. The scheduled run picks TEST_PICK_COUNT random
+// scored businesses and sends each report only to REPORT_TEST_EMAIL.
+// ---------------------------------------------------------------------------
+
+
+/** The scheduled run in testing mode: pick, record, and send the 3 test
+ * reports — only to REPORT_TEST_EMAIL. Never an owner. */
+async function runTestingMode(offset: number): Promise<CronRunSummary> {
+  const empty: CronRunSummary = { pageSize: 0, hasMore: false, processed: 0, sent: 0, skipped: 0, failed: 0, results: [] };
+  // The batch caller pages through offsets; testing mode does all its
+  // work on the first call and tells it to stop.
+  if (offset > 0) return empty;
+  const testEmail = reportTestEmail(reportSendEnv());
+  if (!testEmail) {
+    console.log("[cron/monthly-reports] testing mode: REPORT_TEST_EMAIL isn't set — sending nothing this run.");
+    return empty;
+  }
+  const supabase = createAdminClient();
+  const now = new Date();
+  const plan = await planTestRun(supabase, now);
+  if (plan.alreadyPicked) {
+    console.log(`[cron/monthly-reports] testing mode: this month's test reports already went out (${plan.alreadyPicked.join(", ")}) — sending nothing.`);
+    return empty;
+  }
+  if (plan.picked.length === 0) {
+    console.log("[cron/monthly-reports] testing mode: no scored business to preview — sending nothing.");
+    return empty;
+  }
+  // Record the pick BEFORE sending — the table's primary key on
+  // run_month makes a retry or double trigger send nothing more.
+  const { error: reserveError } = await supabase
+    .from("monthly_report_test_runs")
+    .insert({ run_month: runMonth(now), business_ids: plan.picked.map((b) => b.id) });
+  if (reserveError?.code === "23505") {
+    console.log("[cron/monthly-reports] testing mode: another run already picked this month's businesses — sending nothing.");
+    return empty;
+  }
+  if (reserveError) {
+    console.warn(
+      `[cron/monthly-reports] testing mode: couldn't record this month's picks (${reserveError.message}) — run supabase/monthly-report-test-runs.sql; next month may repeat a business.`
+    );
+  }
+  console.log(
+    `[cron/monthly-reports] testing mode: picked ${plan.picked.map((b) => `${b.name ?? "(no name)"} (${b.id})`).join("; ")} — sending to REPORT_TEST_EMAIL only.`
+  );
+
+  const startOfMonthIso = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+  const results: CronRunResult[] = [];
+  for (const b of plan.picked) {
+    try {
+      results.push(await processBusiness(supabase, b.id, startOfMonthIso, now, "scheduled-test"));
+    } catch (err) {
+      results.push({ businessId: b.id, status: "failed", reason: err instanceof Error ? err.message : "Unexpected error during processing." });
+    }
+  }
+  return {
+    pageSize: results.length,
+    hasMore: false,
+    processed: results.length,
+    sent: results.filter((r) => r.status === "sent").length,
+    skipped: results.filter((r) => r.status === "skipped").length,
+    failed: results.filter((r) => r.status === "failed").length,
+    results,
+  };
 }
 
 /** One real saved score row, read directly off `scores` — the same
@@ -440,28 +517,37 @@ export async function processBusiness(
   path: ReportSendPath = "scheduled"
 ): Promise<CronRunResult> {
   // Send safety first — before any paid work (the re-scan below).
-  const precheck = reportSendPrecheck(path, reportSendEnv());
+  const env = reportSendEnv();
+  const precheck = reportSendPrecheck(path, env);
   if (!precheck.allowed) {
     return { businessId, status: "skipped", reason: precheck.reason };
   }
-  // The owner's own opt-in is always respected, by every path (the
-  // scheduled batch already lists only opted-in businesses; send-one
-  // doesn't, so this is the real guard there).
+  const testing = isTestingMode(env);
   const { data: optIn, error: optInError } = await supabase
     .from("businesses")
-    .select("monthly_report_enabled")
+    .select("monthly_report_enabled, owner_id")
     .eq("id", businessId)
     .maybeSingle();
   if (optInError || !optIn) {
     return { businessId, status: "failed", reason: "could not read this business's report opt-in" };
   }
-  if (optIn.monthly_report_enabled !== true) {
+  // Live mode: the owner's own opt-in is always respected (the scheduled
+  // batch already lists only opted-in businesses; send-one doesn't, so
+  // this is the real guard there), and Free gets no monthly report
+  // emails. Testing mode never emails the owner, so neither applies.
+  if (!testing && optIn.monthly_report_enabled !== true) {
     return { businessId, status: "skipped", reason: "the owner has monthly reports turned off (monthly_report_enabled = false)" };
   }
   // Day 2b: no Google listing, no PostScore — never a monthly report (and
   // never the Google re-scan below).
   if ((await getListingMode(supabase, businessId)) === "website_only") {
     return { businessId, status: "skipped", reason: "website-only business (no Google listing) — monthly reports need a PostScore" };
+  }
+  if (!testing) {
+    const planCheck = reportPlanCheck(backgroundPlan(optIn.owner_id ?? null));
+    if (!planCheck.allowed) {
+      return { businessId, status: "skipped", reason: planCheck.reason };
+    }
   }
 
   // 3a. Idempotency first — a retry or double-trigger must never
@@ -484,7 +570,7 @@ export async function processBusiness(
   if (alreadySentError) {
     return { businessId, status: "failed", reason: `idempotency check failed: ${alreadySentError.message}` };
   }
-  if (alreadySent) {
+  if (alreadySent && !testing) {
     return { businessId, status: "skipped", reason: "a monthly_reports row already exists for this business this calendar month" };
   }
 
@@ -524,14 +610,24 @@ export async function processBusiness(
   // save → score sequence "Re-scan now" runs, so every honesty rail
   // (PageSpeed timeout → "not measured this period," screenshot capture-
   // once/30-day cooldown, etc.) is inherited for free, never reimplemented.
-  const rescanResult = await rescanBusinessWithClient(supabase, businessId);
-  if (rescanResult.status !== "ok") {
-    return { businessId, status: "failed", reason: describeRescanFailure(rescanResult) };
+  //
+  // Testing mode re-scans (paid Google calls) only when the latest saved
+  // score is older than TEST_RESCAN_MAX_AGE_DAYS; otherwise it reuses it.
+  let currentScoreId: string;
+  const recentScore = testing ? await readRecentScoreId(supabase, businessId, now) : null;
+  if (recentScore) {
+    currentScoreId = recentScore;
+  } else {
+    const rescanResult = await rescanBusinessWithClient(supabase, businessId);
+    if (rescanResult.status !== "ok") {
+      return { businessId, status: "failed", reason: describeRescanFailure(rescanResult) };
+    }
+    currentScoreId = rescanResult.scoreId;
   }
 
-  const currentRow = await readScoreRow(supabase, rescanResult.scoreId);
+  const currentRow = await readScoreRow(supabase, currentScoreId);
   if (!currentRow) {
-    return { businessId, status: "failed", reason: `rescan reported success but score ${rescanResult.scoreId} could not be read back` };
+    return { businessId, status: "failed", reason: `rescan reported success but score ${currentScoreId} could not be read back` };
   }
 
   // 3c. Competitor standing — for EVERY business every month (a fresh
@@ -551,9 +647,10 @@ export async function processBusiness(
   let currentCompetitorSnapshot: CompetitorSnapshot | null = null;
   let competitorScanId: string | null = null;
   // Part B: reuse a saved scan under 30 days old instead of paying for a
-  // new one; otherwise run (and save) one fresh scan. Free: never
-  // refreshed after the first scan — any saved scan is reused as is.
-  const free = backgroundPlan() === "free";
+  // new one; otherwise run (and save) one fresh scan. Free (only reaches
+  // here in testing mode): never refreshed after the first scan — any
+  // saved scan is reused as is.
+  const free = backgroundPlan(optIn.owner_id ?? null) === "free";
   const { data: latestScanRows } = await supabase
     .from("competitor_scans")
     .select("scan_id, created_at")
@@ -717,17 +814,17 @@ export async function processBusiness(
     return { businessId, status: "skipped", reason: decision.reason };
   }
   if (decision.mode === "test") {
-    // MONTHLY_REPORTS_LIVE is off: only the fixed test address, never the
-    // owner — and nothing is recorded as this owner's report for the
-    // month (no monthly_reports row), so a test can never block or stand
-    // in for the real one.
+    // Testing mode: only the fixed test address, never the owner — and
+    // nothing is recorded as this owner's report for the month (no
+    // monthly_reports row), so a test can never block or stand in for
+    // the real one.
     const testSend = await sendEmail({
       to: decision.to,
-      subject: `[TEST — not sent to the owner] ${monthlyReportSubject(businessName, reportDate, locale)}`,
-      react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale, googleMapsLogoUrl: `${siteUrl}/google/GoogleMaps_Logo_Gray_2x.png` }),
+      subject: testReportSubject(monthlyReportSubject(businessName, reportDate, locale)),
+      react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale, googleMapsLogoUrl: `${siteUrl}/google/GoogleMaps_Logo_Gray_2x.png`, testPreview: true }),
     });
     return testSend.status === "sent"
-      ? { businessId, status: "sent", reason: `test send to REPORT_TEST_EMAIL (MONTHLY_REPORTS_LIVE is off) — not sent to the owner` }
+      ? { businessId, status: "sent", reason: `test send to REPORT_TEST_EMAIL (testing mode) — not sent to the owner` }
       : { businessId, status: "failed", reason: `test email send failed: ${testSend.message}` };
   }
 
@@ -797,39 +894,11 @@ async function handleCronRun(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // The real safety switch for a SCHEDULED run — isAuthorized above only
-  // proves the caller holds CRON_SECRET (i.e. it's really
-  // monthly-reports-batch.mts calling), not that this feature is
-  // actually meant to send real email to real owners yet. Previously
-  // nothing in this file ever checked isMonthlyReportsLive() at all —
-  // only the in-app "Reports" page UI (app/actions/reports.ts) did,
-  // which gates what an owner SEES, never whether the scheduled job
-  // itself sends. That gap is exactly why reports went out on schedule
-  // even while MONTHLY_REPORTS_LIVE was unset: the scheduler → batch →
-  // this route chain had no gate of its own to check it against. Log
-  // only, send nothing, when it isn't exactly "true" — the dev-only
-  // send-one route bypasses this route entirely (see its own doc
-  // comment) and is unaffected.
-  if (!isMonthlyReportsLive()) {
-    console.log("[cron/monthly-reports] isMonthlyReportsLive() is false — sending nothing this run (log only).");
-    const summary: CronRunSummary = {
-      pageSize: 0,
-      hasMore: false,
-      processed: 0,
-      sent: 0,
-      skipped: 0,
-      failed: 0,
-      results: [],
-    };
-    return NextResponse.json(summary);
-  }
-
   // Pagination so the real caller (netlify/functions/monthly-reports-batch.mts)
   // can chunk this run across multiple small invocations — see the
   // TIMING/COST note at the top of this file for why that's necessary.
-  // Omitted, this processes every eligible business in one call — fine
-  // for local testing against a handful of businesses, not for the real
-  // scheduled run.
+  // Omitted, this processes every eligible business in one call. Parsed
+  // first so testing mode can tell the first call from the rest.
   const limitParam = request.nextUrl.searchParams.get("limit");
   const offsetParam = request.nextUrl.searchParams.get("offset");
   const limit = limitParam ? Number.parseInt(limitParam, 10) : null;
@@ -837,6 +906,16 @@ async function handleCronRun(request: NextRequest): Promise<NextResponse> {
 
   if ((limitParam && (!Number.isFinite(limit) || (limit as number) <= 0)) || !Number.isFinite(offset) || offset < 0) {
     return NextResponse.json({ error: "limit must be a positive integer and offset a non-negative integer" }, { status: 400 });
+  }
+
+  // The real safety switch for a SCHEDULED run — isAuthorized above only
+  // proves the caller holds CRON_SECRET. Unless MONTHLY_REPORTS_LIVE is
+  // exactly "true" this is testing mode: no owner is ever emailed; only
+  // the 3 picked businesses' reports go to REPORT_TEST_EMAIL (or nothing,
+  // when it isn't set). The dev-only send-one route bypasses this route
+  // entirely (see its own doc comment) and follows the same policy.
+  if (!isMonthlyReportsLive()) {
+    return NextResponse.json(await runTestingMode(offset));
   }
 
   const supabase = createAdminClient();

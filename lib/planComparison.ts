@@ -51,7 +51,9 @@ export const COMPARE_ROWS: CompareRow[] = [
   // connect soon.
   row("replies", text("perWeek3"), text("perWeek10"), text("repliesUnlimited")),
   row("doneForYou", no, no, soon),
-  row("reports", text("monthlyEmail"), text("weeklyRecap"), text("weeklyPdf")),
+  // Free gets no monthly report email (lib/plan.ts planIncludesMonthlyReports).
+  row("reports", no, text("weeklyRecap"), text("weeklyPdf")),
+  row("monthlyEmail", no, yes, yes),
   // PostStudio (coming soon): $30/mo on its own (the free audit +
   // PostStudio), +$15 on Grow, +$8 on Premium, included in Multi.
   row("postStudio", text("alone30"), text("plus15"), text("plus8"), text("included", true)),

@@ -27,9 +27,21 @@ export function isAddon(value: unknown): value is Addon {
  * cron and scripts/rescan-all.ts. No checkout exists yet, so no account
  * has a stored paid plan: it's Free (in development, POSTSCORE_DEV_PLAN
  * when set — the same answer lib/premium.ts getPlan gives outside a
- * request). When subscriptions ship, read the owner's subscription here. */
+ * request). When subscriptions ship, read the owner's subscription here.
+ *
+ * LAUNCH CHECKLIST — before Stripe ships, this must read the owner's real
+ * subscription: until it does, every business counts as Free here, so the
+ * monthly report cron emails NO ONE (Free gets no report emails —
+ * planIncludesMonthlyReports below), even with MONTHLY_REPORTS_LIVE=true. */
 export function backgroundPlan(_ownerId?: string | null, env: { NODE_ENV?: string; POSTSCORE_DEV_PLAN?: string } = process.env): Plan {
   return env.NODE_ENV === "development" && isPlan(env.POSTSCORE_DEV_PLAN) ? env.POSTSCORE_DEV_PLAN : "free";
+}
+
+/** Monthly report emails: Grow, Premium and Multi. Free gets none (the
+ * scheduled send skips it server-side: lib/reportSendPolicy.ts). Account
+ * emails (sign-up, password reset) aren't plan-gated. */
+export function planIncludesMonthlyReports(plan: Plan): boolean {
+  return plan !== "free";
 }
 
 /** Locations (businesses) an account's plan includes — Settings → Compare

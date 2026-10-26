@@ -662,6 +662,7 @@ interface ProbeReport {
 
 /** Where "Compare plans" and the code don't match (checked by hand). */
 const PLAN_DISAGREEMENTS = [
+  "Monthly report email: Compare plans shows ✓ for Grow, Premium and Multi (— on Free), but no report goes to owners until MONTHLY_REPORTS_LIVE=true; until then the Free plan list and PostAI's feature map say \"Coming soon\".",
   "Fixed Oct 22: Grow's PostAI \"100 a month\" is now enforced on the server (it wasn't limited at all before).",
   "Fixed Oct 22: locations — 1 on Free, Grow and Premium, up to 5 on Multi — is now enforced when a business is added (before, any account could add any number). Existing accounts with more keep them.",
   "Fixed Oct 22: the PDF report is now Premium only, matching \"Weekly + PDF\" (before, Grow could download it and the routes didn't check the plan).",

@@ -15,7 +15,7 @@
 import { featurePlan, type PromoFeature } from "@/lib/upgradePromos";
 import { tabLocked, type ShowroomTab } from "@/lib/freeTabs";
 import { freeSectionOf, type FreeOverviewItem } from "@/lib/freeOverviewSections";
-import { planExtraBadge, PLAN_EXTRAS } from "@/lib/planFeatures";
+import { isExtraSoon, planExtraBadge, PLAN_EXTRAS } from "@/lib/planFeatures";
 import { replyDraftLimit } from "@/lib/reviewReplies";
 import { FREE_AI_WEEKLY } from "@/lib/freeAiAllowance";
 import { FREE_RESCAN_DAYS, RESCAN_COOLDOWN_HOURS } from "@/lib/rescanPolicy";
@@ -45,6 +45,8 @@ export interface FeatureMapOptions {
   referralOk: boolean;
   pricingOk: boolean;
   hasWebsite: boolean;
+  /** isMonthlyReportsLive() — the monthly report email is coming soon until then. */
+  monthlyReportsLive?: boolean;
 }
 
 const en = (key: MessageKey, params?: Record<string, string | number>) => t("en", key, params);
@@ -156,21 +158,28 @@ export function featureMapFor(plan: Plan, o: FeatureMapOptions): FeatureEntry[] 
 
   // Everything else each plan adds (the Free Overview's "See everything in each plan").
   // Only the extras not described elsewhere in this map (website fixes, the
-  // Google connection, PostStudio); the rest have their own entries above.
-  const MAPPED = new Set(["fixGuides", "recheck", "googleProfile", "postStudio"]);
+  // Google connection, PostStudio, the monthly report email); the rest have
+  // their own entries above.
+  const MAPPED = new Set(["fixGuides", "recheck", "monthlyEmail", "googleProfile", "postStudio"]);
   for (const extra of PLAN_EXTRAS) {
     if (!MAPPED.has(extra.id)) continue;
     if (extra.needs === "website" && !o.hasWebsite) continue;
     const badge = planExtraBadge(extra);
     const unlocked = badge === "grow" ? plan !== "free" : badge === "premium" ? paid(plan) : plan === "multi";
-    const where = extra.id === "reports" ? tab("reports") : extra.id === "googleProfile" ? "the Google Profile page" : extra.id === "campaignHub" ? tab("campaigns") : extra.id === "postStudio" ? "PostStudio" : tab("website");
+    const soon = isExtraSoon(extra, o.monthlyReportsLive);
+    const where = extra.id === "monthlyEmail" ? `the owner's email inbox (on/off in ${tab("settings")} → Email & notifications)` : extra.id === "reports" ? tab("reports") : extra.id === "googleProfile" ? "the Google Profile page" : extra.id === "campaignHub" ? tab("campaigns") : extra.id === "postStudio" ? "PostStudio" : tab("website");
     add({
       id: extra.id,
       name: en(extra.titleKey, { builder: "their website builder" }),
-      status: extra.soon ? "soon" : unlocked ? "usable" : "locked",
+      status: soon ? "soon" : unlocked ? "usable" : "locked",
       where,
-      unlocks: unlocked && !extra.soon ? null : badge === "addOn" ? "add-on" : badge,
-      note: extra.id === "postStudio" ? en(postStudioPriceKey(plan)) : undefined,
+      unlocks: unlocked && !soon ? null : badge === "addOn" ? "add-on" : badge,
+      note:
+        extra.id === "postStudio"
+          ? en(postStudioPriceKey(plan))
+          : extra.id === "monthlyEmail"
+            ? `included with Grow, Premium and Multi; not on Free${soon ? " — not sending yet" : ""}`
+            : undefined,
     });
   }
   const reportsLocked = lockedOn(plan, "reports");
@@ -180,7 +189,7 @@ export function featureMapFor(plan: Plan, o: FeatureMapOptions): FeatureEntry[] 
     status: reportsLocked ? "locked" : "usable",
     where: tab("reports"),
     unlocks: reportsLocked ? "grow" : null,
-    note: reportsLocked ? "Free gets the monthly report email" : plan === "grow" ? "the weekly recap; the PDF report is on Premium" : "the weekly recap and the PDF report",
+    note: reportsLocked ? "no monthly report emails on Free — those come with Grow and Premium" : plan === "grow" ? "the weekly recap; the PDF report is on Premium" : "the weekly recap and the PDF report",
   });
   add({ id: "repliesPosted", name: en("dashboard.free.tile.repliesPostedForYou"), status: "soon", where: "the Google Profile page", unlocks: "premium" });
   add({ id: "plans", name: "Plans and prices (Compare plans)", status: "usable", where: `${tab("settings")} → Plan & billing → "Compare plans"`, unlocks: null });

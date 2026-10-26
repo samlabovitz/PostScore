@@ -275,10 +275,16 @@ describe("Compare plans: honest about what works today", () => {
     expect(premium.promise).toBe("Unlimited PostAI and replies, and every design tool. Connecting Google so PostScore fixes things for you is coming soon.");
     expect(planFacts("es").find((p) => p.plan === "premium")!.promise).toContain("llega próximamente");
   });
-  test("Free's monthly email is available (MONTHLY_REPORTS_LIVE is on in production) — PostAI's plan facts follow", () => {
-    const free = planFacts("en").find((p) => p.plan === "free")!;
-    const reports = free.features.find((f) => /report/i.test(f.feature))!;
-    expect(reports).toMatchObject({ status: "available", value: "Monthly email" });
+  test("Free gets no monthly report email — PostAI's plan facts follow (EN + ES)", () => {
+    for (const locale of ["en", "es"] as const) {
+      const free = planFacts(locale).find((p) => p.plan === "free")!;
+      const reports = free.features.find((f) => /report|informe/i.test(f.feature))!;
+      expect(reports).toMatchObject({ status: "not included" });
+      expect(JSON.stringify(free)).not.toMatch(/Monthly email|Correo mensual/);
+      const monthly = (plan: string) => planFacts(locale).find((p) => p.plan === plan)!.features.find((f) => /Monthly report email|Informe mensual por correo/.test(f.feature))!;
+      expect(monthly("free").status).toBe("not included");
+      for (const plan of ["grow", "premium", "multi"]) expect(monthly(plan).status).toBe("available");
+    }
   });
 });
 

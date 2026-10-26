@@ -82,6 +82,7 @@ export function BusinessScoreView({
   replyDrafts = null,
   freePostai = null,
   gbpReplyCheck = null,
+  monthlyReportsLive = false,
 }: {
   businessId: string;
   business: BusinessRecord;
@@ -118,6 +119,9 @@ export function BusinessScoreView({
   freePostai?: FreeAiAllowance | null;
   /** Free: connect Google for the "Replying to reviews" check (null = hidden). */
   gbpReplyCheck?: GbpReplyCheckState | null;
+  /** isMonthlyReportsLive() — the Free plan list's monthly email row says
+   * "Coming soon" until it's true. */
+  monthlyReportsLive?: boolean;
 }) {
   const locale = useLocale();
   const { breakdown, projectedBreakdown } = result;
@@ -246,7 +250,7 @@ export function BusinessScoreView({
             plan") — every "How to fix this" row and "See how to fix it"
             scrolls down to it. */}
         <FreeSection id="earn" title={t(locale, freeSection("earn").titleKey)} body={t(locale, freeSection("earn").bodyKey)}>
-          <FixPlanBox businessId={businessId} extras={{ hasWebsite, pricingOk: profileTools.pricingOk, campaignsOk: profileTools.couponsOk || profileTools.referralOk }}>
+          <FixPlanBox businessId={businessId} extras={{ hasWebsite, pricingOk: profileTools.pricingOk, campaignsOk: profileTools.couponsOk || profileTools.referralOk, monthlyReportsLive }}>
             <GrowMoreCustomers
               businessId={businessId}
               profileTools={profileTools}

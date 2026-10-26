@@ -12,7 +12,7 @@ import { tradeLabel } from "@/lib/tradeSearch";
 import { BusinessLanguageToggle } from "@/components/layout/BusinessLanguageToggle";
 import { MonthlyEmailReportCard } from "@/components/reports/MonthlyEmailReportCard";
 import { BusinessTypeSetting } from "./BusinessTypeSetting";
-import { CancelPlanButton, PlanCard, SavedToast, SettingsNav, SettingsSection, UnsubscribeAllButton } from "@/components/settings/SettingsParts";
+import { CancelPlanButton, MonthlyEmailFreeNote, PlanCard, SavedToast, SettingsNav, SettingsSection, UnsubscribeAllButton } from "@/components/settings/SettingsParts";
 import { LegalLinks } from "@/components/legal/LegalPage";
 import { cancelAtPeriodEndAction } from "@/app/actions/subscription";
 import { hasActiveSubscription } from "@/lib/subscription";
@@ -146,13 +146,16 @@ export default async function SettingsPage({ params }: { params: { id: string } 
               </div>
             </SettingsSection>
 
-            <SettingsSection id="email" icon="bell" title={k("nav.email")} helper={k("email.helper")}>
-              {reportsResult.status === "ok" ? (
+            <SettingsSection id="email" icon="bell" title={k("nav.email")} helper={k(plan === "free" ? "email.helperFree" : "email.helper")}>
+              {/* Free gets no monthly report emails (lib/plan.ts), so no toggle or unsubscribe that would do nothing. */}
+              {plan === "free" ? (
+                <MonthlyEmailFreeNote businessId={params.id} />
+              ) : reportsResult.status === "ok" ? (
                 <MonthlyEmailReportCard businessId={params.id} status={reportsResult.monthlyEmailReport} />
               ) : (
                 <Card className="p-5 text-sm text-ink-soft">{k("monthlyEmailUnavailable")}</Card>
               )}
-              <UnsubscribeAllButton />
+              {plan !== "free" && <UnsubscribeAllButton />}
             </SettingsSection>
 
             <SettingsSection id="business-type" icon="tag" title={k("nav.businessType")} helper={k("businessType.helper")}>

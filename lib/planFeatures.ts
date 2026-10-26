@@ -19,6 +19,9 @@ export interface PlanExtra {
   /** The promo feature that decides the plan badge; "addOn" = PostStudio. */
   feature: PromoFeature | "addOn";
   soon: boolean;
+  /** Coming soon only until the monthly report emails are live
+   * (MONTHLY_REPORTS_LIVE — lib/monthlyReportsFeatureFlag.ts). */
+  soonUntilReportsLive?: true;
   /** Only when the business has a website / this business type has the tool. */
   needs?: "website" | "pricing" | "campaigns";
 }
@@ -43,6 +46,8 @@ export const PLAN_EXTRAS: PlanExtra[] = [
   extra("reviewScripts", "dashboard.websiteReviews.guide.scriptTitle", "grow"),
   extra("campaigns", "dashboard.campaigns.guide.heading", "grow", false, "campaigns"),
   extra("recap", "dashboard.free.tile.reports", "grow"),
+  // Grow, Premium and Multi (lib/plan.ts planIncludesMonthlyReports).
+  { ...extra("monthlyEmail", "dashboard.settings.plans.row.monthlyEmail", "grow"), soonUntilReportsLive: true },
   extra("moreDrafts", "dashboard.replies.heading", "grow"),
   // Premium
   extra("postaiUnlimited", "dashboard.free.tile.postaiUnlimited", "premium"),
@@ -65,6 +70,13 @@ export interface PlanExtraOptions {
   hasWebsite: boolean;
   pricingOk?: boolean;
   campaignsOk?: boolean;
+  /** isMonthlyReportsLive() on the server; not live when left out. */
+  monthlyReportsLive?: boolean;
+}
+
+/** Whether a row shows "Coming soon" right now. */
+export function isExtraSoon(extra: PlanExtra, monthlyReportsLive = false): boolean {
+  return extra.soon || (extra.soonUntilReportsLive === true && !monthlyReportsLive);
 }
 
 export function planExtrasFor(o: PlanExtraOptions | boolean): PlanExtra[] {
@@ -74,7 +86,7 @@ export function planExtrasFor(o: PlanExtraOptions | boolean): PlanExtra[] {
       (e.needs !== "website" || opts.hasWebsite) &&
       (e.needs !== "pricing" || opts.pricingOk !== false) &&
       (e.needs !== "campaigns" || opts.campaignsOk !== false)
-  );
+  ).map((e) => ({ ...e, soon: isExtraSoon(e, opts.monthlyReportsLive) }));
 }
 
 /** The list in plan groups, in order: Grow, Premium, Add-on. */

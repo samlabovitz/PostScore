@@ -63,6 +63,7 @@ export type MessageKey =
   | "dashboard.settings.plans.row.postai"
   | "dashboard.settings.plans.row.doneForYou"
   | "dashboard.settings.plans.row.reports"
+  | "dashboard.settings.plans.row.monthlyEmail"
   | "dashboard.settings.plans.row.replies"
   | "dashboard.settings.plans.value.perWeek3"
   | "dashboard.settings.plans.value.perWeek10"
@@ -79,7 +80,6 @@ export type MessageKey =
   | "dashboard.settings.plans.value.starterIncluded"
   | "dashboard.settings.plans.value.monthlyLimit"
   | "dashboard.settings.plans.value.unlimited"
-  | "dashboard.settings.plans.value.monthlyEmail"
   | "dashboard.settings.plans.value.weeklyRecap"
   | "dashboard.settings.plans.value.weeklyPdf"
   | "dashboard.settings.plans.value.plus15"
@@ -254,6 +254,8 @@ export type MessageKey =
   | "dashboard.free.planList.campaigns.l"
   | "dashboard.free.planList.recap.h"
   | "dashboard.free.planList.recap.l"
+  | "dashboard.free.planList.monthlyEmail.h"
+  | "dashboard.free.planList.monthlyEmail.l"
   | "dashboard.free.planList.moreDrafts.h"
   | "dashboard.free.planList.moreDrafts.l"
   | "dashboard.free.planList.postaiUnlimited.h"
@@ -3444,6 +3446,8 @@ export type MessageKey =
   | "dashboard.settings.email.unsubscribeAllYes"
   | "dashboard.settings.email.keep"
   | "dashboard.settings.email.unsubscribeAllError"
+  | "dashboard.settings.email.helperFree"
+  | "dashboard.settings.email.freeNote"
   | "dashboard.settings.businessType.helper"
   | "dashboard.settings.account.helper"
   | "dashboard.settings.account.signOut"
@@ -4135,6 +4139,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.row.postai": "PostAI",
     "dashboard.settings.plans.row.doneForYou": "Fixes done for you (Google connect)",
     "dashboard.settings.plans.row.reports": "Reports",
+    "dashboard.settings.plans.row.monthlyEmail": "Monthly report email",
     "dashboard.settings.plans.row.replies": "AI review replies",
     "dashboard.settings.plans.value.perWeek3": "3 a week",
     "dashboard.settings.plans.value.perWeek10": "10 a week",
@@ -4149,7 +4154,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.value.starterIncluded": "Starter + PostStudio included",
     "dashboard.settings.plans.value.monthlyLimit": "Monthly limit",
     "dashboard.settings.plans.value.unlimited": "Unlimited",
-    "dashboard.settings.plans.value.monthlyEmail": "Monthly email",
     "dashboard.settings.plans.value.weeklyRecap": "Weekly recap",
     "dashboard.settings.plans.value.weeklyPdf": "Weekly + PDF",
     "dashboard.settings.plans.value.plus15": "+$15/mo",
@@ -4324,6 +4328,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.planList.campaigns.l": "Print it, track every use with +1, and follow a step-by-step guide to running it.",
     "dashboard.free.planList.recap.h": "See how your week went",
     "dashboard.free.planList.recap.l": "A weekly recap on the Reports page: your score, reviews and rank, and the fixes we confirmed.",
+    "dashboard.free.planList.monthlyEmail.h": "Your monthly report by email",
+    "dashboard.free.planList.monthlyEmail.l": "Your score, what changed and your next step, in your inbox every month.",
     "dashboard.free.planList.moreDrafts.h": "Reply to more reviews",
     "dashboard.free.planList.moreDrafts.l": "10 AI review reply drafts a week (3 on Free).",
     "dashboard.free.planList.postaiUnlimited.h": "Ask PostAI anything, anytime",
@@ -7957,6 +7963,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.email.unsubscribeAllYes": "Unsubscribe from all",
     "dashboard.settings.email.keep": "Keep emails",
     "dashboard.settings.email.unsubscribeAllError": "Couldn't save that — try again.",
+    "dashboard.settings.email.helperFree": "On Free, PostScore only sends account emails, like sign-up and password reset.",
+    "dashboard.settings.email.freeNote": "Monthly report emails are included with Grow and Premium.",
     "dashboard.settings.businessType.helper": "What kind of business this is — it decides your checks, tips and offers.",
     "dashboard.settings.account.helper": "Sign out, and the terms that apply to your account.",
     "dashboard.settings.account.signOut": "Sign out",
@@ -8571,6 +8579,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.row.postai": "PostAI",
     "dashboard.settings.plans.row.doneForYou": "Arreglos que hacemos por usted (conexión con Google)",
     "dashboard.settings.plans.row.reports": "Informes",
+    "dashboard.settings.plans.row.monthlyEmail": "Informe mensual por correo",
     "dashboard.settings.plans.row.replies": "Respuestas a reseñas con IA",
     "dashboard.settings.plans.value.perWeek3": "3 por semana",
     "dashboard.settings.plans.value.perWeek10": "10 por semana",
@@ -8585,7 +8594,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.value.starterIncluded": "Sitio inicial + PostStudio incluido",
     "dashboard.settings.plans.value.monthlyLimit": "Límite mensual",
     "dashboard.settings.plans.value.unlimited": "Ilimitado",
-    "dashboard.settings.plans.value.monthlyEmail": "Correo mensual",
     "dashboard.settings.plans.value.weeklyRecap": "Resumen semanal",
     "dashboard.settings.plans.value.weeklyPdf": "Semanal + PDF",
     "dashboard.settings.plans.value.plus15": "+$15/mes",
@@ -8760,6 +8768,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.planList.campaigns.l": "Imprímala, lleve la cuenta de cada uso con +1 y siga una guía paso a paso.",
     "dashboard.free.planList.recap.h": "Vea cómo le fue en la semana",
     "dashboard.free.planList.recap.l": "Un resumen semanal en la página de Informes: su puntuación, reseñas y posición, y los arreglos que confirmamos.",
+    "dashboard.free.planList.monthlyEmail.h": "Su informe mensual por correo",
+    "dashboard.free.planList.monthlyEmail.l": "Su puntuación, lo que cambió y su próximo paso, en su correo cada mes.",
     "dashboard.free.planList.moreDrafts.h": "Responda a más reseñas",
     "dashboard.free.planList.moreDrafts.l": "10 borradores de respuesta con IA por semana (3 en el plan Gratis).",
     "dashboard.free.planList.postaiUnlimited.h": "Pregunte a PostAI lo que quiera, cuando quiera",
@@ -12492,6 +12502,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.email.unsubscribeAllYes": "Darme de baja de todo",
     "dashboard.settings.email.keep": "Mantener correos",
     "dashboard.settings.email.unsubscribeAllError": "No se pudo guardar — inténtelo de nuevo.",
+    "dashboard.settings.email.helperFree": "En Free, PostScore solo envía correos de la cuenta, como el registro y el restablecimiento de contraseña.",
+    "dashboard.settings.email.freeNote": "Los informes mensuales por correo se incluyen con Grow y Premium.",
     "dashboard.settings.businessType.helper": "Qué tipo de negocio es — decide sus revisiones, consejos y ofertas.",
     "dashboard.settings.account.helper": "Cerrar sesión y los términos que aplican a su cuenta.",
     "dashboard.settings.account.signOut": "Cerrar sesión",

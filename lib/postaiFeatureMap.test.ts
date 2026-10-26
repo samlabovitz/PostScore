@@ -15,6 +15,24 @@ import { t } from "./i18n";
 const ALL = { couponsOk: true, referralOk: true, pricingOk: true, hasWebsite: true };
 const byId = (plan: Plan) => Object.fromEntries(featureMapFor(plan, ALL).map((e) => [e.id, e]));
 
+describe("Reports: Free gets no monthly report email", () => {
+  test("PostAI never tells a Free owner they get a monthly email; paid plans' notes are unchanged", () => {
+    expect(byId("free").reports.note).toBe("no monthly report emails on Free — those come with Grow and Premium");
+    expect(byId("free").reports.note).not.toMatch(/Free gets/);
+    expect(byId("grow").reports.note).toBe("the weekly recap; the PDF report is on Premium");
+  });
+
+  test("the monthly report email: Grow and up, coming soon until MONTHLY_REPORTS_LIVE — agrees with Compare plans", () => {
+    const entry = (plan: Plan, monthlyReportsLive?: boolean) => featureMapFor(plan, { ...ALL, monthlyReportsLive }).find((e) => e.id === "monthlyEmail")!;
+    expect(entry("free")).toMatchObject({ status: "soon", unlocks: "grow" });
+    expect(entry("grow")).toMatchObject({ status: "soon", unlocks: "grow" });
+    expect(entry("grow").note).toContain("not sending yet");
+    expect(entry("free", true)).toMatchObject({ status: "locked", unlocks: "grow" });
+    for (const plan of ["grow", "premium", "multi"] as const) expect(entry(plan, true)).toMatchObject({ status: "usable", unlocks: null });
+    expect(entry("grow", true).note).toBe("included with Grow, Premium and Multi; not on Free");
+  });
+});
+
 describe("the feature map matches the sidebar and plan config, for every plan", () => {
   test("anything on a tab the sidebar locks is LOCKED (or a PREVIEW where the showroom has a working designer); on an open tab it's usable", () => {
     for (const plan of PLANS) {

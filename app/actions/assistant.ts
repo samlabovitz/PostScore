@@ -52,6 +52,7 @@ import { answerWithFactCheck, buildPostaiFacts } from "@/lib/postaiFacts";
 import { planFactsText } from "@/lib/planFacts";
 import { loadCompetitorScope } from "@/lib/businessNiche.server";
 import { scopeGroupLabel, applyScope, scopeSummary } from "@/lib/competitorScope";
+import { isMonthlyReportsLive } from "@/lib/monthlyReportsFeatureFlag";
 
 
 export interface AssistantMessageRow {
@@ -400,7 +401,7 @@ async function planGuideFor(profile: { couponsOk: boolean; referralOk: boolean; 
   const plan = await getPlan();
   const { count } = await createClient().from("businesses").select("id", { count: "exact", head: true });
   return {
-    featureMap: featureMapText(plan, featureMapFor(plan, { couponsOk: profile.couponsOk, referralOk: profile.referralOk, pricingOk: profile.pricingOk, hasWebsite })),
+    featureMap: featureMapText(plan, featureMapFor(plan, { couponsOk: profile.couponsOk, referralOk: profile.referralOk, pricingOk: profile.pricingOk, hasWebsite, monthlyReportsLive: isMonthlyReportsLive() })),
     planFacts: planFactsText(),
     businessCount: count ?? 1,
   };

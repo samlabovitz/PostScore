@@ -5,7 +5,7 @@ vi.mock("@/app/actions/businesses", () => ({ unsubscribeFromAllEmails: vi.fn() }
 vi.mock("next/navigation", () => ({ useRouter: () => ({ back: vi.fn(), push: vi.fn(), refresh: vi.fn() }) }));
 
 import { LocaleProvider } from "@/lib/i18n";
-import { CancelPlanButton, PlanCard, SettingsNav, UnsubscribeAllButton } from "./SettingsParts";
+import { CancelPlanButton, MonthlyEmailFreeNote, PlanCard, SettingsNav, UnsubscribeAllButton } from "./SettingsParts";
 import RefundPolicyPage from "@/app/refund-policy/page";
 import TermsPage from "@/app/terms/page";
 import { LegalLinks } from "@/components/legal/LegalPage";
@@ -57,7 +57,6 @@ describe("Settings pieces", () => {
       "Starter + PostStudio discount",
       "100 a month",
       "Unlimited",
-      "Monthly email",
       "Weekly recap",
       "Weekly + PDF",
       "+$15/mo",
@@ -133,6 +132,36 @@ describe("Settings pieces", () => {
     const html = wrap(<CancelPlanButton onConfirm={async () => {}} />);
     expect(html.match(/<button/g)).toHaveLength(1);
     expect(text(html)).toContain("Cancel subscription");
+  });
+
+  test("Free: no monthly report email in Compare plans (EN + ES) — the Reports cell is not included", async () => {
+    const { COMPARE_ROWS } = await import("@/lib/planComparison");
+    const reports = COMPARE_ROWS.find((r) => r.key.endsWith(".reports"))!.cells;
+    expect(reports.free).toEqual({ kind: "no" });
+    for (const locale of ["en", "es"] as const) {
+      const t = text(wrap(<PlanCard plan="free" />, locale));
+      expect(t).not.toMatch(/Monthly email|Correo mensual/);
+    }
+    // Its own row: Free not included; Grow, Premium and Multi ✓ (EN + ES).
+    const monthly = COMPARE_ROWS.find((r) => r.key.endsWith(".monthlyEmail"))!.cells;
+    expect([monthly.free, monthly.grow, monthly.premium, monthly.multi]).toEqual([{ kind: "no" }, { kind: "yes" }, { kind: "yes" }, { kind: "yes" }]);
+    expect(text(wrap(<PlanCard plan="free" />))).toContain("Monthly report email");
+    expect(text(wrap(<PlanCard plan="free" />, "es"))).toContain("Informe mensual por correo");
+  });
+
+  test("Free Settings → Email: no toggle, a line that report emails come with Grow and Premium, linking to Compare plans (EN + ES)", () => {
+    const en = wrap(<MonthlyEmailFreeNote businessId="b1" />);
+    expect(en).not.toMatch(/role="switch"|type="checkbox"/);
+    expect(text(en)).toContain("Monthly report emails are included with Grow and Premium.");
+    expect(en).toContain('href="/business/b1/settings#compare-plans"');
+    expect(text(wrap(<MonthlyEmailFreeNote businessId="b1" />, "es"))).toContain("Los informes mensuales por correo se incluyen con Grow y Premium.");
+  });
+
+  test("the Settings page shows Free the note, not the toggle or unsubscribe-all", async () => {
+    const { readFile } = await import("fs/promises");
+    const src = await readFile("app/business/[id]/settings/page.tsx", "utf8");
+    expect(src).toMatch(/plan === "free" \? \(\s*<MonthlyEmailFreeNote/);
+    expect(src).toContain('{plan !== "free" && <UnsubscribeAllButton />}');
   });
 
   test("unsubscribe from all emails", () => {

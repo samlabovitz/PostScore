@@ -38,7 +38,7 @@ describe("the upgrade box shows only on Free", () => {
       '<FreeSection id="score"', "<ScoreBand", "<RescanMessages",
       '<FreeSection id="behind"', "<ScoreBreakdownPanel", "<LocalBenchmarkTile",
       '<FreeSection id="tools"', "<FreeReviews", "<FreePostAI ",
-      '<FreeSection id="earn"', "<FixPlanBox", "extras={{ hasWebsite, pricingOk: profileTools.pricingOk, campaignsOk: profileTools.couponsOk || profileTools.referralOk }}", "<GrowMoreCustomers", "embedded", "</FixPlanBox>",
+      '<FreeSection id="earn"', "<FixPlanBox", "extras={{ hasWebsite, pricingOk: profileTools.pricingOk, campaignsOk: profileTools.couponsOk || profileTools.referralOk, monthlyReportsLive }}", "<GrowMoreCustomers", "embedded", "</FixPlanBox>",
     ];
     let at = -1;
     for (const piece of order) {
@@ -128,6 +128,32 @@ describe("the upgrade box shows only on Free", () => {
     const es = text(wrap(<FixPlanBox businessId="b1" extras={{ hasWebsite: true }} />, "es"));
     expect(es).toContain("Ver todo lo que incluye cada plan");
     expect(es).toContain("Un sitio web de una página, listo hoy");
+  });
+
+  test("Grow row: “Your monthly report by email” — Coming soon until MONTHLY_REPORTS_LIVE, then just the Grow badge (EN + ES)", () => {
+    const rowOf = (html: string) => text(html.match(/<li[^>]*data-testid="plan-extra-monthlyEmail"[^>]*>[\s\S]*?<\/li>/)![0]).trim();
+    const notLive = wrap(<FixPlanBox businessId="b1" extras={{ hasWebsite: true, monthlyReportsLive: false }} />);
+    expect(rowOf(notLive)).toBe("Your monthly report by email Your score, what changed and your next step, in your inbox every month. Coming soon Grow");
+    // Under the GROW heading, right after the weekly recap.
+    const grow = notLive.slice(notLive.indexOf('data-testid="plan-group-grow"'), notLive.indexOf('data-testid="plan-group-premium"'));
+    expect(grow.indexOf('data-testid="plan-extra-recap"')).toBeLessThan(grow.indexOf('data-testid="plan-extra-monthlyEmail"'));
+    // Same chip as the other coming-soon rows.
+    const chip = (html: string, id: string) => html.match(new RegExp(`<li[^>]*data-testid="plan-extra-${id}"[\\s\\S]*?(<span class="[^"]*">Coming soon</span>)`))![1];
+    expect(chip(notLive, "monthlyEmail")).toBe(chip(notLive, "googleProfile"));
+    // Left out = not live (the safe default).
+    expect(rowOf(wrap(<FixPlanBox businessId="b1" extras={{ hasWebsite: true }} />))).toContain("Coming soon");
+    const live = rowOf(wrap(<FixPlanBox businessId="b1" extras={{ hasWebsite: true, monthlyReportsLive: true }} />));
+    expect(live).toBe("Your monthly report by email Your score, what changed and your next step, in your inbox every month. Grow");
+    expect(rowOf(wrap(<FixPlanBox businessId="b1" extras={{ hasWebsite: true, monthlyReportsLive: false }} />, "es"))).toBe(
+      "Su informe mensual por correo Su puntuación, lo que cambió y su próximo paso, en su correo cada mes. Próximamente Grow"
+    );
+  });
+
+  test("the Overview reads the same flag the scheduled job uses — never hardcoded", () => {
+    const page = readFileSync("app/business/[id]/page.tsx", "utf8");
+    expect(page).toContain("monthlyReportsLive={isMonthlyReportsLive()}");
+    expect(page).toContain('import { isMonthlyReportsLive } from "@/lib/monthlyReportsFeatureFlag";');
+    expect(readFileSync("app/api/cron/monthly-reports/route.ts", "utf8")).toContain("if (!isMonthlyReportsLive())");
   });
 
   test("Free Overview: no separate Grow/Premium promo cards under the combined card (they stay elsewhere)", () => {

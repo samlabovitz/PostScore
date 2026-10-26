@@ -11,9 +11,11 @@
 // isAuthorized there), AND by lib/reportSendPolicy.ts — the same rules
 // every sending path follows:
 //  - refused in production unless ALLOW_SEND_ONE=true;
-//  - always respects the owner's monthly_report_enabled opt-in;
-//  - with MONTHLY_REPORTS_LIVE off it sends only to REPORT_TEST_EMAIL,
-//    never to the owner, and records nothing as the owner's report.
+//  - live (MONTHLY_REPORTS_LIVE=true): respects the owner's
+//    monthly_report_enabled opt-in and skips Free;
+//  - testing mode (MONTHLY_REPORTS_LIVE off) sends only to
+//    REPORT_TEST_EMAIL ("[TEST]" subject, test-preview line), never a
+//    normal report to the owner, and records nothing as the owner's report.
 //
 // The locale is never a separate parameter here — it comes from the
 // SAME place the batch route reads it from inside processBusiness

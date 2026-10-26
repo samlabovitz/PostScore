@@ -42,6 +42,16 @@ import type {
 import { DEFAULT_LOCALE, formatCount, reportCoverageMonth, t, tPlural, type Locale } from "@/lib/i18n";
 import { spamTopic } from "@/lib/siteSecurity";
 
+/** Top line of a test send (REPORT_TEST_EMAIL only — never an owner).
+ * English only: it's read by the PostScore team, not owners. */
+export const TEST_PREVIEW_LINE = "Test preview — this was not sent to the owner.";
+
+/** A test send's subject: "[TEST] " + the real subject (which starts
+ * with the business name). */
+export function testReportSubject(subject: string): string {
+  return `[TEST] ${subject}`;
+}
+
 export interface MonthlyReportEmailProps {
   businessName: string;
   /** ISO date this report was SENT — the heading/subject label the
@@ -71,6 +81,8 @@ export interface MonthlyReportEmailProps {
    * to the Google data in this email. Without it (previews) the email uses
    * Google's text attribution "Google Maps" instead. */
   googleMapsLogoUrl?: string | null;
+  /** A test send: shows TEST_PREVIEW_LINE at the top. */
+  testPreview?: boolean;
 }
 
 /** "Google Maps" attribution for the rating, reviews, competitors and
@@ -558,6 +570,7 @@ export function MonthlyReportEmail({
   unsubscribeUrl,
   locale = DEFAULT_LOCALE,
   googleMapsLogoUrl = null,
+  testPreview = false,
 }: MonthlyReportEmailProps) {
   const { month: coverageMonth, year: coverageYear } = reportCoverageMonth(reportDate, locale);
 
@@ -579,6 +592,11 @@ export function MonthlyReportEmail({
             maxWidth: "560px",
           }}
         >
+          {testPreview && (
+            <Text style={{ backgroundColor: "#fdf3d8", border: "1px solid #e8d49a", borderRadius: "8px", color: "#14243f", fontSize: "14px", fontWeight: 600, margin: "0 0 18px", padding: "10px 12px" }}>
+              {TEST_PREVIEW_LINE}
+            </Text>
+          )}
           <Text style={{ color: "#6b7890", fontSize: "11.5px", letterSpacing: "0.06em", textTransform: "uppercase", margin: "0 0 4px" }}>
             {t(locale, "report.monthHeading", { month: coverageMonth, year: coverageYear })}
           </Text>

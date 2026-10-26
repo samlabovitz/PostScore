@@ -67,7 +67,7 @@ data isn't available, the preview says so.
   - competitor rank fully visible, plus "You're #N of M nearby…" when they trail;
   - PostAI → a `LockedPreview` with their real starter questions — no AI call (`sendAssistantMessage` also refuses on Free, server-side);
   - 1 owner re-scan per 7 days (+ the first scan) on top of the 24-hour rule — `rescanGate` in `lib/rescanPolicy.ts`, checked in `rescanBusiness` before any Google call; owner re-scans are logged in `places_calls` (kind `owner_rescan`, one Places Details call) and the note says "Next free re-scan: {date}";
-  - Free competitors are never refreshed after the first scan — not by a re-scan (no Nearby Search), the monthly report (reuses the saved scan) or `scripts/rescan-all.ts`. Grow re-scans also refresh competitors when the last refresh is 7+ days old; Premium and Multi on every re-scan (`rescanRefreshesCompetitors` in `lib/competitorScanPolicy.ts`), all still under `PLACES_SEARCH_MONTHLY_CAP`. Outside a request there's no stored plan yet (no checkout), so the cron and the script treat every account as Free (`backgroundPlan` in `lib/plan.ts`);
+  - Free competitors are never refreshed after the first scan — not by a re-scan (no Nearby Search), the monthly report (testing mode only — reuses the saved scan) or `scripts/rescan-all.ts`. Grow re-scans also refresh competitors when the last refresh is 7+ days old; Premium and Multi on every re-scan (`rescanRefreshesCompetitors` in `lib/competitorScanPolicy.ts`), all still under `PLACES_SEARCH_MONTHLY_CAP`. Outside a request there's no stored plan yet (no checkout), so the cron and the script treat every account as Free (`backgroundPlan` in `lib/plan.ts`) — and Free gets no monthly report email, so until subscriptions ship the cron emails no one;
   - the Grow showcase strip stays at the bottom.
   Grow, Premium and Multi see the Overview unchanged.
 - **`LockedPreview`** (`components/plan/LockedPreview.tsx`) is the shared locked feature for 5f: the real UI with the business's own data, read-only (`inert`), fading under a small lock, one unlock line (shown only when its data is real) and a small "See plans", which opens the promo box. It never fetches anything itself.
@@ -217,7 +217,7 @@ Anything not built says "coming soon".
 | PostAI | — | 100 questions/month | unlimited | unlimited |
 | AI review replies | 3 to try | 3 to try | unlimited · auto-post coming soon | unlimited · auto-post coming soon |
 | Fixes done for you (Google connect) | — | — | ✓ coming soon | ✓ coming soon |
-| Reports | monthly email | weekly recap | weekly + PDF | weekly + PDF |
+| Reports | — (no monthly email) | weekly recap | weekly + PDF | weekly + PDF |
 | PostStudio — your full website (coming soon) | $30/mo on its own | +$15/mo | +$8/mo | ✓ included |
 | Locations | 1 | 1 | 1 | up to 5, +$25/mo each extra |
 
@@ -300,7 +300,8 @@ On Free the **Overview is the audit**, top to bottom:
   the input cost by roughly two thirds. At the limit, Grow sees: "You've
   used this month's questions. Premium is unlimited."
 - **Reports:** downloadable PDF reports are **Premium**; Grow gets the weekly
-  recap on screen; Free gets the monthly email.
+  recap on screen; Free gets no Reports page and no monthly report email
+  (Grow, Premium and Multi get the monthly email).
 - The Free "unlock" lines (`dashboard.upgrade.unlock.*`, built by
   `unlockLine()` in `lib/upgradePromos.ts` from real data only — a line
   whose data is missing is never shown) are ready for the locked previews.
@@ -435,11 +436,12 @@ Caching the live result for the length of one visit (in memory, not the database
 2. Remove `PLAN_SWITCHER_EMAILS` from production (testing only).
    - remove PLAN_SWITCHER_EMAILS — also removes the unlimited-businesses test exception
 3. Checkout and billing as in `docs/billing-compliance.md` (lawyer review).
-4. Run every pending `supabase/*.sql` file, including `review-reply-drafts.sql`, `starter-site-details.sql` and `free-ai-usage.sql`.
+4. Run every pending `supabase/*.sql` file, including `review-reply-drafts.sql`, `starter-site-details.sql`, `free-ai-usage.sql` and `monthly-report-test-runs.sql`.
 5. Search demand: its own launch checklist in `docs/search-demand.md` §4.
 6. File the POSTSCORE trademark (Class 42, ~$350).
 7. Decide LLC vs personal ownership.
 8. ~~Get Google Maps Platform's written answer on storage (case opened Oct 21).~~ Answered Oct 21 (`docs/google-maps-support-reply-2026-10-21.md`): owner-entered data OK; §3.2.3(c) → legal counsel + Sales.
 9. Legal counsel: derived scores and score history (§3.2.3(c)), and whether pre-fill + confirm makes the starter-site details the owner's own.
 10. Contact Google Maps Platform Sales (https://mapsplatform.google.com/contact-us/) about terms for derived scores and history, if counsel says it's needed.
-11. `lib/plan.ts` background-job plan lookup must read the real subscription plan once Stripe is live (monthly report + rescan-all currently treat everyone as Free for competitors).
+11. `lib/plan.ts` background-job plan lookup (`backgroundPlan`) must read the real subscription plan once Stripe is live. Until then it treats everyone as Free — for competitors (monthly report + rescan-all) and for the monthly report itself: Free gets no monthly report email, so in live mode the job emails no one until real plans exist.
+12. At launch: set MONTHLY_REPORTS_LIVE=true only after the business list is cleaned; testing mode then stops. (Until then the monthly job is in testing mode: 3 random scored businesses' reports go only to REPORT_TEST_EMAIL as "[TEST]" reports — no owner gets a normal report. REPORT_TEST_EMAIL may be an address with a PostScore account; it still gets only the "[TEST]" reports. Nothing is sent when REPORT_TEST_EMAIL is missing. Run `supabase/monthly-report-test-runs.sql` so picks don't repeat month to month.)
