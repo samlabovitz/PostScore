@@ -199,7 +199,7 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
         replyDrafts={replyDrafts}
         freePostai={freePostai}
         monthlyReportsLive={isMonthlyReportsLive()}
-        gbpReplyCheck={free ? gbpReplyCheckState(upgrade.plan, gbpStatus, searchParams.gbp) : null}
+        gbpReplyCheck={free ? gbpReplyCheckState(upgrade.plan, gbpStatus, searchParams.gbp, { name: scored.business.name ?? null, address: scored.business.address ?? null }) : null}
       />
     </DashboardShell>
   );

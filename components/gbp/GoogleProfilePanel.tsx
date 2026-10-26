@@ -6,8 +6,12 @@
 // search demand (its own honest preview/awaiting states) and the
 // features still coming. Free and Grow see the same real listing as a
 // preview, with the Premium features listed as locked and "Unlock with
-// Premium". Connecting itself happens on the Connect Google page.
+// Premium". Premium connects here (or on the Connect Google page); Free and
+// Grow are pointed to their reviews area, where they connect for the
+// review-reply check — never to the Premium connect page.
 
+import { GBP_PROFILE_ANCHOR, gbpConnectHref, gbpReplyCheckPath, type GbpConnectResult } from "@/lib/gbpLanding";
+import { gbpConnectedText, gbpResultText } from "@/components/gbp/GbpResultMessage";
 import Link from "next/link";
 import { IconLock } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
@@ -29,6 +33,16 @@ export interface GoogleListingFacts {
   googleMapsUri: string | null;
 }
 
+export interface GoogleProfileConnection {
+  locationTitle: string | null;
+  locationAddress: string | null;
+  needsReconnect: boolean;
+  result: GbpConnectResult | null;
+  /** GBP_CONNECT_PUBLIC and the OAuth setup are both on. */
+  canStart: boolean;
+  business: { name: string | null; address: string | null };
+}
+
 export function GoogleProfilePanel({
   businessId,
   plan,
@@ -37,6 +51,7 @@ export function GoogleProfilePanel({
   lastScanAt,
   connected,
   searchDemand,
+  connection = null,
 }: {
   businessId: string;
   plan: Plan;
@@ -46,6 +61,8 @@ export function GoogleProfilePanel({
   lastScanAt: string | null;
   connected: boolean;
   searchDemand: SearchDemandView;
+  /** The matched location, a ?gbp= result and whether connecting is open. */
+  connection?: GoogleProfileConnection | null;
 }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
@@ -119,17 +136,43 @@ export function GoogleProfilePanel({
         </Card>
       </section>
 
-      <section>
+      <section id={GBP_PROFILE_ANCHOR} className="scroll-mt-20">
         <SectionTitle>{t(locale, "dashboard.googleProfile.connectHeading")}</SectionTitle>
         <Card className="flex flex-col gap-2 p-5">
-          <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <span className={connected ? "h-2.5 w-2.5 rounded-full bg-green" : "h-2.5 w-2.5 rounded-full bg-paper-deep"} aria-hidden />
-            {connected ? t(locale, "dashboard.googleProfile.connected") : t(locale, "dashboard.googleProfile.notConnected")}
+          {premium && connection?.result && (
+            <p role="status" className={connection.result === "connected" ? "text-[13px] font-medium text-green" : "text-[13px] font-medium text-red"}>
+              {gbpResultText(locale, connection.result, connection.business)}
+            </p>
+          )}
+          <div className="flex items-center gap-2 break-words text-sm font-semibold text-ink">
+            <span className={connected ? "h-2.5 w-2.5 shrink-0 rounded-full bg-green" : "h-2.5 w-2.5 shrink-0 rounded-full bg-paper-deep"} aria-hidden />
+            {connected
+              ? (gbpConnectedText(locale, connection?.locationTitle ?? null, connection?.locationAddress ?? null) ?? t(locale, "dashboard.googleProfile.connected"))
+              : t(locale, "dashboard.googleProfile.notConnected")}
           </div>
-          <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.googleProfile.connectBody")}</p>
-          <Link href={`/business/${businessId}/connect-gbp`} className={linkClass}>
-            {t(locale, "dashboard.googleProfile.connectLink")}
-          </Link>
+          {premium ? (
+            <>
+              <p className="text-[13px] text-ink-soft">
+                {connection?.needsReconnect && !connected ? t(locale, "dashboard.gbp.reconnectBody") : t(locale, "dashboard.googleProfile.connectBody")}
+              </p>
+              {!connected && connection?.canStart ? (
+                <a href={gbpConnectHref(businessId, "profile")} className={linkClass}>
+                  {connection.needsReconnect ? t(locale, "dashboard.gbp.reconnect") : t(locale, "dashboard.googleProfile.connectLink")}
+                </a>
+              ) : (
+                <Link href={`/business/${businessId}/connect-gbp`} className={linkClass}>
+                  {t(locale, "dashboard.googleProfile.connectLink")}
+                </Link>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.gbp.profileFreeGrowBody")}</p>
+              <Link href={gbpReplyCheckPath(businessId, plan)} className={linkClass}>
+                {t(locale, "dashboard.gbp.goToReviewsConnect")}
+              </Link>
+            </>
+          )}
         </Card>
       </section>
 

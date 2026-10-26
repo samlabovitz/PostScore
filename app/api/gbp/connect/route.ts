@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { buildGbpAuthUrl, gbpRedirectUri, isGbpOAuthConfigured } from "@/lib/googleBusinessProfile";
 import { GBP_OAUTH_COOKIE, GBP_STATE_MAX_AGE_SECONDS, startGbpConnect } from "@/lib/gbpSecurity";
-import { gbpLandingPath } from "@/lib/gbpLanding";
+import { gbpLandingPath, resolveGbpOrigin } from "@/lib/gbpLanding";
 import { canConnectGbp, getPlan } from "@/lib/premium";
 
 export async function GET(req: NextRequest) {
@@ -43,18 +43,20 @@ export async function GET(req: NextRequest) {
   }
 
   const plan = await getPlan();
+  // Where they started — they come back there (Free/Grow: their reviews area only).
+  const origin = resolveGbpOrigin(plan, req.nextUrl.searchParams.get("from"));
 
   // Switched off → back where they came from, never Google's consent screen.
   if (!canConnectGbp()) {
-    return NextResponse.redirect(new URL(gbpLandingPath(businessId, plan, "setup"), req.url));
+    return NextResponse.redirect(new URL(gbpLandingPath(businessId, origin, "setup"), req.url));
   }
 
   const redirectUri = gbpRedirectUri();
   if (!isGbpOAuthConfigured() || !redirectUri) {
-    return NextResponse.redirect(new URL(gbpLandingPath(businessId, plan, "setup"), req.url));
+    return NextResponse.redirect(new URL(gbpLandingPath(businessId, origin, "setup"), req.url));
   }
 
-  const attempt = startGbpConnect(user.id, businessId);
+  const attempt = startGbpConnect(user.id, businessId, undefined, undefined, origin);
   const res = NextResponse.redirect(
     buildGbpAuthUrl({ redirectUri, state: attempt.state, codeChallenge: attempt.codeChallenge })
   );

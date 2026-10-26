@@ -1,7 +1,7 @@
 // Server: whether the Reviews-area "Replying to reviews" connect shows, and
 // what it says. Free and Grow only — Premium and Multi connect from the
 // Google Profile page (the same single connection). Hidden for everyone
-// while GBP_CONNECT_PUBLIC is off.
+// while GBP_CONNECT_PUBLIC is off; NODE_ENV plays no part.
 import type { GbpReplyCheckState } from "@/components/gbp/GbpReplyCheckConnect";
 import type { GetGbpConnectionStatusResult } from "@/app/actions/gbp";
 import { isGbpOAuthConfigured } from "@/lib/googleBusinessProfile";
@@ -12,14 +12,20 @@ import type { Plan } from "@/lib/plan";
 export function gbpReplyCheckState(
   plan: Plan,
   status: GetGbpConnectionStatusResult,
-  resultParam: string | null | undefined
+  resultParam: string | null | undefined,
+  business: { name: string | null; address: string | null } = { name: null, address: null }
 ): GbpReplyCheckState | null {
   if (!canConnectGbp() || canUseGoogleProfilePage(plan)) return null;
-  const connected = status.status === "ok" && status.connected;
+  const ok = status.status === "ok" ? status : null;
   return {
-    connected,
-    connectedAt: status.status === "ok" ? status.connectedAt : null,
+    connected: !!ok?.connected,
+    connectedAt: ok?.connectedAt ?? null,
+    locationTitle: ok?.locationTitle ?? null,
+    locationAddress: ok?.locationAddress ?? null,
+    needsReconnect: !!ok?.needsReconnect,
     configured: isGbpOAuthConfigured(),
     result: parseGbpResult(resultParam),
+    origin: plan === "free" ? "overview" : "reviews",
+    business,
   };
 }

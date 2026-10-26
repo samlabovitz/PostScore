@@ -120,7 +120,10 @@ describe("Growth → Action plan makeover", () => {
   test("Google connect is a small Premium card (not a task) — and gone once connected (Grow too, as before)", () => {
     const html = render();
     expect(html).toContain("Unlock live Google insights");
-    expect(html).toContain('href="/business/b1/connect-gbp"');
+    // Grow is never sent to the Premium connect page — Compare plans instead.
+    expect(html).toContain('href="/business/b1/settings#compare-plans"');
+    expect(html).not.toContain('href="/business/b1/connect-gbp"');
+    expect(render({ plan: "premium" })).toContain('href="/business/b1/connect-gbp"');
     expect(html).toContain("PostScore Premium");
     expect(render({ gbpConnected: true })).not.toContain("Unlock live Google insights");
     expect(render({ plan: "premium" })).toContain("Unlock live Google insights");

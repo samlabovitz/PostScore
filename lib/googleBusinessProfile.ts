@@ -192,3 +192,38 @@ export async function revokeGbpToken(token: string, fetchImpl: typeof fetch = fe
     return "failed";
   }
 }
+
+export type GbpRefreshResult =
+  | { status: "ok"; accessToken: string; expiresAt: string }
+  /** Google says the refresh token is dead (revoked, expired — e.g. after
+   * 7 days in Testing mode, or a password change): the owner must reconnect. */
+  | { status: "invalid_grant" }
+  | { status: "failed" };
+
+/** Trades the stored refresh token for a fresh access token. */
+export async function refreshGbpAccessToken(refreshToken: string, fetchImpl: typeof fetch = fetch): Promise<GbpRefreshResult> {
+  const { clientId, clientSecret } = getOAuthConfig();
+  try {
+    const res = await fetchImpl(GOOGLE_OAUTH_TOKEN_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+      }).toString(),
+    });
+    const data = (await res.json().catch(() => ({}))) as RawTokenResponse;
+    if (res.ok && data.access_token) {
+      return {
+        status: "ok",
+        accessToken: data.access_token,
+        expiresAt: new Date(Date.now() + (data.expires_in ?? 3600) * 1000).toISOString(),
+      };
+    }
+    return data.error === "invalid_grant" ? { status: "invalid_grant" } : { status: "failed" };
+  } catch {
+    return { status: "failed" };
+  }
+}

@@ -428,7 +428,7 @@ describe("connect card and business listing (tweaks)", () => {
     // The connect page is viewable (read-only until GBP_CONNECT_PUBLIC);
     // the real OAuth start stays behind the flag.
     const connectPage = fs.readFileSync("app/business/[id]/connect-gbp/page.tsx", "utf8");
-    expect(connectPage).toContain("connectOpen={canConnectGbp() && profilePage}");
+    expect(connectPage).toContain("connectOpen={canConnectGbp()}");
     expect(connectPage).not.toContain("google-premium");
     const connectRoute = fs.readFileSync("app/api/gbp/connect/route.ts", "utf8");
     expect(connectRoute.indexOf("if (!canConnectGbp())")).toBeGreaterThan(-1);
@@ -515,7 +515,7 @@ describe("whole-number point ranges and the connect page", () => {
     expect(closed).toContain("motion-reduce:hover:translate-y-0");
     expect(render(<ConnectGbpView {...props} connectOpen={false} />, "es")).toContain("Términos de búsqueda");
     const open = render(<ConnectGbpView {...props} connectOpen />);
-    expect(open).toContain('href="/api/gbp/connect?businessId=b1"');
+    expect(open).toContain('href="/api/gbp/connect?businessId=b1&amp;from=connect"');
     expect(open).not.toContain("coming soon");
   });
 });

@@ -253,7 +253,7 @@ export function ReviewsView({
             <ReviewReplyDrafter businessId={businessId} plan={plan} placeId={reviews.placeId} initial={replyDrafts} />
           </div>
         )}
-        {reviews.gbpConnected ? (
+        {!isPremiumPlan(plan) ? null : reviews.gbpConnected ? (
           <ComingSoonCard
             icon={IconMessageCircle}
             title={t(locale, "dashboard.websiteReviews.replyAssistantLabel")}

@@ -6,12 +6,20 @@ import { createClient } from "@/lib/supabase/server";
 export interface GbpConnectionStatus {
   connected: boolean;
   connectedAt: string | null;
+  /** The matched Google location (null until matched, or before
+   * supabase/gbp-location.sql has been run). */
+  locationTitle: string | null;
+  locationAddress: string | null;
+  /** Google stopped accepting the stored token: show "Reconnect Google". */
+  needsReconnect: boolean;
 }
 
 export type GetGbpConnectionStatusResult =
   | ({ status: "ok" } & GbpConnectionStatus)
   | { status: "unauthenticated" }
   | { status: "not_found" };
+
+const NOT_CONNECTED: GbpConnectionStatus = { connected: false, connectedAt: null, locationTitle: null, locationAddress: null, needsReconnect: false };
 
 /**
  * The one honest question every gated feature in the app asks before
@@ -30,18 +38,25 @@ async function getGbpConnectionStatusUncached(businessId: string): Promise<GetGb
     return { status: "unauthenticated" };
   }
 
-  const { data, error } = await supabase
-    .from("gbp_connections")
-    .select("connected_at, status")
-    .eq("business_id", businessId)
-    .eq("status", "connected")
-    .maybeSingle();
+  // "*" so a column that isn't there yet can't make this fail.
+  const { data, error } = await supabase.from("gbp_connections").select("*").eq("business_id", businessId).maybeSingle();
 
-  if (error) {
-    return { status: "ok", connected: false, connectedAt: null };
+  if (error || !data) {
+    return { status: "ok", ...NOT_CONNECTED };
   }
 
-  return { status: "ok", connected: !!data, connectedAt: data?.connected_at ?? null };
+  const row = data as Record<string, unknown>;
+  if (row.status !== "connected") {
+    return { status: "ok", ...NOT_CONNECTED, needsReconnect: row.status === "error" };
+  }
+  return {
+    status: "ok",
+    connected: true,
+    connectedAt: (row.connected_at as string | null) ?? null,
+    locationTitle: (row.location_title as string | null) ?? null,
+    locationAddress: (row.location_address as string | null) ?? null,
+    needsReconnect: false,
+  };
 }
 
 export type DisconnectGbpResult =

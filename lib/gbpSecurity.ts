@@ -71,6 +71,8 @@ export interface GbpStatePayload {
   n: string;
   /** Issued at (ms). */
   iat: number;
+  /** Where the owner started (lib/gbpLanding.ts GbpOrigin) — they return there. */
+  o?: string;
 }
 
 function stateSignature(body: string, env: Env): Buffer {
@@ -84,6 +86,16 @@ export function signGbpState(payload: GbpStatePayload, env: Env = process.env): 
 
 /** The payload, or null when the signature is wrong, it's malformed, or it's expired. */
 export function verifyGbpState(state: string, env: Env = process.env, now: number = Date.now()): GbpStatePayload | null {
+  const payload = readSignedGbpState(state, env);
+  if (!payload) return null;
+  if (now - payload.iat > GBP_STATE_MAX_AGE_SECONDS * 1000 || payload.iat - now > 60_000) return null;
+  return payload;
+}
+
+/** The payload when the signature is ours, even if expired — used only to
+ * send the owner back to where they started with a "try again" message,
+ * never to complete a connect. */
+export function readSignedGbpState(state: string, env: Env = process.env): GbpStatePayload | null {
   const [body, sig, extra] = state.split(".");
   if (!body || !sig || extra !== undefined) return null;
   const expected = stateSignature(body, env);
@@ -96,7 +108,6 @@ export function verifyGbpState(state: string, env: Env = process.env, now: numbe
     return null;
   }
   if (typeof payload?.u !== "string" || typeof payload.b !== "string" || typeof payload.n !== "string" || typeof payload.iat !== "number") return null;
-  if (now - payload.iat > GBP_STATE_MAX_AGE_SECONDS * 1000 || payload.iat - now > 60_000) return null;
   return payload;
 }
 
@@ -111,18 +122,18 @@ export function pkceChallenge(verifier: string): string {
 
 /** Everything one connect attempt needs: the signed state for Google, the
  * PKCE challenge for Google, and the cookie value that stays with the browser. */
-export function startGbpConnect(userId: string, businessId: string, env: Env = process.env, now: number = Date.now()) {
+export function startGbpConnect(userId: string, businessId: string, env: Env = process.env, now: number = Date.now(), origin?: string) {
   const nonce = randomToken();
   const verifier = randomToken();
   return {
-    state: signGbpState({ u: userId, b: businessId, n: nonce, iat: now }, env),
+    state: signGbpState({ u: userId, b: businessId, n: nonce, iat: now, ...(origin ? { o: origin } : {}) }, env),
     codeChallenge: pkceChallenge(verifier),
     cookieValue: `${nonce}.${verifier}`,
   };
 }
 
 export type GbpCallbackCheck =
-  | { ok: true; businessId: string; codeVerifier: string }
+  | { ok: true; businessId: string; codeVerifier: string; origin: string | null }
   | { ok: false; reason: "missing" | "bad_state" | "nonce_mismatch" | "wrong_user" };
 
 /**
@@ -147,5 +158,5 @@ export function checkGbpCallback(params: {
   const b = Buffer.from(payload.n);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return { ok: false, reason: "nonce_mismatch" };
   if (payload.u !== userId) return { ok: false, reason: "wrong_user" };
-  return { ok: true, businessId: payload.b, codeVerifier: verifier };
+  return { ok: true, businessId: payload.b, codeVerifier: verifier, origin: typeof payload.o === "string" ? payload.o : null };
 }

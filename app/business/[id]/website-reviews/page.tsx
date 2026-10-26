@@ -49,7 +49,7 @@ export default async function WebsiteReviewsPage({ params, searchParams = {} }: 
   const { data } = result;
   const plan = await getPlan();
   // Request-cached: the same read getReviewsPageData already made.
-  const gbpReplyCheck = gbpReplyCheckState(plan, await getGbpConnectionStatus(params.id), searchParams.gbp);
+  const gbpReplyCheck = gbpReplyCheckState(plan, await getGbpConnectionStatus(params.id), searchParams.gbp, { name: data.businessName ?? null, address: data.address ?? null });
 
   return (
     <DashboardShell

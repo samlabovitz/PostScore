@@ -274,7 +274,7 @@ describe("the drafter", () => {
   test("on the Free Overview: inside the reviews section; on the Reviews page for Grow and up", () => {
     const view = readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8");
     const free = view.slice(view.indexOf("if (free) {"), view.indexOf('  return (\n    <div className="flex flex-col gap-5 nav:gap-6">'));
-    expect(free).toMatch(/<FreeReviews [^>]*>\s*\{replyDrafts && <ReviewReplyDrafter businessId=\{businessId\} plan="free"[^>]*embedded \/>\}\s*\{gbpReplyCheck && <GbpReplyCheckConnect businessId=\{businessId\} state=\{gbpReplyCheck\} \/>\}\s*<\/FreeReviews>/);
+    expect(free).toMatch(/<FreeReviews[\s\S]*?>\s*\{replyDrafts && <ReviewReplyDrafter businessId=\{businessId\} plan="free"[^>]*embedded \/>\}\s*<\/FreeReviews>/);
     expect(readFileSync("app/business/[id]/page.tsx", "utf8")).toContain('(await getPlan()) === "free" ? getReplyDraftStatus(params.id) : Promise.resolve(null)');
     expect(readFileSync("app/business/[id]/website-reviews/page.tsx", "utf8")).toContain("replyDrafts={replyDrafts}");
   });
@@ -302,5 +302,43 @@ describe("plan copy and PostAI", () => {
   test("docs: reply drafts, the compliance section and the launch checklist", () => {
     const doc = readFileSync("docs/product-structure.md", "utf8");
     for (const s of ["**Reply to a review**", "## Google Maps Platform terms compliance — MUST fix before launch", "**Open questions for Google Maps Platform support**", "**Estimated extra live-fetch cost per month**", "## Launch checklist", "review-reply-drafts.sql"]) expect(doc).toContain(s);
+  });
+});
+
+describe("bug: Free's Draft a reply looked locked with drafts left", () => {
+  test("Free with drafts left: the button works (not disabled), no Premium chip or See plans next to it; an empty box gets a nudge", async () => {
+    vi.doMock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { LocaleProvider } = await import("@/lib/i18n");
+    const { UpgradeProvider } = await import("@/components/upgrade/UpgradeContext");
+    const { NO_FACTS } = await import("@/lib/upgradePromos");
+    const { ReviewReplyDrafter } = await import("@/components/reviews/ReviewReplyDrafter");
+    const RESET = "2026-10-30T15:00:00.000Z";
+    const render = (plan: "free" | "grow", left: number) =>
+      renderToStaticMarkup(
+        <LocaleProvider locale="en" timeZone="America/New_York">
+          <UpgradeProvider value={{ businessId: "b1", plan, facts: NO_FACTS, cards: [] }}>
+            <ReviewReplyDrafter businessId="b1" plan={plan} placeId="p1" initial={{ status: "ok", used: 3 - left, left, resetsAt: RESET, pausedUntil: null }} />
+          </UpgradeProvider>
+        </LocaleProvider>
+      );
+    const free = render("free", 3);
+    expect(free).toContain("3 of 3 free drafts left");
+    const button = free.match(/<button[^>]*data-testid="draft-reply"[^>]*>/)![0];
+    expect(button).not.toContain('disabled=""');
+    expect(free).not.toContain('data-testid="upgrade-trigger"');
+    expect(free).not.toContain('data-testid="lock-chip"');
+    expect(free).not.toContain('data-testid="see-plans-link"');
+    // At 0: the used-up message with the upgrade prompt, no draft button.
+    const used = render("free", 0);
+    expect(used).toContain('data-testid="replies-used-up"');
+    expect(used).toContain('data-testid="upgrade-trigger"');
+    expect(used).not.toContain('data-testid="draft-reply"');
+    // Empty box: a message, not a dead button (the action still validates on the server).
+    const src = readFileSync("components/reviews/ReviewReplyDrafter.tsx", "utf8");
+    expect(src).toContain('if (review.trim().length < 2) {\n      setMessage(K("errorInvalid"));');
+    expect(src).toContain("disabled={busy}");
+    // Grow keeps its quiet "Unlimited with Premium" link.
+    expect(render("grow", 5)).toContain('data-testid="upgrade-trigger"');
   });
 });

@@ -64,8 +64,11 @@ export function FreeReviews({
   reviewCount,
   goal,
   group,
+  connect = null,
   children,
 }: {
+  /** Connect Google for the "Replying to reviews" check (GbpReplyCheckConnect), right under the header. */
+  connect?: React.ReactNode;
   placeId: string | null;
   rating: number | null;
   reviewCount: number | null;
@@ -107,6 +110,7 @@ export function FreeReviews({
           <p className="text-[12.5px] text-ink-soft">{t(locale, "dashboard.free.reviewWhy")}</p>
         </div>
       </div>
+      {connect}
       {reviewUrl && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_200px] sm:items-center">
           <div className="flex min-w-0 flex-col gap-2.5 rounded-xl border border-[color:color-mix(in_srgb,var(--color-brass)_28%,white)] bg-paper p-4">

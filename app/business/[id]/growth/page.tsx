@@ -1,3 +1,5 @@
+import { parseGbpResult } from "@/lib/gbpLanding";
+import { isGbpOAuthConfigured } from "@/lib/googleBusinessProfile";
 import { notFound, redirect } from "next/navigation";
 import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
 import { showRescanNotice } from "@/lib/rescanPolicy";
@@ -25,7 +27,7 @@ import { canConnectGbp, getPlan, hasPremium } from "@/lib/premium";
 import { SEARCH_DEMAND_EXAMPLE } from "@/lib/gbp/searchDemand";
 import { campaignsHref } from "@/lib/campaignsTabs";
 
-export default async function GrowthPage({ params, searchParams = {} }: { params: { id: string }; searchParams?: { tab?: string } }) {
+export default async function GrowthPage({ params, searchParams = {} }: { params: { id: string }; searchParams?: { tab?: string; gbp?: string } }) {
   // Coupons and referrals moved to the Campaigns page: old links to
   // Growth's ?tab=coupons / ?tab=referral land on the matching tab there.
   if (searchParams.tab === "coupons") redirect(campaignsHref(params.id, "coupons"));
@@ -133,6 +135,14 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
     // Same rule as search demand everywhere: example data under an
     // "Example" watermark until the connection is live.
     searchDemand: canConnectGbp() && hasPremium(await getPlan()) && gbpConnected ? ({ kind: "awaiting" } as const) : ({ kind: "preview", data: SEARCH_DEMAND_EXAMPLE } as const),
+    connection: {
+      locationTitle: gbpStatus.status === "ok" ? gbpStatus.locationTitle : null,
+      locationAddress: gbpStatus.status === "ok" ? gbpStatus.locationAddress : null,
+      needsReconnect: gbpStatus.status === "ok" && gbpStatus.needsReconnect,
+      result: parseGbpResult(searchParams.gbp),
+      canStart: canConnectGbp() && isGbpOAuthConfigured(),
+      business: { name: row.name ?? null, address: row.address ?? null },
+    },
   };
 
   const actionPlan =

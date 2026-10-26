@@ -239,9 +239,15 @@ export function BusinessScoreView({
         {/* D. Free tools: Reviews (link, QR, reply drafts), then PostAI —
             3 free questions a week. */}
         <FreeSection id="tools" title={t(locale, freeSection("tools").titleKey)} body={t(locale, freeSection("tools").bodyKey)}>
-          <FreeReviews placeId={business.place_id ?? null} rating={business.rating} reviewCount={business.review_count} goal={reviewGoal} group={reviewGroup}>
+          <FreeReviews
+            placeId={business.place_id ?? null}
+            rating={business.rating}
+            reviewCount={business.review_count}
+            goal={reviewGoal}
+            group={reviewGroup}
+            connect={gbpReplyCheck ? <GbpReplyCheckConnect businessId={businessId} state={gbpReplyCheck} /> : null}
+          >
             {replyDrafts && <ReviewReplyDrafter businessId={businessId} plan="free" placeId={business.place_id ?? null} initial={replyDrafts} embedded />}
-            {gbpReplyCheck && <GbpReplyCheckConnect businessId={businessId} state={gbpReplyCheck} />}
           </FreeReviews>
           {freePostai && <FreePostAI businessId={businessId} starterPrompts={assistant.status === "unavailable" ? [] : assistant.starterPrompts} initial={freePostai} />}
         </FreeSection>
@@ -354,7 +360,7 @@ export function BusinessScoreView({
       <StudioComingSoon businessId={businessId} />
 
       <SectionHeading title={t(locale, "dashboard.overview.liveListingHeading")} />
-      <LiveListingSection businessId={businessId} connected={gbpConnected} />
+      <LiveListingSection businessId={businessId} connected={gbpConnected} premium={plan === "premium" || plan === "multi"} />
 
       <SectionHeading title={t(locale, "dashboard.overview.scanHistoryHeading")} />
       <ScanHistory history={history} />

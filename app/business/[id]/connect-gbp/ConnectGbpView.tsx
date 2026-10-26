@@ -19,7 +19,8 @@ import {
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { GbpDisconnectButton } from "@/components/gbp/GbpDisconnectButton";
-import type { GbpConnectResult } from "@/lib/gbpLanding";
+import { gbpConnectHref, type GbpConnectResult } from "@/lib/gbpLanding";
+import { gbpConnectedText, gbpResultText } from "@/components/gbp/GbpResultMessage";
 import { formatShortDate, t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 
 function buildUnlocks(
@@ -79,8 +80,12 @@ function buildUnlocks(
 export function ConnectGbpView({
   businessId,
   businessName,
+  businessAddress = null,
   connected,
   connectedAt,
+  locationTitle = null,
+  locationAddress = null,
+  needsReconnect = false,
   justConnected,
   error,
   oauthConfigured,
@@ -88,13 +93,19 @@ export function ConnectGbpView({
 }: {
   businessId: string;
   businessName: string | null;
+  businessAddress?: string | null;
   connected: boolean;
   connectedAt: string | null;
+  /** The matched Google location ("Connected: {title}, {address}"). */
+  locationTitle?: string | null;
+  locationAddress?: string | null;
+  /** Google stopped accepting the token — show "Reconnect Google". */
+  needsReconnect?: boolean;
   justConnected: boolean;
   /** A failed connect's code (lib/gbpLanding.ts) — shown as our own words. */
   error: GbpConnectResult | null;
   oauthConfigured: boolean;
-  /** GBP_CONNECT_PUBLIC and Premium — false keeps the button disabled ("coming soon"). */
+  /** GBP_CONNECT_PUBLIC — false keeps the button disabled ("coming soon"). */
   connectOpen: boolean;
 }) {
   const locale = useLocale();
@@ -133,7 +144,7 @@ export function ConnectGbpView({
       {error && (
         <Card className="flex items-center gap-3 border-red/30 bg-red/5 p-4">
           <IconAlertTriangle size={20} className="shrink-0 text-red" />
-          <p className="text-sm text-ink">{t(locale, `dashboard.gbpResult.${error}`)}</p>
+          <p className="text-sm text-ink">{gbpResultText(locale, error, { name: businessName, address: businessAddress })}</p>
         </Card>
       )}
 
@@ -144,8 +155,8 @@ export function ConnectGbpView({
               <IconCircleCheck size={18} />
             </span>
             <div>
-              <div className="text-sm font-semibold text-ink">
-                {t(locale, "dashboard.connectGbp.connectedHeading")}
+              <div className="break-words text-sm font-semibold text-ink">
+                {gbpConnectedText(locale, locationTitle, locationAddress) ?? t(locale, "dashboard.connectGbp.connectedHeading")}
               </div>
               <div className="text-[12.5px] text-ink-mute">
                 {connectedAt
@@ -160,6 +171,19 @@ export function ConnectGbpView({
           <div className="mt-4 border-t border-paper-line pt-4">
             <GbpDisconnectButton businessId={businessId} />
           </div>
+        </Card>
+      ) : needsReconnect && connectOpen && oauthConfigured ? (
+        <Card className="flex flex-col items-start gap-3 border-amber/40 p-5">
+          <div className="flex items-start gap-2.5">
+            <IconAlertTriangle size={18} aria-hidden className="mt-0.5 shrink-0 text-amber" />
+            <p className="text-sm text-ink">{t(locale, "dashboard.gbp.reconnectBody")}</p>
+          </div>
+          <a href={gbpConnectHref(businessId, "connect")}>
+            <Button variant="brass">
+              <IconBrandGoogle size={15} />
+              {t(locale, "dashboard.gbp.reconnect")}
+            </Button>
+          </a>
         </Card>
       ) : (
         <>
@@ -177,7 +201,13 @@ export function ConnectGbpView({
                   <u.icon size={17} />
                 </span>
                 <div>
-                  <div className="text-[13.5px] font-semibold text-ink">{u.title}</div>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-[13.5px] font-semibold text-ink">{u.title}</span>
+                    {/* None of these work yet. */}
+                    <span data-testid="unlock-soon" className="rounded-full bg-paper-deep px-2 py-px text-[10.5px] font-semibold text-ink-soft">
+                      {t(locale, "dashboard.connectGbp.comingSoonBadge")}
+                    </span>
+                  </div>
                   <p className="mt-1 text-[12.5px] leading-snug text-ink-mute">{u.body}</p>
                   {u.preview && (
                     <Link
@@ -219,7 +249,7 @@ export function ConnectGbpView({
                   </span>
                 </div>
               ) : oauthConfigured ? (
-                <a href={`/api/gbp/connect?businessId=${businessId}`}>
+                <a href={gbpConnectHref(businessId, "connect")}>
                   <Button variant="brass">
                     <IconBrandGoogle size={15} />
                     {t(locale, "dashboard.common.connectGoogleBusinessProfile")}

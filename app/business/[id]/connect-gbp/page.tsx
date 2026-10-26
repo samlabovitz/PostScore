@@ -4,7 +4,7 @@ import { getBusinessSummary } from "@/app/actions/businesses";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { isGbpOAuthConfigured } from "@/lib/googleBusinessProfile";
 import { canConnectGbp, canUseGoogleProfilePage, getPlan } from "@/lib/premium";
-import { parseGbpResult } from "@/lib/gbpLanding";
+import { gbpReplyCheckPath, parseGbpResult } from "@/lib/gbpLanding";
 import { ConnectGbpView } from "./ConnectGbpView";
 
 /**
@@ -18,7 +18,7 @@ export default async function ConnectGbpPage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { connected?: string; error?: string };
+  searchParams: { gbp?: string };
 }) {
   const summary = await getBusinessSummary(params.id);
 
@@ -30,30 +30,34 @@ export default async function ConnectGbpPage({
   }
 
   const plan = await getPlan();
-  // The Google Profile page is Premium and Multi only. Free and Grow see
-  // the locked preview here even when they've connected (for the
-  // "Replying to reviews" check) — their status and Disconnect live in
-  // the Reviews area instead.
-  const profilePage = canUseGoogleProfilePage(plan);
+  // The Premium connect page is Premium and Multi only. Free and Grow are
+  // never shown it: they connect (for the "Replying to reviews" check),
+  // see their status and disconnect in their own reviews area.
+  if (!canUseGoogleProfilePage(plan)) {
+    redirect(gbpReplyCheckPath(params.id, plan));
+  }
+
   const gbp = await getGbpConnectionStatus(params.id);
-  const connected = profilePage && gbp.status === "ok" ? gbp.connected : false;
-  const connectedAt = gbp.status === "ok" ? gbp.connectedAt : null;
+  const ok = gbp.status === "ok" ? gbp : null;
+  // Only known codes, never raw text from the URL.
+  const result = parseGbpResult(searchParams.gbp);
 
   return (
     <DashboardShell business={summary.business} plan={plan}>
       <ConnectGbpView
         businessId={params.id}
         businessName={summary.business.name}
-        connected={connected}
-        connectedAt={connectedAt}
-        justConnected={searchParams.connected === "1"}
-        // Only known codes, never raw text from the URL.
-        error={searchParams.error ? (parseGbpResult(searchParams.error) ?? "failed") : null}
+        businessAddress={summary.business.address ?? null}
+        connected={!!ok?.connected}
+        connectedAt={ok?.connectedAt ?? null}
+        locationTitle={ok?.locationTitle ?? null}
+        locationAddress={ok?.locationAddress ?? null}
+        needsReconnect={!!ok?.needsReconnect}
+        justConnected={result === "connected"}
+        error={result && result !== "connected" ? result : null}
         oauthConfigured={isGbpOAuthConfigured()}
-        // Read-only "coming soon" unless GBP_CONNECT_PUBLIC=true; this
-        // page's button is Premium only (Free and Grow connect from the
-        // Reviews area).
-        connectOpen={canConnectGbp() && profilePage}
+        // Disabled "coming soon" unless GBP_CONNECT_PUBLIC=true.
+        connectOpen={canConnectGbp()}
       />
     </DashboardShell>
   );

@@ -14,7 +14,7 @@ import type { ActionPlanTask, CompletedTask, WebsiteBanner } from "@/lib/actionP
 import { websiteRangeText, wholePointRange } from "@/lib/pointRange";
 import type { GrowthMove } from "@/lib/growthMoves";
 import { isPremiumPlan, type Plan } from "@/lib/plan";
-import { GoogleProfilePanel, type GoogleListingFacts } from "@/components/gbp/GoogleProfilePanel";
+import { type GoogleProfileConnection, GoogleProfilePanel, type GoogleListingFacts } from "@/components/gbp/GoogleProfilePanel";
 import type { SearchDemandView } from "@/components/gbp/SearchDemandSection";
 import { growthMoveOverlapsActionPlan } from "@/lib/growthMoveOverlap";
 import type { WeeklyChecklistItem, WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
@@ -129,7 +129,7 @@ function ProjectedSummary({
 
 /** Connecting Google is a PostScore Premium feature — a small card, never
  * one of the week's tasks. Links to the (read-only for now) Connect page. */
-function PremiumConnectCard({ businessId }: { businessId: string }) {
+function PremiumConnectCard({ businessId, premium }: { businessId: string; premium: boolean }) {
   const locale = useLocale();
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-paper-deep bg-white px-4 py-3">
@@ -142,7 +142,8 @@ function PremiumConnectCard({ businessId }: { businessId: string }) {
           <span className="rounded-full bg-ink px-2 py-px text-[10.5px] font-semibold text-paper">{t(locale, "dashboard.overview.connectPremiumPill")}</span>
         </div>
       </div>
-      <Link href={`/business/${businessId}/connect-gbp`} className={LINK_PILL_CLASS}>
+      {/* Free and Grow are never sent to the Premium connect page. */}
+      <Link href={premium ? `/business/${businessId}/connect-gbp` : `/business/${businessId}/settings#compare-plans`} className={LINK_PILL_CLASS}>
         {t(locale, "dashboard.overview.seeWhatsIncluded")}
       </Link>
     </div>
@@ -181,6 +182,7 @@ export function GrowthView({
     websiteOnly: boolean;
     connected: boolean;
     searchDemand: SearchDemandView;
+    connection?: GoogleProfileConnection | null;
   };
   /** When this business was last re-scanned — see getLastScanAt() in
    * app/actions/scoring.ts. Lets a still-pending task tell "hasn't been
@@ -394,7 +396,7 @@ export function GrowthView({
                         })}
                       />
                     </div>
-                    {!gbpConnected && <PremiumConnectCard businessId={businessId} />}
+                    {!gbpConnected && <PremiumConnectCard businessId={businessId} premium={isPremiumPlan(plan)} />}
                     <TaskListCard
                       tasks={actionPlan.weeklyTasks}
                       businessId={businessId}
@@ -465,6 +467,7 @@ export function GrowthView({
             lastScanAt={lastScanAt}
             connected={googleProfile.connected}
             searchDemand={googleProfile.searchDemand}
+            connection={googleProfile.connection ?? null}
           />
         )}
       </div>

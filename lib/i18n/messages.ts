@@ -3280,6 +3280,20 @@ export type MessageKey =
   | "dashboard.overview.recs.pointsAbout"
   | "dashboard.overview.actionPlan.pointsOnceLive"
   | "dashboard.connectGbp.availableWithPremium"
+  | "dashboard.gbpResult.state"
+  | "dashboard.gbpResult.exchange_failed"
+  | "dashboard.gbpResult.google_api"
+  | "dashboard.gbpResult.no_match"
+  | "dashboard.gbpResult.no_match_unverified"
+  | "dashboard.gbpResult.businessAt"
+  | "dashboard.gbp.connectedTo"
+  | "dashboard.gbp.reconnectBody"
+  | "dashboard.gbp.reconnect"
+  | "dashboard.gbp.premiumUpsell"
+  | "dashboard.gbp.comparePlans"
+  | "dashboard.gbp.profileFreeGrowBody"
+  | "dashboard.gbp.goToReviewsConnect"
+  | "dashboard.connectGbp.comingSoonBadge"
   | "dashboard.gbpReplyCheck.title"
   | "dashboard.gbpReplyCheck.body"
   | "dashboard.gbpReplyCheck.connect"
@@ -4763,7 +4777,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleProfile.connectHeading": "Google connection",
     "dashboard.googleProfile.connected": "Connected",
     "dashboard.googleProfile.notConnected": "Not connected",
-    "dashboard.googleProfile.connectBody": "Connecting lets PostScore read your private Google insights and, later, edit your listing.",
+    "dashboard.googleProfile.connectBody": "One connection to your Google Business Profile. PostScore uses it to check how you reply to reviews; your Google insights and listing fixes are coming soon.",
     "dashboard.googleProfile.connectLink": "Connect Google →",
     "dashboard.googleProfile.featuresHeading": "With Premium",
     "dashboard.googleProfile.needsPremium": "Needs Premium",
@@ -6344,13 +6358,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.connectGbp.pageTitle": "Connect your Google Business Profile",
     "dashboard.connectGbp.pageSubtitle":
       "Connecting lets PostScore read (and, for some fields, edit) your real Google Business Profile — on top of the public listing data we already score today.",
-    "dashboard.connectGbp.justConnectedMessage":
-      "Connected. We're still finishing Google's review process for full API access — the features below unlock as each one goes live, not all at once.",
+    "dashboard.connectGbp.justConnectedMessage": "Connected. PostScore will use it to check how you reply to reviews. More features are coming.",
     "dashboard.connectGbp.connectedHeading": "Google Business Profile connected",
     "dashboard.connectGbp.sinceDate": "Since {date}.",
     "dashboard.connectGbp.connectedFallback": "Connected.",
-    "dashboard.connectGbp.notWiredUpSuffix":
-      "Real listing/review/insights data isn't wired up yet — that's a later update, not something broken here.",
+    "dashboard.connectGbp.notWiredUpSuffix": "PostScore will use it to check how you reply to reviews. More features are coming.",
     "dashboard.connectGbp.readyToConnectHeading": "Ready to connect?",
     "dashboard.connectGbp.oauthConfiguredBody":
       "You'll go to Google to approve access, then come back here. You can disconnect at any time.",
@@ -7797,12 +7809,26 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.recs.pointsAbout": "about +{points} pts",
     "dashboard.overview.actionPlan.pointsOnceLive": "About +{points} pts once it's live",
     "dashboard.connectGbp.availableWithPremium": "Available with PostScore Premium — coming soon",
-    "dashboard.gbpReplyCheck.title": "Count your review replies",
-    "dashboard.gbpReplyCheck.body": "Connect Google so PostScore can check how many of your reviews you've replied to, for the “Replying to reviews” check. Read-only: PostScore never posts or changes anything on Google.",
+    "dashboard.gbpResult.state": "That connection attempt expired or didn't match this browser, so nothing was connected. Please start again.",
+    "dashboard.gbpResult.exchange_failed": "Google didn't accept the sign-in, so nothing was connected. Please try again.",
+    "dashboard.gbpResult.google_api": "Google's Business Profile service returned an error, so PostScore couldn't find your listing. Nothing was connected. Please try again in a few minutes.",
+    "dashboard.gbpResult.no_match": "This Google account doesn't manage {business}. Sign in with the account that manages it.",
+    "dashboard.gbpResult.no_match_unverified": "This Google account doesn't manage {business}. Sign in with the account that manages it. If the listing isn't verified yet, verify your listing on Google first.",
+    "dashboard.gbpResult.businessAt": "{name} at {address}",
+    "dashboard.gbp.connectedTo": "Connected: {place}",
+    "dashboard.gbp.reconnectBody": "Google stopped accepting PostScore's access, so it can't check your profile. Reconnect to keep it working.",
+    "dashboard.gbp.reconnect": "Reconnect Google",
+    "dashboard.gbp.premiumUpsell": "Premium adds your Google insights — views, calls, searches and missed customers — and lets PostScore make listing fixes for you (coming soon).",
+    "dashboard.gbp.comparePlans": "Compare plans",
+    "dashboard.gbp.profileFreeGrowBody": "On your plan you connect Google from your reviews area, for the review-reply check. This page's insights and listing tools are Premium.",
+    "dashboard.gbp.goToReviewsConnect": "Go to your reviews →",
+    "dashboard.connectGbp.comingSoonBadge": "Coming soon",
+    "dashboard.gbpReplyCheck.title": "Replying to reviews",
+    "dashboard.gbpReplyCheck.body": "Connect your Google Business Profile so your score can include how you reply to reviews. Read-only — PostScore never changes your listing on this plan.",
     "dashboard.gbpReplyCheck.connect": "Connect Google",
     "dashboard.gbpReplyCheck.notConfigured": "Connecting Google isn't set up here yet.",
     "dashboard.gbpReplyCheck.connected": "Google connected",
-    "dashboard.gbpReplyCheck.connectedBody": "The “Replying to reviews” check isn't live yet. Once it is, it counts toward your score. Read-only: PostScore never posts or changes anything on Google.",
+    "dashboard.gbpReplyCheck.connectedBody": "PostScore will use it to check how you reply to reviews. That check isn't in your score yet — it's coming soon. Read-only — PostScore never changes your listing on this plan.",
     "dashboard.gbpResult.connected": "Google connected.",
     "dashboard.gbpResult.denied": "You didn't approve access, so nothing was connected.",
     "dashboard.gbpResult.failed": "Couldn't connect Google. Please try again.",
@@ -9203,7 +9229,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleProfile.connectHeading": "Conexión con Google",
     "dashboard.googleProfile.connected": "Conectado",
     "dashboard.googleProfile.notConnected": "No conectado",
-    "dashboard.googleProfile.connectBody": "Al conectarse, PostScore puede leer sus estadísticas privadas de Google y, más adelante, editar su ficha.",
+    "dashboard.googleProfile.connectBody": "Una sola conexión con su Perfil de Negocio de Google. PostScore la usa para revisar cómo responde a las reseñas; sus estadísticas de Google y los arreglos de la ficha llegan pronto.",
     "dashboard.googleProfile.connectLink": "Conectar Google →",
     "dashboard.googleProfile.featuresHeading": "Con Premium",
     "dashboard.googleProfile.needsPremium": "Requiere Premium",
@@ -10573,11 +10599,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.connectGbp.disconnectError": "No se pudo desconectar — inténtelo de nuevo.",
     "dashboard.connectGbp.pageTitle": "Conecte su Perfil de Negocio de Google",
     "dashboard.connectGbp.pageSubtitle": "Conectarlo permite que PostScore lea (y, en algunos campos, edite) su Perfil de Negocio de Google real — además de los datos públicos de la ficha que ya evaluamos hoy.",
-    "dashboard.connectGbp.justConnectedMessage": "Conectado. Todavía estamos completando el proceso de revisión de Google para el acceso completo a la API — las funciones de abajo se desbloquean a medida que cada una entra en funcionamiento, no todas a la vez.",
+    "dashboard.connectGbp.justConnectedMessage": "Conectado. PostScore lo usará para revisar cómo responde a las reseñas. Llegan más funciones.",
     "dashboard.connectGbp.connectedHeading": "Perfil de Negocio de Google conectado",
     "dashboard.connectGbp.sinceDate": "Desde el {date}.",
     "dashboard.connectGbp.connectedFallback": "Conectado.",
-    "dashboard.connectGbp.notWiredUpSuffix": "Los datos reales de ficha, reseñas y métricas aún no están habilitados — es una actualización futura, no algo averiado aquí.",
+    "dashboard.connectGbp.notWiredUpSuffix": "PostScore lo usará para revisar cómo responde a las reseñas. Llegan más funciones.",
     "dashboard.connectGbp.readyToConnectHeading": "¿Listo para conectar?",
     "dashboard.connectGbp.oauthConfiguredBody": "Irá a Google para aprobar el acceso y luego volverá aquí. Puede desconectarse en cualquier momento.",
     "dashboard.connectGbp.oauthNotConfiguredBody": "La conexión con el Perfil de Negocio de Google aún no está configurada en este entorno — vuelva pronto.",
@@ -12336,12 +12362,26 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.recs.pointsAbout": "unos +{points} pts",
     "dashboard.overview.actionPlan.pointsOnceLive": "Aprox. +{points} pts cuando esté publicado",
     "dashboard.connectGbp.availableWithPremium": "Disponible con PostScore Premium — próximamente",
-    "dashboard.gbpReplyCheck.title": "Cuente sus respuestas a reseñas",
-    "dashboard.gbpReplyCheck.body": "Conecte Google para que PostScore pueda revisar a cuántas de sus reseñas ha respondido, para el punto “Respuestas a reseñas”. Solo lectura: PostScore nunca publica ni cambia nada en Google.",
+    "dashboard.gbpResult.state": "Ese intento de conexión venció o no coincidió con este navegador, así que no se conectó nada. Vuelva a empezar.",
+    "dashboard.gbpResult.exchange_failed": "Google no aceptó el inicio de sesión, así que no se conectó nada. Inténtelo de nuevo.",
+    "dashboard.gbpResult.google_api": "El servicio de Perfil de Negocio de Google devolvió un error, así que PostScore no pudo encontrar su ficha. No se conectó nada. Inténtelo de nuevo en unos minutos.",
+    "dashboard.gbpResult.no_match": "Esta cuenta de Google no administra {business}. Inicie sesión con la cuenta que la administra.",
+    "dashboard.gbpResult.no_match_unverified": "Esta cuenta de Google no administra {business}. Inicie sesión con la cuenta que la administra. Si la ficha aún no está verificada, verifique primero su ficha en Google.",
+    "dashboard.gbpResult.businessAt": "{name} en {address}",
+    "dashboard.gbp.connectedTo": "Conectado: {place}",
+    "dashboard.gbp.reconnectBody": "Google dejó de aceptar el acceso de PostScore, así que no puede revisar su perfil. Vuelva a conectar para que siga funcionando.",
+    "dashboard.gbp.reconnect": "Volver a conectar Google",
+    "dashboard.gbp.premiumUpsell": "Premium agrega sus estadísticas de Google —vistas, llamadas, búsquedas y clientes perdidos— y permite que PostScore haga arreglos en su ficha por usted (próximamente).",
+    "dashboard.gbp.comparePlans": "Comparar planes",
+    "dashboard.gbp.profileFreeGrowBody": "En su plan, conecta Google desde su área de reseñas, para el punto de respuestas a reseñas. Las estadísticas y herramientas de ficha de esta página son de Premium.",
+    "dashboard.gbp.goToReviewsConnect": "Ir a sus reseñas →",
+    "dashboard.connectGbp.comingSoonBadge": "Próximamente",
+    "dashboard.gbpReplyCheck.title": "Respuestas a reseñas",
+    "dashboard.gbpReplyCheck.body": "Conecte su Perfil de Negocio de Google para que su puntuación pueda incluir cómo responde a las reseñas. Solo lectura: PostScore nunca cambia su ficha en este plan.",
     "dashboard.gbpReplyCheck.connect": "Conectar Google",
     "dashboard.gbpReplyCheck.notConfigured": "La conexión con Google aún no está configurada aquí.",
     "dashboard.gbpReplyCheck.connected": "Google conectado",
-    "dashboard.gbpReplyCheck.connectedBody": "El punto “Respuestas a reseñas” aún no está activo. Cuando lo esté, contará en su puntuación. Solo lectura: PostScore nunca publica ni cambia nada en Google.",
+    "dashboard.gbpReplyCheck.connectedBody": "PostScore lo usará para revisar cómo responde a las reseñas. Ese punto aún no está en su puntuación; llega pronto. Solo lectura: PostScore nunca cambia su ficha en este plan.",
     "dashboard.gbpResult.connected": "Google conectado.",
     "dashboard.gbpResult.denied": "No aprobó el acceso, así que no se conectó nada.",
     "dashboard.gbpResult.failed": "No se pudo conectar Google. Inténtelo de nuevo.",

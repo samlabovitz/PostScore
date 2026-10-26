@@ -58,6 +58,12 @@ export function ReviewReplyDrafter({
 
   async function draft() {
     if (busy) return;
+    // The button stays usable while drafts are left; an empty box gets a
+    // nudge instead of a dead (disabled) button that looks locked.
+    if (review.trim().length < 2) {
+      setMessage(K("errorInvalid"));
+      return;
+    }
     setBusy(true);
     setMessage(null);
     setCopied(false);
@@ -148,14 +154,16 @@ export function ReviewReplyDrafter({
             <button
               type="button"
               onClick={draft}
-              disabled={busy || review.trim().length < 2}
+              disabled={busy}
               data-testid="draft-reply"
               className="inline-flex items-center gap-1.5 rounded-lg border border-brass bg-brass px-3.5 py-2 text-[13px] font-semibold text-ink hover:bg-[#a5772a] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <IconSparkles size={14} aria-hidden />
               {busy ? t(locale, K("drafting")) : t(locale, K("draft"))}
             </button>
-            {!premium && <UpgradeTrigger feature="replies" label={t(locale, K("unlimitedPremium"))} />}
+            {/* Free: no upgrade prompt while drafts are left — only when they're
+                used up (above). Grow keeps its quiet "Unlimited with Premium" link. */}
+            {plan === "grow" && <UpgradeTrigger feature="replies" label={t(locale, K("unlimitedPremium"))} />}
           </div>
           {message && (
             <p role="alert" className="text-[13px] text-red">

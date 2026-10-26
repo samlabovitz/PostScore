@@ -52,14 +52,20 @@ export function LiveListingSection({
   businessId,
   connected,
   fields = null,
+  premium = true,
 }: {
   businessId: string;
   connected: boolean;
+  /** Free and Grow are never sent to the Premium connect page — their
+   * "See what's included" opens Compare plans. */
+  premium?: boolean;
   fields?: GbpListingField[] | null;
 }) {
   const locale = useLocale();
 
-  if (!connected) {
+  // Free/Grow may be connected (for the review-reply check), but this
+  // checklist is Premium: they keep seeing the Premium preview.
+  if (!connected || !premium) {
     // Compact, like the original connect box. Opens the connect page,
     // which stays read-only "coming soon" until GBP_CONNECT_PUBLIC.
     return (
@@ -76,7 +82,7 @@ export function LiveListingSection({
           </div>
           <p className="mt-0.5 text-[12.5px] leading-snug text-ink-soft">{t(locale, "dashboard.overview.profileChecklistDescription")}</p>
           <Link
-            href={`/business/${businessId}/connect-gbp`}
+            href={premium ? `/business/${businessId}/connect-gbp` : `/business/${businessId}/settings#compare-plans`}
             className={`mt-2 ${LINK_PILL_CLASS}`}
           >
             {t(locale, "dashboard.overview.seeWhatsIncluded")}
