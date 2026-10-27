@@ -1,6 +1,7 @@
 // Saved competitor scans (competitor_scans rows) as the Competitors page
 // and its tests use them. Pure — no database or network.
 
+import { withinMaxDistance } from "@/lib/competitorQuality";
 import type { ScoreBreakdown } from "@/lib/scoring";
 import { ownerStanding } from "@/lib/competitorComparison";
 import type { CompetitorScope } from "@/lib/competitorScope";
@@ -118,7 +119,10 @@ export function groupSavedScans(rows: SavedScanRow[]): SavedCompetitorScan[] {
   const byScan = new Map<string, SavedCompetitorScan>();
   for (const row of rows) {
     const scan = byScan.get(row.scan_id) ?? { scanId: row.scan_id, createdAt: row.created_at, entries: [] };
-    scan.entries.push(toEntry(row));
+    const entry = toEntry(row);
+    // No competitor beyond MAX_COMPETITOR_DISTANCE_MILES, saved or new.
+    if (!entry.isSubject && !withinMaxDistance(entry.distanceMeters)) continue;
+    scan.entries.push(entry);
     if (row.created_at > scan.createdAt) scan.createdAt = row.created_at;
     byScan.set(row.scan_id, scan);
   }

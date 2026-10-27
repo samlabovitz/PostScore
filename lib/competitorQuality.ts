@@ -103,7 +103,11 @@ export interface PoolEntry {
  */
 export function selectCompetitors(pool: PoolEntry[], max: number): PoolEntry[] {
   const seen = new Set<string>();
-  const unique = pool.filter((p) => (seen.has(p.candidate.placeId) ? false : (seen.add(p.candidate.placeId), true)));
+  // Never farther than MAX_COMPETITOR_DISTANCE_MILES — a shorter list (a
+  // small sample) rather than a far-away one.
+  const unique = pool
+    .filter((p) => withinMaxDistance(p.distanceMeters))
+    .filter((p) => (seen.has(p.candidate.placeId) ? false : (seen.add(p.candidate.placeId), true)));
   const nearest = (a: PoolEntry, b: PoolEntry) => a.distanceMeters - b.distanceMeters;
   const closestKin = (a: PoolEntry, b: PoolEntry) => (a.kin ?? 99) - (b.kin ?? 99) || nearest(a, b);
   const department = (p: PoolEntry) => isDepartmentListing(p.candidate);
@@ -160,4 +164,69 @@ export function selectionNoteApplies(args: {
   const a = new Set(args.currentPlaceIds);
   const b = new Set(args.previousPlaceIds);
   return a.size !== b.size || Array.from(a).some((id) => !b.has(id));
+}
+
+const METERS_PER_MILE = 1609.34;
+/** No competitor is ever farther than this, for any business type. */
+export const MAX_COMPETITOR_DISTANCE_MILES = 15;
+export const MAX_COMPETITOR_DISTANCE_METERS = MAX_COMPETITOR_DISTANCE_MILES * METERS_PER_MILE;
+/** Ranked competitors mostly farther than this → the distance note. */
+export const FAR_COMPETITOR_MILES = 5;
+
+export function withinMaxDistance(distanceMeters: number | null | undefined): boolean {
+  return distanceMeters === null || distanceMeters === undefined || distanceMeters <= MAX_COMPETITOR_DISTANCE_METERS;
+}
+
+/**
+ * "The nearest established {bakeries} are {min}–{max} miles away…" — when
+ * more than half the ranked competitors are over FAR_COMPETITOR_MILES
+ * away. Real straight-line distances only (no drive times), in whole
+ * miles, from the established ones (all of them if none is).
+ */
+export function distanceNote(competitors: Array<{ distanceMeters: number | null; reviewCount: number | null }>): { min: number; max: number } | null {
+  const located = competitors.filter((c): c is { distanceMeters: number; reviewCount: number | null } => typeof c.distanceMeters === "number");
+  if (located.length === 0) return null;
+  const far = located.filter((c) => c.distanceMeters > FAR_COMPETITOR_MILES * METERS_PER_MILE).length;
+  if (far * 2 <= located.length) return null;
+  const established = located.filter((c) => (c.reviewCount ?? 0) >= ESTABLISHED_MIN_REVIEWS);
+  const miles = (established.length > 0 ? established : located).map((c) => Math.round(c.distanceMeters / METERS_PER_MILE));
+  return { min: Math.min(...miles), max: Math.max(...miles) };
+}
+
+/** A same-type listing skipped for having few or no reviews — shown under
+ * "Also nearby", never ranked or scored. */
+export interface AlsoNearbyListing {
+  placeId: string;
+  name: string;
+  distanceMeters: number;
+  reviewCount: number;
+}
+
+export const ALSO_NEARBY_MAX = 3;
+
+/**
+ * Up to ALSO_NEARBY_MAX listings of the business's own type that weren't
+ * picked for having few or no reviews and are closer than the nearest
+ * ranked competitor — nearest first. Department counters aren't listed
+ * (they're a store's department, not a shop).
+ */
+export function alsoNearby(
+  candidates: Array<{ placeId: string; name: string | null; type: string | null; distanceMeters: number | null; reviewCount: number | null; website?: string | null; types?: string[] | null }>,
+  opts: { ownTypes: string[]; rankedPlaceIds: string[]; nearestRankedMeters: number | null }
+): AlsoNearbyListing[] {
+  const own = new Set(opts.ownTypes);
+  const ranked = new Set(opts.rankedPlaceIds);
+  const seen = new Set<string>();
+  return candidates
+    .filter((c) => {
+      if (ranked.has(c.placeId) || seen.has(c.placeId) || !c.type || !own.has(c.type)) return false;
+      if (!hasFewReviews(c.reviewCount) || typeof c.distanceMeters !== "number" || !withinMaxDistance(c.distanceMeters)) return false;
+      if (opts.nearestRankedMeters !== null && c.distanceMeters >= opts.nearestRankedMeters) return false;
+      if (isDepartmentListing({ name: c.name, primaryType: c.type, types: c.types ?? [c.type], details: { name: c.name, website: c.website ?? null } })) return false;
+      seen.add(c.placeId);
+      return true;
+    })
+    .sort((a, b) => (a.distanceMeters as number) - (b.distanceMeters as number))
+    .slice(0, ALSO_NEARBY_MAX)
+    .map((c) => ({ placeId: c.placeId, name: c.name ?? "", distanceMeters: c.distanceMeters as number, reviewCount: c.reviewCount ?? 0 }));
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
 import { CompetitorSelectionNote } from "@/components/competitors/CompetitorSelectionNote";
+import { DistanceNote } from "@/components/competitors/DistanceNote";
 import { t, useLocale } from "@/lib/i18n";
 
 /**
@@ -30,6 +31,9 @@ export function LocalBenchmarkTile({
         {t(locale, "dashboard.overview.localBenchmarkLabel")}
       </span>
       <LocalBenchmarkValue businessId={businessId} result={result} />
+      {result.status === "ok" && result.benchmark.distanceNote && (
+        <DistanceNote note={result.benchmark.distanceNote} noun={result.benchmark.competitorNoun} compact />
+      )}
       {/* One time, after the competitor-picking update. */}
       {result.status === "ok" && result.benchmark.selectionUpdated && <CompetitorSelectionNote businessId={businessId} compact />}
     </div>

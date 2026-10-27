@@ -9,9 +9,19 @@ import {
   competitorFallbackTypes,
   competitorScanBlocker,
   findAndScoreCompetitors,
+  isGenericType,
   type CompetitorSourceBusiness,
 } from "@/lib/competitors";
-import { COMPETITOR_SELECTION_UPDATED_AT, SELECTION_NOTE_KEY, selectionChangedBetween, selectionNoteApplies, SMALL_SAMPLE_BELOW } from "@/lib/competitorQuality";
+import {
+  alsoNearby,
+  COMPETITOR_SELECTION_UPDATED_AT,
+  distanceNote,
+  SELECTION_NOTE_KEY,
+  selectionChangedBetween,
+  selectionNoteApplies,
+  SMALL_SAMPLE_BELOW,
+  type AlsoNearbyListing,
+} from "@/lib/competitorQuality";
 import { bizProfileById, resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale, t } from "@/lib/i18n";
 import { getPlan } from "@/lib/premium";
@@ -94,6 +104,10 @@ export type GetCompetitorsResult =
       rankHistory: CompetitorRankPoint[];
       /** Show the one-time "We updated how we pick your competitors" note. */
       selectionUpdated?: boolean;
+      /** "Also nearby, with few or no reviews yet" — never ranked or scored. */
+      alsoNearby?: AlsoNearbyListing[];
+      /** "The nearest established … are {min}–{max} miles away" (mostly over 5 mi). */
+      distanceNote?: { min: number; max: number } | null;
       refresh: RefreshAvailability;
       /** Why a scan can't search at all (from saved data, no cost), or
        * null. "category_too_generic": Google lists only a general type
@@ -193,6 +207,10 @@ export async function getCompetitorsWithClient(
     latest,
     rankHistory: scans.map((s) => rankPoint(s, niche?.scope)).reverse(),
     selectionUpdated: await competitorSelectionNote(businessId),
+    alsoNearby: latest
+      ? await alsoNearbyFor(supabase, latest, allRows, [row.primary_type, ...(row.categories ?? []), ...((niche && nicheSearchTypes(niche.scope)?.directTypes) ?? [])])
+      : [],
+    distanceNote: latest ? distanceNote(latest.entries.filter((e) => !e.isSubject)) : null,
     niche,
     // Free: "Refresh" only when the latest scan found no competitors (the
     // one exception — right away, no cooldown).
@@ -360,7 +378,14 @@ export async function runAndSaveCompetitorScanWithClient(
     business_status: r.listing?.businessStatus ?? null,
   }));
 
-  const { error: insertError } = await supabase.from("competitor_scans").insert(rows);
+  // "Also nearby" rides on the owner's own row (supabase/competitor-also-nearby.sql);
+  // before that file is run the scan saves without it.
+  const subjectIndex = rows.findIndex((r) => r.is_subject);
+  const withAlsoNearby = rows.map((r, i) => (i === subjectIndex ? { ...r, also_nearby_json: result.alsoNearby ?? [] } : r));
+  let { error: insertError } = await supabase.from("competitor_scans").insert(withAlsoNearby);
+  if (insertError && (insertError.code === "PGRST204" || insertError.code === "42703")) {
+    ({ error: insertError } = await supabase.from("competitor_scans").insert(rows));
+  }
   if (insertError) {
     return { status: "error", message: insertError.message };
   }
@@ -605,6 +630,36 @@ export interface LocalBenchmark {
   reviewGroup: string;
   /** Show the one-time "We updated how we pick your competitors" note. */
   selectionUpdated?: boolean;
+  /** "The nearest established … are {min}–{max} miles away" (mostly over 5 mi). */
+  distanceNote?: { min: number; max: number } | null;
+}
+
+/**
+ * "Also nearby, with few or no reviews yet" for the scan shown: the list the
+ * scan saved (supabase/competitor-also-nearby.sql), or — for scans saved
+ * before that — worked out from this business's earlier saved scans. Saved
+ * data only; never a Google or PageSpeed call.
+ */
+async function alsoNearbyFor(
+  supabase: SupabaseClient,
+  latest: SavedCompetitorScan,
+  allRows: SavedScanRow[],
+  ownTypes: Array<string | null | undefined>
+): Promise<AlsoNearbyListing[]> {
+  const { data, error } = await supabase.from("competitor_scans").select("also_nearby_json").eq("scan_id", latest.scanId).eq("is_subject", true).maybeSingle();
+  const saved = !error && data ? (data as { also_nearby_json?: unknown }).also_nearby_json : null;
+  if (Array.isArray(saved)) return saved as AlsoNearbyListing[];
+  const ranked = latest.entries.filter((e) => !e.isSubject);
+  return alsoNearby(
+    allRows
+      .filter((r) => !r.is_subject)
+      .map((r) => ({ placeId: r.place_id, name: r.name, type: r.categories?.[0] ?? null, types: r.categories ?? null, distanceMeters: r.distance_meters === null ? null : Number(r.distance_meters), reviewCount: r.review_count, website: r.website_url ?? null })),
+    {
+      ownTypes: ownTypes.filter((t): t is string => !!t && !isGenericType(t)),
+      rankedPlaceIds: ranked.map((e) => e.placeId),
+      nearestRankedMeters: ranked.length > 0 ? Math.min(...ranked.map((e) => e.distanceMeters ?? Infinity)) : null,
+    }
+  );
 }
 
 /**
@@ -747,6 +802,7 @@ async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBe
       reviewGoal: reviewGoal(snapshot.scan, scope, (business as { review_count?: number | null }).review_count ?? snapshot.scan.entries.find((e) => e.isSubject)?.reviewCount ?? null),
       reviewGroup: scopeGroupLabel(snapshot.scan, scope, normalizeLocale(business.language), competitorNoun),
       selectionUpdated: await competitorSelectionNote(businessId),
+      distanceNote: distanceNote(snapshot.scan.entries.filter((e) => !e.isSubject)),
     },
   };
 }

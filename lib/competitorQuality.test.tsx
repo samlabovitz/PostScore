@@ -319,3 +319,89 @@ describe("after the competitor-picking update", () => {
     expect(action).toContain('.eq("promo_key", SELECTION_NOTE_KEY)');
   });
 });
+
+describe("competitor distance", () => {
+  const mi = (n: number) => n * 1609.34;
+
+  test("never farther than 15 miles — a shorter list (small sample) instead", async () => {
+    const { MAX_COMPETITOR_DISTANCE_MILES, withinMaxDistance } = await import("./competitorQuality");
+    expect(MAX_COMPETITOR_DISTANCE_MILES).toBe(15);
+    expect(withinMaxDistance(mi(14.9))).toBe(true);
+    expect(withinMaxDistance(mi(15.2))).toBe(false);
+    const pool = [
+      { candidate: place("near", "bakery", 8, 50) as never, distanceMeters: mi(8) },
+      { candidate: place("far", "bakery", 16, 900) as never, distanceMeters: mi(16) },
+      { candidate: place("farther", "bakery", 22, 900) as never, distanceMeters: mi(22) },
+    ];
+    expect(selectCompetitors(pool, MAX_COMPETITORS).map((p) => (p.candidate as { placeId: string }).placeId)).toEqual(["near"]);
+  });
+
+  test("saved scans never show one beyond 15 miles either", async () => {
+    const { groupSavedScans } = await import("./savedCompetitorScans");
+    const row = (id: string, subject: boolean, miles: number | null) => ({ scan_id: "s", created_at: "2026-10-27T19:00:00Z", is_subject: subject, place_id: id, name: id, address: null, distance_meters: miles === null ? null : mi(miles), rating: 4.5, review_count: 50, has_website: true, total: 80, grade: "B", scoring_version: "1.11.0", breakdown_json: null, price_level: null, photo_count: 3 });
+    const scan = groupSavedScans([row("me", true, null), row("ok", false, 12), row("too-far", false, 18)])[0];
+    expect(scan.entries.map((e) => e.placeId).sort()).toEqual(["me", "ok"]);
+  });
+
+  test("the distance note: only when most ranked competitors are over 5 miles; real whole-mile range from the established ones", async () => {
+    const { distanceNote } = await import("./competitorQuality");
+    // Kee's: all five 10.7–12.5 mi.
+    expect(distanceNote([10.7, 12.1, 11.0, 12.5, 11.9].map((m) => ({ distanceMeters: mi(m), reviewCount: 300 })))).toEqual({ min: 11, max: 13 });
+    // Half or fewer far → no note.
+    expect(distanceNote([1, 2, 6, 7].map((m) => ({ distanceMeters: mi(m), reviewCount: 30 })))).toBeNull();
+    expect(distanceNote([1, 6, 7].map((m) => ({ distanceMeters: mi(m), reviewCount: 30 })))).toEqual({ min: 1, max: 7 });
+    // The range ignores few-review ones when established ones exist.
+    expect(distanceNote([{ distanceMeters: mi(3), reviewCount: 0 }, { distanceMeters: mi(9), reviewCount: 80 }, { distanceMeters: mi(10), reviewCount: 80 }])).toEqual({ min: 9, max: 10 });
+    expect(distanceNote([])).toBeNull();
+  });
+
+  test("the note's words (EN + ES), on the Competitors page and under the rank card", async () => {
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { LocaleProvider } = await import("@/lib/i18n");
+    const { DistanceNote } = await import("@/components/competitors/DistanceNote");
+    const text = (locale: "en" | "es", note: { min: number; max: number }) => renderToStaticMarkup(<LocaleProvider locale={locale}><DistanceNote note={note} noun={locale === "en" ? "bakeries" : "panaderías"} /></LocaleProvider>).replace(/<[^>]+>/g, "");
+    expect(text("en", { min: 11, max: 13 })).toBe("The nearest established bakeries are 11–13 miles away. In smaller towns, customers often compare businesses this far apart.");
+    expect(text("en", { min: 12, max: 12 })).toContain("are 12 miles away");
+    expect(text("es", { min: 11, max: 13 })).toBe("La competencia establecida más cercana (panaderías) está a 11–13 millas. En pueblos pequeños, los clientes suelen comparar negocios así de lejos.");
+    const { LocalBenchmarkTile } = await import("@/components/dashboard/LocalBenchmarkTile");
+    const benchmark = { competitorNoun: "bakeries", scanId: "s", scanAt: "2026-10-27T19:00:00Z", subjectTotal: 88, subjectGrade: "B", rank: 6, peerCount: 6, othersCount: 5, aheadCount: 0, percentileAhead: 0, smallSample: false, competitorReviewAverage: 800, reviewGoal: null, reviewGroup: "bakeries", distanceNote: { min: 11, max: 13 } };
+    expect(renderToStaticMarkup(<LocaleProvider locale="en"><LocalBenchmarkTile businessId="b1" result={{ status: "ok", benchmark } as never} /></LocaleProvider>)).toContain('data-testid="distance-note"');
+    expect(fs.readFileSync("app/business/[id]/competitors/CompetitorsView.tsx", "utf8")).toContain("{data.distanceNote && <DistanceNote note={data.distanceNote} noun={data.competitorNoun} />}");
+  });
+
+  test("“Also nearby”: up to 3 closer same-type listings skipped for few or no reviews — unranked, unscored, no counters", async () => {
+    const { alsoNearby } = await import("./competitorQuality");
+    const listing = (id: string, type: string, miles: number, reviews: number | null, name = id) => ({ placeId: id, name, type, types: [type], distanceMeters: mi(miles), reviewCount: reviews });
+    const out = alsoNearby(
+      [
+        listing("food-lion", "bakery", 2.4, 0, "Food Lion Bakery"),
+        listing("malaysias", "bakery", 2.8, null, "Malaysia's bakery"),
+        listing("beulah", "bakery", 3.3, 0, "Beulah Bakery"),
+        listing("kathys", "bakery", 5.0, 2, "Kathy's Crusty Creations"),
+        listing("fourth", "bakery", 6.0, 1),
+        listing("coffee", "coffee_shop", 2.1, 0),
+        listing("busy-bakery", "bakery", 4.0, 200),
+        listing("ranked", "bakery", 10.7, 0),
+        listing("past-nearest", "bakery", 11.0, 0),
+      ],
+      { ownTypes: ["bakery"], rankedPlaceIds: ["ranked"], nearestRankedMeters: mi(10.7) }
+    );
+    expect(out.map((o) => o.name)).toEqual(["Malaysia's bakery", "Beulah Bakery", "Kathy's Crusty Creations"]);
+    expect(out[0]).toEqual({ placeId: "malaysias", name: "Malaysia's bakery", distanceMeters: mi(2.8), reviewCount: 0 });
+  });
+
+  test("a new scan keeps its also-nearby list (saved with the scan, no extra call); the page shows it apart from the ranked list", async () => {
+    respond = (_call, i) => (i < 3 ? KEES_NEARBY : [place("dover-bakery", "bakery", 11, 210), place("cupcake-co", "cake_shop", 8, 95), place("cookie-shop", "dessert_shop", 12, 60), place("la-baguette", "bakery", 11, 757), place("bavarian", "bakery", 12.5, 884)]);
+    const result = await findAndScoreCompetitors(KEES, "en");
+    expect(nearbyCalls.length).toBeLessThanOrEqual(MAX_CALLS_PER_SCAN);
+    const rankedIds = result.ranked.map((r) => r.placeId);
+    expect((result.alsoNearby ?? []).map((a) => a.placeId)).toEqual(["malaysias", "beulah", "kathys"]);
+    for (const a of result.alsoNearby ?? []) expect(rankedIds).not.toContain(a.placeId);
+    const save = fs.readFileSync("app/actions/competitors.ts", "utf8");
+    expect(save).toContain("also_nearby_json: result.alsoNearby ?? []");
+    expect(fs.readFileSync("supabase/competitor-also-nearby.sql", "utf8")).toContain("add column if not exists also_nearby_json jsonb");
+    const view = fs.readFileSync("app/business/[id]/competitors/CompetitorsView.tsx", "utf8");
+    expect(view).toContain("{(data.alsoNearby ?? []).length > 0 && <AlsoNearby listings={data.alsoNearby!} />}");
+    expect(view.indexOf("<RankedList scan={scan} view={view} />")).toBeLessThan(view.indexOf("<AlsoNearby listings"));
+  });
+});

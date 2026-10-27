@@ -5,7 +5,7 @@
 // scores, no invented "rank" metric other than PostScore itself.
 
 import { MAX_SEARCH_RADIUS_MILES, SMALL_TOWN_RADIUS_MILES } from "@/lib/competitorScanPolicy";
-import { establishedCount, MIN_ESTABLISHED_COMPETITORS, selectCompetitors, type PoolEntry } from "@/lib/competitorQuality";
+import { alsoNearby, establishedCount, MIN_ESTABLISHED_COMPETITORS, selectCompetitors, type AlsoNearbyListing, type PoolEntry } from "@/lib/competitorQuality";
 import { MAX_CALLS_PER_SCAN } from "@/lib/placesSearchBudget";
 import { GOOGLE_TABLE_A_TYPES } from "@/lib/google/placeTypesTableA";
 import {
@@ -193,6 +193,9 @@ export interface CompetitorScanResult {
   /** 1-indexed position of the subject within `ranked`, by PostScore. */
   subjectRank: number | null;
   unscored: UnscoredCompetitor[];
+  /** "Also nearby, with few or no reviews yet": closer listings of the
+   * same kind that weren't picked — never ranked or scored. */
+  alsoNearby?: AlsoNearbyListing[];
 }
 
 function placeDetailsToScoringRow(place: PlaceDetails): BusinessScoringRow {
@@ -243,7 +246,7 @@ const GENERIC_TYPES = new Set([
   "health",
 ]);
 
-function isGenericType(type: string): boolean {
+export function isGenericType(type: string): boolean {
   return GENERIC_TYPES.has(type);
 }
 
@@ -797,6 +800,24 @@ export async function findAndScoreCompetitors(
   // Which of everything found become the competitors: the 10 most
   // relevant, established first (lib/competitorQuality.ts).
   comparable = selectCompetitors(pool, MAX_COMPETITORS);
+  const sameKindSkipped = alsoNearby(
+    pool
+      .filter((p) => !p.broader && !p.area)
+      .map((p) => ({
+        placeId: p.candidate.placeId,
+        name: p.candidate.details?.name ?? p.candidate.name,
+        type: p.candidate.primaryType,
+        types: p.candidate.types,
+        distanceMeters: p.distanceMeters,
+        reviewCount: p.candidate.details?.userRatingCount ?? null,
+        website: p.candidate.details?.website ?? null,
+      })),
+    {
+      ownTypes: Array.from(new Set([...(includedTypes ?? []), ...(referenceType ? [referenceType] : [])])),
+      rankedPlaceIds: comparable.map((c) => c.candidate.placeId),
+      nearestRankedMeters: comparable.length > 0 ? Math.min(...comparable.map((c) => c.distanceMeters)) : null,
+    }
+  );
 
   const scoredCompetitors: RankedCompetitor[] = [];
   const unscored: UnscoredCompetitor[] = [];
@@ -915,5 +936,6 @@ export async function findAndScoreCompetitors(
     subjectRank,
     unscored,
     placesCalls,
+    alsoNearby: sameKindSkipped,
   };
 }

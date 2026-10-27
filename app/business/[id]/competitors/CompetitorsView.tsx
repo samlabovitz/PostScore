@@ -42,8 +42,9 @@ import { placeTypeList } from "@/lib/placeTypeLabels";
 import { scopeGroupLabel, applyScope, type CompetitorScope } from "@/lib/competitorScope";
 import { CompetitorGroups } from "./CompetitorGroups";
 import { reviewGoalText } from "@/lib/reviewGoal";
-import { hasFewReviews } from "@/lib/competitorQuality";
+import { hasFewReviews, type AlsoNearbyListing } from "@/lib/competitorQuality";
 import { CompetitorSelectionNote } from "@/components/competitors/CompetitorSelectionNote";
+import { DistanceNote } from "@/components/competitors/DistanceNote";
 
 type OkResult = Extract<GetCompetitorsResult, { status: "ok" }>;
 
@@ -219,7 +220,9 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
               title={t(locale, "dashboard.competitors.listHeading", { category: t(locale, VIEW_LABEL[view]) })}
               className="mb-3"
             />
+            {data.distanceNote && <DistanceNote note={data.distanceNote} noun={data.competitorNoun} />}
             <RankedList scan={scan} view={view} />
+            {(data.alsoNearby ?? []).length > 0 && <AlsoNearby listings={data.alsoNearby!} />}
             <GoogleMapsAttribution />
           </div>
 
@@ -800,6 +803,28 @@ function CheckDetail({ entry }: { entry: SavedCompetitorEntry }) {
         );
       })}
     </div>
+  );
+}
+
+/** Closer listings of the same kind skipped for few or no reviews — name,
+ * distance, review count. Not ranked, not scored. */
+function AlsoNearby({ listings }: { listings: AlsoNearbyListing[] }) {
+  const locale = useLocale();
+  return (
+    <section data-testid="also-nearby" className="mt-5">
+      <h3 className="text-[13px] font-semibold text-ink">{t(locale, "dashboard.competitors.alsoNearbyHeading")}</h3>
+      <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.competitors.alsoNearbyNote")}</p>
+      <ul className="mt-2 flex flex-col divide-y divide-paper-line rounded-xl border border-paper-deep bg-white">
+        {listings.map((l) => (
+          <li key={l.placeId} className="flex items-baseline justify-between gap-3 px-4 py-2.5 text-[13px]">
+            <span className="min-w-0 truncate text-ink">{l.name}</span>
+            <span className="shrink-0 text-[12px] text-ink-mute">
+              {miles(l.distanceMeters, locale)} · {tPlural(locale, "dashboard.competitors.reviewCount", l.reviewCount, { count: formatCount(l.reviewCount, locale) })}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

@@ -1872,6 +1872,9 @@ export type MessageKey =
   | "dashboard.overview.aheadOfNearby"
   | "dashboard.overview.smallSampleSuffix"
   | "dashboard.competitors.fewReviewsTag"
+  | "dashboard.competitors.distanceNote"
+  | "dashboard.competitors.alsoNearbyHeading"
+  | "dashboard.competitors.alsoNearbyNote"
   | "dashboard.competitors.selectionUpdatedNote"
   | "dashboard.competitors.selectionUpdatedOk"
   | "dashboard.overview.profileChecklistTitle"
@@ -6323,6 +6326,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.aheadOfNearby": "Ahead of {percentileAhead}% of {othersCount} nearby {competitorNoun}",
     "dashboard.overview.smallSampleSuffix": " — small sample",
     "dashboard.competitors.fewReviewsTag": "Few or no reviews yet",
+    "dashboard.competitors.distanceNote": "The nearest established {noun} are {range} miles away. In smaller towns, customers often compare businesses this far apart.",
+    "dashboard.competitors.alsoNearbyHeading": "Also nearby, with few or no reviews yet",
+    "dashboard.competitors.alsoNearbyNote": "Not ranked or scored — they don't have enough reviews yet to compare fairly.",
     "dashboard.competitors.selectionUpdatedNote": "We updated how we pick your competitors — you're now compared with more established businesses nearby, so your rank may have changed.",
     "dashboard.competitors.selectionUpdatedOk": "Got it",
 
@@ -10674,6 +10680,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.aheadOfNearby": "Por delante del {percentileAhead}% de {othersCount} {competitorNoun} de la zona",
     "dashboard.overview.smallSampleSuffix": " — muestra pequeña",
     "dashboard.competitors.fewReviewsTag": "Pocas o ninguna reseña aún",
+    "dashboard.competitors.distanceNote": "La competencia establecida más cercana ({noun}) está a {range} millas. En pueblos pequeños, los clientes suelen comparar negocios así de lejos.",
+    "dashboard.competitors.alsoNearbyHeading": "También cerca, con pocas o ninguna reseña aún",
+    "dashboard.competitors.alsoNearbyNote": "Sin clasificar ni calificar: aún no tienen suficientes reseñas para compararlos con justicia.",
     "dashboard.competitors.selectionUpdatedNote": "Actualizamos cómo elegimos a su competencia: ahora se le compara con negocios más establecidos de la zona, así que su puesto puede haber cambiado.",
     "dashboard.competitors.selectionUpdatedOk": "Entendido",
     "dashboard.overview.profileChecklistTitle": "Conecte su Perfil de Negocio de Google",
