@@ -18,7 +18,6 @@ import {
   scoreBasisPoints,
   type ScoreWithSuggestions,
 } from "@/lib/scoring";
-import { AssistantLauncher } from "@/components/assistant/AssistantLauncher";
 import { ScoreBand } from "@/components/overview/ScoreBand";
 import { ListingPhoto } from "@/components/overview/ListingPhoto";
 import { ListingChips } from "@/components/overview/ListingChips";
@@ -32,7 +31,6 @@ import { TopRecommendations } from "@/components/overview/TopRecommendations";
 import { StudioComingSoon } from "@/components/overview/StudioComingSoon";
 import { reviewCountChange, type Recommendation } from "@/lib/overviewTiles";
 import type { LinkOptions } from "@/lib/postaiLinks";
-import type { AssistantBusinessContext } from "@/lib/assistant";
 import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
 import { LiveListingSection } from "@/components/gbp/LiveListingSection";
 import { InfoTip } from "@/components/reports/ScoreHistoryChart";
@@ -49,27 +47,13 @@ import type { Plan } from "@/lib/plan";
 
 
 
-export type AssistantEmbedData =
-  | {
-      status: "ok";
-      context: AssistantBusinessContext;
-      starterPrompts: string[];
-      conversationCount: number;
-      /** Grow: PostAI questions left this month. */
-      monthly?: { left: number; total: number; resetsAt: string } | null;
-    }
-  | { status: "unavailable"; message: string }
-  /** Free: only the showroom's starter prompts — no business context
-   * (it carries fix details) ever reaches a Free page. */
-  | { status: "showroom"; starterPrompts: string[] };
-
 export function BusinessScoreView({
   businessId,
   business,
   result,
   history,
   recentSnapshots,
-  assistant,
+  freePostaiQuestions = [],
   benchmark,
   gbpConnected,
   profileTools,
@@ -89,7 +73,8 @@ export function BusinessScoreView({
   result: ScoreWithSuggestions;
   history: ScoreHistoryRow[];
   recentSnapshots: ScoreSnapshot[];
-  assistant: AssistantEmbedData;
+  /** Free: the PostAI card's three questions (the panel's own, plan-aware). */
+  freePostaiQuestions?: string[];
   benchmark: GetLocalBenchmarkResult;
   gbpConnected: boolean;
   /** BizProfile.referralOk/couponsOk/pricingOk (config/bizProfiles.ts) —
@@ -249,7 +234,7 @@ export function BusinessScoreView({
           >
             {replyDrafts && <ReviewReplyDrafter businessId={businessId} plan="free" placeId={business.place_id ?? null} initial={replyDrafts} embedded />}
           </FreeReviews>
-          {freePostai && <FreePostAI businessId={businessId} starterPrompts={assistant.status === "unavailable" ? [] : assistant.starterPrompts} initial={freePostai} />}
+          {freePostai && <FreePostAI businessId={businessId} starterPrompts={freePostaiQuestions} initial={freePostai} />}
           {gbpReplyCheck && <GbpReplyCheckConnect businessId={businessId} state={gbpReplyCheck} />}
         </FreeSection>
         {/* B. Earn more, last: ONE card (the plans, then the More
@@ -296,20 +281,18 @@ export function BusinessScoreView({
         <RescanMessages state={rescan.state} />
       </div>
 
-      {assistant.status === "ok" ? (
-        <AssistantLauncher
-          businessId={businessId}
-          businessName={business.name}
-          context={assistant.context}
-          starterPrompts={assistant.starterPrompts}
-          conversationCount={assistant.conversationCount}
-          monthly={assistant.monthly ?? null}
-        />
-      ) : (
-        <Card className="p-5 text-sm text-ink-soft">
-          {t(locale, "dashboard.overview.assistantUnavailablePrefix", { message: assistant.status === "unavailable" ? assistant.message : "" })}
-        </Card>
-      )}
+      {/* Same structure as Free: the breakdown right after the score,
+          then "More customers". PostAI is the "Ask PostAI" button on every
+          page (components/assistant/PostAIDock.tsx). */}
+      <ScoreBreakdownPanel
+        businessId={businessId}
+        categories={breakdown.categories}
+        hasWebsite={hasWebsite}
+        scoreBasis={scoreBasis}
+        linkOptions={linkOptions}
+        websiteFixCount={websiteFixCount}
+        lastScanAt={lastScanAt}
+      />
 
       <GrowMoreCustomers
         businessId={businessId}
@@ -341,16 +324,6 @@ export function BusinessScoreView({
         </div>
         <GoogleMapsAttribution />
       </Card>
-
-      <ScoreBreakdownPanel
-        businessId={businessId}
-        categories={breakdown.categories}
-        hasWebsite={hasWebsite}
-        scoreBasis={scoreBasis}
-        linkOptions={linkOptions}
-        websiteFixCount={websiteFixCount}
-        lastScanAt={lastScanAt}
-      />
 
       {/* Side by side at equal height (each card centers its own content
           if shorter); stacked on mobile. PostStudio gets its own row. */}

@@ -74,10 +74,11 @@ describe("the Free Overview (the audit)", () => {
     const shell = readFileSync("components/layout/DashboardShell.tsx", "utf8");
     expect(shell.indexOf("{children}")).toBeLessThan(shell.indexOf("<PromoCards />"));
   });
-  test("Grow and above keep the Overview exactly as before", () => {
+  test("Grow and above keep every Overview piece (PostAI is the 'Ask PostAI' button now)", () => {
     const view = VIEW();
     const grow = view.slice(view.indexOf("  return (\n    <div className=\"flex flex-col gap-5 nav:gap-6\">"));
-    for (const live of ["<AssistantLauncher", "<GrowMoreCustomers", "<TopRecommendations", "<SinceLastScanCard", "<StudioComingSoon", "<LiveListingSection", "<ScanHistory"]) expect(grow, live).toContain(live);
+    for (const live of ["<ScoreBreakdownPanel", "<GrowMoreCustomers", "<TopRecommendations", "<SinceLastScanCard", "<StudioComingSoon", "<LiveListingSection", "<ScanHistory"]) expect(grow, live).toContain(live);
+    expect(grow).not.toContain("<AssistantLauncher");
     expect(grow).not.toContain("locked");
   });
   test("the page loads nothing that calls Google, PageSpeed or the AI", () => {

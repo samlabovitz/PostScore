@@ -13,6 +13,7 @@ import { freeWaitingPoints } from "@/lib/freeUpsell";
 import { wholePointRange } from "@/lib/pointRange";
 import type { Plan } from "@/lib/plan";
 import { REPLY_CHECK_MIN_REVIEWS, TEMPLATED_WARN_SHARE, type GbpReplyCounts } from "@/lib/gbpReviewReplies";
+import { ownerProvidedLines, type OwnerProvided } from "@/lib/businessOffer";
 
 /** A point gain the app itself shows (Overview "Biggest boost", a Growth
  * plan card's points chip, Free's "N points are waiting"). PostAI may state
@@ -66,6 +67,9 @@ export interface PostaiFacts {
   /** Review-reply counts from the owner's connected Google profile (null =
    * not connected or not checked yet). Not scored yet. */
   replyCounts: GbpReplyCounts | null;
+  /** The owner's own entries ("Added by you"), worded for the business
+   * type (lib/businessOffer.ts ownerProvidedLines). Empty = not known. */
+  ownerProvided?: string[];
 }
 
 const LOW_RATING_BELOW = 4.3;
@@ -89,6 +93,8 @@ export function buildPostaiFacts(
     /** Grow and up: the website banner's gain ("up to about +N", or a starter site's "about +29–31"). */
     websiteBanner?: { kind: "improve"; points: number } | { kind: "get_website"; low: number; high: number | null } | null;
     replyCounts?: GbpReplyCounts | null;
+    /** What they offer, typical spend, what makes them different. */
+    owner?: OwnerProvided | null;
   }
 ): PostaiFacts {
   const plan = b.plan ?? "free";
@@ -136,6 +142,7 @@ export function buildPostaiFacts(
       explanation: c.explanation,
     })),
     replyCounts: b.replyCounts ?? null,
+    ownerProvided: b.owner ? ownerProvidedLines(b.owner) : [],
   };
 }
 
@@ -195,6 +202,12 @@ export function factsBlockText(f: PostaiFacts): string {
     "- Every check (status, points, the app's own explanation with its real threshold):",
     ...f.checks.map((c) => `  - ${c.label}: ${c.status}, ${pts(c.earned)}/${pts(c.max)} pts — ${c.explanation}`),
     replyCountsLine(f.replyCounts),
+    ...((f.ownerProvided ?? []).length > 0
+      ? [
+          "- OWNER-PROVIDED (the owner's own words in \"What PostAI knows about your business\" → \"Added by you\"; not verified by PostScore — use them to fit ideas to the business, say they're what the owner told you, never present them as checked facts, never invent more):",
+          ...(f.ownerProvided ?? []).map((line) => `  - ${line}`),
+        ]
+      : []),
     ...(f.plan === "free"
       ? [
           "- FREE PLAN: never suggest printing, screenshotting or saving a preview, or any other way around a locked feature; never say the owner can re-run, refresh or update their competitors (on Free the saved list isn't refreshed).",

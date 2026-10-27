@@ -4,6 +4,7 @@ import { requestCache } from "@/lib/requestCache";
 import { ensureFirstCompetitorScanWithClient } from "@/app/actions/competitors";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { DIFFERENTIATOR_MAX } from "@/lib/businessOffer";
 import type { PlaceDetails } from "@/lib/google/places";
 import { normalizeLocale, SUPPORTED_LOCALES, t, type Locale } from "@/lib/i18n";
 import { getPlan, unlimitedBusinessesAllowed } from "@/lib/premium";
@@ -490,6 +491,39 @@ export async function updateBusinessProfile(
     avgJobValueLow: data.avg_job_value_low,
     avgJobValueHigh: data.avg_job_value_high,
   };
+}
+
+export type UpdateBusinessDifferentiatorResult =
+  | { status: "ok"; differentiator: string | null }
+  | { status: "unauthenticated" }
+  | { status: "not_found" }
+  /** supabase/business-differentiator.sql hasn't been run yet. */
+  | { status: "not_set_up" }
+  | { status: "error"; message: string };
+
+/**
+ * Saves "What makes you different" — one short owner-written line (empty
+ * clears it). Same owner-scoped RLS as updateBusinessProfile.
+ */
+export async function updateBusinessDifferentiator(businessId: string, text: string): Promise<UpdateBusinessDifferentiatorResult> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { status: "unauthenticated" };
+
+  const trimmed = text.replace(/\s+/g, " ").trim();
+  if (trimmed.length > DIFFERENTIATOR_MAX) return { status: "error", message: `Keep it under ${DIFFERENTIATOR_MAX} characters.` };
+
+  const { data, error } = await supabase
+    .from("businesses")
+    .update({ differentiator: trimmed || null })
+    .eq("id", businessId)
+    .select("differentiator")
+    .single();
+  if (error && (error.code === "PGRST204" || error.code === "42703")) return { status: "not_set_up" };
+  if (error || !data) return { status: "not_found" };
+  return { status: "ok", differentiator: (data as { differentiator: string | null }).differentiator };
 }
 
 export type UpdateBusinessTypeOverrideResult =

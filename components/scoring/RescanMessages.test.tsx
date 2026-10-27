@@ -103,11 +103,12 @@ describe("Score breakdown: “As of your last scan”, and on Free a collapsed c
     expect(text(panel(true, "es"))).toContain(`Ver las ${count} revisiones`);
   });
 
-  test("“As of your last scan, {date}” at the top, on every plan; paid keeps its own button", () => {
+  test("“As of your last scan, {date}” at the top; every plan gets the same collapsed card and gold “See all N checks” button", () => {
     for (const audit of [true, false]) expect(text(panel(audit))).toContain("As of your last scan, Oct 21, 2026");
     const paid = panel(false);
-    expect(paid).not.toContain('data-testid="breakdown-toggle"');
-    expect(paid).not.toContain('data-testid="breakdown-strip"');
+    expect(text(paid)).toContain(`See all ${count} checks`);
+    expect(paid).toMatch(/<button[^>]*aria-expanded="false"[^>]*data-testid="breakdown-toggle"[^>]*class="[^"]*bg-brass/);
+    expect(paid).toMatch(/<button[^>]*aria-expanded="false"[^>]*data-testid="breakdown-strip"/);
   });
 
   test("Growth and Google Profile steps that change something on Google remind the owner to re-scan", () => {

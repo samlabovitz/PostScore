@@ -214,30 +214,18 @@ export function ScoreBreakdownPanel({
             </p>
           )}
         </div>
-        {audit ? (
-          // Free: an obvious gold button with the real number of checks.
-          <button
-            type="button"
-            onClick={() => setOpen((o) => !o)}
-            aria-expanded={open}
-            aria-controls={`${BREAKDOWN_ANCHOR}-checks`}
-            data-testid="breakdown-toggle"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-brass bg-brass px-3.5 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-brass)_85%,white)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-          >
-            {open ? t(locale, "dashboard.overview.breakdown.hideAll") : t(locale, "dashboard.overview.breakdown.seeAll", { count: checkCount })}
-            <IconChevronDown size={15} aria-hidden className={cn("transition-transform duration-300 motion-reduce:transition-none", open && "rotate-180")} />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setOpen((o) => !o)}
-            aria-expanded={open}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-paper-deep bg-white px-3 py-1.5 text-[13px] font-semibold text-ink transition-colors hover:border-ink-soft"
-          >
-            {open ? t(locale, "dashboard.overview.hideChecks") : t(locale, "dashboard.overview.showChecks")}
-            <IconChevronDown size={15} className={cn("transition-transform duration-300 motion-reduce:transition-none", open && "rotate-180")} />
-          </button>
-        )}
+        {/* Every plan: the gold button with the real number of checks. */}
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-controls={`${BREAKDOWN_ANCHOR}-checks`}
+          data-testid="breakdown-toggle"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-brass bg-brass px-3.5 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-brass)_85%,white)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        >
+          {open ? t(locale, "dashboard.overview.breakdown.hideAll") : t(locale, "dashboard.overview.breakdown.seeAll", { count: checkCount })}
+          <IconChevronDown size={15} aria-hidden className={cn("transition-transform duration-300 motion-reduce:transition-none", open && "rotate-180")} />
+        </button>
       </div>
 
       <div id={`${BREAKDOWN_ANCHOR}-checks`} className="mt-4 grid grid-cols-1 gap-x-6 gap-y-5 nav:grid-cols-3">
@@ -263,27 +251,21 @@ export function ScoreBreakdownPanel({
         ))}
       </div>
 
-      {audit ? (
-        // Free: the whole bottom strip opens and closes the checks too.
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          aria-controls={`${BREAKDOWN_ANCHOR}-checks`}
-          data-testid="breakdown-strip"
-          className="-mx-4 -mb-4 mt-4 flex w-[calc(100%+2rem)] flex-wrap items-center gap-x-4 gap-y-1.5 rounded-b-2xl border-t border-paper-line px-4 pb-3.5 pt-3 text-left text-[11.5px] text-ink-soft transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-brass)_7%,white)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brass sm:-mx-5 sm:-mb-5 sm:w-[calc(100%+2.5rem)] sm:px-5"
-        >
-          <Legend locale={locale} />
-          <span className="ml-auto inline-flex items-center gap-1 text-[12px] font-semibold text-ink">
-            {open ? t(locale, "dashboard.overview.breakdown.hideAll") : t(locale, "dashboard.overview.breakdown.seeAll", { count: checkCount })}
-            <IconChevronDown size={14} aria-hidden className={cn("text-brass transition-transform duration-300 motion-reduce:transition-none", open && "rotate-180")} />
-          </span>
-        </button>
-      ) : (
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-paper-line pt-3 text-[11.5px] text-ink-soft">
-          <Legend locale={locale} />
-        </div>
-      )}
+      {/* The whole bottom strip opens and closes the checks too. */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-controls={`${BREAKDOWN_ANCHOR}-checks`}
+        data-testid="breakdown-strip"
+        className="-mx-4 -mb-4 mt-4 flex w-[calc(100%+2rem)] flex-wrap items-center gap-x-4 gap-y-1.5 rounded-b-2xl border-t border-paper-line px-4 pb-3.5 pt-3 text-left text-[11.5px] text-ink-soft transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-brass)_7%,white)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brass sm:-mx-5 sm:-mb-5 sm:w-[calc(100%+2.5rem)] sm:px-5"
+      >
+        <Legend locale={locale} />
+        <span className="ml-auto inline-flex items-center gap-1 text-[12px] font-semibold text-ink">
+          {open ? t(locale, "dashboard.overview.breakdown.hideAll") : t(locale, "dashboard.overview.breakdown.seeAll", { count: checkCount })}
+          <IconChevronDown size={14} aria-hidden className={cn("text-brass transition-transform duration-300 motion-reduce:transition-none", open && "rotate-180")} />
+        </span>
+      </button>
     </section>
   );
 }

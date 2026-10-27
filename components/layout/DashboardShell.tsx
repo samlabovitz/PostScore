@@ -135,18 +135,6 @@ export function DashboardShell({
           {/* Once per browser session per business: "Since your last visit". */}
           {business?.id && <SinceLastVisit businessId={business.id} />}
 
-          {/* Dev-only proof-of-wiring — never rendered in production. The
-            data-locale attribute above on the root div is the real,
-            always-present readout (inspectable in tests/devtools); this
-            badge is just a visible convenience while developing. */}
-          {process.env.NODE_ENV !== "production" && (
-            <div
-              aria-hidden="true"
-              className="fixed bottom-3 right-3 z-50 rounded-md bg-ink px-2 py-1 font-mono text-[11px] text-white/80 shadow-lg"
-            >
-              locale: {locale}
-            </div>
-          )}
         </div>
       </UpgradeProvider>
     </LocaleProvider>

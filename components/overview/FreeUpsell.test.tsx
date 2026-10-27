@@ -232,6 +232,9 @@ describe("blurred fix text never contains the real advice on Free", () => {
     const page = readFileSync("app/business/[id]/page.tsx", "utf8");
     expect(page).toContain("result={free ? withoutAdvice(scored.result) : scored.result}");
     expect(page).toContain("recommendations={free ? null : recommendations}");
-    expect(page).toContain('assistant={free && assistant.status === "ok" ? { status: "showroom", starterPrompts: assistant.starterPrompts } : assistant}');
+    // PostAI's business context (it carries fix details) is never loaded
+    // by the Overview page — only the Free card's plan-aware questions.
+    expect(page).toContain("freePostaiQuestions={freePostaiQuestions}");
+    expect(page).not.toContain("getAssistantPageData");
   });
 });

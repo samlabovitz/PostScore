@@ -16,12 +16,12 @@ const tags = (src: string) => Array.from(src.matchAll(/<([A-Z][A-Za-z]+)/g), (m)
 const without = (list: string[], drop: string[]) => list.filter((tag) => !drop.includes(tag));
 
 describe("paid plans keep their pre-batch layout, page by page", () => {
-  test("Overview: header, score, PostAI, More customers, rank, breakdown, next steps, since last scan, PostStudio, live listing, history", () => {
+  test("Overview (Free's structure): header, score, breakdown, More customers, then rank, next steps, since last scan, PostStudio, live listing, history — no PostAI card", () => {
     const view = read("app/business/[id]/BusinessScoreView.tsx");
     const paid = view.slice(view.indexOf('  return (\n    <div className="flex flex-col gap-5 nav:gap-6">'));
     expect(without(tags(paid), ["Card", "SectionHeading", "Link", "RankUnlockLine"]).filter((tag) =>
       ["HackedSiteBanner", "ScoreBand", "RescanMessages", "AssistantLauncher", "GrowMoreCustomers", "LocalBenchmarkTile", "ScoreBreakdownPanel", "TopRecommendations", "SinceLastScanCard", "StudioComingSoon", "LiveListingSection", "ScanHistory"].includes(tag)
-    )).toEqual(["HackedSiteBanner", "ScoreBand", "RescanMessages", "AssistantLauncher", "GrowMoreCustomers", "LocalBenchmarkTile", "ScoreBreakdownPanel", "TopRecommendations", "SinceLastScanCard", "StudioComingSoon", "LiveListingSection", "ScanHistory"]);
+    )).toEqual(["HackedSiteBanner", "ScoreBand", "RescanMessages", "ScoreBreakdownPanel", "GrowMoreCustomers", "LocalBenchmarkTile", "TopRecommendations", "SinceLastScanCard", "StudioComingSoon", "LiveListingSection", "ScanHistory"]);
     // The header is the same block as before, just shared with Free.
     expect(paid.indexOf("{header}")).toBeLessThan(paid.indexOf("<ScoreBand"));
     expect(paid).not.toMatch(/FreePostAI|FreeReviews|UnlockMore|locked\b/);

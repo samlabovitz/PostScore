@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   IconArrowLeft,
   IconHistory,
@@ -9,13 +9,9 @@ import {
   IconMessages,
   IconPlus,
   IconSend2,
-  IconSparkles,
 } from "@tabler/icons-react";
-import { Card } from "@/components/ui/Card";
-import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
-import { GradeBadge } from "@/components/ui/GradeBadge";
-import { SectionHeading } from "@/components/ui/SectionHeading";
+import { ChatInput, ChatScroll, useChatScroll } from "@/components/assistant/ChatPanelParts";
 import { cn } from "@/lib/utils";
 import {
   getConversationHistory,
@@ -168,8 +164,8 @@ type Pane = { kind: "chat" } | { kind: "history" };
 
 /**
  * "PostAI", the owner-facing assistant, opened from a compact entry
- * point on the Overview page (see AssistantLauncher) inside a modal
- * overlay (see AssistantOverlay). Opening it resumes whichever
+ * point — the "Ask PostAI" button on every page — inside its panel (see
+ * components/assistant/PostAIDock.tsx). Opening it resumes whichever
  * conversation the owner was last actually active in (see
  * getCurrentConversation) rather than always starting blank — the owner
  * can keep typing into it exactly like they never left. Every message
@@ -220,20 +216,19 @@ export function AssistantView({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resuming, setResuming] = useState(true);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   const [pane, setPane] = useState<Pane>({ kind: "chat" });
   const [history, setHistory] = useState<AssistantConversationSummary[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
 
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, sending, resuming, pane]);
+  // To the newest message on open and when one arrives — unless the
+  // owner scrolled up to read ("↓ New message" then).
+  const chatScroll = useChatScroll(`${messages.length}:${sending}:${resuming}`);
 
   // Resume the conversation the owner was last active in, once, on mount
   // — this component only mounts when the modal actually opens (see
-  // AssistantOverlay), so this runs exactly once per open.
+  // PostAIDock), so this runs exactly once per open.
   useEffect(() => {
     let cancelled = false;
     async function loadCurrent() {
@@ -359,106 +354,59 @@ export function AssistantView({
 
   const isChat = pane.kind === "chat";
 
+  // Chat first, sized to the "Ask PostAI" panel: what PostAI knows (a
+  // collapsed row), then the questions and conversation filling the
+  // space, then the input pinned at the bottom with one small bar.
   return (
-    <div className="flex flex-col gap-4">
-      <SectionHeading
-        title={t(locale, "dashboard.overview.postAiOverlayTitle")}
-        action={<Pill variant="brass">{t(locale, "dashboard.overview.betaLabel")}</Pill>}
-      />
+    <div className="flex h-full min-h-0 flex-col">
+      {/* Fixed; when opened, its layer lies over the chat below. */}
+      <div className="relative z-10 shrink-0 border-b border-paper-line px-4">
+        <BusinessMemoryPanel businessId={businessId} profile={context.profile} />
+      </div>
 
-      <Card className="flex items-center gap-3 p-4">
-        <GradeBadge grade={context.score.grade} className="shrink-0" />
-        <p className="text-[13px] text-ink-soft">
-          {t(locale, "dashboard.assistant.groundedInScore", { total: context.score.total })}
-        </p>
-      </Card>
-
-      <BusinessMemoryPanel businessId={businessId} profile={context.profile} />
-
-      <Card className="flex flex-col overflow-hidden p-0">
-        <div className="flex items-center justify-between gap-3 border-b border-paper-line px-5 py-3">
-          {isChat ? (
-            <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink-mute">
-              <IconSparkles size={14} className="text-brass" />
-              {conversationId
-                ? t(locale, "dashboard.assistant.continuingConversation")
-                : t(locale, "dashboard.assistant.newConversationSavedNote")}
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setPane({ kind: "chat" })}
-              className="flex items-center gap-1.5 text-[12px] font-medium text-ink-mute hover:text-ink"
-            >
-              <IconArrowLeft size={14} />
-              {t(locale, "dashboard.assistant.backToChat")}
-            </button>
-          )}
-          <div className="flex items-center gap-1">
-            {isChat && (
-              <button
-                type="button"
-                onClick={openHistory}
-                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-ink-mute hover:bg-paper-deep hover:text-ink"
-              >
-                <IconHistory size={13} />
-                {t(locale, "dashboard.assistant.historyButton")}
-              </button>
-            )}
-            {isChat && messages.length > 0 && (
-              <button
-                type="button"
-                onClick={handleNewChat}
-                disabled={sending}
-                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-ink-mute hover:bg-paper-deep hover:text-ink disabled:opacity-50"
-              >
-                <IconPlus size={13} />
-                {t(locale, "dashboard.assistant.newChatButton")}
-              </button>
-            )}
+      <ChatScroll ref={chatScroll.ref} onScroll={chatScroll.onScroll} hasNew={chatScroll.hasNew} onJump={chatScroll.jumpToNewest}>
+        {pane.kind === "history" ? (
+          <HistoryList
+            loading={historyLoading}
+            error={historyError}
+            conversations={history}
+            onOpen={resumeConversation}
+          />
+        ) : resuming ? (
+          <div className="flex flex-1 items-center justify-center text-ink-mute">
+            <IconLoader2 size={18} className="animate-spin" />
           </div>
-        </div>
-
-        <div ref={scrollRef} className="flex max-h-[520px] min-h-[320px] flex-col gap-3 overflow-y-auto p-5">
-          {pane.kind === "history" ? (
-            <HistoryList
-              loading={historyLoading}
-              error={historyError}
-              conversations={history}
-              onOpen={resumeConversation}
-            />
-          ) : resuming ? (
-            <div className="flex flex-1 items-center justify-center text-ink-mute">
-              <IconLoader2 size={18} className="animate-spin" />
-            </div>
-          ) : messages.length === 0 ? (
-            <EmptyState businessName={businessName} starterPrompts={starterPrompts} onPick={send} />
-          ) : (
-            <>
-              {messages.map((m) => (
-                <MessageBubble key={m.id} message={m} links={links} />
+        ) : messages.length === 0 ? (
+          <EmptyState businessName={businessName} starterPrompts={starterPrompts} onPick={send} />
+        ) : (
+          <>
+            {messages.map((m) => (
+              <MessageBubble key={m.id} message={m} links={links} />
+            ))}
+            {sending && <TypingIndicator />}
+            {/* Follow-up questions at the end of the conversation. */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {starterPrompts.slice(0, 3).map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => send(prompt)}
+                  disabled={sending || resuming}
+                  className="rounded-full border border-paper-deep bg-white px-3 py-1 text-[11.5px] font-medium text-ink-soft transition-colors hover:border-brass hover:text-ink disabled:opacity-50"
+                >
+                  {prompt}
+                </button>
               ))}
-              {sending && <TypingIndicator />}
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
+      </ChatScroll>
 
-        {isChat && (
-          <div className="border-t border-paper-line p-4">
-            {messages.length > 0 && (
-              <div className="mb-3 flex flex-wrap gap-2">
-                {starterPrompts.slice(0, 3).map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => send(prompt)}
-                    disabled={sending || resuming}
-                    className="rounded-full border border-paper-deep bg-white px-3 py-1.5 text-[11.5px] font-medium text-ink-soft transition-colors hover:border-brass hover:text-ink disabled:opacity-50"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
+      <div className="shrink-0 border-t border-paper-line bg-white p-4" data-testid="postai-input-bar">
+        {isChat ? (
+          <>
+            {conversationId && (
+              <p className="mb-1.5 text-[11px] text-ink-mute">{t(locale, "dashboard.assistant.continuingConversation")}</p>
             )}
             {error && <p className="mb-2 text-[12px] text-red">{error}</p>}
             {monthly && monthly.left <= 0 ? (
@@ -476,39 +424,61 @@ export function AssistantView({
               )
             )}
             <form
-              className="flex items-end gap-2.5"
+              className="flex items-end gap-2"
               onSubmit={(e) => {
                 e.preventDefault();
                 void send(draft);
               }}
             >
-              <textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    void send(draft);
-                  }
-                }}
-                placeholder={t(locale, "dashboard.assistant.inputPlaceholder")}
-                rows={2}
-                disabled={sending || resuming}
-                className="min-w-0 flex-1 resize-none rounded-lg border border-paper-deep bg-white px-3.5 py-2.5 text-sm text-ink outline-none focus:border-ink-soft disabled:opacity-60"
-              />
+              <ChatInput value={draft} onChange={setDraft} onSubmit={() => void send(draft)} disabled={sending || resuming} testId="postai-input" />
               <Button
                 type="submit"
                 variant="brass"
                 disabled={sending || resuming || !draft.trim() || (!!monthly && monthly.left <= 0)}
-                className="shrink-0"
+                className="h-10 shrink-0"
               >
                 {sending ? <IconLoader2 size={16} className="animate-spin" /> : <IconSend2 size={16} />}
                 {t(locale, "dashboard.assistant.sendButton")}
               </Button>
             </form>
-          </div>
-        )}
-      </Card>
+          </>
+        ) : null}
+        {/* One line: History / New chat (or back to the chat). */}
+        <div className={cn("flex items-center gap-1", isChat && "mt-2")} data-testid="postai-bottom-bar">
+          {isChat ? (
+            <>
+              <button
+                type="button"
+                onClick={openHistory}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium text-ink-mute hover:bg-paper-deep hover:text-ink"
+              >
+                <IconHistory size={13} aria-hidden />
+                {t(locale, "dashboard.assistant.historyButton")}
+              </button>
+              {messages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleNewChat}
+                  disabled={sending}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium text-ink-mute hover:bg-paper-deep hover:text-ink disabled:opacity-50"
+                >
+                  <IconPlus size={13} aria-hidden />
+                  {t(locale, "dashboard.assistant.newChatButton")}
+                </button>
+              )}
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPane({ kind: "chat" })}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium text-ink-mute hover:bg-paper-deep hover:text-ink"
+            >
+              <IconArrowLeft size={13} aria-hidden />
+              {t(locale, "dashboard.assistant.backToChat")}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

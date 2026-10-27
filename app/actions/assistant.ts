@@ -313,6 +313,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     services: summaryResult.business.services ?? [],
     avgJobValueLow: summaryResult.business.avg_job_value_low ?? null,
     avgJobValueHigh: summaryResult.business.avg_job_value_high ?? null,
+    differentiator: await loadDifferentiator(businessId),
     scoreHistory,
     fixedItems,
   };
@@ -380,6 +381,8 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
               scope: competitors.available ? (competitors.rankedAgainst ?? null) : null,
             }
           : null,
+      // "Added by you": what they offer, typical spend, what makes them different.
+      owner: businessProfile,
       // The owner's own reply counts (connected Google) — never another business's.
       replyCounts: gbpStatus.status === "ok" ? gbpStatus.replyCounts : null,
       rating: scored.business.rating,
@@ -407,6 +410,16 @@ async function planGuideFor(profile: { couponsOk: boolean; referralOk: boolean; 
     planFacts: planFactsText(),
     businessCount: count ?? 1,
   };
+}
+
+/** "What makes you different" — read on its own so a business page never
+ * breaks before supabase/business-differentiator.sql has been run (the
+ * column is missing then: null). */
+async function loadDifferentiator(businessId: string): Promise<string | null> {
+  const { data, error } = await createClient().from("businesses").select("differentiator").eq("id", businessId).maybeSingle();
+  if (error || !data) return null;
+  const value = (data as { differentiator?: string | null }).differentiator;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 export type GetAssistantPageDataResult =

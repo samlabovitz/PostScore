@@ -329,7 +329,6 @@ export type MessageKey =
   | "dashboard.free.postaiExampleNote"
   | "dashboard.free.postaiExampleQuestion"
   | "dashboard.free.postaiExampleAnswer"
-  | "dashboard.free.postaiPlaceholder"
   | "dashboard.free.postaiSend"
   | "dashboard.free.showroom.subtitle"
   | "dashboard.free.showroom.backToAudit"
@@ -1877,6 +1876,109 @@ export type MessageKey =
   | "dashboard.overview.gbpConnectedNotWiredUp"
   | "dashboard.overview.ptsAvailable"
   | "dashboard.overview.askPostAI"
+  | "dashboard.postaiDock.button"
+  | "dashboard.postaiDock.grounding"
+  | "dashboard.postaiDock.placeholder"
+  | "dashboard.postaiDock.newMessage"
+  | "dashboard.assistant.memory.done"
+  | "dashboard.postaiDock.expand"
+  | "dashboard.postaiDock.collapse"
+  | "dashboard.assistant.memory.rowLabel"
+  | "dashboard.memory.kind.services.offer"
+  | "dashboard.memory.kind.services.spend"
+  | "dashboard.memory.kind.services.prompt"
+  | "dashboard.memory.kind.services.example"
+  | "dashboard.memory.kind.products.offer"
+  | "dashboard.memory.kind.products.spend"
+  | "dashboard.memory.kind.products.prompt"
+  | "dashboard.memory.kind.products.example"
+  | "dashboard.memory.kind.menu.offer"
+  | "dashboard.memory.kind.menu.spend"
+  | "dashboard.memory.kind.menu.prompt"
+  | "dashboard.memory.kind.menu.example"
+  | "dashboard.memory.kind.programs.offer"
+  | "dashboard.memory.kind.programs.spend"
+  | "dashboard.memory.kind.programs.prompt"
+  | "dashboard.memory.kind.programs.example"
+  | "dashboard.memory.kind.neutral.offer"
+  | "dashboard.memory.kind.neutral.spend"
+  | "dashboard.memory.kind.neutral.prompt"
+  | "dashboard.memory.kind.neutral.example"
+  | "dashboard.memory.example.salon"
+  | "dashboard.memory.example.nail_salon"
+  | "dashboard.memory.example.barbershop"
+  | "dashboard.memory.example.spa"
+  | "dashboard.memory.example.bakery"
+  | "dashboard.memory.example.dessert_shop"
+  | "dashboard.memory.example.cafe"
+  | "dashboard.memory.example.restaurant"
+  | "dashboard.memory.example.bar"
+  | "dashboard.memory.example.specialty_store"
+  | "dashboard.memory.example.liquor_store"
+  | "dashboard.memory.example.grocery_market"
+  | "dashboard.memory.example.florist"
+  | "dashboard.memory.example.hardware_store"
+  | "dashboard.memory.example.retail_boutique"
+  | "dashboard.memory.example.gym_fitness"
+  | "dashboard.memory.example.tutor_education"
+  | "dashboard.memory.example.plumber"
+  | "dashboard.memory.example.electrician"
+  | "dashboard.memory.example.lawyer"
+  | "dashboard.memory.example.auto_repair"
+  | "dashboard.memory.example.dentist"
+  | "dashboard.memory.spendPrompt"
+  | "dashboard.memory.differentLabel"
+  | "dashboard.memory.differentExample"
+  | "dashboard.memory.differentPrompt"
+  | "dashboard.memory.fromGoogle"
+  | "dashboard.memory.addedByYou"
+  | "dashboard.memory.yourProgress"
+  | "dashboard.memory.address"
+  | "dashboard.memory.add"
+  | "dashboard.memory.edit"
+  | "dashboard.memory.save"
+  | "dashboard.memory.cancel"
+  | "dashboard.memory.spendLow"
+  | "dashboard.memory.spendHigh"
+  | "dashboard.memory.optional"
+  | "dashboard.memory.trendLine"
+  | "dashboard.memory.fixedLine"
+  | "dashboard.memory.notSavedYet"
+  | "dashboard.memory.editLabel"
+  | "dashboard.postaiDock.intro"
+  | "dashboard.postaiDock.gotIt"
+  | "dashboard.postaiDock.panelTitle"
+  | "dashboard.postaiDock.close"
+  | "dashboard.postaiDock.loading"
+  | "dashboard.postaiDock.q.overview.fixFirst"
+  | "dashboard.postaiDock.q.overview.whyScore"
+  | "dashboard.postaiDock.q.overview.compare"
+  | "dashboard.postaiDock.q.reviews.more"
+  | "dashboard.postaiDock.q.reviews.reply"
+  | "dashboard.postaiDock.q.reviews.sign"
+  | "dashboard.postaiDock.q.reviews.whyMatter"
+  | "dashboard.postaiDock.q.website.fixFirst"
+  | "dashboard.postaiDock.q.website.phones"
+  | "dashboard.postaiDock.q.website.starterSite"
+  | "dashboard.postaiDock.q.competitors.compare"
+  | "dashboard.postaiDock.q.competitors.ahead"
+  | "dashboard.postaiDock.q.competitors.catchUp"
+  | "dashboard.postaiDock.q.pricing.competitive"
+  | "dashboard.postaiDock.q.pricing.checkFirst"
+  | "dashboard.postaiDock.q.pricing.addItems"
+  | "dashboard.postaiDock.q.pricing.whatIs"
+  | "dashboard.postaiDock.q.pricing.whichPlan"
+  | "dashboard.postaiDock.q.pricing.thinkAbout"
+  | "dashboard.postaiDock.q.growth.thisWeek"
+  | "dashboard.postaiDock.q.growth.mostPoints"
+  | "dashboard.postaiDock.q.growth.routine"
+  | "dashboard.postaiDock.q.growth.whatsInPlan"
+  | "dashboard.postaiDock.q.growth.whichPlan"
+  | "dashboard.postaiDock.q.reports.changed"
+  | "dashboard.postaiDock.q.reports.read"
+  | "dashboard.postaiDock.q.reports.nextMonth"
+  | "dashboard.postaiDock.q.reports.scoreChanged"
+  | "dashboard.postaiDock.q.reports.whatsIn"
   | "dashboard.overview.betaLabel"
   | "dashboard.overview.assistantPrompt"
   | "dashboard.overview.pastConversations.one"
@@ -1921,7 +2023,6 @@ export type MessageKey =
   | "dashboard.assistant.backToChat"
   | "dashboard.assistant.historyButton"
   | "dashboard.assistant.newChatButton"
-  | "dashboard.assistant.inputPlaceholder"
   | "dashboard.assistant.sendButton"
   // sendAssistantMessage's own server-action error fallbacks
   // (app/actions/assistant.ts) — rendered in the chat UI via
@@ -1957,38 +2058,21 @@ export type MessageKey =
   | "dashboard.assistant.starterPrompts.weeklyRoutineKeepGoing"
   | "dashboard.assistant.memory.noSavedScans"
   | "dashboard.assistant.memory.onlyOneScore"
-  | "dashboard.assistant.memory.pointsSinceDate"
   | "dashboard.assistant.memory.noConfirmedFixed"
   | "dashboard.assistant.memory.pointsGainedWithDate"
   | "dashboard.assistant.memory.pointsGainedNoDate"
   | "dashboard.assistant.memory.removeServiceAriaLabel"
-  | "dashboard.assistant.memory.noServicesYet"
-  | "dashboard.assistant.memory.serviceInputPlaceholder"
   | "dashboard.assistant.memory.addButton"
   | "dashboard.assistant.memory.businessTypeLabel"
   | "dashboard.assistant.memory.businessTypeCorrected"
   | "dashboard.assistant.memory.businessTypeAutoDetected"
   | "dashboard.assistant.memory.couldNotSaveFallback"
-  | "dashboard.assistant.memory.heading"
   | "dashboard.assistant.memory.subheading"
-  | "dashboard.assistant.memory.locationLabel"
   | "dashboard.assistant.memory.notOnFile"
-  | "dashboard.assistant.memory.servicesJobValueHeading"
-  | "dashboard.assistant.memory.editButton"
-  | "dashboard.assistant.memory.servicesFieldLabel"
-  | "dashboard.assistant.memory.jobValueRangeLabel"
-  | "dashboard.assistant.memory.lowPlaceholder"
-  | "dashboard.assistant.memory.highPlaceholder"
-  | "dashboard.assistant.memory.toSeparator"
   | "dashboard.assistant.memory.errorMissingLow"
   | "dashboard.assistant.memory.errorMissingHigh"
   | "dashboard.assistant.memory.errorInvalidNumbers"
   | "dashboard.assistant.memory.errorLowExceedsHigh"
-  | "dashboard.assistant.memory.servicesNotEntered"
-  | "dashboard.assistant.memory.jobValueLine"
-  | "dashboard.assistant.memory.jobValueNotEntered"
-  | "dashboard.assistant.memory.fixedHeading"
-  | "dashboard.assistant.memory.scoreTrendHeading"
   // --- Connect-GBP section (app/business/[id]/connect-gbp/*,
   // components/gbp/ConnectToUnlock.tsx).
   | "dashboard.connectGbp.unlockEditableListingTitle"
@@ -3231,8 +3315,6 @@ export type MessageKey =
   | "dashboard.overview.seeHistory"
   | "dashboard.overview.topIssue"
   | "dashboard.overview.nothingLeftHere"
-  | "dashboard.overview.showChecks"
-  | "dashboard.overview.hideChecks"
   | "dashboard.overview.showAllScans"
   | "dashboard.overview.showFewerScans"
   | "dashboard.overview.listingDetails"
@@ -4434,7 +4516,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.postaiExampleNote": "A general example — with Grow, PostAI answers with your own numbers.",
     "dashboard.free.postaiExampleQuestion": "What should I fix first?",
     "dashboard.free.postaiExampleAnswer": "Start with the fixes worth the most points. For most local businesses that's a complete Google listing (hours, phone, photos) and a steady flow of new reviews — then the website basics.",
-    "dashboard.free.postaiPlaceholder": "Ask PostAI about your score…",
     "dashboard.free.postaiSend": "Send",
     "dashboard.free.showroom.subtitle": "A preview of what this does for {name} — unlock it to use it.",
     "dashboard.free.showroom.backToAudit": "Back to your audit",
@@ -6247,6 +6328,109 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.ptsAvailable": "+{points} pts available",
 
     "dashboard.overview.askPostAI": "Ask PostAI",
+    "dashboard.postaiDock.button": "Ask PostAI",
+    "dashboard.postaiDock.grounding": "Answers use your real PostScore data. General tips are labeled.",
+    "dashboard.postaiDock.placeholder": "Ask PostAI anything…",
+    "dashboard.postaiDock.newMessage": "New message",
+    "dashboard.assistant.memory.done": "Done",
+    "dashboard.postaiDock.expand": "Full screen",
+    "dashboard.postaiDock.collapse": "Back to side panel",
+    "dashboard.assistant.memory.rowLabel": "What PostAI knows about your business",
+    "dashboard.memory.kind.services.offer": "Services",
+    "dashboard.memory.kind.services.spend": "Typical price per service",
+    "dashboard.memory.kind.services.prompt": "Add the services you offer so PostAI's ideas fit your business",
+    "dashboard.memory.kind.services.example": "e.g. Consultations, repairs",
+    "dashboard.memory.kind.products.offer": "Products & brands",
+    "dashboard.memory.kind.products.spend": "Typical purchase",
+    "dashboard.memory.kind.products.prompt": "Add what you sell so PostAI's ideas fit your shop",
+    "dashboard.memory.kind.products.example": "e.g. Best sellers, brands you carry",
+    "dashboard.memory.kind.menu.offer": "Menu favorites",
+    "dashboard.memory.kind.menu.spend": "Typical check per person",
+    "dashboard.memory.kind.menu.prompt": "Add your menu favorites so PostAI's ideas fit your place",
+    "dashboard.memory.kind.menu.example": "e.g. Signature dishes, drinks",
+    "dashboard.memory.kind.programs.offer": "Programs & classes",
+    "dashboard.memory.kind.programs.spend": "Typical membership or class price",
+    "dashboard.memory.kind.programs.prompt": "Add your programs and classes so PostAI's ideas fit",
+    "dashboard.memory.kind.programs.example": "e.g. Classes, memberships",
+    "dashboard.memory.kind.neutral.offer": "What you offer",
+    "dashboard.memory.kind.neutral.spend": "Typical sale",
+    "dashboard.memory.kind.neutral.prompt": "Add what you offer so PostAI's ideas fit your business",
+    "dashboard.memory.kind.neutral.example": "e.g. What you're known for",
+    "dashboard.memory.example.salon": "e.g. Balayage, keratin",
+    "dashboard.memory.example.nail_salon": "e.g. Gel manicure, acrylics",
+    "dashboard.memory.example.barbershop": "e.g. Fades, beard trims",
+    "dashboard.memory.example.spa": "e.g. Massage, facials",
+    "dashboard.memory.example.bakery": "e.g. Cupcakes, custom cakes",
+    "dashboard.memory.example.dessert_shop": "e.g. Gelato, crepes",
+    "dashboard.memory.example.cafe": "e.g. Lattes, breakfast sandwiches",
+    "dashboard.memory.example.restaurant": "e.g. Pho, banh mi",
+    "dashboard.memory.example.bar": "e.g. Craft cocktails, wings",
+    "dashboard.memory.example.specialty_store": "e.g. Snowboards, Burton, skate shoes",
+    "dashboard.memory.example.liquor_store": "e.g. Bourbon, local craft beer",
+    "dashboard.memory.example.grocery_market": "e.g. Fresh produce, imported spices",
+    "dashboard.memory.example.florist": "e.g. Wedding bouquets, same-day delivery",
+    "dashboard.memory.example.hardware_store": "e.g. Paint, key cutting",
+    "dashboard.memory.example.retail_boutique": "e.g. Dresses, local jewelry",
+    "dashboard.memory.example.gym_fitness": "e.g. Personal training, HIIT classes",
+    "dashboard.memory.example.tutor_education": "e.g. SAT prep, math tutoring",
+    "dashboard.memory.example.plumber": "e.g. Water heaters, drain cleaning",
+    "dashboard.memory.example.electrician": "e.g. Panel upgrades, EV chargers",
+    "dashboard.memory.example.lawyer": "e.g. Wills, real estate closings",
+    "dashboard.memory.example.auto_repair": "e.g. Brakes, oil changes",
+    "dashboard.memory.example.dentist": "e.g. Cleanings, whitening",
+    "dashboard.memory.spendPrompt": "Add a typical price range so PostAI can show what a fix is worth",
+    "dashboard.memory.differentLabel": "What makes you different",
+    "dashboard.memory.differentExample": "e.g. Family-owned since 1998, free parking",
+    "dashboard.memory.differentPrompt": "Add what makes you different so PostAI's ideas sound like you",
+    "dashboard.memory.fromGoogle": "From your Google listing",
+    "dashboard.memory.addedByYou": "Added by you",
+    "dashboard.memory.yourProgress": "Your progress",
+    "dashboard.memory.address": "Address",
+    "dashboard.memory.add": "Add",
+    "dashboard.memory.edit": "Edit",
+    "dashboard.memory.save": "Save",
+    "dashboard.memory.cancel": "Cancel",
+    "dashboard.memory.spendLow": "Low",
+    "dashboard.memory.spendHigh": "High",
+    "dashboard.memory.optional": "Optional",
+    "dashboard.memory.trendLine": "{from} → {to} since {date}",
+    "dashboard.memory.fixedLine": "Fixed: {items}",
+    "dashboard.memory.notSavedYet": "Couldn't save — the new field isn't set up yet.",
+    "dashboard.memory.editLabel": "Edit {label}",
+    "dashboard.postaiDock.intro": "Meet PostAI — ask anything about your score, reviews, competitors or what to do next. It answers using your real PostScore data.",
+    "dashboard.postaiDock.gotIt": "Got it",
+    "dashboard.postaiDock.panelTitle": "PostAI",
+    "dashboard.postaiDock.close": "Close PostAI",
+    "dashboard.postaiDock.loading": "Loading PostAI…",
+    "dashboard.postaiDock.q.overview.fixFirst": "What should I fix first?",
+    "dashboard.postaiDock.q.overview.whyScore": "Why is my score what it is?",
+    "dashboard.postaiDock.q.overview.compare": "How do I compare to businesses nearby?",
+    "dashboard.postaiDock.q.reviews.more": "How do I get more reviews?",
+    "dashboard.postaiDock.q.reviews.reply": "How should I reply to a review?",
+    "dashboard.postaiDock.q.reviews.sign": "Where should I put my review sign?",
+    "dashboard.postaiDock.q.reviews.whyMatter": "Why do reviews matter for my score?",
+    "dashboard.postaiDock.q.website.fixFirst": "What should I fix on my website first?",
+    "dashboard.postaiDock.q.website.phones": "Does my website work well on phones?",
+    "dashboard.postaiDock.q.website.starterSite": "Is the starter site right for me?",
+    "dashboard.postaiDock.q.competitors.compare": "How do I compare to my competitors?",
+    "dashboard.postaiDock.q.competitors.ahead": "Who's ahead of me, and why?",
+    "dashboard.postaiDock.q.competitors.catchUp": "How can I catch up on reviews?",
+    "dashboard.postaiDock.q.pricing.competitive": "Are my prices competitive?",
+    "dashboard.postaiDock.q.pricing.checkFirst": "Which prices should I check first?",
+    "dashboard.postaiDock.q.pricing.addItems": "How do I add items to Price check?",
+    "dashboard.postaiDock.q.pricing.whatIs": "What does Price check show?",
+    "dashboard.postaiDock.q.pricing.whichPlan": "Which plan includes Price check?",
+    "dashboard.postaiDock.q.pricing.thinkAbout": "How should I think about my prices?",
+    "dashboard.postaiDock.q.growth.thisWeek": "What should I do this week?",
+    "dashboard.postaiDock.q.growth.mostPoints": "Which fix adds the most points?",
+    "dashboard.postaiDock.q.growth.routine": "How does the weekly routine work?",
+    "dashboard.postaiDock.q.growth.whatsInPlan": "What's in the step-by-step plan?",
+    "dashboard.postaiDock.q.growth.whichPlan": "Which plan has the weekly plan?",
+    "dashboard.postaiDock.q.reports.changed": "What changed since my last report?",
+    "dashboard.postaiDock.q.reports.read": "How do I read my report?",
+    "dashboard.postaiDock.q.reports.nextMonth": "What should I focus on next month?",
+    "dashboard.postaiDock.q.reports.scoreChanged": "How has my score changed?",
+    "dashboard.postaiDock.q.reports.whatsIn": "What's in the reports?",
     "dashboard.overview.betaLabel": "Beta",
     "dashboard.overview.assistantPrompt": "Ask anything about your score, competitors, or what to fix next.",
     "dashboard.overview.pastConversations.one": " {count} past conversation saved.",
@@ -6290,8 +6474,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.backToChat": "Back to chat",
     "dashboard.assistant.historyButton": "History",
     "dashboard.assistant.newChatButton": "New chat",
-    "dashboard.assistant.inputPlaceholder":
-      "Ask about your score, action plan, competitors, or general marketing advice…",
     "dashboard.assistant.sendButton": "Send",
     "dashboard.assistant.errorTypeQuestionFirst": "Type a question first.",
     "dashboard.assistant.errorCouldNotStartConversation": "Could not start a new conversation.",
@@ -6317,38 +6499,21 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.starterPrompts.weeklyRoutineKeepGoing": "How do I keep my weekly routine going?",
     "dashboard.assistant.memory.noSavedScans": "No saved scans yet.",
     "dashboard.assistant.memory.onlyOneScore": "Only one saved score so far — {total}/100 on {date}. No trend yet.",
-    "dashboard.assistant.memory.pointsSinceDate": "{delta} pts since {date}",
     "dashboard.assistant.memory.noConfirmedFixed": "Nothing confirmed fixed yet.",
     "dashboard.assistant.memory.pointsGainedWithDate": "+{points} pts · {date}",
     "dashboard.assistant.memory.pointsGainedNoDate": "+{points} pts",
     "dashboard.assistant.memory.removeServiceAriaLabel": "Remove {service}",
-    "dashboard.assistant.memory.noServicesYet": "No services added yet.",
-    "dashboard.assistant.memory.serviceInputPlaceholder": "e.g. Haircuts",
     "dashboard.assistant.memory.addButton": "Add",
     "dashboard.assistant.memory.businessTypeLabel": "Business type",
     "dashboard.assistant.memory.businessTypeCorrected": 'Corrected by you — Google detected "{autoDetected}."',
     "dashboard.assistant.memory.businessTypeAutoDetected": "Auto-detected from your Google listing.",
     "dashboard.assistant.memory.couldNotSaveFallback": "Couldn't save — try again.",
-    "dashboard.assistant.memory.heading": "What I know about your business",
     "dashboard.assistant.memory.subheading": "The real facts the assistant remembers, every session.",
-    "dashboard.assistant.memory.locationLabel": "Location",
     "dashboard.assistant.memory.notOnFile": "Not on file",
-    "dashboard.assistant.memory.servicesJobValueHeading": "Services & typical job value",
-    "dashboard.assistant.memory.editButton": "Edit",
-    "dashboard.assistant.memory.servicesFieldLabel": "Services",
-    "dashboard.assistant.memory.jobValueRangeLabel": "Typical job/ticket value range",
-    "dashboard.assistant.memory.lowPlaceholder": "Low",
-    "dashboard.assistant.memory.highPlaceholder": "High",
-    "dashboard.assistant.memory.toSeparator": "to $",
     "dashboard.assistant.memory.errorMissingLow": "Enter a low value too, or clear the high value.",
     "dashboard.assistant.memory.errorMissingHigh": "Enter a high value too, or clear the low value.",
     "dashboard.assistant.memory.errorInvalidNumbers": "Enter valid positive numbers.",
     "dashboard.assistant.memory.errorLowExceedsHigh": "The low value can't be more than the high value.",
-    "dashboard.assistant.memory.servicesNotEntered": "Not entered yet.",
-    "dashboard.assistant.memory.jobValueLine": "Typical job/ticket value: ${low} to ${high}",
-    "dashboard.assistant.memory.jobValueNotEntered": "Typical job/ticket value: not entered yet.",
-    "dashboard.assistant.memory.fixedHeading": "What you've fixed",
-    "dashboard.assistant.memory.scoreTrendHeading": "Score trend",
 
     // --- Connect-GBP section: app/business/[id]/connect-gbp/*,
     // components/gbp/ConnectToUnlock.tsx.
@@ -7775,8 +7940,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.seeHistory": "See history",
     "dashboard.overview.topIssue": "Top issue: {label}",
     "dashboard.overview.nothingLeftHere": "Nothing left to fix here",
-    "dashboard.overview.showChecks": "See every check",
-    "dashboard.overview.hideChecks": "Hide checks",
     "dashboard.overview.showAllScans": "Show all {count} scans",
     "dashboard.overview.showFewerScans": "Show fewer",
     "dashboard.overview.listingDetails": "Listing details",
@@ -8901,7 +9064,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.postaiExampleNote": "Un ejemplo general: con Grow, PostAI responde con sus propios datos.",
     "dashboard.free.postaiExampleQuestion": "¿Qué debo arreglar primero?",
     "dashboard.free.postaiExampleAnswer": "Empiece por los arreglos que valen más puntos. Para la mayoría de los negocios locales eso es una ficha de Google completa (horario, teléfono, fotos) y un flujo constante de reseñas nuevas; después, lo básico del sitio web.",
-    "dashboard.free.postaiPlaceholder": "Pregúntele a PostAI sobre su puntuación…",
     "dashboard.free.postaiSend": "Enviar",
     "dashboard.free.showroom.subtitle": "Una vista previa de lo que esto hace por {name}; desbloquéelo para usarlo.",
     "dashboard.free.showroom.backToAudit": "Volver a su auditoría",
@@ -10510,6 +10672,109 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.gbpConnectedNotWiredUp": "Perfil de Negocio de Google conectado. La verificación de campos en vivo aún no está habilitada — es una actualización futura, no algo averiado aquí. Mostraremos su lista real aquí cuando esté disponible.",
     "dashboard.overview.ptsAvailable": "+{points} pts disponibles",
     "dashboard.overview.askPostAI": "Pregunte a PostAI",
+    "dashboard.postaiDock.button": "Pregunte a PostAI",
+    "dashboard.postaiDock.grounding": "Las respuestas usan sus datos reales de PostScore. Los consejos generales van marcados.",
+    "dashboard.postaiDock.placeholder": "Pregunte lo que quiera a PostAI…",
+    "dashboard.postaiDock.newMessage": "Mensaje nuevo",
+    "dashboard.assistant.memory.done": "Listo",
+    "dashboard.postaiDock.expand": "Pantalla completa",
+    "dashboard.postaiDock.collapse": "Volver al panel lateral",
+    "dashboard.assistant.memory.rowLabel": "Lo que PostAI sabe de su negocio",
+    "dashboard.memory.kind.services.offer": "Servicios",
+    "dashboard.memory.kind.services.spend": "Precio típico por servicio",
+    "dashboard.memory.kind.services.prompt": "Agregue los servicios que ofrece para que las ideas de PostAI encajen con su negocio",
+    "dashboard.memory.kind.services.example": "p. ej. Consultas, reparaciones",
+    "dashboard.memory.kind.products.offer": "Productos y marcas",
+    "dashboard.memory.kind.products.spend": "Compra típica",
+    "dashboard.memory.kind.products.prompt": "Agregue lo que vende para que las ideas de PostAI encajen con su tienda",
+    "dashboard.memory.kind.products.example": "p. ej. Lo más vendido, marcas que maneja",
+    "dashboard.memory.kind.menu.offer": "Favoritos del menú",
+    "dashboard.memory.kind.menu.spend": "Cuenta típica por persona",
+    "dashboard.memory.kind.menu.prompt": "Agregue sus favoritos del menú para que las ideas de PostAI encajen con su local",
+    "dashboard.memory.kind.menu.example": "p. ej. Platos de la casa, bebidas",
+    "dashboard.memory.kind.programs.offer": "Programas y clases",
+    "dashboard.memory.kind.programs.spend": "Precio típico de membresía o clase",
+    "dashboard.memory.kind.programs.prompt": "Agregue sus programas y clases para que las ideas de PostAI encajen",
+    "dashboard.memory.kind.programs.example": "p. ej. Clases, membresías",
+    "dashboard.memory.kind.neutral.offer": "Lo que ofrece",
+    "dashboard.memory.kind.neutral.spend": "Venta típica",
+    "dashboard.memory.kind.neutral.prompt": "Agregue lo que ofrece para que las ideas de PostAI encajen con su negocio",
+    "dashboard.memory.kind.neutral.example": "p. ej. Aquello por lo que lo conocen",
+    "dashboard.memory.example.salon": "p. ej. Balayage, keratina",
+    "dashboard.memory.example.nail_salon": "p. ej. Manicura en gel, acrílicas",
+    "dashboard.memory.example.barbershop": "p. ej. Degradados, arreglo de barba",
+    "dashboard.memory.example.spa": "p. ej. Masajes, faciales",
+    "dashboard.memory.example.bakery": "p. ej. Cupcakes, pasteles personalizados",
+    "dashboard.memory.example.dessert_shop": "p. ej. Gelato, crepas",
+    "dashboard.memory.example.cafe": "p. ej. Lattes, sándwiches de desayuno",
+    "dashboard.memory.example.restaurant": "p. ej. Pho, banh mi",
+    "dashboard.memory.example.bar": "p. ej. Cócteles de autor, alitas",
+    "dashboard.memory.example.specialty_store": "p. ej. Tablas de snowboard, Burton, tenis de skate",
+    "dashboard.memory.example.liquor_store": "p. ej. Bourbon, cerveza artesanal local",
+    "dashboard.memory.example.grocery_market": "p. ej. Frutas y verduras frescas, especias importadas",
+    "dashboard.memory.example.florist": "p. ej. Ramos de boda, entrega el mismo día",
+    "dashboard.memory.example.hardware_store": "p. ej. Pintura, copias de llaves",
+    "dashboard.memory.example.retail_boutique": "p. ej. Vestidos, joyería local",
+    "dashboard.memory.example.gym_fitness": "p. ej. Entrenamiento personal, clases HIIT",
+    "dashboard.memory.example.tutor_education": "p. ej. Preparación para el SAT, tutoría de matemáticas",
+    "dashboard.memory.example.plumber": "p. ej. Calentadores de agua, destapado de drenajes",
+    "dashboard.memory.example.electrician": "p. ej. Cambio de tableros, cargadores para autos eléctricos",
+    "dashboard.memory.example.lawyer": "p. ej. Testamentos, cierres de bienes raíces",
+    "dashboard.memory.example.auto_repair": "p. ej. Frenos, cambios de aceite",
+    "dashboard.memory.example.dentist": "p. ej. Limpiezas, blanqueamiento",
+    "dashboard.memory.spendPrompt": "Agregue un rango de precio típico para que PostAI muestre cuánto vale un arreglo",
+    "dashboard.memory.differentLabel": "Qué lo hace diferente",
+    "dashboard.memory.differentExample": "p. ej. Negocio familiar desde 1998, estacionamiento gratis",
+    "dashboard.memory.differentPrompt": "Agregue qué lo hace diferente para que las ideas de PostAI suenen como usted",
+    "dashboard.memory.fromGoogle": "De su ficha de Google",
+    "dashboard.memory.addedByYou": "Agregado por usted",
+    "dashboard.memory.yourProgress": "Su progreso",
+    "dashboard.memory.address": "Dirección",
+    "dashboard.memory.add": "Agregar",
+    "dashboard.memory.edit": "Editar",
+    "dashboard.memory.save": "Guardar",
+    "dashboard.memory.cancel": "Cancelar",
+    "dashboard.memory.spendLow": "Mínimo",
+    "dashboard.memory.spendHigh": "Máximo",
+    "dashboard.memory.optional": "Opcional",
+    "dashboard.memory.trendLine": "{from} → {to} desde el {date}",
+    "dashboard.memory.fixedLine": "Solucionado: {items}",
+    "dashboard.memory.notSavedYet": "No se pudo guardar: el campo nuevo aún no está configurado.",
+    "dashboard.memory.editLabel": "Editar {label}",
+    "dashboard.postaiDock.intro": "Conozca PostAI: pregunte lo que quiera sobre su puntuación, sus reseñas, su competencia o qué hacer después. Responde con sus datos reales de PostScore.",
+    "dashboard.postaiDock.gotIt": "Entendido",
+    "dashboard.postaiDock.panelTitle": "PostAI",
+    "dashboard.postaiDock.close": "Cerrar PostAI",
+    "dashboard.postaiDock.loading": "Cargando PostAI…",
+    "dashboard.postaiDock.q.overview.fixFirst": "¿Qué debo arreglar primero?",
+    "dashboard.postaiDock.q.overview.whyScore": "¿Por qué tengo esta puntuación?",
+    "dashboard.postaiDock.q.overview.compare": "¿Cómo me comparo con los negocios cercanos?",
+    "dashboard.postaiDock.q.reviews.more": "¿Cómo consigo más reseñas?",
+    "dashboard.postaiDock.q.reviews.reply": "¿Cómo debo responder a una reseña?",
+    "dashboard.postaiDock.q.reviews.sign": "¿Dónde pongo mi letrero de reseñas?",
+    "dashboard.postaiDock.q.reviews.whyMatter": "¿Por qué importan las reseñas para mi puntuación?",
+    "dashboard.postaiDock.q.website.fixFirst": "¿Qué debo arreglar primero en mi sitio web?",
+    "dashboard.postaiDock.q.website.phones": "¿Mi sitio web funciona bien en celulares?",
+    "dashboard.postaiDock.q.website.starterSite": "¿Me conviene el sitio inicial?",
+    "dashboard.postaiDock.q.competitors.compare": "¿Cómo me comparo con mi competencia?",
+    "dashboard.postaiDock.q.competitors.ahead": "¿Quién va delante de mí y por qué?",
+    "dashboard.postaiDock.q.competitors.catchUp": "¿Cómo puedo alcanzarlos en reseñas?",
+    "dashboard.postaiDock.q.pricing.competitive": "¿Mis precios son competitivos?",
+    "dashboard.postaiDock.q.pricing.checkFirst": "¿Qué precios debo revisar primero?",
+    "dashboard.postaiDock.q.pricing.addItems": "¿Cómo agrego artículos a Revisión de precios?",
+    "dashboard.postaiDock.q.pricing.whatIs": "¿Qué muestra Revisión de precios?",
+    "dashboard.postaiDock.q.pricing.whichPlan": "¿Qué plan incluye Revisión de precios?",
+    "dashboard.postaiDock.q.pricing.thinkAbout": "¿Cómo debo pensar en mis precios?",
+    "dashboard.postaiDock.q.growth.thisWeek": "¿Qué debo hacer esta semana?",
+    "dashboard.postaiDock.q.growth.mostPoints": "¿Qué arreglo suma más puntos?",
+    "dashboard.postaiDock.q.growth.routine": "¿Cómo funciona la rutina semanal?",
+    "dashboard.postaiDock.q.growth.whatsInPlan": "¿Qué incluye el plan paso a paso?",
+    "dashboard.postaiDock.q.growth.whichPlan": "¿Qué plan tiene el plan semanal?",
+    "dashboard.postaiDock.q.reports.changed": "¿Qué cambió desde mi último informe?",
+    "dashboard.postaiDock.q.reports.read": "¿Cómo leo mi informe?",
+    "dashboard.postaiDock.q.reports.nextMonth": "¿En qué debo enfocarme el próximo mes?",
+    "dashboard.postaiDock.q.reports.scoreChanged": "¿Cómo ha cambiado mi puntuación?",
+    "dashboard.postaiDock.q.reports.whatsIn": "¿Qué incluyen los informes?",
     "dashboard.overview.betaLabel": "Beta",
     "dashboard.overview.assistantPrompt": "Pregunte lo que sea sobre su puntuación, la competencia o qué mejorar a continuación.",
     "dashboard.overview.pastConversations.one": " {count} conversación anterior guardada.",
@@ -10552,8 +10817,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.backToChat": "Volver al chat",
     "dashboard.assistant.historyButton": "Historial",
     "dashboard.assistant.newChatButton": "Nuevo chat",
-    "dashboard.assistant.inputPlaceholder":
-      "Pregunte sobre su puntuación, plan de acción, competencia o consejos generales de marketing…",
     "dashboard.assistant.sendButton": "Enviar",
     "dashboard.assistant.errorTypeQuestionFirst": "Escriba una pregunta primero.",
     "dashboard.assistant.errorCouldNotStartConversation": "No se pudo iniciar una nueva conversación.",
@@ -10582,38 +10845,21 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.memory.noSavedScans": "Aún no hay análisis guardados.",
     "dashboard.assistant.memory.onlyOneScore":
       "Solo una puntuación guardada hasta ahora — {total}/100 el {date}. Aún no hay tendencia.",
-    "dashboard.assistant.memory.pointsSinceDate": "{delta} pts desde el {date}",
     "dashboard.assistant.memory.noConfirmedFixed": "Aún no hay nada confirmado como solucionado.",
     "dashboard.assistant.memory.pointsGainedWithDate": "+{points} pts · {date}",
     "dashboard.assistant.memory.pointsGainedNoDate": "+{points} pts",
     "dashboard.assistant.memory.removeServiceAriaLabel": "Quitar {service}",
-    "dashboard.assistant.memory.noServicesYet": "Aún no se han agregado servicios.",
-    "dashboard.assistant.memory.serviceInputPlaceholder": "p. ej. Cortes de cabello",
     "dashboard.assistant.memory.addButton": "Agregar",
     "dashboard.assistant.memory.businessTypeLabel": "Tipo de negocio",
     "dashboard.assistant.memory.businessTypeCorrected": 'Corregido por usted — Google detectó "{autoDetected}."',
     "dashboard.assistant.memory.businessTypeAutoDetected": "Detectado automáticamente de su ficha de Google.",
     "dashboard.assistant.memory.couldNotSaveFallback": "No se pudo guardar — inténtelo de nuevo.",
-    "dashboard.assistant.memory.heading": "Lo que sé sobre su negocio",
     "dashboard.assistant.memory.subheading": "Los datos reales que el asistente recuerda, en cada sesión.",
-    "dashboard.assistant.memory.locationLabel": "Ubicación",
     "dashboard.assistant.memory.notOnFile": "No registrado",
-    "dashboard.assistant.memory.servicesJobValueHeading": "Servicios y valor típico por trabajo",
-    "dashboard.assistant.memory.editButton": "Editar",
-    "dashboard.assistant.memory.servicesFieldLabel": "Servicios",
-    "dashboard.assistant.memory.jobValueRangeLabel": "Rango de valor típico por trabajo/ticket",
-    "dashboard.assistant.memory.lowPlaceholder": "Mínimo",
-    "dashboard.assistant.memory.highPlaceholder": "Máximo",
-    "dashboard.assistant.memory.toSeparator": "a $",
     "dashboard.assistant.memory.errorMissingLow": "Ingrese también un valor mínimo, o borre el valor máximo.",
     "dashboard.assistant.memory.errorMissingHigh": "Ingrese también un valor máximo, o borre el valor mínimo.",
     "dashboard.assistant.memory.errorInvalidNumbers": "Ingrese números positivos válidos.",
     "dashboard.assistant.memory.errorLowExceedsHigh": "El valor mínimo no puede ser mayor que el valor máximo.",
-    "dashboard.assistant.memory.servicesNotEntered": "Aún no se ha ingresado.",
-    "dashboard.assistant.memory.jobValueLine": "Valor típico por trabajo/ticket: ${low} a ${high}",
-    "dashboard.assistant.memory.jobValueNotEntered": "Valor típico por trabajo/ticket: aún no se ha ingresado.",
-    "dashboard.assistant.memory.fixedHeading": "Lo que ha solucionado",
-    "dashboard.assistant.memory.scoreTrendHeading": "Tendencia de la puntuación",
 
     "dashboard.connectGbp.unlockEditableListingTitle": "Ficha en vivo y editable",
     "dashboard.connectGbp.unlockEditableListingBody": "Actualice su horario, teléfono y otros campos de la ficha desde PostScore en lugar de directamente en Google.",
@@ -12343,8 +12589,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.seeHistory": "Ver historial",
     "dashboard.overview.topIssue": "Principal pendiente: {label}",
     "dashboard.overview.nothingLeftHere": "Nada pendiente aquí",
-    "dashboard.overview.showChecks": "Ver todas las revisiones",
-    "dashboard.overview.hideChecks": "Ocultar revisiones",
     "dashboard.overview.showAllScans": "Mostrar los {count} escaneos",
     "dashboard.overview.showFewerScans": "Mostrar menos",
     "dashboard.overview.listingDetails": "Detalles de la ficha",

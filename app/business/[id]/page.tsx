@@ -8,12 +8,13 @@ import { lastOwnerRescanAt } from "@/lib/placesSearchBudget.server";
 import { Card } from "@/components/ui/Card";
 import { scoreBusinessById, getScoreHistory, getRecentScoreSnapshots } from "@/app/actions/scoring";
 import { getBusinessSummary } from "@/app/actions/businesses";
-import { getAssistantPageData, getPostaiMonthlyStatus } from "@/app/actions/assistant";
 import { getLocalBenchmark } from "@/app/actions/competitors";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { resolveBizProfile } from "@/config/bizProfiles";
-import { normalizeLocale, t } from "@/lib/i18n";
-import { BusinessScoreView, type AssistantEmbedData } from "./BusinessScoreView";
+import { normalizeLocale } from "@/lib/i18n";
+import { BusinessScoreView } from "./BusinessScoreView";
+import { featureMapFor } from "@/lib/postaiFeatureMap";
+import { postaiPageQuestions } from "@/lib/postaiDock";
 import { withoutAdvice } from "@/lib/freeUpsell";
 import { freeAiAllowance } from "@/lib/freeAiUsage.server";
 import { WebsiteOnlyOverview } from "./WebsiteOnlyOverview";
@@ -101,10 +102,9 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
     );
   }
 
-  const [history, recentSnapshots, assistantPageData, benchmark, gbpStatus, actionPlan, niche, upgrade, lastOwnerRescan, replyDrafts, freePostai, postaiMonthly] = await Promise.all([
+  const [history, recentSnapshots, benchmark, gbpStatus, actionPlan, niche, upgrade, lastOwnerRescan, replyDrafts, freePostai] = await Promise.all([
     getScoreHistory(params.id),
     getRecentScoreSnapshots(params.id, 2),
-    getAssistantPageData(params.id),
     getLocalBenchmark(params.id),
     getGbpConnectionStatus(params.id),
     // The same plan the Growth page shows — Top recommendations are its
@@ -123,8 +123,6 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
     (await getPlan()) === "free" ? getReplyDraftStatus(params.id) : Promise.resolve(null),
     // Free: PostAI questions left this week (DB only).
     (await getPlan()) === "free" ? freeAiAllowance(params.id, "postai") : Promise.resolve(null),
-    // Grow: PostAI questions left this month (DB only).
-    getPostaiMonthlyStatus(params.id),
   ]);
   const bannerKind = niche ? nicheBannerKind(niche.resolved) : null;
   const freeGate = rescanGate(upgrade.plan === "free", null, lastOwnerRescan, new Date());
@@ -141,28 +139,20 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
     resolveWebsiteBuilder(websiteAnalysis?.builder, businessWebsiteUrl(scored.business))?.id ?? null
   ).fixes.length;
 
-  const assistant: AssistantEmbedData =
-    assistantPageData.status === "ok"
-      ? {
-          status: "ok",
-          context: assistantPageData.context,
-          starterPrompts: assistantPageData.starterPrompts,
-          conversationCount: assistantPageData.conversationCount,
-          monthly: postaiMonthly,
-        }
-      : {
-          status: "unavailable",
-          message:
-            assistantPageData.status === "error"
-              ? assistantPageData.message
-              : t(locale, "dashboard.overview.assistantDataErrorFallback"),
-        };
-
   // Free: the page gets only what the Free Overview shows — the score
   // without any fix advice, no recommendations, and PostAI's starter
-  // prompts without the business context — so no real fix text is ever
+  // questions without the business context — so no real fix text is ever
   // in a Free page's HTML (lib/freeUpsell.ts).
   const free = upgrade.plan === "free";
+  // The Free PostAI card's questions: the "Ask PostAI" panel's own
+  // Overview questions (lib/postaiDock.ts), plan-aware.
+  const freePostaiQuestions = free
+    ? postaiPageQuestions(
+        "overview",
+        featureMapFor(upgrade.plan, { couponsOk: profile.couponsOk, referralOk: profile.referralOk, pricingOk: profile.pricingOk, hasWebsite: businessWebsiteUrl(scored.business) !== null, monthlyReportsLive: isMonthlyReportsLive() }),
+        locale
+      )
+    : [];
 
   return (
     // Free: the combined upgrade card is the Overview's one upgrade prompt —
@@ -186,7 +176,7 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
         result={free ? withoutAdvice(scored.result) : scored.result}
         history={history}
         recentSnapshots={recentSnapshots}
-        assistant={free && assistant.status === "ok" ? { status: "showroom", starterPrompts: assistant.starterPrompts } : assistant}
+        freePostaiQuestions={freePostaiQuestions}
         benchmark={benchmark}
         gbpConnected={gbpStatus.status === "ok" && gbpStatus.connected}
         profileTools={{ referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk }}

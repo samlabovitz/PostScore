@@ -119,3 +119,13 @@ body {
     page-break-inside: avoid;
   }
 }
+
+/* "Ask PostAI" side panel (components/assistant/PostAIDock.tsx): the page
+   makes room for it only when its own content would still be at least
+   ~1000px wide — PostAIDock measures that and sets the attribute; any
+   narrower and the panel lies over the page, so nothing squeezes. */
+@media (min-width: 860px) {
+  body[data-postai-panel="open"] main {
+    margin-right: 400px;
+  }
+}

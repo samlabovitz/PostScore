@@ -344,8 +344,9 @@ describe("buildAssistantContextText", () => {
   test("includes the persisted business-memory block with real score history and fixed items", () => {
     const text = buildAssistantContextText(BASE_CONTEXT);
     expect(text).toContain("WHAT WE KNOW ABOUT THIS BUSINESS");
-    expect(text).toContain("Services (owner-entered): Brunch, Catering.");
-    expect(text).toContain("Typical job/ticket value range (owner-entered): $15-$45.");
+    // Worded for the business type (a restaurant) and labeled owner-provided.
+    expect(text).toContain("Menu favorites (owner-provided): Brunch, Catering.");
+    expect(text).toContain("Typical check per person (owner-provided): $15–$45.");
     expect(text).toContain("1/1/2026: 68 (D) -> 2/1/2026: 74 (C)");
     expect(text).toContain("Photos on listing (+6 pts, confirmed 1/15/2026)");
   });
@@ -436,8 +437,9 @@ describe("buildAssistantContextText", () => {
       },
     };
     const text = buildAssistantContextText(empty);
-    expect(text).toContain("Services: not entered yet");
-    expect(text).toContain("Typical job/ticket value range: not entered yet.");
+    expect(text).toContain("Menu favorites: not added yet");
+    expect(text).toContain("Typical check per person: not added yet.");
+    expect(text).toContain("What makes you different: not added yet.");
     expect(text).toContain("Score history: no saved scans yet.");
     expect(text).toContain("Confirmed fixed: nothing confirmed fixed yet.");
     expect(text).not.toContain("Brunch");
@@ -1298,7 +1300,7 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
 
   test("instructs the assistant not to recite panel-visible identity facts back to the owner", () => {
     expect(ASSISTANT_SYSTEM_RULES).toContain("DON'T RECITE WHAT THE OWNER CAN ALREADY SEE");
-    expect(ASSISTANT_SYSTEM_RULES).toContain("What I know about your business");
+    expect(ASSISTANT_SYSTEM_RULES).toContain("What PostAI knows about your business");
   });
 
   test("points the assistant to PostScore's own real tools/pages, never an invented one", () => {
