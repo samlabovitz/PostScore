@@ -138,3 +138,36 @@ describe("Price map and the cleaned-up layout", () => {
     expect(html).toContain("Por qué");
   });
 });
+
+describe("Red Bowl, Oct 27: a restaurant is never told to add brand and size", () => {
+  const DISHES = [
+    { id: "d1", business_id: "b", service: "General Tso's Chicken", price: 13.5, size: null, created_at: "2026-10-01T00:00:00Z" },
+    { id: "d2", business_id: "b", service: "Catering party tray", price: 90, size: null, created_at: "2026-10-01T00:00:00Z" },
+  ];
+  const RESTAURANT: StoredPricingAssessment = {
+    assessments: [
+      { service: "General Tso's Chicken", price: 13.5, tier: "competitive", basis: "general_estimate", guidance: "g1", typicalLow: 11, typicalHigh: 16 },
+      // The AI couldn't price it (too custom) — not a bottled product.
+      { service: "Catering party tray", price: 90, tier: "no_data", basis: "no_data", guidance: "g2" },
+    ],
+    priceLevelContext: null,
+    locale: "en",
+    assessedAt: "2026-10-27T12:00:00Z",
+  };
+  const view = (locale: "en" | "es") =>
+    renderToStaticMarkup(
+      <LocaleProvider locale={locale}>
+        <PricingView businessId="b" businessName="Red Bowl" profile={bizProfileById("restaurant", locale)!} initialPrices={DISHES} initialAssessment={RESTAURANT} />
+      </LocaleProvider>
+    );
+
+  test("dishes get a real tier; an item with no typical price says so plainly", () => {
+    const html = view("en");
+    expect(html.match(/data-testid="price-map-row"/g)).toHaveLength(1);
+    expect(html).toContain("No typical price to compare");
+    expect(html).not.toContain("Add brand + size");
+    expect(html).not.toMatch(/needs details/);
+    expect(view("es")).toContain("Sin precio típico para comparar");
+    expect(view("es")).not.toContain("Agregue marca + tamaño");
+  });
+});

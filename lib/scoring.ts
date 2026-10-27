@@ -1601,6 +1601,12 @@ export const CHECKS: CheckDefinition[] = [
       if (!has) {
         return { earnedPoints: 0, confidence: "VERIFIED", explanation: t(locale, "content.checks.completeness.website_link.explanation.missing") };
       }
+      // Day 16: a social page in the website field isn't a website link
+      // (it counts under website.social_links instead).
+      const platform = socialPagePlatform(input.website);
+      if (platform) {
+        return { earnedPoints: 0, confidence: "VERIFIED", explanation: t(locale, "content.checks.completeness.website_link.explanation.socialPage", { platform }) };
+      }
       const trust = input.websiteAnalysis?.websiteTrust;
       if (trust?.listingLinkBroken) {
         return {
@@ -2479,12 +2485,32 @@ export const CHECKS: CheckDefinition[] = [
     maxPoints: 1,
     adviceKey: "content.checks.website.social_links.advice",
     evaluate(input, locale) {
+      // A social page in the listing's website field is a social profile,
+      // not a website (website.has_website) — it counts here.
+      const listingPlatform = input.website ? socialPagePlatform(input.website) : null;
+      const listingProfile = listingPlatform ? { platform: listingPlatform, url: input.website!.trim() } : null;
       if (!hasAnalyzableWebsite(input)) {
+        // Shown as counted, but not scored: the Website category stays
+        // out of the score without a website, and a social page alone
+        // must never earn website points.
+        if (listingProfile) {
+          return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.social_links.explanation.listingOnly", { platform: listingProfile.platform }) };
+        }
         return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.social_links.explanation.noWebsite") };
       }
       const couldntCheck = pageCouldntBeChecked(input, locale);
-      if (couldntCheck) return couldntCheck;
       const content = input.websiteAnalysis?.content ?? null;
+      const analyzed = !couldntCheck && !!content && content.socialProfiles !== undefined;
+      // The site couldn't be read, but the listing's own social link is a
+      // fact from Google — it still counts.
+      if (!analyzed && listingProfile) {
+        return {
+          earnedPoints: 1,
+          confidence: "VERIFIED",
+          explanation: t(locale, "content.checks.website.social_links.explanation.found", { profiles: `${listingProfile.platform}: ${listingProfile.url}` }),
+        };
+      }
+      if (couldntCheck) return couldntCheck;
       // Never analyzed, or saved before this detection existed — not a
       // real "none found".
       if (!content || content.socialProfiles === undefined) {
@@ -2493,6 +2519,7 @@ export const CHECKS: CheckDefinition[] = [
       // v1.11.0: only links that lead to a real profile count (each one
       // checked with a single plain request — lib/socialLinkCheck.ts).
       const counted = content.socialProfiles.filter(socialProfileCounts);
+      if (listingProfile && !counted.some((p) => p.platform === listingProfile.platform)) counted.push(listingProfile);
       const notCounted = content.socialProfiles.filter((p) => !socialProfileCounts(p));
       const whyNot = notCounted.map((p) => socialLinkProblem(p, locale));
       if (counted.length > 0) {

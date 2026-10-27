@@ -140,3 +140,13 @@ describe("Step 2g: social links in unusual formats (the Chipotle store-locator c
     expect(bareProfiles(detectSocialProfiles(`<a href="/out?u=https%3A%2F%2Fwww.facebook.com%2Fsharer%2Fsharer.php%3Fu%3Dx">Share</a>`))).toEqual([]);
   });
 });
+
+describe("Bánh Mì Boy, Oct 27: the rebuilt Next.js site", () => {
+  // The real head banhmiboy.com serves today (to PostScoreBot too): React's
+  // self-closing tags, camel-cased charSet, viewport first.
+  const NEXT_HEAD = `<!DOCTYPE html><!--4zQ99DBjZ83sL_i9UOmXb--><html lang="en" class="__variable_23d926"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="preload" href="/_next/static/media/589c87d9f2db4221-s.p.woff2" as="font" crossorigin="" type="font/woff2"/><title>Bánh Mì Boy</title></head><body><h1>Bánh Mì Boy</h1><p>Fresh banh mi.</p></body></html>`;
+  test("the self-closing viewport tag is found", () => {
+    expect(metaContent(NEXT_HEAD, "viewport")).toBe("width=device-width, initial-scale=1");
+    expect(analyzeWebsiteHtml(NEXT_HEAD, "https://www.banhmiboy.com/").hasViewportTag).toBe(true);
+  });
+});

@@ -69,8 +69,9 @@ export function scoreComparability(baseline: MonthlyReportScoreRow, current: Mon
   if (fromVersion && toVersion && fromVersion !== toVersion) {
     return "scoring_updated";
   }
+  // Any check — newly found data (a review date, a listing field) moves
+  // the score just like a website check that's measured again.
   for (const c of current.breakdown.checks) {
-    if (!c.id.startsWith("website.")) continue;
     const before = baseline.breakdown.checks.find((b) => b.id === c.id);
     if (before && (before.earnedPoints === null) !== (c.earnedPoints === null)) return "checks_flipped";
   }
@@ -348,8 +349,12 @@ function buildMovementSummary(
   // Different scoring versions: the score change isn't the business's —
   // say so, with today's real numbers, and still report the real review
   // and rating changes below.
-  if (comparability === "scoring_updated") {
-    parts.push(t(locale, "report.summary.scoringUpdated", { total: current.total, grade: current.grade }));
+  // Checks measured for the first time (or no longer measurable): same —
+  // never "your score rose", since the owner didn't change anything.
+  if (comparability !== "comparable") {
+    parts.push(
+      t(locale, comparability === "scoring_updated" ? "report.summary.scoringUpdated" : "report.summary.checksFlipped", { total: current.total, grade: current.grade })
+    );
     scoreDelta = 0;
     gradeChanged = false;
   }

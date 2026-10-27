@@ -49,7 +49,7 @@ describe("rule 1 — a social media page is not a website", () => {
   test("the top fix is 'Get a website' — PostScore can do this for you (starter site)", () => {
     const input = { ...scoringInput(), website: "https://linktr.ee/mycafe" };
     const advice = generateSuggestions(scoreBusiness(input)).find((s) => s.checkId === "website.has_website")!.advice;
-    expect(advice).toMatch(/^Get a website of your own/);
+    expect(advice).toBe("Add a real website (or your PostScore starter site) to your listing.");
     expect(websiteFixesFor(check(input, "website.has_website"), null)[0].kind).toBe("postscore_does");
   });
 

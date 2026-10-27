@@ -144,7 +144,31 @@ describe("a scoring update is never reported as progress", () => {
       focus("en")
     );
     expect(content.comparability).toBe("checks_flipped");
-    expect(await renderReport(content, "en")).toContain("Some website checks couldn't be measured this time");
+    expect(await renderReport(content, "en")).toContain("Some checks couldn't be measured this time");
+  });
+
+  test("newly found data (any check, e.g. review recency now measured) is never called progress — EN + ES", async () => {
+    const before = scoringInput({ mostRecentReviewDaysAgo: null });
+    const after = scoringInput({ mostRecentReviewDaysAgo: 3 });
+    for (const locale of ["en", "es"] as const) {
+      const content = buildMonthlyReportContent(
+        scoreRow({ id: "b", scoringVersion: "1.11.0", breakdown: scoreBusiness(before) }),
+        scoreRow({ id: "c", scoringVersion: "1.11.0", breakdown: scoreBusiness(after) }),
+        null,
+        null,
+        locale,
+        focus(locale)
+      );
+      expect(content.comparability).toBe("checks_flipped");
+      const text = await renderReport(content, locale);
+      const preview = inboxPreviewText(content.summary);
+      expect(text).toContain(locale === "en" ? "Some checks were measured differently this month" : "Algunas revisiones se midieron de otra forma este mes");
+      expect(preview).toContain(locale === "en" ? "isn't a like-for-like change" : "no es un cambio comparable");
+      for (const s of [text, preview]) {
+        expect(s).not.toMatch(/score (rose|dropped)|puntuación (subió|bajó)|great progress|since last report|desde el último informe/i);
+        expect(s).not.toMatch(/\+\d+ (pts|points|puntos)/i);
+      }
+    }
   });
 });
 
@@ -159,9 +183,11 @@ describe("report extras from the current scan", () => {
       const content = buildMonthlyReportContent(null, scoreRow({ breakdown: scoreBusiness(input) }), null, null, locale, focus(locale), true, extras);
       const text = await renderReport(content, locale);
       expect(text).toContain(locale === "en" ? "Warning: we found spam content on your website" : "Advertencia: encontramos contenido de spam");
-      // Above the score.
+      // The top item: above the headline, and so above the score.
       const scoreLine = t(locale, "report.score.summary", { total: content.score.current.total, grade: content.score.current.grade });
-      expect(text.indexOf(locale === "en" ? "Warning:" : "Advertencia:")).toBeLessThan(text.lastIndexOf(scoreLine));
+      const warning = text.indexOf(locale === "en" ? "Warning:" : "Advertencia:");
+      expect(warning).toBeLessThan(text.lastIndexOf(scoreLine));
+      expect(warning).toBeLessThan(text.indexOf(t(locale, "report.headline.baseline")));
     }
   });
 
@@ -310,5 +336,50 @@ describe("html lang follows the business's language", () => {
     const props = { businessName: "x", reportDate: "2026-10-01T00:00:00Z", content, unsubscribeUrl: "https://x" };
     expect(await render(<MonthlyReportEmail {...props} locale="es" />)).toMatch(/<html[^>]*lang="es"/);
     expect(await render(<MonthlyReportEmail {...props} locale="en" />)).toMatch(/<html[^>]*lang="en"/);
+  });
+});
+
+describe("Day 16: 'See the Website page' is a real link (SITE_URL)", () => {
+  const URL_ = "https://postscore.co/business/biz-1/website";
+  async function html(content: MonthlyReportContent, locale: Locale, websitePageUrl: string | null) {
+    return render(
+      <MonthlyReportEmail
+        businessName="Riverside Cafe"
+        reportDate="2026-10-01T14:00:00.000Z"
+        content={content}
+        unsubscribeUrl="https://postscore.app/unsubscribe?business=x&token=y"
+        locale={locale}
+        websitePageUrl={websitePageUrl}
+        testPreview
+      />
+    );
+  }
+
+  test("the website pointer and the hacked-site alert both link to the Website page — EN + ES", async () => {
+    const input = inputWith({
+      spamSignals: [{ category: "replica", matchedPhrase: "replica watches", snippet: "replica watches", suspiciousLinks: [], hidden: true } as never],
+    });
+    const extras: ReportExtras = { ...buildReportExtras(input, scoreBusiness(input)), websiteImprovement: { score: 72, improvements: 2, points: 3.5 } };
+    for (const locale of ["en", "es"] as const) {
+      const content = buildMonthlyReportContent(null, scoreRow({ breakdown: scoreBusiness(input) }), null, null, locale, focus(locale), true, extras);
+      const out = decode(await html(content, locale, URL_));
+      const phrase = locale === "en" ? "See the Website page" : "Consulte la página Sitio web";
+      const links = out.match(new RegExp(`<a[^>]*href="${URL_}"[^>]*>${phrase}</a>`, "g")) ?? [];
+      expect(links.length).toBe(2);
+      // The sentence around it is unchanged.
+      expect(visibleText(out)).toContain(locale === "en" ? `${phrase} for what we found and what to do` : `${phrase} para ver lo que encontramos y qué hacer`);
+    }
+  });
+
+  test("no URL (previews) → plain words, no link; the cron passes the same SITE_URL link live and in testing mode", async () => {
+    const extras: ReportExtras = { ...EMPTY_REPORT_EXTRAS, websiteImprovement: { score: 72, improvements: 2, points: 3.5 } };
+    const content = buildMonthlyReportContent(null, scoreRow(), null, null, "en", focus("en"), true, extras);
+    const out = decode(await html(content, "en", null));
+    expect(out).toContain("See the Website page.");
+    expect(out).not.toMatch(/<a[^>]*>See the Website page<\/a>/);
+    const fs = await import("node:fs");
+    const route = fs.readFileSync("app/api/cron/monthly-reports/route.ts", "utf8");
+    expect(route).toContain("const websitePageUrl = `${siteUrl}/business/${businessId}/website`;");
+    expect(route.match(/websitePageUrl \}\),/g)).toHaveLength(2);
   });
 });

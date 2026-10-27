@@ -729,7 +729,7 @@ describe("Free and Grow see the connect box but never the Premium pages", () => 
 });
 
 describe("Premium connect page copy", () => {
-  test("every feature card is marked Coming soon (EN + ES); the honest connected copy replaces the old line", async () => {
+  test("every feature card that doesn't work yet is marked Coming soon; reply-rate stats works now (EN + ES)", async () => {
     const { ConnectGbpView } = await import("@/app/business/[id]/connect-gbp/ConnectGbpView");
     const props = { businessId: "b1", businessName: "Shop", connected: false, connectedAt: null, justConnected: false, error: null, oauthConfigured: true, connectOpen: true };
     const render = (p: Record<string, unknown>, locale: Locale = "en") =>
@@ -738,10 +738,17 @@ describe("Premium connect page copy", () => {
           <ConnectGbpView {...props} {...p} />
         </LocaleProvider>
       );
-    expect(render({}).match(/data-testid="unlock-soon"/g)?.length).toBe(9);
+    const en = render({});
+    expect(en.match(/data-testid="unlock-soon"/g)?.length).toBe(8);
+    expect(en.match(/data-testid="unlock-live"/g)?.length).toBe(1);
+    // The one live card is reply-rate stats.
+    const live = en.slice(en.lastIndexOf("<span", en.indexOf('data-testid="unlock-live"')) - 200, en.indexOf('data-testid="unlock-live"'));
+    expect(live).toContain("Reply-rate stats");
+    expect(en).toContain("Works now");
     expect(render({}, "es")).toContain("Próximamente");
+    expect(render({}, "es")).toContain("Ya funciona");
     const just = render({ justConnected: true, connected: true, locationTitle: "Hair express on Broadway", locationAddress: "9 S Broadway, Tarrytown, NY 10591" });
-    expect(just).toContain("PostScore will use it to check how you reply to reviews. More features are coming.");
+    expect(just).toContain("PostScore checks how you reply to reviews (counts only). More features are coming.");
     expect(just).toContain("Connected: Hair express on Broadway, 9 S Broadway, Tarrytown, NY 10591");
     expect(just).not.toContain("review process");
     expect(render({ error: "no_match", businessAddress: "9 S Broadway" })).toContain("This Google account doesn&#x27;t manage Shop at 9 S Broadway.");

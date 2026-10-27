@@ -613,7 +613,7 @@ export function priceMapSummary(assessments: PriceAssessment[]): PriceMapSummary
     competitive: count("competitive"),
     upperMid: count("upper_mid"),
     premium: count("premium"),
-    needsDetails: assessments.filter((a) => a.tier === "no_data" && a.reason !== "collectible").length,
+    needsDetails: assessments.filter((a) => a.reason === "needs_brand_and_size").length,
     collectible: assessments.filter((a) => a.reason === "collectible").length,
   };
 }

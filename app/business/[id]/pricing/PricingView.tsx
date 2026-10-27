@@ -171,7 +171,7 @@ function SummaryStrip({ assessments }: { assessments: PriceAssessment[] }) {
     t(locale, "dashboard.pricing.map.underMarket", { n: s.underMarket }),
     ...(s.upperMid ? [t(locale, "dashboard.pricing.map.upperMid", { n: s.upperMid })] : []),
     ...(s.premium ? [t(locale, "dashboard.pricing.map.premium", { n: s.premium })] : []),
-    t(locale, "dashboard.pricing.map.needsDetails", { n: s.needsDetails }),
+    ...(s.needsDetails ? [t(locale, "dashboard.pricing.map.needsDetails", { n: s.needsDetails })] : []),
     ...(s.collectible ? [t(locale, "dashboard.pricing.map.collectible", { n: s.collectible })] : []),
   ];
   return (
@@ -195,12 +195,16 @@ function PriceMapRow({ a }: { a: PriceAssessment }) {
     </div>
   );
   if (a.typicalLow === undefined || a.typicalHigh === undefined || a.tier === "no_data") {
+    // "Add brand + size" only for a bottled/packaged item that really
+    // lacks them — never for a menu item or service the AI couldn't price.
     const label =
       a.reason === "collectible"
         ? "dashboard.pricing.map.collectibleRow"
-        : a.tier === "no_data"
+        : a.reason === "needs_brand_and_size"
           ? "dashboard.pricing.map.addBrandSize"
-          : "dashboard.pricing.map.noRange";
+          : a.tier === "no_data"
+            ? "dashboard.pricing.map.noMarketData"
+            : "dashboard.pricing.map.noRange";
     return (
       <li data-testid="price-map-empty">
         {name}

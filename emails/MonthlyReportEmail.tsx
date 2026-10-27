@@ -83,6 +83,26 @@ export interface MonthlyReportEmailProps {
   googleMapsLogoUrl?: string | null;
   /** A test send: shows TEST_PREVIEW_LINE at the top. */
   testPreview?: boolean;
+  /** `${SITE_URL}/business/{id}/website` — "See the Website page" becomes
+   * a real link to it. Without it (previews) the words stay plain text. */
+  websitePageUrl?: string | null;
+}
+
+/** "See the Website page" inside a sentence, as a real link when there's
+ * a URL — the sentence's own words, never a second copy of them. */
+function withWebsiteLink(text: string, url: string | null, locale: Locale): React.ReactNode {
+  const phrase = t(locale, "report.link.websitePage");
+  const at = url ? text.indexOf(phrase) : -1;
+  if (at < 0) return text;
+  return (
+    <>
+      {text.slice(0, at)}
+      <Link href={url!} style={{ color: "inherit", textDecoration: "underline" }}>
+        {phrase}
+      </Link>
+      {text.slice(at + phrase.length)}
+    </>
+  );
 }
 
 /** "Google Maps" attribution for the rating, reviews, competitors and
@@ -205,13 +225,17 @@ export function buildHeadline(content: MonthlyReportContent, locale: Locale = DE
     return t(locale, "report.headline.steady");
   }
 
-  // Different scoring versions: never "your score rose/dropped" — today's
-  // real score, said plainly, plus any real review/rating change.
-  if (content.comparability === "scoring_updated") {
+  // Different scoring versions, or checks measured for the first time (or
+  // no longer): never "your score rose/dropped" — today's real score, said
+  // plainly, plus any real review/rating change.
+  if (content.comparability !== "comparable") {
     const real = [reviewFragment(content.reviewCount, locale), ratingFragment(content.rating, locale)].filter(
       (f): f is string => f !== null
     );
-    const lead = t(locale, "report.headline.scoringUpdated", { total: content.score.current.total, grade: content.score.current.grade });
+    const lead = t(locale, content.comparability === "scoring_updated" ? "report.headline.scoringUpdated" : "report.headline.checksFlipped", {
+      total: content.score.current.total,
+      grade: content.score.current.grade,
+    });
     return real.length > 0 ? `${lead} ${capitalizeFirst(real.join(` ${t(locale, "common.and")} `))}.` : lead;
   }
   const fragments = [
@@ -307,7 +331,8 @@ function ScoreVisual({
 }) {
   const pct = score.current.total;
   const scoringUpdated = comparability === "scoring_updated";
-  const showDelta = !scoringUpdated && score.scoreDelta !== null && score.scoreDelta !== 0;
+  // "+N since last report" only for a like-for-like comparison.
+  const showDelta = comparability === "comparable" && score.scoreDelta !== null && score.scoreDelta !== 0;
 
   return (
     <Section style={{ margin: "0 0 20px" }}>
@@ -370,7 +395,7 @@ function ScoreVisual({
 
 /** Top-of-report warning (above the score) when Site security found spam
  * on the site or Google Safe Browsing flags it — always "may", never "is". */
-function SecurityAlert({ content, locale }: { content: MonthlyReportContent; locale: Locale }) {
+function SecurityAlert({ content, locale, websitePageUrl }: { content: MonthlyReportContent; locale: Locale; websitePageUrl: string | null }) {
   const alert = content.securityAlert;
   if (!alert) return null;
   return (
@@ -378,9 +403,13 @@ function SecurityAlert({ content, locale }: { content: MonthlyReportContent; loc
       style={{ backgroundColor: "#fbeceb", border: "1px solid #e9b8b3", borderRadius: "8px", padding: "12px 14px", margin: "0 0 20px" }}
     >
       <Text style={{ color: "#8f2d24", fontSize: "14px", fontWeight: 600, lineHeight: "1.5", margin: 0 }}>
-        {alert.kind === "spam"
-          ? t(locale, "report.securityAlert.spam", { topic: spamTopic(alert.category, locale) })
-          : t(locale, "report.securityAlert.safeBrowsing", { types: alert.types.join(", ") })}
+        {withWebsiteLink(
+          alert.kind === "spam"
+            ? t(locale, "report.securityAlert.spam", { topic: spamTopic(alert.category, locale) })
+            : t(locale, "report.securityAlert.safeBrowsing", { types: alert.types.join(", ") }),
+          websitePageUrl,
+          locale
+        )}
       </Text>
     </Section>
   );
@@ -401,7 +430,7 @@ function SecurityAlert({ content, locale }: { content: MonthlyReportContent; loc
  * nothing to flag, an honest line saying so — never a fabricated
  * concern to fill the space.
  */
-function FocusSection({ content, locale }: { content: MonthlyReportContent; locale: Locale }) {
+function FocusSection({ content, locale, websitePageUrl }: { content: MonthlyReportContent; locale: Locale; websitePageUrl: string | null }) {
   return (
     <Section>
       <Text style={labelStyle}>{t(locale, "report.focus.label")}</Text>
@@ -412,7 +441,7 @@ function FocusSection({ content, locale }: { content: MonthlyReportContent; loca
       ) : (
         content.focus.pointers.map((pointer, i) => (
           <Text key={i} style={{ ...valueStyle, margin: "0 0 6px" }}>
-            • {pointer.text}
+            • {pointer.kind === "website" ? withWebsiteLink(pointer.text, websitePageUrl, locale) : pointer.text}
           </Text>
         ))
       )}
@@ -571,6 +600,7 @@ export function MonthlyReportEmail({
   locale = DEFAULT_LOCALE,
   googleMapsLogoUrl = null,
   testPreview = false,
+  websitePageUrl = null,
 }: MonthlyReportEmailProps) {
   const { month: coverageMonth, year: coverageYear } = reportCoverageMonth(reportDate, locale);
 
@@ -602,13 +632,15 @@ export function MonthlyReportEmail({
           </Text>
           <Heading style={{ color: "#14243f", fontSize: "22px", margin: "0 0 18px" }}>{businessName}</Heading>
 
+          {/* Hacked-site signs come first — above the headline. */}
+          <SecurityAlert content={content} locale={locale} websitePageUrl={websitePageUrl} />
+
           <Text style={{ color: "#14243f", fontSize: "17px", fontWeight: 600, lineHeight: "1.5", margin: "0 0 20px" }}>
             {buildHeadline(content, locale)}
           </Text>
 
           <Hr style={{ borderColor: "#e5e1d8", margin: "0 0 20px" }} />
 
-          <SecurityAlert content={content} locale={locale} />
           <ScoreVisual score={content.score} comparability={content.comparability} scoreBasis={content.scoreBasis} locale={locale} />
           <MetricLine
             label={t(locale, "report.label.rating")}
@@ -636,7 +668,7 @@ export function MonthlyReportEmail({
             </Text>
           )}
 
-          <FocusSection content={content} locale={locale} />
+          <FocusSection content={content} locale={locale} websitePageUrl={websitePageUrl} />
 
           <Hr style={{ borderColor: "#e5e1d8", margin: "4px 0 20px" }} />
 

@@ -26,7 +26,7 @@ import { formatShortDate, t, useLocale, useTimeZone, type Locale } from "@/lib/i
 function buildUnlocks(
   locale: Locale,
   businessId: string
-): Array<{ icon: typeof IconEdit; title: string; body: string; preview?: { href: string; label: string } }> {
+): Array<{ icon: typeof IconEdit; title: string; body: string; preview?: { href: string; label: string }; live?: boolean }> {
   return [
     {
       icon: IconEdit,
@@ -52,6 +52,8 @@ function buildUnlocks(
       icon: IconChartBar,
       title: t(locale, "dashboard.connectGbp.unlockReplyRateStatsTitle"),
       body: t(locale, "dashboard.connectGbp.unlockReplyRateStatsBody"),
+      // Live: the reply counts (lib/gbpReplyCounts.server.ts).
+      live: true,
     },
     {
       icon: IconChartBar,
@@ -203,10 +205,16 @@ export function ConnectGbpView({
                 <div>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="text-[13.5px] font-semibold text-ink">{u.title}</span>
-                    {/* None of these work yet. */}
-                    <span data-testid="unlock-soon" className="rounded-full bg-paper-deep px-2 py-px text-[10.5px] font-semibold text-ink-soft">
-                      {t(locale, "dashboard.connectGbp.comingSoonBadge")}
-                    </span>
+                    {/* Only reply-rate stats work so far; the rest are coming. */}
+                    {u.live ? (
+                      <span data-testid="unlock-live" className="rounded-full bg-green/10 px-2 py-px text-[10.5px] font-semibold text-green">
+                        {t(locale, "dashboard.connectGbp.liveBadge")}
+                      </span>
+                    ) : (
+                      <span data-testid="unlock-soon" className="rounded-full bg-paper-deep px-2 py-px text-[10.5px] font-semibold text-ink-soft">
+                        {t(locale, "dashboard.connectGbp.comingSoonBadge")}
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1 text-[12.5px] leading-snug text-ink-mute">{u.body}</p>
                   {u.preview && (

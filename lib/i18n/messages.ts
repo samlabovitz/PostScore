@@ -1021,6 +1021,7 @@ export type MessageKey =
   | "content.checks.completeness.website_link.advice"
   | "content.checks.completeness.website_link.explanation.present"
   | "content.checks.completeness.website_link.explanation.missing"
+  | "content.checks.completeness.website_link.explanation.socialPage"
   | "content.checks.completeness.website_link.explanation.broken"
   | "content.checks.completeness.categories.label"
   | "content.checks.completeness.categories.advice"
@@ -1192,6 +1193,7 @@ export type MessageKey =
   | "content.checks.website.social_links.label"
   | "content.checks.website.social_links.advice"
   | "content.checks.website.social_links.explanation.noWebsite"
+  | "content.checks.website.social_links.explanation.listingOnly"
   | "content.checks.website.social_links.explanation.notAnalyzed"
   | "content.checks.website.social_links.explanation.found"
   | "content.checks.website.social_links.explanation.none"
@@ -1361,6 +1363,8 @@ export type MessageKey =
   | "report.fact.scoreUnchanged"
   | "report.summary.steady"
   | "report.summary.scoringUpdated"
+  | "report.summary.checksFlipped"
+  | "report.headline.checksFlipped"
   | "report.fact.scoreTo"
   | "report.fact.scoreToWithGrade"
   | "report.headline.scoringUpdated"
@@ -1372,6 +1376,7 @@ export type MessageKey =
   | "report.competitorSection.basis"
   | "report.focus.mismatch"
   | "report.focus.websitePartlyChecked"
+  | "report.link.websitePage"
   | "report.focus.website.one"
   | "report.focus.website.other"
   | "report.summary.reviewsGained.one"
@@ -3294,6 +3299,7 @@ export type MessageKey =
   | "dashboard.gbp.profileFreeGrowBody"
   | "dashboard.gbp.goToReviewsConnect"
   | "dashboard.connectGbp.comingSoonBadge"
+  | "dashboard.connectGbp.liveBadge"
   | "dashboard.gbpReplyCheck.title"
   | "dashboard.gbpReplyCheck.body"
   | "dashboard.gbpReplyCheck.connect"
@@ -3419,6 +3425,7 @@ export type MessageKey =
   | "dashboard.pricing.map.addBrandSize"
   | "dashboard.pricing.map.collectibleRow"
   | "dashboard.pricing.map.noRange"
+  | "dashboard.pricing.map.noMarketData"
   | "dashboard.pricing.map.markerTitle"
   | "dashboard.pricing.map.youMarker"
   | "dashboard.pricing.legend.what"
@@ -5143,6 +5150,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.completeness.website_link.advice": "Link your website in your Google Business Profile.",
     "content.checks.completeness.website_link.explanation.present": "Website is linked on the listing.",
     "content.checks.completeness.website_link.explanation.missing": "No website linked on the listing.",
+    "content.checks.completeness.website_link.explanation.socialPage": "Your Google listing links to your {platform} page, not a website.",
     "content.checks.completeness.website_link.explanation.broken":
       "The website link on your Google listing opens a \"Page Not Found\" page — update it.",
 
@@ -5408,6 +5416,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.social_links.label": "Social media links",
     "content.checks.website.social_links.advice": "Link your Instagram, Facebook, or other social profiles from your website (usually in the header or footer) so visitors can follow you.",
     "content.checks.website.social_links.explanation.noWebsite": "Not applicable — no website on file to check.",
+    "content.checks.website.social_links.explanation.listingOnly": "Your Google listing links to your {platform} page — that counts as your social profile. This check is scored once you have a website.",
     "content.checks.website.social_links.explanation.notAnalyzed": "Not checked yet — your next PostScore scan will look for social media links.",
     "content.checks.website.social_links.explanation.found": "Social profiles linked from your site: {profiles}.",
     "content.checks.website.social_links.explanation.none": "No links to your social media profiles found on your site — add them to your header or footer.",
@@ -5623,17 +5632,20 @@ export const messages: Record<Locale, LocaleMessages> = {
     "report.fact.scoreUnchanged": "score unchanged at {total} ({grade})",
     "report.summary.steady": "You held steady this month — {facts}.",
     "report.summary.scoringUpdated": "PostScore updated how it scores since your last report, so this isn't a like-for-like change — your score is now {total} ({grade})",
+    "report.summary.checksFlipped": "Some checks were measured for the first time (or couldn't be measured) since your last report, so this isn't a like-for-like change — your score is now {total} ({grade})",
     "report.fact.scoreTo": "{fragment} to {total}",
     "report.fact.scoreToWithGrade": "{fragment} to {total} ({grade})",
     "report.headline.scoringUpdated": "PostScore updated how it scores this month — here's where you stand.",
+    "report.headline.checksFlipped": "Some checks were measured differently this month — here's where you stand.",
     "report.score.scoringUpdated": "PostScore updated how it scores since your last report, so this isn't a like-for-like change — your score is now {total} ({grade}).",
-    "report.score.checksFlipped": "Some website checks couldn't be measured this time (or are measured again), which moved your score.",
+    "report.score.checksFlipped": "Some checks couldn't be measured this time (or are measured for the first time), which moved your score — not a change you made.",
     "report.score.partlyChecked": "Partly checked — your site blocks our automated check, so this score is based on {points} of 100 points.",
     "report.securityAlert.spam": "Warning: we found spam content on your website ({topic}) — a common sign it may have been hacked. See the Website page for what we found and what to do.",
     "report.securityAlert.safeBrowsing": "Warning: Google Safe Browsing has flagged your website as unsafe ({types}) — it may have been hacked. See the Website page for what we found and what to do.",
     "report.competitorSection.basis": "Compared on what Google lists for everyone.",
     "report.focus.mismatch": "Your site says {site}, Google says {google} — update whichever is wrong.",
     "report.focus.websitePartlyChecked": "Your website could only be partly checked (it blocks our automated check). See the Website page.",
+    "report.link.websitePage": "See the Website page",
     "report.focus.website.one": "Your website scores {score}/100 — {count} improvement available (up to about +{points} pts). See the Website page.",
     "report.focus.website.other": "Your website scores {score}/100 — {count} improvements available (up to about +{points} pts). See the Website page.",
     "report.summary.reviewsGained.one": "{count} new review",
@@ -6370,7 +6382,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.connectGbp.connectedHeading": "Google Business Profile connected",
     "dashboard.connectGbp.sinceDate": "Since {date}.",
     "dashboard.connectGbp.connectedFallback": "Connected.",
-    "dashboard.connectGbp.notWiredUpSuffix": "PostScore will use it to check how you reply to reviews. More features are coming.",
+    "dashboard.connectGbp.notWiredUpSuffix": "PostScore checks how you reply to reviews (counts only). More features are coming.",
     "dashboard.connectGbp.readyToConnectHeading": "Ready to connect?",
     "dashboard.connectGbp.oauthConfiguredBody":
       "You'll go to Google to approve access, then come back here. You can disconnect at any time.",
@@ -7728,7 +7740,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.checkResult.needsWork": "Needs work",
     "dashboard.checkResult.couldntCheck": "Couldn't check",
     "content.checks.website.has_website.explanation.socialPage": "Your Google listing links to your {platform} page, not a website. A {platform} page doesn't count as a website — customers can't find your full info, and you don't control it.",
-    "content.checks.website.has_website.advice.socialPage": "Get a website of your own — PostScore's starter site takes minutes — and put its address on your Google listing instead of the social page.",
+    "content.checks.website.has_website.advice.socialPage": "Add a real website (or your PostScore starter site) to your listing.",
     "dashboard.competitors.socialPageOnly": "{platform} page only",
     "content.checks.website.social_links.explanation.unconfirmed": "{platform}: {url} (link looks right — we couldn't open it to confirm)",
     "content.checks.website.social_links.explanation.backToSite": "Your {platform} link sends visitors back to your website instead of your {platform} profile.",
@@ -7831,6 +7843,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbp.profileFreeGrowBody": "On your plan you connect Google from your reviews area, for the review-reply check. This page's insights and listing tools are Premium.",
     "dashboard.gbp.goToReviewsConnect": "Go to your reviews →",
     "dashboard.connectGbp.comingSoonBadge": "Coming soon",
+    "dashboard.connectGbp.liveBadge": "Works now",
     "dashboard.gbpReplyCheck.title": "Replying to reviews",
     "dashboard.gbpReplyCheck.body": "Connect your Google Business Profile so your score can include how you reply to reviews. Read-only — PostScore never changes your listing on this plan.",
     "dashboard.gbpReplyCheck.connect": "Connect Google",
@@ -7956,6 +7969,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.pricing.map.addBrandSize": "Add brand + size",
     "dashboard.pricing.map.collectibleRow": "Collectible — not ranked",
     "dashboard.pricing.map.noRange": "Re-assess to see the typical range",
+    "dashboard.pricing.map.noMarketData": "No typical price to compare",
     "dashboard.pricing.map.markerTitle": "Your price {price} · typical {range}",
     "dashboard.pricing.map.youMarker": "Your price",
     "dashboard.pricing.legend.what": "What these mean",
@@ -9591,6 +9605,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.completeness.website_link.advice": "Enlace su sitio web en su Perfil de Negocio de Google.",
     "content.checks.completeness.website_link.explanation.present": "El sitio web está enlazado en la ficha.",
     "content.checks.completeness.website_link.explanation.missing": "No hay ningún sitio web enlazado en la ficha.",
+    "content.checks.completeness.website_link.explanation.socialPage": "Su ficha de Google enlaza a su página de {platform}, no a un sitio web.",
     "content.checks.completeness.website_link.explanation.broken": "El enlace del sitio web en su ficha de Google abre una página de \"No encontrado\" — actualícelo.",
     "content.checks.completeness.categories.label": "Categorías",
     "content.checks.completeness.categories.advice": "Agregue categorías de negocio a su Perfil de Negocio de Google para que los clientes puedan encontrarlo por lo que ofrece.",
@@ -9760,6 +9775,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.social_links.label": "Enlaces a redes sociales",
     "content.checks.website.social_links.advice": "Enlace sus perfiles de Instagram, Facebook u otras redes sociales desde su sitio web (normalmente en el encabezado o el pie de página) para que los visitantes puedan seguirle.",
     "content.checks.website.social_links.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para verificar.",
+    "content.checks.website.social_links.explanation.listingOnly": "Su ficha de Google enlaza a su página de {platform}; eso cuenta como su perfil social. Este punto se califica cuando tenga un sitio web.",
     "content.checks.website.social_links.explanation.notAnalyzed": "Aún no se ha revisado — su próximo escaneo de PostScore buscará enlaces a redes sociales.",
     "content.checks.website.social_links.explanation.found": "Perfiles sociales enlazados desde su sitio: {profiles}.",
     "content.checks.website.social_links.explanation.none": "No se encontraron enlaces a sus perfiles de redes sociales en su sitio — agréguelos al encabezado o al pie de página.",
@@ -9971,17 +9987,20 @@ export const messages: Record<Locale, LocaleMessages> = {
     "report.fact.scoreUnchanged": "puntuación sin cambios en {total} ({grade})",
     "report.summary.steady": "Se mantuvo estable este mes — {facts}.",
     "report.summary.scoringUpdated": "PostScore actualizó la forma en que calcula la puntuación desde su último informe, así que no es un cambio comparable — su puntuación ahora es {total} ({grade})",
+    "report.summary.checksFlipped": "Algunas revisiones se midieron por primera vez (o no se pudieron medir) desde su último informe, así que no es un cambio comparable — su puntuación ahora es {total} ({grade})",
     "report.fact.scoreTo": "{fragment} a {total}",
     "report.fact.scoreToWithGrade": "{fragment} a {total} ({grade})",
     "report.headline.scoringUpdated": "PostScore actualizó la forma en que calcula la puntuación este mes — así es como está.",
+    "report.headline.checksFlipped": "Algunas revisiones se midieron de otra forma este mes — así es como está.",
     "report.score.scoringUpdated": "PostScore actualizó la forma en que calcula la puntuación desde su último informe, así que no es un cambio comparable — su puntuación ahora es {total} ({grade}).",
-    "report.score.checksFlipped": "Algunas revisiones de su sitio web no se pudieron medir esta vez (o vuelven a medirse), y eso movió su puntuación.",
+    "report.score.checksFlipped": "Algunas revisiones no se pudieron medir esta vez (o se miden por primera vez), y eso movió su puntuación — no es un cambio que usted hizo.",
     "report.score.partlyChecked": "Revisado en parte — su sitio bloquea nuestra revisión automática, así que esta puntuación se basa en {points} de 100 puntos.",
     "report.securityAlert.spam": "Advertencia: encontramos contenido de spam en su sitio web ({topic}) — una señal común de que puede haber sido hackeado. Consulte la página Sitio web para ver lo que encontramos y qué hacer.",
     "report.securityAlert.safeBrowsing": "Advertencia: la Navegación segura de Google marcó su sitio web como inseguro ({types}) — puede haber sido hackeado. Consulte la página Sitio web para ver lo que encontramos y qué hacer.",
     "report.competitorSection.basis": "Comparado con lo que Google indica para todos.",
     "report.focus.mismatch": "Su sitio dice {site} y Google dice {google} — actualice el que esté mal.",
     "report.focus.websitePartlyChecked": "Su sitio web solo se pudo revisar en parte (bloquea nuestra revisión automática). Consulte la página Sitio web.",
+    "report.link.websitePage": "Consulte la página Sitio web",
     "report.focus.website.one": "Su sitio web obtiene {score}/100 — {count} mejora disponible (hasta unos +{points} pts). Consulte la página Sitio web.",
     "report.focus.website.other": "Su sitio web obtiene {score}/100 — {count} mejoras disponibles (hasta unos +{points} pts). Consulte la página Sitio web.",
     "report.summary.reviewsGained.one": "{count} reseña nueva",
@@ -10619,7 +10638,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.connectGbp.connectedHeading": "Perfil de Negocio de Google conectado",
     "dashboard.connectGbp.sinceDate": "Desde el {date}.",
     "dashboard.connectGbp.connectedFallback": "Conectado.",
-    "dashboard.connectGbp.notWiredUpSuffix": "PostScore lo usará para revisar cómo responde a las reseñas. Llegan más funciones.",
+    "dashboard.connectGbp.notWiredUpSuffix": "PostScore revisa cómo responde a las reseñas (solo cifras). Llegan más funciones.",
     "dashboard.connectGbp.readyToConnectHeading": "¿Listo para conectar?",
     "dashboard.connectGbp.oauthConfiguredBody": "Irá a Google para aprobar el acceso y luego volverá aquí. Puede desconectarse en cualquier momento.",
     "dashboard.connectGbp.oauthNotConfiguredBody": "La conexión con el Perfil de Negocio de Google aún no está configurada en este entorno — vuelva pronto.",
@@ -12289,7 +12308,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.checkResult.needsWork": "Por mejorar",
     "dashboard.checkResult.couldntCheck": "No se pudo revisar",
     "content.checks.website.has_website.explanation.socialPage": "Su ficha de Google enlaza a su página de {platform}, no a un sitio web. Una página de {platform} no cuenta como sitio web — los clientes no encuentran toda su información y usted no la controla.",
-    "content.checks.website.has_website.advice.socialPage": "Consiga su propio sitio web — el sitio inicial de PostScore toma minutos — y ponga su dirección en su ficha de Google en lugar de la página social.",
+    "content.checks.website.has_website.advice.socialPage": "Agregue un sitio web real (o su sitio inicial de PostScore) a su ficha.",
     "dashboard.competitors.socialPageOnly": "Solo página de {platform}",
     "content.checks.website.social_links.explanation.unconfirmed": "{platform}: {url} (el enlace parece correcto — no pudimos abrirlo para confirmarlo)",
     "content.checks.website.social_links.explanation.backToSite": "Su enlace de {platform} lleva a los visitantes de vuelta a su sitio web en lugar de a su perfil de {platform}.",
@@ -12392,6 +12411,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbp.profileFreeGrowBody": "En su plan, conecta Google desde su área de reseñas, para el punto de respuestas a reseñas. Las estadísticas y herramientas de ficha de esta página son de Premium.",
     "dashboard.gbp.goToReviewsConnect": "Ir a sus reseñas →",
     "dashboard.connectGbp.comingSoonBadge": "Próximamente",
+    "dashboard.connectGbp.liveBadge": "Ya funciona",
     "dashboard.gbpReplyCheck.title": "Respuestas a reseñas",
     "dashboard.gbpReplyCheck.body": "Conecte su Perfil de Negocio de Google para que su puntuación pueda incluir cómo responde a las reseñas. Solo lectura: PostScore nunca cambia su ficha en este plan.",
     "dashboard.gbpReplyCheck.connect": "Conectar Google",
@@ -12517,6 +12537,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.pricing.map.addBrandSize": "Agregue marca + tamaño",
     "dashboard.pricing.map.collectibleRow": "De colección — no se clasifica",
     "dashboard.pricing.map.noRange": "Vuelva a evaluar para ver el rango típico",
+    "dashboard.pricing.map.noMarketData": "Sin precio típico para comparar",
     "dashboard.pricing.map.markerTitle": "Su precio {price} · típico {range}",
     "dashboard.pricing.map.youMarker": "Su precio",
     "dashboard.pricing.legend.what": "Qué significan",
