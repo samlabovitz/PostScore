@@ -2,7 +2,9 @@
 // capped per calendar month by PLACES_SEARCH_MONTHLY_CAP (default 800, under
 // Google's free monthly amount). Pure.
 
-/** The most one competitor scan can make: 3 radius tiers + 1 wider-areas call. */
+/** The most one competitor scan can make: 3 radius tiers + 1 more — the
+ * small-town search (lib/competitors.ts) or, if that isn't needed, the
+ * wider-areas call. */
 export const MAX_CALLS_PER_SCAN = 4;
 export const DEFAULT_PLACES_SEARCH_MONTHLY_CAP = 800;
 

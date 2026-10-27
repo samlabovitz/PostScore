@@ -11,6 +11,10 @@
 // Usage:
 //   npx tsx scripts/competitor-audit.ts
 //   npx tsx scripts/competitor-audit.ts --rerun
+//   npx tsx scripts/competitor-audit.ts --quality [--rerun]
+//     Every business: established competitors (5+ reviews, open, not a
+//     store's department counter) and its rank; with --rerun, re-searches
+//     only lists the new rules would change (scripts/competitorQualityAudit.ts).
 
 /* eslint-disable no-console */
 // lib/supabase/admin.ts guards itself with `import "server-only"`, which
@@ -39,6 +43,14 @@ type Row = { id: string; name: string | null; address: string | null; primary_ty
 
 async function main() {
   const rerun = process.argv.includes("--rerun");
+  if (process.argv.includes("--quality")) {
+    const { runQualityAudit, qualityReport } = await import("./competitorQualityAudit");
+    const quality = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+    const findings = await runQualityAudit(quality, { rerun });
+    fs.writeFileSync(path.join(os.homedir(), "Desktop", "competitor-audit.md"), qualityReport(findings, rerun));
+    console.log(`wrote ~/Desktop/competitor-audit.md (${findings.filter((f) => f.bigChange).length} big rank changes)`);
+    return;
+  }
   const { competitorScanBlocker, isFoodServiceType } = await import("../lib/competitors");
   const { resolveBusinessNiche, competitorScopeFor } = await import("../lib/businessNiche");
   const { nicheSearchTypes } = await import("../lib/competitorScope");

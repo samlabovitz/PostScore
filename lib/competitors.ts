@@ -4,8 +4,10 @@
 // rank them by real PostScore. No invented competitors, no invented
 // scores, no invented "rank" metric other than PostScore itself.
 
-import { MAX_SEARCH_RADIUS_MILES } from "@/lib/competitorScanPolicy";
+import { MAX_SEARCH_RADIUS_MILES, SMALL_TOWN_RADIUS_MILES } from "@/lib/competitorScanPolicy";
+import { establishedCount, MIN_ESTABLISHED_COMPETITORS, selectCompetitors, type PoolEntry } from "@/lib/competitorQuality";
 import { MAX_CALLS_PER_SCAN } from "@/lib/placesSearchBudget";
+import { GOOGLE_TABLE_A_TYPES } from "@/lib/google/placeTypesTableA";
 import {
   businessRowToScoringInput,
   isRealWebsite,
@@ -62,6 +64,10 @@ const RADIUS_TIERS_METERS = [
   3 * METERS_PER_MILE,
   MAX_SEARCH_RADIUS_MILES * METERS_PER_MILE,
 ];
+/** The one small-town search (lib/competitorQuality.ts). */
+const SMALL_TOWN_RADIUS_METERS = SMALL_TOWN_RADIUS_MILES * METERS_PER_MILE;
+/** Nearby Search returns at most 20 places per call. */
+const NEARBY_PAGE_SIZE = 20;
 
 function metersToMiles(meters: number): number {
   return meters / METERS_PER_MILE;
@@ -271,9 +277,11 @@ function firstNonBroadType(types: Array<string | null | undefined>): string | nu
 
 /** Broadening only (never a direct match): sweets, bakeries and cafés
  * compete for the same treat/coffee visit — a donut shop with no other
- * donut shop nearby is compared with bakeries, dessert and coffee places. */
+ * donut shop nearby is compared with bakeries, dessert and coffee places.
+ * Closest kin first: a bakery is compared with cake, dessert and cookie
+ * shops before cafés, and with coffee chains last (competitorQuality.ts). */
 const BROADER_FAMILIES: string[][] = [
-  ["bakery", "donut_shop", "dessert_shop", "ice_cream_shop", "cafe", "coffee_shop", "bagel_shop", "juice_shop", "tea_house", "confectionery", "chocolate_shop", "candy_store", "cake_shop"],
+  ["bakery", "cake_shop", "dessert_shop", "donut_shop", "confectionery", "chocolate_shop", "candy_store", "bagel_shop", "ice_cream_shop", "cafe", "coffee_shop", "tea_house", "juice_shop"],
 ];
 
 /** The broader types to try when too few competitors turned up. */
@@ -550,9 +558,16 @@ export function competitorFallbackTypes(
 }
 
 /** The owner's business-type place types that are real, specific search
- * types (never generic ones like "store"). */
+ * types (never generic ones like "store"), and that Google's Nearby
+ * Search accepts — one unsupported type fails the whole search with a 400
+ * (the real Main Street Cleaners case: a niche typed "dry_cleaner"). */
 function usableFallbackTypes(types: string[] | null | undefined): string[] {
-  return (types ?? []).filter((t) => !!t && !isGenericType(t));
+  return searchableTypes(types).filter((t) => !isGenericType(t));
+}
+
+/** Only types Google's Nearby Search supports (Table A). */
+export function searchableTypes(types: readonly (string | null | undefined)[] | null | undefined): string[] {
+  return (types ?? []).filter((t): t is string => !!t && GOOGLE_TABLE_A_TYPES.has(t));
 }
 
 export async function findAndScoreCompetitors(
@@ -633,7 +648,7 @@ export async function findAndScoreCompetitors(
   // "hair_salon" isn't filtered out server-side before isSameCategory()
   // ever sees it.
   const includedTypes =
-    fallbackTypes.length > 0 ? fallbackTypes : broadFood ? BROAD_FOOD_SEARCH_TYPES : referenceType ? comparableTypesFor(referenceType) : undefined;
+    fallbackTypes.length > 0 ? fallbackTypes : broadFood ? BROAD_FOOD_SEARCH_TYPES : referenceType ? searchableTypes(comparableTypesFor(referenceType)) : undefined;
   // With the owner's fallback types, a candidate is comparable when its
   // PRIMARY Google type is one of them (same "primary identity" rule as
   // always, over the owner's whole type set).
@@ -645,13 +660,29 @@ export async function findAndScoreCompetitors(
         : isSameCategory(c, { type: referenceType, displayName: referenceDisplayName });
   debugLog("includedTypes requested from Nearby Search:", includedTypes ?? "(none — no specific reference type)");
 
+  // Every comparable listing any search turned up; which ones become
+  // competitors is decided at the end (selectCompetitors: established
+  // standalone shops first — lib/competitorQuality.ts).
+  const pool: PoolEntry[] = [];
+  const addToPool = (candidates: NearbyCandidate[], accept: (c: NearbyCandidate) => boolean, broader: boolean, kinOrder: string[] = []) => {
+    for (const c of candidates) {
+      if (c.placeId === subject.placeId || isClosedStatus(c.businessStatus) || c.location === null || !accept(c)) continue;
+      if (pool.some((p) => p.candidate.placeId === c.placeId)) continue;
+      const kin = broader && c.primaryType ? kinOrder.indexOf(c.primaryType) : -1;
+      pool.push({ candidate: c, distanceMeters: haversineMeters(subjectLocation, c.location), broader, kin: kin >= 0 ? kin : undefined });
+    }
+  };
+  let searchedMeters = 0;
+
   // Start at the narrowest radius tier ("who is actually nearby") and
-  // only widen if it genuinely doesn't turn up enough comparable
-  // competitors — one Nearby Search call per tier, distance-ranked so the
-  // results really are the closest matches, not just the most popular
-  // ones within a wide circle.
+  // only widen while there aren't enough ESTABLISHED competitors (open,
+  // 5+ reviews, a shop of its own). Nearest first — but once a search
+  // comes back full, the same 20 nearest would just repeat in a wider
+  // circle, so the next tier asks Google for the most popular instead.
+  let lastFull = false;
   for (let tier = 0; tier < RADIUS_TIERS_METERS.length; tier++) {
     let candidates: NearbyCandidate[];
+    const rankPreference = tier > 0 && lastFull ? "POPULARITY" : "DISTANCE";
     try {
       placesCalls++;
       candidates = await searchNearbyPlaces({
@@ -659,18 +690,20 @@ export async function findAndScoreCompetitors(
         lng: subjectLocation.lng,
         radiusMeters: RADIUS_TIERS_METERS[tier],
         includedTypes,
-        maxResultCount: 20,
-        rankPreference: "DISTANCE",
+        maxResultCount: NEARBY_PAGE_SIZE,
+        rankPreference,
       });
     } catch (err) {
       // Never silent: logged on the server, and the scan says it failed.
       console.error(`[competitors] Nearby Search failed for ${subject.name ?? subject.placeId} (tier ${tier}):`, err instanceof Error ? err.message : err);
       return { ...emptyResult("error", err instanceof Error ? err.message : t(locale, "dashboard.competitors.nearbySearchFailedFallback"), categoryLabel), placesCalls };
     }
+    searchedMeters = RADIUS_TIERS_METERS[tier];
+    lastFull = candidates.length >= NEARBY_PAGE_SIZE;
 
     if (DEBUG_COMPETITORS) {
       debugLog(
-        `tier ${tier} (radius ${formatMiles(RADIUS_TIERS_METERS[tier])} mi): ${candidates.length} raw candidate(s) from Nearby Search`
+        `tier ${tier} (radius ${formatMiles(RADIUS_TIERS_METERS[tier])} mi, ${rankPreference}): ${candidates.length} raw candidate(s) from Nearby Search`
       );
       for (const c of candidates) {
         const verdict = categorizeMatch(c, { type: referenceType, displayName: referenceDisplayName });
@@ -681,70 +714,61 @@ export async function findAndScoreCompetitors(
           types: c.types ?? [],
           distanceMi: distanceMeters !== null ? metersToMiles(distanceMeters).toFixed(2) : "— (no location)",
           businessStatus: c.businessStatus,
+          reviews: c.details?.userRatingCount ?? null,
           isSameCategory: verdict.matches,
           reason: verdict.reason,
         });
       }
     }
 
-    comparable = candidates
-      .filter((c) => c.placeId !== subject.placeId)
-      .filter((c) => !isClosedStatus(c.businessStatus))
-      .filter((c) => c.location !== null)
-      .filter(matchesCategory)
-      .map((c) => ({
-        candidate: c,
-        distanceMeters: haversineMeters(subjectLocation, c.location as { lat: number; lng: number }),
-      }))
-      .sort((a, b) => a.distanceMeters - b.distanceMeters)
-      .slice(0, MAX_COMPETITORS);
+    addToPool(candidates, matchesCategory, false);
+    const established = establishedCount(pool);
+    debugLog(`tier ${tier}: ${pool.length} comparable so far, ${established} established`);
 
-    debugLog(`tier ${tier}: ${comparable.length} candidate(s) passed every filter (isSameCategory + open + has location)`);
-
-    if (comparable.length >= MAX_COMPETITORS) break;
+    if (established >= MAX_COMPETITORS || (established >= MIN_ESTABLISHED_COMPETITORS && pool.length >= MAX_COMPETITORS)) break;
     if (tier < RADIUS_TIERS_METERS.length - 1) searchWidened = true;
   }
 
-  // Too few after every radius: ONE broader-type search at the widest
-  // radius (food: any cuisine, takeout or delivery; others: the type's
-  // comparable family) — within the per-scan call limit, so the month's
+  // Small towns: still fewer than MIN_ESTABLISHED_COMPETITORS established
+  // after the normal radius → ONE last search, out to the small-town
+  // radius, most popular first, for the same kind AND its broader family
+  // (a bakery: cake, dessert, donut shops, cafés; food: any cuisine) —
+  // within the per-scan call limit, so the month's
   // PLACES_SEARCH_MONTHLY_CAP check before the scan still covers it.
   const foodSubject = broadFood || isFoodServiceType(referenceType) || fallbackTypes.some((x) => isFoodServiceType(x));
-  const broaderTypes = foodSubject ? BROAD_FOOD_SEARCH_TYPES : broaderTypesFor(referenceType, false).filter((x) => !(includedTypes ?? []).includes(x));
-  let broadened = false;
-  if (comparable.length < MIN_COMPETITORS_BEFORE_BROADENING && broaderTypes.length > 0 && !(foodSubject && broadFood) && placesCalls < MAX_CALLS_PER_SCAN) {
+  const broaderTypes = foodSubject ? BROAD_FOOD_SEARCH_TYPES : broaderTypesFor(referenceType, false);
+  const acceptBroader = (c: NearbyCandidate) => (foodSubject ? isFoodServiceType(c.primaryType) : !!c.primaryType && broaderTypes.includes(c.primaryType));
+  // The owner's own ticked "also competes with" areas keep their call:
+  // the small-town search only runs when a call is left beyond that.
+  const wideTypes = usableFallbackTypes(subject.niche?.wideTypes).filter((t) => !fallbackTypes.includes(t)).slice(0, 50);
+  const reservedForAreas = wideTypes.length > 0 ? 1 : 0;
+  if (establishedCount(pool) < MIN_ESTABLISHED_COMPETITORS && placesCalls < MAX_CALLS_PER_SCAN - reservedForAreas) {
+    const farTypes = searchableTypes(Array.from(new Set([...(includedTypes ?? []), ...broaderTypes]))).slice(0, 50);
     try {
       placesCalls++;
-      const broader = await searchNearbyPlaces({
+      const far = await searchNearbyPlaces({
         lat: subjectLocation.lat,
         lng: subjectLocation.lng,
-        radiusMeters: RADIUS_TIERS_METERS[RADIUS_TIERS_METERS.length - 1],
-        includedTypes: broaderTypes,
-        maxResultCount: 20,
-        rankPreference: "DISTANCE",
+        radiusMeters: SMALL_TOWN_RADIUS_METERS,
+        // Primary type only: the most popular places that ARE one of
+        // these, not ones that merely carry the tag.
+        includedPrimaryTypes: farTypes.length > 0 ? farTypes : undefined,
+        maxResultCount: NEARBY_PAGE_SIZE,
+        rankPreference: "POPULARITY",
       });
-      const seen = new Set(comparable.map((c) => c.candidate.placeId));
-      const accept = (c: NearbyCandidate) => (foodSubject ? isFoodServiceType(c.primaryType) : !!c.primaryType && broaderTypes.includes(c.primaryType));
-      const extra = broader
-        .filter((c) => c.placeId !== subject.placeId && !seen.has(c.placeId))
-        .filter((c) => !isClosedStatus(c.businessStatus))
-        .filter((c) => c.location !== null)
-        .filter(accept)
-        .map((c) => ({ candidate: c, distanceMeters: haversineMeters(subjectLocation, c.location as { lat: number; lng: number }) }))
-        .sort((a, b) => a.distanceMeters - b.distanceMeters)
-        .slice(0, MAX_COMPETITORS - comparable.length);
-      comparable = [...comparable, ...extra];
-      broadened = extra.length > 0;
-      searchWidened = searchWidened || broadened;
-      debugLog(`broader search (${broaderTypes.join(", ")}): ${broader.length} raw, ${extra.length} added`);
+      searchedMeters = SMALL_TOWN_RADIUS_METERS;
+      const before = pool.length;
+      addToPool(far, matchesCategory, false);
+      addToPool(far, acceptBroader, true, broaderTypes);
+      searchWidened = true;
+      debugLog(`small-town search (${farTypes.join(", ")}): ${far.length} raw, ${pool.length - before} added, ${establishedCount(pool)} established`);
     } catch (err) {
-      console.error(`[competitors] broader Nearby Search failed for ${subject.name ?? subject.placeId}:`, err instanceof Error ? err.message : err);
+      console.error(`[competitors] small-town Nearby Search failed for ${subject.name ?? subject.placeId}:`, err instanceof Error ? err.message : err);
     }
   }
 
   // The ticked "also competes with" areas: ONE extra search at 3 mi for
   // their Google types, nearest first, never repeating a direct result.
-  const wideTypes = usableFallbackTypes(subject.niche?.wideTypes).filter((t) => !fallbackTypes.includes(t)).slice(0, 50);
   if (wideTypes.length > 0 && placesCalls < MAX_CALLS_PER_SCAN) {
     try {
       placesCalls++;
@@ -756,22 +780,23 @@ export async function findAndScoreCompetitors(
         maxResultCount: 20,
         rankPreference: "DISTANCE",
       });
-      const seen = new Set(comparable.map((c) => c.candidate.placeId));
-      const extra = wide
-        .filter((c) => c.placeId !== subject.placeId && !seen.has(c.placeId))
-        .filter((c) => !isClosedStatus(c.businessStatus))
-        .filter((c) => c.location !== null)
-        .filter((c) => !!c.primaryType && wideTypes.includes(c.primaryType))
-        .map((c) => ({ candidate: c, distanceMeters: haversineMeters(subjectLocation, c.location as { lat: number; lng: number }) }))
-        .sort((a, b) => a.distanceMeters - b.distanceMeters)
-        .slice(0, MAX_COMPETITORS);
-      comparable = [...comparable, ...extra];
+      // The owner's areas join the same choice: after established shops of
+      // the same kind, never beyond MAX_COMPETITORS in all.
+      for (const c of wide) {
+        if (c.placeId === subject.placeId || isClosedStatus(c.businessStatus) || c.location === null) continue;
+        if (!c.primaryType || !wideTypes.includes(c.primaryType) || pool.some((p) => p.candidate.placeId === c.placeId)) continue;
+        pool.push({ candidate: c, distanceMeters: haversineMeters(subjectLocation, c.location), area: true });
+      }
     } catch (err) {
       // The wider areas are extra: a failed search keeps the direct
       // results — but it's logged, never swallowed.
       console.error(`[competitors] "also competes with" Nearby Search failed for ${subject.name ?? subject.placeId}:`, err instanceof Error ? err.message : err);
     }
   }
+
+  // Which of everything found become the competitors: the 10 most
+  // relevant, established first (lib/competitorQuality.ts).
+  comparable = selectCompetitors(pool, MAX_COMPETITORS);
 
   const scoredCompetitors: RankedCompetitor[] = [];
   const unscored: UnscoredCompetitor[] = [];
@@ -866,7 +891,7 @@ export async function findAndScoreCompetitors(
 
   let message: string;
   if (comparableCount === 0) {
-    const searchedLabel = formatMiles(RADIUS_TIERS_METERS[RADIUS_TIERS_METERS.length - 1]);
+    const searchedLabel = formatMiles(searchedMeters || RADIUS_TIERS_METERS[RADIUS_TIERS_METERS.length - 1]);
     message = t(locale, "dashboard.competitors.foundNoneMessage", { label, searchedLabel });
   } else if (comparableCount < MAX_COMPETITORS) {
     message = tPlural(locale, "dashboard.competitors.foundFewMessage", comparableCount, { label, radiusLabel });

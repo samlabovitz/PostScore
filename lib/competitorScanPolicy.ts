@@ -19,6 +19,11 @@ export const COMPETITOR_REFRESH_COOLDOWN_DAYS = 30;
  * last radius tier) — when nothing comparable turns up, this is how far
  * we looked. */
 export const MAX_SEARCH_RADIUS_MILES = 5;
+/** Small towns: when fewer than MIN_ESTABLISHED_COMPETITORS established
+ * competitors turn up within MAX_SEARCH_RADIUS_MILES, one last search out
+ * to this radius (popularity-ranked) looks for established ones of the
+ * same kind before falling back to listings with few or no reviews. */
+export const SMALL_TOWN_RADIUS_MILES = 15;
 const DAY_MS = 86_400_000;
 
 /** Google bills each Nearby Search Enterprise call at $35 per 1,000. */

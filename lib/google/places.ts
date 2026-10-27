@@ -406,6 +406,10 @@ export async function searchNearbyPlaces(params: {
   lng: number;
   radiusMeters: number;
   includedTypes?: string[];
+  /** Only places whose PRIMARY type is one of these (Google's own filter)
+   * — so a popularity-ranked search isn't filled by places that merely
+   * carry the type as a sideline (a diner tagged "cafe"). */
+  includedPrimaryTypes?: string[];
   maxResultCount?: number;
   /**
    * Google defaults Nearby Search to POPULARITY ranking, which can return
@@ -428,6 +432,9 @@ export async function searchNearbyPlaces(params: {
   };
   if (params.includedTypes && params.includedTypes.length > 0) {
     body.includedTypes = params.includedTypes;
+  }
+  if (params.includedPrimaryTypes && params.includedPrimaryTypes.length > 0) {
+    body.includedPrimaryTypes = params.includedPrimaryTypes;
   }
   if (params.rankPreference) {
     body.rankPreference = params.rankPreference;

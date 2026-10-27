@@ -6,13 +6,13 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 // food places of any cuisine; too few results trigger one broader search;
 // a search that didn't run is never shown as "found none".
 
-const nearbyCalls: Array<{ includedTypes?: string[]; radiusMeters: number }> = [];
+const nearbyCalls: Array<{ includedTypes?: string[]; includedPrimaryTypes?: string[]; radiusMeters: number }> = [];
 let nearbyResults: unknown[][] = [];
 vi.mock("@/lib/google/places", async () => {
   const actual = await vi.importActual<typeof import("@/lib/google/places")>("@/lib/google/places");
   return {
     ...actual,
-    searchNearbyPlaces: async (params: { includedTypes?: string[]; radiusMeters: number }) => {
+    searchNearbyPlaces: async (params: { includedTypes?: string[]; includedPrimaryTypes?: string[]; radiusMeters: number }) => {
       nearbyCalls.push(params);
       // A wider radius includes everything nearer: repeat the last result.
       return nearbyResults[nearbyCalls.length - 1] ?? nearbyResults[nearbyResults.length - 1] ?? [];
@@ -89,23 +89,23 @@ describe("restaurant types get competitors", () => {
 });
 
 describe("widening", () => {
-  test(`fewer than ${MIN_COMPETITORS_BEFORE_BROADENING} after every radius → one broader search (any cuisine) at the widest radius, within the per-scan call limit`, async () => {
-    const niche = { directTypes: ["japanese_restaurant", "sushi_restaurant"], wideTypes: ["ramen_restaurant"] };
-    // Three radius tiers find just one sushi place; the broader search finds more food places.
+  test("fewer than 3 established after every radius → ONE small-town search (15 mi, most popular) for the same cuisine and any food place — within the per-scan call limit", async () => {
+    // Three radius tiers find just one sushi place; the small-town search finds more food places.
     nearbyResults = [[place("sushi-1", "sushi_restaurant")], [place("sushi-1", "sushi_restaurant")], [place("sushi-1", "sushi_restaurant")], [place("pizza-1", "pizza_restaurant"), place("thai-1", "thai_restaurant"), place("umami", "meal_takeaway")]];
-    const result = await findAndScoreCompetitors({ ...UMAMI, niche }, "en");
+    const result = await findAndScoreCompetitors({ ...UMAMI, primaryType: "sushi_restaurant", categories: ["sushi_restaurant", "restaurant"] }, "en");
     expect(nearbyCalls).toHaveLength(MAX_CALLS_PER_SCAN);
-    expect(nearbyCalls[3].includedTypes).toEqual(BROAD_FOOD_SEARCH_TYPES);
-    expect(nearbyCalls[3].radiusMeters).toBe(nearbyCalls[2].radiusMeters);
+    expect(nearbyCalls[3].includedPrimaryTypes).toEqual(["sushi_restaurant", ...BROAD_FOOD_SEARCH_TYPES]);
+    expect(nearbyCalls[3].radiusMeters).toBeCloseTo(15 * 1609.34, 0);
+    expect((nearbyCalls[3] as { rankPreference?: string }).rankPreference).toBe("POPULARITY");
     expect(result.ranked.filter((r) => !r.isSubject).map((r) => r.placeId).sort()).toEqual(["pizza-1", "sushi-1", "thai-1"]);
     expect(result.searchWidened).toBe(true);
+    expect(MIN_COMPETITORS_BEFORE_BROADENING).toBe(3);
   });
 
-  test("a donut shop with no other donut shop nearby is broadened to bakeries, dessert and coffee places", async () => {
+  test("a donut shop with no other donut shop nearby: the small-town search also asks for bakeries, dessert and coffee places", async () => {
     nearbyResults = [[], [], [], [place("bakery-1", "bakery"), place("cafe-1", "coffee_shop"), place("gym", "gym")]];
     const result = await findAndScoreCompetitors({ ...UMAMI, name: "Mochinut", primaryType: "donut_shop", categories: ["donut_shop", "food"] }, "en");
-    expect(nearbyCalls[3].includedTypes).toEqual(expect.arrayContaining(["bakery", "coffee_shop", "ice_cream_shop"]));
-    expect(nearbyCalls[3].includedTypes).not.toContain("donut_shop");
+    expect(nearbyCalls[3].includedPrimaryTypes).toEqual(expect.arrayContaining(["donut_shop", "bakery", "coffee_shop", "ice_cream_shop"]));
     expect(result.ranked.filter((r) => !r.isSubject).map((r) => r.placeId).sort()).toEqual(["bakery-1", "cafe-1"]);
   });
 

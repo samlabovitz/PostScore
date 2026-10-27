@@ -331,7 +331,9 @@ const SPECIFIC: Partial<Record<BusinessTypeId, Row[]>> = {
     ["pressure_washing", "Window & pressure washing", "Lavado a presión y ventanas", [], ["window cleaning", "pressure washing", "power washing"], ["cleaning_service"]],
   ],
   repair_dropoff: [
-    ["dry_cleaner", "Dry cleaner", "Tintorería", ["dry_cleaner"], ["dry clean", "dry cleaner", "dry cleaners", "dry cleaning", "cleaners", "tintorería"], ["tailor", "laundromat"]],
+    // Google has no dry-cleaner type: dry cleaners are listed as "laundry"
+    // ("dry_cleaner" made every search fail — the Main Street Cleaners case).
+    ["dry_cleaner", "Dry cleaner", "Tintorería", ["laundry"], ["dry clean", "dry cleaner", "dry cleaners", "dry cleaning", "cleaners", "tintorería"], ["tailor", "laundromat"]],
     ["laundromat", "Laundromat", "Lavandería", ["laundry"], ["laundromat", "laundry", "wash and fold", "coin laundry", "lavandería"], ["dry_cleaner"]],
     ["shoe_repair", "Shoe repair", "Reparación de calzado", [], ["shoe repair", "cobbler", "shoe tech"], ["tailor", "dry_cleaner"]],
     ["tailor", "Tailor & alterations", "Sastrería", [], ["tailor", "tailoring", "alterations", "sastrería"], ["dry_cleaner", "bridal_formal"]],

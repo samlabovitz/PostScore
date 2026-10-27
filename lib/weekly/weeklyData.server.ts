@@ -14,6 +14,7 @@ import { buildWeekSummary, pickerWeeks, type WeeklyScan } from "./weeklyReport";
 import { weeklyViewFromSnapshot, weeklyViewFromSummary, type WeeklyView } from "./weeklyView";
 import { shouldShowSinceLastVisit, sinceLastVisit } from "./sinceLastVisit";
 import { weekBounds, weekEndDay, weekOf } from "./weeks";
+import { selectionChangedBetween } from "@/lib/competitorQuality";
 import { ensureWeeklySnapshots, fixesConfirmedBetween, isMissingTable, loadPastReports, loadSnapshot, loadWeeklyScans, rankAt, routineFor } from "./weekly.server";
 import type { ChartCategoryId } from "@/lib/scoreHistory";
 import type { ScoreBreakdown } from "@/lib/scoring";
@@ -275,7 +276,8 @@ export async function openBusinessVisitWithClient(
       delta: c ? c.delta : null,
       comparable: c ? c.comparable : false,
       categories: c ? c.categories : [],
-      rank: rankNow ? { now: rankNow.rank, then: rankThen?.rank ?? null, of: rankNow.of } : null,
+      // Across the competitor-picking update the old rank isn't comparable.
+      rank: rankNow ? { now: rankNow.rank, then: rankThen && !selectionChangedBetween(rankThen.scanAt, rankNow.scanAt) ? rankThen.rank : null, of: rankNow.of } : null,
       fixesConfirmed: fixes,
       reviews: c ? c.reviews : { count: null, countChange: null, rating: null, ratingChange: null },
       reviewGoalLines,

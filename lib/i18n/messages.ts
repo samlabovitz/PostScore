@@ -1871,6 +1871,9 @@ export type MessageKey =
   | "dashboard.overview.rankOfPeerCount"
   | "dashboard.overview.aheadOfNearby"
   | "dashboard.overview.smallSampleSuffix"
+  | "dashboard.competitors.fewReviewsTag"
+  | "dashboard.competitors.selectionUpdatedNote"
+  | "dashboard.competitors.selectionUpdatedOk"
   | "dashboard.overview.profileChecklistTitle"
   | "dashboard.overview.profileChecklistDescription"
   | "dashboard.overview.gbpConnectedNotWiredUp"
@@ -6319,6 +6322,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.rankOfPeerCount": "#{rank} of {peerCount}",
     "dashboard.overview.aheadOfNearby": "Ahead of {percentileAhead}% of {othersCount} nearby {competitorNoun}",
     "dashboard.overview.smallSampleSuffix": " — small sample",
+    "dashboard.competitors.fewReviewsTag": "Few or no reviews yet",
+    "dashboard.competitors.selectionUpdatedNote": "We updated how we pick your competitors — you're now compared with more established businesses nearby, so your rank may have changed.",
+    "dashboard.competitors.selectionUpdatedOk": "Got it",
 
     "dashboard.overview.profileChecklistTitle": "Connect your Google Business Profile",
     "dashboard.overview.profileChecklistDescription":
@@ -10667,6 +10673,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.rankOfPeerCount": "#{rank} de {peerCount}",
     "dashboard.overview.aheadOfNearby": "Por delante del {percentileAhead}% de {othersCount} {competitorNoun} de la zona",
     "dashboard.overview.smallSampleSuffix": " — muestra pequeña",
+    "dashboard.competitors.fewReviewsTag": "Pocas o ninguna reseña aún",
+    "dashboard.competitors.selectionUpdatedNote": "Actualizamos cómo elegimos a su competencia: ahora se le compara con negocios más establecidos de la zona, así que su puesto puede haber cambiado.",
+    "dashboard.competitors.selectionUpdatedOk": "Entendido",
     "dashboard.overview.profileChecklistTitle": "Conecte su Perfil de Negocio de Google",
     "dashboard.overview.profileChecklistDescription": "Deje que PostScore haga el trabajo pesado por usted. Vea sus llamadas, visitas y reseñas en un solo lugar, y reciba respuestas a sus reseñas ya redactadas.",
     "dashboard.overview.gbpConnectedNotWiredUp": "Perfil de Negocio de Google conectado. La verificación de campos en vivo aún no está habilitada — es una actualización futura, no algo averiado aquí. Mostraremos su lista real aquí cuando esté disponible.",

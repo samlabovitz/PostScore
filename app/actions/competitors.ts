@@ -9,9 +9,9 @@ import {
   competitorFallbackTypes,
   competitorScanBlocker,
   findAndScoreCompetitors,
-  MAX_COMPETITORS,
   type CompetitorSourceBusiness,
 } from "@/lib/competitors";
+import { COMPETITOR_SELECTION_UPDATED_AT, SELECTION_NOTE_KEY, selectionChangedBetween, selectionNoteApplies, SMALL_SAMPLE_BELOW } from "@/lib/competitorQuality";
 import { bizProfileById, resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale, t } from "@/lib/i18n";
 import { getPlan } from "@/lib/premium";
@@ -92,6 +92,8 @@ export type GetCompetitorsResult =
       scoring: ScoringProgress | null;
       /** Owner's rank per saved scan, oldest first (one point per scan). */
       rankHistory: CompetitorRankPoint[];
+      /** Show the one-time "We updated how we pick your competitors" note. */
+      selectionUpdated?: boolean;
       refresh: RefreshAvailability;
       /** Why a scan can't search at all (from saved data, no cost), or
        * null. "category_too_generic": Google lists only a general type
@@ -190,6 +192,7 @@ export async function getCompetitorsWithClient(
     competitorNoun,
     latest,
     rankHistory: scans.map((s) => rankPoint(s, niche?.scope)).reverse(),
+    selectionUpdated: await competitorSelectionNote(businessId),
     niche,
     // Free: "Refresh" only when the latest scan found no competitors (the
     // one exception — right away, no cooldown).
@@ -563,12 +566,12 @@ export async function getPreviousCompetitorRank(businessId: string, latestScanId
 // ---------------------------------------------------------------------------
 
 /**
- * A saved scan with fewer real nearby peers than a scan normally finds
- * (see MAX_COMPETITORS in lib/competitors.ts) is still a legitimate
- * comparison, just a limited one — the UI must say so rather than present
- * a 1-of-1 or 2-of-3 comparison with the same confidence as a full one.
+ * Fewer than SMALL_SAMPLE_BELOW (5) competitors is still a legitimate
+ * comparison, just a limited one — the UI says "small sample" rather than
+ * present a 1-of-1 or 2-of-3 comparison with the same confidence as a
+ * full one (lib/competitorQuality.ts).
  */
-const SMALL_SAMPLE_THRESHOLD = MAX_COMPETITORS;
+const SMALL_SAMPLE_THRESHOLD = SMALL_SAMPLE_BELOW;
 
 export interface LocalBenchmark {
   /** The resolved business-type profile's noun, e.g. "salons". */
@@ -600,6 +603,58 @@ export interface LocalBenchmark {
   reviewGoal: ReviewGoal | null;
   /** The comparison group in words (lib/competitorScope.ts scopeGroupLabel). */
   reviewGroup: string;
+  /** Show the one-time "We updated how we pick your competitors" note. */
+  selectionUpdated?: boolean;
+}
+
+/**
+ * Whether to show the one-time "We updated how we pick your competitors"
+ * note: the list shown now (the newest finished scan) was picked by the
+ * established-competitor rules, the one before them by the old rules, the
+ * two lists differ, and the owner hasn't dismissed the note.
+ */
+async function competitorSelectionNoteUncached(businessId: string): Promise<boolean> {
+  try {
+    const supabase = createClient();
+    const [{ data: subjects }, unfinished] = await Promise.all([
+      supabase.from("competitor_scans").select("scan_id, created_at").eq("business_id", businessId).eq("is_subject", true).order("created_at", { ascending: false }).limit(50),
+      unfinishedNewScanIds(supabase, businessId),
+    ]);
+    const finished = withoutUnfinished((subjects ?? []) as Array<{ scan_id: string; created_at: string }>, unfinished);
+    const current = finished[0];
+    const previous = current ? finished.find((r) => r.created_at < COMPETITOR_SELECTION_UPDATED_AT) : undefined;
+    if (!current || !previous || !selectionChangedBetween(previous.created_at, current.created_at)) return false;
+    const [{ data: rows }, { data: dismissed }] = await Promise.all([
+      supabase.from("competitor_scans").select("scan_id, place_id").in("scan_id", [current.scan_id, previous.scan_id]).eq("is_subject", false),
+      supabase.from("promo_dismissals").select("promo_key").eq("business_id", businessId).eq("promo_key", SELECTION_NOTE_KEY).maybeSingle(),
+    ]);
+    if (dismissed) return false;
+    const ids = (scanId: string) => ((rows ?? []) as Array<{ scan_id: string; place_id: string }>).filter((r) => r.scan_id === scanId).map((r) => r.place_id);
+    return selectionNoteApplies({ currentScanAt: current.created_at, previousScanAt: previous.created_at, currentPlaceIds: ids(current.scan_id), previousPlaceIds: ids(previous.scan_id) });
+  } catch {
+    return false;
+  }
+}
+
+/** Request-scoped (lib/requestCache.ts): the Competitors page and the rank card share one check. */
+const competitorSelectionNoteCached = requestCache(competitorSelectionNoteUncached);
+export async function competitorSelectionNote(businessId: string): Promise<boolean> {
+  return competitorSelectionNoteCached(businessId);
+}
+
+/** "Got it" on that note — for this user and business, for good. Before
+ * supabase/promo-dismissals.sql is run the browser remembers it instead. */
+export async function dismissCompetitorSelectionNote(businessId: string): Promise<{ status: "ok" | "not_enabled" | "unauthenticated" | "error" }> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { status: "unauthenticated" };
+  const { error } = await supabase
+    .from("promo_dismissals")
+    .upsert({ user_id: user.id, business_id: businessId, promo_key: SELECTION_NOTE_KEY, hidden_until: "2100-01-01T00:00:00Z" }, { onConflict: "user_id,business_id,promo_key" });
+  if (error) return /promo_dismissals|42P01|PGRST205/.test(`${error.code} ${error.message}`) ? { status: "not_enabled" } : { status: "error" };
+  return { status: "ok" };
 }
 
 export type GetLocalBenchmarkResult =
@@ -691,6 +746,7 @@ async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBe
       // The business's current count (its row); the scan's own as a fallback.
       reviewGoal: reviewGoal(snapshot.scan, scope, (business as { review_count?: number | null }).review_count ?? snapshot.scan.entries.find((e) => e.isSubject)?.reviewCount ?? null),
       reviewGroup: scopeGroupLabel(snapshot.scan, scope, normalizeLocale(business.language), competitorNoun),
+      selectionUpdated: await competitorSelectionNote(businessId),
     },
   };
 }

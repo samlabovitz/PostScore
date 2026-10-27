@@ -43,6 +43,7 @@
 // 15-minute budget to make many small, safe calls here. See
 // netlify/functions/monthly-reports-batch.mts's own top comment for the
 // full reasoning.
+import { selectionChangedBetween } from "@/lib/competitorQuality";
 import { businessTimeZone } from "@/lib/businessTimeZone";
 import { getListingMode } from "@/lib/listingMode";
 import { backgroundPlan } from "@/lib/plan";
@@ -307,16 +308,17 @@ async function readCompetitorSnapshotAsOf(
   const [{ data, error }, unfinished] = await Promise.all([
     supabase
       .from("competitor_scans")
-      .select("scan_id")
+      .select("scan_id, created_at")
       .eq("business_id", businessId)
       .lte("created_at", cutoffIso)
       .order("created_at", { ascending: false })
       .limit(50),
     unfinishedNewScanIds(supabase, businessId),
   ]);
-  const finished = withoutUnfinished((data ?? []) as { scan_id: string }[], unfinished)[0];
+  const finished = withoutUnfinished((data ?? []) as { scan_id: string; created_at: string }[], unfinished)[0];
   if (error || !finished) return null;
-  return readCompetitorSnapshotForScan(supabase, businessId, finished.scan_id);
+  const snapshot = await readCompetitorSnapshotForScan(supabase, businessId, finished.scan_id);
+  return snapshot ? { ...snapshot, scanAt: finished.created_at } : null;
 }
 
 /**
@@ -672,7 +674,9 @@ export async function processBusiness(
       ? await readCompetitorSnapshotAsOf(supabase, businessId, previousReport.sent_at)
       : null;
     // Both sides real, or neither — never a fabricated "previous."
-    if (currentCompetitorSnapshot && previousSnapshot) {
+    // …and picked the same way: across the competitor-picking update
+    // there's no "moved up/down" (lib/competitorQuality.ts).
+    if (currentCompetitorSnapshot && previousSnapshot && !selectionChangedBetween(previousSnapshot.scanAt, currentCompetitorSnapshot.scanAt)) {
       competitorDelta = { previous: previousSnapshot, current: currentCompetitorSnapshot };
     }
   }

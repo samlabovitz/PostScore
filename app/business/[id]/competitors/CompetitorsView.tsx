@@ -42,6 +42,8 @@ import { placeTypeList } from "@/lib/placeTypeLabels";
 import { scopeGroupLabel, applyScope, type CompetitorScope } from "@/lib/competitorScope";
 import { CompetitorGroups } from "./CompetitorGroups";
 import { reviewGoalText } from "@/lib/reviewGoal";
+import { hasFewReviews } from "@/lib/competitorQuality";
+import { CompetitorSelectionNote } from "@/components/competitors/CompetitorSelectionNote";
 
 type OkResult = Extract<GetCompetitorsResult, { status: "ok" }>;
 
@@ -138,6 +140,8 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
       </div>
 
       {data.scoring && <ScoringProgressNote progress={data.scoring} />}
+      {/* One time, after the competitor-picking update (no "dropped" alert across it). */}
+      {data.selectionUpdated && <CompetitorSelectionNote businessId={businessId} />}
 
       {latest && latest.entries.some((e) => !e.isSubject) && <ScanInfo businessId={businessId} data={data} />}
 
@@ -678,6 +682,13 @@ function CompetitorCard({ entry, rank, view }: { entry: SavedCompetitorEntry; ra
             )}
             {!entry.isSubject && entry.distanceMeters !== null && (
               <span className="text-[12px] text-ink-mute">{miles(entry.distanceMeters, locale)}</span>
+            )}
+            {/* Kept only when there weren't enough established competitors
+                (lib/competitorQuality.ts) — said plainly. */}
+            {!entry.isSubject && hasFewReviews(entry.reviewCount) && (
+              <span data-testid="few-reviews-tag" className="rounded-md bg-paper px-1.5 py-0.5 text-[11px] font-medium text-ink-soft">
+                {t(locale, "dashboard.competitors.fewReviewsTag")}
+              </span>
             )}
             {websiteCouldntBeChecked(entry) && (
               <span className="inline-flex items-center gap-1 rounded-md border border-paper-deep bg-paper px-1.5 py-0.5 text-[11px] font-medium text-ink-soft">

@@ -103,6 +103,9 @@ export const EMPTY_REPORT_EXTRAS: ReportExtras = { securityAlert: null, scoreBas
 export interface CompetitorSnapshot {
   rank: number;
   totalCompetitors: number;
+  /** When the scan behind it was saved (to tell scans picked by different
+   * rules apart — lib/competitorQuality.ts selectionChangedBetween). */
+  scanAt?: string;
   /** The real review count of whichever business ranked #1 in this same
    * competitor scan — a genuine fact from that scan's own
    * RankedCompetitor list (see lib/competitors.ts), never estimated.

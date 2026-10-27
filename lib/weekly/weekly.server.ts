@@ -3,6 +3,7 @@
 // client, reads only data already saved — scans, competitor scans, tasks,
 // the weekly routine — and never calls Google or PageSpeed.
 
+import { selectionChangedBetween } from "@/lib/competitorQuality";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { parseChartCategories } from "@/lib/scoreHistory";
 import type { ProfileSnapshot } from "@/lib/profileChanges";
@@ -37,7 +38,7 @@ export async function loadWeeklyScans(supabase: SupabaseClient, businessId: stri
 
 /** The owner's local rank (shared ownerStanding / rankBy) from the latest
  * saved competitor scan at or before `at`, and the scan before that one. */
-export async function rankAt(supabase: SupabaseClient, businessId: string, at: string): Promise<{ rank: number; of: number; previous: number | null } | null> {
+export async function rankAt(supabase: SupabaseClient, businessId: string, at: string): Promise<{ rank: number; of: number; previous: number | null; scanAt: string | null } | null> {
   const [{ data, error }, unfinished, scope] = await Promise.all([
     supabase.from("competitor_scans").select(SAVED_SCAN_COLUMNS).eq("business_id", businessId).lte("created_at", at).order("created_at", { ascending: false }).limit(150),
     unfinishedNewScanIds(supabase, businessId),
@@ -53,7 +54,11 @@ export async function rankAt(supabase: SupabaseClient, businessId: string, at: s
   };
   const now = standing(ids[0]);
   if (!now) return null;
-  return { rank: now.rank, of: now.of, previous: ids[1] ? standing(ids[1])?.rank ?? null : null };
+  // Across the competitor-picking update the two lists weren't picked the
+  // same way — no "previous" rank, so no "moved up/down" (competitorQuality.ts).
+  const scanAt = (id: string) => rows.find((r) => r.scan_id === id)?.created_at ?? null;
+  const comparable = !!ids[1] && !selectionChangedBetween(scanAt(ids[1]), scanAt(ids[0]));
+  return { rank: now.rank, of: now.of, previous: comparable ? standing(ids[1])?.rank ?? null : null, scanAt: scanAt(ids[0]) };
 }
 
 /** Action-plan fixes a re-scan confirmed in [from, to). */
