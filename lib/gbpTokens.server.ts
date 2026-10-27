@@ -146,10 +146,10 @@ export async function getValidAccessTokenWithClient(
     if (expiresAt - now > REFRESH_MARGIN_MS) {
       return { status: "ok", accessToken: decryptGbpToken(row.access_token_enc, businessId) };
     }
-    if (!row.refresh_token_enc) return markReconnect(admin, businessId);
+    if (!row.refresh_token_enc) return markGbpReconnect(admin, businessId);
 
     const refreshed = await refreshGbpAccessToken(decryptGbpToken(row.refresh_token_enc, businessId), fetchImpl);
-    if (refreshed.status === "invalid_grant") return markReconnect(admin, businessId);
+    if (refreshed.status === "invalid_grant") return markGbpReconnect(admin, businessId);
     if (refreshed.status !== "ok") return { status: "error", reason: "failed" };
 
     await admin
@@ -167,8 +167,8 @@ export async function getValidAccessTokenWithClient(
 }
 
 /** The dead tokens are deleted; the status row says "error" so the owner
- * is asked to reconnect. */
-async function markReconnect(admin: SupabaseClient, businessId: string): Promise<ValidAccessTokenResult> {
+ * is asked to reconnect. The last reply counts stay, with their date. */
+export async function markGbpReconnect(admin: SupabaseClient, businessId: string): Promise<ValidAccessTokenResult> {
   await admin.from("gbp_tokens").delete().eq("business_id", businessId);
   await admin
     .from("gbp_connections")

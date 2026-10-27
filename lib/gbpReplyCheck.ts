@@ -1,5 +1,5 @@
-// Server: whether the Reviews-area "Replying to reviews" connect shows, and
-// what it says. Free and Grow only — Premium and Multi connect from the
+// Server: whether the "Replying to reviews" connect shows (Free: its own
+// Overview card; Grow: the Reviews page), and what it says. Free and Grow only — Premium and Multi connect from the
 // Google Profile page (the same single connection). Hidden for everyone
 // while GBP_CONNECT_PUBLIC is off; NODE_ENV plays no part.
 import type { GbpReplyCheckState } from "@/components/gbp/GbpReplyCheckConnect";
@@ -27,5 +27,6 @@ export function gbpReplyCheckState(
     result: parseGbpResult(resultParam),
     origin: plan === "free" ? "overview" : "reviews",
     business,
+    replyCounts: ok?.replyCounts ?? null,
   };
 }

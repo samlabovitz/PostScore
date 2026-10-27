@@ -537,6 +537,12 @@ export async function rescanBusinessWithClient(
     return scoreResult;
   }
 
+  // Connected businesses: the review-reply counts, once per scan (owner
+  // re-scan, monthly job, rescan-all — all come through here). Never
+  // fails the scan; not scored yet. Loaded here: it's server-only.
+  const { runGbpReplyCheck } = await import("@/lib/gbpReplyCounts.server");
+  await runGbpReplyCheck(businessId);
+
   const currentSnapshot: ProfileSnapshot = buildProfileSnapshot({
     phone: lookup.place.phone,
     // The real, resolved website — never Google's raw empty response

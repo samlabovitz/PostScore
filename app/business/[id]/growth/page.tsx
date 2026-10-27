@@ -142,6 +142,7 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
       result: parseGbpResult(searchParams.gbp),
       canStart: canConnectGbp() && isGbpOAuthConfigured(),
       business: { name: row.name ?? null, address: row.address ?? null },
+      replyCounts: gbpStatus.status === "ok" ? gbpStatus.replyCounts : null,
     },
   };
 

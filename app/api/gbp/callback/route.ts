@@ -20,6 +20,8 @@ import { findGbpLocation } from "@/lib/gbpLocations";
 import { GBP_OAUTH_COOKIE, checkGbpCallback, readSignedGbpState } from "@/lib/gbpSecurity";
 import { gbpLandingPath, resolveGbpOrigin, type GbpConnectResult } from "@/lib/gbpLanding";
 import { disconnectGbpData, saveGbpConnection } from "@/lib/gbpTokens.server";
+import { runGbpReplyCheck } from "@/lib/gbpReplyCounts.server";
+import { gbpFetch, logGbpCalls } from "@/lib/gbpQuota";
 import { canConnectGbp, getPlan } from "@/lib/premium";
 
 /** One line in the server log for each failed step — never tokens, codes or
@@ -117,7 +119,9 @@ export async function GET(req: NextRequest) {
   // Which Google location is this business? Match its Maps place ID —
   // never "pick another location". No match: nothing is stored, and the
   // grant is revoked at Google.
-  const found = await findGbpLocation(tokens.accessToken, business.place_id ?? null);
+  const listingCalls = { calls: 0 };
+  const found = await findGbpLocation(tokens.accessToken, business.place_id ?? null, gbpFetch(listingCalls));
+  logGbpCalls("connect location listing", listingCalls);
   if (found.kind !== "match") {
     await revokeGbpToken(tokens.refreshToken ?? tokens.accessToken);
     // And any earlier connection for this business goes too (revoked, deleted).
@@ -136,6 +140,10 @@ export async function GET(req: NextRequest) {
       logFailure("save");
       return land("failed");
     }
+    // The reply counts, once, so the owner sees them as they land. Never
+    // fails the connect (an error keeps "connected"; a rejected token
+    // shows "Reconnect Google").
+    await runGbpReplyCheck(businessId);
     return land("connected");
   } catch (err) {
     logFailure("save", { error: err instanceof Error ? err.message.slice(0, 120) : "unknown" });

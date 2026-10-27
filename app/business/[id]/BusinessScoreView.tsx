@@ -237,7 +237,8 @@ export function BusinessScoreView({
         </FreeSection>
 
         {/* D. Free tools: Reviews (link, QR, reply drafts), then PostAI —
-            3 free questions a week. */}
+            3 free questions a week — then Connect Google (the read-only
+            "Replying to reviews" check) as its own card. */}
         <FreeSection id="tools" title={t(locale, freeSection("tools").titleKey)} body={t(locale, freeSection("tools").bodyKey)}>
           <FreeReviews
             placeId={business.place_id ?? null}
@@ -245,11 +246,11 @@ export function BusinessScoreView({
             reviewCount={business.review_count}
             goal={reviewGoal}
             group={reviewGroup}
-            connect={gbpReplyCheck ? <GbpReplyCheckConnect businessId={businessId} state={gbpReplyCheck} /> : null}
           >
             {replyDrafts && <ReviewReplyDrafter businessId={businessId} plan="free" placeId={business.place_id ?? null} initial={replyDrafts} embedded />}
           </FreeReviews>
           {freePostai && <FreePostAI businessId={businessId} starterPrompts={assistant.status === "unavailable" ? [] : assistant.starterPrompts} initial={freePostai} />}
+          {gbpReplyCheck && <GbpReplyCheckConnect businessId={businessId} state={gbpReplyCheck} />}
         </FreeSection>
         {/* B. Earn more, last: ONE card (the plans, then the More
             customers tiles, then the collapsed "See everything in each

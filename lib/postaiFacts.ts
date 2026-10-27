@@ -12,6 +12,7 @@ import { wholeCategoryPoints } from "@/lib/overviewTiles";
 import { freeWaitingPoints } from "@/lib/freeUpsell";
 import { wholePointRange } from "@/lib/pointRange";
 import type { Plan } from "@/lib/plan";
+import { REPLY_CHECK_MIN_REVIEWS, TEMPLATED_WARN_SHARE, type GbpReplyCounts } from "@/lib/gbpReviewReplies";
 
 /** A point gain the app itself shows (Overview "Biggest boost", a Growth
  * plan card's points chip, Free's "N points are waiting"). PostAI may state
@@ -62,6 +63,9 @@ export interface PostaiFacts {
    * name, PostScore, review count and rating as stored. Empty = not known. */
   competitors: Array<{ name: string; total: number | null; reviews: number | null; rating: number | null; isSubject: boolean }>;
   checks: Array<{ label: string; status: "done" | "needs work" | "couldn't check"; earned: number | null; max: number; explanation: string }>;
+  /** Review-reply counts from the owner's connected Google profile (null =
+   * not connected or not checked yet). Not scored yet. */
+  replyCounts: GbpReplyCounts | null;
 }
 
 const LOW_RATING_BELOW = 4.3;
@@ -84,6 +88,7 @@ export function buildPostaiFacts(
     tasks?: Array<{ label: string; weightedPoints: number; weightedPointsHigh: number | null }>;
     /** Grow and up: the website banner's gain ("up to about +N", or a starter site's "about +29–31"). */
     websiteBanner?: { kind: "improve"; points: number } | { kind: "get_website"; low: number; high: number | null } | null;
+    replyCounts?: GbpReplyCounts | null;
   }
 ): PostaiFacts {
   const plan = b.plan ?? "free";
@@ -130,6 +135,7 @@ export function buildPostaiFacts(
       max: c.maxPoints,
       explanation: c.explanation,
     })),
+    replyCounts: b.replyCounts ?? null,
   };
 }
 
@@ -139,6 +145,22 @@ function boostNumber(points: number): number {
 }
 
 const pts = (n: number | null) => (n === null ? "—" : Number.isInteger(n) ? String(n) : n.toFixed(1));
+
+/** The reply counts, exactly as the owner's connect box shows them. */
+function replyCountsLine(c: GbpReplyCounts | null): string {
+  const rules = "Not part of the PostScore yet — never say it changes the score, and never claim replying (or anything else) affects Google ranking.";
+  if (!c) return `- Review replies: not known (Google not connected, or not checked yet). ${rules}`;
+  const date = c.checkedAt.slice(0, 10);
+  const allTime =
+    c.allTimeReviews !== null && c.allTimeReplied !== null
+      ? ` ALL-TIME: replied to ${c.allTimeReplied} of ${c.allTimeReviews} reviews${c.allTimeCapped ? " (of the latest 500 only — there are more)" : ""}.`
+      : "";
+  const recent =
+    c.reviewsInWindow < REPLY_CHECK_MIN_REVIEWS
+      ? " RECENT: not enough recent reviews to check yet."
+      : ` RECENT (last 90 days, or the latest 20): replied to ${c.replied} of the last ${c.reviewsInWindow} reviews.${c.templatedShare > TEMPLATED_WARN_SHARE ? " Most replies use the same text — a short personal line helps." : ""}`;
+  return `- Review replies (owner's connected Google profile, checked ${date}):${allTime}${recent} Keep all-time and recent apart — never mix their numbers. ${rules}`;
+}
 
 /** The FACTS block for the prompt — the only source of numbers. */
 export function factsBlockText(f: PostaiFacts): string {
@@ -172,6 +194,7 @@ export function factsBlockText(f: PostaiFacts): string {
     ...(f.projectedScore !== null ? [`- Projected score (Overview): ${f.projectedScore}/100.`] : []),
     "- Every check (status, points, the app's own explanation with its real threshold):",
     ...f.checks.map((c) => `  - ${c.label}: ${c.status}, ${pts(c.earned)}/${pts(c.max)} pts — ${c.explanation}`),
+    replyCountsLine(f.replyCounts),
     ...(f.plan === "free"
       ? [
           "- FREE PLAN: never suggest printing, screenshotting or saving a preview, or any other way around a locked feature; never say the owner can re-run, refresh or update their competitors (on Free the saved list isn't refreshed).",

@@ -2,6 +2,7 @@
 
 import { requestCache } from "@/lib/requestCache";
 import { createClient } from "@/lib/supabase/server";
+import { replyCountsFromRow, type GbpReplyCounts } from "@/lib/gbpReviewReplies";
 
 export interface GbpConnectionStatus {
   connected: boolean;
@@ -12,6 +13,9 @@ export interface GbpConnectionStatus {
   locationAddress: string | null;
   /** Google stopped accepting the stored token: show "Reconnect Google". */
   needsReconnect: boolean;
+  /** The last review-reply counts (null until the first check). Kept
+   * while "Reconnect Google" shows; deleted on disconnect. */
+  replyCounts: GbpReplyCounts | null;
 }
 
 export type GetGbpConnectionStatusResult =
@@ -19,7 +23,7 @@ export type GetGbpConnectionStatusResult =
   | { status: "unauthenticated" }
   | { status: "not_found" };
 
-const NOT_CONNECTED: GbpConnectionStatus = { connected: false, connectedAt: null, locationTitle: null, locationAddress: null, needsReconnect: false };
+const NOT_CONNECTED: GbpConnectionStatus = { connected: false, connectedAt: null, locationTitle: null, locationAddress: null, needsReconnect: false, replyCounts: null };
 
 /**
  * The one honest question every gated feature in the app asks before
@@ -47,7 +51,7 @@ async function getGbpConnectionStatusUncached(businessId: string): Promise<GetGb
 
   const row = data as Record<string, unknown>;
   if (row.status !== "connected") {
-    return { status: "ok", ...NOT_CONNECTED, needsReconnect: row.status === "error" };
+    return { status: "ok", ...NOT_CONNECTED, needsReconnect: row.status === "error", replyCounts: row.status === "error" ? replyCountsFromRow(row) : null };
   }
   return {
     status: "ok",
@@ -56,6 +60,7 @@ async function getGbpConnectionStatusUncached(businessId: string): Promise<GetGb
     locationTitle: (row.location_title as string | null) ?? null,
     locationAddress: (row.location_address as string | null) ?? null,
     needsReconnect: false,
+    replyCounts: replyCountsFromRow(row),
   };
 }
 

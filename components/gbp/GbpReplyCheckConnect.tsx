@@ -4,6 +4,8 @@ import Link from "next/link";
 import { IconBrandGoogle, IconCircleCheck, IconAlertTriangle, IconCrown } from "@tabler/icons-react";
 import { Button } from "@/components/ui/Button";
 import { GbpDisconnectButton } from "@/components/gbp/GbpDisconnectButton";
+import { GbpReplyCountsLine } from "@/components/gbp/GbpReplyCountsLine";
+import type { GbpReplyCounts } from "@/lib/gbpReviewReplies";
 import { gbpConnectedText, gbpResultText } from "@/components/gbp/GbpResultMessage";
 import { GBP_REPLY_CHECK_ANCHOR, gbpConnectHref, type GbpConnectResult } from "@/lib/gbpLanding";
 import { formatShortDate, t, useLocale, useTimeZone } from "@/lib/i18n";
@@ -25,15 +27,21 @@ export interface GbpReplyCheckState {
   /** Where this box is — the owner comes back here after Google. */
   origin: "overview" | "reviews";
   business: { name: string | null; address: string | null };
+  /** The last review-reply counts (null until the first check). */
+  replyCounts: GbpReplyCounts | null;
 }
 
 /**
  * Free and Grow: connect Google only so the read-only "Replying to
- * reviews" check can count toward their score. Once connected, the status
- * and Disconnect live here too. Below: one Premium line (insights and
- * listing fixes are Premium, and not live yet).
+ * reviews" check can count toward their score. Once connected, the status,
+ * the reply counts and Disconnect live here too. Below: one Premium line
+ * (insights and listing fixes are Premium, and not live yet).
+ *
+ * Free shows it as its own card on the Overview ("Free tools you can use
+ * now", after PostAI); Grow inside the Reviews page.
  */
 export function GbpReplyCheckConnect({ businessId, state }: { businessId: string; state: GbpReplyCheckState }) {
+  const free = state.origin === "overview";
   const locale = useLocale();
   const timeZone = useTimeZone();
   const { connected, connectedAt, configured, result, needsReconnect } = state;
@@ -54,7 +62,12 @@ export function GbpReplyCheckConnect({ businessId, state }: { businessId: string
     <div
       id={GBP_REPLY_CHECK_ANCHOR}
       data-testid="gbp-reply-check"
-      className="scroll-mt-20 rounded-xl border border-[color:color-mix(in_srgb,var(--color-brass)_35%,white)] bg-paper p-4"
+      className={cn(
+        "scroll-mt-20",
+        free
+          ? "rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5"
+          : "rounded-xl border border-[color:color-mix(in_srgb,var(--color-brass)_35%,white)] bg-paper p-4"
+      )}
     >
       {result && (
         <p role="status" className={cn("mb-2.5 text-[13px] font-medium", result === "connected" ? "text-green" : "text-red")}>
@@ -77,6 +90,7 @@ export function GbpReplyCheckConnect({ businessId, state }: { businessId: string
               <p className="mt-1 text-[12.5px] leading-snug text-ink-soft">{t(locale, "dashboard.gbpReplyCheck.connectedBody")}</p>
             </div>
           </div>
+          <GbpReplyCountsLine counts={state.replyCounts} />
           <GbpDisconnectButton businessId={businessId} />
         </div>
       ) : needsReconnect ? (
@@ -95,7 +109,7 @@ export function GbpReplyCheckConnect({ businessId, state }: { businessId: string
             </span>
             <div className="min-w-0">
               <h3 className="text-[14px] font-semibold text-ink">{t(locale, "dashboard.gbpReplyCheck.title")}</h3>
-              <p className="mt-0.5 text-[12.5px] leading-snug text-ink-soft">{t(locale, "dashboard.gbpReplyCheck.body")}</p>
+              <p className="mt-0.5 text-[12.5px] leading-snug text-ink-soft">{t(locale, free ? "dashboard.gbpReplyCheck.freeBody" : "dashboard.gbpReplyCheck.body")}</p>
             </div>
           </div>
           {connectButton(t(locale, "dashboard.gbpReplyCheck.connect"))}

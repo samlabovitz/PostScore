@@ -3300,6 +3300,14 @@ export type MessageKey =
   | "dashboard.gbpReplyCheck.notConfigured"
   | "dashboard.gbpReplyCheck.connected"
   | "dashboard.gbpReplyCheck.connectedBody"
+  | "dashboard.gbpReplyCheck.freeBody"
+  | "dashboard.gbpReplyCounts.line"
+  | "dashboard.gbpReplyCounts.templated"
+  | "dashboard.gbpReplyCounts.tooFew"
+  | "dashboard.gbpReplyCounts.allTime"
+  | "dashboard.gbpReplyCounts.allTimeCapped"
+  | "dashboard.gbpReplyCounts.allTimeOnly"
+  | "dashboard.gbpReplyCounts.checked"
   | "dashboard.gbpResult.connected"
   | "dashboard.gbpResult.denied"
   | "dashboard.gbpResult.failed"
@@ -7829,6 +7837,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpReplyCheck.notConfigured": "Connecting Google isn't set up here yet.",
     "dashboard.gbpReplyCheck.connected": "Google connected",
     "dashboard.gbpReplyCheck.connectedBody": "PostScore will use it to check how you reply to reviews. That check isn't in your score yet — it's coming soon. Read-only — PostScore never changes your listing on this plan.",
+    "dashboard.gbpReplyCheck.freeBody": "Connect Google to complete your score — include how you reply to reviews. Read-only: PostScore never changes your listing on this plan.",
+    "dashboard.gbpReplyCounts.line": "You replied to {replied} of your last {count} reviews · checked {date}",
+    "dashboard.gbpReplyCounts.templated": "Most of your replies use the same text — a short personal line helps.",
+    "dashboard.gbpReplyCounts.tooFew": "Not enough recent reviews to check yet.",
+    "dashboard.gbpReplyCounts.allTime": "You've replied to {allReplied} of {allReviews} reviews · Lately: {replied} of your last {count}",
+    "dashboard.gbpReplyCounts.allTimeCapped": "You've replied to {allReplied} of your latest {allReviews} reviews · Lately: {replied} of your last {count}",
+    "dashboard.gbpReplyCounts.allTimeOnly": "You've replied to {allReplied} of {allReviews} reviews",
+    "dashboard.gbpReplyCounts.checked": "Checked {date}",
     "dashboard.gbpResult.connected": "Google connected.",
     "dashboard.gbpResult.denied": "You didn't approve access, so nothing was connected.",
     "dashboard.gbpResult.failed": "Couldn't connect Google. Please try again.",
@@ -12382,6 +12398,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpReplyCheck.notConfigured": "La conexión con Google aún no está configurada aquí.",
     "dashboard.gbpReplyCheck.connected": "Google conectado",
     "dashboard.gbpReplyCheck.connectedBody": "PostScore lo usará para revisar cómo responde a las reseñas. Ese punto aún no está en su puntuación; llega pronto. Solo lectura: PostScore nunca cambia su ficha en este plan.",
+    "dashboard.gbpReplyCheck.freeBody": "Conecte Google para completar su puntuación: incluya cómo responde a las reseñas. Solo lectura: PostScore nunca cambia su ficha en este plan.",
+    "dashboard.gbpReplyCounts.line": "Respondió a {replied} de sus últimas {count} reseñas · revisado el {date}",
+    "dashboard.gbpReplyCounts.templated": "La mayoría de sus respuestas usan el mismo texto: una línea personal breve ayuda.",
+    "dashboard.gbpReplyCounts.tooFew": "Aún no hay suficientes reseñas recientes para revisar.",
+    "dashboard.gbpReplyCounts.allTime": "Ha respondido a {allReplied} de {allReviews} reseñas · Últimamente: {replied} de sus últimas {count}",
+    "dashboard.gbpReplyCounts.allTimeCapped": "Ha respondido a {allReplied} de sus últimas {allReviews} reseñas · Últimamente: {replied} de sus últimas {count}",
+    "dashboard.gbpReplyCounts.allTimeOnly": "Ha respondido a {allReplied} de {allReviews} reseñas",
+    "dashboard.gbpReplyCounts.checked": "Revisado el {date}",
     "dashboard.gbpResult.connected": "Google conectado.",
     "dashboard.gbpResult.denied": "No aprobó el acceso, así que no se conectó nada.",
     "dashboard.gbpResult.failed": "No se pudo conectar Google. Inténtelo de nuevo.",

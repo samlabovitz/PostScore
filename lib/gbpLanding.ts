@@ -1,7 +1,8 @@
 // Where an owner lands after a Google connect attempt (or a refused one):
-// back where they started. Free connects from the Overview's reviews
-// section, Grow from the Reviews page — both only for the read-only
-// "Replying to reviews" check, and never sent to the Premium pages.
+// back where they started. Free connects from its own Overview card
+// ("Free tools you can use now", after PostAI), Grow from the Reviews
+// page — both only for the read-only "Replying to reviews" check, and
+// never sent to the Premium pages.
 // Premium and Multi connect from the Google Profile tab or its connect
 // page. It's one connection either way.
 import type { Plan } from "@/lib/plan";
@@ -42,7 +43,7 @@ export function parseGbpResult(value: string | null | undefined): GbpConnectResu
 
 export type GbpOrigin = "overview" | "reviews" | "profile" | "connect";
 
-/** The anchor the Reviews-area connect sits under. */
+/** The anchor of the Free Overview card and the Grow Reviews-page box. */
 export const GBP_REPLY_CHECK_ANCHOR = "reply-check";
 /** The Google Profile tab's connection card. */
 export const GBP_PROFILE_ANCHOR = "google-connection";

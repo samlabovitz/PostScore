@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import fs from "node:fs";
+import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextRequest } from "next/server";
@@ -48,6 +49,7 @@ function fakeDb(tables: Record<string, Row[]>, user: { id: string } | null = nul
         },
         update: (patch: Row) => ({
           eq: async (col: string, val: unknown) => {
+            if (Object.keys(patch).some((k) => missingColumns.has(k))) return { error: { code: "PGRST204", message: "column not found" } };
             log.push({ op: "update" as Op["op"], table, filters: { [col]: val }, row: patch });
             tables[table] = (tables[table] ?? []).map((r) => (r[col] === val ? { ...r, ...patch } : r));
             return { error: null };
@@ -99,6 +101,8 @@ beforeEach(() => {
   adminDb = fakeDb({ gbp_tokens: [], gbp_connections: [] });
   currentPlan = "free";
   missingColumns.clear();
+  reviewsApi = null;
+  reviewCalls.length = 0;
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
 });
@@ -148,9 +152,19 @@ function googleApi(locationsByAccount: Record<string, Array<Array<Record<string,
       const i = Number(u.searchParams.get("pageToken") ?? 0);
       return jsonResponse({ locations: pages[i], ...(i + 1 < pages.length ? { nextPageToken: String(i + 1) } : {}) });
     }
+    if (u.host === "mybusiness.googleapis.com" && reviewsApi) {
+      reviewCalls.push(u.href);
+      const i = Number(u.searchParams.get("pageToken") ?? 0);
+      const page = reviewsApi[i];
+      if ("status" in page) return jsonResponse({ error: { status: page.reason } }, page.status);
+      return jsonResponse({ reviews: page.reviews, ...(i + 1 < reviewsApi.length ? { nextPageToken: String(i + 1) } : {}) });
+    }
     return jsonResponse({}, 404);
   });
 }
+/** The v4 reviews list, page by page (null = not mocked → 404). */
+let reviewsApi: Array<{ reviews: Array<Record<string, unknown>> } | { status: number; reason: string }> | null = null;
+const reviewCalls: string[] = [];
 function loc(name: string, placeId: string | null, voice = false, title = "Hair express on Broadway") {
   return {
     name,
@@ -190,7 +204,7 @@ describe("plan decision: every plan connects; only Premium opens the Google Prof
 
   test("Reviews-area connect shows for Free and Grow only, and only when switched on", async () => {
     const { gbpReplyCheckState } = await import("@/lib/gbpReplyCheck");
-    const status = { status: "ok" as const, connected: false, connectedAt: null, locationTitle: null, locationAddress: null, needsReconnect: false };
+    const status = { status: "ok" as const, connected: false, connectedAt: null, locationTitle: null, locationAddress: null, needsReconnect: false, replyCounts: null };
     expect(gbpReplyCheckState("free", status, null)).toMatchObject({ connected: false, configured: true });
     expect(gbpReplyCheckState("grow", status, "connected")).toMatchObject({ result: "connected" });
     expect(gbpReplyCheckState("premium", status, null)).toBeNull();
@@ -241,13 +255,16 @@ describe("plan decision: every plan connects; only Premium opens the Google Prof
               result,
               origin: "overview",
               business: { name: "Hair express on Broadway", address: "9 S Broadway, Tarrytown, NY 10591, USA" },
+              replyCounts: null,
             }}
           />
         </LocaleProvider>
       );
     const off = render(false);
     expect(off).toContain('href="/api/gbp/connect?businessId=b1&amp;from=overview"');
-    expect(off).toContain("so your score can include how you reply to reviews");
+    // Free (the Overview card) has its own wording.
+    expect(off).toContain("Connect Google to complete your score — include how you reply to reviews. Read-only: PostScore never changes your listing on this plan.");
+    expect(render(false, "es")).toContain("Conecte Google para completar su puntuación: incluya cómo responde a las reseñas.");
     expect(off).toContain("Premium adds your Google insights");
     expect(off).toContain('href="/business/b1/settings#compare-plans"');
     expect(off).not.toContain("connect-gbp");
@@ -628,7 +645,7 @@ describe("getValidAccessToken", () => {
       <LocaleProvider locale="en" timeZone="America/New_York">
         <GbpReplyCheckConnect
           businessId="b1"
-          state={{ connected: false, connectedAt: null, locationTitle: null, locationAddress: null, needsReconnect: true, configured: true, result: null, origin: "reviews", business: { name: null, address: null } }}
+          state={{ connected: false, connectedAt: null, locationTitle: null, locationAddress: null, needsReconnect: true, configured: true, result: null, origin: "reviews", business: { name: null, address: null }, replyCounts: null }}
         />
       </LocaleProvider>
     );
@@ -638,20 +655,49 @@ describe("getValidAccessToken", () => {
 });
 
 describe("Free and Grow see the connect box but never the Premium pages", () => {
-  test("Free: the box sits right under the Reviews card's header, before the review link", async () => {
+  test("Free: the box is its own card in \"Free tools you can use now\", right after PostAI — no longer inside the Reviews card", async () => {
+    const view = fs.readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8");
+    const tools = view.slice(view.indexOf('<FreeSection id="tools"'), view.indexOf('<FreeSection id="earn"'));
+    const postai = tools.indexOf("<FreePostAI");
+    const card = tools.indexOf("{gbpReplyCheck && <GbpReplyCheckConnect businessId={businessId} state={gbpReplyCheck} />}");
+    expect(postai).toBeGreaterThan(-1);
+    expect(card).toBeGreaterThan(postai);
+    expect(tools.slice(0, tools.indexOf("</FreeReviews>"))).not.toContain("GbpReplyCheckConnect");
+    // The Reviews card itself no longer takes a connect box.
     const { FreeReviews } = await import("@/components/overview/FreeOverview");
     const html = renderToStaticMarkup(
       <LocaleProvider locale="en" timeZone="America/New_York">
-        <FreeReviews placeId="p1" rating={4.6} reviewCount={10} goal={null} group={null} connect={<div data-testid="gbp-reply-check" />}>
+        <FreeReviews placeId="p1" rating={4.6} reviewCount={10} goal={null} group={null}>
           <div data-testid="drafter" />
         </FreeReviews>
       </LocaleProvider>
     );
-    expect(html.indexOf('data-testid="gbp-reply-check"')).toBeGreaterThan(-1);
-    expect(html.indexOf('data-testid="gbp-reply-check"')).toBeLessThan(html.indexOf('data-testid="free-review-link"'));
-    const view = fs.readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8");
-    expect(view).toContain("connect={gbpReplyCheck ? <GbpReplyCheckConnect businessId={businessId} state={gbpReplyCheck} /> : null}");
+    expect(html).not.toContain("gbp-reply-check");
+    expect(fs.readFileSync("components/overview/FreeOverview.tsx", "utf8")).not.toContain("connect?: React.ReactNode");
     expect(fs.readFileSync("app/business/[id]/page.tsx", "utf8")).toContain("gbpReplyCheck={free ? gbpReplyCheckState(upgrade.plan, gbpStatus, searchParams.gbp");
+  });
+
+  test("Free card: its own card style and anchor, so the owner lands back on it after Google", async () => {
+    const { GbpReplyCheckConnect } = await import("@/components/gbp/GbpReplyCheckConnect");
+    const base = { connected: false, connectedAt: null, locationTitle: null, locationAddress: null, needsReconnect: false, configured: true, result: "connected" as const, business: { name: null, address: null }, replyCounts: null };
+    const free = renderToStaticMarkup(
+      <LocaleProvider locale="en" timeZone="America/New_York">
+        <GbpReplyCheckConnect businessId="b1" state={{ ...base, origin: "overview" }} />
+      </LocaleProvider>
+    );
+    const grow = renderToStaticMarkup(
+      <LocaleProvider locale="en" timeZone="America/New_York">
+        <GbpReplyCheckConnect businessId="b1" state={{ ...base, origin: "reviews" }} />
+      </LocaleProvider>
+    );
+    expect(free).toContain('id="reply-check"');
+    expect(free).toContain("shadow-card");
+    expect(free).toContain("Connect Google to complete your score");
+    // Grow keeps its box and wording on the Reviews page.
+    expect(grow).not.toContain("shadow-card");
+    expect(grow).toContain("so your score can include how you reply to reviews");
+    const { gbpLandingPath } = await import("@/lib/gbpLanding");
+    expect(gbpLandingPath("b1", "overview", "connected")).toBe("/business/b1?gbp=connected#reply-check");
   });
 
   test("Grow: the box is on the Reviews page, and the Premium reply-assistant card (→ Premium page) is Premium-only", () => {
@@ -761,5 +807,271 @@ describe("bug: Free connect landed on 'Couldn't connect Google'", () => {
     const { gbpResultText } = await import("@/components/gbp/GbpResultMessage");
     const { GBP_CONNECT_RESULTS } = await import("@/lib/gbpLanding");
     for (const r of GBP_CONNECT_RESULTS) for (const lang of ["en", "es"] as const) expect(gbpResultText(lang, r, { name: "X", address: null })).not.toMatch(/^dashboard\./);
+  });
+});
+
+describe("Step 2: review-reply counts (counts only, not scored)", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const ago = (days: number) => new Date(Date.now() - days * DAY).toISOString();
+  /** A full Google review — text, name, stars — of which only counts may survive. */
+  const gReview = (days: number, reply?: string, name = "Maria Lopez") => ({
+    reviewId: `r${days}`,
+    reviewer: { displayName: name, profilePhotoUrl: "https://lh3.example/p.jpg" },
+    starRating: "FIVE",
+    comment: `SECRET review text ${days}`,
+    createTime: ago(days),
+    updateTime: ago(days),
+    ...(reply ? { reviewReply: { comment: reply, updateTime: ago(days) } } : {}),
+  });
+  async function connected() {
+    const { encryptGbpToken } = await import("@/lib/gbpSecurity");
+    adminDb.tables.gbp_tokens = [{ business_id: BIZ, access_token_enc: encryptGbpToken("ya29.STORED", BIZ), refresh_token_enc: encryptGbpToken("1//R", BIZ), token_expires_at: new Date(Date.now() + 30 * 60_000).toISOString() }];
+    adminDb.tables.gbp_connections = [{ business_id: BIZ, status: "connected", google_account_id: "accounts/1", google_location_id: "locations/9" }];
+  }
+  async function run() {
+    const { runGbpReplyCheck } = await import("@/lib/gbpReplyCounts.server");
+    return runGbpReplyCheck(BIZ);
+  }
+
+  test("reads accounts/{a}/locations/{l}/reviews, pageSize 50, newest updated first; stores only the five counts", async () => {
+    await connected();
+    googleApi();
+    reviewsApi = [{ reviews: [gReview(1, "Thanks Maria, see you soon!"), gReview(5), gReview(9, "Thank you for coming in, we loved having you.")] }];
+    const result = await run();
+    expect(result).toMatchObject({ status: "ok", counts: { reviewsInWindow: 3, replied: 2, hasRecentReview: true } });
+    const url = new URL(reviewCalls[0]);
+    expect(url.pathname).toBe("/v4/accounts/1/locations/9/reviews");
+    expect(url.searchParams.get("pageSize")).toBe("50");
+    expect(url.searchParams.get("orderBy")).toBe("updateTime desc");
+    const row = adminDb.tables.gbp_connections[0];
+    expect(Object.keys(row).filter((k) => k.startsWith("reply_")).sort()).toEqual([
+      "reply_all_time_capped",
+      "reply_all_time_replied",
+      "reply_all_time_reviews",
+      "reply_checked_at",
+      "reply_has_recent_review",
+      "reply_replied",
+      "reply_reviews_in_window",
+      "reply_templated_share",
+    ]);
+    const written = JSON.stringify(adminDb.log.filter((o) => o.op !== "select"));
+    for (const leaked of ["SECRET", "Maria", "FIVE", "Thanks", "lh3.example", ago(1).slice(0, 16)]) expect(written).not.toContain(leaked);
+  });
+
+  test("all-time: reads every page, newest first, until Google has no more", async () => {
+    await connected();
+    googleApi();
+    const page = (from: number, replyEvery = 0) => Array.from({ length: 50 }, (_, i) => gReview(from + i * 2, replyEvery && i % replyEvery === 0 ? "Thank you!" : undefined));
+    // Odd days only, so no review sits exactly on the 90-day line.
+    reviewsApi = [{ reviews: page(1) }, { reviews: page(101, 10) }, { reviews: page(201) }];
+    const result = await run();
+    expect(reviewCalls).toHaveLength(3);
+    expect(result).toMatchObject({ status: "ok", counts: { allTimeReviews: 150, allTimeReplied: 5, allTimeCapped: false, reviewsInWindow: 45, replied: 0 } });
+    expect(adminDb.tables.gbp_connections[0]).toMatchObject({ reply_all_time_reviews: 150, reply_all_time_replied: 5, reply_all_time_capped: false });
+  });
+
+  test("all-time is capped at the newest 500 (10 pages of 50); capped = true when Google has more", async () => {
+    await connected();
+    googleApi();
+    reviewsApi = Array.from({ length: 12 }, (_, p) => ({ reviews: Array.from({ length: 50 }, (_, i) => gReview(p * 50 + i, "Thanks!")) }));
+    const result = await run();
+    expect(reviewCalls).toHaveLength(10);
+    expect(result).toMatchObject({ status: "ok", counts: { allTimeReviews: 500, allTimeReplied: 500, allTimeCapped: true } });
+    // Exactly 500 reviews: not capped.
+    reviewCalls.length = 0;
+    reviewsApi = reviewsApi.slice(0, 10);
+    expect(await run()).toMatchObject({ counts: { allTimeReviews: 500, allTimeCapped: false } });
+  });
+
+  test("before supabase/gbp-reply-alltime.sql: the recent counts are still saved", async () => {
+    await connected();
+    googleApi();
+    reviewsApi = [{ reviews: [gReview(1, "Thanks!"), gReview(2), gReview(3)] }];
+    for (const c of ["reply_all_time_reviews", "reply_all_time_replied", "reply_all_time_capped"]) missingColumns.add(c);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await run()).toMatchObject({ status: "ok" });
+    expect(adminDb.tables.gbp_connections[0]).toMatchObject({ reply_reviews_in_window: 3, reply_replied: 1 });
+    expect(adminDb.tables.gbp_connections[0]).not.toHaveProperty("reply_all_time_reviews");
+    expect(warn.mock.calls.map((c) => c.join(" ")).join("\n")).toContain("supabase/gbp-reply-alltime.sql");
+    warn.mockRestore();
+  });
+
+  test("runs once right after a successful connect, before the owner lands", async () => {
+    googleApi();
+    reviewsApi = [{ reviews: [gReview(1, "Thanks!"), gReview(2, "Thanks!"), gReview(3)] }];
+    const { location, cookie } = await startConnect(BIZ, "overview");
+    const res = await callback(`state=${encodeURIComponent(new URL(location).searchParams.get("state")!)}&code=c`, cookie);
+    expect(res.location).toBe("http://localhost:3000/business/biz-1?gbp=connected#reply-check");
+    expect(reviewCalls).toHaveLength(1);
+    expect(adminDb.tables.gbp_connections[0]).toMatchObject({ status: "connected", reply_reviews_in_window: 3, reply_replied: 2, reply_templated_share: 1 });
+  });
+
+  test("a reviews API error never fails the connect", async () => {
+    googleApi();
+    reviewsApi = [{ status: 403, reason: "PERMISSION_DENIED" }];
+    const { location, cookie } = await startConnect(BIZ);
+    const res = await callback(`state=${encodeURIComponent(new URL(location).searchParams.get("state")!)}&code=c`, cookie);
+    expect(res.location).toContain("gbp=connected");
+    expect(adminDb.tables.gbp_connections[0]).toMatchObject({ status: "connected" });
+  });
+
+  test("runs during every normal scan, at most once, through the one re-scan path — never on page load", () => {
+    const scoring = fs.readFileSync("app/actions/scoring.ts", "utf8");
+    const rescan = scoring.slice(scoring.indexOf("export async function rescanBusinessWithClient"));
+    expect(rescan.match(/runGbpReplyCheck\(businessId\)/g)).toHaveLength(1);
+    expect(scoring.match(/runGbpReplyCheck/g)).toHaveLength(2); // the import + the one call
+    // Owner re-scan, the monthly job and rescan-all all run rescanBusinessWithClient.
+    expect(scoring).toContain("const result = await rescanBusinessWithClient(supabase, businessId);");
+    expect(fs.readFileSync("app/api/cron/monthly-reports/route.ts", "utf8")).toContain("rescanBusinessWithClient(supabase, businessId)");
+    expect(fs.readFileSync("scripts/rescan-all.ts", "utf8")).toContain("rescanBusinessWithClient(supabase, b.id, noScreenshots)");
+    // No page, component or other route starts it.
+    const callers = execFileSync("git", ["grep", "--untracked", "-l", "runGbpReplyCheck", "--", "app", "components", "lib", "scripts", "netlify"], { encoding: "utf8" }).trim().split("\n").filter((f) => !f.includes(".test."));
+    expect(callers.sort()).toEqual(["app/actions/scoring.ts", "app/api/gbp/callback/route.ts", "lib/gbpReplyCounts.server.ts"]);
+  });
+
+  test("not connected → nothing is called", async () => {
+    googleApi();
+    reviewsApi = [{ reviews: [] }];
+    expect(await run()).toEqual({ status: "skipped" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("token rejected (401) → status error + 'Reconnect Google'; the last counts stay with their date", async () => {
+    await connected();
+    Object.assign(adminDb.tables.gbp_connections[0], { reply_reviews_in_window: 8, reply_replied: 6, reply_templated_share: 0, reply_has_recent_review: true, reply_checked_at: "2026-10-01T10:00:00Z" });
+    googleApi();
+    reviewsApi = [{ status: 401, reason: "UNAUTHENTICATED" }];
+    expect(await run()).toEqual({ status: "reconnect" });
+    expect(adminDb.tables.gbp_tokens).toEqual([]);
+    expect(adminDb.tables.gbp_connections[0]).toMatchObject({ status: "error", reply_replied: 6, reply_checked_at: "2026-10-01T10:00:00Z" });
+    const { getGbpConnectionStatus } = await import("@/app/actions/gbp");
+    sessionDb.tables.gbp_connections = adminDb.tables.gbp_connections;
+    expect(await getGbpConnectionStatus(BIZ)).toMatchObject({ connected: false, needsReconnect: true });
+  });
+
+  test("refresh token rejected (invalid_grant) → the same reconnect path, no reviews call", async () => {
+    await connected();
+    adminDb.tables.gbp_tokens[0].token_expires_at = new Date(Date.now() - 60_000).toISOString();
+    fetchMock.mockResolvedValue(jsonResponse({ error: "invalid_grant" }, 400));
+    expect(await run()).toEqual({ status: "reconnect" });
+    expect(adminDb.tables.gbp_connections[0]).toMatchObject({ status: "error" });
+  });
+
+  test("an API error keeps the last counts and their date, logs Google's reason only", async () => {
+    await connected();
+    Object.assign(adminDb.tables.gbp_connections[0], { reply_reviews_in_window: 8, reply_replied: 6, reply_checked_at: "2026-10-01T10:00:00Z" });
+    googleApi();
+    reviewsApi = [{ status: 429, reason: "RESOURCE_EXHAUSTED" }];
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await run()).toEqual({ status: "failed" });
+    expect(adminDb.tables.gbp_connections[0]).toMatchObject({ status: "connected", reply_replied: 6, reply_checked_at: "2026-10-01T10:00:00Z" });
+    expect(warn.mock.calls.map((c) => c.join(" ")).join("\n")).toContain("RESOURCE_EXHAUSTED");
+    warn.mockRestore();
+  });
+
+  test("GBP calls are counted in the logs and throttled well inside 300/min", async () => {
+    const { GBP_CALLS_PER_MINUTE, gbpFetch, resetGbpQuota } = await import("@/lib/gbpQuota");
+    expect(GBP_CALLS_PER_MINUTE).toBeLessThanOrEqual(150);
+    resetGbpQuota();
+    let t = 0;
+    const waits: number[] = [];
+    const counter = { calls: 0 };
+    const f = gbpFetch(counter, (async () => new Response("{}")) as typeof fetch, { now: () => t, sleep: async (ms) => { waits.push(ms); t += ms; } });
+    for (let i = 0; i < GBP_CALLS_PER_MINUTE + 1; i++) await f("https://mybusiness.googleapis.com/x");
+    expect(counter.calls).toBe(GBP_CALLS_PER_MINUTE + 1);
+    expect(waits).toHaveLength(1);
+    await connected();
+    googleApi();
+    reviewsApi = [{ reviews: [gReview(1)] }];
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    await run();
+    expect(info.mock.calls.map((c) => c.join(" ")).join("\n")).toMatch(/\[gbp-calls\] reply-check: 1 call/);
+    info.mockRestore();
+  });
+
+  test("disconnect deletes the counts (they live on the connection row)", async () => {
+    await connected();
+    Object.assign(adminDb.tables.gbp_connections[0], { reply_reviews_in_window: 8, reply_replied: 6, reply_checked_at: "2026-10-01T10:00:00Z" });
+    googleApi();
+    const { disconnectGbp } = await import("@/app/actions/gbp");
+    expect(await disconnectGbp(BIZ)).toMatchObject({ status: "ok" });
+    expect(adminDb.tables.gbp_connections).toEqual([]);
+    expect(fs.readFileSync("supabase/gbp-reply-counts.sql", "utf8")).toContain("alter table public.gbp_connections add column if not exists reply_replied integer;");
+  });
+
+  test("never for other businesses: the check reads only this business's own connection", async () => {
+    await connected();
+    adminDb.tables.gbp_connections.push({ business_id: OTHER_BIZ, status: "connected", google_account_id: "accounts/2", google_location_id: "locations/2", reply_replied: 99 });
+    googleApi();
+    reviewsApi = [{ reviews: [gReview(1)] }];
+    await run();
+    expect(reviewCalls.every((u) => u.includes("/accounts/1/locations/9/"))).toBe(true);
+    expect(adminDb.tables.gbp_connections.find((r) => r.business_id === OTHER_BIZ)).toMatchObject({ reply_replied: 99 });
+    expect(adminDb.tables.gbp_connections.find((r) => r.business_id === OTHER_BIZ)).not.toHaveProperty("reply_checked_at");
+  });
+
+  test("UI (EN + ES): all-time + recent line, the templated hint, too few — on Free/Grow and on Premium's Google Profile", async () => {
+    const { GbpReplyCheckConnect } = await import("@/components/gbp/GbpReplyCheckConnect");
+    const { GoogleProfilePanel } = await import("@/components/gbp/GoogleProfilePanel");
+    const counts = { reviewsInWindow: 18, replied: 12, templatedShare: 0.75, hasRecentReview: true, allTimeReviews: 30 as number | null, allTimeReplied: 1 as number | null, allTimeCapped: false, checkedAt: "2026-10-26T15:00:00Z" };
+    const box = (locale: Locale, replyCounts: typeof counts | null, origin: "overview" | "reviews" = "overview") =>
+      renderToStaticMarkup(
+        <LocaleProvider locale={locale} timeZone="America/New_York">
+          <GbpReplyCheckConnect businessId="b1" state={{ connected: true, connectedAt: "2026-10-20T15:00:00Z", locationTitle: "Hair express on Broadway", locationAddress: null, needsReconnect: false, configured: true, result: null, origin, business: { name: null, address: null }, replyCounts }} />
+        </LocaleProvider>
+      );
+    const en = box("en", counts);
+    expect(en).toContain("You&#x27;ve replied to 1 of 30 reviews · Lately: 12 of your last 18");
+    expect(en).toContain("Checked Oct 26");
+    expect(box("en", { ...counts, allTimeReviews: 500, allTimeReplied: 120, allTimeCapped: true })).toContain("You&#x27;ve replied to 120 of your latest 500 reviews · Lately: 12 of your last 18");
+    expect(box("es", { ...counts, allTimeReviews: 500, allTimeReplied: 120, allTimeCapped: true })).toContain("Ha respondido a 120 de sus últimas 500 reseñas · Últimamente: 12 de sus últimas 18");
+    // Counts saved before the all-time columns: the recent line alone.
+    expect(box("en", { ...counts, allTimeReviews: null, allTimeReplied: null })).toContain("You replied to 12 of your last 18 reviews · checked Oct 26");
+    expect(en).toContain("Most of your replies use the same text — a short personal line helps.");
+    expect(en).toContain("Disconnect");
+    expect(en).toContain('data-testid="gbp-premium-upsell"');
+    expect(en.indexOf('data-testid="gbp-reply-counts"')).toBeLessThan(en.indexOf('data-testid="gbp-premium-upsell"'));
+    expect(box("en", { ...counts, templatedShare: 0.5 })).not.toContain("same text");
+    expect(box("es", counts)).toContain("Ha respondido a 1 de 30 reseñas · Últimamente: 12 de sus últimas 18");
+    expect(box("es", counts)).toContain("La mayoría de sus respuestas usan el mismo texto");
+    const few = box("en", { ...counts, reviewsInWindow: 2, replied: 1, allTimeReviews: 2, allTimeReplied: 1 });
+    expect(few).toContain("Not enough recent reviews to check yet.");
+    expect(few).toContain("You&#x27;ve replied to 1 of 2 reviews");
+    expect(few).not.toContain("Lately");
+    expect(box("es", { ...counts, reviewsInWindow: 2 })).toContain("Aún no hay suficientes reseñas recientes para revisar.");
+    expect(box("en", null)).not.toContain("gbp-reply-counts");
+    expect(box("en", counts, "reviews")).toContain("You&#x27;ve replied to 1 of 30 reviews · Lately: 12 of your last 18");
+
+    const panel = renderToStaticMarkup(
+      <LocaleProvider locale="en" timeZone="America/New_York">
+        <GoogleProfilePanel
+          businessId="b1"
+          plan="premium"
+          listing={null}
+          websiteOnly
+          lastScanAt={null}
+          connected
+          searchDemand={{ kind: "awaiting" }}
+          connection={{ locationTitle: "Hair express on Broadway", locationAddress: null, needsReconnect: false, result: null, canStart: true, business: { name: null, address: null }, replyCounts: counts }}
+        />
+      </LocaleProvider>
+    );
+    expect(panel).toContain("You&#x27;ve replied to 1 of 30 reviews · Lately: 12 of your last 18");
+  });
+
+  test("PostAI facts: all-time and recent, clearly labelled, and never a Google ranking claim", async () => {
+    const { factsBlockText } = await import("@/lib/postaiFacts");
+    const base = { total: 70, grade: "C", rating: 4.6, reviewCount: 40, ratingFullAtReviews: 40, reviewCountFullAt: 150, lowRatingBelow: 4.3, nearbyReviewAverage: null, hasWebsite: true, rank: null, rankCard: null, plan: "free" as const, categories: [], projections: [], projectedScore: null, competitors: [], checks: [] };
+    const counts = { reviewsInWindow: 18, replied: 12, templatedShare: 0.75, hasRecentReview: true, allTimeReviews: 30, allTimeReplied: 1, allTimeCapped: false, checkedAt: "2026-10-26T15:00:00Z" };
+    const known = factsBlockText({ ...base, replyCounts: counts });
+    expect(known).toContain("ALL-TIME: replied to 1 of 30 reviews.");
+    expect(known).toContain("RECENT (last 90 days, or the latest 20): replied to 12 of the last 18 reviews.");
+    expect(known).toContain("never mix their numbers");
+    expect(factsBlockText({ ...base, replyCounts: { ...counts, allTimeReviews: 500, allTimeCapped: true } })).toContain("ALL-TIME: replied to 1 of 500 reviews (of the latest 500 only — there are more).");
+    expect(factsBlockText({ ...base, replyCounts: { ...counts, allTimeReviews: null, allTimeReplied: null } })).not.toContain("ALL-TIME");
+    expect(known).toContain("Most replies use the same text");
+    expect(known).toContain("never claim replying (or anything else) affects Google ranking");
+    expect(factsBlockText({ ...base, replyCounts: null })).toContain("Review replies: not known");
+    expect(fs.readFileSync("app/actions/assistant.ts", "utf8")).toContain("replyCounts: gbpStatus.status === \"ok\" ? gbpStatus.replyCounts : null");
   });
 });

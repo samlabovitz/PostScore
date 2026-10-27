@@ -12,6 +12,8 @@
 
 import { GBP_PROFILE_ANCHOR, gbpConnectHref, gbpReplyCheckPath, type GbpConnectResult } from "@/lib/gbpLanding";
 import { gbpConnectedText, gbpResultText } from "@/components/gbp/GbpResultMessage";
+import { GbpReplyCountsLine } from "@/components/gbp/GbpReplyCountsLine";
+import type { GbpReplyCounts } from "@/lib/gbpReviewReplies";
 import Link from "next/link";
 import { IconLock } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
@@ -41,6 +43,8 @@ export interface GoogleProfileConnection {
   /** GBP_CONNECT_PUBLIC and the OAuth setup are both on. */
   canStart: boolean;
   business: { name: string | null; address: string | null };
+  /** The last review-reply counts (null until the first check). */
+  replyCounts?: GbpReplyCounts | null;
 }
 
 export function GoogleProfilePanel({
@@ -150,6 +154,7 @@ export function GoogleProfilePanel({
               ? (gbpConnectedText(locale, connection?.locationTitle ?? null, connection?.locationAddress ?? null) ?? t(locale, "dashboard.googleProfile.connected"))
               : t(locale, "dashboard.googleProfile.notConnected")}
           </div>
+          {premium && connected && <GbpReplyCountsLine counts={connection?.replyCounts ?? null} />}
           {premium ? (
             <>
               <p className="text-[13px] text-ink-soft">

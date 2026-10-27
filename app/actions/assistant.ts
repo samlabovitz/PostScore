@@ -380,6 +380,8 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
               scope: competitors.available ? (competitors.rankedAgainst ?? null) : null,
             }
           : null,
+      // The owner's own reply counts (connected Google) — never another business's.
+      replyCounts: gbpStatus.status === "ok" ? gbpStatus.replyCounts : null,
       rating: scored.business.rating,
       reviewCount: scored.business.review_count,
       hasWebsite: businessWebsiteUrl(scored.business) !== null,
