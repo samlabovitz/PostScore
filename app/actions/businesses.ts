@@ -19,6 +19,7 @@ import { parsePublicWebsiteUrl } from "@/lib/publicUrl";
 import { businessTimeZone } from "@/lib/businessTimeZone";
 import {
   businessRowToScoringInput,
+  V112_SCORING_COLUMNS,
   scoreBusiness,
   type BusinessScoringRow,
   type Grade,
@@ -740,7 +741,7 @@ export async function listMyBusinesses(): Promise<ListMyBusinessesResult> {
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, category, phone, website, rating, review_count, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, created_at, language"
+      `id, name, address, category, primary_type, business_type_override, phone, website, rating, review_count, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, created_at, language, ${V112_SCORING_COLUMNS}`
     )
     .order("created_at", { ascending: false });
 

@@ -10,6 +10,7 @@ import {
   type CategoryResult,
   type Suggestion,
   type WebsiteAnalysis,
+  V112_SCORING_COLUMNS,
 } from "@/lib/scoring";
 import {
   buildTemplateScoringInput,
@@ -218,7 +219,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "name, address, category, primary_type, business_type_override, phone, opening_hours, opening_hours_periods, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, price_level, place_id, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng"
+      `name, address, category, primary_type, business_type_override, phone, opening_hours, opening_hours_periods, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, price_level, place_id, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng, ${V112_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();

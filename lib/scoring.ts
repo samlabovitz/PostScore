@@ -3787,6 +3787,12 @@ function parseWebsiteTrustOverrides(value: unknown): WebsiteTrustOverride[] | nu
   return overrides;
 }
 
+/** The v1.12.0 businesses columns businessRowToScoringInput reads
+ * (supabase/scoring-v1-12.sql). Every select that feeds it must include
+ * these, or recency, replies and customer details read as "not checked". */
+export const V112_SCORING_COLUMNS =
+  "has_recent_review, listing_has_accessibility, listing_has_payment, listing_has_parking, pure_service_area_business, gbp_reviews_in_window, gbp_replied, gbp_has_recent_review";
+
 /** Maps a saved business row to scoring input. Pure. */
 export function businessRowToScoringInput(row: BusinessScoringRow): BusinessScoringInput {
   return {

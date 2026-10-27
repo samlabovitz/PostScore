@@ -158,3 +158,11 @@ describe("after the first v1.12.0 scan", () => {
     expect(fs.readFileSync("lib/monthlyReport.ts", "utf8")).toContain('return "scoring_updated";');
   });
 });
+
+describe("every saved-row scoring read includes the v1.12.0 columns", () => {
+  test("the selects that feed businessRowToScoringInput name V112_SCORING_COLUMNS", () => {
+    for (const file of ["app/actions/scoring.ts", "app/actions/website.ts", "app/actions/actionPlan.ts", "app/actions/reviews.ts", "app/actions/businesses.ts", "app/api/cron/monthly-reports/route.ts"]) {
+      expect(fs.readFileSync(file, "utf-8"), file).toContain("${V112_SCORING_COLUMNS}`");
+    }
+  });
+});

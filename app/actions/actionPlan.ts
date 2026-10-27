@@ -19,7 +19,7 @@ import {
   type WeeklyPlan,
 } from "@/lib/actionPlan";
 import { estimateStarterSiteRange, type StarterSiteTemplateData } from "@/lib/starterSiteScoring";
-import { businessRowToScoringInput, scoreBusiness } from "@/lib/scoring";
+import { businessRowToScoringInput, scoreBusiness, V112_SCORING_COLUMNS } from "@/lib/scoring";
 import type { BusinessScoringInput, BusinessScoringRow, ScoreBreakdown, Suggestion } from "@/lib/scoring";
 import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
 
@@ -177,7 +177,7 @@ export async function markTaskDone(businessId: string, checkId: string): Promise
   const { data: business, error: businessError } = await supabase
     .from("businesses")
     .select(
-      "rating, review_count, phone, address, opening_hours, website, categories, category, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language"
+      `name, rating, review_count, phone, address, opening_hours, website, categories, category, primary_type, business_type_override, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language, ${V112_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();

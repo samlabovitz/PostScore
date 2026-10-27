@@ -8,6 +8,7 @@ import {
   scoreBusiness,
   type BusinessScoringRow,
   type CategoryResult,
+  V112_SCORING_COLUMNS,
 } from "@/lib/scoring";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { normalizeLocale } from "@/lib/i18n";
@@ -75,7 +76,7 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "name, address, category, primary_type, place_id, rating, review_count, phone, opening_hours, website, categories, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language, lat, lng"
+      `name, address, category, primary_type, business_type_override, place_id, rating, review_count, phone, opening_hours, website, categories, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language, lat, lng, ${V112_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();

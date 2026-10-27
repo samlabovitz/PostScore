@@ -16,6 +16,7 @@ import {
   type ScanKind,
   type ScoreBreakdown,
   type ScoreWithSuggestions,
+  V112_SCORING_COLUMNS,
 } from "@/lib/scoring";
 import { isFullScan } from "@/lib/websiteRecheckPolicy";
 import { reconcileTasks, type TaskRow } from "@/lib/actionPlan";
@@ -122,7 +123,7 @@ export async function scoreBusinessWithClient(
   const { data: business, error } = await supabase
     .from("businesses")
     .select(
-      "id, place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng"
+      `id, place_id, name, address, phone, website, rating, review_count, category, categories, primary_type, business_type_override, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng, ${V112_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();
