@@ -148,12 +148,12 @@ describe("a scoring update is never reported as progress", () => {
   });
 
   test("newly found data (any check, e.g. review recency now measured) is never called progress — EN + ES", async () => {
-    const before = scoringInput({ mostRecentReviewDaysAgo: null });
-    const after = scoringInput({ mostRecentReviewDaysAgo: 3 });
+    const before = scoringInput({ hasRecentReview: null });
+    const after = scoringInput({ hasRecentReview: true });
     for (const locale of ["en", "es"] as const) {
       const content = buildMonthlyReportContent(
-        scoreRow({ id: "b", scoringVersion: "1.11.0", breakdown: scoreBusiness(before) }),
-        scoreRow({ id: "c", scoringVersion: "1.11.0", breakdown: scoreBusiness(after) }),
+        scoreRow({ id: "b", scoringVersion: "1.12.0", breakdown: scoreBusiness(before) }),
+        scoreRow({ id: "c", scoringVersion: "1.12.0", breakdown: scoreBusiness(after) }),
         null,
         null,
         locale,

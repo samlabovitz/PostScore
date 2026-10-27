@@ -5,7 +5,7 @@ import { ensureFirstCompetitorScanWithClient } from "@/app/actions/competitors";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { DIFFERENTIATOR_MAX } from "@/lib/businessOffer";
-import type { PlaceDetails } from "@/lib/google/places";
+import { hasRecentReviewFrom, type PlaceDetails } from "@/lib/google/places";
 import { normalizeLocale, SUPPORTED_LOCALES, t, type Locale } from "@/lib/i18n";
 import { getPlan, unlimitedBusinessesAllowed } from "@/lib/premium";
 import { locationLimit, type Plan } from "@/lib/plan";
@@ -271,10 +271,23 @@ export async function saveBusinessWithClient(
     listingFacts: { phone: place.phone, address: place.formattedAddress, openingHoursPeriods: place.openingHoursPeriods },
   });
 
-  const { data, error } = await supabase
+  // Scoring v1.12.0 facts (supabase/scoring-v1-12.sql) — yes/no only.
+  const v112Facts =
+    place.reviewPublishTimes === undefined
+      ? {}
+      : {
+          has_recent_review: hasRecentReviewFrom(place.reviewPublishTimes, new Date()),
+          listing_has_accessibility: place.listingHasAccessibility ?? null,
+          listing_has_payment: place.listingHasPayment ?? null,
+          listing_has_parking: place.listingHasParking ?? null,
+          pure_service_area_business: place.pureServiceAreaBusiness ?? null,
+        };
+  const upsertBusiness = (facts: Record<string, unknown>) =>
+    supabase
     .from("businesses")
     .upsert(
       {
+        ...facts,
         owner_id: ownerId,
         place_id: place.placeId,
         name: place.name,
@@ -314,6 +327,11 @@ export async function saveBusinessWithClient(
     )
     .select("id")
     .single();
+  let { data, error } = await upsertBusiness(v112Facts);
+  // Before supabase/scoring-v1-12.sql has been run: save without them.
+  if (error && (error.code === "PGRST204" || error.code === "42703") && Object.keys(v112Facts).length > 0) {
+    ({ data, error } = await upsertBusiness({}));
+  }
 
   if (error || !data) {
     return { status: "error", message: error?.message ?? "Save failed." };

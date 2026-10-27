@@ -109,6 +109,8 @@ export async function disconnectGbpData(
 
   const { error: tokenError } = await admin.from("gbp_tokens").delete().eq("business_id", businessId);
   const { error: statusError } = await admin.from("gbp_connections").delete().eq("business_id", businessId);
+  // …and the copy scoring uses (supabase/scoring-v1-12.sql).
+  await clearGbpScoringCounts(admin, businessId);
   if (tokenError || statusError) return { ok: false };
   return { ok: true, revoke };
 }
@@ -174,7 +176,18 @@ export async function markGbpReconnect(admin: SupabaseClient, businessId: string
     .from("gbp_connections")
     .update({ status: "error", updated_at: new Date().toISOString() })
     .eq("business_id", businessId);
+  // Not connected now: scoring leaves replies out until it's reconnected.
+  await clearGbpScoringCounts(admin, businessId);
   return { status: "error", reason: "reconnect" };
+}
+
+/** Clears the reply counts scoring v1.12.0 reads (businesses.gbp_*). */
+async function clearGbpScoringCounts(admin: SupabaseClient, businessId: string): Promise<void> {
+  try {
+    await admin.from("businesses").update({ gbp_reviews_in_window: null, gbp_replied: null, gbp_has_recent_review: null }).eq("id", businessId);
+  } catch {
+    // Missing columns (SQL not run yet): nothing to clear.
+  }
 }
 
 export async function getValidAccessToken(businessId: string): Promise<ValidAccessTokenResult> {

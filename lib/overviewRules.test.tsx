@@ -91,9 +91,9 @@ describe("rating wording — no scoring change", () => {
   const ratingCheck = (rating: number, reviewCount: number, locale: "en" | "es" = "en") =>
     scoreBusiness(rated(rating, reviewCount), locale).checks.find((c) => c.id === "visibility.rating")!;
 
-  test("Hair express on Broadway: 5.0★ with 30 reviews is 'Excellent', never 'Needs work' (still 14.4 / 16 points)", () => {
+  test("Hair express on Broadway: 5.0★ with 30 reviews is 'Excellent', never 'Needs work' (12.6 / 14 points)", () => {
     const c = ratingCheck(5.0, 30);
-    expect(c.earnedPoints).toBe(14.4);
+    expect(c.earnedPoints).toBe(12.6);
     expect(checkOutcome(c)).toBe("excellent");
     expect(c.explanation).toBe("5.0★ on Google. Your rating counts fully as you get more reviews (30 now — full credit at 40+).");
     expect(ratingCheck(5.0, 30, "es").explanation).toBe("5.0★ en Google. Su calificación cuenta por completo a medida que obtiene más reseñas (30 ahora — puntos completos a partir de 40).");
@@ -112,9 +112,9 @@ describe("rating wording — no scoring change", () => {
     expect(advice).toMatch(/reply to every review/);
   });
 
-  test("points are unchanged (still version 1.11.0)", () => {
-    expect(SCORING_VERSION).toBe("1.11.0");
-    expect(ratingCheck(4.5, 40).earnedPoints).toBe(12.8);
+  test("v1.12.0: the rating check is out of 14", () => {
+    expect(SCORING_VERSION).toBe("1.12.0");
+    expect(ratingCheck(4.5, 40).earnedPoints).toBe(11.2);
   });
 
   test("the Reviews page / Overview row reads 'Excellent' in EN and 'Excelente' in ES", () => {

@@ -15,6 +15,8 @@ import { normalizeLocale } from "@/lib/i18n";
 import { BusinessScoreView } from "./BusinessScoreView";
 import { featureMapFor } from "@/lib/postaiFeatureMap";
 import { postaiPageQuestions } from "@/lib/postaiDock";
+import { scoringNoteApplies, SCORING_NOTE_KEY } from "@/lib/scoringUpdateNote";
+import { oneTimeNoteDismissed } from "@/app/actions/oneTimeNotes";
 import { withoutAdvice } from "@/lib/freeUpsell";
 import { freeAiAllowance } from "@/lib/freeAiUsage.server";
 import { WebsiteOnlyOverview } from "./WebsiteOnlyOverview";
@@ -177,6 +179,7 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
         history={history}
         recentSnapshots={recentSnapshots}
         freePostaiQuestions={freePostaiQuestions}
+        scoringNote={scoringNoteApplies(history) && !(await oneTimeNoteDismissed(params.id, SCORING_NOTE_KEY))}
         benchmark={benchmark}
         gbpConnected={gbpStatus.status === "ok" && gbpStatus.connected}
         profileTools={{ referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk }}

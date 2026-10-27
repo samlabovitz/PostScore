@@ -41,6 +41,7 @@ import { freeWaitingPoints } from "@/lib/freeUpsell";
 import { freeSection } from "@/lib/freeOverviewSections";
 import type { FreeAiAllowance } from "@/lib/freeAiAllowance";
 import { ReviewReplyDrafter } from "@/components/reviews/ReviewReplyDrafter";
+import { ScoringUpdateNote } from "@/components/notes/ScoringUpdateNote";
 import { GbpReplyCheckConnect, type GbpReplyCheckState } from "@/components/gbp/GbpReplyCheckConnect";
 import type { ReplyDraftStatus } from "@/app/actions/reviewReplies";
 import type { Plan } from "@/lib/plan";
@@ -54,6 +55,7 @@ export function BusinessScoreView({
   history,
   recentSnapshots,
   freePostaiQuestions = [],
+  scoringNote = false,
   benchmark,
   gbpConnected,
   profileTools,
@@ -75,6 +77,8 @@ export function BusinessScoreView({
   recentSnapshots: ScoreSnapshot[];
   /** Free: the PostAI card's three questions (the panel's own, plan-aware). */
   freePostaiQuestions?: string[];
+  /** Once, after the first v1.12.0 scan (lib/scoringUpdateNote.ts). */
+  scoringNote?: boolean;
   benchmark: GetLocalBenchmarkResult;
   gbpConnected: boolean;
   /** BizProfile.referralOk/couponsOk/pricingOk (config/bizProfiles.ts) —
@@ -207,6 +211,7 @@ export function BusinessScoreView({
             freeWaitingPoints={waiting > 0 ? waiting : 0}
           />
           <RescanMessages state={rescan.state} />
+          {scoringNote && <ScoringUpdateNote businessId={businessId} />}
         </FreeSection>
 
         {/* C. What's behind the score: the breakdown (collapsed), then the
@@ -279,6 +284,7 @@ export function BusinessScoreView({
           biggestBoost={result.suggestions[0] ?? null}
         />
         <RescanMessages state={rescan.state} />
+          {scoringNote && <ScoringUpdateNote businessId={businessId} />}
       </div>
 
       {/* Same structure as Free: the breakdown right after the score,

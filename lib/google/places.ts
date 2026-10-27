@@ -27,10 +27,16 @@ const DETAILS_FIELD_MASK = [
   "googleMapsUri",
   "photos",
   "priceLevel",
-  // Scoring v1.12.0 Stage 1 (docs/review-scoring-plan.md): measured now,
-  // scored later — Place Details only, never Nearby Search (competitors).
+  // Scoring v1.12.0 (docs/review-scoring-plan.md) — Place Details only,
+  // never Nearby Search (competitors). accessibilityOptions and
+  // pureServiceAreaBusiness are Pro fields; reviews, paymentOptions and
+  // parkingOptions are Enterprise + Atmosphere, so a Details call is billed
+  // at that SKU. Only yes/no facts are kept (never review text or dates).
   "accessibilityOptions",
   "pureServiceAreaBusiness",
+  "reviews",
+  "paymentOptions",
+  "parkingOptions",
 ].join(",");
 
 // Nearby Search returns every listing field competitors are scored on
@@ -220,6 +226,15 @@ export interface PlaceDetails {
   accessibilityOptions?: Record<string, boolean> | null;
   /** True for a service-area business with no storefront; null = unknown. */
   pureServiceAreaBusiness?: boolean | null;
+  /** When each review Google returned was published (at most 5, chosen by
+   * relevance). Used once, at save, for "a review in the last 90 days" —
+   * never stored. null = not asked (Nearby Search). */
+  reviewPublishTimes?: string[] | null;
+  /** Whether the listing shows any accessibility / payment / parking info
+   * (scoring v1.12.0 customer details). null = not asked (Nearby Search). */
+  listingHasAccessibility?: boolean | null;
+  listingHasPayment?: boolean | null;
+  listingHasParking?: boolean | null;
 }
 
 export type PlaceLookupResult =
@@ -256,6 +271,9 @@ export interface RawDetailsPlace {
   /** Place Details only (not in the Nearby Search mask). */
   accessibilityOptions?: Record<string, boolean | undefined>;
   pureServiceAreaBusiness?: boolean;
+  reviews?: Array<{ publishTime?: string }>;
+  paymentOptions?: Record<string, boolean | undefined>;
+  parkingOptions?: Record<string, boolean | undefined>;
 }
 
 /** Nearby Search now requests the same listing fields as Place
@@ -381,7 +399,20 @@ export function normalizeDetails(raw: RawDetailsPlace): PlaceDetails {
     priceLevel: raw.priceLevel ?? null,
     accessibilityOptions: accessibilityFlags(raw.accessibilityOptions),
     pureServiceAreaBusiness: typeof raw.pureServiceAreaBusiness === "boolean" ? raw.pureServiceAreaBusiness : null,
+    // Asked for in Place Details: an absent field means the listing doesn't show it.
+    reviewPublishTimes: (raw.reviews ?? []).map((r) => r.publishTime).filter((t): t is string => typeof t === "string"),
+    listingHasAccessibility: accessibilityFlags(raw.accessibilityOptions) !== null,
+    listingHasPayment: accessibilityFlags(raw.paymentOptions) !== null,
+    listingHasParking: accessibilityFlags(raw.parkingOptions) !== null,
   };
+}
+
+/** "A review in the last 90 days" from the reviews Google returned: true
+ * when one is that recent; null when none is (Google shows only a few, so
+ * that can't be confirmed). Never false — 0 reviews is read from the count. */
+export function hasRecentReviewFrom(publishTimes: string[] | null | undefined, now: Date): boolean | null {
+  if (!publishTimes) return null;
+  return publishTimes.some((iso) => now.getTime() - Date.parse(iso) <= 90 * 86_400_000) ? true : null;
 }
 
 /** Only real true/false flags; null when there are none. */
@@ -399,6 +430,8 @@ export function nearbySearchCallCount(): number {
 }
 
 function normalizeNearby(raw: RawNearbyPlace): NearbyCandidate {
+  // Nearby Search never asks for the v1.12.0 listing facts: unknown, not "no".
+  const details = { ...normalizeDetails(raw), reviewPublishTimes: null, listingHasAccessibility: null, listingHasPayment: null, listingHasParking: null, pureServiceAreaBusiness: null };
   return {
     placeId: raw.id,
     name: raw.displayName?.text ?? null,
@@ -412,7 +445,7 @@ function normalizeNearby(raw: RawNearbyPlace): NearbyCandidate {
         ? { lat: raw.location.latitude, lng: raw.location.longitude }
         : null,
     priceLevel: raw.priceLevel ?? null,
-    details: normalizeDetails(raw),
+    details,
   };
 }
 

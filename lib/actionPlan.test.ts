@@ -290,7 +290,9 @@ describe("buildWeeklyPlan", () => {
 
 describe("mergeReviewTasks", () => {
   test("combines rating, review_count, and review_recency into one card when all three are open gaps", () => {
-    const { tasks } = plan(ROUGH_INPUT);
+    // v1.12.0: recency is a confirmed gap only when connected Google says
+    // there's no recent review.
+    const { tasks } = plan({ ...ROUGH_INPUT, gbpReplies: { reviewsInWindow: 0, replied: 0, hasRecentReview: false } });
     const reviewCheckIds = tasks
       .map((t) => t.checkId)
       .filter((id) => id.startsWith("visibility."));

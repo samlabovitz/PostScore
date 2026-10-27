@@ -437,7 +437,7 @@ describe("disconnect: revoke at Google, then delete tokens and GBP data", () => 
     adminDb.tables.gbp_connections = [{ business_id: BIZ, status: "connected", google_location_id: "accounts/1/locations/2" }];
   }
 
-  test("revokes the refresh token first, then deletes both rows", async () => {
+  test("revokes the refresh token first, then deletes both rows — and the reply counts scoring uses", async () => {
     await seedConnected();
     fetchMock.mockResolvedValue(new Response("", { status: 200 }));
     const { disconnectGbp } = await import("@/app/actions/gbp");
@@ -446,7 +446,8 @@ describe("disconnect: revoke at Google, then delete tokens and GBP data", () => 
     expect(url).toBe("https://oauth2.googleapis.com/revoke");
     expect(new URLSearchParams(String(init.body)).get("token")).toBe("1//R");
     const ops = adminDb.log.map((o) => `${o.op}:${o.table}`);
-    expect(ops).toEqual(["select:gbp_tokens", "delete:gbp_tokens", "delete:gbp_connections"]);
+    expect(ops).toEqual(["select:gbp_tokens", "delete:gbp_tokens", "delete:gbp_connections", "update:businesses"]);
+    expect(adminDb.log.at(-1)?.row).toEqual({ gbp_reviews_in_window: null, gbp_replied: null, gbp_has_recent_review: null });
     expect(adminDb.tables.gbp_tokens).toEqual([]);
     expect(adminDb.tables.gbp_connections).toEqual([]);
   });

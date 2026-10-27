@@ -145,7 +145,28 @@ export async function runGbpReplyCheckWithClient(
     logFailure("save", MISSING_COLUMN.has(error.code ?? "") ? { reason: "columns missing — run supabase/gbp-reply-counts.sql" } : { code: error.code ?? null });
     return { status: "failed" };
   }
+  // The three numbers scoring v1.12.0 uses, on the business's own row so
+  // every page scores it the same (supabase/scoring-v1-12.sql). Before that
+  // file is run this simply doesn't save — never an error for the owner.
+  await setGbpScoringCounts(admin, businessId, counts);
   return { status: "ok", counts };
+}
+
+/** The owner's own reply counts for scoring (null clears them: disconnect,
+ * or Google needs reconnecting). Never another business's. */
+export async function setGbpScoringCounts(admin: SupabaseClient, businessId: string, counts: Pick<GbpReplyCounts, "reviewsInWindow" | "replied" | "hasRecentReview"> | null): Promise<void> {
+  try {
+    await admin
+      .from("businesses")
+      .update({
+        gbp_reviews_in_window: counts?.reviewsInWindow ?? null,
+        gbp_replied: counts?.replied ?? null,
+        gbp_has_recent_review: counts ? counts.hasRecentReview : null,
+      })
+      .eq("id", businessId);
+  } catch {
+    // Missing columns (SQL not run yet): scoring leaves replies out.
+  }
 }
 
 /** Never throws — a reply check must never fail a connect or a scan. */

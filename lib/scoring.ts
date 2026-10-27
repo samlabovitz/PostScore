@@ -35,6 +35,8 @@
 // getting the exact same English text this file used to hardcode.
 
 import { REVIEW_COUNT_FULL_CREDIT } from "@/lib/reviewTargets";
+import { customerDetailsPartsFor, type CustomerDetailPart } from "@/lib/customerDetails";
+import { resolveBizProfile } from "@/config/bizProfiles";
 import { isWebsiteBuilderId, type WebsiteBuilderDetection, type WebsiteBuilderId } from "@/lib/websiteBuilder";
 import { DEFAULT_LOCALE, formatShortDate, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
 import { GOOGLE_PHOTO_CAP } from "@/lib/googlePhotoCap";
@@ -54,7 +56,10 @@ import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type Aban
  * records the version that produced it, so historical scores stay
  * interpretable even after the formula evolves.
  */
-export const SCORING_VERSION = "1.11.0";
+// 1.12.0: review recency, replying to reviews (Google connected), customer
+// details on the listing; rating 14, review count 14, categories 3, status 4
+// (docs/review-scoring-plan.md).
+export const SCORING_VERSION = "1.12.0";
 
 // ---------------------------------------------------------------------------
 // Core types
@@ -828,6 +833,23 @@ export interface BusinessScoringInput {
    * explanation like "measured on Oct 3"); never changes any points.
    * Set by server callers via lib/businessTimeZone.ts; omitted = New York. */
   timeZone?: string | null;
+  /** v1.12.0 review recency, from the newest reviews Place Details
+   * returned (computed at collection time — the engine never reads the
+   * clock): true = one is ≤ 90 days old; null = couldn't confirm (Google
+   * shows only a few) or not collected. 0 reviews is read from reviewCount. */
+  hasRecentReview?: boolean | null;
+  /** v1.12.0 "Customer details on your listing": whether the Google
+   * listing has accessibility / payment / parking info at all (null = not
+   * collected yet), and whether it's a service-area-only business. */
+  listingDetails?: { accessibility: boolean | null; payment: boolean | null; parking: boolean | null; pureServiceArea: boolean | null } | null;
+  /** The parts of customer details that apply to this kind of business
+   * (lib/customerDetails.ts). Empty = the check is left out. */
+  customerDetailsParts?: CustomerDetailPart[];
+  /** v1.12.0: the owner's connected Google Business Profile — the recent
+   * window's reply counts and whether it has a review in the last 90 days
+   * (lib/gbpReviewReplies.ts). null = not connected. Only ever the
+   * business's OWN counts; competitors never have them. */
+  gbpReplies?: { reviewsInWindow: number; replied: number; hasRecentReview: boolean } | null;
 }
 
 /** A single check's result, always expressed on the same 0–100 point scale as the total. */
@@ -1185,6 +1207,10 @@ interface CheckDefinition {
     gaps?: string[];
   };
   simulateFix(input: BusinessScoringInput): BusinessScoringInput;
+  /** v1.12.0: false when the check doesn't apply to this business at all
+   * (e.g. customer details for a plumber) — it's left out of the
+   * breakdown, not shown as "couldn't check". Omitted = always applies. */
+  appliesTo?(input: BusinessScoringInput): boolean;
 }
 
 // Visibility's two data-driven checks (rating, review count) share their
@@ -2821,12 +2847,139 @@ export const CHECKS: CheckDefinition[] = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// Scoring v1.12.0 (docs/review-scoring-plan.md, Stage 2) — built from CHECKS,
+// used only when asked for by version until SCORING_VERSION becomes 1.12.0:
+//   Visibility 40 = rating 14 · review count 14 · recency 6 · replies 6
+//   Listing 30    = phone 4 · address 4 · hours 4 · website link 4 ·
+//                   categories 3 · photos 4 · status 4 · customer details 3
+//   Website 30    = unchanged
+// ---------------------------------------------------------------------------
+
+export const SCORING_VERSION_V112 = "1.12.0";
+/** Full credit for replying at or above this share of the recent reviews. */
+export const REPLY_FULL_CREDIT_RATE = 0.8;
+/** Fewer reviews than this in the recent window → replies aren't scored. */
+const REPLIES_MIN_WINDOW = 3;
+
+/** A check with a new maximum: the same evaluation, its points scaled. */
+function reweighted(def: CheckDefinition, maxPoints: number): CheckDefinition {
+  return {
+    ...def,
+    maxPoints,
+    evaluate(input, locale) {
+      const result = def.evaluate(input, locale);
+      // One decimal, like every other check (a fix promises exactly max − earned).
+      return result.earnedPoints === null ? result : { ...result, earnedPoints: roundTo((result.earnedPoints / def.maxPoints) * maxPoints, 1) };
+    },
+  };
+}
+
+const RECENCY_V112: CheckDefinition = {
+  id: "visibility.review_recency",
+  labelKey: "content.checks.visibility.review_recency.label",
+  category: "visibility",
+  maxPoints: 6,
+  adviceKey: "content.checks.visibility.review_recency.advice",
+  evaluate(input, locale) {
+    // Google connected: its own answer, verified either way.
+    if (input.gbpReplies) {
+      return input.gbpReplies.hasRecentReview
+        ? { earnedPoints: 6, confidence: "VERIFIED", explanation: t(locale, "content.checks.visibility.review_recency.explanation.gbpRecent") }
+        : { earnedPoints: 0, confidence: "VERIFIED", explanation: t(locale, "content.checks.visibility.review_recency.explanation.gbpNone") };
+    }
+    if (input.reviewCount === 0) {
+      return { earnedPoints: 0, confidence: "VERIFIED", explanation: t(locale, "content.checks.visibility.review_recency.explanation.noReviews") };
+    }
+    if (input.hasRecentReview === true) {
+      return { earnedPoints: 6, confidence: "VERIFIED", explanation: t(locale, "content.checks.visibility.review_recency.explanation.recentConfirmed") };
+    }
+    // Google shows only a few reviews, chosen by relevance — none recent
+    // among them proves nothing, so it's left out rather than scored 0.
+    return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.visibility.review_recency.explanation.couldntConfirm") };
+  },
+  simulateFix: (input) => ({ ...input, hasRecentReview: true, gbpReplies: input.gbpReplies ? { ...input.gbpReplies, hasRecentReview: true } : input.gbpReplies }),
+};
+
+const REPLIES_V112: CheckDefinition = {
+  id: "visibility.review_replies",
+  labelKey: "content.checks.visibility.review_replies.label",
+  category: "visibility",
+  maxPoints: 6,
+  adviceKey: "content.checks.visibility.review_replies.advice",
+  evaluate(input, locale) {
+    const g = input.gbpReplies;
+    if (!g) return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.visibility.review_replies.explanation.notConnected") };
+    if (g.reviewsInWindow < REPLIES_MIN_WINDOW) return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.visibility.review_replies.explanation.tooFew") };
+    const rate = g.replied / g.reviewsInWindow;
+    return {
+      earnedPoints: roundTo(Math.min(1, rate / REPLY_FULL_CREDIT_RATE) * 6, 1),
+      confidence: "VERIFIED",
+      explanation: t(locale, "content.checks.visibility.review_replies.explanation.counts", { replied: g.replied, count: g.reviewsInWindow }),
+    };
+  },
+  simulateFix: (input) => (input.gbpReplies ? { ...input, gbpReplies: { ...input.gbpReplies, replied: input.gbpReplies.reviewsInWindow } } : input),
+};
+
+const CUSTOMER_DETAILS_V112: CheckDefinition = {
+  id: "completeness.customer_details",
+  labelKey: "content.checks.completeness.customer_details.label",
+  category: "completeness",
+  maxPoints: 3,
+  adviceKey: "content.checks.completeness.customer_details.advice",
+  appliesTo: (input) => (input.customerDetailsParts ?? []).length > 0,
+  evaluate(input, locale) {
+    const parts = input.customerDetailsParts ?? [];
+    if (parts.length === 0) return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.completeness.customer_details.explanation.notApplicable") };
+    const d = input.listingDetails;
+    if (!d || parts.every((p) => d[p] === null)) {
+      return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.completeness.customer_details.explanation.notCheckedYet") };
+    }
+    const present = parts.filter((p) => d[p] === true);
+    const missing = parts.filter((p) => d[p] !== true);
+    const names = (list: CustomerDetailPart[]) => list.map((p) => t(locale, `content.checks.completeness.customer_details.part.${p}` as MessageKey)).join(", ");
+    return {
+      // Only the parts that apply count — always out of 3.
+      earnedPoints: roundTo((present.length / parts.length) * 3, 1),
+      confidence: "VERIFIED",
+      explanation:
+        missing.length === 0
+          ? t(locale, "content.checks.completeness.customer_details.explanation.complete", { parts: names(parts) })
+          : t(locale, "content.checks.completeness.customer_details.explanation.missing", { missing: names(missing) }),
+      gaps: missing,
+    };
+  },
+  simulateFix: (input) => ({
+    ...input,
+    listingDetails: { ...(input.listingDetails ?? { pureServiceArea: null }), accessibility: true, payment: true, parking: true, pureServiceArea: input.listingDetails?.pureServiceArea ?? null },
+  }),
+};
+
+const V112_MAX_POINTS: Record<string, number> = {
+  "visibility.rating": 14,
+  "visibility.review_count": 14,
+  "completeness.categories": 3,
+  "completeness.business_status": 4,
+};
+
+export const CHECKS_V112: CheckDefinition[] = CHECKS.flatMap((def) => {
+  if (def.id === "visibility.review_recency") return [RECENCY_V112, REPLIES_V112];
+  if (def.id === "completeness.business_status") return [reweighted(def, 4), CUSTOMER_DETAILS_V112];
+  const max = V112_MAX_POINTS[def.id];
+  return [max === undefined ? def : reweighted(def, max)];
+});
+
+/** The checks a scoring version uses. */
+export function checksFor(version: string): CheckDefinition[] {
+  return version === SCORING_VERSION_V112 ? CHECKS_V112 : CHECKS;
+}
+
 function isDeterminable(confidence: Confidence): boolean {
   return confidence === "VERIFIED" || confidence === "LIKELY";
 }
 
 function findCheck(checkId: string): CheckDefinition {
-  const def = CHECKS.find((c) => c.id === checkId);
+  const def = checksFor(SCORING_VERSION).find((c) => c.id === checkId) ?? CHECKS_V112.find((c) => c.id === checkId);
   if (!def) throw new Error(`Unknown scoring check id: ${checkId}`);
   return def;
 }
@@ -2869,8 +3022,8 @@ export const BROWSER_READ_CHECK_IDS: readonly string[] = [
  * one keeps getting the exact same English label/explanation text this
  * file used to hardcode — see content.checks.<id>.* in lib/i18n/messages.ts.
  */
-export function scoreBusiness(input: BusinessScoringInput, locale: Locale = DEFAULT_LOCALE): ScoreBreakdown {
-  const checks: CheckResult[] = CHECKS.map((def) => {
+export function scoreBusiness(input: BusinessScoringInput, locale: Locale = DEFAULT_LOCALE, version: string = SCORING_VERSION): ScoreBreakdown {
+  const checks: CheckResult[] = checksFor(version).filter((def) => def.appliesTo?.(input) ?? true).map((def) => {
     const result = def.evaluate(input, locale);
     return {
       id: def.id,
@@ -2896,14 +3049,14 @@ export function scoreBusiness(input: BusinessScoringInput, locale: Locale = DEFA
     };
   });
 
-  return breakdownFromChecks(checks, locale);
+  return breakdownFromChecks(checks, locale, version);
 }
 
 /** Categories and the 0–100 total from a set of check results — the one
  * place PostScore's weighting lives. scoreBusiness uses it, and so does
  * re-totalling a competitor whose listing checks were saved earlier and
  * whose website checks were just run (lib/competitorFullScoring.ts). */
-export function breakdownFromChecks(checks: CheckResult[], locale: Locale = DEFAULT_LOCALE): ScoreBreakdown {
+export function breakdownFromChecks(checks: CheckResult[], locale: Locale = DEFAULT_LOCALE, version: string = SCORING_VERSION): ScoreBreakdown {
   const categories: CategoryResult[] = (Object.keys(CATEGORY_WEIGHTS) as CategoryId[]).map(
     (categoryId) => {
       const categoryChecks = checks.filter((c) => c.category === categoryId);
@@ -2939,7 +3092,7 @@ export function breakdownFromChecks(checks: CheckResult[], locale: Locale = DEFA
     totalPossibleWeight > 0 ? Math.round((totalEarnedWeight / totalPossibleWeight) * 100) : 0;
 
   return {
-    scoringVersion: SCORING_VERSION,
+    scoringVersion: version,
     total,
     grade: gradeFromTotal(total),
     categories,
@@ -3179,6 +3332,19 @@ export interface BusinessScoringRow {
    * optional-for-un-migrated-callers reasoning as the other new
    * columns here. */
   verified_website_url?: string | null;
+  /** v1.12.0 (supabase/scoring-v1-12.sql) — optional until it's run. */
+  has_recent_review?: boolean | null;
+  listing_has_accessibility?: boolean | null;
+  listing_has_payment?: boolean | null;
+  listing_has_parking?: boolean | null;
+  pure_service_area_business?: boolean | null;
+  gbp_reviews_in_window?: number | null;
+  gbp_replied?: number | null;
+  gbp_has_recent_review?: boolean | null;
+  /** For the business type (customer details): the same fields resolveBizProfile reads. */
+  primary_type?: string | null;
+  business_type_override?: string | null;
+  name?: string | null;
 }
 
 /** Narrows a stored https_status string back to the real union,
@@ -3641,5 +3807,20 @@ export function businessRowToScoringInput(row: BusinessScoringRow): BusinessScor
     websiteTrustOverrides: parseWebsiteTrustOverrides(row.website_trust_overrides_json),
     verifiedElsewhereUrl: typeof row.verified_website_url === "string" ? row.verified_website_url : null,
     timeZone: row.time_zone ?? null,
+    hasRecentReview: typeof row.has_recent_review === "boolean" ? row.has_recent_review : null,
+    listingDetails: {
+      accessibility: row.listing_has_accessibility ?? null,
+      payment: row.listing_has_payment ?? null,
+      parking: row.listing_has_parking ?? null,
+      pureServiceArea: row.pure_service_area_business ?? null,
+    },
+    customerDetailsParts: customerDetailsPartsFor(
+      resolveBizProfile(row.category, row.primary_type ?? null, row.business_type_override ?? null, DEFAULT_LOCALE, row.categories, row.name ?? null).id,
+      row.pure_service_area_business ?? null
+    ),
+    gbpReplies:
+      typeof row.gbp_reviews_in_window === "number" && typeof row.gbp_replied === "number"
+        ? { reviewsInWindow: row.gbp_reviews_in_window, replied: row.gbp_replied, hasRecentReview: row.gbp_has_recent_review === true }
+        : null,
   };
 }

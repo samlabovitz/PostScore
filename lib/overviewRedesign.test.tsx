@@ -380,7 +380,8 @@ describe("breakdown bars, Start here, wording", () => {
   test("counts read naturally: '1 needs work', '3 need work'", () => {
     const visibility = cat("visibility");
     const html = render(<ScoreBreakdownPanel businessId="b" categories={[visibility]} hasWebsite scoreBasis={100} />);
-    expect(html).toContain("1 done · 1 needs work · 1 couldn&#x27;t check");
+    // v1.12.0: recency and replies both couldn't be checked here.
+    expect(html).toContain("1 done · 1 needs work · 2 couldn&#x27;t check");
   });
 
   test("Top recommendations starts with the weekly plan on Growth", () => {

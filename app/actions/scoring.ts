@@ -555,16 +555,17 @@ export async function rescanBusinessWithClient(
       : { status: "error", message: saved.status === "error" ? saved.message : "Could not save the fresh listing data." };
   }
 
+  // Connected businesses: the review-reply counts, once per scan (owner
+  // re-scan, monthly job, rescan-all — all come through here) — BEFORE the
+  // score, which (v1.12.0) uses them. Never fails the scan. Loaded here:
+  // it's server-only.
+  const { runGbpReplyCheck } = await import("@/lib/gbpReplyCounts.server");
+  await runGbpReplyCheck(businessId);
+
   const scoreResult = await saveScoreSnapshotWithClient(supabase, businessId);
   if (scoreResult.status !== "saved") {
     return scoreResult;
   }
-
-  // Connected businesses: the review-reply counts, once per scan (owner
-  // re-scan, monthly job, rescan-all — all come through here). Never
-  // fails the scan; not scored yet. Loaded here: it's server-only.
-  const { runGbpReplyCheck } = await import("@/lib/gbpReplyCounts.server");
-  await runGbpReplyCheck(businessId);
 
   const currentSnapshot: ProfileSnapshot = buildProfileSnapshot({
     phone: lookup.place.phone,

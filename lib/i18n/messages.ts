@@ -1001,6 +1001,25 @@ export type MessageKey =
   | "content.checks.visibility.review_count.explanation.nonzero.one"
   | "content.checks.visibility.review_count.explanation.nonzero.other"
   | "content.checks.visibility.review_recency.label"
+  | "content.checks.visibility.review_recency.explanation.gbpRecent"
+  | "content.checks.visibility.review_recency.explanation.gbpNone"
+  | "content.checks.visibility.review_recency.explanation.noReviews"
+  | "content.checks.visibility.review_recency.explanation.recentConfirmed"
+  | "content.checks.visibility.review_recency.explanation.couldntConfirm"
+  | "content.checks.visibility.review_replies.label"
+  | "content.checks.visibility.review_replies.advice"
+  | "content.checks.visibility.review_replies.explanation.notConnected"
+  | "content.checks.visibility.review_replies.explanation.tooFew"
+  | "content.checks.visibility.review_replies.explanation.counts"
+  | "content.checks.completeness.customer_details.label"
+  | "content.checks.completeness.customer_details.advice"
+  | "content.checks.completeness.customer_details.explanation.notApplicable"
+  | "content.checks.completeness.customer_details.explanation.notCheckedYet"
+  | "content.checks.completeness.customer_details.explanation.complete"
+  | "content.checks.completeness.customer_details.explanation.missing"
+  | "content.checks.completeness.customer_details.part.accessibility"
+  | "content.checks.completeness.customer_details.part.payment"
+  | "content.checks.completeness.customer_details.part.parking"
   | "content.checks.visibility.review_recency.advice"
   | "content.checks.visibility.review_recency.explanation.notCollected"
   | "content.checks.visibility.review_recency.explanation.recent"
@@ -1871,6 +1890,7 @@ export type MessageKey =
   | "dashboard.overview.rankOfPeerCount"
   | "dashboard.overview.aheadOfNearby"
   | "dashboard.overview.smallSampleSuffix"
+  | "dashboard.overview.scoringUpdateNote"
   | "dashboard.competitors.fewReviewsTag"
   | "dashboard.competitors.distanceNote"
   | "dashboard.competitors.alsoNearbyHeading"
@@ -5211,6 +5231,25 @@ export const messages: Record<Locale, LocaleMessages> = {
       "{count} reviews on Google (full credit at {saturation}+).",
 
     "content.checks.visibility.review_recency.label": "Review recency",
+    "content.checks.visibility.review_recency.explanation.gbpRecent": "Your Google Business Profile has a review from the last 90 days.",
+    "content.checks.visibility.review_recency.explanation.gbpNone": "No review in the last 90 days on your Google Business Profile.",
+    "content.checks.visibility.review_recency.explanation.noReviews": "No reviews on Google yet.",
+    "content.checks.visibility.review_recency.explanation.recentConfirmed": "A review Google shows is from the last 90 days.",
+    "content.checks.visibility.review_recency.explanation.couldntConfirm": "Couldn't confirm a review from the last 90 days — Google shows only a few reviews, so this isn't scored.",
+    "content.checks.visibility.review_replies.label": "Replying to reviews",
+    "content.checks.visibility.review_replies.advice": "Reply to your recent reviews — a short, personal thank-you. Customers read the replies before they choose.",
+    "content.checks.visibility.review_replies.explanation.notConnected": "Connect Google to check this.",
+    "content.checks.visibility.review_replies.explanation.tooFew": "Not enough recent reviews to check yet.",
+    "content.checks.visibility.review_replies.explanation.counts": "You replied to {replied} of your last {count} reviews (full credit at 80%).",
+    "content.checks.completeness.customer_details.label": "Customer details on your listing",
+    "content.checks.completeness.customer_details.advice": "Add them on Google: Google Business Profile → Edit profile → accessibility / payments / parking.",
+    "content.checks.completeness.customer_details.explanation.notApplicable": "Not applicable to this kind of business.",
+    "content.checks.completeness.customer_details.explanation.notCheckedYet": "Not checked yet — the next scan reads it from your Google listing.",
+    "content.checks.completeness.customer_details.explanation.complete": "Your listing shows {parts}.",
+    "content.checks.completeness.customer_details.explanation.missing": "Your listing doesn't show {missing} yet.",
+    "content.checks.completeness.customer_details.part.accessibility": "accessibility",
+    "content.checks.completeness.customer_details.part.payment": "payment options",
+    "content.checks.completeness.customer_details.part.parking": "parking",
     "content.checks.visibility.review_recency.advice":
       "Keep reviews coming in regularly — recent activity signals to customers (and Google) that the business is active.",
     "content.checks.visibility.review_recency.explanation.notCollected":
@@ -6325,6 +6364,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.rankOfPeerCount": "#{rank} of {peerCount}",
     "dashboard.overview.aheadOfNearby": "Ahead of {percentileAhead}% of {othersCount} nearby {competitorNoun}",
     "dashboard.overview.smallSampleSuffix": " — small sample",
+    "dashboard.overview.scoringUpdateNote": "We updated how PostScore scores reviews and your listing — it now counts how recent your reviews are, your replies to reviews (when Google is connected) and the customer details on your listing. If your score moved, it's because of this update, not a change you made.",
     "dashboard.competitors.fewReviewsTag": "Few or no reviews yet",
     "dashboard.competitors.distanceNote": "The nearest established {noun} are {range} miles away. In smaller towns, customers often compare businesses this far apart.",
     "dashboard.competitors.alsoNearbyHeading": "Also nearby, with few or no reviews yet",
@@ -9760,6 +9800,25 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.visibility.review_count.explanation.nonzero.one": "{count} reseña en Google (crédito completo a partir de {saturation}+).",
     "content.checks.visibility.review_count.explanation.nonzero.other": "{count} reseñas en Google (crédito completo a partir de {saturation}+).",
     "content.checks.visibility.review_recency.label": "Actualidad de las reseñas",
+    "content.checks.visibility.review_recency.explanation.gbpRecent": "Su Perfil de Negocio de Google tiene una reseña de los últimos 90 días.",
+    "content.checks.visibility.review_recency.explanation.gbpNone": "No hay reseñas de los últimos 90 días en su Perfil de Negocio de Google.",
+    "content.checks.visibility.review_recency.explanation.noReviews": "Aún no tiene reseñas en Google.",
+    "content.checks.visibility.review_recency.explanation.recentConfirmed": "Una reseña que muestra Google es de los últimos 90 días.",
+    "content.checks.visibility.review_recency.explanation.couldntConfirm": "No se pudo confirmar una reseña de los últimos 90 días — Google muestra solo unas pocas, así que esto no se califica.",
+    "content.checks.visibility.review_replies.label": "Respuestas a reseñas",
+    "content.checks.visibility.review_replies.advice": "Responda a sus reseñas recientes con un agradecimiento breve y personal. Los clientes leen las respuestas antes de elegir.",
+    "content.checks.visibility.review_replies.explanation.notConnected": "Conecte Google para revisar esto.",
+    "content.checks.visibility.review_replies.explanation.tooFew": "Aún no hay suficientes reseñas recientes para revisar.",
+    "content.checks.visibility.review_replies.explanation.counts": "Respondió a {replied} de sus últimas {count} reseñas (puntos completos al 80 %).",
+    "content.checks.completeness.customer_details.label": "Datos para clientes en su ficha",
+    "content.checks.completeness.customer_details.advice": "Agréguelos en Google: Perfil de Negocio de Google → Editar perfil → accesibilidad / pagos / estacionamiento.",
+    "content.checks.completeness.customer_details.explanation.notApplicable": "No aplica a este tipo de negocio.",
+    "content.checks.completeness.customer_details.explanation.notCheckedYet": "Aún no se revisó — el próximo análisis lo leerá de su ficha de Google.",
+    "content.checks.completeness.customer_details.explanation.complete": "Su ficha muestra {parts}.",
+    "content.checks.completeness.customer_details.explanation.missing": "Su ficha aún no muestra {missing}.",
+    "content.checks.completeness.customer_details.part.accessibility": "accesibilidad",
+    "content.checks.completeness.customer_details.part.payment": "formas de pago",
+    "content.checks.completeness.customer_details.part.parking": "estacionamiento",
     "content.checks.visibility.review_recency.advice": "Mantenga un flujo regular de reseñas — la actividad reciente les indica a los clientes (y a Google) que el negocio está activo.",
     "content.checks.visibility.review_recency.explanation.notCollected": "La integración actual de Google Places aún no recopila las fechas de las reseñas, por lo que esta comprobación se excluye en lugar de contarse como una falla.",
     "content.checks.visibility.review_recency.explanation.recent": "La reseña más reciente fue hace {days} día(s).",
@@ -10679,6 +10738,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.rankOfPeerCount": "#{rank} de {peerCount}",
     "dashboard.overview.aheadOfNearby": "Por delante del {percentileAhead}% de {othersCount} {competitorNoun} de la zona",
     "dashboard.overview.smallSampleSuffix": " — muestra pequeña",
+    "dashboard.overview.scoringUpdateNote": "Actualizamos cómo PostScore califica las reseñas y su ficha: ahora cuenta qué tan recientes son sus reseñas, sus respuestas a reseñas (cuando Google está conectado) y los datos para clientes en su ficha. Si su puntuación cambió, se debe a esta actualización, no a un cambio que usted hizo.",
     "dashboard.competitors.fewReviewsTag": "Pocas o ninguna reseña aún",
     "dashboard.competitors.distanceNote": "La competencia establecida más cercana ({noun}) está a {range} millas. En pueblos pequeños, los clientes suelen comparar negocios así de lejos.",
     "dashboard.competitors.alsoNearbyHeading": "También cerca, con pocas o ninguna reseña aún",

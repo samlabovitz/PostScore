@@ -7,10 +7,12 @@ import {
   applyCheckFix,
   businessRowToScoringInput,
   carryForwardMobilePerformance,
+  checksFor,
   generateSuggestions,
   getScoreWithSuggestions,
   gradeFromTotal,
   scoreBusiness,
+  SCORING_VERSION,
   type BusinessScoringInput,
   type MobilePerformanceMeasurement,
   type WebsiteAnalysis,
@@ -240,10 +242,10 @@ describe("confidence-aware scoring", () => {
     expect(reviewCount.earnedPoints).toBe(0);
 
     const visibility = breakdown.categories.find((c) => c.id === "visibility")!;
-    // possiblePoints stays real (34, from rating + review_count) — the
+    // possiblePoints stays real (28, from rating + review_count) — the
     // category is fully determinable, just genuinely scoring zero on
     // its two real-data checks, not renormalized away as unknown.
-    expect(visibility.possiblePoints).toBe(34);
+    expect(visibility.possiblePoints).toBe(28);
     expect(visibility.earnedPoints).toBe(0);
     expect(visibility.relativeScore).toBe(0);
 
@@ -538,7 +540,7 @@ describe("curve sanity checks", () => {
   test("review count saturates at 150 for full credit", () => {
     const breakdown = scoreBusiness({ ...PERFECT_INPUT, reviewCount: 150 });
     const check = breakdown.checks.find((c) => c.id === "visibility.review_count")!;
-    expect(check.earnedPoints).toBe(18);
+    expect(check.earnedPoints).toBe(14);
   });
 
   test("zero reviews earns zero review-count points (but is still VERIFIED, not NOT_FOUND)", () => {
@@ -569,7 +571,7 @@ describe("suggestion -> projected score guarantee", () => {
     const { breakdown, suggestions } = getScoreWithSuggestions(STRUGGLING_INPUT);
     for (const suggestion of suggestions) {
       const check = breakdown.checks.find((c) => c.id === suggestion.checkId)!;
-      expect(suggestion.promisedPoints).toBe(check.maxPoints - (check.earnedPoints ?? 0));
+      expect(suggestion.promisedPoints).toBeCloseTo(check.maxPoints - (check.earnedPoints ?? 0), 9);
     }
   });
 
@@ -627,6 +629,10 @@ describe("suggestion -> projected score guarantee", () => {
     const input: BusinessScoringInput = {
       ...STRUGGLING_INPUT,
       website: "https://example.com", // hold Website category constant and fully determinable
+      // v1.12.0: customer details already on the listing, so that check is
+      // determinable too and Completeness keeps its full 30.
+      customerDetailsParts: ["accessibility", "payment", "parking"],
+      listingDetails: { accessibility: true, payment: true, parking: true, pureServiceArea: false },
     };
     const { breakdown, suggestions } = getScoreWithSuggestions(input);
     const completenessSuggestions = suggestions.filter((s) => s.category === "completeness");
@@ -640,7 +646,8 @@ describe("suggestion -> projected score guarantee", () => {
 
     const promisedTotal = completenessSuggestions.reduce((sum, s) => sum + s.promisedPoints, 0);
     expect(promisedTotal).toBeGreaterThan(0);
-    expect(fixedBreakdown.total - breakdown.total).toBe(promisedTotal);
+    // Totals are whole numbers, so the move matches to within rounding.
+    expect(Math.abs(fixedBreakdown.total - breakdown.total - promisedTotal)).toBeLessThan(1);
   });
 
   test("honesty check (the v1.5.0 fix): fixing 'has a website' does NOT retroactively verify HTTPS as a side effect", () => {
@@ -850,7 +857,7 @@ describe("businessRowToScoringInput adapter", () => {
     expect(input.mostRecentReviewDaysAgo).toBeNull();
     expect(input.httpsStatus).toBe("https");
     const breakdown = scoreBusiness(input);
-    expect(breakdown.scoringVersion).toBe("1.11.0");
+    expect(breakdown.scoringVersion).toBe("1.12.0");
   });
 
   test("degrades an unexpected https_status value to null (excluded) rather than trusting a bad cast", () => {
@@ -990,21 +997,21 @@ describe("v1.2.0 curve & weight re-tuning", () => {
   test("a 4.0 rating earns roughly half of the rating check's points, not near-full", () => {
     const breakdown = scoreBusiness({ ...PERFECT_INPUT, rating: 4.0 });
     const check = breakdown.checks.find((c) => c.id === "visibility.rating")!;
-    expect(check.earnedPoints).toBe(8.8); // 55% of 16 — see RATING_CURVE
+    expect(check.earnedPoints).toBe(7.7); // 55% of 14 — see RATING_CURVE
   });
 
   test("a 4.5 rating no longer scores near-full on the rating check", () => {
     const breakdown = scoreBusiness({ ...PERFECT_INPUT, rating: 4.5 });
     const check = breakdown.checks.find((c) => c.id === "visibility.rating")!;
-    expect(check.earnedPoints).toBe(12.8); // 80% of 16 — see RATING_CURVE
+    expect(check.earnedPoints).toBe(11.2); // 80% of 14 — see RATING_CURVE
   });
 
   test("a handful of reviews earns a small fraction of the review-count check", () => {
     const breakdown = scoreBusiness({ ...PERFECT_INPUT, reviewCount: 6 });
     const check = breakdown.checks.find((c) => c.id === "visibility.review_count")!;
-    // sqrt(6/150) * 18 = 3.6 — well under a quarter credit for a handful
+    // sqrt(6/150) * 14 = 2.8 — well under a quarter credit for a handful
     // of reviews.
-    expect(check.earnedPoints).toBe(3.6);
+    expect(check.earnedPoints).toBe(2.8);
   });
 
   test("at the same rating, meaningfully more reviews earns a meaningfully higher total", () => {
@@ -1062,7 +1069,7 @@ describe("v1.2.0 curve & weight re-tuning", () => {
 // proof volume, saturating much later at 150) — a thin-sample business
 // can lose points on both, honestly, for the same real weakness.
 describe("v1.3.0 rating confidence weighting", () => {
-  const RATING_MAX_POINTS = CHECKS.find((c) => c.id === "visibility.rating")!.maxPoints;
+  const RATING_MAX_POINTS = checksFor(SCORING_VERSION).find((c) => c.id === "visibility.rating")!.maxPoints;
   // Mirrors RATING_CONFIDENCE_FULL_AT_REVIEWS in lib/scoring.ts — not
   // exported (it's an internal curve constant), so pinned here the same
   // way other tests in this file pin internal curve values directly.

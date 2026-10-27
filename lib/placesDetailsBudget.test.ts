@@ -121,7 +121,7 @@ describe("every Place Details call is logged with its own kind", () => {
 });
 
 describe("the field mask", () => {
-  test("Place Details asks for accessibilityOptions + pureServiceAreaBusiness; Nearby Search (competitors) doesn't", async () => {
+  test("Place Details asks for the v1.12.0 fields (accessibility, service area, reviews, payment, parking); Nearby Search (competitors) doesn't", async () => {
     process.env.GOOGLE_PLACES_API_KEY = "test-key";
     const masks: string[] = [];
     const fetchImpl = (async (_url: string, init: RequestInit) => {
@@ -132,11 +132,8 @@ describe("the field mask", () => {
     await places.lookupBusinessByPlaceId("p", fetchImpl);
     await places.searchNearbyPlaces({ lat: 1, lng: 1, radiusMeters: 100 }, fetchImpl);
     const [details, nearby] = masks;
-    expect(details.split(",")).toEqual(expect.arrayContaining(["accessibilityOptions", "pureServiceAreaBusiness", "rating", "photos"]));
-    expect(nearby).not.toContain("accessibilityOptions");
-    expect(nearby).not.toContain("pureServiceAreaBusiness");
-    // Nothing from the dry run's one-off fields reaches production.
-    for (const field of ["reviews", "paymentOptions", "parkingOptions"]) expect(details.split(",")).not.toContain(field);
+    expect(details.split(",")).toEqual(expect.arrayContaining(["accessibilityOptions", "pureServiceAreaBusiness", "reviews", "paymentOptions", "parkingOptions", "rating", "photos"]));
+    for (const field of ["accessibilityOptions", "pureServiceAreaBusiness", "reviews", "paymentOptions", "parkingOptions"]) expect(nearby, field).not.toContain(field);
   });
 
   test("they're read into the listing data (true/false flags only)", async () => {
@@ -155,7 +152,7 @@ describe("the v1.12.0 dry run (scripts/scoringDryRun.ts)", () => {
     const { scoreBusiness } = await import("@/lib/scoring");
     const { v112Breakdown } = await import("../scripts/scoringDryRun");
     const { scoringInput } = await import("@/emails/sampleMonthlyReportContent");
-    const after = v112Breakdown(scoreBusiness(scoringInput()), { reviewCount: 120, sample: null, gbp: null, now: Date.parse("2026-10-27T00:00:00Z") });
+    const after = v112Breakdown(scoreBusiness(scoringInput(), "en", "1.11.0"), { reviewCount: 120, sample: null, gbp: null, now: Date.parse("2026-10-27T00:00:00Z") });
     const max = (cat: string) => after.checks.filter((c) => c.category === cat).reduce((s, c) => s + c.maxPoints, 0);
     expect(max("visibility")).toBe(40);
     expect(max("completeness")).toBe(30);

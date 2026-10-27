@@ -16,7 +16,7 @@ const check = (input: BusinessScoringInput, id: string, locale: "en" | "es" = "e
 
 describe("rule 1 — a social media page is not a website", () => {
   test("version bumped (this changes scores)", () => {
-    expect(SCORING_VERSION).toBe("1.11.0");
+    expect(SCORING_VERSION).toBe("1.12.0");
   });
 
   test("platforms are named from the address", () => {
