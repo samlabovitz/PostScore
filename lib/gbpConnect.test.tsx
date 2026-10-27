@@ -928,9 +928,9 @@ describe("Step 2: review-reply counts (counts only, not scored)", () => {
     expect(rescan.match(/runGbpReplyCheck\(businessId\)/g)).toHaveLength(1);
     expect(scoring.match(/runGbpReplyCheck/g)).toHaveLength(2); // the import + the one call
     // Owner re-scan, the monthly job and rescan-all all run rescanBusinessWithClient.
-    expect(scoring).toContain("const result = await rescanBusinessWithClient(supabase, businessId);");
-    expect(fs.readFileSync("app/api/cron/monthly-reports/route.ts", "utf8")).toContain("rescanBusinessWithClient(supabase, businessId)");
-    expect(fs.readFileSync("scripts/rescan-all.ts", "utf8")).toContain("rescanBusinessWithClient(supabase, b.id, noScreenshots)");
+    expect(scoring).toContain('const result = await rescanBusinessWithClient(supabase, businessId, false, { detailsKind: "owner_rescan" });');
+    expect(fs.readFileSync("app/api/cron/monthly-reports/route.ts", "utf8")).toContain('rescanBusinessWithClient(supabase, businessId, false, { detailsKind: "monthly" })');
+    expect(fs.readFileSync("scripts/rescan-all.ts", "utf8")).toContain('rescanBusinessWithClient(supabase, b.id, noScreenshots, { detailsKind: "rescan_all" })');
     // No page, component or other route starts it.
     const callers = execFileSync("git", ["grep", "--untracked", "-l", "runGbpReplyCheck", "--", "app", "components", "lib", "scripts", "netlify"], { encoding: "utf8" }).trim().split("\n").filter((f) => !f.includes(".test."));
     expect(callers.sort()).toEqual(["app/actions/scoring.ts", "app/api/gbp/callback/route.ts", "lib/gbpReplyCounts.server.ts"]);

@@ -447,7 +447,7 @@ async function main() {
     console.log(`\n[${i + 1}/${businesses.length}] Re-scanning ${businessName} (${b.id})...`);
 
     const before = await readLatestScoreRow(b.id);
-    const result = await rescanBusinessWithClient(supabase, b.id, noScreenshots);
+    const result = await rescanBusinessWithClient(supabase, b.id, noScreenshots, { detailsKind: "rescan_all" });
 
     if (result.status !== "ok") {
       const reason =

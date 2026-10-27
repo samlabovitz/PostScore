@@ -50,11 +50,3 @@ export async function lastOwnerRescanAt(businessId: string): Promise<string | nu
     return null;
   }
 }
-
-export async function logOwnerRescan(businessId: string): Promise<void> {
-  try {
-    await createAdminClient().from("places_calls").insert({ business_id: businessId, kind: "owner_rescan", calls: 1 });
-  } catch {
-    // Logging must never fail a re-scan.
-  }
-}

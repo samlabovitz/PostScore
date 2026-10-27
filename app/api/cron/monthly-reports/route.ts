@@ -620,7 +620,7 @@ export async function processBusiness(
   if (recentScore) {
     currentScoreId = recentScore;
   } else {
-    const rescanResult = await rescanBusinessWithClient(supabase, businessId);
+    const rescanResult = await rescanBusinessWithClient(supabase, businessId, false, { detailsKind: "monthly" });
     if (rescanResult.status !== "ok") {
       return { businessId, status: "failed", reason: describeRescanFailure(rescanResult) };
     }

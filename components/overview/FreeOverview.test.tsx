@@ -47,7 +47,9 @@ describe("Free re-scan: 1 a week (+ the first scan), on top of the 24-hour rule"
     const src = readFileSync("app/actions/scoring.ts", "utf8");
     const fn = src.slice(src.indexOf("export async function rescanBusiness("), src.indexOf("export async function rescanBusinessWithClient("));
     expect(fn.indexOf("rescanGate(")).toBeLessThan(fn.indexOf("rescanBusinessWithClient("));
-    expect(fn).toMatch(/if \(result\.status === "ok"\) await logOwnerRescan\(businessId\)/);
+    // Its Place Details call is logged as "owner_rescan" (Free's limit reads it — lib/placesDetailsBudget.ts).
+    expect(fn).toContain('rescanBusinessWithClient(supabase, businessId, false, { detailsKind: "owner_rescan" })');
+    expect(src).toContain("if (lookup.status !== \"error\") await details.logPlacesDetailsCall(businessId, detailsKind);");
   });
 });
 

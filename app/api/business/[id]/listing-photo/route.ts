@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getFirstPhotoRef, resolvePhotoUri } from "@/lib/google/places";
+import { logPlacesDetailsCall } from "@/lib/placesDetailsBudget.server";
 import {
   canLoadPlacePhoto,
   LISTING_PHOTO_MAX_WIDTH_PX,
@@ -49,6 +50,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   try {
     // Free (IDs Only SKU). No photos on the listing → no image at all.
     const ref = await getFirstPhotoRef(business.place_id);
+    // Logged like every Place Details call (free SKU: never counts toward the cap).
+    await logPlacesDetailsCall(business.id, "photos");
     if (!ref) return reply({ photo: null });
 
     const admin = createAdminClient();

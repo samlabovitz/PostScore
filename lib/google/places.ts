@@ -27,6 +27,10 @@ const DETAILS_FIELD_MASK = [
   "googleMapsUri",
   "photos",
   "priceLevel",
+  // Scoring v1.12.0 Stage 1 (docs/review-scoring-plan.md): measured now,
+  // scored later — Place Details only, never Nearby Search (competitors).
+  "accessibilityOptions",
+  "pureServiceAreaBusiness",
 ].join(",");
 
 // Nearby Search returns every listing field competitors are scored on
@@ -210,6 +214,12 @@ export interface PlaceDetails {
    * display mapping used by the Pricing page.
    */
   priceLevel: string | null;
+  /** Google's accessibility flags (wheelchair entrance, parking, restroom,
+   * seating), as returned; null when Google has none or the call didn't
+   * ask (Nearby Search). Not scored yet (v1.12.0 Stage 2). */
+  accessibilityOptions?: Record<string, boolean> | null;
+  /** True for a service-area business with no storefront; null = unknown. */
+  pureServiceAreaBusiness?: boolean | null;
 }
 
 export type PlaceLookupResult =
@@ -243,6 +253,9 @@ export interface RawDetailsPlace {
   googleMapsUri?: string;
   photos?: unknown[];
   priceLevel?: string;
+  /** Place Details only (not in the Nearby Search mask). */
+  accessibilityOptions?: Record<string, boolean | undefined>;
+  pureServiceAreaBusiness?: boolean;
 }
 
 /** Nearby Search now requests the same listing fields as Place
@@ -366,7 +379,16 @@ export function normalizeDetails(raw: RawDetailsPlace): PlaceDetails {
     googleMapsUri: raw.googleMapsUri ?? null,
     photoCount: Array.isArray(raw.photos) ? raw.photos.length : null,
     priceLevel: raw.priceLevel ?? null,
+    accessibilityOptions: accessibilityFlags(raw.accessibilityOptions),
+    pureServiceAreaBusiness: typeof raw.pureServiceAreaBusiness === "boolean" ? raw.pureServiceAreaBusiness : null,
   };
+}
+
+/** Only real true/false flags; null when there are none. */
+function accessibilityFlags(raw: RawDetailsPlace["accessibilityOptions"]): Record<string, boolean> | null {
+  if (!raw || typeof raw !== "object") return null;
+  const flags = Object.fromEntries(Object.entries(raw).filter((e): e is [string, boolean] => typeof e[1] === "boolean"));
+  return Object.keys(flags).length > 0 ? flags : null;
 }
 
 /** Real Nearby Search calls made by this process — lets the bulk

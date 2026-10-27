@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { lookupBusinessByPlaceId } from "@/lib/google/places";
 import { findBusiness } from "@/lib/google/businessSearch";
 import { createClient } from "@/lib/supabase/server";
+import { logPlacesDetailsCall } from "@/lib/placesDetailsBudget.server";
 
 export async function POST(req: NextRequest) {
   // Every lookup is a paid Google call — signed-in owners only (the add
@@ -33,6 +34,8 @@ export async function POST(req: NextRequest) {
   // A specific place was picked from a disambiguation list — fetch its full details.
   if (typeof placeId === "string" && placeId.trim().length > 0) {
     const result = await lookupBusinessByPlaceId(placeId.trim());
+    // One Place Details call (logged, never capped — lib/placesDetailsBudget.ts).
+    if (result.status !== "error") await logPlacesDetailsCall(null, "onboarding");
     return NextResponse.json(result);
   }
 
@@ -59,5 +62,6 @@ export async function POST(req: NextRequest) {
     ownerName: typeof ownerName === "string" ? ownerName.slice(0, 120) : null,
     websiteUrl: typeof websiteUrl === "string" ? websiteUrl.slice(0, 2048) : null,
   });
+  await logPlacesDetailsCall(null, "onboarding", result.paidCalls?.details ?? 0);
   return NextResponse.json(result);
 }

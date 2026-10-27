@@ -21,6 +21,7 @@ import { isFullScan } from "@/lib/websiteRecheckPolicy";
 import { reconcileTasks, type TaskRow } from "@/lib/actionPlan";
 import { buildProfileSnapshot, diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
 import { lookupBusinessByPlaceId, type OpeningHoursPeriod } from "@/lib/google/places";
+import type { PlacesDetailsKind } from "@/lib/placesDetailsBudget";
 import { saveBusinessWithClient } from "@/app/actions/businesses";
 import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
 import { findLastKnownWebsiteDate, resolveListingWebsite } from "@/lib/googleListingWebsite";
@@ -282,6 +283,9 @@ export type RescanBusinessResult =
       tasksReopened: number;
       pointsConfirmed: number;
       changes: ProfileChange[];
+      /** PLACES_DETAILS_MONTHLY_CAP was reached: Google wasn't asked again
+       * — the saved listing data was re-scored as it is. */
+      listingRefreshSkipped?: boolean;
       /** Interactive re-scans only (rescanBusiness): the score before and
        * after, whether PostScore's scoring version changed in between,
        * and how many checks changed — for the honest summary toast. */
@@ -368,7 +372,7 @@ export async function rescanBusiness(businessId: string): Promise<RescanBusiness
   const plan = await getPlan();
   const free = plan === "free";
   // Loaded here (admin client, server only) so importing this file stays light.
-  const { lastOwnerRescanAt, logOwnerRescan } = await import("@/lib/placesSearchBudget.server");
+  const { lastOwnerRescanAt } = await import("@/lib/placesSearchBudget.server");
   const [before, lastFull, lastOwner] = await Promise.all([
     latestScore(supabase, businessId),
     latestFullScore(supabase, businessId),
@@ -377,9 +381,9 @@ export async function rescanBusiness(businessId: string): Promise<RescanBusiness
   const gate = rescanGate(free, lastFull?.created_at ?? null, lastOwner, new Date());
   if (!gate.allowed) return { status: "too_soon", nextAvailableAt: gate.nextAvailableAt!, limit: gate.limit ?? "daily" };
 
-  const result = await rescanBusinessWithClient(supabase, businessId);
-  // One Places Details call — logged for every plan (Free's monthly count).
-  if (result.status === "ok") await logOwnerRescan(businessId);
+  // Its Place Details call is logged as "owner_rescan" — every plan, and
+  // Free's re-scan limit reads it (lastOwnerRescanAt).
+  const result = await rescanBusinessWithClient(supabase, businessId, false, { detailsKind: "owner_rescan" });
   if (result.status !== "ok") return result;
   // Competitors, by plan: Premium/Multi every re-scan, Grow weekly, Free
   // never (Free re-scans make no Nearby Search call). Interactive only —
@@ -423,8 +427,13 @@ export async function rescanBusinessWithClient(
   // by the interactive "Re-scan now" path and the monthly-report cron,
   // so neither one's real behavior changes; only
   // scripts/rescan-all.ts's --no-screenshots flag passes true.
-  skipScreenshots: boolean = false
+  skipScreenshots: boolean = false,
+  // Which caller this is, for the Place Details log and
+  // PLACES_DETAILS_MONTHLY_CAP (lib/placesDetailsBudget.ts): "owner_rescan",
+  // "monthly", "rescan_all"…
+  options: { detailsKind?: PlacesDetailsKind } = {}
 ): Promise<RescanBusinessResult> {
+  const detailsKind = options.detailsKind ?? "rescan";
   const { data: before, error: beforeError } = await supabase
     .from("businesses")
     .select(
@@ -447,7 +456,20 @@ export async function rescanBusinessWithClient(
   const locale = normalizeLocale(before.language);
   const previousSnapshot: ProfileSnapshot = buildProfileSnapshot(before);
 
+  // Loaded here (admin client, server only) so importing this file stays light.
+  const details = await import("@/lib/placesDetailsBudget.server");
+  // Over this month's Place Details cap: keep the saved listing data —
+  // re-score it as it is (never fail the scan) and log the skip.
+  if (!(await details.detailsCallAllowed(detailsKind))) {
+    await details.logPlacesDetailsSkip(businessId, detailsKind);
+    const kept = await saveScoreSnapshotWithClient(supabase, businessId);
+    if (kept.status !== "saved") return kept;
+    return { status: "ok", scoreId: kept.scoreId, tasksConfirmed: kept.tasksConfirmed, tasksReopened: kept.tasksReopened, pointsConfirmed: kept.pointsConfirmed, changes: [], listingRefreshSkipped: true };
+  }
+
   const lookup = await lookupBusinessByPlaceId(before.place_id);
+  // Every answered call is billed and logged (a network error isn't).
+  if (lookup.status !== "error") await details.logPlacesDetailsCall(businessId, detailsKind);
 
   if (lookup.status === "no_results") {
     return { status: "no_results" };
@@ -472,8 +494,9 @@ export async function rescanBusinessWithClient(
   // anything. See resolveListingWebsite (lib/googleListingWebsite.ts)
   // for the exact decision this feeds.
   let retryLookupWebsite: string | null | undefined;
-  if (!lookup.place.website && before.website) {
+  if (!lookup.place.website && before.website && (await details.detailsCallAllowed("website_retry"))) {
     const retry = await lookupBusinessByPlaceId(before.place_id);
+    if (retry.status !== "error") await details.logPlacesDetailsCall(businessId, "website_retry");
     retryLookupWebsite = retry.status === "found" ? retry.place.website : null;
   }
   const resolvedWebsite = resolveListingWebsite(
