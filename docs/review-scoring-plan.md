@@ -26,9 +26,10 @@ Rebuilt Oct 26, 2026 from the current code (`lib/scoring.ts` at `SCORING_VERSION
 ## Stage 1 — measure (no score changes)
 
 1. **Log every Place Details call.** Each call writes a `places_calls` row with its own `kind` (`onboarding`, `owner_rescan`, `monthly`, `rescan_all`, `website_retry`, `photos`, `website_only`, …).
-2. **`PLACES_DETAILS_MONTHLY_CAP` (default 800).** Follow the existing cap pattern (`DEFAULT_…` constant + env override, like `lib/screenshotBudget.ts`). Over the cap, skip the call and keep the saved listing data. Never fail a scan; log the skip.
+2. **`PLACES_DETAILS_MONTHLY_CAP` (default 800, confirmed).** Follow the existing cap pattern (`DEFAULT_…` constant + env override, like `lib/screenshotBudget.ts`). Over the cap, skip the call and keep the saved listing data. Never fail a scan; log the skip.
 3. **Place Details only: add `accessibilityOptions` and `pureServiceAreaBusiness`** to `DETAILS_FIELD_MASK`. Don't add them to Nearby Search (competitors).
 4. **Dry run of the new weights on every business → `~/Desktop/scoring-dry-run.md`.** Use the same approach as `~/Desktop/website-trust-dry-run.md`. For each business, show the v1.11.0 total, the v1.12.0 total, the change, and which checks moved. Summarize the biggest movers and the grade changes. Nothing is saved.
+   - Recency and the payment and parking parts of customer details come from a one-off fetch of `reviews`, `paymentOptions` and `parkingOptions` for about 10 sample businesses (Decision 1). For every other business those parts show as "couldn't check".
 
 ---
 
@@ -39,7 +40,7 @@ Rebuilt Oct 26, 2026 from the current code (`lib/scoring.ts` at `SCORING_VERSION
 - **Full points** if any returned review is ≤ 90 days old.
 - **Otherwise "couldn't confirm"** (excluded, not 0). Google returns at most 5 reviews, chosen by relevance rather than date, so their absence doesn't prove anything.
 - **0 reviews on the listing = 0 points, verified.**
-- **Store yes/no only** ("has a review in the last 90 days"). Never store review text, names, ratings or dates. The engine never reads the clock; the yes/no is computed at collection time and frozen into the input.
+- **Store yes/no only** ("has a review in the last 90 days"), in a boolean column on `businesses` (its own `supabase/*.sql` file). Never store review text, names, ratings or dates. The engine never reads the clock; the yes/no is computed at collection time and frozen into the input.
 - **GBP connected:** use GBP `hasRecentReview` instead (verified both ways, since GBP sees every review).
 - This replaces today's linear 90 → 730-day curve (`recencyFraction`).
 
@@ -50,7 +51,7 @@ Rebuilt Oct 26, 2026 from the current code (`lib/scoring.ts` at `SCORING_VERSION
 
 ### Replying to reviews (new, Visibility, 6 pts)
 - **Recent window only:** reviews from the last 90 days, or the latest 20 if fewer (`reviewsInWindow`, `replied`).
-- **Full credit at ≥ 80% replied.**
+- **Full credit at ≥ 80% replied; below that, proportional: `6 × replyRate ÷ 0.8`.**
 - **Templated replies are advice only.** The "Most of your replies use the same text" hint never costs points.
 - **Not connected → excluded**, shown as "Connect Google to check this". Never 0, so not connecting never lowers the score.
 - **Under 3 reviews in the window → excluded** ("Not enough recent reviews to check yet").
@@ -86,9 +87,9 @@ Run `scripts/rescan-all.ts` after v1.12.0 ships, inside `PLACES_DETAILS_MONTHLY_
 
 ---
 
-## Open questions (decide before Stage 1)
+## Decisions (Oct 27, 2026)
 
-1. **Fields for the dry run.** To simulate recency and customer details, Place Details must also return `reviews`, `paymentOptions` and `parkingOptions`. Stage 1 as written adds only `accessibilityOptions` and `pureServiceAreaBusiness`. Should those three also be added in Stage 1, or should the dry run treat those parts as "couldn't check"?
-2. **Cost tier.** `reviews` and the accessibility, payment and parking options are Atmosphere fields, so they likely move Place Details to a higher SKU. Check Google's current pricing before Stage 1, and size `PLACES_DETAILS_MONTHLY_CAP` from it.
-3. **Reply credit below 80%.** Proposed: proportional (`replyRate / 0.8 × 6`, rounded to 0.1). Confirm.
-4. **Where the recency yes/no lives** for non-connected businesses. Proposed: a new `businesses` boolean in its own `supabase/*.sql` file.
+1. **Fields: the production mask stays minimal.** In Stage 1 the production Place Details mask adds only `accessibilityOptions` and `pureServiceAreaBusiness`. For the dry run, a one-off script fetches `reviews`, `paymentOptions` and `parkingOptions` for a sample of about 10 businesses. That stays within the free 1,000 calls/month, and the script stores nothing beyond the dry-run report.
+2. **Cap: `PLACES_DETAILS_MONTHLY_CAP` stays at 800.**
+3. **Reply credit below 80%: proportional, `6 × replyRate ÷ 0.8`** (full credit at ≥ 80%) — confirmed.
+4. **Recency yes/no: a boolean column on `businesses`** ("has a review in the last 90 days"), in its own `supabase/*.sql` file — confirmed.
