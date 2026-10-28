@@ -1,14 +1,17 @@
 import { describe, expect, test } from "vitest";
 import fs from "node:fs";
-import { customerDetailsPartsFor } from "@/lib/customerDetails";
-import { businessRowToScoringInput, CATEGORY_WEIGHTS, checksFor, CHECKS, CHECKS_V112, scoreBusiness, SCORING_VERSION, SCORING_VERSION_V112, type BusinessScoringInput } from "@/lib/scoring";
+import { customerDetailsPartsFor, customerDetailsRuleFor } from "@/lib/customerDetails";
+import { computeReplyCounts } from "@/lib/gbpReviewReplies";
+import { applyCheckFix, businessRowToScoringInput, CATEGORY_WEIGHTS, checksFor, CHECKS, CHECKS_V112, getScoreWithSuggestions, scoreBusiness, SCORING_VERSION, SCORING_VERSION_V112, type BusinessScoringInput } from "@/lib/scoring";
 import { scoringInput } from "@/emails/sampleMonthlyReportContent";
-import { hasRecentReviewFrom, normalizeDetails } from "@/lib/google/places";
+import { hasRecentReviewFrom, normalizeDetails, recentReviewsSeenFrom } from "@/lib/google/places";
 import { SCORING_NOTE_VERSION, scoringNoteApplies } from "@/lib/scoringUpdateNote";
 import { snapshotDelta } from "@/lib/weekly/snapshots";
 
 // Scoring v1.12.0, Stage 2 (docs/review-scoring-plan.md) — live since the
 // dry run was approved.
+
+const ROW = { rating: 4.7, review_count: 120, phone: "1", address: "a", opening_hours: null, website: null, categories: ["bakery"], category: "Bakery", photo_count: 10, business_status: "OPERATIONAL", https_status: null, primary_type: "bakery", name: "Kee's" };
 
 const v112 = (input: BusinessScoringInput) => scoreBusiness(input, "en", SCORING_VERSION_V112);
 const check = (input: BusinessScoringInput, id: string) => v112(input).checks.find((c) => c.id === id)!;
@@ -45,16 +48,51 @@ describe("the v1.12.0 weights", () => {
 });
 
 describe("review recency", () => {
-  test("full points with a review ≤ 90 days; couldn't confirm otherwise; 0 reviews = 0, verified", () => {
-    expect(check({ ...scoringInput(), hasRecentReview: true }, "visibility.review_recency")).toMatchObject({ earnedPoints: 6, confidence: "VERIFIED" });
-    expect(check({ ...scoringInput(), hasRecentReview: null }, "visibility.review_recency")).toMatchObject({ earnedPoints: null, confidence: "NOT_FOUND" });
-    expect(check({ ...scoringInput(), reviewCount: 0, rating: null, hasRecentReview: null }, "visibility.review_recency")).toMatchObject({ earnedPoints: 0, confidence: "VERIFIED" });
+  test("not connected: at least N recent among Google's ≤5 — 3+ = 6, 2 = 4, 1 = 2; none = couldn't confirm; 0 reviews = 0", () => {
+    const seen = (n: 0 | 1 | 2 | 3 | null) => check({ ...scoringInput(), recentReviewsSeen: n }, "visibility.review_recency");
+    expect(seen(3)).toMatchObject({ earnedPoints: 6, confidence: "VERIFIED", explanation: "At least 3 recent reviews (last 90 days) among the few Google shows. Connect Google to count all your recent reviews." });
+    expect(seen(2)).toMatchObject({ earnedPoints: 4, explanation: "At least 2 recent reviews (last 90 days) among the few Google shows — 3 or more earns full points. Connect Google to count all your recent reviews." });
+    expect(seen(1).earnedPoints).toBe(2);
+    expect(seen(0)).toMatchObject({ earnedPoints: null, confidence: "NOT_FOUND" });
+    expect(seen(null)).toMatchObject({ earnedPoints: null, confidence: "NOT_FOUND" });
+    expect(check({ ...scoringInput(), reviewCount: 0, rating: null }, "visibility.review_recency")).toMatchObject({ earnedPoints: 0, confidence: "VERIFIED" });
+    // Saved before the bucket existed: a yes is "at least 1".
+    expect(check({ ...scoringInput(), hasRecentReview: true }, "visibility.review_recency").earnedPoints).toBe(2);
+    const es = scoreBusiness({ ...scoringInput(), recentReviewsSeen: 2 }, "es").checks.find((c) => c.id === "visibility.review_recency")!;
+    expect(es.explanation).toBe("Al menos 2 reseñas recientes (últimos 90 días) entre las pocas que muestra Google — 3 o más obtienen los puntos completos. Conecte Google para contar todas sus reseñas recientes.");
   });
 
-  test("Google connected: its own hasRecentReview decides, either way", () => {
-    const gbp = { reviewsInWindow: 20, replied: 0, hasRecentReview: false };
-    expect(check({ ...scoringInput(), hasRecentReview: true, gbpReplies: gbp }, "visibility.review_recency").earnedPoints).toBe(0);
-    expect(check({ ...scoringInput(), gbpReplies: { ...gbp, hasRecentReview: true } }, "visibility.review_recency").earnedPoints).toBe(6);
+  test("Google connected: the exact count — 0 = 0/6, 1 = 2, 2 = 4, 3+ = 6, and no 'connect' line", () => {
+    const gbp = (recentReviews: 0 | 1 | 2 | 3) => check({ ...scoringInput(), recentReviewsSeen: 3, gbpReplies: { reviewsInWindow: 20, replied: 0, hasRecentReview: recentReviews > 0, recentReviews } }, "visibility.review_recency");
+    expect(gbp(0)).toMatchObject({ earnedPoints: 0, confidence: "VERIFIED" });
+    expect(gbp(1)).toMatchObject({ earnedPoints: 2, explanation: "1 review in the last 90 days on your Google Business Profile — 3 or more earns full points." });
+    expect(gbp(2).earnedPoints).toBe(4);
+    expect(gbp(3)).toMatchObject({ earnedPoints: 6, explanation: "3 or more reviews in the last 90 days on your Google Business Profile." });
+    // Counts saved before the bucket: "none" is still exact.
+    expect(check({ ...scoringInput(), gbpReplies: { reviewsInWindow: 20, replied: 0, hasRecentReview: false } }, "visibility.review_recency").earnedPoints).toBe(0);
+  });
+
+  test("a fix promises the full 6", () => {
+    const input = { ...scoringInput(), recentReviewsSeen: 1 as const };
+    expect(check(applyCheckFix(input, "visibility.review_recency"), "visibility.review_recency").earnedPoints).toBe(6);
+  });
+
+  test("only the bucket is kept: 0/1/2/3+, from Google's ≤5 or the connected profile", () => {
+    const now = new Date("2026-10-27T00:00:00Z");
+    expect(recentReviewsSeenFrom(["2026-10-01T00:00:00Z", "2026-09-17T00:00:00Z", "2026-08-30T00:00:00Z", "2026-08-01T00:00:00Z", "2025-01-01T00:00:00Z"], now)).toBe(3);
+    expect(recentReviewsSeenFrom(["2026-10-01T00:00:00Z", "2025-01-01T00:00:00Z"], now)).toBe(1);
+    expect(recentReviewsSeenFrom(["2025-01-01T00:00:00Z"], now)).toBe(0);
+    expect(recentReviewsSeenFrom(null, now)).toBeNull();
+    const day = 86_400_000;
+    const reviews = Array.from({ length: 7 }, (_, i) => ({ createTime: new Date(now.getTime() - (i + 1) * 10 * day).toISOString() }));
+    expect(computeReplyCounts(reviews, now.getTime()).recentReviews).toBe(3);
+    expect(computeReplyCounts([{ createTime: "2026-06-01T00:00:00Z" }], now.getTime()).recentReviews).toBe(0);
+    expect(computeReplyCounts([reviews[0], reviews[1]], now.getTime()).recentReviews).toBe(2);
+    const row = businessRowToScoringInput({ ...ROW, recent_reviews_seen: 2, gbp_reviews_in_window: 10, gbp_replied: 4, gbp_has_recent_review: true, gbp_recent_reviews: 7 });
+    expect(row.recentReviewsSeen).toBe(2);
+    expect(row.gbpReplies?.recentReviews).toBe(3);
+    const save = fs.readFileSync("app/actions/businesses.ts", "utf8");
+    expect(save).toContain("recent_reviews_seen: recentReviewsSeenFrom(place.reviewPublishTimes, new Date())");
   });
 
   test("from Place Details: true only for a review in the last 90 days (never stored as text or dates)", () => {
@@ -95,7 +133,7 @@ describe("customer details — only the parts that apply", () => {
   test("a salon: accessibility, payment and parking", () => {
     expect(customerDetailsPartsFor("salon", false)).toEqual(["accessibility", "payment", "parking"]);
     const input = { ...scoringInput(), listingDetails: details, customerDetailsParts: customerDetailsPartsFor("salon", false) };
-    expect(check(input, "completeness.customer_details")).toMatchObject({ earnedPoints: 2, explanation: "Your listing doesn't show parking yet." });
+    expect(check(input, "completeness.customer_details")).toMatchObject({ earnedPoints: 2, explanation: "Accessibility ✓ · Payment options ✓ · Parking ✗." });
   });
 
   test("a restaurant: all three; a service-area-only business: never parking", () => {
@@ -164,5 +202,47 @@ describe("every saved-row scoring read includes the v1.12.0 columns", () => {
     for (const file of ["app/actions/scoring.ts", "app/actions/website.ts", "app/actions/actionPlan.ts", "app/actions/reviews.ts", "app/actions/businesses.ts", "app/api/cron/monthly-reports/route.ts"]) {
       expect(fs.readFileSync(file, "utf-8"), file).toContain("${V112_SCORING_COLUMNS}`");
     }
+  });
+});
+
+describe("customer details — ✓/✗ per part, why they count, and the owner's answers", () => {
+  const row = { ...ROW, listing_has_accessibility: false, listing_has_payment: true, listing_has_parking: false, pure_service_area_business: false };
+  const cd = (r: Record<string, unknown>, locale: "en" | "es" = "en") => scoreBusiness(businessRowToScoringInput(r as typeof ROW), locale).checks.find((c) => c.id === "completeness.customer_details")!;
+
+  test("a bakery: every part shown with ✓/✗, and why all three count — EN + ES", () => {
+    expect(cd(row)).toMatchObject({
+      earnedPoints: 1,
+      explanation: "Accessibility ✗ · Payment options ✓ · Parking ✗. All three count: customers visit and pay at a business like yours.",
+      meta: { parts: "accessibility,payment,parking", ownerRemoved: "", ownerCanRemove: "payment,parking", present: "payment" },
+    });
+    expect(cd(row, "es").explanation).toBe("Accesibilidad ✗ · Formas de pago ✓ · Estacionamiento ✗. Cuentan las tres: los clientes visitan y pagan en un negocio como el suyo.");
+  });
+
+  test("a law office: only accessibility, and it says why", () => {
+    const law = { ...row, categories: ["lawyer"], category: "Lawyer", primary_type: "lawyer", name: "Smith Law" };
+    expect(cd(law)).toMatchObject({ earnedPoints: 0, explanation: "Accessibility ✗. Only accessibility counts for an office like yours — payment and parking aren't scored.", meta: { ownerCanRemove: "" } });
+  });
+
+  test("owner: \"No parking available\" removes parking (Added by you); no payments on site removes payment", () => {
+    const noParking = cd({ ...row, owner_no_parking: true });
+    expect(noParking.earnedPoints).toBe(1.5);
+    expect(noParking.explanation).toBe("Accessibility ✗ · Payment options ✓. Counted for your business: Accessibility, Payment options. Parking isn't scored — you told us there's no parking (Added by you).");
+    expect(noParking.meta).toMatchObject({ parts: "accessibility,payment", ownerRemoved: "parking", ownerCanRemove: "payment,parking" });
+    const both = cd({ ...row, owner_no_parking: true, owner_no_payment: true });
+    expect(both).toMatchObject({ earnedPoints: 0, meta: { parts: "accessibility", ownerRemoved: "payment,parking" } });
+    expect(cd({ ...row, owner_no_payment: true }, "es").explanation).toContain("usted nos indicó que no recibe pagos en el lugar (Agregado por usted)");
+    // Accessibility can never be removed, so the check never disappears.
+    expect(customerDetailsRuleFor("bakery", false, { noParking: true, noPayment: true }).parts).toEqual(["accessibility"]);
+  });
+
+  test("no storefront: parking isn't scored, and the owner can't remove what's already out", () => {
+    const rule = customerDetailsRuleFor("restaurant", true, { noParking: true });
+    expect(rule).toMatchObject({ parts: ["accessibility", "payment"], serviceAreaNoParking: true, ownerRemoved: [], ownerCanRemove: ["payment"] });
+    expect(cd({ ...row, pure_service_area_business: true }).explanation).toContain("Parking isn't scored — you serve customers at their location.");
+  });
+
+  test("the advice says exactly where to add them — EN + ES", () => {
+    const { suggestions } = getScoreWithSuggestions(businessRowToScoringInput(row as typeof ROW));
+    expect(suggestions.find((s) => s.checkId === "completeness.customer_details")!.advice).toBe("Add them on Google: Google Business Profile → Edit profile → accessibility / payments / parking.");
   });
 });

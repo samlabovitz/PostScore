@@ -14,7 +14,9 @@ import { wholePointRange } from "@/lib/pointRange";
 import { markTaskDone } from "@/app/actions/actionPlan";
 import { WebsiteRecheck } from "@/components/scoring/WebsiteRecheck";
 import {
+  MERGED_REVIEW_CHECK_ID,
   pendingCheckStatus,
+  timeEstimateText,
   weeklyMetricProgress,
   type ActionPlanTask,
   type CompletedTask,
@@ -258,7 +260,8 @@ export function taskPointsLabel(task: ActionPlanTask, context: TaskCardContext, 
       ? t(locale, "dashboard.overview.actionPlan.pointsRangeOnceLive", { low: range.low, high: range.high })
       : t(locale, "dashboard.overview.actionPlan.pointsOnceLive", { points: range.low });
   }
-  return context === "weekly" && task.effort !== "quick_win"
+  // The reviews card is one combined estimate — "up to", like the Overview.
+  return context === "weekly" && task.effort !== "quick_win" && task.checkId !== MERGED_REVIEW_CHECK_ID
     ? t(locale, "dashboard.overview.actionPlan.pointsThisWeek", { points: wholePoints(task.weightedPoints) })
     : t(locale, "dashboard.overview.actionPlan.pointsUpTo", { points: wholePoints(task.weightedPoints) });
 }
@@ -274,9 +277,12 @@ export function TaskCard({
   step = null,
   linkOptions = {},
   websiteRecheck = null,
+  premium = false,
 }: {
   task: ActionPlanTask;
   businessId: string;
+  /** Premium: steps PostScore will one day do say "Coming soon". */
+  premium?: boolean;
   context?: TaskCardContext;
   /** When the business's most recent scan ran — see getLastScanAt(). */
   lastScanAt?: string | null;
@@ -318,14 +324,23 @@ export function TaskCard({
   // went), hand it back to the owner as a fresh weekly ask.
   const checkedAlready = metricProgress ? metricProgress.kind !== "not_yet_checked" : pendingStatus !== null && pendingStatus !== "not_yet_checked";
   const canMarkAgain = isPending && checkedAlready;
+  // Checked, nothing changed yet: Google can be slow to show an edit.
+  const noChangeYet = canMarkAgain && (metricProgress ? metricProgress.kind === "not_quite_yet" : pendingStatus === "unchanged");
   const status = taskStatus(task, pendingStatus, metricProgress, locale);
   // The obtainable ask, front and center — a weekly target for a
   // gradual check, or the one-shot action itself when there isn't one.
   const headline = task.weeklyTarget ?? task.action;
   // Where this is fixed — the same link PostAI and the Overview use. None
   // when that's this Growth page itself.
-  const fix = task.effort === "setup" ? null : taskFixLink(task.checkId, businessId, linkOptions);
-  const fixLink = fix && !fix.href.startsWith(`/business/${businessId}/growth`) ? fix : null;
+  const isSetup = task.effort === "setup";
+  // The task's own links (PostScore tool, then official Google pages),
+  // then the usual fix link unless it's the same page.
+  const stepLinks = task.links ?? [];
+  const fix = isSetup ? null : taskFixLink(task.checkId, businessId, linkOptions);
+  const fixLink =
+    fix && !fix.href.startsWith(`/business/${businessId}/growth`) && !stepLinks.some((l) => l.href.split("#")[0] === fix.href.split("#")[0]) ? fix : null;
+  // The card title is the action; the check's name is the small label.
+  const title = task.title ?? task.label;
 
   return (
     <li id={`task-${task.checkId.replace(/\./g, "-")}`} className="scroll-mt-20 rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
@@ -338,18 +353,35 @@ export function TaskCard({
         <div className="flex min-w-0 flex-1 flex-col gap-2.5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-              <h3 className="text-[14.5px] font-semibold text-ink">{task.label}</h3>
-              <span className="text-[11.5px] text-ink-mute">{effortBadge(task, context, locale)}</span>
+              <h3 className="text-[14.5px] font-semibold text-ink">{title}</h3>
+              {!isSetup && <span className="text-[11.5px] text-ink-mute">{effortBadge(task, context, locale)}</span>}
+              {task.minutes ? <span className="text-[11.5px] text-ink-mute">· {timeEstimateText(task.minutes, locale)}</span> : null}
+              {title !== task.label && !task.mergedLabels && (
+                <span data-testid="task-check-label" className="w-full text-[11.5px] text-ink-mute">
+                  {task.label}
+                </span>
+              )}
             </div>
-            <StatusPill variant={status.variant} className="shrink-0">
-              {status.label}
-            </StatusPill>
+            {!isSetup && (
+              <StatusPill variant={status.variant} className="shrink-0">
+                {status.label}
+              </StatusPill>
+            )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-            <p className="text-[13.5px] font-medium text-ink">{headline}</p>
-            <span className={POINTS_CHIP}>{taskPointsLabel(task, context, locale)}</span>
-          </div>
+          {premium && task.automatable && (
+            <p data-testid="step-coming-soon" className="w-fit rounded-full border border-paper-deep bg-paper px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft">
+              {t(locale, "content.actionPlan.step.comingSoon")}
+            </p>
+          )}
+
+          {!isSetup && (
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+              {/* Never the title twice ("Reply to your recent reviews"). */}
+              {headline !== title && <p className="text-[13.5px] font-medium text-ink">{headline}</p>}
+              <span className={POINTS_CHIP}>{taskPointsLabel(task, context, locale)}</span>
+            </div>
+          )}
 
           <p className="text-[12.5px] leading-snug text-ink-soft">{task.why}</p>
 
@@ -397,8 +429,27 @@ export function TaskCard({
             )}
           </div>
 
-          {(fixLink || !isPending || canMarkAgain) && (
+          {isSetup && task.href && (
             <div className="flex flex-wrap items-center gap-2 border-t border-paper-line pt-3">
+              <Link href={task.href} className={LINK_PILL_CLASS}>
+                {t(locale, "content.actionPlan.connectGoogle.link")}
+              </Link>
+            </div>
+          )}
+
+          {!isSetup && (fixLink || stepLinks.length > 0 || !isPending || canMarkAgain) && (
+            <div className="flex flex-wrap items-center gap-2 border-t border-paper-line pt-3">
+              {stepLinks.map((link) =>
+                link.external ? (
+                  <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className={LINK_PILL_CLASS}>
+                    {link.label} ↗
+                  </a>
+                ) : (
+                  <Link key={link.href} href={link.href} className={LINK_PILL_CLASS}>
+                    {link.label}
+                  </Link>
+                )
+              )}
               {fixLink && (
                 <Link href={fixLink.href} className={LINK_PILL_CLASS}>
                   {fixLink.label ? t(locale, fixLink.label) : t(locale, "dashboard.overview.recs.seeCheck")}
@@ -409,11 +460,16 @@ export function TaskCard({
                   {state.kind === "saving"
                     ? t(locale, "dashboard.overview.actionPlan.saving")
                     : canMarkAgain
-                      ? t(locale, "dashboard.overview.actionPlan.didThisAgain")
+                      ? t(locale, "dashboard.overview.actionPlan.checkAgain")
                       : t(locale, "dashboard.overview.actionPlan.didThis")}
                 </Button>
               )}
               {state.kind === "error" && <span className="text-[12px] text-red">{state.message}</span>}
+              {noChangeYet && (
+                <p data-testid="check-again-note" className="w-full text-[12px] text-ink-mute">
+                  {t(locale, "dashboard.overview.actionPlan.checkAgainNote")}
+                </p>
+              )}
             </div>
           )}
           {websiteRecheck && task.checkId.startsWith("website.") && task.checkId !== "website.has_website" && (
@@ -496,9 +552,12 @@ export function TaskListCard({
   lastScanAt = null,
   linkOptions = {},
   websiteRecheck = null,
+  premium = false,
 }: {
   tasks: ActionPlanTask[];
   businessId: string;
+  /** See TaskCard's premium. */
+  premium?: boolean;
   emptyMessage: string;
   footnote?: string;
   context?: TaskCardContext;
@@ -523,6 +582,7 @@ export function TaskListCard({
             step={context === "weekly" ? i + 1 : null}
             linkOptions={linkOptions}
             websiteRecheck={websiteRecheck}
+            premium={premium}
           />
         ))}
       </ol>

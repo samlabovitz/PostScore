@@ -5,7 +5,7 @@ import { ensureFirstCompetitorScanWithClient } from "@/app/actions/competitors";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { DIFFERENTIATOR_MAX } from "@/lib/businessOffer";
-import { hasRecentReviewFrom, type PlaceDetails } from "@/lib/google/places";
+import { hasRecentReviewFrom, recentReviewsSeenFrom, type PlaceDetails } from "@/lib/google/places";
 import { normalizeLocale, SUPPORTED_LOCALES, t, type Locale } from "@/lib/i18n";
 import { getPlan, unlimitedBusinessesAllowed } from "@/lib/premium";
 import { locationLimit, type Plan } from "@/lib/plan";
@@ -278,6 +278,7 @@ export async function saveBusinessWithClient(
       ? {}
       : {
           has_recent_review: hasRecentReviewFrom(place.reviewPublishTimes, new Date()),
+          recent_reviews_seen: recentReviewsSeenFrom(place.reviewPublishTimes, new Date()),
           listing_has_accessibility: place.listingHasAccessibility ?? null,
           listing_has_payment: place.listingHasPayment ?? null,
           listing_has_parking: place.listingHasParking ?? null,
@@ -328,9 +329,14 @@ export async function saveBusinessWithClient(
     )
     .select("id")
     .single();
+  const missingColumn = (e: { code?: string } | null) => !!e && (e.code === "PGRST204" || e.code === "42703");
   let { data, error } = await upsertBusiness(v112Facts);
+  // Before supabase/scoring-v1-12-recency-details.sql: without the bucket.
+  if (missingColumn(error) && "recent_reviews_seen" in v112Facts) {
+    ({ data, error } = await upsertBusiness(Object.fromEntries(Object.entries(v112Facts).filter(([k]) => k !== "recent_reviews_seen"))));
+  }
   // Before supabase/scoring-v1-12.sql has been run: save without them.
-  if (error && (error.code === "PGRST204" || error.code === "42703") && Object.keys(v112Facts).length > 0) {
+  if (missingColumn(error) && Object.keys(v112Facts).length > 0) {
     ({ data, error } = await upsertBusiness({}));
   }
 

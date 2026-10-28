@@ -7,8 +7,11 @@ import {
   buildCompletedTasks,
   buildWebsiteBanner,
   GOOGLE_MISMATCH_CHECK_ID,
+  buildConnectGbpWeeklyTask,
   buildWeeklyPlan,
   mergeReviewTasks,
+  V112_STEP_CHECK_IDS,
+  withStepLinks,
   mergeWebsiteTasks,
   weeklyTrackedMetricValue,
   WEEKLY_PLAN_CAP,
@@ -22,6 +25,7 @@ import { estimateStarterSiteRange, type StarterSiteTemplateData } from "@/lib/st
 import { businessRowToScoringInput, scoreBusiness, V112_SCORING_COLUMNS } from "@/lib/scoring";
 import type { BusinessScoringInput, BusinessScoringRow, ScoreBreakdown, Suggestion } from "@/lib/scoring";
 import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
+import type { Plan } from "@/lib/plan";
 
 export type GetActionPlanResult =
   | ({
@@ -67,7 +71,10 @@ export async function getActionPlan(
   breakdown: ScoreBreakdown,
   suggestions: Suggestion[],
   locale: Locale = DEFAULT_LOCALE,
-  starterSiteContext?: StarterSiteContext
+  starterSiteContext?: StarterSiteContext,
+  /** Growth only: the plan, and whether to add the "Connect Google" step
+   * (not connected, and connecting is switched on). */
+  stepContext?: { plan: Plan; connectGoogle: boolean }
 ): Promise<GetActionPlanResult> {
   const supabase = createClient();
 
@@ -122,20 +129,23 @@ export async function getActionPlan(
   // (summarized by websiteBanner instead), except the Google-mismatch
   // card. The monthly report builds its own plan from buildActionPlan
   // directly and is deliberately unaffected.
-  const tasks = applyGrowthWebsiteRules(
-    mergeWebsiteTasks(reviewMerged, breakdown, input, locale, starterSiteRange),
-    input,
+  const tasks = withStepLinks(
+    applyGrowthWebsiteRules(mergeWebsiteTasks(reviewMerged, breakdown, input, locale, starterSiteRange), input, locale),
+    businessId,
     locale
   );
   const websiteBanner = buildWebsiteBanner(breakdown, input, starterSiteRange);
 
-  // Connecting a Google Business Profile is a PostScore Premium feature, not
-  // a weekly task: the Growth page shows it as a small "Unlock live Google
-  // insights" card instead, so it never takes one of the plan's slots.
-  // The Google-mismatch card always shows this week whenever it's open —
-  // exempt from the minimum and the cap (see buildWeeklyPlan).
-  const weeklyPlan = buildWeeklyPlan(tasks, breakdown, input, WEEKLY_PLAN_CAP, locale, [GOOGLE_MISMATCH_CHECK_ID]);
-  const weeklyTasks = weeklyPlan.weeklyTasks;
+  // The Google-mismatch card and the v1.12.0 steps (replies, fresh
+  // reviews, customer details) always show this week whenever they're
+  // open — exempt from the minimum and the cap (see buildWeeklyPlan).
+  const weeklyPlan = buildWeeklyPlan(tasks, breakdown, input, WEEKLY_PLAN_CAP, locale, [GOOGLE_MISMATCH_CHECK_ID, ...V112_STEP_CHECK_IDS]);
+  // Growth: "Connect Google" as the last step while it isn't connected — a
+  // setup step (0 points, a link, never "I did this"); it unlocks replies
+  // and the exact recent-review count.
+  const weeklyTasks = stepContext?.connectGoogle
+    ? [...weeklyPlan.weeklyTasks, buildConnectGbpWeeklyTask(businessId, locale, stepContext.plan)]
+    : weeklyPlan.weeklyTasks;
 
   return {
     status: "ok",

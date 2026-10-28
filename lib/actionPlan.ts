@@ -12,15 +12,19 @@
 
 import {
   applyCheckFix,
+  customerDetailsPath,
   hasAnalyzableWebsite,
   scoreBusiness,
   type BusinessScoringInput,
   type CategoryId,
+  type CheckResult,
   type ScoreBreakdown,
   type Suggestion,
 } from "@/lib/scoring";
 import { DEFAULT_LOCALE, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
 import { keyForInfoConflict } from "@/lib/websiteTrust";
+import { GOOGLE_LINKS, googleHelpUrl } from "@/lib/googleHelpLinks";
+import type { Plan } from "@/lib/plan";
 
 /**
  * Whether a check's FULL points are realistically reachable within
@@ -101,6 +105,11 @@ export interface ActionPlanCopy {
    * real re-scan).
    */
   timingNote?: MessageKey;
+  /** v1.12.0 steps: a rough time estimate, in minutes. */
+  minutes?: number;
+  /** v1.12.0 steps: something PostScore Premium will one day do for the
+   * owner — shown "Coming soon" on Premium (never a button). */
+  automatable?: boolean;
 }
 
 /** A realistic number of new reviews a focused week of asking might
@@ -150,7 +159,9 @@ function weeklyReviewAskFix(input: BusinessScoringInput): BusinessScoringInput {
 function reviewAskFixIncluding(mergedCheckIds: string[]): (input: BusinessScoringInput) => BusinessScoringInput {
   return (input) => {
     const next = weeklyReviewAskFix(input);
-    return mergedCheckIds.includes("visibility.review_recency") ? { ...next, mostRecentReviewDaysAgo: 0 } : next;
+    // 3 new reviews this week are 3 reviews in the last 90 days — the
+    // recency check's own full fix (v1.12.0).
+    return mergedCheckIds.includes("visibility.review_recency") ? applyCheckFix(next, "visibility.review_recency") : next;
   };
 }
 
@@ -189,9 +200,29 @@ const ACTION_PLAN_COPY: Record<string, ActionPlanCopy> = {
     action: "content.actionPlan.visibility.review_recency.action",
     fix: "content.actionPlan.visibility.review_recency.fix",
     ownerActionOnGoogle: false,
-    // Unlike rating/count, this check only needs ONE fresh review to
-    // reach full points — realistically doable this week.
+    // v1.12.0: 3 reviews in the last 90 days is full points — a few asks
+    // this month, so its own step ("Get fresh reviews this month").
     effort: "quick_win",
+    minutes: 10,
+    automatable: true,
+  },
+  "visibility.review_replies": {
+    why: "content.actionPlan.visibility.review_replies.why",
+    action: "content.actionPlan.visibility.review_replies.action",
+    fix: "content.actionPlan.visibility.review_replies.fix",
+    ownerActionOnGoogle: true,
+    effort: "quick_win",
+    minutes: 15,
+    automatable: true,
+  },
+  "completeness.customer_details": {
+    why: "content.actionPlan.completeness.customer_details.why",
+    action: "content.actionPlan.completeness.customer_details.action",
+    fix: "content.actionPlan.completeness.customer_details.fix",
+    ownerActionOnGoogle: true,
+    effort: "quick_win",
+    minutes: 5,
+    automatable: true,
   },
   "completeness.phone": {
     why: "content.actionPlan.completeness.phone.why",
@@ -438,6 +469,119 @@ function fullMergeFix(mergedCheckIds: string[]): (input: BusinessScoringInput) =
   return (input) => mergedCheckIds.reduce((acc, id) => applyCheckFix(acc, id), input);
 }
 
+// ---------------------------------------------------------------------
+// "How to fix it": the steps, a rough time and official links per check —
+// the same for the Score breakdown rows and the Growth plan's cards.
+// ---------------------------------------------------------------------
+
+/** A rough time per check, in minutes (an honest estimate, never a promise). */
+export const CHECK_MINUTES: Record<string, number> = {
+  "visibility.rating": 10,
+  "visibility.review_count": 10,
+  "visibility.review_recency": 10,
+  "visibility.review_replies": 15,
+  "completeness.phone": 2,
+  "completeness.address": 5,
+  "completeness.hours": 5,
+  "completeness.website_link": 2,
+  "completeness.categories": 5,
+  "completeness.photos": 15,
+  "completeness.business_status": 5,
+  "completeness.customer_details": 5,
+  "website.has_website": 120,
+  "website.https": 30,
+  "website.performance_mobile": 120,
+  "website.content_depth": 30,
+  "website.contact_conversion": 20,
+  "website.about_presence": 30,
+  "website.services_presence": 30,
+  "website.social_links": 10,
+  "website.security": 60,
+  "website.info_consistency": 10,
+  "website.notice_freshness": 10,
+  "website.site_freshness": 30,
+};
+
+/** Official links per check (lib/googleHelpLinks.ts — each one checked to
+ * load). None for website content checks: Google has no page for them,
+ * so they point to PostScore's own Website page instead. */
+export function officialLinksFor(checkId: string, locale: Locale = DEFAULT_LOCALE): TaskLink[] {
+  const g = (href: string, label: MessageKey): TaskLink => ({ href: googleHelpUrl(href, locale), label: t(locale, label), external: true });
+  const profile = g(GOOGLE_LINKS.businessProfile, "content.actionPlan.link.gbp");
+  switch (checkId) {
+    case "visibility.rating":
+    case "visibility.review_count":
+    case "visibility.review_recency":
+    case MERGED_REVIEW_CHECK_ID:
+      return [g(GOOGLE_LINKS.getReviewsHelp, "content.actionPlan.link.getReviewsHelp")];
+    case "visibility.review_replies":
+      return [g(GOOGLE_LINKS.businessProfileReviews, "content.actionPlan.link.googleReviews"), g(GOOGLE_LINKS.reviewsHelp, "content.actionPlan.link.googleReviewsHelp")];
+    case "completeness.phone":
+    case "completeness.address":
+    case "completeness.hours":
+    case "completeness.website_link":
+    case "completeness.business_status":
+    case "website.info_consistency":
+      return [profile, g(GOOGLE_LINKS.editProfileHelp, "content.actionPlan.link.editProfileHelp")];
+    case "completeness.categories":
+      return [profile, g(GOOGLE_LINKS.categoryHelp, "content.actionPlan.link.categoryHelp")];
+    case "completeness.photos":
+      return [profile, g(GOOGLE_LINKS.photosHelp, "content.actionPlan.link.photosHelp")];
+    case "completeness.customer_details":
+      return [profile, g(GOOGLE_LINKS.attributesHelp, "content.checks.completeness.customer_details.link.help")];
+    case "website.https":
+      return [g(GOOGLE_LINKS.httpsWhy, "content.actionPlan.link.httpsWhy")];
+    case "website.performance_mobile":
+      return [g(GOOGLE_LINKS.pageSpeed, "content.actionPlan.link.pageSpeed")];
+    case "website.security":
+      return [g(GOOGLE_LINKS.safeBrowsing, "content.actionPlan.link.safeBrowsing")];
+    default:
+      return [];
+  }
+}
+
+/** Customer details' steps, naming only the parts that count for this
+ * business — parking and payment notes only where they count. */
+export function customerDetailsFixText(parts: readonly string[], locale: Locale = DEFAULT_LOCALE): string {
+  const lines = [t(locale, "content.actionPlan.completeness.customer_details.fix", { path: customerDetailsPath(parts, locale) })];
+  if (parts.includes("payment")) lines.push(t(locale, "content.checks.completeness.customer_details.paymentNote"));
+  if (parts.includes("parking")) lines.push(t(locale, "content.checks.completeness.customer_details.parkingNote"));
+  return lines.join(" ");
+}
+
+/** The steps for a check — the plan card's "How" text. */
+export function checkFixText(check: Pick<CheckResult, "id" | "meta">, locale: Locale = DEFAULT_LOCALE): string {
+  if (check.id === "completeness.customer_details") {
+    return customerDetailsFixText((check.meta?.parts ?? "accessibility,payment,parking").split(",").filter(Boolean), locale);
+  }
+  return t(locale, (ACTION_PLAN_COPY[check.id] ?? FALLBACK_COPY).fix);
+}
+
+/** The card title for a check: the action, falling back to its name. */
+export function checkTitle(checkId: string, label: string, locale: Locale = DEFAULT_LOCALE): string {
+  const key = `content.actionPlan.title.${checkId}` as MessageKey;
+  const title = t(locale, key);
+  return title === key ? label : title;
+}
+
+/** "About 15 min" / "About 2 hr" — a rough estimate. */
+export function timeEstimateText(minutes: number, locale: Locale = DEFAULT_LOCALE): string {
+  return minutes >= 60
+    ? t(locale, "content.actionPlan.step.hours", { hours: Math.round((minutes / 60) * 10) / 10 })
+    : t(locale, "content.actionPlan.step.minutes", { minutes });
+}
+
+export interface CheckHowTo {
+  steps: string;
+  minutes: number | null;
+  links: TaskLink[];
+}
+
+/** A Score breakdown row's own "How to fix it". */
+export function checkHowTo(check: Pick<CheckResult, "id" | "meta">, locale: Locale = DEFAULT_LOCALE): CheckHowTo {
+  return { steps: checkFixText(check, locale), minutes: CHECK_MINUTES[check.id] ?? null, links: officialLinksFor(check.id, locale) };
+}
+
 /** Shape of a row from the `tasks` table — only the fields the plan needs. */
 export interface TaskRow {
   id: string;
@@ -572,6 +716,27 @@ export interface ActionPlanTask {
    */
   rangeLowOverlay: Partial<BusinessScoringInput> | null;
   rangeHighOverlay: Partial<BusinessScoringInput> | null;
+  /** v1.12.0 steps: a rough time estimate, in minutes. */
+  minutes?: number | null;
+  /** v1.12.0 steps: where to do it — PostScore pages and official Google
+   * links only (lib/googleHelpLinks.ts). Set by withStepLinks. */
+  links?: TaskLink[];
+  /** Shown "Coming soon: PostScore can do this for you" on Premium. */
+  automatable?: boolean;
+  /** The card's title — the action ("Add your business hours"); `label`
+   * (the check's name) is the small label under it. */
+  title?: string;
+  /** The merged reviews card only: checks its fix also counts toward that
+   * aren't open tasks themselves (review recency while it can't be
+   * confirmed) — in the estimate and "Helps with", never marked done. */
+  fixAlsoCovers?: string[];
+}
+
+export interface TaskLink {
+  href: string;
+  label: string;
+  /** An official Google page (opens in a new tab). */
+  external: boolean;
 }
 
 export interface CompletedTask {
@@ -644,7 +809,9 @@ export function buildActionPlan(
       problem: check.explanation,
       why: websiteText?.why ?? t(locale, copy.why),
       action: websiteText?.action ?? t(locale, copy.action),
-      fix: websiteText?.fix ?? t(locale, copy.fix),
+      fix: websiteText?.fix ?? checkFixText(check, locale),
+      // A site that exists but isn't on the listing: link it, not "get one".
+      title: websiteText ? checkTitle("completeness.website_link", s.label, locale) : checkTitle(s.checkId, s.label, locale),
       ownerActionOnGoogle: websiteText ? true : copy.ownerActionOnGoogle,
       promisedPoints: s.promisedPoints,
       status: row?.status === "pending_verification" ? "pending_verification" : "open",
@@ -658,6 +825,9 @@ export function buildActionPlan(
       mergedCheckIds: null,
       mergedLabels: null,
       timingNote: copy.timingNote ? t(locale, copy.timingNote) : null,
+      minutes: CHECK_MINUTES[s.checkId] ?? null,
+      links: officialLinksFor(websiteText ? "completeness.website_link" : s.checkId, locale),
+      automatable: copy.automatable ?? false,
       weightedPoints: round1(weightedFixPoints(breakdown, input, (inp) => applyCheckFix(inp, s.checkId))),
       weightedPointsHigh: null,
       href: null,
@@ -671,10 +841,21 @@ export function buildActionPlan(
  * never persisted, never scored. See mergeReviewTasks below. */
 export const MERGED_REVIEW_CHECK_ID = "visibility.reviews_merged";
 
+/** Merged into ONE "Get fresh reviews" card whenever two or more are
+ * losing points (the same action helps all three); a single one keeps its
+ * own card. Order: how "Helps with" lists them. */
 const REVIEW_CHECK_IDS: readonly string[] = [
-  "visibility.rating",
   "visibility.review_count",
+  "visibility.rating",
   "visibility.review_recency",
+];
+
+/** The v1.12.0 steps: always in this week's plan while they're losing
+ * points (pinned — short, owner-doable, never taking another task's slot). */
+export const V112_STEP_CHECK_IDS: readonly string[] = [
+  "visibility.review_replies",
+  "visibility.review_recency",
+  "completeness.customer_details",
 ];
 
 /**
@@ -695,11 +876,16 @@ export function mergeReviewTasks(
   input: BusinessScoringInput,
   locale: Locale = DEFAULT_LOCALE
 ): ActionPlanTask[] {
-  const reviewTasks = tasks.filter((task) => REVIEW_CHECK_IDS.includes(task.checkId));
+  const reviewTasks = REVIEW_CHECK_IDS.map((id) => tasks.find((task) => task.checkId === id)).filter((task): task is ActionPlanTask => !!task);
   if (reviewTasks.length < 2) return tasks;
 
   const mergedCheckIds = reviewTasks.map((task) => task.checkId);
-  const mergedLabels = reviewTasks.map((task) => task.label);
+  // Recency that can't be confirmed yet (left out of the score) still
+  // moves with the same fresh reviews: in "Helps with" and the estimate,
+  // never an "I did this" row of its own.
+  const recency = breakdown.checks.find((c) => c.id === "visibility.review_recency");
+  const fixAlsoCovers = recency && !mergedCheckIds.includes(recency.id) && recency.earnedPoints === null ? [recency.id] : [];
+  const mergedLabels = [...reviewTasks.map((task) => task.label), ...(fixAlsoCovers.length > 0 ? [recency!.label] : [])];
 
   // Whichever of rating/review_count is present drives the real weekly
   // review-count target — both share the literal same weeklyFix
@@ -713,7 +899,11 @@ export function mergeReviewTasks(
   const mergedTask: ActionPlanTask = {
     checkId: MERGED_REVIEW_CHECK_ID,
     category: "visibility",
-    label: t(locale, "content.actionPlan.mergedReviews.title"),
+    label: t(locale, "content.actionPlan.mergedReviews.label"),
+    title: t(locale, "content.actionPlan.mergedReviews.title"),
+    minutes: CHECK_MINUTES["visibility.review_count"],
+    links: officialLinksFor(MERGED_REVIEW_CHECK_ID, locale),
+    fixAlsoCovers,
     problem: reviewTasks.map((task) => task.problem).join(" "),
     problemLines: reviewTasks.map((task) => task.problem),
     why: t(locale, "content.actionPlan.mergedReviews.why"),
@@ -743,7 +933,7 @@ export function mergeReviewTasks(
     mergedCheckIds,
     mergedLabels,
     timingNote: null,
-    weightedPoints: round1(weightedFixPoints(breakdown, input, fullMergeFix(mergedCheckIds))),
+    weightedPoints: round1(weightedFixPoints(breakdown, input, fullMergeFix([...mergedCheckIds, ...fixAlsoCovers]))),
     weightedPointsHigh: null,
     href: null,
     rangeLowOverlay: null,
@@ -1021,27 +1211,22 @@ export const WEEKLY_PLAN_CAP = 3;
 const MIN_WEEKLY_HEADLINE_POINTS = 0.5;
 
 /**
- * The synthetic "connect your Google Business Profile" weekly-plan card
- * — a real, one-time account setup step, not a score check (see
- * TaskEffort's "setup" doc). Always 0 points, always links straight out
- * via `href` instead of an "I did this" checkbox. The caller (see
- * app/actions/actionPlan.ts) only ever builds this when the business's
- * GBP genuinely isn't connected — a real OAuth flow at
- * /api/gbp/connect writes a real gbp_connections row on success (see
- * app/api/gbp/callback/route.ts), so this is never shown once that's
- * true. Never appears anywhere else on the page (see item 1's
- * no-repeats rule — it used to be a growth move; see lib/growthMoves.ts's
- * own doc for why it moved here instead).
+ * "Connect Google" — a real, one-time setup step, not a score check (see
+ * TaskEffort's "setup" doc). Always 0 points, a link (connectGoogleHref)
+ * instead of an "I did this" checkbox. getActionPlan adds it to the
+ * Growth page's weekly plan only while Google isn't connected; it unlocks
+ * the "Replying to reviews" check and the exact recent-review count
+ * (scoring v1.12.0).
  */
-export function buildConnectGbpWeeklyTask(businessId: string, locale: Locale = DEFAULT_LOCALE): ActionPlanTask {
+export function buildConnectGbpWeeklyTask(businessId: string, locale: Locale = DEFAULT_LOCALE, plan: Plan = "premium"): ActionPlanTask {
   return {
-    checkId: "setup.connect_gbp",
-    category: "completeness",
-    label: t(locale, "dashboard.growth.moves.connectGbp.title"),
+    checkId: CONNECT_GOOGLE_STEP_ID,
+    category: "visibility",
+    label: t(locale, "content.actionPlan.connectGoogle.title"),
     problem: "",
-    why: t(locale, "dashboard.growth.moves.connectGbp.why"),
-    action: t(locale, "dashboard.growth.moves.connectGbp.howTo"),
-    fix: t(locale, "dashboard.growth.moves.connectGbp.howTo"),
+    why: t(locale, "content.actionPlan.connectGoogle.why"),
+    action: t(locale, "content.actionPlan.connectGoogle.title"),
+    fix: t(locale, "content.actionPlan.connectGoogle.fix"),
     ownerActionOnGoogle: false,
     promisedPoints: 0,
     status: "open",
@@ -1057,10 +1242,42 @@ export function buildConnectGbpWeeklyTask(businessId: string, locale: Locale = D
     timingNote: null,
     weightedPoints: 0,
     weightedPointsHigh: null,
-    href: `/business/${businessId}/connect-gbp`,
+    href: connectGoogleHref(businessId, plan),
     rangeLowOverlay: null,
     rangeHighOverlay: null,
+    minutes: 2,
+    links: [],
+    automatable: false,
   };
+}
+
+export const CONNECT_GOOGLE_STEP_ID = "setup.connect_gbp";
+
+/** Where each plan connects Google (the same single connection): Free on
+ * the Overview's reply-check card, Grow on the Reviews page, Premium and
+ * Multi on the Connect page. */
+export function connectGoogleHref(businessId: string, plan: Plan): string {
+  if (plan === "free") return `/business/${businessId}#reply-check`;
+  if (plan === "grow") return `/business/${businessId}/website-reviews#reply-check`;
+  return `/business/${businessId}/connect-gbp`;
+}
+
+/** A task's links: the PostScore tool for it first (when there is one),
+ * then official Google pages (officialLinksFor). */
+export function stepLinks(checkId: string, businessId: string, locale: Locale = DEFAULT_LOCALE): TaskLink[] {
+  const app = (path: string, label: MessageKey): TaskLink => ({ href: `/business/${businessId}${path}`, label: t(locale, label), external: false });
+  const tool =
+    checkId === "visibility.review_replies"
+      ? [app("/website-reviews#reply-to-a-review", "content.actionPlan.link.replyDrafter")]
+      : REVIEW_CHECK_IDS.includes(checkId) || checkId === MERGED_REVIEW_CHECK_ID
+        ? [app("/website-reviews#get-more-reviews", "content.actionPlan.link.reviewLink")]
+        : [];
+  return [...tool, ...officialLinksFor(checkId, locale)];
+}
+
+/** Adds the PostScore tool links (the pure plan has no business id). */
+export function withStepLinks(tasks: ActionPlanTask[], businessId: string, locale: Locale = DEFAULT_LOCALE): ActionPlanTask[] {
+  return tasks.map((task) => (task.effort === "setup" ? task : { ...task, links: stepLinks(task.checkId, businessId, locale) }));
 }
 
 export interface WeeklyPlan {
@@ -1195,7 +1412,7 @@ function weeklyFixForTask(
   useHighOverlay: boolean = false
 ): ((input: BusinessScoringInput) => BusinessScoringInput) | null {
   if (task.effort === "quick_win_action") {
-    if (task.mergedCheckIds) return reviewAskFixIncluding(task.mergedCheckIds);
+    if (task.mergedCheckIds) return reviewAskFixIncluding([...task.mergedCheckIds, ...(task.fixAlsoCovers ?? [])]);
     const copy = ACTION_PLAN_COPY[task.checkId];
     return copy?.weeklyFix ?? null;
   }

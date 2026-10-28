@@ -1,3 +1,4 @@
+import { recentBucket } from "@/lib/gbpReviewReplies";
 // Server-only. Never import this from a "use client" component — the API
 // key must never reach the browser. Route handlers should call these
 // functions and pass the (normalized, key-free) result down to the client.
@@ -395,7 +396,9 @@ export function normalizeDetails(raw: RawDetailsPlace): PlaceDetails {
         : null,
     businessStatus: raw.businessStatus ?? null,
     googleMapsUri: raw.googleMapsUri ?? null,
-    photoCount: Array.isArray(raw.photos) ? raw.photos.length : null,
+    // Every mask that reaches here asks for `photos`, and Google leaves an
+    // empty field out of its answer — no `photos` is a listing with none.
+    photoCount: Array.isArray(raw.photos) ? raw.photos.length : 0,
     priceLevel: raw.priceLevel ?? null,
     accessibilityOptions: accessibilityFlags(raw.accessibilityOptions),
     pureServiceAreaBusiness: typeof raw.pureServiceAreaBusiness === "boolean" ? raw.pureServiceAreaBusiness : null,
@@ -413,6 +416,14 @@ export function normalizeDetails(raw: RawDetailsPlace): PlaceDetails {
 export function hasRecentReviewFrom(publishTimes: string[] | null | undefined, now: Date): boolean | null {
   if (!publishTimes) return null;
   return publishTimes.some((iso) => now.getTime() - Date.parse(iso) <= 90 * 86_400_000) ? true : null;
+}
+
+/** How many of the reviews Google returned (at most 5) are from the last
+ * 90 days, bucketed — a lower bound ("at least N"). null when Google
+ * returned no review dates at all. */
+export function recentReviewsSeenFrom(publishTimes: string[] | null | undefined, now: Date): 0 | 1 | 2 | 3 | null {
+  if (!publishTimes) return null;
+  return recentBucket(publishTimes.filter((iso) => now.getTime() - Date.parse(iso) <= 90 * 86_400_000).length);
 }
 
 /** Only real true/false flags; null when there are none. */

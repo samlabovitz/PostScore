@@ -35,7 +35,7 @@
 // getting the exact same English text this file used to hardcode.
 
 import { REVIEW_COUNT_FULL_CREDIT } from "@/lib/reviewTargets";
-import { customerDetailsPartsFor, type CustomerDetailPart } from "@/lib/customerDetails";
+import { customerDetailsRuleFor, type CustomerDetailPart, type CustomerDetailsRule } from "@/lib/customerDetails";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { isWebsiteBuilderId, type WebsiteBuilderDetection, type WebsiteBuilderId } from "@/lib/websiteBuilder";
 import { DEFAULT_LOCALE, formatShortDate, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
@@ -838,6 +838,10 @@ export interface BusinessScoringInput {
    * clock): true = one is ≤ 90 days old; null = couldn't confirm (Google
    * shows only a few) or not collected. 0 reviews is read from reviewCount. */
   hasRecentReview?: boolean | null;
+  /** v1.12.0 review recency: how many of the reviews Place Details
+   * returned (at most 5) are ≤ 90 days old, as a bucket 0/1/2/3 (3 = 3+) —
+   * a lower bound. null = not collected (falls back to hasRecentReview). */
+  recentReviewsSeen?: 0 | 1 | 2 | 3 | null;
   /** v1.12.0 "Customer details on your listing": whether the Google
    * listing has accessibility / payment / parking info at all (null = not
    * collected yet), and whether it's a service-area-only business. */
@@ -845,11 +849,15 @@ export interface BusinessScoringInput {
   /** The parts of customer details that apply to this kind of business
    * (lib/customerDetails.ts). Empty = the check is left out. */
   customerDetailsParts?: CustomerDetailPart[];
+  /** The full rule behind customerDetailsParts — why those parts count,
+   * and what the owner removed ("Added by you"). When set, its parts
+   * decide the points. */
+  customerDetailsRule?: CustomerDetailsRule | null;
   /** v1.12.0: the owner's connected Google Business Profile — the recent
    * window's reply counts and whether it has a review in the last 90 days
    * (lib/gbpReviewReplies.ts). null = not connected. Only ever the
    * business's OWN counts; competitors never have them. */
-  gbpReplies?: { reviewsInWindow: number; replied: number; hasRecentReview: boolean } | null;
+  gbpReplies?: { reviewsInWindow: number; replied: number; hasRecentReview: boolean; recentReviews?: 0 | 1 | 2 | 3 | null } | null;
 }
 
 /** A single check's result, always expressed on the same 0–100 point scale as the total. */
@@ -2875,6 +2883,9 @@ function reweighted(def: CheckDefinition, maxPoints: number): CheckDefinition {
   };
 }
 
+/** Recency points by how many reviews in the last 90 days: 3+ = 6, 2 = 4, 1 = 2. */
+const RECENCY_POINTS: Record<0 | 1 | 2 | 3, number> = { 0: 0, 1: 2, 2: 4, 3: 6 };
+
 const RECENCY_V112: CheckDefinition = {
   id: "visibility.review_recency",
   labelKey: "content.checks.visibility.review_recency.label",
@@ -2882,23 +2893,47 @@ const RECENCY_V112: CheckDefinition = {
   maxPoints: 6,
   adviceKey: "content.checks.visibility.review_recency.advice",
   evaluate(input, locale) {
-    // Google connected: its own answer, verified either way.
-    if (input.gbpReplies) {
-      return input.gbpReplies.hasRecentReview
-        ? { earnedPoints: 6, confidence: "VERIFIED", explanation: t(locale, "content.checks.visibility.review_recency.explanation.gbpRecent") }
-        : { earnedPoints: 0, confidence: "VERIFIED", explanation: t(locale, "content.checks.visibility.review_recency.explanation.gbpNone") };
+    const g = input.gbpReplies;
+    // Google connected: the exact count (bucketed), verified either way.
+    if (g && typeof g.recentReviews === "number") {
+      const n = g.recentReviews;
+      return {
+        earnedPoints: RECENCY_POINTS[n],
+        confidence: "VERIFIED",
+        explanation: t(locale, n === 0 ? "content.checks.visibility.review_recency.explanation.gbpNone" : (`content.checks.visibility.review_recency.explanation.gbpCount${n}` as MessageKey)),
+        meta: { recentReviews: String(n), source: "gbp" },
+      };
+    }
+    // Counts saved before the bucket existed: only "none" is exact.
+    if (g && !g.hasRecentReview) {
+      return { earnedPoints: 0, confidence: "VERIFIED", explanation: t(locale, "content.checks.visibility.review_recency.explanation.gbpNone"), meta: { recentReviews: "0", source: "gbp" } };
     }
     if (input.reviewCount === 0) {
       return { earnedPoints: 0, confidence: "VERIFIED", explanation: t(locale, "content.checks.visibility.review_recency.explanation.noReviews") };
     }
-    if (input.hasRecentReview === true) {
-      return { earnedPoints: 6, confidence: "VERIFIED", explanation: t(locale, "content.checks.visibility.review_recency.explanation.recentConfirmed") };
+    // Among the few reviews Google returns: a lower bound ("at least N").
+    // Saved before the bucket existed, a yes is "at least 1".
+    const seen = typeof input.recentReviewsSeen === "number" ? input.recentReviewsSeen : input.hasRecentReview === true ? 1 : 0;
+    if (seen > 0) {
+      const n = seen as 1 | 2 | 3;
+      const base = t(locale, `content.checks.visibility.review_recency.explanation.seen${n}` as MessageKey);
+      return {
+        earnedPoints: RECENCY_POINTS[n],
+        confidence: "VERIFIED",
+        explanation: g ? base : `${base} ${t(locale, "content.checks.visibility.review_recency.explanation.connectToCount")}`,
+        meta: { recentReviews: String(n), source: "places" },
+      };
     }
-    // Google shows only a few reviews, chosen by relevance — none recent
-    // among them proves nothing, so it's left out rather than scored 0.
+    // None recent among the few Google shows proves nothing (they're
+    // chosen by relevance), so it's left out rather than scored 0.
     return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.visibility.review_recency.explanation.couldntConfirm") };
   },
-  simulateFix: (input) => ({ ...input, hasRecentReview: true, gbpReplies: input.gbpReplies ? { ...input.gbpReplies, hasRecentReview: true } : input.gbpReplies }),
+  simulateFix: (input) => ({
+    ...input,
+    hasRecentReview: true,
+    recentReviewsSeen: 3,
+    gbpReplies: input.gbpReplies ? { ...input.gbpReplies, hasRecentReview: true, recentReviews: 3 } : input.gbpReplies,
+  }),
 };
 
 const REPLIES_V112: CheckDefinition = {
@@ -2921,31 +2956,76 @@ const REPLIES_V112: CheckDefinition = {
   simulateFix: (input) => (input.gbpReplies ? { ...input, gbpReplies: { ...input.gbpReplies, replied: input.gbpReplies.reviewsInWindow } } : input),
 };
 
+const CUSTOMER_DETAIL_ORDER: CustomerDetailPart[] = ["accessibility", "payment", "parking"];
+
+/** Which parts count and why: "All three count: …", or the parts counted
+ * plus why any were left out (no storefront, or the owner's answer). */
+export function customerDetailsReasonText(rule: CustomerDetailsRule, locale: Locale): string {
+  const label = (p: CustomerDetailPart) => t(locale, `content.checks.completeness.customer_details.partLabel.${p}` as MessageKey);
+  const removed = rule.serviceAreaNoParking || rule.ownerRemoved.length > 0;
+  const lines = [
+    removed
+      ? t(locale, "content.checks.completeness.customer_details.reason.counted", { parts: rule.parts.map(label).join(", ") })
+      : t(locale, `content.checks.completeness.customer_details.reason.${rule.reason}` as MessageKey),
+  ];
+  if (rule.serviceAreaNoParking) lines.push(t(locale, "content.checks.completeness.customer_details.reason.serviceArea"));
+  if (rule.ownerRemoved.includes("parking")) lines.push(t(locale, "content.checks.completeness.customer_details.reason.ownerNoParking"));
+  if (rule.ownerRemoved.includes("payment")) lines.push(t(locale, "content.checks.completeness.customer_details.reason.ownerNoPayment"));
+  return lines.join(" ");
+}
+
+/** "Google Business Profile → Edit profile → accessibility / payments /
+ * parking", naming only the parts that count for this business. */
+export function customerDetailsPath(parts: readonly string[], locale: Locale): string {
+  return CUSTOMER_DETAIL_ORDER.filter((p) => parts.includes(p))
+    .map((p) => t(locale, `content.checks.completeness.customer_details.path.${p}` as MessageKey))
+    .join(" / ");
+}
+
+function customerDetailsAdvice(check: Pick<CheckResult, "meta">, locale: Locale): string {
+  const parts = (check.meta?.parts ?? "accessibility,payment,parking").split(",").filter(Boolean);
+  const key = parts.length === 1 ? "content.checks.completeness.customer_details.adviceOne" : "content.checks.completeness.customer_details.advice";
+  return t(locale, key, { path: customerDetailsPath(parts, locale) });
+}
+
+/** The parts that count — the full rule's when there is one. */
+function customerDetailsParts(input: BusinessScoringInput): CustomerDetailPart[] {
+  return input.customerDetailsRule?.parts ?? input.customerDetailsParts ?? [];
+}
+
 const CUSTOMER_DETAILS_V112: CheckDefinition = {
   id: "completeness.customer_details",
   labelKey: "content.checks.completeness.customer_details.label",
   category: "completeness",
   maxPoints: 3,
   adviceKey: "content.checks.completeness.customer_details.advice",
-  appliesTo: (input) => (input.customerDetailsParts ?? []).length > 0,
+  appliesTo: (input) => customerDetailsParts(input).length > 0,
   evaluate(input, locale) {
-    const parts = input.customerDetailsParts ?? [];
+    const parts = CUSTOMER_DETAIL_ORDER.filter((p) => customerDetailsParts(input).includes(p));
     if (parts.length === 0) return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.completeness.customer_details.explanation.notApplicable") };
+    const rule = input.customerDetailsRule ?? null;
+    const reason = rule ? customerDetailsReasonText(rule, locale) : null;
+    // For the check row: the parts that count, what the owner removed, and
+    // what they may remove (payment / parking).
+    const meta: Record<string, string> = {
+      parts: parts.join(","),
+      ownerRemoved: (rule?.ownerRemoved ?? []).join(","),
+      ownerCanRemove: (rule?.ownerCanRemove ?? []).join(","),
+    };
     const d = input.listingDetails;
     if (!d || parts.every((p) => d[p] === null)) {
-      return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.completeness.customer_details.explanation.notCheckedYet") };
+      return { earnedPoints: null, confidence: "NOT_FOUND", explanation: [t(locale, "content.checks.completeness.customer_details.explanation.notCheckedYet"), reason].filter(Boolean).join(" "), meta };
     }
     const present = parts.filter((p) => d[p] === true);
     const missing = parts.filter((p) => d[p] !== true);
-    const names = (list: CustomerDetailPart[]) => list.map((p) => t(locale, `content.checks.completeness.customer_details.part.${p}` as MessageKey)).join(", ");
+    // "Accessibility ✓ · Payment options ✗ · Parking ✗."
+    const line = parts.map((p) => `${t(locale, `content.checks.completeness.customer_details.partLabel.${p}` as MessageKey)} ${d[p] === true ? "✓" : "✗"}`).join(" · ");
     return {
       // Only the parts that apply count — always out of 3.
       earnedPoints: roundTo((present.length / parts.length) * 3, 1),
       confidence: "VERIFIED",
-      explanation:
-        missing.length === 0
-          ? t(locale, "content.checks.completeness.customer_details.explanation.complete", { parts: names(parts) })
-          : t(locale, "content.checks.completeness.customer_details.explanation.missing", { missing: names(missing) }),
+      explanation: [`${line}.`, reason].filter(Boolean).join(" "),
+      meta: { ...meta, present: present.join(",") },
       gaps: missing,
     };
   },
@@ -3236,6 +3316,7 @@ export function isMinorSpeedGap(check: Pick<CheckResult, "id" | "earnedPoints" |
 /** The advice for exactly what's missing: one line per gap when the
  * check reports gaps (and has advice for them), else the check's own. */
 function adviceFor(def: CheckDefinition, check: CheckResult, locale: Locale): string {
+  if (check.id === "completeness.customer_details") return customerDetailsAdvice(check, locale);
   const perGap = (check.gaps ?? []).map((g) => def.gapAdviceKeys?.[g]).filter((k): k is MessageKey => !!k);
   if (perGap.length > 0) return perGap.map((k) => t(locale, k)).join(" ");
   return t(locale, def.partialAdviceKey && (check.earnedPoints ?? 0) > 0 ? def.partialAdviceKey : def.adviceKey);
@@ -3334,6 +3415,10 @@ export interface BusinessScoringRow {
   verified_website_url?: string | null;
   /** v1.12.0 (supabase/scoring-v1-12.sql) — optional until it's run. */
   has_recent_review?: boolean | null;
+  recent_reviews_seen?: number | null;
+  gbp_recent_reviews?: number | null;
+  owner_no_parking?: boolean | null;
+  owner_no_payment?: boolean | null;
   listing_has_accessibility?: boolean | null;
   listing_has_payment?: boolean | null;
   listing_has_parking?: boolean | null;
@@ -3789,12 +3874,19 @@ function parseWebsiteTrustOverrides(value: unknown): WebsiteTrustOverride[] | nu
 
 /** The v1.12.0 businesses columns businessRowToScoringInput reads
  * (supabase/scoring-v1-12.sql). Every select that feeds it must include
- * these, or recency, replies and customer details read as "not checked". */
+ * these, or recency, replies and customer details read as "not checked"
+ * (supabase/scoring-v1-12-recency-details.sql adds the recent-review
+ * buckets and the owner's customer-details answers). */
 export const V112_SCORING_COLUMNS =
-  "has_recent_review, listing_has_accessibility, listing_has_payment, listing_has_parking, pure_service_area_business, gbp_reviews_in_window, gbp_replied, gbp_has_recent_review";
+  "has_recent_review, recent_reviews_seen, listing_has_accessibility, listing_has_payment, listing_has_parking, pure_service_area_business, owner_no_parking, owner_no_payment, gbp_reviews_in_window, gbp_replied, gbp_has_recent_review, gbp_recent_reviews";
 
 /** Maps a saved business row to scoring input. Pure. */
 export function businessRowToScoringInput(row: BusinessScoringRow): BusinessScoringInput {
+  const rule = customerDetailsRuleFor(
+    resolveBizProfile(row.category, row.primary_type ?? null, row.business_type_override ?? null, DEFAULT_LOCALE, row.categories, row.name ?? null).id,
+    row.pure_service_area_business ?? null,
+    { noParking: row.owner_no_parking === true, noPayment: row.owner_no_payment === true }
+  );
   return {
     rating: row.rating,
     reviewCount: row.review_count,
@@ -3814,19 +3906,28 @@ export function businessRowToScoringInput(row: BusinessScoringRow): BusinessScor
     verifiedElsewhereUrl: typeof row.verified_website_url === "string" ? row.verified_website_url : null,
     timeZone: row.time_zone ?? null,
     hasRecentReview: typeof row.has_recent_review === "boolean" ? row.has_recent_review : null,
+    recentReviewsSeen: typeof row.recent_reviews_seen === "number" ? bucket(row.recent_reviews_seen) : null,
     listingDetails: {
       accessibility: row.listing_has_accessibility ?? null,
       payment: row.listing_has_payment ?? null,
       parking: row.listing_has_parking ?? null,
       pureServiceArea: row.pure_service_area_business ?? null,
     },
-    customerDetailsParts: customerDetailsPartsFor(
-      resolveBizProfile(row.category, row.primary_type ?? null, row.business_type_override ?? null, DEFAULT_LOCALE, row.categories, row.name ?? null).id,
-      row.pure_service_area_business ?? null
-    ),
+    customerDetailsParts: rule.parts,
+    customerDetailsRule: rule,
     gbpReplies:
       typeof row.gbp_reviews_in_window === "number" && typeof row.gbp_replied === "number"
-        ? { reviewsInWindow: row.gbp_reviews_in_window, replied: row.gbp_replied, hasRecentReview: row.gbp_has_recent_review === true }
+        ? {
+            reviewsInWindow: row.gbp_reviews_in_window,
+            replied: row.gbp_replied,
+            hasRecentReview: row.gbp_has_recent_review === true,
+            recentReviews: typeof row.gbp_recent_reviews === "number" ? bucket(row.gbp_recent_reviews) : null,
+          }
         : null,
   };
+}
+
+/** A stored recent-review bucket, clamped to 0–3. */
+function bucket(n: number): 0 | 1 | 2 | 3 {
+  return n >= 3 ? 3 : n <= 0 ? 0 : (Math.floor(n) as 1 | 2);
 }

@@ -9,8 +9,9 @@ import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/S
 import { TaskListCard, GrowthMoveCard, CompletedTasksCard, ReviewGoalLinesContext, type WebsiteRecheckProps } from "../ActionPlanSection";
 import { WeeklyChecklist } from "./WeeklyChecklist";
 import { WeeklyGoalCelebration } from "./WeeklyGoalCelebration";
+import { WeeklyPlanCelebration } from "./WeeklyPlanCelebration";
 import { FreeGrowthMoves, FreeGrowthPlan } from "./FreeGrowthPlan";
-import type { ActionPlanTask, CompletedTask, WebsiteBanner } from "@/lib/actionPlan";
+import { CONNECT_GOOGLE_STEP_ID, type ActionPlanTask, type CompletedTask, type WebsiteBanner } from "@/lib/actionPlan";
 import { websiteRangeText, wholePointRange } from "@/lib/pointRange";
 import type { GrowthMove } from "@/lib/growthMoves";
 import { isPremiumPlan, type Plan } from "@/lib/plan";
@@ -352,6 +353,15 @@ export function GrowthView({
               </>
             ) : (
               <>
+                <WeeklyPlanCelebration
+                  businessId={businessId}
+                  weekStart={weeklyChecklist.weekStart}
+                  today={breakdown.total}
+                  weeklyTasks={actionPlan.weeklyTasks}
+                  completed={actionPlan.completed}
+                  gbpConnected={gbpConnected}
+                  lastScanAt={lastScanAt}
+                />
                 <WeeklyGoalCelebration
                   businessId={businessId}
                   weekStart={weeklyChecklist.weekStart}
@@ -396,8 +406,12 @@ export function GrowthView({
                         })}
                       />
                     </div>
-                    {!gbpConnected && <PremiumConnectCard businessId={businessId} premium={isPremiumPlan(plan)} />}
+                    {/* The "Connect Google" step replaces this card when it's in the plan. */}
+                    {!gbpConnected && !actionPlan.weeklyTasks.some((task) => task.checkId === CONNECT_GOOGLE_STEP_ID) && (
+                      <PremiumConnectCard businessId={businessId} premium={isPremiumPlan(plan)} />
+                    )}
                     <TaskListCard
+                      premium={isPremiumPlan(plan)}
                       tasks={actionPlan.weeklyTasks}
                       businessId={businessId}
                       context="weekly"

@@ -289,7 +289,7 @@ describe("buildWeeklyPlan", () => {
 });
 
 describe("mergeReviewTasks", () => {
-  test("combines rating, review_count, and review_recency into one card when all three are open gaps", () => {
+  test("combines review count, star rating and recency into ONE \"Get fresh reviews\" card", () => {
     // v1.12.0: recency is a confirmed gap only when connected Google says
     // there's no recent review.
     const { tasks } = plan({ ...ROUGH_INPUT, gbpReplies: { reviewsInWindow: 0, replied: 0, hasRecentReview: false } });
@@ -304,10 +304,9 @@ describe("mergeReviewTasks", () => {
     const merged = mergeReviewTasks(tasks, breakdown, ROUGH_INPUT);
     const mergedCard = merged.find((t) => t.checkId === MERGED_REVIEW_CHECK_ID);
     expect(mergedCard).toBeDefined();
-    expect(mergedCard!.mergedCheckIds?.sort()).toEqual(
-      ["visibility.rating", "visibility.review_count", "visibility.review_recency"].sort()
-    );
-    expect(mergedCard!.mergedLabels).toHaveLength(3);
+    expect(mergedCard!.mergedCheckIds).toEqual(["visibility.review_count", "visibility.rating", "visibility.review_recency"]);
+    expect(mergedCard!.mergedLabels).toEqual(["Review count", "Star rating", "Review recency"]);
+    expect(mergedCard!.title).toBe("Get fresh reviews");
 
     // Exactly one merged card replaces all three individual review
     // tasks — no leftover individual visibility.* task remains (the
@@ -496,11 +495,12 @@ describe("buildWeeklyPlan: real weighted points, and cards that sum to the proje
 
     const touchedCheckIds = new Set<string>();
     for (const task of weekly.weeklyTasks) {
-      for (const id of task.mergedCheckIds ?? [task.checkId]) touchedCheckIds.add(id);
+      for (const id of [...(task.mergedCheckIds ?? [task.checkId]), ...(task.fixAlsoCovers ?? [])]) touchedCheckIds.add(id);
     }
-    // review_recency must never be silently touched by a fix for a
-    // card that doesn't actually include it.
-    expect(touchedCheckIds.has("visibility.review_recency")).toBe(false);
+    // v1.12.0: recency that can't be confirmed moves only with the
+    // reviews card that names it in "Helps with" — never silently.
+    const reviewsCard = weekly.weeklyTasks.find((t) => t.checkId === MERGED_REVIEW_CHECK_ID);
+    if (touchedCheckIds.has("visibility.review_recency")) expect(reviewsCard?.mergedLabels).toContain("Review recency");
 
     for (const check of breakdown.checks) {
       if (touchedCheckIds.has(check.id)) continue;

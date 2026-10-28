@@ -108,7 +108,7 @@ describe("only counts are kept", () => {
   test("the result has only counts — no text, names, ratings or review dates", () => {
     const reviews = [review(1, "Thanks Maria, see you soon!"), { ...review(2), starRating: "FIVE", comment: "Loved it" } as GbpReview];
     const counts = computeReplyCounts(reviews, NOW);
-    expect(Object.keys(counts).sort()).toEqual(["allTimeCapped", "allTimeReplied", "allTimeReviews", "checkedAt", "hasRecentReview", "replied", "reviewsInWindow", "templatedShare"]);
+    expect(Object.keys(counts).sort()).toEqual(["allTimeCapped", "allTimeReplied", "allTimeReviews", "checkedAt", "hasRecentReview", "recentReviews", "replied", "reviewsInWindow", "templatedShare"]);
     const json = JSON.stringify(counts);
     for (const leaked of ["Maria", "Loved", "FIVE", "Thanks", ago(1), ago(2)]) expect(json).not.toContain(leaked);
     expect(counts.checkedAt).toBe(new Date(NOW).toISOString());
@@ -122,6 +122,7 @@ describe("only counts are kept", () => {
       replied: 9,
       templatedShare: 0.25,
       hasRecentReview: true,
+      recentReviews: null,
       allTimeReviews: 600,
       allTimeReplied: 400,
       allTimeCapped: true,

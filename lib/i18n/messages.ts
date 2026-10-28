@@ -1006,6 +1006,13 @@ export type MessageKey =
   | "content.checks.visibility.review_recency.explanation.noReviews"
   | "content.checks.visibility.review_recency.explanation.recentConfirmed"
   | "content.checks.visibility.review_recency.explanation.couldntConfirm"
+  | "content.checks.visibility.review_recency.explanation.gbpCount1"
+  | "content.checks.visibility.review_recency.explanation.gbpCount2"
+  | "content.checks.visibility.review_recency.explanation.gbpCount3"
+  | "content.checks.visibility.review_recency.explanation.seen1"
+  | "content.checks.visibility.review_recency.explanation.seen2"
+  | "content.checks.visibility.review_recency.explanation.seen3"
+  | "content.checks.visibility.review_recency.explanation.connectToCount"
   | "content.checks.visibility.review_replies.label"
   | "content.checks.visibility.review_replies.advice"
   | "content.checks.visibility.review_replies.explanation.notConnected"
@@ -1017,6 +1024,29 @@ export type MessageKey =
   | "content.checks.completeness.customer_details.explanation.notCheckedYet"
   | "content.checks.completeness.customer_details.explanation.complete"
   | "content.checks.completeness.customer_details.explanation.missing"
+  | "content.checks.completeness.customer_details.partLabel.accessibility"
+  | "content.checks.completeness.customer_details.partLabel.payment"
+  | "content.checks.completeness.customer_details.partLabel.parking"
+  | "content.checks.completeness.customer_details.reason.visit_and_pay"
+  | "content.checks.completeness.customer_details.reason.office"
+  | "content.checks.completeness.customer_details.reason.no_payment"
+  | "content.checks.completeness.customer_details.reason.counted"
+  | "content.checks.completeness.customer_details.reason.serviceArea"
+  | "content.checks.completeness.customer_details.reason.ownerNoParking"
+  | "content.checks.completeness.customer_details.reason.ownerNoPayment"
+  | "content.checks.completeness.customer_details.parkingNote"
+  | "content.checks.completeness.customer_details.owner.heading"
+  | "content.checks.completeness.customer_details.owner.noParking"
+  | "content.checks.completeness.customer_details.owner.noPayment"
+  | "content.checks.completeness.customer_details.owner.saving"
+  | "content.checks.completeness.customer_details.owner.error"
+  | "content.checks.completeness.customer_details.link.gbp"
+  | "content.checks.completeness.customer_details.link.help"
+  | "content.checks.completeness.customer_details.adviceOne"
+  | "content.checks.completeness.customer_details.path.accessibility"
+  | "content.checks.completeness.customer_details.path.payment"
+  | "content.checks.completeness.customer_details.path.parking"
+  | "content.checks.completeness.customer_details.paymentNote"
   | "content.checks.completeness.customer_details.part.accessibility"
   | "content.checks.completeness.customer_details.part.payment"
   | "content.checks.completeness.customer_details.part.parking"
@@ -1317,6 +1347,58 @@ export type MessageKey =
   | "content.actionPlan.visibility.review_count.action"
   | "content.actionPlan.visibility.review_count.fix"
   | "content.actionPlan.visibility.review_count.weeklyAction"
+  | "content.actionPlan.visibility.review_replies.why"
+  | "content.actionPlan.visibility.review_replies.action"
+  | "content.actionPlan.visibility.review_replies.fix"
+  | "content.actionPlan.completeness.customer_details.why"
+  | "content.actionPlan.completeness.customer_details.action"
+  | "content.actionPlan.completeness.customer_details.fix"
+  | "content.actionPlan.connectGoogle.title"
+  | "content.actionPlan.connectGoogle.why"
+  | "content.actionPlan.connectGoogle.fix"
+  | "content.actionPlan.connectGoogle.link"
+  | "content.actionPlan.step.hours"
+  | "content.actionPlan.step.howToFix"
+  | "content.actionPlan.link.editProfileHelp"
+  | "content.actionPlan.link.photosHelp"
+  | "content.actionPlan.link.categoryHelp"
+  | "content.actionPlan.link.getReviewsHelp"
+  | "content.actionPlan.link.pageSpeed"
+  | "content.actionPlan.link.safeBrowsing"
+  | "content.actionPlan.link.httpsWhy"
+  | "content.actionPlan.link.gbp"
+  | "content.actionPlan.mergedReviews.label"
+  | "content.actionPlan.title.visibility.rating"
+  | "content.actionPlan.title.visibility.review_count"
+  | "content.actionPlan.title.visibility.review_recency"
+  | "content.actionPlan.title.visibility.review_replies"
+  | "content.actionPlan.title.completeness.phone"
+  | "content.actionPlan.title.completeness.address"
+  | "content.actionPlan.title.completeness.hours"
+  | "content.actionPlan.title.completeness.website_link"
+  | "content.actionPlan.title.completeness.categories"
+  | "content.actionPlan.title.completeness.photos"
+  | "content.actionPlan.title.completeness.business_status"
+  | "content.actionPlan.title.completeness.customer_details"
+  | "content.actionPlan.title.website.has_website"
+  | "content.actionPlan.title.website.https"
+  | "content.actionPlan.title.website.performance_mobile"
+  | "content.actionPlan.title.website.content_depth"
+  | "content.actionPlan.title.website.contact_conversion"
+  | "content.actionPlan.title.website.about_presence"
+  | "content.actionPlan.title.website.services_presence"
+  | "content.actionPlan.title.website.social_links"
+  | "content.actionPlan.title.website.security"
+  | "content.actionPlan.title.website.info_consistency"
+  | "content.actionPlan.title.website.notice_freshness"
+  | "content.actionPlan.title.website.site_freshness"
+  | "content.actionPlan.step.minutes"
+  | "content.actionPlan.step.comingSoon"
+  | "content.actionPlan.step.linksLabel"
+  | "content.actionPlan.link.replyDrafter"
+  | "content.actionPlan.link.googleReviews"
+  | "content.actionPlan.link.googleReviewsHelp"
+  | "content.actionPlan.link.reviewLink"
   | "content.actionPlan.visibility.review_recency.why"
   | "content.actionPlan.visibility.review_recency.action"
   | "content.actionPlan.visibility.review_recency.fix"
@@ -1876,6 +1958,8 @@ export type MessageKey =
   | "dashboard.overview.actionPlan.howLabel"
   | "dashboard.overview.actionPlan.ownerActionOnGoogle"
   | "dashboard.overview.actionPlan.saving"
+  | "dashboard.overview.actionPlan.checkAgain"
+  | "dashboard.overview.actionPlan.checkAgainNote"
   | "dashboard.overview.actionPlan.didThisAgain"
   | "dashboard.overview.actionPlan.didThis"
   | "dashboard.overview.actionPlan.pointsThisWeek"
@@ -3616,6 +3700,9 @@ export type MessageKey =
   | "dashboard.print.popupBlocked"
   | "dashboard.print.preparing"
   | "dashboard.growth.checklist.complete"
+  | "dashboard.growth.planDoneUp"
+  | "dashboard.growth.planDoneUpOne"
+  | "dashboard.growth.planDone"
   | "dashboard.growth.goalHit"
   | "dashboard.studio.customize"
   | "dashboard.studio.lockedTab"
@@ -5236,22 +5323,52 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.visibility.review_recency.explanation.noReviews": "No reviews on Google yet.",
     "content.checks.visibility.review_recency.explanation.recentConfirmed": "A review Google shows is from the last 90 days.",
     "content.checks.visibility.review_recency.explanation.couldntConfirm": "Couldn't confirm a review from the last 90 days — Google shows only a few reviews, so this isn't scored.",
+    "content.checks.visibility.review_recency.explanation.gbpCount1": "1 review in the last 90 days on your Google Business Profile — 3 or more earns full points.",
+    "content.checks.visibility.review_recency.explanation.gbpCount2": "2 reviews in the last 90 days on your Google Business Profile — 3 or more earns full points.",
+    "content.checks.visibility.review_recency.explanation.gbpCount3": "3 or more reviews in the last 90 days on your Google Business Profile.",
+    "content.checks.visibility.review_recency.explanation.seen1": "At least 1 recent review (last 90 days) among the few Google shows — 3 or more earns full points.",
+    "content.checks.visibility.review_recency.explanation.seen2": "At least 2 recent reviews (last 90 days) among the few Google shows — 3 or more earns full points.",
+    "content.checks.visibility.review_recency.explanation.seen3": "At least 3 recent reviews (last 90 days) among the few Google shows.",
+    "content.checks.visibility.review_recency.explanation.connectToCount": "Connect Google to count all your recent reviews.",
     "content.checks.visibility.review_replies.label": "Replying to reviews",
     "content.checks.visibility.review_replies.advice": "Reply to your recent reviews — a short, personal thank-you. Customers read the replies before they choose.",
     "content.checks.visibility.review_replies.explanation.notConnected": "Connect Google to check this.",
     "content.checks.visibility.review_replies.explanation.tooFew": "Not enough recent reviews to check yet.",
     "content.checks.visibility.review_replies.explanation.counts": "You replied to {replied} of your last {count} reviews (full credit at 80%).",
     "content.checks.completeness.customer_details.label": "Customer details on your listing",
-    "content.checks.completeness.customer_details.advice": "Add them on Google: Google Business Profile → Edit profile → accessibility / payments / parking.",
+    "content.checks.completeness.customer_details.advice": "Add them on Google: Google Business Profile → Edit profile → {path}.",
     "content.checks.completeness.customer_details.explanation.notApplicable": "Not applicable to this kind of business.",
     "content.checks.completeness.customer_details.explanation.notCheckedYet": "Not checked yet — the next scan reads it from your Google listing.",
     "content.checks.completeness.customer_details.explanation.complete": "Your listing shows {parts}.",
     "content.checks.completeness.customer_details.explanation.missing": "Your listing doesn't show {missing} yet.",
+    "content.checks.completeness.customer_details.partLabel.accessibility": "Accessibility",
+    "content.checks.completeness.customer_details.partLabel.payment": "Payment options",
+    "content.checks.completeness.customer_details.partLabel.parking": "Parking",
+    "content.checks.completeness.customer_details.reason.visit_and_pay": "All three count: customers visit and pay at a business like yours.",
+    "content.checks.completeness.customer_details.reason.office": "Only accessibility counts for an office like yours — payment and parking aren't scored.",
+    "content.checks.completeness.customer_details.reason.no_payment": "Accessibility and parking count — nothing is bought at a place like yours, so payment isn't scored.",
+    "content.checks.completeness.customer_details.reason.counted": "Counted for your business: {parts}.",
+    "content.checks.completeness.customer_details.reason.serviceArea": "Parking isn't scored — you serve customers at their location.",
+    "content.checks.completeness.customer_details.reason.ownerNoParking": "Parking isn't scored — you told us there's no parking (Added by you).",
+    "content.checks.completeness.customer_details.reason.ownerNoPayment": "Payment options aren't scored — you told us you take no payments on site (Added by you).",
+    "content.checks.completeness.customer_details.parkingNote": "Parking: street parking, or a free or paid lot nearby, all count — only add what's true.",
+    "content.checks.completeness.customer_details.owner.heading": "Not true for your business?",
+    "content.checks.completeness.customer_details.owner.noParking": "No parking available — not even on the street or a lot nearby",
+    "content.checks.completeness.customer_details.owner.noPayment": "We take no payments on site",
+    "content.checks.completeness.customer_details.owner.saving": "Saving…",
+    "content.checks.completeness.customer_details.owner.error": "Couldn't save — please try again.",
+    "content.checks.completeness.customer_details.link.gbp": "Open Google Business Profile",
+    "content.checks.completeness.customer_details.link.help": "Google's help: business attributes",
+    "content.checks.completeness.customer_details.adviceOne": "Add it on Google: Google Business Profile → Edit profile → {path}.",
+    "content.checks.completeness.customer_details.path.accessibility": "accessibility",
+    "content.checks.completeness.customer_details.path.payment": "payments",
+    "content.checks.completeness.customer_details.path.parking": "parking",
+    "content.checks.completeness.customer_details.paymentNote": "Payments: list only the ways customers can really pay (cards, cash, mobile pay).",
     "content.checks.completeness.customer_details.part.accessibility": "accessibility",
     "content.checks.completeness.customer_details.part.payment": "payment options",
     "content.checks.completeness.customer_details.part.parking": "parking",
     "content.checks.visibility.review_recency.advice":
-      "Keep reviews coming in regularly — recent activity signals to customers (and Google) that the business is active.",
+      "Get fresh reviews this month: send your review link to a few recent customers. 3 or more reviews in the last 90 days earns full points.",
     "content.checks.visibility.review_recency.explanation.notCollected":
       "Review timestamps aren't collected by the current Google Places integration yet, so this check is excluded rather than scored as a failure.",
     "content.checks.visibility.review_recency.explanation.recent": "Most recent review was {days} day(s) ago.",
@@ -5297,7 +5414,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.completeness.photos.explanation.has.other": "{count} photos on the listing.",
     "content.checks.completeness.photos.explanation.hasAtCap": "{cap} or more photos on the listing.",
     "content.orMoreCount": "{count} or more",
-    "content.checks.completeness.photos.explanation.none": "No photos on the listing.",
+    "content.checks.completeness.photos.explanation.none": "No photos on your listing.",
 
     "content.checks.completeness.business_status.label": "Operational status",
     "content.checks.completeness.business_status.advice":
@@ -5656,13 +5773,65 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Go to the Reviews page → \"Get more reviews\" section: copy your review link into receipts, follow-up texts, or emails, or print the front-desk QR code for checkout.",
     "content.actionPlan.visibility.review_count.weeklyAction":
       "Ask 3-5 recent customers for a Google review this week — every real review adds up toward a stronger review base.",
+    "content.actionPlan.visibility.review_replies.why": "Customers read how you answer — a short, personal reply to each recent review shows you care.",
+    "content.actionPlan.visibility.review_replies.action": "Reply to your recent reviews",
+    "content.actionPlan.visibility.review_replies.fix": "Open your reviews on Google (or draft replies in PostScore's reply drafter), then post a short, personal thank-you to each recent review that has no reply. Full points at 80% of your recent reviews.",
+    "content.actionPlan.completeness.customer_details.why": "Customers check accessibility, how they can pay and where to park before they visit.",
+    "content.actionPlan.completeness.customer_details.action": "Add your customer details",
+    "content.actionPlan.completeness.customer_details.fix": "On Google: Google Business Profile → Edit profile → {path}. Add only what's true.",
+    "content.actionPlan.connectGoogle.title": "Connect Google",
+    "content.actionPlan.connectGoogle.why": "Unlocks your reply rate (\"Replying to reviews\") and an exact count of your recent reviews — Google otherwise shows PostScore only a few.",
+    "content.actionPlan.connectGoogle.fix": "Sign in with the Google account that manages your Business Profile. PostScore only reads review counts — it never posts or changes anything.",
+    "content.actionPlan.connectGoogle.link": "Connect Google",
+    "content.actionPlan.step.hours": "About {hours} hr",
+    "content.actionPlan.step.howToFix": "How to fix it",
+    "content.actionPlan.link.editProfileHelp": "Google's help: edit your Business Profile",
+    "content.actionPlan.link.photosHelp": "Google's help: add photos",
+    "content.actionPlan.link.categoryHelp": "Google's help: business categories",
+    "content.actionPlan.link.getReviewsHelp": "Google's help: get more reviews",
+    "content.actionPlan.link.pageSpeed": "Test it on Google PageSpeed Insights",
+    "content.actionPlan.link.safeBrowsing": "Google Safe Browsing site status",
+    "content.actionPlan.link.httpsWhy": "Google web.dev: why HTTPS matters (English)",
+    "content.actionPlan.link.gbp": "Open Google Business Profile",
+    "content.actionPlan.mergedReviews.label": "Reviews",
+    "content.actionPlan.title.visibility.rating": "Raise your star rating",
+    "content.actionPlan.title.visibility.review_count": "Get more reviews",
+    "content.actionPlan.title.visibility.review_recency": "Get fresh reviews this month",
+    "content.actionPlan.title.visibility.review_replies": "Reply to your recent reviews",
+    "content.actionPlan.title.completeness.phone": "Add your phone number",
+    "content.actionPlan.title.completeness.address": "Add your address",
+    "content.actionPlan.title.completeness.hours": "Add your business hours",
+    "content.actionPlan.title.completeness.website_link": "Link your website on Google",
+    "content.actionPlan.title.completeness.categories": "Add more categories",
+    "content.actionPlan.title.completeness.photos": "Add photos",
+    "content.actionPlan.title.completeness.business_status": "Fix your listing's status",
+    "content.actionPlan.title.completeness.customer_details": "Add your customer details",
+    "content.actionPlan.title.website.has_website": "Get a website",
+    "content.actionPlan.title.website.https": "Turn on HTTPS",
+    "content.actionPlan.title.website.performance_mobile": "Speed up your site on phones",
+    "content.actionPlan.title.website.content_depth": "Fill in your homepage basics",
+    "content.actionPlan.title.website.contact_conversion": "Make it easy to contact you",
+    "content.actionPlan.title.website.about_presence": "Add an About section",
+    "content.actionPlan.title.website.services_presence": "List your services",
+    "content.actionPlan.title.website.social_links": "Link your social profiles",
+    "content.actionPlan.title.website.security": "Fix your site's security",
+    "content.actionPlan.title.website.info_consistency": "Match your website to Google",
+    "content.actionPlan.title.website.notice_freshness": "Update old notices",
+    "content.actionPlan.title.website.site_freshness": "Refresh your website",
+    "content.actionPlan.step.minutes": "About {minutes} min",
+    "content.actionPlan.step.comingSoon": "Coming soon: PostScore can do this for you",
+    "content.actionPlan.step.linksLabel": "Links:",
+    "content.actionPlan.link.replyDrafter": "Draft replies in PostScore",
+    "content.actionPlan.link.googleReviews": "Your reviews on Google",
+    "content.actionPlan.link.googleReviewsHelp": "Google's help: manage reviews",
+    "content.actionPlan.link.reviewLink": "Your review link & QR code",
     "content.actionPlan.visibility.review_recency.why":
-      "A steady stream of recent reviews signals an active, currently-trustworthy business — a rating built entirely on old reviews looks stale to customers and to Google.",
+      "Customers trust reviews from the last few months most. 3 or more in the last 90 days earns full points.",
     "content.actionPlan.visibility.review_recency.action":
-      "Keep asking for reviews on an ongoing basis, not in one push.",
+      "Get fresh reviews this month",
     "content.actionPlan.visibility.review_recency.fix":
-      "Go to the Reviews page → \"Get more reviews\" section and keep sharing your review link or QR code on an ongoing basis — a recurring reminder (weekly, or after every N customers) keeps new reviews coming in instead of stopping after one round.",
-    "content.actionPlan.mergedReviews.title": "Get a few fresh reviews this week",
+      "Send your PostScore review link or QR code to 3–5 recent happy customers — by text, by email, or at the counter. Ask only real customers, and never offer anything in return.",
+    "content.actionPlan.mergedReviews.title": "Get fresh reviews",
     "content.actionPlan.mergedReviews.why":
       "Your star rating, review count, and how recent your reviews are all move from the exact same action — a few fresh reviews this week helps all three at once.",
     "content.actionPlan.mergedReviews.action":
@@ -6319,7 +6488,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.actionPlan.notQuiteYet": "Not quite yet",
     "dashboard.overview.actionPlan.inProgress": "In progress",
     "dashboard.overview.actionPlan.checkedWorse": "Checked — worse",
-    "dashboard.overview.actionPlan.checkedNoChange": "Checked — no change",
+    "dashboard.overview.actionPlan.checkedNoChange": "Checked — no change yet",
     "dashboard.overview.actionPlan.checkedWithDate": "Checked {date}.",
     "dashboard.overview.actionPlan.checkedNoDate": "Checked.",
     "dashboard.overview.actionPlan.willCheckNextRescan": "We'll check this on your next re-scan.",
@@ -6349,6 +6518,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.actionPlan.ownerActionOnGoogle":
       "This is a change you make yourself, on Google — PostScore can tell you exactly what to do, but we can't edit your listing for you.",
     "dashboard.overview.actionPlan.saving": "Saving...",
+    "dashboard.overview.actionPlan.checkAgain": "Check again",
+    "dashboard.overview.actionPlan.checkAgainNote": "Changes on Google can take a few days — we'll also re-check on your next scan.",
     "dashboard.overview.actionPlan.didThisAgain": "I did this again",
     "dashboard.overview.actionPlan.didThis": "I did this",
     "dashboard.overview.actionPlan.pointsThisWeek": "About +{points} pts this week",
@@ -8267,6 +8438,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.print.popupBlocked": "Your browser blocked the new tab. Allow pop-ups for this site, or use Download PDF and print it.",
     "dashboard.print.preparing": "Preparing your PDF…",
     "dashboard.growth.checklist.complete": "Weekly routine complete 🎉 · resets Monday",
+    "dashboard.growth.planDoneUp": "This week's plan is done! Your score is up {diff} points.",
+    "dashboard.growth.planDoneUpOne": "This week's plan is done! Your score is up 1 point.",
+    "dashboard.growth.planDone": "This week's plan is done — great work.",
     "dashboard.growth.goalHit": "You hit this week's goal: {start} → {now} (+{diff})",
     "dashboard.studio.customize": "Customize design",
     "dashboard.studio.lockedTab": "Try these with a watermarked preview — printing them needs Premium.",
@@ -9805,21 +9979,51 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.visibility.review_recency.explanation.noReviews": "Aún no tiene reseñas en Google.",
     "content.checks.visibility.review_recency.explanation.recentConfirmed": "Una reseña que muestra Google es de los últimos 90 días.",
     "content.checks.visibility.review_recency.explanation.couldntConfirm": "No se pudo confirmar una reseña de los últimos 90 días — Google muestra solo unas pocas, así que esto no se califica.",
+    "content.checks.visibility.review_recency.explanation.gbpCount1": "1 reseña en los últimos 90 días en su Perfil de Negocio de Google — 3 o más obtienen los puntos completos.",
+    "content.checks.visibility.review_recency.explanation.gbpCount2": "2 reseñas en los últimos 90 días en su Perfil de Negocio de Google — 3 o más obtienen los puntos completos.",
+    "content.checks.visibility.review_recency.explanation.gbpCount3": "3 o más reseñas en los últimos 90 días en su Perfil de Negocio de Google.",
+    "content.checks.visibility.review_recency.explanation.seen1": "Al menos 1 reseña reciente (últimos 90 días) entre las pocas que muestra Google — 3 o más obtienen los puntos completos.",
+    "content.checks.visibility.review_recency.explanation.seen2": "Al menos 2 reseñas recientes (últimos 90 días) entre las pocas que muestra Google — 3 o más obtienen los puntos completos.",
+    "content.checks.visibility.review_recency.explanation.seen3": "Al menos 3 reseñas recientes (últimos 90 días) entre las pocas que muestra Google.",
+    "content.checks.visibility.review_recency.explanation.connectToCount": "Conecte Google para contar todas sus reseñas recientes.",
     "content.checks.visibility.review_replies.label": "Respuestas a reseñas",
     "content.checks.visibility.review_replies.advice": "Responda a sus reseñas recientes con un agradecimiento breve y personal. Los clientes leen las respuestas antes de elegir.",
     "content.checks.visibility.review_replies.explanation.notConnected": "Conecte Google para revisar esto.",
     "content.checks.visibility.review_replies.explanation.tooFew": "Aún no hay suficientes reseñas recientes para revisar.",
     "content.checks.visibility.review_replies.explanation.counts": "Respondió a {replied} de sus últimas {count} reseñas (puntos completos al 80 %).",
     "content.checks.completeness.customer_details.label": "Datos para clientes en su ficha",
-    "content.checks.completeness.customer_details.advice": "Agréguelos en Google: Perfil de Negocio de Google → Editar perfil → accesibilidad / pagos / estacionamiento.",
+    "content.checks.completeness.customer_details.advice": "Agréguelos en Google: Perfil de Negocio de Google → Editar perfil → {path}.",
     "content.checks.completeness.customer_details.explanation.notApplicable": "No aplica a este tipo de negocio.",
     "content.checks.completeness.customer_details.explanation.notCheckedYet": "Aún no se revisó — el próximo análisis lo leerá de su ficha de Google.",
     "content.checks.completeness.customer_details.explanation.complete": "Su ficha muestra {parts}.",
     "content.checks.completeness.customer_details.explanation.missing": "Su ficha aún no muestra {missing}.",
+    "content.checks.completeness.customer_details.partLabel.accessibility": "Accesibilidad",
+    "content.checks.completeness.customer_details.partLabel.payment": "Formas de pago",
+    "content.checks.completeness.customer_details.partLabel.parking": "Estacionamiento",
+    "content.checks.completeness.customer_details.reason.visit_and_pay": "Cuentan las tres: los clientes visitan y pagan en un negocio como el suyo.",
+    "content.checks.completeness.customer_details.reason.office": "Solo cuenta la accesibilidad para una oficina como la suya — los pagos y el estacionamiento no se califican.",
+    "content.checks.completeness.customer_details.reason.no_payment": "Cuentan la accesibilidad y el estacionamiento — en un lugar como el suyo no se compra nada, así que los pagos no se califican.",
+    "content.checks.completeness.customer_details.reason.counted": "Se cuentan para su negocio: {parts}.",
+    "content.checks.completeness.customer_details.reason.serviceArea": "El estacionamiento no se califica — usted atiende a los clientes en su ubicación.",
+    "content.checks.completeness.customer_details.reason.ownerNoParking": "El estacionamiento no se califica — usted nos indicó que no hay estacionamiento (Agregado por usted).",
+    "content.checks.completeness.customer_details.reason.ownerNoPayment": "Las formas de pago no se califican — usted nos indicó que no recibe pagos en el lugar (Agregado por usted).",
+    "content.checks.completeness.customer_details.parkingNote": "Estacionamiento: el estacionamiento en la calle o un lote cercano, gratuito o de pago, cuentan — agregue solo lo que sea cierto.",
+    "content.checks.completeness.customer_details.owner.heading": "¿No aplica a su negocio?",
+    "content.checks.completeness.customer_details.owner.noParking": "No hay estacionamiento — ni en la calle ni en un lote cercano",
+    "content.checks.completeness.customer_details.owner.noPayment": "No recibimos pagos en el lugar",
+    "content.checks.completeness.customer_details.owner.saving": "Guardando…",
+    "content.checks.completeness.customer_details.owner.error": "No se pudo guardar — inténtelo de nuevo.",
+    "content.checks.completeness.customer_details.link.gbp": "Abrir Perfil de Negocio de Google",
+    "content.checks.completeness.customer_details.link.help": "Ayuda de Google: atributos de la empresa",
+    "content.checks.completeness.customer_details.adviceOne": "Agréguelo en Google: Perfil de Negocio de Google → Editar perfil → {path}.",
+    "content.checks.completeness.customer_details.path.accessibility": "accesibilidad",
+    "content.checks.completeness.customer_details.path.payment": "pagos",
+    "content.checks.completeness.customer_details.path.parking": "estacionamiento",
+    "content.checks.completeness.customer_details.paymentNote": "Pagos: indique solo las formas en que los clientes realmente pueden pagar (tarjetas, efectivo, pago móvil).",
     "content.checks.completeness.customer_details.part.accessibility": "accesibilidad",
     "content.checks.completeness.customer_details.part.payment": "formas de pago",
     "content.checks.completeness.customer_details.part.parking": "estacionamiento",
-    "content.checks.visibility.review_recency.advice": "Mantenga un flujo regular de reseñas — la actividad reciente les indica a los clientes (y a Google) que el negocio está activo.",
+    "content.checks.visibility.review_recency.advice": "Consiga reseñas nuevas este mes: envíe su enlace de reseñas a algunos clientes recientes. 3 o más reseñas en los últimos 90 días obtienen los puntos completos.",
     "content.checks.visibility.review_recency.explanation.notCollected": "La integración actual de Google Places aún no recopila las fechas de las reseñas, por lo que esta comprobación se excluye en lugar de contarse como una falla.",
     "content.checks.visibility.review_recency.explanation.recent": "La reseña más reciente fue hace {days} día(s).",
     "content.checks.completeness.phone.label": "Número de teléfono",
@@ -9852,7 +10056,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.completeness.photos.explanation.has.one": "{count} foto en la ficha.",
     "content.checks.completeness.photos.explanation.has.other": "{count} fotos en la ficha.",
     "content.checks.completeness.photos.explanation.hasAtCap": "{cap} fotos o más en la ficha.",
-    "content.checks.completeness.photos.explanation.none": "No hay fotos en la ficha.",
+    "content.checks.completeness.photos.explanation.none": "No hay fotos en su ficha.",
     "content.orMoreCount": "{count} o más",
     "content.checks.completeness.business_status.label": "Estado operativo",
     "content.checks.completeness.business_status.advice": "Asegúrese de que su Perfil de Negocio de Google aparezca como Operativo.",
@@ -10119,13 +10323,65 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Vaya a la página de Reseñas → sección \"Conseguir más reseñas\": copie su enlace de reseña en los recibos, mensajes de seguimiento o correos, o imprima el código QR del mostrador para el momento de pagar.",
     "content.actionPlan.visibility.review_count.weeklyAction":
       "Pida una reseña de Google a 3-5 clientes recientes esta semana — cada reseña real suma para construir una base de reseñas más sólida.",
+    "content.actionPlan.visibility.review_replies.why": "Los clientes leen cómo responde — una respuesta breve y personal a cada reseña reciente demuestra que le importa.",
+    "content.actionPlan.visibility.review_replies.action": "Responda a sus reseñas recientes",
+    "content.actionPlan.visibility.review_replies.fix": "Abra sus reseñas en Google (o redacte respuestas con el asistente de respuestas de PostScore) y publique un agradecimiento breve y personal en cada reseña reciente sin respuesta. Puntos completos al 80 % de sus reseñas recientes.",
+    "content.actionPlan.completeness.customer_details.why": "Los clientes revisan la accesibilidad, cómo pueden pagar y dónde estacionar antes de visitarlo.",
+    "content.actionPlan.completeness.customer_details.action": "Agregue sus datos para clientes",
+    "content.actionPlan.completeness.customer_details.fix": "En Google: Perfil de Negocio de Google → Editar perfil → {path}. Agregue solo lo que sea cierto.",
+    "content.actionPlan.connectGoogle.title": "Conecte Google",
+    "content.actionPlan.connectGoogle.why": "Habilita su tasa de respuesta (\"Respuestas a reseñas\") y un conteo exacto de sus reseñas recientes — sin la conexión, Google le muestra a PostScore solo unas pocas.",
+    "content.actionPlan.connectGoogle.fix": "Inicie sesión con la cuenta de Google que administra su Perfil de Negocio. PostScore solo lee el número de reseñas — nunca publica ni cambia nada.",
+    "content.actionPlan.connectGoogle.link": "Conectar Google",
+    "content.actionPlan.step.hours": "Unas {hours} h",
+    "content.actionPlan.step.howToFix": "Cómo corregirlo",
+    "content.actionPlan.link.editProfileHelp": "Ayuda de Google: editar su Perfil de Negocio",
+    "content.actionPlan.link.photosHelp": "Ayuda de Google: agregar fotos",
+    "content.actionPlan.link.categoryHelp": "Ayuda de Google: categorías de la empresa",
+    "content.actionPlan.link.getReviewsHelp": "Ayuda de Google: conseguir más reseñas",
+    "content.actionPlan.link.pageSpeed": "Pruébelo en Google PageSpeed Insights",
+    "content.actionPlan.link.safeBrowsing": "Estado del sitio en Google Safe Browsing",
+    "content.actionPlan.link.httpsWhy": "Google web.dev: por qué importa HTTPS (en inglés)",
+    "content.actionPlan.link.gbp": "Abrir Perfil de Negocio de Google",
+    "content.actionPlan.mergedReviews.label": "Reseñas",
+    "content.actionPlan.title.visibility.rating": "Mejore su calificación",
+    "content.actionPlan.title.visibility.review_count": "Consiga más reseñas",
+    "content.actionPlan.title.visibility.review_recency": "Consiga reseñas nuevas este mes",
+    "content.actionPlan.title.visibility.review_replies": "Responda a sus reseñas recientes",
+    "content.actionPlan.title.completeness.phone": "Agregue su número de teléfono",
+    "content.actionPlan.title.completeness.address": "Agregue su dirección",
+    "content.actionPlan.title.completeness.hours": "Agregue su horario",
+    "content.actionPlan.title.completeness.website_link": "Vincule su sitio web en Google",
+    "content.actionPlan.title.completeness.categories": "Agregue más categorías",
+    "content.actionPlan.title.completeness.photos": "Agregue fotos",
+    "content.actionPlan.title.completeness.business_status": "Corrija el estado de su ficha",
+    "content.actionPlan.title.completeness.customer_details": "Agregue sus datos para clientes",
+    "content.actionPlan.title.website.has_website": "Tenga un sitio web",
+    "content.actionPlan.title.website.https": "Active HTTPS",
+    "content.actionPlan.title.website.performance_mobile": "Acelere su sitio en teléfonos",
+    "content.actionPlan.title.website.content_depth": "Complete lo básico de su página de inicio",
+    "content.actionPlan.title.website.contact_conversion": "Facilite que lo contacten",
+    "content.actionPlan.title.website.about_presence": "Agregue una sección \"Quiénes somos\"",
+    "content.actionPlan.title.website.services_presence": "Muestre sus servicios",
+    "content.actionPlan.title.website.social_links": "Vincule sus redes sociales",
+    "content.actionPlan.title.website.security": "Resuelva la seguridad de su sitio",
+    "content.actionPlan.title.website.info_consistency": "Haga que su sitio coincida con Google",
+    "content.actionPlan.title.website.notice_freshness": "Actualice los avisos antiguos",
+    "content.actionPlan.title.website.site_freshness": "Actualice su sitio web",
+    "content.actionPlan.step.minutes": "Unos {minutes} min",
+    "content.actionPlan.step.comingSoon": "Próximamente: PostScore podrá hacerlo por usted",
+    "content.actionPlan.step.linksLabel": "Enlaces:",
+    "content.actionPlan.link.replyDrafter": "Redactar respuestas en PostScore",
+    "content.actionPlan.link.googleReviews": "Sus reseñas en Google",
+    "content.actionPlan.link.googleReviewsHelp": "Ayuda de Google: gestionar reseñas",
+    "content.actionPlan.link.reviewLink": "Su enlace de reseñas y código QR",
     "content.actionPlan.visibility.review_recency.why":
-      "Un flujo constante de reseñas recientes indica un negocio activo y confiable en el presente — una calificación basada únicamente en reseñas antiguas se ve desactualizada para los clientes y para Google.",
+      "Los clientes confían más en las reseñas de los últimos meses. 3 o más en los últimos 90 días obtienen los puntos completos.",
     "content.actionPlan.visibility.review_recency.action":
-      "Siga pidiendo reseñas de forma continua, no en un solo impulso.",
+      "Consiga reseñas nuevas este mes",
     "content.actionPlan.visibility.review_recency.fix":
-      "Vaya a la página de Reseñas → sección \"Conseguir más reseñas\" y siga compartiendo su enlace de reseña o código QR de forma continua — un recordatorio recurrente (semanal, o después de cada N clientes) mantiene el flujo de nuevas reseñas en lugar de detenerse tras una sola ronda.",
-    "content.actionPlan.mergedReviews.title": "Consiga algunas reseñas nuevas esta semana",
+      "Envíe su enlace de reseñas o código QR de PostScore a 3–5 clientes recientes y satisfechos — por mensaje de texto, por correo o en el mostrador. Pida solo a clientes reales y nunca ofrezca nada a cambio.",
+    "content.actionPlan.mergedReviews.title": "Consiga reseñas nuevas",
     "content.actionPlan.mergedReviews.why":
       "Su calificación, la cantidad de reseñas y qué tan recientes son avanzan con la misma acción — unas cuantas reseñas nuevas esta semana ayudan a las tres a la vez.",
     "content.actionPlan.mergedReviews.action":
@@ -10700,7 +10956,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.actionPlan.notQuiteYet": "Todavía no",
     "dashboard.overview.actionPlan.inProgress": "En curso",
     "dashboard.overview.actionPlan.checkedWorse": "Comprobado — peor",
-    "dashboard.overview.actionPlan.checkedNoChange": "Comprobado — sin cambios",
+    "dashboard.overview.actionPlan.checkedNoChange": "Comprobado — aún sin cambios",
     "dashboard.overview.actionPlan.checkedWithDate": "Comprobado el {date}.",
     "dashboard.overview.actionPlan.checkedNoDate": "Comprobado.",
     "dashboard.overview.actionPlan.willCheckNextRescan": "Lo comprobaremos en su próximo análisis.",
@@ -10724,6 +10980,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.actionPlan.howLabel": "Cómo: ",
     "dashboard.overview.actionPlan.ownerActionOnGoogle": "Este es un cambio que usted mismo hace, en Google — PostScore puede decirle exactamente qué hacer, pero no podemos editar su ficha por usted.",
     "dashboard.overview.actionPlan.saving": "Guardando...",
+    "dashboard.overview.actionPlan.checkAgain": "Comprobar de nuevo",
+    "dashboard.overview.actionPlan.checkAgainNote": "Los cambios en Google pueden tardar unos días — también lo comprobaremos en su próximo análisis.",
     "dashboard.overview.actionPlan.didThisAgain": "Lo hice de nuevo",
     "dashboard.overview.actionPlan.didThis": "Ya lo hice",
     "dashboard.overview.actionPlan.pointsThisWeek": "Aprox. +{points} pts esta semana",
@@ -12942,6 +13200,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.print.popupBlocked": "Su navegador bloqueó la pestaña nueva. Permita las ventanas emergentes para este sitio, o use Descargar PDF e imprímalo.",
     "dashboard.print.preparing": "Preparando su PDF…",
     "dashboard.growth.checklist.complete": "Rutina semanal completa 🎉 · se reinicia el lunes",
+    "dashboard.growth.planDoneUp": "¡Terminó el plan de esta semana! Su puntuación subió {diff} puntos.",
+    "dashboard.growth.planDoneUpOne": "¡Terminó el plan de esta semana! Su puntuación subió 1 punto.",
+    "dashboard.growth.planDone": "Terminó el plan de esta semana — excelente trabajo.",
     "dashboard.growth.goalHit": "Alcanzó la meta de esta semana: {start} → {now} (+{diff})",
     "dashboard.studio.customize": "Personalizar diseño",
     "dashboard.studio.lockedTab": "Pruébelas con una vista previa con marca de agua — imprimirlas requiere Premium.",

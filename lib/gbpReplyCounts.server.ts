@@ -145,7 +145,10 @@ export async function runGbpReplyCheckWithClient(
     logFailure("save", MISSING_COLUMN.has(error.code ?? "") ? { reason: "columns missing — run supabase/gbp-reply-counts.sql" } : { code: error.code ?? null });
     return { status: "failed" };
   }
-  // The three numbers scoring v1.12.0 uses, on the business's own row so
+  // The recent-review bucket (supabase/scoring-v1-12-recency-details.sql) —
+  // its own update, so a missing column never blocks the counts above.
+  await admin.from("gbp_connections").update({ reply_recent_reviews: counts.recentReviews }).eq("business_id", businessId);
+  // The numbers scoring v1.12.0 uses, on the business's own row so
   // every page scores it the same (supabase/scoring-v1-12.sql). Before that
   // file is run this simply doesn't save — never an error for the owner.
   await setGbpScoringCounts(admin, businessId, counts);
@@ -154,7 +157,11 @@ export async function runGbpReplyCheckWithClient(
 
 /** The owner's own reply counts for scoring (null clears them: disconnect,
  * or Google needs reconnecting). Never another business's. */
-export async function setGbpScoringCounts(admin: SupabaseClient, businessId: string, counts: Pick<GbpReplyCounts, "reviewsInWindow" | "replied" | "hasRecentReview"> | null): Promise<void> {
+export async function setGbpScoringCounts(
+  admin: SupabaseClient,
+  businessId: string,
+  counts: (Pick<GbpReplyCounts, "reviewsInWindow" | "replied" | "hasRecentReview"> & { recentReviews?: GbpReplyCounts["recentReviews"] }) | null
+): Promise<void> {
   try {
     await admin
       .from("businesses")
@@ -164,6 +171,8 @@ export async function setGbpScoringCounts(admin: SupabaseClient, businessId: str
         gbp_has_recent_review: counts ? counts.hasRecentReview : null,
       })
       .eq("id", businessId);
+    // Separate, so a missing column (SQL not run yet) never blocks the above.
+    await admin.from("businesses").update({ gbp_recent_reviews: counts?.recentReviews ?? null }).eq("id", businessId);
   } catch {
     // Missing columns (SQL not run yet): scoring leaves replies out.
   }

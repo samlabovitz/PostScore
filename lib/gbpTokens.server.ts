@@ -185,6 +185,7 @@ export async function markGbpReconnect(admin: SupabaseClient, businessId: string
 async function clearGbpScoringCounts(admin: SupabaseClient, businessId: string): Promise<void> {
   try {
     await admin.from("businesses").update({ gbp_reviews_in_window: null, gbp_replied: null, gbp_has_recent_review: null }).eq("id", businessId);
+    await admin.from("businesses").update({ gbp_recent_reviews: null }).eq("id", businessId);
   } catch {
     // Missing columns (SQL not run yet): nothing to clear.
   }

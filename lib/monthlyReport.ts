@@ -477,9 +477,9 @@ const EMPTY_FOCUS_INPUTS: MonthlyReportFocusInputs = {
 };
 
 /** The real, already-merged top action-plan task — at most ONE pointer,
- * and the only kind that can ever be review-related (mergeReviewTasks
- * already combined rating/review_count/review_recency into one real
- * card upstream, so this is never two separate review pointers). */
+ * (mergeReviewTasks already combined rating/review_count into one real
+ * card upstream; since v1.12.0 recency and replies are their own steps,
+ * and this is still only ever ONE pointer). */
 function scoreGapPointer(topTask: FocusTopActionPlanTask | null, locale: Locale): FocusPointer | null {
   if (!topTask) return null;
   // "Review the explanation above…" means nothing in an email — never

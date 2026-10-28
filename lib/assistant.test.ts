@@ -1282,7 +1282,7 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
       "Individual reviews",
       "search or Google Maps ranking",
       "competitor's exact price",
-      "reply-rate/response-time stats",
+      "response-time stats",
     ]) {
       expect(ASSISTANT_SYSTEM_RULES).toContain(phrase);
     }

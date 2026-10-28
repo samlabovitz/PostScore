@@ -446,8 +446,9 @@ describe("disconnect: revoke at Google, then delete tokens and GBP data", () => 
     expect(url).toBe("https://oauth2.googleapis.com/revoke");
     expect(new URLSearchParams(String(init.body)).get("token")).toBe("1//R");
     const ops = adminDb.log.map((o) => `${o.op}:${o.table}`);
-    expect(ops).toEqual(["select:gbp_tokens", "delete:gbp_tokens", "delete:gbp_connections", "update:businesses"]);
-    expect(adminDb.log.at(-1)?.row).toEqual({ gbp_reviews_in_window: null, gbp_replied: null, gbp_has_recent_review: null });
+    expect(ops).toEqual(["select:gbp_tokens", "delete:gbp_tokens", "delete:gbp_connections", "update:businesses", "update:businesses"]);
+    expect(adminDb.log.at(-2)?.row).toEqual({ gbp_reviews_in_window: null, gbp_replied: null, gbp_has_recent_review: null });
+    expect(adminDb.log.at(-1)?.row).toEqual({ gbp_recent_reviews: null });
     expect(adminDb.tables.gbp_tokens).toEqual([]);
     expect(adminDb.tables.gbp_connections).toEqual([]);
   });
@@ -858,6 +859,7 @@ describe("Step 2: review-reply counts (counts only, not scored)", () => {
       "reply_all_time_reviews",
       "reply_checked_at",
       "reply_has_recent_review",
+      "reply_recent_reviews",
       "reply_replied",
       "reply_reviews_in_window",
       "reply_templated_share",
@@ -1078,7 +1080,11 @@ describe("Step 2: review-reply counts (counts only, not scored)", () => {
     expect(factsBlockText({ ...base, replyCounts: { ...counts, allTimeReviews: 500, allTimeCapped: true } })).toContain("ALL-TIME: replied to 1 of 500 reviews (of the latest 500 only — there are more).");
     expect(factsBlockText({ ...base, replyCounts: { ...counts, allTimeReviews: null, allTimeReplied: null } })).not.toContain("ALL-TIME");
     expect(known).toContain("Most replies use the same text");
-    expect(known).toContain("never claim replying (or anything else) affects Google ranking");
+    expect(known).toContain("Never claim replying (or anything else) affects Google ranking");
+    // v1.12.0: replies are scored from the recent numbers only.
+    expect(known).toContain("full points at 80% of recent reviews replied to; the all-time numbers are never scored");
+    expect(factsBlockText({ ...base, replyCounts: { ...counts, recentReviews: 3 } })).toContain("Reviews in the last 90 days (owner's connected Google profile — the exact count): 3 or more.");
+    expect(factsBlockText({ ...base, replyCounts: null })).toContain("counted among the few reviews Google shows");
     expect(factsBlockText({ ...base, replyCounts: null })).toContain("Review replies: not known");
     expect(fs.readFileSync("app/actions/assistant.ts", "utf8")).toContain("replyCounts: gbpStatus.status === \"ok\" ? gbpStatus.replyCounts : null");
   });

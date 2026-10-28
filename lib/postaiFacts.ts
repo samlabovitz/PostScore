@@ -155,8 +155,9 @@ const pts = (n: number | null) => (n === null ? "—" : Number.isInteger(n) ? St
 
 /** The reply counts, exactly as the owner's connect box shows them. */
 function replyCountsLine(c: GbpReplyCounts | null): string {
-  const rules = "Not part of the PostScore yet — never say it changes the score, and never claim replying (or anything else) affects Google ranking.";
-  if (!c) return `- Review replies: not known (Google not connected, or not checked yet). ${rules}`;
+  const rules =
+    "Scored (scoring v1.12.0) in the \"Replying to reviews\" check from the RECENT numbers only — full points at 80% of recent reviews replied to; the all-time numbers are never scored. Never claim replying (or anything else) affects Google ranking.";
+  if (!c) return `- Review replies: not known (Google not connected, or not checked yet) — the "Replying to reviews" check is left out of the score until Google is connected. Never claim replying (or anything else) affects Google ranking.`;
   const date = c.checkedAt.slice(0, 10);
   const allTime =
     c.allTimeReviews !== null && c.allTimeReplied !== null
@@ -167,6 +168,17 @@ function replyCountsLine(c: GbpReplyCounts | null): string {
       ? " RECENT: not enough recent reviews to check yet."
       : ` RECENT (last 90 days, or the latest 20): replied to ${c.replied} of the last ${c.reviewsInWindow} reviews.${c.templatedShare > TEMPLATED_WARN_SHARE ? " Most replies use the same text — a short personal line helps." : ""}`;
   return `- Review replies (owner's connected Google profile, checked ${date}):${allTime}${recent} Keep all-time and recent apart — never mix their numbers. ${rules}`;
+}
+
+/** Recent reviews (the last 90 days): only a bucket is ever stored. */
+function recentReviewsLine(c: GbpReplyCounts | null): string {
+  const rule =
+    "Review recency points: 3 or more reviews in the last 90 days = 6/6, 2 = 4/6, 1 = 2/6. No dates or review text are kept — never name a date, a day count or \"this week\".";
+  if (c && typeof c.recentReviews === "number") {
+    const n = c.recentReviews === 3 ? "3 or more" : String(c.recentReviews);
+    return `- Reviews in the last 90 days (owner's connected Google profile — the exact count): ${n}. ${rule}`;
+  }
+  return `- Reviews in the last 90 days: only what the "Review recency" check below says (counted among the few reviews Google shows — "at least N"; connecting Google counts them all). ${rule}`;
 }
 
 /** The FACTS block for the prompt — the only source of numbers. */
@@ -202,6 +214,7 @@ export function factsBlockText(f: PostaiFacts): string {
     "- Every check (status, points, the app's own explanation with its real threshold):",
     ...f.checks.map((c) => `  - ${c.label}: ${c.status}, ${pts(c.earned)}/${pts(c.max)} pts — ${c.explanation}`),
     replyCountsLine(f.replyCounts),
+    recentReviewsLine(f.replyCounts),
     ...((f.ownerProvided ?? []).length > 0
       ? [
           "- OWNER-PROVIDED (the owner's own words in \"What PostAI knows about your business\" → \"Added by you\"; not verified by PostScore — use them to fit ideas to the business, say they're what the owner told you, never present them as checked facts, never invent more):",

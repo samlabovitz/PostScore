@@ -16,7 +16,7 @@ export function prefersReducedMotion(): boolean {
   }
 }
 
-export function celebrationKey(kind: "routine" | "goal", businessId: string, weekStart: string): string {
+export function celebrationKey(kind: "routine" | "goal" | "plan", businessId: string, weekStart: string): string {
   return `postscore.celebrated.${kind}.${businessId}.${weekStart}`;
 }
 
@@ -105,4 +105,52 @@ export function goalHit(goal: WeekGoal | null, now: number, lastScanAt: string |
   if (Date.parse(lastScanAt) <= Date.parse(goal.setAt)) return null;
   if (now < goal.goal || now <= goal.start) return null;
   return { start: goal.start, now, diff: now - goal.start };
+}
+
+// ---------------------------------------------------------------------
+// "This week's plan is done": every step of the week's plan (as first
+// seen this week, on this device) confirmed by a real re-check — a task
+// the re-scan marked completed, or Google actually connected. Clicking
+// "I did this" never counts.
+// ---------------------------------------------------------------------
+
+export interface WeekPlanRecord {
+  /** The real check ids behind this week's steps (a merged card's own
+   * real ids; "setup.connect_gbp" for the Connect Google step). */
+  steps: string[];
+  /** The real score when the plan was first seen. */
+  start: number;
+  setAt: string;
+}
+
+export function weekPlanKey(businessId: string, weekStart: string): string {
+  return `postscore.weekPlan.${businessId}.${weekStart}`;
+}
+
+export function parseWeekPlan(raw: string | null): WeekPlanRecord | null {
+  try {
+    const v = raw ? (JSON.parse(raw) as Partial<WeekPlanRecord>) : null;
+    return v && Array.isArray(v.steps) && v.steps.length > 0 && v.steps.every((x) => typeof x === "string") && typeof v.start === "number" && typeof v.setAt === "string"
+      ? { steps: v.steps, start: v.start, setAt: v.setAt }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The real ids a step stands for. */
+export function planStepIds(tasks: Array<{ checkId: string; mergedCheckIds: string[] | null }>): string[] {
+  return Array.from(new Set(tasks.flatMap((task) => task.mergedCheckIds ?? [task.checkId])));
+}
+
+/** Whether every step is really done since the plan was first seen, and
+ * the real score change (never "I did this" clicks). */
+export function weekPlanDone(
+  plan: WeekPlanRecord | null,
+  facts: { completed: Array<{ checkId: string; verifiedAt: string | null }>; gbpConnected: boolean; score: number; lastScanAt: string | null }
+): { diff: number } | null {
+  if (!plan || facts.lastScanAt === null || Date.parse(facts.lastScanAt) <= Date.parse(plan.setAt)) return null;
+  const confirmed = new Set(facts.completed.filter((c) => c.verifiedAt !== null && Date.parse(c.verifiedAt) > Date.parse(plan.setAt)).map((c) => c.checkId));
+  const done = plan.steps.every((id) => (id === "setup.connect_gbp" ? facts.gbpConnected : confirmed.has(id)));
+  return done ? { diff: Math.round(facts.score) - plan.start } : null;
 }

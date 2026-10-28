@@ -19,6 +19,8 @@ import { ANCHOR_HIGHLIGHT_EVENT, anchorScrollBehavior } from "@/components/layou
 import { categoryBarShares, categoryOutcomeCounts, postaiTargetForCheck, wholeCategoryPoints } from "@/lib/overviewTiles";
 import { checkAnchorId, resolveLinkTarget, type LinkOptions } from "@/lib/postaiLinks";
 import { isMinorSpeedGap, type CategoryResult } from "@/lib/scoring";
+import { checkHowTo } from "@/lib/actionPlan";
+import type { BreakdownFix } from "@/components/scoring/CategoryCard";
 import { formatShortDate, t, tPlural, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -30,12 +32,14 @@ const STRIPES = "repeating-linear-gradient(135deg, var(--color-paper-deep) 0 3px
  * when that would only point back at this same row (listing checks) —
  * this week's plan on Growth. */
 export function breakdownFixLinks(categories: CategoryResult[], businessId: string, locale: Locale, options: LinkOptions = {}) {
-  const links: Record<string, { href: string; label: string }> = {};
+  const links: Record<string, BreakdownFix> = {};
   for (const check of categories.flatMap((c) => c.checks)) {
     if (checkOutcome(check) !== "needs_work") continue;
     let target = resolveLinkTarget(postaiTargetForCheck(check.id), businessId, options);
     if (!target || target.href.startsWith(`/business/${businessId}#`)) target = resolveLinkTarget("growth", businessId, options);
-    if (target) links[check.id] = { href: target.href, label: t(locale, target.label) };
+    // Its own "How to fix it" first; the PostScore page stays as the
+    // secondary link.
+    if (target) links[check.id] = { href: target.href, label: t(locale, target.label), howTo: checkHowTo(check, locale) };
   }
   return links;
 }
@@ -242,7 +246,7 @@ export function ScoreBreakdownPanel({
               <div className="min-h-0 overflow-hidden">
                 {mounted && (
                   <div className="mt-3 border-t border-paper-line pt-3">
-                    <CategoryCard category={category} embedded fixLinks={fixLinks} lockedFixes={audit} />
+                    <CategoryCard category={category} embedded fixLinks={fixLinks} lockedFixes={audit} businessId={businessId} />
                   </div>
                 )}
               </div>

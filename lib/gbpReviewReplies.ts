@@ -36,6 +36,10 @@ export interface GbpReplyCounts {
   templatedShare: number;
   /** At least one review created in the last 90 days. */
   hasRecentReview: boolean;
+  /** Reviews created in the last 90 days, kept only as a bucket: 0, 1, 2
+   * or 3 (= 3 or more). Null on counts saved before
+   * supabase/scoring-v1-12-recency-details.sql. */
+  recentReviews?: 0 | 1 | 2 | 3 | null;
   /** Every review read (newest first, at most 500) and how many have a
    * reply. Null on counts saved before supabase/gbp-reply-alltime.sql. */
   allTimeReviews: number | null;
@@ -120,6 +124,11 @@ export function templatedShare(replies: Array<{ text: string; reviewerName?: str
   return templated / norm.length;
 }
 
+/** 0, 1, 2 or 3 (= 3 or more). */
+export function recentBucket(count: number): 0 | 1 | 2 | 3 {
+  return count >= 3 ? 3 : count <= 0 ? 0 : (count as 1 | 2);
+}
+
 /** The numbers kept — nothing else from the reviews survives this.
  * `capped`: Google had more reviews than the 500 read. */
 export function computeReplyCounts(reviews: GbpReview[], now: number, capped = false): GbpReplyCounts {
@@ -130,6 +139,7 @@ export function computeReplyCounts(reviews: GbpReview[], now: number, capped = f
     replied: repliedReviews.length,
     templatedShare: Math.round(templatedShare(repliedReviews.map((r) => ({ text: r.reviewReply!.comment!, reviewerName: r.reviewer?.displayName }))) * 1000) / 1000,
     hasRecentReview: reviews.some((r) => time(r.createTime) >= windowCutoff(now)),
+    recentReviews: recentBucket(reviews.filter((r) => time(r.createTime) >= windowCutoff(now)).length),
     allTimeReviews: reviews.length,
     allTimeReplied: reviews.filter(hasReply).length,
     allTimeCapped: capped,
@@ -157,6 +167,7 @@ export function replyCountsFromRow(row: Record<string, unknown>): GbpReplyCounts
     replied: row.reply_replied,
     templatedShare: typeof row.reply_templated_share === "number" ? row.reply_templated_share : 0,
     hasRecentReview: row.reply_has_recent_review === true,
+    recentReviews: typeof row.reply_recent_reviews === "number" ? recentBucket(row.reply_recent_reviews) : null,
     allTimeReviews: typeof row.reply_all_time_reviews === "number" ? row.reply_all_time_reviews : null,
     allTimeReplied: typeof row.reply_all_time_replied === "number" ? row.reply_all_time_replied : null,
     allTimeCapped: row.reply_all_time_capped === true,

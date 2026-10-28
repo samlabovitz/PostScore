@@ -8,6 +8,16 @@ import type { CategoryResult, CheckResult } from "@/lib/scoring";
 import { t, useLocale, type MessageKey } from "@/lib/i18n";
 import { LockedFixRow } from "@/components/overview/FixPlanUpsell";
 import { checkAnchorId } from "@/lib/postaiLinks";
+import { CustomerDetailsExtras } from "@/components/scoring/CustomerDetailsExtras";
+import { timeEstimateText, type CheckHowTo } from "@/lib/actionPlan";
+
+/** A needs-work row's fix: its own "How to fix it" (steps, a rough time,
+ * official links) and the PostScore page as a secondary link. */
+export interface BreakdownFix {
+  href: string;
+  label: string;
+  howTo?: CheckHowTo;
+}
 
 /** Day 4 Step 3: each row is labeled by its RESULT — never by how sure
  * we are of it (the old green "Verified" read as a pass even at 0 / 1):
@@ -62,8 +72,12 @@ export function CategoryCard({
   embedded = false,
   fixLinks,
   lockedFixes = false,
+  businessId = null,
 }: {
   category: CategoryResult;
+  /** The owner's own business: shows the customer-details answers
+   * ("No parking available"…). Omitted = read-only. */
+  businessId?: string | null;
   /** See WebsiteCoverageNote's scoreBasis. */
   scoreBasis?: number | null;
   /** Only used by the Website category's "partly checked" note. */
@@ -73,14 +87,14 @@ export function CategoryCard({
   embedded?: boolean;
   /** Overview: a "how to fix it" link per check id, shown on rows that
    * need work (PostAI's link targets — lib/postaiLinks.ts). */
-  fixLinks?: Record<string, { href: string; label: string }>;
+  fixLinks?: Record<string, BreakdownFix>;
   /** Free (the audit): a locked, blurred "How to fix this" row on rows
    * that need work — never the advice itself. */
   lockedFixes?: boolean;
 }) {
   const locale = useLocale();
   if (embedded) {
-    return <CheckRows category={category} fixLinks={fixLinks} lockedFixes={lockedFixes} />;
+    return <CheckRows category={category} fixLinks={fixLinks} lockedFixes={lockedFixes} businessId={businessId} />;
   }
   return (
     <Card className="p-5">
@@ -97,13 +111,23 @@ export function CategoryCard({
       <WebsiteCoverageNote category={category} hasWebsite={hasWebsite} scoreBasis={scoreBasis} className="mt-1 text-[12px] text-ink-mute" />
 
       <div className="mt-4">
-        <CheckRows category={category} />
+        <CheckRows category={category} businessId={businessId} />
       </div>
     </Card>
   );
 }
 
-function CheckRows({ category, fixLinks, lockedFixes = false }: { category: CategoryResult; fixLinks?: Record<string, { href: string; label: string }>; lockedFixes?: boolean }) {
+function CheckRows({
+  category,
+  fixLinks,
+  lockedFixes = false,
+  businessId = null,
+}: {
+  category: CategoryResult;
+  fixLinks?: Record<string, BreakdownFix>;
+  lockedFixes?: boolean;
+  businessId?: string | null;
+}) {
   const locale = useLocale();
   return (
   <div className="flex flex-col divide-y divide-paper-line">
@@ -139,6 +163,7 @@ function CheckRows({ category, fixLinks, lockedFixes = false }: { category: Cate
             </div>
           </div>
           <p className="pl-[25px] text-[13px] text-ink-mute">{check.explanation}</p>
+          {outcome === "needs_work" && fixLinks?.[check.id]?.howTo && <HowToFix howTo={fixLinks[check.id].howTo!} />}
           {outcome === "needs_work" && fixLinks?.[check.id] && (
             <Link
               href={fixLinks[check.id].href}
@@ -148,9 +173,34 @@ function CheckRows({ category, fixLinks, lockedFixes = false }: { category: Cate
             </Link>
           )}
           {outcome === "needs_work" && lockedFixes && <LockedFixRow blurred className="ml-[25px] mt-1" />}
+          {check.id === "completeness.customer_details" && <CustomerDetailsExtras check={check} businessId={businessId} />}
         </div>
       );
     })}
   </div>
+  );
+}
+
+/** "How to fix it" on a needs-work row: the steps, a rough time, and
+ * official links (lib/googleHelpLinks.ts). */
+function HowToFix({ howTo }: { howTo: CheckHowTo }) {
+  const locale = useLocale();
+  return (
+    <details data-testid="row-how-to" className="group ml-[25px] mt-1 rounded-lg border border-paper-line bg-paper px-3 py-2 text-[12.5px] leading-relaxed text-ink-soft">
+      <summary className="cursor-pointer list-none font-semibold text-ink">
+        {t(locale, "content.actionPlan.step.howToFix")}
+        {howTo.minutes ? <span className="ml-2 font-normal text-ink-mute">· {timeEstimateText(howTo.minutes, locale)}</span> : null}
+      </summary>
+      <p className="mt-1.5">{howTo.steps}</p>
+      {howTo.links.length > 0 && (
+        <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+          {howTo.links.map((link) => (
+            <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline-offset-2 hover:underline">
+              {link.label} ↗
+            </a>
+          ))}
+        </p>
+      )}
+    </details>
   );
 }
