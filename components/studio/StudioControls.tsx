@@ -10,7 +10,7 @@ import { IconCrown, IconLock, IconX } from "@tabler/icons-react";
 import { createMeasurer, loadFontFiles } from "@/lib/signStudio/fonts";
 import { LOGO_MAX_BYTES, LOGO_TYPES, type StoredLogo } from "@/lib/signStudio/design";
 import type { FontRole, Measurer } from "@/lib/signStudio/elements";
-import { t, useLocale } from "@/lib/i18n";
+import { t, useLocale, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 
@@ -325,4 +325,108 @@ export async function readLogoFile(file: File): Promise<{ logo: StoredLogo } | {
   } catch {
     return { error: "readError" };
   }
+}
+
+/** The quick colors under every color field — the sign themes' own
+ * colors plus a few strong basics. */
+export const COLOR_SWATCHES = ["#14243f", "#000000", "#ffffff", "#f7f1e3", "#b8862f", "#2e6b45", "#1d4ed8", "#b42318"] as const;
+
+/**
+ * One color field (Text, Background, Accent…): a row of tap-sized
+ * swatches, a labeled "Custom color" swatch that opens the full picker,
+ * the selected color ringed with a check and its hex code, and an
+ * optional "hard to read" hint. `locked` (Grow on a Premium option) keeps
+ * the Premium chip on the label; picks still go through `onChange`, which
+ * the studios turn into the Premium preview — never a dead click.
+ */
+export function ColorField({
+  label,
+  value,
+  onChange,
+  locked = false,
+  hint = null,
+  testId,
+}: {
+  label: string;
+  value: string;
+  onChange: (hex: string) => void;
+  locked?: boolean;
+  hint?: string | null;
+  testId?: string;
+}) {
+  const locale = useLocale();
+  const current = value.toLowerCase();
+  const custom = !COLOR_SWATCHES.some((c) => c === current);
+  return (
+    <div data-testid={testId} className="flex flex-col gap-1.5">
+      <span className="flex flex-wrap items-center gap-1.5 text-[12px] font-medium text-ink-soft">
+        {label}
+        <PlanChip locked={locked} />
+        <span className="ml-auto font-mono text-[11.5px] uppercase text-ink-mute" data-testid="color-hex">
+          {value}
+        </span>
+      </span>
+      <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-2">
+        {COLOR_SWATCHES.map((hex) => {
+          const on = hex === current;
+          return (
+            <button
+              key={hex}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              aria-label={t(locale, "dashboard.studio.color.swatch", { hex })}
+              data-locked={locked ? "true" : undefined}
+              onClick={() => onChange(hex)}
+              className={cn(
+                "relative flex h-9 w-9 items-center justify-center rounded-full border border-paper-deep sm:h-8 sm:w-8",
+                on && "ring-2 ring-brass ring-offset-2"
+              )}
+              style={{ background: hex }}
+            >
+              {on && <SwatchCheck hex={hex} />}
+            </button>
+          );
+        })}
+        <label
+          className={cn(
+            "relative flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-paper-deep bg-white pl-1 pr-2.5 text-[11.5px] font-semibold text-ink sm:h-8",
+            custom && "ring-2 ring-brass ring-offset-2"
+          )}
+        >
+          <span aria-hidden className="flex h-7 w-7 items-center justify-center rounded-full text-[14px] font-bold text-white sm:h-6 sm:w-6" style={{ background: custom ? value : "conic-gradient(#e53935, #fdd835, #43a047, #1e88e5, #8e24aa, #e53935)" }}>
+            {custom ? <SwatchCheck hex={value} /> : "+"}
+          </span>
+          {t(locale, "dashboard.studio.color.custom")}
+          <input type="color" value={value} onChange={(e) => onChange(e.target.value)} data-locked={locked ? "true" : undefined} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+        </label>
+      </div>
+      {hint && (
+        <p role="status" data-testid="color-hint" className="text-[11.5px] font-medium text-[color:var(--color-amber)]">
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** A check that stays visible on any swatch color. */
+function SwatchCheck({ hex }: { hex: string }) {
+  const light = (() => {
+    const n = parseInt(hex.slice(1), 16);
+    return ((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114 > 160;
+  })();
+  return (
+    <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={light ? "#14243f" : "#ffffff"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12l5 5L20 7" />
+    </svg>
+  );
+}
+
+/** The words for a colorHint (lib/signStudio/design.ts). */
+export function colorHintText(hint: "darker" | "lighter" | "accent" | null, locale: Locale): string | null {
+  if (hint === "darker") return t(locale, "dashboard.studio.color.hardToReadDarker");
+  if (hint === "lighter") return t(locale, "dashboard.studio.color.hardToReadLighter");
+  if (hint === "accent") return t(locale, "dashboard.studio.color.hardToSeeAccent");
+  return null;
 }

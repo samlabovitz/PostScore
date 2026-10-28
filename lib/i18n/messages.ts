@@ -1012,6 +1012,8 @@ export type MessageKey =
   | "content.checks.visibility.review_recency.explanation.seen1"
   | "content.checks.visibility.review_recency.explanation.seen2"
   | "content.checks.visibility.review_recency.explanation.seen3"
+  | "content.checks.visibility.review_recency.explanation.seenLeftOut1"
+  | "content.checks.visibility.review_recency.explanation.seenLeftOut2"
   | "content.checks.visibility.review_recency.explanation.connectToCount"
   | "content.checks.visibility.review_replies.label"
   | "content.checks.visibility.review_replies.advice"
@@ -1556,6 +1558,9 @@ export type MessageKey =
   | "dashboard.growth.view.gradeChangeArrow"
   | "dashboard.growth.view.weeklyPlanNote.one"
   | "dashboard.growth.view.weeklyPlanNote.other"
+  | "dashboard.growth.view.planBlurb.one"
+  | "dashboard.growth.view.planBlurb.other"
+  | "dashboard.growth.view.planBlurbNone"
   | "dashboard.growth.view.weeklyPlanNoteEmpty"
   | "dashboard.growth.view.actionPlanErrorPrefix"
   | "dashboard.growth.view.weeklyPlanHeading"
@@ -3707,6 +3712,11 @@ export type MessageKey =
   | "dashboard.studio.customize"
   | "dashboard.studio.lockedTab"
   | "dashboard.studio.planLegend"
+  | "dashboard.studio.color.custom"
+  | "dashboard.studio.color.swatch"
+  | "dashboard.studio.color.hardToReadDarker"
+  | "dashboard.studio.color.hardToReadLighter"
+  | "dashboard.studio.color.hardToSeeAccent"
   | "dashboard.studio.growChip"
   | "dashboard.growth.print.tab.template"
   | "dashboard.growth.print.tab.size"
@@ -4273,6 +4283,7 @@ export type PluralKeyBase =
   | "dashboard.actionPlan.weeklyReviewTarget"
   | "dashboard.reports.recapDayCount"
   | "dashboard.growth.view.weeklyPlanNote"
+  | "dashboard.growth.view.planBlurb"
   | "dashboard.growth.checklist.streak"
   | "dashboard.growth.coupon.atLimitMessage"
   | "dashboard.growth.coupon.startLimitError"
@@ -4507,7 +4518,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.rescan.afterGoogleChange": "After you make this change on Google, re-scan to see your new score.",
     "dashboard.overview.breakdown.asOf": "As of your last scan, {date}",
     "dashboard.overview.breakdown.seeAll": "See all {count} checks",
-    "dashboard.overview.breakdown.hideAll": "Hide checks",
+    "dashboard.overview.breakdown.hideAll": "Hide checks ↑",
     "dashboard.free.lockedPreviewBadge": "Preview",
     "dashboard.free.lockedPreviewSr": "Preview of {title}. Part of Grow.",
     "dashboard.free.stepsLocked": "Step-by-step guide",
@@ -4573,7 +4584,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.planList.postStudio.h": "Your full website, built and hosted",
     "dashboard.free.planList.postStudio.l": "PostStudio: a multi-page site on your own domain — $30/mo on its own, less with a plan.",
     "dashboard.free.fixPlan.seeEverything": "See everything in each plan",
-    "dashboard.free.fixPlan.hideEverything": "Hide the full list",
+    "dashboard.free.fixPlan.hideEverything": "Hide the full list ↑",
     "dashboard.free.tile.repliesPostedForYou": "AI review replies posted for you",
     "dashboard.free.postaiFixOnGrow": "I can explain what this means and why it matters to your customers — the full step-by-step plan to fix it is on Grow (Settings → Compare plans).",
     "dashboard.free.postai.line": "Ask questions about your score — 3 free questions a week.",
@@ -5329,6 +5340,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.visibility.review_recency.explanation.seen1": "At least 1 recent review (last 90 days) among the few Google shows — 3 or more earns full points.",
     "content.checks.visibility.review_recency.explanation.seen2": "At least 2 recent reviews (last 90 days) among the few Google shows — 3 or more earns full points.",
     "content.checks.visibility.review_recency.explanation.seen3": "At least 3 recent reviews (last 90 days) among the few Google shows.",
+    "content.checks.visibility.review_recency.explanation.seenLeftOut1": "At least 1 recent review (last 90 days) among the few Google shows — connect Google to count them all. Not scored until then.",
+    "content.checks.visibility.review_recency.explanation.seenLeftOut2": "At least 2 recent reviews (last 90 days) among the few Google shows — connect Google to count them all. Not scored until then.",
     "content.checks.visibility.review_recency.explanation.connectToCount": "Connect Google to count all your recent reviews.",
     "content.checks.visibility.review_replies.label": "Replying to reviews",
     "content.checks.visibility.review_replies.advice": "Reply to your recent reviews — a short, personal thank-you. Customers read the replies before they choose.",
@@ -6045,6 +6058,9 @@ export const messages: Record<Locale, LocaleMessages> = {
       'Based on just the {count} task below — a realistic week, not every gap at once. See "Bigger projects" for the longer game.',
     "dashboard.growth.view.weeklyPlanNote.other":
       'Based on just the {count} tasks below — a realistic week, not every gap at once. See "Bigger projects" for the longer game.',
+    "dashboard.growth.view.planBlurb.one": "We checked your Google listing, reviews and website and found 1 thing holding your score back. Do the steps below in order — each one is worth points, and the first ones matter most.",
+    "dashboard.growth.view.planBlurb.other": "We checked your Google listing, reviews and website and found {count} things holding your score back. Do the steps below in order — each one is worth points, and the first ones matter most.",
+    "dashboard.growth.view.planBlurbNone": "Nothing is holding your score back right now — keep up your weekly routine below.",
     "dashboard.growth.view.weeklyPlanNoteEmpty":
       'Nothing realistic to move this week, so this matches your current score. See "Bigger projects" for the longer game.',
     "dashboard.growth.view.actionPlanErrorPrefix": "Couldn't load your action plan: {error}",
@@ -8445,6 +8461,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.studio.customize": "Customize design",
     "dashboard.studio.lockedTab": "Try these with a watermarked preview — printing them needs Premium.",
     "dashboard.studio.planLegend": "Grow: 2 styles · 2 sizes · basic QR. Premium: every template, font, color, logo, double-sided, numbering — and no PostScore branding.",
+    "dashboard.studio.color.custom": "Custom color",
+    "dashboard.studio.color.swatch": "Use {hex}",
+    "dashboard.studio.color.hardToReadDarker": "Hard to read — try a darker text color",
+    "dashboard.studio.color.hardToReadLighter": "Hard to read — try a lighter text color",
+    "dashboard.studio.color.hardToSeeAccent": "Hard to see — try a stronger accent color",
     "dashboard.studio.growChip": "Grow",
     "dashboard.growth.print.tab.template": "Template",
     "dashboard.growth.print.tab.size": "Size",
@@ -9168,7 +9189,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.rescan.afterGoogleChange": "Después de hacer este cambio en Google, vuelva a escanear para ver su nueva puntuación.",
     "dashboard.overview.breakdown.asOf": "Según su último escaneo, {date}",
     "dashboard.overview.breakdown.seeAll": "Ver las {count} revisiones",
-    "dashboard.overview.breakdown.hideAll": "Ocultar revisiones",
+    "dashboard.overview.breakdown.hideAll": "Ocultar revisiones ↑",
     "dashboard.free.lockedPreviewBadge": "Vista previa",
     "dashboard.free.lockedPreviewSr": "Vista previa de {title}. Incluido en Grow.",
     "dashboard.free.stepsLocked": "Guía paso a paso",
@@ -9234,7 +9255,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.planList.postStudio.h": "Su sitio web completo, creado y alojado",
     "dashboard.free.planList.postStudio.l": "PostStudio: un sitio de varias páginas con su propio dominio — $30/mes por sí solo, menos con un plan.",
     "dashboard.free.fixPlan.seeEverything": "Ver todo lo que incluye cada plan",
-    "dashboard.free.fixPlan.hideEverything": "Ocultar la lista completa",
+    "dashboard.free.fixPlan.hideEverything": "Ocultar la lista completa ↑",
     "dashboard.free.tile.repliesPostedForYou": "Respuestas a reseñas con IA que publicamos por usted",
     "dashboard.free.postaiFixOnGrow": "Puedo explicarle qué significa esto y por qué importa a sus clientes — el plan completo paso a paso para arreglarlo está en Grow (Configuración → Comparar planes).",
     "dashboard.free.postai.line": "Haga preguntas sobre su puntuación — 3 preguntas gratis por semana.",
@@ -9985,6 +10006,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.visibility.review_recency.explanation.seen1": "Al menos 1 reseña reciente (últimos 90 días) entre las pocas que muestra Google — 3 o más obtienen los puntos completos.",
     "content.checks.visibility.review_recency.explanation.seen2": "Al menos 2 reseñas recientes (últimos 90 días) entre las pocas que muestra Google — 3 o más obtienen los puntos completos.",
     "content.checks.visibility.review_recency.explanation.seen3": "Al menos 3 reseñas recientes (últimos 90 días) entre las pocas que muestra Google.",
+    "content.checks.visibility.review_recency.explanation.seenLeftOut1": "Al menos 1 reseña reciente (últimos 90 días) entre las pocas que muestra Google — conecte Google para contarlas todas. No se califica hasta entonces.",
+    "content.checks.visibility.review_recency.explanation.seenLeftOut2": "Al menos 2 reseñas recientes (últimos 90 días) entre las pocas que muestra Google — conecte Google para contarlas todas. No se califica hasta entonces.",
     "content.checks.visibility.review_recency.explanation.connectToCount": "Conecte Google para contar todas sus reseñas recientes.",
     "content.checks.visibility.review_replies.label": "Respuestas a reseñas",
     "content.checks.visibility.review_replies.advice": "Responda a sus reseñas recientes con un agradecimiento breve y personal. Los clientes leen las respuestas antes de elegir.",
@@ -10589,6 +10612,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.view.gradeStays": "Se mantiene en {grade}",
     "dashboard.growth.view.weeklyPlanNote.one": "Basado solo en {count} tarea de abajo — una semana realista, no todas las deficiencias a la vez. Consulte \"Proyectos más grandes\" para el plan a más largo plazo.",
     "dashboard.growth.view.weeklyPlanNote.other": "Basado solo en las {count} tareas de abajo — una semana realista, no todas las deficiencias a la vez. Consulte \"Proyectos más grandes\" para el plan a más largo plazo.",
+    "dashboard.growth.view.planBlurb.one": "Revisamos su ficha de Google, sus reseñas y su sitio web y encontramos 1 cosa que frena su puntuación. Siga los pasos de abajo en orden — cada uno vale puntos, y los primeros son los que más importan.",
+    "dashboard.growth.view.planBlurb.other": "Revisamos su ficha de Google, sus reseñas y su sitio web y encontramos {count} cosas que frenan su puntuación. Siga los pasos de abajo en orden — cada uno vale puntos, y los primeros son los que más importan.",
+    "dashboard.growth.view.planBlurbNone": "Nada está frenando su puntuación en este momento — mantenga su rutina semanal de abajo.",
     "dashboard.growth.view.weeklyPlanNoteEmpty": "No hay nada realista que mejorar esta semana, así que esto coincide con su puntuación actual. Consulte \"Proyectos más grandes\" para el plan a más largo plazo.",
     "dashboard.growth.view.actionPlanErrorPrefix": "No se pudo cargar su plan de acción: {error}",
     "dashboard.growth.view.weeklyPlanHeading": "El plan de esta semana ({count})",
@@ -13207,6 +13233,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.studio.customize": "Personalizar diseño",
     "dashboard.studio.lockedTab": "Pruébelas con una vista previa con marca de agua — imprimirlas requiere Premium.",
     "dashboard.studio.planLegend": "Grow: 2 estilos · 2 tamaños · QR básico. Premium: todas las plantillas, fuentes, colores, logotipo, doble cara, numeración, y sin la marca PostScore.",
+    "dashboard.studio.color.custom": "Color personalizado",
+    "dashboard.studio.color.swatch": "Usar {hex}",
+    "dashboard.studio.color.hardToReadDarker": "Difícil de leer — pruebe un color de texto más oscuro",
+    "dashboard.studio.color.hardToReadLighter": "Difícil de leer — pruebe un color de texto más claro",
+    "dashboard.studio.color.hardToSeeAccent": "Difícil de ver — pruebe un color de acento más fuerte",
     "dashboard.studio.growChip": "Grow",
     "dashboard.growth.print.tab.template": "Plantilla",
     "dashboard.growth.print.tab.size": "Tamaño",

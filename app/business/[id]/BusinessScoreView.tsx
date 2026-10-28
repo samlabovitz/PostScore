@@ -56,6 +56,7 @@ export function BusinessScoreView({
   recentSnapshots,
   freePostaiQuestions = [],
   scoringNote = false,
+  uiPrefs = { breakdownCollapsed: null, planListCollapsed: null },
   benchmark,
   gbpConnected,
   profileTools,
@@ -79,6 +80,8 @@ export function BusinessScoreView({
   freePostaiQuestions?: string[];
   /** Once, after the first v1.12.0 scan (lib/scoringUpdateNote.ts). */
   scoringNote?: boolean;
+  /** The owner's saved collapse choices (per account; null = none). */
+  uiPrefs?: { breakdownCollapsed: boolean | null; planListCollapsed: boolean | null };
   benchmark: GetLocalBenchmarkResult;
   gbpConnected: boolean;
   /** BizProfile.referralOk/couponsOk/pricingOk (config/bizProfiles.ts) —
@@ -217,7 +220,7 @@ export function BusinessScoreView({
         {/* C. What's behind the score: the breakdown (collapsed), then the
             competitor rank. */}
         <FreeSection id="behind" title={t(locale, freeSection("behind").titleKey)} body={t(locale, freeSection("behind").bodyKey)}>
-          <ScoreBreakdownPanel businessId={businessId} categories={breakdown.categories} hasWebsite={hasWebsite} scoreBasis={scoreBasis} audit websiteFixCount={null} lastScanAt={lastScanAt} />
+          <ScoreBreakdownPanel businessId={businessId} categories={breakdown.categories} hasWebsite={hasWebsite} scoreBasis={scoreBasis} audit websiteFixCount={null} lastScanAt={lastScanAt} accountCollapsed={uiPrefs.breakdownCollapsed} />
           <Card className="p-5" data-testid="free-rank">
             <h3 className="mb-3 font-serif text-[15px] font-semibold text-ink">{t(locale, "dashboard.free.rankHeading")}</h3>
             <LocalBenchmarkTile businessId={businessId} result={benchmark} />
@@ -247,7 +250,7 @@ export function BusinessScoreView({
             plan") — every "How to fix this" row and "See how to fix it"
             scrolls down to it. */}
         <FreeSection id="earn" title={t(locale, freeSection("earn").titleKey)} body={t(locale, freeSection("earn").bodyKey)}>
-          <FixPlanBox businessId={businessId} extras={{ hasWebsite, pricingOk: profileTools.pricingOk, campaignsOk: profileTools.couponsOk || profileTools.referralOk, monthlyReportsLive }}>
+          <FixPlanBox businessId={businessId} accountCollapsed={uiPrefs.planListCollapsed} extras={{ hasWebsite, pricingOk: profileTools.pricingOk, campaignsOk: profileTools.couponsOk || profileTools.referralOk, monthlyReportsLive }}>
             <GrowMoreCustomers
               businessId={businessId}
               profileTools={profileTools}
@@ -298,6 +301,7 @@ export function BusinessScoreView({
         linkOptions={linkOptions}
         websiteFixCount={websiteFixCount}
         lastScanAt={lastScanAt}
+        accountCollapsed={uiPrefs.breakdownCollapsed}
       />
 
       <GrowMoreCustomers

@@ -173,6 +173,8 @@ export interface CardDesign extends CardText {
 export const CARD_WORDS = {
   coupon: { en: "Coupon", es: "Cupón" },
   validUntil: { en: "Valid until", es: "Válido hasta" },
+  /** The sale banner's small eyebrow above the offer. */
+  limitedTime: { en: "Limited time", es: "Por tiempo limitado" },
   code: { en: "Code", es: "Código" },
   forFriend: { en: "For your friend", es: "Para su amigo" },
   forYou: { en: "For you", es: "Para usted" },

@@ -145,6 +145,18 @@ export function contrastProblems(colors: SignColors): ContrastProblem[] {
   return problems;
 }
 
+/** The "hard to read" hint for a color field, or null: the text color
+ * should go darker on a light background, lighter on a dark one; a faint
+ * accent should go stronger. */
+export function colorHint(field: "background" | "text" | "accent", colors: SignColors): "darker" | "lighter" | "accent" | null {
+  const problems = contrastProblems(colors);
+  if ((field === "text" || field === "background") && problems.includes("text")) {
+    return contrastRatio(colors.background, "#000000") >= contrastRatio(colors.background, "#ffffff") ? "darker" : "lighter";
+  }
+  if (field === "accent" && problems.includes("accent")) return "accent";
+  return null;
+}
+
 /** The QR's ink: the darkest of the sign's colors that's strong on white
  * (7:1+), else navy — the code is always dark on light. */
 export function qrInk(colors: SignColors): string {

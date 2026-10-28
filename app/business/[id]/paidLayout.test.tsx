@@ -31,7 +31,7 @@ describe("paid plans keep their pre-batch layout, page by page", () => {
     const view = read("app/business/[id]/growth/GrowthView.tsx");
     const paid = view.slice(view.indexOf("<WeeklyGoalCelebration"));
     expect(without(tags(paid), ["ReviewGoalLinesContext", "FreeGrowthMoves"])).toEqual([
-      "WeeklyGoalCelebration", "ProjectedSummary", "WeeklyChecklist", "Card", "SectionHeading", "PremiumConnectCard", "TaskListCard", "SectionHeading", "WebsiteBannerCard", "TaskListCard", "CompletedTasksCard", "SectionHeading", "GrowthMoveCard", "GoogleProfilePanel",
+      "WeeklyGoalCelebration", "ProjectedSummary", "PlanBlurb", "WeeklyChecklist", "Card", "SectionHeading", "PremiumConnectCard", "TaskListCard", "SectionHeading", "WebsiteBannerCard", "TaskListCard", "CompletedTasksCard", "SectionHeading", "GrowthMoveCard", "GoogleProfilePanel",
     ]);
     expect(view).toContain("{!gbpConnected && !actionPlan.weeklyTasks.some((task) => task.checkId === CONNECT_GOOGLE_STEP_ID) && (");
   });

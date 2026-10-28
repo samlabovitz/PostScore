@@ -30,7 +30,8 @@ const { breakdown } = result;
 const band = (freeWaiting?: number) =>
   wrap(<ScoreBand businessId="b1" score={breakdown.total} grade={breakdown.grade} history={[]} projectedScore={result.projectedBreakdown.total} projectedGrade={result.projectedBreakdown.grade} biggestBoost={null} freeWaitingPoints={freeWaiting} />);
 const rows = () => wrap(<>{breakdown.categories.map((c) => <CategoryCard key={c.id} category={c} embedded fixLinks={{}} lockedFixes />)}</>);
-const panel = (audit: boolean) => wrap(<ScoreBreakdownPanel businessId="b1" categories={breakdown.categories} hasWebsite scoreBasis={scoreBasisPoints(breakdown.categories)} audit={audit} websiteFixCount={null} />);
+// `collapsed`: the owner collapsed it before (saved per account).
+const panel = (audit: boolean, collapsed = true) => wrap(<ScoreBreakdownPanel businessId="b1" categories={breakdown.categories} hasWebsite scoreBasis={scoreBasisPoints(breakdown.categories)} audit={audit} websiteFixCount={null} accountCollapsed={collapsed} />);
 
 describe("the upgrade box shows only on Free", () => {
   test("Free: four headed sections in order — A score, C breakdown (then rank), D free tools (Reviews, then PostAI), B earn last (one combined card, then Unlock more at the very end)", () => {
@@ -98,12 +99,18 @@ describe("the upgrade box shows only on Free", () => {
     expect(text(combined("es"))).toContain("Recupere sus puntos faltantes, paso a paso");
   });
 
-  test("third part: a collapsed “See everything in each plan” — grouped Grow / Premium / Add-on, an outcome headline + one plain line, real badges and “Coming soon”, no extra buttons", () => {
+  test("third part: “See everything in each plan” starts OPEN (“Hide the full list ↑”) — grouped Grow / Premium / Add-on, an outcome headline + one plain line, real badges and “Coming soon”, no extra buttons", () => {
     const html = wrap(<FixPlanBox businessId="b1" extras={{ hasWebsite: true, pricingOk: true, campaignsOk: true }} />);
     const button = html.match(/<button[^>]*data-testid="fix-plan-extras-toggle"[^>]*>[\s\S]*?<\/button>/)![0];
-    expect(button).toContain('aria-expanded="false"');
-    expect(text(button)).toContain("See everything in each plan");
-    expect(html).toMatch(/<div id="[^"]+" hidden=""[^>]*data-testid="fix-plan-extras-list"/);
+    expect(button).toContain('aria-expanded="true"');
+    expect(text(button)).toContain("Hide the full list ↑");
+    expect(html).not.toMatch(/hidden=""[^>]*data-testid="fix-plan-extras-list"/);
+    // Collapsed before (saved per account): stays collapsed.
+    const collapsed = wrap(<FixPlanBox businessId="b1" accountCollapsed extras={{ hasWebsite: true, pricingOk: true, campaignsOk: true }} />);
+    expect(collapsed).toMatch(/<button[^>]*aria-expanded="false"[^>]*data-testid="fix-plan-extras-toggle"/);
+    expect(text(collapsed)).toContain("See everything in each plan");
+    expect(collapsed).toMatch(/<div id="[^"]+" hidden=""[^>]*data-testid="fix-plan-extras-list"/);
+    expect(text(wrap(<FixPlanBox businessId="b1" extras={{ hasWebsite: true, pricingOk: true, campaignsOk: true }} />, "es"))).toContain("Ocultar la lista completa ↑");
     const group = (g: string) => html.slice(html.indexOf(`data-testid="plan-group-${g}"`));
     expect(html.indexOf('data-testid="plan-group-grow"')).toBeLessThan(html.indexOf('data-testid="plan-group-premium"'));
     expect(html.indexOf('data-testid="plan-group-premium"')).toBeLessThan(html.indexOf('data-testid="plan-group-addOn"'));
@@ -126,7 +133,7 @@ describe("the upgrade box shows only on Free", () => {
     const lean = wrap(<FixPlanBox businessId="b1" extras={{ hasWebsite: false, pricingOk: false, campaignsOk: false }} />);
     for (const id of ["fixGuides", "recheck", "priceCheck", "campaigns"]) expect(lean, id).not.toContain(`data-testid="plan-extra-${id}"`);
     const es = text(wrap(<FixPlanBox businessId="b1" extras={{ hasWebsite: true }} />, "es"));
-    expect(es).toContain("Ver todo lo que incluye cada plan");
+    expect(es).toContain("Ocultar la lista completa ↑");
     expect(es).toContain("Un sitio web de una página, listo hoy");
   });
 

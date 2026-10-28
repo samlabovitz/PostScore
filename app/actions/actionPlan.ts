@@ -10,6 +10,7 @@ import {
   buildConnectGbpWeeklyTask,
   buildWeeklyPlan,
   mergeReviewTasks,
+  orderWeeklySteps,
   V112_STEP_CHECK_IDS,
   withStepLinks,
   mergeWebsiteTasks,
@@ -143,9 +144,9 @@ export async function getActionPlan(
   // Growth: "Connect Google" as the last step while it isn't connected — a
   // setup step (0 points, a link, never "I did this"); it unlocks replies
   // and the exact recent-review count.
-  const weeklyTasks = stepContext?.connectGoogle
-    ? [...weeklyPlan.weeklyTasks, buildConnectGbpWeeklyTask(businessId, locale, stepContext.plan)]
-    : weeklyPlan.weeklyTasks;
+  const weeklyTasks = orderWeeklySteps(
+    stepContext?.connectGoogle ? [...weeklyPlan.weeklyTasks, buildConnectGbpWeeklyTask(businessId, locale, stepContext.plan)] : weeklyPlan.weeklyTasks
+  );
 
   return {
     status: "ok",

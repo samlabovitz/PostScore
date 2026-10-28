@@ -28,7 +28,7 @@ import {
   IconPencil,
   IconTypography,
 } from "@tabler/icons-react";
-import { PlanMarksContext, CHOICE, CHOICE_OFF, CHOICE_ON, Choices, ContrastAlert, INPUT, Label, PremiumPreviewBanner, SELECT, Toggle, fetchSignFont, readLogoFile, usePrintFonts } from "@/components/studio/StudioControls";
+import { PlanMarksContext, CHOICE, CHOICE_OFF, CHOICE_ON, Choices, ColorField, colorHintText, ContrastAlert, INPUT, Label, PremiumPreviewBanner, SELECT, Toggle, fetchSignFont, readLogoFile, usePrintFonts } from "@/components/studio/StudioControls";
 import { CustomizeDesign, type DesignTab } from "@/components/studio/CustomizeDesign";
 import type { Plan } from "@/lib/plan";
 import {
@@ -96,7 +96,7 @@ import { CARD_ICONS, CARD_ICON_IDS, type CardIconId } from "@/lib/printStudio/ic
 import { layoutCardSheets, layoutSingleCard, serialLabel } from "@/lib/printStudio/layout";
 import { cardQrUrl, cardQrs } from "@/lib/printStudio/qr";
 import { formatShortDate, t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
-import { designColors } from "@/lib/signStudio/design";
+import { colorHint, designColors } from "@/lib/signStudio/design";
 import {
   addSaved,
   applySaved,
@@ -356,22 +356,24 @@ export function cardTabs(p: {
             onPick={(o, isLocked) => (!premium && !isLocked ? p.onBasic({ theme: o as BasicCard["theme"] }) : update({ theme: o }, isLocked))}
           />
           {value.theme === "custom" && (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="flex flex-col gap-3">
               {(["background", "text", "accent"] as const).map((k) => (
-                <label key={k} className="flex flex-col gap-1 text-[12px] text-ink-soft">
-                  {ts(locale, `colors.${k}`)}
-                  <input type="color" value={value.customColors[k]} onChange={(e) => update({ customColors: { ...value.customColors, [k]: e.target.value } }, locked)} className="h-9 w-full cursor-pointer rounded-lg border border-paper-deep bg-white p-1" />
-                </label>
+                <ColorField
+                  key={k}
+                  testId={`color-${k}`}
+                  label={ts(locale, `colors.${k}`)}
+                  value={value.customColors[k]}
+                  locked={locked}
+                  hint={colorHintText(colorHint(k, value.customColors), locale)}
+                  onChange={(hex) => update({ customColors: { ...value.customColors, [k]: hex } }, locked)}
+                />
               ))}
             </div>
           )}
           <Toggle locked={locked} checked={value.gradient.on} onChange={(v) => update({ gradient: { ...value.gradient, on: v } }, locked)} label={tp(locale, "gradient")} />
           {value.gradient.on && (
-            <div className="grid grid-cols-[auto_1fr] items-end gap-2">
-              <label className="flex flex-col gap-1 text-[12px] text-ink-soft">
-                {tp(locale, "gradientTo")}
-                <input type="color" value={value.gradient.to} onChange={(e) => update({ gradient: { ...value.gradient, to: e.target.value } }, locked)} className="h-9 w-14 cursor-pointer rounded-lg border border-paper-deep bg-white p-1" />
-              </label>
+            <div className="flex flex-col gap-2">
+              <ColorField testId="color-gradient" label={tp(locale, "gradientTo")} value={value.gradient.to} locked={locked} onChange={(hex) => update({ gradient: { ...value.gradient, to: hex } }, locked)} />
               <Choices name="gradientAngle" cols={3} value={value.gradient.angle} options={GRADIENT_ANGLES} label={(o) => tp(locale, `angle.${o}`)} isLocked={L} onPick={(o) => update({ gradient: { ...value.gradient, angle: o } }, locked)} />
             </div>
           )}

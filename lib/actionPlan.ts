@@ -1275,6 +1275,15 @@ export function stepLinks(checkId: string, businessId: string, locale: Locale = 
   return [...tool, ...officialLinksFor(checkId, locale)];
 }
 
+/** "Do the steps below in order": highest points first, setup steps
+ * (no points) last. Stable for equal points. */
+export function orderWeeklySteps<T extends Pick<ActionPlanTask, "weightedPoints" | "effort">>(tasks: T[]): T[] {
+  return tasks
+    .map((task, i) => ({ task, i }))
+    .sort((a, b) => Number(a.task.effort === "setup") - Number(b.task.effort === "setup") || b.task.weightedPoints - a.task.weightedPoints || a.i - b.i)
+    .map(({ task }) => task);
+}
+
 /** Adds the PostScore tool links (the pure plan has no business id). */
 export function withStepLinks(tasks: ActionPlanTask[], businessId: string, locale: Locale = DEFAULT_LOCALE): ActionPlanTask[] {
   return tasks.map((task) => (task.effort === "setup" ? task : { ...task, links: stepLinks(task.checkId, businessId, locale) }));

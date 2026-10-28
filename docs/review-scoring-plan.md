@@ -36,17 +36,23 @@ Rebuilt Oct 26, 2026 from the current code (`lib/scoring.ts` at `SCORING_VERSION
 ## Stage 2 — v1.12.0
 
 ### Review recency (`visibility.review_recency`, 6 pts)
-- **Source:** reviews from Place Details only (not Nearby Search).
-- **Full points** if any returned review is ≤ 90 days old.
-- **Otherwise "couldn't confirm"** (excluded, not 0). Google returns at most 5 reviews, chosen by relevance rather than date, so their absence doesn't prove anything.
+_As shipped (Day 21, with the fairness fix)._
+- **Counted:** reviews created in the last 90 days, kept only as a bucket — 0, 1, 2 or 3+ (`businesses.recent_reviews_seen`, `businesses.gbp_recent_reviews`, `gbp_connections.reply_recent_reviews`; `supabase/scoring-v1-12-recency-details.sql`). Never review text, names, ratings or dates. The engine never reads the clock; the bucket is computed at collection time.
+- **Google connected — the exact count:** 3+ = 6, 2 = 4, 1 = 2, 0 = 0 (verified either way).
+- **Not connected — Google's few returned reviews (≤ 5, chosen by relevance):**
+  - 3+ recent among them = 6/6;
+  - 1–2 recent = **left out of the score**: "At least N recent reviews among the few Google shows — connect Google to count them all." Google may simply not have shown the others, so it's never scored low;
+  - none recent = "couldn't confirm" (left out).
 - **0 reviews on the listing = 0 points, verified.**
-- **Store yes/no only** ("has a review in the last 90 days"), in a boolean column on `businesses` (its own `supabase/*.sql` file). Never store review text, names, ratings or dates. The engine never reads the clock; the yes/no is computed at collection time and frozen into the input.
-- **GBP connected:** use GBP `hasRecentReview` instead (verified both ways, since GBP sees every review).
+- Growth: recency rides on the one "Get fresh reviews" card (with review count and star rating, one "up to +N" estimate); its own "Get fresh reviews this month" step shows only when it's the one review check losing points.
 - This replaces today's linear 90 → 730-day curve (`recencyFraction`).
 
 ### Customer details on your listing (new, Listing, 3 pts)
-- **Three parts, one point each:** accessibility, payment and parking options on the listing.
-- **Storefronts only.** `pureServiceAreaBusiness = true` excludes the check (not applicable, never 0).
+_As shipped._
+- **Only the parts that apply to the business type count, always out of 3** (`lib/customerDetails.ts`): places customers visit and pay at — accessibility, payment, parking; offices (law, accounting, medical…) — accessibility only; places of worship / community centers — accessibility and parking; trades that go to the customer — none (the check is left out).
+- **No storefront** (`pureServiceAreaBusiness = true`): never parking.
+- **Owner opt-outs ("Added by you"):** "No parking available" and "We take no payments on site" remove that part (`businesses.owner_no_parking`, `owner_no_payment`).
+- Each part shown ✓/✗ with why those parts count; steps and official Google links in the row's "How to fix it".
 - EN + ES label, explanation and advice, like every other check (`content.checks.*`).
 
 ### Replying to reviews (new, Visibility, 6 pts)

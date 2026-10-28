@@ -55,6 +55,7 @@ import {
   type SignSize,
   type SignThemeId,
   type StoredLogo,
+  colorHint,
 } from "@/lib/signStudio/design";
 import { layoutSign, PAGE_POINTS } from "@/lib/signStudio/layout";
 import { signSvg } from "@/lib/signStudio/svg";
@@ -75,6 +76,8 @@ import { PlanMarksContext,
   StudioDialog,
   Toggle,
   usePrintFonts,
+  ColorField,
+  colorHintText,
 } from "@/components/studio/StudioControls";
 import { CustomizeDesign, type DesignTab } from "@/components/studio/CustomizeDesign";
 import { AskPostAI } from "@/components/studio/AskPostAI";
@@ -170,18 +173,17 @@ function useSignTabContents({
           swatch={(o) => <ThemeSwatch theme={o} design={value} />}
         />
         {value.theme === "custom" && (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="flex flex-col gap-3">
             {(["background", "text", "accent"] as const).map((k) => (
-              <label key={k} className="flex flex-col gap-1 text-[12px] text-ink-soft">
-                {tk(locale, `colors.${k}`)}
-                <input
-                  type="color"
-                  value={value.customColors[k]}
-                  disabled={locked}
-                  onChange={(e) => update({ customColors: { ...value.customColors, [k]: e.target.value } }, locked)}
-                  className="h-9 w-full cursor-pointer rounded-lg border border-paper-deep bg-white p-1"
-                />
-              </label>
+              <ColorField
+                key={k}
+                testId={`color-${k}`}
+                label={tk(locale, `colors.${k}`)}
+                value={value.customColors[k]}
+                locked={locked}
+                hint={colorHintText(colorHint(k, value.customColors), locale)}
+                onChange={(hex) => update({ customColors: { ...value.customColors, [k]: hex } }, locked)}
+              />
             ))}
           </div>
         )}

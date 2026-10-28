@@ -89,10 +89,21 @@ describe("Free: re-scans don't refresh competitors — said plainly", () => {
 describe("Score breakdown: “As of your last scan”, and on Free a collapsed card with an obvious open control", () => {
   const { breakdown } = getScoreWithSuggestions(scoringInput());
   const count = breakdown.categories.reduce((n, c) => n + c.checks.length, 0);
-  const panel = (audit: boolean, locale: "en" | "es" = "en") =>
-    wrap(<ScoreBreakdownPanel businessId="b1" categories={breakdown.categories} hasWebsite scoreBasis={scoreBasisPoints(breakdown.categories)} audit={audit} websiteFixCount={null} lastScanAt="2026-10-21T15:00:00Z" />, locale);
+  // `collapsed`: the owner collapsed it before (saved per account).
+  const panel = (audit: boolean, locale: "en" | "es" = "en", collapsed: boolean | null = true) =>
+    wrap(<ScoreBreakdownPanel businessId="b1" categories={breakdown.categories} hasWebsite scoreBasis={scoreBasisPoints(breakdown.categories)} audit={audit} websiteFixCount={null} lastScanAt="2026-10-21T15:00:00Z" accountCollapsed={collapsed} />, locale);
 
-  test("Free starts collapsed: the gold “See all N checks” button (real count) and the clickable bottom strip, both aria-expanded=false", () => {
+  test("every plan starts OPEN — all checks visible, \"Hide checks ↑\" — EN + ES", () => {
+    for (const audit of [true, false]) {
+      const html = panel(audit, "en", null);
+      expect(html).toMatch(/<button[^>]*aria-expanded="true"[^>]*data-testid="breakdown-toggle"/);
+      expect(text(html)).toContain("Hide checks ↑");
+      expect(html).toContain('id="check-photos"');
+    }
+    expect(text(panel(false, "es", null))).toContain("Ocultar revisiones ↑");
+  });
+
+  test("Collapsed before (saved per account) — Free: the gold “See all N checks” button (real count) and the clickable bottom strip, both aria-expanded=false", () => {
     const html = panel(true);
     expect(text(html)).toContain(`See all ${count} checks`);
     expect(html).toMatch(/<button[^>]*aria-expanded="false"[^>]*data-testid="breakdown-toggle"[^>]*class="[^"]*bg-brass/);
@@ -103,7 +114,7 @@ describe("Score breakdown: “As of your last scan”, and on Free a collapsed c
     expect(text(panel(true, "es"))).toContain(`Ver las ${count} revisiones`);
   });
 
-  test("“As of your last scan, {date}” at the top; every plan gets the same collapsed card and gold “See all N checks” button", () => {
+  test("“As of your last scan, {date}” at the top; collapsed before, every plan gets the same collapsed card and gold “See all N checks” button", () => {
     for (const audit of [true, false]) expect(text(panel(audit))).toContain("As of your last scan, Oct 21, 2026");
     const paid = panel(false);
     expect(text(paid)).toContain(`See all ${count} checks`);

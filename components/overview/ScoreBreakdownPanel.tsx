@@ -10,6 +10,7 @@
 // (#check-photos from PostAI, or #score-breakdown from a tile).
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useRememberedOpen } from "@/components/ui/useRememberedOpen";
 import Link from "next/link";
 import { IconArrowRight, IconChevronDown } from "@tabler/icons-react";
 import { CategoryCard, checkOutcome, formatPoints } from "@/components/scoring/CategoryCard";
@@ -143,6 +144,7 @@ export function ScoreBreakdownPanel({
   audit = false,
   websiteFixCount = null,
   lastScanAt = null,
+  accountCollapsed = null,
 }: {
   businessId: string;
   categories: CategoryResult[];
@@ -153,19 +155,21 @@ export function ScoreBreakdownPanel({
   websiteFixCount?: number | null;
   /** Free (the audit): no fix links — what's wrong and the points each
    * costs, never how to fix it; a locked "How to fix this" row instead.
-   * The checks start hidden behind an obvious gold "See all N checks"
-   * button and a clickable bottom strip. */
+   * Like every plan, the checks start open ("Hide checks ↑"). */
   audit?: boolean;
   /** When the score was scanned — "As of your last scan, {date}". */
   lastScanAt?: string | null;
+  /** The owner's saved choice (per account): true = they collapsed it. */
+  accountCollapsed?: boolean | null;
 }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
   // `mounted` keeps the rows in the page while the close animation runs.
-  // Every plan starts collapsed — same on the server and in the browser.
-  const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  // Every plan starts OPEN (all checks visible); a collapse is remembered
+  // per account.
+  const { open, toggle, reveal } = useRememberedOpen("overview.breakdownCollapsed", accountCollapsed);
+  const [mounted, setMounted] = useState(open);
+  const [expanded, setExpanded] = useState(open);
   const checkCount = categories.reduce((sum, c) => sum + c.checks.length, 0);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const fixLinks = audit ? {} : breakdownFixLinks(categories, businessId, locale, linkOptions);
@@ -192,7 +196,7 @@ export function ScoreBreakdownPanel({
     function openForHash() {
       const id = decodeURIComponent(window.location.hash.slice(1));
       if (id !== BREAKDOWN_ANCHOR && !ids.has(id)) return;
-      setOpen(true);
+      reveal();
       // Re-center once the rows have finished growing.
       pending.push(setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: anchorScrollBehavior(), block: "start" }), ANIMATION_MS + 60));
     }
@@ -204,7 +208,7 @@ export function ScoreBreakdownPanel({
       window.removeEventListener(ANCHOR_HIGHLIGHT_EVENT, openForHash);
       pending.forEach(clearTimeout);
     };
-  }, [anchorKey]);
+  }, [anchorKey, reveal]);
 
   return (
     <section id={BREAKDOWN_ANCHOR} className="scroll-mt-20 rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
@@ -221,14 +225,14 @@ export function ScoreBreakdownPanel({
         {/* Every plan: the gold button with the real number of checks. */}
         <button
           type="button"
-          onClick={() => setOpen((o) => !o)}
+          onClick={toggle}
           aria-expanded={open}
           aria-controls={`${BREAKDOWN_ANCHOR}-checks`}
           data-testid="breakdown-toggle"
           className="inline-flex items-center gap-1.5 rounded-lg border border-brass bg-brass px-3.5 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-brass)_85%,white)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
           {open ? t(locale, "dashboard.overview.breakdown.hideAll") : t(locale, "dashboard.overview.breakdown.seeAll", { count: checkCount })}
-          <IconChevronDown size={15} aria-hidden className={cn("transition-transform duration-300 motion-reduce:transition-none", open && "rotate-180")} />
+          {!open && <IconChevronDown size={15} aria-hidden className="transition-transform duration-300 motion-reduce:transition-none" />}
         </button>
       </div>
 
@@ -258,7 +262,7 @@ export function ScoreBreakdownPanel({
       {/* The whole bottom strip opens and closes the checks too. */}
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggle}
         aria-expanded={open}
         aria-controls={`${BREAKDOWN_ANCHOR}-checks`}
         data-testid="breakdown-strip"
@@ -267,7 +271,7 @@ export function ScoreBreakdownPanel({
         <Legend locale={locale} />
         <span className="ml-auto inline-flex items-center gap-1 text-[12px] font-semibold text-ink">
           {open ? t(locale, "dashboard.overview.breakdown.hideAll") : t(locale, "dashboard.overview.breakdown.seeAll", { count: checkCount })}
-          <IconChevronDown size={14} aria-hidden className={cn("text-brass transition-transform duration-300 motion-reduce:transition-none", open && "rotate-180")} />
+          {!open && <IconChevronDown size={14} aria-hidden className="text-brass transition-transform duration-300 motion-reduce:transition-none" />}
         </span>
       </button>
     </section>

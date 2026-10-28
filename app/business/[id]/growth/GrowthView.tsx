@@ -19,7 +19,7 @@ import { type GoogleProfileConnection, GoogleProfilePanel, type GoogleListingFac
 import type { SearchDemandView } from "@/components/gbp/SearchDemandSection";
 import { growthMoveOverlapsActionPlan } from "@/lib/growthMoveOverlap";
 import type { WeeklyChecklistItem, WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
-import type { ScoreBreakdown } from "@/lib/scoring";
+import { generateSuggestions, type ScoreBreakdown } from "@/lib/scoring";
 import type { BizProfile } from "@/config/bizProfiles";
 import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 import { useScrollToHash } from "@/lib/useScrollToHash";
@@ -125,6 +125,17 @@ function ProjectedSummary({
       </div>
       <p className="mt-3 text-[12px] text-ink-mute">{note}</p>
     </section>
+  );
+}
+
+/** What the plan is for, from real data: how many checks are losing
+ * points, or that nothing is. */
+export function PlanBlurb({ count }: { count: number }) {
+  const locale = useLocale();
+  return (
+    <p data-testid="plan-blurb" className="-mt-2 text-[13.5px] leading-relaxed text-ink-soft nav:-mt-4">
+      {count > 0 ? tPlural(locale, "dashboard.growth.view.planBlurb", count) : t(locale, "dashboard.growth.view.planBlurbNone")}
+    </p>
   );
 }
 
@@ -275,6 +286,8 @@ export function GrowthView({
   // truly empty — the only time that happens for a business with real
   // remaining gaps is when there simply aren't any left to show.
   const hasNoRemainingScoreGaps = actionPlan.tasks.length === 0 && actionPlan.websiteBanner === null;
+  // Every check really losing points right now (the same list the plan is built from).
+  const issueCount = generateSuggestions(breakdown, locale).length;
   // Every real open score-gap task on this page, "This week's plan" and
   // "Bigger projects" together — the live source of truth a growth
   // move's badge checks itself against (see growthMoveOverlapsActionPlan
@@ -338,6 +351,7 @@ export function GrowthView({
                       : t(locale, "dashboard.growth.view.weeklyPlanNoteEmpty")
                   }
                 />
+                <PlanBlurb count={issueCount} />
                 {actionPlan.error ? (
                   <Card className="p-5 text-sm text-red">{t(locale, "dashboard.growth.view.actionPlanErrorPrefix", { error: actionPlan.error })}</Card>
                 ) : (
@@ -382,6 +396,7 @@ export function GrowthView({
                     }
                   />
                 </WeeklyGoalCelebration>
+                <PlanBlurb count={issueCount} />
 
                 <div id="weekly-routine" className="scroll-mt-20">
                   <WeeklyChecklist

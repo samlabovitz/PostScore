@@ -284,8 +284,8 @@ describe("top recommendations: the action plan, prioritized by real points", () 
 });
 
 describe("score breakdown panel", () => {
-  test("collapsed: three categories with their bars; fix links only on rows that need work", () => {
-    const html = render(<ScoreBreakdownPanel businessId="b" categories={breakdown.categories} hasWebsite scoreBasis={100} />);
+  test("collapsed (saved per account): three categories with their bars; fix links only on rows that need work", () => {
+    const html = render(<ScoreBreakdownPanel businessId="b" categories={breakdown.categories} hasWebsite scoreBasis={100} accountCollapsed />);
     expect(html).toContain("Score breakdown");
     for (const c of breakdown.categories) expect(html).toContain(c.label.replace("&", "&amp;"));
     expect(html).toContain("4 done · 3 need work · 5 couldn&#x27;t check");

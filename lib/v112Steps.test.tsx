@@ -79,11 +79,14 @@ describe("this week's plan: the v1.12.0 steps while they lose points", () => {
     for (const id of V112_STEP_CHECK_IDS) expect(ids).not.toContain(id);
   });
 
-  test("replies only when connected; recency only below 6/6", () => {
-    const notConnected = businessRowToScoringInput({ ...ROW, gbp_reviews_in_window: null, gbp_replied: null, gbp_has_recent_review: null, gbp_recent_reviews: null, recent_reviews_seen: 2 });
-    const ids = growthPlan(notConnected).weeklyTasks.map((t) => t.checkId);
+  test("replies only when connected; recency only while it's really losing points", () => {
+    const notConnected = (seen: number) => businessRowToScoringInput({ ...ROW, gbp_reviews_in_window: null, gbp_replied: null, gbp_has_recent_review: null, gbp_recent_reviews: null, recent_reviews_seen: seen });
+    // 2 seen, not connected: left out of the score — no step pushing it.
+    const ids = growthPlan(notConnected(2)).weeklyTasks.map((t) => t.checkId);
     expect(ids).not.toContain("visibility.review_replies");
-    expect(ids).toContain("visibility.review_recency");
+    expect(ids).not.toContain("visibility.review_recency");
+    // Connected with 1 recent review: a real gap, its own step.
+    expect(growthPlan(businessRowToScoringInput({ ...ROW, gbp_recent_reviews: 1 })).weeklyTasks.map((t) => t.checkId)).toContain("visibility.review_recency");
   });
 
   test("Spanish (usted)", () => {

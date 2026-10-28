@@ -173,7 +173,7 @@ function replyCountsLine(c: GbpReplyCounts | null): string {
 /** Recent reviews (the last 90 days): only a bucket is ever stored. */
 function recentReviewsLine(c: GbpReplyCounts | null): string {
   const rule =
-    "Review recency points: 3 or more reviews in the last 90 days = 6/6, 2 = 4/6, 1 = 2/6. No dates or review text are kept — never name a date, a day count or \"this week\".";
+    "Review recency points: with Google connected, the exact count — 3 or more reviews in the last 90 days = 6/6, 2 = 4/6, 1 = 2/6, 0 = 0/6. Not connected: 3 or more recent among the few reviews Google shows = 6/6; 1–2 = not scored until Google is connected (Google may not have shown the others — never say the owner lost points for it). No dates or review text are kept — never name a date, a day count or \"this week\".";
   if (c && typeof c.recentReviews === "number") {
     const n = c.recentReviews === 3 ? "3 or more" : String(c.recentReviews);
     return `- Reviews in the last 90 days (owner's connected Google profile — the exact count): ${n}. ${rule}`;

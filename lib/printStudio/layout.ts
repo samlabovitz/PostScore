@@ -13,7 +13,7 @@
 //   → fine print, and the QR is never bigger than the offer;
 // - the referral card's two halves carry equal weight and the same code.
 
-import { qrInk } from "@/lib/signStudio/design";
+import { contrastRatio, qrInk } from "@/lib/signStudio/design";
 import {
   insetShape,
   mixColor,
@@ -27,6 +27,7 @@ import {
   type SignElement,
   type SignPanel,
 } from "@/lib/signStudio/elements";
+import type { SignColors } from "@/lib/signStudio/design";
 import { starPath } from "@/lib/reviewQr";
 import {
   CARD_SHEETS,
@@ -83,7 +84,23 @@ const DROP_EXTRA = 3;
 const DROP_LAST = 4;
 
 type Block = { gap?: number; optional?: number } & (
-  | { kind: "text"; text: string; role: FontRole; rel: number; color: "text" | "accent"; maxLines: number; upper?: boolean; italic?: boolean; spacing?: number; fine?: boolean; offer?: boolean }
+  | {
+      kind: "text";
+      text: string;
+      role: FontRole;
+      rel: number;
+      color: "text" | "accent";
+      maxLines: number;
+      upper?: boolean;
+      italic?: boolean;
+      spacing?: number;
+      fine?: boolean;
+      offer?: boolean;
+      /** Never split a word; two lines are balanced (no lone last word). */
+      balance?: boolean;
+      /** Set in a subtle rounded pill (the sale banner's code + expiry). */
+      pill?: boolean;
+    }
   | { kind: "rule" }
   | { kind: "writeIn"; label: string }
   | { kind: "punches"; count: number }
@@ -145,7 +162,7 @@ function dot(x: number, y: number, r: number): string {
 }
 
 /** Background (clipped to the card shape by the panel), pattern, border. */
-function frame(d: CardDesign, w: number, h: number, shape: CardShape): SignElement[] {
+function frame(d: CardDesign, w: number, h: number, shape: CardShape, borderInk?: string): SignElement[] {
   const colors = cardColors(d);
   const els: SignElement[] = [];
   els.push({
@@ -213,7 +230,7 @@ function frame(d: CardDesign, w: number, h: number, shape: CardShape): SignEleme
   // Borders follow the card shape itself, so the background never shows
   // past them.
   const outline = (inset: number, width: number, dash = false) =>
-    els.push({ kind: "path", d: shapePath(insetShape(shape, inset)), fill: "none", stroke: colors.text, strokeWidth: width, dash });
+    els.push({ kind: "path", d: shapePath(insetShape(shape, inset)), fill: "none", stroke: borderInk ?? colors.text, strokeWidth: width, dash });
   if (d.border === "thin") outline(0.5, 1);
   if (d.border === "dashed") outline(0.6, 1.1, true);
   if (d.border === "double") {
@@ -244,11 +261,11 @@ function frame(d: CardDesign, w: number, h: number, shape: CardShape): SignEleme
 
 // ---- QR ----
 
-function qrTile(d: CardDesign, qrName: string, x: number, y: number, qr: number): SignElement[] {
+function qrTile(d: CardDesign, qrName: string, x: number, y: number, qr: number, palette?: SignColors): SignElement[] {
   const pad = qr * 0.07;
-  const colors = cardColors(d);
+  const colors = palette ?? cardColors(d);
   const ink = qrInk(colors);
-  const onWhite = colors.background.toLowerCase() === "#ffffff" && !d.gradient.on;
+  const onWhite = colors.background.toLowerCase() === "#ffffff" && (palette !== undefined || !d.gradient.on);
   return [
     { kind: "rect", x, y, w: qr + 2 * pad, h: qr + 2 * pad, r: d.corners === "square" ? 0 : pad * 0.9, fill: "#ffffff", stroke: onWhite ? colors.text : null, strokeWidth: 0.6 },
     { kind: "qr", x: x + pad, y: y + pad, size: qr, qr: qrName, ink, star: d.theme === "clean" ? ink : "#b8862f" },
@@ -258,7 +275,7 @@ function qrTile(d: CardDesign, qrName: string, x: number, y: number, qr: number)
 const CAPTION_WORD: Record<Exclude<QrDestination, "none">, keyof typeof CARD_WORDS> = { review: "scanReview", listing: "scanListing", website: "scanWebsite" };
 
 /** A small line under the QR saying where it goes — only when it fits. */
-function qrCaption(d: CardDesign, m: Measurer, dest: QrDestination, x: number, tileBottom: number, tileW: number, limitY: number): SignElement[] {
+function qrCaption(d: CardDesign, m: Measurer, dest: QrDestination, x: number, tileBottom: number, tileW: number, limitY: number, color = cardColors(d).text): SignElement[] {
   if (dest === "none") return [];
   const text = word(d, CAPTION_WORD[dest]);
   const role: FontRole = "body";
@@ -274,11 +291,68 @@ function qrCaption(d: CardDesign, m: Measurer, dest: QrDestination, x: number, t
     text: line,
     size,
     role,
-    color: cardColors(d).text,
+    color,
   }));
 }
 
 // ---- Text fitting ----
+
+/** The code pill: a light tint of the accent that keeps the text readable
+ * (4.5:1), else a fainter one. */
+export function pillFill(colors: { background: string; text: string; accent: string }): string {
+  for (const t of [0.16, 0.1, 0.06]) {
+    const fill = mixColor(colors.background, colors.accent, t);
+    if (contrastRatio(colors.text, fill) >= 4.5) return fill;
+  }
+  return colors.background;
+}
+
+/** A pill's "Code X · Valid until …": one line, else broken only at its
+ * " · " separators (never inside the date). */
+function pillWrap(text: string, m: Measurer, role: FontRole, size: number, maxWidth: number, maxLines: number, letterSpacing = 0): string[] | null {
+  const fits = (t: string) => m.width(t, role, size, letterSpacing) <= maxWidth;
+  if (fits(text)) return [text];
+  const parts = text.split(" · ");
+  const lines: string[] = [];
+  for (const part of parts) {
+    const joined = lines.length ? `${lines[lines.length - 1]} · ${part}` : part;
+    if (lines.length && fits(joined)) lines[lines.length - 1] = joined;
+    else if (fits(part)) lines.push(part);
+    else return null;
+  }
+  return lines.length <= maxLines ? lines : null;
+}
+
+/** Wraps without ever splitting a word; on two lines, picks the break
+ * that makes the lines most even (no lone last word), and never starts a
+ * line with "%". null when it needs more lines (the caller shrinks the
+ * text first). */
+export function balancedWrap(text: string, m: Measurer, role: FontRole, size: number, maxWidth: number, maxLines: number, letterSpacing = 0): string[] | null {
+  const words = text.split(" ").filter(Boolean);
+  const width = (t: string) => m.width(t, role, size, letterSpacing);
+  if (words.some((word) => width(word) > maxWidth)) return null;
+  const one = words.join(" ");
+  if (width(one) <= maxWidth) return [one];
+  if (maxLines < 2) return null;
+  let best: string[] | null = null;
+  let bestW = Infinity;
+  for (let i = 1; i < words.length; i++) {
+    if (words[i] === "%") continue;
+    const a = words.slice(0, i).join(" ");
+    const b = words.slice(i).join(" ");
+    const wa = width(a);
+    const wb = width(b);
+    if (wa > maxWidth || wb > maxWidth) continue;
+    // The longer line as short as possible; on a tie, the top line longer.
+    const score = Math.max(wa, wb) + (wb > wa ? 0.01 : 0);
+    if (score < bestW) {
+      bestW = score;
+      best = [a, b];
+    }
+  }
+  if (best) return best;
+  return maxLines > 2 ? wrap(one, m, role, size, maxWidth, maxLines, letterSpacing) : null;
+}
 
 interface Fitted {
   els: SignElement[];
@@ -293,10 +367,10 @@ function roleFor(d: CardDesign, role: FontRole): FontRole {
 
 /** Fits blocks into a region, vertically centered; null if they don't
  * fit (text never shrinks below MIN_TEXT / MIN_FINE_TEXT). */
-function fitBlocks(d: CardDesign, m: Measurer, blocks: Block[], region: Region, base: number, f: number, align: "left" | "center", inkOver?: string): Fitted | null {
+function fitBlocks(d: CardDesign, m: Measurer, blocks: Block[], region: Region, base: number, f: number, align: "left" | "center", inkOver?: string, palette?: SignColors): Fitted | null {
   const els: SignElement[] = [];
   const laid: Array<(at: Region) => void> = [];
-  const colors = cardColors(d);
+  const colors = palette ?? cardColors(d);
   let y = 0;
   let offerH = 0;
   for (const b of blocks) {
@@ -306,21 +380,32 @@ function fitBlocks(d: CardDesign, m: Measurer, blocks: Block[], region: Region, 
       const spacing = (b.spacing ?? SPACING[d.letterSpacing]) * size;
       const clean = printable(b.upper ? b.text.toUpperCase() : b.text, m, role);
       if (!clean) continue;
-      const lines = wrap(clean, m, role, size, region.w, b.maxLines, spacing);
+      // A pill's text sits inside its padding.
+      const px = b.pill ? size * 0.75 : 0;
+      const py = b.pill ? size * 0.35 : 0;
+      const lines = b.pill
+        ? (pillWrap(clean, m, role, size, region.w - 2 * px, b.maxLines, spacing) ?? wrap(clean, m, role, size, region.w - 2 * px, b.maxLines, spacing))
+        : b.balance
+          ? balancedWrap(clean, m, role, size, region.w - 2 * px, b.maxLines, spacing)
+          : wrap(clean, m, role, size, region.w - 2 * px, b.maxLines, spacing);
       if (!lines) return null;
       const lineH = size * 1.2;
       const top = y;
       const italic = b.italic ?? (b.role === "headline" ? d.headlineItalic : d.bodyItalic);
       const color = inkOver ?? (b.color === "accent" ? colors.accent : colors.text);
-      laid.push((at) =>
+      laid.push((at) => {
+        const widths = lines.map((line) => m.width(line, role, size, spacing));
+        if (b.pill) {
+          const pw = Math.max(...widths) + 2 * px;
+          els.push({ kind: "rect", x: align === "center" ? at.x + (at.w - pw) / 2 : at.x, y: at.y + top, w: pw, h: lines.length * lineH + 2 * py, r: (lineH + 2 * py) / 2, fill: pillFill(colors), stroke: null, strokeWidth: 0 });
+        }
         lines.forEach((line, i) => {
-          const w = m.width(line, role, size, spacing);
-          const x = align === "center" ? at.x + (at.w - w) / 2 : at.x;
-          els.push({ kind: "text", x, y: at.y + top + lineH * (i + 1) - lineH * 0.24, text: line, size, role, color, italic, letterSpacing: spacing || undefined });
-        })
-      );
+          const x = align === "center" ? at.x + (at.w - widths[i]) / 2 : at.x + px;
+          els.push({ kind: "text", x, y: at.y + top + py + lineH * (i + 1) - lineH * 0.24, text: line, size, role, color, italic, letterSpacing: spacing || undefined });
+        });
+      });
       if (b.offer) offerH = lines.length * lineH;
-      y += lines.length * lineH + (b.gap ?? 0.4) * size;
+      y += lines.length * lineH + 2 * py + (b.gap ?? 0.4) * size;
     } else if (b.kind === "rule") {
       const top = y;
       laid.push((at) => {
@@ -430,8 +515,7 @@ function frontBlocks(d: CardDesign, serial: string | null, finePrintOnFront: boo
     case "voucher":
     case "minimal":
       return { main: [...nameBlock, ...offer(d.offer), ...(d.template === "minimal" ? [{ kind: "rule" } as Block] : []), ...tail], side: [] };
-    case "saleBanner":
-      return { main: [...nameBlock, ...tail], side: [] };
+    case "saleBanner": // Its own layout — saleBannerFace.
     case "giftCard":
       return { main: [...nameBlock, ...label("gift"), ...offer(d.offer), ...tail], side: [] };
     case "loyalty":
@@ -474,6 +558,7 @@ const COUPON_TEMPLATES_WITH_OFFER = new Set(["ticket", "voucher", "saleBanner", 
 
 function frontFace(input: CardLayoutInput, m: Measurer, w: number, h: number, serial: string | null): Face | null {
   const d = input.design;
+  if (d.template === "saleBanner") return saleBannerFace(input, m, w, h, serial);
   const landscape = w >= h;
   const unit = Math.min(w, h);
   const shape = cardShape(d, w, h);
@@ -504,23 +589,10 @@ function frontFace(input: CardLayoutInput, m: Measurer, w: number, h: number, se
         let sideR: Region | null = null;
         let qrPos: { x: number; y: number } | null = null;
         let qrBelowLimit = h - pad * 0.6;
-        let bandEls: SignElement[] = [];
-        let top = pad;
+        const top = pad;
         let mainBlocks = main;
         let offerH = 0;
 
-        if (d.template === "saleBanner") {
-          // The offer runs across a band in reversed colors; on landscape
-          // cards the band stops at the QR column.
-          const qrColW = landscape && wantQr ? tile + pad * 0.8 : 0;
-          const bandBlocks: Block[] = [...text(d.offer, "headline", 0.95, "text", 2, { offer: true })];
-          const bandR: Region = { x: pad, y: pad * 0.75, w: w - 2 * pad - qrColW, h: landscape ? h * 0.4 : h * 0.24 };
-          const fitted = fitBlocks(d, m, bandBlocks, bandR, base, f, "center", colors.background);
-          if (!fitted) continue;
-          bandEls = [{ kind: "rect", x: 0, y: 0, w: w - qrColW - pad * 0.4, h: bandR.y + bandR.h + pad * 0.4, r: 0, fill: colors.text, stroke: null, strokeWidth: 0 }, ...fitted.els];
-          top = bandR.y + bandR.h + pad * 0.9;
-          offerH = fitted.offerH;
-        }
         if (d.template === "giftCard") els.push({ kind: "rect", x: 0, y: 0, w: unit * 0.07 + shape.x, h, r: 0, fill: colors.accent, stroke: null, strokeWidth: 0 });
         const left = d.template === "giftCard" ? shape.x + unit * 0.07 + pad * 0.7 : pad;
 
@@ -592,12 +664,12 @@ function frontFace(input: CardLayoutInput, m: Measurer, w: number, h: number, se
         if (!fittedMain) continue;
         // Coupons: the QR is never bigger than the offer (shrink the code,
         // which leaves more room for a bigger offer).
-        if (d.template !== "saleBanner") offerH = fittedMain.offerH;
+        offerH = fittedMain.offerH;
         if (couponOffer && wantQr && qr > minQr + 0.5 && qr > offerH * 1.25) break;
         const fittedSide = sideR && side.length ? fitBlocks(d, m, side, sideR, base, f, "center") : { els: [], height: 0, offerH: 0 };
         if (!fittedSide) continue;
 
-        els.push(...bandEls, ...header, ...fittedMain.els, ...fittedSide.els);
+        els.push(...header, ...fittedMain.els, ...fittedSide.els);
         if (wantQr && qrPos) {
           els.push(...qrTile(d, "front", qrPos.x, qrPos.y, qr));
           els.push(...qrCaption(d, m, d.qr, qrPos.x, qrPos.y + tile, tile, qrBelowLimit));
@@ -609,6 +681,131 @@ function frontFace(input: CardLayoutInput, m: Measurer, w: number, h: number, se
     }
   }
   return null;
+}
+
+/** The first fit from full size down (f 1 → 0.3). */
+function largestFit(fit: (f: number) => Fitted | null): Fitted | null {
+  for (let f = 1; f >= 0.3; f -= 0.05) {
+    const fitted = fit(f);
+    if (fitted) return fitted;
+  }
+  return null;
+}
+
+/** The sale banner's band never gets shorter than this share of the card. */
+const BANNER_MIN = 0.34;
+
+/** Caption height under a QR tile (as qrCaption draws it), 0 when none. */
+function captionHeight(d: CardDesign, m: Measurer, dest: QrDestination, tileW: number): number {
+  if (dest === "none") return 0;
+  const size = Math.max(MIN_TEXT, tileW * 0.075);
+  const lines = wrap(printable(word(d, CAPTION_WORD[dest]), m, "body"), m, "body", size, tileW, 2);
+  return lines ? lines.length * size * 1.2 + size * 0.5 : 0;
+}
+
+/**
+ * "Bold sale banner": a solid band edge to edge across the top (~45%;
+ * less only when a print-size QR needs the room) with the offer large and
+ * centered on 1–2 balanced lines — the type shrinks before a third line —
+ * under an optional "Limited time" eyebrow. Below, on the light card: the
+ * business name, how to redeem, and the code + expiry in a subtle pill on
+ * the left; the QR in its white tile with a short caption on the right,
+ * never over the band. No icon.
+ */
+function saleBannerFace(input: CardLayoutInput, m: Measurer, w: number, h: number, serial: string | null): Face | null {
+  const d = input.design;
+  const landscape = w >= h;
+  const unit = Math.min(w, h);
+  const shape = cardShape(d, w, h);
+  const pad = padding(d, w, h);
+  const base = unit * (landscape ? 0.15 : 0.085) * TEXT_SCALE[d.textSize];
+  const colors = cardColors(d);
+  // The band is always the darker of the two colors, the bottom the
+  // lighter (a dark theme is turned around); the name keeps the accent
+  // only where it stays readable on the bottom.
+  const darkBg = contrastRatio(colors.background, "#ffffff") > contrastRatio(colors.text, "#ffffff");
+  const bandFill = darkBg ? colors.background : colors.text;
+  const light = darkBg ? colors.text : colors.background;
+  const bottom: SignColors = { background: light, text: bandFill, accent: contrastRatio(colors.accent, light) >= 3 ? colors.accent : bandFill };
+  const minQr = minQrPoints(d.size);
+  const wantQr = d.show.qr && d.qr !== "none" && input.hasQr(d.qr);
+  const fine = !(d.doubleSided && d.back.finePrint) && d.show.finePrint ? d.finePrint : "";
+  const gap = pad * 0.7;
+  const bandTarget = h * (landscape ? 0.45 : 0.4);
+  const bandBlocks: Block[] = [
+    ...(d.show.headline ? text(word(d, "limitedTime"), "bodyBold", 0.24, "text", 1, { upper: true, spacing: 0.16, gap: 0.35, optional: DROP_EXTRA }) : []),
+    ...text(d.offer, "headline", 1.4, "text", 2, { offer: true, balance: true, gap: 0 }),
+  ];
+  const leftBlocks: Block[] = [
+    ...(d.show.businessName ? text(d.businessName, "bodyBold", 0.3, "accent", 1, { upper: true, spacing: 0.08, gap: 0.45 }) : []),
+    ...(d.show.subline ? text(d.subline, "body", 0.3, "text", 2, { gap: 0.55, optional: DROP_EXTRA }) : []),
+    // Bilingual with a serial number: up to three parts, one per line.
+    ...text(codeLine(d, serial), "bodyBold", 0.27, "text", 3, { pill: true, gap: 0.5 }),
+    ...text(fine, "body", 0.22, "text", 2, { fine: true, optional: DROP_FINE }),
+  ];
+  const logoOn = !!(input.logo && d.showLogo);
+  // Room the QR column wants below the band.
+  const maxQr = wantQr ? Math.max(minQr, Math.min((h * (1 - (landscape ? 0.45 : 0.4)) - pad - gap) / TILE, (w * (landscape ? 0.3 : 0.36)) / TILE)) : 0;
+
+  for (let drop = 0; drop <= DROP_LAST; drop++) {
+    const band = dropOptional(bandBlocks, drop);
+    const left = dropOptional(leftBlocks, drop);
+    for (let qr = maxQr; ; qr = Math.max(minQr, qr * 0.9)) {
+      const tile = wantQr ? qr * TILE : 0;
+      // The caption goes before the band shrinks too far (wallet cards).
+      const fullCap = wantQr ? captionHeight(d, m, d.qr, tile) : 0;
+      const withCaption = h - pad - gap - tile - fullCap >= h * BANNER_MIN;
+      const capH = withCaption ? fullCap : 0;
+      // The band gives way only as far as the QR column needs.
+      const bandH = Math.min(bandTarget, h - pad - gap - tile - capH);
+      const placed = bandH >= h * BANNER_MIN ? place(band, left, qr, tile, capH, withCaption, bandH) : null;
+      if (placed) return placed;
+      if (!wantQr || qr <= minQr) break;
+    }
+  }
+  return null;
+
+  /** One try: the offer and the bottom column each at the largest size
+   * that fits, independently (a short offer grows to fill the band). */
+  function place(band: Block[], left: Block[], qr: number, tile: number, capH: number, withCaption: boolean, bandH: number): Face | null {
+    const els = frame(d, w, h, shape, bandFill);
+    // Behind the border, edge to edge (the card shape clips it).
+    const behind = 1 + (d.pattern === "none" ? 0 : 1);
+    els.splice(
+      behind,
+      0,
+      ...(darkBg ? [{ kind: "rect" as const, x: 0, y: 0, w, h, r: 0, fill: light, stroke: null, strokeWidth: 0 }] : []),
+      { kind: "rect", x: 0, y: 0, w, h: bandH, r: 0, fill: bandFill, stroke: null, strokeWidth: 0 }
+    );
+    const bandTop = Math.max(pad * 0.75, shape.y + 4);
+    const bandR: Region = { x: pad, y: bandTop, w: w - 2 * pad, h: bandH - bandTop - pad * 0.55 };
+    const fittedBand = largestFit((f) => fitBlocks(d, m, band, bandR, base, f, "center", light));
+    if (!fittedBand) return null;
+    const colTop = bandH + gap;
+    const colH = h - pad - colTop;
+    const qrColW = wantQr ? tile + pad * 0.9 : 0;
+    let leftR: Region = { x: pad, y: colTop, w: w - 2 * pad - qrColW, h: colH };
+    const logoEls: SignElement[] = [];
+    if (logoOn) {
+      const lh = Math.min(base * 0.45, colH * 0.25);
+      const lw = Math.min(lh * input.logo!.aspect, leftR.w * 0.5);
+      logoEls.push({ kind: "logo", x: leftR.x, y: leftR.y, w: lw, h: lw / input.logo!.aspect });
+      leftR = { ...leftR, y: leftR.y + lh * 1.25, h: leftR.h - lh * 1.25 };
+    }
+    if (leftR.w <= 0 || leftR.h <= 0) return null;
+    const fittedLeft = largestFit((f) => fitBlocks(d, m, left, leftR, base, f, "left", undefined, bottom));
+    if (!fittedLeft) return null;
+    els.push(...fittedBand.els, ...logoEls, ...fittedLeft.els);
+    if (wantQr) {
+      // Centered in the bottom area, under the band.
+      const qx = w - pad - tile;
+      const qy = colTop + Math.max(0, (colH - tile - capH) / 2);
+      els.push(...qrTile(d, "front", qx, qy, qr, bottom));
+      if (withCaption) els.push(...qrCaption(d, m, d.qr, qx, qy + tile, tile, h - pad * 0.4, bottom.text));
+    }
+    if (input.credit) creditMark(els, m, w, h, shape, bottom.text);
+    return { els, qr: wantQr ? qr : null, shape };
+  }
 }
 
 function backFace(input: CardLayoutInput, m: Measurer, w: number, h: number): Face | null {

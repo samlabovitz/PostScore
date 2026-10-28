@@ -8,7 +8,8 @@
 // score without any advice (lib/freeUpsell.ts withoutAdvice).
 
 import Link from "next/link";
-import { useId, useState } from "react";
+import { useId } from "react";
+import { useRememberedOpen } from "@/components/ui/useRememberedOpen";
 import { IconArrowRight, IconChevronDown, IconCrown, IconLock, IconRocket } from "@tabler/icons-react";
 import { planExtraBadge, planExtraGroups, type PlanExtraOptions } from "@/lib/planFeatures";
 import { useUpgrade } from "@/components/upgrade/UpgradeContext";
@@ -69,10 +70,22 @@ const PREMIUM_BORDER = "border-[color:color-mix(in_srgb,var(--color-brass)_45%,w
  * the card's only upgrade buttons), a soft divider, then `children` —
  * the "More customers, whatever your score" tool tiles (GrowMoreCustomers
  * embedded). "See how to fix it" and every locked row scroll here. */
-export function FixPlanBox({ businessId, children, extras = null }: { businessId: string; children?: React.ReactNode; extras?: PlanExtraOptions | null }) {
+export function FixPlanBox({
+  businessId,
+  children,
+  extras = null,
+  accountCollapsed = null,
+}: {
+  businessId: string;
+  children?: React.ReactNode;
+  extras?: PlanExtraOptions | null;
+  /** The owner's saved choice (per account): true = they collapsed the list. */
+  accountCollapsed?: boolean | null;
+}) {
   const locale = useLocale();
   const builderName = useUpgrade()?.facts.builderName ?? null;
-  const [showAll, setShowAll] = useState(false);
+  // Open by default; a collapse is remembered per account.
+  const { open: showAll, toggle } = useRememberedOpen("free.planListCollapsed", accountCollapsed);
   const listId = useId();
   const plans: Array<{ kind: "grow" | "premium"; lineKey: MessageKey }> = [
     { kind: "grow", lineKey: "dashboard.free.fixPlan.grow" },
@@ -137,18 +150,18 @@ export function FixPlanBox({ businessId, children, extras = null }: { businessId
       {extras && (
         <>
           <div aria-hidden className="my-5 h-px bg-paper-line" />
-          {/* Third part: everything else each plan adds — collapsed. */}
+          {/* Third part: everything else each plan adds — open until collapsed. */}
           <div data-testid="fix-plan-extras">
             <button
               type="button"
-              onClick={() => setShowAll((v) => !v)}
+              onClick={toggle}
               aria-expanded={showAll}
               aria-controls={listId}
               data-testid="fix-plan-extras-toggle"
               className="flex w-full items-center justify-between gap-3 rounded-lg px-1 py-1 text-left text-[14px] font-semibold text-ink hover:text-brass focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
             >
               {t(locale, showAll ? "dashboard.free.fixPlan.hideEverything" : "dashboard.free.fixPlan.seeEverything")}
-              <IconChevronDown size={18} aria-hidden className={cn("shrink-0 text-ink-soft transition-transform", showAll && "rotate-180")} />
+              {!showAll && <IconChevronDown size={18} aria-hidden className="shrink-0 text-ink-soft transition-transform" />}
             </button>
             <div id={listId} hidden={!showAll} className={cn("mt-3 flex-col gap-4", showAll && "flex")} data-testid="fix-plan-extras-list">
               {planExtraGroups(extras).map(({ group, extras: rows }) => (

@@ -48,18 +48,20 @@ describe("the v1.12.0 weights", () => {
 });
 
 describe("review recency", () => {
-  test("not connected: at least N recent among Google's ≤5 — 3+ = 6, 2 = 4, 1 = 2; none = couldn't confirm; 0 reviews = 0", () => {
+  test("not connected (fair): 3+ recent among Google's ≤5 = 6/6; 1–2 = left out, never scored low; none = couldn't confirm; 0 reviews = 0", () => {
     const seen = (n: 0 | 1 | 2 | 3 | null) => check({ ...scoringInput(), recentReviewsSeen: n }, "visibility.review_recency");
-    expect(seen(3)).toMatchObject({ earnedPoints: 6, confidence: "VERIFIED", explanation: "At least 3 recent reviews (last 90 days) among the few Google shows. Connect Google to count all your recent reviews." });
-    expect(seen(2)).toMatchObject({ earnedPoints: 4, explanation: "At least 2 recent reviews (last 90 days) among the few Google shows — 3 or more earns full points. Connect Google to count all your recent reviews." });
-    expect(seen(1).earnedPoints).toBe(2);
+    expect(seen(3)).toMatchObject({ earnedPoints: 6, confidence: "VERIFIED", explanation: "At least 3 recent reviews (last 90 days) among the few Google shows." });
+    expect(seen(2)).toMatchObject({ earnedPoints: null, confidence: "NOT_FOUND", explanation: "At least 2 recent reviews (last 90 days) among the few Google shows — connect Google to count them all. Not scored until then." });
+    expect(seen(1)).toMatchObject({ earnedPoints: null, confidence: "NOT_FOUND", explanation: "At least 1 recent review (last 90 days) among the few Google shows — connect Google to count them all. Not scored until then." });
+    // Left out, so it never lowers the score: same total as "couldn't confirm".
+    expect(v112({ ...scoringInput(), recentReviewsSeen: 1 }).total).toBe(v112({ ...scoringInput(), recentReviewsSeen: 0 }).total);
     expect(seen(0)).toMatchObject({ earnedPoints: null, confidence: "NOT_FOUND" });
     expect(seen(null)).toMatchObject({ earnedPoints: null, confidence: "NOT_FOUND" });
     expect(check({ ...scoringInput(), reviewCount: 0, rating: null }, "visibility.review_recency")).toMatchObject({ earnedPoints: 0, confidence: "VERIFIED" });
-    // Saved before the bucket existed: a yes is "at least 1".
-    expect(check({ ...scoringInput(), hasRecentReview: true }, "visibility.review_recency").earnedPoints).toBe(2);
+    // Saved before the bucket existed: a yes is "at least 1" — left out.
+    expect(check({ ...scoringInput(), hasRecentReview: true }, "visibility.review_recency").earnedPoints).toBeNull();
     const es = scoreBusiness({ ...scoringInput(), recentReviewsSeen: 2 }, "es").checks.find((c) => c.id === "visibility.review_recency")!;
-    expect(es.explanation).toBe("Al menos 2 reseñas recientes (últimos 90 días) entre las pocas que muestra Google — 3 o más obtienen los puntos completos. Conecte Google para contar todas sus reseñas recientes.");
+    expect(es.explanation).toBe("Al menos 2 reseñas recientes (últimos 90 días) entre las pocas que muestra Google — conecte Google para contarlas todas. No se califica hasta entonces.");
   });
 
   test("Google connected: the exact count — 0 = 0/6, 1 = 2, 2 = 4, 3+ = 6, and no 'connect' line", () => {

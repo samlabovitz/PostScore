@@ -2883,7 +2883,8 @@ function reweighted(def: CheckDefinition, maxPoints: number): CheckDefinition {
   };
 }
 
-/** Recency points by how many reviews in the last 90 days: 3+ = 6, 2 = 4, 1 = 2. */
+/** Recency points by how many reviews in the last 90 days (Google
+ * connected — the exact count): 3+ = 6, 2 = 4, 1 = 2, 0 = 0. */
 const RECENCY_POINTS: Record<0 | 1 | 2 | 3, number> = { 0: 0, 1: 2, 2: 4, 3: 6 };
 
 const RECENCY_V112: CheckDefinition = {
@@ -2911,17 +2912,21 @@ const RECENCY_V112: CheckDefinition = {
     if (input.reviewCount === 0) {
       return { earnedPoints: 0, confidence: "VERIFIED", explanation: t(locale, "content.checks.visibility.review_recency.explanation.noReviews") };
     }
-    // Among the few reviews Google returns: a lower bound ("at least N").
-    // Saved before the bucket existed, a yes is "at least 1".
+    // Among the few reviews Google returns (chosen by relevance, at most
+    // 5) only a lower bound is known: 3+ recent is full points; 1–2 could
+    // be more, so it's left out until Google is connected — never scored
+    // low for what Google simply didn't show. Saved before the bucket
+    // existed, a yes is "at least 1".
     const seen = typeof input.recentReviewsSeen === "number" ? input.recentReviewsSeen : input.hasRecentReview === true ? 1 : 0;
+    if (seen >= 3) {
+      return { earnedPoints: 6, confidence: "VERIFIED", explanation: t(locale, "content.checks.visibility.review_recency.explanation.seen3"), meta: { recentReviews: "3", source: "places" } };
+    }
     if (seen > 0) {
-      const n = seen as 1 | 2 | 3;
-      const base = t(locale, `content.checks.visibility.review_recency.explanation.seen${n}` as MessageKey);
       return {
-        earnedPoints: RECENCY_POINTS[n],
-        confidence: "VERIFIED",
-        explanation: g ? base : `${base} ${t(locale, "content.checks.visibility.review_recency.explanation.connectToCount")}`,
-        meta: { recentReviews: String(n), source: "places" },
+        earnedPoints: null,
+        confidence: "NOT_FOUND",
+        explanation: t(locale, `content.checks.visibility.review_recency.explanation.seenLeftOut${seen}` as MessageKey),
+        meta: { recentReviews: String(seen), source: "places" },
       };
     }
     // None recent among the few Google shows proves nothing (they're
