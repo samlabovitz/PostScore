@@ -41,6 +41,7 @@ import type {
 } from "@/lib/monthlyReport";
 import { DEFAULT_LOCALE, formatCount, reportCoverageMonth, t, tPlural, type Locale } from "@/lib/i18n";
 import { spamTopic } from "@/lib/siteSecurity";
+import { GOOGLE_LINKS } from "@/lib/googleHelpLinks";
 
 /** Top line of a test send (REPORT_TEST_EMAIL only — never an owner).
  * English only: it's read by the PostScore team, not owners. */
@@ -393,6 +394,31 @@ function ScoreVisual({
   );
 }
 
+/** Google shows the business as closed: the report's first line, with the
+ * fix (lib/businessStatus.ts). Red when permanent, amber when temporary. */
+export function closedAlertText(content: Pick<MonthlyReportContent, "closure">, businessName: string, locale: Locale): string | null {
+  if (!content.closure) return null;
+  return t(locale, content.closure === "permanent" ? "dashboard.closed.report.alert" : "dashboard.closed.report.alertTemporary", { name: businessName });
+}
+
+function ClosedAlert({ content, businessName, locale }: { content: MonthlyReportContent; businessName: string; locale: Locale }) {
+  const text = closedAlertText(content, businessName, locale);
+  if (!text) return null;
+  const permanent = content.closure === "permanent";
+  return (
+    <Section
+      style={{ backgroundColor: permanent ? "#fbeceb" : "#fdf3d8", border: `1px solid ${permanent ? "#e9b8b3" : "#e8d49a"}`, borderRadius: "8px", padding: "12px 14px", margin: "0 0 20px" }}
+    >
+      <Text style={{ color: permanent ? "#8f2d24" : "#14243f", fontSize: "14px", fontWeight: 600, lineHeight: "1.5", margin: 0 }}>
+        {text}{" "}
+        <Link href={GOOGLE_LINKS.businessProfile} style={{ color: permanent ? "#8f2d24" : "#14243f", textDecoration: "underline" }}>
+          {t(locale, "dashboard.closed.link.profile")}
+        </Link>
+      </Text>
+    </Section>
+  );
+}
+
 /** Top-of-report warning (above the score) when Site security found spam
  * on the site or Google Safe Browsing flags it — always "may", never "is". */
 function SecurityAlert({ content, locale, websitePageUrl }: { content: MonthlyReportContent; locale: Locale; websitePageUrl: string | null }) {
@@ -611,7 +637,7 @@ export function MonthlyReportEmail({
           content.summary already computes — a separate, more detailed
           line from the short on-page headline below, but never a
           separately hand-written one that could drift from real content. */}
-      <Preview>{inboxPreviewText(content.summary)}</Preview>
+      <Preview>{inboxPreviewText(closedAlertText(content, businessName, locale) ?? content.summary)}</Preview>
       <Body style={{ backgroundColor: "#f6f5f1", fontFamily: "Georgia, 'Times New Roman', serif", margin: 0, padding: "24px 0" }}>
         <Container
           style={{
@@ -632,7 +658,8 @@ export function MonthlyReportEmail({
           </Text>
           <Heading style={{ color: "#14243f", fontSize: "22px", margin: "0 0 18px" }}>{businessName}</Heading>
 
-          {/* Hacked-site signs come first — above the headline. */}
+          {/* A closed listing comes first, then hacked-site signs — above the headline. */}
+          <ClosedAlert content={content} businessName={businessName} locale={locale} />
           <SecurityAlert content={content} locale={locale} websitePageUrl={websitePageUrl} />
 
           <Text style={{ color: "#14243f", fontSize: "17px", fontWeight: 600, lineHeight: "1.5", margin: "0 0 20px" }}>

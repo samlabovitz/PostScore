@@ -6,6 +6,7 @@
 // and scripts/preview-report.ts, so a preview and a real send can't
 // drift apart.
 
+import { closureOf } from "@/lib/businessStatus";
 import {
   applyGrowthWebsiteRules,
   buildWebsiteBanner,
@@ -36,6 +37,7 @@ function securityAlert(input: BusinessScoringInput, breakdown: ScoreBreakdown): 
 export function buildReportExtras(input: BusinessScoringInput, breakdown: ScoreBreakdown): ReportExtras {
   const banner = buildWebsiteBanner(breakdown, input, null);
   return {
+    closure: closureOf(input.businessStatus),
     securityAlert: securityAlert(input, breakdown),
     scoreBasis: partlyCheckedScoreBasis(breakdown.categories, hasAnalyzableWebsite(input)),
     websiteImprovement:

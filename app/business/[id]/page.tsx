@@ -17,6 +17,7 @@ import { featureMapFor } from "@/lib/postaiFeatureMap";
 import { postaiPageQuestions } from "@/lib/postaiDock";
 import { scoringNoteApplies, SCORING_NOTE_KEY } from "@/lib/scoringUpdateNote";
 import { getUiPreference } from "@/app/actions/uiPreferences";
+import { isBusinessArchived } from "@/lib/businessArchive.server";
 import { oneTimeNoteDismissed } from "@/app/actions/oneTimeNotes";
 import { withoutAdvice } from "@/lib/freeUpsell";
 import { freeAiAllowance } from "@/lib/freeAiUsage.server";
@@ -176,6 +177,7 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
       <BusinessScoreView
         businessId={params.id}
         business={scored.business}
+        archived={await isBusinessArchived(createClient(), params.id)}
         result={free ? withoutAdvice(scored.result) : scored.result}
         history={history}
         recentSnapshots={recentSnapshots}

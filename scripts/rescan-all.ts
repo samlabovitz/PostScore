@@ -259,7 +259,8 @@ async function main() {
 
   // Day 2b: a website-only business (listing_mode = 'website_only') has
   // no Google listing to re-fetch — never part of a bulk Google re-scan.
-  const googleBusinesses = allBusinesses.filter((b) => (b as { listing_mode?: string }).listing_mode !== "website_only");
+  // Archived ("Yes, we've closed" — supabase/business-archive.sql): never re-scanned.
+  const googleBusinesses = allBusinesses.filter((b) => (b as { listing_mode?: string }).listing_mode !== "website_only" && !(b as { archived_at?: string | null }).archived_at);
   const businesses: BusinessRow[] = limit ? googleBusinesses.slice(0, limit) : googleBusinesses;
 
   const withCompetitors = args.includes("--with-competitors");

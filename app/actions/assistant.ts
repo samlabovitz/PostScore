@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { isBusinessArchived } from "@/lib/businessArchive.server";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { scoreBusinessById, getScoreHistory } from "@/app/actions/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
@@ -364,6 +365,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     // The facts every answer is checked against (lib/postaiFacts.ts).
     facts: buildPostaiFacts(breakdown, {
       plan,
+      businessStatus: scored.business.business_status,
       // The Overview's own projections: "Biggest boost", "Projected
       // score" and the Growth plan cards' points (Free: points waiting).
       biggestBoost: suggestions[0] ?? null,
@@ -513,6 +515,8 @@ export async function sendAssistantMessage(
 ): Promise<SendAssistantMessageResult> {
   const loaded = await loadContext(businessId);
   if (loaded.status !== "ok") return loaded;
+  // Archived ("Yes, we've closed"): no AI calls.
+  if (await isBusinessArchived(createClient(), businessId)) return { status: "error", message: t(loaded.locale, "dashboard.closed.archived.blocked") };
   if (!message.trim()) {
     return { status: "error", message: t(loaded.locale, "dashboard.assistant.errorTypeQuestionFirst") };
   }

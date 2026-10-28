@@ -150,6 +150,7 @@ export function ScoreBand({
   projectedGrade,
   biggestBoost,
   freeWaitingPoints,
+  onHold = false,
 }: {
   businessId: string;
   score: number;
@@ -163,8 +164,27 @@ export function ScoreBand({
    * replace the projected score, with no suggestion shown; undefined on
    * Grow and above. */
   freeWaitingPoints?: number | null;
+  /** Google shows the business as permanently closed: no normal score or
+   * grade — "On hold" until it shows open again (lib/businessStatus.ts). */
+  onHold?: boolean;
 }) {
   const locale = useLocale();
+  if (onHold) {
+    return (
+      <section data-testid="score-on-hold" className="relative rounded-2xl bg-ink p-5 shadow-card sm:p-6 nav:p-7">
+        <div className="flex flex-col items-center gap-4 nav:flex-row nav:gap-6">
+          <div aria-hidden className="flex h-[164px] w-[164px] shrink-0 items-center justify-center rounded-full border-[10px] border-[color:color-mix(in_srgb,var(--color-paper)_15%,transparent)]">
+            <span className="font-serif text-2xl font-bold text-paper">{t(locale, "dashboard.closed.onHold.label")}</span>
+          </div>
+          <div className="flex flex-col gap-2 text-center nav:text-left">
+            <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)]">{t(locale, "dashboard.overview.currentScoreHeading")}</div>
+            <span className="w-fit self-center rounded-full bg-red px-3 py-1 text-[13px] font-semibold text-white nav:self-start">{t(locale, "dashboard.closed.onHold.label")}</span>
+            <p className="max-w-md text-[13.5px] text-paper">{t(locale, "dashboard.closed.onHold.note")}</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="relative rounded-2xl bg-ink p-5 shadow-card sm:p-6 nav:p-7">
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">

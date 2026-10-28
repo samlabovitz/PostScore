@@ -9,6 +9,7 @@ import { refreshCompetitorsOnRescanWithClient } from "@/app/actions/competitors"
 import type { Plan } from "@/lib/plan";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { isBusinessArchived } from "@/lib/businessArchive.server";
 import {
   businessRowToScoringInput,
   getScoreWithSuggestions,
@@ -24,7 +25,7 @@ import { buildProfileSnapshot, diffProfileSnapshots, type ProfileChange, type Pr
 import { lookupBusinessByPlaceId, type OpeningHoursPeriod } from "@/lib/google/places";
 import type { PlacesDetailsKind } from "@/lib/placesDetailsBudget";
 import { saveBusinessWithClient } from "@/app/actions/businesses";
-import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, normalizeLocale, t, type Locale } from "@/lib/i18n";
 import { findLastKnownWebsiteDate, resolveListingWebsite } from "@/lib/googleListingWebsite";
 
 export interface BusinessRecord extends BusinessScoringRow {
@@ -435,6 +436,10 @@ export async function rescanBusinessWithClient(
   options: { detailsKind?: PlacesDetailsKind } = {}
 ): Promise<RescanBusinessResult> {
   const detailsKind = options.detailsKind ?? "rescan";
+  // Archived ("Yes, we've closed"): no Google calls, no new score.
+  if (await isBusinessArchived(supabase, businessId)) {
+    return { status: "error", message: t(DEFAULT_LOCALE, "dashboard.closed.archived.blocked") };
+  }
   const { data: before, error: beforeError } = await supabase
     .from("businesses")
     .select(

@@ -4,6 +4,7 @@ import { requestCache } from "@/lib/requestCache";
 import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { isBusinessArchived } from "@/lib/businessArchive.server";
 import { businessTimeZone } from "@/lib/businessTimeZone";
 import {
   competitorFallbackTypes,
@@ -23,7 +24,7 @@ import {
   type AlsoNearbyListing,
 } from "@/lib/competitorQuality";
 import { bizProfileById, resolveBizProfile } from "@/config/bizProfiles";
-import { normalizeLocale, t } from "@/lib/i18n";
+import { DEFAULT_LOCALE, normalizeLocale, t } from "@/lib/i18n";
 import { getPlan } from "@/lib/premium";
 import { refreshAvailability, rescanRefreshesCompetitors, type RefreshAvailability } from "@/lib/competitorScanPolicy";
 import type { Plan } from "@/lib/plan";
@@ -285,6 +286,8 @@ export async function runAndSaveCompetitorScanWithClient(
   } = { enforceCooldown: false }
 ): Promise<SaveCompetitorScanResult> {
   const now = options.now ?? new Date();
+  // Archived ("Yes, we've closed"): no competitor scans.
+  if (await isBusinessArchived(supabase, businessId)) return { status: "error", message: t(DEFAULT_LOCALE, "dashboard.closed.archived.blocked") };
   if (options.enforceCooldown) {
     const availability = refreshAvailability(await latestCompetitorScanAt(supabase, businessId), now);
     if (!availability.allowed && availability.nextAvailableAt) {

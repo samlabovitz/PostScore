@@ -43,6 +43,7 @@
 // 15-minute budget to make many small, safe calls here. See
 // netlify/functions/monthly-reports-batch.mts's own top comment for the
 // full reasoning.
+import { isBusinessArchived } from "@/lib/businessArchive.server";
 import { selectionChangedBetween } from "@/lib/competitorQuality";
 import { businessTimeZone } from "@/lib/businessTimeZone";
 import { getListingMode } from "@/lib/listingMode";
@@ -533,6 +534,11 @@ export async function processBusiness(
     .maybeSingle();
   if (optInError || !optIn) {
     return { businessId, status: "failed", reason: "could not read this business's report opt-in" };
+  }
+  // The owner confirmed it's closed ("Yes, we've closed" → archived): no
+  // report and no re-scan, ever, until it's restored.
+  if (await isBusinessArchived(supabase, businessId)) {
+    return { businessId, status: "skipped", reason: "archived — the owner confirmed the business is closed" };
   }
   // Live mode: the owner's own opt-in is always respected (the scheduled
   // batch already lists only opted-in businesses; send-one doesn't, so

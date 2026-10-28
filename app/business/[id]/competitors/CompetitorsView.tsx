@@ -814,12 +814,20 @@ function AlsoNearby({ listings }: { listings: AlsoNearbyListing[] }) {
     <section data-testid="also-nearby" className="mt-5">
       <h3 className="text-[13px] font-semibold text-ink">{t(locale, "dashboard.competitors.alsoNearbyHeading")}</h3>
       <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.competitors.alsoNearbyNote")}</p>
+      {listings.some((l) => l.temporarilyClosed) && <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.competitors.alsoNearbyClosedNote")}</p>}
       <ul className="mt-2 flex flex-col divide-y divide-paper-line rounded-xl border border-paper-deep bg-white">
         {listings.map((l) => (
           <li key={l.placeId} className="flex items-baseline justify-between gap-3 px-4 py-2.5 text-[13px]">
             <span className="min-w-0 truncate text-ink">{l.name}</span>
             <span className="shrink-0 text-[12px] text-ink-mute">
-              {miles(l.distanceMeters, locale)} · {tPlural(locale, "dashboard.competitors.reviewCount", l.reviewCount, { count: formatCount(l.reviewCount, locale) })}
+              {miles(l.distanceMeters, locale)} ·{" "}
+              {l.temporarilyClosed ? (
+                <span data-testid="temporarily-closed" className="font-semibold text-[color:var(--color-amber)]">
+                  {t(locale, "dashboard.competitors.temporarilyClosedTag")}
+                </span>
+              ) : (
+                tPlural(locale, "dashboard.competitors.reviewCount", l.reviewCount, { count: formatCount(l.reviewCount, locale) })
+              )}
             </span>
           </li>
         ))}

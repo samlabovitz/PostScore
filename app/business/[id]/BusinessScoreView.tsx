@@ -7,6 +7,8 @@ import { GrowMoreCustomers } from "@/components/overview/GrowMoreCustomers";
 import { Card } from "@/components/ui/Card";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { HackedSiteBanner } from "@/components/scoring/HackedSiteBanner";
+import { ClosedListingBanner } from "@/components/scoring/ClosedListingBanner";
+import { scoreOnHold } from "@/lib/businessStatus";
 import { hackSignsFor } from "@/lib/siteSecurity";
 import { businessWebsiteUrl } from "@/lib/businessWebsite";
 import { cn } from "@/lib/utils";
@@ -70,6 +72,7 @@ export function BusinessScoreView({
   freePostai = null,
   gbpReplyCheck = null,
   monthlyReportsLive = false,
+  archived = false,
 }: {
   businessId: string;
   business: BusinessRecord;
@@ -114,6 +117,8 @@ export function BusinessScoreView({
   /** isMonthlyReportsLive() — the Free plan list's monthly email row says
    * "Coming soon" until it's true. */
   monthlyReportsLive?: boolean;
+  /** The owner archived it ("Yes, we've closed"). */
+  archived?: boolean;
 }) {
   const locale = useLocale();
   const { breakdown, projectedBreakdown } = result;
@@ -197,6 +202,7 @@ export function BusinessScoreView({
     const waiting = freeWaitingPoints(breakdown.total);
     return (
       <div data-testid="free-overview" className="flex flex-col gap-5 nav:gap-6">
+        <ClosedListingBanner businessId={businessId} status={business.business_status} archived={archived} />
         {showHackedBanner && <HackedSiteBanner href={`/business/${businessId}/website#check-security`} />}
 
         {header}
@@ -212,6 +218,7 @@ export function BusinessScoreView({
             projectedGrade={projectedBreakdown.grade}
             biggestBoost={null}
             freeWaitingPoints={waiting > 0 ? waiting : 0}
+            onHold={scoreOnHold(business.business_status)}
           />
           <RescanMessages state={rescan.state} />
           {scoringNote && <ScoringUpdateNote businessId={businessId} />}
@@ -270,6 +277,7 @@ export function BusinessScoreView({
 
   return (
     <div className="flex flex-col gap-5 nav:gap-6">
+      <ClosedListingBanner businessId={businessId} status={business.business_status} archived={archived} />
       {showHackedBanner && <HackedSiteBanner href={`/business/${businessId}/website#check-security`} />}
 
       {header}
@@ -285,6 +293,7 @@ export function BusinessScoreView({
           // The single biggest real gain available right now
           // (generateSuggestions order) — never a decorative number.
           biggestBoost={result.suggestions[0] ?? null}
+          onHold={scoreOnHold(business.business_status)}
         />
         <RescanMessages state={rescan.state} />
           {scoringNote && <ScoringUpdateNote businessId={businessId} />}

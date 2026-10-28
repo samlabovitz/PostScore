@@ -6,6 +6,7 @@
 // owner gets a short, safe answer built from the facts alone
 // (answerWithFactCheck). Pure.
 
+import { closureOf } from "@/lib/businessStatus";
 import { RATING_CONFIDENCE_FULL_AT_REVIEWS, REVIEW_COUNT_SATURATION, type ScoreBreakdown } from "@/lib/scoring";
 import { t, type Locale } from "@/lib/i18n";
 import { wholeCategoryPoints } from "@/lib/overviewTiles";
@@ -70,6 +71,8 @@ export interface PostaiFacts {
   /** The owner's own entries ("Added by you"), worded for the business
    * type (lib/businessOffer.ts ownerProvidedLines). Empty = not known. */
   ownerProvided?: string[];
+  /** Google's businessStatus — leads the facts when it isn't open. */
+  businessStatus?: string | null;
 }
 
 const LOW_RATING_BELOW = 4.3;
@@ -95,6 +98,7 @@ export function buildPostaiFacts(
     replyCounts?: GbpReplyCounts | null;
     /** What they offer, typical spend, what makes them different. */
     owner?: OwnerProvided | null;
+    businessStatus?: string | null;
   }
 ): PostaiFacts {
   const plan = b.plan ?? "free";
@@ -143,7 +147,22 @@ export function buildPostaiFacts(
     })),
     replyCounts: b.replyCounts ?? null,
     ownerProvided: b.owner ? ownerProvidedLines(b.owner) : [],
+    businessStatus: b.businessStatus ?? null,
   };
+}
+
+/** The listing's status, first — before anything else in FACTS. */
+function closureLines(status: string | null | undefined): string[] {
+  const closure = closureOf(status);
+  if (closure === "permanent")
+    return [
+      "- !!! LISTING STATUS — LEAD WITH THIS: Google shows this business as PERMANENTLY CLOSED. Customers searching for it are told it's closed. Open every answer with this: if the business is still open, the owner should mark it open in Google Business Profile now (Edit profile → Business information → Open date / status). The PostScore is ON HOLD (no grade) until Google shows it open — never present the score or grade as a normal result, and never suggest other fixes before this one.",
+    ];
+  if (closure === "temporary")
+    return [
+      "- LISTING STATUS — LEAD WITH THIS: Google shows this business as TEMPORARILY CLOSED (the Operational status check scores 0). If the owner has reopened, they should update it in Google Business Profile. Mention this first.",
+    ];
+  return [];
 }
 
 /** The Overview's "Biggest boost" number (components/overview/ScoreBand.tsx boostPoints). */
@@ -185,6 +204,7 @@ function recentReviewsLine(c: GbpReplyCounts | null): string {
 export function factsBlockText(f: PostaiFacts): string {
   const lines = [
     "FACTS (from the stored scan — the ONLY source of numbers and facts about this business; never compute, round differently, swap or guess any of them):",
+    ...closureLines(f.businessStatus),
     `- PostScore: ${f.total}/100 (grade ${f.grade}).`,
     `- Google reviews: ${f.reviewCount}. Review count check: full credit at ${f.reviewCountFullAt}+ reviews.`,
     f.rating === null ? "- Google star rating: none (no reviews yet)." : `- Google star rating: ${f.rating.toFixed(1)}★ (a rating under ${f.lowRatingBelow}★ counts as low; this one is ${f.rating < f.lowRatingBelow ? "LOW" : "NOT low"}). The rating counts fully once there are ${f.ratingFullAtReviews}+ reviews (this business has ${f.reviewCount}).`,

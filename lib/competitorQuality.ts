@@ -200,6 +200,20 @@ export interface AlsoNearbyListing {
   name: string;
   distanceMeters: number;
   reviewCount: number;
+  /** Google shows it as temporarily closed: listed, never ranked. */
+  temporarilyClosed?: boolean;
+}
+
+/** Same-kind places Google shows as temporarily closed — nearest first,
+ * at most ALSO_NEARBY_MAX, within the competitor distance. Permanently
+ * closed places are never listed or ranked. */
+export function temporarilyClosedNearby(candidates: Array<{ placeId: string; name: string | null; distanceMeters: number; reviewCount: number | null }>): AlsoNearbyListing[] {
+  const seen = new Set<string>();
+  return candidates
+    .filter((c) => withinMaxDistance(c.distanceMeters) && !seen.has(c.placeId) && !!seen.add(c.placeId))
+    .sort((a, b) => a.distanceMeters - b.distanceMeters)
+    .slice(0, ALSO_NEARBY_MAX)
+    .map((c) => ({ placeId: c.placeId, name: c.name ?? "", distanceMeters: c.distanceMeters, reviewCount: c.reviewCount ?? 0, temporarilyClosed: true }));
 }
 
 export const ALSO_NEARBY_MAX = 3;

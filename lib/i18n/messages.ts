@@ -950,6 +950,8 @@ export type MessageKey =
   | "dashboard.competitors.noCategoryError"
   | "dashboard.competitors.nearbySearchFailedFallback"
   | "dashboard.competitors.unnamedListing"
+  | "dashboard.competitors.temporarilyClosedTag"
+  | "dashboard.competitors.alsoNearbyClosedNote"
   | "dashboard.competitors.temporarilyClosed"
   | "dashboard.competitors.permanentlyClosed"
   | "dashboard.competitors.closedListingReason"
@@ -1091,6 +1093,8 @@ export type MessageKey =
   | "content.checks.completeness.business_status.advice"
   | "content.checks.completeness.business_status.explanation.notFound"
   | "content.checks.completeness.business_status.explanation.operational"
+  | "content.checks.completeness.business_status.explanation.closedTemporarily"
+  | "content.checks.completeness.business_status.explanation.closedPermanently"
   | "content.checks.completeness.business_status.explanation.closed"
   | "content.checks.completeness.business_status.explanation.unrecognized"
   | "content.checks.website.has_website.label"
@@ -1259,6 +1263,26 @@ export type MessageKey =
   | "content.spamTopic.payday_loan"
   | "content.spamTopic.essay_writing"
   | "content.spamTopic.crypto"
+  | "dashboard.closed.permanent.message"
+  | "dashboard.closed.permanent.steps"
+  | "dashboard.closed.temporary.message"
+  | "dashboard.closed.link.profile"
+  | "dashboard.closed.link.help"
+  | "dashboard.closed.archive.button"
+  | "dashboard.closed.archive.confirm"
+  | "dashboard.closed.archive.confirmYes"
+  | "dashboard.closed.archive.cancel"
+  | "dashboard.closed.archive.notEnabled"
+  | "dashboard.closed.archive.error"
+  | "dashboard.closed.archived.message"
+  | "dashboard.closed.archived.restore"
+  | "dashboard.closed.archived.blocked"
+  | "dashboard.closed.onHold.label"
+  | "dashboard.closed.onHold.note"
+  | "dashboard.closed.step.title"
+  | "dashboard.closed.step.why"
+  | "dashboard.closed.report.alert"
+  | "dashboard.closed.report.alertTemporary"
   | "dashboard.hackedBanner.message"
   | "dashboard.hackedBanner.link"
   | "dashboard.website.security.needsWebPerson"
@@ -5267,6 +5291,8 @@ export const messages: Record<Locale, LocaleMessages> = {
       "This business has no category on file, so we can't tell which nearby businesses are genuinely comparable. Re-save it from Google Places to pick up its category.",
     "dashboard.competitors.nearbySearchFailedFallback": "Nearby search failed.",
     "dashboard.competitors.unnamedListing": "(unnamed listing)",
+    "dashboard.competitors.temporarilyClosedTag": "Temporarily closed",
+    "dashboard.competitors.alsoNearbyClosedNote": "Places Google shows as temporarily closed are listed here, never ranked.",
     "dashboard.competitors.temporarilyClosed": "temporarily closed",
     "dashboard.competitors.permanentlyClosed": "permanently closed",
     "dashboard.competitors.closedListingReason": "Google shows this listing as {status}.",
@@ -5435,6 +5461,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.completeness.business_status.explanation.notFound":
       "Google returned no business status for this listing.",
     "content.checks.completeness.business_status.explanation.operational": "Listing shows as Operational.",
+    "content.checks.completeness.business_status.explanation.closedTemporarily": "Google shows your business as temporarily closed.",
+    "content.checks.completeness.business_status.explanation.closedPermanently": "Google shows your business as permanently closed — your score is on hold until it shows you open.",
     "content.checks.completeness.business_status.explanation.closed": "Listing shows as {status}.",
     "content.checks.completeness.business_status.explanation.unrecognized":
       'Listing has an unrecognized status ("{status}") — can\'t confidently score it.',
@@ -5688,6 +5716,26 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.spamTopic.payday_loan": "payday loans",
     "content.spamTopic.essay_writing": "essay-writing services",
     "content.spamTopic.crypto": "crypto schemes",
+    "dashboard.closed.permanent.message": "Google shows your business as permanently closed. Customers searching for you are told you're closed. If you're still open, fix this now.",
+    "dashboard.closed.permanent.steps": "In Google Business Profile: Edit profile → Business information → Open date / status → mark it open. Google may take a few days to show the change.",
+    "dashboard.closed.temporary.message": "Google shows you as temporarily closed. If you've reopened, update it.",
+    "dashboard.closed.link.profile": "Open Google Business Profile",
+    "dashboard.closed.link.help": "Google's help: business status",
+    "dashboard.closed.archive.button": "Yes, we've closed",
+    "dashboard.closed.archive.confirm": "Archive this business? Re-scans, reports and PostAI stop. You can restore it any time.",
+    "dashboard.closed.archive.confirmYes": "Archive it",
+    "dashboard.closed.archive.cancel": "Cancel",
+    "dashboard.closed.archive.notEnabled": "Archiving isn't available yet.",
+    "dashboard.closed.archive.error": "Couldn't save — please try again.",
+    "dashboard.closed.archived.message": "This business is archived. Re-scans, monthly reports and PostAI are paused.",
+    "dashboard.closed.archived.restore": "Restore",
+    "dashboard.closed.archived.blocked": "This business is archived — restore it on the Overview to use this again.",
+    "dashboard.closed.onHold.label": "On hold",
+    "dashboard.closed.onHold.note": "Your score is on hold while Google shows your business as permanently closed.",
+    "dashboard.closed.step.title": "Mark your business as open on Google",
+    "dashboard.closed.step.why": "Google tells everyone searching for you that you're closed. Nothing else matters until that's fixed.",
+    "dashboard.closed.report.alert": "Google shows {name} as permanently closed. If you're still open, mark it open in Google Business Profile now — customers are being told you're closed.",
+    "dashboard.closed.report.alertTemporary": "Google shows {name} as temporarily closed. If you've reopened, update it in Google Business Profile.",
     "dashboard.hackedBanner.message": "Your website may be hacked — we found spam content on it.",
     "dashboard.hackedBanner.link": "See what we found →",
     "dashboard.website.security.needsWebPerson": "Needs a web person",
@@ -9943,6 +9991,8 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Este negocio no tiene una categoría registrada, por lo que no podemos saber qué negocios cercanos son realmente comparables. Vuelva a guardarlo desde Google Places para obtener su categoría.",
     "dashboard.competitors.nearbySearchFailedFallback": "La búsqueda de negocios cercanos falló.",
     "dashboard.competitors.unnamedListing": "(ficha sin nombre)",
+    "dashboard.competitors.temporarilyClosedTag": "Cerrado temporalmente",
+    "dashboard.competitors.alsoNearbyClosedNote": "Los lugares que Google muestra como cerrados temporalmente aparecen aquí, nunca en la clasificación.",
     "dashboard.competitors.temporarilyClosed": "cerrado temporalmente",
     "dashboard.competitors.permanentlyClosed": "cerrado permanentemente",
     "dashboard.competitors.closedListingReason": "Google muestra esta ficha como {status}.",
@@ -10085,6 +10135,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.completeness.business_status.advice": "Asegúrese de que su Perfil de Negocio de Google aparezca como Operativo.",
     "content.checks.completeness.business_status.explanation.notFound": "Google no devolvió el estado del negocio para esta ficha.",
     "content.checks.completeness.business_status.explanation.operational": "La ficha aparece como Operativo.",
+    "content.checks.completeness.business_status.explanation.closedTemporarily": "Google muestra su negocio como cerrado temporalmente.",
+    "content.checks.completeness.business_status.explanation.closedPermanently": "Google muestra su negocio como cerrado permanentemente — su puntuación está en pausa hasta que lo muestre abierto.",
     "content.checks.completeness.business_status.explanation.closed": "La ficha aparece como {status}.",
     "content.checks.completeness.business_status.explanation.unrecognized": "La ficha tiene un estado no reconocido (\"{status}\") — no se puede evaluar con confianza.",
     "content.checks.website.has_website.label": "Tiene un sitio web",
@@ -10251,6 +10303,26 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.spamTopic.payday_loan": "préstamos de día de pago",
     "content.spamTopic.essay_writing": "servicios de redacción de ensayos",
     "content.spamTopic.crypto": "esquemas de criptomonedas",
+    "dashboard.closed.permanent.message": "Google muestra su negocio como cerrado permanentemente. A quienes lo buscan se les dice que cerró. Si sigue abierto, corríjalo ahora.",
+    "dashboard.closed.permanent.steps": "En el Perfil de Negocio de Google: Editar perfil → Información de la empresa → Fecha de apertura / estado → márquelo como abierto. Google puede tardar unos días en mostrar el cambio.",
+    "dashboard.closed.temporary.message": "Google lo muestra como cerrado temporalmente. Si ya reabrió, actualícelo.",
+    "dashboard.closed.link.profile": "Abrir Perfil de Negocio de Google",
+    "dashboard.closed.link.help": "Ayuda de Google: estado de la empresa",
+    "dashboard.closed.archive.button": "Sí, hemos cerrado",
+    "dashboard.closed.archive.confirm": "¿Archivar este negocio? Se detienen los análisis, los informes y PostAI. Puede restaurarlo cuando quiera.",
+    "dashboard.closed.archive.confirmYes": "Archivarlo",
+    "dashboard.closed.archive.cancel": "Cancelar",
+    "dashboard.closed.archive.notEnabled": "Archivar aún no está disponible.",
+    "dashboard.closed.archive.error": "No se pudo guardar — inténtelo de nuevo.",
+    "dashboard.closed.archived.message": "Este negocio está archivado. Los análisis, los informes mensuales y PostAI están en pausa.",
+    "dashboard.closed.archived.restore": "Restaurar",
+    "dashboard.closed.archived.blocked": "Este negocio está archivado — restáurelo en el Resumen para volver a usar esto.",
+    "dashboard.closed.onHold.label": "En pausa",
+    "dashboard.closed.onHold.note": "Su puntuación está en pausa mientras Google muestre su negocio como cerrado permanentemente.",
+    "dashboard.closed.step.title": "Marque su negocio como abierto en Google",
+    "dashboard.closed.step.why": "Google les dice a todos los que lo buscan que cerró. Nada más importa hasta corregirlo.",
+    "dashboard.closed.report.alert": "Google muestra {name} como cerrado permanentemente. Si sigue abierto, márquelo como abierto en su Perfil de Negocio de Google ahora — a los clientes se les dice que cerró.",
+    "dashboard.closed.report.alertTemporary": "Google muestra {name} como cerrado temporalmente. Si ya reabrió, actualícelo en su Perfil de Negocio de Google.",
     "dashboard.hackedBanner.message": "Es posible que su sitio web haya sido hackeado — encontramos contenido spam en él.",
     "dashboard.hackedBanner.link": "Vea lo que encontramos →",
     "dashboard.website.security.needsWebPerson": "Necesita a un técnico web",

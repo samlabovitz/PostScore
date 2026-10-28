@@ -24,6 +24,7 @@ import {
 import { DEFAULT_LOCALE, t, tPlural, type Locale, type MessageKey } from "@/lib/i18n";
 import { keyForInfoConflict } from "@/lib/websiteTrust";
 import { GOOGLE_LINKS, googleHelpUrl } from "@/lib/googleHelpLinks";
+import { MARK_OPEN_STEP_ID } from "@/lib/businessStatus";
 import type { Plan } from "@/lib/plan";
 
 /**
@@ -1252,6 +1253,26 @@ export function buildConnectGbpWeeklyTask(businessId: string, locale: Locale = D
 }
 
 export const CONNECT_GOOGLE_STEP_ID = "setup.connect_gbp";
+
+/** Google shows the business as permanently closed: the plan's only step
+ * (lib/businessStatus.ts) — official links, no points, never "I did this". */
+export function buildMarkOpenStep(locale: Locale = DEFAULT_LOCALE): ActionPlanTask {
+  const g = (href: string, label: MessageKey): TaskLink => ({ href: googleHelpUrl(href, locale), label: t(locale, label), external: true });
+  return {
+    ...buildConnectGbpWeeklyTask("", locale),
+    checkId: MARK_OPEN_STEP_ID,
+    category: "completeness",
+    label: t(locale, "dashboard.closed.step.title"),
+    title: t(locale, "dashboard.closed.step.title"),
+    why: t(locale, "dashboard.closed.step.why"),
+    action: t(locale, "dashboard.closed.step.title"),
+    fix: t(locale, "dashboard.closed.permanent.steps"),
+    ownerActionOnGoogle: true,
+    href: null,
+    minutes: 5,
+    links: [g(GOOGLE_LINKS.businessProfile, "dashboard.closed.link.profile"), g(GOOGLE_LINKS.closedStatusHelp, "dashboard.closed.link.help")],
+  };
+}
 
 /** Where each plan connects Google (the same single connection): Free on
  * the Overview's reply-check card, Grow on the Reviews page, Premium and

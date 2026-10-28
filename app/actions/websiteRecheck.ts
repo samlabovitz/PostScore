@@ -34,6 +34,11 @@ export async function recheckWebsite(businessId: string): Promise<WebsiteRecheck
     const { data } = await supabase.from("businesses").select("language").eq("id", businessId).maybeSingle();
     return { status: "error", message: t(normalizeLocale(data?.language), "dashboard.free.recheckLocked") };
   }
+  const { isBusinessArchived } = await import("@/lib/businessArchive.server");
+  if (await isBusinessArchived(supabase, businessId)) {
+    const { data } = await supabase.from("businesses").select("language").eq("id", businessId).maybeSingle();
+    return { status: "error", message: t(normalizeLocale(data?.language), "dashboard.closed.archived.blocked") };
+  }
   const { recheckWebsiteWithClient } = await import("@/lib/websiteRecheck.server");
   return recheckWebsiteWithClient(supabase, businessId);
 }

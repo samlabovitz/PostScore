@@ -1763,9 +1763,12 @@ export const CHECKS: CheckDefinition[] = [
         return {
           earnedPoints: 0,
           confidence: "VERIFIED",
-          explanation: t(locale, "content.checks.completeness.business_status.explanation.closed", {
-            status: input.businessStatus.replace("_", " ").toLowerCase(),
-          }),
+          explanation: t(
+            locale,
+            input.businessStatus === "CLOSED_PERMANENTLY"
+              ? "content.checks.completeness.business_status.explanation.closedPermanently"
+              : "content.checks.completeness.business_status.explanation.closedTemporarily"
+          ),
         };
       }
       return {

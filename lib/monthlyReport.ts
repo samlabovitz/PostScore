@@ -14,6 +14,7 @@
 // lib/scoring.ts (VERIFIED vs excluded) and the "never treat unknown as
 // zero" rule in lib/profileChanges.ts.
 
+import type { Closure } from "@/lib/businessStatus";
 import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "./profileChanges";
 import { generateSuggestions, type Grade, type ScoreBreakdown } from "./scoring";
 import { growthMoveOverlapsScore } from "./assistant";
@@ -87,6 +88,9 @@ export type ReportSecurityAlert = { kind: "spam"; category: SpamCategory } | { k
  * data the app shows. */
 export interface ReportExtras {
   securityAlert: ReportSecurityAlert | null;
+  /** Google shows the business as closed (lib/businessStatus.ts) — the
+   * report leads with it. Omitted = open. */
+  closure?: Closure;
   /** "Partly checked — score based on X of 100 points" (scoring.ts's
    * partlyCheckedScoreBasis), or null when the score isn't partly checked. */
   scoreBasis: number | null;
@@ -258,6 +262,8 @@ export interface MonthlyReportContent {
   isSteady: boolean;
   /** null for a first (baseline) report — see ScoreComparability. */
   comparability: ScoreComparability | null;
+  /** See ReportExtras.closure — the report's first line when set. */
+  closure?: Closure;
   securityAlert: ReportSecurityAlert | null;
   /** See ReportExtras.scoreBasis. */
   scoreBasis: number | null;
@@ -697,6 +703,7 @@ export function buildMonthlyReportContent(
       listingChanges: { available: false },
       isSteady: false,
       comparability: null,
+      closure: extras.closure ?? null,
       securityAlert: extras.securityAlert,
       scoreBasis: extras.scoreBasis,
       focus: buildFocus(current.breakdown, focusInputs, locale, extras),
@@ -745,6 +752,7 @@ export function buildMonthlyReportContent(
     listingChanges: changes,
     isSteady,
     comparability,
+    closure: extras.closure ?? null,
     securityAlert: extras.securityAlert,
     scoreBasis: extras.scoreBasis,
     focus: buildFocus(current.breakdown, focusInputs, locale, extras),

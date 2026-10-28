@@ -429,11 +429,18 @@ export function TaskCard({
             )}
           </div>
 
-          {isSetup && task.href && (
+          {isSetup && (task.href || stepLinks.length > 0) && (
             <div className="flex flex-wrap items-center gap-2 border-t border-paper-line pt-3">
-              <Link href={task.href} className={LINK_PILL_CLASS}>
-                {t(locale, "content.actionPlan.connectGoogle.link")}
-              </Link>
+              {task.href && (
+                <Link href={task.href} className={LINK_PILL_CLASS}>
+                  {t(locale, "content.actionPlan.connectGoogle.link")}
+                </Link>
+              )}
+              {stepLinks.map((link) => (
+                <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className={LINK_PILL_CLASS}>
+                  {link.label} ↗
+                </a>
+              ))}
             </div>
           )}
 

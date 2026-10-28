@@ -5,7 +5,7 @@
 // scores, no invented "rank" metric other than PostScore itself.
 
 import { MAX_SEARCH_RADIUS_MILES, SMALL_TOWN_RADIUS_MILES } from "@/lib/competitorScanPolicy";
-import { alsoNearby, establishedCount, MIN_ESTABLISHED_COMPETITORS, selectCompetitors, type AlsoNearbyListing, type PoolEntry } from "@/lib/competitorQuality";
+import { alsoNearby, establishedCount, MIN_ESTABLISHED_COMPETITORS, selectCompetitors, temporarilyClosedNearby, type AlsoNearbyListing, type PoolEntry } from "@/lib/competitorQuality";
 import { MAX_CALLS_PER_SCAN } from "@/lib/placesSearchBudget";
 import { GOOGLE_TABLE_A_TYPES } from "@/lib/google/placeTypesTableA";
 import {
@@ -667,8 +667,15 @@ export async function findAndScoreCompetitors(
   // competitors is decided at the end (selectCompetitors: established
   // standalone shops first — lib/competitorQuality.ts).
   const pool: PoolEntry[] = [];
+  // Same-kind places Google shows as temporarily closed: listed under
+  // "Also nearby" as "Temporarily closed", never ranked. Permanently
+  // closed ones are dropped entirely.
+  const closedForNow: Array<{ placeId: string; name: string | null; distanceMeters: number; reviewCount: number | null }> = [];
   const addToPool = (candidates: NearbyCandidate[], accept: (c: NearbyCandidate) => boolean, broader: boolean, kinOrder: string[] = []) => {
     for (const c of candidates) {
+      if (!broader && c.businessStatus === "CLOSED_TEMPORARILY" && c.placeId !== subject.placeId && c.location !== null && accept(c)) {
+        closedForNow.push({ placeId: c.placeId, name: c.details?.name ?? c.name, distanceMeters: haversineMeters(subjectLocation, c.location), reviewCount: c.details?.userRatingCount ?? null });
+      }
       if (c.placeId === subject.placeId || isClosedStatus(c.businessStatus) || c.location === null || !accept(c)) continue;
       if (pool.some((p) => p.candidate.placeId === c.placeId)) continue;
       const kin = broader && c.primaryType ? kinOrder.indexOf(c.primaryType) : -1;
@@ -936,6 +943,6 @@ export async function findAndScoreCompetitors(
     subjectRank,
     unscored,
     placesCalls,
-    alsoNearby: sameKindSkipped,
+    alsoNearby: [...sameKindSkipped, ...temporarilyClosedNearby(closedForNow)],
   };
 }

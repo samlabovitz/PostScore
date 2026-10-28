@@ -8,6 +8,7 @@ import {
   buildWebsiteBanner,
   GOOGLE_MISMATCH_CHECK_ID,
   buildConnectGbpWeeklyTask,
+  buildMarkOpenStep,
   buildWeeklyPlan,
   mergeReviewTasks,
   orderWeeklySteps,
@@ -27,6 +28,7 @@ import { businessRowToScoringInput, scoreBusiness, V112_SCORING_COLUMNS } from "
 import type { BusinessScoringInput, BusinessScoringRow, ScoreBreakdown, Suggestion } from "@/lib/scoring";
 import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
 import type { Plan } from "@/lib/plan";
+import { scoreOnHold } from "@/lib/businessStatus";
 
 export type GetActionPlanResult =
   | ({
@@ -147,6 +149,23 @@ export async function getActionPlan(
   const weeklyTasks = orderWeeklySteps(
     stepContext?.connectGoogle ? [...weeklyPlan.weeklyTasks, buildConnectGbpWeeklyTask(businessId, locale, stepContext.plan)] : weeklyPlan.weeklyTasks
   );
+
+  // Google shows the business as permanently closed: the score is on hold
+  // and marking it open is the only step (lib/businessStatus.ts).
+  if (scoreOnHold(input.businessStatus)) {
+    return {
+      status: "ok",
+      tasks: [],
+      completed: buildCompletedTasks(breakdown, rows),
+      websiteBanner: null,
+      ...weeklyPlan,
+      weeklyTasks: [buildMarkOpenStep(locale)],
+      laterTasks: [],
+      weeklyProjectedBreakdown: breakdown,
+      weeklyProjectedBreakdownHigh: null,
+      weeklyPointsWithinReach: 0,
+    };
+  }
 
   return {
     status: "ok",

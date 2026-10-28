@@ -11,6 +11,7 @@ import { WeeklyChecklist } from "./WeeklyChecklist";
 import { WeeklyGoalCelebration } from "./WeeklyGoalCelebration";
 import { WeeklyPlanCelebration } from "./WeeklyPlanCelebration";
 import { FreeGrowthMoves, FreeGrowthPlan } from "./FreeGrowthPlan";
+import { MARK_OPEN_STEP_ID } from "@/lib/businessStatus";
 import { CONNECT_GOOGLE_STEP_ID, type ActionPlanTask, type CompletedTask, type WebsiteBanner } from "@/lib/actionPlan";
 import { websiteRangeText, wholePointRange } from "@/lib/pointRange";
 import type { GrowthMove } from "@/lib/growthMoves";
@@ -288,6 +289,8 @@ export function GrowthView({
   const hasNoRemainingScoreGaps = actionPlan.tasks.length === 0 && actionPlan.websiteBanner === null;
   // Every check really losing points right now (the same list the plan is built from).
   const issueCount = generateSuggestions(breakdown, locale).length;
+  // Permanently closed: the plan is only "mark it open" — no blurb.
+  const closedOnHold = actionPlan.weeklyTasks.length === 1 && actionPlan.weeklyTasks[0].checkId === MARK_OPEN_STEP_ID;
   // Every real open score-gap task on this page, "This week's plan" and
   // "Bigger projects" together — the live source of truth a growth
   // move's badge checks itself against (see growthMoveOverlapsActionPlan
@@ -351,7 +354,7 @@ export function GrowthView({
                       : t(locale, "dashboard.growth.view.weeklyPlanNoteEmpty")
                   }
                 />
-                <PlanBlurb count={issueCount} />
+                {!closedOnHold && <PlanBlurb count={issueCount} />}
                 {actionPlan.error ? (
                   <Card className="p-5 text-sm text-red">{t(locale, "dashboard.growth.view.actionPlanErrorPrefix", { error: actionPlan.error })}</Card>
                 ) : (
@@ -396,7 +399,7 @@ export function GrowthView({
                     }
                   />
                 </WeeklyGoalCelebration>
-                <PlanBlurb count={issueCount} />
+                {!closedOnHold && <PlanBlurb count={issueCount} />}
 
                 <div id="weekly-routine" className="scroll-mt-20">
                   <WeeklyChecklist

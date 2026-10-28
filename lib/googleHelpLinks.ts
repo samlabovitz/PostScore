@@ -26,6 +26,8 @@ export const GOOGLE_LINKS = {
   pageSpeed: "https://pagespeed.web.dev/",
   /** Google Safe Browsing site status. */
   safeBrowsing: "https://transparencyreport.google.com/safe-browsing/search",
+  /** Help: "Mark your business as closed" — also how to mark it open again. */
+  closedStatusHelp: "https://support.google.com/business/answer/15300196",
   /** web.dev (Google): "Why HTTPS matters" — English only. */
   httpsWhy: "https://web.dev/articles/why-https-matters",
 } as const;
