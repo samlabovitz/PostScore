@@ -28,6 +28,7 @@ export function StarterSiteDetailsForm({
   confirmed,
   prefilled,
   onConfirmed,
+  prefillLink = "",
 }: {
   businessId: string;
   fields: StarterSiteDetailFields;
@@ -38,6 +39,8 @@ export function StarterSiteDetailsForm({
   prefilled: boolean;
   /** The owner confirmed these values (saved, or for this visit only). */
   onConfirmed: (fields: StarterSiteDetailFields) => void;
+  /** The listing's ordering / booking link the link field started with. */
+  prefillLink?: string;
 }) {
   const locale = useLocale();
   const [state, setState] = useState<{ kind: "idle" } | { kind: "saving" } | { kind: "error"; message: MessageKey; reason?: string }>({ kind: "idle" });
@@ -60,7 +63,7 @@ export function StarterSiteDetailsForm({
 
   // Address full width (never cut off); name + type, then phone, side by
   // side on wider screens, stacked on a phone.
-  const wide: Record<string, string> = { address: "sm:col-span-2" };
+  const wide: Record<string, string> = { address: "sm:col-span-2", link: "sm:col-span-2" };
 
   return (
     <div data-testid="starter-details" className="flex flex-col gap-3">
@@ -77,15 +80,24 @@ export function StarterSiteDetailsForm({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {DETAIL_FIELDS.map((field) => (
           <label key={field} className={cn("flex min-w-0 flex-col gap-1.5", wide[field])}>
-            <span className={DESIGNER_LABEL}>{t(locale, k(field))}</span>
+            <span className={cn(DESIGNER_LABEL, "flex flex-wrap items-center gap-1.5")}>
+              {t(locale, k(field))}
+              {/* The owner typed their own link: theirs, not the listing's. */}
+              {field === "link" && fields.link.trim() && fields.link.trim() !== prefillLink && (
+                <span data-testid="link-added-by-you" className="rounded-full bg-paper-deep px-2 py-px text-[10.5px] font-semibold normal-case tracking-normal text-ink-soft">
+                  {t(locale, "dashboard.memory.addedByYou")}
+                </span>
+              )}
+            </span>
             <input
-              type={field === "phone" ? "tel" : "text"}
+              type={field === "phone" ? "tel" : field === "link" ? "url" : "text"}
               value={fields[field]}
               maxLength={DETAIL_MAX[field]}
               onChange={(e) => onChange({ ...fields, [field]: e.target.value })}
               data-testid={`detail-${field}`}
               className={DESIGNER_INPUT}
             />
+            {field === "link" && prefillLink && fields.link.trim() === prefillLink && <span className="text-[11.5px] text-ink-mute">{t(locale, k("linkHint"))}</span>}
           </label>
         ))}
       </div>

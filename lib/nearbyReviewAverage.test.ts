@@ -22,10 +22,10 @@ describe("the one nearby review average", () => {
     expect(nearbyReviewAverage(s)).toBe(57);
   });
 
-  test("uses the same competitor scope as the rank", () => {
+  test("the same list as the rank: every saved competitor (competitor selection v2 — no more scope narrowing)", () => {
     const s = scan([entry("You", 10, ["sporting_goods_store"], true), entry("Zumiez Skate Shop", 100), entry("Board Co Skate Shop", 80), entry("Ride Skate Shop", 60), entry("American Sports", 900)]);
     const direct: CompetitorScope = { nicheId: "skate_snow", parent: "specialty_store", areas: [], mode: "direct" };
-    expect(nearbyReviewAverage(s, direct)).toBe(80);
+    expect(nearbyReviewAverage(s, direct)).toBe(285);
     expect(nearbyReviewAverage(s)).toBe(285);
   });
 

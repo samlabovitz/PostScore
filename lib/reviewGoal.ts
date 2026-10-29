@@ -4,6 +4,7 @@
 // from reviewGoal() in lib/competitorComparison.ts (same scope as the rank);
 // the group is scopeGroupLabel() in lib/competitorScope.ts. Pure.
 
+import { shortName } from "@/lib/displayName";
 import { formatCount, t, type Locale } from "./i18n";
 import type { ReviewGoal } from "./competitorComparison";
 
@@ -25,9 +26,9 @@ export function reviewGoalText(goal: ReviewGoal, group: string, locale: Locale):
   const average = capitalize(t(locale, "dashboard.reviewGoal.average", { group, avg: n(goal.average) }));
   const text =
     goal.kind === "lead"
-      ? t(locale, "dashboard.reviewGoal.lead", { count: n(goal.ownCount), gap: n(goal.gap), name: goal.runnerUp?.name ?? goal.leader.name })
-      : t(locale, goal.kind === "stretch" ? "dashboard.reviewGoal.stretch" : "dashboard.reviewGoal.beat", { name: goal.leader.name, count: n(goal.leader.reviewCount), gap: n(goal.gap) });
-  const nextUp = goal.kind === "stretch" && goal.nextUp ? t(locale, "dashboard.reviewGoal.nextUp", { name: goal.nextUp.name, count: n(goal.nextUp.reviewCount) }) : null;
+      ? t(locale, "dashboard.reviewGoal.lead", { count: n(goal.ownCount), gap: n(goal.gap), name: shortName(goal.runnerUp?.name ?? goal.leader.name) })
+      : t(locale, goal.kind === "stretch" ? "dashboard.reviewGoal.stretch" : "dashboard.reviewGoal.beat", { name: shortName(goal.leader.name), count: n(goal.leader.reviewCount), gap: n(goal.gap) });
+  const nextUp = goal.kind === "stretch" && goal.nextUp ? t(locale, "dashboard.reviewGoal.nextUp", { name: shortName(goal.nextUp.name), count: n(goal.nextUp.reviewCount) }) : null;
   return { average, goal: text, nextUp };
 }
 

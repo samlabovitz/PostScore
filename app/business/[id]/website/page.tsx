@@ -18,6 +18,9 @@ import { formatShortDate, normalizeLocale, t } from "@/lib/i18n";
 import { HackedSiteBanner } from "@/components/scoring/HackedSiteBanner";
 import { hackSignsFor } from "@/lib/siteSecurity";
 import { socialPagePlatform } from "@/lib/websiteTrust";
+import { PlatformLinkCard } from "@/components/gbp/PlatformLinkCard";
+import { getGbpConnectionStatus } from "@/app/actions/gbp";
+import { isPremiumPlan } from "@/lib/plan";
 import { resolveWebsiteBuilder, WEBSITE_BUILDER_NAMES } from "@/lib/websiteBuilder";
 
 export default async function WebsitePage({ params }: { params: { id: string } }) {
@@ -77,6 +80,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       category={data.category}
       phone={data.phone}
       address={data.address}
+      listingWebsite={data.website}
       openingHoursPeriods={data.openingHoursPeriods}
       starterSiteHours={data.starterSiteHours}
       starterSiteHoursEnabled={data.starterSiteHoursEnabled}
@@ -145,6 +149,9 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       data.websiteAnalysis
     ).length > 0;
 
+  const gbpStatus = await getGbpConnectionStatus(params.id);
+  const gbpConnected = gbpStatus.status === "ok" && gbpStatus.connected;
+
   return (
     <DashboardShell
       upgrade={upgrade}
@@ -160,6 +167,8 @@ export default async function WebsitePage({ params }: { params: { id: string } }
     >
       <div className="flex flex-col gap-8 nav:gap-10">
         {showHackedBanner && <HackedSiteBanner href="#check-security" />}
+        {/* The listing's website link goes to an ordering / booking / review / social page. */}
+        <PlatformLinkCard businessId={params.id} website={data.website} premium={isPremiumPlan(upgrade.plan)} connected={gbpConnected} />
         {/* Website-only businesses have no Google scans — no strip. */}
         {lastScanAt && <StaleScanNotice businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} />}
         <div>

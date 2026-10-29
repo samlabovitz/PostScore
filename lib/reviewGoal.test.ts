@@ -45,10 +45,10 @@ describe("the review leader and goal (same scope as the rank)", () => {
     expect(reviewGoal(few, null, 5)).toBeNull();
   });
 
-  test("the scope decides who counts — and the label names that group", () => {
+  test("every saved competitor counts (v2) — and the label names the niche's group", () => {
     const s = scan([entry("You", 10, true), entry("Zumiez Skate Shop", 100), entry("Board Co Skate Shop", 80), entry("Ride Skate Shop", 60), entry("American Sports", 900)]);
     const direct: CompetitorScope = { nicheId: "skate_snow", parent: "specialty_store", areas: [], mode: "direct" };
-    expect(reviewLeader(s, direct)?.name).toBe("Zumiez Skate Shop");
+    expect(reviewLeader(s, direct)?.name).toBe("American Sports");
     expect(reviewLeader(s)?.name).toBe("American Sports");
     expect(scopeGroupLabel(s, direct, "en", "specialty stores")).toBe("skate & snow shop businesses nearby");
     expect(scopeGroupLabel(s, null, "en", "salons")).toBe("nearby salons");

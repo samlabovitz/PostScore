@@ -8,7 +8,7 @@
 import { useState } from "react";
 import { IconCopy, IconExternalLink } from "@tabler/icons-react";
 import { formatShortDate, t, useLocale, type MessageKey } from "@/lib/i18n";
-import { builderGuideFor, webPersonAsk, webPersonMessage, type BuilderGuide } from "@/lib/websiteBuilderGuides";
+import { builderGuideFor, webPersonAsk, webPersonExplain, webPersonMessage, type BuilderGuide } from "@/lib/websiteBuilderGuides";
 import { WEBSITE_BUILDER_NAMES, type WebsiteBuilderId } from "@/lib/websiteBuilder";
 import type { WebsiteFix } from "@/lib/websiteFixes";
 
@@ -75,7 +75,10 @@ export function WebsiteFixGuide({ fixes, builder, siteUrl }: { fixes: WebsiteFix
   // One entry per distinct guide (two missing items can share one).
   const guides: BuilderGuide[] = [];
   const asks: string[] = [];
+  const explains: string[] = [];
   for (const fix of fixes) {
+    const explain = webPersonExplain(fix.checkId, fix.gap, lang);
+    if (explain && !explains.includes(explain)) explains.push(explain);
     const guide = builderGuideFor(builder, fix.checkId, fix.gap);
     if (guide) {
       if (!guides.includes(guide)) guides.push(guide);
@@ -100,9 +103,16 @@ export function WebsiteFixGuide({ fixes, builder, siteUrl }: { fixes: WebsiteFix
         ))}
         {asks.length > 0 && (
           <div className="flex flex-col gap-1.5" data-testid="generic-guide">
-            <p className="text-[12px] text-ink-soft">
-              {builderName ? t(locale, k("noBuilderGuide"), { builder: builderName }) : t(locale, k("unknownBuilder"))}
-            </p>
+            {explains.map((e) => (
+              <p key={e} data-testid="fix-explain" className="text-[12.5px] leading-snug text-ink">
+                {e}
+              </p>
+            ))}
+            {explains.length === 0 && (
+              <p className="text-[12px] text-ink-soft">
+                {builderName ? t(locale, k("noBuilderGuide"), { builder: builderName }) : t(locale, k("unknownBuilder"))}
+              </p>
+            )}
             <p className="text-[12.5px] font-semibold text-ink">{t(locale, k("askWebPerson"))}</p>
             <ul className="ml-4 list-disc space-y-1 text-[12.5px] leading-snug text-ink">
               {asks.map((a) => (

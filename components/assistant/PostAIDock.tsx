@@ -24,6 +24,7 @@ import {
   POSTAI_FULL_STORAGE_KEY,
   POSTAI_INTRO_STORAGE_KEY,
   POSTAI_OPEN_EVENT,
+  markPostaiDockReady,
   POSTAI_PANEL_WIDTH,
   postaiPageFromPath,
   postaiPanelNarrowsPage,
@@ -137,11 +138,16 @@ export function PostAIDock({
     });
   }, [open, data, businessId]);
 
-  // Any page can open it (the Free Overview card, designers' links).
+  // Any page can open it (the Free Overview card, designers' links) —
+  // in place, on that page (lib/postaiDock.ts askPostAIInPlace).
   useEffect(() => {
     const onOpen = (e: Event) => openPanel((e as CustomEvent<{ draft?: string }>).detail?.draft);
     window.addEventListener(POSTAI_OPEN_EVENT, onOpen);
-    return () => window.removeEventListener(POSTAI_OPEN_EVENT, onOpen);
+    markPostaiDockReady(true);
+    return () => {
+      window.removeEventListener(POSTAI_OPEN_EVENT, onOpen);
+      markPostaiDockReady(false);
+    };
   }, [openPanel]);
 
   // "Confused? Ask PostAI →": ?ask=<allowlisted id> opens it with that

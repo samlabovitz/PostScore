@@ -28,14 +28,14 @@ describe("owner: a social page on the listing is not a website", () => {
     const input = scoringInput({ website: FB, websiteAnalysis: null, verifiedElsewhereUrl: null });
     const has = check(input, "website.has_website");
     expect(has.earnedPoints).toBe(0);
-    expect(has.explanation).toContain("Your Google listing links to your Facebook page, not a website");
+    expect(has.explanation).toContain("Your Google listing's website link goes to your Facebook page, not a website");
     // The listing's "website link" doesn't count it either.
     const link = check(input, "completeness.website_link");
     expect(link.earnedPoints).toBe(0);
-    expect(link.explanation).toBe("Your Google listing links to your Facebook page, not a website.");
+    expect(link.explanation).toBe("Your Google listing's website link goes to your Facebook page, not a website.");
     const fix = generateSuggestions(scoreBusiness(input, "en"), "en").find((s) => s.checkId === "website.has_website");
     expect(fix?.advice).toBe("Add a real website (or your PostScore starter site) to your listing.");
-    expect(check(input, "website.has_website", "es").explanation).toContain("Su ficha de Google enlaza a su página de Facebook, no a un sitio web");
+    expect(check(input, "website.has_website", "es").explanation).toContain("El enlace de sitio web de su ficha de Google lleva a su página de Facebook, no a un sitio web");
     expect(generateSuggestions(scoreBusiness(input, "es"), "es").find((s) => s.checkId === "website.has_website")?.advice).toBe(
       "Agregue un sitio web real (o su sitio inicial de PostScore) a su ficha."
     );

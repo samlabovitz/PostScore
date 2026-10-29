@@ -16,6 +16,7 @@
 // 8th!!!" banner still showing in October, a real blog post dated July
 // 11, 2012, and two unfilled "Please put widget here" footer widgets.
 
+import { platformPage } from "@/lib/socialLinkCheck";
 import { extractMainContentHtml, extractVisibleText, wordCount } from "./pagePresenceDetection";
 
 // ---------------------------------------------------------------------
@@ -1294,43 +1295,12 @@ function hostMatches(hostname: string, list: string[]): boolean {
   return list.some((h) => host === h || host.endsWith(`.${h}`));
 }
 
-/** Social, link-in-bio, review and ordering pages — never the
- * business's own website (Day 4b rule: "a social page is not a
- * website"). Maps a host to the platform name shown to owners. */
-const SOCIAL_PAGE_PLATFORMS: Array<[string[], string]> = [
-  [["facebook.com", "fb.com", "fb.me"], "Facebook"],
-  [["instagram.com"], "Instagram"],
-  [["linktr.ee", "linktree.com"], "Linktree"],
-  [["yelp.com"], "Yelp"],
-  [["tiktok.com"], "TikTok"],
-  [["x.com", "twitter.com"], "X"],
-  [["youtube.com", "youtu.be"], "YouTube"],
-  [["linkedin.com"], "LinkedIn"],
-  [["pinterest.com"], "Pinterest"],
-  [["threads.net"], "Threads"],
-  [["nextdoor.com"], "Nextdoor"],
-  [["beacons.ai"], "Beacons"],
-  [["linkin.bio"], "Linkin.bio"],
-  [["doordash.com"], "DoorDash"],
-  [["grubhub.com"], "Grubhub"],
-  [["ubereats.com"], "Uber Eats"],
-  [["nailsites.com"], "NailSites"],
-  [["localsearch.com"], "Localsearch"],
-];
-
 /** The platform name when a "website" address is really a social,
- * link-in-bio, review or ordering page (e.g. "Facebook"); null for a
- * real website or anything unparsable. Pure — no fetch. */
+ * link-in-bio, review, ordering or booking page (e.g. "Facebook",
+ * "DoorDash"); null for a real website or anything unparsable. The list is
+ * lib/socialLinkCheck.ts PLATFORM_PAGES. Pure — no fetch. */
 export function socialPagePlatform(url: string | null | undefined): string | null {
-  if (!url || !url.trim()) return null;
-  let host: string;
-  try {
-    host = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`).hostname;
-  } catch {
-    return null;
-  }
-  for (const [hosts, name] of SOCIAL_PAGE_PLATFORMS) if (hostMatches(host, hosts)) return name;
-  return null;
+  return platformPage(url)?.name ?? null;
 }
 
 /** Classifies a website's real hostname — see FREE_BUILDER_HOSTS/
@@ -1339,7 +1309,9 @@ export function socialPagePlatform(url: string | null | undefined): string | nul
  * independently verified its content (verification is a separate,
  * later step — see website.has_website's own doc). */
 export function classifyWebsiteKind(hostname: string): WebsiteKind {
-  if (hostMatches(hostname, DIRECTORY_HOSTS)) return "directory";
+  // Ordering, booking, review and link-in-bio platforms are directories too.
+  const platform = platformPage(`https://${hostname}`);
+  if (hostMatches(hostname, DIRECTORY_HOSTS) || (platform && platform.kind !== "social")) return "directory";
   if (hostMatches(hostname, FREE_BUILDER_HOSTS)) return "free_builder";
   return "independent";
 }

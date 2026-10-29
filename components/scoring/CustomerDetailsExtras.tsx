@@ -1,9 +1,10 @@
 "use client";
 
-// Under "Customer details on your listing": the owner's own answers ("No
-// parking available", "We take no payments on site") — owner-entered,
-// labeled "Added by you", each removing that part from the check. The
-// steps and official links are the row's "How to fix it".
+// "Doesn't apply to you?" on "Customer details on your listing": a small
+// popover with the owner's own answers ("No parking available", "We take
+// no payments on site") — owner-entered, labeled "Added by you", each
+// removing that part from the check. The same answers are in the Update
+// on Google panel.
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -29,8 +30,9 @@ export function CustomerDetailsExtras({
   const [saving, setSaving] = useState<CustomerDetailsOwnerPart | null>(null);
   const [failed, setFailed] = useState(false);
   const ownerRemoved = list(check.meta?.ownerRemoved);
-  const canRemove = list(check.meta?.ownerCanRemove).filter(
-    (p): p is CustomerDetailsOwnerPart => p === "parking" || p === "payment",
+  // Parking first, the same order as the Update on Google panel.
+  const canRemove = (["parking", "payment"] as const).filter((p) =>
+    list(check.meta?.ownerCanRemove).includes(p),
   );
 
   async function toggle(part: CustomerDetailsOwnerPart, notAvailable: boolean) {
@@ -48,34 +50,28 @@ export function CustomerDetailsExtras({
 
   if (!businessId || canRemove.length === 0) return null;
   return (
-    <div
-      className="ml-[25px] mt-1 text-[12.5px] text-ink-soft"
-      data-testid="customer-details-extras"
-    >
-      <fieldset className="flex flex-col gap-1.5 rounded-lg border border-paper-line bg-paper px-3 py-2">
-        <legend className="px-1 text-[11.5px] font-medium text-ink-mute">
-          {t(
-            locale,
-            "content.checks.completeness.customer_details.owner.heading",
-          )}
-        </legend>
+    <details className="relative" data-testid="customer-details-extras">
+      <summary className="cursor-pointer list-none text-[12px] font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline [&::-webkit-details-marker]:hidden">
+        {t(locale, "dashboard.customerDetails.doesntApply")}
+      </summary>
+      <div className="absolute left-0 z-20 mt-1 flex w-max max-w-[min(20rem,calc(100vw-3rem))] flex-col gap-1.5 rounded-lg border border-paper-deep bg-white px-3 py-2 text-[12.5px] text-ink shadow-card">
         {canRemove.map((part) => {
           const checked = ownerRemoved.includes(part);
           return (
-            <label key={part} className="flex flex-wrap items-center gap-2">
+            <label key={part} className="flex items-center gap-2 whitespace-nowrap">
               <input
                 type="checkbox"
                 checked={checked}
                 disabled={saving !== null}
                 onChange={(e) => toggle(part, e.target.checked)}
-                className="h-3.5 w-3.5 accent-[color:var(--color-brass)]"
+                className="h-3.5 w-3.5 shrink-0 accent-[color:var(--color-brass)]"
               />
               <span>
                 {t(
                   locale,
                   part === "parking"
-                    ? "content.checks.completeness.customer_details.owner.noParking"
-                    : "content.checks.completeness.customer_details.owner.noPayment",
+                    ? "dashboard.gbpEdit.ownerNoParking"
+                    : "dashboard.gbpEdit.ownerNoPayment",
                 )}
               </span>
               {checked && (
@@ -102,7 +98,7 @@ export function CustomerDetailsExtras({
             )}
           </p>
         )}
-      </fieldset>
-    </div>
+      </div>
+    </details>
   );
 }

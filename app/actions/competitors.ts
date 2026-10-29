@@ -44,6 +44,7 @@ import { canRunScan, nextMonthStartUtc, placesSearchMonthlyCap } from "@/lib/pla
 import { scopeGroupLabel, nicheSearchTypes } from "@/lib/competitorScope";
 import { applyOverrides, overridesFromRows, scanOverrides, type CompetitorOverride } from "@/lib/competitorOverrides";
 import { nicheScanFields } from "@/lib/competitorNicheRule";
+import { competitorQueryNoun, competitorTextQuery } from "@/lib/competitorQuery";
 
 
 export type { CompetitorRankPoint, SavedCompetitorEntry, SavedCompetitorScan } from "@/lib/savedCompetitorScans";
@@ -112,6 +113,9 @@ export type GetCompetitorsResult =
       alsoNearby?: AlsoNearbyListing[];
       /** Competitors the owner removed (with the reason) — "Removed by you". */
       removedByOwner?: CompetitorOverride[];
+      /** "Compared with N {noun} near you — … search “{query}”" (the query
+       * scans use; null when a scan uses Nearby Search only). */
+      comparedWith?: { noun: string | null; query: string | null };
       /** "The nearest established … are {min}–{max} miles away" (mostly over 5 mi). */
       distanceNote?: { min: number; max: number } | null;
       refresh: RefreshAvailability;
@@ -163,7 +167,7 @@ export async function getCompetitorsWithClient(
   const [{ data: business, error }, { data: scanRows, error: scanError }, unfinished, scoring, niche] = await Promise.all([
     supabase
       .from("businesses")
-      .select("name, address, language, category, categories, primary_type, business_type_override, lat, lng")
+      .select("name, address, language, category, categories, primary_type, business_type_override, lat, lng, website, verified_website_url")
       .eq("id", businessId)
       .single(),
     supabase.from("competitor_scans").select(SCAN_COLUMNS).eq("business_id", businessId).order("created_at", { ascending: false }).limit(600),
@@ -178,7 +182,7 @@ export async function getCompetitorsWithClient(
 
   const row = business as Pick<
     CompetitorBusinessRow,
-    "name" | "address" | "language" | "category" | "categories" | "primary_type" | "business_type_override" | "lat" | "lng"
+    "name" | "address" | "language" | "category" | "categories" | "primary_type" | "business_type_override" | "lat" | "lng" | "website" | "verified_website_url"
   >;
   const locale = normalizeLocale(row.language);
   const competitorNoun = resolveBizProfile(
@@ -221,6 +225,7 @@ export async function getCompetitorsWithClient(
     ).filter((l) => !overrides.some((o) => o.action === "removed" && o.placeId === l.placeId)),
     distanceNote: latest ? distanceNote(latest.entries.filter((e) => !e.isSubject)) : null,
     removedByOwner: overrides.filter((o) => o.action === "removed"),
+    comparedWith: comparedWithFor(row, niche),
     niche,
     // Free: "Refresh" only when the latest scan found no competitors (the
     // one exception — right away, no cooldown).
@@ -831,4 +836,16 @@ async function loadCompetitorOverrides(supabase: SupabaseClient, businessId: str
   } catch {
     return [];
   }
+}
+
+/** The query words a scan of this business uses (lib/competitorQuery.ts) —
+ * the same niche rules as the scan itself. */
+function comparedWithFor(
+  row: { address: string | null; primary_type: string | null; categories: string[] | null; website: string | null; verified_website_url: string | null },
+  niche: BusinessNicheState | null
+): { noun: string | null; query: string | null } {
+  const { queryNiche } = nicheScanFields(niche?.resolved, niche?.scope, row.website ?? row.verified_website_url);
+  const primaryType = [row.primary_type, ...(row.categories ?? [])].find((t) => !!t && !isGenericType(t)) ?? null;
+  const subject = { nicheLabelEn: queryNiche?.labelEn, nicheParent: queryNiche?.parent, primaryType, address: row.address };
+  return { noun: competitorQueryNoun(subject), query: competitorTextQuery(subject) };
 }

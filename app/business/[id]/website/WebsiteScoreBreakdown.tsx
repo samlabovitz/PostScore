@@ -261,7 +261,7 @@ function CheckRow({
           </div>
         )}
 
-        {(state === "partial" || state === "zero") && fixes.length > 0 && check.id !== "website.has_website" && (
+        {(state === "partial" || state === "zero" || fixes.some((f) => f.gap === "no_main_content")) && fixes.length > 0 && check.id !== "website.has_website" && (
           <WebsiteFixGuide fixes={fixes} builder={builderId} siteUrl={siteUrl} />
         )}
 

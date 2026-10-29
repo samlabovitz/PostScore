@@ -1279,11 +1279,19 @@ describe("carryForwardMobilePerformance (Oct 10 audit fix): the real Blue Bottle
     expect(result.mobilePerformance).not.toBeNull();
   });
 
-  test("never reuses on any OTHER failure kind — only a genuine timeout, never http_error/no_api_key/error", () => {
+  test("a run that returned no score ('error', e.g. Google couldn't find the page's main content) reuses a recent measurement too", () => {
+    const result = carryForwardMobilePerformance(null, { kind: "error", status: null }, RECENT, NOW);
+    expect(result.mobilePerformance).toMatchObject({ ...RECENT, carriedForward: true });
+    expect(result.mobilePerformanceFailureReason).toBeNull();
+    // …but never one older than 30 days.
+    const old = { ...RECENT, measuredAt: new Date(NOW.getTime() - 31 * 24 * 60 * 60 * 1000).toISOString() };
+    expect(carryForwardMobilePerformance(null, { kind: "error", status: null }, old, NOW)).toEqual({ mobilePerformance: null, mobilePerformanceFailureReason: { kind: "error", status: null } });
+  });
+
+  test("never reuses on http_error or no_api_key", () => {
     for (const failure of [
       { kind: "http_error" as const, status: 500 },
       { kind: "no_api_key" as const, status: null },
-      { kind: "error" as const, status: null },
     ]) {
       const result = carryForwardMobilePerformance(null, failure, RECENT, NOW);
       expect(result.mobilePerformance).toBeNull();

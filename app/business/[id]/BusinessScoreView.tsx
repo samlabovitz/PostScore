@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { HackedSiteBanner } from "@/components/scoring/HackedSiteBanner";
 import { ClosedListingBanner } from "@/components/scoring/ClosedListingBanner";
+import { PlatformLinkCard } from "@/components/gbp/PlatformLinkCard";
 import { scoreOnHold } from "@/lib/businessStatus";
 import { hackSignsFor } from "@/lib/siteSecurity";
 import { businessWebsiteUrl } from "@/lib/businessWebsite";
@@ -203,6 +204,7 @@ export function BusinessScoreView({
     return (
       <div data-testid="free-overview" className="flex flex-col gap-5 nav:gap-6">
         <ClosedListingBanner businessId={businessId} status={business.business_status} archived={archived} />
+        <PlatformLinkCard variant="alert" businessId={businessId} website={business.website ?? null} premium={false} connected={gbpConnected} />
         {showHackedBanner && <HackedSiteBanner href={`/business/${businessId}/website#check-security`} />}
 
         {header}
@@ -278,6 +280,7 @@ export function BusinessScoreView({
   return (
     <div className="flex flex-col gap-5 nav:gap-6">
       <ClosedListingBanner businessId={businessId} status={business.business_status} archived={archived} />
+      <PlatformLinkCard variant="alert" businessId={businessId} website={business.website ?? null} premium={plan === "premium" || plan === "multi"} connected={gbpConnected} />
       {showHackedBanner && <HackedSiteBanner href={`/business/${businessId}/website#check-security`} />}
 
       {header}

@@ -8,7 +8,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getPlan } from "@/lib/premium";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { nicheById } from "@/lib/niches";
-import { availableAreas, safeScopeMode, type ScopeMode } from "@/lib/competitorScope";
 import { isMissingNicheColumns, loadBusinessNiche } from "@/lib/businessNiche.server";
 
 export type NicheActionResult = { status: "ok" } | { status: "unauthenticated" } | { status: "not_enabled" } | { status: "not_found" } | { status: "error"; message: string };
@@ -100,25 +99,3 @@ export async function confirmBusinessNiche(businessId: string): Promise<NicheAct
   return { status: "ok" };
 }
 
-/** Which "also competes with" areas count (only real areas of the niche). */
-export async function setCompetitorAreas(businessId: string, areas: string[]): Promise<NicheActionResult> {
-  const supabase = await authed();
-  if (!supabase) return { status: "unauthenticated" };
-  const state = await loadBusinessNiche(supabase, businessId);
-  if (!state) return { status: "not_found" };
-  if (!state.enabled) return { status: "not_enabled" };
-  const allowed = availableAreas(state.resolved.nicheId);
-  const clean = Array.from(new Set(areas.filter((a) => allowed.includes(a))));
-  const { error } = await supabase.from("businesses").update({ competitor_areas: clean }).eq("id", businessId);
-  if (error) return isMissingNicheColumns(error) ? { status: "not_enabled" } : { status: "error", message: error.message };
-  return { status: "ok" };
-}
-
-/** Rank against: auto / direct only / direct + ticked areas. */
-export async function setCompetitorScope(businessId: string, mode: ScopeMode): Promise<NicheActionResult> {
-  const supabase = await authed();
-  if (!supabase) return { status: "unauthenticated" };
-  const { error } = await supabase.from("businesses").update({ competitor_scope: safeScopeMode(mode) }).eq("id", businessId);
-  if (error) return isMissingNicheColumns(error) ? { status: "not_enabled" } : { status: "error", message: error.message };
-  return { status: "ok" };
-}

@@ -70,6 +70,7 @@ export function nicheScanFields(
   if (isGeneralNiche(def.id) || !names) return { queryNiche, nicheRule: null };
   return {
     queryNiche,
-    nicheRule: { nicheId: def.id, parent: def.parent, areas: scope?.areas ?? [], googleTypes: def.googleTypes, professional: PROFESSIONAL_PARENTS.has(def.parent) },
+    // The retired ticked areas are never read (Oct 29).
+    nicheRule: { nicheId: def.id, parent: def.parent, areas: [], googleTypes: def.googleTypes, professional: PROFESSIONAL_PARENTS.has(def.parent) },
   };
 }

@@ -487,7 +487,8 @@ export function guideTaskFor(checkId: string, gap: string | null): GuideTask | n
     case "website.https":
       return "ssl";
     case "website.performance_mobile":
-      return "speed";
+      // Not a builder speed setting: the first screen itself needs changing.
+      return gap === "no_main_content" ? null : "speed";
     case "website.content_depth":
       if (gap === "title" || gap === "meta") return "seo_meta";
       if (gap === "viewport") return null;
@@ -524,6 +525,10 @@ const ASK: Record<string, Text> = {
   "website.performance_mobile": {
     en: "speed up the site on phones: compress and resize large images, remove unused scripts and plugins, and turn on caching. PageSpeed Insights (pagespeed.web.dev) shows exactly what's slow",
     es: "hacer el sitio más rápido en teléfonos: comprimir y reducir las imágenes grandes, quitar scripts y plugins que no se usan y activar la caché. PageSpeed Insights (pagespeed.web.dev) muestra exactamente qué es lento",
+  },
+  "website.performance_mobile:no_main_content": {
+    en: "make the homepage's first screen visible as soon as it loads, so Google's speed test can find the main content: don't start the main image or headline hidden (opacity: 0) and fade it in — show it right away, and keep any animation to movement only; don't load the first screen's text or image with scripts; and don't make a full-screen video or slider the first thing on the page",
+    es: "hacer que la primera pantalla de la página principal se vea en cuanto carga, para que la prueba de velocidad de Google encuentre el contenido principal: no empezar con la imagen principal o el título ocultos (opacity: 0) para luego hacerlos aparecer — mostrarlos de inmediato y dejar cualquier animación solo en movimiento; no cargar el texto ni la imagen de la primera pantalla con scripts; y no poner un video o un carrusel a pantalla completa como lo primero de la página",
   },
   "website.content_depth:title": {
     en: "add a clear page title (the <title> tag) to the homepage that says what we do and where",
@@ -596,6 +601,18 @@ const ASK: Record<string, Text> = {
 export function webPersonAsk(checkId: string, gap: string | null, locale: "en" | "es"): string | null {
   const text = (gap ? ASK[`${checkId}:${gap}`] : undefined) ?? ASK[checkId];
   return text ? text[locale] : null;
+}
+
+/** Plain-words background shown above the ask, for fixes that need it. */
+const EXPLAIN: Record<string, Text> = {
+  "website.performance_mobile:no_main_content": {
+    en: "Google's speed test opens your homepage like a phone would, then looks for its main content — usually the biggest picture or headline on the first screen. On your site it can't find any, so it can't give a speed score. This usually happens when: the main picture or headline starts hidden and fades or slides in; the first screen's content is loaded late by scripts; or a full-screen video or slider is the first thing on the page. The fix is to show the first screen's main picture and headline right away.",
+    es: "La prueba de velocidad de Google abre su página principal como lo haría un teléfono y luego busca su contenido principal: normalmente la imagen o el título más grande de la primera pantalla. En su sitio no encuentra ninguno, así que no puede dar una puntuación de velocidad. Esto suele pasar cuando: la imagen o el título principal empiezan ocultos y aparecen poco a poco o se deslizan; el contenido de la primera pantalla se carga tarde con scripts; o un video o un carrusel a pantalla completa es lo primero de la página. La solución es mostrar de inmediato la imagen y el título principales de la primera pantalla.",
+  },
+};
+
+export function webPersonExplain(checkId: string, gap: string | null, locale: "en" | "es"): string | null {
+  return gap ? (EXPLAIN[`${checkId}:${gap}`]?.[locale] ?? null) : null;
 }
 
 /** The copyable message for a web person. */

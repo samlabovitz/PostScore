@@ -1118,6 +1118,7 @@ export type MessageKey =
   | "content.checks.website.performance_mobile.explanation.noWebsite"
   | "content.checks.website.performance_mobile.explanation.notAnalyzed"
   | "content.checks.website.performance_mobile.explanation.noScore"
+  | "content.checks.website.performance_mobile.explanation.noMainContent"
   | "content.checks.website.performance_mobile.explanation.field"
   | "content.checks.website.performance_mobile.explanation.lab"
   | "content.checks.website.performance_mobile.explanation.fieldLastMeasured"
@@ -1283,6 +1284,102 @@ export type MessageKey =
   | "dashboard.closed.step.why"
   | "dashboard.closed.report.alert"
   | "dashboard.closed.report.alertTemporary"
+  | "dashboard.gbpEdit.button"
+  | "dashboard.gbpEdit.loading"
+  | "dashboard.gbpEdit.lockedNote"
+  | "dashboard.gbpEdit.connectFirst"
+  | "dashboard.gbpEdit.connectLink"
+  | "dashboard.gbpEdit.intro"
+  | "dashboard.gbpEdit.noneOffered"
+  | "dashboard.gbpEdit.now"
+  | "dashboard.gbpEdit.value.yes"
+  | "dashboard.gbpEdit.value.no"
+  | "dashboard.gbpEdit.value.notSet"
+  | "dashboard.gbpEdit.review"
+  | "dashboard.gbpEdit.previewTitle"
+  | "dashboard.gbpEdit.previewNote"
+  | "dashboard.gbpEdit.approve"
+  | "dashboard.gbpEdit.sending"
+  | "dashboard.gbpEdit.back"
+  | "dashboard.gbpEdit.close"
+  | "dashboard.gbpEdit.result.sent"
+  | "dashboard.gbpEdit.result.pending"
+  | "dashboard.gbpEdit.result.noChanges"
+  | "dashboard.gbpEdit.result.points"
+  | "dashboard.gbpEdit.undo.summary"
+  | "dashboard.gbpEdit.undo.summaryPending"
+  | "dashboard.gbpEdit.undo.button"
+  | "dashboard.gbpEdit.undo.confirm"
+  | "dashboard.gbpEdit.undo.confirmYes"
+  | "dashboard.gbpEdit.undo.done"
+  | "dashboard.gbpEdit.undo.donePending"
+  | "dashboard.gbpEdit.blocked.unauthenticated"
+  | "dashboard.gbpEdit.blocked.not_found"
+  | "dashboard.gbpEdit.blocked.not_premium"
+  | "dashboard.gbpEdit.blocked.archived"
+  | "dashboard.gbpEdit.blocked.not_connected"
+  | "dashboard.gbpEdit.error.reconnect"
+  | "dashboard.gbpEdit.error.permission"
+  | "dashboard.gbpEdit.error.rate_limited"
+  | "dashboard.gbpEdit.error.rejected"
+  | "dashboard.gbpEdit.error.failed"
+  | "dashboard.gbpEdit.error.changed"
+  | "dashboard.gbpEdit.error.wait_minute"
+  | "dashboard.gbpEdit.error.daily_cap"
+  | "dashboard.gbpEdit.error.not_enabled"
+  | "dashboard.gbpEdit.error.changed_since"
+  | "dashboard.gbpEdit.error.undo_expired"
+  | "dashboard.platformLink.title"
+  | "dashboard.platformLink.explainSection"
+  | "dashboard.platformLink.explainNoSection"
+  | "dashboard.platformLink.already"
+  | "dashboard.platformLink.onlyWebsite"
+  | "dashboard.platformLink.add"
+  | "dashboard.platformLink.preview"
+  | "dashboard.platformLink.approve"
+  | "dashboard.platformLink.cancel"
+  | "dashboard.platformLink.sending"
+  | "dashboard.platformLink.sent"
+  | "dashboard.platformLink.undoSummary"
+  | "dashboard.platformLink.undo"
+  | "dashboard.platformLink.undoConfirm"
+  | "dashboard.platformLink.undoYes"
+  | "dashboard.platformLink.undone"
+  | "dashboard.platformLink.checking"
+  | "dashboard.platformLink.notConnected"
+  | "dashboard.platformLink.connect"
+  | "dashboard.platformLink.connectPremium"
+  | "dashboard.platformLink.notEnabledGoogle"
+  | "dashboard.platformLink.howToTitle"
+  | "dashboard.platformLink.howToOrder"
+  | "dashboard.platformLink.howToBooking"
+  | "dashboard.platformLink.helpLink"
+  | "dashboard.platformLink.websiteValue"
+  | "dashboard.platformLink.getWebsite"
+  | "dashboard.platformLink.getWebsiteNote"
+  | "dashboard.platformLink.section.order"
+  | "dashboard.platformLink.section.reservations"
+  | "dashboard.platformLink.section.appointments"
+  | "dashboard.platformLink.button.ordering"
+  | "dashboard.platformLink.button.reservations"
+  | "dashboard.platformLink.button.appointments"
+  | "dashboard.platformLink.button.directory"
+  | "dashboard.platformLink.button.link_in_bio"
+  | "dashboard.platformLink.button.social"
+  | "dashboard.platformLink.error.not_enabled_google"
+  | "dashboard.platformLink.error.changed_since"
+  | "dashboard.platformLink.error.undo_expired"
+  | "dashboard.platformLink.error.other"
+  | "dashboard.gbpEdit.error.loadCurrent"
+  | "dashboard.gbpEdit.before"
+  | "dashboard.gbpEdit.after"
+  | "dashboard.gbpEdit.note.cashOnly"
+  | "dashboard.gbpEdit.note.notCashOnly"
+  | "dashboard.gbpEdit.note.noParking"
+  | "dashboard.gbpEdit.note.parkingClearsNo"
+  | "dashboard.gbpEdit.note.noPayment"
+  | "dashboard.gbpEdit.note.paymentClearsNo"
+  | "dashboard.gbpEdit.howToIntro"
   | "dashboard.competitors.owner.remove"
   | "dashboard.competitors.owner.why"
   | "dashboard.competitors.owner.reason.closed"
@@ -1307,6 +1404,35 @@ export type MessageKey =
   | "dashboard.competitors.owner.notEnabled"
   | "dashboard.competitors.owner.error"
   | "dashboard.competitors.owner.miles"
+  | "dashboard.gbpEdit.lockedChip"
+  | "dashboard.gbpEdit.connectToUpdate"
+  | "dashboard.gbpEdit.error.ownerAfterGoogle"
+  | "dashboard.gbpEdit.ownerNoParking"
+  | "dashboard.gbpEdit.ownerNoPayment"
+  | "dashboard.gbpEdit.previewOwnerOnly"
+  | "dashboard.gbpEdit.saveOwnerOnly"
+  | "dashboard.gbpEdit.result.saved"
+  | "dashboard.gbpEdit.group.parking"
+  | "dashboard.gbpEdit.group.payment"
+  | "dashboard.gbpEdit.group.accessibility"
+  | "dashboard.gbpEdit.option.has_parking_street_free"
+  | "dashboard.gbpEdit.option.has_parking_street_paid"
+  | "dashboard.gbpEdit.option.has_parking_lot_free"
+  | "dashboard.gbpEdit.option.has_parking_lot_paid"
+  | "dashboard.gbpEdit.option.has_parking_garage_free"
+  | "dashboard.gbpEdit.option.has_parking_garage_paid"
+  | "dashboard.gbpEdit.option.has_valet_parking"
+  | "dashboard.gbpEdit.option.pay_credit_card"
+  | "dashboard.gbpEdit.option.pay_debit_card"
+  | "dashboard.gbpEdit.option.pay_mobile_nfc"
+  | "dashboard.gbpEdit.option.requires_cash_only"
+  | "dashboard.gbpEdit.option.has_wheelchair_accessible_entrance"
+  | "dashboard.gbpEdit.option.has_wheelchair_accessible_restroom"
+  | "dashboard.gbpEdit.option.has_wheelchair_accessible_seating"
+  | "dashboard.gbpEdit.option.has_wheelchair_accessible_parking"
+  | "dashboard.customerDetails.why"
+  | "dashboard.customerDetails.doesntApply"
+  | "dashboard.customerDetails.howToOptions"
   | "dashboard.hackedBanner.message"
   | "dashboard.hackedBanner.link"
   | "dashboard.website.security.needsWebPerson"
@@ -3570,6 +3696,12 @@ export type MessageKey =
   | "dashboard.competitors.someWebsitesNotChecked"
   | "dashboard.competitors.listingFactsNotSaved"
   | "dashboard.competitors.statYourScore"
+  | "dashboard.competitors.comparedWith.many"
+  | "dashboard.competitors.comparedWith.manyQuery"
+  | "dashboard.competitors.comparedWith.one"
+  | "dashboard.competitors.comparedWith.oneQuery"
+  | "dashboard.competitors.comparedWith.changeType"
+  | "dashboard.competitors.comparedWith.add"
   | "dashboard.competitors.statYourScoreComparable"
   | "dashboard.competitors.comparableExplain"
   | "dashboard.competitors.fullScoreLink"
@@ -4194,6 +4326,9 @@ export type MessageKey =
   | "dashboard.website.starter.details.category"
   | "dashboard.website.starter.details.address"
   | "dashboard.website.starter.details.phone"
+  | "dashboard.website.starter.details.link"
+  | "dashboard.website.starter.details.linkHint"
+  | "starterSite.actionLinkGeneric"
   | "dashboard.website.starter.details.confirm"
   | "dashboard.website.starter.details.saving"
   | "dashboard.website.starter.details.providedByYou"
@@ -5460,7 +5595,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.completeness.website_link.advice": "Link your website in your Google Business Profile.",
     "content.checks.completeness.website_link.explanation.present": "Website is linked on the listing.",
     "content.checks.completeness.website_link.explanation.missing": "No website linked on the listing.",
-    "content.checks.completeness.website_link.explanation.socialPage": "Your Google listing links to your {platform} page, not a website.",
+    "content.checks.completeness.website_link.explanation.socialPage": "Your Google listing's website link goes to your {platform} page, not a website.",
     "content.checks.completeness.website_link.explanation.broken":
       "The website link on your Google listing opens a \"Page Not Found\" page — update it.",
 
@@ -5529,17 +5664,19 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.performance_mobile.explanation.noWebsite":
       "Not applicable — no website on file to check.",
     "content.checks.website.performance_mobile.explanation.notAnalyzed":
-      "This site hasn't been analyzed yet — re-scan to run a real PageSpeed check.",
+      "We haven't measured your site's speed yet. We'll measure it on your next scan.",
+    "content.checks.website.performance_mobile.explanation.noMainContent":
+      "We couldn't measure your site's speed — Google's speed test can't find your homepage's main content, so it can't give a score. This check is left out of your score, not counted against you. See how to fix it below.",
     "content.checks.website.performance_mobile.explanation.noScore":
-      "Couldn't get a real speed measurement for this site — either PostScore's PageSpeed check isn't configured yet, or Google's PageSpeed Insights API couldn't complete the audit (no real-user data and every lab run failed). Excluded from your score, not counted against you.",
+      "We couldn't measure your site's speed this time — Google's speed test didn't finish. This check is left out of your score, not counted against you. We'll try again on your next scan.",
     "content.checks.website.performance_mobile.explanation.field":
       "Real visitors on phones over the last 28 days (Google Chrome data): {category}.",
     "content.checks.website.performance_mobile.explanation.lab":
       "Simulated phone test, middle of 3 runs: {score}/100. Results can vary between tests.",
     "content.checks.website.performance_mobile.explanation.fieldLastMeasured":
-      "Real visitors on phones (Google Chrome data) — last measured {date}: {category}. This scan's own speed check didn't respond in time, so we're showing the most recent real measurement instead of excluding this.",
+      "Real visitors on phones (Google Chrome data) — last measured {date}: {category}. This scan's speed test didn't finish, so we're showing the most recent real measurement instead of leaving this out.",
     "content.checks.website.performance_mobile.explanation.labLastMeasured":
-      "Simulated phone test — last measured {date}: {score}/100. This scan's own speed check didn't respond in time, so we're showing the most recent real measurement instead of excluding this.",
+      "Simulated phone test — last measured {date}: {score}/100. This scan's speed test didn't finish, so we're showing the most recent real measurement instead of leaving this out.",
     "content.checks.website.performance_mobile.fieldCategory.fast": "fast",
     "content.checks.website.performance_mobile.fieldCategory.average": "average",
     "content.checks.website.performance_mobile.fieldCategory.slow": "slow",
@@ -5716,7 +5853,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.performance_mobile.explanation.fieldBlockedSiteLastMeasured": "Real visitors on phones (Google Chrome data), last measured {date}: {category}. Your site blocks our own speed test, so this is real-visitor data only.",
     "content.checks.website.has_website.explanation.presentAutomatedErrorPage": "Business has a real website on file. We couldn't check the page itself — this site shows automated checks an error page instead of what customers see.",
     "dashboard.website.screenshotAutomatedErrorPage": "We couldn't capture this page — the site showed our automated check an error page instead of what customers see. Open it yourself: {url}",
-    "dashboard.website.performanceErrorPage": "PageSpeed reached an error page instead of your site, so we couldn't measure its speed.",
+    "dashboard.website.performanceErrorPage": "Google's speed test reached an error page instead of your site, so we couldn't measure its speed.",
     "content.checks.website.performance_mobile.explanation.fieldOrigin": "Real visitors on phones across your whole site over the last 28 days (Google Chrome data, whole-site measurement — this page's own link opens an error page): {category}.",
     "content.checks.website.performance_mobile.explanation.fieldLastMeasuredErrorPage": "Real visitors on phones (Google Chrome data) — last measured {date}: {category}. This scan's speed check reached an error page instead of your site, so we're showing the most recent real measurement instead.",
     "content.checks.website.performance_mobile.explanation.labLastMeasuredErrorPage": "Simulated phone test — last measured {date}: {score}/100. This scan's speed check reached an error page instead of your site, so we're showing the most recent real measurement instead.",
@@ -5764,6 +5901,102 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.closed.step.why": "Google tells everyone searching for you that you're closed. Nothing else matters until that's fixed.",
     "dashboard.closed.report.alert": "Google shows {name} as permanently closed. If you're still open, mark it open in Google Business Profile now — customers are being told you're closed.",
     "dashboard.closed.report.alertTemporary": "Google shows {name} as temporarily closed. If you've reopened, update it in Google Business Profile.",
+    "dashboard.gbpEdit.button": "Update on Google",
+    "dashboard.gbpEdit.loading": "Reading your Google listing…",
+    "dashboard.gbpEdit.lockedNote": "With Premium, PostScore updates these on Google for you, after you approve.",
+    "dashboard.gbpEdit.connectFirst": "Connect your Google Business Profile to update these from here.",
+    "dashboard.gbpEdit.connectLink": "Connect Google →",
+    "dashboard.gbpEdit.intro": "These are the details Google offers for your kind of business. Pick what's true. Nothing changes on Google until you approve.",
+    "dashboard.gbpEdit.noneOffered": "Google doesn't offer accessibility, payment or parking details for this listing.",
+    "dashboard.gbpEdit.now": "now: {value}",
+    "dashboard.gbpEdit.value.yes": "Yes",
+    "dashboard.gbpEdit.value.no": "No",
+    "dashboard.gbpEdit.value.notSet": "Not set",
+    "dashboard.gbpEdit.review": "Review changes",
+    "dashboard.gbpEdit.previewTitle": "Before → after on your Google listing",
+    "dashboard.gbpEdit.previewNote": "This changes your public Google listing. You can undo it here for 7 days.",
+    "dashboard.gbpEdit.approve": "Approve and update Google",
+    "dashboard.gbpEdit.sending": "Sending to Google…",
+    "dashboard.gbpEdit.back": "Back",
+    "dashboard.gbpEdit.close": "Close",
+    "dashboard.gbpEdit.result.sent": "Sent to Google — may take a little while to appear.",
+    "dashboard.gbpEdit.result.pending": "Pending Google review.",
+    "dashboard.gbpEdit.result.noChanges": "Nothing to change — Google already has these values.",
+    "dashboard.gbpEdit.result.points": "Your score updates after your next scan sees it on Google.",
+    "dashboard.gbpEdit.undo.summary": "You updated your customer details on Google on {date}. You can undo it until {until}.",
+    "dashboard.gbpEdit.undo.summaryPending": "You updated your customer details on Google on {date} (pending Google review). You can undo it until {until}.",
+    "dashboard.gbpEdit.undo.button": "Undo",
+    "dashboard.gbpEdit.undo.confirm": "Put the previous values back on Google?",
+    "dashboard.gbpEdit.undo.confirmYes": "Yes, undo",
+    "dashboard.gbpEdit.undo.done": "Previous values sent to Google — may take a little while to appear.",
+    "dashboard.gbpEdit.undo.donePending": "Previous values sent — pending Google review.",
+    "dashboard.gbpEdit.blocked.unauthenticated": "Please sign in again.",
+    "dashboard.gbpEdit.blocked.not_found": "We couldn't find this business on your account.",
+    "dashboard.gbpEdit.blocked.not_premium": "Updating Google for you is part of Premium.",
+    "dashboard.gbpEdit.blocked.archived": "This business is archived. Restore it to update Google.",
+    "dashboard.gbpEdit.blocked.not_connected": "Connect your Google Business Profile first.",
+    "dashboard.gbpEdit.error.reconnect": "Google asked us to reconnect. Please reconnect Google, then try again. Nothing was changed.",
+    "dashboard.gbpEdit.error.permission": "This Google account can't edit this listing. Nothing was changed.",
+    "dashboard.gbpEdit.error.rate_limited": "Google is busy. Please wait a minute and try again. Nothing was changed.",
+    "dashboard.gbpEdit.error.rejected": "Google didn't accept the change. Nothing was changed.",
+    "dashboard.gbpEdit.error.failed": "We couldn't reach Google. Nothing was changed. Please try again in a minute.",
+    "dashboard.gbpEdit.error.changed": "Google's options for your listing changed. Please open the panel again. Nothing was changed.",
+    "dashboard.gbpEdit.error.wait_minute": "Please wait a minute between changes.",
+    "dashboard.gbpEdit.error.daily_cap": "That's the most changes for today. Please try again tomorrow.",
+    "dashboard.gbpEdit.error.not_enabled": "Updating Google isn't switched on yet. Nothing was changed.",
+    "dashboard.gbpEdit.error.changed_since": "Some of these were changed on Google since, so we didn't undo anything. You can update them again here.",
+    "dashboard.gbpEdit.error.undo_expired": "This change can no longer be undone here.",
+    "dashboard.platformLink.title": "Your Google listing's website link goes to your {platform} page, not a website.",
+    "dashboard.platformLink.explainSection": "Customers can still find your {platform} page — Google has a separate “{section}” link for it. Put a real website in the website spot.",
+    "dashboard.platformLink.explainNoSection": "Customers can still find your {platform} page. Put a real website in the website spot, and link to {platform} from it.",
+    "dashboard.platformLink.already": "✓ {platform} is already in your “{section}” section — customers see it on Google. No need to use it as your website.",
+    "dashboard.platformLink.onlyWebsite": "Your {platform} page is in your website spot. Move it to Google's “{section}” button, where customers expect it, and put a real website in the website spot.",
+    "dashboard.platformLink.add": "Add to “{section}” on Google",
+    "dashboard.platformLink.preview": "PostScore will add this link to “{section}” on your Google listing: {url}. Your website link stays as it is — change it once you have a real website.",
+    "dashboard.platformLink.approve": "Approve and add",
+    "dashboard.platformLink.cancel": "Cancel",
+    "dashboard.platformLink.sending": "Sending to Google…",
+    "dashboard.platformLink.sent": "Sent to Google — it may take a little while to appear in “{section}”.",
+    "dashboard.platformLink.undoSummary": "Added to “{section}” on {date}. You can undo it until {until}.",
+    "dashboard.platformLink.undo": "Undo",
+    "dashboard.platformLink.undoConfirm": "Remove this link from “{section}” on Google?",
+    "dashboard.platformLink.undoYes": "Yes, undo",
+    "dashboard.platformLink.undone": "Removed from “{section}” on Google.",
+    "dashboard.platformLink.checking": "Checking your Google links…",
+    "dashboard.platformLink.notConnected": "We can't see your “{section}” links without connecting Google.",
+    "dashboard.platformLink.connect": "Connect Google →",
+    "dashboard.platformLink.connectPremium": "Connect Google to do this from PostScore →",
+    "dashboard.platformLink.notEnabledGoogle": "Adding links to Google from PostScore isn't switched on yet — you can do it yourself in a minute:",
+    "dashboard.platformLink.howToTitle": "How to check or add it yourself on Google",
+    "dashboard.platformLink.howToOrder": "Open your Business Profile (search your business name on Google, or go to business.google.com). Choose “Food ordering” (or, in Google Maps, Edit profile → Food ordering). If {platform} isn't listed, choose “Add link”, paste your {platform} link and save.",
+    "dashboard.platformLink.howToBooking": "Open your Business Profile (search your business name on Google, or go to business.google.com). Choose “Booking” (or, in Google Maps, Edit profile → Booking). If {platform} isn't listed, choose “Add link”, paste your {platform} link and save.",
+    "dashboard.platformLink.helpLink": "Google: Manage your local business links",
+    "dashboard.platformLink.websiteValue": "A real website gives customers your menu, hours, story and photos in one place, adds points to your PostScore, and gives Google more to show when people search for you.",
+    "dashboard.platformLink.getWebsite": "Get a website →",
+    "dashboard.platformLink.getWebsiteNote": "Your starter site comes with a big “{button}” button using this link.",
+    "dashboard.platformLink.section.order": "Order online",
+    "dashboard.platformLink.section.reservations": "Reservations",
+    "dashboard.platformLink.section.appointments": "Appointments",
+    "dashboard.platformLink.button.ordering": "Order on {platform}",
+    "dashboard.platformLink.button.reservations": "Reserve on {platform}",
+    "dashboard.platformLink.button.appointments": "Book on {platform}",
+    "dashboard.platformLink.button.directory": "See us on {platform}",
+    "dashboard.platformLink.button.link_in_bio": "Find us on {platform}",
+    "dashboard.platformLink.button.social": "Follow us on {platform}",
+    "dashboard.platformLink.error.not_enabled_google": "Adding links to Google from PostScore isn't switched on yet. Nothing was changed.",
+    "dashboard.platformLink.error.changed_since": "That link was changed on Google since, so we didn't undo anything.",
+    "dashboard.platformLink.error.undo_expired": "This change can no longer be undone here.",
+    "dashboard.platformLink.error.other": "Google didn't accept that. Nothing was changed — please try again in a minute.",
+    "dashboard.gbpEdit.error.loadCurrent": "Couldn't load your current details from Google — try again.",
+    "dashboard.gbpEdit.before": "Before: {value}",
+    "dashboard.gbpEdit.after": "After: {value}",
+    "dashboard.gbpEdit.note.cashOnly": "Cash only can't go with cards or contactless, so those were unticked.",
+    "dashboard.gbpEdit.note.notCashOnly": "Cards and contactless can't go with cash only, so cash only was unticked.",
+    "dashboard.gbpEdit.note.noParking": "No parking available — the parking options were unticked.",
+    "dashboard.gbpEdit.note.parkingClearsNo": "There's parking, so \"No parking available\" was unticked.",
+    "dashboard.gbpEdit.note.noPayment": "No payments on site — the payment options were unticked.",
+    "dashboard.gbpEdit.note.paymentClearsNo": "You take payments, so \"We take no payments on site\" was unticked.",
+    "dashboard.gbpEdit.howToIntro": "You can update this on Google from PostScore with the button above, or do it yourself on Google:",
     "dashboard.competitors.owner.remove": "Remove",
     "dashboard.competitors.owner.why": "Why?",
     "dashboard.competitors.owner.reason.closed": "Closed",
@@ -5788,6 +6021,35 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.owner.notEnabled": "This isn't switched on yet. Nothing was changed.",
     "dashboard.competitors.owner.error": "Something went wrong. Nothing was changed — please try again.",
     "dashboard.competitors.owner.miles": "{miles} mi",
+    "dashboard.gbpEdit.lockedChip": "PostScore can do this for you — Premium",
+    "dashboard.gbpEdit.connectToUpdate": "Connect Google to update this",
+    "dashboard.gbpEdit.error.ownerAfterGoogle": "Sent to Google, but we couldn't save your own answer. Please try that part again.",
+    "dashboard.gbpEdit.ownerNoParking": "No parking available",
+    "dashboard.gbpEdit.ownerNoPayment": "We take no payments on site",
+    "dashboard.gbpEdit.previewOwnerOnly": "This only changes your PostScore score (\"Added by you\") — nothing is sent to Google.",
+    "dashboard.gbpEdit.saveOwnerOnly": "Save",
+    "dashboard.gbpEdit.result.saved": "Saved.",
+    "dashboard.gbpEdit.group.parking": "How can customers park? Choose all that apply",
+    "dashboard.gbpEdit.group.payment": "How can customers pay? Choose all that apply",
+    "dashboard.gbpEdit.group.accessibility": "What's wheelchair accessible? Choose all that apply",
+    "dashboard.gbpEdit.option.has_parking_street_free": "Free street parking",
+    "dashboard.gbpEdit.option.has_parking_street_paid": "Paid street parking",
+    "dashboard.gbpEdit.option.has_parking_lot_free": "Free parking lot",
+    "dashboard.gbpEdit.option.has_parking_lot_paid": "Paid parking lot",
+    "dashboard.gbpEdit.option.has_parking_garage_free": "Free garage",
+    "dashboard.gbpEdit.option.has_parking_garage_paid": "Paid garage",
+    "dashboard.gbpEdit.option.has_valet_parking": "Valet",
+    "dashboard.gbpEdit.option.pay_credit_card": "Credit cards",
+    "dashboard.gbpEdit.option.pay_debit_card": "Debit cards",
+    "dashboard.gbpEdit.option.pay_mobile_nfc": "Contactless / phone pay (NFC)",
+    "dashboard.gbpEdit.option.requires_cash_only": "Cash only",
+    "dashboard.gbpEdit.option.has_wheelchair_accessible_entrance": "Wheelchair-accessible entrance",
+    "dashboard.gbpEdit.option.has_wheelchair_accessible_restroom": "Wheelchair-accessible restroom",
+    "dashboard.gbpEdit.option.has_wheelchair_accessible_seating": "Wheelchair-accessible seating",
+    "dashboard.gbpEdit.option.has_wheelchair_accessible_parking": "Wheelchair-accessible parking",
+    "dashboard.customerDetails.why": "Customers check this before they visit.",
+    "dashboard.customerDetails.doesntApply": "Doesn't apply to you?",
+    "dashboard.customerDetails.howToOptions": "Google usually offers these choices:",
     "dashboard.hackedBanner.message": "Your website may be hacked — we found spam content on it.",
     "dashboard.hackedBanner.link": "See what we found →",
     "dashboard.website.security.needsWebPerson": "Needs a web person",
@@ -8244,7 +8506,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.checkResult.done": "Done",
     "dashboard.checkResult.needsWork": "Needs work",
     "dashboard.checkResult.couldntCheck": "Couldn't check",
-    "content.checks.website.has_website.explanation.socialPage": "Your Google listing links to your {platform} page, not a website. A {platform} page doesn't count as a website — customers can't find your full info, and you don't control it.",
+    "content.checks.website.has_website.explanation.socialPage": "Your Google listing's website link goes to your {platform} page, not a website. A {platform} page doesn't count as a website — customers can't find your full info there, and you don't control it.",
     "content.checks.website.has_website.advice.socialPage": "Add a real website (or your PostScore starter site) to your listing.",
     "dashboard.competitors.socialPageOnly": "{platform} page only",
     "content.checks.website.social_links.explanation.unconfirmed": "{platform}: {url} (link looks right — we couldn't open it to confirm)",
@@ -8371,6 +8633,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.someWebsitesNotChecked": "Some websites couldn’t be checked — their rank is based on the other checks.",
     "dashboard.competitors.listingFactsNotSaved": "Couldn’t check: this scan didn’t save the listing’s phone and hours to compare with the website.",
     "dashboard.competitors.statYourScore": "Your PostScore",
+    "dashboard.competitors.comparedWith.many": "Compared with {count} {noun} near you.",
+    "dashboard.competitors.comparedWith.manyQuery": "Compared with {count} {noun} near you — the ones Google shows when customers search “{query}”.",
+    "dashboard.competitors.comparedWith.one": "Compared with 1 business near you.",
+    "dashboard.competitors.comparedWith.oneQuery": "Compared with 1 business near you — the one Google shows when customers search “{query}”.",
+    "dashboard.competitors.comparedWith.changeType": "Change your business type",
+    "dashboard.competitors.comparedWith.add": "Add a competitor",
     "dashboard.competitors.statYourScoreComparable": "Your PostScore — compared like for like",
     "dashboard.competitors.comparableExplain": "Listing, reviews and website. Review replies, recent reviews and customer details aren't counted, because competitors can't be checked for them.",
     "dashboard.competitors.fullScoreLink": "Your full PostScore: {score} →",
@@ -8993,6 +9261,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.starter.details.category": "Type of business",
     "dashboard.website.starter.details.address": "Address",
     "dashboard.website.starter.details.phone": "Phone",
+    "dashboard.website.starter.details.link": "Ordering, booking or page link (becomes a big button)",
+    "dashboard.website.starter.details.linkHint": "From your Google listing — your site shows it as a button.",
+    "starterSite.actionLinkGeneric": "Order or book online",
     "dashboard.website.starter.details.confirm": "Confirm details",
     "dashboard.website.starter.details.saving": "Saving…",
     "dashboard.website.starter.details.providedByYou": "Provided by you",
@@ -10171,7 +10442,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.completeness.website_link.advice": "Enlace su sitio web en su Perfil de Negocio de Google.",
     "content.checks.completeness.website_link.explanation.present": "El sitio web está enlazado en la ficha.",
     "content.checks.completeness.website_link.explanation.missing": "No hay ningún sitio web enlazado en la ficha.",
-    "content.checks.completeness.website_link.explanation.socialPage": "Su ficha de Google enlaza a su página de {platform}, no a un sitio web.",
+    "content.checks.completeness.website_link.explanation.socialPage": "El enlace de sitio web de su ficha de Google lleva a su página de {platform}, no a un sitio web.",
     "content.checks.completeness.website_link.explanation.broken": "El enlace del sitio web en su ficha de Google abre una página de \"No encontrado\" — actualícelo.",
     "content.checks.completeness.categories.label": "Categorías",
     "content.checks.completeness.categories.advice": "Agregue categorías de negocio a su Perfil de Negocio de Google para que los clientes puedan encontrarlo por lo que ofrece.",
@@ -10214,12 +10485,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.performance_mobile.label": "Rendimiento y móvil",
     "content.checks.website.performance_mobile.advice": "Acelere su sitio — comprima las imágenes, use un alojamiento estático rápido y elimine los scripts innecesarios. Una página ligera (como el sitio inicial de PostScore) carga rápido de forma predeterminada.",
     "content.checks.website.performance_mobile.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para comprobar.",
-    "content.checks.website.performance_mobile.explanation.notAnalyzed": "Este sitio aún no se ha analizado — vuelva a escanear para ejecutar una comprobación real de PageSpeed.",
-    "content.checks.website.performance_mobile.explanation.noScore": "No se pudo obtener una medición real de velocidad para este sitio — o la comprobación de PageSpeed de PostScore aún no está configurada, o la API de Google PageSpeed Insights no pudo completar la auditoría (sin datos reales de usuarios y fallaron todas las pruebas simuladas). Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.performance_mobile.explanation.notAnalyzed": "Aún no hemos medido la velocidad de su sitio. La mediremos en su próximo escaneo.",
+    "content.checks.website.performance_mobile.explanation.noMainContent": "No pudimos medir la velocidad de su sitio: la prueba de velocidad de Google no encuentra el contenido principal de su página principal, así que no puede dar una puntuación. Esta comprobación queda fuera de su puntuación, no cuenta en su contra. Vea abajo cómo solucionarlo.",
+    "content.checks.website.performance_mobile.explanation.noScore": "No pudimos medir la velocidad de su sitio esta vez: la prueba de velocidad de Google no terminó. Esta comprobación queda fuera de su puntuación, no cuenta en su contra. Lo intentaremos de nuevo en su próximo escaneo.",
     "content.checks.website.performance_mobile.explanation.field": "Visitantes reales en teléfonos durante los últimos 28 días (datos de Google Chrome): {category}.",
     "content.checks.website.performance_mobile.explanation.lab": "Prueba simulada en teléfono, valor medio de 3 pruebas: {score}/100. Los resultados pueden variar entre pruebas.",
-    "content.checks.website.performance_mobile.explanation.fieldLastMeasured": "Visitantes reales en teléfonos (datos de Google Chrome) — última medición el {date}: {category}. La comprobación de velocidad de este escaneo no respondió a tiempo, así que mostramos la medición real más reciente en lugar de excluir esto.",
-    "content.checks.website.performance_mobile.explanation.labLastMeasured": "Prueba simulada en teléfono — última medición el {date}: {score}/100. La comprobación de velocidad de este escaneo no respondió a tiempo, así que mostramos la medición real más reciente en lugar de excluir esto.",
+    "content.checks.website.performance_mobile.explanation.fieldLastMeasured": "Visitantes reales en teléfonos (datos de Google Chrome) — última medición el {date}: {category}. La prueba de velocidad de este escaneo no terminó, así que mostramos la medición real más reciente en lugar de dejar esto fuera.",
+    "content.checks.website.performance_mobile.explanation.labLastMeasured": "Prueba simulada en teléfono — última medición el {date}: {score}/100. La prueba de velocidad de este escaneo no terminó, así que mostramos la medición real más reciente en lugar de dejar esto fuera.",
     "content.checks.website.performance_mobile.fieldCategory.fast": "rápido",
     "content.checks.website.performance_mobile.fieldCategory.average": "promedio",
     "content.checks.website.performance_mobile.fieldCategory.slow": "lento",
@@ -10331,7 +10603,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.performance_mobile.explanation.fieldBlockedSiteLastMeasured": "Visitantes reales en teléfonos (datos de Google Chrome), última medición el {date}: {category}. Su sitio bloquea nuestra propia prueba de velocidad, así que esto son solo datos de visitantes reales.",
     "content.checks.website.has_website.explanation.presentAutomatedErrorPage": "El negocio tiene un sitio web real registrado. No pudimos revisar la página en sí — este sitio muestra a las verificaciones automáticas una página de error en lugar de lo que ven los clientes.",
     "dashboard.website.screenshotAutomatedErrorPage": "No pudimos capturar esta página — el sitio mostró a nuestra verificación automática una página de error en lugar de lo que ven los clientes. Ábrala usted mismo: {url}",
-    "dashboard.website.performanceErrorPage": "PageSpeed llegó a una página de error en lugar de su sitio, así que no pudimos medir su velocidad.",
+    "dashboard.website.performanceErrorPage": "La prueba de velocidad de Google llegó a una página de error en lugar de su sitio, así que no pudimos medir su velocidad.",
     "content.checks.website.performance_mobile.explanation.fieldOrigin": "Visitantes reales en teléfonos en todo su sitio durante los últimos 28 días (datos de Google Chrome, medición de todo el sitio — el enlace de esta página abre una página de error): {category}.",
     "content.checks.website.performance_mobile.explanation.fieldLastMeasuredErrorPage": "Visitantes reales en teléfonos (datos de Google Chrome) — última medición el {date}: {category}. La comprobación de velocidad de este escaneo llegó a una página de error en lugar de su sitio, así que mostramos la medición real más reciente.",
     "content.checks.website.performance_mobile.explanation.labLastMeasuredErrorPage": "Prueba simulada en teléfono — última medición el {date}: {score}/100. La comprobación de velocidad de este escaneo llegó a una página de error en lugar de su sitio, así que mostramos la medición real más reciente.",
@@ -10379,6 +10651,102 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.closed.step.why": "Google les dice a todos los que lo buscan que cerró. Nada más importa hasta corregirlo.",
     "dashboard.closed.report.alert": "Google muestra {name} como cerrado permanentemente. Si sigue abierto, márquelo como abierto en su Perfil de Negocio de Google ahora — a los clientes se les dice que cerró.",
     "dashboard.closed.report.alertTemporary": "Google muestra {name} como cerrado temporalmente. Si ya reabrió, actualícelo en su Perfil de Negocio de Google.",
+    "dashboard.gbpEdit.button": "Actualizar en Google",
+    "dashboard.gbpEdit.loading": "Leyendo su ficha de Google…",
+    "dashboard.gbpEdit.lockedNote": "Con Premium, PostScore los actualiza en Google por usted, después de que usted lo apruebe.",
+    "dashboard.gbpEdit.connectFirst": "Conecte su Perfil de Negocio de Google para actualizarlos desde aquí.",
+    "dashboard.gbpEdit.connectLink": "Conectar Google →",
+    "dashboard.gbpEdit.intro": "Estos son los detalles que Google ofrece para su tipo de negocio. Elija lo que es cierto. Nada cambia en Google hasta que usted lo apruebe.",
+    "dashboard.gbpEdit.noneOffered": "Google no ofrece detalles de accesibilidad, pago ni estacionamiento para esta ficha.",
+    "dashboard.gbpEdit.now": "ahora: {value}",
+    "dashboard.gbpEdit.value.yes": "Sí",
+    "dashboard.gbpEdit.value.no": "No",
+    "dashboard.gbpEdit.value.notSet": "Sin indicar",
+    "dashboard.gbpEdit.review": "Revisar cambios",
+    "dashboard.gbpEdit.previewTitle": "Antes → después en su ficha de Google",
+    "dashboard.gbpEdit.previewNote": "Esto cambia su ficha pública de Google. Puede deshacerlo aquí durante 7 días.",
+    "dashboard.gbpEdit.approve": "Aprobar y actualizar Google",
+    "dashboard.gbpEdit.sending": "Enviando a Google…",
+    "dashboard.gbpEdit.back": "Volver",
+    "dashboard.gbpEdit.close": "Cerrar",
+    "dashboard.gbpEdit.result.sent": "Enviado a Google; puede tardar un poco en aparecer.",
+    "dashboard.gbpEdit.result.pending": "Pendiente de revisión por Google.",
+    "dashboard.gbpEdit.result.noChanges": "No hay nada que cambiar: Google ya tiene estos valores.",
+    "dashboard.gbpEdit.result.points": "Su puntuación se actualiza cuando su próximo escaneo lo vea en Google.",
+    "dashboard.gbpEdit.undo.summary": "Usted actualizó sus detalles para clientes en Google el {date}. Puede deshacerlo hasta el {until}.",
+    "dashboard.gbpEdit.undo.summaryPending": "Usted actualizó sus detalles para clientes en Google el {date} (pendiente de revisión por Google). Puede deshacerlo hasta el {until}.",
+    "dashboard.gbpEdit.undo.button": "Deshacer",
+    "dashboard.gbpEdit.undo.confirm": "¿Volver a poner los valores anteriores en Google?",
+    "dashboard.gbpEdit.undo.confirmYes": "Sí, deshacer",
+    "dashboard.gbpEdit.undo.done": "Valores anteriores enviados a Google; puede tardar un poco en aparecer.",
+    "dashboard.gbpEdit.undo.donePending": "Valores anteriores enviados; pendiente de revisión por Google.",
+    "dashboard.gbpEdit.blocked.unauthenticated": "Por favor, inicie sesión de nuevo.",
+    "dashboard.gbpEdit.blocked.not_found": "No encontramos este negocio en su cuenta.",
+    "dashboard.gbpEdit.blocked.not_premium": "Actualizar Google por usted es parte de Premium.",
+    "dashboard.gbpEdit.blocked.archived": "Este negocio está archivado. Restáurelo para actualizar Google.",
+    "dashboard.gbpEdit.blocked.not_connected": "Primero conecte su Perfil de Negocio de Google.",
+    "dashboard.gbpEdit.error.reconnect": "Google nos pidió volver a conectar. Vuelva a conectar Google e inténtelo de nuevo. No se cambió nada.",
+    "dashboard.gbpEdit.error.permission": "Esta cuenta de Google no puede editar esta ficha. No se cambió nada.",
+    "dashboard.gbpEdit.error.rate_limited": "Google está ocupado. Espere un minuto e inténtelo de nuevo. No se cambió nada.",
+    "dashboard.gbpEdit.error.rejected": "Google no aceptó el cambio. No se cambió nada.",
+    "dashboard.gbpEdit.error.failed": "No pudimos comunicarnos con Google. No se cambió nada. Inténtelo de nuevo en un minuto.",
+    "dashboard.gbpEdit.error.changed": "Las opciones de Google para su ficha cambiaron. Abra el panel de nuevo. No se cambió nada.",
+    "dashboard.gbpEdit.error.wait_minute": "Por favor, espere un minuto entre cambios.",
+    "dashboard.gbpEdit.error.daily_cap": "Ese es el máximo de cambios por hoy. Inténtelo de nuevo mañana.",
+    "dashboard.gbpEdit.error.not_enabled": "Actualizar Google aún no está activado. No se cambió nada.",
+    "dashboard.gbpEdit.error.changed_since": "Algunos de estos se cambiaron en Google desde entonces, así que no deshicimos nada. Puede actualizarlos de nuevo aquí.",
+    "dashboard.gbpEdit.error.undo_expired": "Este cambio ya no se puede deshacer aquí.",
+    "dashboard.platformLink.title": "El enlace de sitio web de su ficha de Google lleva a su página de {platform}, no a un sitio web.",
+    "dashboard.platformLink.explainSection": "Los clientes pueden seguir encontrando su página de {platform}: Google tiene un enlace aparte de “{section}” para ella. Ponga un sitio web real en el espacio del sitio web.",
+    "dashboard.platformLink.explainNoSection": "Los clientes pueden seguir encontrando su página de {platform}. Ponga un sitio web real en el espacio del sitio web y enlace a {platform} desde él.",
+    "dashboard.platformLink.already": "✓ {platform} ya está en su sección “{section}”: los clientes lo ven en Google. No necesita usarlo como su sitio web.",
+    "dashboard.platformLink.onlyWebsite": "Su página de {platform} está en el espacio de su sitio web. Muévala al botón “{section}” de Google, donde los clientes la esperan, y ponga un sitio web real en el espacio del sitio web.",
+    "dashboard.platformLink.add": "Agregar a “{section}” en Google",
+    "dashboard.platformLink.preview": "PostScore agregará este enlace a “{section}” en su ficha de Google: {url}. El enlace de su sitio web queda como está; cámbielo cuando tenga un sitio web real.",
+    "dashboard.platformLink.approve": "Aprobar y agregar",
+    "dashboard.platformLink.cancel": "Cancelar",
+    "dashboard.platformLink.sending": "Enviando a Google…",
+    "dashboard.platformLink.sent": "Enviado a Google; puede tardar un poco en aparecer en “{section}”.",
+    "dashboard.platformLink.undoSummary": "Agregado a “{section}” el {date}. Puede deshacerlo hasta el {until}.",
+    "dashboard.platformLink.undo": "Deshacer",
+    "dashboard.platformLink.undoConfirm": "¿Quitar este enlace de “{section}” en Google?",
+    "dashboard.platformLink.undoYes": "Sí, deshacer",
+    "dashboard.platformLink.undone": "Se quitó de “{section}” en Google.",
+    "dashboard.platformLink.checking": "Revisando sus enlaces de Google…",
+    "dashboard.platformLink.notConnected": "No podemos ver sus enlaces de “{section}” sin conectar Google.",
+    "dashboard.platformLink.connect": "Conectar Google →",
+    "dashboard.platformLink.connectPremium": "Conecte Google para hacerlo desde PostScore →",
+    "dashboard.platformLink.notEnabledGoogle": "Agregar enlaces a Google desde PostScore aún no está activado; puede hacerlo usted mismo en un minuto:",
+    "dashboard.platformLink.howToTitle": "Cómo revisarlo o agregarlo usted mismo en Google",
+    "dashboard.platformLink.howToOrder": "Abra su Perfil de Negocio (busque el nombre de su negocio en Google o vaya a business.google.com). Elija “Pedidos de comida” (o, en Google Maps, Editar perfil → Pedidos de comida). Si {platform} no aparece, elija “Agregar enlace”, pegue su enlace de {platform} y guarde.",
+    "dashboard.platformLink.howToBooking": "Abra su Perfil de Negocio (busque el nombre de su negocio en Google o vaya a business.google.com). Elija “Reservas” (o, en Google Maps, Editar perfil → Reservas). Si {platform} no aparece, elija “Agregar enlace”, pegue su enlace de {platform} y guarde.",
+    "dashboard.platformLink.helpLink": "Google: Enlaces de empresas locales",
+    "dashboard.platformLink.websiteValue": "Un sitio web real reúne su menú, horario, historia y fotos en un solo lugar, suma puntos a su PostScore y le da a Google más que mostrar cuando lo buscan.",
+    "dashboard.platformLink.getWebsite": "Obtener un sitio web →",
+    "dashboard.platformLink.getWebsiteNote": "Su sitio inicial incluye un botón grande “{button}” con este enlace.",
+    "dashboard.platformLink.section.order": "Pedir en línea",
+    "dashboard.platformLink.section.reservations": "Reservas",
+    "dashboard.platformLink.section.appointments": "Citas",
+    "dashboard.platformLink.button.ordering": "Pedir en {platform}",
+    "dashboard.platformLink.button.reservations": "Reservar en {platform}",
+    "dashboard.platformLink.button.appointments": "Reservar cita en {platform}",
+    "dashboard.platformLink.button.directory": "Véanos en {platform}",
+    "dashboard.platformLink.button.link_in_bio": "Encuéntrenos en {platform}",
+    "dashboard.platformLink.button.social": "Síganos en {platform}",
+    "dashboard.platformLink.error.not_enabled_google": "Agregar enlaces a Google desde PostScore aún no está activado. No se cambió nada.",
+    "dashboard.platformLink.error.changed_since": "Ese enlace se cambió en Google desde entonces, así que no deshicimos nada.",
+    "dashboard.platformLink.error.undo_expired": "Este cambio ya no se puede deshacer aquí.",
+    "dashboard.platformLink.error.other": "Google no aceptó eso. No se cambió nada; inténtelo de nuevo en un minuto.",
+    "dashboard.gbpEdit.error.loadCurrent": "No pudimos cargar sus detalles actuales desde Google; inténtelo de nuevo.",
+    "dashboard.gbpEdit.before": "Antes: {value}",
+    "dashboard.gbpEdit.after": "Después: {value}",
+    "dashboard.gbpEdit.note.cashOnly": "Solo efectivo no puede ir con tarjetas ni pago sin contacto, así que se desmarcaron.",
+    "dashboard.gbpEdit.note.notCashOnly": "Las tarjetas y el pago sin contacto no pueden ir con solo efectivo, así que se desmarcó solo efectivo.",
+    "dashboard.gbpEdit.note.noParking": "No hay estacionamiento: se desmarcaron las opciones de estacionamiento.",
+    "dashboard.gbpEdit.note.parkingClearsNo": "Hay estacionamiento, así que se desmarcó \"No hay estacionamiento\".",
+    "dashboard.gbpEdit.note.noPayment": "No acepta pagos en el local: se desmarcaron las opciones de pago.",
+    "dashboard.gbpEdit.note.paymentClearsNo": "Usted acepta pagos, así que se desmarcó \"No aceptamos pagos en el local\".",
+    "dashboard.gbpEdit.howToIntro": "Puede actualizar esto en Google desde PostScore con el botón de arriba, o hacerlo usted mismo en Google:",
     "dashboard.competitors.owner.remove": "Quitar",
     "dashboard.competitors.owner.why": "¿Por qué?",
     "dashboard.competitors.owner.reason.closed": "Cerrado",
@@ -10403,6 +10771,35 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.owner.notEnabled": "Esto aún no está activado. No se cambió nada.",
     "dashboard.competitors.owner.error": "Algo salió mal. No se cambió nada; inténtelo de nuevo.",
     "dashboard.competitors.owner.miles": "{miles} mi",
+    "dashboard.gbpEdit.lockedChip": "PostScore puede hacerlo por usted — Premium",
+    "dashboard.gbpEdit.connectToUpdate": "Conecte Google para actualizar esto",
+    "dashboard.gbpEdit.error.ownerAfterGoogle": "Se envió a Google, pero no pudimos guardar su propia respuesta. Inténtelo de nuevo para esa parte.",
+    "dashboard.gbpEdit.ownerNoParking": "No hay estacionamiento",
+    "dashboard.gbpEdit.ownerNoPayment": "No aceptamos pagos en el local",
+    "dashboard.gbpEdit.previewOwnerOnly": "Esto solo cambia su puntuación de PostScore (\"Agregado por usted\"); no se envía nada a Google.",
+    "dashboard.gbpEdit.saveOwnerOnly": "Guardar",
+    "dashboard.gbpEdit.result.saved": "Guardado.",
+    "dashboard.gbpEdit.group.parking": "¿Cómo pueden estacionar sus clientes? Elija todas las que correspondan",
+    "dashboard.gbpEdit.group.payment": "¿Cómo pueden pagar sus clientes? Elija todas las que correspondan",
+    "dashboard.gbpEdit.group.accessibility": "¿Qué es accesible para sillas de ruedas? Elija todas las que correspondan",
+    "dashboard.gbpEdit.option.has_parking_street_free": "Estacionamiento gratuito en la calle",
+    "dashboard.gbpEdit.option.has_parking_street_paid": "Estacionamiento de pago en la calle",
+    "dashboard.gbpEdit.option.has_parking_lot_free": "Estacionamiento gratuito",
+    "dashboard.gbpEdit.option.has_parking_lot_paid": "Estacionamiento de pago",
+    "dashboard.gbpEdit.option.has_parking_garage_free": "Garaje gratuito",
+    "dashboard.gbpEdit.option.has_parking_garage_paid": "Garaje de pago",
+    "dashboard.gbpEdit.option.has_valet_parking": "Servicio de valet",
+    "dashboard.gbpEdit.option.pay_credit_card": "Tarjetas de crédito",
+    "dashboard.gbpEdit.option.pay_debit_card": "Tarjetas de débito",
+    "dashboard.gbpEdit.option.pay_mobile_nfc": "Pago sin contacto o con el teléfono (NFC)",
+    "dashboard.gbpEdit.option.requires_cash_only": "Solo efectivo",
+    "dashboard.gbpEdit.option.has_wheelchair_accessible_entrance": "Entrada accesible para sillas de ruedas",
+    "dashboard.gbpEdit.option.has_wheelchair_accessible_restroom": "Baño accesible para sillas de ruedas",
+    "dashboard.gbpEdit.option.has_wheelchair_accessible_seating": "Asientos accesibles para sillas de ruedas",
+    "dashboard.gbpEdit.option.has_wheelchair_accessible_parking": "Estacionamiento accesible para sillas de ruedas",
+    "dashboard.customerDetails.why": "Los clientes revisan esto antes de visitarle.",
+    "dashboard.customerDetails.doesntApply": "¿No aplica a su negocio?",
+    "dashboard.customerDetails.howToOptions": "Google suele ofrecer estas opciones:",
     "dashboard.hackedBanner.message": "Es posible que su sitio web haya sido hackeado — encontramos contenido spam en él.",
     "dashboard.hackedBanner.link": "Vea lo que encontramos →",
     "dashboard.website.security.needsWebPerson": "Necesita a un técnico web",
@@ -13068,7 +13465,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.checkResult.done": "Listo",
     "dashboard.checkResult.needsWork": "Por mejorar",
     "dashboard.checkResult.couldntCheck": "No se pudo revisar",
-    "content.checks.website.has_website.explanation.socialPage": "Su ficha de Google enlaza a su página de {platform}, no a un sitio web. Una página de {platform} no cuenta como sitio web — los clientes no encuentran toda su información y usted no la controla.",
+    "content.checks.website.has_website.explanation.socialPage": "El enlace de sitio web de su ficha de Google lleva a su página de {platform}, no a un sitio web. Una página de {platform} no cuenta como sitio web: los clientes no encuentran allí toda su información y usted no la controla.",
     "content.checks.website.has_website.advice.socialPage": "Agregue un sitio web real (o su sitio inicial de PostScore) a su ficha.",
     "dashboard.competitors.socialPageOnly": "Solo página de {platform}",
     "content.checks.website.social_links.explanation.unconfirmed": "{platform}: {url} (el enlace parece correcto — no pudimos abrirlo para confirmarlo)",
@@ -13195,6 +13592,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.someWebsitesNotChecked": "Algunos sitios web no se pudieron revisar; su posición se basa en las demás revisiones.",
     "dashboard.competitors.listingFactsNotSaved": "No se pudo revisar: este análisis no guardó el teléfono ni el horario de la ficha para compararlos con el sitio web.",
     "dashboard.competitors.statYourScore": "Su PostScore",
+    "dashboard.competitors.comparedWith.many": "Comparado con {count} {noun} cerca de usted.",
+    "dashboard.competitors.comparedWith.manyQuery": "Comparado con {count} {noun} cerca de usted: los que Google muestra cuando los clientes buscan “{query}”.",
+    "dashboard.competitors.comparedWith.one": "Comparado con 1 negocio cerca de usted.",
+    "dashboard.competitors.comparedWith.oneQuery": "Comparado con 1 negocio cerca de usted: el que Google muestra cuando los clientes buscan “{query}”.",
+    "dashboard.competitors.comparedWith.changeType": "Cambiar su tipo de negocio",
+    "dashboard.competitors.comparedWith.add": "Agregar un competidor",
     "dashboard.competitors.statYourScoreComparable": "Su PostScore — comparado en igualdad de condiciones",
     "dashboard.competitors.comparableExplain": "Ficha, reseñas y sitio web. No se cuentan las respuestas a reseñas, las reseñas recientes ni los detalles para clientes, porque no se pueden comprobar en los competidores.",
     "dashboard.competitors.fullScoreLink": "Su PostScore completo: {score} →",
@@ -13817,6 +14220,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.starter.details.category": "Tipo de negocio",
     "dashboard.website.starter.details.address": "Dirección",
     "dashboard.website.starter.details.phone": "Teléfono",
+    "dashboard.website.starter.details.link": "Enlace para pedir, reservar u otra página (será un botón grande)",
+    "dashboard.website.starter.details.linkHint": "De su ficha de Google: su sitio lo muestra como un botón.",
+    "starterSite.actionLinkGeneric": "Pedir o reservar en línea",
     "dashboard.website.starter.details.confirm": "Confirmar datos",
     "dashboard.website.starter.details.saving": "Guardando…",
     "dashboard.website.starter.details.providedByYou": "Proporcionados por usted",

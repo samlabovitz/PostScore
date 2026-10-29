@@ -1,5 +1,6 @@
 "use client";
 
+import { shortName as displayName } from "@/lib/displayName";
 import { AddCompetitor, RemoveCompetitorButton, RemovedByOwner } from "./CompetitorOwnerControls";
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
@@ -40,8 +41,7 @@ import { gradeFromTotal } from "@/lib/scoring";
 import { formatCount, formatShortDate, t, tPlural, useLocale, useTimeZone, type Locale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { placeTypeList } from "@/lib/placeTypeLabels";
-import { scopeGroupLabel, applyScope, type CompetitorScope } from "@/lib/competitorScope";
-import { CompetitorGroups } from "./CompetitorGroups";
+import { scopeGroupLabel, type CompetitorScope } from "@/lib/competitorScope";
 import { reviewGoalText } from "@/lib/reviewGoal";
 import { hasFewReviews, type AlsoNearbyListing } from "@/lib/competitorQuality";
 import { CompetitorSelectionNote } from "@/components/competitors/CompetitorSelectionNote";
@@ -118,12 +118,11 @@ export function CompetitorsView({ businessId, data, fullScore = null }: { busine
   const locale = useLocale();
   const timeZone = useTimeZone();
   const [view, setView] = useState<CompareView>("overall");
-  // Who the rank is against (lib/competitorScope.ts) — the same scope the
-  // Overview, reports and PostAI use; changing it here re-ranks saved data.
-  const [scope, setScope] = useState<CompetitorScope | null>(data.niche?.scope ?? null);
+  // Ranked against the whole saved list (competitor selection v2 picked
+  // it); the niche only names the group in the review goal.
+  const scope: CompetitorScope | null = data.niche?.scope ?? null;
   const latest = data.latest;
-  const scoped = latest && scope ? applyScope(latest, scope) : null;
-  const scan = scoped?.scan ?? latest;
+  const scan = latest;
 
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
@@ -198,10 +197,6 @@ export function CompetitorsView({ businessId, data, fullScore = null }: { busine
           {scan.entries.some((e) => !e.isSubject) && <Hero scan={scan} competitorNoun={data.competitorNoun} businessId={businessId} fullScore={fullScore} />}
           {latest && <CompetitorsReviewGoal scan={latest} scope={scope} noun={data.competitorNoun} />}
 
-          {latest && scope && scoped && (
-            <CompetitorGroups businessId={businessId} scan={latest} scope={scope} scoped={scoped} enabled={!!data.niche?.enabled} onScopeChange={setScope} />
-          )}
-
           {scan.entries.some((e) => !e.isSubject) && (<>
 
           <div className="flex flex-col gap-3">
@@ -221,6 +216,7 @@ export function CompetitorsView({ businessId, data, fullScore = null }: { busine
               title={t(locale, "dashboard.competitors.listHeading", { category: t(locale, VIEW_LABEL[view]) })}
               className="mb-3"
             />
+            <ComparedWithLine businessId={businessId} count={scan.entries.filter((e) => !e.isSubject).length} comparedWith={data.comparedWith ?? null} fallbackNoun={data.competitorNoun} />
             {data.distanceNote && <DistanceNote note={data.distanceNote} noun={data.competitorNoun} />}
             <RankedList scan={scan} view={view} businessId={businessId} />
             {(data.alsoNearby ?? []).length > 0 && <AlsoNearby listings={data.alsoNearby!} />}
@@ -377,7 +373,7 @@ function Hero({ scan, competitorNoun, businessId, fullScore }: { scan: SavedComp
           )}
         </div>
         <Stat label={t(locale, "dashboard.competitors.statLocalAverage")} value={hero.localAverage ?? "—"} />
-        <Stat label={t(locale, "dashboard.competitors.statTop")} value={hero.topScore ?? "—"} detail={hero.topName} />
+        <Stat label={t(locale, "dashboard.competitors.statTop")} value={hero.topScore ?? "—"} detail={hero.topName ? displayName(hero.topName) : null} />
         <Stat
           label={t(locale, "dashboard.competitors.statRadius", { miles: hero.radiusMiles === null ? "—" : hero.radiusMiles.toFixed(1) })}
           value={hero.of - 1}
@@ -429,7 +425,7 @@ function Lineup({ scan }: { scan: SavedCompetitorScan }) {
   const comps = ranked.filter((r) => !r.entry.isSubject);
   const top = comps[0] ?? null;
   const lowest = comps.length > 1 ? comps[comps.length - 1] : null;
-  const name = (e: SavedCompetitorEntry) => e.name ?? t(locale, "dashboard.competitors.unnamedListing");
+  const name = (e: SavedCompetitorEntry) => (e.name ? displayName(e.name) : t(locale, "dashboard.competitors.unnamedListing"));
 
   type Req = LabelRequest & { text: string; title?: string; strong?: boolean };
   const requests: Req[] = [];
@@ -561,7 +557,7 @@ function Comparison({ scan, view }: { scan: SavedCompetitorScan; view: CompareVi
   const hero = heroSummary(scan, view);
   const youLabel = t(locale, "dashboard.competitors.compareYou");
   const avgLabel = t(locale, "dashboard.competitors.compareAverage");
-  const topLabel = t(locale, "dashboard.competitors.compareTop", { name: hero.topName ?? "—" });
+  const topLabel = t(locale, "dashboard.competitors.compareTop", { name: hero.topName ? displayName(hero.topName) : "—" });
   const metrics = view === "overall" ? [] : METRICS.filter((m) => m.view === view);
 
   return (
@@ -589,7 +585,7 @@ function Comparison({ scan, view }: { scan: SavedCompetitorScan; view: CompareVi
                 <div className="text-[13px] font-medium text-ink">{checkLabel(m.checkId, locale)}</div>
                 <Bar label={youLabel} value={formatMetric(m, c.owner, locale)} fraction={frac(c.owner)} highlight />
                 <Bar label={avgLabel} value={formatMetric(m, c.average === null ? null : m.kind === "count" ? Math.round(c.average) : c.average, locale, m.kind === "yesno")} fraction={frac(c.average)} />
-                <Bar label={t(locale, "dashboard.competitors.compareTop", { name: c.topName ?? "—" })} value={formatMetric(m, c.top, locale)} fraction={frac(c.top)} />
+                <Bar label={t(locale, "dashboard.competitors.compareTop", { name: c.topName ? displayName(c.topName) : "—" })} value={formatMetric(m, c.top, locale)} fraction={frac(c.top)} />
               </div>
             );
           })}
@@ -691,7 +687,9 @@ function CompetitorCard({ entry, rank, view, businessId }: { entry: SavedCompeti
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="min-w-0 truncate text-[14.5px] font-semibold text-ink">{entry.name ?? t(locale, "dashboard.competitors.unnamedListing")}</span>
+            <span className="min-w-0 truncate text-[14.5px] font-semibold text-ink" title={entry.name ?? undefined}>
+              {entry.name ? displayName(entry.name) : t(locale, "dashboard.competitors.unnamedListing")}
+            </span>
             {entry.isSubject && (
               <span className="rounded-md bg-brass/15 px-1.5 py-0.5 text-[11px] font-semibold text-brass">
                 {t(locale, "dashboard.competitors.yourBusiness")}
@@ -840,7 +838,9 @@ function AlsoNearby({ listings }: { listings: AlsoNearbyListing[] }) {
       <ul className="mt-2 flex flex-col divide-y divide-paper-line rounded-xl border border-paper-deep bg-white">
         {listings.map((l) => (
           <li key={l.placeId} className="flex items-baseline justify-between gap-3 px-4 py-2.5 text-[13px]">
-            <span className="min-w-0 truncate text-ink">{l.name}</span>
+            <span className="min-w-0 truncate text-ink" title={l.name ?? undefined}>
+              {displayName(l.name)}
+            </span>
             <span className="shrink-0 text-[12px] text-ink-mute">
               {miles(l.distanceMeters, locale)} ·{" "}
               {l.temporarilyClosed ? (
@@ -877,5 +877,40 @@ function OverTime({ data }: { data: OkResult }) {
         ))}
       </ul>
     </Card>
+  );
+}
+
+/** "Compared with 10 hair salons near you — the ones Google shows when
+ * customers search “hair salons in Tarrytown, NY”." with the two ways to
+ * change it. Removing stays on each competitor card. */
+export function ComparedWithLine({
+  businessId,
+  count,
+  comparedWith,
+  fallbackNoun,
+}: {
+  businessId: string;
+  count: number;
+  comparedWith: { noun: string | null; query: string | null } | null;
+  fallbackNoun: string;
+}) {
+  const locale = useLocale();
+  if (count === 0) return null;
+  const noun = (locale === "en" ? comparedWith?.noun : null) ?? fallbackNoun;
+  const query = comparedWith?.query ?? null;
+  const line =
+    count === 1
+      ? t(locale, query ? "dashboard.competitors.comparedWith.oneQuery" : "dashboard.competitors.comparedWith.one", { query: query ?? "" })
+      : t(locale, query ? "dashboard.competitors.comparedWith.manyQuery" : "dashboard.competitors.comparedWith.many", { count, noun, query: query ?? "" });
+  return (
+    <p data-testid="compared-with" className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[13px] text-ink-soft">
+      <span>{line}</span>
+      <Link href={`/business/${businessId}/settings#business-type`} className="text-[12px] font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline">
+        {t(locale, "dashboard.competitors.comparedWith.changeType")}
+      </Link>
+      <a href="#add-competitor" className="text-[12px] font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline">
+        {t(locale, "dashboard.competitors.comparedWith.add")}
+      </a>
+    </p>
   );
 }

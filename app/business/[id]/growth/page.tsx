@@ -17,6 +17,8 @@ import { getActionPlan } from "@/app/actions/actionPlan";
 import { getGrowthMoves } from "@/app/actions/growthMoves";
 import { getWeeklyChecklistState } from "@/app/actions/weeklyChecklist";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
+import { getCustomerDetailsUndo } from "@/app/actions/gbpCustomerDetails";
+import { GbpEditProvider } from "@/components/gbp/CustomerDetailsGoogleEdit";
 import { businessRowToScoringInput } from "@/lib/scoring";
 import { buildPriceCheckMove } from "@/lib/growthMoves";
 import { buildWeeklyChecklistItems, weekStartFor } from "@/lib/weeklyChecklist";
@@ -174,6 +176,7 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
           <StaleScanNotice businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} />
         </div>
       )}
+      <GbpEditProvider value={{ premium: hasPremium(plan), connected: gbpConnected, undo: await getCustomerDetailsUndo(params.id) }}>
       <GrowthView
         reviewGoalLines={benchmark.status === "ok" && benchmark.benchmark.reviewGoal ? reviewGoalLines(benchmark.benchmark.reviewGoal, benchmark.benchmark.reviewGroup, locale) : []}
         businessId={params.id}
@@ -187,10 +190,12 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
         lastScanAt={lastScanAt}
         websiteRecheck={recheckStatus.status === "ok" ? { left: recheckStatus.availability.left, hasWebsite: recheckStatus.hasWebsite } : null}
         gbpConnected={gbpConnected}
+        listingWebsite={row.website ?? null}
         linkOptions={{ referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk }}
         plan={plan}
         devPlanSwitch={process.env.NODE_ENV === "development"}
       />
+      </GbpEditProvider>
     </DashboardShell>
   );
 }

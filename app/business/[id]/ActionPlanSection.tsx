@@ -25,6 +25,7 @@ import {
 } from "@/lib/actionPlan";
 import type { GrowthMove } from "@/lib/growthMoves";
 import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
+import { CustomerDetailsGoogleEdit, useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
 import { formatMonthDayTime, t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 
 /** What a website task needs for "Re-check my website". */
@@ -297,6 +298,11 @@ export function TaskCard({
   const locale = useLocale();
   const [expanded, setExpanded] = useState(false);
   const [state, setState] = useState<MarkState>({ kind: "idle" });
+  // Premium "Update on Google" (Step 1: customer details only).
+  const gbpEdit = useGbpEdit();
+  const onGoogle = task.checkId === "completeness.customer_details";
+  // Premium + connected: PostScore can make this change ("Update on Google").
+  const canUpdateOnGoogle = onGoogle && gbpEdit.enabled && gbpEdit.premium && gbpEdit.connected;
 
   async function handleMarkDone() {
     setState({ kind: "saving" });
@@ -369,7 +375,7 @@ export function TaskCard({
             )}
           </div>
 
-          {premium && task.automatable && (
+          {premium && task.automatable && !(onGoogle && gbpEdit.enabled) && (
             <p data-testid="step-coming-soon" className="w-fit rounded-full border border-paper-deep bg-paper px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft">
               {t(locale, "content.actionPlan.step.comingSoon")}
             </p>
@@ -396,6 +402,8 @@ export function TaskCard({
 
           <CurrentStatus task={task} pendingStatus={pendingStatus} metricProgress={metricProgress} lastScanAt={lastScanAt} />
 
+          {onGoogle && <CustomerDetailsGoogleEdit businessId={businessId} />}
+
           <div>
             <button
               type="button"
@@ -408,6 +416,11 @@ export function TaskCard({
             </button>
             {expanded && (
               <div className="mt-2 rounded-xl border border-paper-line bg-paper p-3.5 text-[13px] leading-relaxed text-ink-soft">
+                {canUpdateOnGoogle && (
+                  <p data-testid="how-to-update-intro" className="mb-1.5 font-medium text-ink">
+                    {t(locale, "dashboard.gbpEdit.howToIntro")}
+                  </p>
+                )}
                 <p className="mb-1.5">
                   <span className="font-semibold text-ink">{t(locale, "dashboard.overview.actionPlan.doThisLabel")}</span>
                   {task.action}
@@ -420,7 +433,8 @@ export function TaskCard({
                   <p className="mt-2.5 flex items-start gap-1.5 border-t border-paper-line pt-2.5 text-[12px] text-ink-mute">
                     <IconBrandGoogle size={14} className="mt-0.5 shrink-0" aria-hidden />
                     <span>
-                      {t(locale, "dashboard.overview.actionPlan.ownerActionOnGoogle")}{" "}
+                      {/* Premium + connected: PostScore can make this change, so never "we can't edit your listing". */}
+                      {!canUpdateOnGoogle && <>{t(locale, "dashboard.overview.actionPlan.ownerActionOnGoogle")} </>}
                       <span data-testid="after-google-change" className="font-medium text-ink-soft">{t(locale, "dashboard.rescan.afterGoogleChange")}</span>
                     </span>
                   </p>

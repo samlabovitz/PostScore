@@ -204,7 +204,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
           available: true,
           scanAt: formatShortDate(snapshot.createdAt, locale, timeZone),
           subjectRank: ownerStanding(snapshot.scan, competitorScope)?.rank ?? null,
-          rankedAgainst: competitorScope ? scopeSummary(applyScope(snapshot.scan, competitorScope), competitorScope) : null,
+          rankedAgainst: competitorScope ? scopeSummary(applyScope(snapshot.scan, competitorScope)) : null,
           nearbyReviewAverage: nearbyReviewAverage(snapshot.scan, competitorScope),
           // The shared review goal in words — PostAI quotes it, never computes its own.
           reviewGoalLines: (() => {

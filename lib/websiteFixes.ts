@@ -37,6 +37,11 @@ function isLosing(check: CheckResult): boolean {
 
 /** The fixes for one check (empty when it isn't losing points). */
 export function websiteFixesFor(check: CheckResult, builder: WebsiteBuilderId | null): WebsiteFix[] {
+  // Google's speed test can't find the page's main content: not scored,
+  // but a real site problem — always a web person's job.
+  if (check.id === "website.performance_mobile" && check.gaps?.includes("no_main_content")) {
+    return [{ checkId: check.id, gap: "no_main_content", ...webPerson }];
+  }
   if (!check.id.startsWith("website.") || !isLosing(check)) return [];
   const hosted = builder !== null && HOSTED_BUILDERS.has(builder);
   const partial = (check.earnedPoints ?? 0) > 0;

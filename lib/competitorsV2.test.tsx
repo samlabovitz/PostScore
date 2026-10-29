@@ -383,6 +383,7 @@ describe("the Competitors page's niche groups (the real Hair express '#1 of 5')"
     const scope = { nicheId: "hair_salon", parent: "salon", areas: ["barbershop", "blowout_bar"], mode: "auto" as const };
     const groups = groupCompetitors(scan.entries, scope);
     expect(groups.direct.map((x) => x.name)).toEqual(["Hair and Makeup Lounge by Angela", "Ilda's Salon", "Eclipse Hair Body Nails", "Beyond Beauty Salon"]);
-    expect(applyScope(scan as never, scope).scan.entries.map((x) => x.name)).not.toContain("Tatiana Day Spa");
+    // Ranked against the whole saved list now; the scan itself left Tatiana out.
+    expect(applyScope(scan as never, scope).scan.entries).toHaveLength(scan.entries.length);
   });
 });

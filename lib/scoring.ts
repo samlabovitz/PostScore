@@ -43,7 +43,7 @@ import { GOOGLE_PHOTO_CAP } from "@/lib/googlePhotoCap";
 import { reachabilityReasonMessageKey, type ReachabilityFailureReason } from "@/lib/websiteReachability";
 import { spamTopic } from "@/lib/siteSecurity";
 import { socialPagePlatform } from "@/lib/websiteTrust";
-import { socialProfileCounts } from "@/lib/socialLinkCheck";
+import { platformPage, socialProfileCounts } from "@/lib/socialLinkCheck";
 import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type AbandonedSiteFinding, type EmbeddedMapFinding, type InfoFieldFinding, type SpamFinding, type StaleNoticeFinding, type WebsiteKind } from "@/lib/websiteTrust";
 
 // ---------------------------------------------------------------------------
@@ -302,6 +302,11 @@ export interface MobilePerformanceFailure {
   /** Only set when kind === "http_error" — the real HTTP status
    * PageSpeed itself returned. */
   status: number | null;
+  /** Only with kind "error": Google's test loaded the real page but
+   * couldn't find its main content (Lighthouse NO_LCP — e.g. the first
+   * screen starts invisible and fades in), so no score. A site problem
+   * with a fix ("Needs a web person"), unlike a one-off failure. */
+  cause?: "no_main_content";
 }
 
 /**
@@ -343,9 +348,10 @@ export const MAX_PERFORMANCE_CARRY_FORWARD_MS = 30 * 24 * 60 * 60 * 1000;
  * measurement, labeled honestly as "last measured {date}" (see
  * website.performance_mobile's own evaluate()), rather than excluding
  * the check outright, when and ONLY when:
- *   - this scan's own PageSpeed attempt genuinely timed out (never on
- *     any other failure kind — http_error/no_api_key/error are real,
- *     different facts a stale reuse would misrepresent), AND
+ *   - this scan's own PageSpeed attempt measured nothing — it timed
+ *     out, hit an error page, or returned no score ("error") — never on
+ *     http_error/no_api_key, real different facts a stale reuse would
+ *     misrepresent, AND
  *   - a real prior measurement exists, with its own real measuredAt,
  *     from within MAX_PERFORMANCE_CARRY_FORWARD_MS.
  *
@@ -359,6 +365,11 @@ export const MAX_PERFORMANCE_CARRY_FORWARD_MS = 30 * 24 * 60 * 60 * 1000;
  * real volatility problem (lab-score noise between runs), not this
  * function's job.
  */
+/** Failures that measured nothing, so a recent real measurement still
+ * stands. Never http_error (the site itself answered an error) or
+ * no_api_key (a setup gap, not a scan). */
+const CARRY_FORWARD_KINDS = new Set<string>(["timed_out", "error_page", "error"]);
+
 export function carryForwardMobilePerformance(
   fresh: MobilePerformanceMeasurement | null,
   freshFailureReason: MobilePerformanceFailure | null,
@@ -367,8 +378,10 @@ export function carryForwardMobilePerformance(
 ): { mobilePerformance: MobilePerformanceMeasurement | null; mobilePerformanceFailureReason: MobilePerformanceFailure | null } {
   if (fresh) return { mobilePerformance: fresh, mobilePerformanceFailureReason: null };
   // Step 2d: an error-page run is just as unmeasured as a timeout — reuse
-  // a real measurement from the last 30 days the same way.
-  if ((freshFailureReason?.kind !== "timed_out" && freshFailureReason?.kind !== "error_page") || !existing?.measuredAt) {
+  // a real measurement from the last 30 days the same way. So is "error"
+  // (Google's test ran but returned no score, e.g. it couldn't find the
+  // page's main content) — nothing about the site was measured.
+  if (!CARRY_FORWARD_KINDS.has(freshFailureReason?.kind ?? "") || !existing?.measuredAt) {
     return { mobilePerformance: null, mobilePerformanceFailureReason: freshFailureReason };
   }
   const age = now.getTime() - new Date(existing.measuredAt).getTime();
@@ -379,7 +392,7 @@ export function carryForwardMobilePerformance(
     mobilePerformance: {
       ...existing,
       carriedForward: true,
-      ...(freshFailureReason.kind === "error_page" ? { carriedForwardReason: "error_page" as const } : {}),
+      ...(freshFailureReason?.kind === "error_page" ? { carriedForwardReason: "error_page" as const } : {}),
     },
     mobilePerformanceFailureReason: null,
   };
@@ -2011,6 +2024,17 @@ export const CHECKS: CheckDefinition[] = [
       }
       const measurement = input.websiteAnalysis.mobilePerformance;
       if (!measurement) {
+        // Google's test can't find the page's main content: still left
+        // out of the score, but it's the site, with a fix (gap below).
+        if (input.websiteAnalysis.mobilePerformanceFailureReason?.cause === "no_main_content") {
+          return {
+            earnedPoints: null,
+            confidence: "NOT_FOUND",
+            explanation: t(locale, "content.checks.website.performance_mobile.explanation.noMainContent"),
+            meta: { noScoreCause: "no_main_content" } as Record<string, string>,
+            gaps: ["no_main_content"],
+          };
+        }
         return {
           earnedPoints: null,
           confidence: "NOT_FOUND",
@@ -2524,7 +2548,11 @@ export const CHECKS: CheckDefinition[] = [
     evaluate(input, locale) {
       // A social page in the listing's website field is a social profile,
       // not a website (website.has_website) — it counts here.
-      const listingPlatform = input.website ? socialPagePlatform(input.website) : null;
+      // Only a SOCIAL profile there counts — an ordering, booking, review
+      // or link-in-bio page isn't a social profile (the real Lulu's Tacos
+      // case: a DoorDash store page).
+      const listingPage = input.website ? platformPage(input.website) : null;
+      const listingPlatform = listingPage?.kind === "social" ? listingPage.name : null;
       const listingProfile = listingPlatform ? { platform: listingPlatform, url: input.website!.trim() } : null;
       if (!hasAnalyzableWebsite(input)) {
         // Shown as counted, but not scored: the Website category stays
@@ -3629,6 +3657,7 @@ function parseMobilePerformanceFailure(value: unknown): MobilePerformanceFailure
   return {
     kind: v.kind as MobilePerformanceFailure["kind"],
     status: typeof v.status === "number" ? v.status : null,
+    ...(v.kind === "error" && v.cause === "no_main_content" ? { cause: "no_main_content" as const } : {}),
   };
 }
 

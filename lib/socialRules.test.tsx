@@ -33,10 +33,10 @@ describe("rule 1 — a social media page is not a website", () => {
     const en = check(input, "website.has_website");
     expect(en.earnedPoints).toBe(0);
     expect(en.explanation).toBe(
-      "Your Google listing links to your Facebook page, not a website. A Facebook page doesn't count as a website — customers can't find your full info, and you don't control it."
+      "Your Google listing's website link goes to your Facebook page, not a website. A Facebook page doesn't count as a website — customers can't find your full info there, and you don't control it."
     );
     expect(en.meta).toEqual({ socialPlatform: "Facebook" });
-    expect(check(input, "website.has_website", "es").explanation).toMatch(/^Su ficha de Google enlaza a su página de Facebook, no a un sitio web/);
+    expect(check(input, "website.has_website", "es").explanation).toMatch(/^El enlace de sitio web de su ficha de Google lleva a su página de Facebook, no a un sitio web/);
   });
 
   test("the website checks that need a real site become not applicable (never scored on the Facebook page)", () => {

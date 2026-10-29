@@ -6,6 +6,7 @@
 // owner gets a short, safe answer built from the facts alone
 // (answerWithFactCheck). Pure.
 
+import { shortName } from "@/lib/displayName";
 import { closureOf } from "@/lib/businessStatus";
 import { RATING_CONFIDENCE_FULL_AT_REVIEWS, REVIEW_COUNT_SATURATION, type ScoreBreakdown } from "@/lib/scoring";
 import { t, type Locale } from "@/lib/i18n";
@@ -220,7 +221,7 @@ export function factsBlockText(f: PostaiFacts): string {
     ...(f.competitors.length > 0
       ? [
           "- The saved competitor scan, in rank order (PostScore · Google reviews · rating — \"not known\" where the scan has none):",
-          ...f.competitors.map((c, i) => `  ${i + 1}. ${c.isSubject ? "THIS BUSINESS" : c.name} · ${c.total ?? "not known"} · ${c.reviews ?? "not known"} reviews · ${c.rating === null ? "rating not known" : `${c.rating.toFixed(1)}★`}`),
+          ...f.competitors.map((c, i) => `  ${i + 1}. ${c.isSubject ? "THIS BUSINESS" : shortName(c.name)} · ${c.total ?? "not known"} · ${c.reviews ?? "not known"} reviews · ${c.rating === null ? "rating not known" : `${c.rating.toFixed(1)}★`}`),
         ]
       : ["- Individual competitors' review counts and star ratings: NOT known. Never say a competitor has more or fewer reviews, or a higher or lower rating."]),
     `- The ${f.reviewCountFullAt}+ and ${f.ratingFullAtReviews}+ review thresholds are PostScore's own scoring rules — never say Google counts, requires or rewards them.`,

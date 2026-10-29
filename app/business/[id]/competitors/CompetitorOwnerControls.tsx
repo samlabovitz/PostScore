@@ -129,7 +129,7 @@ export function AddCompetitor({ businessId }: { businessId: string }) {
   }
 
   return (
-    <div data-testid="add-competitor" className="mt-4 rounded-xl border border-paper-line bg-white px-4 py-3">
+    <div id="add-competitor" data-testid="add-competitor" className="mt-4 scroll-mt-20 rounded-xl border border-paper-line bg-white px-4 py-3">
       <p className="text-[12.5px] font-semibold text-ink">{t(locale, k("addHeading"))}</p>
       <p className="text-[12px] text-ink-mute">{t(locale, k("addHint"))}</p>
       <form onSubmit={search} className="mt-2 flex flex-wrap items-center gap-2">

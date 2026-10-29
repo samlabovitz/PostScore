@@ -13,6 +13,82 @@
 
 import type { SocialLinkCheck, SocialProfile } from "@/lib/scoring";
 
+// ---------------------------------------------------------------------------
+// Platform pages: social, link-in-bio, review/directory, ordering, delivery,
+// reservation and booking pages. NEVER the business's own website — in the
+// Google listing's website field, or as a verified website — for owners and
+// competitors alike: not scored as a website, never crawled, screenshotted
+// or speed-tested. The one shared list (lib/websiteTrust.ts
+// socialPagePlatform reads it).
+//
+// Only the platform's OWN pages: a restaurant's site on its own domain
+// built with Toast, BentoBox, ChowNow or Wix, or a Square Online site
+// (*.square.site), is a real website and never matches.
+// ---------------------------------------------------------------------------
+
+export type PlatformKind = "social" | "link_in_bio" | "directory" | "ordering" | "reservations" | "appointments";
+
+export interface PlatformDef {
+  hosts: string[];
+  name: string;
+  kind: PlatformKind;
+}
+
+export const PLATFORM_PAGES: PlatformDef[] = [
+  { hosts: ["facebook.com", "fb.com", "fb.me"], name: "Facebook", kind: "social" },
+  { hosts: ["instagram.com"], name: "Instagram", kind: "social" },
+  { hosts: ["tiktok.com"], name: "TikTok", kind: "social" },
+  { hosts: ["x.com", "twitter.com"], name: "X", kind: "social" },
+  { hosts: ["youtube.com", "youtu.be"], name: "YouTube", kind: "social" },
+  { hosts: ["linkedin.com"], name: "LinkedIn", kind: "social" },
+  { hosts: ["pinterest.com"], name: "Pinterest", kind: "social" },
+  { hosts: ["threads.net"], name: "Threads", kind: "social" },
+  { hosts: ["nextdoor.com"], name: "Nextdoor", kind: "social" },
+  { hosts: ["linktr.ee", "linktree.com"], name: "Linktree", kind: "link_in_bio" },
+  { hosts: ["beacons.ai"], name: "Beacons", kind: "link_in_bio" },
+  { hosts: ["linkin.bio"], name: "Linkin.bio", kind: "link_in_bio" },
+  { hosts: ["yelp.com"], name: "Yelp", kind: "directory" },
+  { hosts: ["nailsites.com"], name: "NailSites", kind: "directory" },
+  { hosts: ["localsearch.com"], name: "Localsearch", kind: "directory" },
+  { hosts: ["doordash.com"], name: "DoorDash", kind: "ordering" },
+  { hosts: ["ubereats.com"], name: "Uber Eats", kind: "ordering" },
+  { hosts: ["grubhub.com"], name: "Grubhub", kind: "ordering" },
+  { hosts: ["postmates.com"], name: "Postmates", kind: "ordering" },
+  { hosts: ["seamless.com"], name: "Seamless", kind: "ordering" },
+  { hosts: ["slicelife.com"], name: "Slice", kind: "ordering" },
+  // ChowNow's own ordering pages only (ordering.chownow.com, direct.chownow.com…);
+  // a restaurant's ChowNow-built site on its own domain doesn't match.
+  { hosts: ["chownow.com"], name: "ChowNow", kind: "ordering" },
+  { hosts: ["opentable.com"], name: "OpenTable", kind: "reservations" },
+  { hosts: ["resy.com"], name: "Resy", kind: "reservations" },
+  { hosts: ["exploretock.com"], name: "Tock", kind: "reservations" },
+  { hosts: ["vagaro.com"], name: "Vagaro", kind: "appointments" },
+  { hosts: ["booksy.com"], name: "Booksy", kind: "appointments" },
+  { hosts: ["styleseat.com"], name: "StyleSeat", kind: "appointments" },
+  { hosts: ["fresha.com"], name: "Fresha", kind: "appointments" },
+];
+
+/** The platform a "website" address really is, or null for a real website
+ * (or anything unparsable). Pure — no fetch. */
+export function platformPage(url: string | null | undefined): { name: string; kind: PlatformKind } | null {
+  if (!url || !url.trim()) return null;
+  let host: string;
+  try {
+    host = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`).hostname.replace(/^www\./i, "").toLowerCase();
+  } catch {
+    return null;
+  }
+  const def = PLATFORM_PAGES.find((p) => p.hosts.some((h) => host === h || host.endsWith(`.${h}`)));
+  return def ? { name: def.name, kind: def.kind } : null;
+}
+
+/** Google's "Order online" / "Reservations" / "Appointments" link type for
+ * a platform kind (Place Actions API PlaceActionType); null when Google
+ * has no such section for it (social, link-in-bio, directory). */
+export function placeActionTypeFor(kind: PlatformKind): "FOOD_ORDERING" | "DINING_RESERVATION" | "APPOINTMENT" | null {
+  return kind === "ordering" ? "FOOD_ORDERING" : kind === "reservations" ? "DINING_RESERVATION" : kind === "appointments" ? "APPOINTMENT" : null;
+}
+
 /** Links checked per site at most (each one plain request). */
 export const MAX_SOCIAL_LINK_CHECKS = 8;
 

@@ -105,6 +105,28 @@ export function openPostAI(draft?: string) {
   window.dispatchEvent(new CustomEvent(POSTAI_OPEN_EVENT, { detail: { draft } }));
 }
 
+/** The floating panel marks the page while it's mounted (every business
+ * page's layout), so links can open it in place. */
+export function markPostaiDockReady(ready: boolean) {
+  if (typeof document === "undefined") return;
+  if (ready) document.documentElement.dataset.postaiDock = "ready";
+  else delete document.documentElement.dataset.postaiDock;
+}
+
+export function postaiDockReady(): boolean {
+  return typeof document !== "undefined" && document.documentElement.dataset.postaiDock === "ready";
+}
+
+/** An "Ask PostAI" link's click: with the panel on this page, open it in
+ * place with the question typed in (never sent) — no navigation. Without
+ * it (a page with no PostAI), the link's own address is followed. */
+export function askPostAIInPlace(event: { preventDefault: () => void }, question?: string): boolean {
+  if (!postaiDockReady()) return false;
+  event.preventDefault();
+  openPostAI(question);
+  return true;
+}
+
 /** The one-time intro, remembered on this device too (the account flag
  * is the source of truth — user_metadata.postai_intro_seen). */
 export const POSTAI_INTRO_STORAGE_KEY = "postscore:postai-intro-seen";

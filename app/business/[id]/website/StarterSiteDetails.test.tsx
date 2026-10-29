@@ -38,7 +38,7 @@ const builder = (over: Partial<Parameters<typeof StarterSiteBuilder>[0]> = {}, l
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&#x27;/g, "'").replace(/\s+/g, " ");
 const input = (html: string, field: string) => html.match(new RegExp(`<input[^>]*data-testid="detail-${field}"[^>]*>`))?.[0] ?? "";
 
-const SAVED: StarterSiteDetails = { name: "Hudson Shears & Co", category: "Barber", address: "1 Main St, Hudson, NY 12534, USA", phone: "(914) 555-0199", confirmedAt: "2026-10-21T15:00:00Z" };
+const SAVED: StarterSiteDetails = { name: "Hudson Shears & Co", category: "Barber", address: "1 Main St, Hudson, NY 12534, USA", phone: "(914) 555-0199", link: "", confirmedAt: "2026-10-21T15:00:00Z", linkSaved: true };
 
 describe("Your business details", () => {
   test("not confirmed: Google's values as editable inputs, the Google Maps attribution, Confirm — and no download yet", () => {
@@ -171,7 +171,7 @@ describe("saving the details", () => {
     const now = new Date("2026-10-21T16:00:00Z");
     const result = await saveStarterSiteDetailsWithClient(db({ data: [{ id: "b1" }], error: null }, seen), "b1", { name: "  Hudson Shears ", category: "x".repeat(200), address: "1 Main St", phone: "555", extra: "no" }, now);
     expect(result.status).toBe("ok");
-    expect(seen[0]).toEqual({ starter_site_details: { name: "Hudson Shears", category: "x".repeat(60), address: "1 Main St", phone: "555", confirmedAt: "2026-10-21T16:00:00.000Z" } });
+    expect(seen[0]).toEqual({ starter_site_details: { name: "Hudson Shears", category: "x".repeat(60), address: "1 Main St", phone: "555", link: "", confirmedAt: "2026-10-21T16:00:00.000Z" } });
   });
 
   test("a name is required; before supabase/starter-site-details.sql: not_enabled, not a crash", async () => {
@@ -184,7 +184,13 @@ describe("saving the details", () => {
     expect(sanitizeStarterSiteDetails(SAVED)).toEqual(SAVED);
     expect(sanitizeStarterSiteDetails({ ...SAVED, confirmedAt: "never" })).toBeNull();
     expect(sanitizeStarterSiteDetails(null)).toBeNull();
-    expect(sanitizeDetailFields({ name: "A\u0000B" })).toEqual({ name: "A B", category: "", address: "", phone: "" });
+    expect(sanitizeDetailFields({ name: "A\u0000B" })).toEqual({ name: "A B", category: "", address: "", phone: "", link: "" });
+    // Only a real web address becomes the site's button.
+    expect(sanitizeDetailFields({ name: "A", link: "javascript:alert(1)" })?.link).toBe("");
+    expect(sanitizeDetailFields({ name: "A", link: "www.doordash.com/store/1" })?.link).toBe("https://www.doordash.com/store/1");
+    // A row saved before the link field existed: the builder pre-fills it.
+    const old = { name: SAVED.name, category: SAVED.category, address: SAVED.address, phone: SAVED.phone, confirmedAt: SAVED.confirmedAt };
+    expect(sanitizeStarterSiteDetails(old)).toMatchObject({ link: "", linkSaved: false });
     expect(sameDetails(SAVED, { ...SAVED, phone: " (914) 555-0199 " })).toBe(true);
     expect(sameDetails(SAVED, { ...SAVED, phone: "555" })).toBe(false);
   });
@@ -200,5 +206,30 @@ describe("saving the details", () => {
     const sql = readFileSync("supabase/starter-site-details.sql", "utf8");
     expect(sql).toContain("add column if not exists starter_site_details jsonb");
     expect(readFileSync("lib/scoring.ts", "utf8")).not.toContain("starter_site_details");
+  });
+});
+
+describe("the Link field: the site's big button", () => {
+  const LULU = "https://www.doordash.com/store/36532653";
+
+  test("pre-filled from the listing's DoorDash link — on the site as 'Order on DoorDash', no 'Added by you'", () => {
+    const html = builder({ listingWebsite: LULU });
+    expect(input(html, "link")).toContain(`value="${LULU}"`);
+    expect(html).not.toContain('data-testid="link-added-by-you"');
+    expect(html).toContain("Order on DoorDash");
+  });
+
+  test("the owner's own link is labeled 'Added by you'; a real website on the listing pre-fills nothing", () => {
+    const own = builder({ listingWebsite: LULU, starterSiteDetails: { ...SAVED, link: "https://www.vagaro.com/hudsonshears" } });
+    expect(own).toContain('data-testid="link-added-by-you"');
+    expect(own).toContain("Book on Vagaro");
+    expect(input(builder({ listingWebsite: "https://www.hudsonshears.com" }), "link")).toContain('value=""');
+  });
+
+  test("a row saved before the field existed keeps its confirmation, with the link pre-filled", () => {
+    const old = { name: SAVED.name, category: SAVED.category, address: SAVED.address, phone: SAVED.phone, confirmedAt: SAVED.confirmedAt };
+    const html = builder({ listingWebsite: LULU, starterSiteDetails: sanitizeStarterSiteDetails(old) });
+    expect(input(html, "link")).toContain(`value="${LULU}"`);
+    expect(html).toContain('data-testid="details-confirmed"');
   });
 });

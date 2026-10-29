@@ -204,7 +204,7 @@ describe("sorting saved competitors by name", () => {
 
 describe("no Google calls", () => {
   test("the niche, scope and choice code never imports the Places client or fetches", () => {
-    for (const file of ["lib/niches.ts", "config/niches.ts", "lib/competitorScope.ts", "lib/businessNiche.ts", "lib/businessNiche.server.ts", "app/business/[id]/competitors/CompetitorGroups.tsx", "components/niche/NicheBanner.tsx", "components/niche/NichePicker.tsx", "scripts/apply-niche-corrections.ts"]) {
+    for (const file of ["lib/niches.ts", "config/niches.ts", "lib/competitorScope.ts", "lib/businessNiche.ts", "lib/businessNiche.server.ts", "components/niche/NicheBanner.tsx", "components/niche/NichePicker.tsx", "scripts/apply-niche-corrections.ts"]) {
       const src = readFileSync(file, "utf8");
       expect(src, file).not.toMatch(/google\/places|searchNearby|searchText|fetch\(|competitorScoringJob|refreshCompetitors|runAndSaveCompetitorScan/);
     }

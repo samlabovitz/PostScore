@@ -49,23 +49,21 @@ beforeEach(() => {
 });
 
 describe("niche-aware competitor search", () => {
-  test("Mini Shop → Toy, game & hobby store: direct toy stores, then ONE call for the areas — ≤ 5 calls (with the Text Search)", async () => {
+  test("Mini Shop → Toy, game & hobby store: toy stores only — the retired 'also competes with' areas are never searched (Oct 29)", async () => {
     respond = (p) => (p.includedTypes?.includes("toy_store") ? [place("Toy Barn", "toy_store"), place("Game Spot", "toy_store", 39.69)] : [place("Gift Corner", "gift_shop"), place("Big Store", "department_store")]);
     const types = nicheSearchTypes(TOY_SCOPE)!;
     expect(types.directTypes).toEqual(["toy_store"]);
-    expect(types.wideTypes).toEqual(expect.arrayContaining(["gift_shop"]));
+    expect(types.wideTypes).toEqual([]);
     const result = await findAndScoreCompetitors({ ...MINI_SHOP, niche: types }, "en");
     expect(result.status).toBe("ok");
     // Every search counts: the Text Search (v2) plus the Nearby fallback.
     expect(result.placesCalls).toBe(nearbyCalls.length + (result.textSearchCalls ?? 0));
     expect(nearbyCalls.length).toBeLessThanOrEqual(MAX_CALLS_PER_SCAN);
-    // 3 radius tiers for the direct search (too few toy stores found), then the areas.
-    expect(nearbyCalls.slice(0, -1).every((c) => c.includedTypes?.join() === "toy_store")).toBe(true);
-    expect(nearbyCalls.at(-1)!.includedTypes).not.toContain("toy_store");
-    // A department store isn't one of a toy store's areas, so it's left out.
-    expect(result.ranked.map((r) => r.name).sort()).toEqual(["Game Spot", "Gift Corner", "Mini Shop in Delaware", "Toy Barn"]);
+    // No search for gift shops or any other area type.
+    expect(nearbyCalls.some((c) => c.includedTypes?.includes("gift_shop"))).toBe(false);
+    expect(result.ranked.map((r) => r.name).sort()).toEqual(["Game Spot", "Mini Shop in Delaware", "Toy Barn"]);
     // Each competitor keeps its Google types, so later grouping is exact.
-    expect(result.ranked.find((r) => r.name === "Gift Corner")?.listing?.categories).toEqual(["gift_shop"]);
+    expect(result.ranked.find((r) => r.name === "Toy Barn")?.listing?.categories).toEqual(["toy_store"]);
   });
 
   test("without a niche the search is exactly as before (a generic listing still can't be searched)", async () => {

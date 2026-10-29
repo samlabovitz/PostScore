@@ -10,6 +10,9 @@ import { scoreBusinessById, getScoreHistory, getRecentScoreSnapshots } from "@/a
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { getLocalBenchmark } from "@/app/actions/competitors";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
+import { getCustomerDetailsUndo } from "@/app/actions/gbpCustomerDetails";
+import { GbpEditProvider } from "@/components/gbp/CustomerDetailsGoogleEdit";
+import { isPremiumPlan } from "@/lib/plan";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale } from "@/lib/i18n";
 import { BusinessScoreView } from "./BusinessScoreView";
@@ -174,6 +177,7 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
           />
         </div>
       )}
+      <GbpEditProvider value={{ premium: isPremiumPlan(upgrade.plan), connected: gbpStatus.status === "ok" && gbpStatus.connected, undo: await getCustomerDetailsUndo(params.id) }}>
       <BusinessScoreView
         businessId={params.id}
         business={scored.business}
@@ -198,6 +202,7 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
         monthlyReportsLive={isMonthlyReportsLive()}
         gbpReplyCheck={free ? gbpReplyCheckState(upgrade.plan, gbpStatus, searchParams.gbp, { name: scored.business.name ?? null, address: scored.business.address ?? null }) : null}
       />
+      </GbpEditProvider>
     </DashboardShell>
   );
 }

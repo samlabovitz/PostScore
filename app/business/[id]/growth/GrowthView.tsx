@@ -1,5 +1,6 @@
 "use client";
 
+import { PlatformLinkCard } from "@/components/gbp/PlatformLinkCard";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { IconArrowLeft, IconBrandGoogle, IconLock, IconWorld } from "@tabler/icons-react";
@@ -182,6 +183,7 @@ export function GrowthView({
   lastScanAt,
   websiteRecheck = null,
   gbpConnected = false,
+  listingWebsite = null,
   linkOptions = {},
   plan = "free",
 }: {
@@ -212,6 +214,8 @@ export function GrowthView({
   /** Show the dev-only plan switch (the page passes true only in local dev). */
   devPlanSwitch?: boolean;
   gbpConnected?: boolean;
+  /** The Google listing's website field (an ordering page shows a card). */
+  listingWebsite?: string | null;
   /** Which tools this business has — for each task's fix link. */
   linkOptions?: LinkOptions;
   actionPlan: {
@@ -417,6 +421,8 @@ export function GrowthView({
                   </Card>
                 ) : (
                   <>
+                    {/* An ordering / booking page in the website spot: what to do about it. */}
+                    <PlatformLinkCard businessId={businessId} website={listingWebsite} premium={isPremiumPlan(plan)} connected={gbpConnected} />
                     <div id="weekly-plan" className="scroll-mt-20">
                       <SectionHeading
                         title={t(locale, "dashboard.growth.view.weeklyPlanHeading", {

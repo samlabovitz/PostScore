@@ -97,29 +97,14 @@ export interface ScopedScan {
   autoWidened: boolean;
 }
 
-/** The scan narrowed to the scope (the owner's own row always kept). */
+/** Who the owner is ranked against: since competitor selection v2 (Oct 29)
+ * the WHOLE saved list — the search already picked the right businesses
+ * (Text Search, same kind, the owner's ticked areas, Remove / Add), so the
+ * old "Rank against" narrowing (Automatic / Direct only / Direct + areas)
+ * is gone. The groups are still counted, for PostAI's wording. */
 export function applyScope(scan: SavedCompetitorScan, scope: CompetitorScope): ScopedScan {
   const groups = groupCompetitors(scan.entries, scope);
-  const directCount = groups.direct.length;
-  const general = isGeneralNiche(scope.nicheId) || !nicheById(scope.nicheId);
-  const effective: "direct" | "wide" = general ? "direct" : scope.mode === "direct" ? "direct" : scope.mode === "wide" ? "wide" : directCount >= MIN_DIRECT ? "direct" : "wide";
-  const keep = new Set<SavedCompetitorEntry>(groups.direct);
-  const areasUsed: string[] = [];
-  if (effective === "wide") {
-    for (const area of scope.areas) {
-      const list = groups.byArea.get(area);
-      if (!list?.length) continue;
-      areasUsed.push(area);
-      list.forEach((e) => keep.add(e));
-    }
-  }
-  return {
-    scan: { ...scan, entries: scan.entries.filter((e) => e.isSubject || keep.has(e)) },
-    effective,
-    directCount,
-    areasUsed,
-    autoWidened: !general && scope.mode === "auto" && effective === "wide",
-  };
+  return { scan, effective: "wide", directCount: groups.direct.length, areasUsed: [], autoWidened: false };
 }
 
 /** An area's name in a sentence ("sporting goods", "other similar businesses"). */
@@ -151,12 +136,9 @@ export function scopeNote(result: ScopedScan, scope: CompetitorScope, locale: Lo
 }
 
 /** One line on who the rank is against (PostAI's context; English). */
-export function scopeSummary(result: ScopedScan, scope: CompetitorScope): string {
-  if (isGeneralNiche(scope.nicheId) || !nicheById(scope.nicheId)) return "nearby businesses of the same kind (the whole saved scan)";
-  const niche = nicheLabel(scope.nicheId, "en");
-  if (result.effective === "direct") return `direct competitors only (${niche}: ${result.directCount}${scope.mode === "auto" ? `, chosen automatically because there are ${MIN_DIRECT}+` : ", the owner's choice"})`;
-  const areas = result.areasUsed.map((a) => areaPhrase(a, scope, "en")).join(", ") || "no other areas";
-  return `direct competitors (${niche}: ${result.directCount}) plus ${areas}${result.autoWidened ? ` — widened automatically because there are fewer than ${MIN_DIRECT} direct competitors` : " — the owner's choice"}`;
+export function scopeSummary(result: ScopedScan): string {
+  const n = result.scan.entries.filter((e) => !e.isSubject).length;
+  return `all ${n} saved competitors — the businesses Google shows when customers search for this kind of business nearby`;
 }
 
 /** The Google types a niche-aware competitor search uses: the niche's own
@@ -165,13 +147,10 @@ export function scopeSummary(result: ScopedScan, scope: CompetitorScope): string
 export function nicheSearchTypes(scope: CompetitorScope): { directTypes: string[]; wideTypes: string[] } | null {
   const n = nicheById(scope.nicheId);
   if (!n || n.id === n.parent) return null;
-  const wide = new Set<string>();
-  for (const area of scope.areas) {
-    // "Other similar businesses" is the same category the direct search covers.
-    if (area === scope.parent) continue;
-    for (const t of nicheById(area)?.googleTypes ?? []) if (!n.googleTypes.includes(t)) wide.add(t);
-  }
-  return { directTypes: n.googleTypes, wideTypes: Array.from(wide) };
+  // The ticked "also competes with" areas are retired (Oct 29): competitor
+  // selection v2 finds who customers see, and owners Add / Remove the rest.
+  // No wider "areas" search any more.
+  return { directTypes: n.googleTypes, wideTypes: [] };
 }
 
 /** The comparison group the scope actually uses, in words, for review and

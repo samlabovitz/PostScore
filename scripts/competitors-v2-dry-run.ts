@@ -6,7 +6,7 @@
 // so PLACES_SEARCH_MONTHLY_CAP counts it, and the run stops before the cap.
 // No PageSpeed: the "after" lists are scored from listing data only.
 //
-//   NODE_OPTIONS=--conditions=react-server npx tsx scripts/competitors-v2-dry-run.ts [--out file.md]
+//   npx tsx scripts/competitors-v2-dry-run.ts [--only "Name" …] [--out file.md]
 
 import fs from "node:fs";
 import os from "node:os";
@@ -19,7 +19,10 @@ for (const line of fs.readFileSync(".env.local", "utf8").split("\n")) {
   if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^"|"$/g, "");
 }
 
-const NAMES = ["Hair express", "Kee's", "Mini Shop", "Umami", "Red Bowl", "Switch Skate", "Drybar", "Gregg L. Smith", "Main Street Sweets", "J & G Italian Deli"];
+const DEFAULT_NAMES = ["Hair express", "Kee's", "Mini Shop", "Umami", "Red Bowl", "Switch Skate", "Drybar", "Gregg L. Smith", "Main Street Sweets", "J & G Italian Deli"];
+// --only "Name" (repeatable) narrows the run.
+const ONLY = process.argv.flatMap((a, i) => (a === "--only" ? [process.argv[i + 1]] : []));
+const NAMES = ONLY.length > 0 ? ONLY : DEFAULT_NAMES;
 /** The Tarrytown salons the owner expected (diagnosis). */
 const EXPECTED_HAIR = ["Ilda", "Hair and Makeup Lounge by Angela", "Eclipse Hair", "New Karma"];
 

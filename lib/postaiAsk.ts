@@ -1,6 +1,7 @@
-// "Confused? Ask PostAI →" on the designers: a link to the Overview with
-// an allowlisted question id (never free text in the URL). The Overview
-// opens PostAI with that question typed in — the owner presses Send.
+// "Confused? Ask PostAI →" on the designers: opens the floating panel in
+// place with the question typed in (components/studio/AskPostAI.tsx). The
+// ?ask=<allowlisted id> address (never free text in the URL) is only the
+// fallback for a page without the panel, and old links.
 
 import type { MessageKey } from "@/lib/i18n";
 

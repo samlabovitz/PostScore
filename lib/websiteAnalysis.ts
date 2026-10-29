@@ -1163,6 +1163,8 @@ interface RawPageSpeedResponse {
       {
         score?: number | null;
         scoreDisplayMode?: string;
+        /** e.g. "NO_LCP" when an audit couldn't run. */
+        errorMessage?: string;
         details?: { items?: Array<{ url?: string; statusCode?: number; resourceType?: string }> };
       }
     >;
@@ -1255,6 +1257,14 @@ async function fetchPageSpeedRunOnce(
   }
 
   return lastOutcome;
+}
+
+/** Lighthouse's "largest contentful paint" couldn't be found (NO_LCP):
+ * the page loaded, but nothing on the first screen counted as its main
+ * content — so Google gives no performance score. */
+export function couldNotFindMainContent(raw: RawPageSpeedResponse): boolean {
+  const lcp = raw.lighthouseResult?.audits?.["largest-contentful-paint"];
+  return !raw.lighthouseResult?.runtimeError?.code && extractLabScore(raw) === null && (lcp?.errorMessage ?? "").includes("NO_LCP");
 }
 
 function extractLabScore(raw: RawPageSpeedResponse): number | null {
@@ -1517,9 +1527,12 @@ export async function fetchMobilePerformance(
   if (labScores.length === 0) {
     // Never a score from an error page.
     const anyErrorPage = outcomes.some((o, i) => o.kind === "ok" && !assessments[i]?.loadedRealPage);
+    // The real page loaded, but Google couldn't find its main content
+    // (the real Hair express case) — a site problem with a fix.
+    const noMainContent = !anyErrorPage && outcomes.some((o) => o.kind === "ok" && couldNotFindMainContent(o.response));
     return {
       measurement: null,
-      failureReason: anyErrorPage ? { kind: "error_page", status: null } : pickFailureReason(outcomes),
+      failureReason: anyErrorPage ? { kind: "error_page", status: null } : noMainContent ? { kind: "error", status: null, cause: "no_main_content" } : pickFailureReason(outcomes),
       renderedContentSignals,
       stackPackIds,
       callCount: 3,

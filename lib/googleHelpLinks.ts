@@ -28,6 +28,10 @@ export const GOOGLE_LINKS = {
   safeBrowsing: "https://transparencyreport.google.com/safe-browsing/search",
   /** Help: "Mark your business as closed" — also how to mark it open again. */
   closedStatusHelp: "https://support.google.com/business/answer/15300196",
+  /** Help: "Manage your local business links" ("Enlaces de empresas
+   * locales") — Order online, Booking, Pickup and delivery links (checked
+   * EN + ES on 2026-10-29). */
+  localLinksHelp: "https://support.google.com/business/answer/6218037",
   /** web.dev (Google): "Why HTTPS matters" — English only. */
   httpsWhy: "https://web.dev/articles/why-https-matters",
 } as const;

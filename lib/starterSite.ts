@@ -26,7 +26,9 @@
 // only the owner's own (the hours editor); reviews are a link to the
 // live listing by place ID; the map is Google's own embed.
 
-import { t, type Locale } from "./i18n";
+import { platformPage } from "@/lib/socialLinkCheck";
+import { safeLink } from "@/lib/starterSiteDetails";
+import { t, type Locale, type MessageKey } from "./i18n";
 import { appointmentOnlyLabel, hoursRows, openingHoursSpecification, type OwnerHours } from "./ownerHours";
 import { contrastRatio, mix, readableOn, readableOnAll, textOn } from "./color";
 import { businessIcon, dividerSvg, headingShapeCss, iconSvg, patternCss, safeAccentStyle, type AccentStyle, type IconName } from "./starterSiteArt";
@@ -328,6 +330,8 @@ export interface StarterSiteInput {
   /** Maps Embed API (place mode) for the storefront map; null = just the
    * address and an "Open in Google Maps" link. */
   mapEmbed?: { key: string; placeId: string } | null;
+  /** The owner's ordering / booking / page link — the hero's big button. */
+  actionLink?: string | null;
   /** Social profiles verified to open the real profile (lib/socialLinkCheck.ts). */
   socialLinks?: Array<{ platform: string; url: string }>;
   /** The copyright year (passed in so the output stays deterministic). */
@@ -500,12 +504,20 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
 
   // ---- Hero
   const heroCtas: string[] = [];
+  // The owner's ordering / booking / page link: the first, biggest button
+  // ("Order on DoorDash", "Book on Vagaro", "See us on Yelp").
+  const actionLink = input.actionLink ? safeLink(input.actionLink) : "";
+  if (actionLink) {
+    const platform = platformPage(actionLink);
+    const label = platform ? t(locale, `dashboard.platformLink.button.${platform.kind}` as MessageKey, { platform: platform.name }) : t(locale, "starterSite.actionLinkGeneric");
+    heroCtas.push(`<a class="btn btn-primary btn-action" data-action-link href="${escapeHtml(actionLink)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`);
+  }
   if (showPhone) {
-    heroCtas.push(`<a class="btn btn-primary" href="${telHref(input.phone as string)}">${ico("phone", 18)}${escapeHtml(t(locale, "starterSite.callNow"))}</a>`);
+    heroCtas.push(`<a class="btn ${actionLink ? "btn-secondary" : "btn-primary"}" href="${telHref(input.phone as string)}">${ico("phone", 18)}${escapeHtml(t(locale, "starterSite.callNow"))}</a>`);
   }
   if (directionsUrl) {
     heroCtas.push(
-      `<a class="btn ${showPhone ? "btn-secondary" : "btn-primary"}" href="${directionsUrl}" target="_blank" rel="noopener noreferrer">${ico("pin", 18)}${escapeHtml(t(locale, "starterSite.getDirections"))}</a>`
+      `<a class="btn ${showPhone || actionLink ? "btn-secondary" : "btn-primary"}" href="${directionsUrl}" target="_blank" rel="noopener noreferrer">${ico("pin", 18)}${escapeHtml(t(locale, "starterSite.getDirections"))}</a>`
     );
   }
   const taglineHtml = tagline ? `<p class="tagline tagline--${input.taglinePlacement}">${escapeHtml(tagline)}</p>` : "";

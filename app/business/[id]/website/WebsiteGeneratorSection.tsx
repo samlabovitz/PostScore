@@ -46,6 +46,7 @@ export function WebsiteGeneratorSection({
   year,
   storefront,
   mapEmbed,
+  listingWebsite = null,
   profileId,
   builderOfferReason,
   faqEn,
@@ -86,6 +87,8 @@ export function WebsiteGeneratorSection({
   year: number;
   storefront: boolean;
   mapEmbed: { key: string; placeId: string } | null;
+  /** The Google listing's website field (pre-fills the site's button). */
+  listingWebsite?: string | null;
   profileId: string;
   builderOfferReason: "no_website" | "underperforming" | "backup";
   /** Already token-substituted (renderFaq) for this real business, in
@@ -141,6 +144,7 @@ export function WebsiteGeneratorSection({
       year={year}
       storefront={storefront}
       mapEmbed={mapEmbed}
+      listingWebsite={listingWebsite}
       profileId={profileId}
       builderOfferReason={builderOfferReason}
       onSiteLocaleChange={setSiteLocale}

@@ -9,6 +9,8 @@ import { t, useLocale, type MessageKey } from "@/lib/i18n";
 import { LockedFixRow } from "@/components/overview/FixPlanUpsell";
 import { checkAnchorId } from "@/lib/postaiLinks";
 import { CustomerDetailsExtras } from "@/components/scoring/CustomerDetailsExtras";
+import { CustomerDetailsGoogleEdit, optionLabel, useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
+import { CUSTOMER_DETAIL_OPTIONS, PART_ORDER } from "@/lib/gbpAttributes";
 import { timeEstimateText, type CheckHowTo } from "@/lib/actionPlan";
 
 /** A needs-work row's fix: its own "How to fix it" (steps, a rough time,
@@ -162,18 +164,8 @@ function CheckRows({
               <Pill variant={pill.variant}>{t(locale, pill.labelKey)}</Pill>
             </div>
           </div>
-          <p className="pl-[25px] text-[13px] text-ink-mute">{check.explanation}</p>
-          {outcome === "needs_work" && fixLinks?.[check.id]?.howTo && <HowToFix howTo={fixLinks[check.id].howTo!} />}
-          {outcome === "needs_work" && fixLinks?.[check.id] && (
-            <Link
-              href={fixLinks[check.id].href}
-              className="ml-[25px] mt-1 inline-flex w-fit max-w-full items-center rounded-full border border-[color:color-mix(in_srgb,var(--color-brass)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--color-brass)_10%,transparent)] px-2.5 py-1 text-[12px] font-semibold text-ink transition-colors hover:border-brass hover:bg-[color:color-mix(in_srgb,var(--color-brass)_20%,transparent)]"
-            >
-              {fixLinks[check.id].label}
-            </Link>
-          )}
-          {outcome === "needs_work" && lockedFixes && <LockedFixRow blurred className="ml-[25px] mt-1" />}
-          {check.id === "completeness.customer_details" && <CustomerDetailsExtras check={check} businessId={businessId} />}
+          <RowStatus check={check} />
+          <RowActions check={check} outcome={outcome} fix={fixLinks?.[check.id]} lockedFixes={lockedFixes} businessId={businessId} />
         </div>
       );
     })}
@@ -181,19 +173,112 @@ function CheckRows({
   );
 }
 
-/** "How to fix it" on a needs-work row: the steps, a rough time, and
- * official links (lib/googleHelpLinks.ts). */
-function HowToFix({ howTo }: { howTo: CheckHowTo }) {
+/** The row's status: "✓ Accessibility · ✓ Payment options · ✗ Parking" +
+ * one plain line for customer details; the check's own explanation
+ * otherwise. */
+function RowStatus({ check }: { check: CheckResult }) {
+  const locale = useLocale();
+  const parts = (check.meta?.parts ?? "").split(",").filter(Boolean);
+  const present = check.meta?.present !== undefined ? new Set(check.meta.present.split(",").filter(Boolean)) : null;
+  if (check.id === "completeness.customer_details" && parts.length > 0 && present) {
+    return (
+      <div data-testid="customer-details-status" className="flex flex-wrap items-center gap-x-1.5 gap-y-1 pl-[25px] text-[12.5px]">
+        {parts.map((part) => (
+          <span key={part} className={cn("rounded-full px-2 py-px font-medium", present.has(part) ? "bg-green/10 text-green" : "bg-paper-deep text-ink-soft")}>
+            {present.has(part) ? "✓" : "✗"} {t(locale, `content.checks.completeness.customer_details.partLabel.${part}` as MessageKey)}
+          </span>
+        ))}
+        <span className="w-full text-[13px] text-ink-mute">{t(locale, "dashboard.customerDetails.why")}</span>
+      </div>
+    );
+  }
+  return <p className="pl-[25px] text-[13px] text-ink-mute">{check.explanation}</p>;
+}
+
+/** One primary action, then small secondary links — the same on every
+ * row: "How to fix it" (or, for customer details on Premium, "Update on
+ * Google"), the PostScore page as a small text link. */
+function RowActions({
+  check,
+  outcome,
+  fix,
+  lockedFixes,
+  businessId,
+}: {
+  check: CheckResult;
+  outcome: CheckOutcome;
+  fix: BreakdownFix | undefined;
+  lockedFixes: boolean;
+  businessId: string | null;
+}) {
+  const gbp = useGbpEdit();
+  const locale = useLocale();
+  const needsWork = outcome === "needs_work";
+  const customerDetails = check.id === "completeness.customer_details" && !!businessId;
+  // Premium (connected or not): the Google action is the one action.
+  const googleAction = customerDetails && gbp.enabled && gbp.premium;
+  const canRemove = customerDetails && (check.meta?.ownerCanRemove ?? "").split(",").some(Boolean);
+  if (!needsWork && !googleAction && !canRemove) return null;
+  return (
+    <div data-testid="row-actions" className="ml-[25px] mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+      {googleAction ? (
+        <>
+          <CustomerDetailsGoogleEdit businessId={businessId!} className="basis-full" />
+          {/* Connected: the steps stay, for doing it on Google directly. */}
+          {gbp.connected && needsWork && fix?.howTo && !lockedFixes && (
+            <HowToFix howTo={fix.howTo} customerDetailsParts={null} intro={t(locale, "dashboard.gbpEdit.howToIntro")} />
+          )}
+        </>
+      ) : needsWork && lockedFixes ? (
+        <LockedFixRow blurred />
+      ) : needsWork && fix?.howTo ? (
+        <HowToFix howTo={fix.howTo} customerDetailsParts={customerDetails ? (check.meta?.parts ?? "").split(",").filter(Boolean) : null} />
+      ) : null}
+      {customerDetails && needsWork && !googleAction && !lockedFixes && <CustomerDetailsGoogleEdit businessId={businessId!} />}
+      {needsWork && fix && !lockedFixes && (
+        <Link href={fix.href} className="text-[12px] font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline">
+          {fix.label}
+        </Link>
+      )}
+      {canRemove && <CustomerDetailsExtras check={check} businessId={businessId} />}
+    </div>
+  );
+}
+
+/** "How to fix it": the steps, a rough time and official links — opens in
+ * place (no box); for customer details, the choices Google usually offers. */
+function HowToFix({ howTo, customerDetailsParts, intro }: { howTo: CheckHowTo; customerDetailsParts: string[] | null; intro?: string }) {
   const locale = useLocale();
   return (
-    <details data-testid="row-how-to" className="group ml-[25px] mt-1 rounded-lg border border-paper-line bg-paper px-3 py-2 text-[12.5px] leading-relaxed text-ink-soft">
-      <summary className="cursor-pointer list-none font-semibold text-ink">
+    <details data-testid="row-how-to" className="group text-[12.5px] leading-relaxed text-ink-soft open:basis-full">
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1 font-semibold text-ink hover:text-brass [&::-webkit-details-marker]:hidden">
+        <span className="inline-block transition-transform group-open:rotate-90" aria-hidden>
+          ›
+        </span>
         {t(locale, "content.actionPlan.step.howToFix")}
-        {howTo.minutes ? <span className="ml-2 font-normal text-ink-mute">· {timeEstimateText(howTo.minutes, locale)}</span> : null}
+        {howTo.minutes ? <span className="font-normal text-ink-mute">· {timeEstimateText(howTo.minutes, locale)}</span> : null}
       </summary>
-      <p className="mt-1.5">{howTo.steps}</p>
+      {intro && (
+        <p data-testid="row-how-to-intro" className="mt-1 font-medium text-ink">
+          {intro}
+        </p>
+      )}
+      <p className="mt-1">{howTo.steps}</p>
+      {customerDetailsParts && customerDetailsParts.length > 0 && (
+        <div data-testid="row-how-to-options" className="mt-1.5">
+          <p className="font-medium text-ink">{t(locale, "dashboard.customerDetails.howToOptions")}</p>
+          <ul className="ml-4 list-disc">
+            {PART_ORDER.filter((part) => customerDetailsParts.includes(part)).map((part) => (
+              <li key={part}>
+                <span className="font-medium text-ink">{t(locale, `content.checks.completeness.customer_details.partLabel.${part}` as MessageKey)}:</span>{" "}
+                {CUSTOMER_DETAIL_OPTIONS[part].map((id) => optionLabel(id, locale)).join(", ")}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {howTo.links.length > 0 && (
-        <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+        <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
           {howTo.links.map((link) => (
             <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline-offset-2 hover:underline">
               {link.label} ↗

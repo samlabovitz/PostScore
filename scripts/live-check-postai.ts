@@ -313,7 +313,7 @@ async function loadBusinessContext(businessId: string, localeOverride?: Locale):
           available: true,
           scanAt: formatShortDate(snapshot.createdAt, locale),
           subjectRank: ownerStanding(snapshot.scan, competitorScope)?.rank ?? null,
-          rankedAgainst: competitorScope ? scopeSummary(applyScope(snapshot.scan, competitorScope), competitorScope) : null,
+          rankedAgainst: competitorScope ? scopeSummary(applyScope(snapshot.scan, competitorScope)) : null,
           nearbyReviewAverage: nearbyReviewAverage(snapshot.scan, competitorScope),
           entries: ranked.map(({ entry }) => ({
             name: entry.name ?? "Unnamed business",

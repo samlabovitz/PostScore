@@ -1,5 +1,6 @@
 "use client";
 
+import { platformPage } from "@/lib/socialLinkCheck";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -186,6 +187,7 @@ export function StarterSiteBuilder({
   year,
   storefront = true,
   mapEmbed = null,
+  listingWebsite = null,
   profileId,
   builderOfferReason,
   postStudioHref = null,
@@ -227,6 +229,8 @@ export function StarterSiteBuilder({
   storefront?: boolean;
   /** Maps Embed API key + place id; null = no map, address and link only. */
   mapEmbed?: { key: string; placeId: string } | null;
+  /** The Google listing's website field — an ordering / booking page there pre-fills the site's button. */
+  listingWebsite?: string | null;
   profileId: string;
   /** Why the builder is being offered — see BuilderOffer in
    * app/actions/website.ts. Drives the headline/subcopy only; the
@@ -261,13 +265,19 @@ export function StarterSiteBuilder({
   // The details on the site: the owner's confirmed ones, else Google's as
   // a pre-fill to confirm or edit. No Google content goes on the owner's
   // own site — the download waits for the confirmation.
+  // The listing's ordering / booking / page link, pre-filled as the site's
+  // big button (rows saved before the link field keep it pre-filled).
+  const prefillLink = platformPage(listingWebsite) ? (listingWebsite ?? "").trim() : "";
+  const savedLink = starterSiteDetails ? (starterSiteDetails.linkSaved === false ? prefillLink : starterSiteDetails.link) : prefillLink;
   const [details, setDetails] = useState<StarterSiteDetailFields>(
     () =>
       starterSiteDetails
-        ? { name: starterSiteDetails.name, category: starterSiteDetails.category, address: starterSiteDetails.address, phone: starterSiteDetails.phone }
-        : { name: businessName, category: category ?? "", address: address ?? "", phone: phone ?? "" }
+        ? { name: starterSiteDetails.name, category: starterSiteDetails.category, address: starterSiteDetails.address, phone: starterSiteDetails.phone, link: savedLink }
+        : { name: businessName, category: category ?? "", address: address ?? "", phone: phone ?? "", link: prefillLink }
   );
-  const [confirmedDetails, setConfirmedDetails] = useState<StarterSiteDetailFields | null>(starterSiteDetails);
+  const [confirmedDetails, setConfirmedDetails] = useState<StarterSiteDetailFields | null>(
+    starterSiteDetails ? { name: starterSiteDetails.name, category: starterSiteDetails.category, address: starterSiteDetails.address, phone: starterSiteDetails.phone, link: savedLink } : null
+  );
   const detailsConfirmed = confirmedDetails !== null && sameDetails(confirmedDetails, details);
   const [showAddress, setShowAddress] = useState(!!details.address);
   const [showPhone, setShowPhone] = useState(!!details.phone);
@@ -331,6 +341,7 @@ export function StarterSiteBuilder({
         taglinePlacement,
         phone: details.phone.trim() || null,
         address: details.address.trim() || null,
+        actionLink: details.link.trim() || null,
         ownerHours,
         timeZone,
         placeId,
@@ -487,6 +498,7 @@ export function StarterSiteBuilder({
               }}
               confirmed={detailsConfirmed}
               prefilled={confirmedDetails === null}
+              prefillLink={prefillLink}
               onConfirmed={setConfirmedDetails}
             />
           </DesignerSection>

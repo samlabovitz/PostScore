@@ -2,14 +2,14 @@ import { describe, expect, test, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
-vi.mock("@/app/actions/niches", () => ({ setCompetitorAreas: vi.fn(), setCompetitorScope: vi.fn(), confirmBusinessNiche: vi.fn(), setBusinessNiche: vi.fn() }));
+vi.mock("@/app/actions/niches", () => ({ confirmBusinessNiche: vi.fn(), setBusinessNiche: vi.fn() }));
 
 import { applyScope, availableAreas, defaultAreas, effectiveAreas, groupCompetitors, scopeNote, scopeSummary, type CompetitorScope } from "./competitorScope";
 import { ownerStanding, rankBy, reportStanding } from "./competitorComparison";
 import { rankPoint, type SavedCompetitorEntry, type SavedCompetitorScan } from "./savedCompetitorScans";
 import { snapshotFromSavedRows } from "./monthlyReportExtras";
 import { LocaleProvider } from "./i18n";
-import { CompetitorGroups } from "@/app/business/[id]/competitors/CompetitorGroups";
+import { ComparedWithLine } from "@/app/business/[id]/competitors/CompetitorsView";
 import { NicheBanner } from "@/components/niche/NicheBanner";
 import { NichePicker } from "@/components/niche/NichePicker";
 
@@ -64,53 +64,37 @@ describe("grouping a saved scan", () => {
   });
 });
 
-describe("ranking scope", () => {
-  test("auto with fewer than 3 direct: direct + ticked areas, with the honest line (EN + ES)", () => {
-    const r = applyScope(SKATE_SCAN, SKATE);
-    expect(r.effective).toBe("wide");
-    expect(r.autoWidened).toBe(true);
-    expect(r.scan.entries).toHaveLength(7);
-    expect(scopeNote(r, SKATE, "en")).toBe("Few direct competitors nearby (skate & snow shop: 1), so we're also comparing you with sporting goods and other similar businesses nearby.");
-    expect(scopeNote(r, SKATE, "es")).toBe("Hay pocos competidores directos cerca (tienda de skate y snowboard: 1), así que también lo comparamos con artículos deportivos y otros negocios similares cercanos.");
+describe("ranking: the whole saved list (competitor selection v2)", () => {
+  test("no more narrowing: Automatic / Direct only / Direct + areas all rank against every saved competitor", () => {
+    for (const mode of ["auto", "direct", "wide"] as const) {
+      const r = applyScope(SKATE_SCAN, { ...SKATE, mode });
+      expect(r.scan.entries).toHaveLength(7);
+      expect(r.autoWidened).toBe(false);
+      expect(scopeNote(r, SKATE, "en")).toBeNull();
+    }
+    // The groups are still counted (for wording only).
+    expect(applyScope(SKATE_SCAN, SKATE).directCount).toBe(1);
   });
 
-  test("auto with 3+ direct: direct only, no line", () => {
-    const scan = { ...SKATE_SCAN, entries: [...SKATE_SCAN.entries, entry("Board Shop East", 40), entry("Snowboard Hut", 45)] };
-    const r = applyScope(scan, SKATE);
-    expect(r.effective).toBe("direct");
-    expect(r.directCount).toBe(3);
-    expect(scopeNote(r, SKATE, "en")).toBeNull();
-    expect(r.scan.entries.map((e) => e.name)).toEqual(["Switch Skate & Snow", "Zumiez Skate Shop", "Board Shop East", "Snowboard Hut"]);
-  });
-
-  test("the owner can switch: direct only, or wide with only the ticked areas", () => {
-    expect(applyScope(SKATE_SCAN, { ...SKATE, mode: "direct" }).scan.entries.map((e) => e.name)).toEqual(["Switch Skate & Snow", "Zumiez Skate Shop"]);
-    const wide = applyScope(SKATE_SCAN, { ...SKATE, mode: "wide", areas: ["sporting_goods"] });
-    expect(wide.scan.entries.map((e) => e.name)).toEqual(["American Sports", "Switch Skate & Snow", "Zumiez Skate Shop"]);
-    expect(wide.autoWidened).toBe(false);
-  });
-
-  test("ticks are kept only when they're real areas of the niche; none saved = all", () => {
+  test("ticks are kept only when they're real areas of the niche; none saved = all — they still widen the scan's search", () => {
     expect(effectiveAreas("skate_snow", null)).toEqual(availableAreas("skate_snow"));
     expect(effectiveAreas("skate_snow", ["sporting_goods", "yoga", "nonsense"])).toEqual(["sporting_goods"]);
   });
 
-  test("one shared rank: rankBy / ownerStanding / reportStanding / rank history / monthly report agree", () => {
+  test("one shared rank: rankBy / ownerStanding / reportStanding / rank history / monthly report agree — with or without a saved scope", () => {
     const direct = { ...SKATE, mode: "direct" as const };
-    expect(ownerStanding(SKATE_SCAN, direct)).toMatchObject({ rank: 1, of: 2 });
-    expect(rankBy(SKATE_SCAN, "overall", direct).find((r) => r.entry.isSubject)?.rank).toBe(1);
-    expect(reportStanding(SKATE_SCAN, direct)).toMatchObject({ rank: 1, total: 2 });
-    expect(rankPoint(SKATE_SCAN, direct)).toMatchObject({ rank: 1, of: 2 });
-    // Wider set: behind American Sports and the hockey shop.
-    expect(ownerStanding(SKATE_SCAN, SKATE)).toMatchObject({ rank: 3, of: 7 });
-    // No scope: exactly as before.
-    expect(ownerStanding(SKATE_SCAN)).toMatchObject({ rank: 3, of: 7 });
+    for (const scope of [direct, SKATE, undefined]) {
+      expect(ownerStanding(SKATE_SCAN, scope)).toMatchObject({ rank: 3, of: 7 });
+      expect(rankBy(SKATE_SCAN, "overall", scope).find((r) => r.entry.isSubject)?.rank).toBe(3);
+      expect(reportStanding(SKATE_SCAN, scope)).toMatchObject({ rank: 3, total: 7 });
+      expect(rankPoint(SKATE_SCAN, scope)).toMatchObject({ rank: 3, of: 7 });
+    }
     const rows = SKATE_SCAN.entries.map((e) => ({ scan_id: "s1", created_at: SKATE_SCAN.createdAt, is_subject: e.isSubject, place_id: e.placeId, name: e.name, address: null, distance_meters: e.distanceMeters, rating: e.rating, review_count: e.reviewCount, has_website: true, total: e.total, grade: "C", scoring_version: "1", breakdown_json: null, price_level: null, photo_count: 5, website_url: null }));
-    expect(snapshotFromSavedRows(rows as never, direct)).toMatchObject({ rank: 1, totalCompetitors: 2 });
+    expect(snapshotFromSavedRows(rows as never, direct)).toMatchObject({ rank: 3, totalCompetitors: 7 });
   });
 
   test("PostAI is told who the rank is against", () => {
-    expect(scopeSummary(applyScope(SKATE_SCAN, SKATE), SKATE)).toContain("direct competitors (Skate & snow shop: 1) plus sporting goods, other similar businesses nearby — widened automatically");
+    expect(scopeSummary(applyScope(SKATE_SCAN, SKATE))).toBe("all 6 saved competitors — the businesses Google shows when customers search for this kind of business nearby");
   });
 });
 
@@ -123,20 +107,16 @@ describe("the UI pieces", () => {
     );
   const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&#x27;/g, "'").replace(/\s+/g, " ");
 
-  test("Competitors: groups, 'Counts for me' ticks, the scope toggle and the honest line", () => {
-    const html = wrap(<CompetitorGroups businessId="b1" scan={SKATE_SCAN} scope={SKATE} scoped={applyScope(SKATE_SCAN, SKATE)} enabled onScopeChange={() => {}} />);
-    const t = text(html);
-    expect(t).toContain("Your type: Skate & snow shop");
-    expect(t).toContain("Direct competitors · 1");
-    expect(t).toContain("Zumiez Skate Shop");
-    expect(t).toContain("Sporting goods · 1");
-    expect(t).toContain("Other similar businesses nearby · 4");
-    expect(html.match(/type="checkbox"/g)).toHaveLength(5);
-    expect(html).toMatch(/role="tab" aria-selected="true"[^>]*>Automatic</);
-    expect(html).toContain('data-testid="scope-note"');
-    const es = text(wrap(<CompetitorGroups businessId="b1" scan={SKATE_SCAN} scope={SKATE} scoped={applyScope(SKATE_SCAN, SKATE)} enabled onScopeChange={() => {}} />, "es"));
-    expect(es).toContain("Competidores directos · 1");
-    expect(es).toContain("Cuenta para mí");
+  test("Competitors: one line instead of the card — no 'Rank against' tabs, no 'Counts for me' ticks (EN + ES)", () => {
+    const query = { noun: "skate & snow shops", query: "skate & snow shops in Newark, DE" };
+    const html = wrap(<ComparedWithLine businessId="b1" count={6} comparedWith={query} fallbackNoun="shops" />);
+    expect(text(html)).toContain("Compared with 6 skate & snow shops near you — the ones Google shows when customers search “skate & snow shops in Newark, DE”.");
+    expect(html).toContain('href="/business/b1/settings#business-type"');
+    expect(html).toContain('href="#add-competitor"');
+    expect(html).not.toMatch(/Counts for me|Rank against|type="checkbox"|role="tab"/);
+    expect(text(wrap(<ComparedWithLine businessId="b1" count={6} comparedWith={query} fallbackNoun="tiendas" />, "es"))).toContain("Comparado con 6 tiendas cerca de usted: los que Google muestra cuando los clientes buscan “skate & snow shops in Newark, DE”.");
+    expect(text(wrap(<ComparedWithLine businessId="b1" count={3} comparedWith={{ noun: null, query: null }} fallbackNoun="salons" />))).toContain("Compared with 3 salons near you.");
+    expect(wrap(<ComparedWithLine businessId="b1" count={0} comparedWith={query} fallbackNoun="shops" />)).toBe("");
   });
 
   test("the one-time banner: 'We think you're…', the suggestion, and 'tell us' (EN + ES)", () => {
