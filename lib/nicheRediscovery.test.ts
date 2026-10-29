@@ -9,6 +9,9 @@ vi.mock("@/lib/google/places", async () => {
   const actual = await vi.importActual<typeof import("@/lib/google/places")>("@/lib/google/places");
   return {
     ...actual,
+    // Competitor selection v2's Text Search finds nothing here: these
+    // tests cover the Nearby Search fallback.
+    searchTextCompetitors: async () => [],
     searchNearbyPlaces: async (params: { includedTypes?: string[]; radiusMeters: number }) => {
       nearbyCalls.push(params);
       return respond(params);
@@ -46,14 +49,15 @@ beforeEach(() => {
 });
 
 describe("niche-aware competitor search", () => {
-  test("Mini Shop → Toy, game & hobby store: direct toy stores, then ONE call for the areas — ≤ 4 calls", async () => {
+  test("Mini Shop → Toy, game & hobby store: direct toy stores, then ONE call for the areas — ≤ 5 calls (with the Text Search)", async () => {
     respond = (p) => (p.includedTypes?.includes("toy_store") ? [place("Toy Barn", "toy_store"), place("Game Spot", "toy_store", 39.69)] : [place("Gift Corner", "gift_shop"), place("Big Store", "department_store")]);
     const types = nicheSearchTypes(TOY_SCOPE)!;
     expect(types.directTypes).toEqual(["toy_store"]);
     expect(types.wideTypes).toEqual(expect.arrayContaining(["gift_shop"]));
     const result = await findAndScoreCompetitors({ ...MINI_SHOP, niche: types }, "en");
     expect(result.status).toBe("ok");
-    expect(result.placesCalls).toBe(nearbyCalls.length);
+    // Every search counts: the Text Search (v2) plus the Nearby fallback.
+    expect(result.placesCalls).toBe(nearbyCalls.length + (result.textSearchCalls ?? 0));
     expect(nearbyCalls.length).toBeLessThanOrEqual(MAX_CALLS_PER_SCAN);
     // 3 radius tiers for the direct search (too few toy stores found), then the areas.
     expect(nearbyCalls.slice(0, -1).every((c) => c.includedTypes?.join() === "toy_store")).toBe(true);
@@ -80,8 +84,9 @@ describe("the month's cap and the 30-day cooldown", () => {
   test("cap: a scan runs only when its worst case fits; default 800, set by PLACES_SEARCH_MONTHLY_CAP", () => {
     expect(placesSearchMonthlyCap({})).toBe(800);
     expect(placesSearchMonthlyCap({ PLACES_SEARCH_MONTHLY_CAP: "900" })).toBe(900);
-    expect(canRunScan(796, 800)).toBe(true);
-    expect(canRunScan(797, 800)).toBe(false);
+    // Worst case 5: the Text Search + 4 Nearby fallback calls.
+    expect(canRunScan(795, 800)).toBe(true);
+    expect(canRunScan(796, 800)).toBe(false);
     expect(nextMonthStartUtc(new Date("2026-10-20T12:00:00Z"))).toBe("2026-11-01T00:00:00.000Z");
   });
 

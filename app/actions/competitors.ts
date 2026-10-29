@@ -11,6 +11,7 @@ import {
   competitorScanBlocker,
   findAndScoreCompetitors,
   isGenericType,
+  savedScanRow,
   type CompetitorSourceBusiness,
 } from "@/lib/competitors";
 import {
@@ -26,7 +27,7 @@ import {
 import { bizProfileById, resolveBizProfile } from "@/config/bizProfiles";
 import { DEFAULT_LOCALE, normalizeLocale, t } from "@/lib/i18n";
 import { getPlan } from "@/lib/premium";
-import { refreshAvailability, rescanRefreshesCompetitors, type RefreshAvailability } from "@/lib/competitorScanPolicy";
+import { competitorRefreshAvailability, refreshAvailability, rescanRefreshesCompetitors, type RefreshAvailability } from "@/lib/competitorScanPolicy";
 import type { Plan } from "@/lib/plan";
 import {
   groupSavedScans,
@@ -41,6 +42,8 @@ import { latestScoringProgress, unfinishedNewScanIds, withoutUnfinished, type Sc
 import { loadBusinessNiche, loadCompetitorScope, type BusinessNicheState } from "@/lib/businessNiche.server";
 import { canRunScan, nextMonthStartUtc, placesSearchMonthlyCap } from "@/lib/placesSearchBudget";
 import { scopeGroupLabel, nicheSearchTypes } from "@/lib/competitorScope";
+import { applyOverrides, overridesFromRows, scanOverrides, type CompetitorOverride } from "@/lib/competitorOverrides";
+import { nicheScanFields } from "@/lib/competitorNicheRule";
 
 
 export type { CompetitorRankPoint, SavedCompetitorEntry, SavedCompetitorScan } from "@/lib/savedCompetitorScans";
@@ -107,6 +110,8 @@ export type GetCompetitorsResult =
       selectionUpdated?: boolean;
       /** "Also nearby, with few or no reviews yet" — never ranked or scored. */
       alsoNearby?: AlsoNearbyListing[];
+      /** Competitors the owner removed (with the reason) — "Removed by you". */
+      removedByOwner?: CompetitorOverride[];
       /** "The nearest established … are {min}–{max} miles away" (mostly over 5 mi). */
       distanceNote?: { min: number; max: number } | null;
       refresh: RefreshAvailability;
@@ -193,8 +198,10 @@ export async function getCompetitorsWithClient(
   // one is shown meanwhile, with honest progress. The 30-day refresh limit
   // still counts it.
   const allRows = (scanRows ?? []) as SavedScanRow[];
+  // The owner's Remove / Add apply to the list shown right away.
+  const overrides = await loadCompetitorOverrides(supabase, businessId);
   const scans = groupSavedScans(withoutUnfinished(allRows, unfinished));
-  const latest = scans[0] ?? null;
+  const latest = scans[0] ? applyOverrides(scans[0], overrides) : null;
   const newestSavedAt = allRows[0]?.created_at ?? null;
 
   return {
@@ -208,19 +215,20 @@ export async function getCompetitorsWithClient(
     latest,
     rankHistory: scans.map((s) => rankPoint(s, niche?.scope)).reverse(),
     selectionUpdated: await competitorSelectionNote(businessId),
-    alsoNearby: latest
+    alsoNearby: (latest
       ? await alsoNearbyFor(supabase, latest, allRows, [row.primary_type, ...(row.categories ?? []), ...((niche && nicheSearchTypes(niche.scope)?.directTypes) ?? [])])
-      : [],
+      : []
+    ).filter((l) => !overrides.some((o) => o.action === "removed" && o.placeId === l.placeId)),
     distanceNote: latest ? distanceNote(latest.entries.filter((e) => !e.isSubject)) : null,
+    removedByOwner: overrides.filter((o) => o.action === "removed"),
     niche,
     // Free: "Refresh" only when the latest scan found no competitors (the
     // one exception — right away, no cooldown).
-    refresh:
-      plan === "free"
-        ? latest && !latest.entries.some((e) => !e.isSubject)
-          ? { allowed: true, nextAvailableAt: null }
-          : { allowed: false, nextAvailableAt: null }
-        : refreshAvailability(newestSavedAt, now),
+    // The plan's own limit (competitorRefreshAvailability) — the same
+    // rule refreshCompetitors checks on the server.
+    refresh: plan
+      ? competitorRefreshAvailability(plan, newestSavedAt, now, !!latest && !latest.entries.some((e) => !e.isSubject))
+      : refreshAvailability(newestSavedAt, now),
     scanBlocker: competitorScanBlocker({
       lat: row.lat,
       lng: row.lng,
@@ -275,6 +283,9 @@ export async function runAndSaveCompetitorScanWithClient(
   businessId: string,
   options: {
     enforceCooldown: boolean;
+    /** With enforceCooldown: the account's plan decides how often
+     * (competitorRefreshAvailability). Without it, the 30-day limit. */
+    plan?: Plan;
     now?: Date;
     scan?: typeof findAndScoreCompetitors;
     /** Starts the background full scoring (tests replace it). */
@@ -289,7 +300,10 @@ export async function runAndSaveCompetitorScanWithClient(
   // Archived ("Yes, we've closed"): no competitor scans.
   if (await isBusinessArchived(supabase, businessId)) return { status: "error", message: t(DEFAULT_LOCALE, "dashboard.closed.archived.blocked") };
   if (options.enforceCooldown) {
-    const availability = refreshAvailability(await latestCompetitorScanAt(supabase, businessId), now);
+    const latestAt = await latestCompetitorScanAt(supabase, businessId);
+    const availability = options.plan
+      ? competitorRefreshAvailability(options.plan, latestAt, now, latestAt !== null && (await latestScanFoundNone(supabase, businessId)) === true)
+      : refreshAvailability(latestAt, now);
     if (!availability.allowed && availability.nextAvailableAt) {
       return { status: "too_soon", nextAvailableAt: availability.nextAvailableAt };
     }
@@ -335,6 +349,8 @@ export async function runAndSaveCompetitorScanWithClient(
     verified_website_url: row.verified_website_url,
     website_trust_overrides_json: row.website_trust_overrides_json,
     niche: niche ? nicheSearchTypes(niche.scope) : null,
+    ...nicheScanFields(niche?.resolved, niche?.scope, row.website ?? row.verified_website_url),
+    ownerOverrides: scanOverrides(await loadCompetitorOverrides(supabase, businessId)),
   };
 
   let result;
@@ -346,6 +362,10 @@ export async function runAndSaveCompetitorScanWithClient(
   }
   // Every search call counts toward the month, found anything or not.
   await (options.logCalls ?? logPlacesSearchCalls)(businessId, result.placesCalls ?? 0).catch(() => undefined);
+  // Owner-added competitors the searches missed (one Details call each).
+  if ((result.detailsCalls ?? 0) > 0) {
+    await import("@/lib/placesDetailsBudget.server").then((m) => m.logPlacesDetailsCall(businessId, "competitor_added", result.detailsCalls)).catch(() => undefined);
+  }
   // "Didn't run" is never shown as "found none": a failed search or a scan
   // that couldn't search (no location, only generic types) says so.
   if (result.status !== "ok") {
@@ -357,29 +377,7 @@ export async function runAndSaveCompetitorScanWithClient(
   }
 
   const scanId = randomUUID();
-  const rows = result.ranked.map((r) => ({
-    scan_id: scanId,
-    business_id: businessId,
-    is_subject: r.isSubject,
-    place_id: r.placeId,
-    name: r.name,
-    address: r.address,
-    distance_meters: r.distanceMeters,
-    rating: r.rating,
-    review_count: r.reviewCount,
-    has_website: r.hasWebsite,
-    total: r.breakdown.total,
-    grade: r.breakdown.grade,
-    scoring_version: r.breakdown.scoringVersion,
-    breakdown_json: r.breakdown,
-    price_level: r.priceLevel,
-    photo_count: r.photoCount,
-    website_url: r.websiteUrl ?? null,
-    phone: r.listing?.phone ?? null,
-    opening_hours: r.listing ? { weekday: r.listing.openingHours, periods: r.listing.openingHoursPeriods } : null,
-    categories: r.listing?.categories ?? null,
-    business_status: r.listing?.businessStatus ?? null,
-  }));
+  const rows = result.ranked.map((r) => savedScanRow(r, scanId, businessId));
 
   // "Also nearby" rides on the owner's own row (supabase/competitor-also-nearby.sql);
   // before that file is run the scan saves without it.
@@ -423,7 +421,8 @@ async function defaultStartScoring(scanId: string, businessId: string, competito
   startCompetitorScoring(scanId);
 }
 
-/** "Refresh competitors" — one paid scan, at most once per 30 days. */
+/** "Refresh competitors" — one paid scan, as often as the plan allows
+ * (lib/competitorScanPolicy.ts competitorRefreshAvailability). */
 /** Whether the latest saved scan found no competitors at all (only the
  * business itself); null when there's no scan. */
 async function latestScanFoundNone(supabase: SupabaseClient, businessId: string): Promise<boolean | null> {
@@ -453,7 +452,8 @@ export async function refreshCompetitors(businessId: string): Promise<SaveCompet
     const { data: row } = await supabase.from("businesses").select("language").eq("id", businessId).maybeSingle();
     return { status: "error", message: t(normalizeLocale(row?.language), "dashboard.free.competitorsLocked") };
   }
-  return runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: true });
+  // Grow: every 7 days; Premium and Multi: every 24 hours (their re-scan limit).
+  return runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: true, plan: await getPlan() });
 }
 
 /**
@@ -820,4 +820,15 @@ export async function getLocalBenchmark(...args: Parameters<typeof getLocalBench
 const getLatestCompetitorSnapshotCached = requestCache(getLatestCompetitorSnapshotUncached);
 export async function getLatestCompetitorSnapshot(...args: Parameters<typeof getLatestCompetitorSnapshotUncached>): Promise<Awaited<ReturnType<typeof getLatestCompetitorSnapshotUncached>>> {
   return getLatestCompetitorSnapshotCached(...args);
+}
+
+/** The owner's Remove / Add choices (supabase/competitor-overrides.sql);
+ * empty before the file is run or on any read error. */
+async function loadCompetitorOverrides(supabase: SupabaseClient, businessId: string): Promise<CompetitorOverride[]> {
+  try {
+    const { data, error } = await supabase.from("competitor_overrides").select("place_id, action, reason, name, created_at").eq("business_id", businessId);
+    return error ? [] : overridesFromRows((data ?? []) as Array<Record<string, unknown>>);
+  } catch {
+    return [];
+  }
 }

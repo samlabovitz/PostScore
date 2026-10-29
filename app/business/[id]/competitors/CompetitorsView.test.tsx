@@ -85,11 +85,24 @@ describe("Competitors page", () => {
     expect(html).toContain("Compared over time");
   });
 
-  test("one score everywhere: the hero shows the owner's own PostScore — no separate 'comparable' number", () => {
-    const html = render();
-    expect(html).toMatch(/Your PostScore<\/span><span[^>]*>71</);
-    expect(html).not.toContain("Comparable score");
-    expect(html).not.toContain("Full PostScore");
+  test("the hero's score is labeled as compared like for like, with a small link to the full PostScore (EN + ES)", () => {
+    const html = renderToStaticMarkup(
+      <LocaleProvider locale="en">
+        <CompetitorsView businessId="biz" data={DATA} fullScore={80} />
+      </LocaleProvider>
+    ).replace(/&#x27;/g, "'");
+    expect(html).toMatch(/Your PostScore — compared like for like<\/span><span[^>]*>71</);
+    expect(html).toContain("Listing, reviews and website. Review replies, recent reviews and customer details aren't counted, because competitors can't be checked for them.");
+    expect(html).toMatch(/<a[^>]*href="\/business\/biz"[^>]*>Your full PostScore: <!-- -->80<!-- --> →<\/a>|<a[^>]*href="\/business\/biz"[^>]*>Your full PostScore: 80 →<\/a>/);
+    const es = renderToStaticMarkup(
+      <LocaleProvider locale="es">
+        <CompetitorsView businessId="biz" data={DATA} fullScore={80} />
+      </LocaleProvider>
+    );
+    expect(es).toContain("Su PostScore — comparado en igualdad de condiciones");
+    expect(es).toContain("Su PostScore completo: 80 →");
+    // Without the full score: no link, never a made-up number.
+    expect(render()).not.toContain("Your full PostScore");
   });
 
   test("lineup: #1, lowest and area average are labeled; a zoom note when the scale doesn't start at 0", () => {

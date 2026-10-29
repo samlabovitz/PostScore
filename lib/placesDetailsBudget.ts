@@ -30,7 +30,9 @@ export type PlacesDetailsKind =
   /** Any other re-scan caller. */
   | "rescan"
   /** A one-off measuring script (scripts/scoringDryRun.ts). */
-  | "dry_run";
+  | "dry_run"
+  /** A competitor the owner added that this scan's searches didn't return. */
+  | "competitor_added";
 
 export const PLACES_DETAILS_KINDS: readonly PlacesDetailsKind[] = [
   "onboarding",
@@ -42,6 +44,7 @@ export const PLACES_DETAILS_KINDS: readonly PlacesDetailsKind[] = [
   "website_only",
   "rescan",
   "dry_run",
+  "competitor_added",
 ];
 
 /** Billed Details calls — what the cap counts (photos-only is free). */

@@ -87,6 +87,27 @@ export interface PoolEntry {
   kin?: number;
   /** One of the owner's own ticked "also competes with" areas. */
   area?: boolean;
+  /** Competitor selection v2: this place's position (0 = first) in Google's
+   * Text Search results for the customer's query — who customers see first. */
+  textRank?: number;
+  /** The owner added it ("Add a competitor") — always kept, labeled. */
+  ownerAdded?: boolean;
+}
+
+/** How many Text Search results Google returns at most (one page). */
+export const TEXT_SEARCH_PAGE = 20;
+
+/**
+ * Competitor selection v2 relevance, 0–1, among places already of the same
+ * kind: Google's own order for the customer's query (45%), review count
+ * (30%, log scale — 1,000 reviews is full) and distance (25%, 0 at the
+ * 15-mile limit). A place Text Search didn't return gets no order points.
+ */
+export function relevanceScore(p: Pick<PoolEntry, "textRank" | "distanceMeters" | "candidate">): number {
+  const order = typeof p.textRank === "number" ? Math.max(0, 1 - p.textRank / TEXT_SEARCH_PAGE) : 0;
+  const reviews = Math.min(1, Math.log10(reviewCountOf(p.candidate) + 1) / 3);
+  const distance = Math.max(0, 1 - p.distanceMeters / MAX_COMPETITOR_DISTANCE_METERS);
+  return 0.45 * order + 0.3 * reviews + 0.25 * distance;
 }
 
 /**
@@ -109,6 +130,12 @@ export function selectCompetitors(pool: PoolEntry[], max: number): PoolEntry[] {
     .filter((p) => withinMaxDistance(p.distanceMeters))
     .filter((p) => (seen.has(p.candidate.placeId) ? false : (seen.add(p.candidate.placeId), true)));
   const nearest = (a: PoolEntry, b: PoolEntry) => a.distanceMeters - b.distanceMeters;
+  // v2: when Text Search ran, the most relevant first (Google's order,
+  // reviews, distance); otherwise nearest first, as before.
+  const byText = unique.some((p) => typeof p.textRank === "number");
+  const best = byText ? (a: PoolEntry, b: PoolEntry) => relevanceScore(b) - relevanceScore(a) || nearest(a, b) : nearest;
+  // The owner's own additions are always kept (within the cap).
+  const owner = unique.filter((p) => p.ownerAdded);
   const closestKin = (a: PoolEntry, b: PoolEntry) => (a.kin ?? 99) - (b.kin ?? 99) || nearest(a, b);
   const department = (p: PoolEntry) => isDepartmentListing(p.candidate);
   const standalone = unique.filter((p) => !department(p));
@@ -116,17 +143,19 @@ export function selectCompetitors(pool: PoolEntry[], max: number): PoolEntry[] {
 
   const sameKind = (p: PoolEntry) => !p.broader && !p.area;
   const picked = [
-    ...standalone.filter((p) => sameKind(p) && established(p)).sort(nearest),
-    ...standalone.filter((p) => p.area && established(p)).sort(nearest),
+    ...owner,
+    ...standalone.filter((p) => !p.ownerAdded && sameKind(p) && established(p)).sort(best),
+    ...standalone.filter((p) => !p.ownerAdded && p.area && established(p)).sort(nearest),
   ].slice(0, max);
   const fillers = [
     ...standalone.filter((p) => p.broader && established(p)).sort(closestKin),
-    ...standalone.filter((p) => sameKind(p) && !established(p)).sort(nearest),
+    ...standalone.filter((p) => !p.ownerAdded && sameKind(p) && !established(p)).sort(best),
     ...standalone.filter((p) => !sameKind(p) && !established(p)).sort(closestKin),
     ...unique.filter(department).sort((a, b) => Number(established(b)) - Number(established(a)) || nearest(a, b)),
   ];
   for (const p of fillers) {
     if (picked.length >= Math.min(SMALL_SAMPLE_BELOW, max)) break;
+    if (picked.includes(p)) continue;
     picked.push(p);
   }
   return picked.sort(nearest);

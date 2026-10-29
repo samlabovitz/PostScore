@@ -8,6 +8,9 @@ vi.mock("@/lib/google/places", async () => {
   const actual = await vi.importActual<typeof import("@/lib/google/places")>("@/lib/google/places");
   return {
     ...actual,
+    // Competitor selection v2's Text Search finds nothing here: these
+    // tests cover the Nearby Search fallback.
+    searchTextCompetitors: async () => [],
     searchNearbyPlaces: async (params: { includedTypes?: string[] }) => {
       nearbyCalls.push(params);
       return nearbyResult;

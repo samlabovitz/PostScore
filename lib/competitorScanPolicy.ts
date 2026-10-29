@@ -1,4 +1,5 @@
 import type { Plan } from "@/lib/plan";
+import { RESCAN_COOLDOWN_HOURS } from "@/lib/rescanPolicy";
 
 // When a paid competitor scan may run (Part B, cost-first competitor
 // scan — see ~/Desktop/auto-competitors-plan.md). Pure: no network, no
@@ -8,7 +9,9 @@ import type { Plan } from "@/lib/plan";
 //   it never calls Google.
 // - A business's first scan runs automatically once (see
 //   ensureFirstCompetitorScan in app/actions/competitors.ts).
-// - "Refresh competitors" is allowed once per COOLDOWN_DAYS.
+// - "Refresh competitors" follows the plan (competitorRefreshAvailability):
+//   Free never after the first scan, Grow every 7 days, Premium and Multi
+//   every 24 hours (their re-scan limit).
 // - The monthly report reuses a scan younger than COOLDOWN_DAYS.
 // - scripts/rescan-all.ts scans competitors only when asked to
 //   (--with-competitors / --competitors-only).
@@ -42,6 +45,26 @@ export interface RefreshAvailability {
 export function refreshAvailability(latestScanAt: string | null, now: Date): RefreshAvailability {
   if (!latestScanAt) return { allowed: true, nextAvailableAt: null };
   const next = Date.parse(latestScanAt) + COMPETITOR_REFRESH_COOLDOWN_DAYS * DAY_MS;
+  if (!Number.isFinite(next) || now.getTime() >= next) return { allowed: true, nextAvailableAt: null };
+  return { allowed: false, nextAvailableAt: new Date(next).toISOString() };
+}
+
+/**
+ * "Refresh competitors" on the Competitors page, by plan — checked on the
+ * server before any Google call, and the page's button and "Available
+ * again on …" date use the same answer:
+ * - Free: never after the first scan (the one exception: no scan yet, or
+ *   the latest one found NO competitors — then right away);
+ * - Grow: at most once every GROW_RESCAN_COMPETITOR_DAYS (7) days;
+ * - Premium and Multi: whenever they could re-scan — the same rolling
+ *   RESCAN_COOLDOWN_HOURS (24) as their own re-scan.
+ * `nextAvailableAt` is null when allowed now, and on Free (never again).
+ */
+export function competitorRefreshAvailability(plan: Plan, latestScanAt: string | null, now: Date, latestFoundNone = false): RefreshAvailability {
+  if (!latestScanAt) return { allowed: true, nextAvailableAt: null };
+  if (plan === "free") return { allowed: latestFoundNone, nextAvailableAt: null };
+  const wait = plan === "grow" ? GROW_RESCAN_COMPETITOR_DAYS * DAY_MS : RESCAN_COOLDOWN_HOURS * 3_600_000;
+  const next = Date.parse(latestScanAt) + wait;
   if (!Number.isFinite(next) || now.getTime() >= next) return { allowed: true, nextAvailableAt: null };
   return { allowed: false, nextAvailableAt: new Date(next).toISOString() };
 }

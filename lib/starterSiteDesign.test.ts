@@ -350,6 +350,25 @@ describe("the storefront map", () => {
     expect(html).not.toMatch(/<script[^>]+src=/);
   });
 
+  test("never an empty box: the map sits on a placeholder (address + where to tap), at most 640px wide (EN + ES)", () => {
+    const html = buildStarterSiteHtml({ ...SALON, storefront: true, mapEmbed: KEY });
+    const box = html.indexOf('<div class="map-box">');
+    const fallback = html.indexOf('<div class="map-fallback" aria-hidden="true">', box);
+    const frame = html.indexOf('<iframe class="map"', box);
+    // The placeholder comes first, the map frame draws over it.
+    expect(box).toBeGreaterThan(-1);
+    expect(fallback).toBeGreaterThan(box);
+    expect(frame).toBeGreaterThan(fallback);
+    expect(html.slice(fallback, frame)).toContain("20 W Main St #1, Irvington, NY 10533, USA");
+    expect(html.slice(fallback, frame)).toContain("If the map doesn’t appear, use “Open in Google Maps” below.");
+    // Google's map page has no background: transparent frame on the placeholder.
+    expect(html).toMatch(/\.map \{ position: relative; z-index: 1;[^}]*background: transparent; \}/);
+    expect(html).toMatch(/\.map-box \{[^}]*max-width: 640px;[^}]*\}/);
+    // "Open in Google Maps" is a real button under the map.
+    expect(html).toMatch(/<a class="btn btn-outline" href="[^"]*"[^>]*>Open in Google Maps →<\/a>/);
+    expect(buildStarterSiteHtml({ ...SALON, locale: "es", storefront: true, mapEmbed: KEY })).toContain("Si el mapa no aparece, use “Abrir en Google Maps” abajo.");
+  });
+
   test("no key: the address and link, no iframe at all", () => {
     for (const mapEmbed of [null, undefined, { key: "  ", placeId: "ChIJx" }]) {
       const html = buildStarterSiteHtml({ ...SALON, storefront: true, mapEmbed });

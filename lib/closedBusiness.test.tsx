@@ -12,7 +12,7 @@ vi.mock("@/app/actions/actionPlan", () => ({ markTaskDone: vi.fn() }));
 const nearby: { results: unknown[] } = { results: [] };
 vi.mock("@/lib/google/places", async () => {
   const actual = await vi.importActual<typeof import("@/lib/google/places")>("@/lib/google/places");
-  return { ...actual, searchNearbyPlaces: async () => nearby.results };
+  return { ...actual, searchTextCompetitors: async () => [], searchNearbyPlaces: async () => nearby.results };
 });
 
 import { LocaleProvider, type Locale } from "@/lib/i18n";

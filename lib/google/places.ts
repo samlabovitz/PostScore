@@ -526,6 +526,59 @@ export async function searchNearbyPlaces(params: {
   return (data.places ?? []).map(normalizeNearby);
 }
 
+/**
+ * Competitor selection v2: Text Search (New) with the query a customer
+ * would type ("hair salons in Tarrytown, NY"), biased around the business
+ * — one page, up to 20 places, in Google's own order (who customers see
+ * first). Asks for the same listing fields as Nearby Search so every
+ * competitor is scored from this one call, never a Details call each.
+ * Counted with the other Text Search calls (~$0.035 with these fields).
+ */
+export async function searchTextCompetitors(
+  params: { textQuery: string; lat: number; lng: number; radiusMeters: number; pageSize?: number },
+  fetchImpl: typeof fetch = fetch
+): Promise<NearbyCandidate[]> {
+  textSearchCalls++;
+  const res = await fetchPlacesApi(
+    `${PLACES_API_BASE}/places:searchText`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": getApiKey(),
+        "X-Goog-FieldMask": NEARBY_SEARCH_FIELD_MASK,
+      },
+      body: JSON.stringify({
+        textQuery: params.textQuery,
+        pageSize: params.pageSize ?? 20,
+        locationBias: {
+          circle: { center: { latitude: params.lat, longitude: params.lng }, radius: Math.min(params.radiusMeters, 50_000) },
+        },
+      }),
+    },
+    "Google Places text search",
+    fetchImpl
+  );
+  const data = (await res.json()) as { places?: RawNearbyPlace[] };
+  return (data.places ?? []).map(normalizeNearby);
+}
+
+/** A PlaceDetails (e.g. from lookupBusinessByPlaceId) as a search candidate. */
+export function candidateFromDetails(place: PlaceDetails): NearbyCandidate {
+  return {
+    placeId: place.placeId,
+    name: place.name,
+    formattedAddress: place.formattedAddress,
+    types: place.categories,
+    primaryType: place.primaryType,
+    primaryTypeDisplayName: place.primaryCategory,
+    businessStatus: place.businessStatus,
+    location: place.location,
+    priceLevel: place.priceLevel,
+    details: place,
+  };
+}
+
 /** Look up a business by name + free-form location (e.g. "Blue Bottle Coffee", "Oakland, CA"). */
 export async function lookupBusiness(
   name: string,

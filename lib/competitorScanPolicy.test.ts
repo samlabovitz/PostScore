@@ -4,6 +4,7 @@ import {
   competitorScanCostRange,
   competitorScanTargets,
   isScanFresh,
+  competitorRefreshAvailability,
   refreshAvailability,
 } from "./competitorScanPolicy";
 
@@ -51,5 +52,27 @@ describe("rescan-all competitor flag", () => {
     const c = competitorScanCostRange(10);
     expect(c.min).toBeCloseTo(0.35);
     expect(c.max).toBeCloseTo(1.05);
+  });
+});
+
+describe("competitorRefreshAvailability: by plan", () => {
+  const AT = "2026-10-29T12:00:00Z";
+  const at = (iso: string) => new Date(iso);
+  test("no scan yet: every plan, right away", () => {
+    for (const plan of ["free", "grow", "premium", "multi"] as const) expect(competitorRefreshAvailability(plan, null, at(AT))).toEqual({ allowed: true, nextAvailableAt: null });
+  });
+  test("Free: never after the first scan — unless it found no competitors", () => {
+    expect(competitorRefreshAvailability("free", AT, at("2027-01-01T00:00:00Z"))).toEqual({ allowed: false, nextAvailableAt: null });
+    expect(competitorRefreshAvailability("free", AT, at("2026-10-29T13:00:00Z"), true)).toEqual({ allowed: true, nextAvailableAt: null });
+  });
+  test("Grow: once every 7 days", () => {
+    expect(competitorRefreshAvailability("grow", AT, at("2026-11-05T11:59:00Z"))).toEqual({ allowed: false, nextAvailableAt: "2026-11-05T12:00:00.000Z" });
+    expect(competitorRefreshAvailability("grow", AT, at("2026-11-05T12:00:00Z"))).toEqual({ allowed: true, nextAvailableAt: null });
+  });
+  test("Premium and Multi: every 24 hours, like their re-scan", () => {
+    for (const plan of ["premium", "multi"] as const) {
+      expect(competitorRefreshAvailability(plan, AT, at("2026-10-30T11:00:00Z"))).toEqual({ allowed: false, nextAvailableAt: "2026-10-30T12:00:00.000Z" });
+      expect(competitorRefreshAvailability(plan, AT, at("2026-10-30T12:00:00Z"))).toEqual({ allowed: true, nextAvailableAt: null });
+    }
   });
 });

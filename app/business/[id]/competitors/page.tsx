@@ -6,17 +6,19 @@ import { loadUpgradeContext } from "@/lib/upgradePromos.server";
 import { Card } from "@/components/ui/Card";
 import { getCompetitors } from "@/app/actions/competitors";
 import { CompetitorsView } from "./CompetitorsView";
-import { getLastScanAt } from "@/app/actions/scoring";
+import { getLastScanAt, scoreBusinessById } from "@/app/actions/scoring";
 import { normalizeLocale } from "@/lib/i18n";
 import { competitorPageLines } from "@/lib/competitorSchedule";
 
 export default async function CompetitorsPage({ params }: { params: { id: string } }) {
   // Independent loads run together.
-  const [websiteOnly, fetched, lastScanAt, upgrade] = await Promise.all([
+  const [websiteOnly, fetched, lastScanAt, upgrade, scored] = await Promise.all([
     websiteOnlyGuard(params.id, "competitors"),
     getCompetitors(params.id),
     getLastScanAt(params.id),
     loadUpgradeContext(params.id, "competitors"),
+    // The owner's full PostScore — the same number as the Overview.
+    scoreBusinessById(params.id, "business"),
   ]);
   if (websiteOnly) return websiteOnly;
 
@@ -49,7 +51,7 @@ export default async function CompetitorsPage({ params }: { params: { id: string
     >
       <div className="flex flex-col gap-6">
         <StaleScanNotice businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} />
-        <CompetitorsView businessId={params.id} data={fetched} />
+        <CompetitorsView businessId={params.id} data={fetched} fullScore={scored.status === "ok" ? scored.result.breakdown.total : null} />
         {/* When competitors update, by plan (lib/competitorScanPolicy.ts). */}
         <p data-testid="competitors-schedule" className="-mt-2 text-[12.5px] text-ink-mute">
           {competitorPageLines(upgrade.plan, fetched.latest?.createdAt ?? null, normalizeLocale(fetched.language), fetched.timeZone, new Date()).join(" ")}

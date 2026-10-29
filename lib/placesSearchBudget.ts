@@ -1,11 +1,12 @@
-// Google Places SEARCH calls (Nearby Search) made by competitor scans,
+// Google Places SEARCH calls (Text Search and Nearby Search) made by competitor scans,
 // capped per calendar month by PLACES_SEARCH_MONTHLY_CAP (default 800, under
 // Google's free monthly amount). Pure.
 
-/** The most one competitor scan can make: 3 radius tiers + 1 more — the
- * small-town search (lib/competitors.ts) or, if that isn't needed, the
- * wider-areas call. */
-export const MAX_CALLS_PER_SCAN = 4;
+/** The most one competitor scan can make: the Text Search (competitor
+ * selection v2), then — only when it found fewer than 5 of the same kind —
+ * the Nearby Search fallback: 3 radius tiers + 1 more (the small-town
+ * search or the wider-areas call). */
+export const MAX_CALLS_PER_SCAN = 5;
 export const DEFAULT_PLACES_SEARCH_MONTHLY_CAP = 800;
 
 export function placesSearchMonthlyCap(env: Record<string, string | undefined> = process.env): number {

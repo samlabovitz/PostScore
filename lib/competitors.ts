@@ -5,7 +5,7 @@
 // scores, no invented "rank" metric other than PostScore itself.
 
 import { MAX_SEARCH_RADIUS_MILES, SMALL_TOWN_RADIUS_MILES } from "@/lib/competitorScanPolicy";
-import { alsoNearby, establishedCount, MIN_ESTABLISHED_COMPETITORS, selectCompetitors, temporarilyClosedNearby, type AlsoNearbyListing, type PoolEntry } from "@/lib/competitorQuality";
+import { alsoNearby, establishedCount, MIN_ESTABLISHED_COMPETITORS, relevanceScore, selectCompetitors, temporarilyClosedNearby, type AlsoNearbyListing, type PoolEntry } from "@/lib/competitorQuality";
 import { MAX_CALLS_PER_SCAN } from "@/lib/placesSearchBudget";
 import { GOOGLE_TABLE_A_TYPES } from "@/lib/google/placeTypesTableA";
 import {
@@ -16,10 +16,18 @@ import {
   type ScoreBreakdown,
 } from "@/lib/scoring";
 import {
+  candidateFromDetails,
+  lookupBusinessByPlaceId,
   searchNearbyPlaces,
+  searchTextCompetitors,
   type NearbyCandidate,
   type PlaceDetails,
 } from "@/lib/google/places";
+import { competitorTextQuery } from "@/lib/competitorQuery";
+import { categoryFamilyFor, comparableTypesFor, NON_HAIR_SERVICE_EXCLUSIONS } from "@/lib/categoryFamily";
+import { onePerBrand } from "@/lib/competitorChains";
+import { classifyCompetitor, nicheById } from "@/lib/niches";
+import type { NicheRule } from "@/lib/competitorNicheRule";
 import { t, tPlural, type Locale } from "@/lib/i18n";
 
 /** How many nearest comparable competitors to score and show, at most —
@@ -66,6 +74,14 @@ const RADIUS_TIERS_METERS = [
 ];
 /** The one small-town search (lib/competitorQuality.ts). */
 const SMALL_TOWN_RADIUS_METERS = SMALL_TOWN_RADIUS_MILES * METERS_PER_MILE;
+/** v2: Text Search finding this many of the same kind is enough — fewer,
+ * and the Nearby Search fallback runs. */
+export const TEXT_SEARCH_ENOUGH = 5;
+/** Google's own top results for the customer's query count as the same
+ * kind for a niche with no Google type of its own (with the same type). */
+const TEXT_TOP_TRUSTED = 3;
+/** At most this many owner-added competitors per business. */
+export const MAX_OWNER_ADDED = 5;
 /** Nearby Search returns at most 20 places per call. */
 const NEARBY_PAGE_SIZE = 20;
 
@@ -115,6 +131,15 @@ export interface CompetitorSourceBusiness extends BusinessScoringRow {
    * generic listing), `wideTypes` the ticked "also competes with" areas'
    * types (ONE extra search at 3 mi). Absent = the search as before. */
   niche?: { directTypes: string[]; wideTypes: string[] } | null;
+  /** Competitor selection v2: the niche's English label and parent type,
+   * for the customer's query words ("hair salons in Tarrytown, NY"). */
+  queryNiche?: { labelEn: string; parent: string } | null;
+  /** Who counts as the same kind beyond Google's types — a niche with no
+   * Google type of its own, or a practice (lib/competitorNicheRule.ts). */
+  nicheRule?: NicheRule | null;
+  /** The owner's own choices (supabase/competitor-overrides.sql): places
+   * they removed are never picked; places they added are always kept. */
+  ownerOverrides?: { removed: string[]; added: string[] } | null;
   /** The subject's own cached Google price-level enum (e.g.
    * "PRICE_LEVEL_MODERATE"), for the Pricing page's price-level
    * comparison. Optional/undefined for callers (like the Competitors
@@ -185,8 +210,14 @@ export interface CompetitorScanResult {
   /** True if the narrowest radius tier didn't find enough comparable
    * competitors and the search had to widen. */
   searchWidened: boolean;
-  /** Google Places search calls this scan made (Nearby Search). */
+  /** Google Places search calls this scan made (Text Search + Nearby Search). */
   placesCalls?: number;
+  /** Of those, Text Search calls (competitor selection v2). */
+  textSearchCalls?: number;
+  /** The customer's query Text Search ran, or null when it didn't. */
+  textQuery?: string | null;
+  /** Place Details calls for owner-added competitors the searches missed. */
+  detailsCalls?: number;
   /** Subject + successfully scored competitors, sorted by real PostScore
    * descending. Empty when status !== "ok". */
   ranked: RankedCompetitor[];
@@ -309,78 +340,8 @@ function firstSpecificType(types: Array<string | null | undefined>): string | nu
   return null;
 }
 
-/**
- * Curated groups of Google place-type slugs that are genuinely
- * comparable even when they're not the exact same type — e.g. a real
- * "beauty_salon" that does hair is a true competitor to a "hair_salon"
- * the way a customer (or Google Maps itself) would see it, and a
- * "burrito_restaurant" is a real competitor to a "mexican_restaurant"
- * even though Google filed them under different specific type slugs.
- * This is a disciplined allowlist, not a fuzzy match: a candidate only
- * counts as comparable if it shares a type with the subject directly, OR
- * both the subject's and the candidate's types fall in the SAME curated
- * group here — and every member of every group here is itself a SPECIFIC
- * type, never one of GENERIC_TYPES. Anything not in one of these groups
- * still requires an exact type match — a barbershop (a distinct, more
- * male-grooming-focused business model) or an unrelated type like a gym
- * stays excluded, on purpose.
- */
-const CATEGORY_FAMILIES: string[][] = [
-  ["hair_salon", "beauty_salon", "hair_care"],
-  [
-    "mexican_restaurant",
-    "tex_mex_restaurant",
-    "burrito_restaurant",
-    "taco_restaurant",
-    // Real, live Google data (see DEBUG_COMPETITORS): a genuine burrito
-    // place — El Diablo Burritos, Newark DE — comes back with
-    // primaryType "southwestern_us_restaurant" and "burrito_restaurant"
-    // only as a secondary type. Since categorizeMatch() requires the
-    // family match on primaryType (a secondary tag isn't enough — see
-    // its doc comment), that business never matched "mexican_restaurant"
-    // subjects (e.g. Chipotle) in either direction until this was added.
-    "southwestern_us_restaurant",
-  ],
-];
-
-function categoryFamilyFor(type: string): string[] | null {
-  return CATEGORY_FAMILIES.find((family) => family.includes(type)) ?? null;
-}
-
-/**
- * The full set of type slugs that should count as "comparable" to the
- * subject's reference type — just the type itself if it's not part of
- * any curated family, or every member of its family when it is. Used
- * both to ask Nearby Search for the right types server-side and to
- * double-check comparability once results come back.
- */
-function comparableTypesFor(referenceType: string): string[] {
-  return categoryFamilyFor(referenceType) ?? [referenceType];
-}
-
-/**
- * Google tags many nail salons, day spas, and massage studios with
- * "beauty_salon" alongside their own more specific type — that's real
- * Google data, not a mistake on Google's part, but it means the
- * hair/salon family match above would otherwise wave through a nail spa
- * as if it were a hair salon. A candidate carrying ANY of these clearly
- * different personal-care service types is excluded from a family match
- * even when it also carries a family type — e.g. a place tagged
- * [beauty_salon, nail_salon] is a nail place, not a hair-salon
- * competitor. This only applies to family matches (see isSameCategory);
- * it never touches an exact-type match outside the family. Add to this
- * list as more false positives turn up.
- */
-const NON_HAIR_SERVICE_EXCLUSIONS = [
-  "nail_salon",
-  "spa",
-  "day_spa",
-  "massage",
-  "massage_spa",
-  "barber_shop",
-  "tanning_studio",
-];
-
+// The curated type families and their exclusions live in
+// lib/categoryFamily.ts (shared with the Competitors page's niche groups).
 /**
  * A business currently isn't a real competitor if it isn't currently
  * open for business — Google's businessStatus enum is OPERATIONAL,
@@ -500,6 +461,11 @@ function categorizeMatch(
   return { matches: false, reason: "no reference category available on the subject at all" };
 }
 
+/** Why a candidate is or isn't the subject's kind (diagnostics). */
+export function explainCategoryMatch(candidate: NearbyCandidate, ref: { type: string | null; displayName: string | null }): { matches: boolean; reason: string } {
+  return categorizeMatch(candidate, ref);
+}
+
 /** True only when we can verify the candidate shares the subject's
  * category — see categorizeMatch() for the full rule and reasoning. */
 function isSameCategory(
@@ -575,7 +541,10 @@ export function searchableTypes(types: readonly (string | null | undefined)[] | 
 
 export async function findAndScoreCompetitors(
   subject: CompetitorSourceBusiness,
-  locale: Locale
+  locale: Locale,
+  /** Diagnostics only (scripts/competitors-v2-dry-run.ts): every raw search
+   * result, in Google's order. Never changes the result. */
+  observe?: { onSearch?: (stage: "text" | "nearby", candidates: NearbyCandidate[]) => void }
 ): Promise<CompetitorScanResult> {
   const categoryLabel = subject.category ?? subject.primaryType ?? null;
 
@@ -655,9 +624,30 @@ export async function findAndScoreCompetitors(
   // With the owner's fallback types, a candidate is comparable when its
   // PRIMARY Google type is one of them (same "primary identity" rule as
   // always, over the owner's whole type set).
-  const matchesCategory = (c: NearbyCandidate) =>
+  // v2 fix (the real Hair express case): a niche's or owner's own types
+  // match the same way Google's would — the curated family and its
+  // exclusions included — so a "beauty_salon" salon counts for a hair
+  // salon and a nail spa tagged "hair_salon" doesn't.
+  const nicheRule = subject.nicheRule ?? null;
+  const nicheKindOk = (c: NearbyCandidate): boolean => {
+    if (!nicheRule) return true;
+    const kind = classifyCompetitor(c.details?.name ?? c.name, { nicheId: nicheRule.nicheId, areas: nicheRule.areas, parent: nicheRule.parent }, c.types);
+    // A practice: out only when the name says a different practice.
+    if (nicheRule.professional) return !(kind && kind !== nicheRule.nicheId && kind !== nicheRule.parent && nicheById(kind)?.parent === nicheRule.parent);
+    // A niche with no Google type of its own: its name or types must say
+    // so — or Google itself puts it in its top 3 for the customer's exact
+    // query with the same Google type (The Ski Bum for "skate & snow shops").
+    if (nicheRule.googleTypes.length > 0 || kind === nicheRule.nicheId) return true;
+    const rank = textRankById.get(c.placeId);
+    return rank !== undefined && rank < TEXT_TOP_TRUSTED && matchesType(c);
+  };
+  const textRankById = new Map<string, number>();
+  // A niche with no Google type of its own: its own classification is the
+  // rule (a ski shop listed as "sporting goods" or "clothing store" both count).
+  const matchesCategory = (c: NearbyCandidate) => (nicheRule && !nicheRule.professional && nicheRule.googleTypes.length === 0 ? nicheKindOk(c) : nicheKindOk(c) && matchesType(c));
+  const matchesType = (c: NearbyCandidate) =>
     fallbackTypes.length > 0
-      ? !!c.primaryType && fallbackTypes.includes(c.primaryType)
+      ? fallbackTypes.some((type) => isSameCategory(c, { type, displayName: referenceDisplayName }))
       : broadFood
         ? isFoodServiceType(c.primaryType)
         : isSameCategory(c, { type: referenceType, displayName: referenceDisplayName });
@@ -671,18 +661,57 @@ export async function findAndScoreCompetitors(
   // "Also nearby" as "Temporarily closed", never ranked. Permanently
   // closed ones are dropped entirely.
   const closedForNow: Array<{ placeId: string; name: string | null; distanceMeters: number; reviewCount: number | null }> = [];
-  const addToPool = (candidates: NearbyCandidate[], accept: (c: NearbyCandidate) => boolean, broader: boolean, kinOrder: string[] = []) => {
+  const removedByOwner = new Set(subject.ownerOverrides?.removed ?? []);
+  const addedByOwner = new Set((subject.ownerOverrides?.added ?? []).filter((id) => !removedByOwner.has(id)));
+  const addToPool = (candidates: NearbyCandidate[], accept: (c: NearbyCandidate) => boolean, broader: boolean, kinOrder: string[] = [], textRanks?: Map<string, number>) => {
     for (const c of candidates) {
+      // The owner removed it: never picked, never listed.
+      if (removedByOwner.has(c.placeId)) continue;
+      // The owner added it: kept whatever its type (checked separately below).
+      if (addedByOwner.has(c.placeId)) {
+        if (c.placeId !== subject.placeId && c.location !== null && !pool.some((p) => p.candidate.placeId === c.placeId)) {
+          pool.push({ candidate: c, distanceMeters: haversineMeters(subjectLocation, c.location), ownerAdded: true, textRank: textRanks?.get(c.placeId) });
+        }
+        continue;
+      }
       if (!broader && c.businessStatus === "CLOSED_TEMPORARILY" && c.placeId !== subject.placeId && c.location !== null && accept(c)) {
         closedForNow.push({ placeId: c.placeId, name: c.details?.name ?? c.name, distanceMeters: haversineMeters(subjectLocation, c.location), reviewCount: c.details?.userRatingCount ?? null });
       }
       if (c.placeId === subject.placeId || isClosedStatus(c.businessStatus) || c.location === null || !accept(c)) continue;
       if (pool.some((p) => p.candidate.placeId === c.placeId)) continue;
       const kin = broader && c.primaryType ? kinOrder.indexOf(c.primaryType) : -1;
-      pool.push({ candidate: c, distanceMeters: haversineMeters(subjectLocation, c.location), broader, kin: kin >= 0 ? kin : undefined });
+      pool.push({ candidate: c, distanceMeters: haversineMeters(subjectLocation, c.location), broader, kin: kin >= 0 ? kin : undefined, textRank: textRanks?.get(c.placeId) });
     }
   };
   let searchedMeters = 0;
+
+  // v2: first, what customers see when they search — "hair salons in
+  // Tarrytown, NY", biased around the business, one page in Google's own
+  // order. Nearby Search below is only the fallback when that turns up
+  // fewer than TEXT_SEARCH_ENOUGH of the same kind.
+  const textQuery = competitorTextQuery({ nicheLabelEn: subject.queryNiche?.labelEn, nicheParent: subject.queryNiche?.parent, primaryType: specificType, address: subject.address });
+  let textSearchCalls = 0;
+  let textSameKind = 0;
+  if (textQuery) {
+    try {
+      placesCalls++;
+      textSearchCalls++;
+      const results = await searchTextCompetitors({ textQuery, lat: subjectLocation.lat, lng: subjectLocation.lng, radiusMeters: RADIUS_TIERS_METERS[1] });
+      observe?.onSearch?.("text", results);
+      const ranks = new Map(results.map((c, i) => [c.placeId, i]));
+      ranks.forEach((rank, id) => textRankById.set(id, rank));
+      const before = pool.length;
+      addToPool(results, matchesCategory, false, [], ranks);
+      textSameKind = pool.length - before;
+      debugLog(`text search "${textQuery}": ${results.length} raw, ${textSameKind} same kind`);
+      if (DEBUG_COMPETITORS) {
+        for (const c of results) debugLog("  text", { name: c.name, primaryType: c.primaryType, types: c.types ?? [], ...categorizeMatch(c, { type: referenceType, displayName: referenceDisplayName }) });
+      }
+    } catch (err) {
+      // Never silent; the Nearby Search fallback still runs.
+      console.error(`[competitors] Text Search failed for ${subject.name ?? subject.placeId}:`, err instanceof Error ? err.message : err);
+    }
+  }
 
   // Start at the narrowest radius tier ("who is actually nearby") and
   // only widen while there aren't enough ESTABLISHED competitors (open,
@@ -690,7 +719,7 @@ export async function findAndScoreCompetitors(
   // comes back full, the same 20 nearest would just repeat in a wider
   // circle, so the next tier asks Google for the most popular instead.
   let lastFull = false;
-  for (let tier = 0; tier < RADIUS_TIERS_METERS.length; tier++) {
+  for (let tier = 0; tier < RADIUS_TIERS_METERS.length && textSameKind < TEXT_SEARCH_ENOUGH; tier++) {
     let candidates: NearbyCandidate[];
     const rankPreference = tier > 0 && lastFull ? "POPULARITY" : "DISTANCE";
     try {
@@ -710,6 +739,7 @@ export async function findAndScoreCompetitors(
     }
     searchedMeters = RADIUS_TIERS_METERS[tier];
     lastFull = candidates.length >= NEARBY_PAGE_SIZE;
+    observe?.onSearch?.("nearby", candidates);
 
     if (DEBUG_COMPETITORS) {
       debugLog(
@@ -747,12 +777,15 @@ export async function findAndScoreCompetitors(
   // PLACES_SEARCH_MONTHLY_CAP check before the scan still covers it.
   const foodSubject = broadFood || isFoodServiceType(referenceType) || fallbackTypes.some((x) => isFoodServiceType(x));
   const broaderTypes = foodSubject ? BROAD_FOOD_SEARCH_TYPES : broaderTypesFor(referenceType, false);
-  const acceptBroader = (c: NearbyCandidate) => (foodSubject ? isFoodServiceType(c.primaryType) : !!c.primaryType && broaderTypes.includes(c.primaryType));
+  // A niche with no Google type of its own: no broader-type fill — a broad
+  // type is all those would share (pool supplies for a skate shop).
+  const noTypeNiche = !!nicheRule && !nicheRule.professional && nicheRule.googleTypes.length === 0;
+  const acceptBroader = (c: NearbyCandidate) => !noTypeNiche && (foodSubject ? isFoodServiceType(c.primaryType) : !!c.primaryType && broaderTypes.includes(c.primaryType));
   // The owner's own ticked "also competes with" areas keep their call:
   // the small-town search only runs when a call is left beyond that.
   const wideTypes = usableFallbackTypes(subject.niche?.wideTypes).filter((t) => !fallbackTypes.includes(t)).slice(0, 50);
   const reservedForAreas = wideTypes.length > 0 ? 1 : 0;
-  if (establishedCount(pool) < MIN_ESTABLISHED_COMPETITORS && placesCalls < MAX_CALLS_PER_SCAN - reservedForAreas) {
+  if (textSameKind < TEXT_SEARCH_ENOUGH && establishedCount(pool) < MIN_ESTABLISHED_COMPETITORS && placesCalls < MAX_CALLS_PER_SCAN - reservedForAreas) {
     const farTypes = searchableTypes(Array.from(new Set([...(includedTypes ?? []), ...broaderTypes]))).slice(0, 50);
     try {
       placesCalls++;
@@ -804,8 +837,31 @@ export async function findAndScoreCompetitors(
     }
   }
 
-  // Which of everything found become the competitors: the 10 most
-  // relevant, established first (lib/competitorQuality.ts).
+  // The owner's own additions that no search returned: one Place Details
+  // call each (at most MAX_OWNER_ADDED), so they're always compared.
+  let detailsCalls = 0;
+  for (const placeId of Array.from(addedByOwner).slice(0, MAX_OWNER_ADDED)) {
+    if (pool.some((p) => p.candidate.placeId === placeId)) continue;
+    detailsCalls++;
+    const found = await lookupBusinessByPlaceId(placeId);
+    if (found.status !== "found" || isClosedStatus(found.place.businessStatus)) continue;
+    addToPool([candidateFromDetails(found.place)], () => true, false);
+  }
+
+  // One location per chain, never the business's own brand — the most
+  // relevant location of each kept (lib/competitorChains.ts).
+  const brands = onePerBrand(
+    pool,
+    (p) => ({ name: p.candidate.details?.name ?? p.candidate.name, website: p.candidate.details?.website ?? null, ownerAdded: p.ownerAdded }),
+    { name: subject.name, website: subject.website ?? subject.verified_website_url ?? null },
+    (a, b) => relevanceScore(b) - relevanceScore(a) || a.distanceMeters - b.distanceMeters
+  );
+  if (brands.ownBrand.length + brands.sameChain.length > 0) debugLog(`brands: ${brands.ownBrand.length} own-brand and ${brands.sameChain.length} same-chain listings left out`);
+  pool.splice(0, pool.length, ...brands.kept);
+
+  // Which of everything found become the competitors: the owner's own
+  // additions, then the 10 most relevant, established first
+  // (lib/competitorQuality.ts).
   comparable = selectCompetitors(pool, MAX_COMPETITORS);
   const sameKindSkipped = alsoNearby(
     pool
@@ -858,32 +914,7 @@ export async function findAndScoreCompetitors(
       continue;
     }
 
-    const row = placeDetailsToScoringRow(place);
-    const breakdown = scoreBusiness(businessRowToScoringInput(row), locale);
-
-    scoredCompetitors.push({
-      placeId: candidate.placeId,
-      name: place.name ?? candidate.name ?? "(unnamed listing)",
-      isSubject: false,
-      address: place.formattedAddress,
-      distanceMeters,
-      rating: place.rating,
-      reviewCount: place.userRatingCount,
-      // v1.11.0: a Facebook/Instagram/Yelp page is not a website.
-      hasWebsite: isRealWebsite(place.website),
-      websiteUrl: place.website ?? null,
-      listing: {
-        phone: place.phone,
-        openingHours: place.openingHours,
-        openingHoursPeriods: place.openingHoursPeriods,
-        categories: place.categories,
-        businessStatus: place.businessStatus,
-      },
-      googleMapsUri: place.googleMapsUri,
-      breakdown,
-      priceLevel: place.priceLevel,
-      photoCount: place.photoCount,
-    });
+    scoredCompetitors.push(rankedFromCandidate(candidate, distanceMeters, locale));
   }
 
   const subjectEntry: RankedCompetitor = {
@@ -943,6 +974,70 @@ export async function findAndScoreCompetitors(
     subjectRank,
     unscored,
     placesCalls,
+    textSearchCalls,
+    textQuery,
+    detailsCalls,
     alsoNearby: [...sameKindSkipped, ...temporarilyClosedNearby(closedForNow)],
   };
+}
+
+/** One competitor, scored from its own search listing (no network call). */
+export function rankedFromCandidate(candidate: NearbyCandidate, distanceMeters: number, locale: Locale): RankedCompetitor {
+  const place = candidate.details;
+  const breakdown = scoreBusiness(businessRowToScoringInput(placeDetailsToScoringRow(place)), locale);
+  return {
+    placeId: candidate.placeId,
+    name: place.name ?? candidate.name ?? "(unnamed listing)",
+    isSubject: false,
+    address: place.formattedAddress,
+    distanceMeters,
+    rating: place.rating,
+    reviewCount: place.userRatingCount,
+    // v1.11.0: a Facebook/Instagram/Yelp page is not a website.
+    hasWebsite: isRealWebsite(place.website),
+    websiteUrl: place.website ?? null,
+    listing: {
+      phone: place.phone,
+      openingHours: place.openingHours,
+      openingHoursPeriods: place.openingHoursPeriods,
+      categories: place.categories,
+      businessStatus: place.businessStatus,
+    },
+    googleMapsUri: place.googleMapsUri,
+    breakdown,
+    priceLevel: place.priceLevel,
+    photoCount: place.photoCount,
+  };
+}
+
+/** The competitor_scans row saved for one ranked entry. */
+export function savedScanRow(r: RankedCompetitor, scanId: string, businessId: string) {
+  return {
+    scan_id: scanId,
+    business_id: businessId,
+    is_subject: r.isSubject,
+    place_id: r.placeId,
+    name: r.name,
+    address: r.address,
+    distance_meters: r.distanceMeters,
+    rating: r.rating,
+    review_count: r.reviewCount,
+    has_website: r.hasWebsite,
+    total: r.breakdown.total,
+    grade: r.breakdown.grade,
+    scoring_version: r.breakdown.scoringVersion,
+    breakdown_json: r.breakdown,
+    price_level: r.priceLevel,
+    photo_count: r.photoCount,
+    website_url: r.websiteUrl ?? null,
+    phone: r.listing?.phone ?? null,
+    opening_hours: r.listing ? { weekday: r.listing.openingHours, periods: r.listing.openingHoursPeriods } : null,
+    categories: r.listing?.categories ?? null,
+    business_status: r.listing?.businessStatus ?? null,
+  };
+}
+
+/** Straight-line distance between two points, in meters. */
+export function distanceMetersBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  return haversineMeters(a, b);
 }

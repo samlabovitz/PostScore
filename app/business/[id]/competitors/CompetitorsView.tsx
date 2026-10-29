@@ -1,5 +1,6 @@
 "use client";
 
+import { AddCompetitor, RemoveCompetitorButton, RemovedByOwner } from "./CompetitorOwnerControls";
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -113,7 +114,7 @@ function formatMetric(m: MetricDef, v: number | null, locale: Locale, asShare = 
 function socialPlatformOf(entry: SavedCompetitorEntry): string | null {
   return entry.breakdown?.checks.find((c) => c.id === "website.has_website")?.meta?.socialPlatform ?? null;
 }
-export function CompetitorsView({ businessId, data }: { businessId: string; data: OkResult }) {
+export function CompetitorsView({ businessId, data, fullScore = null }: { businessId: string; data: OkResult; /** The Overview's full PostScore. */ fullScore?: number | null }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
   const [view, setView] = useState<CompareView>("overall");
@@ -194,7 +195,7 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
         </Card>
       ) : (
         <>
-          {scan.entries.some((e) => !e.isSubject) && <Hero scan={scan} competitorNoun={data.competitorNoun} />}
+          {scan.entries.some((e) => !e.isSubject) && <Hero scan={scan} competitorNoun={data.competitorNoun} businessId={businessId} fullScore={fullScore} />}
           {latest && <CompetitorsReviewGoal scan={latest} scope={scope} noun={data.competitorNoun} />}
 
           {latest && scope && scoped && (
@@ -221,8 +222,10 @@ export function CompetitorsView({ businessId, data }: { businessId: string; data
               className="mb-3"
             />
             {data.distanceNote && <DistanceNote note={data.distanceNote} noun={data.competitorNoun} />}
-            <RankedList scan={scan} view={view} />
+            <RankedList scan={scan} view={view} businessId={businessId} />
             {(data.alsoNearby ?? []).length > 0 && <AlsoNearby listings={data.alsoNearby!} />}
+            <RemovedByOwner businessId={businessId} removed={data.removedByOwner ?? []} />
+            <AddCompetitor businessId={businessId} />
             <GoogleMapsAttribution />
           </div>
 
@@ -346,7 +349,7 @@ function CompetitorsReviewGoal({ scan, scope, noun }: { scan: SavedCompetitorSca
   );
 }
 
-function Hero({ scan, competitorNoun }: { scan: SavedCompetitorScan; competitorNoun: string }) {
+function Hero({ scan, competitorNoun, businessId, fullScore }: { scan: SavedCompetitorScan; competitorNoun: string; businessId: string; fullScore: number | null }) {
   const locale = useLocale();
   const hero = heroSummary(scan, "overall");
 
@@ -361,7 +364,18 @@ function Hero({ scan, competitorNoun }: { scan: SavedCompetitorScan; competitorN
       <Lineup scan={scan} />
 
       <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-paper-line pt-4 sm:grid-cols-4">
-        <Stat label={t(locale, "dashboard.competitors.statYourScore")} value={hero.ownerScore ?? "—"} />
+        {/* The like-for-like score (only the checks competitors also
+            get), so it can differ from the Overview's full PostScore. */}
+        <div data-testid="comparable-score" className="col-span-2 flex min-w-0 flex-col gap-1 sm:col-span-1">
+          <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-mute">{t(locale, "dashboard.competitors.statYourScoreComparable")}</span>
+          <span className="font-serif text-[24px] font-semibold leading-tight text-ink tabular-nums">{hero.ownerScore ?? "—"}</span>
+          <span className="text-[12px] leading-snug text-ink-soft">{t(locale, "dashboard.competitors.comparableExplain")}</span>
+          {fullScore !== null && (
+            <Link href={`/business/${businessId}`} className="text-[12px] font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline">
+              {t(locale, "dashboard.competitors.fullScoreLink", { score: fullScore })}
+            </Link>
+          )}
+        </div>
         <Stat label={t(locale, "dashboard.competitors.statLocalAverage")} value={hero.localAverage ?? "—"} />
         <Stat label={t(locale, "dashboard.competitors.statTop")} value={hero.topScore ?? "—"} detail={hero.topName} />
         <Stat
@@ -641,7 +655,7 @@ function LeadTrail({ scan, businessId }: { scan: SavedCompetitorScan; businessId
   );
 }
 
-function RankedList({ scan, view }: { scan: SavedCompetitorScan; view: CompareView }) {
+function RankedList({ scan, view, businessId }: { scan: SavedCompetitorScan; view: CompareView; businessId: string }) {
   const locale = useLocale();
   const ranked = rankBy(scan, view);
   const anyNotChecked = (view === "overall" || view === "website") && scan.entries.some(websiteCouldntBeChecked);
@@ -650,14 +664,14 @@ function RankedList({ scan, view }: { scan: SavedCompetitorScan; view: CompareVi
       {anyNotChecked && <p className="mb-2.5 text-[12.5px] text-ink-soft">{t(locale, "dashboard.competitors.someWebsitesNotChecked")}</p>}
       <ol className="flex flex-col gap-2.5">
         {ranked.map((r) => (
-          <CompetitorCard key={r.entry.placeId} entry={r.entry} rank={r.rank} view={view} />
+          <CompetitorCard key={r.entry.placeId} entry={r.entry} rank={r.rank} view={view} businessId={businessId} />
         ))}
       </ol>
     </>
   );
 }
 
-function CompetitorCard({ entry, rank, view }: { entry: SavedCompetitorEntry; rank: number; view: CompareView }) {
+function CompetitorCard({ entry, rank, view, businessId }: { entry: SavedCompetitorEntry; rank: number; view: CompareView; businessId: string }) {
   const locale = useLocale();
   const [open, setOpen] = useState(false);
   const price = priceLevelToSymbol(entry.priceLevel);
@@ -685,6 +699,11 @@ function CompetitorCard({ entry, rank, view }: { entry: SavedCompetitorEntry; ra
             )}
             {!entry.isSubject && entry.distanceMeters !== null && (
               <span className="text-[12px] text-ink-mute">{miles(entry.distanceMeters, locale)}</span>
+            )}
+            {entry.ownerAdded && (
+              <span data-testid="owner-added-tag" className="rounded-md bg-brass/10 px-1.5 py-0.5 text-[11px] font-semibold text-ink">
+                {t(locale, "dashboard.memory.addedByYou")}
+              </span>
             )}
             {/* Kept only when there weren't enough established competitors
                 (lib/competitorQuality.ts) — said plainly. */}
@@ -745,15 +764,18 @@ function CompetitorCard({ entry, rank, view }: { entry: SavedCompetitorEntry; ra
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-medium text-ink-soft hover:text-ink"
-      >
-        <IconChevronDown size={14} className={cn("transition-transform", open && "rotate-180")} />
-        {open ? t(locale, "dashboard.competitors.hideDetails") : t(locale, "dashboard.competitors.showDetails")}
-      </button>
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="inline-flex items-center gap-1 text-[12.5px] font-medium text-ink-soft hover:text-ink"
+        >
+          <IconChevronDown size={14} className={cn("transition-transform", open && "rotate-180")} />
+          {open ? t(locale, "dashboard.competitors.hideDetails") : t(locale, "dashboard.competitors.showDetails")}
+        </button>
+        {!entry.isSubject && <RemoveCompetitorButton businessId={businessId} placeId={entry.placeId} name={entry.name} />}
+      </div>
       {open && <CheckDetail entry={entry} />}
     </li>
   );

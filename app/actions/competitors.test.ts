@@ -151,6 +151,39 @@ describe("Refresh competitors: once per 30 days", () => {
   });
 });
 
+describe("Refresh competitors follows the plan (server-side, before any paid call)", () => {
+  const scanned = (iso: string) => fakeSupabase({ businesses: [BUSINESS], competitor_scans: [{ created_at: iso, is_subject: true, place_id: "p-owner" }, { created_at: iso, is_subject: false, place_id: "rival" }] });
+
+  test("Grow: refused inside 7 days, with the right date; allowed after", async () => {
+    const early = scanned("2026-10-12T18:00:00Z");
+    expect(await runAndSaveCompetitorScanWithClient(early.client, "biz", { enforceCooldown: true, plan: "grow", now: NOW })).toEqual({ status: "too_soon", nextAvailableAt: "2026-10-19T18:00:00.000Z" });
+    expect(scanSpy).not.toHaveBeenCalled();
+    const later = scanned("2026-10-09T15:00:00Z");
+    expect((await runAndSaveCompetitorScanWithClient(later.client, "biz", { enforceCooldown: true, plan: "grow", now: NOW })).status).toBe("saved");
+  });
+
+  test("Premium and Multi: the same 24 hours as their own re-scan", async () => {
+    for (const plan of ["premium", "multi"] as const) {
+      scanSpy.mockClear();
+      const recent = scanned("2026-10-16T10:00:00Z");
+      expect(await runAndSaveCompetitorScanWithClient(recent.client, "biz", { enforceCooldown: true, plan, now: NOW })).toEqual({ status: "too_soon", nextAvailableAt: "2026-10-17T10:00:00.000Z" });
+      expect(scanSpy).not.toHaveBeenCalled();
+      const dayOld = scanned("2026-10-15T15:00:00Z");
+      expect((await runAndSaveCompetitorScanWithClient(dayOld.client, "biz", { enforceCooldown: true, plan, now: NOW })).status).toBe("saved");
+    }
+  });
+
+  test("the page's button and 'Available again on…' use the same rule", async () => {
+    const grow = await getCompetitorsWithClient(scanned("2026-10-12T18:00:00Z").client, "biz", NOW, "grow");
+    expect(grow.status === "ok" && grow.refresh).toEqual({ allowed: false, nextAvailableAt: "2026-10-19T18:00:00.000Z" });
+    const premium = await getCompetitorsWithClient(scanned("2026-10-15T15:00:00Z").client, "biz", NOW, "premium");
+    expect(premium.status === "ok" && premium.refresh).toEqual({ allowed: true, nextAvailableAt: null });
+    // Free: never after a first scan that found competitors (no date to wait for).
+    const free = await getCompetitorsWithClient(scanned("2026-09-01T18:00:00Z").client, "biz", NOW, "free");
+    expect(free.status === "ok" && free.refresh).toEqual({ allowed: false, nextAvailableAt: null });
+  });
+});
+
 describe("the automatic first competitor scan", () => {
   test("runs once when the business has never been scanned", async () => {
     const { client, inserted } = fakeSupabase({ businesses: [BUSINESS], competitor_scans: [] });

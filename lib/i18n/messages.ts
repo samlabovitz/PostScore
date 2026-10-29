@@ -1283,6 +1283,30 @@ export type MessageKey =
   | "dashboard.closed.step.why"
   | "dashboard.closed.report.alert"
   | "dashboard.closed.report.alertTemporary"
+  | "dashboard.competitors.owner.remove"
+  | "dashboard.competitors.owner.why"
+  | "dashboard.competitors.owner.reason.closed"
+  | "dashboard.competitors.owner.reason.not_competitor"
+  | "dashboard.competitors.owner.reason.other"
+  | "dashboard.competitors.owner.restore"
+  | "dashboard.competitors.owner.removedHeading"
+  | "dashboard.competitors.owner.removedNote"
+  | "dashboard.competitors.owner.addHeading"
+  | "dashboard.competitors.owner.addHint"
+  | "dashboard.competitors.owner.addPlaceholder"
+  | "dashboard.competitors.owner.search"
+  | "dashboard.competitors.owner.searching"
+  | "dashboard.competitors.owner.add"
+  | "dashboard.competitors.owner.adding"
+  | "dashboard.competitors.owner.added"
+  | "dashboard.competitors.owner.alreadyAdded"
+  | "dashboard.competitors.owner.tooFar"
+  | "dashboard.competitors.owner.noHits"
+  | "dashboard.competitors.owner.capped"
+  | "dashboard.competitors.owner.addLimit"
+  | "dashboard.competitors.owner.notEnabled"
+  | "dashboard.competitors.owner.error"
+  | "dashboard.competitors.owner.miles"
   | "dashboard.hackedBanner.message"
   | "dashboard.hackedBanner.link"
   | "dashboard.website.security.needsWebPerson"
@@ -2476,6 +2500,7 @@ export type MessageKey =
   | "starterSite.defaultBusinessName"
   | "starterSite.footerBuiltWith"
   | "starterSite.mapTitle"
+  | "starterSite.mapFallback"
   | "starterSite.heroPhotoAlt"
   | "starterSite.contentPhotoAlt"
   // --- Business-type profiles (config/bizProfiles.ts). Step L8 (beat 1).
@@ -3545,6 +3570,9 @@ export type MessageKey =
   | "dashboard.competitors.someWebsitesNotChecked"
   | "dashboard.competitors.listingFactsNotSaved"
   | "dashboard.competitors.statYourScore"
+  | "dashboard.competitors.statYourScoreComparable"
+  | "dashboard.competitors.comparableExplain"
+  | "dashboard.competitors.fullScoreLink"
   | "dashboard.competitors.checkDone"
   | "dashboard.competitors.checkNeedsWork"
   | "dashboard.competitors.scoringProgress"
@@ -5202,7 +5230,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.no": "No",
     "dashboard.competitors.notListedByGoogle": "Not listed by Google",
     "dashboard.competitors.notChecked": "Not checked",
-    "dashboard.competitors.comparableNote": "Every business here gets the same full PostScore as yours — Google listing, reviews and website — so you’re compared like for like.",
+    "dashboard.competitors.comparableNote": "Every business here is scored on the same checks — Google listing, reviews and website — so you’re compared like for like.",
     "dashboard.competitors.comparedViaFallback": "Google's listing gives only a general category, so you're compared with the closest kinds of businesses nearby: {types}.",
     "placeType.accounting": "accounting firms",
     "placeType.amusement_center": "amusement centers",
@@ -5736,6 +5764,30 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.closed.step.why": "Google tells everyone searching for you that you're closed. Nothing else matters until that's fixed.",
     "dashboard.closed.report.alert": "Google shows {name} as permanently closed. If you're still open, mark it open in Google Business Profile now — customers are being told you're closed.",
     "dashboard.closed.report.alertTemporary": "Google shows {name} as temporarily closed. If you've reopened, update it in Google Business Profile.",
+    "dashboard.competitors.owner.remove": "Remove",
+    "dashboard.competitors.owner.why": "Why?",
+    "dashboard.competitors.owner.reason.closed": "Closed",
+    "dashboard.competitors.owner.reason.not_competitor": "Not really a competitor",
+    "dashboard.competitors.owner.reason.other": "Other",
+    "dashboard.competitors.owner.restore": "Restore",
+    "dashboard.competitors.owner.removedHeading": "Removed by you",
+    "dashboard.competitors.owner.removedNote": "These stay off your list on every future scan.",
+    "dashboard.competitors.owner.addHeading": "Add a competitor",
+    "dashboard.competitors.owner.addHint": "Missing someone you compete with? Search Google by name — they'll stay on your list on every future scan.",
+    "dashboard.competitors.owner.addPlaceholder": "Business name",
+    "dashboard.competitors.owner.search": "Search Google",
+    "dashboard.competitors.owner.searching": "Searching…",
+    "dashboard.competitors.owner.add": "Add",
+    "dashboard.competitors.owner.adding": "Adding…",
+    "dashboard.competitors.owner.added": "Added {name}.",
+    "dashboard.competitors.owner.alreadyAdded": "Already added",
+    "dashboard.competitors.owner.tooFar": "More than 15 miles away",
+    "dashboard.competitors.owner.noHits": "Google didn't find that name near you. Try the name as it appears on Google Maps.",
+    "dashboard.competitors.owner.capped": "This month's Google searches are used up. Please try again next month.",
+    "dashboard.competitors.owner.addLimit": "You can add up to 5 competitors.",
+    "dashboard.competitors.owner.notEnabled": "This isn't switched on yet. Nothing was changed.",
+    "dashboard.competitors.owner.error": "Something went wrong. Nothing was changed — please try again.",
+    "dashboard.competitors.owner.miles": "{miles} mi",
     "dashboard.hackedBanner.message": "Your website may be hacked — we found spam content on it.",
     "dashboard.hackedBanner.link": "See what we found →",
     "dashboard.website.security.needsWebPerson": "Needs a web person",
@@ -7085,6 +7137,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "starterSite.defaultBusinessName": "Your Business",
     "starterSite.footerBuiltWith": "Site built with PostScore",
     "starterSite.mapTitle": "Map to {name}",
+    "starterSite.mapFallback": "If the map doesn’t appear, use “Open in Google Maps” below.",
     "starterSite.heroPhotoAlt": "{name} hero photo",
     "starterSite.contentPhotoAlt": "{name} photo",
 
@@ -8318,6 +8371,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.someWebsitesNotChecked": "Some websites couldn’t be checked — their rank is based on the other checks.",
     "dashboard.competitors.listingFactsNotSaved": "Couldn’t check: this scan didn’t save the listing’s phone and hours to compare with the website.",
     "dashboard.competitors.statYourScore": "Your PostScore",
+    "dashboard.competitors.statYourScoreComparable": "Your PostScore — compared like for like",
+    "dashboard.competitors.comparableExplain": "Listing, reviews and website. Review replies, recent reviews and customer details aren't counted, because competitors can't be checked for them.",
+    "dashboard.competitors.fullScoreLink": "Your full PostScore: {score} →",
     "dashboard.competitors.checkDone": "Done",
     "dashboard.competitors.checkNeedsWork": "Needs work",
     "dashboard.competitors.scoringProgress": "Checking {done} of {total} competitor websites…",
@@ -9902,7 +9958,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.no": "No",
     "dashboard.competitors.notListedByGoogle": "Google no lo indica",
     "dashboard.competitors.notChecked": "No verificado",
-    "dashboard.competitors.comparableNote": "Cada negocio recibe el mismo PostScore completo que el suyo —ficha de Google, reseñas y sitio web—, para compararlos en igualdad de condiciones.",
+    "dashboard.competitors.comparableNote": "Cada negocio se puntúa con las mismas comprobaciones —ficha de Google, reseñas y sitio web—, para compararlos en igualdad de condiciones.",
     "dashboard.competitors.comparedViaFallback": "La ficha de Google solo indica una categoría general, por lo que se le compara con los negocios más parecidos de la zona: {types}.",
     "placeType.accounting": "despachos contables",
     "placeType.amusement_center": "centros de entretenimiento",
@@ -10323,6 +10379,30 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.closed.step.why": "Google les dice a todos los que lo buscan que cerró. Nada más importa hasta corregirlo.",
     "dashboard.closed.report.alert": "Google muestra {name} como cerrado permanentemente. Si sigue abierto, márquelo como abierto en su Perfil de Negocio de Google ahora — a los clientes se les dice que cerró.",
     "dashboard.closed.report.alertTemporary": "Google muestra {name} como cerrado temporalmente. Si ya reabrió, actualícelo en su Perfil de Negocio de Google.",
+    "dashboard.competitors.owner.remove": "Quitar",
+    "dashboard.competitors.owner.why": "¿Por qué?",
+    "dashboard.competitors.owner.reason.closed": "Cerrado",
+    "dashboard.competitors.owner.reason.not_competitor": "No es realmente un competidor",
+    "dashboard.competitors.owner.reason.other": "Otro motivo",
+    "dashboard.competitors.owner.restore": "Restaurar",
+    "dashboard.competitors.owner.removedHeading": "Quitados por usted",
+    "dashboard.competitors.owner.removedNote": "No volverán a su lista en ningún escaneo futuro.",
+    "dashboard.competitors.owner.addHeading": "Agregar un competidor",
+    "dashboard.competitors.owner.addHint": "¿Falta alguien con quien usted compite? Búsquelo en Google por su nombre; se quedará en su lista en cada escaneo futuro.",
+    "dashboard.competitors.owner.addPlaceholder": "Nombre del negocio",
+    "dashboard.competitors.owner.search": "Buscar en Google",
+    "dashboard.competitors.owner.searching": "Buscando…",
+    "dashboard.competitors.owner.add": "Agregar",
+    "dashboard.competitors.owner.adding": "Agregando…",
+    "dashboard.competitors.owner.added": "Se agregó {name}.",
+    "dashboard.competitors.owner.alreadyAdded": "Ya agregado",
+    "dashboard.competitors.owner.tooFar": "A más de 15 millas",
+    "dashboard.competitors.owner.noHits": "Google no encontró ese nombre cerca de usted. Pruebe con el nombre tal como aparece en Google Maps.",
+    "dashboard.competitors.owner.capped": "Las búsquedas de Google de este mes ya se usaron. Inténtelo de nuevo el próximo mes.",
+    "dashboard.competitors.owner.addLimit": "Puede agregar hasta 5 competidores.",
+    "dashboard.competitors.owner.notEnabled": "Esto aún no está activado. No se cambió nada.",
+    "dashboard.competitors.owner.error": "Algo salió mal. No se cambió nada; inténtelo de nuevo.",
+    "dashboard.competitors.owner.miles": "{miles} mi",
     "dashboard.hackedBanner.message": "Es posible que su sitio web haya sido hackeado — encontramos contenido spam en él.",
     "dashboard.hackedBanner.link": "Vea lo que encontramos →",
     "dashboard.website.security.needsWebPerson": "Necesita a un técnico web",
@@ -11566,6 +11646,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "starterSite.defaultBusinessName": "Su negocio",
     "starterSite.footerBuiltWith": "Sitio creado con PostScore",
     "starterSite.mapTitle": "Mapa de {name}",
+    "starterSite.mapFallback": "Si el mapa no aparece, use “Abrir en Google Maps” abajo.",
     "starterSite.heroPhotoAlt": "Foto principal de {name}",
     "starterSite.contentPhotoAlt": "Foto de {name}",
 
@@ -13114,6 +13195,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.someWebsitesNotChecked": "Algunos sitios web no se pudieron revisar; su posición se basa en las demás revisiones.",
     "dashboard.competitors.listingFactsNotSaved": "No se pudo revisar: este análisis no guardó el teléfono ni el horario de la ficha para compararlos con el sitio web.",
     "dashboard.competitors.statYourScore": "Su PostScore",
+    "dashboard.competitors.statYourScoreComparable": "Su PostScore — comparado en igualdad de condiciones",
+    "dashboard.competitors.comparableExplain": "Ficha, reseñas y sitio web. No se cuentan las respuestas a reseñas, las reseñas recientes ni los detalles para clientes, porque no se pueden comprobar en los competidores.",
+    "dashboard.competitors.fullScoreLink": "Su PostScore completo: {score} →",
     "dashboard.competitors.checkDone": "Hecho",
     "dashboard.competitors.checkNeedsWork": "Necesita mejoras",
     "dashboard.competitors.scoringProgress": "Revisando {done} de {total} sitios web de la competencia…",

@@ -12,6 +12,9 @@ vi.mock("@/lib/google/places", async () => {
   const actual = await vi.importActual<typeof import("@/lib/google/places")>("@/lib/google/places");
   return {
     ...actual,
+    // Competitor selection v2's Text Search finds nothing here: these
+    // tests cover the Nearby Search fallback.
+    searchTextCompetitors: async () => [],
     searchNearbyPlaces: async (params: { includedTypes?: string[]; includedPrimaryTypes?: string[]; radiusMeters: number }) => {
       nearbyCalls.push(params);
       // A wider radius includes everything nearer: repeat the last result.
@@ -93,7 +96,8 @@ describe("widening", () => {
     // Three radius tiers find just one sushi place; the small-town search finds more food places.
     nearbyResults = [[place("sushi-1", "sushi_restaurant")], [place("sushi-1", "sushi_restaurant")], [place("sushi-1", "sushi_restaurant")], [place("pizza-1", "pizza_restaurant"), place("thai-1", "thai_restaurant"), place("umami", "meal_takeaway")]];
     const result = await findAndScoreCompetitors({ ...UMAMI, primaryType: "sushi_restaurant", categories: ["sushi_restaurant", "restaurant"] }, "en");
-    expect(nearbyCalls).toHaveLength(MAX_CALLS_PER_SCAN);
+    // The Text Search took one of the scan's calls.
+    expect(nearbyCalls).toHaveLength(MAX_CALLS_PER_SCAN - 1);
     expect(nearbyCalls[3].includedPrimaryTypes).toEqual(["sushi_restaurant", ...BROAD_FOOD_SEARCH_TYPES]);
     expect(nearbyCalls[3].radiusMeters).toBeCloseTo(15 * 1609.34, 0);
     expect((nearbyCalls[3] as { rankPreference?: string }).rankPreference).toBe("POPULARITY");

@@ -12,6 +12,7 @@
 // rankBy / ownerStanding take this scope, so the Overview, reports, PDF,
 // "Since your last visit", PostAI and the Competitors page all agree.
 
+import { sameKindByTypes } from "@/lib/categoryFamily";
 import type { SavedCompetitorEntry, SavedCompetitorScan } from "@/lib/savedCompetitorScans";
 import { classifyCompetitor, isGeneralNiche, nicheById, nicheLabel } from "@/lib/niches";
 import type { Locale } from "@/lib/i18n";
@@ -68,8 +69,14 @@ export function groupCompetitors(entries: SavedCompetitorEntry[], scope: Pick<Co
   const otherId = scope.parent;
   const direct: SavedCompetitorEntry[] = [];
   const byArea = new Map<string, SavedCompetitorEntry[]>();
+  const nicheTypes = nicheById(scope.nicheId)?.googleTypes ?? [];
   for (const e of competitors) {
-    const niche = classifyCompetitor(e.name, { nicheId: scope.nicheId, areas, parent: scope.parent }, e.types);
+    // The same kind as the search decided (lib/categoryFamily.ts): by
+    // Google's types first — "Hair and Makeup Lounge" (hair_salon) and
+    // Ilda's Salon (beauty_salon) are hair salons, whatever a name keyword
+    // suggests. Names decide only when the types don't.
+    const byTypes = nicheTypes.some((t) => sameKindByTypes(e.types?.[0], e.types, t));
+    const niche = byTypes ? scope.nicheId : classifyCompetitor(e.name, { nicheId: scope.nicheId, areas, parent: scope.parent }, e.types);
     if (niche === scope.nicheId) direct.push(e);
     else {
       const area = niche && areas.includes(niche) ? niche : otherId;

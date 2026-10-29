@@ -585,9 +585,16 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   if (showAddress) {
     visit.push(`<div class="card${mapSrc ? " card--map" : ""}" id="location">
           <h2 class="sec-title">${secIcon("map")}${escapeHtml(t(locale, "starterSite.locationHeading"))}</h2>
-          ${mapSrc ? `<iframe class="map" src="${escapeHtml(mapSrc)}" referrerpolicy="no-referrer-when-downgrade" allowfullscreen title="${escapeHtml(t(locale, "starterSite.mapTitle", { name }))}"></iframe>` : ""}
+          ${
+            mapSrc
+              ? `<div class="map-box">
+            <div class="map-fallback" aria-hidden="true">${secIcon("map")}<p class="map-fallback-addr">${escapeHtml(input.address as string)}</p><p class="map-fallback-note">${escapeHtml(t(locale, "starterSite.mapFallback"))}</p></div>
+            <iframe class="map" src="${escapeHtml(mapSrc)}" referrerpolicy="no-referrer-when-downgrade" allowfullscreen title="${escapeHtml(t(locale, "starterSite.mapTitle", { name }))}"></iframe>
+          </div>`
+              : ""
+          }
           <p class="big">${escapeHtml(input.address as string)}</p>
-          <p class="links"><a class="link" href="${escapeHtml(placeUrl as string)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(locale, "starterSite.openInMaps"))}</a>
+          <p class="links"><a class="${mapSrc ? "btn btn-outline" : "link"}" href="${escapeHtml(placeUrl as string)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(locale, "starterSite.openInMaps"))}</a>
           <a class="link" href="${directionsUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(locale, "starterSite.getDirectionsArrow"))}</a></p>
         </div>`);
   } else if (city) {
@@ -757,7 +764,19 @@ export function buildStarterSiteHtml(input: StarterSiteInput): string {
   .card p { margin: 0 0 8px; color: ${c.soft}; }
   .card p.big { font-size: 17px; color: ${c.ink}; font-weight: 600; }
   .links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
-  .map { display: block; width: 100%; height: 320px; border: 0; border-radius: 12px; margin-bottom: 14px; background: ${c.altBg}; }
+  /* The map sits on a placeholder (address + where to tap): Google's map
+     page has no background of its own, so if the map can't draw — a
+     blocked frame, a strict browser, a file opened from the computer —
+     the placeholder shows instead of an empty box. */
+  /* At most 640px wide, centered: in testing (Oct 29) wider Google map
+     embeds stayed an empty grey box in the full-width preview and in the
+     downloaded file; at 640px they drew in the in-app preview, "Open full
+     preview" and the file opened from the computer alike. */
+  .map-box { position: relative; height: 320px; max-width: 640px; margin: 0 auto 14px; border-radius: 12px; overflow: hidden; background: ${c.altBg}; }
+  .map-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px; text-align: center; }
+  .map-fallback-addr { margin: 0; font-weight: 600; }
+  .map-fallback-note { margin: 0; font-size: 14px; opacity: .8; }
+  .map { position: relative; z-index: 1; display: block; width: 100%; height: 100%; border: 0; background: transparent; }
   .link { color: ${c.link}; font-weight: 700; text-decoration: none; font-size: 15px; }
 
   .gallery { display: grid; gap: 10px; }

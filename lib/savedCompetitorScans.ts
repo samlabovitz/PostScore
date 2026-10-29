@@ -33,6 +33,8 @@ export interface SavedCompetitorEntry {
   websiteUrl: string | null;
   /** Google's types for this listing (saved by newer scans; null on older rows). */
   types?: string[] | null;
+  /** The owner added it ("Add a competitor") — labeled "Added by you". */
+  ownerAdded?: boolean;
 }
 
 export interface SavedCompetitorScan {

@@ -54,14 +54,14 @@ describe("paid plans keep their pre-batch layout, page by page", () => {
     expect(view).toContain('{isPremiumPlan(plan) && (\n          <p data-testid="ai-replies-soon"');
   });
 
-  test("Competitors: unchanged apart from the review goal card (and Free's locked Refresh), plus the one-time competitor-picking note, the distance note and “Also nearby”", () => {
+  test("Competitors: unchanged apart from the review goal card (and Free's locked Refresh), plus the one-time competitor-picking note, the distance note, “Also nearby” the owner's Remove / Removed by you / Add a competitor, and the like-for-like score with its link to the full PostScore", () => {
     const view = read("app/business/[id]/competitors/CompetitorsView.tsx");
     const goalFn = view.indexOf("function CompetitorsReviewGoal(");
     const withoutGoal = view.slice(0, goalFn) + view.slice(view.indexOf("\n}\n", goalFn) + 3);
     const freeStart = withoutGoal.indexOf('if (upgrade?.plan === "free")');
     const paidOnly = withoutGoal.slice(0, freeStart) + withoutGoal.slice(withoutGoal.indexOf("    );\n", freeStart) + 7);
     expect(without(tags(paidOnly), ["CompetitorsReviewGoal"])).toEqual([
-      "GetCompetitorsResult", "CompareView", "CompareView", "CompetitorScope", "Link", "ScoringProgressNote", "CompetitorSelectionNote", "ScanInfo", "Card", "Card", "RefreshButton", "Card", "RefreshButton", "Hero", "CompetitorGroups", "SegmentedControl", "CompareView", "Comparison", "LeadTrail", "SectionHeading", "DistanceNote", "RankedList", "AlsoNearby", "OverTime", "OkResult", "RefreshButton", "Button", "Card", "Lineup", "Stat", "Stat", "Stat", "Stat", "Lane", "HTMLDivElement", "Card", "Bar", "Bar", "Bar", "Bar", "Bar", "Bar", "Link", "Card", "GapItem", "Card", "GapItem", "CompetitorCard", "CheckDetail", "Card",
+      "GetCompetitorsResult", "CompareView", "CompareView", "CompetitorScope", "Link", "ScoringProgressNote", "CompetitorSelectionNote", "ScanInfo", "Card", "Card", "RefreshButton", "Card", "RefreshButton", "Hero", "CompetitorGroups", "SegmentedControl", "CompareView", "Comparison", "LeadTrail", "SectionHeading", "DistanceNote", "RankedList", "AlsoNearby", "RemovedByOwner", "AddCompetitor", "OverTime", "OkResult", "RefreshButton", "Button", "Card", "Lineup", "Link", "Stat", "Stat", "Stat", "Lane", "HTMLDivElement", "Card", "Bar", "Bar", "Bar", "Bar", "Bar", "Bar", "Link", "Card", "GapItem", "Card", "GapItem", "CompetitorCard", "RemoveCompetitorButton", "CheckDetail", "Card",
     ]);
   });
 

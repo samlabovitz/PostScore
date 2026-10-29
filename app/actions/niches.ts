@@ -78,7 +78,7 @@ export async function updateCompetitorsForNiche(businessId: string): Promise<Upd
   if (!supabase) return { status: "error" };
   if ((await getPlan()) === "free") return { status: "locked" };
   const { runAndSaveCompetitorScanWithClient } = await import("@/app/actions/competitors");
-  const result = await runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: true });
+  const result = await runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: true, plan: await getPlan() });
   if (result.status === "saved") return { status: "updated", placesCalls: result.placesCalls ?? 0 };
   if (result.status === "too_soon" || result.status === "capped") return { status: result.status, nextAvailableAt: result.nextAvailableAt };
   if (result.status === "no_data") return { status: "none_found" };
