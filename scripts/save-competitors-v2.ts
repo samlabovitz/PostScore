@@ -17,10 +17,15 @@ Module._load = function (req: string, ...rest: unknown[]) {
 
 const argv = process.argv.slice(2);
 const ONLY = argv.flatMap((a, i) => (a === "--only" ? [argv[i + 1]] : []));
+const EXCEPT = argv.flatMap((a, i) => (a === "--except" ? [argv[i + 1]] : []));
+/** Every business (not archived), minus --except. */
+const ALL = argv.includes("--all");
+/** Only print the worst-case call count against the monthly cap. */
+const COUNT_ONLY = argv.includes("--count");
 
 (async () => {
-  if (ONLY.length === 0) {
-    console.log('Nothing to do: pass --only "Business name" (exact; repeatable).');
+  if (ONLY.length === 0 && !ALL) {
+    console.log('Nothing to do: pass --only "Business name" (exact; repeatable) or --all [--except "Name"].');
     return;
   }
   const { createAdminClient } = require("../lib/supabase/admin");
@@ -33,11 +38,27 @@ const ONLY = argv.flatMap((a, i) => (a === "--only" ? [argv[i + 1]] : []));
   const { loadBusinessNiche } = require("../lib/businessNiche.server");
   const db = createAdminClient();
 
-  const { data: businesses, error } = await db.from("businesses").select("id, name").in("name", ONLY);
+  let query = db.from("businesses").select("id, name, archived_at").order("name");
+  if (!ALL) query = query.in("name", ONLY);
+  const { data: rows, error } = await query;
   if (error) throw error;
-  for (const name of ONLY) if (!(businesses ?? []).some((b: { name: string }) => b.name === name)) console.log(`Not found (exact name): ${name}`);
+  for (const name of ONLY) if (!(rows ?? []).some((b: { name: string }) => b.name === name)) console.log(`Not found (exact name): ${name}`);
+  const businesses = (rows ?? []).filter((b: { name: string; archived_at: string | null }) => !b.archived_at && !EXCEPT.includes(b.name));
 
-  for (const b of businesses ?? []) {
+  // The month's cap: every scan's worst case must fit, or nothing runs.
+  const { placesSearchMonthlyCap, monthStartUtc, MAX_CALLS_PER_SCAN } = require("../lib/placesSearchBudget");
+  const { data: logged } = await db.from("places_calls").select("calls").eq("kind", "competitor_scan").gte("created_at", monthStartUtc(new Date()));
+  const used = (logged ?? []).reduce((sum: number, r: { calls: number }) => sum + (Number(r.calls) || 0), 0);
+  const cap = placesSearchMonthlyCap();
+  const worst = businesses.length * MAX_CALLS_PER_SCAN;
+  console.log(`${businesses.length} businesses · worst case ${worst} search calls (${MAX_CALLS_PER_SCAN} each) · used this month ${used} · cap ${cap} · after: at most ${used + worst}`);
+  if (COUNT_ONLY) return;
+  if (used + worst > cap) {
+    console.log("Stopped: the worst case would go over PLACES_SEARCH_MONTHLY_CAP. Nothing was run.");
+    return;
+  }
+
+  for (const b of businesses) {
     const before = groupSavedScans(((await db.from("competitor_scans").select(SAVED_SCAN_COLUMNS).eq("business_id", b.id).order("created_at", { ascending: false }).limit(60)).data ?? []))[0];
     const result = await runAndSaveCompetitorScanWithClient(db, b.id, {
       enforceCooldown: false,

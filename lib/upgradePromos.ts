@@ -13,6 +13,7 @@
 
 import { t, type Locale, type MessageKey } from "./i18n";
 import type { Plan } from "./plan";
+import { MIN_RANKED_COMPETITORS } from "./competitorComparison";
 import { PLAN_COPY } from "./planComparison";
 
 export type ShowcasePage = "overview" | "growth" | "campaigns" | "reviews" | "website" | "competitors" | "pricing" | "reports";
@@ -76,7 +77,7 @@ export function unlockLine(id: UnlockLineId, f: PromoFacts, locale: Locale): str
       if (f.reviewCount === null || !f.reviewLeader || f.reviewCount >= f.reviewLeader.count) return null;
       return t(locale, U(f.reviewCount === 1 ? "unlock.reviewsGoalOne" : "unlock.reviewsGoal"), { n: f.reviewCount, name: f.reviewLeader.name, count: f.reviewLeader.count });
     case "rank":
-      return f.rank !== null && f.total !== null && f.total > 1 && f.rank > 1 ? t(locale, U("unlock.rank"), { rank: f.rank, total: f.total }) : null;
+      return f.rank !== null && f.total !== null && f.total - 1 >= MIN_RANKED_COMPETITORS && f.rank > 1 ? t(locale, U("unlock.rank"), { rank: f.rank, total: f.total }) : null;
     case "website":
       if (!f.websiteFailed || !f.builderName) return null;
       return t(locale, U(f.websiteFailed === 1 ? "unlock.websiteOne" : "unlock.website"), { n: f.websiteFailed, builder: f.builderName });

@@ -52,6 +52,9 @@ export interface PostaiFacts {
   nearbyReviewAverage: number | null;
   hasWebsite: boolean;
   rank: { rank: number; of: number } | null;
+  /** Only 1–2 competitors: the head-to-head the app shows instead of a
+   * rank (then `rank` is null and no rank may be stated). */
+  headToHead?: string | null;
   /** The Overview rank card's own wording (same scope as `rank`). */
   rankCard: PostaiRankCard | null;
   /** The plan the answer is for (the Free rules in checkAnswerFacts). */
@@ -85,6 +88,7 @@ export function buildPostaiFacts(
     reviewCount: number | null;
     hasWebsite: boolean;
     rank: { rank: number; of: number } | null;
+    headToHead?: string | null;
     nearbyReviewAverage: number | null;
     competitors?: PostaiFacts["competitors"];
     rankCard?: PostaiRankCard | null;
@@ -133,6 +137,7 @@ export function buildPostaiFacts(
     nearbyReviewAverage: b.nearbyReviewAverage,
     hasWebsite: b.hasWebsite,
     rank: b.rank,
+    headToHead: b.rank ? null : (b.headToHead ?? null),
     rankCard: b.rankCard ?? null,
     plan,
     categories: breakdown.categories.map((c, i) => ({ label: c.label, points: whole[i], of: c.weight })),
@@ -217,11 +222,13 @@ export function factsBlockText(f: PostaiFacts): string {
             ? ` The Overview's "How you rank nearby" card says exactly: "#${f.rank.rank} of ${f.rank.of} · Ahead of ${f.rankCard.percentileAhead}% of ${f.rankCard.othersCount} nearby ${f.rankCard.noun}${f.rankCard.smallSample ? " — small sample" : ""}" — use this rank and these words (never another rank or count).${f.rankCard.scope ? ` Ranked against: ${f.rankCard.scope}.` : ""}`
             : ""
         }`
-      : "- Rank among nearby competitors: not known (no competitor scan).",
+      : f.headToHead
+        ? `- Rank among nearby competitors: NONE — fewer than 3 competitors were found, so the app shows no rank anywhere; never state a rank or position (no "#1 of 2"). The app shows this head-to-head instead — use these words: "${f.headToHead}". For others they really compete with, point to "Add a competitor" on the Competitors page.`
+        : "- Rank among nearby competitors: not known (no competitor scan).",
     ...(f.competitors.length > 0
       ? [
-          "- The saved competitor scan, in rank order (PostScore · Google reviews · rating — \"not known\" where the scan has none):",
-          ...f.competitors.map((c, i) => `  ${i + 1}. ${c.isSubject ? "THIS BUSINESS" : shortName(c.name)} · ${c.total ?? "not known"} · ${c.reviews ?? "not known"} reviews · ${c.rating === null ? "rating not known" : `${c.rating.toFixed(1)}★`}`),
+          `- The saved competitor scan${f.headToHead ? "" : ", in rank order"} (PostScore · Google reviews · rating — \"not known\" where the scan has none):`,
+          ...f.competitors.map((c, i) => `  ${f.headToHead ? "-" : `${i + 1}.`} ${c.isSubject ? "THIS BUSINESS" : shortName(c.name)} · ${c.total ?? "not known"} · ${c.reviews ?? "not known"} reviews · ${c.rating === null ? "rating not known" : `${c.rating.toFixed(1)}★`}`),
         ]
       : ["- Individual competitors' review counts and star ratings: NOT known. Never say a competitor has more or fewer reviews, or a higher or lower rating."]),
     `- The ${f.reviewCountFullAt}+ and ${f.ratingFullAtReviews}+ review thresholds are PostScore's own scoring rules — never say Google counts, requires or rewards them.`,
@@ -318,7 +325,7 @@ export function checkAnswerFacts(answer: string, f: PostaiFacts, promptText: str
     // Rank: exactly the Overview card's.
     for (const m of Array.from(sentence.matchAll(/(?:#\s?|\b(?:rank(?:ed)?|place[sd]?|puesto|lugar)\s+(?:#\s?)?)(\d+)(?:st|nd|rd|th|º|°)?\s*(?:of|out of|de)\s*(\d+)/gi))) {
       const [r, of] = [num(m[1]), num(m[2])];
-      if (!f.rank) issues.push(`states a rank (#${r} of ${of}) — the rank isn't known`);
+      if (!f.rank) issues.push(f.headToHead ? `states a rank (#${r} of ${of}) — with fewer than 3 competitors the app shows no rank, only the head-to-head` : `states a rank (#${r} of ${of}) — the rank isn't known`);
       // Another business's place in the same list ("the leader is #1 of 5") is fine.
       else if (of === f.rank.of && r !== f.rank.rank && !/\b(you|you're|your|usted|su)\b/i.test(sentence)) continue;
       else if (r !== f.rank.rank || of !== f.rank.of) issues.push(`a rank that isn't the Overview's: #${r} of ${of} — the Overview card shows #${f.rank.rank} of ${f.rank.of}`);
@@ -434,7 +441,7 @@ export function factsFallbackAnswer(f: PostaiFacts, locale: Locale): string {
       ? t(locale, "dashboard.assistant.fallback.noReviews")
       : t(locale, "dashboard.assistant.fallback.reviews", { count: f.reviewCount, rating: f.rating.toFixed(1), fullAt: f.reviewCountFullAt }),
     t(locale, f.hasWebsite ? "dashboard.assistant.fallback.website" : "dashboard.assistant.fallback.noWebsite"),
-    ...(f.rank ? [t(locale, "dashboard.assistant.fallback.rank", { rank: f.rank.rank, of: f.rank.of })] : []),
+    ...(f.rank ? [t(locale, "dashboard.assistant.fallback.rank", { rank: f.rank.rank, of: f.rank.of })] : f.headToHead ? [`${f.headToHead}.`] : []),
     t(locale, "dashboard.assistant.fallback.more"),
   ];
   return parts.join(" ");

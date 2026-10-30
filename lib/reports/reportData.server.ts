@@ -103,6 +103,7 @@ export async function getReportData(businessId: string, now: Date = new Date()):
         benchmark.status === "ok"
           ? { rank: benchmark.benchmark.rank, of: benchmark.benchmark.peerCount, noun: benchmark.benchmark.competitorNoun, previousRank }
           : null,
+      headToHead: benchmark.status === "head_to_head" ? { ...benchmark.headToHead, noun: benchmark.competitorNoun } : null,
       changes: {
         listing: recap ? recap.changes.map((c) => c.description) : [],
         listingUnavailable: recap ? recap.changesUnavailable : false,

@@ -15,8 +15,8 @@ import { snapshotFromSavedRows } from "@/lib/monthlyReportExtras";
 import { scoreBusiness } from "@/lib/scoring";
 import { scoringInput } from "@/emails/sampleMonthlyReportContent";
 
-// Three businesses with real breakdowns; the owner's full PostScore (94)
-// is below two competitors' (96, 95).
+// Four businesses with real breakdowns; the owner's full PostScore (94)
+// is below two competitors' (96, 95) and above one (80).
 const strong = scoreBusiness(scoringInput());
 const weaker = scoreBusiness(scoringInput({ rating: 3.4, reviewCount: 6 }));
 const weakest = scoreBusiness(scoringInput({ rating: 2.9, reviewCount: 2 }));
@@ -32,6 +32,7 @@ const ROWS: SavedScanRow[] = [
   row("J & G Italian Deli", true, 94, strong),
   row("Dom's Deli", false, 96, weaker),
   row("Greene County Deli", false, 95, weakest),
+  row("Corner Deli", false, 80, weakest),
 ];
 
 function fakeSupabase(rows: SavedScanRow[]) {
@@ -69,10 +70,27 @@ describe("the same rank everywhere", () => {
 
     expect([overviewRank, competitorsHeadline, competitorsOverTime, report, postAi]).toEqual([3, 3, 3, 3, 3]);
     if (overview.status === "ok") {
-      expect(overview.benchmark.peerCount).toBe(3);
-      expect(overview.benchmark.aheadCount).toBe(0);
+      expect(overview.benchmark.peerCount).toBe(4);
+      expect(overview.benchmark.aheadCount).toBe(1);
       expect(overview.benchmark.subjectTotal).toBe(standing.ownerScore);
     }
+  });
+
+  test("only 1–2 competitors: no rank anywhere — a head-to-head on the Overview, Competitors over time, the report and PostAI", async () => {
+    const two = ROWS.slice(0, 3);
+    vi.mocked(createClient).mockReturnValue(fakeSupabase(two) as never);
+    const overview = await getLocalBenchmark("jg");
+    expect(overview.status).toBe("head_to_head");
+    if (overview.status === "head_to_head") {
+      expect(overview.headToHead.owner.name).toBe("J & G Italian Deli");
+      expect(overview.headToHead.rivals.map((x) => x.name)).toEqual(["Dom's Deli", "Greene County Deli"]);
+    }
+    const scan = groupSavedScans(two)[0];
+    expect(rankPoint(scan).headToHead).toBe(true);
+    expect(snapshotFromSavedRows(two)!.headToHead?.rivals).toHaveLength(2);
+    // Back to a rank at 3+.
+    expect(rankPoint(groupSavedScans(ROWS)[0]).headToHead).toBe(false);
+    expect(snapshotFromSavedRows(ROWS)!.headToHead).toBeUndefined();
   });
 
   test("every rank call site goes through the shared function (no private sort by total)", async () => {

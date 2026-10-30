@@ -13,7 +13,7 @@ import {
   GOOGLE_MISMATCH_CHECK_ID,
   type ActionPlanTask,
 } from "@/lib/actionPlan";
-import { reportStanding } from "@/lib/competitorComparison";
+import { headToHead, reportStanding } from "@/lib/competitorComparison";
 import { t, type Locale } from "@/lib/i18n";
 import type { CompetitorSnapshot, FocusTopActionPlanTask, ReportExtras, ReportSecurityAlert } from "@/lib/monthlyReport";
 import { groupSavedScans, type SavedScanRow } from "@/lib/savedCompetitorScans";
@@ -83,5 +83,9 @@ export function reportTopTask(tasks: ActionPlanTask[], input: BusinessScoringInp
 export function snapshotFromSavedRows(rows: SavedScanRow[], scope?: CompetitorScope | null): CompetitorSnapshot | null {
   const scan = groupSavedScans(rows)[0];
   const standing = scan ? reportStanding(scan, scope) : null;
-  return standing ? { rank: standing.rank, totalCompetitors: standing.total, topCompetitorReviewCount: standing.topReviewCount } : null;
+  if (!scan || !standing) return null;
+  // 1–2 competitors: a head-to-head, never "#1 of 2" (and no "top business" pointer).
+  const h2h = headToHead(scan, scope);
+  if (h2h) return { rank: standing.rank, totalCompetitors: standing.total, topCompetitorReviewCount: null, headToHead: h2h };
+  return { rank: standing.rank, totalCompetitors: standing.total, topCompetitorReviewCount: standing.topReviewCount };
 }

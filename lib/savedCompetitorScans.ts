@@ -3,7 +3,7 @@
 
 import { withinMaxDistance } from "@/lib/competitorQuality";
 import type { ScoreBreakdown } from "@/lib/scoring";
-import { ownerStanding } from "@/lib/competitorComparison";
+import { isHeadToHead, ownerStanding } from "@/lib/competitorComparison";
 import type { CompetitorScope } from "@/lib/competitorScope";
 
 
@@ -54,6 +54,8 @@ export interface CompetitorRankPoint {
   of: number;
   /** The owner's comparable score in that scan — the number it's ranked by. */
   score: number | null;
+  /** Only 1–2 competitors then: shown as a head-to-head, never "#1 of 2". */
+  headToHead: boolean;
 }
 
 /** Every competitor_scans column SavedScanRow needs. */
@@ -143,6 +145,7 @@ export function rankPoint(scan: SavedCompetitorScan, scope?: CompetitorScope | n
     rank: standing?.rank ?? null,
     of: standing?.of ?? scan.entries.length,
     score: standing?.ownerScore ?? null,
+    headToHead: isHeadToHead(standing),
   };
 }
 

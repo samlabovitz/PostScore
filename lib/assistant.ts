@@ -143,6 +143,9 @@ export interface AssistantCompetitorSummary {
   /** The review goal in words (lib/reviewGoal.ts): the area average, the
    * goal (beat the leader / stretch / you lead) and "Next up". */
   reviewGoalLines?: string[];
+  /** Only 1–2 competitors: the head-to-head line the app shows instead of
+   * a rank (subjectRank is then null). */
+  headToHead?: string | null;
 }
 
 export interface AssistantScoreHistoryEntry {
@@ -902,7 +905,7 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
     );
   } else {
     lines.push(
-      `- From a saved scan on ${context.competitors.scanAt ?? "an earlier date"}. This business ranks #${context.competitors.subjectRank ?? "?"} of ${context.competitors.entries.length} by PostScore — every business here is scored with the same full PostScore (Google listing, reviews and website), exactly as the Competitors page and the Overview show it. A check that couldn't be done for a business (e.g. its website blocked automated checks) is left out of that business's score.`
+      `- From a saved scan on ${context.competitors.scanAt ?? "an earlier date"}. ${context.competitors.headToHead ? `${context.competitors.headToHead}. There is NO rank (fewer than 3 competitors) — never state one; suggest "Add a competitor" on the Competitors page for others they really compete with. Compared by PostScore` : `This business ranks #${context.competitors.subjectRank ?? "?"} of ${context.competitors.entries.length} by PostScore`} — every business here is scored with the same full PostScore (Google listing, reviews and website), exactly as the Competitors page and the Overview show it. A check that couldn't be done for a business (e.g. its website blocked automated checks) is left out of that business's score.`
     );
     if (context.competitors.rankedAgainst) lines.push(`- Ranked against: ${context.competitors.rankedAgainst}. Use this same set whenever you mention the rank.`);
     if (context.competitors.nearbyReviewAverage != null)

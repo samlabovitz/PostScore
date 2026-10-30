@@ -817,6 +817,7 @@ export async function processBusiness(
   // "See the Website page" links here — the same SITE_URL in testing mode
   // (the test send to REPORT_TEST_EMAIL) and live.
   const websitePageUrl = `${siteUrl}/business/${businessId}/website`;
+  const competitorsPageUrl = `${siteUrl}/business/${businessId}/competitors#add-competitor`;
 
   const decision = decideReportRecipient({
     path,
@@ -835,7 +836,7 @@ export async function processBusiness(
     const testSend = await sendEmail({
       to: decision.to,
       subject: testReportSubject(monthlyReportSubject(businessName, reportDate, locale)),
-      react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale, googleMapsLogoUrl: `${siteUrl}/google/GoogleMaps_Logo_Gray_2x.png`, testPreview: true, websitePageUrl }),
+      react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale, googleMapsLogoUrl: `${siteUrl}/google/GoogleMaps_Logo_Gray_2x.png`, testPreview: true, websitePageUrl, competitorNoun: profile.competitorNoun, competitorsPageUrl }),
     });
     return testSend.status === "sent"
       ? { businessId, status: "sent", reason: `test send to REPORT_TEST_EMAIL (testing mode) — not sent to the owner` }
@@ -883,7 +884,7 @@ export async function processBusiness(
   const sendResult = await sendEmail({
     to: decision.to,
     subject: monthlyReportSubject(businessName, reportDate, locale),
-    react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale, googleMapsLogoUrl: `${siteUrl}/google/GoogleMaps_Logo_Gray_2x.png`, websitePageUrl }),
+    react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale, googleMapsLogoUrl: `${siteUrl}/google/GoogleMaps_Logo_Gray_2x.png`, websitePageUrl, competitorNoun: profile.competitorNoun, competitorsPageUrl }),
   });
 
   if (sendResult.status !== "sent") {

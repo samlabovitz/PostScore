@@ -817,6 +817,7 @@ export type MessageKey =
   | "report.score.sinceLastReport"
   | "report.focus.label"
   | "report.focus.nothingNotable"
+  | "report.competitorSection.businessesFallback"
   | "report.competitorSection.label"
   | "report.competitorSection.noScanYet"
   | "report.competitorSection.noComparables"
@@ -964,6 +965,12 @@ export type MessageKey =
   | "dashboard.competitors.unscoredSuffix.one"
   | "dashboard.competitors.unscoredSuffix.other"
   | "dashboard.competitors.noRating"
+  | "dashboard.competitors.headToHead.intro.one"
+  | "dashboard.competitors.headToHead.intro.other"
+  | "dashboard.competitors.headToHead.label"
+  | "dashboard.competitors.headToHead.you"
+  | "dashboard.competitors.headToHead.rankNote"
+  | "dashboard.competitors.headToHead.add"
   | "dashboard.competitors.reviewCount.one"
   | "dashboard.competitors.reviewCount.other"
   | "dashboard.competitors.noReviewCount"
@@ -4435,6 +4442,7 @@ export type MessageKey =
  * how a future locale with more categories, e.g. "few"/"many", would
  * still get a safe result even before every category is seeded for it). */
 export type PluralKeyBase =
+  | "dashboard.competitors.headToHead.intro"
   | "dashboard.overview.growBanner.reviews.vsNearby"
   | "dashboard.overview.growBanner.reviews.countOnly"
   | "dashboard.overview.band.points"
@@ -5313,6 +5321,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "report.focus.nothingNotable":
       "Nothing notable to flag this month — your listing and site are in strong shape across the board.",
 
+    "report.competitorSection.businessesFallback": "businesses",
     "report.competitorSection.label": "Competitor standing",
     "report.competitorSection.noScanYet": "No competitor scan yet — run one on the Competitors page.",
     "report.competitorSection.noComparables":
@@ -5474,6 +5483,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.unscoredSuffix.other":
       " {count} of them couldn't be scored — Google returned no usable details.",
     "dashboard.competitors.noRating": "No rating",
+    "dashboard.competitors.headToHead.intro.one": "Only 1 business like yours within {miles} miles — here's how you compare with {names}",
+    "dashboard.competitors.headToHead.intro.other": "Only {count} {noun} like yours within {miles} miles — here's how you compare with {names}",
+    "dashboard.competitors.headToHead.label": "Head-to-head",
+    "dashboard.competitors.headToHead.you": "You",
+    "dashboard.competitors.headToHead.rankNote": "A rank shows once 3 or more businesses like yours are compared. Know others you really compete with? Add them.",
+    "dashboard.competitors.headToHead.add": "Add a competitor",
     "dashboard.competitors.reviewCount.one": "{count} review",
     "dashboard.competitors.reviewCount.other": "{count} reviews",
     "dashboard.competitors.noReviewCount": "No review count",
@@ -10176,6 +10191,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "report.focus.nothingNotable":
       "Nada notable que señalar este mes — su ficha y su sitio web están en muy buena forma en todos los aspectos.",
 
+    "report.competitorSection.businessesFallback": "negocios",
     "report.competitorSection.label": "Posición frente a la competencia",
     "report.competitorSection.noScanYet":
       "Todavía no hay una comparación con la competencia — ejecute una en la página Competidores.",
@@ -10338,6 +10354,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.unscoredSuffix.other":
       " {count} de ellos no se pudieron evaluar — Google no devolvió detalles utilizables.",
     "dashboard.competitors.noRating": "Sin calificación",
+    "dashboard.competitors.headToHead.intro.one": "Solo hay 1 negocio como el suyo a menos de {miles} millas: así se compara con {names}",
+    "dashboard.competitors.headToHead.intro.other": "Solo hay {count} negocios como el suyo a menos de {miles} millas: así se compara con {names}",
+    "dashboard.competitors.headToHead.label": "Cara a cara",
+    "dashboard.competitors.headToHead.you": "Usted",
+    "dashboard.competitors.headToHead.rankNote": "La posición aparece cuando se comparan 3 o más negocios como el suyo. ¿Conoce otros con los que realmente compite? Agréguelos.",
+    "dashboard.competitors.headToHead.add": "Agregar un competidor",
     "dashboard.competitors.reviewCount.one": "{count} reseña",
     "dashboard.competitors.reviewCount.other": "{count} reseñas",
     "dashboard.competitors.noReviewCount": "Sin número de reseñas",

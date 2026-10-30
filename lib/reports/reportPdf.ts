@@ -7,6 +7,8 @@
 // the two most recent saved scans. Nothing here is invented for print.
 
 import { GOOGLE_MAPS_LOGO_RATIO } from "@/lib/google/mapsLogoPng";
+import type { HeadToHead } from "@/lib/competitorComparison";
+import { headToHeadIntro, headToHeadScores } from "@/lib/competitorHeadToHead";
 import { printable, wrap, type FontRole, type Measurer, type PrintPage, type SignElement } from "@/lib/signStudio/elements";
 import { formatCount, formatLongDate, formatShortDate, t, tPlural, type Locale } from "@/lib/i18n";
 
@@ -62,6 +64,8 @@ export interface ReportData {
   } | null;
   categories: ReportCategory[];
   rank: { rank: number; of: number; noun: string; previousRank: number | null } | null;
+  /** Only 1–2 competitors: shown instead of a rank (never "#1 of 2"). */
+  headToHead?: (HeadToHead & { noun: string }) | null;
   changes: { listing: string[]; listingUnavailable: boolean; fixesConfirmed: number };
   nextSteps: ReportNextStep[];
   reviews: { rating: number | null; count: number | null; countChange: number | null; nearbyAverage: number | null; goalLines?: string[] };
@@ -271,6 +275,9 @@ export function layoutReport(data: ReportData, m: Measurer): PrintPage {
       const up = data.rank.rank < prev;
       text(colX + rw + 8, ry, t(locale, up ? "dashboard.reports.pdf.rankUp" : "dashboard.reports.pdf.rankDown", { previous: prev }), 9.5, "body", up ? C.green : C.red);
     }
+  } else if (data.headToHead) {
+    ry = para(colX, ry, headToHeadIntro(data.headToHead, data.headToHead.noun, locale), 9.5, "body", C.inkSoft, colW, 3) + 4;
+    text(colX, ry, headToHeadScores(data.headToHead, locale), 11, "bodyBold", C.ink);
   } else {
     text(colX, ry, t(locale, "dashboard.reports.pdf.rankNone"), 10.5, "body", C.inkSoft);
   }

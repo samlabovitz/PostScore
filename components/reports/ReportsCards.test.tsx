@@ -37,6 +37,7 @@ const VIEW: WeeklyView = {
     { id: "reviews", before: 70, after: 68 },
   ],
   rank: { rank: 3, of: 11, previous: 5 },
+  headToHead: null,
   listingChanges: ["Your hours changed."],
   changesUnavailable: false,
   fixesConfirmed: 2,

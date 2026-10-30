@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
 import { CompetitorSelectionNote } from "@/components/competitors/CompetitorSelectionNote";
 import { DistanceNote } from "@/components/competitors/DistanceNote";
+import { HeadToHead } from "@/components/competitors/HeadToHead";
 import { t, useLocale } from "@/lib/i18n";
 
 /**
@@ -66,6 +67,11 @@ function LocalBenchmarkValue({
         {t(locale, "dashboard.overview.noComparablePeers", { competitorNoun: result.competitorNoun })}
       </span>
     );
+  }
+
+  if (result.status === "head_to_head") {
+    // 1–2 competitors: never "#1 of 2" — a head-to-head instead.
+    return <HeadToHead businessId={businessId} headToHead={result.headToHead} noun={result.competitorNoun} compact />;
   }
 
   if (result.status !== "ok") {

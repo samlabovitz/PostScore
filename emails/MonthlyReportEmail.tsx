@@ -42,6 +42,7 @@ import type {
 import { DEFAULT_LOCALE, formatCount, reportCoverageMonth, t, tPlural, type Locale } from "@/lib/i18n";
 import { spamTopic } from "@/lib/siteSecurity";
 import { GOOGLE_LINKS } from "@/lib/googleHelpLinks";
+import { headToHeadIntro, headToHeadScores } from "@/lib/competitorHeadToHead";
 
 /** Top line of a test send (REPORT_TEST_EMAIL only — never an owner).
  * English only: it's read by the PostScore team, not owners. */
@@ -55,6 +56,10 @@ export function testReportSubject(subject: string): string {
 
 export interface MonthlyReportEmailProps {
   businessName: string;
+  /** The business type's plural noun ("salons") for the head-to-head line. */
+  competitorNoun?: string | null;
+  /** "Add a competitor" in the head-to-head (Competitors page, #add-competitor). */
+  competitorsPageUrl?: string | null;
   /** ISO date this report was SENT — the heading/subject label the
    * calendar month BEFORE this (see reportCoverageMonth in
    * lib/i18n/format.ts), since the report covers the month that just
@@ -500,8 +505,31 @@ function FocusSection({ content, locale, websitePageUrl }: { content: MonthlyRep
  *      nearby businesses (or failed outright) — say so plainly, never a
  *      fabricated rank.
  */
-function CompetitorSection({ content, locale }: { content: MonthlyReportContent; locale: Locale }) {
+function CompetitorSection({ content, locale, competitorNoun, competitorsPageUrl }: { content: MonthlyReportContent; locale: Locale; competitorNoun: string | null; competitorsPageUrl: string | null }) {
   const competitor = content.competitor;
+  const h2h = content.competitorStanding?.headToHead;
+
+  // 1–2 competitors: a head-to-head, never "#1 of 2".
+  if (h2h) {
+    return (
+      <Section>
+        <Text style={labelStyle}>{t(locale, "report.competitorSection.label")}</Text>
+        <Text style={{ ...valueStyle, fontSize: "14px" }}>{headToHeadIntro(h2h, competitorNoun ?? t(locale, "report.competitorSection.businessesFallback"), locale)}</Text>
+        <Text style={{ ...valueStyle, marginTop: "-10px" }}>{headToHeadScores(h2h, locale)}</Text>
+        <Text style={{ ...valueStyle, fontSize: "12.5px", color: "#6b7890", marginTop: "-10px" }}>
+          {t(locale, "dashboard.competitors.headToHead.rankNote")}
+          {competitorsPageUrl && (
+            <>
+              {" "}
+              <Link href={competitorsPageUrl} style={{ color: "#14243f", textDecoration: "underline" }}>
+                {t(locale, "dashboard.competitors.headToHead.add")}
+              </Link>
+            </>
+          )}
+        </Text>
+      </Section>
+    );
+  }
 
   if (!competitor.available && content.competitorStanding) {
     return (
@@ -627,6 +655,8 @@ export function MonthlyReportEmail({
   googleMapsLogoUrl = null,
   testPreview = false,
   websitePageUrl = null,
+  competitorNoun = null,
+  competitorsPageUrl = null,
 }: MonthlyReportEmailProps) {
   const { month: coverageMonth, year: coverageYear } = reportCoverageMonth(reportDate, locale);
 
@@ -683,7 +713,7 @@ export function MonthlyReportEmail({
             unmeasuredNote={t(locale, "report.unmeasured.reviewCount")}
             locale={locale}
           />
-          <CompetitorSection content={content} locale={locale} />
+          <CompetitorSection content={content} locale={locale} competitorNoun={competitorNoun} competitorsPageUrl={competitorsPageUrl} />
           <ListingChangesSection content={content} locale={locale} />
           <GoogleMapsAttribution logoUrl={googleMapsLogoUrl} />
 

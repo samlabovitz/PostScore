@@ -6,7 +6,8 @@ import { getBusinessSummary } from "@/app/actions/businesses";
 import { scoreBusinessById, getScoreHistory } from "@/app/actions/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
 import { getLatestCompetitorSnapshot, getLocalBenchmark } from "@/app/actions/competitors";
-import { nearbyReviewAverage, ownerStanding, rankBy, reviewGoal } from "@/lib/competitorComparison";
+import { headToHead, nearbyReviewAverage, ownerStanding, rankBy, reviewGoal } from "@/lib/competitorComparison";
+import { headToHeadIntro, headToHeadScores } from "@/lib/competitorHeadToHead";
 import { reviewGoalLines } from "@/lib/reviewGoal";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { getGrowthMoveSignals } from "@/app/actions/growthMoves";
@@ -200,10 +201,13 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
         // The one shared rank (full PostScore), and the list in that same
         // order — identical to the Competitors page and the Overview.
         const ranked = rankBy(snapshot.scan, "overall", competitorScope);
+        // 1–2 competitors: no rank anywhere — the head-to-head instead.
+        const h2h = headToHead(snapshot.scan, competitorScope);
         return {
+          headToHead: h2h ? `${headToHeadIntro(h2h, profile.competitorNoun, locale)}: ${headToHeadScores(h2h, locale)}` : null,
           available: true,
           scanAt: formatShortDate(snapshot.createdAt, locale, timeZone),
-          subjectRank: ownerStanding(snapshot.scan, competitorScope)?.rank ?? null,
+          subjectRank: h2h ? null : (ownerStanding(snapshot.scan, competitorScope)?.rank ?? null),
           rankedAgainst: competitorScope ? scopeSummary(applyScope(snapshot.scan, competitorScope)) : null,
           nearbyReviewAverage: nearbyReviewAverage(snapshot.scan, competitorScope),
           // The shared review goal in words — PostAI quotes it, never computes its own.
@@ -391,6 +395,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
       reviewCount: scored.business.review_count,
       hasWebsite: businessWebsiteUrl(scored.business) !== null,
       rank: competitors.subjectRank ? { rank: competitors.subjectRank, of: competitors.entries.length } : null,
+      headToHead: competitors.available ? (competitors.headToHead ?? null) : null,
       nearbyReviewAverage: competitors.nearbyReviewAverage ?? null,
       competitors: snapshot
         ? rankBy(snapshot.scan, "overall", competitorScope).map(({ entry }) => ({ name: entry.name ?? "Unnamed business", total: entry.total, reviews: entry.reviewCount, rating: entry.rating, isSubject: entry.isSubject }))

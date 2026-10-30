@@ -14,6 +14,7 @@
 // lib/scoring.ts (VERIFIED vs excluded) and the "never treat unknown as
 // zero" rule in lib/profileChanges.ts.
 
+import type { HeadToHead } from "@/lib/competitorComparison";
 import type { Closure } from "@/lib/businessStatus";
 import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "./profileChanges";
 import { generateSuggestions, type Grade, type ScoreBreakdown } from "./scoring";
@@ -121,6 +122,9 @@ export interface CompetitorSnapshot {
    * a comparison anyone could act on.
    */
   topCompetitorReviewCount: number | null;
+  /** Only 1–2 competitors: the report shows this head-to-head, never the
+   * rank, and no "moved up/down" (lib/competitorComparison.ts). */
+  headToHead?: HeadToHead | null;
 }
 
 /** Both sides of a real competitor-rank comparison — the caller only
@@ -290,6 +294,8 @@ function numericMetric(previousValue: number | null | undefined, currentValue: n
 
 function competitorMovement(delta: CompetitorDelta | null): CompetitorMovement {
   if (!delta) return { available: false };
+  // A head-to-head on either side has no rank to move.
+  if (delta.current.headToHead || delta.previous.headToHead) return { available: false };
   return {
     available: true,
     current: delta.current,

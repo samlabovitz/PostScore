@@ -54,11 +54,12 @@ const DATA: Extract<GetCompetitorsResult, { status: "ok" }> = {
       entry("Main Street Liquors", 88, false, { priceLevel: "PRICE_LEVEL_MODERATE" }),
       entry("Peddler's", 79),
       entry("Modern Liquors", 71, true),
+      entry("Corner Liquor", 60),
     ],
   },
   rankHistory: [
-    { scanId: "a", createdAt: "2026-09-20T13:00:00Z", rank: 3, of: 3, score: 72 },
-    { scanId: "s", createdAt: "2026-10-16T13:00:00Z", rank: 3, of: 3, score: 71 },
+    { scanId: "a", createdAt: "2026-09-20T13:00:00Z", rank: 3, of: 4, score: 72, headToHead: false },
+    { scanId: "s", createdAt: "2026-10-16T13:00:00Z", rank: 3, of: 4, score: 71, headToHead: false },
   ],
   refresh: { allowed: false, nextAvailableAt: "2026-11-15T13:00:00.000Z" },
   scanBlocker: null,
@@ -77,7 +78,7 @@ function render(data = DATA, locale: "en" | "es" = "en") {
 describe("Competitors page", () => {
   test("hero, scan date, refresh limit, price level and 'Compared over time' from saved data", () => {
     const html = render();
-    expect(html).toContain("You're #3 of 3 nearby liquor stores");
+    expect(html).toContain("You're #3 of 4 nearby liquor stores");
     expect(html).toContain("Scanned Oct 16, 2026");
     expect(html).toContain("Available again on Nov 15, 2026");
     expect(html).toContain("Price level: $$");
@@ -178,7 +179,7 @@ describe("Competitors page", () => {
 
   test("ES (usted)", () => {
     const html = render(DATA, "es");
-    expect(html).toContain("Usted ocupa el puesto #3 de 3 liquor stores de la zona");
+    expect(html).toContain("Usted ocupa el puesto #3 de 4 liquor stores de la zona");
     expect(html).toContain("Google no lo indica");
     expect(html).toContain("Dónde se queda atrás");
   });
@@ -244,5 +245,30 @@ describe("Website chip and 'couldn't be checked'", () => {
     expect(first).toContain("Checking 2 of 9 competitor websites…");
     expect(first).not.toContain("Run your first competitor scan");
     expect(render({ ...DATA, scoring: { scanId: "n", kind: "backfill", status: "failed", done: 4, total: 10, error: "x" } })).toContain("paused (4 of 10 done)");
+  });
+});
+
+describe("only 1–2 competitors: a head-to-head, never a rank", () => {
+  const history = DATA.rankHistory.map((p) => ({ ...p, of: 2, headToHead: true }));
+  const two = { ...DATA, rankHistory: history, latest: { ...DATA.latest!, entries: DATA.latest!.entries.filter((e) => e.name !== "Corner Liquor" && e.name !== "Peddler's") } };
+  test("EN: the head-to-head line with side-by-side scores and Add a competitor; no '#1 of 2', no '#' on the list", () => {
+    const html = render(two);
+    expect(html).toContain("Only 1 business like yours within 15 miles — here's how you compare with Main Street Liquors");
+    expect(html).toContain('data-testid="head-to-head"');
+    expect(html).toMatch(/href="#add-competitor"[^>]*>Add a competitor/);
+    expect(html).not.toMatch(/#\d+ of \d+/);
+    expect(html).not.toMatch(/>#\d+</);
+    // “Compared over time” says head-to-head for those scans.
+    expect(html).toContain("Head-to-head");
+  });
+  test("ES (usted), and two competitors read “A y B”", () => {
+    const withTwo = { ...DATA, rankHistory: history, latest: { ...DATA.latest!, entries: DATA.latest!.entries.filter((e) => e.name !== "Corner Liquor") } };
+    const html = render(withTwo, "es");
+    expect(html).toContain("Solo hay 2 negocios como el suyo a menos de 15 millas: así se compara con Main Street Liquors y Peddler's");
+    expect(html).toContain("Agregar un competidor");
+    expect(html).not.toMatch(/#\d+ de \d+/);
+  });
+  test("ranks return at 3+", () => {
+    expect(render()).not.toContain('data-testid="head-to-head"');
   });
 });

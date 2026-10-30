@@ -15,7 +15,9 @@ import { weeklyViewFromSnapshot, weeklyViewFromSummary, type WeeklyView } from "
 import { shouldShowSinceLastVisit, sinceLastVisit } from "./sinceLastVisit";
 import { weekBounds, weekEndDay, weekOf } from "./weeks";
 import { selectionChangedBetween } from "@/lib/competitorQuality";
-import { ensureWeeklySnapshots, fixesConfirmedBetween, isMissingTable, loadPastReports, loadSnapshot, loadWeeklyScans, rankAt, routineFor } from "./weekly.server";
+import { ensureWeeklySnapshots, fixesConfirmedBetween, isMissingTable, loadPastReports, loadSnapshot, loadWeeklyScans, rankAt, rankOnly, routineFor } from "./weekly.server";
+import { snapshotRank } from "./weeklyView";
+import type { HeadToHead } from "@/lib/competitorComparison";
 import type { ChartCategoryId } from "@/lib/scoreHistory";
 import type { ScoreBreakdown } from "@/lib/scoring";
 import type { ReportData, WeeklyMeta } from "@/lib/reports/reportPdf";
@@ -79,7 +81,7 @@ async function weekView(supabase: SupabaseClient, businessId: string, weekStart:
     rankAt(supabase, businessId, until.toISOString()),
     fixesConfirmedBetween(supabase, businessId, start.toISOString(), until.toISOString()),
   ]);
-  return weeklyViewFromSummary(summary, { rank, fixesConfirmed: fixes, isCurrentWeek });
+  return weeklyViewFromSummary(summary, { rank: rankOnly(rank), headToHead: rank?.headToHead ?? null, fixesConfirmed: fixes, isCurrentWeek });
 }
 
 export interface WeeklyRecapData {
@@ -174,9 +176,12 @@ export async function weeklyReportDataWithClient(
   const { data: scanRow } = await supabase.from("scores").select("total, grade, breakdown_json").eq("id", scanId).maybeSingle();
   const saved = scanRow as { total: number; grade: string; breakdown_json: ScoreBreakdown } | null;
   if (!saved) return null;
-  const [rank, fixes] = snapshot
-    ? [snapshot.rank !== null && snapshot.rank_of !== null ? { rank: snapshot.rank, of: snapshot.rank_of, previous: snapshot.prev_rank } : null, snapshot.fixes_confirmed]
+  // A frozen week keeps only a real rank; a live one may be a head-to-head.
+  const [liveRank, fixes] = snapshot
+    ? [null, snapshot.fixes_confirmed]
     : await Promise.all([rankAt(supabase, businessId, end.toISOString()), fixesConfirmedBetween(supabase, businessId, start.toISOString(), end.toISOString())]);
+  const rank = snapshot ? snapshotRank(snapshot) : rankOnly(liveRank);
+  const weekHeadToHead: HeadToHead | null = liveRank?.headToHead ?? null;
   const sameCompared = !snapshot || !c || snapshot.compared_scan_id === c.from.id;
   const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override, locale, business.categories, business.name);
   const score = snapshot?.score ?? saved.total;
@@ -191,6 +196,7 @@ export async function weeklyReportDataWithClient(
     period: c && prevScore !== null && sameCompared ? period(prevScore, score, comparable, c.from.createdAt, c.to.createdAt) : null,
     categories: reportCategories(saved.breakdown_json.categories ?? []),
     rank: rank ? { rank: rank.rank, of: rank.of, noun: profile.competitorNoun, previousRank: rank.previous } : null,
+    headToHead: weekHeadToHead ? { ...weekHeadToHead, noun: profile.competitorNoun } : null,
     changes: { listing: c && sameCompared ? c.listingChanges.map((x) => x.description) : [], listingUnavailable: c ? c.changesUnavailable : false, fixesConfirmed: fixes },
     nextSteps: [],
     reviews: {
@@ -263,6 +269,9 @@ export async function openBusinessVisitWithClient(
     s.noNewScan ? Promise.resolve([]) : deps.nextSteps(),
     deps.reviewGoalLines ? deps.reviewGoalLines().catch(() => []) : Promise.resolve([] as string[]),
   ]);
+  // A head-to-head (1–2 competitors) shows no rank, now or then.
+  const shownNow = rankOnly(rankNow);
+  const shownThen = rankOnly(rankThen);
   return {
     status: "ok",
     show: true,
@@ -277,7 +286,7 @@ export async function openBusinessVisitWithClient(
       comparable: c ? c.comparable : false,
       categories: c ? c.categories : [],
       // Across the competitor-picking update the old rank isn't comparable.
-      rank: rankNow ? { now: rankNow.rank, then: rankThen && !selectionChangedBetween(rankThen.scanAt, rankNow.scanAt) ? rankThen.rank : null, of: rankNow.of } : null,
+      rank: shownNow ? { now: shownNow.rank, then: shownThen && !selectionChangedBetween(shownThen.scanAt, shownNow.scanAt) ? shownThen.rank : null, of: shownNow.of } : null,
       fixesConfirmed: fixes,
       reviews: c ? c.reviews : { count: null, countChange: null, rating: null, ratingChange: null },
       reviewGoalLines,

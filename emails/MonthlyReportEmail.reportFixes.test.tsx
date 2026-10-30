@@ -221,8 +221,8 @@ describe("competitor standing matches the Competitors page", () => {
     };
   }
   test("rank and total come from reportStanding; the #1 business's reviews are kept", () => {
-    const snapshot = snapshotFromSavedRows([row("Owner", true, 70, 15), row("Top", false, 90, 200), row("Mid", false, 80, 50)]);
-    expect(snapshot).toEqual({ rank: 3, totalCompetitors: 3, topCompetitorReviewCount: 200 });
+    const snapshot = snapshotFromSavedRows([row("Owner", true, 70, 15), row("Top", false, 90, 200), row("Mid", false, 80, 50), row("Low", false, 60, 5)]);
+    expect(snapshot).toEqual({ rank: 3, totalCompetitors: 4, topCompetitorReviewCount: 200 });
   });
   test("no owner row → no standing", () => {
     expect(snapshotFromSavedRows([row("Top", false, 90, 200)])).toBeNull();
@@ -380,6 +380,33 @@ describe("Day 16: 'See the Website page' is a real link (SITE_URL)", () => {
     const fs = await import("node:fs");
     const route = fs.readFileSync("app/api/cron/monthly-reports/route.ts", "utf8");
     expect(route).toContain("const websitePageUrl = `${siteUrl}/business/${businessId}/website`;");
-    expect(route.match(/websitePageUrl \}\),/g)).toHaveLength(2);
+    expect(route.match(/websitePageUrl, competitorNoun: profile\.competitorNoun, competitorsPageUrl \}\),/g)).toHaveLength(2);
+  });
+});
+
+describe("monthly report: only 1–2 competitors → head-to-head, never '#1 of 2'", () => {
+  function row(name: string, isSubject: boolean, total: number): SavedScanRow {
+    return {
+      scan_id: "s", created_at: "2026-10-01T00:00:00Z", is_subject: isSubject, place_id: name, name, address: null,
+      distance_meters: isSubject ? null : 500, rating: 4.5, review_count: 30, has_website: true, total, grade: "B",
+      scoring_version: "1.10.0", breakdown_json: scoreBusiness(scoringInput()), price_level: null, photo_count: 10,
+    };
+  }
+  test("EN + ES: the head-to-head line, scores and Add a competitor; no rank, no movement", async () => {
+    const standing = snapshotFromSavedRows([row("Owner", true, 70), row("Rival", false, 90)])!;
+    expect(standing.headToHead?.rivals[0].name).toBe("Rival");
+    expect(standing.topCompetitorReviewCount).toBeNull();
+    const content = buildMonthlyReportContent(null, scoreRow(), { previous: standing, current: standing }, standing, "en", focus("en"));
+    expect(content.competitor.available).toBe(false);
+    for (const locale of ["en", "es"] as const) {
+      const out = visibleText(
+        await render(
+          <MonthlyReportEmail businessName="Riverside Cafe" reportDate="2026-10-01T14:00:00.000Z" content={content} unsubscribeUrl="https://x/u" locale={locale} competitorNoun="cafes" competitorsPageUrl="https://x/business/b/competitors#add-competitor" />
+        )
+      );
+      expect(out).toContain(locale === "en" ? "Only 1 business like yours within 15 miles — here's how you compare with Rival" : "Solo hay 1 negocio como el suyo a menos de 15 millas: así se compara con Rival");
+      expect(out).toContain(locale === "en" ? "Add a competitor" : "Agregar un competidor");
+      expect(out).not.toMatch(/#\d+ (of|de) \d+/);
+    }
   });
 });

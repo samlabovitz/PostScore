@@ -8,7 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { parseChartCategories } from "@/lib/scoreHistory";
 import type { ProfileSnapshot } from "@/lib/profileChanges";
 import { groupSavedScans, SAVED_SCAN_COLUMNS, type SavedScanRow } from "@/lib/savedCompetitorScans";
-import { ownerStanding } from "@/lib/competitorComparison";
+import { headToHead, isHeadToHead, ownerStanding, type HeadToHead } from "@/lib/competitorComparison";
 import { unfinishedNewScanIds, withoutUnfinished } from "@/lib/competitorScoringStatus";
 import { WEEKLY_CHECKLIST_ITEM_IDS } from "@/lib/weeklyChecklist";
 import type { Locale } from "@/lib/i18n";
@@ -36,9 +36,23 @@ export async function loadWeeklyScans(supabase: SupabaseClient, businessId: stri
   }));
 }
 
+export interface RankAt {
+  rank: number;
+  of: number;
+  previous: number | null;
+  scanAt: string | null;
+  /** Only 1–2 competitors: show this, never the rank (rankOnly). */
+  headToHead: HeadToHead | null;
+}
+
+/** The rank to show — null for a head-to-head (1–2 competitors). */
+export function rankOnly(r: RankAt | null | undefined): RankAt | null {
+  return r && !r.headToHead ? r : null;
+}
+
 /** The owner's local rank (shared ownerStanding / rankBy) from the latest
  * saved competitor scan at or before `at`, and the scan before that one. */
-export async function rankAt(supabase: SupabaseClient, businessId: string, at: string): Promise<{ rank: number; of: number; previous: number | null; scanAt: string | null } | null> {
+export async function rankAt(supabase: SupabaseClient, businessId: string, at: string): Promise<RankAt | null> {
   const [{ data, error }, unfinished, scope] = await Promise.all([
     supabase.from("competitor_scans").select(SAVED_SCAN_COLUMNS).eq("business_id", businessId).lte("created_at", at).order("created_at", { ascending: false }).limit(150),
     unfinishedNewScanIds(supabase, businessId),
@@ -48,8 +62,9 @@ export async function rankAt(supabase: SupabaseClient, businessId: string, at: s
   const rows = withoutUnfinished(data as SavedScanRow[], unfinished);
   const ids = Array.from(new Set(rows.map((r) => r.scan_id)));
   if (ids.length === 0) return null;
+  const scanOf = (id: string) => groupSavedScans(rows.filter((r) => r.scan_id === id))[0];
   const standing = (id: string) => {
-    const scan = groupSavedScans(rows.filter((r) => r.scan_id === id))[0];
+    const scan = scanOf(id);
     return scan ? ownerStanding(scan, scope) : null;
   };
   const now = standing(ids[0]);
@@ -58,7 +73,15 @@ export async function rankAt(supabase: SupabaseClient, businessId: string, at: s
   // same way — no "previous" rank, so no "moved up/down" (competitorQuality.ts).
   const scanAt = (id: string) => rows.find((r) => r.scan_id === id)?.created_at ?? null;
   const comparable = !!ids[1] && !selectionChangedBetween(scanAt(ids[1]), scanAt(ids[0]));
-  return { rank: now.rank, of: now.of, previous: comparable ? standing(ids[1])?.rank ?? null : null, scanAt: scanAt(ids[0]) };
+  // A head-to-head before had no rank to move from.
+  const before = comparable ? standing(ids[1]) : null;
+  return {
+    rank: now.rank,
+    of: now.of,
+    previous: before && !isHeadToHead(before) ? before.rank : null,
+    scanAt: scanAt(ids[0]),
+    headToHead: isHeadToHead(now) ? headToHead(scanOf(ids[0]), scope) : null,
+  };
 }
 
 /** Action-plan fixes a re-scan confirmed in [from, to). */
@@ -118,7 +141,8 @@ export async function ensureWeeklySnapshots(
       rankAt(supabase, businessId, end.toISOString()),
       fixesConfirmedBetween(supabase, businessId, start.toISOString(), end.toISOString()),
     ]);
-    const row = snapshotFromWeek(businessId, week, { rank: rank?.rank ?? null, rankOf: rank?.of ?? null, prevRank: rank?.previous ?? null, fixesConfirmed: fixes });
+    const shown = rankOnly(rank);
+    const row = snapshotFromWeek(businessId, week, { rank: shown?.rank ?? null, rankOf: shown?.of ?? null, prevRank: shown?.previous ?? null, fixesConfirmed: fixes });
     if (row) rows.push(row);
   }
   if (rows.length === 0) return { enabled: true, added: [] };

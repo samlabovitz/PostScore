@@ -7,6 +7,7 @@ import type { ChartCategoryId } from "@/lib/scoreHistory";
 import { CHART_CATEGORY_IDS } from "@/lib/scoreHistory";
 import { snapshotDelta, type WeeklySnapshotRow } from "./snapshots";
 import type { WeekSummary } from "./weeklyReport";
+import { MIN_RANKED_COMPETITORS, type HeadToHead } from "@/lib/competitorComparison";
 
 export interface WeeklyView {
   weekStart: string;
@@ -27,6 +28,8 @@ export interface WeeklyView {
   change: { delta: number | null; comparable: boolean; comparedDate: string; comparedInWeek: boolean; fromScore: number } | null;
   categories: Array<{ id: ChartCategoryId; before: number | null; after: number | null }>;
   rank: { rank: number; of: number; previous: number | null } | null;
+  /** Only 1–2 competitors: shown instead of a rank (lib/competitorComparison.ts). */
+  headToHead: HeadToHead | null;
   listingChanges: string[];
   changesUnavailable: boolean;
   fixesConfirmed: number;
@@ -36,6 +39,7 @@ export interface WeeklyView {
 
 export interface WeekExtras {
   rank: { rank: number; of: number; previous: number | null } | null;
+  headToHead?: HeadToHead | null;
   fixesConfirmed: number;
   isCurrentWeek: boolean;
 }
@@ -60,6 +64,7 @@ export function weeklyViewFromSummary(week: WeekSummary, extras: WeekExtras): We
       ? c.categories
       : CHART_CATEGORY_IDS.map((id) => ({ id, before: null, after: shown?.categories?.[id] ? Math.round(shown.categories[id].percent) : null })),
     rank: extras.rank,
+    headToHead: extras.headToHead ?? null,
     listingChanges: c ? c.listingChanges.map((x) => x.description) : [],
     changesUnavailable: c ? c.changesUnavailable : false,
     fixesConfirmed: extras.fixesConfirmed,
@@ -91,11 +96,19 @@ export function weeklyViewFromSnapshot(row: WeeklySnapshotRow, live: WeekSummary
         ? { delta, comparable: delta !== null, comparedDate, comparedInWeek: live.comparedInWeek, fromScore: row.prev_score }
         : null,
     categories: CHART_CATEGORY_IDS.map((id) => ({ id, before: row.categories[id]?.[0] ?? null, after: row.categories[id]?.[1] ?? null })),
-    rank: row.rank !== null && row.rank_of !== null ? { rank: row.rank, of: row.rank_of, previous: row.prev_rank } : null,
+    rank: snapshotRank(row),
+    headToHead: null,
     listingChanges: descriptions,
     changesUnavailable: row.compared_scan_id !== null && live.comparison?.changesUnavailable === true,
     fixesConfirmed: row.fixes_confirmed,
     reviews: { count: row.review_count, countChange: row.review_count_change, rating: row.rating === null ? null : Number(row.rating), ratingChange: row.rating_change === null ? null : Number(row.rating_change) },
     sparkline: live.sparkline,
   };
+}
+
+/** A frozen week's rank — none when it was a head-to-head (1–2
+ * competitors; weeks frozen before that rule may still hold "#1 of 2"). */
+export function snapshotRank(row: Pick<WeeklySnapshotRow, "rank" | "rank_of" | "prev_rank">): { rank: number; of: number; previous: number | null } | null {
+  if (row.rank === null || row.rank_of === null || row.rank_of - 1 < MIN_RANKED_COMPETITORS) return null;
+  return { rank: row.rank, of: row.rank_of, previous: row.prev_rank };
 }

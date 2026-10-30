@@ -29,6 +29,7 @@ import type { WeeklyView } from "@/lib/weekly/weeklyView";
 import type { ChartCategoryId } from "@/lib/scoreHistory";
 import { downloadWeeklyPdf } from "./weeklyPdfDownload";
 import { ShareGoodNews } from "./ShareGoodNews";
+import { HeadToHead } from "@/components/competitors/HeadToHead";
 import { useUpgrade } from "@/components/upgrade/UpgradeContext";
 import { UpgradeButton } from "@/components/upgrade/UpgradeTrigger";
 import { isPremiumPlan } from "@/lib/plan";
@@ -211,6 +212,13 @@ export function WeeklyRecapCard({
           )}
         </div>
       </div>
+
+      {/* 1–2 competitors: a head-to-head instead of "#1 of 2". */}
+      {view.headToHead && (
+        <div className="border-t border-paper-line px-5 py-4">
+          <HeadToHead businessId={businessId} headToHead={view.headToHead} noun={rankNoun} compact />
+        </div>
+      )}
 
       {/* What changed */}
       <div className="border-t border-paper-line px-5 py-4">

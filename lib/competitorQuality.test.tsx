@@ -298,7 +298,7 @@ describe("after the competitor-picking update", () => {
   test("no 'moved up/down' across it: weekly / since last visit / Reports PDF, and the monthly report", () => {
     const weekly = fs.readFileSync("lib/weekly/weekly.server.ts", "utf8");
     expect(weekly).toContain("const comparable = !!ids[1] && !selectionChangedBetween(scanAt(ids[1]), scanAt(ids[0]));");
-    expect(fs.readFileSync("lib/weekly/weeklyData.server.ts", "utf8")).toContain("then: rankThen && !selectionChangedBetween(rankThen.scanAt, rankNow.scanAt) ? rankThen.rank : null");
+    expect(fs.readFileSync("lib/weekly/weeklyData.server.ts", "utf8")).toContain("then: shownThen && !selectionChangedBetween(shownThen.scanAt, shownNow.scanAt) ? shownThen.rank : null");
     expect(fs.readFileSync("app/api/cron/monthly-reports/route.ts", "utf8")).toContain("!selectionChangedBetween(previousSnapshot.scanAt, currentCompetitorSnapshot.scanAt)");
   });
 

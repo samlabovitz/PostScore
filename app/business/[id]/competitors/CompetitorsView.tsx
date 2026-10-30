@@ -2,6 +2,7 @@
 
 import { shortName as displayName } from "@/lib/displayName";
 import { AddCompetitor, RemoveCompetitorButton, RemovedByOwner } from "./CompetitorOwnerControls";
+import { HeadToHead } from "@/components/competitors/HeadToHead";
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,6 +24,7 @@ import { reviewGoal,
   computeGaps,
   entryScore,
   VIEW_CATEGORY,
+  headToHead,
   heroSummary,
   metricValue,
   websiteNotChecked,
@@ -348,16 +350,24 @@ function CompetitorsReviewGoal({ scan, scope, noun }: { scan: SavedCompetitorSca
 function Hero({ scan, competitorNoun, businessId, fullScore }: { scan: SavedCompetitorScan; competitorNoun: string; businessId: string; fullScore: number | null }) {
   const locale = useLocale();
   const hero = heroSummary(scan, "overall");
+  // 1–2 competitors: a head-to-head, never "#1 of 2".
+  const h2h = headToHead(scan);
 
   return (
     <Card className="p-5">
-      <h2 className="font-serif text-xl font-semibold text-ink sm:text-[22px]">
-        {hero.rank !== null
-          ? t(locale, "dashboard.competitors.heroRank", { rank: hero.rank, total: hero.of, competitorNoun })
-          : t(locale, "dashboard.competitors.heroNoRank")}
-      </h2>
+      {h2h ? (
+        <HeadToHead businessId={businessId} headToHead={h2h} noun={competitorNoun} onCompetitorsPage />
+      ) : (
+        <>
+          <h2 className="font-serif text-xl font-semibold text-ink sm:text-[22px]">
+            {hero.rank !== null
+              ? t(locale, "dashboard.competitors.heroRank", { rank: hero.rank, total: hero.of, competitorNoun })
+              : t(locale, "dashboard.competitors.heroNoRank")}
+          </h2>
 
-      <Lineup scan={scan} />
+          <Lineup scan={scan} />
+        </>
+      )}
 
       <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-paper-line pt-4 sm:grid-cols-4">
         {/* The like-for-like score (only the checks competitors also
@@ -372,13 +382,17 @@ function Hero({ scan, competitorNoun, businessId, fullScore }: { scan: SavedComp
             </Link>
           )}
         </div>
-        <Stat label={t(locale, "dashboard.competitors.statLocalAverage")} value={hero.localAverage ?? "—"} />
-        <Stat label={t(locale, "dashboard.competitors.statTop")} value={hero.topScore ?? "—"} detail={hero.topName ? displayName(hero.topName) : null} />
-        <Stat
-          label={t(locale, "dashboard.competitors.statRadius", { miles: hero.radiusMiles === null ? "—" : hero.radiusMiles.toFixed(1) })}
-          value={hero.of - 1}
-          detail={competitorNoun}
-        />
+        {!h2h && (
+          <>
+            <Stat label={t(locale, "dashboard.competitors.statLocalAverage")} value={hero.localAverage ?? "—"} />
+            <Stat label={t(locale, "dashboard.competitors.statTop")} value={hero.topScore ?? "—"} detail={hero.topName ? displayName(hero.topName) : null} />
+            <Stat
+              label={t(locale, "dashboard.competitors.statRadius", { miles: hero.radiusMiles === null ? "—" : hero.radiusMiles.toFixed(1) })}
+              value={hero.of - 1}
+              detail={competitorNoun}
+            />
+          </>
+        )}
       </div>
       {/* Competitor names and listings come from Google. */}
       <GoogleMapsAttribution />
@@ -654,20 +668,21 @@ function LeadTrail({ scan, businessId }: { scan: SavedCompetitorScan; businessId
 function RankedList({ scan, view, businessId }: { scan: SavedCompetitorScan; view: CompareView; businessId: string }) {
   const locale = useLocale();
   const ranked = rankBy(scan, view);
+  const showRank = headToHead(scan) === null;
   const anyNotChecked = (view === "overall" || view === "website") && scan.entries.some(websiteCouldntBeChecked);
   return (
     <>
       {anyNotChecked && <p className="mb-2.5 text-[12.5px] text-ink-soft">{t(locale, "dashboard.competitors.someWebsitesNotChecked")}</p>}
       <ol className="flex flex-col gap-2.5">
         {ranked.map((r) => (
-          <CompetitorCard key={r.entry.placeId} entry={r.entry} rank={r.rank} view={view} businessId={businessId} />
+          <CompetitorCard key={r.entry.placeId} entry={r.entry} rank={showRank ? r.rank : null} view={view} businessId={businessId} />
         ))}
       </ol>
     </>
   );
 }
 
-function CompetitorCard({ entry, rank, view, businessId }: { entry: SavedCompetitorEntry; rank: number; view: CompareView; businessId: string }) {
+function CompetitorCard({ entry, rank, view, businessId }: { entry: SavedCompetitorEntry; rank: number | null; view: CompareView; businessId: string }) {
   const locale = useLocale();
   const [open, setOpen] = useState(false);
   const price = priceLevelToSymbol(entry.priceLevel);
@@ -683,7 +698,7 @@ function CompetitorCard({ entry, rank, view, businessId }: { entry: SavedCompeti
     >
       <div className="flex items-start gap-3">
         <span className={cn("mt-0.5 w-7 shrink-0 font-serif text-lg font-semibold tabular-nums", entry.isSubject ? "text-brass" : "text-ink-mute")}>
-          #{rank}
+          {rank === null ? "" : `#${rank}`}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -870,7 +885,7 @@ function OverTime({ data }: { data: OkResult }) {
           <li key={p.scanId} className="flex items-center justify-between gap-3 border-t border-paper-line py-2 text-[13px] first:border-t-0">
             <span className="text-ink-soft">{formatShortDate(p.createdAt, locale, timeZone)}</span>
             <span className="font-medium tabular-nums text-ink">
-              {p.rank === null ? "—" : t(locale, "dashboard.competitors.overTimeRank", { rank: p.rank, total: p.of })}
+              {p.headToHead ? t(locale, "dashboard.competitors.headToHead.label") : p.rank === null ? "—" : t(locale, "dashboard.competitors.overTimeRank", { rank: p.rank, total: p.of })}
             </span>
             <span className="w-10 text-right tabular-nums text-ink-mute">{p.score ?? "—"}</span>
           </li>

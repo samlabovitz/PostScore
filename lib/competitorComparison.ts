@@ -409,3 +409,40 @@ export function reportStanding(scan: SavedCompetitorScan, scope?: CompetitorScop
   const standing = ownerStanding(scan, scope);
   return standing ? { rank: standing.rank, total: standing.of, topReviewCount: standing.topReviewCount } : null;
 }
+
+/** Below this many competitors a rank says little ("#1 of 2"), so no place
+ * shows one — the Overview, Competitors page, weekly recap, monthly report
+ * and PostAI show a head-to-head instead (headToHead). Ranks return on
+ * their own at 3+. */
+export const MIN_RANKED_COMPETITORS = 3;
+
+export interface HeadToHeadSide {
+  placeId: string;
+  name: string | null;
+  /** Full PostScore (the same number the rank would use). */
+  score: number | null;
+  reviewCount: number | null;
+  rating: number | null;
+}
+
+export interface HeadToHead {
+  owner: HeadToHeadSide;
+  /** The 1–2 competitors, highest score first. */
+  rivals: HeadToHeadSide[];
+}
+
+/** The head-to-head for a scan with 1–2 competitors (same scope as the
+ * rank); null with none or with 3+ (then the rank shows). */
+export function headToHead(scan: SavedCompetitorScan, scope?: CompetitorScope | null): HeadToHead | null {
+  const ranked = rankBy(scan, "overall", scope);
+  const owner = ranked.find((r) => r.entry.isSubject);
+  const rivals = ranked.filter((r) => !r.entry.isSubject);
+  if (!owner || rivals.length === 0 || rivals.length >= MIN_RANKED_COMPETITORS) return null;
+  const side = (r: RankedEntry): HeadToHeadSide => ({ placeId: r.entry.placeId, name: r.entry.name, score: r.score, reviewCount: r.entry.reviewCount, rating: r.entry.rating });
+  return { owner: side(owner), rivals: rivals.map(side) };
+}
+
+/** True when a standing must not be shown as a rank (1–2 competitors). */
+export function isHeadToHead(standing: Pick<OwnerStanding, "othersCount"> | null | undefined): boolean {
+  return !!standing && standing.othersCount > 0 && standing.othersCount < MIN_RANKED_COMPETITORS;
+}
