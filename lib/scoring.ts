@@ -62,15 +62,43 @@ import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type Aban
 // 1.13.0: "Performance & mobile" (5) → "Loads fast" (4, or 3 once the
 // fuller phone check has run) + "Works well on phones" (1, or 2); speed
 // Fast 100% / Average 50% / Slow 0%; the viewport tag leaves Content depth.
-export const SCORING_VERSION = "1.13.0";
+// 1.13.1: Social media links — real profiles plus a broken icon = 0.5;
+// a website checked on fewer than half of its 30 points (it blocks
+// automated checks) counts in the total only by the share checked.
+export const SCORING_VERSION = "1.13.1";
 
 /**
  * v1.13.0's speed / phone split and Content depth without the viewport —
  * on now that SCORING_VERSION is "1.13.0" (POSTSCORE_SCORING_PREVIEW was
  * the pre-approval dry-run switch).
  */
-export const SCORING_V113: boolean =
-  (SCORING_VERSION as string) === "1.13.0" || (typeof process !== "undefined" && process.env?.POSTSCORE_SCORING_PREVIEW === "1.13.0");
+/** "1.13.1" ≥ "1.13.0" — numeric, part by part. */
+function versionAtLeast(version: string, min: string): boolean {
+  const a = version.split(".").map(Number);
+  const b = min.split(".").map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const d = (a[i] ?? 0) - (b[i] ?? 0);
+    if (d !== 0) return d > 0;
+  }
+  return true;
+}
+/** POSTSCORE_SCORING_PREVIEW turns a not-yet-approved version on for a
+ * dry run (server-side scripts only; never set in the app). */
+const SCORING_PREVIEW = typeof process !== "undefined" ? (process.env?.POSTSCORE_SCORING_PREVIEW ?? null) : null;
+const scoringAtLeast = (min: string) => versionAtLeast(SCORING_VERSION, min) || (!!SCORING_PREVIEW && versionAtLeast(SCORING_PREVIEW, min));
+
+export const SCORING_V113: boolean = scoringAtLeast("1.13.0");
+
+/**
+ * v1.13.1 (on since SCORING_VERSION 1.13.1):
+ * - Social media links: real profiles plus a broken icon ("#", nowhere,
+ *   the site itself, a bare platform homepage) is half a point.
+ * - A website that exists but could be checked on fewer than half of the
+ *   Website category's points (it blocks automated checks) counts in the
+ *   total only by the share checked — the score leans on Listing and
+ *   Reviews. A business with no website keeps today's scoring.
+ */
+export const SCORING_V1131: boolean = scoringAtLeast("1.13.1");
 
 // ---------------------------------------------------------------------------
 // Core types
@@ -2857,7 +2885,8 @@ export const CHECKS: CheckDefinition[] = [
       const brokenGaps = broken.length > 0 ? { gaps: ["broken_social"] } : {};
       if (counted.length > 0) {
         return {
-          earnedPoints: 1,
+          // v1.13.1: a broken icon next to real profiles costs half the point.
+          earnedPoints: SCORING_V1131 && broken.length > 0 ? 0.5 : 1,
           confidence: "VERIFIED",
           ...brokenGaps,
           explanation: [
@@ -3357,7 +3386,7 @@ export const CHECKS_V112: CheckDefinition[] = CHECKS.flatMap((def) => {
 /** The checks a scoring version uses. */
 export function checksFor(version: string): CheckDefinition[] {
   // 1.13.0 keeps every 1.12.0 check (its own changes live in CHECKS, behind SCORING_V113).
-  return version === SCORING_VERSION_V112 || version === "1.13.0" ? CHECKS_V112 : CHECKS;
+  return versionAtLeast(version, SCORING_VERSION_V112) ? CHECKS_V112 : CHECKS;
 }
 
 function isDeterminable(confidence: Confidence): boolean {
@@ -3443,6 +3472,21 @@ export function scoreBusiness(input: BusinessScoringInput, locale: Locale = DEFA
  * place PostScore's weighting lives. scoreBusiness uses it, and so does
  * re-totalling a competitor whose listing checks were saved earlier and
  * whose website checks were just run (lib/competitorFullScoring.ts). */
+/** v1.13.1: the Website category's weight in the total — scaled by the
+ * share of its points that could be checked when that's under half, the
+ * business HAS a website, and the rest was left out because the site
+ * couldn't be reached (it blocks automated checks). Never for a missing
+ * website (a real weakness), nor for one simply not checked yet — a new
+ * site, or the starter-site projection, which will be checked in full.
+ * Every other category keeps its weight. */
+export function partlyCheckedWebsiteWeight(c: Pick<CategoryResult, "id" | "weight" | "possiblePoints" | "checks">): number {
+  if (c.id !== "website" || c.possiblePoints <= 0 || c.possiblePoints >= c.weight / 2) return c.weight;
+  const hasWebsite = c.checks.find((x) => x.id === "website.has_website");
+  if (!hasWebsite || !(hasWebsite.earnedPoints !== null && hasWebsite.earnedPoints > 0)) return c.weight;
+  if (!c.checks.some((x) => x.earnedPoints === null && x.excludedReason === "unreachable")) return c.weight;
+  return c.weight * (c.possiblePoints / c.weight);
+}
+
 export function breakdownFromChecks(checks: CheckResult[], locale: Locale = DEFAULT_LOCALE, version: string = SCORING_VERSION): ScoreBreakdown {
   const categories: CategoryResult[] = (Object.keys(CATEGORY_WEIGHTS) as CategoryId[]).map(
     (categoryId) => {
@@ -3470,9 +3514,10 @@ export function breakdownFromChecks(checks: CheckResult[], locale: Locale = DEFA
   // exists as an honest fallback, never silently scoring an undetermined
   // category as a zero.
   const determinableCategories = categories.filter((c) => c.possiblePoints > 0);
-  const totalPossibleWeight = determinableCategories.reduce((sum, c) => sum + c.weight, 0);
+  const weightInTotal = (c: CategoryResult) => (SCORING_V1131 ? partlyCheckedWebsiteWeight(c) : c.weight);
+  const totalPossibleWeight = determinableCategories.reduce((sum, c) => sum + weightInTotal(c), 0);
   const totalEarnedWeight = determinableCategories.reduce(
-    (sum, c) => sum + (c.earnedPoints / c.possiblePoints) * c.weight,
+    (sum, c) => sum + (c.earnedPoints / c.possiblePoints) * weightInTotal(c),
     0
   );
   const total =

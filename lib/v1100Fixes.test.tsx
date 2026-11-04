@@ -76,16 +76,15 @@ describe("2 — 'Partly checked — score based on X of 100 points'", () => {
         <WebsiteCoverageNote category={blocked} hasWebsite scoreBasis={basis} />
       </LocaleProvider>
     );
-  test("the label always equals the sum of the category maxes shown: 34 + 30 + 9 = 73 (EN + ES)", () => {
+  test("v1.13.1: a site that blocks our checks says how much of the Website counted — “based on 9 of 30 points” (EN + ES)", () => {
     expect(scoreBasisPoints(categories)).toBe(73);
     expect(websitePointsCoverage(blocked)).toEqual({ share: 0.3 });
-    expect(render("en")).toContain("Partly checked — score based on 73 of 100 points.");
-    expect(render("es")).toContain("Revisado en parte — puntuación basada en 73 de 100 puntos.");
+    expect(render("en")).toContain("Website: partly checked — based on 9 of 30 points");
+    expect(render("es")).toContain("Sitio web: revisado en parte, basado en 9 de 30 puntos");
+    expect(render("en")).not.toContain("of 100 points");
   });
-  test("without the whole-score basis, no points number is guessed (only the check-count line)", () => {
-    const html = render("en", null);
-    expect(html).not.toContain("Partly checked");
-    expect(html).toContain("Based on 2 of 4 website checks");
+  test("the line needs no whole-score basis — it's the Website's own checked points", () => {
+    expect(render("en", null)).toContain("Website: partly checked — based on 9 of 30 points");
   });
   test("60%+ checkable → no 'Partly checked' label (the existing check-count note stays)", () => {
     const mostly = { ...blocked, possiblePoints: 24, checks: [check("website.has_website", 4, 4), check("website.content_depth", 20, 10), check("website.https", 6, null)] };

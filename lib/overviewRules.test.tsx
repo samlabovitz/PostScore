@@ -113,7 +113,7 @@ describe("rating wording — no scoring change", () => {
   });
 
   test("v1.12.0+: the rating check is out of 14", () => {
-    expect(SCORING_VERSION).toBe("1.13.0");
+    expect(SCORING_VERSION).toBe("1.13.1");
     expect(ratingCheck(4.5, 40).earnedPoints).toBe(11.2);
   });
 

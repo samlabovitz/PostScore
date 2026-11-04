@@ -5,6 +5,7 @@ import { DEFAULT_LOCALE, type Locale } from "./locale";
 // below; adding a new locale (see locale.ts) doesn't require touching the
 // key list, only a new entry in `messages`.
 export type MessageKey =
+  | "dashboard.website.partlyCheckedOf30"
   | "dashboard.gbpEdit.viewOnGoogle"
   | "dashboard.gbpEdit.viewOnGoogleNote"
   | "dashboard.gbpMessaging.title"
@@ -4573,6 +4574,7 @@ type LocaleMessages = Partial<Record<MessageKey, string>>;
 
 export const messages: Record<Locale, LocaleMessages> = {
   en: {
+    "dashboard.website.partlyCheckedOf30": "Website: partly checked — based on {points} of {of} points",
     "dashboard.gbpEdit.viewOnGoogle": "View on Google",
     "dashboard.gbpEdit.viewOnGoogleNote": "Google can take a while to review edits. If you don't see the change yet, it's probably still pending.",
     "dashboard.gbpMessaging.title": "Let customers text you from Google — turn on messaging in your Business Profile (about 2 min)",
@@ -9497,6 +9499,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.searchDemand.tips.empty": "Tips appear once there are real search terms to work from.",
   },
   es: {
+    "dashboard.website.partlyCheckedOf30": "Sitio web: revisado en parte, basado en {points} de {of} puntos",
     "dashboard.gbpEdit.viewOnGoogle": "Ver en Google",
     "dashboard.gbpEdit.viewOnGoogleNote": "Google puede tardar un poco en revisar los cambios. Si todavía no ve el cambio, probablemente sigue pendiente.",
     "dashboard.gbpMessaging.title": "Permita que los clientes le escriban desde Google: active la mensajería en su Perfil de Empresa en Google (unos 2 min)",

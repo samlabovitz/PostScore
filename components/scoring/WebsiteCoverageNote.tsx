@@ -1,6 +1,6 @@
 "use client";
 
-import { categoryCheckCoverage, PARTLY_CHECKED_THRESHOLD, websitePointShare, type CategoryResult } from "@/lib/scoring";
+import { categoryCheckCoverage, partlyCheckedWebsiteWeight, PARTLY_CHECKED_THRESHOLD, SCORING_V1131, websitePointShare, type CategoryResult } from "@/lib/scoring";
 import { t, useLocale } from "@/lib/i18n";
 
 /**
@@ -33,6 +33,15 @@ export function WebsiteCoverageNote({
   // Only when checks were excluded because we couldn't reach the site.
   if (unreachable === 0 || checked === 0) return null;
   const share = websitePointShare(category);
+  // v1.13.1: the Website counts in the total only by what was checked.
+  if (SCORING_V1131 && partlyCheckedWebsiteWeight(category) < category.weight) {
+    const points = Math.round(category.possiblePoints * 10) / 10;
+    return (
+      <p data-testid="website-partly-checked" className={className ?? "text-[12px] text-ink-mute"}>
+        <span className="font-semibold text-amber">{t(locale, "dashboard.website.partlyCheckedOf30", { points, of: category.weight })}</span>
+      </p>
+    );
+  }
   return (
     <p className={className ?? "text-[12px] text-ink-mute"}>
       {share < PARTLY_CHECKED_THRESHOLD && scoreBasis !== null && (

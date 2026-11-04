@@ -105,7 +105,8 @@ describe("2 — social icons that don't go to a profile", () => {
     ];
     const withReal = withContent({ socialProfiles: [{ platform: "Instagram", url: "instagram.com/national510" }], brokenSocialLinks: broken });
     const ok = check(withReal, "website.social_links");
-    expect(ok.earnedPoints).toBe(1);
+    // v1.13.1: real profiles plus a broken icon = half the point.
+    expect(ok.earnedPoints).toBe(0.5);
     expect(ok.gaps).toEqual(["broken_social"]);
     expect(ok.explanation).toContain("Your Twitter (X) and YouTube icons don't go to a profile — they reload your own site. Link them to your real profiles or remove them.");
     expect(check(withReal, "website.social_links", "es").explanation).toContain("Sus íconos de Twitter (X) y YouTube no llevan a un perfil: vuelven a cargar su propio sitio.");
@@ -204,8 +205,8 @@ describe("3 — “Works well on phones” and “Loads fast”, Website still 3
 });
 
 describe("v1.13.0", () => {
-  test("SCORING_VERSION is 1.13.0 and its split is on", () => {
-    expect(SCORING_VERSION).toBe("1.13.0");
+  test("SCORING_VERSION is 1.13.1 and the 1.13.0 split is on", () => {
+    expect(SCORING_VERSION).toBe("1.13.1");
     expect(SCORING_V113).toBe(true);
   });
 
