@@ -213,12 +213,12 @@ describe("v1.13.0", () => {
     check({ ...BASE, websiteAnalysis: { ...BASE.websiteAnalysis!, mobilePerformance: m } }, "website.performance_mobile", locale);
 
   test("owner wording (EN + ES): “Average · about 2.0 seconds to show your page on a phone”, a muted source line, no seconds → just the word, never “/100”", () => {
-    const avg = speed({ method: "field", fieldCategory: "AVERAGE", labScore: null, lcpSeconds: 2.04 });
+    const avg = speed({ method: "field", fieldCategory: "AVERAGE", labScore: null, lcpSeconds: 3.04 });
     expect(avg.label).toBe("Loads fast");
-    expect(avg.explanation).toBe("Average · about 2.0 seconds to show your page on a phone.");
+    expect(avg.explanation).toBe("Average · about 3.0 seconds to show your page on a phone.");
     expect(avg.note).toBe("Based on real visitors in the last 28 days");
-    const es = speed({ method: "field", fieldCategory: "AVERAGE", labScore: null, lcpSeconds: 2.04 }, "es");
-    expect(es.explanation).toBe("Promedio · unos 2,0 segundos en mostrar su página en un teléfono.");
+    const es = speed({ method: "field", fieldCategory: "AVERAGE", labScore: null, lcpSeconds: 3.04 }, "es");
+    expect(es.explanation).toBe("Promedio · unos 3,0 segundos en mostrar su página en un teléfono.");
     expect(es.note).toBe("Basado en visitantes reales de los últimos 28 días");
     const lab = speed({ method: "lab", fieldCategory: null, labScore: 65, lcpSeconds: 6.82 });
     expect(lab.explanation).toBe("Slow · about 6.8 seconds to show your page on a phone.");
@@ -228,6 +228,19 @@ describe("v1.13.0", () => {
     const carried = speed({ method: "lab", fieldCategory: null, labScore: 27, measuredAt: "2026-10-06T20:40:00.000Z", carriedForward: true });
     expect(carried.explanation).toBe("Slow (last measured Oct 6, 2026).");
     for (const c of [avg, es, lab, carried]) expect(c.explanation).not.toMatch(/\/100|Chrome|Lighthouse|PageSpeed|CrUX|lab/i);
+  });
+
+  test("the label matches the seconds: Fast ≤ 2.5 s, Average ≤ 4 s, Slow > 4 s — real visitors and the phone test alike; no seconds → Google's overall rating", () => {
+    // The real National 5 & 10 case: Google rates it Slow overall, but its page shows in 2.1 s.
+    const n510 = speed({ method: "field", fieldCategory: "SLOW", labScore: null, lcpSeconds: 2.1 });
+    expect(n510.explanation).toBe("Fast · about 2.1 seconds to show your page on a phone.");
+    expect(n510.earnedPoints).toBe(4);
+    const word = (m: NonNullable<WebsiteAnalysis["mobilePerformance"]>) => speed(m).explanation.split(" ")[0].replace(".", "");
+    expect([2.5, 2.6, 4, 4.1].map((sec) => word({ method: "field", fieldCategory: "FAST", labScore: null, lcpSeconds: sec }))).toEqual(["Fast", "Average", "Average", "Slow"]);
+    expect([2.5, 4, 4.1].map((sec) => word({ method: "lab", fieldCategory: null, labScore: 95, lcpSeconds: sec }))).toEqual(["Fast", "Average", "Slow"]);
+    expect(word({ method: "field", fieldCategory: "SLOW", labScore: null })).toBe("Slow");
+    expect(word({ method: "field", fieldCategory: "FAST", labScore: null })).toBe("Fast");
+    expect(word({ method: "lab", fieldCategory: null, labScore: 65 })).toBe("Average");
   });
 
   test("weights: phones 1 + speed 4 until the fuller phone check has run, then 2 + 3 — Website stays 30 either way", () => {

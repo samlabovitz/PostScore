@@ -1371,11 +1371,14 @@ function worksOnPhonesMaxPoints(input: BusinessScoringInput): number {
   return fullerPhoneCheckRan(input) ? 2 : 1;
 }
 
-/** v1.13.0: a lab run in the same plain words as real-visitor data —
- * by Google's own largest-contentful-paint thresholds (2.5 s / 4 s) when
- * the seconds are known, else by Google's own score bands (90 / 50). */
-function labSpeedCategory(m: MobilePerformanceMeasurement): FieldSpeedCategory {
+/** v1.13.0: the label matches the seconds shown — Fast ≤ 2.5 s, Average
+ * ≤ 4 s, Slow > 4 s, for real-visitor and phone-test times alike (the real
+ * National 5 & 10 case: 2.1 s to show the page, but "Slow" from Google's
+ * overall real-visitor rating). No seconds → Google's overall rating
+ * (real visitors) or its score bands, 90 / 50 (phone test). */
+function speedCategory(m: MobilePerformanceMeasurement): FieldSpeedCategory {
   if (typeof m.lcpSeconds === "number") return m.lcpSeconds <= 2.5 ? "FAST" : m.lcpSeconds <= 4 ? "AVERAGE" : "SLOW";
+  if (m.method === "field" && m.fieldCategory) return m.fieldCategory;
   const score = m.labScore ?? 0;
   return score >= 90 ? "FAST" : score >= 50 ? "AVERAGE" : "SLOW";
 }
@@ -1411,7 +1414,7 @@ function loadsFastV113(input: BusinessScoringInput, locale: Locale): ReturnType<
     }
     return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.performance_mobile.explanation.noScore") };
   }
-  const category = m.method === "field" ? m.fieldCategory! : labSpeedCategory(m);
+  const category = speedCategory(m);
   const result = speedResult(category, m.lcpSeconds, locale);
   const lastMeasured = m.carriedForward && m.measuredAt ? formatShortDate(m.measuredAt, locale, input.timeZone || undefined) : null;
   return {
