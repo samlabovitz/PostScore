@@ -151,9 +151,9 @@ describe("score card: change since last scan, honestly", () => {
     expect(html).not.toMatch(/text-paper\/\d|bg-paper\/|border-paper\/|bg-brass\/\d/);
   });
 
-  test("ring: '/ 100' under the score, smaller and lighter", () => {
+  test("ring: a large serif score with “/100” under it, smaller and muted", () => {
     const html = renderToStaticMarkup(<AnimatedScoreRing score={87} businessId="b" />);
-    expect(html).toMatch(/text-\[52px\][^>]*>87<\/div><div class="mt-1 text-\[13px\] text-\[color:color-mix\(in_srgb,var\(--color-paper\)_70%,transparent\)\]">\/ 100</);
+    expect(html).toMatch(/font-serif text-\[54px\][^>]*>87<\/div><div class="mt-1 text-\[13px\] font-medium text-\[color:color-mix\(in_srgb,var\(--color-paper\)_60%,transparent\)\]">\/100</);
   });
 });
 

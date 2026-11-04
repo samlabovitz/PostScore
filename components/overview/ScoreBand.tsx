@@ -28,6 +28,15 @@ function gradeRangeLabel(index: number): string {
 }
 
 /** The grade; tapping it shows what each letter means (the real ranges). */
+/** The grade's accent: A/B green, C amber, D deeper amber, F red. */
+export const GRADE_ACCENT: Record<Grade, string> = {
+  A: "var(--color-green)",
+  B: "color-mix(in srgb, var(--color-green) 70%, var(--color-amber))",
+  C: "var(--color-amber)",
+  D: "color-mix(in srgb, var(--color-amber) 55%, var(--color-red))",
+  F: "var(--color-red)",
+};
+
 function GradeExplainer({ grade }: { grade: Grade }) {
   const locale = useLocale();
   const [open, setOpen] = useState(false);
@@ -38,9 +47,15 @@ function GradeExplainer({ grade }: { grade: Grade }) {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-label={t(locale, "dashboard.overview.gradeMeaningAriaLabel")}
-        className="inline-flex items-center gap-2 rounded-lg border border-[color:color-mix(in_srgb,var(--color-brass)_60%,transparent)] bg-[color:color-mix(in_srgb,var(--color-paper)_6%,transparent)] px-2.5 py-1 text-paper transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-paper)_12%,transparent)]"
+        data-testid="grade-chip"
+        data-grade={grade}
+        // A subtle grade accent (border, tint and dot); the letter stays
+        // cream on the dark card for contrast.
+        style={{ borderColor: `color-mix(in srgb, ${GRADE_ACCENT[grade]} 70%, white)`, backgroundColor: `color-mix(in srgb, ${GRADE_ACCENT[grade]} 18%, transparent)` }}
+        className="inline-flex items-center gap-2 rounded-lg border px-2.5 py-1 text-paper transition-colors hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
       >
-        <span className="text-[12px] font-medium text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)]">{t(locale, "dashboard.overview.gradeColumn")}</span>
+        <span aria-hidden className="h-2 w-2 rounded-full" style={{ backgroundColor: `color-mix(in srgb, ${GRADE_ACCENT[grade]} 60%, white)` }} />
+        <span className="text-[12px] font-medium text-[color:color-mix(in_srgb,var(--color-paper)_75%,transparent)]">{t(locale, "dashboard.overview.gradeColumn")}</span>
         <span className="font-serif text-lg font-bold leading-none">{grade}</span>
       </button>
       {open && (
@@ -192,8 +207,10 @@ export function ScoreBand({
       </div>
       <div className="relative grid grid-cols-1 items-center gap-5 nav:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] nav:gap-6">
         <div className="flex items-center justify-center gap-5 nav:justify-start">
-          <div className="flex flex-col items-center gap-2">
-            <AnimatedScoreRing score={score} businessId={businessId} size={164} />
+          {/* The ring and its button share one centered column: the button
+              sits under the ring's center with even space above and below. */}
+          <div data-testid="score-ring-column" className="flex w-max flex-col items-center gap-3">
+            <AnimatedScoreRing score={score} size={164} />
             {/* A real link (works without JS, keyboard included); the click
                 scrolls smoothly to the breakdown and opens + highlights it. */}
             <a
@@ -203,6 +220,7 @@ export function ScoreBand({
                 jumpToAnchor(BREAKDOWN_ANCHOR);
               }}
               data-testid="see-breakdown"
+              // Centered under the ring (its own row in the column).
               // A clear button on the dark card: cream outline and text,
               // brighter on hover, a visible focus ring; Enter works (a real link).
               className="inline-flex min-h-[36px] items-center gap-1 whitespace-nowrap rounded-full border border-[color:color-mix(in_srgb,var(--color-paper)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--color-paper)_8%,transparent)] px-3.5 py-1.5 text-[12.5px] font-semibold text-paper transition-colors hover:border-paper hover:bg-[color:color-mix(in_srgb,var(--color-paper)_18%,transparent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass motion-reduce:transition-none"

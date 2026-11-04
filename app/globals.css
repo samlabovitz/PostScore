@@ -65,6 +65,33 @@ body {
   }
 }
 
+/* The Overview score ring: a soft gold glow behind it, and a short pulse
+   when the count-up lands. "Reduce motion": no pulse (the ring and number
+   show their final state instantly — components/overview/AnimatedScoreRing). */
+.ps-score-glow {
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-brass) 28%, transparent) 0%, transparent 70%);
+  filter: blur(18px);
+  opacity: 0.9;
+}
+@keyframes ps-score-glow-land {
+  0% { opacity: 0.9; transform: scale(1); }
+  40% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 0.9; transform: scale(1); }
+}
+@keyframes ps-score-land {
+  0% { transform: scale(1); text-shadow: 0 0 0 transparent; }
+  40% { transform: scale(1.06); text-shadow: 0 0 18px color-mix(in srgb, var(--color-brass) 70%, transparent); }
+  100% { transform: scale(1); text-shadow: 0 0 0 transparent; }
+}
+.ps-score-glow-land { animation: ps-score-glow-land 650ms ease-out; }
+.ps-score-land { animation: ps-score-land 650ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .ps-score-glow-land,
+  .ps-score-land {
+    animation: none;
+  }
+}
+
 /* Growth celebrations: a gentle pop and the check badge appearing. */
 @keyframes ps-pop {
   0% { transform: scale(1); }
