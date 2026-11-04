@@ -374,10 +374,21 @@ function UndoStrip({ businessId, undo, onUndone }: { businessId: string; undo: U
       return setStep("error");
     }
     if (r.status === "error") {
-      setMessage(t(locale, `dashboard.gbpEdit.error.${r.error}` as MessageKey));
+      // Which fields didn't revert (or changed since), in the owner's words.
+      const fields = r.fields?.length ? r.fields.map((id) => optionLabel(id, locale)).join(", ") : null;
+      const key: MessageKey =
+        r.error === "undo_unverified"
+          ? r.pending
+            ? "dashboard.gbpEdit.error.undo_unverifiedPending"
+            : "dashboard.gbpEdit.error.undo_unverified"
+          : r.error === "changed_since" && fields
+            ? "dashboard.gbpEdit.error.changed_sinceFields"
+            : (`dashboard.gbpEdit.error.${r.error}` as MessageKey);
+      setMessage(t(locale, key, { fields: fields ?? "" }));
       return setStep("error");
     }
-    setMessage(t(locale, r.status === "pending_review" ? "dashboard.gbpEdit.undo.donePending" : "dashboard.gbpEdit.undo.done"));
+    // Only after Google read back the previous values.
+    setMessage(t(locale, "dashboard.gbpEdit.undo.complete"));
     setStep("done");
     router.refresh();
   }

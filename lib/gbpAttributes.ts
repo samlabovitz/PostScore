@@ -230,9 +230,39 @@ export function latestUndoable(rows: GbpChangeRow[], now: number): UndoableChang
   };
 }
 
+function merchantValues(current: GbpAttribute[]): Map<string, AttrValue> {
+  return new Map(current.filter((a) => a.name).map((a) => [attributeId(a.name!), boolValue(a)]));
+}
+
 /** Fields whose live (merchant) value is no longer what we set — someone
  * changed them on Google since. Undo never overwrites a newer edit. */
 export function undoConflicts(changes: UndoableChange["changes"], current: GbpAttribute[]): string[] {
-  const byId = new Map(current.filter((a) => a.name).map((a) => [attributeId(a.name!), boolValue(a)]));
-  return changes.filter((c) => (byId.get(c.id) ?? null) !== c.after).map((c) => c.id);
+  return undoPlan(changes, current).conflicts;
+}
+
+/**
+ * What an undo must send to restore exactly the logged "before": every
+ * field still at the value we set goes back (null = "not set" → removed:
+ * in the mask, left out of the body). A field already back at its
+ * "before" needs nothing. A field at any third value was changed on
+ * Google since — a conflict: undo refuses rather than overwrite it.
+ */
+export function undoPlan(changes: UndoableChange["changes"], current: GbpAttribute[]): { send: Array<{ id: string; after: AttrValue; before: AttrValue }>; conflicts: string[] } {
+  const now = merchantValues(current);
+  const send: Array<{ id: string; after: AttrValue; before: AttrValue }> = [];
+  const conflicts: string[] = [];
+  for (const c of changes) {
+    const value = now.get(c.id) ?? null;
+    if (value === c.before) continue;
+    if (value === c.after) send.push({ id: c.id, after: c.before, before: c.after });
+    else conflicts.push(c.id);
+  }
+  return { send, conflicts };
+}
+
+/** After an undo: the fields Google still doesn't show at their logged
+ * "before" value (read back from locations.getAttributes). */
+export function undoReadbackMismatches(changes: UndoableChange["changes"], readback: GbpAttribute[]): string[] {
+  const now = merchantValues(readback);
+  return changes.filter((c) => (now.get(c.id) ?? null) !== c.before).map((c) => c.id);
 }

@@ -34,7 +34,12 @@ export type ApplyActionResult =
   | { status: "no_changes" }
   | { status: "blocked"; reason: GbpEditBlock }
   | { status: "error"; error: GbpEditErrorCode };
-export type UndoActionResult = { status: "sent" | "pending_review" } | { status: "blocked"; reason: GbpEditBlock } | { status: "error"; error: GbpEditErrorCode };
+/** "sent" = read back from Google and verified; an error may name the
+ * fields that didn't revert (and whether Google is still reviewing). */
+export type UndoActionResult =
+  | { status: "sent" }
+  | { status: "blocked"; reason: GbpEditBlock }
+  | { status: "error"; error: GbpEditErrorCode; fields?: string[]; pending?: boolean };
 
 async function server() {
   const [tokens, attrs, admin] = await Promise.all([import("@/lib/gbpTokens.server"), import("@/lib/gbpAttributes.server"), import("@/lib/supabase/admin")]);
@@ -105,7 +110,7 @@ export async function undoCustomerDetailsAction(businessId: string, batchId: str
   const g = await gate(businessId);
   if (!g.ok) return g.result;
   const result = await g.s.attrs.undoCustomerDetailsChange(g.target, batchId, g.s.attrs.supabaseChangeStore(g.s.admin));
-  if (result.status === "error") return onError(g, { status: "error", error: result.error });
+  if (result.status === "error") return onError(g, { status: "error", error: result.error, ...(result.fields ? { fields: result.fields } : {}), ...(result.pending ? { pending: true } : {}) });
   revalidatePath(`/business/${businessId}`, "layout");
   return result;
 }

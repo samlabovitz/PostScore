@@ -5,6 +5,10 @@ import { DEFAULT_LOCALE, type Locale } from "./locale";
 // below; adding a new locale (see locale.ts) doesn't require touching the
 // key list, only a new entry in `messages`.
 export type MessageKey =
+  | "dashboard.gbpEdit.undo.complete"
+  | "dashboard.gbpEdit.error.undo_unverified"
+  | "dashboard.gbpEdit.error.undo_unverifiedPending"
+  | "dashboard.gbpEdit.error.changed_sinceFields"
   | "dashboard.overview.scoringUpdateNote.v1_13_0"
   | "content.checks.website.performance_mobile.result.withTime"
   | "content.checks.website.performance_mobile.explanation.resultV113"
@@ -4553,6 +4557,10 @@ type LocaleMessages = Partial<Record<MessageKey, string>>;
 
 export const messages: Record<Locale, LocaleMessages> = {
   en: {
+    "dashboard.gbpEdit.undo.complete": "Undo complete — Google shows your previous values again.",
+    "dashboard.gbpEdit.error.undo_unverified": "Undo didn't finish — try again. Google still shows the new value for: {fields}.",
+    "dashboard.gbpEdit.error.undo_unverifiedPending": "Undo didn't finish — try again later. Google is still reviewing the change, and still shows the new value for: {fields}.",
+    "dashboard.gbpEdit.error.changed_sinceFields": "Undo didn't finish — {fields} changed on Google since, so we didn't undo anything (we never overwrite a newer change). You can update them again here.",
     "dashboard.overview.scoringUpdateNote.v1_13_0": "We updated how PostScore scores websites — “Performance & mobile” is now two checks: “Loads fast” (about how many seconds your page takes to show on a phone) and “Works well on phones”. If your score moved, it's because of this update, not a change you made.",
     "content.checks.website.performance_mobile.result.withTime": "{category} · about {seconds} seconds to show your page on a phone",
     "content.checks.website.performance_mobile.explanation.resultV113": "{result}.",
@@ -9457,6 +9465,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.searchDemand.tips.empty": "Tips appear once there are real search terms to work from.",
   },
   es: {
+    "dashboard.gbpEdit.undo.complete": "Se deshizo el cambio: Google vuelve a mostrar sus valores anteriores.",
+    "dashboard.gbpEdit.error.undo_unverified": "No se terminó de deshacer: inténtelo de nuevo. Google todavía muestra el valor nuevo de: {fields}.",
+    "dashboard.gbpEdit.error.undo_unverifiedPending": "No se terminó de deshacer: inténtelo de nuevo más tarde. Google todavía está revisando el cambio y muestra el valor nuevo de: {fields}.",
+    "dashboard.gbpEdit.error.changed_sinceFields": "No se deshizo: {fields} cambió en Google desde entonces, así que no deshicimos nada (nunca sobrescribimos un cambio más reciente). Puede actualizarlos de nuevo aquí.",
     "dashboard.overview.scoringUpdateNote.v1_13_0": "Actualizamos cómo PostScore califica los sitios web: «Rendimiento y móvil» ahora son dos comprobaciones, «Carga rápida» (cuántos segundos tarda, aproximadamente, su página en mostrarse en un teléfono) y «Funciona bien en teléfonos». Si su puntuación cambió, se debe a esta actualización, no a algo que usted hizo.",
     "content.checks.website.performance_mobile.result.withTime": "{category} · unos {seconds} segundos en mostrar su página en un teléfono",
     "content.checks.website.performance_mobile.explanation.resultV113": "{result}.",

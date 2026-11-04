@@ -9,7 +9,8 @@
 //   none — then reads metadata.hasPendingEdits for an honest "Pending
 //   Google review". Every approval is logged in gbp_changes, failures too.
 // - undo: the latest approval, ≤ 7 days, only if nothing was changed on
-//   Google since; one PATCH writing the previous values back.
+//   Google since; one PATCH restoring the logged "before" (removing what
+//   was "not set"), then a read-back — complete only if it matches.
 //
 // The caller (app/actions/gbpCustomerDetails.ts) has already checked the
 // owner, the plan, the archive and the connection.
@@ -24,7 +25,8 @@ import {
   diffCustomerDetails,
   latestUndoable,
   storedValue,
-  undoConflicts,
+  undoPlan,
+  undoReadbackMismatches,
   type AttrValue,
   type AttributeChange,
   type CustomerDetailsEditorRow,
@@ -50,7 +52,9 @@ export type GbpEditError =
   | "daily_cap"
   | "not_enabled"
   | "changed_since"
-  | "undo_expired";
+  | "undo_expired"
+  /** Sent, but Google doesn't show the previous values yet (read back). */
+  | "undo_unverified";
 
 type GoogleCall<T> = { ok: true; data: T } | { ok: false; error: GbpEditError; status: number | null; reason: string | null };
 
@@ -274,8 +278,22 @@ export async function getUndoableChange(store: GbpChangeStore, businessId: strin
   return rows ? latestUndoable(rows, now) : null;
 }
 
-export type UndoResult = { status: "sent" | "pending_review" } | { status: "error"; error: GbpEditError; fields?: string[] };
+export type UndoResult =
+  | { status: "sent" }
+  | { status: "error"; error: GbpEditError; fields?: string[]; pending?: boolean };
 
+/**
+ * Undo puts back exactly the logged "before" of the latest approval —
+ * including REMOVING an attribute that was "not set" (in the mask, left
+ * out of the body) — then reads the location back from Google. "Undo
+ * complete" only when every field reads back at its "before"; otherwise
+ * "Undo didn't finish" with which fields (and whether Google is still
+ * reviewing it). Never overwrites a value someone changed on Google since.
+ * Every attempt is logged in gbp_changes (undo_of = the approval), a
+ * refusal too — the real Hair express case had no trace of its undo.
+ * Not held to the one-minute wait between approvals: undoing a mistake
+ * right away is the point.
+ */
 export async function undoCustomerDetailsChange(
   target: GbpEditTarget,
   batchId: string,
@@ -285,25 +303,12 @@ export async function undoCustomerDetailsChange(
 ): Promise<UndoResult> {
   const undoable = await getUndoableChange(store, target.businessId, now);
   if (!undoable || undoable.batchId !== batchId) return { status: "error", error: "undo_expired" };
-  const approvals = (await store.approvalsSince(target.businessId, new Date(now - DAY_MS).toISOString())) ?? [];
-  if (approvalAllowed(approvals, now) === "wait_minute") return { status: "error", error: "wait_minute" };
 
-  const counter = { calls: 0 };
-  const f = gbpFetch(counter, fetchImpl);
-  try {
-    const current = await currentAttributes(f, target.accessToken, target.locationName);
-    if (!current.ok) return logAndFail("undo current", current);
-    const conflicts = undoConflicts(undoable.changes, current.data);
-    if (conflicts.length > 0) return { status: "error", error: "changed_since", fields: conflicts };
-
-    const back = undoable.changes.map((c) => ({ id: c.id, after: c.before, before: c.after }));
-    const patched = await patchAttributes(f, target.accessToken, target.locationName, back);
-    const pending = patched.ok ? await hasPendingEdits(f, target.accessToken, target.locationName) : false;
-    const status = !patched.ok ? "failed" : pending ? "pending_review" : "sent";
-    const at = new Date(now).toISOString();
-    const undoBatchId = randomUUID();
-    await store.insert(
-      back.map((c) => ({
+  const at = new Date(now).toISOString();
+  const undoBatchId = randomUUID();
+  const log = (rows: Array<{ id: string; before: AttrValue; after: AttrValue }>, status: "sent" | "failed", reason: string | null) =>
+    store.insert(
+      rows.map((c) => ({
         business_id: target.businessId,
         batch_id: undoBatchId,
         kind: "attributes",
@@ -313,13 +318,46 @@ export async function undoCustomerDetailsChange(
         approved_by: target.userId,
         approved_at: at,
         status,
-        error_reason: patched.ok ? null : (patched.reason ?? (patched.status ? String(patched.status) : null)),
+        error_reason: reason,
         undo_of: batchId,
       }))
     );
-    if (!patched.ok) return logAndFail("undo patch", patched);
+  // Logged the way undo would write it: before = what we set, after = what we restore.
+  const reversed = undoable.changes.map((c) => ({ id: c.id, before: c.after, after: c.before }));
+
+  const counter = { calls: 0 };
+  const f = gbpFetch(counter, fetchImpl);
+  try {
+    const current = await currentAttributes(f, target.accessToken, target.locationName);
+    if (!current.ok) {
+      await log(reversed, "failed", `read:${current.reason ?? current.status ?? current.error}`);
+      return logAndFail("undo current", current);
+    }
+    const plan = undoPlan(undoable.changes, current.data);
+    if (plan.conflicts.length > 0) {
+      await log(reversed, "failed", `changed_since:${plan.conflicts.join(",")}`);
+      return { status: "error", error: "changed_since", fields: plan.conflicts };
+    }
+    if (plan.send.length > 0) {
+      const patched = await patchAttributes(f, target.accessToken, target.locationName, plan.send);
+      if (!patched.ok) {
+        await log(reversed, "failed", patched.reason ?? (patched.status ? String(patched.status) : patched.error));
+        return logAndFail("undo patch", patched);
+      }
+    }
+    // Read back: done only when Google shows every "before" again.
+    const readback = await currentAttributes(f, target.accessToken, target.locationName);
+    const mismatches = readback.ok ? undoReadbackMismatches(undoable.changes, readback.data) : undoable.changes.map((c) => c.id);
+    if (mismatches.length > 0) {
+      const pending = await hasPendingEdits(f, target.accessToken, target.locationName);
+      const reason = readback.ok ? `readback:${mismatches.join(",")}${pending ? ":pending_review" : ""}` : `readback_failed:${readback.reason ?? readback.status ?? readback.error}`;
+      await log(reversed, "failed", reason);
+      logFailure("undo readback", { mismatches, pending });
+      return { status: "error", error: "undo_unverified", fields: mismatches, pending };
+    }
+    await log(reversed, "sent", null);
     await store.markUndone(batchId, at);
-    return { status: pending ? "pending_review" : "sent" };
+    return { status: "sent" };
   } finally {
     logGbpCalls("customer-details-undo", counter);
   }
