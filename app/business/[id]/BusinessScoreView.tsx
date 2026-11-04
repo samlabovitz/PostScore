@@ -302,9 +302,15 @@ export function BusinessScoreView({
           {scoringNote && <ScoringUpdateNote businessId={businessId} />}
       </div>
 
-      {/* Same structure as Free: the breakdown right after the score,
-          then "More customers". PostAI is the "Ask PostAI" button on every
-          page (components/assistant/PostAIDock.tsx). */}
+      {/* Paid order: score card → Top recommendations + Since your last
+          scan (side by side at equal height, stacked on phones) → Score
+          breakdown → "More customers" → the rest. PostAI is the "Ask
+          PostAI" button on every page (components/assistant/PostAIDock.tsx). */}
+      <div data-testid="overview-recs-row" className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+        <TopRecommendations businessId={businessId} recommendations={recommendations} />
+        <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} />
+      </div>
+
       <ScoreBreakdownPanel
         businessId={businessId}
         categories={breakdown.categories}
@@ -347,12 +353,6 @@ export function BusinessScoreView({
         <GoogleMapsAttribution />
       </Card>
 
-      {/* Side by side at equal height (each card centers its own content
-          if shorter); stacked on mobile. PostStudio gets its own row. */}
-      <div className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <TopRecommendations businessId={businessId} recommendations={recommendations} />
-        <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} />
-      </div>
       <StudioComingSoon businessId={businessId} />
 
       <SectionHeading title={t(locale, "dashboard.overview.liveListingHeading")} />

@@ -187,7 +187,7 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
         recentSnapshots={recentSnapshots}
         freePostaiQuestions={freePostaiQuestions}
         scoringNote={scoringNoteApplies(history) && !(await oneTimeNoteDismissed(params.id, SCORING_NOTE_KEY))}
-        uiPrefs={{ breakdownCollapsed: await getUiPreference("overview.breakdownCollapsed"), planListCollapsed: await getUiPreference("free.planListCollapsed") }}
+        uiPrefs={{ breakdownCollapsed: await getUiPreference("overview.breakdownCollapsed.v2"), planListCollapsed: await getUiPreference("free.planListCollapsed") }}
         benchmark={benchmark}
         gbpConnected={gbpStatus.status === "ok" && gbpStatus.connected}
         profileTools={{ referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk }}

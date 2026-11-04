@@ -194,15 +194,18 @@ export function ScoreBand({
         <div className="flex items-center justify-center gap-5 nav:justify-start">
           <div className="flex flex-col items-center gap-2">
             <AnimatedScoreRing score={score} businessId={businessId} size={164} />
-            {/* A real link (works without JS); the click jumps in place
-                and opens + highlights the breakdown. */}
+            {/* A real link (works without JS, keyboard included); the click
+                scrolls smoothly to the breakdown and opens + highlights it. */}
             <a
               href={`#${BREAKDOWN_ANCHOR}`}
               onClick={(e) => {
                 e.preventDefault();
                 jumpToAnchor(BREAKDOWN_ANCHOR);
               }}
-              className="-my-1 inline-flex items-center whitespace-nowrap rounded px-1.5 py-1 text-[12px] font-medium text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)] underline-offset-2 transition-colors hover:text-paper hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
+              data-testid="see-breakdown"
+              // A clear button on the dark card: cream outline and text,
+              // brighter on hover, a visible focus ring; Enter works (a real link).
+              className="inline-flex min-h-[36px] items-center gap-1 whitespace-nowrap rounded-full border border-[color:color-mix(in_srgb,var(--color-paper)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--color-paper)_8%,transparent)] px-3.5 py-1.5 text-[12.5px] font-semibold text-paper transition-colors hover:border-paper hover:bg-[color:color-mix(in_srgb,var(--color-paper)_18%,transparent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass motion-reduce:transition-none"
             >
               {t(locale, "dashboard.overview.band.seeBreakdown")}
             </a>
@@ -246,7 +249,7 @@ export function ScoreBand({
               >
                 <IconSparkles size={14} className="shrink-0 text-brass" />
                 <span className="truncate">
-                  {t(locale, "dashboard.overview.biggestBoost", { points: boostPoints(biggestBoost.promisedPoints), label: biggestBoost.label })}
+                  {t(locale, "dashboard.overview.biggestBoost", { points: boostPoints(biggestBoost.weightedPoints ?? biggestBoost.promisedPoints), label: biggestBoost.label })}
                 </span>
               </Link>
             )}

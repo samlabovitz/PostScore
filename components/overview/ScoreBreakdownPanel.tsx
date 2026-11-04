@@ -167,7 +167,7 @@ export function ScoreBreakdownPanel({
   // `mounted` keeps the rows in the page while the close animation runs.
   // Every plan starts OPEN (all checks visible); a collapse is remembered
   // per account.
-  const { open, toggle, reveal } = useRememberedOpen("overview.breakdownCollapsed", accountCollapsed);
+  const { open, toggle, reveal } = useRememberedOpen("overview.breakdownCollapsed.v2", accountCollapsed);
   const [mounted, setMounted] = useState(open);
   const [expanded, setExpanded] = useState(open);
   const checkCount = categories.reduce((sum, c) => sum + c.checks.length, 0);

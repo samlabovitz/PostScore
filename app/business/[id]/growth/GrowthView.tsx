@@ -65,7 +65,8 @@ export function WebsiteBannerCard({ banner, businessId }: { banner: WebsiteBanne
           {banner.kind === "improve" ? (
             <p className="text-[13.5px] text-ink">
               {tPlural(locale, "dashboard.growth.websiteBanner.improve", banner.improvements, {
-                score: banner.score,
+                earned: banner.earned,
+                of: banner.of,
                 points: wholePointRange(banner.points, null).low,
               })}
             </p>

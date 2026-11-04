@@ -16,12 +16,14 @@ const tags = (src: string) => Array.from(src.matchAll(/<([A-Z][A-Za-z]+)/g), (m)
 const without = (list: string[], drop: string[]) => list.filter((tag) => !drop.includes(tag));
 
 describe("paid plans keep their pre-batch layout, page by page", () => {
-  test("Overview (Free's structure): header, score, breakdown, More customers, then rank, next steps, since last scan, PostStudio, live listing, history — no PostAI card", () => {
+  test("Overview (paid): header, score card → Top recommendations + Since your last scan → Score breakdown → More customers → rank, PostStudio, live listing, history — no PostAI card", () => {
     const view = read("app/business/[id]/BusinessScoreView.tsx");
     const paid = view.slice(view.indexOf('  return (\n    <div className="flex flex-col gap-5 nav:gap-6">'));
     expect(without(tags(paid), ["Card", "SectionHeading", "Link", "RankUnlockLine"]).filter((tag) =>
       ["HackedSiteBanner", "ScoreBand", "RescanMessages", "AssistantLauncher", "GrowMoreCustomers", "LocalBenchmarkTile", "ScoreBreakdownPanel", "TopRecommendations", "SinceLastScanCard", "StudioComingSoon", "LiveListingSection", "ScanHistory"].includes(tag)
-    )).toEqual(["HackedSiteBanner", "ScoreBand", "RescanMessages", "ScoreBreakdownPanel", "GrowMoreCustomers", "LocalBenchmarkTile", "TopRecommendations", "SinceLastScanCard", "StudioComingSoon", "LiveListingSection", "ScanHistory"]);
+    )).toEqual(["HackedSiteBanner", "ScoreBand", "RescanMessages", "TopRecommendations", "SinceLastScanCard", "ScoreBreakdownPanel", "GrowMoreCustomers", "LocalBenchmarkTile", "StudioComingSoon", "LiveListingSection", "ScanHistory"]);
+    // Each one once — nothing left in its old spot.
+    for (const tag of ["TopRecommendations", "SinceLastScanCard", "ScoreBreakdownPanel", "GrowMoreCustomers"]) expect(tags(paid).filter((x) => x === tag)).toHaveLength(1);
     // The header is the same block as before, just shared with Free.
     expect(paid.indexOf("{header}")).toBeLessThan(paid.indexOf("<ScoreBand"));
     expect(paid).not.toMatch(/FreePostAI|FreeReviews|UnlockMore|locked\b/);

@@ -293,7 +293,13 @@ function CheckRow({
   );
 }
 
-function WebsiteScoreRing({ relativeScore, grade }: { relativeScore: number | null; grade: Grade | null }) {
+/** The Website category in the app's own units — whole points of its
+ * weight ("28 of 30"), never a category score out of 100. */
+function websitePoints(category: Pick<CategoryResult, "relativeScore" | "weight">): number | null {
+  return category.relativeScore === null ? null : Math.round((category.relativeScore * category.weight) / 100);
+}
+
+function WebsiteScoreRing({ relativeScore, grade, weight = 30 }: { relativeScore: number | null; grade: Grade | null; weight?: number }) {
   const locale = useLocale();
   const size = 100;
   const viewBox = 120;
@@ -331,8 +337,8 @@ function WebsiteScoreRing({ relativeScore, grade }: { relativeScore: number | nu
         )}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="font-serif text-[24px] font-bold leading-none text-ink">{pct === null ? "—" : Math.round(pct)}</div>
-        <div className="mt-0.5 text-[10px] text-ink-mute">{t(locale, "dashboard.website.outOf100")}</div>
+        <div className="font-serif text-[24px] font-bold leading-none text-ink">{pct === null ? "—" : Math.round((pct * weight) / 100)}</div>
+        <div className="mt-0.5 text-[10px] text-ink-mute">{t(locale, "dashboard.website.outOfPoints", { of: weight })}</div>
       </div>
     </div>
   );
@@ -409,7 +415,7 @@ export function WebsiteScoreBreakdown({
       </div>
 
       <Card className="mb-5 flex flex-col items-start gap-4 nav:flex-row nav:items-center">
-        <WebsiteScoreRing relativeScore={websiteCategory.relativeScore} grade={grade} />
+        <WebsiteScoreRing relativeScore={websiteCategory.relativeScore} grade={grade} weight={websiteCategory.weight} />
         <div className="flex flex-col gap-1">
           <div className="flex items-baseline gap-2">
             <span className="font-serif text-2xl font-bold text-ink">
@@ -506,15 +512,12 @@ export function WebsiteScoreCompact({ websiteCategory }: { websiteCategory: Cate
   return (
     <Card className="flex flex-col gap-4 p-5" data-testid="website-score-compact">
       <div className="flex items-center gap-4">
-        <WebsiteScoreRing relativeScore={websiteCategory.relativeScore} grade={grade} />
+        <WebsiteScoreRing relativeScore={websiteCategory.relativeScore} grade={grade} weight={websiteCategory.weight} />
         <div className="flex min-w-0 flex-col gap-1">
           <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">{t(locale, "dashboard.website.scoreHeading")}</div>
           <div className="flex flex-wrap items-baseline gap-x-2">
             <span className="font-serif text-xl font-bold text-ink">
-              {websiteCategory.relativeScore === null ? "—" : Math.round(websiteCategory.relativeScore)}/100
-            </span>
-            <span className="text-sm text-ink-mute">
-              · {formatPoints(websiteCategory.earnedPoints)}/{formatPoints(websiteCategory.possiblePoints)} {t(locale, "dashboard.website.ptsAbbrev")}
+              {websitePoints(websiteCategory) ?? "—"}/{websiteCategory.weight}
             </span>
             {grade && <span className="text-sm font-bold text-ink">· {grade}</span>}
           </div>

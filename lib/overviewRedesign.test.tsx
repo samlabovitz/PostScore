@@ -86,13 +86,33 @@ describe("score card: change since last scan, honestly", () => {
       locale
     );
 
-  test("ring has a quiet 'Score breakdown ↓' text link (no pill) to the breakdown — EN + ES", () => {
+  test("under the ring: a clear pill button “See your score breakdown ↓” to the breakdown — contrast on the dark card, hover, focus ring, a real link (keyboard) — EN + ES", () => {
     const en = band([h(87)]);
-    const link = en.slice(en.indexOf('<a href="#score-breakdown"'), en.indexOf("</a>", en.indexOf('<a href="#score-breakdown"')));
-    expect(link).toContain("Score breakdown ↓");
-    expect(link).not.toContain("rounded-full");
-    expect(link).not.toContain("border");
-    expect(band([h(87)], "es")).toContain("Desglose ↓");
+    const start = en.indexOf('<a href="#score-breakdown"');
+    expect(start).toBeGreaterThan(-1);
+    const link = en.slice(start, en.indexOf("</a>", start));
+    expect(link).toContain("See your score breakdown ↓");
+    expect(link).toContain("rounded-full");
+    expect(link).toMatch(/border-\[color:color-mix\(in_srgb,var\(--color-paper\)_55%/);
+    expect(link).toContain("text-paper");
+    expect(link).toContain("hover:border-paper");
+    expect(link).toContain("focus-visible:outline-brass");
+    expect(band([h(87)], "es")).toContain("Ver el desglose de su puntuación ↓");
+  });
+
+  test("Score breakdown opens by default; an earlier saved “collapsed” choice is reset once (a new key), a new collapse is remembered", async () => {
+    const { UI_PREFERENCE_KEYS } = await import("@/lib/uiPreferences");
+    expect(UI_PREFERENCE_KEYS).toContain("overview.breakdownCollapsed.v2");
+    expect(UI_PREFERENCE_KEYS).not.toContain("overview.breakdownCollapsed");
+    const fs = await import("node:fs");
+    expect(fs.readFileSync("components/overview/ScoreBreakdownPanel.tsx", "utf8")).toContain('useRememberedOpen("overview.breakdownCollapsed.v2", accountCollapsed)');
+    // No saved choice → open.
+    const html = renderToStaticMarkup(
+      <LocaleProvider locale="en">
+        <ScoreBreakdownPanel businessId="b" categories={breakdown.categories} hasWebsite scoreBasis={100} accountCollapsed={null} />
+      </LocaleProvider>
+    );
+    expect(html).toContain('aria-expanded="true"');
   });
 
   test("Since last scan: '2 points' with an up arrow, an expand arrow, no sparkline", () => {
@@ -257,7 +277,7 @@ describe("top recommendations: the action plan, prioritized by real points", () 
         task({ checkId: "completeness.hours", weightedPoints: 9, status: "pending_verification" }),
         task({ checkId: "setup.connect_gbp", effort: "setup", weightedPoints: 0 }),
       ],
-      { kind: "improve", score: 72, improvements: 3, points: 4.1 },
+      { kind: "improve", score: 72, earned: 25, of: 30, improvements: 3, points: 4.1 },
       "b"
     );
     expect(recs.map((r) => [r.key, r.priority])).toEqual([
@@ -392,7 +412,7 @@ describe("breakdown bars, Start here, wording", () => {
   });
 
   test("'up to about +5 pts' (no '~+')", () => {
-    const recs = topRecommendations([], { kind: "improve", score: 72, improvements: 3, points: 5 }, "b");
+    const recs = topRecommendations([], { kind: "improve", score: 72, earned: 25, of: 30, improvements: 3, points: 5 }, "b");
     const html = render(<TopRecommendations businessId="b" recommendations={recs} />);
     expect(html).toContain("up to about +5 pts");
     expect(html).not.toContain("~+");
@@ -465,14 +485,15 @@ describe("same-page jump + highlight", () => {
 });
 
 describe("Overview layout and scan history (GBP card tweaks)", () => {
-  test("recs + since-last-scan: equal height, side by side, stacked on mobile; PostStudio on its own row; no Version column", async () => {
+  test("recs + since-last-scan: equal height, side by side, stacked on mobile, right under the score card; PostStudio on its own row; no Version column", async () => {
     const fs = await import("node:fs");
     const view = fs.readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8");
-    expect(view).toContain(`<div className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+    expect(view).toContain(`<div data-testid="overview-recs-row" className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <TopRecommendations businessId={businessId} recommendations={recommendations} />
         <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} />
-      </div>
-      <StudioComingSoon businessId={businessId} />`);
+      </div>`);
+    // PostStudio keeps its own row.
+    expect(view).toMatch(/\n      <StudioComingSoon businessId=\{businessId\} \/>\n/);
     expect(view).not.toContain("versionColumn");
     expect(view).toContain('"dashboard.overview.scoringUpdatedVersionTip", { version: row.scoring_version }');
   });
@@ -547,7 +568,7 @@ describe("icon squares, app-wide", () => {
   });
 
   test("the website recommendation's estimate is whole points, like its 'about +4' line", () => {
-    const recs = topRecommendations([], { kind: "improve", score: 72, improvements: 3, points: 4.1 }, "b");
+    const recs = topRecommendations([], { kind: "improve", score: 72, earned: 25, of: 30, improvements: 3, points: 4.1 }, "b");
     const html = render(<TopRecommendations businessId="b" recommendations={recs} />);
     expect(html).toContain("about +4 pts");
     expect(html).not.toContain("+4.1");

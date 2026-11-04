@@ -79,9 +79,10 @@ describe("Growth on Free: every section is advice, fully hidden — only titles,
     const t = text(html);
     for (const hidden of ["Photos", "Only 4 photos.", "Secure website (HTTPS)", "Opening hours", "No hours on Google.", "Open your Google listing and add photos.", buildWeeklyChecklistItems("en")[0].title])
       expect(t, hidden).not.toContain(hidden);
-    expect(t).toContain("2 fixes · 7 pts");
+    // The real effect on the total (the same number as the Overview and PostAI).
+    expect(t).toContain("2 fixes · 3 pts");
     expect(t).toContain("5 weekly habits");
-    expect(t).toContain("1 fix · 5 pts");
+    expect(t).toContain("1 fix · 2 pts");
     expect(html).not.toMatch(/<input[^>]*type="checkbox"/);
   });
 
@@ -90,7 +91,7 @@ describe("Growth on Free: every section is advice, fully hidden — only titles,
     for (const line of [
       "Your weekly routine is ready — unlock it with Grow.",
       "Your plan for this week is ready. Unlock it with Grow.",
-      "1 bigger project worth about 5 points. Grow shows you how.",
+      "1 bigger project worth about 2 points. Grow shows you how.",
       "Grow gives you a referral program and price check tools.",
     ])
       expect(t.split(line).length - 1, line).toBe(1);

@@ -106,12 +106,12 @@ describe("studio color fields: swatches, Custom color, selected ring + hex", () 
 describe("collapse choices are remembered per account", () => {
   test("only known keys; the SQL keeps rows to their owner", async () => {
     const fs = await import("node:fs");
-    expect(UI_PREFERENCE_KEYS).toEqual(["overview.breakdownCollapsed", "free.planListCollapsed"]);
+    expect(UI_PREFERENCE_KEYS).toEqual(["overview.breakdownCollapsed.v2", "free.planListCollapsed"]);
     const sql = fs.readFileSync("supabase/ui-preferences.sql", "utf8");
     expect(sql).toContain("enable row level security");
     expect(sql).toContain("auth.uid() = user_id");
     const page = fs.readFileSync("app/business/[id]/page.tsx", "utf8");
-    expect(page).toContain('getUiPreference("overview.breakdownCollapsed")');
+    expect(page).toContain('getUiPreference("overview.breakdownCollapsed.v2")');
     expect(page).toContain('getUiPreference("free.planListCollapsed")');
   });
 });

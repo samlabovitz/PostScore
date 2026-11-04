@@ -1045,6 +1045,13 @@ export interface Suggestion {
    * generateSuggestions() below.
    */
   promisedPoints: number;
+  /** What fixing it really moves the 0–100 total by (unrounded deltas,
+   * one decimal) — the ONE number every place shows: Top recommendations,
+   * the score card's "Biggest boost", Growth and PostAI. Differs from
+   * promisedPoints when a category has checks we couldn't check (e.g.
+   * Reviews scored on 28 of 40: each review-count point is worth 40/28).
+   * Set by getScoreWithSuggestions; absent from generateSuggestions alone. */
+  weightedPoints?: number;
   /** Actionable copy describing what to do. */
   advice: string;
 }
@@ -3487,6 +3494,20 @@ export function partlyCheckedWebsiteWeight(c: Pick<CategoryResult, "id" | "weigh
   return c.weight * (c.possiblePoints / c.weight);
 }
 
+/** The 0–100 total before rounding — THE formula, shared by the score
+ * itself and every points estimate (lib/actionPlan.ts rawWeightedTotal):
+ * each determinable category's share of its weight in the total (v1.13.1:
+ * a partly checked website counts by its checked points), renormalized
+ * over the weight actually determinable. */
+export function unroundedTotal(categories: Array<Pick<CategoryResult, "id" | "weight" | "possiblePoints" | "earnedPoints" | "checks">>): number {
+  const determinable = categories.filter((c) => c.possiblePoints > 0);
+  const weightInTotal = (c: (typeof determinable)[number]) => (SCORING_V1131 ? partlyCheckedWebsiteWeight(c) : c.weight);
+  const totalPossibleWeight = determinable.reduce((sum, c) => sum + weightInTotal(c), 0);
+  if (totalPossibleWeight <= 0) return 0;
+  const totalEarnedWeight = determinable.reduce((sum, c) => sum + (c.earnedPoints / c.possiblePoints) * weightInTotal(c), 0);
+  return (totalEarnedWeight / totalPossibleWeight) * 100;
+}
+
 export function breakdownFromChecks(checks: CheckResult[], locale: Locale = DEFAULT_LOCALE, version: string = SCORING_VERSION): ScoreBreakdown {
   const categories: CategoryResult[] = (Object.keys(CATEGORY_WEIGHTS) as CategoryId[]).map(
     (categoryId) => {
@@ -3513,15 +3534,7 @@ export function breakdownFromChecks(checks: CheckResult[], locale: Locale = DEFA
   // denominator is 100 in every real case — the redistribution branch only
   // exists as an honest fallback, never silently scoring an undetermined
   // category as a zero.
-  const determinableCategories = categories.filter((c) => c.possiblePoints > 0);
-  const weightInTotal = (c: CategoryResult) => (SCORING_V1131 ? partlyCheckedWebsiteWeight(c) : c.weight);
-  const totalPossibleWeight = determinableCategories.reduce((sum, c) => sum + weightInTotal(c), 0);
-  const totalEarnedWeight = determinableCategories.reduce(
-    (sum, c) => sum + (c.earnedPoints / c.possiblePoints) * weightInTotal(c),
-    0
-  );
-  const total =
-    totalPossibleWeight > 0 ? Math.round((totalEarnedWeight / totalPossibleWeight) * 100) : 0;
+  const total = Math.round(unroundedTotal(categories));
 
   return {
     scoringVersion: version,
@@ -3711,7 +3724,12 @@ export function getScoreWithSuggestions(
   locale: Locale = DEFAULT_LOCALE
 ): ScoreWithSuggestions {
   const breakdown = scoreBusiness(input, locale);
-  const suggestions = generateSuggestions(breakdown, locale);
+  // Each suggestion's real effect on the total — one source for every
+  // place that shows a points estimate. Biggest real gain first.
+  const before = unroundedTotal(breakdown.categories);
+  const suggestions = generateSuggestions(breakdown, locale)
+    .map((s) => ({ ...s, weightedPoints: roundTo(Math.max(0, unroundedTotal(scoreBusiness(applyCheckFix(input, s.checkId), locale).categories) - before), 1) }))
+    .sort((a, b) => b.weightedPoints - a.weightedPoints || b.promisedPoints - a.promisedPoints);
 
   const projectedInput = suggestions.reduce(
     (acc, s) => applyCheckFix(acc, s.checkId),

@@ -268,6 +268,8 @@ describe("buildWebsiteBanner", () => {
     expect(banner).toEqual({
       kind: "improve",
       score: Math.round(website.relativeScore!),
+      earned: Math.round((website.relativeScore! * 30) / 100),
+      of: 30,
       improvements: 2, // performance_mobile + contact_conversion; NOT info_consistency
       points: expect.any(Number),
     });

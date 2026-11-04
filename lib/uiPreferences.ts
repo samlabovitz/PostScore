@@ -2,7 +2,11 @@
 // supabase/ui-preferences.sql is run (or when the account read fails).
 // Browser-safe; the account read/write is app/actions/uiPreferences.ts.
 
-export const UI_PREFERENCE_KEYS = ["overview.breakdownCollapsed", "free.planListCollapsed"] as const;
+// "overview.breakdownCollapsed.v2" (Nov 2026): the Score breakdown opens by
+// default for every owner — a new key resets everyone's earlier
+// "collapsed" choice once (the old key is simply never read again);
+// collapsing it again is remembered under the new key.
+export const UI_PREFERENCE_KEYS = ["overview.breakdownCollapsed.v2", "free.planListCollapsed"] as const;
 export type UiPreferenceKey = (typeof UI_PREFERENCE_KEYS)[number];
 
 const storageKey = (key: UiPreferenceKey) => `postscore:pref:${key}`;

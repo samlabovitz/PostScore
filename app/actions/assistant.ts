@@ -190,7 +190,8 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
       ? actionPlanResult.tasks.slice(0, MAX_ACTION_PLAN_TASKS_IN_CONTEXT).map((t) => ({
           label: t.label,
           category: t.category,
-          promisedPoints: t.promisedPoints,
+          // The real effect on the total — the same number Top recommendations and Growth show.
+          promisedPoints: t.weightedPoints,
           action: t.action,
           effort: t.effort,
         }))

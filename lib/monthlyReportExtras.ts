@@ -6,7 +6,7 @@
 // and scripts/preview-report.ts, so a preview and a real send can't
 // drift apart.
 
-import { wholeCategoryPoints } from "@/lib/overviewTiles";
+import { wholeCategoryPoints } from "@/lib/categoryPoints";
 import { closureOf } from "@/lib/businessStatus";
 import {
   applyGrowthWebsiteRules,

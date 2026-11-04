@@ -39,7 +39,7 @@ function nextStep(rec: Recommendation, locale: Locale): ReportNextStep {
   if (banner.kind === "improve") {
     return {
       title: t(locale, "dashboard.overview.recs.improveWebsite"),
-      detail: tPlural(locale, "dashboard.growth.websiteBanner.improve", banner.improvements, { score: banner.score, points: wholePointRange(banner.points, null).low }),
+      detail: tPlural(locale, "dashboard.growth.websiteBanner.improve", banner.improvements, { earned: banner.earned, of: banner.of, points: wholePointRange(banner.points, null).low }),
       points,
     };
   }

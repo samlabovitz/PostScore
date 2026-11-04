@@ -147,8 +147,9 @@ describe("the Website page on Free", () => {
   test("ONE compact score card: ring, points, grade, each check's name with a status chip and points — nothing else", () => {
     const html = wrap(<WebsiteScoreCompact websiteCategory={category} />);
     const t = text(html);
-    expect(t).toContain("75/100");
-    expect(t).toContain("21/28 pts");
+    // The app's own units: the Website's points of 30, never out of 100.
+    expect(t).toContain("23/30");
+    expect(t).not.toContain("/100");
     expect(html.match(/data-testid="compact-check"/g)).toHaveLength(4);
     for (const s of ["HTTPS Done 4 / 4", "Mobile speed Needs work 2 / 6", "Description Needs work 0 / 3", "Site security Couldn't check — / 2"]) expect(t).toContain(s);
     expect(t).not.toContain("EXPLANATION");

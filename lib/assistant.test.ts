@@ -1592,9 +1592,9 @@ describe("Day 4 Step 2f — PostAI points website fixes to the Website page", ()
   test("an 'improve' website summary is stated with its real numbers and a Website-page pointer", () => {
     const text = buildAssistantContextText({
       ...BASE_CONTEXT,
-      websiteSummary: { kind: "improve", score: 76, improvements: 5, points: 2.4 },
+      websiteSummary: { kind: "improve", score: 76, earned: 23, of: 30, improvements: 5, points: 2.4 },
     });
-    expect(text).toContain("WEBSITE SUMMARY: the website scores 76/100");
+    expect(text).toContain("WEBSITE SUMMARY: the website scores 23/30");
     expect(text).toContain("5 improvement(s) available (up to about +2 pts");
     expect(text).toContain("point the owner there instead of listing steps");
   });
@@ -1613,7 +1613,7 @@ describe("Day 4 Step 2f — PostAI points website fixes to the Website page", ()
 
   test("website starter prompts come from the website summary, at most once", () => {
     const improve = buildAssistantStarterPrompts(
-      { ...BASE_CONTEXT, growthMoves: [], websiteSummary: { kind: "improve", score: 76, improvements: 5, points: 2.4 } },
+      { ...BASE_CONTEXT, growthMoves: [], websiteSummary: { kind: "improve", score: 76, earned: 23, of: 30, improvements: 5, points: 2.4 } },
       "en"
     );
     const none = buildAssistantStarterPrompts({ ...BASE_CONTEXT, growthMoves: [], websiteSummary: null }, "en");

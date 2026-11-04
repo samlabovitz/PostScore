@@ -94,7 +94,7 @@ export function buildPostaiFacts(
     rankCard?: PostaiRankCard | null;
     plan?: Plan;
     /** Grow and up: the Overview's biggest boost (suggestions[0]) and projected score. */
-    biggestBoost?: { label: string; promisedPoints: number } | null;
+    biggestBoost?: { label: string; promisedPoints: number; weightedPoints?: number } | null;
     projectedScore?: number | null;
     /** Grow and up: the Growth plan cards' points chips (weightedPoints, as ActionPlanSection shows them). */
     tasks?: Array<{ label: string; weightedPoints: number; weightedPointsHigh: number | null }>;
@@ -114,7 +114,8 @@ export function buildPostaiFacts(
     const waiting = freeWaitingPoints(breakdown.total);
     if (waiting > 0) projections.push({ label: "every point the score is missing (the Overview's \"N points are waiting to be fixed\")", upTo: waiting, where: "Overview score card" });
   } else {
-    if (b.biggestBoost) projections.push({ label: b.biggestBoost.label, upTo: boostNumber(b.biggestBoost.promisedPoints), where: "Overview \"Biggest boost\"" });
+    // The same real effect on the total as Top recommendations and Growth.
+    if (b.biggestBoost) projections.push({ label: b.biggestBoost.label, upTo: boostNumber(b.biggestBoost.weightedPoints ?? b.biggestBoost.promisedPoints), where: "Overview \"Biggest boost\"" });
     const wb = b.websiteBanner;
     if (wb?.kind === "improve") projections.push({ label: "fixing every website improvement on the Website page", upTo: wholePointRange(wb.points, null).low, where: "Website banner" });
     if (wb?.kind === "get_website") {

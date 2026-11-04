@@ -10,11 +10,13 @@
 // reconcileTasks() below, which only marks a task complete once a real
 // re-scan shows the underlying check actually reached full points.
 
+import { websiteWholePoints } from "@/lib/categoryPoints";
 import {
   applyCheckFix,
   customerDetailsPath,
   hasAnalyzableWebsite,
   scoreBusiness,
+  unroundedTotal,
   type BusinessScoringInput,
   type CategoryId,
   type CheckResult,
@@ -389,14 +391,8 @@ function round1(value: number): number {
  * already-rounded number and drifting out of sum with it.
  */
 export function rawWeightedTotal(breakdown: ScoreBreakdown): number {
-  const determinable = breakdown.categories.filter((c) => c.possiblePoints > 0);
-  const totalPossibleWeight = determinable.reduce((sum, c) => sum + c.weight, 0);
-  if (totalPossibleWeight === 0) return 0;
-  const totalEarnedWeight = determinable.reduce(
-    (sum, c) => sum + (c.earnedPoints / c.possiblePoints) * c.weight,
-    0
-  );
-  return (totalEarnedWeight / totalPossibleWeight) * 100;
+  // The score's own formula (lib/scoring.ts), so every estimate matches it.
+  return unroundedTotal(breakdown.categories);
 }
 
 /**
@@ -1793,8 +1789,11 @@ export function applyGrowthWebsiteRules(
 export type WebsiteBanner =
   | {
       kind: "improve";
-      /** The Website page's own 0–100 Website score, rounded. */
+      /** The Website page's own 0–100 Website score, rounded (internal — never shown). */
       score: number;
+      /** The Website category in the app's own units: "28" of "30" (the Overview's whole points). */
+      earned: number;
+      of: number;
       /** Website checks losing points, EXCLUDING the Google mismatch. */
       improvements: number;
       /** Real weighted PostScore gain from fixing all of them at once. */
@@ -1847,9 +1846,12 @@ export function buildWebsiteBanner(
   );
   if (losing.length === 0) return null;
   const fixAll = (inp: BusinessScoringInput) => losing.reduce((acc, c) => applyCheckFix(acc, c.id), inp);
+  const whole = websiteWholePoints(breakdown.categories) ?? { earned: Math.round((website.relativeScore * website.weight) / 100), of: website.weight };
   return {
     kind: "improve",
     score: Math.round(website.relativeScore),
+    earned: whole.earned,
+    of: whole.of,
     improvements: losing.length,
     points: round1(weightedFixPoints(breakdown, input, fixAll)),
   };

@@ -23,7 +23,8 @@ import { fixesSummary } from "@/components/overview/FreeOverview";
 /** The same anchor the live task card uses (ActionPlanSection). */
 export const taskAnchor = (checkId: string) => `task-${checkId.replace(/\./g, "-")}`;
 
-const points = (tasks: ActionPlanTask[]) => Math.round(tasks.reduce((sum, task) => sum + task.promisedPoints, 0));
+// The real effect on the total — the same number the Overview and PostAI show.
+const points = (tasks: ActionPlanTask[]) => Math.round(tasks.reduce((sum, task) => sum + task.weightedPoints, 0));
 
 /** Bigger projects in real numbers: website work (the banner's own count
  * and points, plus website tasks) or every project. */

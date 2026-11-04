@@ -54,7 +54,7 @@ function RecText({ rec }: { rec: Recommendation }) {
       <>
         <span className="text-sm font-semibold text-ink">{t(locale, "dashboard.overview.recs.improveWebsite")}</span>
         <span className="text-[12.5px] leading-snug text-ink-soft">
-          {tPlural(locale, "dashboard.growth.websiteBanner.improve", banner.improvements, { score: banner.score, points: wholePointRange(banner.points, null).low })}
+          {tPlural(locale, "dashboard.growth.websiteBanner.improve", banner.improvements, { earned: banner.earned, of: banner.of, points: wholePointRange(banner.points, null).low })}
         </span>
       </>
     );

@@ -833,7 +833,7 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
 
   if (context.websiteSummary?.kind === "improve") {
     lines.push(
-      `WEBSITE SUMMARY: the website scores ${context.websiteSummary.score}/100 on the Website page, with ${context.websiteSummary.improvements} improvement(s) available (up to about +${wholePointRange(context.websiteSummary.points, null).low} pts on the PostScore, precomputed). The Website page's score breakdown has each fix — point the owner there instead of listing steps (the "Matches your Google listing" mismatch, if any, is in the action plan above and can be explained directly).`
+      `WEBSITE SUMMARY: the website scores ${context.websiteSummary.earned}/${context.websiteSummary.of} (the Website category's points — always say it this way, never out of 100), with ${context.websiteSummary.improvements} improvement(s) available (up to about +${wholePointRange(context.websiteSummary.points, null).low} pts on the PostScore, precomputed). The Website page's score breakdown has each fix — point the owner there instead of listing steps (the "Matches your Google listing" mismatch, if any, is in the action plan above and can be explained directly).`
     );
   } else if (context.websiteSummary?.kind === "get_website") {
     // Whole points, as the app shows them ("about +29–31").

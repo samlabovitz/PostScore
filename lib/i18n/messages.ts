@@ -5,6 +5,7 @@ import { DEFAULT_LOCALE, type Locale } from "./locale";
 // below; adding a new locale (see locale.ts) doesn't require touching the
 // key list, only a new entry in `messages`.
 export type MessageKey =
+  | "dashboard.website.outOfPoints"
   | "dashboard.website.partlyCheckedOf30"
   | "dashboard.gbpEdit.viewOnGoogle"
   | "dashboard.gbpEdit.viewOnGoogleNote"
@@ -4574,6 +4575,7 @@ type LocaleMessages = Partial<Record<MessageKey, string>>;
 
 export const messages: Record<Locale, LocaleMessages> = {
   en: {
+    "dashboard.website.outOfPoints": "of {of}",
     "dashboard.website.partlyCheckedOf30": "Website: partly checked — based on {points} of {of} points",
     "dashboard.gbpEdit.viewOnGoogle": "View on Google",
     "dashboard.gbpEdit.viewOnGoogleNote": "Google can take a while to review edits. If you don't see the change yet, it's probably still pending.",
@@ -6229,8 +6231,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.website.info_consistency.action.generic": "Your website and Google listing show different information — check which is correct and update the other.",
     "content.actionPlan.website.info_consistency.why": "Customers who get the wrong hours, phone number, or address may be turned away.",
     "content.actionPlan.website.info_consistency.fix": "Decide which one is right, then update the other one — your website's own page, or your Google Business Profile's business information. Your next PostScore scan will confirm they match.",
-    "dashboard.growth.websiteBanner.improve.one": "Your website scores {score}/100 — {count} improvement available (up to about +{points} pts on your PostScore).",
-    "dashboard.growth.websiteBanner.improve.other": "Your website scores {score}/100 — {count} improvements available (up to about +{points} pts on your PostScore).",
+    "dashboard.growth.websiteBanner.improve.one": "Your website scores {earned}/{of} — {count} improvement available (up to about +{points} pts).",
+    "dashboard.growth.websiteBanner.improve.other": "Your website scores {earned}/{of} — {count} improvements available (up to about +{points} pts).",
     "dashboard.growth.websiteBanner.openWebsitePage": "Open the Website page →",
     "dashboard.growth.websiteBanner.getWebsite.title": "Get a website",
     "dashboard.growth.websiteBanner.getWebsite.range": "You don't have a website yet — a starter site from PostScore could add about +{low}–{high} pts to your PostScore.",
@@ -8724,7 +8726,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.band.points.one": "{count} point",
     "dashboard.overview.band.points.other": "{count} points",
     "dashboard.overview.connectPremiumPill": "PostScore Premium",
-    "dashboard.overview.band.seeBreakdown": "Score breakdown ↓",
+    "dashboard.overview.band.seeBreakdown": "See your score breakdown ↓",
     "dashboard.overview.scoringUpdatedVersionTip": "PostScore updated how it scores (now version {version}) — scores may shift; this isn't a change at your business.",
     "dashboard.overview.seeWhatsIncluded": "See what's included →",
     "dashboard.overview.recs.pointsAbout": "about +{points} pts",
@@ -9499,6 +9501,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.searchDemand.tips.empty": "Tips appear once there are real search terms to work from.",
   },
   es: {
+    "dashboard.website.outOfPoints": "de {of}",
     "dashboard.website.partlyCheckedOf30": "Sitio web: revisado en parte, basado en {points} de {of} puntos",
     "dashboard.gbpEdit.viewOnGoogle": "Ver en Google",
     "dashboard.gbpEdit.viewOnGoogleNote": "Google puede tardar un poco en revisar los cambios. Si todavía no ve el cambio, probablemente sigue pendiente.",
@@ -11045,8 +11048,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.website.info_consistency.action.generic": "Su sitio web y su ficha de Google muestran información diferente — verifique cuál es la correcta y actualice la otra.",
     "content.actionPlan.website.info_consistency.why": "Los clientes que reciben un horario, un teléfono o una dirección incorrectos podrían terminar yéndose a otro lugar.",
     "content.actionPlan.website.info_consistency.fix": "Decida cuál es el correcto y luego actualice el otro — la página de su propio sitio web o la información de su Perfil de Empresa en Google. Su próximo escaneo de PostScore confirmará que coinciden.",
-    "dashboard.growth.websiteBanner.improve.one": "Su sitio web obtiene {score}/100 — {count} mejora disponible (hasta unos +{points} pts en su PostScore).",
-    "dashboard.growth.websiteBanner.improve.other": "Su sitio web obtiene {score}/100 — {count} mejoras disponibles (hasta unos +{points} pts en su PostScore).",
+    "dashboard.growth.websiteBanner.improve.one": "Su sitio web obtiene {earned}/{of} — {count} mejora disponible (hasta unos +{points} pts).",
+    "dashboard.growth.websiteBanner.improve.other": "Su sitio web obtiene {earned}/{of} — {count} mejoras disponibles (hasta unos +{points} pts).",
     "dashboard.growth.websiteBanner.openWebsitePage": "Abrir la página Sitio web →",
     "dashboard.growth.websiteBanner.getWebsite.title": "Obtenga un sitio web",
     "dashboard.growth.websiteBanner.getWebsite.range": "Todavía no tiene sitio web — un sitio inicial de PostScore podría sumar unos +{low}–{high} pts a su PostScore.",
@@ -13749,7 +13752,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.band.points.one": "{count} punto",
     "dashboard.overview.band.points.other": "{count} puntos",
     "dashboard.overview.connectPremiumPill": "PostScore Premium",
-    "dashboard.overview.band.seeBreakdown": "Desglose ↓",
+    "dashboard.overview.band.seeBreakdown": "Ver el desglose de su puntuación ↓",
     "dashboard.overview.scoringUpdatedVersionTip": "PostScore actualizó su forma de puntuar (ahora versión {version}): las puntuaciones pueden variar; esto no es un cambio en su negocio.",
     "dashboard.overview.seeWhatsIncluded": "Ver qué incluye →",
     "dashboard.overview.recs.pointsAbout": "unos +{points} pts",
