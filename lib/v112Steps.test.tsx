@@ -93,7 +93,7 @@ describe("this week's plan: the v1.12.0 steps while they lose points", () => {
     const es = growthPlan(input, "es").weeklyTasks;
     expect(es.find((t) => t.checkId === "visibility.review_replies")!.action).toBe("Responda a sus reseñas recientes");
     expect(es.find((t) => t.checkId === "visibility.review_recency")!.action).toBe("Consiga reseñas nuevas este mes");
-    expect(es.find((t) => t.checkId === "completeness.customer_details")!.fix).toContain("Perfil de Negocio de Google → Editar perfil → accesibilidad / pagos / estacionamiento");
+    expect(es.find((t) => t.checkId === "completeness.customer_details")!.fix).toContain("Perfil de Empresa en Google → Editar perfil → accesibilidad / pagos / estacionamiento");
   });
 });
 
@@ -232,7 +232,7 @@ describe("every Needs work row: its own How to fix it", () => {
   test("customer details: an office sees accessibility only — no parking or payment notes; EN + ES", () => {
     const cd = breakdown.checks.find((c) => c.id === "completeness.customer_details")!;
     expect(checkHowTo(cd, "en").steps).toBe("On Google: Google Business Profile → Edit profile → accessibility. Add only what's true.");
-    expect(checkHowTo(cd, "es").steps).toBe("En Google: Perfil de Negocio de Google → Editar perfil → accesibilidad. Agregue solo lo que sea cierto.");
+    expect(checkHowTo(cd, "es").steps).toBe("En Google: Perfil de Empresa en Google → Editar perfil → accesibilidad. Agregue solo lo que sea cierto.");
     const { suggestions } = getScoreWithSuggestions(businessRowToScoringInput(GREGG));
     expect(suggestions.find((s) => s.checkId === "completeness.customer_details")!.advice).toBe("Add it on Google: Google Business Profile → Edit profile → accessibility.");
     // A bakery: all three, with the payment and parking notes.

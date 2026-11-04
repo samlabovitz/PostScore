@@ -413,7 +413,7 @@ describe("connect card and business listing (tweaks)", () => {
     expect(en).not.toContain("Profile-completeness checklist");
     expect(en).not.toMatch(/\$\d/);
     const es = render(<LiveListingSection businessId="b1" connected={false} />, "es");
-    expect(es).toContain("Conecte su Perfil de Negocio de Google");
+    expect(es).toContain("Conecte su Perfil de Empresa en Google");
     expect(es).toContain("reciba respuestas a sus reseñas ya redactadas");
     expect(es).toContain("Ver qué incluye →");
     expect(es).toContain("PostScore Premium");

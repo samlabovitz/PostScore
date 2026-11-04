@@ -57,7 +57,7 @@ describe("the step (EN + ES), with Google's own link", () => {
     expect(on).toContain("On — customers can text you from your Google profile.");
     expect(on).not.toContain("Click Edit profile");
     const es = html(<GbpMessagingStep on={null} />, "es");
-    expect(es).toContain("Permita que los clientes le escriban desde Google: active la mensajería en su Perfil de Empresa (unos 2 min)");
+    expect(es).toContain("Permita que los clientes le escriban desde Google: active la mensajería en su Perfil de Empresa en Google (unos 2 min)");
     expect(es).toContain(`href="${GOOGLE_LINKS.chatHelp}?hl=es"`);
     expect(es).toContain("PostScore nunca lo activa por usted");
   });

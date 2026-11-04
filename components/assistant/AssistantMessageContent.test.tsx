@@ -14,7 +14,7 @@ import { AssistantMessageContent, parseInlineBold, splitAssistantContent } from 
 describe("splitAssistantContent — recognizes each language's own real general-guidance marker", () => {
   test("strips the Spanish marker from a Spanish-language reply", () => {
     const spanishReply =
-      "Su calificación es 4.3 con 58 reseñas.\n\nConsejo general: Considere publicar actualizaciones semanales en su Perfil de Negocio de Google para mantener su ficha activa.";
+      "Su calificación es 4.3 con 58 reseñas.\n\nConsejo general: Considere publicar actualizaciones semanales en su Perfil de Empresa en Google para mantener su ficha activa.";
 
     const parts = splitAssistantContent(spanishReply);
 
@@ -22,7 +22,7 @@ describe("splitAssistantContent — recognizes each language's own real general-
       { general: false, text: "Su calificación es 4.3 con 58 reseñas." },
       {
         general: true,
-        text: "Considere publicar actualizaciones semanales en su Perfil de Negocio de Google para mantener su ficha activa.",
+        text: "Considere publicar actualizaciones semanales en su Perfil de Empresa en Google para mantener su ficha activa.",
       },
     ]);
   });

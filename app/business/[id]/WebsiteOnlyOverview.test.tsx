@@ -68,7 +68,7 @@ describe("Website score — no Google listing", () => {
   test("Spanish", () => {
     const html = renderOverview("es");
     expect(html).toContain("Puntuación del sitio web — sin ficha de Google");
-    expect(html).toContain("Cree su Perfil de Negocio de Google");
+    expect(html).toContain("Cree su Perfil de Empresa en Google");
     expect(html).toContain("Esto no es un PostScore.");
     expect(html).not.toContain("Your first fix");
   });
