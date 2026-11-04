@@ -1,5 +1,6 @@
 "use client";
 
+import { GbpMessagingStep, GoogleAiAnswersLine } from "@/components/gbp/GbpMessagingStep";
 import Link from "next/link";
 import {
   IconArrowLeft,
@@ -92,6 +93,7 @@ export function ConnectGbpView({
   error,
   oauthConfigured,
   connectOpen,
+  messagingOn = null,
 }: {
   businessId: string;
   businessName: string | null;
@@ -109,6 +111,8 @@ export function ConnectGbpView({
   oauthConfigured: boolean;
   /** GBP_CONNECT_PUBLIC — false keeps the button disabled ("coming soon"). */
   connectOpen: boolean;
+  /** Connected: a texting/WhatsApp option is set on Google (read-only). */
+  messagingOn?: boolean | null;
 }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
@@ -170,11 +174,22 @@ export function ConnectGbpView({
               </div>
             </div>
           </div>
+          <GoogleAiAnswersLine businessId={businessId} premium className="mt-3 text-[12.5px] text-ink-soft" />
           <div className="mt-4 border-t border-paper-line pt-4">
             <GbpDisconnectButton businessId={businessId} />
           </div>
         </Card>
-      ) : needsReconnect && connectOpen && oauthConfigured ? (
+      ) : null}
+
+      {connected && (
+        // Right after connecting (and after): the next steps on Google.
+        <Card className="p-5" data-testid="connect-next-steps">
+          <h2 className="mb-3 font-serif text-base font-semibold text-ink">{t(locale, "dashboard.gbpMessaging.nextStepsHeading")}</h2>
+          <GbpMessagingStep on={messagingOn} />
+        </Card>
+      )}
+
+      {connected ? null : needsReconnect && connectOpen && oauthConfigured ? (
         <Card className="flex flex-col items-start gap-3 border-amber/40 p-5">
           <div className="flex items-start gap-2.5">
             <IconAlertTriangle size={18} aria-hidden className="mt-0.5 shrink-0 text-amber" />

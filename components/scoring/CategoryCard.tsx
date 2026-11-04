@@ -10,6 +10,7 @@ import { LockedFixRow } from "@/components/overview/FixPlanUpsell";
 import { checkAnchorId } from "@/lib/postaiLinks";
 import { CustomerDetailsExtras } from "@/components/scoring/CustomerDetailsExtras";
 import { CustomerDetailsGoogleEdit, optionLabel, useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
+import { GoogleAiAnswersLine } from "@/components/gbp/GbpMessagingStep";
 import { CUSTOMER_DETAIL_OPTIONS, PART_ORDER } from "@/lib/gbpAttributes";
 import { timeEstimateText, type CheckHowTo } from "@/lib/actionPlan";
 
@@ -189,6 +190,8 @@ function RowStatus({ check }: { check: CheckResult }) {
           </span>
         ))}
         <span className="w-full text-[13px] text-ink-mute">{t(locale, "dashboard.customerDetails.why")}</span>
+        {/* Premium's "Update on Google" is right in this row. */}
+        <GoogleAiAnswersLine businessId={null} premium={false} className="w-full text-[12.5px] text-ink-mute" />
       </div>
     );
   }

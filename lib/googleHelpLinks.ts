@@ -12,6 +12,10 @@ export const GOOGLE_LINKS = {
   businessProfileReviews: "https://business.google.com/reviews",
   /** Help: "Manage your business attributes" (accessibility, payments, parking). */
   attributesHelp: "https://support.google.com/business/answer/9049526",
+  /** Help: "Chat with customers from your Business Profile" — add a text
+   * message or WhatsApp option (Edit profile → Contact → Chat). Checked
+   * Nov 4, 2026. */
+  chatHelp: "https://support.google.com/business/answer/15013580",
   /** Help: "Manage customer reviews" (reading and replying). */
   reviewsHelp: "https://support.google.com/business/answer/3474050",
   /** Help: "Tips to get more reviews". */

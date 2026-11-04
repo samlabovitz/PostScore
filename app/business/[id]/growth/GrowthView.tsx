@@ -196,6 +196,8 @@ export function GrowthView({
     listing: GoogleListingFacts | null;
     websiteOnly: boolean;
     connected: boolean;
+    /** A texting/WhatsApp option on the connected location (read-only; null = not known). */
+    messagingOn?: boolean | null;
     searchDemand: SearchDemandView;
     connection?: GoogleProfileConnection | null;
   };
@@ -504,6 +506,7 @@ export function GrowthView({
             websiteOnly={googleProfile.websiteOnly}
             lastScanAt={lastScanAt}
             connected={googleProfile.connected}
+            messagingOn={googleProfile.messagingOn ?? null}
             searchDemand={googleProfile.searchDemand}
             connection={googleProfile.connection ?? null}
           />

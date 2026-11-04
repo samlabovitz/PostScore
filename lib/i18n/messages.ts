@@ -5,6 +5,20 @@ import { DEFAULT_LOCALE, type Locale } from "./locale";
 // below; adding a new locale (see locale.ts) doesn't require touching the
 // key list, only a new entry in `messages`.
 export type MessageKey =
+  | "dashboard.gbpMessaging.title"
+  | "dashboard.gbpMessaging.step1"
+  | "dashboard.gbpMessaging.step2"
+  | "dashboard.gbpMessaging.step3"
+  | "dashboard.gbpMessaging.step4"
+  | "dashboard.gbpMessaging.step5"
+  | "dashboard.gbpMessaging.regions"
+  | "dashboard.gbpMessaging.never"
+  | "dashboard.gbpMessaging.on"
+  | "dashboard.gbpMessaging.helpLink"
+  | "dashboard.gbpMessaging.aiLine"
+  | "dashboard.gbpMessaging.updateOnGoogle"
+  | "dashboard.gbpMessaging.strengthHeading"
+  | "dashboard.gbpMessaging.nextStepsHeading"
   | "dashboard.gbpEdit.undo.complete"
   | "dashboard.gbpEdit.error.undo_unverified"
   | "dashboard.gbpEdit.error.undo_unverifiedPending"
@@ -4557,6 +4571,20 @@ type LocaleMessages = Partial<Record<MessageKey, string>>;
 
 export const messages: Record<Locale, LocaleMessages> = {
   en: {
+    "dashboard.gbpMessaging.title": "Let customers text you from Google — turn on messaging in your Business Profile (about 2 min)",
+    "dashboard.gbpMessaging.step1": "Go to your Business Profile (business.google.com).",
+    "dashboard.gbpMessaging.step2": "Click Edit profile → Contact.",
+    "dashboard.gbpMessaging.step3": "Next to “Chat,” select Edit.",
+    "dashboard.gbpMessaging.step4": "Choose Text message (or WhatsApp) and add a number that can receive texts (or your WhatsApp click-to-chat link).",
+    "dashboard.gbpMessaging.step5": "Click Save.",
+    "dashboard.gbpMessaging.regions": "Google offers this in select regions, so it might not show for your profile.",
+    "dashboard.gbpMessaging.never": "You turn it on yourself on Google — PostScore never turns it on for you. It doesn't change your PostScore.",
+    "dashboard.gbpMessaging.on": "On — customers can text you from your Google profile.",
+    "dashboard.gbpMessaging.helpLink": "Google's help: chat with customers",
+    "dashboard.gbpMessaging.aiLine": "Google's AI answers customers' questions from your profile. Fill in your services, prices, hours, parking and payments so it answers correctly.",
+    "dashboard.gbpMessaging.updateOnGoogle": "Update on Google",
+    "dashboard.gbpMessaging.strengthHeading": "Profile strength",
+    "dashboard.gbpMessaging.nextStepsHeading": "Next steps on your Google profile",
     "dashboard.gbpEdit.undo.complete": "Undo complete — Google shows your previous values again.",
     "dashboard.gbpEdit.error.undo_unverified": "Undo didn't finish — try again. Google still shows the new value for: {fields}.",
     "dashboard.gbpEdit.error.undo_unverifiedPending": "Undo didn't finish — try again later. Google is still reviewing the change, and still shows the new value for: {fields}.",
@@ -9465,6 +9493,20 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.searchDemand.tips.empty": "Tips appear once there are real search terms to work from.",
   },
   es: {
+    "dashboard.gbpMessaging.title": "Permita que los clientes le escriban desde Google: active la mensajería en su Perfil de Empresa (unos 2 min)",
+    "dashboard.gbpMessaging.step1": "Vaya a su Perfil de Empresa (business.google.com).",
+    "dashboard.gbpMessaging.step2": "Haga clic en Editar perfil → Contacto.",
+    "dashboard.gbpMessaging.step3": "Junto a «Chat», seleccione Editar.",
+    "dashboard.gbpMessaging.step4": "Elija Mensaje de texto (o WhatsApp) y agregue un número que pueda recibir mensajes de texto (o su enlace de WhatsApp para chatear).",
+    "dashboard.gbpMessaging.step5": "Haga clic en Guardar.",
+    "dashboard.gbpMessaging.regions": "Google ofrece esto en algunas regiones, así que es posible que no aparezca en su perfil.",
+    "dashboard.gbpMessaging.never": "Usted lo activa en Google; PostScore nunca lo activa por usted. No cambia su PostScore.",
+    "dashboard.gbpMessaging.on": "Activado: los clientes pueden escribirle desde su perfil de Google.",
+    "dashboard.gbpMessaging.helpLink": "Ayuda de Google: chatear con clientes",
+    "dashboard.gbpMessaging.aiLine": "La IA de Google responde las preguntas de los clientes con la información de su perfil. Complete sus servicios, precios, horario, estacionamiento y formas de pago para que responda correctamente.",
+    "dashboard.gbpMessaging.updateOnGoogle": "Actualizar en Google",
+    "dashboard.gbpMessaging.strengthHeading": "Solidez del perfil",
+    "dashboard.gbpMessaging.nextStepsHeading": "Próximos pasos en su perfil de Google",
     "dashboard.gbpEdit.undo.complete": "Se deshizo el cambio: Google vuelve a mostrar sus valores anteriores.",
     "dashboard.gbpEdit.error.undo_unverified": "No se terminó de deshacer: inténtelo de nuevo. Google todavía muestra el valor nuevo de: {fields}.",
     "dashboard.gbpEdit.error.undo_unverifiedPending": "No se terminó de deshacer: inténtelo de nuevo más tarde. Google todavía está revisando el cambio y muestra el valor nuevo de: {fields}.",

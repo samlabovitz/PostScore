@@ -58,6 +58,8 @@ export default async function ConnectGbpPage({
         oauthConfigured={isGbpOAuthConfigured()}
         // Disabled "coming soon" unless GBP_CONNECT_PUBLIC=true.
         connectOpen={canConnectGbp()}
+        // Read-only: a texting/WhatsApp option on the owner's location (✓).
+        messagingOn={ok?.connected ? await (await import("@/lib/gbpMessaging.server")).readGbpMessaging(params.id) : null}
       />
     </DashboardShell>
   );

@@ -22,6 +22,7 @@ import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import { SearchDemandSection, type SearchDemandView } from "@/components/gbp/SearchDemandSection";
 import { isPremiumPlan, type Plan } from "@/lib/plan";
 import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
+import { GbpMessagingStep, GoogleAiAnswersLine } from "@/components/gbp/GbpMessagingStep";
 import { formatShortDate, t, useLocale, useTimeZone } from "@/lib/i18n";
 
 export interface GoogleListingFacts {
@@ -54,6 +55,7 @@ export function GoogleProfilePanel({
   websiteOnly,
   lastScanAt,
   connected,
+  messagingOn = null,
   searchDemand,
   connection = null,
 }: {
@@ -64,6 +66,8 @@ export function GoogleProfilePanel({
   websiteOnly: boolean;
   lastScanAt: string | null;
   connected: boolean;
+  /** A texting/WhatsApp option on the connected location (null = not connected / not known). */
+  messagingOn?: boolean | null;
   searchDemand: SearchDemandView;
   /** The matched location, a ?gbp= result and whether connecting is open. */
   connection?: GoogleProfileConnection | null;
@@ -155,6 +159,7 @@ export function GoogleProfilePanel({
               : t(locale, "dashboard.googleProfile.notConnected")}
           </div>
           {premium && connected && <GbpReplyCountsLine counts={connection?.replyCounts ?? null} />}
+          <GoogleAiAnswersLine businessId={businessId} premium={premium} />
           {premium ? (
             <>
               <p className="text-[13px] text-ink-soft">
@@ -180,6 +185,15 @@ export function GoogleProfilePanel({
           )}
         </Card>
       </section>
+
+      {!websiteOnly && (
+        <section data-testid="profile-strength">
+          <SectionTitle>{t(locale, "dashboard.gbpMessaging.strengthHeading")}</SectionTitle>
+          <Card className="p-5">
+            <GbpMessagingStep on={connected ? messagingOn : null} />
+          </Card>
+        </section>
+      )}
 
       {premium ? (
         <>
