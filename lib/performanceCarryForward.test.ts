@@ -75,7 +75,7 @@ describe("a failed speed test keeps a real measurement from the last 30 days (v1
       const { websiteAnalysis } = await save(measured(10), { kind, status: null });
       expect(websiteAnalysis!.mobilePerformance).toMatchObject({ labScore: 68, carriedForward: true });
       expect(websiteAnalysis!.mobilePerformanceFailureReason).toBeNull();
-      expect(SCORING_VERSION).toBe("1.12.0");
+      expect(SCORING_VERSION).toBe("1.13.0");
       const check = performanceCheck(websiteAnalysis);
       expect(check.earnedPoints).not.toBeNull();
       expect(check.explanation).toContain("last measured");

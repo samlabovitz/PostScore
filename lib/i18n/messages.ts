@@ -5,21 +5,21 @@ import { DEFAULT_LOCALE, type Locale } from "./locale";
 // below; adding a new locale (see locale.ts) doesn't require touching the
 // key list, only a new entry in `messages`.
 export type MessageKey =
+  | "dashboard.overview.scoringUpdateNote.v1_13_0"
+  | "content.checks.website.performance_mobile.result.withTime"
+  | "content.checks.website.performance_mobile.explanation.resultV113"
+  | "content.checks.website.performance_mobile.explanation.resultLastMeasuredV113"
+  | "content.checks.website.performance_mobile.note.field"
+  | "content.checks.website.performance_mobile.note.lab"
   | "report.footer.unsubscribeDisabledTest"
   | "content.checks.website.content_depth.explanation.allGoodV113"
-  | "content.checks.website.performance_mobile.explanation.labV113"
-  | "content.checks.website.performance_mobile.explanation.labLastMeasuredV113"
-  | "content.checks.website.performance_mobile.explanation.labLastMeasuredErrorPageV113"
   | "content.checks.website.performance_mobile.labelV113"
   | "content.actionPlan.website.mobile_friendly.why"
   | "content.actionPlan.website.mobile_friendly.action"
   | "content.actionPlan.website.mobile_friendly.fix"
   | "content.checks.website.performance_mobile.result.fast"
-  | "content.checks.website.performance_mobile.result.fastTime"
   | "content.checks.website.performance_mobile.result.average"
-  | "content.checks.website.performance_mobile.result.averageTime"
   | "content.checks.website.performance_mobile.result.slow"
-  | "content.checks.website.performance_mobile.result.slowTime"
   | "content.checks.website.mobile_friendly.label"
   | "content.checks.website.mobile_friendly.advice"
   | "content.checks.website.mobile_friendly.advice.viewport"
@@ -4553,21 +4553,21 @@ type LocaleMessages = Partial<Record<MessageKey, string>>;
 
 export const messages: Record<Locale, LocaleMessages> = {
   en: {
+    "dashboard.overview.scoringUpdateNote.v1_13_0": "We updated how PostScore scores websites — “Performance & mobile” is now two checks: “Loads fast” (about how many seconds your page takes to show on a phone) and “Works well on phones”. If your score moved, it's because of this update, not a change you made.",
+    "content.checks.website.performance_mobile.result.withTime": "{category} · about {seconds} seconds to show your page on a phone",
+    "content.checks.website.performance_mobile.explanation.resultV113": "{result}.",
+    "content.checks.website.performance_mobile.explanation.resultLastMeasuredV113": "{result} (last measured {date}).",
+    "content.checks.website.performance_mobile.note.field": "Based on real visitors in the last 28 days",
+    "content.checks.website.performance_mobile.note.lab": "Based on Google's phone test",
     "report.footer.unsubscribeDisabledTest": "(test preview — link disabled)",
     "content.checks.website.content_depth.explanation.allGoodV113": "Real, substantial content: a title, meta description, headings and real text all present.",
-    "content.checks.website.performance_mobile.explanation.labV113": "Simulated phone test, middle of 3 runs: {category}. Results can vary between tests.",
-    "content.checks.website.performance_mobile.explanation.labLastMeasuredV113": "Simulated phone test — last measured {date}: {category}. This scan's speed test didn't finish, so we're showing the most recent real measurement instead of leaving this out.",
-    "content.checks.website.performance_mobile.explanation.labLastMeasuredErrorPageV113": "Simulated phone test — last measured {date}: {category}. This scan's speed check reached an error page instead of your site, so we're showing the most recent real measurement instead.",
     "content.checks.website.performance_mobile.labelV113": "Loads fast",
     "content.actionPlan.website.mobile_friendly.why": "Most people find local businesses on their phones. A site that's hard to read or tap there sends them back to search.",
     "content.actionPlan.website.mobile_friendly.action": "Make your website easy to use on a phone.",
     "content.actionPlan.website.mobile_friendly.fix": "Fix each ✗ item on the Website page: add a mobile viewport tag, make buttons and links big enough to tap, and keep text readable without zooming. Most site builders have a mobile view to check this in.",
     "content.checks.website.performance_mobile.result.fast": "Fast",
-    "content.checks.website.performance_mobile.result.fastTime": "Fast · about {seconds} seconds",
     "content.checks.website.performance_mobile.result.average": "Average",
-    "content.checks.website.performance_mobile.result.averageTime": "Average",
     "content.checks.website.performance_mobile.result.slow": "Slow",
-    "content.checks.website.performance_mobile.result.slowTime": "Slow · about {seconds} seconds",
     "content.checks.website.mobile_friendly.label": "Works well on phones",
     "content.checks.website.mobile_friendly.advice": "Make sure your site is set up for phones: a mobile viewport tag, text people can read without zooming, nothing wider than the screen, and buttons big enough to tap.",
     "content.checks.website.mobile_friendly.advice.viewport": "Add a mobile viewport tag (<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">) so phones show your site at their own size instead of a shrunken desktop page.",
@@ -9457,21 +9457,21 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.searchDemand.tips.empty": "Tips appear once there are real search terms to work from.",
   },
   es: {
+    "dashboard.overview.scoringUpdateNote.v1_13_0": "Actualizamos cómo PostScore califica los sitios web: «Rendimiento y móvil» ahora son dos comprobaciones, «Carga rápida» (cuántos segundos tarda, aproximadamente, su página en mostrarse en un teléfono) y «Funciona bien en teléfonos». Si su puntuación cambió, se debe a esta actualización, no a algo que usted hizo.",
+    "content.checks.website.performance_mobile.result.withTime": "{category} · unos {seconds} segundos en mostrar su página en un teléfono",
+    "content.checks.website.performance_mobile.explanation.resultV113": "{result}.",
+    "content.checks.website.performance_mobile.explanation.resultLastMeasuredV113": "{result} (última medición: {date}).",
+    "content.checks.website.performance_mobile.note.field": "Basado en visitantes reales de los últimos 28 días",
+    "content.checks.website.performance_mobile.note.lab": "Basado en la prueba en teléfono de Google",
     "report.footer.unsubscribeDisabledTest": "(vista previa de prueba — enlace desactivado)",
     "content.checks.website.content_depth.explanation.allGoodV113": "Contenido real y sustancial: hay un título, una meta descripción, encabezados y texto real.",
-    "content.checks.website.performance_mobile.explanation.labV113": "Prueba simulada en teléfono, valor medio de 3 pruebas: {category}. Los resultados pueden variar entre pruebas.",
-    "content.checks.website.performance_mobile.explanation.labLastMeasuredV113": "Prueba simulada en teléfono — última medición el {date}: {category}. La prueba de velocidad de este escaneo no terminó, así que mostramos la medición real más reciente en lugar de dejar esto fuera.",
-    "content.checks.website.performance_mobile.explanation.labLastMeasuredErrorPageV113": "Prueba simulada en teléfono — última medición el {date}: {category}. La comprobación de velocidad de este escaneo llegó a una página de error en lugar de su sitio, así que mostramos la medición real más reciente.",
     "content.checks.website.performance_mobile.labelV113": "Carga rápida",
     "content.actionPlan.website.mobile_friendly.why": "La mayoría de las personas encuentran negocios locales desde el teléfono. Un sitio difícil de leer o de tocar ahí las devuelve a la búsqueda.",
     "content.actionPlan.website.mobile_friendly.action": "Haga que su sitio web sea fácil de usar en un teléfono.",
     "content.actionPlan.website.mobile_friendly.fix": "Corrija cada elemento con ✗ en la página Sitio web: agregue una etiqueta viewport para móviles, haga los botones y enlaces lo bastante grandes para tocarlos y mantenga el texto legible sin hacer zoom. La mayoría de los creadores de sitios tienen una vista móvil para revisarlo.",
     "content.checks.website.performance_mobile.result.fast": "Rápido",
-    "content.checks.website.performance_mobile.result.fastTime": "Rápido · unos {seconds} segundos",
     "content.checks.website.performance_mobile.result.average": "Promedio",
-    "content.checks.website.performance_mobile.result.averageTime": "Promedio",
     "content.checks.website.performance_mobile.result.slow": "Lento",
-    "content.checks.website.performance_mobile.result.slowTime": "Lento · unos {seconds} segundos",
     "content.checks.website.mobile_friendly.label": "Funciona bien en teléfonos",
     "content.checks.website.mobile_friendly.advice": "Asegúrese de que su sitio esté preparado para teléfonos: una etiqueta viewport para móviles, texto legible sin hacer zoom, nada más ancho que la pantalla y botones lo bastante grandes para tocarlos.",
     "content.checks.website.mobile_friendly.advice.viewport": "Agregue una etiqueta viewport para móviles (<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">) para que los teléfonos muestren su sitio a su propio tamaño en lugar de una página de escritorio reducida.",

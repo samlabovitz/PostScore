@@ -280,16 +280,18 @@ describe("buildWebsiteBanner", () => {
   });
 
   test("hidden when the Website page itself shows 100/100 (a 99.6 rounds to 100 there)", () => {
-    // A barely-below-full speed score: real gap, but the Website page reads 100.
-    const input: BusinessScoringInput = {
-      ...BASE,
-      websiteAnalysis: { ...GOOD_ANALYSIS, mobilePerformance: { method: "lab", fieldCategory: null, labScore: 98 } },
-    };
-    const { breakdown, banner } = growthPlan(input);
-    const website = breakdown.categories.find((c) => c.id === "website")!;
-    expect(website.relativeScore!).toBeLessThan(100);
-    expect(Math.round(website.relativeScore!)).toBe(100);
-    expect(banner).toBeNull();
+    // A barely-below-full website: a real gap, but the Website page reads
+    // 100. (v1.13.0 speed is Fast / Average / Slow, so the tiny gap is set
+    // on the breakdown directly.)
+    const input: BusinessScoringInput = { ...BASE, websiteAnalysis: GOOD_ANALYSIS };
+    const { breakdown } = growthPlan(input);
+    const nearlyFull = structuredClone(breakdown);
+    const website = nearlyFull.categories.find((c) => c.id === "website")!;
+    const speed = website.checks.find((c) => c.id === "website.performance_mobile")!;
+    speed.earnedPoints = speed.maxPoints - 0.1;
+    website.relativeScore = 99.6;
+    expect(Math.round(website.relativeScore)).toBe(100);
+    expect(buildWebsiteBanner(nearlyFull, input, null)).toBeNull();
   });
 
   test("no website at all: 'get a website' with the starter-site range (or one value without a template)", () => {

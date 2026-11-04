@@ -288,7 +288,7 @@ describe("score breakdown panel", () => {
     const html = render(<ScoreBreakdownPanel businessId="b" categories={breakdown.categories} hasWebsite scoreBasis={100} accountCollapsed />);
     expect(html).toContain("Score breakdown");
     for (const c of breakdown.categories) expect(html).toContain(c.label.replace("&", "&amp;"));
-    expect(html).toContain("4 done · 3 need work · 5 couldn&#x27;t check");
+    expect(html).toContain("6 done · 2 need work · 5 couldn&#x27;t check");
     expect(html).toContain('aria-expanded="false"');
     const links = breakdownFixLinks(breakdown.categories, "b", "en");
     for (const id of Object.keys(links)) {

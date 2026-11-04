@@ -192,7 +192,12 @@ function RowStatus({ check }: { check: CheckResult }) {
       </div>
     );
   }
-  return <p className="pl-[25px] text-[13px] text-ink-mute">{check.explanation}</p>;
+  return (
+    <>
+      <p className="pl-[25px] text-[13px] text-ink-mute">{check.explanation}</p>
+      {check.note && <p className="pl-[25px] text-[11.5px] text-ink-mute/80">{check.note}</p>}
+    </>
+  );
 }
 
 /** One primary action, then small secondary links — the same on every

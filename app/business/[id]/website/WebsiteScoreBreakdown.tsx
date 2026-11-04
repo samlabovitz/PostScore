@@ -241,6 +241,7 @@ function CheckRow({
           )}
           {excludedReasonKey ? t(locale, excludedReasonKey) : check.explanation}
         </p>
+        {check.note && !excludedReasonKey && <p className="mt-0.5 text-[11.5px] text-ink-mute">{check.note}</p>}
 
         {(state === "partial" || state === "zero") && suggestion && !spamFinding && (
           <p className="mt-1 text-[12.5px] text-ink-mute">{suggestion.advice}</p>

@@ -59,14 +59,15 @@ import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type Aban
 // 1.12.0: review recency, replying to reviews (Google connected), customer
 // details on the listing; rating 14, review count 14, categories 3, status 4
 // (docs/review-scoring-plan.md).
-export const SCORING_VERSION = "1.12.0";
+// 1.13.0: "Performance & mobile" (5) → "Loads fast" (4, or 3 once the
+// fuller phone check has run) + "Works well on phones" (1, or 2); speed
+// Fast 100% / Average 50% / Slow 0%; the viewport tag leaves Content depth.
+export const SCORING_VERSION = "1.13.0";
 
 /**
- * v1.13.0 (waiting for approval): "Performance & mobile" (5) split into
- * "Loads fast" (3) and "Works well on phones" (2), and the viewport tag
- * moved out of Content depth. Off until SCORING_VERSION is "1.13.0" —
- * POSTSCORE_SCORING_PREVIEW=1.13.0 turns it on for a dry run (server-side
- * scripts only; never set in the app).
+ * v1.13.0's speed / phone split and Content depth without the viewport —
+ * on now that SCORING_VERSION is "1.13.0" (POSTSCORE_SCORING_PREVIEW was
+ * the pre-approval dry-run switch).
  */
 export const SCORING_V113: boolean =
   (SCORING_VERSION as string) === "1.13.0" || (typeof process !== "undefined" && process.env?.POSTSCORE_SCORING_PREVIEW === "1.13.0");
@@ -946,6 +947,9 @@ export interface CheckResult {
   confidence: Confidence;
   /** Human-readable explanation of why the check earned what it earned. */
   explanation: string;
+  /** v1.13.0: a small muted line under the explanation ("Based on real
+   * visitors in the last 28 days"). */
+  note?: string;
   /** Optional machine-readable detail about HOW this check's value was
    * determined — currently set only by website.performance_mobile
    * (`{ method: "field" | "lab" }`), read by lib/scoreChanges.ts to tell
@@ -1261,6 +1265,10 @@ interface CheckDefinition {
   labelKey: MessageKey;
   category: CategoryId;
   maxPoints: number;
+  /** v1.13.0: this business's own maximum when it differs from
+   * `maxPoints` (the Website speed/phone pair — see fullerPhoneCheckRan);
+   * the category total never changes. */
+  maxPointsFor?(input: BusinessScoringInput): number;
   /** i18n key for the copy shown on a suggestion generated from this
    * check while it's losing points — see content.checks.<id>.advice. */
   adviceKey: MessageKey;
@@ -1283,6 +1291,8 @@ interface CheckDefinition {
     meta?: Record<string, string> | null;
     /** See CheckResult.gaps. */
     gaps?: string[];
+    /** See CheckResult.note. */
+    note?: string;
   };
   simulateFix(input: BusinessScoringInput): BusinessScoringInput;
   /** v1.12.0: false when the check doesn't apply to this business at all
@@ -1319,20 +1329,14 @@ const REVIEW_COUNT_CHECK_MAX_POINTS = 18;
  * - SLOW -> 1.2: CrUX's "SLOW" ("poor") lines up with the lab "slow"
  *   band; same reasoning as before, scaled to the new ceiling.
  */
-// v1.13.0: "Performance & mobile" (5) split into "Loads fast" (3, this
-// one — still website.performance_mobile) and "Works well on phones" (2,
-// website.mobile_friendly). Same proportions (100% / 60% / 20%).
 // 1.12.0: one 5-point "Performance & mobile" check (100% / 60% / 20%).
-const MOBILE_SPEED_MAX_POINTS = SCORING_V113 ? 3 : 5;
-const MOBILE_FRIENDLY_MAX_POINTS = 2;
+const MOBILE_SPEED_MAX_POINTS = 5;
+const FIELD_CATEGORY_POINTS: Record<FieldSpeedCategory, number> = { FAST: 5, AVERAGE: 3, SLOW: 1 };
 /** Content depth's sub-points (sum 5): 1.12.0 title 1 / meta 1 /
  * viewport 1.5 / headings 1 / length 0.5; v1.13.0 drops the viewport. */
 const CONTENT_DEPTH_WEIGHTS = SCORING_V113
   ? { title: 1.5, meta: 1.25, viewport: 0, headings: 1.5, length: 0.75 }
   : { title: 1, meta: 1, viewport: 1.5, headings: 1, length: 0.5 };
-const FIELD_CATEGORY_POINTS: Record<FieldSpeedCategory, number> = SCORING_V113
-  ? { FAST: 3, AVERAGE: 1.8, SLOW: 0.6 }
-  : { FAST: 5, AVERAGE: 3, SLOW: 1 };
 
 const FIELD_CATEGORY_LABEL_KEYS: Record<FieldSpeedCategory, MessageKey> = {
   FAST: "content.checks.website.performance_mobile.fieldCategory.fast",
@@ -1340,9 +1344,31 @@ const FIELD_CATEGORY_LABEL_KEYS: Record<FieldSpeedCategory, MessageKey> = {
   SLOW: "content.checks.website.performance_mobile.fieldCategory.slow",
 };
 
-/** The speed result in words: v1.13.0 "Fast · about 2.0 seconds", 1.12.0 "fast". */
-function speedText(category: FieldSpeedCategory, seconds: number | undefined, locale: Locale): string {
-  return SCORING_V113 ? speedResult(category, seconds, locale) : t(locale, FIELD_CATEGORY_LABEL_KEYS[category]);
+/**
+ * v1.13.0 weights. Until the fuller phone check (text size, page width,
+ * touch targets) has actually run on a site, "Works well on phones" only
+ * checks the viewport tag, which almost every site passes — so it's worth
+ * 1 and "Loads fast" 4. Once it has run: 2 and 3. Website stays 30.
+ * Speed earns Fast 100% / Average 50% / Slow 0%, so a Slow site never
+ * gains on the 1-point phone check: Slow 0 + viewport 1 = 1, its 1.12.0
+ * points (1 of 5); Average 2 + 1 = 3 (was 3); Fast 4 + 1 = 5 (was 5).
+ */
+const SPEED_SHARE: Record<FieldSpeedCategory, number> = { FAST: 1, AVERAGE: 0.5, SLOW: 0 };
+
+/** v1.13.0: Google's phone audits or our own page read measured text
+ * size, page width or touch targets on this site (never on a site that
+ * blocks automated checks — that would be its block page). */
+export function fullerPhoneCheckRan(input: BusinessScoringInput): boolean {
+  if (siteBlocksAutomatedChecks(input)) return false;
+  const u = input.websiteAnalysis?.mobilePerformance?.mobileUsability;
+  const l = input.websiteAnalysis?.content?.phoneLayout;
+  return [u?.tapTargets, u?.textReadable, u?.fitsScreen, l?.textReadable, l?.fitsScreen].some((v) => typeof v === "boolean");
+}
+function loadsFastMaxPoints(input: BusinessScoringInput): number {
+  return fullerPhoneCheckRan(input) ? 3 : 4;
+}
+function worksOnPhonesMaxPoints(input: BusinessScoringInput): number {
+  return fullerPhoneCheckRan(input) ? 2 : 1;
 }
 
 /** v1.13.0: a lab run in the same plain words as real-visitor data —
@@ -1354,14 +1380,50 @@ function labSpeedCategory(m: MobilePerformanceMeasurement): FieldSpeedCategory {
   return score >= 90 ? "FAST" : score >= 50 ? "AVERAGE" : "SLOW";
 }
 
-/** "Fast · about 2.0 seconds" / "Average" / "Slow · about 6.8 seconds" —
- * never a score out of 100. */
+/** "Average · about 2.0 seconds to show your page on a phone" — or just
+ * "Average" without seconds. Never a score out of 100, never where the
+ * number came from (that's the muted note). */
 function speedResult(category: FieldSpeedCategory, seconds: number | undefined, locale: Locale): string {
-  const time = typeof seconds === "number" && category !== "AVERAGE" ? new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(seconds) : null;
-  const base = category === "FAST" ? "fast" : category === "SLOW" ? "slow" : "average";
-  return time ? t(locale, `content.checks.website.performance_mobile.result.${base}Time` as MessageKey, { seconds: time }) : t(locale, `content.checks.website.performance_mobile.result.${base}` as MessageKey);
+  const word = t(locale, `content.checks.website.performance_mobile.result.${category === "FAST" ? "fast" : category === "SLOW" ? "slow" : "average"}` as MessageKey);
+  if (typeof seconds !== "number") return word;
+  const time = new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.round(seconds * 10) / 10);
+  return t(locale, "content.checks.website.performance_mobile.result.withTime", { category: word, seconds: time });
 }
 
+/** v1.13.0 "Loads fast": real visitors first, else Google's phone test
+ * (never a lab result for a site that blocks automated checks), with the
+ * carry-forward and "couldn't measure" rules unchanged. */
+function loadsFastV113(input: BusinessScoringInput, locale: Locale): ReturnType<CheckDefinition["evaluate"]> {
+  const wa = input.websiteAnalysis!;
+  const blocked = siteBlocksAutomatedChecks(input);
+  const m = wa.mobilePerformance;
+  const usable = !!m && (m.method === "field" ? m.fieldCategory !== null : !blocked && m.labScore !== null);
+  if (!m || !usable) {
+    if (blocked) return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.performance_mobile.explanation.blockedSite") };
+    if (wa.mobilePerformanceFailureReason?.cause === "no_main_content") {
+      return {
+        earnedPoints: null,
+        confidence: "NOT_FOUND",
+        explanation: t(locale, "content.checks.website.performance_mobile.explanation.noMainContent"),
+        meta: { noScoreCause: "no_main_content" },
+        gaps: ["no_main_content"],
+      };
+    }
+    return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.performance_mobile.explanation.noScore") };
+  }
+  const category = m.method === "field" ? m.fieldCategory! : labSpeedCategory(m);
+  const result = speedResult(category, m.lcpSeconds, locale);
+  const lastMeasured = m.carriedForward && m.measuredAt ? formatShortDate(m.measuredAt, locale, input.timeZone || undefined) : null;
+  return {
+    earnedPoints: roundTo(SPEED_SHARE[category] * loadsFastMaxPoints(input), 1),
+    confidence: "VERIFIED",
+    explanation: lastMeasured
+      ? t(locale, "content.checks.website.performance_mobile.explanation.resultLastMeasuredV113", { result, date: lastMeasured })
+      : t(locale, "content.checks.website.performance_mobile.explanation.resultV113", { result }),
+    note: t(locale, m.method === "field" ? "content.checks.website.performance_mobile.note.field" : "content.checks.website.performance_mobile.note.lab"),
+    meta: { method: m.method },
+  };
+}
 
 /** A fully-good WebsiteAnalysis, used only by the Website quality checks'
  * simulateFix (mirrors PLACEHOLDER_HOURS's role below) — never shown to
@@ -1536,7 +1598,9 @@ const MOBILE_FRIENDLY_CHECK: CheckDefinition = {
   id: "website.mobile_friendly",
   labelKey: "content.checks.website.mobile_friendly.label",
   category: "website",
-  maxPoints: MOBILE_FRIENDLY_MAX_POINTS,
+  // 1 until the fuller phone check has run on the site, then 2 (worksOnPhonesMaxPoints).
+  maxPoints: 1,
+  maxPointsFor: worksOnPhonesMaxPoints,
   adviceKey: "content.checks.website.mobile_friendly.advice",
   gapAdviceKeys: {
     viewport: "content.checks.website.mobile_friendly.advice.viewport",
@@ -1573,7 +1637,7 @@ const MOBILE_FRIENDLY_CHECK: CheckDefinition = {
     const passed = known.filter((i) => i.ok).length;
     const list = known.map((i) => `${i.ok ? "✓" : "✗"} ${t(locale, `content.checks.website.mobile_friendly.item.${i.key}` as MessageKey)}`).join(" · ");
     return {
-      earnedPoints: roundTo((passed / known.length) * MOBILE_FRIENDLY_MAX_POINTS, 1),
+      earnedPoints: roundTo((passed / known.length) * worksOnPhonesMaxPoints(input), 1),
       confidence: "VERIFIED",
       gaps: known.filter((i) => !i.ok).map((i) => i.key),
       explanation: t(locale, "content.checks.website.mobile_friendly.explanation.items", { items: list }),
@@ -2148,7 +2212,9 @@ export const CHECKS: CheckDefinition[] = [
     // Gave up 4 points (was 10) to make room for the 4 new site-trust
     // checks inside Website's unchanged 30-point total — see
     // CATEGORY_WEIGHTS' own doc.
-    maxPoints: MOBILE_SPEED_MAX_POINTS,
+    // v1.13.0: 4 (3 once the fuller phone check has run — loadsFastMaxPoints).
+    maxPoints: SCORING_V113 ? 4 : MOBILE_SPEED_MAX_POINTS,
+    ...(SCORING_V113 ? { maxPointsFor: loadsFastMaxPoints } : {}),
     adviceKey: "content.checks.website.performance_mobile.advice",
     evaluate(input, locale) {
       if (!hasAnalyzableWebsite(input)) {
@@ -2165,6 +2231,7 @@ export const CHECKS: CheckDefinition[] = [
           explanation: t(locale, "content.checks.website.performance_mobile.explanation.notAnalyzed"),
         };
       }
+      if (SCORING_V113) return loadsFastV113(input, locale);
       // Step 2d: a site our own fetch can't access (bot-blocked, or one
       // that shows automated checks an error page) — no LAB rating is
       // trusted for it (it would measure the block page), nor a carried-
@@ -2179,7 +2246,7 @@ export const CHECKS: CheckDefinition[] = [
         // with its date (the real Blue Bottle case).
         const m = input.websiteAnalysis.mobilePerformance;
         if (m && m.method === "field" && m.fieldCategory) {
-          const category = speedText(m.fieldCategory, m.lcpSeconds, locale);
+          const category = t(locale, FIELD_CATEGORY_LABEL_KEYS[m.fieldCategory]);
           return {
             earnedPoints: FIELD_CATEGORY_POINTS[m.fieldCategory],
             confidence: "VERIFIED",
@@ -2242,7 +2309,7 @@ export const CHECKS: CheckDefinition[] = [
                 measurement.carriedForwardReason === "error_page"
                   ? "content.checks.website.performance_mobile.explanation.fieldLastMeasuredErrorPage"
                   : "content.checks.website.performance_mobile.explanation.fieldLastMeasured",
-                { category: speedText(category, measurement.lcpSeconds, locale), date: lastMeasuredDate }
+                { category: t(locale, FIELD_CATEGORY_LABEL_KEYS[category]), date: lastMeasuredDate }
               )
             : t(
                 locale,
@@ -2251,7 +2318,7 @@ export const CHECKS: CheckDefinition[] = [
                 measurement.fieldScope === "origin"
                   ? "content.checks.website.performance_mobile.explanation.fieldOrigin"
                   : "content.checks.website.performance_mobile.explanation.field",
-                { category: speedText(category, measurement.lcpSeconds, locale) }
+                { category: t(locale, FIELD_CATEGORY_LABEL_KEYS[category]) }
               ),
           meta: { method: "field" },
         };
@@ -2262,26 +2329,6 @@ export const CHECKS: CheckDefinition[] = [
       // than trusting any single one (see MobilePerformanceMeasurement's
       // own doc).
       if (measurement.method === "lab" && measurement.labScore !== null) {
-        if (SCORING_V113) {
-          // v1.13.0: the same plain Fast / Average / Slow as real-visitor
-          // data — never a score out of 100.
-          const labCategory = labSpeedCategory(measurement);
-          const result = speedResult(labCategory, measurement.lcpSeconds, locale);
-          return {
-            earnedPoints: FIELD_CATEGORY_POINTS[labCategory],
-            confidence: "VERIFIED",
-            explanation: lastMeasuredDate
-              ? t(
-                  locale,
-                  measurement.carriedForwardReason === "error_page"
-                    ? "content.checks.website.performance_mobile.explanation.labLastMeasuredErrorPageV113"
-                    : "content.checks.website.performance_mobile.explanation.labLastMeasuredV113",
-                  { category: result, date: lastMeasuredDate }
-                )
-              : t(locale, "content.checks.website.performance_mobile.explanation.labV113", { category: result }),
-            meta: { method: "lab" },
-          };
-        }
         const score = measurement.labScore;
         return {
           earnedPoints: roundTo((score / 100) * MOBILE_SPEED_MAX_POINTS, 1),
@@ -3306,7 +3353,8 @@ export const CHECKS_V112: CheckDefinition[] = CHECKS.flatMap((def) => {
 
 /** The checks a scoring version uses. */
 export function checksFor(version: string): CheckDefinition[] {
-  return version === SCORING_VERSION_V112 ? CHECKS_V112 : CHECKS;
+  // 1.13.0 keeps every 1.12.0 check (its own changes live in CHECKS, behind SCORING_V113).
+  return version === SCORING_VERSION_V112 || version === "1.13.0" ? CHECKS_V112 : CHECKS;
 }
 
 function isDeterminable(confidence: Confidence): boolean {
@@ -3364,9 +3412,10 @@ export function scoreBusiness(input: BusinessScoringInput, locale: Locale = DEFA
       id: def.id,
       label: t(locale, def.labelKey),
       category: def.category,
-      maxPoints: def.maxPoints,
+      maxPoints: def.maxPointsFor?.(input) ?? def.maxPoints,
       earnedPoints: result.earnedPoints,
       confidence: result.confidence,
+      ...(result.note ? { note: result.note } : {}),
       // Step 2g: findings read from the page as a browser shows it say so.
       explanation:
         result.earnedPoints !== null && (input.websiteAnalysis?.readViaBrowserChecks ?? []).includes(def.id)

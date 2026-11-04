@@ -22,10 +22,11 @@ const adviceFor = (input: BusinessScoringInput, id: string, locale: "en" | "es" 
   generateSuggestions(scoreBusiness(input, locale), locale).find((s) => s.checkId === id)?.advice;
 
 describe("advice for exactly what's missing", () => {
-  test("Bánh Mì Boy's shape — only the viewport tag is missing → only the viewport advice", () => {
+  test("Bánh Mì Boy's shape — only the viewport tag is missing → only the viewport advice, now under “Works well on phones” (v1.13.0)", () => {
     const input = withContent({ hasTitle: true, hasMetaDescription: true, hasViewportTag: false, headingCount: 5, visibleTextLength: 1041 });
-    const advice = adviceFor(input, "website.content_depth")!;
-    expect(advice).toContain("isn't set up for phones");
+    expect(adviceFor(input, "website.content_depth")).toBeUndefined();
+    const advice = adviceFor(input, "website.mobile_friendly")!;
+    expect(advice).toContain("mobile viewport tag");
     expect(advice).not.toMatch(/meta description|page title|headings/i);
   });
 

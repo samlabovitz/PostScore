@@ -82,10 +82,12 @@ function reason(o: Row, n: Row): string {
   const phones = n.checks["website.mobile_friendly"];
   const why =
     phones && phones.earned === null
-      ? "the phone check can't run on this site (it blocks automated checks), so it's left out and a weak speed now weighs less of Website"
+      ? "the phone check can't run on this site (it blocks automated checks), so it's left out of Website"
       : n.total > o.total
-        ? "speed is now 3 of the 5 points and the phone-ready site earns the other 2"
-        : "the missing viewport tag now costs its 2 points under Works well on phones";
+        ? "a faster-than-Slow speed plus the phone-ready site add up to more than before"
+        : n.total < o.total
+          ? "speed now earns less (Average 50%, Slow 0%) and/or the missing viewport tag costs its phone point"
+          : "no change overall";
   return `${parts.join("; ")} — ${why}.`;
 }
 
@@ -99,7 +101,7 @@ function compare(oldPath: string, newPath: string, report: string) {
     "",
     `Generated ${new Date().toISOString()} from saved data only (no Google, PageSpeed or page fetches; nothing saved).`,
     "",
-    "What moves here: **Performance & mobile (5)** split into **Loads fast (3)** — the saved real-visitor or lab result, in Fast / Average / Slow (100% / 60% / 20%) — and **Works well on phones (2)** — saved rows only hold our own viewport read, so that is the only item checked. The viewport tag no longer counts in **Content depth** (title 1.5 / meta 1.25 / headings 1.5 / text 0.75). Website stays 30.",
+    "What moves here: **Performance & mobile (5)** split into **Loads fast** and **Works well on phones**. Until the fuller phone check (text size, page width, touch targets) has run on a site, phones only checks the viewport tag and is worth **1**, speed **4**; once it has run, **2** and **3**. Speed earns Fast 100% / Average 50% / Slow 0%. Saved rows hold only the viewport read, so every site here is on 1 + 4. The viewport tag no longer counts in **Content depth** (title 1.5 / meta 1.25 / headings 1.5 / text 0.75). Website stays 30.",
     "",
     "What doesn't move yet (needs each site read again — applies on the next scan): text size and page width from the page's own HTML/inline CSS, Google's touch-target audit, phone numbers shown as text (partial contact credit), broken social icons, broken About links / non-About pages under /about/, and the new call-to-action phrases.",
     "",
@@ -107,6 +109,7 @@ function compare(oldPath: string, newPath: string, report: string) {
   const changed = neu.map((n) => ({ n, o: byId.get(n.id) })).filter((x): x is { n: Row; o: Row } => !!x.o);
   const moved = changed.filter(({ n, o }) => n.total !== o.total || n.grade !== o.grade).sort((a, b) => Math.abs(b.n.total - b.o.total) - Math.abs(a.n.total - a.o.total));
   const gradeChanges = changed.filter(({ n, o }) => n.grade !== o.grade);
+  const slow = changed.filter(({ n }) => /^Slow\b/.test(n.checks["website.performance_mobile"]?.explanation ?? "")).sort((a, b) => a.n.name.localeCompare(b.n.name));
   const deltas = changed.map(({ n, o }) => n.total - o.total);
   lines.push(
     "## Summary",
@@ -114,6 +117,14 @@ function compare(oldPath: string, newPath: string, report: string) {
     `- Businesses: ${changed.length}`,
     `- Score changed: ${moved.length} · grade changed: ${gradeChanges.length}`,
     `- Biggest rise: ${Math.max(0, ...deltas)} · biggest drop: ${Math.min(0, ...deltas)} · average change: ${(deltas.reduce((a, b) => a + b, 0) / Math.max(1, deltas.length)).toFixed(2)}`,
+    "",
+    "## Slow sites never go up",
+    "",
+    `Every business whose “Loads fast” reads Slow (${slow.length}): ${slow.filter(({ n, o }) => n.total > o.total).length === 0 ? "none goes up." : "**SOME GO UP — see below.**"}`,
+    "",
+    "| Business | Old | New | Change | Was: Performance & mobile | Now: Loads fast | Now: Works well on phones |",
+    "|---|---:|---:|---:|---|---|---|",
+    ...slow.map(({ n, o }) => `| ${n.name.replace(/\|/g, "/")} | ${o.total} | ${n.total} | ${n.total - o.total > 0 ? `+${n.total - o.total}` : n.total - o.total} | ${pts(o.checks["website.performance_mobile"])} | ${pts(n.checks["website.performance_mobile"])} | ${pts(n.checks["website.mobile_friendly"])} |`),
     "",
     "## Grade changes",
     "",

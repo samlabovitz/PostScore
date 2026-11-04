@@ -5,8 +5,9 @@ import { computeReplyCounts } from "@/lib/gbpReviewReplies";
 import { applyCheckFix, businessRowToScoringInput, CATEGORY_WEIGHTS, checksFor, CHECKS, CHECKS_V112, getScoreWithSuggestions, scoreBusiness, SCORING_VERSION, SCORING_VERSION_V112, type BusinessScoringInput } from "@/lib/scoring";
 import { scoringInput } from "@/emails/sampleMonthlyReportContent";
 import { hasRecentReviewFrom, normalizeDetails, recentReviewsSeenFrom } from "@/lib/google/places";
-import { SCORING_NOTE_VERSION, scoringNoteApplies } from "@/lib/scoringUpdateNote";
+import { SCORING_NOTE_KEY, SCORING_NOTE_MESSAGE, SCORING_NOTE_VERSION, scoringNoteApplies } from "@/lib/scoringUpdateNote";
 import { snapshotDelta } from "@/lib/weekly/snapshots";
+import { t } from "@/lib/i18n";
 
 // Scoring v1.12.0, Stage 2 (docs/review-scoring-plan.md) — live since the
 // dry run was approved.
@@ -17,12 +18,13 @@ const v112 = (input: BusinessScoringInput) => scoreBusiness(input, "en", SCORING
 const check = (input: BusinessScoringInput, id: string) => v112(input).checks.find((c) => c.id === id)!;
 
 describe("the version bump", () => {
-  test("SCORING_VERSION is 1.12.0; v1.11.0 still scores the old way", () => {
-    expect(SCORING_VERSION).toBe(SCORING_VERSION_V112);
+  test("SCORING_VERSION is 1.13.0 (keeping every 1.12.0 check); v1.11.0 still scores the old way", () => {
+    expect(SCORING_VERSION).toBe("1.13.0");
+    expect(checksFor(SCORING_VERSION_V112)).toBe(CHECKS_V112);
     expect(checksFor(SCORING_VERSION)).toBe(CHECKS_V112);
     expect(checksFor("1.11.0")).toBe(CHECKS);
     const input = scoringInput();
-    expect(scoreBusiness(input, "en")).toEqual(v112(input));
+    expect(scoreBusiness(input, "en").checks).toEqual(v112(input).checks); // the same checks, labelled 1.13.0
     expect(scoreBusiness(input, "en", "1.11.0").checks.some((c) => c.id === "visibility.review_replies")).toBe(false);
   });
 });
@@ -178,16 +180,18 @@ describe("collected from Place Details only — competitors never", () => {
   });
 });
 
-describe("after the first v1.12.0 scan", () => {
-  test("the one-time note shows when the newest score is v1.12.0 and an earlier one isn't", () => {
-    expect(SCORING_NOTE_VERSION).toBe(SCORING_VERSION_V112);
-    expect(scoringNoteApplies([{ scoring_version: "1.12.0" }, { scoring_version: "1.11.0" }])).toBe(true);
-    expect(scoringNoteApplies([{ scoring_version: "1.12.0" }])).toBe(false);
-    expect(scoringNoteApplies([{ scoring_version: "1.12.0" }, { scoring_version: "1.12.0" }])).toBe(false);
-    expect(scoringNoteApplies([{ scoring_version: "1.11.0" }, { scoring_version: "1.10.0" }])).toBe(false);
-    const messages = fs.readFileSync("lib/i18n/messages.ts", "utf8");
-    expect(messages).toContain('"dashboard.overview.scoringUpdateNote": "We updated how PostScore scores reviews and your listing');
-    expect(messages).toContain('"dashboard.overview.scoringUpdateNote": "Actualizamos cómo PostScore califica las reseñas y su ficha');
+describe("after the first scan on a new scoring version", () => {
+  test("the one-time note shows once for v1.13.0 — the newest score is v1.13.0 and an earlier one isn't — naming “Loads fast” and “Works well on phones” (EN + ES)", () => {
+    expect(SCORING_NOTE_VERSION).toBe(SCORING_VERSION);
+    expect(SCORING_NOTE_KEY).toBe("scoring-1.13.0"); // its own dismissal: the v1.12.0 one doesn't hide it
+    expect(scoringNoteApplies([{ scoring_version: "1.13.0" }, { scoring_version: "1.12.0" }])).toBe(true);
+    expect(scoringNoteApplies([{ scoring_version: "1.13.0" }])).toBe(false);
+    expect(scoringNoteApplies([{ scoring_version: "1.13.0" }, { scoring_version: "1.13.0" }])).toBe(false);
+    expect(scoringNoteApplies([{ scoring_version: "1.12.0" }, { scoring_version: "1.11.0" }])).toBe(false);
+    expect(t("en", SCORING_NOTE_MESSAGE)).toContain("“Loads fast”");
+    expect(t("en", SCORING_NOTE_MESSAGE)).toContain("“Works well on phones”");
+    expect(t("es", SCORING_NOTE_MESSAGE)).toContain("«Carga rápida»");
+    expect(t("es", SCORING_NOTE_MESSAGE)).toContain("«Funciona bien en teléfonos»");
     expect(fs.readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8").match(/\{scoringNote && <ScoringUpdateNote businessId=\{businessId\} \/>\}/g)).toHaveLength(2);
   });
 

@@ -112,8 +112,8 @@ describe("rating wording — no scoring change", () => {
     expect(advice).toMatch(/reply to every review/);
   });
 
-  test("v1.12.0: the rating check is out of 14", () => {
-    expect(SCORING_VERSION).toBe("1.12.0");
+  test("v1.12.0+: the rating check is out of 14", () => {
+    expect(SCORING_VERSION).toBe("1.13.0");
     expect(ratingCheck(4.5, 40).earnedPoints).toBe(11.2);
   });
 

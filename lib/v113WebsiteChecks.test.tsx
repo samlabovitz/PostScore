@@ -1,10 +1,5 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
 
-// The v1.13.0 split runs behind SCORING_V113 (SCORING_VERSION stays
-// 1.12.0 until approved) — on for this file only, before any import.
-vi.hoisted(() => {
-  process.env.POSTSCORE_SCORING_PREVIEW = "1.13.0";
-});
 
 import { analyzeWebsiteHtml, detectBrokenSocialLinks, detectPhoneLayout, findPhoneText } from "./websiteContentAnalysis";
 import { detectPagePresence, extractMobileUsability, fetchMobilePerformance, newPresenceBudget } from "./websiteAnalysis";
@@ -160,7 +155,7 @@ describe("4 — About: a broken “Our Story” link is said, and non-About page
   });
 });
 
-describe("3 — “Works well on phones” (2) and “Loads fast” (3), Website still 30", () => {
+describe("3 — “Works well on phones” and “Loads fast”, Website still 30", () => {
   test("Google's phone audits from PageSpeed: touch targets (and text size / page width when Google still reports them)", () => {
     const raw = (audits: Record<string, { score: number | null; scoreDisplayMode?: string }>) => ({ lighthouseResult: { audits } });
     expect(extractMobileUsability(raw({ "target-size": { score: 1, scoreDisplayMode: "binary" } }))).toEqual({ tapTargets: true, textReadable: null, fitsScreen: null });
@@ -208,32 +203,58 @@ describe("3 — “Works well on phones” (2) and “Loads fast” (3), Website
   });
 });
 
-describe("v1.13.0 behind its flag", () => {
-  test("SCORING_VERSION stays 1.12.0; the preview flag turns the split on", () => {
-    expect(SCORING_VERSION).toBe("1.12.0");
+describe("v1.13.0", () => {
+  test("SCORING_VERSION is 1.13.0 and its split is on", () => {
+    expect(SCORING_VERSION).toBe("1.13.0");
     expect(SCORING_V113).toBe(true);
   });
 
   const speed = (m: NonNullable<WebsiteAnalysis["mobilePerformance"]>, locale: "en" | "es" = "en") =>
     check({ ...BASE, websiteAnalysis: { ...BASE.websiteAnalysis!, mobilePerformance: m } }, "website.performance_mobile", locale);
 
-  test("“Loads fast” (3): Fast · about X seconds / Average / Slow · about X seconds — real visitors first, never “/100” (EN + ES)", () => {
-    const fast = speed({ method: "field", fieldCategory: "FAST", labScore: null, lcpSeconds: 2 });
-    expect([fast.label, fast.maxPoints, fast.earnedPoints]).toEqual(["Loads fast", 3, 3]);
-    expect(fast.explanation).toContain("Fast · about 2.0 seconds");
-    const avg = speed({ method: "field", fieldCategory: "AVERAGE", labScore: null, lcpSeconds: 3.1 });
-    expect(avg.earnedPoints).toBe(1.8);
-    expect(avg.explanation).toContain(": Average.");
-    expect(speed({ method: "field", fieldCategory: "SLOW", labScore: null, lcpSeconds: 6.8 }, "es").explanation).toContain("Lento · unos 6,8 segundos");
-    // Lab: by its seconds (2.5 s / 4 s), else Google's own score bands (90 / 50).
-    const lab = speed({ method: "lab", fieldCategory: null, labScore: 65, lcpSeconds: 6.8 });
-    expect(lab.earnedPoints).toBe(0.6);
-    expect(lab.explanation).toContain("Slow · about 6.8 seconds");
-    expect(lab.explanation).not.toContain("/100");
-    expect(speed({ method: "lab", fieldCategory: null, labScore: 65 }).earnedPoints).toBe(1.8);
+  test("owner wording (EN + ES): “Average · about 2.0 seconds to show your page on a phone”, a muted source line, no seconds → just the word, never “/100”", () => {
+    const avg = speed({ method: "field", fieldCategory: "AVERAGE", labScore: null, lcpSeconds: 2.04 });
+    expect(avg.label).toBe("Loads fast");
+    expect(avg.explanation).toBe("Average · about 2.0 seconds to show your page on a phone.");
+    expect(avg.note).toBe("Based on real visitors in the last 28 days");
+    const es = speed({ method: "field", fieldCategory: "AVERAGE", labScore: null, lcpSeconds: 2.04 }, "es");
+    expect(es.explanation).toBe("Promedio · unos 2,0 segundos en mostrar su página en un teléfono.");
+    expect(es.note).toBe("Basado en visitantes reales de los últimos 28 días");
+    const lab = speed({ method: "lab", fieldCategory: null, labScore: 65, lcpSeconds: 6.82 });
+    expect(lab.explanation).toBe("Slow · about 6.8 seconds to show your page on a phone.");
+    expect(lab.note).toBe("Based on Google's phone test");
+    expect(speed({ method: "lab", fieldCategory: null, labScore: 65 }, "es").note).toBe("Basado en la prueba en teléfono de Google");
+    expect(speed({ method: "field", fieldCategory: "FAST", labScore: null }).explanation).toBe("Fast.");
     const carried = speed({ method: "lab", fieldCategory: null, labScore: 27, measuredAt: "2026-10-06T20:40:00.000Z", carriedForward: true });
-    expect(carried.explanation.toLowerCase()).toContain("last measured");
-    expect(carried.explanation).not.toContain("/100");
+    expect(carried.explanation).toBe("Slow (last measured Oct 6, 2026).");
+    for (const c of [avg, es, lab, carried]) expect(c.explanation).not.toMatch(/\/100|Chrome|Lighthouse|PageSpeed|CrUX|lab/i);
+  });
+
+  test("weights: phones 1 + speed 4 until the fuller phone check has run, then 2 + 3 — Website stays 30 either way", () => {
+    const wa = BASE.websiteAnalysis!;
+    const basic = { ...BASE, websiteAnalysis: { ...wa, mobilePerformance: { method: "field" as const, fieldCategory: "AVERAGE" as const, labScore: null } } };
+    const fuller = { ...BASE, websiteAnalysis: { ...wa, mobilePerformance: { method: "field" as const, fieldCategory: "AVERAGE" as const, labScore: null, mobileUsability: { tapTargets: true, textReadable: null, fitsScreen: null } } } };
+    expect([check(basic, "website.performance_mobile").maxPoints, check(basic, "website.mobile_friendly").maxPoints]).toEqual([4, 1]);
+    expect([check(fuller, "website.performance_mobile").maxPoints, check(fuller, "website.mobile_friendly").maxPoints]).toEqual([3, 2]);
+    for (const input of [basic, fuller]) {
+      const website = scoreBusiness(input).categories.find((c) => c.id === "website")!;
+      expect(website.checks.reduce((sum, c) => sum + c.maxPoints, 0)).toBe(30);
+    }
+    // Fast 100% / Average 50% / Slow 0%.
+    expect(check(basic, "website.performance_mobile").earnedPoints).toBe(2);
+    expect(check(fuller, "website.performance_mobile").earnedPoints).toBe(1.5);
+  });
+
+  test("a Slow site never gains: speed + phones ≤ its 1.12.0 points (Slow 1 / Average 3 / Fast 5 of 5) while only the viewport is checked", () => {
+    const wa = BASE.websiteAnalysis!;
+    const OLD = { SLOW: 1, AVERAGE: 3, FAST: 5 } as const;
+    for (const cat of ["SLOW", "AVERAGE", "FAST"] as const) {
+      for (const viewport of [true, false]) {
+        const input = { ...BASE, websiteAnalysis: { ...wa, content: { ...wa.content!, hasViewportTag: viewport }, mobilePerformance: { method: "field" as const, fieldCategory: cat, labScore: null } } };
+        const pair = (check(input, "website.performance_mobile").earnedPoints ?? 0) + (check(input, "website.mobile_friendly").earnedPoints ?? 0);
+        expect(pair, `${cat} viewport=${viewport}`).toBeLessThanOrEqual(OLD[cat]);
+      }
+    }
   });
 
   test("Content depth no longer counts the viewport tag — only “Works well on phones” does", () => {
