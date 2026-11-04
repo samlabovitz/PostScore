@@ -122,14 +122,27 @@ describe("reportCoverageMonth", () => {
     expect(reportCoverageMonth("2027-01-01T14:00:00.000Z", "en")).toEqual({ month: "December", year: "2026" });
   });
 
-  test("uses America/New_York, not UTC, to decide the send date's own calendar day", () => {
-    // 2026-10-01T02:00:00.000Z is 2026-09-30T22:00:00 in New York (EDT,
-    // UTC-4) — still September 30th there, even though the UTC calendar
-    // date already reads October 1st. A naive UTC-only computation would
-    // wrongly treat this as an October send and report "September"; the
-    // real New York calendar date is still September, so the month this
-    // covers is honestly August.
-    expect(reportCoverageMonth("2026-10-01T02:00:00.000Z", "en")).toEqual({ month: "August", year: "2026" });
+  test("the scheduled run (00:00 UTC on the 1st = the last evening of the month in New York) names the month that just ended", () => {
+    // The real Oct 31 / Nov 1 run: 2026-11-01T00:00Z is Oct 31, 8 pm in
+    // New York — "your October 2026 recap", never "September".
+    expect(reportCoverageMonth("2026-11-01T00:00:00.000Z", "en")).toEqual({ month: "October", year: "2026" });
+    expect(reportCoverageMonth("2026-11-01T00:00:00.000Z", "es")).toEqual({ month: "octubre", year: "2026" });
+    expect(reportCoverageMonth("2026-10-31T16:00:00.000Z", "en")).toEqual({ month: "October", year: "2026" });
+    expect(reportCoverageMonth("2026-11-03T15:00:00.000Z", "en")).toEqual({ month: "October", year: "2026" });
+    // 2026-10-01T02:00Z is Sep 30, 10 pm in New York: September just ended.
+    expect(reportCoverageMonth("2026-10-01T02:00:00.000Z", "en")).toEqual({ month: "September", year: "2026" });
+    // Across the year: Dec 31 evening (00:00Z Jan 1) covers December.
+    expect(reportCoverageMonth("2027-01-01T00:00:00.000Z", "en")).toEqual({ month: "December", year: "2026" });
+    // February's last day (28th) covers February; the 27th still covers January.
+    expect(reportCoverageMonth("2027-03-01T00:00:00.000Z", "en")).toEqual({ month: "February", year: "2027" });
+    expect(reportCoverageMonth("2027-02-27T15:00:00.000Z", "en")).toEqual({ month: "January", year: "2027" });
+  });
+
+  test("subject and heading use the same month (EN + ES)", async () => {
+    const { monthlyReportSubject } = await import("@/emails/MonthlyReportEmail");
+    expect(monthlyReportSubject("Main Street Sweets", "2026-11-01T00:00:00.000Z", "en")).toBe("Main Street Sweets — your October 2026 recap");
+    expect(monthlyReportSubject("Main Street Sweets", "2026-11-01T00:00:00.000Z", "es")).toBe("Main Street Sweets — Resumen de octubre de 2026");
+    expect(reportCoverageMonthRange("2026-11-01T00:00:00.000Z")).toEqual({ start: "2026-10-01", end: "2026-11-01" });
   });
 });
 

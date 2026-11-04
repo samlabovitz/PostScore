@@ -5,6 +5,7 @@ import { DEFAULT_LOCALE, type Locale } from "./locale";
 // below; adding a new locale (see locale.ts) doesn't require touching the
 // key list, only a new entry in `messages`.
 export type MessageKey =
+  | "report.footer.unsubscribeDisabledTest"
   | "content.checks.website.content_depth.explanation.allGoodV113"
   | "content.checks.website.performance_mobile.explanation.labV113"
   | "content.checks.website.performance_mobile.explanation.labLastMeasuredV113"
@@ -4552,6 +4553,7 @@ type LocaleMessages = Partial<Record<MessageKey, string>>;
 
 export const messages: Record<Locale, LocaleMessages> = {
   en: {
+    "report.footer.unsubscribeDisabledTest": "(test preview — link disabled)",
     "content.checks.website.content_depth.explanation.allGoodV113": "Real, substantial content: a title, meta description, headings and real text all present.",
     "content.checks.website.performance_mobile.explanation.labV113": "Simulated phone test, middle of 3 runs: {category}. Results can vary between tests.",
     "content.checks.website.performance_mobile.explanation.labLastMeasuredV113": "Simulated phone test — last measured {date}: {category}. This scan's speed test didn't finish, so we're showing the most recent real measurement instead of leaving this out.",
@@ -6408,8 +6410,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "report.focus.mismatch": "Your site says {site}, Google says {google} — update whichever is wrong.",
     "report.focus.websitePartlyChecked": "Your website could only be partly checked (it blocks our automated check). See the Website page.",
     "report.link.websitePage": "See the Website page",
-    "report.focus.website.one": "Your website scores {score}/100 — {count} improvement available (up to about +{points} pts). See the Website page.",
-    "report.focus.website.other": "Your website scores {score}/100 — {count} improvements available (up to about +{points} pts). See the Website page.",
+    "report.focus.website.one": "Website: {earned}/{of} — {count} improvement available (up to about +{points} pts). See the Website page.",
+    "report.focus.website.other": "Website: {earned}/{of} — {count} improvements available (up to about +{points} pts). See the Website page.",
     "report.summary.reviewsGained.one": "{count} new review",
     "report.summary.reviewsGained.other": "{count} new reviews",
     "report.summary.reviewsLost": "your review count dropped by {count}",
@@ -9455,6 +9457,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.searchDemand.tips.empty": "Tips appear once there are real search terms to work from.",
   },
   es: {
+    "report.footer.unsubscribeDisabledTest": "(vista previa de prueba — enlace desactivado)",
     "content.checks.website.content_depth.explanation.allGoodV113": "Contenido real y sustancial: hay un título, una meta descripción, encabezados y texto real.",
     "content.checks.website.performance_mobile.explanation.labV113": "Prueba simulada en teléfono, valor medio de 3 pruebas: {category}. Los resultados pueden variar entre pruebas.",
     "content.checks.website.performance_mobile.explanation.labLastMeasuredV113": "Prueba simulada en teléfono — última medición el {date}: {category}. La prueba de velocidad de este escaneo no terminó, así que mostramos la medición real más reciente en lugar de dejar esto fuera.",
@@ -11198,8 +11201,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "report.focus.mismatch": "Su sitio dice {site} y Google dice {google} — actualice el que esté mal.",
     "report.focus.websitePartlyChecked": "Su sitio web solo se pudo revisar en parte (bloquea nuestra revisión automática). Consulte la página Sitio web.",
     "report.link.websitePage": "Consulte la página Sitio web",
-    "report.focus.website.one": "Su sitio web obtiene {score}/100 — {count} mejora disponible (hasta unos +{points} pts). Consulte la página Sitio web.",
-    "report.focus.website.other": "Su sitio web obtiene {score}/100 — {count} mejoras disponibles (hasta unos +{points} pts). Consulte la página Sitio web.",
+    "report.focus.website.one": "Sitio web: {earned}/{of} — {count} mejora disponible (hasta unos +{points} pts). Consulte la página Sitio web.",
+    "report.focus.website.other": "Sitio web: {earned}/{of} — {count} mejoras disponibles (hasta unos +{points} pts). Consulte la página Sitio web.",
     "report.summary.reviewsGained.one": "{count} reseña nueva",
     "report.summary.reviewsGained.other": "{count} reseñas nuevas",
     "report.summary.reviewsLost": "su número de reseñas bajó en {count}",

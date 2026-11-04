@@ -97,7 +97,9 @@ export interface ReportExtras {
   scoreBasis: number | null;
   /** The Growth page's website banner numbers — the report's only website
    * pointer (besides a Google-listing mismatch). */
-  websiteImprovement: { score: number; improvements: number; points: number } | null;
+  /** `earned` of `of`: the Website category in the app's own units
+   * ("Website 24/30", the Overview's whole points) — never a 0–100. */
+  websiteImprovement: { earned: number; of: number; improvements: number; points: number } | null;
 }
 
 export const EMPTY_REPORT_EXTRAS: ReportExtras = { securityAlert: null, scoreBasis: null, websiteImprovement: null };
@@ -590,7 +592,8 @@ function websitePointer(extras: ReportExtras, locale: Locale): FocusPointer | nu
   return {
     kind: "website",
     text: tPlural(locale, "report.focus.website", improvement.improvements, {
-      score: improvement.score,
+      earned: improvement.earned,
+      of: improvement.of,
       count: improvement.improvements,
       points: Math.max(1, Math.round(improvement.points)),
     }),

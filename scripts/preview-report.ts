@@ -46,6 +46,9 @@
 // row (if any) and renders an "update" report against it, exactly like
 // a real scheduled run would.
 //
+// --date=<ISO> replays a run at that moment (the month label follows it);
+// --test renders it as a "[TEST]" send (dead unsubscribe link).
+//
 // --locale=es (or any other supported locale) renders in that language
 // instead of the business's own real stored `language` column — never
 // writes that column, just overrides which language THIS preview uses.
@@ -99,7 +102,7 @@ import {
 import { buildProfileSnapshot } from "../lib/profileChanges";
 import { buildActionPlan, mergeReviewTasks, type TaskRow } from "../lib/actionPlan";
 import { buildGrowthMoves, competitorPhotoCounts, median, weakWebsiteIssueLabels, type GrowthMoveSignals } from "../lib/growthMoves";
-import { MonthlyReportEmail, monthlyReportSubject } from "../emails/MonthlyReportEmail";
+import { MonthlyReportEmail, monthlyReportSubject, TEST_PREVIEW_UNSUBSCRIBE_URL, testReportSubject } from "../emails/MonthlyReportEmail";
 import { normalizeLocale, reportCoverageMonthIndex, reportCoverageMonthRange } from "../lib/i18n";
 import { resolveBizProfile } from "../config/bizProfiles";
 import { runAndSaveCompetitorScanWithClient } from "../app/actions/competitors";
@@ -388,9 +391,13 @@ async function main() {
   const businessId = args.find((a) => !a.startsWith("--"));
   const localeOverrideArg = args.find((a) => a.startsWith("--locale="));
   const localeOverride = localeOverrideArg ? localeOverrideArg.slice("--locale=".length) : null;
+  // --date=2026-11-01T00:00:00Z replays a run at that moment (e.g. the
+  // scheduled Oct 31 / Nov 1 run); --test renders it as a [TEST] send.
+  const dateArg = args.find((a) => a.startsWith("--date="))?.slice("--date=".length) ?? null;
+  const asTest = args.includes("--test");
 
   if (!businessId) {
-    console.error("Usage: npx tsx scripts/preview-report.ts <businessId> [--baseline] [--fresh-scan] [--locale=es] | --testing-mode | <businessId> --live-check [--plan=grow]");
+    console.error("Usage: npx tsx scripts/preview-report.ts <businessId> [--baseline] [--fresh-scan] [--locale=es] [--date=ISO] [--test] | --testing-mode | <businessId> --live-check [--plan=grow]");
     process.exit(1);
   }
 
@@ -435,7 +442,7 @@ async function main() {
     }
   }
 
-  const reportDate = new Date().toISOString();
+  const reportDate = dateArg ? new Date(dateArg).toISOString() : new Date().toISOString();
 
   // DEFAULT: the latest already-SAVED scan, no Google calls, no write.
   // --fresh-scan deliberately opts into a real, billed scan instead —
@@ -526,7 +533,7 @@ async function main() {
   const businessName = business.name ?? "Your business";
   // Obviously fake — this is a preview file, never a real send, so the
   // unsubscribe link must never look like a working one.
-  const unsubscribeUrl = `https://postscoree.netlify.app/unsubscribe?business=${businessId}&token=PREVIEW-NOT-REAL`;
+  const unsubscribeUrl = TEST_PREVIEW_UNSUBSCRIBE_URL;
 
   // MonthlyReportEmail.tsx relies on Next's own build pipeline to inject
   // the JSX runtime automatically (tsconfig's "jsx": "preserve" is a
@@ -538,9 +545,9 @@ async function main() {
   (globalThis as unknown as { React: unknown }).React = require("react");
 
   const html = await render(
-    createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale })
+    createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale, testPreview: asTest })
   );
-  const subject = monthlyReportSubject(businessName, reportDate, locale);
+  const subject = asTest ? testReportSubject(monthlyReportSubject(businessName, reportDate, locale)) : monthlyReportSubject(businessName, reportDate, locale);
 
   const safeName = businessName.replace(/[\\/:*?"<>|]/g, "").trim() || businessId;
   const outPath = path.join(os.homedir(), "Desktop", `report-preview-${safeName}.html`);

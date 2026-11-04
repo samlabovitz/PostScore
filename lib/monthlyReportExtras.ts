@@ -6,6 +6,7 @@
 // and scripts/preview-report.ts, so a preview and a real send can't
 // drift apart.
 
+import { wholeCategoryPoints } from "@/lib/overviewTiles";
 import { closureOf } from "@/lib/businessStatus";
 import {
   applyGrowthWebsiteRules,
@@ -36,13 +37,16 @@ function securityAlert(input: BusinessScoringInput, breakdown: ScoreBreakdown): 
 
 export function buildReportExtras(input: BusinessScoringInput, breakdown: ScoreBreakdown): ReportExtras {
   const banner = buildWebsiteBanner(breakdown, input, null);
+  // The Overview's own whole points for Website ("24 / 30").
+  const websiteIndex = breakdown.categories.findIndex((c) => c.id === "website");
+  const websiteEarned = websiteIndex >= 0 ? wholeCategoryPoints(breakdown.categories)[websiteIndex] : null;
   return {
     closure: closureOf(input.businessStatus),
     securityAlert: securityAlert(input, breakdown),
     scoreBasis: partlyCheckedScoreBasis(breakdown.categories, hasAnalyzableWebsite(input)),
     websiteImprovement:
-      banner?.kind === "improve" && banner.improvements > 0
-        ? { score: banner.score, improvements: banner.improvements, points: banner.points }
+      banner?.kind === "improve" && banner.improvements > 0 && websiteEarned !== null
+        ? { earned: websiteEarned, of: breakdown.categories[websiteIndex].weight, improvements: banner.improvements, points: banner.points }
         : null,
   };
 }

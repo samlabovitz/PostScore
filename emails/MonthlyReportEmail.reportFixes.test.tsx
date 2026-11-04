@@ -264,9 +264,9 @@ describe("the focus item follows the Growth page's rules", () => {
   });
 
   test("the website pointer is the Growth page's banner line", () => {
-    const extras: ReportExtras = { ...EMPTY_REPORT_EXTRAS, websiteImprovement: { score: 72, improvements: 2, points: 3.5 } };
+    const extras: ReportExtras = { ...EMPTY_REPORT_EXTRAS, websiteImprovement: { earned: 22, of: 30, improvements: 2, points: 3.5 } };
     const content = buildMonthlyReportContent(null, scoreRow(), null, null, "en", focus("en"), true, extras);
-    expect(content.focus.pointers.some((p) => p.text === "Your website scores 72/100 — 2 improvements available (up to about +4 pts). See the Website page.")).toBe(true);
+    expect(content.focus.pointers.some((p) => p.text === "Website: 22/30 — 2 improvements available (up to about +4 pts). See the Website page.")).toBe(true);
   });
 });
 
@@ -305,13 +305,13 @@ describe("website pointer: no estimate when partly checked; whole points otherwi
     buildMonthlyReportContent(null, scoreRow(), null, null, locale, focus(locale), true, extras).focus.pointers.find((p) => p.kind === "website")?.text;
 
   test("partly checked → the note, no points (EN + ES)", () => {
-    const extras: ReportExtras = { ...EMPTY_REPORT_EXTRAS, scoreBasis: 73, websiteImprovement: { score: 56, improvements: 1, points: 13.3 } };
+    const extras: ReportExtras = { ...EMPTY_REPORT_EXTRAS, scoreBasis: 73, websiteImprovement: { earned: 17, of: 30, improvements: 1, points: 13.3 } };
     expect(pointer(extras)).toBe("Your website could only be partly checked (it blocks our automated check). See the Website page.");
     expect(pointer(extras, "es")).toBe("Su sitio web solo se pudo revisar en parte (bloquea nuestra revisión automática). Consulte la página Sitio web.");
   });
 
   test("fully checked → rounded to whole points", () => {
-    expect(pointer({ ...EMPTY_REPORT_EXTRAS, websiteImprovement: { score: 83, improvements: 2, points: 4.6 } })).toContain("(up to about +5 pts)");
+    expect(pointer({ ...EMPTY_REPORT_EXTRAS, websiteImprovement: { earned: 25, of: 30, improvements: 2, points: 4.6 } })).toContain("(up to about +5 pts)");
   });
 });
 
@@ -359,7 +359,7 @@ describe("Day 16: 'See the Website page' is a real link (SITE_URL)", () => {
     const input = inputWith({
       spamSignals: [{ category: "replica", matchedPhrase: "replica watches", snippet: "replica watches", suspiciousLinks: [], hidden: true } as never],
     });
-    const extras: ReportExtras = { ...buildReportExtras(input, scoreBusiness(input)), websiteImprovement: { score: 72, improvements: 2, points: 3.5 } };
+    const extras: ReportExtras = { ...buildReportExtras(input, scoreBusiness(input)), websiteImprovement: { earned: 22, of: 30, improvements: 2, points: 3.5 } };
     for (const locale of ["en", "es"] as const) {
       const content = buildMonthlyReportContent(null, scoreRow({ breakdown: scoreBusiness(input) }), null, null, locale, focus(locale), true, extras);
       const out = decode(await html(content, locale, URL_));
@@ -372,7 +372,7 @@ describe("Day 16: 'See the Website page' is a real link (SITE_URL)", () => {
   });
 
   test("no URL (previews) → plain words, no link; the cron passes the same SITE_URL link live and in testing mode", async () => {
-    const extras: ReportExtras = { ...EMPTY_REPORT_EXTRAS, websiteImprovement: { score: 72, improvements: 2, points: 3.5 } };
+    const extras: ReportExtras = { ...EMPTY_REPORT_EXTRAS, websiteImprovement: { earned: 22, of: 30, improvements: 2, points: 3.5 } };
     const content = buildMonthlyReportContent(null, scoreRow(), null, null, "en", focus("en"), true, extras);
     const out = decode(await html(content, "en", null));
     expect(out).toContain("See the Website page.");
@@ -408,5 +408,52 @@ describe("monthly report: only 1–2 competitors → head-to-head, never '#1 of 
       expect(out).toContain(locale === "en" ? "Add a competitor" : "Agregar un competidor");
       expect(out).not.toMatch(/#\d+ (of|de) \d+/);
     }
+  });
+});
+
+describe("monthly report fixes (Nov 2026)", () => {
+  test("[TEST] sends: the unsubscribe link is a dead demo link, marked “(test preview — link disabled)” (EN + ES); real sends keep the real link", async () => {
+    const { TEST_PREVIEW_UNSUBSCRIBE_URL } = await import("./MonthlyReportEmail");
+    const content = buildMonthlyReportContent(null, scoreRow(), null, null, "en", focus("en"));
+    for (const locale of ["en", "es"] as const) {
+      const html = await render(
+        <MonthlyReportEmail businessName="Riverside Cafe" reportDate="2026-11-01T00:00:00.000Z" content={content} unsubscribeUrl="https://postscore.app/unsubscribe?business=real&token=REAL" locale={locale} testPreview />
+      );
+      expect(html).not.toContain("token=REAL");
+      expect(visibleText(html)).toContain(locale === "en" ? "Unsubscribe from these reports (test preview — link disabled)" : "(vista previa de prueba — enlace desactivado)");
+    }
+    const real = await render(<MonthlyReportEmail businessName="Riverside Cafe" reportDate="2026-11-01T00:00:00.000Z" content={content} unsubscribeUrl="https://postscore.app/unsubscribe?business=real&amp;token=REAL" locale="en" />);
+    expect(real).toContain("token=REAL");
+    // The cron's test path never passes the real link (or its token).
+    const fs = await import("node:fs");
+    const route = fs.readFileSync("app/api/cron/monthly-reports/route.ts", "utf8");
+    const testSend = route.slice(route.indexOf('if (decision.mode === "test")'), route.indexOf("3f — RESERVE"));
+    expect(testSend).toContain("unsubscribeUrl: TEST_PREVIEW_UNSUBSCRIBE_URL");
+    expect(testSend).not.toMatch(/content, unsubscribeUrl,/);
+    expect(TEST_PREVIEW_UNSUBSCRIBE_URL).not.toMatch(/token|business=/);
+  });
+
+  test("the October run (Oct 31, 8 pm New York) is “your October 2026 recap” in the subject and heading (EN + ES)", async () => {
+    const content = buildMonthlyReportContent(null, scoreRow(), null, null, "en", focus("en"));
+    const { monthlyReportSubject } = await import("./MonthlyReportEmail");
+    expect(monthlyReportSubject("Riverside Cafe", "2026-11-01T00:00:00.000Z", "en")).toBe("Riverside Cafe — your October 2026 recap");
+    expect(await renderReport(content, "en")).toContain("recap");
+    const html = visibleText(await render(<MonthlyReportEmail businessName="Riverside Cafe" reportDate="2026-11-01T00:00:00.000Z" content={content} unsubscribeUrl="https://x/u" locale="es" />));
+    expect(html).toContain("Resumen de octubre de 2026");
+  });
+
+  test("Website in the app's own units — the Overview's whole points out of 30, never a 0–100", async () => {
+    const input = scoringInput();
+    const breakdown = scoreBusiness(input);
+    const extras = buildReportExtras(input, breakdown);
+    if (extras.websiteImprovement) {
+      const { wholeCategoryPoints } = await import("@/lib/overviewTiles");
+      const i = breakdown.categories.findIndex((c) => c.id === "website");
+      expect(extras.websiteImprovement.earned).toBe(wholeCategoryPoints(breakdown.categories)[i]);
+      expect(extras.websiteImprovement.of).toBe(30);
+    }
+    const es = buildMonthlyReportContent(null, scoreRow(), null, null, "es", focus("es"), true, { ...EMPTY_REPORT_EXTRAS, websiteImprovement: { earned: 24, of: 30, improvements: 1, points: 2 } });
+    expect(es.focus.pointers.some((p) => p.text.startsWith("Sitio web: 24/30 — 1 mejora disponible"))).toBe(true);
+    expect(es.focus.pointers.some((p) => p.text.includes("/100"))).toBe(false);
   });
 });

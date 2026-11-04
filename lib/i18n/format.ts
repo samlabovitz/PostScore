@@ -17,41 +17,43 @@ export function formatMonthLabel(date: string, locale: Locale): string {
   }).format(new Date(date));
 }
 
-/**
- * The real calendar month a monthly report COVERS — the month BEFORE
- * `sendDate`, computed off `sendDate`'s America/New_York-local calendar
- * date, not UTC. Load-bearing, not decoration: a report sent just after
- * midnight UTC on the 1st can still be the previous evening in US
- * Eastern time, and computing "previous month" off the wrong calendar
- * day would mislabel the report by a full month at that boundary.
- * Returns the bare localized month name and year separately (e.g.
- * `{month: "September", year: "2026"}`) rather than a single combined
- * string, so a caller composes its own full phrasing (e.g. "{month}
- * {year} recap") via t() instead of this function dictating the
- * sentence.
- */
+/** NY-local day of month from which a report covers the send month itself. */
+const LAST_DAYS_COVER_SEND_MONTH_FROM = 28;
+
 /** Shared by reportCoverageMonth/reportCoverageMonthIndex/
- * reportCoverageMonthRange below — the real calendar month BEFORE
- * `sendDate`, computed off `sendDate`'s America/New_York-local calendar
- * date, never UTC (see reportCoverageMonth's own doc for why). Returns
- * the covered month as a real (year, 0-based month) pair — the one
- * computation every caller below needs, each just presenting it
- * differently. */
+ * reportCoverageMonthRange below — see reportCoverageMonth's doc. */
 function coveredYearMonth(sendDate: string): { year: number; month0: number } {
   const sendDateParts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     year: "numeric",
     month: "numeric",
+    day: "numeric",
   }).formatToParts(new Date(sendDate));
   const sendYear = Number(sendDateParts.find((p) => p.type === "year")!.value);
   const sendMonth = Number(sendDateParts.find((p) => p.type === "month")!.value); // 1-12, NY-local
+  const sendDay = Number(sendDateParts.find((p) => p.type === "day")!.value);
 
+  // The last days of a month (the scheduled run lands on its last evening
+  // in New York) cover that month; earlier days cover the one before.
+  if (sendDay >= LAST_DAYS_COVER_SEND_MONTH_FROM) return { year: sendYear, month0: sendMonth - 1 };
   return {
     month0: sendMonth === 1 ? 11 : sendMonth - 2, // 0-based, for Date.UTC
     year: sendMonth === 1 ? sendYear - 1 : sendYear,
   };
 }
 
+/**
+ * The real calendar month a monthly report COVERS — the month that just
+ * ended, read off `sendDate`'s America/New_York-local calendar date. The
+ * scheduled run fires at 00:00 UTC on the 1st, which is still the last
+ * evening of the month in New York (Oct 31, 8 pm): that run covers the
+ * month it's sent in (October), and so does a run on the 1st or a few
+ * days later (November 1–27 → October). Rule: NY-local day 28 or later
+ * covers the send month itself (it's ending); earlier days cover the
+ * previous month. Returns the bare localized month name and year
+ * separately (e.g. `{month: "October", year: "2026"}`) so a caller
+ * composes its own phrasing ("{month} {year} recap") via t().
+ */
 export function reportCoverageMonth(sendDate: string, locale: Locale): { month: string; year: string } {
   const { year: coveredYear, month0: coveredMonthIndex0 } = coveredYearMonth(sendDate);
   // Noon UTC on the 1st of the covered month — nowhere near a DST/date

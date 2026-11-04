@@ -48,6 +48,11 @@ import { headToHeadIntro, headToHeadScores } from "@/lib/competitorHeadToHead";
  * English only: it's read by the PostScore team, not owners. */
 export const TEST_PREVIEW_LINE = "Test preview — this was not sent to the owner.";
 
+/** A [TEST] send's unsubscribe address: a dead demo link with no business
+ * id or token, so it can never change a real business's opt-in (the
+ * footer shows the words only, marked "link disabled"). */
+export const TEST_PREVIEW_UNSUBSCRIBE_URL = "#test-preview-unsubscribe-disabled";
+
 /** A test send's subject: "[TEST] " + the real subject (which starts
  * with the business name). */
 export function testReportSubject(subject: string): string {
@@ -61,7 +66,7 @@ export interface MonthlyReportEmailProps {
   /** "Add a competitor" in the head-to-head (Competitors page, #add-competitor). */
   competitorsPageUrl?: string | null;
   /** ISO date this report was SENT — the heading/subject label the
-   * calendar month BEFORE this (see reportCoverageMonth in
+   * month that just ended (see reportCoverageMonth in
    * lib/i18n/format.ts), since the report covers the month that just
    * ended, not the month it happens to go out in. Never read from the
    * system clock inside this file; the caller supplies the real send
@@ -731,9 +736,17 @@ export function MonthlyReportEmail({
 
           <Text style={{ color: "#9aa3b2", fontSize: "11.5px", lineHeight: "1.5", margin: 0 }}>
             {t(locale, "report.footer.enabledForPrefix")}{businessName}.{" "}
-            <Link href={unsubscribeUrl} style={{ color: "#9aa3b2", textDecoration: "underline" }}>
-              {t(locale, "report.footer.unsubscribeLinkText")}
-            </Link>
+            {testPreview ? (
+              // A [TEST] send never carries a working unsubscribe link —
+              // clicking it must not turn off the real business's report.
+              <>
+                {t(locale, "report.footer.unsubscribeLinkText")} {t(locale, "report.footer.unsubscribeDisabledTest")}
+              </>
+            ) : (
+              <Link href={unsubscribeUrl} style={{ color: "#9aa3b2", textDecoration: "underline" }}>
+                {t(locale, "report.footer.unsubscribeLinkText")}
+              </Link>
+            )}
             .
           </Text>
         </Container>

@@ -79,7 +79,7 @@ import { buildProfileSnapshot } from "@/lib/profileChanges";
 import { buildActionPlan, mergeReviewTasks, type TaskRow } from "@/lib/actionPlan";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { buildGrowthMoves, competitorPhotoCounts, median, weakWebsiteIssueLabels, type GrowthMoveSignals } from "@/lib/growthMoves";
-import { MonthlyReportEmail, monthlyReportSubject, testReportSubject } from "@/emails/MonthlyReportEmail";
+import { MonthlyReportEmail, monthlyReportSubject, TEST_PREVIEW_UNSUBSCRIBE_URL, testReportSubject } from "@/emails/MonthlyReportEmail";
 import { sendEmail } from "@/lib/email";
 import { isMonthlyReportsLive } from "@/lib/monthlyReportsFeatureFlag";
 import { buildReportExtras, reportTopTask, snapshotFromSavedRows } from "@/lib/monthlyReportExtras";
@@ -836,7 +836,8 @@ export async function processBusiness(
     const testSend = await sendEmail({
       to: decision.to,
       subject: testReportSubject(monthlyReportSubject(businessName, reportDate, locale)),
-      react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale, googleMapsLogoUrl: `${siteUrl}/google/GoogleMaps_Logo_Gray_2x.png`, testPreview: true, websitePageUrl, competitorNoun: profile.competitorNoun, competitorsPageUrl }),
+      // Never the real unsubscribe link (or its token) in a test send.
+      react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl: TEST_PREVIEW_UNSUBSCRIBE_URL, locale, googleMapsLogoUrl: `${siteUrl}/google/GoogleMaps_Logo_Gray_2x.png`, testPreview: true, websitePageUrl, competitorNoun: profile.competitorNoun, competitorsPageUrl }),
     });
     return testSend.status === "sent"
       ? { businessId, status: "sent", reason: `test send to REPORT_TEST_EMAIL (testing mode) — not sent to the owner` }
