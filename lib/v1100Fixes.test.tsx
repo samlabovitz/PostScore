@@ -125,6 +125,7 @@ describe("4 — Contact & conversion evidence is saved (no score change)", () =>
       contactPageLink: "https://joes.com/contact",
       actionLinkText: "Call us",
       ctaPhrase: "order online",
+      phoneText: null,
     });
     expect(c.hasPhoneLink && c.hasEmailLink && c.hasContactPageLink && c.hasCtaText).toBe(true);
   });

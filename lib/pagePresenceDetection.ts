@@ -36,6 +36,9 @@ export const ABOUT_PAGE_KEYWORDS: string[] = [
   "meet our",
   "meet the",
   "who we are",
+  "our history",
+  "our people",
+  "about the company",
   "welcome to",
   "our studio",
   "our mission",
@@ -50,6 +53,10 @@ export const ABOUT_PAGE_KEYWORDS: string[] = [
   "quiénes somos",
   "quienes somos",
   "nuestra historia",
+  "acerca de",
+  "conózcanos",
+  "conozcanos",
+  "nuestro equipo",
   "bienvenidos a",
   "bienvenido a",
   "nuestro estudio",
@@ -712,10 +719,13 @@ export function aboutContentPasses(text: string): boolean {
  * text, which could legitimately mention "contact" or "directions" in
  * passing inside a real About-Us narrative without being ABOUT that
  * topic. Bilingual. */
-const NON_ABOUT_TOPIC_RE = /\b(hours|location|directions|contact|store hours|horas|ubicaci[oó]n(?:es)?|direcciones|contacto)\b/i;
+// v1.13.0: parking, shipping, returns, FAQ and policy pages too — the
+// same National 5 & 10 /about/ folder has a 500-word "Parking" page.
+const NON_ABOUT_TOPIC_RE =
+  /\b(hours|location|directions|contact|store hours|parking|shipping|returns?|exchanges|faqs?|privacy|terms|policy|policies|horas|ubicaci[oó]n(?:es)?|direcciones|contacto|estacionamiento|env[ií]os?|devoluciones|preguntas frecuentes|privacidad|t[eé]rminos|pol[ií]ticas?)\b/i;
 
 /** True when the page's own title/h1 is a real hours/location/
- * directions/contact page — see NON_ABOUT_TOPIC_RE's own doc. */
+ * directions/contact/parking/shipping/policy page — see NON_ABOUT_TOPIC_RE's own doc. */
 export function looksLikeNonAboutTopicPage(html: string): boolean {
   const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   const h1Match = html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i);

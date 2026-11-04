@@ -61,6 +61,16 @@ import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type Aban
 // (docs/review-scoring-plan.md).
 export const SCORING_VERSION = "1.12.0";
 
+/**
+ * v1.13.0 (waiting for approval): "Performance & mobile" (5) split into
+ * "Loads fast" (3) and "Works well on phones" (2), and the viewport tag
+ * moved out of Content depth. Off until SCORING_VERSION is "1.13.0" —
+ * POSTSCORE_SCORING_PREVIEW=1.13.0 turns it on for a dry run (server-side
+ * scripts only; never set in the app).
+ */
+export const SCORING_V113: boolean =
+  (SCORING_VERSION as string) === "1.13.0" || (typeof process !== "undefined" && process.env?.POSTSCORE_SCORING_PREVIEW === "1.13.0");
+
 // ---------------------------------------------------------------------------
 // Core types
 // ---------------------------------------------------------------------------
@@ -164,6 +174,15 @@ export interface WebsiteContentSignals {
    * page (Step 2d) — see detectSocialProfiles. Absent (undefined) on
    * rows saved before this was detected: never read as "none found". */
   socialProfiles?: SocialProfile[];
+  /** v1.13.0: social icons that don't go to a profile (see
+   * detectBrokenSocialLinks). Absent on rows saved before. */
+  brokenSocialLinks?: BrokenSocialLink[];
+  /** v1.13.0: text size and page width read from the page's own HTML and
+   * inline CSS (see detectPhoneLayout). Absent on rows saved before. */
+  phoneLayout?: PhoneLayout;
+  /** v1.13.0: a phone number shown on the page as text but not as a
+   * tap-to-call link. Absent on rows saved before. */
+  hasPhoneText?: boolean;
   /** The page's footer looks script-built (see
    * hasScriptBuiltFooterSigns in lib/websiteContentAnalysis.ts) — when
    * no social profiles were found, Social links is "couldn't check",
@@ -279,6 +298,32 @@ export interface MobilePerformanceMeasurement {
   /** Step 2d: why this measurement was carried forward — absent = a
    * timeout (the original reason). */
   carriedForwardReason?: "error_page";
+  /** v1.13.0: how long the main content took to show on a phone, in
+   * seconds — real visitors' 75th percentile (field) or the lab median
+   * (largest contentful paint). Absent on older rows. */
+  lcpSeconds?: number;
+  /** v1.13.0: Google's phone-usability audits from the same run (see
+   * website.mobile_friendly). Absent on older rows. */
+  mobileUsability?: MobileUsability;
+}
+
+/** v1.13.0: what the page's own code says about phones (lib/websiteContentAnalysis.ts detectPhoneLayout). */
+export interface PhoneLayout {
+  textReadable: boolean | null;
+  fitsScreen: boolean | null;
+  /** The base font size found on html/body, in px. */
+  baseFontPx: number | null;
+  /** The first thing fixed wider than a phone (evidence). */
+  wideElement: string | null;
+}
+
+/** v1.13.0: Google PageSpeed's phone-usability audits — true passes,
+ * false fails, null = not in the response (Lighthouse 12+ dropped
+ * font-size and content-width). */
+export interface MobileUsability {
+  tapTargets: boolean | null;
+  textReadable: boolean | null;
+  fitsScreen: boolean | null;
 }
 
 /** Why a PageSpeed Insights attempt didn't produce a usable measurement
@@ -483,6 +528,18 @@ export interface ContactEvidence {
   contactPageLink: string | null;
   actionLinkText: string | null;
   ctaPhrase: string | null;
+  /** v1.13.0: a phone number shown as plain text (not a tel: link), as
+   * written on the page ("302.368.1646"). Absent on older rows. */
+  phoneText?: string | null;
+}
+
+/** v1.13.0: a social icon that doesn't go to a profile — back to the
+ * business's own site (or "#"), nowhere at all, or a platform's bare
+ * homepage (twitter.com, youtube.com). */
+export interface BrokenSocialLink {
+  platform: string;
+  href: string;
+  reason: "own_site" | "no_link" | "platform_home";
 }
 
 /** v1.9.0 — see lib/pagePresenceDetection.ts's aboutDepth/servicesDepth. */
@@ -1262,20 +1319,49 @@ const REVIEW_COUNT_CHECK_MAX_POINTS = 18;
  * - SLOW -> 1.2: CrUX's "SLOW" ("poor") lines up with the lab "slow"
  *   band; same reasoning as before, scaled to the new ceiling.
  */
-// Step 2d: mobile speed is worth 5 (was 6) to make room for the new
-// 1-point website.social_links — same proportions (100% / 60% / 20%).
-const MOBILE_SPEED_MAX_POINTS = 5;
-const FIELD_CATEGORY_POINTS: Record<FieldSpeedCategory, number> = {
-  FAST: 5,
-  AVERAGE: 3,
-  SLOW: 1,
-};
+// v1.13.0: "Performance & mobile" (5) split into "Loads fast" (3, this
+// one — still website.performance_mobile) and "Works well on phones" (2,
+// website.mobile_friendly). Same proportions (100% / 60% / 20%).
+// 1.12.0: one 5-point "Performance & mobile" check (100% / 60% / 20%).
+const MOBILE_SPEED_MAX_POINTS = SCORING_V113 ? 3 : 5;
+const MOBILE_FRIENDLY_MAX_POINTS = 2;
+/** Content depth's sub-points (sum 5): 1.12.0 title 1 / meta 1 /
+ * viewport 1.5 / headings 1 / length 0.5; v1.13.0 drops the viewport. */
+const CONTENT_DEPTH_WEIGHTS = SCORING_V113
+  ? { title: 1.5, meta: 1.25, viewport: 0, headings: 1.5, length: 0.75 }
+  : { title: 1, meta: 1, viewport: 1.5, headings: 1, length: 0.5 };
+const FIELD_CATEGORY_POINTS: Record<FieldSpeedCategory, number> = SCORING_V113
+  ? { FAST: 3, AVERAGE: 1.8, SLOW: 0.6 }
+  : { FAST: 5, AVERAGE: 3, SLOW: 1 };
 
 const FIELD_CATEGORY_LABEL_KEYS: Record<FieldSpeedCategory, MessageKey> = {
   FAST: "content.checks.website.performance_mobile.fieldCategory.fast",
   AVERAGE: "content.checks.website.performance_mobile.fieldCategory.average",
   SLOW: "content.checks.website.performance_mobile.fieldCategory.slow",
 };
+
+/** The speed result in words: v1.13.0 "Fast · about 2.0 seconds", 1.12.0 "fast". */
+function speedText(category: FieldSpeedCategory, seconds: number | undefined, locale: Locale): string {
+  return SCORING_V113 ? speedResult(category, seconds, locale) : t(locale, FIELD_CATEGORY_LABEL_KEYS[category]);
+}
+
+/** v1.13.0: a lab run in the same plain words as real-visitor data —
+ * by Google's own largest-contentful-paint thresholds (2.5 s / 4 s) when
+ * the seconds are known, else by Google's own score bands (90 / 50). */
+function labSpeedCategory(m: MobilePerformanceMeasurement): FieldSpeedCategory {
+  if (typeof m.lcpSeconds === "number") return m.lcpSeconds <= 2.5 ? "FAST" : m.lcpSeconds <= 4 ? "AVERAGE" : "SLOW";
+  const score = m.labScore ?? 0;
+  return score >= 90 ? "FAST" : score >= 50 ? "AVERAGE" : "SLOW";
+}
+
+/** "Fast · about 2.0 seconds" / "Average" / "Slow · about 6.8 seconds" —
+ * never a score out of 100. */
+function speedResult(category: FieldSpeedCategory, seconds: number | undefined, locale: Locale): string {
+  const time = typeof seconds === "number" && category !== "AVERAGE" ? new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(seconds) : null;
+  const base = category === "FAST" ? "fast" : category === "SLOW" ? "slow" : "average";
+  return time ? t(locale, `content.checks.website.performance_mobile.result.${base}Time` as MessageKey, { seconds: time }) : t(locale, `content.checks.website.performance_mobile.result.${base}` as MessageKey);
+}
+
 
 /** A fully-good WebsiteAnalysis, used only by the Website quality checks'
  * simulateFix (mirrors PLACEHOLDER_HOURS's role below) — never shown to
@@ -1348,6 +1434,31 @@ export const WEBSITE_CTA_PHRASES: string[] = [
   "get started",
   "sign up now",
   "request an appointment",
+  // v1.13.0: the real National 5 & 10 case — "Give Us A Call",
+  // "Call us: 302.368.1646" and "Add to cart" are clear calls to action.
+  "call us",
+  "give us a call",
+  "add to cart",
+  "visit us",
+  "shop online",
+  "order today",
+  // Spanish (usted and tú forms sites use).
+  "llámenos",
+  "llamenos",
+  "llámanos",
+  "contáctenos",
+  "contáctanos",
+  "reserve ahora",
+  "reserve su cita",
+  "haga su pedido",
+  "ordene ahora",
+  "pida ahora",
+  "compre ahora",
+  "compre en línea",
+  "agregar al carrito",
+  "añadir al carrito",
+  "visítenos",
+  "agende una cita",
 ];
 
 const PLACEHOLDER_HOURS = [
@@ -1415,6 +1526,72 @@ function pageContentUnreadable(input: BusinessScoringInput, locale: Locale): Ret
   }
   return null;
 }
+
+const MOBILE_FRIENDLY_CHECK: CheckDefinition = {
+  // v1.13.0: "Works well on phones" — each item ✓/✗ in plain words:
+  // our own read of the page (the mobile viewport tag) plus Google
+  // PageSpeed's phone audits from the same speed test (touch targets;
+  // text size and page width when Google still reports them). Items
+  // we couldn't check are left out; none checked → couldn't check.
+  id: "website.mobile_friendly",
+  labelKey: "content.checks.website.mobile_friendly.label",
+  category: "website",
+  maxPoints: MOBILE_FRIENDLY_MAX_POINTS,
+  adviceKey: "content.checks.website.mobile_friendly.advice",
+  gapAdviceKeys: {
+    viewport: "content.checks.website.mobile_friendly.advice.viewport",
+    text: "content.checks.website.mobile_friendly.advice.text",
+    fits: "content.checks.website.mobile_friendly.advice.fits",
+    tap: "content.checks.website.mobile_friendly.advice.tap",
+  },
+  evaluate(input, locale) {
+    if (!hasAnalyzableWebsite(input)) {
+      return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.performance_mobile.explanation.noWebsite") };
+    }
+    if (!input.websiteAnalysis) {
+      return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.mobile_friendly.explanation.notAnalyzed") };
+    }
+    // A site that blocks automated checks shows us (and Google's test)
+    // a block page — nothing here would describe the real site.
+    if (siteBlocksAutomatedChecks(input)) {
+      return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.mobile_friendly.explanation.blockedSite") };
+    }
+    const content = input.websiteAnalysis.content;
+    const viewport = !content ? null : content.isLikelyClientRenderedShell ? (content.renderedContentSignals?.hasViewportTag ?? null) : content.hasViewportTag;
+    const u = input.websiteAnalysis.mobilePerformance?.mobileUsability ?? null;
+    const items: Array<{ key: "viewport" | "text" | "fits" | "tap"; ok: boolean | null }> = [
+      { key: "viewport", ok: viewport },
+      // Google's audit first; else the page's own HTML/inline CSS.
+      { key: "text", ok: u?.textReadable ?? content?.phoneLayout?.textReadable ?? null },
+      { key: "fits", ok: u?.fitsScreen ?? content?.phoneLayout?.fitsScreen ?? null },
+      { key: "tap", ok: u?.tapTargets ?? null },
+    ];
+    const known = items.filter((i): i is { key: "viewport" | "text" | "fits" | "tap"; ok: boolean } => i.ok !== null);
+    if (known.length === 0) {
+      return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.mobile_friendly.explanation.couldntCheck") };
+    }
+    const passed = known.filter((i) => i.ok).length;
+    const list = known.map((i) => `${i.ok ? "✓" : "✗"} ${t(locale, `content.checks.website.mobile_friendly.item.${i.key}` as MessageKey)}`).join(" · ");
+    return {
+      earnedPoints: roundTo((passed / known.length) * MOBILE_FRIENDLY_MAX_POINTS, 1),
+      confidence: "VERIFIED",
+      gaps: known.filter((i) => !i.ok).map((i) => i.key),
+      explanation: t(locale, "content.checks.website.mobile_friendly.explanation.items", { items: list }),
+    };
+  },
+  simulateFix: (input) => ({
+    ...input,
+    website: hasAnalyzableWebsite(input) ? input.website : "https://example.com",
+    websiteAnalysis: {
+      ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
+      content: { ...(input.websiteAnalysis?.content ?? PERFECT_WEBSITE_ANALYSIS.content!), hasViewportTag: true },
+      mobilePerformance: {
+        ...(input.websiteAnalysis?.mobilePerformance ?? PERFECT_WEBSITE_ANALYSIS.mobilePerformance!),
+        mobileUsability: { tapTargets: true, textReadable: true, fitsScreen: true },
+      },
+    },
+  }),
+};
 
 export const CHECKS: CheckDefinition[] = [
   // --- Visibility & Reputation (40 pts) ------------------------------------
@@ -1966,7 +2143,7 @@ export const CHECKS: CheckDefinition[] = [
   },
   {
     id: "website.performance_mobile",
-    labelKey: "content.checks.website.performance_mobile.label",
+    labelKey: SCORING_V113 ? "content.checks.website.performance_mobile.labelV113" : "content.checks.website.performance_mobile.label",
     category: "website",
     // Gave up 4 points (was 10) to make room for the 4 new site-trust
     // checks inside Website's unchanged 30-point total — see
@@ -2002,7 +2179,7 @@ export const CHECKS: CheckDefinition[] = [
         // with its date (the real Blue Bottle case).
         const m = input.websiteAnalysis.mobilePerformance;
         if (m && m.method === "field" && m.fieldCategory) {
-          const category = t(locale, FIELD_CATEGORY_LABEL_KEYS[m.fieldCategory]);
+          const category = speedText(m.fieldCategory, m.lcpSeconds, locale);
           return {
             earnedPoints: FIELD_CATEGORY_POINTS[m.fieldCategory],
             confidence: "VERIFIED",
@@ -2065,7 +2242,7 @@ export const CHECKS: CheckDefinition[] = [
                 measurement.carriedForwardReason === "error_page"
                   ? "content.checks.website.performance_mobile.explanation.fieldLastMeasuredErrorPage"
                   : "content.checks.website.performance_mobile.explanation.fieldLastMeasured",
-                { category: t(locale, FIELD_CATEGORY_LABEL_KEYS[category]), date: lastMeasuredDate }
+                { category: speedText(category, measurement.lcpSeconds, locale), date: lastMeasuredDate }
               )
             : t(
                 locale,
@@ -2074,7 +2251,7 @@ export const CHECKS: CheckDefinition[] = [
                 measurement.fieldScope === "origin"
                   ? "content.checks.website.performance_mobile.explanation.fieldOrigin"
                   : "content.checks.website.performance_mobile.explanation.field",
-                { category: t(locale, FIELD_CATEGORY_LABEL_KEYS[category]) }
+                { category: speedText(category, measurement.lcpSeconds, locale) }
               ),
           meta: { method: "field" },
         };
@@ -2085,6 +2262,26 @@ export const CHECKS: CheckDefinition[] = [
       // than trusting any single one (see MobilePerformanceMeasurement's
       // own doc).
       if (measurement.method === "lab" && measurement.labScore !== null) {
+        if (SCORING_V113) {
+          // v1.13.0: the same plain Fast / Average / Slow as real-visitor
+          // data — never a score out of 100.
+          const labCategory = labSpeedCategory(measurement);
+          const result = speedResult(labCategory, measurement.lcpSeconds, locale);
+          return {
+            earnedPoints: FIELD_CATEGORY_POINTS[labCategory],
+            confidence: "VERIFIED",
+            explanation: lastMeasuredDate
+              ? t(
+                  locale,
+                  measurement.carriedForwardReason === "error_page"
+                    ? "content.checks.website.performance_mobile.explanation.labLastMeasuredErrorPageV113"
+                    : "content.checks.website.performance_mobile.explanation.labLastMeasuredV113",
+                  { category: result, date: lastMeasuredDate }
+                )
+              : t(locale, "content.checks.website.performance_mobile.explanation.labV113", { category: result }),
+            meta: { method: "lab" },
+          };
+        }
         const score = measurement.labScore;
         return {
           earnedPoints: roundTo((score / 100) * MOBILE_SPEED_MAX_POINTS, 1),
@@ -2097,9 +2294,7 @@ export const CHECKS: CheckDefinition[] = [
                   : "content.checks.website.performance_mobile.explanation.labLastMeasured",
                 { score: Math.round(score), date: lastMeasuredDate }
               )
-            : t(locale, "content.checks.website.performance_mobile.explanation.lab", {
-                score: Math.round(score),
-              }),
+            : t(locale, "content.checks.website.performance_mobile.explanation.lab", { score: Math.round(score) }),
           meta: { method: "lab" },
         };
       }
@@ -2118,6 +2313,8 @@ export const CHECKS: CheckDefinition[] = [
       },
     }),
   },
+  // v1.13.0 only (SCORING_V113).
+  ...(SCORING_V113 ? [MOBILE_FRIENDLY_CHECK] : []),
   {
     id: "website.content_depth",
     labelKey: "content.checks.website.content_depth.label",
@@ -2170,10 +2367,13 @@ export const CHECKS: CheckDefinition[] = [
         // visible text depth, so the remaining 0.5 "content length" point
         // is never earned here, but also never described as a failure —
         // see the explanation below.
-        const titlePts = recovered.hasTitle ? 1 : 0;
-        const metaPts = recovered.hasMetaDescription ? 1 : 0;
-        const viewportPts = recovered.hasViewportTag ? 1.5 : 0;
-        const headingPts = recovered.hasHeadings ? 1 : 0;
+        // v1.13.0: no viewport here (it's in "Works well on phones") —
+        // title 1.5 / meta 1.25 / headings 1.5 = 4.25 of 5.
+        const w = CONTENT_DEPTH_WEIGHTS;
+        const titlePts = recovered.hasTitle ? w.title : 0;
+        const metaPts = recovered.hasMetaDescription ? w.meta : 0;
+        const viewportPts = recovered.hasViewportTag ? w.viewport : 0;
+        const headingPts = recovered.hasHeadings ? w.headings : 0;
         const earnedPoints = roundTo(titlePts + metaPts + viewportPts + headingPts, 1);
 
         // Each sub-signal is tri-state: true/false is a real Lighthouse-
@@ -2186,7 +2386,9 @@ export const CHECKS: CheckDefinition[] = [
         else if (recovered.hasTitle === false) confirmedMissing.push(t(locale, "content.checks.website.content_depth.explanation.missingTitle"));
         if (recovered.hasMetaDescription === true) confirmedPresent.push(t(locale, "content.checks.website.content_depth.explanation.presentMeta"));
         else if (recovered.hasMetaDescription === false) confirmedMissing.push(t(locale, "content.checks.website.content_depth.explanation.missingMeta"));
-        if (recovered.hasViewportTag === true) confirmedPresent.push(t(locale, "content.checks.website.content_depth.explanation.presentViewport"));
+        if (SCORING_V113) {
+          // The viewport tag is reported under "Works well on phones".
+        } else if (recovered.hasViewportTag === true) confirmedPresent.push(t(locale, "content.checks.website.content_depth.explanation.presentViewport"));
         else if (recovered.hasViewportTag === false) confirmedMissing.push(t(locale, "content.checks.website.content_depth.explanation.missingViewport"));
         if (recovered.hasHeadings === true) confirmedPresent.push(t(locale, "content.checks.website.content_depth.explanation.presentHeadings"));
         else if (recovered.hasHeadings === false) confirmedMissing.push(t(locale, "content.checks.website.content_depth.explanation.missingHeadings"));
@@ -2211,7 +2413,7 @@ export const CHECKS: CheckDefinition[] = [
         const gaps = [
           ...(recovered.hasTitle === false ? ["title"] : []),
           ...(recovered.hasMetaDescription === false ? ["meta"] : []),
-          ...(recovered.hasViewportTag === false ? ["viewport"] : []),
+          ...(!SCORING_V113 && recovered.hasViewportTag === false ? ["viewport"] : []),
           ...(recovered.hasHeadings === false ? ["headings"] : []),
         ];
         return { earnedPoints, confidence: "VERIFIED", explanation: explanationParts.join(" "), gaps };
@@ -2222,11 +2424,14 @@ export const CHECKS: CheckDefinition[] = [
       // character-count proxy, not a hard verification), and the lightest
       // one to trim to make room for website.about_presence/
       // website.services_presence's real page-discovery signals.
-      const titlePts = content.hasTitle ? 1 : 0;
-      const metaPts = content.hasMetaDescription ? 1 : 0;
-      const viewportPts = content.hasViewportTag ? 1.5 : 0;
-      const headingPts = content.headingCount > 0 ? 1 : 0;
-      const lengthPts = contentLengthFraction(content.visibleTextLength) * 0.5;
+      // v1.13.0: title 1.5 / meta 1.25 / headings 1.5 / length 0.75 — the
+      // viewport tag moved to "Works well on phones" (CONTENT_DEPTH_WEIGHTS).
+      const w = CONTENT_DEPTH_WEIGHTS;
+      const titlePts = content.hasTitle ? w.title : 0;
+      const metaPts = content.hasMetaDescription ? w.meta : 0;
+      const viewportPts = content.hasViewportTag ? w.viewport : 0;
+      const headingPts = content.headingCount > 0 ? w.headings : 0;
+      const lengthPts = contentLengthFraction(content.visibleTextLength) * w.length;
       const earnedPoints = roundTo(titlePts + metaPts + viewportPts + headingPts + lengthPts, 1);
 
       const missing: string[] = [];
@@ -2239,7 +2444,7 @@ export const CHECKS: CheckDefinition[] = [
         missing.push(t(locale, "content.checks.website.content_depth.explanation.gapNoMeta"));
         gaps.push("meta");
       }
-      if (!content.hasViewportTag) {
+      if (!SCORING_V113 && !content.hasViewportTag) {
         missing.push(t(locale, "content.checks.website.content_depth.explanation.gapNoViewport"));
         gaps.push("viewport");
       }
@@ -2258,7 +2463,7 @@ export const CHECKS: CheckDefinition[] = [
         gaps,
         explanation:
           missing.length === 0
-            ? t(locale, "content.checks.website.content_depth.explanation.allGood")
+            ? t(locale, SCORING_V113 ? "content.checks.website.content_depth.explanation.allGoodV113" : "content.checks.website.content_depth.explanation.allGood")
             : t(locale, "content.checks.website.content_depth.explanation.gapsTemplate", { items: missing.join(", ") }),
       };
     },
@@ -2280,6 +2485,7 @@ export const CHECKS: CheckDefinition[] = [
     gapAdviceKeys: {
       contact: "content.checks.website.contact_conversion.advice.contact",
       cta: "content.checks.website.contact_conversion.advice.cta",
+      phone_link: "content.checks.website.contact_conversion.advice.phone_link",
     },
     evaluate(input, locale) {
       if (!hasAnalyzableWebsite(input)) {
@@ -2316,16 +2522,23 @@ export const CHECKS: CheckDefinition[] = [
       // website.about_presence/website.services_presence.
       // Step 2d: a link to the site's own contact page counts too.
       const hasContact = content.hasPhoneLink || content.hasEmailLink || content.hasContactPageLink === true;
-      const earnedPoints = (hasContact ? 2 : 0) + (content.hasCtaText ? 1 : 0);
+      // v1.13.0: a phone number shown as text but not tap-to-call (the
+      // real National 5 & 10 footer) is half the contact credit — and
+      // never "no contact" while a number is right there on the page.
+      const phoneNotLinked = !content.hasPhoneLink && content.hasPhoneText === true;
+      const contactPoints = hasContact ? 2 : phoneNotLinked ? 1 : 0;
+      const earnedPoints = contactPoints + (content.hasCtaText ? 1 : 0);
+      const phone = content.contactEvidence?.phoneText ?? "";
 
       const problems: string[] = [];
-      if (!hasContact) problems.push(t(locale, "content.checks.website.contact_conversion.explanation.noContact"));
+      if (phoneNotLinked) problems.push(t(locale, "content.checks.website.contact_conversion.explanation.phoneNotLinked", { phone }));
+      else if (!hasContact) problems.push(t(locale, "content.checks.website.contact_conversion.explanation.noContact"));
       if (!content.hasCtaText) problems.push(t(locale, "content.checks.website.contact_conversion.explanation.noCta"));
 
       return {
         earnedPoints,
         confidence: "VERIFIED",
-        gaps: [...(hasContact ? [] : ["contact"]), ...(content.hasCtaText ? [] : ["cta"])],
+        gaps: [...(hasContact ? [] : phoneNotLinked ? ["phone_link"] : ["contact"]), ...(content.hasCtaText ? [] : ["cta"])],
         explanation:
           problems.length === 0
             ? t(locale, "content.checks.website.contact_conversion.explanation.allGood")
@@ -2545,6 +2758,7 @@ export const CHECKS: CheckDefinition[] = [
     category: "website",
     maxPoints: 1,
     adviceKey: "content.checks.website.social_links.advice",
+    gapAdviceKeys: { broken_social: "content.checks.website.social_links.advice.broken_social" },
     evaluate(input, locale) {
       // A social page in the listing's website field is a social profile,
       // not a website (website.has_website) — it counts here.
@@ -2586,11 +2800,16 @@ export const CHECKS: CheckDefinition[] = [
       const counted = content.socialProfiles.filter(socialProfileCounts);
       if (listingProfile && !counted.some((p) => p.platform === listingProfile.platform)) counted.push(listingProfile);
       const notCounted = content.socialProfiles.filter((p) => !socialProfileCounts(p));
-      const whyNot = notCounted.map((p) => socialLinkProblem(p, locale));
+      // v1.13.0: icons that don't go to a profile ("#", the site itself,
+      // a bare twitter.com) — said plainly; they never earn the point.
+      const broken = (content.brokenSocialLinks ?? []).filter((b) => !counted.some((p) => p.platform === b.platform));
+      const whyNot = [...notCounted.map((p) => socialLinkProblem(p, locale)), ...brokenSocialLines(broken, locale)];
+      const brokenGaps = broken.length > 0 ? { gaps: ["broken_social"] } : {};
       if (counted.length > 0) {
         return {
           earnedPoints: 1,
           confidence: "VERIFIED",
+          ...brokenGaps,
           explanation: [
             t(locale, "content.checks.website.social_links.explanation.found", {
               profiles: counted
@@ -2605,8 +2824,8 @@ export const CHECKS: CheckDefinition[] = [
           ].join(" "),
         };
       }
-      if (notCounted.length > 0) {
-        return { earnedPoints: 0, confidence: "VERIFIED", explanation: whyNot.join(" ") };
+      if (notCounted.length > 0 || broken.length > 0) {
+        return { earnedPoints: 0, confidence: "VERIFIED", ...brokenGaps, explanation: whyNot.join(" ") };
       }
       // A JavaScript-rendered page's links may simply not be in the HTML
       // we can read — honestly couldn't check, not a real "none".
@@ -3530,6 +3749,9 @@ function parseWebsiteContentSignals(value: unknown): WebsiteContentSignals | nul
     hasCtaText: v.hasCtaText as boolean,
     ...(typeof v.hasContactPageLink === "boolean" ? { hasContactPageLink: v.hasContactPageLink } : {}),
     ...(typeof v.scriptBuiltFooter === "boolean" ? { scriptBuiltFooter: v.scriptBuiltFooter } : {}),
+    ...(typeof v.hasPhoneText === "boolean" ? { hasPhoneText: v.hasPhoneText } : {}),
+    ...(parsePhoneLayout(v.phoneLayout) ? { phoneLayout: parsePhoneLayout(v.phoneLayout)! } : {}),
+    ...(parseBrokenSocialLinks(v.brokenSocialLinks) ? { brokenSocialLinks: parseBrokenSocialLinks(v.brokenSocialLinks)! } : {}),
     ...(parseContactEvidence(v.contactEvidence) ? { contactEvidence: parseContactEvidence(v.contactEvidence)! } : {}),
     ...(Array.isArray(v.socialProfiles)
       ? {
@@ -3553,6 +3775,19 @@ function parseWebsiteContentSignals(value: unknown): WebsiteContentSignals | nul
 }
 
 /** Why a checked social link doesn't count, in the owner's words. */
+/** "Your Twitter (X) and YouTube icons don't go to a profile — they
+ * reload your own site…" — one sentence per kind of broken icon. */
+function brokenSocialLines(broken: BrokenSocialLink[], locale: Locale): string[] {
+  const name = (platform: string) => (platform === "X/Twitter" ? "Twitter (X)" : platform);
+  const and = locale === "es" ? " y " : " and ";
+  return (["own_site", "no_link", "platform_home"] as const).flatMap((reason) => {
+    const names = broken.filter((b) => b.reason === reason).map((b) => name(b.platform));
+    if (names.length === 0) return [];
+    const platforms = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")}${and}${names[names.length - 1]}`;
+    return [tPlural(locale, `content.checks.website.social_links.broken.${reason}`, names.length, { platforms })];
+  });
+}
+
 function socialLinkProblem(profile: SocialProfile, locale: Locale): string {
   const host = (() => {
     try {
@@ -3624,6 +3859,12 @@ function parseMobilePerformance(value: unknown): MobilePerformanceMeasurement | 
   const v = value as Record<string, unknown>;
   const measuredAt = typeof v.measuredAt === "string" ? v.measuredAt : undefined;
   const carriedForward = v.carriedForward === true ? true : undefined;
+  const tri = (x: unknown) => (typeof x === "boolean" ? x : null);
+  const u = v.mobileUsability && typeof v.mobileUsability === "object" ? (v.mobileUsability as Record<string, unknown>) : null;
+  const extra = {
+    ...(typeof v.lcpSeconds === "number" && v.lcpSeconds > 0 ? { lcpSeconds: v.lcpSeconds } : {}),
+    ...(u ? { mobileUsability: { tapTargets: tri(u.tapTargets), textReadable: tri(u.textReadable), fitsScreen: tri(u.fitsScreen) } } : {}),
+  };
   if (v.method === "field" && isFieldSpeedCategory(v.fieldCategory)) {
     return {
       method: "field",
@@ -3633,6 +3874,7 @@ function parseMobilePerformance(value: unknown): MobilePerformanceMeasurement | 
       carriedForward,
       ...(v.fieldScope === "origin" ? { fieldScope: "origin" as const } : {}),
       ...(v.carriedForwardReason === "error_page" ? { carriedForwardReason: "error_page" as const } : {}),
+      ...extra,
     };
   }
   if (v.method === "lab" && typeof v.labScore === "number") {
@@ -3643,6 +3885,7 @@ function parseMobilePerformance(value: unknown): MobilePerformanceMeasurement | 
       measuredAt,
       carriedForward,
       ...(v.carriedForwardReason === "error_page" ? { carriedForwardReason: "error_page" as const } : {}),
+      ...extra,
     };
   }
   return null;
@@ -3708,7 +3951,28 @@ function parseContactEvidence(value: unknown): ContactEvidence | null {
     contactPageLink: str(v.contactPageLink),
     actionLinkText: str(v.actionLinkText),
     ctaPhrase: str(v.ctaPhrase),
+    ...(typeof v.phoneText === "string" ? { phoneText: v.phoneText } : {}),
   };
+}
+
+function parsePhoneLayout(value: unknown): PhoneLayout | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  const tri = (x: unknown) => (typeof x === "boolean" ? x : null);
+  return {
+    textReadable: tri(v.textReadable),
+    fitsScreen: tri(v.fitsScreen),
+    baseFontPx: typeof v.baseFontPx === "number" ? v.baseFontPx : null,
+    wideElement: typeof v.wideElement === "string" ? v.wideElement : null,
+  };
+}
+
+const BROKEN_SOCIAL_REASONS = new Set(["own_site", "no_link", "platform_home"]);
+function parseBrokenSocialLinks(value: unknown): BrokenSocialLink[] | null {
+  if (!Array.isArray(value)) return null;
+  return value
+    .filter((b): b is BrokenSocialLink => !!b && typeof b === "object" && typeof b.platform === "string" && typeof b.href === "string" && BROKEN_SOCIAL_REASONS.has(b.reason))
+    .map((b) => ({ platform: b.platform, href: b.href, reason: b.reason }));
 }
 
 function parsePresenceCounts(value: unknown): PresenceCounts | null {

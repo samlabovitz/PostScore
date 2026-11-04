@@ -19,7 +19,7 @@
 // never a separate hand-tuned estimate for the template.
 
 import type { WebsiteContentSignals } from "./scoring";
-import { WEBSITE_CTA_PHRASES, type ContactEvidence, type SocialProfile } from "./scoring";
+import { WEBSITE_CTA_PHRASES, type BrokenSocialLink, type ContactEvidence, type SocialProfile } from "./scoring";
 
 /**
  * Strips every real markup that is NEVER visible to a real visitor —
@@ -151,6 +151,10 @@ interface AnchorLink {
   text: string;
   /** Step 2g: extra URLs some icon buttons keep in data attributes. */
   dataUrls?: string[];
+  /** v1.13.0: the raw attributes and inner markup (icon classes,
+   * aria-label/title) — how a social icon with no real link is named. */
+  attrs?: string;
+  inner?: string;
 }
 
 /** Every real `<a href>` with its visible text — href quoted or unquoted. */
@@ -163,9 +167,11 @@ function anchorLinks(html: string): AnchorLink[] {
     const dataUrls = ["data-href", "data-url", "data-link"]
       .map((attr) => attributeValue(` ${m![1]}`, attr))
       .filter((v): v is string => !!v);
-    if (!href && dataUrls.length === 0) continue;
+    // v1.13.0: an <a> with no href at all is kept too (an icon that goes
+    // nowhere) — contact/social detection skip empty hrefs themselves.
+    if (href === null && dataUrls.length === 0 && !/\b(?:twitter|youtube|facebook|instagram|tiktok|linkedin|pinterest|yelp)\b/i.test(m[0])) continue;
     const text = decodeBasicEntities(m[2].replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
-    links.push({ href: (href ?? "").trim(), text, dataUrls });
+    links.push({ href: (href ?? "").trim(), text, dataUrls, attrs: m[1], inner: m[2] });
   }
   return links;
 }
@@ -383,6 +389,196 @@ export function detectSocialProfiles(html: string): SocialProfile[] {
   return profiles;
 }
 
+/** How an icon names its platform when its link doesn't: icon classes
+ * ("fa fa-twitter", "icon-youtube"), aria-label/title, or its text. */
+const SOCIAL_ICON_NAMES: Array<{ platform: string; re: RegExp }> = [
+  { platform: "X/Twitter", re: /\btwitter\b|\bfa-x-twitter\b|\bx-twitter\b|aria-label\s*=\s*["']\s*x\s*["']/i },
+  { platform: "YouTube", re: /\byoutube\b/i },
+  { platform: "Facebook", re: /\bfacebook\b/i },
+  { platform: "Instagram", re: /\binstagram\b/i },
+  { platform: "TikTok", re: /\btiktok\b/i },
+  { platform: "LinkedIn", re: /\blinkedin\b/i },
+  { platform: "Pinterest", re: /\bpinterest\b/i },
+  { platform: "Yelp", re: /\byelp\b/i },
+];
+
+/**
+ * v1.13.0: social icons that don't go to a profile — the real National
+ * 5 & 10 case (its footer's Twitter and YouTube icons both link to "#",
+ * so tapping them just reloads the page). Broken when the link goes back
+ * to the business's own site (its homepage, the same page, or "#"),
+ * nowhere ("", "javascript:…"), or to a platform's bare homepage
+ * ("https://twitter.com/"). A share button (sharer, intent) is not an
+ * icon for the business's profile and is never counted either way. A
+ * platform that ALSO has a real profile link on the page isn't broken
+ * (the same icon set often appears twice).
+ */
+export function detectBrokenSocialLinks(html: string, baseUrl?: string | null): BrokenSocialLink[] {
+  const clean = stripNonVisibleMarkup(html);
+  let base: URL | null = null;
+  try {
+    base = baseUrl ? new URL(/^https?:\/\//i.test(baseUrl) ? baseUrl : `https://${baseUrl}`) : null;
+  } catch {
+    base = null;
+  }
+  const real = new Set(detectSocialProfiles(clean).map((p) => p.platform));
+  const broken: BrokenSocialLink[] = [];
+  for (const link of anchorLinks(clean)) {
+    const raw = decodeHrefEntities(link.href).trim();
+    let reason: BrokenSocialLink["reason"] | null = null;
+    let platform: string | null = null;
+    let url: URL | null = null;
+    if (raw === "" || /^javascript:/i.test(raw)) reason = "no_link";
+    else if (raw.startsWith("#")) reason = "own_site";
+    else {
+      try {
+        url = new URL(raw, base ?? "https://placeholder.invalid/");
+      } catch {
+        continue;
+      }
+      const onPlatform = socialPlatformFor(url.hostname);
+      if (onPlatform) {
+        if (url.pathname.split("/").filter(Boolean).length > 0) continue; // a profile, share button or post — handled elsewhere
+        platform = onPlatform.platform;
+        reason = "platform_home";
+      } else if (base && normalizeSiteHost(url.hostname) === normalizeSiteHost(base.hostname) && (url.pathname === "/" || url.pathname === "" || url.pathname === base.pathname)) {
+        reason = "own_site";
+      } else continue;
+    }
+    if (link.dataUrls && link.dataUrls.length > 0) continue; // a real address kept in data-href
+    // A "Share on Facebook" button works by script — not a profile icon.
+    if (/\bshare\b|compartir/i.test(`${link.attrs ?? ""} ${link.text}`)) continue;
+    platform ??= SOCIAL_ICON_NAMES.find((n) => n.re.test(`${link.attrs ?? ""} ${link.inner ?? ""} ${link.text}`))?.platform ?? null;
+    if (!platform || real.has(platform) || broken.some((b) => b.platform === platform)) continue;
+    broken.push({ platform, href: link.href.slice(0, 200), reason });
+  }
+  return broken;
+}
+
+function normalizeSiteHost(hostname: string): string {
+  return hostname.replace(/^www\./i, "").toLowerCase();
+}
+
+/** Phones are at most this wide (CSS px) — anything fixed wider overflows. */
+const PHONE_MAX_WIDTH_PX = 480;
+/** Google's own legibility line: text under 12px is too small on a phone. */
+const MIN_READABLE_FONT_PX = 12;
+
+/** A CSS length in px (px, pt, rem/em and % of a 16px default), or null. */
+function cssPx(value: string): number | null {
+  const m = value.trim().match(/^(\d*\.?\d+)\s*(px|pt|rem|em|%)?/i);
+  if (!m) return null;
+  const n = Number(m[1]);
+  const unit = (m[2] ?? "px").toLowerCase();
+  return unit === "px" ? n : unit === "pt" ? (n * 4) / 3 : unit === "%" ? (n / 100) * 16 : n * 16;
+}
+
+/** Inline <style> text with every @media/@supports block removed (a rule
+ * inside "@media (min-width: 1200px)" never applies on a phone). */
+function topLevelCss(html: string): string {
+  const css = Array.from(html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi), (m) => m[1]).join("\n").replace(/\/\*[\s\S]*?\*\//g, "");
+  let out = "";
+  for (let i = 0; i < css.length; ) {
+    if (css[i] === "@" && /^@(media|supports|container|document)\b/i.test(css.slice(i, i + 12))) {
+      const open = css.indexOf("{", i);
+      if (open < 0) break;
+      let depth = 1;
+      let j = open + 1;
+      for (; j < css.length && depth > 0; j++) depth += css[j] === "{" ? 1 : css[j] === "}" ? -1 : 0;
+      i = j;
+      continue;
+    }
+    out += css[i++];
+  }
+  return out;
+}
+
+/** Declarations of every top-level rule whose selector list names `html` or `body` itself. */
+function rootDeclarations(css: string): string[] {
+  return Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g))
+    .filter((m) => m[1].split(",").some((sel) => /^(?:html|body|:root)$/i.test(sel.trim())))
+    .map((m) => m[2]);
+}
+
+function declaredPx(declarations: string, property: "font-size" | "width" | "min-width"): number | null {
+  const re = new RegExp(`(?:^|[;{\\s])${property}\\s*:\\s*([^;!]+)`, "gi");
+  let last: number | null = null;
+  for (const m of Array.from(declarations.matchAll(re))) last = cssPx(m[1]) ?? last;
+  return last;
+}
+
+/**
+ * v1.13.0: "Text readable without zooming" and "Nothing wider than the
+ * screen" from the page's OWN code — the HTML and inline CSS we already
+ * fetched (no extra request; external stylesheets aren't read). Google
+ * PageSpeed's own audits win when it still reports them.
+ *   - textReadable: the base font size set on html/body (inline CSS or a
+ *     style attribute) is 12px or more; null when the page doesn't set one
+ *     where we can see it.
+ *   - fitsScreen: false when the viewport is a fixed width, or an element's
+ *     own style (or html/body, or a table's width attribute) is fixed wider
+ *     than a phone (480px); true when none is and the page has a
+ *     device-width viewport; null without one (the viewport item covers it).
+ */
+export function detectPhoneLayout(html: string): { textReadable: boolean | null; fitsScreen: boolean | null; baseFontPx: number | null; wideElement: string | null } {
+  const clean = stripNonVisibleMarkup(html);
+  const rootRules = rootDeclarations(topLevelCss(html));
+  const rootStyles = Array.from(clean.matchAll(/<(?:html|body)\b[^>]*>/gi), (m) => attributeValue(` ${m[0].slice(1)}`, "style") ?? "");
+  let baseFontPx: number | null = null;
+  for (const d of [...rootRules, ...rootStyles]) baseFontPx = declaredPx(d, "font-size") ?? baseFontPx;
+
+  const viewport = metaContent(clean, "viewport") ?? "";
+  const fixedViewport = viewport.match(/width\s*=\s*(\d+)/i);
+  let wideElement: string | null = fixedViewport && Number(fixedViewport[1]) > PHONE_MAX_WIDTH_PX ? `<meta name="viewport" content="${viewport}">` : null;
+  if (!wideElement) {
+    for (const d of rootRules) {
+      const w = Math.max(declaredPx(d, "width") ?? 0, declaredPx(d, "min-width") ?? 0);
+      if (w > PHONE_MAX_WIDTH_PX && !/(?:^|[;\s])width\s*:\s*\d*\.?\d+\s*%/i.test(d)) {
+        wideElement = `html/body { ${d.trim().slice(0, 80)} }`;
+        break;
+      }
+    }
+  }
+  if (!wideElement) {
+    for (const m of Array.from(clean.matchAll(/<([a-z][a-z0-9]*)\b[^>]*>/gi))) {
+      const tag = m[0];
+      const style = attributeValue(` ${tag.slice(1)}`, "style");
+      if (style && !/display\s*:\s*none/i.test(style)) {
+        const w = Math.max(declaredPx(style, "width") ?? 0, declaredPx(style, "min-width") ?? 0);
+        if (w > PHONE_MAX_WIDTH_PX) {
+          wideElement = tag.slice(0, 120);
+          break;
+        }
+      }
+      if (m[1].toLowerCase() === "table") {
+        const width = attributeValue(` ${tag.slice(1)}`, "width");
+        if (width && /^\d+$/.test(width.trim()) && Number(width) > PHONE_MAX_WIDTH_PX) {
+          wideElement = tag.slice(0, 120);
+          break;
+        }
+      }
+    }
+  }
+  const deviceWidth = /width\s*=\s*device-width/i.test(viewport);
+  return {
+    textReadable: baseFontPx === null ? null : baseFontPx >= MIN_READABLE_FONT_PX,
+    fitsScreen: wideElement ? false : deviceWidth ? true : null,
+    baseFontPx,
+    wideElement,
+  };
+}
+
+/** US phone numbers as written on pages: 302.368.1646, (302) 368-1646,
+ * 302-368-1646, 302 368 1646, +1 302 368 1646. Area and exchange codes
+ * never start with 0 or 1; never part of a longer run of digits. */
+const PHONE_TEXT_RE = /(?<![\d.\-])(?:\+?1[\s.\-]?)?(?:\(\s*[2-9]\d{2}\s*\)|[2-9]\d{2})[\s.\-]?[2-9]\d{2}[\s.\-]\d{4}(?![\d\-])/;
+
+/** v1.13.0: a phone number shown on the page as text (headers, footers,
+ * anywhere visible), as written — or null. */
+export function findPhoneText(visibleText: string): string | null {
+  return visibleText.match(PHONE_TEXT_RE)?.[0].trim() ?? null;
+}
+
 const SCRIPT_SOCIAL_URL_RE =
   /(?:instagram|facebook|twitter|x|tiktok|youtube|linkedin|pinterest|yelp)\.com\/[A-Za-z0-9_@.-]+/i;
 
@@ -451,8 +647,14 @@ export function analyzeWebsiteHtml(html: string, baseUrl?: string | null): Websi
   const hasCtaText = ctaPhrase !== null || hasActionLinkText;
   // v1.10.0: what actually counted for Contact & conversion, saved so an
   // audit can show it (no effect on the score).
-  const contactEvidence: ContactEvidence = { ...evidence, ctaPhrase };
+  // v1.13.0: a number shown as text (the real National 5 & 10 footer:
+  // "Call us: 302.368.1646", no tel: link).
+  const phoneText = findPhoneText(visibleText);
+  const contactEvidence: ContactEvidence = { ...evidence, ctaPhrase, phoneText };
   const socialProfiles = detectSocialProfiles(clean);
+  const brokenSocialLinks = detectBrokenSocialLinks(clean, baseUrl);
+  // Read from the RAW html — inline <style> blocks are stripped from `clean`.
+  const phoneLayout = detectPhoneLayout(html);
 
   const isLikelyClientRenderedShell = detectClientRenderedShell(clean, visibleTextLength, headingCount);
 
@@ -466,7 +668,10 @@ export function analyzeWebsiteHtml(html: string, baseUrl?: string | null): Websi
     hasEmailLink,
     hasContactPageLink,
     hasCtaText,
+    hasPhoneText: phoneText !== null,
     socialProfiles,
+    brokenSocialLinks,
+    phoneLayout,
     // Read from the RAW html — `clean` has scripts stripped.
     scriptBuiltFooter: hasScriptBuiltFooterSigns(html),
     contactEvidence,

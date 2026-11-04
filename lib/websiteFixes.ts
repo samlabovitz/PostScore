@@ -63,6 +63,8 @@ export function websiteFixesFor(check: CheckResult, builder: WebsiteBuilderId | 
       return [one(null, hosted ? guided(5, 10) : webPerson)];
     case "website.performance_mobile":
       return [one(null, hosted ? guided(20, 40) : webPerson)];
+    case "website.mobile_friendly":
+      return [one(gaps[0] ?? null, hosted ? guided(10, 30) : webPerson)];
     case "website.content_depth": {
       const perGap: Record<string, ReturnType<typeof guided> | typeof webPerson> = {
         title: guided(5, 10),

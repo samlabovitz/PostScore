@@ -26,6 +26,7 @@ import type {
   FieldSpeedCategory,
   MobilePerformanceFailure,
   MobilePerformanceMeasurement,
+  MobileUsability,
   PagePresenceFailureReason,
   PagePresenceNote,
   PagePresenceResult,
@@ -129,7 +130,8 @@ const KEY_PAGE_KEYWORDS = ["services", "about", "contact", "menu"] as const;
 
 /** Categories requested on every normal PageSpeed call — just the real
  * performance score. */
-const PAGESPEED_DEFAULT_CATEGORIES = ["performance"] as const;
+// v1.13.0: + accessibility, for Google's touch-target audit ("Works well on phones").
+const PAGESPEED_DEFAULT_CATEGORIES = ["performance", "accessibility"] as const;
 /** Widened category set requested ONLY when the homepage's own static
  * HTML was already detected as a client-rendered shell
  * (WebsiteContentSignals.isLikelyClientRenderedShell) — seo+accessibility
@@ -868,7 +870,11 @@ export async function detectPagePresence(
     if (!outcome) break; // budget exhausted — stop trying more candidates
 
     if (outcome.kind === "broken_link") {
-      if (!notFoundEvidence) notFoundEvidence = { url: candidate.url, note: "broken_link" };
+      // v1.13.0: a broken About link ("Our Story" → 404) is the finding
+      // worth saying, even after a page that only had "about" in its path
+      // (the real National 5 & 10 case: /about/location-store-hours/ was
+      // read first, so the 404 on /about/our-story/ was never mentioned).
+      if (!notFoundEvidence || notFoundEvidence.note !== "broken_link") notFoundEvidence = { url: candidate.url, note: "broken_link" };
       continue;
     }
     if (outcome.kind === "failed") {
@@ -1165,17 +1171,19 @@ interface RawPageSpeedResponse {
         scoreDisplayMode?: string;
         /** e.g. "NO_LCP" when an audit couldn't run. */
         errorMessage?: string;
+        /** v1.13.0: e.g. largest-contentful-paint in ms. */
+        numericValue?: number;
         details?: { items?: Array<{ url?: string; statusCode?: number; resourceType?: string }> };
       }
     >;
   };
   /** Real Chrome UX Report data for this exact URL, when Google has
    * enough real-visitor traffic to report it. */
-  loadingExperience?: { overall_category?: string };
+  loadingExperience?: { overall_category?: string; metrics?: Record<string, { percentile?: number }> };
   /** Same real CrUX data, aggregated across the whole origin — Google's
    * fallback for a URL that individually doesn't have enough traffic to
    * report on its own. */
-  originLoadingExperience?: { overall_category?: string };
+  originLoadingExperience?: { overall_category?: string; metrics?: Record<string, { percentile?: number }> };
 }
 
 function isFieldSpeedCategory(value: unknown): value is FieldSpeedCategory {
@@ -1267,6 +1275,26 @@ export function couldNotFindMainContent(raw: RawPageSpeedResponse): boolean {
   return !raw.lighthouseResult?.runtimeError?.code && extractLabScore(raw) === null && (lcp?.errorMessage ?? "").includes("NO_LCP");
 }
 
+/** v1.13.0: the lab run's largest-contentful-paint, in seconds. */
+function extractLabLcpSeconds(raw: RawPageSpeedResponse): number | null {
+  const ms = raw.lighthouseResult?.audits?.["largest-contentful-paint"]?.numericValue;
+  return typeof ms === "number" && ms > 0 ? ms / 1000 : null;
+}
+
+/** v1.13.0: Google's own phone-usability audits from one run, each
+ * true (passes), false (fails) or null (not in this response — Lighthouse
+ * 12+ no longer runs font-size or content-width). */
+export function extractMobileUsability(raw: RawPageSpeedResponse): MobileUsability | null {
+  const audits = raw.lighthouseResult?.audits;
+  if (!audits || raw.lighthouseResult?.runtimeError?.code) return null;
+  const pass = (id: string): boolean | null => {
+    const a = audits[id];
+    if (!a || a.scoreDisplayMode === "notApplicable" || a.scoreDisplayMode === "manual" || typeof a.score !== "number") return null;
+    return a.score >= 0.9;
+  };
+  return { tapTargets: pass("target-size") ?? pass("tap-targets"), textReadable: pass("font-size"), fitsScreen: pass("content-width") };
+}
+
 function extractLabScore(raw: RawPageSpeedResponse): number | null {
   const score = raw.lighthouseResult?.categories?.performance?.score;
   return typeof score === "number" && !Number.isNaN(score) ? Math.round(Math.max(0, Math.min(1, score)) * 100) : null;
@@ -1282,11 +1310,15 @@ function extractLabScore(raw: RawPageSpeedResponse): number | null {
 function extractFieldCategory(
   raw: RawPageSpeedResponse,
   originOnly = false
-): { category: FieldSpeedCategory; scope: "url" | "origin" } | null {
+): { category: FieldSpeedCategory; scope: "url" | "origin"; lcpSeconds: number | null } | null {
+  const lcpOf = (m: Record<string, { percentile?: number }> | undefined) => {
+    const ms = m?.LARGEST_CONTENTFUL_PAINT_MS?.percentile;
+    return typeof ms === "number" && ms > 0 ? ms / 1000 : null;
+  };
   const urlCategory = raw.loadingExperience?.overall_category;
-  if (!originOnly && isFieldSpeedCategory(urlCategory)) return { category: urlCategory, scope: "url" };
+  if (!originOnly && isFieldSpeedCategory(urlCategory)) return { category: urlCategory, scope: "url", lcpSeconds: lcpOf(raw.loadingExperience?.metrics) };
   const originCategory = raw.originLoadingExperience?.overall_category;
-  if (isFieldSpeedCategory(originCategory)) return { category: originCategory, scope: "origin" };
+  if (isFieldSpeedCategory(originCategory)) return { category: originCategory, scope: "origin", lcpSeconds: lcpOf(raw.originLoadingExperience?.metrics) };
   return null;
 }
 
@@ -1376,6 +1408,14 @@ function extractRenderedContentSignals(
  * the average of the two middle values of an even-length one — used so
  * one outlier run (a cold cache, a network hiccup) can't single-
  * handedly swing the lab fallback the way trusting any one run would. */
+function roundSeconds(v: number): number {
+  return Math.round(v * 10) / 10;
+}
+
+function withUsability(u: MobileUsability | null): { mobileUsability?: MobileUsability } {
+  return u && (u.tapTargets !== null || u.textReadable !== null || u.fitsScreen !== null) ? { mobileUsability: u } : {};
+}
+
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
@@ -1488,11 +1528,18 @@ export async function fetchMobilePerformance(
   };
   // Labeled "whole-site measurement" only when whole-site data replaced a
   // soft-404 URL's own data — ordinary origin fallback keeps its wording.
-  const fieldMeasurement = (field: { category: FieldSpeedCategory; scope: "url" | "origin" }, softNotFound: boolean): MobilePerformanceMeasurement => ({
+  // v1.13.0: Google's phone-usability audits, from the first run that loaded.
+  const usabilityFrom = (outcomes: PageSpeedAttemptOutcome[]) => {
+    for (const o of outcomes) if (o.kind === "ok" && assessPageSpeedRun(o.response, website).loadedRealPage) return extractMobileUsability(o.response);
+    return null;
+  };
+  const fieldMeasurement = (field: { category: FieldSpeedCategory; scope: "url" | "origin"; lcpSeconds: number | null }, softNotFound: boolean, outcomes: PageSpeedAttemptOutcome[]): MobilePerformanceMeasurement => ({
     method: "field",
     fieldCategory: field.category,
     labScore: null,
     measuredAt: new Date().toISOString(),
+    ...(field.lcpSeconds !== null ? { lcpSeconds: roundSeconds(field.lcpSeconds) } : {}),
+    ...withUsability(usabilityFrom(outcomes)),
     ...(softNotFound && !ownFetchBlocked && field.scope === "origin" ? { fieldScope: "origin" as const } : {}),
   });
 
@@ -1500,7 +1547,7 @@ export async function fetchMobilePerformance(
     const firstSoft = assessPageSpeedRun(first.response, website).softNotFoundUrl;
     const field = fieldFrom([first], firstSoft !== null);
     if (field) {
-      return { measurement: fieldMeasurement(field, firstSoft !== null), failureReason: null, renderedContentSignals, stackPackIds, callCount: 1, softNotFoundUrl: firstSoft };
+      return { measurement: fieldMeasurement(field, firstSoft !== null, [first]), failureReason: null, renderedContentSignals, stackPackIds, callCount: 1, softNotFoundUrl: firstSoft };
     }
   }
 
@@ -1517,7 +1564,7 @@ export async function fetchMobilePerformance(
 
   const field = fieldFrom(outcomes, softNotFoundUrl !== null);
   if (field) {
-    return { measurement: fieldMeasurement(field, softNotFoundUrl !== null), failureReason: null, renderedContentSignals, stackPackIds, callCount: 3, softNotFoundUrl };
+    return { measurement: fieldMeasurement(field, softNotFoundUrl !== null, outcomes), failureReason: null, renderedContentSignals, stackPackIds, callCount: 3, softNotFoundUrl };
   }
 
   const labScores = outcomes
@@ -1540,8 +1587,18 @@ export async function fetchMobilePerformance(
     };
   }
 
+  const labLcp = outcomes
+    .map((o, i) => (o.kind === "ok" && assessments[i]?.loadedRealPage ? extractLabLcpSeconds(o.response) : null))
+    .filter((v): v is number => v !== null);
   return {
-    measurement: { method: "lab", fieldCategory: null, labScore: median(labScores), measuredAt: new Date().toISOString() },
+    measurement: {
+      method: "lab",
+      fieldCategory: null,
+      labScore: median(labScores),
+      measuredAt: new Date().toISOString(),
+      ...(labLcp.length > 0 ? { lcpSeconds: roundSeconds(median(labLcp)) } : {}),
+      ...withUsability(usabilityFrom(outcomes)),
+    },
     failureReason: null,
     renderedContentSignals,
     stackPackIds,

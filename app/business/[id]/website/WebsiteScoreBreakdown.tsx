@@ -9,6 +9,7 @@ import {
   gradeFromTotal,
   performanceFailureMessageKey,
   siteBlocksAutomatedChecks,
+  SCORING_V113,
   type CategoryResult,
   type CheckResult,
   type Grade,
@@ -31,6 +32,7 @@ import { WebsiteFixGuide } from "@/components/scoring/WebsiteFixGuide";
  * check keeps the existing generic "Couldn't verify — {explanation}"
  * wording. */
 function excludedReasonMessageKey(check: CheckResult, websiteAnalysis: WebsiteAnalysis | null): MessageKey | null {
+  if (check.id === "website.mobile_friendly" && siteBlocksAutomatedChecks({ websiteAnalysis })) return "content.checks.website.mobile_friendly.explanation.blockedSite";
   if (check.id === "website.performance_mobile") {
     if (siteBlocksAutomatedChecks({ websiteAnalysis })) return "content.checks.website.performance_mobile.explanation.blockedSite";
     const failure = websiteAnalysis?.mobilePerformanceFailureReason;
@@ -58,7 +60,8 @@ function excludedReasonMessageKey(check: CheckResult, websiteAnalysis: WebsiteAn
  * second — a deliberate, honest-only grouping (no check is invented or
  * moved out of its real category, this just orders the same live
  * checks for scanning). */
-const TECHNICAL_CHECK_IDS = ["website.has_website", "website.https", "website.performance_mobile"];
+// v1.13.0: "Loads fast" and "Works well on phones" (no "/100" score shown).
+const TECHNICAL_CHECK_IDS = ["website.has_website", "website.https", "website.performance_mobile", "website.mobile_friendly"];
 const CONTENT_CHECK_IDS = [
   "website.content_depth",
   "website.contact_conversion",
@@ -191,13 +194,10 @@ function CheckRow({
       ? 0
       : Math.max(0, Math.min(100, (check.earnedPoints / check.maxPoints) * 100));
 
-  // Real, previously-invisible detail worth its own small fact instead of
-  // staying buried in prose — only rendered for a real lab measurement
-  // (a /100 score). Field-data measurements have no such number; their
-  // FAST/AVERAGE/SLOW classification is already stated in the check's
-  // own explanation text above.
+  // 1.12.0 only: a lab measurement's /100 — v1.13.0 never shows owners a
+  // score out of 100 (its explanation says Fast / Average / Slow).
   const performanceScore =
-    check.id === "website.performance_mobile" && websiteAnalysis?.mobilePerformance?.method === "lab"
+    !SCORING_V113 && check.id === "website.performance_mobile" && websiteAnalysis?.mobilePerformance?.method === "lab"
       ? websiteAnalysis.mobilePerformance.labScore
       : null;
   const recovered =
@@ -268,6 +268,7 @@ function CheckRow({
         {spamFinding && trust && (
           <SiteSecurityDetails finding={spamFinding} trust={trust} siteUrl={siteUrl} businessName={businessName} />
         )}
+
 
         {performanceScore !== null && (
           <div className="mt-2">

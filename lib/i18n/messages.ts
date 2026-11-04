@@ -5,6 +5,43 @@ import { DEFAULT_LOCALE, type Locale } from "./locale";
 // below; adding a new locale (see locale.ts) doesn't require touching the
 // key list, only a new entry in `messages`.
 export type MessageKey =
+  | "content.checks.website.content_depth.explanation.allGoodV113"
+  | "content.checks.website.performance_mobile.explanation.labV113"
+  | "content.checks.website.performance_mobile.explanation.labLastMeasuredV113"
+  | "content.checks.website.performance_mobile.explanation.labLastMeasuredErrorPageV113"
+  | "content.checks.website.performance_mobile.labelV113"
+  | "content.actionPlan.website.mobile_friendly.why"
+  | "content.actionPlan.website.mobile_friendly.action"
+  | "content.actionPlan.website.mobile_friendly.fix"
+  | "content.checks.website.performance_mobile.result.fast"
+  | "content.checks.website.performance_mobile.result.fastTime"
+  | "content.checks.website.performance_mobile.result.average"
+  | "content.checks.website.performance_mobile.result.averageTime"
+  | "content.checks.website.performance_mobile.result.slow"
+  | "content.checks.website.performance_mobile.result.slowTime"
+  | "content.checks.website.mobile_friendly.label"
+  | "content.checks.website.mobile_friendly.advice"
+  | "content.checks.website.mobile_friendly.advice.viewport"
+  | "content.checks.website.mobile_friendly.advice.text"
+  | "content.checks.website.mobile_friendly.advice.fits"
+  | "content.checks.website.mobile_friendly.advice.tap"
+  | "content.checks.website.mobile_friendly.item.viewport"
+  | "content.checks.website.mobile_friendly.item.text"
+  | "content.checks.website.mobile_friendly.item.fits"
+  | "content.checks.website.mobile_friendly.item.tap"
+  | "content.checks.website.mobile_friendly.explanation.items"
+  | "content.checks.website.mobile_friendly.explanation.notAnalyzed"
+  | "content.checks.website.mobile_friendly.explanation.couldntCheck"
+  | "content.checks.website.mobile_friendly.explanation.blockedSite"
+  | "content.checks.website.social_links.broken.own_site.one"
+  | "content.checks.website.social_links.broken.own_site.other"
+  | "content.checks.website.social_links.broken.no_link.one"
+  | "content.checks.website.social_links.broken.no_link.other"
+  | "content.checks.website.social_links.broken.platform_home.one"
+  | "content.checks.website.social_links.broken.platform_home.other"
+  | "content.checks.website.social_links.advice.broken_social"
+  | "content.checks.website.contact_conversion.explanation.phoneNotLinked"
+  | "content.checks.website.contact_conversion.advice.phone_link"
   | "language.en"
   | "language.es"
   | "common.save"
@@ -4442,6 +4479,9 @@ export type MessageKey =
  * how a future locale with more categories, e.g. "few"/"many", would
  * still get a safe result even before every category is seeded for it). */
 export type PluralKeyBase =
+  | "content.checks.website.social_links.broken.no_link"
+  | "content.checks.website.social_links.broken.own_site"
+  | "content.checks.website.social_links.broken.platform_home"
   | "dashboard.competitors.headToHead.intro"
   | "dashboard.overview.growBanner.reviews.vsNearby"
   | "dashboard.overview.growBanner.reviews.countOnly"
@@ -4512,6 +4552,43 @@ type LocaleMessages = Partial<Record<MessageKey, string>>;
 
 export const messages: Record<Locale, LocaleMessages> = {
   en: {
+    "content.checks.website.content_depth.explanation.allGoodV113": "Real, substantial content: a title, meta description, headings and real text all present.",
+    "content.checks.website.performance_mobile.explanation.labV113": "Simulated phone test, middle of 3 runs: {category}. Results can vary between tests.",
+    "content.checks.website.performance_mobile.explanation.labLastMeasuredV113": "Simulated phone test — last measured {date}: {category}. This scan's speed test didn't finish, so we're showing the most recent real measurement instead of leaving this out.",
+    "content.checks.website.performance_mobile.explanation.labLastMeasuredErrorPageV113": "Simulated phone test — last measured {date}: {category}. This scan's speed check reached an error page instead of your site, so we're showing the most recent real measurement instead.",
+    "content.checks.website.performance_mobile.labelV113": "Loads fast",
+    "content.actionPlan.website.mobile_friendly.why": "Most people find local businesses on their phones. A site that's hard to read or tap there sends them back to search.",
+    "content.actionPlan.website.mobile_friendly.action": "Make your website easy to use on a phone.",
+    "content.actionPlan.website.mobile_friendly.fix": "Fix each ✗ item on the Website page: add a mobile viewport tag, make buttons and links big enough to tap, and keep text readable without zooming. Most site builders have a mobile view to check this in.",
+    "content.checks.website.performance_mobile.result.fast": "Fast",
+    "content.checks.website.performance_mobile.result.fastTime": "Fast · about {seconds} seconds",
+    "content.checks.website.performance_mobile.result.average": "Average",
+    "content.checks.website.performance_mobile.result.averageTime": "Average",
+    "content.checks.website.performance_mobile.result.slow": "Slow",
+    "content.checks.website.performance_mobile.result.slowTime": "Slow · about {seconds} seconds",
+    "content.checks.website.mobile_friendly.label": "Works well on phones",
+    "content.checks.website.mobile_friendly.advice": "Make sure your site is set up for phones: a mobile viewport tag, text people can read without zooming, nothing wider than the screen, and buttons big enough to tap.",
+    "content.checks.website.mobile_friendly.advice.viewport": "Add a mobile viewport tag (<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">) so phones show your site at their own size instead of a shrunken desktop page.",
+    "content.checks.website.mobile_friendly.advice.text": "Use a body text size of at least 16px so people can read your site on a phone without zooming.",
+    "content.checks.website.mobile_friendly.advice.fits": "Find what's wider than a phone screen (often a big image, table or fixed-width section) and make it shrink to fit.",
+    "content.checks.website.mobile_friendly.advice.tap": "Make buttons and links bigger and space them out (about 48 × 48 px each) so people can tap the right one on a phone.",
+    "content.checks.website.mobile_friendly.item.viewport": "Set up for phone screens",
+    "content.checks.website.mobile_friendly.item.text": "Text readable without zooming",
+    "content.checks.website.mobile_friendly.item.fits": "Nothing wider than the screen",
+    "content.checks.website.mobile_friendly.item.tap": "Buttons and links big enough to tap",
+    "content.checks.website.mobile_friendly.explanation.items": "On a phone: {items}.",
+    "content.checks.website.mobile_friendly.explanation.notAnalyzed": "We haven't checked your site on a phone yet. We'll check it on your next scan.",
+    "content.checks.website.mobile_friendly.explanation.couldntCheck": "Couldn't check how your site works on phones this time. Excluded from your score, not counted against you.",
+    "content.checks.website.mobile_friendly.explanation.blockedSite": "Couldn't check — this site blocks automated checks, so we can't see how it works on phones. Excluded from your score, not counted against you.",
+    "content.checks.website.social_links.broken.own_site.one": "Your {platforms} icon doesn't go to a profile — it reloads your own site. Link it to your real profile or remove it.",
+    "content.checks.website.social_links.broken.own_site.other": "Your {platforms} icons don't go to a profile — they reload your own site. Link them to your real profiles or remove them.",
+    "content.checks.website.social_links.broken.no_link.one": "Your {platforms} icon doesn't go anywhere. Link it to your real profile or remove it.",
+    "content.checks.website.social_links.broken.no_link.other": "Your {platforms} icons don't go anywhere. Link them to your real profiles or remove them.",
+    "content.checks.website.social_links.broken.platform_home.one": "Your {platforms} icon goes to that site's homepage, not to your profile. Link it to your real profile or remove it.",
+    "content.checks.website.social_links.broken.platform_home.other": "Your {platforms} icons go to those sites' homepages, not to your profiles. Link them to your real profiles or remove them.",
+    "content.checks.website.social_links.advice.broken_social": "Point each social icon on your site to your real profile page (or remove icons for accounts you don't have).",
+    "content.checks.website.contact_conversion.explanation.phoneNotLinked": "Your phone number ({phone}) is on the page but isn't tap-to-call — make it a link so phone visitors can call in one tap",
+    "content.checks.website.contact_conversion.advice.phone_link": "Make your phone number a tap-to-call link (a \"tel:\" link) so people on phones can call you in one tap.",
     "language.en": "English",
     "language.es": "Spanish",
     "common.save": "Save",
@@ -5759,7 +5836,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.about_presence.explanation.notFound":
       "No real About/Our Story content was found, on a dedicated page or your homepage. Add a page or section with a few real sentences about your business.",
     "content.checks.website.about_presence.explanation.brokenLink":
-      "Your navigation links to an About page at {url}, but that page doesn't load (a broken link) — fix or remove it.",
+      "Your site links to an About page at {url}, but that page doesn't load (a broken link) — fix the link or add the page.",
     "content.checks.website.about_presence.explanation.jsRendered":
       "Your site builds its content with JavaScript, so our check couldn't read it — open it yourself to confirm. Excluded from your score, not counted against you.",
 
@@ -9378,6 +9455,43 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.searchDemand.tips.empty": "Tips appear once there are real search terms to work from.",
   },
   es: {
+    "content.checks.website.content_depth.explanation.allGoodV113": "Contenido real y sustancial: hay un título, una meta descripción, encabezados y texto real.",
+    "content.checks.website.performance_mobile.explanation.labV113": "Prueba simulada en teléfono, valor medio de 3 pruebas: {category}. Los resultados pueden variar entre pruebas.",
+    "content.checks.website.performance_mobile.explanation.labLastMeasuredV113": "Prueba simulada en teléfono — última medición el {date}: {category}. La prueba de velocidad de este escaneo no terminó, así que mostramos la medición real más reciente en lugar de dejar esto fuera.",
+    "content.checks.website.performance_mobile.explanation.labLastMeasuredErrorPageV113": "Prueba simulada en teléfono — última medición el {date}: {category}. La comprobación de velocidad de este escaneo llegó a una página de error en lugar de su sitio, así que mostramos la medición real más reciente.",
+    "content.checks.website.performance_mobile.labelV113": "Carga rápida",
+    "content.actionPlan.website.mobile_friendly.why": "La mayoría de las personas encuentran negocios locales desde el teléfono. Un sitio difícil de leer o de tocar ahí las devuelve a la búsqueda.",
+    "content.actionPlan.website.mobile_friendly.action": "Haga que su sitio web sea fácil de usar en un teléfono.",
+    "content.actionPlan.website.mobile_friendly.fix": "Corrija cada elemento con ✗ en la página Sitio web: agregue una etiqueta viewport para móviles, haga los botones y enlaces lo bastante grandes para tocarlos y mantenga el texto legible sin hacer zoom. La mayoría de los creadores de sitios tienen una vista móvil para revisarlo.",
+    "content.checks.website.performance_mobile.result.fast": "Rápido",
+    "content.checks.website.performance_mobile.result.fastTime": "Rápido · unos {seconds} segundos",
+    "content.checks.website.performance_mobile.result.average": "Promedio",
+    "content.checks.website.performance_mobile.result.averageTime": "Promedio",
+    "content.checks.website.performance_mobile.result.slow": "Lento",
+    "content.checks.website.performance_mobile.result.slowTime": "Lento · unos {seconds} segundos",
+    "content.checks.website.mobile_friendly.label": "Funciona bien en teléfonos",
+    "content.checks.website.mobile_friendly.advice": "Asegúrese de que su sitio esté preparado para teléfonos: una etiqueta viewport para móviles, texto legible sin hacer zoom, nada más ancho que la pantalla y botones lo bastante grandes para tocarlos.",
+    "content.checks.website.mobile_friendly.advice.viewport": "Agregue una etiqueta viewport para móviles (<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">) para que los teléfonos muestren su sitio a su propio tamaño en lugar de una página de escritorio reducida.",
+    "content.checks.website.mobile_friendly.advice.text": "Use un tamaño de texto de al menos 16 px para que se pueda leer su sitio en un teléfono sin hacer zoom.",
+    "content.checks.website.mobile_friendly.advice.fits": "Busque lo que es más ancho que la pantalla de un teléfono (a menudo una imagen grande, una tabla o una sección de ancho fijo) y haga que se ajuste.",
+    "content.checks.website.mobile_friendly.advice.tap": "Haga los botones y enlaces más grandes y sepárelos (unos 48 × 48 px cada uno) para que se pueda tocar el correcto en un teléfono.",
+    "content.checks.website.mobile_friendly.item.viewport": "Adaptado a pantallas de teléfono",
+    "content.checks.website.mobile_friendly.item.text": "Texto legible sin hacer zoom",
+    "content.checks.website.mobile_friendly.item.fits": "Nada más ancho que la pantalla",
+    "content.checks.website.mobile_friendly.item.tap": "Botones y enlaces del tamaño adecuado para tocar",
+    "content.checks.website.mobile_friendly.explanation.items": "En un teléfono: {items}.",
+    "content.checks.website.mobile_friendly.explanation.notAnalyzed": "Aún no hemos revisado su sitio en un teléfono. Lo revisaremos en su próximo escaneo.",
+    "content.checks.website.mobile_friendly.explanation.couldntCheck": "Esta vez no pudimos revisar cómo funciona su sitio en teléfonos. Se excluye de su puntuación, no cuenta en su contra.",
+    "content.checks.website.mobile_friendly.explanation.blockedSite": "No se pudo verificar: este sitio bloquea las verificaciones automáticas, así que no podemos ver cómo funciona en teléfonos. Se excluye de su puntuación, no cuenta en su contra.",
+    "content.checks.website.social_links.broken.own_site.one": "Su ícono de {platforms} no lleva a un perfil: vuelve a cargar su propio sitio. Enlácelo a su perfil real o elimínelo.",
+    "content.checks.website.social_links.broken.own_site.other": "Sus íconos de {platforms} no llevan a un perfil: vuelven a cargar su propio sitio. Enlácelos a sus perfiles reales o elimínelos.",
+    "content.checks.website.social_links.broken.no_link.one": "Su ícono de {platforms} no lleva a ninguna parte. Enlácelo a su perfil real o elimínelo.",
+    "content.checks.website.social_links.broken.no_link.other": "Sus íconos de {platforms} no llevan a ninguna parte. Enlácelos a sus perfiles reales o elimínelos.",
+    "content.checks.website.social_links.broken.platform_home.one": "Su ícono de {platforms} lleva a la página principal de esa red, no a su perfil. Enlácelo a su perfil real o elimínelo.",
+    "content.checks.website.social_links.broken.platform_home.other": "Sus íconos de {platforms} llevan a la página principal de cada red, no a sus perfiles. Enlácelos a sus perfiles reales o elimínelos.",
+    "content.checks.website.social_links.advice.broken_social": "Haga que cada ícono social de su sitio lleve a su perfil real (o elimine los íconos de cuentas que no tiene).",
+    "content.checks.website.contact_conversion.explanation.phoneNotLinked": "Su número de teléfono ({phone}) está en la página, pero no se puede tocar para llamar: conviértalo en un enlace para que quienes visitan desde el teléfono puedan llamar con un toque",
+    "content.checks.website.contact_conversion.advice.phone_link": "Convierta su número de teléfono en un enlace para llamar (un enlace \"tel:\") para que quienes usan el teléfono puedan llamarle con un toque.",
     "language.en": "Inglés",
     "language.es": "Español",
     "common.save": "Guardar",
@@ -10558,7 +10672,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.about_presence.explanation.foundOnPage": "Se encontró contenido real de Acerca de / Nuestra historia en {url}.",
     "content.checks.website.about_presence.explanation.foundOnHomepage": "Se encontró una sección real de Acerca de / Nuestra historia en su página de inicio.",
     "content.checks.website.about_presence.explanation.notFound": "No se encontró contenido real de Acerca de / Nuestra historia, ni en una página dedicada ni en su página de inicio. Agregue una página o sección con algunas oraciones reales sobre su negocio.",
-    "content.checks.website.about_presence.explanation.brokenLink": "Su navegación enlaza a una página de Acerca de en {url}, pero esa página no carga (un enlace roto) — corríjalo o elimínelo.",
+    "content.checks.website.about_presence.explanation.brokenLink": "Su sitio enlaza a una página de Acerca de en {url}, pero esa página no carga (un enlace roto): corrija el enlace o agregue la página.",
     "content.checks.website.about_presence.explanation.jsRendered": "Su sitio genera su contenido con JavaScript, por lo que nuestra comprobación no pudo leerlo — ábralo usted mismo para confirmarlo. Se excluye de su puntuación, no se cuenta en su contra.",
     "content.checks.website.services_presence.label": "Servicios / productos",
     "content.checks.website.services_presence.advice": "Agregue una página real de Servicios, Productos o Menú (enlazada desde su navegación principal) — tanto los visitantes como los motores de búsqueda buscan una lista clara de lo que ofrece.",

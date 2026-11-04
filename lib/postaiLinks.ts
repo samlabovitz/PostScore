@@ -27,6 +27,7 @@ const WEBSITE_CHECKS = [
   "has_website",
   "https",
   "performance_mobile",
+  "mobile_friendly",
   "content_depth",
   "contact_conversion",
   "about_presence",

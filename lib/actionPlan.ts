@@ -309,6 +309,14 @@ const ACTION_PLAN_COPY: Record<string, ActionPlanCopy> = {
     // Real, measured site-speed work is a project, not a same-week fix.
     effort: "longer_term",
   },
+  "website.mobile_friendly": {
+    why: "content.actionPlan.website.mobile_friendly.why",
+    action: "content.actionPlan.website.mobile_friendly.action",
+    fix: "content.actionPlan.website.mobile_friendly.fix",
+    ownerActionOnGoogle: false,
+    // Theme/layout work (tap targets, text size), like content_depth.
+    effort: "longer_term",
+  },
   "website.content_depth": {
     why: "content.actionPlan.website.content_depth.why",
     action: "content.actionPlan.website.content_depth.action",
@@ -492,6 +500,7 @@ export const CHECK_MINUTES: Record<string, number> = {
   "website.has_website": 120,
   "website.https": 30,
   "website.performance_mobile": 120,
+  "website.mobile_friendly": 30,
   "website.content_depth": 30,
   "website.contact_conversion": 20,
   "website.about_presence": 30,
@@ -533,6 +542,7 @@ export function officialLinksFor(checkId: string, locale: Locale = DEFAULT_LOCAL
     case "website.https":
       return [g(GOOGLE_LINKS.httpsWhy, "content.actionPlan.link.httpsWhy")];
     case "website.performance_mobile":
+    case "website.mobile_friendly":
       return [g(GOOGLE_LINKS.pageSpeed, "content.actionPlan.link.pageSpeed")];
     case "website.security":
       return [g(GOOGLE_LINKS.safeBrowsing, "content.actionPlan.link.safeBrowsing")];
