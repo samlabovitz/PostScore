@@ -5,6 +5,8 @@ import { DEFAULT_LOCALE, type Locale } from "./locale";
 // below; adding a new locale (see locale.ts) doesn't require touching the
 // key list, only a new entry in `messages`.
 export type MessageKey =
+  | "dashboard.gbpEdit.viewOnGoogle"
+  | "dashboard.gbpEdit.viewOnGoogleNote"
   | "dashboard.gbpMessaging.title"
   | "dashboard.gbpMessaging.step1"
   | "dashboard.gbpMessaging.step2"
@@ -4571,6 +4573,8 @@ type LocaleMessages = Partial<Record<MessageKey, string>>;
 
 export const messages: Record<Locale, LocaleMessages> = {
   en: {
+    "dashboard.gbpEdit.viewOnGoogle": "View on Google",
+    "dashboard.gbpEdit.viewOnGoogleNote": "Google can take a while to review edits. If you don't see the change yet, it's probably still pending.",
     "dashboard.gbpMessaging.title": "Let customers text you from Google — turn on messaging in your Business Profile (about 2 min)",
     "dashboard.gbpMessaging.step1": "Go to your Business Profile (business.google.com).",
     "dashboard.gbpMessaging.step2": "Click Edit profile → Contact.",
@@ -9493,6 +9497,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.searchDemand.tips.empty": "Tips appear once there are real search terms to work from.",
   },
   es: {
+    "dashboard.gbpEdit.viewOnGoogle": "Ver en Google",
+    "dashboard.gbpEdit.viewOnGoogleNote": "Google puede tardar un poco en revisar los cambios. Si todavía no ve el cambio, probablemente sigue pendiente.",
     "dashboard.gbpMessaging.title": "Permita que los clientes le escriban desde Google: active la mensajería en su Perfil de Empresa (unos 2 min)",
     "dashboard.gbpMessaging.step1": "Vaya a su Perfil de Empresa (business.google.com).",
     "dashboard.gbpMessaging.step2": "Haga clic en Editar perfil → Contacto.",

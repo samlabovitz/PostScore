@@ -14,6 +14,7 @@
 //    comes with the button prebuilt). The website link itself is never
 //    removed here.
 
+import { ViewOnGoogle } from "@/components/gbp/ViewOnGoogle";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -171,11 +172,14 @@ function AddToGoogle({ businessId, platform, section, initialUndo }: { businessI
   const [step, setStep] = useState<"idle" | "preview" | "sending" | "sent" | "undoConfirm" | "undoing" | "undone">("idle");
   const [undo, setUndo] = useState<UndoableChange | null>(initialUndo);
   const [error, setError] = useState<string | null>(null);
+  // Google's own link to the live listing, after a change or a failed one.
+  const [mapsUri, setMapsUri] = useState<string | null>(null);
 
   async function approve() {
     setStep("sending");
     setError(null);
     const r = await addPlatformLinkAction(businessId).catch(() => ({ status: "error" as const, error: "failed" as const }));
+    setMapsUri("mapsUri" in r ? (r.mapsUri ?? null) : null);
     if (r.status === "sent") {
       setUndo(r.undo);
       setStep("sent");
@@ -192,6 +196,7 @@ function AddToGoogle({ businessId, platform, section, initialUndo }: { businessI
     if (!undo) return;
     setStep("undoing");
     const r = await undoPlatformLinkAction(businessId, undo.batchId).catch(() => ({ status: "error" as const, error: "failed" as const }));
+    setMapsUri("mapsUri" in r ? (r.mapsUri ?? null) : null);
     if (r.status === "sent") {
       setUndo(null);
       setStep("undone");
@@ -254,6 +259,7 @@ function AddToGoogle({ businessId, platform, section, initialUndo }: { businessI
         </p>
       )}
       {error && <p className="text-[12.5px] text-red">{error}</p>}
+      {(step === "sent" || step === "undone" || error) && <ViewOnGoogle mapsUri={mapsUri} />}
     </div>
   );
 }

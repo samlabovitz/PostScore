@@ -10,6 +10,7 @@
 // this". Off entirely where no GbpEditProvider is (tests,
 // other pages).
 
+import { ViewOnGoogle } from "@/components/gbp/ViewOnGoogle";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -57,8 +58,8 @@ type Phase =
   | { kind: "loading" }
   | ({ kind: "editing" } & Editor)
   | ({ kind: "preview" | "sending"; changes: AttributeChange[]; ownerChanges: OwnerChange[] } & Editor)
-  | { kind: "done"; status: "sent" | "pending_review" | "no_changes" | "saved" }
-  | { kind: "error"; message: string };
+  | { kind: "done"; status: "sent" | "pending_review" | "no_changes" | "saved"; mapsUri?: string | null }
+  | { kind: "error"; message: string; mapsUri?: string | null };
 type OwnerChange = { part: OwnerPart; off: boolean };
 
 const BUTTON =
@@ -161,7 +162,7 @@ export function CustomerDetailsGoogleEdit({ businessId, className }: { businessI
   }
 
   const editing = phase.kind === "editing" ? phase : null;
-  const fail = (message: string) => setPhase({ kind: "error", message });
+  const fail = (message: string, mapsUri: string | null = null) => setPhase({ kind: "error", message, mapsUri });
   const errorText = (r: { status: "blocked"; reason: GbpEditBlock } | { status: "error"; error: string }) =>
     r.status === "blocked" ? t(locale, blockMessage(r.reason)) : t(locale, `dashboard.gbpEdit.error.${r.error}` as MessageKey);
 
@@ -189,21 +190,26 @@ export function CustomerDetailsGoogleEdit({ businessId, className }: { businessI
     setPhase({ kind: "sending", ...e, changes, ownerChanges });
     try {
       let status: "sent" | "pending_review" | "no_changes" | "saved" = "saved";
+      let mapsUri: string | null = null;
       if (changes.length > 0) {
         // Only the changed fields are sent; the server re-reads Google's
         // current values and builds the real before → after itself.
         const r = await applyCustomerDetailsAction(businessId, Object.fromEntries(changes.map((c) => [c.id, c.after])));
-        if (r.status === "blocked" || r.status === "error") return fail(errorText(r));
-        if (r.status !== "no_changes") setUndo(r.undo);
+        if (r.status === "blocked") return fail(errorText(r));
+        if (r.status === "error") return fail(errorText(r), r.mapsUri ?? null);
+        if (r.status !== "no_changes") {
+          setUndo(r.undo);
+          mapsUri = r.mapsUri ?? null;
+        }
         status = r.status;
       }
       // The owner's own answers are PostScore's ("Added by you") — saved
       // only after Google took its part.
       for (const c of ownerChanges) {
         const saved = await setCustomerDetailsOwnerAnswer(businessId, c.part, c.off);
-        if (saved.status !== "ok") return fail(t(locale, changes.length > 0 ? "dashboard.gbpEdit.error.ownerAfterGoogle" : "content.checks.completeness.customer_details.owner.error"));
+        if (saved.status !== "ok") return fail(t(locale, changes.length > 0 ? "dashboard.gbpEdit.error.ownerAfterGoogle" : "content.checks.completeness.customer_details.owner.error"), mapsUri);
       }
-      setPhase({ kind: "done", status });
+      setPhase({ kind: "done", status, mapsUri });
       router.refresh();
     } catch {
       fail(t(locale, "dashboard.gbpEdit.error.failed"));
@@ -279,6 +285,7 @@ export function CustomerDetailsGoogleEdit({ businessId, className }: { businessI
             )}
           </span>{" "}
           {(phase.status === "sent" || phase.status === "pending_review") && t(locale, "dashboard.gbpEdit.result.points")}
+          <ViewOnGoogle mapsUri={phase.mapsUri} />
         </p>
       )}
 
@@ -288,6 +295,7 @@ export function CustomerDetailsGoogleEdit({ businessId, className }: { businessI
           <button type="button" className={QUIET} onClick={() => setPhase({ kind: "idle" })}>
             {t(locale, "dashboard.gbpEdit.close")}
           </button>
+          <ViewOnGoogle mapsUri={phase.mapsUri} />
         </p>
       )}
     </div>
@@ -365,10 +373,12 @@ function UndoStrip({ businessId, undo, onUndone }: { businessId: string; undo: U
   const router = useRouter();
   const [step, setStep] = useState<"idle" | "confirm" | "sending" | "done" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
+  const [mapsUri, setMapsUri] = useState<string | null>(null);
 
   async function run() {
     setStep("sending");
     const r = await undoCustomerDetailsAction(businessId, undo.batchId);
+    if (r.status !== "blocked") setMapsUri(r.mapsUri ?? null);
     if (r.status === "blocked") {
       setMessage(t(locale, blockMessage(r.reason)));
       return setStep("error");
@@ -400,6 +410,7 @@ function UndoStrip({ businessId, undo, onUndone }: { businessId: string; undo: U
         <button type="button" className={cn(QUIET, "ml-2")} onClick={onUndone}>
           {t(locale, "dashboard.gbpEdit.close")}
         </button>
+        <ViewOnGoogle mapsUri={mapsUri} />
       </p>
     );
   }
@@ -429,6 +440,7 @@ function UndoStrip({ businessId, undo, onUndone }: { businessId: string; undo: U
         </span>
       )}
       {step === "error" && <span className="w-full text-red">{message}</span>}
+      {step === "error" && <ViewOnGoogle mapsUri={mapsUri} />}
     </div>
   );
 }

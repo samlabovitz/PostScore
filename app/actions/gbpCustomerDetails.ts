@@ -29,17 +29,25 @@ export type LoadEditorActionResult =
   | { status: "ok"; rows: CustomerDetailsEditorRow[]; owner: CustomerDetailsOwnerState }
   | { status: "blocked"; reason: GbpEditBlock }
   | { status: "error"; error: GbpEditErrorCode };
+/** `mapsUri`: Google's own link to the live listing (metadata.mapsUri),
+ * for "View on Google" — on success, failure and pending alike. */
 export type ApplyActionResult =
-  | { status: "sent" | "pending_review"; changes: AttributeChange[]; undo: UndoableChange | null }
+  | { status: "sent" | "pending_review"; changes: AttributeChange[]; undo: UndoableChange | null; mapsUri?: string | null }
   | { status: "no_changes" }
   | { status: "blocked"; reason: GbpEditBlock }
-  | { status: "error"; error: GbpEditErrorCode };
+  | { status: "error"; error: GbpEditErrorCode; mapsUri?: string | null };
 /** "sent" = read back from Google and verified; an error may name the
  * fields that didn't revert (and whether Google is still reviewing). */
 export type UndoActionResult =
-  | { status: "sent" }
+  | { status: "sent"; mapsUri?: string | null }
   | { status: "blocked"; reason: GbpEditBlock }
-  | { status: "error"; error: GbpEditErrorCode; fields?: string[]; pending?: boolean };
+  | { status: "error"; error: GbpEditErrorCode; fields?: string[]; pending?: boolean; mapsUri?: string | null };
+
+/** Google's link to the live listing — a read only. */
+async function mapsUriFor(g: Extract<Gate, { ok: true }>): Promise<string | null> {
+  const { readGbpMapsUri } = await import("@/lib/gbpMapsUri.server");
+  return readGbpMapsUri(g.target);
+}
 
 async function server() {
   const [tokens, attrs, admin] = await Promise.all([import("@/lib/gbpTokens.server"), import("@/lib/gbpAttributes.server"), import("@/lib/supabase/admin")]);
@@ -95,13 +103,13 @@ export async function applyCustomerDetailsAction(businessId: string, picks: Reco
   if (!g.ok) return g.result;
   const store = g.s.attrs.supabaseChangeStore(g.s.admin);
   const result = await g.s.attrs.applyCustomerDetailsChange(g.target, picks, store);
-  if (result.status === "error") return onError(g, result);
+  if (result.status === "error") return onError(g, { ...result, mapsUri: await mapsUriFor(g) });
   if (result.status === "no_changes") return result;
   // Points still wait for Google: the step shows "Waiting for the next
   // check" until a scan sees the details on the public listing.
   if (result.changes.some((c) => c.after === true)) await markTaskDone(businessId, "completeness.customer_details").catch(() => null);
   revalidatePath(`/business/${businessId}`, "layout");
-  return { status: result.status, changes: result.changes, undo: result.logged ? await g.s.attrs.getUndoableChange(store, businessId) : null };
+  return { status: result.status, changes: result.changes, undo: result.logged ? await g.s.attrs.getUndoableChange(store, businessId) : null, mapsUri: await mapsUriFor(g) };
 }
 
 /** "Yes, undo": puts the previous values back, if nothing changed since. */
@@ -110,9 +118,10 @@ export async function undoCustomerDetailsAction(businessId: string, batchId: str
   const g = await gate(businessId);
   if (!g.ok) return g.result;
   const result = await g.s.attrs.undoCustomerDetailsChange(g.target, batchId, g.s.attrs.supabaseChangeStore(g.s.admin));
-  if (result.status === "error") return onError(g, { status: "error", error: result.error, ...(result.fields ? { fields: result.fields } : {}), ...(result.pending ? { pending: true } : {}) });
+  if (result.status === "error")
+    return onError(g, { status: "error", error: result.error, ...(result.fields ? { fields: result.fields } : {}), ...(result.pending ? { pending: true } : {}), mapsUri: await mapsUriFor(g) });
   revalidatePath(`/business/${businessId}`, "layout");
-  return result;
+  return { ...result, mapsUri: await mapsUriFor(g) };
 }
 
 /** For the page: the latest change the owner may still undo (a database

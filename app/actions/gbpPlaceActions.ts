@@ -63,7 +63,17 @@ export async function getPlatformLinkStatus(businessId: string): Promise<Platfor
   };
 }
 
-export type AddPlatformLinkResult = { status: "sent"; undo: UndoableChange | null } | { status: "already" } | { status: "blocked"; reason: GbpEditBlock } | { status: "error"; error: PlaceActionError };
+/** `mapsUri`: Google's own link to the live listing, for "View on Google". */
+export type AddPlatformLinkResult =
+  | { status: "sent"; undo: UndoableChange | null; mapsUri?: string | null }
+  | { status: "already" }
+  | { status: "blocked"; reason: GbpEditBlock }
+  | { status: "error"; error: PlaceActionError; mapsUri?: string | null };
+
+async function mapsUriFor(target: { locationName: string; accessToken: string }): Promise<string | null> {
+  const { readGbpMapsUri } = await import("@/lib/gbpMapsUri.server");
+  return readGbpMapsUri(target);
+}
 
 /** "Add to 'Order online' on Google" — Premium, after the owner approved. */
 export async function addPlatformLinkAction(businessId: string): Promise<AddPlatformLinkResult> {
@@ -78,14 +88,17 @@ export async function addPlatformLinkAction(businessId: string): Promise<AddPlat
   cache.delete(businessId);
   if (result.status === "error") {
     if (result.error === "reconnect") await g.tokens.markGbpReconnect(g.admin, businessId);
-    return result;
+    return { ...result, mapsUri: await mapsUriFor(g.target) };
   }
   revalidatePath(`/business/${businessId}`, "layout");
-  return result.status === "already" ? result : { status: "sent", undo: await placeActionUndo(store, businessId) };
+  return result.status === "already" ? result : { status: "sent", undo: await placeActionUndo(store, businessId), mapsUri: await mapsUriFor(g.target) };
 }
 
 /** Undo: removes the link PostScore added (7 days, only if still there). */
-export async function undoPlatformLinkAction(businessId: string, batchId: string): Promise<{ status: "sent" } | { status: "blocked"; reason: GbpEditBlock } | { status: "error"; error: PlaceActionError }> {
+export async function undoPlatformLinkAction(
+  businessId: string,
+  batchId: string
+): Promise<{ status: "sent"; mapsUri?: string | null } | { status: "blocked"; reason: GbpEditBlock } | { status: "error"; error: PlaceActionError; mapsUri?: string | null }> {
   const { gate, server, attrs } = await lib();
   const g = await gate.gbpEditGate(businessId, { requirePremium: true });
   if (!g.ok) return g.result;
@@ -95,5 +108,5 @@ export async function undoPlatformLinkAction(businessId: string, batchId: string
   const result = await server.removeAddedLink(g.target, undo.changes[0].id, batchId, store);
   cache.delete(businessId);
   if (result.status === "sent") revalidatePath(`/business/${businessId}`, "layout");
-  return result;
+  return { ...result, mapsUri: await mapsUriFor(g.target) };
 }
