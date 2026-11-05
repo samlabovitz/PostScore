@@ -96,11 +96,15 @@ export async function analyzeWebsiteForSave(params: {
   // 503 or any bot-challenge signal — those stay "couldn't check".
   const listingLinkMissing =
     !!analysis?.contentFetchMissingPageStatus && !!listingWebsite && analysisUrl === listingWebsite;
+  // v1.13.1: the listing's own URL is a domain company's parking / "coming
+  // soon" page — the link is broken (and nothing on it is the business's).
+  const listingLinkParked = !!analysis?.content?.parkedDomain && !!listingWebsite && analysisUrl === listingWebsite;
   const websiteTrustForSave = analysis
     ? {
         ...analysis.websiteTrust,
         ...(analysis.pageSpeedSoftNotFoundUrl ? { automatedErrorPageUrl: analysis.pageSpeedSoftNotFoundUrl } : {}),
         ...(listingLinkMissing ? { listingLinkBroken: true, listingLinkErrorPageUrl: listingWebsite } : {}),
+        ...(listingLinkParked ? { listingLinkBroken: true, listingLinkErrorPageUrl: listingWebsite, listingLinkParked: true } : {}),
       }
     : null;
 

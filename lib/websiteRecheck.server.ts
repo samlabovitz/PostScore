@@ -69,9 +69,13 @@ type BusinessRow = {
 const BUSINESS_COLUMNS =
   "id, name, website, verified_website_url, phone, address, opening_hours_periods, category, primary_type, categories, business_type_override, website_analysis_json, listing_mode, lat, lng";
 
-/** The site a re-check reads: the listing's website, else a verified one. */
-function siteToCheck(row: Pick<BusinessRow, "website" | "verified_website_url">): string | null {
+/** The site a re-check reads: the listing's website, else a verified one
+ * — and the verified one when the listing's link is a parked domain
+ * (v1.13.1, the real Colorful Yun Nan case). */
+function siteToCheck(row: Pick<BusinessRow, "website" | "verified_website_url"> & { website_analysis_json?: unknown }): string | null {
   const verified = row.verified_website_url?.trim() || null;
+  const trust = (row.website_analysis_json as { websiteTrust?: { listingLinkParked?: boolean } } | null)?.websiteTrust;
+  if (verified && trust?.listingLinkParked) return verified;
   return row.website?.trim() || verified;
 }
 
@@ -148,7 +152,17 @@ export async function recheckWebsiteWithClient(
     return { status: "error", message: e instanceof Error ? e.message : "Website check failed." };
   }
 
-  const { websiteAnalysis, httpsStatus, checkedAt } = analyzed;
+  const { httpsStatus, checkedAt } = analyzed;
+  // v1.13.1: re-checking the verified real site because the listing's link
+  // is parked — that link is still parked (only a full scan re-reads it).
+  const priorTrust = (row.website_analysis_json as { websiteTrust?: { listingLinkParked?: boolean; listingLinkErrorPageUrl?: string | null } } | null)?.websiteTrust;
+  const websiteAnalysis =
+    analyzed.websiteAnalysis && priorTrust?.listingLinkParked && site !== row.website?.trim() && analyzed.websiteAnalysis.websiteTrust
+      ? {
+          ...analyzed.websiteAnalysis,
+          websiteTrust: { ...analyzed.websiteAnalysis.websiteTrust, listingLinkBroken: true, listingLinkErrorPageUrl: priorTrust.listingLinkErrorPageUrl ?? row.website, listingLinkParked: true },
+        }
+      : analyzed.websiteAnalysis;
   const { error: updateError } = await supabase
     .from("businesses")
     .update({

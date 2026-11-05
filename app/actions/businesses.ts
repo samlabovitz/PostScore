@@ -263,14 +263,35 @@ export async function saveBusinessWithClient(
   ).id;
   const extraServicesKeywords = extraServicesKeywordsFor(resolvedTypeId);
 
-  const { websiteAnalysis, httpsStatus, checkedAt, captureScreenshots, analysis } = await analyzeWebsiteForSave({
-    analysisUrl,
-    listingWebsite: place.website,
-    existingAnalysisJson: existingRow?.website_analysis_json,
-    skipScreenshots,
-    extraServicesKeywords,
-    listingFacts: { phone: place.phone, address: place.formattedAddress, openingHoursPeriods: place.openingHoursPeriods },
-  });
+  const analyze = (url: string | null) =>
+    analyzeWebsiteForSave({
+      analysisUrl: url,
+      listingWebsite: place.website,
+      existingAnalysisJson: existingRow?.website_analysis_json,
+      skipScreenshots,
+      extraServicesKeywords,
+      listingFacts: { phone: place.phone, address: place.formattedAddress, openingHoursPeriods: place.openingHoursPeriods },
+    });
+  let saved = await analyze(analysisUrl);
+  // v1.13.1: the listing's link is a parked domain (the real Colorful Yun
+  // Nan case) and a verified real site is on file — analyze the real site
+  // instead, keeping the honest "your Google link is parked" finding.
+  if (saved.websiteAnalysis?.websiteTrust?.listingLinkParked && verifiedWebsiteUrl && analysisUrl !== verifiedWebsiteUrl) {
+    const parkedTrust = saved.websiteAnalysis.websiteTrust;
+    const real = await analyze(verifiedWebsiteUrl);
+    if (real.websiteAnalysis) {
+      saved = {
+        ...real,
+        websiteAnalysis: {
+          ...real.websiteAnalysis,
+          websiteTrust: real.websiteAnalysis.websiteTrust
+            ? { ...real.websiteAnalysis.websiteTrust, listingLinkBroken: true, listingLinkErrorPageUrl: parkedTrust.listingLinkErrorPageUrl ?? place.website, listingLinkParked: true }
+            : parkedTrust,
+        },
+      };
+    }
+  }
+  const { websiteAnalysis, httpsStatus, checkedAt, captureScreenshots, analysis } = saved;
 
   // Scoring v1.12.0 facts (supabase/scoring-v1-12.sql) — yes/no only.
   const v112Facts =

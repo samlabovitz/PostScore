@@ -206,6 +206,10 @@ export interface WebsiteContentSignals {
   /** v1.13.0: social icons that don't go to a profile (see
    * detectBrokenSocialLinks). Absent on rows saved before. */
   brokenSocialLinks?: BrokenSocialLink[];
+  /** v1.13.1: the page is a domain company's parking / "coming soon"
+   * page (lib/websiteContentAnalysis.ts detectParkedDomain). Absent = a
+   * real page (or a row saved before this). */
+  parkedDomain?: { provider: string | null };
   /** v1.13.0: text size and page width read from the page's own HTML and
    * inline CSS (see detectPhoneLayout). Absent on rows saved before. */
   phoneLayout?: PhoneLayout;
@@ -647,6 +651,10 @@ export interface WebsiteTrustAnalysis {
    * opens in a real browser (PageSpeed's finalDisplayedUrl, e.g.
    * "https://www.wonder.com/order/404") — set with listingLinkBroken. */
   listingLinkErrorPageUrl?: string | null;
+  /** v1.13.1: the listing's link goes to a parked domain (a "coming
+   * soon" / for-sale page) — set with listingLinkBroken; the URL is in
+   * listingLinkErrorPageUrl. */
+  listingLinkParked?: boolean;
   /** Step 2d: the error page an AUTOMATED browser (PageSpeed) was shown
    * for this site — real people may well see the real page (the real
    * Wonder case). Never marks the listing link broken; it means the
@@ -1578,7 +1586,11 @@ const PLACEHOLDER_HOURS = [
  * the LISTING's own URL state) still ignores it.
  */
 export function hasAnalyzableWebsite(input: BusinessScoringInput): boolean {
-  return isRealWebsite(input.website) || isRealWebsite(input.verifiedElsewhereUrl);
+  if (isRealWebsite(input.verifiedElsewhereUrl)) return true;
+  // v1.13.1: a listing link to a parked domain is no working website —
+  // nothing on that page is the business's (the real Colorful Yun Nan case).
+  if (input.websiteAnalysis?.websiteTrust?.listingLinkParked) return false;
+  return isRealWebsite(input.website);
 }
 
 /** v1.11.0: an address that is a website at all — a Facebook/Instagram/
@@ -1938,7 +1950,9 @@ export const CHECKS: CheckDefinition[] = [
         return {
           earnedPoints: 0,
           confidence: "VERIFIED",
-          explanation: trust.listingLinkErrorPageUrl
+          explanation: trust.listingLinkParked && trust.listingLinkErrorPageUrl
+            ? t(locale, "content.checks.completeness.website_link.explanation.parked", { url: trust.listingLinkErrorPageUrl })
+            : trust.listingLinkErrorPageUrl
             ? t(locale, "content.checks.completeness.website_link.explanation.brokenErrorPage", { url: trust.listingLinkErrorPageUrl })
             : t(locale, "content.checks.completeness.website_link.explanation.broken"),
         };
@@ -1952,7 +1966,7 @@ export const CHECKS: CheckDefinition[] = [
       websiteAnalysis: input.websiteAnalysis?.websiteTrust
         ? {
             ...input.websiteAnalysis,
-            websiteTrust: { ...input.websiteAnalysis.websiteTrust, listingLinkBroken: false, listingLinkErrorPageUrl: null },
+            websiteTrust: { ...input.websiteAnalysis.websiteTrust, listingLinkBroken: false, listingLinkErrorPageUrl: null, listingLinkParked: false },
           }
         : input.websiteAnalysis,
     }),
@@ -2148,7 +2162,11 @@ export const CHECKS: CheckDefinition[] = [
           return {
             earnedPoints: 4,
             confidence: "VERIFIED",
-            explanation: t(locale, "content.checks.website.has_website.explanation.verifiedElsewhere", { url: verifiedElsewhere }),
+            explanation: t(
+              locale,
+              trust.listingLinkParked ? "content.checks.website.has_website.explanation.verifiedElsewhereParked" : "content.checks.website.has_website.explanation.verifiedElsewhere",
+              { url: verifiedElsewhere }
+            ),
           };
         }
         return {
@@ -2156,7 +2174,9 @@ export const CHECKS: CheckDefinition[] = [
           confidence: "VERIFIED",
           explanation: t(
             locale,
-            trust.listingLinkBroken
+            trust.listingLinkParked
+              ? "content.checks.website.has_website.explanation.listingParked"
+              : trust.listingLinkBroken
               ? "content.checks.website.has_website.explanation.listingBroken"
               : "content.checks.website.has_website.explanation.directory"
           ),
@@ -2187,7 +2207,7 @@ export const CHECKS: CheckDefinition[] = [
       websiteAnalysis: input.websiteAnalysis?.websiteTrust
         ? {
             ...input.websiteAnalysis,
-            websiteTrust: { ...input.websiteAnalysis.websiteTrust, listingLinkBroken: false, listingLinkErrorPageUrl: null },
+            websiteTrust: { ...input.websiteAnalysis.websiteTrust, listingLinkBroken: false, listingLinkErrorPageUrl: null, listingLinkParked: false },
           }
         : input.websiteAnalysis,
     }),
@@ -3866,6 +3886,7 @@ function parseWebsiteContentSignals(value: unknown): WebsiteContentSignals | nul
     ...(typeof v.scriptBuiltFooter === "boolean" ? { scriptBuiltFooter: v.scriptBuiltFooter } : {}),
     ...(typeof v.hasPhoneText === "boolean" ? { hasPhoneText: v.hasPhoneText } : {}),
     ...(parsePhoneLayout(v.phoneLayout) ? { phoneLayout: parsePhoneLayout(v.phoneLayout)! } : {}),
+    ...(v.parkedDomain && typeof v.parkedDomain === "object" ? { parkedDomain: { provider: typeof (v.parkedDomain as { provider?: unknown }).provider === "string" ? ((v.parkedDomain as { provider: string }).provider) : null } } : {}),
     ...(parseBrokenSocialLinks(v.brokenSocialLinks) ? { brokenSocialLinks: parseBrokenSocialLinks(v.brokenSocialLinks)! } : {}),
     ...(parseContactEvidence(v.contactEvidence) ? { contactEvidence: parseContactEvidence(v.contactEvidence)! } : {}),
     ...(Array.isArray(v.socialProfiles)
@@ -4261,6 +4282,7 @@ function parseWebsiteTrust(value: unknown): WebsiteTrustAnalysis | null {
     websiteKind,
     listingLinkBroken: v.listingLinkBroken === true,
     ...(typeof v.listingLinkErrorPageUrl === "string" ? { listingLinkErrorPageUrl: v.listingLinkErrorPageUrl } : {}),
+    ...(v.listingLinkParked === true ? { listingLinkParked: true } : {}),
     ...(typeof v.automatedErrorPageUrl === "string" ? { automatedErrorPageUrl: v.automatedErrorPageUrl } : {}),
     ...(v.embeddedMap && typeof v.embeddedMap === "object"
       ? {

@@ -459,6 +459,48 @@ function normalizeSiteHost(hostname: string): string {
   return hostname.replace(/^www\./i, "").toLowerCase();
 }
 
+/** Domain companies whose parking / "coming soon" / for-sale pages show
+ * on a domain no one has built a site on. */
+const PARKING_PROVIDERS: Array<{ name: string; re: RegExp }> = [
+  { name: "NameBright", re: /namebright/i },
+  { name: "GoDaddy", re: /godaddy|domaincontrol\.com/i },
+  { name: "Sedo", re: /\bsedo(parking)?\b/i },
+  { name: "Dan.com", re: /\bdan\.com\b/i },
+  { name: "Afternic", re: /afternic/i },
+  { name: "HugeDomains", re: /hugedomains/i },
+  { name: "Bodis", re: /\bbodis\b/i },
+  { name: "ParkingCrew", re: /parkingcrew/i },
+  { name: "Namecheap", re: /namecheap/i },
+  { name: "Dynadot", re: /dynadot/i },
+  { name: "Porkbun", re: /porkbun/i },
+  { name: "DropCatch", re: /dropcatch/i },
+];
+const PARKED_PHRASES =
+  /\b(this domain (is|may be) for sale|buy this domain|domain (is )?parked|parked (free|domain)|is coming soon|this domain is managed at|make an offer on this domain|the domain \S+ is for sale)\b/i;
+/** A real business page has far more text than a parking page. */
+const PARKED_MAX_TEXT_CHARS = 1500;
+
+/**
+ * v1.13.1: the page is a domain company's parking / "coming soon" /
+ * for-sale page, not a business's site — the real Colorful Yun Nan case:
+ * the Google listing's colorfulyunnanorder.com lapsed, was caught by a
+ * domain dropper and now shows "NameBright - Coming Soon … This domain is
+ * managed at NameBright". Needs a parking phrase AND (a known domain
+ * company OR almost no text). null for a real page.
+ */
+export function detectParkedDomain(html: string): { provider: string | null } | null {
+  const clean = stripNonVisibleMarkup(html);
+  const title = extractTag(clean, /<title[^>]*>([\s\S]*?)<\/title>/i) ?? "";
+  const text = extractVisibleText(clean);
+  if (text.length > PARKED_MAX_TEXT_CHARS) return null;
+  const haystack = `${title} ${text}`;
+  const provider = PARKING_PROVIDERS.find((p) => p.re.test(haystack) || p.re.test(html.slice(0, 20000)))?.name ?? null;
+  const phrase = PARKED_PHRASES.test(haystack) || (/\bcoming soon\b/i.test(title) && !!provider);
+  if (!phrase) return null;
+  if (!provider && text.length > 400) return null;
+  return { provider };
+}
+
 /** Phones are at most this wide (CSS px) — anything fixed wider overflows. */
 const PHONE_MAX_WIDTH_PX = 480;
 /** Google's own legibility line: text under 12px is too small on a phone. */
@@ -655,6 +697,7 @@ export function analyzeWebsiteHtml(html: string, baseUrl?: string | null): Websi
   const brokenSocialLinks = detectBrokenSocialLinks(clean, baseUrl);
   // Read from the RAW html — inline <style> blocks are stripped from `clean`.
   const phoneLayout = detectPhoneLayout(html);
+  const parkedDomain = detectParkedDomain(html);
 
   const isLikelyClientRenderedShell = detectClientRenderedShell(clean, visibleTextLength, headingCount);
 
@@ -672,6 +715,7 @@ export function analyzeWebsiteHtml(html: string, baseUrl?: string | null): Websi
     socialProfiles,
     brokenSocialLinks,
     phoneLayout,
+    ...(parkedDomain ? { parkedDomain } : {}),
     // Read from the RAW html — `clean` has scripts stripped.
     scriptBuiltFooter: hasScriptBuiltFooterSigns(html),
     contactEvidence,

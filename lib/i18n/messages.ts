@@ -5,6 +5,9 @@ import { DEFAULT_LOCALE, type Locale } from "./locale";
 // below; adding a new locale (see locale.ts) doesn't require touching the
 // key list, only a new entry in `messages`.
 export type MessageKey =
+  | "content.checks.completeness.website_link.explanation.parked"
+  | "content.checks.website.has_website.explanation.listingParked"
+  | "content.checks.website.has_website.explanation.verifiedElsewhereParked"
   | "dashboard.website.outOfPoints"
   | "dashboard.website.partlyCheckedOf30"
   | "dashboard.gbpEdit.viewOnGoogle"
@@ -4575,6 +4578,9 @@ type LocaleMessages = Partial<Record<MessageKey, string>>;
 
 export const messages: Record<Locale, LocaleMessages> = {
   en: {
+    "content.checks.completeness.website_link.explanation.parked": "Your Google listing's website link goes to {url}, which is now a parked “coming soon” domain — not your website. Someone else may now control that address. Change the link on Google to your real site.",
+    "content.checks.website.has_website.explanation.listingParked": "Your Google listing links to a parked “coming soon” domain, not your website — it doesn't count as a real site until the link is changed.",
+    "content.checks.website.has_website.explanation.verifiedElsewhereParked": "Your real website ({url}) was checked instead — your Google listing links to a parked domain. Change the link on Google to {url}.",
     "dashboard.website.outOfPoints": "of {of}",
     "dashboard.website.partlyCheckedOf30": "Website: partly checked — based on {points} of {of} points",
     "dashboard.gbpEdit.viewOnGoogle": "View on Google",
@@ -9501,6 +9507,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.searchDemand.tips.empty": "Tips appear once there are real search terms to work from.",
   },
   es: {
+    "content.checks.completeness.website_link.explanation.parked": "El enlace del sitio web de su Perfil de Empresa en Google lleva a {url}, que ahora es un dominio estacionado (“próximamente”), no su sitio web. Es posible que otra persona controle ahora esa dirección. Cambie el enlace en Google por el de su sitio real.",
+    "content.checks.website.has_website.explanation.listingParked": "Su Perfil de Empresa en Google enlaza a un dominio estacionado (“próximamente”), no a su sitio web; no cuenta como un sitio real hasta que se cambie el enlace.",
+    "content.checks.website.has_website.explanation.verifiedElsewhereParked": "Se revisó su sitio web real ({url}) en su lugar: su Perfil de Empresa en Google enlaza a un dominio estacionado. Cambie el enlace en Google a {url}.",
     "dashboard.website.outOfPoints": "de {of}",
     "dashboard.website.partlyCheckedOf30": "Sitio web: revisado en parte, basado en {points} de {of} puntos",
     "dashboard.gbpEdit.viewOnGoogle": "Ver en Google",
