@@ -174,7 +174,7 @@ export function ScoreBand({
   history: ScoreHistoryRow[];
   projectedScore: number;
   projectedGrade: Grade;
-  biggestBoost: Suggestion | null;
+  biggestBoost: Pick<Suggestion, "label" | "promisedPoints" | "weightedPoints"> | null;
   /** Free: the points waiting to be fixed (the scoring's own projection)
    * replace the projected score, with no suggestion shown; undefined on
    * Grow and above. */
@@ -263,10 +263,12 @@ export function ScoreBand({
             {biggestBoost && (
               <Link
                 href={`/business/${businessId}/growth`}
-                className="mt-1 inline-flex w-fit max-w-full items-center gap-1.5 rounded-full border border-[color:color-mix(in_srgb,var(--color-brass)_50%,transparent)] bg-[color:color-mix(in_srgb,var(--color-brass)_15%,transparent)] px-3 py-1 text-[12.5px] font-semibold text-paper hover:bg-[color:color-mix(in_srgb,var(--color-brass)_25%,transparent)]"
+                // Wraps to a second line rather than ever cutting off the
+                // check's name.
+                className="mt-1 inline-flex w-fit max-w-full items-start gap-1.5 rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-brass)_50%,transparent)] bg-[color:color-mix(in_srgb,var(--color-brass)_15%,transparent)] px-3 py-1 text-[12.5px] font-semibold text-paper hover:bg-[color:color-mix(in_srgb,var(--color-brass)_25%,transparent)]"
               >
-                <IconSparkles size={14} className="shrink-0 text-brass" />
-                <span className="truncate">
+                <IconSparkles size={14} className="mt-[3px] shrink-0 text-brass" />
+                <span className="min-w-0 break-words leading-snug">
                   {t(locale, "dashboard.overview.biggestBoost", { points: boostPoints(biggestBoost.weightedPoints ?? biggestBoost.promisedPoints), label: biggestBoost.label })}
                 </span>
               </Link>

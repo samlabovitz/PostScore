@@ -7,6 +7,9 @@ import { DEFAULT_LOCALE, type Locale } from "./locale";
 export type MessageKey =
   | "content.checks.completeness.website_link.explanation.parked"
   | "content.checks.website.has_website.explanation.listingParked"
+  | "content.checks.website.has_website.advice.listingParked"
+  | "growth.fix.parkedListingLink.action"
+  | "growth.fix.parkedListingLink.why"
   | "content.checks.website.has_website.explanation.verifiedElsewhereParked"
   | "dashboard.website.outOfPoints"
   | "dashboard.website.partlyCheckedOf30"
@@ -608,6 +611,9 @@ export type MessageKey =
   | "dashboard.niche.saved"
   | "dashboard.niche.notSaved"
   | "dashboard.niche.resetAuto"
+  | "dashboard.niche.weDetectedThis"
+  | "dashboard.niche.youChoseThis"
+  | "dashboard.niche.cancel"
   | "dashboard.websiteReviews.guide.heading"
   | "dashboard.websiteReviews.guide.summary"
   | "dashboard.websiteReviews.guide.whenTitle"
@@ -2356,6 +2362,7 @@ export type MessageKey =
   | "dashboard.assistant.link.website"
   | "dashboard.assistant.link.starterSite"
   | "dashboard.assistant.link.reviews"
+  | "dashboard.assistant.link.replies"
   | "dashboard.assistant.link.connect"
   | "dashboard.assistant.link.growth"
   | "dashboard.assistant.link.weeklyRoutine"
@@ -3712,6 +3719,9 @@ export type MessageKey =
   | "dashboard.overview.sinceCard.listingHeading"
   | "dashboard.overview.sinceCard.checksHeading"
   | "dashboard.overview.sinceCard.reportsLink"
+  | "dashboard.overview.sinceCard.moreChanges.one"
+  | "dashboard.overview.recs.pending"
+  | "dashboard.overview.sinceCard.moreChanges.other"
   | "dashboard.overview.breakdown.done.one"
   | "dashboard.overview.breakdown.done.other"
   | "dashboard.overview.breakdown.needsWork.one"
@@ -4505,6 +4515,7 @@ export type MessageKey =
  * how a future locale with more categories, e.g. "few"/"many", would
  * still get a safe result even before every category is seeded for it). */
 export type PluralKeyBase =
+  | "dashboard.overview.sinceCard.moreChanges"
   | "content.checks.website.social_links.broken.no_link"
   | "content.checks.website.social_links.broken.own_site"
   | "content.checks.website.social_links.broken.platform_home"
@@ -4579,6 +4590,9 @@ type LocaleMessages = Partial<Record<MessageKey, string>>;
 export const messages: Record<Locale, LocaleMessages> = {
   en: {
     "content.checks.completeness.website_link.explanation.parked": "Your Google listing's website link goes to {url}, which is now a parked “coming soon” domain — not your website. Someone else may now control that address. Change the link on Google to your real site.",
+    "content.checks.website.has_website.advice.listingParked": "Your Google listing's website link goes to a parked “coming soon” domain, not your website. Change it to your real site.",
+    "growth.fix.parkedListingLink.action": "Your Google listing's website link goes to a parked “coming soon” domain, not your website. Change it to your real site.",
+    "growth.fix.parkedListingLink.why": "Customers who tap your website from Google land on a domain company's “coming soon” page instead of yours — and someone else may now control that address.",
     "content.checks.website.has_website.explanation.listingParked": "Your Google listing links to a parked “coming soon” domain, not your website — it doesn't count as a real site until the link is changed.",
     "content.checks.website.has_website.explanation.verifiedElsewhereParked": "Your real website ({url}) was checked instead — your Google listing links to a parked domain. Change the link on Google to {url}.",
     "dashboard.website.outOfPoints": "of {of}",
@@ -5162,8 +5176,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.groups.byName": "Sorted by business name for now — your next competitor refresh sorts them more precisely.",
     "dashboard.competitors.groups.notSaved": "Shown here, but not saved yet — PostScore needs a quick update first.",
     "dashboard.competitors.groups.allSameKind": "Every business in your last scan is the same kind as yours.",
-    "dashboard.niche.weThink": "We think you're {article} {niche}.",
-    "dashboard.niche.suggest": "We think you're {article} {suggested} (you chose {current}).",
+    "dashboard.niche.weThink": "We think you're {niche}.",
+    "dashboard.niche.suggest": "We think you're {suggested} (you chose {current}).",
     "dashboard.niche.needsOwner": "Tell us what kind of {parent} you are, so we compare you with the right businesses.",
     "dashboard.niche.looksRight": "Looks right",
     "dashboard.niche.change": "Change",
@@ -5180,6 +5194,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.niche.saved": "Saved.",
     "dashboard.niche.notSaved": "Couldn't save yet — PostScore needs a quick update first. Your choice applies to this visit.",
     "dashboard.niche.resetAuto": "Use automatic detection",
+    "dashboard.niche.weDetectedThis": "We detected this",
+    "dashboard.niche.youChoseThis": "You chose this",
+    "dashboard.niche.cancel": "Cancel",
     "dashboard.websiteReviews.guide.heading": "Get more reviews, the right way",
     "dashboard.websiteReviews.guide.summary": "When to ask, what to say, where to put your QR code",
     "dashboard.websiteReviews.guide.whenTitle": "When to ask",
@@ -7191,6 +7208,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.link.website": "Fix this on the Website page →",
     "dashboard.assistant.link.starterSite": "Build your starter site →",
     "dashboard.assistant.link.reviews": "Get your review link and QR sign →",
+    "dashboard.assistant.link.replies": "Reply to your reviews →",
     "dashboard.assistant.link.connect": "Connect your Google Business Profile →",
     "dashboard.assistant.link.growth": "Open this week's plan on Growth →",
     "dashboard.assistant.link.weeklyRoutine": "Open your weekly routine →",
@@ -8723,6 +8741,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.sinceCard.listingHeading": "On your Google listing",
     "dashboard.overview.sinceCard.checksHeading": "Checks that went up or down",
     "dashboard.overview.sinceCard.reportsLink": "See full history on Reports",
+    "dashboard.overview.sinceCard.moreChanges.one": "+{count} more change",
+    "dashboard.overview.recs.pending": "You marked this done — your next scan confirms it.",
+    "dashboard.overview.sinceCard.moreChanges.other": "+{count} more changes",
     "dashboard.overview.breakdown.done.one": "{count} done",
     "dashboard.overview.breakdown.done.other": "{count} done",
     "dashboard.overview.breakdown.needsWork.one": "{count} needs work",
@@ -9508,6 +9529,9 @@ export const messages: Record<Locale, LocaleMessages> = {
   },
   es: {
     "content.checks.completeness.website_link.explanation.parked": "El enlace del sitio web de su Perfil de Empresa en Google lleva a {url}, que ahora es un dominio estacionado (“próximamente”), no su sitio web. Es posible que otra persona controle ahora esa dirección. Cambie el enlace en Google por el de su sitio real.",
+    "content.checks.website.has_website.advice.listingParked": "El enlace del sitio web de su Perfil de Empresa en Google lleva a un dominio estacionado (“próximamente”), no a su sitio web. Cámbielo por el de su sitio real.",
+    "growth.fix.parkedListingLink.action": "El enlace del sitio web de su Perfil de Empresa en Google lleva a un dominio estacionado (“próximamente”), no a su sitio web. Cámbielo por el de su sitio real.",
+    "growth.fix.parkedListingLink.why": "Los clientes que tocan su sitio web desde Google llegan a la página “próximamente” de una empresa de dominios en lugar de la suya, y es posible que otra persona controle ahora esa dirección.",
     "content.checks.website.has_website.explanation.listingParked": "Su Perfil de Empresa en Google enlaza a un dominio estacionado (“próximamente”), no a su sitio web; no cuenta como un sitio real hasta que se cambie el enlace.",
     "content.checks.website.has_website.explanation.verifiedElsewhereParked": "Se revisó su sitio web real ({url}) en su lugar: su Perfil de Empresa en Google enlaza a un dominio estacionado. Cambie el enlace en Google a {url}.",
     "dashboard.website.outOfPoints": "de {of}",
@@ -10091,8 +10115,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.groups.byName": "Por ahora se ordenan por el nombre del negocio — su próxima actualización de competidores los ordenará con más precisión.",
     "dashboard.competitors.groups.notSaved": "Se muestra aquí, pero todavía no se guarda — PostScore necesita una actualización rápida primero.",
     "dashboard.competitors.groups.allSameKind": "Todos los negocios de su último análisis son del mismo tipo que el suyo.",
-    "dashboard.niche.weThink": "Creemos que su negocio es: {niche}.",
-    "dashboard.niche.suggest": "Creemos que su negocio es: {suggested} (usted eligió {current}).",
+    "dashboard.niche.weThink": "Creemos que su tipo de negocio es: {niche}.",
+    "dashboard.niche.suggest": "Creemos que su tipo de negocio es: {suggested} (usted eligió {current}).",
     "dashboard.niche.needsOwner": "Díganos qué tipo de {parent} es su negocio, para compararlo con los negocios correctos.",
     "dashboard.niche.looksRight": "Es correcto",
     "dashboard.niche.change": "Cambiar",
@@ -10109,6 +10133,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.niche.saved": "Guardado.",
     "dashboard.niche.notSaved": "Todavía no se pudo guardar — PostScore necesita una actualización rápida primero. Su elección se aplica a esta visita.",
     "dashboard.niche.resetAuto": "Usar la detección automática",
+    "dashboard.niche.weDetectedThis": "Lo detectamos",
+    "dashboard.niche.youChoseThis": "Usted lo eligió",
+    "dashboard.niche.cancel": "Cancelar",
     "dashboard.websiteReviews.guide.heading": "Consiga más reseñas, de la manera correcta",
     "dashboard.websiteReviews.guide.summary": "Cuándo pedirla, qué decir, dónde poner su código QR",
     "dashboard.websiteReviews.guide.whenTitle": "Cuándo pedirla",
@@ -11914,6 +11941,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.link.website": "Arréglelo en la página Sitio web →",
     "dashboard.assistant.link.starterSite": "Cree su sitio inicial →",
     "dashboard.assistant.link.reviews": "Obtenga su enlace y letrero QR de reseñas →",
+    "dashboard.assistant.link.replies": "Responda a sus reseñas →",
     "dashboard.assistant.link.connect": "Conecte su Perfil de Empresa en Google →",
     "dashboard.assistant.link.growth": "Abra el plan de esta semana en Crecimiento →",
     "dashboard.assistant.link.weeklyRoutine": "Abra su rutina semanal →",
@@ -13752,6 +13780,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.sinceCard.listingHeading": "En su ficha de Google",
     "dashboard.overview.sinceCard.checksHeading": "Revisiones que subieron o bajaron",
     "dashboard.overview.sinceCard.reportsLink": "Vea el historial completo en Informes",
+    "dashboard.overview.sinceCard.moreChanges.one": "+{count} cambio más",
+    "dashboard.overview.recs.pending": "Usted lo marcó como hecho; su próximo análisis lo confirmará.",
+    "dashboard.overview.sinceCard.moreChanges.other": "+{count} cambios más",
     "dashboard.overview.breakdown.done.one": "{count} completa",
     "dashboard.overview.breakdown.done.other": "{count} completas",
     "dashboard.overview.breakdown.needsWork.one": "{count} por mejorar",

@@ -12,7 +12,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { IconTag } from "@tabler/icons-react";
 import { confirmBusinessNiche } from "@/app/actions/niches";
-import { articleFor, nicheLabel } from "@/lib/niches";
+import { nicheDisplayName, nicheSentencePhrase, OPEN_PICKER_PARAM } from "@/lib/niches";
 import { t, useLocale } from "@/lib/i18n";
 import type { NicheBannerKind } from "@/lib/businessNiche";
 
@@ -40,13 +40,13 @@ export function NicheBanner({ businessId, kind, nicheId, suggestion, parentLabel
   }, [businessId]);
   if (hidden) return null;
 
-  const current = nicheLabel(nicheId, locale);
+  const current = nicheDisplayName(nicheId, locale);
   const message =
     kind === "suggest" && suggestion
-      ? t(locale, "dashboard.niche.suggest", { article: articleFor(nicheLabel(suggestion, "en")), suggested: nicheLabel(suggestion, locale), current })
+      ? t(locale, "dashboard.niche.suggest", { suggested: nicheSentencePhrase(suggestion, locale), current })
       : kind === "needsOwner"
         ? t(locale, "dashboard.niche.needsOwner", { parent: parentLabel.toLowerCase() })
-        : t(locale, "dashboard.niche.weThink", { article: articleFor(nicheLabel(nicheId, "en")), niche: current });
+        : t(locale, "dashboard.niche.weThink", { niche: nicheSentencePhrase(nicheId, locale) });
 
   function dismiss() {
     setHidden(true);
@@ -61,7 +61,8 @@ export function NicheBanner({ businessId, kind, nicheId, suggestion, parentLabel
     });
   }
 
-  const changeHref = `/business/${businessId}/settings#business-type`;
+  // Opens the Settings picker with its search already open.
+  const changeHref = `/business/${businessId}/settings?${OPEN_PICKER_PARAM}#business-type`;
   return (
     <div className="flex flex-col gap-2.5 rounded-2xl border border-brass/40 bg-brass/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between" data-testid="niche-banner">
       <div className="flex min-w-0 items-start gap-2.5">

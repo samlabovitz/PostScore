@@ -28,12 +28,14 @@ import {
 import type { ScoreSnapshot } from "@/app/actions/scoring";
 import { formatPoints } from "@/components/scoring/CategoryCard";
 import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
-import { diffBreakdowns, resolveChangeDisplay } from "@/lib/scoreChanges";
+import { diffBreakdowns, resolveChangeDisplay, type CheckChange } from "@/lib/scoreChanges";
 import type { ScoreBreakdown } from "@/lib/scoring";
-import { formatShortDate, t, useLocale, useTimeZone } from "@/lib/i18n";
+import { formatShortDate, t, tPlural, useLocale, useTimeZone } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-const MAX_CHECK_ROWS = 8;
+/** At most this many check changes on the Overview (biggest point
+ * changes first); the rest are one link away on Reports. */
+export const MAX_CHECK_ROWS = 4;
 
 const FIELD_ICON: Record<ProfileChange["field"], typeof IconStar> = {
   phone: IconPhone,
@@ -67,6 +69,9 @@ export function SinceLastScanCard({
   const locale = useLocale();
   const timeZone = useTimeZone();
   const [current, previous] = snapshots;
+  const sameVersion = !!current && !!previous && current.scoring_version === previous.scoring_version;
+  const checkChanges = sameVersion ? diffBreakdowns(previous.breakdown_json, current.breakdown_json) : [];
+  const hiddenChanges = Math.max(0, checkChanges.length - MAX_CHECK_ROWS);
   const reportsLink = (
     <Link
       href={`/business/${businessId}/reports`}
@@ -95,9 +100,9 @@ export function SinceLastScanCard({
     <section className="flex h-full flex-col gap-3 rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
       <h2 className="font-serif text-lg font-semibold text-ink">{t(locale, "dashboard.overview.sinceCard.heading")}</h2>
 
-      {/* Equal height with Top recommendations: if this side is
-          shorter, its content centers rather than leaving a gap. */}
-      <div className="flex flex-1 flex-col justify-center gap-3">
+      {/* Equal height with Top recommendations: content sits at the
+          top; any extra height goes above the Reports link. */}
+      <div className="flex flex-1 flex-col gap-3">
         <ScoreBeforeAfter current={current} previous={previous} timeZone={timeZone} />
 
         <div className="flex flex-col gap-2">
@@ -107,15 +112,27 @@ export function SinceLastScanCard({
 
         {/* A scoring-version change has no point-for-point comparison;
             the one note above already says so — no second message. */}
-        {current.scoring_version === previous.scoring_version && (
+        {sameVersion && (
           <div className="flex flex-col gap-2">
             <SubHeading>{t(locale, "dashboard.overview.sinceCard.checksHeading")}</SubHeading>
-            <CheckChanges current={current} previous={previous} liveBreakdown={liveBreakdown} />
+            <CheckChanges changes={checkChanges} liveBreakdown={liveBreakdown} />
+            {hiddenChanges > 0 && (
+              <Link
+                href={`/business/${businessId}/reports`}
+                data-testid="since-more-changes"
+                className="inline-flex w-fit flex-wrap items-center gap-x-1 pt-1 text-[13px] font-semibold text-ink hover:text-brass"
+              >
+                <span>{tPlural(locale, "dashboard.overview.sinceCard.moreChanges", hiddenChanges)}</span>
+                <IconArrowRight size={14} aria-hidden />
+                <span>{t(locale, "dashboard.overview.sinceCard.reportsLink")}</span>
+              </Link>
+            )}
           </div>
         )}
       </div>
 
-      {reportsLink}
+      {/* The "+N more" link already goes to Reports — no second one. */}
+      {hiddenChanges === 0 && reportsLink}
     </section>
   );
 }
@@ -178,9 +195,8 @@ function ListingChanges({ current, previous }: { current: ScoreSnapshot; previou
   );
 }
 
-function CheckChanges({ current, previous, liveBreakdown }: { current: ScoreSnapshot; previous: ScoreSnapshot; liveBreakdown: ScoreBreakdown }) {
+function CheckChanges({ changes, liveBreakdown }: { changes: CheckChange[]; liveBreakdown: ScoreBreakdown }) {
   const locale = useLocale();
-  const changes = diffBreakdowns(previous.breakdown_json, current.breakdown_json);
   if (changes.length === 0) return <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.overview.nothingChangedSinceLastScan")}</p>;
   return (
     <ul className="flex flex-col divide-y divide-paper-line">

@@ -1,15 +1,17 @@
 import { describe, expect, test, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { LocaleProvider, type Locale } from "@/lib/i18n";
+import { LocaleProvider, t, type Locale } from "@/lib/i18n";
 
 vi.mock("@/app/actions/scoring", () => ({ rescanBusiness: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
 
 import {
+  biggestBoostFrom,
   categoryOutcomeCounts,
   recommendationPriority,
   reviewCountChange,
   scoreChangeSinceLastScan,
+  taskFixLink,
   topRecommendations,
   weightedCategoryPoints,
   wholeCategoryPoints,
@@ -269,7 +271,7 @@ describe("top recommendations: the action plan, prioritized by real points", () 
     expect(recommendationPriority(1.9)).toBeNull();
   });
 
-  test("open items only, biggest first, each with PostAI's fix link", () => {
+  test("open and marked-done items (points not yet earned), biggest first, each with PostAI's fix link", () => {
     const recs = topRecommendations(
       [
         task({ checkId: "completeness.photos", weightedPoints: 2.5 }),
@@ -280,16 +282,25 @@ describe("top recommendations: the action plan, prioritized by real points", () 
       { kind: "improve", score: 72, earned: 25, of: 30, improvements: 3, points: 4.1 },
       "b"
     );
-    expect(recs.map((r) => [r.key, r.priority])).toEqual([
-      ["visibility.reviews_merged", "high"],
-      ["website", "medium"],
-      ["completeness.photos", "medium"],
+    expect(recs.map((r) => [r.key, r.priority, r.pending])).toEqual([
+      ["completeness.hours", "high", true],
+      ["visibility.reviews_merged", "high", false],
+      ["website", "medium", false],
     ]);
-    expect(recs[0].href).toBe("/business/b/website-reviews#get-more-reviews");
-    expect(recs[1].href).toBe("/business/b/website");
+    expect(recs[1].href).toBe("/business/b/website-reviews#get-more-reviews");
+    expect(recs[2].href).toBe("/business/b/website");
     // A listing check's fix row lives on the Overview itself.
-    expect(recs[2].href).toBe("/business/b#check-photos");
-    expect(recs[2].linkLabel).toBeNull();
+    expect(topRecommendations([task({ weightedPoints: 2.5 })], null, "b")[0].href).toBe("/business/b#check-photos");
+    expect(topRecommendations([task({ weightedPoints: 2.5 })], null, "b")[0].linkLabel).toBeNull();
+    // The real Hair Express case: everything marked done → still listed,
+    // and Biggest boost is the same first item.
+    const marked = topRecommendations([task({ checkId: "visibility.reviews_merged", category: "visibility", label: "Reviews", weightedPoints: 13.2, status: "pending_verification" })], null, "b");
+    expect(marked).toHaveLength(1);
+    expect(biggestBoostFrom(marked, [], "en")).toEqual({ label: "Reviews", promisedPoints: 13.2, weightedPoints: 13.2 });
+    expect(biggestBoostFrom([], [], "en")).toBeNull();
+    const html = render(<TopRecommendations businessId="b" recommendations={marked} />);
+    expect(html).toContain("You marked this done");
+    expect(html).not.toContain("Nothing open");
   });
 
   test("renders pills, points and 'View all' → Growth", () => {
@@ -382,6 +393,41 @@ describe("since your last scan (replaces the two change sections)", () => {
     expect(same).toContain("Nothing changed since your last scan.");
     expect(card([snap({})])).toContain("No prior scan to compare yet");
     expect(card([snap({}), snap({})], "es")).toContain("Desde su último análisis");
+  });
+
+  // Previous scan with `n` checks lower by 1, 2, … points (biggest last).
+  const withChanges = (n: number) => {
+    const changed = breakdown.checks.filter((c) => (c.earnedPoints ?? 0) >= 1).slice(0, n).map((c) => c.id);
+    const prevChecks = breakdown.checks.map((c) => {
+      const i = changed.indexOf(c.id);
+      return i < 0 ? c : { ...c, earnedPoints: Math.max(0, (c.earnedPoints ?? 0) - Math.min(i + 1, c.earnedPoints ?? 0) / (i + 1) * (i + 1) / Math.max(1, n - i)) };
+    });
+    return { changed, prev: snap({ breakdown_json: { ...breakdown, checks: prevChecks } }) };
+  };
+  const rows = (html: string) => html.split("Checks that went up or down")[1]?.split("</ul>")[0].split("<li").length - 1;
+
+  test("at most 4 check changes, biggest first, then '+N more changes → Reports'", () => {
+    const { prev, changed } = withChanges(7);
+    expect(changed.length).toBe(7);
+    const html = card([snap({}), prev]);
+    expect(rows(html)).toBe(4);
+    expect(html).toContain("+3 more changes");
+    expect(html).toContain('data-testid="since-more-changes"');
+    // The "+N more" link is the one Reports link.
+    expect(html.split('href="/business/b/reports"').length - 1).toBe(1);
+    const es = card([snap({}), prev], "es");
+    expect(es).toContain("+3 cambios más");
+    expect(es).toContain("Vea el historial completo en Informes");
+  });
+
+  test("4 or fewer: all shown, no '+N more' link", () => {
+    for (const n of [1, 2, 4]) {
+      const html = card([snap({}), withChanges(n).prev]);
+      expect(rows(html)).toBe(n);
+      expect(html).not.toContain("since-more-changes");
+      expect(html).toContain("See full history on Reports");
+    }
+    expect(card([snap({}), withChanges(5).prev])).toContain("+1 more change<");
   });
 });
 
@@ -621,5 +667,31 @@ describe("listing photo survives React's dev double-run", () => {
     expect(src).toContain("if (!requested.current) {");
     expect(src).toContain("if (mounted.current && body.photo) setPhoto(body.photo);");
     expect(src).not.toMatch(/let cancelled = false/);
+  });
+});
+
+const taskFixLinkForTest = (checkId: string) => taskFixLink(checkId, "b", {});
+
+describe("each Top recommendation's button matches it", () => {
+  const link = (checkId: string, locale: Locale = "en") => {
+    const l = taskFixLinkForTest(checkId);
+    return { href: l.href, text: l.label ? t(locale, l.label) : null };
+  };
+  test("replying to reviews opens the Reviews page's reply section (EN + ES)", () => {
+    expect(link("visibility.review_replies")).toEqual({ href: "/business/b/website-reviews#reply-to-reviews", text: "Reply to your reviews →" });
+    expect(link("visibility.review_replies", "es").text).toBe("Responda a sus reseñas →");
+  });
+  test("asking for reviews keeps the review link; listing checks (customer details too) open their Overview row", () => {
+    for (const id of ["visibility.review_count", "visibility.review_recency", "visibility.rating", "visibility.reviews_merged"]) {
+      expect(link(id).href).toBe("/business/b/website-reviews#get-more-reviews");
+    }
+    expect(link("completeness.customer_details")).toEqual({ href: "/business/b#check-customer_details", text: null });
+  });
+  test("Biggest boost never cuts off the check's name", () => {
+    const html = render(
+      <ScoreBand businessId="b" score={80} grade="B" history={[]} projectedScore={93} projectedGrade="A" biggestBoost={{ label: "Review count", promisedPoints: 13, weightedPoints: 13 }} />
+    );
+    expect(html).toContain("Biggest boost: up to +13 pts · Review count");
+    expect(html).not.toMatch(/class="[^"]*truncate[^"]*">Biggest boost/);
   });
 });

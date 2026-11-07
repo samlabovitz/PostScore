@@ -7,8 +7,8 @@ import { checkOutcome } from "@/components/scoring/CategoryCard";
 import type { ActionPlanTask, WebsiteBanner } from "@/lib/actionPlan";
 import type { ProfileSnapshot } from "@/lib/profileChanges";
 import { resolveLinkTarget, type LinkOptions } from "@/lib/postaiLinks";
-import type { CategoryResult } from "@/lib/scoring";
-import type { MessageKey } from "@/lib/i18n";
+import type { CategoryResult, Suggestion } from "@/lib/scoring";
+import { t, type Locale, type MessageKey } from "@/lib/i18n";
 
 /** A category's real contribution to the 0–100 total — its own 0–100
  * score scaled to its weight (40 / 30 / 30), so the three tiles add up
@@ -114,6 +114,8 @@ export interface Recommendation {
   /** The PostAI hotlink wording, or null for a link back to the Overview's
    * own check row (the UI says "See this check"). */
   linkLabel: MessageKey | null;
+  /** The owner marked it done; its points count once a scan confirms it. */
+  pending: boolean;
 }
 
 /** Where a check is fixed — the same link PostAI and the Overview use.
@@ -134,9 +136,9 @@ function linkForCheck(checkId: string, businessId: string, options: LinkOptions)
 }
 
 /** The action plan's own open items (the same list as Growth), plus the
- * Growth page's website summary, biggest real gain first. Items already
- * marked done (waiting for a re-scan) and setup steps (no points) are left
- * out. */
+ * Growth page's website summary, biggest real gain first. Items marked
+ * done stay (flagged pending) until a re-scan confirms them; setup steps
+ * (no points) are left out. */
 export function topRecommendations(
   tasks: ActionPlanTask[],
   websiteBanner: WebsiteBanner | null,
@@ -145,7 +147,9 @@ export function topRecommendations(
   limit: number = TOP_RECOMMENDATIONS
 ): Recommendation[] {
   const items: Recommendation[] = tasks
-    .filter((task) => task.status === "open" && task.effort !== "setup" && task.weightedPoints > 0)
+    // "Marked done" items stay until a scan confirms them: their points
+    // aren't earned yet (they're still in the projected score).
+    .filter((task) => (task.status === "open" || task.status === "pending_verification") && task.effort !== "setup" && task.weightedPoints > 0)
     .map((task) => {
       const link = linkForCheck(task.checkId, businessId, options);
       return {
@@ -156,6 +160,7 @@ export function topRecommendations(
         priority: recommendationPriority(task.weightedPoints),
         href: link.href,
         linkLabel: link.label,
+        pending: task.status === "pending_verification",
       };
     });
   if (websiteBanner) {
@@ -170,8 +175,32 @@ export function topRecommendations(
         priority: recommendationPriority(points),
         href: target?.href ?? `/business/${businessId}/website`,
         linkLabel: target?.label ?? "dashboard.assistant.link.website",
+        pending: false,
       });
     }
   }
   return items.sort((a, b) => b.points - a.points).slice(0, limit);
+}
+
+/** The score card's "Biggest boost": the first Top recommendation, so the
+ * two never disagree (the real Hair Express case: every item marked done,
+ * Biggest boost +9 · Review count, Top recommendations "Nothing open").
+ * Without recommendations (Free hides them), the biggest suggestion. */
+export function biggestBoostFrom(
+  recommendations: Recommendation[] | null,
+  suggestions: Suggestion[],
+  locale: Locale
+): { label: string; promisedPoints: number; weightedPoints: number } | null {
+  const top = recommendations?.[0];
+  if (top) {
+    const label =
+      top.source.kind === "task"
+        ? top.source.task.label
+        : t(locale, top.source.banner.kind === "improve" ? "dashboard.overview.recs.improveWebsite" : "dashboard.growth.websiteBanner.getWebsite.title");
+    const points = top.pointsHigh ?? top.points;
+    return { label, promisedPoints: points, weightedPoints: points };
+  }
+  if (recommendations) return null;
+  const s = suggestions[0];
+  return s ? { label: s.label, promisedPoints: s.promisedPoints, weightedPoints: s.weightedPoints ?? s.promisedPoints } : null;
 }

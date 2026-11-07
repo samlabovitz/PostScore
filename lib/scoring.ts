@@ -1002,7 +1002,7 @@ export interface CheckResult {
   excludedReason?: "unreachable" | "not_checked_yet";
   /** Day 4 Step 3: what exactly is missing, as stable codes (e.g.
    * content depth "viewport"/"meta", contact "contact"/"cta", has-website
-   * "missing"/"directory"/"listing_broken"). Drives per-item advice and
+   * "missing"/"directory"/"listing_broken"/"listing_parked"). Drives per-item advice and
    * the fix labels (lib/websiteFixes.ts); never changes points. Absent
    * when nothing specific applies, and on breakdowns saved before. */
   gaps?: string[];
@@ -2106,6 +2106,7 @@ export const CHECKS: CheckDefinition[] = [
     gapAdviceKeys: {
       social_page: "content.checks.website.has_website.advice.socialPage",
       listing_broken: "content.checks.website.has_website.advice.listingBroken",
+      listing_parked: "content.checks.website.has_website.advice.listingParked",
       directory: "content.checks.website.has_website.advice.directory",
     },
     // Redefined (Oct 10): full credit for a real, verified site — the
@@ -2180,7 +2181,7 @@ export const CHECKS: CheckDefinition[] = [
               ? "content.checks.website.has_website.explanation.listingBroken"
               : "content.checks.website.has_website.explanation.directory"
           ),
-          gaps: [trust.listingLinkBroken ? "listing_broken" : "directory"],
+          gaps: [trust.listingLinkParked ? "listing_parked" : trust.listingLinkBroken ? "listing_broken" : "directory"],
         };
       }
 

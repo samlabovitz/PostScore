@@ -11,6 +11,7 @@
 
 import { getBizProfileOptions } from "@/config/bizProfiles";
 import { NICHE_PARENTS, SPECIFIC_NICHES, generalNicheSignals, type NicheDef } from "@/config/niches";
+import { NICHE_PHRASE_EN, NICHE_PHRASE_ES } from "@/config/nichePhrases";
 import type { BusinessTypeId } from "@/lib/tradeSearch";
 import type { Locale } from "@/lib/i18n";
 
@@ -159,4 +160,28 @@ export function isNicheParent(id: string): id is BusinessTypeId {
 /** "a" / "an" before an English niche name ("an Ice cream…", "a Skate…"). */
 export function articleFor(label: string): "a" | "an" {
   return /^[aeiou]/i.test(label.trim()) ? "an" : "a";
+}
+
+/** The query a "Change" link adds to open the Settings picker on arrival. */
+export const OPEN_PICKER_PARAM = "change=business-type";
+
+/** The niche's name as the banner says it, without the article
+ * ("Chinese restaurant", "Plumbing business"; Spanish "Restaurante chino"). */
+export function nicheDisplayName(id: string, locale: Locale): string {
+  if (locale === "es") return nicheSentencePhrase(id, "es");
+  const phrase = nicheSentencePhrase(id, "en").replace(/^an? /, "");
+  return phrase.charAt(0).toUpperCase() + phrase.slice(1);
+}
+
+/** The niche as it reads in a sentence (config/nichePhrases.ts): English
+ * with its article ("a Chinese restaurant", "a barbershop"); Spanish as a
+ * type of business ("Restaurante chino", "Barbería"). */
+export function nicheSentencePhrase(id: string, locale: Locale): string {
+  if (locale === "es") return NICHE_PHRASE_ES[id] ?? nicheLabel(id, "es");
+  const phrase = NICHE_PHRASE_EN[id];
+  if (phrase) return phrase;
+  const label = nicheLabel(id, "en");
+  // Lower case, except acronyms ("YMCA").
+  const words = label.split(" ").map((w) => (/^[A-Z][A-Z]/.test(w) ? w : w.toLowerCase())).join(" ");
+  return `${articleFor(label)} ${words}`;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { readFileSync } from "node:fs";
-import { allNiches, articleFor, classifyCompetitor, detectNiche, isGeneralNiche, nicheById, nicheLabel, nichesOfParent, suggestNiche } from "./niches";
+import { allNiches, articleFor, classifyCompetitor, detectNiche, isGeneralNiche, nicheById, nicheLabel, nicheSentencePhrase, nichesOfParent, suggestNiche } from "./niches";
 import { resolveBusinessNiche, nicheBannerKind } from "./businessNiche";
 import { getBizProfileOptions, resolveBizProfile } from "@/config/bizProfiles";
 import { SAVED_BUSINESSES } from "./niches.fixture";
@@ -212,5 +212,22 @@ describe("no Google calls", () => {
     const actions = readFileSync("app/actions/niches.ts", "utf8");
     expect(actions.match(/runAndSaveCompetitorScanWithClient\(/g)).toHaveLength(1);
     expect(actions).toMatch(/export async function updateCompetitorsForNiche[\s\S]*enforceCooldown: true/);
+  });
+});
+
+describe("the business-type banner reads as a sentence", () => {
+  test("every niche, EN + ES", () => {
+    for (const n of allNiches()) {
+      const en = nicheSentencePhrase(n.id, "en");
+      expect(en).toMatch(/^(a|an) /);
+      // "a" before a consonant sound, "an" before a vowel (the phrases are written by hand).
+      expect(en.startsWith("an ") ? /^an ([aeiou]|HVAC)/i.test(en) : /^a [^aeiou]/i.test(en) || /^a (used|YMCA)/.test(en)).toBe(true);
+      expect(nicheSentencePhrase(n.id, "es").length).toBeGreaterThan(2);
+    }
+    expect(nicheSentencePhrase("chinese", "en")).toBe("a Chinese restaurant");
+    expect(nicheSentencePhrase("chinese", "es")).toBe("Restaurante chino");
+    expect(nicheSentencePhrase("nail_salon", "en")).toBe("a nail salon");
+    expect(nicheSentencePhrase("plumber", "en")).toBe("a plumbing business");
+    expect(nicheSentencePhrase("car_dealer", "en")).toBe("a used car dealer");
   });
 });

@@ -48,6 +48,7 @@ import { reviewGoalText } from "@/lib/reviewGoal";
 import { hasFewReviews, type AlsoNearbyListing } from "@/lib/competitorQuality";
 import { CompetitorSelectionNote } from "@/components/competitors/CompetitorSelectionNote";
 import { DistanceNote } from "@/components/competitors/DistanceNote";
+import { OPEN_PICKER_PARAM } from "@/lib/niches";
 
 type OkResult = Extract<GetCompetitorsResult, { status: "ok" }>;
 
@@ -920,7 +921,7 @@ export function ComparedWithLine({
   return (
     <p data-testid="compared-with" className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[13px] text-ink-soft">
       <span>{line}</span>
-      <Link href={`/business/${businessId}/settings#business-type`} className="text-[12px] font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline">
+      <Link href={`/business/${businessId}/settings?${OPEN_PICKER_PARAM}#business-type`} className="text-[12px] font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline">
         {t(locale, "dashboard.competitors.comparedWith.changeType")}
       </Link>
       <a href="#add-competitor" className="text-[12px] font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline">

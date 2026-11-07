@@ -754,17 +754,22 @@ export interface CompletedTask {
   verifiedAt: string | null;
 }
 
+/** The listing's link is broken: a parked "coming soon" domain says so;
+ * a real error page keeps the error-page wording. */
+function brokenListingLinkText(input: BusinessScoringInput, locale: Locale): { action: string; why: string; fix: string } {
+  const parked = !!input.websiteAnalysis?.websiteTrust?.listingLinkParked;
+  return {
+    action: t(locale, parked ? "growth.fix.parkedListingLink.action" : "growth.fix.brokenListingLink.action"),
+    why: t(locale, parked ? "growth.fix.parkedListingLink.why" : "growth.fix.brokenListingLink.why"),
+    fix: t(locale, "growth.fix.brokenListingLink.fix"),
+  };
+}
+
 /** website.has_website's honest task text when the business already has
  * a real website — see buildActionPlan. Null = the normal "get a
  * website" copy applies (truly no website). */
 function hasWebsiteTaskText(input: BusinessScoringInput, locale: Locale): { action: string; why: string; fix: string } | null {
-  if (input.website && input.websiteAnalysis?.websiteTrust?.listingLinkBroken) {
-    return {
-      action: t(locale, "growth.fix.brokenListingLink.action"),
-      why: t(locale, "growth.fix.brokenListingLink.why"),
-      fix: t(locale, "growth.fix.brokenListingLink.fix"),
-    };
-  }
+  if (input.website && input.websiteAnalysis?.websiteTrust?.listingLinkBroken) return brokenListingLinkText(input, locale);
   if (input.verifiedElsewhereUrl) {
     return {
       action: t(locale, "growth.fix.addWebsiteToListing.heading"),
@@ -1744,9 +1749,7 @@ export function applyGrowthWebsiteRules(
       result.push({
         ...task,
         effort: "quick_win",
-        action: t(locale, "growth.fix.brokenListingLink.action"),
-        why: t(locale, "growth.fix.brokenListingLink.why"),
-        fix: t(locale, "growth.fix.brokenListingLink.fix"),
+        ...brokenListingLinkText(input, locale),
         timingNote: t(locale, "growth.fix.addWebsiteToListing.note"),
         ownerActionOnGoogle: true,
       });

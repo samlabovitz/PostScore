@@ -111,7 +111,7 @@ describe("the UI pieces", () => {
     const query = { noun: "skate & snow shops", query: "skate & snow shops in Newark, DE" };
     const html = wrap(<ComparedWithLine businessId="b1" count={6} comparedWith={query} fallbackNoun="shops" />);
     expect(text(html)).toContain("Compared with 6 skate & snow shops near you — the ones Google shows when customers search “skate & snow shops in Newark, DE”.");
-    expect(html).toContain('href="/business/b1/settings#business-type"');
+    expect(html).toContain('href="/business/b1/settings?change=business-type#business-type"');
     expect(html).toContain('href="#add-competitor"');
     expect(html).not.toMatch(/Counts for me|Rank against|type="checkbox"|role="tab"/);
     expect(text(wrap(<ComparedWithLine businessId="b1" count={6} comparedWith={query} fallbackNoun="tiendas" />, "es"))).toContain("Comparado con 6 tiendas cerca de usted: los que Google muestra cuando los clientes buscan “skate & snow shops in Newark, DE”.");
@@ -120,20 +120,46 @@ describe("the UI pieces", () => {
   });
 
   test("the one-time banner: 'We think you're…', the suggestion, and 'tell us' (EN + ES)", () => {
-    expect(text(wrap(<NicheBanner businessId="b1" kind="weThink" nicheId="skate_snow" suggestion={null} parentLabel="Specialty Store" />))).toContain("We think you're a Skate & snow shop.");
-    expect(text(wrap(<NicheBanner businessId="b1" kind="suggest" nicheId="cafe" suggestion="ice_cream" parentLabel="Café / Coffee Shop" />))).toContain("We think you're an Ice cream & frozen yogurt shop (you chose Café / Coffee Shop).");
+    expect(text(wrap(<NicheBanner businessId="b1" kind="weThink" nicheId="skate_snow" suggestion={null} parentLabel="Specialty Store" />))).toContain("We think you're a skate & snow shop.");
+    expect(text(wrap(<NicheBanner businessId="b1" kind="suggest" nicheId="cafe" suggestion="ice_cream" parentLabel="Café / Coffee Shop" />))).toContain("We think you're an ice cream & frozen yogurt shop (you chose Café or coffee shop).");
     expect(text(wrap(<NicheBanner businessId="b1" kind="needsOwner" nicheId="lawyer" suggestion={null} parentLabel="Law Firm" />))).toContain("Tell us what kind of law firm you are");
     const es = text(wrap(<NicheBanner businessId="b1" kind="weThink" nicheId="skate_snow" suggestion={null} parentLabel="Tienda especializada" />, "es"));
-    expect(es).toContain("Creemos que su negocio es: Tienda de skate y snowboard.");
+    expect(es).toContain("Creemos que su tipo de negocio es: Tienda de skate y snowboard.");
     expect(es).toContain("Cambiar");
   });
 
   test("Settings: a searchable list grouped by type, the business's own type first", () => {
-    const html = wrap(<NichePicker businessId="b1" nicheId="skate_snow" source="detected" suggestion={null} />);
-    const t = text(html);
-    expect(t).toContain("Current: Skate & snow shop (we detected this)");
+    // Closed: the selected type, its source, Change — no search or list.
+    const closed = wrap(<NichePicker businessId="b1" nicheId="skate_snow" source="detected" suggestion={null} />);
+    expect(text(closed)).toContain("Skate & snow shop We detected this");
+    expect(closed).toContain('data-testid="niche-selected"');
+    expect(text(closed)).toContain("Change");
+    expect(closed).not.toContain('type="search"');
+    expect(closed).not.toContain('role="listbox"');
+    expect(text(closed)).not.toContain("Use automatic detection");
+    // Open: search, Cancel, the list (own type first, banner names).
+    const html = wrap(<NichePicker businessId="b1" nicheId="skate_snow" source="detected" suggestion={null} initialOpen />);
     expect(html).toContain('type="search"');
+    expect(text(html)).toContain("Cancel");
     expect(html.indexOf("Specialty Store")).toBeLessThan(html.indexOf("Salon &amp; Personal Care"));
     expect(html).toMatch(/aria-selected="true"[^>]*>Skate &amp; snow shop</);
+    expect(text(html)).toContain("Chinese restaurant");
+    // Automatic detection: only after the owner chose a type.
+    expect(text(html)).not.toContain("Use automatic detection");
+    const chosen = text(wrap(<NichePicker businessId="b1" nicheId="chinese" source="owner" suggestion={null} initialOpen />));
+    expect(chosen).toContain("Chinese restaurant You chose this");
+    expect(chosen).toContain("Use automatic detection");
+    // Spanish.
+    const es = text(wrap(<NichePicker businessId="b1" nicheId="chinese" source="owner" suggestion={null} initialOpen />, "es"));
+    expect(es).toContain("Restaurante chino Usted lo eligió");
+    expect(es).toContain("Cancelar");
+    expect(es).toContain("Usar la detección automática");
+    expect(text(wrap(<NichePicker businessId="b1" nicheId="chinese" source="detected" suggestion={null} />, "es"))).toContain("Lo detectamos");
+  });
+
+  test("the banner's Change opens the picker; banner names match", () => {
+    const html = wrap(<NicheBanner businessId="b1" kind="suggest" nicheId="chinese" suggestion="noodles_ramen" parentLabel="Restaurant" />);
+    expect(html).toContain('href="/business/b1/settings?change=business-type#business-type"');
+    expect(text(html)).toContain("We think you're a noodle and ramen restaurant (you chose Chinese restaurant).");
   });
 });

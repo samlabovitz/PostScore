@@ -39,7 +39,7 @@ const WEBSITE_CHECKS = [
   "site_freshness",
 ] as const;
 
-const LISTING_CHECKS = ["photos", "hours", "phone", "address", "categories", "website_link", "business_status"] as const;
+const LISTING_CHECKS = ["photos", "hours", "phone", "address", "categories", "website_link", "business_status", "customer_details"] as const;
 const REVIEW_CHECKS = ["rating", "review_count", "review_recency"] as const;
 
 export const POSTAI_LINK_TARGETS: Record<string, LinkTarget> = {
@@ -58,6 +58,8 @@ export const POSTAI_LINK_TARGETS: Record<string, LinkTarget> = {
   ...Object.fromEntries(
     REVIEW_CHECKS.map((c) => [`reviews.${c}`, { path: "/website-reviews", anchor: "get-more-reviews", label: "dashboard.assistant.link.reviews" }])
   ),
+  // Replying is done where the unanswered reviews are, not with the review link.
+  "reviews.review_replies": { path: "/website-reviews", anchor: "reply-to-reviews", label: "dashboard.assistant.link.replies" },
   "reviews.connect": { path: "/connect-gbp", label: "dashboard.assistant.link.connect" },
   growth: { path: "/growth", label: "dashboard.assistant.link.growth" },
   "growth.weekly_routine": { path: "/growth", anchor: "weekly-routine", label: "dashboard.assistant.link.weeklyRoutine" },

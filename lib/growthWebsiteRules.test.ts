@@ -351,3 +351,36 @@ describe("website banner hides when nothing scoreable is left (Step 2d, the Wond
     expect(buildWebsiteBanner(getScoreWithSuggestions(input, "en").breakdown, input, null)).toBeNull();
   });
 });
+
+describe("a parked listing link says parked, not 'error page'", () => {
+  const parked: BusinessScoringInput = {
+    ...BASE,
+    websiteAnalysis: { ...GOOD_ANALYSIS, websiteTrust: { ...CLEAN_TRUST, listingLinkBroken: true, listingLinkParked: true } },
+  };
+  const broken: BusinessScoringInput = {
+    ...BASE,
+    websiteAnalysis: { ...GOOD_ANALYSIS, websiteTrust: { ...CLEAN_TRUST, listingLinkBroken: true } },
+  };
+
+  test("the website-link recommendation (EN + ES)", () => {
+    const linkTask = (input: BusinessScoringInput) =>
+      growthPlan(input).tasks.find((x) => x.checkId === "completeness.website_link" || x.checkId === "website.has_website" || x.checkId === MERGED_WEBSITE_CHECK_ID);
+    const parkedTask = growthPlan({ ...parked, verifiedElsewhereUrl: "https://real.example" }).tasks.find((x) => x.checkId === "completeness.website_link");
+    expect(parkedTask?.action).toBe("Your Google listing's website link goes to a parked “coming soon” domain, not your website. Change it to your real site.");
+    expect(parkedTask?.why).not.toMatch(/Page Not Found/);
+    expect(t("es", "growth.fix.parkedListingLink.action")).toContain("dominio estacionado");
+    // A real error page keeps the error-page wording.
+    const brokenTask = growthPlan({ ...broken, verifiedElsewhereUrl: "https://real.example" }).tasks.find((x) => x.checkId === "completeness.website_link");
+    expect(brokenTask?.action).toBe(t("en", "growth.fix.brokenListingLink.action"));
+    expect(linkTask(parked)).toBeTruthy();
+  });
+
+  test("website.has_website's advice (no verified site)", () => {
+    const advice = (input: BusinessScoringInput, locale: "en" | "es" = "en") =>
+      getScoreWithSuggestions(input, locale).suggestions.find((s) => s.checkId === "website.has_website")?.advice;
+    expect(advice(parked)).toBe(t("en", "content.checks.website.has_website.advice.listingParked"));
+    expect(advice(parked)).not.toMatch(/error page/);
+    expect(advice(parked, "es")).toBe(t("es", "content.checks.website.has_website.advice.listingParked"));
+    expect(advice(broken)).toBe(t("en", "content.checks.website.has_website.advice.listingBroken"));
+  });
+});

@@ -101,9 +101,10 @@ export function TopRecommendations({ businessId, recommendations }: { businessId
         <IconArrowRight size={16} className="shrink-0 text-brass" aria-hidden />
       </Link>
 
-      {/* Equal height with "Since your last scan": if this side is
-          shorter, its list centers rather than leaving a gap. */}
-      <div className="flex flex-1 flex-col justify-center">
+      {/* Equal height with "Since your last scan": the list always sits
+          right under the banner; any extra height goes below it, above
+          the footer note — never spread between items. */}
+      <div className="flex-1">
         {recommendations === null ? (
           <p className="mt-3 text-sm text-ink-soft">{t(locale, "dashboard.overview.recs.unavailable")}</p>
         ) : recommendations.length === 0 ? (
@@ -119,6 +120,7 @@ export function TopRecommendations({ businessId, recommendations }: { businessId
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <RecText rec={rec} />
+                      {rec.pending && <span className="text-[12px] font-medium text-ink-soft">{t(locale, "dashboard.overview.recs.pending")}</span>}
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       {rec.priority && <PriorityTag priority={rec.priority} />}

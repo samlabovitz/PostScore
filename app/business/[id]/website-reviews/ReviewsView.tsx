@@ -236,7 +236,7 @@ export function ReviewsView({
         )}
       </div>
 
-      <div>
+      <div id="reply-to-reviews" className="scroll-mt-20">
         <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
           {t(locale, "dashboard.websiteReviews.replyAssistantLabel")}
         </div>

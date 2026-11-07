@@ -5,6 +5,7 @@ import { isBusinessArchived } from "@/lib/businessArchive.server";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { scoreBusinessById, getScoreHistory } from "@/app/actions/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
+import { biggestBoostFrom, topRecommendations } from "@/lib/overviewTiles";
 import { getLatestCompetitorSnapshot, getLocalBenchmark } from "@/app/actions/competitors";
 import { headToHead, nearbyReviewAverage, ownerStanding, rankBy, reviewGoal } from "@/lib/competitorComparison";
 import { headToHeadIntro, headToHeadScores } from "@/lib/competitorHeadToHead";
@@ -373,7 +374,11 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
       businessStatus: scored.business.business_status,
       // The Overview's own projections: "Biggest boost", "Projected
       // score" and the Growth plan cards' points (Free: points waiting).
-      biggestBoost: suggestions[0] ?? null,
+      biggestBoost: biggestBoostFrom(
+        actionPlanResult.status === "ok" ? topRecommendations(actionPlanResult.tasks, actionPlanResult.websiteBanner, businessId) : null,
+        suggestions,
+        locale
+      ),
       projectedScore: scored.result.projectedBreakdown.total,
       tasks: actionPlanResult.status === "ok" ? actionPlanResult.tasks.slice(0, MAX_ACTION_PLAN_TASKS_IN_CONTEXT) : [],
       websiteBanner: actionPlanResult.status === "ok" ? actionPlanResult.websiteBanner : null,

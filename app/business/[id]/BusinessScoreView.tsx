@@ -32,7 +32,7 @@ import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution
 import { ScoreBreakdownPanel } from "@/components/overview/ScoreBreakdownPanel";
 import { TopRecommendations } from "@/components/overview/TopRecommendations";
 import { StudioComingSoon } from "@/components/overview/StudioComingSoon";
-import { reviewCountChange, type Recommendation } from "@/lib/overviewTiles";
+import { biggestBoostFrom, reviewCountChange, type Recommendation } from "@/lib/overviewTiles";
 import type { LinkOptions } from "@/lib/postaiLinks";
 import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
 import { LiveListingSection } from "@/components/gbp/LiveListingSection";
@@ -293,9 +293,9 @@ export function BusinessScoreView({
           history={history}
           projectedScore={projectedBreakdown.total}
           projectedGrade={projectedBreakdown.grade}
-          // The single biggest real gain available right now
-          // (generateSuggestions order) — never a decorative number.
-          biggestBoost={result.suggestions[0] ?? null}
+          // The first Top recommendation — the same source, so the two
+          // never disagree; never a decorative number.
+          biggestBoost={biggestBoostFrom(recommendations, result.suggestions, locale)}
           onHold={scoreOnHold(business.business_status)}
         />
         <RescanMessages state={rescan.state} />
