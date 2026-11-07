@@ -17,7 +17,7 @@ import { getActionPlan } from "@/app/actions/actionPlan";
 import { createClient } from "@/lib/supabase/server";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { businessRowToScoringInput } from "@/lib/scoring";
-import { topRecommendations } from "@/lib/overviewTiles";
+import { reportNextSteps, topRecommendations } from "@/lib/overviewTiles";
 import { reportCategories } from "./reportCategories";
 import { recRangeText, wholePointRange } from "@/lib/pointRange";
 import { normalizeLocale, t, tPlural, type Locale } from "@/lib/i18n";
@@ -75,7 +75,7 @@ export async function getReportData(businessId: string, now: Date = new Date()):
   ]);
 
   const linkOptions = { referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk };
-  const recs = actionPlan.status === "ok" ? topRecommendations(actionPlan.tasks, actionPlan.websiteBanner, businessId, linkOptions, 3) : [];
+  const recs = actionPlan.status === "ok" ? reportNextSteps(topRecommendations(actionPlan.tasks, actionPlan.websiteBanner, businessId, linkOptions, Infinity)) : [];
   const snapshots = reports.history;
   const latestReviews = snapshots.at(-1)?.profile_snapshot_json?.reviewCount;
   const previousReviews = snapshots.at(-2)?.profile_snapshot_json?.reviewCount;

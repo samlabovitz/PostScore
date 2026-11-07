@@ -923,7 +923,9 @@ export function mergeReviewTasks(
     fix: t(locale, "content.actionPlan.mergedReviews.fix"),
     ownerActionOnGoogle: false,
     promisedPoints: round1(reviewTasks.reduce((sum, task) => sum + task.promisedPoints, 0)),
-    status: reviewTasks.some((task) => task.status === "pending_verification")
+    // "Marked done" only when every part is — one review check marked
+    // done doesn't mean the whole card is.
+    status: reviewTasks.every((task) => task.status === "pending_verification")
       ? "pending_verification"
       : "open",
     markedDoneAt:
@@ -1032,7 +1034,9 @@ export function mergeWebsiteTasks(
     fix: t(locale, copy.fix),
     ownerActionOnGoogle: false,
     promisedPoints: round1(websiteTasks.reduce((sum, task) => sum + task.promisedPoints, 0)),
-    status: websiteTasks.some((task) => task.status === "pending_verification")
+    // "Marked done" only when every part is — one review check marked
+    // done doesn't mean the whole card is.
+    status: websiteTasks.every((task) => task.status === "pending_verification")
       ? "pending_verification"
       : "open",
     markedDoneAt:

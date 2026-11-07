@@ -374,8 +374,11 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
       businessStatus: scored.business.business_status,
       // The Overview's own projections: "Biggest boost", "Projected
       // score" and the Growth plan cards' points (Free: points waiting).
+      // Exactly the score card's inputs (app/business/[id]/page.tsx): Free
+      // has no recommendations (its card uses the biggest suggestion), and
+      // an empty list means nothing to boost.
       biggestBoost: biggestBoostFrom(
-        actionPlanResult.status === "ok" ? topRecommendations(actionPlanResult.tasks, actionPlanResult.websiteBanner, businessId) : null,
+        plan !== "free" && actionPlanResult.status === "ok" ? topRecommendations(actionPlanResult.tasks, actionPlanResult.websiteBanner, businessId) : null,
         suggestions,
         locale
       ),

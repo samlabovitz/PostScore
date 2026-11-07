@@ -271,7 +271,7 @@ describe("top recommendations: the action plan, prioritized by real points", () 
     expect(recommendationPriority(1.9)).toBeNull();
   });
 
-  test("open and marked-done items (points not yet earned), biggest first, each with PostAI's fix link", () => {
+  test("open items first, then marked-done ones (points not yet earned), biggest first, each with PostAI's fix link", () => {
     const recs = topRecommendations(
       [
         task({ checkId: "completeness.photos", weightedPoints: 2.5 }),
@@ -282,13 +282,14 @@ describe("top recommendations: the action plan, prioritized by real points", () 
       { kind: "improve", score: 72, earned: 25, of: 30, improvements: 3, points: 4.1 },
       "b"
     );
+    // The marked-done Hours item (9 pts) comes after every open item.
     expect(recs.map((r) => [r.key, r.priority, r.pending])).toEqual([
-      ["completeness.hours", "high", true],
       ["visibility.reviews_merged", "high", false],
       ["website", "medium", false],
+      ["completeness.photos", "medium", false],
     ]);
-    expect(recs[1].href).toBe("/business/b/website-reviews#get-more-reviews");
-    expect(recs[2].href).toBe("/business/b/website");
+    expect(recs[0].href).toBe("/business/b/website-reviews#get-more-reviews");
+    expect(recs[1].href).toBe("/business/b/website");
     // A listing check's fix row lives on the Overview itself.
     expect(topRecommendations([task({ weightedPoints: 2.5 })], null, "b")[0].href).toBe("/business/b#check-photos");
     expect(topRecommendations([task({ weightedPoints: 2.5 })], null, "b")[0].linkLabel).toBeNull();

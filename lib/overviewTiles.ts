@@ -179,19 +179,28 @@ export function topRecommendations(
       });
     }
   }
-  return items.sort((a, b) => b.points - a.points).slice(0, limit);
+  // Open items first (biggest first), then marked-done ones — so items
+  // waiting for a scan never push out what the owner still has to do.
+  return items.sort((a, b) => Number(a.pending) - Number(b.pending) || b.points - a.points).slice(0, limit);
 }
 
-/** The score card's "Biggest boost": the first Top recommendation, so the
- * two never disagree (the real Hair Express case: every item marked done,
- * Biggest boost +9 · Review count, Top recommendations "Nothing open").
- * Without recommendations (Free hides them), the biggest suggestion. */
+/** The monthly report's next steps: open items only — never something the
+ * owner already marked done (it's waiting for a scan) — at most 3. */
+export function reportNextSteps(recs: Recommendation[], limit = 3): Recommendation[] {
+  return recs.filter((r) => !r.pending).slice(0, limit);
+}
+
+/** The score card's "Biggest boost": the first OPEN Top recommendation
+ * (a marked-done one only when nothing is open), so the two never disagree
+ * (the real Hair Express case: every item marked done, Biggest boost +9 ·
+ * Review count, Top recommendations "Nothing open"). Without
+ * recommendations (Free hides them), the biggest suggestion. */
 export function biggestBoostFrom(
   recommendations: Recommendation[] | null,
   suggestions: Suggestion[],
   locale: Locale
 ): { label: string; promisedPoints: number; weightedPoints: number } | null {
-  const top = recommendations?.[0];
+  const top = recommendations?.find((r) => !r.pending) ?? recommendations?.[0];
   if (top) {
     const label =
       top.source.kind === "task"
