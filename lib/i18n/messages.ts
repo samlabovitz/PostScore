@@ -2500,6 +2500,8 @@ export type MessageKey =
   | "dashboard.intake.searching"
   | "dashboard.intake.searchButton"
   | "dashboard.intake.searchFailedError"
+  | "dashboard.intake.searchBusy"
+  | "dashboard.intake.searchRateLimited"
   | "dashboard.intake.resultHeading"
   | "dashboard.intake.noMatchingBusiness"
   | "dashboard.intake.multipleMatches"
@@ -7351,6 +7353,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.intake.searching": "Searching...",
     "dashboard.intake.searchButton": "Search",
     "dashboard.intake.searchFailedError": "The search failed — check your connection and try again.",
+    "dashboard.intake.searchBusy": "Search is busy right now — please try again later.",
+    "dashboard.intake.searchRateLimited": "You've reached today's search limit — please try again tomorrow.",
     "dashboard.intake.resultHeading": "Result",
     "dashboard.intake.noMatchingBusiness":
       "No matching business found for that name and location. Try broadening the location or checking the spelling.",
@@ -12071,6 +12075,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.intake.searching": "Buscando...",
     "dashboard.intake.searchButton": "Buscar",
     "dashboard.intake.searchFailedError": "La búsqueda falló — revise su conexión e inténtelo de nuevo.",
+    "dashboard.intake.searchBusy": "La búsqueda está ocupada en este momento; inténtelo de nuevo más tarde.",
+    "dashboard.intake.searchRateLimited": "Alcanzó el límite de búsquedas de hoy; inténtelo de nuevo mañana.",
     "dashboard.intake.resultHeading": "Resultado",
     "dashboard.intake.noMatchingBusiness": "No se encontró ningún negocio que coincida con ese nombre y ubicación. Pruebe ampliando la ubicación o revisando la ortografía.",
     "dashboard.intake.multipleMatches": "Se encontraron {count} posibles coincidencias. Elija la correcta:",

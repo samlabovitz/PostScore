@@ -57,11 +57,12 @@ describe("the cap — like PLACES_SEARCH_MONTHLY_CAP", () => {
     expect(canMakeDetailsCall("owner_rescan", 799, 800)).toBe(true);
     expect(canMakeDetailsCall("owner_rescan", 800, 800)).toBe(false);
     for (const kind of ["monthly", "rescan_all", "website_retry", "website_only", "dry_run"] as const) expect(canMakeDetailsCall(kind, 800, 800), kind).toBe(false);
-    expect(canMakeDetailsCall("onboarding", 5000, 800)).toBe(true);
+    // Onboarding has its own ceiling (lib/onboardingLookupBudget.ts), not this one.
+    expect(canMakeDetailsCall("onboarding", 800, 800)).toBe(false);
     expect(canMakeDetailsCall("photos", 5000, 800)).toBe(true);
     // Photos-only Details is Google's free IDs Only SKU: logged, never counted.
     expect(BILLED_DETAILS_KINDS).not.toContain("photos");
-    expect(BILLED_DETAILS_KINDS).toContain("onboarding");
+    expect(BILLED_DETAILS_KINDS).not.toContain("onboarding");
     expect(skippedKind("monthly")).toBe("monthly_skipped");
   });
 
@@ -112,8 +113,9 @@ describe("every Place Details call is logged with its own kind", () => {
     expect(fs.readFileSync("app/api/cron/monthly-reports/route.ts", "utf8")).toContain('rescanBusinessWithClient(supabase, businessId, false, { detailsKind: "monthly" })');
     expect(fs.readFileSync("scripts/rescan-all.ts", "utf8")).toContain('rescanBusinessWithClient(supabase, b.id, noScreenshots, { detailsKind: "rescan_all" })');
     const lookupRoute = fs.readFileSync("app/api/places/lookup/route.ts", "utf8");
-    expect(lookupRoute).toContain('logPlacesDetailsCall(null, "onboarding")');
-    expect(lookupRoute).toContain('logPlacesDetailsCall(null, "onboarding", result.paidCalls?.details ?? 0)');
+    // Sign-up logs every Google call under its own ceiling (lib/onboardingLookupBudget.ts).
+    expect(lookupRoute).toContain("logOnboardingCalls({ textSearch: 0, details: 1, geocode: 0 })");
+    expect(lookupRoute).toContain("logOnboardingCalls(result.paidCalls");
     expect(fs.readFileSync("app/api/business/[id]/listing-photo/route.ts", "utf8")).toContain('logPlacesDetailsCall(business.id, "photos")');
     // Free's re-scan limit still reads "owner_rescan" rows.
     expect(fs.readFileSync("lib/placesSearchBudget.server.ts", "utf8")).toContain('.eq("kind", "owner_rescan")');

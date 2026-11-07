@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { saveBusiness, saveWebsiteOnlyBusiness } from "@/app/actions/businesses";
 import { DEFAULT_LOCALE, normalizeLocale, t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
+import { lookupBlockedMessage } from "@/lib/onboardingLookupBudget";
 import type { PlaceLookupResult, PlaceCandidate, PlaceDetails } from "@/lib/google/places";
 import type { SearchRoute } from "@/lib/google/businessSearch";
 import { TradeTypeahead, tradePickToSaveFields, type TradePick } from "./TradeTypeahead";
@@ -239,7 +240,8 @@ export function AddBusinessSearch({ attachTo = null }: { attachTo?: AttachTarget
         body: JSON.stringify(body),
       });
       const data = (await res.json()) as SearchResult;
-      setResult(data);
+      const blocked = lookupBlockedMessage(data, locale);
+      setResult(blocked ? { status: "error", message: blocked } : data);
     } catch {
       setResult({ status: "error", message: t(locale, "dashboard.intake.searchFailedError") });
     } finally {

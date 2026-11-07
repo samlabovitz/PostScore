@@ -4,16 +4,18 @@
 // PLACES_SEARCH_MONTHLY_CAP (lib/placesSearchBudget.ts). Pure.
 //
 // Over the cap a re-scan skips the Google refresh and keeps the saved
-// listing data (it never fails); the skip is logged. Two kinds are logged
-// but never blocked: "onboarding" (a new owner must always be able to add
-// their business) and "photos" (the photos-only Details call is Google's
-// free "IDs Only" SKU, so it doesn't count toward the cap either).
+// listing data (it never fails); the skip is logged. "photos" is logged but
+// never blocked (the photos-only Details call is Google's free "IDs Only"
+// SKU, so it doesn't count toward the cap either). "onboarding" (adding a
+// business) has its own ceiling, PLACES_ONBOARDING_MONTHLY_CAP
+// (lib/onboardingLookupBudget.ts), and isn't counted here — so onboarding
+// can never use up what re-scans and the monthly job need.
 // See docs/review-scoring-plan.md, Stage 1.
 
 export const DEFAULT_PLACES_DETAILS_MONTHLY_CAP = 800;
 
 export type PlacesDetailsKind =
-  /** Adding a business (the intake lookup). */
+  /** Adding a business (the intake lookup) — its own ceiling (lib/onboardingLookupBudget.ts). */
   | "onboarding"
   /** "Re-scan now". Also Free's re-scan limit (lastOwnerRescanAt). */
   | "owner_rescan"
@@ -47,11 +49,12 @@ export const PLACES_DETAILS_KINDS: readonly PlacesDetailsKind[] = [
   "competitor_added",
 ];
 
-/** Billed Details calls — what the cap counts (photos-only is free). */
-export const BILLED_DETAILS_KINDS: readonly PlacesDetailsKind[] = PLACES_DETAILS_KINDS.filter((k) => k !== "photos");
+/** What this cap counts: billed Details calls, except onboarding's (its own
+ * ceiling) and photos-only (free). */
+export const BILLED_DETAILS_KINDS: readonly PlacesDetailsKind[] = PLACES_DETAILS_KINDS.filter((k) => k !== "photos" && k !== "onboarding");
 
 /** Never skipped by the cap (still logged). */
-const NEVER_BLOCKED: ReadonlySet<PlacesDetailsKind> = new Set<PlacesDetailsKind>(["onboarding", "photos"]);
+const NEVER_BLOCKED: ReadonlySet<PlacesDetailsKind> = new Set<PlacesDetailsKind>(["photos"]);
 
 export function placesDetailsMonthlyCap(env: Record<string, string | undefined> = process.env): number {
   const raw = Number.parseInt(env.PLACES_DETAILS_MONTHLY_CAP ?? "", 10);
