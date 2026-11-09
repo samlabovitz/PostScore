@@ -11,7 +11,10 @@ import { getPlan } from "@/lib/premium";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Every business page shares this layout only for "Ask PostAI"
+ * Every business page shares this layout for "Ask PostAI" and for bringing
+ * the Account menu's notifications up to date with the saved data.
+ *
+ * "Ask PostAI"
  * (components/assistant/PostAIDock.tsx): a layout stays mounted while the
  * owner moves between its pages, so the open panel and its conversation
  * do too. Each page still renders its own DashboardShell.
@@ -20,6 +23,14 @@ import { createClient } from "@/lib/supabase/server";
  * page reads them too); the chat's data loads only when the panel opens.
  */
 export default async function BusinessLayout({ children, params }: { children: ReactNode; params: { id: string } }) {
+  // Notifications from the saved data, before the Account menu reads them
+  // (at most once an hour per business — lib/notifications.server.ts).
+  try {
+    const { syncNotificationsForPage } = await import("@/lib/notifications.server");
+    await syncNotificationsForPage(createClient(), params.id);
+  } catch {
+    // Never let notifications break a page.
+  }
   return (
     <>
       {children}

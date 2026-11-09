@@ -799,6 +799,18 @@ export type MessageKey =
   | "dashboard.website.studioShowcase.add"
   | "dashboard.nav.account"
   | "dashboard.nav.logOut"
+  | "dashboard.notifications.title"
+  | "dashboard.notifications.empty"
+  | "dashboard.notifications.found"
+  | "dashboard.notifications.fixed"
+  | "dashboard.notifications.unread"
+  | "dashboard.notifications.viewCheck"
+  | "dashboard.notifications.severity.urgent"
+  | "dashboard.notifications.severity.high"
+  | "dashboard.notifications.severity.info"
+  | "dashboard.notifications.close"
+  | "dashboard.notifications.loading"
+  | "dashboard.notifications.badgeLabel"
   // --- Per-business language toggle (BusinessLanguageToggle.tsx), inside
   // the sidebar's collapsed account menu.
   | "dashboard.nav.languageForBusinessLabel"
@@ -5481,6 +5493,18 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.studioShowcase.add": "Add PostStudio",
     "dashboard.nav.account": "Account",
     "dashboard.nav.logOut": "Log out",
+    "dashboard.notifications.title": "Notifications",
+    "dashboard.notifications.empty": "You're all caught up. When a scan finds something customers are running into, it shows up here.",
+    "dashboard.notifications.found": "Found {date}",
+    "dashboard.notifications.fixed": "Fixed ✓ {date}",
+    "dashboard.notifications.unread": "Unread",
+    "dashboard.notifications.viewCheck": "See the check",
+    "dashboard.notifications.severity.urgent": "Urgent",
+    "dashboard.notifications.severity.high": "High",
+    "dashboard.notifications.severity.info": "Info",
+    "dashboard.notifications.close": "Close",
+    "dashboard.notifications.loading": "Loading…",
+    "dashboard.notifications.badgeLabel": "{count} unread notifications",
     "dashboard.nav.languageForBusinessLabel": "Language for this business",
     "dashboard.nav.languageToggleEn": "EN",
     "dashboard.nav.languageToggleEs": "ES",
@@ -10519,6 +10543,18 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.studioShowcase.add": "Agregar PostStudio",
     "dashboard.nav.account": "Cuenta",
     "dashboard.nav.logOut": "Cerrar sesión",
+    "dashboard.notifications.title": "Notificaciones",
+    "dashboard.notifications.empty": "Está todo al día. Cuando un análisis encuentre algo con lo que sus clientes estén teniendo problemas, aparecerá aquí.",
+    "dashboard.notifications.found": "Detectado el {date}",
+    "dashboard.notifications.fixed": "Corregido ✓ {date}",
+    "dashboard.notifications.unread": "Sin leer",
+    "dashboard.notifications.viewCheck": "Ver la revisión",
+    "dashboard.notifications.severity.urgent": "Urgente",
+    "dashboard.notifications.severity.high": "Alta",
+    "dashboard.notifications.severity.info": "Info",
+    "dashboard.notifications.close": "Cerrar",
+    "dashboard.notifications.loading": "Cargando…",
+    "dashboard.notifications.badgeLabel": "{count} notificaciones sin leer",
     "dashboard.nav.languageForBusinessLabel": "Idioma de este negocio",
     "dashboard.nav.languageToggleEn": "EN",
     "dashboard.nav.languageToggleEs": "ES",

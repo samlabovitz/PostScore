@@ -224,6 +224,21 @@ export async function saveScoreSnapshotWithClient(
     data.id
   );
 
+  // In-app notifications (lib/notifications.ts): one per urgent issue this
+  // scan finds, and the ones it shows are fixed resolved. Never fails the scan.
+  try {
+    const [{ urgentIssues }, { syncUrgentNotifications }, { createAdminClient }] = await Promise.all([
+      import("@/lib/urgency"),
+      import("@/lib/notifications.server"),
+      import("@/lib/supabase/admin"),
+    ]);
+    const input = businessRowToScoringInput(scored.business as BusinessScoringRow);
+    const issues = urgentIssues(input, scored.result.breakdown, { hasListing: !!scored.business.place_id });
+    await syncUrgentNotifications(createAdminClient(), businessId, issues, { listingParked: input.websiteAnalysis?.websiteTrust?.listingLinkParked === true });
+  } catch (err) {
+    console.error(`[notifications] sync failed for ${businessId}:`, err instanceof Error ? err.message : err);
+  }
+
   return {
     status: "saved",
     scoreId: data.id,
