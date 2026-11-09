@@ -55,6 +55,9 @@ describe("“View on Google” after a change to the Business Profile", () => {
     const edit = fs.readFileSync("components/gbp/CustomerDetailsGoogleEdit.tsx", "utf8");
     expect(edit.match(/<ViewOnGoogle mapsUri=\{phase\.mapsUri\} \/>/g)?.length).toBe(2); // done + error
     expect(edit.match(/<ViewOnGoogle mapsUri=\{mapsUri\} \/>/g)?.length).toBe(2); // undo done + undo error
-    expect(fs.readFileSync("components/gbp/PlatformLinkCard.tsx", "utf8")).toContain('{(step === "sent" || step === "undone" || error) && <ViewOnGoogle mapsUri={mapsUri} />}');
+    const card = fs.readFileSync("components/gbp/PlatformLinkCard.tsx", "utf8");
+    // Add, and its Undo (the strip shown right after adding and on later visits).
+    expect(card).toContain('{(step === "sent" || error) && <ViewOnGoogle mapsUri={mapsUri} />}');
+    expect(card).toContain('{(step === "undone" || error) && <ViewOnGoogle mapsUri={mapsUri} />}');
   });
 });

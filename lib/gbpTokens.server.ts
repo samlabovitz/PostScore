@@ -107,6 +107,9 @@ export async function disconnectGbpData(
     }
   }
 
+  // Changes made on Google while connected can't be undone after a
+  // disconnect — a reconnect may be a different listing.
+  await closeOpenUndos(admin, businessId);
   const { error: tokenError } = await admin.from("gbp_tokens").delete().eq("business_id", businessId);
   const { error: statusError } = await admin.from("gbp_connections").delete().eq("business_id", businessId);
   // …and the copy scoring uses (supabase/scoring-v1-12.sql).
@@ -179,6 +182,15 @@ export async function markGbpReconnect(admin: SupabaseClient, businessId: string
   // Not connected now: scoring leaves replies out until it's reconnected.
   await clearGbpScoringCounts(admin, businessId);
   return { status: "error", reason: "reconnect" };
+}
+
+/** Marks every open Google change (gbp_changes) as no longer undoable. */
+export async function closeOpenUndos(admin: SupabaseClient, businessId: string, at: string = new Date().toISOString()): Promise<void> {
+  try {
+    await admin.from("gbp_changes").update({ undo_closed_at: at }).eq("business_id", businessId).is("undone_at", null).is("undo_closed_at", null);
+  } catch {
+    // supabase/gbp-changes-location.sql not run yet: rows can't be read for undo either.
+  }
 }
 
 /** Clears the reply counts scoring v1.12.0 reads (businesses.gbp_*). */

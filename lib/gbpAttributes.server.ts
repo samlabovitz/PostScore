@@ -8,9 +8,11 @@
 //   ONE locations.updateAttributes PATCH — Google applies all of it or
 //   none — then reads metadata.hasPendingEdits for an honest "Pending
 //   Google review". Every approval is logged in gbp_changes, failures too.
-// - undo: the latest approval, ≤ 7 days, only if nothing was changed on
-//   Google since; one PATCH restoring the logged "before" (removing what
-//   was "not set"), then a read-back — complete only if it matches.
+// - undo: the latest approval, ≤ 7 days, made on the location connected
+//   now, only if nothing was changed on Google since; one PATCH restoring
+//   the logged "before" (removing what was "not set"), then a read-back —
+//   complete only if it matches. An approval Google was still reviewing
+//   is always re-sent, and "sent — Google is reviewing" if it still is.
 //
 // The caller (app/actions/gbpCustomerDetails.ts) has already checked the
 // owner, the plan, the archive and the connection.
@@ -153,7 +155,7 @@ export function supabaseChangeStore(db: SupabaseClient): GbpChangeStore {
     async rowsSince(businessId, since, kind = "attributes") {
       const { data, error } = await db
         .from("gbp_changes")
-        .select("batch_id, field, before_value, after_value, approved_at, status, undo_of, undone_at")
+        .select("batch_id, field, before_value, after_value, approved_at, status, undo_of, undone_at, location_name, undo_closed_at")
         .eq("business_id", businessId)
         .eq("kind", kind)
         .gte("approved_at", since);
@@ -161,7 +163,12 @@ export function supabaseChangeStore(db: SupabaseClient): GbpChangeStore {
       return (data ?? []) as GbpChangeRow[];
     },
     async insert(rows) {
-      const { error } = await db.from("gbp_changes").insert(rows);
+      let { error } = await db.from("gbp_changes").insert(rows);
+      // Before supabase/gbp-changes-location.sql: keep the audit row
+      // without its location (never undoable — latestUndoable needs it).
+      if (error && MISSING_TABLE.has(error.code ?? "")) {
+        ({ error } = await db.from("gbp_changes").insert(rows.map((r) => Object.fromEntries(Object.entries(r).filter(([k]) => k !== "location_name")))));
+      }
       return !error;
     },
     async markUndone(batchId, at) {
@@ -259,6 +266,7 @@ export async function applyCustomerDetailsChange(
         after_value: storedValue(c.after),
         approved_by: target.userId,
         approved_at: approvedAt,
+        location_name: target.locationName,
         status,
         error_reason: patched.ok ? null : (patched.reason ?? (patched.status ? String(patched.status) : null)),
       }))
@@ -271,15 +279,17 @@ export async function applyCustomerDetailsChange(
   }
 }
 
-/** The latest approval the owner may undo (a database read — no Google
- * call). Null before the SQL is run. */
-export async function getUndoableChange(store: GbpChangeStore, businessId: string, now: number = Date.now()): Promise<UndoableChange | null> {
+/** The latest approval the owner may undo on `locationName` (the location
+ * connected now) — a database read, no Google call. Null before the SQL is run. */
+export async function getUndoableChange(store: GbpChangeStore, businessId: string, locationName: string, now: number = Date.now()): Promise<UndoableChange | null> {
   const rows = await store.rowsSince(businessId, new Date(now - 8 * DAY_MS).toISOString());
-  return rows ? latestUndoable(rows, now) : null;
+  return rows ? latestUndoable(rows, now, locationName) : null;
 }
 
 export type UndoResult =
-  | { status: "sent" }
+  /** `pending`: the restore was sent while Google is reviewing changes to
+   * the profile — it can't be read back yet (dashboard.gbpEdit.undo.donePending). */
+  | { status: "sent"; pending?: boolean }
   | { status: "error"; error: GbpEditError; fields?: string[]; pending?: boolean };
 
 /**
@@ -301,12 +311,12 @@ export async function undoCustomerDetailsChange(
   fetchImpl: typeof fetch = fetch,
   now: number = Date.now()
 ): Promise<UndoResult> {
-  const undoable = await getUndoableChange(store, target.businessId, now);
+  const undoable = await getUndoableChange(store, target.businessId, target.locationName, now);
   if (!undoable || undoable.batchId !== batchId) return { status: "error", error: "undo_expired" };
 
   const at = new Date(now).toISOString();
   const undoBatchId = randomUUID();
-  const log = (rows: Array<{ id: string; before: AttrValue; after: AttrValue }>, status: "sent" | "failed", reason: string | null) =>
+  const log = (rows: Array<{ id: string; before: AttrValue; after: AttrValue }>, status: "sent" | "pending_review" | "failed", reason: string | null) =>
     store.insert(
       rows.map((c) => ({
         business_id: target.businessId,
@@ -317,6 +327,7 @@ export async function undoCustomerDetailsChange(
         after_value: storedValue(c.after),
         approved_by: target.userId,
         approved_at: at,
+        location_name: target.locationName,
         status,
         error_reason: reason,
         undo_of: batchId,
@@ -333,7 +344,10 @@ export async function undoCustomerDetailsChange(
       await log(reversed, "failed", `read:${current.reason ?? current.status ?? current.error}`);
       return logAndFail("undo current", current);
     }
-    const plan = undoPlan(undoable.changes, current.data);
+    // Still under review when approved: Google may show the old value now
+    // and apply our edit later — so the restore is always sent.
+    const wasPending = undoable.status === "pending_review";
+    const plan = undoPlan(undoable.changes, current.data, { resendRestored: wasPending });
     if (plan.conflicts.length > 0) {
       await log(reversed, "failed", `changed_since:${plan.conflicts.join(",")}`);
       return { status: "error", error: "changed_since", fields: plan.conflicts };
@@ -344,6 +358,12 @@ export async function undoCustomerDetailsChange(
         await log(reversed, "failed", patched.reason ?? (patched.status ? String(patched.status) : patched.error));
         return logAndFail("undo patch", patched);
       }
+    }
+    if (wasPending && (await hasPendingEdits(f, target.accessToken, target.locationName))) {
+      // Can't be read back while Google reviews: sent, and said so.
+      await log(reversed, "pending_review", null);
+      await store.markUndone(batchId, at);
+      return { status: "sent", pending: true };
     }
     // Read back: done only when Google shows every "before" again.
     const readback = await currentAttributes(f, target.accessToken, target.locationName);

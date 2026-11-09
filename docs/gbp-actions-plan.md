@@ -76,7 +76,7 @@ need to connect again.
 
 **What we show**
 1. Right after a successful PATCH, we read `metadata.hasPendingEdits` (one GET).
-   - If it's `true`, we show **"Pending Google review"**.
+   - If it's `true`, we show **"Google is reviewing changes to your profile"** — it's location-wide, so it never claims this edit is the one under review.
    - Otherwise, or if that read fails, we show **"Sent to Google — may take a little while to appear"**.
    - We never claim the change is live.
 2. Points are never credited by the write. The score keeps reading accessibility, payment and parking from Google's public listing on the next scan (`listing_has_*`, Place Details). The change counts only once Google shows it. The Growth step also turns to "Waiting for the next check", the same as "I did this".

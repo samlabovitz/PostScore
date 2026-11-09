@@ -198,6 +198,11 @@ export interface GbpChangeRow {
   status: string;
   undo_of: string | null;
   undone_at: string | null;
+  /** The Google location the change was made on ("locations/456"); null on
+   * rows logged before supabase/gbp-changes-location.sql. */
+  location_name?: string | null;
+  /** Set when the owner disconnected Google: no longer undoable. */
+  undo_closed_at?: string | null;
 }
 
 export interface UndoableChange {
@@ -210,15 +215,19 @@ export interface UndoableChange {
 }
 
 /** The latest approval the owner may still undo: sent (not failed), not an
- * undo itself, not undone, and at most 7 days old. Rows newest first or
- * not — the latest batch wins. */
-export function latestUndoable(rows: GbpChangeRow[], now: number): UndoableChange | null {
+ * undo itself, not undone, not closed by a disconnect, at most 7 days old,
+ * and made on `locationName` — the location connected NOW. A change made
+ * on another location (or with no location logged) is never undone here:
+ * its "before" belongs to a different listing. Rows newest first or not —
+ * the latest batch wins. */
+export function latestUndoable(rows: GbpChangeRow[], now: number, locationName: string): UndoableChange | null {
   // A failed attempt (approval or undo) changed nothing on Google: the
   // change before it is still the latest.
   const latest = rows.filter((r) => r.status !== "failed").sort((a, b) => Date.parse(b.approved_at) - Date.parse(a.approved_at))[0];
   if (!latest) return null;
   const batch = rows.filter((r) => r.batch_id === latest.batch_id);
-  if (batch.some((r) => r.undo_of || r.undone_at || (r.status !== "sent" && r.status !== "pending_review"))) return null;
+  if (batch.some((r) => r.undo_of || r.undone_at || r.undo_closed_at || (r.status !== "sent" && r.status !== "pending_review"))) return null;
+  if (!locationName || batch.some((r) => r.location_name !== locationName)) return null;
   const at = Date.parse(latest.approved_at);
   if (!Number.isFinite(at) || now - at > UNDO_DAYS * DAY_MS) return null;
   return {
@@ -246,15 +255,24 @@ export function undoConflicts(changes: UndoableChange["changes"], current: GbpAt
  * in the mask, left out of the body). A field already back at its
  * "before" needs nothing. A field at any third value was changed on
  * Google since — a conflict: undo refuses rather than overwrite it.
+ *
+ * `resendRestored` (undo of a "pending_review" approval): a field that
+ * already reads as its "before" is sent anyway — Google may only be
+ * showing the old value while it still reviews our edit, and could apply
+ * it later.
  */
-export function undoPlan(changes: UndoableChange["changes"], current: GbpAttribute[]): { send: Array<{ id: string; after: AttrValue; before: AttrValue }>; conflicts: string[] } {
+export function undoPlan(
+  changes: UndoableChange["changes"],
+  current: GbpAttribute[],
+  opts: { resendRestored?: boolean } = {}
+): { send: Array<{ id: string; after: AttrValue; before: AttrValue }>; conflicts: string[] } {
   const now = merchantValues(current);
   const send: Array<{ id: string; after: AttrValue; before: AttrValue }> = [];
   const conflicts: string[] = [];
   for (const c of changes) {
     const value = now.get(c.id) ?? null;
-    if (value === c.before) continue;
-    if (value === c.after) send.push({ id: c.id, after: c.before, before: c.after });
+    if (value === c.before && !opts.resendRestored) continue;
+    if (value === c.after || value === c.before) send.push({ id: c.id, after: c.before, before: c.after });
     else conflicts.push(c.id);
   }
   return { send, conflicts };

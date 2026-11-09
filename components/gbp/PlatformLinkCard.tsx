@@ -103,6 +103,8 @@ export function PlatformLinkCard({
               <span>{t(locale, k("already"), { platform: platform.name, section: sec }).replace(/^✓\s*/, "")}</span>
             </p>
           )}
+          {/* A later visit: the link PostScore added is on Google now — Undo still holds for its 7 days. */}
+          {ok?.alreadyOnGoogle && ok.undo && ok.canAdd && <UndoAddedLink businessId={businessId} section={section} undo={ok.undo} />}
           {ok && !ok.alreadyOnGoogle && (
             <>
               <p data-testid="platform-only-website" className="rounded-lg bg-paper px-3 py-2 text-ink">
@@ -166,10 +168,9 @@ function HowTo({ platform, section, open = false }: { platform: WebsitePlatform;
 /** Premium + connected: approve → preview → add → Undo for 7 days. */
 function AddToGoogle({ businessId, platform, section, initialUndo }: { businessId: string; platform: WebsitePlatform; section: PlaceActionSection; initialUndo: UndoableChange | null }) {
   const locale = useLocale();
-  const timeZone = useTimeZone();
   const router = useRouter();
   const sec = sectionLabel(section, locale);
-  const [step, setStep] = useState<"idle" | "preview" | "sending" | "sent" | "undoConfirm" | "undoing" | "undone">("idle");
+  const [step, setStep] = useState<"idle" | "preview" | "sending" | "sent">("idle");
   const [undo, setUndo] = useState<UndoableChange | null>(initialUndo);
   const [error, setError] = useState<string | null>(null);
   // Google's own link to the live listing, after a change or a failed one.
@@ -192,43 +193,9 @@ function AddToGoogle({ businessId, platform, section, initialUndo }: { businessI
     }
   }
 
-  async function runUndo() {
-    if (!undo) return;
-    setStep("undoing");
-    const r = await undoPlatformLinkAction(businessId, undo.batchId).catch(() => ({ status: "error" as const, error: "failed" as const }));
-    setMapsUri("mapsUri" in r ? (r.mapsUri ?? null) : null);
-    if (r.status === "sent") {
-      setUndo(null);
-      setStep("undone");
-      router.refresh();
-    } else {
-      setError(errorText(r, locale));
-      setStep("idle");
-    }
-  }
-
   return (
     <div data-testid="platform-add" className="flex flex-col gap-2">
-      {undo && step !== "undone" && (
-        <p data-testid="platform-undo" className="flex flex-wrap items-center gap-2 text-[12.5px] text-ink-soft">
-          {t(locale, k("undoSummary"), { section: sec, date: formatShortDate(undo.approvedAt, locale, timeZone), until: formatShortDate(undo.undoUntil, locale, timeZone) })}
-          {step === "undoConfirm" || step === "undoing" ? (
-            <>
-              <span className="text-ink">{t(locale, k("undoConfirm"), { section: sec })}</span>
-              <button type="button" className={PRIMARY} disabled={step === "undoing"} onClick={runUndo}>
-                {step === "undoing" ? t(locale, k("sending")) : t(locale, k("undoYes"))}
-              </button>
-              <button type="button" className={QUIET} onClick={() => setStep("idle")}>
-                {t(locale, k("cancel"))}
-              </button>
-            </>
-          ) : (
-            <button type="button" className={PILL} onClick={() => setStep("undoConfirm")}>
-              {t(locale, k("undo"))}
-            </button>
-          )}
-        </p>
-      )}
+      {undo && <UndoAddedLink businessId={businessId} section={section} undo={undo} />}
       {step === "idle" && !undo && (
         <button type="button" className={PILL} onClick={() => setStep("preview")}>
           <IconBrandGoogle size={14} aria-hidden />
@@ -253,13 +220,65 @@ function AddToGoogle({ businessId, platform, section, initialUndo }: { businessI
           {t(locale, k("sent"), { section: sec })}
         </p>
       )}
-      {step === "undone" && (
+      {error && <p className="text-[12.5px] text-red">{error}</p>}
+      {(step === "sent" || error) && <ViewOnGoogle mapsUri={mapsUri} />}
+    </div>
+  );
+}
+
+/** "Added to 'Order online' on {date}. You can undo it until {until}." —
+ * right after adding, and on every later visit for the 7 days. */
+function UndoAddedLink({ businessId, section, undo }: { businessId: string; section: PlaceActionSection; undo: UndoableChange }) {
+  const locale = useLocale();
+  const timeZone = useTimeZone();
+  const router = useRouter();
+  const sec = sectionLabel(section, locale);
+  const [step, setStep] = useState<"idle" | "undoConfirm" | "undoing" | "undone">("idle");
+  const [error, setError] = useState<string | null>(null);
+  const [mapsUri, setMapsUri] = useState<string | null>(null);
+
+  async function runUndo() {
+    setStep("undoing");
+    setError(null);
+    const r = await undoPlatformLinkAction(businessId, undo.batchId).catch(() => ({ status: "error" as const, error: "failed" as const }));
+    setMapsUri("mapsUri" in r ? (r.mapsUri ?? null) : null);
+    if (r.status === "sent") {
+      setStep("undone");
+      router.refresh();
+    } else {
+      setError(errorText(r, locale));
+      setStep("idle");
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {step === "undone" ? (
         <p role="status" className="font-medium text-ink">
           {t(locale, k("undone"), { section: sec })}
         </p>
+      ) : (
+        <p data-testid="platform-undo" className="flex flex-wrap items-center gap-2 text-[12.5px] text-ink-soft">
+          {t(locale, k("undoSummary"), { section: sec, date: formatShortDate(undo.approvedAt, locale, timeZone), until: formatShortDate(undo.undoUntil, locale, timeZone) })}
+          {step === "undoConfirm" || step === "undoing" ? (
+            <>
+              <span className="text-ink">{t(locale, k("undoConfirm"), { section: sec })}</span>
+              <button type="button" className={PRIMARY} disabled={step === "undoing"} onClick={runUndo}>
+                {step === "undoing" ? t(locale, k("sending")) : t(locale, k("undoYes"))}
+              </button>
+              <button type="button" className={QUIET} onClick={() => setStep("idle")}>
+                {t(locale, k("cancel"))}
+              </button>
+            </>
+          ) : (
+            <button type="button" className={PILL} onClick={() => setStep("undoConfirm")}>
+              {t(locale, k("undo"))}
+            </button>
+          )}
+        </p>
       )}
       {error && <p className="text-[12.5px] text-red">{error}</p>}
-      {(step === "sent" || step === "undone" || error) && <ViewOnGoogle mapsUri={mapsUri} />}
+      {(step === "undone" || error) && <ViewOnGoogle mapsUri={mapsUri} />}
     </div>
   );
 }

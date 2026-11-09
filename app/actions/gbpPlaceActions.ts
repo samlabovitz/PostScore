@@ -31,9 +31,10 @@ async function lib() {
   return { gate, server, attrs };
 }
 
-async function placeActionUndo(store: import("@/lib/gbpAttributes.server").GbpChangeStore, businessId: string): Promise<UndoableChange | null> {
+/** The latest link added on `locationName` (the location connected now). */
+async function placeActionUndo(store: import("@/lib/gbpAttributes.server").GbpChangeStore, businessId: string, locationName: string): Promise<UndoableChange | null> {
   const rows = await store.rowsSince(businessId, new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), "place_action");
-  return rows ? latestUndoable(rows, Date.now()) : null;
+  return rows ? latestUndoable(rows, Date.now(), locationName) : null;
 }
 
 /** Is the platform already in its Google section? Read-only. */
@@ -59,7 +60,7 @@ export async function getPlatformLinkStatus(businessId: string): Promise<Platfor
     platform,
     alreadyOnGoogle: existingLinkFor(platform, links) !== null,
     canAdd: isPremiumPlan(g.plan),
-    undo: await placeActionUndo(attrs.supabaseChangeStore(g.admin), businessId),
+    undo: await placeActionUndo(attrs.supabaseChangeStore(g.admin), businessId, g.target.locationName),
   };
 }
 
@@ -91,7 +92,7 @@ export async function addPlatformLinkAction(businessId: string): Promise<AddPlat
     return { ...result, mapsUri: await mapsUriFor(g.target) };
   }
   revalidatePath(`/business/${businessId}`, "layout");
-  return result.status === "already" ? result : { status: "sent", undo: await placeActionUndo(store, businessId), mapsUri: await mapsUriFor(g.target) };
+  return result.status === "already" ? result : { status: "sent", undo: await placeActionUndo(store, businessId, g.target.locationName), mapsUri: await mapsUriFor(g.target) };
 }
 
 /** Undo: removes the link PostScore added (7 days, only if still there). */
@@ -103,7 +104,7 @@ export async function undoPlatformLinkAction(
   const g = await gate.gbpEditGate(businessId, { requirePremium: true });
   if (!g.ok) return g.result;
   const store = attrs.supabaseChangeStore(g.admin);
-  const undo = await placeActionUndo(store, businessId);
+  const undo = await placeActionUndo(store, businessId, g.target.locationName);
   if (!undo || undo.batchId !== batchId || !undo.changes[0]) return { status: "error", error: "undo_expired" };
   const result = await server.removeAddedLink(g.target, undo.changes[0].id, batchId, store);
   cache.delete(businessId);

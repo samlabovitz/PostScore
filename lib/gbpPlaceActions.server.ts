@@ -95,6 +95,7 @@ export async function addPlatformLink(target: GbpEditTarget, platform: WebsitePl
       after_value: platform.url,
       approved_by: target.userId,
       approved_at: new Date(now).toISOString(),
+      location_name: target.locationName,
       status: created.ok ? "sent" : "failed",
       error_reason: created.ok ? null : (created.reason ?? (created.status ? String(created.status) : null)),
     },
@@ -114,7 +115,7 @@ export async function removeAddedLink(target: GbpEditTarget, linkName: string, b
   logGbpCalls("place-actions-delete", counter);
   const at = new Date(now).toISOString();
   await store.insert([
-    { business_id: target.businessId, batch_id: randomUUID(), kind: "place_action", field: linkName, before_value: null, after_value: null, approved_by: target.userId, approved_at: at, status: res.ok ? "sent" : "failed", error_reason: res.ok ? null : res.reason, undo_of: batchId },
+    { business_id: target.businessId, batch_id: randomUUID(), kind: "place_action", field: linkName, before_value: null, after_value: null, approved_by: target.userId, approved_at: at, location_name: target.locationName, status: res.ok ? "sent" : "failed", error_reason: res.ok ? null : res.reason, undo_of: batchId },
   ]);
   if (!res.ok) return { status: "error", error: res.error };
   await store.markUndone(batchId, at);

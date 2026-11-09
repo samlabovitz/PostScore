@@ -397,8 +397,9 @@ function UndoStrip({ businessId, undo, onUndone }: { businessId: string; undo: U
       setMessage(t(locale, key, { fields: fields ?? "" }));
       return setStep("error");
     }
-    // Only after Google read back the previous values.
-    setMessage(t(locale, "dashboard.gbpEdit.undo.complete"));
+    // Only after Google read back the previous values — or, while Google
+    // is reviewing changes to the profile, sent and said so.
+    setMessage(t(locale, r.pending ? "dashboard.gbpEdit.undo.donePending" : "dashboard.gbpEdit.undo.complete"));
     setStep("done");
     router.refresh();
   }

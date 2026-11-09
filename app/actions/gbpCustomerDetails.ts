@@ -36,10 +36,11 @@ export type ApplyActionResult =
   | { status: "no_changes" }
   | { status: "blocked"; reason: GbpEditBlock }
   | { status: "error"; error: GbpEditErrorCode; mapsUri?: string | null };
-/** "sent" = read back from Google and verified; an error may name the
- * fields that didn't revert (and whether Google is still reviewing). */
+/** "sent" = read back from Google and verified, or `pending`: sent while
+ * Google is reviewing changes to the profile. An error may name the fields
+ * that didn't revert (and whether Google is still reviewing). */
 export type UndoActionResult =
-  | { status: "sent"; mapsUri?: string | null }
+  | { status: "sent"; pending?: boolean; mapsUri?: string | null }
   | { status: "blocked"; reason: GbpEditBlock }
   | { status: "error"; error: GbpEditErrorCode; fields?: string[]; pending?: boolean; mapsUri?: string | null };
 
@@ -109,7 +110,7 @@ export async function applyCustomerDetailsAction(businessId: string, picks: Reco
   // check" until a scan sees the details on the public listing.
   if (result.changes.some((c) => c.after === true)) await markTaskDone(businessId, "completeness.customer_details").catch(() => null);
   revalidatePath(`/business/${businessId}`, "layout");
-  return { status: result.status, changes: result.changes, undo: result.logged ? await g.s.attrs.getUndoableChange(store, businessId) : null, mapsUri: await mapsUriFor(g) };
+  return { status: result.status, changes: result.changes, undo: result.logged ? await g.s.attrs.getUndoableChange(store, businessId, g.target.locationName) : null, mapsUri: await mapsUriFor(g) };
 }
 
 /** "Yes, undo": puts the previous values back, if nothing changed since. */
@@ -130,8 +131,13 @@ export async function undoCustomerDetailsAction(businessId: string, batchId: str
 export async function getCustomerDetailsUndo(businessId: string): Promise<UndoableChange | null> {
   try {
     if (!isPremiumPlan(await getPlan())) return null;
+    const db = createClient();
+    // Only changes made on the location connected now (RLS: the owner's own row).
+    const { data: connection } = await db.from("gbp_connections").select("google_location_id").eq("business_id", businessId).maybeSingle();
+    const locationName = (connection as { google_location_id?: string | null } | null)?.google_location_id;
+    if (!locationName) return null;
     const { supabaseChangeStore, getUndoableChange } = await import("@/lib/gbpAttributes.server");
-    return await getUndoableChange(supabaseChangeStore(createClient()), businessId);
+    return await getUndoableChange(supabaseChangeStore(db), businessId, locationName);
   } catch {
     return null;
   }
