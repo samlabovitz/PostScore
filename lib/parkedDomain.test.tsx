@@ -27,6 +27,25 @@ describe("parked domains are never read as the business's site", () => {
     expect(analyzeWebsiteHtml(PARKED, "https://www.colorfulyunnanorder.com/").parkedDomain).toEqual({ provider: "NameBright" });
   });
 
+  test("M9: a small real GoDaddy Website Builder site saying “Our online menu is coming soon” is NOT parked", () => {
+    // GoDaddy's builder puts "godaddy" all over the markup (scripts, CDN,
+    // footer) — the company name in markup alone never means parked.
+    const GODADDY_BUILDER = `<!DOCTYPE html><html><head><title>Rosa's Taqueria | Tacos in Newark</title>
+<meta name="generator" content="Starfield Technologies; Go Daddy Website Builder 8.0.0000">
+<link rel="stylesheet" href="//img1.wsimg.com/blobby/go/godaddy-website-builder.css"><script src="https://img1.wsimg.com/signals/js/clients/godaddy/scc-c2.min.js"></script></head>
+<body><header><h1>Rosa's Taqueria</h1><nav><a href="/">Home</a><a href="/contact">Contact</a></nav></header>
+<main><p>Fresh tacos, burritos and aguas frescas.</p><p>Our online menu is coming soon!</p><p>Call us: <a href="tel:302-555-0123">302-555-0123</a></p></main>
+<footer><p>Copyright © 2026 Rosa's Taqueria - All Rights Reserved.</p><p>Powered by GoDaddy</p></footer></body></html>`;
+    expect(detectParkedDomain(GODADDY_BUILDER)).toBeNull();
+    expect(analyzeWebsiteHtml(GODADDY_BUILDER, "https://rosastaqueria.com/").parkedDomain).toBeUndefined();
+    // Even with a "Coming Soon" title, a footer "Powered by GoDaddy" isn't a parking page.
+    expect(detectParkedDomain(GODADDY_BUILDER.replace("<title>Rosa's Taqueria | Tacos in Newark</title>", "<title>Coming Soon</title>"))).toBeNull();
+    // A real GoDaddy parking page (its lander markup) still is.
+    expect(detectParkedDomain(`<title>rosastaqueria.com - Coming Soon</title><script src="https://img1.wsimg.com/parking-lander/static/js/main.js"></script><div id="root"></div>`)).toEqual({ provider: "GoDaddy" });
+    // The real Colorful Yun Nan NameBright page stays parked.
+    expect(detectParkedDomain(PARKED)).toEqual({ provider: "NameBright" });
+  });
+
   test("a real one-page site — even one saying “coming soon” about a new menu — is never parked", () => {
     expect(detectParkedDomain(REAL)).toBeNull();
     expect(detectParkedDomain(`<title>Joe's Bakery</title><h1>Joe's Bakery</h1><p>Our new fall menu is coming soon! ${"Fresh bread and pastries every morning. ".repeat(60)}</p>`)).toBeNull();

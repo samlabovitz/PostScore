@@ -475,8 +475,20 @@ const PARKING_PROVIDERS: Array<{ name: string; re: RegExp }> = [
   { name: "Porkbun", re: /porkbun/i },
   { name: "DropCatch", re: /dropcatch/i },
 ];
+/** Phrases only a domain company's page uses — in the title or visible text. */
 const PARKED_PHRASES =
-  /\b(this domain (is|may be) for sale|buy this domain|domain (is )?parked|parked (free|domain)|is coming soon|this domain is managed at|make an offer on this domain|the domain \S+ is for sale)\b/i;
+  /\b(this domain (is|may be) for sale|buy this domain|domain (is )?parked|parked (free|domain)|this domain is managed at|make an offer on this domain|the domain \S+ is for sale)\b/i;
+/** Markup only parking pages carry (their lander scripts and links) — a
+ * site merely BUILT with GoDaddy or Namecheap never has these. */
+const PARKING_MARKUP: Array<{ name: string; re: RegExp }> = [
+  { name: "GoDaddy", re: /parking-lander|\/parking\/|parkingcrew\.net|park\.godaddy|domaincontrol\.com\/(park|lander)/i },
+  { name: "Sedo", re: /sedoparking\.com/i },
+  { name: "Bodis", re: /bodis\.com/i },
+  { name: "ParkingCrew", re: /parkingcrew\.net/i },
+  { name: "Afternic", re: /afternic\.com/i },
+  { name: "Dan.com", re: /\/\/(www\.)?dan\.com\//i },
+  { name: "HugeDomains", re: /hugedomains\.com/i },
+];
 /** A real business page has far more text than a parking page. */
 const PARKED_MAX_TEXT_CHARS = 1500;
 
@@ -485,8 +497,15 @@ const PARKED_MAX_TEXT_CHARS = 1500;
  * for-sale page, not a business's site — the real Colorful Yun Nan case:
  * the Google listing's colorfulyunnanorder.com lapsed, was caught by a
  * domain dropper and now shows "NameBright - Coming Soon … This domain is
- * managed at NameBright". Needs a parking phrase AND (a known domain
- * company OR almost no text). null for a real page.
+ * managed at NameBright". null for a real page.
+ *
+ * The domain company must show in the title, the visible text, or
+ * parking-only markup — never just anywhere in the HTML (a small GoDaddy
+ * Website Builder site has "godaddy" all over its markup). Then it needs a
+ * parking phrase, or "coming soon" IN THE TITLE with the company in the
+ * title or parking markup (a page that only says "our menu is coming
+ * soon" is a real site). A parking phrase with no company needs almost no
+ * text.
  */
 export function detectParkedDomain(html: string): { provider: string | null } | null {
   const clean = stripNonVisibleMarkup(html);
@@ -494,8 +513,13 @@ export function detectParkedDomain(html: string): { provider: string | null } | 
   const text = extractVisibleText(clean);
   if (text.length > PARKED_MAX_TEXT_CHARS) return null;
   const haystack = `${title} ${text}`;
-  const provider = PARKING_PROVIDERS.find((p) => p.re.test(haystack) || p.re.test(html.slice(0, 20000)))?.name ?? null;
-  const phrase = PARKED_PHRASES.test(haystack) || (/\bcoming soon\b/i.test(title) && !!provider);
+  const markupProvider = PARKING_MARKUP.find((p) => p.re.test(html.slice(0, 20000)))?.name ?? null;
+  const provider = PARKING_PROVIDERS.find((p) => p.re.test(haystack))?.name ?? markupProvider;
+  // "Coming soon" alone isn't enough: the company must be in the title
+  // ("NameBright - Coming Soon") or the parking markup — a site's own
+  // "Powered by GoDaddy" footer doesn't count.
+  const titleProvider = PARKING_PROVIDERS.find((p) => p.re.test(title))?.name ?? markupProvider;
+  const phrase = PARKED_PHRASES.test(haystack) || (/\bcoming soon\b/i.test(title) && !!titleProvider);
   if (!phrase) return null;
   if (!provider && text.length > 400) return null;
   return { provider };

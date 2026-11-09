@@ -68,7 +68,7 @@ describe("--no-screenshots never skips the speed test", () => {
 });
 
 describe("a failed speed test keeps a real measurement from the last 30 days (v1.12.0)", () => {
-  const measured = (daysAgo: number): MobilePerformanceMeasurement => ({ method: "lab", fieldCategory: null, labScore: 68, measuredAt: new Date(Date.now() - daysAgo * DAY).toISOString() });
+  const measured = (daysAgo: number, measuredUrl: string = SITE): MobilePerformanceMeasurement => ({ method: "lab", fieldCategory: null, labScore: 68, measuredAt: new Date(Date.now() - daysAgo * DAY).toISOString(), measuredUrl });
 
   for (const kind of ["timed_out", "error_page", "error"] as const) {
     test(`${kind}: carried forward, scored, "last measured {date}"`, async () => {
@@ -82,6 +82,16 @@ describe("a failed speed test keeps a real measurement from the last 30 days (v1
       expect(check.explanation).not.toMatch(/PageSpeed|API|Lighthouse/);
     });
   }
+
+  test("M11: a past result from a different site (the parked listing domain) is never carried onto this one", async () => {
+    const { websiteAnalysis } = await save(measured(10, "https://www.colorfulyunnanorder.com/"), { kind: "timed_out", status: null });
+    expect(websiteAnalysis!.mobilePerformance).toBeNull();
+    // …nor an old result saved before the measured URL was recorded.
+    const { measuredUrl: _u, ...legacy } = measured(10);
+    void _u;
+    const second = await save(legacy, { kind: "timed_out", status: null });
+    expect(second.websiteAnalysis!.mobilePerformance).toBeNull();
+  });
 
   test("older than 30 days (Hair express: last real measurement Sep 11): left out, never a stale number", async () => {
     const { websiteAnalysis } = await save(measured(47), { kind: "error", status: null });

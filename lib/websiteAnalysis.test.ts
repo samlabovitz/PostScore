@@ -60,6 +60,7 @@ describe("fetchMobilePerformance: method order a) URL field -> b) origin field -
       fieldCategory: "FAST",
       labScore: null,
       measuredAt: expect.any(String),
+      measuredUrl: "example.com",
     });
     expect(result.callCount).toBe(1);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
@@ -75,6 +76,7 @@ describe("fetchMobilePerformance: method order a) URL field -> b) origin field -
       fieldCategory: "AVERAGE",
       labScore: null,
       measuredAt: expect.any(String),
+      measuredUrl: "example.com",
     });
     expect(result.callCount).toBe(1);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
@@ -103,6 +105,7 @@ describe("fetchMobilePerformance: method order a) URL field -> b) origin field -
       fieldCategory: null,
       labScore: 55,
       measuredAt: expect.any(String),
+      measuredUrl: "example.com",
     });
     expect(result.callCount).toBe(3);
     expect(fetchImpl).toHaveBeenCalledTimes(3);
@@ -123,6 +126,7 @@ describe("fetchMobilePerformance: method order a) URL field -> b) origin field -
       fieldCategory: null,
       labScore: 70,
       measuredAt: expect.any(String),
+      measuredUrl: "example.com",
     });
     expect(result.callCount).toBe(3);
   });
@@ -190,6 +194,7 @@ describe("fetchMobilePerformance: Day 4 Part 3a retry on timeout, 429, and 5xx",
       fieldCategory: null,
       labScore: 80,
       measuredAt: expect.any(String),
+      measuredUrl: "example.com",
     });
     expect(result.failureReason).toBeNull();
   }, 10000);
@@ -207,6 +212,7 @@ describe("fetchMobilePerformance: Day 4 Part 3a retry on timeout, 429, and 5xx",
       fieldCategory: null,
       labScore: 80,
       measuredAt: expect.any(String),
+      measuredUrl: "example.com",
     });
   }, 10000);
 

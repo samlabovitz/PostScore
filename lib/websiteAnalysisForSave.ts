@@ -82,7 +82,10 @@ export async function analyzeWebsiteForSave(params: {
     ? carryForwardMobilePerformance(
         analysis.mobilePerformance,
         analysis.mobilePerformanceFailureReason,
-        existingAnalysis?.mobilePerformance
+        existingAnalysis?.mobilePerformance,
+        new Date(),
+        // Only a past measurement of THIS site (lib/scoring.ts sameMeasuredSite).
+        analysisUrl
       )
     : { mobilePerformance: null, mobilePerformanceFailureReason: null };
 

@@ -314,6 +314,11 @@ export interface MobilePerformanceMeasurement {
    * field existed. Only ever READ when carriedForward is true below —
    * see carryForwardMobilePerformance's own doc. */
   measuredAt?: string;
+  /** The page Google measured (set by fetchMobilePerformance). A past
+   * measurement is carried forward only onto the same site — never onto
+   * a different one (e.g. a parked listing domain → the verified real
+   * site). Absent on rows saved before this existed: never carried. */
+  measuredUrl?: string;
   /** True only when this measurement is a reused, out-of-date value
    * carried forward because THIS scan's own PageSpeed attempt timed
    * out and a real measurement from within the last 30 days existed to
@@ -448,13 +453,30 @@ export const MAX_PERFORMANCE_CARRY_FORWARD_MS = 30 * 24 * 60 * 60 * 1000;
  * no_api_key (a setup gap, not a scan). */
 const CARRY_FORWARD_KINDS = new Set<string>(["timed_out", "error_page", "error"]);
 
+/** Same site: the same host (ignoring "www." and case). Either missing → no. */
+export function sameMeasuredSite(measuredUrl: string | null | undefined, currentUrl: string | null | undefined): boolean {
+  const host = (u: string | null | undefined) => {
+    if (!u) return null;
+    try {
+      return new URL(u).hostname.toLowerCase().replace(/^www\./, "");
+    } catch {
+      return null;
+    }
+  };
+  const a = host(measuredUrl);
+  return a !== null && a === host(currentUrl);
+}
+
 export function carryForwardMobilePerformance(
   fresh: MobilePerformanceMeasurement | null,
   freshFailureReason: MobilePerformanceFailure | null,
   existing: MobilePerformanceMeasurement | null | undefined,
-  now: Date = new Date()
+  now: Date = new Date(),
+  /** The site being analysed now — the past measurement must be of it. */
+  currentUrl: string | null = null
 ): { mobilePerformance: MobilePerformanceMeasurement | null; mobilePerformanceFailureReason: MobilePerformanceFailure | null } {
   if (fresh) return { mobilePerformance: fresh, mobilePerformanceFailureReason: null };
+  if (!sameMeasuredSite(existing?.measuredUrl, currentUrl)) return { mobilePerformance: null, mobilePerformanceFailureReason: freshFailureReason };
   // Step 2d: an error-page run is just as unmeasured as a timeout — reuse
   // a real measurement from the last 30 days the same way. So is "error"
   // (Google's test ran but returned no score, e.g. it couldn't find the
@@ -1693,18 +1715,37 @@ const MOBILE_FRIENDLY_CHECK: CheckDefinition = {
       explanation: t(locale, "content.checks.website.mobile_friendly.explanation.items", { items: list }),
     };
   },
-  simulateFix: (input) => ({
-    ...input,
-    website: hasAnalyzableWebsite(input) ? input.website : "https://example.com",
-    websiteAnalysis: {
-      ...(input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS),
-      content: { ...(input.websiteAnalysis?.content ?? PERFECT_WEBSITE_ANALYSIS.content!), hasViewportTag: true },
-      mobilePerformance: {
-        ...(input.websiteAnalysis?.mobilePerformance ?? PERFECT_WEBSITE_ANALYSIS.mobilePerformance!),
-        mobileUsability: { tapTargets: true, textReadable: true, fitsScreen: true },
+  // Fixing the phone layout: the viewport tag, and every phone check that
+  // actually ran now passes. Never invents a speed result (a speed test
+  // that produced nothing stays nothing — "Loads fast" can't earn points
+  // from this fix) and never changes which checks ran (the 4+1 / 3+2 split).
+  simulateFix: (input) => {
+    const wa = input.websiteAnalysis;
+    if (!wa) {
+      return { ...input, website: hasAnalyzableWebsite(input) ? input.website : "https://example.com", websiteAnalysis: PERFECT_WEBSITE_ANALYSIS };
+    }
+    const pass = (v: boolean | null | undefined) => (typeof v === "boolean" ? true : v ?? null);
+    const u = wa.mobilePerformance?.mobileUsability;
+    const layout = wa.content?.phoneLayout;
+    return {
+      ...input,
+      website: hasAnalyzableWebsite(input) ? input.website : "https://example.com",
+      websiteAnalysis: {
+        ...wa,
+        content: {
+          ...(wa.content ?? PERFECT_WEBSITE_ANALYSIS.content!),
+          hasViewportTag: true,
+          ...(layout ? { phoneLayout: { ...layout, textReadable: pass(layout.textReadable), fitsScreen: pass(layout.fitsScreen) } } : {}),
+        },
+        mobilePerformance: wa.mobilePerformance
+          ? {
+              ...wa.mobilePerformance,
+              ...(u ? { mobileUsability: { tapTargets: pass(u.tapTargets), textReadable: pass(u.textReadable), fitsScreen: pass(u.fitsScreen) } } : {}),
+            }
+          : null,
       },
-    },
-  }),
+    };
+  },
 };
 
 export const CHECKS: CheckDefinition[] = [
@@ -3996,6 +4037,7 @@ function parseMobilePerformance(value: unknown): MobilePerformanceMeasurement | 
   const v = value as Record<string, unknown>;
   const measuredAt = typeof v.measuredAt === "string" ? v.measuredAt : undefined;
   const carriedForward = v.carriedForward === true ? true : undefined;
+  const measuredUrlField = typeof v.measuredUrl === "string" && v.measuredUrl ? { measuredUrl: v.measuredUrl } : {};
   const tri = (x: unknown) => (typeof x === "boolean" ? x : null);
   const u = v.mobileUsability && typeof v.mobileUsability === "object" ? (v.mobileUsability as Record<string, unknown>) : null;
   const extra = {
@@ -4008,6 +4050,7 @@ function parseMobilePerformance(value: unknown): MobilePerformanceMeasurement | 
       fieldCategory: v.fieldCategory,
       labScore: null,
       measuredAt,
+      ...measuredUrlField,
       carriedForward,
       ...(v.fieldScope === "origin" ? { fieldScope: "origin" as const } : {}),
       ...(v.carriedForwardReason === "error_page" ? { carriedForwardReason: "error_page" as const } : {}),
@@ -4020,6 +4063,7 @@ function parseMobilePerformance(value: unknown): MobilePerformanceMeasurement | 
       fieldCategory: null,
       labScore: v.labScore,
       measuredAt,
+      ...measuredUrlField,
       carriedForward,
       ...(v.carriedForwardReason === "error_page" ? { carriedForwardReason: "error_page" as const } : {}),
       ...extra,
