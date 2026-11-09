@@ -11,6 +11,7 @@ import { getPlan, unlimitedBusinessesAllowed } from "@/lib/premium";
 import { locationLimit, type Plan } from "@/lib/plan";
 import { analyzeWebsiteForSave, probeListingLink, withListingLinkState } from "@/lib/websiteAnalysisForSave";
 import { gradedWebsite } from "@/lib/businessWebsite";
+import { nextCaptureLog } from "@/lib/screenshotBudget";
 import { readOwnerWebsite } from "@/lib/ownerWebsite.server";
 import type { collectWebsiteAnalysis } from "@/lib/websiteAnalysis";
 import { uploadWebsiteScreenshots } from "@/lib/websiteScreenshotUpload";
@@ -148,7 +149,8 @@ async function finishAutoScreenshots(
         lastScreenshotRefreshAt,
         screenshotHttpStatus: analysis?.screenshotHttpStatus ?? null,
         screenshotSiteUrl: siteUrl,
-        screenshotCaptureLog: { at: lastScreenshotRefreshAt, calls: analysis?.screenshotCalls ?? 0, source: "auto" },
+        // This month's earlier captures stay counted (lib/screenshotBudget.ts rule 4).
+        screenshotCaptureLog: nextCaptureLog(websiteAnalysis.screenshotCaptureLog, analysis?.screenshotCalls ?? 0, "auto", new Date(lastScreenshotRefreshAt)),
       },
     })
     .eq("id", businessId);

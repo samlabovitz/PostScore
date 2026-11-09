@@ -6,15 +6,19 @@
 // - Refresh: once per SCREENSHOT_REFRESH_COOLDOWN_DAYS.
 // - After the owner changes the site: one fresh capture even inside that
 //   window.
-// - Either way, only while the month's ScreenshotOne cap has room
-//   (lib/screenshotBudget.ts — the plan is shared by every business).
+// - Either way, only while the business's own monthly allowance (by plan)
+//   and the account-wide monthly cap both have room (lib/screenshotBudget.ts
+//   rules 2 and 4) — checked before ScreenshotOne is called; when either is
+//   used, the existing screenshot stays.
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { businessWebsiteUrl } from "@/lib/businessWebsite";
 import { withOwnerWebsite } from "@/lib/ownerWebsite.server";
 import { fetchWebsiteHtml, captureWebsiteScreenshots } from "@/lib/websiteAnalysis";
 import { uploadWebsiteScreenshots } from "@/lib/websiteScreenshotUpload";
-import { canAutoCapture, screenshotAutoMonthlyCap } from "@/lib/screenshotBudget";
+import { canAutoCapture, canCaptureForBusiness, nextBusinessCaptureAt, nextCaptureLog, screenshotAutoMonthlyCap } from "@/lib/screenshotBudget";
+import { getPlan } from "@/lib/premium";
+import type { Plan } from "@/lib/plan";
 import { loadScreenshotCallsThisMonth } from "@/lib/screenshotBudgetServer";
 import { parseWebsiteAnalysis, SCREENSHOT_REFRESH_COOLDOWN_DAYS, type WebsiteAnalysis } from "@/lib/scoring";
 
@@ -25,6 +29,8 @@ export type CaptureScreenshotsResult =
   | { status: "too_soon"; nextAvailableAt: string }
   /** The month's ScreenshotOne cap has no room. */
   | { status: "capped" }
+  /** This business's own allowance for the month is used (by plan). */
+  | { status: "business_limit"; nextAvailableAt: string }
   | { status: "no_website" }
   | { status: "not_found" }
   | { status: "error"; message: string };
@@ -35,7 +41,9 @@ export async function captureScreenshotsWithClient(
   supabase: SupabaseClient,
   businessId: string,
   reason: "refresh" | "site_change",
-  now: Date = new Date()
+  now: Date = new Date(),
+  /** The owner's plan (rule 4). Default: getPlan(). */
+  plan?: Plan
 ): Promise<CaptureScreenshotsResult> {
   const { data: row, error } = await supabase
     .from("businesses")
@@ -61,6 +69,10 @@ export async function captureScreenshotsWithClient(
       return { status: "too_soon", nextAvailableAt: new Date(lastRefreshMs + COOLDOWN_MS).toISOString() };
     }
   }
+  // This business's own allowance for the month, by plan (rule 4).
+  if (!canCaptureForBusiness(existing, plan ?? (await getPlan()), now)) {
+    return { status: "business_limit", nextAvailableAt: nextBusinessCaptureAt(now) };
+  }
   // After a site change, inside the window is fine — over the month's cap never is.
   if (!canAutoCapture(await loadScreenshotCallsThisMonth(now), screenshotAutoMonthlyCap())) {
     return { status: "capped" };
@@ -77,11 +89,7 @@ export async function captureScreenshotsWithClient(
   const { screenshotUrl, additionalPages } = await uploadWebsiteScreenshots(businessId, capture);
 
   const lastScreenshotRefreshAt = now.toISOString();
-  // One capture log per business: keep this month's earlier calls in it,
-  // so the monthly count never forgets a capture.
-  const earlier = existing?.screenshotCaptureLog;
-  const earlierThisMonth =
-    earlier && new Date(earlier.at).getUTCFullYear() === now.getUTCFullYear() && new Date(earlier.at).getUTCMonth() === now.getUTCMonth() ? earlier.calls : 0;
+
   const updated: WebsiteAnalysis = {
     // Everything this screenshot-only refresh doesn't touch carries
     // forward — including websiteTrust, which an earlier version of this
@@ -102,7 +110,9 @@ export async function captureScreenshotsWithClient(
     lastScreenshotRefreshAt,
     screenshotHttpStatus: capture.screenshotHttpStatus ?? null,
     screenshotSiteUrl: siteUrl,
-    screenshotCaptureLog: { at: lastScreenshotRefreshAt, calls: earlierThisMonth + (capture.calls ?? 0), source: reason === "refresh" ? "manual" : "site_change" },
+    // One capture log per business: this month's earlier calls stay in it,
+    // so neither monthly count ever forgets a capture.
+    screenshotCaptureLog: nextCaptureLog(existing?.screenshotCaptureLog, capture.calls ?? 0, reason === "refresh" ? "manual" : "site_change", now),
     // Not touched by this action — see the doc comment above.
     checkedAt: existing?.checkedAt ?? lastScreenshotRefreshAt,
     aboutPresence: existing?.aboutPresence ?? null,

@@ -77,7 +77,7 @@ import { getWebsiteChoice, saveOwnerWebsite, undoOwnerWebsite } from "@/app/acti
 import { ListingChips } from "@/components/overview/ListingChips";
 import { ScanningLine } from "@/components/website/ScanningLine";
 import { BrokenListingCard } from "@/components/website/BrokenListingCard";
-import { mentionsText } from "@/components/website/WrongSite";
+import { afterLines, mentionsText } from "@/components/website/WrongSite";
 import { LocaleProvider, t, type Locale } from "@/lib/i18n";
 import type { WebsiteAnalysis } from "@/lib/scoring";
 
@@ -207,7 +207,7 @@ describe("screenshots: always of the graded site", () => {
     row.website_analysis_json = { ...parkedAnalysis, ...fresh };
     expect(await captureScreenshotsWithClient(client() as never, "cyn", "refresh", new Date("2026-11-09T00:00:00Z"))).toMatchObject({ status: "too_soon" });
     row.website_analysis_json = { ...parkedAnalysis, ...fresh, lastScreenshotRefreshAt: "2026-09-01T00:00:00Z" };
-    const r = await captureScreenshotsWithClient(client() as never, "cyn", "refresh", new Date("2026-11-09T00:00:00Z"));
+    const r = await captureScreenshotsWithClient(client() as never, "cyn", "refresh", new Date("2026-11-09T00:00:00Z"), "grow");
     expect(r.status).toBe("ok");
     const saved = (updates.at(-1)!.website_analysis_json as WebsiteAnalysis);
     expect(saved.screenshotSiteUrl).toBe(REAL);
@@ -220,11 +220,11 @@ describe("screenshots: always of the graded site", () => {
     monthCalls = 76; // 76 + 5 (a capture's worst case) > 80
     const { captureWebsiteScreenshots } = await import("@/lib/websiteAnalysis");
     const before = vi.mocked(captureWebsiteScreenshots).mock.calls.length;
-    expect(await captureScreenshotsWithClient(client() as never, "cyn", "refresh", new Date("2026-11-09T00:00:00Z"))).toEqual({ status: "capped" });
+    expect(await captureScreenshotsWithClient(client() as never, "cyn", "refresh", new Date("2026-11-09T00:00:00Z"), "grow")).toEqual({ status: "capped" });
     expect(vi.mocked(captureWebsiteScreenshots).mock.calls.length).toBe(before);
     expect(updates).toEqual([]);
     monthCalls = 75;
-    expect((await captureScreenshotsWithClient(client() as never, "cyn", "refresh", new Date("2026-11-09T00:00:00Z"))).status).toBe("ok");
+    expect((await captureScreenshotsWithClient(client() as never, "cyn", "refresh", new Date("2026-11-09T00:00:00Z"), "grow")).status).toBe("ok");
     expect(readFileSync("app/business/[id]/website/WebsiteVisualAnalysis.tsx", "utf8")).toContain('result.status === "capped"');
     expect(t("en", "dashboard.website.screenshotsCapped")).toBe("This month's screenshot limit is reached. You can refresh them again next month — nothing was changed.");
     expect(t("es", "dashboard.website.screenshotsCapped")).toBe("Se alcanzó el límite de capturas de este mes. Podrá actualizarlas de nuevo el próximo mes; no se cambió nada.");
@@ -233,10 +233,56 @@ describe("screenshots: always of the graded site", () => {
   test("after a site change: allowed inside the 30 days — never over the month's cap", async () => {
     row.website_analysis_json = { ...parkedAnalysis, ...fresh };
     row.owner_website_url = "https://mine.example.com";
-    expect(await captureScreenshotsWithClient(client() as never, "cyn", "site_change", new Date("2026-11-09T00:00:00Z"))).toMatchObject({ status: "ok" });
+    expect(await captureScreenshotsWithClient(client() as never, "cyn", "site_change", new Date("2026-11-09T00:00:00Z"), "grow")).toMatchObject({ status: "ok" });
     expect((updates.at(-1)!.website_analysis_json as WebsiteAnalysis).screenshotSiteUrl).toBe("https://mine.example.com");
+    row.website_analysis_json = { ...parkedAnalysis, ...fresh };
     monthCalls = 79;
-    expect(await captureScreenshotsWithClient(client() as never, "cyn", "site_change", new Date("2026-11-09T00:00:00Z"))).toEqual({ status: "capped" });
+    expect(await captureScreenshotsWithClient(client() as never, "cyn", "site_change", new Date("2026-11-09T00:00:00Z"), "grow")).toEqual({ status: "capped" });
+  });
+});
+
+describe("each business's own monthly screenshot allowance, by plan", () => {
+  const log = (calls: number, at = "2026-11-03T00:00:00Z") => ({ ...parkedAnalysis, lastScreenshotRefreshAt: "2026-09-01T00:00:00Z", checkedAt: "2026-09-01T00:00:00Z", screenshotUrl: "https://storage/old.png", screenshotCaptureLog: { at, calls, source: "auto" } });
+  const NOV9 = new Date("2026-11-09T00:00:00Z");
+
+  test("Free: one capture a month — the next Refresh is refused before ScreenshotOne, the old screenshot stays", async () => {
+    row.website_analysis_json = log(3);
+    const { captureWebsiteScreenshots } = await import("@/lib/websiteAnalysis");
+    const before = vi.mocked(captureWebsiteScreenshots).mock.calls.length;
+    expect(await captureScreenshotsWithClient(client() as never, "cyn", "refresh", NOV9, "free")).toEqual({ status: "business_limit", nextAvailableAt: "2026-12-01T00:00:00.000Z" });
+    expect(vi.mocked(captureWebsiteScreenshots).mock.calls.length).toBe(before);
+    expect(updates).toEqual([]);
+    expect((row.website_analysis_json as { screenshotUrl: string }).screenshotUrl).toBe("https://storage/old.png");
+  });
+
+  test("Grow/Premium/Multi: about two — a second capture fits, a third doesn't", async () => {
+    row.website_analysis_json = log(5);
+    expect((await captureScreenshotsWithClient(client() as never, "cyn", "refresh", NOV9, "premium")).status).toBe("ok");
+    // 5 + 3 calls this month now, logged together.
+    expect((row.website_analysis_json as WebsiteAnalysis).screenshotCaptureLog).toMatchObject({ calls: 8 });
+    row.website_analysis_json = { ...(row.website_analysis_json as object), lastScreenshotRefreshAt: "2026-09-01T00:00:00Z" };
+    expect((await captureScreenshotsWithClient(client() as never, "cyn", "refresh", NOV9, "multi")).status).toBe("business_limit");
+  });
+
+  test("“Wrong site?” counts too: the site change's capture is refused, and the owner is told when the next one is", async () => {
+    row.website_analysis_json = log(5);
+    expect(await captureScreenshotsWithClient(client() as never, "cyn", "site_change", NOV9, "free")).toEqual({ status: "business_limit", nextAvailableAt: "2026-12-01T00:00:00.000Z" });
+    expect(afterLines({ recheck: "done", screenshot: "limit", screenshotNextAt: "2026-12-01T12:00:00.000Z" }, "en", "America/New_York")[1]).toMatch(/^You've used this month's screenshot refresh — the next one is available on Dec 1\b/);
+    expect(afterLines({ recheck: "done", screenshot: "limit", screenshotNextAt: "2026-12-01T12:00:00.000Z" }, "es", "America/New_York")[1]).toMatch(/^Ya usó la actualización de capturas de este mes; la próxima estará disponible el /);
+  });
+
+  test("last month's captures don't count; the account-wide cap still applies on top", async () => {
+    row.website_analysis_json = log(5, "2026-10-20T00:00:00Z");
+    expect((await captureScreenshotsWithClient(client() as never, "cyn", "refresh", NOV9, "free")).status).toBe("ok");
+    row.website_analysis_json = log(0, "2026-10-20T00:00:00Z");
+    monthCalls = 79;
+    expect(await captureScreenshotsWithClient(client() as never, "cyn", "refresh", NOV9, "premium")).toEqual({ status: "capped" });
+  });
+
+  test("the Refresh button shows the friendly message with the date (EN + ES)", () => {
+    expect(readFileSync("app/business/[id]/website/WebsiteVisualAnalysis.tsx", "utf8")).toContain('t(locale, "dashboard.website.screenshotBusinessLimit", { date: formatShortDate(result.nextAvailableAt, locale, timeZone) })');
+    expect(t("en", "dashboard.website.screenshotBusinessLimit", { date: "Dec 1" })).toBe("You've used this month's screenshot refresh — the next one is available on Dec 1.");
+    expect(t("es", "dashboard.website.screenshotBusinessLimit", { date: "1 dic" })).toBe("Ya usó la actualización de capturas de este mes; la próxima estará disponible el 1 dic.");
   });
 });
 

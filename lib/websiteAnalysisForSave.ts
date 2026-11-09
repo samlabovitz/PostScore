@@ -3,7 +3,8 @@
 // (lib/competitorFullScoring.ts) — so both are analyzed exactly the same
 // way. Competitors pass skipScreenshots and allowBrowserRenders: false.
 
-import { canAutoCapture, needsAutoScreenshot, screenshotAutoMonthlyCap } from "@/lib/screenshotBudget";
+import { autoCaptureAllowed, canCaptureForBusiness, needsAutoScreenshot, screenshotAutoMonthlyCap } from "@/lib/screenshotBudget";
+import type { Plan } from "@/lib/plan";
 import { loadBrowserRendersThisMonth, loadScreenshotCallsThisMonth } from "@/lib/screenshotBudgetServer";
 import { browserRenderMonthlyCap, currentRenderMonth, rendersAllowedThisScan } from "@/lib/browserRender";
 import type { PlaceDetails } from "@/lib/google/places";
@@ -29,6 +30,10 @@ export async function analyzeWebsiteForSave(params: {
   allowBrowserRenders?: boolean;
   /** For counting PageSpeed calls (competitor scoring); defaults to fetch. */
   fetchImpl?: typeof fetch;
+  /** The owner's plan, for the business's own monthly screenshot allowance
+   * (lib/screenshotBudget.ts rule 4). Default: getPlan() — the request's
+   * plan, or the background plan in the monthly job and scripts. */
+  plan?: Plan;
 }) {
   const { analysisUrl, listingWebsite, existingAnalysisJson, skipScreenshots, extraServicesKeywords, listingFacts } = params;
   const fetchImpl = params.fetchImpl ?? fetch;
@@ -38,9 +43,14 @@ export async function analyzeWebsiteForSave(params: {
   // never because one is old — and only while this month's real
   // ScreenshotOne usage leaves room under the cap. When skipped, the
   // honest "no screenshot captured yet" state simply stays.
+  // The business's own monthly allowance by plan (rule 4) comes first,
+  // then the account-wide cap — both before ScreenshotOne is called.
   let captureScreenshots = !skipScreenshots && !!analysisUrl && needsAutoScreenshot(existingAnalysis);
   if (captureScreenshots) {
-    captureScreenshots = canAutoCapture(await loadScreenshotCallsThisMonth(), screenshotAutoMonthlyCap());
+    const plan = params.plan ?? (await (await import("@/lib/premium")).getPlan());
+    captureScreenshots =
+      canCaptureForBusiness(parseWebsiteAnalysis(existingAnalysisJson ?? null), plan) &&
+      autoCaptureAllowed(parseWebsiteAnalysis(existingAnalysisJson ?? null), plan, await loadScreenshotCallsThisMonth(), screenshotAutoMonthlyCap());
   }
 
   // Step 2g: Browserless renders this scan may use — only with a key, and
@@ -159,6 +169,12 @@ export async function analyzeWebsiteForSave(params: {
           screenshotUrl: existingAnalysis?.screenshotUrl ?? null,
           additionalPages: existingAnalysis?.additionalPages ?? [],
           lastScreenshotRefreshAt: existingAnalysis?.lastScreenshotRefreshAt ?? null,
+          // The stored capture's facts stay with it — above all its log,
+          // which the monthly ScreenshotOne counts (account and business)
+          // read: dropping it let a re-scan reset them.
+          ...(existingAnalysis?.screenshotHttpStatus != null ? { screenshotHttpStatus: existingAnalysis.screenshotHttpStatus } : {}),
+          ...(existingAnalysis?.screenshotSiteUrl ? { screenshotSiteUrl: existingAnalysis.screenshotSiteUrl } : {}),
+          ...(existingAnalysis?.screenshotCaptureLog ? { screenshotCaptureLog: existingAnalysis.screenshotCaptureLog } : {}),
           // Same real detection, freshly re-run on every regular re-scan
           // too — see the first branch's own comment above.
           aboutPresence: analysis.aboutPresence,

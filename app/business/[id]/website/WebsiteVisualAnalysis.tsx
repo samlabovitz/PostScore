@@ -50,6 +50,7 @@ function RefreshScreenshotsControl({
   lastScreenshotRefreshAt: string | null;
 }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const router = useRouter();
   const [state, setState] = useState<
     { kind: "idle" } | { kind: "refreshing" } | { kind: "error"; message: string }
@@ -71,6 +72,8 @@ function RefreshScreenshotsControl({
     if (result.status === "too_soon") {
       const days = daysRemainingUntil(new Date(result.nextAvailableAt).getTime());
       setState({ kind: "error", message: tPlural(locale, "dashboard.website.refreshAvailableInError", days) });
+    } else if (result.status === "business_limit") {
+      setState({ kind: "error", message: t(locale, "dashboard.website.screenshotBusinessLimit", { date: formatShortDate(result.nextAvailableAt, locale, timeZone) }) });
     } else if (result.status === "capped") {
       setState({ kind: "error", message: t(locale, "dashboard.website.screenshotsCapped") });
     } else if (result.status === "no_website") {

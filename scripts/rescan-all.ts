@@ -86,6 +86,7 @@ import { businessWebsiteUrl } from "../lib/businessWebsite";
 import {
   canAutoCapture,
   MAX_SCREENSHOT_CALLS_PER_CAPTURE,
+  canCaptureForBusiness,
   needsAutoScreenshot,
   screenshotAutoMonthlyCap,
   screenshotCallsThisMonth,
@@ -327,9 +328,11 @@ async function main() {
     const { data: everyBusiness } = await supabase.from("businesses").select("website_analysis_json");
     const usedThisMonth = screenshotCallsThisMonth((everyBusiness ?? []).map((r) => parseWebsiteAnalysis(r.website_analysis_json)));
     const cap = screenshotAutoMonthlyCap();
-    const needCapture = businesses.filter(
-      (b) => businessWebsiteUrl(b) !== null && needsAutoScreenshot(parseWebsiteAnalysis(b.website_analysis_json))
-    );
+    // …and the business's own monthly allowance by plan (rule 4).
+    const needCapture = businesses.filter((b) => {
+      const analysis = parseWebsiteAnalysis(b.website_analysis_json);
+      return businessWebsiteUrl(b) !== null && needsAutoScreenshot(analysis) && canCaptureForBusiness(analysis, backgroundPlan((b as { owner_id?: string | null }).owner_id ?? null));
+    });
     let reserved = usedThisMonth;
     const willCapture: BusinessRow[] = [];
     if (!noScreenshots) {

@@ -1982,6 +1982,7 @@ export type MessageKey =
   | "dashboard.website.refreshAvailableInError.other"
   | "dashboard.website.noWebsiteToScreenshot"
   | "dashboard.website.screenshotsCapped"
+  | "dashboard.website.screenshotBusinessLimit"
   | "dashboard.website.refreshErrorFallback"
   | "dashboard.website.availableInDays.one"
   | "dashboard.website.availableInDays.other"
@@ -6908,6 +6909,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.refreshAvailableInError.other": "Screenshots refresh available in {count} days.",
     "dashboard.website.noWebsiteToScreenshot": "This business has no website to screenshot.",
     "dashboard.website.screenshotsCapped": "This month's screenshot limit is reached. You can refresh them again next month — nothing was changed.",
+    "dashboard.website.screenshotBusinessLimit": "You've used this month's screenshot refresh — the next one is available on {date}.",
     "dashboard.website.refreshErrorFallback": "Couldn't refresh screenshots — try again shortly.",
     "dashboard.website.availableInDays.one": "Available in {count} day",
     "dashboard.website.availableInDays.other": "Available in {count} days",
@@ -11802,6 +11804,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.refreshAvailableInError.other": "La actualización de capturas estará disponible en {count} días.",
     "dashboard.website.noWebsiteToScreenshot": "Este negocio no tiene un sitio web del que tomar capturas.",
     "dashboard.website.screenshotsCapped": "Se alcanzó el límite de capturas de este mes. Podrá actualizarlas de nuevo el próximo mes; no se cambió nada.",
+    "dashboard.website.screenshotBusinessLimit": "Ya usó la actualización de capturas de este mes; la próxima estará disponible el {date}.",
     "dashboard.website.refreshErrorFallback": "No se pudieron actualizar las capturas — inténtelo de nuevo en un momento.",
     "dashboard.website.availableInDays.one": "Disponible en {count} día",
     "dashboard.website.availableInDays.other": "Disponible en {count} días",

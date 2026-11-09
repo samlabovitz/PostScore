@@ -39,12 +39,21 @@ export type CheckSiteResult =
   | { status: "invalid" | "down" | "parked" | "unauthenticated" | "not_found" };
 
 export type SaveSiteResult =
-  | { status: "saved"; url: string; mentions: BusinessMention[]; recheck: "done" | "later"; screenshot: "taken" | "later" | "capped" }
+  | ({ status: "saved"; url: string; mentions: BusinessMention[] } & AfterChange)
   /** Loads, but nothing on it says it's this business — save only with `anyway`. */
   | { status: "unconfirmed"; url: string }
   | { status: "invalid" | "down" | "parked" | "not_enabled" | "unauthenticated" | "not_found" | "error" };
 
-export type UndoSiteResult = { status: "saved"; recheck: "done" | "later"; screenshot: "taken" | "later" | "capped" } | { status: "nothing" | "not_enabled" | "unauthenticated" | "not_found" | "error" };
+/** After a site change: the website check, and the one fresh screenshot —
+ * "limit" when the business's own monthly allowance is used (the next one
+ * from `screenshotNextAt`), "capped" when the account-wide cap is. */
+export interface AfterChange {
+  recheck: "done" | "later";
+  screenshot: "taken" | "later" | "capped" | "limit";
+  screenshotNextAt?: string;
+}
+
+export type UndoSiteResult = ({ status: "saved" } & AfterChange) | { status: "nothing" | "not_enabled" | "unauthenticated" | "not_found" | "error" };
 
 type OwnedBusiness = { id: string; name: string | null; phone: string | null; address: string | null; website: string | null; verified_website_url: string | null; website_analysis_json: unknown };
 
@@ -103,7 +112,7 @@ export async function checkOwnerWebsite(businessId: string, url: string): Promis
 }
 
 /** Re-runs the website check and takes the one fresh screenshot. */
-async function afterChange(supabase: ReturnType<typeof createClient>, businessId: string): Promise<{ recheck: "done" | "later"; screenshot: "taken" | "later" | "capped" }> {
+async function afterChange(supabase: ReturnType<typeof createClient>, businessId: string): Promise<AfterChange> {
   const [{ recheckWebsiteWithClient }, { captureScreenshotsWithClient }] = await Promise.all([import("@/lib/websiteRecheck.server"), import("@/lib/websiteScreenshotRefresh.server")]);
   let recheck: "done" | "later" = "later";
   try {
@@ -112,15 +121,17 @@ async function afterChange(supabase: ReturnType<typeof createClient>, businessId
   } catch (err) {
     console.error(`[owner-website] re-check failed for ${businessId}:`, err instanceof Error ? err.message : err);
   }
-  let screenshot: "taken" | "later" | "capped" = "later";
+  let screenshot: AfterChange["screenshot"] = "later";
+  let screenshotNextAt: string | undefined;
   try {
     const s = await captureScreenshotsWithClient(supabase, businessId, "site_change");
-    screenshot = s.status === "ok" ? "taken" : s.status === "capped" ? "capped" : "later";
+    screenshot = s.status === "ok" ? "taken" : s.status === "capped" ? "capped" : s.status === "business_limit" ? "limit" : "later";
+    if (s.status === "business_limit") screenshotNextAt = s.nextAvailableAt;
   } catch (err) {
     console.error(`[owner-website] screenshot failed for ${businessId}:`, err instanceof Error ? err.message : err);
   }
   revalidatePath(`/business/${businessId}`, "layout");
-  return { recheck, screenshot };
+  return { recheck, screenshot, ...(screenshotNextAt ? { screenshotNextAt } : {}) };
 }
 
 async function writeOwnerWebsite(businessId: string, url: string | null, previous: { url: string | null; at: string | null }): Promise<"ok" | "not_enabled" | "error"> {

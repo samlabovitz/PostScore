@@ -8,6 +8,8 @@ export type RefreshWebsiteScreenshotsResult =
   | { status: "too_soon"; nextAvailableAt: string }
   /** This month's ScreenshotOne limit is used (SCREENSHOT_AUTO_MONTHLY_CAP). */
   | { status: "capped" }
+  /** This business's own allowance for the month is used (by plan). */
+  | { status: "business_limit"; nextAvailableAt: string }
   | { status: "no_website" }
   | { status: "not_found" }
   | { status: "unauthenticated" }

@@ -12,9 +12,9 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconWorld, IconX } from "@tabler/icons-react";
-import { checkOwnerWebsite, getWebsiteChoice, saveOwnerWebsite, undoOwnerWebsite, type CheckSiteResult, type WebsiteChoice } from "@/app/actions/ownerWebsite";
+import { checkOwnerWebsite, getWebsiteChoice, saveOwnerWebsite, undoOwnerWebsite, type AfterChange, type CheckSiteResult, type WebsiteChoice } from "@/app/actions/ownerWebsite";
 import { siteHost, type BusinessMention } from "@/lib/ownerWebsite";
-import { t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
+import { formatShortDate, t, useLocale, useTimeZone, type Locale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const PRIMARY = "inline-flex items-center justify-center rounded-full bg-ink px-3.5 py-1.5 text-[13px] font-semibold text-white disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass";
@@ -50,6 +50,7 @@ function checkMessage(result: CheckSiteResult, locale: Locale): { text: string; 
 
 export function WrongSite({ businessId, className }: { businessId: string; className?: string }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
   const router = useRouter();
   const titleId = useId();
   const [open, setOpen] = useState(false);
@@ -136,7 +137,7 @@ export function WrongSite({ businessId, className }: { businessId: string; class
     try {
       const r = await saveOwnerWebsite(businessId, target, anyway);
       if (r.status === "saved") {
-        setPhase({ kind: "done", lines: [t(locale, "dashboard.wrongSite.saved", { host: siteHost(r.url) }), ...afterLines(r.recheck, r.screenshot, locale)] });
+        setPhase({ kind: "done", lines: [t(locale, "dashboard.wrongSite.saved", { host: siteHost(r.url) }), ...afterLines(r, locale, timeZone)] });
         router.refresh();
       } else if (r.status === "unconfirmed") {
         setPhase({ kind: "checked", result: { status: "ok", url: r.url, mentions: [] } });
@@ -155,7 +156,7 @@ export function WrongSite({ businessId, className }: { businessId: string; class
     try {
       const r = await undoOwnerWebsite(businessId);
       if (r.status === "saved") {
-        setPhase({ kind: "done", lines: [t(locale, "dashboard.wrongSite.undone"), ...afterLines(r.recheck, r.screenshot, locale)] });
+        setPhase({ kind: "done", lines: [t(locale, "dashboard.wrongSite.undone"), ...afterLines(r, locale, timeZone)] });
         router.refresh();
       } else {
         setPhase({ kind: "error", message: t(locale, r.status === "not_enabled" ? "dashboard.wrongSite.notEnabled" : "dashboard.wrongSite.error") });
@@ -290,10 +291,16 @@ export function WrongSite({ businessId, className }: { businessId: string; class
   );
 }
 
-function afterLines(recheck: "done" | "later", screenshot: "taken" | "later" | "capped", locale: Locale): string[] {
+export function afterLines(r: AfterChange, locale: Locale, timeZone?: string): string[] {
   return [
-    t(locale, recheck === "done" ? "dashboard.wrongSite.recheckDone" : "dashboard.wrongSite.recheckLater"),
-    ...(screenshot === "taken" ? [t(locale, "dashboard.wrongSite.screenshotTaken")] : screenshot === "capped" ? [t(locale, "dashboard.wrongSite.screenshotCapped")] : []),
+    t(locale, r.recheck === "done" ? "dashboard.wrongSite.recheckDone" : "dashboard.wrongSite.recheckLater"),
+    ...(r.screenshot === "taken"
+      ? [t(locale, "dashboard.wrongSite.screenshotTaken")]
+      : r.screenshot === "capped"
+        ? [t(locale, "dashboard.wrongSite.screenshotCapped")]
+        : r.screenshot === "limit" && r.screenshotNextAt
+          ? [t(locale, "dashboard.website.screenshotBusinessLimit", { date: formatShortDate(r.screenshotNextAt, locale, timeZone) })]
+          : []),
   ];
 }
 
