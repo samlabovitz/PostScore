@@ -56,6 +56,14 @@ export const BILLED_DETAILS_KINDS: readonly PlacesDetailsKind[] = PLACES_DETAILS
 /** Never skipped by the cap (still logged). */
 const NEVER_BLOCKED: ReadonlySet<PlacesDetailsKind> = new Set<PlacesDetailsKind>(["photos"]);
 
+/** A single owner action, not a batch job: still runs when the month's
+ * count can't be read (lib/placesSearchBudget.ts countUnreadableAllows). */
+const INTERACTIVE_KINDS: ReadonlySet<PlacesDetailsKind> = new Set<PlacesDetailsKind>(["owner_rescan", "competitor_added"]);
+
+export function isInteractiveDetailsKind(kind: PlacesDetailsKind): boolean {
+  return INTERACTIVE_KINDS.has(kind);
+}
+
 export function placesDetailsMonthlyCap(env: Record<string, string | undefined> = process.env): number {
   const raw = Number.parseInt(env.PLACES_DETAILS_MONTHLY_CAP ?? "", 10);
   return Number.isFinite(raw) && raw >= 0 ? raw : DEFAULT_PLACES_DETAILS_MONTHLY_CAP;

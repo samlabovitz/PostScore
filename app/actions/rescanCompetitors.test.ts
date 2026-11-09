@@ -100,7 +100,7 @@ describe("paid re-scans still refresh competitors", () => {
         const run = saved();
         expect(await refreshCompetitorsOnRescanWithClient(db(latest).client, "b1", plan, NOW, run)).toBe("refreshed");
         expect(run).toHaveBeenCalledTimes(1);
-        expect(run).toHaveBeenCalledWith(expect.anything(), "b1", { enforceCooldown: false, now: NOW });
+        expect(run).toHaveBeenCalledWith(expect.anything(), "b1", { enforceCooldown: false, now: NOW, interactive: true });
       }
     }
   });

@@ -142,7 +142,7 @@ describe("Refresh competitors: once per 30 days", () => {
       businesses: [BUSINESS],
       competitor_scans: [{ created_at: "2026-09-10T18:00:00Z" }],
     });
-    const result = await runAndSaveCompetitorScanWithClient(client, "biz", { enforceCooldown: true, now: NOW });
+    const result = await runAndSaveCompetitorScanWithClient(client, "biz", { enforceCooldown: true, now: NOW, budget: async () => ({ used: 0 }) });
     expect(result.status).toBe("saved");
     expect(scanSpy).toHaveBeenCalledTimes(1);
     const rows = inserted.competitor_scans as Array<{ scan_id: string; is_subject: boolean }>;
@@ -159,7 +159,7 @@ describe("Refresh competitors follows the plan (server-side, before any paid cal
     expect(await runAndSaveCompetitorScanWithClient(early.client, "biz", { enforceCooldown: true, plan: "grow", now: NOW })).toEqual({ status: "too_soon", nextAvailableAt: "2026-10-19T18:00:00.000Z" });
     expect(scanSpy).not.toHaveBeenCalled();
     const later = scanned("2026-10-09T15:00:00Z");
-    expect((await runAndSaveCompetitorScanWithClient(later.client, "biz", { enforceCooldown: true, plan: "grow", now: NOW })).status).toBe("saved");
+    expect((await runAndSaveCompetitorScanWithClient(later.client, "biz", { enforceCooldown: true, plan: "grow", now: NOW, budget: async () => ({ used: 0 }) })).status).toBe("saved");
   });
 
   test("Premium and Multi: the same 24 hours as their own re-scan", async () => {
@@ -169,7 +169,7 @@ describe("Refresh competitors follows the plan (server-side, before any paid cal
       expect(await runAndSaveCompetitorScanWithClient(recent.client, "biz", { enforceCooldown: true, plan, now: NOW })).toEqual({ status: "too_soon", nextAvailableAt: "2026-10-17T10:00:00.000Z" });
       expect(scanSpy).not.toHaveBeenCalled();
       const dayOld = scanned("2026-10-15T15:00:00Z");
-      expect((await runAndSaveCompetitorScanWithClient(dayOld.client, "biz", { enforceCooldown: true, plan, now: NOW })).status).toBe("saved");
+      expect((await runAndSaveCompetitorScanWithClient(dayOld.client, "biz", { enforceCooldown: true, plan, now: NOW, budget: async () => ({ used: 0 }) })).status).toBe("saved");
     }
   });
 

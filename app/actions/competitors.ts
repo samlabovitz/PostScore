@@ -40,7 +40,7 @@ import {
 import { headToHead, isHeadToHead, nearbyReviewAverage, ownerStanding, reviewGoal, type HeadToHead, type ReviewGoal } from "@/lib/competitorComparison";
 import { latestScoringProgress, unfinishedNewScanIds, withoutUnfinished, type ScoringProgress } from "@/lib/competitorScoringStatus";
 import { loadBusinessNiche, loadCompetitorScope, type BusinessNicheState } from "@/lib/businessNiche.server";
-import { canRunScan, nextMonthStartUtc, placesSearchMonthlyCap } from "@/lib/placesSearchBudget";
+import { canRunScan, countUnreadableAllows, nextMonthStartUtc, placesSearchMonthlyCap } from "@/lib/placesSearchBudget";
 import { scopeGroupLabel, nicheSearchTypes } from "@/lib/competitorScope";
 import { applyOverrides, overridesFromRows, scanOverrides, type CompetitorOverride } from "@/lib/competitorOverrides";
 import { nicheScanFields } from "@/lib/competitorNicheRule";
@@ -295,8 +295,13 @@ export async function runAndSaveCompetitorScanWithClient(
     scan?: typeof findAndScoreCompetitors;
     /** Starts the background full scoring (tests replace it). */
     startScoring?: (scanId: string, businessId: string, competitorCount: number) => Promise<void>;
-    /** This month's Places search calls so far (tests replace it). */
-    budget?: () => Promise<{ used: number }>;
+    /** This month's Places search calls so far (tests replace it);
+     * `unreadable`: the count couldn't be read. */
+    budget?: () => Promise<{ used: number | null; unreadable?: boolean }>;
+    /** A single owner action (a button, a re-scan, adding a business) — not
+     * the monthly job or a script. Only these run when the month's count
+     * can't be read. */
+    interactive?: boolean;
     /** Logs the calls a scan made (tests replace it). */
     logCalls?: (businessId: string, calls: number) => Promise<void>;
   } = { enforceCooldown: false }
@@ -316,11 +321,20 @@ export async function runAndSaveCompetitorScanWithClient(
 
   // The month's Places search allowance: a scan runs only when even its
   // worst case (4 calls) fits under PLACES_SEARCH_MONTHLY_CAP.
+  let count: { used: number | null; unreadable?: boolean };
   try {
-    const { used } = await (options.budget ?? defaultBudget)();
-    if (!canRunScan(used, placesSearchMonthlyCap())) return { status: "capped", nextAvailableAt: nextMonthStartUtc(now) };
-  } catch {
-    // An unreadable count never blocks a scan the cooldown allows.
+    count = await (options.budget ?? defaultBudget)();
+  } catch (err) {
+    console.error("[competitors] couldn't read this month's Places search count:", err instanceof Error ? err.message : err);
+    count = { used: null, unreadable: true };
+  }
+  if (count.unreadable || count.used === null) {
+    // Batch callers never search blind; one owner action still runs.
+    if (!countUnreadableAllows(options.interactive === true)) {
+      return { status: "error", message: "Skipped: this month's Places search count couldn't be read, and batch scans never run without it." };
+    }
+  } else if (!canRunScan(count.used, placesSearchMonthlyCap())) {
+    return { status: "capped", nextAvailableAt: nextMonthStartUtc(now) };
   }
 
   const [{ data: business, error }, niche] = await Promise.all([
@@ -405,7 +419,7 @@ export async function runAndSaveCompetitorScanWithClient(
   return { status: "saved", scanId, placesCalls: result.placesCalls };
 }
 
-async function defaultBudget(): Promise<{ used: number }> {
+async function defaultBudget(): Promise<{ used: number | null; unreadable?: boolean }> {
   const { placesSearchCallsThisMonth } = await import("@/lib/placesSearchBudget.server");
   return placesSearchCallsThisMonth();
 }
@@ -452,13 +466,13 @@ export async function refreshCompetitors(businessId: string): Promise<SaveCompet
   if ((await getPlan()) === "free") {
     const latestAt = await latestCompetitorScanAt(supabase, businessId);
     if (latestAt === null || (await latestScanFoundNone(supabase, businessId)) === true) {
-      return runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: false });
+      return runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: false, interactive: true });
     }
     const { data: row } = await supabase.from("businesses").select("language").eq("id", businessId).maybeSingle();
     return { status: "error", message: t(normalizeLocale(row?.language), "dashboard.free.competitorsLocked") };
   }
   // Grow: every 7 days; Premium and Multi: every 24 hours (their re-scan limit).
-  return runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: true, plan: await getPlan() });
+  return runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: true, plan: await getPlan(), interactive: true });
 }
 
 /**
@@ -481,7 +495,8 @@ export async function refreshCompetitorsOnRescanWithClient(
     const latestAt = await latestCompetitorScanAt(supabase, businessId);
     const foundNone = plan === "free" && latestAt !== null ? (await latestScanFoundNone(supabase, businessId)) === true : false;
     if (!rescanRefreshesCompetitors(plan, latestAt, now, foundNone)) return "skipped";
-    const result = await run(supabase, businessId, { enforceCooldown: false, now });
+    // Part of the owner's own re-scan: interactive.
+    const result = await run(supabase, businessId, { enforceCooldown: false, now, interactive: true });
     if (result.status === "error") console.error(`[competitors] re-scan competitor search failed for ${businessId}: ${result.message}`);
     return result.status === "saved" ? "refreshed" : "skipped";
   } catch (err) {
@@ -504,7 +519,8 @@ export async function ensureFirstCompetitorScanWithClient(
 ): Promise<SaveCompetitorScanResult | { status: "skipped" }> {
   try {
     if ((await latestCompetitorScanAt(supabase, businessId)) !== null) return { status: "skipped" };
-    const result = await run(supabase, businessId, { enforceCooldown: false });
+    // After the owner adds a business or re-scans: interactive.
+    const result = await run(supabase, businessId, { enforceCooldown: false, interactive: true });
     if (result.status === "error") console.error(`[competitors] first competitor scan failed for ${businessId}: ${result.message}`);
     return result;
   } catch (err) {

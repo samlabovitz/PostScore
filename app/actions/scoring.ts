@@ -500,7 +500,7 @@ export async function rescanBusinessWithClient(
   // anything. See resolveListingWebsite (lib/googleListingWebsite.ts)
   // for the exact decision this feeds.
   let retryLookupWebsite: string | null | undefined;
-  if (!lookup.place.website && before.website && (await details.detailsCallAllowed("website_retry"))) {
+  if (!lookup.place.website && before.website && (await details.detailsCallAllowed("website_retry", { interactive: detailsKind === "owner_rescan" }))) {
     const retry = await lookupBusinessByPlaceId(before.place_id);
     if (retry.status !== "error") await details.logPlacesDetailsCall(businessId, "website_retry");
     retryLookupWebsite = retry.status === "found" ? retry.place.website : null;

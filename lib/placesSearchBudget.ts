@@ -24,6 +24,29 @@ export function nextMonthStartUtc(now: Date): string {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString();
 }
 
+/**
+ * The month's count couldn't be read (a database error — not the table
+ * missing in development). Batch callers (the monthly job, rescan-all
+ * --with-competitors, scripts) never run blind; a single interactive owner
+ * action (one re-scan, one search) still does.
+ */
+export function countUnreadableAllows(interactive: boolean): boolean {
+  return interactive;
+}
+
+/** "Add a competitor" name searches per business in any 24 hours — so one
+ * owner (or a loop on the server action) can't use up the project's
+ * monthly search allowance for everyone. */
+export const COMPETITOR_SEARCHES_PER_DAY = 10;
+/** The 0-call places_calls row that marks one name search, written BEFORE Google is called. */
+export const COMPETITOR_NAME_SEARCH_KIND = "competitor_name_search";
+
+/** `countIncludingThis`: this business's name searches in the last 24 h,
+ * this one included; null = couldn't be counted (the monthly cap still holds). */
+export function competitorSearchAllowed(countIncludingThis: number | null, perDay: number = COMPETITOR_SEARCHES_PER_DAY): boolean {
+  return countIncludingThis === null || countIncludingThis <= perDay;
+}
+
 /** A scan may run only when even its worst case stays under the cap. */
 export function canRunScan(usedThisMonth: number, cap: number): boolean {
   return usedThisMonth + MAX_CALLS_PER_SCAN <= cap;

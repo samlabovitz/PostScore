@@ -114,7 +114,7 @@ export function AddCompetitor({ businessId }: { businessId: string }) {
     setState({ kind: "searching" });
     const r = await searchCompetitorToAdd(businessId, query);
     if (r.status === "ok") setState(r.hits.length > 0 ? { kind: "hits", hits: r.hits } : { kind: "message", text: t(locale, k("noHits")) });
-    else setState({ kind: "message", text: t(locale, r.status === "capped" ? k("capped") : k("error")), error: true });
+    else setState({ kind: "message", text: t(locale, r.status === "capped" ? k("capped") : r.status === "daily_limit" ? k("dailyLimit") : k("error")), error: true });
   }
 
   async function add(hit: CompetitorSearchHit) {

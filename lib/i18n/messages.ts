@@ -1476,6 +1476,7 @@ export type MessageKey =
   | "dashboard.competitors.owner.tooFar"
   | "dashboard.competitors.owner.noHits"
   | "dashboard.competitors.owner.capped"
+  | "dashboard.competitors.owner.dailyLimit"
   | "dashboard.competitors.owner.addLimit"
   | "dashboard.competitors.owner.notEnabled"
   | "dashboard.competitors.owner.error"
@@ -6180,6 +6181,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.owner.tooFar": "More than 15 miles away",
     "dashboard.competitors.owner.noHits": "Google didn't find that name near you. Try the name as it appears on Google Maps.",
     "dashboard.competitors.owner.capped": "This month's Google searches are used up. Please try again next month.",
+    "dashboard.competitors.owner.dailyLimit": "You've reached today's competitor search limit — try again tomorrow.",
     "dashboard.competitors.owner.addLimit": "You can add up to 5 competitors.",
     "dashboard.competitors.owner.notEnabled": "This isn't switched on yet. Nothing was changed.",
     "dashboard.competitors.owner.error": "Something went wrong. Nothing was changed — please try again.",
@@ -11012,6 +11014,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.owner.tooFar": "A más de 15 millas",
     "dashboard.competitors.owner.noHits": "Google no encontró ese nombre cerca de usted. Pruebe con el nombre tal como aparece en Google Maps.",
     "dashboard.competitors.owner.capped": "Las búsquedas de Google de este mes ya se usaron. Inténtelo de nuevo el próximo mes.",
+    "dashboard.competitors.owner.dailyLimit": "Ya alcanzó el límite de búsquedas de competidores de hoy. Inténtelo de nuevo mañana.",
     "dashboard.competitors.owner.addLimit": "Puede agregar hasta 5 competidores.",
     "dashboard.competitors.owner.notEnabled": "Esto aún no está activado. No se cambió nada.",
     "dashboard.competitors.owner.error": "Algo salió mal. No se cambió nada; inténtelo de nuevo.",

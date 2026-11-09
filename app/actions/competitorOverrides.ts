@@ -4,15 +4,16 @@
 // - Remove (Closed / Not really a competitor / Other) — gone from the list
 //   now and never picked by a future scan; "Restore" undoes it.
 // - Add a competitor — search Google by name (ONE Text Search call, inside
-//   PLACES_SEARCH_MONTHLY_CAP), pick one: it joins the latest list now
-//   (scored from that same search) and every future scan keeps it.
+//   PLACES_SEARCH_MONTHLY_CAP and at most COMPETITOR_SEARCHES_PER_DAY per
+//   business), pick one: it joins the latest list now (scored from that
+//   same search) and every future scan keeps it.
 // Owner-only through RLS; nothing here reads or stores review text.
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeLocale } from "@/lib/i18n";
 import { isRemoveReason, type RemoveReason } from "@/lib/competitorOverrides";
-import { placesSearchMonthlyCap } from "@/lib/placesSearchBudget";
+import { competitorSearchAllowed, placesSearchMonthlyCap } from "@/lib/placesSearchBudget";
 import { MAX_COMPETITOR_DISTANCE_METERS } from "@/lib/competitorQuality";
 import type { NearbyCandidate } from "@/lib/google/places";
 
@@ -40,6 +41,8 @@ export interface CompetitorSearchHit {
 export type SearchCompetitorResult =
   | { status: "ok"; hits: CompetitorSearchHit[] }
   | { status: "capped" }
+  /** This business's COMPETITOR_SEARCHES_PER_DAY are used (any 24 hours). */
+  | { status: "daily_limit" }
   | { status: "unauthenticated" | "not_found" | "invalid" | "error" };
 
 async function ownBusiness(businessId: string) {
@@ -89,12 +92,15 @@ export async function searchCompetitorToAdd(businessId: string, query: string): 
   if (!user) return { status: "unauthenticated" };
   if (!business || business.lat === null || business.lng === null) return { status: "not_found" };
   const budget = await import("@/lib/placesSearchBudget.server");
-  try {
-    const { used } = await budget.placesSearchCallsThisMonth();
-    // One call: it runs while one more fits under the cap.
-    if (used + 1 > placesSearchMonthlyCap()) return { status: "capped" };
-  } catch {
-    // An unreadable count never blocks one search.
+  // One call: it runs while one more fits under the cap. An unreadable
+  // count (logged) still allows this one owner search.
+  const month = await budget.placesSearchCallsThisMonth();
+  if (month.used !== null && month.used + 1 > placesSearchMonthlyCap()) return { status: "capped" };
+  // Counted before Google is called, so rapid repeated submits can't slip past.
+  const today = await budget.recordCompetitorNameSearch(businessId);
+  if (today && !competitorSearchAllowed(today.count)) {
+    await today.release().catch(() => undefined);
+    return { status: "daily_limit" };
   }
   const [{ searchTextCompetitors }, { distanceMetersBetween }] = await Promise.all([import("@/lib/google/places"), import("@/lib/competitors")]);
   let results: NearbyCandidate[];

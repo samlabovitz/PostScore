@@ -1,31 +1,48 @@
 // Counts and logs the month's Place Details calls in places_calls
 // (supabase/places-calls.sql — `kind` is free text, so no table change),
-// whole project (the admin client: Google bills the project). Never fails
-// the caller: a read error allows the call, a write error is ignored.
+// whole project (the admin client: Google bills the project). A write
+// error is ignored. Before the table exists (development) every call is
+// allowed; a database read error is logged and blocks batch callers —
+// only a single interactive owner action still runs.
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { monthStartUtc } from "@/lib/placesSearchBudget";
-import { BILLED_DETAILS_KINDS, canMakeDetailsCall, placesDetailsMonthlyCap, skippedKind, type PlacesDetailsKind } from "@/lib/placesDetailsBudget";
+import { countUnreadableAllows, monthStartUtc } from "@/lib/placesSearchBudget";
+import { placesCallsTableMissing } from "@/lib/placesSearchBudget.server";
+import { BILLED_DETAILS_KINDS, canMakeDetailsCall, isInteractiveDetailsKind, placesDetailsMonthlyCap, skippedKind, type PlacesDetailsKind } from "@/lib/placesDetailsBudget";
 
-/** Billed Details calls logged this calendar month (UTC). */
-export async function placesDetailsCallsThisMonth(now: Date = new Date()): Promise<number | null> {
+/** Billed Details calls logged this calendar month (UTC); "missing" before
+ * supabase/places-calls.sql, "unreadable" on any other read error. */
+export async function placesDetailsCallsThisMonth(now: Date = new Date()): Promise<number | "missing" | "unreadable"> {
   try {
     const { data, error } = await createAdminClient()
       .from("places_calls")
       .select("calls")
       .in("kind", BILLED_DETAILS_KINDS as string[])
       .gte("created_at", monthStartUtc(now));
-    if (error) return null;
+    if (error) {
+      if (placesCallsTableMissing(error)) return "missing";
+      console.error(`[places-details] couldn't read this month's Details count: ${error.code ?? ""} ${error.message ?? ""}`.trim());
+      return "unreadable";
+    }
     return (data ?? []).reduce((sum, r) => sum + (Number((r as { calls: number }).calls) || 0), 0);
-  } catch {
-    return null;
+  } catch (err) {
+    console.error("[places-details] couldn't read this month's Details count:", err instanceof Error ? err.message : err);
+    return "unreadable";
   }
 }
 
-/** Whether this call may run now. A failed count allows it (never blocks a scan on a read error). */
-export async function detailsCallAllowed(kind: PlacesDetailsKind, now: Date = new Date()): Promise<boolean> {
-  const used = await placesDetailsCallsThisMonth(now);
-  return used === null || canMakeDetailsCall(kind, used, placesDetailsMonthlyCap());
+/**
+ * Whether this call may run now. `interactive`: a single owner action (by
+ * default, from the kind — "owner_rescan", "competitor_added"); a
+ * "website_retry" passes its re-scan's. An unreadable count allows only
+ * an interactive call.
+ */
+export async function detailsCallAllowed(kind: PlacesDetailsKind, opts: { interactive?: boolean; now?: Date } = {}): Promise<boolean> {
+  const used = await placesDetailsCallsThisMonth(opts.now ?? new Date());
+  if (used === "missing") return true;
+  // "photos" is never blocked (free SKU), counted or not.
+  if (used === "unreadable") return canMakeDetailsCall(kind, Infinity, 0) || countUnreadableAllows(opts.interactive ?? isInteractiveDetailsKind(kind));
+  return canMakeDetailsCall(kind, used, placesDetailsMonthlyCap());
 }
 
 /** One row per call (or `calls` for several made together). */
