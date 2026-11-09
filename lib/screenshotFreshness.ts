@@ -2,6 +2,16 @@
 // see"? Never inspects the image itself — only stored facts.
 
 import type { WebsiteAnalysis, WebsiteAnalysisPage } from "@/lib/scoring";
+import type { WebsiteSource } from "@/lib/businessWebsite";
+import { sameWebsiteLink } from "@/lib/gbpWebsiteLink";
+
+/** The site PostScore grades (lib/businessWebsite.ts gradedWebsite), and
+ * whether the Google listing's own link is parked or broken. */
+export interface GradedSite {
+  url: string;
+  source: WebsiteSource;
+  listingBroken: boolean;
+}
 
 export const SCREENSHOT_STALE_AFTER_DAYS = 30;
 
@@ -13,11 +23,14 @@ export type ScreenshotFreshness =
   | { kind: "stale_unreachable"; capturedAt: string }
   /** Older than SCREENSHOT_STALE_AFTER_DAYS. */
   | { kind: "stale_old"; capturedAt: string }
-  /** Step 2d: the Google listing's link is confirmed broken (a real
-   * browser landed on an error page) and this recent capture is of that
-   * same link — shown as what customers see when they click it, never as
-   * the business's homepage. */
-  | { kind: "listing_link_error"; capturedAt: string }
+  /** The site we'd grade is the Google listing's link, and it's parked or
+   * broken: a capture of it is never shown as "what customers see" — the
+   * Website page shows a warning card with the fix instead. (A parked
+   * domain can show automated browsers a page people never see.) */
+  | { kind: "broken_listing" }
+  /** The stored capture is of a different site than the one graded now
+   * (the owner or PostScore changed it since) — never shown as theirs. */
+  | { kind: "other_site"; capturedAt: string; siteUrl: string }
   /** Step 2d: the capture shows an error page the site served to our
    * AUTOMATED check (a 4xx/5xx capture, or a site that shows automated
    * browsers an error page — the real Wonder case) — never shown;
@@ -31,13 +44,10 @@ export function isErrorCapture(httpStatus: number | null | undefined): boolean {
 }
 
 /** True when a stored capture shows an error page our automated check
- * was served — unless the listing link is confirmed broken by our own
- * plain fetch, in which case that error page IS what customers see. */
+ * was served. */
 export function captureShowsAutomatedErrorPage(analysis: WebsiteAnalysis | null): boolean {
   if (!analysis?.screenshotUrl) return false;
-  const trust = analysis.websiteTrust;
-  if (trust?.listingLinkBroken) return false;
-  return isErrorCapture(analysis.screenshotHttpStatus) || !!trust?.automatedErrorPageUrl;
+  return isErrorCapture(analysis.screenshotHttpStatus) || !!analysis.websiteTrust?.automatedErrorPageUrl;
 }
 
 /** The homepage screenshot URL that may be shown at all (null when none,
@@ -45,7 +55,6 @@ export function captureShowsAutomatedErrorPage(analysis: WebsiteAnalysis | null)
  * served to our automated check). */
 export function visibleHomepageScreenshot(analysis: WebsiteAnalysis | null): string | null {
   if (!analysis?.screenshotUrl || captureShowsAutomatedErrorPage(analysis)) return null;
-  if (isErrorCapture(analysis.screenshotHttpStatus) && !analysis.websiteTrust?.listingLinkBroken) return null;
   return analysis.screenshotUrl;
 }
 
@@ -55,14 +64,17 @@ export function visibleAdditionalPages(analysis: WebsiteAnalysis | null): Websit
   return (analysis?.additionalPages ?? []).map((p) => (isErrorCapture(p.httpStatus) ? { ...p, screenshotUrl: null } : p));
 }
 
-export function screenshotFreshness(analysis: WebsiteAnalysis | null, now: Date = new Date()): ScreenshotFreshness {
+export function screenshotFreshness(analysis: WebsiteAnalysis | null, now: Date = new Date(), site: GradedSite | null = null): ScreenshotFreshness {
+  // The listing's own link is the site, and it's parked or broken: never a picture of it.
+  if (site?.source === "listing" && site.listingBroken) return { kind: "broken_listing" };
   if (captureShowsAutomatedErrorPage(analysis)) return { kind: "automated_error_page" };
   if (!visibleHomepageScreenshot(analysis) || !analysis) return { kind: "none" };
   const capturedAt = analysis.lastScreenshotRefreshAt ?? analysis.checkedAt;
+  // Captured before the site changed. (Captures from before Nov 9 don't
+  // say which site they are; they were of the site graded at the time.)
+  if (site && analysis.screenshotSiteUrl && !sameWebsiteLink(analysis.screenshotSiteUrl, site.url)) return { kind: "other_site", capturedAt, siteUrl: analysis.screenshotSiteUrl };
   const ageMs = now.getTime() - new Date(capturedAt).getTime();
   const isOld = ageMs > SCREENSHOT_STALE_AFTER_DAYS * 24 * 60 * 60 * 1000;
-  const trust = analysis.websiteTrust;
-  if (!isOld && trust?.listingLinkBroken && trust.listingLinkErrorPageUrl) return { kind: "listing_link_error", capturedAt };
   if (analysis.contentFetchFailureReason) return { kind: "stale_unreachable", capturedAt };
   if (isOld) return { kind: "stale_old", capturedAt };
   return { kind: "current" };

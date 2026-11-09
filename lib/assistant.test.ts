@@ -1659,3 +1659,33 @@ describe("Day 2b: tools a business type doesn't have", () => {
     expect(text).toContain("Coupon quick picks");
   });
 });
+
+describe("Nov 9: PostAI links only to the site PostScore shows, and starts with what's urgent", () => {
+  test("a parked listing link with a verified real site: link the real one, never the parked one", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      listing: { ...BASE_CONTEXT.listing, websitePresent: true, shownWebsiteUrl: "https://newarkcolorfulyunnan.com/", brokenListingLink: "https://www.colorfulyunnanorder.com/" },
+    });
+    expect(text).toContain("Any link to their website must be https://newarkcolorfulyunnan.com/; never link to https://www.colorfulyunnanorder.com/.");
+  });
+
+  test("a broken listing link and no other site: never link it, never guess another", () => {
+    const text = buildAssistantContextText({ ...BASE_CONTEXT, listing: { ...BASE_CONTEXT.listing, shownWebsiteUrl: null, brokenListingLink: "https://dead.example.com/" } });
+    expect(text).toContain("Never link to it, and never guess or search for another site");
+  });
+
+  test("urgent tasks are marked and come first", () => {
+    const text = buildAssistantContextText({
+      ...BASE_CONTEXT,
+      actionPlan: {
+        topTasks: [
+          { label: "Website link", category: "completeness", promisedPoints: 1.5, action: "Fix it", effort: "quick_win", urgent: true },
+          { label: "Review count", category: "visibility", promisedPoints: 9, action: "Ask", effort: "quick_win_action" },
+        ],
+      },
+    });
+    expect(text).toContain("- URGENT — customers are hitting this right now. Website link");
+    expect(text.indexOf("URGENT — customers")).toBeLessThan(text.indexOf("- Review count"));
+    expect(text).toContain("start with the URGENT items");
+  });
+});

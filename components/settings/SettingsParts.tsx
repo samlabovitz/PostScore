@@ -6,7 +6,7 @@
 // button here does something real — or isn't shown.
 
 import { useEffect, useState, type ReactNode } from "react";
-import { IconBell, IconBuildingStore, IconCheck, IconCreditCard, IconCrown, IconTag, IconUser, IconUserCircle, type Icon } from "@tabler/icons-react";
+import { IconBell, IconBuildingStore, IconCheck, IconCreditCard, IconCrown, IconTag, IconUser, IconUserCircle, IconWorld, type Icon } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { unsubscribeFromAllEmails } from "@/app/actions/businesses";
@@ -26,6 +26,7 @@ export const SETTINGS_ICONS = {
   card: IconCreditCard,
   bell: IconBell,
   tag: IconTag,
+  globe: IconWorld,
   account: IconUserCircle,
 } satisfies Record<string, Icon>;
 export type SettingsIconKey = keyof typeof SETTINGS_ICONS;

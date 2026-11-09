@@ -11,7 +11,9 @@
 //      same plan) would go over SCREENSHOT_AUTO_MONTHLY_CAP (default 80,
 //      under the free plan's 100). A capture reserves its worst case
 //      (homepage + MAX_ADDITIONAL_PAGES) before running.
-//   3. The manual Refresh button is never capped here — it stays manual.
+//   3. The manual Refresh button is capped by the same monthly total
+//      (lib/websiteScreenshotRefresh.server.ts), as is the one capture
+//      after "Wrong site?".
 
 import type { WebsiteAnalysis } from "@/lib/scoring";
 

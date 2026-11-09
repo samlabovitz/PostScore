@@ -77,6 +77,7 @@ import {
 } from "@/lib/scoring";
 import { buildProfileSnapshot } from "@/lib/profileChanges";
 import { buildActionPlan, mergeReviewTasks, type TaskRow } from "@/lib/actionPlan";
+import { orderByUrgency, urgentIssues } from "@/lib/urgency";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { buildGrowthMoves, competitorPhotoCounts, median, weakWebsiteIssueLabels, type GrowthMoveSignals } from "@/lib/growthMoves";
 import { MonthlyReportEmail, monthlyReportSubject, TEST_PREVIEW_UNSUBSCRIBE_URL, testReportSubject } from "@/emails/MonthlyReportEmail";
@@ -396,7 +397,8 @@ export function computeTopActionPlanTask(
   const suggestions = generateSuggestions(breakdown, locale);
   const rawTasks = buildActionPlan(breakdown, suggestions, taskRows, input, locale);
   const mergedTasks = mergeReviewTasks(rawTasks, breakdown, input, locale);
-  return reportTopTask(mergedTasks, input, locale);
+  // Urgent first, the same rule as the Overview and Growth (lib/urgency.ts).
+  return reportTopTask(orderByUrgency(mergedTasks, urgentIssues(input, breakdown)), input, locale);
 }
 
 /**

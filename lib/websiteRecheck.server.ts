@@ -10,6 +10,9 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { analyzeWebsiteForSave } from "@/lib/websiteAnalysisForSave";
+import { gradedWebsite } from "@/lib/businessWebsite";
+import { SITE_CHANGE_RECHECKS_PER_DAY } from "@/lib/ownerWebsite";
+import { withOwnerWebsite } from "@/lib/ownerWebsite.server";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { extraServicesKeywordsFor } from "@/lib/pagePresenceDetection";
 import { parseListingMode } from "@/lib/listingMode";
@@ -18,6 +21,7 @@ import { saveScoreSnapshotWithClient } from "@/app/actions/scoring";
 import type { ScoreBreakdown } from "@/lib/scoring";
 import {
   WEBSITE_RECHECK_KIND,
+  WEBSITE_RECHECKS_PER_DAY,
   websiteCheckChanges,
   websiteRecheckAvailability,
   websiteScoreOf,
@@ -69,14 +73,11 @@ type BusinessRow = {
 const BUSINESS_COLUMNS =
   "id, name, website, verified_website_url, phone, address, opening_hours_periods, category, primary_type, categories, business_type_override, website_analysis_json, listing_mode, lat, lng";
 
-/** The site a re-check reads: the listing's website, else a verified one
- * — and the verified one when the listing's link is a parked domain
- * (v1.13.1, the real Colorful Yun Nan case). */
-function siteToCheck(row: Pick<BusinessRow, "website" | "verified_website_url"> & { website_analysis_json?: unknown }): string | null {
-  const verified = row.verified_website_url?.trim() || null;
-  const trust = (row.website_analysis_json as { websiteTrust?: { listingLinkParked?: boolean } } | null)?.websiteTrust;
-  if (verified && trust?.listingLinkParked) return verified;
-  return row.website?.trim() || verified;
+/** The site a re-check reads: the one PostScore grades, screenshots and
+ * shows (lib/businessWebsite.ts gradedWebsite — the owner's confirmed
+ * site, else a verified one, else the listing's link). */
+function siteToCheck(row: Pick<BusinessRow, "website" | "verified_website_url"> & { owner_website_url?: string | null }): string | null {
+  return gradedWebsite(row)?.url ?? null;
 }
 
 /** Re-checks that ran in the last two days (enough to count "today" in
@@ -92,9 +93,9 @@ async function recentRecheckDates(supabase: SupabaseClient, businessId: string, 
     .map((r) => r.created_at);
 }
 
-async function loadBusiness(supabase: SupabaseClient, businessId: string): Promise<BusinessRow | null> {
+async function loadBusiness(supabase: SupabaseClient, businessId: string): Promise<(BusinessRow & { owner_website_url: string | null }) | null> {
   const { data } = await supabase.from("businesses").select(BUSINESS_COLUMNS).eq("id", businessId).maybeSingle();
-  return (data as BusinessRow | null) ?? null;
+  return data ? withOwnerWebsite(supabase, businessId, data as BusinessRow) : null;
 }
 
 export async function getWebsiteRecheckStatusWithClient(supabase: SupabaseClient, businessId: string, now: Date = new Date()): Promise<WebsiteRecheckStatus> {
@@ -108,7 +109,9 @@ export async function getWebsiteRecheckStatusWithClient(supabase: SupabaseClient
 export async function recheckWebsiteWithClient(
   supabase: SupabaseClient,
   businessId: string,
-  deps: { analyze?: typeof analyzeWebsiteForSave; now?: () => Date } = {}
+  /** `siteChange`: the owner just changed the site ("Wrong site?") — up to
+   * SITE_CHANGE_RECHECKS_PER_DAY more re-checks today than the usual limit. */
+  deps: { analyze?: typeof analyzeWebsiteForSave; now?: () => Date; siteChange?: boolean } = {}
 ): Promise<WebsiteRecheckResult> {
   const analyze = deps.analyze ?? analyzeWebsiteForSave;
   const now = deps.now ?? (() => new Date());
@@ -121,7 +124,8 @@ export async function recheckWebsiteWithClient(
   // The limit is checked before any PageSpeed / render call.
   const timeZone = businessTimeZone(row.lat, row.lng);
   const availability = websiteRecheckAvailability(await recentRecheckDates(supabase, businessId, now()), now(), timeZone);
-  if (!availability.allowed) return { status: "limit_reached", availability };
+  const siteChangeRoom = deps.siteChange === true && availability.used < WEBSITE_RECHECKS_PER_DAY + SITE_CHANGE_RECHECKS_PER_DAY;
+  if (!availability.allowed && !siteChangeRoom) return { status: "limit_reached", availability };
 
   const { data: beforeRow } = await supabase
     .from("scores")
@@ -153,14 +157,20 @@ export async function recheckWebsiteWithClient(
   }
 
   const { httpsStatus, checkedAt } = analyzed;
-  // v1.13.1: re-checking the verified real site because the listing's link
-  // is parked — that link is still parked (only a full scan re-reads it).
-  const priorTrust = (row.website_analysis_json as { websiteTrust?: { listingLinkParked?: boolean; listingLinkErrorPageUrl?: string | null } } | null)?.websiteTrust;
+  // Re-checking a site other than the listing's link (owner-confirmed or
+  // verified): the listing link keeps its last known state — only a full
+  // scan re-reads it.
+  const priorTrust = (row.website_analysis_json as { websiteTrust?: { listingLinkBroken?: boolean; listingLinkParked?: boolean; listingLinkErrorPageUrl?: string | null } } | null)?.websiteTrust;
   const websiteAnalysis =
-    analyzed.websiteAnalysis && priorTrust?.listingLinkParked && site !== row.website?.trim() && analyzed.websiteAnalysis.websiteTrust
+    analyzed.websiteAnalysis && priorTrust?.listingLinkBroken && site !== row.website?.trim() && analyzed.websiteAnalysis.websiteTrust
       ? {
           ...analyzed.websiteAnalysis,
-          websiteTrust: { ...analyzed.websiteAnalysis.websiteTrust, listingLinkBroken: true, listingLinkErrorPageUrl: priorTrust.listingLinkErrorPageUrl ?? row.website, listingLinkParked: true },
+          websiteTrust: {
+            ...analyzed.websiteAnalysis.websiteTrust,
+            listingLinkBroken: true,
+            listingLinkErrorPageUrl: priorTrust.listingLinkErrorPageUrl ?? row.website,
+            ...(priorTrust.listingLinkParked ? { listingLinkParked: true } : {}),
+          },
         }
       : analyzed.websiteAnalysis;
   const { error: updateError } = await supabase

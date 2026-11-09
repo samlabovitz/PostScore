@@ -12,9 +12,11 @@
 // scrolling row can't clip it.
 
 import { useEffect, useRef, useState } from "react";
-import { IconClock, IconMapPin, IconPhone, IconWorld } from "@tabler/icons-react";
+import Link from "next/link";
+import { IconAlertTriangle, IconClock, IconMapPin, IconPhone, IconWorld } from "@tabler/icons-react";
 import type { OpeningHoursPeriod } from "@/lib/google/places";
-import { businessWebsiteUrl, isWebsiteVerifiedElsewhereOnly } from "@/lib/businessWebsite";
+import { isWebsiteVerifiedElsewhereOnly, shownWebsite } from "@/lib/businessWebsite";
+import { WrongSite } from "@/components/website/WrongSite";
 import { formatOpeningHours, todayHours, todayLineIndex } from "@/lib/hours";
 import { socialPagePlatform } from "@/lib/websiteTrust";
 import { t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
@@ -24,6 +26,10 @@ export interface ListingChipsBusiness {
   phone: string | null;
   website: string | null;
   verified_website_url?: string | null;
+  /** The site the owner confirmed with "Wrong site?". */
+  owner_website_url?: string | null;
+  /** Read only for whether the listing's own link is parked or broken. */
+  website_analysis_json?: unknown;
   opening_hours: string[] | null;
   opening_hours_periods: OpeningHoursPeriod[] | null;
   google_maps_uri: string | null;
@@ -135,14 +141,17 @@ function HoursChip({ business, now }: { business: ListingChipsBusiness; now: Dat
   );
 }
 
-export function ListingChips({ business, now }: { business: ListingChipsBusiness; now: string }) {
+export function ListingChips({ business, now, businessId = null }: { business: ListingChipsBusiness; now: string; businessId?: string | null }) {
   const locale = useLocale();
+  // The one site PostScore shows (lib/businessWebsite.ts): owner-confirmed,
+  // verified, or the listing's link — never a parked or broken listing link.
   // A Facebook/Instagram/Yelp page on the listing is not a website — show
-  // "Facebook page only", unless a real site was verified elsewhere.
+  // "Facebook page only", unless there's a real site.
   const social = business.website ? socialPagePlatform(business.website) : null;
-  const verified = business.verified_website_url?.trim() || null;
-  const site = social ? verified : businessWebsiteUrl(business);
-  const elsewhere = site !== null && (social !== null || isWebsiteVerifiedElsewhereOnly(business));
+  const shown = shownWebsite(business);
+  const site = shown.kind === "site" ? shown.url : null;
+  const elsewhere = site !== null && !(shown.kind === "site" && shown.listingDiffers) && (social !== null || isWebsiteVerifiedElsewhereOnly(business));
+  const fixHref = businessId ? `/business/${businessId}#check-website_link` : "#check-website_link";
   return (
     <div
       data-testid="listing-chips"
@@ -167,6 +176,7 @@ export function ListingChips({ business, now }: { business: ListingChipsBusiness
           href={site}
           target="_blank"
           rel="noreferrer"
+          data-testid="website-chip"
           className={cn(LINK_CHIP, SHRINK, "max-w-[16rem]")}
           title={elsewhere ? `${site} — ${t(locale, "dashboard.overview.listingChips.notOnListing")}` : site}
         >
@@ -174,6 +184,12 @@ export function ListingChips({ business, now }: { business: ListingChipsBusiness
           <span className="truncate">{host(site)}</span>
           {elsewhere && <span className="shrink-0 text-ink-mute">· {t(locale, "dashboard.overview.listingChips.notOnListingShort")}</span>}
         </a>
+      ) : shown.kind === "broken" ? (
+        // Never open the dead link, never guess another: point to the fix.
+        <Link href={fixHref} data-testid="website-chip-broken" className={cn(CHIP, "border-red/40 font-semibold text-red hover:border-red")}>
+          <IconAlertTriangle size={14} className="shrink-0" aria-hidden />
+          {t(locale, "dashboard.overview.listingChips.linkBroken")}
+        </Link>
       ) : social ? (
         <a href={business.website!} target="_blank" rel="noreferrer" className={LINK_CHIP}>
           <IconWorld size={14} className="shrink-0 text-brass" aria-hidden />
@@ -185,6 +201,13 @@ export function ListingChips({ business, now }: { business: ListingChipsBusiness
           {t(locale, "dashboard.overview.listingChips.noWebsite")}
         </span>
       )}
+
+      {shown.kind === "site" && shown.listingDiffers && (
+        <Link href={fixHref} data-testid="listing-differs" className="shrink-0 whitespace-nowrap text-[12px] font-medium text-red underline-offset-2 hover:underline">
+          {t(locale, "dashboard.overview.listingChips.listingDiffers")}
+        </Link>
+      )}
+      {businessId && <WrongSite businessId={businessId} />}
 
       {business.google_maps_uri && (
         <a href={business.google_maps_uri} target="_blank" rel="noreferrer" className={LINK_CHIP}>

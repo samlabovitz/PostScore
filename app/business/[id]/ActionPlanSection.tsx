@@ -359,6 +359,11 @@ export function TaskCard({
         <div className="flex min-w-0 flex-1 flex-col gap-2.5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              {task.urgent && (
+                <span data-testid="task-urgent" className="inline-flex items-center whitespace-nowrap rounded-full bg-red px-2 py-0.5 text-[11px] font-semibold text-white">
+                  {t(locale, "dashboard.overview.recs.urgent")}
+                </span>
+              )}
               <h3 className="text-[14.5px] font-semibold text-ink">{title}</h3>
               {!isSetup && <span className="text-[11.5px] text-ink-mute">{effortBadge(task, context, locale)}</span>}
               {task.minutes ? <span className="text-[11.5px] text-ink-mute">· {timeEstimateText(task.minutes, locale)}</span> : null}

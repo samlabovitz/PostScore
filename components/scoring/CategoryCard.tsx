@@ -10,6 +10,7 @@ import { LockedFixRow } from "@/components/overview/FixPlanUpsell";
 import { checkAnchorId } from "@/lib/postaiLinks";
 import { CustomerDetailsExtras } from "@/components/scoring/CustomerDetailsExtras";
 import { CustomerDetailsGoogleEdit, optionLabel, useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
+import { WebsiteLinkFix } from "@/components/gbp/WebsiteLinkFix";
 import { GoogleAiAnswersLine } from "@/components/gbp/GbpMessagingStep";
 import { CUSTOMER_DETAIL_OPTIONS, PART_ORDER } from "@/lib/gbpAttributes";
 import { timeEstimateText, type CheckHowTo } from "@/lib/actionPlan";
@@ -226,7 +227,13 @@ function RowActions({
   // Premium (connected or not): the Google action is the one action.
   const googleAction = customerDetails && gbp.enabled && gbp.premium;
   const canRemove = customerDetails && (check.meta?.ownerCanRemove ?? "").split(",").some(Boolean);
-  if (!needsWork && !googleAction && !canRemove) return null;
+  // The Website link check: "Update website on Google" for every Premium +
+  // Google-connected business, any time (change the link whenever you
+  // like); the steps when it's losing points on other plans; and the
+  // 7-day Undo even once the new link scores.
+  const websiteLinkFix =
+    check.id === "completeness.website_link" && !!businessId && gbp.enabled && (needsWork || (gbp.premium && gbp.connected) || !!gbp.websiteUndo);
+  if (!needsWork && !googleAction && !canRemove && !websiteLinkFix) return null;
   return (
     <div data-testid="row-actions" className="ml-[25px] mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
       {googleAction ? (
@@ -249,6 +256,7 @@ function RowActions({
         </Link>
       )}
       {canRemove && <CustomerDetailsExtras check={check} businessId={businessId} />}
+      {websiteLinkFix && !lockedFixes && <WebsiteLinkFix businessId={businessId!} suggested={gbp.websiteSuggested ?? null} className="basis-full" />}
     </div>
   );
 }

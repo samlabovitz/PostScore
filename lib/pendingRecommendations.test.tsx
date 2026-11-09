@@ -80,7 +80,7 @@ describe("M12: the monthly report's next steps skip marked-done items", () => {
 
   test("the report builds them from the full list, not a top 3 cut before filtering", () => {
     const src = readFileSync("lib/reports/reportData.server.ts", "utf8");
-    expect(src).toContain("reportNextSteps(topRecommendations(actionPlan.tasks, actionPlan.websiteBanner, businessId, linkOptions, Infinity))");
+    expect(src).toContain("reportNextSteps(topRecommendations(actionPlan.tasks, actionPlan.websiteBanner, businessId, linkOptions, Infinity, actionPlan.urgentIssues))");
   });
 });
 

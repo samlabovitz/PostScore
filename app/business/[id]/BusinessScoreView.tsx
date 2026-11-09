@@ -11,7 +11,7 @@ import { ClosedListingBanner } from "@/components/scoring/ClosedListingBanner";
 import { PlatformLinkCard } from "@/components/gbp/PlatformLinkCard";
 import { scoreOnHold } from "@/lib/businessStatus";
 import { hackSignsFor } from "@/lib/siteSecurity";
-import { businessWebsiteUrl } from "@/lib/businessWebsite";
+import { businessWebsiteUrl, shownWebsiteUrl } from "@/lib/businessWebsite";
 import { cn } from "@/lib/utils";
 import type { BusinessRecord, ScoreHistoryRow, ScoreSnapshot } from "@/app/actions/scoring";
 import { formatCount, formatDateTime, t, useLocale, useTimeZone } from "@/lib/i18n";
@@ -32,7 +32,7 @@ import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution
 import { ScoreBreakdownPanel } from "@/components/overview/ScoreBreakdownPanel";
 import { TopRecommendations } from "@/components/overview/TopRecommendations";
 import { StudioComingSoon } from "@/components/overview/StudioComingSoon";
-import { biggestBoostFrom, reviewCountChange, type Recommendation } from "@/lib/overviewTiles";
+import { biggestBoostFrom, reviewCountChange, TOP_RECOMMENDATIONS, type Recommendation } from "@/lib/overviewTiles";
 import type { LinkOptions } from "@/lib/postaiLinks";
 import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
 import { LiveListingSection } from "@/components/gbp/LiveListingSection";
@@ -97,8 +97,9 @@ export function BusinessScoreView({
   /** The server's "now" (ISO) — freshness and re-scan availability are
    * worked out from it so server and browser agree. */
   now: string;
-  /** The action plan's biggest open items (lib/overviewTiles.ts), or
-   * null when the plan couldn't be loaded. */
+  /** Every open item of the action plan, urgent first (lib/overviewTiles.ts):
+   * the card shows the first TOP_RECOMMENDATIONS; Biggest boost reads them
+   * all. Null when the plan couldn't be loaded. */
   recommendations: Recommendation[] | null;
   /** The Website page's own fix count (lib/websiteFixes.ts). */
   websiteFixCount: number;
@@ -135,7 +136,8 @@ export function BusinessScoreView({
   // Google listing data look fresh.
   const lastScanAt = history.find((h) => h.scan_kind !== "website_recheck")?.created_at ?? null;
   const hasWebsite = businessWebsiteUrl(business) !== null;
-  const liveSiteUrl = businessWebsiteUrl(business);
+  // "View live site": the site PostScore shows — never a parked or broken listing link.
+  const liveSiteUrl = shownWebsiteUrl(business);
   const scoreBasis = scoreBasisPoints(breakdown.categories);
   const free = plan === "free";
   const rescan = useRescan(businessId, lastScanAt, now, free ? freeRescanNextAt : null);
@@ -152,7 +154,7 @@ export function BusinessScoreView({
         footer={<ScanFreshnessLine lastScanAt={lastScanAt} now={now} scoringVersion={breakdown.scoringVersion} />}
         // The Google listing at a glance, on its own full-width row: one
         // line on a desktop (replaces the old "Business listing" card).
-        chips={<ListingChips business={business} now={now} />}
+        chips={<ListingChips business={business} now={now} businessId={businessId} />}
         // The score is a snapshot: re-scan to update it (replaces the old
         // grey line under the score card).
         note={<SnapshotNotice businessId={businessId} lastScanAt={lastScanAt} now={now} nextAt={rescan.nextAt} free={free} />}
@@ -295,6 +297,7 @@ export function BusinessScoreView({
           projectedGrade={projectedBreakdown.grade}
           // The first Top recommendation — the same source, so the two
           // never disagree; never a decorative number.
+          // Points only, from every open recommendation (not just the top 3).
           biggestBoost={biggestBoostFrom(recommendations, result.suggestions, locale)}
           onHold={scoreOnHold(business.business_status)}
         />
@@ -307,7 +310,7 @@ export function BusinessScoreView({
           breakdown → "More customers" → the rest. PostAI is the "Ask
           PostAI" button on every page (components/assistant/PostAIDock.tsx). */}
       <div data-testid="overview-recs-row" className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <TopRecommendations businessId={businessId} recommendations={recommendations} />
+        <TopRecommendations businessId={businessId} recommendations={recommendations?.slice(0, TOP_RECOMMENDATIONS) ?? null} />
         <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} />
       </div>
 

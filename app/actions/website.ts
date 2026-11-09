@@ -1,5 +1,6 @@
 "use server";
 
+import { gradedWebsite, listingLinkBroken } from "@/lib/businessWebsite";
 import { createClient } from "@/lib/supabase/server";
 import {
   businessRowToScoringInput,
@@ -57,6 +58,10 @@ export interface WebsitePageData {
    * Google listing itself shows none — see businesses.verified_website_url.
    * The page treats either one as "this business has a real website." */
   verifiedWebsiteUrl: string | null;
+  /** The site PostScore grades, screenshots and shows (lib/businessWebsite.ts
+   * gradedWebsite — owner-confirmed, verified, or the listing's link), and
+   * whether the listing's own link is parked or broken. */
+  gradedSite: { url: string; source: import("@/lib/businessWebsite").WebsiteSource; listingBroken: boolean } | null;
   /** Non-null only the first scan to SUSPECT Google's listing lost its
    * website (one lookup + one retry, both empty, despite one kept on
    * file for scoring) — see resolveListingWebsite in
@@ -249,6 +254,11 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   // Boy case) — same definition website.has_website scores, so the page
   // never pitches "build a website" to a business that already has one.
   const hasWebsite = (!!data.website && data.website.trim().length > 0) || !!verifiedWebsiteUrl;
+  const { readOwnerWebsite } = await import("@/lib/ownerWebsite.server");
+  const ownerWebsite = await readOwnerWebsite(supabase, businessId);
+  const siteRow = { website: data.website, verified_website_url: verifiedWebsiteUrl, owner_website_url: ownerWebsite?.url ?? null, website_analysis_json: data.website_analysis_json };
+  const graded = gradedWebsite(siteRow);
+  const gradedSite = graded ? { ...graded, listingBroken: listingLinkBroken(siteRow) } : null;
   const locale = normalizeLocale(data.language);
   const profile = resolveBizProfile(
     data.category,
@@ -302,6 +312,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       reviewCount: data.review_count,
       website: data.website,
       verifiedWebsiteUrl,
+      gradedSite,
       googleListingMissingWebsiteSince: data.google_listing_missing_website_since,
       googleListingWebsiteRemovedSince: data.google_listing_website_removed_since,
       googleListingLastKnownWebsiteAt: data.google_listing_last_known_website_at,

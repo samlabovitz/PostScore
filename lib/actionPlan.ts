@@ -677,6 +677,10 @@ export interface ActionPlanTask {
   /** Short caveat shown alongside this task — see ActionPlanCopy's
    * timingNote doc. Null for every task without one. */
   timingNote: string | null;
+  /** Customers hit a dead end or wrong info right now (lib/urgency.ts):
+   * listed first everywhere. Order only — never points. Set by
+   * orderByUrgency; absent = not urgent. */
+  urgent?: boolean;
   /** The merged reviews card's explanations, one per line (review count
    * and rating each have their own "full credit at …"), so they're never
    * run together into one confusing sentence. */
@@ -1311,12 +1315,19 @@ export function stepLinks(checkId: string, businessId: string, locale: Locale = 
   return [...tool, ...officialLinksFor(checkId, locale)];
 }
 
-/** "Do the steps below in order": highest points first, setup steps
- * (no points) last. Stable for equal points. */
-export function orderWeeklySteps<T extends Pick<ActionPlanTask, "weightedPoints" | "effort">>(tasks: T[]): T[] {
+/** "Do the steps below in order": urgent steps first (lib/urgency.ts),
+ * then highest points first, setup steps (no points) last. Stable for
+ * equal points. */
+export function orderWeeklySteps<T extends Pick<ActionPlanTask, "weightedPoints" | "effort"> & { urgent?: boolean }>(tasks: T[]): T[] {
   return tasks
     .map((task, i) => ({ task, i }))
-    .sort((a, b) => Number(a.task.effort === "setup") - Number(b.task.effort === "setup") || b.task.weightedPoints - a.task.weightedPoints || a.i - b.i)
+    .sort(
+      (a, b) =>
+        Number(a.task.effort === "setup") - Number(b.task.effort === "setup") ||
+        Number(!!b.task.urgent) - Number(!!a.task.urgent) ||
+        b.task.weightedPoints - a.task.weightedPoints ||
+        a.i - b.i
+    )
     .map(({ task }) => task);
 }
 

@@ -17,7 +17,8 @@ import { UpgradeButton, UpgradeTrigger } from "@/components/upgrade/UpgradeTrigg
 import { cn } from "@/lib/utils";
 import { SCREENSHOT_REFRESH_COOLDOWN_DAYS, type WebsiteAnalysis, type WebsiteAnalysisPage } from "@/lib/scoring";
 import { refreshWebsiteScreenshots } from "@/app/actions/websiteScreenshots";
-import { screenshotFreshness, visibleAdditionalPages, visibleHomepageScreenshot } from "@/lib/screenshotFreshness";
+import { screenshotFreshness, visibleAdditionalPages, visibleHomepageScreenshot, type GradedSite } from "@/lib/screenshotFreshness";
+import { siteHost } from "@/lib/ownerWebsite";
 import { formatShortDate, t, tPlural, useLocale, useTimeZone } from "@/lib/i18n";
 
 const COOLDOWN_MS = SCREENSHOT_REFRESH_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
@@ -70,6 +71,8 @@ function RefreshScreenshotsControl({
     if (result.status === "too_soon") {
       const days = daysRemainingUntil(new Date(result.nextAvailableAt).getTime());
       setState({ kind: "error", message: tPlural(locale, "dashboard.website.refreshAvailableInError", days) });
+    } else if (result.status === "capped") {
+      setState({ kind: "error", message: t(locale, "dashboard.website.screenshotsCapped") });
     } else if (result.status === "no_website") {
       setState({ kind: "error", message: t(locale, "dashboard.website.noWebsiteToScreenshot") });
     } else if (result.status === "error") {
@@ -242,6 +245,7 @@ export function WebsiteVisualAnalysis({
   businessId,
   websiteAnalysis,
   siteUrl = null,
+  site = null,
   locked = false,
 }: {
   businessId: string;
@@ -251,6 +255,10 @@ export function WebsiteVisualAnalysis({
   /** The site that was captured — named in the "open it yourself" note
    * when the capture showed our automated check an error page. */
   siteUrl?: string | null;
+  /** The site PostScore grades (gradedWebsite), for matching the capture
+   * to it — a capture of another site, or of a parked/broken listing
+   * link, is never shown as theirs. */
+  site?: GradedSite | null;
 }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
@@ -259,10 +267,12 @@ export function WebsiteVisualAnalysis({
 
   // Step 2d: a capture whose stored status is 4xx/5xx is never shown,
   // and a stale one is never captioned "what customers see".
-  const additionalPages = visibleAdditionalPages(websiteAnalysis);
+  const freshness = screenshotFreshness(websiteAnalysis, undefined, site);
+  // Never a picture of a parked/broken listing link, or of another site.
+  const hidden = freshness.kind === "broken_listing" || freshness.kind === "other_site";
+  const additionalPages = hidden ? [] : visibleAdditionalPages(websiteAnalysis);
   const hasAdditionalPages = additionalPages.length > 0;
-  const homepageScreenshotUrl = visibleHomepageScreenshot(websiteAnalysis);
-  const freshness = screenshotFreshness(websiteAnalysis);
+  const homepageScreenshotUrl = hidden ? null : visibleHomepageScreenshot(websiteAnalysis);
 
   const lightboxPages: LightboxPage[] = websiteAnalysis
     ? [
@@ -276,7 +286,7 @@ export function WebsiteVisualAnalysis({
       <div className="mb-3 flex flex-col items-start justify-between gap-3 nav:flex-row nav:items-end">
         <div>
           <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-            {t(locale, "dashboard.website.visualAnalysisHeading")}
+            {t(locale, "dashboard.website.gradedSiteHeading")}
           </div>
           {/* "What customers actually see..." is a real claim ONLY a
               genuine screenshot backs up — never shown over the honest
@@ -285,8 +295,8 @@ export function WebsiteVisualAnalysis({
           {freshness.kind === "current" && (
             <p className="text-sm text-ink-soft">{t(locale, "dashboard.website.visualAnalysisSubtitle")}</p>
           )}
-          {freshness.kind === "listing_link_error" && (
-            <p className="text-sm text-amber">{t(locale, "dashboard.website.screenshotListingLinkLabel")}</p>
+          {freshness.kind === "other_site" && (
+            <p className="text-sm text-amber">{t(locale, "dashboard.website.screenshotOtherSite", { host: siteHost(freshness.siteUrl) })}</p>
           )}
           {(freshness.kind === "stale_unreachable" || freshness.kind === "stale_old") && (
             <p className="text-sm text-amber">

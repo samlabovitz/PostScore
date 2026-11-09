@@ -22,6 +22,10 @@ import { PlatformLinkCard } from "@/components/gbp/PlatformLinkCard";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { isPremiumPlan } from "@/lib/plan";
 import { resolveWebsiteBuilder, WEBSITE_BUILDER_NAMES } from "@/lib/websiteBuilder";
+import { ScanningLine } from "@/components/website/ScanningLine";
+import { BrokenListingCard } from "@/components/website/BrokenListingCard";
+import { GbpEditProvider } from "@/components/gbp/CustomerDetailsGoogleEdit";
+import { getWebsiteLinkUndoForPage } from "@/app/actions/gbpWebsiteLink";
 
 export default async function WebsitePage({ params }: { params: { id: string } }) {
   const [result, lastScanAt, recheck, upgrade] = await Promise.all([
@@ -62,7 +66,8 @@ export default async function WebsitePage({ params }: { params: { id: string } }
   );
   const faqEn = renderFaq(profileEn.faq, { name: data.businessName, address: data.address });
   const faqEs = renderFaq(profileEs.faq, { name: data.businessName, address: data.address });
-  const hasWebsite = (!!data.website && data.website.trim().length > 0) || !!data.verifiedWebsiteUrl;
+  // The site PostScore grades (owner-confirmed, verified, or the listing's link).
+  const hasWebsite = data.gradedSite !== null;
   // Free: the page is open — a compact score, the starter site and the
   // screenshot card — with the how-to, Re-check, FAQ and download locked.
   const free = upgrade.plan === "free";
@@ -105,7 +110,8 @@ export default async function WebsitePage({ params }: { params: { id: string } }
     <WebsiteVisualAnalysis
       businessId={params.id}
       websiteAnalysis={data.websiteAnalysis}
-      siteUrl={data.website ?? data.verifiedWebsiteUrl}
+      siteUrl={data.gradedSite?.url ?? null}
+      site={data.gradedSite}
       locked={free}
     />
   ) : null;
@@ -123,7 +129,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       scoreBasis={data.scoreBasis}
       websiteAnalysis={data.websiteAnalysis}
       websiteSuggestions={data.websiteSuggestions}
-      siteUrl={data.website ?? data.verifiedWebsiteUrl}
+      siteUrl={data.gradedSite?.url ?? null}
       businessName={data.businessName}
     />
   ) : null;
@@ -136,7 +142,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
 
   // Free's two paths: "fix it" only for a real site — not for none, and not
   // for a social page standing in for one (lib/websiteTrust.ts).
-  const siteUrl = data.website ?? data.verifiedWebsiteUrl;
+  const siteUrl = data.gradedSite?.url ?? null;
   const socialPlatform = hasWebsite ? socialPagePlatform(siteUrl) : null;
   const realSite = hasWebsite && socialPlatform === null;
   const builder = resolveWebsiteBuilder(data.websiteAnalysis?.builder, siteUrl);
@@ -184,7 +190,18 @@ export default async function WebsitePage({ params }: { params: { id: string } }
           <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
             {t(locale, "dashboard.website.pageTitle")}
           </h1>
+          {/* The one site PostScore grades, screenshots and shows — and "Wrong site?". */}
+          <div className="mt-2">
+            <ScanningLine businessId={params.id} site={data.gradedSite} />
+          </div>
         </div>
+
+        {/* The listing's own link is parked or broken: a warning, never its picture. */}
+        {data.gradedSite?.listingBroken && data.website && (
+          <GbpEditProvider value={{ premium: isPremiumPlan(upgrade.plan), connected: gbpConnected, undo: null, websiteUndo: await getWebsiteLinkUndoForPage(params.id) }}>
+            <BrokenListingCard businessId={params.id} listingUrl={data.website} suggested={data.gradedSite.source !== "listing" ? data.gradedSite.url : null} />
+          </GbpEditProvider>
+        )}
 
         {data.googleListingMissingWebsiteSince && (
           <div className="rounded-lg border border-amber/30 bg-amber/5 px-4 py-3 text-[13px] text-ink-soft">

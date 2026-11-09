@@ -29,6 +29,7 @@ import type { BusinessScoringInput, BusinessScoringRow, ScoreBreakdown, Suggesti
 import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
 import type { Plan } from "@/lib/plan";
 import { scoreOnHold } from "@/lib/businessStatus";
+import { orderByUrgency, urgentCheckIds, urgentIssues, type UrgentIssue } from "@/lib/urgency";
 
 export type GetActionPlanResult =
   | ({
@@ -39,6 +40,9 @@ export type GetActionPlanResult =
        * buildWebsiteBanner (lib/actionPlan.ts). Null when there's nothing
        * left to fix. */
       websiteBanner: WebsiteBanner | null;
+      /** What customers are hitting right now (lib/urgency.ts) — the
+       * Overview's red alert, and the order of everything above. */
+      urgentIssues: UrgentIssue[];
     } & WeeklyPlan)
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
@@ -132,17 +136,19 @@ export async function getActionPlan(
   // (summarized by websiteBanner instead), except the Google-mismatch
   // card. The monthly report builds its own plan from buildActionPlan
   // directly and is deliberately unaffected.
-  const tasks = withStepLinks(
-    applyGrowthWebsiteRules(mergeWebsiteTasks(reviewMerged, breakdown, input, locale, starterSiteRange), input, locale),
-    businessId,
-    locale
+  // Urgent first (customers are hitting it now — lib/urgency.ts), then
+  // by points as before. Order only: no task's points change.
+  const urgent = urgentIssues(input, breakdown);
+  const tasks = orderByUrgency(
+    withStepLinks(applyGrowthWebsiteRules(mergeWebsiteTasks(reviewMerged, breakdown, input, locale, starterSiteRange), input, locale), businessId, locale),
+    urgent
   );
   const websiteBanner = buildWebsiteBanner(breakdown, input, starterSiteRange);
 
-  // The Google-mismatch card and the v1.12.0 steps (replies, fresh
-  // reviews, customer details) always show this week whenever they're
-  // open — exempt from the minimum and the cap (see buildWeeklyPlan).
-  const weeklyPlan = buildWeeklyPlan(tasks, breakdown, input, WEEKLY_PLAN_CAP, locale, [GOOGLE_MISMATCH_CHECK_ID, ...V112_STEP_CHECK_IDS]);
+  // The Google-mismatch card, the v1.12.0 steps (replies, fresh reviews,
+  // customer details) and anything urgent always show this week whenever
+  // they're open — exempt from the minimum and the cap (see buildWeeklyPlan).
+  const weeklyPlan = buildWeeklyPlan(tasks, breakdown, input, WEEKLY_PLAN_CAP, locale, [GOOGLE_MISMATCH_CHECK_ID, ...V112_STEP_CHECK_IDS, ...urgentCheckIds(urgent)]);
   // Growth: "Connect Google" as the last step while it isn't connected — a
   // setup step (0 points, a link, never "I did this"); it unlocks replies
   // and the exact recent-review count.
@@ -158,6 +164,7 @@ export async function getActionPlan(
       tasks: [],
       completed: buildCompletedTasks(breakdown, rows),
       websiteBanner: null,
+      urgentIssues: [],
       ...weeklyPlan,
       weeklyTasks: [buildMarkOpenStep(locale)],
       laterTasks: [],
@@ -172,6 +179,7 @@ export async function getActionPlan(
     tasks,
     completed: buildCompletedTasks(breakdown, rows),
     websiteBanner,
+    urgentIssues: urgent,
     ...weeklyPlan,
     weeklyTasks,
   };

@@ -60,7 +60,10 @@ export type GbpEditError =
 
 type GoogleCall<T> = { ok: true; data: T } | { ok: false; error: GbpEditError; status: number | null; reason: string | null };
 
-async function call<T>(fetchImpl: typeof fetch, token: string, url: string, init: RequestInit = {}): Promise<GoogleCall<T>> {
+export type { GoogleCall };
+
+/** One Business Information API call (shared with lib/gbpWebsiteLink.server.ts). */
+export async function call<T>(fetchImpl: typeof fetch, token: string, url: string, init: RequestInit = {}): Promise<GoogleCall<T>> {
   let res: Response;
   try {
     res = await fetchImpl(url, { ...init, headers: { Authorization: `Bearer ${token}`, ...(init.body ? { "Content-Type": "application/json" } : {}) } });
@@ -122,7 +125,7 @@ async function patchAttributes(f: typeof fetch, token: string, locationName: str
 
 /** metadata.hasPendingEdits — true only when Google says so. A failed
  * read is "don't know", never "pending". */
-async function hasPendingEdits(f: typeof fetch, token: string, locationName: string): Promise<boolean> {
+export async function hasPendingEdits(f: typeof fetch, token: string, locationName: string): Promise<boolean> {
   const url = new URL(`${BASE}/${locationName}`);
   url.searchParams.set("readMask", "metadata");
   const res = await call<{ metadata?: { hasPendingEdits?: boolean } }>(f, token, url.toString());

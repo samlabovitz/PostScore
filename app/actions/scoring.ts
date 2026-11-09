@@ -30,6 +30,8 @@ import { findLastKnownWebsiteDate, resolveListingWebsite } from "@/lib/googleLis
 
 export interface BusinessRecord extends BusinessScoringRow {
   id: string;
+  /** The site the owner confirmed with "Wrong site?" (lib/ownerWebsite.server.ts). */
+  owner_website_url?: string | null;
   /** Google's place id (null for a website-only business). */
   place_id?: string | null;
   name: string | null;
@@ -135,7 +137,9 @@ export async function scoreBusinessWithClient(
 
   // The business's own time zone (Day 5 prep) — for DashboardShell and
   // any date inside a check explanation.
-  const zoned = withTimeZone(business);
+  // The owner's confirmed site (read on its own — null before supabase/owner-website.sql).
+  const { withOwnerWebsite } = await import("@/lib/ownerWebsite.server");
+  const zoned = await withOwnerWebsite(supabase, businessId, withTimeZone(business));
   const input = businessRowToScoringInput(zoned as BusinessScoringRow);
   const result = getScoreWithSuggestions(input, locale === "business" ? normalizeLocale(business.language) : locale);
 

@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
+vi.mock("server-only", () => ({}));
 
 const saveScoreSnapshotWithClient = vi.fn();
 vi.mock("@/app/actions/scoring", () => ({ saveScoreSnapshotWithClient: (...args: unknown[]) => saveScoreSnapshotWithClient(...args) }));

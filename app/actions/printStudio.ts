@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatOpeningHours } from "@/lib/hours";
 import { normalizeLocale, type Locale } from "@/lib/i18n";
 import { realWebsite } from "@/lib/printStudio/website";
+import { withOwnerWebsite } from "@/lib/ownerWebsite.server";
 import { iconForBusiness } from "@/lib/printStudio/icons";
 import type { CardBusiness } from "@/lib/printStudio/design";
 import type { OpeningHoursPeriod } from "@/lib/google/places";
@@ -26,7 +27,7 @@ export async function getPrintStudioData(businessId: string): Promise<GetPrintSt
 
   const { data, error } = await supabase
     .from("businesses")
-    .select("name, address, place_id, google_maps_uri, website, verified_website_url, opening_hours, opening_hours_periods, language, category, primary_type, categories")
+    .select("name, address, place_id, google_maps_uri, website, verified_website_url, website_analysis_json, opening_hours, opening_hours_periods, language, category, primary_type, categories")
     .eq("id", businessId)
     .single();
   if (error || !data) return { status: "not_found" };
@@ -40,7 +41,8 @@ export async function getPrintStudioData(businessId: string): Promise<GetPrintSt
       businessName: data.name,
       placeId: data.place_id,
       googleMapsUri: data.google_maps_uri,
-      website: realWebsite(data),
+      // The site PostScore shows, with the owner's confirmed one (null before supabase/owner-website.sql).
+      website: realWebsite(await withOwnerWebsite(supabase, businessId, data)),
       address: data.address,
       hours: hours && hours.length ? hours : null,
       icon: iconForBusiness(data.category, data.primary_type, data.categories as string[] | null, data.name),

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
+vi.mock("server-only", () => ({}));
 
 // Day 2b — website-only businesses. Everything paid is replaced with a
 // spy: the website analysis, and the Google Places lookup (which must

@@ -9,6 +9,7 @@ import type { ProfileSnapshot } from "@/lib/profileChanges";
 import { resolveLinkTarget, type LinkOptions } from "@/lib/postaiLinks";
 import type { CategoryResult, Suggestion } from "@/lib/scoring";
 import { t, type Locale, type MessageKey } from "@/lib/i18n";
+import { urgentIssueForCheck, type UrgentIssue } from "@/lib/urgency";
 
 /** A category's real contribution to the 0–100 total — its own 0–100
  * score scaled to its weight (40 / 30 / 30), so the three tiles add up
@@ -77,15 +78,18 @@ export function reviewCountChange(
 // Top recommendations
 // ---------------------------------------------------------------------------
 
-/** Points on the 0–100 total. High: one fix worth 5+ points; Medium: 2+.
- * Smaller items show their points with no priority pill. */
+/** Urgent: customers are hitting a problem right now (lib/urgency.ts) —
+ * whatever its points. Otherwise points on the 0–100 total: High, one fix
+ * worth 5+ points; Medium, 2+. Smaller items show their points with no
+ * priority pill. */
 export const HIGH_PRIORITY_POINTS = 5;
 export const MEDIUM_PRIORITY_POINTS = 2;
 export const TOP_RECOMMENDATIONS = 3;
 
-export type Priority = "high" | "medium";
+export type Priority = "urgent" | "high" | "medium";
 
-export function recommendationPriority(points: number): Priority | null {
+export function recommendationPriority(points: number, urgent = false): Priority | null {
+  if (urgent) return "urgent";
   if (points >= HIGH_PRIORITY_POINTS) return "high";
   if (points >= MEDIUM_PRIORITY_POINTS) return "medium";
   return null;
@@ -116,6 +120,8 @@ export interface Recommendation {
   linkLabel: MessageKey | null;
   /** The owner marked it done; its points count once a scan confirms it. */
   pending: boolean;
+  /** Customers are hitting it right now (lib/urgency.ts): listed first. */
+  urgent: boolean;
 }
 
 /** Where a check is fixed — the same link PostAI and the Overview use.
@@ -136,15 +142,17 @@ function linkForCheck(checkId: string, businessId: string, options: LinkOptions)
 }
 
 /** The action plan's own open items (the same list as Growth), plus the
- * Growth page's website summary, biggest real gain first. Items marked
- * done stay (flagged pending) until a re-scan confirms them; setup steps
- * (no points) are left out. */
+ * Growth page's website summary: urgent first, then biggest real gain.
+ * Items marked done stay (flagged pending) until a re-scan confirms them,
+ * after every open one; setup steps (no points) are left out.
+ * `urgentIssues`: for the website summary (a task carries its own `urgent`). */
 export function topRecommendations(
   tasks: ActionPlanTask[],
   websiteBanner: WebsiteBanner | null,
   businessId: string,
   options: LinkOptions = {},
-  limit: number = TOP_RECOMMENDATIONS
+  limit: number = TOP_RECOMMENDATIONS,
+  urgentIssues: readonly UrgentIssue[] = []
 ): Recommendation[] {
   const items: Recommendation[] = tasks
     // "Marked done" items stay until a scan confirms them: their points
@@ -152,36 +160,42 @@ export function topRecommendations(
     .filter((task) => (task.status === "open" || task.status === "pending_verification") && task.effort !== "setup" && task.weightedPoints > 0)
     .map((task) => {
       const link = linkForCheck(task.checkId, businessId, options);
+      const urgent = task.urgent === true;
       return {
         key: task.checkId,
         source: { kind: "task" as const, task },
         points: task.weightedPoints,
         pointsHigh: task.weightedPointsHigh,
-        priority: recommendationPriority(task.weightedPoints),
+        priority: recommendationPriority(task.weightedPoints, urgent),
         href: link.href,
         linkLabel: link.label,
         pending: task.status === "pending_verification",
+        urgent,
       };
     });
   if (websiteBanner) {
     const points = websiteBanner.kind === "improve" ? websiteBanner.points : websiteBanner.low;
     if (points > 0) {
       const target = resolveLinkTarget(websiteBanner.kind === "improve" ? "website" : "website.starter_site", businessId, options);
+      // The site is down or flagged unsafe: the website summary is where it's fixed.
+      const urgent = urgentIssueForCheck("website", urgentIssues) !== null;
       items.push({
         key: "website",
         source: { kind: "website", banner: websiteBanner },
         points,
         pointsHigh: websiteBanner.kind === "get_website" ? websiteBanner.high : null,
-        priority: recommendationPriority(points),
+        priority: recommendationPriority(points, urgent),
         href: target?.href ?? `/business/${businessId}/website`,
         linkLabel: target?.label ?? "dashboard.assistant.link.website",
         pending: false,
+        urgent,
       });
     }
   }
-  // Open items first (biggest first), then marked-done ones — so items
-  // waiting for a scan never push out what the owner still has to do.
-  return items.sort((a, b) => Number(a.pending) - Number(b.pending) || b.points - a.points).slice(0, limit);
+  // Open items first — urgent ones first, then biggest first — then
+  // marked-done ones, so items waiting for a scan never push out what the
+  // owner still has to do.
+  return items.sort((a, b) => Number(a.pending) - Number(b.pending) || Number(b.urgent) - Number(a.urgent) || b.points - a.points).slice(0, limit);
 }
 
 /** The monthly report's next steps: open items only — never something the
@@ -190,17 +204,21 @@ export function reportNextSteps(recs: Recommendation[], limit = 3): Recommendati
   return recs.filter((r) => !r.pending).slice(0, limit);
 }
 
-/** The score card's "Biggest boost": the first OPEN Top recommendation
- * (a marked-done one only when nothing is open), so the two never disagree
- * (the real Hair Express case: every item marked done, Biggest boost +9 ·
- * Review count, Top recommendations "Nothing open"). Without
- * recommendations (Free hides them), the biggest suggestion. */
+/** The score card's "Biggest boost": points only — the OPEN recommendation
+ * worth the most points, never picked by urgency (a marked-done one only
+ * when nothing is open: the real Hair Express case, every item marked
+ * done, Biggest boost +9 · Review count, Top recommendations "Nothing
+ * open"). Pass the full list, not the top 3 — urgent items can fill
+ * those. Without recommendations (Free hides them), the biggest
+ * suggestion. */
 export function biggestBoostFrom(
   recommendations: Recommendation[] | null,
   suggestions: Suggestion[],
   locale: Locale
 ): { label: string; promisedPoints: number; weightedPoints: number } | null {
-  const top = recommendations?.find((r) => !r.pending) ?? recommendations?.[0];
+  const open = (recommendations ?? []).filter((r) => !r.pending);
+  // Most points first; ties keep the list's order.
+  const top = open.reduce<Recommendation | undefined>((best, r) => (!best || r.points > best.points ? r : best), undefined) ?? recommendations?.[0];
   if (top) {
     const label =
       top.source.kind === "task"

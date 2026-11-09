@@ -27,10 +27,12 @@ import type { ReportData, ReportNextStep } from "./reportPdf";
 export type ReportDataResult = { status: "ok"; data: ReportData } | { status: "unauthenticated" } | { status: "not_found" } | { status: "error"; message: string };
 
 function nextStep(rec: Recommendation, locale: Locale): ReportNextStep {
-  const points =
+  const pointsText =
     rec.pointsHigh !== null
       ? recRangeText(locale, rec.points, rec.pointsHigh)
       : t(locale, rec.source.kind === "website" ? "dashboard.overview.recs.pointsAbout" : "dashboard.overview.recs.points", { points: wholePointRange(rec.points, null).low });
+  // Listed first, and labelled, when customers are hitting it now (lib/urgency.ts).
+  const points = rec.urgent ? `${t(locale, "dashboard.overview.recs.urgent")} · ${pointsText}` : pointsText;
   if (rec.source.kind === "task") {
     const { task } = rec.source;
     return { title: task.label, detail: task.weeklyTarget ?? task.action, points };
@@ -75,7 +77,7 @@ export async function getReportData(businessId: string, now: Date = new Date()):
   ]);
 
   const linkOptions = { referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk };
-  const recs = actionPlan.status === "ok" ? reportNextSteps(topRecommendations(actionPlan.tasks, actionPlan.websiteBanner, businessId, linkOptions, Infinity)) : [];
+  const recs = actionPlan.status === "ok" ? reportNextSteps(topRecommendations(actionPlan.tasks, actionPlan.websiteBanner, businessId, linkOptions, Infinity, actionPlan.urgentIssues)) : [];
   const snapshots = reports.history;
   const latestReviews = snapshots.at(-1)?.profile_snapshot_json?.reviewCount;
   const previousReviews = snapshots.at(-2)?.profile_snapshot_json?.reviewCount;

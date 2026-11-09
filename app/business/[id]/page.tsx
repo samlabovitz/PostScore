@@ -12,6 +12,8 @@ import { getLocalBenchmark } from "@/app/actions/competitors";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { getCustomerDetailsUndo } from "@/app/actions/gbpCustomerDetails";
 import { GbpEditProvider } from "@/components/gbp/CustomerDetailsGoogleEdit";
+import { getWebsiteLinkUndoForPage } from "@/app/actions/gbpWebsiteLink";
+import { shownWebsite } from "@/lib/businessWebsite";
 import { isPremiumPlan } from "@/lib/plan";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale } from "@/lib/i18n";
@@ -137,7 +139,7 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
 
   const linkOptions = { referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk };
   const recommendations =
-    actionPlan.status === "ok" ? topRecommendations(actionPlan.tasks, actionPlan.websiteBanner, params.id, linkOptions) : null;
+    actionPlan.status === "ok" ? topRecommendations(actionPlan.tasks, actionPlan.websiteBanner, params.id, linkOptions, Infinity, actionPlan.urgentIssues) : null;
   // The Website page's own fix count (same builder rule, same plan).
   const websiteAnalysis = parseWebsiteAnalysis(scored.business.website_analysis_json);
   const websiteChecks = scored.result.breakdown.categories.find((c) => c.id === "website")?.checks ?? [];
@@ -177,7 +179,18 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
           />
         </div>
       )}
-      <GbpEditProvider value={{ premium: isPremiumPlan(upgrade.plan), connected: gbpStatus.status === "ok" && gbpStatus.connected, undo: await getCustomerDetailsUndo(params.id) }}>
+      <GbpEditProvider
+        value={{
+          premium: isPremiumPlan(upgrade.plan),
+          connected: gbpStatus.status === "ok" && gbpStatus.connected,
+          undo: await getCustomerDetailsUndo(params.id),
+          websiteUndo: await getWebsiteLinkUndoForPage(params.id),
+          websiteSuggested: (() => {
+            const shown = shownWebsite(scored.business);
+            return shown.kind === "site" && shown.source !== "listing" ? shown.url : null;
+          })(),
+        }}
+      >
       <BusinessScoreView
         businessId={params.id}
         business={scored.business}

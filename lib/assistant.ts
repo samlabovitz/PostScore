@@ -38,6 +38,12 @@ export interface AssistantListingSummary {
    * NOT on the Google listing yet (the real Bánh Mì Boy case) — the
    * site's URL. Null when the website (if any) is the listing's own. */
   verifiedWebsiteNotOnListing?: string | null;
+  /** The website PostScore shows and links to (lib/businessWebsite.ts
+   * shownWebsite) — the only website URL PostAI may link to. */
+  shownWebsiteUrl?: string | null;
+  /** The Google listing's own link is parked or broken (that URL), so it
+   * must never be linked to — with or without a verified real site. */
+  brokenListingLink?: string | null;
   httpsStatus: HttpsCheckStatus | null;
   /** WHY httpsStatus is "unreachable" — see ReachabilityFailureReason's
    * own doc (lib/websiteReachability.ts) and websiteReachabilityText's
@@ -108,6 +114,8 @@ export interface AssistantActionPlanTask {
   promisedPoints: number;
   action: string;
   effort: TaskEffort;
+  /** Customers are hitting it right now (lib/urgency.ts) — listed first. */
+  urgent?: boolean;
 }
 
 export interface AssistantActionPlanSummary {
@@ -814,13 +822,17 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
     );
   }
 
-  lines.push("Action plan (open tasks, biggest opportunity first):");
+  lines.push("Action plan (open tasks: URGENT ones first, then biggest opportunity first):");
   if (context.actionPlan.topTasks.length === 0) {
     lines.push("- No open tasks.");
   } else {
     for (const t of context.actionPlan.topTasks) {
       // With FACTS, the points are its "POINT GAINS THE APP SHOWS" line (the Growth card's chip).
-      lines.push(context.facts ? `- ${t.label} (${formatEffort(t.effort)}): ${t.action}` : `- ${t.label} (+${formatPoints(t.promisedPoints)} pts, ${formatEffort(t.effort)}): ${t.action}`);
+      const urgent = t.urgent ? "URGENT — customers are hitting this right now. " : "";
+      lines.push(context.facts ? `- ${urgent}${t.label} (${formatEffort(t.effort)}): ${t.action}` : `- ${urgent}${t.label} (+${formatPoints(t.promisedPoints)} pts, ${formatEffort(t.effort)}): ${t.action}`);
+    }
+    if (context.actionPlan.topTasks.some((t) => t.urgent)) {
+      lines.push("When the owner asks what to do first, start with the URGENT items, in this order, before anything worth more points — and say plainly that customers are running into them now. Urgent changes the order only, never the points.");
     }
   }
 
@@ -933,6 +945,15 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
         }. Reachability on the last check: ${websiteReachabilityText(context.listing.httpsStatus, context.listing.httpsUnreachableReason)}.`
       : "- No website on file."
   );
+  if (context.listing.brokenListingLink) {
+    lines.push(
+      context.listing.shownWebsiteUrl
+        ? `- The Google listing's website link (${context.listing.brokenListingLink}) is a parked or broken page — not the business's. Their real website is ${context.listing.shownWebsiteUrl}. Any link to their website must be ${context.listing.shownWebsiteUrl}; never link to ${context.listing.brokenListingLink}.`
+        : `- The Google listing's website link (${context.listing.brokenListingLink}) is a parked or broken page, and no other website is known. Never link to it, and never guess or search for another site: point the owner to fixing the website link on their Google listing.`
+    );
+  } else if (context.listing.shownWebsiteUrl) {
+    lines.push(`- Any link to their website must be ${context.listing.shownWebsiteUrl}.`);
+  }
   if (context.listing.googleListingMissingWebsiteSince) {
     lines.push(
       "- GOOGLE'S OWN LISTING didn't return a website on our last check, even though a website is still on file above (kept from the last time Google DID return one — a single empty response is never trusted). This is a fact about Google's listing data, NOT about whether the site itself is reachable or working. NEVER say or imply this business has no website; say only that Google's own listing may need the website re-added, and suggest the owner check their Google Business Profile."

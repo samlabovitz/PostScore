@@ -9,7 +9,9 @@ import { hasRecentReviewFrom, recentReviewsSeenFrom, type PlaceDetails } from "@
 import { normalizeLocale, SUPPORTED_LOCALES, t, type Locale } from "@/lib/i18n";
 import { getPlan, unlimitedBusinessesAllowed } from "@/lib/premium";
 import { locationLimit, type Plan } from "@/lib/plan";
-import { analyzeWebsiteForSave } from "@/lib/websiteAnalysisForSave";
+import { analyzeWebsiteForSave, probeListingLink, withListingLinkState } from "@/lib/websiteAnalysisForSave";
+import { gradedWebsite } from "@/lib/businessWebsite";
+import { readOwnerWebsite } from "@/lib/ownerWebsite.server";
 import type { collectWebsiteAnalysis } from "@/lib/websiteAnalysis";
 import { uploadWebsiteScreenshots } from "@/lib/websiteScreenshotUpload";
 import { bizProfileById, resolveBizProfile } from "@/config/bizProfiles";
@@ -110,7 +112,9 @@ async function finishAutoScreenshots(
   supabase: SupabaseClient,
   businessId: string,
   websiteAnalysis: WebsiteAnalysis,
-  analysis: Awaited<ReturnType<typeof collectWebsiteAnalysis>> | null
+  analysis: Awaited<ReturnType<typeof collectWebsiteAnalysis>> | null,
+  /** The site that was captured (gradedWebsite) — the Website page checks it matches. */
+  siteUrl: string | null
 ): Promise<void> {
   // Ownership invariant: every storage path uploadWebsiteScreenshots
   // writes to is derived only from businessId, the id of the row the
@@ -143,6 +147,7 @@ async function finishAutoScreenshots(
         additionalPages,
         lastScreenshotRefreshAt,
         screenshotHttpStatus: analysis?.screenshotHttpStatus ?? null,
+        screenshotSiteUrl: siteUrl,
         screenshotCaptureLog: { at: lastScreenshotRefreshAt, calls: analysis?.screenshotCalls ?? 0, source: "auto" },
       },
     })
@@ -233,22 +238,23 @@ export async function saveBusinessWithClient(
   const existingRow = (
     await supabase
       .from("businesses")
-      .select("website_analysis_json, verified_website_url, business_type_override")
+      .select("id, website_analysis_json, verified_website_url, business_type_override")
       .eq("owner_id", ownerId)
       .eq("place_id", place.placeId)
       .maybeSingle()
   ).data;
-  // The real site to analyze: the listing's own website when it has one,
-  // otherwise a stored verified-elsewhere site (the real Bánh Mì Boy
-  // case — no website on the listing, but banhmiboy.com verified by
-  // phone). Only the ANALYSIS uses this; the saved `website` column
-  // below stays the listing's own URL, so completeness.website_link
-  // still honestly reflects what the listing itself shows.
+  // The site to grade (lib/businessWebsite.ts gradedWebsite): the owner's
+  // confirmed site, else a verified one (the real Bánh Mì Boy and Colorful
+  // Yun Nan cases), else the listing's own link. The SAME site is graded,
+  // screenshotted and shown. The saved `website` column below stays the
+  // listing's own URL, so completeness.website_link still honestly
+  // reflects what the listing itself shows.
   const verifiedWebsiteUrl =
     typeof existingRow?.verified_website_url === "string" && existingRow.verified_website_url.trim().length > 0
       ? existingRow.verified_website_url.trim()
       : null;
-  const analysisUrl = place.website || verifiedWebsiteUrl;
+  const ownerWebsite = existingRow ? (await readOwnerWebsite(supabase, (existingRow as { id: string }).id))?.url ?? null : null;
+  const analysisUrl = gradedWebsite({ website: place.website, verified_website_url: verifiedWebsiteUrl, owner_website_url: ownerWebsite })?.url ?? null;
 
   // Step 2g: a retail-type business's "services" are its brands and
   // departments; Day 2b: a community center's are its programs,
@@ -273,23 +279,12 @@ export async function saveBusinessWithClient(
       listingFacts: { phone: place.phone, address: place.formattedAddress, openingHoursPeriods: place.openingHoursPeriods },
     });
   let saved = await analyze(analysisUrl);
-  // v1.13.1: the listing's link is a parked domain (the real Colorful Yun
-  // Nan case) and a verified real site is on file — analyze the real site
-  // instead, keeping the honest "your Google link is parked" finding.
-  if (saved.websiteAnalysis?.websiteTrust?.listingLinkParked && verifiedWebsiteUrl && analysisUrl !== verifiedWebsiteUrl) {
-    const parkedTrust = saved.websiteAnalysis.websiteTrust;
-    const real = await analyze(verifiedWebsiteUrl);
-    if (real.websiteAnalysis) {
-      saved = {
-        ...real,
-        websiteAnalysis: {
-          ...real.websiteAnalysis,
-          websiteTrust: real.websiteAnalysis.websiteTrust
-            ? { ...real.websiteAnalysis.websiteTrust, listingLinkBroken: true, listingLinkErrorPageUrl: parkedTrust.listingLinkErrorPageUrl ?? place.website, listingLinkParked: true }
-            : parkedTrust,
-        },
-      };
-    }
+  // Grading another site than the listing's link: the listing link is
+  // still what customers tap on Google — one plain fetch says whether it's
+  // parked or missing (never a second full analysis or screenshot).
+  if (place.website && analysisUrl && analysisUrl !== place.website && saved.websiteAnalysis) {
+    const probe = await probeListingLink(place.website);
+    saved = { ...saved, websiteAnalysis: withListingLinkState(saved.websiteAnalysis, place.website, probe) };
   }
   const { websiteAnalysis, httpsStatus, checkedAt, captureScreenshots, analysis } = saved;
 
@@ -366,7 +361,7 @@ export async function saveBusinessWithClient(
   }
 
   if (captureScreenshots && websiteAnalysis) {
-    await finishAutoScreenshots(supabase, data.id, websiteAnalysis, analysis);
+    await finishAutoScreenshots(supabase, data.id, websiteAnalysis, analysis, analysisUrl);
   }
 
   return { status: "saved", businessId: data.id };
@@ -919,7 +914,7 @@ export async function saveWebsiteOnlyBusinessWithClient(
     if (isMissingColumnError(error) || error?.code === "23502") return { status: "not_enabled" };
     return { status: "error", message: error?.message ?? "Save failed." };
   }
-  if (captureScreenshots && websiteAnalysis) await finishAutoScreenshots(supabase, data.id, websiteAnalysis, analysis);
+  if (captureScreenshots && websiteAnalysis) await finishAutoScreenshots(supabase, data.id, websiteAnalysis, analysis, url.toString());
   return { status: "saved", businessId: data.id };
 }
 
@@ -1006,7 +1001,7 @@ export async function recheckWebsiteOnlyBusinessWithClient(
     })
     .eq("id", businessId);
   if (error) return { status: "error", message: error.message };
-  if (captureScreenshots && websiteAnalysis) await finishAutoScreenshots(supabase, businessId, websiteAnalysis, analysis);
+  if (captureScreenshots && websiteAnalysis) await finishAutoScreenshots(supabase, businessId, websiteAnalysis, analysis, url.toString());
   return { status: "ok" };
 }
 

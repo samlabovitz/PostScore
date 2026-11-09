@@ -1969,6 +1969,7 @@ export type MessageKey =
   | "dashboard.website.refreshAvailableInError.one"
   | "dashboard.website.refreshAvailableInError.other"
   | "dashboard.website.noWebsiteToScreenshot"
+  | "dashboard.website.screenshotsCapped"
   | "dashboard.website.refreshErrorFallback"
   | "dashboard.website.availableInDays.one"
   | "dashboard.website.availableInDays.other"
@@ -3702,6 +3703,99 @@ export type MessageKey =
   | "dashboard.overview.breakdown.legendMissing"
   | "dashboard.overview.recs.heading"
   | "dashboard.overview.recs.viewAll"
+  | "dashboard.overview.recs.urgent"
+  | "dashboard.wrongSite.button"
+  | "dashboard.wrongSite.title"
+  | "dashboard.wrongSite.current"
+  | "dashboard.wrongSite.none"
+  | "dashboard.wrongSite.source.owner"
+  | "dashboard.wrongSite.source.verified"
+  | "dashboard.wrongSite.source.listing"
+  | "dashboard.wrongSite.choose"
+  | "dashboard.wrongSite.option.listing"
+  | "dashboard.wrongSite.option.listingBroken"
+  | "dashboard.wrongSite.option.verified"
+  | "dashboard.wrongSite.option.enter"
+  | "dashboard.wrongSite.placeholder"
+  | "dashboard.wrongSite.check"
+  | "dashboard.wrongSite.checking"
+  | "dashboard.wrongSite.found"
+  | "dashboard.wrongSite.found.name"
+  | "dashboard.wrongSite.found.phone"
+  | "dashboard.wrongSite.found.address"
+  | "dashboard.wrongSite.found.and"
+  | "dashboard.wrongSite.unconfirmed"
+  | "dashboard.wrongSite.use"
+  | "dashboard.wrongSite.useAnyway"
+  | "dashboard.wrongSite.saving"
+  | "dashboard.wrongSite.saved"
+  | "dashboard.wrongSite.recheckDone"
+  | "dashboard.wrongSite.recheckLater"
+  | "dashboard.wrongSite.screenshotTaken"
+  | "dashboard.wrongSite.screenshotCapped"
+  | "dashboard.wrongSite.undo"
+  | "dashboard.wrongSite.undoDefault"
+  | "dashboard.wrongSite.undone"
+  | "dashboard.wrongSite.notEnabled"
+  | "dashboard.wrongSite.error"
+  | "dashboard.wrongSite.close"
+  | "dashboard.wrongSite.loading"
+  | "dashboard.website.scanning"
+  | "dashboard.website.gradedSiteHeading"
+  | "dashboard.website.screenshotOtherSite"
+  | "dashboard.website.brokenListing.title"
+  | "dashboard.website.brokenListing.body"
+  | "dashboard.urgent.issue.listing_link_parked"
+  | "dashboard.urgent.issue.listing_link_broken"
+  | "dashboard.urgent.issue.site_down"
+  | "dashboard.urgent.issue.site_unsafe"
+  | "dashboard.urgent.issue.phone_mismatch"
+  | "dashboard.urgent.issue.no_phone"
+  | "dashboard.urgent.issue.no_hours"
+  | "dashboard.urgent.fix.listing_link"
+  | "dashboard.urgent.fix.site_down"
+  | "dashboard.urgent.fix.site_unsafe"
+  | "dashboard.urgent.fix.phone_mismatch"
+  | "dashboard.urgent.fix.no_phone"
+  | "dashboard.urgent.fix.no_hours"
+  | "dashboard.overview.listingChips.listingDiffers"
+  | "dashboard.overview.listingChips.linkBroken"
+  | "dashboard.websiteLinkFix.button"
+  | "dashboard.websiteLinkFix.loading"
+  | "dashboard.websiteLinkFix.intro"
+  | "dashboard.websiteLinkFix.introNone"
+  | "dashboard.websiteLinkFix.label"
+  | "dashboard.websiteLinkFix.suggested"
+  | "dashboard.websiteLinkFix.check"
+  | "dashboard.websiteLinkFix.checking"
+  | "dashboard.websiteLinkFix.checkOk"
+  | "dashboard.websiteLinkFix.check.invalid"
+  | "dashboard.websiteLinkFix.check.down"
+  | "dashboard.websiteLinkFix.check.parked"
+  | "dashboard.websiteLinkFix.previewHeading"
+  | "dashboard.websiteLinkFix.before"
+  | "dashboard.websiteLinkFix.after"
+  | "dashboard.websiteLinkFix.none"
+  | "dashboard.websiteLinkFix.previewNote"
+  | "dashboard.websiteLinkFix.approve"
+  | "dashboard.websiteLinkFix.sent"
+  | "dashboard.websiteLinkFix.pending"
+  | "dashboard.websiteLinkFix.noChange"
+  | "dashboard.websiteLinkFix.undoSummary"
+  | "dashboard.websiteLinkFix.undoSummaryPending"
+  | "dashboard.websiteLinkFix.undoConfirm"
+  | "dashboard.websiteLinkFix.undoDone"
+  | "dashboard.websiteLinkFix.undoDonePending"
+  | "dashboard.websiteLinkFix.changedSince"
+  | "dashboard.websiteLinkFix.manualTitle"
+  | "dashboard.websiteLinkFix.step1"
+  | "dashboard.websiteLinkFix.step2"
+  | "dashboard.websiteLinkFix.step3"
+  | "dashboard.websiteLinkFix.step3Url"
+  | "dashboard.websiteLinkFix.step4"
+  | "dashboard.websiteLinkFix.help"
+  | "dashboard.websiteLinkFix.connect"
+  | "dashboard.websiteLinkFix.premiumPreview"
   | "dashboard.overview.recs.high"
   | "dashboard.overview.recs.medium"
   | "dashboard.overview.recs.points"
@@ -3908,6 +4002,8 @@ export type MessageKey =
   | "dashboard.settings.nav.plan"
   | "dashboard.settings.nav.email"
   | "dashboard.settings.nav.businessType"
+  | "dashboard.settings.nav.website"
+  | "dashboard.settings.website.helper"
   | "dashboard.settings.nav.account"
   | "dashboard.settings.profile.helper"
   | "dashboard.settings.profile.emailHelp"
@@ -6787,6 +6883,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.refreshAvailableInError.one": "Screenshots refresh available in {count} day.",
     "dashboard.website.refreshAvailableInError.other": "Screenshots refresh available in {count} days.",
     "dashboard.website.noWebsiteToScreenshot": "This business has no website to screenshot.",
+    "dashboard.website.screenshotsCapped": "This month's screenshot limit is reached. You can refresh them again next month — nothing was changed.",
     "dashboard.website.refreshErrorFallback": "Couldn't refresh screenshots — try again shortly.",
     "dashboard.website.availableInDays.one": "Available in {count} day",
     "dashboard.website.availableInDays.other": "Available in {count} days",
@@ -8727,6 +8824,99 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.breakdown.legendMissing": "Points missing",
     "dashboard.overview.recs.heading": "Top recommendations",
     "dashboard.overview.recs.viewAll": "View all",
+    "dashboard.overview.recs.urgent": "Urgent",
+    "dashboard.wrongSite.button": "Wrong site?",
+    "dashboard.wrongSite.title": "Is this your website?",
+    "dashboard.wrongSite.current": "We grade and show {host}",
+    "dashboard.wrongSite.none": "We don't have a website for you yet.",
+    "dashboard.wrongSite.source.owner": "Confirmed by you",
+    "dashboard.wrongSite.source.verified": "Verified by PostScore",
+    "dashboard.wrongSite.source.listing": "From your Google listing",
+    "dashboard.wrongSite.choose": "Which one is your website?",
+    "dashboard.wrongSite.option.listing": "Your Google listing link",
+    "dashboard.wrongSite.option.listingBroken": "doesn't go to your website",
+    "dashboard.wrongSite.option.verified": "The site PostScore verified",
+    "dashboard.wrongSite.option.enter": "Enter your website",
+    "dashboard.wrongSite.placeholder": "https://yourbusiness.com",
+    "dashboard.wrongSite.check": "Check this site",
+    "dashboard.wrongSite.checking": "Checking…",
+    "dashboard.wrongSite.found": "We found your business {what} on this page ✓",
+    "dashboard.wrongSite.found.name": "name",
+    "dashboard.wrongSite.found.phone": "phone number",
+    "dashboard.wrongSite.found.address": "address",
+    "dashboard.wrongSite.found.and": "and",
+    "dashboard.wrongSite.unconfirmed": "We couldn't confirm this page is yours. Use it anyway?",
+    "dashboard.wrongSite.use": "Use this site",
+    "dashboard.wrongSite.useAnyway": "Use it anyway",
+    "dashboard.wrongSite.saving": "Saving…",
+    "dashboard.wrongSite.saved": "Saved. We grade and show {host} from now on.",
+    "dashboard.wrongSite.recheckDone": "Your website check is updated.",
+    "dashboard.wrongSite.recheckLater": "Your website will be checked again on the next scan.",
+    "dashboard.wrongSite.screenshotTaken": "New screenshots are on the Website page.",
+    "dashboard.wrongSite.screenshotCapped": "New screenshots come next month — this month's limit is used.",
+    "dashboard.wrongSite.undo": "Undo — go back to {host}",
+    "dashboard.wrongSite.undoDefault": "Undo — go back to PostScore's choice",
+    "dashboard.wrongSite.undone": "Done — back to the previous site.",
+    "dashboard.wrongSite.notEnabled": "This isn't switched on yet. Nothing was changed.",
+    "dashboard.wrongSite.error": "Something went wrong. Nothing was changed — please try again.",
+    "dashboard.wrongSite.close": "Close",
+    "dashboard.wrongSite.loading": "Loading…",
+    "dashboard.website.scanning": "Scanning:",
+    "dashboard.website.gradedSiteHeading": "Your website (the site we graded)",
+    "dashboard.website.screenshotOtherSite": "These screenshots are of {host}, not the site we grade now. New ones come with the next refresh.",
+    "dashboard.website.brokenListing.title": "This address doesn't go to your website",
+    "dashboard.website.brokenListing.body": "Your Google listing's Website button opens {url}. Customers who tap it don't reach you.",
+    "dashboard.urgent.issue.listing_link_parked": "Your Google listing's website link goes to a page that isn't yours — customers who tap Website won't reach you.",
+    "dashboard.urgent.issue.listing_link_broken": "Your Google listing's website link opens a page that doesn't work — customers who tap Website won't reach you.",
+    "dashboard.urgent.issue.site_down": "Your website isn't loading — customers who try to visit it can't reach you.",
+    "dashboard.urgent.issue.site_unsafe": "Google flags your website as unsafe — browsers may warn customers away from it.",
+    "dashboard.urgent.issue.phone_mismatch": "The phone number on Google doesn't match your website — customers may call the wrong number.",
+    "dashboard.urgent.issue.no_phone": "Your Google listing has no phone number — customers can't call you from Google.",
+    "dashboard.urgent.issue.no_hours": "Your Google listing has no hours — customers can't tell when you're open.",
+    "dashboard.urgent.fix.listing_link": "Fix the website link",
+    "dashboard.urgent.fix.site_down": "See what's wrong",
+    "dashboard.urgent.fix.site_unsafe": "See how to fix it",
+    "dashboard.urgent.fix.phone_mismatch": "Fix the phone number",
+    "dashboard.urgent.fix.no_phone": "Add your phone number",
+    "dashboard.urgent.fix.no_hours": "Add your hours",
+    "dashboard.overview.listingChips.listingDiffers": "Your Google listing links to a different address",
+    "dashboard.overview.listingChips.linkBroken": "Website link broken",
+    "dashboard.websiteLinkFix.button": "Update website on Google",
+    "dashboard.websiteLinkFix.loading": "Reading your Google listing…",
+    "dashboard.websiteLinkFix.intro": "Google shows {current} as your website. Put your real website there instead.",
+    "dashboard.websiteLinkFix.introNone": "Google shows no website for you. Add your real website.",
+    "dashboard.websiteLinkFix.label": "Your real website",
+    "dashboard.websiteLinkFix.suggested": "Suggested: the site PostScore verified as yours. You can change it.",
+    "dashboard.websiteLinkFix.check": "Check this website",
+    "dashboard.websiteLinkFix.checking": "Checking…",
+    "dashboard.websiteLinkFix.checkOk": "It loads, and it's a real website.",
+    "dashboard.websiteLinkFix.check.invalid": "Enter a full website address, like https://yourbusiness.com.",
+    "dashboard.websiteLinkFix.check.down": "That website didn't load. Check the address and try again.",
+    "dashboard.websiteLinkFix.check.parked": "That address is a parked or for-sale page, not a website customers can use.",
+    "dashboard.websiteLinkFix.previewHeading": "This changes your public Google listing:",
+    "dashboard.websiteLinkFix.before": "Now",
+    "dashboard.websiteLinkFix.after": "After",
+    "dashboard.websiteLinkFix.none": "(no website)",
+    "dashboard.websiteLinkFix.previewNote": "You can undo it here for 7 days.",
+    "dashboard.websiteLinkFix.approve": "Approve and update Google",
+    "dashboard.websiteLinkFix.sent": "Sent to Google — may take a little while to appear. Your points update on the next scan once it's live.",
+    "dashboard.websiteLinkFix.pending": "Sent. Google is reviewing changes to your profile. Your points update on the next scan once it's live.",
+    "dashboard.websiteLinkFix.noChange": "Google already shows that website.",
+    "dashboard.websiteLinkFix.undoSummary": "You changed your Google website link on {date}. You can undo it until {until}.",
+    "dashboard.websiteLinkFix.undoSummaryPending": "You changed your Google website link on {date} (Google is reviewing changes to your profile). You can undo it until {until}.",
+    "dashboard.websiteLinkFix.undoConfirm": "Put the previous website link back on Google?",
+    "dashboard.websiteLinkFix.undoDone": "The previous website link is back on Google.",
+    "dashboard.websiteLinkFix.undoDonePending": "Previous website link sent — Google is reviewing changes to your profile.",
+    "dashboard.websiteLinkFix.changedSince": "Your website link was changed on Google since, so we didn't undo anything (we never overwrite a newer change).",
+    "dashboard.websiteLinkFix.manualTitle": "Fix it on Google yourself (about 2 minutes)",
+    "dashboard.websiteLinkFix.step1": "Open your Business Profile: search your business name on Google while signed in, or go to business.google.com.",
+    "dashboard.websiteLinkFix.step2": "Click Edit profile, then Contact.",
+    "dashboard.websiteLinkFix.step3": "In Website, replace the address with your real website.",
+    "dashboard.websiteLinkFix.step3Url": "In Website, replace the address with: {url}",
+    "dashboard.websiteLinkFix.step4": "Click Save. Google may take a little while to show it.",
+    "dashboard.websiteLinkFix.help": "Google's help: edit your Business Profile",
+    "dashboard.websiteLinkFix.connect": "Connect Google to fix this in one click",
+    "dashboard.websiteLinkFix.premiumPreview": "Premium fixes this in one click",
     "dashboard.overview.recs.high": "High priority",
     "dashboard.overview.recs.medium": "Medium priority",
     "dashboard.overview.recs.points": "+{points} pts",
@@ -8735,7 +8925,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.recs.improveWebsite": "Improve your website",
     "dashboard.overview.recs.empty": "Nothing open right now — every recommendation is done or waiting for your next re-scan.",
     "dashboard.overview.recs.unavailable": "Your recommendations couldn't be loaded right now. See them on the Growth page.",
-    "dashboard.overview.recs.priorityNote": "High priority: worth {high}+ points on your score. Medium: {medium}+ points.",
+    "dashboard.overview.recs.priorityNote": "Urgent: customers are hitting a problem right now. High priority: worth {high}+ points on your score. Medium: {medium}+ points.",
     "dashboard.overview.studio.comingSoon": "Coming soon",
     "dashboard.overview.photo.alt": "Photo of {name} from its Google listing",
     "dashboard.overview.photo.viewOnMaps": "View this photo on Google Maps",
@@ -8933,6 +9123,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.nav.plan": "Plan & billing",
     "dashboard.settings.nav.email": "Email & notifications",
     "dashboard.settings.nav.businessType": "Business type",
+    "dashboard.settings.nav.website": "Website",
+    "dashboard.settings.website.helper": "The site PostScore grades, screenshots and shows for this business.",
     "dashboard.settings.nav.account": "Account",
     "dashboard.settings.profile.helper": "Your login and the language PostScore uses for this business.",
     "dashboard.settings.profile.emailHelp": "This is your login email.",
@@ -11573,6 +11765,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.refreshAvailableInError.one": "La actualización de capturas estará disponible en {count} día.",
     "dashboard.website.refreshAvailableInError.other": "La actualización de capturas estará disponible en {count} días.",
     "dashboard.website.noWebsiteToScreenshot": "Este negocio no tiene un sitio web del que tomar capturas.",
+    "dashboard.website.screenshotsCapped": "Se alcanzó el límite de capturas de este mes. Podrá actualizarlas de nuevo el próximo mes; no se cambió nada.",
     "dashboard.website.refreshErrorFallback": "No se pudieron actualizar las capturas — inténtelo de nuevo en un momento.",
     "dashboard.website.availableInDays.one": "Disponible en {count} día",
     "dashboard.website.availableInDays.other": "Disponible en {count} días",
@@ -13769,6 +13962,99 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.breakdown.legendMissing": "Puntos faltantes",
     "dashboard.overview.recs.heading": "Recomendaciones principales",
     "dashboard.overview.recs.viewAll": "Ver todo",
+    "dashboard.overview.recs.urgent": "Urgente",
+    "dashboard.wrongSite.button": "¿Sitio equivocado?",
+    "dashboard.wrongSite.title": "¿Es este su sitio web?",
+    "dashboard.wrongSite.current": "Evaluamos y mostramos {host}",
+    "dashboard.wrongSite.none": "Aún no tenemos un sitio web suyo.",
+    "dashboard.wrongSite.source.owner": "Confirmado por usted",
+    "dashboard.wrongSite.source.verified": "Verificado por PostScore",
+    "dashboard.wrongSite.source.listing": "De su Perfil de Empresa en Google",
+    "dashboard.wrongSite.choose": "¿Cuál es su sitio web?",
+    "dashboard.wrongSite.option.listing": "El enlace de su Perfil de Empresa en Google",
+    "dashboard.wrongSite.option.listingBroken": "no lleva a su sitio web",
+    "dashboard.wrongSite.option.verified": "El sitio que PostScore verificó",
+    "dashboard.wrongSite.option.enter": "Escriba su sitio web",
+    "dashboard.wrongSite.placeholder": "https://sunegocio.com",
+    "dashboard.wrongSite.check": "Comprobar este sitio",
+    "dashboard.wrongSite.checking": "Comprobando…",
+    "dashboard.wrongSite.found": "En esta página encontramos {what} de su negocio ✓",
+    "dashboard.wrongSite.found.name": "el nombre",
+    "dashboard.wrongSite.found.phone": "el teléfono",
+    "dashboard.wrongSite.found.address": "la dirección",
+    "dashboard.wrongSite.found.and": "y",
+    "dashboard.wrongSite.unconfirmed": "No pudimos confirmar que esta página sea suya. ¿Usarla de todos modos?",
+    "dashboard.wrongSite.use": "Usar este sitio",
+    "dashboard.wrongSite.useAnyway": "Usarla de todos modos",
+    "dashboard.wrongSite.saving": "Guardando…",
+    "dashboard.wrongSite.saved": "Guardado. Desde ahora evaluamos y mostramos {host}.",
+    "dashboard.wrongSite.recheckDone": "Se actualizó la revisión de su sitio web.",
+    "dashboard.wrongSite.recheckLater": "Su sitio web se revisará de nuevo en el próximo análisis.",
+    "dashboard.wrongSite.screenshotTaken": "Hay capturas nuevas en la página Sitio web.",
+    "dashboard.wrongSite.screenshotCapped": "Las capturas nuevas llegarán el próximo mes: se usó el límite de este mes.",
+    "dashboard.wrongSite.undo": "Deshacer: volver a {host}",
+    "dashboard.wrongSite.undoDefault": "Deshacer: volver a la elección de PostScore",
+    "dashboard.wrongSite.undone": "Listo: se volvió al sitio anterior.",
+    "dashboard.wrongSite.notEnabled": "Esto aún no está activado. No se cambió nada.",
+    "dashboard.wrongSite.error": "Algo salió mal. No se cambió nada; inténtelo de nuevo.",
+    "dashboard.wrongSite.close": "Cerrar",
+    "dashboard.wrongSite.loading": "Cargando…",
+    "dashboard.website.scanning": "Analizando:",
+    "dashboard.website.gradedSiteHeading": "Su sitio web (el sitio que evaluamos)",
+    "dashboard.website.screenshotOtherSite": "Estas capturas son de {host}, no del sitio que evaluamos ahora. Las nuevas llegarán con la próxima actualización.",
+    "dashboard.website.brokenListing.title": "Esta dirección no lleva a su sitio web",
+    "dashboard.website.brokenListing.body": "El botón Sitio web de su Perfil de Empresa en Google abre {url}. Los clientes que lo tocan no lo encuentran.",
+    "dashboard.urgent.issue.listing_link_parked": "El enlace al sitio web de su Perfil de Empresa en Google lleva a una página que no es suya: los clientes que tocan Sitio web no lo encontrarán.",
+    "dashboard.urgent.issue.listing_link_broken": "El enlace al sitio web de su Perfil de Empresa en Google abre una página que no funciona: los clientes que tocan Sitio web no lo encontrarán.",
+    "dashboard.urgent.issue.site_down": "Su sitio web no carga: los clientes que intentan visitarlo no pueden encontrarlo.",
+    "dashboard.urgent.issue.site_unsafe": "Google marca su sitio web como no seguro: los navegadores pueden advertir a los clientes que no entren.",
+    "dashboard.urgent.issue.phone_mismatch": "El teléfono en Google no coincide con el de su sitio web: los clientes podrían llamar al número equivocado.",
+    "dashboard.urgent.issue.no_phone": "Su Perfil de Empresa en Google no tiene número de teléfono: los clientes no pueden llamarle desde Google.",
+    "dashboard.urgent.issue.no_hours": "Su Perfil de Empresa en Google no tiene horario: los clientes no saben cuándo está abierto.",
+    "dashboard.urgent.fix.listing_link": "Corregir el enlace",
+    "dashboard.urgent.fix.site_down": "Ver qué pasa",
+    "dashboard.urgent.fix.site_unsafe": "Ver cómo corregirlo",
+    "dashboard.urgent.fix.phone_mismatch": "Corregir el teléfono",
+    "dashboard.urgent.fix.no_phone": "Agregar su teléfono",
+    "dashboard.urgent.fix.no_hours": "Agregar su horario",
+    "dashboard.overview.listingChips.listingDiffers": "Su Perfil de Empresa en Google enlaza a otra dirección",
+    "dashboard.overview.listingChips.linkBroken": "Enlace del sitio web roto",
+    "dashboard.websiteLinkFix.button": "Actualizar el sitio web en Google",
+    "dashboard.websiteLinkFix.loading": "Leyendo su perfil de Google…",
+    "dashboard.websiteLinkFix.intro": "Google muestra {current} como su sitio web. Ponga allí su sitio web real.",
+    "dashboard.websiteLinkFix.introNone": "Google no muestra ningún sitio web suyo. Agregue su sitio web real.",
+    "dashboard.websiteLinkFix.label": "Su sitio web real",
+    "dashboard.websiteLinkFix.suggested": "Sugerido: el sitio que PostScore verificó como suyo. Puede cambiarlo.",
+    "dashboard.websiteLinkFix.check": "Comprobar este sitio",
+    "dashboard.websiteLinkFix.checking": "Comprobando…",
+    "dashboard.websiteLinkFix.checkOk": "Carga y es un sitio web real.",
+    "dashboard.websiteLinkFix.check.invalid": "Escriba la dirección completa, como https://sunegocio.com.",
+    "dashboard.websiteLinkFix.check.down": "Ese sitio web no cargó. Revise la dirección e inténtelo de nuevo.",
+    "dashboard.websiteLinkFix.check.parked": "Esa dirección es una página estacionada o en venta, no un sitio que los clientes puedan usar.",
+    "dashboard.websiteLinkFix.previewHeading": "Esto cambia su Perfil de Empresa en Google público:",
+    "dashboard.websiteLinkFix.before": "Ahora",
+    "dashboard.websiteLinkFix.after": "Después",
+    "dashboard.websiteLinkFix.none": "(sin sitio web)",
+    "dashboard.websiteLinkFix.previewNote": "Puede deshacerlo aquí durante 7 días.",
+    "dashboard.websiteLinkFix.approve": "Aprobar y actualizar Google",
+    "dashboard.websiteLinkFix.sent": "Enviado a Google; puede tardar un poco en aparecer. Sus puntos se actualizan en el próximo análisis cuando esté publicado.",
+    "dashboard.websiteLinkFix.pending": "Enviado. Google está revisando cambios en su perfil. Sus puntos se actualizan en el próximo análisis cuando esté publicado.",
+    "dashboard.websiteLinkFix.noChange": "Google ya muestra ese sitio web.",
+    "dashboard.websiteLinkFix.undoSummary": "Usted cambió el enlace de su sitio web en Google el {date}. Puede deshacerlo hasta el {until}.",
+    "dashboard.websiteLinkFix.undoSummaryPending": "Usted cambió el enlace de su sitio web en Google el {date} (Google está revisando cambios en su perfil). Puede deshacerlo hasta el {until}.",
+    "dashboard.websiteLinkFix.undoConfirm": "¿Volver a poner el enlace anterior en Google?",
+    "dashboard.websiteLinkFix.undoDone": "El enlace anterior volvió a Google.",
+    "dashboard.websiteLinkFix.undoDonePending": "Enlace anterior enviado; Google está revisando cambios en su perfil.",
+    "dashboard.websiteLinkFix.changedSince": "El enlace de su sitio web se cambió en Google desde entonces, así que no deshicimos nada (nunca sobrescribimos un cambio más reciente).",
+    "dashboard.websiteLinkFix.manualTitle": "Corríjalo usted mismo en Google (unos 2 minutos)",
+    "dashboard.websiteLinkFix.step1": "Abra su Perfil de Empresa en Google: busque el nombre de su negocio en Google con su cuenta abierta, o vaya a business.google.com.",
+    "dashboard.websiteLinkFix.step2": "Haga clic en Editar perfil y luego en Contacto.",
+    "dashboard.websiteLinkFix.step3": "En Sitio web, reemplace la dirección por la de su sitio web real.",
+    "dashboard.websiteLinkFix.step3Url": "En Sitio web, reemplace la dirección por: {url}",
+    "dashboard.websiteLinkFix.step4": "Haga clic en Guardar. Google puede tardar un poco en mostrarlo.",
+    "dashboard.websiteLinkFix.help": "Ayuda de Google: editar su Perfil de Empresa",
+    "dashboard.websiteLinkFix.connect": "Conecte Google para corregir esto con un clic",
+    "dashboard.websiteLinkFix.premiumPreview": "Premium lo corrige con un clic",
     "dashboard.overview.recs.high": "Prioridad alta",
     "dashboard.overview.recs.medium": "Prioridad media",
     "dashboard.overview.recs.points": "+{points} pts",
@@ -13777,7 +14063,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.recs.improveWebsite": "Mejore su sitio web",
     "dashboard.overview.recs.empty": "No hay nada pendiente — cada recomendación está hecha o espera su próximo análisis.",
     "dashboard.overview.recs.unavailable": "No se pudieron cargar sus recomendaciones. Véalas en la página Crecimiento.",
-    "dashboard.overview.recs.priorityNote": "Prioridad alta: vale {high}+ puntos en su puntuación. Media: {medium}+ puntos.",
+    "dashboard.overview.recs.priorityNote": "Urgente: sus clientes están teniendo un problema ahora mismo. Prioridad alta: vale {high}+ puntos en su puntuación. Media: {medium}+ puntos.",
     "dashboard.overview.studio.comingSoon": "Próximamente",
     "dashboard.overview.photo.alt": "Foto de {name} de su ficha de Google",
     "dashboard.overview.photo.viewOnMaps": "Ver esta foto en Google Maps",
@@ -13975,6 +14261,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.nav.plan": "Plan y facturación",
     "dashboard.settings.nav.email": "Correo y avisos",
     "dashboard.settings.nav.businessType": "Tipo de negocio",
+    "dashboard.settings.nav.website": "Sitio web",
+    "dashboard.settings.website.helper": "El sitio que PostScore evalúa, captura y muestra para este negocio.",
     "dashboard.settings.nav.account": "Cuenta",
     "dashboard.settings.profile.helper": "Su inicio de sesión y el idioma que PostScore usa para este negocio.",
     "dashboard.settings.profile.emailHelp": "Este es el correo con el que inicia sesión.",

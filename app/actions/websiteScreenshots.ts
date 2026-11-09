@@ -1,16 +1,13 @@
 "use server";
 
-import { businessWebsiteUrl } from "@/lib/businessWebsite";
 import { createClient } from "@/lib/supabase/server";
-import { fetchWebsiteHtml, captureWebsiteScreenshots } from "@/lib/websiteAnalysis";
-import { uploadWebsiteScreenshots } from "@/lib/websiteScreenshotUpload";
-import { parseWebsiteAnalysis, SCREENSHOT_REFRESH_COOLDOWN_DAYS, type WebsiteAnalysis } from "@/lib/scoring";
-
-const COOLDOWN_MS = SCREENSHOT_REFRESH_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
+import type { WebsiteAnalysis } from "@/lib/scoring";
 
 export type RefreshWebsiteScreenshotsResult =
   | { status: "ok"; websiteAnalysis: WebsiteAnalysis }
   | { status: "too_soon"; nextAvailableAt: string }
+  /** This month's ScreenshotOne limit is used (SCREENSHOT_AUTO_MONTHLY_CAP). */
+  | { status: "capped" }
   | { status: "no_website" }
   | { status: "not_found" }
   | { status: "unauthenticated" }
@@ -44,76 +41,9 @@ export async function refreshWebsiteScreenshots(businessId: string): Promise<Ref
     return { status: "unauthenticated" };
   }
 
-  const { data: row, error } = await supabase
-    .from("businesses")
-    .select("website, verified_website_url, website_analysis_json")
-    .eq("id", businessId)
-    .single();
-
-  if (error || !row) {
-    return { status: "not_found" };
-  }
-  // The business's real website — the listing's URL or a verified one.
-  const siteUrl = businessWebsiteUrl(row);
-  if (!siteUrl) {
-    return { status: "no_website" };
-  }
-
-  const existing = parseWebsiteAnalysis(row.website_analysis_json);
-
-  if (existing?.lastScreenshotRefreshAt) {
-    const lastRefreshMs = new Date(existing.lastScreenshotRefreshAt).getTime();
-    const elapsedMs = Date.now() - lastRefreshMs;
-    if (elapsedMs < COOLDOWN_MS) {
-      return { status: "too_soon", nextAvailableAt: new Date(lastRefreshMs + COOLDOWN_MS).toISOString() };
-    }
-  }
-
-  const { html } = await fetchWebsiteHtml(siteUrl);
-  const capture = await captureWebsiteScreenshots(siteUrl, html, process.env.SCREENSHOT_API_KEY);
-  // Ownership invariant: uploadWebsiteScreenshots writes with the
-  // service-role admin client, bypassing RLS — safe here because
-  // businessId was only ever obtained from the query above, RLS-scoped
-  // to this authenticated user's own rows (the .single() above already
-  // proved ownership; a business belonging to someone else simply
-  // wouldn't have been found).
-  const { screenshotUrl, additionalPages } = await uploadWebsiteScreenshots(businessId, capture);
-
-  const lastScreenshotRefreshAt = new Date().toISOString();
-  const updated: WebsiteAnalysis = {
-    // Everything this screenshot-only refresh doesn't touch carries
-    // forward — including websiteTrust, which an earlier version of this
-    // object silently dropped (erasing the site-trust findings until the
-    // next full scan).
-    ...(existing ?? {}),
-    content: existing?.content ?? null,
-    mobilePerformance: existing?.mobilePerformance ?? null,
-    // Not touched by this action — this is a screenshot-only refresh,
-    // never a full re-scan — so the real failure reasons (if any) from
-    // whenever content/mobilePerformance were last actually measured
-    // carry forward unchanged, same as content/mobilePerformance above.
-    mobilePerformanceFailureReason: existing?.mobilePerformanceFailureReason ?? null,
-    contentFetchFailureReason: existing?.contentFetchFailureReason ?? null,
-    httpsUnreachableReason: existing?.httpsUnreachableReason ?? null,
-    screenshotUrl,
-    additionalPages,
-    lastScreenshotRefreshAt,
-    screenshotHttpStatus: capture.screenshotHttpStatus ?? null,
-    screenshotCaptureLog: { at: lastScreenshotRefreshAt, calls: capture.calls ?? 0, source: "manual" },
-    // Not touched by this action — see the doc comment above.
-    checkedAt: existing?.checkedAt ?? lastScreenshotRefreshAt,
-    aboutPresence: existing?.aboutPresence ?? null,
-    servicesPresence: existing?.servicesPresence ?? null,
-  };
-
-  const { error: updateError } = await supabase
-    .from("businesses")
-    .update({ website_analysis_json: updated })
-    .eq("id", businessId);
-
-  if (updateError) {
-    return { status: "error", message: updateError.message };
-  }
-
-  return { status: "ok", websiteAnalysis: updated };
+  // The shared core (lib/websiteScreenshotRefresh.server.ts) — of the site
+  // PostScore grades, once per SCREENSHOT_REFRESH_COOLDOWN_DAYS, and only
+  // while the month's ScreenshotOne cap has room.
+  const { captureScreenshotsWithClient } = await import("@/lib/websiteScreenshotRefresh.server");
+  return captureScreenshotsWithClient(supabase, businessId, "refresh");
 }

@@ -21,6 +21,8 @@ import { REFUND_POLICY_SHORT, legalHref } from "@/lib/legal/policies";
 import { normalizeLocale, t, type MessageKey } from "@/lib/i18n";
 import { NichePicker } from "@/components/niche/NichePicker";
 import { loadBusinessNiche } from "@/lib/businessNiche.server";
+import { ScanningLine } from "@/components/website/ScanningLine";
+import { getWebsiteChoice } from "@/app/actions/ownerWebsite";
 
 /**
  * Settings — owner-only (getBusinessSummary, RLS-scoped). Every control
@@ -52,6 +54,7 @@ export default async function SettingsPage({ params }: { params: { id: string } 
     niche,
   ] = await Promise.all([supabase.auth.getUser(), loadBusinessNiche(supabase, params.id)]);
 
+  const websiteChoice = await getWebsiteChoice(params.id);
   const autoDetectedProfile = bizProfile(business.category, business.primary_type, locale, business.categories, null);
   const businessTypeOverride = business.business_type_override ?? null;
   const profile = resolveBizProfile(business.category, business.primary_type, businessTypeOverride, locale, business.categories, business.name);
@@ -65,6 +68,7 @@ export default async function SettingsPage({ params }: { params: { id: string } 
     { id: "plan", label: k("nav.plan"), icon: "card" as const },
     { id: "email", label: k("nav.email"), icon: "bell" as const },
     { id: "business-type", label: k("nav.businessType"), icon: "tag" as const },
+    { id: "website", label: k("nav.website"), icon: "globe" as const },
     { id: "account", label: k("nav.account"), icon: "account" as const },
   ];
 
@@ -171,6 +175,11 @@ export default async function SettingsPage({ params }: { params: { id: string } 
                   initialTradeName={tradeName}
                 />
               )}
+            </SettingsSection>
+
+            {/* The one site PostScore grades, screenshots and shows — and "Wrong site?". */}
+            <SettingsSection id="website" icon="globe" title={k("nav.website")} helper={k("website.helper")}>
+              <ScanningLine businessId={params.id} site={websiteChoice.status === "ok" ? websiteChoice.choice.current : null} />
             </SettingsSection>
 
             <SettingsSection id="account" icon="account" title={k("nav.account")} helper={k("account.helper")}>

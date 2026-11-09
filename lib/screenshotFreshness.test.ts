@@ -65,17 +65,31 @@ describe("error-status captures are hidden", () => {
   });
 });
 
-describe("listing link error (Step 2d, the Wonder case)", () => {
+describe("a broken or parked listing link (Nov 9: never pictured as what customers see)", () => {
   const trust = { listingLinkBroken: true, listingLinkErrorPageUrl: "https://www.wonder.com/order/404" } as unknown as WebsiteAnalysis["websiteTrust"];
-  test("a recent capture of a broken listing link is labeled as what customers see when they click it", () => {
-    expect(
-      screenshotFreshness(analysis({ websiteTrust: trust, contentFetchFailureReason: "blocked_automated_check", lastScreenshotRefreshAt: "2026-10-14T00:00:00Z" }), NOW)
-    ).toEqual({ kind: "listing_link_error", capturedAt: "2026-10-14T00:00:00Z" });
+  const a = () => analysis({ websiteTrust: trust, contentFetchFailureReason: "blocked_automated_check", lastScreenshotRefreshAt: "2026-10-14T00:00:00Z" });
+  test("the graded site IS the broken listing link: no picture at all (the page shows a warning card)", () => {
+    expect(screenshotFreshness(a(), NOW, { url: "https://www.wonder.com/order/404", source: "listing", listingBroken: true })).toEqual({ kind: "broken_listing" });
+  });
+  test("a verified real site is graded: its capture is shown as the site we graded (the real Colorful Yun Nan case)", () => {
+    const cyn = analysis({ websiteTrust: trust, lastScreenshotRefreshAt: "2026-11-09T06:33:03Z" });
+    expect(screenshotFreshness(cyn, new Date("2026-11-09T12:00:00Z"), { url: "https://newarkcolorfulyunnan.com/", source: "verified", listingBroken: true })).toEqual({ kind: "current" });
   });
   test("an old capture still falls back to the stale rule", () => {
     expect(
       screenshotFreshness(analysis({ websiteTrust: trust, contentFetchFailureReason: "blocked_automated_check", lastScreenshotRefreshAt: "2026-09-01T00:00:00Z" }), NOW).kind
     ).toBe("stale_unreachable");
+  });
+});
+
+describe("the capture must be of the site we grade", () => {
+  test("captured before the site changed: never shown as theirs", () => {
+    const a = analysis({ screenshotSiteUrl: "https://old.example.com/", lastScreenshotRefreshAt: "2026-10-14T00:00:00Z" });
+    expect(screenshotFreshness(a, NOW, { url: "https://new.example.com/", source: "owner", listingBroken: false })).toEqual({ kind: "other_site", capturedAt: "2026-10-14T00:00:00Z", siteUrl: "https://old.example.com/" });
+  });
+  test("same site (www., trailing slash and scheme don't matter): shown", () => {
+    const a = analysis({ screenshotSiteUrl: "http://www.new.example.com", lastScreenshotRefreshAt: "2026-10-14T00:00:00Z" });
+    expect(screenshotFreshness(a, NOW, { url: "https://new.example.com/", source: "owner", listingBroken: false }).kind).toBe("current");
   });
 });
 

@@ -63,7 +63,7 @@ describe("placed next to Places data shown without a map", () => {
     // Overview header: the chip row as before; the logo ends the scan line
     // (ListingPhoto). Then the Free rank card and the paid "At a glance".
     expect(uses("app/business/[id]/BusinessScoreView.tsx")).toBe(2);
-    expect(src("app/business/[id]/BusinessScoreView.tsx")).toContain("chips={<ListingChips business={business} now={now} />}");
+    expect(src("app/business/[id]/BusinessScoreView.tsx")).toContain("chips={<ListingChips business={business} now={now} businessId={businessId} />}");
     expect(src("components/overview/ListingPhoto.tsx").match(/<GoogleMapsLogo \/>/g)).toHaveLength(2);
     expect(uses("components/overview/FreeOverview.tsx")).toBe(1);
     expect(uses("components/overview/GrowMoreCustomers.tsx")).toBe(1);

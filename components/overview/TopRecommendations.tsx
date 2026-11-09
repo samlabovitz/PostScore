@@ -1,8 +1,9 @@
 "use client";
 
 // The action plan's biggest open items (the same list as Growth), with
-// a priority from their real points on the 0–100 total — High 5+,
-// Medium 2+ (lib/overviewTiles.ts) — and PostAI's fix link for each.
+// a priority: Urgent when customers are hitting it right now
+// (lib/urgency.ts), otherwise from their real points on the 0–100 total —
+// High 5+, Medium 2+ (lib/overviewTiles.ts) — and PostAI's fix link for each.
 
 import Link from "next/link";
 import { IconArrowRight, IconMapPin, IconStar, IconWorld } from "@tabler/icons-react";
@@ -17,12 +18,17 @@ function PriorityTag({ priority }: { priority: Priority }) {
   const locale = useLocale();
   return (
     <span
+      data-priority={priority}
       className={cn(
         "inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold",
-        priority === "high" ? "bg-ink text-paper" : "border border-[color:color-mix(in_srgb,var(--color-brass)_50%,transparent)] bg-[color:color-mix(in_srgb,var(--color-brass)_15%,transparent)] text-ink"
+        priority === "urgent"
+          ? "bg-red text-white"
+          : priority === "high"
+            ? "bg-ink text-paper"
+            : "border border-[color:color-mix(in_srgb,var(--color-brass)_50%,transparent)] bg-[color:color-mix(in_srgb,var(--color-brass)_15%,transparent)] text-ink"
       )}
     >
-      {t(locale, priority === "high" ? "dashboard.overview.recs.high" : "dashboard.overview.recs.medium")}
+      {t(locale, priority === "urgent" ? "dashboard.overview.recs.urgent" : priority === "high" ? "dashboard.overview.recs.high" : "dashboard.overview.recs.medium")}
     </span>
   );
 }

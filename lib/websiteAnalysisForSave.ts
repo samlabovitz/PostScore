@@ -172,3 +172,46 @@ export async function analyzeWebsiteForSave(params: {
 
   return { websiteAnalysis, httpsStatus, checkedAt, captureScreenshots, analysis };
 }
+
+/**
+ * The Google listing's own link, when PostScore grades a different site
+ * (the owner's confirmed one, or a verified one): one plain fetch — no
+ * PageSpeed, no screenshot — enough to know whether customers who tap
+ * "Website" reach a parked page or a 404/410 (the same two signals a full
+ * scan of the listing link would use). A block, a timeout or any other
+ * error proves nothing, so it's never "broken".
+ */
+export async function probeListingLink(listingWebsite: string, fetchImpl: typeof fetch = fetch): Promise<{ broken: boolean; parked: boolean }> {
+  const { fetchWebsiteHtml } = await import("@/lib/websiteAnalysis");
+  const { detectParkedDomain } = await import("@/lib/websiteContentAnalysis");
+  try {
+    const fetched = await fetchWebsiteHtml(listingWebsite, fetchImpl);
+    if (fetched.html) {
+      const parked = !!detectParkedDomain(fetched.html);
+      return { broken: parked, parked };
+    }
+    return { broken: fetched.missingPageStatus === 404 || fetched.missingPageStatus === 410, parked: false };
+  } catch {
+    return { broken: false, parked: false };
+  }
+}
+
+/** The graded site's analysis, with the listing link's own state from
+ * probeListingLink (the listing link is the one completeness.website_link
+ * scores). Unchanged when the graded site IS the listing link. */
+export function withListingLinkState(
+  websiteAnalysis: WebsiteAnalysis | null,
+  listingWebsite: string,
+  probe: { broken: boolean; parked: boolean }
+): WebsiteAnalysis | null {
+  if (!websiteAnalysis?.websiteTrust) return websiteAnalysis;
+  return {
+    ...websiteAnalysis,
+    websiteTrust: {
+      ...websiteAnalysis.websiteTrust,
+      listingLinkBroken: probe.broken,
+      listingLinkErrorPageUrl: probe.broken ? listingWebsite : null,
+      listingLinkParked: probe.parked,
+    },
+  };
+}

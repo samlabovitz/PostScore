@@ -21,6 +21,7 @@ import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import { formatShortDate, t, useLocale, useTimeZone, type Locale, type MessageKey } from "@/lib/i18n";
 import { PART_ORDER, pickFromChecked, type AttrValue, type AttributeChange, type CustomerDetailsEditorRow, type UndoableChange } from "@/lib/gbpAttributes";
 import { cn } from "@/lib/utils";
+import type { WebsiteLinkUndo } from "@/lib/gbpWebsiteLink";
 
 export interface GbpEditState {
   enabled: boolean;
@@ -28,9 +29,13 @@ export interface GbpEditState {
   connected: boolean;
   /** The latest change the owner may still undo (≤ 7 days). */
   undo: UndoableChange | null;
+  /** The latest website link change the owner may still undo (components/gbp/WebsiteLinkFix.tsx). */
+  websiteUndo?: WebsiteLinkUndo | null;
+  /** The real site to put on the Google listing, when PostScore knows it. */
+  websiteSuggested?: string | null;
 }
 
-const OFF: GbpEditState = { enabled: false, premium: false, connected: false, undo: null };
+const OFF: GbpEditState = { enabled: false, premium: false, connected: false, undo: null, websiteUndo: null };
 const GbpEditContext = createContext<GbpEditState>(OFF);
 
 /** Whether "Update on Google" is on this page (a GbpEditProvider above). */

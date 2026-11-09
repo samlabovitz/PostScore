@@ -778,6 +778,9 @@ export interface WebsiteAnalysis {
    * recent capture (Step 2d) — a 4xx/5xx capture is never stored as an
    * image. Absent/null on captures from before this was recorded. */
   screenshotHttpStatus?: number | null;
+  /** The site the stored screenshots are of (lib/businessWebsite.ts
+   * gradedWebsite at capture time). Absent on captures from before Nov 9. */
+  screenshotSiteUrl?: string | null;
   /** The most recent capture's real ScreenshotOne usage — counted toward
    * the monthly automatic-capture cap (see lib/screenshotBudget.ts). */
   screenshotCaptureLog?: ScreenshotCaptureLog | null;
@@ -833,8 +836,9 @@ export interface ScreenshotCaptureLog {
   at: string;
   /** Real ScreenshotOne requests made (homepage + discovered pages). */
   calls: number;
-  /** "auto" = during a scan; "manual" = the Refresh screenshots button. */
-  source: "auto" | "manual";
+  /** "auto" = during a scan; "manual" = the Refresh screenshots button;
+   * "site_change" = the one fresh capture after "Wrong site?". */
+  source: "auto" | "manual" | "site_change";
 }
 
 export interface WebsiteAnalysisPage {
@@ -4189,6 +4193,7 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
   const additionalPages = parseAdditionalPages(v.additionalPages);
   const lastScreenshotRefreshAt = typeof v.lastScreenshotRefreshAt === "string" ? v.lastScreenshotRefreshAt : null;
   const screenshotHttpStatus = typeof v.screenshotHttpStatus === "number" ? v.screenshotHttpStatus : null;
+  const screenshotSiteUrl = typeof v.screenshotSiteUrl === "string" ? v.screenshotSiteUrl : null;
   const screenshotCaptureLog = parseScreenshotCaptureLog(v.screenshotCaptureLog);
   const aboutPresence = parsePagePresenceResult(v.aboutPresence);
   const servicesPresence = parsePagePresenceResult(v.servicesPresence);
@@ -4206,6 +4211,7 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
     lastScreenshotRefreshAt,
     // Only present when stored (captures from before Step 2d have neither).
     ...(screenshotHttpStatus !== null ? { screenshotHttpStatus } : {}),
+    ...(screenshotSiteUrl !== null ? { screenshotSiteUrl } : {}),
     ...(Array.isArray(v.readViaBrowserChecks)
       ? { readViaBrowserChecks: (v.readViaBrowserChecks as unknown[]).filter((x): x is string => typeof x === "string") }
       : {}),
@@ -4234,7 +4240,7 @@ function parseScreenshotCaptureLog(value: unknown): ScreenshotCaptureLog | null 
   if (!value || typeof value !== "object") return null;
   const v = value as Record<string, unknown>;
   if (typeof v.at !== "string" || typeof v.calls !== "number") return null;
-  if (v.source !== "auto" && v.source !== "manual") return null;
+  if (v.source !== "auto" && v.source !== "manual" && v.source !== "site_change") return null;
   return { at: v.at, calls: v.calls, source: v.source };
 }
 
