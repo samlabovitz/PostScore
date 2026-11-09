@@ -13,7 +13,8 @@
 // tasks.
 //
 // COST: one real, billed Google Places Details call per business
-// (Enterprise-tier pricing, ~$0.02/call as of writing — see Day 4 Part
+// (Enterprise + Atmosphere pricing, $0.025/call since scoring v1.12.0
+// asked for reviews/payment/parking — see Day 4 Part
 // D's audit in ~/Desktop/day4-prep.md / the earlier website audit
 // report). PageSpeed Insights (the mobile-speed check) is free. A
 // business being analyzed for the very first time (no
@@ -166,7 +167,8 @@ const PAUSE_BETWEEN_BUSINESSES_MS = 1500;
  * looked-up Google pricing audit — this app's field mask pulls
  * Enterprise-only fields (phone, website, hours, rating, price level,
  * photos), so it bills at this rate, not the cheaper Pro/Basic tiers. */
-const PLACES_DETAILS_COST_USD = 0.02;
+/** Place Details Enterprise + Atmosphere ($25 per 1,000). */
+const PLACES_DETAILS_COST_USD = 0.025;
 
 interface BusinessRow {
   id: string;
@@ -406,7 +408,7 @@ async function main() {
 
     const placesCost = businesses.length * PLACES_DETAILS_COST_USD;
     console.log(`\nEstimated real, billed cost:`);
-    console.log(`  Google Places Details: ${businesses.length} calls x $${PLACES_DETAILS_COST_USD.toFixed(2)} = $${placesCost.toFixed(2)}`);
+    console.log(`  Google Places Details: ${businesses.length} calls x $${PLACES_DETAILS_COST_USD.toFixed(3)} = $${placesCost.toFixed(2)}`);
     // PageSpeed: one call per business with a real website (listing or
     // verified), up to 3 when the first run has no real-visitor data.
     const withSite = businesses.filter((b) => businessWebsiteUrl(b) !== null);

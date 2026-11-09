@@ -22,6 +22,7 @@ import {
   searchTextCompetitors,
   type NearbyCandidate,
   type PlaceDetails,
+  type ServiceOptions,
 } from "@/lib/google/places";
 import { competitorTextQuery } from "@/lib/competitorQuery";
 import { categoryFamilyFor, comparableTypesFor, NON_HAIR_SERVICE_EXCLUSIONS } from "@/lib/categoryFamily";
@@ -172,6 +173,9 @@ export interface RankedCompetitor {
   };
   googleMapsUri: string | null;
   breakdown: ScoreBreakdown;
+  /** Google's service options from this same search (takeout, delivery,
+   * curbside, dine-in) — information only. Undefined for the subject. */
+  serviceOptions?: ServiceOptions;
   /** Google's raw price-level enum for this listing (e.g.
    * "PRICE_LEVEL_MODERATE"), or null when Google has no price data for
    * it — see lib/priceLevel.ts for the display mapping. */
@@ -1007,6 +1011,7 @@ export function rankedFromCandidate(candidate: NearbyCandidate, distanceMeters: 
     breakdown,
     priceLevel: place.priceLevel,
     photoCount: place.photoCount,
+    ...(place.serviceOptions !== undefined ? { serviceOptions: place.serviceOptions } : {}),
   };
 }
 
@@ -1034,6 +1039,8 @@ export function savedScanRow(r: RankedCompetitor, scanId: string, businessId: st
     opening_hours: r.listing ? { weekday: r.listing.openingHours, periods: r.listing.openingHoursPeriods } : null,
     categories: r.listing?.categories ?? null,
     business_status: r.listing?.businessStatus ?? null,
+    // supabase/service-options.sql (dropped by the caller before it's run).
+    service_options: r.serviceOptions ?? null,
   };
 }
 

@@ -48,6 +48,7 @@ import { ScoringUpdateNote } from "@/components/notes/ScoringUpdateNote";
 import { GbpReplyCheckConnect, type GbpReplyCheckState } from "@/components/gbp/GbpReplyCheckConnect";
 import type { ReplyDraftStatus } from "@/app/actions/reviewReplies";
 import type { Plan } from "@/lib/plan";
+import type { ServiceOptions } from "@/lib/google/places";
 
 
 
@@ -74,6 +75,7 @@ export function BusinessScoreView({
   gbpReplyCheck = null,
   monthlyReportsLive = false,
   archived = false,
+  serviceOptions = null,
 }: {
   businessId: string;
   business: BusinessRecord;
@@ -121,6 +123,9 @@ export function BusinessScoreView({
   monthlyReportsLive?: boolean;
   /** The owner archived it ("Yes, we've closed"). */
   archived?: boolean;
+  /** Food businesses: Google's takeout / delivery / curbside / dine-in
+   * (lib/serviceOptions.ts) — information on the Completeness card, no points. */
+  serviceOptions?: ServiceOptions | null;
 }) {
   const locale = useLocale();
   const { breakdown, projectedBreakdown } = result;
@@ -231,7 +236,7 @@ export function BusinessScoreView({
         {/* C. What's behind the score: the breakdown (collapsed), then the
             competitor rank. */}
         <FreeSection id="behind" title={t(locale, freeSection("behind").titleKey)} body={t(locale, freeSection("behind").bodyKey)}>
-          <ScoreBreakdownPanel businessId={businessId} categories={breakdown.categories} hasWebsite={hasWebsite} scoreBasis={scoreBasis} audit websiteFixCount={null} lastScanAt={lastScanAt} accountCollapsed={uiPrefs.breakdownCollapsed} />
+          <ScoreBreakdownPanel businessId={businessId} categories={breakdown.categories} hasWebsite={hasWebsite} scoreBasis={scoreBasis} audit websiteFixCount={null} lastScanAt={lastScanAt} accountCollapsed={uiPrefs.breakdownCollapsed} serviceOptions={serviceOptions} />
           <Card className="p-5" data-testid="free-rank">
             <h3 className="mb-3 font-serif text-[15px] font-semibold text-ink">{t(locale, "dashboard.free.rankHeading")}</h3>
             <LocalBenchmarkTile businessId={businessId} result={benchmark} />
@@ -323,6 +328,7 @@ export function BusinessScoreView({
         websiteFixCount={websiteFixCount}
         lastScanAt={lastScanAt}
         accountCollapsed={uiPrefs.breakdownCollapsed}
+        serviceOptions={serviceOptions}
       />
 
       <GrowMoreCustomers

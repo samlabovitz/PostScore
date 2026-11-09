@@ -5,6 +5,13 @@ import { recentBucket } from "@/lib/gbpReviewReplies";
 
 const PLACES_API_BASE = "https://places.googleapis.com/v1";
 
+/** Google's yes/no service options: how customers get the food. Missing =
+ * unknown, never "no". Enterprise + Atmosphere fields. */
+export const SERVICE_OPTION_FIELDS = ["takeout", "delivery", "curbsidePickup", "dineIn"] as const;
+export type ServiceOption = (typeof SERVICE_OPTION_FIELDS)[number];
+/** Only the flags Google actually gave (true or false); a missing one is unknown. */
+export type ServiceOptions = Partial<Record<ServiceOption, boolean>>;
+
 // pureServiceAreaBusiness is in the same (Pro) tier as the address —
 // no extra cost — and lets the results say "no storefront".
 const SEARCH_FIELD_MASK = "places.id,places.displayName,places.formattedAddress,places.pureServiceAreaBusiness";
@@ -38,6 +45,10 @@ const DETAILS_FIELD_MASK = [
   "reviews",
   "paymentOptions",
   "parkingOptions",
+  // Online ordering, step 1 (Nov 10): how customers get the food — no
+  // points yet. Enterprise + Atmosphere like reviews/payment/parking above,
+  // so this call's price doesn't change.
+  ...SERVICE_OPTION_FIELDS,
 ].join(",");
 
 // Nearby Search returns every listing field competitors are scored on
@@ -67,6 +78,10 @@ const NEARBY_SEARCH_FIELD_MASK = [
   "places.googleMapsUri",
   "places.photos",
   "places.priceLevel",
+  // Online ordering, step 1: the service options. They move these searches
+  // from Enterprise to Enterprise + Atmosphere (+$5 per 1,000 past the
+  // free monthly usage).
+  ...SERVICE_OPTION_FIELDS.map((f) => `places.${f}`),
 ].join(",");
 
 function getApiKey(): string {
@@ -227,6 +242,9 @@ export interface PlaceDetails {
   accessibilityOptions?: Record<string, boolean> | null;
   /** True for a service-area business with no storefront; null = unknown. */
   pureServiceAreaBusiness?: boolean | null;
+  /** Takeout / delivery / curbside / dine-in as Google states them: only
+   * the flags Google gave ({} = it gave none). Undefined = not asked. */
+  serviceOptions?: ServiceOptions;
   /** When each review Google returned was published (at most 5, chosen by
    * relevance). Used once, at save, for "a review in the last 90 days" —
    * never stored. null = not asked (Nearby Search). */
@@ -275,6 +293,10 @@ export interface RawDetailsPlace {
   reviews?: Array<{ publishTime?: string }>;
   paymentOptions?: Record<string, boolean | undefined>;
   parkingOptions?: Record<string, boolean | undefined>;
+  takeout?: boolean;
+  delivery?: boolean;
+  curbsidePickup?: boolean;
+  dineIn?: boolean;
 }
 
 /** Nearby Search now requests the same listing fields as Place
@@ -407,7 +429,15 @@ export function normalizeDetails(raw: RawDetailsPlace): PlaceDetails {
     listingHasAccessibility: accessibilityFlags(raw.accessibilityOptions) !== null,
     listingHasPayment: accessibilityFlags(raw.paymentOptions) !== null,
     listingHasParking: accessibilityFlags(raw.parkingOptions) !== null,
+    serviceOptions: serviceOptionsFrom(raw),
   };
+}
+
+/** Only the service options Google actually returned (true or false). */
+export function serviceOptionsFrom(raw: Partial<Record<ServiceOption, unknown>>): ServiceOptions {
+  const out: ServiceOptions = {};
+  for (const f of SERVICE_OPTION_FIELDS) if (typeof raw[f] === "boolean") out[f] = raw[f] as boolean;
+  return out;
 }
 
 /** "A review in the last 90 days" from the reviews Google returned: true

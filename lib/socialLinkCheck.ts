@@ -12,6 +12,7 @@
 // result is saved on each profile (SocialProfile.check) for auditing.
 
 import type { SocialLinkCheck, SocialProfile } from "@/lib/scoring";
+import { ORDERING_PLATFORMS } from "@/lib/orderingPlatforms";
 
 // ---------------------------------------------------------------------------
 // Platform pages: social, link-in-bio, review/directory, ordering, delivery,
@@ -50,15 +51,10 @@ export const PLATFORM_PAGES: PlatformDef[] = [
   { hosts: ["yelp.com"], name: "Yelp", kind: "directory" },
   { hosts: ["nailsites.com"], name: "NailSites", kind: "directory" },
   { hosts: ["localsearch.com"], name: "Localsearch", kind: "directory" },
-  { hosts: ["doordash.com"], name: "DoorDash", kind: "ordering" },
-  { hosts: ["ubereats.com"], name: "Uber Eats", kind: "ordering" },
-  { hosts: ["grubhub.com"], name: "Grubhub", kind: "ordering" },
-  { hosts: ["postmates.com"], name: "Postmates", kind: "ordering" },
-  { hosts: ["seamless.com"], name: "Seamless", kind: "ordering" },
-  { hosts: ["slicelife.com"], name: "Slice", kind: "ordering" },
-  // ChowNow's own ordering pages only (ordering.chownow.com, direct.chownow.com…);
-  // a restaurant's ChowNow-built site on its own domain doesn't match.
-  { hosts: ["chownow.com"], name: "ChowNow", kind: "ordering" },
+  // Ordering marketplaces, from the one shared list (lib/orderingPlatforms.ts).
+  // Website builders there (Toast, Square Online, Popmenu…) aren't here:
+  // a listing link to them is still a website.
+  ...ORDERING_PLATFORMS.filter((p) => p.kind === "marketplace").map((p): PlatformDef => ({ hosts: [...p.hosts], name: p.name, kind: "ordering" })),
   { hosts: ["opentable.com"], name: "OpenTable", kind: "reservations" },
   { hosts: ["resy.com"], name: "Resy", kind: "reservations" },
   { hosts: ["exploretock.com"], name: "Tock", kind: "reservations" },

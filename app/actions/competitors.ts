@@ -402,9 +402,15 @@ export async function runAndSaveCompetitorScanWithClient(
   // before that file is run the scan saves without it.
   const subjectIndex = rows.findIndex((r) => r.is_subject);
   const withAlsoNearby = rows.map((r, i) => (i === subjectIndex ? { ...r, also_nearby_json: result.alsoNearby ?? [] } : r));
+  // Newest columns first; each missing one (its SQL not run yet) is dropped in turn.
+  const missingColumn = (e: { code?: string } | null) => !!e && (e.code === "PGRST204" || e.code === "42703");
+  const withoutServiceOptions = (list: Array<Record<string, unknown>>) => list.map((r) => Object.fromEntries(Object.entries(r).filter(([k]) => k !== "service_options")));
   let { error: insertError } = await supabase.from("competitor_scans").insert(withAlsoNearby);
-  if (insertError && (insertError.code === "PGRST204" || insertError.code === "42703")) {
-    ({ error: insertError } = await supabase.from("competitor_scans").insert(rows));
+  if (missingColumn(insertError)) {
+    ({ error: insertError } = await supabase.from("competitor_scans").insert(withoutServiceOptions(withAlsoNearby)));
+  }
+  if (missingColumn(insertError)) {
+    ({ error: insertError } = await supabase.from("competitor_scans").insert(withoutServiceOptions(rows)));
   }
   if (insertError) {
     return { status: "error", message: insertError.message };

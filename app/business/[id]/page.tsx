@@ -40,6 +40,8 @@ import { loadBusinessNiche } from "@/lib/businessNiche.server";
 import { getReplyDraftStatus } from "@/app/actions/reviewReplies";
 import { gbpReplyCheckState } from "@/lib/gbpReplyCheck";
 import { isMonthlyReportsLive } from "@/lib/monthlyReportsFeatureFlag";
+import { isFoodBusiness } from "@/lib/serviceOptions";
+import { readServiceOptions } from "@/lib/serviceOptions.server";
 
 export default async function BusinessPage({ params, searchParams = {} }: { params: { id: string }; searchParams?: { gbp?: string } }) {
   // getBusinessSummary is awaited separately (not folded into the
@@ -195,6 +197,8 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
         businessId={params.id}
         business={scored.business}
         archived={await isBusinessArchived(createClient(), params.id)}
+        // Food businesses: Google's service options, as information (no points).
+        serviceOptions={isFoodBusiness(profile.id) ? await readServiceOptions(createClient(), params.id) : null}
         result={free ? withoutAdvice(scored.result) : scored.result}
         history={history}
         recentSnapshots={recentSnapshots}

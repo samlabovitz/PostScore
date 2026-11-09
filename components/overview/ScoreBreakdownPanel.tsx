@@ -24,6 +24,8 @@ import { checkHowTo } from "@/lib/actionPlan";
 import type { BreakdownFix } from "@/components/scoring/CategoryCard";
 import { formatShortDate, t, tPlural, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { serviceOptionsLine } from "@/lib/serviceOptions";
+import type { ServiceOptions } from "@/lib/google/places";
 
 export const BREAKDOWN_ANCHOR = "score-breakdown";
 const ANIMATION_MS = 320;
@@ -72,9 +74,13 @@ function CategorySummary({
   websiteFixCount,
   points,
   audit,
+  serviceOptions = null,
 }: {
   businessId: string;
   category: CategoryResult;
+  /** Food businesses: Google's takeout / delivery / curbside / dine-in,
+   * shown on the Completeness card as information (no points). */
+  serviceOptions?: ServiceOptions | null;
   /** Free: a locked "How to fix this" row under the top issue. */
   audit: boolean;
   hasWebsite: boolean;
@@ -115,6 +121,12 @@ function CategorySummary({
             : t(locale, "dashboard.overview.nothingLeftHere")}
       </p>
       {audit && category.relativeScore !== null && topIssue && <LockedFixRow />}
+      {category.id === "completeness" && serviceOptions && (
+        <p data-testid="service-options" className="text-[12px] text-ink-soft">
+          {serviceOptionsLine(serviceOptions, locale)}
+          <span className="block text-[11px] text-ink-mute">{t(locale, "dashboard.serviceOptions.note")}</span>
+        </p>
+      )}
       <WebsiteCoverageNote category={category} hasWebsite={hasWebsite} scoreBasis={scoreBasis} className="text-[12px] text-ink-soft" />
       {category.id === "website" && websiteFixCount !== null && (
         // The Website page's own fix count (same plan, same builder rule).
@@ -145,9 +157,12 @@ export function ScoreBreakdownPanel({
   websiteFixCount = null,
   lastScanAt = null,
   accountCollapsed = null,
+  serviceOptions = null,
 }: {
   businessId: string;
   categories: CategoryResult[];
+  /** Food businesses only: Google's service options (information, no points). */
+  serviceOptions?: ServiceOptions | null;
   hasWebsite: boolean;
   scoreBasis: number;
   linkOptions?: LinkOptions;
@@ -239,7 +254,7 @@ export function ScoreBreakdownPanel({
       <div id={`${BREAKDOWN_ANCHOR}-checks`} className="mt-4 grid grid-cols-1 gap-x-6 gap-y-5 nav:grid-cols-3">
         {categories.map((category, i) => (
           <div key={category.id} className="flex min-w-0 flex-col">
-            <CategorySummary businessId={businessId} category={category} hasWebsite={hasWebsite} scoreBasis={scoreBasis} websiteFixCount={websiteFixCount} points={wholePoints[i]} audit={audit} />
+            <CategorySummary businessId={businessId} category={category} hasWebsite={hasWebsite} scoreBasis={scoreBasis} websiteFixCount={websiteFixCount} points={wholePoints[i]} audit={audit} serviceOptions={serviceOptions} />
             <div
               className={cn(
                 "grid transition-[grid-template-rows,opacity] ease-out motion-reduce:transition-none",

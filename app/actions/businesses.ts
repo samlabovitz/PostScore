@@ -362,6 +362,15 @@ export async function saveBusinessWithClient(
     return { status: "error", message: error?.message ?? "Save failed." };
   }
 
+  // Google's service options (supabase/service-options.sql) — information
+  // only, no points. Saved on their own so a missing column never fails the save.
+  if (place.serviceOptions !== undefined) {
+    await supabase.from("businesses").update({ google_service_options: place.serviceOptions }).eq("id", data.id).then(
+      () => undefined,
+      () => undefined
+    );
+  }
+
   if (captureScreenshots && websiteAnalysis) {
     await finishAutoScreenshots(supabase, data.id, websiteAnalysis, analysis, analysisUrl);
   }

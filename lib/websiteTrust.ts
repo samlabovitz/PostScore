@@ -18,6 +18,7 @@
 
 import { platformPage } from "@/lib/socialLinkCheck";
 import { extractMainContentHtml, extractVisibleText, wordCount } from "./pagePresenceDetection";
+import { ORDERING_PLATFORM_HOSTS } from "@/lib/orderingPlatforms";
 
 // ---------------------------------------------------------------------
 // 4a) Hacked / injected spam content
@@ -55,21 +56,8 @@ const LEGITIMATE_OUTBOUND_HOSTS = [
   "youtu.be",
   "linkedin.com",
   "pinterest.com",
-  // ordering platforms (same list as lib/pagePresenceDetection.ts's
-  // KNOWN_ORDERING_PLATFORM_HOSTS, duplicated here on purpose — same
-  // small-duplication style as the rest of this codebase, and this
-  // module must never import network-adjacent concerns from there).
-  "toasttab.com",
-  "chownow.com",
-  "olo.com",
-  "squareup.com",
-  "square.site",
-  "clover.com",
-  "popmenu.com",
-  "bentobox.com",
-  "doordash.com",
-  "ubereats.com",
-  "grubhub.com",
+  // ordering platforms — the one shared list (lib/orderingPlatforms.ts, pure)
+  ...ORDERING_PLATFORM_HOSTS,
   // payment
   "stripe.com",
   "paypal.com",

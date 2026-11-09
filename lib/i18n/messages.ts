@@ -3717,6 +3717,14 @@ export type MessageKey =
   | "dashboard.overview.recs.heading"
   | "dashboard.overview.recs.viewAll"
   | "dashboard.overview.recs.urgent"
+  | "dashboard.serviceOptions.line"
+  | "dashboard.serviceOptions.takeout"
+  | "dashboard.serviceOptions.delivery"
+  | "dashboard.serviceOptions.curbsidePickup"
+  | "dashboard.serviceOptions.dineIn"
+  | "dashboard.serviceOptions.notListed"
+  | "dashboard.serviceOptions.no"
+  | "dashboard.serviceOptions.note"
   | "dashboard.wrongSite.button"
   | "dashboard.wrongSite.title"
   | "dashboard.wrongSite.current"
@@ -8851,6 +8859,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.recs.heading": "Top recommendations",
     "dashboard.overview.recs.viewAll": "View all",
     "dashboard.overview.recs.urgent": "Urgent",
+    "dashboard.serviceOptions.line": "Google shows: {list}",
+    "dashboard.serviceOptions.takeout": "Takeout",
+    "dashboard.serviceOptions.delivery": "Delivery",
+    "dashboard.serviceOptions.curbsidePickup": "Curbside",
+    "dashboard.serviceOptions.dineIn": "Dine-in",
+    "dashboard.serviceOptions.notListed": "{label} — not listed",
+    "dashboard.serviceOptions.no": "{label} — no",
+    "dashboard.serviceOptions.note": "For your information — not part of your score.",
     "dashboard.wrongSite.button": "Wrong site?",
     "dashboard.wrongSite.title": "Is this your website?",
     "dashboard.wrongSite.current": "We grade and show {host}",
@@ -14002,6 +14018,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.recs.heading": "Recomendaciones principales",
     "dashboard.overview.recs.viewAll": "Ver todo",
     "dashboard.overview.recs.urgent": "Urgente",
+    "dashboard.serviceOptions.line": "Google muestra: {list}",
+    "dashboard.serviceOptions.takeout": "Para llevar",
+    "dashboard.serviceOptions.delivery": "Entrega a domicilio",
+    "dashboard.serviceOptions.curbsidePickup": "Recogida en la acera",
+    "dashboard.serviceOptions.dineIn": "Comer en el local",
+    "dashboard.serviceOptions.notListed": "{label}: no aparece",
+    "dashboard.serviceOptions.no": "{label}: no",
+    "dashboard.serviceOptions.note": "Solo para su información; no cuenta en su puntuación.",
     "dashboard.wrongSite.button": "¿Sitio equivocado?",
     "dashboard.wrongSite.title": "¿Es este su sitio web?",
     "dashboard.wrongSite.current": "Evaluamos y mostramos {host}",

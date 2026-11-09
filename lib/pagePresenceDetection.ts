@@ -26,6 +26,7 @@
 //      prose, which they aren't.
 
 import type { PresenceCounts, PresenceDepth } from "./scoring";
+import { ORDERING_PLATFORM_HOSTS, orderingPlatformFor } from "@/lib/orderingPlatforms";
 
 export const ABOUT_PAGE_KEYWORDS: string[] = [
   "about us",
@@ -1001,22 +1002,11 @@ export const ONLINE_ORDERING_LINK_KEYWORDS: string[] = ["order online", "order n
 /** Real, well-known third-party ordering/menu platforms seen among
  * real business sites — a link to one of these, even off this
  * business's own domain, is real, verifiable evidence of a real
- * ordering menu, unlike an arbitrary off-domain link. */
-export const KNOWN_ORDERING_PLATFORM_HOSTS: string[] = [
-  "toasttab.com",
-  "chownow.com",
-  "olo.com",
-  "squareup.com",
-  "square.site",
-  "clover.com",
-  "popmenu.com",
-  "bentobox.com",
-  "doordash.com",
-  "ubereats.com",
-  "grubhub.com",
-];
+ * ordering menu, unlike an arbitrary off-domain link. The one shared
+ * list: lib/orderingPlatforms.ts. (A business's own order. subdomain is
+ * its own brand — findOnlineOrderingCandidate's same-brand rule.) */
+export const KNOWN_ORDERING_PLATFORM_HOSTS: readonly string[] = ORDERING_PLATFORM_HOSTS;
 
 export function isKnownOrderingPlatformHost(hostname: string): boolean {
-  const host = hostname.replace(/^www\./i, "").toLowerCase();
-  return KNOWN_ORDERING_PLATFORM_HOSTS.some((platform) => host === platform || host.endsWith(`.${platform}`));
+  return orderingPlatformFor(hostname) !== null;
 }
