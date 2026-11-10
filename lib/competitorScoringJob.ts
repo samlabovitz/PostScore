@@ -12,6 +12,7 @@ import { canSpendPagespeed, pacificDayStart, pagespeedDailyBudget, PAGESPEED_CAL
 import { scoreBusinessWithClient } from "@/app/actions/scoring";
 import type { ScoreBreakdown } from "@/lib/scoring";
 import { normalizeLocale } from "@/lib/i18n";
+import { forCompetitorComparison } from "@/lib/scoring";
 
 export type ScoringJobKind = "new_scan" | "backfill";
 
@@ -84,8 +85,10 @@ export async function runCompetitorScoringJob(
   if (owner && !owner.pending_breakdown_json) {
     const scored = await scoreBusinessWithClient(db, job.business_id, locale);
     if (scored.status === "ok") {
-      owner.pending_breakdown_json = scored.result.breakdown;
-      await db.from("competitor_scans").update({ pending_breakdown_json: scored.result.breakdown }).eq("id", owner.id);
+      // Like for like (v1.15.0): without the checks competitors aren't scored on.
+      const comparable = forCompetitorComparison(scored.result.breakdown, locale);
+      owner.pending_breakdown_json = comparable;
+      await db.from("competitor_scans").update({ pending_breakdown_json: comparable }).eq("id", owner.id);
     }
   }
 

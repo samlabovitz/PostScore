@@ -502,6 +502,7 @@ export const CHECK_MINUTES: Record<string, number> = {
   "website.about_presence": 30,
   "website.services_presence": 30,
   "website.social_links": 10,
+  "website.links": 15,
   "website.security": 60,
   "website.info_consistency": 10,
   "website.notice_freshness": 10,

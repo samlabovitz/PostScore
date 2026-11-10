@@ -8,7 +8,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { WebsiteRecheckResult, WebsiteRecheckStatus } from "@/lib/websiteRecheck.server";
 import { getPlan } from "@/lib/premium";
-import { normalizeLocale, t } from "@/lib/i18n";
 
 export type { WebsiteRecheckResult, WebsiteRecheckStatus } from "@/lib/websiteRecheck.server";
 
@@ -30,15 +29,16 @@ export async function recheckWebsite(businessId: string): Promise<WebsiteRecheck
   if (!user) return { status: "unauthenticated" };
   // Free is an audit: a Re-check (PageSpeed and site checks) never runs
   // for a Free account — Growth and the Website page show it locked.
-  if ((await getPlan()) === "free") {
-    const { data } = await supabase.from("businesses").select("language").eq("id", businessId).maybeSingle();
-    return { status: "error", message: t(normalizeLocale(data?.language), "dashboard.free.recheckLocked") };
-  }
+  if ((await getPlan()) === "free") return { status: "plan_locked" };
   const { isBusinessArchived } = await import("@/lib/businessArchive.server");
-  if (await isBusinessArchived(supabase, businessId)) {
-    const { data } = await supabase.from("businesses").select("language").eq("id", businessId).maybeSingle();
-    return { status: "error", message: t(normalizeLocale(data?.language), "dashboard.closed.archived.blocked") };
-  }
+  if (await isBusinessArchived(supabase, businessId)) return { status: "archived" };
   const { recheckWebsiteWithClient } = await import("@/lib/websiteRecheck.server");
-  return recheckWebsiteWithClient(supabase, businessId);
+  // A thrown error comes back as its real message — a server action's
+  // thrown error reaches the browser without one.
+  try {
+    return await recheckWebsiteWithClient(supabase, businessId);
+  } catch (e) {
+    console.error(`[websiteRecheck] ${businessId}:`, e);
+    return { status: "error", message: e instanceof Error ? e.message : String(e) };
+  }
 }

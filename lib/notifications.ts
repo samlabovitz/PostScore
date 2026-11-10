@@ -45,6 +45,8 @@ export function urgentFixHref(issue: UrgentIssue, businessId: string): string {
       return `/business/${businessId}/website`;
     case "site_unsafe":
       return `/business/${businessId}/website#check-security`;
+    case "broken_link":
+      return `/business/${businessId}/website#check-links`;
     case "phone_mismatch":
       return `/business/${businessId}/website#check-info_consistency`;
     case "no_phone":

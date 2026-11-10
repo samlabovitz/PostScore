@@ -14,6 +14,7 @@ import { WebsiteLinkFix } from "@/components/gbp/WebsiteLinkFix";
 import { GoogleAiAnswersLine } from "@/components/gbp/GbpMessagingStep";
 import { CUSTOMER_DETAIL_OPTIONS, PART_ORDER } from "@/lib/gbpAttributes";
 import { timeEstimateText, type CheckHowTo } from "@/lib/actionPlan";
+import { LinkIssues } from "@/components/scoring/LinkIssues";
 
 /** A needs-work row's fix: its own "How to fix it" (steps, a rough time,
  * official links) and the PostScore page as a secondary link. */
@@ -200,6 +201,7 @@ function RowStatus({ check }: { check: CheckResult }) {
     <>
       <p className="pl-[25px] text-[13px] text-ink-mute">{check.explanation}</p>
       {check.note && <p className="pl-[25px] text-[11.5px] text-ink-mute/80">{check.note}</p>}
+      <LinkIssues check={check} className="ml-[25px] self-start text-left text-[12.5px] font-semibold text-ink underline-offset-2 hover:text-brass hover:underline" />
     </>
   );
 }

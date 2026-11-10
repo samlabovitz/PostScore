@@ -1,16 +1,11 @@
 import { recentBucket } from "@/lib/gbpReviewReplies";
+import { SERVICE_OPTION_FIELDS, type ServiceOption, type ServiceOptions } from "@/lib/serviceOptionFields";
+export { SERVICE_OPTION_FIELDS, type ServiceOption, type ServiceOptions };
 // Server-only. Never import this from a "use client" component — the API
 // key must never reach the browser. Route handlers should call these
 // functions and pass the (normalized, key-free) result down to the client.
 
 const PLACES_API_BASE = "https://places.googleapis.com/v1";
-
-/** Google's yes/no service options: how customers get the food. Missing =
- * unknown, never "no". Enterprise + Atmosphere fields. */
-export const SERVICE_OPTION_FIELDS = ["takeout", "delivery", "curbsidePickup", "dineIn"] as const;
-export type ServiceOption = (typeof SERVICE_OPTION_FIELDS)[number];
-/** Only the flags Google actually gave (true or false); a missing one is unknown. */
-export type ServiceOptions = Partial<Record<ServiceOption, boolean>>;
 
 // pureServiceAreaBusiness is in the same (Pro) tier as the address —
 // no extra cost — and lets the results say "no storefront".

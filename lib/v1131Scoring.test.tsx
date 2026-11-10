@@ -20,19 +20,19 @@ const BROKEN = [
 ];
 
 describe("v1.13.1", () => {
-  test("SCORING_VERSION is 1.13.1, with 1.13.0's rules still on", () => {
-    expect(SCORING_VERSION).toBe("1.13.1");
+  test("SCORING_VERSION is 1.14.0, with 1.13.0's and 1.13.1's rules still on", () => {
+    expect(SCORING_VERSION).toBe("1.15.0");
     expect(SCORING_V1131).toBe(true);
     expect(SCORING_V113).toBe(true);
   });
 });
 
-describe("Social media links: broken icons cost points", () => {
+describe("Social media links (v1.15.0: only “do you link to your profiles?”)", () => {
   test("real profiles and no broken icons = 1/1", () => {
     expect(social(withContent({ socialProfiles: [{ platform: "Instagram", url: "instagram.com/national510" }], brokenSocialLinks: [] })).earnedPoints).toBe(1);
   });
 
-  test("the real National 5 & 10 case: real profiles + broken Twitter (X) and YouTube icons = 0.5/1, Needs work, the broken ones named (EN + ES)", () => {
+  test("the real National 5 & 10 case: real profiles + Twitter (X) and YouTube icons that reload the site = Social links 1/1; the two icons are “No broken links or dead pages”'s (EN + ES)", () => {
     const input = withContent({
       socialProfiles: [
         { platform: "Instagram", url: "instagram.com/national510" },
@@ -42,16 +42,28 @@ describe("Social media links: broken icons cost points", () => {
       brokenSocialLinks: BROKEN,
     });
     const c = social(input);
-    expect(c.earnedPoints).toBe(0.5);
-    expect(c.confidence).toBe("VERIFIED");
-    expect(checkOutcome(c)).toBe("needs_work");
-    expect(c.gaps).toEqual(["broken_social"]);
-    expect(c.explanation).toContain("Your Twitter (X) and YouTube icons don't go to a profile — they reload your own site. Link them to your real profiles or remove them.");
-    expect(social(input, "es").explanation).toContain("Sus íconos de Twitter (X) y YouTube no llevan a un perfil");
+    expect(c.earnedPoints).toBe(1);
+    expect(checkOutcome(c)).toBe("done");
+    const withLinks: BusinessScoringInput = { ...input, websiteAnalysis: { ...input.websiteAnalysis!, linkCheck: { checkedAt: "2026-11-09T00:00:00Z", checked: 6, problems: [] } } };
+    const links = scoreBusiness(withLinks).checks.find((x) => x.id === "website.links")!;
+    // 6 links opened + 5 social icons; 2 broken → 2 − 2.
+    expect(links.earnedPoints).toBe(0);
+    expect(links.explanation).toBe("2 of 11 links need fixing.");
+    expect(scoreBusiness(withLinks, "es").checks.find((x) => x.id === "website.links")!.explanation).toBe("2 de 11 enlaces necesitan arreglo.");
+    expect(links.gaps).toEqual(["broken_link"]); // social icons: not Urgent
+    expect(JSON.parse(links.meta!.linkProblems).map((p: { platform: string; problem: string }) => `${p.platform}:${p.problem}`)).toEqual(["X/Twitter:loops_home", "YouTube:loops_home"]);
   });
 
-  test("only broken icons = 0/1", () => {
-    expect(social(withContent({ socialProfiles: [], brokenSocialLinks: BROKEN })).earnedPoints).toBe(0);
+  test("the real Monkey's Uncle case: only broken icons = not scored, so a broken icon never counts twice (EN + ES)", () => {
+    const input = withContent({ socialProfiles: [], brokenSocialLinks: BROKEN });
+    const c = social(input);
+    expect(c.earnedPoints).toBeNull();
+    expect(c.gaps).toBeUndefined();
+    expect(c.explanation).toMatch(/This check is left out of your score: your site's social icons don't lead to a profile, and broken links are already counted under “No broken links or dead pages”\.$/);
+    expect(social(input, "es").explanation).toMatch(/Este apartado queda fuera de su puntuación: .*«Sin enlaces rotos ni páginas sin contenido»\.$/);
+    // The icons still cost points once — in the links check (2 broken → 2 − 2).
+    const withLinks: BusinessScoringInput = { ...input, websiteAnalysis: { ...input.websiteAnalysis!, linkCheck: { checkedAt: "2026-11-09T00:00:00Z", checked: 4, problems: [] } } };
+    expect(scoreBusiness(withLinks).checks.find((x) => x.id === "website.links")!.earnedPoints).toBe(0);
   });
 });
 

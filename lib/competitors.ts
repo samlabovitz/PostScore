@@ -14,6 +14,7 @@ import {
   scoreBusiness,
   type BusinessScoringRow,
   type ScoreBreakdown,
+  forCompetitorComparison,
 } from "@/lib/scoring";
 import {
   candidateFromDetails,
@@ -612,7 +613,8 @@ export async function findAndScoreCompetitors(
   }
 
   const subjectLocation = { lat: subject.lat, lng: subject.lng };
-  const subjectBreakdown = scoreBusiness(businessRowToScoringInput(subject), locale);
+  // Like for like (v1.15.0): competitors aren't link-checked, so neither is the owner here.
+  const subjectBreakdown = forCompetitorComparison(scoreBusiness(businessRowToScoringInput(subject), locale), locale);
 
   type Comparable = { candidate: NearbyCandidate; distanceMeters: number };
   let comparable: Comparable[] = [];

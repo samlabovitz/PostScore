@@ -480,7 +480,10 @@ export function detectAbandonedSignals(visibleText: string, now: Date): Abandone
 // 4b) Conflicting info vs Google: phone, address, hours
 // ---------------------------------------------------------------------
 
-export type InfoFieldComparison = "matches" | "conflicts" | "not_found_on_site";
+// "unconfirmed" (hours only): the site states several opening-hours
+// blocks that disagree and we can't tell which is real — excluded,
+// never a mismatch.
+export type InfoFieldComparison = "matches" | "conflicts" | "unconfirmed" | "not_found_on_site";
 
 export interface InfoFieldFinding {
   field: "phone" | "address" | "hours";
@@ -494,6 +497,9 @@ export interface InfoFieldFinding {
   /** Where the site's value came from when it wasn't the page text —
    * "map" = the address in an embedded Google Map's own URL (Step 2d). */
   source?: "map";
+  /** Hours: the label of the block we read, as the site writes it
+   * ("Operating Hours") — null/absent for unlabelled hours. */
+  siteLabel?: string | null;
 }
 
 /** An embedded Google Map found on the site (Step 2d). readableAddress is
@@ -848,7 +854,8 @@ function parseTimeToMinutes(hourStr: string, minuteStr: string | undefined, meri
  * confidently parse is simply not included in the result — never
  * guessed. Never throws.
  */
-export function parseHoursFromText(text: string): ParsedHoursEntry[] {
+export function parseHoursFromText(rawText: string): ParsedHoursEntry[] {
+  const text = normalizeHoursText(rawText);
   const entries: ParsedHoursEntry[] = [];
   let m: RegExpExecArray | null;
   DAY_OR_DAILY_RE.lastIndex = 0;
@@ -932,6 +939,14 @@ export function parseHoursFromText(text: string): ParsedHoursEntry[] {
         continue;
       }
     }
+    // No am/pm: "Mon–Fri 9–5", "Lun–Vie 9:00–17:00".
+    if (timeMatches.length === 0) {
+      const bare = parseBareTimeRange(window);
+      if (bare) {
+        entries.push({ days, openMinutes: bare.open, closeMinutes: bare.close, closed: false });
+        continue;
+      }
+    }
 
     // No real hours found — check for a real closed marker, BACKWARD
     // first (the real Bing's Bakery Sunday case: "...Closed Sunday",
@@ -970,6 +985,149 @@ export function parseHoursFromText(text: string): ParsedHoursEntry[] {
   }
 
   return entries;
+}
+
+
+/** Decodes the HTML entities that survive text extraction ("Monday
+ * &ndash; Sunday" — the real JT's Sports Bar & Grill case) so ranges and
+ * dashes read as written. */
+export function normalizeHoursText(text: string): string {
+  return text
+    .replace(/&(ndash|mdash|#8211|#8212|#x2013|#x2014);/gi, "–")
+    .replace(/&(nbsp|#160|#xa0);/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&(rsquo|lsquo|#39|#8217|apos);/gi, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/[ \t]+/g, " ");
+}
+
+/** "9–5", "11 to 10", "9:00–17:00" right after a day (no am/pm): 24-hour
+ * when either side is past 12; otherwise a 5–11 start is morning, the
+ * close is afternoon/evening (a 12 close after an afternoon start is
+ * midnight). Null for anything else (a price, a date, a phone number). */
+function parseBareTimeRange(window: string): { open: number; close: number } | null {
+  const m = /^[\s:,]*(\d{1,2})(?::(\d{2}))?\s*(?:-|–|—|to|a)\s*(\d{1,2})(?::(\d{2}))?(?![\d:/.$%])(?!\s*(?:am|pm|a\.m|p\.m))/i.exec(window);
+  if (!m) return null;
+  const [oh, om, ch, cm] = [Number(m[1]), Number(m[2] ?? 0), Number(m[3]), Number(m[4] ?? 0)];
+  if (om > 59 || cm > 59 || oh > 24 || ch > 24) return null;
+  if (oh > 12 || ch > 12 || (m[2] !== undefined && oh === 0)) {
+    return { open: (oh % 24) * 60 + om, close: (ch % 24) * 60 + cm };
+  }
+  if (oh === 0 || ch === 0) return null;
+  const open = oh === 12 ? 12 * 60 + om : oh >= 5 ? oh * 60 + om : (oh + 12) * 60 + om;
+  const close = ch === 12 ? (open >= 12 * 60 ? 0 : 12 * 60) + cm : (ch + 12) * 60 + cm;
+  return { open, close };
+}
+
+// ---------------------------------------------------------------------
+// Which hours on the page are the opening hours (the real JT's Sports
+// Bar & Grill case: "Operating Hours" next to "Happy Hour Specials").
+// ---------------------------------------------------------------------
+
+/** Labels of hours that aren't the opening hours. A word in a sentence
+ * ("open for lunch and dinner") isn't a label. */
+const OTHER_HOURS_LABEL_RE =
+  /\b(happy\s+hours?|specials?|brunch|kitchen|lunch|dinner|delivery|holidays?|events?|classes|class\s+schedule|hora\s+feliz|especiales|almuerzo|cena|cocina|entregas?|feriados?|eventos|clases)\b/gi;
+/** Labels of opening hours. */
+const OPENING_HOURS_LABEL_RE = new RegExp(
+  `\\b((?:operating|business|opening|store|shop|office|regular|our|salon|restaurant|bar)\\s+hours|hours\\s+of\\s+operation|hours|open(?=\\s*[:\\-–]?\\s*(?:daily|every|7\\s+days|seven\\s+days|${DAY_NAME_PATTERN})\\b)|horarios?(?:\\s+de\\s+(?:atenci[oó]n|apertura))?)\\b`,
+  "gi"
+);
+/** After an other-hours word: what makes it a label. */
+const OTHER_LABEL_FOLLOW_RE = new RegExp(`^\\s*(?:hours?|horario|specials?|menu|service|times?)?\\s*(?:[:\\-–]|daily|every|\\d|(?:${DAY_NAME_PATTERN})\\b)`, "i");
+const PROSE_BEFORE_LABEL_RE = /\b(?:for|serving|serve|and|our|about|upcoming|private|book|host|from)\s+$/i;
+
+export interface HoursBlock {
+  kind: "opening" | "other" | "none";
+  /** The label as the site writes it ("Operating Hours"), or null. */
+  label: string | null;
+  text: string;
+}
+
+/** Splits page text at each hours label — each block is parsed on its
+ * own, so a day in one block never pairs with a time in the next. */
+export function splitHoursBlocks(rawText: string): HoursBlock[] {
+  const text = normalizeHoursText(rawText);
+  const labels: { index: number; end: number; kind: "opening" | "other"; label: string }[] = [];
+  for (const m of Array.from(text.matchAll(OTHER_HOURS_LABEL_RE))) {
+    const before = text.slice(Math.max(0, m.index! - 12), m.index!);
+    const after = text.slice(m.index! + m[0].length, m.index! + m[0].length + 30);
+    // A label: followed by "hours", ":", a day, "daily" or a time — and not mid-sentence.
+    // "Happy Hour" is always a label; "special event?" in a sentence isn't.
+    const labelLike = OTHER_LABEL_FOLLOW_RE.test(after) || /^happy|^hora\s+feliz/i.test(m[0]);
+    if (!labelLike || PROSE_BEFORE_LABEL_RE.test(before)) continue;
+    // "Happy Hour Specials": one label.
+    if (labels.some((l) => m.index! >= l.index && m.index! <= l.end)) continue;
+    const full = /^\s*(hours?|horario|specials?)\b/i.exec(after);
+    labels.push({ index: m.index!, end: m.index! + m[0].length + (full ? full[0].length : 0), kind: "other", label: (m[0] + (full ? full[0] : "")).trim() });
+  }
+  for (const m of Array.from(text.matchAll(OPENING_HOURS_LABEL_RE))) {
+    const start = m.index!;
+    // "Kitchen Hours", "Happy Hour Specials": the other label owns it.
+    if (labels.some((l) => l.kind === "other" && start >= l.index && start <= l.end + 1)) continue;
+    // "open 24 hours", "2 hours", "hours of fun": not a label.
+    if (/^hours$/i.test(m[0]) && (/\d\s*$/.test(text.slice(Math.max(0, start - 4), start)) || /^\s+(?:of\s+(?!operation)|ago|later|before|after|away|a\s)/i.test(text.slice(start + 5, start + 15)))) continue;
+    labels.push({ index: start, end: start + m[0].length, kind: "opening", label: m[0].trim() });
+  }
+  labels.sort((a, b) => a.index - b.index);
+  const blocks: HoursBlock[] = [];
+  const first = labels[0]?.index ?? text.length;
+  if (first > 0) blocks.push({ kind: "none", label: null, text: text.slice(0, first) });
+  labels.forEach((l, i) => {
+    const end = labels[i + 1]?.index ?? text.length;
+    blocks.push({ kind: l.kind, label: l.label, text: text.slice(l.index, end) });
+  });
+  return blocks;
+}
+
+const HOURS_TOLERANCE_MINUTES = 30;
+
+/** Closing at or before opening means after midnight (12:00 AM = 24:00). */
+function closeAfterOpen(open: number, close: number | null): number | null {
+  return close === null ? null : close <= open ? close + 1440 : close;
+}
+
+function sameHours(a: { openMinutes: number; closeMinutes: number | null; closed: boolean }, b: { openMinutes: number; closeMinutes: number | null; closed: boolean }): boolean {
+  if (a.closed || b.closed) return a.closed === b.closed;
+  const ac = closeAfterOpen(a.openMinutes, a.closeMinutes);
+  const bc = closeAfterOpen(b.openMinutes, b.closeMinutes);
+  return Math.abs(a.openMinutes - b.openMinutes) <= HOURS_TOLERANCE_MINUTES && (ac === null || bc === null || Math.abs(ac - bc) <= HOURS_TOLERANCE_MINUTES);
+}
+
+/** The site's opening hours: from blocks labelled as opening hours when
+ * there are any, else unlabelled ones; a Happy Hour / Brunch / Kitchen…
+ * block only when it's the only hours on the page and its label also
+ * calls them opening hours. "conflicting" when the chosen blocks
+ * disagree on a day. */
+export function siteOpeningHours(rawText: string): { entries: ParsedHoursEntry[]; label: string | null } | "conflicting" | null {
+  const parsed = splitHoursBlocks(rawText)
+    .map((b) => ({ ...b, entries: parseHoursFromText(b.text) }))
+    .filter((b) => b.entries.length > 0);
+  if (parsed.length === 0) return null;
+  let chosen = parsed.filter((b) => b.kind === "opening");
+  if (chosen.length === 0) chosen = parsed.filter((b) => b.kind === "none");
+  if (chosen.length === 0) {
+    const only = parsed.length === 1 ? parsed[0] : null;
+    const alsoOpening = only && /operating|business|opening|store|horario|regular/i.test(only.text.slice(0, only.label!.length + 25));
+    if (!only || !alsoOpening) return null;
+    chosen = [only];
+  }
+  // Blocks that agree (a header and a footer saying the same) are one;
+  // two different times for the same day — two blocks, or two locations
+  // listed together (the real Santa Fe Mexican Grill case: Newark's and
+  // Wilmington's hours side by side) — can't be told apart.
+  const byDay = new Map<number, ParsedHoursEntry>();
+  for (const block of chosen) {
+    for (const entry of block.entries) {
+      for (const day of entry.days) {
+        const seen = byDay.get(day);
+        if (seen && !sameHours(seen, entry)) return "conflicting";
+        if (!seen) byDay.set(day, entry);
+      }
+    }
+  }
+  const labels = Array.from(new Set(chosen.map((b) => b.label).filter((l): l is string => !!l)));
+  return { entries: chosen.flatMap((b) => b.entries), label: labels.length === 1 ? labels[0] : null };
 }
 
 /** Google's own structured periods, reduced to the same per-day shape
@@ -1019,7 +1177,12 @@ export function compareHours(
   siteText: string,
   googlePeriods: { open?: { day?: number; hour?: number; minute?: number }; close?: { day?: number; hour?: number; minute?: number } }[] | null
 ): InfoFieldFinding {
-  const siteEntries = parseHoursFromText(siteText);
+  const opening = siteOpeningHours(siteText);
+  if (opening === "conflicting") {
+    return { field: "hours", comparison: "unconfirmed", siteValue: null, googleValue: null };
+  }
+  const siteEntries = opening?.entries ?? [];
+  const siteLabel = opening?.label ?? null;
   if (siteEntries.length === 0) {
     return { field: "hours", comparison: "not_found_on_site", siteValue: null, googleValue: null };
   }
@@ -1028,7 +1191,6 @@ export function compareHours(
   }
   const googleByDay = normalizeGooglePeriods(googlePeriods);
 
-  const TOLERANCE_MINUTES = 30;
   for (const entry of siteEntries) {
     for (const day of entry.days) {
       const googleDay = googleByDay.get(day);
@@ -1040,24 +1202,21 @@ export function compareHours(
           comparison: "conflicts",
           siteValue: `${dayName(day)}: Closed`,
           googleValue: `${dayName(day)}: ${formatHoursRange(googleDay.openMinutes, googleDay.closeMinutes)}`,
+          siteLabel,
         };
       }
-      const openDiff = Math.abs(entry.openMinutes - googleDay.openMinutes);
-      const closeDiff =
-        entry.closeMinutes !== null && googleDay.closeMinutes !== null
-          ? Math.abs(entry.closeMinutes - googleDay.closeMinutes)
-          : 0;
-      if (openDiff > TOLERANCE_MINUTES || closeDiff > TOLERANCE_MINUTES) {
+      if (!sameHours(entry, { ...googleDay, closed: false })) {
         return {
           field: "hours",
           comparison: "conflicts",
           siteValue: `${dayName(day)}: ${formatHoursRange(entry.openMinutes, entry.closeMinutes)}`,
           googleValue: `${dayName(day)}: ${formatHoursRange(googleDay.openMinutes, googleDay.closeMinutes)}`,
+          siteLabel,
         };
       }
     }
   }
-  return { field: "hours", comparison: "matches", siteValue: "see site", googleValue: "see listing" };
+  return { field: "hours", comparison: "matches", siteValue: "see site", googleValue: "see listing", siteLabel };
 }
 
 function formatMinutes(total: number): string {
@@ -1193,7 +1352,7 @@ function restrictToLocationWindow(text: string, city: string | null): string {
  * go on). Used to pick the better of two independent real comparisons
  * — see compareListingInfo's own `secondaryText` doc for why these are
  * never just concatenated into one string first. */
-const INFO_COMPARISON_PRIORITY: Record<InfoFieldComparison, number> = { matches: 2, conflicts: 1, not_found_on_site: 0 };
+const INFO_COMPARISON_PRIORITY: Record<InfoFieldComparison, number> = { matches: 3, conflicts: 2, unconfirmed: 1, not_found_on_site: 0 };
 
 function preferInfoFieldFinding(a: InfoFieldFinding, b: InfoFieldFinding): InfoFieldFinding {
   return INFO_COMPARISON_PRIORITY[b.comparison] > INFO_COMPARISON_PRIORITY[a.comparison] ? b : a;

@@ -144,7 +144,7 @@ describe("archived: no re-scans, competitor scans, website re-checks or PostAI",
   test("every path checks first", () => {
     expect(fs.readFileSync("app/actions/scoring.ts", "utf8")).toMatch(/const detailsKind = options.detailsKind \?\? "rescan";\n  \/\/ Archived[^\n]*\n  if \(await isBusinessArchived\(supabase, businessId\)\)/);
     expect(fs.readFileSync("app/actions/competitors.ts", "utf8")).toContain("if (await isBusinessArchived(supabase, businessId)) return");
-    expect(fs.readFileSync("app/actions/websiteRecheck.ts", "utf8")).toContain("if (await isBusinessArchived(supabase, businessId)) {");
+    expect(fs.readFileSync("app/actions/websiteRecheck.ts", "utf8")).toContain("if (await isBusinessArchived(supabase, businessId)) return { status: \"archived\" };");
     expect(fs.readFileSync("app/actions/assistant.ts", "utf8")).toContain("if (await isBusinessArchived(createClient(), businessId)) return");
     expect(fs.readFileSync("scripts/rescan-all.ts", "utf8")).toContain("!(b as { archived_at?: string | null }).archived_at");
     expect(fs.readFileSync("supabase/business-archive.sql", "utf8")).toContain("add column if not exists archived_at timestamptz");

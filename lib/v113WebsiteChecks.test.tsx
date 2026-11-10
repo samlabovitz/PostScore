@@ -98,25 +98,25 @@ describe("2 — social icons that don't go to a profile", () => {
     expect(detectBrokenSocialLinks(`<a href="#"><i class="fa fa-instagram"></i></a><a href="https://instagram.com/realshop">IG</a>`, site)).toEqual([]);
   });
 
-  test("scoring: real profiles earn the point, the broken icons are said plainly (EN + ES); only broken ones → 0", () => {
+  test("scoring: real profiles earn the point, the broken icons are said plainly (EN + ES); only broken ones → not scored", () => {
     const broken = [
       { platform: "X/Twitter", href: "#", reason: "own_site" as const },
       { platform: "YouTube", href: "#", reason: "own_site" as const },
     ];
     const withReal = withContent({ socialProfiles: [{ platform: "Instagram", url: "instagram.com/national510" }], brokenSocialLinks: broken });
     const ok = check(withReal, "website.social_links");
-    // v1.13.1: real profiles plus a broken icon = half the point.
-    expect(ok.earnedPoints).toBe(0.5);
-    expect(ok.gaps).toEqual(["broken_social"]);
-    expect(ok.explanation).toContain("Your Twitter (X) and YouTube icons don't go to a profile — they reload your own site. Link them to your real profiles or remove them.");
-    expect(check(withReal, "website.social_links", "es").explanation).toContain("Sus íconos de Twitter (X) y YouTube no llevan a un perfil: vuelven a cargar su propio sitio.");
+    // v1.15.0: a real profile link earns the point; the broken icons are
+    // "No broken links or dead pages"'s (never counted twice).
+    expect(ok.earnedPoints).toBe(1);
+    expect(ok.gaps).toBeUndefined();
+    expect(ok.explanation).toBe("Social profiles linked from your site: Instagram: instagram.com/national510.");
 
     const onlyBroken = check(withContent({ socialProfiles: [], brokenSocialLinks: broken }), "website.social_links");
-    expect(onlyBroken.earnedPoints).toBe(0);
-    expect(onlyBroken.explanation).toBe("Your Twitter (X) and YouTube icons don't go to a profile — they reload your own site. Link them to your real profiles or remove them.");
+    expect(onlyBroken.earnedPoints).toBeNull();
+    expect(onlyBroken.explanation).toBe("Your Twitter (X) and YouTube icons don't go to a profile — they reload your own site. Link them to your real profiles or remove them. This check is left out of your score: your site's social icons don't lead to a profile, and broken links are already counted under “No broken links or dead pages”.");
 
     const home = check(withContent({ socialProfiles: [], brokenSocialLinks: [{ platform: "YouTube", href: "https://youtube.com", reason: "platform_home" }] }), "website.social_links");
-    expect(home.explanation).toBe("Your YouTube icon goes to that site's homepage, not to your profile. Link it to your real profile or remove it.");
+    expect(home.explanation).toBe("Your YouTube icon goes to that site's homepage, not to your profile. Link it to your real profile or remove it. This check is left out of your score: your site's social icons don't lead to a profile, and broken links are already counted under “No broken links or dead pages”.");
   });
 });
 
@@ -156,7 +156,7 @@ describe("4 — About: a broken “Our Story” link is said, and non-About page
   });
 });
 
-describe("3 — “Works well on phones” and “Loads fast”, Website still 30", () => {
+describe("3 — “Works well on phones” and the speed check, Website still 30", () => {
   test("Google's phone audits from PageSpeed: touch targets (and text size / page width when Google still reports them)", () => {
     const raw = (audits: Record<string, { score: number | null; scoreDisplayMode?: string }>) => ({ lighthouseResult: { audits } });
     expect(extractMobileUsability(raw({ "target-size": { score: 1, scoreDisplayMode: "binary" } }))).toEqual({ tapTargets: true, textReadable: null, fitsScreen: null });
@@ -171,12 +171,13 @@ describe("3 — “Works well on phones” and “Loads fast”, Website still 3
       websiteAnalysis: { ...wa, content: { ...wa.content!, hasViewportTag: viewport }, mobilePerformance: { method: "field" as const, fieldCategory: "FAST" as const, labScore: null, ...(usability ? { mobileUsability: usability } : {}) } },
     });
     const both = check(input(true, { tapTargets: false, textReadable: null, fitsScreen: null }), "website.mobile_friendly");
-    expect(both.maxPoints).toBe(2);
-    expect(both.earnedPoints).toBe(1);
+    // v1.15.0: always 1 point, shared by what was checked.
+    expect(both.maxPoints).toBe(1);
+    expect(both.earnedPoints).toBe(0.5);
     expect(both.explanation).toBe("On a phone: ✓ Set up for phone screens · ✗ Buttons and links big enough to tap.");
     expect(both.gaps).toEqual(["tap"]);
     expect(check(input(true, { tapTargets: false, textReadable: null, fitsScreen: null }), "website.mobile_friendly", "es").explanation).toBe("En un teléfono: ✓ Adaptado a pantallas de teléfono · ✗ Botones y enlaces del tamaño adecuado para tocar.");
-    expect(check(input(true, { tapTargets: true, textReadable: true, fitsScreen: true }), "website.mobile_friendly").earnedPoints).toBe(2);
+    expect(check(input(true, { tapTargets: true, textReadable: true, fitsScreen: true }), "website.mobile_friendly").earnedPoints).toBe(1);
     // Older saved rows: only our own viewport read is known.
     expect(check(input(false, undefined), "website.mobile_friendly").earnedPoints).toBe(0);
     const noContent = { ...BASE, websiteAnalysis: { ...wa, content: null, mobilePerformance: null } };
@@ -205,58 +206,53 @@ describe("3 — “Works well on phones” and “Loads fast”, Website still 3
 });
 
 describe("v1.13.0", () => {
-  test("SCORING_VERSION is 1.13.1 and the 1.13.0 split is on", () => {
-    expect(SCORING_VERSION).toBe("1.13.1");
+  test("SCORING_VERSION is 1.15.0 and the 1.13.0 split is on", () => {
+    expect(SCORING_VERSION).toBe("1.15.0");
     expect(SCORING_V113).toBe(true);
   });
 
   const speed = (m: NonNullable<WebsiteAnalysis["mobilePerformance"]>, locale: "en" | "es" = "en") =>
     check({ ...BASE, websiteAnalysis: { ...BASE.websiteAnalysis!, mobilePerformance: m } }, "website.performance_mobile", locale);
 
-  test("owner wording (EN + ES): “Average · about 2.0 seconds to show your page on a phone”, a muted source line, no seconds → just the word, never “/100”", () => {
-    const avg = speed({ method: "field", fieldCategory: "AVERAGE", labScore: null, lcpSeconds: 3.04 });
-    expect(avg.label).toBe("Loads fast");
-    expect(avg.explanation).toBe("Average · about 3.0 seconds to show your page on a phone.");
-    expect(avg.note).toBe("Based on real visitors in the last 28 days");
+  test("v1.15.0 “Loads in a reasonable time” (EN + ES): about X seconds, a muted source line, never “/100”", () => {
+    const ok = speed({ method: "field", fieldCategory: "AVERAGE", labScore: null, lcpSeconds: 3.04 });
+    expect(ok.label).toBe("Loads in a reasonable time");
+    expect(ok.explanation).toBe("Your site loads in a reasonable time on phones (about 3.0 seconds).");
+    expect(ok.note).toBe("Based on real visitors in the last 28 days");
     const es = speed({ method: "field", fieldCategory: "AVERAGE", labScore: null, lcpSeconds: 3.04 }, "es");
-    expect(es.explanation).toBe("Promedio · unos 3,0 segundos en mostrar su página en un teléfono.");
-    expect(es.note).toBe("Basado en visitantes reales de los últimos 28 días");
-    const lab = speed({ method: "lab", fieldCategory: null, labScore: 65, lcpSeconds: 6.82 });
-    expect(lab.explanation).toBe("Slow · about 6.8 seconds to show your page on a phone.");
-    expect(lab.note).toBe("Based on Google's phone test");
-    expect(speed({ method: "lab", fieldCategory: null, labScore: 65 }, "es").note).toBe("Basado en la prueba en teléfono de Google");
-    expect(speed({ method: "field", fieldCategory: "FAST", labScore: null }).explanation).toBe("Fast.");
-    const carried = speed({ method: "lab", fieldCategory: null, labScore: 27, measuredAt: "2026-10-06T20:40:00.000Z", carriedForward: true });
-    expect(carried.explanation).toBe("Slow (last measured Oct 6, 2026).");
-    for (const c of [avg, es, lab, carried]) expect(c.explanation).not.toMatch(/\/100|Chrome|Lighthouse|PageSpeed|CrUX|lab/i);
+    expect(es.label).toBe("Carga en un tiempo razonable");
+    expect(es.explanation).toBe("Su sitio carga en un tiempo razonable en teléfonos (unos 3,0 segundos).");
+    const slow = speed({ method: "lab", fieldCategory: null, labScore: 65, lcpSeconds: 6.82 });
+    expect(slow.explanation).toBe("Your site takes about 6.8 seconds to load on phones — many customers leave before it shows.");
+    expect(slow.note).toBe("Based on Google's phone test");
+    expect(speed({ method: "lab", fieldCategory: null, labScore: 65, lcpSeconds: 6.82 }, "es").explanation).toBe("Su sitio tarda unos 6,8 segundos en cargar en teléfonos; muchos clientes se van antes de que aparezca.");
+    for (const c of [ok, es, slow]) expect(c.explanation).not.toMatch(/\/100|Chrome|Lighthouse|PageSpeed|CrUX|lab/i);
   });
 
-  test("the label matches the seconds: Fast ≤ 2.5 s, Average ≤ 4 s, Slow > 4 s — real visitors and the phone test alike; no seconds → Google's overall rating", () => {
+  test("v1.15.0: pass/fail at 6 seconds — 3 points; no seconds → not scored (Google's overall rating alone isn't used)", () => {
     // The real National 5 & 10 case: Google rates it Slow overall, but its page shows in 2.1 s.
     const n510 = speed({ method: "field", fieldCategory: "SLOW", labScore: null, lcpSeconds: 2.1 });
-    expect(n510.explanation).toBe("Fast · about 2.1 seconds to show your page on a phone.");
-    expect(n510.earnedPoints).toBe(4);
-    const word = (m: NonNullable<WebsiteAnalysis["mobilePerformance"]>) => speed(m).explanation.split(" ")[0].replace(".", "");
-    expect([2.5, 2.6, 4, 4.1].map((sec) => word({ method: "field", fieldCategory: "FAST", labScore: null, lcpSeconds: sec }))).toEqual(["Fast", "Average", "Average", "Slow"]);
-    expect([2.5, 4, 4.1].map((sec) => word({ method: "lab", fieldCategory: null, labScore: 95, lcpSeconds: sec }))).toEqual(["Fast", "Average", "Slow"]);
-    expect(word({ method: "field", fieldCategory: "SLOW", labScore: null })).toBe("Slow");
-    expect(word({ method: "field", fieldCategory: "FAST", labScore: null })).toBe("Fast");
-    expect(word({ method: "lab", fieldCategory: null, labScore: 65 })).toBe("Average");
+    expect([n510.earnedPoints, n510.maxPoints]).toEqual([3, 3]);
+    expect([4.1, 5.9, 5.99, 6, 6.8, 13.8].map((sec) => speed({ method: "lab", fieldCategory: null, labScore: 40, lcpSeconds: sec }).earnedPoints)).toEqual([3, 3, 3, 0, 0, 0]);
+    expect(speed({ method: "lab", fieldCategory: null, labScore: 40, lcpSeconds: 7 }).gaps).toEqual(["too_slow"]);
+    const unmeasured = speed({ method: "field", fieldCategory: "SLOW", labScore: null });
+    expect(unmeasured.earnedPoints).toBeNull();
+    expect(unmeasured.explanation).toBe("Not scored: Google's test didn't say how many seconds your page takes to show.");
+    const carried = speed({ method: "lab", fieldCategory: null, labScore: 27, lcpSeconds: 7.2, measuredAt: "2026-10-06T20:40:00.000Z", carriedForward: true });
+    expect(carried.earnedPoints).toBe(0);
+    expect(carried.explanation).toMatch(/Last measured Oct 6, 2026\.$/);
   });
 
-  test("weights: phones 1 + speed 4 until the fuller phone check has run, then 2 + 3 — Website stays 30 either way", () => {
+  test("v1.15.0 weights: HTTPS 5, speed 3, phones 1, links 2 — Website stays 30, with or without the fuller phone check", () => {
     const wa = BASE.websiteAnalysis!;
-    const basic = { ...BASE, websiteAnalysis: { ...wa, mobilePerformance: { method: "field" as const, fieldCategory: "AVERAGE" as const, labScore: null } } };
-    const fuller = { ...BASE, websiteAnalysis: { ...wa, mobilePerformance: { method: "field" as const, fieldCategory: "AVERAGE" as const, labScore: null, mobileUsability: { tapTargets: true, textReadable: null, fitsScreen: null } } } };
-    expect([check(basic, "website.performance_mobile").maxPoints, check(basic, "website.mobile_friendly").maxPoints]).toEqual([4, 1]);
-    expect([check(fuller, "website.performance_mobile").maxPoints, check(fuller, "website.mobile_friendly").maxPoints]).toEqual([3, 2]);
+    const basic = { ...BASE, websiteAnalysis: { ...wa, mobilePerformance: { method: "field" as const, fieldCategory: "AVERAGE" as const, labScore: null, lcpSeconds: 3 } } };
+    const fuller = { ...BASE, websiteAnalysis: { ...wa, mobilePerformance: { method: "field" as const, fieldCategory: "AVERAGE" as const, labScore: null, lcpSeconds: 3, mobileUsability: { tapTargets: true, textReadable: null, fitsScreen: null } } } };
     for (const input of [basic, fuller]) {
+      expect(["website.https", "website.performance_mobile", "website.mobile_friendly", "website.links"].map((id) => check(input, id).maxPoints)).toEqual([5, 3, 1, 2]);
       const website = scoreBusiness(input).categories.find((c) => c.id === "website")!;
       expect(website.checks.reduce((sum, c) => sum + c.maxPoints, 0)).toBe(30);
     }
-    // Fast 100% / Average 50% / Slow 0%.
-    expect(check(basic, "website.performance_mobile").earnedPoints).toBe(2);
-    expect(check(fuller, "website.performance_mobile").earnedPoints).toBe(1.5);
+    expect(check(basic, "website.https").earnedPoints).toBe(5);
   });
 
   test("a Slow site never gains: speed + phones ≤ its 1.12.0 points (Slow 1 / Average 3 / Fast 5 of 5) while only the viewport is checked", () => {
@@ -303,7 +299,7 @@ describe("v1.13.0", () => {
     const input = withContent({ hasViewportTag: true, phoneLayout: { textReadable: false, fitsScreen: true, baseFontPx: 10, wideElement: null } }, { mobilePerformance: { method: "field", fieldCategory: "FAST", labScore: null, mobileUsability: { tapTargets: true, textReadable: null, fitsScreen: null } } });
     const c = check(input, "website.mobile_friendly");
     expect(c.explanation).toBe("On a phone: ✓ Set up for phone screens · ✗ Text readable without zooming · ✓ Nothing wider than the screen · ✓ Buttons and links big enough to tap.");
-    expect(c.earnedPoints).toBe(1.5);
+    expect(c.earnedPoints).toBe(0.8); // v1.15.0: 3 of 4 items of 1 point
     expect(c.gaps).toEqual(["text"]);
     expect(check(input, "website.mobile_friendly", "es").explanation).toContain("✗ Texto legible sin hacer zoom");
   });

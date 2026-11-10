@@ -25,6 +25,7 @@ import { checkAnchorId } from "@/lib/postaiLinks";
 import { websiteFixPlan, type WebsiteFix, type WebsiteFixPlan } from "@/lib/websiteFixes";
 import { resolveWebsiteBuilder, WEBSITE_BUILDER_NAMES, type WebsiteBuilderId } from "@/lib/websiteBuilder";
 import { WebsiteFixGuide } from "@/components/scoring/WebsiteFixGuide";
+import { LinkIssues } from "@/components/scoring/LinkIssues";
 
 /** Checks whose "excluded" state has a real, specific reason worth its
  * own honest sentence (Day 4 Part 3c) — mapped from the real stored
@@ -68,6 +69,7 @@ const CONTENT_CHECK_IDS = [
   "website.about_presence",
   "website.services_presence",
   "website.social_links",
+  "website.links",
 ];
 /** Can visitors trust what the site says — the same four live trust
  * checks the Overview's "Detailed checks" shows (spam/hacked content,
@@ -242,6 +244,7 @@ function CheckRow({
           {excludedReasonKey ? t(locale, excludedReasonKey) : check.explanation}
         </p>
         {check.note && !excludedReasonKey && <p className="mt-0.5 text-[11.5px] text-ink-mute">{check.note}</p>}
+        <LinkIssues check={check} className="mt-1 text-left text-[12.5px] font-semibold text-ink underline-offset-2 hover:text-brass hover:underline" />
 
         {(state === "partial" || state === "zero") && suggestion && !spamFinding && (
           <p className="mt-1 text-[12.5px] text-ink-mute">{suggestion.advice}</p>

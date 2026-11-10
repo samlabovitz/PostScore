@@ -17,6 +17,7 @@
 // exclude it from scoring, never fabricate a value or fail the save.
 
 import { checkSocialProfiles } from "@/lib/socialLinkCheck";
+import { checkHomepageLinks, type LinkCheckResult } from "@/lib/linkCheck";
 import { detectWebsiteBuilder, type WebsiteBuilderDetection } from "@/lib/websiteBuilder";
 import { POSTSCORE_USER_AGENT } from "./userAgent";
 import { analyzeWebsiteHtml, detectContactLinks, detectSocialProfiles } from "./websiteContentAnalysis";
@@ -1670,7 +1671,7 @@ function withMapAddress(findings: InfoFieldFinding[], map: EmbeddedMapFinding | 
   if (!map?.readableAddress) return findings;
   const fromMap: InfoFieldFinding = { ...compareAddress(map.readableAddress, googleAddress), source: "map" };
   if (fromMap.comparison === "not_found_on_site") return findings;
-  const rank = { matches: 2, conflicts: 1, not_found_on_site: 0 } as const;
+  const rank = { matches: 3, conflicts: 2, unconfirmed: 1, not_found_on_site: 0 } as const;
   return findings.map((f) => (f.field === "address" && rank[fromMap.comparison] > rank[f.comparison] ? fromMap : f));
 }
 
@@ -1899,6 +1900,9 @@ export interface WebsiteAnalysisCollection {
   builder: WebsiteBuilderDetection;
   /** v1.11.0: plain requests spent checking social links this scan. */
   socialLinkRequests: number;
+  /** Scoring 1.15.0: the homepage's customer links, opened (null when not
+   * checked — a competitor, or no readable homepage). */
+  linkCheck?: LinkCheckResult | null;
   /** Up to MAX_ADDITIONAL_PAGES other real discovered pages, each with
    * its own best-effort screenshot — see AdditionalPageCapture. Always []
    * when options.captureScreenshots was false — a regular re-scan reuses
@@ -1972,6 +1976,9 @@ export async function collectWebsiteAnalysis(
     maxBrowserRenders?: number;
     /** Step 2g: extra Services keywords for a retail-type business. */
     extraServicesKeywords?: string[];
+    /** Scoring 1.15.0: open the homepage's customer links (default true;
+     * competitors pass false — they're left out of the links check). */
+    checkLinks?: boolean;
   },
   google: {
     phone: string | null;
@@ -2181,9 +2188,15 @@ export async function collectWebsiteAnalysis(
       ? await checkSocialProfiles(finalContent.socialProfiles!, website, fetchImpl)
       : null;
 
+  // Scoring 1.15.0: the homepage's customer links (order, book, contact,
+  // menu, directions, main navigation), each opened once (lib/linkCheck.ts).
+  const homepageHtml = htmlResult.status === "fulfilled" ? htmlResult.value.html : null;
+  const linkCheck = options.checkLinks !== false && homepageHtml && finalContent ? await checkHomepageLinks(homepageHtml, website, fetchImpl) : null;
+
   return {
     content: socialChecked && finalContent ? { ...finalContent, socialProfiles: socialChecked.profiles } : finalContent,
     socialLinkRequests: socialChecked?.requests ?? 0,
+    linkCheck,
     contentFetchFailureReason: content ? null : htmlFailureReason,
     mobilePerformance: pageSpeed.measurement,
     mobilePerformanceFailureReason: pageSpeed.measurement ? null : pageSpeed.failureReason,

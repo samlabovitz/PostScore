@@ -67,7 +67,7 @@ export function scoringInput(overrides: Partial<BusinessScoringInput> = {}): Bus
         isLikelyClientRenderedShell: false,
         renderedContentSignals: null,
       },
-      mobilePerformance: { method: "lab", fieldCategory: null, labScore: 92 },
+      mobilePerformance: { method: "lab", fieldCategory: null, labScore: 92, lcpSeconds: 1.8 },
       mobilePerformanceFailureReason: null,
       contentFetchFailureReason: null,
       httpsUnreachableReason: null,

@@ -45,6 +45,8 @@ import { spamTopic } from "@/lib/siteSecurity";
 import { socialPagePlatform } from "@/lib/websiteTrust";
 import { platformPage, socialProfileCounts } from "@/lib/socialLinkCheck";
 import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type AbandonedSiteFinding, type EmbeddedMapFinding, type InfoFieldFinding, type SpamFinding, type StaleNoticeFinding, type WebsiteKind } from "@/lib/websiteTrust";
+import type { SpeedSample, SpeedSmoothed } from "@/lib/speedSmoothing";
+import { socialIconCount, socialLinkProblems, URGENT_LINK_KINDS, type LinkCheckResult, type LinkProblem } from "@/lib/linkProblems";
 
 // ---------------------------------------------------------------------------
 // Versioning
@@ -65,7 +67,13 @@ import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type Aban
 // 1.13.1: Social media links — real profiles plus a broken icon = 0.5;
 // a website checked on fewer than half of its 30 points (it blocks
 // automated checks) counts in the total only by the share checked.
-export const SCORING_VERSION = "1.13.1";
+// 1.14.0: "Loads fast" scores the typical result of the site's last 3
+// speed tests with a 0.3 s buffer at each line (lib/speedSmoothing.ts).
+// 1.15.0: "Loads fast" → "Loads in a reasonable time" (1, fails at a
+// typical 6 s+); "Works well on phones" always 1; "Uses HTTPS" 6 → 5; new
+// "No broken links or dead pages" (4); Social links only asks "do you
+// link to profiles" and a broken menu link no longer costs Services.
+export const SCORING_VERSION = "1.15.0";
 
 /**
  * v1.13.0's speed / phone split and Content depth without the viewport —
@@ -99,6 +107,9 @@ export const SCORING_V113: boolean = scoringAtLeast("1.13.0");
  *   Reviews. A business with no website keeps today's scoring.
  */
 export const SCORING_V1131: boolean = scoringAtLeast("1.13.1");
+
+/** v1.15.0 (see SCORING_VERSION): the links check and the Website rebalance. */
+export const SCORING_V115: boolean = scoringAtLeast("1.15.0");
 
 // ---------------------------------------------------------------------------
 // Core types
@@ -778,6 +789,15 @@ export interface WebsiteAnalysis {
    * recent capture (Step 2d) — a 4xx/5xx capture is never stored as an
    * image. Absent/null on captures from before this was recorded. */
   screenshotHttpStatus?: number | null;
+  /** "Loads fast", steadied (lib/speedSmoothing.ts): this site's last
+   * successful speed measurements (at most 3, within 30 days), newest
+   * first, and their typical result — what the check scores. Absent on
+   * analyses saved before Nov 10. */
+  speedHistory?: SpeedSample[];
+  speedSmoothed?: SpeedSmoothed | null;
+  /** v1.15.0: the homepage's customer links, opened at the last scan
+   * (lib/linkCheck.ts). Absent = not checked yet (or a competitor). */
+  linkCheck?: LinkCheckResult | null;
   /** The site the stored screenshots are of (lib/businessWebsite.ts
    * gradedWebsite at capture time). Absent on captures from before Nov 9. */
   screenshotSiteUrl?: string | null;
@@ -1434,10 +1454,55 @@ export function fullerPhoneCheckRan(input: BusinessScoringInput): boolean {
   return [u?.tapTargets, u?.textReadable, u?.fitsScreen, l?.textReadable, l?.fitsScreen].some((v) => typeof v === "boolean");
 }
 function loadsFastMaxPoints(input: BusinessScoringInput): number {
+  if (SCORING_V115) return LOADS_REASONABLE_POINTS;
   return fullerPhoneCheckRan(input) ? 3 : 4;
 }
 function worksOnPhonesMaxPoints(input: BusinessScoringInput): number {
+  // v1.15.0: always 1 — the fuller phone check's parts share it.
+  if (SCORING_V115) return 1;
   return fullerPhoneCheckRan(input) ? 2 : 1;
+}
+
+/** v1.15.0: a typical phone load time at or past this fails "Loads in a reasonable time". */
+export const REASONABLE_LOAD_SECONDS = 6;
+/** v1.15.0: "Loads in a reasonable time" is pass/fail for this many points. */
+export const LOADS_REASONABLE_POINTS = 3;
+/** v1.15.0: "No broken links or dead pages" — 1 off per broken link, minimum 0. */
+export const LINKS_CHECK_POINTS = 2;
+
+/** v1.15.0 "Loads in a reasonable time" (3, pass/fail): the typical time
+ * of the site's recent speed tests (lib/speedSmoothing.ts) — fails only at
+ * REASONABLE_LOAD_SECONDS or more. No seconds measured = not scored. */
+function loadsReasonableV115(input: BusinessScoringInput, locale: Locale): ReturnType<CheckDefinition["evaluate"]> {
+  const wa = input.websiteAnalysis!;
+  const blocked = siteBlocksAutomatedChecks(input);
+  const m = wa.mobilePerformance;
+  const usable = !!m && (m.method === "field" ? m.fieldCategory !== null : !blocked && m.labScore !== null);
+  if (!m || !usable) {
+    if (blocked) return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.performance_mobile.explanation.blockedSite") };
+    if (wa.mobilePerformanceFailureReason?.cause === "no_main_content") {
+      return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.performance_mobile.explanation.noMainContent"), meta: { noScoreCause: "no_main_content" }, gaps: ["no_main_content"] };
+    }
+    return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.performance_mobile.explanation.noScore") };
+  }
+  const smoothed = wa.speedSmoothed && m.measuredUrl && sameMeasuredSite(wa.speedSmoothed.measuredUrl, m.measuredUrl) ? wa.speedSmoothed : null;
+  const seconds = smoothed?.seconds ?? (typeof m.lcpSeconds === "number" ? m.lcpSeconds : null);
+  if (seconds === null) return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.performance_mobile.explanation.noSecondsV115") };
+  const time = new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.round(seconds * 10) / 10);
+  const pass = seconds < REASONABLE_LOAD_SECONDS;
+  const lastMeasured = m.carriedForward && m.measuredAt ? formatShortDate(m.measuredAt, locale, input.timeZone || undefined) : null;
+  return {
+    earnedPoints: pass ? LOADS_REASONABLE_POINTS : 0,
+    confidence: "VERIFIED",
+    explanation: [
+      t(locale, pass ? "content.checks.website.performance_mobile.explanation.reasonableV115" : "content.checks.website.performance_mobile.explanation.tooSlowV115", { seconds: time }),
+      ...(smoothed && smoothed.samples > 1 ? [t(locale, "content.checks.website.performance_mobile.explanation.typicalOfTestsV115", { count: smoothed.samples })] : []),
+      ...(lastMeasured ? [t(locale, "content.checks.website.performance_mobile.explanation.lastMeasuredNoteV115", { date: lastMeasured })] : []),
+    ].join(" "),
+    note: t(locale, m.method === "field" ? "content.checks.website.performance_mobile.note.field" : "content.checks.website.performance_mobile.note.lab"),
+    meta: { method: m.method, seconds: String(Math.round(seconds * 10) / 10) },
+    ...(pass ? {} : { gaps: ["too_slow"] }),
+  };
 }
 
 /** v1.13.0: the label matches the seconds shown — Fast ≤ 2.5 s, Average
@@ -1483,18 +1548,99 @@ function loadsFastV113(input: BusinessScoringInput, locale: Locale): ReturnType<
     }
     return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.performance_mobile.explanation.noScore") };
   }
-  const category = speedCategory(m);
-  const result = speedResult(category, m.lcpSeconds, locale);
+  // Nov 10: the typical result of this site's last tests (lib/speedSmoothing.ts)
+  // when it's of the same site as this measurement; else this one alone.
+  const smoothed = wa.speedSmoothed && m.measuredUrl && sameMeasuredSite(wa.speedSmoothed.measuredUrl, m.measuredUrl) ? wa.speedSmoothed : null;
+  const category = smoothed ? smoothed.category : speedCategory(m);
+  const seconds = smoothed ? (smoothed.seconds ?? undefined) : m.lcpSeconds;
+  const result = speedResult(category, seconds, locale);
   const lastMeasured = m.carriedForward && m.measuredAt ? formatShortDate(m.measuredAt, locale, input.timeZone || undefined) : null;
   return {
     earnedPoints: roundTo(SPEED_SHARE[category] * loadsFastMaxPoints(input), 1),
     confidence: "VERIFIED",
-    explanation: lastMeasured
-      ? t(locale, "content.checks.website.performance_mobile.explanation.resultLastMeasuredV113", { result, date: lastMeasured })
-      : t(locale, "content.checks.website.performance_mobile.explanation.resultV113", { result }),
+    explanation:
+      smoothed && smoothed.samples > 1
+        ? t(locale, "content.checks.website.performance_mobile.explanation.resultTypicalV113", { result, count: smoothed.samples })
+        : lastMeasured
+          ? t(locale, "content.checks.website.performance_mobile.explanation.resultLastMeasuredV113", { result, date: lastMeasured })
+          : t(locale, "content.checks.website.performance_mobile.explanation.resultV113", { result }),
     note: t(locale, m.method === "field" ? "content.checks.website.performance_mobile.note.field" : "content.checks.website.performance_mobile.note.lab"),
     meta: { method: m.method },
   };
+}
+
+/** v1.15.0 "No broken links or dead pages" (4): the homepage's customer
+ * links (order, book, contact, menu, directions, main navigation —
+ * lib/linkCheck.ts) and its social icons. Every one that opens the real
+ * page it promises = 4; each broken one costs 1 (never below 0). An
+ * unreadable site, or one not checked yet, isn't scored. Competitors are
+ * left out (forCompetitorComparison). */
+const LINKS_CHECK: CheckDefinition = {
+  id: "website.links",
+  labelKey: "content.checks.website.links.label",
+  category: "website",
+  maxPoints: LINKS_CHECK_POINTS,
+  adviceKey: "content.checks.website.links.advice",
+  evaluate(input, locale) {
+    if (!hasAnalyzableWebsite(input)) return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.links.explanation.noWebsite") };
+    const wa = input.websiteAnalysis;
+    if (!wa) return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.links.explanation.notCheckedYet") };
+    const unreadable = pageContentUnreadable(input, locale);
+    if (unreadable) return unreadable;
+    if (!wa.linkCheck) return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.links.explanation.notCheckedYet") };
+    const content = wa.content;
+    const problems = [...wa.linkCheck.problems, ...socialLinkProblems(content?.socialProfiles, content?.brokenSocialLinks)];
+    const checked = wa.linkCheck.checked + socialIconCount(content?.socialProfiles, content?.brokenSocialLinks);
+    if (checked === 0) return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.links.explanation.noLinks") };
+    if (problems.length === 0) {
+      return { earnedPoints: LINKS_CHECK_POINTS, confidence: "VERIFIED", explanation: tPlural(locale, "content.checks.website.links.explanation.allGood", checked, { count: checked }), meta: { linksChecked: String(checked) } };
+    }
+    const urgent = problems.some((p) => URGENT_LINK_KINDS.includes(p.kind));
+    return {
+      earnedPoints: Math.max(0, LINKS_CHECK_POINTS - problems.length),
+      confidence: "VERIFIED",
+      explanation: tPlural(locale, "content.checks.website.links.explanation.problems", problems.length, { count: problems.length, checked }),
+      meta: { linksChecked: String(checked), linkProblems: JSON.stringify(problems) },
+      gaps: [urgent ? "urgent_link" : "broken_link"],
+    };
+  },
+  simulateFix: (input) => {
+    const wa = input.websiteAnalysis ?? PERFECT_WEBSITE_ANALYSIS;
+    return {
+      ...input,
+      website: hasAnalyzableWebsite(input) ? input.website : "https://example.com",
+      websiteAnalysis: {
+        ...wa,
+        linkCheck: { checkedAt: new Date(0).toISOString(), checked: Math.max(1, wa.linkCheck?.checked ?? 1), problems: [] },
+        content: wa.content
+          ? {
+              ...wa.content,
+              socialProfiles: (wa.content.socialProfiles ?? []).map((p) => (p.check && p.check.result !== "profile" && p.check.result !== "unconfirmed" ? { ...p, check: { ...p.check, result: "profile" as const } } : p)),
+              brokenSocialLinks: [],
+            }
+          : wa.content,
+      },
+    };
+  },
+};
+
+/** The links check (v1.15.0) lists this URL as broken. */
+function linkCheckListed(input: BusinessScoringInput, url: string | null): boolean {
+  if (!url) return false;
+  const key = (u: string) => u.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/[#?].*$/, "").replace(/\/+$/, "");
+  return (input.websiteAnalysis?.linkCheck?.problems ?? []).some((p) => key(p.url) === key(url));
+}
+
+/** Checks the competitor comparison leaves out (v1.15.0): competitors
+ * aren't link-checked, so the owner's own entry isn't either — the
+ * comparison stays like for like. */
+export const COMPETITOR_EXCLUDED_CHECK_IDS: readonly string[] = ["website.links"];
+
+/** The owner's breakdown for comparing with competitors: without the
+ * checks competitors aren't scored on, re-totalled. */
+export function forCompetitorComparison(breakdown: ScoreBreakdown, locale: Locale = DEFAULT_LOCALE): ScoreBreakdown {
+  if (!breakdown.checks.some((c) => COMPETITOR_EXCLUDED_CHECK_IDS.includes(c.id))) return breakdown;
+  return { ...breakdownFromChecks(breakdown.checks.filter((c) => !COMPETITOR_EXCLUDED_CHECK_IDS.includes(c.id)), locale, breakdown.scoringVersion), ...(breakdown.scanKind ? { scanKind: breakdown.scanKind } : {}) };
 }
 
 /** A fully-good WebsiteAnalysis, used only by the Website quality checks'
@@ -1515,7 +1661,7 @@ const PERFECT_WEBSITE_ANALYSIS: WebsiteAnalysis = {
     isLikelyClientRenderedShell: false,
     renderedContentSignals: null,
   },
-  mobilePerformance: { method: "lab", fieldCategory: null, labScore: 100 },
+  mobilePerformance: { method: "lab", fieldCategory: null, labScore: 100, lcpSeconds: 1.5 },
   mobilePerformanceFailureReason: null,
   contentFetchFailureReason: null,
   httpsUnreachableReason: null,
@@ -2262,7 +2408,8 @@ export const CHECKS: CheckDefinition[] = [
     id: "website.https",
     labelKey: "content.checks.website.https.label",
     category: "website",
-    maxPoints: 6,
+    // v1.15.0: 5 (its sixth point went to "No broken links or dead pages").
+    maxPoints: SCORING_V115 ? 5 : 6,
     adviceKey: "content.checks.website.https.advice",
     evaluate(input, locale) {
       if (!hasAnalyzableWebsite(input)) {
@@ -2274,7 +2421,7 @@ export const CHECKS: CheckDefinition[] = [
       }
       if (input.httpsStatus === "https") {
         return {
-          earnedPoints: 6,
+          earnedPoints: SCORING_V115 ? 5 : 6,
           confidence: "VERIFIED",
           explanation: t(locale, "content.checks.website.https.explanation.https"),
         };
@@ -2311,13 +2458,17 @@ export const CHECKS: CheckDefinition[] = [
   },
   {
     id: "website.performance_mobile",
-    labelKey: SCORING_V113 ? "content.checks.website.performance_mobile.labelV113" : "content.checks.website.performance_mobile.label",
+    labelKey: SCORING_V115
+      ? "content.checks.website.performance_mobile.labelV115"
+      : SCORING_V113
+        ? "content.checks.website.performance_mobile.labelV113"
+        : "content.checks.website.performance_mobile.label",
     category: "website",
     // Gave up 4 points (was 10) to make room for the 4 new site-trust
     // checks inside Website's unchanged 30-point total — see
     // CATEGORY_WEIGHTS' own doc.
     // v1.13.0: 4 (3 once the fuller phone check has run — loadsFastMaxPoints).
-    maxPoints: SCORING_V113 ? 4 : MOBILE_SPEED_MAX_POINTS,
+    maxPoints: SCORING_V115 ? LOADS_REASONABLE_POINTS : SCORING_V113 ? 4 : MOBILE_SPEED_MAX_POINTS,
     ...(SCORING_V113 ? { maxPointsFor: loadsFastMaxPoints } : {}),
     adviceKey: "content.checks.website.performance_mobile.advice",
     evaluate(input, locale) {
@@ -2335,6 +2486,7 @@ export const CHECKS: CheckDefinition[] = [
           explanation: t(locale, "content.checks.website.performance_mobile.explanation.notAnalyzed"),
         };
       }
+      if (SCORING_V115) return loadsReasonableV115(input, locale);
       if (SCORING_V113) return loadsFastV113(input, locale);
       // Step 2d: a site our own fetch can't access (bot-blocked, or one
       // that shows automated checks an error page) — no LAB rating is
@@ -2466,6 +2618,8 @@ export const CHECKS: CheckDefinition[] = [
   },
   // v1.13.0 only (SCORING_V113).
   ...(SCORING_V113 ? [MOBILE_FRIENDLY_CHECK] : []),
+  // v1.15.0 only.
+  ...(SCORING_V115 ? [LINKS_CHECK] : []),
   {
     id: "website.content_depth",
     labelKey: "content.checks.website.content_depth.label",
@@ -2873,6 +3027,12 @@ export const CHECKS: CheckDefinition[] = [
       // not_found — see website.about_presence's own comment on this
       // same branch: a real, confirmed absence counts against the
       // score, VERIFIED at 0, unlike couldnt_check's genuine exclusion.
+      // v1.15.0: a broken menu link is "No broken links or dead pages"'s —
+      // here it's couldn't check (never counted twice) — but only when
+      // that check really lists it; otherwise it stays a zero here.
+      if (SCORING_V115 && presence.note === "broken_link" && linkCheckListed(input, presence.url)) {
+        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.services_presence.explanation.brokenLinkV115", { url: presence.url ?? "" }) };
+      }
       return {
         earnedPoints: 0,
         confidence: "VERIFIED",
@@ -2956,6 +3116,17 @@ export const CHECKS: CheckDefinition[] = [
       const broken = (content.brokenSocialLinks ?? []).filter((b) => !counted.some((p) => p.platform === b.platform));
       const whyNot = [...notCounted.map((p) => socialLinkProblem(p, locale)), ...brokenSocialLines(broken, locale)];
       const brokenGaps = broken.length > 0 ? { gaps: ["broken_social"] } : {};
+      // v1.15.0: only "do you link to your social profiles?" — a link to a
+      // profile counts even if that profile is gone or the link loops back:
+      // "No broken links or dead pages" owns those (never counted twice).
+      if (SCORING_V115 && (content.socialProfiles.length > 0 || listingProfile)) {
+        const linked = [...content.socialProfiles, ...(listingProfile && !content.socialProfiles.some((p) => p.platform === listingProfile.platform) ? [listingProfile] : [])];
+        return {
+          earnedPoints: 1,
+          confidence: "VERIFIED",
+          explanation: t(locale, "content.checks.website.social_links.explanation.found", { profiles: linked.map((p) => `${p.platform}: ${p.url}`).join(", ") }),
+        };
+      }
       if (counted.length > 0) {
         return {
           // v1.13.1: a broken icon next to real profiles costs half the point.
@@ -2976,7 +3147,15 @@ export const CHECKS: CheckDefinition[] = [
           ].join(" "),
         };
       }
+      // (v1.15.0: reached only with no profile link at all — icons that
+      // go nowhere don't link to a profile, said plainly.)
       if (notCounted.length > 0 || broken.length > 0) {
+        // v1.15.0: icons that go nowhere are "No broken links or dead
+        // pages"'s — with no real profile link, this check isn't scored
+        // (the real Monkey's Uncle case: a broken icon never counts twice).
+        if (SCORING_V115) {
+          return { earnedPoints: null, confidence: "NOT_FOUND", explanation: [...whyNot, t(locale, "content.checks.website.social_links.explanation.onlyBrokenV115")].join(" ") };
+        }
         return { earnedPoints: 0, confidence: "VERIFIED", ...brokenGaps, explanation: whyNot.join(" ") };
       }
       // A JavaScript-rendered page's links may simply not be in the HTML
@@ -3104,7 +3283,10 @@ export const CHECKS: CheckDefinition[] = [
       const couldntCheck = pageContentUnreadable(input, locale);
       if (couldntCheck) return couldntCheck;
       const overriddenKeys = new Set((input.websiteTrustOverrides ?? []).map((o) => o.key));
-      const determinable = trust.infoConflicts.filter((f) => f.comparison !== "not_found_on_site");
+      // "unconfirmed" hours (several disagreeing opening-hours blocks) are
+      // excluded like a field the site doesn't state — never a mismatch.
+      const determinable = trust.infoConflicts.filter((f) => f.comparison !== "not_found_on_site" && f.comparison !== "unconfirmed");
+      const hoursUnconfirmed = trust.infoConflicts.some((f) => f.field === "hours" && f.comparison === "unconfirmed");
       // Day 2b: with no Google listing info at all (a website-only
       // business), there's nothing to compare against — say that, not
       // that the site is missing it. Same points (excluded) either way.
@@ -3112,7 +3294,11 @@ export const CHECKS: CheckDefinition[] = [
         return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.info_consistency.explanation.noListingInfo") };
       }
       if (determinable.length === 0) {
-        return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.info_consistency.explanation.noComparableInfo") };
+        return {
+          earnedPoints: null,
+          confidence: "NOT_FOUND",
+          explanation: t(locale, hoursUnconfirmed ? "content.checks.website.info_consistency.explanation.hoursUnconfirmed" : "content.checks.website.info_consistency.explanation.noComparableInfo"),
+        };
       }
       const realConflicts = determinable.filter((f) => f.comparison === "conflicts" && !overriddenKeys.has(keyForInfoConflict(f)));
       if (realConflicts.length === 0) {
@@ -3123,15 +3309,28 @@ export const CHECKS: CheckDefinition[] = [
           confidence: "VERIFIED",
           explanation: t(
             locale,
-            addressFromMap
-              ? "content.checks.website.info_consistency.explanation.allMatchMap"
-              : "content.checks.website.info_consistency.explanation.allMatch"
+            // Hours that couldn't be confirmed are never said to match.
+            hoursUnconfirmed
+              ? "content.checks.website.info_consistency.explanation.allMatchHoursUnconfirmed"
+              : addressFromMap
+                ? "content.checks.website.info_consistency.explanation.allMatchMap"
+                : "content.checks.website.info_consistency.explanation.allMatch"
           ),
         };
       }
       const matchingCount = determinable.length - realConflicts.length;
       const earnedPoints = roundTo(1 * (matchingCount / determinable.length), 1);
       const first = realConflicts[0];
+      // Hours: say which block we read ("Your website's Operating Hours say
+      // Friday 12:00 PM–12:00 AM; …").
+      if (first.field === "hours" && first.siteLabel) {
+        const dayless = (v: string | null) => (v ?? "").replace(/^(\w+): /, "$1 ");
+        return {
+          earnedPoints,
+          confidence: "VERIFIED",
+          explanation: t(locale, "content.checks.website.info_consistency.explanation.conflictHoursLabelled", { label: first.siteLabel, site: dayless(first.siteValue), google: dayless(first.googleValue) }),
+        };
+      }
       const fieldKey =
         first.field === "phone"
           ? "content.checks.website.info_consistency.explanation.conflictPhone"
@@ -3458,7 +3657,7 @@ export const CHECKS_V112: CheckDefinition[] = CHECKS.flatMap((def) => {
 
 /** The checks a scoring version uses. */
 export function checksFor(version: string): CheckDefinition[] {
-  // 1.13.0 keeps every 1.12.0 check (its own changes live in CHECKS, behind SCORING_V113).
+  // 1.13.0 and 1.14.0 keep every 1.12.0 check (their changes live inside the checks).
   return versionAtLeast(version, SCORING_VERSION_V112) ? CHECKS_V112 : CHECKS;
 }
 
@@ -4194,6 +4393,9 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
   const lastScreenshotRefreshAt = typeof v.lastScreenshotRefreshAt === "string" ? v.lastScreenshotRefreshAt : null;
   const screenshotHttpStatus = typeof v.screenshotHttpStatus === "number" ? v.screenshotHttpStatus : null;
   const screenshotSiteUrl = typeof v.screenshotSiteUrl === "string" ? v.screenshotSiteUrl : null;
+  const speedHistory = parseSpeedHistory(v.speedHistory);
+  const speedSmoothed = parseSpeedSmoothed(v.speedSmoothed);
+  const linkCheck = parseLinkCheck(v.linkCheck);
   const screenshotCaptureLog = parseScreenshotCaptureLog(v.screenshotCaptureLog);
   const aboutPresence = parsePagePresenceResult(v.aboutPresence);
   const servicesPresence = parsePagePresenceResult(v.servicesPresence);
@@ -4212,6 +4414,9 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
     // Only present when stored (captures from before Step 2d have neither).
     ...(screenshotHttpStatus !== null ? { screenshotHttpStatus } : {}),
     ...(screenshotSiteUrl !== null ? { screenshotSiteUrl } : {}),
+    ...(speedHistory ? { speedHistory } : {}),
+    ...(speedSmoothed ? { speedSmoothed } : {}),
+    ...(linkCheck ? { linkCheck } : {}),
     ...(Array.isArray(v.readViaBrowserChecks)
       ? { readViaBrowserChecks: (v.readViaBrowserChecks as unknown[]).filter((x): x is string => typeof x === "string") }
       : {}),
@@ -4236,6 +4441,43 @@ export function parseWebsiteAnalysis(value: unknown): WebsiteAnalysis | null {
   };
 }
 
+const SPEED_CATEGORIES = new Set(["FAST", "AVERAGE", "SLOW"]);
+
+function parseSpeedHistory(value: unknown): SpeedSample[] | null {
+  if (!Array.isArray(value)) return null;
+  return value
+    .filter((s): s is Record<string, unknown> => !!s && typeof s === "object")
+    .filter((s) => typeof s.measuredAt === "string" && typeof s.measuredUrl === "string" && SPEED_CATEGORIES.has(String(s.category)))
+    .map((s) => ({ measuredAt: s.measuredAt as string, measuredUrl: s.measuredUrl as string, lcpSeconds: typeof s.lcpSeconds === "number" ? s.lcpSeconds : null, category: s.category as FieldSpeedCategory }));
+}
+
+const LINK_KINDS = new Set(["order", "book", "contact", "menu", "directions", "nav", "social"]);
+
+function parseLinkCheck(value: unknown): LinkCheckResult | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  if (typeof v.checkedAt !== "string" || typeof v.checked !== "number" || !Array.isArray(v.problems)) return null;
+  const problems = (v.problems as unknown[])
+    .filter((p): p is Record<string, unknown> => !!p && typeof p === "object")
+    .filter((p) => LINK_KINDS.has(String(p.kind)) && typeof p.url === "string" && typeof p.problem === "string")
+    .map((p) => ({
+      kind: p.kind as LinkProblem["kind"],
+      label: typeof p.label === "string" ? p.label : "",
+      url: p.url as string,
+      problem: p.problem as LinkProblem["problem"],
+      ...(typeof p.status === "number" ? { status: p.status } : {}),
+      ...(typeof p.platform === "string" ? { platform: p.platform } : {}),
+    }));
+  return { checkedAt: v.checkedAt, checked: v.checked, problems };
+}
+
+function parseSpeedSmoothed(value: unknown): SpeedSmoothed | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  if (!SPEED_CATEGORIES.has(String(v.category)) || typeof v.measuredUrl !== "string" || typeof v.samples !== "number") return null;
+  return { category: v.category as FieldSpeedCategory, seconds: typeof v.seconds === "number" ? v.seconds : null, samples: v.samples, measuredUrl: v.measuredUrl };
+}
+
 function parseScreenshotCaptureLog(value: unknown): ScreenshotCaptureLog | null {
   if (!value || typeof value !== "object") return null;
   const v = value as Record<string, unknown>;
@@ -4245,7 +4487,7 @@ function parseScreenshotCaptureLog(value: unknown): ScreenshotCaptureLog | null 
 }
 
 const INFO_CONFLICT_FIELDS = new Set(["phone", "address", "hours"]);
-const INFO_CONFLICT_COMPARISONS = new Set(["matches", "conflicts", "not_found_on_site"]);
+const INFO_CONFLICT_COMPARISONS = new Set(["matches", "conflicts", "unconfirmed", "not_found_on_site"]);
 
 function parseInfoFieldFinding(value: unknown): InfoFieldFinding | null {
   if (!value || typeof value !== "object") return null;
@@ -4258,6 +4500,7 @@ function parseInfoFieldFinding(value: unknown): InfoFieldFinding | null {
     siteValue: typeof v.siteValue === "string" ? v.siteValue : null,
     googleValue: typeof v.googleValue === "string" ? v.googleValue : null,
     ...(v.source === "map" ? { source: "map" as const } : {}),
+    ...(typeof v.siteLabel === "string" && v.siteLabel ? { siteLabel: v.siteLabel } : {}),
   };
 }
 

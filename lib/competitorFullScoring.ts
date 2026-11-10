@@ -205,6 +205,8 @@ export async function scoreCompetitorFully(
         existingAnalysisJson: null,
         skipScreenshots: true,
         allowBrowserRenders: false,
+        // Competitors are left out of "No broken links or dead pages" (1.15.0).
+        checkLinks: false,
         extraServicesKeywords: [],
         listingFacts: {
           phone: listingFacts ? row.phone ?? null : null,

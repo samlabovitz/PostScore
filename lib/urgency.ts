@@ -6,17 +6,19 @@
 //   - the Google listing's website link is parked, broken or a dead page
 //   - the phone number on Google doesn't match the website
 //   - the website is down, or flagged unsafe by Google Safe Browsing
+//   - (v1.15.0) a link customers use to order, book or contact is broken
 //   - no phone number, or no hours, on the Google listing
 // Every surface asks this one module, so they always agree. Pure.
 
 import type { ActionPlanTask } from "@/lib/actionPlan";
 import type { BusinessScoringInput, ScoreBreakdown } from "@/lib/scoring";
 import { keyForInfoConflict } from "@/lib/websiteTrust";
+import { URGENT_LINK_KINDS } from "@/lib/linkProblems";
 
-export type UrgentIssue = "listing_link" | "phone_mismatch" | "site_down" | "site_unsafe" | "no_phone" | "no_hours";
+export type UrgentIssue = "listing_link" | "phone_mismatch" | "site_down" | "site_unsafe" | "broken_link" | "no_phone" | "no_hours";
 
 /** The order the Overview's alert lists them in: dead ends first. */
-export const URGENT_ISSUES: readonly UrgentIssue[] = ["listing_link", "site_down", "site_unsafe", "phone_mismatch", "no_phone", "no_hours"];
+export const URGENT_ISSUES: readonly UrgentIssue[] = ["listing_link", "site_down", "site_unsafe", "broken_link", "phone_mismatch", "no_phone", "no_hours"];
 
 /** The scoring checks (action-plan task ids) each issue is fixed by. */
 const CHECKS_FOR_ISSUE: Record<UrgentIssue, readonly string[]> = {
@@ -25,6 +27,8 @@ const CHECKS_FOR_ISSUE: Record<UrgentIssue, readonly string[]> = {
   phone_mismatch: ["website.info_consistency"],
   site_down: [],
   site_unsafe: ["website.security"],
+  // v1.15.0: a broken order / book / contact link on the homepage.
+  broken_link: ["website.links"],
   no_phone: ["completeness.phone"],
   no_hours: ["completeness.hours"],
 };
@@ -68,6 +72,11 @@ export function urgentIssues(
   // Google Safe Browsing flagged it (spam signals alone aren't a dead end).
   if (trust?.safeBrowsingThreat?.threatFound) issues.add("site_unsafe");
 
+  // v1.15.0: an order / book / contact link on the homepage is broken —
+  // and the links check scored it (a readable site).
+  const links = check(breakdown.checks, "website.links");
+  if (links && links.earnedPoints !== null && (input.websiteAnalysis?.linkCheck?.problems ?? []).some((p) => URGENT_LINK_KINDS.includes(p.kind))) issues.add("broken_link");
+
   const phone = check(breakdown.checks, "completeness.phone");
   if (hasListing && phone && phone.earnedPoints === 0) issues.add("no_phone");
   const hours = check(breakdown.checks, "completeness.hours");
@@ -79,7 +88,7 @@ export function urgentIssues(
 /** The urgent issue an action-plan task (or the Growth page's website
  * summary, id "website") fixes, or null. */
 export function urgentIssueForCheck(checkId: string, issues: readonly UrgentIssue[]): UrgentIssue | null {
-  if (checkId === "website") return issues.find((i) => i === "site_down" || i === "site_unsafe") ?? null;
+  if (checkId === "website") return issues.find((i) => i === "site_down" || i === "site_unsafe" || i === "broken_link") ?? null;
   return issues.find((i) => CHECKS_FOR_ISSUE[i].includes(checkId)) ?? null;
 }
 

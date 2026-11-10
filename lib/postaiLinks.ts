@@ -33,6 +33,7 @@ const WEBSITE_CHECKS = [
   "about_presence",
   "services_presence",
   "social_links",
+  "links",
   "security",
   "info_consistency",
   "notice_freshness",

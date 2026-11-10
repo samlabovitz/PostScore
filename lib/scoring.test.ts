@@ -40,7 +40,7 @@ const GOOD_WEBSITE_ANALYSIS: WebsiteAnalysis = {
     isLikelyClientRenderedShell: false,
     renderedContentSignals: null,
   },
-  mobilePerformance: { method: "lab", fieldCategory: null, labScore: 96 },
+  mobilePerformance: { method: "lab", fieldCategory: null, labScore: 96, lcpSeconds: 1.6 },
   mobilePerformanceFailureReason: null,
   contentFetchFailureReason: null,
   httpsUnreachableReason: null,
@@ -407,6 +407,23 @@ describe("confidence-aware scoring", () => {
       expect(check.earnedPoints).toBe(0);
       expect(check.explanation).toContain("https://example.com/services");
       expect(check.explanation.toLowerCase()).toContain("broken");
+    });
+
+    test("v1.15.0: a broken menu link the links check lists is that check's — here it's not counted (never twice)", () => {
+      const input: BusinessScoringInput = {
+        ...PERFECT_INPUT,
+        websiteAnalysis: {
+          ...GOOD_WEBSITE_ANALYSIS,
+          servicesPresence: { state: "not_found", url: "https://example.com/services", locatedOnHomepage: false, reason: null, note: "broken_link" },
+          linkCheck: { checkedAt: "2026-11-09T00:00:00Z", checked: 5, problems: [{ kind: "menu", label: "Menu", url: "https://www.example.com/services/", problem: "not_found", status: 404 }] },
+        },
+      };
+      const breakdown = scoreBusiness(input);
+      const services = breakdown.checks.find((c) => c.id === "website.services_presence")!;
+      expect(services.earnedPoints).toBeNull();
+      expect(services.explanation).toBe("Your menu link (https://example.com/services) is broken — it's counted under “No broken links or dead pages”, not here.");
+      const links = breakdown.checks.find((c) => c.id === "website.links")!;
+      expect(links.earnedPoints).toBe(1);
     });
 
     test("couldnt_check (unlike not_found) is still genuinely excluded — NOT_FOUND, null points, never a zero", () => {
@@ -858,7 +875,7 @@ describe("businessRowToScoringInput adapter", () => {
     expect(input.mostRecentReviewDaysAgo).toBeNull();
     expect(input.httpsStatus).toBe("https");
     const breakdown = scoreBusiness(input);
-    expect(breakdown.scoringVersion).toBe("1.13.1");
+    expect(breakdown.scoringVersion).toBe("1.15.0");
   });
 
   test("degrades an unexpected https_status value to null (excluded) rather than trusting a bad cast", () => {
@@ -1162,40 +1179,32 @@ describe("website.performance_mobile: field-vs-lab measurement (Day 3b)", () => 
     return { ...PERFECT_INPUT, websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, mobilePerformance: measurement } };
   }
 
-  // v1.13.0 "Loads fast": 4 points while only the viewport is checked on
-  // phones (these fixtures), Fast 100% / Average 50% / Slow 0%.
-  test("real-user field data FAST earns the full 4/4, VERIFIED, tagged meta.method 'field'", () => {
-    const breakdown = scoreBusiness(withMeasurement({ method: "field", fieldCategory: "FAST", labScore: null }));
-    const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(4);
+  // v1.15.0 "Loads in a reasonable time": 1 point, pass/fail at 6 seconds;
+  // Google's band alone (no seconds) isn't scored.
+  test("real-user seconds under 6 earn the 3/3, VERIFIED, tagged meta.method 'field'", () => {
+    const check = scoreBusiness(withMeasurement({ method: "field", fieldCategory: "SLOW", labScore: null, lcpSeconds: 4.2 })).checks.find((c) => c.id === "website.performance_mobile")!;
+    expect(check.earnedPoints).toBe(3);
+    expect(check.maxPoints).toBe(3);
     expect(check.confidence).toBe("VERIFIED");
-    expect(check.meta).toEqual({ method: "field" });
-    expect(check.explanation).toBe("Fast.");
+    expect(check.meta).toEqual({ method: "field", seconds: "4.2" });
+    expect(check.explanation).toBe("Your site loads in a reasonable time on phones (about 4.2 seconds).");
     expect(check.note).toBe("Based on real visitors in the last 28 days");
   });
 
-  test("real-user field data AVERAGE earns 2/4", () => {
-    const breakdown = scoreBusiness(withMeasurement({ method: "field", fieldCategory: "AVERAGE", labScore: null }));
-    const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(2);
-    expect(check.meta).toEqual({ method: "field" });
-  });
-
-  test("real-user field data SLOW earns 0/4", () => {
-    const breakdown = scoreBusiness(withMeasurement({ method: "field", fieldCategory: "SLOW", labScore: null }));
-    const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
+  test("6 seconds or more: 0/1 — the lab test alike, tagged meta.method 'lab'", () => {
+    const check = scoreBusiness(withMeasurement({ method: "lab", fieldCategory: null, labScore: 65, lcpSeconds: 6 })).checks.find((c) => c.id === "website.performance_mobile")!;
     expect(check.earnedPoints).toBe(0);
-    expect(check.meta).toEqual({ method: "field" });
+    expect(check.meta).toEqual({ method: "lab", seconds: "6" });
+    expect(check.explanation).toBe("Your site takes about 6.0 seconds to load on phones — many customers leave before it shows.");
+    expect(check.note).toBe("Based on Google's phone test");
   });
 
-  test("a lab measurement (median of 3 runs) is said in the same plain words — Google's score bands without seconds (65 = Average) — tagged meta.method 'lab'", () => {
-    const breakdown = scoreBusiness(withMeasurement({ method: "lab", fieldCategory: null, labScore: 65 }));
-    const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(2);
-    expect(check.confidence).toBe("VERIFIED");
-    expect(check.meta).toEqual({ method: "lab" });
-    expect(check.explanation).toBe("Average.");
-    expect(check.note).toBe("Based on Google's phone test");
+  test("a rating without seconds (FAST / AVERAGE / SLOW, or a lab score) isn't scored — said plainly", () => {
+    for (const m of [{ method: "field" as const, fieldCategory: "FAST" as const, labScore: null }, { method: "lab" as const, fieldCategory: null, labScore: 20 }]) {
+      const check = scoreBusiness(withMeasurement(m)).checks.find((c) => c.id === "website.performance_mobile")!;
+      expect(check.earnedPoints).toBeNull();
+      expect(check.confidence).toBe("NOT_FOUND");
+    }
   });
 
   test("no measurement at all (every attempt failed) is NOT_FOUND, excluded, meta null — never a fabricated value", () => {
@@ -1206,41 +1215,30 @@ describe("website.performance_mobile: field-vs-lab measurement (Day 3b)", () => 
     expect(check.meta).toBeNull();
   });
 
-  test("simulateFix reaches the full 4/4", () => {
+  test("simulateFix reaches the full 3/3", () => {
     const fixed = scoreBusiness(applyCheckFix(withMeasurement(null), "website.performance_mobile"));
     const check = fixed.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(4);
+    expect(check.earnedPoints).toBe(3);
   });
 
   // Oct 10 audit fix: PageSpeed carry-forward on a timeout — see
   // carryForwardMobilePerformance's own doc for the real Blue Bottle
   // Coffee case this fixes.
-  test("a carried-forward lab measurement still scores normally, but with the honest 'last measured {date}' wording", () => {
-    const breakdown = scoreBusiness(
-      withMeasurement({ method: "lab", fieldCategory: null, labScore: 27, measuredAt: "2026-10-06T20:40:00.000Z", carriedForward: true })
-    );
-    const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(0);
-    expect(check.confidence).toBe("VERIFIED");
-    expect(check.explanation).toBe("Slow (last measured Oct 6, 2026).");
-  });
-
-  test("a carried-forward field measurement also gets the 'last measured {date}' wording", () => {
-    const breakdown = scoreBusiness(
-      withMeasurement({ method: "field", fieldCategory: "SLOW", labScore: null, measuredAt: "2026-09-15T00:00:00.000Z", carriedForward: true })
-    );
-    const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(0);
-    expect(check.explanation.toLowerCase()).toContain("last measured");
+  test("a carried-forward measurement still scores normally, with the honest 'last measured {date}' wording (lab and field)", () => {
+    const lab = scoreBusiness(withMeasurement({ method: "lab", fieldCategory: null, labScore: 27, lcpSeconds: 8.1, measuredAt: "2026-10-06T20:40:00.000Z", carriedForward: true })).checks.find((c) => c.id === "website.performance_mobile")!;
+    expect(lab.earnedPoints).toBe(0);
+    expect(lab.confidence).toBe("VERIFIED");
+    expect(lab.explanation).toBe("Your site takes about 8.1 seconds to load on phones — many customers leave before it shows. Last measured Oct 6, 2026.");
+    const field = scoreBusiness(withMeasurement({ method: "field", fieldCategory: "SLOW", labScore: null, lcpSeconds: 3, measuredAt: "2026-09-15T00:00:00.000Z", carriedForward: true })).checks.find((c) => c.id === "website.performance_mobile")!;
+    expect(field.earnedPoints).toBe(3);
+    expect(field.explanation.toLowerCase()).toContain("last measured");
   });
 
   test("a FRESH measurement (carriedForward false/absent) never gets the carried-forward wording, even with a real measuredAt", () => {
-    const breakdown = scoreBusiness(
-      withMeasurement({ method: "lab", fieldCategory: null, labScore: 50, measuredAt: new Date().toISOString() })
-    );
+    const breakdown = scoreBusiness(withMeasurement({ method: "lab", fieldCategory: null, labScore: 50, lcpSeconds: 3.5, measuredAt: new Date().toISOString() }));
     const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
     expect(check.explanation.toLowerCase()).not.toContain("last measured");
-    expect(check.explanation).toBe("Average.");
+    expect(check.explanation).toBe("Your site loads in a reasonable time on phones (about 3.5 seconds).");
   });
 });
 
@@ -1851,11 +1849,14 @@ describe("blocked page = couldn't check (the real Wonder case)", () => {
 });
 
 describe("Step 2d additions: Website weights, social links, map evidence, contact page link", () => {
-  test("Website still totals 30: v1.13.0 Loads fast 4 + Works well on phones 1 (viewport only so far) + social links 1", () => {
+  test("Website still totals 30: v1.15.0 HTTPS 5 + Loads in a reasonable time 3 + Works well on phones 1 + links 2 + social links 1", () => {
     const website = scoreBusiness(PERFECT_INPUT).categories.find((c) => c.id === "website")!;
     expect(website.checks.reduce((sum, c) => sum + c.maxPoints, 0)).toBe(30);
-    expect(website.checks.find((c) => c.id === "website.performance_mobile")!.maxPoints).toBe(4);
+    // v1.15.0: HTTPS 5, Loads in a reasonable time 3, phones 1, links 2.
+    expect(website.checks.find((c) => c.id === "website.https")!.maxPoints).toBe(5);
+    expect(website.checks.find((c) => c.id === "website.performance_mobile")!.maxPoints).toBe(3);
     expect(website.checks.find((c) => c.id === "website.mobile_friendly")!.maxPoints).toBe(1);
+    expect(website.checks.find((c) => c.id === "website.links")!.maxPoints).toBe(2);
     expect(website.checks.find((c) => c.id === "website.social_links")!.maxPoints).toBe(1);
   });
 
@@ -1920,7 +1921,7 @@ describe("Step 2d additions: Website weights, social links, map evidence, contac
 });
 
 describe("Step 2d / v1.10.0: sites that block automated checks — mobile speed", () => {
-  const field = { method: "field" as const, fieldCategory: "SLOW" as const, labScore: null };
+  const field = { method: "field" as const, fieldCategory: "SLOW" as const, labScore: null, lcpSeconds: 7.4 };
   for (const [name, analysis] of [
     ["bot-blocked fetch", { contentFetchFailureReason: "blocked_automated_check" as const, content: null }],
     ["automated-only error page", { websiteTrust: { ...CLEAN_TRUST, automatedErrorPageUrl: "https://x.com/404" } }],
@@ -1943,11 +1944,11 @@ describe("Step 2d / v1.10.0: sites that block automated checks — mobile speed"
     ] as const) {
       const input: BusinessScoringInput = { ...PERFECT_INPUT, websiteAnalysis: { ...GOOD_WEBSITE_ANALYSIS, ...analysis, mobilePerformance: field } };
       const check = scoreBusiness(input).checks.find((c) => c.id === "website.performance_mobile")!;
-      expect(check.earnedPoints).toBe(0); // SLOW (v1.13.0: 0%)
+      expect(check.earnedPoints).toBe(0); // 7.4 s (v1.15.0: 6 s or more)
       expect(check.confidence).toBe("VERIFIED");
-      expect(check.explanation).toBe("Slow.");
+      expect(check.explanation).toBe("Your site takes about 7.4 seconds to load on phones — many customers leave before it shows.");
       expect(check.note).toBe("Based on real visitors in the last 28 days");
-      expect(scoreBusiness(input, "es").checks.find((c) => c.id === "website.performance_mobile")!.explanation).toBe("Lento.");
+      expect(scoreBusiness(input, "es").checks.find((c) => c.id === "website.performance_mobile")!.explanation).toBe("Su sitio tarda unos 7,4 segundos en cargar en teléfonos; muchos clientes se van antes de que aparezca.");
     }
   });
 
@@ -1958,13 +1959,13 @@ describe("Step 2d / v1.10.0: sites that block automated checks — mobile speed"
         ...GOOD_WEBSITE_ANALYSIS,
         contentFetchFailureReason: "blocked_automated_check",
         content: null,
-        mobilePerformance: { method: "field", fieldCategory: "AVERAGE", labScore: null, carriedForward: true, measuredAt: "2026-10-16T14:35:47.310Z" },
+        mobilePerformance: { method: "field", fieldCategory: "AVERAGE", labScore: null, lcpSeconds: 3.2, carriedForward: true, measuredAt: "2026-10-16T14:35:47.310Z" },
       },
     };
     const check = scoreBusiness(input).checks.find((c) => c.id === "website.performance_mobile")!;
-    expect(check.earnedPoints).toBe(2);
-    expect(check.explanation).toBe("Average (last measured Oct 16, 2026).");
-    expect(scoreBusiness(input, "es").checks.find((c) => c.id === "website.performance_mobile")!.explanation).toBe("Promedio (última medición: 16 oct 2026).");
+    expect(check.earnedPoints).toBe(3);
+    expect(check.explanation).toBe("Your site loads in a reasonable time on phones (about 3.2 seconds). Last measured Oct 16, 2026.");
+    expect(scoreBusiness(input, "es").checks.find((c) => c.id === "website.performance_mobile")!.explanation).toBe("Su sitio carga en un tiempo razonable en teléfonos (unos 3,2 segundos). Última medición: 16 oct 2026.");
   });
 
   test("a site our fetch can read still scores speed normally", () => {

@@ -87,6 +87,9 @@ export function websiteFixesFor(check: CheckResult, builder: WebsiteBuilderId | 
       return [one(null, partial ? guided(15, 30) : guided(20, 40))];
     case "website.social_links":
       return [one(null, guided(5, 10))];
+    case "website.links":
+      // One fix per broken link isn't useful — one sitting with the list.
+      return [one(null, guided(5, 15))];
     case "website.security":
       return [one(null, webPerson)];
     case "website.info_consistency":

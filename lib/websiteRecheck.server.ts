@@ -47,6 +47,9 @@ export type WebsiteRecheckResult =
       availability: WebsiteRecheckAvailability;
     }
   | { status: "limit_reached"; availability: WebsiteRecheckAvailability }
+  /** Free: re-checks are on Grow and Premium (app/actions/websiteRecheck.ts). */
+  | { status: "plan_locked" }
+  | { status: "archived" }
   | { status: "no_website" }
   | { status: "not_found" }
   | { status: "unauthenticated" }

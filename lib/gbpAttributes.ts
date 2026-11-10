@@ -32,7 +32,7 @@ export interface GbpAttribute {
 export interface CustomerDetailsEditorRow {
   /** "attributes/has_wheelchair_accessible_entrance" */
   id: string;
-  part: CustomerDetailPart;
+  part: EditorPart;
   /** Google's own label, in the owner's language. */
   label: string;
   /** What customers see on Google now: the owner's own value when they've
@@ -46,7 +46,7 @@ export interface CustomerDetailsEditorRow {
 
 export interface AttributeChange {
   id: string;
-  part: CustomerDetailPart;
+  part: EditorPart;
   label: string;
   /** What customers saw before (see CustomerDetailsEditorRow.current). */
   before: AttrValue;
@@ -55,7 +55,12 @@ export interface AttributeChange {
   merchantBefore?: AttrValue;
 }
 
-export const PART_ORDER: CustomerDetailPart[] = ["parking", "payment", "accessibility"];
+/** The editor's groups: the three customer-details parts, plus food
+ * businesses' service options (takeout / delivery / curbside) — shown only
+ * when Google offers them for the location; information only, no points. */
+export type EditorPart = CustomerDetailPart | "service";
+
+export const PART_ORDER: EditorPart[] = ["parking", "payment", "accessibility", "service"];
 /** One approval changes at most this many fields. */
 export const MAX_CHANGES_PER_APPROVAL = 40;
 /** Undo is offered this long after an approval. */
@@ -74,7 +79,7 @@ export function attributeId(name: string): string {
  * attribute IDs (checked live against attributes.list for the location
  * on Oct 28: a hair salon's accessibility, payments and parking groups).
  * Only the ones Google offers for the location are ever shown. */
-export const CUSTOMER_DETAIL_OPTIONS: Record<CustomerDetailPart, string[]> = {
+export const CUSTOMER_DETAIL_OPTIONS: Record<EditorPart, string[]> = {
   parking: [
     "has_parking_street_free",
     "has_parking_street_paid",
@@ -86,10 +91,13 @@ export const CUSTOMER_DETAIL_OPTIONS: Record<CustomerDetailPart, string[]> = {
   ],
   payment: ["pay_credit_card", "pay_debit_card", "pay_mobile_nfc", "requires_cash_only"],
   accessibility: ["has_wheelchair_accessible_entrance", "has_wheelchair_accessible_restroom", "has_wheelchair_accessible_seating", "has_wheelchair_accessible_parking"],
+  // Food businesses' service options — only when Google offers them for
+  // the location (attributes.list); never offered by name alone.
+  service: ["has_takeout", "has_delivery", "has_curbside_pickup"],
 };
 
 /** Which part an attribute is, or null when the panel doesn't offer it. */
-export function partOfAttribute(name: string): CustomerDetailPart | null {
+export function partOfAttribute(name: string): EditorPart | null {
   const id = attributeId(name).slice("attributes/".length);
   return PART_ORDER.find((part) => CUSTOMER_DETAIL_OPTIONS[part].includes(id)) ?? null;
 }

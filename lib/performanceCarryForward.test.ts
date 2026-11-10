@@ -68,17 +68,17 @@ describe("--no-screenshots never skips the speed test", () => {
 });
 
 describe("a failed speed test keeps a real measurement from the last 30 days (v1.12.0)", () => {
-  const measured = (daysAgo: number, measuredUrl: string = SITE): MobilePerformanceMeasurement => ({ method: "lab", fieldCategory: null, labScore: 68, measuredAt: new Date(Date.now() - daysAgo * DAY).toISOString(), measuredUrl });
+  const measured = (daysAgo: number, measuredUrl: string = SITE): MobilePerformanceMeasurement => ({ method: "lab", fieldCategory: null, labScore: 68, lcpSeconds: 3.2, measuredAt: new Date(Date.now() - daysAgo * DAY).toISOString(), measuredUrl });
 
   for (const kind of ["timed_out", "error_page", "error"] as const) {
     test(`${kind}: carried forward, scored, "last measured {date}"`, async () => {
       const { websiteAnalysis } = await save(measured(10), { kind, status: null });
       expect(websiteAnalysis!.mobilePerformance).toMatchObject({ labScore: 68, carriedForward: true });
       expect(websiteAnalysis!.mobilePerformanceFailureReason).toBeNull();
-      expect(SCORING_VERSION).toBe("1.13.1");
+      expect(SCORING_VERSION).toBe("1.15.0");
       const check = performanceCheck(websiteAnalysis);
       expect(check.earnedPoints).not.toBeNull();
-      expect(check.explanation).toContain("last measured");
+      expect(check.explanation).toMatch(/last measured/i);
       expect(check.explanation).not.toMatch(/PageSpeed|API|Lighthouse/);
     });
   }

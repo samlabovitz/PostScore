@@ -115,7 +115,7 @@ const sum = (tasks: ActionPlanTask[]) => Math.round(tasks.reduce((s, x) => s + x
 describe("applyGrowthWebsiteRules", () => {
   test("removes every website.* task except the Google mismatch (and the merged starter-site card)", () => {
     const input = withConflicts(["hours"], {
-      mobilePerformance: { method: "lab", fieldCategory: null, labScore: 40 },
+      mobilePerformance: { method: "lab", fieldCategory: null, labScore: 40, lcpSeconds: 7 },
       content: { ...GOOD_ANALYSIS.content!, hasPhoneLink: false, hasCtaText: false },
     });
     const { raw, tasks } = growthPlan(input);
@@ -260,7 +260,7 @@ describe("buildWeeklyPlan — the Google mismatch is pinned this week", () => {
 describe("buildWebsiteBanner", () => {
   test("real Website score, improvement count and points — excluding the Google mismatch", () => {
     const input = withConflicts(["hours"], {
-      mobilePerformance: { method: "lab", fieldCategory: null, labScore: 40 },
+      mobilePerformance: { method: "lab", fieldCategory: null, labScore: 40, lcpSeconds: 7 },
       content: { ...GOOD_ANALYSIS.content!, hasPhoneLink: false, hasCtaText: false },
     });
     const { breakdown, banner } = growthPlan(input);
@@ -307,7 +307,7 @@ describe("buildWebsiteBanner", () => {
 
   test("a verified-elsewhere site is never offered 'get a website'", () => {
     const verified: BusinessScoringInput = {
-      ...withConflicts([], { mobilePerformance: { method: "lab", fieldCategory: null, labScore: 40 } }),
+      ...withConflicts([], { mobilePerformance: { method: "lab", fieldCategory: null, labScore: 40, lcpSeconds: 7 } }),
       website: null,
       verifiedElsewhereUrl: "https://banhmiboy.com",
     };

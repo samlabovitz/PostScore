@@ -7,6 +7,7 @@ import { socialPagePlatform } from "./websiteTrust";
 import { checkSocialProfiles, classifySocialLink, MAX_SOCIAL_LINK_CHECKS } from "./socialLinkCheck";
 import { detectSocialProfiles } from "./websiteContentAnalysis";
 import { websiteFixesFor } from "./websiteFixes";
+import { socialLinkProblems } from "./linkProblems";
 
 vi.mock("@/app/actions/competitors", () => ({ refreshCompetitors: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
@@ -16,7 +17,7 @@ const check = (input: BusinessScoringInput, id: string, locale: "en" | "es" = "e
 
 describe("rule 1 — a social media page is not a website", () => {
   test("version bumped (this changes scores)", () => {
-    expect(SCORING_VERSION).toBe("1.13.1");
+    expect(SCORING_VERSION).toBe("1.15.0");
   });
 
   test("platforms are named from the address", () => {
@@ -103,9 +104,12 @@ describe("rule 2 — social links must lead to a real profile", () => {
   test("redirects back to the business's own site → own_site, with the explanation", () => {
     expect(classifySocialLink({ finalUrl: "https://mycafe.com/home", httpStatus: 200, ownSiteUrl: OWN })).toBe("own_site");
     const input = withProfiles([{ platform: "Instagram", url: "instagram.com/mycafe", check: { result: "own_site", finalUrl: "https://mycafe.com/", httpStatus: 200, checkedAt: "x" } }]);
-    const c = check(input, "website.social_links");
-    expect(c.earnedPoints).toBe(0);
-    expect(c.explanation).toBe("Your Instagram link sends visitors back to your website instead of your Instagram profile.");
+    // v1.15.0: "Social links" only asks "do you link to your profiles?" —
+    // the loop is "No broken links or dead pages"'s, never counted twice.
+    expect(check(input, "website.social_links").earnedPoints).toBe(1);
+    expect(socialLinkProblems(input.websiteAnalysis!.content!.socialProfiles, [])).toEqual([
+      { kind: "social", label: "Instagram", url: "instagram.com/mycafe", problem: "loops_home", platform: "Instagram" },
+    ]);
   });
 
   test("redirects to an unrelated site → elsewhere (doesn't count)", () => {
@@ -119,7 +123,9 @@ describe("rule 2 — social links must lead to a real profile", () => {
     expect(classifySocialLink({ finalUrl: null, httpStatus: null, ownSiteUrl: OWN })).toBe("unconfirmed");
     const c = check(withProfiles([{ platform: "Facebook", url: "facebook.com/mycafe", check: { result: "unconfirmed", finalUrl: null, httpStatus: null, checkedAt: "x" } }]), "website.social_links");
     expect(c.earnedPoints).toBe(1);
-    expect(c.explanation).toContain("facebook.com/mycafe (link looks right — we couldn't open it to confirm)");
+    expect(c.explanation).toContain("facebook.com/mycafe");
+    // Never a broken link either: a block proves nothing.
+    expect(socialLinkProblems([{ platform: "Facebook", url: "facebook.com/mycafe", check: { result: "unconfirmed", finalUrl: null, httpStatus: null, checkedAt: "x" } }], [])).toEqual([]);
   });
 
   test("the platform says the page doesn't exist (404) → not_found", () => {
@@ -135,7 +141,7 @@ describe("rule 2 — social links must lead to a real profile", () => {
       "website.social_links"
     );
     expect(c.earnedPoints).toBe(1);
-    expect(c.explanation).toContain("sends visitors back to your website");
+    expect(c.explanation).toContain("Facebook: facebook.com/mycafe");
   });
 
   test("unchecked profiles (saved before this rule) keep counting as before", () => {

@@ -4,7 +4,7 @@
 // as "online ordering": these say how customers get the food, not that
 // they can order online. Pure.
 
-import { SERVICE_OPTION_FIELDS, type ServiceOption, type ServiceOptions } from "@/lib/google/places";
+import { SERVICE_OPTION_FIELDS, type ServiceOption, type ServiceOptions } from "@/lib/serviceOptionFields";
 import { t, type Locale, type MessageKey } from "@/lib/i18n";
 
 /** Food businesses (lib/bizProfiles ids): restaurants, cafés, bakeries, dessert shops. */

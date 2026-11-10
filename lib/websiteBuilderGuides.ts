@@ -578,6 +578,10 @@ const ASK: Record<string, Text> = {
     en: "add links to our social media profiles in the header or footer",
     es: "agregar enlaces a nuestros perfiles de redes sociales en el encabezado o el pie de página",
   },
+  "website.links": {
+    en: "fix or remove the links on our homepage that don't open the page they promise (PostScore lists each one) — especially the order, booking and contact links",
+    es: "corregir o quitar los enlaces de nuestra página principal que no abren la página que prometen (PostScore indica cada uno), sobre todo los de pedidos, reservas y contacto",
+  },
   "website.security": {
     en: "check the site for hacked or spam content and clean it up — PostScore found signs of it — then ask Google to review the site in Search Console if it was flagged",
     es: "revisar el sitio en busca de contenido hackeado o spam y limpiarlo — PostScore encontró señales — y luego pedir a Google que revise el sitio en Search Console si fue marcado",

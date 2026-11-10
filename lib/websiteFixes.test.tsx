@@ -47,7 +47,7 @@ describe("advice for exactly what's missing", () => {
 
   test("no 'speed up your site' at 90+/100; still shown at 60/100", () => {
     const at = (score: number) =>
-      adviceFor({ ...scoringInput(), websiteAnalysis: { ...scoringInput().websiteAnalysis!, mobilePerformance: { method: "lab", fieldCategory: null, labScore: score } } }, "website.performance_mobile");
+      adviceFor({ ...scoringInput(), websiteAnalysis: { ...scoringInput().websiteAnalysis!, mobilePerformance: { method: "lab", fieldCategory: null, labScore: score, lcpSeconds: score >= 90 ? 1.5 : 7 } } }, "website.performance_mobile");
     expect(at(97)).toBeUndefined();
     expect(at(90)).toBeUndefined();
     expect(at(60)).toMatch(/^Speed up your site/);

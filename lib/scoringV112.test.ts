@@ -18,13 +18,13 @@ const v112 = (input: BusinessScoringInput) => scoreBusiness(input, "en", SCORING
 const check = (input: BusinessScoringInput, id: string) => v112(input).checks.find((c) => c.id === id)!;
 
 describe("the version bump", () => {
-  test("SCORING_VERSION is 1.13.1 (keeping every 1.12.0 check); v1.11.0 still scores the old way", () => {
-    expect(SCORING_VERSION).toBe("1.13.1");
+  test("SCORING_VERSION is 1.14.0 (keeping every 1.12.0 check); v1.11.0 still scores the old way", () => {
+    expect(SCORING_VERSION).toBe("1.15.0");
     expect(checksFor(SCORING_VERSION_V112)).toBe(CHECKS_V112);
     expect(checksFor(SCORING_VERSION)).toBe(CHECKS_V112);
     expect(checksFor("1.11.0")).toBe(CHECKS);
     const input = scoringInput();
-    expect(scoreBusiness(input, "en").checks).toEqual(v112(input).checks); // the same checks, labelled 1.13.1
+    expect(scoreBusiness(input, "en").checks).toEqual(v112(input).checks); // the same checks, labelled 1.14.0
     expect(scoreBusiness(input, "en", "1.11.0").checks.some((c) => c.id === "visibility.review_replies")).toBe(false);
   });
 });
@@ -181,21 +181,19 @@ describe("collected from Place Details only — competitors never", () => {
 });
 
 describe("after the first scan on a new scoring version", () => {
-  test("the one-time note shows once for v1.13.0 — the newest score is v1.13.0 and an earlier one isn't — naming “Loads fast” and “Works well on phones” (EN + ES)", () => {
-    // 1.13.1 only re-weighs existing checks: it reuses the 1.13.0 note (one dismissal).
-    expect(SCORING_NOTE_VERSION).toBe("1.13.0");
-    expect(scoringNoteApplies([{ scoring_version: "1.13.1" }, { scoring_version: "1.12.0" }])).toBe(true);
-    expect(scoringNoteApplies([{ scoring_version: "1.13.1" }, { scoring_version: "1.13.0" }, { scoring_version: "1.12.0" }])).toBe(true);
-    expect(scoringNoteApplies([{ scoring_version: "1.13.1" }, { scoring_version: "1.13.0" }])).toBe(false);
-    expect(SCORING_NOTE_KEY).toBe("scoring-1.13.0"); // its own dismissal: the v1.12.0 one doesn't hide it
-    expect(scoringNoteApplies([{ scoring_version: "1.13.0" }, { scoring_version: "1.12.0" }])).toBe(true);
-    expect(scoringNoteApplies([{ scoring_version: "1.13.0" }])).toBe(false);
-    expect(scoringNoteApplies([{ scoring_version: "1.13.0" }, { scoring_version: "1.13.0" }])).toBe(false);
-    expect(scoringNoteApplies([{ scoring_version: "1.12.0" }, { scoring_version: "1.11.0" }])).toBe(false);
-    expect(t("en", SCORING_NOTE_MESSAGE)).toContain("“Loads fast”");
-    expect(t("en", SCORING_NOTE_MESSAGE)).toContain("“Works well on phones”");
-    expect(t("es", SCORING_NOTE_MESSAGE)).toContain("«Carga rápida»");
-    expect(t("es", SCORING_NOTE_MESSAGE)).toContain("«Funciona bien en teléfonos»");
+  test("the one-time note shows once for v1.15.0 — the newest score is v1.15.0 and an earlier one isn't — describing the links check, the reasonable load time and HTTPS (EN + ES)", () => {
+    expect(SCORING_NOTE_VERSION).toBe("1.15.0");
+    expect(scoringNoteApplies([{ scoring_version: "1.15.0" }, { scoring_version: "1.14.0" }])).toBe(true);
+    expect(scoringNoteApplies([{ scoring_version: "1.15.0" }, { scoring_version: "1.15.0" }, { scoring_version: "1.13.1" }])).toBe(true);
+    expect(scoringNoteApplies([{ scoring_version: "1.15.0" }, { scoring_version: "1.15.0" }])).toBe(false);
+    expect(SCORING_NOTE_KEY).toBe("scoring-1.15.0"); // its own dismissal: an earlier one doesn't hide it
+    expect(scoringNoteApplies([{ scoring_version: "1.15.0" }])).toBe(false);
+    expect(scoringNoteApplies([{ scoring_version: "1.14.0" }, { scoring_version: "1.13.1" }])).toBe(false);
+    expect(t("en", SCORING_NOTE_MESSAGE)).toContain("“No broken links or dead pages”");
+    expect(t("en", SCORING_NOTE_MESSAGE)).toContain("“Loads in a reasonable time”");
+    expect(t("es", SCORING_NOTE_MESSAGE)).toContain("«Sin enlaces rotos ni páginas sin contenido»");
+    expect(t("es", SCORING_NOTE_MESSAGE)).toContain("«Usa HTTPS» vale un punto menos");
+    for (const locale of ["en", "es"] as const) expect(t(locale, SCORING_NOTE_MESSAGE).toLowerCase()).not.toMatch(/takeout|delivery|para llevar|domicilio/);
     expect(fs.readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8").match(/\{scoringNote && <ScoringUpdateNote businessId=\{businessId\} \/>\}/g)).toHaveLength(2);
   });
 

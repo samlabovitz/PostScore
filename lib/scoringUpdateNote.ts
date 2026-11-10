@@ -5,16 +5,17 @@
 import type { MessageKey } from "@/lib/i18n";
 
 /** The version whose note this is (kept here so the browser never loads
- * the scoring engine for a note). 1.13.1 only re-weighs existing checks,
- * so it reuses this note: shown once (one dismissal) for 1.13.0 and up. */
-export const SCORING_NOTE_VERSION = "1.13.0";
+ * the scoring engine for a note). 1.15.0: "No broken links or dead pages",
+ * "Loads in a reasonable time" and HTTPS 6 → 5 — shown once (one
+ * dismissal). 1.14.0 (the steadier speed) never shipped on its own. */
+export const SCORING_NOTE_VERSION = "1.15.0";
 
 /** The note's dismissal key (promo_dismissals; never expires) — a new
  * version gets its own, so it shows once for that version. */
 export const SCORING_NOTE_KEY = `scoring-${SCORING_NOTE_VERSION}`;
 
 /** What this version changed, in the owner's words (EN + ES). */
-export const SCORING_NOTE_MESSAGE: MessageKey = "dashboard.overview.scoringUpdateNote.v1_13_0";
+export const SCORING_NOTE_MESSAGE: MessageKey = "dashboard.overview.scoringUpdateNote.v1_15_0";
 
 function atLeast(version: string, min: string): boolean {
   const a = version.split(".").map(Number);

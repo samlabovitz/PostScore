@@ -31,6 +31,27 @@ export function changeLine(c: WebsiteCheckChange, locale: Locale): string {
 
 type Ok = Extract<WebsiteRecheckResult, { status: "ok" }>;
 
+/** The real reason a re-check didn't run or didn't finish, shown under
+ * the button — never a generic "failed" when the reason is known. */
+export function recheckFailureMessage(result: Exclude<WebsiteRecheckResult, Ok>, locale: Locale): string {
+  switch (result.status) {
+    case "plan_locked":
+      return t(locale, k("planLocked"));
+    case "limit_reached":
+      return t(locale, k("limitReached"), { total: WEBSITE_RECHECKS_PER_DAY });
+    case "archived":
+      return t(locale, k("archived"));
+    case "no_website":
+      return t(locale, k("noWebsite"));
+    case "unauthenticated":
+      return t(locale, k("signedOut"));
+    case "not_found":
+      return t(locale, k("notFound"));
+    case "error":
+      return result.message.trim() ? t(locale, k("failedWithReason"), { reason: result.message.trim() }) : t(locale, k("failed"));
+  }
+}
+
 export function RecheckSummary({ result }: { result: Ok }) {
   const locale = useLocale();
   const nothing = result.changes.length === 0 && result.scoreBefore === result.scoreAfter;
@@ -97,19 +118,15 @@ export function WebsiteRecheck({
 
   async function run() {
     setState({ kind: "running", seconds: 0 });
-    const result = await recheckWebsite(businessId).catch(() => ({ status: "error", message: "" }) as const);
+    const result = await recheckWebsite(businessId).catch((e: unknown) => ({ status: "error", message: e instanceof Error ? e.message : "" }) as const);
     if (result.status === "ok") {
       setLeft(result.availability.left);
       setState({ kind: "done", result });
       router.refresh();
-    } else if (result.status === "limit_reached") {
-      setLeft(0);
-      setState({ kind: "error", message: t(locale, k("limitReached"), { total: WEBSITE_RECHECKS_PER_DAY }) });
-    } else if (result.status === "no_website") {
-      setState({ kind: "error", message: t(locale, k("noWebsite")) });
-    } else {
-      setState({ kind: "error", message: t(locale, k("failed")) });
+      return;
     }
+    if (result.status === "limit_reached") setLeft(0);
+    setState({ kind: "error", message: recheckFailureMessage(result, locale) });
   }
 
   return (

@@ -10,7 +10,8 @@ import { browserRenderMonthlyCap, currentRenderMonth, rendersAllowedThisScan } f
 import type { PlaceDetails } from "@/lib/google/places";
 import { checkWebsiteHttps } from "@/lib/websiteHttps";
 import { collectWebsiteAnalysis } from "@/lib/websiteAnalysis";
-import { carryForwardMobilePerformance, parseWebsiteAnalysis, type WebsiteAnalysis } from "@/lib/scoring";
+import { carryForwardMobilePerformance, parseWebsiteAnalysis, sameMeasuredSite, type MobilePerformanceMeasurement, type WebsiteAnalysis } from "@/lib/scoring";
+import { nextSpeedHistory, sampleCategory, sampleFrom, smoothSpeed, type SpeedSample, type SpeedSmoothed } from "@/lib/speedSmoothing";
 
 /**
  * The website half of a save (Day 2b: shared by a normal Google-listing
@@ -28,6 +29,8 @@ export async function analyzeWebsiteForSave(params: {
   listingFacts: { phone: string | null; address: string | null; openingHoursPeriods: PlaceDetails["openingHoursPeriods"] };
   /** false for competitors: never a Browserless render (default true). */
   allowBrowserRenders?: boolean;
+  /** false for competitors: no homepage link check (scoring 1.15.0 — default true). */
+  checkLinks?: boolean;
   /** For counting PageSpeed calls (competitor scoring); defaults to fetch. */
   fetchImpl?: typeof fetch;
   /** The owner's plan, for the business's own monthly screenshot allowance
@@ -74,7 +77,7 @@ export async function analyzeWebsiteForSave(params: {
             safeBrowsingApiKey: process.env.GOOGLE_SAFE_BROWSING_API_KEY,
             browserlessApiKey,
           },
-          { captureScreenshots, maxBrowserRenders, extraServicesKeywords },
+          { captureScreenshots, maxBrowserRenders, extraServicesKeywords, checkLinks: params.checkLinks !== false },
           listingFacts,
           fetchImpl
         )
@@ -98,6 +101,12 @@ export async function analyzeWebsiteForSave(params: {
         analysisUrl
       )
     : { mobilePerformance: null, mobilePerformanceFailureReason: null };
+
+  // "Loads fast", steadied (lib/speedSmoothing.ts): this site's last 3
+  // successful measurements within 30 days, and their typical result —
+  // the median, kept in its band unless a line is crossed by more than
+  // 0.3 s. Before any history exists, the last saved measurement starts it.
+  const speed = analysis ? speedForSave(analysis.mobilePerformance, existingAnalysis, analysisUrl) : null;
 
   // Step 2d (corrected after the real Wonder case): a soft 404 seen only
   // by PageSpeed's automated Chrome NEVER marks the Google listing link
@@ -139,6 +148,8 @@ export async function analyzeWebsiteForSave(params: {
       ? {
           content: analysis.content,
           mobilePerformance,
+          ...(speed ? speed : {}),
+          ...(analysis.linkCheck ? { linkCheck: analysis.linkCheck } : {}),
           mobilePerformanceFailureReason,
           contentFetchFailureReason: analysis.contentFetchFailureReason,
           httpsUnreachableReason: httpsResult?.reason ?? null,
@@ -161,6 +172,8 @@ export async function analyzeWebsiteForSave(params: {
       : {
           content: analysis.content,
           mobilePerformance,
+          ...(speed ? speed : {}),
+          ...(analysis.linkCheck ? { linkCheck: analysis.linkCheck } : {}),
           mobilePerformanceFailureReason,
           contentFetchFailureReason: analysis.contentFetchFailureReason,
           httpsUnreachableReason: httpsResult?.reason ?? null,
@@ -230,4 +243,28 @@ export function withListingLinkState(
       listingLinkParked: probe.parked,
     },
   };
+}
+
+/** The speed history and its typical result for the analysis being saved.
+ * `fresh` is THIS scan's own measurement (null when it failed — the
+ * history then stays as it was). Exported for tests. */
+export function speedForSave(
+  fresh: MobilePerformanceMeasurement | null | undefined,
+  existing: WebsiteAnalysis | null | undefined,
+  siteUrl: string | null,
+  now: Date = new Date()
+): { speedHistory: SpeedSample[]; speedSmoothed: SpeedSmoothed | null } | null {
+  if (!siteUrl) return null;
+  // Before this existed: the last saved measurement of this site starts the history.
+  const seedSample = sampleFrom(existing?.mobilePerformance);
+  const previous = existing?.speedHistory ?? (seedSample ? [seedSample] : []);
+  const history = nextSpeedHistory(previous, sampleFrom(fresh), siteUrl, now);
+  // The band shown last time — its stored typical result, else the last measurement's own.
+  const lastMeasured = existing?.mobilePerformance;
+  const previousSmoothed: SpeedSmoothed | null =
+    existing?.speedSmoothed ??
+    (lastMeasured?.measuredUrl && sameMeasuredSite(lastMeasured.measuredUrl, siteUrl) && seedSample
+      ? { category: sampleCategory(lastMeasured), seconds: seedSample.lcpSeconds, samples: 1, measuredUrl: lastMeasured.measuredUrl }
+      : null);
+  return { speedHistory: history, speedSmoothed: smoothSpeed(history, previousSmoothed) };
 }

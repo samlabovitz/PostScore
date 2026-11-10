@@ -108,7 +108,8 @@ export async function applyCustomerDetailsAction(businessId: string, picks: Reco
   if (result.status === "no_changes") return result;
   // Points still wait for Google: the step shows "Waiting for the next
   // check" until a scan sees the details on the public listing.
-  if (result.changes.some((c) => c.after === true)) await markTaskDone(businessId, "completeness.customer_details").catch(() => null);
+  // Service options (takeout / delivery / curbside) are information only — no task.
+  if (result.changes.some((c) => c.after === true && c.part !== "service")) await markTaskDone(businessId, "completeness.customer_details").catch(() => null);
   revalidatePath(`/business/${businessId}`, "layout");
   return { status: result.status, changes: result.changes, undo: result.logged ? await g.s.attrs.getUndoableChange(store, businessId, g.target.locationName) : null, mapsUri: await mapsUriFor(g) };
 }

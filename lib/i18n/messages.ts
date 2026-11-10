@@ -36,6 +36,7 @@ export type MessageKey =
   | "dashboard.overview.scoringUpdateNote.v1_13_0"
   | "content.checks.website.performance_mobile.result.withTime"
   | "content.checks.website.performance_mobile.explanation.resultV113"
+  | "content.checks.website.performance_mobile.explanation.resultTypicalV113"
   | "content.checks.website.performance_mobile.explanation.resultLastMeasuredV113"
   | "content.checks.website.performance_mobile.note.field"
   | "content.checks.website.performance_mobile.note.lab"
@@ -1111,6 +1112,7 @@ export type MessageKey =
   | "content.checks.visibility.review_replies.explanation.tooFew"
   | "content.checks.visibility.review_replies.explanation.counts"
   | "content.checks.completeness.customer_details.label"
+  | "dashboard.overview.scoringUpdateNote.v1_14_0"
   | "content.checks.completeness.customer_details.advice"
   | "content.checks.completeness.customer_details.explanation.notApplicable"
   | "content.checks.completeness.customer_details.explanation.notCheckedYet"
@@ -1289,6 +1291,9 @@ export type MessageKey =
   | "content.checks.website.info_consistency.explanation.conflictPhone"
   | "content.checks.website.info_consistency.explanation.conflictAddress"
   | "content.checks.website.info_consistency.explanation.conflictHours"
+  | "content.checks.website.info_consistency.explanation.conflictHoursLabelled"
+  | "content.checks.website.info_consistency.explanation.hoursUnconfirmed"
+  | "content.checks.website.info_consistency.explanation.allMatchHoursUnconfirmed"
   | "content.checks.website.notice_freshness.label"
   | "content.checks.website.notice_freshness.advice"
   | "content.checks.website.notice_freshness.explanation.noWebsite"
@@ -1339,6 +1344,7 @@ export type MessageKey =
   | "content.checks.website.social_links.explanation.listingOnly"
   | "content.checks.website.social_links.explanation.notAnalyzed"
   | "content.checks.website.social_links.explanation.found"
+  | "content.checks.website.social_links.explanation.onlyBrokenV115"
   | "content.checks.website.social_links.explanation.none"
   | "content.checks.website.social_links.explanation.clientRenderedShell"
   | "content.checks.website.social_links.explanation.scriptBuiltFooter"
@@ -1504,6 +1510,10 @@ export type MessageKey =
   | "dashboard.gbpEdit.group.parking"
   | "dashboard.gbpEdit.group.payment"
   | "dashboard.gbpEdit.group.accessibility"
+  | "dashboard.gbpEdit.group.service"
+  | "dashboard.gbpEdit.option.has_takeout"
+  | "dashboard.gbpEdit.option.has_delivery"
+  | "dashboard.gbpEdit.option.has_curbside_pickup"
   | "dashboard.gbpEdit.option.has_parking_street_free"
   | "dashboard.gbpEdit.option.has_parking_street_paid"
   | "dashboard.gbpEdit.option.has_parking_lot_free"
@@ -3717,6 +3727,57 @@ export type MessageKey =
   | "dashboard.overview.recs.heading"
   | "dashboard.overview.recs.viewAll"
   | "dashboard.overview.recs.urgent"
+  | "content.checks.website.performance_mobile.labelV115"
+  | "content.checks.website.performance_mobile.explanation.reasonableV115"
+  | "content.checks.website.performance_mobile.explanation.tooSlowV115"
+  | "content.checks.website.performance_mobile.explanation.typicalOfTestsV115"
+  | "content.checks.website.performance_mobile.explanation.lastMeasuredNoteV115"
+  | "content.checks.website.performance_mobile.explanation.noSecondsV115"
+  | "content.checks.website.services_presence.explanation.brokenLinkV115"
+  | "content.checks.website.links.label"
+  | "content.checks.website.links.advice"
+  | "content.checks.website.links.explanation.noWebsite"
+  | "content.checks.website.links.explanation.notCheckedYet"
+  | "content.checks.website.links.explanation.noLinks"
+  | "content.checks.website.links.explanation.allGood.one"
+  | "content.checks.website.links.explanation.allGood.other"
+  | "content.checks.website.links.explanation.problems.one"
+  | "content.checks.website.links.explanation.problems.other"
+  | "dashboard.links.open.one"
+  | "dashboard.links.open.other"
+  | "dashboard.links.title"
+  | "dashboard.links.intro"
+  | "dashboard.links.pointsTo"
+  | "dashboard.links.copy"
+  | "dashboard.links.copied"
+  | "dashboard.links.close"
+  | "dashboard.links.urgent"
+  | "dashboard.links.kind.order"
+  | "dashboard.links.kind.book"
+  | "dashboard.links.kind.contact"
+  | "dashboard.links.kind.menu"
+  | "dashboard.links.kind.directions"
+  | "dashboard.links.kind.nav"
+  | "dashboard.links.kind.social"
+  | "dashboard.links.problem.not_found"
+  | "dashboard.links.problem.server_error"
+  | "dashboard.links.problem.page_not_found"
+  | "dashboard.links.problem.parked"
+  | "dashboard.links.problem.coming_soon"
+  | "dashboard.links.problem.loops_home"
+  | "dashboard.links.problem.loops_home_social"
+  | "dashboard.links.problem.dead_profile"
+  | "dashboard.links.problem.wrong_page"
+  | "dashboard.links.problem.platform_home"
+  | "dashboard.links.problem.empty_link"
+  | "dashboard.links.fix.page"
+  | "dashboard.links.fix.social"
+  | "dashboard.links.fix.order"
+  | "dashboard.links.fix.book"
+  | "dashboard.links.fix.contact"
+  | "dashboard.urgent.issue.broken_link"
+  | "dashboard.urgent.fix.broken_link"
+  | "dashboard.overview.scoringUpdateNote.v1_15_0"
   | "dashboard.serviceOptions.line"
   | "dashboard.serviceOptions.takeout"
   | "dashboard.serviceOptions.delivery"
@@ -4566,6 +4627,11 @@ export type MessageKey =
   | "dashboard.websiteRecheck.publishHint"
   | "dashboard.websiteRecheck.tasksConfirmed"
   | "dashboard.websiteRecheck.limitReached"
+  | "dashboard.websiteRecheck.planLocked"
+  | "dashboard.websiteRecheck.archived"
+  | "dashboard.websiteRecheck.signedOut"
+  | "dashboard.websiteRecheck.notFound"
+  | "dashboard.websiteRecheck.failedWithReason"
   | "dashboard.websiteRecheck.noWebsite"
   | "dashboard.websiteRecheck.failed"
   | "dashboard.websiteRecheck.seeWebsite"
@@ -4635,6 +4701,9 @@ export type MessageKey =
  * how a future locale with more categories, e.g. "few"/"many", would
  * still get a safe result even before every category is seeded for it). */
 export type PluralKeyBase =
+  | "content.checks.website.links.explanation.allGood"
+  | "content.checks.website.links.explanation.problems"
+  | "dashboard.links.open"
   | "dashboard.overview.sinceCard.moreChanges"
   | "content.checks.website.social_links.broken.no_link"
   | "content.checks.website.social_links.broken.own_site"
@@ -4740,6 +4809,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.scoringUpdateNote.v1_13_0": "We updated how PostScore scores websites — “Performance & mobile” is now two checks: “Loads fast” (about how many seconds your page takes to show on a phone) and “Works well on phones”. If your score moved, it's because of this update, not a change you made.",
     "content.checks.website.performance_mobile.result.withTime": "{category} · about {seconds} seconds to show your page on a phone",
     "content.checks.website.performance_mobile.explanation.resultV113": "{result}.",
+    "content.checks.website.performance_mobile.explanation.resultTypicalV113": "{result}, typical of your last {count} tests.",
     "content.checks.website.performance_mobile.explanation.resultLastMeasuredV113": "{result} (last measured {date}).",
     "content.checks.website.performance_mobile.note.field": "Based on real visitors in the last 28 days",
     "content.checks.website.performance_mobile.note.lab": "Based on Google's phone test",
@@ -5831,6 +5901,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.visibility.review_replies.explanation.tooFew": "Not enough recent reviews to check yet.",
     "content.checks.visibility.review_replies.explanation.counts": "You replied to {replied} of your last {count} reviews (full credit at 80%).",
     "content.checks.completeness.customer_details.label": "Customer details on your listing",
+    "dashboard.overview.scoringUpdateNote.v1_14_0": "We updated how PostScore scores website speed. “Loads fast” now uses the typical result of your last speed tests, so one slow or fast test no longer moves your score. If your score moved, it's because of this update, not a change you made.",
     "content.checks.completeness.customer_details.advice": "Add them on Google: Google Business Profile → Edit profile → {path}.",
     "content.checks.completeness.customer_details.explanation.notApplicable": "Not applicable to this kind of business.",
     "content.checks.completeness.customer_details.explanation.notCheckedYet": "Not checked yet — the next scan reads it from your Google listing.",
@@ -6097,6 +6168,9 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Your website says {site}; Google says {google}.",
     "content.checks.website.info_consistency.explanation.conflictHours":
       "Your website says {site}; Google says {google}.",
+    "content.checks.website.info_consistency.explanation.conflictHoursLabelled": "Your website's {label} say {site}; Google says {google}.",
+    "content.checks.website.info_consistency.explanation.hoursUnconfirmed": "Your site lists more than one set of opening hours, and we couldn't confirm which one is current — so we didn't compare them with Google. Excluded from your score, not counted against you.",
+    "content.checks.website.info_consistency.explanation.allMatchHoursUnconfirmed": "Your website's phone and address match your Google listing. We didn't compare your hours: your site lists more than one set, and we couldn't confirm which one is current.",
 
     "content.checks.website.notice_freshness.label": "Up-to-date notices",
     "content.checks.website.notice_freshness.advice":
@@ -6161,6 +6235,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.social_links.explanation.listingOnly": "Your Google listing links to your {platform} page — that counts as your social profile. This check is scored once you have a website.",
     "content.checks.website.social_links.explanation.notAnalyzed": "Not checked yet — your next PostScore scan will look for social media links.",
     "content.checks.website.social_links.explanation.found": "Social profiles linked from your site: {profiles}.",
+    "content.checks.website.social_links.explanation.onlyBrokenV115": "This check is left out of your score: your site's social icons don't lead to a profile, and broken links are already counted under “No broken links or dead pages”.",
     "content.checks.website.social_links.explanation.none": "No links to your social media profiles found on your site — add them to your header or footer.",
     "content.checks.website.social_links.explanation.clientRenderedShell": "Couldn't verify — this site renders its content with JavaScript, so its links weren't readable by our check. Excluded from your score, not counted against you.",
     "content.checks.website.social_links.explanation.scriptBuiltFooter": "Couldn't verify — your site's footer is built by a script after the page loads, so its social links weren't readable by our check. Excluded from your score, not counted against you.",
@@ -6326,6 +6401,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpEdit.group.parking": "How can customers park? Choose all that apply",
     "dashboard.gbpEdit.group.payment": "How can customers pay? Choose all that apply",
     "dashboard.gbpEdit.group.accessibility": "What's wheelchair accessible? Choose all that apply",
+    "dashboard.gbpEdit.group.service": "How can customers get your food? Choose all that apply",
+    "dashboard.gbpEdit.option.has_takeout": "Takeout",
+    "dashboard.gbpEdit.option.has_delivery": "Delivery",
+    "dashboard.gbpEdit.option.has_curbside_pickup": "Curbside pickup",
     "dashboard.gbpEdit.option.has_parking_street_free": "Free street parking",
     "dashboard.gbpEdit.option.has_parking_street_paid": "Paid street parking",
     "dashboard.gbpEdit.option.has_parking_lot_free": "Free parking lot",
@@ -8859,6 +8938,57 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.recs.heading": "Top recommendations",
     "dashboard.overview.recs.viewAll": "View all",
     "dashboard.overview.recs.urgent": "Urgent",
+    "content.checks.website.performance_mobile.labelV115": "Loads in a reasonable time",
+    "content.checks.website.performance_mobile.explanation.reasonableV115": "Your site loads in a reasonable time on phones (about {seconds} seconds).",
+    "content.checks.website.performance_mobile.explanation.tooSlowV115": "Your site takes about {seconds} seconds to load on phones — many customers leave before it shows.",
+    "content.checks.website.performance_mobile.explanation.typicalOfTestsV115": "Typical of your last {count} tests.",
+    "content.checks.website.performance_mobile.explanation.lastMeasuredNoteV115": "Last measured {date}.",
+    "content.checks.website.performance_mobile.explanation.noSecondsV115": "Not scored: Google's test didn't say how many seconds your page takes to show.",
+    "content.checks.website.services_presence.explanation.brokenLinkV115": "Your menu link ({url}) is broken — it's counted under “No broken links or dead pages”, not here.",
+    "content.checks.website.links.label": "No broken links or dead pages",
+    "content.checks.website.links.advice": "Fix or remove each link that doesn't open the page it promises — your web person can usually do it in a few minutes.",
+    "content.checks.website.links.explanation.noWebsite": "No website to check.",
+    "content.checks.website.links.explanation.notCheckedYet": "Not checked yet — the next scan opens the links on your homepage.",
+    "content.checks.website.links.explanation.noLinks": "We found no links to check on your homepage.",
+    "content.checks.website.links.explanation.allGood.one": "The {count} link we checked opens the right page.",
+    "content.checks.website.links.explanation.allGood.other": "All {count} links we checked open the right page.",
+    "content.checks.website.links.explanation.problems.one": "1 of {checked} links needs fixing.",
+    "content.checks.website.links.explanation.problems.other": "{count} of {checked} links need fixing.",
+    "dashboard.links.open.one": "1 link needs fixing — see it",
+    "dashboard.links.open.other": "{count} links need fixing — see them",
+    "dashboard.links.title": "Links that need fixing",
+    "dashboard.links.intro": "Customers who tap these don't reach the page the link promises.",
+    "dashboard.links.pointsTo": "Points to",
+    "dashboard.links.copy": "Copy link",
+    "dashboard.links.copied": "Copied",
+    "dashboard.links.close": "Close",
+    "dashboard.links.urgent": "Urgent",
+    "dashboard.links.kind.order": "“{label}” (order online)",
+    "dashboard.links.kind.book": "“{label}” (booking)",
+    "dashboard.links.kind.contact": "“{label}” (contact)",
+    "dashboard.links.kind.menu": "“{label}” (menu)",
+    "dashboard.links.kind.directions": "“{label}” (directions)",
+    "dashboard.links.kind.nav": "“{label}” (menu bar link)",
+    "dashboard.links.kind.social": "{label} icon",
+    "dashboard.links.problem.not_found": "Page not found ({status}).",
+    "dashboard.links.problem.server_error": "The page answers with a server error ({status}).",
+    "dashboard.links.problem.page_not_found": "Opens a “page not found” page.",
+    "dashboard.links.problem.parked": "Opens a parked or for-sale domain page, not your page.",
+    "dashboard.links.problem.coming_soon": "Opens a “coming soon” page.",
+    "dashboard.links.problem.loops_home": "Opens your own homepage instead.",
+    "dashboard.links.problem.loops_home_social": "Opens your own homepage instead of {platform}.",
+    "dashboard.links.problem.dead_profile": "That {platform} profile no longer exists.",
+    "dashboard.links.problem.wrong_page": "Goes to an unrelated site, not your {platform} profile.",
+    "dashboard.links.problem.platform_home": "Goes to {platform}'s front page, not your profile.",
+    "dashboard.links.problem.empty_link": "The icon has no link — tapping it does nothing.",
+    "dashboard.links.fix.page": "Point the link to the right page, or remove it.",
+    "dashboard.links.fix.social": "Set the icon's link to your real {platform} profile address, or remove the icon.",
+    "dashboard.links.fix.order": "Point it to your current online ordering page — customers can't order until it works.",
+    "dashboard.links.fix.book": "Point it to your current booking page — customers can't book until it works.",
+    "dashboard.links.fix.contact": "Point it to a page with your phone, email or contact form.",
+    "dashboard.urgent.issue.broken_link": "A link customers use to order, book or contact you is broken — they hit a dead end.",
+    "dashboard.urgent.fix.broken_link": "Fix the broken link",
+    "dashboard.overview.scoringUpdateNote.v1_15_0": "We updated how PostScore scores websites. New: “No broken links or dead pages” checks the links customers tap on your homepage (order, book, contact, menu, social icons). “Loads fast” is now “Loads in a reasonable time” — only a very slow site (6 seconds or more) loses that point — and “Uses HTTPS” is worth one point less. If your score moved, it's because of this update, not a change you made.",
     "dashboard.serviceOptions.line": "Google shows: {list}",
     "dashboard.serviceOptions.takeout": "Takeout",
     "dashboard.serviceOptions.delivery": "Delivery",
@@ -9704,7 +9834,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteRecheck.nothingChanged": "Nothing changed on your website since the last check.",
     "dashboard.websiteRecheck.publishHint": "Just published a fix? Some website builders take a few minutes to update the live site — try again in a little while.",
     "dashboard.websiteRecheck.tasksConfirmed": "Fixes confirmed in your plan: {count} (+{points} pts)",
-    "dashboard.websiteRecheck.limitReached": "You've used all {total} website re-checks for today. Try again tomorrow.",
+    "dashboard.websiteRecheck.limitReached": "You've used today's {total} re-checks — try again tomorrow.",
+    "dashboard.websiteRecheck.planLocked": "Re-checks are on Grow and Premium. See plans in Settings → Plan & billing.",
+    "dashboard.websiteRecheck.archived": "This business is archived. Restore it on the Overview to re-check its website.",
+    "dashboard.websiteRecheck.signedOut": "You're signed out. Sign in again, then re-check your website.",
+    "dashboard.websiteRecheck.notFound": "We couldn't find this business on your account.",
+    "dashboard.websiteRecheck.failedWithReason": "Couldn't re-check your website: {reason}",
     "dashboard.websiteRecheck.noWebsite": "There's no website on your listing to re-check.",
     "dashboard.websiteRecheck.failed": "Couldn't re-check your website — try again in a few minutes. This didn't use a re-check.",
     "dashboard.websiteRecheck.seeWebsite": "See your website results",
@@ -9799,6 +9934,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.scoringUpdateNote.v1_13_0": "Actualizamos cómo PostScore califica los sitios web: «Rendimiento y móvil» ahora son dos comprobaciones, «Carga rápida» (cuántos segundos tarda, aproximadamente, su página en mostrarse en un teléfono) y «Funciona bien en teléfonos». Si su puntuación cambió, se debe a esta actualización, no a algo que usted hizo.",
     "content.checks.website.performance_mobile.result.withTime": "{category} · unos {seconds} segundos en mostrar su página en un teléfono",
     "content.checks.website.performance_mobile.explanation.resultV113": "{result}.",
+    "content.checks.website.performance_mobile.explanation.resultTypicalV113": "{result}, lo habitual en sus últimas {count} pruebas.",
     "content.checks.website.performance_mobile.explanation.resultLastMeasuredV113": "{result} (última medición: {date}).",
     "content.checks.website.performance_mobile.note.field": "Basado en visitantes reales de los últimos 28 días",
     "content.checks.website.performance_mobile.note.lab": "Basado en la prueba en teléfono de Google",
@@ -10885,6 +11021,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.visibility.review_replies.explanation.tooFew": "Aún no hay suficientes reseñas recientes para revisar.",
     "content.checks.visibility.review_replies.explanation.counts": "Respondió a {replied} de sus últimas {count} reseñas (puntos completos al 80 %).",
     "content.checks.completeness.customer_details.label": "Datos para clientes en su ficha",
+    "dashboard.overview.scoringUpdateNote.v1_14_0": "Actualizamos cómo PostScore califica la velocidad del sitio web. «Carga rápida» ahora usa el resultado habitual de sus últimas pruebas de velocidad, así que una sola prueba lenta o rápida ya no cambia su puntuación. Si su puntuación cambió, se debe a esta actualización, no a algo que usted hizo.",
     "content.checks.completeness.customer_details.advice": "Agréguelos en Google: Perfil de Empresa en Google → Editar perfil → {path}.",
     "content.checks.completeness.customer_details.explanation.notApplicable": "No aplica a este tipo de negocio.",
     "content.checks.completeness.customer_details.explanation.notCheckedYet": "Aún no se revisó — el próximo análisis lo leerá de su ficha de Google.",
@@ -11062,6 +11199,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.info_consistency.explanation.conflictPhone": "Su sitio web dice {site}; Google dice {google}.",
     "content.checks.website.info_consistency.explanation.conflictAddress": "Su sitio web dice {site}; Google dice {google}.",
     "content.checks.website.info_consistency.explanation.conflictHours": "Su sitio web dice {site}; Google dice {google}.",
+    "content.checks.website.info_consistency.explanation.conflictHoursLabelled": "El apartado «{label}» de su sitio web dice {site}; Google dice {google}.",
+    "content.checks.website.info_consistency.explanation.hoursUnconfirmed": "Su sitio indica más de un horario de apertura y no pudimos confirmar cuál es el actual, así que no lo comparamos con Google. Se excluye de su puntuación, no se cuenta en su contra.",
+    "content.checks.website.info_consistency.explanation.allMatchHoursUnconfirmed": "El teléfono y la dirección de su sitio web coinciden con su ficha de Google. No comparamos su horario: su sitio indica más de uno y no pudimos confirmar cuál es el actual.",
     "content.checks.website.notice_freshness.label": "Avisos actualizados",
     "content.checks.website.notice_freshness.advice": "Elimine o actualice cualquier aviso de cierre/temporada una vez que su fecha haya pasado — un aviso de \"estamos cerrados\" desactualizado se percibe como abandono, no como cuidado.",
     "content.checks.website.notice_freshness.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para verificar.",
@@ -11111,6 +11251,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.social_links.explanation.listingOnly": "Su ficha de Google enlaza a su página de {platform}; eso cuenta como su perfil social. Este punto se califica cuando tenga un sitio web.",
     "content.checks.website.social_links.explanation.notAnalyzed": "Aún no se ha revisado — su próximo escaneo de PostScore buscará enlaces a redes sociales.",
     "content.checks.website.social_links.explanation.found": "Perfiles sociales enlazados desde su sitio: {profiles}.",
+    "content.checks.website.social_links.explanation.onlyBrokenV115": "Este apartado queda fuera de su puntuación: los iconos sociales de su sitio no llevan a ningún perfil, y los enlaces rotos ya cuentan en «Sin enlaces rotos ni páginas sin contenido».",
     "content.checks.website.social_links.explanation.none": "No se encontraron enlaces a sus perfiles de redes sociales en su sitio — agréguelos al encabezado o al pie de página.",
     "content.checks.website.social_links.explanation.clientRenderedShell": "No se pudo verificar — este sitio muestra su contenido con JavaScript, así que nuestra comprobación no pudo leer sus enlaces. Se excluye de su puntuación, no se cuenta en su contra.",
     "content.checks.website.social_links.explanation.scriptBuiltFooter": "No se pudo verificar — el pie de página de su sitio se genera con un script después de cargar la página, así que nuestra comprobación no pudo leer sus enlaces a redes sociales. Se excluye de su puntuación, no se cuenta en su contra.",
@@ -11276,6 +11417,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpEdit.group.parking": "¿Cómo pueden estacionar sus clientes? Elija todas las que correspondan",
     "dashboard.gbpEdit.group.payment": "¿Cómo pueden pagar sus clientes? Elija todas las que correspondan",
     "dashboard.gbpEdit.group.accessibility": "¿Qué es accesible para sillas de ruedas? Elija todas las que correspondan",
+    "dashboard.gbpEdit.group.service": "¿Cómo pueden obtener su comida los clientes? Elija todas las que correspondan",
+    "dashboard.gbpEdit.option.has_takeout": "Para llevar",
+    "dashboard.gbpEdit.option.has_delivery": "Entrega a domicilio",
+    "dashboard.gbpEdit.option.has_curbside_pickup": "Recogida en la acera",
     "dashboard.gbpEdit.option.has_parking_street_free": "Estacionamiento gratuito en la calle",
     "dashboard.gbpEdit.option.has_parking_street_paid": "Estacionamiento de pago en la calle",
     "dashboard.gbpEdit.option.has_parking_lot_free": "Estacionamiento gratuito",
@@ -14018,6 +14163,57 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.recs.heading": "Recomendaciones principales",
     "dashboard.overview.recs.viewAll": "Ver todo",
     "dashboard.overview.recs.urgent": "Urgente",
+    "content.checks.website.performance_mobile.labelV115": "Carga en un tiempo razonable",
+    "content.checks.website.performance_mobile.explanation.reasonableV115": "Su sitio carga en un tiempo razonable en teléfonos (unos {seconds} segundos).",
+    "content.checks.website.performance_mobile.explanation.tooSlowV115": "Su sitio tarda unos {seconds} segundos en cargar en teléfonos; muchos clientes se van antes de que aparezca.",
+    "content.checks.website.performance_mobile.explanation.typicalOfTestsV115": "Lo habitual en sus últimas {count} pruebas.",
+    "content.checks.website.performance_mobile.explanation.lastMeasuredNoteV115": "Última medición: {date}.",
+    "content.checks.website.performance_mobile.explanation.noSecondsV115": "No se califica: la prueba de Google no indicó cuántos segundos tarda su página en mostrarse.",
+    "content.checks.website.services_presence.explanation.brokenLinkV115": "El enlace a su menú ({url}) no funciona; se cuenta en «Sin enlaces rotos ni páginas sin contenido», no aquí.",
+    "content.checks.website.links.label": "Sin enlaces rotos ni páginas sin contenido",
+    "content.checks.website.links.advice": "Corrija o quite cada enlace que no abre la página que promete; quien maneja su sitio web suele poder hacerlo en unos minutos.",
+    "content.checks.website.links.explanation.noWebsite": "No hay un sitio web que revisar.",
+    "content.checks.website.links.explanation.notCheckedYet": "Aún no se revisa: el próximo análisis abrirá los enlaces de su página principal.",
+    "content.checks.website.links.explanation.noLinks": "No encontramos enlaces que revisar en su página principal.",
+    "content.checks.website.links.explanation.allGood.one": "El enlace que revisamos abre la página correcta.",
+    "content.checks.website.links.explanation.allGood.other": "Los {count} enlaces que revisamos abren la página correcta.",
+    "content.checks.website.links.explanation.problems.one": "1 de {checked} enlaces necesita arreglo.",
+    "content.checks.website.links.explanation.problems.other": "{count} de {checked} enlaces necesitan arreglo.",
+    "dashboard.links.open.one": "1 enlace necesita arreglo: véalo",
+    "dashboard.links.open.other": "{count} enlaces necesitan arreglo: véalos",
+    "dashboard.links.title": "Enlaces que necesitan arreglo",
+    "dashboard.links.intro": "Los clientes que los tocan no llegan a la página que promete el enlace.",
+    "dashboard.links.pointsTo": "Apunta a",
+    "dashboard.links.copy": "Copiar enlace",
+    "dashboard.links.copied": "Copiado",
+    "dashboard.links.close": "Cerrar",
+    "dashboard.links.urgent": "Urgente",
+    "dashboard.links.kind.order": "«{label}» (pedir en línea)",
+    "dashboard.links.kind.book": "«{label}» (reservas)",
+    "dashboard.links.kind.contact": "«{label}» (contacto)",
+    "dashboard.links.kind.menu": "«{label}» (menú)",
+    "dashboard.links.kind.directions": "«{label}» (cómo llegar)",
+    "dashboard.links.kind.nav": "«{label}» (enlace de la barra de menú)",
+    "dashboard.links.kind.social": "Ícono de {label}",
+    "dashboard.links.problem.not_found": "Página no encontrada ({status}).",
+    "dashboard.links.problem.server_error": "La página responde con un error del servidor ({status}).",
+    "dashboard.links.problem.page_not_found": "Abre una página de «página no encontrada».",
+    "dashboard.links.problem.parked": "Abre una página de dominio estacionado o en venta, no su página.",
+    "dashboard.links.problem.coming_soon": "Abre una página de «próximamente».",
+    "dashboard.links.problem.loops_home": "Abre su propia página principal en su lugar.",
+    "dashboard.links.problem.loops_home_social": "Abre su propia página principal en lugar de {platform}.",
+    "dashboard.links.problem.dead_profile": "Ese perfil de {platform} ya no existe.",
+    "dashboard.links.problem.wrong_page": "Lleva a un sitio que no tiene relación, no a su perfil de {platform}.",
+    "dashboard.links.problem.platform_home": "Lleva a la página principal de {platform}, no a su perfil.",
+    "dashboard.links.problem.empty_link": "El ícono no tiene enlace: tocarlo no hace nada.",
+    "dashboard.links.fix.page": "Haga que el enlace apunte a la página correcta, o quítelo.",
+    "dashboard.links.fix.social": "Ponga en el ícono la dirección real de su perfil de {platform}, o quite el ícono.",
+    "dashboard.links.fix.order": "Haga que apunte a su página actual para pedir en línea; los clientes no pueden pedir hasta que funcione.",
+    "dashboard.links.fix.book": "Haga que apunte a su página actual de reservas; los clientes no pueden reservar hasta que funcione.",
+    "dashboard.links.fix.contact": "Haga que apunte a una página con su teléfono, correo o formulario de contacto.",
+    "dashboard.urgent.issue.broken_link": "Un enlace que los clientes usan para pedir, reservar o contactarlo no funciona: se quedan sin salida.",
+    "dashboard.urgent.fix.broken_link": "Corregir el enlace roto",
+    "dashboard.overview.scoringUpdateNote.v1_15_0": "Actualizamos cómo PostScore califica los sitios web. Nuevo: «Sin enlaces rotos ni páginas sin contenido» revisa los enlaces que tocan los clientes en su página principal (pedir, reservar, contacto, menú, íconos sociales). «Carga rápida» ahora es «Carga en un tiempo razonable»: solo un sitio muy lento (6 segundos o más) pierde ese punto. «Usa HTTPS» vale un punto menos. Si su puntuación cambió, se debe a esta actualización, no a algo que usted hizo.",
     "dashboard.serviceOptions.line": "Google muestra: {list}",
     "dashboard.serviceOptions.takeout": "Para llevar",
     "dashboard.serviceOptions.delivery": "Entrega a domicilio",
@@ -14863,7 +15059,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteRecheck.nothingChanged": "Nada cambió en su sitio web desde la última revisión.",
     "dashboard.websiteRecheck.publishHint": "¿Acaba de publicar un cambio? Algunos creadores de sitios tardan unos minutos en actualizar el sitio publicado — inténtelo de nuevo en un rato.",
     "dashboard.websiteRecheck.tasksConfirmed": "Arreglos confirmados en su plan: {count} (+{points} pts)",
-    "dashboard.websiteRecheck.limitReached": "Ya usó las {total} revisiones del sitio web de hoy. Inténtelo de nuevo mañana.",
+    "dashboard.websiteRecheck.limitReached": "Ya usó las {total} revisiones de hoy; inténtelo de nuevo mañana.",
+    "dashboard.websiteRecheck.planLocked": "Las revisiones están incluidas en Grow y Premium. Vea los planes en Configuración → Plan y facturación.",
+    "dashboard.websiteRecheck.archived": "Este negocio está archivado. Restáurelo en el Resumen para volver a revisar su sitio web.",
+    "dashboard.websiteRecheck.signedOut": "Su sesión se cerró. Inicie sesión de nuevo y vuelva a revisar su sitio web.",
+    "dashboard.websiteRecheck.notFound": "No encontramos este negocio en su cuenta.",
+    "dashboard.websiteRecheck.failedWithReason": "No se pudo revisar su sitio web: {reason}",
     "dashboard.websiteRecheck.noWebsite": "Su ficha no tiene un sitio web para revisar.",
     "dashboard.websiteRecheck.failed": "No se pudo revisar su sitio web — inténtelo de nuevo en unos minutos. Esto no gastó una revisión.",
     "dashboard.websiteRecheck.seeWebsite": "Ver los resultados de su sitio web",
