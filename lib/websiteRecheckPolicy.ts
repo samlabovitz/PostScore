@@ -14,6 +14,8 @@ import { zonedDayKey } from "@/lib/i18n/format";
 
 export const WEBSITE_RECHECKS_PER_DAY = 3;
 export const WEBSITE_RECHECK_KIND = "website_recheck" as const;
+/** A re-score of the saved data with new scoring code (scripts/rescore-all.ts). */
+export const SCORING_UPDATE_KIND = "scoring_update" as const;
 
 export interface WebsiteRecheckAvailability {
   used: number;
@@ -29,9 +31,23 @@ export function websiteRecheckAvailability(recheckDates: string[], now: Date, ti
   return { used, left, allowed: left > 0 };
 }
 
-/** Is this saved scan a full scan (the one the 1-a-day limit counts)? */
+/** Is this saved scan a full scan (the one the 1-a-day limit counts, and
+ * "last scan" shows)? Never a website re-check or a scoring update. */
 export function isFullScan(breakdown: Pick<ScoreBreakdown, "scanKind"> | null | undefined): boolean {
-  return breakdown?.scanKind !== WEBSITE_RECHECK_KIND;
+  return isFullScanKind(breakdown?.scanKind);
+}
+
+/** isFullScan for a saved scan's `breakdown_json->>scanKind`. */
+export function isFullScanKind(kind: string | null | undefined): boolean {
+  return kind !== WEBSITE_RECHECK_KIND && kind !== SCORING_UPDATE_KIND;
+}
+
+/** Between two saved scans, did PostScore change how it scores — a new
+ * scoring version, or the newer scan is a re-score of the same data? Then
+ * the difference is never the owner's gain or loss. */
+export function isScoringUpdate(previousVersion: string | null | undefined, currentVersion: string | null | undefined, currentKind: string | null | undefined): boolean {
+  if (currentKind === SCORING_UPDATE_KIND) return true;
+  return !!previousVersion && !!currentVersion && previousVersion !== currentVersion;
 }
 
 export type CheckStatus = "done" | "needs_work" | "couldnt_check";

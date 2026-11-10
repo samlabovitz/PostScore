@@ -3,6 +3,7 @@
 // pass their own RLS-scoped Supabase client (a business the user doesn't
 // own reads as not found).
 
+import { isFullScanKind } from "@/lib/websiteRecheckPolicy";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { businessTimeZone } from "@/lib/businessTimeZone";
 import { normalizeLocale, type Locale } from "@/lib/i18n";
@@ -261,7 +262,7 @@ export async function openBusinessVisitWithClient(
   const s = sinceLastVisit(lastSeenAt, scans, locale);
   const c = s.comparison;
   const { data: recent } = await supabase.from("scores").select("created_at, scan_kind:breakdown_json->>scanKind").eq("business_id", businessId).order("created_at", { ascending: false }).limit(10);
-  const lastFull = ((recent ?? []) as Array<{ created_at: string; scan_kind: string | null }>).find((r) => r.scan_kind !== "website_recheck")?.created_at ?? null;
+  const lastFull = ((recent ?? []) as Array<{ created_at: string; scan_kind: string | null }>).find((r) => isFullScanKind(r.scan_kind))?.created_at ?? null;
   const [rankNow, rankThen, fixes, nextSteps, reviewGoalLines] = await Promise.all([
     rankAt(supabase, businessId, now.toISOString()),
     rankAt(supabase, businessId, lastSeenAt),

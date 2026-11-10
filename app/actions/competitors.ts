@@ -32,6 +32,7 @@ import type { Plan } from "@/lib/plan";
 import {
   groupSavedScans,
   rankPoint,
+  withLatestOwnerScore,
   type CompetitorRankPoint,
   type SavedCompetitorScan,
   type SavedScanRow,
@@ -157,6 +158,13 @@ export async function getCompetitors(businessId: string): Promise<GetCompetitors
 }
 
 /** The real logic behind getCompetitors() — DB reads only. */
+/** The business's latest saved score (its newest `scores` row's
+ * breakdown) — what the Competitors page ranks the owner by. */
+async function latestSavedBreakdown(supabase: SupabaseClient, businessId: string): Promise<unknown> {
+  const { data } = await supabase.from("scores").select("breakdown_json").eq("business_id", businessId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  return (data as { breakdown_json: unknown } | null)?.breakdown_json ?? null;
+}
+
 export async function getCompetitorsWithClient(
   supabase: SupabaseClient,
   businessId: string,
@@ -164,7 +172,7 @@ export async function getCompetitorsWithClient(
   plan: Plan | null = null
 ): Promise<GetCompetitorsResult> {
   // Every read needs only the id — run them together (each RLS-scoped).
-  const [{ data: business, error }, { data: scanRows, error: scanError }, unfinished, scoring, niche] = await Promise.all([
+  const [{ data: business, error }, { data: scanRows, error: scanError }, unfinished, scoring, niche, latestScore] = await Promise.all([
     supabase
       .from("businesses")
       .select("name, address, language, category, categories, primary_type, business_type_override, lat, lng, website, verified_website_url")
@@ -174,6 +182,7 @@ export async function getCompetitorsWithClient(
     unfinishedNewScanIds(supabase, businessId),
     latestScoringProgress(supabase, businessId),
     loadBusinessNiche(supabase, businessId),
+    latestSavedBreakdown(supabase, businessId),
   ]);
 
   if (error || !business) {
@@ -204,7 +213,10 @@ export async function getCompetitorsWithClient(
   const allRows = (scanRows ?? []) as SavedScanRow[];
   // The owner's Remove / Add apply to the list shown right away.
   const overrides = await loadCompetitorOverrides(supabase, businessId);
-  const scans = groupSavedScans(withoutUnfinished(allRows, unfinished));
+  // The latest scan ranks the owner by their latest saved score (its
+  // number, rank and chart dot match the score card); earlier scans keep
+  // the score saved with them — that's the history.
+  const scans = groupSavedScans(withoutUnfinished(allRows, unfinished)).map((s, i) => (i === 0 ? withLatestOwnerScore(s, latestScore, locale) : s));
   const latest = scans[0] ? applyOverrides(scans[0], overrides) : null;
   const newestSavedAt = allRows[0]?.created_at ?? null;
 
@@ -566,9 +578,11 @@ export interface CompetitorSnapshot {
 async function getLatestCompetitorSnapshotUncached(businessId: string): Promise<CompetitorSnapshot | null> {
   const supabase = createClient();
 
-  const [{ data, error }, unfinished] = await Promise.all([
+  const [{ data, error }, unfinished, latestScore, { data: business }] = await Promise.all([
     supabase.from("competitor_scans").select(SAVED_SCAN_COLUMNS).eq("business_id", businessId).order("created_at", { ascending: false }).limit(50),
     unfinishedNewScanIds(supabase, businessId),
+    latestSavedBreakdown(supabase, businessId),
+    supabase.from("businesses").select("language").eq("id", businessId).maybeSingle(),
   ]);
 
   if (error || !data || data.length === 0) return null;
@@ -578,7 +592,9 @@ async function getLatestCompetitorSnapshotUncached(businessId: string): Promise<
 
   const latestScanId = rows[0].scan_id;
   const latestRows = rows.filter((r) => r.scan_id === latestScanId);
-  const scan = groupSavedScans(latestRows)[0];
+  // The owner on their latest saved score — the same as the Competitors page.
+  const scan = withLatestOwnerScore(groupSavedScans(latestRows)[0], latestScore, normalizeLocale((business as { language: string | null } | null)?.language));
+  const owner = scan.entries.find((e) => e.isSubject);
 
   return {
     scan,
@@ -587,8 +603,8 @@ async function getLatestCompetitorSnapshotUncached(businessId: string): Promise<
     entries: latestRows.map((r) => ({
       name: r.name,
       isSubject: r.is_subject,
-      total: r.total,
-      grade: r.grade,
+      total: r.is_subject && owner ? owner.total : r.total,
+      grade: r.is_subject && owner ? owner.grade : r.grade,
       priceLevel: r.price_level,
       photoCount: r.photo_count,
     })),

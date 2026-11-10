@@ -2,7 +2,8 @@
 // and its tests use them. Pure — no database or network.
 
 import { withinMaxDistance } from "@/lib/competitorQuality";
-import type { ScoreBreakdown } from "@/lib/scoring";
+import { forCompetitorComparison, type ScoreBreakdown } from "@/lib/scoring";
+import type { Locale } from "@/lib/i18n";
 import { isHeadToHead, ownerStanding } from "@/lib/competitorComparison";
 import type { CompetitorScope } from "@/lib/competitorScope";
 
@@ -135,6 +136,23 @@ export function groupSavedScans(rows: SavedScanRow[]): SavedCompetitorScan[] {
   // database's row order — so a tied rank is the same on every page.
   for (const scan of scans) scan.entries.sort((a, b) => (b.total ?? -1) - (a.total ?? -1) || a.placeId.localeCompare(b.placeId));
   return scans.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+}
+
+/** The scan with the owner's own entry on the business's latest saved
+ * score (its latest `scores` row), compared like for like
+ * (forCompetitorComparison) — so the Competitors page's number, rank and
+ * chart dot match the score card, never the score frozen when the
+ * competitor scan ran (the real Colorful Yun Nan case). Competitors keep
+ * their saved scores. No saved score: unchanged. */
+export function withLatestOwnerScore(scan: SavedCompetitorScan, latest: unknown, locale: Locale): SavedCompetitorScan {
+  const breakdown = parseBreakdown(latest);
+  if (!breakdown || !scan.entries.some((e) => e.isSubject)) return scan;
+  const comparable = forCompetitorComparison(breakdown, locale);
+  const entries = scan.entries.map((e) =>
+    e.isSubject ? { ...e, total: comparable.total, grade: comparable.grade, scoringVersion: comparable.scoringVersion, breakdown: comparable } : e
+  );
+  entries.sort((a, b) => (b.total ?? -1) - (a.total ?? -1) || a.placeId.localeCompare(b.placeId));
+  return { ...scan, entries };
 }
 
 export function rankPoint(scan: SavedCompetitorScan, scope?: CompetitorScope | null): CompetitorRankPoint {

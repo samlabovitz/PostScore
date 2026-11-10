@@ -1082,12 +1082,14 @@ export interface ScoreBreakdown {
   /** Flat list of every check, in CHECKS order — convenient for tables/exports. */
   checks: CheckResult[];
   /** Saved scans only: "website_recheck" when only the website part was
-   * re-checked (no Google call) — see app/actions/websiteRecheck.ts.
-   * Absent on a full scan. */
+   * re-checked (no Google call) — see app/actions/websiteRecheck.ts;
+   * "scoring_update" when PostScore re-scored the saved data with new
+   * scoring code (scripts/rescore-all.ts) — nothing at the business
+   * changed. Absent on a full scan. */
   scanKind?: ScanKind;
 }
 
-export type ScanKind = "full" | "website_recheck";
+export type ScanKind = "full" | "website_recheck" | "scoring_update";
 
 export interface Suggestion {
   checkId: string;

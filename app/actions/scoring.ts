@@ -217,12 +217,13 @@ export async function saveScoreSnapshotWithClient(
     return { status: "error", message: error?.message ?? "Could not save this scan." };
   }
 
-  const { toComplete, toReopen, pointsConfirmed } = await reconcileActionPlanTasks(
-    supabase,
-    businessId,
-    scored.result.breakdown,
-    data.id
-  );
+  // A scoring update (scripts/rescore-all.ts) re-scores saved data — it
+  // never confirms or reopens the owner's "I did this" tasks; the next
+  // real scan does.
+  const { toComplete, toReopen, pointsConfirmed } =
+    scanKind === "scoring_update"
+      ? { toComplete: 0, toReopen: 0, pointsConfirmed: 0 }
+      : await reconcileActionPlanTasks(supabase, businessId, scored.result.breakdown, data.id);
 
   // In-app notifications (lib/notifications.ts): one per urgent issue this
   // scan finds, and the ones it shows are fixed resolved. Never fails the scan.

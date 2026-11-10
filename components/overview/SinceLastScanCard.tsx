@@ -31,6 +31,7 @@ import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "
 import { diffBreakdowns, resolveChangeDisplay, type CheckChange } from "@/lib/scoreChanges";
 import type { ScoreBreakdown } from "@/lib/scoring";
 import { formatShortDate, t, tPlural, useLocale, useTimeZone } from "@/lib/i18n";
+import { isScoringUpdate } from "@/lib/websiteRecheckPolicy";
 import { cn } from "@/lib/utils";
 
 /** At most this many check changes on the Overview (biggest point
@@ -69,7 +70,7 @@ export function SinceLastScanCard({
   const locale = useLocale();
   const timeZone = useTimeZone();
   const [current, previous] = snapshots;
-  const sameVersion = !!current && !!previous && current.scoring_version === previous.scoring_version;
+  const sameVersion = !!current && !!previous && !scoringUpdateBetween(previous, current);
   const checkChanges = sameVersion ? diffBreakdowns(previous.breakdown_json, current.breakdown_json) : [];
   const hiddenChanges = Math.max(0, checkChanges.length - MAX_CHECK_ROWS);
   const reportsLink = (
@@ -137,9 +138,15 @@ export function SinceLastScanCard({
   );
 }
 
+/** A scoring update between the two scans (a new version, or a re-score
+ * of the same data): the difference is PostScore's, not the owner's. */
+function scoringUpdateBetween(previous: ScoreSnapshot, current: ScoreSnapshot): boolean {
+  return isScoringUpdate(previous.scoring_version, current.scoring_version, (current.breakdown_json as { scanKind?: string } | null)?.scanKind);
+}
+
 function ScoreBeforeAfter({ current, previous, timeZone }: { current: ScoreSnapshot; previous: ScoreSnapshot; timeZone: string }) {
   const locale = useLocale();
-  const sameVersion = current.scoring_version === previous.scoring_version;
+  const sameVersion = !scoringUpdateBetween(previous, current);
   const delta = current.total - previous.total;
   const Icon = delta > 0 ? IconArrowUpRight : delta < 0 ? IconArrowDownRight : IconMinus;
   return (
@@ -156,6 +163,11 @@ function ScoreBeforeAfter({ current, previous, timeZone }: { current: ScoreSnaps
           <span className="text-[11.5px] text-ink-soft">{t(locale, "dashboard.overview.sinceCard.now")}</span>
           <span className="font-serif text-[28px] font-bold leading-none tabular-nums text-ink">{current.total}</span>
         </div>
+        {!sameVersion && (
+          <span data-testid="since-scoring-updated" className="mb-0.5 inline-flex items-center rounded-full bg-white px-2.5 py-1 text-[12.5px] font-semibold text-ink-soft">
+            {t(locale, "dashboard.overview.scoreCard.scoringUpdated")}
+          </span>
+        )}
         {sameVersion && (
           <span
             className={cn(

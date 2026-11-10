@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isFullScanKind, isScoringUpdate } from "@/lib/websiteRecheckPolicy";
 import { IconChevronDown, IconExternalLink } from "@tabler/icons-react";
 import type { ProfileTools } from "@/lib/growBannerTools";
 import { GrowMoreCustomers } from "@/components/overview/GrowMoreCustomers";
@@ -137,9 +138,9 @@ export function BusinessScoreView({
     ).length > 0;
 
   // The last FULL scan: a website-only re-check refreshes the website
-  // part only, so it neither uses up the daily re-scan nor makes the
-  // Google listing data look fresh.
-  const lastScanAt = history.find((h) => h.scan_kind !== "website_recheck")?.created_at ?? null;
+  // part only, and a scoring update re-scores saved data, so neither uses
+  // up the daily re-scan nor makes the Google listing data look fresh.
+  const lastScanAt = history.find((h) => isFullScanKind(h.scan_kind))?.created_at ?? null;
   const hasWebsite = businessWebsiteUrl(business) !== null;
   // "View live site": the site PostScore shows — never a parked or broken listing link.
   const liveSiteUrl = shownWebsiteUrl(business);
@@ -429,7 +430,7 @@ function ScanHistory({ history }: { history: ScoreHistoryRow[] }) {
             // The scoring version is internal: no column, just a tag on
             // the scan where it changed, with the version in its tooltip.
             const older = history[i + 1];
-            const scoringUpdated = !!older && older.scoring_version !== row.scoring_version;
+            const scoringUpdated = !!older && isScoringUpdate(older.scoring_version, row.scoring_version, row.scan_kind);
             return (
               <tr key={row.id} className="border-t border-paper-line align-top">
                 <td className="py-2 pr-2 text-ink">

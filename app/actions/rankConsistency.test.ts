@@ -39,10 +39,11 @@ function fakeSupabase(rows: SavedScanRow[]) {
   const business = { name: "J & G Italian Deli", category: "Deli", categories: ["deli"], primary_type: "deli", business_type_override: null, language: "en" };
   return {
     from(table: string) {
-      const data = table === "businesses" ? [business] : table === "competitor_scoring_jobs" ? [] : rows;
+      // No saved score (`scores`): the owner's row keeps its saved score.
+      const data = table === "businesses" ? [business] : table === "competitor_scoring_jobs" || table === "scores" ? [] : rows;
       const chain: Record<string, unknown> = {};
       for (const m of ["select", "eq", "neq", "order", "limit", "in"]) chain[m] = () => chain;
-      chain.maybeSingle = async () => ({ data: table === "competitor_scoring_jobs" ? null : data[0], error: null });
+      chain.maybeSingle = async () => ({ data: data[0] ?? null, error: null });
       chain.single = async () => ({ data: data[0], error: null });
       chain.then = (resolve: (v: unknown) => unknown) => resolve({ data, error: null });
       return chain;

@@ -134,9 +134,10 @@ describe("scan history rows", () => {
       scan("b", "2026-10-16T14:00:00Z", 71, "1.9.0"),
     ];
     const rows = historyRows(scans, "90d", NOW);
+    // A scoring update is PostScore's change, never the owner's gain or loss.
     expect(rows.map((r) => [r.id, r.changeFromPrevious, r.scoringUpdated])).toEqual([
-      ["b", -3, true],
-      ["a", 4, true],
+      ["b", null, true],
+      ["a", null, true],
     ]);
     expect(historyRows(scans, "all", NOW).at(-1)).toMatchObject({ id: "old", changeFromPrevious: null, scoringUpdated: false });
   });

@@ -23,6 +23,8 @@ export interface ReportsScoreRow {
   profile_snapshot_json: ProfileSnapshot | null;
   /** The SCORING_VERSION saved with this scan (null if none recorded). */
   scoring_version: string | null;
+  /** The saved scan's kind ("scoring_update": a re-score of saved data). */
+  scan_kind?: string | null;
   /** This scan's three category scores, narrowed server-side from
    * breakdown_json so the full check list never ships to the browser.
    * null when the saved scan has no category breakdown. */
@@ -128,7 +130,7 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
     supabase.from("businesses").select("name, monthly_report_enabled, language, lat, lng").eq("id", businessId).single(),
     supabase
       .from("scores")
-      .select("id, total, grade, created_at, profile_snapshot_json, scoring_version, breakdown_categories:breakdown_json->categories")
+      .select("id, total, grade, created_at, profile_snapshot_json, scoring_version, scan_kind:breakdown_json->>scanKind, breakdown_categories:breakdown_json->categories")
       .eq("business_id", businessId)
       .order("created_at", { ascending: true }),
     // Best-effort: a failed count here shouldn't fail the whole page, same
@@ -152,8 +154,9 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
   }
 
   const history: ReportsScoreRow[] = (scores ?? []).map((row) => {
-    const r = row as Omit<ReportsScoreRow, "categories" | "scoring_version"> & {
+    const r = row as Omit<ReportsScoreRow, "categories" | "scoring_version" | "scan_kind"> & {
       scoring_version: unknown;
+      scan_kind: unknown;
       breakdown_categories: unknown;
     };
     return {
@@ -163,6 +166,7 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
       created_at: r.created_at,
       profile_snapshot_json: r.profile_snapshot_json,
       scoring_version: typeof r.scoring_version === "string" && r.scoring_version.length > 0 ? r.scoring_version : null,
+      scan_kind: typeof r.scan_kind === "string" ? r.scan_kind : null,
       categories: parseChartCategories(r.breakdown_categories),
     };
   });

@@ -378,12 +378,13 @@ describe("since your last scan (replaces the two change sections)", () => {
     expect(html).toContain('href="/business/b/reports"');
   });
 
-  test("a scoring-version change: both real scores, the honest note, no delta, no check deltas", () => {
+  test("a scoring-version change: both real scores, “PostScore updated how it scores”, never a gain or loss, no check deltas", () => {
     const html = card([snap({}), snap({ total: 80, scoring_version: "1.10.0" })]);
     expect(html).toContain(">80<");
     expect(html).not.toContain("+7");
-    // One honest note only; the checks section is hidden, not repeated.
-    expect(html.split("PostScore updated how it scores").length - 1).toBe(1);
+    // The pill in place of the delta, and one note; the checks section is hidden.
+    expect(html).toMatch(/data-testid="since-scoring-updated"[^>]*>PostScore updated how it scores</);
+    expect(html).toContain("not from a change at your business, so it isn&#x27;t counted as a gain or a loss.");
     expect(html).not.toContain("Checks that went up or down");
     expect(html).not.toContain("aren&#x27;t compared across a scoring update");
   });

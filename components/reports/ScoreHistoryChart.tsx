@@ -82,6 +82,7 @@ function toScan(row: ReportsScoreRow): HistoryScan {
     grade: row.grade,
     createdAt: row.created_at,
     scoringVersion: row.scoring_version ?? null,
+    scanKind: row.scan_kind ?? null,
     categories: row.categories ?? null,
   };
 }
@@ -618,7 +619,9 @@ function ScanHistory({ rows }: { rows: ReturnType<typeof historyRows> }) {
                   <td className="py-2 text-right font-semibold tabular-nums text-ink">{row.total}</td>
                   <td className="py-2 text-right text-ink-soft">{row.grade}</td>
                   <td className="py-2 text-right tabular-nums text-ink-soft">
-                    {row.changeFromPrevious === null ? (
+                    {row.scoringUpdated ? (
+                      <span className="text-[11.5px] text-ink-mute">{t(locale, "dashboard.overview.scoreCard.scoringUpdated")}</span>
+                    ) : row.changeFromPrevious === null ? (
                       <span className="text-[11.5px] text-ink-mute">{t(locale, "dashboard.reports.chartHistoryFirstScan")}</span>
                     ) : (
                       signed(row.changeFromPrevious)

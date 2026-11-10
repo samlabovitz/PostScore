@@ -3,6 +3,7 @@
 // data isn't there, the result says so ("none", null) and the UI shows
 // an honest empty state instead.
 
+import { isScoringUpdate } from "@/lib/websiteRecheckPolicy";
 import { checkOutcome } from "@/components/scoring/CategoryCard";
 import type { ActionPlanTask, WebsiteBanner } from "@/lib/actionPlan";
 import type { ProfileSnapshot } from "@/lib/profileChanges";
@@ -54,10 +55,10 @@ export type ScoreChange =
   | { kind: "delta"; delta: number };
 
 /** Change since the previous saved scan (history is newest first). */
-export function scoreChangeSinceLastScan(history: { total: number; scoring_version: string }[]): ScoreChange {
+export function scoreChangeSinceLastScan(history: { total: number; scoring_version: string; scan_kind?: string | null }[]): ScoreChange {
   if (history.length < 2) return { kind: "first" };
   const [current, previous] = history;
-  if (current.scoring_version !== previous.scoring_version) return { kind: "scoring_updated" };
+  if (isScoringUpdate(previous.scoring_version, current.scoring_version, current.scan_kind)) return { kind: "scoring_updated" };
   return { kind: "delta", delta: current.total - previous.total };
 }
 

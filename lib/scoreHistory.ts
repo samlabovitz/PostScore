@@ -28,6 +28,8 @@ export interface HistoryScan {
   /** The SCORING_VERSION saved with this scan, or null when the row
    * doesn't record one — never guessed. */
   scoringVersion: string | null;
+  /** The saved scan's kind ("scoring_update": a re-score of saved data). */
+  scanKind?: string | null;
   /** null when the saved scan has no category breakdown. */
   categories: Record<ChartCategoryId, ChartCategoryScore> | null;
 }
@@ -102,10 +104,12 @@ export function hasEnoughForLine(points: DayPoint[]): boolean {
   return points.length >= 2;
 }
 
-/** True when `curr`'s saved scoring version differs from `prev`'s. Both
- * must be known — a missing version is never guessed as a change. */
+/** True when PostScore changed how it scores between `prev` and `curr`:
+ * `curr` is a re-score of saved data ("scoring_update"), or the two saved
+ * scoring versions differ (both known — a missing version is never
+ * guessed as a change). */
 export function versionChangedBetween(prev: HistoryScan | undefined, curr: HistoryScan): boolean {
-  return !!prev && prev.scoringVersion !== null && curr.scoringVersion !== null && prev.scoringVersion !== curr.scoringVersion;
+  return !!prev && (curr.scanKind === "scoring_update" || (prev.scoringVersion !== null && curr.scoringVersion !== null && prev.scoringVersion !== curr.scoringVersion));
 }
 
 /** Indexes into `points` where the scoring version changed from the
@@ -174,6 +178,8 @@ export function zoomedDomain(values: number[]): { min: number; max: number; tick
  * scan in the range, with its change from the scan before it (which
  * may sit just outside the range). */
 export interface HistoryRow extends HistoryScan {
+  /** null for the first scan, and for a scoring update — that change is
+   * PostScore's, never the owner's gain or loss. */
   changeFromPrevious: number | null;
   scoringUpdated: boolean;
 }
@@ -187,7 +193,7 @@ export function historyRows(allScans: HistoryScan[], range: RangeKey, now: Date)
     const prev = sorted[i - 1];
     rows.push({
       ...scan,
-      changeFromPrevious: prev ? scan.total - prev.total : null,
+      changeFromPrevious: prev && !versionChangedBetween(prev, scan) ? scan.total - prev.total : null,
       scoringUpdated: versionChangedBetween(prev, scan),
     });
   });
