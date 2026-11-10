@@ -50,9 +50,9 @@ describe("paid plans keep their pre-batch layout, page by page", () => {
   test("Reviews: stats, the review link & sign, the guide, counter tools, social proof, the rubric, replies — plus the review goal and 'Reply to a review' (the AI reply drafts)", () => {
     const view = read("app/business/[id]/website-reviews/ReviewsView.tsx");
     expect(without(tags(view), ["ReviewGapLine"])).toEqual([
-      "Card", "ProgressBar", "SectionHeading", "StatCard", "StatCard", "Pill", "Pill", "Card", "Link", "GetMoreReviews", "ReviewGuide", "CounterTools", "ReviewSocialProof", "SectionHeading", "CategoryCard", "GbpReplyCheckConnect", "ReviewReplyDrafter", "ComingSoonCard", "ConnectToUnlockCard", "ComingSoonCard",
+      "Card", "ProgressBar", "SectionHeading", "StatCard", "StatCard", "Pill", "Pill", "Card", "Link", "GetMoreReviews", "ReviewGuide", "CounterTools", "ReviewSocialProof", "SectionHeading", "CategoryCard", "GbpReplyCheckConnect", "GoogleReviewsInbox", "ReviewReplyDrafter", "ReviewReplyDrafter", "LockedPreview", "ConnectToUnlockCard", "ComingSoonCard",
     ]);
-    // Premium/Multi: the honest replies line (posting for them is coming soon).
+    // Premium/Multi: the replies line (unlimited drafts; with Google connected, replying from here).
     expect(view).toContain('{isPremiumPlan(plan) && (\n          <p data-testid="ai-replies-soon"');
   });
 

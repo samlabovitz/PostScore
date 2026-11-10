@@ -100,7 +100,7 @@ describe("this week's plan: the v1.12.0 steps while they lose points", () => {
 describe("links: PostScore's own tools, then official Google pages only", () => {
   const official = new Set<string>(Object.values(GOOGLE_LINKS));
   test("each step's links", () => {
-    expect(stepLinks("visibility.review_replies", "b1").map((l) => l.href)).toEqual(["/business/b1/website-reviews#reply-to-a-review", GOOGLE_LINKS.businessProfileReviews, GOOGLE_LINKS.reviewsHelp]);
+    expect(stepLinks("visibility.review_replies", "b1").map((l) => l.href)).toEqual(["/business/b1/website-reviews#reply-to-reviews", GOOGLE_LINKS.businessProfileReviews, GOOGLE_LINKS.reviewsHelp]);
     expect(stepLinks("visibility.review_recency", "b1").map((l) => l.href)).toEqual(["/business/b1/website-reviews#get-more-reviews", GOOGLE_LINKS.getReviewsHelp]);
     expect(stepLinks("completeness.customer_details", "b1").map((l) => l.href)).toEqual([GOOGLE_LINKS.businessProfile, GOOGLE_LINKS.attributesHelp]);
     for (const id of V112_STEP_CHECK_IDS) {
@@ -147,7 +147,7 @@ describe("the step card", () => {
   test("time estimate and links; Google links open in a new tab", () => {
     const html = render(<TaskCard task={replies} businessId="b1" context="weekly" step={1} />);
     expect(html).toContain("About 15 min");
-    expect(html).toContain('href="/business/b1/website-reviews#reply-to-a-review"');
+    expect(html).toContain('href="/business/b1/website-reviews#reply-to-reviews"');
     expect(html).toContain(`href="${GOOGLE_LINKS.businessProfileReviews}" target="_blank" rel="noopener noreferrer"`);
     expect(html).not.toContain("Coming soon");
   });

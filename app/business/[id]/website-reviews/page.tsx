@@ -14,6 +14,7 @@ import { getLocalBenchmark } from "@/app/actions/competitors";
 import { getReplyDraftStatus } from "@/app/actions/reviewReplies";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { gbpReplyCheckState } from "@/lib/gbpReplyCheck";
+import { reviewRepliesPracticeOn } from "@/lib/gbpReviewPractice";
 
 export default async function WebsiteReviewsPage({ params, searchParams = {} }: { params: { id: string }; searchParams?: { gbp?: string } }) {
   // Free: this tab is locked — its showroom, before any of its own data loads.
@@ -77,6 +78,8 @@ export default async function WebsiteReviewsPage({ params, searchParams = {} }: 
         nearby={benchmark.status === "ok" ? { goal: benchmark.benchmark.reviewGoal, group: benchmark.benchmark.reviewGroup } : null}
         devPlanSwitch={process.env.NODE_ENV === "development"}
         replyDrafts={replyDrafts}
+        // Practice mode (never in production): the inbox with sample reviews, no Google connection needed.
+        reviewRepliesPractice={reviewRepliesPracticeOn()}
       />
     </DashboardShell>
   );

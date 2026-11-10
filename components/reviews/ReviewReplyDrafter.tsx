@@ -28,6 +28,7 @@ export function ReviewReplyDrafter({
   placeId,
   initial,
   embedded = false,
+  inbox = false,
 }: {
   businessId: string;
   plan: Plan;
@@ -36,6 +37,9 @@ export function ReviewReplyDrafter({
   initial: ReplyDraftStatus;
   /** Inside another section (Free Overview's reviews): no card of its own. */
   embedded?: boolean;
+  /** The Google reviews inbox is on this page (Premium + Google connected):
+   * this box is for reviews from anywhere else. */
+  inbox?: boolean;
 }) {
   const locale = useLocale();
   const [review, setReview] = useState("");
@@ -207,7 +211,7 @@ export function ReviewReplyDrafter({
       )}
 
       <p className="text-[12px] leading-snug text-ink-mute" data-testid="replies-footer">
-        {t(locale, K(premium ? "footerPremium" : "footerFree"))} {t(locale, K("privacy"))}
+        {t(locale, K(premium ? (inbox ? "footerInbox" : "footerConnect") : "footerFree"))} {t(locale, K("privacy"))}
       </p>
     </section>
   );

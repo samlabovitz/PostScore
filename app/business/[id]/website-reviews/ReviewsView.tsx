@@ -26,6 +26,8 @@ import type { ReviewGoal } from "@/lib/competitorComparison";
 import { formatCount, t, useLocale } from "@/lib/i18n";
 import { useScrollToHash } from "@/lib/useScrollToHash";
 import { ReviewReplyDrafter } from "@/components/reviews/ReviewReplyDrafter";
+import { GoogleReviewsInbox } from "@/components/reviews/GoogleReviewsInbox";
+import { LockedPreview } from "@/components/plan/LockedPreview";
 import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 import type { ReplyDraftStatus } from "@/app/actions/reviewReplies";
 import { GbpReplyCheckConnect, type GbpReplyCheckState } from "@/components/gbp/GbpReplyCheckConnect";
@@ -166,6 +168,7 @@ export function ReviewsView({
   plan = "free",
   nearby = null,
   replyDrafts = null,
+  reviewRepliesPractice = false,
   gbpReplyCheck = null,
 }: {
   businessId: string;
@@ -177,10 +180,14 @@ export function ReviewsView({
   devPlanSwitch?: boolean;
   /** AI review reply drafts left (Grow and up; Free's page is a showroom). */
   replyDrafts?: ReplyDraftStatus | null;
+  /** Practice mode (lib/gbpReviewPractice.ts): the Google reviews inbox on fake data, connected or not. */
+  reviewRepliesPractice?: boolean;
   /** Grow: connect Google for the "Replying to reviews" check (null = hidden). */
   gbpReplyCheck?: GbpReplyCheckState | null;
 }) {
   const locale = useLocale();
+  // The Google reviews inbox (Premium + Google connected, or practice mode).
+  const inboxShowing = isPremiumPlan(plan) && (reviews.gbpConnected || reviewRepliesPractice);
   // A link straight to #get-more-reviews (e.g. the Overview page's
   // growth strip) needs this — see useScrollToHash's own doc comment.
   useScrollToHash();
@@ -247,19 +254,42 @@ export function ReviewsView({
             {t(locale, "dashboard.settings.plans.bullet.premium.replies")}
           </p>
         )}
-        {/* Paste a review, PostAI drafts the reply (3 free; Premium unlimited). */}
-        {replyDrafts && (
+        {/* Premium + Google connected: the owner's Google reviews, replied to
+            from here (posted only on their click). */}
+        {inboxShowing && (
           <div className="mb-3">
-            <ReviewReplyDrafter businessId={businessId} plan={plan} placeId={reviews.placeId} initial={replyDrafts} />
+            <GoogleReviewsInbox businessId={businessId} />
           </div>
         )}
-        {!isPremiumPlan(plan) ? null : reviews.gbpConnected ? (
-          <ComingSoonCard
+        {/* Paste a review, PostAI drafts the reply (3 free; Premium unlimited). */}
+        {/* Paste a review, PostAI drafts the reply. With the inbox showing,
+            it's one line — for reviews from anywhere else. */}
+        {replyDrafts &&
+          (inboxShowing ? (
+            <details data-testid="paste-box-collapsed" className="group mb-3 rounded-xl border border-paper-deep bg-white">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-[13.5px] font-semibold text-ink [&::-webkit-details-marker]:hidden">
+                {t(locale, "dashboard.googleReviews.pasteCollapsed")}
+                <span aria-hidden className="text-ink-soft transition-transform group-open:rotate-90">▸</span>
+              </summary>
+              <div className="border-t border-paper-line p-1">
+                <ReviewReplyDrafter businessId={businessId} plan={plan} placeId={reviews.placeId} initial={replyDrafts} inbox />
+              </div>
+            </details>
+          ) : (
+            <div className="mb-3">
+              <ReviewReplyDrafter businessId={businessId} plan={plan} placeId={reviews.placeId} initial={replyDrafts} />
+            </div>
+          ))}
+        {/* Free and Grow: a preview of replying from here. */}
+        {!isPremiumPlan(plan) ? (
+          <LockedPreview
+            id="google-reviews"
+            feature="replies"
             icon={IconMessageCircle}
-            title={t(locale, "dashboard.websiteReviews.replyAssistantLabel")}
-            body={t(locale, "dashboard.websiteReviews.replyAssistantConnectedBody")}
+            title={t(locale, "dashboard.googleReviews.previewTitle")}
+            unlock={t(locale, "dashboard.googleReviews.previewUnlock")}
           />
-        ) : (
+        ) : reviews.gbpConnected || reviewRepliesPractice ? null : (
           <ConnectToUnlockCard
             businessId={businessId}
             title={t(locale, "dashboard.websiteReviews.replyAssistantLabel")}

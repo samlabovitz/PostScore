@@ -200,6 +200,84 @@ export type MessageKey =
   | "dashboard.upgrade.feature.campaignHub.name"
   | "dashboard.upgrade.feature.campaignHub.b1"
   | "dashboard.upgrade.feature.campaignHub.b2"
+  | "dashboard.googleReviews.heading"
+  | "dashboard.googleReviews.intro"
+  | "dashboard.googleReviews.filterLabel"
+  | "dashboard.googleReviews.filter.needs_reply"
+  | "dashboard.googleReviews.filter.replied"
+  | "dashboard.googleReviews.filter.all"
+  | "dashboard.googleReviews.loading"
+  | "dashboard.googleReviews.empty.needs_reply"
+  | "dashboard.googleReviews.empty.replied"
+  | "dashboard.googleReviews.empty.all"
+  | "dashboard.googleReviews.anonymous"
+  | "dashboard.googleReviews.noText"
+  | "dashboard.googleReviews.starsAria"
+  | "dashboard.googleReviews.draft"
+  | "dashboard.googleReviews.drafting"
+  | "dashboard.googleReviews.write"
+  | "dashboard.googleReviews.replyLabel"
+  | "dashboard.googleReviews.approve"
+  | "dashboard.googleReviews.posting"
+  | "dashboard.googleReviews.cancel"
+  | "dashboard.googleReviews.yourReply"
+  | "dashboard.googleReviews.edit"
+  | "dashboard.googleReviews.save"
+  | "dashboard.googleReviews.saving"
+  | "dashboard.googleReviews.delete"
+  | "dashboard.googleReviews.deleteConfirm"
+  | "dashboard.googleReviews.deleteYes"
+  | "dashboard.googleReviews.deleting"
+  | "dashboard.googleReviews.error.failed"
+  | "dashboard.googleReviews.error.reconnect"
+  | "dashboard.googleReviews.error.notFound"
+  | "dashboard.googleReviews.error.notSetUp"
+  | "dashboard.googleReviews.error.rules"
+  | "dashboard.googleReviews.error.invalid"
+  | "dashboard.googleReviews.error.alreadyReplied"
+  | "dashboard.googleReviews.error.noReply"
+  | "dashboard.googleReviews.error.notPremium"
+  | "dashboard.googleReviews.error.archived"
+  | "dashboard.googleReviews.error.notConnected"
+  | "dashboard.googleReviews.error.draftLimit"
+  | "dashboard.googleReviews.error.list"
+  | "dashboard.googleReviews.error.listReconnect"
+  | "dashboard.googleReviews.footer"
+  | "dashboard.googleReviews.previewTitle"
+  | "dashboard.googleReviews.previewUnlock"
+  | "dashboard.googleReviews.beta"
+  | "dashboard.googleReviews.readOnly"
+  | "dashboard.googleReviews.error.postingOff"
+  | "dashboard.googleReviews.practice.banner"
+  | "dashboard.googleReviews.practice.body"
+  | "dashboard.googleReviews.practice.done.post"
+  | "dashboard.googleReviews.practice.done.edit"
+  | "dashboard.googleReviews.practice.done.delete"
+  | "dashboard.googleReviews.done.post"
+  | "dashboard.googleReviews.done.edit"
+  | "dashboard.googleReviews.done.delete"
+  | "dashboard.googleReviews.sortLabel"
+  | "dashboard.googleReviews.sort.newest"
+  | "dashboard.googleReviews.sort.lowest"
+  | "dashboard.googleReviews.sort.oldest"
+  | "dashboard.googleReviews.summary.caughtUp"
+  | "dashboard.googleReviews.summary.needsReply.one"
+  | "dashboard.googleReviews.summary.needsReply.other"
+  | "dashboard.googleReviews.showMore"
+  | "dashboard.googleReviews.showAll"
+  | "dashboard.googleReviews.readMore"
+  | "dashboard.googleReviews.showLess"
+  | "dashboard.googleReviews.waiting.reply"
+  | "dashboard.googleReviews.waiting.delete"
+  | "dashboard.googleReviews.waiting.timedOut"
+  | "dashboard.googleReviews.done.shown"
+  | "dashboard.googleReviews.practice.done.shown"
+  | "dashboard.googleReviews.error.deleteFailed"
+  | "dashboard.googleReviews.showFewer"
+  | "dashboard.googleReviews.pasteCollapsed"
+  | "dashboard.googleReviews.postingOffTip"
+  | "dashboard.replies.footerInbox"
+  | "dashboard.replies.footerConnect"
   | "dashboard.replies.heading"
   | "dashboard.replies.intro"
   | "dashboard.replies.reviewLabel"
@@ -217,7 +295,6 @@ export type MessageKey =
   | "dashboard.replies.unlimitedPremium"
   | "dashboard.replies.usedUp"
   | "dashboard.replies.footerFree"
-  | "dashboard.replies.footerPremium"
   | "dashboard.replies.privacy"
   | "dashboard.replies.errorInvalid"
   | "dashboard.replies.errorRules"
@@ -4701,6 +4778,7 @@ export type MessageKey =
  * how a future locale with more categories, e.g. "few"/"many", would
  * still get a safe result even before every category is seeded for it). */
 export type PluralKeyBase =
+  | "dashboard.googleReviews.summary.needsReply"
   | "content.checks.website.links.explanation.allGood"
   | "content.checks.website.links.explanation.problems"
   | "dashboard.links.open"
@@ -4883,7 +4961,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.grow.tools": "A starter website, plus basic review signs, coupons and referral cards",
     "dashboard.settings.plans.bullet.grow.postai": "PostAI for your questions (100 a month)",
     "dashboard.settings.plans.bullet.premium.fixes": "One-click fixes to your Google listing: hours, info, photos (coming soon)",
-    "dashboard.settings.plans.bullet.premium.replies": "Unlimited replies; with Google connect, every unanswered review + posting for you (coming soon)",
+    // Posting replies to Google is still off for every business in production
+    // (REVIEW_REPLIES_LIVE_PLACES, lib/gbpReviewPractice.ts). When it goes live,
+    // update this bullet AND dashboard.settings.plans.value.repliesUnlimited
+    // (the plan table, lib/planComparison.ts) together, in EN and ES.
+    "dashboard.settings.plans.bullet.premium.replies": "Unlimited AI reply drafts · With Google connected, see every review in one place · Posting replies to Google: coming soon",
     "dashboard.settings.plans.bullet.premium.insights": "See who searches for you and who calls or clicks (coming soon)",
     "dashboard.settings.plans.bullet.premium.channels": "Email, text and social campaigns (coming soon)",
     "dashboard.settings.plans.bullet.premium.designs": "Every design tool unlocked, with no PostScore branding",
@@ -4907,6 +4989,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.value.perWeek3": "3 a week",
     "dashboard.settings.plans.value.perWeek10": "10 a week",
     "dashboard.settings.plans.value.perMonth100": "100 a month",
+    // Update together with dashboard.settings.plans.bullet.premium.replies
+    // when posting replies to Google goes live (see the note there).
     "dashboard.settings.plans.value.repliesUnlimited": "Unlimited · auto-post coming soon",
     "dashboard.settings.plans.row.postStudio": "PostStudio — your full website, built and hosted for you (coming soon)",
     "dashboard.settings.plans.row.locations": "Locations",
@@ -4970,6 +5054,84 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.feature.campaignHub.name": "Email, text & social campaigns",
     "dashboard.upgrade.feature.campaignHub.b1": "Send your offers to customers by email and text",
     "dashboard.upgrade.feature.campaignHub.b2": "Post them to your social pages from PostScore",
+    "dashboard.googleReviews.heading": "Your Google reviews",
+    "dashboard.googleReviews.intro": "Read live from your Google Business Profile — shown here, never stored. Nothing is posted to Google until you click Approve.",
+    "dashboard.googleReviews.filterLabel": "Show reviews",
+    "dashboard.googleReviews.filter.needs_reply": "Needs a reply",
+    "dashboard.googleReviews.filter.replied": "Replied",
+    "dashboard.googleReviews.filter.all": "All",
+    "dashboard.googleReviews.loading": "Loading your Google reviews…",
+    "dashboard.googleReviews.empty.needs_reply": "Every review shown here has a reply.",
+    "dashboard.googleReviews.empty.replied": "No replies yet.",
+    "dashboard.googleReviews.empty.all": "No Google reviews yet.",
+    "dashboard.googleReviews.anonymous": "A Google user",
+    "dashboard.googleReviews.noText": "No written review — just a star rating.",
+    "dashboard.googleReviews.starsAria": "{count} of 5 stars",
+    "dashboard.googleReviews.draft": "Draft a reply",
+    "dashboard.googleReviews.drafting": "Drafting…",
+    "dashboard.googleReviews.write": "Write my own",
+    "dashboard.googleReviews.replyLabel": "Your reply — edit it before you post",
+    "dashboard.googleReviews.approve": "Approve and post to Google",
+    "dashboard.googleReviews.posting": "Posting…",
+    "dashboard.googleReviews.cancel": "Cancel",
+    "dashboard.googleReviews.yourReply": "Your reply on Google",
+    "dashboard.googleReviews.edit": "Edit reply",
+    "dashboard.googleReviews.save": "Save to Google",
+    "dashboard.googleReviews.saving": "Saving…",
+    "dashboard.googleReviews.delete": "Delete reply",
+    "dashboard.googleReviews.deleteConfirm": "Delete this reply from Google? Customers will no longer see it. This can't be undone.",
+    "dashboard.googleReviews.deleteYes": "Yes, delete it",
+    "dashboard.googleReviews.deleting": "Deleting…",
+    "dashboard.googleReviews.error.failed": "Google didn't accept this reply, so nothing changed. Try changing the wording, or reply from Google Maps.",
+    "dashboard.googleReviews.error.reconnect": "Google needs you to reconnect your Business Profile before PostScore can post. Nothing was changed.",
+    "dashboard.googleReviews.error.notFound": "Google couldn't find this review — it may have been removed. Nothing was changed.",
+    "dashboard.googleReviews.error.notSetUp": "Replying from PostScore isn't set up yet, so nothing was sent to Google.",
+    "dashboard.googleReviews.error.rules": "This reply mentions an incentive or asks the reviewer to change their review, which Google doesn't allow. Please reword it.",
+    "dashboard.googleReviews.error.invalid": "Write a reply first (up to {max} characters).",
+    "dashboard.googleReviews.error.alreadyReplied": "This review already has a reply on Google — it's shown above. Use Edit reply to change it.",
+    "dashboard.googleReviews.error.noReply": "This review has no reply on Google any more.",
+    "dashboard.googleReviews.error.notPremium": "Replying from PostScore is part of Premium.",
+    "dashboard.googleReviews.error.archived": "This business is archived. Restore it on the Overview to reply to reviews.",
+    "dashboard.googleReviews.error.notConnected": "Connect your Google Business Profile to reply to reviews here.",
+    "dashboard.googleReviews.error.draftLimit": "You've used this week's reply drafts.",
+    "dashboard.googleReviews.error.list": "We couldn't load your Google reviews right now. Try again in a few minutes.",
+    "dashboard.googleReviews.error.listReconnect": "Reconnect Google to see your reviews here.",
+    "dashboard.googleReviews.footer": "Google's policy: a reply is posted only when you click Approve. We keep a record of who posted, when and how long the reply was — never the review or the reply text.",
+    "dashboard.googleReviews.previewTitle": "Reply to your Google reviews",
+    "dashboard.googleReviews.previewUnlock": "See your Google reviews here, draft a reply with PostAI, and post it to Google once you approve it.",
+    "dashboard.googleReviews.beta": "Beta",
+    "dashboard.googleReviews.readOnly": "Read-only check: your real Google reviews load here, but posting to Google is turned off for this business, so Approve, Edit and Delete are disabled.",
+    "dashboard.googleReviews.error.postingOff": "Posting to Google is turned off for this business, so nothing was sent.",
+    "dashboard.googleReviews.practice.banner": "Practice mode — nothing is sent to Google.",
+    "dashboard.googleReviews.practice.body": "These are sample reviews. One shows Google refusing a reply, and one shows a reply Google accepts but takes about 30 seconds to show.",
+    "dashboard.googleReviews.practice.done.post": "Practice: reply to {name} posted ✓ (nothing sent to Google)",
+    "dashboard.googleReviews.practice.done.edit": "Practice: reply to {name} updated ✓ (nothing sent to Google)",
+    "dashboard.googleReviews.practice.done.delete": "Practice: reply to {name} deleted ✓ (nothing sent to Google)",
+    "dashboard.googleReviews.done.post": "Posted to Google ✓ — your reply to {name}",
+    "dashboard.googleReviews.done.edit": "Updated on Google ✓ — your reply to {name}",
+    "dashboard.googleReviews.done.delete": "Deleted from Google ✓ — your reply to {name}",
+    "dashboard.googleReviews.sortLabel": "Sort",
+    "dashboard.googleReviews.sort.newest": "Newest first",
+    "dashboard.googleReviews.sort.lowest": "Lowest rating first",
+    "dashboard.googleReviews.sort.oldest": "Oldest first",
+    "dashboard.googleReviews.summary.caughtUp": "You're all caught up ✓",
+    "dashboard.googleReviews.summary.needsReply.one": "{count} review needs a reply · from {date}",
+    "dashboard.googleReviews.summary.needsReply.other": "{count} reviews need a reply · newest from {date}",
+    "dashboard.googleReviews.showMore": "Show {count} more",
+    "dashboard.googleReviews.showAll": "Show all ({count})",
+    "dashboard.googleReviews.readMore": "Read more",
+    "dashboard.googleReviews.showLess": "Show less",
+    "dashboard.googleReviews.waiting.reply": "Waiting for Google to show your reply…",
+    "dashboard.googleReviews.waiting.delete": "Waiting for Google to remove your reply…",
+    "dashboard.googleReviews.waiting.timedOut": "Google hasn't shown it yet. Check Google Maps before trying again.",
+    "dashboard.googleReviews.done.shown": "Google is now showing your reply to {name} ✓",
+    "dashboard.googleReviews.practice.done.shown": "Practice: Google is now showing your reply to {name} ✓ (nothing sent to Google)",
+    "dashboard.googleReviews.error.deleteFailed": "Google didn't remove this reply, so nothing changed. Try again in a few minutes, or delete it from Google Maps.",
+    "dashboard.googleReviews.showFewer": "Show fewer",
+    "dashboard.googleReviews.pasteCollapsed": "Reply to a review from somewhere else? Paste it here",
+    "dashboard.googleReviews.postingOffTip": "Posting is off for this business",
+    "dashboard.replies.footerInbox": "For reviews from Yelp, Facebook or anywhere else, paste them here.",
+    "dashboard.replies.footerConnect": "Connect Google to see and answer every review here.",
     "dashboard.replies.heading": "Reply to a review",
     "dashboard.replies.intro": "Copy a review from Google, paste it here, and PostAI drafts a short, polite reply you can edit.",
     "dashboard.replies.reviewLabel": "Paste the review",
@@ -4986,8 +5148,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.replies.unlimited": "Unlimited replies",
     "dashboard.replies.unlimitedPremium": "Unlimited with Premium",
     "dashboard.replies.usedUp": "You've used your {total} free replies.",
-    "dashboard.replies.footerFree": "Drafts only — paste it into Google yourself. With Premium, PostScore shows every review you haven't answered and posts replies for you (coming soon).",
-    "dashboard.replies.footerPremium": "Drafts only — paste it into Google yourself. With Google connect, PostScore will show every review you haven't answered and post replies for you (coming soon).",
+    "dashboard.replies.footerFree": "Drafts only — paste it into Google yourself. With Premium and Google connected, PostScore shows every review you haven't answered and posts your reply when you approve it.",
     "dashboard.replies.privacy": "We don't save the review you paste — only your reply.",
     "dashboard.replies.errorInvalid": "Paste the review first (up to 2,000 characters).",
     "dashboard.replies.errorRules": "PostAI couldn't write a reply that follows the rules (no offers, no asking to change the review). Please try again — it didn't use up a free reply.",
@@ -6569,7 +6730,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.step.minutes": "About {minutes} min",
     "content.actionPlan.step.comingSoon": "Coming soon: PostScore can do this for you",
     "content.actionPlan.step.linksLabel": "Links:",
-    "content.actionPlan.link.replyDrafter": "Draft replies in PostScore",
+    "content.actionPlan.link.replyDrafter": "Reply to reviews in PostScore",
     "content.actionPlan.link.googleReviews": "Your reviews on Google",
     "content.actionPlan.link.googleReviewsHelp": "Google's help: manage reviews",
     "content.actionPlan.link.reviewLink": "Your review link & QR code",
@@ -10008,7 +10169,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.grow.tools": "Un sitio web inicial, además de letreros de reseñas, cupones y tarjetas de referidos básicos",
     "dashboard.settings.plans.bullet.grow.postai": "PostAI para sus preguntas (100 al mes)",
     "dashboard.settings.plans.bullet.premium.fixes": "Arreglos con un clic en su ficha de Google: horario, datos y fotos (próximamente)",
-    "dashboard.settings.plans.bullet.premium.replies": "Respuestas ilimitadas; con la conexión a Google, cada reseña sin responder + las publicamos por usted (próximamente)",
+    // Posting replies to Google is still off for every business in production
+    // (REVIEW_REPLIES_LIVE_PLACES, lib/gbpReviewPractice.ts). When it goes live,
+    // update this bullet AND dashboard.settings.plans.value.repliesUnlimited
+    // (the plan table, lib/planComparison.ts) together, in EN and ES.
+    "dashboard.settings.plans.bullet.premium.replies": "Borradores de respuesta con IA ilimitados · Con Google conectado, vea todas sus reseñas en un solo lugar · Publicar respuestas en Google: próximamente",
     "dashboard.settings.plans.bullet.premium.insights": "Vea quién lo busca y quién lo llama o hace clic (próximamente)",
     "dashboard.settings.plans.bullet.premium.channels": "Campañas por correo, mensaje de texto y redes sociales (próximamente)",
     "dashboard.settings.plans.bullet.premium.designs": "Todas las herramientas de diseño, sin la marca PostScore",
@@ -10032,6 +10197,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.value.perWeek3": "3 por semana",
     "dashboard.settings.plans.value.perWeek10": "10 por semana",
     "dashboard.settings.plans.value.perMonth100": "100 al mes",
+    // Update together with dashboard.settings.plans.bullet.premium.replies
+    // when posting replies to Google goes live (see the note there).
     "dashboard.settings.plans.value.repliesUnlimited": "Ilimitadas · publicación automática próximamente",
     "dashboard.settings.plans.row.postStudio": "PostStudio: su sitio web completo, construido y alojado por nosotros (próximamente)",
     "dashboard.settings.plans.row.locations": "Ubicaciones",
@@ -10095,6 +10262,84 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.feature.campaignHub.name": "Campañas por correo, texto y redes sociales",
     "dashboard.upgrade.feature.campaignHub.b1": "Envíe sus ofertas a sus clientes por correo y mensaje de texto",
     "dashboard.upgrade.feature.campaignHub.b2": "Publíquelas en sus redes sociales desde PostScore",
+    "dashboard.googleReviews.heading": "Sus reseñas de Google",
+    "dashboard.googleReviews.intro": "Se leen en vivo de su Perfil de Empresa en Google: se muestran aquí, nunca se guardan. No se publica nada en Google hasta que usted haga clic en Aprobar.",
+    "dashboard.googleReviews.filterLabel": "Mostrar reseñas",
+    "dashboard.googleReviews.filter.needs_reply": "Necesitan respuesta",
+    "dashboard.googleReviews.filter.replied": "Respondidas",
+    "dashboard.googleReviews.filter.all": "Todas",
+    "dashboard.googleReviews.loading": "Cargando sus reseñas de Google…",
+    "dashboard.googleReviews.empty.needs_reply": "Todas las reseñas que se muestran tienen respuesta.",
+    "dashboard.googleReviews.empty.replied": "Aún no hay respuestas.",
+    "dashboard.googleReviews.empty.all": "Aún no hay reseñas en Google.",
+    "dashboard.googleReviews.anonymous": "Un usuario de Google",
+    "dashboard.googleReviews.noText": "Sin texto, solo una calificación con estrellas.",
+    "dashboard.googleReviews.starsAria": "{count} de 5 estrellas",
+    "dashboard.googleReviews.draft": "Redactar una respuesta",
+    "dashboard.googleReviews.drafting": "Redactando…",
+    "dashboard.googleReviews.write": "Escribir la mía",
+    "dashboard.googleReviews.replyLabel": "Su respuesta: edítela antes de publicarla",
+    "dashboard.googleReviews.approve": "Aprobar y publicar en Google",
+    "dashboard.googleReviews.posting": "Publicando…",
+    "dashboard.googleReviews.cancel": "Cancelar",
+    "dashboard.googleReviews.yourReply": "Su respuesta en Google",
+    "dashboard.googleReviews.edit": "Editar respuesta",
+    "dashboard.googleReviews.save": "Guardar en Google",
+    "dashboard.googleReviews.saving": "Guardando…",
+    "dashboard.googleReviews.delete": "Eliminar respuesta",
+    "dashboard.googleReviews.deleteConfirm": "¿Eliminar esta respuesta de Google? Los clientes ya no la verán. Esto no se puede deshacer.",
+    "dashboard.googleReviews.deleteYes": "Sí, eliminarla",
+    "dashboard.googleReviews.deleting": "Eliminando…",
+    "dashboard.googleReviews.error.failed": "Google no aceptó esta respuesta, así que no cambió nada. Pruebe a cambiar la redacción o responda desde Google Maps.",
+    "dashboard.googleReviews.error.reconnect": "Google necesita que vuelva a conectar su Perfil de Empresa antes de que PostScore pueda publicar. No se cambió nada.",
+    "dashboard.googleReviews.error.notFound": "Google no encontró esta reseña; es posible que se haya eliminado. No se cambió nada.",
+    "dashboard.googleReviews.error.notSetUp": "Responder desde PostScore aún no está configurado, así que no se envió nada a Google.",
+    "dashboard.googleReviews.error.rules": "Esta respuesta menciona un incentivo o le pide al cliente que cambie su reseña, algo que Google no permite. Por favor, redáctela de otra forma.",
+    "dashboard.googleReviews.error.invalid": "Escriba primero una respuesta (hasta {max} caracteres).",
+    "dashboard.googleReviews.error.alreadyReplied": "Esta reseña ya tiene una respuesta en Google; se muestra arriba. Use Editar respuesta para cambiarla.",
+    "dashboard.googleReviews.error.noReply": "Esta reseña ya no tiene respuesta en Google.",
+    "dashboard.googleReviews.error.notPremium": "Responder desde PostScore es parte de Premium.",
+    "dashboard.googleReviews.error.archived": "Este negocio está archivado. Restáurelo en el Resumen para responder reseñas.",
+    "dashboard.googleReviews.error.notConnected": "Conecte su Perfil de Empresa en Google para responder reseñas aquí.",
+    "dashboard.googleReviews.error.draftLimit": "Ya usó los borradores de respuesta de esta semana.",
+    "dashboard.googleReviews.error.list": "No pudimos cargar sus reseñas de Google en este momento. Inténtelo de nuevo en unos minutos.",
+    "dashboard.googleReviews.error.listReconnect": "Vuelva a conectar Google para ver sus reseñas aquí.",
+    "dashboard.googleReviews.footer": "Política de Google: una respuesta se publica solo cuando usted hace clic en Aprobar. Guardamos un registro de quién publicó, cuándo y la longitud de la respuesta; nunca el texto de la reseña ni de la respuesta.",
+    "dashboard.googleReviews.previewTitle": "Responda a sus reseñas de Google",
+    "dashboard.googleReviews.previewUnlock": "Vea aquí sus reseñas de Google, redacte una respuesta con PostAI y publíquela en Google cuando usted la apruebe.",
+    "dashboard.googleReviews.beta": "Beta",
+    "dashboard.googleReviews.readOnly": "Solo lectura: aquí se cargan sus reseñas reales de Google, pero publicar en Google está desactivado para este negocio, así que Aprobar, Editar y Eliminar están desactivados.",
+    "dashboard.googleReviews.error.postingOff": "Publicar en Google está desactivado para este negocio, así que no se envió nada.",
+    "dashboard.googleReviews.practice.banner": "Modo de práctica: no se envía nada a Google.",
+    "dashboard.googleReviews.practice.body": "Son reseñas de ejemplo. Una muestra a Google rechazando una respuesta y otra, una respuesta que Google acepta pero tarda unos 30 segundos en mostrar.",
+    "dashboard.googleReviews.practice.done.post": "Práctica: respuesta a {name} publicada ✓ (no se envió nada a Google)",
+    "dashboard.googleReviews.practice.done.edit": "Práctica: respuesta a {name} actualizada ✓ (no se envió nada a Google)",
+    "dashboard.googleReviews.practice.done.delete": "Práctica: respuesta a {name} eliminada ✓ (no se envió nada a Google)",
+    "dashboard.googleReviews.done.post": "Publicada en Google ✓: su respuesta a {name}",
+    "dashboard.googleReviews.done.edit": "Actualizada en Google ✓: su respuesta a {name}",
+    "dashboard.googleReviews.done.delete": "Eliminada de Google ✓: su respuesta a {name}",
+    "dashboard.googleReviews.sortLabel": "Ordenar",
+    "dashboard.googleReviews.sort.newest": "Más recientes primero",
+    "dashboard.googleReviews.sort.lowest": "Calificación más baja primero",
+    "dashboard.googleReviews.sort.oldest": "Más antiguas primero",
+    "dashboard.googleReviews.summary.caughtUp": "Está al día ✓",
+    "dashboard.googleReviews.summary.needsReply.one": "{count} reseña necesita respuesta · del {date}",
+    "dashboard.googleReviews.summary.needsReply.other": "{count} reseñas necesitan respuesta · la más reciente del {date}",
+    "dashboard.googleReviews.showMore": "Ver {count} más",
+    "dashboard.googleReviews.showAll": "Ver todas ({count})",
+    "dashboard.googleReviews.readMore": "Leer más",
+    "dashboard.googleReviews.showLess": "Ver menos",
+    "dashboard.googleReviews.waiting.reply": "Esperando a que Google muestre su respuesta…",
+    "dashboard.googleReviews.waiting.delete": "Esperando a que Google quite su respuesta…",
+    "dashboard.googleReviews.waiting.timedOut": "Google aún no la muestra. Revise Google Maps antes de intentarlo de nuevo.",
+    "dashboard.googleReviews.done.shown": "Google ya muestra su respuesta a {name} ✓",
+    "dashboard.googleReviews.practice.done.shown": "Práctica: Google ya muestra su respuesta a {name} ✓ (no se envió nada a Google)",
+    "dashboard.googleReviews.error.deleteFailed": "Google no quitó esta respuesta, así que no cambió nada. Inténtelo de nuevo en unos minutos o elimínela desde Google Maps.",
+    "dashboard.googleReviews.showFewer": "Ver menos",
+    "dashboard.googleReviews.pasteCollapsed": "¿Responder a una reseña de otro sitio? Péguela aquí",
+    "dashboard.googleReviews.postingOffTip": "Publicar está desactivado para este negocio",
+    "dashboard.replies.footerInbox": "Para reseñas de Yelp, Facebook o cualquier otro sitio, péguelas aquí.",
+    "dashboard.replies.footerConnect": "Conecte Google para ver y responder todas sus reseñas aquí.",
     "dashboard.replies.heading": "Responder a una reseña",
     "dashboard.replies.intro": "Copie una reseña de Google, péguela aquí y PostAI redactará una respuesta breve y amable que usted puede editar.",
     "dashboard.replies.reviewLabel": "Pegue la reseña",
@@ -10111,8 +10356,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.replies.unlimited": "Respuestas ilimitadas",
     "dashboard.replies.unlimitedPremium": "Ilimitadas con Premium",
     "dashboard.replies.usedUp": "Ya usó sus {total} respuestas gratis.",
-    "dashboard.replies.footerFree": "Solo borradores: péguelo usted en Google. Con Premium, PostScore le muestra cada reseña que no ha respondido y publica las respuestas por usted (próximamente).",
-    "dashboard.replies.footerPremium": "Solo borradores: péguelo usted en Google. Con la conexión a Google, PostScore le mostrará cada reseña que no ha respondido y publicará las respuestas por usted (próximamente).",
+    "dashboard.replies.footerFree": "Solo borradores: péguelo usted en Google. Con Premium y Google conectado, PostScore le muestra cada reseña que no ha respondido y publica su respuesta cuando usted la aprueba.",
     "dashboard.replies.privacy": "No guardamos la reseña que pega, solo su respuesta.",
     "dashboard.replies.errorInvalid": "Primero pegue la reseña (hasta 2,000 caracteres).",
     "dashboard.replies.errorRules": "PostAI no pudo escribir una respuesta que cumpla las reglas (sin ofertas, sin pedir que cambien la reseña). Inténtelo de nuevo; no usó una respuesta gratis.",
@@ -11582,7 +11826,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.step.minutes": "Unos {minutes} min",
     "content.actionPlan.step.comingSoon": "Próximamente: PostScore podrá hacerlo por usted",
     "content.actionPlan.step.linksLabel": "Enlaces:",
-    "content.actionPlan.link.replyDrafter": "Redactar respuestas en PostScore",
+    "content.actionPlan.link.replyDrafter": "Responder reseñas en PostScore",
     "content.actionPlan.link.googleReviews": "Sus reseñas en Google",
     "content.actionPlan.link.googleReviewsHelp": "Ayuda de Google: gestionar reseñas",
     "content.actionPlan.link.reviewLink": "Su enlace de reseñas y código QR",

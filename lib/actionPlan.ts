@@ -1309,7 +1309,7 @@ export function stepLinks(checkId: string, businessId: string, locale: Locale = 
   const app = (path: string, label: MessageKey): TaskLink => ({ href: `/business/${businessId}${path}`, label: t(locale, label), external: false });
   const tool =
     checkId === "visibility.review_replies"
-      ? [app("/website-reviews#reply-to-a-review", "content.actionPlan.link.replyDrafter")]
+      ? [app("/website-reviews#reply-to-reviews", "content.actionPlan.link.replyDrafter")]
       : REVIEW_CHECK_IDS.includes(checkId) || checkId === MERGED_REVIEW_CHECK_ID
         ? [app("/website-reviews#get-more-reviews", "content.actionPlan.link.reviewLink")]
         : [];

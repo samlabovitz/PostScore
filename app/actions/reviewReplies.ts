@@ -24,6 +24,7 @@ import { getPlan } from "@/lib/premium";
 import { allowanceWindow, FREE_AI_WEEKLY } from "@/lib/freeAiAllowance";
 import { confirmFreeAiWithClient, freeAiAllowance, freeAllowanceAnchor, releaseFreeAiWithClient, reserveFreeAi } from "@/lib/freeAiUsage.server";
 import { cleanReply, cleanReviewInput, draftsLeft, replyBreaksRules, replyDraftLimit, replySystemPrompt, replyUserMessage } from "@/lib/reviewReplies";
+import { reviewLanguage } from "@/lib/gbpReviewInbox";
 
 export type ReplyDraftStatus =
   /** `resetsAt`: Free only — when the week's drafts come back. `pausedUntil`:
@@ -155,7 +156,9 @@ export async function draftReviewReply(businessId: string, review: unknown, star
   try {
     reply = cleanReply(
       await callAnthropicMessage({
-        system: replySystemPrompt(normalizeLocale(business.language), (business.name as string | null) ?? null),
+        // The reply matches the review's own language (EN or ES); the
+        // business's language when it can't tell.
+        system: replySystemPrompt(reviewLanguage(input.review) ?? normalizeLocale(business.language), (business.name as string | null) ?? null),
         userMessage: replyUserMessage(input),
         maxTokens: 300,
         onUsage: (u) => {

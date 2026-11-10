@@ -192,8 +192,8 @@ describe("Reviews", () => {
     expect(html).toContain('data-testid="sign-locked"');
   });
 
-  test("Premium and Multi see 'Unlimited replies; with Google connect … (coming soon)'; Grow doesn't", () => {
-    for (const plan of ["premium", "multi"] as Plan[]) expect(text(view(plan)), plan).toContain("Unlimited replies; with Google connect, every unanswered review + posting for you (coming soon)");
+  test("Premium and Multi see 'Unlimited AI reply drafts · … Posting replies to Google: coming soon'; Grow doesn't", () => {
+    for (const plan of ["premium", "multi"] as Plan[]) expect(text(view(plan)), plan).toContain("Unlimited AI reply drafts · With Google connected, see every review in one place · Posting replies to Google: coming soon");
     expect(view("grow")).not.toContain("ai-replies-soon");
   });
 

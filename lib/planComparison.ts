@@ -49,6 +49,9 @@ export const COMPARE_ROWS: CompareRow[] = [
   // AI review reply drafts (the owner pastes the review): 3 a week on Free,
   // 10 a week on Grow; Premium unlimited, posting for them with Google
   // connect soon.
+  // "Unlimited · auto-post coming soon": update together with the Premium
+  // replies bullet when posting replies to Google goes live (see
+  // dashboard.settings.plans.bullet.premium.replies in lib/i18n/messages.ts).
   row("replies", text("perWeek3"), text("perWeek10"), text("repliesUnlimited")),
   row("doneForYou", no, no, soon),
   // Free gets no monthly report email (lib/plan.ts planIncludesMonthlyReports).

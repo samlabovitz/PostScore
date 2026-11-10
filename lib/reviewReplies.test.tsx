@@ -223,7 +223,8 @@ describe("the drafter", () => {
     const html = render("free", { status: "ok", used: 1, left: 2 });
     const t = text(html);
     for (const s of ["Reply to a review", "Copy a review from Google, paste it here, and PostAI drafts a short, polite reply you can edit.", "Paste the review", "Stars (optional)", "Draft a reply", "2 of 3 free replies left"]) expect(t).toContain(s);
-    expect(t).toContain("Drafts only — paste it into Google yourself. With Premium, PostScore shows every review you haven't answered and posts replies for you (coming soon).");
+    expect(t).toContain("Drafts only — paste it into Google yourself. With Premium and Google connected, PostScore shows every review you haven't answered and posts your reply when you approve it.");
+    expect(t).not.toContain("coming soon");
     expect(t).toContain("We don't save the review you paste — only your reply.");
     expect(html).toContain("<textarea");
     expect(html).toMatch(/<select/);
@@ -254,7 +255,9 @@ describe("the drafter", () => {
       const t = text(render(plan, { status: "ok", used: 12, left: null }));
       expect(t, plan).toContain("Unlimited replies");
       expect(t, plan).not.toMatch(/free replies left|Unlimited with Premium/);
-      expect(t, plan).toContain("Drafts only — paste it into Google yourself. With Google connect, PostScore will show every review you haven't answered and post replies for you (coming soon).");
+      // Not connected: how to get the inbox; never "coming soon".
+      expect(t, plan).toContain("Connect Google to see and answer every review here.");
+      expect(t, plan).not.toContain("coming soon");
     }
   });
 
@@ -283,7 +286,10 @@ describe("the drafter", () => {
 describe("plan copy and PostAI", () => {
   test("Free's bullets add '3 PostAI questions and 3 AI review replies a week'; Premium: unlimited + Google connect coming soon; the Compare row (3 a week / 10 a week)", () => {
     expect(PLAN_COPY.free.bullets.map((k) => t("en", k))).toContain("3 PostAI questions and 3 AI review replies a week");
-    expect(t("en", "dashboard.settings.plans.bullet.premium.replies")).toBe("Unlimited replies; with Google connect, every unanswered review + posting for you (coming soon)");
+    expect(t("en", "dashboard.settings.plans.bullet.premium.replies")).toBe("Unlimited AI reply drafts · With Google connected, see every review in one place · Posting replies to Google: coming soon");
+    expect(t("es", "dashboard.settings.plans.bullet.premium.replies")).toBe("Borradores de respuesta con IA ilimitados · Con Google conectado, vea todas sus reseñas en un solo lugar · Publicar respuestas en Google: próximamente");
+    // Posting is off for every business in production: both say "coming soon" until it goes live — updated together.
+    expect(t("en", "dashboard.settings.plans.value.repliesUnlimited")).toBe("Unlimited · auto-post coming soon");
     const row = COMPARE_ROWS.find((r) => r.key.endsWith(".replies"))!;
     expect(t("en", row.key)).toBe("AI review replies");
     expect([row.cells.free, row.cells.grow, row.cells.premium, row.cells.multi].map((c) => (c.kind === "text" ? t("en", c.key) : c.kind))).toEqual(["3 a week", "10 a week", "Unlimited · auto-post coming soon", "Unlimited · auto-post coming soon"]);
