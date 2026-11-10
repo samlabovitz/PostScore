@@ -1,7 +1,7 @@
 "use server";
 
 import { requestCache } from "@/lib/requestCache";
-import { ensureFirstCompetitorScanWithClient } from "@/app/actions/competitors";
+import { afterBusinessAdded } from "@/lib/businessAdded.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { DIFFERENTIATOR_MAX } from "@/lib/businessOffer";
@@ -99,10 +99,9 @@ export async function saveBusiness(
   }
 
   const result = await saveBusinessWithClient(supabase, user.id, place, language, businessTypeOverride, tradeId);
-  // Part B: a newly added business gets its first competitor scan right
-  // away, so the Competitors page has real data — once ever (no-op when
-  // one is already saved). Never fails the save.
-  if (result.status === "saved") await ensureFirstCompetitorScanWithClient(supabase, result.businessId);
+  // Its first saved score, then (Part B) its first competitor scan — see
+  // lib/businessAdded.server.ts. Never fails the save.
+  if (result.status === "saved") await afterBusinessAdded(supabase, result.businessId);
   return result;
 }
 
