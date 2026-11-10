@@ -10,8 +10,11 @@
 //   Google place ids): with practice mode off, a business's real reviews
 //   load read-only, and Post / Edit / Delete stay off unless its place id
 //   is listed. Default: no business may post.
+// - Edit on Google (hours, phone, description — lib/gbpProfileEdits.server.ts)
+//   uses the same practice mode, and its own allow list:
+//   GBP_PROFILE_EDITS_LIVE_PLACES (default: none — read-only, locked).
 
-type Env = { NODE_ENV?: string; REVIEW_REPLIES_PRACTICE?: string; REVIEW_REPLIES_LIVE_PLACES?: string };
+type Env = { NODE_ENV?: string; REVIEW_REPLIES_PRACTICE?: string; REVIEW_REPLIES_LIVE_PLACES?: string; GBP_PROFILE_EDITS_LIVE_PLACES?: string };
 
 export function reviewRepliesPracticeOn(env: Env = process.env): boolean {
   if (env.REVIEW_REPLIES_PRACTICE !== "1") return false;
@@ -22,14 +25,22 @@ export function reviewRepliesPracticeOn(env: Env = process.env): boolean {
   return true;
 }
 
-export function livePostingPlaces(env: Env = process.env): string[] {
-  return (env.REVIEW_REPLIES_LIVE_PLACES ?? "")
+const placeList = (raw: string | undefined) =>
+  (raw ?? "")
     .split(",")
     .map((p) => p.trim())
     .filter((p) => p.length > 0);
+
+export function livePostingPlaces(env: Env = process.env): string[] {
+  return placeList(env.REVIEW_REPLIES_LIVE_PLACES);
 }
 
 /** May this business post, edit or delete replies on its real Google listing? */
 export function livePostingAllowed(placeId: string | null | undefined, env: Env = process.env): boolean {
   return !!placeId && livePostingPlaces(env).includes(placeId);
+}
+
+/** May this business change its hours, phone or description on its real Google listing? */
+export function profileEditsAllowed(placeId: string | null | undefined, env: Env = process.env): boolean {
+  return !!placeId && placeList(env.GBP_PROFILE_EDITS_LIVE_PLACES).includes(placeId);
 }

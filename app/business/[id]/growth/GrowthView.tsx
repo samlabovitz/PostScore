@@ -201,6 +201,8 @@ export function GrowthView({
     messagingOn?: boolean | null;
     searchDemand: SearchDemandView;
     connection?: GoogleProfileConnection | null;
+    /** Practice mode (lib/gbpReviewPractice.ts): Edit on Google on a sample listing. */
+    practice?: boolean;
   };
   /** When this business was last re-scanned — see getLastScanAt() in
    * app/actions/scoring.ts. Lets a still-pending task tell "hasn't been
@@ -510,6 +512,7 @@ export function GrowthView({
             messagingOn={googleProfile.messagingOn ?? null}
             searchDemand={googleProfile.searchDemand}
             connection={googleProfile.connection ?? null}
+            practice={googleProfile.practice ?? false}
           />
         )}
       </div>

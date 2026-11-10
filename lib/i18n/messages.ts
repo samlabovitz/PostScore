@@ -278,6 +278,81 @@ export type MessageKey =
   | "dashboard.googleReviews.postingOffTip"
   | "dashboard.replies.footerInbox"
   | "dashboard.replies.footerConnect"
+  | "dashboard.gbpProfileEdits.heading"
+  | "dashboard.gbpProfileEdits.intro"
+  | "dashboard.gbpProfileEdits.nowOnGoogle"
+  | "dashboard.gbpProfileEdits.notSet"
+  | "dashboard.gbpProfileEdits.loading"
+  | "dashboard.gbpProfileEdits.loadFailed"
+  | "dashboard.gbpProfileEdits.edit"
+  | "dashboard.gbpProfileEdits.cancel"
+  | "dashboard.gbpProfileEdits.approve"
+  | "dashboard.gbpProfileEdits.approving"
+  | "dashboard.gbpProfileEdits.beta"
+  | "dashboard.gbpProfileEdits.updated"
+  | "dashboard.gbpProfileEdits.undone"
+  | "dashboard.gbpProfileEdits.pending"
+  | "dashboard.gbpProfileEdits.unconfirmed"
+  | "dashboard.gbpProfileEdits.noChange"
+  | "dashboard.gbpProfileEdits.undo"
+  | "dashboard.gbpProfileEdits.undoUntil"
+  | "dashboard.gbpProfileEdits.undoConfirm"
+  | "dashboard.gbpProfileEdits.undoYes"
+  | "dashboard.gbpProfileEdits.editingOff"
+  | "dashboard.gbpProfileEdits.readOnly"
+  | "dashboard.gbpProfileEdits.practiceBanner"
+  | "dashboard.gbpProfileEdits.practiceBody"
+  | "dashboard.gbpProfileEdits.practiceOutcome.accept"
+  | "dashboard.gbpProfileEdits.practiceOutcome.refuse"
+  | "dashboard.gbpProfileEdits.practiceOutcome.hold"
+  | "dashboard.gbpProfileEdits.error.rejected"
+  | "dashboard.gbpProfileEdits.error.notSetUp"
+  | "dashboard.gbpProfileEdits.error.invalid"
+  | "dashboard.gbpProfileEdits.error.blocked"
+  | "dashboard.gbpProfileEdits.field.hours"
+  | "dashboard.gbpProfileEdits.field.phone"
+  | "dashboard.gbpProfileEdits.field.description"
+  | "dashboard.gbpProfileEdits.fieldLower.hours"
+  | "dashboard.gbpProfileEdits.fieldLower.phone"
+  | "dashboard.gbpProfileEdits.fieldLower.description"
+  | "dashboard.gbpProfileEdits.hours.closed"
+  | "dashboard.gbpProfileEdits.hours.open"
+  | "dashboard.gbpProfileEdits.hours.open24"
+  | "dashboard.gbpProfileEdits.hours.addRange"
+  | "dashboard.gbpProfileEdits.hours.remove"
+  | "dashboard.gbpProfileEdits.hours.opens"
+  | "dashboard.gbpProfileEdits.hours.closes"
+  | "dashboard.gbpProfileEdits.hours.nextDay"
+  | "dashboard.gbpProfileEdits.hours.nextDayShort"
+  | "dashboard.gbpProfileEdits.hours.midnight"
+  | "dashboard.gbpProfileEdits.hours.special"
+  | "dashboard.gbpProfileEdits.hours.problem.no_ranges"
+  | "dashboard.gbpProfileEdits.hours.problem.bad_time"
+  | "dashboard.gbpProfileEdits.hours.problem.same_open_close"
+  | "dashboard.gbpProfileEdits.hours.problem.overlap"
+  | "dashboard.gbpProfileEdits.hours.problem.overnight_overlap"
+  | "dashboard.gbpProfileEdits.useWebsite.hours"
+  | "dashboard.gbpProfileEdits.useWebsite.phone"
+  | "dashboard.gbpProfileEdits.websiteHint.hours"
+  | "dashboard.gbpProfileEdits.websiteHint.phone"
+  | "dashboard.gbpProfileEdits.phone.label"
+  | "dashboard.gbpProfileEdits.phone.invalid"
+  | "dashboard.gbpProfileEdits.phone.warning"
+  | "dashboard.gbpProfileEdits.description.label"
+  | "dashboard.gbpProfileEdits.description.counter"
+  | "dashboard.gbpProfileEdits.description.draft"
+  | "dashboard.gbpProfileEdits.description.drafting"
+  | "dashboard.gbpProfileEdits.description.draftRules"
+  | "dashboard.gbpProfileEdits.description.draftUnavailable"
+  | "dashboard.gbpProfileEdits.description.problem.empty"
+  | "dashboard.gbpProfileEdits.description.problem.too_long"
+  | "dashboard.gbpProfileEdits.description.problem.link"
+  | "dashboard.gbpProfileEdits.description.problem.phone"
+  | "dashboard.gbpProfileEdits.description.problem.price"
+  | "dashboard.gbpProfileEdits.description.problem.caps"
+  | "dashboard.gbpProfileEdits.preview.title"
+  | "dashboard.gbpProfileEdits.preview.unlock"
+  | "dashboard.gbpProfileEdits.afterScan"
   | "dashboard.replies.heading"
   | "dashboard.replies.intro"
   | "dashboard.replies.reviewLabel"
@@ -5132,6 +5207,81 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleReviews.postingOffTip": "Posting is off for this business",
     "dashboard.replies.footerInbox": "For reviews from Yelp, Facebook or anywhere else, paste them here.",
     "dashboard.replies.footerConnect": "Connect Google to see and answer every review here.",
+    "dashboard.gbpProfileEdits.heading": "Edit on Google",
+    "dashboard.gbpProfileEdits.intro": "Change your hours, phone and description on your Google Business Profile. We read what Google has now; nothing changes until you click Approve.",
+    "dashboard.gbpProfileEdits.nowOnGoogle": "On Google now",
+    "dashboard.gbpProfileEdits.notSet": "Not set on Google",
+    "dashboard.gbpProfileEdits.loading": "Loading what Google has now…",
+    "dashboard.gbpProfileEdits.loadFailed": "Couldn't load your profile from Google — try again in a minute.",
+    "dashboard.gbpProfileEdits.edit": "Edit",
+    "dashboard.gbpProfileEdits.cancel": "Cancel",
+    "dashboard.gbpProfileEdits.approve": "Approve and update Google",
+    "dashboard.gbpProfileEdits.approving": "Updating Google…",
+    "dashboard.gbpProfileEdits.beta": "Beta",
+    "dashboard.gbpProfileEdits.updated": "Updated on Google ✓",
+    "dashboard.gbpProfileEdits.undone": "Put back on Google ✓",
+    "dashboard.gbpProfileEdits.pending": "Google is reviewing your change — this can take a few days.",
+    "dashboard.gbpProfileEdits.unconfirmed": "Google accepted the change but isn't showing it yet. Check again in a few minutes — don't send it again.",
+    "dashboard.gbpProfileEdits.noChange": "That's already what Google shows, so there was nothing to change.",
+    "dashboard.gbpProfileEdits.undo": "Undo",
+    "dashboard.gbpProfileEdits.undoUntil": "You can undo this until {date}.",
+    "dashboard.gbpProfileEdits.undoConfirm": "Put the previous {field} back on Google?",
+    "dashboard.gbpProfileEdits.undoYes": "Yes, undo",
+    "dashboard.gbpProfileEdits.editingOff": "Editing is off for this business",
+    "dashboard.gbpProfileEdits.readOnly": "Read-only: you're seeing what Google has now, but editing is turned off for this business, so Approve and Undo are locked.",
+    "dashboard.gbpProfileEdits.practiceBanner": "Practice mode — nothing is sent to Google.",
+    "dashboard.gbpProfileEdits.practiceBody": "This is a sample listing. With your next Approve, the practice Google will:",
+    "dashboard.gbpProfileEdits.practiceOutcome.accept": "Accept it",
+    "dashboard.gbpProfileEdits.practiceOutcome.refuse": "Refuse it",
+    "dashboard.gbpProfileEdits.practiceOutcome.hold": "Hold it for review",
+    "dashboard.gbpProfileEdits.error.rejected": "Google didn't accept this change, so nothing changed. Check it and try again, or edit it on Google Maps.",
+    "dashboard.gbpProfileEdits.error.notSetUp": "Editing from PostScore isn't set up yet, so nothing was sent to Google.",
+    "dashboard.gbpProfileEdits.error.invalid": "Fix the problems shown first — nothing was sent.",
+    "dashboard.gbpProfileEdits.error.blocked": "Connect your Google Business Profile to edit it here.",
+    "dashboard.gbpProfileEdits.field.hours": "Hours",
+    "dashboard.gbpProfileEdits.field.phone": "Phone",
+    "dashboard.gbpProfileEdits.field.description": "Description",
+    "dashboard.gbpProfileEdits.fieldLower.hours": "hours",
+    "dashboard.gbpProfileEdits.fieldLower.phone": "phone number",
+    "dashboard.gbpProfileEdits.fieldLower.description": "description",
+    "dashboard.gbpProfileEdits.hours.closed": "Closed",
+    "dashboard.gbpProfileEdits.hours.open": "Open",
+    "dashboard.gbpProfileEdits.hours.open24": "Open 24 hours",
+    "dashboard.gbpProfileEdits.hours.addRange": "Add hours",
+    "dashboard.gbpProfileEdits.hours.remove": "Remove",
+    "dashboard.gbpProfileEdits.hours.opens": "opens",
+    "dashboard.gbpProfileEdits.hours.closes": "closes",
+    "dashboard.gbpProfileEdits.hours.nextDay": "closes the next day",
+    "dashboard.gbpProfileEdits.hours.nextDayShort": "next day",
+    "dashboard.gbpProfileEdits.hours.midnight": "closes at midnight",
+    "dashboard.gbpProfileEdits.hours.special": "Holiday and special hours: coming later.",
+    "dashboard.gbpProfileEdits.hours.problem.no_ranges": "Add the hours, or mark the day closed.",
+    "dashboard.gbpProfileEdits.hours.problem.bad_time": "Enter a valid time.",
+    "dashboard.gbpProfileEdits.hours.problem.same_open_close": "Opening and closing can't be the same time — choose Open 24 hours instead.",
+    "dashboard.gbpProfileEdits.hours.problem.overlap": "These hours overlap.",
+    "dashboard.gbpProfileEdits.hours.problem.overnight_overlap": "These hours run past midnight into the next day's hours.",
+    "dashboard.gbpProfileEdits.useWebsite.hours": "Use the hours from your website",
+    "dashboard.gbpProfileEdits.useWebsite.phone": "Use the phone from your website",
+    "dashboard.gbpProfileEdits.websiteHint.hours": "Your website shows different hours.",
+    "dashboard.gbpProfileEdits.websiteHint.phone": "Your website shows {phone}.",
+    "dashboard.gbpProfileEdits.phone.label": "Primary phone",
+    "dashboard.gbpProfileEdits.phone.invalid": "Enter a real 10-digit US number, like (302) 555-2368.",
+    "dashboard.gbpProfileEdits.phone.warning": "Changing your phone number can make Google ask you to verify your listing again.",
+    "dashboard.gbpProfileEdits.description.label": "Description",
+    "dashboard.gbpProfileEdits.description.counter": "{count} / {max}",
+    "dashboard.gbpProfileEdits.description.draft": "Draft with PostAI",
+    "dashboard.gbpProfileEdits.description.drafting": "Drafting…",
+    "dashboard.gbpProfileEdits.description.draftRules": "PostAI's draft didn't follow Google's rules, so we didn't show it. Try again, or write your own.",
+    "dashboard.gbpProfileEdits.description.draftUnavailable": "PostAI couldn't draft one right now. Try again in a minute.",
+    "dashboard.gbpProfileEdits.description.problem.empty": "Write a description first.",
+    "dashboard.gbpProfileEdits.description.problem.too_long": "Keep it to 750 characters.",
+    "dashboard.gbpProfileEdits.description.problem.link": "Remove links and web addresses — Google doesn't allow them.",
+    "dashboard.gbpProfileEdits.description.problem.phone": "Remove phone numbers — Google doesn't allow them in the description.",
+    "dashboard.gbpProfileEdits.description.problem.price": "Remove prices, sales and promotions — Google doesn't allow them.",
+    "dashboard.gbpProfileEdits.description.problem.caps": "Avoid ALL CAPS — Google doesn't allow it.",
+    "dashboard.gbpProfileEdits.preview.title": "Edit your hours, phone and description on Google",
+    "dashboard.gbpProfileEdits.preview.unlock": "Change what Google shows from PostScore — checked before anything is sent, with an undo.",
+    "dashboard.gbpProfileEdits.afterScan": "Your score and recommendations update after your next scan confirms the change.",
     "dashboard.replies.heading": "Reply to a review",
     "dashboard.replies.intro": "Copy a review from Google, paste it here, and PostAI drafts a short, polite reply you can edit.",
     "dashboard.replies.reviewLabel": "Paste the review",
@@ -10340,6 +10490,81 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleReviews.postingOffTip": "Publicar está desactivado para este negocio",
     "dashboard.replies.footerInbox": "Para reseñas de Yelp, Facebook o cualquier otro sitio, péguelas aquí.",
     "dashboard.replies.footerConnect": "Conecte Google para ver y responder todas sus reseñas aquí.",
+    "dashboard.gbpProfileEdits.heading": "Editar en Google",
+    "dashboard.gbpProfileEdits.intro": "Cambie su horario, teléfono y descripción en su Perfil de Empresa en Google. Leemos lo que Google tiene ahora; nada cambia hasta que usted haga clic en Aprobar.",
+    "dashboard.gbpProfileEdits.nowOnGoogle": "En Google ahora",
+    "dashboard.gbpProfileEdits.notSet": "No está en Google",
+    "dashboard.gbpProfileEdits.loading": "Cargando lo que Google tiene ahora…",
+    "dashboard.gbpProfileEdits.loadFailed": "No pudimos cargar su perfil de Google; inténtelo de nuevo en un minuto.",
+    "dashboard.gbpProfileEdits.edit": "Editar",
+    "dashboard.gbpProfileEdits.cancel": "Cancelar",
+    "dashboard.gbpProfileEdits.approve": "Aprobar y actualizar Google",
+    "dashboard.gbpProfileEdits.approving": "Actualizando Google…",
+    "dashboard.gbpProfileEdits.beta": "Beta",
+    "dashboard.gbpProfileEdits.updated": "Actualizado en Google ✓",
+    "dashboard.gbpProfileEdits.undone": "Restaurado en Google ✓",
+    "dashboard.gbpProfileEdits.pending": "Google está revisando su cambio; esto puede tardar unos días.",
+    "dashboard.gbpProfileEdits.unconfirmed": "Google aceptó el cambio, pero aún no lo muestra. Vuelva a revisar en unos minutos; no lo envíe de nuevo.",
+    "dashboard.gbpProfileEdits.noChange": "Eso ya es lo que muestra Google, así que no había nada que cambiar.",
+    "dashboard.gbpProfileEdits.undo": "Deshacer",
+    "dashboard.gbpProfileEdits.undoUntil": "Puede deshacerlo hasta el {date}.",
+    "dashboard.gbpProfileEdits.undoConfirm": "¿Volver a poner en Google el {field} anterior?",
+    "dashboard.gbpProfileEdits.undoYes": "Sí, deshacer",
+    "dashboard.gbpProfileEdits.editingOff": "Editar está desactivado para este negocio",
+    "dashboard.gbpProfileEdits.readOnly": "Solo lectura: ve lo que Google tiene ahora, pero editar está desactivado para este negocio, así que Aprobar y Deshacer están bloqueados.",
+    "dashboard.gbpProfileEdits.practiceBanner": "Modo de práctica: no se envía nada a Google.",
+    "dashboard.gbpProfileEdits.practiceBody": "Esta es una ficha de ejemplo. Con su próxima aprobación, el Google de práctica:",
+    "dashboard.gbpProfileEdits.practiceOutcome.accept": "La acepta",
+    "dashboard.gbpProfileEdits.practiceOutcome.refuse": "La rechaza",
+    "dashboard.gbpProfileEdits.practiceOutcome.hold": "La deja en revisión",
+    "dashboard.gbpProfileEdits.error.rejected": "Google no aceptó este cambio, así que no cambió nada. Revíselo e inténtelo de nuevo, o edítelo en Google Maps.",
+    "dashboard.gbpProfileEdits.error.notSetUp": "Editar desde PostScore aún no está configurado, así que no se envió nada a Google.",
+    "dashboard.gbpProfileEdits.error.invalid": "Corrija primero los problemas indicados; no se envió nada.",
+    "dashboard.gbpProfileEdits.error.blocked": "Conecte su Perfil de Empresa en Google para editarlo aquí.",
+    "dashboard.gbpProfileEdits.field.hours": "Horario",
+    "dashboard.gbpProfileEdits.field.phone": "Teléfono",
+    "dashboard.gbpProfileEdits.field.description": "Descripción",
+    "dashboard.gbpProfileEdits.fieldLower.hours": "horario",
+    "dashboard.gbpProfileEdits.fieldLower.phone": "teléfono",
+    "dashboard.gbpProfileEdits.fieldLower.description": "texto de descripción",
+    "dashboard.gbpProfileEdits.hours.closed": "Cerrado",
+    "dashboard.gbpProfileEdits.hours.open": "Abierto",
+    "dashboard.gbpProfileEdits.hours.open24": "Abierto 24 horas",
+    "dashboard.gbpProfileEdits.hours.addRange": "Agregar horario",
+    "dashboard.gbpProfileEdits.hours.remove": "Quitar",
+    "dashboard.gbpProfileEdits.hours.opens": "abre",
+    "dashboard.gbpProfileEdits.hours.closes": "cierra",
+    "dashboard.gbpProfileEdits.hours.nextDay": "cierra al día siguiente",
+    "dashboard.gbpProfileEdits.hours.nextDayShort": "día siguiente",
+    "dashboard.gbpProfileEdits.hours.midnight": "cierra a medianoche",
+    "dashboard.gbpProfileEdits.hours.special": "Horarios festivos y especiales: más adelante.",
+    "dashboard.gbpProfileEdits.hours.problem.no_ranges": "Agregue el horario o marque el día como cerrado.",
+    "dashboard.gbpProfileEdits.hours.problem.bad_time": "Escriba una hora válida.",
+    "dashboard.gbpProfileEdits.hours.problem.same_open_close": "La apertura y el cierre no pueden ser a la misma hora; elija Abierto 24 horas.",
+    "dashboard.gbpProfileEdits.hours.problem.overlap": "Estos horarios se superponen.",
+    "dashboard.gbpProfileEdits.hours.problem.overnight_overlap": "Este horario pasa de medianoche y se superpone con el del día siguiente.",
+    "dashboard.gbpProfileEdits.useWebsite.hours": "Usar el horario de su sitio web",
+    "dashboard.gbpProfileEdits.useWebsite.phone": "Usar el teléfono de su sitio web",
+    "dashboard.gbpProfileEdits.websiteHint.hours": "Su sitio web muestra otro horario.",
+    "dashboard.gbpProfileEdits.websiteHint.phone": "Su sitio web muestra {phone}.",
+    "dashboard.gbpProfileEdits.phone.label": "Teléfono principal",
+    "dashboard.gbpProfileEdits.phone.invalid": "Escriba un número real de EE. UU. de 10 dígitos, como (302) 555-2368.",
+    "dashboard.gbpProfileEdits.phone.warning": "Cambiar su número de teléfono puede hacer que Google le pida verificar su ficha de nuevo.",
+    "dashboard.gbpProfileEdits.description.label": "Descripción",
+    "dashboard.gbpProfileEdits.description.counter": "{count} / {max}",
+    "dashboard.gbpProfileEdits.description.draft": "Redactar con PostAI",
+    "dashboard.gbpProfileEdits.description.drafting": "Redactando…",
+    "dashboard.gbpProfileEdits.description.draftRules": "El borrador de PostAI no cumplió las reglas de Google, así que no lo mostramos. Inténtelo de nuevo o escriba la suya.",
+    "dashboard.gbpProfileEdits.description.draftUnavailable": "PostAI no pudo redactar una en este momento. Inténtelo de nuevo en un minuto.",
+    "dashboard.gbpProfileEdits.description.problem.empty": "Escriba primero una descripción.",
+    "dashboard.gbpProfileEdits.description.problem.too_long": "Use como máximo 750 caracteres.",
+    "dashboard.gbpProfileEdits.description.problem.link": "Quite los enlaces y direcciones web; Google no los permite.",
+    "dashboard.gbpProfileEdits.description.problem.phone": "Quite los números de teléfono; Google no los permite en la descripción.",
+    "dashboard.gbpProfileEdits.description.problem.price": "Quite los precios, ofertas y promociones; Google no los permite.",
+    "dashboard.gbpProfileEdits.description.problem.caps": "Evite las MAYÚSCULAS; Google no las permite.",
+    "dashboard.gbpProfileEdits.preview.title": "Edite su horario, teléfono y descripción en Google",
+    "dashboard.gbpProfileEdits.preview.unlock": "Cambie lo que muestra Google desde PostScore, con una revisión antes de enviar y la opción de deshacer.",
+    "dashboard.gbpProfileEdits.afterScan": "Su puntuación y sus recomendaciones se actualizan cuando su próximo análisis confirme el cambio.",
     "dashboard.replies.heading": "Responder a una reseña",
     "dashboard.replies.intro": "Copie una reseña de Google, péguela aquí y PostAI redactará una respuesta breve y amable que usted puede editar.",
     "dashboard.replies.reviewLabel": "Pegue la reseña",

@@ -500,6 +500,15 @@ export interface InfoFieldFinding {
   /** Hours: the label of the block we read, as the site writes it
    * ("Operating Hours") — null/absent for unlabelled hours. */
   siteLabel?: string | null;
+  /** Hours: the website's whole week as read (Google's day numbers, minutes
+   * after midnight) — what "Use the hours from your website" fills in on
+   * the Google Profile tab (lib/gbpProfileEdits.ts weekFromSite). */
+  siteWeek?: Array<{ day: number; closed: boolean; open: number | null; close: number | null }>;
+}
+
+/** The site's week, one row per day it states (a day it lists twice keeps both ranges). */
+function siteWeekOf(entries: ParsedHoursEntry[]): NonNullable<InfoFieldFinding["siteWeek"]> {
+  return entries.flatMap((e) => e.days.map((day) => ({ day, closed: e.closed, open: e.closed ? null : e.openMinutes, close: e.closed ? null : e.closeMinutes })));
 }
 
 /** An embedded Google Map found on the site (Step 2d). readableAddress is
@@ -1190,6 +1199,7 @@ export function compareHours(
     return { field: "hours", comparison: "not_found_on_site", siteValue: "see site", googleValue: null };
   }
   const googleByDay = normalizeGooglePeriods(googlePeriods);
+  const siteWeek = siteWeekOf(siteEntries);
 
   for (const entry of siteEntries) {
     for (const day of entry.days) {
@@ -1203,6 +1213,7 @@ export function compareHours(
           siteValue: `${dayName(day)}: Closed`,
           googleValue: `${dayName(day)}: ${formatHoursRange(googleDay.openMinutes, googleDay.closeMinutes)}`,
           siteLabel,
+          siteWeek,
         };
       }
       if (!sameHours(entry, { ...googleDay, closed: false })) {
@@ -1212,11 +1223,12 @@ export function compareHours(
           siteValue: `${dayName(day)}: ${formatHoursRange(entry.openMinutes, entry.closeMinutes)}`,
           googleValue: `${dayName(day)}: ${formatHoursRange(googleDay.openMinutes, googleDay.closeMinutes)}`,
           siteLabel,
+          siteWeek,
         };
       }
     }
   }
-  return { field: "hours", comparison: "matches", siteValue: "see site", googleValue: "see listing", siteLabel };
+  return { field: "hours", comparison: "matches", siteValue: "see site", googleValue: "see listing", siteLabel, siteWeek };
 }
 
 function formatMinutes(total: number): string {

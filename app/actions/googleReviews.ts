@@ -79,28 +79,13 @@ async function inboxTarget(businessId: string): Promise<InboxContext | { ok: fal
 /** Practice mode: the owner, Premium and not archived — like the real gate,
  * minus Google (no connection or token needed: the fake Google answers). */
 async function practiceTarget(businessId: string): Promise<InboxContext | { ok: false; result: GateFailure }> {
-  const blocked = (reason: GbpEditBlock) => ({ ok: false as const, result: { status: "blocked" as const, reason } });
-  const [{ createClient }, { getPlan }, { isPremiumPlan }, { isBusinessArchived }, { createAdminClient }, practice] = await Promise.all([
-    import("@/lib/supabase/server"),
-    import("@/lib/premium"),
-    import("@/lib/plan"),
-    import("@/lib/businessArchive.server"),
-    import("@/lib/supabase/admin"),
-    import("@/lib/gbpReviewPractice.server"),
-  ]);
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return blocked("unauthenticated");
-  const { data: business } = await supabase.from("businesses").select("id").eq("id", businessId).eq("owner_id", user.id).maybeSingle();
-  if (!business) return blocked("not_found");
-  if (!isPremiumPlan(await getPlan())) return blocked("not_premium");
-  if (await isBusinessArchived(supabase, businessId)) return blocked("archived");
+  const [{ practiceOwnerGate }, practice] = await Promise.all([import("@/lib/gbpPracticeGate.server"), import("@/lib/gbpReviewPractice.server")]);
+  const gate = await practiceOwnerGate(businessId);
+  if (!gate.ok) return gate;
   return {
     ok: true as const,
-    admin: createAdminClient(),
-    target: { businessId, userId: user.id, accountName: practice.PRACTICE_ACCOUNT, locationName: practice.PRACTICE_LOCATION, accessToken: practice.PRACTICE_TOKEN },
+    admin: gate.admin,
+    target: { businessId, userId: gate.userId, accountName: practice.PRACTICE_ACCOUNT, locationName: practice.PRACTICE_LOCATION, accessToken: practice.PRACTICE_TOKEN },
     practice: true,
     canPost: true,
     fetchImpl: practice.practiceFetch(businessId),

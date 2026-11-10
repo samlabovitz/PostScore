@@ -4503,7 +4503,14 @@ function parseInfoFieldFinding(value: unknown): InfoFieldFinding | null {
     googleValue: typeof v.googleValue === "string" ? v.googleValue : null,
     ...(v.source === "map" ? { source: "map" as const } : {}),
     ...(typeof v.siteLabel === "string" && v.siteLabel ? { siteLabel: v.siteLabel } : {}),
+    ...(Array.isArray(v.siteWeek) ? { siteWeek: v.siteWeek.filter(isSiteWeekDay) } : {}),
   };
+}
+
+function isSiteWeekDay(d: unknown): d is NonNullable<InfoFieldFinding["siteWeek"]>[number] {
+  const v = d as Record<string, unknown> | null;
+  const minutes = (n: unknown) => n === null || (typeof n === "number" && Number.isFinite(n));
+  return !!v && typeof v.day === "number" && v.day >= 0 && v.day <= 6 && typeof v.closed === "boolean" && minutes(v.open) && minutes(v.close);
 }
 
 function parseSpamFinding(value: unknown): SpamFinding | null {

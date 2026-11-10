@@ -10,12 +10,14 @@
 // Grow are pointed to their reviews area, where they connect for the
 // review-reply check — never to the Premium connect page.
 
+import { ProfileEditsOnGoogle } from "@/components/gbp/ProfileEditsOnGoogle";
+import { LockedPreview } from "@/components/plan/LockedPreview";
 import { GBP_PROFILE_ANCHOR, gbpConnectHref, gbpReplyCheckPath, type GbpConnectResult } from "@/lib/gbpLanding";
 import { gbpConnectedText, gbpResultText } from "@/components/gbp/GbpResultMessage";
 import { GbpReplyCountsLine } from "@/components/gbp/GbpReplyCountsLine";
 import type { GbpReplyCounts } from "@/lib/gbpReviewReplies";
 import Link from "next/link";
-import { IconLock } from "@tabler/icons-react";
+import { IconLock, IconPencil } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { SectionTitle, SoonList, SoonRow } from "@/components/preview/PreviewParts";
 import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
@@ -58,6 +60,7 @@ export function GoogleProfilePanel({
   messagingOn = null,
   searchDemand,
   connection = null,
+  practice = false,
 }: {
   businessId: string;
   plan: Plan;
@@ -71,6 +74,8 @@ export function GoogleProfilePanel({
   searchDemand: SearchDemandView;
   /** The matched location, a ?gbp= result and whether connecting is open. */
   connection?: GoogleProfileConnection | null;
+  /** Practice mode: Edit on Google on a sample listing (nothing sent to Google). */
+  practice?: boolean;
 }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
@@ -186,6 +191,27 @@ export function GoogleProfilePanel({
         </Card>
       </section>
 
+      {/* Edit on Google: Premium + Google connected (or practice mode). Others see a preview. */}
+      {!websiteOnly && (
+        <section data-testid="edit-on-google-section">
+          <SectionTitle>{t(locale, "dashboard.gbpProfileEdits.heading")}</SectionTitle>
+          {premium && (connected || practice) ? (
+            <ProfileEditsOnGoogle businessId={businessId} />
+          ) : premium ? (
+            <Card className="p-5">
+              <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.gbpProfileEdits.error.blocked")}</p>
+            </Card>
+          ) : (
+            <LockedPreview
+              feature="googleProfile"
+              icon={IconPencil}
+              title={t(locale, "dashboard.gbpProfileEdits.preview.title")}
+              unlock={t(locale, "dashboard.gbpProfileEdits.preview.unlock")}
+            />
+          )}
+        </section>
+      )}
+
       {!websiteOnly && (
         <section data-testid="profile-strength">
           <SectionTitle>{t(locale, "dashboard.gbpMessaging.strengthHeading")}</SectionTitle>
@@ -204,7 +230,6 @@ export function GoogleProfilePanel({
           <section>
             <SectionTitle>{t(locale, "dashboard.googleProfile.featuresHeading")}</SectionTitle>
             <SoonList>
-              <SoonRow title={t(locale, "dashboard.googleProfile.editing")} body={t(locale, "dashboard.googleProfile.editingBody")} status={inPlanSoon} />
               <SoonRow title={t(locale, "dashboard.googleProfile.insights")} body={t(locale, "dashboard.googleProfile.insightsBody")} status={inPlanSoon} />
             </SoonList>
           </section>
@@ -214,7 +239,6 @@ export function GoogleProfilePanel({
           <SectionTitle>{t(locale, "dashboard.googleProfile.featuresHeading")}</SectionTitle>
           <SoonList>
             <SoonRow title={t(locale, "dashboard.googleProfile.searchDemand")} body={t(locale, "dashboard.googleProfile.searchDemandSoonBody")} status={needsPremium} />
-            <SoonRow title={t(locale, "dashboard.googleProfile.editing")} body={t(locale, "dashboard.googleProfile.editingBody")} status={needsPremium} />
             <SoonRow title={t(locale, "dashboard.googleProfile.insights")} body={t(locale, "dashboard.googleProfile.insightsBody")} status={needsPremium} />
           </SoonList>
         </section>

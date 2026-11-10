@@ -137,6 +137,8 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
     // Website-only businesses never reach this page (websiteOnlyGuard).
     websiteOnly: false,
     connected: gbpConnected,
+    // Practice mode (never in production): "Edit on Google" on a sample listing, connected or not.
+    practice: (await import("@/lib/gbpReviewPractice")).reviewRepliesPracticeOn(),
     // Read-only: is a texting/WhatsApp option on the owner's location (✓)?
     messagingOn: gbpConnected ? await (await import("@/lib/gbpMessaging.server")).readGbpMessaging(params.id) : null,
     // Same rule as search demand everywhere: example data under an

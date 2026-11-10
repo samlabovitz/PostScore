@@ -52,7 +52,10 @@ describe("the real JT's Sports Bar & Grill page: Operating Hours, not Happy Hour
 
   test("a real difference names the block (EN + ES)", () => {
     const finding = compareHours(JTS, everyDay(12, 0, { 5: [11, 0] }));
-    expect(finding).toEqual({ field: "hours", comparison: "conflicts", siteValue: "Friday: 12:00 PM–12:00 AM", googleValue: "Friday: 11:00 AM–12:00 AM", siteLabel: "Operating Hours" });
+    expect(finding).toMatchObject({ field: "hours", comparison: "conflicts", siteValue: "Friday: 12:00 PM–12:00 AM", googleValue: "Friday: 11:00 AM–12:00 AM", siteLabel: "Operating Hours" });
+    // The website's whole week is kept too ("Use the hours from your website" on the Google Profile tab).
+    expect(finding.siteWeek).toHaveLength(7);
+    expect(finding.siteWeek!.find((d) => d.day === 5)).toEqual({ day: 5, closed: false, open: 720, close: 0 });
     const input: BusinessScoringInput = {
       ...scoringInput(),
       websiteAnalysis: { ...scoringInput().websiteAnalysis!, websiteTrust: trustWith(finding) },
