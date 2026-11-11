@@ -226,15 +226,16 @@ function RowActions({
   const locale = useLocale();
   const needsWork = outcome === "needs_work";
   const customerDetails = check.id === "completeness.customer_details" && !!businessId;
+  // A fix button only on a row with a real problem: a Done row shows none.
+  // Owners who still want to change it do it from the Google Profile tab
+  // (Edit on Google), which also keeps the 7-day Undo.
   // Premium (connected or not): the Google action is the one action.
-  const googleAction = customerDetails && gbp.enabled && gbp.premium;
+  const googleAction = customerDetails && needsWork && gbp.enabled && gbp.premium;
   const canRemove = customerDetails && (check.meta?.ownerCanRemove ?? "").split(",").some(Boolean);
-  // The Website link check: "Update website on Google" for every Premium +
-  // Google-connected business, any time (change the link whenever you
-  // like); the steps when it's losing points on other plans; and the
-  // 7-day Undo even once the new link scores.
-  const websiteLinkFix =
-    check.id === "completeness.website_link" && !!businessId && gbp.enabled && (needsWork || (gbp.premium && gbp.connected) || !!gbp.websiteUndo);
+  // The Website link check: "Update website on Google" (Premium +
+  // connected), or the steps, only while the link loses points — dead,
+  // parked, the wrong site, or not the verified website.
+  const websiteLinkFix = check.id === "completeness.website_link" && !!businessId && gbp.enabled && needsWork;
   if (!needsWork && !googleAction && !canRemove && !websiteLinkFix) return null;
   return (
     <div data-testid="row-actions" className="ml-[25px] mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">

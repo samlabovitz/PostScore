@@ -76,6 +76,11 @@ export function setPracticeOutcome(businessId: string, outcome: PracticeOutcome)
   outcomes.set(businessId, outcome);
 }
 
+/** The practice panel's choice — shared with the fake Place Actions API (lib/gbpPlaceActionsPractice.server.ts). */
+export function practiceOutcomeOf(businessId: string): PracticeOutcome {
+  return outcomes.get(businessId) ?? "accept";
+}
+
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 const googleError = (status: number, code: string) => json({ error: { code: status, status: code } }, status);
 

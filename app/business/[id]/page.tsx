@@ -145,10 +145,10 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
   // The Website page's own fix count (same builder rule, same plan).
   const websiteAnalysis = parseWebsiteAnalysis(scored.business.website_analysis_json);
   const websiteChecks = scored.result.breakdown.categories.find((c) => c.id === "website")?.checks ?? [];
-  const websiteFixCount = websiteFixPlan(
-    websiteChecks,
-    resolveWebsiteBuilder(websiteAnalysis?.builder, businessWebsiteUrl(scored.business))?.id ?? null
-  ).fixes.length;
+  const websitePlan = websiteFixPlan(websiteChecks, resolveWebsiteBuilder(websiteAnalysis?.builder, businessWebsiteUrl(scored.business))?.id ?? null);
+  const websiteFixCount = websitePlan.fixes.length;
+  // Guides on checks we couldn't score: "things to look at", never fixes.
+  const websiteLookAtCount = websitePlan.lookAt.length;
 
   // Free: the page gets only what the Free Overview shows — the score
   // without any fix advice, no recommendations, and PostAI's starter
@@ -211,6 +211,7 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
         now={new Date().toISOString()}
         recommendations={free ? null : recommendations}
         websiteFixCount={websiteFixCount}
+        websiteLookAtCount={websiteLookAtCount}
         linkOptions={linkOptions}
         plan={upgrade.plan}
         freeRescanNextAt={freeRescanNextAt}

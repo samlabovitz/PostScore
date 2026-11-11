@@ -13,8 +13,12 @@
 // - Edit on Google (hours, phone, description — lib/gbpProfileEdits.server.ts)
 //   uses the same practice mode, and its own allow list:
 //   GBP_PROFILE_EDITS_LIVE_PLACES (default: none — read-only, locked).
+// - The "Order online" / "Booking link" card (lib/gbpOrderLink.server.ts,
+//   and "Add to 'Order online'" on the platform link card) uses the same
+//   practice mode, and its own allow list: GBP_PLACE_ACTIONS_LIVE_PLACES
+//   (default: none — real links load, Add / Change / Remove locked).
 
-type Env = { NODE_ENV?: string; REVIEW_REPLIES_PRACTICE?: string; REVIEW_REPLIES_LIVE_PLACES?: string; GBP_PROFILE_EDITS_LIVE_PLACES?: string };
+type Env = { NODE_ENV?: string; REVIEW_REPLIES_PRACTICE?: string; REVIEW_REPLIES_LIVE_PLACES?: string; GBP_PROFILE_EDITS_LIVE_PLACES?: string; GBP_PLACE_ACTIONS_LIVE_PLACES?: string };
 
 export function reviewRepliesPracticeOn(env: Env = process.env): boolean {
   if (env.REVIEW_REPLIES_PRACTICE !== "1") return false;
@@ -43,4 +47,9 @@ export function livePostingAllowed(placeId: string | null | undefined, env: Env 
 /** May this business change its hours, phone or description on its real Google listing? */
 export function profileEditsAllowed(placeId: string | null | undefined, env: Env = process.env): boolean {
   return !!placeId && placeList(env.GBP_PROFILE_EDITS_LIVE_PLACES).includes(placeId);
+}
+
+/** May this business add, change or remove its ordering / booking link on its real Google listing? */
+export function placeActionsAllowed(placeId: string | null | undefined, env: Env = process.env): boolean {
+  return !!placeId && placeList(env.GBP_PLACE_ACTIONS_LIVE_PLACES).includes(placeId);
 }

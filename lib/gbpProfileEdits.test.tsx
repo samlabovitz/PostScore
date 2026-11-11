@@ -441,9 +441,12 @@ describe("on the page (EN + ES)", () => {
 
   test("Approve says Beta and locks the same way as review replies when editing is off; holiday hours “coming later”", () => {
     const component = readFileSync("components/gbp/ProfileEditsOnGoogle.tsx", "utf8");
-    expect(component).toContain('if (!canEdit) return <LockedButton label={t(locale, K("approve"))} testId={testId} />;');
-    expect(component).toContain('<span data-testid="beta-label"');
-    expect(component).toContain('title={tip}');
+    // Approve and its locked look are shared with the ordering / booking link card.
+    const bits = readFileSync("components/gbp/googleEditBits.tsx", "utf8");
+    expect(bits).toContain('if (!canEdit) return <LockedButton label={label ?? t(locale, K("approve"))} testId={testId} />;');
+    expect(bits).toContain('<span data-testid="beta-label"');
+    expect(bits).toContain('title={tip}');
+    expect(component).toContain('import { ApproveButton, LockedButton, TONE } from "@/components/gbp/googleEditBits";');
     expect(component).toContain('t(locale, K("hours.special"))');
   });
 });

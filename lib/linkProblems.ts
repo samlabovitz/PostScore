@@ -60,3 +60,21 @@ export function socialLinkProblems(profiles: SocialProfile[] | undefined, broken
 export function socialIconCount(profiles: SocialProfile[] | undefined, broken: BrokenSocialLink[] | undefined): number {
   return new Set([...(profiles ?? []).map((p) => p.platform), ...(broken ?? []).map((b) => b.platform)]).size;
 }
+
+/** A public http(s) web address: a real host name, never an IP address,
+ * localhost or an internal name, never a user/password. */
+export function isPublicWebUrl(raw: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+  if (u.username || u.password) return false;
+  const host = u.hostname.toLowerCase();
+  if (!host.includes(".") || host.endsWith(".")) return false;
+  if (/^\d+(\.\d+){3}$/.test(host) || host.startsWith("[")) return false;
+  if (/(^|\.)(localhost|local|internal|lan|home|corp|test|invalid|example|arpa)$/.test(host)) return false;
+  return true;
+}

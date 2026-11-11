@@ -7,7 +7,8 @@
 // 2. Google's own section for it ("Order online", "Reservations",
 //    "Appointments"): with Google connected, whether it's already there
 //    (read-only); if only in the website spot, one action by plan —
-//    Premium: "Add to 'Order online' on Google" (approve → Undo 7 days),
+//    Premium: "Add to 'Order online' on Google" (approve → Undo 7 days;
+//    locked unless practice mode or GBP_PLACE_ACTIONS_LIVE_PLACES lists it),
 //    Premium not connected: connect first, Free/Grow: the steps;
 //    not connected: never a guess — connect, or check it yourself;
 // 3. why a real website helps, and "Get a website" (the starter site
@@ -23,12 +24,15 @@ import { addPlatformLinkAction, getPlatformLinkStatus, undoPlatformLinkAction, t
 import { websitePlatform, type PlaceActionSection, type WebsitePlatform } from "@/lib/gbpPlaceActions";
 import { GOOGLE_LINKS, googleHelpUrl } from "@/lib/googleHelpLinks";
 import { formatShortDate, t, useLocale, useTimeZone, type Locale, type MessageKey } from "@/lib/i18n";
-import type { UndoableChange } from "@/lib/gbpAttributes";
+import type { OrderLinkUndo } from "@/lib/gbpOrderLink.server";
+import { LockedButton, TONE } from "@/components/gbp/googleEditBits";
 import { cn } from "@/lib/utils";
 
 const k = (key: string) => `dashboard.platformLink.${key}` as MessageKey;
 const PILL = "inline-flex w-fit items-center gap-1.5 rounded-full border border-[color:color-mix(in_srgb,var(--color-brass)_40%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_10%,white)] px-3 py-1 text-[12.5px] font-semibold text-ink hover:border-brass disabled:opacity-60";
 const PRIMARY = "inline-flex w-fit items-center rounded-full bg-ink px-3.5 py-1.5 text-[12.5px] font-semibold text-white disabled:opacity-60";
+/** What the card needs of an undo (lib/gbpOrderLink.server.ts). */
+type LinkUndo = Pick<OrderLinkUndo, "batchId" | "approvedAt" | "undoUntil">;
 const QUIET = "text-[12.5px] font-semibold text-ink-soft underline-offset-2 hover:underline";
 
 export function sectionLabel(section: PlaceActionSection, locale: Locale): string {
@@ -42,6 +46,9 @@ export function platformButtonLabel(platform: Pick<WebsitePlatform, "name" | "ki
 
 function errorText(r: { status: string; error?: string; reason?: string }, locale: Locale): string {
   if (r.status === "blocked") return t(locale, `dashboard.gbpEdit.blocked.${r.reason}` as MessageKey);
+  // Not on the live allow list (GBP_PLACE_ACTIONS_LIVE_PLACES): refused, nothing sent.
+  if (r.status === "editing_off") return t(locale, "dashboard.gbpProfileEdits.editingOff");
+  if (r.error === "not_set_up") return t(locale, "dashboard.gbpProfileEdits.error.notSetUp");
   if (r.error === "not_enabled_google" || r.error === "changed_since" || r.error === "undo_expired") return t(locale, k(`error.${r.error}`));
   if (r.error === "reconnect" || r.error === "permission" || r.error === "wait_minute" || r.error === "daily_cap" || r.error === "not_enabled") return t(locale, `dashboard.gbpEdit.error.${r.error}` as MessageKey);
   return t(locale, k("error.other"));
@@ -104,13 +111,18 @@ export function PlatformLinkCard({
             </p>
           )}
           {/* A later visit: the link PostScore added is on Google now — Undo still holds for its 7 days. */}
-          {ok?.alreadyOnGoogle && ok.undo && ok.canAdd && <UndoAddedLink businessId={businessId} section={section} undo={ok.undo} />}
+          {ok?.practice && (
+            <p data-testid="platform-practice" className="text-[12.5px] font-semibold text-ink-soft">
+              {t(locale, "dashboard.gbpProfileEdits.practiceBanner")}
+            </p>
+          )}
+          {ok?.alreadyOnGoogle && ok.undo && ok.canAdd && <UndoAddedLink businessId={businessId} section={section} undo={ok.undo} canEdit={ok.canEdit !== false} />}
           {ok && !ok.alreadyOnGoogle && (
             <>
               <p data-testid="platform-only-website" className="rounded-lg bg-paper px-3 py-2 text-ink">
                 {t(locale, k("onlyWebsite"), { platform: platform.name, section: sec })}
               </p>
-              {ok.canAdd ? <AddToGoogle businessId={businessId} platform={platform} section={section} initialUndo={ok.undo} /> : <HowTo platform={platform} section={section} />}
+              {ok.canAdd ? <AddToGoogle businessId={businessId} platform={platform} section={section} initialUndo={ok.undo} canEdit={ok.canEdit !== false} /> : <HowTo platform={platform} section={section} />}
             </>
           )}
           {!connected && (
@@ -166,12 +178,12 @@ function HowTo({ platform, section, open = false }: { platform: WebsitePlatform;
 }
 
 /** Premium + connected: approve → preview → add → Undo for 7 days. */
-function AddToGoogle({ businessId, platform, section, initialUndo }: { businessId: string; platform: WebsitePlatform; section: PlaceActionSection; initialUndo: UndoableChange | null }) {
+function AddToGoogle({ businessId, platform, section, initialUndo, canEdit }: { businessId: string; platform: WebsitePlatform; section: PlaceActionSection; initialUndo: LinkUndo | null; canEdit: boolean }) {
   const locale = useLocale();
   const router = useRouter();
   const sec = sectionLabel(section, locale);
-  const [step, setStep] = useState<"idle" | "preview" | "sending" | "sent">("idle");
-  const [undo, setUndo] = useState<UndoableChange | null>(initialUndo);
+  const [step, setStep] = useState<"idle" | "preview" | "sending" | "sent" | "waiting">("idle");
+  const [undo, setUndo] = useState<LinkUndo | null>(initialUndo);
   const [error, setError] = useState<string | null>(null);
   // Google's own link to the live listing, after a change or a failed one.
   const [mapsUri, setMapsUri] = useState<string | null>(null);
@@ -181,9 +193,9 @@ function AddToGoogle({ businessId, platform, section, initialUndo }: { businessI
     setError(null);
     const r = await addPlatformLinkAction(businessId).catch(() => ({ status: "error" as const, error: "failed" as const }));
     setMapsUri("mapsUri" in r ? (r.mapsUri ?? null) : null);
-    if (r.status === "sent") {
+    if (r.status === "sent" || r.status === "unconfirmed") {
       setUndo(r.undo);
-      setStep("sent");
+      setStep(r.status === "sent" ? "sent" : "waiting");
       router.refresh();
     } else if (r.status === "already") {
       setStep("sent");
@@ -195,7 +207,7 @@ function AddToGoogle({ businessId, platform, section, initialUndo }: { businessI
 
   return (
     <div data-testid="platform-add" className="flex flex-col gap-2">
-      {undo && <UndoAddedLink businessId={businessId} section={section} undo={undo} />}
+      {undo && <UndoAddedLink businessId={businessId} section={section} undo={undo} canEdit={canEdit} />}
       {step === "idle" && !undo && (
         <button type="button" className={PILL} onClick={() => setStep("preview")}>
           <IconBrandGoogle size={14} aria-hidden />
@@ -206,9 +218,16 @@ function AddToGoogle({ businessId, platform, section, initialUndo }: { businessI
         <div data-testid="platform-preview" className="flex flex-col gap-2 rounded-lg border border-paper-line bg-paper p-3">
           <p className="text-ink">{t(locale, k("preview"), { section: sec, url: platform.url })}</p>
           <div className="flex flex-wrap items-center gap-3">
-            <button type="button" className={PRIMARY} disabled={step === "sending"} onClick={approve}>
-              {step === "sending" ? t(locale, k("sending")) : t(locale, k("approve"))}
-            </button>
+            {canEdit ? (
+              <button type="button" className={PRIMARY} disabled={step === "sending"} onClick={approve}>
+                {step === "sending" ? t(locale, k("sending")) : t(locale, k("approve"))}
+                <span data-testid="beta-label" className="ml-1.5 rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em]">
+                  {t(locale, "dashboard.gbpProfileEdits.beta")}
+                </span>
+              </button>
+            ) : (
+              <LockedButton label={t(locale, k("approve"))} testId="platform-approve" />
+            )}
             <button type="button" className={QUIET} disabled={step === "sending"} onClick={() => setStep("idle")}>
               {t(locale, k("cancel"))}
             </button>
@@ -220,15 +239,20 @@ function AddToGoogle({ businessId, platform, section, initialUndo }: { businessI
           {t(locale, k("sent"), { section: sec })}
         </p>
       )}
+      {step === "waiting" && (
+        <p role="status" data-testid="platform-waiting" className={cn("text-[13px]", TONE.waiting)}>
+          {t(locale, "dashboard.orderLink.unconfirmed")}
+        </p>
+      )}
       {error && <p className="text-[12.5px] text-red">{error}</p>}
-      {(step === "sent" || error) && <ViewOnGoogle mapsUri={mapsUri} />}
+      {(step === "sent" || step === "waiting" || error) && <ViewOnGoogle mapsUri={mapsUri} />}
     </div>
   );
 }
 
 /** "Added to 'Order online' on {date}. You can undo it until {until}." —
  * right after adding, and on every later visit for the 7 days. */
-function UndoAddedLink({ businessId, section, undo }: { businessId: string; section: PlaceActionSection; undo: UndoableChange }) {
+function UndoAddedLink({ businessId, section, undo, canEdit }: { businessId: string; section: PlaceActionSection; undo: LinkUndo; canEdit: boolean }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
   const router = useRouter();
@@ -263,9 +287,13 @@ function UndoAddedLink({ businessId, section, undo }: { businessId: string; sect
           {step === "undoConfirm" || step === "undoing" ? (
             <>
               <span className="text-ink">{t(locale, k("undoConfirm"), { section: sec })}</span>
-              <button type="button" className={PRIMARY} disabled={step === "undoing"} onClick={runUndo}>
-                {step === "undoing" ? t(locale, k("sending")) : t(locale, k("undoYes"))}
-              </button>
+              {canEdit ? (
+                <button type="button" className={PRIMARY} disabled={step === "undoing"} onClick={runUndo}>
+                  {step === "undoing" ? t(locale, k("sending")) : t(locale, k("undoYes"))}
+                </button>
+              ) : (
+                <LockedButton label={t(locale, k("undoYes"))} testId="platform-undo-yes" />
+              )}
               <button type="button" className={QUIET} onClick={() => setStep("idle")}>
                 {t(locale, k("cancel"))}
               </button>

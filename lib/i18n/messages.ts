@@ -280,6 +280,10 @@ export type MessageKey =
   | "dashboard.replies.footerConnect"
   | "dashboard.gbpProfileEdits.heading"
   | "dashboard.gbpProfileEdits.intro"
+  | "dashboard.gbpProfileEdits.field.websiteLink"
+  | "dashboard.gbpProfileEdits.field.customerDetails"
+  | "dashboard.gbpProfileEdits.websiteLinkIntro"
+  | "dashboard.gbpProfileEdits.customerDetailsIntro"
   | "dashboard.gbpProfileEdits.nowOnGoogle"
   | "dashboard.gbpProfileEdits.notSet"
   | "dashboard.gbpProfileEdits.loading"
@@ -1616,6 +1620,32 @@ export type MessageKey =
   | "dashboard.platformLink.error.changed_since"
   | "dashboard.platformLink.error.undo_expired"
   | "dashboard.platformLink.error.other"
+  | "dashboard.orderLink.title.order"
+  | "dashboard.orderLink.title.booking"
+  | "dashboard.orderLink.intro.order"
+  | "dashboard.orderLink.intro.booking"
+  | "dashboard.orderLink.yourLink"
+  | "dashboard.orderLink.none"
+  | "dashboard.orderLink.partner"
+  | "dashboard.orderLink.add"
+  | "dashboard.orderLink.change"
+  | "dashboard.orderLink.remove"
+  | "dashboard.orderLink.urlLabel"
+  | "dashboard.orderLink.hint.order"
+  | "dashboard.orderLink.hint.booking"
+  | "dashboard.orderLink.problem.invalid"
+  | "dashboard.orderLink.problem.not_https"
+  | "dashboard.orderLink.problem.not_allowed.order"
+  | "dashboard.orderLink.problem.not_allowed.booking"
+  | "dashboard.orderLink.problem.parked"
+  | "dashboard.orderLink.problem.too_long"
+  | "dashboard.orderLink.approveAdd"
+  | "dashboard.orderLink.approveChange"
+  | "dashboard.orderLink.removeConfirm"
+  | "dashboard.orderLink.removeYes"
+  | "dashboard.orderLink.removed"
+  | "dashboard.orderLink.undoConfirm"
+  | "dashboard.orderLink.unconfirmed"
   | "dashboard.gbpEdit.error.loadCurrent"
   | "dashboard.gbpEdit.before"
   | "dashboard.gbpEdit.after"
@@ -3819,6 +3849,8 @@ export type MessageKey =
   | "dashboard.websiteFix.summary.webOne"
   | "dashboard.websiteFix.summary.bothOne"
   | "dashboard.websiteFix.summary.none"
+  | "dashboard.websiteFix.summary.lookAtOnly.one"
+  | "dashboard.websiteFix.summary.lookAtOnly.other"
   | "dashboard.websiteFix.builder.detected"
   | "dashboard.websiteFix.builder.notDetected"
   | "dashboard.websiteFix.builder.notYet"
@@ -3871,6 +3903,8 @@ export type MessageKey =
   | "dashboard.overview.tiles.noWebsite"
   | "dashboard.overview.tiles.fixes.one"
   | "dashboard.overview.tiles.fixes.other"
+  | "dashboard.overview.tiles.lookAt.one"
+  | "dashboard.overview.tiles.lookAt.other"
   | "dashboard.overview.tiles.nothingToFix"
   | "dashboard.overview.breakdown.heading"
   | "dashboard.overview.breakdown.caption"
@@ -4869,6 +4903,7 @@ export type PluralKeyBase =
   | "dashboard.overview.breakdown.needsWork"
   | "dashboard.overview.breakdown.couldntCheck"
   | "dashboard.overview.tiles.fixes"
+  | "dashboard.overview.tiles.lookAt"
   | "dashboard.rescan.freshDays"
   | "dashboard.rescan.toastChecks"
   | "dashboard.growth.websiteBanner.improve"
@@ -5208,7 +5243,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.replies.footerInbox": "For reviews from Yelp, Facebook or anywhere else, paste them here.",
     "dashboard.replies.footerConnect": "Connect Google to see and answer every review here.",
     "dashboard.gbpProfileEdits.heading": "Edit on Google",
-    "dashboard.gbpProfileEdits.intro": "Change your hours, phone and description on your Google Business Profile. We read what Google has now; nothing changes until you click Approve.",
+    "dashboard.gbpProfileEdits.intro": "Change your hours, phone, description and ordering or booking link on your Google Business Profile. We read what Google has now; nothing changes until you click Approve.",
+    "dashboard.gbpProfileEdits.field.websiteLink": "Website link",
+    "dashboard.gbpProfileEdits.field.customerDetails": "Customer details",
+    "dashboard.gbpProfileEdits.websiteLinkIntro": "The website your Google listing links to. Change it any time.",
+    "dashboard.gbpProfileEdits.customerDetailsIntro": "Parking, payments and accessibility on your Google listing.",
     "dashboard.gbpProfileEdits.nowOnGoogle": "On Google now",
     "dashboard.gbpProfileEdits.notSet": "Not set on Google",
     "dashboard.gbpProfileEdits.loading": "Loading what Google has now…",
@@ -6666,6 +6705,32 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.platformLink.error.changed_since": "That link was changed on Google since, so we didn't undo anything.",
     "dashboard.platformLink.error.undo_expired": "This change can no longer be undone here.",
     "dashboard.platformLink.error.other": "Google didn't accept that. Nothing was changed — please try again in a minute.",
+    "dashboard.orderLink.title.order": "Order online",
+    "dashboard.orderLink.title.booking": "Booking link",
+    "dashboard.orderLink.intro.order": "The link customers use to order online from your Google listing.",
+    "dashboard.orderLink.intro.booking": "The link customers use to book an appointment from your Google listing.",
+    "dashboard.orderLink.yourLink": "Your link",
+    "dashboard.orderLink.none": "No link on Google yet.",
+    "dashboard.orderLink.partner": "Added by a Google partner ({site}) — Google manages it, so it can't be changed here.",
+    "dashboard.orderLink.add": "Add the link",
+    "dashboard.orderLink.change": "Change",
+    "dashboard.orderLink.remove": "Remove",
+    "dashboard.orderLink.urlLabel": "Link (starts with https://)",
+    "dashboard.orderLink.hint.order": "An ordering site (DoorDash, Uber Eats, Toast, Square, ChowNow…) or a page on your own website.",
+    "dashboard.orderLink.hint.booking": "A booking site (Square Appointments, Vagaro, Booksy, Fresha, StyleSeat…) or a page on your own website.",
+    "dashboard.orderLink.problem.invalid": "Enter a full web address, like https://…",
+    "dashboard.orderLink.problem.not_https": "Use a secure link that starts with https://",
+    "dashboard.orderLink.problem.not_allowed.order": "Use an ordering site (DoorDash, Toast, Square…) or a page on your own website.",
+    "dashboard.orderLink.problem.not_allowed.booking": "Use a booking site (Square Appointments, Vagaro, Booksy, Fresha…) or a page on your own website.",
+    "dashboard.orderLink.problem.parked": "Your website showed a parked or “coming soon” page in your last scan, so PostScore won't send customers there. Use your ordering or booking site instead.",
+    "dashboard.orderLink.problem.too_long": "That link is too long.",
+    "dashboard.orderLink.approveAdd": "Approve and add to Google",
+    "dashboard.orderLink.approveChange": "Approve and update Google",
+    "dashboard.orderLink.removeConfirm": "Remove this link from your Google listing? Customers won't see it there anymore.",
+    "dashboard.orderLink.removeYes": "Approve and remove",
+    "dashboard.orderLink.removed": "Removed from Google ✓",
+    "dashboard.orderLink.undoConfirm": "Put the previous link back on Google?",
+    "dashboard.orderLink.unconfirmed": "Google took the change but isn't showing it yet. Check again later — don't send it again.",
     "dashboard.gbpEdit.error.loadCurrent": "Couldn't load your current details from Google — try again.",
     "dashboard.gbpEdit.before": "Before: {value}",
     "dashboard.gbpEdit.after": "After: {value}",
@@ -9189,6 +9254,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteFix.summary.webOne": "{selfCount} fixes you can do yourself (~{min}–{max} min) · 1 needs a web person",
     "dashboard.websiteFix.summary.bothOne": "1 fix you can do yourself (~{min}–{max} min) · 1 needs a web person",
     "dashboard.websiteFix.summary.none": "Nothing to fix on the website checks we could run.",
+    "dashboard.websiteFix.summary.lookAtOnly.one": "Nothing to fix · 1 thing to look at below.",
+    "dashboard.websiteFix.summary.lookAtOnly.other": "Nothing to fix · {count} things to look at below.",
     "dashboard.websiteFix.builder.detected": "Built with {builder}",
     "dashboard.websiteFix.builder.notDetected": "Builder not detected",
     "dashboard.websiteFix.builder.notYet": "Builder: checked on your next scan",
@@ -9241,6 +9308,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.tiles.noWebsite": "No website",
     "dashboard.overview.tiles.fixes.one": "{count} fix",
     "dashboard.overview.tiles.fixes.other": "{count} fixes",
+    "dashboard.overview.tiles.lookAt.one": "{count} thing to look at",
+    "dashboard.overview.tiles.lookAt.other": "{count} things to look at",
     "dashboard.overview.tiles.nothingToFix": "Nothing to fix",
     "dashboard.overview.breakdown.heading": "Score breakdown",
     "dashboard.overview.breakdown.caption": "The three categories add up to your score.",
@@ -10491,7 +10560,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.replies.footerInbox": "Para reseñas de Yelp, Facebook o cualquier otro sitio, péguelas aquí.",
     "dashboard.replies.footerConnect": "Conecte Google para ver y responder todas sus reseñas aquí.",
     "dashboard.gbpProfileEdits.heading": "Editar en Google",
-    "dashboard.gbpProfileEdits.intro": "Cambie su horario, teléfono y descripción en su Perfil de Empresa en Google. Leemos lo que Google tiene ahora; nada cambia hasta que usted haga clic en Aprobar.",
+    "dashboard.gbpProfileEdits.intro": "Cambie su horario, teléfono, descripción y enlace de pedidos o reservas en su Perfil de Empresa en Google. Leemos lo que Google tiene ahora; nada cambia hasta que usted haga clic en Aprobar.",
+    "dashboard.gbpProfileEdits.field.websiteLink": "Enlace del sitio web",
+    "dashboard.gbpProfileEdits.field.customerDetails": "Datos para clientes",
+    "dashboard.gbpProfileEdits.websiteLinkIntro": "El sitio web al que enlaza su Perfil de Empresa en Google. Cámbielo cuando quiera.",
+    "dashboard.gbpProfileEdits.customerDetailsIntro": "Estacionamiento, pagos y accesibilidad en su Perfil de Empresa en Google.",
     "dashboard.gbpProfileEdits.nowOnGoogle": "En Google ahora",
     "dashboard.gbpProfileEdits.notSet": "No está en Google",
     "dashboard.gbpProfileEdits.loading": "Cargando lo que Google tiene ahora…",
@@ -11840,6 +11913,32 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.platformLink.error.changed_since": "Ese enlace se cambió en Google desde entonces, así que no deshicimos nada.",
     "dashboard.platformLink.error.undo_expired": "Este cambio ya no se puede deshacer aquí.",
     "dashboard.platformLink.error.other": "Google no aceptó eso. No se cambió nada; inténtelo de nuevo en un minuto.",
+    "dashboard.orderLink.title.order": "Pedidos en línea",
+    "dashboard.orderLink.title.booking": "Enlace para reservar",
+    "dashboard.orderLink.intro.order": "El enlace que los clientes usan para hacer pedidos en línea desde su Perfil de Empresa en Google.",
+    "dashboard.orderLink.intro.booking": "El enlace que los clientes usan para reservar una cita desde su Perfil de Empresa en Google.",
+    "dashboard.orderLink.yourLink": "Su enlace",
+    "dashboard.orderLink.none": "Todavía no hay un enlace en Google.",
+    "dashboard.orderLink.partner": "Agregado por un socio de Google ({site}). Google lo administra, así que no se puede cambiar aquí.",
+    "dashboard.orderLink.add": "Agregar el enlace",
+    "dashboard.orderLink.change": "Cambiar",
+    "dashboard.orderLink.remove": "Quitar",
+    "dashboard.orderLink.urlLabel": "Enlace (empieza con https://)",
+    "dashboard.orderLink.hint.order": "Un sitio de pedidos (DoorDash, Uber Eats, Toast, Square, ChowNow…) o una página de su propio sitio web.",
+    "dashboard.orderLink.hint.booking": "Un sitio de reservas (Square Appointments, Vagaro, Booksy, Fresha, StyleSeat…) o una página de su propio sitio web.",
+    "dashboard.orderLink.problem.invalid": "Escriba una dirección web completa, como https://…",
+    "dashboard.orderLink.problem.not_https": "Use un enlace seguro que empiece con https://",
+    "dashboard.orderLink.problem.not_allowed.order": "Use un sitio de pedidos (DoorDash, Toast, Square…) o una página de su propio sitio web.",
+    "dashboard.orderLink.problem.not_allowed.booking": "Use un sitio de reservas (Square Appointments, Vagaro, Booksy, Fresha…) o una página de su propio sitio web.",
+    "dashboard.orderLink.problem.parked": "Su sitio web mostró una página estacionada o de “próximamente” en su último análisis, así que PostScore no enviará clientes allí. Use su sitio de pedidos o de reservas.",
+    "dashboard.orderLink.problem.too_long": "Ese enlace es demasiado largo.",
+    "dashboard.orderLink.approveAdd": "Aprobar y agregar a Google",
+    "dashboard.orderLink.approveChange": "Aprobar y actualizar Google",
+    "dashboard.orderLink.removeConfirm": "¿Quitar este enlace de su Perfil de Empresa en Google? Los clientes ya no lo verán allí.",
+    "dashboard.orderLink.removeYes": "Aprobar y quitar",
+    "dashboard.orderLink.removed": "Quitado de Google ✓",
+    "dashboard.orderLink.undoConfirm": "¿Volver a poner el enlace anterior en Google?",
+    "dashboard.orderLink.unconfirmed": "Google recibió el cambio, pero aún no lo muestra. Vuelva a revisar más tarde; no lo envíe de nuevo.",
     "dashboard.gbpEdit.error.loadCurrent": "No pudimos cargar sus detalles actuales desde Google; inténtelo de nuevo.",
     "dashboard.gbpEdit.before": "Antes: {value}",
     "dashboard.gbpEdit.after": "Después: {value}",
@@ -14572,6 +14671,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteFix.summary.webOne": "{selfCount} mejoras que puede hacer usted mismo (~{min}–{max} min) · 1 necesita a un encargado web",
     "dashboard.websiteFix.summary.bothOne": "1 mejora que puede hacer usted mismo (~{min}–{max} min) · 1 necesita a un encargado web",
     "dashboard.websiteFix.summary.none": "No hay nada que mejorar en las revisiones del sitio que pudimos hacer.",
+    "dashboard.websiteFix.summary.lookAtOnly.one": "Nada que arreglar · 1 cosa para revisar abajo.",
+    "dashboard.websiteFix.summary.lookAtOnly.other": "Nada que arreglar · {count} cosas para revisar abajo.",
     "dashboard.websiteFix.builder.detected": "Hecho con {builder}",
     "dashboard.websiteFix.builder.notDetected": "No se detectó la plataforma",
     "dashboard.websiteFix.builder.notYet": "Plataforma: se revisará en su próximo escaneo",
@@ -14624,6 +14725,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.tiles.noWebsite": "Sin sitio web",
     "dashboard.overview.tiles.fixes.one": "{count} arreglo",
     "dashboard.overview.tiles.fixes.other": "{count} arreglos",
+    "dashboard.overview.tiles.lookAt.one": "{count} cosa para revisar",
+    "dashboard.overview.tiles.lookAt.other": "{count} cosas para revisar",
     "dashboard.overview.tiles.nothingToFix": "Nada que arreglar",
     "dashboard.overview.breakdown.heading": "Desglose de la puntuación",
     "dashboard.overview.breakdown.caption": "Las tres categorías suman su puntuación.",

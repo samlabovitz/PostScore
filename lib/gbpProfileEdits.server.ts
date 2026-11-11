@@ -161,7 +161,8 @@ export function supabaseProfileEditStore(db: SupabaseClient): ProfileEditStore {
       await changes.markUndone(batchId, at);
     },
     async editLogReady(businessId) {
-      const { error } = await db.from("gbp_profile_edit_log").select("id", { head: true, count: "exact" }).eq("business_id", businessId).limit(1);
+      // A plain select: a head request hides a missing table's error code.
+      const { error } = await db.from("gbp_profile_edit_log").select("id").eq("business_id", businessId).limit(1);
       // Only a missing table means "not set up"; another read error doesn't block the edit.
       return !error || !MISSING.has(error.code ?? "");
     },

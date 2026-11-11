@@ -151,7 +151,12 @@ function fixLabel(fix: WebsiteFix, locale: Locale): string {
 export function websiteFixSummary(plan: WebsiteFixPlan, locale: Locale): string {
   const { selfCount: self, webPersonCount: web } = plan;
   const minutes = { min: plan.selfMinutes.min, max: plan.selfMinutes.max };
-  if (self === 0 && web === 0) return t(locale, "dashboard.websiteFix.summary.none");
+  if (self === 0 && web === 0) {
+    // A guide on a check we couldn't score is something to look at, never a fix.
+    const look = plan.lookAt.length;
+    if (look === 0) return t(locale, "dashboard.websiteFix.summary.none");
+    return look === 1 ? t(locale, "dashboard.websiteFix.summary.lookAtOnly.one") : t(locale, "dashboard.websiteFix.summary.lookAtOnly.other", { count: look });
+  }
   if (web === 0) {
     return self === 1
       ? t(locale, "dashboard.websiteFix.summary.selfOnly.one", minutes)
@@ -475,7 +480,7 @@ export function WebsiteScoreBreakdown({
                       key={check.id}
                       check={check}
                       suggestion={websiteSuggestions.find((s) => s.checkId === check.id)}
-                      fixes={plan.fixes.filter((f) => f.checkId === check.id)}
+                      fixes={[...plan.fixes, ...plan.lookAt].filter((f) => f.checkId === check.id)}
                       websiteAnalysis={websiteAnalysis}
                       siteUrl={siteUrl}
                       businessName={businessName}

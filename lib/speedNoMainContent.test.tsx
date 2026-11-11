@@ -71,7 +71,9 @@ describe("the check and its fix", () => {
   test("one 'Needs a web person' fix — never the builder's image-compression speed guide", () => {
     const fixes = websiteFixesFor(check(), "wix");
     expect(fixes).toEqual([{ checkId: "website.performance_mobile", gap: "no_main_content", kind: "web_person", minutes: null }]);
-    expect(websiteFixPlan([check()], null).webPersonCount).toBe(1);
+    // The check isn't scored: the guide is something to look at, never counted as a fix.
+    expect(websiteFixPlan([check()], null).webPersonCount).toBe(0);
+    expect(websiteFixPlan([check()], null).lookAt).toEqual(fixes);
     expect(guideTaskFor("website.performance_mobile", "no_main_content")).toBeNull();
     expect(builderGuideFor("wix", "website.performance_mobile", "no_main_content")).toBeNull();
     // A normal slow site still gets the speed guide.

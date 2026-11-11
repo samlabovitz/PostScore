@@ -17,9 +17,9 @@ import { businessWebsiteUrl } from "@/lib/businessWebsite";
 import { isRealWebsite, scoreBusiness, type BusinessScoringInput } from "@/lib/scoring";
 import { scoringInput } from "@/emails/sampleMonthlyReportContent";
 import { existingLinkFor, websitePlatform } from "@/lib/gbpPlaceActions";
-import { addPlatformLink, removeAddedLink } from "@/lib/gbpPlaceActions.server";
+import { applyOrderLinkEdit, getOrderLinkUndo, undoOrderLink, type OrderLinkStore } from "@/lib/gbpOrderLink.server";
+import { listPlaceActionLinks } from "@/lib/gbpPlaceActions.server";
 import type { GbpChangeRow } from "@/lib/gbpAttributes";
-import type { GbpChangeStore } from "@/lib/gbpAttributes.server";
 import { PlatformLinkCard, platformButtonLabel } from "@/components/gbp/PlatformLinkCard";
 import { buildStarterSiteHtml } from "@/lib/starterSite";
 
@@ -142,7 +142,7 @@ describe("the card: one action per plan", () => {
 });
 
 describe("Google: read, add, undo (mocked — never calls Google)", () => {
-  const target = { businessId: "b1", userId: "u1", locationName: "locations/9", accessToken: "tok", locale: "en" };
+  const target = { businessId: "b1", userId: "u1", locationName: "locations/9", accessToken: "tok" };
   function google(links: Array<Record<string, unknown>>, opts: { create?: number; disabled?: boolean } = {}) {
     const calls: Array<{ method: string; url: string; body: unknown }> = [];
     let current = [...links];
@@ -165,55 +165,58 @@ describe("Google: read, add, undo (mocked — never calls Google)", () => {
       }
       throw new Error("unexpected");
     }) as typeof fetch;
-    return { calls, fetchImpl };
+    return { calls, fetchImpl, remove: () => (current = []) };
   }
   function store() {
     const rows: Array<GbpChangeRow & Record<string, unknown>> = [];
-    const s: GbpChangeStore = {
+    const set = (id: string, patch: Record<string, unknown>) => rows.forEach((r) => r.batch_id === id && Object.assign(r, patch));
+    const s: OrderLinkStore = {
       approvalsSince: async () => [],
       rowsSince: async () => rows,
-      insert: async (r) => (rows.push(...r.map((x) => ({ undo_of: null, undone_at: null, ...x }) as never)), true),
-      markUndone: async (id, at) => (rows.forEach((r) => r.batch_id === id && (r.undone_at = at)), true),
+      insertSending: async (r) => (rows.push({ undo_of: null, undone_at: null, ...r, status: "sending" } as never), true),
+      setStatus: async (id, status) => set(id, { status }),
+      setAfter: async (id, after) => set(id, { after_value: after }),
+      markUndone: async (id, at) => set(id, { undone_at: at }),
+      editLogReady: async () => true,
+      logEdit: async () => {},
     };
     return { rows, s };
   }
 
-  test("already there (any DoorDash link in Order online): no change sent", async () => {
-    const g = google([{ name: "locations/9/placeActionLinks/a", uri: "https://www.doordash.com/store/36532653?utm=x", placeActionType: "FOOD_DELIVERY" }]);
+  test("already there (any DoorDash link in Order online): the platform card says so", () => {
     expect(existingLinkFor(DD, [{ uri: "https://doordash.com/store/1", placeActionType: "FOOD_TAKEOUT" }])).not.toBeNull();
-    expect(await addPlatformLink(target, DD, store().s, g.fetchImpl)).toEqual({ status: "already" });
-    expect(g.calls.filter((c) => c.method === "POST")).toEqual([]);
+    expect(existingLinkFor(DD, [{ uri: "https://doordash.com/store/1", placeActionType: "SHOP_ONLINE" }])).not.toBeNull();
+    expect(existingLinkFor(DD, [{ uri: "https://www.ubereats.com/store/1", placeActionType: "FOOD_TAKEOUT" }])).toBeNull();
   });
 
-  test("only in the website spot: ONE create with the link as Food ordering, logged; the website link is never touched", async () => {
+  test("only in the website spot: ONE create with the link as Food ordering, saved first; the website link is never touched", async () => {
     const g = google([]);
     const { rows, s } = store();
-    const r = await addPlatformLink(target, DD, s, g.fetchImpl);
-    expect(r).toMatchObject({ status: "sent" });
+    const r = await applyOrderLinkEdit(target, { op: "add", url: LULU, section: "order" }, s, { fetchImpl: g.fetchImpl });
+    expect(r).toMatchObject({ status: "updated" });
     const post = g.calls.filter((c) => c.method === "POST");
     expect(post).toHaveLength(1);
     expect(post[0].url).toBe("https://mybusinessplaceactions.googleapis.com/v1/locations/9/placeActionLinks");
     expect(post[0].body).toEqual({ uri: LULU, placeActionType: "FOOD_ORDERING" });
-    expect(rows[0]).toMatchObject({ kind: "place_action", field: "locations/9/placeActionLinks/new1", after_value: LULU, status: "sent" });
+    expect(rows[0]).toMatchObject({ kind: "order_link", field: "order_link", before_value: null, status: "sent" });
+    expect(JSON.parse(String(rows[0].after_value))).toEqual({ name: "locations/9/placeActionLinks/new1", uri: LULU, type: "FOOD_ORDERING" });
     expect(g.calls.some((c) => c.url.includes("mybusinessbusinessinformation"))).toBe(false);
   });
 
-  test("Undo deletes only the link PostScore added, only if it's still there", async () => {
+  test("Undo deletes only the link PostScore added; gone already → nothing left to undo", async () => {
     const g = google([]);
     const { s } = store();
-    const added = await addPlatformLink(target, DD, s, g.fetchImpl);
-    if (added.status !== "sent") throw new Error("not sent");
-    expect(await removeAddedLink(target, "locations/9/placeActionLinks/new1", added.batchId, s, g.fetchImpl)).toEqual({ status: "sent" });
+    const added = await applyOrderLinkEdit(target, { op: "add", url: LULU, section: "order" }, s, { fetchImpl: g.fetchImpl });
+    if (added.status !== "updated") throw new Error("not sent");
+    expect((await undoOrderLink(target, added.undoBatchId, s, { fetchImpl: g.fetchImpl })).status).toBe("updated");
     expect(g.calls.filter((c) => c.method === "DELETE").map((c) => c.url)).toEqual(["https://mybusinessplaceactions.googleapis.com/v1/locations/9/placeActionLinks/new1"]);
-    // Gone already (removed on Google): nothing deleted.
-    expect(await removeAddedLink(target, "locations/9/placeActionLinks/new1", added.batchId, s, g.fetchImpl)).toEqual({ status: "error", error: "changed_since" });
-    // Never another location's link.
-    expect(await removeAddedLink(target, "locations/8/placeActionLinks/x", added.batchId, s, g.fetchImpl)).toEqual({ status: "error", error: "rejected" });
+    expect(await getOrderLinkUndo(s, "b1", "locations/9", false)).toBeNull();
   });
 
   test("the API isn't enabled on our Google Cloud project: said plainly, nothing sent", async () => {
     const g = google([], { disabled: true });
-    expect(await addPlatformLink(target, DD, store().s, g.fetchImpl)).toEqual({ status: "error", error: "not_enabled_google" });
+    expect(await listPlaceActionLinks(target, g.fetchImpl)).toMatchObject({ ok: false, error: "not_enabled_google" });
+    expect(await applyOrderLinkEdit(target, { op: "add", url: LULU, section: "order" }, store().s, { fetchImpl: g.fetchImpl })).toMatchObject({ status: "error", error: "not_enabled_google" });
     expect(g.calls.filter((c) => c.method === "POST")).toEqual([]);
   });
 });

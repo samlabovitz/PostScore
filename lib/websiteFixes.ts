@@ -104,7 +104,12 @@ export function websiteFixesFor(check: CheckResult, builder: WebsiteBuilderId | 
 }
 
 export interface WebsiteFixPlan {
+  /** Real fixes: checks losing points. */
   fixes: WebsiteFix[];
+  /** Things to look at on a check PostScore couldn't score (Google's speed
+   * test couldn't find the main content): shown as a guide, never counted
+   * as a fix — so they never contradict "Nothing left to fix here". */
+  lookAt: WebsiteFix[];
   /** Fixes the owner can do (guided, or done by PostScore and published by them). */
   selfCount: number;
   selfMinutes: { min: number; max: number };
@@ -112,10 +117,13 @@ export interface WebsiteFixPlan {
 }
 
 export function websiteFixPlan(checks: CheckResult[], builder: WebsiteBuilderId | null): WebsiteFixPlan {
-  const fixes = checks.flatMap((c) => websiteFixesFor(c, builder));
+  const all = checks.map((c) => ({ scored: c.earnedPoints !== null, fixes: websiteFixesFor(c, builder) }));
+  const fixes = all.filter((c) => c.scored).flatMap((c) => c.fixes);
+  const lookAt = all.filter((c) => !c.scored).flatMap((c) => c.fixes);
   const self = fixes.filter((f) => f.kind !== "web_person");
   return {
     fixes,
+    lookAt,
     selfCount: self.length,
     selfMinutes: {
       min: self.reduce((sum, f) => sum + (f.minutes?.min ?? 0), 0),

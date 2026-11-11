@@ -68,6 +68,7 @@ export function BusinessScoreView({
   now,
   recommendations,
   websiteFixCount,
+  websiteLookAtCount = 0,
   linkOptions,
   plan = "grow",
   freeRescanNextAt = null,
@@ -106,6 +107,7 @@ export function BusinessScoreView({
   recommendations: Recommendation[] | null;
   /** The Website page's own fix count (lib/websiteFixes.ts). */
   websiteFixCount: number;
+  websiteLookAtCount?: number;
   linkOptions: LinkOptions;
   /** The account's plan (lib/premium.ts). Free gets its own layout (the
    * audit — see FreeOverviewLayout below); Grow and above see the Overview
@@ -327,6 +329,7 @@ export function BusinessScoreView({
         scoreBasis={scoreBasis}
         linkOptions={linkOptions}
         websiteFixCount={websiteFixCount}
+        websiteLookAtCount={websiteLookAtCount}
         lastScanAt={lastScanAt}
         accountCollapsed={uiPrefs.breakdownCollapsed}
         serviceOptions={serviceOptions}

@@ -72,6 +72,7 @@ function CategorySummary({
   hasWebsite,
   scoreBasis,
   websiteFixCount,
+  websiteLookAtCount = 0,
   points,
   audit,
   serviceOptions = null,
@@ -86,6 +87,8 @@ function CategorySummary({
   hasWebsite: boolean;
   scoreBasis: number;
   websiteFixCount: number | null;
+  /** Guides on checks we couldn't score ("1 thing to look at"), never fixes. */
+  websiteLookAtCount?: number;
   /** Whole points (wholeCategoryPoints over all three categories). */
   points: number | null;
 }) {
@@ -133,6 +136,12 @@ function CategorySummary({
         <p className="text-[12px] font-medium text-ink">
           {!hasWebsite ? (
             t(locale, "dashboard.overview.tiles.noWebsite")
+          ) : websiteFixCount === 0 && websiteLookAtCount > 0 ? (
+            // A guide on a check we couldn't score: never counted as a fix.
+            <Link href={`/business/${businessId}/website`} className="inline-flex items-center gap-1 underline decoration-paper-line underline-offset-2 hover:text-brass">
+              {tPlural(locale, "dashboard.overview.tiles.lookAt", websiteLookAtCount, { count: websiteLookAtCount })}
+              <IconArrowRight size={13} aria-hidden />
+            </Link>
           ) : websiteFixCount === 0 ? (
             t(locale, "dashboard.overview.tiles.nothingToFix")
           ) : (
@@ -155,6 +164,7 @@ export function ScoreBreakdownPanel({
   linkOptions,
   audit = false,
   websiteFixCount = null,
+  websiteLookAtCount = 0,
   lastScanAt = null,
   accountCollapsed = null,
   serviceOptions = null,
@@ -168,6 +178,7 @@ export function ScoreBreakdownPanel({
   linkOptions?: LinkOptions;
   /** The Website page's fix count (lib/websiteFixes.ts), or null to hide it. */
   websiteFixCount?: number | null;
+  websiteLookAtCount?: number;
   /** Free (the audit): no fix links — what's wrong and the points each
    * costs, never how to fix it; a locked "How to fix this" row instead.
    * Like every plan, the checks start open ("Hide checks ↑"). */
@@ -254,7 +265,7 @@ export function ScoreBreakdownPanel({
       <div id={`${BREAKDOWN_ANCHOR}-checks`} className="mt-4 grid grid-cols-1 gap-x-6 gap-y-5 nav:grid-cols-3">
         {categories.map((category, i) => (
           <div key={category.id} className="flex min-w-0 flex-col">
-            <CategorySummary businessId={businessId} category={category} hasWebsite={hasWebsite} scoreBasis={scoreBasis} websiteFixCount={websiteFixCount} points={wholePoints[i]} audit={audit} serviceOptions={serviceOptions} />
+            <CategorySummary businessId={businessId} category={category} hasWebsite={hasWebsite} scoreBasis={scoreBasis} websiteFixCount={websiteFixCount} websiteLookAtCount={websiteLookAtCount} points={wholePoints[i]} audit={audit} serviceOptions={serviceOptions} />
             <div
               className={cn(
                 "grid transition-[grid-template-rows,opacity] ease-out motion-reduce:transition-none",

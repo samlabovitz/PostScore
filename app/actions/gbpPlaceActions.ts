@@ -5,109 +5,139 @@
 // "Order online" / "Reservations" / "Appointments" links needs Google
 // connected (any plan); adding one is Premium, after the owner approves,
 // with Undo for 7 days. Never removes the website link.
+//
+// The add and the undo go through the same code and switches as the
+// "Order online" / "Booking link" card (lib/gbpOrderLink.server.ts,
+// lib/gbpOrderLinkContext.server.ts): practice mode's fake Google, and
+// the live allow list GBP_PLACE_ACTIONS_LIVE_PLACES — off the list the
+// links load read-only and Add / Undo are refused here.
 
 import { revalidatePath } from "next/cache";
-import { latestUndoable, type UndoableChange } from "@/lib/gbpAttributes";
 import { existingLinkFor, websitePlatform, type WebsitePlatform } from "@/lib/gbpPlaceActions";
-import { isPremiumPlan } from "@/lib/plan";
 import type { GbpEditBlock } from "@/lib/gbpEditGate.server";
+import type { OrderLinkError, OrderLinkUndo } from "@/lib/gbpOrderLink.server";
+import type { GbpEditError } from "@/lib/gbpAttributes.server";
 
-type PlaceActionError = import("@/lib/gbpPlaceActions.server").PlaceActionError | "changed_since" | "undo_expired";
+type PlaceActionError = OrderLinkError | GbpEditError;
 
 export type PlatformLinkStatus =
   /** No ordering / booking platform in the website spot. */
   | { status: "none" }
-  | { status: "ok"; platform: WebsitePlatform; alreadyOnGoogle: boolean; canAdd: boolean; undo: UndoableChange | null }
+  | {
+      status: "ok";
+      platform: WebsitePlatform;
+      alreadyOnGoogle: boolean;
+      /** Premium. */
+      canAdd: boolean;
+      /** Practice mode, or on the live allow list; false: Add and Undo show locked. */
+      canEdit?: boolean;
+      practice?: boolean;
+      undo: OrderLinkUndo | null;
+    }
   | { status: "blocked"; reason: GbpEditBlock }
   | { status: "error"; error: PlaceActionError };
 
 /** Read once per business per 10 minutes at most (a page view never
- * repeats Google calls). Cleared on add / undo. */
+ * repeats Google calls). Cleared on add / undo. Never for practice mode. */
 const CACHE_MS = 10 * 60 * 1000;
 const cache = new Map<string, { at: number; links: import("@/lib/gbpPlaceActions").PlaceActionLink[] }>();
 
 async function lib() {
-  const [gate, server, attrs] = await Promise.all([import("@/lib/gbpEditGate.server"), import("@/lib/gbpPlaceActions.server"), import("@/lib/gbpAttributes.server")]);
-  return { gate, server, attrs };
+  const [context, server, read] = await Promise.all([import("@/lib/gbpOrderLinkContext.server"), import("@/lib/gbpOrderLink.server"), import("@/lib/gbpPlaceActions.server")]);
+  return { context, server, read };
 }
 
-/** The latest link added on `locationName` (the location connected now). */
-async function placeActionUndo(store: import("@/lib/gbpAttributes.server").GbpChangeStore, businessId: string, locationName: string): Promise<UndoableChange | null> {
-  const rows = await store.rowsSince(businessId, new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), "place_action");
-  return rows ? latestUndoable(rows, Date.now(), locationName) : null;
+/** The latest link change on the location in use (any section the website platform belongs to). */
+async function undoFor(c: import("@/lib/gbpOrderLinkContext.server").OrderLinkContext, platform: WebsitePlatform): Promise<OrderLinkUndo | null> {
+  const { getOrderLinkUndo, supabaseOrderLinkStore } = await import("@/lib/gbpOrderLink.server");
+  const undo = await getOrderLinkUndo(supabaseOrderLinkStore(c.admin), c.target.businessId, c.target.locationName, c.practice);
+  return undo && undo.section === platform.section ? undo : null;
 }
 
 /** Is the platform already in its Google section? Read-only. */
 export async function getPlatformLinkStatus(businessId: string): Promise<PlatformLinkStatus> {
-  const { gate, server, attrs } = await lib();
-  const g = await gate.gbpEditGate(businessId, { requirePremium: false });
-  if (!g.ok) return g.result;
-  const platform = websitePlatform(g.business.website);
+  const { context, read } = await lib();
+  const c = await context.orderLinkContext(businessId, { requirePremium: false });
+  if (!c.ok) return c.result;
+  const platform = websitePlatform(c.website);
   if (!platform || !platform.section) return { status: "none" };
-  const hit = cache.get(businessId);
+  const hit = c.practice ? null : cache.get(businessId);
   let links = hit && Date.now() - hit.at < CACHE_MS ? hit.links : null;
   if (!links) {
-    const res = await server.listPlaceActionLinks(g.target);
+    const res = await read.listPlaceActionLinks(c.target, c.fetchImpl);
     if (!res.ok) {
-      if (res.error === "reconnect") await g.tokens.markGbpReconnect(g.admin, businessId);
+      if (res.error === "reconnect") await c.markReconnect();
       return { status: "error", error: res.error };
     }
     links = res.data;
-    cache.set(businessId, { at: Date.now(), links });
+    if (!c.practice) cache.set(businessId, { at: Date.now(), links });
   }
   return {
     status: "ok",
     platform,
     alreadyOnGoogle: existingLinkFor(platform, links) !== null,
-    canAdd: isPremiumPlan(g.plan),
-    undo: await placeActionUndo(attrs.supabaseChangeStore(g.admin), businessId, g.target.locationName),
+    canAdd: c.premium,
+    canEdit: c.canEdit,
+    practice: c.practice,
+    undo: await undoFor(c, platform),
   };
 }
 
 /** `mapsUri`: Google's own link to the live listing, for "View on Google". */
 export type AddPlatformLinkResult =
-  | { status: "sent"; undo: UndoableChange | null; mapsUri?: string | null }
+  | { status: "sent"; undo: OrderLinkUndo | null; mapsUri?: string | null }
+  /** Google took it but doesn't show it yet — a neutral wait. */
+  | { status: "unconfirmed"; undo: OrderLinkUndo | null; mapsUri?: string | null }
   | { status: "already" }
+  | { status: "editing_off" }
   | { status: "blocked"; reason: GbpEditBlock }
   | { status: "error"; error: PlaceActionError; mapsUri?: string | null };
 
-async function mapsUriFor(target: { locationName: string; accessToken: string }): Promise<string | null> {
+async function mapsUriFor(c: import("@/lib/gbpOrderLinkContext.server").OrderLinkContext): Promise<string | null> {
+  if (c.practice) return null;
   const { readGbpMapsUri } = await import("@/lib/gbpMapsUri.server");
-  return readGbpMapsUri(target);
+  return readGbpMapsUri(c.target);
 }
 
 /** "Add to 'Order online' on Google" — Premium, after the owner approved. */
 export async function addPlatformLinkAction(businessId: string): Promise<AddPlatformLinkResult> {
-  const { gate, server, attrs } = await lib();
-  const g = await gate.gbpEditGate(businessId, { requirePremium: true });
-  if (!g.ok) return g.result;
+  const { context, server, read } = await lib();
+  const c = await context.orderLinkContext(businessId);
+  if (!c.ok) return c.result.status === "blocked" ? c.result : { status: "error", error: c.result.error };
+  if (!c.canEdit) return { status: "editing_off" };
   // The website on the business's own row — never a link from the browser.
-  const platform = websitePlatform(g.business.website);
-  if (!platform || !platform.section) return { status: "error", error: "rejected" };
-  const store = attrs.supabaseChangeStore(g.admin);
-  const result = await server.addPlatformLink(g.target, platform, store);
+  const platform = websitePlatform(c.website);
+  if (!platform || !platform.section || !/^https:\/\//i.test(platform.url)) return { status: "error", error: "rejected" };
+  // Any link to the same platform, in any of Google's sections: already there.
+  const current = await read.listPlaceActionLinks(c.target, c.fetchImpl);
+  if (!current.ok) {
+    if (current.error === "reconnect") await c.markReconnect();
+    return { status: "error", error: current.error };
+  }
+  if (existingLinkFor(platform, current.data)) return { status: "already" };
+  const result = await server.applyOrderLinkEdit(c.target, { op: "add", url: platform.url, section: platform.section }, server.supabaseOrderLinkStore(c.admin), { fetchImpl: c.fetchImpl, practice: c.practice });
   cache.delete(businessId);
   if (result.status === "error") {
-    if (result.error === "reconnect") await g.tokens.markGbpReconnect(g.admin, businessId);
-    return { ...result, mapsUri: await mapsUriFor(g.target) };
+    if (result.error === "reconnect") await c.markReconnect();
+    return { status: "error", error: result.error, mapsUri: await mapsUriFor(c) };
   }
-  revalidatePath(`/business/${businessId}`, "layout");
-  return result.status === "already" ? result : { status: "sent", undo: await placeActionUndo(store, businessId, g.target.locationName), mapsUri: await mapsUriFor(g.target) };
+  if (result.status === "no_change") return { status: "already" };
+  if (!c.practice) revalidatePath(`/business/${businessId}`, "layout");
+  return { status: result.status === "updated" ? "sent" : "unconfirmed", undo: await undoFor(c, platform), mapsUri: await mapsUriFor(c) };
 }
 
-/** Undo: removes the link PostScore added (7 days, only if still there). */
+/** Undo: removes the link PostScore added (7 days, only if not changed since). */
 export async function undoPlatformLinkAction(
   businessId: string,
   batchId: string
-): Promise<{ status: "sent"; mapsUri?: string | null } | { status: "blocked"; reason: GbpEditBlock } | { status: "error"; error: PlaceActionError; mapsUri?: string | null }> {
-  const { gate, server, attrs } = await lib();
-  const g = await gate.gbpEditGate(businessId, { requirePremium: true });
-  if (!g.ok) return g.result;
-  const store = attrs.supabaseChangeStore(g.admin);
-  const undo = await placeActionUndo(store, businessId, g.target.locationName);
-  if (!undo || undo.batchId !== batchId || !undo.changes[0]) return { status: "error", error: "undo_expired" };
-  const result = await server.removeAddedLink(g.target, undo.changes[0].id, batchId, store);
+): Promise<{ status: "sent"; mapsUri?: string | null } | { status: "editing_off" } | { status: "blocked"; reason: GbpEditBlock } | { status: "error"; error: PlaceActionError; mapsUri?: string | null }> {
+  const { context, server } = await lib();
+  const c = await context.orderLinkContext(businessId);
+  if (!c.ok) return c.result.status === "blocked" ? c.result : { status: "error", error: c.result.error };
+  if (!c.canEdit) return { status: "editing_off" };
+  const result = await server.undoOrderLink(c.target, batchId, server.supabaseOrderLinkStore(c.admin), { fetchImpl: c.fetchImpl, practice: c.practice });
   cache.delete(businessId);
-  if (result.status === "sent") revalidatePath(`/business/${businessId}`, "layout");
-  return { ...result, mapsUri: await mapsUriFor(g.target) };
+  if (result.status === "error") return { status: "error", error: result.error, mapsUri: await mapsUriFor(c) };
+  if (!c.practice) revalidatePath(`/business/${businessId}`, "layout");
+  return { status: "sent", mapsUri: await mapsUriFor(c) };
 }

@@ -18,6 +18,8 @@ import { getGrowthMoves } from "@/app/actions/growthMoves";
 import { getWeeklyChecklistState } from "@/app/actions/weeklyChecklist";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { getCustomerDetailsUndo } from "@/app/actions/gbpCustomerDetails";
+import { getWebsiteLinkUndoForPage } from "@/app/actions/gbpWebsiteLink";
+import { shownWebsite } from "@/lib/businessWebsite";
 import { GbpEditProvider } from "@/components/gbp/CustomerDetailsGoogleEdit";
 import { businessRowToScoringInput } from "@/lib/scoring";
 import { buildPriceCheckMove } from "@/lib/growthMoves";
@@ -180,7 +182,19 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
           <StaleScanNotice businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} />
         </div>
       )}
-      <GbpEditProvider value={{ premium: hasPremium(plan), connected: gbpConnected, undo: await getCustomerDetailsUndo(params.id) }}>
+      {/* The Google Profile tab's Edit on Google also carries the website link and customer details (with their Undo). */}
+      <GbpEditProvider
+        value={{
+          premium: hasPremium(plan),
+          connected: gbpConnected,
+          undo: await getCustomerDetailsUndo(params.id),
+          websiteUndo: await getWebsiteLinkUndoForPage(params.id),
+          websiteSuggested: (() => {
+            const shown = shownWebsite(row);
+            return shown.kind === "site" && shown.source !== "listing" ? shown.url : null;
+          })(),
+        }}
+      >
       <GrowthView
         reviewGoalLines={benchmark.status === "ok" && benchmark.benchmark.reviewGoal ? reviewGoalLines(benchmark.benchmark.reviewGoal, benchmark.benchmark.reviewGroup, locale) : []}
         businessId={params.id}

@@ -10,7 +10,7 @@
 // timeout or a network error proves nothing — never a fail. Never fetches
 // an internal or private address (every redirect hop is checked).
 
-import type { LinkCheckResult, LinkKind, LinkProblem } from "@/lib/linkProblems";
+import { isPublicWebUrl, type LinkCheckResult, type LinkKind, type LinkProblem } from "@/lib/linkProblems";
 export * from "@/lib/linkProblems";
 import { detectParkedDomain } from "@/lib/websiteContentAnalysis";
 import { extractVisibleText } from "@/lib/pagePresenceDetection";
@@ -32,24 +32,6 @@ export interface CustomerLink {
 // ---------------------------------------------------------------------------
 // Safety: never an internal or private address
 // ---------------------------------------------------------------------------
-
-/** A public http(s) web address: a real host name, never an IP address,
- * localhost or an internal name, never a user/password. */
-export function isPublicWebUrl(raw: string): boolean {
-  let u: URL;
-  try {
-    u = new URL(raw);
-  } catch {
-    return false;
-  }
-  if (u.protocol !== "https:" && u.protocol !== "http:") return false;
-  if (u.username || u.password) return false;
-  const host = u.hostname.toLowerCase();
-  if (!host.includes(".") || host.endsWith(".")) return false;
-  if (/^\d+(\.\d+){3}$/.test(host) || host.startsWith("[")) return false;
-  if (/(^|\.)(localhost|local|internal|lan|home|corp|test|invalid|example|arpa)$/.test(host)) return false;
-  return true;
-}
 
 // ---------------------------------------------------------------------------
 // Which links: pure

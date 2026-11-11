@@ -11,6 +11,8 @@
 // review-reply check — never to the Premium connect page.
 
 import { ProfileEditsOnGoogle } from "@/components/gbp/ProfileEditsOnGoogle";
+import { WebsiteLinkFix } from "@/components/gbp/WebsiteLinkFix";
+import { CustomerDetailsGoogleEdit, useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
 import { LockedPreview } from "@/components/plan/LockedPreview";
 import { GBP_PROFILE_ANCHOR, gbpConnectHref, gbpReplyCheckPath, type GbpConnectResult } from "@/lib/gbpLanding";
 import { gbpConnectedText, gbpResultText } from "@/components/gbp/GbpResultMessage";
@@ -78,6 +80,7 @@ export function GoogleProfilePanel({
   practice?: boolean;
 }) {
   const locale = useLocale();
+  const gbpEdit = useGbpEdit();
   const timeZone = useTimeZone();
   const premium = isPremiumPlan(plan);
   const missing = t(locale, "dashboard.googleProfile.notOnListing");
@@ -196,7 +199,25 @@ export function GoogleProfilePanel({
         <section data-testid="edit-on-google-section">
           <SectionTitle>{t(locale, "dashboard.gbpProfileEdits.heading")}</SectionTitle>
           {premium && (connected || practice) ? (
-            <ProfileEditsOnGoogle businessId={businessId} />
+            <div className="flex flex-col gap-3">
+              <ProfileEditsOnGoogle businessId={businessId} />
+              {/* The website link and customer details: always changeable here, even when their checks are Done
+                  (the Overview shows their buttons only while they lose points). Real Google — never practice. */}
+              {connected && (
+                <>
+                  <Card className="flex flex-col gap-2 p-4 sm:p-5" data-testid="edit-website-link">
+                    <h3 className="text-[15px] font-semibold text-ink">{t(locale, "dashboard.gbpProfileEdits.field.websiteLink")}</h3>
+                    <p className="text-[13px] leading-snug text-ink-soft">{t(locale, "dashboard.gbpProfileEdits.websiteLinkIntro")}</p>
+                    <WebsiteLinkFix businessId={businessId} suggested={gbpEdit.websiteSuggested ?? null} />
+                  </Card>
+                  <Card className="flex flex-col gap-2 p-4 sm:p-5" data-testid="edit-customer-details">
+                    <h3 className="text-[15px] font-semibold text-ink">{t(locale, "dashboard.gbpProfileEdits.field.customerDetails")}</h3>
+                    <p className="text-[13px] leading-snug text-ink-soft">{t(locale, "dashboard.gbpProfileEdits.customerDetailsIntro")}</p>
+                    <CustomerDetailsGoogleEdit businessId={businessId} />
+                  </Card>
+                </>
+              )}
+            </div>
           ) : premium ? (
             <Card className="p-5">
               <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.gbpProfileEdits.error.blocked")}</p>

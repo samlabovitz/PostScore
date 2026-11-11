@@ -233,11 +233,11 @@ describe("the Website link check: change the link any time on Premium + Google c
     return wrap(<GbpEditProvider value={{ ...state, undo: null }}><CategoryCard category={only} embedded fixLinks={{}} businessId="hair" /></GbpEditProvider>, locale);
   }
 
-  test("a working link: Premium + connected see 'Update website on Google'", () => {
+  test("a working link (Done): no 'Update website on Google' here — it's on the Google Profile tab instead", () => {
     const html = linkRow(working, { premium: true, connected: true });
-    expect(html).toContain("Update website on Google");
-    expect(html).toContain('data-testid="website-link-fix"');
-    expect(linkRow(working, { premium: true, connected: true }, "es")).toContain("Actualizar el sitio web en Google");
+    expect(html).not.toContain("Update website on Google");
+    expect(html).not.toContain('data-testid="website-link-fix"');
+    expect(linkRow(working, { premium: true, connected: true }, "es")).not.toContain("Actualizar el sitio web en Google");
   });
 
   test("a working link: nothing on other plans, or when Google isn't connected", () => {

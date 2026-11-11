@@ -10,9 +10,9 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 // Google undo safety (code review Nov 7, M1–M3). Every Google response is
 // mocked: no test calls Google, and nothing is ever written to it.
 
-import { latestUndoable, undoPlan, type GbpChangeRow, type UndoableChange } from "@/lib/gbpAttributes";
+import { latestUndoable, undoPlan, type GbpChangeRow } from "@/lib/gbpAttributes";
 import { applyCustomerDetailsChange, getUndoableChange, undoCustomerDetailsChange, type GbpChangeStore, type GbpEditTarget } from "@/lib/gbpAttributes.server";
-import { addPlatformLink, removeAddedLink } from "@/lib/gbpPlaceActions.server";
+import { applyOrderLinkEdit, getOrderLinkUndo, undoOrderLink, type OrderLinkStore, type OrderLinkUndo } from "@/lib/gbpOrderLink.server";
 import { closeOpenUndos, disconnectGbpData } from "@/lib/gbpTokens.server";
 import { websitePlatform } from "@/lib/gbpPlaceActions";
 import { resetGbpQuota } from "@/lib/gbpQuota";
@@ -126,17 +126,28 @@ describe("M1: undo only on the location the change was made on", () => {
       links = [];
       return new Response("{}", { status: 200 });
     }) as typeof fetch;
-    const { rows, store } = memStore();
-    const added = await addPlatformLink(target9, platform, store, fetchImpl, NOW);
-    expect(added.status).toBe("sent");
-    expect(rows[0]).toMatchObject({ kind: "place_action", location_name: "locations/9" });
-    const placeRows = (await store.rowsSince("biz-1", new Date(NOW - DAY).toISOString(), "place_action"))!;
-    expect(latestUndoable(placeRows, NOW, "locations/9")).not.toBeNull();
-    expect(latestUndoable(placeRows, NOW, OTHER)).toBeNull();
-    if (added.status !== "sent") return;
-    expect(await removeAddedLink(target9, "locations/9/placeActionLinks/new1", added.batchId, store, fetchImpl, NOW)).toEqual({ status: "sent" });
-    expect(rows[1]).toMatchObject({ undo_of: added.batchId, location_name: "locations/9" });
+    const { rows, store: changes } = memStore();
+    const store: OrderLinkStore = {
+      approvalsSince: changes.approvalsSince,
+      rowsSince: changes.rowsSince,
+      insertSending: async (row) => changes.insert([{ ...row, status: "sending" }]),
+      setStatus: async (batchId, status) => void rows.forEach((r) => r.batch_id === batchId && (r.status = status)),
+      setAfter: async (batchId, after) => void rows.forEach((r) => r.batch_id === batchId && (r.after_value = after)),
+      markUndone: async (batchId, at) => void (await changes.markUndone(batchId, at)),
+      editLogReady: async () => true,
+      logEdit: async () => {},
+    };
+    const added = await applyOrderLinkEdit(target9, { op: "add", url: platform.url, section: "order" }, store, { fetchImpl, now: NOW });
+    expect(added.status).toBe("updated");
+    expect(rows[0]).toMatchObject({ kind: "order_link", location_name: "locations/9" });
+    expect(await getOrderLinkUndo(store, "biz-1", "locations/9", false, NOW)).not.toBeNull();
+    expect(await getOrderLinkUndo(store, "biz-1", OTHER, false, NOW)).toBeNull();
+    // Undo from another location: never.
+    expect(await undoOrderLink({ ...target9, locationName: OTHER }, (added as { undoBatchId: string }).undoBatchId, store, { fetchImpl, now: NOW })).toEqual({ status: "error", error: "undo_expired" });
+    expect((await undoOrderLink(target9, (added as { undoBatchId: string }).undoBatchId, store, { fetchImpl, now: NOW })).status).toBe("updated");
+    expect(rows[1]).toMatchObject({ undo_of: (added as { undoBatchId: string }).undoBatchId, location_name: "locations/9" });
   });
+
 });
 
 /** A fake admin client: records every query as [table, op, ...filters]. */
@@ -182,7 +193,7 @@ describe("M1: disconnecting Google closes every open undo", () => {
 const wrap = (node: ReactNode, locale: Locale = "en") => renderToStaticMarkup(<LocaleProvider locale={locale}>{node}</LocaleProvider>);
 const LULU = "https://www.doordash.com/store/36532653";
 const DD = websitePlatform(LULU)!;
-const LINK_UNDO: UndoableChange = { batchId: "b1", approvedAt: "2026-11-06T15:00:00Z", undoUntil: "2026-11-13T15:00:00Z", status: "sent", changes: [{ id: "locations/9/placeActionLinks/new1", before: null, after: null }] };
+const LINK_UNDO: OrderLinkUndo = { batchId: "b1", approvedAt: "2026-11-06T15:00:00Z", undoUntil: "2026-11-13T15:00:00Z", before: null, after: { name: "locations/9/placeActionLinks/new1", uri: LULU, type: "FOOD_ORDERING" }, section: "order" };
 
 describe("M2: “Order online” Undo on later visits", () => {
   test("already on Google + a link PostScore added → the Undo strip shows (EN + ES)", () => {
