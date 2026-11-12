@@ -44,7 +44,7 @@ export function orderLinkMessage(result: OrderLinkActionResult, what: What, kind
     case "invalid":
       return { text: orderLinkProblemText(result.problem, kind, locale), tone: "failure" };
     case "editing_off":
-      return { text: t(locale, P("editingOff")), tone: "failure" };
+      return { text: t(locale, P("error.editingOff")), tone: "failure" };
     case "none":
     case "blocked":
       return { text: t(locale, P("error.blocked")), tone: "failure" };

@@ -6,7 +6,7 @@
 // Opening only reads; only "Approve" (Add / Change / Remove) and
 // "Yes, undo" write to Google.
 //
-// Practice mode and the live allow list (GBP_PLACE_ACTIONS_LIVE_PLACES)
+// Practice mode and the live allow list (GOOGLE_WRITES_LIVE_PLACES)
 // are lib/gbpOrderLinkContext.server.ts: off the list, the real links load
 // and every change is refused here ("editing_off"), nothing sent.
 
@@ -71,7 +71,7 @@ export type OrderLinkActionResult =
   | { status: "no_change" }
   /** Checked here before anything is sent. */
   | { status: "invalid"; problem: OrderLinkProblem }
-  /** Not practice mode, and not on GBP_PLACE_ACTIONS_LIVE_PLACES. Nothing sent. */
+  /** Not practice mode, and not on GOOGLE_WRITES_LIVE_PLACES. Nothing sent. */
   | { status: "editing_off" }
   | { status: "none" }
   | Blocked

@@ -168,6 +168,11 @@ function ScoreBeforeAfter({ current, previous, timeZone }: { current: ScoreSnaps
             {t(locale, "dashboard.overview.scoreCard.scoringUpdated")}
           </span>
         )}
+        {sameVersion && (current.breakdown_json as { scanKind?: string } | null)?.scanKind === "google_connected" && (
+          <span data-testid="since-google-connected" className="mb-0.5 inline-flex items-center rounded-full bg-white px-2.5 py-1 text-[12.5px] font-semibold text-ink-soft">
+            {t(locale, "dashboard.overview.googleConnectedLabel")}
+          </span>
+        )}
         {sameVersion && (
           <span
             className={cn(

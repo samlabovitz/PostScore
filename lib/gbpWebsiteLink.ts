@@ -6,6 +6,9 @@ import { latestUndoable, type GbpChangeRow } from "@/lib/gbpAttributes";
 
 /** The gbp_changes `kind` for a website link change (field "websiteUri"). */
 export const WEBSITE_LINK_KIND = "website_uri";
+/** Practice mode's changes (the fake Google) — never mixed with real ones. */
+export const WEBSITE_LINK_KIND_PRACTICE = "website_uri_practice";
+export const websiteLinkKind = (practice: boolean) => (practice ? WEBSITE_LINK_KIND_PRACTICE : WEBSITE_LINK_KIND);
 export const WEBSITE_LINK_FIELD = "websiteUri";
 
 /**

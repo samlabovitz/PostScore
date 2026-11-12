@@ -118,11 +118,16 @@ Table `public.gbp_changes` (`supabase/gbp-changes.sql`) has one row per field ch
   - plan is Premium or Multi (`getPlan()`);
   - the business isn't archived;
   - Google is connected with a matched location.
-- **Audit log:** every approval writes its rows to `gbp_changes`, including failed ones, and undo writes its own rows. Owners can read their own rows. Only the server writes them.
-- **Never half-applied:**
+- **One switch for every write to Google** (Nov 10): `GOOGLE_WRITES_LIVE_PLACES` (lib/gbpReviewPractice.ts) covers review replies, hours / phone / description, the ordering / booking link, the website link and customer details.
+  - Empty or unset: nothing can write. Comma-separated place ids: only those businesses. `all`: every connected business (for launch); startup warns when it's `all` outside production (instrumentation.ts).
+  - Off the list, real data loads read-only, Approve and Undo are locked ("Changes to Google are off for this business"), and every server action refuses (`editing_off` / `posting_off`) before anything is saved or sent.
+  - Practice mode (`REVIEW_REPLIES_PRACTICE=1`, never in production) swaps in a fake Google with an Accept / Refuse / Hold chooser for every editor.
+  - `lib/googleWrites.test.tsx` fails if a new file sends a write to a Business Profile API without being added to the list of known writers.
+- **Audit log:** the previous value is saved in `gbp_changes` as `sending` BEFORE anything is sent, then set to `sent`, `pending_review` or `failed`; undo writes its own rows. If that save fails, nothing is sent. Each edit and undo also gets one row in `gbp_profile_edit_log`: who, when, the outcome and how many settings — never a value. Owners can read their own rows. Only the server writes them.
+- **Never half-applied, and never a false ✓:**
   - One request per approval. Google applies the whole attribute mask or rejects it.
-  - If the PATCH fails, nothing has changed on Google. The log row says `failed` and the owner sees a clear error.
-  - If the log write fails after Google accepted the change, the owner is still told it was sent. Undo isn't offered then, because we would have no record of the before values to restore.
+  - If the PATCH fails, nothing has changed on Google. The row says `failed` and the owner sees a clear error.
+  - After the PATCH, Google is read back: "Updated on Google ✓" only when Google shows the new values; held for review, or not showing yet, is a neutral wait.
 - **Rate limits:** see §1.
 - **Clear errors, in plain words, EN and ES:**
   - **Reconnect:** a 401 means Google stopped accepting the stored token. The connection is marked "Reconnect Google".
@@ -130,4 +135,4 @@ Table `public.gbp_changes` (`supabase/gbp-changes.sql`) has one row per field ch
   - **Changed on Google:** Google's offered attributes changed while the panel was open. Reopen the panel and try again.
   - **Try again:** "Google didn't accept the change. Nothing was changed. Please try again in a minute."
   - **Too many:** a 429, or our own cap, gives "Please wait a minute".
-- **Not built in Step 1:** review replies, hours, phone, website and description.
+- **Built since Step 1:** review replies, hours, phone, description, the website link and the ordering / booking link — all under the same switch, flow and log.

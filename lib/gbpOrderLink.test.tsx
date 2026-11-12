@@ -89,7 +89,7 @@ import { addPlatformLinkAction, getPlatformLinkStatus, undoPlatformLinkAction } 
 import { OrderLinkBody, orderLinkMessage } from "@/components/gbp/OrderLinkOnGoogle";
 import { PlatformLinkCard } from "@/components/gbp/PlatformLinkCard";
 import { websitePlatform } from "@/lib/gbpPlaceActions";
-import { placeActionsAllowed } from "@/lib/gbpReviewPractice";
+import { googleWritesAllowed } from "@/lib/gbpReviewPractice";
 import { resetGbpQuota } from "@/lib/gbpQuota";
 import { LocaleProvider } from "@/lib/i18n";
 
@@ -110,7 +110,7 @@ const recorded = (businessId = "b1") => {
 const live = async (businessId = "b1") => ((await (await practicePlaceActionsFetch(businessId)(LINKS)).json()) as { placeActionLinks: Array<{ name: string; uri: string; placeActionType: string }> }).placeActionLinks;
 const MIN = 60_000;
 
-const ENV_KEYS = ["REVIEW_REPLIES_PRACTICE", "GBP_PLACE_ACTIONS_LIVE_PLACES", "NODE_ENV"] as const;
+const ENV_KEYS = ["REVIEW_REPLIES_PRACTICE", "GOOGLE_WRITES_LIVE_PLACES", "NODE_ENV"] as const;
 const savedEnv = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
 const setEnv = (vars: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>>) => {
   for (const [k, v] of Object.entries(vars)) {
@@ -354,13 +354,13 @@ describe("the actions: practice mode, never in production; the live allow list",
     expect(gbpEditGate).toHaveBeenCalledWith("b1", { requirePremium: true });
   });
 
-  test("not on GBP_PLACE_ACTIONS_LIVE_PLACES (default: none): Add, Change, Remove and Undo refused on the server — nothing sent, nothing saved", async () => {
-    setEnv({ REVIEW_REPLIES_PRACTICE: undefined, GBP_PLACE_ACTIONS_LIVE_PLACES: undefined });
+  test("not on GOOGLE_WRITES_LIVE_PLACES (default: none): Add, Change, Remove and Undo refused on the server — nothing sent, nothing saved", async () => {
+    setEnv({ REVIEW_REPLIES_PRACTICE: undefined, GOOGLE_WRITES_LIVE_PLACES: undefined });
     gbpEditGate.mockResolvedValue(gate());
-    expect(placeActionsAllowed("ChIJ-hair-express", {})).toBe(false);
-    expect(placeActionsAllowed("ChIJ-hair-express", { GBP_PLACE_ACTIONS_LIVE_PLACES: "ChIJ-a, ChIJ-hair-express" })).toBe(true);
-    // Its own list: review replies' and Edit on Google's lists don't open it.
-    expect(placeActionsAllowed("ChIJ-hair-express", { REVIEW_REPLIES_LIVE_PLACES: "ChIJ-hair-express", GBP_PROFILE_EDITS_LIVE_PLACES: "ChIJ-hair-express" } as never)).toBe(false);
+    expect(googleWritesAllowed("ChIJ-hair-express", {})).toBe(false);
+    expect(googleWritesAllowed("ChIJ-hair-express", { GOOGLE_WRITES_LIVE_PLACES: "ChIJ-a, ChIJ-hair-express" })).toBe(true);
+    // The old per-feature lists are no longer read.
+    expect(googleWritesAllowed("ChIJ-hair-express", { GBP_PLACE_ACTIONS_LIVE_PLACES: "ChIJ-hair-express", REVIEW_REPLIES_LIVE_PLACES: "ChIJ-hair-express" })).toBe(false);
     expect(await applyOrderLinkAction("b1", { op: "add", url: VAGARO })).toEqual({ status: "editing_off" });
     expect(await applyOrderLinkAction("b1", { op: "change", name: "locations/222/placeActionLinks/1", url: VAGARO })).toEqual({ status: "editing_off" });
     expect(await applyOrderLinkAction("b1", { op: "remove", name: "locations/222/placeActionLinks/1" })).toEqual({ status: "editing_off" });
@@ -443,14 +443,14 @@ describe("on the page (EN + ES)", () => {
     expect(render(view({ links: [{ name: "x", uri: VAGARO, type: "APPOINTMENT", editable: false, preferred: false }] }), "es")).toContain("Agregado por un socio de Google");
   });
 
-  test("Approve says Beta; locked when editing is off — grey, a lock, “Editing is off for this business”", () => {
+  test("Approve says Beta; locked when editing is off — grey, a lock, “Changes to Google are off for this business”", () => {
     const on = render(view(), "en", { name: null, url: VAGARO });
     expect(on).toContain('data-testid="beta-label"');
     expect(on).toContain("Approve and add to Google");
     const off = render(view({ canEdit: false }), "en", { name: null, url: VAGARO });
     expect(off).toMatch(/data-testid="approve-order-link"[^>]*data-locked="true"/);
-    expect(off).toContain('title="Editing is off for this business"');
-    expect(render(view({ canEdit: false }), "es", { name: null, url: VAGARO })).toContain('title="Editar está desactivado para este negocio"');
+    expect(off).toContain('title="Changes to Google are off for this business"');
+    expect(render(view({ canEdit: false }), "es", { name: null, url: VAGARO })).toContain('title="Los cambios en Google están desactivados para este negocio"');
   });
 
   test("the link's problem shows as you type (EN + ES)", () => {
@@ -463,7 +463,7 @@ describe("on the page (EN + ES)", () => {
     expect(orderLinkMessage({ status: "updated", links: [], undo: null }, "remove", "booking", "es")).toEqual({ text: "Quitado de Google ✓", tone: "done" });
     expect(orderLinkMessage({ status: "unconfirmed", links: [], undo: null }, "add", "booking", "en").tone).toBe("waiting");
     expect(orderLinkMessage({ status: "error", error: "rejected" }, "add", "booking", "en")).toMatchObject({ tone: "failure" });
-    expect(orderLinkMessage({ status: "editing_off" }, "add", "booking", "en").text).toBe("Editing is off for this business");
+    expect(orderLinkMessage({ status: "editing_off" }, "add", "booking", "en").text).toBe("Changes to Google are turned off for this business, so nothing was sent.");
     expect(orderLinkMessage({ status: "error", error: "not_set_up" }, "add", "booking", "en").text).toBe("Editing from PostScore isn't set up yet, so nothing was sent to Google.");
   });
 

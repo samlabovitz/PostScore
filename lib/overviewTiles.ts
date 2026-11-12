@@ -52,14 +52,15 @@ export type ScoreChange =
   /** The two scans were scored by different PostScore versions — a
    * point-for-point delta would be misleading. */
   | { kind: "scoring_updated" }
-  | { kind: "delta"; delta: number };
+  /** `google`: the change came from connecting Google (its real +/−). */
+  | { kind: "delta"; delta: number; google?: boolean };
 
 /** Change since the previous saved scan (history is newest first). */
 export function scoreChangeSinceLastScan(history: { total: number; scoring_version: string; scan_kind?: string | null }[]): ScoreChange {
   if (history.length < 2) return { kind: "first" };
   const [current, previous] = history;
   if (isScoringUpdate(previous.scoring_version, current.scoring_version, current.scan_kind)) return { kind: "scoring_updated" };
-  return { kind: "delta", delta: current.total - previous.total };
+  return { kind: "delta", delta: current.total - previous.total, ...(current.scan_kind === "google_connected" ? { google: true } : {}) };
 }
 
 /** New Google reviews between the two latest saved scans — only when

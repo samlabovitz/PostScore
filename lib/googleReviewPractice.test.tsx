@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 // - practice mode (REVIEW_REPLIES_PRACTICE=1, never in production) runs
 //   the real inbox code against a fake, in-memory Google;
 // - otherwise Post / Edit / Delete are refused for any business whose
-//   place id isn't in REVIEW_REPLIES_LIVE_PLACES (default: none).
+//   place id isn't in GOOGLE_WRITES_LIVE_PLACES (default: none).
 // Plus the calmer list: 3 at a time, Show 10 more / Show all, the sort,
 // the summary line and the caught-up state.
 // NEVER posts to Google: the real fetch throws in this file.
@@ -51,7 +51,7 @@ afterAll(() => {
 });
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { livePostingAllowed, livePostingPlaces, reviewRepliesPracticeOn } from "@/lib/gbpReviewPractice";
+import { googleWritesAllowed, googleWritesLivePlaces, reviewRepliesPracticeOn } from "@/lib/gbpReviewPractice";
 import { DELAY_MS, DELAYED_REVIEW_ID, practiceFetch, PRACTICE_ACCOUNT, PRACTICE_LOCATION, PRACTICE_TOKEN, REFUSED_REVIEW_ID, resetPracticeReviews } from "@/lib/gbpReviewPractice.server";
 import { changeReplyWithClient, fetchInboxPage, type InboxTarget } from "@/lib/gbpReviewInbox.server";
 import { changeGoogleReviewReply, listGoogleReviews } from "@/app/actions/googleReviews";
@@ -61,7 +61,7 @@ import { resetGbpQuota } from "@/lib/gbpQuota";
 import { LocaleProvider } from "@/lib/i18n";
 
 const PRACTICE: InboxTarget = { businessId: "b1", userId: "owner-1", accountName: PRACTICE_ACCOUNT, locationName: PRACTICE_LOCATION, accessToken: PRACTICE_TOKEN };
-const ENV_KEYS = ["REVIEW_REPLIES_PRACTICE", "REVIEW_REPLIES_LIVE_PLACES", "NODE_ENV"] as const;
+const ENV_KEYS = ["REVIEW_REPLIES_PRACTICE", "GOOGLE_WRITES_LIVE_PLACES", "NODE_ENV"] as const;
 const savedEnv = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
 const setEnv = (vars: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>>) => {
   for (const [k, v] of Object.entries(vars)) {
@@ -95,7 +95,7 @@ describe("practice mode: on only with REVIEW_REPLIES_PRACTICE=1, never in produc
   });
 
   test("in production with the variable set, the actions use the real gate and the allow list — never the fake Google", async () => {
-    setEnv({ REVIEW_REPLIES_PRACTICE: "1", NODE_ENV: "production", REVIEW_REPLIES_LIVE_PLACES: undefined });
+    setEnv({ REVIEW_REPLIES_PRACTICE: "1", NODE_ENV: "production", GOOGLE_WRITES_LIVE_PLACES: undefined });
     gbpEditGate.mockResolvedValue({ ok: false, result: { status: "blocked", reason: "not_connected" } });
     expect(await listGoogleReviews("b1")).toEqual({ status: "blocked", reason: "not_connected" });
     expect(await changeGoogleReviewReply("b1", "practice-maria", "post", "Thank you!")).toEqual({ status: "blocked", reason: "not_connected" });
@@ -172,15 +172,15 @@ describe("the fake Google behaves like the real API", () => {
 describe("live posting allow list (practice mode off)", () => {
   const gate = { ok: true, admin, plan: "premium", tokens: {}, business: { id: "b1" }, target: { businessId: "b1", userId: "owner-1", locationName: "locations/222", accessToken: "test-token", locale: "en" } };
 
-  test("REVIEW_REPLIES_LIVE_PLACES: comma-separated place ids; default none", () => {
-    expect(livePostingPlaces({})).toEqual([]);
-    expect(livePostingAllowed("ChIJ-hair-express", {})).toBe(false);
-    expect(livePostingAllowed("ChIJ-hair-express", { REVIEW_REPLIES_LIVE_PLACES: " ChIJ-other , ChIJ-hair-express " })).toBe(true);
-    expect(livePostingAllowed(null, { REVIEW_REPLIES_LIVE_PLACES: "ChIJ-hair-express" })).toBe(false);
+  test("GOOGLE_WRITES_LIVE_PLACES: comma-separated place ids; default none", () => {
+    expect(googleWritesLivePlaces({})).toEqual([]);
+    expect(googleWritesAllowed("ChIJ-hair-express", {})).toBe(false);
+    expect(googleWritesAllowed("ChIJ-hair-express", { GOOGLE_WRITES_LIVE_PLACES: " ChIJ-other , ChIJ-hair-express " })).toBe(true);
+    expect(googleWritesAllowed(null, { GOOGLE_WRITES_LIVE_PLACES: "ChIJ-hair-express" })).toBe(false);
   });
 
   test("not on the list: Post, Edit and Delete are refused on the server — nothing sent", async () => {
-    setEnv({ REVIEW_REPLIES_PRACTICE: undefined, REVIEW_REPLIES_LIVE_PLACES: "ChIJ-someone-else" });
+    setEnv({ REVIEW_REPLIES_PRACTICE: undefined, GOOGLE_WRITES_LIVE_PLACES: "ChIJ-someone-else" });
     gbpEditGate.mockResolvedValue(gate);
     expect(await changeGoogleReviewReply("b1", "r1", "post", "Thank you!")).toEqual({ status: "posting_off" });
     expect(await changeGoogleReviewReply("b1", "r1", "edit", "Thank you!")).toEqual({ status: "posting_off" });
@@ -190,7 +190,7 @@ describe("live posting allow list (practice mode off)", () => {
   });
 
   test("the real reviews still load read-only (canPost false); on the list, canPost is true", async () => {
-    setEnv({ REVIEW_REPLIES_PRACTICE: undefined, REVIEW_REPLIES_LIVE_PLACES: undefined });
+    setEnv({ REVIEW_REPLIES_PRACTICE: undefined, GOOGLE_WRITES_LIVE_PLACES: undefined });
     gbpEditGate.mockResolvedValue(gate);
     // A fake Google for the list read only — the real one is never called.
     const fakeList = (async () => new Response(JSON.stringify({ reviews: [], totalReviewCount: 0 }), { status: 200 })) as typeof fetch;
@@ -198,7 +198,7 @@ describe("live posting allow list (practice mode off)", () => {
     globalThis.fetch = fakeList;
     try {
       expect(await listGoogleReviews("b1")).toMatchObject({ status: "ok", practice: false, canPost: false });
-      setEnv({ REVIEW_REPLIES_LIVE_PLACES: "ChIJ-hair-express" });
+      setEnv({ GOOGLE_WRITES_LIVE_PLACES: "ChIJ-hair-express" });
       expect(await listGoogleReviews("b1")).toMatchObject({ status: "ok", canPost: true });
     } finally {
       globalThis.fetch = throwing;

@@ -7,7 +7,7 @@ import { loadUpgradeContext } from "@/lib/upgradePromos.server";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { getReportsData } from "@/app/actions/reports";
 import { ReportsView } from "./ReportsView";
-import { getLastScanAt } from "@/app/actions/scoring";
+import { getLastScanAt, syncScoreSnapshot } from "@/app/actions/scoring";
 import { getLocalBenchmark, getPreviousCompetitorRank } from "@/app/actions/competitors";
 import { compactWeekLabel, shareHeadline } from "@/lib/reports/reportPdf";
 import { normalizeLocale } from "@/lib/i18n";
@@ -21,6 +21,8 @@ export default async function ReportsPage({ params, searchParams }: { params: { 
   const showroom = await freeShowroom(params.id, "reports");
   if (showroom) return showroom;
   // Independent loads run together.
+  // One score everywhere: the same catch-up snapshot as the Overview.
+  await syncScoreSnapshot(params.id);
   const requestedWeek = typeof searchParams.week === "string" && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.week) ? searchParams.week : null;
   const [websiteOnly, summary, reports, lastScanAt, benchmark, weekly, upgrade] = await Promise.all([
     websiteOnlyGuard(params.id, "reports"),

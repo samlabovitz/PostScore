@@ -21,6 +21,7 @@ import { getCustomerDetailsUndo } from "@/app/actions/gbpCustomerDetails";
 import { getWebsiteLinkUndoForPage } from "@/app/actions/gbpWebsiteLink";
 import { shownWebsite } from "@/lib/businessWebsite";
 import { GbpEditProvider } from "@/components/gbp/CustomerDetailsGoogleEdit";
+import { googleWritesPageState } from "@/app/actions/gbpWebsiteLink";
 import { businessRowToScoringInput } from "@/lib/scoring";
 import { buildPriceCheckMove } from "@/lib/growthMoves";
 import { buildWeeklyChecklistItems, weekStartFor } from "@/lib/weeklyChecklist";
@@ -189,6 +190,7 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
           connected: gbpConnected,
           undo: await getCustomerDetailsUndo(params.id),
           websiteUndo: await getWebsiteLinkUndoForPage(params.id),
+          ...(await googleWritesPageState(params.id)),
           websiteSuggested: (() => {
             const shown = shownWebsite(row);
             return shown.kind === "site" && shown.source !== "listing" ? shown.url : null;

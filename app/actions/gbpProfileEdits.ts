@@ -13,12 +13,12 @@
 //   needed, nothing ever sent;
 // - otherwise the real values load read-only, and Approve / Undo are
 //   refused here unless the business's place id is in
-//   GBP_PROFILE_EDITS_LIVE_PLACES (default: none).
+//   GOOGLE_WRITES_LIVE_PLACES (default: none).
 // Editing never marks a recommendation done: a later scan confirms it.
 
 import { revalidatePath } from "next/cache";
 import type { GbpEditBlock } from "@/lib/gbpEditGate.server";
-import { profileEditsAllowed, reviewRepliesPracticeOn } from "@/lib/gbpReviewPractice";
+import { googleWritesAllowed, reviewRepliesPracticeOn } from "@/lib/gbpReviewPractice";
 import {
   cleanDescription,
   descriptionProblems,
@@ -74,7 +74,7 @@ async function context(businessId: string): Promise<Context | Blocked> {
     admin: gate.admin,
     target: { businessId, userId: gate.target.userId, locationName: gate.target.locationName, accessToken: gate.target.accessToken },
     practice: false,
-    canEdit: profileEditsAllowed(r?.place_id),
+    canEdit: googleWritesAllowed(r?.place_id),
     fetchImpl: fetch,
     business: { name: r?.name ?? null, language: gate.business.language },
   };
@@ -163,7 +163,7 @@ export type ApplyProfileEditActionResult =
   | { status: "no_change" }
   /** Checked here before anything is sent. */
   | { status: "invalid"; hours?: HoursProblem[]; description?: DescriptionProblem[] }
-  /** Not practice mode, and this business isn't on GBP_PROFILE_EDITS_LIVE_PLACES. Nothing sent. */
+  /** Not practice mode, and this business isn't on GOOGLE_WRITES_LIVE_PLACES. Nothing sent. */
   | { status: "editing_off" }
   | { status: "blocked"; reason: GbpEditBlock }
   | { status: "error"; error: ProfileEditError | "undo_expired" | "changed_since" };

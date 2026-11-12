@@ -9,7 +9,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 // - changing the filter or the sort also goes back to 3;
 // - with the inbox on the page, the old paste box is one line;
 // - read-only: Approve, Edit reply and Delete reply look the same — grey,
-//   a lock, "Posting is off for this business".
+//   a lock, "Changes to Google are off for this business".
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/app/actions/googleReviews", () => ({ changeGoogleReviewReply: vi.fn(), checkGoogleReview: vi.fn(), listGoogleReviews: vi.fn() }));
@@ -79,11 +79,11 @@ describe("Show fewer", () => {
 });
 
 describe("read-only: every disabled button looks the same", () => {
-  test("Edit reply and Delete reply: grey, a lock, “Posting is off for this business” — no red outline", () => {
+  test("Edit reply and Delete reply: grey, a lock, “Changes to Google are off for this business” — no red outline", () => {
     const html = inbox({ reviews: [review("r", 1, "Thanks!")], filter: "replied", canPost: false });
     for (const id of ["edit-reply", "delete-reply"]) {
       const button = html.slice(html.lastIndexOf("<span", html.indexOf(`data-testid="${id}"`)), html.indexOf("</button>", html.indexOf(`data-testid="${id}"`)));
-      expect(button, id).toContain('title="Posting is off for this business"');
+      expect(button, id).toContain('title="Changes to Google are off for this business"');
       expect(button, id).toContain('data-locked="true"');
       expect(button, id).toContain("disabled");
       expect(button, id).toContain("bg-paper");
@@ -91,7 +91,7 @@ describe("read-only: every disabled button looks the same", () => {
       expect(button, id).not.toMatch(/red/);
       expect(button, id).toContain("tabler-icon-lock");
     }
-    expect(inbox({ reviews: [review("r", 1, "Thanks!")], filter: "replied", canPost: false, locale: "es" })).toContain('title="Publicar está desactivado para este negocio"');
+    expect(inbox({ reviews: [review("r", 1, "Thanks!")], filter: "replied", canPost: false, locale: "es" })).toContain('title="Los cambios en Google están desactivados para este negocio"');
   });
 
   test("Approve uses the same locked button; with posting on, the real buttons (and Delete's red hover)", () => {

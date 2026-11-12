@@ -124,9 +124,9 @@ describe("a Done check shows no fix button", () => {
   test("the Google Profile tab keeps both editors (with their Undo) for Premium + connected, under Edit on Google", () => {
     const panel = readFileSync("components/gbp/GoogleProfilePanel.tsx", "utf8");
     expect(panel).toContain('data-testid="edit-website-link"');
-    expect(panel).toContain("<WebsiteLinkFix businessId={businessId} suggested={gbpEdit.websiteSuggested ?? null} />");
+    expect(panel).toContain("<WebsiteLinkFix businessId={businessId} suggested={gbpEdit.websiteSuggested ?? null} autoLoad />");
     expect(panel).toContain('data-testid="edit-customer-details"');
-    expect(panel).toContain("<CustomerDetailsGoogleEdit businessId={businessId} />");
+    expect(panel).toContain("<CustomerDetailsGoogleEdit businessId={businessId} autoLoad />");
     const growth = readFileSync("app/business/[id]/growth/page.tsx", "utf8");
     expect(growth).toContain("websiteUndo: await getWebsiteLinkUndoForPage(params.id)");
   });

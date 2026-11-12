@@ -8,7 +8,7 @@
 //    "Appointments"): with Google connected, whether it's already there
 //    (read-only); if only in the website spot, one action by plan —
 //    Premium: "Add to 'Order online' on Google" (approve → Undo 7 days;
-//    locked unless practice mode or GBP_PLACE_ACTIONS_LIVE_PLACES lists it),
+//    locked unless practice mode or GOOGLE_WRITES_LIVE_PLACES lists it),
 //    Premium not connected: connect first, Free/Grow: the steps;
 //    not connected: never a guess — connect, or check it yourself;
 // 3. why a real website helps, and "Get a website" (the starter site
@@ -46,8 +46,8 @@ export function platformButtonLabel(platform: Pick<WebsitePlatform, "name" | "ki
 
 function errorText(r: { status: string; error?: string; reason?: string }, locale: Locale): string {
   if (r.status === "blocked") return t(locale, `dashboard.gbpEdit.blocked.${r.reason}` as MessageKey);
-  // Not on the live allow list (GBP_PLACE_ACTIONS_LIVE_PLACES): refused, nothing sent.
-  if (r.status === "editing_off") return t(locale, "dashboard.gbpProfileEdits.editingOff");
+  // Not on the live allow list (GOOGLE_WRITES_LIVE_PLACES): refused, nothing sent.
+  if (r.status === "editing_off") return t(locale, "dashboard.gbpProfileEdits.error.editingOff");
   if (r.error === "not_set_up") return t(locale, "dashboard.gbpProfileEdits.error.notSetUp");
   if (r.error === "not_enabled_google" || r.error === "changed_since" || r.error === "undo_expired") return t(locale, k(`error.${r.error}`));
   if (r.error === "reconnect" || r.error === "permission" || r.error === "wait_minute" || r.error === "daily_cap" || r.error === "not_enabled") return t(locale, `dashboard.gbpEdit.error.${r.error}` as MessageKey);

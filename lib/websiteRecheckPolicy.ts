@@ -16,6 +16,10 @@ export const WEBSITE_RECHECKS_PER_DAY = 3;
 export const WEBSITE_RECHECK_KIND = "website_recheck" as const;
 /** A re-score of the saved data with new scoring code (scripts/rescore-all.ts). */
 export const SCORING_UPDATE_KIND = "scoring_update" as const;
+/** Google connected or reconnected (app/api/gbp/callback/route.ts). */
+export const GOOGLE_CONNECTED_KIND = "google_connected" as const;
+/** The saved data changed the score between scans (syncScoreSnapshot). */
+export const DATA_UPDATE_KIND = "data_update" as const;
 
 export interface WebsiteRecheckAvailability {
   used: number;
@@ -39,7 +43,7 @@ export function isFullScan(breakdown: Pick<ScoreBreakdown, "scanKind"> | null | 
 
 /** isFullScan for a saved scan's `breakdown_json->>scanKind`. */
 export function isFullScanKind(kind: string | null | undefined): boolean {
-  return kind !== WEBSITE_RECHECK_KIND && kind !== SCORING_UPDATE_KIND;
+  return kind !== WEBSITE_RECHECK_KIND && kind !== SCORING_UPDATE_KIND && kind !== GOOGLE_CONNECTED_KIND && kind !== DATA_UPDATE_KIND;
 }
 
 /** Between two saved scans, did PostScore change how it scores — a new

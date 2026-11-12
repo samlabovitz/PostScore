@@ -249,6 +249,55 @@ export async function saveScoreSnapshotWithClient(
   };
 }
 
+/** When each business last saved a catch-up snapshot (this server process) —
+ * two page loads at once save one, not two. */
+const recentSyncs = new Map<string, number>();
+const SYNC_DEDUPE_MS = 15_000;
+
+/**
+ * One score everywhere: if the score the ring shows now (scored live
+ * from the saved data) isn't the latest saved snapshot's — Google
+ * connected, an owner answer, a Google refresh changed the data since —
+ * save a snapshot, so the ring, "Since last scan", "Since your last scan"
+ * and Reports show the same number. A changed scoring version is saved
+ * as a scoring update (no delta). Nothing before a business's first
+ * snapshot (lib/businessAdded.server.ts saves it). Never fails a page.
+ * `kind`: "google_connected" right after a connect (the callback).
+ */
+export async function syncScoreSnapshotWithClient(
+  supabase: SupabaseClient,
+  businessId: string,
+  kind: "data_update" | "google_connected" = "data_update",
+  now: number = Date.now()
+): Promise<{ saved: boolean; before: number | null; after: number | null }> {
+  try {
+    const [scored, { data: latest }] = await Promise.all([
+      scoreBusinessWithClient(supabase, businessId, "business"),
+      supabase.from("scores").select("total, grade, scoring_version").eq("business_id", businessId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    ]);
+    if (scored.status !== "ok") return { saved: false, before: null, after: null };
+    const live = scored.result.breakdown;
+    const last = latest as { total: number; grade: string; scoring_version: string } | null;
+    if (!last) return { saved: false, before: null, after: live.total };
+    const versionChanged = last.scoring_version !== live.scoringVersion;
+    // Connecting Google always gets its own labeled snapshot, even at +0.
+    if (kind !== "google_connected" && !versionChanged && last.total === live.total && last.grade === live.grade) return { saved: false, before: last.total, after: live.total };
+    const lastSync = recentSyncs.get(businessId);
+    if (kind === "data_update" && lastSync !== undefined && now - lastSync < SYNC_DEDUPE_MS) return { saved: false, before: last.total, after: live.total };
+    recentSyncs.set(businessId, now);
+    const saved = await saveScoreSnapshotWithClient(supabase, businessId, versionChanged && kind === "data_update" ? "scoring_update" : kind);
+    return { saved: saved.status === "saved", before: last.total, after: live.total };
+  } catch (err) {
+    console.error(`[scores] snapshot sync failed for ${businessId}:`, err instanceof Error ? err.message : err);
+    return { saved: false, before: null, after: null };
+  }
+}
+
+/** syncScoreSnapshotWithClient for the signed-in owner's page (RLS). */
+export async function syncScoreSnapshot(businessId: string): Promise<void> {
+  await syncScoreSnapshotWithClient(createClient(), businessId);
+}
+
 /**
  * Applies reconcileTasks()'s verdict to the `tasks` table: pending tasks
  * whose check is now genuinely full get marked completed and stamped

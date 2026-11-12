@@ -1,16 +1,18 @@
 // In-app notifications (supabase/notifications.sql) — the Account menu's
 // "Notifications". In-app only: never emails or texts. Pure.
 //
-// Today only "urgent" ones are created (lib/urgency.ts): one per issue per
-// business, opened when a scan finds it and resolved automatically when a
-// later scan shows it's fixed. Each kind is one entry in NOTIFICATION_KINDS
+// "urgent" ones (lib/urgency.ts): one per issue per business, opened when
+// a scan finds it and resolved automatically when a later scan shows it's
+// fixed. "google" / "disconnected": Google stopped accepting PostScore's
+// access (lib/gbpTokens.server.ts), resolved when the owner reconnects. Each kind is one entry in NOTIFICATION_KINDS
 // (its wording and where it's fixed), so others can be added later — a
 // Google change approved, a new review, a score drop.
 
 import { URGENT_ISSUES, type UrgentIssue } from "@/lib/urgency";
 import type { MessageKey } from "@/lib/i18n";
+import { gbpConnectHref } from "@/lib/gbpLanding";
 
-export type NotificationType = "urgent";
+export type NotificationType = "urgent" | "google";
 export type NotificationSeverity = "urgent" | "high" | "info";
 
 /** A notifications row as the owner reads it (RLS), with its business's name. */
@@ -61,7 +63,7 @@ export function urgentFixHref(issue: UrgentIssue, businessId: string): string {
 
 /** Every kind of notification: its wording and its fix (for a fixed one,
  * where the related check is). Add a kind here. */
-const NOTIFICATION_KINDS: Record<NotificationType, (row: Pick<NotificationRow, "key" | "payload" | "business_id">) => NotificationView | null> = {
+const NOTIFICATION_KINDS: Record<NotificationType, (row: Pick<NotificationRow, "key" | "payload" | "business_id"> & { resolved_at?: string | null }) => NotificationView | null> = {
   urgent: (row) => {
     if (!isUrgentIssue(row.key)) return null;
     const message: MessageKey =
@@ -72,10 +74,19 @@ const NOTIFICATION_KINDS: Record<NotificationType, (row: Pick<NotificationRow, "
         : (`dashboard.urgent.issue.${row.key}` as MessageKey);
     return { message, fixLabel: `dashboard.urgent.fix.${row.key}` as MessageKey, fixHref: urgentFixHref(row.key, row.business_id) };
   },
+  // Reconnect starts Google's consent screen; once reconnected, the Overview.
+  google: (row) =>
+    row.key === "disconnected"
+      ? {
+          message: "dashboard.notifications.google.disconnected",
+          fixLabel: "dashboard.notifications.google.reconnect",
+          fixHref: row.resolved_at ? `/business/${row.business_id}` : gbpConnectHref(row.business_id, "overview"),
+        }
+      : null,
 };
 
 /** A notification's wording and fix, or null for a kind this version doesn't know. */
-export function notificationView(row: Pick<NotificationRow, "type" | "key" | "payload" | "business_id">): NotificationView | null {
+export function notificationView(row: Pick<NotificationRow, "type" | "key" | "payload" | "business_id"> & { resolved_at?: string | null }): NotificationView | null {
   const kind = NOTIFICATION_KINDS[row.type as NotificationType];
   return kind ? kind(row) : null;
 }

@@ -13,14 +13,14 @@
 //   same code runs against a fake, in-memory Google — no Google connection
 //   needed, nothing ever sent to Google;
 // - otherwise a business's real reviews load, but Post / Edit / Delete are
-//   refused here unless its place id is in REVIEW_REPLIES_LIVE_PLACES
+//   refused here unless its place id is in GOOGLE_WRITES_LIVE_PLACES
 //   (default: none).
 
 import type { GbpEditBlock } from "@/lib/gbpEditGate.server";
 import { cleanPostedReply, isReviewId, type InboxReview } from "@/lib/gbpReviewInbox";
 import { replyBreaksRules } from "@/lib/reviewReplies";
 import type { ReplyAction } from "@/lib/gbpReviewInbox.server";
-import { livePostingAllowed, reviewRepliesPracticeOn } from "@/lib/gbpReviewPractice";
+import { googleWritesAllowed, reviewRepliesPracticeOn } from "@/lib/gbpReviewPractice";
 import type { PendingReply } from "@/lib/gbpReviewPending";
 
 export type ListGoogleReviewsResult =
@@ -71,7 +71,7 @@ async function inboxTarget(businessId: string): Promise<InboxContext | { ok: fal
     admin: gate.admin,
     target: { businessId, userId: gate.target.userId, accountName, locationName: gate.target.locationName, accessToken: gate.target.accessToken },
     practice: false,
-    canPost: livePostingAllowed((business as { place_id: string | null } | null)?.place_id),
+    canPost: googleWritesAllowed((business as { place_id: string | null } | null)?.place_id),
     fetchImpl: fetch,
   };
 }
@@ -104,9 +104,12 @@ export async function listGoogleReviews(businessId: string, pageToken: string | 
   const page = await fetchInboxPage(t.target, typeof pageToken === "string" && pageToken.length < 500 ? pageToken : null, t.fetchImpl);
   if (!page.ok) {
     if (page.kind === "auth") {
+      // Practice mode's fake Google never touches the real connection.
+      if (t.practice) return { status: "error", error: "failed" };
       const { markGbpReconnect } = await import("@/lib/gbpTokens.server");
-      await markGbpReconnect(t.admin, businessId);
-      return { status: "error", error: "reconnect" };
+      const checked = await markGbpReconnect(t.admin, businessId);
+      // Google took the refresh: still connected, this one read just failed.
+      return { status: "error", error: checked.status === "error" && checked.reason === "reconnect" ? "reconnect" : "failed" };
     }
     console.warn("[review-inbox] list failed", JSON.stringify({ status: page.status, reason: page.reason }));
     return { status: "error", error: "failed" };

@@ -169,10 +169,13 @@ describe("collected from Place Details only — competitors never", () => {
     expect(places).toContain("reviewPublishTimes: null, listingHasAccessibility: null, listingHasPayment: null, listingHasParking: null, pureServiceAreaBusiness: null");
   });
 
-  test("the reply counts scoring uses are the owner's own, cleared on disconnect and when Google needs reconnecting", () => {
+  test("the reply counts scoring uses are the owner's own, cleared on disconnect — kept (with their date) when Google needs reconnecting", () => {
     expect(fs.readFileSync("lib/gbpReplyCounts.server.ts", "utf8")).toContain("await setGbpScoringCounts(admin, businessId, counts);");
     const tokens = fs.readFileSync("lib/gbpTokens.server.ts", "utf8");
-    expect(tokens.match(/await clearGbpScoringCounts\(admin, businessId\);/g)).toHaveLength(2);
+    // Only the owner's own Disconnect clears them; a lost connection keeps the last good data.
+    expect(tokens.match(/await clearGbpScoringCounts\(admin, businessId\);/g)).toHaveLength(1);
+    const lose = tokens.slice(tokens.indexOf("export async function loseGbpConnection"), tokens.indexOf("async function openDisconnectNotification"));
+    expect(lose).not.toContain("clearGbpScoringCounts");
     // The reply check runs before the score is saved, so the score uses fresh counts.
     const scoring = fs.readFileSync("app/actions/scoring.ts", "utf8");
     expect(scoring.indexOf("await runGbpReplyCheck(businessId);")).toBeLessThan(scoring.indexOf("const scoreResult = await saveScoreSnapshotWithClient(supabase, businessId);"));

@@ -4,8 +4,16 @@
 // "connected" without an actual successful token exchange.
 //
 // After the exchange, the business's Google location is found by its Maps
-// place ID (lib/gbpLocations.ts). No match → nothing is kept: the grant is
-// revoked and any stored tokens for the business are deleted.
+// place ID (lib/gbpLocations.ts). No match, or Google's listing call
+// fails → the new tokens are never stored, and an earlier connection is
+// never touched: a failed reconnect (a passing Google error, the wrong
+// Google account) must not drop one that works. The new grant is revoked
+// only when there's no live earlier connection (revoking it would end
+// that one too when it's the same Google account).
+//
+// Connected: the score before and after is saved (Google's data changes
+// it), and the owner lands on the Overview: "Google connected ✓ — your
+// score updated: 78 → 84".
 //
 // Rejected before anything is exchanged or stored: a state whose
 // signature is wrong or that's expired, a state started by another
@@ -19,7 +27,8 @@ import { exchangeGbpAuthCode, gbpRedirectUri, isGbpOAuthConfigured, revokeGbpTok
 import { findGbpLocation } from "@/lib/gbpLocations";
 import { GBP_OAUTH_COOKIE, checkGbpCallback, readSignedGbpState } from "@/lib/gbpSecurity";
 import { gbpLandingPath, resolveGbpOrigin, type GbpConnectResult } from "@/lib/gbpLanding";
-import { disconnectGbpData, saveGbpConnection } from "@/lib/gbpTokens.server";
+import { saveGbpConnection } from "@/lib/gbpTokens.server";
+import { syncScoreSnapshotWithClient } from "@/app/actions/scoring";
 import { runGbpReplyCheck } from "@/lib/gbpReplyCounts.server";
 import { gbpFetch, logGbpCalls } from "@/lib/gbpQuota";
 import { canConnectGbp, getPlan } from "@/lib/premium";
@@ -123,9 +132,8 @@ export async function GET(req: NextRequest) {
   const found = await findGbpLocation(tokens.accessToken, business.place_id ?? null, gbpFetch(listingCalls));
   logGbpCalls("connect location listing", listingCalls);
   if (found.kind !== "match") {
-    await revokeGbpToken(tokens.refreshToken ?? tokens.accessToken);
-    // And any earlier connection for this business goes too (revoked, deleted).
-    await disconnectGbpData(createAdminClient(), businessId);
+    const { data: earlier } = await createAdminClient().from("gbp_connections").select("status").eq("business_id", businessId).maybeSingle();
+    if ((earlier as { status?: string } | null)?.status !== "connected") await revokeGbpToken(tokens.refreshToken ?? tokens.accessToken);
     if (found.kind === "error") {
       logFailure("location listing", { step: found.step, status: found.status, reason: found.reason });
       return land("google_api");
@@ -135,6 +143,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // The score as the owner saw it just before (so "78 → 84" is honest).
+    await syncScoreSnapshotWithClient(supabase, businessId);
     const saved = await saveGbpConnection(createAdminClient(), { businessId, userId: user.id, tokens, location: found.match });
     if (!saved.ok) {
       logFailure("save");
@@ -144,6 +154,8 @@ export async function GET(req: NextRequest) {
     // fails the connect (an error keeps "connected"; a rejected token
     // shows "Reconnect Google").
     await runGbpReplyCheck(businessId);
+    // Google's data changes the score: saved and labeled "Google connected".
+    await syncScoreSnapshotWithClient(supabase, businessId, "google_connected");
     return land("connected");
   } catch (err) {
     logFailure("save", { error: err instanceof Error ? err.message.slice(0, 120) : "unknown" });

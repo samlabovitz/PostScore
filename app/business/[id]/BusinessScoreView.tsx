@@ -444,6 +444,9 @@ function ScanHistory({ history }: { history: ScoreHistoryRow[] }) {
                       <InfoTip text={t(locale, "dashboard.overview.scoringUpdatedVersionTip", { version: row.scoring_version })} />
                     </span>
                   )}
+                  {!scoringUpdated && row.scan_kind === "google_connected" && (
+                    <span className="mt-1 inline-flex items-center rounded-md bg-paper px-1.5 py-0.5 text-[11px] text-ink-soft">{t(locale, "dashboard.overview.googleConnectedLabel")}</span>
+                  )}
                 </td>
                 <td className="py-2 text-ink">{row.total}</td>
                 <td className="py-2 text-ink">{row.grade}</td>

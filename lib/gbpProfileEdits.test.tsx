@@ -98,7 +98,7 @@ import { applyProfileEdit, getProfileUndo, readLiveProfile, supabaseProfileEditS
 import { practiceProfileFetch, PRACTICE_PROFILE_LOCATION, resetPracticeProfiles, setPracticeOutcome } from "@/lib/gbpProfilePractice.server";
 import { applyProfileEditAction, openProfileEdits, undoProfileEditAction } from "@/app/actions/gbpProfileEdits";
 import { ProfileEditsBody, resultMessage, weekLines } from "@/components/gbp/ProfileEditsOnGoogle";
-import { profileEditsAllowed } from "@/lib/gbpReviewPractice";
+import { googleWritesAllowed } from "@/lib/gbpReviewPractice";
 import { resetGbpQuota } from "@/lib/gbpQuota";
 import { LocaleProvider } from "@/lib/i18n";
 
@@ -116,7 +116,7 @@ const recorded = (businessId = "b1") => {
   }) as typeof fetch;
 };
 
-const ENV_KEYS = ["REVIEW_REPLIES_PRACTICE", "GBP_PROFILE_EDITS_LIVE_PLACES", "NODE_ENV"] as const;
+const ENV_KEYS = ["REVIEW_REPLIES_PRACTICE", "GOOGLE_WRITES_LIVE_PLACES", "NODE_ENV"] as const;
 const savedEnv = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
 const setEnv = (vars: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>>) => {
   for (const [k, v] of Object.entries(vars)) {
@@ -358,11 +358,11 @@ describe("the actions: practice mode, never in production; the live allow list",
     expect(gbpEditGate).toHaveBeenCalledWith("b1", { requirePremium: true });
   });
 
-  test("not on GBP_PROFILE_EDITS_LIVE_PLACES (default: none): Approve and Undo refused on the server — nothing sent", async () => {
-    setEnv({ REVIEW_REPLIES_PRACTICE: undefined, GBP_PROFILE_EDITS_LIVE_PLACES: undefined });
+  test("not on GOOGLE_WRITES_LIVE_PLACES (default: none): Approve and Undo refused on the server — nothing sent", async () => {
+    setEnv({ REVIEW_REPLIES_PRACTICE: undefined, GOOGLE_WRITES_LIVE_PLACES: undefined });
     gbpEditGate.mockResolvedValue(gate);
-    expect(profileEditsAllowed("ChIJ-hair-express", {})).toBe(false);
-    expect(profileEditsAllowed("ChIJ-hair-express", { GBP_PROFILE_EDITS_LIVE_PLACES: "ChIJ-a, ChIJ-hair-express" })).toBe(true);
+    expect(googleWritesAllowed("ChIJ-hair-express", {})).toBe(false);
+    expect(googleWritesAllowed("ChIJ-hair-express", { GOOGLE_WRITES_LIVE_PLACES: "ChIJ-a, ChIJ-hair-express" })).toBe(true);
     expect(await applyProfileEditAction("b1", "phone", "302-555-2368")).toEqual({ status: "editing_off" });
     expect(await undoProfileEditAction("b1", "phone", "batch-1")).toEqual({ status: "editing_off" });
     expect(networkCalls).toEqual([]);
@@ -435,7 +435,7 @@ describe("on the page (EN + ES)", () => {
     expect(resultMessage({ status: "updated", value: { field: "phone", value: "x" }, undo: null }, "en")).toEqual({ text: "Updated on Google ✓", tone: "done" });
     expect(resultMessage({ status: "pending_review", undo: null }, "en")).toEqual({ text: "Google is reviewing your change — this can take a few days.", tone: "waiting" });
     expect(resultMessage({ status: "error", error: "rejected" }, "en")).toEqual({ text: "Google didn't accept this change, so nothing changed. Check it and try again, or edit it on Google Maps.", tone: "failure" });
-    expect(resultMessage({ status: "editing_off" }, "es").text).toBe("Editar está desactivado para este negocio");
+    expect(resultMessage({ status: "editing_off" }, "es").text).toBe("Los cambios en Google están desactivados para este negocio, así que no se envió nada.");
     expect(resultMessage({ status: "error", error: "wait_minute" }, "en").text).toBe("Please wait a minute between changes.");
   });
 

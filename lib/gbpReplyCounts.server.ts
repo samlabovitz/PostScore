@@ -113,8 +113,9 @@ export async function runGbpReplyCheckWithClient(
   if (!fetched.ok) {
     logFailure("reviews", { status: fetched.status, reason: fetched.reason });
     if (fetched.kind === "auth") {
-      await markGbpReconnect(admin, businessId);
-      return { status: "reconnect" };
+      // Lost only if Google also refuses the refresh token; otherwise still connected.
+      const checked = await markGbpReconnect(admin, businessId, fetchImpl);
+      return checked.status === "error" && checked.reason === "reconnect" ? { status: "reconnect" } : { status: "failed" };
     }
     return { status: "failed" };
   }

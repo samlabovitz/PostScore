@@ -9,7 +9,7 @@
 // The add and the undo go through the same code and switches as the
 // "Order online" / "Booking link" card (lib/gbpOrderLink.server.ts,
 // lib/gbpOrderLinkContext.server.ts): practice mode's fake Google, and
-// the live allow list GBP_PLACE_ACTIONS_LIVE_PLACES — off the list the
+// the live allow list GOOGLE_WRITES_LIVE_PLACES — off the list the
 // links load read-only and Add / Undo are refused here.
 
 import { revalidatePath } from "next/cache";

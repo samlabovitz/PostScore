@@ -1,24 +1,32 @@
 // Server-only. The Google side of "Update website on Google": the owner's
-// OWN matched location only, every call through gbpFetch
-// (lib/gbpQuota.ts), and only after the owner clicks Approve (or "Yes,
-// undo"). Same safety as customer details (lib/gbpAttributes.server.ts):
+// OWN matched location only (or practice mode's fake Google), every call
+// through gbpFetch (lib/gbpQuota.ts), and only after the owner clicks
+// Approve (or "Yes, undo"). The caller (app/actions/gbpWebsiteLink.ts)
+// has already checked the owner, the plan, practice mode and the live
+// allow list (GOOGLE_WRITES_LIVE_PLACES).
 // - check: the new address loads and isn't a parked page — a plain fetch
 //   of the site, never Google.
-// - apply: re-reads the link on Google (the logged "before" is Google's,
-//   never the browser's), ONE locations.patch with updateMask=websiteUri,
-//   then metadata.hasPendingEdits and a read-back. Logged in gbp_changes
-//   (kind "website_uri", with location_name), failures too.
+// - apply, the same flow as Edit on Google (lib/gbpProfileEdits.server.ts):
+//   1. gbp_changes and the edit log ready (else "not_enabled", nothing
+//      sent), the approval limits allow it;
+//   2. re-read the link on Google (the "before" is Google's, never the browser's);
+//   3. save before → after in gbp_changes as "sending" BEFORE anything is sent;
+//   4. ONE locations.patch with updateMask=websiteUri;
+//   5. metadata.hasPendingEdits: held for review is a neutral wait;
+//   6. read it back: verified only when Google shows it.
+//   The edit log (gbp_profile_edit_log) gets the outcome — never the URL.
 // - undo: the latest change, ≤ 7 days, on the location connected now, only
 //   if the link wasn't changed on Google since (or Google is still
-//   reviewing ours); one PATCH restoring the old link, then a re-check.
+//   reviewing ours); saved first, one PATCH restoring the old link, then a
+//   read-back.
 import "server-only";
 import { randomUUID } from "crypto";
 import { gbpFetch, logGbpCalls } from "@/lib/gbpQuota";
 import { approvalAllowed } from "@/lib/gbpAttributes";
-import { call, hasPendingEdits, type GbpChangeStore, type GbpEditError, type GbpEditTarget, type GoogleCall } from "@/lib/gbpAttributes.server";
+import { call, hasPendingEdits, type GbpChangeStore, type GbpEditError, type GbpEditTarget, type GoogleCall, type GoogleWriteOutcome } from "@/lib/gbpAttributes.server";
 import { fetchWebsiteHtml } from "@/lib/websiteAnalysis";
 import { detectParkedDomain } from "@/lib/websiteContentAnalysis";
-import { WEBSITE_LINK_FIELD, WEBSITE_LINK_KIND, latestWebsiteLinkUndo, sameWebsiteLink, websiteLinkInput, type WebsiteLinkUndo } from "@/lib/gbpWebsiteLink";
+import { WEBSITE_LINK_FIELD, websiteLinkKind, latestWebsiteLinkUndo, sameWebsiteLink, websiteLinkInput, type WebsiteLinkUndo } from "@/lib/gbpWebsiteLink";
 
 const BASE = "https://mybusinessbusinessinformation.googleapis.com/v1";
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -65,145 +73,161 @@ function reasonOf(res: Extract<GoogleCall<unknown>, { ok: false }>): string | nu
 }
 
 export type ApplyWebsiteLinkResult =
-  /** `verified`: Google reads back the new link. `logged` false: sent, but no undo can be offered. */
-  | { status: "sent"; verified: boolean; logged: boolean; before: string | null }
-  | { status: "pending_review"; logged: boolean; before: string | null }
+  /** `verified`: Google reads back the new link; otherwise Google took it but doesn't show it yet.
+   * `shown`: the link Google read back (undefined when the read-back failed). */
+  | { status: "sent"; verified: boolean; before: string | null; shown?: string | null }
+  | { status: "pending_review"; before: string | null }
   | { status: "no_change" }
   | { status: "error"; error: GbpEditError | "invalid" | "down" | "parked" };
 
-export async function applyWebsiteLink(
-  target: GbpEditTarget,
-  raw: unknown,
-  store: GbpChangeStore,
-  fetchImpl: typeof fetch = fetch,
-  now: number = Date.now(),
-  checkImpl: typeof checkWebsiteLink = checkWebsiteLink
-): Promise<ApplyWebsiteLinkResult> {
-  // The log must exist before anything is sent.
+export interface WebsiteLinkOptions {
+  fetchImpl?: typeof fetch;
+  now?: number;
+  checkImpl?: typeof checkWebsiteLink;
+  /** Practice mode's fake Google: its own kind in gbp_changes, practice = true in the log. */
+  practice?: boolean;
+}
+
+export async function applyWebsiteLink(target: GbpEditTarget, raw: unknown, store: GbpChangeStore, options: WebsiteLinkOptions = {}): Promise<ApplyWebsiteLinkResult> {
+  const now = options.now ?? Date.now();
+  // 1. Both logs must exist, and the approval limits allow it — before any Google call.
   const approvals = await store.approvalsSince(target.businessId, new Date(now - DAY_MS).toISOString());
-  if (approvals === null) return { status: "error", error: "not_enabled" };
+  if (approvals === null || !(await store.editLogReady(target.businessId))) return { status: "error", error: "not_enabled" };
   const allowed = approvalAllowed(approvals, now);
   if (allowed !== "ok") return { status: "error", error: allowed };
   // Checked again here: only an address that loads, and isn't parked.
-  const checked = await checkImpl(raw);
+  const checked = await (options.checkImpl ?? checkWebsiteLink)(raw);
   if (checked.status !== "ok") return { status: "error", error: checked.status };
-
-  const counter = { calls: 0 };
-  const f = gbpFetch(counter, fetchImpl);
-  try {
-    const current = await readLink(f, target);
-    if (!current.ok) return { status: "error", error: current.error };
-    if (sameWebsiteLink(current.data, checked.url)) return { status: "no_change" };
-
-    const patched = await patchLink(f, target, checked.url);
-    const pending = patched.ok ? await hasPendingEdits(f, target.accessToken, target.locationName) : false;
-    const readback = patched.ok && !pending ? await readLink(f, target) : null;
-    const status = !patched.ok ? "failed" : pending ? "pending_review" : "sent";
-    const logged = await store.insert([
-      {
-        business_id: target.businessId,
-        batch_id: randomUUID(),
-        kind: WEBSITE_LINK_KIND,
-        field: WEBSITE_LINK_FIELD,
-        before_value: current.data,
-        after_value: checked.url,
-        approved_by: target.userId,
-        approved_at: new Date(now).toISOString(),
-        location_name: target.locationName,
-        status,
-        error_reason: patched.ok ? null : reasonOf(patched),
-      },
-    ]);
-    if (!patched.ok) {
-      console.warn("[gbp-website] patch failed", JSON.stringify({ status: patched.status, reason: patched.reason }));
-      return { status: "error", error: patched.error };
-    }
-    if (pending) return { status: "pending_review", logged, before: current.data };
-    return { status: "sent", verified: !!readback?.ok && sameWebsiteLink(readback.data, checked.url), logged, before: current.data };
-  } finally {
-    logGbpCalls("website-link-apply", counter);
-  }
+  const result = await sendLink(target, checked.url, store, { ...options, now, undoOf: null });
+  if (result.status === "error") return result;
+  if (result.status === "no_change") return result;
+  return result.status === "pending_review" ? { status: "pending_review", before: result.before } : { status: "sent", verified: result.verified, before: result.before, shown: result.shown };
 }
 
-/** The latest website link change the owner may undo here (a database
- * read — no Google call). Null before the SQL is run. */
-export async function getWebsiteLinkUndo(store: GbpChangeStore, businessId: string, locationName: string, now: number = Date.now()): Promise<WebsiteLinkUndo | null> {
-  const rows = await store.rowsSince(businessId, new Date(now - 8 * DAY_MS).toISOString(), WEBSITE_LINK_KIND);
-  return rows ? latestWebsiteLinkUndo(rows, now, locationName) : null;
-}
+type SendResult =
+  | { status: "sent"; verified: boolean; before: string | null; shown: string | null | undefined; batchId: string }
+  | { status: "pending_review"; before: string | null; batchId: string }
+  | { status: "no_change" }
+  | { status: "error"; error: GbpEditError };
 
-export type UndoWebsiteLinkResult =
-  | { status: "sent"; pending?: boolean }
-  | { status: "error"; error: GbpEditError; pending?: boolean };
-
-/** Puts the old link back (removes it when there was none). Never
- * overwrites a link someone changed on Google since — unless Google is
- * still reviewing ours, when Google's read may show the old one anyway:
- * then the restore is always sent (code review M3). */
-export async function undoWebsiteLink(target: GbpEditTarget, batchId: string, store: GbpChangeStore, fetchImpl: typeof fetch = fetch, now: number = Date.now()): Promise<UndoWebsiteLinkResult> {
-  const undo = await getWebsiteLinkUndo(store, target.businessId, target.locationName, now);
-  if (!undo || undo.batchId !== batchId) return { status: "error", error: "undo_expired" };
-
-  const at = new Date(now).toISOString();
-  const log = (status: "sent" | "pending_review" | "failed", reason: string | null) =>
-    store.insert([
-      {
-        business_id: target.businessId,
-        batch_id: randomUUID(),
-        kind: WEBSITE_LINK_KIND,
-        field: WEBSITE_LINK_FIELD,
-        before_value: undo.after,
-        after_value: undo.before,
-        approved_by: target.userId,
-        approved_at: at,
-        location_name: target.locationName,
-        status,
-        error_reason: reason,
-        undo_of: batchId,
-      },
-    ]);
-
+/** Steps 2–6 for an edit or an undo: read, save first, one patch, held?, read back, log. */
+async function sendLink(
+  target: GbpEditTarget,
+  uri: string | null,
+  store: GbpChangeStore,
+  options: WebsiteLinkOptions & { now: number; undoOf: string | null; expectBefore?: (current: string | null) => GbpEditError | "already" | null }
+): Promise<SendResult> {
+  const practice = options.practice === true;
+  const action = options.undoOf ? "undo" : "edit";
+  const log = (outcome: GoogleWriteOutcome, reason: string | null = null) =>
+    store.logEdit({ business_id: target.businessId, user_id: target.userId, field: "website_link", action, outcome, practice, error_reason: reason, changed_count: 1 });
   const counter = { calls: 0 };
-  const f = gbpFetch(counter, fetchImpl);
+  const f = gbpFetch(counter, options.fetchImpl ?? fetch);
   try {
+    // 2. What Google has now.
     const current = await readLink(f, target);
     if (!current.ok) {
       await log("failed", `read:${reasonOf(current)}`);
       return { status: "error", error: current.error };
     }
-    const wasPending = undo.status === "pending_review";
-    const stillOurs = sameWebsiteLink(current.data, undo.after);
-    const alreadyBack = sameWebsiteLink(current.data, undo.before);
-    if (!stillOurs && !(wasPending && alreadyBack)) {
-      if (alreadyBack) {
-        // Back already (changed on Google): nothing to send.
-        await log("sent", "already_restored");
-        await store.markUndone(batchId, at);
-        return { status: "sent" };
-      }
-      await log("failed", "changed_since");
-      return { status: "error", error: "changed_since" };
+    const refused = options.expectBefore?.(current.data) ?? null;
+    if (refused === "already") return { status: "no_change" };
+    if (refused) {
+      await log("failed", refused);
+      return { status: "error", error: refused };
     }
-    const patched = await patchLink(f, target, undo.before);
+    if (!options.expectBefore && sameWebsiteLink(current.data, uri)) return { status: "no_change" };
+
+    // 3. The previous link, saved before anything is sent.
+    const batchId = randomUUID();
+    const saved = await store.insert([
+      {
+        business_id: target.businessId,
+        batch_id: batchId,
+        kind: websiteLinkKind(practice),
+        field: WEBSITE_LINK_FIELD,
+        before_value: current.data,
+        after_value: uri,
+        approved_by: target.userId,
+        approved_at: new Date(options.now).toISOString(),
+        location_name: target.locationName,
+        status: "sending",
+        undo_of: options.undoOf,
+      },
+    ]);
+    if (!saved) return { status: "error", error: "not_enabled" };
+
+    // 4. The one change.
+    const patched = await patchLink(f, target, uri);
     if (!patched.ok) {
+      await store.setStatus(batchId, "failed", reasonOf(patched));
       await log("failed", reasonOf(patched));
+      console.warn("[gbp-website] patch failed", JSON.stringify({ status: patched.status, reason: patched.reason }));
       return { status: "error", error: patched.error };
     }
-    const pending = await hasPendingEdits(f, target.accessToken, target.locationName);
-    if (pending) {
-      await log("pending_review", null);
-      await store.markUndone(batchId, at);
-      return { status: "sent", pending: true };
+    // 5. Held for review?
+    if (await hasPendingEdits(f, target.accessToken, target.locationName)) {
+      await store.setStatus(batchId, "pending_review", null);
+      await log("pending_review");
+      return { status: "pending_review", before: current.data, batchId };
     }
+    // 6. Read it back.
     const readback = await readLink(f, target);
-    if (!readback.ok || !sameWebsiteLink(readback.data, undo.before)) {
-      await log("failed", readback.ok ? "readback" : `readback_failed:${reasonOf(readback)}`);
-      return { status: "error", error: "undo_unverified" };
-    }
-    await log("sent", null);
-    await store.markUndone(batchId, at);
-    return { status: "sent" };
+    const verified = readback.ok && sameWebsiteLink(readback.data, uri);
+    await store.setStatus(batchId, "sent", verified ? null : readback.ok ? "read_back_differs" : `read_back_failed:${reasonOf(readback)}`);
+    await log(verified ? "ok" : "unconfirmed", verified ? null : readback.ok ? "read_back_differs" : `read_back_failed:${reasonOf(readback)}`);
+    return { status: "sent", verified, before: current.data, shown: readback.ok ? readback.data : undefined, batchId };
   } finally {
-    logGbpCalls("website-link-undo", counter);
+    logGbpCalls(`website-link-${action}`, counter);
   }
+}
+
+/** The latest website link change the owner may undo here (a database
+ * read — no Google call). Null before the SQL is run. */
+export async function getWebsiteLinkUndo(store: GbpChangeStore, businessId: string, locationName: string, now: number = Date.now(), practice = false): Promise<WebsiteLinkUndo | null> {
+  const rows = await store.rowsSince(businessId, new Date(now - 8 * DAY_MS).toISOString(), websiteLinkKind(practice));
+  return rows ? latestWebsiteLinkUndo(rows, now, locationName) : null;
+}
+
+export type UndoWebsiteLinkResult =
+  /** `pending`: sent while Google reviews it. `shown`: the link Google reads back now (not while pending). */
+  | { status: "sent"; pending?: boolean; shown?: string | null }
+  | { status: "error"; error: GbpEditError; pending?: boolean };
+
+/** Puts the old link back (removes it when there was none). Never
+ * overwrites a link someone changed on Google since — unless Google is
+ * still reviewing ours, when Google's read may show the old one anyway:
+ * then the restore is always sent (code review M3). Saved before it's
+ * sent, like an edit; not held to the one-minute wait. */
+export async function undoWebsiteLink(target: GbpEditTarget, batchId: string, store: GbpChangeStore, options: Omit<WebsiteLinkOptions, "checkImpl"> = {}): Promise<UndoWebsiteLinkResult> {
+  const now = options.now ?? Date.now();
+  const practice = options.practice === true;
+  const undo = await getWebsiteLinkUndo(store, target.businessId, target.locationName, now, practice);
+  if (!undo || undo.batchId !== batchId) return { status: "error", error: "undo_expired" };
+  if ((await store.approvalsSince(target.businessId, new Date(now - DAY_MS).toISOString())) === null || !(await store.editLogReady(target.businessId))) return { status: "error", error: "not_enabled" };
+
+  const wasPending = undo.status === "pending_review";
+  const result = await sendLink(target, undo.before, store, {
+    ...options,
+    now,
+    undoOf: batchId,
+    expectBefore: (current) => {
+      if (sameWebsiteLink(current, undo.after)) return null;
+      // Google may still be showing the old link while it reviews ours: send anyway.
+      if (wasPending && sameWebsiteLink(current, undo.before)) return null;
+      // Back already (changed on Google): nothing to send.
+      if (sameWebsiteLink(current, undo.before)) return "already";
+      return "changed_since";
+    },
+  });
+  if (result.status === "error") return result;
+  if (result.status === "sent" && !result.verified) {
+    // Google doesn't show the old link back: "failed", so the change can still be undone again.
+    await store.setStatus(result.batchId, "failed", "readback");
+    return { status: "error", error: "undo_unverified" };
+  }
+  await store.markUndone(batchId, new Date(now).toISOString());
+  if (result.status === "pending_review") return { status: "sent", pending: true };
+  // Back already on Google (nothing sent): it shows the previous link.
+  return { status: "sent", shown: result.status === "sent" ? result.shown : undo.before };
 }

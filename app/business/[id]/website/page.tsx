@@ -25,6 +25,7 @@ import { resolveWebsiteBuilder, WEBSITE_BUILDER_NAMES } from "@/lib/websiteBuild
 import { ScanningLine } from "@/components/website/ScanningLine";
 import { BrokenListingCard } from "@/components/website/BrokenListingCard";
 import { GbpEditProvider } from "@/components/gbp/CustomerDetailsGoogleEdit";
+import { googleWritesPageState } from "@/app/actions/gbpWebsiteLink";
 import { getWebsiteLinkUndoForPage } from "@/app/actions/gbpWebsiteLink";
 
 export default async function WebsitePage({ params }: { params: { id: string } }) {
@@ -198,7 +199,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
 
         {/* The listing's own link is parked or broken: a warning, never its picture. */}
         {data.gradedSite?.listingBroken && data.website && (
-          <GbpEditProvider value={{ premium: isPremiumPlan(upgrade.plan), connected: gbpConnected, undo: null, websiteUndo: await getWebsiteLinkUndoForPage(params.id) }}>
+          <GbpEditProvider value={{ premium: isPremiumPlan(upgrade.plan), connected: gbpConnected, undo: null, websiteUndo: await getWebsiteLinkUndoForPage(params.id), ...(await googleWritesPageState(params.id)) }}>
             <BrokenListingCard businessId={params.id} listingUrl={data.website} suggested={data.gradedSite.source !== "listing" ? data.gradedSite.url : null} />
           </GbpEditProvider>
         )}

@@ -128,6 +128,11 @@ export function SinceLastScanControl({ history }: { history: ScoreHistoryRow[] }
             {change.delta !== 0 && <span className="sr-only">{change.delta > 0 ? "up" : "down"}</span>}
           </div>
         )}
+        {change.kind === "delta" && change.google && (
+          <div data-testid="since-google-connected" className="mt-1 text-[12px] font-semibold text-[color:color-mix(in_srgb,var(--color-paper)_80%,transparent)]">
+            {t(locale, "dashboard.overview.googleConnectedLabel")}
+          </div>
+        )}
       </button>
       {open && (
         <div className="absolute left-0 right-0 top-full z-20 mt-2 rounded-xl border border-paper-deep bg-white p-3 shadow-card">

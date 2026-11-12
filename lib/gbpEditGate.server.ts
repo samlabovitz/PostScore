@@ -21,7 +21,7 @@ export type GbpGate =
       admin: import("@supabase/supabase-js").SupabaseClient;
       tokens: typeof import("@/lib/gbpTokens.server");
       /** The business row fields the actions need (read through RLS). */
-      business: { id: string; language: string | null; website: string | null; verified_website_url: string | null };
+      business: { id: string; language: string | null; website: string | null; verified_website_url: string | null; place_id: string | null };
     }
   | { ok: false; result: { status: "blocked"; reason: GbpEditBlock } | { status: "error"; error: GbpEditError } };
 
@@ -33,7 +33,7 @@ export async function gbpEditGate(businessId: string, options: { requirePremium:
   } = await supabase.auth.getUser();
   if (!user) return blocked("unauthenticated");
   // RLS: only the owner's own business comes back.
-  const { data: business } = await supabase.from("businesses").select("id, language, website, verified_website_url").eq("id", businessId).eq("owner_id", user.id).maybeSingle();
+  const { data: business } = await supabase.from("businesses").select("id, language, website, verified_website_url, place_id").eq("id", businessId).eq("owner_id", user.id).maybeSingle();
   if (!business) return blocked("not_found");
   const plan = await getPlan();
   if (options.requirePremium && !isPremiumPlan(plan)) return blocked("not_premium");
@@ -53,7 +53,7 @@ export async function gbpEditGate(businessId: string, options: { requirePremium:
     plan,
     admin,
     tokens,
-    business: business as { id: string; language: string | null; website: string | null; verified_website_url: string | null },
+    business: business as { id: string; language: string | null; website: string | null; verified_website_url: string | null; place_id: string | null },
     target: { businessId, userId: user.id, locationName: conn.google_location_id, accessToken: token.accessToken, locale: normalizeLocale(business.language) },
   };
 }

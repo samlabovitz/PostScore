@@ -36,6 +36,6 @@ describe("service options: shown, never scored", () => {
     expect(t("es", "dashboard.gbpEdit.group.service")).toBe("¿Cómo pueden obtener su comida los clientes? Elija todas las que correspondan");
     const action = readFileSync("app/actions/gbpCustomerDetails.ts", "utf8");
     expect(action).not.toContain("completeness.order_options");
-    expect(action).toContain('c.part !== "service"');
+    expect(action).toContain('change.part !== "service"');
   });
 });

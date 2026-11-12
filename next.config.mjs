@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
+    // instrumentation.ts: startup warnings for GOOGLE_WRITES_LIVE_PLACES.
+    instrumentationHook: true,
     // The review sign PDF route reads its print fonts from disk; make
     // sure they ship with that serverless function.
     outputFileTracingIncludes: {

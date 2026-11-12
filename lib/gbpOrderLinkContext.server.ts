@@ -8,13 +8,13 @@
 //   nothing ever sent; changes allowed;
 // - otherwise the real gate (lib/gbpEditGate.server.ts) and real links,
 //   with changes allowed only when the business's place id is in
-//   GBP_PLACE_ACTIONS_LIVE_PLACES (default: none — read-only).
+//   GOOGLE_WRITES_LIVE_PLACES (default: none — read-only).
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { GbpEditBlock } from "@/lib/gbpEditGate.server";
 import type { GbpEditError } from "@/lib/gbpAttributes.server";
 import type { ProfileTarget } from "@/lib/gbpProfileEdits.server";
-import { placeActionsAllowed, reviewRepliesPracticeOn } from "@/lib/gbpReviewPractice";
+import { googleWritesAllowed, reviewRepliesPracticeOn } from "@/lib/gbpReviewPractice";
 import { orderLinkKindFor, ownSiteHost, type OrderLinkKind, type OwnSite } from "@/lib/gbpOrderLink";
 
 export interface OrderLinkContext {
@@ -23,7 +23,7 @@ export interface OrderLinkContext {
   target: ProfileTarget;
   practice: boolean;
   premium: boolean;
-  /** Practice mode, or the place id is on GBP_PLACE_ACTIONS_LIVE_PLACES. */
+  /** Practice mode, or the place id is on GOOGLE_WRITES_LIVE_PLACES. */
   canEdit: boolean;
   fetchImpl: typeof fetch;
   website: string | null;
@@ -93,7 +93,7 @@ export async function orderLinkContext(businessId: string, options: { requirePre
     target: { businessId, userId: gate.target.userId, locationName: gate.target.locationName, accessToken: gate.target.accessToken },
     practice: false,
     premium: isPremiumPlan(gate.plan),
-    canEdit: placeActionsAllowed(facts.placeId),
+    canEdit: googleWritesAllowed(facts.placeId),
     fetchImpl: fetch,
     website: gate.business.website,
     kind: facts.kind,

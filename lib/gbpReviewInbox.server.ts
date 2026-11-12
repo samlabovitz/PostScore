@@ -177,9 +177,11 @@ export async function changeReplyWithClient(
   const fail = async (e: GbpCallError): Promise<ReplyChangeResult> => {
     logGbpCalls("review-reply", counter);
     await log("failed", e.reason ?? e.kind);
-    if (e.kind === "auth") {
-      await markGbpReconnect(admin, target.businessId);
-      return { status: "error", error: "reconnect", reason: e.reason };
+    // Practice mode's fake Google never touches the real connection.
+    if (e.kind === "auth" && !options.practice) {
+      const checked = await markGbpReconnect(admin, target.businessId);
+      // Google took the refresh: still connected, this one call just failed.
+      if (checked.status === "error" && checked.reason === "reconnect") return { status: "error", error: "reconnect", reason: e.reason };
     }
     return { status: "error", error: e.kind === "not_found" ? "not_found" : "failed", reason: e.reason };
   };

@@ -61,6 +61,8 @@ export function gbpReplyCheckPath(businessId: string, plan: Plan): string {
 }
 
 export function gbpLandingPath(businessId: string, origin: GbpOrigin, result: GbpConnectResult): string {
+  // Connected: every plan lands on the Overview, with the score before → after.
+  if (result === "connected") return origin === "overview" ? `/business/${businessId}?gbp=connected#${GBP_REPLY_CHECK_ANCHOR}` : `/business/${businessId}?gbp=connected`;
   switch (origin) {
     case "overview":
       return `/business/${businessId}?gbp=${result}#${GBP_REPLY_CHECK_ANCHOR}`;

@@ -113,12 +113,16 @@ export interface GbpTokenResult {
    * than GBP_OAUTH_SCOPE if the owner adjusted it on Google's consent
    * screen; always the real value Google returned. */
   scope: string;
+  /** When the refresh token stops working — Google only says so when it
+   * will (an OAuth consent screen in Testing: 7 days). Null: no expiry. */
+  refreshTokenExpiresAt?: string | null;
 }
 
 interface RawTokenResponse {
   access_token?: string;
   refresh_token?: string;
   expires_in?: number;
+  refresh_token_expires_in?: number;
   scope?: string;
   error?: string;
   error_description?: string;
@@ -167,6 +171,7 @@ export async function exchangeGbpAuthCode(params: {
     refreshToken: data.refresh_token ?? null,
     expiresAt: new Date(Date.now() + (data.expires_in ?? 3600) * 1000).toISOString(),
     scope: data.scope ?? GBP_OAUTH_SCOPE,
+    refreshTokenExpiresAt: typeof data.refresh_token_expires_in === "number" ? new Date(Date.now() + data.refresh_token_expires_in * 1000).toISOString() : null,
   };
 }
 

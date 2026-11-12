@@ -17,7 +17,7 @@ type Row = Record<string, unknown>;
 /** Columns the fake database doesn't have yet (e.g. before a SQL file is run). */
 const missingColumns = new Set<string>();
 interface Op {
-  op: "select" | "upsert" | "update" | "delete";
+  op: "select" | "upsert" | "update" | "delete" | "insert";
   table: string;
   filters?: Row;
   row?: Row;
@@ -30,38 +30,73 @@ function fakeDb(tables: Record<string, Row[]>, user: { id: string } | null = nul
     auth: { getUser: async () => ({ data: { user } }) },
     from(table: string) {
       const filters: Row = {};
+      const isNull: string[] = [];
+      let mode: { op: "select" } | { op: "update"; patch: Row } | { op: "delete" } = { op: "select" };
+      let returning = false;
+      const matches = (r: Row) => Object.entries(filters).every(([k, v]) => r[k] === v) && isNull.every((k) => r[k] == null);
+      const missing = (row: Row) => Object.keys(row).some((k) => missingColumns.has(k));
+      async function run() {
+        const rows = tables[table] ?? [];
+        if (mode.op === "update") {
+          const patch = mode.patch;
+          if (missing(patch)) return { data: null, error: { code: "PGRST204", message: "column not found" } };
+          log.push({ op: "update", table, filters: { ...filters }, row: patch });
+          const hit = rows.filter(matches);
+          tables[table] = rows.map((r) => (matches(r) ? { ...r, ...patch } : r));
+          return { data: returning ? hit : null, error: null };
+        }
+        if (mode.op === "delete") {
+          log.push({ op: "delete", table, filters: { ...filters } });
+          tables[table] = rows.filter((r) => !matches(r));
+          return { data: null, error: null };
+        }
+        log.push({ op: "select", table, filters: { ...filters } });
+        return { data: rows.filter(matches), error: null };
+      }
       const builder = {
-        select: () => builder,
+        select: () => {
+          if (mode.op !== "select") returning = true;
+          return builder;
+        },
         eq: (col: string, val: unknown) => {
           filters[col] = val;
           return builder;
         },
+        is: (col: string, val: unknown) => {
+          if (val === null) isNull.push(col);
+          return builder;
+        },
+        order: () => builder,
+        limit: () => builder,
         maybeSingle: async () => {
-          log.push({ op: "select", table, filters: { ...filters } });
-          const rows = (tables[table] ?? []).filter((r) => Object.entries(filters).every(([k, v]) => r[k] === v));
-          return { data: rows[0] ?? null, error: null };
+          const { data } = await run();
+          return { data: (data as Row[] | null)?.[0] ?? null, error: null };
+        },
+        single: async () => {
+          const { data } = await run();
+          const row = (data as Row[] | null)?.[0] ?? null;
+          return row ? { data: row, error: null } : { data: null, error: { code: "PGRST116", message: "no rows" } };
         },
         upsert: async (row: Row) => {
-          if (Object.keys(row).some((k) => missingColumns.has(k))) return { error: { code: "PGRST204", message: "column not found" } };
+          if (missing(row)) return { error: { code: "PGRST204", message: "column not found" } };
           log.push({ op: "upsert", table, row });
           tables[table] = [...(tables[table] ?? []).filter((r) => r.business_id !== row.business_id), row];
           return { error: null };
         },
-        update: (patch: Row) => ({
-          eq: async (col: string, val: unknown) => {
-            if (Object.keys(patch).some((k) => missingColumns.has(k))) return { error: { code: "PGRST204", message: "column not found" } };
-            log.push({ op: "update" as Op["op"], table, filters: { [col]: val }, row: patch });
-            tables[table] = (tables[table] ?? []).map((r) => (r[col] === val ? { ...r, ...patch } : r));
-            return { error: null };
-          },
-        }),
-        delete: () => ({
-          eq: async (col: string, val: unknown) => {
-            log.push({ op: "delete", table, filters: { [col]: val } });
-            tables[table] = (tables[table] ?? []).filter((r) => r[col] !== val);
-            return { error: null };
-          },
-        }),
+        insert: async (row: Row) => {
+          log.push({ op: "insert", table, row });
+          tables[table] = [...(tables[table] ?? []), row];
+          return { error: null };
+        },
+        update: (patch: Row) => {
+          mode = { op: "update", patch };
+          return builder;
+        },
+        delete: () => {
+          mode = { op: "delete" };
+          return builder;
+        },
+        then: (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) => run().then(resolve, reject),
       };
       return builder;
     },
@@ -214,11 +249,14 @@ describe("plan decision: every plan connects; only Premium opens the Google Prof
     expect(gbpReplyCheckState("free", status, null)).toBeNull();
   });
 
-  test("landing paths: Free → Overview reviews, Grow → Reviews page, Premium → Google Profile tab or connect page", async () => {
+  test("landing paths: connected → the Overview (every plan); otherwise back where they started", async () => {
     const { gbpLandingPath, resolveGbpOrigin } = await import("@/lib/gbpLanding");
     expect(gbpLandingPath("b1", "overview", "connected")).toBe("/business/b1?gbp=connected#reply-check");
+    expect(gbpLandingPath("b1", "reviews", "connected")).toBe("/business/b1?gbp=connected");
+    expect(gbpLandingPath("b1", "profile", "connected")).toBe("/business/b1?gbp=connected");
+    expect(gbpLandingPath("b1", "connect", "connected")).toBe("/business/b1?gbp=connected");
     expect(gbpLandingPath("b1", "reviews", "denied")).toBe("/business/b1/website-reviews?gbp=denied#reply-check");
-    expect(gbpLandingPath("b1", "profile", "connected")).toBe("/business/b1/growth?tab=google-profile&gbp=connected#google-connection");
+    expect(gbpLandingPath("b1", "profile", "denied")).toBe("/business/b1/growth?tab=google-profile&gbp=denied#google-connection");
     expect(gbpLandingPath("b1", "connect", "failed")).toBe("/business/b1/connect-gbp?gbp=failed");
     // Free and Grow can never be routed to a Premium page, whatever "from" says.
     expect(resolveGbpOrigin("free", "profile")).toBe("overview");
@@ -342,8 +380,9 @@ describe("tokens: server-only table, encrypted at rest", () => {
     expect(decryptGbpToken(String(tokenRow.refresh_token_enc), BIZ)).toBe("1//PLAIN-REFRESH");
     expect(adminDb.tables.gbp_connections[0]).toMatchObject({ business_id: BIZ, status: "connected" });
     expect(Object.keys(adminDb.tables.gbp_connections[0])).not.toContain("access_token");
-    // Nothing went through the owner's own (browser-equivalent) session.
-    expect(sessionDb.log.every((o) => o.table === "businesses")).toBe(true);
+    // No token or connection row went through the owner's own (browser-equivalent)
+    // session — only their business and its score history (the before → after).
+    expect(sessionDb.log.every((o) => o.table === "businesses" || o.table === "scores")).toBe(true);
   });
 });
 
@@ -446,9 +485,10 @@ describe("disconnect: revoke at Google, then delete tokens and GBP data", () => 
     expect(url).toBe("https://oauth2.googleapis.com/revoke");
     expect(new URLSearchParams(String(init.body)).get("token")).toBe("1//R");
     const ops = adminDb.log.map((o) => `${o.op}:${o.table}`);
-    expect(ops).toEqual(["select:gbp_tokens", "update:gbp_changes", "delete:gbp_tokens", "delete:gbp_connections", "update:businesses", "update:businesses"]);
-    expect(adminDb.log.at(-2)?.row).toEqual({ gbp_reviews_in_window: null, gbp_replied: null, gbp_has_recent_review: null });
-    expect(adminDb.log.at(-1)?.row).toEqual({ gbp_recent_reviews: null });
+    // The owner let go on purpose: no "reconnect" reminder is left open.
+    expect(ops).toEqual(["select:gbp_tokens", "update:gbp_changes", "delete:gbp_tokens", "delete:gbp_connections", "update:businesses", "update:businesses", "delete:notifications"]);
+    expect(adminDb.log.at(-3)?.row).toEqual({ gbp_reviews_in_window: null, gbp_replied: null, gbp_has_recent_review: null });
+    expect(adminDb.log.at(-2)?.row).toEqual({ gbp_recent_reviews: null });
     expect(adminDb.tables.gbp_tokens).toEqual([]);
     expect(adminDb.tables.gbp_connections).toEqual([]);
   });
@@ -548,19 +588,41 @@ describe("Step 1: find the location by its Maps place ID", () => {
     });
   });
 
-  test("callback with no match: doesn't connect — revokes, keeps no tokens, deletes any earlier connection, explains", async () => {
-    const { encryptGbpToken } = await import("@/lib/gbpSecurity");
-    adminDb.tables.gbp_tokens = [{ business_id: BIZ, access_token_enc: encryptGbpToken("ya29.OLD", BIZ), refresh_token_enc: null }];
-    adminDb.tables.gbp_connections = [{ business_id: BIZ, status: "connected" }];
+  const revokedTokens = () => fetchMock.mock.calls.filter(([u]) => String(u).includes("/revoke")).map(([, init]) => new URLSearchParams(String(init.body)).get("token"));
+
+  test("callback with no match, nothing connected before: doesn't connect — revokes the new grant, keeps no tokens, explains", async () => {
     googleApi({ "accounts/1": [[loc("locations/1", "someone-else", true, "Other salon")]] });
     const { location, cookie } = await startConnect();
     const res = await callback(`state=${encodeURIComponent(new URL(location).searchParams.get("state")!)}&code=c`, cookie);
     expect(res.location).toBe("http://localhost:3000/business/biz-1?gbp=no_match#reply-check");
-    const revokes = fetchMock.mock.calls.filter(([u]) => String(u).includes("/revoke")).map(([, init]) => new URLSearchParams(String(init.body)).get("token"));
-    expect(revokes).toEqual(["1//PLAIN-REFRESH", "ya29.OLD"]);
+    expect(revokedTokens()).toEqual(["1//PLAIN-REFRESH"]);
     expect(adminDb.log.some((o) => o.op === "upsert")).toBe(false);
     expect(adminDb.tables.gbp_tokens).toEqual([]);
     expect(adminDb.tables.gbp_connections).toEqual([]);
+  });
+
+  test("a failed reconnect never drops a working connection: wrong account (no match) or a Google error", async () => {
+    const { encryptGbpToken } = await import("@/lib/gbpSecurity");
+    for (const [api, result] of [
+      [{ "accounts/1": [[loc("locations/1", "someone-else", true, "Other salon")]] }, "no_match"],
+      [null, "google_api"],
+    ] as Array<[Record<string, Array<Array<Record<string, unknown>>>> | null, string]>) {
+      adminDb.tables.gbp_tokens = [{ business_id: BIZ, access_token_enc: encryptGbpToken("ya29.OLD", BIZ), refresh_token_enc: encryptGbpToken("1//OLD", BIZ) }];
+      adminDb.tables.gbp_connections = [{ business_id: BIZ, status: "connected", google_location_id: "locations/9" }];
+      fetchMock.mockReset();
+      if (api) googleApi(api);
+      else
+        fetchMock.mockImplementation(async (url: string) =>
+          String(url).startsWith("https://oauth2.googleapis.com/token") ? jsonResponse({ access_token: "ya29.PLAIN-ACCESS", refresh_token: "1//PLAIN-REFRESH", expires_in: 3600 }) : jsonResponse({ error: { status: "UNAVAILABLE" } }, 503)
+        );
+      const { location, cookie } = await startConnect();
+      const res = await callback(`state=${encodeURIComponent(new URL(location).searchParams.get("state")!)}&code=c`, cookie);
+      expect(res.location).toBe(`http://localhost:3000/business/biz-1?gbp=${result}#reply-check`);
+      // Revoking the new grant would end the old one too (same Google account): nothing is revoked.
+      expect(revokedTokens()).toEqual([]);
+      expect(adminDb.tables.gbp_connections).toEqual([{ business_id: BIZ, status: "connected", google_location_id: "locations/9" }]);
+      expect(adminDb.tables.gbp_tokens).toHaveLength(1);
+    }
   });
 
   test("no-match messages name the business from PostScore's record (EN + ES), plus the verify hint", async () => {
@@ -583,14 +645,14 @@ describe("return to where the owner started", () => {
     const { location, cookie } = await startConnect(BIZ, from);
     return (await callback(`state=${encodeURIComponent(new URL(location).searchParams.get("state")!)}&code=c`, cookie)).location;
   }
+  // Connected: every plan lands on the Overview, with the score before → after.
   test.each([
     ["free", "overview", "http://localhost:3000/business/biz-1?gbp=connected#reply-check"],
-    ["grow", "reviews", "http://localhost:3000/business/biz-1/website-reviews?gbp=connected#reply-check"],
-    ["premium", "profile", "http://localhost:3000/business/biz-1/growth?tab=google-profile&gbp=connected#google-connection"],
-    ["multi", "connect", "http://localhost:3000/business/biz-1/connect-gbp?gbp=connected"],
-    // Free/Grow can't be routed to a Premium page even by asking.
+    ["grow", "reviews", "http://localhost:3000/business/biz-1?gbp=connected"],
+    ["premium", "profile", "http://localhost:3000/business/biz-1?gbp=connected"],
+    ["multi", "connect", "http://localhost:3000/business/biz-1?gbp=connected"],
     ["free", "profile", "http://localhost:3000/business/biz-1?gbp=connected#reply-check"],
-    ["grow", "connect", "http://localhost:3000/business/biz-1/website-reviews?gbp=connected#reply-check"],
+    ["grow", "connect", "http://localhost:3000/business/biz-1?gbp=connected"],
   ] as Array<[Plan, string, string]>)("%s from %s", async (plan, from, expected) => {
     expect(await roundTrip(plan, from)).toBe(expected);
   });
@@ -948,10 +1010,24 @@ describe("Step 2: review-reply counts (counts only, not scored)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  test("token rejected (401) → status error + 'Reconnect Google'; the last counts stay with their date", async () => {
+  test("a call rejected (401) but Google takes the refresh → still connected, nothing dropped", async () => {
+    await connected();
+    googleApi();
+    reviewsApi = [{ status: 401, reason: "UNAUTHENTICATED" }];
+    expect(await run()).toEqual({ status: "failed" });
+    expect(adminDb.tables.gbp_connections[0]).toMatchObject({ status: "connected" });
+    expect(adminDb.tables.gbp_tokens).toHaveLength(1);
+    const { decryptGbpToken } = await import("@/lib/gbpSecurity");
+    expect(decryptGbpToken(String(adminDb.tables.gbp_tokens[0].access_token_enc), BIZ)).toBe("ya29.PLAIN-ACCESS");
+    expect(adminDb.tables.notifications ?? []).toEqual([]);
+  });
+
+  test("token rejected (401) and the refresh refused → status error + 'Reconnect Google'; the last counts stay with their date", async () => {
     await connected();
     Object.assign(adminDb.tables.gbp_connections[0], { reply_reviews_in_window: 8, reply_replied: 6, reply_templated_share: 0, reply_has_recent_review: true, reply_checked_at: "2026-10-01T10:00:00Z" });
     googleApi();
+    const api = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url: string) => (String(url).startsWith("https://oauth2.googleapis.com/token") ? jsonResponse({ error: "invalid_grant" }, 400) : api(url)));
     reviewsApi = [{ status: 401, reason: "UNAUTHENTICATED" }];
     expect(await run()).toEqual({ status: "reconnect" });
     expect(adminDb.tables.gbp_tokens).toEqual([]);
@@ -1089,5 +1165,113 @@ describe("Step 2: review-reply counts (counts only, not scored)", () => {
     expect(factsBlockText({ ...base, replyCounts: null })).toContain("counted among the few reviews Google shows");
     expect(factsBlockText({ ...base, replyCounts: null })).toContain("Review replies: not known");
     expect(fs.readFileSync("app/actions/assistant.ts", "utf8")).toContain("replyCounts: gbpStatus.status === \"ok\" ? gbpStatus.replyCounts : null");
+  });
+});
+
+describe("never lose a Google connection silently", () => {
+  async function seedConnected(refresh: string | null = "1//R") {
+    const { encryptGbpToken } = await import("@/lib/gbpSecurity");
+    adminDb.tables.gbp_tokens = [{ business_id: BIZ, access_token_enc: encryptGbpToken("ya29.STORED", BIZ), refresh_token_enc: refresh ? encryptGbpToken(refresh, BIZ) : null, token_expires_at: new Date(Date.now() - 60_000).toISOString() }];
+    adminDb.tables.gbp_connections = [{ business_id: BIZ, status: "connected", reply_replied: 6, reply_checked_at: "2026-11-04T10:00:00Z" }];
+    adminDb.tables.notifications = [];
+  }
+
+  test("Google refuses the refresh token: marked lost with when and why, one in-app notification, the last data kept", async () => {
+    await seedConnected();
+    fetchMock.mockResolvedValue(jsonResponse({ error: "invalid_grant" }, 400));
+    const { getValidAccessTokenWithClient } = await import("@/lib/gbpTokens.server");
+    expect(await getValidAccessTokenWithClient(adminDb as never, BIZ)).toEqual({ status: "error", reason: "reconnect" });
+    expect(adminDb.tables.gbp_connections[0]).toMatchObject({ status: "error", disconnect_reason: "refresh_rejected", reply_replied: 6, reply_checked_at: "2026-11-04T10:00:00Z" });
+    expect(typeof adminDb.tables.gbp_connections[0].disconnected_at).toBe("string");
+    expect(adminDb.tables.notifications).toEqual([expect.objectContaining({ business_id: BIZ, type: "google", key: "disconnected", severity: "high", payload: { reason: "refresh_rejected" } })]);
+    // The score's Google data stays: nothing on businesses is cleared.
+    expect(adminDb.log.some((o) => o.table === "businesses")).toBe(false);
+    // A second failure doesn't open a second notification (already lost).
+    await getValidAccessTokenWithClient(adminDb as never, BIZ);
+    expect(adminDb.tables.notifications).toHaveLength(1);
+  });
+
+  test("before supabase/gbp-connection-health.sql: still marked lost (no date or reason), still notified", async () => {
+    await seedConnected();
+    missingColumns.add("disconnected_at");
+    fetchMock.mockResolvedValue(jsonResponse({ error: "invalid_grant" }, 400));
+    const { getValidAccessTokenWithClient } = await import("@/lib/gbpTokens.server");
+    await getValidAccessTokenWithClient(adminDb as never, BIZ);
+    expect(adminDb.tables.gbp_connections[0]).toMatchObject({ status: "error" });
+    expect(adminDb.tables.notifications).toHaveLength(1);
+  });
+
+  test("a network error refreshing changes nothing", async () => {
+    await seedConnected();
+    fetchMock.mockRejectedValue(new Error("offline"));
+    const { getValidAccessTokenWithClient, markGbpReconnect } = await import("@/lib/gbpTokens.server");
+    expect(await getValidAccessTokenWithClient(adminDb as never, BIZ)).toEqual({ status: "error", reason: "failed" });
+    expect(await markGbpReconnect(adminDb as never, BIZ)).toEqual({ status: "error", reason: "failed" });
+    expect(adminDb.tables.gbp_connections[0]).toMatchObject({ status: "connected" });
+    expect(adminDb.tables.gbp_tokens).toHaveLength(1);
+    expect(adminDb.tables.notifications).toEqual([]);
+  });
+
+  test("a business that was never connected is never marked lost or notified", async () => {
+    const { markGbpReconnect, loseGbpConnection } = await import("@/lib/gbpTokens.server");
+    adminDb.tables.notifications = [];
+    expect(await markGbpReconnect(adminDb as never, BIZ)).toEqual({ status: "error", reason: "reconnect" });
+    await loseGbpConnection(adminDb as never, BIZ, "refresh_rejected");
+    expect(adminDb.tables.notifications).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("reconnecting resolves the notification (unread, so the owner sees it) and clears the lost date", async () => {
+    await seedConnected();
+    fetchMock.mockResolvedValue(jsonResponse({ error: "invalid_grant" }, 400));
+    const { getValidAccessTokenWithClient } = await import("@/lib/gbpTokens.server");
+    await getValidAccessTokenWithClient(adminDb as never, BIZ);
+    adminDb.tables.notifications[0].read_at = "2026-11-11T16:00:00Z";
+    adminDb.tables.notifications[0].resolved_at = null;
+    googleApi();
+    const { location, cookie } = await startConnect();
+    expect((await callback(`state=${encodeURIComponent(new URL(location).searchParams.get("state")!)}&code=c`, cookie)).location).toBe("http://localhost:3000/business/biz-1?gbp=connected#reply-check");
+    expect(adminDb.tables.gbp_connections[0]).toMatchObject({ status: "connected", disconnected_at: null, disconnect_reason: null });
+    expect(adminDb.tables.notifications[0]).toMatchObject({ read_at: null });
+    expect(typeof adminDb.tables.notifications[0].resolved_at).toBe("string");
+  });
+
+  test("the notification (EN + ES): what happened and Reconnect Google; once fixed it links to the Overview", async () => {
+    const { notificationView } = await import("@/lib/notifications");
+    const { t } = await import("@/lib/i18n");
+    const open = notificationView({ type: "google", key: "disconnected", payload: {}, business_id: BIZ, resolved_at: null })!;
+    expect(t("en", open.message)).toBe("Google disconnected — reconnect to keep your score and edits up to date.");
+    expect(t("es", open.message)).toBe("Google se desconectó: vuelva a conectarlo para mantener al día su puntuación y sus cambios.");
+    expect(t("en", open.fixLabel)).toBe("Reconnect Google");
+    expect(t("es", open.fixLabel)).toBe("Volver a conectar Google");
+    expect(open.fixHref).toBe(`/api/gbp/connect?businessId=${BIZ}&from=overview`);
+    expect(notificationView({ type: "google", key: "disconnected", payload: {}, business_id: BIZ, resolved_at: "2026-11-11T16:00:00Z" })!.fixHref).toBe(`/business/${BIZ}`);
+  });
+
+  test("Google says the refresh token expires (Testing mode): kept and logged at connect", async () => {
+    googleApi();
+    const listing = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url: string) =>
+      String(url).startsWith("https://oauth2.googleapis.com/token") ? jsonResponse({ access_token: "ya29.A", refresh_token: "1//R", expires_in: 3600, refresh_token_expires_in: 604799 }) : listing(url)
+    );
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { location, cookie } = await startConnect();
+    await callback(`state=${encodeURIComponent(new URL(location).searchParams.get("state")!)}&code=c`, cookie);
+    const expires = Date.parse(String(adminDb.tables.gbp_tokens[0].refresh_token_expires_at));
+    expect(expires - Date.now()).toBeGreaterThan(6.9 * 24 * 3600_000);
+    expect(warn.mock.calls.some(([m]) => String(m).includes("refresh token expires"))).toBe(true);
+    warn.mockRestore();
+  });
+
+  test("practice mode never touches the real connection, and only Google refusing the refresh ends one", () => {
+    const reviews = fs.readFileSync("app/actions/googleReviews.ts", "utf8");
+    expect(reviews).toContain("if (t.practice) return { status: \"error\", error: \"failed\" };");
+    expect(fs.readFileSync("lib/gbpReviewInbox.server.ts", "utf8")).toContain('if (e.kind === "auth" && !options.practice)');
+    expect(fs.readFileSync("lib/gbpWriteContext.server.ts", "utf8")).toContain("markReconnect: async () => {},");
+    // The only ways a connection ends: the owner's Disconnect, and Google refusing the refresh token.
+    const tokens = fs.readFileSync("lib/gbpTokens.server.ts", "utf8");
+    expect(tokens.match(/loseGbpConnection\(admin, businessId, "refresh_rejected"\)/g)).toHaveLength(2);
+    const callers = execFileSync("git", ["grep", "--untracked", "-l", "disconnectGbpData(", "--", "app", "components", "lib", "scripts"], { encoding: "utf8" }).trim().split("\n").filter((f) => !f.includes(".test."));
+    expect(callers.sort()).toEqual(["app/actions/gbp.ts", "lib/gbpTokens.server.ts"]);
   });
 });

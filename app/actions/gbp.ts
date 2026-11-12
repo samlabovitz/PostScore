@@ -13,6 +13,10 @@ export interface GbpConnectionStatus {
   locationAddress: string | null;
   /** Google stopped accepting the stored token: show "Reconnect Google". */
   needsReconnect: boolean;
+  /** When Google stopped accepting it (null before supabase/gbp-connection-health.sql). */
+  disconnectedAt?: string | null;
+  /** The date of the last Google data the score uses (the last reply check). */
+  dataFrom?: string | null;
   /** The last review-reply counts (null until the first check). Kept
    * while "Reconnect Google" shows; deleted on disconnect. */
   replyCounts: GbpReplyCounts | null;
@@ -51,7 +55,15 @@ async function getGbpConnectionStatusUncached(businessId: string): Promise<GetGb
 
   const row = data as Record<string, unknown>;
   if (row.status !== "connected") {
-    return { status: "ok", ...NOT_CONNECTED, needsReconnect: row.status === "error", replyCounts: row.status === "error" ? replyCountsFromRow(row) : null };
+    const lost = row.status === "error";
+    return {
+      status: "ok",
+      ...NOT_CONNECTED,
+      needsReconnect: lost,
+      replyCounts: lost ? replyCountsFromRow(row) : null,
+      disconnectedAt: lost ? ((row.disconnected_at as string | null) ?? (row.updated_at as string | null) ?? null) : null,
+      dataFrom: lost ? ((row.reply_checked_at as string | null) ?? null) : null,
+    };
   }
   return {
     status: "ok",

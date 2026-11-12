@@ -10,6 +10,13 @@
 //
 // Every caller must already have proven the signed-in user owns the
 // business (the connect callback and disconnectGbp both do).
+//
+// A connection is never lost silently or by accident: only Google
+// refusing the refresh token ends it (a single rejected API call first
+// tries a refresh — the access token may just be stale), and then the
+// owner gets an in-app notification and the Overview's amber banner, and
+// the score keeps the last Google data with its date. Only the owner's
+// own Disconnect deletes everything.
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { decryptGbpToken, encryptGbpToken } from "@/lib/gbpSecurity";
@@ -47,6 +54,13 @@ export async function saveGbpConnection(
     { onConflict: "business_id" }
   );
   if (tokenError) return { ok: false };
+  // Google sends an expiry for the refresh token only when it will expire:
+  // the OAuth consent screen is in Testing (7 days), so this connection
+  // will drop. Kept (supabase/gbp-connection-health.sql) and said in the log.
+  if (tokens.refreshTokenExpiresAt) {
+    console.warn("[gbp-connect] Google says this refresh token expires", JSON.stringify({ at: tokens.refreshTokenExpiresAt, hint: "OAuth consent screen in Testing? Publish the app to production." }));
+    await admin.from("gbp_tokens").update({ refresh_token_expires_at: tokens.refreshTokenExpiresAt }).eq("business_id", businessId);
+  }
 
   const row = {
     business_id: businessId,
@@ -60,10 +74,14 @@ export async function saveGbpConnection(
   };
   let { error: statusError } = await admin
     .from("gbp_connections")
-    .upsert({ ...row, location_title: location.title, location_address: location.address }, { onConflict: "business_id" });
-  // Before supabase/gbp-location.sql has been run the title/address columns
-  // don't exist (PostgREST PGRST204 / Postgres 42703). Connect anyway — the
-  // IDs are what matter; the "Connected: {title}" line appears once it's run.
+    .upsert({ ...row, location_title: location.title, location_address: location.address, disconnected_at: null, disconnect_reason: null }, { onConflict: "business_id" });
+  // Before supabase/gbp-connection-health.sql the disconnect columns don't
+  // exist, and before supabase/gbp-location.sql the title/address ones
+  // (PostgREST PGRST204 / Postgres 42703). Connect anyway — the IDs are
+  // what matter.
+  if (statusError && MISSING_COLUMN.has(statusError.code ?? "")) {
+    ({ error: statusError } = await admin.from("gbp_connections").upsert({ ...row, location_title: location.title, location_address: location.address }, { onConflict: "business_id" }));
+  }
   if (statusError && MISSING_COLUMN.has(statusError.code ?? "")) {
     ({ error: statusError } = await admin.from("gbp_connections").upsert(row, { onConflict: "business_id" }));
   }
@@ -72,6 +90,8 @@ export async function saveGbpConnection(
     await admin.from("gbp_tokens").delete().eq("business_id", businessId);
     return { ok: false };
   }
+  // "Google disconnected" is fixed: it comes back unread as resolved.
+  await resolveDisconnectNotification(admin, businessId, now);
   return { ok: true };
 }
 
@@ -114,6 +134,12 @@ export async function disconnectGbpData(
   const { error: statusError } = await admin.from("gbp_connections").delete().eq("business_id", businessId);
   // …and the copy scoring uses (supabase/scoring-v1-12.sql).
   await clearGbpScoringCounts(admin, businessId);
+  // The owner let go on purpose: no "reconnect" reminder left open.
+  try {
+    await admin.from("notifications").delete().eq("business_id", businessId).eq("type", "google").eq("key", "disconnected").is("resolved_at", null);
+  } catch {
+    // Before supabase/notifications.sql: nothing to remove.
+  }
   if (tokenError || statusError) return { ok: false };
   return { ok: true, revoke };
 }
@@ -151,10 +177,10 @@ export async function getValidAccessTokenWithClient(
     if (expiresAt - now > REFRESH_MARGIN_MS) {
       return { status: "ok", accessToken: decryptGbpToken(row.access_token_enc, businessId) };
     }
-    if (!row.refresh_token_enc) return markGbpReconnect(admin, businessId);
+    if (!row.refresh_token_enc) return loseGbpConnection(admin, businessId, "no_refresh_token");
 
     const refreshed = await refreshGbpAccessToken(decryptGbpToken(row.refresh_token_enc, businessId), fetchImpl);
-    if (refreshed.status === "invalid_grant") return markGbpReconnect(admin, businessId);
+    if (refreshed.status === "invalid_grant") return loseGbpConnection(admin, businessId, "refresh_rejected");
     if (refreshed.status !== "ok") return { status: "error", reason: "failed" };
 
     await admin
@@ -171,17 +197,81 @@ export async function getValidAccessTokenWithClient(
   }
 }
 
-/** The dead tokens are deleted; the status row says "error" so the owner
- * is asked to reconnect. The last reply counts stay, with their date. */
-export async function markGbpReconnect(admin: SupabaseClient, businessId: string): Promise<ValidAccessTokenResult> {
+/**
+ * Google rejected an API call (401). That alone doesn't mean access is
+ * gone — the access token may just be stale — so the stored refresh token
+ * is tried once: if Google takes it, the connection stays (and the caller's
+ * one call simply failed); only if Google refuses it is the connection
+ * marked lost. A network error changes nothing.
+ */
+export async function markGbpReconnect(admin: SupabaseClient, businessId: string, fetchImpl: typeof fetch = fetch): Promise<ValidAccessTokenResult> {
+  try {
+    const { data: row } = await admin.from("gbp_tokens").select("refresh_token_enc").eq("business_id", businessId).maybeSingle();
+    // No tokens at all: not connected (or already lost) — nothing to drop.
+    if (!row) return { status: "error", reason: "reconnect" };
+    if (!row.refresh_token_enc) return loseGbpConnection(admin, businessId, "no_refresh_token");
+    const refreshed = await refreshGbpAccessToken(decryptGbpToken(row.refresh_token_enc, businessId), fetchImpl);
+    if (refreshed.status === "invalid_grant") return loseGbpConnection(admin, businessId, "refresh_rejected");
+    if (refreshed.status === "ok") {
+      await admin
+        .from("gbp_tokens")
+        .update({ access_token_enc: encryptGbpToken(refreshed.accessToken, businessId), token_expires_at: refreshed.expiresAt, updated_at: new Date().toISOString() })
+        .eq("business_id", businessId);
+      console.warn("[gbp-connection] a call was rejected but the refresh worked — still connected");
+    }
+    return { status: "error", reason: "failed" };
+  } catch {
+    return { status: "error", reason: "failed" };
+  }
+}
+
+export type GbpLossReason = "refresh_rejected" | "no_refresh_token";
+
+/**
+ * Google refused PostScore's access for good (refresh token revoked or
+ * expired): the dead tokens are deleted and the status row says "error"
+ * with when and why, so the owner is asked to reconnect — in-app
+ * notification and the Overview's banner. The score keeps the last
+ * Google data (the reply counts stay, with their date). Only a connected
+ * business is touched.
+ */
+export async function loseGbpConnection(admin: SupabaseClient, businessId: string, reason: GbpLossReason, now: Date = new Date()): Promise<ValidAccessTokenResult> {
+  const at = now.toISOString();
   await admin.from("gbp_tokens").delete().eq("business_id", businessId);
-  await admin
+  let { data, error } = await admin
     .from("gbp_connections")
-    .update({ status: "error", updated_at: new Date().toISOString() })
-    .eq("business_id", businessId);
-  // Not connected now: scoring leaves replies out until it's reconnected.
-  await clearGbpScoringCounts(admin, businessId);
+    .update({ status: "error", updated_at: at, disconnected_at: at, disconnect_reason: reason })
+    .eq("business_id", businessId)
+    .eq("status", "connected")
+    .select("business_id");
+  // Before supabase/gbp-connection-health.sql: no date or reason, same status.
+  if (error && MISSING_COLUMN.has(error.code ?? "")) {
+    ({ data, error } = await admin.from("gbp_connections").update({ status: "error", updated_at: at }).eq("business_id", businessId).eq("status", "connected").select("business_id"));
+  }
+  // Only a connection that was live just now is news.
+  if (!error && (data?.length ?? 0) > 0) {
+    console.warn("[gbp-connection] lost", JSON.stringify({ businessId, reason }));
+    await openDisconnectNotification(admin, businessId, reason, at);
+  }
   return { status: "error", reason: "reconnect" };
+}
+
+/** The in-app "Google disconnected" notification (lib/notifications.ts) — one open at a time. */
+async function openDisconnectNotification(admin: SupabaseClient, businessId: string, reason: GbpLossReason, at: string): Promise<void> {
+  try {
+    // 23505: one is already open (notifications_one_open) — fine.
+    await admin.from("notifications").insert({ business_id: businessId, type: "google", key: "disconnected", severity: "high", payload: { reason }, created_at: at });
+  } catch {
+    // Before supabase/notifications.sql: the banner still shows.
+  }
+}
+
+async function resolveDisconnectNotification(admin: SupabaseClient, businessId: string, at: string): Promise<void> {
+  try {
+    await admin.from("notifications").update({ resolved_at: at, read_at: null }).eq("business_id", businessId).eq("type", "google").eq("key", "disconnected").is("resolved_at", null);
+  } catch {
+    // Nothing to resolve.
+  }
 }
 
 /** Marks every open Google change (gbp_changes) as no longer undoable. */

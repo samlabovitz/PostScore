@@ -12,7 +12,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import { applyWebsiteLink, checkWebsiteLink, getWebsiteLinkUndo, undoWebsiteLink } from "@/lib/gbpWebsiteLink.server";
 import { latestWebsiteLinkUndo, sameWebsiteLink, websiteLinkInput, WEBSITE_LINK_KIND } from "@/lib/gbpWebsiteLink";
-import type { GbpChangeStore, GbpEditTarget } from "@/lib/gbpAttributes.server";
+import type { GbpChangeStore, GbpEditTarget, GoogleWriteLogRow } from "@/lib/gbpAttributes.server";
 import type { GbpChangeRow } from "@/lib/gbpAttributes";
 import { resetGbpQuota } from "@/lib/gbpQuota";
 import { GbpEditProvider } from "@/components/gbp/CustomerDetailsGoogleEdit";
@@ -54,15 +54,23 @@ function google(opts: { uri?: string | null; pending?: boolean; patch?: number }
   return { calls, fetchImpl, patches: () => calls.filter((c) => c.method === "PATCH"), setUri: (v: string | null) => (uri = v) };
 }
 
-function memStore() {
+function memStore(logReady = true) {
   const rows: Array<GbpChangeRow & Record<string, unknown>> = [];
+  const logs: GoogleWriteLogRow[] = [];
   const store: GbpChangeStore = {
     approvalsSince: async () => [],
     rowsSince: async (businessId, since, kind = "attributes") => rows.filter((r) => r.business_id === businessId && r.kind === kind && r.approved_at >= since),
     insert: async (r) => (rows.push(...r.map((x) => ({ undo_of: null, undone_at: null, ...x }) as GbpChangeRow & Record<string, unknown>)), true),
     markUndone: async (id, at) => (rows.forEach((r) => r.batch_id === id && (r.undone_at = at)), true),
+    setStatus: async (batchId, status, reason) => {
+      for (const r of rows) if (r.batch_id === batchId) Object.assign(r, { status, error_reason: reason });
+    },
+    editLogReady: async () => logReady,
+    logEdit: async (row) => {
+      logs.push(row);
+    },
   };
-  return { rows, store };
+  return { rows, logs, store };
 }
 
 beforeEach(() => resetGbpQuota());
@@ -96,7 +104,7 @@ describe("apply: one PATCH, websiteUri only, read back, logged with the location
   test("sent and verified; Google's own 'before' is logged; undo offered for 7 days", async () => {
     const g = google();
     const { rows, store } = memStore();
-    expect(await applyWebsiteLink(target, REAL, store, g.fetchImpl, NOW, okCheck)).toEqual({ status: "sent", verified: true, logged: true, before: PARKED });
+    expect(await applyWebsiteLink(target, REAL, store, { fetchImpl: g.fetchImpl, now: NOW, checkImpl: okCheck })).toEqual({ status: "sent", verified: true, before: PARKED, shown: REAL });
     expect(g.patches()).toHaveLength(1);
     expect(g.patches()[0].body).toEqual({ websiteUri: REAL });
     expect(rows[0]).toMatchObject({ kind: WEBSITE_LINK_KIND, field: "websiteUri", before_value: PARKED, after_value: REAL, location_name: LOC, status: "sent", approved_by: "owner" });
@@ -107,29 +115,29 @@ describe("apply: one PATCH, websiteUri only, read back, logged with the location
   test("Google is reviewing: 'pending_review', said so, still undoable", async () => {
     const g = google({ pending: true });
     const { rows, store } = memStore();
-    expect(await applyWebsiteLink(target, REAL, store, g.fetchImpl, NOW, okCheck)).toMatchObject({ status: "pending_review" });
+    expect(await applyWebsiteLink(target, REAL, store, { fetchImpl: g.fetchImpl, now: NOW, checkImpl: okCheck })).toMatchObject({ status: "pending_review" });
     expect(rows[0].status).toBe("pending_review");
   });
 
   test("never sends an address that doesn't load or is parked (checked again on the server)", async () => {
     const g = google();
     const { rows, store } = memStore();
-    expect(await applyWebsiteLink(target, PARKED, store, g.fetchImpl, NOW, async () => ({ status: "parked" }))).toEqual({ status: "error", error: "parked" });
-    expect(await applyWebsiteLink(target, "x", store, g.fetchImpl, NOW, async () => ({ status: "invalid" }))).toEqual({ status: "error", error: "invalid" });
+    expect(await applyWebsiteLink(target, PARKED, store, { fetchImpl: g.fetchImpl, now: NOW, checkImpl: async () => ({ status: "parked" }) })).toEqual({ status: "error", error: "parked" });
+    expect(await applyWebsiteLink(target, "x", store, { fetchImpl: g.fetchImpl, now: NOW, checkImpl: async () => ({ status: "invalid" }) })).toEqual({ status: "error", error: "invalid" });
     expect(g.calls).toEqual([]);
     expect(rows).toEqual([]);
   });
 
   test("already on Google: nothing sent", async () => {
     const g = google({ uri: "http://www.newarkcolorfulyunnan.com" });
-    expect(await applyWebsiteLink(target, REAL, memStore().store, g.fetchImpl, NOW, okCheck)).toEqual({ status: "no_change" });
+    expect(await applyWebsiteLink(target, REAL, memStore().store, { fetchImpl: g.fetchImpl, now: NOW, checkImpl: okCheck })).toEqual({ status: "no_change" });
     expect(g.patches()).toEqual([]);
   });
 
   test("Google rejects: logged as failed, no undo", async () => {
     const g = google({ patch: 400 });
     const { rows, store } = memStore();
-    expect(await applyWebsiteLink(target, REAL, store, g.fetchImpl, NOW, okCheck)).toEqual({ status: "error", error: "rejected" });
+    expect(await applyWebsiteLink(target, REAL, store, { fetchImpl: g.fetchImpl, now: NOW, checkImpl: okCheck })).toEqual({ status: "error", error: "rejected" });
     expect(rows[0].status).toBe("failed");
     expect(await getWebsiteLinkUndo(store, "cyn", LOC, NOW)).toBeNull();
   });
@@ -137,7 +145,7 @@ describe("apply: one PATCH, websiteUri only, read back, logged with the location
   test("before the log table exists: nothing is sent", async () => {
     const g = google();
     const store: GbpChangeStore = { ...memStore().store, approvalsSince: async () => null };
-    expect(await applyWebsiteLink(target, REAL, store, g.fetchImpl, NOW, okCheck)).toEqual({ status: "error", error: "not_enabled" });
+    expect(await applyWebsiteLink(target, REAL, store, { fetchImpl: g.fetchImpl, now: NOW, checkImpl: okCheck })).toEqual({ status: "error", error: "not_enabled" });
     expect(g.calls).toEqual([]);
   });
 });
@@ -146,9 +154,9 @@ describe("undo: the old link back, only where it was changed", () => {
   test("restores the old link, read back, then no more undo", async () => {
     const g = google();
     const { rows, store } = memStore();
-    await applyWebsiteLink(target, REAL, store, g.fetchImpl, NOW, okCheck);
+    await applyWebsiteLink(target, REAL, store, { fetchImpl: g.fetchImpl, now: NOW, checkImpl: okCheck });
     const undo = (await getWebsiteLinkUndo(store, "cyn", LOC, NOW + DAY))!;
-    expect(await undoWebsiteLink(target, undo.batchId, store, g.fetchImpl, NOW + DAY)).toEqual({ status: "sent" });
+    expect(await undoWebsiteLink(target, undo.batchId, store, { fetchImpl: g.fetchImpl, now: NOW + DAY })).toEqual({ status: "sent", shown: PARKED });
     expect(g.patches()[1].body).toEqual({ websiteUri: PARKED });
     expect(rows.find((r) => r.undo_of === undo.batchId)).toMatchObject({ before_value: REAL, after_value: PARKED, status: "sent", location_name: LOC });
     expect(await getWebsiteLinkUndo(store, "cyn", LOC, NOW + DAY)).toBeNull();
@@ -157,30 +165,30 @@ describe("undo: the old link back, only where it was changed", () => {
   test("changed on Google since: refuses, sends nothing", async () => {
     const g = google();
     const { store } = memStore();
-    await applyWebsiteLink(target, REAL, store, g.fetchImpl, NOW, okCheck);
+    await applyWebsiteLink(target, REAL, store, { fetchImpl: g.fetchImpl, now: NOW, checkImpl: okCheck });
     g.setUri("https://someone-else.example.com/");
     const undo = (await getWebsiteLinkUndo(store, "cyn", LOC, NOW + DAY))!;
-    expect(await undoWebsiteLink(target, undo.batchId, store, g.fetchImpl, NOW + DAY)).toEqual({ status: "error", error: "changed_since" });
+    expect(await undoWebsiteLink(target, undo.batchId, store, { fetchImpl: g.fetchImpl, now: NOW + DAY })).toEqual({ status: "error", error: "changed_since" });
     expect(g.patches()).toHaveLength(1);
   });
 
   test("approved while Google was reviewing: the restore is always sent, and 'Google is reviewing' if it still is", async () => {
     const g = google({ pending: true });
     const { store } = memStore();
-    await applyWebsiteLink(target, REAL, store, g.fetchImpl, NOW, okCheck);
+    await applyWebsiteLink(target, REAL, store, { fetchImpl: g.fetchImpl, now: NOW, checkImpl: okCheck });
     const undo = (await getWebsiteLinkUndo(store, "cyn", LOC, NOW + DAY))!;
     // Google still reads the old link — but our edit may apply later.
-    expect(await undoWebsiteLink(target, undo.batchId, store, g.fetchImpl, NOW + DAY)).toEqual({ status: "sent", pending: true });
+    expect(await undoWebsiteLink(target, undo.batchId, store, { fetchImpl: g.fetchImpl, now: NOW + DAY })).toEqual({ status: "sent", pending: true });
     expect(g.patches()).toHaveLength(2);
   });
 
   test("never on another location", async () => {
     const g = google();
     const { store } = memStore();
-    await applyWebsiteLink(target, REAL, store, g.fetchImpl, NOW, okCheck);
+    await applyWebsiteLink(target, REAL, store, { fetchImpl: g.fetchImpl, now: NOW, checkImpl: okCheck });
     const batchId = (await getWebsiteLinkUndo(store, "cyn", LOC, NOW))!.batchId;
     const other = google();
-    expect(await undoWebsiteLink({ ...target, locationName: "locations/789" }, batchId, store, other.fetchImpl, NOW)).toEqual({ status: "error", error: "undo_expired" });
+    expect(await undoWebsiteLink({ ...target, locationName: "locations/789" }, batchId, store, { fetchImpl: other.fetchImpl, now: NOW })).toEqual({ status: "error", error: "undo_expired" });
     expect(other.calls).toEqual([]);
   });
 
@@ -220,7 +228,7 @@ describe("what each plan sees", () => {
     const undo = { batchId: "a", approvedAt: "2026-11-09T15:00:00Z", undoUntil: "2026-11-16T15:00:00Z", status: "sent" as const, before: PARKED, after: REAL };
     const html = wrap(<GbpEditProvider value={{ premium: true, connected: true, undo: null, websiteUndo: undo }}><WebsiteLinkFix businessId="cyn" suggested={REAL} /></GbpEditProvider>);
     expect(html).toContain('data-testid="website-link-undo"');
-    expect(html).toContain("You changed your Google website link on");
+    expect(html).toContain("You can undo this until Nov 16, 2026.");
   });
 });
 

@@ -82,7 +82,7 @@ export function resultMessage(result: ApplyProfileEditActionResult, locale: Loca
     case "invalid":
       return { text: t(locale, K("error.invalid")), tone: "failure" };
     case "editing_off":
-      return { text: t(locale, K("editingOff")), tone: "failure" };
+      return { text: t(locale, K("error.editingOff")), tone: "failure" };
     case "blocked":
       return { text: t(locale, K("error.blocked")), tone: "failure" };
     case "error":

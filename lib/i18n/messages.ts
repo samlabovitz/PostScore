@@ -311,6 +311,7 @@ export type MessageKey =
   | "dashboard.gbpProfileEdits.practiceOutcome.hold"
   | "dashboard.gbpProfileEdits.error.rejected"
   | "dashboard.gbpProfileEdits.error.notSetUp"
+  | "dashboard.gbpProfileEdits.error.editingOff"
   | "dashboard.gbpProfileEdits.error.invalid"
   | "dashboard.gbpProfileEdits.error.blocked"
   | "dashboard.gbpProfileEdits.field.hours"
@@ -960,6 +961,16 @@ export type MessageKey =
   | "dashboard.notifications.empty"
   | "dashboard.notifications.found"
   | "dashboard.notifications.fixed"
+  | "dashboard.notifications.google.disconnected"
+  | "dashboard.notifications.google.reconnect"
+  | "dashboard.gbpConnection.banner.paused"
+  | "dashboard.gbpConnection.banner.pausedBasic"
+  | "dashboard.gbpConnection.banner.dataFrom"
+  | "dashboard.gbpConnection.banner.keeps"
+  | "dashboard.gbpConnection.connected.changed"
+  | "dashboard.gbpConnection.connected.same"
+  | "dashboard.gbpConnection.connected.plain"
+  | "dashboard.overview.googleConnectedLabel"
   | "dashboard.notifications.unread"
   | "dashboard.notifications.viewCheck"
   | "dashboard.notifications.severity.urgent"
@@ -1577,6 +1588,7 @@ export type MessageKey =
   | "dashboard.gbpEdit.error.wait_minute"
   | "dashboard.gbpEdit.error.daily_cap"
   | "dashboard.gbpEdit.error.not_enabled"
+  | "dashboard.gbpEdit.error.editing_off"
   | "dashboard.gbpEdit.error.changed_since"
   | "dashboard.gbpEdit.error.undo_expired"
   | "dashboard.platformLink.title"
@@ -4045,6 +4057,12 @@ export type MessageKey =
   | "dashboard.websiteLinkFix.after"
   | "dashboard.websiteLinkFix.none"
   | "dashboard.websiteLinkFix.previewNote"
+  | "dashboard.websiteLinkFix.review"
+  | "dashboard.websiteLinkFix.change"
+  | "dashboard.websiteLinkFix.retry"
+  | "dashboard.gbpEdit.change"
+  | "dashboard.gbpEdit.nowNone"
+  | "dashboard.websiteLinkFix.restored"
   | "dashboard.websiteLinkFix.approve"
   | "dashboard.websiteLinkFix.sent"
   | "dashboard.websiteLinkFix.pending"
@@ -5072,7 +5090,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.grow.postai": "PostAI for your questions (100 a month)",
     "dashboard.settings.plans.bullet.premium.fixes": "One-click fixes to your Google listing: hours, info, photos (coming soon)",
     // Posting replies to Google is still off for every business in production
-    // (REVIEW_REPLIES_LIVE_PLACES, lib/gbpReviewPractice.ts). When it goes live,
+    // (GOOGLE_WRITES_LIVE_PLACES, lib/gbpReviewPractice.ts). When it goes live,
     // update this bullet AND dashboard.settings.plans.value.repliesUnlimited
     // (the plan table, lib/planComparison.ts) together, in EN and ES.
     "dashboard.settings.plans.bullet.premium.replies": "Unlimited AI reply drafts · With Google connected, see every review in one place · Posting replies to Google: coming soon",
@@ -5210,8 +5228,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleReviews.previewTitle": "Reply to your Google reviews",
     "dashboard.googleReviews.previewUnlock": "See your Google reviews here, draft a reply with PostAI, and post it to Google once you approve it.",
     "dashboard.googleReviews.beta": "Beta",
-    "dashboard.googleReviews.readOnly": "Read-only check: your real Google reviews load here, but posting to Google is turned off for this business, so Approve, Edit and Delete are disabled.",
-    "dashboard.googleReviews.error.postingOff": "Posting to Google is turned off for this business, so nothing was sent.",
+    "dashboard.googleReviews.readOnly": "Read-only: your real Google reviews load here, but changes to Google are turned off for this business, so Approve, Edit and Delete are locked.",
+    "dashboard.googleReviews.error.postingOff": "Changes to Google are turned off for this business, so nothing was sent.",
     "dashboard.googleReviews.practice.banner": "Practice mode — nothing is sent to Google.",
     "dashboard.googleReviews.practice.body": "These are sample reviews. One shows Google refusing a reply, and one shows a reply Google accepts but takes about 30 seconds to show.",
     "dashboard.googleReviews.practice.done.post": "Practice: reply to {name} posted ✓ (nothing sent to Google)",
@@ -5239,7 +5257,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleReviews.error.deleteFailed": "Google didn't remove this reply, so nothing changed. Try again in a few minutes, or delete it from Google Maps.",
     "dashboard.googleReviews.showFewer": "Show fewer",
     "dashboard.googleReviews.pasteCollapsed": "Reply to a review from somewhere else? Paste it here",
-    "dashboard.googleReviews.postingOffTip": "Posting is off for this business",
+    "dashboard.googleReviews.postingOffTip": "Changes to Google are off for this business",
     "dashboard.replies.footerInbox": "For reviews from Yelp, Facebook or anywhere else, paste them here.",
     "dashboard.replies.footerConnect": "Connect Google to see and answer every review here.",
     "dashboard.gbpProfileEdits.heading": "Edit on Google",
@@ -5266,8 +5284,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpProfileEdits.undoUntil": "You can undo this until {date}.",
     "dashboard.gbpProfileEdits.undoConfirm": "Put the previous {field} back on Google?",
     "dashboard.gbpProfileEdits.undoYes": "Yes, undo",
-    "dashboard.gbpProfileEdits.editingOff": "Editing is off for this business",
-    "dashboard.gbpProfileEdits.readOnly": "Read-only: you're seeing what Google has now, but editing is turned off for this business, so Approve and Undo are locked.",
+    "dashboard.gbpProfileEdits.editingOff": "Changes to Google are off for this business",
+    "dashboard.gbpProfileEdits.readOnly": "Read-only: you're seeing what Google has now, but changes to Google are turned off for this business, so Approve and Undo are locked.",
     "dashboard.gbpProfileEdits.practiceBanner": "Practice mode — nothing is sent to Google.",
     "dashboard.gbpProfileEdits.practiceBody": "This is a sample listing. With your next Approve, the practice Google will:",
     "dashboard.gbpProfileEdits.practiceOutcome.accept": "Accept it",
@@ -5275,6 +5293,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpProfileEdits.practiceOutcome.hold": "Hold it for review",
     "dashboard.gbpProfileEdits.error.rejected": "Google didn't accept this change, so nothing changed. Check it and try again, or edit it on Google Maps.",
     "dashboard.gbpProfileEdits.error.notSetUp": "Editing from PostScore isn't set up yet, so nothing was sent to Google.",
+    "dashboard.gbpProfileEdits.error.editingOff": "Changes to Google are turned off for this business, so nothing was sent.",
     "dashboard.gbpProfileEdits.error.invalid": "Fix the problems shown first — nothing was sent.",
     "dashboard.gbpProfileEdits.error.blocked": "Connect your Google Business Profile to edit it here.",
     "dashboard.gbpProfileEdits.field.hours": "Hours",
@@ -5926,6 +5945,16 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.notifications.empty": "You're all caught up. When a scan finds something customers are running into, it shows up here.",
     "dashboard.notifications.found": "Found {date}",
     "dashboard.notifications.fixed": "Fixed ✓ {date}",
+    "dashboard.notifications.google.disconnected": "Google disconnected — reconnect to keep your score and edits up to date.",
+    "dashboard.notifications.google.reconnect": "Reconnect Google",
+    "dashboard.gbpConnection.banner.paused": "Until you reconnect, these stop updating: Google insights, your reviews inbox and Edit on Google.",
+    "dashboard.gbpConnection.banner.pausedBasic": "Until you reconnect, your “Replying to reviews” check stops updating.",
+    "dashboard.gbpConnection.banner.dataFrom": "Your score keeps your Google data from {date}.",
+    "dashboard.gbpConnection.banner.keeps": "Your score keeps your last Google data until you reconnect.",
+    "dashboard.gbpConnection.connected.changed": "Google connected ✓ — your score updated: {from} → {to}",
+    "dashboard.gbpConnection.connected.same": "Google connected ✓ — your score didn't change.",
+    "dashboard.gbpConnection.connected.plain": "Google connected ✓",
+    "dashboard.overview.googleConnectedLabel": "Google connected",
     "dashboard.notifications.unread": "Unread",
     "dashboard.notifications.viewCheck": "See the check",
     "dashboard.notifications.severity.urgent": "Urgent",
@@ -6637,7 +6666,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpEdit.sending": "Sending to Google…",
     "dashboard.gbpEdit.back": "Back",
     "dashboard.gbpEdit.close": "Close",
-    "dashboard.gbpEdit.result.sent": "Sent to Google — may take a little while to appear.",
+    "dashboard.gbpEdit.result.sent": "Updated on Google ✓",
     "dashboard.gbpEdit.result.pending": "Google is reviewing changes to your profile.",
     "dashboard.gbpEdit.result.noChanges": "Nothing to change — Google already has these values.",
     "dashboard.gbpEdit.result.points": "Your score updates after your next scan sees it on Google.",
@@ -6661,7 +6690,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpEdit.error.changed": "Google's options for your listing changed. Please open the panel again. Nothing was changed.",
     "dashboard.gbpEdit.error.wait_minute": "Please wait a minute between changes.",
     "dashboard.gbpEdit.error.daily_cap": "That's the most changes for today. Please try again tomorrow.",
-    "dashboard.gbpEdit.error.not_enabled": "Updating Google isn't switched on yet. Nothing was changed.",
+    "dashboard.gbpEdit.error.not_enabled": "Editing from PostScore isn't set up yet, so nothing was sent to Google.",
+    "dashboard.gbpEdit.error.editing_off": "Changes to Google are turned off for this business, so nothing was sent.",
     "dashboard.gbpEdit.error.changed_since": "Some of these were changed on Google since, so we didn't undo anything. You can update them again here.",
     "dashboard.gbpEdit.error.undo_expired": "This change can no longer be undone here.",
     "dashboard.platformLink.title": "Your Google listing's website link goes to your {platform} page, not a website.",
@@ -9450,8 +9480,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteLinkFix.after": "After",
     "dashboard.websiteLinkFix.none": "(no website)",
     "dashboard.websiteLinkFix.previewNote": "You can undo it here for 7 days.",
+    "dashboard.websiteLinkFix.review": "Review the change",
+    "dashboard.websiteLinkFix.change": "Change",
+    "dashboard.websiteLinkFix.retry": "Try again",
+    "dashboard.gbpEdit.change": "Change",
+    "dashboard.gbpEdit.nowNone": "None of these are set on Google yet.",
+    "dashboard.websiteLinkFix.restored": "The page reloaded, so PostScore kept your change where you left it. Nothing was sent to Google.",
     "dashboard.websiteLinkFix.approve": "Approve and update Google",
-    "dashboard.websiteLinkFix.sent": "Sent to Google — may take a little while to appear. Your points update on the next scan once it's live.",
+    "dashboard.websiteLinkFix.sent": "Updated on Google ✓ Your points update on the next scan.",
     "dashboard.websiteLinkFix.pending": "Sent. Google is reviewing changes to your profile. Your points update on the next scan once it's live.",
     "dashboard.websiteLinkFix.noChange": "Google already shows that website.",
     "dashboard.websiteLinkFix.undoSummary": "You changed your Google website link on {date}. You can undo it until {until}.",
@@ -10389,7 +10425,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.grow.postai": "PostAI para sus preguntas (100 al mes)",
     "dashboard.settings.plans.bullet.premium.fixes": "Arreglos con un clic en su ficha de Google: horario, datos y fotos (próximamente)",
     // Posting replies to Google is still off for every business in production
-    // (REVIEW_REPLIES_LIVE_PLACES, lib/gbpReviewPractice.ts). When it goes live,
+    // (GOOGLE_WRITES_LIVE_PLACES, lib/gbpReviewPractice.ts). When it goes live,
     // update this bullet AND dashboard.settings.plans.value.repliesUnlimited
     // (the plan table, lib/planComparison.ts) together, in EN and ES.
     "dashboard.settings.plans.bullet.premium.replies": "Borradores de respuesta con IA ilimitados · Con Google conectado, vea todas sus reseñas en un solo lugar · Publicar respuestas en Google: próximamente",
@@ -10527,8 +10563,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleReviews.previewTitle": "Responda a sus reseñas de Google",
     "dashboard.googleReviews.previewUnlock": "Vea aquí sus reseñas de Google, redacte una respuesta con PostAI y publíquela en Google cuando usted la apruebe.",
     "dashboard.googleReviews.beta": "Beta",
-    "dashboard.googleReviews.readOnly": "Solo lectura: aquí se cargan sus reseñas reales de Google, pero publicar en Google está desactivado para este negocio, así que Aprobar, Editar y Eliminar están desactivados.",
-    "dashboard.googleReviews.error.postingOff": "Publicar en Google está desactivado para este negocio, así que no se envió nada.",
+    "dashboard.googleReviews.readOnly": "Solo lectura: aquí se cargan sus reseñas reales de Google, pero los cambios en Google están desactivados para este negocio, así que Aprobar, Editar y Eliminar están bloqueados.",
+    "dashboard.googleReviews.error.postingOff": "Los cambios en Google están desactivados para este negocio, así que no se envió nada.",
     "dashboard.googleReviews.practice.banner": "Modo de práctica: no se envía nada a Google.",
     "dashboard.googleReviews.practice.body": "Son reseñas de ejemplo. Una muestra a Google rechazando una respuesta y otra, una respuesta que Google acepta pero tarda unos 30 segundos en mostrar.",
     "dashboard.googleReviews.practice.done.post": "Práctica: respuesta a {name} publicada ✓ (no se envió nada a Google)",
@@ -10556,7 +10592,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleReviews.error.deleteFailed": "Google no quitó esta respuesta, así que no cambió nada. Inténtelo de nuevo en unos minutos o elimínela desde Google Maps.",
     "dashboard.googleReviews.showFewer": "Ver menos",
     "dashboard.googleReviews.pasteCollapsed": "¿Responder a una reseña de otro sitio? Péguela aquí",
-    "dashboard.googleReviews.postingOffTip": "Publicar está desactivado para este negocio",
+    "dashboard.googleReviews.postingOffTip": "Los cambios en Google están desactivados para este negocio",
     "dashboard.replies.footerInbox": "Para reseñas de Yelp, Facebook o cualquier otro sitio, péguelas aquí.",
     "dashboard.replies.footerConnect": "Conecte Google para ver y responder todas sus reseñas aquí.",
     "dashboard.gbpProfileEdits.heading": "Editar en Google",
@@ -10583,8 +10619,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpProfileEdits.undoUntil": "Puede deshacerlo hasta el {date}.",
     "dashboard.gbpProfileEdits.undoConfirm": "¿Volver a poner en Google el {field} anterior?",
     "dashboard.gbpProfileEdits.undoYes": "Sí, deshacer",
-    "dashboard.gbpProfileEdits.editingOff": "Editar está desactivado para este negocio",
-    "dashboard.gbpProfileEdits.readOnly": "Solo lectura: ve lo que Google tiene ahora, pero editar está desactivado para este negocio, así que Aprobar y Deshacer están bloqueados.",
+    "dashboard.gbpProfileEdits.editingOff": "Los cambios en Google están desactivados para este negocio",
+    "dashboard.gbpProfileEdits.readOnly": "Solo lectura: ve lo que Google tiene ahora, pero los cambios en Google están desactivados para este negocio, así que Aprobar y Deshacer están bloqueados.",
     "dashboard.gbpProfileEdits.practiceBanner": "Modo de práctica: no se envía nada a Google.",
     "dashboard.gbpProfileEdits.practiceBody": "Esta es una ficha de ejemplo. Con su próxima aprobación, el Google de práctica:",
     "dashboard.gbpProfileEdits.practiceOutcome.accept": "La acepta",
@@ -10592,6 +10628,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpProfileEdits.practiceOutcome.hold": "La deja en revisión",
     "dashboard.gbpProfileEdits.error.rejected": "Google no aceptó este cambio, así que no cambió nada. Revíselo e inténtelo de nuevo, o edítelo en Google Maps.",
     "dashboard.gbpProfileEdits.error.notSetUp": "Editar desde PostScore aún no está configurado, así que no se envió nada a Google.",
+    "dashboard.gbpProfileEdits.error.editingOff": "Los cambios en Google están desactivados para este negocio, así que no se envió nada.",
     "dashboard.gbpProfileEdits.error.invalid": "Corrija primero los problemas indicados; no se envió nada.",
     "dashboard.gbpProfileEdits.error.blocked": "Conecte su Perfil de Empresa en Google para editarlo aquí.",
     "dashboard.gbpProfileEdits.field.hours": "Horario",
@@ -11243,6 +11280,16 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.notifications.empty": "Está todo al día. Cuando un análisis encuentre algo con lo que sus clientes estén teniendo problemas, aparecerá aquí.",
     "dashboard.notifications.found": "Detectado el {date}",
     "dashboard.notifications.fixed": "Corregido ✓ {date}",
+    "dashboard.notifications.google.disconnected": "Google se desconectó: vuelva a conectarlo para mantener al día su puntuación y sus cambios.",
+    "dashboard.notifications.google.reconnect": "Volver a conectar Google",
+    "dashboard.gbpConnection.banner.paused": "Hasta que vuelva a conectarlo, esto deja de actualizarse: la información de Google, su bandeja de reseñas y Editar en Google.",
+    "dashboard.gbpConnection.banner.pausedBasic": "Hasta que vuelva a conectarlo, su revisión “Respuestas a reseñas” deja de actualizarse.",
+    "dashboard.gbpConnection.banner.dataFrom": "Su puntuación conserva sus datos de Google del {date}.",
+    "dashboard.gbpConnection.banner.keeps": "Su puntuación conserva sus últimos datos de Google hasta que vuelva a conectarlo.",
+    "dashboard.gbpConnection.connected.changed": "Google conectado ✓: su puntuación se actualizó: {from} → {to}",
+    "dashboard.gbpConnection.connected.same": "Google conectado ✓: su puntuación no cambió.",
+    "dashboard.gbpConnection.connected.plain": "Google conectado ✓",
+    "dashboard.overview.googleConnectedLabel": "Google conectado",
     "dashboard.notifications.unread": "Sin leer",
     "dashboard.notifications.viewCheck": "Ver la revisión",
     "dashboard.notifications.severity.urgent": "Urgente",
@@ -11845,7 +11892,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpEdit.sending": "Enviando a Google…",
     "dashboard.gbpEdit.back": "Volver",
     "dashboard.gbpEdit.close": "Cerrar",
-    "dashboard.gbpEdit.result.sent": "Enviado a Google; puede tardar un poco en aparecer.",
+    "dashboard.gbpEdit.result.sent": "Actualizado en Google ✓",
     "dashboard.gbpEdit.result.pending": "Google está revisando cambios en su perfil.",
     "dashboard.gbpEdit.result.noChanges": "No hay nada que cambiar: Google ya tiene estos valores.",
     "dashboard.gbpEdit.result.points": "Su puntuación se actualiza cuando su próximo escaneo lo vea en Google.",
@@ -11869,7 +11916,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpEdit.error.changed": "Las opciones de Google para su ficha cambiaron. Abra el panel de nuevo. No se cambió nada.",
     "dashboard.gbpEdit.error.wait_minute": "Por favor, espere un minuto entre cambios.",
     "dashboard.gbpEdit.error.daily_cap": "Ese es el máximo de cambios por hoy. Inténtelo de nuevo mañana.",
-    "dashboard.gbpEdit.error.not_enabled": "Actualizar Google aún no está activado. No se cambió nada.",
+    "dashboard.gbpEdit.error.not_enabled": "Editar desde PostScore aún no está configurado, así que no se envió nada a Google.",
+    "dashboard.gbpEdit.error.editing_off": "Los cambios en Google están desactivados para este negocio, así que no se envió nada.",
     "dashboard.gbpEdit.error.changed_since": "Algunos de estos se cambiaron en Google desde entonces, así que no deshicimos nada. Puede actualizarlos de nuevo aquí.",
     "dashboard.gbpEdit.error.undo_expired": "Este cambio ya no se puede deshacer aquí.",
     "dashboard.platformLink.title": "El enlace de sitio web de su ficha de Google lleva a su página de {platform}, no a un sitio web.",
@@ -14867,8 +14915,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteLinkFix.after": "Después",
     "dashboard.websiteLinkFix.none": "(sin sitio web)",
     "dashboard.websiteLinkFix.previewNote": "Puede deshacerlo aquí durante 7 días.",
+    "dashboard.websiteLinkFix.review": "Revisar el cambio",
+    "dashboard.websiteLinkFix.change": "Cambiar",
+    "dashboard.websiteLinkFix.retry": "Intentar de nuevo",
+    "dashboard.gbpEdit.change": "Cambiar",
+    "dashboard.gbpEdit.nowNone": "Todavía no hay ninguno de estos indicados en Google.",
+    "dashboard.websiteLinkFix.restored": "La página se volvió a cargar, así que PostScore conservó su cambio donde lo dejó. No se envió nada a Google.",
     "dashboard.websiteLinkFix.approve": "Aprobar y actualizar Google",
-    "dashboard.websiteLinkFix.sent": "Enviado a Google; puede tardar un poco en aparecer. Sus puntos se actualizan en el próximo análisis cuando esté publicado.",
+    "dashboard.websiteLinkFix.sent": "Actualizado en Google ✓ Sus puntos se actualizan en el próximo análisis.",
     "dashboard.websiteLinkFix.pending": "Enviado. Google está revisando cambios en su perfil. Sus puntos se actualizan en el próximo análisis cuando esté publicado.",
     "dashboard.websiteLinkFix.noChange": "Google ya muestra ese sitio web.",
     "dashboard.websiteLinkFix.undoSummary": "Usted cambió el enlace de su sitio web en Google el {date}. Puede deshacerlo hasta el {until}.",

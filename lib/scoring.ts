@@ -1089,7 +1089,12 @@ export interface ScoreBreakdown {
   scanKind?: ScanKind;
 }
 
-export type ScanKind = "full" | "website_recheck" | "scoring_update";
+/** "google_connected": Google was connected or reconnected (its data
+ * changed the score); "data_update": the saved data changed the score
+ * between scans (an owner answer, a Google refresh) — saved so the ring,
+ * "Since last scan" and Reports always show the same number. Neither is
+ * a scan: the re-scan limit and "last scan" ignore them. */
+export type ScanKind = "full" | "website_recheck" | "scoring_update" | "google_connected" | "data_update";
 
 export interface Suggestion {
   checkId: string;

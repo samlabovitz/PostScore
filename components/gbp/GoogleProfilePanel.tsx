@@ -202,21 +202,17 @@ export function GoogleProfilePanel({
             <div className="flex flex-col gap-3">
               <ProfileEditsOnGoogle businessId={businessId} />
               {/* The website link and customer details: always changeable here, even when their checks are Done
-                  (the Overview shows their buttons only while they lose points). Real Google — never practice. */}
-              {connected && (
-                <>
-                  <Card className="flex flex-col gap-2 p-4 sm:p-5" data-testid="edit-website-link">
-                    <h3 className="text-[15px] font-semibold text-ink">{t(locale, "dashboard.gbpProfileEdits.field.websiteLink")}</h3>
-                    <p className="text-[13px] leading-snug text-ink-soft">{t(locale, "dashboard.gbpProfileEdits.websiteLinkIntro")}</p>
-                    <WebsiteLinkFix businessId={businessId} suggested={gbpEdit.websiteSuggested ?? null} />
-                  </Card>
-                  <Card className="flex flex-col gap-2 p-4 sm:p-5" data-testid="edit-customer-details">
-                    <h3 className="text-[15px] font-semibold text-ink">{t(locale, "dashboard.gbpProfileEdits.field.customerDetails")}</h3>
-                    <p className="text-[13px] leading-snug text-ink-soft">{t(locale, "dashboard.gbpProfileEdits.customerDetailsIntro")}</p>
-                    <CustomerDetailsGoogleEdit businessId={businessId} />
-                  </Card>
-                </>
-              )}
+                  (the Overview shows their buttons only while they lose points). Practice mode: the fake Google. */}
+              <Card className="flex flex-col gap-2 p-4 sm:p-5" data-testid="edit-website-link">
+                <h3 className="text-[15px] font-semibold text-ink">{t(locale, "dashboard.gbpProfileEdits.field.websiteLink")}</h3>
+                <p className="text-[13px] leading-snug text-ink-soft">{t(locale, "dashboard.gbpProfileEdits.websiteLinkIntro")}</p>
+                <WebsiteLinkFix businessId={businessId} suggested={gbpEdit.websiteSuggested ?? null} autoLoad />
+              </Card>
+              <Card className="flex flex-col gap-2 p-4 sm:p-5" data-testid="edit-customer-details">
+                <h3 className="text-[15px] font-semibold text-ink">{t(locale, "dashboard.gbpProfileEdits.field.customerDetails")}</h3>
+                <p className="text-[13px] leading-snug text-ink-soft">{t(locale, "dashboard.gbpProfileEdits.customerDetailsIntro")}</p>
+                <CustomerDetailsGoogleEdit businessId={businessId} autoLoad />
+              </Card>
             </div>
           ) : premium ? (
             <Card className="p-5">

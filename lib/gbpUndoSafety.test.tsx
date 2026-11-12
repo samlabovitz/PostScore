@@ -11,7 +11,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 // mocked: no test calls Google, and nothing is ever written to it.
 
 import { latestUndoable, undoPlan, type GbpChangeRow } from "@/lib/gbpAttributes";
-import { applyCustomerDetailsChange, getUndoableChange, undoCustomerDetailsChange, type GbpChangeStore, type GbpEditTarget } from "@/lib/gbpAttributes.server";
+import { applyCustomerDetailsChange, getUndoableChange, undoCustomerDetailsChange, type GbpChangeStore, type GbpEditTarget, type GoogleWriteLogRow } from "@/lib/gbpAttributes.server";
 import { applyOrderLinkEdit, getOrderLinkUndo, undoOrderLink, type OrderLinkStore, type OrderLinkUndo } from "@/lib/gbpOrderLink.server";
 import { closeOpenUndos, disconnectGbpData } from "@/lib/gbpTokens.server";
 import { websitePlatform } from "@/lib/gbpPlaceActions";
@@ -52,15 +52,23 @@ function google(location: string, opts: { current: unknown[]; pending?: boolean[
   return { calls, fetchImpl, patches: () => calls.filter((c) => c.method === "PATCH") };
 }
 
-function memStore() {
+function memStore(logReady = true) {
   const rows: Array<GbpChangeRow & Record<string, unknown>> = [];
+  const logs: GoogleWriteLogRow[] = [];
   const store: GbpChangeStore = {
     approvalsSince: async () => [],
     rowsSince: async (businessId, since, kind = "attributes") => rows.filter((r) => r.business_id === businessId && r.kind === kind && r.approved_at >= since),
     insert: async (newRows) => (rows.push(...newRows.map((r) => ({ undo_of: null, undone_at: null, ...r }) as GbpChangeRow & Record<string, unknown>)), true),
     markUndone: async (batchId, at) => (rows.forEach((r) => r.batch_id === batchId && (r.undone_at = at)), true),
+    setStatus: async (batchId, status, reason) => {
+      for (const r of rows) if (r.batch_id === batchId) Object.assign(r, { status, error_reason: reason });
+    },
+    editLogReady: async () => logReady,
+    logEdit: async (row) => {
+      logs.push(row);
+    },
   };
-  return { rows, store };
+  return { rows, logs, store };
 }
 
 const row = (extra: Partial<GbpChangeRow> = {}): GbpChangeRow => ({
@@ -82,21 +90,21 @@ describe("M1: undo only on the location the change was made on", () => {
   test("every logged row records its location (approval and undo)", async () => {
     const { rows, store } = memStore();
     const g = google(LOC, { current: CARDS(false) });
-    await applyCustomerDetailsChange(target, { "attributes/pay_credit_card": true }, store, g.fetchImpl, NOW);
+    await applyCustomerDetailsChange(target, { "attributes/pay_credit_card": true }, store, { fetchImpl: g.fetchImpl, now: NOW });
     const undo = (await getUndoableChange(store, "biz-1", LOC, NOW + DAY))!;
-    expect(await undoCustomerDetailsChange(target, undo.batchId, store, g.fetchImpl, NOW + DAY)).toEqual({ status: "sent" });
+    expect(await undoCustomerDetailsChange(target, undo.batchId, store, { fetchImpl: g.fetchImpl, now: NOW + DAY })).toEqual({ status: "sent" });
     expect(rows).toHaveLength(2);
     expect(rows.every((r) => r.location_name === LOC)).toBe(true);
   });
 
   test("edit listing A, reconnect to listing B: no undo offered, and undo sends nothing to B", async () => {
     const { store } = memStore();
-    await applyCustomerDetailsChange(target, { "attributes/pay_credit_card": true }, store, google(LOC, { current: CARDS(false) }).fetchImpl, NOW);
+    await applyCustomerDetailsChange(target, { "attributes/pay_credit_card": true }, store, { fetchImpl: google(LOC, { current: CARDS(false) }).fetchImpl, now: NOW });
     const batchId = (await getUndoableChange(store, "biz-1", LOC, NOW))!.batchId;
     // Now connected to B, which happens to hold the logged "after" value.
     expect(await getUndoableChange(store, "biz-1", OTHER, NOW + DAY)).toBeNull();
     const b = google(OTHER, { current: CARDS(true) });
-    expect(await undoCustomerDetailsChange({ ...target, locationName: OTHER }, batchId, store, b.fetchImpl, NOW + DAY)).toEqual({ status: "error", error: "undo_expired" });
+    expect(await undoCustomerDetailsChange({ ...target, locationName: OTHER }, batchId, store, { fetchImpl: b.fetchImpl, now: NOW + DAY })).toEqual({ status: "error", error: "undo_expired" });
     expect(b.calls).toEqual([]);
   });
 
@@ -184,7 +192,7 @@ describe("M1: disconnecting Google closes every open undo", () => {
 
   test("a closed change is no longer offered", async () => {
     const { rows, store } = memStore();
-    await applyCustomerDetailsChange(target, { "attributes/pay_credit_card": true }, store, google(LOC, { current: CARDS(false) }).fetchImpl, NOW);
+    await applyCustomerDetailsChange(target, { "attributes/pay_credit_card": true }, store, { fetchImpl: google(LOC, { current: CARDS(false) }).fetchImpl, now: NOW });
     rows.forEach((r) => (r.undo_closed_at = new Date(NOW + 1000).toISOString()));
     expect(await getUndoableChange(store, "biz-1", LOC, NOW + DAY)).toBeNull();
   });
@@ -231,11 +239,11 @@ describe("M3: changes Google is still reviewing", () => {
     const { rows, store } = memStore();
     // Approved while pending: Google keeps showing "no" (the old value).
     const g = google(LOC, { current: CARDS(false), pending: [true] });
-    expect(await applyCustomerDetailsChange(target, { "attributes/pay_credit_card": true }, store, g.fetchImpl, NOW)).toMatchObject({ status: "pending_review" });
+    expect(await applyCustomerDetailsChange(target, { "attributes/pay_credit_card": true }, store, { fetchImpl: g.fetchImpl, now: NOW })).toMatchObject({ status: "pending_review" });
     const undo = (await getUndoableChange(store, "biz-1", LOC, NOW + DAY))!;
     expect(undo.status).toBe("pending_review");
 
-    expect(await undoCustomerDetailsChange(target, undo.batchId, store, g.fetchImpl, NOW + DAY)).toEqual({ status: "sent", pending: true });
+    expect(await undoCustomerDetailsChange(target, undo.batchId, store, { fetchImpl: g.fetchImpl, now: NOW + DAY })).toEqual({ status: "sent", pending: true });
     // Before: no PATCH at all ("already back"). Now: the restore goes to Google.
     const restore = g.patches()[1];
     expect(restore.url.searchParams.get("attributeMask")).toBe("attributes/pay_credit_card");
@@ -248,9 +256,9 @@ describe("M3: changes Google is still reviewing", () => {
     const { store } = memStore();
     // Pending at approval; the restore's re-check says it's done.
     const g = google(LOC, { current: CARDS(false), pending: [true, false] });
-    await applyCustomerDetailsChange(target, { "attributes/pay_credit_card": true }, store, g.fetchImpl, NOW);
+    await applyCustomerDetailsChange(target, { "attributes/pay_credit_card": true }, store, { fetchImpl: g.fetchImpl, now: NOW });
     const undo = (await getUndoableChange(store, "biz-1", LOC, NOW + DAY))!;
-    expect(await undoCustomerDetailsChange(target, undo.batchId, store, g.fetchImpl, NOW + DAY)).toEqual({ status: "sent" });
+    expect(await undoCustomerDetailsChange(target, undo.batchId, store, { fetchImpl: g.fetchImpl, now: NOW + DAY })).toEqual({ status: "sent" });
     expect(g.patches()).toHaveLength(2);
   });
 

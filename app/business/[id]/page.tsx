@@ -6,12 +6,15 @@ import { getPlan } from "@/lib/premium";
 import { rescanGate } from "@/lib/rescanPolicy";
 import { lastOwnerRescanAt } from "@/lib/placesSearchBudget.server";
 import { Card } from "@/components/ui/Card";
-import { scoreBusinessById, getScoreHistory, getRecentScoreSnapshots } from "@/app/actions/scoring";
+import { scoreBusinessById, getScoreHistory, getRecentScoreSnapshots, syncScoreSnapshot } from "@/app/actions/scoring";
+import { GoogleConnectedNote, GoogleDisconnectedBanner } from "@/components/gbp/GoogleConnectionNotices";
+import { connectedScoreChange } from "@/lib/gbpConnectedNote";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { getLocalBenchmark } from "@/app/actions/competitors";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { getCustomerDetailsUndo } from "@/app/actions/gbpCustomerDetails";
 import { GbpEditProvider } from "@/components/gbp/CustomerDetailsGoogleEdit";
+import { googleWritesPageState } from "@/app/actions/gbpWebsiteLink";
 import { getWebsiteLinkUndoForPage } from "@/app/actions/gbpWebsiteLink";
 import { shownWebsite } from "@/lib/businessWebsite";
 import { isPremiumPlan } from "@/lib/plan";
@@ -113,6 +116,11 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
     );
   }
 
+  // One score everywhere: the ring scores the saved data live, so if that
+  // changed since the last snapshot (Google, an owner answer), save one
+  // first — the ring, "Since last scan" and its card then agree.
+  await syncScoreSnapshot(params.id);
+
   const [history, recentSnapshots, benchmark, gbpStatus, actionPlan, niche, upgrade, lastOwnerRescan, replyDrafts, freePostai] = await Promise.all([
     getScoreHistory(params.id),
     getRecentScoreSnapshots(params.id, 2),
@@ -181,12 +189,23 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
           />
         </div>
       )}
+      {gbpStatus.status === "ok" && gbpStatus.needsReconnect && (
+        <div className="mb-6">
+          <GoogleDisconnectedBanner businessId={params.id} premium={isPremiumPlan(upgrade.plan)} dataFrom={gbpStatus.dataFrom ?? null} />
+        </div>
+      )}
+      {searchParams.gbp === "connected" && gbpStatus.status === "ok" && gbpStatus.connected && (
+        <div className="mb-6">
+          <GoogleConnectedNote {...connectedScoreChange(recentSnapshots, Date.now())} />
+        </div>
+      )}
       <GbpEditProvider
         value={{
           premium: isPremiumPlan(upgrade.plan),
           connected: gbpStatus.status === "ok" && gbpStatus.connected,
           undo: await getCustomerDetailsUndo(params.id),
           websiteUndo: await getWebsiteLinkUndoForPage(params.id),
+          ...(await googleWritesPageState(params.id)),
           websiteSuggested: (() => {
             const shown = shownWebsite(scored.business);
             return shown.kind === "site" && shown.source !== "listing" ? shown.url : null;
