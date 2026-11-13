@@ -1,6 +1,8 @@
 "use client";
 
-// The one-time "We think you're a Skate & snow shop — Change" banner
+// The one-time "We think you're a Skate & snow shop — Change" banner, or
+// "We picked Art & pottery classes — Change" for PostScore's own pick when
+// the business was added
 // (Overview). Never a silent guess: shown until the owner confirms
 // ("Looks right"), changes it, or dismisses it. A suggestion from another
 // type (Google says ice cream shop, the owner chose café) keeps the owner's
@@ -12,7 +14,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { IconTag } from "@tabler/icons-react";
 import { confirmBusinessNiche } from "@/app/actions/niches";
-import { nicheDisplayName, nicheSentencePhrase, OPEN_PICKER_PARAM } from "@/lib/niches";
+import { nicheById, nicheDisplayName, nicheSentencePhrase, OPEN_PICKER_PARAM } from "@/lib/niches";
 import { t, useLocale } from "@/lib/i18n";
 import type { NicheBannerKind } from "@/lib/businessNiche";
 
@@ -46,7 +48,9 @@ export function NicheBanner({ businessId, kind, nicheId, suggestion, parentLabel
       ? t(locale, "dashboard.niche.suggest", { suggested: nicheSentencePhrase(suggestion, locale), current })
       : kind === "needsOwner"
         ? t(locale, "dashboard.niche.needsOwner", { parent: parentLabel.toLowerCase() })
-        : t(locale, "dashboard.niche.weThink", { niche: nicheSentencePhrase(nicheId, locale) });
+        : kind === "picked"
+          ? t(locale, "dashboard.niche.picked", { niche: nicheById(nicheId)?.label[locale] ?? current })
+          : t(locale, "dashboard.niche.weThink", { niche: nicheSentencePhrase(nicheId, locale) });
 
   function dismiss() {
     setHidden(true);

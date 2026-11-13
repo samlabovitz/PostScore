@@ -286,7 +286,7 @@ const SPECIFIC: Partial<Record<BusinessTypeId, Row[]>> = {
     ["music_lessons", "Music lessons & piano teacher", "Clases de música y piano", [], ["music lessons", "piano lessons", "piano teacher", "guitar lessons", "voice lessons", "piano"], ["music_school", "music_store", "dance_studio"]],
     ["music_school", "Music school", "Escuela de música", [], ["music school", "conservatory", "school of music"], ["music_lessons"]],
     ["language_school", "Language school", "Escuela de idiomas", [], ["language school", "esl", "spanish lessons", "english classes"], ["tutor_education"]],
-    ["art_classes", "Art & pottery classes", "Clases de arte", [], ["art class", "art classes", "pottery", "paint and sip", "ceramics studio"], ["craft_fabric", "after_school"]],
+    ["art_classes", "Art & pottery classes", "Clases de arte", [], ["art class", "art classes", "pottery", "paint and sip", "ceramics studio", "ceramic studio", "ceramics", "clay studio", "pottery studio", "pottery classes", "wheel throwing", "cerámica"], ["craft_fabric", "after_school"]],
     ["coding_stem", "Coding & STEM", "Programación y STEM", [], ["coding", "stem", "robotics"], ["tutor_education"]],
     ["driving_school", "Driving school", "Autoescuela", ["driving_school"], ["driving school", "driver training"], ["tutor_education"]],
   ],

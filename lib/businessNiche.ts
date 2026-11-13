@@ -25,7 +25,10 @@ export interface BusinessNicheRow {
   competitor_scope?: string | null;
 }
 
-export type NicheSource = "owner" | "approved" | "detected";
+/** "auto": PostScore's own pick when the business was added
+ * (lib/businessTypeDetect.server.ts) — saved, shown as "We picked … —
+ * Change" until the owner confirms or changes it. */
+export type NicheSource = "owner" | "approved" | "auto" | "detected";
 
 export interface ResolvedNiche {
   nicheId: string;
@@ -53,7 +56,7 @@ export function resolveBusinessNiche(row: BusinessNicheRow): ResolvedNiche {
     tradeName: row.trade_id ? tradeLabel(row.trade_id, "en") : null,
   };
   if (saved && saved.parent === parent) {
-    const source: NicheSource = row.niche_source === "approved" ? "approved" : "owner";
+    const source: NicheSource = row.niche_source === "approved" ? "approved" : row.niche_source === "auto" ? "auto" : "owner";
     return { nicheId: saved.id, parent, source, confidence: "saved", suggestion: null, needsOwner: false, confirmed, showBanner: !confirmed && source !== "owner" };
   }
   const detected = detectNiche(input, parent);
@@ -72,11 +75,12 @@ export function competitorScopeFor(resolved: ResolvedNiche, row: Pick<BusinessNi
   };
 }
 
-export type NicheBannerKind = "weThink" | "suggest" | "needsOwner";
+export type NicheBannerKind = "weThink" | "suggest" | "needsOwner" | "picked";
 
 /** Which one-time banner (if any) a business gets. */
-export function nicheBannerKind(resolved: Pick<ResolvedNiche, "showBanner" | "suggestion" | "needsOwner">): NicheBannerKind | null {
+export function nicheBannerKind(resolved: Pick<ResolvedNiche, "showBanner" | "suggestion" | "needsOwner"> & { source?: NicheSource }): NicheBannerKind | null {
   if (!resolved.showBanner) return null;
+  if (resolved.source === "auto") return "picked";
   if (resolved.suggestion) return "suggest";
   if (resolved.needsOwner) return "needsOwner";
   return "weThink";

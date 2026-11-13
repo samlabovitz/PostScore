@@ -20,7 +20,7 @@ import { allNiches, nicheById, nicheDisplayName, OPEN_PICKER_PARAM } from "@/lib
 import { getBizProfileOptions } from "@/config/bizProfiles";
 import { formatShortDate, t, useLocale, useTimeZone, type MessageKey } from "@/lib/i18n";
 
-export type NicheSource = "owner" | "approved" | "detected";
+export type NicheSource = "owner" | "approved" | "auto" | "detected";
 
 /** How long the "Saved" confirmation stays before it fades. */
 export const SAVED_NOTE_MS = 3000;

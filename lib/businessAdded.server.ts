@@ -9,12 +9,16 @@ import "server-only";
 //    cases). It scores the data the add just saved — no Google call — and
 //    is a no-op when the business already has a saved scan (re-adding
 //    the same listing).
+//    Before it: its business type, when none is set and we're confident
+//    (lib/businessTypeDetect.server.ts) — so the first score and the
+//    competitor scan use it.
 // 2. Its first competitor scan (once ever), which ranks it.
 // Neither step ever fails the save.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 type SaveFirst = (supabase: SupabaseClient, businessId: string) => Promise<{ status: string; message?: string }>;
+type DetectType = (supabase: SupabaseClient, businessId: string) => Promise<{ status: string }>;
 type EnsureCompetitors = (supabase: SupabaseClient, businessId: string) => Promise<unknown>;
 
 /** Saves the business's first score snapshot unless it already has one. */
@@ -34,9 +38,16 @@ export async function saveFirstScoreSnapshotWithClient(
 export async function afterBusinessAdded(
   supabase: SupabaseClient,
   businessId: string,
-  deps: { saveFirst?: SaveFirst; ensureCompetitors?: EnsureCompetitors } = {}
+  deps: { saveFirst?: SaveFirst; ensureCompetitors?: EnsureCompetitors; detectType?: DetectType } = {}
 ): Promise<void> {
   const saveFirst = deps.saveFirst ?? saveFirstScoreSnapshotWithClient;
+  const detectType = deps.detectType ?? (async (s: SupabaseClient, id: string) => (await import("@/lib/businessTypeDetect.server")).detectAndSaveBusinessTypeWithClient(s, id));
+  try {
+    const detected = await detectType(supabase, businessId);
+    if (detected.status === "error" || detected.status === "not_enabled") console.error(`[businessAdded] business type for ${businessId}: ${detected.status}`);
+  } catch (err) {
+    console.error(`[businessAdded] business type for ${businessId}:`, err instanceof Error ? err.message : err);
+  }
   try {
     const first = await saveFirst(supabase, businessId);
     if (first.status === "error") console.error(`[businessAdded] first score for ${businessId}: ${first.message}`);

@@ -63,7 +63,7 @@ function norm(text: string): string {
     .replace(/[’′]/g, "'");
 }
 
-function hasKeyword(text: string, keyword: string): boolean {
+export function hasKeyword(text: string, keyword: string): boolean {
   if (!text) return false;
   const kw = norm(keyword).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`(^|[^a-z0-9])${kw}([^a-z0-9]|$)`).test(norm(text));

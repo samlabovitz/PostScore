@@ -762,6 +762,7 @@ export type MessageKey =
   | "dashboard.competitors.groups.notSaved"
   | "dashboard.competitors.groups.allSameKind"
   | "dashboard.niche.weThink"
+  | "dashboard.niche.picked"
   | "dashboard.niche.suggest"
   | "dashboard.niche.needsOwner"
   | "dashboard.niche.looksRight"
@@ -5761,6 +5762,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.groups.notSaved": "Shown here, but not saved yet — PostScore needs a quick update first.",
     "dashboard.competitors.groups.allSameKind": "Every business in your last scan is the same kind as yours.",
     "dashboard.niche.weThink": "We think you're {niche}.",
+    "dashboard.niche.picked": "We picked {niche} for your business.",
     "dashboard.niche.suggest": "We think you're {suggested} (you chose {current}).",
     "dashboard.niche.needsOwner": "Tell us what kind of {parent} you are, so we compare you with the right businesses.",
     "dashboard.niche.looksRight": "Looks right",
@@ -11111,6 +11113,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.groups.notSaved": "Se muestra aquí, pero todavía no se guarda — PostScore necesita una actualización rápida primero.",
     "dashboard.competitors.groups.allSameKind": "Todos los negocios de su último análisis son del mismo tipo que el suyo.",
     "dashboard.niche.weThink": "Creemos que su tipo de negocio es: {niche}.",
+    "dashboard.niche.picked": "Elegimos {niche} para su negocio.",
     "dashboard.niche.suggest": "Creemos que su tipo de negocio es: {suggested} (usted eligió {current}).",
     "dashboard.niche.needsOwner": "Díganos qué tipo de {parent} es su negocio, para compararlo con los negocios correctos.",
     "dashboard.niche.looksRight": "Es correcto",
