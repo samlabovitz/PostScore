@@ -723,6 +723,37 @@ function findContactPageCandidate(candidates: DiscoveredPage[], homepageUrl: URL
   return null;
 }
 
+/** Bilingual classes/events page link keywords ("One-Time 1-2 Day
+ * Workshops", "Classes", "Events", "Talleres"). */
+const LISTING_PAGE_LINK_KEYWORDS = ["workshop", "class", "event", "calendar", "camp", "lesson", "course", "taller", "clases", "evento", "calendario", "curso"];
+
+/** Finds this site's own classes/events page link, if any — the real
+ * Centered Clay Studio case: upcoming workshop dates ("Saturday, November
+ * 14") only on /one-time-12-day-workshops, while the homepage shows
+ * nothing newer than "© 2023". Read for site freshness only (see
+ * collectWebsiteTrust's own listingPageHtml doc). Same-brand host only;
+ * never the homepage itself. */
+export function findListingPageCandidate(candidates: DiscoveredPage[], homepageUrl: URL): DiscoveredPage | null {
+  const homeHostExact = normalizeHost(homepageUrl.hostname);
+  const homePath = normalizePath(homepageUrl.pathname);
+  for (const c of candidates) {
+    let u: URL;
+    try {
+      u = new URL(c.url);
+    } catch {
+      continue;
+    }
+    if (!sameBrandHost(u.hostname, homepageUrl.hostname)) continue;
+    const path = normalizePath(u.pathname);
+    if (normalizeHost(u.hostname) === homeHostExact && path === homePath) continue;
+    const haystack = `${c.label} ${path}`.toLowerCase();
+    if (LISTING_PAGE_LINK_KEYWORDS.some((kw) => haystack.includes(kw))) {
+      return { url: `${u.origin}${u.pathname}`, label: c.label };
+    }
+  }
+  return null;
+}
+
 /** Shared mutable state for one scan's about+services detection — a
  * single object so both calls (see detectPagePresence) draw from the
  * same MAX_PRESENCE_EXTRA_FETCHES budget and never double-fetch the
@@ -1713,7 +1744,12 @@ export async function collectWebsiteTrust(
   // that guards against) and only ever used for the info-consistency
   // comparison below — never spam/stale-notice/abandoned-site
   // detection, which stay homepage-only by design.
-  contactPageHtml: string | null = null
+  contactPageHtml: string | null = null,
+  // The site's own classes/events page (findListingPageCandidate), when the
+  // shared fetch budget allowed it — read ONLY for site freshness: its
+  // dates, including class dates written without a year, count toward the
+  // newest date (detectAbandonedSignals). Never spam or stale notices.
+  listingPageHtml: string | null = null
 ): Promise<WebsiteTrustAnalysis> {
   const checkedAt = now.toISOString();
   const target = /^https?:\/\//i.test(websiteUrl.trim()) ? websiteUrl.trim() : `https://${websiteUrl.trim()}`;
@@ -1758,7 +1794,7 @@ export async function collectWebsiteTrust(
     infoConflicts: withMapAddress(compareListingInfo(wholePageText, google, contactPageText), embeddedMap, google.address),
     embeddedMap,
     staleNotices: findStaleNotices(wholePageText, now),
-    abandonedSignals: detectAbandonedSignals(wholePageText, now),
+    abandonedSignals: detectAbandonedSignals(wholePageText, now, listingPageHtml ? [extractMainContentVisibleText(listingPageHtml)] : []),
     websiteKind,
     // Step 2d: only a genuine HTTP 404/410 on the listing's own URL marks
     // the link broken (set in saveBusinessWithClient) — never page text,
@@ -2060,8 +2096,16 @@ export async function collectWebsiteAnalysis(
     return outcome?.kind === "ok" ? outcome.html : null;
   });
 
-  const trustPromise = Promise.all([htmlResultPromise, contactPageHtmlPromise]).then(([r, contactPageHtml]) =>
-    collectWebsiteTrust(r.html, website, google, keys.safeBrowsingApiKey, now, fetchImpl, contactPageHtml)
+  const listingPageHtmlPromise: Promise<string | null> = Promise.all([htmlResultPromise, candidatesPromise]).then(async ([r, disc]) => {
+    if (!r.html || !disc) return null;
+    const listingCandidate = findListingPageCandidate(disc.candidates, disc.homepageUrl);
+    if (!listingCandidate) return null;
+    const outcome = await fetchPresenceCandidateBudgeted(listingCandidate.url, sharedPresenceBudget, fetchImpl);
+    return outcome?.kind === "ok" ? outcome.html : null;
+  });
+
+  const trustPromise = Promise.all([htmlResultPromise, contactPageHtmlPromise, listingPageHtmlPromise.catch(() => null)]).then(([r, contactPageHtml, listingPageHtml]) =>
+    collectWebsiteTrust(r.html, website, google, keys.safeBrowsingApiKey, now, fetchImpl, contactPageHtml, listingPageHtml)
   );
 
   const [htmlResult, contentResult, pageSpeedResult, screenshotsResult, presenceResult, trustResult, contactPageResult] = await Promise.allSettled([
