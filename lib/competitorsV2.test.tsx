@@ -323,7 +323,7 @@ describe("practice type for professional services", () => {
     expect(practiceFromWebsite("https://smithlaw.com", "lawyer")).toBeNull();
     expect(practiceFromWebsite("http://glscrimlaw.com/", "salon")).toBeNull();
     const fields = nicheScanFields({ nicheId: "lawyer", parent: "lawyer", source: "detected", confidence: "general" }, null, "http://glscrimlaw.com/");
-    expect(fields.queryNiche).toEqual({ labelEn: "Criminal defense", parent: "lawyer" });
+    expect(fields.queryNiche).toEqual({ id: "criminal_defense", labelEn: "Criminal defense", parent: "lawyer" });
     expect(fields.nicheRule).toMatchObject({ nicheId: "criminal_defense", professional: true });
     expect(competitorTextQuery({ nicheLabelEn: "Criminal defense", nicheParent: "lawyer", address: "205 W Randolph St #610, Chicago, IL 60606, USA" })).toBe("criminal defense lawyers in Chicago, IL");
     expect(competitorQueryNoun({ nicheLabelEn: "Personal injury law", nicheParent: "lawyer" })).toBe("personal injury lawyers");

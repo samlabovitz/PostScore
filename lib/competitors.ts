@@ -5,7 +5,7 @@
 // scores, no invented "rank" metric other than PostScore itself.
 
 import { MAX_SEARCH_RADIUS_MILES, SMALL_TOWN_RADIUS_MILES } from "@/lib/competitorScanPolicy";
-import { alsoNearby, establishedCount, MIN_ESTABLISHED_COMPETITORS, relevanceScore, selectCompetitors, temporarilyClosedNearby, type AlsoNearbyListing, type PoolEntry } from "@/lib/competitorQuality";
+import { alsoNearby, establishedCount, MAX_COMPETITOR_DISTANCE_MILES, MIN_ESTABLISHED_COMPETITORS, relevanceScore, selectCompetitors, temporarilyClosedNearby, type AlsoNearbyListing, type PoolEntry } from "@/lib/competitorQuality";
 import { MAX_CALLS_PER_SCAN } from "@/lib/placesSearchBudget";
 import { GOOGLE_TABLE_A_TYPES } from "@/lib/google/placeTypesTableA";
 import {
@@ -25,7 +25,7 @@ import {
   type PlaceDetails,
   type ServiceOptions,
 } from "@/lib/google/places";
-import { competitorTextQuery } from "@/lib/competitorQuery";
+import { competitorPhraseQueries, competitorTextQuery, phraseMatch, type PhraseVerdict } from "@/lib/competitorQuery";
 import { categoryFamilyFor, comparableTypesFor, NON_HAIR_SERVICE_EXCLUSIONS } from "@/lib/categoryFamily";
 import { onePerBrand } from "@/lib/competitorChains";
 import { classifyCompetitor, nicheById } from "@/lib/niches";
@@ -82,6 +82,32 @@ export const TEXT_SEARCH_ENOUGH = 5;
 /** Google's own top results for the customer's query count as the same
  * kind for a niche with no Google type of its own (with the same type). */
 const TEXT_TOP_TRUSTED = 3;
+/** Business types searched with their own phrases (NICHE_SEARCH_PHRASES):
+ * kept within this distance, widened to PHRASE_WIDE_MILES only when fewer
+ * than PHRASE_ENOUGH pass the strict rule — never padded with other kinds.
+ * The widest is the app's own limit (MAX_COMPETITOR_DISTANCE_MILES): saved
+ * scans, head-to-head and "Add a competitor" never show anyone farther. */
+const PHRASE_NEAR_MILES = 10;
+const PHRASE_WIDE_MILES = MAX_COMPETITOR_DISTANCE_MILES;
+const PHRASE_ENOUGH = 3;
+/** Each phrase search is biased to PHRASE_NEAR_MILES around the business; a
+ * bias isn't a limit, so the same results also cover the wider distance —
+ * widening costs no extra call. */
+const PHRASE_BIAS_METERS = PHRASE_NEAR_MILES * METERS_PER_MILE;
+
+/** One place a phrase search turned up, with the strict rule's verdict —
+ * for the scan's own report (scripts, DEBUG_COMPETITORS). */
+export interface PhraseFilterEntry {
+  placeId: string;
+  name: string | null;
+  query: string;
+  fallback: boolean;
+  distanceMiles: number | null;
+  verdict: PhraseVerdict;
+  /** Kept as a competitor candidate (passed, open, within the distance used). */
+  kept: boolean;
+}
+
 /** At most this many owner-added competitors per business. */
 export const MAX_OWNER_ADDED = 5;
 /** Nearby Search returns at most 20 places per call. */
@@ -135,7 +161,7 @@ export interface CompetitorSourceBusiness extends BusinessScoringRow {
   niche?: { directTypes: string[]; wideTypes: string[] } | null;
   /** Competitor selection v2: the niche's English label and parent type,
    * for the customer's query words ("hair salons in Tarrytown, NY"). */
-  queryNiche?: { labelEn: string; parent: string } | null;
+  queryNiche?: { id?: string; labelEn: string; parent: string } | null;
   /** Who counts as the same kind beyond Google's types — a niche with no
    * Google type of its own, or a practice (lib/competitorNicheRule.ts). */
   nicheRule?: NicheRule | null;
@@ -549,7 +575,11 @@ export async function findAndScoreCompetitors(
   locale: Locale,
   /** Diagnostics only (scripts/competitors-v2-dry-run.ts): every raw search
    * result, in Google's order. Never changes the result. */
-  observe?: { onSearch?: (stage: "text" | "nearby", candidates: NearbyCandidate[]) => void }
+  observe?: {
+    onSearch?: (stage: "text" | "nearby", candidates: NearbyCandidate[]) => void;
+    /** Every place a phrase search found, kept or rejected, and why. */
+    onPhraseFilter?: (entries: PhraseFilterEntry[], searchedMiles: number) => void;
+  }
 ): Promise<CompetitorScanResult> {
   const categoryLabel = subject.category ?? subject.primaryType ?? null;
 
@@ -579,8 +609,11 @@ export async function findAndScoreCompetitors(
   const broadFood = nicheDirect.length === 0 && fallbackTypes.length === 0 && !!googleSpecificType && BROAD_FOOD_TYPES.has(googleSpecificType) && !googleNonBroad;
   const specificType = nicheDirect[0] ?? (googleSpecificType && BROAD_FOOD_TYPES.has(googleSpecificType) ? (googleNonBroad ?? googleSpecificType) : googleSpecificType) ?? fallbackTypes[0] ?? null;
   const referenceDisplayName = subject.category ?? null;
+  // Business types with their own search phrases don't need a specific
+  // Google type: the phrases and the strict rule decide.
+  const phraseQueries = competitorPhraseQueries(subject.queryNiche?.id);
 
-  if (hasAnyTypeData && !specificType) {
+  if (hasAnyTypeData && !specificType && !phraseQueries) {
     // The subject has real Google type data, but every type on it is too
     // generic to match on (e.g. only "store"/"point_of_interest"/
     // "establishment" — no specific type like "book_store" or
@@ -608,7 +641,7 @@ export async function findAndScoreCompetitors(
     resolvedReferenceDisplayName: referenceDisplayName,
   });
 
-  if (!referenceType && !referenceDisplayName) {
+  if (!referenceType && !referenceDisplayName && !phraseQueries) {
     return emptyResult("no_category", t(locale, "dashboard.competitors.noCategoryError"), categoryLabel);
   }
 
@@ -695,9 +728,68 @@ export async function findAndScoreCompetitors(
   // Tarrytown, NY", biased around the business, one page in Google's own
   // order. Nearby Search below is only the fallback when that turns up
   // fewer than TEXT_SEARCH_ENOUGH of the same kind.
-  const textQuery = competitorTextQuery({ nicheLabelEn: subject.queryNiche?.labelEn, nicheParent: subject.queryNiche?.parent, primaryType: specificType, address: subject.address });
+  const textQuery = phraseQueries ? null : competitorTextQuery({ nicheId: subject.queryNiche?.id, nicheLabelEn: subject.queryNiche?.labelEn, nicheParent: subject.queryNiche?.parent, primaryType: specificType, address: subject.address });
   let textSearchCalls = 0;
   let textSameKind = 0;
+
+  // Business types with their own phrases (the real Centered Clay Studio
+  // case): every phrase near the business, results merged, and only the
+  // places the strict rule keeps (lib/competitorQuery.ts phraseMatch) —
+  // within PHRASE_NEAR_MILES, or PHRASE_WIDE_MILES when that finds fewer
+  // than PHRASE_ENOUGH. No Nearby Search by Google type afterwards: it
+  // can't tell a pottery studio from a music school.
+  if (phraseQueries && subject.queryNiche?.id) {
+    const nicheId = subject.queryNiche.id;
+    const seen = new Map<string, { candidate: NearbyCandidate; entry: PhraseFilterEntry }>();
+    const runQueries = async (queries: string[], fallback: boolean) => {
+      for (const query of queries) {
+        if (placesCalls >= MAX_CALLS_PER_SCAN) break;
+        try {
+          placesCalls++;
+          textSearchCalls++;
+          const results = await searchTextCompetitors({ textQuery: query, lat: subjectLocation.lat, lng: subjectLocation.lng, radiusMeters: PHRASE_BIAS_METERS });
+          observe?.onSearch?.("text", results);
+          for (const c of results) {
+            if (c.placeId === subject.placeId) continue;
+            const prior = seen.get(c.placeId);
+            if (prior && (prior.entry.verdict.ok || fallback === prior.entry.fallback)) continue;
+            const verdict = phraseMatch(nicheId, { name: c.details?.name ?? c.name, types: c.types, website: c.details?.website ?? null }, fallback);
+            const distanceMiles = c.location ? metersToMiles(haversineMeters(subjectLocation, c.location)) : null;
+            seen.set(c.placeId, { candidate: c, entry: { placeId: c.placeId, name: c.details?.name ?? c.name, query, fallback, distanceMiles, verdict, kept: false } });
+          }
+          debugLog(`phrase search "${query}": ${results.length} raw`);
+        } catch (err) {
+          // Never silent; the other phrases still run.
+          console.error(`[competitors] Text Search failed for ${subject.name ?? subject.placeId} ("${query}"):`, err instanceof Error ? err.message : err);
+        }
+      }
+    };
+    const passingWithin = (miles: number) =>
+      Array.from(seen.values()).filter(({ candidate, entry }) => entry.verdict.ok && entry.distanceMiles !== null && entry.distanceMiles <= miles && !isClosedStatus(candidate.businessStatus));
+    await runQueries(phraseQueries.queries, false);
+    if (passingWithin(PHRASE_NEAR_MILES).length < PHRASE_ENOUGH) await runQueries(phraseQueries.fallbackQueries, true);
+    let miles = PHRASE_NEAR_MILES;
+    if (passingWithin(miles).length < PHRASE_ENOUGH) {
+      miles = PHRASE_WIDE_MILES;
+      searchWidened = true;
+    }
+    searchedMeters = miles * METERS_PER_MILE;
+    const keep = passingWithin(miles);
+    for (const k of keep) k.entry.kept = true;
+    const before = pool.length;
+    addToPool(
+      keep.map((k) => k.candidate),
+      () => true,
+      false
+    );
+    textSameKind = pool.length - before;
+    observe?.onPhraseFilter?.(
+      Array.from(seen.values()).map((v) => v.entry),
+      miles
+    );
+    debugLog(`phrase searches: ${seen.size} places, ${keep.length} kept within ${miles} mi`);
+  }
+
   if (textQuery) {
     try {
       placesCalls++;
@@ -725,7 +817,7 @@ export async function findAndScoreCompetitors(
   // comes back full, the same 20 nearest would just repeat in a wider
   // circle, so the next tier asks Google for the most popular instead.
   let lastFull = false;
-  for (let tier = 0; tier < RADIUS_TIERS_METERS.length && textSameKind < TEXT_SEARCH_ENOUGH; tier++) {
+  for (let tier = 0; tier < RADIUS_TIERS_METERS.length && textSameKind < TEXT_SEARCH_ENOUGH && !phraseQueries; tier++) {
     let candidates: NearbyCandidate[];
     const rankPreference = tier > 0 && lastFull ? "POPULARITY" : "DISTANCE";
     try {
@@ -791,7 +883,7 @@ export async function findAndScoreCompetitors(
   // the small-town search only runs when a call is left beyond that.
   const wideTypes = usableFallbackTypes(subject.niche?.wideTypes).filter((t) => !fallbackTypes.includes(t)).slice(0, 50);
   const reservedForAreas = wideTypes.length > 0 ? 1 : 0;
-  if (textSameKind < TEXT_SEARCH_ENOUGH && establishedCount(pool) < MIN_ESTABLISHED_COMPETITORS && placesCalls < MAX_CALLS_PER_SCAN - reservedForAreas) {
+  if (!phraseQueries && textSameKind < TEXT_SEARCH_ENOUGH && establishedCount(pool) < MIN_ESTABLISHED_COMPETITORS && placesCalls < MAX_CALLS_PER_SCAN - reservedForAreas) {
     const farTypes = searchableTypes(Array.from(new Set([...(includedTypes ?? []), ...broaderTypes]))).slice(0, 50);
     try {
       placesCalls++;
@@ -818,7 +910,7 @@ export async function findAndScoreCompetitors(
 
   // The ticked "also competes with" areas: ONE extra search at 3 mi for
   // their Google types, nearest first, never repeating a direct result.
-  if (wideTypes.length > 0 && placesCalls < MAX_CALLS_PER_SCAN) {
+  if (!phraseQueries && wideTypes.length > 0 && placesCalls < MAX_CALLS_PER_SCAN) {
     try {
       placesCalls++;
       const wide = await searchNearbyPlaces({

@@ -52,7 +52,7 @@ export function nicheScanFields(
   resolved: { nicheId: string; parent: string; source: string; confidence: string } | null | undefined,
   scope: Pick<CompetitorScope, "areas"> | null | undefined,
   website: string | null | undefined
-): { queryNiche: { labelEn: string; parent: string } | null; nicheRule: NicheRule | null } {
+): { queryNiche: { id: string; labelEn: string; parent: string } | null; nicheRule: NicheRule | null } {
   if (!resolved) return { queryNiche: null, nicheRule: null };
   let id = resolved.nicheId;
   let names = nicheNamesQuery(resolved);
@@ -65,7 +65,7 @@ export function nicheScanFields(
   }
   const def = nicheById(id);
   if (!def) return { queryNiche: null, nicheRule: null };
-  const queryNiche = names ? { labelEn: def.label.en, parent: def.parent } : null;
+  const queryNiche = names ? { id: def.id, labelEn: def.label.en, parent: def.parent } : null;
   // A general niche ("Salon", "Lawyer") narrows nothing.
   if (isGeneralNiche(def.id) || !names) return { queryNiche, nicheRule: null };
   return {

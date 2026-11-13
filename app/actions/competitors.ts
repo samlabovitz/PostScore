@@ -894,6 +894,6 @@ function comparedWithFor(
 ): { noun: string | null; query: string | null } {
   const { queryNiche } = nicheScanFields(niche?.resolved, niche?.scope, row.website ?? row.verified_website_url);
   const primaryType = [row.primary_type, ...(row.categories ?? [])].find((t) => !!t && !isGenericType(t)) ?? null;
-  const subject = { nicheLabelEn: queryNiche?.labelEn, nicheParent: queryNiche?.parent, primaryType, address: row.address };
+  const subject = { nicheId: queryNiche?.id, nicheLabelEn: queryNiche?.labelEn, nicheParent: queryNiche?.parent, primaryType, address: row.address };
   return { noun: competitorQueryNoun(subject), query: competitorTextQuery(subject) };
 }
