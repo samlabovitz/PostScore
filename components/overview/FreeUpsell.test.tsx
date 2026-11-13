@@ -121,7 +121,10 @@ describe("the upgrade box shows only on Free", () => {
     expect(row("moreDrafts")).toContain("10 AI review reply drafts a week (3 on Free).");
     expect(row("fixGuides")).toMatch(/Guides written for .+, check by check\./);
     expect(row("pdfReports")).toMatch(/Download your weekly report as a PDF\. Premium$/);
-    expect(row("googleProfile")).toMatch(/Coming soon Premium$/);
+    // Editing the listing is built: "(Beta)" in the headline, no Coming soon pill.
+    expect(row("googleProfile")).toMatch(/^Edit your Google listing from PostScore \(Beta\) .*Premium$/);
+    expect(row("googleProfile")).not.toContain("Coming soon");
+    expect(row("googleProfile")).not.toMatch(/photos/i);
     expect(row("aiReplies")).toMatch(/Coming soon Premium$/);
     expect(row("campaignHub")).toMatch(/Coming soon Premium$/);
     expect(row("postaiUnlimited")).not.toContain("Coming soon");

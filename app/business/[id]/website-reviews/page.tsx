@@ -76,7 +76,6 @@ export default async function WebsiteReviewsPage({ params, searchParams = {} }: 
         plan={plan}
         gbpReplyCheck={gbpReplyCheck}
         nearby={benchmark.status === "ok" ? { goal: benchmark.benchmark.reviewGoal, group: benchmark.benchmark.reviewGroup } : null}
-        devPlanSwitch={process.env.NODE_ENV === "development"}
         replyDrafts={replyDrafts}
         // Practice mode (never in production): the inbox with sample reviews, no Google connection needed.
         reviewRepliesPractice={reviewRepliesPracticeOn()}

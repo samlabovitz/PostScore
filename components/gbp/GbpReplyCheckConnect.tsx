@@ -9,6 +9,7 @@ import type { GbpReplyCounts } from "@/lib/gbpReviewReplies";
 import { gbpConnectedText, gbpResultText } from "@/components/gbp/GbpResultMessage";
 import { GBP_REPLY_CHECK_ANCHOR, gbpConnectHref, type GbpConnectResult } from "@/lib/gbpLanding";
 import { formatShortDate, t, useLocale, useTimeZone } from "@/lib/i18n";
+import { googleWritesCopy } from "@/lib/googleWritesLaunch";
 import { cn } from "@/lib/utils";
 
 /** What the server decides for the Reviews-area connect. Null = don't show
@@ -118,7 +119,7 @@ export function GbpReplyCheckConnect({ businessId, state }: { businessId: string
       <p data-testid="gbp-premium-upsell" className="mt-3 flex items-start gap-1.5 border-t border-paper-line pt-2.5 text-[12px] leading-snug text-ink-soft">
         <IconCrown size={13} aria-hidden className="mt-0.5 shrink-0 text-brass" />
         <span>
-          {t(locale, "dashboard.gbp.premiumUpsell")}{" "}
+          {t(locale, googleWritesCopy("premiumUpsell"))}{" "}
           <Link href={`/business/${businessId}/settings#compare-plans`} className="font-semibold text-ink underline-offset-2 hover:underline">
             {t(locale, "dashboard.gbp.comparePlans")}
           </Link>

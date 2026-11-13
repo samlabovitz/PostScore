@@ -3,16 +3,21 @@
 // "Past reports": one compact row per finished week (from its frozen
 // snapshot), grouped by month, newest first. The last 8 weeks, then
 // "Show older" 12 at a time, and a year filter once there's more than a
-// year. Each PDF is drawn on demand when Download is clicked.
+// year. Each PDF is drawn on demand when Download is clicked. The PDF is
+// Premium (like the weekly recap's Download): below Premium each row's
+// Download is a locked Premium feature; the route refuses it too.
 
 import { useState } from "react";
-import { IconDownload } from "@tabler/icons-react";
+import { IconDownload, IconLock } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
 import { formatMonthLabel, formatShortDate, t, useLocale, type MessageKey } from "@/lib/i18n";
 import { groupByMonth } from "@/lib/weekly/snapshots";
 import { getPastReports, type PastReport } from "@/app/actions/weekly";
 import { downloadWeeklyPdf } from "./weeklyPdfDownload";
+import { useUpgrade } from "@/components/upgrade/UpgradeContext";
+import { UpgradeButton } from "@/components/upgrade/UpgradeTrigger";
+import { isPremiumPlan } from "@/lib/plan";
 
 const k = (key: string) => `dashboard.reports.weekly.${key}` as MessageKey;
 const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0");
@@ -20,6 +25,8 @@ const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "
 function PastRow({ businessId, row }: { businessId: string; row: PastReport }) {
   const locale = useLocale();
   const [state, setState] = useState<"idle" | "working" | "error">("idle");
+  const upgrade = useUpgrade();
+  const locked = !!upgrade && !isPremiumPlan(upgrade.plan);
   const day = (ymd: string) => formatShortDate(`${ymd}T12:00:00Z`, locale, "UTC");
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5" data-testid="past-report">
@@ -36,18 +43,30 @@ function PastRow({ businessId, row }: { businessId: string; row: PastReport }) {
       >
         {row.delta === null ? "—" : row.delta === 0 ? t(locale, k("noChange")) : signed(row.delta)}
       </span>
-      <button
-        type="button"
-        onClick={async () => {
-          setState("working");
-          setState((await downloadWeeklyPdf(businessId, row.weekStart, true)) ? "idle" : "error");
-        }}
-        disabled={state === "working"}
-        className="inline-flex items-center gap-1 rounded-md border border-paper-deep bg-white px-2 py-1 text-[12px] font-semibold text-ink hover:border-ink-mute disabled:opacity-50"
-      >
-        <IconDownload size={13} aria-hidden />
-        {state === "working" ? t(locale, "dashboard.reports.recapPreparingDownload") : t(locale, k("downloadShort"))}
-      </button>
+      {locked ? (
+        <UpgradeButton
+          feature="premium"
+          testId="past-report-locked"
+          className="inline-flex items-center gap-1 rounded-md border border-paper-deep bg-white px-2 py-1 text-[12px] font-semibold text-ink hover:border-ink-mute"
+        >
+          <IconLock size={12} aria-hidden className="text-brass" />
+          {t(locale, k("downloadShort"))}
+          <span className="rounded-full bg-paper px-1.5 py-px text-[10.5px] font-semibold text-ink-soft">{t(locale, "dashboard.settings.plan.name.premium")}</span>
+        </UpgradeButton>
+      ) : (
+        <button
+          type="button"
+          onClick={async () => {
+            setState("working");
+            setState((await downloadWeeklyPdf(businessId, row.weekStart, true)) ? "idle" : "error");
+          }}
+          disabled={state === "working"}
+          className="inline-flex items-center gap-1 rounded-md border border-paper-deep bg-white px-2 py-1 text-[12px] font-semibold text-ink hover:border-ink-mute disabled:opacity-50"
+        >
+          <IconDownload size={13} aria-hidden />
+          {state === "working" ? t(locale, "dashboard.reports.recapPreparingDownload") : t(locale, k("downloadShort"))}
+        </button>
+      )}
       {state === "error" && <span className="w-full text-[11.5px] text-red">{t(locale, "dashboard.reports.pdf.error")}</span>}
     </li>
   );

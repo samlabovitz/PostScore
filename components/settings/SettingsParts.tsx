@@ -304,6 +304,13 @@ function PlanCell({ cell }: { cell: Cell }) {
         <span className="rounded-full border border-paper-deep bg-paper px-1.5 text-[11px] font-semibold text-ink-soft">{t(locale, "dashboard.settings.plans.cell.soon")}</span>
       </span>
     );
+  if (cell.kind === "beta")
+    return (
+      <span className="inline-flex flex-wrap items-center gap-1 text-green">
+        <IconCheck size={16} aria-hidden />
+        <span className="rounded-full border border-paper-deep bg-paper px-1.5 text-[11px] font-semibold text-ink-soft">{t(locale, "dashboard.settings.plans.cell.beta")}</span>
+      </span>
+    );
   if (cell.kind === "preview") return <span className="font-medium text-ink-soft">{t(locale, "dashboard.settings.plans.cell.preview")}</span>;
   if (cell.kind === "no")
     return (

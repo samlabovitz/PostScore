@@ -40,10 +40,10 @@ function data(over: Partial<ReviewsPageData> = {}): ReviewsPageData {
   };
 }
 
-function render(opts: { locale?: "en" | "es"; plan?: Plan; dev?: boolean; data?: Partial<ReviewsPageData> } = {}) {
+function render(opts: { locale?: "en" | "es"; plan?: Plan; data?: Partial<ReviewsPageData> } = {}) {
   return renderToStaticMarkup(
     <LocaleProvider locale={opts.locale ?? "en"} timeZone="America/New_York">
-      <ReviewsView businessId="b1" reviews={data(opts.data)} plan={opts.plan ?? "free"} devPlanSwitch={opts.dev ?? false} />
+      <ReviewsView businessId="b1" reviews={data(opts.data)} plan={opts.plan ?? "free"} />
     </LocaleProvider>
   );
 }
@@ -101,8 +101,10 @@ describe("plan tiers on the page", () => {
     expect(html).not.toContain('data-testid="sign-locked"');
   });
 
-  test("no per-page plan switch any more — the one dev-only pill lives in the root layout", () => {
-    expect(render({ dev: true })).not.toContain("dev-plan-switch");
+  test("no per-page plan switch any more — the one dev-only pill lives in the root layout", async () => {
+    expect(render()).not.toContain("dev-plan-switch");
+    const { readFileSync } = await import("node:fs");
+    for (const file of ["app/business/[id]/website-reviews/ReviewsView.tsx", "app/business/[id]/website-reviews/page.tsx"]) expect(readFileSync(file, "utf8"), file).not.toContain("devPlanSwitch");
   });
 
   test("Spanish", () => {

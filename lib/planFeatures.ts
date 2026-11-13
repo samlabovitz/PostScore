@@ -8,6 +8,7 @@
 
 import { featurePlan, type PromoFeature } from "@/lib/upgradePromos";
 import type { MessageKey } from "@/lib/i18n";
+import { googleWritesCopy, postingRepliesSoon } from "@/lib/googleWritesLaunch";
 
 export interface PlanExtra {
   id: string;
@@ -54,8 +55,10 @@ export const PLAN_EXTRAS: PlanExtra[] = [
   extra("unlimitedDrafts", "dashboard.replies.unlimited", "premium"),
   extra("designs", "dashboard.settings.plans.row.designs", "designs"),
   extra("pdfReports", "dashboard.settings.plans.row.reports", "premium"),
-  extra("googleProfile", "dashboard.free.tile.google", "googleProfile", true),
-  extra("aiReplies", "dashboard.free.tile.repliesPostedForYou", "replies", true),
+  // Editing the listing is built and says "(Beta)" in its headline until
+  // lib/googleWritesLaunch.ts flips; replies posted for you stay coming soon.
+  { ...extra("googleProfile", "dashboard.free.tile.google", "googleProfile"), headlineKey: googleWritesCopy("planListGoogleProfile") },
+  extra("aiReplies", "dashboard.free.tile.repliesPostedForYou", "replies", postingRepliesSoon()),
   extra("campaignHub", "dashboard.free.tile.hub", "campaignHub", true),
   // Add-on
   extra("postStudio", "dashboard.overview.postStudio.title", "addOn", true),

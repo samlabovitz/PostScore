@@ -2,9 +2,10 @@
 
 // PostStudio on the Overview: one clear card that opens the full-screen
 // PostStudio page (a real page — its checklist uses this business's real
-// data). No price and no buy button here; the PostStudio page shows the
-// price for the account's plan. "PostStudio" is a product name and is
-// never translated.
+// data), labeled "Coming soon" like everywhere else PostStudio appears —
+// its building tools aren't open yet. No price and no buy button here; the
+// PostStudio page shows the price for the account's plan. "PostStudio" is
+// a product name and is never translated.
 
 import Link from "next/link";
 import { IconArrowRight, IconLayoutDashboard } from "@tabler/icons-react";
@@ -20,7 +21,12 @@ export function StudioComingSoon({ businessId }: { businessId: string }) {
           <IconLayoutDashboard size={17} />
         </span>
         <div className="flex min-w-0 flex-col gap-1">
-          <h2 className="font-serif text-base font-semibold text-ink">{t(locale, "dashboard.overview.postStudio.title")}</h2>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <h2 className="font-serif text-base font-semibold text-ink">{t(locale, "dashboard.overview.postStudio.title")}</h2>
+            <span data-testid="poststudio-soon" className="rounded-full border border-paper-deep bg-white px-2 py-0.5 text-[11px] font-semibold text-ink-soft">
+              {t(locale, "dashboard.common.comingSoon")}
+            </span>
+          </div>
           <p className="text-[13px] leading-snug text-ink-soft">{t(locale, "dashboard.overview.postStudio.body")}</p>
         </div>
       </div>

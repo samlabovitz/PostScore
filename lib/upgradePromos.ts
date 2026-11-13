@@ -15,6 +15,7 @@ import { t, type Locale, type MessageKey } from "./i18n";
 import type { Plan } from "./plan";
 import { MIN_RANKED_COMPETITORS } from "./competitorComparison";
 import { PLAN_COPY } from "./planComparison";
+import { googleWritesCopy, postingRepliesSoon } from "./googleWritesLaunch";
 
 export type ShowcasePage = "overview" | "growth" | "campaigns" | "reviews" | "website" | "competitors" | "pricing" | "reports";
 export const SHOWCASE_PAGES: ShowcasePage[] = ["overview", "growth", "campaigns", "reviews", "website", "competitors", "pricing", "reports"];
@@ -83,10 +84,11 @@ export function unlockLine(id: UnlockLineId, f: PromoFacts, locale: Locale): str
       return t(locale, U(f.websiteFailed === 1 ? "unlock.websiteOne" : "unlock.website"), { n: f.websiteFailed, builder: f.builderName });
     case "plan":
       return f.issueCount ? t(locale, U("unlock.plan")) : null;
+    case "connect":
+      return t(locale, googleWritesCopy("unlockConnect"));
     case "recheck":
     case "designs":
     case "hub":
-    case "connect":
     case "postai":
     case "routine":
     case "tools":
@@ -231,14 +233,16 @@ export function promoContent(feature: PromoFeature, f: PromoFacts, locale: Local
     case "recheck":
       return named("recheck", [...fact("website"), line(U("unlock.recheck"))]);
     case "googleProfile":
-      return named("googleProfile", [line(U("feature.googleProfile.b1"), true), line(U("feature.googleProfile.b2"), true), line(U("feature.googleProfile.b3"), true)]);
+      // Editing the listing is built (Beta); insights aren't; reply posting
+      // stays "coming soon" until lib/googleWritesLaunch.ts flips.
+      return named("googleProfile", [line(googleWritesCopy("promoGoogleProfileB1")), line(U("feature.googleProfile.b2"), true), line(U("feature.googleProfile.b3"), postingRepliesSoon())]);
     case "campaignHub":
       // Email, text and social campaigns — Premium, not built yet.
       return named("campaignHub", [line(U("feature.campaignHub.b1"), true), line(U("feature.campaignHub.b2"), true)]);
     case "replies":
       // After the 3 free AI review reply drafts: Premium is unlimited;
       // seeing every unanswered review and posting need Google connect.
-      return named("replies", [line(U("feature.replies.b1")), line(U("feature.replies.b2"), true)]);
+      return named("replies", [line(U("feature.replies.b1")), line(U("feature.replies.b2"), postingRepliesSoon())]);
     case "postStudio":
       return { plan, feature: { title: t(locale, U("feature.postStudio.name")), lines: [line(U("feature.postStudio.b1"), true), line(U("feature.postStudio.b2"))] }, plans: boxPlans("premium", locale) };
     case "premium":
@@ -290,16 +294,20 @@ export interface Chip {
   soon: boolean;
 }
 const chip = (id: string, soon = false): Chip => ({ key: U(`chip.${id}`), soon });
+// Editing the Google listing says "(Beta)" in its own wording (no "soon");
+// AI replies posted to Google stay "soon" until lib/googleWritesLaunch.ts flips.
+const DONE_FOR_YOU: Chip = { key: googleWritesCopy("doneForYouChip"), soon: false };
+const AI_REPLIES: Chip = chip("aiReplies", postingRepliesSoon());
 
 const PREMIUM_CHIPS: Record<ShowcasePage, Chip[]> = {
-  overview: [chip("doneForYou", true), chip("aiReplies", true), chip("postai"), chip("designs")],
-  growth: [chip("doneForYou", true), chip("searchInsights", true), chip("postai"), chip("aiReplies", true)],
-  campaigns: [chip("campaignChannels", true), chip("designs"), chip("postai"), chip("doneForYou", true)],
-  reviews: [chip("aiReplies", true), chip("designs"), chip("postai"), chip("doneForYou", true)],
-  website: [chip("postStudio", true), chip("doneForYou", true), chip("postai"), chip("searchInsights", true)],
-  competitors: [chip("searchInsights", true), chip("doneForYou", true), chip("postai"), chip("aiReplies", true)],
-  pricing: [chip("postai"), chip("searchInsights", true), chip("doneForYou", true), chip("campaignChannels", true)],
-  reports: [chip("pdfReports"), chip("searchInsights", true), chip("postai"), chip("doneForYou", true)],
+  overview: [DONE_FOR_YOU, AI_REPLIES, chip("postai"), chip("designs")],
+  growth: [DONE_FOR_YOU, chip("searchInsights", true), chip("postai"), AI_REPLIES],
+  campaigns: [chip("campaignChannels", true), chip("designs"), chip("postai"), DONE_FOR_YOU],
+  reviews: [AI_REPLIES, chip("designs"), chip("postai"), DONE_FOR_YOU],
+  website: [chip("postStudio", true), DONE_FOR_YOU, chip("postai"), chip("searchInsights", true)],
+  competitors: [chip("searchInsights", true), DONE_FOR_YOU, chip("postai"), AI_REPLIES],
+  pricing: [chip("postai"), chip("searchInsights", true), DONE_FOR_YOU, chip("campaignChannels", true)],
+  reports: [chip("pdfReports"), chip("searchInsights", true), chip("postai"), DONE_FOR_YOU],
 };
 const GROW_CHIPS: Record<ShowcasePage, Chip[]> = {
   overview: [chip("fixGuides"), chip("weeklyPlan"), chip("recheck"), chip("starterSite")],

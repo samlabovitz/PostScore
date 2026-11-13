@@ -23,16 +23,19 @@ import { GbpDisconnectButton } from "@/components/gbp/GbpDisconnectButton";
 import { gbpConnectHref, type GbpConnectResult } from "@/lib/gbpLanding";
 import { gbpConnectedText, gbpResultText } from "@/components/gbp/GbpResultMessage";
 import { formatShortDate, t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
+import { GOOGLE_WRITES_FOR_EVERYONE } from "@/lib/googleWritesLaunch";
 
 function buildUnlocks(
   locale: Locale,
   businessId: string
-): Array<{ icon: typeof IconEdit; title: string; body: string; preview?: { href: string; label: string }; live?: boolean }> {
+): Array<{ icon: typeof IconEdit; title: string; body: string; preview?: { href: string; label: string }; live?: boolean; beta?: boolean }> {
   return [
     {
       icon: IconEdit,
       title: t(locale, "dashboard.connectGbp.unlockEditableListingTitle"),
       body: t(locale, "dashboard.connectGbp.unlockEditableListingBody"),
+      // Built: Edit on Google (Beta until lib/googleWritesLaunch.ts flips).
+      beta: true,
     },
     {
       icon: IconClipboardCheck,
@@ -48,6 +51,8 @@ function buildUnlocks(
       icon: IconMessageCircle,
       title: t(locale, "dashboard.connectGbp.unlockReplyAssistantTitle"),
       body: t(locale, "dashboard.connectGbp.unlockReplyAssistantBody"),
+      // Built: the Google reviews inbox on the Reviews page (Beta).
+      beta: true,
     },
     {
       icon: IconChartBar,
@@ -220,10 +225,16 @@ export function ConnectGbpView({
                 <div>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="text-[13.5px] font-semibold text-ink">{u.title}</span>
-                    {/* Only reply-rate stats work so far; the rest are coming. */}
-                    {u.live ? (
+                    {/* Reply-rate stats work now; editing the listing and the
+                        reviews inbox are Beta until they're on for everyone;
+                        the rest are coming. */}
+                    {u.live || (u.beta && GOOGLE_WRITES_FOR_EVERYONE) ? (
                       <span data-testid="unlock-live" className="rounded-full bg-green/10 px-2 py-px text-[10.5px] font-semibold text-green">
                         {t(locale, "dashboard.connectGbp.liveBadge")}
+                      </span>
+                    ) : u.beta ? (
+                      <span data-testid="unlock-beta" className="rounded-full bg-brass/10 px-2 py-px text-[10.5px] font-semibold text-brass">
+                        {t(locale, "dashboard.connectGbp.betaBadge")}
                       </span>
                     ) : (
                       <span data-testid="unlock-soon" className="rounded-full bg-paper-deep px-2 py-px text-[10.5px] font-semibold text-ink-soft">

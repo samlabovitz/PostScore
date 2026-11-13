@@ -22,6 +22,7 @@ import { FREE_RESCAN_DAYS, RESCAN_COOLDOWN_HOURS } from "@/lib/rescanPolicy";
 import { GROW_RESCAN_COMPETITOR_DAYS } from "@/lib/competitorScanPolicy";
 import { postStudioPriceKey } from "@/lib/navPlans";
 import { t, type MessageKey } from "@/lib/i18n";
+import { GOOGLE_WRITES_FOR_EVERYONE, postingRepliesSoon } from "@/lib/googleWritesLaunch";
 import type { Plan } from "@/lib/plan";
 
 /** usable: works on this plan. preview: can be tried (designed,
@@ -179,7 +180,9 @@ export function featureMapFor(plan: Plan, o: FeatureMapOptions): FeatureEntry[] 
           ? en(postStudioPriceKey(plan))
           : extra.id === "monthlyEmail"
             ? `included with Grow, Premium and Multi; not on Free${soon ? " — not sending yet" : ""}`
-            : undefined,
+            : extra.id === "googleProfile" && !GOOGLE_WRITES_FOR_EVERYONE
+              ? "Beta: editing the listing from PostScore is switched on for a few businesses only and needs Google connected — never promise it works for this business; search insights are coming soon"
+              : undefined,
     });
   }
   const reportsLocked = lockedOn(plan, "reports");
@@ -191,7 +194,7 @@ export function featureMapFor(plan: Plan, o: FeatureMapOptions): FeatureEntry[] 
     unlocks: reportsLocked ? "grow" : null,
     note: reportsLocked ? "no monthly report emails on Free — those come with Grow and Premium" : plan === "grow" ? "the weekly recap; the PDF report is on Premium" : "the weekly recap and the PDF report",
   });
-  add({ id: "repliesPosted", name: en("dashboard.free.tile.repliesPostedForYou"), status: "soon", where: "the Google Profile page", unlocks: "premium" });
+  add({ id: "repliesPosted", name: en("dashboard.free.tile.repliesPostedForYou"), status: postingRepliesSoon() ? "soon" : paid(plan) ? "usable" : "locked", where: "the Reviews page", unlocks: postingRepliesSoon() || !paid(plan) ? "premium" : null });
   add({ id: "plans", name: "Plans and prices (Compare plans)", status: "usable", where: `${tab("settings")} → Plan & billing → "Compare plans"`, unlocks: null });
   return out;
 }

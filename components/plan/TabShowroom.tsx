@@ -13,6 +13,7 @@ import { IconArrowLeft, IconBrandGoogle, IconCheck, IconCrown, IconLock, IconQrc
 import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import { NO_FACTS, unlockLine } from "@/lib/upgradePromos";
 import { t, useLocale, type MessageKey } from "@/lib/i18n";
+import { googleWritesCopy } from "@/lib/googleWritesLaunch";
 import { SHOWROOM_NAV, type ShowroomTab } from "@/lib/freeTabs";
 import { LockedPreview } from "@/components/plan/LockedPreview";
 import { useUpgrade } from "@/components/upgrade/UpgradeContext";
@@ -78,8 +79,8 @@ function Sections({ tab, businessId, data }: { tab: ShowroomTab; businessId: str
     case "growth":
       return (
         <>
-          {/* Google Profile (Premium, coming soon) first, then the Grow sections. */}
-          <LockedPreview icon={IconBrandGoogle} title={t(locale, "dashboard.free.tile.google")} unlock={line("connect")} feature="googleProfile" soon rows={2} />
+          {/* Google Profile (Premium; editing the listing is in Beta) first, then the Grow sections. */}
+          <LockedPreview icon={IconBrandGoogle} title={t(locale, "dashboard.free.tile.google")} unlock={line("connect")} feature="googleProfile" rows={2} />
           <LockedPreview title={t(locale, "dashboard.free.actionPlanTitle")} summary={fixesSummary(f.issueCount ?? 0, f.fixPoints, locale)} unlock={line("plan")} rows={4} />
           <LockedPreview title={t(locale, "dashboard.growth.checklist.sectionHeading")} summary={t(locale, "dashboard.free.sumHabits", { count: ROUTINE_HABITS })} unlock={line("routine")} />
           <LockedPreview title={t(locale, "dashboard.growth.moves.sectionHeading")} unlock={line("tools")} shape="card" />
@@ -229,7 +230,7 @@ export function TabShowroom({
               {PREMIUM_ADDS[tab].map((b) => (
                 <li key={b} className="flex items-start gap-2 text-[14px] text-ink">
                   <IconCrown size={15} aria-hidden className="mt-0.5 shrink-0 text-brass" />
-                  {t(locale, S(`${tab}.${b}`))}
+                  {t(locale, tab === "growth" && b === "p1" ? googleWritesCopy("showroomGrowthP1") : S(`${tab}.${b}`))}
                 </li>
               ))}
             </ul>

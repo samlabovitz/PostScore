@@ -68,8 +68,12 @@ describe("who sees which promo card", () => {
 
   test("anything not built is marked soon", () => {
     const all = SHOWCASE_PAGES.flatMap((p) => cardChips("premium", p));
-    for (const id of ["aiReplies", "doneForYou", "searchInsights", "campaignChannels", "postStudio"])
+    for (const id of ["aiReplies", "searchInsights", "campaignChannels", "postStudio"])
       expect(all.filter((c) => c.key.endsWith(`.${id}`)).every((c) => c.soon), id).toBe(true);
+    // Editing the Google listing is built: "(Beta)" in its wording, no "soon".
+    const edit = all.filter((c) => c.key.endsWith(".doneForYou"));
+    expect(edit.length).toBeGreaterThan(0);
+    expect(edit.every((c) => !c.soon && t("en", c.key) === "Edit your Google listing (Beta)")).toBe(true);
     expect(SHOWCASE_PAGES.flatMap((p) => cardChips("grow", p)).every((c) => !c.soon)).toBe(true);
   });
 });
@@ -95,7 +99,12 @@ describe("the promo box", () => {
   test("title names the feature and the plan; not-built lines say Coming soon", () => {
     const g = promoContent("googleProfile", FACTS, "en");
     expect(g.feature?.title).toBe("Google Profile · Premium");
-    expect(g.feature?.lines.every((l) => l.soon)).toBe(true);
+    // Editing the listing is Beta (said in the line); insights and posted replies are coming soon.
+    expect(g.feature?.lines.map((l) => [l.text, l.soon])).toEqual([
+      ["Edit your Google listing from PostScore (Beta)", false],
+      ["See who searches for you and who calls or clicks", true],
+      ["AI-drafted replies to every review", true],
+    ]);
     const hub = promoContent("campaignHub", FACTS, "en");
     // Only email, text and social campaigns are Premium now — and not built yet.
     expect(hub.feature?.title).toBe("Email, text & social campaigns · Premium");
@@ -146,7 +155,7 @@ describe("the Free unlock lines (real data only)", () => {
     expect(unlockLine("designs", FACTS, "en")).toBe("Design and print your review sign, coupons and referral cards with Grow.");
     expect(unlockLine("hub", FACTS, "en")).toBe("Email, text and social campaigns — Premium, coming soon.");
     expect(unlockLine("tracking", FACTS, "en")).toBe("Track every coupon and referral card in one place, with +1 for each one used — with Grow.");
-    expect(unlockLine("connect", FACTS, "en")).toBe("Connect Google and let PostScore fix your listing for you. Premium, coming soon.");
+    expect(unlockLine("connect", FACTS, "en")).toBe("Connect Google and edit your listing from PostScore — Premium, in Beta.");
   });
 
   test("hidden when the data is missing or there's no gap; singular for 1", () => {

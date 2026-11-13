@@ -38,7 +38,7 @@ const REVIEWS = task({
 });
 const MOVE: GrowthMove = { id: "start_coupon", title: "Start a coupon", meta: null, why: "Brings people back.", howTo: "Pick an offer.", href: "/business/b1/campaigns?tab=coupons", signal: "x" };
 
-function render(over: { gbpConnected?: boolean; locale?: "en" | "es"; devPlanSwitch?: boolean; plan?: "free" | "grow" | "premium" | "multi"; tab?: string } = {}) {
+function render(over: { gbpConnected?: boolean; locale?: "en" | "es"; plan?: "free" | "grow" | "premium" | "multi"; tab?: string } = {}) {
   nav.query = over.tab ? `tab=${over.tab}` : "";
   return renderToStaticMarkup(
     <LocaleProvider locale={over.locale ?? "en"} timeZone="America/New_York">
@@ -55,7 +55,6 @@ function render(over: { gbpConnected?: boolean; locale?: "en" | "es"; devPlanSwi
         }}
         lastScanAt="2026-10-16T13:00:00Z"
         gbpConnected={over.gbpConnected ?? false}
-        devPlanSwitch={over.devPlanSwitch ?? false}
         plan={over.plan ?? "grow"}
         linkOptions={{ referralOk: true, couponsOk: true, pricingOk: true }}
         actionPlan={{
@@ -150,8 +149,10 @@ describe("Growth → Action plan makeover", () => {
     expect(taskPointsLabel(task({ weightedPoints: 29.2, weightedPointsHigh: 31.4 }), "weekly", "en")).toContain("+29–31");
   });
 
-  test("no per-page plan switch any more — the one dev-only pill lives in the root layout", () => {
-    expect(render({ devPlanSwitch: true })).not.toContain("dev-plan-switch");
+  test("no per-page plan switch any more — the one dev-only pill lives in the root layout", async () => {
+    expect(render()).not.toContain("dev-plan-switch");
+    const { readFileSync } = await import("node:fs");
+    for (const file of ["app/business/[id]/growth/GrowthView.tsx", "app/business/[id]/growth/page.tsx"]) expect(readFileSync(file, "utf8"), file).not.toContain("devPlanSwitch");
   });
 });
 

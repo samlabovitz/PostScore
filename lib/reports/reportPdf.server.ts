@@ -15,15 +15,3 @@ export async function buildReportPdf(data: ReportData): Promise<Uint8Array> {
   const { bytes } = await renderPdf([page], { qrs: {}, fontBytes: fonts, title: `${title} — ${data.business.name}` });
   return bytes;
 }
-
-/** "postscore-report-modern-liquors-2026-10-19.pdf" */
-export function reportFileName(name: string, generatedAt: string): string {
-  const slug = name
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 40);
-  return `postscore-report-${slug || "business"}-${generatedAt.slice(0, 10)}.pdf`;
-}

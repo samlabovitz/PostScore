@@ -34,7 +34,11 @@ describe("Settings pieces", () => {
     const html = wrap(<PlanCard plan="grow" />);
     const t = text(html);
     for (const s of ["$0", "$25/mo", "$50/mo", "$150/mo", "Fix it yourself, step by step", "We do the work for you", "Premium for every location"]) expect(t).toContain(s);
-    expect(t).toContain("Unlimited PostAI and replies, and every design tool. Connecting Google so PostScore fixes things for you is coming soon.");
+    expect(t).toContain("Unlimited PostAI and replies, every design tool, and editing your Google listing from PostScore (Beta).");
+    // Posting replies stays "coming soon" on the Premium card until lib/googleWritesLaunch.ts flips.
+    expect(t).toContain("Posting replies to Google: coming soon");
+    expect(t).toContain("Edit your Google listing from PostScore: hours, phone, description, website link and customer details (Beta)");
+    expect(t).not.toMatch(/photos \(coming soon\)/);
     expect(t).not.toContain("Connect Google and PostScore fixes things for you.");
     expect(t).toContain("Everything in Premium for up to 5 locations (+$25 each extra)");
     expect(html.match(/data-testid="best-value"/g)).toHaveLength(1);
@@ -51,7 +55,7 @@ describe("Settings pieces", () => {
       "Campaign hub (every coupon and referral, with +1)",
       "Email, text & social campaigns",
       "Track every coupon and referral in one place",
-      "Fixes done for you (Google connect)",
+      "Edit your Google listing from PostScore (Google connect)",
       "Basic",
       "Full, no branding",
       "Starter + PostStudio discount",
@@ -72,7 +76,8 @@ describe("Settings pieces", () => {
     const { COMPARE_ROWS } = await import("@/lib/planComparison");
     const freeYes = COMPARE_ROWS.filter((r) => r.cells.free.kind === "yes").map((r) => r.key.split(".").pop());
     expect(freeYes).toEqual(["whatsWrong", "rank"]);
-    expect(COMPARE_ROWS.find((r) => r.key.endsWith(".doneForYou"))!.cells.premium).toEqual({ kind: "soon" });
+    // Editing the Google listing is built: Beta until lib/googleWritesLaunch.ts flips.
+    expect(COMPARE_ROWS.find((r) => r.key.endsWith(".doneForYou"))!.cells.premium).toEqual({ kind: "beta" });
     // The campaign hub (every coupon and referral, +1) is Grow and up; email, text and social are Premium, coming soon.
     const hub = COMPARE_ROWS.find((r) => r.key.endsWith(".hub"))!.cells;
     expect([hub.free, hub.grow, hub.premium, hub.multi]).toEqual([{ kind: "preview" }, { kind: "yes" }, { kind: "yes" }, { kind: "yes" }]);
@@ -123,7 +128,7 @@ describe("Settings pieces", () => {
     const t = text(wrap(<PlanCard plan="premium" />, "es"));
     expect(t).toContain("Comparar planes");
     expect(t).toContain("Nosotros hacemos el trabajo por usted");
-    expect(t).toContain("PostAI y respuestas ilimitadas, y todas las herramientas de diseño. Conectar Google para que PostScore haga los arreglos por usted llega próximamente.");
+    expect(t).toContain("PostAI y respuestas ilimitadas, todas las herramientas de diseño, y editar su ficha de Google desde PostScore (Beta).");
     expect(t).toContain("$50/mes");
     expect(t).toContain("Mejor valor");
   });

@@ -303,7 +303,7 @@ describe("plan decision: every plan connects; only Premium opens the Google Prof
     // Free (the Overview card) has its own wording.
     expect(off).toContain("Connect Google to complete your score — include how you reply to reviews. Read-only: PostScore never changes your listing on this plan.");
     expect(render(false, "es")).toContain("Conecte Google para completar su puntuación: incluya cómo responde a las reseñas.");
-    expect(off).toContain("Premium adds your Google insights");
+    expect(off).toContain("Premium lets you edit your Google listing and reply to reviews from PostScore (Beta — switched on for a few businesses so far).");
     expect(off).toContain('href="/business/b1/settings#compare-plans"');
     expect(off).not.toContain("connect-gbp");
     expect(off).toContain("Read-only");
@@ -795,7 +795,7 @@ describe("Free and Grow see the connect box but never the Premium pages", () => 
 });
 
 describe("Premium connect page copy", () => {
-  test("every feature card that doesn't work yet is marked Coming soon; reply-rate stats works now (EN + ES)", async () => {
+  test("every feature card that doesn't work yet is marked Coming soon; editing the listing and the reviews inbox are Beta; reply-rate stats works now (EN + ES)", async () => {
     const { ConnectGbpView } = await import("@/app/business/[id]/connect-gbp/ConnectGbpView");
     const props = { businessId: "b1", businessName: "Shop", connected: false, connectedAt: null, justConnected: false, error: null, oauthConfigured: true, connectOpen: true };
     const render = (p: Record<string, unknown>, locale: Locale = "en") =>
@@ -805,8 +805,15 @@ describe("Premium connect page copy", () => {
         </LocaleProvider>
       );
     const en = render({});
-    expect(en.match(/data-testid="unlock-soon"/g)?.length).toBe(8);
+    expect(en.match(/data-testid="unlock-soon"/g)?.length).toBe(6);
+    expect(en.match(/data-testid="unlock-beta"/g)?.length).toBe(2);
     expect(en.match(/data-testid="unlock-live"/g)?.length).toBe(1);
+    // The Beta cards: editing the listing and the reviews inbox (lib/googleWritesLaunch.ts).
+    for (const title of ["Edit your Google listing", "Individual reviews + AI reply assistant"]) {
+      const at = en.indexOf(title);
+      expect(en.slice(at, at + 200), title).toContain('data-testid="unlock-beta"');
+    }
+    expect(en).not.toContain("Live, editable listing");
     // The one live card is reply-rate stats.
     const live = en.slice(en.lastIndexOf("<span", en.indexOf('data-testid="unlock-live"')) - 200, en.indexOf('data-testid="unlock-live"'));
     expect(live).toContain("Reply-rate stats");

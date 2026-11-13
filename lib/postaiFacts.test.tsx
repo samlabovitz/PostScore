@@ -270,10 +270,10 @@ describe("“no reviews yet” / “low rating” are caught in upgrade answers 
 });
 
 describe("Compare plans: honest about what works today", () => {
-  test("Premium's promise is true today; the Google part is coming soon (EN + ES)", () => {
+  test("Premium's promise is true today; editing the Google listing says Beta (EN + ES)", () => {
     const premium = planFacts("en").find((p) => p.plan === "premium")!;
-    expect(premium.promise).toBe("Unlimited PostAI and replies, and every design tool. Connecting Google so PostScore fixes things for you is coming soon.");
-    expect(planFacts("es").find((p) => p.plan === "premium")!.promise).toContain("llega próximamente");
+    expect(premium.promise).toBe("Unlimited PostAI and replies, every design tool, and editing your Google listing from PostScore (Beta).");
+    expect(planFacts("es").find((p) => p.plan === "premium")!.promise).toBe("PostAI y respuestas ilimitadas, todas las herramientas de diseño, y editar su ficha de Google desde PostScore (Beta).");
   });
   test("Free gets no monthly report email — PostAI's plan facts follow (EN + ES)", () => {
     for (const locale of ["en", "es"] as const) {
@@ -318,8 +318,8 @@ describe("Grow: 100 PostAI questions a month", () => {
 });
 
 describe("the weekly PDF report is Premium", () => {
-  test("both PDF routes refuse below Premium, on the server", () => {
-    for (const route of ["app/api/business/[id]/weekly-report-pdf/route.ts", "app/api/business/[id]/report-pdf/route.ts"]) {
+  test("the PDF route refuses below Premium, on the server", () => {
+    for (const route of ["app/api/business/[id]/weekly-report-pdf/route.ts"]) {
       const src = readFileSync(route, "utf8");
       expect(src, route).toContain('if (!isPremiumPlan(await getPlan())) return NextResponse.json({ error: "premium_only" }, { status: 403 });');
       expect(src.indexOf("premium_only")).toBeLessThan(src.indexOf("buildReportPdf("));

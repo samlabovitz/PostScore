@@ -44,7 +44,7 @@ describe("paid plans keep their pre-batch layout, page by page", () => {
     expect(without(tags(body), ["HowToRunIt"])).toEqual(["Link", "SegmentedControl", "Card", "AllCampaigns", "Card", "SectionTitle", "SoonList", "SoonRow", "SoonRow", "SoonRow", "CouponsSection", "ReferralSection"]);
     expect(view).toContain('const tab = campaignsTabFromParam(searchParams.get("tab"), profile);');
     expect(view).not.toContain("LockedPreview");
-    expect(view).toContain('{plan === "grow" && (tab === "coupons" || tab === "referrals") && <HowToRunIt kind={tab} />}');
+    expect(view).toContain('{plan !== "free" && (tab === "coupons" || tab === "referrals") && <HowToRunIt kind={tab} />}');
   });
 
   test("Reviews: stats, the review link & sign, the guide, counter tools, social proof, the rubric, replies — plus the review goal and 'Reply to a review' (the AI reply drafts)", () => {

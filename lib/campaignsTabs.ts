@@ -4,14 +4,14 @@
 
 export type CampaignsTab = "all" | "coupons" | "referrals";
 
-/** `hubFirst`: Premium/Multi open on "All campaigns" (the hub); Grow opens
- * on its first designer tab, since the hub is a Premium preview for it
- * (?tab=all still opens that preview). */
-export function campaignsTabFromParam(param: string | null | undefined, tools: { couponsOk: boolean; referralOk: boolean }, hubFirst: boolean = true): CampaignsTab {
+/** Every paid plan opens on "All campaigns": the hub is Grow and up
+ * (Settings → Compare plans), and it's where a saved coupon or referral
+ * card is tracked. A designer tab only when the link asks for one this
+ * business type has. */
+export function campaignsTabFromParam(param: string | null | undefined, tools: { couponsOk: boolean; referralOk: boolean }): CampaignsTab {
   if (param === "coupons" && tools.couponsOk) return "coupons";
   if ((param === "referrals" || param === "referral") && tools.referralOk) return "referrals";
-  if (param === "all" || hubFirst) return "all";
-  return tools.couponsOk ? "coupons" : tools.referralOk ? "referrals" : "all";
+  return "all";
 }
 
 export function campaignsHref(businessId: string, tab: CampaignsTab = "all"): string {

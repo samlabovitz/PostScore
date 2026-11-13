@@ -213,7 +213,6 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
         listingWebsite={row.website ?? null}
         linkOptions={{ referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk }}
         plan={plan}
-        devPlanSwitch={process.env.NODE_ENV === "development"}
       />
       </GbpEditProvider>
     </DashboardShell>

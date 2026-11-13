@@ -216,8 +216,6 @@ export function GrowthView({
   /** The account's plan (lib/premium.ts) — the Google Profile tab is
    * Premium (Free/Grow see a preview with a lock on the tab). */
   plan?: Plan;
-  /** Show the dev-only plan switch (the page passes true only in local dev). */
-  devPlanSwitch?: boolean;
   gbpConnected?: boolean;
   /** The Google listing's website field (an ordering page shows a card). */
   listingWebsite?: string | null;

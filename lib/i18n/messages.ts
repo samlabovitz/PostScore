@@ -100,6 +100,7 @@ export type MessageKey =
   | "dashboard.settings.plans.promise.free"
   | "dashboard.settings.plans.promise.grow"
   | "dashboard.settings.plans.promise.premium"
+  | "dashboard.settings.plans.promise.premiumLive"
   | "dashboard.settings.plans.bullet.free.score"
   | "dashboard.settings.plans.bullet.free.problems"
   | "dashboard.settings.plans.bullet.free.rank"
@@ -111,7 +112,9 @@ export type MessageKey =
   | "dashboard.settings.plans.bullet.grow.tools"
   | "dashboard.settings.plans.bullet.grow.postai"
   | "dashboard.settings.plans.bullet.premium.fixes"
+  | "dashboard.settings.plans.bullet.premium.fixesLive"
   | "dashboard.settings.plans.bullet.premium.replies"
+  | "dashboard.settings.plans.bullet.premium.repliesLive"
   | "dashboard.settings.plans.bullet.premium.insights"
   | "dashboard.settings.plans.bullet.premium.channels"
   | "dashboard.settings.plans.bullet.premium.designs"
@@ -138,6 +141,7 @@ export type MessageKey =
   | "dashboard.replies.leftWeeklyGrow"
   | "dashboard.replies.usedUpWeeklyGrow"
   | "dashboard.settings.plans.value.repliesUnlimited"
+  | "dashboard.settings.plans.value.repliesUnlimitedLive"
   | "dashboard.settings.plans.row.postStudio"
   | "dashboard.settings.plans.row.locations"
   | "dashboard.settings.plans.value.basic"
@@ -158,6 +162,7 @@ export type MessageKey =
   | "dashboard.settings.plans.cell.preview"
   | "dashboard.settings.plans.cell.no"
   | "dashboard.settings.plans.cell.soon"
+  | "dashboard.settings.plans.cell.beta"
   | "dashboard.upgrade.unlock.missing"
   | "dashboard.upgrade.unlock.reviews"
   | "dashboard.upgrade.unlock.reviewsOne"
@@ -169,6 +174,7 @@ export type MessageKey =
   | "dashboard.upgrade.unlock.designs"
   | "dashboard.upgrade.unlock.hub"
   | "dashboard.upgrade.unlock.connect"
+  | "dashboard.upgrade.unlock.connectLive"
   | "dashboard.upgrade.missing.hours"
   | "dashboard.upgrade.missing.phone"
   | "dashboard.upgrade.missing.website"
@@ -195,6 +201,7 @@ export type MessageKey =
   | "dashboard.upgrade.feature.reviewSign.b2"
   | "dashboard.upgrade.feature.googleProfile.name"
   | "dashboard.upgrade.feature.googleProfile.b1"
+  | "dashboard.upgrade.feature.googleProfile.b1Live"
   | "dashboard.upgrade.feature.googleProfile.b2"
   | "dashboard.upgrade.feature.googleProfile.b3"
   | "dashboard.upgrade.feature.campaignHub.name"
@@ -392,6 +399,7 @@ export type MessageKey =
   | "dashboard.upgrade.strip.hide"
   | "dashboard.upgrade.strip.label"
   | "dashboard.upgrade.chip.doneForYou"
+  | "dashboard.upgrade.chip.doneForYouLive"
   | "dashboard.upgrade.chip.aiReplies"
   | "dashboard.upgrade.chip.searchInsights"
   | "dashboard.upgrade.chip.campaignChannels"
@@ -491,6 +499,7 @@ export type MessageKey =
   | "dashboard.free.planList.pdfReports.h"
   | "dashboard.free.planList.pdfReports.l"
   | "dashboard.free.planList.googleProfile.h"
+  | "dashboard.free.planList.googleProfile.hLive"
   | "dashboard.free.planList.googleProfile.l"
   | "dashboard.free.planList.aiReplies.h"
   | "dashboard.free.planList.aiReplies.l"
@@ -597,6 +606,7 @@ export type MessageKey =
   | "dashboard.free.showroom.growth.g2"
   | "dashboard.free.showroom.growth.g3"
   | "dashboard.free.showroom.growth.p1"
+  | "dashboard.free.showroom.growth.p1Live"
   | "dashboard.free.showroom.growth.p2"
   | "dashboard.free.showroom.growth.p3"
   | "dashboard.free.showroom.campaigns.g1"
@@ -914,6 +924,7 @@ export type MessageKey =
   | "dashboard.googleProfile.connected"
   | "dashboard.googleProfile.notConnected"
   | "dashboard.googleProfile.connectBody"
+  | "dashboard.googleProfile.connectBodyLive"
   | "dashboard.googleProfile.connectLink"
   | "dashboard.googleProfile.featuresHeading"
   | "dashboard.googleProfile.needsPremium"
@@ -2301,6 +2312,8 @@ export type MessageKey =
   | "dashboard.websiteReviews.exampleBuildingTrust"
   | "dashboard.websiteReviews.rubricHeading"
   | "dashboard.websiteReviews.replyAssistantLabel"
+  | "dashboard.websiteReviews.premiumRepliesLine"
+  | "dashboard.websiteReviews.premiumRepliesLineLive"
   | "dashboard.websiteReviews.replyAssistantConnectedBody"
   | "dashboard.websiteReviews.replyAssistantUnlockDescription"
   | "dashboard.websiteReviews.comingSoonLabel"
@@ -4130,11 +4143,13 @@ export type MessageKey =
   | "dashboard.gbp.reconnectBody"
   | "dashboard.gbp.reconnect"
   | "dashboard.gbp.premiumUpsell"
+  | "dashboard.gbp.premiumUpsellLive"
   | "dashboard.gbp.comparePlans"
   | "dashboard.gbp.profileFreeGrowBody"
   | "dashboard.gbp.goToReviewsConnect"
   | "dashboard.connectGbp.comingSoonBadge"
   | "dashboard.connectGbp.liveBadge"
+  | "dashboard.connectGbp.betaBadge"
   | "dashboard.gbpReplyCheck.title"
   | "dashboard.gbpReplyCheck.body"
   | "dashboard.gbpReplyCheck.connect"
@@ -5077,7 +5092,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.tagline.multi": "Premium for every location",
     "dashboard.settings.plans.promise.free": "See exactly what's costing you customers.",
     "dashboard.settings.plans.promise.grow": "We show you exactly how to fix every problem.",
-    "dashboard.settings.plans.promise.premium": "Unlimited PostAI and replies, and every design tool. Connecting Google so PostScore fixes things for you is coming soon.",
+    "dashboard.settings.plans.promise.premium": "Unlimited PostAI and replies, every design tool, and editing your Google listing from PostScore (Beta).",
+    "dashboard.settings.plans.promise.premiumLive": "Unlimited PostAI and replies, every design tool, and editing your Google listing from PostScore.",
     "dashboard.settings.plans.bullet.free.score": "Your PostScore and grade, with a free re-scan every week",
     "dashboard.settings.plans.bullet.free.problems": "Every problem on your Google listing, reviews and website",
     "dashboard.settings.plans.bullet.free.rank": "How you rank against nearby competitors",
@@ -5088,12 +5104,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.grow.recheck": "Re-check your website as soon as you fix something",
     "dashboard.settings.plans.bullet.grow.tools": "A starter website, plus basic review signs, coupons and referral cards",
     "dashboard.settings.plans.bullet.grow.postai": "PostAI for your questions (100 a month)",
-    "dashboard.settings.plans.bullet.premium.fixes": "One-click fixes to your Google listing: hours, info, photos (coming soon)",
+    "dashboard.settings.plans.bullet.premium.fixes": "Edit your Google listing from PostScore: hours, phone, description, website link and customer details (Beta)",
+    "dashboard.settings.plans.bullet.premium.fixesLive": "Edit your Google listing from PostScore: hours, phone, description, website link and customer details",
     // Posting replies to Google is still off for every business in production
     // (GOOGLE_WRITES_LIVE_PLACES, lib/gbpReviewPractice.ts). When it goes live,
     // update this bullet AND dashboard.settings.plans.value.repliesUnlimited
     // (the plan table, lib/planComparison.ts) together, in EN and ES.
     "dashboard.settings.plans.bullet.premium.replies": "Unlimited AI reply drafts · With Google connected, see every review in one place · Posting replies to Google: coming soon",
+    "dashboard.settings.plans.bullet.premium.repliesLive": "Unlimited AI reply drafts · With Google connected, see every review in one place · Post your replies to Google",
     "dashboard.settings.plans.bullet.premium.insights": "See who searches for you and who calls or clicks (coming soon)",
     "dashboard.settings.plans.bullet.premium.channels": "Email, text and social campaigns (coming soon)",
     "dashboard.settings.plans.bullet.premium.designs": "Every design tool unlocked, with no PostScore branding",
@@ -5110,7 +5128,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.row.channels": "Email, text & social campaigns",
     "dashboard.settings.plans.row.website": "Website",
     "dashboard.settings.plans.row.postai": "PostAI",
-    "dashboard.settings.plans.row.doneForYou": "Fixes done for you (Google connect)",
+    "dashboard.settings.plans.row.doneForYou": "Edit your Google listing from PostScore (Google connect)",
     "dashboard.settings.plans.row.reports": "Reports",
     "dashboard.settings.plans.row.monthlyEmail": "Monthly report email",
     "dashboard.settings.plans.row.replies": "AI review replies",
@@ -5119,7 +5137,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.value.perMonth100": "100 a month",
     // Update together with dashboard.settings.plans.bullet.premium.replies
     // when posting replies to Google goes live (see the note there).
-    "dashboard.settings.plans.value.repliesUnlimited": "Unlimited · auto-post coming soon",
+    "dashboard.settings.plans.value.repliesUnlimited": "Unlimited · post to Google (Beta)",
+    "dashboard.settings.plans.value.repliesUnlimitedLive": "Unlimited · post to Google",
     "dashboard.settings.plans.row.postStudio": "PostStudio — your full website, built and hosted for you (coming soon)",
     "dashboard.settings.plans.row.locations": "Locations",
     "dashboard.settings.plans.value.basic": "Basic",
@@ -5140,6 +5159,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.cell.preview": "Preview",
     "dashboard.settings.plans.cell.no": "Not included",
     "dashboard.settings.plans.cell.soon": "Coming soon",
+    "dashboard.settings.plans.cell.beta": "Beta",
     "dashboard.upgrade.unlock.missing": "Your listing is missing {issue}. Grow shows you exactly how to fix it, step by step.",
     "dashboard.upgrade.unlock.reviews": "You have {n} reviews. Nearby {type} average {avg}. Grow gives you a plan to close the gap.",
     "dashboard.upgrade.unlock.reviewsOne": "You have 1 review. Nearby {type} average {avg}. Grow gives you a plan to close the gap.",
@@ -5150,7 +5170,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.unlock.recheck": "Fixed something? With Grow, re-check right away instead of waiting a month.",
     "dashboard.upgrade.unlock.designs": "Design and print your review sign, coupons and referral cards with Grow.",
     "dashboard.upgrade.unlock.hub": "Email, text and social campaigns — Premium, coming soon.",
-    "dashboard.upgrade.unlock.connect": "Connect Google and let PostScore fix your listing for you. Premium, coming soon.",
+    "dashboard.upgrade.unlock.connect": "Connect Google and edit your listing from PostScore — Premium, in Beta.",
+    "dashboard.upgrade.unlock.connectLive": "Connect Google and edit your listing from PostScore — Premium.",
     "dashboard.upgrade.missing.hours": "your business hours",
     "dashboard.upgrade.missing.phone": "a phone number",
     "dashboard.upgrade.missing.website": "a link to your website",
@@ -5176,7 +5197,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.feature.reviewSign.b1": "Print a sign with your own review QR code",
     "dashboard.upgrade.feature.reviewSign.b2": "Put it by your counter so every customer can leave a review",
     "dashboard.upgrade.feature.googleProfile.name": "Google Profile",
-    "dashboard.upgrade.feature.googleProfile.b1": "One-click fixes to your Google listing",
+    "dashboard.upgrade.feature.googleProfile.b1": "Edit your Google listing from PostScore (Beta)",
+    "dashboard.upgrade.feature.googleProfile.b1Live": "Edit your Google listing from PostScore",
     "dashboard.upgrade.feature.googleProfile.b2": "See who searches for you and who calls or clicks",
     "dashboard.upgrade.feature.googleProfile.b3": "AI-drafted replies to every review",
     "dashboard.upgrade.feature.campaignHub.name": "Email, text & social campaigns",
@@ -5373,7 +5395,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.strip.seeIncluded": "See what's included",
     "dashboard.upgrade.strip.hide": "Hide for 14 days",
     "dashboard.upgrade.strip.label": "Plans",
-    "dashboard.upgrade.chip.doneForYou": "Fixes done for you",
+    "dashboard.upgrade.chip.doneForYou": "Edit your Google listing (Beta)",
+    "dashboard.upgrade.chip.doneForYouLive": "Edit your Google listing",
     "dashboard.upgrade.chip.aiReplies": "AI-drafted review replies",
     "dashboard.upgrade.chip.searchInsights": "Who searches for you",
     "dashboard.upgrade.chip.campaignChannels": "Email, text & social campaigns",
@@ -5472,8 +5495,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.planList.designs.l": "Every template and option for review signs, coupons and referral cards — no PostScore branding.",
     "dashboard.free.planList.pdfReports.h": "A report you can print or share",
     "dashboard.free.planList.pdfReports.l": "Download your weekly report as a PDF.",
-    "dashboard.free.planList.googleProfile.h": "Google listing fixes done for you",
-    "dashboard.free.planList.googleProfile.l": "Connect Google to fix your hours, info and photos in one click, and see who searches for you and calls.",
+    "dashboard.free.planList.googleProfile.h": "Edit your Google listing from PostScore (Beta)",
+    "dashboard.free.planList.googleProfile.hLive": "Edit your Google listing from PostScore",
+    "dashboard.free.planList.googleProfile.l": "Connect Google to update your hours, phone, description and more from PostScore. Seeing who searches for you and calls is coming soon.",
     "dashboard.free.planList.aiReplies.h": "Replies posted for you",
     "dashboard.free.planList.aiReplies.l": "See every review you haven't answered and post replies from PostScore.",
     "dashboard.free.planList.campaignHub.h": "Email, text and social campaigns",
@@ -5563,7 +5587,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.tile.reports": "Weekly reports",
     "dashboard.free.tile.reportsPdf": "PDF on Premium",
     "dashboard.free.tile.hub": "Email, text and social campaigns",
-    "dashboard.free.tile.google": "Google Profile: fixes done for you + search insights",
+    "dashboard.free.tile.google": "Google Profile: edit your listing + search insights",
     "dashboard.free.tile.aiReplies": "AI-drafted review replies",
     "dashboard.free.tile.postaiUnlimited": "Unlimited PostAI",
     "dashboard.free.tile.postStudioPrice": "$30/mo alone · +$15 on Grow · +$8 on Premium",
@@ -5580,7 +5604,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.showroom.growth.g1": "A weekly plan that tells you what to do next",
     "dashboard.free.showroom.growth.g2": "Step-by-step guides for every issue",
     "dashboard.free.showroom.growth.g3": "A weekly routine for your Google listing",
-    "dashboard.free.showroom.growth.p1": "Google Profile connection — fixes done for you (coming soon)",
+    "dashboard.free.showroom.growth.p1": "Google Profile connection — edit your listing from PostScore (Beta)",
+    "dashboard.free.showroom.growth.p1Live": "Google Profile connection — edit your listing from PostScore",
     "dashboard.free.showroom.growth.p2": "See who searches for you, and who calls or clicks (coming soon)",
     "dashboard.free.showroom.growth.p3": "Unlimited PostAI",
     "dashboard.free.showroom.campaigns.g1": "Coupons and referral cards (2 styles, 2 sizes)",
@@ -5897,14 +5922,15 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleProfile.connectHeading": "Google connection",
     "dashboard.googleProfile.connected": "Connected",
     "dashboard.googleProfile.notConnected": "Not connected",
-    "dashboard.googleProfile.connectBody": "One connection to your Google Business Profile. PostScore uses it to check how you reply to reviews; your Google insights and listing fixes are coming soon.",
+    "dashboard.googleProfile.connectBody": "One connection to your Google Business Profile. PostScore uses it to check how you reply to reviews, and to edit your listing and reply to reviews from here (Beta — switched on for a few businesses so far). Your Google insights are coming soon.",
+    "dashboard.googleProfile.connectBodyLive": "One connection to your Google Business Profile. PostScore uses it to check how you reply to reviews, and to edit your listing and reply to reviews from here. Your Google insights are coming soon.",
     "dashboard.googleProfile.connectLink": "Connect Google →",
     "dashboard.googleProfile.featuresHeading": "With Premium",
     "dashboard.googleProfile.needsPremium": "Needs Premium",
     "dashboard.googleProfile.inPlanSoon": "In your plan · coming soon",
     "dashboard.googleProfile.searchDemand": "Search demand",
     "dashboard.googleProfile.editing": "Edit your listing from here",
-    "dashboard.googleProfile.editingBody": "Hours, phone, description and photos — without leaving PostScore.",
+    "dashboard.googleProfile.editingBody": "Hours, phone and description — without leaving PostScore.",
     "dashboard.googleProfile.insights": "Insights funnel",
     "dashboard.googleProfile.insightsBody": "Views → calls, website clicks and directions.",
     "dashboard.postStudio.priceFree": "PostStudio on its own: $30/mo with your free audit — or add it to Grow (+$15/mo) or Premium (+$8/mo).",
@@ -7534,6 +7560,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.exampleBuildingTrust": "{target}★ from 5 reviews — still building trust",
     "dashboard.websiteReviews.rubricHeading": "The rubric behind your review score",
     "dashboard.websiteReviews.replyAssistantLabel": "Reply assistant",
+    "dashboard.websiteReviews.premiumRepliesLine": "Unlimited AI reply drafts · With Google connected, see your Google reviews here and post replies to Google (Beta — switched on for a few businesses so far)",
+    "dashboard.websiteReviews.premiumRepliesLineLive": "Unlimited AI reply drafts · With Google connected, see your Google reviews here and post replies to Google",
     "dashboard.websiteReviews.replyAssistantConnectedBody":
       "Your Google Business Profile is connected — reading your actual reviews and drafting replies is a later update, not live yet. Nothing fabricated in the meantime.",
     "dashboard.websiteReviews.replyAssistantUnlockDescription":
@@ -7900,7 +7928,7 @@ export const messages: Record<Locale, LocaleMessages> = {
 
     // --- Connect-GBP section: app/business/[id]/connect-gbp/*,
     // components/gbp/ConnectToUnlock.tsx.
-    "dashboard.connectGbp.unlockEditableListingTitle": "Live, editable listing",
+    "dashboard.connectGbp.unlockEditableListingTitle": "Edit your Google listing",
     "dashboard.connectGbp.unlockEditableListingBody":
       "Update your hours, phone, and other listing fields from PostScore instead of Google directly.",
     "dashboard.connectGbp.unlockCompletenessFixesTitle": "Profile-completeness fixes",
@@ -9552,12 +9580,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbp.connectedTo": "Connected: {place}",
     "dashboard.gbp.reconnectBody": "Google stopped accepting PostScore's access, so it can't check your profile. Reconnect to keep it working.",
     "dashboard.gbp.reconnect": "Reconnect Google",
-    "dashboard.gbp.premiumUpsell": "Premium adds your Google insights — views, calls, searches and missed customers — and lets PostScore make listing fixes for you (coming soon).",
+    "dashboard.gbp.premiumUpsell": "Premium lets you edit your Google listing and reply to reviews from PostScore (Beta — switched on for a few businesses so far). Your Google insights — views, calls, searches and missed customers — are coming soon.",
+    "dashboard.gbp.premiumUpsellLive": "Premium lets you edit your Google listing and reply to reviews from PostScore. Your Google insights — views, calls, searches and missed customers — are coming soon.",
     "dashboard.gbp.comparePlans": "Compare plans",
     "dashboard.gbp.profileFreeGrowBody": "On your plan you connect Google from your reviews area, for the review-reply check. This page's insights and listing tools are Premium.",
     "dashboard.gbp.goToReviewsConnect": "Go to your reviews →",
     "dashboard.connectGbp.comingSoonBadge": "Coming soon",
     "dashboard.connectGbp.liveBadge": "Works now",
+    "dashboard.connectGbp.betaBadge": "Beta",
     "dashboard.gbpReplyCheck.title": "Replying to reviews",
     "dashboard.gbpReplyCheck.body": "Connect your Google Business Profile so your score can include how you reply to reviews. Read-only — PostScore never changes your listing on this plan.",
     "dashboard.gbpReplyCheck.connect": "Connect Google",
@@ -10412,7 +10442,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.tagline.multi": "Premium para cada una de sus ubicaciones",
     "dashboard.settings.plans.promise.free": "Vea exactamente qué le está costando clientes.",
     "dashboard.settings.plans.promise.grow": "Le mostramos exactamente cómo resolver cada problema.",
-    "dashboard.settings.plans.promise.premium": "PostAI y respuestas ilimitadas, y todas las herramientas de diseño. Conectar Google para que PostScore haga los arreglos por usted llega próximamente.",
+    "dashboard.settings.plans.promise.premium": "PostAI y respuestas ilimitadas, todas las herramientas de diseño, y editar su ficha de Google desde PostScore (Beta).",
+    "dashboard.settings.plans.promise.premiumLive": "PostAI y respuestas ilimitadas, todas las herramientas de diseño, y editar su ficha de Google desde PostScore.",
     "dashboard.settings.plans.bullet.free.score": "Su PostScore y su calificación, con un escaneo gratis cada semana",
     "dashboard.settings.plans.bullet.free.problems": "Cada problema de su ficha de Google, sus reseñas y su sitio web",
     "dashboard.settings.plans.bullet.free.rank": "Su posición frente a los competidores cercanos",
@@ -10423,12 +10454,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.grow.recheck": "Vuelva a revisar su sitio web en cuanto arregle algo",
     "dashboard.settings.plans.bullet.grow.tools": "Un sitio web inicial, además de letreros de reseñas, cupones y tarjetas de referidos básicos",
     "dashboard.settings.plans.bullet.grow.postai": "PostAI para sus preguntas (100 al mes)",
-    "dashboard.settings.plans.bullet.premium.fixes": "Arreglos con un clic en su ficha de Google: horario, datos y fotos (próximamente)",
+    "dashboard.settings.plans.bullet.premium.fixes": "Edite su ficha de Google desde PostScore: horario, teléfono, descripción, enlace al sitio web y datos para clientes (Beta)",
+    "dashboard.settings.plans.bullet.premium.fixesLive": "Edite su ficha de Google desde PostScore: horario, teléfono, descripción, enlace al sitio web y datos para clientes",
     // Posting replies to Google is still off for every business in production
     // (GOOGLE_WRITES_LIVE_PLACES, lib/gbpReviewPractice.ts). When it goes live,
     // update this bullet AND dashboard.settings.plans.value.repliesUnlimited
     // (the plan table, lib/planComparison.ts) together, in EN and ES.
     "dashboard.settings.plans.bullet.premium.replies": "Borradores de respuesta con IA ilimitados · Con Google conectado, vea todas sus reseñas en un solo lugar · Publicar respuestas en Google: próximamente",
+    "dashboard.settings.plans.bullet.premium.repliesLive": "Borradores de respuesta con IA ilimitados · Con Google conectado, vea todas sus reseñas en un solo lugar · Publique sus respuestas en Google",
     "dashboard.settings.plans.bullet.premium.insights": "Vea quién lo busca y quién lo llama o hace clic (próximamente)",
     "dashboard.settings.plans.bullet.premium.channels": "Campañas por correo, mensaje de texto y redes sociales (próximamente)",
     "dashboard.settings.plans.bullet.premium.designs": "Todas las herramientas de diseño, sin la marca PostScore",
@@ -10445,7 +10478,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.row.channels": "Campañas por correo, texto y redes sociales",
     "dashboard.settings.plans.row.website": "Sitio web",
     "dashboard.settings.plans.row.postai": "PostAI",
-    "dashboard.settings.plans.row.doneForYou": "Arreglos que hacemos por usted (conexión con Google)",
+    "dashboard.settings.plans.row.doneForYou": "Editar su ficha de Google desde PostScore (conexión con Google)",
     "dashboard.settings.plans.row.reports": "Informes",
     "dashboard.settings.plans.row.monthlyEmail": "Informe mensual por correo",
     "dashboard.settings.plans.row.replies": "Respuestas a reseñas con IA",
@@ -10454,7 +10487,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.value.perMonth100": "100 al mes",
     // Update together with dashboard.settings.plans.bullet.premium.replies
     // when posting replies to Google goes live (see the note there).
-    "dashboard.settings.plans.value.repliesUnlimited": "Ilimitadas · publicación automática próximamente",
+    "dashboard.settings.plans.value.repliesUnlimited": "Ilimitadas · publicar en Google (Beta)",
+    "dashboard.settings.plans.value.repliesUnlimitedLive": "Ilimitadas · publicar en Google",
     "dashboard.settings.plans.row.postStudio": "PostStudio: su sitio web completo, construido y alojado por nosotros (próximamente)",
     "dashboard.settings.plans.row.locations": "Ubicaciones",
     "dashboard.settings.plans.value.basic": "Básico",
@@ -10475,6 +10509,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.cell.preview": "Vista previa",
     "dashboard.settings.plans.cell.no": "No incluido",
     "dashboard.settings.plans.cell.soon": "Próximamente",
+    "dashboard.settings.plans.cell.beta": "Beta",
     "dashboard.upgrade.unlock.missing": "A su ficha le falta {issue}. Grow le muestra exactamente cómo arreglarlo, paso a paso.",
     "dashboard.upgrade.unlock.reviews": "Usted tiene {n} reseñas. Los {type} cercanos tienen {avg} en promedio. Grow le da un plan para cerrar la diferencia.",
     "dashboard.upgrade.unlock.reviewsOne": "Usted tiene 1 reseña. Los {type} cercanos tienen {avg} en promedio. Grow le da un plan para cerrar la diferencia.",
@@ -10485,7 +10520,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.unlock.recheck": "¿Arregló algo? Con Grow, vuelva a revisar al instante en lugar de esperar un mes.",
     "dashboard.upgrade.unlock.designs": "Diseñe e imprima su letrero de reseñas, sus cupones y sus tarjetas de referidos con Grow.",
     "dashboard.upgrade.unlock.hub": "Campañas por correo, texto y redes sociales — Premium, próximamente.",
-    "dashboard.upgrade.unlock.connect": "Conecte Google y deje que PostScore arregle su ficha por usted. Premium, próximamente.",
+    "dashboard.upgrade.unlock.connect": "Conecte Google y edite su ficha desde PostScore — Premium, en Beta.",
+    "dashboard.upgrade.unlock.connectLive": "Conecte Google y edite su ficha desde PostScore — Premium.",
     "dashboard.upgrade.missing.hours": "su horario de atención",
     "dashboard.upgrade.missing.phone": "un número de teléfono",
     "dashboard.upgrade.missing.website": "un enlace a su sitio web",
@@ -10511,7 +10547,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.feature.reviewSign.b1": "Imprima un letrero con el código QR de sus reseñas",
     "dashboard.upgrade.feature.reviewSign.b2": "Póngalo junto a su mostrador para que cada cliente pueda dejar una reseña",
     "dashboard.upgrade.feature.googleProfile.name": "Perfil de Google",
-    "dashboard.upgrade.feature.googleProfile.b1": "Arreglos con un clic en su ficha de Google",
+    "dashboard.upgrade.feature.googleProfile.b1": "Edite su ficha de Google desde PostScore (Beta)",
+    "dashboard.upgrade.feature.googleProfile.b1Live": "Edite su ficha de Google desde PostScore",
     "dashboard.upgrade.feature.googleProfile.b2": "Vea quién lo busca y quién lo llama o hace clic",
     "dashboard.upgrade.feature.googleProfile.b3": "Respuestas a cada reseña redactadas con IA",
     "dashboard.upgrade.feature.campaignHub.name": "Campañas por correo, texto y redes sociales",
@@ -10708,7 +10745,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.strip.seeIncluded": "Vea qué incluye",
     "dashboard.upgrade.strip.hide": "Ocultar por 14 días",
     "dashboard.upgrade.strip.label": "Planes",
-    "dashboard.upgrade.chip.doneForYou": "Arreglos hechos por usted",
+    "dashboard.upgrade.chip.doneForYou": "Edite su ficha de Google (Beta)",
+    "dashboard.upgrade.chip.doneForYouLive": "Edite su ficha de Google",
     "dashboard.upgrade.chip.aiReplies": "Respuestas a reseñas redactadas con IA",
     "dashboard.upgrade.chip.searchInsights": "Quién lo busca",
     "dashboard.upgrade.chip.campaignChannels": "Campañas por correo, texto y redes",
@@ -10807,8 +10845,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.planList.designs.l": "Todas las plantillas y opciones para letreros de reseñas, cupones y tarjetas de referidos, sin la marca PostScore.",
     "dashboard.free.planList.pdfReports.h": "Un informe que puede imprimir o compartir",
     "dashboard.free.planList.pdfReports.l": "Descargue su informe semanal en PDF.",
-    "dashboard.free.planList.googleProfile.h": "Arreglos de su ficha de Google, hechos por nosotros",
-    "dashboard.free.planList.googleProfile.l": "Conecte Google para arreglar su horario, sus datos y sus fotos con un clic, y vea quién le busca y le llama.",
+    "dashboard.free.planList.googleProfile.h": "Edite su ficha de Google desde PostScore (Beta)",
+    "dashboard.free.planList.googleProfile.hLive": "Edite su ficha de Google desde PostScore",
+    "dashboard.free.planList.googleProfile.l": "Conecte Google para actualizar su horario, teléfono, descripción y más desde PostScore. Ver quién le busca y le llama llega pronto.",
     "dashboard.free.planList.aiReplies.h": "Respuestas que publicamos por usted",
     "dashboard.free.planList.aiReplies.l": "Vea cada reseña sin responder y publique respuestas desde PostScore.",
     "dashboard.free.planList.campaignHub.h": "Campañas por correo, texto y redes sociales",
@@ -10898,7 +10937,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.tile.reports": "Informes semanales",
     "dashboard.free.tile.reportsPdf": "PDF con Premium",
     "dashboard.free.tile.hub": "Campañas por correo, texto y redes sociales",
-    "dashboard.free.tile.google": "Perfil de Google: arreglos hechos por usted + búsquedas",
+    "dashboard.free.tile.google": "Perfil de Google: edite su ficha + búsquedas",
     "dashboard.free.tile.aiReplies": "Respuestas a reseñas redactadas con IA",
     "dashboard.free.tile.postaiUnlimited": "PostAI ilimitado",
     "dashboard.free.tile.postStudioPrice": "$30/mes solo · +$15 con Grow · +$8 con Premium",
@@ -10915,7 +10954,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.showroom.growth.g1": "Un plan semanal que le dice qué hacer a continuación",
     "dashboard.free.showroom.growth.g2": "Guías paso a paso para cada problema",
     "dashboard.free.showroom.growth.g3": "Una rutina semanal para su ficha de Google",
-    "dashboard.free.showroom.growth.p1": "Conexión con el Perfil de Google: arreglos hechos por usted (próximamente)",
+    "dashboard.free.showroom.growth.p1": "Conexión con el Perfil de Google: edite su ficha desde PostScore (Beta)",
+    "dashboard.free.showroom.growth.p1Live": "Conexión con el Perfil de Google: edite su ficha desde PostScore",
     "dashboard.free.showroom.growth.p2": "Vea quién lo busca y quién llama o hace clic (próximamente)",
     "dashboard.free.showroom.growth.p3": "PostAI ilimitado",
     "dashboard.free.showroom.campaigns.g1": "Cupones y tarjetas de referidos (2 estilos, 2 tamaños)",
@@ -11232,14 +11272,15 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleProfile.connectHeading": "Conexión con Google",
     "dashboard.googleProfile.connected": "Conectado",
     "dashboard.googleProfile.notConnected": "No conectado",
-    "dashboard.googleProfile.connectBody": "Una sola conexión con su Perfil de Empresa en Google. PostScore la usa para revisar cómo responde a las reseñas; sus estadísticas de Google y los arreglos de la ficha llegan pronto.",
+    "dashboard.googleProfile.connectBody": "Una sola conexión con su Perfil de Empresa en Google. PostScore la usa para revisar cómo responde a las reseñas, y para editar su ficha y responder reseñas desde aquí (Beta: activado por ahora para algunas empresas). Sus estadísticas de Google llegan pronto.",
+    "dashboard.googleProfile.connectBodyLive": "Una sola conexión con su Perfil de Empresa en Google. PostScore la usa para revisar cómo responde a las reseñas, y para editar su ficha y responder reseñas desde aquí. Sus estadísticas de Google llegan pronto.",
     "dashboard.googleProfile.connectLink": "Conectar Google →",
     "dashboard.googleProfile.featuresHeading": "Con Premium",
     "dashboard.googleProfile.needsPremium": "Requiere Premium",
     "dashboard.googleProfile.inPlanSoon": "En su plan · próximamente",
     "dashboard.googleProfile.searchDemand": "Demanda de búsqueda",
     "dashboard.googleProfile.editing": "Editar su ficha desde aquí",
-    "dashboard.googleProfile.editingBody": "Horario, teléfono, descripción y fotos — sin salir de PostScore.",
+    "dashboard.googleProfile.editingBody": "Horario, teléfono y descripción — sin salir de PostScore.",
     "dashboard.googleProfile.insights": "Embudo de estadísticas",
     "dashboard.googleProfile.insightsBody": "Vistas → llamadas, clics al sitio web y solicitudes de cómo llegar.",
     "dashboard.postStudio.priceFree": "PostStudio por sí solo: $30/mes con su auditoría gratis, o agréguelo a Grow (+$15/mes) o Premium (+$8/mes).",
@@ -12699,6 +12740,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteReviews.exampleBuildingTrust": "{target}★ de 5 reseñas — aún generando confianza",
     "dashboard.websiteReviews.rubricHeading": "El criterio detrás de su puntuación de reseñas",
     "dashboard.websiteReviews.replyAssistantLabel": "Asistente de respuestas",
+    "dashboard.websiteReviews.premiumRepliesLine": "Borradores de respuesta con IA ilimitados · Con Google conectado, vea aquí sus reseñas de Google y publique respuestas en Google (Beta: activado por ahora para algunas empresas)",
+    "dashboard.websiteReviews.premiumRepliesLineLive": "Borradores de respuesta con IA ilimitados · Con Google conectado, vea aquí sus reseñas de Google y publique respuestas en Google",
     "dashboard.websiteReviews.replyAssistantConnectedBody": "Su Perfil de Empresa en Google está conectado — leer sus reseñas reales y redactar respuestas es una actualización futura, aún no está disponible. Nada inventado mientras tanto.",
     "dashboard.websiteReviews.replyAssistantUnlockDescription": "Redactar respuestas a sus reseñas reales requiere acceso real al Perfil de Empresa en Google — hoy solo obtenemos su calificación y su número de reseñas, no el contenido ni los autores de cada reseña. Conecte su perfil para desbloquearlo.",
     "dashboard.websiteReviews.comingSoonLabel": "Próximamente",
@@ -13030,7 +13073,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.memory.errorInvalidNumbers": "Ingrese números positivos válidos.",
     "dashboard.assistant.memory.errorLowExceedsHigh": "El valor mínimo no puede ser mayor que el valor máximo.",
 
-    "dashboard.connectGbp.unlockEditableListingTitle": "Ficha en vivo y editable",
+    "dashboard.connectGbp.unlockEditableListingTitle": "Edite su ficha de Google",
     "dashboard.connectGbp.unlockEditableListingBody": "Actualice su horario, teléfono y otros campos de la ficha desde PostScore en lugar de directamente en Google.",
     "dashboard.connectGbp.unlockCompletenessFixesTitle": "Soluciones para completar el perfil",
     "dashboard.connectGbp.unlockCompletenessFixesBody": "Vea exactamente qué campos faltan en su ficha y agregue cada uno directamente a su plan de acción.",
@@ -14987,12 +15030,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbp.connectedTo": "Conectado: {place}",
     "dashboard.gbp.reconnectBody": "Google dejó de aceptar el acceso de PostScore, así que no puede revisar su perfil. Vuelva a conectar para que siga funcionando.",
     "dashboard.gbp.reconnect": "Volver a conectar Google",
-    "dashboard.gbp.premiumUpsell": "Premium agrega sus estadísticas de Google —vistas, llamadas, búsquedas y clientes perdidos— y permite que PostScore haga arreglos en su ficha por usted (próximamente).",
+    "dashboard.gbp.premiumUpsell": "Premium le permite editar su ficha de Google y responder reseñas desde PostScore (Beta: activado por ahora para algunas empresas). Sus estadísticas de Google —vistas, llamadas, búsquedas y clientes perdidos— llegan pronto.",
+    "dashboard.gbp.premiumUpsellLive": "Premium le permite editar su ficha de Google y responder reseñas desde PostScore. Sus estadísticas de Google —vistas, llamadas, búsquedas y clientes perdidos— llegan pronto.",
     "dashboard.gbp.comparePlans": "Comparar planes",
     "dashboard.gbp.profileFreeGrowBody": "En su plan, conecta Google desde su área de reseñas, para el punto de respuestas a reseñas. Las estadísticas y herramientas de ficha de esta página son de Premium.",
     "dashboard.gbp.goToReviewsConnect": "Ir a sus reseñas →",
     "dashboard.connectGbp.comingSoonBadge": "Próximamente",
     "dashboard.connectGbp.liveBadge": "Ya funciona",
+    "dashboard.connectGbp.betaBadge": "Beta",
     "dashboard.gbpReplyCheck.title": "Respuestas a reseñas",
     "dashboard.gbpReplyCheck.body": "Conecte su Perfil de Empresa en Google para que su puntuación pueda incluir cómo responde a las reseñas. Solo lectura: PostScore nunca cambia su ficha en este plan.",
     "dashboard.gbpReplyCheck.connect": "Conectar Google",

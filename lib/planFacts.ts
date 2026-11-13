@@ -2,13 +2,14 @@
 // Settings → Plan & billing → "Compare plans" (lib/planComparison.ts:
 // PLAN_COPY and COMPARE_ROWS), so PostAI can never describe a plan
 // differently from that page. Every feature carries its real status:
-// available now, a preview, not included, or coming soon. Pure.
+// available now, a preview, not included, Beta (built, switched on for a few
+// businesses so far — lib/googleWritesLaunch.ts), or coming soon. Pure.
 
 import { COMPARE_PLANS, COMPARE_ROWS, PLAN_COPY, type Cell } from "@/lib/planComparison";
 import { t, type Locale } from "@/lib/i18n";
 import type { Plan } from "@/lib/plan";
 
-export type FactStatus = "available" | "preview" | "not included" | "coming soon";
+export type FactStatus = "available" | "preview" | "not included" | "beta" | "coming soon";
 
 export interface PlanFeatureFact {
   feature: string;
@@ -17,6 +18,8 @@ export interface PlanFeatureFact {
   value: string | null;
   /** The part that's coming soon ("auto-post coming soon"), when a value mixes both. */
   soonValue: string | null;
+  /** The part that's in Beta ("post to Google (Beta)"), when a value mixes it in. */
+  betaValue: string | null;
 }
 
 export interface PlanFact {
@@ -31,6 +34,7 @@ export interface PlanFact {
 }
 
 const saysSoon = (text: string) => /coming soon|próximamente/i.test(text);
+const saysBeta = (text: string) => /\bBeta\b/.test(text);
 
 /** One Compare plans cell. A value that mixes "available" and "coming
  * soon" parts ("Unlimited · auto-post coming soon") is split; a row whose
@@ -40,24 +44,30 @@ function cellFact(cell: Cell, rowLabel: string, locale: Locale): Omit<PlanFeatur
   const rowSoon = saysSoon(rowLabel);
   switch (cell.kind) {
     case "yes":
-      return { status: rowSoon ? "coming soon" : "available", value: null, soonValue: null };
+      return { status: rowSoon ? "coming soon" : "available", value: null, soonValue: null, betaValue: null };
     case "preview":
-      return { status: "preview", value: null, soonValue: null };
+      return { status: "preview", value: null, soonValue: null, betaValue: null };
     case "no":
-      return { status: "not included", value: null, soonValue: null };
+      return { status: "not included", value: null, soonValue: null, betaValue: null };
     case "soon":
-      return { status: "coming soon", value: null, soonValue: null };
+      return { status: "coming soon", value: null, soonValue: null, betaValue: null };
+    case "beta":
+      return { status: "beta", value: null, soonValue: null, betaValue: null };
     case "text": {
       const text = t(locale, cell.key);
-      if (rowSoon) return { status: "coming soon", value: null, soonValue: text };
-      const parts = text.split(/\s+·\s+/);
+      if (rowSoon) return { status: "coming soon", value: null, soonValue: text, betaValue: null };
+      const all = text.split(/\s+·\s+/);
+      const beta = all.filter(saysBeta);
+      const betaValue = beta.length > 0 ? beta.join(" · ") : null;
+      const parts = all.filter((part) => !saysBeta(part));
+      if (parts.length === 0) return { status: "beta", value: null, soonValue: null, betaValue };
       const now = parts.filter((part) => !saysSoon(part) && !/PostStudio/.test(part));
       const later = parts.filter((part) => saysSoon(part) || /PostStudio/.test(part)).map((part) => (/PostStudio/.test(part) && !saysSoon(part) ? `${part} (PostStudio is coming soon)` : part));
       // "Starter + PostStudio discount": the starter site now, the PostStudio part later.
       if (now.length === 0 && later.length === 1 && /^(.+?)\s*\+\s*PostStudio/.test(parts[0])) {
-        return { status: "available", value: parts[0].replace(/\s*\+\s*PostStudio.*$/, ""), soonValue: later[0] };
+        return { status: "available", value: parts[0].replace(/\s*\+\s*PostStudio.*$/, ""), soonValue: later[0], betaValue };
       }
-      return { status: now.length > 0 ? "available" : "coming soon", value: now.length > 0 ? now.join(" · ") : null, soonValue: later.length > 0 ? later.join(" · ") : null };
+      return { status: now.length > 0 ? "available" : "coming soon", value: now.length > 0 ? now.join(" · ") : null, soonValue: later.length > 0 ? later.join(" · ") : null, betaValue };
     }
   }
 }
@@ -83,7 +93,7 @@ export function planFacts(locale: Locale = "en"): PlanFact[] {
   });
 }
 
-const STATUS: Record<FactStatus, string> = { available: "available now", preview: "preview only", "not included": "not included", "coming soon": "COMING SOON" };
+const STATUS: Record<FactStatus, string> = { available: "available now", preview: "preview only", "not included": "not included", beta: "BETA", "coming soon": "COMING SOON" };
 
 /** The plan facts as a prompt section. */
 export function planFactsText(locale: Locale = "en"): string {
@@ -92,6 +102,7 @@ export function planFactsText(locale: Locale = "en"): string {
     lines.push(`${p.name} — ${p.price} — "${p.tagline}"${p.promise ? ` — ${p.promise}` : ""}`);
     const now = p.features.filter((f) => f.status === "available").map((f) => `${f.feature}${f.value ? ` (${f.value})` : ""}`);
     const preview = p.features.filter((f) => f.status === "preview").map((f) => f.feature);
+    const beta = p.features.filter((f) => f.status === "beta" || f.betaValue).map((f) => `${f.feature}${f.betaValue ? ` (${f.betaValue})` : ""}`);
     const soon = [
       ...p.features.filter((f) => f.soonValue || f.status === "coming soon").map((f) => `${f.feature}${f.soonValue ? ` (${f.soonValue})` : ""}`),
       // Card bullets that are wholly coming soon (a bullet that mixes in
@@ -101,6 +112,7 @@ export function planFactsText(locale: Locale = "en"): string {
     ];
     lines.push(`  AVAILABLE NOW: ${now.join("; ")}.`);
     if (preview.length > 0) lines.push(`  PREVIEW ONLY: ${preview.join("; ")}.`);
+    if (beta.length > 0) lines.push(`  BETA (built, but switched on for a few businesses only and needs Google connected — never promise it works for this business): ${beta.join("; ")}.`);
     if (soon.length > 0) lines.push(`  COMING SOON (never a current benefit): ${soon.join("; ")}.`);
     void STATUS;
   }

@@ -288,11 +288,13 @@ describe("plan copy and PostAI", () => {
     expect(PLAN_COPY.free.bullets.map((k) => t("en", k))).toContain("3 PostAI questions and 3 AI review replies a week");
     expect(t("en", "dashboard.settings.plans.bullet.premium.replies")).toBe("Unlimited AI reply drafts · With Google connected, see every review in one place · Posting replies to Google: coming soon");
     expect(t("es", "dashboard.settings.plans.bullet.premium.replies")).toBe("Borradores de respuesta con IA ilimitados · Con Google conectado, vea todas sus reseñas en un solo lugar · Publicar respuestas en Google: próximamente");
-    // Posting is off for every business in production: both say "coming soon" until it goes live — updated together.
-    expect(t("en", "dashboard.settings.plans.value.repliesUnlimited")).toBe("Unlimited · auto-post coming soon");
+    // Posting works only for the businesses on GOOGLE_WRITES_LIVE_PLACES: the
+    // bullet keeps "coming soon" and the Compare cell says Beta — both flip
+    // together in lib/googleWritesLaunch.ts.
+    expect(t("en", "dashboard.settings.plans.value.repliesUnlimited")).toBe("Unlimited · post to Google (Beta)");
     const row = COMPARE_ROWS.find((r) => r.key.endsWith(".replies"))!;
     expect(t("en", row.key)).toBe("AI review replies");
-    expect([row.cells.free, row.cells.grow, row.cells.premium, row.cells.multi].map((c) => (c.kind === "text" ? t("en", c.key) : c.kind))).toEqual(["3 a week", "10 a week", "Unlimited · auto-post coming soon", "Unlimited · auto-post coming soon"]);
+    expect([row.cells.free, row.cells.grow, row.cells.premium, row.cells.multi].map((c) => (c.kind === "text" ? t("en", c.key) : c.kind))).toEqual(["3 a week", "10 a week", "Unlimited · post to Google (Beta)", "Unlimited · post to Google (Beta)"]);
     expect(t("es", row.key)).toBe("Respuestas a reseñas con IA");
     expect(t("es", "dashboard.settings.plans.bullet.free.replies")).toBe("3 preguntas a PostAI y 3 respuestas a reseñas con IA por semana");
     // Free's PostAI cell, too.

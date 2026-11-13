@@ -7,20 +7,25 @@
 
 import type { MessageKey } from "./i18n";
 import type { Plan } from "./plan";
+import { GOOGLE_WRITES_FOR_EVERYONE, googleWritesCopy } from "./googleWritesLaunch";
 
 export const COMPARE_PLANS: Plan[] = ["free", "grow", "premium", "multi"];
 
 /** The plan the comparison highlights ("Best value"). */
 export const HIGHLIGHT_PLAN: Plan = "premium";
 
-/** ✓, a real-data preview, not included, ✓ but not built yet, or a short
- * value (with a ✓ in front when `check`). */
-export type Cell = { kind: "yes" } | { kind: "preview" } | { kind: "no" } | { kind: "soon" } | { kind: "text"; key: MessageKey; check?: boolean };
+/** ✓, a real-data preview, not included, ✓ but not built yet, ✓ built but
+ * in Beta (switched on for a few businesses so far), or a short value (with
+ * a ✓ in front when `check`). */
+export type Cell = { kind: "yes" } | { kind: "preview" } | { kind: "no" } | { kind: "soon" } | { kind: "beta" } | { kind: "text"; key: MessageKey; check?: boolean };
 
 const yes: Cell = { kind: "yes" };
 const preview: Cell = { kind: "preview" };
 const no: Cell = { kind: "no" };
 const soon: Cell = { kind: "soon" };
+// Editing the Google listing and posting replies: Beta until they're on for
+// everyone (lib/googleWritesLaunch.ts), then a plain ✓.
+const googleWrites: Cell = GOOGLE_WRITES_FOR_EVERYONE ? yes : { kind: "beta" };
 const text = (k: string, check = false): Cell => ({ kind: "text", key: `dashboard.settings.plans.value.${k}` as MessageKey, ...(check ? { check } : {}) });
 
 export interface CompareRow {
@@ -47,13 +52,12 @@ export const COMPARE_ROWS: CompareRow[] = [
   row("website", preview, text("starterSite"), text("starterDiscount"), text("starterIncluded")),
   row("postai", text("perWeek3"), text("perMonth100"), text("unlimited")),
   // AI review reply drafts (the owner pastes the review): 3 a week on Free,
-  // 10 a week on Grow; Premium unlimited, posting for them with Google
-  // connect soon.
-  // "Unlimited · auto-post coming soon": update together with the Premium
-  // replies bullet when posting replies to Google goes live (see
-  // dashboard.settings.plans.bullet.premium.replies in lib/i18n/messages.ts).
-  row("replies", text("perWeek3"), text("perWeek10"), text("repliesUnlimited")),
-  row("doneForYou", no, no, soon),
+  // 10 a week on Grow; Premium unlimited, and posting them to Google with
+  // Google connected — "(Beta)" until lib/googleWritesLaunch.ts flips.
+  row("replies", text("perWeek3"), text("perWeek10"), { kind: "text", key: googleWritesCopy("repliesValue") }),
+  // Edit on Google (hours, phone, description, website link, customer
+  // details, order or booking link): Premium, Beta until it's on for everyone.
+  row("doneForYou", no, no, googleWrites),
   // Free gets no monthly report email (lib/plan.ts planIncludesMonthlyReports).
   row("reports", no, text("weeklyRecap"), text("weeklyPdf")),
   row("monthlyEmail", no, yes, yes),
@@ -81,8 +85,9 @@ export const PLAN_COPY: Record<Plan, PlanCopy> = {
   premium: {
     price: k("price.premium"),
     tagline: k("tagline.premium"),
-    promise: k("promise.premium"),
-    bullets: bullets("premium", ["fixes", "replies", "insights", "channels", "designs", "postai"]),
+    // The listing-edit and replies lines flip with lib/googleWritesLaunch.ts.
+    promise: googleWritesCopy("premiumPromise"),
+    bullets: [googleWritesCopy("fixesBullet"), googleWritesCopy("repliesBullet"), ...bullets("premium", ["insights", "channels", "designs", "postai"])],
   },
   multi: { price: k("price.multi"), tagline: k("tagline.multi"), promise: null, bullets: bullets("multi", ["everything", "studio", "dashboard"]) },
 };

@@ -28,6 +28,7 @@ import { isPremiumPlan, type Plan } from "@/lib/plan";
 import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 import { GbpMessagingStep, GoogleAiAnswersLine } from "@/components/gbp/GbpMessagingStep";
 import { formatShortDate, t, useLocale, useTimeZone } from "@/lib/i18n";
+import { googleWritesCopy } from "@/lib/googleWritesLaunch";
 
 export interface GoogleListingFacts {
   rating: number | null;
@@ -171,7 +172,7 @@ export function GoogleProfilePanel({
           {premium ? (
             <>
               <p className="text-[13px] text-ink-soft">
-                {connection?.needsReconnect && !connected ? t(locale, "dashboard.gbp.reconnectBody") : t(locale, "dashboard.googleProfile.connectBody")}
+                {connection?.needsReconnect && !connected ? t(locale, "dashboard.gbp.reconnectBody") : t(locale, googleWritesCopy("connectBody"))}
               </p>
               {!connected && connection?.canStart ? (
                 <a href={gbpConnectHref(businessId, "profile")} className={linkClass}>

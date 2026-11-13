@@ -24,6 +24,7 @@ import { isPremiumPlan, type Plan } from "@/lib/plan";
 import { reviewGoalText } from "@/lib/reviewGoal";
 import type { ReviewGoal } from "@/lib/competitorComparison";
 import { formatCount, t, useLocale } from "@/lib/i18n";
+import { googleWritesCopy } from "@/lib/googleWritesLaunch";
 import { useScrollToHash } from "@/lib/useScrollToHash";
 import { ReviewReplyDrafter } from "@/components/reviews/ReviewReplyDrafter";
 import { GoogleReviewsInbox } from "@/components/reviews/GoogleReviewsInbox";
@@ -176,8 +177,6 @@ export function ReviewsView({
   plan?: Plan;
   /** The shared review goal and its comparison group, or null. */
   nearby?: { goal: ReviewGoal | null; group: string } | null;
-  /** Show the dev-only plan switch (the page passes true only in local dev). */
-  devPlanSwitch?: boolean;
   /** AI review reply drafts left (Grow and up; Free's page is a showroom). */
   replyDrafts?: ReplyDraftStatus | null;
   /** Practice mode (lib/gbpReviewPractice.ts): the Google reviews inbox on fake data, connected or not. */
@@ -247,11 +246,12 @@ export function ReviewsView({
         <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
           {t(locale, "dashboard.websiteReviews.replyAssistantLabel")}
         </div>
-        {/* Premium/Multi: an honest coming-soon Premium feature. */}
+        {/* Premium/Multi: what the plan includes for replies — posting to
+            Google says Beta until it's on for everyone (lib/googleWritesLaunch.ts). */}
         {isPremiumPlan(plan) && (
           <p data-testid="ai-replies-soon" className="mb-2 flex items-start gap-2 rounded-lg border border-[color:color-mix(in_srgb,var(--color-brass)_45%,white)] bg-white px-3 py-2 text-[13px] text-ink">
             <IconCrown size={15} aria-hidden className="mt-0.5 shrink-0 text-brass" />
-            {t(locale, "dashboard.settings.plans.bullet.premium.replies")}
+            {t(locale, googleWritesCopy("reviewsPlanLine"))}
           </p>
         )}
         {/* Premium + Google connected: the owner's Google reviews, replied to

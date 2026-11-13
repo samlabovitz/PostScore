@@ -125,11 +125,11 @@ describe("Campaigns on Grow and Premium", () => {
     for (const s of ["20% off any color service", "Coupon", "New", "COLOR20", "Started Sep 30, 2026", "+1 Redeemed", "End"]) expect(t, s).toContain(s);
   });
 ;
-  test("Premium/Multi: no 'How to run it' guides (Grow only)", () => {
+  test("Premium/Multi: 'How to run it' too (Grow and up)", () => {
     for (const plan of ["premium", "multi"] as Plan[]) {
       nav.query = "tab=coupons";
       const html = wrap(<CampaignsView businessId="b1" businessName="Test Salon" businessPhone={null} profile={SALON} initialPromos={[]} initialReferral={null} plan={plan} printBusiness={CARD} />, plan);
-      expect(html, plan).not.toContain("how-to-run-it");
+      expect(html, plan).toContain('data-testid="how-to-run-it" data-kind="coupons"');
     }
     nav.query = "";
   });
@@ -192,8 +192,12 @@ describe("Reviews", () => {
     expect(html).toContain('data-testid="sign-locked"');
   });
 
-  test("Premium and Multi see 'Unlimited AI reply drafts · … Posting replies to Google: coming soon'; Grow doesn't", () => {
-    for (const plan of ["premium", "multi"] as Plan[]) expect(text(view(plan)), plan).toContain("Unlimited AI reply drafts · With Google connected, see every review in one place · Posting replies to Google: coming soon");
+  test("Premium and Multi see 'Unlimited AI reply drafts · … post replies to Google (Beta …)'; Grow doesn't", () => {
+    for (const plan of ["premium", "multi"] as Plan[]) {
+      const t = text(view(plan));
+      expect(t, plan).toContain("Unlimited AI reply drafts · With Google connected, see your Google reviews here and post replies to Google (Beta — switched on for a few businesses so far)");
+      expect(t, plan).not.toContain("Posting replies to Google: coming soon");
+    }
     expect(view("grow")).not.toContain("ai-replies-soon");
   });
 

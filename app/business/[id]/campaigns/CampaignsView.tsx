@@ -146,8 +146,8 @@ export function CampaignsView({
         </div>
       )}
 
-      {/* Grow: the five-step guide, collapsed, above the designer. */}
-      {plan === "grow" && (tab === "coupons" || tab === "referrals") && <HowToRunIt kind={tab} />}
+      {/* Grow and up: the five-step guide, collapsed, above the designer. */}
+      {plan !== "free" && (tab === "coupons" || tab === "referrals") && <HowToRunIt kind={tab} />}
 
       {tab === "coupons" && (
         <CouponsSection
