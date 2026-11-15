@@ -243,6 +243,8 @@ export interface Audience {
   takeaway: { kind: "phone" | "maps" | "search"; percent: number };
   /** Too few views for a % change to mean much. */
   small: boolean;
+  /** The table's raw numbers: the window's last month, and [this period, the same months a year earlier (null: not all stored)]. */
+  compare?: { to: string; views: [number, number | null]; interactions: [number, number | null] };
 }
 
 /** "Who saw you" over the last `window` months ending with the newest row:
@@ -273,7 +275,47 @@ export function audience(months: InsightsMonth[], window = 6): Audience | null {
     rows: AUDIENCE_ROWS.map((id, i) => ({ id, count: counts[i], percent: percents[i] })),
     takeaway: takeaway(counts),
     small: total < SMALL_MONTH_VIEWS || (lastYearTotal !== null && lastYearTotal < SMALL_MONTH_VIEWS),
+    compare: { to: last, views: [total, lastYearTotal], interactions: [interactions, lastYearInteractions] },
   };
+}
+
+export type WhoTakeaway = "downUp" | "upUp" | "upDown" | "downDown";
+export interface WhoRow {
+  id: "views" | "interactions" | "per100";
+  now: number;
+  last: number | null;
+  /** Whole % for views / interactions; whole customers for per 100. null: not enough history. */
+  change: { kind: "percent" | "more"; value: number } | null;
+}
+export interface WhoTable {
+  /** "2026-10": the period's last month (the period is the 6 months ending there). */
+  to: string;
+  lastTo: string;
+  rows: WhoRow[];
+  /** Views up/down × customers per 100 up/down; null without last year. */
+  takeaway: WhoTakeaway | null;
+}
+
+const per100 = (interactions: number, views: number) => (views > 0 ? Math.round((interactions / views) * 100) : 0);
+const wholePercent = (now: number, last: number | null) => (last !== null && last > 0 ? Math.round(((now - last) / last) * 100) : null);
+
+/** "Who saw you" as a table: this period vs the same 6 calendar months a year earlier. */
+export function whoTable(a: Audience): WhoTable | null {
+  const c = a.compare;
+  if (!c) return null;
+  const [v, vLast] = c.views;
+  const [i, iLast] = c.interactions;
+  const p = per100(i, v);
+  const pLast = vLast !== null && iLast !== null ? per100(iLast, vLast) : null;
+  const vChange = wholePercent(v, vLast);
+  const iChange = wholePercent(i, iLast);
+  const rows: WhoRow[] = [
+    { id: "views", now: v, last: vLast, change: vChange === null ? null : { kind: "percent", value: vChange } },
+    { id: "interactions", now: i, last: iLast, change: iChange === null ? null : { kind: "percent", value: iChange } },
+    { id: "per100", now: p, last: pLast, change: pLast === null ? null : { kind: "more", value: p - pLast } },
+  ];
+  const takeaway: WhoTakeaway | null = vLast === null || pLast === null ? null : `${v >= vLast ? "up" : "down"}${p >= pLast ? "Up" : "Down"}` as WhoTakeaway;
+  return { to: c.to, lastTo: addMonths(c.to, -12), rows, takeaway };
 }
 
 /** % change, one decimal; null without a real base. */
@@ -307,6 +349,7 @@ export const SAMPLE_AUDIENCE: Audience = {
   ],
   takeaway: { kind: "phone", percent: 83 },
   small: false,
+  compare: { to: "2026-10", views: [3091, 3569], interactions: [655, 526] },
 };
 
 /** Calls by part of the week (the mockup's three groups) over the given

@@ -66,8 +66,12 @@ describe("the Update on Google panel: choose all that apply", () => {
     expect(html).toContain("Contactless / phone pay (NFC)");
     expect(html).toContain("Cash only");
     expect(html).toContain("Wheelchair-accessible seating");
-    // Not asked about: checks, on-site parking, hearing loop, restroom.
-    expect(html).not.toMatch(/pay_check|has_onsite_parking|has_hearing_loop|has_restroom/);
+    // Not in the scored groups: checks, on-site parking, hearing loop, restroom —
+    // those are suggestions under "Help more people choose you" (no points).
+    const scored = html.slice(html.indexOf('data-testid="gbp-edit-scored"'), html.indexOf('data-testid="gbp-edit-extras"'));
+    expect(scored).not.toMatch(/pay_check|has_onsite_parking|has_hearing_loop|has_restroom/);
+    expect(html.slice(html.indexOf('data-testid="gbp-edit-extras"'))).toMatch(/Restroom/);
+    expect(html).not.toMatch(/dashboard\.gbpEdit\.option\./);
     // "No parking available" last in its group, labeled "Added by you".
     expect(html.indexOf("No parking available")).toBeGreaterThan(html.indexOf("Paid garage"));
     expect(html).toContain("We take no payments on site");
@@ -123,71 +127,49 @@ function row(state: { premium: boolean; connected: boolean } | null, opts: { loc
   return wrap(state ? <GbpEditProvider value={{ ...state, undo: null }}>{card}</GbpEditProvider> : card, opts.locale);
 }
 
-describe("the customer-details row: status → one action → small links", () => {
-  test("status chips and one plain line", () => {
+describe("the customer-details row on the Overview: one sentence, ONE button", () => {
+  test("what's missing in one sentence, no chips, no inline editor", () => {
     const html = row({ premium: true, connected: true });
     expect(html).toContain('data-testid="customer-details-status"');
-    expect(html).toMatch(/✓ Accessibility/);
-    expect(html).toMatch(/✓ Payment options/);
-    expect(html).toMatch(/✗ Parking/);
-    expect(html).toContain("Customers check this before they visit.");
-    expect(row({ premium: true, connected: true }, { locale: "es" })).toContain("Los clientes revisan esto antes de visitarle.");
+    expect(html).toContain("Missing on Google: parking.");
+    expect(html).not.toContain('data-testid="gbp-edit"');
+    expect(html).not.toContain("On Google now");
+    expect(html).not.toContain('data-testid="row-how-to"');
+    expect(row({ premium: true, connected: true }, { locale: "es" })).toContain("Falta en Google: estacionamiento.");
   });
 
-  test("Premium + connected: 'Update on Google' first; How to fix it says PostScore can do it — never 'we can't edit your listing'", () => {
+  test("Premium + connected: one button to the Google Profile tab's editor", () => {
     const html = row({ premium: true, connected: true });
-    expect(html).toContain("Update on Google");
-    expect(html.indexOf("Update on Google")).toBeLessThan(html.indexOf("How to fix it"));
-    expect(html).toContain("You can update this on Google from PostScore with the button above, or do it yourself on Google:");
-    expect(html).not.toContain("can&#x27;t edit your listing");
-    expect(html).not.toContain("Not true for your business?");
-    expect(row({ premium: true, connected: true }, { locale: "es" })).toContain("Puede actualizar esto en Google desde PostScore con el botón de arriba");
-    // Grow keeps its own wording (no intro).
-    expect(row({ premium: false, connected: false })).not.toContain("with the button above");
+    expect(html.match(/data-testid="row-action"/g)).toHaveLength(1);
+    expect(html).toContain('href="/business/b1/growth?tab=google#edit-customer-details"');
+    expect(html).toContain("Add parking →");
   });
 
-  test("Premium, not connected: 'Connect Google to update this'", () => {
-    const html = row({ premium: true, connected: false });
-    expect(html).toContain("Connect Google to update this");
-    expect(html).not.toContain("How to fix it");
-  });
-
-  test("Grow: How to fix it (with the choices Google offers) + a small locked Premium chip", () => {
-    const html = row({ premium: false, connected: false });
-    expect(html).toContain("How to fix it");
-    expect(html).toContain('data-testid="row-how-to-options"');
-    expect(html).toContain("Free street parking");
-    expect(html).toContain("PostScore can do this for you — Premium");
-    expect(html.indexOf("How to fix it")).toBeLessThan(html.indexOf("PostScore can do this for you"));
+  test("not on the Google Profile tab (Grow, or not connected): the same one button, to the fix page", () => {
+    for (const plan of [{ premium: false, connected: false }, { premium: true, connected: false }]) {
+      const html = row(plan);
+      expect(html.match(/data-testid="row-action"/g)).toHaveLength(1);
+      expect(html).not.toContain("growth?tab=google#edit-customer-details");
+      expect(html).not.toContain('data-testid="row-how-to"');
+    }
   });
 
   test("Free: the locked fix row, never the steps", () => {
     const html = row({ premium: false, connected: false }, { locked: true });
     expect(html).not.toContain('data-testid="row-how-to"');
   });
-
-  test("the PostScore page is a small text link, and 'Doesn't apply to you?' opens the two options", () => {
-    const html = row({ premium: false, connected: false });
-    const growth = html.match(/<a[^>]*href="\/business\/b1\/growth[^"]*"[^>]*>/)?.[0] ?? "";
-    expect(growth).not.toBe("");
-    expect(growth).not.toContain("rounded-full");
-    expect(html).toContain("Doesn&#x27;t apply to you?");
-    expect(html).toMatch(/whitespace-nowrap[^>]*><input type="checkbox"[^>]*\/><span>No parking available/);
-    expect(row({ premium: false, connected: false }, { locale: "es" })).toContain("¿No aplica a su negocio?");
-  });
 });
 
 describe("other Needs work rows read the same way", () => {
-  test("hours: status, then How to fix it, then the PostScore page as a small text link", () => {
+  test("hours: one sentence, then ONE button with the time beside it", () => {
     const breakdown = scoreBusiness(businessRowToScoringInput({ ...HAIR, opening_hours: null } as BusinessScoringRow));
     const links = breakdownFixLinks(breakdown.categories, "b1", "en");
     const category = breakdown.categories.find((c) => c.id === "completeness")!;
     const only = { ...category, checks: category.checks.filter((c) => c.id === "completeness.hours") };
     const html = wrap(<CategoryCard category={only} embedded fixLinks={links} businessId="b1" />);
-    const actions = html.slice(html.indexOf('data-testid="row-actions"'));
-    expect(actions.indexOf("How to fix it")).toBeGreaterThanOrEqual(0);
-    expect(actions.indexOf("How to fix it")).toBeLessThan(actions.indexOf(`href="${links["completeness.hours"].href}"`));
-    expect(html).not.toMatch(/<a[^>]*rounded-full[^>]*href="\/business\/b1/);
+    expect(html.match(/data-testid="row-action"/g)).toHaveLength(1);
+    expect(html).toContain("Set your hours →");
+    expect(html).not.toContain("How to fix it");
   });
 });
 

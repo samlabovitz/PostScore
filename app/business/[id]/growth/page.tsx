@@ -1,3 +1,4 @@
+import { GOOGLE_MISMATCH_CHECK_ID } from "@/lib/actionPlan";
 import { googleWritesAllowed } from "@/lib/gbpReviewPractice";
 import { parseGbpResult } from "@/lib/gbpLanding";
 import { isGbpOAuthConfigured } from "@/lib/googleBusinessProfile";
@@ -187,6 +188,8 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
       ? await (async () => {
           const practice = googleProfile.practice;
           const db = createClient();
+          // A real change stuck on "Google reviewing" for 3+ days: read again (read only).
+          if (gbpConnected && !practice) await (await import("@/lib/gbpStaleChanges.server")).refreshStaleReviews(createAdminClient(), params.id).catch(() => null);
           const saved = gbpConnected || practice ? await loadGoogleTabSaved(db, params.id, { timeZone: business.time_zone ?? DEFAULT_BUSINESS_TIMEZONE, practice, businessStatus: row.business_status ?? null }) : null;
           // "Not yet: … turning on Google booking" while case B stands.
           if (saved && bookingState?.tracking.kind === "turn_on" && !saved.recap.notYet.includes("booking")) saved.recap.notYet.push("booking");
@@ -232,6 +235,23 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
             media: media ? { photos: media.photos, posts: media.posts, checkedAt: media.checkedAt } : null,
             extras,
             // "Change it back" / Undo from PostScore: practice, or on the live list.
+            nicheId: (row as { niche_id?: string | null }).niche_id ?? null,
+            // The website's hours from the last scan (section 6's hours card, "Website's version").
+            websiteHours: await (async () => {
+              const [{ parseWebsiteAnalysis }, { weekFromSite }, { WEBSITE_BUILDER_NAMES }, { managedSiteContact }] = await Promise.all([import("@/lib/scoring"), import("@/lib/gbpProfileEdits"), import("@/lib/websiteBuilder"), import("@/lib/hoursChooser")]);
+              const analysis = parseWebsiteAnalysis((row as { website_analysis_json?: unknown }).website_analysis_json);
+              const builderId = (analysis as { builder?: { id?: import("@/lib/websiteBuilder").WebsiteBuilderId | null } } | null)?.builder?.id ?? null;
+              const siteUrl = (row as { verified_website_url?: string | null }).verified_website_url ?? row.website ?? null;
+              return {
+                week: weekFromSite(analysis?.websiteTrust?.infoConflicts.find((f) => f.field === "hours")?.siteWeek),
+                builder: builderId ? { id: builderId, name: WEBSITE_BUILDER_NAMES[builderId] } : null,
+                siteUrl,
+                managedEmail: managedSiteContact(siteUrl, { MANAGED_SITE_HOSTS: process.env.MANAGED_SITE_HOSTS, MANAGED_SITE_CONTACT_EMAIL: process.env.MANAGED_SITE_CONTACT_EMAIL }),
+                // A real tel: link on the site (section 2's "What this means for you").
+                hasPhoneLink: analysis?.content ? analysis.content.hasPhoneLink : null,
+              };
+            })(),
+            hoursMismatch: actionPlanResult.status === "ok" ? actionPlanResult.tasks.some((task) => task.checkId === GOOGLE_MISMATCH_CHECK_ID && (task.mismatchFields ?? []).includes("hours")) : undefined,
             canEditGoogle: practice || googleWritesAllowed((row as { place_id?: string | null }).place_id ?? null),
           };
         })()

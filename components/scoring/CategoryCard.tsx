@@ -5,17 +5,12 @@ import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { cn } from "@/lib/utils";
 import type { CategoryResult, CheckResult } from "@/lib/scoring";
-import { t, useLocale, type MessageKey } from "@/lib/i18n";
+import { t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
 import { LockedFixRow } from "@/components/overview/FixPlanUpsell";
 import { checkAnchorId } from "@/lib/postaiLinks";
-import { CustomerDetailsExtras } from "@/components/scoring/CustomerDetailsExtras";
-import { CustomerDetailsGoogleEdit, optionLabel, useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
-import { FixWithPostScore, fixFlowHref } from "@/components/gbp/FixWithPostScore";
-import { WebsiteLinkFix } from "@/components/gbp/WebsiteLinkFix";
-import { GoogleAiAnswersLine } from "@/components/gbp/GbpMessagingStep";
-import { CUSTOMER_DETAIL_OPTIONS, PART_ORDER } from "@/lib/gbpAttributes";
+import { useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
 import { timeEstimateText, type CheckHowTo } from "@/lib/actionPlan";
-import { LinkIssues } from "@/components/scoring/LinkIssues";
+import { breakdownAction } from "@/lib/breakdownAction";
 
 /** A needs-work row's fix: its own "How to fix it" (steps, a rough time,
  * official links) and the PostScore page as a secondary link. */
@@ -177,39 +172,38 @@ function CheckRows({
   );
 }
 
-/** The row's status: "✓ Accessibility · ✓ Payment options · ✗ Parking" +
- * one plain line for customer details; the check's own explanation
- * otherwise. */
+/** The row's status: ONE short sentence on what's missing (max 2 lines).
+ * Customer details: the scored groups still missing on Google. */
 function RowStatus({ check }: { check: CheckResult }) {
   const locale = useLocale();
-  const parts = (check.meta?.parts ?? "").split(",").filter(Boolean);
-  const present = check.meta?.present !== undefined ? new Set(check.meta.present.split(",").filter(Boolean)) : null;
-  if (check.id === "completeness.customer_details" && parts.length > 0 && present) {
+  const missing = missingParts(check);
+  if (check.id === "completeness.customer_details" && missing !== null) {
     return (
-      <div data-testid="customer-details-status" className="flex flex-wrap items-center gap-x-1.5 gap-y-1 pl-[25px] text-[12.5px]">
-        {parts.map((part) => (
-          <span key={part} className={cn("rounded-full px-2 py-px font-medium", present.has(part) ? "bg-green/10 text-green" : "bg-paper-deep text-ink-soft")}>
-            {present.has(part) ? "✓" : "✗"} {t(locale, `content.checks.completeness.customer_details.partLabel.${part}` as MessageKey)}
-          </span>
-        ))}
-        <span className="w-full text-[13px] text-ink-mute">{t(locale, "dashboard.customerDetails.why")}</span>
-        {/* Premium's "Update on Google" is right in this row. */}
-        <GoogleAiAnswersLine businessId={null} premium={false} className="w-full text-[12.5px] text-ink-mute" />
-      </div>
+      <p data-testid="customer-details-status" className="line-clamp-2 pl-[25px] text-[13px] text-ink-mute">
+        {missing.length === 0 ? check.explanation : t(locale, "dashboard.breakdown.missingParts", { parts: partList(missing, locale) })}
+      </p>
     );
   }
-  return (
-    <>
-      <p className="pl-[25px] text-[13px] text-ink-mute">{check.explanation}</p>
-      {check.note && <p className="pl-[25px] text-[11.5px] text-ink-mute/80">{check.note}</p>}
-      <LinkIssues check={check} className="ml-[25px] self-start text-left text-[12.5px] font-semibold text-ink underline-offset-2 hover:text-brass hover:underline" />
-    </>
-  );
+  return <p className="line-clamp-2 pl-[25px] text-[13px] text-ink-mute">{check.explanation}</p>;
 }
 
-/** One primary action, then small secondary links — the same on every
- * row: "How to fix it" (or, for customer details on Premium, "Update on
- * Google"), the PostScore page as a small text link. */
+/** Customer details: the scored groups not on Google yet (null: not known). */
+function missingParts(check: CheckResult): string[] | null {
+  const parts = (check.meta?.parts ?? "").split(",").filter(Boolean);
+  if (check.meta?.present === undefined || parts.length === 0) return null;
+  const present = new Set(check.meta.present.split(",").filter(Boolean));
+  return parts.filter((p) => !present.has(p));
+}
+
+/** "parking & accessibility" / "estacionamiento y accesibilidad". */
+function partList(parts: string[], locale: Locale): string {
+  const names = parts.map((p) => t(locale, `content.checks.completeness.customer_details.partLabel.${p}` as MessageKey).toLowerCase());
+  return names.length <= 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} ${t(locale, "dashboard.breakdown.and")} ${names[names.length - 1]}`;
+}
+
+/** ONE button on a row that's missing points: a verb, and where it's
+ * fixed (lib/breakdownAction.ts), with the rough time as small grey text.
+ * No inline editors, no "How to fix it" here — those are on the destination. */
 function RowActions({
   check,
   outcome,
@@ -225,91 +219,34 @@ function RowActions({
 }) {
   const gbp = useGbpEdit();
   const locale = useLocale();
-  const needsWork = outcome === "needs_work";
-  const customerDetails = check.id === "completeness.customer_details" && !!businessId;
-  // A fix button only on a row with a real problem: a Done row shows none.
-  // Owners who still want to change it do it from the Google Profile tab
-  // (Edit on Google), which also keeps the 7-day Undo.
-  // Premium (connected or not): the Google action is the one action.
-  const googleAction = customerDetails && needsWork && gbp.enabled && gbp.premium;
-  const canRemove = customerDetails && (check.meta?.ownerCanRemove ?? "").split(",").some(Boolean);
-  // The Website link check: "Update website on Google" (Premium +
-  // connected), or the steps, only while the link loses points — dead,
-  // parked, the wrong site, or not the verified website.
-  const websiteLinkFix = check.id === "completeness.website_link" && !!businessId && gbp.enabled && needsWork;
-  // The website link and customer details already open their editor in place.
-  const fixWithPostScore = !!businessId && needsWork && !lockedFixes && gbp.enabled && gbp.premium && !websiteLinkFix && !customerDetails && fixFlowHref(businessId, check.id) !== null;
-  if (!needsWork && !googleAction && !canRemove && !websiteLinkFix) return null;
-  return (
-    <div data-testid="row-actions" className="ml-[25px] mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-      {googleAction ? (
-        <>
-          <CustomerDetailsGoogleEdit businessId={businessId!} className="basis-full" />
-          {/* Connected: the steps stay, for doing it on Google directly. */}
-          {gbp.connected && needsWork && fix?.howTo && !lockedFixes && (
-            <HowToFix howTo={fix.howTo} customerDetailsParts={null} intro={t(locale, "dashboard.gbpEdit.howToIntro")} />
-          )}
-        </>
-      ) : needsWork && lockedFixes ? (
+  if (outcome !== "needs_work") return null;
+  if (lockedFixes) {
+    return (
+      <div data-testid="row-actions" className="ml-[25px] mt-1">
         <LockedFixRow blurred />
-      ) : needsWork && fix?.howTo ? (
-        <HowToFix howTo={fix.howTo} customerDetailsParts={customerDetails ? (check.meta?.parts ?? "").split(",").filter(Boolean) : null} />
-      ) : null}
-      {customerDetails && needsWork && !googleAction && !lockedFixes && <CustomerDetailsGoogleEdit businessId={businessId!} />}
-      {needsWork && fix && !lockedFixes && (
-        <Link href={fix.href} className="text-[12px] font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline">
-          {fix.label}
-        </Link>
-      )}
-      {canRemove && <CustomerDetailsExtras check={check} businessId={businessId} />}
-      {websiteLinkFix && !lockedFixes && <WebsiteLinkFix businessId={businessId!} suggested={gbp.websiteSuggested ?? null} className="basis-full" />}
-      {/* Hours, phone, review replies: Premium opens the existing editor. */}
-      {fixWithPostScore && <FixWithPostScore businessId={businessId!} checkId={check.id} className="basis-full" />}
-    </div>
-  );
-}
-
-/** "How to fix it": the steps, a rough time and official links — opens in
- * place (no box); for customer details, the choices Google usually offers. */
-function HowToFix({ howTo, customerDetailsParts, intro }: { howTo: CheckHowTo; customerDetailsParts: string[] | null; intro?: string }) {
-  const locale = useLocale();
+      </div>
+    );
+  }
+  if (!businessId) return null;
+  const action = breakdownAction({
+    businessId,
+    checkId: check.id,
+    googleTab: gbp.enabled && gbp.premium && (gbp.connected || gbp.practice === true),
+    fixHref: fix?.href ?? null,
+    missingParts: missingParts(check) ?? undefined,
+    hoursMismatch: check.id === "website.info_consistency" && /hour|horario/i.test(check.explanation),
+  });
+  if (!action) return null;
+  const label =
+    action.key === "addParts"
+      ? t(locale, "dashboard.breakdown.action.addParts", { parts: partList((action.params?.parts ?? "").split("|"), locale) })
+      : t(locale, `dashboard.breakdown.action.${action.key}` as MessageKey);
   return (
-    <details data-testid="row-how-to" className="group text-[12.5px] leading-relaxed text-ink-soft open:basis-full">
-      <summary className="inline-flex cursor-pointer list-none items-center gap-1 font-semibold text-ink hover:text-brass [&::-webkit-details-marker]:hidden">
-        <span className="inline-block transition-transform group-open:rotate-90" aria-hidden>
-          ›
-        </span>
-        {t(locale, "content.actionPlan.step.howToFix")}
-        {howTo.minutes ? <span className="font-normal text-ink-mute">· {timeEstimateText(howTo.minutes, locale)}</span> : null}
-      </summary>
-      {intro && (
-        <p data-testid="row-how-to-intro" className="mt-1 font-medium text-ink">
-          {intro}
-        </p>
-      )}
-      <p className="mt-1">{howTo.steps}</p>
-      {customerDetailsParts && customerDetailsParts.length > 0 && (
-        <div data-testid="row-how-to-options" className="mt-1.5">
-          <p className="font-medium text-ink">{t(locale, "dashboard.customerDetails.howToOptions")}</p>
-          <ul className="ml-4 list-disc">
-            {PART_ORDER.filter((part) => customerDetailsParts.includes(part)).map((part) => (
-              <li key={part}>
-                <span className="font-medium text-ink">{t(locale, `content.checks.completeness.customer_details.partLabel.${part}` as MessageKey)}:</span>{" "}
-                {CUSTOMER_DETAIL_OPTIONS[part].map((id) => optionLabel(id, locale)).join(", ")}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {howTo.links.length > 0 && (
-        <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
-          {howTo.links.map((link) => (
-            <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline-offset-2 hover:underline">
-              {link.label} ↗
-            </a>
-          ))}
-        </p>
-      )}
-    </details>
+    <div data-testid="row-actions" className="ml-[25px] mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+      <Link href={action.href} data-testid="row-action" className="inline-flex h-8 items-center rounded-lg border border-ink bg-ink px-3 text-[12.5px] font-semibold text-white hover:bg-ink/90">
+        {label} →
+      </Link>
+      {fix?.howTo?.minutes ? <span className="text-[12px] text-ink-mute">{timeEstimateText(fix.howTo.minutes, locale)}</span> : null}
+    </div>
   );
 }

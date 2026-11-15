@@ -84,13 +84,43 @@ export function hoursText(periods: Period[] | null | undefined, locale: "en" | "
   return parts.join(", ");
 }
 
+/** Hours as a short per-day code, Monday first ("0|570-1020\n1|c\n…",
+ * minutes after midnight, "c" closed) — compared day by day and shown in
+ * the owner's language by decodeWeek. */
+export function weekCode(periods: Period[] | null | undefined): string | null {
+  if (!periods || periods.length === 0) return null;
+  const min = (t: Period["openTime"]) => (t?.hours ?? 0) * 60 + (t?.minutes ?? 0);
+  return DAYS.map((d, i) => {
+    const ranges = periods
+      .filter((p) => p.openDay === d)
+      .map((p) => [min(p.openTime), p.closeDay && p.closeDay !== d && min(p.closeTime) === 0 ? 1440 : min(p.closeTime)])
+      .sort((a, b) => a[0] - b[0]);
+    return `${i}|${ranges.length ? ranges.map(([o, c]) => `${o}-${c}`).join(",") : "c"}`;
+  }).join("\n");
+}
+
+export interface CodedDay {
+  /** 0 = Monday … 6 = Sunday. */
+  day: number;
+  /** Minutes after midnight; empty: closed. */
+  ranges: Array<[number, number]>;
+}
+
+export function decodeWeek(code: string | null | undefined): CodedDay[] | null {
+  if (!code || !/^\d\|/.test(code)) return null;
+  return code.split("\n").map((line) => {
+    const [d, r] = line.split("|");
+    return { day: Number(d), ranges: r === "c" || !r ? [] : r.split(",").map((x) => x.split("-").map(Number) as [number, number]) };
+  });
+}
+
 const clip = (s: string | null | undefined, max = 400) => {
   const v = (s ?? "").trim();
   return v ? (v.length > max ? `${v.slice(0, max - 1)}…` : v) : null;
 };
 
-/** One field's value as short text (what the row shows and the table keeps). */
-export function fieldText(field: EditedField, loc: EditedLocation, locale: "en" | "es" = "en"): string | null {
+/** One field's value as short text (what the row shows and the table keeps; hours as weekCode). */
+export function fieldText(field: EditedField, loc: EditedLocation): string | null {
   switch (field) {
     case "title":
       return clip(loc.title);
@@ -102,7 +132,7 @@ export function fieldText(field: EditedField, loc: EditedLocation, locale: "en" 
       return clip([...(a.addressLines ?? []), a.locality, [a.administrativeArea, a.postalCode].filter(Boolean).join(" ")].filter((x) => x && String(x).trim()).join(", "));
     }
     case "hours":
-      return clip(hoursText(loc.regularHours?.periods, locale));
+      return weekCode(loc.regularHours?.periods);
     case "website":
       return clip(loc.websiteUri);
     case "categories":
@@ -170,3 +200,48 @@ export function fieldOfNotificationKey(key: string): EditedField | null {
   const f = key.replace(/^edit_/, "");
   return key.startsWith("edit_") && (EDITED_FIELDS as readonly string[]).includes(f) ? (f as EditedField) : null;
 }
+
+// ---------------------------------------------------------------------------
+// The tab's banner (and the Overview notification)
+// ---------------------------------------------------------------------------
+
+const hostOf = (v: string | null | undefined) => {
+  if (!v) return null;
+  try {
+    return new URL(/^https?:\/\//.test(v) ? v : `https://${v}`).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return v.toLowerCase();
+  }
+};
+const digits = (v: string | null | undefined) => (v ?? "").replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "");
+
+/** Google filled in a field the owner left empty, and it matches what our
+ * scan found (e.g. the website): information only — no banner, no
+ * notification; section 6 says "Google added this · looks right ✓". */
+export function isInfoOnly(e: Pick<GoogleEditRow, "field" | "owner_value" | "google_value">, scan: { website?: string | null; phone?: string | null }): boolean {
+  if (e.owner_value || !e.google_value) return false;
+  if (e.field === "website") return !!scan.website && hostOf(scan.website) === hostOf(e.google_value);
+  if (e.field === "phone") return !!scan.phone && digits(scan.phone) === digits(e.google_value) && digits(scan.phone).length >= 10;
+  return false;
+}
+
+/** The banner's fields, in a natural order ("hours, phone and website"). */
+const BANNER_ORDER: EditedField[] = ["title", "address", "hours", "phone", "website", "categories", "description"];
+export function bannerEdits(open: GoogleEditRow[], scan: { website?: string | null; phone?: string | null }): GoogleEditRow[] {
+  return open.filter((e) => !isInfoOnly(e, scan)).sort((a, b) => BANNER_ORDER.indexOf(a.field) - BANNER_ORDER.indexOf(b.field));
+}
+
+/** Red, with "Review" only (no "I know, that's right"): the name or address
+ * changed, or Google shows the business as closed. */
+export function bannerSerious(fields: EditedField[], businessStatus: string | null | undefined): boolean {
+  return fields.includes("title") || fields.includes("address") || businessStatus === "CLOSED_TEMPORARILY" || businessStatus === "CLOSED_PERMANENTLY";
+}
+
+/** "hours" · "hours and website" · "hours, phone and website". */
+export function joinFields(names: string[], and: string): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} ${and} ${names[names.length - 1]}`;
+}
+
+/** Plural nouns take "were" / "se cambiaron" in the one-field sentence. */
+export const PLURAL_FIELDS: readonly EditedField[] = ["hours", "categories"];

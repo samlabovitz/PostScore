@@ -24,20 +24,32 @@ import {
 } from "@/lib/googleProfileTab";
 
 const DAY_MS = 86_400_000;
+const CHANGE_COLUMNS = "batch_id, kind, field, status, approved_at, undone_at, undo_closed_at, undo_of, before_value, after_value, location_name, error_reason";
+
+/** This business's recent changes, with the practice flag once
+ * supabase/gbp-changes-practice.sql has run (before it: the old markers). */
+async function loadChangeRows(db: SupabaseClient, businessId: string, since: string): Promise<ChangeRow[]> {
+  const read = (columns: string) => db.from("gbp_changes").select(columns).eq("business_id", businessId).gte("approved_at", since).order("approved_at", { ascending: false }).limit(200);
+  const withFlag = await read(`${CHANGE_COLUMNS}, practice`);
+  if (!withFlag.error) return (withFlag.data ?? []) as unknown as ChangeRow[];
+  const without = await read(CHANGE_COLUMNS);
+  return without.error ? [] : ((without.data ?? []) as unknown as ChangeRow[]);
+}
 
 export async function loadGoogleTabSaved(db: SupabaseClient, businessId: string, opts: { timeZone: string; practice: boolean; businessStatus: string | null; now?: Date }): Promise<GoogleTabSaved> {
   const now = opts.now ?? new Date();
   const since = new Date(now.getTime() - 70 * DAY_MS).toISOString();
   const today = now.toISOString().slice(0, 10);
   const [changes, replies, promos, referrals, scans, googleEdits] = await Promise.all([
-    db.from("gbp_changes").select("batch_id, kind, field, status, approved_at, undone_at, undo_closed_at, undo_of, before_value, after_value").eq("business_id", businessId).gte("approved_at", since).order("approved_at", { ascending: false }).limit(200),
+    loadChangeRows(db, businessId, since),
     db.from("gbp_review_reply_log").select("action, status, created_at").eq("business_id", businessId).gte("created_at", since).limit(1000),
     db.from("promos").select("active, expiry, created_at").eq("business_id", businessId).limit(200),
     db.from("referrals").select("created_at").eq("business_id", businessId).gte("created_at", since).limit(200),
     db.from("scores").select("created_at, profile_snapshot_json").eq("business_id", businessId).not("profile_snapshot_json", "is", null).order("created_at", { ascending: false }).limit(2),
-    loadGoogleEdits(db, businessId, opts.practice).catch(() => null),
+    // Changes by anyone else: ALWAYS the real Google check, even in practice mode.
+    loadGoogleEdits(db, businessId, false).catch(() => null),
   ]);
-  const rows = ((changes.error ? [] : changes.data) ?? []) as ChangeRow[];
+  const rows = changes;
   const month = previousMonthKey(now, opts.timeZone);
   const inMonth = (iso: string) => monthKeyOf(iso, opts.timeZone) === month;
 

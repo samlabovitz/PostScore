@@ -11,7 +11,7 @@
 // Read-only (not on the live allow list): Approve and Undo are locked.
 // Green for done, neutral or amber while waiting, red only for real failures.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { IconCheck, IconClock, IconFlask, IconLock, IconPlus, IconSparkles, IconX } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import {
@@ -200,12 +200,15 @@ function FieldCard({
   view,
   outcome,
   onView,
+  startHours = null,
 }: {
   businessId: string;
   field: ProfileField;
   view: ProfileEditsView;
   outcome: Outcome;
   onView: (patch: Partial<ProfileEditsView>) => void;
+  /** The hours-mismatch chooser: open already editing, with the website's hours or the owner's own. */
+  startHours?: StartHours;
 }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
@@ -223,6 +226,17 @@ function FieldCard({
     [hours, phone, description]
   );
   const invalid = field === "hours" ? problems.hours.length > 0 : field === "phone" ? problems.phone : problems.description.length > 0;
+
+  // "My website is right" / "Neither, let me enter them": start editing with those hours.
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current || field !== "hours" || !startHours) return;
+    const week = startHours === "website" ? view.fromWebsite.hours : startHours;
+    if (!week) return;
+    started.current = true;
+    setHours(week);
+    setState({ kind: "editing" });
+  }, [field, startHours, view.fromWebsite.hours]);
 
   function startEditing() {
     setMessage(null);
@@ -358,7 +372,7 @@ function FieldCard({
             </>
           )}
           <div className="flex flex-wrap items-center gap-2">
-            <ApproveButton canEdit={view.canEdit} busy={state.kind === "busy"} disabled={invalid} onClick={approve} testId={`approve-${field}`} />
+            <ApproveButton canEdit={view.canEdit} busy={state.kind === "busy"} disabled={invalid} onClick={approve} testId={`approve-${field}`} label={field === "hours" && startHours === "website" ? t(locale, K("matchWebsite")) : undefined} />
             <button type="button" disabled={state.kind === "busy"} onClick={() => setState({ kind: "idle" })} className="rounded-lg border border-paper-deep bg-white px-3 py-1.5 text-[13px] font-medium text-ink">
               {t(locale, K("cancel"))}
             </button>
@@ -421,9 +435,11 @@ export function ProfileEditsBody({
   initial,
   fields = ["hours", "phone", "description"],
   orderLink = true,
+  startHours = null,
 }: {
   businessId: string;
   initial: ProfileEditsView;
+  startHours?: StartHours;
   /** Only these fields (the Google Profile tab opens one row's editor at a time). */
   fields?: ProfileField[];
   orderLink?: boolean;
@@ -458,7 +474,7 @@ export function ProfileEditsBody({
         </p>
       )}
       {fields.map((field) => (
-        <FieldCard key={field} businessId={businessId} field={field} view={view} outcome={outcome} onView={(patch) => setView((v) => ({ ...v, ...patch }))} />
+        <FieldCard key={field} businessId={businessId} field={field} view={view} outcome={outcome} startHours={startHours} onView={(patch) => setView((v) => ({ ...v, ...patch }))} />
       ))}
       {orderLink && <OrderLinkOnGoogle businessId={businessId} outcome={outcome} />}
       <p className="text-[12px] text-ink-mute">{t(locale, K("afterScan"))}</p>
@@ -466,7 +482,9 @@ export function ProfileEditsBody({
   );
 }
 
-export function ProfileEditsOnGoogle({ businessId, fields, orderLink, intro = true }: { businessId: string; fields?: ProfileField[]; orderLink?: boolean; intro?: boolean }) {
+export type StartHours = "website" | WeeklyHours | null;
+
+export function ProfileEditsOnGoogle({ businessId, fields, orderLink, intro = true, startHours = null }: { businessId: string; fields?: ProfileField[]; orderLink?: boolean; intro?: boolean; startHours?: StartHours }) {
   const locale = useLocale();
   const [view, setView] = useState<ProfileEditsView | null>(null);
   const [error, setError] = useState<MessageKey | null>(null);
@@ -482,7 +500,7 @@ export function ProfileEditsOnGoogle({ businessId, fields, orderLink, intro = tr
     <section id="edit-on-google" data-testid="profile-edits" className="flex scroll-mt-20 flex-col gap-3">
       {intro && <p className="text-[13px] leading-snug text-ink-soft">{t(locale, K("intro"))}</p>}
       {view ? (
-        <ProfileEditsBody businessId={businessId} initial={view} fields={fields} orderLink={orderLink} />
+        <ProfileEditsBody businessId={businessId} initial={view} fields={fields} orderLink={orderLink} startHours={startHours} />
       ) : error ? (
         <p role="alert" className="text-[13px] text-red">
           {t(locale, error)}

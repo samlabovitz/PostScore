@@ -25,7 +25,7 @@ import { applyCustomerDetailsAction, loadCustomerDetailsEditorAction, undoCustom
 import { setCustomerDetailsOwnerAnswer } from "@/app/actions/customerDetails";
 import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import { t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
-import { PART_ORDER, pickFromChecked, type AttrValue, type AttributeChange, type CustomerDetailsEditorRow, type UndoableChange } from "@/lib/gbpAttributes";
+import { extraGroups, HOW_TO_VISIT, PART_ORDER, pickFromChecked, SCORED_PARTS, type AttrValue, type AttributeChange, type CustomerDetailsEditorRow, type EditorPart, type UndoableChange } from "@/lib/gbpAttributes";
 import { cn } from "@/lib/utils";
 import type { WebsiteLinkUndo } from "@/lib/gbpWebsiteLink";
 import { ApproveButton, PracticeChooser, ReadOnlyNote, TONE, UndoLine, type PracticeOutcome } from "@/components/gbp/googleEditBits";
@@ -92,8 +92,20 @@ function blockMessage(reason: GbpEditBlock): MessageKey {
 }
 
 /** The panel's plain label for one of Google's options (EN + ES). */
-export function optionLabel(id: string, locale: Locale): string {
-  return t(locale, `dashboard.gbpEdit.option.${id.replace(/^attributes\//, "")}` as MessageKey);
+export function optionLabel(id: string, locale: Locale, fallback?: string): string {
+  const bare = id.replace(/^attributes\//, "");
+  const key = `dashboard.gbpEdit.option.${bare}` as MessageKey;
+  const text = t(locale, key);
+  if (text !== key) return text;
+  // No label of ours: Google's own (English only), else the id made readable — never the key.
+  if (fallback && fallback.trim() && fallback !== key && !fallback.startsWith("dashboard.") && !/^[a-z0-9_]+$/.test(fallback.trim())) return fallback;
+  return readableId(bare);
+}
+
+/** "has_hearing_loop" → "Hearing loop"; "pay_check" → "Check". */
+export function readableId(bare: string): string {
+  const words = bare.replace(/^(has_|is_|offers_|accepts_|pay_|serves_|welcomes_|requires_)/, "").replace(/_/g, " ").trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : bare;
 }
 
 /** Pure: the before → after list from the ticked options ("choose all
@@ -147,7 +159,7 @@ export function ownerChangesOf(e: Editor): OwnerChange[] {
 
 /** `autoLoad` (the Google Profile tab's card): read Google when the card
  * shows, for "On Google now" — elsewhere only when the owner clicks. */
-export function CustomerDetailsGoogleEdit({ businessId, className, autoLoad = false }: { businessId: string; className?: string; autoLoad?: boolean }) {
+export function CustomerDetailsGoogleEdit({ businessId, className, autoLoad = false, openEditing = false }: { businessId: string; className?: string; autoLoad?: boolean; openEditing?: boolean }) {
   const state = useContext(GbpEditContext);
   const locale = useLocale();
   const router = useRouter();
@@ -162,7 +174,8 @@ export function CustomerDetailsGoogleEdit({ businessId, className, autoLoad = fa
   const live = state.enabled && state.premium && (state.connected || state.practice === true);
 
   useEffect(() => {
-    if (live && autoLoad) void load(false);
+    // The Google Profile tab's "Update": straight to every group, no separate "Change" step.
+    if (live && autoLoad) void load(openEditing);
     // Only once, when the card mounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -330,7 +343,7 @@ export function CustomerDetailsGoogleEdit({ businessId, className, autoLoad = fa
           <span className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-ink-soft">{t(locale, "dashboard.gbpProfileEdits.nowOnGoogle")}</span>
           <div className="flex flex-wrap items-center gap-2 text-[13.5px] text-ink">
             <span data-testid="gbp-edit-current" className={yes.length === 0 ? "text-ink-mute" : undefined}>
-              {yes.length === 0 ? t(locale, "dashboard.gbpEdit.nowNone") : yes.map((r) => optionLabel(r.id, locale)).join(", ")}
+              {yes.length === 0 ? t(locale, "dashboard.gbpEdit.nowNone") : yes.map((r) => optionLabel(r.id, locale, r.label)).join(", ")}
             </span>
             {quiet && (
               <button type="button" data-testid="gbp-edit-change" disabled={phase.kind === "undoing"} onClick={startEditing} className="rounded-lg border border-paper-deep bg-white px-2.5 py-1 text-[12.5px] font-medium text-ink hover:border-ink-soft disabled:opacity-50">
@@ -363,7 +376,7 @@ export function CustomerDetailsGoogleEdit({ businessId, className, autoLoad = fa
           <ul data-testid="gbp-edit-preview" className="flex flex-col gap-1 text-[12.5px] text-ink-soft">
             {phase.changes.map((c) => (
               <li key={c.id} className="flex flex-wrap items-center gap-1.5">
-                <span className="text-ink">{optionLabel(c.id, locale)}:</span>
+                <span className="text-ink">{optionLabel(c.id, locale, c.label)}:</span>
                 <span>{t(locale, "dashboard.gbpEdit.before", { value: t(locale, valueKey(c.before)) })}</span>
                 <IconArrowRight size={12} aria-label="→" />
                 <span className="font-semibold text-ink">{t(locale, "dashboard.gbpEdit.after", { value: t(locale, valueKey(c.after)) })}</span>
@@ -473,38 +486,73 @@ export function EditorPanel({
   const locale = useLocale();
   const changes = pendingChanges(editor.rows, editor.checked);
   const ownerChanges = ownerChangesOf(editor);
-  const parts = PART_ORDER.filter((part) => editor.rows.some((r) => r.part === part) || editor.owner.canRemove.includes(part as OwnerPart));
+  const parts: EditorPart[] = PART_ORDER.filter((part) => editor.rows.some((r) => r.part === part) || editor.owner.canRemove.includes(part as OwnerPart));
   const toggle = (row: CustomerDetailsEditorRow) => onChange(toggleOption(editor, row));
   const toggleOwner = (part: OwnerPart) => onChange(toggleOwnerPart(editor, part));
+  const scored = SCORED_PARTS.filter((part) => parts.includes(part));
+  const extras = extraGroups(editor.rows);
+  const identity = editor.rows.filter((r) => r.part === "identity");
+  const rowLabel = (row: CustomerDetailsEditorRow) => (
+    <label key={row.id} data-testid="gbp-edit-row" className="flex items-center gap-2 text-[12.5px] text-ink">
+      <input type="checkbox" checked={editor.checked[row.id] === true} onChange={() => toggle(row)} className="h-3.5 w-3.5 accent-[color:var(--color-brass)]" />
+      {optionLabel(row.id, locale, row.label)}
+    </label>
+  );
+  const isSet = (part: OwnerPart | "accessibility") => editor.rows.some((r) => r.part === part && r.current === true) || ((part === "parking" || part === "payment") && editor.owner.removed.includes(part));
   return (
     <Panel>
       <p className="text-[12.5px] text-ink-soft">{t(locale, "dashboard.gbpEdit.intro")}</p>
-      {parts.length === 0 && <p className="text-[12.5px] text-ink-mute">{t(locale, "dashboard.gbpEdit.noneOffered")}</p>}
-      {parts.map((part) => (
-        <fieldset key={part} data-testid={`gbp-edit-group-${part}`} className="flex flex-col gap-1">
-          <legend className="mb-1 text-[12.5px] font-semibold text-ink">{t(locale, `dashboard.gbpEdit.group.${part}` as MessageKey)}</legend>
-          {editor.rows
-            .filter((r) => r.part === part)
-            .map((row) => (
-              <label key={row.id} data-testid="gbp-edit-row" className="flex items-center gap-2 text-[12.5px] text-ink">
-                <input type="checkbox" checked={editor.checked[row.id] === true} onChange={() => toggle(row)} className="h-3.5 w-3.5 accent-[color:var(--color-brass)]" />
-                {optionLabel(row.id, locale)}
-              </label>
-            ))}
-          {(part === "parking" || part === "payment") && editor.owner.canRemove.includes(part) && (
-            <label data-testid={`gbp-edit-owner-${part}`} className="flex items-center gap-2 text-[12.5px] text-ink">
-              <input type="checkbox" checked={editor.ownerOff[part]} onChange={() => toggleOwner(part)} className="h-3.5 w-3.5 accent-[color:var(--color-brass)]" />
-              {t(locale, part === "parking" ? "dashboard.gbpEdit.ownerNoParking" : "dashboard.gbpEdit.ownerNoPayment")}
-              <span className="rounded-full bg-paper-deep px-2 py-px text-[10.5px] font-semibold text-ink-soft">{t(locale, "dashboard.memory.addedByYou")}</span>
-            </label>
-          )}
-          {editor.note?.part === part && (
-            <p data-testid="gbp-edit-note" role="status" className="text-[12px] text-ink-mute">
-              {t(locale, `dashboard.gbpEdit.note.${editor.note.key}` as MessageKey)}
-            </p>
-          )}
-        </fieldset>
-      ))}
+      {parts.length === 0 && extras.length === 0 && <p className="text-[12.5px] text-ink-mute">{t(locale, "dashboard.gbpEdit.noneOffered")}</p>}
+      {scored.length > 0 && (
+        <section className="flex flex-col gap-2" data-testid="gbp-edit-scored">
+          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-brass">{t(locale, "dashboard.gbpEdit.tier.scored")}</p>
+          {scored.map((part) => (
+            <fieldset key={part} data-testid={`gbp-edit-group-${part}`} className="flex flex-col gap-1">
+              <legend className="mb-1 flex items-center gap-2 text-[12.5px] font-semibold text-ink">
+                {t(locale, `dashboard.gbpEdit.groupShort.${part}` as MessageKey)}
+                <span className={cn("text-[11.5px] font-semibold", isSet(part) ? "text-green" : "text-amber")} data-testid={`gbp-edit-status-${part}`}>
+                  {isSet(part) ? `✓ ${t(locale, "dashboard.gbpEdit.statusSet")}` : `! ${t(locale, "dashboard.gbpEdit.statusMissing")}`}
+                </span>
+              </legend>
+              <p className="-mt-0.5 text-[12px] text-ink-soft">{t(locale, `dashboard.gbpEdit.group.${part}` as MessageKey)}</p>
+              {editor.rows.filter((r) => r.part === part).map(rowLabel)}
+              {(part === "parking" || part === "payment") && editor.owner.canRemove.includes(part) && (
+                <label data-testid={`gbp-edit-owner-${part}`} className="flex items-center gap-2 text-[12.5px] text-ink">
+                  <input type="checkbox" checked={editor.ownerOff[part]} onChange={() => toggleOwner(part)} className="h-3.5 w-3.5 accent-[color:var(--color-brass)]" />
+                  {t(locale, part === "parking" ? "dashboard.gbpEdit.ownerNoParking" : "dashboard.gbpEdit.ownerNoPayment")}
+                  <span className="rounded-full bg-paper-deep px-2 py-px text-[10.5px] font-semibold text-ink-soft">{t(locale, "dashboard.memory.addedByYou")}</span>
+                </label>
+              )}
+              {editor.note?.part === part && (
+                <p data-testid="gbp-edit-note" role="status" className="text-[12px] text-ink-mute">
+                  {t(locale, `dashboard.gbpEdit.note.${editor.note.key}` as MessageKey)}
+                </p>
+              )}
+            </fieldset>
+          ))}
+        </section>
+      )}
+      {extras.length > 0 && (
+        <section className="flex flex-col gap-2 border-t border-paper-line pt-2.5" data-testid="gbp-edit-extras">
+          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-brass">{t(locale, "dashboard.gbpEdit.tier.extras")}</p>
+          <p className="text-[12px] text-ink-soft">{t(locale, "dashboard.gbpEdit.tier.extrasWhy")}</p>
+          {extras.map((g) => (
+            <fieldset key={g.group} data-testid={`gbp-edit-extra-${g.group}`} className="flex flex-col gap-1">
+              <legend className="mb-1 flex flex-wrap items-center gap-2 text-[12.5px] font-semibold text-ink">
+                {g.group === HOW_TO_VISIT ? t(locale, "dashboard.gbpEdit.howToVisit") : g.group}
+                <span className="text-[11.5px] font-normal text-ink-mute">{t(locale, "dashboard.gbpEdit.groupCount", { set: g.set, open: g.open })}</span>
+              </legend>
+              {g.rows.map(rowLabel)}
+            </fieldset>
+          ))}
+        </section>
+      )}
+      {identity.length > 0 && (
+        <details className="border-t border-paper-line pt-2.5" data-testid="gbp-edit-identity">
+          <summary className="cursor-pointer text-[12.5px] font-semibold text-ink-soft">{t(locale, "dashboard.gbpEdit.tier.identity")}</summary>
+          <div className="mt-1.5 flex flex-col gap-1">{identity.map(rowLabel)}</div>
+        </details>
+      )}
       <div className="flex flex-wrap items-center gap-3 border-t border-paper-line pt-2.5">
         <button type="button" className={PRIMARY} disabled={changes.length === 0 && ownerChanges.length === 0} onClick={() => onReview(changes, ownerChanges)}>
           {t(locale, "dashboard.gbpEdit.review")}

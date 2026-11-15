@@ -39,7 +39,8 @@ export async function checkGoogleEditsNow(businessId: string): Promise<CheckNowR
   const c = await context(businessId);
   if (!c.ok) return c.result;
   const { checkGoogleEdits } = await import("@/lib/gbpGoogleEdits.server");
-  const r = await checkGoogleEdits(c.admin, businessId, { rateLimited: true, practice: c.practice ? { fetchImpl: c.fetchImpl, locationName: c.target.locationName } : undefined });
+  // Always the real listing (a read): practice mode never hides Google's own edits.
+  const r = await checkGoogleEdits(c.admin, businessId, { rateLimited: true });
   if (r.status === "failed") {
     if (r.error === "reconnect") await c.markReconnect();
     return { status: "failed" };
@@ -55,8 +56,36 @@ export async function keepGoogleVersion(businessId: string, editId: string): Pro
   const c = await context(businessId);
   if (!c.ok) return c.result;
   const { resolveGoogleEdit } = await import("@/lib/gbpGoogleEdits.server");
-  const row = await resolveGoogleEdit(c.admin, businessId, editId, "kept", c.practice);
+  // Google's edits are always the real ones (never practice rows).
+  const row = await resolveGoogleEdit(c.admin, businessId, editId, "kept", false);
   if (!row) return { status: "not_found" };
+  revalidatePath(`/business/${businessId}/growth`);
+  return { status: "ok" };
+}
+
+/** The banner's "I know, that's right": Google's version kept for every
+ * change it lists (nothing sent to Google). Never the name or address —
+ * those are reviewed one by one. */
+export async function keepAllGoogleVersions(businessId: string, editIds: string[]): Promise<{ status: "ok"; kept: number } | Blocked> {
+  const c = await context(businessId);
+  if (!c.ok) return c.result;
+  const ge = await import("@/lib/gbpGoogleEdits.server");
+  let kept = 0;
+  for (const id of editIds.slice(0, 20)) {
+    const row = await ge.openGoogleEdit(c.admin, businessId, id, false);
+    if (!row || row.field === "title" || row.field === "address") continue;
+    if (await ge.resolveGoogleEdit(c.admin, businessId, id, "kept", false)) kept++;
+  }
+  revalidatePath(`/business/${businessId}/growth`);
+  return { status: "ok", kept };
+}
+
+/** "Change" on a kept one: open the choice again. */
+export async function reopenGoogleEditAction(businessId: string, editId: string): Promise<KeepResult> {
+  const c = await context(businessId);
+  if (!c.ok) return c.result;
+  const { reopenGoogleEdit } = await import("@/lib/gbpGoogleEdits.server");
+  if (!(await reopenGoogleEdit(c.admin, businessId, editId, false))) return { status: "not_found" };
   revalidatePath(`/business/${businessId}/growth`);
   return { status: "ok" };
 }
@@ -67,6 +96,7 @@ export type ChangeBackResult =
   | { status: "no_change" }
   | { status: "editing_off" }
   | { status: "on_google" }
+  | { status: "google_added" }
   | { status: "not_found" }
   | Blocked;
 
@@ -75,9 +105,12 @@ export async function changeGoogleEditBack(businessId: string, editId: string, p
   const c = await context(businessId, practiceOutcome);
   if (!c.ok) return c.result;
   const ge = await import("@/lib/gbpGoogleEdits.server");
-  const row = await ge.openGoogleEdit(c.admin, businessId, editId, c.practice);
+  const row = await ge.openGoogleEdit(c.admin, businessId, editId, false);
   if (!row) return { status: "not_found" };
   if (!canChangeBack(row.field)) return { status: "on_google" };
+  // Google filled in a field the owner left empty: "changing it back" would
+  // clear it on Google, so that's never sent from here.
+  if (!row.owner_value) return { status: "google_added" };
   if (!c.canEdit) return { status: "editing_off" };
   const [write, attrs, quota] = await Promise.all([import("@/lib/gbpFieldWrite.server"), import("@/lib/gbpAttributes.server"), import("@/lib/gbpQuota")]);
   const counter = { calls: 0 };
@@ -94,8 +127,9 @@ export async function changeGoogleEditBack(businessId: string, editId: string, p
     if (r.error === "reconnect") await c.markReconnect();
     return { status: "error", error: r.error };
   }
-  // Sent (or Google already shows the owner's value): the row closes.
-  await ge.resolveGoogleEdit(c.admin, businessId, editId, "changed_back", c.practice);
+  // Sent (or Google already shows the owner's value): the row closes — only
+  // for a real write; practice mode's fake changed nothing on Google.
+  if (!c.practice) await ge.resolveGoogleEdit(c.admin, businessId, editId, "changed_back", false);
   await refreshTab(businessId);
   const undo = r.status === "no_change" ? null : await write.getFieldUndo(store, spec, businessId, c.target.locationName, c.practice).catch(() => null);
   if (r.status === "no_change") return { status: "no_change" };
@@ -105,7 +139,7 @@ export async function changeGoogleEditBack(businessId: string, editId: string, p
 
 export type UndoMadeResult = { status: "ok" } | { status: "failed" } | { status: "editing_off" } | { status: "not_found" } | Blocked;
 
-const UNDONE = new Set(["sent", "pending_review", "no_change", "ok", "undone"]);
+const UNDONE = new Set(["sent", "pending_review", "no_change", "ok", "undone", "updated"]);
 
 /** Undo on "Made from PostScore": the change's own undo, by its kind. */
 export async function undoMadeChange(businessId: string, batchId: string, practiceOutcome: unknown = null): Promise<UndoMadeResult> {
@@ -124,6 +158,7 @@ export async function undoMadeChange(businessId: string, batchId: string, practi
   else if (k === "order_link") r = await (await import("@/app/actions/gbpOrderLink")).undoOrderLinkAction(businessId, batchId, outcome);
   else if (k === "special_hours") r = await (await import("@/app/actions/gbpListingFields")).undoHolidayHours(businessId, batchId, outcome);
   else if (k === "services") r = await (await import("@/app/actions/gbpListingFields")).undoServices(businessId, batchId, outcome);
+  else if (k === "photos") r = await (await import("@/app/actions/gbpPhotos")).undoPhotosAction(businessId, batchId);
   else if (k === "google_revert") {
     const [write, attrs, ge] = await Promise.all([import("@/lib/gbpFieldWrite.server"), import("@/lib/gbpAttributes.server"), import("@/lib/gbpGoogleEdits.server")]);
     const field = row.field === "phoneNumbers" ? "phone" : row.field === "websiteUri" ? "website" : "hours";

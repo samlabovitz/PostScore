@@ -38,6 +38,8 @@ export interface RealListing {
   /** Customer details: yes / no values by attribute id ("attributes/pay_credit_card"). */
   attributes: Array<{ name: string; valueType?: string; values?: unknown[] }>;
   placeActionLinks: PlaceActionLink[];
+  /** The yes/no details Google offers for this listing's category (attributes.list); [] when the read failed. */
+  offered?: import("@/lib/gbpAttributes").GbpAttributeMetadata[];
 }
 
 export type RealListingResult = { ok: true; listing: RealListing } | { ok: false; error: string };
@@ -55,10 +57,12 @@ async function get<T>(f: typeof fetch, token: string, url: string): Promise<{ ok
 async function readWith(f: typeof fetch, token: string, location: string): Promise<{ ok: true; listing: RealListing } | { ok: false; status: number | null; step: string }> {
   const info = new URL(`${INFO}/${location}`);
   info.searchParams.set("readMask", REAL_LISTING_READ_MASK);
-  const [loc, attrs, links] = await Promise.all([
+  const { listOffered } = await import("@/lib/gbpAttributes.server");
+  const [loc, attrs, links, offered] = await Promise.all([
     get<RealLocation>(f, token, info.toString()),
     get<{ attributes?: RealListing["attributes"] }>(f, token, `${INFO}/${location}/attributes`),
     get<{ placeActionLinks?: PlaceActionLink[] }>(f, token, `${ACTIONS}/${location}/placeActionLinks`),
+    listOffered(f, token, location),
   ]);
   if (!loc.ok) return { ok: false, status: loc.status, step: "location" };
   return {
@@ -68,6 +72,7 @@ async function readWith(f: typeof fetch, token: string, location: string): Promi
       // Customer details and links are extras: a failed read leaves them empty.
       attributes: attrs.ok ? (attrs.data.attributes ?? []) : [],
       placeActionLinks: links.ok ? (links.data.placeActionLinks ?? []) : [],
+      offered: offered.ok ? offered.data : [],
     },
   };
 }
@@ -135,5 +140,23 @@ export async function listingExtras(admin: SupabaseClient, businessId: string): 
     categories: [cats?.primaryCategory?.displayName, ...(cats?.additionalCategories ?? []).map((c) => c.displayName)].filter((x): x is string => !!x),
     verified: typeof read.listing.location.metadata?.hasVoiceOfMerchant === "boolean" ? read.listing.location.metadata.hasVoiceOfMerchant : null,
     description: read.listing.location.profile?.description ?? null,
+    attributeIds: read.listing.attributes.filter((a) => (a.values ?? []).length > 0).map((a) => a.name),
+    details: await (async () => {
+      // Customer details: the 3 scored groups and the extras Google offers (suggestions only, no points).
+      const offered = read.listing.offered ?? [];
+      if (offered.length === 0) return null;
+      const [{ customerDetailsEditorRows, suggestedExtras }, { ideaTypeOf }] = await Promise.all([import("@/lib/gbpAttributes"), import("@/lib/listingIdeas")]);
+      const rows = customerDetailsEditorRows(offered, read.listing.attributes as never, []);
+      const { data: biz } = await admin.from("businesses").select("niche_id").eq("id", businessId).maybeSingle();
+      const type = ideaTypeOf((biz as { niche_id?: string | null } | null)?.niche_id ?? null, []);
+      const set = (part: string) => rows.some((r) => r.part === part && r.current !== null);
+      return {
+        payment: set("payment"),
+        parking: set("parking"),
+        accessibility: set("accessibility"),
+        open: rows.filter((r) => (r.part === "extra" || r.part === "service") && r.current === null).length,
+        suggest: suggestedExtras(rows, type).map((r) => ({ id: r.id, label: r.label })),
+      };
+    })(),
   };
 }

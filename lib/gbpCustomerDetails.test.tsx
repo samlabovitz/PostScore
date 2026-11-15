@@ -126,8 +126,8 @@ beforeEach(() => resetGbpQuota());
 
 describe("which attributes the panel offers", () => {
   test("only Google's offered yes/no attributes for accessibility, payment and parking, with current values", () => {
-    const rows = customerDetailsEditorRows(OFFERED, CURRENT);
-    // Parking, payment, accessibility; each in the panel's own order.
+    const rows = customerDetailsEditorRows(OFFERED, CURRENT).filter((r) => r.part !== "extra" && r.part !== "identity");
+    // Parking, payment, accessibility; each in the panel's own order (the extras follow, unscored).
     expect(rows.map((r) => [r.id, r.part, r.current])).toEqual([
       ["attributes/has_parking_lot_free", "parking", null],
       ["attributes/pay_credit_card", "payment", false],

@@ -12,7 +12,7 @@ vi.mock("@/lib/gbpTokens.server", () => ({
   markGbpReconnect: async () => ({ status: "ok" }),
 }));
 
-import { canChangeBack, checkNowAllowed, fieldsInMask, googleEditsFrom, hoursText, syncGoogleEdits, type GoogleEditRow } from "@/lib/gbpGoogleEdits";
+import { canChangeBack, checkNowAllowed, decodeWeek, fieldsInMask, googleEditsFrom, hoursText, syncGoogleEdits, type GoogleEditRow } from "@/lib/gbpGoogleEdits";
 import { notificationView } from "@/lib/notifications";
 
 // ---------------------------------------------------------------------------
@@ -91,7 +91,7 @@ describe("diffMask → changed fields", () => {
   test("old → new values; a mask entry with the same text isn't a change", () => {
     expect(googleEditsFrom("phoneNumbers,regularHours,title", OWNER, GOOGLE)).toEqual([
       { field: "phone", ownerValue: "(914) 320-3012", googleValue: "(914) 555-0100" },
-      { field: "hours", ownerValue: "Mon 9 AM–6 PM, Tue–Sun closed", googleValue: "Mon 10 AM–6 PM, Tue–Sun closed" },
+      { field: "hours", ownerValue: "0|540-1080\n1|c\n2|c\n3|c\n4|c\n5|c\n6|c", googleValue: "0|600-1080\n1|c\n2|c\n3|c\n4|c\n5|c\n6|c" },
     ]);
   });
 
@@ -111,6 +111,14 @@ describe("diffMask → changed fields", () => {
     expect(plan.gone).toEqual(["b"]);
     // Google changes the kept name again → flagged again.
     expect(syncGoogleEdits([], [{ field: "title", ownerValue: "A", googleValue: "C" }], kept).create).toHaveLength(1);
+  });
+
+  test("hours are kept per day and read back", () => {
+    expect(decodeWeek("0|540-1080\n1|c")).toEqual([
+      { day: 0, ranges: [[540, 1080]] },
+      { day: 1, ranges: [] },
+    ]);
+    expect(decodeWeek("Mon 9 AM–6 PM")).toBeNull();
   });
 
   test("only phone, hours and website can be changed back from PostScore", () => {
@@ -152,6 +160,20 @@ describe("checkGoogleEdits", () => {
     expect(after.status === "ok" && after.open).toEqual([]);
     expect(tables.gbp_google_edits[0]).toMatchObject({ resolution: "gone" });
     expect(tables.notifications[0].resolved_at).toBe("2026-11-17T12:00:00.000Z");
+  });
+
+  test("Google filled in the website the owner left empty, matching our scan: stored (info only), no notification", async () => {
+    const { checkGoogleEdits } = await import("@/lib/gbpGoogleEdits.server");
+    const tables: Record<string, Row[]> = { gbp_connections: [connected()], gbp_google_edits: [], notifications: [], businesses: [{ id: "b1", website: "https://www.hairexpress.example/", phone: null }] };
+    const f = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const owner = { ...OWNER, websiteUri: undefined };
+      const body = url.includes(":getGoogleUpdated") ? { location: { ...owner, websiteUri: "https://www.hairexpress.example/" }, diffMask: "websiteUri" } : owner;
+      return new Response(JSON.stringify(body), { status: 200 });
+    }) as typeof fetch;
+    await checkGoogleEdits(fakeDb(tables), "b1", { fetchImpl: f });
+    expect(tables.gbp_google_edits).toEqual([expect.objectContaining({ field: "website", owner_value: null })]);
+    expect(tables.notifications).toEqual([]);
   });
 
   test("none changed: nothing stored", async () => {

@@ -75,6 +75,12 @@ describe("Google's own edits: keep or change back", () => {
     expect(h.applied).toEqual([]);
   });
 
+  test("Google filled in an empty field: never \"changed back\" (that would clear it on Google)", async () => {
+    h.row = { ...edit("website"), owner_value: null, google_value: "https://www.hairexpressonbroadway.com/" };
+    expect(await changeGoogleEditBack("b1", "e1")).toEqual({ status: "google_added" });
+    expect(h.applied).toEqual([]);
+  });
+
   test("a row that's already closed (or someone else's) isn't found", async () => {
     h.row = null;
     expect(await keepGoogleVersion("b1", "e1")).toEqual({ status: "not_found" });

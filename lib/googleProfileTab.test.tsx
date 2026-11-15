@@ -27,6 +27,8 @@ import {
   listingGroups,
   madeFromPostScore,
   madeValue,
+  type ListingExtras,
+  SAMPLE_INSIGHTS,
   watchedChanges,
   monthListingChanges,
   monthRecap,
@@ -120,7 +122,7 @@ describe("the five levers: status and pill", () => {
       const l = one({}, id);
       expect([words(l).status, words(l).pill, l.tone]).toEqual(["coming soon", "Soon", "neutral"]);
     }
-    expect(one({}, "photos").href).toBe("#listing-photos");
+    expect(one({}, "photos").href).toBe("#edit-photos");
   });
 
   test("Deals: red Start with no coupon running, green with one", () => {
@@ -232,11 +234,16 @@ describe("Protection & changes", () => {
     expect(none.slice(none.indexOf("6 Protection & changes"))).not.toContain("Coming soon");
     const edit = { id: "e1", field: "phone" as const, owner_value: "(914) 320-3012", google_value: "(914) 555-0100", detected_at: "2026-11-14T12:00:00Z", resolved_at: null, resolution: null };
     const html = render({ saved: { ...BASE.saved!, googleEdits: { available: true, open: [edit], checkedAt: "2026-11-15T12:00:00Z" } } });
-    expect(text(html)).toContain("Phone: “(914) 320-3012” → “(914) 555-0100” · Nov 14");
+    expect(text(html)).toContain("Google changed your phone. Which is right?");
+    expect(html).toContain('data-testid="version-google"');
+    expect(html).toContain('data-testid="version-mine"');
     expect(text(html)).toContain("Keep Google's version");
-    expect(text(html)).toContain("Change it back");
+    expect(text(html)).toContain("Keep your version");
+    // Never "Unchanged" while a change is listed above.
+    expect(text(html)).toContain("1 changed: phone");
+    expect(text(html)).not.toContain("Unchanged ✓");
     expect(html).toContain('data-testid="google-edits-banner"');
-    expect(text(html)).toContain("Google changed your phone. Review it");
+    expect(text(html)).toContain("Your phone number was changed on Google (Nov 14).");
     // Before supabase/gbp-step3b.sql: no Check now, no guess.
     expect(text(render({ saved: { ...BASE.saved!, googleEdits: { available: false, open: [], checkedAt: null } } }))).toContain("After the next check");
   });
@@ -270,6 +277,55 @@ describe("Protection & changes", () => {
   });
 });
 
+describe("description and photos rows", () => {
+  const groupsWith = (extras: ListingExtras) => listingGroups({ ...BASE.listing, businessId: "b1", checks: BASE.checks, messagingOn: true, replies: null, extras }).flatMap((g) => g.rows);
+  test("a short description is ! amber with Write with PostAI; 250+ is ✓", () => {
+    const desc = groupsWith({ specialPeriods: [], services: [], categories: [], description: "Hair salon" }).find((r) => r.id === "description")!;
+    expect(desc).toMatchObject({ status: "warn", meta: { short: "1" } });
+    expect(rowText(desc, "en").action).toBe("Write with PostAI");
+    expect(groupsWith({ specialPeriods: [], services: [], categories: [], description: "x".repeat(260) }).find((r) => r.id === "description")!.status).toBe("ok");
+    expect(groupsWith({ specialPeriods: [], services: [], categories: [], description: "" }).find((r) => r.id === "description")!.status).toBe("bad");
+  });
+  test("the Photos row opens Add photos, with the customer-photos tooltip", () => {
+    const html = render({ media: { photos: { count: 4, newestAt: "2026-09-09T00:00:00Z" }, posts: null, checkedAt: null } });
+    expect(html).toContain('title="Customer photos aren&#x27;t counted"');
+    expect(text(html)).toContain("4 photos you added · newest 2 months ago");
+    expect(text(html)).toContain("Add photos");
+  });
+});
+
+describe("Show up for more searches (section 5)", () => {
+  const full = { specialPeriods: [], services: ["Haircut"], categories: ["Hair salon"], description: "Hair salon", attributeIds: [], verified: true };
+  const section = (html: string) => text(html).slice(text(html).indexOf("5 Show up for more searches"), text(html).indexOf("6 Protection & changes"));
+  test("real ideas with a pill, a reason with real numbers and one button; max 5, then Show N more", () => {
+    const html = render({
+      nicheId: "hair_salon",
+      extras: full,
+      messagingOn: false,
+      media: { photos: { count: 4, newestAt: "2026-09-09T00:00:00Z" }, posts: { last30: 0, lastAt: null, lastType: null }, checkedAt: "2026-11-15T00:00:00Z" },
+      insights: [{ ...SAMPLE_INSIGHTS[SAMPLE_INSIGHTS.length - 1], topKeywords: [{ term: "keratin tarrytown", count: 12 }] }],
+    });
+    const s5 = section(html);
+    expect(s5).toContain("Add Keratin treatment to your services");
+    expect(s5).toContain("Reach: 12 searches/mo");
+    expect(s5).toContain("Your description is only 10 characters (“Hair salon”)");
+    expect(s5).not.toContain("Coming soon");
+    expect(s5).not.toContain("Sample");
+    expect((html.match(/data-testid="google-tab-idea-[a-z]+"/g) ?? []).length).toBe(5);
+    expect(s5).toMatch(/Show \d more/);
+    expect(html).toContain('href="#edit-services?add=Keratin%20treatment"');
+  });
+
+  test("every check passes: Nothing to add right now", () => {
+    const html = render({
+      extras: { ...full, description: "x".repeat(300), attributeIds: ["attributes/has_free_parking_lot", "attributes/has_wheelchair_accessible_entrance"], specialPeriods: [{ startDate: { year: 2026, month: 11, day: 26 }, closed: true }, { startDate: { year: 2026, month: 12, day: 24 }, closed: true }, { startDate: { year: 2026, month: 12, day: 25 }, closed: true }] },
+      messagingOn: true,
+      media: { photos: { count: 4, newestAt: new Date().toISOString() }, posts: { last30: 3, lastAt: null, lastType: null }, checkedAt: null },
+    });
+    expect(section(html)).toContain("Nothing to add right now. Your listing covers what people search for.");
+  });
+});
+
 describe("your listing", () => {
   test("grouped rows with ✓ / ! / ✕, the counts, and coming-soon rows", () => {
     const groups = listingGroups({ ...BASE.listing, businessId: "b1", checks: BASE.checks, messagingOn: false, replies: { replied: 0, inWindow: 20 } });
@@ -296,7 +352,7 @@ describe("your listing", () => {
     const desc = rows.find((r) => r.id === "description")!;
     const booking = rows.find((r) => r.id === "booking")!;
     const loading = { description: { kind: "loading" }, booking: { kind: "loading" } } as const;
-    expect(rowText(desc, "en", { live: { ...loading, description: { kind: "value", value: "Hair salon" } } })).toMatchObject({ value: "“Hair salon”", note: "10 of 750 characters. Say what you do best." });
+    expect(rowText(desc, "en", { live: { ...loading, description: { kind: "value", value: "Hair salon" } } })).toMatchObject({ value: "“Hair salon”", note: "10 of 750 characters. Too short: say what you do best (aim for 250+ characters)." });
     expect(rowText(desc, "en", { live: { ...loading, description: { kind: "none" } } }).value).toBe("No description on Google yet");
     expect(rowText(desc, "en", { live: { ...loading, description: { kind: "error" } } })).toMatchObject({ value: "Couldn't load from Google. Open the editor to see it.", note: null });
     expect(rowText(booking, "en", { live: { ...loading, booking: { kind: "value", value: "https://www.booksy.com/en-us/hair-express/" } } }).value).toBe("booksy.com/en-us/hair-express");
@@ -304,13 +360,24 @@ describe("your listing", () => {
     expect(rowText(booking, "es", { live: { ...loading, booking: { kind: "error" } } }).value).toBe("No se pudo cargar desde Google. Abra el editor para verlo.");
   });
 
-  test("rows: at least 44px, small 30px buttons, and clear of the floating Ask PostAI button; room for it at the bottom", () => {
+  test("rows: at least 44px, 32px buttons flush right (no per-row margin); room for Ask PostAI at the bottom of the tab", () => {
     const html = render();
     expect(html).toContain("min-h-[44px]");
-    expect(html).toContain("h-[30px]");
-    expect(html).toContain("sm:mr-[108px]");
-    expect(html).toMatch(/data-testid="google-profile-tab"|pb-\[60px\]/);
-    expect(html).toContain("pb-[60px]");
+    expect(html).toContain("inline-flex h-8 items-center");
+    expect(html).not.toContain("sm:mr-[108px]");
+    expect(html).toContain('class="flex flex-col pb-[68px]" data-testid="google-profile-tab"');
+  });
+
+  test("customer details: the three groups once, then the grey line", () => {
+    const html = text(render({ extras: { specialPeriods: [], services: [], categories: [], details: { payment: true, parking: false, accessibility: false, open: 14, suggest: [] } } }));
+    expect(html).toContain("Payments ✓ · Parking ✗ · Accessibility ✗ These three count toward your score · 14 more details you can add");
+  });
+
+  test("hours: Compare (primary) beside Edit only when the website and Google differ", () => {
+    const with_ = render({ hoursMismatch: true });
+    expect(with_).toContain('data-testid="listing-action-compare"');
+    expect(text(with_)).toMatch(/Compare Edit/);
+    expect(render({ hoursMismatch: false })).not.toContain('data-testid="listing-action-compare"');
   });
 
   test("hours run together; links open the right editor", () => {
@@ -407,7 +474,8 @@ describe("the tab's states", () => {
     expect(words).toContain("Google hasn't shared numbers for your listing yet. They usually appear within a few days.");
     expect(words).toContain("Updates on the 1st of every month · next: ");
     expect(html).toContain('data-testid="google-tab-kpis-empty"');
-    expect(html.match(/data-testid="google-tab-coming"/g)).toHaveLength(3);
+    // Sections 2 and 3 wait for Google's numbers; section 5 never says "Coming soon".
+    expect(html.match(/data-testid="google-tab-coming"/g)).toHaveLength(2);
     expect(words).not.toContain("first full month");
     expect(words).not.toMatch(/Sample data|11\.8%|704|\$3,700/);
     // The levers, with the exact micro descriptions.
@@ -468,10 +536,12 @@ describe("the tab's states", () => {
     expect(sampleIdeas(null)).toEqual([1, 2]);
     // Hair Express has 5 categories: no "add a second category".
     expect(sampleIdeas(["Hair salon", "Beauty salon", "Hair care", "Hair extension technician", "Hairdresser"])).toEqual([1]);
-    const html = render({ practice: true, connected: false, listing: { ...BASE.listing, categories: ["Hair salon", "Beauty salon"] } });
+    // Samples only while there's no real idea (messaging off would be one).
+    const html = render({ practice: true, connected: false, messagingOn: true, listing: { ...BASE.listing, categories: ["Hair salon", "Beauty salon"] } });
     expect(html).toContain('data-testid="google-tab-idea-1"');
     expect(html).not.toContain('data-testid="google-tab-idea-2"');
-    expect(render({ practice: true, connected: false })).toContain('data-testid="google-tab-idea-2"');
+    expect(render({ practice: true, connected: false, messagingOn: true })).toContain('data-testid="google-tab-idea-2"');
+    expect(render({ practice: true, connected: false, messagingOn: false })).not.toContain('data-testid="google-tab-idea-1"');
   });
 
   test("practice mode: the mockup's sample numbers, labelled as sample data", () => {

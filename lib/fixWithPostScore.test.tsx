@@ -107,10 +107,12 @@ describe("the button on its own (Overview score rows)", () => {
     expect(render(<FixWithPostScore businessId="b1" checkId="completeness.hours" />, GROW)).toBe("");
   });
 
-  test("the Overview's score rows show it for hours, phone and review replies (customer details and the website link keep their own editor)", async () => {
+  test("the Overview's score rows no longer fix inline: one button to where it's fixed (lib/breakdownAction.ts)", async () => {
     const { readFileSync } = await import("node:fs");
     const src = readFileSync("components/scoring/CategoryCard.tsx", "utf8");
-    expect(src).toContain("!websiteLinkFix && !customerDetails && fixFlowHref(businessId, check.id) !== null");
-    expect(src).toContain("<FixWithPostScore businessId={businessId!} checkId={check.id}");
+    expect(src).not.toContain("<FixWithPostScore");
+    expect(src).not.toContain("<CustomerDetailsGoogleEdit");
+    expect(src).not.toContain("<WebsiteLinkFix");
+    expect(src).toContain("breakdownAction(");
   });
 });

@@ -70,11 +70,11 @@ describe("the step (EN + ES), with Google's own link", () => {
     expect(html(<GoogleAiAnswersLine businessId="b1" premium />, "es")).toContain("La IA de Google responde las preguntas de los clientes");
   });
 
-  test("it's on the Growth Google Profile tab, the connect page's next steps, and the Customer details row", () => {
+  test("it's on the Growth Google Profile tab and the connect page's next steps", () => {
     expect(fs.readFileSync("components/gbp/GoogleProfilePanel.tsx", "utf8")).toMatch(/data-testid="profile-strength"[\s\S]*<GbpMessagingStep on=\{connected \? messagingOn : null\} \/>/);
     const connect = fs.readFileSync("app/business/[id]/connect-gbp/ConnectGbpView.tsx", "utf8");
     expect(connect).toContain('data-testid="connect-next-steps"');
     expect(connect).toContain("<GoogleAiAnswersLine businessId={businessId} premium");
-    expect(fs.readFileSync("components/scoring/CategoryCard.tsx", "utf8")).toContain("<GoogleAiAnswersLine");
+    // The Overview breakdown no longer carries it: one button per check (lib/breakdownAction.ts).
   });
 });

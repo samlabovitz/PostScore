@@ -91,7 +91,7 @@ function logFailure(step: string, details: Record<string, unknown>) {
 }
 
 /** Google's offered attributes for this location, every page. */
-async function listOffered(f: typeof fetch, token: string, locationName: string): Promise<GoogleCall<GbpAttributeMetadata[]>> {
+export async function listOffered(f: typeof fetch, token: string, locationName: string): Promise<GoogleCall<GbpAttributeMetadata[]>> {
   const out: GbpAttributeMetadata[] = [];
   let pageToken: string | undefined;
   for (let page = 0; page < 5; page++) {
@@ -163,7 +163,7 @@ export type GoogleWriteOutcome = "ok" | "pending_review" | "unconfirmed" | "fail
 export interface GoogleWriteLogRow {
   business_id: string;
   user_id: string;
-  field: "website_link" | "customer_details" | "special_hours" | "services" | "phone" | "hours";
+  field: "website_link" | "customer_details" | "special_hours" | "services" | "phone" | "hours" | "photos";
   action: "edit" | "undo";
   outcome: GoogleWriteOutcome;
   practice: boolean;

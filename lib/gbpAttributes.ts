@@ -42,6 +42,8 @@ export interface CustomerDetailsEditorRow {
   /** The owner's own saved value only (locations.getAttributes) — what
    * Undo puts back (null = not set: Google's own info shows again). */
   merchant?: AttrValue;
+  /** "extra" rows: Google's group ("Amenities"…), or HOW_TO_VISIT. */
+  group?: string;
 }
 
 export interface AttributeChange {
@@ -58,9 +60,22 @@ export interface AttributeChange {
 /** The editor's groups: the three customer-details parts, plus food
  * businesses' service options (takeout / delivery / curbside) — shown only
  * when Google offers them for the location; information only, no points. */
-export type EditorPart = CustomerDetailPart | "service";
+export type EditorPart = CustomerDetailPart | "service" | "extra" | "identity";
 
-export const PART_ORDER: EditorPart[] = ["parking", "payment", "accessibility", "service"];
+/** The three groups that count toward the score (lib/scoring.ts — unchanged). */
+export const SCORED_PARTS: readonly CustomerDetailPart[] = ["payment", "parking", "accessibility"];
+/** The synthetic first group of the extras: appointments and walk-ins. */
+export const HOW_TO_VISIT = "how_to_visit";
+
+/** Owner-identity attributes (women-owned, Black-owned, veteran-led,
+ * LGBTQ+ friendly…): optional, collapsed, never suggested, never counted. */
+export function isIdentityAttribute(id: string): boolean {
+  return /(_owned|owned_|_led$|_led_|lgbtq|transgender|identifies_as)/.test(id.replace(/^attributes\//, ""));
+}
+
+const isHowToVisit = (id: string) => /(appointment|walk_?ins?|reservation)/.test(id);
+
+export const PART_ORDER: Array<CustomerDetailPart | "service"> = ["parking", "payment", "accessibility", "service"];
 /** One approval changes at most this many fields. */
 export const MAX_CHANGES_PER_APPROVAL = 40;
 /** Undo is offered this long after an approval. */
@@ -79,7 +94,7 @@ export function attributeId(name: string): string {
  * attribute IDs (checked live against attributes.list for the location
  * on Oct 28: a hair salon's accessibility, payments and parking groups).
  * Only the ones Google offers for the location are ever shown. */
-export const CUSTOMER_DETAIL_OPTIONS: Record<EditorPart, string[]> = {
+export const CUSTOMER_DETAIL_OPTIONS: Record<CustomerDetailPart | "service", string[]> = {
   parking: [
     "has_parking_street_free",
     "has_parking_street_paid",
@@ -133,13 +148,17 @@ export function customerDetailsEditorRows(metadata: GbpAttributeMetadata[], curr
   for (const m of metadata) {
     if (!m.parent || m.deprecated || m.valueType !== "BOOL") continue;
     const id = attributeId(m.parent);
-    const part = partOfAttribute(id);
-    if (!part || seen.has(id)) continue;
+    if (seen.has(id)) continue;
+    // Scored (and food service options) as before; every other yes/no
+    // attribute Google offers for the category: an extra (or owner identity).
+    const part: EditorPart = partOfAttribute(id) ?? (isIdentityAttribute(id) ? "identity" : "extra");
     seen.add(id);
     const merchant = boolValue(byId.get(id));
-    rows.push({ id, part, label: m.displayName?.trim() || id.slice("attributes/".length).replace(/_/g, " "), current: merchant ?? boolValue(liveById.get(id)), merchant });
+    const group = part === "extra" ? (isHowToVisit(id) ? HOW_TO_VISIT : m.groupDisplayName?.trim() || "Other") : undefined;
+    rows.push({ id, part, label: m.displayName?.trim() || id.slice("attributes/".length).replace(/_/g, " "), current: merchant ?? boolValue(liveById.get(id)), merchant, ...(group ? { group } : {}) });
   }
-  return rows.sort((a, b) => PART_ORDER.indexOf(a.part) - PART_ORDER.indexOf(b.part) || optionIndex(a.id) - optionIndex(b.id));
+  const partRank = (p: EditorPart) => (p === "extra" ? 10 : p === "identity" ? 11 : PART_ORDER.indexOf(p));
+  return rows.sort((a, b) => partRank(a.part) - partRank(b.part) || optionIndex(a.id) - optionIndex(b.id));
 }
 
 export type DiffResult =
@@ -291,4 +310,48 @@ export function undoPlan(
 export function undoReadbackMismatches(changes: UndoableChange["changes"], readback: GbpAttribute[]): string[] {
   const now = merchantValues(readback);
   return changes.filter((c) => (now.get(c.id) ?? null) !== c.before).map((c) => c.id);
+}
+
+
+// ---------------------------------------------------------------------------
+// The extras ("Help more people choose you"): grouped, and the ones to suggest
+// ---------------------------------------------------------------------------
+
+const GROUP_PREFERENCE = ["Amenities", "Offerings", "Service options", "Planning", "Highlights", "Popular for", "Crowd", "Atmosphere"];
+
+/** The extras by group: "How to visit" first, then Amenities, Offerings,
+ * Service options…, each with how many are set and how many can be added.
+ * Food businesses' service options (part "service") join their Google group. */
+export function extraGroups(rows: CustomerDetailsEditorRow[]): Array<{ group: string; rows: CustomerDetailsEditorRow[]; set: number; open: number }> {
+  const extras = rows.filter((r) => r.part === "extra" || r.part === "service").map((r) => (r.part === "service" ? { ...r, group: r.group ?? "Service options" } : r));
+  const groups = new Map<string, CustomerDetailsEditorRow[]>();
+  for (const r of extras) groups.set(r.group ?? "Other", [...(groups.get(r.group ?? "Other") ?? []), r]);
+  const rank = (g: string) => (g === HOW_TO_VISIT ? -1 : GROUP_PREFERENCE.includes(g) ? GROUP_PREFERENCE.indexOf(g) : 50);
+  return Array.from(groups, ([group, rs]) => ({ group, rows: rs, set: rs.filter((r) => r.current !== null).length, open: rs.filter((r) => r.current === null).length })).sort(
+    (a, b) => rank(a.group) - rank(b.group) || a.group.localeCompare(b.group)
+  );
+}
+
+/** What customers of each type ask most, as attribute-id patterns, best first. */
+const SUGGEST_BY_TYPE: Record<string, RegExp[]> = {
+  hair: [/walk_?ins?/, /online_appointment|appointment_online/, /restroom/, /appointment/, /wi_?fi/],
+  barber: [/walk_?ins?/, /online_appointment|appointment_online/, /appointment/, /restroom/, /wi_?fi/],
+  nails: [/walk_?ins?/, /online_appointment|appointment_online/, /appointment/, /restroom/, /wi_?fi/],
+  restaurant: [/reservation/, /outdoor_seating/, /takeout/, /delivery/, /restroom/, /wi_?fi/, /kids|children|high_chair/],
+  art: [/online_appointment|appointment/, /restroom/, /kids|children/, /wi_?fi/],
+  home: [/online_appointment|appointment/, /onsite_services|on_site/, /estimate/],
+  default: [/walk_?ins?/, /online_appointment|appointment/, /restroom/, /wi_?fi/],
+};
+
+/** The 2–3 unanswered extras worth suggesting for the business type
+ * (never an owner-identity attribute, never a scored one). */
+export function suggestedExtras(rows: CustomerDetailsEditorRow[], type: string | null, max = 3): CustomerDetailsEditorRow[] {
+  const open = rows.filter((r) => (r.part === "extra" || r.part === "service") && r.current === null && !isIdentityAttribute(r.id));
+  const out: CustomerDetailsEditorRow[] = [];
+  for (const pattern of SUGGEST_BY_TYPE[type ?? "default"] ?? SUGGEST_BY_TYPE.default) {
+    const hit = open.find((r) => pattern.test(r.id) && !out.includes(r));
+    if (hit) out.push(hit);
+    if (out.length >= max) break;
+  }
+  return out;
 }

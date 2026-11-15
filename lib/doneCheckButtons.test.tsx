@@ -110,15 +110,24 @@ describe("a Done check shows no fix button", () => {
     expect(html).not.toContain('data-testid="row-actions"');
   });
 
-  test("website link losing points (Colorful Yun Nan, 0/4): the button shows (Premium + connected) or the steps (other plans)", () => {
-    expect(row(check("completeness.website_link", 0, 4))).toContain('data-testid="website-link-fix"');
-    expect(row(check("completeness.website_link", 0, 4), { premium: false, connected: false, undo: null, websiteUndo: null })).toContain('data-testid="website-link-fix-manual"');
+  test("website link losing points (Colorful Yun Nan, 0/4): ONE button to where it's fixed, no inline editor", () => {
+    const premium = row(check("completeness.website_link", 0, 4));
+    expect(premium.match(/data-testid="row-action"/g)).toHaveLength(1);
+    expect(premium).toContain("#edit-website-link");
+    expect(premium).not.toContain('data-testid="website-link-fix"');
+    const other = row(check("completeness.website_link", 0, 4), { premium: false, connected: false, undo: null, websiteUndo: null });
+    expect(other.match(/data-testid="row-action"/g)).toHaveLength(1);
+    expect(other).not.toContain('data-testid="website-link-fix-manual"');
   });
 
-  test("customer details Done (3/3): no “Update on Google”; needs work (1/3): it shows", () => {
+  test("customer details Done (3/3): no button; needs work (1/3): one button, no inline editor", () => {
     const meta = { parts: "accessibility,parking", ownerRemoved: "", ownerCanRemove: "" };
-    expect(row(check("completeness.customer_details", 3, 3, { meta }))).not.toContain("gbp-edit");
-    expect(row(check("completeness.customer_details", 1, 3, { meta, gaps: ["accessibility"] }))).toContain("Update on Google");
+    const done = row(check("completeness.customer_details", 3, 3, { meta }));
+    expect(done).not.toContain("gbp-edit");
+    expect(done).not.toContain('data-testid="row-action"');
+    const needs = row(check("completeness.customer_details", 1, 3, { meta, gaps: ["accessibility"] }));
+    expect(needs.match(/data-testid="row-action"/g)).toHaveLength(1);
+    expect(needs).not.toContain('data-testid="gbp-edit"');
   });
 
   test("the Google Profile tab keeps both editors (with their Undo) for Premium + connected, under Edit on Google", () => {

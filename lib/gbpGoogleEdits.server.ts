@@ -14,7 +14,7 @@ import { getValidAccessTokenWithClient, markGbpReconnect } from "@/lib/gbpTokens
 import { gbpFetch, logGbpCalls } from "@/lib/gbpQuota";
 import { call } from "@/lib/gbpAttributes.server";
 import type { FieldSpec } from "@/lib/gbpFieldWrite.server";
-import { checkNowAllowed, editNotificationKey, GOOGLE_EDITS_READ_MASK, googleEditsFrom, syncGoogleEdits, type EditedField, type EditedLocation, type FoundEdit, type GoogleEditRow, type RevertableField } from "@/lib/gbpGoogleEdits";
+import { checkNowAllowed, editNotificationKey, isInfoOnly, GOOGLE_EDITS_READ_MASK, googleEditsFrom, syncGoogleEdits, type EditedField, type EditedLocation, type FoundEdit, type GoogleEditRow, type RevertableField } from "@/lib/gbpGoogleEdits";
 
 const BASE = "https://mybusinessbusinessinformation.googleapis.com/v1";
 const COLUMNS = "id, field, owner_value, google_value, detected_at, resolved_at, resolution";
@@ -23,16 +23,20 @@ export interface GoogleEditsState {
   /** false: supabase/gbp-step3b.sql hasn't been run yet. */
   available: boolean;
   open: GoogleEditRow[];
+  /** Kept / changed back in the last day: shown collapsed ("✓ You kept …"). */
+  recent?: GoogleEditRow[];
   checkedAt: string | null;
 }
 
 export async function loadGoogleEdits(db: SupabaseClient, businessId: string, practice: boolean): Promise<GoogleEditsState> {
-  const [rows, conn] = await Promise.all([
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const [rows, conn, recent] = await Promise.all([
     db.from("gbp_google_edits").select(COLUMNS).eq("business_id", businessId).eq("practice", practice).is("resolved_at", null).order("detected_at", { ascending: false }),
     db.from("gbp_connections").select("google_edits_checked_at").eq("business_id", businessId).maybeSingle(),
+    db.from("gbp_google_edits").select(COLUMNS).eq("business_id", businessId).eq("practice", practice).in("resolution", ["kept", "changed_back"]).gte("resolved_at", since).order("resolved_at", { ascending: false }).limit(10),
   ]);
   if (rows.error) return { available: false, open: [], checkedAt: null };
-  return { available: true, open: (rows.data ?? []) as GoogleEditRow[], checkedAt: ((conn.data as { google_edits_checked_at?: string | null } | null)?.google_edits_checked_at ?? null) as string | null };
+  return { available: true, open: (rows.data ?? []) as GoogleEditRow[], recent: ((recent.error ? [] : recent.data) ?? []) as GoogleEditRow[], checkedAt: ((conn.data as { google_edits_checked_at?: string | null } | null)?.google_edits_checked_at ?? null) as string | null };
 }
 
 type Reads = { ok: true; owner: EditedLocation; google: EditedLocation; diffMask: string } | { ok: false; status: number | null };
@@ -106,12 +110,17 @@ export async function checkGoogleEdits(admin: SupabaseClient, businessId: string
   const found = googleEditsFrom(reads.diffMask, reads.owner, reads.google);
   const plan = syncGoogleEdits(open, found, kept);
   const at = now.toISOString();
+  // What our own scan found (website, phone): a field Google filled in that matches it is info only — no notification.
+  const { data: biz } = await admin.from("businesses").select("website, phone").eq("id", businessId).maybeSingle();
+  const scan = (biz as { website?: string | null; phone?: string | null } | null) ?? {};
   for (const e of plan.create) {
     // 23505: another check just opened the same field — fine.
     await admin.from("gbp_google_edits").insert({ business_id: businessId, field: e.field, owner_value: e.ownerValue, google_value: e.googleValue, detected_at: at, practice });
-    if (!practice) await openNotification(admin, businessId, e, at);
+    if (!practice && !isInfoOnly({ field: e.field, owner_value: e.ownerValue, google_value: e.googleValue }, scan)) await openNotification(admin, businessId, e, at);
   }
   for (const u of plan.update) await admin.from("gbp_google_edits").update({ owner_value: u.edit.ownerValue, google_value: u.edit.googleValue }).eq("id", u.id);
+  // An open one that's only Google filling in what matches our scan: no notification (closes an older one).
+  if (!practice) for (const r of open.filter((o) => !plan.gone.includes(o.id) && isInfoOnly(o, scan))) await resolveNotification(admin, businessId, r.field, at);
   if (plan.gone.length > 0) {
     await admin.from("gbp_google_edits").update({ resolved_at: at, resolution: "gone" }).in("id", plan.gone);
     if (!practice) for (const r of open.filter((o) => plan.gone.includes(o.id))) await resolveNotification(admin, businessId, r.field, at);
@@ -139,6 +148,18 @@ export async function resolveGoogleEdit(admin: SupabaseClient, businessId: strin
   await admin.from("gbp_google_edits").update({ resolved_at: at, resolution }).eq("id", id);
   if (!practice) await resolveNotification(admin, businessId, row.field, at);
   return row;
+}
+
+/** "Change" after "Keep Google's version": the row is open again (until the next check decides). */
+export async function reopenGoogleEdit(admin: SupabaseClient, businessId: string, id: string, practice: boolean): Promise<boolean> {
+  const { data } = await admin.from("gbp_google_edits").select("id, field").eq("id", id).eq("business_id", businessId).eq("practice", practice).eq("resolution", "kept").maybeSingle();
+  const row = data as { id: string; field: EditedField } | null;
+  if (!row) return false;
+  // Another open row for the field (a newer edit) wins; this one stays closed.
+  const { data: other } = await admin.from("gbp_google_edits").select("id").eq("business_id", businessId).eq("field", row.field).eq("practice", practice).is("resolved_at", null).maybeSingle();
+  if (other) return false;
+  await admin.from("gbp_google_edits").update({ resolved_at: null, resolution: null }).eq("id", id);
+  return true;
 }
 
 export async function openGoogleEdit(db: SupabaseClient, businessId: string, id: string, practice: boolean): Promise<GoogleEditRow | null> {

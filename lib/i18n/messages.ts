@@ -1570,6 +1570,17 @@ export type MessageKey =
   | "dashboard.gbpEdit.connectFirst"
   | "dashboard.gbpEdit.connectLink"
   | "dashboard.gbpEdit.intro"
+  | "dashboard.gbpEdit.tier.scored"
+  | "dashboard.gbpEdit.statusSet"
+  | "dashboard.gbpEdit.statusMissing"
+  | "dashboard.gbpEdit.tier.extras"
+  | "dashboard.gbpEdit.tier.extrasWhy"
+  | "dashboard.gbpEdit.howToVisit"
+  | "dashboard.gbpEdit.groupCount"
+  | "dashboard.gbpEdit.tier.identity"
+  | "dashboard.gbpEdit.groupShort.payment"
+  | "dashboard.gbpEdit.groupShort.parking"
+  | "dashboard.gbpEdit.groupShort.accessibility"
   | "dashboard.gbpEdit.noneOffered"
   | "dashboard.gbpEdit.now"
   | "dashboard.gbpEdit.value.yes"
@@ -1896,6 +1907,8 @@ export type MessageKey =
   | "dashboard.googleTab.rate.label"
   | "dashboard.googleTab.rate.pill"
   | "dashboard.googleTab.rate.sentence"
+  | "dashboard.googleTab.rate.how"
+  | "dashboard.googleTab.rate.howTip"
   | "dashboard.googleTab.rate.of"
   | "dashboard.googleTab.rate.trend"
   | "dashboard.googleTab.rate.empty"
@@ -2031,6 +2044,41 @@ export type MessageKey =
   | "dashboard.googleTab.s5.sample2.body"
   | "dashboard.googleTab.s5.sample2.why"
   | "dashboard.googleTab.s6.title"
+  | "dashboard.googleTab.s2.platform.search"
+  | "dashboard.googleTab.s2.platform.maps"
+  | "dashboard.googleTab.s2.device.phone"
+  | "dashboard.googleTab.s2.device.computer"
+  | "dashboard.googleTab.s2.split.phone"
+  | "dashboard.googleTab.s2.split.computer"
+  | "dashboard.googleTab.s2.split.search"
+  | "dashboard.googleTab.s2.split.maps"
+  | "dashboard.googleTab.s2.means"
+  | "dashboard.googleTab.s2.lead.phone"
+  | "dashboard.googleTab.s2.lead.search"
+  | "dashboard.googleTab.s2.lead.maps"
+  | "dashboard.googleTab.s2.advice.tapToCall"
+  | "dashboard.googleTab.s2.advice.speed"
+  | "dashboard.googleTab.s2.advice.bookingWorks"
+  | "dashboard.googleTab.s2.advice.tapToCallOk"
+  | "dashboard.googleTab.s2.advice.description"
+  | "dashboard.googleTab.s2.advice.descriptionOk"
+  | "dashboard.googleTab.s2.advice.photos"
+  | "dashboard.googleTab.s2.advice.holiday"
+  | "dashboard.googleTab.s2.advice.mapsOk"
+  | "dashboard.googleTab.who.vs"
+  | "dashboard.googleTab.who.change"
+  | "dashboard.googleTab.who.views"
+  | "dashboard.googleTab.who.interactions"
+  | "dashboard.googleTab.who.interactionsTip"
+  | "dashboard.googleTab.who.per100"
+  | "dashboard.googleTab.who.more"
+  | "dashboard.googleTab.who.fewer"
+  | "dashboard.googleTab.who.same"
+  | "dashboard.googleTab.who.noHistory"
+  | "dashboard.googleTab.who.takeaway.downUp"
+  | "dashboard.googleTab.who.takeaway.upUp"
+  | "dashboard.googleTab.who.takeaway.upDown"
+  | "dashboard.googleTab.who.takeaway.downDown"
   | "dashboard.googleTab.s6.meta"
   | "dashboard.googleTab.others.title"
   | "dashboard.googleTab.others.suggested"
@@ -2077,6 +2125,7 @@ export type MessageKey =
   | "dashboard.googleTab.others.emptyValue"
   | "dashboard.googleTab.others.keep"
   | "dashboard.googleTab.others.changeBack"
+  | "dashboard.googleTab.others.googleAdded"
   | "dashboard.googleTab.others.back.sent"
   | "dashboard.googleTab.others.back.pending"
   | "dashboard.googleTab.others.back.noChange"
@@ -2104,6 +2153,215 @@ export type MessageKey =
   | "dashboard.googleTab.made.undoFailed"
   | "dashboard.googleTab.made.showAll"
   | "dashboard.googleTab.made.showLess"
+  | "dashboard.hoursChooser.compareShort"
+  | "dashboard.hoursChooser.hideShort"
+  | "dashboard.googleTab.row.customerDetails.scored"
+  | "dashboard.googleTab.banner.one"
+  | "dashboard.googleTab.banner.onePlural"
+  | "dashboard.googleTab.banner.many"
+  | "dashboard.googleTab.banner.and"
+  | "dashboard.googleTab.banner.why"
+  | "dashboard.googleTab.banner.accept"
+  | "dashboard.googleTab.banner.closedTemp"
+  | "dashboard.googleTab.banner.closed"
+  | "dashboard.googleTab.banner.field.title"
+  | "dashboard.googleTab.banner.field.phone"
+  | "dashboard.googleTab.banner.field.address"
+  | "dashboard.googleTab.banner.field.hours"
+  | "dashboard.googleTab.banner.field.website"
+  | "dashboard.googleTab.banner.field.categories"
+  | "dashboard.googleTab.banner.field.description"
+  | "dashboard.googleTab.others.addedByGoogle"
+  | "dashboard.googleTab.others.looksRight"
+  | "dashboard.googleTab.row.customerDetails.more"
+  | "dashboard.googleTab.row.customerDetails.moreOne"
+  | "dashboard.googleTab.ideas.extras.title"
+  | "dashboard.googleTab.ideas.extras.pill"
+  | "dashboard.googleTab.ideas.extras.reason"
+  | "dashboard.googleTab.ideas.extras.button"
+  | "dashboard.googleTab.made.practice"
+  | "dashboard.googleTab.made.status.rejected"
+  | "dashboard.googleTab.made.status.held"
+  | "dashboard.googleTab.made.kind.photos"
+  | "dashboard.googleTab.recap.listing.photos"
+  | "dashboard.googleTab.made.photos"
+  | "dashboard.googleTab.made.photosOne"
+  | "dashboard.googleTab.action.addPhotos"
+  | "dashboard.googleTab.action.writeWithPostAI"
+  | "dashboard.googleTab.row.description.short"
+  | "dashboard.googleTab.row.photos.tooltip"
+  | "dashboard.photos.loading"
+  | "dashboard.photos.practice"
+  | "dashboard.photos.tips"
+  | "dashboard.photos.suggested"
+  | "dashboard.photos.drop"
+  | "dashboard.photos.pick"
+  | "dashboard.photos.tooMany"
+  | "dashboard.photos.type"
+  | "dashboard.photos.crop"
+  | "dashboard.photos.uncrop"
+  | "dashboard.photos.remove"
+  | "dashboard.photos.uploading"
+  | "dashboard.photos.reviewing"
+  | "dashboard.photos.notAdded"
+  | "dashboard.photos.sending"
+  | "dashboard.photos.approve"
+  | "dashboard.photos.approveOne"
+  | "dashboard.photos.added"
+  | "dashboard.photos.addedOne"
+  | "dashboard.photos.failed"
+  | "dashboard.photos.undoLine"
+  | "dashboard.photos.undoLineOne"
+  | "dashboard.photos.undo"
+  | "dashboard.photos.undone"
+  | "dashboard.photos.undoFailed"
+  | "dashboard.photos.privacy"
+  | "dashboard.photos.problem.type"
+  | "dashboard.photos.problem.too_small_file"
+  | "dashboard.photos.problem.too_big_file"
+  | "dashboard.photos.problem.too_small_size"
+  | "dashboard.photos.problem.unreadable"
+  | "dashboard.photos.category.INTERIOR"
+  | "dashboard.photos.category.EXTERIOR"
+  | "dashboard.photos.category.AT_WORK"
+  | "dashboard.photos.category.TEAMS"
+  | "dashboard.photos.category.PRODUCT"
+  | "dashboard.photos.category.ADDITIONAL"
+  | "dashboard.photos.onGoogle.intro"
+  | "dashboard.photos.onGoogle.step1"
+  | "dashboard.photos.onGoogle.step2"
+  | "dashboard.photos.onGoogle.step3"
+  | "dashboard.photos.onGoogle.button"
+  | "dashboard.googleTab.ideas.reach"
+  | "dashboard.googleTab.ideas.services.title"
+  | "dashboard.googleTab.ideas.services.reason"
+  | "dashboard.googleTab.ideas.services.button"
+  | "dashboard.googleTab.ideas.description.title"
+  | "dashboard.googleTab.ideas.description.pill"
+  | "dashboard.googleTab.ideas.description.reason"
+  | "dashboard.googleTab.ideas.description.reasonNone"
+  | "dashboard.googleTab.ideas.description.button"
+  | "dashboard.googleTab.ideas.holiday.title"
+  | "dashboard.googleTab.ideas.holiday.pill"
+  | "dashboard.googleTab.ideas.holiday.reason"
+  | "dashboard.googleTab.ideas.holiday.reasonOne"
+  | "dashboard.googleTab.ideas.holiday.button"
+  | "dashboard.googleTab.ideas.posts.title"
+  | "dashboard.googleTab.ideas.posts.pill"
+  | "dashboard.googleTab.ideas.posts.reason"
+  | "dashboard.googleTab.ideas.posts.button"
+  | "dashboard.googleTab.ideas.posts.topic.hair"
+  | "dashboard.googleTab.ideas.posts.topic.barber"
+  | "dashboard.googleTab.ideas.posts.topic.nails"
+  | "dashboard.googleTab.ideas.posts.topic.restaurant"
+  | "dashboard.googleTab.ideas.posts.topic.art"
+  | "dashboard.googleTab.ideas.posts.topic.home"
+  | "dashboard.googleTab.ideas.posts.topic.default"
+  | "dashboard.googleTab.ideas.photos.title"
+  | "dashboard.googleTab.ideas.photos.pill"
+  | "dashboard.googleTab.ideas.photos.reason"
+  | "dashboard.googleTab.ideas.photos.reasonOne"
+  | "dashboard.googleTab.ideas.photos.reasonNone"
+  | "dashboard.googleTab.ideas.photos.button"
+  | "dashboard.googleTab.ideas.details.title.both"
+  | "dashboard.googleTab.ideas.details.title.parking"
+  | "dashboard.googleTab.ideas.details.title.accessibility"
+  | "dashboard.googleTab.ideas.details.pill"
+  | "dashboard.googleTab.ideas.details.reason.both"
+  | "dashboard.googleTab.ideas.details.reason.parking"
+  | "dashboard.googleTab.ideas.details.reason.accessibility"
+  | "dashboard.googleTab.ideas.details.button"
+  | "dashboard.googleTab.ideas.messaging.title"
+  | "dashboard.googleTab.ideas.messaging.pill"
+  | "dashboard.googleTab.ideas.messaging.reason"
+  | "dashboard.googleTab.ideas.messaging.button"
+  | "dashboard.googleTab.ideas.category.title"
+  | "dashboard.googleTab.ideas.category.reason"
+  | "dashboard.googleTab.ideas.category.button"
+  | "dashboard.googleTab.ideas.done.services"
+  | "dashboard.googleTab.ideas.done.holiday"
+  | "dashboard.googleTab.ideas.done.description"
+  | "dashboard.googleTab.ideas.done.details"
+  | "dashboard.googleTab.ideas.doneMark"
+  | "dashboard.googleTab.ideas.more"
+  | "dashboard.googleTab.ideas.fewer"
+  | "dashboard.googleTab.ideas.none"
+  | "dashboard.googleTab.ideas.noRead"
+  | "dashboard.googleTab.ideas.recapLink.before"
+  | "dashboard.googleTab.ideas.recapLink.link"
+  | "dashboard.compareVersions.google"
+  | "dashboard.compareVersions.none"
+  | "dashboard.compareVersions.change"
+  | "dashboard.compareVersions.website"
+  | "dashboard.compareVersions.keepWebsite"
+  | "dashboard.googleTab.others.youEntered"
+  | "dashboard.googleTab.others.noSiteHours"
+  | "dashboard.googleTab.others.question"
+  | "dashboard.googleTab.others.yourVersion"
+  | "dashboard.googleTab.others.keepNote"
+  | "dashboard.googleTab.others.keepMine"
+  | "dashboard.googleTab.others.changeOnGoogle"
+  | "dashboard.googleTab.others.noteWrite"
+  | "dashboard.googleTab.others.noteGuide"
+  | "dashboard.googleTab.others.chosenGoogle"
+  | "dashboard.googleTab.others.chosenMine"
+  | "dashboard.googleTab.others.previewTitle"
+  | "dashboard.googleTab.others.previewNote"
+  | "dashboard.googleTab.others.approve"
+  | "dashboard.googleTab.others.cancel"
+  | "dashboard.googleTab.others.guide.step3Hours"
+  | "dashboard.googleTab.others.guide.step3Added"
+  | "dashboard.googleTab.others.copy"
+  | "dashboard.googleTab.others.copied"
+  | "dashboard.googleTab.others.changedCount"
+  | "dashboard.googleTab.others.changedByGoogle"
+  | "dashboard.hoursChooser.compare"
+  | "dashboard.hoursChooser.hide"
+  | "dashboard.hoursChooser.loading"
+  | "dashboard.hoursChooser.loadFailed"
+  | "dashboard.hoursChooser.question"
+  | "dashboard.hoursChooser.onWebsite"
+  | "dashboard.hoursChooser.keepGoogle"
+  | "dashboard.hoursChooser.keepGoogleNote"
+  | "dashboard.hoursChooser.keepWebsite"
+  | "dashboard.hoursChooser.keepWebsiteNoteWrite"
+  | "dashboard.hoursChooser.keepWebsiteNoteGuide"
+  | "dashboard.hoursChooser.neither"
+  | "dashboard.hoursChooser.chosen.google"
+  | "dashboard.hoursChooser.chosen.website"
+  | "dashboard.hoursChooser.chosen.own"
+  | "dashboard.hoursChooser.sourceLive"
+  | "dashboard.hoursChooser.sourceScan"
+  | "dashboard.hoursChooser.copy"
+  | "dashboard.hoursChooser.copied"
+  | "dashboard.hoursChooser.openOnGoogle"
+  | "dashboard.hoursChooser.google.title"
+  | "dashboard.hoursChooser.google.titleOwn"
+  | "dashboard.hoursChooser.google.button"
+  | "dashboard.hoursChooser.google.buttonOwn"
+  | "dashboard.hoursChooser.google.safety"
+  | "dashboard.hoursChooser.google.stepsTitle"
+  | "dashboard.hoursChooser.google.step1"
+  | "dashboard.hoursChooser.google.step2"
+  | "dashboard.hoursChooser.google.step3"
+  | "dashboard.hoursChooser.site.title"
+  | "dashboard.hoursChooser.site.yourWebsite"
+  | "dashboard.hoursChooser.site.step1"
+  | "dashboard.hoursChooser.site.step2"
+  | "dashboard.hoursChooser.site.step3"
+  | "dashboard.hoursChooser.site.paste"
+  | "dashboard.hoursChooser.site.help"
+  | "dashboard.hoursChooser.site.askSam"
+  | "dashboard.hoursChooser.site.askSubject"
+  | "dashboard.hoursChooser.site.askBody"
+  | "dashboard.hoursChooser.own.closed"
+  | "dashboard.hoursChooser.own.opens"
+  | "dashboard.hoursChooser.own.closes"
+  | "dashboard.hoursChooser.own.open24"
+  | "dashboard.hoursChooser.own.continue"
+  | "dashboard.hoursChooser.remembered"
+  | "dashboard.hoursChooser.done"
+  | "dashboard.gbpProfileEdits.matchWebsite"
   | "dashboard.googleTab.notConnected.title"
   | "dashboard.googleTab.notConnected.lead"
   | "dashboard.googleTab.notConnected.rate"
@@ -2136,6 +2394,45 @@ export type MessageKey =
   | "dashboard.gbpEdit.option.pay_debit_card"
   | "dashboard.gbpEdit.option.pay_mobile_nfc"
   | "dashboard.gbpEdit.option.requires_cash_only"
+  | "dashboard.gbpEdit.option.pay_check"
+  | "dashboard.gbpEdit.option.has_restroom"
+  | "dashboard.gbpEdit.option.has_gender_neutral_restroom"
+  | "dashboard.gbpEdit.option.has_hearing_loop"
+  | "dashboard.gbpEdit.option.has_wheelchair_accessible_elevator"
+  | "dashboard.gbpEdit.option.has_onsite_parking"
+  | "dashboard.gbpEdit.option.has_wifi"
+  | "dashboard.gbpEdit.option.has_wifi_free"
+  | "dashboard.gbpEdit.option.welcomes_walk_ins"
+  | "dashboard.gbpEdit.option.has_online_appointments"
+  | "dashboard.gbpEdit.option.requires_appointments"
+  | "dashboard.gbpEdit.option.accepts_reservations"
+  | "dashboard.gbpEdit.option.has_seating_outdoors"
+  | "dashboard.gbpEdit.option.has_dine_in"
+  | "dashboard.gbpEdit.option.has_onsite_services"
+  | "dashboard.gbpEdit.option.has_online_care"
+  | "dashboard.gbpEdit.option.has_language_assistance"
+  | "dashboard.gbpEdit.option.is_owned_by_women"
+  | "dashboard.gbpEdit.option.is_black_owned"
+  | "dashboard.gbpEdit.option.is_veteran_led"
+  | "dashboard.gbpEdit.option.is_latino_owned"
+  | "dashboard.gbpEdit.option.is_asian_owned"
+  | "dashboard.gbpEdit.option.has_lgbtq_friendly"
+  | "dashboard.gbpEdit.option.has_transgender_safespace"
+  | "dashboard.breakdown.missingParts"
+  | "dashboard.breakdown.and"
+  | "dashboard.breakdown.action.replyReviews"
+  | "dashboard.breakdown.action.moreReviews"
+  | "dashboard.breakdown.action.addParts"
+  | "dashboard.breakdown.action.addDetails"
+  | "dashboard.breakdown.action.addPhotos"
+  | "dashboard.breakdown.action.setHours"
+  | "dashboard.breakdown.action.addPhone"
+  | "dashboard.breakdown.action.fixWebsiteLink"
+  | "dashboard.breakdown.action.chooseCategory"
+  | "dashboard.breakdown.action.fixOnGoogle"
+  | "dashboard.breakdown.action.compareHours"
+  | "dashboard.breakdown.action.fixWebsite"
+  | "dashboard.breakdown.action.fixIt"
   | "dashboard.gbpEdit.option.has_wheelchair_accessible_entrance"
   | "dashboard.gbpEdit.option.has_wheelchair_accessible_restroom"
   | "dashboard.gbpEdit.option.has_wheelchair_accessible_seating"
@@ -6504,14 +6801,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.notifications.fixed": "Fixed ✓ {date}",
     "dashboard.notifications.google.disconnected": "Google disconnected — reconnect to keep your score and edits up to date.",
     "dashboard.notifications.google.reconnect": "Reconnect Google",
-    "dashboard.notifications.google.review": "Review it",
-    "dashboard.notifications.google.edit.title": "Google changed your business name on your listing.",
-    "dashboard.notifications.google.edit.phone": "Google changed your phone number on your listing.",
-    "dashboard.notifications.google.edit.address": "Google changed your address on your listing.",
-    "dashboard.notifications.google.edit.hours": "Google changed your hours on your listing.",
-    "dashboard.notifications.google.edit.website": "Google changed your website on your listing.",
-    "dashboard.notifications.google.edit.categories": "Google changed your categories on your listing.",
-    "dashboard.notifications.google.edit.description": "Google changed your description on your listing.",
+    "dashboard.notifications.google.review": "Review",
+    "dashboard.notifications.google.edit.title": "Your business name was changed on Google. Review it on the Google Profile tab.",
+    "dashboard.notifications.google.edit.phone": "Your phone number was changed on Google.",
+    "dashboard.notifications.google.edit.address": "Your address was changed on Google. Review it on the Google Profile tab.",
+    "dashboard.notifications.google.edit.hours": "Your hours were changed on Google.",
+    "dashboard.notifications.google.edit.website": "Your website was changed on Google.",
+    "dashboard.notifications.google.edit.categories": "Your categories were changed on Google.",
+    "dashboard.notifications.google.edit.description": "Your description was changed on Google.",
     "dashboard.gbpConnection.banner.paused": "Until you reconnect, these stop updating: Google insights, your reviews inbox and Edit on Google.",
     "dashboard.gbpConnection.banner.pausedBasic": "Until you reconnect, your “Replying to reviews” check stops updating.",
     "dashboard.gbpConnection.banner.dataFrom": "Your score keeps your Google data from {date}.",
@@ -7395,6 +7692,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.rate.label": "Your conversion rate",
     "dashboard.googleTab.rate.pill": "Updates on the 1st of every month · next: {date}",
     "dashboard.googleTab.rate.sentence": "of people who found you on Google became customers who called, booked, visited your site or asked for directions",
+    "dashboard.googleTab.rate.how": "How it's calculated: {interactions} people who called, asked for directions, visited your site, booked or messaged ÷ {views} people who saw your listing on Google.",
+    "dashboard.googleTab.rate.howTip": "Google can't see what happens after someone calls or clicks, so this counts interest, not finished sales.",
     "dashboard.googleTab.rate.of": "{actions} of {viewers} people",
     "dashboard.googleTab.rate.trend": "Last 6 months",
     "dashboard.googleTab.rate.empty": "Google hasn't shared numbers for your listing yet. They usually appear within a few days.",
@@ -7530,6 +7829,41 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.s5.sample2.body": "\"hair color sleepy hollow\" found you only 23 times, and your only category is Hair salon.",
     "dashboard.googleTab.s5.sample2.why": "Categories decide which searches Google shows you for. A second category opens up color searches nearby.",
     "dashboard.googleTab.s6.title": "Protection & changes",
+    "dashboard.googleTab.s2.platform.search": "Google Search",
+    "dashboard.googleTab.s2.platform.maps": "Google Maps",
+    "dashboard.googleTab.s2.device.phone": "on a phone",
+    "dashboard.googleTab.s2.device.computer": "on a computer",
+    "dashboard.googleTab.s2.split.phone": "on a phone",
+    "dashboard.googleTab.s2.split.computer": "{percent}% on a computer",
+    "dashboard.googleTab.s2.split.search": "Google Search",
+    "dashboard.googleTab.s2.split.maps": "{percent}% Google Maps",
+    "dashboard.googleTab.s2.means": "What this means for you",
+    "dashboard.googleTab.s2.lead.phone": "Most people find you on a phone.",
+    "dashboard.googleTab.s2.lead.search": "Most people find you on Google Search, where your description and services help you match searches.",
+    "dashboard.googleTab.s2.lead.maps": "About {tenths} in 10 find you on Google Maps, where photos, hours and directions matter.",
+    "dashboard.googleTab.s2.advice.tapToCall": "Make your phone number tap-to-call on your website",
+    "dashboard.googleTab.s2.advice.speed": "Speed up your site on phones",
+    "dashboard.googleTab.s2.advice.bookingWorks": "Your Book online button works from a phone",
+    "dashboard.googleTab.s2.advice.tapToCallOk": "Your phone number is tap-to-call on your website",
+    "dashboard.googleTab.s2.advice.description": "Write a fuller description",
+    "dashboard.googleTab.s2.advice.descriptionOk": "Your description is a good length",
+    "dashboard.googleTab.s2.advice.photos": "Add new photos",
+    "dashboard.googleTab.s2.advice.holiday": "Set your {holiday} hours",
+    "dashboard.googleTab.s2.advice.mapsOk": "Your photos and holiday hours are up to date",
+    "dashboard.googleTab.who.vs": "{now} vs {last}",
+    "dashboard.googleTab.who.change": "Change",
+    "dashboard.googleTab.who.views": "Views",
+    "dashboard.googleTab.who.interactions": "Interactions",
+    "dashboard.googleTab.who.interactionsTip": "Calls, directions, website clicks, bookings and messages",
+    "dashboard.googleTab.who.per100": "Customers per 100 viewers",
+    "dashboard.googleTab.who.more": "{count} more",
+    "dashboard.googleTab.who.fewer": "{count} fewer",
+    "dashboard.googleTab.who.same": "Same",
+    "dashboard.googleTab.who.noHistory": "Not enough history",
+    "dashboard.googleTab.who.takeaway.downUp": "Fewer people saw your listing than last year, but more of them became customers.",
+    "dashboard.googleTab.who.takeaway.upUp": "More people saw your listing and more of them became customers.",
+    "dashboard.googleTab.who.takeaway.upDown": "More people saw your listing, but fewer of them became customers. The levers in section 1 help.",
+    "dashboard.googleTab.who.takeaway.downDown": "Fewer people saw your listing and fewer became customers. Start with the ideas in section 5.",
     "dashboard.googleTab.s6.meta": "Checked on every scan and once a day",
     "dashboard.googleTab.others.title": "Changes by anyone else",
     "dashboard.googleTab.others.suggested": "Suggested edits Google accepted",
@@ -7561,7 +7895,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.made.status.undone": "Undone",
     "dashboard.googleTab.made.status.failed": "Didn't go through",
     "dashboard.googleTab.banner.changed": "Google changed your {fields}.",
-    "dashboard.googleTab.banner.review": "Review it",
+    "dashboard.googleTab.banner.review": "Review",
     "dashboard.googleTab.protect.field.title": "Name",
     "dashboard.googleTab.protect.field.name": "Name",
     "dashboard.googleTab.protect.field.phone": "Phone",
@@ -7576,6 +7910,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.others.emptyValue": "(empty)",
     "dashboard.googleTab.others.keep": "Keep Google's version",
     "dashboard.googleTab.others.changeBack": "Change it back",
+    "dashboard.googleTab.others.googleAdded": "You hadn't entered one, so Google added it. Keep it if it's right, or change it on Google.",
     "dashboard.googleTab.others.back.sent": "Changed back. Google may take a few minutes to show it. You can undo it below for 7 days.",
     "dashboard.googleTab.others.back.pending": "Sent. Google is reviewing it.",
     "dashboard.googleTab.others.back.noChange": "Google already shows your version.",
@@ -7603,6 +7938,215 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.made.undoFailed": "Couldn't undo it. Google may have changed it since.",
     "dashboard.googleTab.made.showAll": "Show all changes ({count})",
     "dashboard.googleTab.made.showLess": "Show fewer",
+    "dashboard.hoursChooser.compareShort": "Compare",
+    "dashboard.hoursChooser.hideShort": "Hide",
+    "dashboard.googleTab.row.customerDetails.scored": "These three count toward your score",
+    "dashboard.googleTab.banner.one": "Your {field} was changed on Google ({date}).",
+    "dashboard.googleTab.banner.onePlural": "Your {field} were changed on Google ({date}).",
+    "dashboard.googleTab.banner.many": "Your {fields} were changed on Google ({date}).",
+    "dashboard.googleTab.banner.and": "and",
+    "dashboard.googleTab.banner.why": "This can happen if you updated them somewhere else (like Square) or Google accepted a suggested edit.",
+    "dashboard.googleTab.banner.accept": "I know, that's right",
+    "dashboard.googleTab.banner.closedTemp": "Google shows your business as temporarily closed.",
+    "dashboard.googleTab.banner.closed": "Google shows your business as permanently closed.",
+    "dashboard.googleTab.banner.field.title": "business name",
+    "dashboard.googleTab.banner.field.phone": "phone number",
+    "dashboard.googleTab.banner.field.address": "address",
+    "dashboard.googleTab.banner.field.hours": "hours",
+    "dashboard.googleTab.banner.field.website": "website",
+    "dashboard.googleTab.banner.field.categories": "categories",
+    "dashboard.googleTab.banner.field.description": "description",
+    "dashboard.googleTab.others.addedByGoogle": "Google added this",
+    "dashboard.googleTab.others.looksRight": "looks right",
+    "dashboard.googleTab.row.customerDetails.more": "{count} more details you can add",
+    "dashboard.googleTab.row.customerDetails.moreOne": "1 more detail you can add",
+    "dashboard.googleTab.ideas.extras.title": "Answer the questions customers ask",
+    "dashboard.googleTab.ideas.extras.pill": "Raises your conversion rate",
+    "dashboard.googleTab.ideas.extras.reason": "Add {list}. Customers check these before they call, and Google's AI uses them to answer questions.",
+    "dashboard.googleTab.ideas.extras.button": "Add details",
+    "dashboard.googleTab.made.practice": "Practice",
+    "dashboard.googleTab.made.status.rejected": "Google rejected it",
+    "dashboard.googleTab.made.status.held": "Held (practice)",
+    "dashboard.googleTab.made.kind.photos": "Photos",
+    "dashboard.googleTab.recap.listing.photos": "added photos",
+    "dashboard.googleTab.made.photos": "{count} added",
+    "dashboard.googleTab.made.photosOne": "1 added",
+    "dashboard.googleTab.action.addPhotos": "Add photos",
+    "dashboard.googleTab.action.writeWithPostAI": "Write with PostAI",
+    "dashboard.googleTab.row.description.short": "{count} of 750 characters. Too short: say what you do best (aim for 250+ characters).",
+    "dashboard.googleTab.row.photos.tooltip": "Customer photos aren't counted",
+    "dashboard.photos.loading": "Loading…",
+    "dashboard.photos.practice": "Practice mode: nothing is sent to Google.",
+    "dashboard.photos.tips": "Bright, real photos of your space, your work and your team. No stock photos, text overlays or logos.",
+    "dashboard.photos.suggested": "Best types for your business: {list}",
+    "dashboard.photos.drop": "Drop up to {count} photos here (JPG or PNG)",
+    "dashboard.photos.pick": "Choose photos",
+    "dashboard.photos.tooMany": "Up to {count} photos at a time.",
+    "dashboard.photos.type": "Photo type",
+    "dashboard.photos.crop": "Crop square",
+    "dashboard.photos.uncrop": "Undo crop",
+    "dashboard.photos.remove": "Remove",
+    "dashboard.photos.uploading": "Sending…",
+    "dashboard.photos.reviewing": "Added · Google is reviewing",
+    "dashboard.photos.notAdded": "Didn't go through",
+    "dashboard.photos.sending": "Sending to Google…",
+    "dashboard.photos.approve": "Approve: add {count} photos to Google",
+    "dashboard.photos.approveOne": "Approve: add 1 photo to Google",
+    "dashboard.photos.added": "{count} photos added. Google reviews new photos before showing them, usually within a day.",
+    "dashboard.photos.addedOne": "1 photo added. Google reviews new photos before showing them, usually within a day.",
+    "dashboard.photos.failed": "None of the photos went through. Try again in a minute, or add them on Google.",
+    "dashboard.photos.undoLine": "{count} photos added. You can undo until {date}.",
+    "dashboard.photos.undoLineOne": "1 photo added. You can undo until {date}.",
+    "dashboard.photos.undo": "Undo (remove them)",
+    "dashboard.photos.undone": "Removed {count} photos from Google.",
+    "dashboard.photos.undoFailed": "Couldn't remove them just now. Try again shortly.",
+    "dashboard.photos.privacy": "Photos go straight to Google: PostScore never keeps them, and location data is removed first.",
+    "dashboard.photos.problem.type": "Only JPG or PNG photos.",
+    "dashboard.photos.problem.too_small_file": "This file is too small to be a real photo (under 10 KB).",
+    "dashboard.photos.problem.too_big_file": "This photo is over 5 MB. Google takes up to 5 MB.",
+    "dashboard.photos.problem.too_small_size": "This photo is too small; Google needs at least 720×720.",
+    "dashboard.photos.problem.unreadable": "This photo couldn't be read.",
+    "dashboard.photos.category.INTERIOR": "Interior",
+    "dashboard.photos.category.EXTERIOR": "Exterior",
+    "dashboard.photos.category.AT_WORK": "At work",
+    "dashboard.photos.category.TEAMS": "Team",
+    "dashboard.photos.category.PRODUCT": "Product",
+    "dashboard.photos.category.ADDITIONAL": "Additional",
+    "dashboard.photos.onGoogle.intro": "Add them on your Business Profile on Google:",
+    "dashboard.photos.onGoogle.step1": "Tap Photos",
+    "dashboard.photos.onGoogle.step2": "Add photos",
+    "dashboard.photos.onGoogle.step3": "Pick the type (Interior, Exterior, At work, Team…)",
+    "dashboard.photos.onGoogle.button": "Open on Google ↗",
+    "dashboard.googleTab.ideas.reach": "Reach: {count} searches/mo",
+    "dashboard.googleTab.ideas.services.title": "Add {list} to your services",
+    "dashboard.googleTab.ideas.services.reason": "About {count} searches a month for {terms} found you, but your services don't list it.",
+    "dashboard.googleTab.ideas.services.button": "Add services",
+    "dashboard.googleTab.ideas.description.title": "Write a fuller description",
+    "dashboard.googleTab.ideas.description.pill": "Helps Google match more searches",
+    "dashboard.googleTab.ideas.description.reason": "Your description is only {count} characters (“{text}”). Up to 750 lets you say what you do best.",
+    "dashboard.googleTab.ideas.description.reasonNone": "Your listing has no description. Up to 750 characters lets you say what you do best.",
+    "dashboard.googleTab.ideas.description.button": "Write it (with PostAI)",
+    "dashboard.googleTab.ideas.holiday.title": "Set your {holiday} hours",
+    "dashboard.googleTab.ideas.holiday.pill": "Avoid “Hours might differ”",
+    "dashboard.googleTab.ideas.holiday.reason": "{holiday} is {date}, in {count} days. Without holiday hours, Google can warn searchers your hours might differ.",
+    "dashboard.googleTab.ideas.holiday.reasonOne": "{holiday} is tomorrow ({date}). Without holiday hours, Google can warn searchers your hours might differ.",
+    "dashboard.googleTab.ideas.holiday.button": "Set holiday hours",
+    "dashboard.googleTab.ideas.posts.title": "Post this week",
+    "dashboard.googleTab.ideas.posts.pill": "Gives searchers a reason to act now",
+    "dashboard.googleTab.ideas.posts.reason": "No Google posts in the last 30 days. Try {topic}.",
+    "dashboard.googleTab.ideas.posts.button": "See post ideas",
+    "dashboard.googleTab.ideas.posts.topic.hair": "a before-and-after of a recent color",
+    "dashboard.googleTab.ideas.posts.topic.barber": "a fresh fade with its price",
+    "dashboard.googleTab.ideas.posts.topic.nails": "this month's nail art",
+    "dashboard.googleTab.ideas.posts.topic.restaurant": "this week's special, with a photo",
+    "dashboard.googleTab.ideas.posts.topic.art": "your next class, with its date",
+    "dashboard.googleTab.ideas.posts.topic.home": "a recent job, before and after",
+    "dashboard.googleTab.ideas.posts.topic.default": "what's new this month",
+    "dashboard.googleTab.ideas.photos.title": "Add 3 new photos",
+    "dashboard.googleTab.ideas.photos.pill": "42% more direction requests with photos (Google)",
+    "dashboard.googleTab.ideas.photos.reason": "Your newest photo on Google is {count} months old.",
+    "dashboard.googleTab.ideas.photos.reasonOne": "Your newest photo on Google is a month old.",
+    "dashboard.googleTab.ideas.photos.reasonNone": "Your listing has no photos yet.",
+    "dashboard.googleTab.ideas.photos.button": "Add photos",
+    "dashboard.googleTab.ideas.details.title.both": "Add parking and accessibility",
+    "dashboard.googleTab.ideas.details.title.parking": "Add parking",
+    "dashboard.googleTab.ideas.details.title.accessibility": "Add accessibility",
+    "dashboard.googleTab.ideas.details.pill": "Google's AI uses these to answer questions",
+    "dashboard.googleTab.ideas.details.reason.both": "Your listing doesn't say where to park or whether the entrance is wheelchair accessible.",
+    "dashboard.googleTab.ideas.details.reason.parking": "Your listing doesn't say where customers can park.",
+    "dashboard.googleTab.ideas.details.reason.accessibility": "Your listing doesn't say whether the entrance is wheelchair accessible.",
+    "dashboard.googleTab.ideas.details.button": "Add details",
+    "dashboard.googleTab.ideas.messaging.title": "Turn on messaging",
+    "dashboard.googleTab.ideas.messaging.pill": "Customers can text you from Google",
+    "dashboard.googleTab.ideas.messaging.reason": "Messaging is off, so people who find you can only call.",
+    "dashboard.googleTab.ideas.messaging.button": "How to",
+    "dashboard.googleTab.ideas.category.title": "Add “{category}” as a second category",
+    "dashboard.googleTab.ideas.category.reason": "Searches like {terms} point to {category}, and your listing has only one category.",
+    "dashboard.googleTab.ideas.category.button": "How to ↗",
+    "dashboard.googleTab.ideas.done.services": "Services added",
+    "dashboard.googleTab.ideas.done.holiday": "Holiday hours set",
+    "dashboard.googleTab.ideas.done.description": "Description updated",
+    "dashboard.googleTab.ideas.done.details": "Customer details added",
+    "dashboard.googleTab.ideas.doneMark": "Done ✓",
+    "dashboard.googleTab.ideas.more": "Show {count} more",
+    "dashboard.googleTab.ideas.fewer": "Show fewer",
+    "dashboard.googleTab.ideas.none": "Nothing to add right now. Your listing covers what people search for.",
+    "dashboard.googleTab.ideas.noRead": "Couldn't read your listing from Google just now. Ideas show here on the next try.",
+    "dashboard.googleTab.ideas.recapLink.before": "Reviews, coupons and weekly tasks are in",
+    "dashboard.googleTab.ideas.recapLink.link": "Growth recap",
+    "dashboard.compareVersions.google": "Google's version",
+    "dashboard.compareVersions.none": "(none)",
+    "dashboard.compareVersions.change": "Change",
+    "dashboard.compareVersions.website": "Website's version",
+    "dashboard.compareVersions.keepWebsite": "Keep website's version",
+    "dashboard.googleTab.others.youEntered": "You entered on Google: {hours}",
+    "dashboard.googleTab.others.noSiteHours": "We couldn't read hours on your website.",
+    "dashboard.googleTab.others.question": "Google changed your {field}. Which is right?",
+    "dashboard.googleTab.others.yourVersion": "Your version",
+    "dashboard.googleTab.others.keepNote": "Nothing changes on Google.",
+    "dashboard.googleTab.others.keepMine": "Keep your version",
+    "dashboard.googleTab.others.changeOnGoogle": "Change on Google",
+    "dashboard.googleTab.others.noteWrite": "We'll update Google for you (preview, approve, undo for 7 days).",
+    "dashboard.googleTab.others.noteGuide": "We'll show you how to change it on Google.",
+    "dashboard.googleTab.others.chosenGoogle": "You confirmed Google's version",
+    "dashboard.googleTab.others.chosenMine": "You kept your version",
+    "dashboard.googleTab.others.previewTitle": "Send your {field} to Google:",
+    "dashboard.googleTab.others.previewNote": "Google may take a few minutes to show it. You can undo it for 7 days.",
+    "dashboard.googleTab.others.approve": "Approve and send",
+    "dashboard.googleTab.others.cancel": "Cancel",
+    "dashboard.googleTab.others.guide.step3Hours": "Enter these hours and save:",
+    "dashboard.googleTab.others.guide.step3Added": "Change or remove it, then save.",
+    "dashboard.googleTab.others.copy": "Copy these hours",
+    "dashboard.googleTab.others.copied": "Copied",
+    "dashboard.googleTab.others.changedCount": "{count} changed: {fields}",
+    "dashboard.googleTab.others.changedByGoogle": "changed by Google (above)",
+    "dashboard.hoursChooser.compare": "Compare your site and Google listing",
+    "dashboard.hoursChooser.hide": "Hide the comparison",
+    "dashboard.hoursChooser.loading": "Loading both versions…",
+    "dashboard.hoursChooser.loadFailed": "Couldn't load the hours just now. Try again shortly.",
+    "dashboard.hoursChooser.question": "Your Google listing and website show different hours. Which is right?",
+    "dashboard.hoursChooser.onWebsite": "Your website",
+    "dashboard.hoursChooser.keepGoogle": "Keep Google's version",
+    "dashboard.hoursChooser.keepGoogleNote": "We'll show you how to update your website.",
+    "dashboard.hoursChooser.keepWebsite": "Keep website's hours",
+    "dashboard.hoursChooser.keepWebsiteNoteWrite": "We'll update Google for you (preview, approve, undo for 7 days).",
+    "dashboard.hoursChooser.keepWebsiteNoteGuide": "We'll show you how to change it on Google.",
+    "dashboard.hoursChooser.neither": "Neither is right? Enter the correct hours",
+    "dashboard.hoursChooser.chosen.google": "You kept Google's version",
+    "dashboard.hoursChooser.chosen.website": "You kept your website's hours",
+    "dashboard.hoursChooser.chosen.own": "You entered the correct hours",
+    "dashboard.hoursChooser.sourceLive": "Google's hours read just now; your website's from the last scan.",
+    "dashboard.hoursChooser.sourceScan": "Both from your last scan.",
+    "dashboard.hoursChooser.copy": "Copy these hours",
+    "dashboard.hoursChooser.copied": "Copied",
+    "dashboard.hoursChooser.openOnGoogle": "Open on Google ↗",
+    "dashboard.hoursChooser.google.title": "Update Google to match your website",
+    "dashboard.hoursChooser.google.titleOwn": "Update Google with these hours",
+    "dashboard.hoursChooser.google.button": "Update Google to match your website",
+    "dashboard.hoursChooser.google.buttonOwn": "Update Google with these hours",
+    "dashboard.hoursChooser.google.safety": "Opens the hours editor with these hours: preview, approve, undo for 7 days.",
+    "dashboard.hoursChooser.google.stepsTitle": "Change your hours on Google (2 min)",
+    "dashboard.hoursChooser.google.step1": "Open your Business Profile on Google (button below).",
+    "dashboard.hoursChooser.google.step2": "Choose Edit profile, then Hours.",
+    "dashboard.hoursChooser.google.step3": "Enter these hours and save:",
+    "dashboard.hoursChooser.site.title": "Update the hours on {where}",
+    "dashboard.hoursChooser.site.yourWebsite": "your website",
+    "dashboard.hoursChooser.site.step1": "Sign in to wherever you edit your website.",
+    "dashboard.hoursChooser.site.step2": "Open the page that shows your hours (often the footer, Contact or Home).",
+    "dashboard.hoursChooser.site.step3": "Edit the hours text.",
+    "dashboard.hoursChooser.site.paste": "Enter these hours, then publish:",
+    "dashboard.hoursChooser.site.help": "{where} help ↗",
+    "dashboard.hoursChooser.site.askSam": "Or ask Sam to update it",
+    "dashboard.hoursChooser.site.askSubject": "Please update the hours on my website",
+    "dashboard.hoursChooser.site.askBody": "Hi Sam, could you update the hours on my website to these?",
+    "dashboard.hoursChooser.own.closed": "Closed",
+    "dashboard.hoursChooser.own.opens": "Opens",
+    "dashboard.hoursChooser.own.closes": "Closes",
+    "dashboard.hoursChooser.own.open24": "Open 24 hours",
+    "dashboard.hoursChooser.own.continue": "Use these hours",
+    "dashboard.hoursChooser.remembered": "We'll remember this until your next scan shows the hours match.",
+    "dashboard.hoursChooser.done": "Hours match on Google and your website ✓",
+    "dashboard.gbpProfileEdits.matchWebsite": "Update Google to match your website",
     "dashboard.googleTab.notConnected.title": "Connect Google to see your Google Profile",
     "dashboard.googleTab.notConnected.lead": "Connecting your Google Business Profile unlocks this tab:",
     "dashboard.googleTab.notConnected.rate": "Your conversion rate each month: how many people who found you on Google called, booked, visited your site or asked for directions.",
@@ -7617,6 +8161,17 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpEdit.connectFirst": "Connect your Google Business Profile to update these from here.",
     "dashboard.gbpEdit.connectLink": "Connect Google →",
     "dashboard.gbpEdit.intro": "These are the details Google offers for your kind of business. Pick what's true. Nothing changes on Google until you approve.",
+    "dashboard.gbpEdit.tier.scored": "Counts toward your score",
+    "dashboard.gbpEdit.statusSet": "set",
+    "dashboard.gbpEdit.statusMissing": "missing",
+    "dashboard.gbpEdit.tier.extras": "Help more people choose you (no points, raises your conversion rate)",
+    "dashboard.gbpEdit.tier.extrasWhy": "Customers check these before they call or visit, and Google's AI uses them to answer questions like 'Do they take walk-ins?' More answers mean fewer people leave without contacting you.",
+    "dashboard.gbpEdit.howToVisit": "How to visit",
+    "dashboard.gbpEdit.groupCount": "{set} set · {open} you can add",
+    "dashboard.gbpEdit.tier.identity": "About the owner (optional, only if you want to share)",
+    "dashboard.gbpEdit.groupShort.payment": "Payments",
+    "dashboard.gbpEdit.groupShort.parking": "Parking",
+    "dashboard.gbpEdit.groupShort.accessibility": "Accessibility",
     "dashboard.gbpEdit.noneOffered": "Google doesn't offer accessibility, payment or parking details for this listing.",
     "dashboard.gbpEdit.now": "now: {value}",
     "dashboard.gbpEdit.value.yes": "Yes",
@@ -7785,6 +8340,45 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpEdit.option.pay_debit_card": "Debit cards",
     "dashboard.gbpEdit.option.pay_mobile_nfc": "Contactless / phone pay (NFC)",
     "dashboard.gbpEdit.option.requires_cash_only": "Cash only",
+    "dashboard.gbpEdit.option.pay_check": "Checks",
+    "dashboard.gbpEdit.option.has_restroom": "Restroom",
+    "dashboard.gbpEdit.option.has_gender_neutral_restroom": "Gender-neutral restroom",
+    "dashboard.gbpEdit.option.has_hearing_loop": "Hearing loop",
+    "dashboard.gbpEdit.option.has_wheelchair_accessible_elevator": "Wheelchair-accessible elevator",
+    "dashboard.gbpEdit.option.has_onsite_parking": "On-site parking",
+    "dashboard.gbpEdit.option.has_wifi": "Wi-Fi",
+    "dashboard.gbpEdit.option.has_wifi_free": "Free Wi-Fi",
+    "dashboard.gbpEdit.option.welcomes_walk_ins": "Walk-ins welcome",
+    "dashboard.gbpEdit.option.has_online_appointments": "Online appointments",
+    "dashboard.gbpEdit.option.requires_appointments": "Appointment required",
+    "dashboard.gbpEdit.option.accepts_reservations": "Takes reservations",
+    "dashboard.gbpEdit.option.has_seating_outdoors": "Outdoor seating",
+    "dashboard.gbpEdit.option.has_dine_in": "Dine-in",
+    "dashboard.gbpEdit.option.has_onsite_services": "On-site services",
+    "dashboard.gbpEdit.option.has_online_care": "Online appointments",
+    "dashboard.gbpEdit.option.has_language_assistance": "Language assistance",
+    "dashboard.gbpEdit.option.is_owned_by_women": "Women-owned",
+    "dashboard.gbpEdit.option.is_black_owned": "Black-owned",
+    "dashboard.gbpEdit.option.is_veteran_led": "Veteran-led",
+    "dashboard.gbpEdit.option.is_latino_owned": "Latino-owned",
+    "dashboard.gbpEdit.option.is_asian_owned": "Asian-owned",
+    "dashboard.gbpEdit.option.has_lgbtq_friendly": "LGBTQ+ friendly",
+    "dashboard.gbpEdit.option.has_transgender_safespace": "Transgender safe space",
+    "dashboard.breakdown.missingParts": "Missing on Google: {parts}.",
+    "dashboard.breakdown.and": "&",
+    "dashboard.breakdown.action.replyReviews": "Reply to reviews",
+    "dashboard.breakdown.action.moreReviews": "Get more reviews",
+    "dashboard.breakdown.action.addParts": "Add {parts}",
+    "dashboard.breakdown.action.addDetails": "Add customer details",
+    "dashboard.breakdown.action.addPhotos": "Add photos",
+    "dashboard.breakdown.action.setHours": "Set your hours",
+    "dashboard.breakdown.action.addPhone": "Add your phone number",
+    "dashboard.breakdown.action.fixWebsiteLink": "Fix your website link",
+    "dashboard.breakdown.action.chooseCategory": "Choose your category",
+    "dashboard.breakdown.action.fixOnGoogle": "Fix it on Google",
+    "dashboard.breakdown.action.compareHours": "Compare your hours",
+    "dashboard.breakdown.action.fixWebsite": "Fix on your website",
+    "dashboard.breakdown.action.fixIt": "Fix it",
     "dashboard.gbpEdit.option.has_wheelchair_accessible_entrance": "Wheelchair-accessible entrance",
     "dashboard.gbpEdit.option.has_wheelchair_accessible_restroom": "Wheelchair-accessible restroom",
     "dashboard.gbpEdit.option.has_wheelchair_accessible_seating": "Wheelchair-accessible seating",
@@ -12382,14 +12976,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.notifications.fixed": "Corregido ✓ {date}",
     "dashboard.notifications.google.disconnected": "Google se desconectó: vuelva a conectarlo para mantener al día su puntuación y sus cambios.",
     "dashboard.notifications.google.reconnect": "Volver a conectar Google",
-    "dashboard.notifications.google.review": "Revisarlo",
-    "dashboard.notifications.google.edit.title": "Google cambió el nombre de su empresa en su ficha.",
-    "dashboard.notifications.google.edit.phone": "Google cambió su número de teléfono en su ficha.",
-    "dashboard.notifications.google.edit.address": "Google cambió su dirección en su ficha.",
-    "dashboard.notifications.google.edit.hours": "Google cambió su horario en su ficha.",
-    "dashboard.notifications.google.edit.website": "Google cambió su sitio web en su ficha.",
-    "dashboard.notifications.google.edit.categories": "Google cambió sus categorías en su ficha.",
-    "dashboard.notifications.google.edit.description": "Google cambió su descripción en su ficha.",
+    "dashboard.notifications.google.review": "Revisar",
+    "dashboard.notifications.google.edit.title": "El nombre de su empresa se cambió en Google. Revíselo en la pestaña Perfil de Google.",
+    "dashboard.notifications.google.edit.phone": "Su número de teléfono se cambió en Google.",
+    "dashboard.notifications.google.edit.address": "Su dirección se cambió en Google. Revísela en la pestaña Perfil de Google.",
+    "dashboard.notifications.google.edit.hours": "Sus horarios se cambiaron en Google.",
+    "dashboard.notifications.google.edit.website": "Su sitio web se cambió en Google.",
+    "dashboard.notifications.google.edit.categories": "Sus categorías se cambiaron en Google.",
+    "dashboard.notifications.google.edit.description": "Su descripción se cambió en Google.",
     "dashboard.gbpConnection.banner.paused": "Hasta que vuelva a conectarlo, esto deja de actualizarse: la información de Google, su bandeja de reseñas y Editar en Google.",
     "dashboard.gbpConnection.banner.pausedBasic": "Hasta que vuelva a conectarlo, su revisión “Respuestas a reseñas” deja de actualizarse.",
     "dashboard.gbpConnection.banner.dataFrom": "Su puntuación conserva sus datos de Google del {date}.",
@@ -13164,6 +13758,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.rate.label": "Su tasa de conversión",
     "dashboard.googleTab.rate.pill": "Se actualiza el día 1 de cada mes · próxima: {date}",
     "dashboard.googleTab.rate.sentence": "de las personas que lo encontraron en Google se convirtieron en clientes que llamaron, reservaron, visitaron su sitio o pidieron indicaciones",
+    "dashboard.googleTab.rate.how": "Cómo se calcula: {interactions} personas que llamaron, pidieron indicaciones, visitaron su sitio, reservaron o enviaron un mensaje ÷ {views} personas que vieron su ficha en Google.",
+    "dashboard.googleTab.rate.howTip": "Google no puede ver qué pasa después de que alguien llama o hace clic, así que esto cuenta el interés, no las ventas cerradas.",
     "dashboard.googleTab.rate.of": "{actions} de {viewers} personas",
     "dashboard.googleTab.rate.trend": "Últimos 6 meses",
     "dashboard.googleTab.rate.empty": "Google aún no ha compartido números de su ficha. Suelen aparecer en unos días.",
@@ -13299,6 +13895,41 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.s5.sample2.body": "\"hair color sleepy hollow\" lo encontró solo 23 veces, y su única categoría es Peluquería.",
     "dashboard.googleTab.s5.sample2.why": "Las categorías deciden en qué búsquedas le muestra Google. Una segunda categoría abre las búsquedas de color cercanas.",
     "dashboard.googleTab.s6.title": "Protección y cambios",
+    "dashboard.googleTab.s2.platform.search": "Búsqueda de Google",
+    "dashboard.googleTab.s2.platform.maps": "Google Maps",
+    "dashboard.googleTab.s2.device.phone": "en un teléfono",
+    "dashboard.googleTab.s2.device.computer": "en una computadora",
+    "dashboard.googleTab.s2.split.phone": "en un teléfono",
+    "dashboard.googleTab.s2.split.computer": "{percent} % en una computadora",
+    "dashboard.googleTab.s2.split.search": "Búsqueda de Google",
+    "dashboard.googleTab.s2.split.maps": "{percent} % Google Maps",
+    "dashboard.googleTab.s2.means": "Qué significa para usted",
+    "dashboard.googleTab.s2.lead.phone": "La mayoría lo encuentra en un teléfono.",
+    "dashboard.googleTab.s2.lead.search": "La mayoría lo encuentra en la Búsqueda de Google, donde su descripción y sus servicios le ayudan a coincidir con las búsquedas.",
+    "dashboard.googleTab.s2.lead.maps": "Unas {tenths} de cada 10 personas lo encuentran en Google Maps, donde importan las fotos, el horario y las indicaciones.",
+    "dashboard.googleTab.s2.advice.tapToCall": "Haga que su número se pueda tocar para llamar en su sitio web",
+    "dashboard.googleTab.s2.advice.speed": "Haga que su sitio cargue más rápido en teléfonos",
+    "dashboard.googleTab.s2.advice.bookingWorks": "Su botón Reservar en línea funciona desde un teléfono",
+    "dashboard.googleTab.s2.advice.tapToCallOk": "Su número se puede tocar para llamar en su sitio web",
+    "dashboard.googleTab.s2.advice.description": "Escriba una descripción más completa",
+    "dashboard.googleTab.s2.advice.descriptionOk": "Su descripción tiene buena extensión",
+    "dashboard.googleTab.s2.advice.photos": "Agregue fotos nuevas",
+    "dashboard.googleTab.s2.advice.holiday": "Indique su horario de {holiday}",
+    "dashboard.googleTab.s2.advice.mapsOk": "Sus fotos y su horario festivo están al día",
+    "dashboard.googleTab.who.vs": "{now} frente a {last}",
+    "dashboard.googleTab.who.change": "Cambio",
+    "dashboard.googleTab.who.views": "Vistas",
+    "dashboard.googleTab.who.interactions": "Interacciones",
+    "dashboard.googleTab.who.interactionsTip": "Llamadas, indicaciones, clics al sitio web, reservas y mensajes",
+    "dashboard.googleTab.who.per100": "Clientes por cada 100 personas que lo vieron",
+    "dashboard.googleTab.who.more": "{count} más",
+    "dashboard.googleTab.who.fewer": "{count} menos",
+    "dashboard.googleTab.who.same": "Igual",
+    "dashboard.googleTab.who.noHistory": "Historial insuficiente",
+    "dashboard.googleTab.who.takeaway.downUp": "Menos personas vieron su ficha que el año pasado, pero más de ellas se convirtieron en clientes.",
+    "dashboard.googleTab.who.takeaway.upUp": "Más personas vieron su ficha y más de ellas se convirtieron en clientes.",
+    "dashboard.googleTab.who.takeaway.upDown": "Más personas vieron su ficha, pero menos de ellas se convirtieron en clientes. Las palancas de la sección 1 ayudan.",
+    "dashboard.googleTab.who.takeaway.downDown": "Menos personas vieron su ficha y menos se convirtieron en clientes. Empiece con las ideas de la sección 5.",
     "dashboard.googleTab.s6.meta": "Se revisa en cada análisis y una vez al día",
     "dashboard.googleTab.others.title": "Cambios hechos por otros",
     "dashboard.googleTab.others.suggested": "Sugerencias que Google aceptó",
@@ -13330,7 +13961,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.made.status.undone": "Deshecho",
     "dashboard.googleTab.made.status.failed": "No se aplicó",
     "dashboard.googleTab.banner.changed": "Google cambió su {fields}.",
-    "dashboard.googleTab.banner.review": "Revisarlo",
+    "dashboard.googleTab.banner.review": "Revisar",
     "dashboard.googleTab.protect.field.title": "Nombre",
     "dashboard.googleTab.protect.field.name": "Nombre",
     "dashboard.googleTab.protect.field.phone": "Teléfono",
@@ -13345,6 +13976,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.others.emptyValue": "(vacío)",
     "dashboard.googleTab.others.keep": "Mantener la versión de Google",
     "dashboard.googleTab.others.changeBack": "Volver a lo anterior",
+    "dashboard.googleTab.others.googleAdded": "Usted no lo había escrito, así que Google lo agregó. Manténgalo si es correcto o cámbielo en Google.",
     "dashboard.googleTab.others.back.sent": "Se volvió a lo anterior. Google puede tardar unos minutos en mostrarlo. Puede deshacerlo abajo durante 7 días.",
     "dashboard.googleTab.others.back.pending": "Enviado. Google lo está revisando.",
     "dashboard.googleTab.others.back.noChange": "Google ya muestra su versión.",
@@ -13372,6 +14004,215 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.made.undoFailed": "No se pudo deshacer. Puede que Google lo haya cambiado desde entonces.",
     "dashboard.googleTab.made.showAll": "Ver todos los cambios ({count})",
     "dashboard.googleTab.made.showLess": "Ver menos",
+    "dashboard.hoursChooser.compareShort": "Comparar",
+    "dashboard.hoursChooser.hideShort": "Ocultar",
+    "dashboard.googleTab.row.customerDetails.scored": "Estos tres cuentan para su puntuación",
+    "dashboard.googleTab.banner.one": "Su {field} se cambió en Google ({date}).",
+    "dashboard.googleTab.banner.onePlural": "Sus {field} se cambiaron en Google ({date}).",
+    "dashboard.googleTab.banner.many": "Sus {fields} se cambiaron en Google ({date}).",
+    "dashboard.googleTab.banner.and": "y",
+    "dashboard.googleTab.banner.why": "Esto puede pasar si los actualizó en otro lugar (como Square) o si Google aceptó una sugerencia de cambio.",
+    "dashboard.googleTab.banner.accept": "Sí, está bien",
+    "dashboard.googleTab.banner.closedTemp": "Google muestra su negocio como cerrado temporalmente.",
+    "dashboard.googleTab.banner.closed": "Google muestra su negocio como cerrado permanentemente.",
+    "dashboard.googleTab.banner.field.title": "nombre",
+    "dashboard.googleTab.banner.field.phone": "número de teléfono",
+    "dashboard.googleTab.banner.field.address": "dirección",
+    "dashboard.googleTab.banner.field.hours": "horarios",
+    "dashboard.googleTab.banner.field.website": "sitio web",
+    "dashboard.googleTab.banner.field.categories": "categorías",
+    "dashboard.googleTab.banner.field.description": "descripción",
+    "dashboard.googleTab.others.addedByGoogle": "Google lo agregó",
+    "dashboard.googleTab.others.looksRight": "parece correcto",
+    "dashboard.googleTab.row.customerDetails.more": "{count} detalles más que puede agregar",
+    "dashboard.googleTab.row.customerDetails.moreOne": "1 detalle más que puede agregar",
+    "dashboard.googleTab.ideas.extras.title": "Responda las preguntas que hacen los clientes",
+    "dashboard.googleTab.ideas.extras.pill": "Mejora su tasa de conversión",
+    "dashboard.googleTab.ideas.extras.reason": "Agregue {list}. Los clientes revisan esto antes de llamar y la IA de Google lo usa para responder preguntas.",
+    "dashboard.googleTab.ideas.extras.button": "Agregar detalles",
+    "dashboard.googleTab.made.practice": "Práctica",
+    "dashboard.googleTab.made.status.rejected": "Google lo rechazó",
+    "dashboard.googleTab.made.status.held": "Retenido (práctica)",
+    "dashboard.googleTab.made.kind.photos": "Fotos",
+    "dashboard.googleTab.recap.listing.photos": "agregó fotos",
+    "dashboard.googleTab.made.photos": "{count} agregadas",
+    "dashboard.googleTab.made.photosOne": "1 agregada",
+    "dashboard.googleTab.action.addPhotos": "Agregar fotos",
+    "dashboard.googleTab.action.writeWithPostAI": "Escribir con PostAI",
+    "dashboard.googleTab.row.description.short": "{count} de 750 caracteres. Demasiado corta: diga lo que mejor hace (procure más de 250 caracteres).",
+    "dashboard.googleTab.row.photos.tooltip": "No se cuentan las fotos de clientes",
+    "dashboard.photos.loading": "Cargando…",
+    "dashboard.photos.practice": "Modo de práctica: no se envía nada a Google.",
+    "dashboard.photos.tips": "Fotos reales y luminosas de su local, su trabajo y su equipo. Sin fotos de archivo, textos superpuestos ni logotipos.",
+    "dashboard.photos.suggested": "Los mejores tipos para su negocio: {list}",
+    "dashboard.photos.drop": "Arrastre aquí hasta {count} fotos (JPG o PNG)",
+    "dashboard.photos.pick": "Elegir fotos",
+    "dashboard.photos.tooMany": "Hasta {count} fotos a la vez.",
+    "dashboard.photos.type": "Tipo de foto",
+    "dashboard.photos.crop": "Recortar cuadrada",
+    "dashboard.photos.uncrop": "Quitar recorte",
+    "dashboard.photos.remove": "Quitar",
+    "dashboard.photos.uploading": "Enviando…",
+    "dashboard.photos.reviewing": "Agregada · Google la está revisando",
+    "dashboard.photos.notAdded": "No se aplicó",
+    "dashboard.photos.sending": "Enviando a Google…",
+    "dashboard.photos.approve": "Aprobar: agregar {count} fotos a Google",
+    "dashboard.photos.approveOne": "Aprobar: agregar 1 foto a Google",
+    "dashboard.photos.added": "Se agregaron {count} fotos. Google revisa las fotos nuevas antes de mostrarlas, normalmente en un día.",
+    "dashboard.photos.addedOne": "Se agregó 1 foto. Google revisa las fotos nuevas antes de mostrarlas, normalmente en un día.",
+    "dashboard.photos.failed": "Ninguna foto se aplicó. Inténtelo en un minuto o agréguelas en Google.",
+    "dashboard.photos.undoLine": "Se agregaron {count} fotos. Puede deshacerlo hasta el {date}.",
+    "dashboard.photos.undoLineOne": "Se agregó 1 foto. Puede deshacerlo hasta el {date}.",
+    "dashboard.photos.undo": "Deshacer (quitarlas)",
+    "dashboard.photos.undone": "Se quitaron {count} fotos de Google.",
+    "dashboard.photos.undoFailed": "No se pudieron quitar ahora. Inténtelo en un momento.",
+    "dashboard.photos.privacy": "Las fotos van directo a Google: PostScore nunca las guarda y primero se quitan los datos de ubicación.",
+    "dashboard.photos.problem.type": "Solo fotos JPG o PNG.",
+    "dashboard.photos.problem.too_small_file": "Este archivo es demasiado pequeño para ser una foto real (menos de 10 KB).",
+    "dashboard.photos.problem.too_big_file": "Esta foto pesa más de 5 MB. Google acepta hasta 5 MB.",
+    "dashboard.photos.problem.too_small_size": "Esta foto es demasiado pequeña; Google necesita al menos 720×720.",
+    "dashboard.photos.problem.unreadable": "No se pudo leer esta foto.",
+    "dashboard.photos.category.INTERIOR": "Interior",
+    "dashboard.photos.category.EXTERIOR": "Exterior",
+    "dashboard.photos.category.AT_WORK": "En el trabajo",
+    "dashboard.photos.category.TEAMS": "Equipo",
+    "dashboard.photos.category.PRODUCT": "Producto",
+    "dashboard.photos.category.ADDITIONAL": "Otras",
+    "dashboard.photos.onGoogle.intro": "Agréguelas en su Perfil de Empresa en Google:",
+    "dashboard.photos.onGoogle.step1": "Toque Fotos",
+    "dashboard.photos.onGoogle.step2": "Agregar fotos",
+    "dashboard.photos.onGoogle.step3": "Elija el tipo (Interior, Exterior, En el trabajo, Equipo…)",
+    "dashboard.photos.onGoogle.button": "Abrir en Google ↗",
+    "dashboard.googleTab.ideas.reach": "Alcance: {count} búsquedas/mes",
+    "dashboard.googleTab.ideas.services.title": "Agregue {list} a sus servicios",
+    "dashboard.googleTab.ideas.services.reason": "Unas {count} búsquedas al mes como {terms} lo encontraron, pero sus servicios no lo incluyen.",
+    "dashboard.googleTab.ideas.services.button": "Agregar servicios",
+    "dashboard.googleTab.ideas.description.title": "Escriba una descripción más completa",
+    "dashboard.googleTab.ideas.description.pill": "Ayuda a Google a mostrarle en más búsquedas",
+    "dashboard.googleTab.ideas.description.reason": "Su descripción tiene solo {count} caracteres («{text}»). Hasta 750 le permiten decir lo que mejor hace.",
+    "dashboard.googleTab.ideas.description.reasonNone": "Su ficha no tiene descripción. Hasta 750 caracteres le permiten decir lo que mejor hace.",
+    "dashboard.googleTab.ideas.description.button": "Escribirla (con PostAI)",
+    "dashboard.googleTab.ideas.holiday.title": "Indique su horario de {holiday}",
+    "dashboard.googleTab.ideas.holiday.pill": "Evite «El horario podría variar»",
+    "dashboard.googleTab.ideas.holiday.reason": "{holiday} es el {date}, en {count} días. Sin horario festivo, Google puede avisar que su horario podría variar.",
+    "dashboard.googleTab.ideas.holiday.reasonOne": "{holiday} es mañana ({date}). Sin horario festivo, Google puede avisar que su horario podría variar.",
+    "dashboard.googleTab.ideas.holiday.button": "Indicar horario festivo",
+    "dashboard.googleTab.ideas.posts.title": "Publique esta semana",
+    "dashboard.googleTab.ideas.posts.pill": "Da a quienes buscan un motivo para actuar ya",
+    "dashboard.googleTab.ideas.posts.reason": "Ninguna publicación en Google en los últimos 30 días. Pruebe con {topic}.",
+    "dashboard.googleTab.ideas.posts.button": "Ver ideas para publicar",
+    "dashboard.googleTab.ideas.posts.topic.hair": "un antes y después de un color reciente",
+    "dashboard.googleTab.ideas.posts.topic.barber": "un fade reciente con su precio",
+    "dashboard.googleTab.ideas.posts.topic.nails": "el diseño de uñas de este mes",
+    "dashboard.googleTab.ideas.posts.topic.restaurant": "el especial de esta semana, con una foto",
+    "dashboard.googleTab.ideas.posts.topic.art": "su próxima clase, con la fecha",
+    "dashboard.googleTab.ideas.posts.topic.home": "un trabajo reciente, antes y después",
+    "dashboard.googleTab.ideas.posts.topic.default": "lo nuevo de este mes",
+    "dashboard.googleTab.ideas.photos.title": "Agregue 3 fotos nuevas",
+    "dashboard.googleTab.ideas.photos.pill": "42 % más solicitudes de indicaciones con fotos (Google)",
+    "dashboard.googleTab.ideas.photos.reason": "Su foto más reciente en Google tiene {count} meses.",
+    "dashboard.googleTab.ideas.photos.reasonOne": "Su foto más reciente en Google tiene un mes.",
+    "dashboard.googleTab.ideas.photos.reasonNone": "Su ficha aún no tiene fotos.",
+    "dashboard.googleTab.ideas.photos.button": "Agregar fotos",
+    "dashboard.googleTab.ideas.details.title.both": "Agregue estacionamiento y accesibilidad",
+    "dashboard.googleTab.ideas.details.title.parking": "Agregue estacionamiento",
+    "dashboard.googleTab.ideas.details.title.accessibility": "Agregue accesibilidad",
+    "dashboard.googleTab.ideas.details.pill": "La IA de Google los usa para responder preguntas",
+    "dashboard.googleTab.ideas.details.reason.both": "Su ficha no dice dónde estacionar ni si la entrada es accesible en silla de ruedas.",
+    "dashboard.googleTab.ideas.details.reason.parking": "Su ficha no dice dónde pueden estacionar sus clientes.",
+    "dashboard.googleTab.ideas.details.reason.accessibility": "Su ficha no dice si la entrada es accesible en silla de ruedas.",
+    "dashboard.googleTab.ideas.details.button": "Agregar detalles",
+    "dashboard.googleTab.ideas.messaging.title": "Active los mensajes",
+    "dashboard.googleTab.ideas.messaging.pill": "Sus clientes pueden escribirle desde Google",
+    "dashboard.googleTab.ideas.messaging.reason": "Los mensajes están desactivados, así que quien lo encuentra solo puede llamar.",
+    "dashboard.googleTab.ideas.messaging.button": "Cómo hacerlo",
+    "dashboard.googleTab.ideas.category.title": "Agregue «{category}» como segunda categoría",
+    "dashboard.googleTab.ideas.category.reason": "Búsquedas como {terms} apuntan a {category}, y su ficha tiene solo una categoría.",
+    "dashboard.googleTab.ideas.category.button": "Cómo hacerlo ↗",
+    "dashboard.googleTab.ideas.done.services": "Servicios agregados",
+    "dashboard.googleTab.ideas.done.holiday": "Horario festivo indicado",
+    "dashboard.googleTab.ideas.done.description": "Descripción actualizada",
+    "dashboard.googleTab.ideas.done.details": "Detalles para clientes agregados",
+    "dashboard.googleTab.ideas.doneMark": "Hecho ✓",
+    "dashboard.googleTab.ideas.more": "Ver {count} más",
+    "dashboard.googleTab.ideas.fewer": "Ver menos",
+    "dashboard.googleTab.ideas.none": "Nada que agregar por ahora. Su ficha cubre lo que la gente busca.",
+    "dashboard.googleTab.ideas.noRead": "No se pudo leer su ficha de Google en este momento. Las ideas aparecerán aquí en el próximo intento.",
+    "dashboard.googleTab.ideas.recapLink.before": "Las reseñas, los cupones y las tareas semanales están en",
+    "dashboard.googleTab.ideas.recapLink.link": "Resumen de crecimiento",
+    "dashboard.compareVersions.google": "Versión de Google",
+    "dashboard.compareVersions.none": "(ninguno)",
+    "dashboard.compareVersions.change": "Cambiar",
+    "dashboard.compareVersions.website": "Versión de su sitio web",
+    "dashboard.compareVersions.keepWebsite": "Conservar la versión de su sitio web",
+    "dashboard.googleTab.others.youEntered": "Usted escribió en Google: {hours}",
+    "dashboard.googleTab.others.noSiteHours": "No pudimos leer el horario en su sitio web.",
+    "dashboard.googleTab.others.question": "Google cambió su {field}. ¿Cuál es el correcto?",
+    "dashboard.googleTab.others.yourVersion": "Su versión",
+    "dashboard.googleTab.others.keepNote": "No cambia nada en Google.",
+    "dashboard.googleTab.others.keepMine": "Mantener su versión",
+    "dashboard.googleTab.others.changeOnGoogle": "Cambiar en Google",
+    "dashboard.googleTab.others.noteWrite": "Actualizaremos Google por usted (vista previa, aprobación y 7 días para deshacer).",
+    "dashboard.googleTab.others.noteGuide": "Le mostraremos cómo cambiarlo en Google.",
+    "dashboard.googleTab.others.chosenGoogle": "Confirmó la versión de Google",
+    "dashboard.googleTab.others.chosenMine": "Mantuvo su versión",
+    "dashboard.googleTab.others.previewTitle": "Enviar su {field} a Google:",
+    "dashboard.googleTab.others.previewNote": "Google puede tardar unos minutos en mostrarlo. Puede deshacerlo durante 7 días.",
+    "dashboard.googleTab.others.approve": "Aprobar y enviar",
+    "dashboard.googleTab.others.cancel": "Cancelar",
+    "dashboard.googleTab.others.guide.step3Hours": "Escriba este horario y guarde:",
+    "dashboard.googleTab.others.guide.step3Added": "Cámbielo o elimínelo y guarde.",
+    "dashboard.googleTab.others.copy": "Copiar este horario",
+    "dashboard.googleTab.others.copied": "Copiado",
+    "dashboard.googleTab.others.changedCount": "{count} cambiaron: {fields}",
+    "dashboard.googleTab.others.changedByGoogle": "Google lo cambió (arriba)",
+    "dashboard.hoursChooser.compare": "Comparar su sitio y su ficha de Google",
+    "dashboard.hoursChooser.hide": "Ocultar la comparación",
+    "dashboard.hoursChooser.loading": "Cargando ambas versiones…",
+    "dashboard.hoursChooser.loadFailed": "No se pudo cargar el horario. Inténtelo en un momento.",
+    "dashboard.hoursChooser.question": "Su ficha de Google y su sitio web muestran horarios diferentes. ¿Cuál es el correcto?",
+    "dashboard.hoursChooser.onWebsite": "Su sitio web",
+    "dashboard.hoursChooser.keepGoogle": "Mantener la versión de Google",
+    "dashboard.hoursChooser.keepGoogleNote": "Le mostraremos cómo actualizar su sitio web.",
+    "dashboard.hoursChooser.keepWebsite": "Mantener el horario del sitio web",
+    "dashboard.hoursChooser.keepWebsiteNoteWrite": "Actualizaremos Google por usted (vista previa, aprobación y 7 días para deshacer).",
+    "dashboard.hoursChooser.keepWebsiteNoteGuide": "Le mostraremos cómo cambiarlo en Google.",
+    "dashboard.hoursChooser.neither": "¿Ninguno es correcto? Escriba el horario correcto",
+    "dashboard.hoursChooser.chosen.google": "Mantuvo la versión de Google",
+    "dashboard.hoursChooser.chosen.website": "Mantuvo el horario de su sitio web",
+    "dashboard.hoursChooser.chosen.own": "Escribió el horario correcto",
+    "dashboard.hoursChooser.sourceLive": "El horario de Google se leyó ahora; el de su sitio web, en el último análisis.",
+    "dashboard.hoursChooser.sourceScan": "Ambos del último análisis.",
+    "dashboard.hoursChooser.copy": "Copiar este horario",
+    "dashboard.hoursChooser.copied": "Copiado",
+    "dashboard.hoursChooser.openOnGoogle": "Abrir en Google ↗",
+    "dashboard.hoursChooser.google.title": "Actualice Google para que coincida con su sitio web",
+    "dashboard.hoursChooser.google.titleOwn": "Actualice Google con este horario",
+    "dashboard.hoursChooser.google.button": "Actualizar Google como su sitio web",
+    "dashboard.hoursChooser.google.buttonOwn": "Actualizar Google con este horario",
+    "dashboard.hoursChooser.google.safety": "Abre el editor de horario con este horario: vista previa, aprobación y 7 días para deshacer.",
+    "dashboard.hoursChooser.google.stepsTitle": "Cambie su horario en Google (2 min)",
+    "dashboard.hoursChooser.google.step1": "Abra su Perfil de Empresa en Google (botón de abajo).",
+    "dashboard.hoursChooser.google.step2": "Elija Editar perfil y luego Horario.",
+    "dashboard.hoursChooser.google.step3": "Escriba este horario y guarde:",
+    "dashboard.hoursChooser.site.title": "Actualice el horario en {where}",
+    "dashboard.hoursChooser.site.yourWebsite": "su sitio web",
+    "dashboard.hoursChooser.site.step1": "Inicie sesión donde edita su sitio web.",
+    "dashboard.hoursChooser.site.step2": "Abra la página que muestra su horario (a menudo el pie de página, Contacto o Inicio).",
+    "dashboard.hoursChooser.site.step3": "Edite el texto del horario.",
+    "dashboard.hoursChooser.site.paste": "Escriba este horario y publique:",
+    "dashboard.hoursChooser.site.help": "Ayuda de {where} ↗",
+    "dashboard.hoursChooser.site.askSam": "O pídale a Sam que lo actualice",
+    "dashboard.hoursChooser.site.askSubject": "Por favor, actualice el horario de mi sitio web",
+    "dashboard.hoursChooser.site.askBody": "Hola, Sam: ¿podría actualizar el horario de mi sitio web a este?",
+    "dashboard.hoursChooser.own.closed": "Cerrado",
+    "dashboard.hoursChooser.own.opens": "Abre",
+    "dashboard.hoursChooser.own.closes": "Cierra",
+    "dashboard.hoursChooser.own.open24": "Abierto 24 horas",
+    "dashboard.hoursChooser.own.continue": "Usar este horario",
+    "dashboard.hoursChooser.remembered": "Lo recordaremos hasta que su próximo análisis muestre que los horarios coinciden.",
+    "dashboard.hoursChooser.done": "El horario coincide en Google y en su sitio web ✓",
+    "dashboard.gbpProfileEdits.matchWebsite": "Actualizar Google como su sitio web",
     "dashboard.googleTab.notConnected.title": "Conecte Google para ver su Perfil de Empresa en Google",
     "dashboard.googleTab.notConnected.lead": "Conectar su Perfil de Empresa en Google desbloquea esta pestaña:",
     "dashboard.googleTab.notConnected.rate": "Su tasa de conversión cada mes: cuántas personas que lo encontraron en Google llamaron, reservaron, visitaron su sitio o pidieron indicaciones.",
@@ -13386,6 +14227,17 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpEdit.connectFirst": "Conecte su Perfil de Empresa en Google para actualizarlos desde aquí.",
     "dashboard.gbpEdit.connectLink": "Conectar Google →",
     "dashboard.gbpEdit.intro": "Estos son los detalles que Google ofrece para su tipo de negocio. Elija lo que es cierto. Nada cambia en Google hasta que usted lo apruebe.",
+    "dashboard.gbpEdit.tier.scored": "Cuenta para su puntuación",
+    "dashboard.gbpEdit.statusSet": "indicado",
+    "dashboard.gbpEdit.statusMissing": "falta",
+    "dashboard.gbpEdit.tier.extras": "Ayude a que más personas lo elijan (sin puntos, mejora su tasa de conversión)",
+    "dashboard.gbpEdit.tier.extrasWhy": "Los clientes revisan esto antes de llamar o visitarlo, y la IA de Google lo usa para responder preguntas como «¿Atienden sin cita?». Más respuestas significan que menos personas se van sin contactarlo.",
+    "dashboard.gbpEdit.howToVisit": "Cómo visitarlo",
+    "dashboard.gbpEdit.groupCount": "{set} indicados · {open} que puede agregar",
+    "dashboard.gbpEdit.tier.identity": "Sobre el propietario (opcional, solo si desea compartirlo)",
+    "dashboard.gbpEdit.groupShort.payment": "Pagos",
+    "dashboard.gbpEdit.groupShort.parking": "Estacionamiento",
+    "dashboard.gbpEdit.groupShort.accessibility": "Accesibilidad",
     "dashboard.gbpEdit.noneOffered": "Google no ofrece detalles de accesibilidad, pago ni estacionamiento para esta ficha.",
     "dashboard.gbpEdit.now": "ahora: {value}",
     "dashboard.gbpEdit.value.yes": "Sí",
@@ -13554,6 +14406,45 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpEdit.option.pay_debit_card": "Tarjetas de débito",
     "dashboard.gbpEdit.option.pay_mobile_nfc": "Pago sin contacto o con el teléfono (NFC)",
     "dashboard.gbpEdit.option.requires_cash_only": "Solo efectivo",
+    "dashboard.gbpEdit.option.pay_check": "Cheques",
+    "dashboard.gbpEdit.option.has_restroom": "Baño",
+    "dashboard.gbpEdit.option.has_gender_neutral_restroom": "Baño sin distinción de género",
+    "dashboard.gbpEdit.option.has_hearing_loop": "Bucle auditivo",
+    "dashboard.gbpEdit.option.has_wheelchair_accessible_elevator": "Elevador accesible en silla de ruedas",
+    "dashboard.gbpEdit.option.has_onsite_parking": "Estacionamiento en el lugar",
+    "dashboard.gbpEdit.option.has_wifi": "Wi-Fi",
+    "dashboard.gbpEdit.option.has_wifi_free": "Wi-Fi gratis",
+    "dashboard.gbpEdit.option.welcomes_walk_ins": "Se atiende sin cita",
+    "dashboard.gbpEdit.option.has_online_appointments": "Citas en línea",
+    "dashboard.gbpEdit.option.requires_appointments": "Se requiere cita",
+    "dashboard.gbpEdit.option.accepts_reservations": "Acepta reservaciones",
+    "dashboard.gbpEdit.option.has_seating_outdoors": "Asientos al aire libre",
+    "dashboard.gbpEdit.option.has_dine_in": "Para comer en el lugar",
+    "dashboard.gbpEdit.option.has_onsite_services": "Servicios en el lugar",
+    "dashboard.gbpEdit.option.has_online_care": "Atención en línea",
+    "dashboard.gbpEdit.option.has_language_assistance": "Asistencia en otros idiomas",
+    "dashboard.gbpEdit.option.is_owned_by_women": "Propiedad de mujeres",
+    "dashboard.gbpEdit.option.is_black_owned": "Propiedad de personas negras",
+    "dashboard.gbpEdit.option.is_veteran_led": "Dirigido por veteranos",
+    "dashboard.gbpEdit.option.is_latino_owned": "Propiedad de latinos",
+    "dashboard.gbpEdit.option.is_asian_owned": "Propiedad de personas asiáticas",
+    "dashboard.gbpEdit.option.has_lgbtq_friendly": "Acogedor con personas LGBTQ+",
+    "dashboard.gbpEdit.option.has_transgender_safespace": "Espacio seguro para personas trans",
+    "dashboard.breakdown.missingParts": "Falta en Google: {parts}.",
+    "dashboard.breakdown.and": "y",
+    "dashboard.breakdown.action.replyReviews": "Responder reseñas",
+    "dashboard.breakdown.action.moreReviews": "Conseguir más reseñas",
+    "dashboard.breakdown.action.addParts": "Agregar {parts}",
+    "dashboard.breakdown.action.addDetails": "Agregar detalles para clientes",
+    "dashboard.breakdown.action.addPhotos": "Agregar fotos",
+    "dashboard.breakdown.action.setHours": "Indicar su horario",
+    "dashboard.breakdown.action.addPhone": "Agregar su teléfono",
+    "dashboard.breakdown.action.fixWebsiteLink": "Corregir el enlace a su sitio",
+    "dashboard.breakdown.action.chooseCategory": "Elegir su categoría",
+    "dashboard.breakdown.action.fixOnGoogle": "Corregirlo en Google",
+    "dashboard.breakdown.action.compareHours": "Comparar sus horarios",
+    "dashboard.breakdown.action.fixWebsite": "Corregir en su sitio web",
+    "dashboard.breakdown.action.fixIt": "Corregirlo",
     "dashboard.gbpEdit.option.has_wheelchair_accessible_entrance": "Entrada accesible para sillas de ruedas",
     "dashboard.gbpEdit.option.has_wheelchair_accessible_restroom": "Baño accesible para sillas de ruedas",
     "dashboard.gbpEdit.option.has_wheelchair_accessible_seating": "Asientos accesibles para sillas de ruedas",

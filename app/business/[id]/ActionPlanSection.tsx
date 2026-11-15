@@ -15,6 +15,7 @@ import { markTaskDone } from "@/app/actions/actionPlan";
 import { WebsiteRecheck } from "@/components/scoring/WebsiteRecheck";
 import {
   MERGED_REVIEW_CHECK_ID,
+  GOOGLE_MISMATCH_CHECK_ID,
   pendingCheckStatus,
   timeEstimateText,
   weeklyMetricProgress,
@@ -27,6 +28,7 @@ import type { GrowthMove } from "@/lib/growthMoves";
 import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 import { CustomerDetailsGoogleEdit, useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
 import { FixWithPostScore, fixFlowHref } from "@/components/gbp/FixWithPostScore";
+import { HoursMismatchChooser } from "@/components/hours/HoursMismatchChooser";
 import { formatMonthDayTime, t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 
 /** What a website task needs for "Re-check my website". */
@@ -412,6 +414,7 @@ export function TaskCard({
           <CurrentStatus task={task} pendingStatus={pendingStatus} metricProgress={metricProgress} lastScanAt={lastScanAt} />
 
           {onGoogle && <CustomerDetailsGoogleEdit businessId={businessId} />}
+          {task.checkId === GOOGLE_MISMATCH_CHECK_ID && (task.mismatchFields ?? []).includes("hours") && <HoursMismatchChooser businessId={businessId} />}
           {premium && !isSetup && <FixWithPostScore businessId={businessId} checkId={task.checkId} mergedCheckIds={task.mergedCheckIds} />}
 
           <div>

@@ -21,11 +21,21 @@ import Link from "next/link";
 import { createContext, Fragment, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { syncGoogleNumbers } from "@/app/actions/gbpInsights";
-import { changeGoogleEditBack, checkGoogleEditsNow, keepGoogleVersion, undoMadeChange, type ChangeBackResult } from "@/app/actions/gbpGoogleEdits";
-import { canChangeBack, type GoogleEditRow } from "@/lib/gbpGoogleEdits";
-import { timeText } from "@/lib/gbpListingFields";
+import { changeGoogleEditBack, checkGoogleEditsNow, keepAllGoogleVersions, keepGoogleVersion, reopenGoogleEditAction, undoMadeChange, type ChangeBackResult } from "@/app/actions/gbpGoogleEdits";
+import { CompareVersions } from "@/components/gbp/CompareVersions";
+import { codedToWeek, shortWeek, versionsOfEdit, versionsOfHours, watchedSummary } from "@/lib/compareVersions";
+import { sameWeek } from "@/lib/gbpProfileEdits";
+import { bannerEdits, bannerSerious, canChangeBack, isInfoOnly, joinFields, PLURAL_FIELDS, type GoogleEditRow } from "@/lib/gbpGoogleEdits";
+import { specialFor, timeText, upcomingHolidays } from "@/lib/gbpListingFields";
+import { isFresh } from "@/lib/gbpMediaPosts";
+import { doneSinceScan, ideaTypeOf, listingIdeas, MAX_IDEAS, prefillFromHash, type Idea } from "@/lib/listingIdeas";
 import { IconArrowUpRight, IconBuildingStore, IconDiscount2, IconPencil, IconPhoto, IconStar } from "@tabler/icons-react";
-import { ProfileEditsOnGoogle } from "@/components/gbp/ProfileEditsOnGoogle";
+import { ProfileEditsOnGoogle, type StartHours } from "@/components/gbp/ProfileEditsOnGoogle";
+import { FixGoogle, FixWebsite, HoursComparePanel, HoursMismatchChooser } from "@/components/hours/HoursMismatchChooser";
+import type { WeeklyHours } from "@/lib/gbpProfileEdits";
+import type { WebsiteBuilderId } from "@/lib/websiteBuilder";
+import { PhotoUpload } from "@/components/gbp/PhotoUpload";
+import { ownHoursKey, startHoursFromHash } from "@/lib/hoursChooser";
 import { WebsiteLinkFix } from "@/components/gbp/WebsiteLinkFix";
 import { CustomerDetailsGoogleEdit, useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
 import { GbpMessagingStep } from "@/components/gbp/GbpMessagingStep";
@@ -51,6 +61,9 @@ import {
   per100Change,
   rateTrend,
   sampleIdeas,
+  deviceAdvice,
+  deviceSplit,
+  SHORT_DESCRIPTION,
   SAMPLE_AVERAGE_VISIT,
   SAMPLE_INSIGHTS,
   lastSixMonths,
@@ -76,7 +89,7 @@ import type { BookingTracking } from "@/lib/bookingPartners";
 import type { MediaPostsState } from "@/lib/gbpMediaPosts";
 import { BookingStepsPanel } from "@/components/gbp/BookingSteps";
 import { HolidayHoursEditor, ServicesEditor } from "@/components/gbp/ListingFieldEditors";
-import { actions, audience, type InsightsState, callsByDays, isSmallMonth, leftOnTable, SAMPLE_AUDIENCE, sixMonthSpan, totalViews, worthRange, type Audience, type InsightsMonth } from "@/lib/gbpInsights";
+import { actions, audience, type InsightsState, callsByDays, isSmallMonth, leftOnTable, SAMPLE_AUDIENCE, sixMonthSpan, totalViews, worthRange, whoTable, type Audience, type InsightsMonth, type WhoRow } from "@/lib/gbpInsights";
 import type { GbpReplyCounts } from "@/lib/gbpReviewReplies";
 import { cn } from "@/lib/utils";
 
@@ -126,6 +139,12 @@ export interface GoogleProfileTabProps {
   practiceSource?: "real" | "sample" | "fallback" | null;
   /** Connected: shown / sync needed / Google had nothing (lib/gbpInsights.ts insightsStateFor). */
   insightsState?: InsightsState;
+  /** The website's hours from the last scan (null week: none could be read), its builder, and "Ask Sam". */
+  websiteHours?: { week: WeeklyHours | null; builder: { id: WebsiteBuilderId; name: string } | null; siteUrl: string | null; managedEmail: string | null; hasPhoneLink?: boolean | null } | null;
+  /** The last scan found the website's hours differ from Google's (undefined: no website compared). */
+  hoursMismatch?: boolean;
+  /** The business type (businesses.niche_id), for section 5's search-term → service maps. */
+  nicheId?: string | null;
   /** Writes from PostScore allowed (practice, or GOOGLE_WRITES_LIVE_PLACES). */
   canEditGoogle?: boolean;
 }
@@ -196,23 +215,24 @@ function ConnectedTab(props: GoogleProfileTabProps) {
   const months = props.insights && props.insights.length > 0 ? props.insights : sample ? SAMPLE_INSIGHTS : [];
   const who = sample ? SAMPLE_AUDIENCE : audience(months);
   return (
-    // Bottom room for the floating "Ask PostAI" button (44px + 16px).
+    // Bottom room for the floating "Ask PostAI" button (44px + 24px), so the
+    // last rows scroll above it — rows themselves have no right margin.
     <SyncContext.Provider value={sync}>
-    <div className="flex flex-col pb-[60px]" data-testid="google-profile-tab" data-sync={sync.status}>
+    <div className="flex flex-col pb-[68px]" data-testid="google-profile-tab" data-sync={sync.status}>
       {props.result && (
         <p id={GBP_PROFILE_ANCHOR} role="status" className={cn("mb-3 scroll-mt-20 text-[13px] font-medium", props.result === "connected" ? "text-green" : "text-red")}>
           {gbpResultText(locale, props.result, props.business)}
         </p>
       )}
-      <GoogleEditsBanner saved={props.saved} />
+      <GoogleEditsBanner businessId={props.businessId} saved={props.saved} scan={{ website: props.listing.website, phone: props.listing.phone }} />
       <JumpMenu sample={sample} />
       <PartHeader part="performance" />
       <LastMonthSection {...props} months={months} sample={sample} />
-      <FunnelSection months={months} sample={sample} who={who} />
+      <FunnelSection months={months} sample={sample} who={who} props={props} />
       <SearchesSection months={months} sample={sample} />
       <PartHeader part="edit" />
       <ListingSection {...props} />
-      <NextSection sample={sample} hasData={months.length > 0} categories={props.listing.categories ?? null} booking={props.booking ?? null} />
+      <NextSection {...props} sample={sample} />
       <PartHeader part="protection" />
       <ProtectionSection {...props} />
     </div>
@@ -485,6 +505,11 @@ function ComingCard({ body, title, sync = false }: { body: string; title?: strin
 const monthName = (month: string, locale: Locale, style: "long" | "short" = "long") =>
   new Intl.DateTimeFormat(locale, { month: style, timeZone: "UTC" }).format(new Date(`${month}-15T12:00:00Z`));
 /** "May–Oct 2026" (or "Nov 2025–Apr 2026"): the 6 months ending `last`. */
+/** The hero's "How it's calculated" line: only with views to divide by. */
+export function howCalculated(interactions: number, views: number): { interactions: number; views: number } | null {
+  return views > 0 ? { interactions, views } : null;
+}
+
 function spanLabel(last: string, locale: Locale): string {
   const { from, to } = sixMonthSpan(last);
   const y = (m: string) => m.slice(0, 4);
@@ -713,6 +738,14 @@ function LastMonthSection(props: GoogleProfileTabProps & { months: InsightsMonth
             <div>
               <div className={cn("font-serif text-[40px] font-semibold leading-none sm:text-[46px]", GOLD_LIGHT)}>{formatRate(rate, locale)}</div>
               <p className="mt-1.5 max-w-[520px] text-[13px] leading-snug text-white/85">{t(locale, K("rate.sentence"))}</p>
+              {howCalculated(actions(last), totalViews(last)) && (
+                <p data-testid="google-tab-rate-how" className={cn("mt-1.5 w-fit max-w-[560px] rounded-lg px-2.5 py-1 text-[12.5px] leading-snug text-white/85", NAVY_2)}>
+                  {t(locale, K("rate.how"), { interactions: formatCount(actions(last), locale), views: formatCount(totalViews(last), locale) })}{" "}
+                  <span title={t(locale, K("rate.howTip"))} aria-label={t(locale, K("rate.howTip"))} className="cursor-help text-white/70">
+                    ⓘ
+                  </span>
+                </p>
+              )}
               {/* Both months' own ratios, and the change in percentage points. */}
               <div data-testid="google-tab-rate-change" className="mt-1.5 text-[12.5px] leading-snug">
                 <p className="font-semibold text-white/90">{t(locale, K("rate.monthLine"), { month: monthName(last.month, locale), rate: formatRate(rate, locale), ...of })}</p>
@@ -880,16 +913,6 @@ function Donut({ parts }: { parts: number[] }) {
   );
 }
 
-/** "▲ 24.5% vs the same months last year": green up, red down. */
-function YoyPill({ value, testId, className }: { value: number; testId: string; className?: string }) {
-  const locale = useLocale();
-  return (
-    <span data-testid={testId} data-dir={value > 0 ? "up" : value < 0 ? "down" : "same"} className={cn("inline-block rounded-full px-2 py-0.5 text-[11.5px] font-semibold", value > 0 ? "bg-[color:color-mix(in_srgb,var(--color-green)_12%,white)] text-green" : value < 0 ? "bg-[color:color-mix(in_srgb,var(--color-red)_10%,white)] text-red" : "bg-paper text-ink-mute", className)}>
-      {value === 0 ? t(locale, K("s2.yoySame")) : t(locale, K(value > 0 ? "s2.yoyUp" : "s2.yoyDown"), { percent: Math.abs(value).toLocaleString(locale === "es" ? "es-ES" : "en-US", { maximumFractionDigits: 1 }) })}
-    </span>
-  );
-}
-
 /** A card header: the title, and the time period its numbers cover. */
 function CardHead({ title, period, extra }: { title: string; period: string; extra?: ReactNode }) {
   return (
@@ -906,58 +929,176 @@ function CardHead({ title, period, extra }: { title: string; period: string; ext
 }
 
 /** "Who saw you": people and interactions over the last 6 months. */
+/** "Who saw you": this period vs the same 6 calendar months a year
+ * earlier, as a small table (views, interactions, customers per 100
+ * viewers), then one fixed takeaway from the two directions. */
 function WhoCard({ a, sample, span }: { a: Audience; sample: boolean; span: string }) {
   const locale = useLocale();
-  const yoy = a.small || a.vsLastYear === null ? null : a.vsLastYear;
+  const table = whoTable(a);
+  if (!table) return null;
+  const lastSpan = spanLabel(table.lastTo, locale);
+  const history = table.rows[0].last !== null;
+  const cell = "px-1.5 py-1 text-right tabular-nums";
+  const changeText = (r: WhoRow) => {
+    if (!r.change) return t(locale, K("who.noHistory"));
+    if (r.change.kind === "more") return r.change.value === 0 ? t(locale, K("who.same")) : t(locale, K(r.change.value > 0 ? "who.more" : "who.fewer"), { count: Math.abs(r.change.value) });
+    return r.change.value === 0 ? "0%" : `${Math.abs(r.change.value)}%`;
+  };
   return (
     <div className="rounded-xl border border-paper-line p-3" data-testid="google-tab-who">
-      <CardHead title={t(locale, K("s2.whoTitle"))} period={span} extra={sample ? <SampleTag className="ml-2" /> : undefined} />
-      <p className="mt-1.5 text-[13px] text-ink-soft">
-        <b className="mr-1 font-serif text-[22px] font-semibold leading-none text-ink">{formatCount(a.total, locale)}</b>
-        {t(locale, K("s2.whoPeople"))}
-      </p>
-      {a.small ? <p className="mt-1.5 text-[12px] text-ink-mute">{t(locale, K("rate.small"))}</p> : yoy !== null && <YoyPill value={yoy} testId="google-tab-yoy" className="mt-1.5" />}
-      <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-ink-soft" data-testid="google-tab-interactions">
-        <b className="font-semibold text-ink">{t(locale, K("s2.interactions"), { count: formatCount(a.interactions, locale) })}</b>
-        {!a.small && a.interactionsVsLastYear !== null && <YoyPill value={a.interactionsVsLastYear} testId="google-tab-yoy-interactions" />}
-      </p>
+      <CardHead title={t(locale, K("s2.whoTitle"))} period={history ? t(locale, K("who.vs"), { now: span, last: lastSpan }) : span} extra={sample ? <SampleTag className="ml-2" /> : undefined} />
+      <table className="mt-2 w-full text-[12.5px]" data-testid="google-tab-who-table">
+        <thead>
+          <tr className="text-[11px] text-ink-mute">
+            <th className="py-1 pr-1.5 text-left font-semibold" />
+            <th className={cn(cell, "font-semibold")}>{span}</th>
+            <th className={cn(cell, "font-semibold")}>{lastSpan}</th>
+            <th className={cn(cell, "pr-0 font-semibold")}>{t(locale, K("who.change"))}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {table.rows.map((r) => {
+            const up = r.change && r.change.value > 0;
+            const down = r.change && r.change.value < 0;
+            return (
+              <tr key={r.id} className="border-t border-paper-line/60" data-testid={`who-row-${r.id}`}>
+                <td className="py-1 pr-1.5 text-ink-soft">
+                  {r.id === "interactions" ? (
+                    <span title={t(locale, K("who.interactionsTip"))} className="cursor-help underline decoration-dotted underline-offset-2">
+                      {t(locale, K("who.interactions"))}
+                    </span>
+                  ) : (
+                    t(locale, K(`who.${r.id}`))
+                  )}
+                </td>
+                <td className={cn(cell, "font-semibold text-ink")}>{formatCount(r.now, locale)}</td>
+                <td className={cn(cell, "text-ink-soft")}>{r.last === null ? "—" : formatCount(r.last, locale)}</td>
+                <td className={cn(cell, "whitespace-nowrap pr-0 font-semibold", !r.change ? "font-normal text-ink-mute" : up ? "text-green" : down ? "text-red" : "text-ink-mute")} data-testid={`who-change-${r.id}`}>
+                  {r.change && (up || down) && <span aria-hidden>{up ? "▲ " : "▼ "}</span>}
+                  {changeText(r)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {a.small && <p className="mt-1.5 text-[12px] text-ink-mute">{t(locale, K("rate.small"))}</p>}
+      {table.takeaway && !a.small && (
+        <p className="mt-1.5 text-[12.5px] text-ink" data-testid="google-tab-who-takeaway">
+          {t(locale, K(`who.takeaway.${table.takeaway}`))}
+        </p>
+      )}
       <p className="mt-1.5 text-[11.5px] text-ink-mute">{t(locale, K("s2.counted"))}</p>
       <p className="mt-0.5 text-[11.5px] text-ink-mute">{t(locale, K("s2.otherRange"))}</p>
     </div>
   );
 }
 
-/** "Devices and platforms": the same 6 months' views, in 4 parts that add
- * up to the "Who saw you" total. */
-function DevicesCard({ a, className, span }: { a: Audience; className?: string; span: string }) {
+/** "Devices and platforms": the same 6 months' views in 4 parts (adding up
+ * to the "Who saw you" total, labels never cut off), the phone / computer
+ * and Search / Maps split, and "What this means for you" from the real
+ * numbers and checks. */
+function DevicesCard({ a, className, span, props }: { a: Audience; className?: string; span: string; props: GoogleProfileTabProps }) {
   const locale = useLocale();
+  const split = deviceSplit(a.rows);
+  const now = Date.now();
+  const extras = props.extras ?? null;
+  const holiday = extras ? upcomingHolidays(new Date(now)).find((h) => !specialFor(extras.specialPeriods, h.date)) : undefined;
+  const speed = props.checks.find((c) => c.id === "website.performance_mobile");
+  const advice = deviceAdvice(split, {
+    businessId: props.businessId,
+    tapToCall: props.websiteHours?.hasPhoneLink ?? null,
+    mobileSlow: speed && speed.earnedPoints !== null ? speed.earnedPoints < speed.maxPoints : null,
+    bookingLink: !!props.booking && props.booking.link.kind !== "none",
+    descriptionLength: extras && extras.description !== undefined ? (extras.description ?? "").trim().length : null,
+    photosFresh: props.media?.photos ? !!props.media.photos.newestAt && isFresh(props.media.photos.newestAt, now) : null,
+    holidayUnset: holiday?.id ?? null,
+    listingRead: !!extras,
+  });
   return (
-    <div className={cn("rounded-xl border border-paper-line p-3", className)} data-testid="google-tab-devices">
+    <div className={cn("flex flex-col rounded-xl border border-paper-line p-3", className)} data-testid="google-tab-devices">
       <CardHead title={t(locale, K("s2.devices"))} period={span} />
-      <div className="mt-1.5 flex items-center gap-3">
+      <div className="mt-1.5 flex flex-col items-center gap-3 lg:flex-row lg:items-start">
         <Donut parts={a.rows.map((r) => r.count)} />
-        <ul className="min-w-0 flex-1 text-[12.5px]">
+        <ul className="w-full min-w-0 flex-1 text-[12.5px]">
           {a.rows.map((r, i) => (
-            <li key={r.id} data-testid={`google-tab-device-${r.id}`} className="flex items-center justify-between gap-2 py-0.5">
-              <span className="flex min-w-0 items-center gap-1.5 text-ink-soft">
-                <i className="inline-block h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ background: AUDIENCE_COLORS[i] }} />
-                <span className="truncate">{t(locale, K(`s2.row.${r.id}`))}</span>
+            <li key={r.id} data-testid={`google-tab-device-${r.id}`} className="flex items-start justify-between gap-2 py-0.5">
+              <span className="flex min-w-0 items-start gap-1.5">
+                <i className="mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ background: AUDIENCE_COLORS[i] }} />
+                <span className="leading-tight">
+                  <b className="block font-semibold text-ink">{t(locale, K(`s2.platform.${r.id.startsWith("search") ? "search" : "maps"}`))}</b>
+                  <span className="text-[11.5px] text-ink-mute">{t(locale, K(`s2.device.${r.id.endsWith("Phone") ? "phone" : "computer"}`))}</span>
+                </span>
               </span>
-              <b className="whitespace-nowrap font-semibold">
+              <b className="whitespace-nowrap text-right font-semibold">
                 {formatCount(r.count, locale)} · {r.percent}%
               </b>
             </li>
           ))}
         </ul>
       </div>
-      <p data-testid="google-tab-takeaway" className="mt-1.5 text-[12.5px] text-ink">
-        {t(locale, K(`s2.takeaway.${a.takeaway.kind}`), { percent: a.takeaway.percent })}
-      </p>
+      <div className="mt-2 grid grid-cols-2 gap-2 rounded-lg bg-paper px-2.5 py-2 text-[12px]" data-testid="google-tab-device-split">
+        <p>
+          <b className="font-serif text-[17px] font-semibold text-ink">{split.phone}%</b> {t(locale, K("s2.split.phone"))}
+          <span className="block text-ink-mute">{t(locale, K("s2.split.computer"), { percent: split.computer })}</span>
+        </p>
+        <p>
+          <b className="font-serif text-[17px] font-semibold text-ink">{split.search}%</b> {t(locale, K("s2.split.search"))}
+          <span className="block text-ink-mute">{t(locale, K("s2.split.maps"), { percent: split.maps })}</span>
+        </p>
+      </div>
+      {advice.length === 0 && (split.phone >= 60 || split.search >= 50 || split.maps >= 25) && (
+        // Nothing to check yet (no listing or website read): the plain facts.
+        <div className="mt-2.5 flex-1" data-testid="google-tab-advice">
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-brass">{t(locale, K("s2.means"))}</p>
+          <ul className="mt-1 flex list-disc flex-col gap-1 pl-4 text-[12.5px] text-ink-soft">
+            {(["phone", "search", "maps"] as const)
+              .filter((g) => (g === "phone" ? split.phone >= 60 : g === "search" ? split.search >= 50 : split.maps >= 25))
+              .map((g) => (
+                <li key={g}>{t(locale, K(`s2.lead.${g}`), { tenths: Math.round(split.maps / 10) })}</li>
+              ))}
+          </ul>
+        </div>
+      )}
+      {advice.length > 0 && (
+        <div className="mt-2.5 flex-1" data-testid="google-tab-advice">
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-brass">{t(locale, K("s2.means"))}</p>
+          <ul className="mt-1 flex flex-col gap-1.5 text-[12.5px]">
+            {advice.map((it, i) => {
+              const firstOfGroup = advice.findIndex((x) => x.group === it.group) === i;
+              const text = t(locale, K(`s2.advice.${it.key}`), it.holiday ? { holiday: t(locale, K(`fields.holiday.${it.holiday}`)) } : undefined);
+              return (
+                <li key={`${it.group}-${it.key}`} data-testid={`advice-${it.key}`} data-status={it.status}>
+                  {firstOfGroup && <span className="block text-ink-soft">{t(locale, K(`s2.lead.${it.group}`), { tenths: Math.round(split.maps / 10) })}</span>}
+                  <span className="flex items-start gap-1.5">
+                    <span aria-hidden className={cn("mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white", it.status === "ok" ? "bg-green" : "bg-amber")}>
+                      {it.status === "ok" ? "✓" : "!"}
+                    </span>
+                    {it.href ? (
+                      it.href.startsWith("#") ? (
+                        <a href={it.href} className="font-semibold text-ink underline underline-offset-2">
+                          {text}
+                        </a>
+                      ) : (
+                        <Link href={it.href} className="font-semibold text-ink underline underline-offset-2">
+                          {text}
+                        </Link>
+                      )
+                    ) : (
+                      <span className="font-semibold text-ink">{text}</span>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
 
-function FunnelSection({ months, sample, who }: { months: InsightsMonth[]; sample: boolean; who: Audience | null }) {
+function FunnelSection({ months, sample, who, props }: { months: InsightsMonth[]; sample: boolean; who: Audience | null; props: GoogleProfileTabProps }) {
   const locale = useLocale();
   const { last } = lastTwo(months);
   if (!last) {
@@ -997,7 +1138,8 @@ function FunnelSection({ months, sample, who }: { months: InsightsMonth[]; sampl
 
         {/* Left: who saw you, then which days they call; right: devices — same height, no gaps. */}
         <div className="mt-3 grid items-stretch gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-3">
+          {/* The left column's last card stretches, so both columns end together. */}
+          <div className="flex flex-col gap-3 [&>*:last-child]:flex-1">
             {who && <WhoCard a={who} sample={sample} span={span} />}
             <div className="flex-1 rounded-xl border border-paper-line p-3" data-testid="google-tab-days">
               <CardHead title={t(locale, K("s2.days"))} period={span} />
@@ -1017,7 +1159,7 @@ function FunnelSection({ months, sample, who }: { months: InsightsMonth[]; sampl
               )}
             </div>
           </div>
-          {who && <DevicesCard a={who} className="h-full" span={span} />}
+          {who && <DevicesCard a={who} className="h-full" span={span} props={props} />}
         </div>
 
         <div className="mt-3 rounded-xl border border-paper-line p-3">
@@ -1099,29 +1241,98 @@ function SearchesSection({ months, sample }: { months: InsightsMonth[]; sample: 
   );
 }
 
-function NextSection({ sample, hasData = false, categories, booking = null }: { sample: boolean; hasData?: boolean; categories: string[] | null; booking?: BookingState | null }) {
+function ideaText(idea: Idea, locale: Locale): { title: string; pill: string; reason: string; button: string } {
+  const k = (s: string, p?: Record<string, string | number>) => t(locale, K(`ideas.${idea.id}.${s}`), p);
+  switch (idea.id) {
+    case "services": {
+      const names = idea.missing.map((m) => m.service).join(", ");
+      const terms = idea.missing.flatMap((m) => m.terms).slice(0, 3).map((x) => `“${x}”`).join(", ");
+      return { title: k("title", { list: names }), pill: t(locale, K("ideas.reach"), { count: formatCount(idea.searches, locale) }), reason: k("reason", { terms, count: formatCount(idea.searches, locale) }), button: k("button") };
+    }
+    case "description":
+      return { title: k("title"), pill: k("pill"), reason: idea.length === 0 ? k("reasonNone") : k("reason", { count: idea.length, text: idea.text.length > 60 ? `${idea.text.slice(0, 59)}…` : idea.text }), button: k("button") };
+    case "holiday": {
+      const name = t(locale, K(`fields.holiday.${idea.holiday}`));
+      const date = formatShortDate(`${idea.date}T12:00:00Z`, locale, "UTC").replace(/,? \d{4}$/, "");
+      return { title: k("title", { holiday: name }), pill: k("pill"), reason: k(idea.daysAway === 1 ? "reasonOne" : "reason", { holiday: name, date, count: idea.daysAway }), button: k("button") };
+    }
+    case "posts":
+      return { title: k("title"), pill: k("pill"), reason: k("reason", { topic: t(locale, K(`ideas.posts.topic.${idea.topic}`)) }), button: k("button") };
+    case "photos":
+      return { title: k("title"), pill: k("pill"), reason: idea.monthsOld === null ? k("reasonNone") : k(idea.monthsOld === 1 ? "reasonOne" : "reason", { count: idea.monthsOld }), button: k("button") };
+    case "details": {
+      const which = idea.missing.length === 2 ? "both" : idea.missing[0];
+      return { title: k(`title.${which}`), pill: k("pill"), reason: k(`reason.${which}`), button: k("button") };
+    }
+    case "messaging":
+      return { title: k("title"), pill: k("pill"), reason: k("reason"), button: k("button") };
+    case "extras":
+      return { title: k("title"), pill: k("pill"), reason: k("reason", { list: idea.names.map((n) => n.toLowerCase()).join(", ") }), button: k("button") };
+    case "category":
+      return { title: k("title", { category: idea.category }), pill: t(locale, K("ideas.reach"), { count: formatCount(idea.searches, locale) }), reason: k("reason", { terms: idea.terms.slice(0, 2).map((x) => `“${x}”`).join(", "), category: idea.category }), button: k("button") };
+    case "booking":
+      return { title: t(locale, K("booking.ideaTitle")), pill: t(locale, K("booking.ideaPill")), reason: t(locale, K("booking.ideaBody"), { partner: idea.provider }), button: t(locale, K("action.turnOnBooking")) };
+  }
+}
+
+function IdeaCard({ idea, n }: { idea: Idea; n: number }) {
   const locale = useLocale();
-  const ideas = sampleIdeas(categories);
+  const x = ideaText(idea, locale);
+  const a = idea.action;
+  const cls = "inline-flex h-[30px] items-center whitespace-nowrap rounded-lg border border-ink bg-ink px-3 text-[12.5px] font-semibold text-paper";
+  return (
+    <Box className="grid items-start gap-3 px-3.5 py-3 sm:grid-cols-[24px_1fr_auto]" data-testid={`google-tab-idea-${idea.id}`}>
+      <span className="flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] border-brass text-[11.5px] font-bold text-brass">{n}</span>
+      <div className="min-w-0">
+        <h3 className="flex flex-wrap items-center gap-2 text-[14px] font-semibold leading-snug">
+          {x.title}
+          <span className="rounded-full bg-[color:color-mix(in_srgb,var(--color-green)_12%,white)] px-2 py-0.5 text-[11px] font-bold text-green">{x.pill}</span>
+        </h3>
+        <p className="mt-0.5 line-clamp-2 text-[12.5px] leading-snug text-ink-soft">{x.reason}</p>
+      </div>
+      {a.kind === "editor" ? (
+        <a href={a.hash} className={cls}>
+          {x.button}
+        </a>
+      ) : a.external ? (
+        <a href={a.href} target="_blank" rel="noopener noreferrer" className={cls}>
+          {x.button}
+        </a>
+      ) : (
+        <Link href={a.href} className={cls}>
+          {x.button}
+        </Link>
+      )}
+    </Box>
+  );
+}
+
+function NextSection(props: GoogleProfileTabProps & { sample: boolean }) {
+  const locale = useLocale();
+  const [more, setMore] = useState(false);
+  const sampleList = sampleIdeas(props.listing.categories ?? null);
+  const extras = props.extras ?? null;
+  const ideas = listingIdeas({
+    businessId: props.businessId,
+    now: Date.now(),
+    type: ideaTypeOf(props.nicheId ?? null, extras?.categories ?? props.listing.categories ?? []),
+    months: props.insights ?? [],
+    listing: extras ? { services: extras.services, categories: extras.categories, description: extras.description ?? null, specialPeriods: extras.specialPeriods, attributeIds: extras.attributeIds ?? null, details: extras.details ?? null } : null,
+    photos: props.media?.photos ?? null,
+    posts: props.media?.posts ?? null,
+    messagingOn: props.messagingOn,
+    bookingTurnOn: props.booking?.tracking.kind === "turn_on" ? { provider: props.booking.tracking.provider } : null,
+  });
+  const done = doneSinceScan(props.saved?.made ?? [], props.lastScanAt);
+  const open = ideas.filter((i) => !done.includes(i.id));
+  const shown = more ? open : open.slice(0, MAX_IDEAS);
+  // Practice mode with no real numbers yet: the labelled samples.
+  const sample = props.sample && !extras && open.length === 0;
   return (
     <SectionHead n={5} id="next" title={t(locale, K("s5.title"))} meta={t(locale, K("s5.meta"))}>
-      {/* Case B: the owner's link to a partner whose Google booking isn't on — the first idea. */}
-      {booking?.tracking.kind === "turn_on" && (
-        <Box className="mt-3 grid items-start gap-3 px-3.5 py-3 sm:grid-cols-[1fr_auto]" data-testid="google-tab-idea-booking">
-          <div className="min-w-0">
-            <h3 className="flex flex-wrap items-center gap-2 text-[14px] font-semibold leading-snug">
-              {t(locale, K("booking.ideaTitle"))}
-              <span className="rounded-full bg-[color:color-mix(in_srgb,var(--color-green)_12%,white)] px-2 py-0.5 text-[11px] font-bold text-green">{t(locale, K("booking.ideaPill"))}</span>
-            </h3>
-            <p className="mt-0.5 line-clamp-2 text-[12.5px] leading-snug text-ink-soft">{t(locale, K("booking.ideaBody"), { partner: booking.tracking.provider })}</p>
-          </div>
-          <a href="#edit-booking-steps" className="inline-flex h-[30px] items-center whitespace-nowrap rounded-lg border border-ink bg-ink px-3 text-[12.5px] font-semibold text-paper">
-            {t(locale, K("action.turnOnBooking"))}
-          </a>
-        </Box>
-      )}
-      {sample && ideas.length > 0 ? (
+      {sample && sampleList.length > 0 ? (
         <div className="mt-3 flex flex-col gap-2" data-testid="google-tab-ideas">
-          {ideas.map((n, i) => (
+          {sampleList.map((n, i) => (
             <Box key={n} className="grid items-start gap-3 px-3.5 py-3 sm:grid-cols-[24px_1fr]" data-testid={`google-tab-idea-${n}`}>
               <span className="flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] border-brass text-[11.5px] font-bold text-brass">{i + 1}</span>
               <div className="min-w-0">
@@ -1138,7 +1349,28 @@ function NextSection({ sample, hasData = false, categories, booking = null }: { 
           ))}
         </div>
       ) : (
-        <ComingCard body={t(locale, K("s5.empty"))} title={hasData ? t(locale, K("row.soon")) : undefined} />
+        <div className="mt-3 flex flex-col gap-2" data-testid="google-tab-ideas">
+          {shown.map((idea, i) => (
+            <IdeaCard key={idea.id} idea={idea} n={i + 1} />
+          ))}
+          {done.map((id) => (
+            <Box key={`done-${id}`} className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-[13px]" data-testid={`google-tab-idea-done-${id}`}>
+              <span className="text-ink-soft">{t(locale, K(`ideas.done.${id}`))}</span>
+              <b className="text-green">{t(locale, K("ideas.doneMark"))}</b>
+            </Box>
+          ))}
+          {open.length > MAX_IDEAS && (
+            <button type="button" onClick={() => setMore(!more)} className="w-fit text-[12.5px] font-semibold text-ink underline underline-offset-2" data-testid="ideas-more">
+              {more ? t(locale, K("ideas.fewer")) : t(locale, K("ideas.more"), { count: open.length - MAX_IDEAS })}
+            </button>
+          )}
+          {open.length === 0 && done.length === 0 && (
+            <Box className="px-3.5 py-3 text-[13px] text-ink-soft" data-testid="google-tab-ideas-none">
+              {t(locale, K(extras ? "ideas.none" : "ideas.noRead"))}
+            </Box>
+          )}
+          <p className="text-[12px] text-ink-mute">{t(locale, K("ideas.recapLink.before"))} <Link href={`/business/${props.businessId}/growth`} className="font-semibold text-ink underline underline-offset-2">{t(locale, K("ideas.recapLink.link"))}</Link></p>
+        </div>
       )}
     </SectionHead>
   );
@@ -1151,6 +1383,7 @@ function NextSection({ sample, hasData = false, categories, booking = null }: { 
 const EDITOR_ROW: Record<Editor, string> = {
   holiday: "holiday",
   services: "services",
+  photos: "photos",
   booking_steps: "booking",
   booking_partner: "booking",
   hours: "hours",
@@ -1216,22 +1449,53 @@ function ListingSection(props: GoogleProfileTabProps) {
   const counts = listingCounts(groups);
   const live = useLiveValues(props.businessId);
   const [open, setOpen] = useState<Editor | null>(null);
-  const opened = useRef(false);
-  // ?tab=google#edit-hours (the "Fix it with PostScore" links) opens that editor.
+  // "#edit-services?add=Balayage": section 5's missing services, pre-filled.
+  const [prefill, setPrefill] = useState<string[]>([]);
+  // "#edit-hours?use=website|own": the hours-mismatch chooser's hours, pre-filled.
+  const [startHours, setStartHours] = useState<StartHours>(null);
+  // "#compare-hours" (the Overview's "Compare your hours"): the Hours row's compare panel.
+  const [compareRequest, setCompareRequest] = useState(0);
+  const businessId = props.businessId;
+  // ?tab=google#edit-hours (the "Fix it with PostScore" links, the levers,
+  // section 5's ideas) opens that row's editor — on load and while on the
+  // page. No "run once" guard: under StrictMode (next dev) the effect runs,
+  // cleans up and runs again, and a guard left the page with no listener.
   useEffect(() => {
-    if (opened.current) return;
-    opened.current = true;
     const openFromHash = () => {
+      if (window.location.hash.startsWith("#compare-hours")) {
+        setCompareRequest((n) => n + 1);
+        requestAnimationFrame(() => document.getElementById("listing-hours")?.scrollIntoView({ block: "start" }));
+        return;
+      }
       const editor = editorFromHash(window.location.hash);
       if (!editor) return;
       setOpen(editor);
+      setPrefill(prefillFromHash(window.location.hash));
+      setStartHours(
+        startHoursFromHash(window.location.hash, () => {
+          try {
+            return window.sessionStorage.getItem(ownHoursKey(businessId));
+          } catch {
+            return null;
+          }
+        })
+      );
       requestAnimationFrame(() => document.getElementById(`listing-${EDITOR_ROW[editor]}`)?.scrollIntoView({ block: "start" }));
     };
+    // A link to the hash the address bar already shows fires no
+    // "hashchange" (the second click on "Add photos"): open it from the click.
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest?.("a[href^='#edit-'], a[href^='#compare-']") as HTMLAnchorElement | null;
+      if (a && a.getAttribute("href") === window.location.hash) openFromHash();
+    };
     openFromHash();
-    // Links elsewhere on the tab ("Not tracked yet: …") open their editor too.
     window.addEventListener("hashchange", openFromHash);
-    return () => window.removeEventListener("hashchange", openFromHash);
-  }, []);
+    document.addEventListener("click", onClick);
+    return () => {
+      window.removeEventListener("hashchange", openFromHash);
+      document.removeEventListener("click", onClick);
+    };
+  }, [businessId]);
   const ago = syncedAgo(props.replyCounts?.checkedAt ?? props.lastScanAt, Date.now());
   const agoText = ago ? t(locale, K(ago.unit === "days" && ago.count === 1 ? "ago.daysOne" : `ago.${ago.unit}`), { count: ago.count }) : null;
   const beta = GOOGLE_WRITES_FOR_EVERYONE ? "" : ` · ${t(locale, "dashboard.fixWithPostScore.beta")}`;
@@ -1253,7 +1517,7 @@ function ListingSection(props: GoogleProfileTabProps) {
             <b className="text-amber">{t(locale, K("count.improve"), { count: counts.improve })}</b>
           </span>
           {props.listing.googleMapsUri && /^https:\/\//.test(props.listing.googleMapsUri) && (
-            <a href={props.listing.googleMapsUri} target="_blank" rel="noopener noreferrer" className="inline-flex h-[30px] items-center whitespace-nowrap rounded-lg border border-paper-line bg-white px-2.5 text-[12.5px] font-semibold text-ink">
+            <a href={props.listing.googleMapsUri} target="_blank" rel="noopener noreferrer" className="inline-flex h-8 items-center whitespace-nowrap rounded-lg border border-paper-line bg-white px-2.5 text-[12.5px] font-semibold text-ink">
               {t(locale, K("strip.open"))}
             </a>
           )}
@@ -1262,7 +1526,7 @@ function ListingSection(props: GoogleProfileTabProps) {
           <div key={g.id}>
             <div className={cn("px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-mute", CREAM, gi > 0 && "border-t border-paper-line/70")}>{t(locale, K(`group.${g.id}`))}</div>
             {g.rows.map((row) => (
-              <ListingRowView key={row.id} row={row} props={props} live={live} open={row.action?.kind === "editor" && open === row.action.editor} onToggle={(e) => setOpen((cur) => (cur === e ? null : e))} />
+              <ListingRowView key={row.id} row={row} props={props} live={live} prefill={prefill} startHours={startHours} compareRequest={compareRequest} open={row.action?.kind === "editor" && open === row.action.editor} onToggle={(e) => setOpen((cur) => (cur === e ? null : e))} />
             ))}
           </div>
         ))}
@@ -1311,7 +1575,7 @@ export function rowText(row: ListingRow, locale: Locale, extra: { replyNote?: st
       else if (v.kind === "notOffered") value = t(locale, K("row.booking.notOffered"));
       else if (row.id === "description") {
         value = `“${v.value.length > 90 ? `${v.value.slice(0, 90).trimEnd()}…` : v.value}”`;
-        note = t(locale, K("row.description.chars"), { count: v.value.length });
+        note = v.value.trim().length < SHORT_DESCRIPTION ? t(locale, K("row.description.short"), { count: v.value.length }) : t(locale, K("row.description.chars"), { count: v.value.length });
       } else value = v.value.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
       break;
     }
@@ -1352,6 +1616,13 @@ export function rowText(row: ListingRow, locale: Locale, extra: { replyNote?: st
       break;
     }
     case "customerDetails":
+      if (row.meta?.open !== undefined) {
+        const mark = (part: "payment" | "parking" | "accessibility") => `${t(locale, `dashboard.gbpEdit.groupShort.${part}` as MessageKey)} ${row.meta![part] === "1" ? "✓" : "✗"}`;
+        const open = Number(row.meta.open);
+        value = [mark("payment"), mark("parking"), mark("accessibility")].join(" · ");
+        note = [t(locale, K("row.customerDetails.scored")), ...(open > 0 ? [t(locale, K(open === 1 ? "row.customerDetails.moreOne" : "row.customerDetails.more"), { count: open })] : [])].join(" · ");
+        break;
+      }
       value = t(locale, K("row.customerDetails.value"));
       break;
     case "photos":
@@ -1389,13 +1660,17 @@ export function rowText(row: ListingRow, locale: Locale, extra: { replyNote?: st
               ? t(locale, K("action.turnOnBooking"))
               : row.action.editor === "services"
               ? t(locale, K("action.addServices"))
+              : row.action.editor === "photos"
+              ? t(locale, K("action.addPhotos"))
+              : row.action.editor === "description" && row.meta?.short === "1"
+              ? t(locale, K("action.writeWithPostAI"))
               : row.action.editor === "holiday"
               ? t(locale, K(row.status === "ok" ? "action.edit" : "action.setHolidays"))
               : t(locale, K(row.id === "messaging" ? "action.howToInline" : row.id === "customerDetails" ? "action.update" : row.status === "bad" ? "action.fix" : "action.edit"));
   return { label, value, note, action };
 }
 
-function ListingRowView({ row, props, live, open, onToggle }: { row: ListingRow; props: GoogleProfileTabProps; live: LiveValues; open: boolean; onToggle: (e: Editor) => void }) {
+function ListingRowView({ row, props, live, open, onToggle, prefill, startHours = null, compareRequest = 0 }: { row: ListingRow; props: GoogleProfileTabProps; live: LiveValues; open: boolean; onToggle: (e: Editor) => void; prefill?: string[]; startHours?: StartHours; compareRequest?: number }) {
   const locale = useLocale();
   const gbpEdit = useGbpEdit();
   const replyNote =
@@ -1409,7 +1684,16 @@ function ListingRowView({ row, props, live, open, onToggle }: { row: ListingRow;
   const loading = (row.id === "description" || (row.id === "booking" && !row.meta)) && live[row.id].kind === "loading";
   const dot = STATUS_DOT[row.status];
   const strong = row.status === "bad";
-  const actionCls = cn("inline-flex h-[30px] items-center whitespace-nowrap rounded-lg border px-2.5 text-[12.5px] font-semibold", strong ? "border-ink bg-ink text-white" : "border-paper-line text-ink hover:border-ink-soft");
+  const actionBase = "inline-flex h-8 items-center whitespace-nowrap rounded-lg border px-2.5 text-[12.5px] font-semibold";
+  const actionCls = cn(actionBase, strong ? "border-ink bg-ink text-white" : "border-paper-line text-ink hover:border-ink-soft");
+  const plainCls = cn(actionBase, "border-paper-line bg-white text-ink hover:border-ink-soft");
+  const primaryCls = cn(actionBase, "border-ink bg-ink text-white");
+  // Hours: "Compare" (the website and Google show different hours) beside "Edit".
+  const [compareOpen, setCompareOpen] = useState(false);
+  const compare = row.id === "hours" && props.hoursMismatch === true;
+  useEffect(() => {
+    if (compareRequest > 0 && compare) setCompareOpen(true);
+  }, [compareRequest, compare]);
   return (
     <div id={`listing-${row.id}`} className="scroll-mt-24 border-t border-paper-line/70" data-testid={`listing-row-${row.id}`} data-status={row.status}>
       <div className="grid min-h-[44px] grid-cols-[24px_1fr_auto] items-center gap-x-3 gap-y-0.5 px-3 py-[7px] text-[13px] sm:grid-cols-[24px_160px_1fr_auto]">
@@ -1421,12 +1705,19 @@ function ListingRowView({ row, props, live, open, onToggle }: { row: ListingRow;
           {loading ? (
             <span data-testid={`listing-loading-${row.id}`} aria-label={t(locale, K("row.loading"))} className="block h-3.5 w-48 max-w-full animate-pulse rounded bg-paper-deep motion-reduce:animate-none" />
           ) : (
-            <span className="break-words">{text.value}</span>
+            <span className="break-words" title={row.id === "photos" && row.meta?.kind === "read" ? t(locale, K("row.photos.tooltip")) : undefined}>
+              {text.value}
+            </span>
           )}
           {text.note && <small className="mt-0.5 block text-[12px] text-ink-mute line-clamp-2">{text.note}</small>}
         </span>
-        {/* Clear of the floating "Ask PostAI" button at the bottom-right. */}
-        <span className="col-start-3 row-start-1 mr-10 sm:col-start-auto sm:row-start-auto sm:mr-[108px]">
+        {/* Flush with the card's right padding: every row's buttons share one right edge. */}
+        <span className="col-start-3 row-start-1 flex flex-wrap items-center justify-end gap-1.5 sm:col-start-auto sm:row-start-auto">
+          {compare && (
+            <button type="button" className={primaryCls} aria-expanded={compareOpen} data-testid="listing-action-compare" onClick={() => setCompareOpen(!compareOpen)}>
+              {t(locale, compareOpen ? "dashboard.hoursChooser.hideShort" : "dashboard.hoursChooser.compareShort")}
+            </button>
+          )}
           {row.action?.kind === "link" &&
             (row.action.external ? (
               <a href={row.action.href} target="_blank" rel="noopener noreferrer" className={cn(actionCls, "inline-flex items-center gap-1")}>
@@ -1439,15 +1730,33 @@ function ListingRowView({ row, props, live, open, onToggle }: { row: ListingRow;
               </Link>
             ))}
           {row.action?.kind === "editor" && (
-            <button type="button" className={actionCls} aria-expanded={open} data-testid={`listing-action-${row.id}`} onClick={() => onToggle((row.action as { editor: Editor }).editor)}>
-              {open ? t(locale, K("action.close")) : text.action}
+            <button
+              type="button"
+              className={compare ? plainCls : actionCls}
+              aria-expanded={open}
+              data-testid={`listing-action-${row.id}`}
+              onClick={() => onToggle((row.action as { editor: Editor }).editor)}
+            >
+              {open ? t(locale, K("action.close")) : compare ? t(locale, K("action.edit")) : text.action}
             </button>
           )}
         </span>
       </div>
       {open && row.action?.kind === "editor" && (
         <div className="border-t border-[color:color-mix(in_srgb,var(--color-brass)_18%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_5%,white)] px-3 pb-3 pt-2.5 sm:pl-[51px]" data-testid={`listing-editor-${row.id}`}>
-          <RowEditor editor={row.action.editor} businessId={props.businessId} suggested={gbpEdit.websiteSuggested ?? null} booking={props.booking ?? null} />
+          <RowEditor editor={row.action.editor} businessId={props.businessId} suggested={gbpEdit.websiteSuggested ?? null} booking={props.booking ?? null} prefill={prefill} startHours={startHours} />
+        </div>
+      )}
+      {/* "Your website and Google listing show different hours": the shared panel, from the row's "Compare". */}
+      {compare && compareOpen && !open && (
+        <div className="px-3 pb-2.5 sm:pl-[51px]" data-testid="listing-compare-hours">
+          <HoursComparePanel businessId={props.businessId} onTab />
+        </div>
+      )}
+      {/* After a choice, once a scan shows they match: "Hours match … ✓". */}
+      {row.id === "hours" && props.hoursMismatch === false && !open && (
+        <div className="px-3 pb-2 sm:pl-[51px] empty:hidden">
+          <HoursMismatchChooser businessId={props.businessId} mismatch={false} onTab />
         </div>
       )}
     </div>
@@ -1476,15 +1785,16 @@ function PartnerBookingPanel({ link, tracking }: { link: { uri: string; provider
 
 /** The existing editors, unchanged: their own preview → approve → read
  * back → undo, live-places lock and practice mode. */
-function RowEditor({ editor, businessId, suggested, booking, prefill }: { editor: Editor; businessId: string; suggested: string | null; booking: BookingState | null; prefill?: string[] }) {
+function RowEditor({ editor, businessId, suggested, booking, prefill, startHours = null }: { editor: Editor; businessId: string; suggested: string | null; booking: BookingState | null; prefill?: string[]; startHours?: StartHours }) {
   if (editor === "holiday") return <HolidayHoursEditor businessId={businessId} />;
   if (editor === "services") return <ServicesEditor businessId={businessId} prefill={prefill} />;
+  if (editor === "photos") return <PhotoUpload businessId={businessId} />;
   if (editor === "booking_partner" && booking && booking.link.kind === "partner") return <PartnerBookingPanel link={booking.link} tracking={booking.tracking} />;
   if (editor === "booking_steps" && booking && booking.tracking.kind === "turn_on") return <BookingStepsPanel businessId={businessId} provider={booking.tracking.provider} partnerId={booking.tracking.partnerId} still={booking.tracking.still} />;
-  if (editor === "hours" || editor === "phone" || editor === "description") return <ProfileEditsOnGoogle businessId={businessId} fields={[editor]} orderLink={false} intro={false} />;
+  if (editor === "hours" || editor === "phone" || editor === "description") return <ProfileEditsOnGoogle businessId={businessId} fields={[editor]} orderLink={false} intro={false} startHours={editor === "hours" ? startHours : null} />;
   if (editor === "booking") return <ProfileEditsOnGoogle businessId={businessId} fields={[]} orderLink intro={false} />;
   if (editor === "website") return <WebsiteLinkFix businessId={businessId} suggested={suggested} autoLoad />;
-  if (editor === "customer_details") return <CustomerDetailsGoogleEdit businessId={businessId} autoLoad />;
+  if (editor === "customer_details") return <CustomerDetailsGoogleEdit businessId={businessId} autoLoad openEditing />;
   return <GbpMessagingStep on={null} />;
 }
 
@@ -1496,29 +1806,159 @@ const GOOGLE_PROFILE_URL = "https://business.google.com/";
 const SMALL_BTN = "inline-flex h-[26px] items-center rounded-md border px-2.5 text-[12px] font-semibold disabled:opacity-60";
 
 /** Red banner at the top of the tab while Google's own edits are open. */
-function GoogleEditsBanner({ saved }: { saved: GoogleTabSaved | null }) {
+/** The banner at the top of the tab: the fields Google changed (never one
+ * it only filled in that matches our scan), amber with "I know, that's
+ * right" / "Review" — red with "Review" only for the name, the address or a
+ * closed listing. */
+export function GoogleEditsBanner({ businessId, saved, scan }: { businessId: string; saved: GoogleTabSaved | null; scan: { website?: string | null; phone?: string | null } }) {
   const locale = useLocale();
-  const open = saved?.googleEdits?.open ?? [];
-  if (open.length === 0) return null;
-  const fields = open.map((e) => t(locale, K(`protect.field.${e.field}`)).toLowerCase()).join(", ");
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const edits = bannerEdits(saved?.googleEdits?.open ?? [], scan);
+  const status = saved?.businessStatus ?? null;
+  const closed = status === "CLOSED_TEMPORARILY" || status === "CLOSED_PERMANENTLY";
+  if (hidden || (edits.length === 0 && !closed)) return null;
+  const serious = bannerSerious(edits.map((e) => e.field), status);
+  const latest = edits.map((e) => e.detected_at).sort().pop();
+  const date = latest ? formatShortDate(latest, locale).replace(/,? \d{4}$/, "") : "";
+  const names = edits.map((e) => t(locale, K(`banner.field.${e.field}`)));
+  const headline =
+    edits.length === 0
+      ? t(locale, K(status === "CLOSED_PERMANENTLY" ? "banner.closed" : "banner.closedTemp"))
+      : edits.length === 1
+        ? t(locale, K(PLURAL_FIELDS.includes(edits[0].field) ? "banner.onePlural" : "banner.one"), { field: names[0], date })
+        : t(locale, K("banner.many"), { fields: joinFields(names, t(locale, K("banner.and"))), date });
   return (
-    <a href="#others" role="alert" data-testid="google-edits-banner" className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-red/30 bg-[color:color-mix(in_srgb,var(--color-red)_8%,white)] px-3.5 py-2.5 text-[13px] text-red">
-      <b>{t(locale, K("banner.changed"), { fields })}</b>
-      <span className="font-semibold underline underline-offset-2">{t(locale, K("banner.review"))}</span>
-    </a>
+    <div
+      role={serious ? "alert" : "status"}
+      data-testid="google-edits-banner"
+      data-tone={serious ? "red" : "amber"}
+      className={cn(
+        "mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border px-3.5 py-2.5 text-[13px]",
+        serious ? "border-red/30 bg-[color:color-mix(in_srgb,var(--color-red)_8%,white)] text-red" : "border-amber/30 bg-[color:color-mix(in_srgb,var(--color-amber)_10%,white)] text-ink"
+      )}
+    >
+      <div className="min-w-0">
+        <b className={serious ? "text-red" : "text-ink"}>{headline}</b>
+        <p className="text-[12px] text-ink-mute">{t(locale, K("banner.why"))}</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        {!serious && (
+          <BannerAccept
+            businessId={businessId}
+            ids={edits.map((e) => e.id)}
+            busy={busy}
+            onDone={() => {
+              setHidden(true);
+              router.refresh();
+            }}
+            setBusy={setBusy}
+          />
+        )}
+        <a href="#others" className={cn("inline-flex h-[30px] items-center rounded-lg border px-3 text-[12.5px] font-semibold", serious ? "border-red bg-red text-white" : "border-ink bg-white text-ink")} data-testid="banner-review">
+          {t(locale, K("banner.review"))}
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function BannerAccept({ businessId, ids, busy, onDone, setBusy }: { businessId: string; ids: string[]; busy: boolean; onDone: () => void; setBusy: (b: boolean) => void }) {
+  const locale = useLocale();
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        const r = await keepAllGoogleVersions(businessId, ids).catch(() => null);
+        setBusy(false);
+        if (r?.status === "ok") onDone();
+      }}
+      className="inline-flex h-[30px] items-center rounded-lg border border-ink bg-ink px-3 text-[12.5px] font-semibold text-paper disabled:opacity-60"
+      data-testid="banner-accept"
+    >
+      {t(locale, K("banner.accept"))}
+    </button>
   );
 }
 
 const quoted = (v: string | null, locale: Locale) => (v ? `“${v}”` : t(locale, K("others.emptyValue")));
 
-function GoogleEditItem({ businessId, edit, canEdit, practice }: { businessId: string; edit: GoogleEditRow; canEdit: boolean; practice: boolean }) {
+/** One of Google's own edits: Google's version vs the owner's, side by side
+ * (components/gbp/CompareVersions.tsx). "Keep Google's version" changes
+ * nothing on Google; "Keep your version" sends it back through the safety
+ * flow when writes are allowed, otherwise shows the steps on Google. */
+export function GoogleEditItem({ businessId, edit, canEdit, practice, website = null }: { businessId: string; edit: GoogleEditRow; canEdit: boolean; practice: boolean; website?: GoogleProfileTabProps["websiteHours"] }) {
+  // Hours: Google's version vs the WEBSITE's (last scan), when the site's hours could be read.
+  if (edit.field === "hours" && website?.week) return <GoogleHoursVsWebsite businessId={businessId} edit={edit} canEdit={canEdit} website={{ ...website, week: website.week }} />;
+  return <GoogleEditVsOwner businessId={businessId} edit={edit} canEdit={canEdit} practice={practice} noSiteHours={edit.field === "hours"} />;
+}
+
+/** Section 6's hours card: Google's hours vs the website's, day by day.
+ * "Keep Google's version" → how to update the website (unless it already
+ * matches); "Keep website's version" → the hours editor with the website's
+ * hours (writes allowed) or the steps on Google. */
+function GoogleHoursVsWebsite({ businessId, edit, canEdit, website }: { businessId: string; edit: GoogleEditRow; canEdit: boolean; website: NonNullable<GoogleProfileTabProps["websiteHours"]> & { week: WeeklyHours } }) {
   const locale = useLocale();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState<"choose" | "website" | "google">("choose");
+  const google = codedToWeek(edit.google_value);
+  const owner = codedToWeek(edit.owner_value);
+  const siteMatchesGoogle = !!google && sameWeek(google, website.week);
+  const ownerDiffers = !!owner && !(google && sameWeek(owner, google)) && !sameWeek(owner, website.week);
+  const resolved = edit.resolution === "kept" || edit.resolution === "changed_back";
+  async function keepGoogle() {
+    setStage(siteMatchesGoogle ? "choose" : "website");
+    setBusy(true);
+    const r = await keepGoogleVersion(businessId, edit.id).catch(() => ({ status: "failed" }) as const);
+    setBusy(false);
+    if (r.status === "ok") router.refresh();
+  }
+  async function reopen() {
+    setStage("choose");
+    const r = await reopenGoogleEditAction(businessId, edit.id).catch(() => ({ status: "failed" }) as const);
+    if (r.status === "ok") router.refresh();
+  }
+  return (
+    <div className="border-t border-paper-line/60 py-2.5 first:border-t-0" data-testid="google-edit-hours">
+      <CompareVersions
+        question={t(locale, K("others.question"), { field: t(locale, K("protect.field.hours")).toLowerCase() })}
+        versions={versionsOfHours(google, website.week, locale)}
+        mineLabel={t(locale, "dashboard.compareVersions.website")}
+        mineIcon="globe"
+        mineFooter={
+          ownerDiffers ? (
+            <p className="text-[11.5px] text-ink-mute" data-testid="you-entered">
+              {t(locale, K("others.youEntered"), { hours: shortWeek(owner, locale) })}
+            </p>
+          ) : null
+        }
+        googleButton={{ label: t(locale, K("others.keep")), note: t(locale, siteMatchesGoogle ? K("others.keepNote") : "dashboard.hoursChooser.keepGoogleNote"), onClick: keepGoogle, testId: "keep-google", disabled: busy }}
+        mineButton={{ label: t(locale, "dashboard.compareVersions.keepWebsite"), note: t(locale, canEdit ? "dashboard.hoursChooser.keepWebsiteNoteWrite" : "dashboard.hoursChooser.keepWebsiteNoteGuide"), onClick: () => setStage("google"), testId: "keep-website", primary: true, disabled: busy }}
+        chosen={resolved ? { text: t(locale, K("others.chosenGoogle")), at: edit.resolved_at ?? edit.detected_at, onChange: reopen } : stage === "google" ? { text: t(locale, "dashboard.hoursChooser.chosen.website"), at: new Date().toISOString(), onChange: () => setStage("choose") } : null}
+      >
+        {stage === "website" && <FixWebsite view={website} week={google} locale={locale} />}
+        {stage === "google" && <FixGoogle businessId={businessId} view={{ canEdit }} week={website.week} own={false} onTab />}
+      </CompareVersions>
+    </div>
+  );
+}
+
+function GoogleEditVsOwner({ businessId, edit, canEdit, practice, noSiteHours = false }: { businessId: string; edit: GoogleEditRow; canEdit: boolean; practice: boolean; noSiteHours?: boolean }) {
+  const locale = useLocale();
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState<"choose" | "confirm" | "guide">("choose");
   const [msg, setMsg] = useState<{ key: string; tone: "ok" | "warn" | "bad" } | null>(null);
-  const [guide, setGuide] = useState(false);
   const label = t(locale, K(`protect.field.${edit.field}`));
-  const inApp = canChangeBack(edit.field) && canEdit;
+  const versions = versionsOfEdit(edit.field, edit.google_value, edit.owner_value, locale);
+  const resolved = edit.resolution === "kept" || edit.resolution === "changed_back";
+  // Google filled in something the owner left empty: only "Change on Google" (sending "nothing" would clear it).
+  const added = !edit.owner_value;
+  const inApp = !added && canChangeBack(edit.field) && canEdit;
   async function keep() {
     setBusy(true);
     const r = await keepGoogleVersion(businessId, edit.id).catch(() => ({ status: "failed" }) as const);
@@ -1526,51 +1966,101 @@ function GoogleEditItem({ businessId, edit, canEdit, practice }: { businessId: s
     if (r.status === "ok") router.refresh();
     else setMsg({ key: "others.actionFailed", tone: "bad" });
   }
-  async function changeBack() {
-    if (!inApp) return setGuide(true);
+  async function sendBack() {
     setBusy(true);
     const r = await changeGoogleEditBack(businessId, edit.id, practice ? "accept" : null).catch(() => ({ status: "error", error: "failed" }) as ChangeBackResult);
     setBusy(false);
     if (r.status === "sent" || r.status === "pending_review" || r.status === "no_change") {
-      setMsg({ key: r.status === "sent" ? "others.back.sent" : r.status === "pending_review" ? "others.back.pending" : "others.back.noChange", tone: r.status === "sent" || r.status === "no_change" ? "ok" : "warn" });
+      setMsg({ key: r.status === "sent" ? "others.back.sent" : r.status === "pending_review" ? "others.back.pending" : "others.back.noChange", tone: r.status === "pending_review" ? "warn" : "ok" });
       router.refresh();
-    } else if (r.status === "editing_off" || r.status === "on_google") setGuide(true);
+    } else if (r.status === "editing_off" || r.status === "on_google" || r.status === "google_added") setStage("guide");
     else setMsg({ key: "others.actionFailed", tone: "bad" });
   }
+  async function reopen() {
+    if (edit.resolution === "changed_back") {
+      document.getElementById("google-tab-made")?.scrollIntoView({ block: "start" });
+      return;
+    }
+    const r = await reopenGoogleEditAction(businessId, edit.id).catch(() => ({ status: "failed" }) as const);
+    if (r.status === "ok") router.refresh();
+  }
+  const mineLines = versions.kind === "days" ? versions.days.map((d) => `${d.label}: ${d.mine}`) : edit.owner_value ? [edit.owner_value] : [];
   return (
-    <div className="flex flex-col gap-1.5 border-t border-paper-line/60 py-2 text-[13px] first:border-t-0" data-testid={`google-edit-${edit.field}`}>
-      <p>
-        <b>{label}:</b> <span className="text-ink-mute line-through decoration-ink-mute/50">{quoted(edit.owner_value, locale)}</span> → <b className="text-red">{quoted(edit.google_value, locale)}</b>
-        <span className="text-ink-mute"> · {formatShortDate(edit.detected_at, locale)}</span>
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={busy} onClick={keep} className={cn(SMALL_BTN, "border-paper-line text-ink")} data-testid="keep-google">
-          {t(locale, K("others.keep"))}
-        </button>
-        <button type="button" disabled={busy} onClick={changeBack} className={cn(SMALL_BTN, "border-ink bg-ink text-paper")} data-testid="change-back">
-          {t(locale, K("others.changeBack"))}
-        </button>
-      </div>
-      {msg && (
-        <p role="status" className={cn("text-[12.5px]", msg.tone === "ok" ? "text-green" : msg.tone === "warn" ? "text-amber" : "text-red")}>
-          {t(locale, K(msg.key))}
-        </p>
-      )}
-      {guide && (
-        <div className="rounded-lg bg-paper p-2.5 text-[12.5px]" data-testid="change-back-guide">
-          <b>{t(locale, K("others.guide.title"))}</b>
-          {!canChangeBack(edit.field) && <p className="mt-0.5 text-ink-soft">{t(locale, K("others.guide.why"))}</p>}
-          <ol className="mt-1 list-decimal space-y-0.5 pl-5">
-            <li>{t(locale, K("others.guide.step1"))}</li>
-            <li>{t(locale, K("others.guide.step2"), { field: label })}</li>
-            <li>{edit.owner_value ? t(locale, K("others.guide.step3"), { value: edit.owner_value }) : t(locale, K("others.guide.step3Empty"))}</li>
-          </ol>
-          <a href={GOOGLE_PROFILE_URL} target="_blank" rel="noopener noreferrer" className={cn(SMALL_BTN, "mt-2 w-fit border-paper-line bg-white text-ink")}>
-            {t(locale, K("others.openOnGoogle"))}
-          </a>
-        </div>
-      )}
+    <div className="border-t border-paper-line/60 py-2.5 first:border-t-0" data-testid={`google-edit-${edit.field}`}>
+      <CompareVersions
+        question={t(locale, K("others.question"), { field: label.toLowerCase() })}
+        versions={versions}
+        mineLabel={t(locale, K("others.yourVersion"))}
+        mineFooter={noSiteHours ? <p className="text-[11.5px] text-ink-mute" data-testid="no-site-hours">{t(locale, K("others.noSiteHours"))}</p> : null}
+        googleButton={{ label: t(locale, K("others.keep")), note: t(locale, K("others.keepNote")), onClick: keep, testId: "keep-google", disabled: busy }}
+        mineButton={
+          added
+            ? { label: t(locale, K("others.changeOnGoogle")), note: t(locale, K("others.noteGuide")), onClick: () => setStage("guide"), testId: "change-back", primary: true, disabled: busy }
+            : { label: t(locale, K("others.keepMine")), note: t(locale, K(inApp ? "others.noteWrite" : "others.noteGuide")), onClick: () => setStage(inApp ? "confirm" : "guide"), testId: "change-back", primary: true, disabled: busy }
+        }
+        chosen={resolved ? { text: t(locale, K(edit.resolution === "kept" ? "others.chosenGoogle" : "others.chosenMine")), at: edit.resolved_at ?? edit.detected_at, onChange: reopen } : null}
+      >
+        {!resolved && stage === "confirm" && (
+          <div className="flex flex-col gap-1.5 rounded-lg bg-paper p-2.5 text-[12.5px]" data-testid="change-back-preview">
+            <b>{t(locale, K("others.previewTitle"), { field: label.toLowerCase() })}</b>
+            {versions.kind === "days" ? <HoursLines lines={mineLines} /> : <p className="text-[14px] font-semibold">{edit.owner_value}</p>}
+            <div className="flex flex-wrap gap-2">
+              <button type="button" disabled={busy} onClick={sendBack} className={cn(SMALL_BTN, "border-ink bg-ink text-paper")} data-testid="approve-change-back">
+                {t(locale, K("others.approve"))}
+              </button>
+              <button type="button" disabled={busy} onClick={() => setStage("choose")} className={cn(SMALL_BTN, "border-paper-line bg-white text-ink")}>
+                {t(locale, K("others.cancel"))}
+              </button>
+            </div>
+            <p className="text-ink-mute">{t(locale, K("others.previewNote"))}</p>
+          </div>
+        )}
+        {!resolved && stage === "guide" && (
+          <div className="rounded-lg bg-paper p-2.5 text-[12.5px]" data-testid="change-back-guide">
+            <b>{t(locale, K("others.guide.title"))}</b>
+            {!canChangeBack(edit.field) && <p className="mt-0.5 text-ink-soft">{t(locale, K("others.guide.why"))}</p>}
+            <ol className="mt-1 list-decimal space-y-0.5 pl-5">
+              <li>{t(locale, K("others.guide.step1"))}</li>
+              <li>{t(locale, K("others.guide.step2"), { field: label })}</li>
+              <li>{added ? t(locale, K("others.guide.step3Added")) : versions.kind === "days" ? t(locale, K("others.guide.step3Hours")) : t(locale, K("others.guide.step3"), { value: edit.owner_value ?? "" })}</li>
+            </ol>
+            {versions.kind === "days" && !added && <HoursLines lines={mineLines} />}
+            <div className="mt-2 flex flex-wrap gap-2">
+              <a href={GOOGLE_PROFILE_URL} target="_blank" rel="noopener noreferrer" className={cn(SMALL_BTN, "w-fit border-ink bg-ink text-paper")}>
+                {t(locale, K("others.openOnGoogle"))}
+              </a>
+              {!added && <CopyLines lines={mineLines} />}
+            </div>
+          </div>
+        )}
+        {msg && (
+          <p role="status" className={cn("text-[12.5px]", msg.tone === "ok" ? "text-green" : msg.tone === "warn" ? "text-amber" : "text-red")}>
+            {t(locale, K(msg.key))}
+          </p>
+        )}
+      </CompareVersions>
     </div>
+  );
+}
+
+function HoursLines({ lines }: { lines: string[] }) {
+  return (
+    <ul className="mt-1 text-[12.5px] text-ink">
+      {lines.map((l) => (
+        <li key={l}>{l}</li>
+      ))}
+    </ul>
+  );
+}
+
+function CopyLines({ lines }: { lines: string[] }) {
+  const locale = useLocale();
+  const [copied, setCopied] = useState(false);
+  if (lines.length === 0) return null;
+  return (
+    <button type="button" onClick={() => void navigator.clipboard?.writeText(lines.join("\n")).then(() => setCopied(true), () => undefined)} className={cn(SMALL_BTN, "border-paper-line bg-white text-ink")} data-testid="copy-value">
+      {t(locale, K(copied ? "others.copied" : "others.copy"))}
+    </button>
   );
 }
 
@@ -1603,6 +2093,7 @@ function madeValueText(v: MadeValue | null | undefined, locale: Locale): string 
   if (!v) return null;
   if ("text" in v) return v.text;
   if ("added" in v) return t(locale, K("made.added"), { list: v.added.join(", ") });
+  if ("photos" in v) return t(locale, K(v.photos === 1 ? "made.photosOne" : "made.photos"), { count: v.photos });
   return v.dates
     .map((d) => {
       const date = formatShortDate(`${d.date}T12:00:00Z`, locale, "UTC").replace(/,? \d{4}$/, "");
@@ -1629,10 +2120,15 @@ function MadeRow({ businessId, c, practice, canEdit }: { businessId: string; c: 
     <div className="flex flex-col border-t border-paper-line/60 py-2 text-[13px] first:border-t-0" data-testid="made-row">
       <div className="flex items-center justify-between gap-3">
         <span className="min-w-0 text-ink-soft">
+          {c.practice && (
+            <span className="mr-1.5 rounded-full bg-[color:color-mix(in_srgb,var(--color-amber)_14%,white)] px-1.5 py-0.5 text-[10.5px] font-bold text-amber" data-testid="made-practice">
+              {t(locale, K("made.practice"))}
+            </span>
+          )}
           <b className="text-ink">{t(locale, K(`made.kind.${c.kind}`))}</b>
           {value && <>: {value}</>} <span className="text-ink-mute">· {formatShortDate(c.at, locale)}</span>
         </span>
-        <span className={cn("flex shrink-0 items-center gap-2 whitespace-nowrap", c.status === "live" ? "font-semibold text-green" : c.status === "reviewing" || c.status === "undo" ? "text-amber" : c.status === "failed" ? "text-red" : "text-ink-mute")}>
+        <span className={cn("flex shrink-0 items-center gap-2 whitespace-nowrap", c.status === "live" ? "font-semibold text-green" : c.status === "reviewing" || c.status === "undo" || c.status === "held" ? "text-amber" : c.status === "failed" || c.status === "rejected" ? "text-red" : "text-ink-mute")}>
           {c.status === "undo" ? t(locale, K(c.daysLeft === 1 ? "made.status.undoOne" : "made.status.undo"), { count: c.daysLeft }) : t(locale, K(`made.status.${c.status}`))}
           {c.status === "undo" && canEdit && c.batchId && (
             <button type="button" disabled={state === "busy"} onClick={undo} className={cn(SMALL_BTN, "border-paper-line text-ink")} data-testid="made-undo">
@@ -1659,41 +2155,73 @@ function ProtectionSection(props: GoogleProfileTabProps) {
   const made = saved?.made ?? [];
   const shown = showAll ? made : made.slice(0, MADE_SHOWN);
   const li = "flex items-start justify-between gap-3 border-t border-paper-line/60 py-2 text-[13px] first:border-t-0";
+  // Open edits first, then the ones chosen in the last day (collapsed: "✓ You kept …").
+  const shownEdits = [...(edits?.open ?? []), ...(edits?.recent ?? []).filter((r) => !(edits?.open ?? []).some((o) => o.field === r.field))];
+  // Never "Unchanged" while a change is listed: between-scan changes + Google's open edits
+  // (not one Google only filled in that matches our scan — that's info only).
+  const scan = { website: props.listing.website, phone: props.listing.phone };
+  const realOpen = (edits?.open ?? []).filter((e) => !isInfoOnly(e, scan));
+  const openFields = realOpen.map((e) => (e.field === "title" ? "name" : e.field));
+  const watched = watchedSummary(others?.fields ?? [], realOpen.map((e) => e.field));
   return (
     <SectionHead n={6} id="protection" title={t(locale, K("s6.title"))} meta={t(locale, K("s6.meta"))}>
       <div className="mt-3.5 grid gap-4 sm:grid-cols-2">
-        <Box className="scroll-mt-24 p-3.5" id="others" data-testid="google-tab-others">
+        <Box className={cn("scroll-mt-24 p-3.5", shownEdits.length > 0 && "sm:col-span-2")} id="others" data-testid="google-tab-others">
           <Eyebrow>{t(locale, K("others.title"))}</Eyebrow>
           <div className="mt-2">
-            <div className={cn(li, edits && edits.open.length > 0 && "flex-col items-stretch")}>
+            <div className={cn(li, shownEdits.length > 0 && "flex-col items-stretch")}>
               <span className="text-ink-soft">{t(locale, K("others.suggested"))}</span>
               {!edits || !edits.available ? (
                 <span className="text-ink-mute">{t(locale, K("others.unknown"))}</span>
-              ) : edits.open.length === 0 ? (
+              ) : shownEdits.length === 0 ? (
                 <b className="text-green">{t(locale, K("others.none"))} ✓</b>
               ) : (
                 <div data-testid="google-edits-list">
-                  {edits.open.map((e) => (
-                    <GoogleEditItem key={e.id} businessId={props.businessId} edit={e} canEdit={canEdit} practice={props.practice} />
-                  ))}
+                  {shownEdits.map((e) =>
+                    isInfoOnly(e, scan) ? (
+                      // Google filled in what the owner left empty, and it matches our scan: info only.
+                      <p key={e.id} className="border-t border-paper-line/60 py-2 text-[13px] first:border-t-0" data-testid={`google-added-${e.field}`}>
+                        <b>{t(locale, K(`protect.field.${e.field}`))}:</b> {e.google_value} <span className="text-ink-mute">· {t(locale, K("others.addedByGoogle"))}</span> <b className="text-green">{t(locale, K("others.looksRight"))} ✓</b>
+                      </p>
+                    ) : (
+                      <GoogleEditItem key={e.id} businessId={props.businessId} edit={e} canEdit={canEdit} practice={props.practice} website={props.websiteHours ?? null} />
+                    )
+                  )}
                 </div>
               )}
             </div>
-            <div className={cn(li, others && others.fields.length > 0 && "flex-col items-stretch gap-1")}>
+            <div className={cn(li, watched.length > 0 && "flex-col items-stretch gap-1")}>
               <span className="text-ink-soft">{t(locale, K("others.fields"))}</span>
-              {others === null ? (
+              {others === null && watched.length === 0 ? (
                 <span className="text-ink-mute">{t(locale, K("others.unknownScan"))}</span>
-              ) : others.fields.length === 0 ? (
+              ) : watched.length === 0 ? (
                 <b className="text-green">{t(locale, K("others.unchanged"))} ✓</b>
               ) : (
-                <ul className="space-y-0.5" data-testid="google-tab-others-changed">
-                  {(others.changes ?? others.fields.map((field) => ({ field, from: null, to: null }))).map((ch) => (
-                    <li key={ch.field} className="text-amber">
-                      <b>{t(locale, K(`protect.field.${ch.field}`))}:</b> {ch.from || ch.to ? <>{quoted(ch.from, locale)} → {quoted(ch.to, locale)}</> : t(locale, K("others.changedShort"))}
-                      {others.at && <span className="text-ink-mute"> · {formatShortDate(others.at, locale)}</span>}
-                    </li>
-                  ))}
-                </ul>
+                <div data-testid="google-tab-others-changed">
+                  <b className="text-amber" data-testid="watched-summary">
+                    {t(locale, K("others.changedCount"), { count: watched.length, fields: watched.map((f) => t(locale, K(`protect.field.${f}`)).toLowerCase()).join(", ") })}
+                  </b>
+                  <ul className="mt-0.5 space-y-0.5">
+                    {watched.map((f) => {
+                      const ch = others?.changes?.find((c) => c.field === f);
+                      return (
+                        <li key={f} className="text-ink-soft">
+                          <b className="text-ink">{t(locale, K(`protect.field.${f}`))}:</b>{" "}
+                          {ch && (ch.from || ch.to) ? (
+                            <>
+                              {quoted(ch.from, locale)} → {quoted(ch.to, locale)}
+                              {others?.at && <span className="text-ink-mute"> · {formatShortDate(others.at, locale)}</span>}
+                            </>
+                          ) : openFields.includes(f) ? (
+                            t(locale, K("others.changedByGoogle"))
+                          ) : (
+                            t(locale, K("others.changedShort"))
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
               )}
             </div>
             <div className={li}>

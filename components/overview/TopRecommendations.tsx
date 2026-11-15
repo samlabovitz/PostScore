@@ -13,6 +13,8 @@ import { ANCHOR_HIGHLIGHT_EVENT } from "@/components/layout/AnchorHighlight";
 import { HIGH_PRIORITY_POINTS, MEDIUM_PRIORITY_POINTS, type Priority, type Recommendation } from "@/lib/overviewTiles";
 import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { GOOGLE_MISMATCH_CHECK_ID } from "@/lib/actionPlan";
+import { HoursMismatchChooser } from "@/components/hours/HoursMismatchChooser";
 
 function PriorityTag({ priority }: { priority: Priority }) {
   const locale = useLocale();
@@ -140,6 +142,7 @@ export function TopRecommendations({ businessId, recommendations }: { businessId
                   >
                     {rec.linkLabel ? t(locale, rec.linkLabel) : t(locale, "dashboard.overview.recs.seeCheck")}
                   </Link>
+                  {rec.source.kind === "task" && rec.source.task.checkId === GOOGLE_MISMATCH_CHECK_ID && (rec.source.task.mismatchFields ?? []).includes("hours") && <HoursMismatchChooser businessId={businessId} />}
                 </div>
               </li>
             ))}

@@ -253,10 +253,12 @@ describe("the Website link check: change the link any time on Premium + Google c
     expect(linkRow(working, { premium: false, connected: false })).not.toContain("website-link-fix");
   });
 
-  test("a missing link: the steps on every plan, the one-click fix on Premium + connected", () => {
+  test("a missing link: ONE \"Fix your website link\" button — the Google Profile tab's editor on Premium + connected, the fix page otherwise", () => {
     const missing = { ...working, website: null } as unknown as BusinessScoringRow;
-    expect(linkRow(missing, { premium: false, connected: false })).toContain("Fix it on Google yourself (about 2 minutes)");
-    expect(linkRow(missing, { premium: true, connected: true })).toContain("Update website on Google");
+    expect(linkRow(missing, { premium: false, connected: false })).toContain("Fix your website link →");
+    const premium = linkRow(missing, { premium: true, connected: true });
+    expect(premium).toContain("Fix your website link →");
+    expect(premium).toContain("growth?tab=google#edit-website-link");
   });
 
   test("opening it on a working link starts from today's link, to edit (same checks, preview, approve, read-back and undo)", () => {

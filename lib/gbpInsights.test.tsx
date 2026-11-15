@@ -425,20 +425,23 @@ describe("the tab: real numbers replace the empty states", () => {
     expect(set).toContain("You matched your best month. Keep the levers going.");
   });
 
-  test("section 2: “Who saw you” with the year-over-year pill, devices with % adding to 100, the takeaway, which days they call", () => {
+  test("section 2: “Who saw you” as a table vs last year, devices with % adding to 100, which days they call", () => {
     const html = render({ insights: REAL });
     const words = text(html);
-    expect(words).toMatch(/Who saw you May–Oct 2026 [\d,]+ people viewed your listing in the last 6 months/);
-    expect(html).toContain('data-testid="google-tab-yoy" data-dir="down"');
-    expect(words).toMatch(/▼ [\d.]+% vs the same months last year/);
+    expect(words).toMatch(/Who saw you May–Oct 2026 vs May–Oct 2025/);
+    expect(html).toContain('data-testid="google-tab-who-table"');
+    expect(words).not.toContain("people viewed your listing");
+    expect(words).toMatch(/Views [\d,]+ [\d,]+ ▼ \d+%/);
     expect(words).toContain("Counted the way Google counts views.");
     const percents = Array.from(html.matchAll(/data-testid="google-tab-device-[a-zA-Z]+"[\s\S]*?· (\d+)%/g)).map((m) => Number(m[1]));
     expect(percents).toHaveLength(4);
     expect(percents.reduce((a, b) => a + b, 0)).toBe(100);
-    expect(words).toMatch(/\d+% found you on a phone\. Make sure tap-to-call and your booking link work on mobile\./);
+    expect(words).toMatch(/\d+% on a phone/);
     expect(words).toContain("Most calls come midweek, so answer the phone or set voicemail with your booking link.");
-    // Without last year's months: no pill.
-    expect(render({ insights: REAL.slice(-6) })).not.toContain("google-tab-yoy");
+    // Without last year's months: "—" and "Not enough history", no takeaway.
+    const short = text(render({ insights: REAL.slice(-6) }));
+    expect(short).toMatch(/Views [\d,]+ — Not enough history/);
+    expect(short).not.toContain("than last year");
   });
 
   test("Phase B: section 2 — no “Where they saw you”; left: Who saw you then Which days they call; right: Devices; every card says its period; devices add up to the Who saw you total", () => {
@@ -450,13 +453,13 @@ describe("the tab: real numbers replace the empty states", () => {
     expect(at("google-tab-who")).toBeLessThan(at("google-tab-days"));
     expect(at("google-tab-days")).toBeLessThan(at("google-tab-devices"));
     // Left column holds who + days; the right column is the devices card at full height.
-    expect(html).toMatch(/<div class="flex flex-col gap-3"><div class="rounded-xl border border-paper-line p-3" data-testid="google-tab-who">/);
-    expect(html).toMatch(/class="rounded-xl border border-paper-line p-3 h-full" data-testid="google-tab-devices"/);
+    expect(html).toMatch(/<div class="flex flex-col gap-3[^"]*"><div class="rounded-xl border border-paper-line p-3" data-testid="google-tab-who">/);
+    expect(html).toMatch(/class="flex flex-col rounded-xl border border-paper-line p-3 h-full" data-testid="google-tab-devices"/);
     // Periods: the funnel's month; the rest the real months ("May–Oct 2026").
     expect(words).toMatch(/From views to customers October 2026/);
     for (const title of ["Who saw you", "Which days they call", "Devices and platforms", "Interactions by month"]) expect(words).toMatch(new RegExp(`${title} May–Oct 2026`));
     // The four device rows add up to the Who saw you total.
-    const total = Number(words.match(/Who saw you May–Oct 2026 ([\d,]+) people/)![1].replace(/,/g, ""));
+    const total = Number(words.match(/Views ([\d,]+) /)![1].replace(/,/g, ""));
     const parts = Array.from(html.matchAll(/data-testid="google-tab-device-[a-zA-Z]+"[\s\S]*?<b[^>]*>([\d,]+) ·/g)).map((m) => Number(m[1].replace(/,/g, "")));
     expect(parts).toHaveLength(4);
     expect(parts.reduce((x, y) => x + y, 0)).toBe(total);
@@ -486,11 +489,10 @@ describe("the tab: real numbers replace the empty states", () => {
     expect(text(loading)).toContain("Loading your Google numbers…");
     expect(loading).toContain('data-sync="loading"');
     const practice = text(render({ practice: true, connected: false, insights: [] }));
-    expect(practice).toContain("3,091 people viewed your listing in the last 6 months");
-    expect(practice).toContain("▼ 13.4% vs the same months last year");
-    expect(practice).toContain("Google Search – phone 1,820 · 59%");
-    expect(practice).toContain("Google Maps – computer 171 · 6%");
-    expect(practice).toContain("83% found you on a phone.");
+    expect(practice).toMatch(/Views 3,091 3,569 ▼ 13%/);
+    expect(practice).toContain("Google Search on a phone 1,820 · 59%");
+    expect(practice).toContain("Google Maps on a computer 171 · 6%");
+    expect(practice).toContain("83% on a phone");
   });
 
   test("the change line: down is red “▼ 3 fewer customers per 100 people than the month before” (Hair Express, Sep 24.6% → Oct 21.6%)", () => {
@@ -600,7 +602,8 @@ describe("the tab: real numbers replace the empty states", () => {
   test("Spanish (usted)", () => {
     const words = text(render({ insights: REAL, averageVisit: null }, "es"));
     expect(words).toContain("Quién lo vio");
-    expect(words).toContain("personas vieron su ficha en los últimos 6 meses");
+    expect(words).toContain("Clientes por cada 100 personas que lo vieron");
+    expect(words).toContain("en un teléfono");
     expect(words).toContain("Contado como Google cuenta las vistas.");
     expect(words).toContain("Indique su visita promedio en Configuración para ver esto");
     expect(words).toContain("Google muestra los términos de búsqueda usados al menos 15 veces al mes.");

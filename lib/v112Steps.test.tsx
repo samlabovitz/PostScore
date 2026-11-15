@@ -205,15 +205,15 @@ describe("every Needs work row: its own How to fix it", () => {
   const breakdown = scoreBusiness(businessRowToScoringInput(GREGG));
   const links = breakdownFixLinks(breakdown.categories, "b1", "en");
 
-  test("steps, a time and verified official links; the PostScore page stays secondary", () => {
+  test("steps, a time and verified official links — on the fix page; the breakdown links to it", () => {
     expect(links["completeness.hours"].howTo).toMatchObject({ minutes: 5, links: [{ href: GOOGLE_LINKS.businessProfile }, { href: GOOGLE_LINKS.editProfileHelp }] });
     expect(links["completeness.hours"].howTo!.steps.length).toBeGreaterThan(30);
+    // The steps stay on the destination page; the breakdown shows ONE button with the time beside it.
     const html = render(<CategoryCard category={breakdown.categories.find((c) => c.id === "completeness")!} embedded fixLinks={links} businessId="b1" />);
-    expect(html).toContain("How to fix it");
+    expect(html).not.toContain("How to fix it");
     expect(html).toContain("About 5 min");
-    expect(html).toContain(`href="${GOOGLE_LINKS.editProfileHelp}" target="_blank" rel="noopener noreferrer"`);
+    expect(html).not.toContain(`href="${GOOGLE_LINKS.editProfileHelp}"`);
     expect(html).toContain(`href="${links["completeness.hours"].href}"`);
-    expect(html.indexOf("How to fix it")).toBeLessThan(html.indexOf(`href="${links["completeness.hours"].href}"`));
   });
 
   test("every v1.12.0 check has a time; every official link is a verified one (EN + ES)", () => {

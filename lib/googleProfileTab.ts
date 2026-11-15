@@ -10,7 +10,7 @@ import type { CheckResult } from "@/lib/scoring";
 import { actions, addMonths, monthRange, totalViews, type InsightsMonth, type Keyword } from "@/lib/gbpInsights";
 import type { BookingLink, BookingTracking } from "@/lib/bookingPartners";
 import { isFresh, monthsAgo, type MediaPostsState } from "@/lib/gbpMediaPosts";
-import { specialFor, upcomingHolidays, type SpecialHourPeriod } from "@/lib/gbpListingFields";
+import { specialFor, upcomingHolidays, type HolidayId, type SpecialHourPeriod } from "@/lib/gbpListingFields";
 import type { GoogleEditRow } from "@/lib/gbpGoogleEdits";
 
 /** ?tab=google opens this tab; the old ?tab=google-profile links still do. */
@@ -286,7 +286,7 @@ export function levers(input: LeverInputs): Lever[] {
   // Photos: "newest N mo ago" → "Add 3" (amber) / "Done" (green, within 30 days).
   const photos: Lever = ((): Lever => {
     const p = input.media?.photos;
-    const href = "#listing-photos";
+    const href = "#edit-photos";
     if (!p) return { id: "photos", status: "soon", pill: "soon", params: {}, tone: "neutral", href };
     if (p.count === 0 || !p.newestAt) return { id: "photos", status: "none", pill: "add3", params: {}, tone: "bad", href };
     return isFresh(p.newestAt, now)
@@ -330,7 +330,7 @@ export interface MonthActivity {
   campaigns: number;
 }
 
-export type ListingChangeKind = "hours" | "phone" | "description" | "website_link" | "customer_details" | "booking_link" | "holiday_hours" | "services";
+export type ListingChangeKind = "hours" | "phone" | "description" | "website_link" | "customer_details" | "booking_link" | "holiday_hours" | "services" | "photos";
 
 export interface MonthRecap {
   did: Array<{ key: string; count?: number }>;
@@ -354,12 +354,27 @@ export function listingChangeKind(kind: string, field: string): ListingChangeKin
   if (k === "order_link") return "booking_link";
   if (k === "special_hours") return "holiday_hours";
   if (k === "services") return "services";
+  if (k === "photos") return "photos";
   // "Change it back" after Google's own edit (lib/gbpGoogleEdits.server.ts).
   if (k === "google_revert") return field === "phoneNumbers" ? "phone" : field === "websiteUri" ? "website_link" : field === "regularHours" ? "hours" : null;
   return null;
 }
 
 export const PRACTICE_KIND = /_practice$/;
+
+/** Made in practice mode (never sent to Google): the row's own flag
+ * (supabase/gbp-changes-practice.sql), or — before that column exists —
+ * a "_practice" kind or the practice listing. */
+export function isPracticeRow(r: Pick<ChangeRow, "kind" | "practice" | "location_name">): boolean {
+  if (typeof r.practice === "boolean" && r.practice) return true;
+  return PRACTICE_KIND.test(r.kind) || r.location_name === "locations/practice";
+}
+
+/** gbp_changes.error_reason when a held change was later turned down by Google. */
+export const REJECTED_BY_GOOGLE = "rejected_by_google";
+
+/** A real change Google still showed as "reviewing" after this long gets re-read. */
+export const STALE_REVIEW_DAYS = 3;
 
 export interface ChangeRow {
   batch_id: string;
@@ -372,6 +387,10 @@ export interface ChangeRow {
   undo_of?: string | null;
   before_value?: string | null;
   after_value?: string | null;
+  /** supabase/gbp-changes-practice.sql; absent before it runs. */
+  practice?: boolean | null;
+  location_name?: string | null;
+  error_reason?: string | null;
 }
 
 /** "2026-10": the month before `now`, in the business's time zone. */
@@ -393,7 +412,7 @@ export function monthKeyOf(iso: string, timeZone: string): string {
 export function monthListingChanges(rows: ChangeRow[], month: string, timeZone: string, practice: boolean): ListingChangeKind[] {
   const out: ListingChangeKind[] = [];
   for (const r of [...rows].sort((a, b) => a.approved_at.localeCompare(b.approved_at))) {
-    if (PRACTICE_KIND.test(r.kind) !== practice || r.undo_of || r.undone_at) continue;
+    if (isPracticeRow(r) !== practice || r.undo_of || r.undone_at) continue;
     if (r.status !== "sent" && r.status !== "pending_review") continue;
     if (monthKeyOf(r.approved_at, timeZone) !== month) continue;
     const k = listingChangeKind(r.kind, r.field);
@@ -411,8 +430,11 @@ const DAY_MS = 86_400_000;
 
 export interface MadeChange {
   kind: ListingChangeKind;
-  /** live · undo (with daysLeft) · reviewing · undone · failed */
-  status: "live" | "undo" | "reviewing" | "undone" | "failed";
+  /** live · undo (with daysLeft) · reviewing · rejected (Google turned it down) · undone · failed;
+   * practice rows: "held" instead of "reviewing" — never "Google reviewing". */
+  status: "live" | "undo" | "reviewing" | "rejected" | "held" | "undone" | "failed";
+  /** Made in practice mode (the "Practice" tag). */
+  practice?: boolean;
   daysLeft: number;
   at: string;
   batchId?: string;
@@ -420,7 +442,7 @@ export interface MadeChange {
   value?: MadeValue | null;
 }
 
-export type MadeValue = { text: string } | { added: string[] } | { dates: Array<{ date: string; closed: boolean; open: GTimeLike | null; close: GTimeLike | null }> };
+export type MadeValue = { text: string } | { added: string[] } | { photos: number } | { dates: Array<{ date: string; closed: boolean; open: GTimeLike | null; close: GTimeLike | null }> };
 type GTimeLike = { hours?: number; minutes?: number };
 
 const short = (v: string, max = 48) => (v.length > max ? `${v.slice(0, max - 1)}…` : v);
@@ -463,14 +485,29 @@ export function madeFromPostScore(rows: ChangeRow[], now: number, practice: bool
   const seen = new Set<string>();
   const out: MadeChange[] = [];
   for (const r of [...rows].sort((a, b) => b.approved_at.localeCompare(a.approved_at))) {
-    if (PRACTICE_KIND.test(r.kind) !== practice || r.undo_of || r.status === "sending" || seen.has(r.batch_id)) continue;
+    if (isPracticeRow(r) !== practice || r.undo_of || r.status === "sending" || seen.has(r.batch_id)) continue;
     const kind = listingChangeKind(r.kind, r.field);
     if (!kind) continue;
     seen.add(r.batch_id);
     const left = Math.ceil((Date.parse(r.approved_at) + UNDO_DAYS * DAY_MS - now) / DAY_MS);
+    const isPractice = isPracticeRow(r);
     const status: MadeChange["status"] =
-      r.status === "failed" ? "failed" : r.undone_at ? "undone" : r.status === "pending_review" ? "reviewing" : left > 0 && !r.undo_closed_at ? "undo" : "live";
-    out.push({ kind, status, daysLeft: Math.max(0, left), at: r.approved_at, batchId: r.batch_id, value: madeValue(kind, r.before_value, r.after_value) });
+      r.status === "failed"
+        ? r.error_reason === REJECTED_BY_GOOGLE
+          ? "rejected"
+          : "failed"
+        : r.undone_at
+          ? "undone"
+          : r.status === "pending_review"
+            ? isPractice
+              ? "held"
+              : "reviewing"
+            : left > 0 && !r.undo_closed_at
+              ? "undo"
+              : "live";
+    // Photos: one row per photo, one line per batch ("Photos · 3 added").
+    const value = kind === "photos" ? { photos: rows.filter((x) => x.batch_id === r.batch_id && x.status === "sent" && !x.undo_of).length } : madeValue(kind, r.before_value, r.after_value);
+    out.push({ kind, status, daysLeft: Math.max(0, left), at: r.approved_at, batchId: r.batch_id, value, ...(isPractice ? { practice: true } : {}) });
     if (out.length >= max) break;
   }
   return out;
@@ -481,7 +518,7 @@ export function madeFromPostScore(rows: ChangeRow[], now: number, practice: bool
 // ---------------------------------------------------------------------------
 
 export type RowStatus = "ok" | "warn" | "bad" | "neutral" | "soon";
-export type Editor = "hours" | "phone" | "description" | "website" | "customer_details" | "booking" | "booking_steps" | "booking_partner" | "messaging" | "holiday" | "services";
+export type Editor = "hours" | "phone" | "description" | "website" | "customer_details" | "booking" | "booking_steps" | "booking_partner" | "messaging" | "holiday" | "services" | "photos";
 
 export interface ListingRow {
   id: string;
@@ -525,6 +562,10 @@ export interface ListingExtras {
   specialPeriods: SpecialHourPeriod[];
   services: string[];
   categories: string[];
+  /** Customer details: the 3 scored groups set?, how many extras can be added, the ones to suggest. */
+  details?: { payment: boolean; parking: boolean; accessibility: boolean; open: number; suggest: Array<{ id: string; label: string }> } | null;
+  /** The customer details the owner has set (attribute ids); null when not read. */
+  attributeIds?: string[] | null;
   /** metadata.hasVoiceOfMerchant: Google treats the owner as verified. */
   verified?: boolean | null;
   description?: string | null;
@@ -642,8 +683,14 @@ export function listingGroups(input: ListingInput): ListingGroup[] {
         row("category", "completeness.categories", input.category, { kind: "link", href: GOOGLE_BUSINESS_URL, external: true }),
         // The description is read live from Google when opened.
         ...(servicesRow(input) ? [servicesRow(input)!] : []),
-        row("description", null, null, editor("description")),
-        row("customerDetails", "completeness.customer_details", null, editor("customer_details")),
+        // From the real listing read: ! when it's under 250 characters (or empty).
+        descriptionRow(input, row, editor("description")),
+        (() => {
+          const r = row("customerDetails", "completeness.customer_details", null, editor("customer_details"));
+          const d = input.extras?.details;
+          // "Payments ✓ · Parking ✗ · Accessibility ✗ · N more details you can add" (the status stays the scored check's).
+          return d ? { ...r, meta: { payment: d.payment ? "1" : "0", parking: d.parking ? "1" : "0", accessibility: d.accessibility ? "1" : "0", open: String(d.open) } } : r;
+        })(),
       ],
     },
     {
@@ -662,8 +709,17 @@ export function listingGroups(input: ListingInput): ListingGroup[] {
 
 /** Photos: Google's own count and newest photo when read (✓ within 30
  * days, ! older); before the first read, the scan's count. */
+export const SHORT_DESCRIPTION = 250;
+function descriptionRow(input: ListingInput, row: (id: string, checkId: string | null, value: string | null, action: ListingRow["action"], status?: RowStatus) => ListingRow, action: ListingRow["action"]): ListingRow {
+  const text = input.extras?.description;
+  if (text === undefined || input.extras === null || input.extras === undefined) return row("description", null, null, action);
+  const length = (text ?? "").trim().length;
+  return { ...row("description", null, null, action, length === 0 ? "bad" : length < SHORT_DESCRIPTION ? "warn" : "ok"), meta: { short: length < SHORT_DESCRIPTION ? "1" : "0" } };
+}
+
 function photosRow(input: ListingInput): ListingRow {
-  const action = { kind: "link" as const, href: GOOGLE_BUSINESS_URL, external: true };
+  // "Add photos": PostScore's upload panel (or, off the live list, the steps on Google).
+  const action = { kind: "editor" as const, editor: "photos" as const };
   const p = input.media?.photos;
   const now = input.now ?? Date.now();
   if (!p) {
@@ -691,14 +747,16 @@ export function listingCounts(groups: ListingGroup[]): { ok: number; fix: number
 
 /** The editor a ?tab=google#edit-… link opens. */
 export function editorFromHash(hash: string): Editor | null {
-  const h = hash.replace(/^#/, "");
+  const h = hash.replace(/^#/, "").split("?")[0];
   if (h === "edit-hours") return "hours";
+  if (h === "edit-messaging") return "messaging";
   if (h === "edit-booking-steps") return "booking_steps";
   if (h === "edit-booking") return "booking";
   if (h === "edit-holiday") return "holiday";
   if (h === "edit-services") return "services";
   if (h === "edit-phone") return "phone";
   if (h === "edit-description") return "description";
+  if (h === "edit-photos") return "photos";
   if (h === "edit-website-link") return "website";
   if (h === "edit-customer-details") return "customer_details";
   return null;
@@ -730,7 +788,7 @@ const FIELD_KIND: Record<WatchedField, ListingChangeKind | null> = { name: null,
 export function changedByOthers(changed: WatchedField[], rows: ChangeRow[], fromAt: string, toAt: string): WatchedField[] {
   const ours = new Set(
     rows
-      .filter((r) => !PRACTICE_KIND.test(r.kind) && !r.undo_of && r.status !== "failed" && r.approved_at > fromAt && r.approved_at <= toAt)
+      .filter((r) => !isPracticeRow(r) && !r.undo_of && r.status !== "failed" && r.approved_at > fromAt && r.approved_at <= toAt)
       .map((r) => listingChangeKind(r.kind, r.field))
       .filter((k): k is ListingChangeKind => k !== null)
   );
@@ -780,6 +838,82 @@ export interface GoogleTabSaved {
   others: { fields: WatchedField[]; since: string; at?: string; changes?: WatchedChange[] } | null;
   businessStatus: string | null;
   /** Google's own edits (getGoogleUpdated); null when not connected. */
-  googleEdits?: { available: boolean; open: GoogleEditRow[]; checkedAt: string | null } | null;
+  googleEdits?: { available: boolean; open: GoogleEditRow[]; recent?: GoogleEditRow[]; checkedAt: string | null } | null;
 }
 
+
+// ---------------------------------------------------------------------------
+// Section 2 "Devices and platforms": the split and "What this means for you"
+// ---------------------------------------------------------------------------
+
+export interface DeviceSplit {
+  phone: number;
+  computer: number;
+  search: number;
+  maps: number;
+}
+
+/** Phone vs computer and Search vs Maps (whole %, each pair adding to 100) from the 4 parts. */
+export function deviceSplit(rows: Array<{ id: string; count: number }>): DeviceSplit {
+  const c = (id: string) => rows.find((r) => r.id === id)?.count ?? 0;
+  const total = rows.reduce((a, r) => a + r.count, 0);
+  if (total <= 0) return { phone: 0, computer: 0, search: 0, maps: 0 };
+  const phone = Math.round(((c("searchPhone") + c("mapsPhone")) / total) * 100);
+  const search = Math.round(((c("searchPhone") + c("searchComputer")) / total) * 100);
+  return { phone, computer: 100 - phone, search, maps: 100 - search };
+}
+
+export interface DeviceFacts {
+  businessId: string;
+  /** The website has a tap-to-call (tel:) link; null: no website read. */
+  tapToCall: boolean | null;
+  /** "Loads in a reasonable time" on phones isn't at full points; null: not checked. */
+  mobileSlow: boolean | null;
+  /** A Book online button on the listing. */
+  bookingLink: boolean;
+  /** null: the listing wasn't read. */
+  descriptionLength: number | null;
+  /** null: photos not read yet. */
+  photosFresh: boolean | null;
+  /** The next holiday (6 weeks) without special hours; null: all set (or not read). */
+  holidayUnset: HolidayId | null;
+  /** The listing was read (holiday hours known). */
+  listingRead: boolean;
+}
+
+export interface AdviceItem {
+  group: "phone" | "search" | "maps";
+  status: "ok" | "warn";
+  key: "tapToCall" | "speed" | "bookingWorks" | "tapToCallOk" | "description" | "descriptionOk" | "photos" | "holiday" | "mapsOk";
+  href: string | null;
+  holiday?: HolidayId;
+}
+
+export const MAX_ADVICE = 3;
+
+/** "What this means for you": from the real split and the real checks;
+ * ! items first, at most 3. */
+export function deviceAdvice(split: DeviceSplit, f: DeviceFacts): AdviceItem[] {
+  const site = (check: string) => `/business/${f.businessId}/website#check-${check}`;
+  const items: AdviceItem[] = [];
+  if (split.phone >= 60) {
+    if (f.tapToCall === false) items.push({ group: "phone", status: "warn", key: "tapToCall", href: site("contact_conversion") });
+    if (f.mobileSlow === true) items.push({ group: "phone", status: "warn", key: "speed", href: site("performance_mobile") });
+    if (f.bookingLink) items.push({ group: "phone", status: "ok", key: "bookingWorks", href: null });
+    else if (f.tapToCall === true && f.mobileSlow !== true) items.push({ group: "phone", status: "ok", key: "tapToCallOk", href: null });
+  }
+  if (split.search >= 50 && f.descriptionLength !== null) {
+    items.push(f.descriptionLength < SHORT_DESCRIPTION ? { group: "search", status: "warn", key: "description", href: "#edit-description" } : { group: "search", status: "ok", key: "descriptionOk", href: null });
+  }
+  if (split.maps >= 25) {
+    const before = items.length;
+    if (f.photosFresh === false) items.push({ group: "maps", status: "warn", key: "photos", href: "#edit-photos" });
+    if (f.holidayUnset) items.push({ group: "maps", status: "warn", key: "holiday", href: "#edit-holiday", holiday: f.holidayUnset });
+    if (items.length === before && f.photosFresh === true && f.listingRead) items.push({ group: "maps", status: "ok", key: "mapsOk", href: null });
+  }
+  return items
+    .map((it, i) => ({ it, i }))
+    .sort((a, b) => Number(a.it.status === "ok") - Number(b.it.status === "ok") || a.i - b.i)
+    .slice(0, MAX_ADVICE)
+    .map((x) => x.it);
+}

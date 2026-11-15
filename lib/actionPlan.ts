@@ -607,6 +607,9 @@ export interface TaskRow {
 
 export interface ActionPlanTask {
   checkId: string;
+  /** The Google-mismatch card only: which fields differ (hours → the "Compare
+   * your site and Google listing" chooser, components/hours/HoursMismatchChooser.tsx). */
+  mismatchFields?: Array<"hours" | "phone" | "address">;
   category: CategoryId;
   label: string;
   /** What's actually wrong — the real, dynamic check explanation, not generic copy. */
@@ -1751,6 +1754,7 @@ export function applyGrowthWebsiteRules(
         why: t(locale, "content.actionPlan.website.info_consistency.why"),
         fix: t(locale, "content.actionPlan.website.info_consistency.fix"),
         ownerActionOnGoogle: false,
+        mismatchFields: fields,
       });
       continue;
     }
