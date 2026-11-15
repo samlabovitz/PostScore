@@ -69,7 +69,7 @@ export function gbpLandingPath(businessId: string, origin: GbpOrigin, result: Gb
     case "reviews":
       return `/business/${businessId}/website-reviews?gbp=${result}#${GBP_REPLY_CHECK_ANCHOR}`;
     case "profile":
-      return `/business/${businessId}/growth?tab=google-profile&gbp=${result}#${GBP_PROFILE_ANCHOR}`;
+      return `/business/${businessId}/growth?tab=google&gbp=${result}#${GBP_PROFILE_ANCHOR}`;
     case "connect":
       return `/business/${businessId}/connect-gbp?gbp=${result}`;
   }

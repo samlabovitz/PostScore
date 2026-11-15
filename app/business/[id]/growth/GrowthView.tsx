@@ -18,6 +18,9 @@ import { websiteRangeText, wholePointRange } from "@/lib/pointRange";
 import type { GrowthMove } from "@/lib/growthMoves";
 import { isPremiumPlan, type Plan } from "@/lib/plan";
 import { type GoogleProfileConnection, GoogleProfilePanel, type GoogleListingFacts } from "@/components/gbp/GoogleProfilePanel";
+import { GoogleProfileTab, type GoogleProfileTabProps } from "@/components/gbp/GoogleProfileTab";
+import { BookingTaskCard } from "@/components/gbp/BookingSteps";
+import { GOOGLE_TAB_PARAM, isGoogleTabParam } from "@/lib/googleProfileTab";
 import type { SearchDemandView } from "@/components/gbp/SearchDemandSection";
 import { growthMoveOverlapsActionPlan } from "@/lib/growthMoveOverlap";
 import type { WeeklyChecklistItem, WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
@@ -165,11 +168,12 @@ function PremiumConnectCard({ businessId, premium }: { businessId: string; premi
   );
 }
 
-/** ?tab=google-profile opens the Google Profile tab; anything else is
- * the plan. (Coupons and referrals moved to the Campaigns page — the
- * Growth page redirects their old ?tab= links there.) */
+/** ?tab=google (or the older ?tab=google-profile) opens the Google
+ * Profile tab; anything else is the plan. (Coupons and referrals moved to
+ * the Campaigns page — the Growth page redirects their old ?tab= links
+ * there.) */
 export function segmentFromParam(param: string | null): Segment {
-  return param === "google-profile" ? "google-profile" : "plan";
+  return isGoogleTabParam(param) ? "google-profile" : "plan";
 }
 
 export function GrowthView({
@@ -181,6 +185,8 @@ export function GrowthView({
   growthMoves,
   weeklyChecklist,
   googleProfile,
+  googleTab = null,
+  bookingTask = null,
   lastScanAt,
   websiteRecheck = null,
   gbpConnected = false,
@@ -192,6 +198,11 @@ export function GrowthView({
   businessName: string | null;
   profile: BizProfile;
   breakdown: ScoreBreakdown;
+  /** Premium: the Google Profile tab (components/gbp/GoogleProfileTab.tsx),
+   * loaded only while that tab is open. */
+  googleTab?: GoogleProfileTabProps | null;
+  /** Case B (lib/bookingPartners.ts): a one-time "Turn on Google booking" task. */
+  bookingTask?: { provider: string; still: boolean } | null;
   /** The Google Profile tab's real data (see GoogleProfilePanel). */
   googleProfile: {
     listing: GoogleListingFacts | null;
@@ -267,7 +278,7 @@ export function GrowthView({
   // own scroll-to-hash can land before this client component has
   // rendered the section, so the browser's native jump finds nothing.
   useScrollToHash();
-  // The tab is in the URL (?tab=google-profile) so links and
+  // The tab is in the URL (?tab=google) so links and
   // back/forward land on it.
   const segment = segmentFromParam(searchParams.get("tab"));
   // Free is an audit: the plan tab shows locked previews (FreeGrowthPlan).
@@ -278,7 +289,7 @@ export function GrowthView({
     if (next === "plan") {
       params.delete("tab");
     } else {
-      params.set("tab", next);
+      params.set("tab", GOOGLE_TAB_PARAM);
     }
     const query = params.toString();
     router.push(`/business/${businessId}/growth${query ? `?${query}` : ""}`, { scroll: false });
@@ -433,6 +444,8 @@ export function GrowthView({
                         })}
                       />
                     </div>
+                    {/* One time, not weekly: until Google counts the bookings. */}
+                    {bookingTask && <BookingTaskCard businessId={businessId} provider={bookingTask.provider} still={bookingTask.still} />}
                     {/* The "Connect Google" step replaces this card when it's in the plan. */}
                     {!gbpConnected && !actionPlan.weeklyTasks.some((task) => task.checkId === CONNECT_GOOGLE_STEP_ID) && (
                       <PremiumConnectCard businessId={businessId} premium={isPremiumPlan(plan)} />
@@ -499,7 +512,8 @@ export function GrowthView({
           </div>
         )}
 
-        {segment === "google-profile" && (
+        {segment === "google-profile" && isPremiumPlan(plan) && googleTab && <GoogleProfileTab {...googleTab} />}
+        {segment === "google-profile" && !(isPremiumPlan(plan) && googleTab) && (
           <GoogleProfilePanel
             businessId={businessId}
             plan={plan}

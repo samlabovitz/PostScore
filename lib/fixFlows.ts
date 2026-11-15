@@ -2,7 +2,7 @@
 // (components/gbp/FixWithPostScore.tsx) and the weekly report's steps
 // point to the same place. Pure.
 
-const PROFILE = (id: string, anchor: string) => `/business/${id}/growth?tab=google-profile#${anchor}`;
+const PROFILE = (id: string, anchor: string) => `/business/${id}/growth?tab=google#${anchor}`;
 
 /** Where each check's editor is. */
 const FLOWS: Record<string, (businessId: string) => string> = {

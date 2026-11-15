@@ -7,5 +7,5 @@ import { redirect } from "next/navigation";
  * docs/search-demand.md.
  */
 export default function SearchDemandPage({ params }: { params: { id: string } }) {
-  redirect(`/business/${params.id}/growth?tab=google-profile#search-demand`);
+  redirect(`/business/${params.id}/growth?tab=google#searches`);
 }

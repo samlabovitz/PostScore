@@ -1,0 +1,5632 @@
+{
+ "multiDailyMetricTimeSeries": [
+  {
+   "dailyMetricTimeSeries": [
+    {
+     "dailyMetric": "BUSINESS_IMPRESSIONS_MOBILE_SEARCH",
+     "timeSeries": {
+      "datedValues": [
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 1
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 2
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 3
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 4
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 5
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 6
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 7
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 8
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 9
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 10
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 11
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 12
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 13
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 14
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 15
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 16
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 17
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 18
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 19
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 20
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 21
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 22
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 23
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 24
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 25
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 26
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 27
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 28
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 29
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 30
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 31
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 1
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 2
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 3
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 4
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 5
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 6
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 7
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 8
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 9
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 10
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 11
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 12
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 13
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 14
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 15
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 16
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 17
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 18
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 19
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 20
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 21
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 22
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 23
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 24
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 25
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 26
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 27
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 28
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 29
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 30
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 1
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 2
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 3
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 4
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 5
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 6
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 7
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 8
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 9
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 10
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 11
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 12
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 13
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 14
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 15
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 16
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 17
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 18
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 19
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 20
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 21
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 22
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 23
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 24
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 25
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 26
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 27
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 28
+        },
+        "value": "15"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 29
+        },
+        "value": "16"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 30
+        },
+        "value": "14"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 31
+        },
+        "value": "15"
+       }
+      ]
+     }
+    },
+    {
+     "dailyMetric": "BUSINESS_IMPRESSIONS_MOBILE_MAPS",
+     "timeSeries": {
+      "datedValues": [
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 1
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 2
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 3
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 4
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 5
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 6
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 7
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 8
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 9
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 10
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 11
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 12
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 13
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 14
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 15
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 16
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 17
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 18
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 19
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 20
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 21
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 22
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 23
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 24
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 25
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 26
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 27
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 28
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 29
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 30
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 31
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 1
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 2
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 3
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 4
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 5
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 6
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 7
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 8
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 9
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 10
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 11
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 12
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 13
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 14
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 15
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 16
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 17
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 18
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 19
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 20
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 21
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 22
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 23
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 24
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 25
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 26
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 27
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 28
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 29
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 30
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 1
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 2
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 3
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 4
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 5
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 6
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 7
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 8
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 9
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 10
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 11
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 12
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 13
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 14
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 15
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 16
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 17
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 18
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 19
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 20
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 21
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 22
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 23
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 24
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 25
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 26
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 27
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 28
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 29
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 30
+        },
+        "value": "6"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 31
+        },
+        "value": "6"
+       }
+      ]
+     }
+    },
+    {
+     "dailyMetric": "BUSINESS_IMPRESSIONS_DESKTOP_SEARCH",
+     "timeSeries": {
+      "datedValues": [
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 1
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 2
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 3
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 4
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 5
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 6
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 7
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 8
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 9
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 10
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 11
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 12
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 13
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 14
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 15
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 16
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 17
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 18
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 19
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 20
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 21
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 22
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 23
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 24
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 25
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 26
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 27
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 28
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 29
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 30
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 31
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 1
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 2
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 3
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 4
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 5
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 6
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 7
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 8
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 9
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 10
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 11
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 12
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 13
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 14
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 15
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 16
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 17
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 18
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 19
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 20
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 21
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 22
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 23
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 24
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 25
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 26
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 27
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 28
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 29
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 30
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 1
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 2
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 3
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 4
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 5
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 6
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 7
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 8
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 9
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 10
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 11
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 12
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 13
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 14
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 15
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 16
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 17
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 18
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 19
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 20
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 21
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 22
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 23
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 24
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 25
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 26
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 27
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 28
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 29
+        },
+        "value": "3"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 30
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 31
+        },
+        "value": "3"
+       }
+      ]
+     }
+    },
+    {
+     "dailyMetric": "BUSINESS_IMPRESSIONS_DESKTOP_MAPS",
+     "timeSeries": {
+      "datedValues": [
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 1
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 2
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 3
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 4
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 5
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 6
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 7
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 8
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 9
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 10
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 11
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 12
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 13
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 14
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 15
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 16
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 17
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 18
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 19
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 20
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 21
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 22
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 23
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 24
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 25
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 26
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 27
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 28
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 29
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 30
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 31
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 1
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 2
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 3
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 4
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 5
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 6
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 7
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 8
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 9
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 10
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 11
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 12
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 13
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 14
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 15
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 16
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 17
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 18
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 19
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 20
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 21
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 22
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 23
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 24
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 25
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 26
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 27
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 28
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 29
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 30
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 1
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 2
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 3
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 4
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 5
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 6
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 7
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 8
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 9
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 10
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 11
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 12
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 13
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 14
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 15
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 16
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 17
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 18
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 19
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 20
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 21
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 22
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 23
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 24
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 25
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 26
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 27
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 28
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 29
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 30
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 31
+        }
+       }
+      ]
+     }
+    },
+    {
+     "dailyMetric": "CALL_CLICKS",
+     "timeSeries": {
+      "datedValues": [
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 1
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 2
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 3
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 4
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 5
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 6
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 7
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 8
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 9
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 10
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 11
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 12
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 13
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 14
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 15
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 16
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 17
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 18
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 19
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 20
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 21
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 22
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 23
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 24
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 25
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 26
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 27
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 28
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 29
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 30
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 31
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 1
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 2
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 3
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 4
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 5
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 6
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 7
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 8
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 9
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 10
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 11
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 12
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 13
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 14
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 15
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 16
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 17
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 18
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 19
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 20
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 21
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 22
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 23
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 24
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 25
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 26
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 27
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 28
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 29
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 30
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 1
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 2
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 3
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 4
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 5
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 6
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 7
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 8
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 9
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 10
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 11
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 12
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 13
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 14
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 15
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 16
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 17
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 18
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 19
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 20
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 21
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 22
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 23
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 24
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 25
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 26
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 27
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 28
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 29
+        },
+        "value": "2"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 30
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 31
+        },
+        "value": "1"
+       }
+      ]
+     }
+    },
+    {
+     "dailyMetric": "BUSINESS_DIRECTION_REQUESTS",
+     "timeSeries": {
+      "datedValues": [
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 1
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 2
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 3
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 4
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 5
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 6
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 7
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 8
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 9
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 10
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 11
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 12
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 13
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 14
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 15
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 16
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 17
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 18
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 19
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 20
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 21
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 22
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 23
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 24
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 25
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 26
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 27
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 28
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 29
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 30
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 31
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 1
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 2
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 3
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 4
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 5
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 6
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 7
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 8
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 9
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 10
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 11
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 12
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 13
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 14
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 15
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 16
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 17
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 18
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 19
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 20
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 21
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 22
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 23
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 24
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 25
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 26
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 27
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 28
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 29
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 30
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 1
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 2
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 3
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 4
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 5
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 6
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 7
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 8
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 9
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 10
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 11
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 12
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 13
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 14
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 15
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 16
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 17
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 18
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 19
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 20
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 21
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 22
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 23
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 24
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 25
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 26
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 27
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 28
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 29
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 30
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 31
+        }
+       }
+      ]
+     }
+    },
+    {
+     "dailyMetric": "WEBSITE_CLICKS",
+     "timeSeries": {
+      "datedValues": [
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 1
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 2
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 3
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 4
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 5
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 6
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 7
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 8
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 9
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 10
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 11
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 12
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 13
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 14
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 15
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 16
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 17
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 18
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 19
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 20
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 21
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 22
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 23
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 24
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 25
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 26
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 27
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 28
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 29
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 30
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 31
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 1
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 2
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 3
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 4
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 5
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 6
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 7
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 8
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 9
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 10
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 11
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 12
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 13
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 14
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 15
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 16
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 17
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 18
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 19
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 20
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 21
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 22
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 23
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 24
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 25
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 26
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 27
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 28
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 29
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 30
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 1
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 2
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 3
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 4
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 5
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 6
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 7
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 8
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 9
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 10
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 11
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 12
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 13
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 14
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 15
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 16
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 17
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 18
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 19
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 20
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 21
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 22
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 23
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 24
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 25
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 26
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 27
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 28
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 29
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 30
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 31
+        }
+       }
+      ]
+     }
+    },
+    {
+     "dailyMetric": "BUSINESS_BOOKINGS",
+     "timeSeries": {
+      "datedValues": [
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 1
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 2
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 3
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 4
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 5
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 6
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 7
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 8
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 9
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 10
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 11
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 12
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 13
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 14
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 15
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 16
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 17
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 18
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 19
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 20
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 21
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 22
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 23
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 24
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 25
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 26
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 27
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 28
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 29
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 30
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 8,
+         "day": 31
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 1
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 2
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 3
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 4
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 5
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 6
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 7
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 8
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 9
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 10
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 11
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 12
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 13
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 14
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 15
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 16
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 17
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 18
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 19
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 20
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 21
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 22
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 23
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 24
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 25
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 26
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 27
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 28
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 29
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 9,
+         "day": 30
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 1
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 2
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 3
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 4
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 5
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 6
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 7
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 8
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 9
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 10
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 11
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 12
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 13
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 14
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 15
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 16
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 17
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 18
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 19
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 20
+        },
+        "value": "1"
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 21
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 22
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 23
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 24
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 25
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 26
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 27
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 28
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 29
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 30
+        }
+       },
+       {
+        "date": {
+         "year": 2026,
+         "month": 10,
+         "day": 31
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -33,7 +33,7 @@ describe("paid plans keep their pre-batch layout, page by page", () => {
     const view = read("app/business/[id]/growth/GrowthView.tsx");
     const paid = view.slice(view.indexOf("<WeeklyGoalCelebration"));
     expect(without(tags(paid), ["ReviewGoalLinesContext", "FreeGrowthMoves"])).toEqual([
-      "WeeklyGoalCelebration", "ProjectedSummary", "PlanBlurb", "WeeklyChecklist", "Card", "PlatformLinkCard", "SectionHeading", "PremiumConnectCard", "TaskListCard", "SectionHeading", "WebsiteBannerCard", "TaskListCard", "CompletedTasksCard", "SectionHeading", "GrowthMoveCard", "GoogleProfilePanel",
+      "WeeklyGoalCelebration", "ProjectedSummary", "PlanBlurb", "WeeklyChecklist", "Card", "PlatformLinkCard", "SectionHeading", "BookingTaskCard", "PremiumConnectCard", "TaskListCard", "SectionHeading", "WebsiteBannerCard", "TaskListCard", "CompletedTasksCard", "SectionHeading", "GrowthMoveCard", "GoogleProfileTab", "GoogleProfilePanel",
     ]);
     expect(view).toContain("{!gbpConnected && !actionPlan.weeklyTasks.some((task) => task.checkId === CONNECT_GOOGLE_STEP_ID) && (");
   });
@@ -71,7 +71,7 @@ describe("paid plans keep their pre-batch layout, page by page", () => {
     expect(tags(read("app/business/[id]/pricing/page.tsx"))).toEqual(["DashboardShell", "Card", "DashboardShell", "Card", "DashboardShell", "StaleScanNotice", "PricingView"]);
     expect(tags(read("app/business/[id]/reports/page.tsx"))).toEqual(["DashboardShell", "StaleScanNotice", "ReportsView"]);
     expect(tags(read("app/business/[id]/settings/page.tsx"))).toEqual([
-      "DashboardShell", "Link", "SettingsNav", "SettingsSection", "BusinessLanguageToggle", "SettingsSection", "Link", "Link", "Link", "SettingsSection", "PlanCard", "CancelPlanButton", "Link", "SettingsSection", "MonthlyEmailFreeNote", "MonthlyEmailReportCard", "Card", "UnsubscribeAllButton", "SettingsSection", "NichePicker", "BusinessTypeSetting", "SettingsSection", "ScanningLine", "SettingsSection", "LegalLinks", "SavedToast",
+      "DashboardShell", "Link", "SettingsNav", "SettingsSection", "BusinessLanguageToggle", "SettingsSection", "Link", "Link", "Link", "SettingsSection", "PlanCard", "CancelPlanButton", "Link", "SettingsSection", "MonthlyEmailFreeNote", "MonthlyEmailReportCard", "Card", "UnsubscribeAllButton", "SettingsSection", "NichePicker", "BusinessTypeSetting", "SettingsSection", "ScanningLine", "SettingsSection", "AverageVisitSetting", "SettingsSection", "LegalLinks", "SavedToast",
     ]);
   });
 

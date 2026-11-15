@@ -1706,6 +1706,280 @@ export type MessageKey =
   | "dashboard.competitors.owner.miles"
   | "dashboard.gbpEdit.lockedChip"
   | "dashboard.gbpEdit.connectToUpdate"
+  | "dashboard.googleTab.parts.performance.label"
+  | "dashboard.googleTab.parts.performance.subtitle"
+  | "dashboard.googleTab.parts.edit.label"
+  | "dashboard.googleTab.parts.protection.label"
+  | "dashboard.googleTab.parts.protection.subtitle"
+  | "dashboard.googleTab.samplePill"
+  | "dashboard.googleTab.row.loading"
+  | "dashboard.googleTab.row.liveFailed"
+  | "dashboard.googleTab.row.description.none"
+  | "dashboard.googleTab.row.description.chars"
+  | "dashboard.googleTab.row.booking.none"
+  | "dashboard.googleTab.row.booking.notOffered"
+  | "dashboard.googleTab.rate.small"
+  | "dashboard.googleTab.worth.setIt"
+  | "dashboard.googleTab.s2.whoTitle"
+  | "dashboard.googleTab.s2.whoPeople"
+  | "dashboard.googleTab.s2.yoyUp"
+  | "dashboard.googleTab.s2.yoyDown"
+  | "dashboard.googleTab.s2.yoySame"
+  | "dashboard.googleTab.s2.counted"
+  | "dashboard.googleTab.s2.devices"
+  | "dashboard.googleTab.s2.row.searchPhone"
+  | "dashboard.googleTab.s2.row.mapsPhone"
+  | "dashboard.googleTab.s2.row.searchComputer"
+  | "dashboard.googleTab.s2.row.mapsComputer"
+  | "dashboard.googleTab.s2.takeaway.phone"
+  | "dashboard.googleTab.s2.takeaway.maps"
+  | "dashboard.googleTab.s2.takeaway.search"
+  | "dashboard.googleTab.s2.days"
+  | "dashboard.googleTab.s2.dayGroup.midweek"
+  | "dashboard.googleTab.s2.dayGroup.weekend"
+  | "dashboard.googleTab.s2.dayGroup.sunMon"
+  | "dashboard.googleTab.s2.dayTip.midweek"
+  | "dashboard.googleTab.s2.dayTip.weekend"
+  | "dashboard.googleTab.s2.dayTip.sunMon"
+  | "dashboard.googleTab.s2.noCalls"
+  | "dashboard.googleTab.s3.meta"
+  | "dashboard.googleTab.s3.none"
+  | "dashboard.googleTab.s3.noteReal"
+  | "dashboard.googleTab.rate.loading"
+  | "dashboard.googleTab.rate.failed"
+  | "dashboard.googleTab.rate.retry"
+  | "dashboard.googleTab.s2.interactions"
+  | "dashboard.googleTab.rate.monthLine"
+  | "dashboard.googleTab.kpi.vsMonth"
+  | "dashboard.googleTab.s2.funnel"
+  | "dashboard.googleTab.s2.trendTitle"
+  | "dashboard.googleTab.rate.per100.down"
+  | "dashboard.googleTab.rate.per100.up"
+  | "dashboard.googleTab.rate.per100.same"
+  | "dashboard.googleTab.rate.best"
+  | "dashboard.googleTab.rate.tooltip"
+  | "dashboard.googleTab.rate.trendAria"
+  | "dashboard.googleTab.strip.practiceReal"
+  | "dashboard.googleTab.strip.practiceFallback"
+  | "dashboard.googleTab.row.booking.via"
+  | "dashboard.googleTab.row.booking.button"
+  | "dashboard.googleTab.row.booking.notCounted"
+  | "dashboard.googleTab.action.addLink"
+  | "dashboard.googleTab.action.managedBy"
+  | "dashboard.googleTab.action.turnOnBooking"
+  | "dashboard.googleTab.booking.partnerAdded"
+  | "dashboard.googleTab.booking.notCountedA"
+  | "dashboard.googleTab.booking.tileB"
+  | "dashboard.googleTab.booking.ideaTitle"
+  | "dashboard.googleTab.booking.ideaPill"
+  | "dashboard.googleTab.booking.ideaBody"
+  | "dashboard.googleTab.recap.not.booking"
+  | "dashboard.booking.square.1"
+  | "dashboard.booking.square.2"
+  | "dashboard.booking.square.3"
+  | "dashboard.booking.square.4"
+  | "dashboard.booking.square.note"
+  | "dashboard.booking.generic"
+  | "dashboard.booking.turnedOn"
+  | "dashboard.booking.snoozed"
+  | "dashboard.booking.still"
+  | "dashboard.booking.taskTitle"
+  | "dashboard.booking.taskBody"
+  | "dashboard.booking.taskButton"
+  | "dashboard.googleTab.worth.brought"
+  | "dashboard.googleTab.worth.broughtSub"
+  | "dashboard.googleTab.worth.left"
+  | "dashboard.googleTab.worth.leftSub"
+  | "dashboard.googleTab.worth.leversLink"
+  | "dashboard.googleTab.worth.matched"
+  | "dashboard.googleTab.worth.info"
+  | "dashboard.googleTab.s2.otherRange"
+  | "dashboard.googleTab.jump.label"
+  | "dashboard.googleTab.jump.lastMonth"
+  | "dashboard.googleTab.jump.funnel"
+  | "dashboard.googleTab.jump.searches"
+  | "dashboard.googleTab.jump.listing"
+  | "dashboard.googleTab.jump.next"
+  | "dashboard.googleTab.jump.protection"
+  | "dashboard.googleTab.sample"
+  | "dashboard.googleTab.sampleNote"
+  | "dashboard.googleTab.monthly"
+  | "dashboard.googleTab.coming"
+  | "dashboard.googleTab.s1.title"
+  | "dashboard.googleTab.s1.meta"
+  | "dashboard.googleTab.rate.label"
+  | "dashboard.googleTab.rate.pill"
+  | "dashboard.googleTab.rate.sentence"
+  | "dashboard.googleTab.rate.of"
+  | "dashboard.googleTab.rate.trend"
+  | "dashboard.googleTab.rate.empty"
+  | "dashboard.googleTab.rate.emptyBody"
+  | "dashboard.googleTab.raise.title"
+  | "dashboard.googleTab.raise.sub"
+  | "dashboard.googleTab.lever.reviews.title"
+  | "dashboard.googleTab.lever.photos.title"
+  | "dashboard.googleTab.lever.posts.title"
+  | "dashboard.googleTab.lever.deals.title"
+  | "dashboard.googleTab.lever.website.title"
+  | "dashboard.googleTab.lever.reviews.why"
+  | "dashboard.googleTab.lever.photos.why"
+  | "dashboard.googleTab.lever.posts.why"
+  | "dashboard.googleTab.lever.deals.why"
+  | "dashboard.googleTab.lever.website.why"
+  | "dashboard.googleTab.lever.reviews.status.replied"
+  | "dashboard.googleTab.lever.reviews.status.notChecked"
+  | "dashboard.googleTab.lever.reviews.status.noRecent"
+  | "dashboard.googleTab.lever.photos.status.soon"
+  | "dashboard.googleTab.lever.posts.status.soon"
+  | "dashboard.googleTab.lever.deals.status.running"
+  | "dashboard.googleTab.lever.deals.status.runningOne"
+  | "dashboard.googleTab.lever.deals.status.none"
+  | "dashboard.googleTab.lever.website.status.score"
+  | "dashboard.googleTab.lever.website.status.none"
+  | "dashboard.googleTab.lever.pill.reply"
+  | "dashboard.googleTab.lever.pill.done"
+  | "dashboard.googleTab.lever.pill.soon"
+  | "dashboard.googleTab.lever.pill.running"
+  | "dashboard.googleTab.lever.pill.start"
+  | "dashboard.googleTab.lever.pill.fixes"
+  | "dashboard.googleTab.lever.pill.fixesOne"
+  | "dashboard.googleTab.recap.did"
+  | "dashboard.googleTab.recap.notYetLabel"
+  | "dashboard.googleTab.recap.nothing"
+  | "dashboard.googleTab.recap.listing.hours"
+  | "dashboard.googleTab.recap.listing.phone"
+  | "dashboard.googleTab.recap.listing.description"
+  | "dashboard.googleTab.recap.listing.website_link"
+  | "dashboard.googleTab.recap.listing.customer_details"
+  | "dashboard.googleTab.recap.listing.booking_link"
+  | "dashboard.googleTab.recap.replies"
+  | "dashboard.googleTab.recap.repliesOne"
+  | "dashboard.googleTab.recap.campaigns"
+  | "dashboard.googleTab.recap.campaignsOne"
+  | "dashboard.googleTab.recap.not.replies"
+  | "dashboard.googleTab.recap.not.campaign"
+  | "dashboard.googleTab.recap.not.listing"
+  | "dashboard.googleTab.recap.tail"
+  | "dashboard.googleTab.sources"
+  | "dashboard.googleTab.kpi.calls"
+  | "dashboard.googleTab.kpi.directions"
+  | "dashboard.googleTab.kpi.bookings"
+  | "dashboard.googleTab.kpi.websiteClicks"
+  | "dashboard.googleTab.kpi.empty"
+  | "dashboard.googleTab.worth.label"
+  | "dashboard.googleTab.worth.estimate"
+  | "dashboard.googleTab.s2.title"
+  | "dashboard.googleTab.s2.empty"
+  | "dashboard.googleTab.s2.saw"
+  | "dashboard.googleTab.s2.sawSub"
+  | "dashboard.googleTab.s2.acted"
+  | "dashboard.googleTab.s2.actedSub"
+  | "dashboard.googleTab.s2.called"
+  | "dashboard.googleTab.s2.calledSub"
+  | "dashboard.googleTab.s2.otherActions"
+  | "dashboard.googleTab.s3.title"
+  | "dashboard.googleTab.s3.empty"
+  | "dashboard.googleTab.s3.note"
+  | "dashboard.googleTab.s4.title"
+  | "dashboard.googleTab.s4.meta"
+  | "dashboard.googleTab.strip.synced"
+  | "dashboard.googleTab.strip.connected"
+  | "dashboard.googleTab.strip.practice"
+  | "dashboard.googleTab.strip.open"
+  | "dashboard.googleTab.ago.minutes"
+  | "dashboard.googleTab.ago.hours"
+  | "dashboard.googleTab.ago.days"
+  | "dashboard.googleTab.ago.daysOne"
+  | "dashboard.googleTab.count.ok"
+  | "dashboard.googleTab.count.fix"
+  | "dashboard.googleTab.count.improve"
+  | "dashboard.googleTab.group.reach"
+  | "dashboard.googleTab.group.open"
+  | "dashboard.googleTab.group.who"
+  | "dashboard.googleTab.group.fresh"
+  | "dashboard.googleTab.row.missing"
+  | "dashboard.googleTab.row.soon"
+  | "dashboard.googleTab.row.phone.label"
+  | "dashboard.googleTab.row.website.label"
+  | "dashboard.googleTab.row.booking.label"
+  | "dashboard.googleTab.row.booking.note"
+  | "dashboard.googleTab.row.messaging.label"
+  | "dashboard.googleTab.row.messaging.on"
+  | "dashboard.googleTab.row.messaging.off"
+  | "dashboard.googleTab.row.messaging.unknown"
+  | "dashboard.googleTab.row.messaging.note"
+  | "dashboard.googleTab.row.hours.label"
+  | "dashboard.googleTab.row.holiday.label"
+  | "dashboard.googleTab.row.holiday.note"
+  | "dashboard.googleTab.row.category.label"
+  | "dashboard.googleTab.row.description.label"
+  | "dashboard.googleTab.row.description.note"
+  | "dashboard.googleTab.row.customerDetails.label"
+  | "dashboard.googleTab.row.customerDetails.value"
+  | "dashboard.googleTab.row.photos.label"
+  | "dashboard.googleTab.row.photos.value"
+  | "dashboard.googleTab.row.photos.note"
+  | "dashboard.googleTab.row.posts.label"
+  | "dashboard.googleTab.row.posts.note"
+  | "dashboard.googleTab.row.reviews.label"
+  | "dashboard.googleTab.row.reviews.value"
+  | "dashboard.googleTab.row.reviews.note"
+  | "dashboard.googleTab.row.reviews.noteNone"
+  | "dashboard.googleTab.action.edit"
+  | "dashboard.googleTab.action.fix"
+  | "dashboard.googleTab.action.update"
+  | "dashboard.googleTab.action.howTo"
+  | "dashboard.googleTab.action.howToInline"
+  | "dashboard.googleTab.action.addOnGoogle"
+  | "dashboard.googleTab.action.openInbox"
+  | "dashboard.googleTab.action.close"
+  | "dashboard.googleTab.s5.title"
+  | "dashboard.googleTab.s5.meta"
+  | "dashboard.googleTab.s5.empty"
+  | "dashboard.googleTab.s5.sample1.title"
+  | "dashboard.googleTab.s5.sample1.tag"
+  | "dashboard.googleTab.s5.sample1.body"
+  | "dashboard.googleTab.s5.sample1.why"
+  | "dashboard.googleTab.s5.sample2.title"
+  | "dashboard.googleTab.s5.sample2.tag"
+  | "dashboard.googleTab.s5.sample2.body"
+  | "dashboard.googleTab.s5.sample2.why"
+  | "dashboard.googleTab.s6.title"
+  | "dashboard.googleTab.s6.meta"
+  | "dashboard.googleTab.others.title"
+  | "dashboard.googleTab.others.suggested"
+  | "dashboard.googleTab.others.fields"
+  | "dashboard.googleTab.others.unchanged"
+  | "dashboard.googleTab.others.changed"
+  | "dashboard.googleTab.others.unknown"
+  | "dashboard.googleTab.others.field.phone"
+  | "dashboard.googleTab.others.field.hours"
+  | "dashboard.googleTab.others.field.website"
+  | "dashboard.googleTab.others.status"
+  | "dashboard.googleTab.others.statusValue.open"
+  | "dashboard.googleTab.others.statusValue.closedTemp"
+  | "dashboard.googleTab.others.statusValue.closed"
+  | "dashboard.googleTab.others.statusValue.unknown"
+  | "dashboard.googleTab.others.note"
+  | "dashboard.googleTab.made.title"
+  | "dashboard.googleTab.made.empty"
+  | "dashboard.googleTab.made.kind.hours"
+  | "dashboard.googleTab.made.kind.phone"
+  | "dashboard.googleTab.made.kind.description"
+  | "dashboard.googleTab.made.kind.website_link"
+  | "dashboard.googleTab.made.kind.customer_details"
+  | "dashboard.googleTab.made.kind.booking_link"
+  | "dashboard.googleTab.made.status.live"
+  | "dashboard.googleTab.made.status.undo"
+  | "dashboard.googleTab.made.status.undoOne"
+  | "dashboard.googleTab.made.status.reviewing"
+  | "dashboard.googleTab.made.status.undone"
+  | "dashboard.googleTab.made.status.failed"
+  | "dashboard.googleTab.notConnected.title"
+  | "dashboard.googleTab.notConnected.lead"
+  | "dashboard.googleTab.notConnected.rate"
+  | "dashboard.googleTab.notConnected.searches"
+  | "dashboard.googleTab.notConnected.edit"
   | "dashboard.fixWithPostScore.button"
   | "dashboard.fixWithPostScore.beta"
   | "dashboard.fixWithPostScore.connectFirst"
@@ -4420,6 +4694,14 @@ export type MessageKey =
   | "dashboard.settings.nav.plan"
   | "dashboard.settings.nav.email"
   | "dashboard.settings.nav.businessType"
+  | "dashboard.settings.nav.averageVisit"
+  | "dashboard.settings.averageVisit.helper"
+  | "dashboard.settings.averageVisit.label"
+  | "dashboard.settings.averageVisit.save"
+  | "dashboard.settings.averageVisit.help"
+  | "dashboard.settings.averageVisit.error.invalid"
+  | "dashboard.settings.averageVisit.error.not_ready"
+  | "dashboard.settings.averageVisit.error.failed"
   | "dashboard.settings.nav.website"
   | "dashboard.settings.website.helper"
   | "dashboard.settings.nav.account"
@@ -6794,6 +7076,280 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.closed.step.why": "Google tells everyone searching for you that you're closed. Nothing else matters until that's fixed.",
     "dashboard.closed.report.alert": "Google shows {name} as permanently closed. If you're still open, mark it open in Google Business Profile now — customers are being told you're closed.",
     "dashboard.closed.report.alertTemporary": "Google shows {name} as temporarily closed. If you've reopened, update it in Google Business Profile.",
+    "dashboard.googleTab.parts.performance.label": "Performance",
+    "dashboard.googleTab.parts.performance.subtitle": "How people found you on Google and what they did",
+    "dashboard.googleTab.parts.edit.label": "Edit your listing",
+    "dashboard.googleTab.parts.protection.label": "Protection",
+    "dashboard.googleTab.parts.protection.subtitle": "Changes made by anyone else, and everything changed from PostScore",
+    "dashboard.googleTab.samplePill": "Sample data in practice mode",
+    "dashboard.googleTab.row.loading": "Loading from Google",
+    "dashboard.googleTab.row.liveFailed": "Couldn't load from Google. Open the editor to see it.",
+    "dashboard.googleTab.row.description.none": "No description on Google yet",
+    "dashboard.googleTab.row.description.chars": "{count} of 750 characters. Say what you do best.",
+    "dashboard.googleTab.row.booking.none": "No booking link on Google yet",
+    "dashboard.googleTab.row.booking.notOffered": "Google doesn't offer this for your business type",
+    "dashboard.googleTab.rate.small": "Small numbers swing a lot month to month.",
+    "dashboard.googleTab.worth.setIt": "Set your average visit in Settings to see this",
+    "dashboard.googleTab.s2.whoTitle": "Who saw you",
+    "dashboard.googleTab.s2.whoPeople": "people viewed your listing in the last 6 months",
+    "dashboard.googleTab.s2.yoyUp": "▲ {percent}% vs the same months last year",
+    "dashboard.googleTab.s2.yoyDown": "▼ {percent}% vs the same months last year",
+    "dashboard.googleTab.s2.yoySame": "Same as the same months last year",
+    "dashboard.googleTab.s2.counted": "Counted the way Google counts views.",
+    "dashboard.googleTab.s2.devices": "Devices and platforms",
+    "dashboard.googleTab.s2.row.searchPhone": "Google Search – phone",
+    "dashboard.googleTab.s2.row.mapsPhone": "Google Maps – phone",
+    "dashboard.googleTab.s2.row.searchComputer": "Google Search – computer",
+    "dashboard.googleTab.s2.row.mapsComputer": "Google Maps – computer",
+    "dashboard.googleTab.s2.takeaway.phone": "{percent}% found you on a phone. Make sure tap-to-call and your booking link work on mobile.",
+    "dashboard.googleTab.s2.takeaway.maps": "Most people found you on Maps. Keep your hours, photos and directions details sharp.",
+    "dashboard.googleTab.s2.takeaway.search": "Most people found you on Google Search. Your description and services help you show up.",
+    "dashboard.googleTab.s2.days": "Which days they call",
+    "dashboard.googleTab.s2.dayGroup.midweek": "Tue–Thu",
+    "dashboard.googleTab.s2.dayGroup.weekend": "Fri–Sat",
+    "dashboard.googleTab.s2.dayGroup.sunMon": "Sun–Mon",
+    "dashboard.googleTab.s2.dayTip.midweek": "Most calls come midweek, so answer the phone or set voicemail with your booking link.",
+    "dashboard.googleTab.s2.dayTip.weekend": "Most calls come on Friday and Saturday, so answer the phone or set voicemail with your booking link.",
+    "dashboard.googleTab.s2.dayTip.sunMon": "Most calls come on Sunday and Monday, so answer the phone or set voicemail with your booking link, and check your hours for those days.",
+    "dashboard.googleTab.s2.noCalls": "No calls from your listing in these months.",
+    "dashboard.googleTab.s3.meta": "{month} · from Google · updates monthly",
+    "dashboard.googleTab.s3.none": "Google didn't list any search terms for {month}.",
+    "dashboard.googleTab.s3.noteReal": "Google shows search terms used at least 15 times a month.",
+    "dashboard.googleTab.rate.loading": "Loading your Google numbers…",
+    "dashboard.googleTab.rate.failed": "Couldn't load your Google numbers.",
+    "dashboard.googleTab.rate.retry": "Try again",
+    "dashboard.googleTab.s2.interactions": "{count} interactions",
+    "dashboard.googleTab.rate.monthLine": "{month}: {rate} · {actions} of {viewers} people",
+    "dashboard.googleTab.kpi.vsMonth": "vs {month}",
+    "dashboard.googleTab.s2.funnel": "From views to customers",
+    "dashboard.googleTab.s2.trendTitle": "Interactions by month",
+    "dashboard.googleTab.rate.per100.down": "▼ {count} fewer customers per 100 people than the month before",
+    "dashboard.googleTab.rate.per100.up": "▲ {count} more customers per 100 people than the month before",
+    "dashboard.googleTab.rate.per100.same": "About the same as the month before",
+    "dashboard.googleTab.rate.best": "Best: {month} {rate}",
+    "dashboard.googleTab.rate.tooltip": "{month}: {rate} · {actions} of {viewers} people",
+    "dashboard.googleTab.rate.trendAria": "Conversion rate, last 6 months: {values}",
+    "dashboard.googleTab.strip.practiceReal": "Practice mode · a copy of your real listing",
+    "dashboard.googleTab.strip.practiceFallback": "Practice copy: couldn't load your real listing",
+    "dashboard.googleTab.row.booking.via": "Book online · via {provider}",
+    "dashboard.googleTab.row.booking.button": "The Book online button on your Google listing.",
+    "dashboard.googleTab.row.booking.notCounted": "Bookings happen on {partner}'s site, so Google can't count them.",
+    "dashboard.googleTab.action.addLink": "Add the link",
+    "dashboard.googleTab.action.managedBy": "Managed by {provider}",
+    "dashboard.googleTab.action.turnOnBooking": "Turn on Google booking",
+    "dashboard.googleTab.booking.partnerAdded": "{provider} added this button to your Google listing. To change it, update your booking settings in {provider}.",
+    "dashboard.googleTab.booking.notCountedA": "Google lists your {provider} booking button, but bookings finish on {provider}'s site, so Google can't count them. PostScore will count them once you connect {provider} (coming soon).",
+    "dashboard.googleTab.booking.tileB": "Not tracked yet: turn on Google booking in {partner}",
+    "dashboard.googleTab.booking.ideaTitle": "Let customers book without leaving Google",
+    "dashboard.googleTab.booking.ideaPill": "Track every booking",
+    "dashboard.googleTab.booking.ideaBody": "Your Book online button sends people to {partner}. Turn on {partner}'s Google booking so people book right on Google and Google counts each one.",
+    "dashboard.googleTab.recap.not.booking": "turning on Google booking",
+    "dashboard.booking.square.1": "In Square Dashboard go to Appointments → Settings → Online booking → Channels.",
+    "dashboard.booking.square.2": "Turn on Google (it may be called \"Book with Google\" or \"Reserve with Google\").",
+    "dashboard.booking.square.3": "Make sure your Square business name, address and phone match your Google listing exactly.",
+    "dashboard.booking.square.4": "It can take a few days to a couple of weeks for Google to switch your button.",
+    "dashboard.booking.square.note": "Bookings made directly on your Square site still won't show here.",
+    "dashboard.booking.generic": "In {partner}'s settings, look for \"Reserve with Google\" or \"Book with Google\" and turn it on. Make sure your business name, address and phone match your Google listing.",
+    "dashboard.booking.turnedOn": "I turned it on",
+    "dashboard.booking.snoozed": "Thanks. We'll hide this for 14 days and check your bookings again.",
+    "dashboard.booking.still": "Still not tracked. Double-check the setting.",
+    "dashboard.booking.taskTitle": "Turn on Google booking in {partner} (10 min)",
+    "dashboard.booking.taskBody": "Your Book online button goes to {partner}, but Google can't count those bookings until it's on.",
+    "dashboard.booking.taskButton": "See the steps",
+    "dashboard.googleTab.worth.brought": "Google brought you about {low}–{high} last month",
+    "dashboard.googleTab.worth.broughtSub": "{actions} customer actions × ${avg} average visit, if a third to all of them became visits.",
+    "dashboard.googleTab.worth.left": "Left on the table: ≈ {missed}",
+    "dashboard.googleTab.worth.leftSub": "At your best rate ({month}, {best}), the same {views} viewers would have meant about {extra} more customers.",
+    "dashboard.googleTab.worth.leversLink": "The levers above are how you get there.",
+    "dashboard.googleTab.worth.matched": "You matched your best month. Keep the levers going.",
+    "dashboard.googleTab.worth.info": "Not every call or direction request becomes a sale. Change your average visit in Settings.",
+    "dashboard.googleTab.s2.otherRange": "Google's own Performance screen may use a different date range.",
+    "dashboard.googleTab.jump.label": "On this page",
+    "dashboard.googleTab.jump.lastMonth": "Last month",
+    "dashboard.googleTab.jump.funnel": "Searches → customers",
+    "dashboard.googleTab.jump.searches": "Search terms",
+    "dashboard.googleTab.jump.listing": "Your listing",
+    "dashboard.googleTab.jump.next": "Show up for more",
+    "dashboard.googleTab.jump.protection": "Changes",
+    "dashboard.googleTab.sample": "Sample data",
+    "dashboard.googleTab.sampleNote": "Practice mode: the numbers in sections 1, 2, 3 and 5 are sample data to show the design. Real numbers come from Google after your first full month connected.",
+    "dashboard.googleTab.monthly": "Updates monthly",
+    "dashboard.googleTab.coming": "Coming with your first monthly Google report",
+    "dashboard.googleTab.s1.title": "Last month on Google",
+    "dashboard.googleTab.s1.meta": "{month} · compared with {previous}",
+    "dashboard.googleTab.rate.label": "Your conversion rate",
+    "dashboard.googleTab.rate.pill": "Updates on the 1st of every month · next: {date}",
+    "dashboard.googleTab.rate.sentence": "of people who found you on Google became customers who called, booked, visited your site or asked for directions",
+    "dashboard.googleTab.rate.of": "{actions} of {viewers} people",
+    "dashboard.googleTab.rate.trend": "Last 6 months",
+    "dashboard.googleTab.rate.empty": "Google hasn't shared numbers for your listing yet. They usually appear within a few days.",
+    "dashboard.googleTab.rate.emptyBody": "It's the share of people who found you on Google and then called, booked, visited your site or asked for directions. Until then, the five things below are what tend to move it.",
+    "dashboard.googleTab.raise.title": "What raises your conversion rate",
+    "dashboard.googleTab.raise.sub": "Five things research links to more calls, bookings and visits, all done in PostScore.",
+    "dashboard.googleTab.lever.reviews.title": "Reviews",
+    "dashboard.googleTab.lever.photos.title": "Photos",
+    "dashboard.googleTab.lever.posts.title": "Google posts",
+    "dashboard.googleTab.lever.deals.title": "Deals",
+    "dashboard.googleTab.lever.website.title": "Website",
+    "dashboard.googleTab.lever.reviews.why": "80% prefer businesses that reply to every review.",
+    "dashboard.googleTab.lever.photos.why": "42% more direction requests with photos (Google).",
+    "dashboard.googleTab.lever.posts.why": "Give people who found you a reason to act now.",
+    "dashboard.googleTab.lever.deals.why": "50% of customers look for a deal when searching (Google).",
+    "dashboard.googleTab.lever.website.why": "0.1s faster on phones lifts conversions ~8% (Deloitte).",
+    "dashboard.googleTab.lever.reviews.status.replied": "{percent}% replied",
+    "dashboard.googleTab.lever.reviews.status.notChecked": "not checked yet",
+    "dashboard.googleTab.lever.reviews.status.noRecent": "no recent reviews",
+    "dashboard.googleTab.lever.photos.status.soon": "coming soon",
+    "dashboard.googleTab.lever.posts.status.soon": "coming soon",
+    "dashboard.googleTab.lever.deals.status.running": "{count} running",
+    "dashboard.googleTab.lever.deals.status.runningOne": "1 running",
+    "dashboard.googleTab.lever.deals.status.none": "no coupon running",
+    "dashboard.googleTab.lever.website.status.score": "{earned} / {of}",
+    "dashboard.googleTab.lever.website.status.none": "no website",
+    "dashboard.googleTab.lever.pill.reply": "Reply",
+    "dashboard.googleTab.lever.pill.done": "Done",
+    "dashboard.googleTab.lever.pill.soon": "Soon",
+    "dashboard.googleTab.lever.pill.running": "Running",
+    "dashboard.googleTab.lever.pill.start": "Start",
+    "dashboard.googleTab.lever.pill.fixes": "{count} fixes",
+    "dashboard.googleTab.lever.pill.fixesOne": "1 fix",
+    "dashboard.googleTab.recap.did": "Last month you:",
+    "dashboard.googleTab.recap.notYetLabel": "Not yet:",
+    "dashboard.googleTab.recap.nothing": "nothing from PostScore yet",
+    "dashboard.googleTab.recap.listing.hours": "updated your hours",
+    "dashboard.googleTab.recap.listing.phone": "updated your phone",
+    "dashboard.googleTab.recap.listing.description": "updated your description",
+    "dashboard.googleTab.recap.listing.website_link": "fixed your website link",
+    "dashboard.googleTab.recap.listing.customer_details": "added customer details",
+    "dashboard.googleTab.recap.listing.booking_link": "updated your booking link",
+    "dashboard.googleTab.recap.replies": "replied to {count} reviews",
+    "dashboard.googleTab.recap.repliesOne": "replied to 1 review",
+    "dashboard.googleTab.recap.campaigns": "started {count} campaigns",
+    "dashboard.googleTab.recap.campaignsOne": "started 1 campaign",
+    "dashboard.googleTab.recap.not.replies": "review replies",
+    "dashboard.googleTab.recap.not.campaign": "a coupon or referral card",
+    "dashboard.googleTab.recap.not.listing": "a listing update",
+    "dashboard.googleTab.recap.tail": "The more of these you keep up each month, the better your odds of this number climbing.",
+    "dashboard.googleTab.sources": "Sources: Google Business Profile playbooks · BrightLocal Local Consumer Review Survey 2026 · Sterling Sky Google Posts test · Deloitte 'Milliseconds Make Millions'.",
+    "dashboard.googleTab.kpi.calls": "Calls",
+    "dashboard.googleTab.kpi.directions": "Direction requests",
+    "dashboard.googleTab.kpi.bookings": "Booked in Google",
+    "dashboard.googleTab.kpi.websiteClicks": "Website clicks",
+    "dashboard.googleTab.kpi.empty": "Calls, direction requests, website clicks, bookings and messages, and what they could be worth, show here once Google shares your numbers.",
+    "dashboard.googleTab.worth.label": "What that could be worth",
+    "dashboard.googleTab.worth.estimate": "Estimate",
+    "dashboard.googleTab.s2.title": "How searches became customers",
+    "dashboard.googleTab.s2.empty": "How many people saw your listing on Search and Maps, how many then called, booked, visited your site or asked for directions, and the last 6 months.",
+    "dashboard.googleTab.s2.saw": "Saw your listing",
+    "dashboard.googleTab.s2.sawSub": "Search and Maps",
+    "dashboard.googleTab.s2.acted": "Took an action",
+    "dashboard.googleTab.s2.actedSub": "call, book, directions, website",
+    "dashboard.googleTab.s2.called": "Called",
+    "dashboard.googleTab.s2.calledSub": "{percent}% of actions",
+    "dashboard.googleTab.s2.otherActions": "Bookings + website",
+    "dashboard.googleTab.s3.title": "What people searched to find you",
+    "dashboard.googleTab.s3.empty": "The words people typed into Google before they found your listing.",
+    "dashboard.googleTab.s3.note": "Google shows search terms used at least 15 times a month. Section 5 turns these into ways to show up for more of them.",
+    "dashboard.googleTab.s4.title": "Your Google listing",
+    "dashboard.googleTab.s4.meta": "Edit right here: preview → approve → undo for 7 days",
+    "dashboard.googleTab.strip.synced": "Connected · synced {ago}",
+    "dashboard.googleTab.strip.connected": "Connected",
+    "dashboard.googleTab.strip.practice": "Practice mode · sample Google",
+    "dashboard.googleTab.strip.open": "Open on Google ↗",
+    "dashboard.googleTab.ago.minutes": "{count} min ago",
+    "dashboard.googleTab.ago.hours": "{count} h ago",
+    "dashboard.googleTab.ago.days": "{count} days ago",
+    "dashboard.googleTab.ago.daysOne": "1 day ago",
+    "dashboard.googleTab.count.ok": "{count} OK",
+    "dashboard.googleTab.count.fix": "{count} to fix",
+    "dashboard.googleTab.count.improve": "{count} to improve",
+    "dashboard.googleTab.group.reach": "How customers reach you",
+    "dashboard.googleTab.group.open": "When you're open",
+    "dashboard.googleTab.group.who": "Who you are",
+    "dashboard.googleTab.group.fresh": "What keeps you fresh",
+    "dashboard.googleTab.row.missing": "Not on your listing",
+    "dashboard.googleTab.row.soon": "Coming soon",
+    "dashboard.googleTab.row.phone.label": "Phone",
+    "dashboard.googleTab.row.website.label": "Website",
+    "dashboard.googleTab.row.booking.label": "Booking link",
+    "dashboard.googleTab.row.booking.note": "The \"Book online\" button customers tap on Google.",
+    "dashboard.googleTab.row.messaging.label": "Messaging",
+    "dashboard.googleTab.row.messaging.on": "On",
+    "dashboard.googleTab.row.messaging.off": "Off",
+    "dashboard.googleTab.row.messaging.unknown": "Not known yet",
+    "dashboard.googleTab.row.messaging.note": "Customers can text you from your listing, and Google's AI can answer for you.",
+    "dashboard.googleTab.row.hours.label": "Hours",
+    "dashboard.googleTab.row.holiday.label": "Holiday hours",
+    "dashboard.googleTab.row.holiday.note": "Without them, Google can show \"Hours might differ\" on holidays.",
+    "dashboard.googleTab.row.category.label": "Category",
+    "dashboard.googleTab.row.description.label": "Description",
+    "dashboard.googleTab.row.description.note": "Say what you do best, in up to 750 characters.",
+    "dashboard.googleTab.row.customerDetails.label": "Customer details",
+    "dashboard.googleTab.row.customerDetails.value": "Payments, parking, accessibility and more",
+    "dashboard.googleTab.row.photos.label": "Photos",
+    "dashboard.googleTab.row.photos.value": "{count} on your listing",
+    "dashboard.googleTab.row.photos.note": "Add 2–3 new ones a month. The date of your newest photo is coming soon.",
+    "dashboard.googleTab.row.posts.label": "Google posts",
+    "dashboard.googleTab.row.posts.note": "Your recent Google posts will show here.",
+    "dashboard.googleTab.row.reviews.label": "Reviews",
+    "dashboard.googleTab.row.reviews.value": "{value} reviews",
+    "dashboard.googleTab.row.reviews.note": "{replied} of your last {total} replied",
+    "dashboard.googleTab.row.reviews.noteNone": "Reply counts appear after the first check.",
+    "dashboard.googleTab.action.edit": "Edit",
+    "dashboard.googleTab.action.fix": "Fix",
+    "dashboard.googleTab.action.update": "Update",
+    "dashboard.googleTab.action.howTo": "How to",
+    "dashboard.googleTab.action.howToInline": "How to",
+    "dashboard.googleTab.action.addOnGoogle": "Add on Google",
+    "dashboard.googleTab.action.openInbox": "Open inbox",
+    "dashboard.googleTab.action.close": "Close",
+    "dashboard.googleTab.s5.title": "Show up for more searches",
+    "dashboard.googleTab.s5.meta": "Based on your searches and listing · only Google-listing ideas",
+    "dashboard.googleTab.s5.empty": "Ideas to show up for more of the searches people used to find you, based on your monthly Google report.",
+    "dashboard.googleTab.s5.sample1.title": "Add balayage and keratin to your Services on Google",
+    "dashboard.googleTab.s5.sample1.tag": "Reach: 76 searches/mo",
+    "dashboard.googleTab.s5.sample1.body": "People found you with \"balayage near me\" (61) and \"keratin treatment\" (15), but neither is in your Services list on Google.",
+    "dashboard.googleTab.s5.sample1.why": "Google matches searches to the services you list, so listing them helps you show up for those searches more often.",
+    "dashboard.googleTab.s5.sample2.title": "Add \"Hair coloring service\" as a second category",
+    "dashboard.googleTab.s5.sample2.tag": "Reach: color searches",
+    "dashboard.googleTab.s5.sample2.body": "\"hair color sleepy hollow\" found you only 23 times, and your only category is Hair salon.",
+    "dashboard.googleTab.s5.sample2.why": "Categories decide which searches Google shows you for. A second category opens up color searches nearby.",
+    "dashboard.googleTab.s6.title": "Protection & changes",
+    "dashboard.googleTab.s6.meta": "Checked on every scan",
+    "dashboard.googleTab.others.title": "Changes by anyone else",
+    "dashboard.googleTab.others.suggested": "Suggested edits Google accepted",
+    "dashboard.googleTab.others.fields": "Phone, hours, website",
+    "dashboard.googleTab.others.unchanged": "Unchanged",
+    "dashboard.googleTab.others.changed": "Changed: {fields}",
+    "dashboard.googleTab.others.unknown": "After your next scan",
+    "dashboard.googleTab.others.field.phone": "phone",
+    "dashboard.googleTab.others.field.hours": "hours",
+    "dashboard.googleTab.others.field.website": "website",
+    "dashboard.googleTab.others.status": "Listing status",
+    "dashboard.googleTab.others.statusValue.open": "Open",
+    "dashboard.googleTab.others.statusValue.closedTemp": "Temporarily closed",
+    "dashboard.googleTab.others.statusValue.closed": "Permanently closed",
+    "dashboard.googleTab.others.statusValue.unknown": "Not known",
+    "dashboard.googleTab.others.note": "Google can accept other people's suggested edits without telling you. PostScore compares your listing on every scan and leaves out changes you made from here.",
+    "dashboard.googleTab.made.title": "Made from PostScore",
+    "dashboard.googleTab.made.empty": "Nothing yet. Changes you approve here show up with their status.",
+    "dashboard.googleTab.made.kind.hours": "Hours",
+    "dashboard.googleTab.made.kind.phone": "Phone",
+    "dashboard.googleTab.made.kind.description": "Description",
+    "dashboard.googleTab.made.kind.website_link": "Website link",
+    "dashboard.googleTab.made.kind.customer_details": "Customer details",
+    "dashboard.googleTab.made.kind.booking_link": "Booking link",
+    "dashboard.googleTab.made.status.live": "Live ✓",
+    "dashboard.googleTab.made.status.undo": "Undo · {count} days left",
+    "dashboard.googleTab.made.status.undoOne": "Undo · 1 day left",
+    "dashboard.googleTab.made.status.reviewing": "Google reviewing",
+    "dashboard.googleTab.made.status.undone": "Undone",
+    "dashboard.googleTab.made.status.failed": "Didn't go through",
+    "dashboard.googleTab.notConnected.title": "Connect Google to see your Google Profile",
+    "dashboard.googleTab.notConnected.lead": "Connecting your Google Business Profile unlocks this tab:",
+    "dashboard.googleTab.notConnected.rate": "Your conversion rate each month: how many people who found you on Google called, booked, visited your site or asked for directions.",
+    "dashboard.googleTab.notConnected.searches": "What people searched on Google to find you, and how those searches became customers.",
+    "dashboard.googleTab.notConnected.edit": "Editing your listing from PostScore: preview, approve, undo for 7 days",
     "dashboard.fixWithPostScore.button": "Fix it with PostScore",
     "dashboard.fixWithPostScore.beta": "Beta",
     "dashboard.fixWithPostScore.connectFirst": "Connect your Google Business Profile so PostScore can fix this for you.",
@@ -9978,6 +10534,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.nav.plan": "Plan & billing",
     "dashboard.settings.nav.email": "Email & notifications",
     "dashboard.settings.nav.businessType": "Business type",
+    "dashboard.settings.nav.averageVisit": "Average visit",
+    "dashboard.settings.averageVisit.helper": "What one customer visit is usually worth to you. Used only for the “What that could be worth” estimate on the Google Profile tab.",
+    "dashboard.settings.averageVisit.label": "Average visit",
+    "dashboard.settings.averageVisit.save": "Save",
+    "dashboard.settings.averageVisit.help": "In dollars, for example 45. Leave it empty to clear it.",
+    "dashboard.settings.averageVisit.error.invalid": "Enter an amount like 45 or 45.50.",
+    "dashboard.settings.averageVisit.error.not_ready": "This can't be saved yet. Please try again later.",
+    "dashboard.settings.averageVisit.error.failed": "Couldn't save. Please try again.",
     "dashboard.settings.nav.website": "Website",
     "dashboard.settings.website.helper": "The site PostScore grades, screenshots and shows for this business.",
     "dashboard.settings.nav.account": "Account",
@@ -12152,6 +12716,280 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.closed.step.why": "Google les dice a todos los que lo buscan que cerró. Nada más importa hasta corregirlo.",
     "dashboard.closed.report.alert": "Google muestra {name} como cerrado permanentemente. Si sigue abierto, márquelo como abierto en su Perfil de Empresa en Google ahora — a los clientes se les dice que cerró.",
     "dashboard.closed.report.alertTemporary": "Google muestra {name} como cerrado temporalmente. Si ya reabrió, actualícelo en su Perfil de Empresa en Google.",
+    "dashboard.googleTab.parts.performance.label": "Rendimiento",
+    "dashboard.googleTab.parts.performance.subtitle": "Cómo lo encontró la gente en Google y qué hizo",
+    "dashboard.googleTab.parts.edit.label": "Edite su ficha",
+    "dashboard.googleTab.parts.protection.label": "Protección",
+    "dashboard.googleTab.parts.protection.subtitle": "Cambios hechos por cualquier otra persona, y todo lo que se cambió desde PostScore",
+    "dashboard.googleTab.samplePill": "Datos de muestra en modo de práctica",
+    "dashboard.googleTab.row.loading": "Cargando desde Google",
+    "dashboard.googleTab.row.liveFailed": "No se pudo cargar desde Google. Abra el editor para verlo.",
+    "dashboard.googleTab.row.description.none": "Aún no hay descripción en Google",
+    "dashboard.googleTab.row.description.chars": "{count} de 750 caracteres. Diga lo que mejor hace.",
+    "dashboard.googleTab.row.booking.none": "Aún no hay enlace de reservas en Google",
+    "dashboard.googleTab.row.booking.notOffered": "Google no lo ofrece para su tipo de negocio",
+    "dashboard.googleTab.rate.small": "Los números pequeños cambian mucho de un mes a otro.",
+    "dashboard.googleTab.worth.setIt": "Indique su visita promedio en Configuración para ver esto",
+    "dashboard.googleTab.s2.whoTitle": "Quién lo vio",
+    "dashboard.googleTab.s2.whoPeople": "personas vieron su ficha en los últimos 6 meses",
+    "dashboard.googleTab.s2.yoyUp": "▲ {percent} % frente a los mismos meses del año pasado",
+    "dashboard.googleTab.s2.yoyDown": "▼ {percent} % frente a los mismos meses del año pasado",
+    "dashboard.googleTab.s2.yoySame": "Igual que los mismos meses del año pasado",
+    "dashboard.googleTab.s2.counted": "Contado como Google cuenta las vistas.",
+    "dashboard.googleTab.s2.devices": "Dispositivos y plataformas",
+    "dashboard.googleTab.s2.row.searchPhone": "Búsqueda de Google – teléfono",
+    "dashboard.googleTab.s2.row.mapsPhone": "Google Maps – teléfono",
+    "dashboard.googleTab.s2.row.searchComputer": "Búsqueda de Google – computadora",
+    "dashboard.googleTab.s2.row.mapsComputer": "Google Maps – computadora",
+    "dashboard.googleTab.s2.takeaway.phone": "El {percent} % lo encontró en un teléfono. Asegúrese de que llamar con un toque y su enlace de reservas funcionen en el móvil.",
+    "dashboard.googleTab.s2.takeaway.maps": "La mayoría lo encontró en Maps. Mantenga al día su horario, sus fotos y los datos para llegar.",
+    "dashboard.googleTab.s2.takeaway.search": "La mayoría lo encontró en la Búsqueda de Google. Su descripción y sus servicios le ayudan a aparecer.",
+    "dashboard.googleTab.s2.days": "Qué días llaman",
+    "dashboard.googleTab.s2.dayGroup.midweek": "mar–jue",
+    "dashboard.googleTab.s2.dayGroup.weekend": "vie–sáb",
+    "dashboard.googleTab.s2.dayGroup.sunMon": "dom–lun",
+    "dashboard.googleTab.s2.dayTip.midweek": "La mayoría de las llamadas llegan a mitad de semana: conteste o deje un buzón de voz con su enlace de reservas.",
+    "dashboard.googleTab.s2.dayTip.weekend": "La mayoría de las llamadas llegan el viernes y el sábado: conteste o deje un buzón de voz con su enlace de reservas.",
+    "dashboard.googleTab.s2.dayTip.sunMon": "La mayoría de las llamadas llegan el domingo y el lunes: conteste o deje un buzón de voz con su enlace de reservas, y revise su horario de esos días.",
+    "dashboard.googleTab.s2.noCalls": "No hubo llamadas desde su ficha en estos meses.",
+    "dashboard.googleTab.s3.meta": "{month} · de Google · se actualiza cada mes",
+    "dashboard.googleTab.s3.none": "Google no mostró términos de búsqueda para {month}.",
+    "dashboard.googleTab.s3.noteReal": "Google muestra los términos de búsqueda usados al menos 15 veces al mes.",
+    "dashboard.googleTab.rate.loading": "Cargando sus números de Google…",
+    "dashboard.googleTab.rate.failed": "No se pudieron cargar sus números de Google.",
+    "dashboard.googleTab.rate.retry": "Intentar de nuevo",
+    "dashboard.googleTab.s2.interactions": "{count} interacciones",
+    "dashboard.googleTab.rate.monthLine": "{month}: {rate} · {actions} de {viewers} personas",
+    "dashboard.googleTab.kpi.vsMonth": "frente a {month}",
+    "dashboard.googleTab.s2.funnel": "De vistas a clientes",
+    "dashboard.googleTab.s2.trendTitle": "Interacciones por mes",
+    "dashboard.googleTab.rate.per100.down": "▼ {count} clientes menos por cada 100 personas que el mes anterior",
+    "dashboard.googleTab.rate.per100.up": "▲ {count} clientes más por cada 100 personas que el mes anterior",
+    "dashboard.googleTab.rate.per100.same": "Más o menos igual que el mes anterior",
+    "dashboard.googleTab.rate.best": "Mejor: {month} {rate}",
+    "dashboard.googleTab.rate.tooltip": "{month}: {rate} · {actions} de {viewers} personas",
+    "dashboard.googleTab.rate.trendAria": "Tasa de conversión, últimos 6 meses: {values}",
+    "dashboard.googleTab.strip.practiceReal": "Modo de práctica · una copia de su ficha real",
+    "dashboard.googleTab.strip.practiceFallback": "Copia de práctica: no se pudo cargar su ficha real",
+    "dashboard.googleTab.row.booking.via": "Reservar en línea · vía {provider}",
+    "dashboard.googleTab.row.booking.button": "El botón Reservar en línea de su ficha de Google.",
+    "dashboard.googleTab.row.booking.notCounted": "Las reservas se hacen en el sitio de {partner}, así que Google no puede contarlas.",
+    "dashboard.googleTab.action.addLink": "Agregar el enlace",
+    "dashboard.googleTab.action.managedBy": "Lo administra {provider}",
+    "dashboard.googleTab.action.turnOnBooking": "Activar reservas en Google",
+    "dashboard.googleTab.booking.partnerAdded": "{provider} agregó este botón a su ficha de Google. Para cambiarlo, actualice su configuración de reservas en {provider}.",
+    "dashboard.googleTab.booking.notCountedA": "Google muestra su botón de reservas de {provider}, pero las reservas se completan en el sitio de {provider}, así que Google no puede contarlas. PostScore las contará cuando conecte {provider} (próximamente).",
+    "dashboard.googleTab.booking.tileB": "Aún no se cuentan: active las reservas de Google en {partner}",
+    "dashboard.googleTab.booking.ideaTitle": "Deje que los clientes reserven sin salir de Google",
+    "dashboard.googleTab.booking.ideaPill": "Cuente cada reserva",
+    "dashboard.googleTab.booking.ideaBody": "Su botón Reservar en línea lleva a la gente a {partner}. Active las reservas de Google de {partner} para que reserven en Google y Google cuente cada una.",
+    "dashboard.googleTab.recap.not.booking": "activar las reservas en Google",
+    "dashboard.booking.square.1": "En el panel de Square vaya a Citas → Configuración → Reservas en línea → Canales.",
+    "dashboard.booking.square.2": "Active Google (puede llamarse \"Book with Google\" o \"Reserve with Google\").",
+    "dashboard.booking.square.3": "Asegúrese de que el nombre, la dirección y el teléfono de su negocio en Square coincidan exactamente con su ficha de Google.",
+    "dashboard.booking.square.4": "Google puede tardar desde unos días hasta un par de semanas en cambiar su botón.",
+    "dashboard.booking.square.note": "Las reservas hechas directamente en su sitio de Square seguirán sin aparecer aquí.",
+    "dashboard.booking.generic": "En la configuración de {partner}, busque \"Reserve with Google\" o \"Book with Google\" y actívelo. Asegúrese de que el nombre, la dirección y el teléfono de su negocio coincidan con su ficha de Google.",
+    "dashboard.booking.turnedOn": "Ya lo activé",
+    "dashboard.booking.snoozed": "Gracias. Ocultaremos esto 14 días y volveremos a revisar sus reservas.",
+    "dashboard.booking.still": "Todavía no se cuentan. Revise de nuevo la configuración.",
+    "dashboard.booking.taskTitle": "Active las reservas de Google en {partner} (10 min)",
+    "dashboard.booking.taskBody": "Su botón Reservar en línea lleva a {partner}, pero Google no puede contar esas reservas hasta que lo active.",
+    "dashboard.booking.taskButton": "Ver los pasos",
+    "dashboard.googleTab.worth.brought": "Google le trajo unos {low}–{high} el mes pasado",
+    "dashboard.googleTab.worth.broughtSub": "{actions} acciones de clientes × {avg} dólares de visita promedio, si entre un tercio y todas se convirtieron en visitas.",
+    "dashboard.googleTab.worth.left": "Lo que se quedó sobre la mesa: ≈ {missed}",
+    "dashboard.googleTab.worth.leftSub": "Con su mejor tasa ({month}, {best}), las mismas {views} personas habrían sido unos {extra} clientes más.",
+    "dashboard.googleTab.worth.leversLink": "Las palancas de arriba son la forma de lograrlo.",
+    "dashboard.googleTab.worth.matched": "Igualó su mejor mes. Siga con las palancas.",
+    "dashboard.googleTab.worth.info": "No todas las llamadas o solicitudes de indicaciones se convierten en una venta. Cambie su visita promedio en Configuración.",
+    "dashboard.googleTab.s2.otherRange": "La pantalla de Rendimiento de Google puede usar otro rango de fechas.",
+    "dashboard.googleTab.jump.label": "En esta página",
+    "dashboard.googleTab.jump.lastMonth": "El mes pasado",
+    "dashboard.googleTab.jump.funnel": "Búsquedas → clientes",
+    "dashboard.googleTab.jump.searches": "Búsquedas",
+    "dashboard.googleTab.jump.listing": "Su ficha",
+    "dashboard.googleTab.jump.next": "Aparezca en más",
+    "dashboard.googleTab.jump.protection": "Cambios",
+    "dashboard.googleTab.sample": "Datos de muestra",
+    "dashboard.googleTab.sampleNote": "Modo de práctica: los números de las secciones 1, 2, 3 y 5 son datos de muestra para mostrar el diseño. Los números reales llegan de Google después de su primer mes completo conectado.",
+    "dashboard.googleTab.monthly": "Se actualiza cada mes",
+    "dashboard.googleTab.coming": "Llega con su primer informe mensual de Google",
+    "dashboard.googleTab.s1.title": "El mes pasado en Google",
+    "dashboard.googleTab.s1.meta": "{month} · comparado con {previous}",
+    "dashboard.googleTab.rate.label": "Su tasa de conversión",
+    "dashboard.googleTab.rate.pill": "Se actualiza el día 1 de cada mes · próxima: {date}",
+    "dashboard.googleTab.rate.sentence": "de las personas que lo encontraron en Google se convirtieron en clientes que llamaron, reservaron, visitaron su sitio o pidieron indicaciones",
+    "dashboard.googleTab.rate.of": "{actions} de {viewers} personas",
+    "dashboard.googleTab.rate.trend": "Últimos 6 meses",
+    "dashboard.googleTab.rate.empty": "Google aún no ha compartido números de su ficha. Suelen aparecer en unos días.",
+    "dashboard.googleTab.rate.emptyBody": "Es la parte de las personas que lo encontraron en Google y luego llamaron, reservaron, visitaron su sitio o pidieron indicaciones. Mientras tanto, estas cinco cosas son las que suelen moverla.",
+    "dashboard.googleTab.raise.title": "Qué sube su tasa de conversión",
+    "dashboard.googleTab.raise.sub": "Cinco cosas que los estudios relacionan con más llamadas, reservas y visitas, todas desde PostScore.",
+    "dashboard.googleTab.lever.reviews.title": "Reseñas",
+    "dashboard.googleTab.lever.photos.title": "Fotos",
+    "dashboard.googleTab.lever.posts.title": "Publicaciones de Google",
+    "dashboard.googleTab.lever.deals.title": "Ofertas",
+    "dashboard.googleTab.lever.website.title": "Sitio web",
+    "dashboard.googleTab.lever.reviews.why": "El 80 % prefiere negocios que responden a todas las reseñas.",
+    "dashboard.googleTab.lever.photos.why": "42 % más solicitudes de indicaciones con fotos (Google).",
+    "dashboard.googleTab.lever.posts.why": "Dé a quienes lo encontraron una razón para actuar ahora.",
+    "dashboard.googleTab.lever.deals.why": "El 50 % de los clientes busca una oferta al buscar (Google).",
+    "dashboard.googleTab.lever.website.why": "0,1 s más rápido en teléfonos sube las conversiones ~8 % (Deloitte).",
+    "dashboard.googleTab.lever.reviews.status.replied": "{percent} % respondidas",
+    "dashboard.googleTab.lever.reviews.status.notChecked": "aún sin revisar",
+    "dashboard.googleTab.lever.reviews.status.noRecent": "sin reseñas recientes",
+    "dashboard.googleTab.lever.photos.status.soon": "próximamente",
+    "dashboard.googleTab.lever.posts.status.soon": "próximamente",
+    "dashboard.googleTab.lever.deals.status.running": "{count} activos",
+    "dashboard.googleTab.lever.deals.status.runningOne": "1 activo",
+    "dashboard.googleTab.lever.deals.status.none": "ningún cupón activo",
+    "dashboard.googleTab.lever.website.status.score": "{earned} / {of}",
+    "dashboard.googleTab.lever.website.status.none": "sin sitio web",
+    "dashboard.googleTab.lever.pill.reply": "Responder",
+    "dashboard.googleTab.lever.pill.done": "Listo",
+    "dashboard.googleTab.lever.pill.soon": "Pronto",
+    "dashboard.googleTab.lever.pill.running": "Activo",
+    "dashboard.googleTab.lever.pill.start": "Empezar",
+    "dashboard.googleTab.lever.pill.fixes": "{count} arreglos",
+    "dashboard.googleTab.lever.pill.fixesOne": "1 arreglo",
+    "dashboard.googleTab.recap.did": "El mes pasado usted:",
+    "dashboard.googleTab.recap.notYetLabel": "Aún no:",
+    "dashboard.googleTab.recap.nothing": "nada desde PostScore todavía",
+    "dashboard.googleTab.recap.listing.hours": "actualizó su horario",
+    "dashboard.googleTab.recap.listing.phone": "actualizó su teléfono",
+    "dashboard.googleTab.recap.listing.description": "actualizó su descripción",
+    "dashboard.googleTab.recap.listing.website_link": "arregló el enlace a su sitio web",
+    "dashboard.googleTab.recap.listing.customer_details": "agregó detalles para clientes",
+    "dashboard.googleTab.recap.listing.booking_link": "actualizó su enlace de reservas",
+    "dashboard.googleTab.recap.replies": "respondió {count} reseñas",
+    "dashboard.googleTab.recap.repliesOne": "respondió 1 reseña",
+    "dashboard.googleTab.recap.campaigns": "empezó {count} campañas",
+    "dashboard.googleTab.recap.campaignsOne": "empezó 1 campaña",
+    "dashboard.googleTab.recap.not.replies": "respuestas a reseñas",
+    "dashboard.googleTab.recap.not.campaign": "un cupón o una tarjeta de referidos",
+    "dashboard.googleTab.recap.not.listing": "una actualización de su ficha",
+    "dashboard.googleTab.recap.tail": "Cuantas más de estas mantenga cada mes, mejores serán sus probabilidades de que este número suba.",
+    "dashboard.googleTab.sources": "Fuentes: guías del Perfil de Empresa en Google · BrightLocal Local Consumer Review Survey 2026 · prueba de publicaciones de Google de Sterling Sky · Deloitte 'Milliseconds Make Millions'.",
+    "dashboard.googleTab.kpi.calls": "Llamadas",
+    "dashboard.googleTab.kpi.directions": "Solicitudes de indicaciones",
+    "dashboard.googleTab.kpi.bookings": "Reservado en Google",
+    "dashboard.googleTab.kpi.websiteClicks": "Clics al sitio web",
+    "dashboard.googleTab.kpi.empty": "Las llamadas, solicitudes de indicaciones, clics al sitio web, reservas y mensajes, y lo que podrían valer, aparecen aquí cuando Google comparta sus números.",
+    "dashboard.googleTab.worth.label": "Lo que eso podría valer",
+    "dashboard.googleTab.worth.estimate": "Estimación",
+    "dashboard.googleTab.s2.title": "Cómo las búsquedas se convirtieron en clientes",
+    "dashboard.googleTab.s2.empty": "Cuántas personas vieron su ficha en la Búsqueda y en Maps, cuántas luego llamaron, reservaron, visitaron su sitio o pidieron indicaciones, y los últimos 6 meses.",
+    "dashboard.googleTab.s2.saw": "Vieron su ficha",
+    "dashboard.googleTab.s2.sawSub": "Búsqueda y Maps",
+    "dashboard.googleTab.s2.acted": "Hicieron algo",
+    "dashboard.googleTab.s2.actedSub": "llamar, reservar, indicaciones, sitio web",
+    "dashboard.googleTab.s2.called": "Llamaron",
+    "dashboard.googleTab.s2.calledSub": "{percent} % de las acciones",
+    "dashboard.googleTab.s2.otherActions": "Reservas + sitio web",
+    "dashboard.googleTab.s3.title": "Qué buscaron para encontrarlo",
+    "dashboard.googleTab.s3.empty": "Las palabras que la gente escribió en Google antes de encontrar su ficha.",
+    "dashboard.googleTab.s3.note": "Google muestra los términos de búsqueda usados al menos 15 veces al mes. La sección 5 los convierte en formas de aparecer en más de ellas.",
+    "dashboard.googleTab.s4.title": "Su ficha de Google",
+    "dashboard.googleTab.s4.meta": "Edite aquí mismo: vista previa → aprobar → deshacer durante 7 días",
+    "dashboard.googleTab.strip.synced": "Conectado · sincronizado {ago}",
+    "dashboard.googleTab.strip.connected": "Conectado",
+    "dashboard.googleTab.strip.practice": "Modo de práctica · Google de muestra",
+    "dashboard.googleTab.strip.open": "Abrir en Google ↗",
+    "dashboard.googleTab.ago.minutes": "hace {count} min",
+    "dashboard.googleTab.ago.hours": "hace {count} h",
+    "dashboard.googleTab.ago.days": "hace {count} días",
+    "dashboard.googleTab.ago.daysOne": "hace 1 día",
+    "dashboard.googleTab.count.ok": "{count} bien",
+    "dashboard.googleTab.count.fix": "{count} por arreglar",
+    "dashboard.googleTab.count.improve": "{count} por mejorar",
+    "dashboard.googleTab.group.reach": "Cómo le contactan",
+    "dashboard.googleTab.group.open": "Cuándo abre",
+    "dashboard.googleTab.group.who": "Quién es usted",
+    "dashboard.googleTab.group.fresh": "Lo que le mantiene al día",
+    "dashboard.googleTab.row.missing": "No está en su ficha",
+    "dashboard.googleTab.row.soon": "Próximamente",
+    "dashboard.googleTab.row.phone.label": "Teléfono",
+    "dashboard.googleTab.row.website.label": "Sitio web",
+    "dashboard.googleTab.row.booking.label": "Enlace de reservas",
+    "dashboard.googleTab.row.booking.note": "El botón \"Reservar en línea\" que los clientes tocan en Google.",
+    "dashboard.googleTab.row.messaging.label": "Mensajes",
+    "dashboard.googleTab.row.messaging.on": "Activado",
+    "dashboard.googleTab.row.messaging.off": "Desactivado",
+    "dashboard.googleTab.row.messaging.unknown": "Aún no se sabe",
+    "dashboard.googleTab.row.messaging.note": "Los clientes pueden escribirle desde su ficha, y la IA de Google puede responder por usted.",
+    "dashboard.googleTab.row.hours.label": "Horario",
+    "dashboard.googleTab.row.holiday.label": "Horario festivo",
+    "dashboard.googleTab.row.holiday.note": "Sin él, Google puede mostrar \"El horario podría ser diferente\" en días festivos.",
+    "dashboard.googleTab.row.category.label": "Categoría",
+    "dashboard.googleTab.row.description.label": "Descripción",
+    "dashboard.googleTab.row.description.note": "Diga lo que mejor hace, en hasta 750 caracteres.",
+    "dashboard.googleTab.row.customerDetails.label": "Detalles para clientes",
+    "dashboard.googleTab.row.customerDetails.value": "Pagos, estacionamiento, accesibilidad y más",
+    "dashboard.googleTab.row.photos.label": "Fotos",
+    "dashboard.googleTab.row.photos.value": "{count} en su ficha",
+    "dashboard.googleTab.row.photos.note": "Agregue 2 o 3 nuevas al mes. La fecha de su foto más reciente llegará pronto.",
+    "dashboard.googleTab.row.posts.label": "Publicaciones de Google",
+    "dashboard.googleTab.row.posts.note": "Sus publicaciones recientes de Google aparecerán aquí.",
+    "dashboard.googleTab.row.reviews.label": "Reseñas",
+    "dashboard.googleTab.row.reviews.value": "{value} reseñas",
+    "dashboard.googleTab.row.reviews.note": "{replied} de sus últimas {total} respondidas",
+    "dashboard.googleTab.row.reviews.noteNone": "Las respuestas aparecen después de la primera revisión.",
+    "dashboard.googleTab.action.edit": "Editar",
+    "dashboard.googleTab.action.fix": "Arreglar",
+    "dashboard.googleTab.action.update": "Actualizar",
+    "dashboard.googleTab.action.howTo": "Cómo hacerlo",
+    "dashboard.googleTab.action.howToInline": "Cómo hacerlo",
+    "dashboard.googleTab.action.addOnGoogle": "Agregar en Google",
+    "dashboard.googleTab.action.openInbox": "Abrir bandeja",
+    "dashboard.googleTab.action.close": "Cerrar",
+    "dashboard.googleTab.s5.title": "Aparezca en más búsquedas",
+    "dashboard.googleTab.s5.meta": "Según sus búsquedas y su ficha · solo ideas para su ficha de Google",
+    "dashboard.googleTab.s5.empty": "Ideas para aparecer en más de las búsquedas que la gente usó para encontrarlo, según su informe mensual de Google.",
+    "dashboard.googleTab.s5.sample1.title": "Agregue balayage y keratina a sus Servicios en Google",
+    "dashboard.googleTab.s5.sample1.tag": "Alcance: 76 búsquedas/mes",
+    "dashboard.googleTab.s5.sample1.body": "La gente lo encontró con \"balayage near me\" (61) y \"keratin treatment\" (15), pero ninguno está en su lista de Servicios en Google.",
+    "dashboard.googleTab.s5.sample1.why": "Google relaciona las búsquedas con los servicios que usted publica, así que publicarlos le ayuda a aparecer más en esas búsquedas.",
+    "dashboard.googleTab.s5.sample2.title": "Agregue \"Servicio de coloración\" como segunda categoría",
+    "dashboard.googleTab.s5.sample2.tag": "Alcance: búsquedas de color",
+    "dashboard.googleTab.s5.sample2.body": "\"hair color sleepy hollow\" lo encontró solo 23 veces, y su única categoría es Peluquería.",
+    "dashboard.googleTab.s5.sample2.why": "Las categorías deciden en qué búsquedas le muestra Google. Una segunda categoría abre las búsquedas de color cercanas.",
+    "dashboard.googleTab.s6.title": "Protección y cambios",
+    "dashboard.googleTab.s6.meta": "Se revisa en cada análisis",
+    "dashboard.googleTab.others.title": "Cambios hechos por otros",
+    "dashboard.googleTab.others.suggested": "Sugerencias que Google aceptó",
+    "dashboard.googleTab.others.fields": "Teléfono, horario, sitio web",
+    "dashboard.googleTab.others.unchanged": "Sin cambios",
+    "dashboard.googleTab.others.changed": "Cambió: {fields}",
+    "dashboard.googleTab.others.unknown": "Tras su próximo análisis",
+    "dashboard.googleTab.others.field.phone": "teléfono",
+    "dashboard.googleTab.others.field.hours": "horario",
+    "dashboard.googleTab.others.field.website": "sitio web",
+    "dashboard.googleTab.others.status": "Estado de la ficha",
+    "dashboard.googleTab.others.statusValue.open": "Abierto",
+    "dashboard.googleTab.others.statusValue.closedTemp": "Cerrado temporalmente",
+    "dashboard.googleTab.others.statusValue.closed": "Cerrado permanentemente",
+    "dashboard.googleTab.others.statusValue.unknown": "No se sabe",
+    "dashboard.googleTab.others.note": "Google puede aceptar sugerencias de otras personas sin avisarle. PostScore compara su ficha en cada análisis y deja fuera los cambios que usted hizo desde aquí.",
+    "dashboard.googleTab.made.title": "Hecho desde PostScore",
+    "dashboard.googleTab.made.empty": "Nada todavía. Los cambios que apruebe aquí aparecen con su estado.",
+    "dashboard.googleTab.made.kind.hours": "Horario",
+    "dashboard.googleTab.made.kind.phone": "Teléfono",
+    "dashboard.googleTab.made.kind.description": "Descripción",
+    "dashboard.googleTab.made.kind.website_link": "Enlace al sitio web",
+    "dashboard.googleTab.made.kind.customer_details": "Detalles para clientes",
+    "dashboard.googleTab.made.kind.booking_link": "Enlace de reservas",
+    "dashboard.googleTab.made.status.live": "Publicado ✓",
+    "dashboard.googleTab.made.status.undo": "Deshacer · quedan {count} días",
+    "dashboard.googleTab.made.status.undoOne": "Deshacer · queda 1 día",
+    "dashboard.googleTab.made.status.reviewing": "Google lo está revisando",
+    "dashboard.googleTab.made.status.undone": "Deshecho",
+    "dashboard.googleTab.made.status.failed": "No se aplicó",
+    "dashboard.googleTab.notConnected.title": "Conecte Google para ver su Perfil de Empresa en Google",
+    "dashboard.googleTab.notConnected.lead": "Conectar su Perfil de Empresa en Google desbloquea esta pestaña:",
+    "dashboard.googleTab.notConnected.rate": "Su tasa de conversión cada mes: cuántas personas que lo encontraron en Google llamaron, reservaron, visitaron su sitio o pidieron indicaciones.",
+    "dashboard.googleTab.notConnected.searches": "Qué buscó la gente en Google para encontrarlo, y cómo esas búsquedas se convirtieron en clientes.",
+    "dashboard.googleTab.notConnected.edit": "Editar su ficha desde PostScore: vista previa, aprobar, deshacer durante 7 días",
     "dashboard.fixWithPostScore.button": "Arréglelo con PostScore",
     "dashboard.fixWithPostScore.beta": "Beta",
     "dashboard.fixWithPostScore.connectFirst": "Conecte su Perfil de Empresa en Google para que PostScore pueda arreglar esto por usted.",
@@ -15545,6 +16383,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.nav.plan": "Plan y facturación",
     "dashboard.settings.nav.email": "Correo y avisos",
     "dashboard.settings.nav.businessType": "Tipo de negocio",
+    "dashboard.settings.nav.averageVisit": "Visita promedio",
+    "dashboard.settings.averageVisit.helper": "Cuánto suele valer para usted una visita de un cliente. Solo se usa para la estimación “Lo que eso podría valer” en la pestaña Perfil de Google.",
+    "dashboard.settings.averageVisit.label": "Visita promedio",
+    "dashboard.settings.averageVisit.save": "Guardar",
+    "dashboard.settings.averageVisit.help": "En dólares, por ejemplo 45. Déjelo vacío para borrarlo.",
+    "dashboard.settings.averageVisit.error.invalid": "Escriba una cantidad como 45 o 45.50.",
+    "dashboard.settings.averageVisit.error.not_ready": "Esto aún no se puede guardar. Inténtelo más tarde.",
+    "dashboard.settings.averageVisit.error.failed": "No se pudo guardar. Inténtelo de nuevo.",
     "dashboard.settings.nav.website": "Sitio web",
     "dashboard.settings.website.helper": "El sitio que PostScore evalúa, captura y muestra para este negocio.",
     "dashboard.settings.nav.account": "Cuenta",

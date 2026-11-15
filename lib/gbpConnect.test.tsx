@@ -256,7 +256,7 @@ describe("plan decision: every plan connects; only Premium opens the Google Prof
     expect(gbpLandingPath("b1", "profile", "connected")).toBe("/business/b1?gbp=connected");
     expect(gbpLandingPath("b1", "connect", "connected")).toBe("/business/b1?gbp=connected");
     expect(gbpLandingPath("b1", "reviews", "denied")).toBe("/business/b1/website-reviews?gbp=denied#reply-check");
-    expect(gbpLandingPath("b1", "profile", "denied")).toBe("/business/b1/growth?tab=google-profile&gbp=denied#google-connection");
+    expect(gbpLandingPath("b1", "profile", "denied")).toBe("/business/b1/growth?tab=google&gbp=denied#google-connection");
     expect(gbpLandingPath("b1", "connect", "failed")).toBe("/business/b1/connect-gbp?gbp=failed");
     // Free and Grow can never be routed to a Premium page, whatever "from" says.
     expect(resolveGbpOrigin("free", "profile")).toBe("overview");

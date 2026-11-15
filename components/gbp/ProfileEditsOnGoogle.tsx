@@ -416,7 +416,18 @@ function WebsiteOffer({ text, button, onUse, testId }: { text: string; button: s
 }
 
 /** The section once loaded — exported so tests can render it with a view. */
-export function ProfileEditsBody({ businessId, initial }: { businessId: string; initial: ProfileEditsView }) {
+export function ProfileEditsBody({
+  businessId,
+  initial,
+  fields = ["hours", "phone", "description"],
+  orderLink = true,
+}: {
+  businessId: string;
+  initial: ProfileEditsView;
+  /** Only these fields (the Google Profile tab opens one row's editor at a time). */
+  fields?: ProfileField[];
+  orderLink?: boolean;
+}) {
   const locale = useLocale();
   const [view, setView] = useState(initial);
   const [outcome, setOutcome] = useState<Outcome>("accept");
@@ -446,16 +457,16 @@ export function ProfileEditsBody({ businessId, initial }: { businessId: string; 
           {t(locale, K("readOnly"))}
         </p>
       )}
-      {(["hours", "phone", "description"] as ProfileField[]).map((field) => (
+      {fields.map((field) => (
         <FieldCard key={field} businessId={businessId} field={field} view={view} outcome={outcome} onView={(patch) => setView((v) => ({ ...v, ...patch }))} />
       ))}
-      <OrderLinkOnGoogle businessId={businessId} outcome={outcome} />
+      {orderLink && <OrderLinkOnGoogle businessId={businessId} outcome={outcome} />}
       <p className="text-[12px] text-ink-mute">{t(locale, K("afterScan"))}</p>
     </div>
   );
 }
 
-export function ProfileEditsOnGoogle({ businessId }: { businessId: string }) {
+export function ProfileEditsOnGoogle({ businessId, fields, orderLink, intro = true }: { businessId: string; fields?: ProfileField[]; orderLink?: boolean; intro?: boolean }) {
   const locale = useLocale();
   const [view, setView] = useState<ProfileEditsView | null>(null);
   const [error, setError] = useState<MessageKey | null>(null);
@@ -469,9 +480,9 @@ export function ProfileEditsOnGoogle({ businessId }: { businessId: string }) {
 
   return (
     <section id="edit-on-google" data-testid="profile-edits" className="flex scroll-mt-20 flex-col gap-3">
-      <p className="text-[13px] leading-snug text-ink-soft">{t(locale, K("intro"))}</p>
+      {intro && <p className="text-[13px] leading-snug text-ink-soft">{t(locale, K("intro"))}</p>}
       {view ? (
-        <ProfileEditsBody businessId={businessId} initial={view} />
+        <ProfileEditsBody businessId={businessId} initial={view} fields={fields} orderLink={orderLink} />
       ) : error ? (
         <p role="alert" className="text-[13px] text-red">
           {t(locale, error)}

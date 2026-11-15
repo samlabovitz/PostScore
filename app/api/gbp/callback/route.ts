@@ -30,6 +30,7 @@ import { gbpLandingPath, resolveGbpOrigin, type GbpConnectResult } from "@/lib/g
 import { saveGbpConnection } from "@/lib/gbpTokens.server";
 import { syncScoreSnapshotWithClient } from "@/app/actions/scoring";
 import { runGbpReplyCheck } from "@/lib/gbpReplyCounts.server";
+import { backfillInsightsIfNeeded } from "@/lib/gbpInsights.server";
 import { gbpFetch, logGbpCalls } from "@/lib/gbpQuota";
 import { canConnectGbp, getPlan } from "@/lib/premium";
 
@@ -154,6 +155,9 @@ export async function GET(req: NextRequest) {
     // fails the connect (an error keeps "connected"; a rejected token
     // shows "Reconnect Google").
     await runGbpReplyCheck(businessId);
+    // The last 18 months of Google's numbers, once (the Google Profile tab).
+    // Never fails the connect: on any error the first tab visit tries again.
+    await backfillInsightsIfNeeded(createAdminClient(), businessId).catch(() => undefined);
     // Google's data changes the score: saved and labeled "Google connected".
     await syncScoreSnapshotWithClient(supabase, businessId, "google_connected");
     return land("connected");

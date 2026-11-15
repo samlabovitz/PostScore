@@ -35,9 +35,9 @@ const task = (checkId: string, over: Partial<ActionPlanTask> = {}): ActionPlanTa
 
 describe("which steps have an editor", () => {
   test("hours, phone, website link and review replies open their editor; the merged reviews card when it stands for replies", () => {
-    expect(fixFlowHref("b1", "completeness.hours")).toBe("/business/b1/growth?tab=google-profile#edit-hours");
-    expect(fixFlowHref("b1", "completeness.phone")).toBe("/business/b1/growth?tab=google-profile#edit-phone");
-    expect(fixFlowHref("b1", "completeness.website_link")).toBe("/business/b1/growth?tab=google-profile#edit-website-link");
+    expect(fixFlowHref("b1", "completeness.hours")).toBe("/business/b1/growth?tab=google#edit-hours");
+    expect(fixFlowHref("b1", "completeness.phone")).toBe("/business/b1/growth?tab=google#edit-phone");
+    expect(fixFlowHref("b1", "completeness.website_link")).toBe("/business/b1/growth?tab=google#edit-website-link");
     expect(fixFlowHref("b1", "visibility.review_replies")).toBe("/business/b1/website-reviews#google-reviews");
     expect(fixFlowHref("b1", "visibility.reviews_merged", ["visibility.review_count", "visibility.review_replies"])).toBe("/business/b1/website-reviews#google-reviews");
     expect(fixFlowHref("b1", "visibility.review_recency")).toBeNull();

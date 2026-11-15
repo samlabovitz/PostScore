@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
+vi.mock("server-only", () => ({}));
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactElement } from "react";
 import type { Addon, Plan } from "@/lib/plan";
@@ -174,8 +175,8 @@ describe("Campaigns: coupons + referrals moved off Growth", () => {
 
 describe("Old URLs redirect to the new homes", () => {
   test("/google-profile → Growth's Google Profile tab; /search-demand → the same tab's search demand", () => {
-    expect(() => GoogleProfilePage({ params: { id: "b1" } })).toThrow("REDIRECT /business/b1/growth?tab=google-profile");
-    expect(() => SearchDemandPage({ params: { id: "b1" } })).toThrow("REDIRECT /business/b1/growth?tab=google-profile#search-demand");
+    expect(() => GoogleProfilePage({ params: { id: "b1" } })).toThrow("REDIRECT /business/b1/growth?tab=google");
+    expect(() => SearchDemandPage({ params: { id: "b1" } })).toThrow("REDIRECT /business/b1/growth?tab=google#searches");
   });
 
   test("Growth's old ?tab=coupons / ?tab=referral → the Campaigns tabs", async () => {

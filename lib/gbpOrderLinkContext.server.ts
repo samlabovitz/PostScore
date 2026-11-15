@@ -59,13 +59,15 @@ async function businessFacts(admin: SupabaseClient, businessId: string) {
 /** `requirePremium: false` (reading the platform link card): a non-Premium owner reads the real links even in practice mode. */
 export async function orderLinkContext(businessId: string, options: { requirePremium: boolean } = { requirePremium: true }): Promise<OrderLinkContext | OrderLinkBlocked> {
   if (reviewRepliesPracticeOn()) {
-    const [{ practiceOwnerGate }, practice, { PRACTICE_PROFILE_LOCATION }] = await Promise.all([
+    const [{ practiceOwnerGate }, practice, { PRACTICE_PROFILE_LOCATION, seedPracticeListing }] = await Promise.all([
       import("@/lib/gbpPracticeGate.server"),
       import("@/lib/gbpPlaceActionsPractice.server"),
       import("@/lib/gbpProfilePractice.server"),
     ]);
     const gate = await practiceOwnerGate(businessId);
     if (gate.ok) {
+      // The practice copy (and its links) starts from the real listing (once; never written to Google).
+      await seedPracticeListing(businessId);
       const facts = await businessFacts(gate.admin, businessId);
       return {
         ok: true,

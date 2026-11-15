@@ -1,0 +1,47 @@
+{
+ "searchKeywordsCounts": [
+  {
+   "searchKeyword": "hair salon tarrytown",
+   "insightsValue": {
+    "value": "212"
+   }
+  },
+  {
+   "searchKeyword": "keratin treatment",
+   "insightsValue": {
+    "value": "15"
+   }
+  },
+  {
+   "searchKeyword": "balayage near me",
+   "insightsValue": {
+    "value": "61"
+   }
+  },
+  {
+   "searchKeyword": "blowout sleepy hollow",
+   "insightsValue": {
+    "threshold": "15"
+   }
+  },
+  {
+   "searchKeyword": "hair express",
+   "insightsValue": {
+    "value": "140"
+   }
+  },
+  {
+   "searchKeyword": "hair color sleepy hollow",
+   "insightsValue": {
+    "value": "23"
+   }
+  },
+  {
+   "searchKeyword": "curly cut",
+   "insightsValue": {
+    "value": "18"
+   }
+  }
+ ],
+ "nextPageToken": ""
+}

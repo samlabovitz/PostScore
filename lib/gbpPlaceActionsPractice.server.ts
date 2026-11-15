@@ -31,6 +31,12 @@ function listing(businessId: string): PracticeLinks {
   return l;
 }
 
+/** Practice mode from the real listing: the real links, copied (lib/gbpProfilePractice.server.ts seedPracticeListing). */
+export function seedPracticePlaceActions(businessId: string, links: PlaceActionLink[]) {
+  const collection = `${PRACTICE_PROFILE_LOCATION}/placeActionLinks`;
+  listings.set(businessId, { shown: links.map((x, i) => ({ ...x, name: `${collection}/real-${i + 1}` })), held: [], next: links.length + 1 });
+}
+
 /** For tests: every business starts over with no link. */
 export function resetPracticePlaceActions() {
   listings.clear();

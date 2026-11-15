@@ -35,6 +35,8 @@ export async function googleWriteContext(businessId: string): Promise<GoogleWrit
     const [{ practiceOwnerGate }, practice] = await Promise.all([import("@/lib/gbpPracticeGate.server"), import("@/lib/gbpProfilePractice.server")]);
     const gate = await practiceOwnerGate(businessId);
     if (!gate.ok) return gate;
+    // The practice copy starts from the real listing (once; never written to Google).
+    await practice.seedPracticeListing(businessId);
     const { data } = await gate.admin.from("businesses").select("verified_website_url").eq("id", businessId).maybeSingle();
     return {
       ok: true,

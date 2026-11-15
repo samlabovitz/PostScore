@@ -1,0 +1,320 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:PF;src:url(../fonts/fontsource-playfair-display-5.0.21/package/files/playfair-display-latin-700-normal.woff2);font-weight:700}
+@font-face{font-family:IN;src:url(../fonts/fontsource-inter-5.0.18/package/files/inter-latin-400-normal.woff2);font-weight:400}
+@font-face{font-family:IN;src:url(../fonts/fontsource-inter-5.0.18/package/files/inter-latin-500-normal.woff2);font-weight:500}
+@font-face{font-family:IN;src:url(../fonts/fontsource-inter-5.0.18/package/files/inter-latin-600-normal.woff2);font-weight:600}
+@font-face{font-family:IN;src:url(../fonts/fontsource-inter-5.0.18/package/files/inter-latin-700-normal.woff2);font-weight:700}
+:root{--navy:#16213e;--navy2:#1f2b4a;--gold:#b8892f;--gold2:#e3c88f;--cream:#f5f1e8;--line:#e7e0d2;--ink:#1c2541;--muted:#6b6f7d;--green:#2f7a4b;--red:#b23b2e;--amber:#b7791f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:IN,sans-serif;color:var(--ink);background:var(--cream);font-size:14px;width:1440px}
+.app{display:grid;grid-template-columns:270px 1fr}
+.side{background:var(--navy);color:#dfe3ee;padding:28px 20px;display:flex;flex-direction:column;gap:4px}
+.logo{font-family:PF;font-size:27px;color:#fff;margin-bottom:18px}.logo span{color:var(--gold)}
+.biz{border:1px solid #2f3c62;border-radius:12px;padding:12px 14px;margin-bottom:18px}.biz b{color:#fff;display:block}.biz small{color:#9aa3bd}
+.si{padding:11px 14px;border-radius:10px;color:#dfe3ee;font-size:15px}.si.act{background:var(--gold);color:#fff;font-weight:600}
+.main{padding:30px 0 50px}
+.col{width:1000px;margin:0 auto}
+.back{color:var(--navy);font-size:13.5px}
+h1{font-family:PF;font-size:34px;color:var(--navy);margin-top:10px}
+.sub{color:#3e4762;font-size:15px;margin-top:4px}
+.tabs{display:inline-flex;background:#ece6da;border-radius:12px;padding:4px;margin-top:18px}
+.tab{padding:9px 16px;border-radius:9px;font-weight:600;color:#3e4762}.tab.on{background:#fff;color:var(--navy);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.toc{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.toc span{font-size:12.5px;border:1px solid var(--line);background:#fff;border-radius:20px;padding:5px 11px;color:#3e4762}
+.toc span b{color:var(--gold)}
+.k{font-size:11px;letter-spacing:.14em;color:var(--gold);font-weight:700;text-transform:uppercase}
+.sec{margin-top:34px}
+.sh{display:flex;align-items:baseline;gap:12px}
+.num{width:28px;height:28px;border-radius:50%;background:var(--navy);color:var(--gold2);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none;align-self:center}
+.sh h2{font-family:PF;font-size:24px;color:var(--navy)}
+.sh p{color:var(--muted);font-size:13px;margin-left:auto}
+.lead{color:#3e4762;font-size:14px;margin:6px 0 0 40px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;margin-top:14px}
+.pad{padding:20px 22px}
+.status{display:flex;justify-content:space-between;align-items:center;padding:14px 22px;border-bottom:1px solid #f1ece2;background:#faf7f1;border-radius:16px 16px 0 0}
+.pill{white-space:nowrap;border:1px solid var(--line);background:#fff;border-radius:20px;padding:6px 12px;font-size:12.5px;font-weight:600}
+.g{color:var(--green)}
+.btn{white-space:nowrap;background:var(--navy);color:#fff;border-radius:10px;padding:9px 14px;font-weight:600;font-size:13px;display:inline-block}
+.btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}
+.btn.gold{background:var(--gold)}
+.grp{padding:9px 22px;background:#faf7f1;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;border-top:1px solid #f1ece2}
+.field{display:grid;grid-template-columns:28px 170px 1fr auto;gap:14px;align-items:center;padding:14px 22px;border-top:1px solid #f1ece2}
+.st{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+.st.ok{background:var(--green)}.st.no{background:var(--red)}.st.w{background:var(--amber)}
+.lbl{font-weight:600}
+.val{color:#3e4762;font-size:13.5px}.val small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.lk{font-weight:600;font-size:12.5px;color:var(--navy);border:1px solid var(--line);border-radius:8px;padding:6px 11px;white-space:nowrap}
+.lk.go{background:var(--navy);color:#fff;border-color:var(--navy)}
+.open{background:#fbf7ef;border-top:1px solid #efe6d3;padding:16px 22px 18px 64px}
+.open .row{display:grid;grid-template-columns:110px 1fr 1fr;gap:10px;font-size:13px;padding:4px 0}
+.open .row b{font-weight:600}
+.diff{color:var(--red);font-weight:600}
+.open .acts{display:flex;gap:8px;margin-top:10px;align-items:center}
+.open .acts small{color:var(--muted);margin-left:6px}
+/* analytics */
+.navyc{background:var(--navy);border-radius:16px;color:#fff;padding:18px 22px;margin-top:12px}
+.navyc .k{color:var(--gold2)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.kpi{background:var(--navy2);border:1px solid #2f3c62;border-radius:12px;padding:10px 13px}
+.kpi small{color:#aab2c8;font-size:12px}.kpi b{font-family:PF;font-size:26px;display:block;margin-top:2px}.kpi em{font-style:normal;font-size:12px;color:#7fd3a0}
+.kpi em.dn{color:#e8a59b}
+.big2{display:grid;grid-template-columns:1.2fr 1fr;gap:18px;margin-top:16px}
+.worth{background:var(--navy2);border:1px solid var(--gold);border-radius:14px;padding:12px 16px}
+.worth b{font-family:PF;font-size:28px;color:var(--gold2)}
+.worth p{color:#cfd5e6;font-size:12.5px;margin-top:6px;line-height:1.45}
+.est{font-size:10.5px;background:#33416a;color:var(--gold2);border-radius:5px;padding:2px 6px;margin-left:6px;vertical-align:middle;font-family:IN}
+.rate{background:var(--navy2);border:1px solid #2f3c62;border-radius:14px;padding:16px 18px}
+.rate b{font-family:PF;font-size:34px}
+.rate p{color:#cfd5e6;font-size:12.5px;margin-top:6px}
+/* funnel */
+.fun{padding:22px}
+.fstep{display:grid;grid-template-columns:190px 1fr 90px;align-items:center;gap:14px;margin:10px 0}
+.fstep span{font-weight:600}
+.fbar{height:30px;border-radius:8px;background:#f1ece2;position:relative;overflow:hidden}
+.fbar i{position:absolute;left:0;top:0;bottom:0;background:var(--gold);border-radius:8px}
+.fbar i.n{background:var(--navy)}
+.fstep b{font-family:PF;font-size:20px;text-align:right}
+.fstep small{display:block;font-family:IN;font-size:11.5px;color:var(--muted);font-weight:400}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:6px}
+.mini{border:1px solid #f1ece2;border-radius:12px;padding:14px 16px}
+.mini h4{font-size:14px;margin-bottom:8px}
+.li{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-top:1px solid #f3eee5}
+.li:first-of-type{border-top:0}
+.li span{color:#3e4762}
+.hb{display:flex;align-items:center;gap:8px;font-size:12.5px;margin:6px 0}
+.hb .t{width:90px;color:#3e4762}
+.hb .bb{flex:1;height:10px;background:#f1ece2;border-radius:5px;overflow:hidden}.hb .bb i{display:block;height:100%;background:var(--gold)}
+.hb b{width:40px;text-align:right}
+/* chart */
+.chart{height:170px;display:flex;align-items:flex-end;gap:22px;padding:10px 6px 0;border-bottom:1px solid var(--line);margin-top:10px}
+.cb{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+.stack{width:46px;display:flex;flex-direction:column-reverse;border-radius:6px 6px 0 0;overflow:hidden}
+.stack i{display:block}
+.cl{display:flex;gap:22px;padding:6px 6px 0}.cl span{flex:1;text-align:center;font-size:12px;color:var(--muted)}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:10px}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+/* searches */
+.sq{display:grid;grid-template-columns:28px 1fr 120px 70px;gap:10px;align-items:center;font-size:13.5px;padding:9px 0;border-top:1px solid #f3eee5}
+.sq:first-child{border-top:0}
+.sq .r{color:var(--muted)}
+.sq .bb{height:8px;background:#f1ece2;border-radius:4px;overflow:hidden}.sq .bb i{display:block;height:100%;background:var(--gold)}
+.sq b{text-align:right}
+.tip{margin-top:12px;background:#fbf7ef;border-left:3px solid var(--gold);padding:9px 12px;border-radius:4px;font-size:13px;color:var(--navy)}
+/* actions */
+.acts3{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.act{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 20px;display:grid;grid-template-columns:30px 1fr 210px;gap:16px;align-items:center}
+.n{width:26px;height:26px;border:1.5px solid var(--gold);border-radius:50%;color:var(--gold);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
+.act h3{font-size:16px;display:flex;gap:10px;align-items:center}
+.act p{color:#3e4762;font-size:13px;margin-top:3px}
+.act .why{font-size:12.5px;color:var(--navy);margin-top:6px}
+.tag{font-size:11px;font-weight:700;border-radius:20px;padding:3px 9px}
+.tag.u{background:#fbe9e6;color:var(--red)}.tag.p{background:#e8f3ec;color:var(--green)}
+.act .right{text-align:right}.act .right small{display:block;color:var(--muted);font-size:12px;margin-top:6px}
+/* bottom */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+.cmp{width:100%;border-collapse:collapse;font-size:13px}
+.cmp th{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:right;padding:4px 0}
+.cmp th:first-child,.cmp td:first-child{text-align:left}
+.cmp td{padding:8px 0;border-top:1px solid #f3eee5;text-align:right}
+.cmp tr.me td{font-weight:700;color:var(--navy)}
+.lo{color:var(--red);font-weight:700}
+.foot{margin-top:26px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between}
+.jump{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:6px;margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:6px;box-shadow:0 4px 14px rgba(22,33,62,.06)}
+.jump .jl{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:0 10px 0 8px;border-right:1px solid var(--line);margin-right:2px}
+.jump a{text-decoration:none;color:#3e4762;font-size:13px;font-weight:600;padding:8px 11px;border-radius:9px;white-space:nowrap}
+.jump a b{color:var(--gold);margin-right:3px}
+.jump a.on{background:var(--navy);color:#fff}.jump a.on b{color:var(--gold2)}
+html{scroll-behavior:smooth}
+.conv{display:grid;grid-template-columns:1.3fr 1fr;gap:24px;margin-top:10px;align-items:center}
+.cbig{font-family:PF;font-size:56px;line-height:1;color:var(--gold2)}
+.csub{color:#dfe3ee;font-size:14px;margin-top:8px;line-height:1.45;max-width:520px}
+.cchg{color:#7fd3a0;font-size:13px;font-weight:600;margin-top:8px}
+.spark{background:var(--navy2);border:1px solid #2f3c62;border-radius:12px;padding:12px 14px}
+.sl{font-size:11.5px;color:#aab2c8}.sx{display:flex;justify-content:space-between;font-size:11.5px;color:#aab2c8}
+.raise{margin-top:14px;background:#fff;border-radius:14px;padding:13px 15px;color:var(--ink)}
+.rh{display:flex;gap:10px;align-items:baseline;flex-wrap:nowrap}.rh b{font-size:15px}.rh span{color:var(--muted);font-size:13px}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:10px}
+.rc{border:1px solid var(--line);border-radius:12px;padding:9px 11px;display:grid;grid-template-columns:26px 1fr;column-gap:9px;row-gap:3px;align-content:start}
+.rc>*:not(.ri){grid-column:2}.rc .ri{grid-row:1/3}.rc .rs{justify-self:start}
+.ri{width:26px;height:26px;border-radius:8px;background:#fbf7ef;color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700}
+.rc b{font-size:13.5px;margin-top:2px}.rc small{color:var(--ink);font-size:12px;font-weight:600}
+.why{font-size:11.5px;color:var(--muted);line-height:1.35;min-height:31px}
+.srcs{font-size:11px;color:var(--muted);margin-top:8px}
+.rs{font-size:11px;font-weight:700;border-radius:20px;padding:2px 8px;align-self:flex-start}
+.rs.ok{background:#e8f3ec;color:var(--green)}.rs.w{background:#fff3df;color:var(--amber)}.rs.no{background:#fbe9e6;color:var(--red)}
+.rc a{font-size:12.5px;font-weight:600;color:var(--navy);margin-top:4px}
+.did{margin-top:12px;font-size:13px;color:#3e4762;background:#fbf7ef;border-left:3px solid var(--gold);padding:8px 11px;border-radius:4px}
+.rrow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:10px}
+.rl{display:flex;flex-direction:column;gap:5px;border:1px solid var(--line);border-radius:10px;padding:7px 8px;color:var(--ink);text-decoration:none;cursor:pointer}
+.rl:hover{border-color:var(--gold);background:#fbf7ef}
+.rl .ri{flex:none}.rt{display:flex;flex-direction:column;line-height:1.2;flex:1;min-width:0}
+.rt b{font-size:13px;white-space:nowrap}.rt small{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.rl .rs{flex:none}
+.rtop{display:flex;align-items:center;gap:7px}
+.rwhy{font-size:11px;color:var(--muted);line-height:1.35;border-top:1px dashed var(--line);padding-top:5px}
+</style></head><body>
+<div class="app">
+ <aside class="side">
+  <div class="logo">Post<span>Score</span></div>
+  <div class="biz"><b>Hair express on Broadway</b><small>9 S Broadway, Tarrytown, NY 1059…</small></div>
+  <div class="si">Overview</div><div class="si act">Growth</div><div class="si">Campaigns</div><div class="si">Reviews</div><div class="si">Website</div><div class="si">Competitors</div><div class="si">Price check</div><div class="si">Reports</div>
+ </aside>
+ <main class="main"><div class="col">
+  <div class="back">← Back to Hair express on Broadway</div>
+  <h1>Growth</h1>
+  <div class="sub">Raise your score and bring more customers through the door, everything you can act on in one place.</div>
+  <div class="tabs"><span class="tab">Growth recap</span><span class="tab on">Google Profile</span></div>
+  <nav class="jump"><span class="jl">On this page</span><a class="on" href="#last-month"><b>1</b> Last month</a><a href="#funnel"><b>2</b> Searches → customers</a><a href="#searches"><b>3</b> What people searched</a><a href="#listing"><b>4</b> Your listing</a><a href="#next"><b>5</b> Show up for more</a><a href="#protection"><b>6</b> Protection</a></nav>
+  <div style="font-size:11.5px;color:var(--muted);margin-top:6px">This menu stays pinned at the top while you scroll. Click any item to jump to it.</div>
+
+  <!-- 2 LAST MONTH -->
+  <section class="sec" id="last-month">
+   <div class="sh"><div class="num">1</div><h2>Last month on Google</h2><p>October 2026 · compared with September</p></div>
+   <div class="navyc">
+    <div style="display:flex;justify-content:space-between;align-items:center"><div class="k">Your conversion rate</div><span style="font-size:12px;color:#cfd5e6;border:1px solid #33416a;border-radius:20px;padding:4px 10px">Updates on the 1st of every month · next: Dec 1</span></div>
+    <div class="conv">
+     <div>
+      <div class="cbig">11.8%</div>
+      <div class="csub">of people who found you on Google became customers who called, booked, visited your site or asked for directions</div>
+      <div class="cchg">▲ from 10.1% in September · 83 of 704 people</div>
+     </div>
+     <div class="spark">
+      <div class="sl">Last 6 months</div>
+      <svg viewBox="0 0 300 90" width="100%" height="68" preserveAspectRatio="none"><polyline fill="none" stroke="#e3c88f" stroke-width="3" points="5,70 62,64 119,68 176,52 233,40 290,22"/><g fill="#e3c88f"><circle cx="5" cy="70" r="3"/><circle cx="62" cy="64" r="3"/><circle cx="119" cy="68" r="3"/><circle cx="176" cy="52" r="3"/><circle cx="233" cy="40" r="3"/><circle cx="290" cy="22" r="5"/></g></svg>
+      <div class="sx"><span>May 8.2%</span><span>Oct 11.8%</span></div>
+     </div>
+    </div>
+    <div class="raise">
+     <div class="rh"><b>What raises your conversion rate</b><span>Five things research links to more calls, bookings and visits, all done in PostScore.</span></div>
+     <div class="rrow">
+      <a class="rl" title="80% prefer businesses that reply to every review; 74% want reviews from the last 3 months (BrightLocal 2026)"><span class="rtop"><span class="ri">★</span><span class="rt"><b>Reviews</b><small>0% replied</small></span><span class="rs w">Reply</span></span><span class="rwhy">80% prefer businesses that reply to every review.</span></a>
+      <a class="rl" title="42% more direction requests and 35% more website clicks with photos (Google)"><span class="rtop"><span class="ri">▣</span><span class="rt"><b>Photos</b><small>newest 4 mo ago</small></span><span class="rs w">Add 3</span></span><span class="rwhy">42% more direction requests with photos (Google).</span></a>
+      <a class="rl" title="Won't lift your ranking, but give people who found you a reason to act now (Sterling Sky)"><span class="rtop"><span class="ri">✎</span><span class="rt"><b>Google posts</b><small>none in 30 days</small></span><span class="rs no">Post</span></span><span class="rwhy">Give people who found you a reason to act now.</span></a>
+      <a class="rl" title="50% of customers look for a deal when searching for a business (Google)"><span class="rtop"><span class="ri">%</span><span class="rt"><b>Deals</b><small>no coupon running</small></span><span class="rs no">Start</span></span><span class="rwhy">50% of customers look for a deal when searching (Google).</span></a>
+      <a class="rl" title="0.1s faster on phones lifts conversions ~8% (Deloitte)"><span class="rtop"><span class="ri">⌂</span><span class="rt"><b>Website</b><small>28 / 30</small></span><span class="rs ok">1 fix</span></span><span class="rwhy">0.1s faster on phones lifts conversions ~8% (Deloitte).</span></a>
+     </div>
+     <div class="did"><b>Last month you:</b> added customer details · fixed your website link. <b>Not yet:</b> review replies, new photos, a Google post, a coupon. The more of these you keep up each month, the better your odds of this number climbing.</div>
+     <div class="srcs">Sources: Google Business Profile playbooks · BrightLocal Local Consumer Review Survey 2026 · Sterling Sky Google Posts test · Deloitte "Milliseconds Make Millions".</div>
+    </div>
+    <div class="kpis">
+     <div class="kpi"><small>Calls</small><b>31</b><em>▲ 6</em></div>
+     <div class="kpi"><small>Direction requests</small><b>27</b><em>▲ 3</em></div>
+     <div class="kpi"><small>Online bookings</small><b>11</b><em>▲ 4</em></div>
+     <div class="kpi"><small>Website visits</small><b>14</b><em class="dn">▼ 2</em></div>
+    </div>
+    <div class="worth" style="margin-top:14px"><div class="k">What that could be worth</div><b>≈ $3,700</b><span class="est">Estimate</span><p>83 customer actions × your average visit ($45, set in Settings), if every one became a visit. Use it to watch the trend, not as sales.</p></div>
+   </div>
+  </section>
+
+  <!-- 3 FUNNEL -->
+  <section class="sec" id="funnel">
+   <div class="sh"><div class="num">2</div><h2>How searches became customers</h2><p>October 2026 · updates monthly</p></div>
+   <div class="card fun">
+    <div class="fstep"><span>Saw your listing<small>Search and Maps</small></span><div class="fbar"><i style="width:100%"></i></div><b>704</b></div>
+    <div class="fstep"><span>Took an action<small>call, book, directions, website</small></span><div class="fbar"><i class="n" style="width:12%"></i></div><b>83</b></div>
+    <div class="fstep"><span>Called<small>37% of actions</small></span><div class="fbar"><i class="n" style="width:4.4%"></i></div><b>31</b></div>
+    <div class="split" style="margin-top:16px">
+     <div class="mini"><h4>Where they saw you</h4>
+      <div class="hb"><span class="t">Google Maps</span><div class="bb"><i style="width:58%"></i></div><b>409</b></div>
+      <div class="hb"><span class="t">Google Search</span><div class="bb"><i style="width:42%"></i></div><b>295</b></div>
+      <div class="hb"><span class="t">On a phone</span><div class="bb"><i style="width:81%"></i></div><b>81%</b></div>
+      <div class="hb"><span class="t">On a computer</span><div class="bb"><i style="width:19%"></i></div><b>19%</b></div>
+     </div>
+     <div class="mini"><h4>Which days they call</h4>
+      <div class="hb"><span class="t">Tue–Thu</span><div class="bb"><i style="width:52%"></i></div><b>16</b></div>
+      <div class="hb"><span class="t">Fri–Sat</span><div class="bb"><i style="width:39%"></i></div><b>12</b></div>
+      <div class="hb"><span class="t">Sun–Mon</span><div class="bb"><i style="width:10%"></i></div><b>3</b></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">Most calls come midweek, so answer the phone or set voicemail with your booking link.</div>
+     </div>
+    </div>
+    <div class="mini" style="margin-top:16px"><h4>Last 6 months</h4>
+     <div class="chart">
+      <div class="cb"><div class="stack" style="height:66px"><i style="height:30px;background:#16213e"></i><i style="height:24px;background:#b8892f"></i><i style="height:12px;background:#e3c88f"></i></div></div>
+      <div class="cb"><div class="stack" style="height:78px"><i style="height:34px;background:#16213e"></i><i style="height:28px;background:#b8892f"></i><i style="height:16px;background:#e3c88f"></i></div></div>
+      <div class="cb"><div class="stack" style="height:72px"><i style="height:32px;background:#16213e"></i><i style="height:26px;background:#b8892f"></i><i style="height:14px;background:#e3c88f"></i></div></div>
+      <div class="cb"><div class="stack" style="height:96px"><i style="height:42px;background:#16213e"></i><i style="height:34px;background:#b8892f"></i><i style="height:20px;background:#e3c88f"></i></div></div>
+      <div class="cb"><div class="stack" style="height:118px"><i style="height:50px;background:#16213e"></i><i style="height:48px;background:#b8892f"></i><i style="height:20px;background:#e3c88f"></i></div></div>
+      <div class="cb"><div class="stack" style="height:150px"><i style="height:62px;background:#16213e"></i><i style="height:54px;background:#b8892f"></i><i style="height:34px;background:#e3c88f"></i></div></div>
+     </div>
+     <div class="cl"><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span></div>
+     <div class="legend"><span><i class="sw" style="background:#16213e"></i>Calls</span><span><i class="sw" style="background:#b8892f"></i>Directions</span><span><i class="sw" style="background:#e3c88f"></i>Bookings + website</span></div>
+    </div>
+   </div>
+  </section>
+
+  <!-- 4 SEARCHES -->
+  <section class="sec" id="searches">
+   <div class="sh"><div class="num">3</div><h2>What people searched to find you</h2><p>October 2026 · from Google · updates monthly</p></div>
+   <div class="card pad">
+    <div class="sq"><span class="r">1</span><span>hair salon tarrytown</span><div class="bb"><i style="width:100%"></i></div><b>212</b></div>
+    <div class="sq"><span class="r">2</span><span>hair express</span><div class="bb"><i style="width:66%"></i></div><b>140</b></div>
+    <div class="sq"><span class="r">3</span><span>balayage near me</span><div class="bb"><i style="width:29%"></i></div><b>61</b></div>
+    <div class="sq"><span class="r">4</span><span>hair color sleepy hollow</span><div class="bb"><i style="width:11%"></i></div><b>23</b></div>
+    <div class="sq"><span class="r">5</span><span>keratin treatment</span><div class="bb"><i style="width:7%"></i></div><b>15</b></div>
+    <div style="font-size:12.5px;color:var(--muted);margin-top:10px">Google shows search terms used at least 15 times a month. Section 5 turns these into ways to show up for more of them.</div>
+   </div>
+  </section>
+
+  <!-- 1 LISTING -->
+  <section class="sec" id="listing">
+   <div class="sh"><div class="num">4</div><h2>Your Google listing</h2><p>Edit right here: preview → approve → undo for 7 days</p></div>
+   <div class="lead">Everything customers see on Google, checked and editable without leaving PostScore.</div>
+   <div class="card">
+    <div class="status"><span class="pill g">● Connected · synced 2 h ago</span><span style="font-size:13px;color:var(--muted)">9 sections OK · <b style="color:var(--red)">2 to fix</b> · <b style="color:var(--amber)">4 to improve</b></span><span class="btn ghost">Open on Google ↗</span></div>
+    <div class="grp" style="border-top:0">How customers reach you</div>
+    <div class="field"><span class="st ok">✓</span><span class="lbl">Phone</span><span class="val">(914) 320-3012 <small>Matches your website</small></span><span class="lk">Edit</span></div>
+    <div class="field"><span class="st ok">✓</span><span class="lbl">Website</span><span class="val">hairexpressonbroadway.com <small>Loads fast, secure, the right site</small></span><span class="lk">Edit</span></div>
+    <div class="field"><span class="st ok">✓</span><span class="lbl">Booking link</span><span class="val">"Book online" button is on <small>11 bookings came from Google last month</small></span><span class="lk">Edit</span></div>
+    <div class="field"><span class="st w">!</span><span class="lbl">Messaging</span><span class="val">Off <small>Google's AI can answer customer texts from your listing. Turn it on in Google (2 min)</small></span><span class="lk">How to ↗</span></div>
+    <div class="grp">When you're open</div>
+    <div class="field"><span class="st no">✕</span><span class="lbl">Hours</span><span class="val">Tue–Sat · Sun 11–4 · Mon closed <small>Tuesday doesn't match your website</small></span><span class="lk go">Fix</span></div>
+    <div class="open">
+     <div class="row"><b></b><b style="color:var(--muted)">On Google now</b><b style="color:var(--muted)">On your website</b></div>
+     <div class="row"><b>Tuesday</b><span>9:30 AM – <span class="diff">5:00 PM</span></span><span>9:30 AM – <span class="diff">6:00 PM</span></span></div>
+     <div class="row"><b>Wed–Sat</b><span>9:30 AM – 6:00 PM</span><span>9:30 AM – 6:00 PM</span></div>
+     <div class="acts"><span class="btn">Use my website's hours</span><span class="btn ghost">Edit by hand</span><small>Preview first · undo for 7 days</small></div>
+    </div>
+    <div class="field"><span class="st w">!</span><span class="lbl">Holiday hours</span><span class="val">None set for Thanksgiving (Nov 26) <small>Google shows "Hours might differ" without them</small></span><span class="lk">Add</span></div>
+    <div class="grp">Who you are</div>
+    <div class="field"><span class="st ok">✓</span><span class="lbl">Category</span><span class="val">Hair salon <small>Tip: add "Hair coloring" in Google to show up for color searches</small></span><span class="lk">How to ↗</span></div>
+    <div class="field"><span class="st no">✕</span><span class="lbl">Description</span><span class="val">"Hair salon" <small>12 of 750 characters. Say what you do best</small></span><span class="lk go">Write with PostAI</span></div>
+    <div class="field"><span class="st w">!</span><span class="lbl">Customer details</span><span class="val">Restroom ✓ · payments, parking, accessibility missing <small>Google's AI uses these to answer "Do they take cards?"</small></span><span class="lk">Update</span></div>
+    <div class="grp">What keeps you fresh</div>
+    <div class="field"><span class="st ok">✓</span><span class="lbl">Photos</span><span class="val">10+ on your listing <small>Newest is 4 months old. Add 2–3 new ones a month</small></span><span class="lk">Add on Google ↗</span></div>
+    <div class="field"><span class="st w">!</span><span class="lbl">Google posts</span><span class="val">None in 30+ days <small>Recent posts and photos help you stay visible</small></span><span class="lk">Post ideas</span></div>
+    <div class="field"><span class="st ok">✓</span><span class="lbl">Reviews</span><span class="val">5.0 ★ · 30 reviews · 0 of last 20 replied <small>Nearby salons average 69 reviews</small></span><span class="lk">Open inbox</span></div>
+   </div>
+  </section>
+
+  <!-- 5 ACTIONS -->
+  <section class="sec" id="next">
+   <div class="sh"><div class="num">5</div><h2>Show up for more searches</h2><p>Based on your searches and listing · only Google-listing ideas</p></div>
+   <div class="lead">Your weekly tasks live in Growth recap. These are only about getting your listing in front of more people searching on Google.</div>
+   <div class="acts3">
+    <div class="act"><div class="n">1</div><div><h3>Add balayage and keratin to your Services on Google <span class="tag p">Reach: 76 searches/mo</span></h3><p>People found you with "balayage near me" (61) and "keratin treatment" (15), but neither is in your Services list on Google.</p><div class="why">Google matches searches to the services you list, so listing them helps you show up for those searches more often.</div></div><div class="right"><span class="btn">Add services</span><small>3 min · undo for 7 days</small></div></div>
+    <div class="act"><div class="n">2</div><div><h3>Add "Hair coloring service" as a second category <span class="tag p">Reach: color searches</span></h3><p>"hair color sleepy hollow" found you only 23 times, and your only category is Hair salon.</p><div class="why">Categories decide which searches Google shows you for. A second category opens up color searches nearby.</div></div><div class="right"><span class="btn ghost">How to ↗</span><small>2 min in Google</small></div></div>
+   </div>
+  </section>
+
+  <!-- 6 PROTECTION -->
+  <section class="sec" id="protection">
+   <div class="sh"><div class="num">6</div><h2>Protection & changes</h2><p>Checked on every scan</p></div>
+   <div class="two">
+    <div class="card pad"><div class="k">Changes by anyone else</div>
+     <div class="li" style="margin-top:8px"><span>Suggested edits Google accepted</span><b class="g">None</b></div>
+     <div class="li"><span>Name, phone, address, hours</span><b class="g">Unchanged</b></div>
+     <div class="li"><span>Listing status</span><b class="g">Open · verified</b></div>
+     <div style="font-size:12px;color:var(--muted);margin-top:8px">Google can accept other people's suggested edits without telling you. We alert you the same day.</div></div>
+    <div class="card pad"><div class="k">Made from PostScore</div>
+     <div class="li" style="margin-top:8px"><span>Customer details · added restroom</span><b class="g">Live ✓</b></div>
+     <div class="li"><span>Website link updated</span><span style="color:var(--muted)">Undo · 5 days left</span></div>
+     <div class="li"><span>Description</span><span style="color:var(--amber)">Google reviewing</span></div></div>
+   </div>
+  </section>
+
+    <div class="foot"><span>Google data from Business Profile Performance and your listing, synced Nov 14. Sample numbers in this mockup.</span><span>Google Maps</span></div>
+ </div></main>
+</div>
+</body></html>

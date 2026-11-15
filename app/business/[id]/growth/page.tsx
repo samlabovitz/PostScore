@@ -31,6 +31,16 @@ import { GrowthView } from "./GrowthView";
 import { canConnectGbp, getPlan, hasPremium } from "@/lib/premium";
 import { SEARCH_DEMAND_EXAMPLE } from "@/lib/gbp/searchDemand";
 import { campaignsHref } from "@/lib/campaignsTabs";
+import { isGoogleTabParam } from "@/lib/googleProfileTab";
+import { loadGoogleTabSaved } from "@/lib/googleProfileTab.server";
+import { loadBookingState, loadInsights, loadInsightsSyncedAt } from "@/lib/gbpInsights.server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { insightsStateFor } from "@/lib/gbpInsights";
+import { loadAverageVisit } from "@/lib/averageVisit.server";
+import { reportCategories } from "@/lib/reports/reportCategories";
+import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_BUSINESS_TIMEZONE } from "@/lib/i18n";
+import type { GoogleProfileTabProps } from "@/components/gbp/GoogleProfileTab";
 
 export default async function GrowthPage({ params, searchParams = {} }: { params: { id: string }; searchParams?: { tab?: string; gbp?: string } }) {
   // Coupons and referrals moved to the Campaigns page: old links to
@@ -158,6 +168,60 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
     },
   };
 
+  // The booking button and whether Google can count its bookings (case B
+  // adds a one-time task to the Growth recap; lib/bookingPartners.ts).
+  const bookingState =
+    hasPremium(plan) && gbpConnected
+      ? await (async () => {
+          const months = await loadInsights(createClient(), params.id);
+          return loadBookingState(createAdminClient(), params.id, months.ok ? months.months : []).catch(() => null);
+        })()
+      : null;
+
+  // Premium's Google Profile tab: its own saved data, only while it's open.
+  const googleTab: GoogleProfileTabProps | null =
+    hasPremium(plan) && isGoogleTabParam(searchParams.tab)
+      ? await (async () => {
+          const practice = googleProfile.practice;
+          const db = createClient();
+          const saved = gbpConnected || practice ? await loadGoogleTabSaved(db, params.id, { timeZone: business.time_zone ?? DEFAULT_BUSINESS_TIMEZONE, practice, businessStatus: row.business_status ?? null }) : null;
+          // "Not yet: … turning on Google booking" while case B stands.
+          if (saved && bookingState?.tracking.kind === "turn_on" && !saved.recap.notYet.includes("booking")) saved.recap.notYet.push("booking");
+          // Google's monthly numbers. Shown when the last full month is stored;
+          // otherwise the tab syncs them (app/actions/gbpInsights.ts), unless a
+          // sync in the last 6 hours found Google had nothing for that month.
+          const stored = gbpConnected ? await loadInsights(db, params.id) : null;
+          const syncedAt = gbpConnected ? await loadInsightsSyncedAt(db, params.id) : null;
+          const insightsState = insightsStateFor(stored?.ok ? stored.months.map((m) => m.month) : [], syncedAt, new Date());
+          // Practice mode: the fake Google starts as a copy of the real listing.
+          const practiceSource = practice ? await (await import("@/lib/gbpProfilePractice.server")).seedPracticeListing(params.id) : null;
+          const averageVisit = gbpConnected ? await loadAverageVisit(db, params.id) : null;
+          const website = reportCategories(scored.result.breakdown.categories).find((_, i) => scored.result.breakdown.categories[i].id === "website");
+          const hasWebsite = scored.result.breakdown.checks.find((c) => c.id === "website.has_website")?.earnedPoints !== 0;
+          return {
+            businessId: params.id,
+            connected: gbpConnected,
+            practice,
+            needsReconnect: googleProfile.connection.needsReconnect,
+            canStart: googleProfile.connection.canStart,
+            result: googleProfile.connection.result,
+            business: googleProfile.connection.business,
+            listing: { ...googleProfile.listing, categories: row.categories ?? null, openingHours: row.opening_hours ?? null },
+            checks: scored.result.breakdown.checks,
+            website: website && hasWebsite && website.points !== null ? { earned: website.points, of: website.weight, fixes: website.needsWork } : null,
+            replyCounts: gbpStatus.status === "ok" ? gbpStatus.replyCounts : null,
+            messagingOn: googleProfile.messagingOn,
+            saved,
+            lastScanAt,
+            insights: stored?.ok ? stored.months : [],
+            insightsState: gbpConnected ? insightsState : "ready",
+            averageVisit,
+            practiceSource,
+            booking: bookingState,
+          };
+        })()
+      : null;
+
   const actionPlan =
     actionPlanResult.status === "ok"
       ? actionPlanResult
@@ -204,6 +268,8 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
         profile={profile}
         breakdown={scored.result.breakdown}
         googleProfile={googleProfile}
+        googleTab={googleTab}
+        bookingTask={bookingState?.tracking.kind === "turn_on" ? { provider: bookingState.tracking.provider, still: bookingState.tracking.still } : null}
         actionPlan={actionPlan}
         growthMoves={growthMoves}
         weeklyChecklist={weeklyChecklist}

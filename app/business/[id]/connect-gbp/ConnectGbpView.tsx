@@ -80,7 +80,7 @@ function buildUnlocks(
       icon: IconChartFunnel,
       title: t(locale, "dashboard.connectGbp.unlockSearchDemandTitle"),
       body: t(locale, "dashboard.connectGbp.unlockSearchDemandBody"),
-      preview: { href: `/business/${businessId}/growth?tab=google-profile#search-demand`, label: t(locale, "dashboard.connectGbp.unlockSearchDemandPreview") },
+      preview: { href: `/business/${businessId}/growth?tab=google#searches`, label: t(locale, "dashboard.connectGbp.unlockSearchDemandPreview") },
     },
   ];
 }

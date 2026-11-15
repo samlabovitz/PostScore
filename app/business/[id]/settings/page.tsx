@@ -12,6 +12,8 @@ import { tradeLabel } from "@/lib/tradeSearch";
 import { BusinessLanguageToggle } from "@/components/layout/BusinessLanguageToggle";
 import { MonthlyEmailReportCard } from "@/components/reports/MonthlyEmailReportCard";
 import { BusinessTypeSetting } from "./BusinessTypeSetting";
+import { AverageVisitSetting } from "@/components/settings/AverageVisitSetting";
+import { loadAverageVisit } from "@/lib/averageVisit.server";
 import { CancelPlanButton, MonthlyEmailFreeNote, PlanCard, SavedToast, SettingsNav, SettingsSection, UnsubscribeAllButton } from "@/components/settings/SettingsParts";
 import { LegalLinks } from "@/components/legal/LegalPage";
 import { cancelAtPeriodEndAction } from "@/app/actions/subscription";
@@ -69,6 +71,7 @@ export default async function SettingsPage({ params }: { params: { id: string } 
     { id: "email", label: k("nav.email"), icon: "bell" as const },
     { id: "business-type", label: k("nav.businessType"), icon: "tag" as const },
     { id: "website", label: k("nav.website"), icon: "globe" as const },
+    { id: "average-visit", label: k("nav.averageVisit"), icon: "coin" as const },
     { id: "account", label: k("nav.account"), icon: "account" as const },
   ];
 
@@ -180,6 +183,11 @@ export default async function SettingsPage({ params }: { params: { id: string } 
             {/* The one site PostScore grades, screenshots and shows — and "Wrong site?". */}
             <SettingsSection id="website" icon="globe" title={k("nav.website")} helper={k("website.helper")}>
               <ScanningLine businessId={params.id} site={websiteChoice.status === "ok" ? websiteChoice.choice.current : null} />
+            </SettingsSection>
+
+            {/* What one visit is usually worth: the Google Profile tab's "What that could be worth". */}
+            <SettingsSection id="average-visit" icon="coin" title={k("nav.averageVisit")} helper={k("averageVisit.helper")}>
+              <AverageVisitSetting businessId={params.id} initial={await loadAverageVisit(supabase, params.id)} />
             </SettingsSection>
 
             <SettingsSection id="account" icon="account" title={k("nav.account")} helper={k("account.helper")}>

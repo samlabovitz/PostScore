@@ -21,6 +21,16 @@ export function isPracticeOutcome(v: unknown): v is PracticeOutcome {
 }
 
 interface PracticeListing {
+  /** "real": a copy of the business's real listing (one read, Phase C);
+   * "sample": the built-in sample; "fallback": the sample because the real
+   * read failed ("Practice copy: couldn't load your real listing"). */
+  source: "real" | "sample" | "fallback";
+  /** Copied from the real listing when there is one (read-only here). */
+  title?: string;
+  categories?: unknown;
+  storefrontAddress?: unknown;
+  specialHours: { specialHourPeriods: unknown[] };
+  serviceItems: unknown[];
   regularHours: { periods: GooglePeriod[] };
   phoneNumbers: { primaryPhone: string; additionalPhones?: string[] };
   profile: { description: string };
@@ -33,9 +43,12 @@ interface PracticeListing {
 }
 
 const t = (hours: number, minutes = 0) => ({ hours, minutes });
-function sample(): PracticeListing {
+function sample(source: PracticeListing["source"] = "sample"): PracticeListing {
   const weekday = (day: GooglePeriod["openDay"]) => ({ openDay: day, openTime: t(9), closeDay: day, closeTime: t(18) });
   return {
+    source,
+    specialHours: { specialHourPeriods: [] },
+    serviceItems: [],
     regularHours: {
       periods: [
         weekday("MONDAY"),
@@ -91,6 +104,59 @@ function listing(businessId: string): PracticeListing {
   return l;
 }
 
+/** Practice mode starts from the REAL listing when the business is
+ * connected: one read of Google (lib/gbpRealListing.server.ts), copied into
+ * the fake — practice edits apply to the copy and never reach Google. Not
+ * connected: the sample. The read fails: the sample, marked "fallback". Once
+ * per business until the dev server restarts. */
+export async function seedPracticeListing(businessId: string, fetchImpl: typeof fetch = fetch): Promise<PracticeListing["source"]> {
+  const existing = listings.get(businessId);
+  if (existing) return existing.source;
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const { data: conn } = await Promise.resolve(admin.from("gbp_connections").select("status").eq("business_id", businessId).maybeSingle()).catch(() => ({ data: null }));
+  if ((conn as { status?: string } | null)?.status !== "connected") {
+    listings.set(businessId, sample());
+    return "sample";
+  }
+  const { readRealListing } = await import("@/lib/gbpRealListing.server");
+  // Practice mode must keep working whatever happens: any error is "couldn't load".
+  const read = await readRealListing(admin, businessId, fetchImpl).catch((err: unknown) => ({ ok: false as const, error: err instanceof Error ? err.message.slice(0, 80) : "error" }));
+  if (!read.ok) {
+    console.warn(`[practice] couldn't copy the real listing for ${businessId}: ${read.error} — using the sample`);
+    listings.set(businessId, sample("fallback"));
+    return "fallback";
+  }
+  listings.set(businessId, fromReal(read.listing));
+  const { seedPracticePlaceActions } = await import("@/lib/gbpPlaceActionsPractice.server");
+  seedPracticePlaceActions(businessId, read.listing.placeActionLinks);
+  return "real";
+}
+
+/** The fake's copy of a real listing (only what Google returned; nothing invented). */
+export function fromReal(real: import("@/lib/gbpRealListing.server").RealListing): PracticeListing {
+  const loc = real.location;
+  return {
+    source: "real",
+    title: loc.title,
+    categories: loc.categories,
+    storefrontAddress: loc.storefrontAddress,
+    specialHours: { specialHourPeriods: (loc.specialHours?.specialHourPeriods ?? []) as unknown[] },
+    serviceItems: (loc.serviceItems ?? []) as unknown[],
+    regularHours: { periods: (loc.regularHours?.periods ?? []) as GooglePeriod[] },
+    phoneNumbers: { primaryPhone: loc.phoneNumbers?.primaryPhone ?? "", ...(loc.phoneNumbers?.additionalPhones?.length ? { additionalPhones: loc.phoneNumbers.additionalPhones } : {}) },
+    profile: { description: loc.profile?.description ?? "" },
+    websiteUri: loc.websiteUri ?? "",
+    attributes: new Map(real.attributes.filter((a) => typeof a.values?.[0] === "boolean").map((a) => [a.name, a.values![0] as boolean])),
+    pending: new Map(),
+  };
+}
+
+/** Where the practice copy came from (null before it's made). */
+export function practiceSourceOf(businessId: string): PracticeListing["source"] | null {
+  return listings.get(businessId)?.source ?? null;
+}
+
 /** For tests: every business starts over with the sample listing. */
 export function resetPracticeProfiles() {
   listings.clear();
@@ -117,6 +183,11 @@ function pick(l: PracticeListing, readMask: string | null): Record<string, unkno
   if (fields.includes("phoneNumbers")) out.phoneNumbers = l.phoneNumbers;
   if (fields.includes("profile")) out.profile = l.profile;
   if (fields.includes("websiteUri") && l.websiteUri) out.websiteUri = l.websiteUri;
+  if (fields.includes("title") && l.title) out.title = l.title;
+  if (fields.includes("categories") && l.categories) out.categories = l.categories;
+  if (fields.includes("storefrontAddress") && l.storefrontAddress) out.storefrontAddress = l.storefrontAddress;
+  if (fields.includes("specialHours")) out.specialHours = l.specialHours;
+  if (fields.includes("serviceItems")) out.serviceItems = l.serviceItems;
   if (fields.includes("metadata")) out.metadata = { hasPendingEdits: l.pending.size > 0 };
   return out;
 }
@@ -163,7 +234,7 @@ export function practiceProfileFetch(businessId: string): typeof fetch {
     if (method === "GET") return json(pick(l, url.searchParams.get("readMask")));
     if (method === "PATCH") {
       const mask = url.searchParams.get("updateMask") ?? "";
-      if (!["regularHours", "phoneNumbers", "profile", "websiteUri"].includes(mask)) return googleError(400, "INVALID_ARGUMENT");
+      if (!["regularHours", "phoneNumbers", "profile", "websiteUri", "specialHours", "serviceItems"].includes(mask)) return googleError(400, "INVALID_ARGUMENT");
       const outcome = outcomes.get(businessId) ?? "accept";
       if (outcome === "refuse") return googleError(400, "INVALID_ARGUMENT");
       const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
@@ -177,6 +248,8 @@ export function practiceProfileFetch(businessId: string): typeof fetch {
       if (mask === "profile") l.profile = body.profile as PracticeListing["profile"];
       // An empty body removes the link.
       if (mask === "websiteUri") l.websiteUri = typeof body.websiteUri === "string" ? body.websiteUri : "";
+      if (mask === "specialHours") l.specialHours = { specialHourPeriods: ((body.specialHours as { specialHourPeriods?: unknown[] } | undefined)?.specialHourPeriods ?? []) as unknown[] };
+      if (mask === "serviceItems") l.serviceItems = (body.serviceItems as unknown[] | undefined) ?? [];
       return json(pick(l, mask));
     }
     return googleError(400, "INVALID_ARGUMENT");
