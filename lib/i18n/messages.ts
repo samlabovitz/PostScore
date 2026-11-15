@@ -4874,6 +4874,7 @@ export type MessageKey =
   | "dashboard.gbpResult.failed"
   | "dashboard.gbpResult.setup"
   | "dashboard.gbpDisconnect.notRevoked"
+  | "dashboard.gbpDisconnect.what"
   | "dashboard.connectGbp.unlockSearchTermsTitle"
   | "dashboard.connectGbp.unlockSearchTermsBody"
   | "dashboard.competitors.someWebsitesNotChecked"
@@ -11140,6 +11141,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpResult.failed": "Couldn't connect Google. Please try again.",
     "dashboard.gbpResult.setup": "Connecting Google isn't set up here yet.",
     "dashboard.gbpDisconnect.notRevoked": "Disconnected, and your Google data was deleted from PostScore. Google didn't confirm the access was removed, so you can also remove PostScore at myaccount.google.com/permissions.",
+    "dashboard.gbpDisconnect.what": "Disconnecting deletes your Google tokens, monthly Google numbers, Google's edits, review-reply drafts, and the values behind changes made from PostScore. Your scores and score history stay.",
     "dashboard.connectGbp.unlockSearchTermsTitle": "Search terms",
     "dashboard.connectGbp.unlockSearchTermsBody": "See the exact words people typed on Google to find you.",
     "dashboard.competitors.someWebsitesNotChecked": "Some websites couldn’t be checked — their rank is based on the other checks.",
@@ -17415,6 +17417,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.gbpResult.failed": "No se pudo conectar Google. Inténtelo de nuevo.",
     "dashboard.gbpResult.setup": "La conexión con Google aún no está configurada aquí.",
     "dashboard.gbpDisconnect.notRevoked": "Desconectado, y sus datos de Google se borraron de PostScore. Google no confirmó que se quitó el acceso, así que también puede quitar PostScore en myaccount.google.com/permissions.",
+    "dashboard.gbpDisconnect.what": "Al desconectar se borran sus tokens de Google, las cifras mensuales de Google, los cambios hechos por Google, los borradores de respuestas a reseñas y los valores de los cambios hechos desde PostScore. Sus puntuaciones y su historial se conservan.",
     "dashboard.connectGbp.unlockSearchTermsTitle": "Términos de búsqueda",
     "dashboard.connectGbp.unlockSearchTermsBody": "Vea las palabras exactas que la gente escribió en Google para encontrarlo.",
     "dashboard.competitors.someWebsitesNotChecked": "Algunos sitios web no se pudieron revisar; su posición se basa en las demás revisiones.",

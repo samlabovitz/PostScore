@@ -356,6 +356,15 @@ export async function saveBusinessWithClient(
   if (missingColumn(error) && Object.keys(v112Facts).length > 0) {
     ({ data, error } = await upsertBusiness({}));
   }
+  // When lat/lng were read from Places (kept at most 30 days — lib/storageCleanup.server.ts).
+  // Its own update, so a save never fails before supabase/storage-cleanup.sql has run.
+  if (!error && data && place.location) {
+    try {
+      await supabase.from("businesses").update({ lat_lng_fetched_at: new Date().toISOString() }).eq("id", (data as { id: string }).id);
+    } catch {
+      // Column not there yet.
+    }
+  }
 
   if (error || !data) {
     return { status: "error", message: error?.message ?? "Save failed." };

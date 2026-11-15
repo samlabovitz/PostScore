@@ -11,7 +11,8 @@
 --
 -- Written only by the server (service role: the monthly job, the backfill
 -- on connect / first tab visit, scripts/fetch-insights.ts). Owners read
--- their own rows. Disconnect / business delete removes them (cascade).
+-- their own rows. Disconnect deletes them (lib/gbpDataCleanup.server.ts, also
+-- 30 days after a lost connection); deleting the business removes them (cascade).
 --
 -- Also:
 --   gbp_connections.insights_backfilled_at: the 18-month backfill ran once.

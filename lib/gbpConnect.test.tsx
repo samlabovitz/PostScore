@@ -345,8 +345,10 @@ describe("tokens: server-only table, encrypted at rest", () => {
       (fs.readdirSync(dir, { recursive: true }) as string[]).filter((f) => /\.(ts|tsx)$/.test(f) && !/\.test\./.test(f)).map((f) => `${dir}/${f}`)
     );
     const users = files.filter((f) => fs.readFileSync(f, "utf8").includes('"gbp_tokens"'));
-    expect(users).toEqual(["lib/gbpTokens.server.ts"]);
+    // The tokens module, and the one cleanup that deletes every Google value (disconnect / lost connection).
+    expect(users.sort()).toEqual(["lib/gbpDataCleanup.server.ts", "lib/gbpTokens.server.ts"]);
     expect(fs.readFileSync("lib/gbpTokens.server.ts", "utf8")).toContain('import "server-only";');
+    expect(fs.readFileSync("lib/gbpDataCleanup.server.ts", "utf8")).toContain('import "server-only";');
     expect(fs.readFileSync("lib/gbpSecurity.ts", "utf8")).toContain('import "server-only";');
   });
 
@@ -485,10 +487,12 @@ describe("disconnect: revoke at Google, then delete tokens and GBP data", () => 
     expect(url).toBe("https://oauth2.googleapis.com/revoke");
     expect(new URLSearchParams(String(init.body)).get("token")).toBe("1//R");
     const ops = adminDb.log.map((o) => `${o.op}:${o.table}`);
-    // The owner let go on purpose: no "reconnect" reminder is left open.
-    expect(ops).toEqual(["select:gbp_tokens", "update:gbp_changes", "delete:gbp_tokens", "delete:gbp_connections", "update:businesses", "update:businesses", "delete:notifications"]);
-    expect(adminDb.log.at(-3)?.row).toEqual({ gbp_reviews_in_window: null, gbp_replied: null, gbp_has_recent_review: null });
-    expect(adminDb.log.at(-2)?.row).toEqual({ gbp_recent_reviews: null });
+    // Revoke first (the tokens read), undo closed, then every Google value goes (lib/gbpDataCleanup.server.ts).
+    expect(ops[0]).toBe("select:gbp_tokens");
+    expect(ops.indexOf("update:gbp_changes")).toBeLessThan(ops.indexOf("delete:gbp_tokens"));
+    for (const op of ["delete:gbp_tokens", "delete:gbp_connections", "delete:gbp_monthly_insights", "delete:gbp_google_edits", "delete:review_reply_drafts", "delete:notifications"]) expect(ops).toContain(op);
+    // …and the reply counts scoring uses.
+    expect(adminDb.log.filter((o) => o.op === "update" && o.table === "businesses").map((o) => o.row)).toEqual([{ gbp_reviews_in_window: null, gbp_replied: null, gbp_has_recent_review: null }, { gbp_recent_reviews: null }]);
     expect(adminDb.tables.gbp_tokens).toEqual([]);
     expect(adminDb.tables.gbp_connections).toEqual([]);
   });

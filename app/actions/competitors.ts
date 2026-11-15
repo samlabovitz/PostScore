@@ -357,6 +357,12 @@ export async function runAndSaveCompetitorScanWithClient(
     return { status: "not_found" };
   }
   const row = business as CompetitorBusinessRow;
+  // lat/lng cleared after 30 days (Places terms): read them again for this search.
+  if (row.lat === null || row.lng === null) {
+    const { ensureLatLng } = await import("@/lib/placesLocation.server");
+    const fresh = await ensureLatLng(supabase, { id: businessId, place_id: row.place_id, lat: row.lat, lng: row.lng });
+    if (fresh) Object.assign(row, fresh);
+  }
   const subject: CompetitorSourceBusiness = {
     placeId: row.place_id,
     name: row.name,

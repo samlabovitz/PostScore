@@ -118,10 +118,23 @@ function isRetryablePlacesStatus(status: number): boolean {
   return status >= 500;
 }
 
+/** "PERMISSION_DENIED" / "API_KEY_INVALID" from a Places error body — the
+ * status and reason codes only, never Google's message text. */
+export function placesErrorReason(body: string): string | null {
+  try {
+    const e = (JSON.parse(body) as { error?: { status?: unknown; details?: Array<{ reason?: unknown }> } }).error;
+    const reason = e?.details?.find((d) => typeof d.reason === "string")?.reason;
+    const parts = [typeof e?.status === "string" ? e.status : null, typeof reason === "string" ? reason : null].filter(Boolean);
+    return parts.length ? parts.join(" ").slice(0, 80) : null;
+  } catch {
+    return null;
+  }
+}
+
 type PlacesAttemptOutcome =
   | { kind: "ok"; res: Response }
   | { kind: "timed_out" }
-  | { kind: "http_error"; status: number; body: string }
+  | { kind: "http_error"; status: number; reason: string | null }
   | { kind: "network_error"; message: string };
 
 async function fetchPlacesOnce(url: string, init: RequestInit, fetchImpl: typeof fetch): Promise<PlacesAttemptOutcome> {
@@ -130,8 +143,8 @@ async function fetchPlacesOnce(url: string, init: RequestInit, fetchImpl: typeof
   try {
     const res = await fetchImpl(url, { ...init, signal: controller.signal });
     if (res.ok) return { kind: "ok", res };
-    const body = await res.text();
-    return { kind: "http_error", status: res.status, body };
+    // Google's machine-readable reason only — never its message text.
+    return { kind: "http_error", status: res.status, reason: placesErrorReason(await res.text().catch(() => "")) };
   } catch (err) {
     const isTimeout = (err as { name?: string } | null)?.name === "AbortError";
     return isTimeout
@@ -165,7 +178,7 @@ async function fetchPlacesApi(
     throw new Error(`${label} timed out after ${PLACES_MAX_ATTEMPTS} attempt(s).`);
   }
   if (last.kind === "http_error") {
-    throw new Error(`${label} failed (${last.status}): ${last.body}`);
+    throw new Error(`${label} failed: HTTP ${last.status}${last.reason ? ` ${last.reason}` : ""}`);
   }
   throw new Error(`${label} failed: ${last.message}`);
 }
@@ -743,6 +756,21 @@ export async function resolvePhotoUri(photoName: string, maxWidthPx: number, fet
   if (outcome.kind !== "ok") return null;
   const data = (await outcome.res.json()) as { photoUri?: string };
   return typeof data.photoUri === "string" && /^https:\/\//.test(data.photoUri) ? data.photoUri : null;
+}
+
+/** A place's coordinates only (Place Details, FieldMask location) — the
+ * lat/lng PostScore may keep at most 30 days. One attempt, never retried. */
+export async function getPlaceLocation(placeId: string, fetchImpl: typeof fetch = fetch): Promise<{ lat: number; lng: number } | null> {
+  const outcome = await fetchPlacesOnce(
+    `${PLACES_API_BASE}/places/${encodeURIComponent(placeId)}`,
+    { headers: { "X-Goog-Api-Key": getApiKey(), "X-Goog-FieldMask": "location" }, cache: "no-store" },
+    fetchImpl
+  );
+  if (outcome.kind !== "ok") return null;
+  const data = (await outcome.res.json()) as { location?: { latitude?: unknown; longitude?: unknown } };
+  const lat = data.location?.latitude;
+  const lng = data.location?.longitude;
+  return typeof lat === "number" && typeof lng === "number" ? { lat, lng } : null;
 }
 
 /** A place's website address only (Place Details, FieldMask websiteUri —

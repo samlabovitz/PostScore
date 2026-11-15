@@ -34,7 +34,9 @@ export type PlacesDetailsKind =
   /** A one-off measuring script (scripts/scoringDryRun.ts). */
   | "dry_run"
   /** A competitor the owner added that this scan's searches didn't return. */
-  | "competitor_added";
+  | "competitor_added"
+  /** A location-only Details call: lat/lng re-read after the 30-day limit (lib/placesLocation.server.ts). */
+  | "location";
 
 export const PLACES_DETAILS_KINDS: readonly PlacesDetailsKind[] = [
   "onboarding",
@@ -47,6 +49,7 @@ export const PLACES_DETAILS_KINDS: readonly PlacesDetailsKind[] = [
   "rescan",
   "dry_run",
   "competitor_added",
+  "location",
 ];
 
 /** What this cap counts: billed Details calls, except onboarding's (its own

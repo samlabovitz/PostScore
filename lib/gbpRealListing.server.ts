@@ -112,11 +112,29 @@ const CACHE_MS = 60 * 60 * 1000;
 const g = globalThis as unknown as { __realListingCache?: Map<string, { at: number; listing: RealListing }> };
 const cache = (g.__realListingCache ??= new Map());
 
+/** Expired entries go on every read and write (the nightly cron can't
+ * reach serverless memory); never more than MAX_CACHED businesses. */
+const MAX_CACHED = 200;
+export function sweepRealListingCache(now: number = Date.now()) {
+  cache.forEach((v, k) => {
+    if (now - v.at >= CACHE_MS) cache.delete(k);
+  });
+  while (cache.size > MAX_CACHED) {
+    const oldest = cache.keys().next().value;
+    if (oldest === undefined) break;
+    cache.delete(oldest);
+  }
+}
+
 export async function readRealListingCached(admin: SupabaseClient, businessId: string, fetchImpl: typeof fetch = fetch, now: number = Date.now()): Promise<RealListingResult> {
+  sweepRealListingCache(now);
   const hit = cache.get(businessId);
   if (hit && now - hit.at < CACHE_MS) return { ok: true, listing: hit.listing };
   const read = await readRealListing(admin, businessId, fetchImpl);
-  if (read.ok) cache.set(businessId, { at: now, listing: read.listing });
+  if (read.ok) {
+    cache.set(businessId, { at: now, listing: read.listing });
+    sweepRealListingCache(now);
+  }
   return read;
 }
 

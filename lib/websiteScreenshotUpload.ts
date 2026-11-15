@@ -60,7 +60,8 @@ async function uploadOne(
       console.error(`[websiteScreenshotUpload] screenshot upload to "${path}" (${logLabel}) failed: ${error.message}`);
       return null;
     }
-    return admin.storage.from(WEBSITE_SCREENSHOTS_BUCKET).getPublicUrl(path).data.publicUrl;
+    // The bucket is private: the path is stored, and the Website page signs it for the owner.
+    return path;
   } catch (err) {
     console.error(`[websiteScreenshotUpload] screenshot upload to "${path}" (${logLabel}) threw: ${err}`);
     return null;
@@ -69,7 +70,7 @@ async function uploadOne(
 
 /**
  * Uploads a fresh capture (homepage + any discovered pages) to the
- * public website-screenshots bucket and returns the public URLs to
+ * private website-screenshots bucket and returns the paths to
  * store. Homepage goes to "<businessId>.png", each additional page to
  * "<businessId>/<slug>.png". A page whose bytes are null (capture
  * failed) or whose upload fails is still returned, with
@@ -100,5 +101,10 @@ export async function uploadWebsiteScreenshots(
     additionalPages.push({ label: page.label, url: page.url, screenshotUrl: pageScreenshotUrl, httpStatus: page.httpStatus ?? null });
   }
 
+  // Pages the new capture no longer has: their old files go.
+  if (screenshotUrl || additionalPages.length > 0) {
+    const { removeReplacedScreenshots } = await import("@/lib/screenshotStorage.server");
+    await removeReplacedScreenshots(admin, businessId, [screenshotUrl, ...additionalPages.map((p) => p.screenshotUrl)].filter((p): p is string => !!p));
+  }
   return { screenshotUrl, additionalPages };
 }

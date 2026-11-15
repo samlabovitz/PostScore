@@ -59,9 +59,10 @@ describe("uploadWebsiteScreenshots — Day 4 Part 2d: a storage failure must nev
       ],
     });
 
-    expect(result.screenshotUrl).toBe("https://example.com/real.png");
+    // The bucket is private: the stored value is the path (the Website page signs it).
+    expect(result.screenshotUrl).toBe("biz-3.png");
     expect(result.additionalPages).toHaveLength(2);
     expect(result.additionalPages[0].screenshotUrl).toBeNull();
-    expect(result.additionalPages[1].screenshotUrl).toBe("https://example.com/real.png");
+    expect(result.additionalPages[1].screenshotUrl).toBe("biz-3/contact.png");
   });
 });

@@ -83,8 +83,10 @@ export type DisconnectGbpResult =
 
 /**
  * A real, owner-initiated disconnect: revokes PostScore's access at
- * Google, then deletes the stored tokens and every GBP-derived value
- * (lib/gbpTokens.server.ts). Tokens are readable only by the service
+ * Google, then deletes the tokens and every Google Business Profile value
+ * PostScore keeps — monthly numbers, Google's edits, reply drafts, change
+ * values, review ids, Google notifications, the cached listing
+ * (lib/gbpDataCleanup.server.ts). Scores and score history stay. Tokens are readable only by the service
  * role, so the owner check happens here first. `revoked: false` means
  * Google didn't confirm the revoke — the data is still deleted, and the
  * UI points the owner to their Google account permissions.

@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/Button";
 import { disconnectGbp } from "@/app/actions/gbp";
 import { t, useLocale } from "@/lib/i18n";
 
-/** Disconnect: revokes PostScore's access at Google, then deletes the
- * stored tokens and Google data (app/actions/gbp.ts). If Google didn't
+/** Disconnect: revokes PostScore's access at Google, then deletes every
+ * Google value PostScore keeps — the line under the button says exactly
+ * what (app/actions/gbp.ts, lib/gbpDataCleanup.server.ts). If Google didn't
  * confirm the revoke, says so and where to remove access. */
 export function GbpDisconnectButton({ businessId }: { businessId: string }) {
   const router = useRouter();
@@ -30,6 +31,11 @@ export function GbpDisconnectButton({ businessId }: { businessId: string }) {
       <Button variant="default" size="sm" onClick={handleDisconnect} disabled={state === "working"}>
         {state === "working" ? t(locale, "dashboard.connectGbp.disconnecting") : t(locale, "dashboard.connectGbp.disconnect")}
       </Button>
+      {state === "idle" && (
+        <span className="text-[12px] text-ink-mute" data-testid="disconnect-what">
+          {t(locale, "dashboard.gbpDisconnect.what")}
+        </span>
+      )}
       {state === "error" && <span className="text-sm text-red">{t(locale, "dashboard.connectGbp.disconnectError")}</span>}
       {state === "notRevoked" && (
         <span role="status" className="text-[12.5px] text-ink-soft">

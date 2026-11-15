@@ -134,8 +134,8 @@ async function handler(req: Request) {
       });
       if (!res.ok) {
         chunkFailures++;
-        const body = await res.text().catch(() => "");
-        console.error(`[monthly-reports-batch] chunk at offset ${offset} returned ${res.status}: ${body}`);
+        // The status only — never the response body.
+        console.error(`[monthly-reports-batch] chunk at offset ${offset} returned HTTP ${res.status}.`);
         offset += CHUNK_SIZE;
         continue;
       }

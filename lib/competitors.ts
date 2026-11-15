@@ -760,7 +760,7 @@ export async function findAndScoreCompetitors(
           debugLog(`phrase search "${query}": ${results.length} raw`);
         } catch (err) {
           // Never silent; the other phrases still run.
-          console.error(`[competitors] Text Search failed for ${subject.name ?? subject.placeId} ("${query}"):`, err instanceof Error ? err.message : err);
+          console.error(`[competitors] Text Search failed for ${subject.placeId} (phrase query):`, err instanceof Error ? err.message : err);
         }
       }
     };
@@ -807,7 +807,7 @@ export async function findAndScoreCompetitors(
       }
     } catch (err) {
       // Never silent; the Nearby Search fallback still runs.
-      console.error(`[competitors] Text Search failed for ${subject.name ?? subject.placeId}:`, err instanceof Error ? err.message : err);
+      console.error(`[competitors] Text Search failed for ${subject.placeId}:`, err instanceof Error ? err.message : err);
     }
   }
 
@@ -832,7 +832,7 @@ export async function findAndScoreCompetitors(
       });
     } catch (err) {
       // Never silent: logged on the server, and the scan says it failed.
-      console.error(`[competitors] Nearby Search failed for ${subject.name ?? subject.placeId} (tier ${tier}):`, err instanceof Error ? err.message : err);
+      console.error(`[competitors] Nearby Search failed for ${subject.placeId} (tier ${tier}):`, err instanceof Error ? err.message : err);
       return { ...emptyResult("error", err instanceof Error ? err.message : t(locale, "dashboard.competitors.nearbySearchFailedFallback"), categoryLabel), placesCalls };
     }
     searchedMeters = RADIUS_TIERS_METERS[tier];
@@ -904,7 +904,7 @@ export async function findAndScoreCompetitors(
       searchWidened = true;
       debugLog(`small-town search (${farTypes.join(", ")}): ${far.length} raw, ${pool.length - before} added, ${establishedCount(pool)} established`);
     } catch (err) {
-      console.error(`[competitors] small-town Nearby Search failed for ${subject.name ?? subject.placeId}:`, err instanceof Error ? err.message : err);
+      console.error(`[competitors] small-town Nearby Search failed for ${subject.placeId}:`, err instanceof Error ? err.message : err);
     }
   }
 
@@ -931,7 +931,7 @@ export async function findAndScoreCompetitors(
     } catch (err) {
       // The wider areas are extra: a failed search keeps the direct
       // results — but it's logged, never swallowed.
-      console.error(`[competitors] "also competes with" Nearby Search failed for ${subject.name ?? subject.placeId}:`, err instanceof Error ? err.message : err);
+      console.error(`[competitors] "also competes with" Nearby Search failed for ${subject.placeId}:`, err instanceof Error ? err.message : err);
     }
   }
 

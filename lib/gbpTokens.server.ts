@@ -100,11 +100,15 @@ export type DisconnectGbpDataResult =
   | { ok: false };
 
 /**
- * Disconnect: revoke the grant at Google first, then delete the stored
- * tokens and the connection row (which holds every GBP-derived value we
- * keep). The delete happens even when Google's revoke fails — the owner
- * asked us to let go — and the result says so, so the UI can point them
- * to their Google account permissions.
+ * Disconnect: revoke the grant at Google first, then delete every Google
+ * Business Profile value PostScore keeps (lib/gbpDataCleanup.server.ts):
+ * tokens, the connection row, monthly Google numbers (incl. search terms),
+ * Google's own edits, review-reply drafts, the before/after values of
+ * changes made from PostScore, review ids in the reply log, Google
+ * notifications and the cached listing. Scores and score history stay.
+ * The delete happens even when Google's revoke fails — the owner asked us
+ * to let go — and the result says so, so the UI can point them to their
+ * Google account permissions.
  */
 export async function disconnectGbpData(
   admin: SupabaseClient,
@@ -130,17 +134,9 @@ export async function disconnectGbpData(
   // Changes made on Google while connected can't be undone after a
   // disconnect — a reconnect may be a different listing.
   await closeOpenUndos(admin, businessId);
-  const { error: tokenError } = await admin.from("gbp_tokens").delete().eq("business_id", businessId);
-  const { error: statusError } = await admin.from("gbp_connections").delete().eq("business_id", businessId);
-  // …and the copy scoring uses (supabase/scoring-v1-12.sql).
-  await clearGbpScoringCounts(admin, businessId);
-  // The owner let go on purpose: no "reconnect" reminder left open.
-  try {
-    await admin.from("notifications").delete().eq("business_id", businessId).eq("type", "google").eq("key", "disconnected").is("resolved_at", null);
-  } catch {
-    // Before supabase/notifications.sql: nothing to remove.
-  }
-  if (tokenError || statusError) return { ok: false };
+  const { deleteGoogleData } = await import("@/lib/gbpDataCleanup.server");
+  const deleted = await deleteGoogleData(admin, businessId);
+  if (!deleted.ok) return { ok: false };
   return { ok: true, revoke };
 }
 
@@ -232,8 +228,10 @@ export type GbpLossReason = "refresh_rejected" | "no_refresh_token";
  * expired): the dead tokens are deleted and the status row says "error"
  * with when and why, so the owner is asked to reconnect — in-app
  * notification and the Overview's banner. The score keeps the last
- * Google data (the reply counts stay, with their date). Only a connected
- * business is touched.
+ * Google data (the reply counts stay, with their date) — for 30 days: if
+ * the owner hasn't reconnected by then, the nightly cleanup deletes every
+ * Google value (lib/storageCleanup.server.ts → deleteGoogleData). Only a
+ * connected business is touched.
  */
 export async function loseGbpConnection(admin: SupabaseClient, businessId: string, reason: GbpLossReason, now: Date = new Date()): Promise<ValidAccessTokenResult> {
   const at = now.toISOString();
@@ -280,16 +278,6 @@ export async function closeOpenUndos(admin: SupabaseClient, businessId: string, 
     await admin.from("gbp_changes").update({ undo_closed_at: at }).eq("business_id", businessId).is("undone_at", null).is("undo_closed_at", null);
   } catch {
     // supabase/gbp-changes-location.sql not run yet: rows can't be read for undo either.
-  }
-}
-
-/** Clears the reply counts scoring v1.12.0 reads (businesses.gbp_*). */
-async function clearGbpScoringCounts(admin: SupabaseClient, businessId: string): Promise<void> {
-  try {
-    await admin.from("businesses").update({ gbp_reviews_in_window: null, gbp_replied: null, gbp_has_recent_review: null }).eq("id", businessId);
-    await admin.from("businesses").update({ gbp_recent_reviews: null }).eq("id", businessId);
-  } catch {
-    // Missing columns (SQL not run yet): nothing to clear.
   }
 }
 

@@ -85,12 +85,22 @@ export async function restoreCompetitor(businessId: string, placeId: string): Pr
 }
 
 /** "Add a competitor": ONE Text Search by name, near the business. */
+/** lat/lng cleared after 30 days (Places terms): read them again, once, for this request. */
+async function withLatLng(supabase: import("@supabase/supabase-js").SupabaseClient, business: { id: string; place_id: string; lat: number | null; lng: number | null }) {
+  if (business.lat !== null && business.lng !== null) return;
+  const { ensureLatLng } = await import("@/lib/placesLocation.server");
+  const fresh = await ensureLatLng(supabase, business);
+  if (fresh) Object.assign(business, fresh);
+}
+
 export async function searchCompetitorToAdd(businessId: string, query: string): Promise<SearchCompetitorResult> {
   const q = typeof query === "string" ? query.trim().replace(/\s+/g, " ") : "";
   if (q.length < 2 || q.length > 80) return { status: "invalid" };
   const { supabase, user, business } = await ownBusiness(businessId);
   if (!user) return { status: "unauthenticated" };
-  if (!business || business.lat === null || business.lng === null) return { status: "not_found" };
+  if (!business) return { status: "not_found" };
+  await withLatLng(supabase, business);
+  if (business.lat === null || business.lng === null) return { status: "not_found" };
   const budget = await import("@/lib/placesSearchBudget.server");
   // One call: it runs while one more fits under the cap. An unreadable
   // count (logged) still allows this one owner search.
@@ -139,7 +149,9 @@ export async function addCompetitor(businessId: string, placeId: string): Promis
   if (typeof placeId !== "string" || !placeId) return { status: "invalid" };
   const { supabase, user, business } = await ownBusiness(businessId);
   if (!user) return { status: "unauthenticated" };
-  if (!business || business.place_id === placeId || business.lat === null || business.lng === null) return { status: "not_found" };
+  if (!business || business.place_id === placeId) return { status: "not_found" };
+  await withLatLng(supabase, business);
+  if (business.lat === null || business.lng === null) return { status: "not_found" };
   // Only a place this owner's own search just returned (never a forged one).
   const cached = picked.get(`${businessId}:${placeId}`);
   if (!cached || Date.now() - cached.at > PICK_TTL_MS) return { status: "invalid" };

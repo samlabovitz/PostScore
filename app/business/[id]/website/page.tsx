@@ -1,3 +1,5 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+import { withSignedScreenshots } from "@/lib/screenshotStorage.server";
 import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
@@ -107,10 +109,12 @@ export default async function WebsitePage({ params }: { params: { id: string } }
     />
   );
 
+  // Screenshots live in a private bucket: signed for this owner, for an hour.
+  const signedAnalysis = hasWebsite ? await withSignedScreenshots(createAdminClient(), data.websiteAnalysis ?? null) : null;
   const visualAnalysis = hasWebsite ? (
     <WebsiteVisualAnalysis
       businessId={params.id}
-      websiteAnalysis={data.websiteAnalysis}
+      websiteAnalysis={signedAnalysis}
       siteUrl={data.gradedSite?.url ?? null}
       site={data.gradedSite}
       locked={free}
