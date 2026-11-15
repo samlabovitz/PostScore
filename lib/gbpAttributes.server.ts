@@ -163,7 +163,7 @@ export type GoogleWriteOutcome = "ok" | "pending_review" | "unconfirmed" | "fail
 export interface GoogleWriteLogRow {
   business_id: string;
   user_id: string;
-  field: "website_link" | "customer_details";
+  field: "website_link" | "customer_details" | "special_hours" | "services" | "phone" | "hours";
   action: "edit" | "undo";
   outcome: GoogleWriteOutcome;
   practice: boolean;

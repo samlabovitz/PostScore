@@ -974,6 +974,14 @@ export type MessageKey =
   | "dashboard.notifications.fixed"
   | "dashboard.notifications.google.disconnected"
   | "dashboard.notifications.google.reconnect"
+  | "dashboard.notifications.google.review"
+  | "dashboard.notifications.google.edit.title"
+  | "dashboard.notifications.google.edit.phone"
+  | "dashboard.notifications.google.edit.address"
+  | "dashboard.notifications.google.edit.hours"
+  | "dashboard.notifications.google.edit.website"
+  | "dashboard.notifications.google.edit.categories"
+  | "dashboard.notifications.google.edit.description"
   | "dashboard.gbpConnection.banner.paused"
   | "dashboard.gbpConnection.banner.pausedBasic"
   | "dashboard.gbpConnection.banner.dataFrom"
@@ -1794,6 +1802,84 @@ export type MessageKey =
   | "dashboard.googleTab.worth.matched"
   | "dashboard.googleTab.worth.info"
   | "dashboard.googleTab.s2.otherRange"
+  | "dashboard.googleTab.lever.photos.status.newest"
+  | "dashboard.googleTab.lever.photos.status.none"
+  | "dashboard.googleTab.lever.posts.status.count"
+  | "dashboard.googleTab.lever.posts.status.none"
+  | "dashboard.googleTab.lever.pill.add3"
+  | "dashboard.googleTab.lever.pill.post"
+  | "dashboard.googleTab.row.photos.read"
+  | "dashboard.googleTab.row.photos.thisMonth"
+  | "dashboard.googleTab.row.photos.monthAgo"
+  | "dashboard.googleTab.row.photos.monthsAgo"
+  | "dashboard.googleTab.row.photos.zero"
+  | "dashboard.googleTab.row.photos.addMore"
+  | "dashboard.googleTab.row.posts.count"
+  | "dashboard.googleTab.row.posts.countOne"
+  | "dashboard.googleTab.row.posts.none"
+  | "dashboard.googleTab.row.posts.last"
+  | "dashboard.googleTab.row.posts.never"
+  | "dashboard.googleTab.action.postIdeas"
+  | "dashboard.googleTab.recap.listing.holiday_hours"
+  | "dashboard.googleTab.recap.listing.services"
+  | "dashboard.googleTab.made.kind.holiday_hours"
+  | "dashboard.googleTab.made.kind.services"
+  | "dashboard.googleTab.row.holiday.noneSoon"
+  | "dashboard.googleTab.row.holiday.set"
+  | "dashboard.googleTab.row.holiday.notSet"
+  | "dashboard.googleTab.row.services.label"
+  | "dashboard.googleTab.row.services.none"
+  | "dashboard.googleTab.row.services.more"
+  | "dashboard.googleTab.row.services.note"
+  | "dashboard.googleTab.action.addServices"
+  | "dashboard.googleTab.action.setHolidays"
+  | "dashboard.googleTab.fields.loading"
+  | "dashboard.googleTab.fields.loadFailed"
+  | "dashboard.googleTab.fields.noHolidays"
+  | "dashboard.googleTab.fields.practice"
+  | "dashboard.googleTab.fields.readOnly"
+  | "dashboard.googleTab.fields.openOnGoogle"
+  | "dashboard.googleTab.fields.approve"
+  | "dashboard.googleTab.fields.undo"
+  | "dashboard.googleTab.fields.undoUntil"
+  | "dashboard.googleTab.fields.result.sent"
+  | "dashboard.googleTab.fields.result.unconfirmed"
+  | "dashboard.googleTab.fields.result.pending"
+  | "dashboard.googleTab.fields.result.noChange"
+  | "dashboard.googleTab.fields.result.off"
+  | "dashboard.googleTab.fields.result.invalid"
+  | "dashboard.googleTab.fields.result.failed"
+  | "dashboard.googleTab.fields.holiday.thanksgiving"
+  | "dashboard.googleTab.fields.holiday.christmasEve"
+  | "dashboard.googleTab.fields.holiday.christmas"
+  | "dashboard.googleTab.fields.holiday.newYearsEve"
+  | "dashboard.googleTab.fields.holiday.newYear"
+  | "dashboard.googleTab.fields.holiday.july4"
+  | "dashboard.googleTab.fields.holiday.memorialDay"
+  | "dashboard.googleTab.fields.holiday.laborDay"
+  | "dashboard.googleTab.fields.holiday.isClosed"
+  | "dashboard.googleTab.fields.holiday.isOpen"
+  | "dashboard.googleTab.fields.holiday.notSet"
+  | "dashboard.googleTab.fields.holiday.closed"
+  | "dashboard.googleTab.fields.holiday.open"
+  | "dashboard.googleTab.fields.holiday.opens"
+  | "dashboard.googleTab.fields.holiday.closes"
+  | "dashboard.googleTab.fields.holiday.keeps"
+  | "dashboard.googleTab.fields.holiday.step1"
+  | "dashboard.googleTab.fields.holiday.step2"
+  | "dashboard.googleTab.fields.holiday.step3"
+  | "dashboard.googleTab.fields.services.now"
+  | "dashboard.googleTab.fields.services.none"
+  | "dashboard.googleTab.fields.services.name"
+  | "dashboard.googleTab.fields.services.description"
+  | "dashboard.googleTab.fields.services.another"
+  | "dashboard.googleTab.fields.services.approve"
+  | "dashboard.googleTab.fields.services.keeps"
+  | "dashboard.googleTab.fields.services.step1"
+  | "dashboard.googleTab.fields.services.step2"
+  | "dashboard.googleTab.fields.services.step3"
+  | "content.listingChange.name.changed"
+  | "content.listingChange.address.changed"
   | "dashboard.googleTab.jump.label"
   | "dashboard.googleTab.jump.lastMonth"
   | "dashboard.googleTab.jump.funnel"
@@ -1975,6 +2061,49 @@ export type MessageKey =
   | "dashboard.googleTab.made.status.reviewing"
   | "dashboard.googleTab.made.status.undone"
   | "dashboard.googleTab.made.status.failed"
+  | "dashboard.googleTab.banner.changed"
+  | "dashboard.googleTab.banner.review"
+  | "dashboard.googleTab.protect.field.title"
+  | "dashboard.googleTab.protect.field.name"
+  | "dashboard.googleTab.protect.field.phone"
+  | "dashboard.googleTab.protect.field.address"
+  | "dashboard.googleTab.protect.field.hours"
+  | "dashboard.googleTab.protect.field.website"
+  | "dashboard.googleTab.protect.field.categories"
+  | "dashboard.googleTab.protect.field.description"
+  | "dashboard.googleTab.others.none"
+  | "dashboard.googleTab.others.unknownScan"
+  | "dashboard.googleTab.others.changedShort"
+  | "dashboard.googleTab.others.emptyValue"
+  | "dashboard.googleTab.others.keep"
+  | "dashboard.googleTab.others.changeBack"
+  | "dashboard.googleTab.others.back.sent"
+  | "dashboard.googleTab.others.back.pending"
+  | "dashboard.googleTab.others.back.noChange"
+  | "dashboard.googleTab.others.actionFailed"
+  | "dashboard.googleTab.others.guide.title"
+  | "dashboard.googleTab.others.guide.why"
+  | "dashboard.googleTab.others.guide.step1"
+  | "dashboard.googleTab.others.guide.step2"
+  | "dashboard.googleTab.others.guide.step3"
+  | "dashboard.googleTab.others.guide.step3Empty"
+  | "dashboard.googleTab.others.openOnGoogle"
+  | "dashboard.googleTab.others.verified"
+  | "dashboard.googleTab.others.lastChecked"
+  | "dashboard.googleTab.others.notChecked"
+  | "dashboard.googleTab.others.checkNow"
+  | "dashboard.googleTab.others.checking"
+  | "dashboard.googleTab.others.checkedNow"
+  | "dashboard.googleTab.others.tooSoon"
+  | "dashboard.googleTab.others.checkFailed"
+  | "dashboard.googleTab.made.added"
+  | "dashboard.googleTab.made.dateClosed"
+  | "dashboard.googleTab.made.dateOpen"
+  | "dashboard.googleTab.made.undo"
+  | "dashboard.googleTab.made.undoing"
+  | "dashboard.googleTab.made.undoFailed"
+  | "dashboard.googleTab.made.showAll"
+  | "dashboard.googleTab.made.showLess"
   | "dashboard.googleTab.notConnected.title"
   | "dashboard.googleTab.notConnected.lead"
   | "dashboard.googleTab.notConnected.rate"
@@ -6375,6 +6504,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.notifications.fixed": "Fixed ✓ {date}",
     "dashboard.notifications.google.disconnected": "Google disconnected — reconnect to keep your score and edits up to date.",
     "dashboard.notifications.google.reconnect": "Reconnect Google",
+    "dashboard.notifications.google.review": "Review it",
+    "dashboard.notifications.google.edit.title": "Google changed your business name on your listing.",
+    "dashboard.notifications.google.edit.phone": "Google changed your phone number on your listing.",
+    "dashboard.notifications.google.edit.address": "Google changed your address on your listing.",
+    "dashboard.notifications.google.edit.hours": "Google changed your hours on your listing.",
+    "dashboard.notifications.google.edit.website": "Google changed your website on your listing.",
+    "dashboard.notifications.google.edit.categories": "Google changed your categories on your listing.",
+    "dashboard.notifications.google.edit.description": "Google changed your description on your listing.",
     "dashboard.gbpConnection.banner.paused": "Until you reconnect, these stop updating: Google insights, your reviews inbox and Edit on Google.",
     "dashboard.gbpConnection.banner.pausedBasic": "Until you reconnect, your “Replying to reviews” check stops updating.",
     "dashboard.gbpConnection.banner.dataFrom": "Your score keeps your Google data from {date}.",
@@ -7164,6 +7301,84 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.worth.matched": "You matched your best month. Keep the levers going.",
     "dashboard.googleTab.worth.info": "Not every call or direction request becomes a sale. Change your average visit in Settings.",
     "dashboard.googleTab.s2.otherRange": "Google's own Performance screen may use a different date range.",
+    "dashboard.googleTab.lever.photos.status.newest": "newest {months} mo ago",
+    "dashboard.googleTab.lever.photos.status.none": "no photos yet",
+    "dashboard.googleTab.lever.posts.status.count": "{count} in 30 days",
+    "dashboard.googleTab.lever.posts.status.none": "none in 30 days",
+    "dashboard.googleTab.lever.pill.add3": "Add 3",
+    "dashboard.googleTab.lever.pill.post": "Post",
+    "dashboard.googleTab.row.photos.read": "{count} photos you added · newest {ago}",
+    "dashboard.googleTab.row.photos.thisMonth": "this month",
+    "dashboard.googleTab.row.photos.monthAgo": "1 month ago",
+    "dashboard.googleTab.row.photos.monthsAgo": "{count} months ago",
+    "dashboard.googleTab.row.photos.zero": "No photos on your listing",
+    "dashboard.googleTab.row.photos.addMore": "Add 2–3 new photos a month.",
+    "dashboard.googleTab.row.posts.count": "{count} in the last 30 days",
+    "dashboard.googleTab.row.posts.countOne": "1 in the last 30 days",
+    "dashboard.googleTab.row.posts.none": "None in 30+ days",
+    "dashboard.googleTab.row.posts.last": "Last one {date}",
+    "dashboard.googleTab.row.posts.never": "No Google posts yet",
+    "dashboard.googleTab.action.postIdeas": "Post ideas",
+    "dashboard.googleTab.recap.listing.holiday_hours": "set your holiday hours",
+    "dashboard.googleTab.recap.listing.services": "added services",
+    "dashboard.googleTab.made.kind.holiday_hours": "Holiday hours",
+    "dashboard.googleTab.made.kind.services": "Services",
+    "dashboard.googleTab.row.holiday.noneSoon": "No US holidays in the next 6 weeks",
+    "dashboard.googleTab.row.holiday.set": "set",
+    "dashboard.googleTab.row.holiday.notSet": "not set",
+    "dashboard.googleTab.row.services.label": "Services",
+    "dashboard.googleTab.row.services.none": "No services on your listing",
+    "dashboard.googleTab.row.services.more": "{list} +{count} more",
+    "dashboard.googleTab.row.services.note": "Google matches searches to the services you list.",
+    "dashboard.googleTab.action.addServices": "Add services",
+    "dashboard.googleTab.action.setHolidays": "Set them",
+    "dashboard.googleTab.fields.loading": "Reading Google…",
+    "dashboard.googleTab.fields.loadFailed": "Couldn't load from Google. Try again in a minute.",
+    "dashboard.googleTab.fields.noHolidays": "No US holidays in the next 6 weeks.",
+    "dashboard.googleTab.fields.practice": "Practice mode: changes go to a copy of your listing, never to Google.",
+    "dashboard.googleTab.fields.readOnly": "Changes to Google are off for this business, so here's how to do it on Google:",
+    "dashboard.googleTab.fields.openOnGoogle": "Open on Google ↗",
+    "dashboard.googleTab.fields.approve": "Approve",
+    "dashboard.googleTab.fields.undo": "Undo",
+    "dashboard.googleTab.fields.undoUntil": "You can undo until {date}.",
+    "dashboard.googleTab.fields.result.sent": "Done. Google shows it now.",
+    "dashboard.googleTab.fields.result.unconfirmed": "Sent. Google took it but doesn't show it yet.",
+    "dashboard.googleTab.fields.result.pending": "Sent. Google is reviewing it.",
+    "dashboard.googleTab.fields.result.noChange": "Google already shows this. Nothing to change.",
+    "dashboard.googleTab.fields.result.off": "Changes to Google are off for this business.",
+    "dashboard.googleTab.fields.result.invalid": "Check the hours: the opening time must be before the closing time.",
+    "dashboard.googleTab.fields.result.failed": "Couldn't send it to Google. Nothing changed.",
+    "dashboard.googleTab.fields.holiday.thanksgiving": "Thanksgiving",
+    "dashboard.googleTab.fields.holiday.christmasEve": "Christmas Eve",
+    "dashboard.googleTab.fields.holiday.christmas": "Christmas",
+    "dashboard.googleTab.fields.holiday.newYearsEve": "New Year's Eve",
+    "dashboard.googleTab.fields.holiday.newYear": "New Year's Day",
+    "dashboard.googleTab.fields.holiday.july4": "July 4",
+    "dashboard.googleTab.fields.holiday.memorialDay": "Memorial Day",
+    "dashboard.googleTab.fields.holiday.laborDay": "Labor Day",
+    "dashboard.googleTab.fields.holiday.isClosed": "Google: closed",
+    "dashboard.googleTab.fields.holiday.isOpen": "Google: {open}–{close}",
+    "dashboard.googleTab.fields.holiday.notSet": "Not set on Google",
+    "dashboard.googleTab.fields.holiday.closed": "Closed",
+    "dashboard.googleTab.fields.holiday.open": "Open with these hours",
+    "dashboard.googleTab.fields.holiday.opens": "Opens",
+    "dashboard.googleTab.fields.holiday.closes": "Closes",
+    "dashboard.googleTab.fields.holiday.keeps": "Only that day changes; your other special hours stay as they are. You can undo for 7 days.",
+    "dashboard.googleTab.fields.holiday.step1": "Open your Business Profile on Google.",
+    "dashboard.googleTab.fields.holiday.step2": "Edit profile → Hours → Special hours.",
+    "dashboard.googleTab.fields.holiday.step3": "Add: {list}. Save.",
+    "dashboard.googleTab.fields.services.now": "{count} on Google now: {list}",
+    "dashboard.googleTab.fields.services.none": "No services on Google yet.",
+    "dashboard.googleTab.fields.services.name": "Service name",
+    "dashboard.googleTab.fields.services.description": "Short description (optional)",
+    "dashboard.googleTab.fields.services.another": "Add another",
+    "dashboard.googleTab.fields.services.approve": "Approve: add {count}",
+    "dashboard.googleTab.fields.services.keeps": "Your current services stay exactly as they are. You can undo for 7 days.",
+    "dashboard.googleTab.fields.services.step1": "Open your Business Profile on Google.",
+    "dashboard.googleTab.fields.services.step2": "Edit services → Add a custom service.",
+    "dashboard.googleTab.fields.services.step3": "Add: {list}. Save.",
+    "content.listingChange.name.changed": "Your business name on Google changed",
+    "content.listingChange.address.changed": "Your address on Google changed",
     "dashboard.googleTab.jump.label": "On this page",
     "dashboard.googleTab.jump.lastMonth": "Last month",
     "dashboard.googleTab.jump.funnel": "Searches → customers",
@@ -7315,13 +7530,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.s5.sample2.body": "\"hair color sleepy hollow\" found you only 23 times, and your only category is Hair salon.",
     "dashboard.googleTab.s5.sample2.why": "Categories decide which searches Google shows you for. A second category opens up color searches nearby.",
     "dashboard.googleTab.s6.title": "Protection & changes",
-    "dashboard.googleTab.s6.meta": "Checked on every scan",
+    "dashboard.googleTab.s6.meta": "Checked on every scan and once a day",
     "dashboard.googleTab.others.title": "Changes by anyone else",
     "dashboard.googleTab.others.suggested": "Suggested edits Google accepted",
-    "dashboard.googleTab.others.fields": "Phone, hours, website",
+    "dashboard.googleTab.others.fields": "Name, phone, address, hours, website",
     "dashboard.googleTab.others.unchanged": "Unchanged",
     "dashboard.googleTab.others.changed": "Changed: {fields}",
-    "dashboard.googleTab.others.unknown": "After your next scan",
+    "dashboard.googleTab.others.unknown": "After the next check",
     "dashboard.googleTab.others.field.phone": "phone",
     "dashboard.googleTab.others.field.hours": "hours",
     "dashboard.googleTab.others.field.website": "website",
@@ -7330,9 +7545,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.others.statusValue.closedTemp": "Temporarily closed",
     "dashboard.googleTab.others.statusValue.closed": "Permanently closed",
     "dashboard.googleTab.others.statusValue.unknown": "Not known",
-    "dashboard.googleTab.others.note": "Google can accept other people's suggested edits without telling you. PostScore compares your listing on every scan and leaves out changes you made from here.",
+    "dashboard.googleTab.others.note": "Google can change your listing itself, or accept other people's suggested edits, without telling you. PostScore checks on every scan and once a day, and leaves out changes you made from here.",
     "dashboard.googleTab.made.title": "Made from PostScore",
-    "dashboard.googleTab.made.empty": "Nothing yet. Changes you approve here show up with their status.",
+    "dashboard.googleTab.made.empty": "No changes made from PostScore yet.",
     "dashboard.googleTab.made.kind.hours": "Hours",
     "dashboard.googleTab.made.kind.phone": "Phone",
     "dashboard.googleTab.made.kind.description": "Description",
@@ -7345,6 +7560,49 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.made.status.reviewing": "Google reviewing",
     "dashboard.googleTab.made.status.undone": "Undone",
     "dashboard.googleTab.made.status.failed": "Didn't go through",
+    "dashboard.googleTab.banner.changed": "Google changed your {fields}.",
+    "dashboard.googleTab.banner.review": "Review it",
+    "dashboard.googleTab.protect.field.title": "Name",
+    "dashboard.googleTab.protect.field.name": "Name",
+    "dashboard.googleTab.protect.field.phone": "Phone",
+    "dashboard.googleTab.protect.field.address": "Address",
+    "dashboard.googleTab.protect.field.hours": "Hours",
+    "dashboard.googleTab.protect.field.website": "Website",
+    "dashboard.googleTab.protect.field.categories": "Categories",
+    "dashboard.googleTab.protect.field.description": "Description",
+    "dashboard.googleTab.others.none": "None",
+    "dashboard.googleTab.others.unknownScan": "After your next scan",
+    "dashboard.googleTab.others.changedShort": "changed",
+    "dashboard.googleTab.others.emptyValue": "(empty)",
+    "dashboard.googleTab.others.keep": "Keep Google's version",
+    "dashboard.googleTab.others.changeBack": "Change it back",
+    "dashboard.googleTab.others.back.sent": "Changed back. Google may take a few minutes to show it. You can undo it below for 7 days.",
+    "dashboard.googleTab.others.back.pending": "Sent. Google is reviewing it.",
+    "dashboard.googleTab.others.back.noChange": "Google already shows your version.",
+    "dashboard.googleTab.others.actionFailed": "That didn't go through. Try again, or change it on Google.",
+    "dashboard.googleTab.others.guide.title": "Change it back on Google (2 min)",
+    "dashboard.googleTab.others.guide.why": "Changing your name, address or categories can make Google ask you to verify again, so this one is done on Google.",
+    "dashboard.googleTab.others.guide.step1": "Open your Business Profile on Google (button below).",
+    "dashboard.googleTab.others.guide.step2": "Choose Edit profile, then {field}.",
+    "dashboard.googleTab.others.guide.step3": "Enter “{value}” and save.",
+    "dashboard.googleTab.others.guide.step3Empty": "Clear it and save.",
+    "dashboard.googleTab.others.openOnGoogle": "Open on Google ↗",
+    "dashboard.googleTab.others.verified": "Verified",
+    "dashboard.googleTab.others.lastChecked": "Last checked {time}",
+    "dashboard.googleTab.others.notChecked": "Not checked yet",
+    "dashboard.googleTab.others.checkNow": "Check now",
+    "dashboard.googleTab.others.checking": "Checking…",
+    "dashboard.googleTab.others.checkedNow": "Checked just now",
+    "dashboard.googleTab.others.tooSoon": "Checked in the last 10 minutes. Try again shortly.",
+    "dashboard.googleTab.others.checkFailed": "Couldn't reach Google. Try again later.",
+    "dashboard.googleTab.made.added": "added {list}",
+    "dashboard.googleTab.made.dateClosed": "{date} closed",
+    "dashboard.googleTab.made.dateOpen": "{date} {open}–{close}",
+    "dashboard.googleTab.made.undo": "Undo",
+    "dashboard.googleTab.made.undoing": "Undoing…",
+    "dashboard.googleTab.made.undoFailed": "Couldn't undo it. Google may have changed it since.",
+    "dashboard.googleTab.made.showAll": "Show all changes ({count})",
+    "dashboard.googleTab.made.showLess": "Show fewer",
     "dashboard.googleTab.notConnected.title": "Connect Google to see your Google Profile",
     "dashboard.googleTab.notConnected.lead": "Connecting your Google Business Profile unlocks this tab:",
     "dashboard.googleTab.notConnected.rate": "Your conversion rate each month: how many people who found you on Google called, booked, visited your site or asked for directions.",
@@ -12124,6 +12382,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.notifications.fixed": "Corregido ✓ {date}",
     "dashboard.notifications.google.disconnected": "Google se desconectó: vuelva a conectarlo para mantener al día su puntuación y sus cambios.",
     "dashboard.notifications.google.reconnect": "Volver a conectar Google",
+    "dashboard.notifications.google.review": "Revisarlo",
+    "dashboard.notifications.google.edit.title": "Google cambió el nombre de su empresa en su ficha.",
+    "dashboard.notifications.google.edit.phone": "Google cambió su número de teléfono en su ficha.",
+    "dashboard.notifications.google.edit.address": "Google cambió su dirección en su ficha.",
+    "dashboard.notifications.google.edit.hours": "Google cambió su horario en su ficha.",
+    "dashboard.notifications.google.edit.website": "Google cambió su sitio web en su ficha.",
+    "dashboard.notifications.google.edit.categories": "Google cambió sus categorías en su ficha.",
+    "dashboard.notifications.google.edit.description": "Google cambió su descripción en su ficha.",
     "dashboard.gbpConnection.banner.paused": "Hasta que vuelva a conectarlo, esto deja de actualizarse: la información de Google, su bandeja de reseñas y Editar en Google.",
     "dashboard.gbpConnection.banner.pausedBasic": "Hasta que vuelva a conectarlo, su revisión “Respuestas a reseñas” deja de actualizarse.",
     "dashboard.gbpConnection.banner.dataFrom": "Su puntuación conserva sus datos de Google del {date}.",
@@ -12804,6 +13070,84 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.worth.matched": "Igualó su mejor mes. Siga con las palancas.",
     "dashboard.googleTab.worth.info": "No todas las llamadas o solicitudes de indicaciones se convierten en una venta. Cambie su visita promedio en Configuración.",
     "dashboard.googleTab.s2.otherRange": "La pantalla de Rendimiento de Google puede usar otro rango de fechas.",
+    "dashboard.googleTab.lever.photos.status.newest": "la más reciente hace {months} meses",
+    "dashboard.googleTab.lever.photos.status.none": "aún no hay fotos",
+    "dashboard.googleTab.lever.posts.status.count": "{count} en 30 días",
+    "dashboard.googleTab.lever.posts.status.none": "ninguna en 30 días",
+    "dashboard.googleTab.lever.pill.add3": "Agregar 3",
+    "dashboard.googleTab.lever.pill.post": "Publicar",
+    "dashboard.googleTab.row.photos.read": "{count} fotos que usted agregó · la más reciente {ago}",
+    "dashboard.googleTab.row.photos.thisMonth": "este mes",
+    "dashboard.googleTab.row.photos.monthAgo": "hace 1 mes",
+    "dashboard.googleTab.row.photos.monthsAgo": "hace {count} meses",
+    "dashboard.googleTab.row.photos.zero": "No hay fotos en su ficha",
+    "dashboard.googleTab.row.photos.addMore": "Agregue 2 o 3 fotos nuevas al mes.",
+    "dashboard.googleTab.row.posts.count": "{count} en los últimos 30 días",
+    "dashboard.googleTab.row.posts.countOne": "1 en los últimos 30 días",
+    "dashboard.googleTab.row.posts.none": "Ninguna en más de 30 días",
+    "dashboard.googleTab.row.posts.last": "La última, {date}",
+    "dashboard.googleTab.row.posts.never": "Aún no hay publicaciones de Google",
+    "dashboard.googleTab.action.postIdeas": "Ideas para publicar",
+    "dashboard.googleTab.recap.listing.holiday_hours": "configuró su horario festivo",
+    "dashboard.googleTab.recap.listing.services": "agregó servicios",
+    "dashboard.googleTab.made.kind.holiday_hours": "Horario festivo",
+    "dashboard.googleTab.made.kind.services": "Servicios",
+    "dashboard.googleTab.row.holiday.noneSoon": "No hay días festivos en las próximas 6 semanas",
+    "dashboard.googleTab.row.holiday.set": "configurado",
+    "dashboard.googleTab.row.holiday.notSet": "sin configurar",
+    "dashboard.googleTab.row.services.label": "Servicios",
+    "dashboard.googleTab.row.services.none": "No hay servicios en su ficha",
+    "dashboard.googleTab.row.services.more": "{list} y {count} más",
+    "dashboard.googleTab.row.services.note": "Google relaciona las búsquedas con los servicios que usted publica.",
+    "dashboard.googleTab.action.addServices": "Agregar servicios",
+    "dashboard.googleTab.action.setHolidays": "Configurar",
+    "dashboard.googleTab.fields.loading": "Leyendo Google…",
+    "dashboard.googleTab.fields.loadFailed": "No se pudo cargar desde Google. Inténtelo en un minuto.",
+    "dashboard.googleTab.fields.noHolidays": "No hay días festivos en las próximas 6 semanas.",
+    "dashboard.googleTab.fields.practice": "Modo de práctica: los cambios van a una copia de su ficha, nunca a Google.",
+    "dashboard.googleTab.fields.readOnly": "Los cambios en Google están desactivados para este negocio; así se hace en Google:",
+    "dashboard.googleTab.fields.openOnGoogle": "Abrir en Google ↗",
+    "dashboard.googleTab.fields.approve": "Aprobar",
+    "dashboard.googleTab.fields.undo": "Deshacer",
+    "dashboard.googleTab.fields.undoUntil": "Puede deshacerlo hasta el {date}.",
+    "dashboard.googleTab.fields.result.sent": "Listo. Google ya lo muestra.",
+    "dashboard.googleTab.fields.result.unconfirmed": "Enviado. Google lo recibió pero aún no lo muestra.",
+    "dashboard.googleTab.fields.result.pending": "Enviado. Google lo está revisando.",
+    "dashboard.googleTab.fields.result.noChange": "Google ya muestra esto. No hay nada que cambiar.",
+    "dashboard.googleTab.fields.result.off": "Los cambios en Google están desactivados para este negocio.",
+    "dashboard.googleTab.fields.result.invalid": "Revise el horario: la apertura debe ser antes del cierre.",
+    "dashboard.googleTab.fields.result.failed": "No se pudo enviar a Google. No cambió nada.",
+    "dashboard.googleTab.fields.holiday.thanksgiving": "Día de Acción de Gracias",
+    "dashboard.googleTab.fields.holiday.christmasEve": "Nochebuena",
+    "dashboard.googleTab.fields.holiday.christmas": "Navidad",
+    "dashboard.googleTab.fields.holiday.newYearsEve": "Nochevieja",
+    "dashboard.googleTab.fields.holiday.newYear": "Año Nuevo",
+    "dashboard.googleTab.fields.holiday.july4": "4 de julio",
+    "dashboard.googleTab.fields.holiday.memorialDay": "Memorial Day",
+    "dashboard.googleTab.fields.holiday.laborDay": "Día del Trabajo",
+    "dashboard.googleTab.fields.holiday.isClosed": "Google: cerrado",
+    "dashboard.googleTab.fields.holiday.isOpen": "Google: {open}–{close}",
+    "dashboard.googleTab.fields.holiday.notSet": "Sin configurar en Google",
+    "dashboard.googleTab.fields.holiday.closed": "Cerrado",
+    "dashboard.googleTab.fields.holiday.open": "Abierto con este horario",
+    "dashboard.googleTab.fields.holiday.opens": "Abre",
+    "dashboard.googleTab.fields.holiday.closes": "Cierra",
+    "dashboard.googleTab.fields.holiday.keeps": "Solo cambia ese día; sus otros horarios especiales quedan igual. Puede deshacerlo durante 7 días.",
+    "dashboard.googleTab.fields.holiday.step1": "Abra su Perfil de Empresa en Google.",
+    "dashboard.googleTab.fields.holiday.step2": "Editar perfil → Horario → Horario especial.",
+    "dashboard.googleTab.fields.holiday.step3": "Agregue: {list}. Guarde.",
+    "dashboard.googleTab.fields.services.now": "{count} en Google ahora: {list}",
+    "dashboard.googleTab.fields.services.none": "Aún no hay servicios en Google.",
+    "dashboard.googleTab.fields.services.name": "Nombre del servicio",
+    "dashboard.googleTab.fields.services.description": "Descripción breve (opcional)",
+    "dashboard.googleTab.fields.services.another": "Agregar otro",
+    "dashboard.googleTab.fields.services.approve": "Aprobar: agregar {count}",
+    "dashboard.googleTab.fields.services.keeps": "Sus servicios actuales quedan exactamente igual. Puede deshacerlo durante 7 días.",
+    "dashboard.googleTab.fields.services.step1": "Abra su Perfil de Empresa en Google.",
+    "dashboard.googleTab.fields.services.step2": "Editar servicios → Agregar un servicio personalizado.",
+    "dashboard.googleTab.fields.services.step3": "Agregue: {list}. Guarde.",
+    "content.listingChange.name.changed": "El nombre de su negocio en Google cambió",
+    "content.listingChange.address.changed": "Su dirección en Google cambió",
     "dashboard.googleTab.jump.label": "En esta página",
     "dashboard.googleTab.jump.lastMonth": "El mes pasado",
     "dashboard.googleTab.jump.funnel": "Búsquedas → clientes",
@@ -12955,13 +13299,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.s5.sample2.body": "\"hair color sleepy hollow\" lo encontró solo 23 veces, y su única categoría es Peluquería.",
     "dashboard.googleTab.s5.sample2.why": "Las categorías deciden en qué búsquedas le muestra Google. Una segunda categoría abre las búsquedas de color cercanas.",
     "dashboard.googleTab.s6.title": "Protección y cambios",
-    "dashboard.googleTab.s6.meta": "Se revisa en cada análisis",
+    "dashboard.googleTab.s6.meta": "Se revisa en cada análisis y una vez al día",
     "dashboard.googleTab.others.title": "Cambios hechos por otros",
     "dashboard.googleTab.others.suggested": "Sugerencias que Google aceptó",
-    "dashboard.googleTab.others.fields": "Teléfono, horario, sitio web",
+    "dashboard.googleTab.others.fields": "Nombre, teléfono, dirección, horario, sitio web",
     "dashboard.googleTab.others.unchanged": "Sin cambios",
     "dashboard.googleTab.others.changed": "Cambió: {fields}",
-    "dashboard.googleTab.others.unknown": "Tras su próximo análisis",
+    "dashboard.googleTab.others.unknown": "Tras la próxima revisión",
     "dashboard.googleTab.others.field.phone": "teléfono",
     "dashboard.googleTab.others.field.hours": "horario",
     "dashboard.googleTab.others.field.website": "sitio web",
@@ -12970,9 +13314,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.others.statusValue.closedTemp": "Cerrado temporalmente",
     "dashboard.googleTab.others.statusValue.closed": "Cerrado permanentemente",
     "dashboard.googleTab.others.statusValue.unknown": "No se sabe",
-    "dashboard.googleTab.others.note": "Google puede aceptar sugerencias de otras personas sin avisarle. PostScore compara su ficha en cada análisis y deja fuera los cambios que usted hizo desde aquí.",
+    "dashboard.googleTab.others.note": "Google puede cambiar su ficha por su cuenta, o aceptar sugerencias de otras personas, sin avisarle. PostScore lo revisa en cada análisis y una vez al día, y deja fuera los cambios que usted hizo desde aquí.",
     "dashboard.googleTab.made.title": "Hecho desde PostScore",
-    "dashboard.googleTab.made.empty": "Nada todavía. Los cambios que apruebe aquí aparecen con su estado.",
+    "dashboard.googleTab.made.empty": "Todavía no se han hecho cambios desde PostScore.",
     "dashboard.googleTab.made.kind.hours": "Horario",
     "dashboard.googleTab.made.kind.phone": "Teléfono",
     "dashboard.googleTab.made.kind.description": "Descripción",
@@ -12985,6 +13329,49 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.made.status.reviewing": "Google lo está revisando",
     "dashboard.googleTab.made.status.undone": "Deshecho",
     "dashboard.googleTab.made.status.failed": "No se aplicó",
+    "dashboard.googleTab.banner.changed": "Google cambió su {fields}.",
+    "dashboard.googleTab.banner.review": "Revisarlo",
+    "dashboard.googleTab.protect.field.title": "Nombre",
+    "dashboard.googleTab.protect.field.name": "Nombre",
+    "dashboard.googleTab.protect.field.phone": "Teléfono",
+    "dashboard.googleTab.protect.field.address": "Dirección",
+    "dashboard.googleTab.protect.field.hours": "Horario",
+    "dashboard.googleTab.protect.field.website": "Sitio web",
+    "dashboard.googleTab.protect.field.categories": "Categorías",
+    "dashboard.googleTab.protect.field.description": "Descripción",
+    "dashboard.googleTab.others.none": "Ninguna",
+    "dashboard.googleTab.others.unknownScan": "Tras su próximo análisis",
+    "dashboard.googleTab.others.changedShort": "cambió",
+    "dashboard.googleTab.others.emptyValue": "(vacío)",
+    "dashboard.googleTab.others.keep": "Mantener la versión de Google",
+    "dashboard.googleTab.others.changeBack": "Volver a lo anterior",
+    "dashboard.googleTab.others.back.sent": "Se volvió a lo anterior. Google puede tardar unos minutos en mostrarlo. Puede deshacerlo abajo durante 7 días.",
+    "dashboard.googleTab.others.back.pending": "Enviado. Google lo está revisando.",
+    "dashboard.googleTab.others.back.noChange": "Google ya muestra su versión.",
+    "dashboard.googleTab.others.actionFailed": "No se aplicó. Inténtelo de nuevo o cámbielo en Google.",
+    "dashboard.googleTab.others.guide.title": "Vuelva a lo anterior en Google (2 min)",
+    "dashboard.googleTab.others.guide.why": "Cambiar el nombre, la dirección o las categorías puede hacer que Google le pida verificar de nuevo, así que esto se hace en Google.",
+    "dashboard.googleTab.others.guide.step1": "Abra su Perfil de Empresa en Google (botón de abajo).",
+    "dashboard.googleTab.others.guide.step2": "Elija Editar perfil y luego {field}.",
+    "dashboard.googleTab.others.guide.step3": "Escriba «{value}» y guarde.",
+    "dashboard.googleTab.others.guide.step3Empty": "Bórrelo y guarde.",
+    "dashboard.googleTab.others.openOnGoogle": "Abrir en Google ↗",
+    "dashboard.googleTab.others.verified": "Verificada",
+    "dashboard.googleTab.others.lastChecked": "Última revisión: {time}",
+    "dashboard.googleTab.others.notChecked": "Aún no se ha revisado",
+    "dashboard.googleTab.others.checkNow": "Revisar ahora",
+    "dashboard.googleTab.others.checking": "Revisando…",
+    "dashboard.googleTab.others.checkedNow": "Revisado ahora mismo",
+    "dashboard.googleTab.others.tooSoon": "Se revisó en los últimos 10 minutos. Inténtelo en un momento.",
+    "dashboard.googleTab.others.checkFailed": "No se pudo conectar con Google. Inténtelo más tarde.",
+    "dashboard.googleTab.made.added": "se agregó {list}",
+    "dashboard.googleTab.made.dateClosed": "{date} cerrado",
+    "dashboard.googleTab.made.dateOpen": "{date} {open}–{close}",
+    "dashboard.googleTab.made.undo": "Deshacer",
+    "dashboard.googleTab.made.undoing": "Deshaciendo…",
+    "dashboard.googleTab.made.undoFailed": "No se pudo deshacer. Puede que Google lo haya cambiado desde entonces.",
+    "dashboard.googleTab.made.showAll": "Ver todos los cambios ({count})",
+    "dashboard.googleTab.made.showLess": "Ver menos",
     "dashboard.googleTab.notConnected.title": "Conecte Google para ver su Perfil de Empresa en Google",
     "dashboard.googleTab.notConnected.lead": "Conectar su Perfil de Empresa en Google desbloquea esta pestaña:",
     "dashboard.googleTab.notConnected.rate": "Su tasa de conversión cada mes: cuántas personas que lo encontraron en Google llamaron, reservaron, visitaron su sitio o pidieron indicaciones.",

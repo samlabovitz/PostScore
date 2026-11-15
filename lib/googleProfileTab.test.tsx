@@ -26,6 +26,8 @@ import {
   listingCounts,
   listingGroups,
   madeFromPostScore,
+  madeValue,
+  watchedChanges,
   monthListingChanges,
   monthRecap,
   nextMonthlyUpdate,
@@ -113,12 +115,12 @@ describe("the five levers: status and pill", () => {
     expect(one({}, "reviews").href).toBe("/business/b1/website-reviews#google-reviews");
   });
 
-  test("Photos and Google posts: coming soon, a neutral pill (no data stored yet)", () => {
+  test("Photos and Google posts: a neutral pill until the first read from Google", () => {
     for (const id of ["photos", "posts"] as const) {
       const l = one({}, id);
       expect([words(l).status, words(l).pill, l.tone]).toEqual(["coming soon", "Soon", "neutral"]);
     }
-    expect(one({}, "photos").href).toBe("#listing");
+    expect(one({}, "photos").href).toBe("#listing-photos");
   });
 
   test("Deals: red Start with no coupon running, green with one", () => {
@@ -197,14 +199,74 @@ describe("Protection & changes", () => {
     expect(changedByOthers(["website"], [row({ approved_at: "2026-10-05T00:00:00Z" })], "2026-11-01T00:00:00Z", "2026-11-08T00:00:00Z")).toEqual(["website"]);
   });
 
-  test("the cards say Unchanged / Changed / Open, and list PostScore's changes", () => {
-    const html = text(render({ saved: { ...BASE.saved!, others: { fields: ["phone", "hours"], since: "2026-11-01T00:00:00Z" }, made: [{ kind: "website_link", status: "undo", daysLeft: 5, at: "2026-11-12T12:00:00Z" }] } }));
-    expect(html).toContain("Changed: phone, hours");
-    expect(html).toContain("Open");
-    expect(html).toContain("Website link");
+  test("the cards: old → new values with the date, Open · Verified, PostScore's changes with Undo", () => {
+    const html = text(
+      render({
+        canEditGoogle: true,
+        extras: { specialPeriods: [], services: [], categories: [], verified: true },
+        saved: {
+          ...BASE.saved!,
+          others: { fields: ["phone", "name"], since: "2026-11-01T00:00:00Z", at: "2026-11-08T12:00:00Z", changes: [{ field: "phone", from: "(914) 320-3012", to: "(914) 555-0100" }, { field: "name", from: "Hair express", to: "Hair Express Salon" }] },
+          made: [{ kind: "website_link", status: "undo", daysLeft: 5, at: "2026-11-12T12:00:00Z", batchId: "b", value: { text: "https://hairexpress.example" } }],
+        },
+      })
+    );
+    expect(html).toContain("Name, phone, address, hours, website");
+    expect(html).toContain("Phone: “(914) 320-3012” → “(914) 555-0100” · Nov 8");
+    expect(html).toContain("Name: “Hair express” → “Hair Express Salon”");
+    expect(html).toContain("Open · Verified");
+    expect(html).toContain("Website link : https://hairexpress.example");
     expect(html).toContain("Undo · 5 days left");
-    expect(text(render())).toContain("Unchanged");
-    expect(text(render())).toContain("Nothing yet. Changes you approve here show up with their status.");
+    expect(render({ canEditGoogle: true, saved: { ...BASE.saved!, made: [{ kind: "website_link", status: "undo", daysLeft: 5, at: "2026-11-12T12:00:00Z", batchId: "b" }] } })).toContain('data-testid="made-undo"');
+    // Read-only: the status, no Undo button.
+    expect(render({ saved: { ...BASE.saved!, made: [{ kind: "website_link", status: "undo", daysLeft: 5, at: "2026-11-12T12:00:00Z", batchId: "b" }] } })).not.toContain('data-testid="made-undo"');
+    expect(text(render())).toContain("Unchanged ✓");
+    expect(text(render())).toContain("No changes made from PostScore yet.");
+  });
+
+  test("Suggested edits Google accepted: None ✓, or each change with Keep / Change it back, and the red banner", () => {
+    const none = text(render({ saved: { ...BASE.saved!, googleEdits: { available: true, open: [], checkedAt: "2026-11-15T12:00:00Z" } } }));
+    expect(none).toContain("Suggested edits Google accepted None ✓");
+    expect(none).toContain("Last checked");
+    expect(none).toContain("Check now");
+    expect(none.slice(none.indexOf("6 Protection & changes"))).not.toContain("Coming soon");
+    const edit = { id: "e1", field: "phone" as const, owner_value: "(914) 320-3012", google_value: "(914) 555-0100", detected_at: "2026-11-14T12:00:00Z", resolved_at: null, resolution: null };
+    const html = render({ saved: { ...BASE.saved!, googleEdits: { available: true, open: [edit], checkedAt: "2026-11-15T12:00:00Z" } } });
+    expect(text(html)).toContain("Phone: “(914) 320-3012” → “(914) 555-0100” · Nov 14");
+    expect(text(html)).toContain("Keep Google's version");
+    expect(text(html)).toContain("Change it back");
+    expect(html).toContain('data-testid="google-edits-banner"');
+    expect(text(html)).toContain("Google changed your phone. Review it");
+    // Before supabase/gbp-step3b.sql: no Check now, no guess.
+    expect(text(render({ saved: { ...BASE.saved!, googleEdits: { available: false, open: [], checkedAt: null } } }))).toContain("After the next check");
+  });
+
+  test("Made from PostScore: the last 10, then Show all changes", () => {
+    const made = Array.from({ length: 12 }, (_, i) => ({ kind: "phone" as const, status: "live" as const, daysLeft: 0, at: `2026-10-${String(10 + i).padStart(2, "0")}T12:00:00Z`, batchId: `b${i}` }));
+    const html = render({ saved: { ...BASE.saved!, made } });
+    expect(html.match(/data-testid="made-row"/g)).toHaveLength(10);
+    expect(text(html)).toContain("Show all changes (12)");
+  });
+
+  test("short values: services added, holiday dates set, text clipped; none for hours", () => {
+    const svc = (n: string) => ({ freeFormServiceItem: { label: { displayName: n } } });
+    expect(madeValue("services", JSON.stringify([svc("Cut")]), JSON.stringify([svc("Cut"), svc("Balayage")]))).toEqual({ added: ["Balayage"] });
+    expect(madeValue("holiday_hours", "[]", JSON.stringify([{ startDate: { year: 2026, month: 11, day: 26 }, closed: true }]))).toEqual({ dates: [{ date: "2026-11-26", closed: true, open: null, close: null }] });
+    expect(madeValue("phone", null, "(914) 320-3012")).toEqual({ text: "(914) 320-3012" });
+    expect(madeValue("hours", null, JSON.stringify({ mon: [] }))).toBeNull();
+    expect(madeFromPostScore([row({ batch_id: "s", kind: "special_hours", field: "specialHours", before_value: "[]", after_value: JSON.stringify([{ startDate: { year: 2026, month: 11, day: 26 }, closed: true }]) })], now, false)[0]).toMatchObject({ kind: "holiday_hours", batchId: "s" });
+    expect(madeFromPostScore([row({ batch_id: "r", kind: "google_revert", field: "phoneNumbers" })], now, false)[0].kind).toBe("phone");
+  });
+
+  test("between scans: old → new for name, phone, address, website; hours by the first day that differs", () => {
+    const a = { name: "A", phone: "1", address: "9 S Broadway", website: "u", openingHours: ["Monday: 9 AM–5 PM", "Tuesday: 9 AM–5 PM"] };
+    const b = { name: "B", phone: "1", address: "9 S Broadway", website: "u", openingHours: ["Monday: 9 AM–5 PM", "Tuesday: 10 AM–5 PM"] };
+    expect(watchedChanges(a, b, ["name", "hours"])).toEqual([
+      { field: "name", from: "A", to: "B" },
+      { field: "hours", from: "Tuesday: 9 AM–5 PM", to: "Tuesday: 10 AM–5 PM" },
+    ]);
+    // Name and address have no PostScore edit, so they're never left out.
+    expect(changedByOthers(["name", "address"], [row({})], "2026-11-01T00:00:00Z", "2026-11-20T00:00:00Z")).toEqual(["name", "address"]);
   });
 });
 

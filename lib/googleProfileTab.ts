@@ -9,6 +9,9 @@
 import type { CheckResult } from "@/lib/scoring";
 import { actions, addMonths, monthRange, totalViews, type InsightsMonth, type Keyword } from "@/lib/gbpInsights";
 import type { BookingLink, BookingTracking } from "@/lib/bookingPartners";
+import { isFresh, monthsAgo, type MediaPostsState } from "@/lib/gbpMediaPosts";
+import { specialFor, upcomingHolidays, type SpecialHourPeriod } from "@/lib/gbpListingFields";
+import type { GoogleEditRow } from "@/lib/gbpGoogleEdits";
 
 /** ?tab=google opens this tab; the old ?tab=google-profile links still do. */
 export const GOOGLE_TAB_PARAM = "google";
@@ -252,6 +255,9 @@ export interface Lever {
 
 export interface LeverInputs {
   businessId: string;
+  /** Photos and posts from Google (lib/gbpMediaPosts.ts); null/undefined before the first check. */
+  media?: MediaPostsState | null;
+  now?: number;
   /** The last review-reply check; null before the first one. */
   replies: { replied: number; inWindow: number } | null;
   /** Coupons running now (active, not expired). */
@@ -276,9 +282,25 @@ export function levers(input: LeverInputs): Lever[] {
       ? { id: "reviews", status: "replied", pill: "done", params: { percent }, tone: "ok", href }
       : { id: "reviews", status: "replied", pill: "reply", params: { percent }, tone: "warn", href };
   })();
-  // The newest photo's date comes in step 3; Google posts aren't stored yet.
-  const photos: Lever = { id: "photos", status: "soon", pill: "soon", params: {}, tone: "neutral", href: "#listing" };
-  const posts: Lever = { id: "posts", status: "soon", pill: "soon", params: {}, tone: "neutral", href: `/business/${id}/growth#ways-to-grow` };
+  const now = input.now ?? Date.now();
+  // Photos: "newest N mo ago" → "Add 3" (amber) / "Done" (green, within 30 days).
+  const photos: Lever = ((): Lever => {
+    const p = input.media?.photos;
+    const href = "#listing-photos";
+    if (!p) return { id: "photos", status: "soon", pill: "soon", params: {}, tone: "neutral", href };
+    if (p.count === 0 || !p.newestAt) return { id: "photos", status: "none", pill: "add3", params: {}, tone: "bad", href };
+    return isFresh(p.newestAt, now)
+      ? { id: "photos", status: "newest", pill: "done", params: { months: monthsAgo(p.newestAt, now) }, tone: "ok", href }
+      : { id: "photos", status: "newest", pill: "add3", params: { months: monthsAgo(p.newestAt, now) }, tone: "warn", href };
+  })();
+  // Posts: "{N} in 30 days" / "none in 30 days" → "Post" (red at 0, amber at 1) / "Done" (green at 2+).
+  const posts: Lever = ((): Lever => {
+    const p = input.media?.posts;
+    const href = `/business/${id}/growth#ways-to-grow`;
+    if (!p) return { id: "posts", status: "soon", pill: "soon", params: {}, tone: "neutral", href };
+    if (p.last30 === 0) return { id: "posts", status: "none", pill: "post", params: {}, tone: "bad", href };
+    return { id: "posts", status: "count", pill: p.last30 >= 2 ? "done" : "post", params: { count: p.last30 }, tone: p.last30 >= 2 ? "ok" : "warn", href };
+  })();
   const deals: Lever =
     input.couponsRunning > 0
       ? { id: "deals", status: "running", pill: "running", params: { count: input.couponsRunning }, tone: "ok", href: `/business/${id}/campaigns` }
@@ -308,7 +330,7 @@ export interface MonthActivity {
   campaigns: number;
 }
 
-export type ListingChangeKind = "hours" | "phone" | "description" | "website_link" | "customer_details" | "booking_link";
+export type ListingChangeKind = "hours" | "phone" | "description" | "website_link" | "customer_details" | "booking_link" | "holiday_hours" | "services";
 
 export interface MonthRecap {
   did: Array<{ key: string; count?: number }>;
@@ -330,6 +352,10 @@ export function listingChangeKind(kind: string, field: string): ListingChangeKin
   if (k === "attributes") return "customer_details";
   if (k === "website_uri") return "website_link";
   if (k === "order_link") return "booking_link";
+  if (k === "special_hours") return "holiday_hours";
+  if (k === "services") return "services";
+  // "Change it back" after Google's own edit (lib/gbpGoogleEdits.server.ts).
+  if (k === "google_revert") return field === "phoneNumbers" ? "phone" : field === "websiteUri" ? "website_link" : field === "regularHours" ? "hours" : null;
   return null;
 }
 
@@ -344,6 +370,8 @@ export interface ChangeRow {
   undone_at?: string | null;
   undo_closed_at?: string | null;
   undo_of?: string | null;
+  before_value?: string | null;
+  after_value?: string | null;
 }
 
 /** "2026-10": the month before `now`, in the business's time zone. */
@@ -387,10 +415,51 @@ export interface MadeChange {
   status: "live" | "undo" | "reviewing" | "undone" | "failed";
   daysLeft: number;
   at: string;
+  batchId?: string;
+  /** The new value, short: a text, or the holiday dates it set. */
+  value?: MadeValue | null;
+}
+
+export type MadeValue = { text: string } | { added: string[] } | { dates: Array<{ date: string; closed: boolean; open: GTimeLike | null; close: GTimeLike | null }> };
+type GTimeLike = { hours?: number; minutes?: number };
+
+const short = (v: string, max = 48) => (v.length > max ? `${v.slice(0, max - 1)}…` : v);
+const parse = (v: string | null | undefined): unknown => {
+  if (v === null || v === undefined) return null;
+  try {
+    return JSON.parse(v);
+  } catch {
+    return v;
+  }
+};
+
+/** A change's new value as the "Made from PostScore" row shows it: the
+ * text for phone / description / links; the services it added; the holiday
+ * dates it set. null when there's nothing short to show (hours, details). */
+export function madeValue(kind: ListingChangeKind, before: string | null | undefined, after: string | null | undefined): MadeValue | null {
+  const a = parse(after);
+  const b = parse(before);
+  if (kind === "services" && Array.isArray(a)) {
+    const label = (i: unknown) => (i as { freeFormServiceItem?: { label?: { displayName?: string } } })?.freeFormServiceItem?.label?.displayName ?? null;
+    const had = new Set((Array.isArray(b) ? b : []).map(label));
+    const added = a.map(label).filter((n): n is string => !!n && !had.has(n));
+    return added.length ? { added } : null;
+  }
+  if (kind === "holiday_hours" && Array.isArray(a)) {
+    type P = { startDate?: { year: number; month: number; day: number }; closed?: boolean; openTime?: GTimeLike; closeTime?: GTimeLike };
+    const key = (p: P) => (p.startDate ? `${p.startDate.year}-${String(p.startDate.month).padStart(2, "0")}-${String(p.startDate.day).padStart(2, "0")}` : "");
+    const had = new Set((Array.isArray(b) ? (b as P[]) : []).map((p) => JSON.stringify(p)));
+    const dates = (a as P[]).filter((p) => p.startDate && !had.has(JSON.stringify(p))).map((p) => ({ date: key(p), closed: !!p.closed, open: p.openTime ?? null, close: p.closeTime ?? null }));
+    return dates.length ? { dates } : null;
+  }
+  if (kind === "hours" || kind === "customer_details") return null;
+  if (typeof a === "string" && a.trim()) return { text: short(a.trim()) };
+  if (a && typeof a === "object" && typeof (a as { primaryPhone?: unknown }).primaryPhone === "string") return { text: short((a as { primaryPhone: string }).primaryPhone) };
+  return null;
 }
 
 /** The latest changes made from PostScore, newest first, one per batch. */
-export function madeFromPostScore(rows: ChangeRow[], now: number, practice: boolean, max = 5): MadeChange[] {
+export function madeFromPostScore(rows: ChangeRow[], now: number, practice: boolean, max = 50): MadeChange[] {
   const seen = new Set<string>();
   const out: MadeChange[] = [];
   for (const r of [...rows].sort((a, b) => b.approved_at.localeCompare(a.approved_at))) {
@@ -401,7 +470,7 @@ export function madeFromPostScore(rows: ChangeRow[], now: number, practice: bool
     const left = Math.ceil((Date.parse(r.approved_at) + UNDO_DAYS * DAY_MS - now) / DAY_MS);
     const status: MadeChange["status"] =
       r.status === "failed" ? "failed" : r.undone_at ? "undone" : r.status === "pending_review" ? "reviewing" : left > 0 && !r.undo_closed_at ? "undo" : "live";
-    out.push({ kind, status, daysLeft: Math.max(0, left), at: r.approved_at });
+    out.push({ kind, status, daysLeft: Math.max(0, left), at: r.approved_at, batchId: r.batch_id, value: madeValue(kind, r.before_value, r.after_value) });
     if (out.length >= max) break;
   }
   return out;
@@ -412,7 +481,7 @@ export function madeFromPostScore(rows: ChangeRow[], now: number, practice: bool
 // ---------------------------------------------------------------------------
 
 export type RowStatus = "ok" | "warn" | "bad" | "neutral" | "soon";
-export type Editor = "hours" | "phone" | "description" | "website" | "customer_details" | "booking" | "booking_steps" | "booking_partner" | "messaging";
+export type Editor = "hours" | "phone" | "description" | "website" | "customer_details" | "booking" | "booking_steps" | "booking_partner" | "messaging" | "holiday" | "services";
 
 export interface ListingRow {
   id: string;
@@ -443,8 +512,40 @@ export interface ListingInput {
   reviewCount: number | null;
   messagingOn: boolean | null;
   replies: { replied: number; inWindow: number } | null;
+  /** Photos and posts from Google (lib/gbpMediaPosts.ts). */
+  media?: MediaPostsState | null;
+  now?: number;
+  /** From the real listing read: special hours, service names, categories. */
+  extras?: ListingExtras | null;
   /** The real Book online button and whether Google counts its bookings (lib/bookingPartners.ts). */
   booking?: BookingState | null;
+}
+
+export interface ListingExtras {
+  specialPeriods: SpecialHourPeriod[];
+  services: string[];
+  categories: string[];
+  /** metadata.hasVoiceOfMerchant: Google treats the owner as verified. */
+  verified?: boolean | null;
+  description?: string | null;
+}
+
+/** Holiday hours: the US holidays in the next 6 weeks and whether each is set. */
+function holidayRow(input: ListingInput): ListingRow {
+  if (!input.extras) return { id: "holiday", status: "soon", value: null, note: null, action: null };
+  const now = input.now ?? Date.now();
+  const holidays = upcomingHolidays(new Date(now));
+  const list = holidays.map((h) => ({ id: h.id, date: h.date, set: !!specialFor(input.extras!.specialPeriods, h.date) }));
+  const action = { kind: "editor" as const, editor: "holiday" as const };
+  if (list.length === 0) return { id: "holiday", status: "ok", value: null, note: null, action: null, meta: { kind: "none" } };
+  return { id: "holiday", status: list.every((h) => h.set) ? "ok" : "warn", value: null, note: null, action, meta: { kind: "list", list: JSON.stringify(list) } };
+}
+
+/** Services: the first 6 names and "+N more". */
+function servicesRow(input: ListingInput): ListingRow | null {
+  if (!input.extras) return null;
+  const names = input.extras.services;
+  return { id: "services", status: names.length > 0 ? "ok" : "warn", value: names.length > 0 ? String(names.length) : null, note: null, action: { kind: "editor", editor: "services" }, meta: { names: JSON.stringify(names) } };
 }
 
 export interface BookingState {
@@ -533,13 +634,14 @@ export function listingGroups(input: ListingInput): ListingGroup[] {
     },
     {
       id: "open",
-      rows: [row("hours", "completeness.hours", compactHours(input.openingHours), editor("hours")), row("holiday", null, null, null, "soon")],
+      rows: [row("hours", "completeness.hours", compactHours(input.openingHours), editor("hours")), holidayRow(input)],
     },
     {
       id: "who",
       rows: [
         row("category", "completeness.categories", input.category, { kind: "link", href: GOOGLE_BUSINESS_URL, external: true }),
         // The description is read live from Google when opened.
+        ...(servicesRow(input) ? [servicesRow(input)!] : []),
         row("description", null, null, editor("description")),
         row("customerDetails", "completeness.customer_details", null, editor("customer_details")),
       ],
@@ -547,8 +649,8 @@ export function listingGroups(input: ListingInput): ListingGroup[] {
     {
       id: "fresh",
       rows: [
-        row("photos", "completeness.photos", input.photoCount !== null ? String(input.photoCount) : null, { kind: "link", href: GOOGLE_BUSINESS_URL, external: true }),
-        row("posts", null, null, null, "soon"),
+        photosRow(input),
+        postsRow(input),
         {
           ...row("reviews", "visibility.review_replies", input.rating !== null ? `${input.rating.toFixed(1)} ★ · ${input.reviewCount ?? 0}` : null, { kind: "link", href: `/business/${input.businessId}/website-reviews#google-reviews`, external: false }),
           note: repliesText,
@@ -556,6 +658,29 @@ export function listingGroups(input: ListingInput): ListingGroup[] {
       ],
     },
   ];
+}
+
+/** Photos: Google's own count and newest photo when read (✓ within 30
+ * days, ! older); before the first read, the scan's count. */
+function photosRow(input: ListingInput): ListingRow {
+  const action = { kind: "link" as const, href: GOOGLE_BUSINESS_URL, external: true };
+  const p = input.media?.photos;
+  const now = input.now ?? Date.now();
+  if (!p) {
+    const check = input.checks.find((c) => c.id === "completeness.photos");
+    return { id: "photos", status: checkStatus(check), value: input.photoCount !== null ? String(input.photoCount) : null, note: null, action };
+  }
+  if (p.count === 0 || !p.newestAt) return { id: "photos", status: "bad", value: "0", note: null, action, meta: { kind: "none" } };
+  return { id: "photos", status: isFresh(p.newestAt, now) ? "ok" : "warn", value: String(p.count), note: null, action, meta: { kind: "read", months: String(monthsAgo(p.newestAt, now)) } };
+}
+
+/** Google posts: ✓ with one in the last 30 days, ! with none. */
+function postsRow(input: ListingInput): ListingRow {
+  const p = input.media?.posts;
+  if (!p) return { id: "posts", status: "soon", value: null, note: null, action: null };
+  const action = { kind: "link" as const, href: `/business/${input.businessId}/growth#ways-to-grow`, external: false };
+  if (p.last30 === 0) return { id: "posts", status: "warn", value: null, note: null, action, meta: { kind: "none", lastAt: p.lastAt ?? "" } };
+  return { id: "posts", status: "ok", value: String(p.last30), note: null, action, meta: { kind: "count", lastAt: p.lastAt ?? "" } };
 }
 
 /** The header strip's counts: OK / to fix / to improve. */
@@ -570,6 +695,8 @@ export function editorFromHash(hash: string): Editor | null {
   if (h === "edit-hours") return "hours";
   if (h === "edit-booking-steps") return "booking_steps";
   if (h === "edit-booking") return "booking";
+  if (h === "edit-holiday") return "holiday";
+  if (h === "edit-services") return "services";
   if (h === "edit-phone") return "phone";
   if (h === "edit-description") return "description";
   if (h === "edit-website-link") return "website";
@@ -593,8 +720,9 @@ export function syncedAgo(iso: string | null, now: number): { unit: "minutes" | 
 // Changes by anyone else
 // ---------------------------------------------------------------------------
 
-export type WatchedField = "phone" | "hours" | "website";
-const FIELD_KIND: Record<WatchedField, ListingChangeKind> = { phone: "phone", hours: "hours", website: "website_link" };
+export type WatchedField = "name" | "phone" | "address" | "hours" | "website";
+export const WATCHED_FIELDS: readonly WatchedField[] = ["name", "phone", "address", "hours", "website"];
+const FIELD_KIND: Record<WatchedField, ListingChangeKind | null> = { name: null, phone: "phone", address: null, hours: "hours", website: "website_link" };
 
 /** Phone, hours and website changes between the last two scans that
  * weren't made from PostScore in that time — someone else's edit, or a
@@ -606,7 +734,39 @@ export function changedByOthers(changed: WatchedField[], rows: ChangeRow[], from
       .map((r) => listingChangeKind(r.kind, r.field))
       .filter((k): k is ListingChangeKind => k !== null)
   );
-  return changed.filter((f) => !ours.has(FIELD_KIND[f]));
+  return changed.filter((f) => {
+    const k = FIELD_KIND[f];
+    return !k || !ours.has(k);
+  });
+}
+
+export interface WatchedChange {
+  field: WatchedField;
+  from: string | null;
+  to: string | null;
+}
+
+interface SnapshotLike {
+  name?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  website?: string | null;
+  openingHours?: string[] | null;
+}
+
+/** The old → new value of each changed field between two scans. Hours:
+ * the first day that differs ("Monday: 9 AM–5 PM" → "Monday: 9 AM–6 PM"). */
+export function watchedChanges(from: SnapshotLike, to: SnapshotLike, fields: WatchedField[]): WatchedChange[] {
+  return fields.map((field) => {
+    if (field === "hours") {
+      const a = from.openingHours ?? [];
+      const b = to.openingHours ?? [];
+      const i = Array.from({ length: Math.max(a.length, b.length) }, (_, k) => k).find((k) => (a[k] ?? "") !== (b[k] ?? ""));
+      return { field, from: i === undefined ? null : (a[i] ?? null), to: i === undefined ? null : (b[i] ?? null) };
+    }
+    const v = (s: SnapshotLike) => (field === "name" ? s.name : field === "phone" ? s.phone : field === "address" ? s.address : s.website) ?? null;
+    return { field, from: v(from), to: v(to) };
+  });
 }
 
 /** What the tab reads from PostScore's own tables (lib/googleProfileTab.server.ts). */
@@ -616,8 +776,10 @@ export interface GoogleTabSaved {
   lastMonth: string;
   recap: MonthRecap;
   made: MadeChange[];
-  /** null: fewer than two scans with listing snapshots. */
-  others: { fields: WatchedField[]; since: string } | null;
+  /** null: fewer than two scans with listing snapshots. `at`: the later scan. */
+  others: { fields: WatchedField[]; since: string; at?: string; changes?: WatchedChange[] } | null;
   businessStatus: string | null;
+  /** Google's own edits (getGoogleUpdated); null when not connected. */
+  googleEdits?: { available: boolean; open: GoogleEditRow[]; checkedAt: string | null } | null;
 }
 

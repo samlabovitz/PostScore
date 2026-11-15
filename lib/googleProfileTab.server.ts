@@ -8,8 +8,11 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { diffProfileSnapshots, type ProfileSnapshot } from "@/lib/profileChanges";
+import { loadGoogleEdits } from "@/lib/gbpGoogleEdits.server";
 import {
   changedByOthers,
+  watchedChanges,
+  WATCHED_FIELDS,
   madeFromPostScore,
   monthKeyOf,
   monthListingChanges,
@@ -26,12 +29,13 @@ export async function loadGoogleTabSaved(db: SupabaseClient, businessId: string,
   const now = opts.now ?? new Date();
   const since = new Date(now.getTime() - 70 * DAY_MS).toISOString();
   const today = now.toISOString().slice(0, 10);
-  const [changes, replies, promos, referrals, scans] = await Promise.all([
-    db.from("gbp_changes").select("batch_id, kind, field, status, approved_at, undone_at, undo_closed_at, undo_of").eq("business_id", businessId).gte("approved_at", since).order("approved_at", { ascending: false }).limit(200),
+  const [changes, replies, promos, referrals, scans, googleEdits] = await Promise.all([
+    db.from("gbp_changes").select("batch_id, kind, field, status, approved_at, undone_at, undo_closed_at, undo_of, before_value, after_value").eq("business_id", businessId).gte("approved_at", since).order("approved_at", { ascending: false }).limit(200),
     db.from("gbp_review_reply_log").select("action, status, created_at").eq("business_id", businessId).gte("created_at", since).limit(1000),
     db.from("promos").select("active, expiry, created_at").eq("business_id", businessId).limit(200),
     db.from("referrals").select("created_at").eq("business_id", businessId).gte("created_at", since).limit(200),
     db.from("scores").select("created_at, profile_snapshot_json").eq("business_id", businessId).not("profile_snapshot_json", "is", null).order("created_at", { ascending: false }).limit(2),
+    loadGoogleEdits(db, businessId, opts.practice).catch(() => null),
   ]);
   const rows = ((changes.error ? [] : changes.data) ?? []) as ChangeRow[];
   const month = previousMonthKey(now, opts.timeZone);
@@ -49,9 +53,10 @@ export async function loadGoogleTabSaved(db: SupabaseClient, businessId: string,
   let others: GoogleTabSaved["others"] = null;
   const [to, from] = scanRows;
   if (to?.profile_snapshot_json && from?.profile_snapshot_json) {
-    const watched = new Set<WatchedField>(["phone", "hours", "website"]);
+    const watched = new Set<WatchedField>(WATCHED_FIELDS);
     const fields = Array.from(new Set(diffProfileSnapshots(from.profile_snapshot_json, to.profile_snapshot_json, "en").map((c) => c.field))).filter((f): f is WatchedField => watched.has(f as WatchedField));
-    others = { fields: changedByOthers(fields, rows, from.created_at, to.created_at), since: from.created_at };
+    const theirs = changedByOthers(fields, rows, from.created_at, to.created_at);
+    others = { fields: theirs, since: from.created_at, at: to.created_at, changes: watchedChanges(from.profile_snapshot_json, to.profile_snapshot_json, theirs) };
   }
 
   return {
@@ -61,5 +66,6 @@ export async function loadGoogleTabSaved(db: SupabaseClient, businessId: string,
     made: madeFromPostScore(rows, now.getTime(), opts.practice),
     others,
     businessStatus: opts.businessStatus,
+    googleEdits,
   };
 }

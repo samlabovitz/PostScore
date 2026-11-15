@@ -29,6 +29,10 @@ export interface ProfileSnapshot {
   rating: number | null;
   reviewCount: number | null;
   businessStatus: string | null;
+  /** The listing's title and formatted address (since Day 22B; missing on
+   * older snapshots, which are never compared on these two). */
+  name?: string | null;
+  address?: string | null;
 }
 
 /** Builds a snapshot from whatever real Google-derived fields a caller
@@ -44,6 +48,8 @@ export function buildProfileSnapshot(business: {
   rating: number | null;
   review_count: number | null;
   business_status: string | null;
+  name?: string | null;
+  address?: string | null;
 }): ProfileSnapshot {
   return {
     phone: business.phone,
@@ -54,11 +60,13 @@ export function buildProfileSnapshot(business: {
     rating: business.rating,
     reviewCount: business.review_count,
     businessStatus: business.business_status,
+    ...(business.name !== undefined ? { name: business.name } : {}),
+    ...(business.address !== undefined ? { address: business.address } : {}),
   };
 }
 
 export interface ProfileChange {
-  field: "phone" | "website" | "hours" | "categories" | "photos" | "rating" | "reviews" | "status";
+  field: "phone" | "website" | "hours" | "categories" | "photos" | "rating" | "reviews" | "status" | "name" | "address";
   /** A single, honest, plain-language sentence — e.g. "Your hours changed." */
   description: string;
 }
@@ -92,6 +100,13 @@ export function diffProfileSnapshots(
 ): ProfileChange[] {
   const changes: ProfileChange[] = [];
 
+  // Name and address: only when both scans kept them (older snapshots didn't).
+  if (previous.name !== undefined && current.name !== undefined && (previous.name ?? "").trim() !== (current.name ?? "").trim()) {
+    changes.push({ field: "name", description: t(locale, "content.listingChange.name.changed") });
+  }
+  if (previous.address !== undefined && current.address !== undefined && (previous.address ?? "").trim() !== (current.address ?? "").trim()) {
+    changes.push({ field: "address", description: t(locale, "content.listingChange.address.changed") });
+  }
   if (previous.phone !== current.phone) {
     if (!previous.phone && current.phone) {
       changes.push({ field: "phone", description: t(locale, "content.listingChange.phone.added") });

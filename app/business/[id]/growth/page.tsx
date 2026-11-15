@@ -1,3 +1,4 @@
+import { googleWritesAllowed } from "@/lib/gbpReviewPractice";
 import { parseGbpResult } from "@/lib/gbpLanding";
 import { isGbpOAuthConfigured } from "@/lib/googleBusinessProfile";
 import { notFound, redirect } from "next/navigation";
@@ -34,6 +35,8 @@ import { campaignsHref } from "@/lib/campaignsTabs";
 import { isGoogleTabParam } from "@/lib/googleProfileTab";
 import { loadGoogleTabSaved } from "@/lib/googleProfileTab.server";
 import { loadBookingState, loadInsights, loadInsightsSyncedAt } from "@/lib/gbpInsights.server";
+import { loadPhotosAndPosts, refreshPhotosAndPosts } from "@/lib/gbpMediaPosts.server";
+import { listingExtras } from "@/lib/gbpRealListing.server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { insightsStateFor } from "@/lib/gbpInsights";
 import { loadAverageVisit } from "@/lib/averageVisit.server";
@@ -195,6 +198,14 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
           const insightsState = insightsStateFor(stored?.ok ? stored.months.map((m) => m.month) : [], syncedAt, new Date());
           // Practice mode: the fake Google starts as a copy of the real listing.
           const practiceSource = practice ? await (await import("@/lib/gbpProfilePractice.server")).seedPracticeListing(params.id) : null;
+          // Photos and posts: read from Google when the last check is over a day old.
+          let media = gbpConnected ? await loadPhotosAndPosts(db, params.id) : null;
+          if (gbpConnected && media?.stale) {
+            const r = await refreshPhotosAndPosts(createAdminClient(), params.id).catch(() => null);
+            if (r?.ok) media = await loadPhotosAndPosts(db, params.id);
+          }
+          // Holiday hours, services and categories from the real listing (cached read).
+          const extras = gbpConnected ? await listingExtras(createAdminClient(), params.id) : null;
           const averageVisit = gbpConnected ? await loadAverageVisit(db, params.id) : null;
           const website = reportCategories(scored.result.breakdown.categories).find((_, i) => scored.result.breakdown.categories[i].id === "website");
           const hasWebsite = scored.result.breakdown.checks.find((c) => c.id === "website.has_website")?.earnedPoints !== 0;
@@ -218,6 +229,10 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
             averageVisit,
             practiceSource,
             booking: bookingState,
+            media: media ? { photos: media.photos, posts: media.posts, checkedAt: media.checkedAt } : null,
+            extras,
+            // "Change it back" / Undo from PostScore: practice, or on the live list.
+            canEditGoogle: practice || googleWritesAllowed((row as { place_id?: string | null }).place_id ?? null),
           };
         })()
       : null;

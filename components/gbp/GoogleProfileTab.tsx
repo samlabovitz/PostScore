@@ -21,6 +21,9 @@ import Link from "next/link";
 import { createContext, Fragment, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { syncGoogleNumbers } from "@/app/actions/gbpInsights";
+import { changeGoogleEditBack, checkGoogleEditsNow, keepGoogleVersion, undoMadeChange, type ChangeBackResult } from "@/app/actions/gbpGoogleEdits";
+import { canChangeBack, type GoogleEditRow } from "@/lib/gbpGoogleEdits";
+import { timeText } from "@/lib/gbpListingFields";
 import { IconArrowUpRight, IconBuildingStore, IconDiscount2, IconPencil, IconPhoto, IconStar } from "@tabler/icons-react";
 import { ProfileEditsOnGoogle } from "@/components/gbp/ProfileEditsOnGoogle";
 import { WebsiteLinkFix } from "@/components/gbp/WebsiteLinkFix";
@@ -32,7 +35,7 @@ import { openOrderLink } from "@/app/actions/gbpOrderLink";
 import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 import { GBP_PROFILE_ANCHOR, gbpConnectHref, type GbpConnectResult } from "@/lib/gbpLanding";
 import { googleWritesCopy, GOOGLE_WRITES_FOR_EVERYONE } from "@/lib/googleWritesLaunch";
-import { formatCount, formatShortDate, t, useLocale, useTimeZone, type Locale, type MessageKey } from "@/lib/i18n";
+import { formatCount, formatMonthDayTime, formatShortDate, t, useLocale, useTimeZone, type Locale, type MessageKey } from "@/lib/i18n";
 import {
   conversionRate,
   editorFromHash,
@@ -56,8 +59,11 @@ import {
   rateChart,
   type Editor,
   type GoogleTabSaved,
+  type MadeChange,
+  type MadeValue,
   type BookingState,
   type JumpPart,
+  type ListingExtras,
   type JumpSectionId,
   type Lever,
   type LeverId,
@@ -67,7 +73,9 @@ import {
 } from "@/lib/googleProfileTab";
 import type { CheckResult } from "@/lib/scoring";
 import type { BookingTracking } from "@/lib/bookingPartners";
+import type { MediaPostsState } from "@/lib/gbpMediaPosts";
 import { BookingStepsPanel } from "@/components/gbp/BookingSteps";
+import { HolidayHoursEditor, ServicesEditor } from "@/components/gbp/ListingFieldEditors";
 import { actions, audience, type InsightsState, callsByDays, isSmallMonth, leftOnTable, SAMPLE_AUDIENCE, sixMonthSpan, totalViews, worthRange, type Audience, type InsightsMonth } from "@/lib/gbpInsights";
 import type { GbpReplyCounts } from "@/lib/gbpReviewReplies";
 import { cn } from "@/lib/utils";
@@ -109,11 +117,17 @@ export interface GoogleProfileTabProps {
   averageVisit?: number | null;
   /** The real Book online button and whether Google counts its bookings. */
   booking?: BookingState | null;
+  /** Photos and Google posts, read from Google (lib/gbpMediaPosts.ts). */
+  media?: MediaPostsState | null;
+  /** From the real listing read: special hours, service names, categories. */
+  extras?: ListingExtras | null;
   /** Practice mode: the fake Google is a copy of the real listing ("real"),
    * the sample ("sample"), or the sample because the real read failed. */
   practiceSource?: "real" | "sample" | "fallback" | null;
   /** Connected: shown / sync needed / Google had nothing (lib/gbpInsights.ts insightsStateFor). */
   insightsState?: InsightsState;
+  /** Writes from PostScore allowed (practice, or GOOGLE_WRITES_LIVE_PLACES). */
+  canEditGoogle?: boolean;
 }
 
 /** Gold-on-navy and the mockup's soft tones, from the app's own colors. */
@@ -190,6 +204,7 @@ function ConnectedTab(props: GoogleProfileTabProps) {
           {gbpResultText(locale, props.result, props.business)}
         </p>
       )}
+      <GoogleEditsBanner saved={props.saved} />
       <JumpMenu sample={sample} />
       <PartHeader part="performance" />
       <LastMonthSection {...props} months={months} sample={sample} />
@@ -676,6 +691,7 @@ function LastMonthSection(props: GoogleProfileTabProps & { months: InsightsMonth
     replies: props.replyCounts ? { replied: props.replyCounts.replied, inWindow: props.replyCounts.reviewsInWindow } : null,
     couponsRunning: props.saved?.couponsRunning ?? 0,
     website: props.website,
+    media: props.media ?? null,
   });
   const meta = last && prev ? t(locale, K("s1.meta"), { month: monthYear(last.month, locale), previous: monthName(prev.month, locale) }) : last ? monthYear(last.month, locale) : t(locale, K("monthly"));
   const averageVisit = sample ? SAMPLE_AVERAGE_VISIT : (props.averageVisit ?? null);
@@ -1133,6 +1149,8 @@ function NextSection({ sample, hasData = false, categories, booking = null }: { 
 // ---------------------------------------------------------------------------
 
 const EDITOR_ROW: Record<Editor, string> = {
+  holiday: "holiday",
+  services: "services",
   booking_steps: "booking",
   booking_partner: "booking",
   hours: "hours",
@@ -1192,6 +1210,8 @@ function ListingSection(props: GoogleProfileTabProps) {
     messagingOn: props.messagingOn,
     replies: props.replyCounts ? { replied: props.replyCounts.replied, inWindow: props.replyCounts.reviewsInWindow } : null,
     booking: props.booking ?? null,
+    media: props.media ?? null,
+    extras: props.extras ?? null,
   });
   const counts = listingCounts(groups);
   const live = useLiveValues(props.businessId);
@@ -1299,15 +1319,53 @@ export function rowText(row: ListingRow, locale: Locale, extra: { replyNote?: st
       value = t(locale, K(row.status === "ok" ? "row.messaging.on" : row.status === "warn" ? "row.messaging.off" : "row.messaging.unknown"));
       note = t(locale, K("row.messaging.note"));
       break;
-    case "holiday":
     case "posts":
+      // Read from Google: "{N} in the last 30 days · last one {date}" or "None in 30+ days".
+      if (row.meta) {
+        value = row.meta.kind === "none" ? t(locale, K("row.posts.none")) : t(locale, K(Number(row.value) === 1 ? "row.posts.countOne" : "row.posts.count"), { count: row.value ?? "0" });
+        note = row.meta.lastAt ? t(locale, K("row.posts.last"), { date: formatShortDate(row.meta.lastAt, locale) }) : t(locale, K("row.posts.never"));
+        break;
+      }
+      value = t(locale, K("row.soon"));
+      note = t(locale, K("row.posts.note"));
+      break;
+    case "holiday":
+      if (row.meta?.kind === "none") {
+        value = t(locale, K("row.holiday.noneSoon"));
+        note = null;
+        break;
+      }
+      if (row.meta?.kind === "list") {
+        // "Thanksgiving (Nov 26): not set · Christmas Eve (Dec 24): set".
+        const list = JSON.parse(row.meta.list) as Array<{ id: string; date: { year: number; month: number; day: number }; set: boolean }>;
+        value = list.map((h) => `${t(locale, K(`fields.holiday.${h.id}`))} (${formatShortDate(`${h.date.year}-${String(h.date.month).padStart(2, "0")}-${String(h.date.day).padStart(2, "0")}T12:00:00Z`, locale, "UTC").replace(/,? \d{4}$/, "")}): ${t(locale, K(h.set ? "row.holiday.set" : "row.holiday.notSet"))}`).join(" · ");
+        note = t(locale, K("row.holiday.note"));
+        break;
+      }
       value = t(locale, K("row.soon"));
       note = t(locale, K(`row.${row.id}.note`));
       break;
+    case "services": {
+      const names = JSON.parse(row.meta?.names ?? "[]") as string[];
+      value = names.length === 0 ? t(locale, K("row.services.none")) : names.length > 6 ? t(locale, K("row.services.more"), { list: names.slice(0, 6).join(", "), count: names.length - 6 }) : names.join(", ");
+      note = t(locale, K("row.services.note"));
+      break;
+    }
     case "customerDetails":
       value = t(locale, K("row.customerDetails.value"));
       break;
     case "photos":
+      if (row.meta?.kind === "read") {
+        // "{N} photos · newest {X} months ago".
+        value = t(locale, K("row.photos.read"), { count: row.value ?? "0", ago: Number(row.meta.months) === 0 ? t(locale, K("row.photos.thisMonth")) : t(locale, K(Number(row.meta.months) === 1 ? "row.photos.monthAgo" : "row.photos.monthsAgo"), { count: row.meta.months }) });
+        note = t(locale, K("row.photos.addMore"));
+        break;
+      }
+      if (row.meta?.kind === "none") {
+        value = t(locale, K("row.photos.zero"));
+        note = t(locale, K("row.photos.addMore"));
+        break;
+      }
       value = row.value !== null ? t(locale, K("row.photos.value"), { count: row.value }) : missing;
       note = t(locale, K("row.photos.note"));
       break;
@@ -1322,13 +1380,17 @@ export function rowText(row: ListingRow, locale: Locale, extra: { replyNote?: st
     row.action === null
       ? null
       : row.action.kind === "link"
-        ? t(locale, K(row.id === "reviews" ? "action.openInbox" : row.id === "photos" ? "action.addOnGoogle" : "action.howTo"))
+        ? t(locale, K(row.id === "reviews" ? "action.openInbox" : row.id === "photos" ? "action.addOnGoogle" : row.id === "posts" ? "action.postIdeas" : "action.howTo"))
         : row.id === "booking" && row.meta?.kind === "none"
           ? t(locale, K("action.addLink"))
           : row.action.editor === "booking_partner"
             ? t(locale, K("action.managedBy"), { provider: row.meta?.provider ?? "" })
             : row.action.editor === "booking_steps"
               ? t(locale, K("action.turnOnBooking"))
+              : row.action.editor === "services"
+              ? t(locale, K("action.addServices"))
+              : row.action.editor === "holiday"
+              ? t(locale, K(row.status === "ok" ? "action.edit" : "action.setHolidays"))
               : t(locale, K(row.id === "messaging" ? "action.howToInline" : row.id === "customerDetails" ? "action.update" : row.status === "bad" ? "action.fix" : "action.edit"));
   return { label, value, note, action };
 }
@@ -1414,7 +1476,9 @@ function PartnerBookingPanel({ link, tracking }: { link: { uri: string; provider
 
 /** The existing editors, unchanged: their own preview → approve → read
  * back → undo, live-places lock and practice mode. */
-function RowEditor({ editor, businessId, suggested, booking }: { editor: Editor; businessId: string; suggested: string | null; booking: BookingState | null }) {
+function RowEditor({ editor, businessId, suggested, booking, prefill }: { editor: Editor; businessId: string; suggested: string | null; booking: BookingState | null; prefill?: string[] }) {
+  if (editor === "holiday") return <HolidayHoursEditor businessId={businessId} />;
+  if (editor === "services") return <ServicesEditor businessId={businessId} prefill={prefill} />;
   if (editor === "booking_partner" && booking && booking.link.kind === "partner") return <PartnerBookingPanel link={booking.link} tracking={booking.tracking} />;
   if (editor === "booking_steps" && booking && booking.tracking.kind === "turn_on") return <BookingStepsPanel businessId={businessId} provider={booking.tracking.provider} partnerId={booking.tracking.partnerId} still={booking.tracking.still} />;
   if (editor === "hours" || editor === "phone" || editor === "description") return <ProfileEditsOnGoogle businessId={businessId} fields={[editor]} orderLink={false} intro={false} />;
@@ -1428,66 +1492,235 @@ function RowEditor({ editor, businessId, suggested, booking }: { editor: Editor;
 // 6 Protection & changes
 // ---------------------------------------------------------------------------
 
+const GOOGLE_PROFILE_URL = "https://business.google.com/";
+const SMALL_BTN = "inline-flex h-[26px] items-center rounded-md border px-2.5 text-[12px] font-semibold disabled:opacity-60";
+
+/** Red banner at the top of the tab while Google's own edits are open. */
+function GoogleEditsBanner({ saved }: { saved: GoogleTabSaved | null }) {
+  const locale = useLocale();
+  const open = saved?.googleEdits?.open ?? [];
+  if (open.length === 0) return null;
+  const fields = open.map((e) => t(locale, K(`protect.field.${e.field}`)).toLowerCase()).join(", ");
+  return (
+    <a href="#others" role="alert" data-testid="google-edits-banner" className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-red/30 bg-[color:color-mix(in_srgb,var(--color-red)_8%,white)] px-3.5 py-2.5 text-[13px] text-red">
+      <b>{t(locale, K("banner.changed"), { fields })}</b>
+      <span className="font-semibold underline underline-offset-2">{t(locale, K("banner.review"))}</span>
+    </a>
+  );
+}
+
+const quoted = (v: string | null, locale: Locale) => (v ? `“${v}”` : t(locale, K("others.emptyValue")));
+
+function GoogleEditItem({ businessId, edit, canEdit, practice }: { businessId: string; edit: GoogleEditRow; canEdit: boolean; practice: boolean }) {
+  const locale = useLocale();
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ key: string; tone: "ok" | "warn" | "bad" } | null>(null);
+  const [guide, setGuide] = useState(false);
+  const label = t(locale, K(`protect.field.${edit.field}`));
+  const inApp = canChangeBack(edit.field) && canEdit;
+  async function keep() {
+    setBusy(true);
+    const r = await keepGoogleVersion(businessId, edit.id).catch(() => ({ status: "failed" }) as const);
+    setBusy(false);
+    if (r.status === "ok") router.refresh();
+    else setMsg({ key: "others.actionFailed", tone: "bad" });
+  }
+  async function changeBack() {
+    if (!inApp) return setGuide(true);
+    setBusy(true);
+    const r = await changeGoogleEditBack(businessId, edit.id, practice ? "accept" : null).catch(() => ({ status: "error", error: "failed" }) as ChangeBackResult);
+    setBusy(false);
+    if (r.status === "sent" || r.status === "pending_review" || r.status === "no_change") {
+      setMsg({ key: r.status === "sent" ? "others.back.sent" : r.status === "pending_review" ? "others.back.pending" : "others.back.noChange", tone: r.status === "sent" || r.status === "no_change" ? "ok" : "warn" });
+      router.refresh();
+    } else if (r.status === "editing_off" || r.status === "on_google") setGuide(true);
+    else setMsg({ key: "others.actionFailed", tone: "bad" });
+  }
+  return (
+    <div className="flex flex-col gap-1.5 border-t border-paper-line/60 py-2 text-[13px] first:border-t-0" data-testid={`google-edit-${edit.field}`}>
+      <p>
+        <b>{label}:</b> <span className="text-ink-mute line-through decoration-ink-mute/50">{quoted(edit.owner_value, locale)}</span> → <b className="text-red">{quoted(edit.google_value, locale)}</b>
+        <span className="text-ink-mute"> · {formatShortDate(edit.detected_at, locale)}</span>
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" disabled={busy} onClick={keep} className={cn(SMALL_BTN, "border-paper-line text-ink")} data-testid="keep-google">
+          {t(locale, K("others.keep"))}
+        </button>
+        <button type="button" disabled={busy} onClick={changeBack} className={cn(SMALL_BTN, "border-ink bg-ink text-paper")} data-testid="change-back">
+          {t(locale, K("others.changeBack"))}
+        </button>
+      </div>
+      {msg && (
+        <p role="status" className={cn("text-[12.5px]", msg.tone === "ok" ? "text-green" : msg.tone === "warn" ? "text-amber" : "text-red")}>
+          {t(locale, K(msg.key))}
+        </p>
+      )}
+      {guide && (
+        <div className="rounded-lg bg-paper p-2.5 text-[12.5px]" data-testid="change-back-guide">
+          <b>{t(locale, K("others.guide.title"))}</b>
+          {!canChangeBack(edit.field) && <p className="mt-0.5 text-ink-soft">{t(locale, K("others.guide.why"))}</p>}
+          <ol className="mt-1 list-decimal space-y-0.5 pl-5">
+            <li>{t(locale, K("others.guide.step1"))}</li>
+            <li>{t(locale, K("others.guide.step2"), { field: label })}</li>
+            <li>{edit.owner_value ? t(locale, K("others.guide.step3"), { value: edit.owner_value }) : t(locale, K("others.guide.step3Empty"))}</li>
+          </ol>
+          <a href={GOOGLE_PROFILE_URL} target="_blank" rel="noopener noreferrer" className={cn(SMALL_BTN, "mt-2 w-fit border-paper-line bg-white text-ink")}>
+            {t(locale, K("others.openOnGoogle"))}
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CheckNow({ businessId, checkedAt }: { businessId: string; checkedAt: string | null }) {
+  const locale = useLocale();
+  const timeZone = useTimeZone();
+  const router = useRouter();
+  const [state, setState] = useState<"idle" | "busy" | "done" | "too_soon" | "failed">("idle");
+  async function run() {
+    setState("busy");
+    const r = await checkGoogleEditsNow(businessId).catch(() => ({ status: "failed" }) as const);
+    setState(r.status === "ok" ? "done" : r.status === "too_soon" ? "too_soon" : "failed");
+    if (r.status === "ok") router.refresh();
+  }
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-paper-line/60 pt-2 text-[12.5px] text-ink-mute" data-testid="google-edits-check">
+      <span>{state === "done" ? t(locale, K("others.checkedNow")) : checkedAt ? t(locale, K("others.lastChecked"), { time: formatMonthDayTime(checkedAt, locale, timeZone) }) : t(locale, K("others.notChecked"))}</span>
+      <span className="flex items-center gap-2">
+        {state === "too_soon" && <span className="text-amber">{t(locale, K("others.tooSoon"))}</span>}
+        {state === "failed" && <span className="text-red">{t(locale, K("others.checkFailed"))}</span>}
+        <button type="button" disabled={state === "busy"} onClick={run} className="font-semibold text-ink underline underline-offset-2 disabled:opacity-60" data-testid="check-now">
+          {state === "busy" ? t(locale, K("others.checking")) : t(locale, K("others.checkNow"))}
+        </button>
+      </span>
+    </div>
+  );
+}
+
+function madeValueText(v: MadeValue | null | undefined, locale: Locale): string | null {
+  if (!v) return null;
+  if ("text" in v) return v.text;
+  if ("added" in v) return t(locale, K("made.added"), { list: v.added.join(", ") });
+  return v.dates
+    .map((d) => {
+      const date = formatShortDate(`${d.date}T12:00:00Z`, locale, "UTC").replace(/,? \d{4}$/, "");
+      return d.closed ? t(locale, K("made.dateClosed"), { date }) : t(locale, K("made.dateOpen"), { date, open: timeText(d.open ?? undefined, locale), close: timeText(d.close ?? undefined, locale) });
+    })
+    .join(", ");
+}
+
+const MADE_SHOWN = 10;
+
+function MadeRow({ businessId, c, practice, canEdit }: { businessId: string; c: MadeChange; practice: boolean; canEdit: boolean }) {
+  const locale = useLocale();
+  const router = useRouter();
+  const [state, setState] = useState<"idle" | "busy" | "failed">("idle");
+  const value = madeValueText(c.value, locale);
+  async function undo() {
+    if (!c.batchId) return;
+    setState("busy");
+    const r = await undoMadeChange(businessId, c.batchId, practice ? "accept" : null).catch(() => ({ status: "failed" }) as const);
+    if (r.status === "ok") router.refresh();
+    else setState("failed");
+  }
+  return (
+    <div className="flex flex-col border-t border-paper-line/60 py-2 text-[13px] first:border-t-0" data-testid="made-row">
+      <div className="flex items-center justify-between gap-3">
+        <span className="min-w-0 text-ink-soft">
+          <b className="text-ink">{t(locale, K(`made.kind.${c.kind}`))}</b>
+          {value && <>: {value}</>} <span className="text-ink-mute">· {formatShortDate(c.at, locale)}</span>
+        </span>
+        <span className={cn("flex shrink-0 items-center gap-2 whitespace-nowrap", c.status === "live" ? "font-semibold text-green" : c.status === "reviewing" || c.status === "undo" ? "text-amber" : c.status === "failed" ? "text-red" : "text-ink-mute")}>
+          {c.status === "undo" ? t(locale, K(c.daysLeft === 1 ? "made.status.undoOne" : "made.status.undo"), { count: c.daysLeft }) : t(locale, K(`made.status.${c.status}`))}
+          {c.status === "undo" && canEdit && c.batchId && (
+            <button type="button" disabled={state === "busy"} onClick={undo} className={cn(SMALL_BTN, "border-paper-line text-ink")} data-testid="made-undo">
+              {state === "busy" ? t(locale, K("made.undoing")) : t(locale, K("made.undo"))}
+            </button>
+          )}
+        </span>
+      </div>
+      {state === "failed" && <p className="text-[12px] text-red">{t(locale, K("made.undoFailed"))}</p>}
+    </div>
+  );
+}
+
 function ProtectionSection(props: GoogleProfileTabProps) {
   const locale = useLocale();
+  const [showAll, setShowAll] = useState(false);
   const saved = props.saved;
   const others = saved?.others ?? null;
-  const fieldsText = others ? others.fields.map((f) => t(locale, K(`others.field.${f}`))).join(", ") : "";
+  const edits = saved?.googleEdits ?? null;
+  const canEdit = props.canEditGoogle === true;
   const status = saved?.businessStatus ?? null;
   const statusKey = status === "OPERATIONAL" ? "open" : status === "CLOSED_TEMPORARILY" ? "closedTemp" : status === "CLOSED_PERMANENTLY" ? "closed" : "unknown";
-  const li = "flex items-center justify-between gap-3 border-t border-paper-line/60 py-2 text-[13px] first:border-t-0";
+  const verified = props.extras?.verified === true;
+  const made = saved?.made ?? [];
+  const shown = showAll ? made : made.slice(0, MADE_SHOWN);
+  const li = "flex items-start justify-between gap-3 border-t border-paper-line/60 py-2 text-[13px] first:border-t-0";
   return (
     <SectionHead n={6} id="protection" title={t(locale, K("s6.title"))} meta={t(locale, K("s6.meta"))}>
       <div className="mt-3.5 grid gap-4 sm:grid-cols-2">
-        <Box className="p-3.5" data-testid="google-tab-others">
+        <Box className="scroll-mt-24 p-3.5" id="others" data-testid="google-tab-others">
           <Eyebrow>{t(locale, K("others.title"))}</Eyebrow>
           <div className="mt-2">
-            <div className={li}>
+            <div className={cn(li, edits && edits.open.length > 0 && "flex-col items-stretch")}>
               <span className="text-ink-soft">{t(locale, K("others.suggested"))}</span>
-              <span className="text-ink-mute">{t(locale, K("row.soon"))}</span>
+              {!edits || !edits.available ? (
+                <span className="text-ink-mute">{t(locale, K("others.unknown"))}</span>
+              ) : edits.open.length === 0 ? (
+                <b className="text-green">{t(locale, K("others.none"))} ✓</b>
+              ) : (
+                <div data-testid="google-edits-list">
+                  {edits.open.map((e) => (
+                    <GoogleEditItem key={e.id} businessId={props.businessId} edit={e} canEdit={canEdit} practice={props.practice} />
+                  ))}
+                </div>
+              )}
             </div>
-            <div className={li}>
+            <div className={cn(li, others && others.fields.length > 0 && "flex-col items-stretch gap-1")}>
               <span className="text-ink-soft">{t(locale, K("others.fields"))}</span>
               {others === null ? (
-                <span className="text-ink-mute">{t(locale, K("others.unknown"))}</span>
+                <span className="text-ink-mute">{t(locale, K("others.unknownScan"))}</span>
               ) : others.fields.length === 0 ? (
-                <b className="text-green">{t(locale, K("others.unchanged"))}</b>
+                <b className="text-green">{t(locale, K("others.unchanged"))} ✓</b>
               ) : (
-                <b className="text-amber" data-testid="google-tab-others-changed">
-                  {t(locale, K("others.changed"), { fields: fieldsText })}
-                </b>
+                <ul className="space-y-0.5" data-testid="google-tab-others-changed">
+                  {(others.changes ?? others.fields.map((field) => ({ field, from: null, to: null }))).map((ch) => (
+                    <li key={ch.field} className="text-amber">
+                      <b>{t(locale, K(`protect.field.${ch.field}`))}:</b> {ch.from || ch.to ? <>{quoted(ch.from, locale)} → {quoted(ch.to, locale)}</> : t(locale, K("others.changedShort"))}
+                      {others.at && <span className="text-ink-mute"> · {formatShortDate(others.at, locale)}</span>}
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
             <div className={li}>
               <span className="text-ink-soft">{t(locale, K("others.status"))}</span>
-              <b className={statusKey === "open" ? "text-green" : statusKey === "unknown" ? "text-ink-mute" : "text-red"}>{t(locale, K(`others.statusValue.${statusKey}`))}</b>
+              <b className={statusKey === "open" ? "text-green" : statusKey === "unknown" ? "text-ink-mute" : "text-red"} data-testid="listing-status">
+                {t(locale, K(`others.statusValue.${statusKey}`))}
+                {verified && <span className="font-semibold"> · {t(locale, K("others.verified"))}</span>}
+              </b>
             </div>
           </div>
+          {props.connected && edits?.available && <CheckNow businessId={props.businessId} checkedAt={edits.checkedAt} />}
           <p className="mt-2 text-[12px] text-ink-mute">{t(locale, K("others.note"))}</p>
         </Box>
         <Box className="p-3.5" data-testid="google-tab-made">
           <Eyebrow>{t(locale, K("made.title"))}</Eyebrow>
           <div className="mt-2">
-            {(saved?.made ?? []).length === 0 ? (
+            {made.length === 0 ? (
               <p className="py-2 text-[13px] text-ink-mute">{t(locale, K("made.empty"))}</p>
             ) : (
-              saved!.made.map((c, i) => (
-                <div key={`${c.at}-${i}`} className={li}>
-                  <span className="text-ink-soft">
-                    {t(locale, K(`made.kind.${c.kind}`))} · {formatShortDate(c.at, locale)}
-                  </span>
-                  <span
-                    className={cn(
-                      "whitespace-nowrap",
-                      c.status === "live" ? "font-semibold text-green" : c.status === "reviewing" ? "text-amber" : c.status === "failed" ? "text-red" : "text-ink-mute"
-                    )}
-                  >
-                    {c.status === "undo" ? t(locale, K(c.daysLeft === 1 ? "made.status.undoOne" : "made.status.undo"), { count: c.daysLeft }) : t(locale, K(`made.status.${c.status}`))}
-                  </span>
-                </div>
-              ))
+              shown.map((c, i) => <MadeRow key={`${c.batchId ?? c.at}-${i}`} businessId={props.businessId} c={c} practice={props.practice} canEdit={canEdit} />)
             )}
           </div>
+          {made.length > MADE_SHOWN && (
+            <button type="button" onClick={() => setShowAll(!showAll)} className="mt-1 text-[12.5px] font-semibold text-ink underline underline-offset-2" data-testid="made-show-all">
+              {showAll ? t(locale, K("made.showLess")) : t(locale, K("made.showAll"), { count: made.length })}
+            </button>
+          )}
         </Box>
       </div>
     </SectionHead>

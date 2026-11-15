@@ -264,7 +264,7 @@ describe("every write to Google is behind the switch", () => {
   // (the OAuth token / revoke calls and the Places / PageSpeed / Safe
   // Browsing searches change nothing on a listing). A new one fails here
   // until it's behind GOOGLE_WRITES_LIVE_PLACES and added to this list.
-  const WRITERS = ["lib/gbpReviewInbox.server.ts", "lib/gbpProfileEdits.server.ts", "lib/gbpOrderLink.server.ts", "lib/gbpWebsiteLink.server.ts", "lib/gbpAttributes.server.ts"];
+  const WRITERS = ["lib/gbpReviewInbox.server.ts", "lib/gbpProfileEdits.server.ts", "lib/gbpOrderLink.server.ts", "lib/gbpWebsiteLink.server.ts", "lib/gbpAttributes.server.ts", "lib/gbpFieldWrite.server.ts"];
   const files = (dir: string): string[] =>
     readdirSync(dir).flatMap((f) => {
       const p = join(dir, f);
@@ -272,7 +272,7 @@ describe("every write to Google is behind the switch", () => {
       return /\.(ts|tsx)$/.test(f) && !/\.test\./.test(f) ? [p] : [];
     });
 
-  test("only the five known writers send PATCH / PUT / POST / DELETE to a Business Profile API", () => {
+  test("only the six known writers send PATCH / PUT / POST / DELETE to a Business Profile API", () => {
     const google = /mybusiness[a-z]*\.googleapis\.com|PLACE_ACTIONS_BASE|reviewUrl\(|from "@\/lib\/gbpAttributes\.server"|from "@\/lib\/gbpPlaceActions\.server"/;
     const write = /method: ?["'](PATCH|PUT|POST|DELETE)["']/;
     const found = ["lib", "app", "components"].flatMap(files).filter((p) => {
@@ -290,6 +290,9 @@ describe("every write to Google is behind the switch", () => {
       "app/actions/gbpPlaceActions.ts": "if (!c.canEdit) return { status: \"editing_off\" }",
       "app/actions/gbpWebsiteLink.ts": "if (!c.canEdit) return { status: \"editing_off\" }",
       "app/actions/gbpCustomerDetails.ts": "if (!c.canEdit) return { status: \"editing_off\" }",
+      // lib/gbpFieldWrite.server.ts: holiday hours, services, "Change it back" and Undo.
+      "app/actions/gbpListingFields.ts": "if (!c.canEdit) return { status: \"editing_off\" }",
+      "app/actions/gbpGoogleEdits.ts": "if (!c.canEdit) return { status: \"editing_off\" }",
     };
     for (const [file, check] of Object.entries(actions)) expect([file, readFileSync(file, "utf8").includes(check)]).toEqual([file, true]);
     // Every real-mode context reads the one list.

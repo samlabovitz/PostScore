@@ -30,7 +30,7 @@ export interface RealLocation {
   specialHours?: { specialHourPeriods?: unknown[] };
   serviceItems?: unknown[];
   profile?: { description?: string };
-  metadata?: { placeId?: string; mapsUri?: string };
+  metadata?: { placeId?: string; mapsUri?: string; hasVoiceOfMerchant?: boolean };
 }
 
 export interface RealListing {
@@ -118,4 +118,22 @@ export async function readRealListingCached(admin: SupabaseClient, businessId: s
 /** After a write from PostScore: the next page view reads Google again. */
 export function forgetRealListing(businessId: string) {
   cache.delete(businessId);
+}
+
+/** What the tab's rows need from the real listing: special hours, the
+ * service names, the categories (null when the read fails). */
+export async function listingExtras(admin: SupabaseClient, businessId: string): Promise<import("@/lib/googleProfileTab").ListingExtras | null> {
+  const read = await readRealListingCached(admin, businessId).catch(() => null);
+  if (!read?.ok) return null;
+  const { serviceNames } = await import("@/lib/gbpListingFields");
+  type Cat = { displayName?: string; serviceTypes?: Array<{ serviceTypeId?: string; displayName?: string }> };
+  const cats = read.listing.location.categories as { primaryCategory?: Cat; additionalCategories?: Cat[] } | undefined;
+  const types = [...(cats?.primaryCategory?.serviceTypes ?? []), ...(cats?.additionalCategories ?? []).flatMap((c) => c.serviceTypes ?? [])];
+  return {
+    specialPeriods: (read.listing.location.specialHours?.specialHourPeriods ?? []) as import("@/lib/gbpListingFields").SpecialHourPeriod[],
+    services: serviceNames((read.listing.location.serviceItems ?? []) as import("@/lib/gbpListingFields").ServiceItem[], types),
+    categories: [cats?.primaryCategory?.displayName, ...(cats?.additionalCategories ?? []).map((c) => c.displayName)].filter((x): x is string => !!x),
+    verified: typeof read.listing.location.metadata?.hasVoiceOfMerchant === "boolean" ? read.listing.location.metadata.hasVoiceOfMerchant : null,
+    description: read.listing.location.profile?.description ?? null,
+  };
 }

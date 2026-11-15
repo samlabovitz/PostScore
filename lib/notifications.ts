@@ -11,6 +11,7 @@
 import { URGENT_ISSUES, type UrgentIssue } from "@/lib/urgency";
 import type { MessageKey } from "@/lib/i18n";
 import { gbpConnectHref } from "@/lib/gbpLanding";
+import { fieldOfNotificationKey } from "@/lib/gbpGoogleEdits";
 
 export type NotificationType = "urgent" | "google";
 export type NotificationSeverity = "urgent" | "high" | "info";
@@ -75,14 +76,18 @@ const NOTIFICATION_KINDS: Record<NotificationType, (row: Pick<NotificationRow, "
     return { message, fixLabel: `dashboard.urgent.fix.${row.key}` as MessageKey, fixHref: urgentFixHref(row.key, row.business_id) };
   },
   // Reconnect starts Google's consent screen; once reconnected, the Overview.
-  google: (row) =>
-    row.key === "disconnected"
-      ? {
-          message: "dashboard.notifications.google.disconnected",
-          fixLabel: "dashboard.notifications.google.reconnect",
-          fixHref: row.resolved_at ? `/business/${row.business_id}` : gbpConnectHref(row.business_id, "overview"),
-        }
-      : null,
+  // "edit_<field>": Google changed a field itself (lib/gbpGoogleEdits.server.ts),
+  // reviewed on the Google Profile tab's "Changes by anyone else".
+  google: (row) => {
+    if (row.key === "disconnected")
+      return {
+        message: "dashboard.notifications.google.disconnected",
+        fixLabel: "dashboard.notifications.google.reconnect",
+        fixHref: row.resolved_at ? `/business/${row.business_id}` : gbpConnectHref(row.business_id, "overview"),
+      };
+    const field = fieldOfNotificationKey(row.key);
+    return field ? { message: `dashboard.notifications.google.edit.${field}` as MessageKey, fixLabel: "dashboard.notifications.google.review", fixHref: `/business/${row.business_id}/growth?tab=google#others` } : null;
+  },
 };
 
 /** A notification's wording and fix, or null for a kind this version doesn't know. */

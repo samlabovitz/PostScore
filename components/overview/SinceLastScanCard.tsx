@@ -11,7 +11,7 @@
 // locale (resolveChangeDisplay — see lib/scoreChanges.ts).
 
 import Link from "next/link";
-import {
+import { IconMapPin,
   IconArrowDownRight,
   IconArrowRight,
   IconArrowUpRight,
@@ -47,6 +47,8 @@ const FIELD_ICON: Record<ProfileChange["field"], typeof IconStar> = {
   rating: IconStar,
   reviews: IconMessageCircle,
   status: IconBuildingStore,
+  name: IconBuildingStore,
+  address: IconMapPin,
 };
 
 function signed(n: number): string {

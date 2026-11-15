@@ -636,6 +636,12 @@ export async function rescanBusinessWithClient(
   // it's server-only.
   const { runGbpReplyCheck } = await import("@/lib/gbpReplyCounts.server");
   await runGbpReplyCheck(businessId);
+  // Photos and posts on the listing (summaries only); never fails the scan.
+  const [{ refreshPhotosAndPosts }, { createAdminClient }] = await Promise.all([import("@/lib/gbpMediaPosts.server"), import("@/lib/supabase/admin")]);
+  await refreshPhotosAndPosts(createAdminClient(), businessId).catch(() => undefined);
+  // Google's own edits (getGoogleUpdated): read only; never fails the scan.
+  const { checkGoogleEdits } = await import("@/lib/gbpGoogleEdits.server");
+  await checkGoogleEdits(createAdminClient(), businessId).catch(() => undefined);
 
   const scoreResult = await saveScoreSnapshotWithClient(supabase, businessId);
   if (scoreResult.status !== "saved") {
@@ -655,6 +661,8 @@ export async function rescanBusinessWithClient(
     rating: lookup.place.rating,
     review_count: lookup.place.userRatingCount,
     business_status: lookup.place.businessStatus,
+    name: lookup.place.name,
+    address: lookup.place.formattedAddress,
   });
 
   return {

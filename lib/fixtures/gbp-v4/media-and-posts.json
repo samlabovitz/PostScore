@@ -1,0 +1,20 @@
+{
+  "media": {
+    "mediaItems": [
+      { "mediaFormat": "PHOTO", "createTime": "2026-09-09T15:45:23Z", "locationAssociation": { "category": "INTERIOR" } },
+      { "mediaFormat": "PHOTO", "createTime": "2025-04-02T10:00:00Z", "locationAssociation": { "category": "EXTERIOR" } },
+      { "mediaFormat": "PHOTO", "createTime": "2024-11-20T10:00:00Z" },
+      { "mediaFormat": "PHOTO", "createTime": "2024-06-01T10:00:00Z" },
+      { "mediaFormat": "VIDEO", "createTime": "2026-10-01T10:00:00Z" }
+    ],
+    "totalMediaItemCount": 5
+  },
+  "posts": {
+    "localPosts": [
+      { "createTime": "2026-11-10T12:00:00Z", "topicType": "STANDARD", "state": "LIVE" },
+      { "createTime": "2026-10-25T12:00:00Z", "topicType": "OFFER", "state": "LIVE" },
+      { "createTime": "2026-09-01T12:00:00Z", "topicType": "EVENT", "state": "LIVE" },
+      { "createTime": "2026-11-12T12:00:00Z", "topicType": "STANDARD", "state": "REJECTED" }
+    ]
+  }
+}
