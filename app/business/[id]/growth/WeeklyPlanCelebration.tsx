@@ -1,6 +1,6 @@
 "use client";
 
-// Celebrates finishing EVERY step of this week's plan — only when a real
+// Celebrates finishing EVERY step of the Growth recap — only when a real
 // re-check confirmed each one (a re-scan marked it completed, or Google is
 // actually connected); "I did this" clicks never count. The first visit
 // of the week records the plan's steps and the real score (this device);

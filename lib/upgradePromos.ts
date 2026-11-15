@@ -39,7 +39,7 @@ export interface PromoFacts {
   reviewAvg: number | null;
   /** The plural noun for competitors ("salons"), in the business's language. */
   competitorNoun: string | null;
-  /** The review leader to beat (the shared reviewGoal), when they trail. */
+  /** The next business above them to beat (the shared reviewGoal), when they trail. */
   reviewLeader: { name: string; count: number } | null;
 }
 

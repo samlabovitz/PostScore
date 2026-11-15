@@ -29,7 +29,7 @@ import type { Plan } from "@/lib/plan";
 import type { ReviewGoal } from "@/lib/competitorComparison";
 
 const FACTS: PromoFacts = { ...NO_FACTS, reviewCount: 10, reviewAvg: 57, competitorNoun: "salons", issueCount: 3, reviewLeader: { name: "Leader Salon", count: 90 } };
-const GOAL: ReviewGoal = { kind: "beat", average: 57, leader: { name: "Leader Salon", reviewCount: 90, rating: null }, ownCount: 10, gap: 80, nextUp: null, runnerUp: null };
+const GOAL: ReviewGoal = { kind: "next", average: 57, leader: { name: "Leader Salon", reviewCount: 90, rating: null }, ownCount: 10, gap: 80, nextUp: { name: "Leader Salon", reviewCount: 90, rating: null }, stretch: null, runnerUp: null };
 const wrap = (node: React.ReactNode, plan: Plan, locale: "en" | "es" = "en") =>
   renderToStaticMarkup(
     <LocaleProvider locale={locale} timeZone="America/New_York">
@@ -176,11 +176,11 @@ describe("Reviews", () => {
     expect(t).toContain("At the register or checkout counter");
   });
 
-  test("the review goal (beat the leader) is free on every plan", () => {
+  test("the review goal (next up) is free on every plan", () => {
     for (const plan of ["free", "grow", "premium"] as Plan[]) {
       const t = text(view(plan));
       expect(t, plan).toContain("Nearby salons average 57 reviews.");
-      expect(t, plan).toContain("Your goal: beat Leader Salon — 90 reviews (80 more than you).");
+      expect(t, plan).toContain("Next up: Leader Salon, 90 reviews.");
     }
     expect(wrap(<ReviewGapLine goal={null} group={null} />, "free")).toBe("");
   });

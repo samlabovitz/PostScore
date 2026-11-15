@@ -85,7 +85,7 @@ describe("Past reports: Download is Premium in the page, like the server", () =>
   });
 
   test("the route refuses below Premium too", () => {
-    expect(readFileSync("app/api/business/[id]/weekly-report-pdf/route.ts", "utf8")).toContain('if (!isPremiumPlan(await getPlan())) return NextResponse.json({ error: "premium_only" }, { status: 403 });');
+    expect(readFileSync("app/api/business/[id]/weekly-report-pdf/route.ts", "utf8")).toContain('if (!isPremiumPlan(plan)) return NextResponse.json({ error: "premium_only" }, { status: 403 });');
   });
 });
 

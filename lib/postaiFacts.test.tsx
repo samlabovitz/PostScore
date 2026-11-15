@@ -321,8 +321,10 @@ describe("the weekly PDF report is Premium", () => {
   test("the PDF route refuses below Premium, on the server", () => {
     for (const route of ["app/api/business/[id]/weekly-report-pdf/route.ts"]) {
       const src = readFileSync(route, "utf8");
-      expect(src, route).toContain('if (!isPremiumPlan(await getPlan())) return NextResponse.json({ error: "premium_only" }, { status: 403 });');
+      expect(src, route).toContain('if (!isPremiumPlan(plan)) return NextResponse.json({ error: "premium_only" }, { status: 403 });');
+      expect(src).toContain("const plan = await getPlan();");
       expect(src.indexOf("premium_only")).toBeLessThan(src.indexOf("buildReportPdf("));
+      expect(src.indexOf("premium_only")).toBeLessThan(src.indexOf("buildWeeklyReportV2Pdf("));
     }
   });
 

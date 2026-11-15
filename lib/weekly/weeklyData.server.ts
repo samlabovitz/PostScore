@@ -154,6 +154,7 @@ export async function weeklyReportDataWithClient(
     comparedInWeek: summary.comparedInWeek,
     routine,
     pastWeek: !isCurrentWeek,
+    comparedScans: c ? { fromId: c.from.id, toId: c.to.id } : null,
   };
   const period = (from: number, to: number, comparable: boolean, fromAt: string, toAt: string) => ({ from: fromAt, to: toAt, days: 0, fromScore: from, toScore: to, comparable });
 

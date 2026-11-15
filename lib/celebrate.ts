@@ -108,7 +108,7 @@ export function goalHit(goal: WeekGoal | null, now: number, lastScanAt: string |
 }
 
 // ---------------------------------------------------------------------
-// "This week's plan is done": every step of the week's plan (as first
+// "Your Growth recap is done": every step of the week's plan (as first
 // seen this week, on this device) confirmed by a real re-check — a task
 // the re-scan marked completed, or Google actually connected. Clicking
 // "I did this" never counts.

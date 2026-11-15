@@ -18,7 +18,7 @@ describe("long business names", () => {
   });
 
   test("the review goal line uses the short name", () => {
-    const goal = { kind: "beat", average: 60, leader: { name: STUFFED, reviewCount: 142 }, ownCount: 30, gap: 112, nextUp: null, runnerUp: null } as never;
+    const goal = { kind: "next", average: 60, leader: { name: STUFFED, reviewCount: 142 }, ownCount: 30, gap: 112, nextUp: { name: STUFFED, reviewCount: 142 }, stretch: null, runnerUp: null } as never;
     const text = JSON.stringify(reviewGoalText(goal, "hair salons nearby", "en"));
     expect(text).toContain("Hair Extension Sew ins Weave Microlinks…");
     expect(text).not.toContain("Yonkers");

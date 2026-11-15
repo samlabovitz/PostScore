@@ -2,7 +2,7 @@
 // are shown in whole points: "about +29–31 pts", never "~+29.2–31.4".
 // A range that rounds to a single number collapses to that number.
 
-import { t } from "@/lib/i18n/messages";
+import { t, tPlural } from "@/lib/i18n/messages";
 import type { Locale } from "@/lib/i18n/locale";
 
 export type WholePointRange = { low: number; high: number | null };
@@ -21,10 +21,15 @@ export function websiteRangeText(locale: Locale, low: number, high: number | nul
     : t(locale, "dashboard.growth.websiteBanner.getWebsite.single", { points: range.low });
 }
 
+/** "+1 pt" / "+4 pts", or "about +2 pts" for an estimate. */
+export function pointsText(locale: Locale, points: number, about = false): string {
+  return tPlural(locale, about ? "dashboard.overview.recs.pointsAbout" : "dashboard.overview.recs.points", points, { points });
+}
+
 /** "about +29–31 pts" on a recommendation row. */
 export function recRangeText(locale: Locale, low: number, high: number): string {
   const range = wholePointRange(low, high);
   return range.high !== null
     ? t(locale, "dashboard.overview.recs.pointsRange", { low: range.low, high: range.high })
-    : t(locale, "dashboard.overview.recs.pointsAbout", { points: range.low });
+    : pointsText(locale, range.low, true);
 }

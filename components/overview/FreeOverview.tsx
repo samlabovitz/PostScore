@@ -99,7 +99,7 @@ export function FreeReviews({
               <p className={cn("text-[13.5px] font-semibold leading-snug", trailing ? "text-amber" : "text-green")} data-testid="review-goal">
                 {text.goal}
               </p>
-              {text.nextUp && <p className="text-[13px] text-ink" data-testid="review-next-up">{text.nextUp}</p>}
+              {text.stretch && <p className="text-[13px] text-ink" data-testid="review-stretch">{text.stretch}</p>}
             </>
           ) : (
             <p className="text-[13.5px] font-medium leading-snug text-ink">{reviewStatLine(reviewCount, null, locale)}</p>

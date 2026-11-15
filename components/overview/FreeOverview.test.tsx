@@ -26,8 +26,8 @@ const render = (node: React.ReactNode, plan: Plan = "free", locale: "en" | "es" 
   );
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/\s+/g, " ");
 const rival = (name: string, reviewCount: number) => ({ name, reviewCount, rating: null });
-const BEAT: ReviewGoal = { kind: "beat", average: 57, leader: rival("Leader Salon", 90), ownCount: 10, gap: 80, nextUp: null, runnerUp: null };
-const LEAD: ReviewGoal = { kind: "lead", average: 57, leader: rival("Test Salon", 120), ownCount: 120, gap: 30, nextUp: null, runnerUp: rival("Runner Salon", 90) };
+const BEAT: ReviewGoal = { kind: "next", average: 57, leader: rival("Leader Salon", 90), ownCount: 10, gap: 80, nextUp: rival("Leader Salon", 90), stretch: null, runnerUp: null };
+const LEAD: ReviewGoal = { kind: "lead", average: 57, leader: rival("Test Salon", 120), ownCount: 120, gap: 30, nextUp: null, stretch: null, runnerUp: rival("Runner Salon", 90) };
 const VIEW = () => readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8");
 
 describe("Free re-scan: 1 a week (+ the first scan), on top of the 24-hour rule", () => {
@@ -124,13 +124,13 @@ describe("LockedPreview — advice is never in the page", () => {
 });
 
 describe("reviews and rank on Free", () => {
-  test("rating + count, the review goal (beat the leader), the working review link (copy, open) and QR (PNG)", () => {
+  test("rating + count, the review goal (the next business above), the working review link (copy, open) and QR (PNG)", () => {
     const html = render(<FreeReviews placeId="ChIJN1t_tDeuEmsRUsoyG83frY4" rating={4.6} reviewCount={10} goal={BEAT} group="nearby salons" />);
     const t = text(html);
     expect(html).toContain('id="free-reviews"');
     expect(t).toContain("4.6★ from 10 reviews");
     expect(t).toContain("Nearby salons average 57 reviews.");
-    expect(t).toContain("Your goal: beat Leader Salon — 90 reviews (80 more than you).");
+    expect(t).toContain("Next up: Leader Salon, 90 reviews.");
     expect(html).toContain("data-trailing");
     expect(html).toContain('data-testid="free-review-link"');
     expect(html).toContain("data-review-qr=");
@@ -142,7 +142,7 @@ describe("reviews and rank on Free", () => {
     expect(lead).not.toContain("data-trailing");
     expect(text(lead)).toContain("You lead nearby with 120 reviews — keep the gap (30 ahead of Runner Salon).");
     expect(text(render(<FreeReviews placeId={null} rating={null} reviewCount={10} goal={null} group={null} />))).not.toMatch(/more than you|Your goal/);
-    expect(text(render(<FreeReviews placeId={null} rating={null} reviewCount={10} goal={BEAT} group="salones cercanos" />, "free", "es"))).toContain("Su meta: superar a Leader Salon");
+    expect(text(render(<FreeReviews placeId={null} rating={null} reviewCount={10} goal={BEAT} group="salones cercanos" />, "free", "es"))).toContain("Siguiente: Leader Salon, 90 reseñas.");
   });
   test("'You're #N of M nearby' only when they trail", () => {
     expect(text(render(<RankUnlockLine />))).toContain("You're #6 of 8 nearby. See what's holding you back with Grow.");

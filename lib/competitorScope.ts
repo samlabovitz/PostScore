@@ -12,6 +12,7 @@
 // rankBy / ownerStanding take this scope, so the Overview, reports, PDF,
 // "Since your last visit", PostAI and the Competitors page all agree.
 
+import { nicheGroupNoun } from "@/lib/competitorQuery";
 import { sameKindByTypes } from "@/lib/categoryFamily";
 import type { SavedCompetitorEntry, SavedCompetitorScan } from "@/lib/savedCompetitorScans";
 import { classifyCompetitor, isGeneralNiche, nicheById, nicheLabel } from "@/lib/niches";
@@ -158,11 +159,12 @@ export function nicheSearchTypes(scope: CompetitorScope): { directTypes: string[
  * the niche plus the areas in use — or, without a niche, the business
  * type's own noun ("nearby salons"). */
 export function scopeGroupLabel(scan: SavedCompetitorScan, scope: CompetitorScope | null | undefined, locale: Locale, fallbackNoun: string): string {
-  const fallback = locale === "es" ? `${fallbackNoun} cercanos` : `nearby ${fallbackNoun}`;
+  // The same words as the rank line (lib/competitorQuery.ts nicheGroupNoun).
+  const fallback = locale === "es" ? `${fallbackNoun} de la zona` : `nearby ${fallbackNoun}`;
   if (!scope || isGeneralNiche(scope.nicheId) || !nicheById(scope.nicheId)) return fallback;
   const result = applyScope(scan, scope);
-  const niche = nicheLabel(scope.nicheId, locale).toLowerCase();
+  const niche = nicheGroupNoun(nicheById(scope.nicheId), locale, false) ?? nicheLabel(scope.nicheId, locale).toLowerCase();
   const parts = [niche, ...(result.effective === "wide" ? result.areasUsed.filter((a) => a !== scope.parent).map((a) => areaPhrase(a, scope, locale)) : [])];
   const list = joinList(parts, locale) ?? niche;
-  return locale === "es" ? `negocios cercanos de ${list}` : `${list} businesses nearby`;
+  return locale === "es" ? list : `nearby ${list}`;
 }

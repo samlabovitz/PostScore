@@ -26,6 +26,7 @@ import {
 import type { GrowthMove } from "@/lib/growthMoves";
 import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 import { CustomerDetailsGoogleEdit, useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
+import { FixWithPostScore, fixFlowHref } from "@/components/gbp/FixWithPostScore";
 import { formatMonthDayTime, t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 
 /** What a website task needs for "Re-check my website". */
@@ -236,7 +237,7 @@ function ProblemText({ task }: { task: ActionPlanTask }) {
 type MarkState = { kind: "idle" } | { kind: "saving" } | { kind: "error"; message: string };
 
 /** Which list a task card is rendered in — the SAME task (same checkId,
- * same effort) can legitimately appear in both "This week's plan" and
+ * same effort) can legitimately appear in both "Growth recap" and
  * "Bigger projects" (see buildWeeklyPlan's duplication for
  * quick_win_action checks), so the badge/points framing is chosen by
  * context, not derived purely from the task's own effort field. */
@@ -287,7 +288,7 @@ export function TaskCard({
   context?: TaskCardContext;
   /** When the business's most recent scan ran — see getLastScanAt(). */
   lastScanAt?: string | null;
-  /** 1, 2, 3… in "This week's plan". */
+  /** 1, 2, 3… in "Growth recap". */
   step?: number | null;
   /** Which tools this business has — for the fix link (same as PostAI's). */
   linkOptions?: LinkOptions;
@@ -303,6 +304,9 @@ export function TaskCard({
   const onGoogle = task.checkId === "completeness.customer_details";
   // Premium + connected: PostScore can make this change ("Update on Google").
   const canUpdateOnGoogle = onGoogle && gbpEdit.enabled && gbpEdit.premium && gbpEdit.connected;
+  // Premium: a step whose fix PostScore can make opens that editor ("Fix it
+  // with PostScore (Beta)"); "Coming soon" only for steps with no editor yet.
+  const hasEditor = gbpEdit.enabled && (onGoogle || fixFlowHref(businessId, task.checkId, task.mergedCheckIds) !== null);
 
   async function handleMarkDone() {
     setState({ kind: "saving" });
@@ -380,7 +384,7 @@ export function TaskCard({
             )}
           </div>
 
-          {premium && task.automatable && !(onGoogle && gbpEdit.enabled) && (
+          {premium && task.automatable && !hasEditor && (
             <p data-testid="step-coming-soon" className="w-fit rounded-full border border-paper-deep bg-paper px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft">
               {t(locale, "content.actionPlan.step.comingSoon")}
             </p>
@@ -408,6 +412,7 @@ export function TaskCard({
           <CurrentStatus task={task} pendingStatus={pendingStatus} metricProgress={metricProgress} lastScanAt={lastScanAt} />
 
           {onGoogle && <CustomerDetailsGoogleEdit businessId={businessId} />}
+          {premium && !isSetup && <FixWithPostScore businessId={businessId} checkId={task.checkId} mergedCheckIds={task.mergedCheckIds} />}
 
           <div>
             <button
@@ -566,7 +571,7 @@ export function GrowthMoveCard({ move, overlapsActionPlan }: { move: GrowthMove;
   );
 }
 
-/** Tasks as separate cards (numbered in "This week's plan"), or an honest
+/** Tasks as separate cards (numbered in "Growth recap"), or an honest
  * empty-state message — the caller supplies it so "nothing left this
  * week" can read differently from "nothing longer-term either". */
 export function TaskListCard({

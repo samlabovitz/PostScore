@@ -25,7 +25,7 @@ export function WeeklyGoalCelebration({
   weekStart: string;
   /** The real score (from the latest scan). */
   today: number;
-  /** This week's plan, projected. */
+  /** The Growth recap, projected. */
   projected: number;
   lastScanAt: string | null;
   children: ReactNode;

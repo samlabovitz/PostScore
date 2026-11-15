@@ -343,7 +343,7 @@ function CompetitorsReviewGoal({ scan, scope, noun }: { scan: SavedCompetitorSca
     <Card className="flex flex-col gap-1 p-4" data-testid="competitors-review-goal">
       <p className="text-[13px] text-ink-soft">{text.average}</p>
       <p className="text-[14px] font-semibold text-ink">{text.goal}</p>
-      {text.nextUp && <p className="text-[13px] text-ink">{text.nextUp}</p>}
+      {text.stretch && <p className="text-[13px] text-ink">{text.stretch}</p>}
     </Card>
   );
 }

@@ -158,7 +158,7 @@ export function ReviewGapLine({ goal, group }: { goal: ReviewGoal | null; group:
     <div data-testid="review-gap" data-trailing={goal.kind !== "lead" || undefined} className="mt-4 flex flex-col gap-1 rounded-lg border border-paper-deep bg-white px-4 py-3">
       <p className="text-[13px] text-ink-soft">{text.average}</p>
       <p className="text-[13.5px] font-semibold text-ink">{text.goal}</p>
-      {text.nextUp && <p className="text-[13px] text-ink">{text.nextUp}</p>}
+      {text.stretch && <p className="text-[13px] text-ink">{text.stretch}</p>}
     </div>
   );
 }

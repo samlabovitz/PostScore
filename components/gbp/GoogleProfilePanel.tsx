@@ -204,7 +204,7 @@ export function GoogleProfilePanel({
               <ProfileEditsOnGoogle businessId={businessId} />
               {/* The website link and customer details: always changeable here, even when their checks are Done
                   (the Overview shows their buttons only while they lose points). Practice mode: the fake Google. */}
-              <Card className="flex flex-col gap-2 p-4 sm:p-5" data-testid="edit-website-link">
+              <Card id="edit-website-link" className="flex scroll-mt-20 flex-col gap-2 p-4 sm:p-5" data-testid="edit-website-link">
                 <h3 className="text-[15px] font-semibold text-ink">{t(locale, "dashboard.gbpProfileEdits.field.websiteLink")}</h3>
                 <p className="text-[13px] leading-snug text-ink-soft">{t(locale, "dashboard.gbpProfileEdits.websiteLinkIntro")}</p>
                 <WebsiteLinkFix businessId={businessId} suggested={gbpEdit.websiteSuggested ?? null} autoLoad />

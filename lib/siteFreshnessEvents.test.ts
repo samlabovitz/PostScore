@@ -41,8 +41,18 @@ describe("yearlessEventDates", () => {
     expect(ymd(yearlessEventDates("Upcoming: Saturday, November 14", NOW))).toEqual(["2026-11-14"]);
   });
 
-  test("abbreviated months never count without a year; dates with a year are left to the dated reader", () => {
-    expect(ymd(yearlessEventDates("Workshop Sat Nov 14 1pm", NOW))).toEqual([]);
+  test("abbreviated months count with a weekday or a time (Centered Clay's “Saturday, Nov. 21st - 2-5 pm”), never alone", () => {
+    expect(ymd(yearlessEventDates("Luminary $65 Saturday, Nov. 21st - 2-5 pm; December dates TBA. Workshops", NOW))).toEqual(["2026-11-21"]);
+    expect(ymd(yearlessEventDates("Workshop Sat Nov 14 1pm", NOW))).toEqual(["2026-11-14"]);
+    expect(ymd(yearlessEventDates("Workshops: Dec. 5 at 2 pm", NOW))).toEqual(["2026-12-05"]);
+    expect(ymd(yearlessEventDates("Workshops: Friday Dec 4", NOW))).toEqual(["2026-12-04"]);
+    expect(ymd(yearlessEventDates("Talleres: 5 de dic. a las 2 pm", NOW))).toEqual(["2026-12-05"]);
+    // No weekday or time: not a date.
+    expect(ymd(yearlessEventDates("Workshops in Nov. 21 spots left", NOW))).toEqual([]);
+    expect(ymd(yearlessEventDates("Class notes: you may 3 times a week", NOW))).toEqual([]);
+  });
+
+  test("dates with a year are left to the dated reader", () => {
     expect(ymd(yearlessEventDates("Workshop May 3 1pm", NOW))).toEqual(["2027-05-03"]);
     expect(ymd(yearlessEventDates("Workshop: Saturday, November 14th, 2020 at 1pm", NOW))).toEqual([]);
   });

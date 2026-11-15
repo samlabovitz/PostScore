@@ -279,7 +279,7 @@ function FieldCard({
   const editing = state.kind === "editing" || (state.kind === "busy" && state.what === "approve");
 
   return (
-    <Card className="flex flex-col gap-3 p-4 sm:p-5" data-testid={`edit-${field}`}>
+    <Card id={`edit-${field}`} className="flex scroll-mt-20 flex-col gap-3 p-4 sm:p-5" data-testid={`edit-${field}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-[15px] font-semibold text-ink">{t(locale, K(`field.${field}`))}</h3>
         {state.kind === "idle" && (

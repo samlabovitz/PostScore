@@ -33,7 +33,7 @@ const STRIPES = "repeating-linear-gradient(135deg, var(--color-paper-deep) 0 3px
 
 /** The fix link for a check that needs work: PostAI's link for it, or —
  * when that would only point back at this same row (listing checks) —
- * this week's plan on Growth. */
+ * the Growth recap. */
 export function breakdownFixLinks(categories: CategoryResult[], businessId: string, locale: Locale, options: LinkOptions = {}) {
   const links: Record<string, BreakdownFix> = {};
   for (const check of categories.flatMap((c) => c.checks)) {

@@ -3,6 +3,8 @@
 // English query words only (Google matches them in any market); the
 // niche's own label first, else the Google primary type. Pure.
 
+import { GROUP_NOUN_ES } from "@/lib/nicheGroupNounEs";
+
 const GENERIC = new Set(["store", "point_of_interest", "establishment", "service", "food", "food_store", "health"]);
 const BROAD_FOOD = new Set(["restaurant", "meal_takeaway", "meal_delivery"]);
 
@@ -276,4 +278,20 @@ export function competitorTextQuery(subject: { nicheId?: string | null; nicheLab
  * Sweets case: guessed "Café / Coffee Shop", Google says ice cream shop). */
 export function nicheNamesQuery(resolved: { source: string; confidence: string }): boolean {
   return resolved.source === "owner" || resolved.confidence !== "general";
+}
+
+/** Display words where the search phrase reads oddly ("pottery studios"
+ * covers the art classes too). */
+const GROUP_NOUN_EN: Record<string, string> = { art_classes: "art & pottery studios" };
+
+/** One shared name for a business type's group — the rank line ("#3 of 5
+ * nearby art & pottery studios") and the review goal ("Nearby art &
+ * pottery studios average 51 reviews") use the same words. English: the
+ * plural search phrase (the rank adds "nearby"); Spanish: the whole plural
+ * phrase, "nearby" included ("restaurantes mexicanos cercanos", as in
+ * "#11 de 11 restaurantes mexicanos cercanos"). null for a general type. */
+export function nicheGroupNoun(niche: { id: string; parent: string; label: { en: string; es: string } } | null | undefined, locale: "en" | "es", general: boolean): string | null {
+  if (!niche || general) return null;
+  if (locale === "es") return GROUP_NOUN_ES[niche.id] ?? `${niche.label.es.toLowerCase()} de la zona`;
+  return GROUP_NOUN_EN[niche.id] ?? competitorQueryNoun({ nicheId: niche.id, nicheLabelEn: niche.label.en, nicheParent: niche.parent });
 }

@@ -19,7 +19,7 @@ import { resolveBizProfile } from "@/config/bizProfiles";
 import { businessRowToScoringInput } from "@/lib/scoring";
 import { reportNextSteps, topRecommendations } from "@/lib/overviewTiles";
 import { reportCategories } from "./reportCategories";
-import { recRangeText, wholePointRange } from "@/lib/pointRange";
+import { pointsText, recRangeText, wholePointRange } from "@/lib/pointRange";
 import { normalizeLocale, t, tPlural, type Locale } from "@/lib/i18n";
 import type { Recommendation } from "@/lib/overviewTiles";
 import type { ReportData, ReportNextStep } from "./reportPdf";
@@ -27,12 +27,12 @@ import type { ReportData, ReportNextStep } from "./reportPdf";
 export type ReportDataResult = { status: "ok"; data: ReportData } | { status: "unauthenticated" } | { status: "not_found" } | { status: "error"; message: string };
 
 function nextStep(rec: Recommendation, locale: Locale): ReportNextStep {
-  const pointsText =
+  const pointsLabel =
     rec.pointsHigh !== null
       ? recRangeText(locale, rec.points, rec.pointsHigh)
-      : t(locale, rec.source.kind === "website" ? "dashboard.overview.recs.pointsAbout" : "dashboard.overview.recs.points", { points: wholePointRange(rec.points, null).low });
+      : pointsText(locale, wholePointRange(rec.points, null).low, rec.source.kind === "website");
   // Listed first, and labelled, when customers are hitting it now (lib/urgency.ts).
-  const points = rec.urgent ? `${t(locale, "dashboard.overview.recs.urgent")} · ${pointsText}` : pointsText;
+  const points = rec.urgent ? `${t(locale, "dashboard.overview.recs.urgent")} · ${pointsLabel}` : pointsLabel;
   if (rec.source.kind === "task") {
     const { task } = rec.source;
     return { title: task.label, detail: task.weeklyTarget ?? task.action, points };
@@ -48,7 +48,23 @@ function nextStep(rec: Recommendation, locale: Locale): ReportNextStep {
   return { title: t(locale, "dashboard.growth.websiteBanner.getWebsite.title"), detail: "", points };
 }
 
+/** What the report is built from, for the three-page weekly report
+ * (lib/reports/weeklyReportV2Data.server.ts) — so it never loads twice. */
+export interface ReportSources {
+  recs: Recommendation[];
+  business: Awaited<ReturnType<typeof scoreBusinessById>> extends infer R ? (R extends { status: "ok"; business: infer B } ? B : never) : never;
+  breakdown: import("@/lib/scoring").ScoreBreakdown;
+  profileId: string;
+  nicheId: string | null;
+  benchmarkNoun: string | null;
+}
+
 export async function getReportData(businessId: string, now: Date = new Date()): Promise<ReportDataResult> {
+  const result = await getReportDataWithSources(businessId, now);
+  return result.status === "ok" ? { status: "ok", data: result.data } : result;
+}
+
+export async function getReportDataWithSources(businessId: string, now: Date = new Date()): Promise<ReportDataResult | { status: "ok"; data: ReportData; sources: ReportSources }> {
   const [summary, scored, reports, benchmark] = await Promise.all([getBusinessSummary(businessId), scoreBusinessById(businessId, "business"), getReportsData(businessId), getLocalBenchmark(businessId)]);
   if (summary.status === "unauthenticated" || scored.status === "unauthenticated" || reports.status === "unauthenticated") return { status: "unauthenticated" };
   if (summary.status === "not_found" || scored.status === "not_found" || reports.status === "not_found") return { status: "not_found" };
@@ -82,8 +98,17 @@ export async function getReportData(businessId: string, now: Date = new Date()):
   const latestReviews = snapshots.at(-1)?.profile_snapshot_json?.reviewCount;
   const previousReviews = snapshots.at(-2)?.profile_snapshot_json?.reviewCount;
 
+  const sources: ReportSources = {
+    recs: actionPlan.status === "ok" ? topRecommendations(actionPlan.tasks, actionPlan.websiteBanner, businessId, linkOptions, Infinity, actionPlan.urgentIssues) : [],
+    business,
+    breakdown,
+    profileId: profile.id,
+    nicheId: (s as { niche_id?: string | null }).niche_id ?? null,
+    benchmarkNoun: benchmark.status === "ok" ? benchmark.benchmark.competitorNoun : null,
+  };
   return {
     status: "ok",
+    sources,
     data: {
       locale,
       timeZone,

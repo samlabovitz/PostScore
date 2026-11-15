@@ -81,7 +81,7 @@ export interface ActionPlanCopy {
   effort: TaskEffort;
   /**
    * Only meaningful for effort "quick_win_action": i18n key for the
-   * concrete, doable-this-week action, shown in "This week's plan"
+   * concrete, doable-this-week action, shown in "Growth recap"
    * INSTEAD of `action` — e.g. "Ask 3-5 recent customers for a review
    * this week," rather than the longer-run "grow your review base"
    * framing. Resolved via t(locale, weeklyAction).
@@ -634,7 +634,7 @@ export interface ActionPlanTask {
    * progress against weeklyTargetDelta (see weeklyMetricProgress). Null
    * when never marked, or marked before this tracking existed. */
   markedMetricValue: number | null;
-  /** See TaskEffort — drives which tasks can appear in this week's plan. */
+  /** See TaskEffort — drives which tasks can appear in the Growth recap. */
   effort: TaskEffort;
   /**
    * An OBTAINABLE weekly goal, in plain language — e.g. "Get 3+ new
@@ -867,7 +867,7 @@ const REVIEW_CHECK_IDS: readonly string[] = [
   "visibility.review_recency",
 ];
 
-/** The v1.12.0 steps: always in this week's plan while they're losing
+/** The v1.12.0 steps: always in the Growth recap while they're losing
  * points (pinned — short, owner-doable, never taking another task's slot). */
 export const V112_STEP_CHECK_IDS: readonly string[] = [
   "visibility.review_replies",
@@ -1218,10 +1218,10 @@ export function reconcileTasks(breakdown: ScoreBreakdown, taskRows: TaskRow[]): 
 }
 
 // ---------------------------------------------------------------------------
-// This week's plan
+// The Growth recap
 // ---------------------------------------------------------------------------
 
-/** How many quick score fixes "this week's plan" surfaces at once —
+/** How many quick score fixes "Growth recap" surfaces at once —
  * enough to feel like real progress, few enough to not be overwhelming. */
 export const WEEKLY_PLAN_CAP = 3;
 
@@ -1359,7 +1359,7 @@ export interface WeeklyPlan {
    */
   weeklyTasks: ActionPlanTask[];
   /**
-   * Every task not fully "spent" by this week's plan: overflow quick
+   * Every task not fully "spent" by the Growth recap: overflow quick
    * wins beyond the cap, every longer_term task, AND the full-outcome
    * version of any "quick_win_action" task also in weeklyTasks (its
    * weekly action is real progress, but the full outcome is still a
@@ -1494,7 +1494,7 @@ function weeklyFixForTask(
 }
 
 /**
- * The one, last-resort source of "this week's plan" content when NO
+ * The one, last-resort source of "Growth recap" content when NO
  * quick_win/quick_win_action task clears the headline bar: the single
  * best longer_term check that genuinely has its own honest, bounded
  * weekly first step (see e.g. website.content_depth/contact_conversion's

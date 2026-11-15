@@ -156,10 +156,10 @@ describe("Growth → Action plan makeover", () => {
   });
 });
 
-describe("Growth tabs: This week's plan · Google Profile", () => {
+describe("Growth tabs: Growth recap · Google Profile", () => {
   test("two tabs, no coupon or referral designer on Growth", () => {
     const html = render();
-    expect(html).toMatch(/role="tab"[^>]*>This week's plan</);
+    expect(html).toMatch(/role="tab"[^>]*>Growth recap</);
     expect(html).toContain("Google Profile");
     expect(html).not.toMatch(/role="tab"[^>]*>(Coupons|Refer a friend)</);
   });
@@ -184,7 +184,7 @@ describe("Growth tabs: This week's plan · Google Profile", () => {
 
   test("Spanish tab labels", () => {
     const html = render({ locale: "es" });
-    expect(html).toContain("Plan de esta semana");
+    expect(html).toContain("Resumen de crecimiento");
     expect(html).toContain("Perfil de Google");
   });
 });

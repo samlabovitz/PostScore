@@ -653,7 +653,7 @@ describe("buildAssistantContextText", () => {
   test("reports each weekly-routine item as checked or not checked off this week, with the real streak", () => {
     const text = buildAssistantContextText(BASE_CONTEXT);
     expect(text).toContain('exactly 5 items, logged on the Growth page under "Your weekly routine"');
-    expect(text).toContain('a DIFFERENT section from "This week\'s plan," which is the score-based action plan above');
+    expect(text).toContain('a DIFFERENT section from the "Growth recap," which is the score-based action plan above');
     expect(text).toContain("Post an update: checked off this week.");
     expect(text).toContain("Reply to reviews: not checked off this week.");
     expect(text).toContain("Share your review link: not checked off this week.");
@@ -1333,8 +1333,8 @@ describe("ASSISTANT_SYSTEM_RULES", () => {
     expect(ASSISTANT_SYSTEM_RULES).toContain('the Growth page\'s "Your weekly routine" checklist');
   });
 
-  test("points 'what should I do this week' to This week's plan, and bigger work to Bigger projects", () => {
-    expect(ASSISTANT_SYSTEM_RULES).toContain('the Growth page\'s "This week\'s plan"');
+  test("points 'what should I do this week' to the Growth recap, and bigger work to Bigger projects", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain('the Growth page\'s "Growth recap"');
     expect(ASSISTANT_SYSTEM_RULES).toContain('"Bigger projects" on the same page');
   });
 

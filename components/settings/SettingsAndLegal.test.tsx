@@ -49,7 +49,7 @@ describe("Settings pieces", () => {
     for (const s of [
       "See what's wrong + your score",
       "Rank vs. nearby competitors",
-      "Step-by-step fixes + weekly plan",
+      "Step-by-step fixes + Growth recap",
       "Instant website re-checks",
       "Review signs, coupons, referral cards",
       "Campaign hub (every coupon and referral, with +1)",

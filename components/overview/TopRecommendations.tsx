@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 import { IconArrowRight, IconMapPin, IconStar, IconWorld } from "@tabler/icons-react";
-import { recRangeText, websiteRangeText, wholePointRange } from "@/lib/pointRange";
+import { pointsText, recRangeText, websiteRangeText, wholePointRange } from "@/lib/pointRange";
 import { LINK_PILL_CLASS } from "@/components/ui/linkPill";
 import { ANCHOR_HIGHLIGHT_EVENT } from "@/components/layout/AnchorHighlight";
 import { HIGH_PRIORITY_POINTS, MEDIUM_PRIORITY_POINTS, type Priority, type Recommendation } from "@/lib/overviewTiles";
@@ -80,9 +80,7 @@ function RecText({ rec }: { rec: Recommendation }) {
 function recPointsText(locale: Locale, rec: Recommendation): string {
   if (rec.pointsHigh !== null) return recRangeText(locale, rec.points, rec.pointsHigh);
   const points = wholePointRange(rec.points, null).low;
-  return rec.source.kind === "website"
-    ? t(locale, "dashboard.overview.recs.pointsAbout", { points })
-    : t(locale, "dashboard.overview.recs.points", { points });
+  return pointsText(locale, points, rec.source.kind === "website");
 }
 
 export function TopRecommendations({ businessId, recommendations }: { businessId: string; recommendations: Recommendation[] | null }) {

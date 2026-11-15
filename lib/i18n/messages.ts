@@ -697,7 +697,6 @@ export type MessageKey =
   | "dashboard.free.web.downloadRefused"
   | "dashboard.upgrade.unlock.faq"
   | "dashboard.reviewGoal.average"
-  | "dashboard.reviewGoal.beat"
   | "dashboard.reviewGoal.stretch"
   | "dashboard.reviewGoal.nextUp"
   | "dashboard.reviewGoal.lead"
@@ -1707,6 +1706,9 @@ export type MessageKey =
   | "dashboard.competitors.owner.miles"
   | "dashboard.gbpEdit.lockedChip"
   | "dashboard.gbpEdit.connectToUpdate"
+  | "dashboard.fixWithPostScore.button"
+  | "dashboard.fixWithPostScore.beta"
+  | "dashboard.fixWithPostScore.connectFirst"
   | "dashboard.gbpEdit.error.ownerAfterGoogle"
   | "dashboard.gbpEdit.ownerNoParking"
   | "dashboard.gbpEdit.ownerNoPayment"
@@ -4098,7 +4100,8 @@ export type MessageKey =
   | "dashboard.websiteLinkFix.premiumPreview"
   | "dashboard.overview.recs.high"
   | "dashboard.overview.recs.medium"
-  | "dashboard.overview.recs.points"
+  | "dashboard.overview.recs.points.one"
+  | "dashboard.overview.recs.points.other"
   | "dashboard.overview.recs.pointsRange"
   | "dashboard.overview.recs.seeCheck"
   | "dashboard.overview.recs.improveWebsite"
@@ -4131,7 +4134,8 @@ export type MessageKey =
   | "dashboard.overview.band.seeBreakdown"
   | "dashboard.overview.scoringUpdatedVersionTip"
   | "dashboard.overview.seeWhatsIncluded"
-  | "dashboard.overview.recs.pointsAbout"
+  | "dashboard.overview.recs.pointsAbout.one"
+  | "dashboard.overview.recs.pointsAbout.other"
   | "dashboard.overview.actionPlan.pointsOnceLive"
   | "dashboard.connectGbp.availableWithPremium"
   | "dashboard.gbpResult.state"
@@ -4248,6 +4252,118 @@ export type MessageKey =
   | "dashboard.reports.pdf.scoringUpdated"
   | "dashboard.reports.pdf.rankLabel"
   | "dashboard.reports.pdf.rank"
+  | "dashboard.reports.v2.startingPoint"
+  | "dashboard.reports.v2.startingLine"
+  | "dashboard.reports.v2.startingNote"
+  | "dashboard.reports.v2.startingNoteNoDate"
+  | "dashboard.reports.v2.movedLabel"
+  | "dashboard.reports.v2.movedNone"
+  | "dashboard.reports.v2.noChangeWeek"
+  | "dashboard.reports.v2.otherChanges"
+  | "dashboard.reports.v2.scoringUpdate"
+  | "dashboard.reports.v2.scoringUnsplit"
+  | "dashboard.reports.v2.rankNiche"
+  | "dashboard.reports.v2.outOfNote"
+  | "dashboard.reports.v2.waitingInlineOne"
+  | "dashboard.reports.v2.waitingInline"
+  | "dashboard.reports.v2.waitingTitleOne"
+  | "dashboard.reports.v2.waitingTitle"
+  | "dashboard.reports.v2.waitingBody"
+  | "dashboard.reports.v2.checkPts"
+  | "dashboard.reports.v2.checkPtsOne"
+  | "dashboard.reports.v2.reviews.whyOne"
+  | "dashboard.reports.v2.reviews.whyNoRatingOne"
+  | "dashboard.reports.v2.and"
+  | "dashboard.reports.v2.minutes"
+  | "dashboard.reports.v2.p2Eyebrow"
+  | "dashboard.reports.v2.p2Title"
+  | "dashboard.reports.v2.p2TitleFew"
+  | "dashboard.reports.v2.p2Intro"
+  | "dashboard.reports.v2.p2None"
+  | "dashboard.reports.v2.p2Footer"
+  | "dashboard.reports.v2.whatToSay"
+  | "dashboard.reports.v2.startingText"
+  | "dashboard.reports.v2.hoursAppt.title"
+  | "dashboard.reports.v2.hoursAppt.summary"
+  | "dashboard.reports.v2.hoursAppt.why"
+  | "dashboard.reports.v2.hoursAppt.b1"
+  | "dashboard.reports.v2.hoursAppt.b2"
+  | "dashboard.reports.v2.hoursAppt.b3"
+  | "dashboard.reports.v2.hoursAppt.sample"
+  | "dashboard.reports.v2.hoursAppt.sampleLabel"
+  | "dashboard.reports.v2.reviews.title"
+  | "dashboard.reports.v2.reviews.summary"
+  | "dashboard.reports.v2.reviews.why"
+  | "dashboard.reports.v2.reviews.whyNoRating"
+  | "dashboard.reports.v2.reviews.b1"
+  | "dashboard.reports.v2.reviews.b2"
+  | "dashboard.reports.v2.website.why"
+  | "dashboard.reports.v2.website.summary.one"
+  | "dashboard.reports.v2.website.summary.other"
+  | "dashboard.reports.v2.website.meta"
+  | "dashboard.reports.v2.website.metaSample"
+  | "dashboard.reports.v2.p3Eyebrow"
+  | "dashboard.reports.v2.p3Title"
+  | "dashboard.reports.v2.p3Intro"
+  | "dashboard.reports.v2.chip1"
+  | "dashboard.reports.v2.chip2"
+  | "dashboard.reports.v2.chip3"
+  | "dashboard.reports.v2.chip4"
+  | "dashboard.reports.v2.rhythm"
+  | "dashboard.reports.v2.datesHeading"
+  | "dashboard.reports.v2.colDate"
+  | "dashboard.reports.v2.colSite"
+  | "dashboard.reports.v2.colIdea"
+  | "dashboard.reports.v2.eventFallback"
+  | "dashboard.reports.v2.eventFallbackEvent"
+  | "dashboard.reports.v2.fixInApp"
+  | "dashboard.reports.v2.ideaBefore"
+  | "dashboard.reports.v2.ideaNow"
+  | "dashboard.reports.v2.datesNote"
+  | "dashboard.reports.v2.ideasHeading"
+  | "dashboard.reports.v2.ideas.food.1"
+  | "dashboard.reports.v2.ideas.food.2"
+  | "dashboard.reports.v2.ideas.food.3"
+  | "dashboard.reports.v2.ideas.food.4"
+  | "dashboard.reports.v2.ideas.beauty.1"
+  | "dashboard.reports.v2.ideas.beauty.2"
+  | "dashboard.reports.v2.ideas.beauty.3"
+  | "dashboard.reports.v2.ideas.beauty.4"
+  | "dashboard.reports.v2.ideas.retail.1"
+  | "dashboard.reports.v2.ideas.retail.2"
+  | "dashboard.reports.v2.ideas.retail.3"
+  | "dashboard.reports.v2.ideas.retail.4"
+  | "dashboard.reports.v2.ideas.classes.1"
+  | "dashboard.reports.v2.ideas.classes.2"
+  | "dashboard.reports.v2.ideas.classes.3"
+  | "dashboard.reports.v2.ideas.classes.4"
+  | "dashboard.reports.v2.ideas.services.1"
+  | "dashboard.reports.v2.ideas.services.2"
+  | "dashboard.reports.v2.ideas.services.3"
+  | "dashboard.reports.v2.ideas.services.4"
+  | "dashboard.reports.v2.todayHeading"
+  | "dashboard.reports.v2.headedHeading"
+  | "dashboard.reports.v2.today.score"
+  | "dashboard.reports.v2.today.reviewLink"
+  | "dashboard.reports.v2.today.postai3"
+  | "dashboard.reports.v2.today.replies3"
+  | "dashboard.reports.v2.today.plan"
+  | "dashboard.reports.v2.today.signs"
+  | "dashboard.reports.v2.today.cards"
+  | "dashboard.reports.v2.today.postai100"
+  | "dashboard.reports.v2.today.postaiUnlimited"
+  | "dashboard.reports.v2.today.report"
+  | "dashboard.reports.v2.today.editGoogle"
+  | "dashboard.reports.v2.today.replyGoogle"
+  | "dashboard.reports.v2.headed.posts"
+  | "dashboard.reports.v2.headed.insights"
+  | "dashboard.reports.v2.headed.everyone"
+  | "dashboard.reports.v2.headed.editGoogle"
+  | "dashboard.reports.v2.upgradeTitle"
+  | "dashboard.reports.v2.upgradeBody"
+  | "dashboard.reports.v2.teaserTitle"
+  | "dashboard.reports.v2.teaserBody"
+  | "dashboard.reports.v2.p3Footer"
   | "dashboard.reports.pdf.rankUp"
   | "dashboard.reports.pdf.rankDown"
   | "dashboard.reports.pdf.rankNone"
@@ -4921,6 +5037,9 @@ export type MessageKey =
  * how a future locale with more categories, e.g. "few"/"many", would
  * still get a safe result even before every category is seeded for it). */
 export type PluralKeyBase =
+  | "dashboard.overview.recs.points"
+  | "dashboard.overview.recs.pointsAbout"
+  | "dashboard.reports.v2.website.summary"
   | "dashboard.googleReviews.summary.needsReply"
   | "content.checks.website.links.explanation.allGood"
   | "content.checks.website.links.explanation.problems"
@@ -5101,7 +5220,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.free.reviewGap": "Your review gap compared to businesses near you",
     "dashboard.settings.plans.bullet.free.replies": "3 PostAI questions and 3 AI review replies a week",
     "dashboard.settings.plans.bullet.grow.guides": "Step-by-step fix guides for every issue",
-    "dashboard.settings.plans.bullet.grow.plan": "A weekly action plan that tells you what to do next",
+    "dashboard.settings.plans.bullet.grow.plan": "A weekly Growth recap that tells you what to do next",
     "dashboard.settings.plans.bullet.grow.recheck": "Re-check your website as soon as you fix something",
     "dashboard.settings.plans.bullet.grow.tools": "A starter website, plus basic review signs, coupons and referral cards",
     "dashboard.settings.plans.bullet.grow.postai": "PostAI for your questions (100 a month)",
@@ -5122,7 +5241,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.multi.dashboard": "All your locations in one dashboard (coming soon)",
     "dashboard.settings.plans.row.whatsWrong": "See what's wrong + your score",
     "dashboard.settings.plans.row.rank": "Rank vs. nearby competitors",
-    "dashboard.settings.plans.row.fixes": "Step-by-step fixes + weekly plan",
+    "dashboard.settings.plans.row.fixes": "Step-by-step fixes + Growth recap",
     "dashboard.settings.plans.row.recheck": "Instant website re-checks",
     "dashboard.settings.plans.row.designs": "Review signs, coupons, referral cards",
     "dashboard.settings.plans.row.hub": "Campaign hub (every coupon and referral, with +1)",
@@ -5406,7 +5525,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.chip.postStudio": "PostStudio at a discount",
     "dashboard.upgrade.chip.pdfReports": "PDF reports for partners",
     "dashboard.upgrade.chip.fixGuides": "Step-by-step fix guides",
-    "dashboard.upgrade.chip.weeklyPlan": "A weekly action plan",
+    "dashboard.upgrade.chip.weeklyPlan": "A weekly Growth recap",
     "dashboard.upgrade.chip.recheck": "Instant website re-checks",
     "dashboard.upgrade.chip.starterSite": "Download your starter website",
     "dashboard.upgrade.chip.printTools": "Print signs, coupons & cards",
@@ -5602,7 +5721,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.showroom.chip": "Grow · more with Premium",
     "dashboard.free.showroom.withGrow": "With Grow",
     "dashboard.free.showroom.premiumAdds": "Premium adds",
-    "dashboard.free.showroom.growth.g1": "A weekly plan that tells you what to do next",
+    "dashboard.free.showroom.growth.g1": "A weekly Growth recap that tells you what to do next",
     "dashboard.free.showroom.growth.g2": "Step-by-step guides for every issue",
     "dashboard.free.showroom.growth.g3": "A weekly routine for your Google listing",
     "dashboard.free.showroom.growth.p1": "Google Profile connection — edit your listing from PostScore (Beta)",
@@ -5697,7 +5816,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.web.downloadRefused": "Downloading your site is part of Grow.",
     "dashboard.upgrade.unlock.faq": "A ready-to-use FAQ for your website, written for your business — with Grow.",
     "dashboard.reviewGoal.average": "{group} average {avg} reviews.",
-    "dashboard.reviewGoal.beat": "Your goal: beat {name} — {count} reviews ({gap} more than you).",
     "dashboard.reviewGoal.stretch": "Stretch goal: beat {name} — {count} reviews ({gap} more than you).",
     "dashboard.reviewGoal.nextUp": "Next up: {name}, {count} reviews.",
     "dashboard.reviewGoal.lead": "You lead nearby with {count} reviews — keep the gap ({gap} ahead of {name}).",
@@ -6676,6 +6794,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.closed.step.why": "Google tells everyone searching for you that you're closed. Nothing else matters until that's fixed.",
     "dashboard.closed.report.alert": "Google shows {name} as permanently closed. If you're still open, mark it open in Google Business Profile now — customers are being told you're closed.",
     "dashboard.closed.report.alertTemporary": "Google shows {name} as temporarily closed. If you've reopened, update it in Google Business Profile.",
+    "dashboard.fixWithPostScore.button": "Fix it with PostScore",
+    "dashboard.fixWithPostScore.beta": "Beta",
+    "dashboard.fixWithPostScore.connectFirst": "Connect your Google Business Profile so PostScore can fix this for you.",
     "dashboard.gbpEdit.button": "Update on Google",
     "dashboard.gbpEdit.loading": "Reading your Google listing…",
     "dashboard.gbpEdit.lockedNote": "With Premium, PostScore updates these on Google for you, after you approve.",
@@ -7151,7 +7272,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.view.title": "Growth",
     "dashboard.growth.view.subtitle":
       "Raise your score and bring more customers through the door — everything you can act on, in one place.",
-    "dashboard.growth.view.tabPlan": "This week's plan",
+    "dashboard.growth.view.tabPlan": "Growth recap",
     "dashboard.growth.moves.sectionHeading": "Ways to bring in more customers",
     "dashboard.growth.moves.badge": "Brings in customers — doesn't change your score",
     "dashboard.growth.moves.badgeAlsoScored": "Brings in customers — the same fix also raises your score (see your plan above)",
@@ -7219,7 +7340,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Check your hours are still correct (including holiday hours)",
     "dashboard.growth.checklist.items.checkHours.howTo":
       "Open your Google Business Profile → Business information → Hours, and confirm they're still accurate.",
-    "dashboard.growth.view.weeklyCardLabel": "If you finish this week's plan",
+    "dashboard.growth.view.weeklyCardLabel": "If you finish your Growth recap",
     "dashboard.growth.view.statProjected": "Projected after plan",
     "dashboard.growth.view.gradeStays": "Stays {article} {grade}",
     "dashboard.growth.view.gradeChangeArrow": "{from} → {to}",
@@ -7233,14 +7354,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.view.weeklyPlanNoteEmpty":
       'Nothing realistic to move this week, so this matches your current score. See "Bigger projects" for the longer game.',
     "dashboard.growth.view.actionPlanErrorPrefix": "Couldn't load your action plan: {error}",
-    "dashboard.growth.view.weeklyPlanHeading": "This week's plan ({count})",
+    "dashboard.growth.view.weeklyPlanHeading": "Growth recap ({count})",
     "dashboard.growth.view.laterTasksHeading": "Bigger projects ({count})",
     "dashboard.growth.view.weeklyEmptyMessage":
       "No quick score fixes this week — keep up your weekly routine and try one of the ways to bring in more customers below.",
     "dashboard.growth.view.weeklyFootnote":
       'Every estimate here is exactly what its check is currently missing — the same numbers behind the projected score above. Points only ever land after a re-scan actually finds the fix, never from clicking "I did this" alone.',
     "dashboard.growth.view.laterEmptyMessage":
-      "Nothing longer-term right now — everything determinable is either in this week's plan or already done.",
+      "Nothing longer-term right now — everything determinable is either in your Growth recap or already done.",
     "dashboard.growth.view.fullPointsMessage":
       "You're at full points on everything we can check — keep up your weekly routine.",
 
@@ -7837,7 +7958,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.postaiDock.q.growth.mostPoints": "Which fix adds the most points?",
     "dashboard.postaiDock.q.growth.routine": "How does the weekly routine work?",
     "dashboard.postaiDock.q.growth.whatsInPlan": "What's in the step-by-step plan?",
-    "dashboard.postaiDock.q.growth.whichPlan": "Which plan has the weekly plan?",
+    "dashboard.postaiDock.q.growth.whichPlan": "Which plan has the Growth recap?",
     "dashboard.postaiDock.q.reports.changed": "What changed since my last report?",
     "dashboard.postaiDock.q.reports.read": "How do I read my report?",
     "dashboard.postaiDock.q.reports.nextMonth": "What should I focus on next month?",
@@ -7860,7 +7981,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.link.reviews": "Get your review link and QR sign →",
     "dashboard.assistant.link.replies": "Reply to your reviews →",
     "dashboard.assistant.link.connect": "Connect your Google Business Profile →",
-    "dashboard.assistant.link.growth": "Open this week's plan on Growth →",
+    "dashboard.assistant.link.growth": "Open your Growth recap →",
     "dashboard.assistant.link.weeklyRoutine": "Open your weekly routine →",
     "dashboard.assistant.link.coupon": "Make a coupon →",
     "dashboard.assistant.link.referral": "Make a referral card →",
@@ -9279,7 +9400,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteOnly.websiteFixesLink": "See every website check",
     "dashboard.websiteOnly.noWebsiteFixes": "Nothing to fix on the website checks we could run.",
     "dashboard.websiteOnly.needsListing.title": "This page needs a Google listing",
-    "dashboard.websiteOnly.needsListing.reason.growth": "Your weekly plan, coupons and growth ideas are built from your Google listing's checks. Create a Google Business Profile and link it to get them.",
+    "dashboard.websiteOnly.needsListing.reason.growth": "Your Growth recap, coupons and growth ideas are built from your Google listing's checks. Create a Google Business Profile and link it to get them.",
     "dashboard.websiteOnly.needsListing.reason.reviews": "Reviews and your rating live on a Google Business Profile, and so does your review link. Create one and link it to see them here.",
     "dashboard.websiteOnly.needsListing.reason.competitors": "Nearby competitors are found from your Google listing's location and category, so there's no comparison without one — never a made-up rank.",
     "dashboard.websiteOnly.needsListing.reason.pricing": "The price check compares you with nearby businesses found through your Google listing. Create one and link it to use it.",
@@ -9537,7 +9658,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteLinkFix.premiumPreview": "Premium fixes this in one click",
     "dashboard.overview.recs.high": "High priority",
     "dashboard.overview.recs.medium": "Medium priority",
-    "dashboard.overview.recs.points": "+{points} pts",
+    "dashboard.overview.recs.points.one": "+{points} pt",
+    "dashboard.overview.recs.points.other": "+{points} pts",
     "dashboard.overview.recs.pointsRange": "about +{low}–{high} pts",
     "dashboard.overview.recs.seeCheck": "See this check →",
     "dashboard.overview.recs.improveWebsite": "Improve your website",
@@ -9548,7 +9670,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.photo.alt": "Photo of {name} from its Google listing",
     "dashboard.overview.photo.viewOnMaps": "View this photo on Google Maps",
     "dashboard.overview.recs.startHereLabel": "Start here:",
-    "dashboard.overview.recs.startHere": "your weekly plan on Growth",
+    "dashboard.overview.recs.startHere": "your Growth recap",
     "dashboard.overview.sinceCard.heading": "Since your last scan",
     "dashboard.overview.sinceCard.lastScan": "Last scan · {date}",
     "dashboard.overview.sinceCard.now": "Now",
@@ -9570,7 +9692,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.band.seeBreakdown": "See your score breakdown ↓",
     "dashboard.overview.scoringUpdatedVersionTip": "PostScore updated how it scores (now version {version}) — scores may shift; this isn't a change at your business.",
     "dashboard.overview.seeWhatsIncluded": "See what's included →",
-    "dashboard.overview.recs.pointsAbout": "about +{points} pts",
+    "dashboard.overview.recs.pointsAbout.one": "about +{points} pt",
+    "dashboard.overview.recs.pointsAbout.other": "about +{points} pts",
     "dashboard.overview.actionPlan.pointsOnceLive": "About +{points} pts once it's live",
     "dashboard.connectGbp.availableWithPremium": "Available with PostScore Premium — coming soon",
     "dashboard.gbpResult.state": "That connection attempt expired or didn't match this browser, so nothing was connected. Please start again.",
@@ -9686,6 +9809,118 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.pdf.firstScan": "First scan — nothing earlier to compare yet.",
     "dashboard.reports.pdf.scoringUpdated": "PostScore updated how it scores between these scans, so the change isn't shown point for point.",
     "dashboard.reports.pdf.rankLabel": "Local rank",
+    "dashboard.reports.v2.startingPoint": "Your starting point",
+    "dashboard.reports.v2.startingLine": "out of 100 · Grade {grade}",
+    "dashboard.reports.v2.startingNote": "Your first full scan ({date}). Next week's report shows what moved and why.",
+    "dashboard.reports.v2.startingNoteNoDate": "Next week's report shows what moved and why.",
+    "dashboard.reports.v2.movedLabel": "Where your points moved",
+    "dashboard.reports.v2.movedNone": "No check changed since the last report.",
+    "dashboard.reports.v2.noChangeWeek": "No change this week",
+    "dashboard.reports.v2.otherChanges": "Other changes ({count})",
+    "dashboard.reports.v2.scoringUpdate": "Scoring update: {from} → {to}. PostScore's scoring was updated; that isn't a gain or loss for you.",
+    "dashboard.reports.v2.scoringUnsplit": "PostScore's scoring was updated since the last report, so this change can't be split by check.",
+    "dashboard.reports.v2.rankNiche": "#{rank} of {of} nearby {noun}",
+    "dashboard.reports.v2.outOfNote": "Each category out of its total points",
+    "dashboard.reports.v2.waitingInlineOne": "1 check waiting on Google (see below)",
+    "dashboard.reports.v2.waitingInline": "{count} checks waiting on Google (see below)",
+    "dashboard.reports.v2.waitingTitleOne": "1 check waiting on Google",
+    "dashboard.reports.v2.waitingTitle": "{count} checks waiting on Google",
+    "dashboard.reports.v2.waitingBody": "{checks} can only be checked once you connect your Google Business Profile to PostScore, because Google only shares a few reviews publicly. Until then, your {category} score of {points} / {weight} is based on the checks we could run, so these don't count against you. Connecting is read-only: nothing on your listing changes.",
+    "dashboard.reports.v2.checkPts": "{label} ({points} pts)",
+    "dashboard.reports.v2.checkPtsOne": "{label} (1 pt)",
+    "dashboard.reports.v2.and": " and ",
+    "dashboard.reports.v2.minutes": "~{minutes} min",
+    "dashboard.reports.v2.p2Eyebrow": "Your Growth recap · {name}",
+    "dashboard.reports.v2.p2Title": "Three things worth your time",
+    "dashboard.reports.v2.p2TitleFew": "Worth your time this week",
+    "dashboard.reports.v2.p2Intro": "You don't need to do everything at once. These are where your score and your customers gain the most.",
+    "dashboard.reports.v2.p2None": "Nothing needs fixing this week. Keep up your weekly routine, and next week's report will show what moved.",
+    "dashboard.reports.v2.p2Footer": "Built from your PostScore scan on {date} and your public Google listing and website.",
+    "dashboard.reports.v2.whatToSay": "What to say:",
+    "dashboard.reports.v2.startingText": "A starting point:",
+    "dashboard.reports.v2.hoursAppt.title": "Tell Google how people can book you",
+    "dashboard.reports.v2.hoursAppt.summary": "Show customers on Google when and how they can book you (see page 2).",
+    "dashboard.reports.v2.hoursAppt.why": "Right now your Google listing shows no hours. If you work by appointment or scheduled classes rather than set hours, that's fine. Google just needs to know, so customers aren't left guessing whether you're open.",
+    "dashboard.reports.v2.hoursAppt.b1": "Open by appointment: in Google Business Profile → Edit profile → Hours, choose “Open with no main hours”. That's Google's setting for appointment-only businesses.",
+    "dashboard.reports.v2.hoursAppt.b2": "Add a booking link (Edit profile → Contact, where your category offers it) pointing to your sign-up or booking page, so people can book straight from Google.",
+    "dashboard.reports.v2.hoursAppt.b3": "Seasonal hours? Set them while they apply, and switch back to “no main hours” when the season ends.",
+    "dashboard.reports.v2.hoursAppt.sample": "By appointment and scheduled classes. See dates and book online.",
+    "dashboard.reports.v2.hoursAppt.sampleLabel": "Say it in your description:",
+    "dashboard.reports.v2.reviews.title": "Turn visits into reviews",
+    "dashboard.reports.v2.reviews.summary": "Ask every customer at the end of the visit (see page 2).",
+    "dashboard.reports.v2.reviews.why": "You have a {rating}★ rating from {count} reviews. The best moment to ask is at the end of a good visit.",
+    "dashboard.reports.v2.reviews.whyNoRating": "You have {count} reviews. The best moment to ask is at the end of a good visit.",
+    "dashboard.reports.v2.reviews.whyOne": "You have a {rating}★ rating from 1 review. The best moment to ask is at the end of a good visit.",
+    "dashboard.reports.v2.reviews.whyNoRatingOne": "You have 1 review. The best moment to ask is at the end of a good visit.",
+    "dashboard.reports.v2.reviews.b1": "Put a review QR card by the counter or the door. PostScore makes the sign for you.",
+    "dashboard.reports.v2.reviews.b2": "At the end of each visit, one line is enough.",
+    "dashboard.reports.v2.website.why": "Your website scores {earned} / {of}. The checks losing points:",
+    "dashboard.reports.v2.website.summary.one": "Your website scores {earned}/{of}, with 1 improvement available.",
+    "dashboard.reports.v2.website.summary.other": "Your website scores {earned}/{of}, with {count} improvements available.",
+    "dashboard.reports.v2.website.meta": "Add a search description (the line Google shows under your name).",
+    "dashboard.reports.v2.website.metaSample": "{type} in {town}: {name}. See what's new and get in touch online.",
+    "dashboard.reports.v2.p3Eyebrow": "Posting, made lighter",
+    "dashboard.reports.v2.p3Title": "Post once, share it three places",
+    "dashboard.reports.v2.p3Intro": "Facebook and Instagram posts don't show up when people search Google or Maps, but a Google post appears right on your listing. Write each post once and share it all three places.",
+    "dashboard.reports.v2.chip1": "Write it once",
+    "dashboard.reports.v2.chip2": "Google post",
+    "dashboard.reports.v2.chip3": "Facebook",
+    "dashboard.reports.v2.chip4": "Instagram",
+    "dashboard.reports.v2.rhythm": "A simple rhythm: two posts a week, one before something happens and one after, with photos. Write a month of posts in one 30-minute sitting.",
+    "dashboard.reports.v2.datesHeading": "Coming up on your website",
+    "dashboard.reports.v2.colDate": "Date",
+    "dashboard.reports.v2.colSite": "On your website",
+    "dashboard.reports.v2.colIdea": "Post idea",
+    "dashboard.reports.v2.eventFallback": "Workshop listed on your website",
+    "dashboard.reports.v2.eventFallbackEvent": "Event listed on your website",
+    "dashboard.reports.v2.fixInApp": "In PostScore, open {page} and click “{button}”. It makes the change on Google for you.",
+    "dashboard.reports.v2.ideaBefore": "Post about it by {date}",
+    "dashboard.reports.v2.ideaNow": "Post about it this week",
+    "dashboard.reports.v2.datesNote": "Dates from {site} on {date}. Please double-check before posting.",
+    "dashboard.reports.v2.ideasHeading": "Post ideas for this month",
+    "dashboard.reports.v2.ideas.food.1": "A photo of your most-ordered item, with when to come in for it.",
+    "dashboard.reports.v2.ideas.food.2": "Behind the counter: who's cooking or baking this week.",
+    "dashboard.reports.v2.ideas.food.3": "A seasonal special, only if you have one, and when it's on.",
+    "dashboard.reports.v2.ideas.food.4": "Thank your regulars, and ask them to leave a Google review.",
+    "dashboard.reports.v2.ideas.beauty.1": "A before-and-after photo (with the client's OK).",
+    "dashboard.reports.v2.ideas.beauty.2": "Meet the team: one person and what they love doing.",
+    "dashboard.reports.v2.ideas.beauty.3": "Open spots this week, and how to book.",
+    "dashboard.reports.v2.ideas.beauty.4": "A care tip customers can use at home.",
+    "dashboard.reports.v2.ideas.retail.1": "New in the shop this week, with a photo.",
+    "dashboard.reports.v2.ideas.retail.2": "A staff pick, and why they love it.",
+    "dashboard.reports.v2.ideas.retail.3": "A gift idea for an occasion coming up.",
+    "dashboard.reports.v2.ideas.retail.4": "Your hours this week, and where to find you.",
+    "dashboard.reports.v2.ideas.classes.1": "Photos from a recent class or session (with everyone's OK).",
+    "dashboard.reports.v2.ideas.classes.2": "What a first visit looks like, for beginners.",
+    "dashboard.reports.v2.ideas.classes.3": "Meet your teacher or coach.",
+    "dashboard.reports.v2.ideas.classes.4": "How to sign up, and where to see the schedule.",
+    "dashboard.reports.v2.ideas.services.1": "A recent job, with a photo (with the customer's OK).",
+    "dashboard.reports.v2.ideas.services.2": "A question customers often ask, and the answer.",
+    "dashboard.reports.v2.ideas.services.3": "Meet the team: who'll show up or answer the phone.",
+    "dashboard.reports.v2.ideas.services.4": "How to book or get a quote, and how fast you reply.",
+    "dashboard.reports.v2.todayHeading": "What PostScore does today",
+    "dashboard.reports.v2.headedHeading": "Where it's headed",
+    "dashboard.reports.v2.today.score": "Your score every week, and the checks behind it",
+    "dashboard.reports.v2.today.reviewLink": "Your review link and QR code",
+    "dashboard.reports.v2.today.postai3": "PostAI: 3 questions a week",
+    "dashboard.reports.v2.today.replies3": "3 AI review reply drafts a week",
+    "dashboard.reports.v2.today.plan": "A weekly Growth recap like this one, with step-by-step fixes",
+    "dashboard.reports.v2.today.signs": "Review signs and “what to say” scripts",
+    "dashboard.reports.v2.today.cards": "Coupon and referral cards that track what works",
+    "dashboard.reports.v2.today.postai100": "PostAI: 100 questions a month",
+    "dashboard.reports.v2.today.postaiUnlimited": "PostAI: unlimited questions",
+    "dashboard.reports.v2.today.report": "A weekly report showing what moved your score",
+    "dashboard.reports.v2.today.editGoogle": "Edit your Google listing from PostScore, with undo",
+    "dashboard.reports.v2.today.replyGoogle": "Reply to your Google reviews from PostScore",
+    "dashboard.reports.v2.headed.posts": "Your Google posts and offers drafted and scheduled for you; you just approve",
+    "dashboard.reports.v2.headed.insights": "See who searches for you, and who calls or clicks",
+    "dashboard.reports.v2.headed.everyone": "Google edits and replies for every business (out of Beta)",
+    "dashboard.reports.v2.headed.editGoogle": "Fix Google listing details in one tap, with undo",
+    "dashboard.reports.v2.upgradeTitle": "This is one week. PostScore does it every week.",
+    "dashboard.reports.v2.upgradeBody": "Grow gives you a weekly Growth recap with step-by-step fixes, review signs and scripts, and coupon and referral cards that track what works. Premium adds editing your Google listing from PostScore and unlimited PostAI. See Settings → Plan & billing → Compare plans.",
+    "dashboard.reports.v2.teaserTitle": "Next week",
+    "dashboard.reports.v2.teaserBody": "Next week's report shows what moved after this week's steps, and picks your next three.",
+    "dashboard.reports.v2.p3Footer": "Prepared for {name} by PostScore",
     "dashboard.reports.pdf.rank": "#{rank} of {of} nearby {noun}",
     "dashboard.reports.pdf.rankUp": "up from #{previous}",
     "dashboard.reports.pdf.rankDown": "down from #{previous}",
@@ -9809,9 +10044,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.print.popupBlocked": "Your browser blocked the new tab. Allow pop-ups for this site, or use Download PDF and print it.",
     "dashboard.print.preparing": "Preparing your PDF…",
     "dashboard.growth.checklist.complete": "Weekly routine complete 🎉 · resets Monday",
-    "dashboard.growth.planDoneUp": "This week's plan is done! Your score is up {diff} points.",
-    "dashboard.growth.planDoneUpOne": "This week's plan is done! Your score is up 1 point.",
-    "dashboard.growth.planDone": "This week's plan is done — great work.",
+    "dashboard.growth.planDoneUp": "Your Growth recap is done! Your score is up {diff} points.",
+    "dashboard.growth.planDoneUpOne": "Your Growth recap is done! Your score is up 1 point.",
+    "dashboard.growth.planDone": "Your Growth recap is done — great work.",
     "dashboard.growth.goalHit": "You hit this week's goal: {start} → {now} (+{diff})",
     "dashboard.studio.customize": "Customize design",
     "dashboard.studio.lockedTab": "Try these with a watermarked preview — printing them needs Premium.",
@@ -10452,7 +10687,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.free.reviewGap": "Cuántas reseñas le faltan en comparación con los negocios cercanos",
     "dashboard.settings.plans.bullet.free.replies": "3 preguntas a PostAI y 3 respuestas a reseñas con IA por semana",
     "dashboard.settings.plans.bullet.grow.guides": "Guías paso a paso para resolver cada problema",
-    "dashboard.settings.plans.bullet.grow.plan": "Un plan de acción semanal que le indica qué hacer a continuación",
+    "dashboard.settings.plans.bullet.grow.plan": "Un Resumen de crecimiento semanal que le indica qué hacer a continuación",
     "dashboard.settings.plans.bullet.grow.recheck": "Vuelva a revisar su sitio web en cuanto arregle algo",
     "dashboard.settings.plans.bullet.grow.tools": "Un sitio web inicial, además de letreros de reseñas, cupones y tarjetas de referidos básicos",
     "dashboard.settings.plans.bullet.grow.postai": "PostAI para sus preguntas (100 al mes)",
@@ -10473,7 +10708,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.multi.dashboard": "Todas sus ubicaciones en un solo panel (próximamente)",
     "dashboard.settings.plans.row.whatsWrong": "Qué está mal y su puntuación",
     "dashboard.settings.plans.row.rank": "Su posición frente a la competencia cercana",
-    "dashboard.settings.plans.row.fixes": "Arreglos paso a paso y plan semanal",
+    "dashboard.settings.plans.row.fixes": "Arreglos paso a paso y Resumen de crecimiento",
     "dashboard.settings.plans.row.recheck": "Nuevas revisiones del sitio web al instante",
     "dashboard.settings.plans.row.designs": "Letreros de reseñas, cupones y tarjetas de referidos",
     "dashboard.settings.plans.row.hub": "Centro de campañas (cada cupón y referido, con +1)",
@@ -10757,7 +10992,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.chip.postStudio": "PostStudio con descuento",
     "dashboard.upgrade.chip.pdfReports": "Informes en PDF para socios",
     "dashboard.upgrade.chip.fixGuides": "Guías de arreglos paso a paso",
-    "dashboard.upgrade.chip.weeklyPlan": "Un plan de acción semanal",
+    "dashboard.upgrade.chip.weeklyPlan": "Un Resumen de crecimiento semanal",
     "dashboard.upgrade.chip.recheck": "Revisiones del sitio al instante",
     "dashboard.upgrade.chip.starterSite": "Descargue su sitio web inicial",
     "dashboard.upgrade.chip.printTools": "Imprima letreros, cupones y tarjetas",
@@ -10953,7 +11188,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.showroom.chip": "Grow · más con Premium",
     "dashboard.free.showroom.withGrow": "Con Grow",
     "dashboard.free.showroom.premiumAdds": "Premium agrega",
-    "dashboard.free.showroom.growth.g1": "Un plan semanal que le dice qué hacer a continuación",
+    "dashboard.free.showroom.growth.g1": "Un Resumen de crecimiento semanal que le dice qué hacer a continuación",
     "dashboard.free.showroom.growth.g2": "Guías paso a paso para cada problema",
     "dashboard.free.showroom.growth.g3": "Una rutina semanal para su ficha de Google",
     "dashboard.free.showroom.growth.p1": "Conexión con el Perfil de Google: edite su ficha desde PostScore (Beta)",
@@ -11047,8 +11282,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.web.recheckBody": "Vea la nueva puntuación de su sitio en cuanto arregle algo.",
     "dashboard.free.web.downloadRefused": "Descargar su sitio está incluido en Grow.",
     "dashboard.upgrade.unlock.faq": "Unas preguntas frecuentes listas para su sitio, escritas para su negocio, con Grow.",
-    "dashboard.reviewGoal.average": "Los {group} tienen {avg} reseñas en promedio.",
-    "dashboard.reviewGoal.beat": "Su meta: superar a {name}: {count} reseñas ({gap} más que usted).",
+    "dashboard.reviewGoal.average": "{group}: {avg} reseñas en promedio.",
     "dashboard.reviewGoal.stretch": "Meta ambiciosa: superar a {name}: {count} reseñas ({gap} más que usted).",
     "dashboard.reviewGoal.nextUp": "Siguiente: {name}, {count} reseñas.",
     "dashboard.reviewGoal.lead": "Usted lidera en su zona con {count} reseñas: mantenga la ventaja ({gap} más que {name}).",
@@ -11918,6 +12152,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.closed.step.why": "Google les dice a todos los que lo buscan que cerró. Nada más importa hasta corregirlo.",
     "dashboard.closed.report.alert": "Google muestra {name} como cerrado permanentemente. Si sigue abierto, márquelo como abierto en su Perfil de Empresa en Google ahora — a los clientes se les dice que cerró.",
     "dashboard.closed.report.alertTemporary": "Google muestra {name} como cerrado temporalmente. Si ya reabrió, actualícelo en su Perfil de Empresa en Google.",
+    "dashboard.fixWithPostScore.button": "Arréglelo con PostScore",
+    "dashboard.fixWithPostScore.beta": "Beta",
+    "dashboard.fixWithPostScore.connectFirst": "Conecte su Perfil de Empresa en Google para que PostScore pueda arreglar esto por usted.",
     "dashboard.gbpEdit.button": "Actualizar en Google",
     "dashboard.gbpEdit.loading": "Leyendo su ficha de Google…",
     "dashboard.gbpEdit.lockedNote": "Con Premium, PostScore los actualiza en Google por usted, después de que usted lo apruebe.",
@@ -12386,7 +12623,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.view.businessNameFallback": "Su negocio",
     "dashboard.growth.view.title": "Crecimiento",
     "dashboard.growth.view.subtitle": "Suba su puntuación y atraiga a más clientes por la puerta — todo lo que puede poner en práctica, en un solo lugar.",
-    "dashboard.growth.view.tabPlan": "Plan de esta semana",
+    "dashboard.growth.view.tabPlan": "Resumen de crecimiento",
     "dashboard.growth.moves.sectionHeading": "Formas de atraer más clientes",
     "dashboard.growth.moves.badge": "Atrae clientes: no cambia su puntuación",
     "dashboard.growth.moves.badgeAlsoScored": "Atrae clientes: esta misma mejora también sube su puntuación (véala en su plan de arriba)",
@@ -12455,7 +12692,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Revise que su horario siga correcto (incluido el horario de días festivos)",
     "dashboard.growth.checklist.items.checkHours.howTo":
       "Abra su Perfil de Empresa en Google → Información del negocio → Horario, y confirme que siga siendo exacto.",
-    "dashboard.growth.view.weeklyCardLabel": "Si completa el plan de esta semana",
+    "dashboard.growth.view.weeklyCardLabel": "Si completa su Resumen de crecimiento",
     "dashboard.growth.view.statProjected": "Proyectada tras el plan",
     "dashboard.growth.view.gradeStays": "Se mantiene en {grade}",
     "dashboard.growth.view.weeklyPlanNote.one": "Basado solo en {count} tarea de abajo — una semana realista, no todas las deficiencias a la vez. Consulte \"Proyectos más grandes\" para el plan a más largo plazo.",
@@ -12465,12 +12702,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.view.planBlurbNone": "Nada está frenando su puntuación en este momento — mantenga su rutina semanal de abajo.",
     "dashboard.growth.view.weeklyPlanNoteEmpty": "No hay nada realista que mejorar esta semana, así que esto coincide con su puntuación actual. Consulte \"Proyectos más grandes\" para el plan a más largo plazo.",
     "dashboard.growth.view.actionPlanErrorPrefix": "No se pudo cargar su plan de acción: {error}",
-    "dashboard.growth.view.weeklyPlanHeading": "El plan de esta semana ({count})",
+    "dashboard.growth.view.weeklyPlanHeading": "Resumen de crecimiento ({count})",
     "dashboard.growth.view.laterTasksHeading": "Proyectos más grandes ({count})",
     "dashboard.growth.view.weeklyEmptyMessage":
       "No hay arreglos rápidos de puntuación esta semana: mantenga su rutina semanal y pruebe una de las formas de atraer más clientes que aparecen abajo.",
     "dashboard.growth.view.weeklyFootnote": "Cada estimación aquí es exactamente lo que le falta actualmente a esa comprobación — los mismos números detrás de la puntuación proyectada de arriba. Los puntos solo se acreditan después de que un nuevo análisis realmente encuentre la mejora, nunca por hacer clic en \"Ya lo hice\" por sí solo.",
-    "dashboard.growth.view.laterEmptyMessage": "Nada a más largo plazo ahora mismo — todo lo que se puede determinar está en el plan de esta semana o ya está hecho.",
+    "dashboard.growth.view.laterEmptyMessage": "Nada a más largo plazo ahora mismo — todo lo que se puede determinar está en su Resumen de crecimiento o ya está hecho.",
     "dashboard.growth.view.fullPointsMessage":
       "Tiene todos los puntos en todo lo que podemos revisar: mantenga su rutina semanal.",
     "dashboard.growth.coupon.defaultInstructions": "Muestre este cupón en la tienda para canjearlo.",
@@ -12983,7 +13220,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.postaiDock.q.growth.mostPoints": "¿Qué arreglo suma más puntos?",
     "dashboard.postaiDock.q.growth.routine": "¿Cómo funciona la rutina semanal?",
     "dashboard.postaiDock.q.growth.whatsInPlan": "¿Qué incluye el plan paso a paso?",
-    "dashboard.postaiDock.q.growth.whichPlan": "¿Qué plan tiene el plan semanal?",
+    "dashboard.postaiDock.q.growth.whichPlan": "¿Qué plan tiene el Resumen de crecimiento?",
     "dashboard.postaiDock.q.reports.changed": "¿Qué cambió desde mi último informe?",
     "dashboard.postaiDock.q.reports.read": "¿Cómo leo mi informe?",
     "dashboard.postaiDock.q.reports.nextMonth": "¿En qué debo enfocarme el próximo mes?",
@@ -13005,7 +13242,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.link.reviews": "Obtenga su enlace y letrero QR de reseñas →",
     "dashboard.assistant.link.replies": "Responda a sus reseñas →",
     "dashboard.assistant.link.connect": "Conecte su Perfil de Empresa en Google →",
-    "dashboard.assistant.link.growth": "Abra el plan de esta semana en Crecimiento →",
+    "dashboard.assistant.link.growth": "Abra su Resumen de crecimiento →",
     "dashboard.assistant.link.weeklyRoutine": "Abra su rutina semanal →",
     "dashboard.assistant.link.coupon": "Cree un cupón →",
     "dashboard.assistant.link.referral": "Cree una tarjeta de referidos →",
@@ -14730,7 +14967,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteOnly.websiteFixesLink": "Ver todas las revisiones del sitio web",
     "dashboard.websiteOnly.noWebsiteFixes": "No hay nada que mejorar en las revisiones del sitio web que pudimos hacer.",
     "dashboard.websiteOnly.needsListing.title": "Esta página necesita una ficha de Google",
-    "dashboard.websiteOnly.needsListing.reason.growth": "Su plan semanal, cupones e ideas de crecimiento se basan en las revisiones de su ficha de Google. Cree un Perfil de Empresa en Google y vincúlelo para obtenerlos.",
+    "dashboard.websiteOnly.needsListing.reason.growth": "Su Resumen de crecimiento, cupones e ideas de crecimiento se basan en las revisiones de su ficha de Google. Cree un Perfil de Empresa en Google y vincúlelo para obtenerlos.",
     "dashboard.websiteOnly.needsListing.reason.reviews": "Las reseñas y su calificación están en un Perfil de Empresa en Google, igual que su enlace para reseñas. Cree uno y vincúlelo para verlos aquí.",
     "dashboard.websiteOnly.needsListing.reason.competitors": "La competencia cercana se encuentra a partir de la ubicación y la categoría de su ficha de Google, así que sin una no hay comparación — nunca una posición inventada.",
     "dashboard.websiteOnly.needsListing.reason.pricing": "La revisión de precios lo compara con negocios cercanos encontrados mediante su ficha de Google. Cree una y vincúlela para usarla.",
@@ -14988,7 +15225,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.websiteLinkFix.premiumPreview": "Premium lo corrige con un clic",
     "dashboard.overview.recs.high": "Prioridad alta",
     "dashboard.overview.recs.medium": "Prioridad media",
-    "dashboard.overview.recs.points": "+{points} pts",
+    "dashboard.overview.recs.points.one": "+{points} pt",
+    "dashboard.overview.recs.points.other": "+{points} pts",
     "dashboard.overview.recs.pointsRange": "unos +{low}–{high} pts",
     "dashboard.overview.recs.seeCheck": "Vea esta revisión →",
     "dashboard.overview.recs.improveWebsite": "Mejore su sitio web",
@@ -14999,7 +15237,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.photo.alt": "Foto de {name} de su ficha de Google",
     "dashboard.overview.photo.viewOnMaps": "Ver esta foto en Google Maps",
     "dashboard.overview.recs.startHereLabel": "Empiece aquí:",
-    "dashboard.overview.recs.startHere": "su plan semanal en Crecimiento",
+    "dashboard.overview.recs.startHere": "su Resumen de crecimiento",
     "dashboard.overview.sinceCard.heading": "Desde su último análisis",
     "dashboard.overview.sinceCard.lastScan": "Último análisis · {date}",
     "dashboard.overview.sinceCard.now": "Ahora",
@@ -15021,7 +15259,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.band.seeBreakdown": "Ver el desglose de su puntuación ↓",
     "dashboard.overview.scoringUpdatedVersionTip": "PostScore actualizó su forma de puntuar (ahora versión {version}): las puntuaciones pueden variar; esto no es un cambio en su negocio.",
     "dashboard.overview.seeWhatsIncluded": "Ver qué incluye →",
-    "dashboard.overview.recs.pointsAbout": "unos +{points} pts",
+    "dashboard.overview.recs.pointsAbout.one": "cerca de +{points} pt",
+    "dashboard.overview.recs.pointsAbout.other": "unos +{points} pts",
     "dashboard.overview.actionPlan.pointsOnceLive": "Aprox. +{points} pts cuando esté publicado",
     "dashboard.connectGbp.availableWithPremium": "Disponible con PostScore Premium — próximamente",
     "dashboard.gbpResult.state": "Ese intento de conexión venció o no coincidió con este navegador, así que no se conectó nada. Vuelva a empezar.",
@@ -15137,6 +15376,118 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.pdf.firstScan": "Primer análisis — aún no hay uno anterior para comparar.",
     "dashboard.reports.pdf.scoringUpdated": "PostScore actualizó su forma de calificar entre estos análisis, así que el cambio no se muestra punto por punto.",
     "dashboard.reports.pdf.rankLabel": "Posición local",
+    "dashboard.reports.v2.startingPoint": "Su punto de partida",
+    "dashboard.reports.v2.startingLine": "de 100 · Calificación {grade}",
+    "dashboard.reports.v2.startingNote": "Su primer análisis completo ({date}). El informe de la próxima semana mostrará qué cambió y por qué.",
+    "dashboard.reports.v2.startingNoteNoDate": "El informe de la próxima semana mostrará qué cambió y por qué.",
+    "dashboard.reports.v2.movedLabel": "Dónde se movieron sus puntos",
+    "dashboard.reports.v2.movedNone": "Ninguna revisión cambió desde el último informe.",
+    "dashboard.reports.v2.noChangeWeek": "Sin cambios esta semana",
+    "dashboard.reports.v2.otherChanges": "Otros cambios ({count})",
+    "dashboard.reports.v2.scoringUpdate": "Actualización del puntaje: {from} → {to}. PostScore actualizó su forma de calcular; no es una ganancia ni una pérdida para usted.",
+    "dashboard.reports.v2.scoringUnsplit": "PostScore actualizó su forma de calcular desde el último informe, así que este cambio no se puede dividir por revisión.",
+    "dashboard.reports.v2.rankNiche": "#{rank} de {of} {noun}",
+    "dashboard.reports.v2.outOfNote": "Cada categoría sobre su total de puntos",
+    "dashboard.reports.v2.waitingInlineOne": "1 revisión esperando a Google (vea abajo)",
+    "dashboard.reports.v2.waitingInline": "{count} revisiones esperando a Google (vea abajo)",
+    "dashboard.reports.v2.waitingTitleOne": "1 revisión esperando a Google",
+    "dashboard.reports.v2.waitingTitle": "{count} revisiones esperando a Google",
+    "dashboard.reports.v2.waitingBody": "{checks} solo se pueden revisar cuando conecte su Perfil de Empresa en Google a PostScore, porque Google solo muestra unas pocas reseñas públicamente. Mientras tanto, su puntuación de {category} de {points} / {weight} se basa en las revisiones que sí pudimos hacer, así que estas no cuentan en su contra. Conectar es de solo lectura: nada de su ficha cambia.",
+    "dashboard.reports.v2.checkPts": "{label} ({points} pts)",
+    "dashboard.reports.v2.checkPtsOne": "{label} (1 pt)",
+    "dashboard.reports.v2.and": " y ",
+    "dashboard.reports.v2.minutes": "~{minutes} min",
+    "dashboard.reports.v2.p2Eyebrow": "Su Resumen de crecimiento · {name}",
+    "dashboard.reports.v2.p2Title": "Tres cosas que valen su tiempo",
+    "dashboard.reports.v2.p2TitleFew": "Lo que vale su tiempo esta semana",
+    "dashboard.reports.v2.p2Intro": "No tiene que hacerlo todo a la vez. Aquí es donde su puntuación y sus clientes ganan más.",
+    "dashboard.reports.v2.p2None": "No hay nada que arreglar esta semana. Siga con su rutina semanal; el informe de la próxima semana mostrará qué cambió.",
+    "dashboard.reports.v2.p2Footer": "Hecho con su análisis de PostScore del {date} y su ficha pública de Google y su sitio web.",
+    "dashboard.reports.v2.whatToSay": "Qué decir:",
+    "dashboard.reports.v2.startingText": "Un punto de partida:",
+    "dashboard.reports.v2.hoursAppt.title": "Dígale a Google cómo reservar con usted",
+    "dashboard.reports.v2.hoursAppt.summary": "Muestre en Google cuándo y cómo pueden reservar con usted (vea la página 2).",
+    "dashboard.reports.v2.hoursAppt.why": "Ahora su ficha de Google no muestra horario. Si trabaja con cita previa o clases programadas en vez de un horario fijo, está bien. Google solo necesita saberlo, para que sus clientes no se queden con la duda de si está abierto.",
+    "dashboard.reports.v2.hoursAppt.b1": "Abierto con cita: en el Perfil de Empresa en Google → Editar perfil → Horario, elija “Abierto sin horario principal”. Es la opción de Google para negocios que atienden solo con cita.",
+    "dashboard.reports.v2.hoursAppt.b2": "Agregue un enlace de reservas (Editar perfil → Contacto, si su categoría lo ofrece) a su página de inscripción o reservas, para que reserven directamente desde Google.",
+    "dashboard.reports.v2.hoursAppt.b3": "¿Horario de temporada? Póngalo mientras aplique y vuelva a “sin horario principal” cuando termine la temporada.",
+    "dashboard.reports.v2.hoursAppt.sample": "Con cita previa y clases programadas. Vea las fechas y reserve en línea.",
+    "dashboard.reports.v2.hoursAppt.sampleLabel": "Dígalo en su descripción:",
+    "dashboard.reports.v2.reviews.title": "Convierta visitas en reseñas",
+    "dashboard.reports.v2.reviews.summary": "Pida una reseña a cada cliente al final de la visita (vea la página 2).",
+    "dashboard.reports.v2.reviews.why": "Tiene una calificación de {rating}★ con {count} reseñas. El mejor momento para pedir una es al final de una buena visita.",
+    "dashboard.reports.v2.reviews.whyNoRating": "Tiene {count} reseñas. El mejor momento para pedir una es al final de una buena visita.",
+    "dashboard.reports.v2.reviews.whyOne": "Tiene una calificación de {rating}★ con 1 reseña. El mejor momento para pedir una es al final de una buena visita.",
+    "dashboard.reports.v2.reviews.whyNoRatingOne": "Tiene 1 reseña. El mejor momento para pedir una es al final de una buena visita.",
+    "dashboard.reports.v2.reviews.b1": "Ponga una tarjeta con el código QR de reseñas en el mostrador o la puerta. PostScore le hace el letrero.",
+    "dashboard.reports.v2.reviews.b2": "Al final de cada visita, basta con una frase.",
+    "dashboard.reports.v2.website.why": "Su sitio web tiene {earned} / {of}. Las revisiones que le restan puntos:",
+    "dashboard.reports.v2.website.summary.one": "Su sitio web tiene {earned}/{of}, con 1 mejora posible.",
+    "dashboard.reports.v2.website.summary.other": "Su sitio web tiene {earned}/{of}, con {count} mejoras posibles.",
+    "dashboard.reports.v2.website.meta": "Agregue una descripción para buscadores (la línea que Google muestra bajo su nombre).",
+    "dashboard.reports.v2.website.metaSample": "{type} en {town}: {name}. Vea las novedades y contáctenos en línea.",
+    "dashboard.reports.v2.p3Eyebrow": "Publicar, más fácil",
+    "dashboard.reports.v2.p3Title": "Publique una vez, compártalo en tres lugares",
+    "dashboard.reports.v2.p3Intro": "Las publicaciones de Facebook e Instagram no aparecen cuando la gente busca en Google o Maps, pero una publicación de Google aparece en su ficha. Escriba cada publicación una vez y compártala en los tres lugares.",
+    "dashboard.reports.v2.chip1": "Escríbala una vez",
+    "dashboard.reports.v2.chip2": "Publicación de Google",
+    "dashboard.reports.v2.chip3": "Facebook",
+    "dashboard.reports.v2.chip4": "Instagram",
+    "dashboard.reports.v2.rhythm": "Un ritmo sencillo: dos publicaciones a la semana, una antes de algo y otra después, con fotos. Escriba las de un mes en una sola sesión de 30 minutos.",
+    "dashboard.reports.v2.datesHeading": "Próximamente en su sitio web",
+    "dashboard.reports.v2.colDate": "Fecha",
+    "dashboard.reports.v2.colSite": "En su sitio web",
+    "dashboard.reports.v2.colIdea": "Idea para publicar",
+    "dashboard.reports.v2.eventFallback": "Taller publicado en su sitio web",
+    "dashboard.reports.v2.eventFallbackEvent": "Evento publicado en su sitio web",
+    "dashboard.reports.v2.fixInApp": "En PostScore, abra {page} y haga clic en “{button}”. Hace el cambio en Google por usted.",
+    "dashboard.reports.v2.ideaBefore": "Publíquelo antes del {date}",
+    "dashboard.reports.v2.ideaNow": "Publíquelo esta semana",
+    "dashboard.reports.v2.datesNote": "Fechas de {site} el {date}. Revíselas antes de publicar.",
+    "dashboard.reports.v2.ideasHeading": "Ideas para publicar este mes",
+    "dashboard.reports.v2.ideas.food.1": "Una foto de lo que más le piden, y cuándo venir a probarlo.",
+    "dashboard.reports.v2.ideas.food.2": "Detrás del mostrador: quién cocina u hornea esta semana.",
+    "dashboard.reports.v2.ideas.food.3": "Un especial de temporada, solo si lo tiene, y cuándo está disponible.",
+    "dashboard.reports.v2.ideas.food.4": "Agradezca a sus clientes de siempre y pídales una reseña en Google.",
+    "dashboard.reports.v2.ideas.beauty.1": "Una foto de antes y después (con el permiso del cliente).",
+    "dashboard.reports.v2.ideas.beauty.2": "Conozca al equipo: una persona y lo que más le gusta hacer.",
+    "dashboard.reports.v2.ideas.beauty.3": "Los espacios libres de esta semana y cómo reservar.",
+    "dashboard.reports.v2.ideas.beauty.4": "Un consejo de cuidado que sus clientes puedan usar en casa.",
+    "dashboard.reports.v2.ideas.retail.1": "Lo nuevo en la tienda esta semana, con una foto.",
+    "dashboard.reports.v2.ideas.retail.2": "Una recomendación del equipo y por qué les gusta.",
+    "dashboard.reports.v2.ideas.retail.3": "Una idea de regalo para una ocasión que se acerca.",
+    "dashboard.reports.v2.ideas.retail.4": "Su horario de esta semana y dónde encontrarles.",
+    "dashboard.reports.v2.ideas.classes.1": "Fotos de una clase o sesión reciente (con el permiso de todos).",
+    "dashboard.reports.v2.ideas.classes.2": "Cómo es una primera visita, para principiantes.",
+    "dashboard.reports.v2.ideas.classes.3": "Conozca a su maestro o entrenador.",
+    "dashboard.reports.v2.ideas.classes.4": "Cómo inscribirse y dónde ver el calendario.",
+    "dashboard.reports.v2.ideas.services.1": "Un trabajo reciente, con foto (con el permiso del cliente).",
+    "dashboard.reports.v2.ideas.services.2": "Una pregunta frecuente de sus clientes, y la respuesta.",
+    "dashboard.reports.v2.ideas.services.3": "Conozca al equipo: quién llega o contesta el teléfono.",
+    "dashboard.reports.v2.ideas.services.4": "Cómo reservar o pedir un presupuesto, y qué tan rápido responde.",
+    "dashboard.reports.v2.todayHeading": "Lo que PostScore hace hoy",
+    "dashboard.reports.v2.headedHeading": "Hacia dónde va",
+    "dashboard.reports.v2.today.score": "Su puntuación cada semana y las revisiones detrás de ella",
+    "dashboard.reports.v2.today.reviewLink": "Su enlace y código QR de reseñas",
+    "dashboard.reports.v2.today.postai3": "PostAI: 3 preguntas a la semana",
+    "dashboard.reports.v2.today.replies3": "3 borradores de respuesta a reseñas con IA a la semana",
+    "dashboard.reports.v2.today.plan": "Un Resumen de crecimiento semanal como este, con arreglos paso a paso",
+    "dashboard.reports.v2.today.signs": "Letreros de reseñas y guiones de “qué decir”",
+    "dashboard.reports.v2.today.cards": "Cupones y tarjetas de referidos que miden qué funciona",
+    "dashboard.reports.v2.today.postai100": "PostAI: 100 preguntas al mes",
+    "dashboard.reports.v2.today.postaiUnlimited": "PostAI: preguntas ilimitadas",
+    "dashboard.reports.v2.today.report": "Un informe semanal que muestra qué movió su puntuación",
+    "dashboard.reports.v2.today.editGoogle": "Edite su ficha de Google desde PostScore, con opción de deshacer",
+    "dashboard.reports.v2.today.replyGoogle": "Responda a sus reseñas de Google desde PostScore",
+    "dashboard.reports.v2.headed.posts": "Sus publicaciones y ofertas de Google redactadas y programadas; usted solo las aprueba",
+    "dashboard.reports.v2.headed.insights": "Vea quién le busca y quién le llama o hace clic",
+    "dashboard.reports.v2.headed.everyone": "Ediciones y respuestas en Google para todos los negocios (fuera de Beta)",
+    "dashboard.reports.v2.headed.editGoogle": "Arregle datos de su ficha de Google con un toque, con opción de deshacer",
+    "dashboard.reports.v2.upgradeTitle": "Esto es una semana. PostScore lo hace cada semana.",
+    "dashboard.reports.v2.upgradeBody": "Grow le da un Resumen de crecimiento semanal con arreglos paso a paso, letreros y guiones de reseñas, y cupones y tarjetas de referidos que miden qué funciona. Premium agrega editar su ficha de Google desde PostScore y PostAI ilimitado. Vea Configuración → Plan y facturación → Comparar planes.",
+    "dashboard.reports.v2.teaserTitle": "La próxima semana",
+    "dashboard.reports.v2.teaserBody": "El informe de la próxima semana mostrará qué cambió después de los pasos de esta semana y elegirá sus tres siguientes.",
+    "dashboard.reports.v2.p3Footer": "Preparado para {name} por PostScore",
     "dashboard.reports.pdf.rank": "Puesto {rank} de {of} entre {noun} de la zona",
     "dashboard.reports.pdf.rankUp": "antes puesto {previous}",
     "dashboard.reports.pdf.rankDown": "antes puesto {previous}",
@@ -15260,9 +15611,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.print.popupBlocked": "Su navegador bloqueó la pestaña nueva. Permita las ventanas emergentes para este sitio, o use Descargar PDF e imprímalo.",
     "dashboard.print.preparing": "Preparando su PDF…",
     "dashboard.growth.checklist.complete": "Rutina semanal completa 🎉 · se reinicia el lunes",
-    "dashboard.growth.planDoneUp": "¡Terminó el plan de esta semana! Su puntuación subió {diff} puntos.",
-    "dashboard.growth.planDoneUpOne": "¡Terminó el plan de esta semana! Su puntuación subió 1 punto.",
-    "dashboard.growth.planDone": "Terminó el plan de esta semana — excelente trabajo.",
+    "dashboard.growth.planDoneUp": "¡Terminó su Resumen de crecimiento! Su puntuación subió {diff} puntos.",
+    "dashboard.growth.planDoneUpOne": "¡Terminó su Resumen de crecimiento! Su puntuación subió 1 punto.",
+    "dashboard.growth.planDone": "Terminó su Resumen de crecimiento — excelente trabajo.",
     "dashboard.growth.goalHit": "Alcanzó la meta de esta semana: {start} → {now} (+{diff})",
     "dashboard.studio.customize": "Personalizar diseño",
     "dashboard.studio.lockedTab": "Pruébelas con una vista previa con marca de agua — imprimirlas requiere Premium.",

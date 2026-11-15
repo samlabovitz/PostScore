@@ -298,7 +298,7 @@ export function GrowthView({
   const issueCount = generateSuggestions(breakdown, locale).length;
   // Permanently closed: the plan is only "mark it open" — no blurb.
   const closedOnHold = actionPlan.weeklyTasks.length === 1 && actionPlan.weeklyTasks[0].checkId === MARK_OPEN_STEP_ID;
-  // Every real open score-gap task on this page, "This week's plan" and
+  // Every real open score-gap task on this page, "Growth recap" and
   // "Bigger projects" together — the live source of truth a growth
   // move's badge checks itself against (see growthMoveOverlapsActionPlan
   // in lib/growthMoveOverlap.ts), never a separate/stale copy.

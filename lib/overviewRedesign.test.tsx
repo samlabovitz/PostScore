@@ -452,11 +452,11 @@ describe("breakdown bars, Start here, wording", () => {
     expect(html).toContain("1 done · 1 needs work · 2 couldn&#x27;t check");
   });
 
-  test("Top recommendations starts with the weekly plan on Growth", () => {
+  test("Top recommendations starts with the Growth recap", () => {
     const html = render(<TopRecommendations businessId="b" recommendations={[]} />);
     expect(html).toContain('href="/business/b/growth#weekly-plan"');
     expect(html).toContain("Start here:");
-    expect(html).toContain("your weekly plan on Growth");
+    expect(html).toContain("your Growth recap");
   });
 
   test("'up to about +5 pts' (no '~+')", () => {

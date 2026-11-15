@@ -93,7 +93,7 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
   }
 
   const input = businessRowToScoringInput(scored.business);
-  // "Connect Google" joins this week's plan while it isn't connected.
+  // "Connect Google" joins the Growth recap while it isn't connected.
   const gbpEarly = await gbpPromise;
   const connectGoogle = canConnectGbp() && !(gbpEarly.status === "ok" && gbpEarly.connected);
   const [actionPlanResult, growthMovesResult, checklistStateResult, lastScanAt, gbpStatus, recheckStatus, benchmark] = await Promise.all([

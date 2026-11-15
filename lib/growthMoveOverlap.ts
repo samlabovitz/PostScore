@@ -50,7 +50,7 @@ export interface OverlapCheckableTask {
 
 /**
  * True when `moveId`'s real underlying check is currently an OPEN task
- * in `openTasks` — pass the Growth page's own "This week's plan" +
+ * in `openTasks` — pass the Growth page's own "Growth recap" +
  * "Bigger projects" lists together (every open, real score-gap task),
  * never a filtered subset. Matches by a task's own `checkId`, or by
  * `mergedCheckIds` for a merged card (e.g. the merged website card uses

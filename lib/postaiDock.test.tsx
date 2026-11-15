@@ -248,7 +248,7 @@ describe("page-aware starter questions", () => {
       }
     }
     // Free: the step-by-step plan, the review sign, Price check and Reports are locked.
-    expect(postaiPageQuestions("growth", features("free"), "en")).toEqual(["What should I fix first?", "What's in the step-by-step plan?", "Which plan has the weekly plan?"]);
+    expect(postaiPageQuestions("growth", features("free"), "en")).toEqual(["What should I fix first?", "What's in the step-by-step plan?", "Which plan has the Growth recap?"]);
     expect(postaiPageQuestions("reviews", features("free"), "en")[2]).toBe("Why do reviews matter for my score?");
     expect(postaiPageQuestions("pricing", features("free"), "en")).toEqual(["What does Price check show?", "Which plan includes Price check?", "How should I think about my prices?"]);
     expect(postaiPageQuestions("reports", features("free"), "en")).toEqual(["How has my score changed?", "What's in the reports?", "What should I focus on next month?"]);

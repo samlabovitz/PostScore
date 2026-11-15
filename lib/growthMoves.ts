@@ -218,7 +218,7 @@ export function withoutWebsiteGrowthMoves(moves: GrowthMove[]): GrowthMove[] {
  * (see app/business/[id]/growth/WeeklyChecklist.tsx). connect_gbp moved
  * out entirely too, as of step 2e's second pass — it's a real,
  * one-time setup step (see lib/actionPlan.ts's buildWeeklyPlan), so it
- * now lives in "This week's plan" instead of here, never both (see
+ * now lives in "Growth recap" instead of here, never both (see
  * item 1's no-repeats rule).
  */
 export function buildGrowthMoves(signals: GrowthMoveSignals, locale: Locale = DEFAULT_LOCALE): GrowthMove[] {

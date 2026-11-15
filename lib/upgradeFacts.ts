@@ -38,7 +38,7 @@ export function factsFromScore(
     reviewCount: business.review_count,
     reviewAvg: benchmark?.competitorReviewAverage != null ? Math.round(benchmark.competitorReviewAverage) : null,
     competitorNoun: benchmark?.competitorNoun ?? null,
-    reviewLeader: benchmark?.reviewGoal && benchmark.reviewGoal.kind !== "lead" ? { name: benchmark.reviewGoal.leader.name, count: benchmark.reviewGoal.leader.reviewCount } : null,
+    reviewLeader: benchmark?.reviewGoal?.kind === "next" && benchmark.reviewGoal.nextUp ? { name: benchmark.reviewGoal.nextUp.name, count: benchmark.reviewGoal.nextUp.reviewCount } : null,
   };
 }
 

@@ -17,20 +17,32 @@ describe("the review leader and goal (same scope as the rank)", () => {
     expect(reviewLeader(SALONS)).toEqual({ name: "The Beauty Parlor", reviewCount: 188, rating: 4.5 });
   });
 
-  test("beat the leader: the real goal and gap, with the area average", () => {
+  test("next up: the nearest competitor above them, with the area average", () => {
     const goal = reviewGoal(scan([entry("You", 30, true), entry("A", 60), entry("B", 50), entry("C", 40)]), null, 30)!;
-    expect(goal).toMatchObject({ kind: "beat", average: 50, gap: 30, nextUp: null, leader: { name: "A", reviewCount: 60 } });
-    expect(reviewGoalLines(goal, "nearby salons", "en")).toEqual(["Nearby salons average 50 reviews.", "Your goal: beat A — 60 reviews (30 more than you)."]);
+    expect(goal).toMatchObject({ kind: "next", average: 50, gap: 10, nextUp: { name: "C", reviewCount: 40 }, leader: { name: "A", reviewCount: 60 } });
+    // The leader (60) is within 3× their 30 reviews: a stretch goal too.
+    expect(reviewGoalLines(goal, "nearby salons", "en")).toEqual(["Nearby salons average 50 reviews.", "Next up: C, 40 reviews.", "Stretch goal: beat A — 60 reviews (30 more than you)."]);
   });
 
-  test("a leader over 3× the average is a stretch goal, with the nearest competitor above as the next target", () => {
+  test("a leader over 3× their own count is never shown (Lulu's Tacos: never “beat X — 5,337 reviews”)", () => {
     expect(STRETCH_LEADER_FACTOR).toBe(3);
-    const goal = reviewGoal(scan([entry("You", 20, true), entry("Big Chain", 900), entry("Local A", 60), entry("Local B", 30), entry("Local C", 10)]), null, 20)!;
-    expect(goal.kind).toBe("stretch");
-    expect(goal.nextUp).toMatchObject({ name: "Local B", reviewCount: 30 });
+    const goal = reviewGoal(scan([entry("You", 187, true), entry("Big Chain", 5337), entry("Casa Kahlo", 222), entry("Local B", 30), entry("Local C", 10)]), null, 187)!;
+    expect(goal.nextUp).toMatchObject({ name: "Casa Kahlo", reviewCount: 222 });
+    expect(goal.stretch).toBeNull();
     const text = reviewGoalText(goal, "nearby salons", "en");
-    expect(text.goal).toBe("Stretch goal: beat Big Chain — 900 reviews (880 more than you).");
-    expect(text.nextUp).toBe("Next up: Local B, 30 reviews.");
+    expect(text.goal).toBe("Next up: Casa Kahlo, 222 reviews.");
+    expect(text.stretch).toBeNull();
+    expect(reviewGoalLines(goal, "nearby salons", "en").join(" ")).not.toContain("5,337");
+  });
+
+  test("only the leader above them: next up is the leader, no stretch line", () => {
+    const goal = reviewGoal(scan([entry("You", 50, true), entry("A", 60), entry("B", 40), entry("C", 20)]), null, 50)!;
+    expect(reviewGoalLines(goal, "nearby salons", "en")).toEqual(["Nearby salons average 40 reviews.", "Next up: A, 60 reviews."]);
+  });
+
+  test("Rooted On Main: next up is Sacksy Thyme (22); “Rooted” (114, another business) is over 3× their 15", () => {
+    const goal = reviewGoal(scan([entry("Rooted On Main", 15, true), entry("Rooted", 114), entry("The Little Treasure Shoppe", 48), entry("Sacksy Thyme Natural Wellness", 22), entry("Creations By Emas", 1), entry("Surfshore", 1)]), null, 15)!;
+    expect(reviewGoalLines(goal, "nearby gift shops", "en").slice(1)).toEqual(["Next up: Sacksy Thyme Natural Wellness, 22 reviews."]);
   });
 
   test("already the most reviews: you lead, keep the gap (to #2)", () => {
@@ -50,14 +62,28 @@ describe("the review leader and goal (same scope as the rank)", () => {
     const direct: CompetitorScope = { nicheId: "skate_snow", parent: "specialty_store", areas: [], mode: "direct" };
     expect(reviewLeader(s, direct)?.name).toBe("American Sports");
     expect(reviewLeader(s)?.name).toBe("American Sports");
-    expect(scopeGroupLabel(s, direct, "en", "specialty stores")).toBe("skate & snow shop businesses nearby");
+    // The same plural words as the rank line (nicheGroupNoun).
+    expect(scopeGroupLabel(s, direct, "en", "specialty stores")).toBe("nearby skate & snow shops");
     expect(scopeGroupLabel(s, null, "en", "salons")).toBe("nearby salons");
-    expect(scopeGroupLabel(s, direct, "es", "tiendas")).toMatch(/^negocios cercanos de /);
+    expect(scopeGroupLabel(s, direct, "es", "tiendas")).toBe("tiendas de skate y snowboard cercanas");
+    expect(scopeGroupLabel(s, null, "es", "tiendas especializadas")).toBe("tiendas especializadas de la zona");
+  });
+
+  test("Art & pottery studios: the review goal says what the rank line says (EN + ES)", async () => {
+    const { reviewGoalLines } = await import("./reviewGoal");
+    const { nicheById } = await import("./niches");
+    const clay: CompetitorScope = { nicheId: "art_classes", parent: "tutor_education", areas: [], mode: "direct" };
+    const s = scan([entry("You", 48, true), entry("Fired Up Pottery, LLC", 117), entry("The Painted Plate", 74)]);
+    expect(scopeGroupLabel(s, clay, "en", "tutoring services")).toBe("nearby art & pottery studios");
+    const goal = { kind: "next", average: 51, ownCount: 48, gap: 26, leader: { name: "Fired Up Pottery, LLC", reviewCount: 117 }, runnerUp: null, nextUp: { name: "The Painted Plate", reviewCount: 74 }, stretch: { name: "Fired Up Pottery, LLC", reviewCount: 117 } } as never;
+    expect(reviewGoalLines(goal, scopeGroupLabel(s, clay, "en", "tutoring services"), "en")[0]).toBe("Nearby art & pottery studios average 51 reviews.");
+    expect(reviewGoalLines(goal, scopeGroupLabel(s, clay, "es", "servicios de tutoría"), "es")[0]).toBe("Estudios de arte y cerámica cercanos: 51 reseñas en promedio.");
+    expect(nicheById("mexican")).not.toBeNull();
   });
 
   test("Spanish (usted)", () => {
     const goal = reviewGoal(SALONS, null, 10)!;
-    expect(reviewGoalLines(goal, "salones cercanos", "es")[1]).toBe("Meta ambiciosa: superar a The Beauty Parlor: 188 reseñas (178 más que usted).");
+    expect(reviewGoalLines(goal, "salones de la zona", "es")).toEqual(["Salones de la zona: 57 reseñas en promedio.", "Siguiente: Salon Zinie, 13 reseñas."]);
   });
 
   test("every place uses it: benchmark (Overview, Reviews, reports, PDF, visit, unlock lines), Competitors, Growth and PostAI", () => {

@@ -754,6 +754,41 @@ export function findListingPageCandidate(candidates: DiscoveredPage[], homepageU
   return null;
 }
 
+/** A page's visible text, one line per block (a heading, paragraph, list
+ * item, line break…) — so an event's title is the line before its date. */
+export function htmlTextLines(html: string): string[] {
+  const text = html
+    .replace(/<(script|style|noscript|head|svg)\b[^>]*>[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(h[1-6]|p|div|li|section|article|tr|td|th|header|footer|span|a|button|figcaption|dt|dd)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ");
+  return decodeBasicEntitiesForLinkText(text)
+    .replace(/&#(\d+);/g, (_m, n: string) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_m, n: string) => String.fromCharCode(parseInt(n, 16)))
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+}
+
+/** The site's own classes/events page, read live (one homepage fetch, one
+ * page fetch; nothing stored) — the weekly report's post ideas use its
+ * dates (lib/reports/weeklyReportV2.ts). null when there's none or it
+ * can't be read. */
+export async function readListingPage(website: string | null, fetchImpl: typeof fetch = fetch): Promise<{ url: string; text: string; lines: string[] } | null> {
+  if (!website) return null;
+  try {
+    const home = await fetchWebsiteHtml(website, fetchImpl);
+    if (!home.html) return null;
+    const homepageUrl = new URL(/^https?:\/\//i.test(website.trim()) ? website.trim() : `https://${website.trim()}`);
+    const candidate = findListingPageCandidate(extractLinkCandidates(home.html, homepageUrl), homepageUrl);
+    if (!candidate) return null;
+    const outcome = await fetchPresenceCandidate(candidate.url, fetchImpl);
+    return outcome.kind === "ok" ? { url: candidate.url, text: extractMainContentVisibleText(outcome.html), lines: htmlTextLines(outcome.html) } : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Shared mutable state for one scan's about+services detection — a
  * single object so both calls (see detectPagePresence) draw from the
  * same MAX_PRESENCE_EXTRA_FETCHES budget and never double-fetch the

@@ -327,7 +327,7 @@ describe("Check again", () => {
   });
 });
 
-describe("This week's plan is done", () => {
+describe("The Growth recap is done", () => {
   const plan = { steps: ["completeness.hours", "visibility.review_count", "visibility.rating", "setup.connect_gbp"], start: 67, setAt: "2026-10-26T12:00:00Z" };
   const done = (id: string, at = "2026-10-28T09:00:00Z") => ({ checkId: id, verifiedAt: at });
   const all = [done("completeness.hours"), done("visibility.review_count"), done("visibility.rating")];
@@ -345,11 +345,11 @@ describe("This week's plan is done", () => {
   });
 
   test("the real change only — EN + ES", () => {
-    expect(planDoneMessage(9, "en")).toBe("This week's plan is done! Your score is up 9 points.");
-    expect(planDoneMessage(1, "en")).toBe("This week's plan is done! Your score is up 1 point.");
-    expect(planDoneMessage(0, "en")).toBe("This week's plan is done — great work.");
-    expect(planDoneMessage(-2, "en")).toBe("This week's plan is done — great work.");
-    expect(planDoneMessage(4, "es")).toBe("¡Terminó el plan de esta semana! Su puntuación subió 4 puntos.");
+    expect(planDoneMessage(9, "en")).toBe("Your Growth recap is done! Your score is up 9 points.");
+    expect(planDoneMessage(1, "en")).toBe("Your Growth recap is done! Your score is up 1 point.");
+    expect(planDoneMessage(0, "en")).toBe("Your Growth recap is done — great work.");
+    expect(planDoneMessage(-2, "en")).toBe("Your Growth recap is done — great work.");
+    expect(planDoneMessage(4, "es")).toBe("¡Terminó su Resumen de crecimiento! Su puntuación subió 4 puntos.");
   });
 
   test("a merged card stands for its real checks; a bad record is ignored", () => {

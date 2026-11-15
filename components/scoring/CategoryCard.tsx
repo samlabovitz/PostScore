@@ -10,6 +10,7 @@ import { LockedFixRow } from "@/components/overview/FixPlanUpsell";
 import { checkAnchorId } from "@/lib/postaiLinks";
 import { CustomerDetailsExtras } from "@/components/scoring/CustomerDetailsExtras";
 import { CustomerDetailsGoogleEdit, optionLabel, useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
+import { FixWithPostScore, fixFlowHref } from "@/components/gbp/FixWithPostScore";
 import { WebsiteLinkFix } from "@/components/gbp/WebsiteLinkFix";
 import { GoogleAiAnswersLine } from "@/components/gbp/GbpMessagingStep";
 import { CUSTOMER_DETAIL_OPTIONS, PART_ORDER } from "@/lib/gbpAttributes";
@@ -236,6 +237,8 @@ function RowActions({
   // connected), or the steps, only while the link loses points — dead,
   // parked, the wrong site, or not the verified website.
   const websiteLinkFix = check.id === "completeness.website_link" && !!businessId && gbp.enabled && needsWork;
+  // The website link and customer details already open their editor in place.
+  const fixWithPostScore = !!businessId && needsWork && !lockedFixes && gbp.enabled && gbp.premium && !websiteLinkFix && !customerDetails && fixFlowHref(businessId, check.id) !== null;
   if (!needsWork && !googleAction && !canRemove && !websiteLinkFix) return null;
   return (
     <div data-testid="row-actions" className="ml-[25px] mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -260,6 +263,8 @@ function RowActions({
       )}
       {canRemove && <CustomerDetailsExtras check={check} businessId={businessId} />}
       {websiteLinkFix && !lockedFixes && <WebsiteLinkFix businessId={businessId!} suggested={gbp.websiteSuggested ?? null} className="basis-full" />}
+      {/* Hours, phone, review replies: Premium opens the existing editor. */}
+      {fixWithPostScore && <FixWithPostScore businessId={businessId!} checkId={check.id} className="basis-full" />}
     </div>
   );
 }

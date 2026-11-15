@@ -201,7 +201,7 @@ describe("facts come from the real scan", () => {
         peerCount: 8,
         competitorReviewAverage: 83.6,
         competitorNoun: "salons",
-        reviewGoal: { kind: "beat", average: 84, leader: { name: "Leader Salon", reviewCount: 57, rating: null }, ownCount: 10, gap: 47, nextUp: null, runnerUp: null },
+        reviewGoal: { kind: "next", average: 84, leader: { name: "Leader Salon", reviewCount: 57, rating: null }, ownCount: 10, gap: 47, nextUp: { name: "Leader Salon", reviewCount: 57, rating: null }, stretch: null, runnerUp: null },
       }
     );
     expect(facts).toEqual({ ...FACTS, issueCount: 3, websiteFailed: 2 });

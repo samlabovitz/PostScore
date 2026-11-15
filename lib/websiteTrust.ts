@@ -430,9 +430,6 @@ export interface AbandonedSiteFinding {
  * a genuine signal. */
 export const ABANDONED_SITE_MAX_AGE_MS = 2 * 365 * 24 * 60 * 60 * 1000;
 
-/** Full month names only — a year-less "may 3" or "mar 9" is too easy to
- * misread, so the abbreviations never count without a year. */
-const FULL_MONTH_NAMES = Object.keys(MONTH_NAMES).filter((name) => !["jan", "ene", "feb", "mar", "apr", "abr", "jun", "jul", "aug", "ago", "sep", "sept", "oct", "nov", "dec", "dic"].includes(name));
 
 const EN_WEEKDAYS: Record<string, number> = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
 const ES_WEEKDAYS: Record<string, number> = { domingo: 0, lunes: 1, martes: 2, "miércoles": 3, miercoles: 3, jueves: 4, viernes: 5, "sábado": 6, sabado: 6 };
@@ -450,7 +447,9 @@ const YEARLESS_GRACE_MS = 31 * 24 * 60 * 60 * 1000;
 
 /**
  * Class and event listings often skip the year ("Saturday, November 14",
- * "December 5th 2 - 5 pm"). On a page that reads like a listing (see
+ * "December 5th 2 - 5 pm", "Saturday, Nov. 21st"). Full or abbreviated
+ * month names ("Nov", "Nov.", "Dec."); either way only with a weekday or a
+ * time next to it, so a stray "may 3" never counts. On a page that reads like a listing (see
  * EVENT_LISTING_RE), each such date that names a weekday, or has a time
  * right after it, is read as this year's, or next year's once it's more
  * than a month past. A named weekday has to match that year (else the
@@ -459,16 +458,22 @@ const YEARLESS_GRACE_MS = 31 * 24 * 60 * 60 * 1000;
  * noviembre"). Dates WITH a year are read elsewhere.
  */
 export function yearlessEventDates(visibleText: string, now: Date): Date[] {
+  return eventDateMentions(visibleText, now).map((m) => m.date);
+}
+
+/** yearlessEventDates with where each date sits in the text (`index`–`end`)
+ * — the weekly report shows the words around it, verbatim. */
+export function eventDateMentions(visibleText: string, now: Date): Array<{ date: Date; index: number; end: number }> {
   if (!EVENT_LISTING_RE.test(visibleText)) return [];
-  const months = FULL_MONTH_NAMES.join("|");
+  const months = Object.keys(MONTH_NAMES).join("|");
   const enWeekdays = Object.keys(EN_WEEKDAYS).join("|");
   const esWeekdays = Object.keys(ES_WEEKDAYS).join("|");
   const noYear = "(?!,?\\s*(?:19|20)\\d{2}\\b)";
-  const en = new RegExp(`(?:\\b(${enWeekdays}),?\\s+)?\\b(${months})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b${noYear}`, "gi");
-  const es = new RegExp(`(?:(${esWeekdays}),?\\s+)?\\b(\\d{1,2})\\s+de\\s+(${months})\\b(?!\\s+de\\s+(?:19|20)\\d{2})${noYear}`, "gi");
+  const en = new RegExp(`(?:\\b(${enWeekdays}),?\\s+)?\\b(${months})[.,]?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b${noYear}`, "gi");
+  const es = new RegExp(`(?:(${esWeekdays}),?\\s+)?\\b(\\d{1,2})\\s+de\\s+(${months})\\b\\.?(?!\\s+de\\s+(?:19|20)\\d{2})${noYear}`, "gi");
   const year = now.getUTCFullYear();
-  const out: Date[] = [];
-  const add = (weekday: number | null, month: number, day: number, end: number) => {
+  const out: Array<{ date: Date; index: number; end: number }> = [];
+  const add = (weekday: number | null, month: number, day: number, end: number, index: number) => {
     if (day < 1 || day > 31) return;
     if (weekday === null && !TIME_AFTER_RE.test(visibleText.slice(end, end + 30))) return;
     const on = (y: number) => {
@@ -479,11 +484,11 @@ export function yearlessEventDates(visibleText: string, now: Date): Date[] {
     let d: Date | null;
     if (weekday !== null) d = thisYear?.getUTCDay() === weekday ? thisYear : nextYear?.getUTCDay() === weekday ? nextYear : null;
     else d = thisYear && thisYear.getTime() >= now.getTime() - YEARLESS_GRACE_MS ? thisYear : nextYear;
-    if (d) out.push(d);
+    if (d) out.push({ date: d, index, end });
   };
   let m: RegExpExecArray | null;
-  while ((m = en.exec(visibleText)) !== null) add(m[1] ? EN_WEEKDAYS[m[1].toLowerCase()] : null, MONTH_NAMES[m[2].toLowerCase()], Number(m[3]), m.index + m[0].length);
-  while ((m = es.exec(visibleText)) !== null) add(m[1] ? ES_WEEKDAYS[m[1].toLowerCase()] : null, MONTH_NAMES[m[3].toLowerCase()], Number(m[2]), m.index + m[0].length);
+  while ((m = en.exec(visibleText)) !== null) add(m[1] ? EN_WEEKDAYS[m[1].toLowerCase()] : null, MONTH_NAMES[m[2].toLowerCase()], Number(m[3]), m.index + m[0].length, m.index);
+  while ((m = es.exec(visibleText)) !== null) add(m[1] ? ES_WEEKDAYS[m[1].toLowerCase()] : null, MONTH_NAMES[m[3].toLowerCase()], Number(m[2]), m.index + m[0].length, m.index);
   return out;
 }
 

@@ -87,6 +87,9 @@ export interface WeeklyMeta {
   routine: { done: number; total: number } | null;
   /** A finished week: next steps are about today, so they're not shown. */
   pastWeek: boolean;
+  /** The two saved scans compared (this week's report) — "Where your
+   * points moved" reads their checks. Absent on older data. */
+  comparedScans?: { fromId: string; toId: string } | null;
 }
 
 /** "Oct 19–25, 2026" / "Sep 28 – Oct 4, 2026" / "Dec 29, 2025 – Jan 4, 2026" —
