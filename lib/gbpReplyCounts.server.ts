@@ -17,6 +17,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { computeReplyCounts, MAX_ALL_TIME_REVIEWS, type GbpReplyCounts, type GbpReview } from "@/lib/gbpReviewReplies";
 import { getValidAccessTokenWithClient, markGbpReconnect } from "@/lib/gbpTokens.server";
 import { gbpFetch, logGbpCalls } from "@/lib/gbpQuota";
+import type { GbpReviewTimes } from "@/lib/scanChanges";
 
 const REVIEWS_BASE = "https://mybusiness.googleapis.com/v4";
 export const REVIEWS_PAGE_SIZE = 50;
@@ -73,7 +74,9 @@ export async function fetchGbpReviews(
 }
 
 export type GbpReplyCheckRun =
-  | { status: "ok"; counts: GbpReplyCounts }
+  /** `reviewTimes`: when each review was written (in memory only, never
+   * saved) — the scan counts its new reviews from them (lib/scanChanges.ts). */
+  | { status: "ok"; counts: GbpReplyCounts; reviewTimes: GbpReviewTimes }
   /** Not connected (or no matched location): nothing to do. */
   | { status: "skipped" }
   /** Token rejected: the connection is now "error" → "Reconnect Google". */
@@ -153,7 +156,12 @@ export async function runGbpReplyCheckWithClient(
   // every page scores it the same (supabase/scoring-v1-12.sql). Before that
   // file is run this simply doesn't save — never an error for the owner.
   await setGbpScoringCounts(admin, businessId, counts);
-  return { status: "ok", counts };
+  const updated = fetched.reviews.map((r) => r.updateTime).filter((u): u is string => typeof u === "string");
+  return {
+    status: "ok",
+    counts,
+    reviewTimes: { createTimes: fetched.reviews.map((r) => r.createTime).filter((c): c is string => typeof c === "string"), oldestUpdateTime: updated.length ? updated[updated.length - 1] : null, capped: fetched.capped },
+  };
 }
 
 /** The owner's own reply counts for scoring (null clears them: disconnect,

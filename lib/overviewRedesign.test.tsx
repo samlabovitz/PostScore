@@ -389,6 +389,30 @@ describe("since your last scan (replaces the two change sections)", () => {
     expect(html).not.toContain("aren&#x27;t compared across a scoring update");
   });
 
+  test("review count / rating: unconnected owners see only that it changed, with today's value, and how to get exact counts (EN + ES)", () => {
+    const prev = snap({ created_at: "2026-10-08T15:00:00Z", profile_snapshot_json: { phone: "1", website: "w", openingHours: null, categories: null, photoCount: 10, rating: 4.7, reviewCount: 55, businessStatus: "OPERATIONAL" } });
+    const html = card([snap({}), prev]);
+    expect(html).toContain("Review count changed · now 58");
+    expect(html).toContain("Rating changed · now 4.8★");
+    // Never an amount or a guessed minimum.
+    const text = html.replace(/<[^>]*>/g, " ");
+    expect(text).not.toMatch(/3 new reviews|\+3|4\.7/);
+    expect(html).toMatch(/data-testid="since-connect-for-reviews"[^>]*href="\/business\/b\/connect-gbp"|href="\/business\/b\/connect-gbp"[^>]*data-testid="since-connect-for-reviews"/);
+    expect(html).toContain("Connect Google to see exactly how many new reviews you got");
+    const es = card([snap({}), prev], "es");
+    expect(es).toContain("El número de reseñas cambió · ahora 58");
+    expect(es).toContain("La calificación cambió · ahora 4.8★");
+    expect(es).toContain("Conecte Google para ver exactamente cuántas reseñas nuevas recibió");
+  });
+
+  test("connected owners: the exact new-review count, no connect hint; no review change → no hint", () => {
+    const prev = snap({ created_at: "2026-10-08T15:00:00Z", profile_snapshot_json: { phone: "1", website: "w", openingHours: null, categories: null, photoCount: 10, rating: 4.8, reviewCount: 55, businessStatus: "OPERATIONAL" } });
+    const connected = render(<SinceLastScanCard businessId="b" snapshots={[snap({}), prev]} liveBreakdown={breakdown} gbpConnected />, "en");
+    expect(connected).toContain("3 new reviews");
+    expect(connected).not.toContain("since-connect-for-reviews");
+    expect(card([snap({}), snap({ profile_snapshot_json: { phone: null, website: "w", openingHours: null, categories: null, photoCount: 10, rating: 4.8, reviewCount: 58, businessStatus: "OPERATIONAL" } })])).not.toContain("since-connect-for-reviews");
+  });
+
   test("nothing changed / first scan / Spanish", () => {
     const same = card([snap({}), snap({})]);
     expect(same).toContain("Nothing changed on your listing since your last scan.");
@@ -538,7 +562,7 @@ describe("Overview layout and scan history (GBP card tweaks)", () => {
     const view = fs.readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8");
     expect(view).toContain(`<div data-testid="overview-recs-row" className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <TopRecommendations businessId={businessId} recommendations={recommendations?.slice(0, TOP_RECOMMENDATIONS) ?? null} />
-        <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} />
+        <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} gbpConnected={gbpConnected} />
       </div>`);
     // PostStudio keeps its own row.
     expect(view).toMatch(/\n      <StudioComingSoon businessId=\{businessId\} \/>\n/);

@@ -180,7 +180,8 @@ describe("collected from Place Details only — competitors never", () => {
     expect(lose).not.toContain("deleteGoogleData");
     // The reply check runs before the score is saved, so the score uses fresh counts.
     const scoring = fs.readFileSync("app/actions/scoring.ts", "utf8");
-    expect(scoring.indexOf("await runGbpReplyCheck(businessId);")).toBeLessThan(scoring.indexOf("const scoreResult = await saveScoreSnapshotWithClient(supabase, businessId);"));
+    expect(scoring.indexOf("await runGbpReplyCheck(businessId);")).toBeGreaterThan(-1);
+    expect(scoring.indexOf("await runGbpReplyCheck(businessId);")).toBeLessThan(scoring.indexOf("const scoreResult = await saveScoreSnapshotWithClient(supabase, businessId,"));
     expect(fs.readFileSync("supabase/scoring-v1-12.sql", "utf8")).toContain("add column if not exists gbp_replied integer");
   });
 });

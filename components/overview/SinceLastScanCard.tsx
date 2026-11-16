@@ -63,8 +63,12 @@ export function SinceLastScanCard({
   businessId,
   snapshots,
   liveBreakdown,
+  gbpConnected = false,
 }: {
   businessId: string;
+  /** Connected owners get exact new-review counts from Business Profile;
+   * others see "Review count changed" and how to get them. */
+  gbpConnected?: boolean;
   /** Newest first — the two most recent saved scans. */
   snapshots: ScoreSnapshot[];
   liveBreakdown: ScoreBreakdown;
@@ -110,7 +114,7 @@ export function SinceLastScanCard({
 
         <div className="flex flex-col gap-2">
           <SubHeading>{t(locale, "dashboard.overview.sinceCard.listingHeading")}</SubHeading>
-          <ListingChanges current={current} previous={previous} />
+          <ListingChanges businessId={businessId} current={current} previous={previous} gbpConnected={gbpConnected} />
         </div>
 
         {/* A scoring-version change has no point-for-point comparison;
@@ -192,25 +196,44 @@ function ScoreBeforeAfter({ current, previous, timeZone }: { current: ScoreSnaps
   );
 }
 
-function ListingChanges({ current, previous }: { current: ScoreSnapshot; previous: ScoreSnapshot }) {
+/** A rating, or (without Business Profile) a review count, says only that
+ * it changed, with the current value — never an amount we can't know
+ * exactly once Google's old values aren't kept. */
+function listingChangeText(change: ProfileChange, current: ProfileSnapshot, gbpConnected: boolean, locale: ReturnType<typeof useLocale>): string {
+  const now = (value: string) => ` · ${t(locale, "dashboard.overview.sinceCard.nowValue", { value })}`;
+  if (change.field === "rating") return t(locale, "content.listingChange.rating.changed") + (current.rating !== null ? now(`${current.rating.toFixed(1)}★`) : "");
+  if (change.field === "reviews" && !gbpConnected) return t(locale, "content.listingChange.reviews.changed") + (current.reviewCount !== null ? now(String(current.reviewCount)) : "");
+  return change.description;
+}
+
+function ListingChanges({ businessId, current, previous, gbpConnected }: { businessId: string; current: ScoreSnapshot; previous: ScoreSnapshot; gbpConnected: boolean }) {
   const locale = useLocale();
   if (!current.profile_snapshot_json || !previous.profile_snapshot_json) {
     return <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.overview.predatesListingTracking")}</p>;
   }
-  const changes = diffProfileSnapshots(previous.profile_snapshot_json as ProfileSnapshot, current.profile_snapshot_json as ProfileSnapshot, locale);
+  const now = current.profile_snapshot_json as ProfileSnapshot;
+  const changes = diffProfileSnapshots(previous.profile_snapshot_json as ProfileSnapshot, now, locale);
   if (changes.length === 0) return <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.overview.nothingChangedOnListing")}</p>;
   return (
-    <ul className="flex flex-wrap gap-1.5">
-      {changes.map((change) => {
-        const Icon = FIELD_ICON[change.field];
-        return (
-          <li key={change.field} className="inline-flex max-w-full items-start gap-1.5 rounded-lg border border-paper-deep bg-paper px-2.5 py-1.5 text-[12.5px] leading-snug text-ink">
-            <Icon size={14} className="mt-0.5 shrink-0 text-brass" aria-hidden />
-            <span>{change.description}</span>
-          </li>
-        );
-      })}
-    </ul>
+    <>
+      <ul className="flex flex-wrap gap-1.5">
+        {changes.map((change) => {
+          const Icon = FIELD_ICON[change.field];
+          return (
+            <li key={change.field} className="inline-flex max-w-full items-start gap-1.5 rounded-lg border border-paper-deep bg-paper px-2.5 py-1.5 text-[12.5px] leading-snug text-ink">
+              <Icon size={14} className="mt-0.5 shrink-0 text-brass" aria-hidden />
+              <span>{listingChangeText(change, now, gbpConnected, locale)}</span>
+            </li>
+          );
+        })}
+      </ul>
+      {!gbpConnected && changes.some((c) => c.field === "reviews") && (
+        <Link href={`/business/${businessId}/connect-gbp`} data-testid="since-connect-for-reviews" className="inline-flex w-fit items-center gap-1 text-[12.5px] font-medium text-ink-soft hover:text-brass">
+          {t(locale, "dashboard.overview.sinceCard.connectForReviews")}
+          <IconArrowRight size={13} aria-hidden />
+        </Link>
+      )}
+    </>
   );
 }
 

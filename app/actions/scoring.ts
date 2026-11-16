@@ -24,6 +24,7 @@ import { reconcileTasks, type TaskRow } from "@/lib/actionPlan";
 import { buildProfileSnapshot, diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
 import { lookupBusinessByPlaceId, type OpeningHoursPeriod } from "@/lib/google/places";
 import type { PlacesDetailsKind } from "@/lib/placesDetailsBudget";
+import type { GbpReviewTimes } from "@/lib/scanChanges";
 import { saveBusinessWithClient } from "@/app/actions/businesses";
 import { DEFAULT_LOCALE, normalizeLocale, t, type Locale } from "@/lib/i18n";
 import { findLastKnownWebsiteDate, resolveListingWebsite } from "@/lib/googleListingWebsite";
@@ -194,11 +195,14 @@ export async function saveScoreSnapshotWithClient(
   supabase: SupabaseClient,
   businessId: string,
   /** "website_recheck" marks a website-only re-check (app/actions/websiteRecheck.ts). */
-  scanKind?: ScanKind
+  scanKind?: ScanKind,
+  /** A connected owner's review dates, read by this scan (rescanBusinessWithClient). */
+  options: { gbpReviews?: GbpReviewTimes | null } = {}
 ): Promise<SaveScoreSnapshotResult> {
   const scored = await scoreBusinessWithClient(supabase, businessId);
   if (scored.status !== "ok") return scored;
   const breakdownJson: ScoreBreakdown = scanKind && scanKind !== "full" ? { ...scored.result.breakdown, scanKind } : scored.result.breakdown;
+  const snapshot = buildProfileSnapshot(scored.business);
 
   const { data, error } = await supabase
     .from("scores")
@@ -208,13 +212,24 @@ export async function saveScoreSnapshotWithClient(
       grade: scored.result.breakdown.grade,
       breakdown_json: breakdownJson,
       scoring_version: scored.result.breakdown.scoringVersion,
-      profile_snapshot_json: buildProfileSnapshot(scored.business),
+      profile_snapshot_json: snapshot,
     })
     .select("id")
     .single();
 
   if (error || !data) {
     return { status: "error", message: error?.message ?? "Could not save this scan." };
+  }
+
+  // Our own record of what changed since the last scan, and this scan's
+  // fingerprints (lib/scanChanges.server.ts). Never fails the scan.
+  try {
+    // Written by the server: the score row above was saved under the
+    // owner's own access, and owners can't update a saved score.
+    const [{ recordScanChanges }, { createAdminClient }] = await Promise.all([import("@/lib/scanChanges.server"), import("@/lib/supabase/admin")]);
+    await recordScanChanges(createAdminClient(), businessId, data.id, snapshot, { gbpReviews: options.gbpReviews });
+  } catch (err) {
+    console.error(`[scan-changes] not recorded for ${businessId}:`, err instanceof Error ? err.message : err);
   }
 
   // A scoring update (scripts/rescore-all.ts) re-scores saved data — it
@@ -635,7 +650,7 @@ export async function rescanBusinessWithClient(
   // score, which (v1.12.0) uses them. Never fails the scan. Loaded here:
   // it's server-only.
   const { runGbpReplyCheck } = await import("@/lib/gbpReplyCounts.server");
-  await runGbpReplyCheck(businessId);
+  const replyCheck = await runGbpReplyCheck(businessId);
   // Photos and posts on the listing (summaries only); never fails the scan.
   const [{ refreshPhotosAndPosts }, { createAdminClient }] = await Promise.all([import("@/lib/gbpMediaPosts.server"), import("@/lib/supabase/admin")]);
   await refreshPhotosAndPosts(createAdminClient(), businessId).catch(() => undefined);
@@ -643,7 +658,8 @@ export async function rescanBusinessWithClient(
   const { checkGoogleEdits } = await import("@/lib/gbpGoogleEdits.server");
   await checkGoogleEdits(createAdminClient(), businessId).catch(() => undefined);
 
-  const scoreResult = await saveScoreSnapshotWithClient(supabase, businessId);
+  // Their own reviews, just read: exactly how many are new since the last scan.
+  const scoreResult = await saveScoreSnapshotWithClient(supabase, businessId, undefined, { gbpReviews: replyCheck.status === "ok" ? replyCheck.reviewTimes : null });
   if (scoreResult.status !== "saved") {
     return scoreResult;
   }

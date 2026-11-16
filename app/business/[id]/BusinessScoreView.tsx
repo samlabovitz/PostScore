@@ -323,7 +323,7 @@ export function BusinessScoreView({
           PostAI" button on every page (components/assistant/PostAIDock.tsx). */}
       <div data-testid="overview-recs-row" className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <TopRecommendations businessId={businessId} recommendations={recommendations?.slice(0, TOP_RECOMMENDATIONS) ?? null} />
-        <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} />
+        <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} gbpConnected={gbpConnected} />
       </div>
 
       <ScoreBreakdownPanel

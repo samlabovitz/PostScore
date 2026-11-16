@@ -2513,6 +2513,8 @@ export type MessageKey =
   | "content.listingChange.photos.crossedCapDown"
   | "content.listingChange.rating.rose"
   | "content.listingChange.rating.dropped"
+  | "content.listingChange.rating.changed"
+  | "content.listingChange.reviews.changed"
   | "content.listingChange.reviews.gained.one"
   | "content.listingChange.reviews.gained.other"
   | "content.listingChange.reviews.lost"
@@ -4823,6 +4825,8 @@ export type MessageKey =
   | "dashboard.overview.sinceCard.listingHeading"
   | "dashboard.overview.sinceCard.checksHeading"
   | "dashboard.overview.sinceCard.reportsLink"
+  | "dashboard.overview.sinceCard.nowValue"
+  | "dashboard.overview.sinceCard.connectForReviews"
   | "dashboard.overview.sinceCard.moreChanges.one"
   | "dashboard.overview.recs.pending"
   | "dashboard.overview.sinceCard.moreChanges.other"
@@ -8467,6 +8471,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.listingChange.photos.crossedCapDown": "Fewer than {cap} photos now.",
     "content.listingChange.rating.rose": "Your rating rose from {previous}★ to {current}★.",
     "content.listingChange.rating.dropped": "Your rating dropped from {previous}★ to {current}★.",
+    "content.listingChange.rating.changed": "Rating changed",
+    "content.listingChange.reviews.changed": "Review count changed",
     "content.listingChange.reviews.gained.one": "{count} new review.",
     "content.listingChange.reviews.gained.other": "{count} new reviews.",
     "content.listingChange.reviews.lost": "Your review count dropped by {count}.",
@@ -11095,6 +11101,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.sinceCard.listingHeading": "On your Google listing",
     "dashboard.overview.sinceCard.checksHeading": "Checks that went up or down",
     "dashboard.overview.sinceCard.reportsLink": "See full history on Reports",
+    "dashboard.overview.sinceCard.nowValue": "now {value}",
+    "dashboard.overview.sinceCard.connectForReviews": "Connect Google to see exactly how many new reviews you got",
     "dashboard.overview.sinceCard.moreChanges.one": "+{count} more change",
     "dashboard.overview.recs.pending": "You marked this done — your next scan confirms it.",
     "dashboard.overview.sinceCard.moreChanges.other": "+{count} more changes",
@@ -14535,6 +14543,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.listingChange.photos.crossedCapDown": "Ahora tiene menos de {cap} fotos.",
     "content.listingChange.rating.rose": "Su calificación subió de {previous}★ a {current}★.",
     "content.listingChange.rating.dropped": "Su calificación bajó de {previous}★ a {current}★.",
+    "content.listingChange.rating.changed": "La calificación cambió",
+    "content.listingChange.reviews.changed": "El número de reseñas cambió",
     "content.listingChange.reviews.gained.one": "{count} reseña nueva.",
     "content.listingChange.reviews.gained.other": "{count} reseñas nuevas.",
     "content.listingChange.reviews.lost": "Su número de reseñas bajó en {count}.",
@@ -17375,6 +17385,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.sinceCard.listingHeading": "En su ficha de Google",
     "dashboard.overview.sinceCard.checksHeading": "Revisiones que subieron o bajaron",
     "dashboard.overview.sinceCard.reportsLink": "Vea el historial completo en Informes",
+    "dashboard.overview.sinceCard.nowValue": "ahora {value}",
+    "dashboard.overview.sinceCard.connectForReviews": "Conecte Google para ver exactamente cuántas reseñas nuevas recibió",
     "dashboard.overview.sinceCard.moreChanges.one": "+{count} cambio más",
     "dashboard.overview.recs.pending": "Usted lo marcó como hecho; su próximo análisis lo confirmará.",
     "dashboard.overview.sinceCard.moreChanges.other": "+{count} cambios más",
