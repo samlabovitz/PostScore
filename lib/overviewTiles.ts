@@ -6,7 +6,7 @@
 import { isScoringUpdate } from "@/lib/websiteRecheckPolicy";
 import { checkOutcome } from "@/components/scoring/CategoryCard";
 import type { ActionPlanTask, WebsiteBanner } from "@/lib/actionPlan";
-import type { ProfileSnapshot } from "@/lib/profileChanges";
+import { reviewCountChangeOf, type ReviewCountChange, type ScanChangeSummary } from "@/lib/scanChanges";
 import { resolveLinkTarget, type LinkOptions } from "@/lib/postaiLinks";
 import type { CategoryResult, Suggestion } from "@/lib/scoring";
 import { t, type Locale, type MessageKey } from "@/lib/i18n";
@@ -63,17 +63,11 @@ export function scoreChangeSinceLastScan(history: { total: number; scoring_versi
   return { kind: "delta", delta: current.total - previous.total, ...(current.scan_kind === "google_connected" ? { google: true } : {}) };
 }
 
-/** New Google reviews between the two latest saved scans — only when
- * both scans recorded a review count (older scans predate the listing
- * snapshot and are never guessed as "no change"). */
-export function reviewCountChange(
-  snapshots: { profile_snapshot_json: ProfileSnapshot | null }[]
-): number | null {
-  if (snapshots.length < 2) return null;
-  const now = snapshots[0].profile_snapshot_json?.reviewCount;
-  const before = snapshots[1].profile_snapshot_json?.reviewCount;
-  if (typeof now !== "number" || typeof before !== "number") return null;
-  return now - before;
+/** The review count since the previous saved scan, from our own change
+ * records: an exact number of new reviews (Business Profile), "changed",
+ * none — or null when the two scans couldn't be compared (never guessed). */
+export function reviewCountChange(snapshots: { listing_changes?: ScanChangeSummary }[]): ReviewCountChange {
+  return snapshots[0]?.listing_changes ? reviewCountChangeOf(snapshots[0].listing_changes) : null;
 }
 
 // ---------------------------------------------------------------------------

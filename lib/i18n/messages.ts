@@ -1069,6 +1069,8 @@ export type MessageKey =
   | "report.fragment.reviewsLost.other"
   | "report.fragment.ratingRose"
   | "report.fragment.ratingDropped"
+  | "report.fragment.ratingChanged"
+  | "report.fragment.reviewsChanged"
   | "report.fragment.competitorUp"
   | "report.fragment.competitorDown"
   | "report.fragment.listingChanges.one"
@@ -2505,6 +2507,8 @@ export type MessageKey =
   | "content.listingChange.categories.addedPart"
   | "content.listingChange.categories.removedPart"
   | "content.listingChange.categories.changed"
+  | "content.listingChange.categories.changedPlain"
+  | "content.listingChange.photos.changed"
   | "content.listingChange.photos.added.one"
   | "content.listingChange.photos.added.other"
   | "content.listingChange.photos.removed.one"
@@ -2522,6 +2526,7 @@ export type MessageKey =
   | "content.listingChange.status.closedTemporarily"
   | "content.listingChange.status.closedPermanently"
   | "content.listingChange.status.changed"
+  | "content.listingChange.status.changedPlain"
   // --- Shared content layer: action-plan task copy (lib/actionPlan.ts's
   // ACTION_PLAN_COPY/FALLBACK_COPY). Keyed by each check's own stable id,
   // same convention as content.checks.* above. Rendered by
@@ -4633,6 +4638,7 @@ export type MessageKey =
   | "dashboard.overview.header.viewLiveSite"
   | "dashboard.overview.scoreCard.scoringUpdated"
   | "dashboard.overview.tiles.reviewsSinceLastScan"
+  | "dashboard.overview.tiles.reviewsChangedSinceLastScan"
   | "dashboard.overview.tiles.noNewReviews"
   | "dashboard.overview.tiles.noWebsite"
   | "dashboard.overview.tiles.fixes.one"
@@ -5086,6 +5092,7 @@ export type MessageKey =
   | "dashboard.reports.pdf.rating"
   | "dashboard.reports.pdf.reviewCount"
   | "dashboard.reports.pdf.reviewChange"
+  | "dashboard.reports.pdf.reviewChanged"
   | "dashboard.reports.pdf.nearbyAverage"
   | "dashboard.reports.pdf.footer"
   | "dashboard.reports.pdf.download"
@@ -5528,6 +5535,7 @@ export type MessageKey =
   | "dashboard.reports.weekly.firstScanChanges"
   | "dashboard.reports.weekly.categoryMove"
   | "dashboard.reports.weekly.reviewsMove"
+  | "dashboard.reports.weekly.reviewsChanged"
   | "dashboard.reports.weekly.nothingMoved"
   | "dashboard.reports.weekly.verifiedHeading"
   | "dashboard.reports.weekly.statFixes"
@@ -5558,9 +5566,11 @@ export type MessageKey =
   | "dashboard.visit.fixes"
   | "dashboard.visit.reviews"
   | "dashboard.visit.newReviews"
+  | "dashboard.visit.reviewsChanged"
   | "dashboard.visit.noNewReviews"
   | "dashboard.visit.fewerReviews"
   | "dashboard.visit.ratingMove"
+  | "dashboard.visit.ratingChanged"
   | "dashboard.visit.nextSteps"
   | "dashboard.visit.downloadWeekly"
   | "dashboard.visit.gotIt"
@@ -6899,6 +6909,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "report.fragment.reviewsLost.other": "you lost {count} reviews",
     "report.fragment.ratingRose": "your rating rose to {value}★",
     "report.fragment.ratingDropped": "your rating dropped to {value}★",
+    "report.fragment.ratingChanged": "your rating changed (now {value}★)",
+    "report.fragment.reviewsChanged": "your review count changed",
     "report.fragment.competitorUp": "you moved up to #{rank} of {total}",
     "report.fragment.competitorDown": "you moved down to #{rank} of {total}",
     "report.fragment.listingChanges.one": "there was {count} listing change",
@@ -8463,6 +8475,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.listingChange.categories.addedPart": "added {list}",
     "content.listingChange.categories.removedPart": "removed {list}",
     "content.listingChange.categories.changed": "Your categories changed — {parts}.",
+    "content.listingChange.categories.changedPlain": "Your categories changed.",
+    "content.listingChange.photos.changed": "Your photo count changed.",
     "content.listingChange.photos.added.one": "{count} photo added.",
     "content.listingChange.photos.added.other": "{count} photos added.",
     "content.listingChange.photos.removed.one": "A photo was removed.",
@@ -8480,6 +8494,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.listingChange.status.closedTemporarily": "Temporarily closed",
     "content.listingChange.status.closedPermanently": "Permanently closed",
     "content.listingChange.status.changed": "Your listing status changed from {previous} to {current}.",
+    "content.listingChange.status.changedPlain": "Your listing status changed.",
 
     // --- content.actionPlan.* — lib/actionPlan.ts's ACTION_PLAN_COPY/FALLBACK_COPY.
     "content.actionPlan.visibility.rating.why":
@@ -10909,6 +10924,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.header.viewLiveSite": "View live site",
     "dashboard.overview.scoreCard.scoringUpdated": "PostScore updated how it scores",
     "dashboard.overview.tiles.reviewsSinceLastScan": "{delta} since last scan",
+    "dashboard.overview.tiles.reviewsChangedSinceLastScan": "Changed since last scan",
     "dashboard.overview.tiles.noNewReviews": "No new reviews since last scan",
     "dashboard.overview.tiles.noWebsite": "No website",
     "dashboard.overview.tiles.fixes.one": "{count} fix",
@@ -11362,6 +11378,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.pdf.rating": "Google rating",
     "dashboard.reports.pdf.reviewCount": "Google reviews",
     "dashboard.reports.pdf.reviewChange": "{change} since the previous scan",
+    "dashboard.reports.pdf.reviewChanged": "Changed since the previous scan",
     "dashboard.reports.pdf.nearbyAverage": "Nearby average: {count} reviews",
     "dashboard.reports.pdf.footer": "Scores use real public signals; items we couldn't check are marked.",
     "dashboard.reports.pdf.download": "Download report (PDF)",
@@ -11803,6 +11820,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.weekly.firstScanChanges": "Changes show from your next scan on.",
     "dashboard.reports.weekly.categoryMove": "{category}: {from} → {to} ({change})",
     "dashboard.reports.weekly.reviewsMove": "{change} reviews ({count} total)",
+    "dashboard.reports.weekly.reviewsChanged": "Review count changed ({count} total)",
     "dashboard.reports.weekly.nothingMoved": "No changes found between these two scans.",
     "dashboard.reports.weekly.verifiedHeading": "What we've verified this week",
     "dashboard.reports.weekly.statFixes": "Fixes confirmed",
@@ -11833,9 +11851,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.visit.fixes": "Fixes confirmed",
     "dashboard.visit.reviews": "Reviews",
     "dashboard.visit.newReviews": "{change} new reviews",
+    "dashboard.visit.reviewsChanged": "review count changed",
     "dashboard.visit.noNewReviews": "No new reviews",
     "dashboard.visit.fewerReviews": "{count} fewer reviews showing on Google",
     "dashboard.visit.ratingMove": "rating {from} → {to}",
+    "dashboard.visit.ratingChanged": "rating changed (now {to})",
     "dashboard.visit.nextSteps": "Your next steps",
     "dashboard.visit.downloadWeekly": "Download weekly report (PDF)",
     "dashboard.visit.gotIt": "Got it",
@@ -13084,6 +13104,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "report.fragment.reviewsLost.other": "perdió {count} reseñas",
     "report.fragment.ratingRose": "su calificación subió a {value}★",
     "report.fragment.ratingDropped": "su calificación bajó a {value}★",
+    "report.fragment.ratingChanged": "su calificación cambió (ahora {value}★)",
+    "report.fragment.reviewsChanged": "su número de reseñas cambió",
     "report.fragment.competitorUp": "subió al puesto #{rank} de {total}",
     "report.fragment.competitorDown": "bajó al puesto #{rank} de {total}",
     "report.fragment.listingChanges.one": "hubo {count} cambio en su ficha",
@@ -14535,6 +14557,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.listingChange.categories.addedPart": "se agregó {list}",
     "content.listingChange.categories.removedPart": "se eliminó {list}",
     "content.listingChange.categories.changed": "Sus categorías cambiaron — {parts}.",
+    "content.listingChange.categories.changedPlain": "Sus categorías cambiaron.",
+    "content.listingChange.photos.changed": "El número de fotos cambió.",
     "content.listingChange.photos.added.one": "{count} foto agregada.",
     "content.listingChange.photos.added.other": "{count} fotos agregadas.",
     "content.listingChange.photos.removed.one": "Se eliminó una foto.",
@@ -14552,6 +14576,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.listingChange.status.closedTemporarily": "Cerrado temporalmente",
     "content.listingChange.status.closedPermanently": "Cerrado permanentemente",
     "content.listingChange.status.changed": "El estado de su ficha cambió de {previous} a {current}.",
+    "content.listingChange.status.changedPlain": "El estado de su ficha cambió.",
 
     // --- content.actionPlan.* — lib/actionPlan.ts's ACTION_PLAN_COPY/FALLBACK_COPY.
     "content.actionPlan.visibility.rating.why":
@@ -17193,6 +17218,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.header.viewLiveSite": "Ver sitio en vivo",
     "dashboard.overview.scoreCard.scoringUpdated": "PostScore actualizó su forma de calificar",
     "dashboard.overview.tiles.reviewsSinceLastScan": "{delta} desde el último análisis",
+    "dashboard.overview.tiles.reviewsChangedSinceLastScan": "Cambió desde el último análisis",
     "dashboard.overview.tiles.noNewReviews": "Sin reseñas nuevas desde el último análisis",
     "dashboard.overview.tiles.noWebsite": "Sin sitio web",
     "dashboard.overview.tiles.fixes.one": "{count} arreglo",
@@ -17646,6 +17672,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.pdf.rating": "Calificación en Google",
     "dashboard.reports.pdf.reviewCount": "Reseñas en Google",
     "dashboard.reports.pdf.reviewChange": "{change} desde el análisis anterior",
+    "dashboard.reports.pdf.reviewChanged": "Cambió desde el análisis anterior",
     "dashboard.reports.pdf.nearbyAverage": "Promedio de la zona: {count} reseñas",
     "dashboard.reports.pdf.footer": "Las puntuaciones usan señales públicas reales; lo que no pudimos revisar está marcado.",
     "dashboard.reports.pdf.download": "Descargar informe (PDF)",
@@ -18087,6 +18114,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.weekly.firstScanChanges": "Los cambios se mostrarán a partir de su próximo escaneo.",
     "dashboard.reports.weekly.categoryMove": "{category}: {from} → {to} ({change})",
     "dashboard.reports.weekly.reviewsMove": "{change} reseñas ({count} en total)",
+    "dashboard.reports.weekly.reviewsChanged": "El número de reseñas cambió ({count} en total)",
     "dashboard.reports.weekly.nothingMoved": "No se encontraron cambios entre estos dos escaneos.",
     "dashboard.reports.weekly.verifiedHeading": "Lo que verificamos esta semana",
     "dashboard.reports.weekly.statFixes": "Arreglos confirmados",
@@ -18117,9 +18145,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.visit.fixes": "Arreglos confirmados",
     "dashboard.visit.reviews": "Reseñas",
     "dashboard.visit.newReviews": "{change} reseñas nuevas",
+    "dashboard.visit.reviewsChanged": "el número de reseñas cambió",
     "dashboard.visit.noNewReviews": "Sin reseñas nuevas",
     "dashboard.visit.fewerReviews": "{count} reseñas menos visibles en Google",
     "dashboard.visit.ratingMove": "calificación {from} → {to}",
+    "dashboard.visit.ratingChanged": "la calificación cambió (ahora {to})",
     "dashboard.visit.nextSteps": "Sus próximos pasos",
     "dashboard.visit.downloadWeekly": "Descargar informe semanal (PDF)",
     "dashboard.visit.gotIt": "Entendido",

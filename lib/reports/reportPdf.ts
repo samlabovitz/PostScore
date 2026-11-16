@@ -68,7 +68,7 @@ export interface ReportData {
   headToHead?: (HeadToHead & { noun: string }) | null;
   changes: { listing: string[]; listingUnavailable: boolean; fixesConfirmed: number };
   nextSteps: ReportNextStep[];
-  reviews: { rating: number | null; count: number | null; countChange: number | null; nearbyAverage: number | null; goalLines?: string[] };
+  reviews: { rating: number | null; count: number | null; countChange: number | null; countChanged?: boolean; nearbyAverage: number | null; goalLines?: string[] };
   /** The weekly report: same page, with the week in the header and the
    * change box comparing the week's scan with the last scan before it. */
   weekly?: WeeklyMeta;
@@ -367,6 +367,9 @@ export function layoutReport(data: ReportData, m: Measurer): PrintPage {
     const change = r.countChange > 0 ? `+${r.countChange}` : String(r.countChange);
     const line = r.countChange === 0 ? t(locale, "dashboard.reports.pdf.reviewNoChange") : t(locale, "dashboard.reports.pdf.reviewChange", { change });
     ly = para(M, ly, line, 9.5, "body", C.inkSoft, leftW, 1);
+  } else if (r.countChanged) {
+    // Without Business Profile: only that it changed, never an amount.
+    ly = para(M, ly, t(locale, "dashboard.reports.pdf.reviewChanged"), 9.5, "body", C.inkSoft, leftW, 1);
   }
   // The area average AND the goal (beat the leader) — the shared wording.
   if (r.goalLines && r.goalLines.length > 0) {

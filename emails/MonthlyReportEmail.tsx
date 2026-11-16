@@ -162,12 +162,14 @@ function scoreFragment(score: ScoreMovement, locale: Locale): string | null {
 }
 
 function reviewFragment(reviewCount: MetricResult, locale: Locale): string | null {
+  if (reviewCount.available && reviewCount.changed) return t(locale, "report.fragment.reviewsChanged");
   if (!reviewCount.available || reviewCount.delta === null || reviewCount.delta === 0) return null;
   const abs = Math.abs(reviewCount.delta);
   return tPlural(locale, reviewCount.delta > 0 ? "report.fragment.reviewsGained" : "report.fragment.reviewsLost", abs);
 }
 
 function ratingFragment(rating: MetricResult, locale: Locale): string | null {
+  if (rating.available && rating.changed) return t(locale, "report.fragment.ratingChanged", { value: rating.current.toFixed(1) });
   if (!rating.available || rating.delta === null || rating.delta === 0) return null;
   return t(locale, rating.delta > 0 ? "report.fragment.ratingRose" : "report.fragment.ratingDropped", {
     value: rating.current.toFixed(1),

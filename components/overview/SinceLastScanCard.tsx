@@ -27,7 +27,8 @@ import { IconMapPin,
 } from "@tabler/icons-react";
 import type { ScoreSnapshot } from "@/app/actions/scoring";
 import { formatPoints } from "@/components/scoring/CategoryCard";
-import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
+import type { ProfileChange } from "@/lib/profileChanges";
+import { describeScanChanges, type NowValues } from "@/lib/scanChangeText";
 import { diffBreakdowns, resolveChangeDisplay, type CheckChange } from "@/lib/scoreChanges";
 import type { ScoreBreakdown } from "@/lib/scoring";
 import { formatShortDate, t, tPlural, useLocale, useTimeZone } from "@/lib/i18n";
@@ -64,11 +65,14 @@ export function SinceLastScanCard({
   snapshots,
   liveBreakdown,
   gbpConnected = false,
+  now = {},
 }: {
   businessId: string;
   /** Connected owners get exact new-review counts from Business Profile;
    * others see "Review count changed" and how to get them. */
   gbpConnected?: boolean;
+  /** Today's rating and review count, shown next to "… changed". */
+  now?: NowValues;
   /** Newest first — the two most recent saved scans. */
   snapshots: ScoreSnapshot[];
   liveBreakdown: ScoreBreakdown;
@@ -114,7 +118,7 @@ export function SinceLastScanCard({
 
         <div className="flex flex-col gap-2">
           <SubHeading>{t(locale, "dashboard.overview.sinceCard.listingHeading")}</SubHeading>
-          <ListingChanges businessId={businessId} current={current} previous={previous} gbpConnected={gbpConnected} />
+          <ListingChanges businessId={businessId} current={current} gbpConnected={gbpConnected} now={now} />
         </div>
 
         {/* A scoring-version change has no point-for-point comparison;
@@ -196,23 +200,16 @@ function ScoreBeforeAfter({ current, previous, timeZone }: { current: ScoreSnaps
   );
 }
 
-/** A rating, or (without Business Profile) a review count, says only that
- * it changed, with the current value — never an amount we can't know
- * exactly once Google's old values aren't kept. */
-function listingChangeText(change: ProfileChange, current: ProfileSnapshot, gbpConnected: boolean, locale: ReturnType<typeof useLocale>): string {
-  const now = (value: string) => ` · ${t(locale, "dashboard.overview.sinceCard.nowValue", { value })}`;
-  if (change.field === "rating") return t(locale, "content.listingChange.rating.changed") + (current.rating !== null ? now(`${current.rating.toFixed(1)}★`) : "");
-  if (change.field === "reviews" && !gbpConnected) return t(locale, "content.listingChange.reviews.changed") + (current.reviewCount !== null ? now(String(current.reviewCount)) : "");
-  return change.description;
-}
-
-function ListingChanges({ businessId, current, previous, gbpConnected }: { businessId: string; current: ScoreSnapshot; previous: ScoreSnapshot; gbpConnected: boolean }) {
+/** What changed on the listing, from our own change records (lib/scanChanges.ts):
+ * a rating, or (without Business Profile) a review count, says only that
+ * it changed, with today's value — never an amount we can't know. */
+function ListingChanges({ businessId, current, gbpConnected, now }: { businessId: string; current: ScoreSnapshot; gbpConnected: boolean; now: NowValues }) {
   const locale = useLocale();
-  if (!current.profile_snapshot_json || !previous.profile_snapshot_json) {
+  const summary = current.listing_changes;
+  if (!summary?.available) {
     return <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.overview.predatesListingTracking")}</p>;
   }
-  const now = current.profile_snapshot_json as ProfileSnapshot;
-  const changes = diffProfileSnapshots(previous.profile_snapshot_json as ProfileSnapshot, now, locale);
+  const changes = describeScanChanges(summary.records, locale, now);
   if (changes.length === 0) return <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.overview.nothingChangedOnListing")}</p>;
   return (
     <>
@@ -222,7 +219,7 @@ function ListingChanges({ businessId, current, previous, gbpConnected }: { busin
           return (
             <li key={change.field} className="inline-flex max-w-full items-start gap-1.5 rounded-lg border border-paper-deep bg-paper px-2.5 py-1.5 text-[12.5px] leading-snug text-ink">
               <Icon size={14} className="mt-0.5 shrink-0 text-brass" aria-hidden />
-              <span>{listingChangeText(change, now, gbpConnected, locale)}</span>
+              <span>{change.description}</span>
             </li>
           );
         })}

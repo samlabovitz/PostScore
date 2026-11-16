@@ -1,11 +1,14 @@
 import { describe, expect, test } from "vitest";
 import {
   buildMonthlyReportContent,
+  EMPTY_REPORT_EXTRAS,
   type CompetitorDelta,
   type MonthlyReportFocusInputs,
   type MonthlyReportScoreRow,
+  type ReportExtras,
 } from "./monthlyReport";
 import type { ProfileSnapshot } from "./profileChanges";
+import type { ScanChangeRecord } from "./scanChanges";
 import { scoreBusiness, type BusinessScoringInput } from "./scoring";
 
 const BASE_SNAPSHOT: ProfileSnapshot = {
@@ -138,6 +141,11 @@ describe("buildMonthlyReportContent — first-ever report (no baseline)", () => 
   });
 });
 
+/** What changed since the baseline: our own change records (lib/scanChanges.ts). */
+const since = (records: ScanChangeRecord[], available = true): ReportExtras => ({ ...EMPTY_REPORT_EXTRAS, listingChanges: { available, records } });
+const build = (baseline: Parameters<typeof buildMonthlyReportContent>[0], current: Parameters<typeof buildMonthlyReportContent>[1], delta: CompetitorDelta | null, extras: ReportExtras) =>
+  buildMonthlyReportContent(baseline, current, delta, null, "en", undefined, true, extras);
+
 describe("buildMonthlyReportContent — real deltas", () => {
   test("reports genuine improvement across every dimension, never softened or inflated", () => {
     const baseline = scoreRow({
@@ -162,7 +170,13 @@ describe("buildMonthlyReportContent — real deltas", () => {
       current: { rank: 2, totalCompetitors: 12, topCompetitorReviewCount: 120 },
     };
 
-    const report = buildMonthlyReportContent(baseline, current, competitorDelta);
+    // A connected owner: 15 new reviews counted from Business Profile; the
+    // rating only "changed" (decided Nov 16: never an amount we can't keep knowing).
+    const report = build(baseline, current, competitorDelta, since([
+      { field: "photos", direction: "up", delta: 3 },
+      { field: "rating", direction: "changed", delta: null },
+      { field: "reviews", direction: "up", delta: 15 },
+    ]));
 
     expect(report.kind).toBe("update");
     expect(report.isSteady).toBe(false);
@@ -174,8 +188,8 @@ describe("buildMonthlyReportContent — real deltas", () => {
       gradeChanged: true,
     });
 
-    expect(report.rating).toEqual({ available: true, current: 4.6, previous: 4.2, delta: 0.4 });
-    expect(report.reviewCount).toEqual({ available: true, current: 75, previous: 60, delta: 15 });
+    expect(report.rating).toEqual({ available: true, current: 4.6, previous: null, delta: null, changed: true });
+    expect(report.reviewCount).toEqual({ available: true, current: 75, previous: null, delta: 15 });
 
     expect(report.competitor).toEqual({
       available: true,
@@ -193,7 +207,8 @@ describe("buildMonthlyReportContent — real deltas", () => {
     }
 
     expect(report.summary).toContain("rose 14 points to 84 (B)");
-    expect(report.summary).toContain("rating rose to 4.6★");
+    expect(report.summary).toContain("rating changed (now 4.6★)");
+    expect(report.summary).not.toContain("4.2");
     expect(report.summary).toContain("15 new reviews");
     expect(report.summary).toContain("moved up to #2 of 12");
     expect(report.summary).toContain("listing change");
@@ -207,16 +222,22 @@ describe("buildMonthlyReportContent — real deltas", () => {
       current: { rank: 6, totalCompetitors: 10, topCompetitorReviewCount: 140 },
     };
 
-    const report = buildMonthlyReportContent(baseline, current, competitorDelta);
+    // Not connected: the rating and review count say only that they changed.
+    const report = build(baseline, current, competitorDelta, since([
+      { field: "rating", direction: "changed", delta: null },
+      { field: "reviews", direction: "changed", delta: null },
+    ]));
 
     expect(report.score.scoreDelta).toBe(-14);
-    expect(report.rating).toMatchObject({ delta: -0.4 });
-    expect(report.reviewCount).toMatchObject({ delta: -5 });
+    expect(report.rating).toMatchObject({ delta: null, changed: true });
+    expect(report.reviewCount).toMatchObject({ delta: null, changed: true });
     expect(report.competitor).toMatchObject({ rankDelta: -4 });
+    expect(report.isSteady).toBe(false);
 
     expect(report.summary).toContain("dropped 14 points to 74 (C)");
-    expect(report.summary).toContain("rating dropped to 4.3★");
-    expect(report.summary).toContain("review count dropped by 5");
+    expect(report.summary).toContain("rating changed (now 4.3★)");
+    expect(report.summary).toContain("review count changed");
+    expect(report.summary).not.toMatch(/dropped by 5|4\.7/);
     expect(report.summary).toContain("moved down to #6 of 10");
   });
 });
@@ -230,7 +251,7 @@ describe("buildMonthlyReportContent — quiet/steady month", () => {
       current: { rank: 3, totalCompetitors: 9, topCompetitorReviewCount: null },
     };
 
-    const report = buildMonthlyReportContent(baseline, current, competitorDelta);
+    const report = build(baseline, current, competitorDelta, since([]));
 
     expect(report.isSteady).toBe(true);
     expect(report.score.scoreDelta).toBe(0);
@@ -266,11 +287,11 @@ describe("buildMonthlyReportContent — missing competitor data", () => {
     const baseline = scoreRow({ total: 70, profileSnapshot: { ...BASE_SNAPSHOT, rating: 4.0 } });
     const current = scoreRow({ total: 80, profileSnapshot: { ...BASE_SNAPSHOT, rating: 4.5 } });
 
-    const report = buildMonthlyReportContent(baseline, current, null);
+    const report = build(baseline, current, null, since([{ field: "rating", direction: "changed", delta: null }]));
 
     expect(report.competitor).toEqual({ available: false });
     expect(report.score.scoreDelta).toBe(10);
-    expect(report.rating).toMatchObject({ delta: 0.5 });
+    expect(report.rating).toMatchObject({ changed: true });
     // Never a fabricated rank, never the word "competitor" in the summary
     // when we have nothing real to say about it.
     expect(report.summary).not.toMatch(/#\d+ of \d+/);

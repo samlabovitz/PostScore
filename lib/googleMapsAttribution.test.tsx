@@ -78,7 +78,7 @@ describe("placed next to Places data shown without a map", () => {
     // Growth: the listing tasks and the Google profile panel.
     expect(src("app/business/[id]/ActionPlanSection.tsx")).toContain("{tasks.some(showsListingData) ? (");
     expect(uses("components/gbp/GoogleProfilePanel.tsx")).toBe(1);
-    expect(src("components/visits/SinceLastVisit.tsx")).toContain('{(data.rank || data.reviews.countChange !== null) && <GoogleMapsAttribution className="mt-0" />}');
+    expect(src("components/visits/SinceLastVisit.tsx")).toContain('{(data.rank || data.reviews.countChange !== null || data.reviews.countChanged) && <GoogleMapsAttribution className="mt-0" />}');
   });
 
   test("never squeezed: no negative margins eating the clear space", () => {

@@ -125,7 +125,8 @@ describe("Since your last visit", () => {
     categories: [{ id: "listing", before: 80, after: 86 }],
     rank: { now: 3, then: 5, of: 11 },
     fixesConfirmed: 2,
-    reviews: { count: 104, countChange: 4, rating: 4.7, ratingChange: 0.1 },
+    // A connected owner: 4 new reviews from Business Profile; the rating only "changed".
+    reviews: { count: 104, countChange: 4, rating: 4.7, ratingChange: null, ratingChanged: true },
     nextSteps: [{ title: "Add 5 photos", detail: "", points: "+3 pts" }],
     rescan: { allowed: true, nextAvailableAt: null },
   };
@@ -134,8 +135,16 @@ describe("Since your last visit", () => {
     expect(t).toContain("Since Oct 2, 2026: 66 → 71 (+5)");
     expect(t).toContain("80 → 86");
     expect(t).toContain("#3 / 11 (was #5)");
-    expect(t).toContain("+4 new reviews · rating 4.6 → 4.7");
+    expect(t).toContain("+4 new reviews · rating changed (now 4.7)");
+    expect(t).not.toContain("4.6");
     expect(t).toContain("Add 5 photos");
+  });
+  test("without Business Profile: 'review count changed', never an amount (EN + ES)", () => {
+    const data = { ...DATA, reviews: { count: 104, countChange: null, countChanged: true, rating: 4.7, ratingChange: null, ratingChanged: false } };
+    const t = text(wrap(<SinceLastVisitBody businessId="b1" data={data} />));
+    expect(t).toContain("Reviews review count changed");
+    expect(t).not.toMatch(/\+\d+ new reviews/);
+    expect(text(wrap(<SinceLastVisitBody businessId="b1" data={data} />, "es"))).toContain("el número de reseñas cambió");
   });
   test("no new scan: says so (never 'no change') and offers a fresh scan, or the next time one is allowed", () => {
     const t = text(wrap(<SinceLastVisitBody businessId="b1" data={{ ...DATA, noNewScan: true }} />));

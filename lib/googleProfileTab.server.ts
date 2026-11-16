@@ -7,7 +7,9 @@ import "server-only";
 // failed read leaves its part empty, never a guess.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { diffProfileSnapshots, type ProfileSnapshot } from "@/lib/profileChanges";
+import type { ProfileSnapshot } from "@/lib/profileChanges";
+import { changesAcross } from "@/lib/scanChanges";
+import { FP_KEY_COLUMN, loadScanChangeRecords } from "@/lib/scanChanges.server";
 import { loadGoogleEdits } from "@/lib/gbpGoogleEdits.server";
 import {
   changedByOthers,
@@ -45,7 +47,7 @@ export async function loadGoogleTabSaved(db: SupabaseClient, businessId: string,
     db.from("gbp_review_reply_log").select("action, status, created_at").eq("business_id", businessId).gte("created_at", since).limit(1000),
     db.from("promos").select("active, expiry, created_at").eq("business_id", businessId).limit(200),
     db.from("referrals").select("created_at").eq("business_id", businessId).gte("created_at", since).limit(200),
-    db.from("scores").select("created_at, profile_snapshot_json").eq("business_id", businessId).not("profile_snapshot_json", "is", null).order("created_at", { ascending: false }).limit(2),
+    db.from("scores").select(`id, created_at, profile_snapshot_json, ${FP_KEY_COLUMN}`).eq("business_id", businessId).order("created_at", { ascending: false }).limit(2),
     // Changes by anyone else: ALWAYS the real Google check, even in practice mode.
     loadGoogleEdits(db, businessId, false).catch(() => null),
   ]);
@@ -61,14 +63,23 @@ export async function loadGoogleTabSaved(db: SupabaseClient, businessId: string,
   const referralRows = ((referrals.error ? [] : referrals.data) ?? []) as Array<{ created_at: string }>;
   const campaigns = promoRows.filter((p) => inMonth(p.created_at)).length + referralRows.filter((r) => inMonth(r.created_at)).length;
 
-  const scanRows = ((scans.error ? [] : scans.data) ?? []) as Array<{ created_at: string; profile_snapshot_json: ProfileSnapshot | null }>;
+  const scanRows = ((scans.error ? [] : scans.data) ?? []) as unknown as Array<{ id: string; created_at: string; profile_snapshot_json: ProfileSnapshot | null; fp_key: string | null }>;
   let others: GoogleTabSaved["others"] = null;
   const [to, from] = scanRows;
-  if (to?.profile_snapshot_json && from?.profile_snapshot_json) {
+  // Which fields changed between the two latest scans: our own change
+  // records (lib/scanChanges.ts). Google's before/after values still come
+  // from the saved snapshots while they exist (read live from 2c-4).
+  const summary = to && from ? changesAcross([{ id: from.id, fpKey: from.fp_key ?? null }, { id: to.id, fpKey: to.fp_key ?? null }], await loadScanChangeRecords(db, [to.id])) : null;
+  if (to && from && summary?.available) {
     const watched = new Set<WatchedField>(WATCHED_FIELDS);
-    const fields = Array.from(new Set(diffProfileSnapshots(from.profile_snapshot_json, to.profile_snapshot_json, "en").map((c) => c.field))).filter((f): f is WatchedField => watched.has(f as WatchedField));
+    const fields = Array.from(new Set(summary.records.map((c) => c.field))).filter((f): f is WatchedField => watched.has(f as WatchedField));
     const theirs = changedByOthers(fields, rows, from.created_at, to.created_at);
-    others = { fields: theirs, since: from.created_at, at: to.created_at, changes: watchedChanges(from.profile_snapshot_json, to.profile_snapshot_json, theirs) };
+    others = {
+      fields: theirs,
+      since: from.created_at,
+      at: to.created_at,
+      changes: from.profile_snapshot_json && to.profile_snapshot_json ? watchedChanges(from.profile_snapshot_json, to.profile_snapshot_json, theirs) : [],
+    };
   }
 
   return {

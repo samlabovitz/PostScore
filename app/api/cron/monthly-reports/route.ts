@@ -75,6 +75,7 @@ import {
   V112_SCORING_COLUMNS,
 } from "@/lib/scoring";
 import { buildProfileSnapshot } from "@/lib/profileChanges";
+import { scanChangesBetweenScores } from "@/lib/scanChanges.server";
 import { buildActionPlan, mergeReviewTasks, type TaskRow } from "@/lib/actionPlan";
 import { orderByUrgency, urgentIssues } from "@/lib/urgency";
 import { resolveBizProfile } from "@/config/bizProfiles";
@@ -810,7 +811,11 @@ export async function processBusiness(
     locale,
     focusInputs,
     hasSavedCompetitorScan,
-    buildReportExtras(scoringInput, currentForDisplay.breakdown)
+    {
+      ...buildReportExtras(scoringInput, currentForDisplay.breakdown),
+      // Since the last report: our own change records (lib/scanChanges.ts).
+      ...(baselineRow ? { listingChanges: await scanChangesBetweenScores(supabase, businessId, baselineRow.id, currentForDisplay.id) } : {}),
+    }
   );
   const businessName = freshBusiness.name ?? "Your business";
   // A real, working unsubscribe link — app/unsubscribe/page.tsx validates

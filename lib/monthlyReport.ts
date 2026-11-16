@@ -16,7 +16,9 @@
 
 import type { HeadToHead } from "@/lib/competitorComparison";
 import type { Closure } from "@/lib/businessStatus";
-import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "./profileChanges";
+import type { ProfileChange, ProfileSnapshot } from "./profileChanges";
+import { ratingChangedOf, reviewCountChangeOf, type ReviewCountChange, type ScanChangeSummary } from "./scanChanges";
+import { describeScanChanges } from "./scanChangeText";
 import { generateSuggestions, type Grade, type ScoreBreakdown } from "./scoring";
 import { growthMoveOverlapsScore } from "./assistant";
 import type { GrowthMoveId } from "./growthMoves";
@@ -100,6 +102,10 @@ export interface ReportExtras {
   /** `earned` of `of`: the Website category in the app's own units
    * ("Website 24/30", the Overview's whole points) — never a 0–100. */
   websiteImprovement: { earned: number; of: number; improvements: number; points: number } | null;
+  /** What changed on the listing since the baseline scan — our own change
+   * records across every scan in between (lib/scanChanges.ts). Omitted:
+   * not known (never "nothing changed"). */
+  listingChanges?: ScanChangeSummary;
 }
 
 export const EMPTY_REPORT_EXTRAS: ReportExtras = { securityAlert: null, scoreBasis: null, websiteImprovement: null };
@@ -147,7 +153,9 @@ export interface CompetitorDelta {
  * snapshot itself is missing — never inferred as zero.
  */
 export type MetricResult =
-  | { available: true; current: number; previous: number | null; delta: number | null }
+  /** `changed`: it moved by an amount we can't know (a rating, or a review
+   * count without Business Profile) — `delta` is null then. */
+  | { available: true; current: number; previous: number | null; delta: number | null; changed?: boolean }
   | { available: false };
 
 /** Score/grade movement — `current` is always real (a `scores` row
@@ -308,16 +316,23 @@ function competitorMovement(delta: CompetitorDelta | null): CompetitorMovement {
   };
 }
 
-function listingChanges(
-  previous: ProfileSnapshot | null,
-  current: ProfileSnapshot | null,
-  locale: Locale
-): ListingChangesResult {
-  if (!previous || !current) return { available: false };
+function listingChanges(summary: ScanChangeSummary, locale: Locale): ListingChangesResult {
+  if (!summary.available) return { available: false };
   return {
     available: true,
-    changes: diffProfileSnapshots(previous, current, locale).filter((c) => c.field !== "rating" && c.field !== "reviews"),
+    changes: describeScanChanges(summary.records.filter((r) => r.field !== "rating" && r.field !== "reviews"), locale),
   };
+}
+
+/** Today's value, and how it moved since the baseline per our own change
+ * records: 0 when compared and unchanged, an exact number only for new
+ * reviews from Business Profile, otherwise `changed` with no amount. */
+function changeMetric(currentValue: number | null | undefined, change: ReviewCountChange): MetricResult {
+  if (currentValue == null) return { available: false };
+  if (change === null) return { available: true, current: currentValue, previous: null, delta: null };
+  if (change.kind === "none") return { available: true, current: currentValue, previous: null, delta: 0 };
+  if (change.kind === "exact") return { available: true, current: currentValue, previous: null, delta: change.delta };
+  return { available: true, current: currentValue, previous: null, delta: null, changed: true };
 }
 
 function competitorPhrase(competitor: CompetitorMovement, locale: Locale): string | null {
@@ -404,9 +419,13 @@ function buildMovementSummary(
         value: rating.current.toFixed(1),
       })
     );
+  } else if (rating.available && rating.changed) {
+    parts.push(t(locale, "report.fragment.ratingChanged", { value: rating.current.toFixed(1) }));
   }
 
-  if (reviewCount.available && reviewCount.delta !== null && reviewCount.delta !== 0) {
+  if (reviewCount.available && reviewCount.changed) {
+    parts.push(t(locale, "report.fragment.reviewsChanged"));
+  } else if (reviewCount.available && reviewCount.delta !== null && reviewCount.delta !== 0) {
     parts.push(
       reviewCount.delta > 0
         ? tPlural(locale, "report.summary.reviewsGained", reviewCount.delta, { count: formatCount(reviewCount.delta, locale) })
@@ -719,9 +738,11 @@ export function buildMonthlyReportContent(
     };
   }
 
-  const rating = numericMetric(baseline.profileSnapshot?.rating, current.profileSnapshot?.rating);
-  const reviewCount = numericMetric(baseline.profileSnapshot?.reviewCount, current.profileSnapshot?.reviewCount);
-  const changes = listingChanges(baseline.profileSnapshot, current.profileSnapshot, locale);
+  const summary: ScanChangeSummary = extras.listingChanges ?? { available: false, records: [] };
+  const ratingChanged = ratingChangedOf(summary);
+  const rating = changeMetric(current.profileSnapshot?.rating, ratingChanged === null ? null : ratingChanged ? { kind: "changed" } : { kind: "none" });
+  const reviewCount = changeMetric(current.profileSnapshot?.reviewCount, reviewCountChangeOf(summary));
+  const changes = listingChanges(summary, locale);
 
   const scoreDelta = current.total - baseline.total;
   const gradeChanged = current.grade !== baseline.grade;
@@ -731,7 +752,7 @@ export function buildMonthlyReportContent(
   // — never counts against "steady": this is about whether anything we
   // COULD actually compare moved, not a claim about what we couldn't.
   const metricIsUnchanged = (metric: MetricResult): boolean =>
-    !metric.available || metric.delta === null || metric.delta === 0;
+    !metric.available || (!metric.changed && (metric.delta === null || metric.delta === 0));
   const comparability = scoreComparability(baseline, current);
   const isSteady =
     comparability === "comparable" &&

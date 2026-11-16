@@ -34,6 +34,7 @@ import { ScoreBreakdownPanel } from "@/components/overview/ScoreBreakdownPanel";
 import { TopRecommendations } from "@/components/overview/TopRecommendations";
 import { StudioComingSoon } from "@/components/overview/StudioComingSoon";
 import { biggestBoostFrom, reviewCountChange, TOP_RECOMMENDATIONS, type Recommendation } from "@/lib/overviewTiles";
+import type { ReviewCountChange } from "@/lib/scanChanges";
 import type { LinkOptions } from "@/lib/postaiLinks";
 import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
 import { LiveListingSection } from "@/components/gbp/LiveListingSection";
@@ -323,7 +324,7 @@ export function BusinessScoreView({
           PostAI" button on every page (components/assistant/PostAIDock.tsx). */}
       <div data-testid="overview-recs-row" className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <TopRecommendations businessId={businessId} recommendations={recommendations?.slice(0, TOP_RECOMMENDATIONS) ?? null} />
-        <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} gbpConnected={gbpConnected} />
+        <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} gbpConnected={gbpConnected} now={{ rating: business.rating, reviewCount: business.review_count }} />
       </div>
 
       <ScoreBreakdownPanel
@@ -395,14 +396,16 @@ function RatingBandTag({ rating }: { rating: number }) {
 }
 
 /** New reviews between the last two scans — only when both recorded a count. */
-function ReviewChangeLine({ change }: { change: number | null }) {
+function ReviewChangeLine({ change }: { change: ReviewCountChange }) {
   const locale = useLocale();
   if (change === null) return null;
   return (
     <span className="text-[12.5px] text-ink-soft">
-      {change === 0
+      {change.kind === "none"
         ? t(locale, "dashboard.overview.tiles.noNewReviews")
-        : t(locale, "dashboard.overview.tiles.reviewsSinceLastScan", { delta: change > 0 ? `+${change}` : `−${Math.abs(change)}` })}
+        : change.kind === "changed"
+          ? t(locale, "dashboard.overview.tiles.reviewsChangedSinceLastScan")
+          : t(locale, "dashboard.overview.tiles.reviewsSinceLastScan", { delta: change.delta > 0 ? `+${change.delta}` : `−${Math.abs(change.delta)}` })}
     </span>
   );
 }

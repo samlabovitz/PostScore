@@ -41,6 +41,6 @@ export function sinceLastVisit(lastSeenAt: string, scans: WeeklyScan[], locale: 
     baseline,
     latest,
     noNewScan,
-    comparison: !noNewScan && baseline && latest ? compareScans(baseline, latest, locale) : null,
+    comparison: !noNewScan && baseline && latest ? compareScans(baseline, latest, locale, scans) : null,
   };
 }

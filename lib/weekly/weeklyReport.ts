@@ -12,7 +12,9 @@
 // and the "Since your last visit" pop-up.
 
 import { CHART_CATEGORY_IDS, type ChartCategoryId, type ChartCategoryScore } from "@/lib/scoreHistory";
-import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
+import type { ProfileChange, ProfileSnapshot } from "@/lib/profileChanges";
+import { changesAcross, reviewCountChangeOf, scansBetween, type ScanChangeRecord } from "@/lib/scanChanges";
+import { describeScanChanges } from "@/lib/scanChangeText";
 import type { Locale } from "@/lib/i18n";
 import { weekBounds, weekEndDay, weekOf } from "./weeks";
 
@@ -24,6 +26,11 @@ export interface WeeklyScan {
   scoringVersion: string | null;
   categories: Record<ChartCategoryId, ChartCategoryScore> | null;
   profile: ProfileSnapshot | null;
+  /** Its fingerprints' key id (lib/scanChanges.ts). */
+  fpKey?: string | null;
+  /** What changed since the scan before it (our own records); null when
+   * they couldn't be read. */
+  changes?: ScanChangeRecord[] | null;
 }
 
 export interface CategoryMove {
@@ -40,20 +47,27 @@ export interface ScanComparison {
   comparable: boolean;
   delta: number | null;
   categories: CategoryMove[];
-  reviews: { count: number | null; countChange: number | null; rating: number | null; ratingChange: number | null };
+  /** `countChange`: an exact number (Business Profile) or 0 — null when
+   * it changed by an amount we can't know (`countChanged`) or wasn't
+   * compared. A rating says only that it changed (`ratingChanged`). */
+  reviews: { count: number | null; countChange: number | null; countChanged?: boolean; rating: number | null; ratingChange: number | null; ratingChanged?: boolean };
   listingChanges: ProfileChange[];
   /** Either scan predates listing snapshots: changes honestly unknown. */
   changesUnavailable: boolean;
 }
 
-/** Two saved scans compared — the one rule every weekly view uses. */
-export function compareScans(from: WeeklyScan, to: WeeklyScan, locale: Locale): ScanComparison {
+/** Two saved scans compared — the one rule every weekly view uses.
+ * `scans`: the business's saved scans (the listing changes are our own
+ * records of every scan between the two). */
+export function compareScans(from: WeeklyScan, to: WeeklyScan, locale: Locale, scans: WeeklyScan[]): ScanComparison {
   const comparable = from.scoringVersion === to.scoringVersion;
   const pct = (s: WeeklyScan, id: ChartCategoryId) => (s.categories?.[id] ? Math.round(s.categories[id].percent) : null);
   const count = to.profile?.reviewCount ?? null;
-  const prevCount = from.profile?.reviewCount ?? null;
   const rating = to.profile?.rating ?? null;
-  const prevRating = from.profile?.rating ?? null;
+  const between = scansBetween(scans.map((s) => ({ ...s, fpKey: s.fpKey ?? null })), { ...from, fpKey: from.fpKey ?? null }, { ...to, fpKey: to.fpKey ?? null });
+  const unreadable = between.slice(1).some((s) => s.changes === null || s.changes === undefined);
+  const summary = changesAcross(between, unreadable ? null : new Map(between.map((s) => [s.id, s.changes ?? []])));
+  const reviewChange = reviewCountChangeOf(summary);
   return {
     from,
     to,
@@ -62,12 +76,14 @@ export function compareScans(from: WeeklyScan, to: WeeklyScan, locale: Locale): 
     categories: CHART_CATEGORY_IDS.map((id) => ({ id, before: comparable ? pct(from, id) : null, after: pct(to, id) })),
     reviews: {
       count,
-      countChange: count !== null && prevCount !== null ? count - prevCount : null,
+      countChange: reviewChange?.kind === "exact" ? reviewChange.delta : reviewChange?.kind === "none" ? 0 : null,
+      countChanged: reviewChange?.kind === "changed",
       rating,
-      ratingChange: rating !== null && prevRating !== null ? Math.round((rating - prevRating) * 10) / 10 : null,
+      ratingChange: summary.available && !summary.records.some((r) => r.field === "rating") ? 0 : null,
+      ratingChanged: summary.records.some((r) => r.field === "rating"),
     },
-    listingChanges: from.profile && to.profile ? diffProfileSnapshots(from.profile, to.profile, locale) : [],
-    changesUnavailable: !(from.profile && to.profile),
+    listingChanges: describeScanChanges(summary.records, locale, { rating, reviewCount: count }),
+    changesUnavailable: !summary.available,
   };
 }
 
@@ -124,7 +140,7 @@ export function buildWeekSummary(weekStart: string, scans: WeeklyScan[], timeZon
     current,
     compared: current ? compared : null,
     comparedInWeek,
-    comparison: current && compared ? compareScans(compared, current, locale) : null,
+    comparison: current && compared ? compareScans(compared, current, locale, scans) : null,
     lastKnown: current ? null : before.at(-1) ?? null,
     sparkline: upToEnd.slice(-8).map((s) => s.total),
   };

@@ -214,7 +214,9 @@ describe("MonthlyReportEmail — real deltas", () => {
 
     // The new headline and score-visual delta must be equally
     // un-softened — a decline is stated the same plain way as a gain.
-    expect(html).toContain("Your score dropped 14 points and you lost 5 reviews.");
+    // Not connected: the review count says only that it changed (never "lost 5").
+    expect(html).toContain("Your score dropped 14 points and your review count changed.");
+    expect(html).not.toMatch(/lost 5 reviews|dropped by 5/);
     expect(html).toContain("74/100 · C");
     expect(html).toContain("-14 since last report");
     expect(html).not.toMatch(CELEBRATORY_WORDS);

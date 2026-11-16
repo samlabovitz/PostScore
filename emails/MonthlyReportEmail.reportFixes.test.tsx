@@ -96,7 +96,10 @@ function everyKind(locale: Locale): Record<string, MonthlyReportContent> {
       },
       null,
       locale,
-      focus(locale)
+      focus(locale),
+      true,
+      // Not connected: the rating and review count say only that they changed.
+      { ...EMPTY_REPORT_EXTRAS, listingChanges: { available: true, records: [{ field: "rating", direction: "changed", delta: null }, { field: "reviews", direction: "changed", delta: null }] } }
     ),
     declined: buildMonthlyReportContent(at({ id: "b", total: 92, grade: "A" }), current, null, null, locale, focus(locale)),
     scoringUpdated: buildMonthlyReportContent(
@@ -105,7 +108,10 @@ function everyKind(locale: Locale): Record<string, MonthlyReportContent> {
       null,
       null,
       locale,
-      focus(locale)
+      focus(locale),
+      true,
+      // A connected owner: 12 new reviews counted from Business Profile.
+      { ...EMPTY_REPORT_EXTRAS, listingChanges: { available: true, records: [{ field: "reviews", direction: "up", delta: 12 }] } }
     ),
   };
 }

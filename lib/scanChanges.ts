@@ -126,13 +126,14 @@ export interface GbpReviewTimes {
   capped: boolean;
 }
 
-export function newReviewsSince(reviews: GbpReviewTimes, since: string): number | null {
+export function newReviewsSince(reviews: GbpReviewTimes, since: string, until?: string): number | null {
   const t = Date.parse(since);
-  if (Number.isNaN(t)) return null;
+  const u = until === undefined ? Infinity : Date.parse(until);
+  if (Number.isNaN(t) || Number.isNaN(u)) return null;
   // A review written after `since` was also updated after it, so it's on
   // the pages read unless they stopped before reaching `since`.
   if (reviews.capped && (reviews.oldestUpdateTime === null || Date.parse(reviews.oldestUpdateTime) > t)) return null;
-  return reviews.createTimes.filter((c) => Date.parse(c) > t).length;
+  return reviews.createTimes.filter((c) => Date.parse(c) > t && Date.parse(c) <= u).length;
 }
 
 export interface ScanSide {
@@ -166,4 +167,74 @@ export function parseFieldFingerprints(value: unknown): FieldFingerprints | null
   if (!value || typeof value !== "object") return null;
   const v = value as { k?: unknown; f?: unknown };
   return typeof v.k === "string" && !!v.f && typeof v.f === "object" ? (v as FieldFingerprints) : null;
+}
+
+/** A saved fingerprints value's key id, or null. */
+export function fingerprintKeyOf(value: unknown): string | null {
+  return parseFieldFingerprints(value)?.k ?? null;
+}
+
+/** One saved scan, as the change readers need it. */
+export interface ScanRef {
+  id: string;
+  /** Its fingerprints' key id (scores.field_fingerprints->>k), or null. */
+  fpKey: string | null;
+}
+
+/** What changed across a run of scans, oldest first: `available` only when
+ * every one of them was fingerprinted under the same key (so each change
+ * between them was recorded) — otherwise honestly unknown, never "nothing
+ * changed". */
+export interface ScanChangeSummary {
+  available: boolean;
+  records: ScanChangeRecord[];
+}
+
+const NOT_AVAILABLE: ScanChangeSummary = { available: false, records: [] };
+
+/** Several scans' records for one field, as one change: amounts add up
+ * when every one is known; otherwise it's simply "changed". */
+function combine(field: ScanChangeField, records: ScanChangeRecord[]): ScanChangeRecord | null {
+  if (records.length === 1) return records[0];
+  if (records.every((r) => r.delta !== null) && (field === "reviews" || field === "photos")) {
+    const total = records.reduce((sum, r) => sum + (r.delta as number), 0);
+    return total === 0 ? { field, direction: "changed", delta: null } : { field, direction: total > 0 ? "up" : "down", delta: total };
+  }
+  if (records.every((r) => r.direction === records[0].direction) && (records[0].direction === "up" || records[0].direction === "down")) return { field, direction: records[0].direction, delta: null };
+  return { field, direction: "changed", delta: null };
+}
+
+export function changesAcross(scans: ScanRef[], recordsByScore: Map<string, ScanChangeRecord[]> | null): ScanChangeSummary {
+  if (scans.length < 2 || !recordsByScore) return NOT_AVAILABLE;
+  const key = scans[0].fpKey;
+  if (!key || scans.some((s) => s.fpKey !== key)) return NOT_AVAILABLE;
+  const byField = new Map<ScanChangeField, ScanChangeRecord[]>();
+  for (const s of scans.slice(1)) for (const r of recordsByScore.get(s.id) ?? []) byField.set(r.field, [...(byField.get(r.field) ?? []), r]);
+  const records = SCAN_CHANGE_FIELDS.map((f) => (byField.has(f) ? combine(f, byField.get(f)!) : null)).filter((r): r is ScanChangeRecord => r !== null);
+  return { available: true, records };
+}
+
+/** The scans from `from` to `to` (inclusive), out of a business's scans in
+ * any order. */
+export function scansBetween<T extends ScanRef & { createdAt: string }>(scans: T[], from: T, to: T): T[] {
+  const a = Date.parse(from.createdAt);
+  const b = Date.parse(to.createdAt);
+  return scans.filter((s) => s.id === from.id || s.id === to.id || (Date.parse(s.createdAt) > a && Date.parse(s.createdAt) < b)).sort((x, y) => Date.parse(x.createdAt) - Date.parse(y.createdAt));
+}
+
+/** The review count across a summary: an exact number of new reviews
+ * (Business Profile), "changed" with no amount, 0 when it was compared and
+ * didn't move — or null when it couldn't be compared. */
+export type ReviewCountChange = { kind: "exact"; delta: number } | { kind: "changed" } | { kind: "none" } | null;
+
+export function reviewCountChangeOf(summary: ScanChangeSummary): ReviewCountChange {
+  if (!summary.available) return null;
+  const r = summary.records.find((x) => x.field === "reviews");
+  if (!r) return { kind: "none" };
+  return r.delta !== null ? { kind: "exact", delta: r.delta } : { kind: "changed" };
+}
+
+/** Whether the rating changed (never by how much); null when not compared. */
+export function ratingChangedOf(summary: ScanChangeSummary): boolean | null {
+  return summary.available ? summary.records.some((x) => x.field === "rating") : null;
 }

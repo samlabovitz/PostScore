@@ -19,11 +19,11 @@ import {
 import { scoreBusiness } from "@/lib/scoring";
 import { scoringInput } from "@/emails/sampleMonthlyReportContent";
 import type { ActionPlanTask } from "@/lib/actionPlan";
-import type { ProfileSnapshot } from "@/lib/profileChanges";
 import { boostPoints, ScoreBand, SinceLastScanControl } from "@/components/overview/ScoreBand";
 import { AnimatedScoreRing } from "@/components/overview/AnimatedScoreRing";
 import { ListingPhoto } from "@/components/overview/ListingPhoto";
 import { SinceLastScanCard } from "@/components/overview/SinceLastScanCard";
+import type { ScanChangeRecord } from "@/lib/scanChanges";
 import { firstPhotoRef } from "@/lib/google/places";
 import { canLoadPlacePhoto, placePhotoMonthlyCap, utcMonthStart } from "@/lib/placePhotoBudget";
 import type { ScoreSnapshot } from "@/app/actions/scoring";
@@ -254,12 +254,13 @@ describe("category points and review change (now in the breakdown and At a glanc
     expect(panel({}, "es")).toContain("6 arreglos");
   });
 
-  test("review change: only when both scans recorded a count", () => {
-    const snap = (reviewCount: number | null) => ({ profile_snapshot_json: { reviewCount } as ProfileSnapshot });
-    expect(reviewCountChange([snap(58), snap(56)])).toBe(2);
-    expect(reviewCountChange([snap(58), snap(58)])).toBe(0);
-    expect(reviewCountChange([snap(58), { profile_snapshot_json: null }])).toBeNull();
-    expect(reviewCountChange([snap(58)])).toBeNull();
+  test("review change: from our own change records — exact only from Business Profile, never guessed", () => {
+    const with_ = (records: ScanChangeRecord[], available = true) => [{ listing_changes: { available, records } }, {}];
+    expect(reviewCountChange(with_([{ field: "reviews", direction: "up", delta: 2 }]))).toEqual({ kind: "exact", delta: 2 });
+    expect(reviewCountChange(with_([{ field: "reviews", direction: "changed", delta: null }]))).toEqual({ kind: "changed" });
+    expect(reviewCountChange(with_([]))).toEqual({ kind: "none" });
+    expect(reviewCountChange(with_([], false))).toBeNull();
+    expect(reviewCountChange([{}])).toBeNull();
   });
 });
 
@@ -364,12 +365,15 @@ describe("since your last scan (replaces the two change sections)", () => {
     profile_snapshot_json: { phone: "1", website: "w", openingHours: null, categories: null, photoCount: 10, rating: 4.8, reviewCount: 58, businessStatus: "OPERATIONAL" },
     ...over,
   });
+  const NOW = { rating: 4.8, reviewCount: 58 };
   const card = (snapshots: ScoreSnapshot[], locale: Locale = "en") =>
-    render(<SinceLastScanCard businessId="b" snapshots={snapshots} liveBreakdown={breakdown} />, locale);
+    render(<SinceLastScanCard businessId="b" snapshots={snapshots} liveBreakdown={breakdown} now={NOW} />, locale);
+  /** The newest scan, with what changed since the one before (our own records). */
+  const changed = (records: ScanChangeRecord[], over: Partial<ScoreSnapshot> = {}) => snap({ listing_changes: { available: true, records }, ...over });
 
   test("before → after with the real delta, listing chips, and a Reports link", () => {
-    const prev = snap({ total: 81, created_at: "2026-10-08T15:00:00Z", profile_snapshot_json: { phone: "1", website: "w", openingHours: null, categories: null, photoCount: 10, rating: 4.8, reviewCount: 56, businessStatus: "OPERATIONAL" } });
-    const html = card([snap({}), prev]);
+    const prev = snap({ total: 81, created_at: "2026-10-08T15:00:00Z" });
+    const html = card([changed([{ field: "reviews", direction: "up", delta: 2 }]), prev]);
     expect(html).toContain(">81<");
     expect(html).toContain(">87<");
     expect(html).toContain("+6");
@@ -390,8 +394,9 @@ describe("since your last scan (replaces the two change sections)", () => {
   });
 
   test("review count / rating: unconnected owners see only that it changed, with today's value, and how to get exact counts (EN + ES)", () => {
-    const prev = snap({ created_at: "2026-10-08T15:00:00Z", profile_snapshot_json: { phone: "1", website: "w", openingHours: null, categories: null, photoCount: 10, rating: 4.7, reviewCount: 55, businessStatus: "OPERATIONAL" } });
-    const html = card([snap({}), prev]);
+    const prev = snap({ created_at: "2026-10-08T15:00:00Z" });
+    const current = changed([{ field: "rating", direction: "changed", delta: null }, { field: "reviews", direction: "changed", delta: null }]);
+    const html = card([current, prev]);
     expect(html).toContain("Review count changed · now 58");
     expect(html).toContain("Rating changed · now 4.8★");
     // Never an amount or a guessed minimum.
@@ -399,26 +404,34 @@ describe("since your last scan (replaces the two change sections)", () => {
     expect(text).not.toMatch(/3 new reviews|\+3|4\.7/);
     expect(html).toMatch(/data-testid="since-connect-for-reviews"[^>]*href="\/business\/b\/connect-gbp"|href="\/business\/b\/connect-gbp"[^>]*data-testid="since-connect-for-reviews"/);
     expect(html).toContain("Connect Google to see exactly how many new reviews you got");
-    const es = card([snap({}), prev], "es");
+    const es = card([current, prev], "es");
     expect(es).toContain("El número de reseñas cambió · ahora 58");
     expect(es).toContain("La calificación cambió · ahora 4.8★");
     expect(es).toContain("Conecte Google para ver exactamente cuántas reseñas nuevas recibió");
   });
 
   test("connected owners: the exact new-review count, no connect hint; no review change → no hint", () => {
-    const prev = snap({ created_at: "2026-10-08T15:00:00Z", profile_snapshot_json: { phone: "1", website: "w", openingHours: null, categories: null, photoCount: 10, rating: 4.8, reviewCount: 55, businessStatus: "OPERATIONAL" } });
-    const connected = render(<SinceLastScanCard businessId="b" snapshots={[snap({}), prev]} liveBreakdown={breakdown} gbpConnected />, "en");
+    const prev = snap({ created_at: "2026-10-08T15:00:00Z" });
+    const connected = render(<SinceLastScanCard businessId="b" snapshots={[changed([{ field: "reviews", direction: "up", delta: 3 }]), prev]} liveBreakdown={breakdown} gbpConnected now={NOW} />, "en");
     expect(connected).toContain("3 new reviews");
     expect(connected).not.toContain("since-connect-for-reviews");
-    expect(card([snap({}), snap({ profile_snapshot_json: { phone: null, website: "w", openingHours: null, categories: null, photoCount: 10, rating: 4.8, reviewCount: 58, businessStatus: "OPERATIONAL" } })])).not.toContain("since-connect-for-reviews");
+    const phoneOnly = card([changed([{ field: "phone", direction: "added", delta: null }]), prev]);
+    expect(phoneOnly).toContain("A phone number was added to your listing.");
+    expect(phoneOnly).not.toContain("since-connect-for-reviews");
+  });
+
+  test("scans that couldn't be compared (no fingerprints) say so — never 'nothing changed'", () => {
+    const html = card([snap({ listing_changes: { available: false, records: [] } }), snap({})]);
+    expect(html).toContain("predates listing-change tracking");
+    expect(html).not.toContain("Nothing changed on your listing");
   });
 
   test("nothing changed / first scan / Spanish", () => {
-    const same = card([snap({}), snap({})]);
+    const same = card([changed([]), snap({})]);
     expect(same).toContain("Nothing changed on your listing since your last scan.");
     expect(same).toContain("Nothing changed since your last scan.");
     expect(card([snap({})])).toContain("No prior scan to compare yet");
-    expect(card([snap({}), snap({})], "es")).toContain("Desde su último análisis");
+    expect(card([changed([]), snap({})], "es")).toContain("Desde su último análisis");
   });
 
   // Previous scan with `n` checks lower by 1, 2, … points (biggest last).
@@ -562,7 +575,7 @@ describe("Overview layout and scan history (GBP card tweaks)", () => {
     const view = fs.readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8");
     expect(view).toContain(`<div data-testid="overview-recs-row" className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <TopRecommendations businessId={businessId} recommendations={recommendations?.slice(0, TOP_RECOMMENDATIONS) ?? null} />
-        <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} gbpConnected={gbpConnected} />
+        <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} gbpConnected={gbpConnected} now={{ rating: business.rating, reviewCount: business.review_count }} />
       </div>`);
     // PostStudio keeps its own row.
     expect(view).toMatch(/\n      <StudioComingSoon businessId=\{businessId\} \/>\n/);

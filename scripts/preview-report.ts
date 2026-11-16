@@ -163,6 +163,12 @@ async function scoreWithApp(): Promise<typeof ScoreBusinessFn> {
   allowServerOnly();
   return (await import("../app/actions/scoring")).scoreBusinessWithClient;
 }
+
+/** lib/scanChanges.server.ts, loaded past its "server-only" guard. */
+async function scanChangesBetween() {
+  allowServerOnly();
+  return (await import("../lib/scanChanges.server")).scanChangesBetweenScores;
+}
 async function runCompetitorScan(): Promise<typeof RunCompetitorScanFn> {
   allowServerOnly();
   return (await import("../app/actions/competitors")).runAndSaveCompetitorScanWithClient;
@@ -562,7 +568,11 @@ async function main() {
     locale,
     focusInputs,
     hasSavedCompetitorScan,
-    buildReportExtras(scoringInput, currentForDisplay.breakdown)
+    {
+      ...buildReportExtras(scoringInput, currentForDisplay.breakdown),
+      // Since the last report: our own change records (lib/scanChanges.ts).
+      ...(baselineRow ? { listingChanges: await (await scanChangesBetween())(supabase, businessId, baselineRow.id, currentForDisplay.id) } : {}),
+    }
   );
 
   const businessName = business.name ?? "Your business";

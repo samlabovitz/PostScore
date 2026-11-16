@@ -132,19 +132,20 @@ export function SinceLastVisitBody({ businessId, data }: { businessId: string; d
           <dt className="text-ink-mute">{t(locale, k("fixes"))}</dt>
           <dd className="font-semibold text-ink">{data.fixesConfirmed}</dd>
         </div>
-        {data.reviews.countChange !== null && (
+        {(data.reviews.countChange !== null || data.reviews.countChanged) && (
           <div className="col-span-2 rounded-lg bg-paper px-3 py-2">
             <dt className="text-ink-mute">{t(locale, k("reviews"))}</dt>
             <dd className="font-semibold text-ink">
-              {data.reviews.countChange === 0
+              {/* Without Business Profile: only that it changed, never an amount. */}
+              {data.reviews.countChange === null
+                ? t(locale, k("reviewsChanged"))
+                : data.reviews.countChange === 0
                 ? t(locale, k("noNewReviews"))
                 : data.reviews.countChange > 0
                   ? t(locale, k("newReviews"), { change: signed(data.reviews.countChange) })
                   : t(locale, k("fewerReviews"), { count: Math.abs(data.reviews.countChange) })}
-              {data.reviews.rating !== null && data.reviews.ratingChange !== null && data.reviews.ratingChange !== 0 && (
-                <span className="ml-1 font-medium text-ink-soft">
-                  · {t(locale, k("ratingMove"), { from: (data.reviews.rating - data.reviews.ratingChange).toFixed(1), to: data.reviews.rating.toFixed(1) })}
-                </span>
+              {data.reviews.rating !== null && data.reviews.ratingChanged && (
+                <span className="ml-1 font-medium text-ink-soft">· {t(locale, k("ratingChanged"), { to: data.reviews.rating.toFixed(1) })}</span>
               )}
             </dd>
             {/* The goal (beat the leader) — the shared wording, then "Next up". */}
@@ -157,7 +158,7 @@ export function SinceLastVisitBody({ businessId, data }: { businessId: string; d
         )}
       </dl>
       {/* The rank and reviews are Google Maps data. */}
-      {(data.rank || data.reviews.countChange !== null) && <GoogleMapsAttribution className="mt-0" />}
+      {(data.rank || data.reviews.countChange !== null || data.reviews.countChanged) && <GoogleMapsAttribution className="mt-0" />}
 
       {data.nextSteps.length > 0 && (
         <div>

@@ -7,6 +7,7 @@ import { selectionChangedBetween } from "@/lib/competitorQuality";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { parseChartCategories } from "@/lib/scoreHistory";
 import type { ProfileSnapshot } from "@/lib/profileChanges";
+import { FP_KEY_COLUMN, loadScanChangeRecords } from "@/lib/scanChanges.server";
 import { groupSavedScans, SAVED_SCAN_COLUMNS, type SavedCompetitorScan, type SavedScanRow } from "@/lib/savedCompetitorScans";
 import { withLiveCompetitorValuesFor } from "@/lib/placesLive.server";
 import { withMissingNames } from "@/lib/placesLive";
@@ -27,10 +28,13 @@ import { loadCompetitorScope } from "@/lib/businessNiche.server";
 export async function loadWeeklyScans(supabase: SupabaseClient, businessId: string): Promise<WeeklyScan[]> {
   const { data } = await supabase
     .from("scores")
-    .select("id, total, grade, created_at, scoring_version, profile_snapshot_json, breakdown_categories:breakdown_json->categories")
+    .select(`id, total, grade, created_at, scoring_version, profile_snapshot_json, ${FP_KEY_COLUMN}, breakdown_categories:breakdown_json->categories`)
     .eq("business_id", businessId)
     .order("created_at", { ascending: true });
-  return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+  const rows = (data ?? []) as Array<Record<string, unknown>>;
+  // Our own change records (lib/scanChanges.ts); null when unreadable.
+  const records = await loadScanChangeRecords(supabase, rows.map((r) => String(r.id)));
+  return rows.map((r) => ({
     id: String(r.id),
     total: Number(r.total),
     grade: String(r.grade ?? ""),
@@ -38,6 +42,8 @@ export async function loadWeeklyScans(supabase: SupabaseClient, businessId: stri
     scoringVersion: typeof r.scoring_version === "string" && r.scoring_version ? r.scoring_version : null,
     categories: parseChartCategories(r.breakdown_categories),
     profile: (r.profile_snapshot_json as ProfileSnapshot | null) ?? null,
+    fpKey: typeof r.fp_key === "string" ? r.fp_key : null,
+    changes: records ? records.get(String(r.id)) ?? [] : null,
   }));
 }
 

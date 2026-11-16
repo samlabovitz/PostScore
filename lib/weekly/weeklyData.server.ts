@@ -166,7 +166,7 @@ export async function weeklyReportDataWithClient(
       ...base,
       period: c ? period(c.from.total, c.to.total, c.comparable, c.from.createdAt, c.to.createdAt) : null,
       changes: { listing: c ? c.listingChanges.map((x) => x.description) : [], listingUnavailable: c ? c.changesUnavailable : false, fixesConfirmed: fixes },
-      reviews: { ...base.reviews, countChange: c ? c.reviews.countChange : null },
+      reviews: { ...base.reviews, countChange: c ? c.reviews.countChange : null, countChanged: c ? c.reviews.countChanged : false },
       weekly,
     };
   }
@@ -226,7 +226,7 @@ export interface SinceLastVisitData {
   categories: Array<{ id: ChartCategoryId; before: number | null; after: number | null }>;
   rank: { now: number; then: number | null; of: number } | null;
   fixesConfirmed: number;
-  reviews: { count: number | null; countChange: number | null; rating: number | null; ratingChange: number | null };
+  reviews: { count: number | null; countChange: number | null; countChanged?: boolean; rating: number | null; ratingChange: number | null; ratingChanged?: boolean };
   /** The shared review goal in words (average, goal, next up) — empty when
    * there's no goal (fewer than 3 competitors). */
   reviewGoalLines?: string[];

@@ -2,7 +2,10 @@
 
 import { parseChartCategories, type ChartCategoryId, type ChartCategoryScore } from "@/lib/scoreHistory";
 import { createClient } from "@/lib/supabase/server";
-import { diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
+import type { ProfileChange, ProfileSnapshot } from "@/lib/profileChanges";
+import { changesAcross, type ScanChangeSummary } from "@/lib/scanChanges";
+import { FP_KEY_COLUMN, loadScanChangeRecords } from "@/lib/scanChanges.server";
+import { describeScanChanges } from "@/lib/scanChangeText";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { isMonthlyReportsLive } from "@/lib/monthlyReportsFeatureFlag";
 import { calendarDaysAgo, normalizeLocale } from "@/lib/i18n";
@@ -21,6 +24,8 @@ export interface ReportsScoreRow {
    * lib/profileChanges.ts). Null for any scan saved before that column
    * existed — callers must treat that honestly as "nothing to diff from." */
   profile_snapshot_json: ProfileSnapshot | null;
+  /** This scan's fingerprints' key id (lib/scanChanges.ts ScanRef). */
+  fp_key?: string | null;
   /** The SCORING_VERSION saved with this scan (null if none recorded). */
   scoring_version: string | null;
   /** The saved scan's kind ("scoring_update": a re-score of saved data). */
@@ -54,6 +59,9 @@ export interface MonthlyRecap {
    * (Oct 16 8pm → Oct 18 1am is 2 days, not "1 day" of elapsed hours). */
   daysBetween: number;
   changes: ProfileChange[];
+  /** The same changes as our own records (lib/scanChanges.ts) — the
+   * review count and rating read from here. */
+  summary: ScanChangeSummary;
   /** True when either scan predates profile-snapshot tracking — `changes`
    * is honestly empty in that case, not "nothing changed." */
   changesUnavailable: boolean;
@@ -72,10 +80,9 @@ export type GetReportsDataResult =
        * the owner merely marked done but that hasn't been re-verified
        * against real data. */
       confirmedFixCount: number;
-      /** Sum of diffProfileSnapshots(...).length across every consecutive
-       * pair of scans that both have a real profile snapshot — the total
-       * count of real listing-field changes detected across this
-       * business's whole scan history. */
+      /** The number of our own change records (lib/scanChanges.ts) across
+       * every consecutive pair of scans that could be compared — the
+       * real listing-field changes detected across the whole history. */
       listingChangesDetected: number;
       /** When the period `listingChangesDetected` covers starts — the first
        * scan that has a listing snapshot to compare from. null when no two
@@ -127,10 +134,10 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
     gbpStatus,
     { data: lastReport },
   ] = await Promise.all([
-    supabase.from("businesses").select("name, monthly_report_enabled, language, lat, lng").eq("id", businessId).single(),
+    supabase.from("businesses").select("name, monthly_report_enabled, language, lat, lng, rating, review_count").eq("id", businessId).single(),
     supabase
       .from("scores")
-      .select("id, total, grade, created_at, profile_snapshot_json, scoring_version, scan_kind:breakdown_json->>scanKind, breakdown_categories:breakdown_json->categories")
+      .select(`id, total, grade, created_at, profile_snapshot_json, scoring_version, ${FP_KEY_COLUMN}, scan_kind:breakdown_json->>scanKind, breakdown_categories:breakdown_json->categories`)
       .eq("business_id", businessId)
       .order("created_at", { ascending: true }),
     // Best-effort: a failed count here shouldn't fail the whole page, same
@@ -165,6 +172,7 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
       grade: r.grade,
       created_at: r.created_at,
       profile_snapshot_json: r.profile_snapshot_json,
+      fp_key: typeof r.fp_key === "string" ? r.fp_key : null,
       scoring_version: typeof r.scoring_version === "string" && r.scoring_version.length > 0 ? r.scoring_version : null,
       scan_kind: typeof r.scan_kind === "string" ? r.scan_kind : null,
       categories: parseChartCategories(r.breakdown_categories),
@@ -173,14 +181,15 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
 
   // All-time (labeled "since {first comparable scan}" on the page) — the
   // recap's "What changed" covers only its own two scans.
+  const records = await loadScanChangeRecords(supabase, history.slice(1).map((h) => h.id));
+  const pair = (a: ReportsScoreRow, b: ReportsScoreRow) => changesAcross([{ id: a.id, fpKey: a.fp_key ?? null }, { id: b.id, fpKey: b.fp_key ?? null }], records);
   let listingChangesDetected = 0;
   let listingChangesSince: string | null = null;
   for (let i = 1; i < history.length; i++) {
-    const prev = history[i - 1].profile_snapshot_json;
-    const curr = history[i].profile_snapshot_json;
-    if (prev && curr) {
+    const summary = pair(history[i - 1], history[i]);
+    if (summary.available) {
       listingChangesSince ??= history[i - 1].created_at;
-      listingChangesDetected += diffProfileSnapshots(prev, curr, locale).length;
+      listingChangesDetected += summary.records.length;
     }
   }
 
@@ -188,20 +197,15 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
   if (history.length >= 2) {
     const previous = history[history.length - 2];
     const current = history[history.length - 1];
-    const changesAvailable = Boolean(previous.profile_snapshot_json && current.profile_snapshot_json);
+    const summary = pair(previous, current);
     recap = {
       previous,
       current,
       scoreDelta: current.total - previous.total,
       daysBetween: calendarDaysAgo(previous.created_at, new Date(current.created_at), timeZone),
-      changes: changesAvailable
-        ? diffProfileSnapshots(
-            previous.profile_snapshot_json as ProfileSnapshot,
-            current.profile_snapshot_json as ProfileSnapshot,
-            locale
-          )
-        : [],
-      changesUnavailable: !changesAvailable,
+      changes: describeScanChanges(summary.records, locale, { rating: business.rating, reviewCount: business.review_count }),
+      summary,
+      changesUnavailable: !summary.available,
     };
   }
 

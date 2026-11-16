@@ -8,7 +8,7 @@ import { hkdfSync } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { readGbpKey } from "@/lib/gbpSecurity";
 import type { ProfileSnapshot } from "@/lib/profileChanges";
-import { fingerprintSnapshot, newReviewsSince, parseFieldFingerprints, scanChangeRecords, type GbpReviewTimes, type ScanChangeRecord } from "@/lib/scanChanges";
+import { changesAcross, fingerprintSnapshot, newReviewsSince, parseFieldFingerprints, scanChangeRecords, type GbpReviewTimes, type ScanChangeRecord, type ScanChangeSummary } from "@/lib/scanChanges";
 
 type Env = { GBP_TOKEN_ENCRYPTION_KEY?: string; NODE_ENV?: string };
 
@@ -56,4 +56,46 @@ export async function recordScanChanges(
     .insert(records.map((r) => ({ business_id: businessId, score_id: scoreId, previous_score_id: prev.id, field: r.field, direction: r.direction, delta: r.delta, at })));
   if (error) throw new Error(`scan_changes: ${error.message}`);
   return records;
+}
+
+/** The saved records of these scans, by scan. Owners' own client works
+ * (RLS: their businesses only). Missing table or a read error: none —
+ * readers then say the changes aren't available, never "nothing changed". */
+export async function loadScanChangeRecords(db: SupabaseClient, scoreIds: string[]): Promise<Map<string, ScanChangeRecord[]> | null> {
+  const out = new Map<string, ScanChangeRecord[]>();
+  for (let i = 0; i < scoreIds.length; i += 200) {
+    const { data, error } = await db.from("scan_changes").select("score_id, field, direction, delta").in("score_id", scoreIds.slice(i, i + 200));
+    if (error) {
+      console.warn("[scan-changes] read failed:", error.message);
+      return null;
+    }
+    for (const r of (data ?? []) as Array<{ score_id: string; field: ScanChangeRecord["field"]; direction: ScanChangeRecord["direction"]; delta: number | string | null }>) {
+      out.set(r.score_id, [...(out.get(r.score_id) ?? []), { field: r.field, direction: r.direction, delta: r.delta === null ? null : Number(r.delta) }]);
+    }
+  }
+  return out;
+}
+
+/** The column to select alongside a scan for ScanRef.fpKey. */
+export const FP_KEY_COLUMN = "fp_key:field_fingerprints->>k";
+
+/** What changed between two saved scans of a business (oldest first),
+ * across every scan in between — the monthly email's "since your last
+ * report". Unknown (never "nothing changed") when it can't be read. */
+export async function scanChangesBetweenScores(db: SupabaseClient, businessId: string, fromScoreId: string, toScoreId: string): Promise<ScanChangeSummary> {
+  const unknown: ScanChangeSummary = { available: false, records: [] };
+  const { data: ends } = await db.from("scores").select("id, created_at").in("id", [fromScoreId, toScoreId]);
+  const from = (ends ?? []).find((r) => r.id === fromScoreId);
+  const to = (ends ?? []).find((r) => r.id === toScoreId);
+  if (!from || !to || Date.parse(from.created_at as string) > Date.parse(to.created_at as string)) return unknown;
+  const { data, error } = await db
+    .from("scores")
+    .select(`id, created_at, ${FP_KEY_COLUMN}`)
+    .eq("business_id", businessId)
+    .gte("created_at", from.created_at as string)
+    .lte("created_at", to.created_at as string)
+    .order("created_at", { ascending: true });
+  if (error || !data) return unknown;
+  const scans = (data as unknown as Array<{ id: string; fp_key: string | null }>).map((r) => ({ id: r.id, fpKey: r.fp_key ?? null }));
+  return changesAcross(scans, await loadScanChangeRecords(db, scans.slice(1).map((s) => s.id)));
 }

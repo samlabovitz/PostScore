@@ -24,7 +24,8 @@ import { reconcileTasks, type TaskRow } from "@/lib/actionPlan";
 import { buildProfileSnapshot, diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
 import { lookupBusinessByPlaceId, type OpeningHoursPeriod } from "@/lib/google/places";
 import type { PlacesDetailsKind } from "@/lib/placesDetailsBudget";
-import type { GbpReviewTimes } from "@/lib/scanChanges";
+import { changesAcross, type GbpReviewTimes, type ScanChangeSummary } from "@/lib/scanChanges";
+import { FP_KEY_COLUMN, loadScanChangeRecords } from "@/lib/scanChanges.server";
 import { saveBusinessWithClient } from "@/app/actions/businesses";
 import { DEFAULT_LOCALE, normalizeLocale, t, type Locale } from "@/lib/i18n";
 import { findLastKnownWebsiteDate, resolveListingWebsite } from "@/lib/googleListingWebsite";
@@ -747,6 +748,9 @@ export interface ScoreSnapshot {
    * saved before that column existed; callers must treat that honestly
    * as "nothing to diff from," never as all-fields-unchanged. */
   profile_snapshot_json: ProfileSnapshot | null;
+  /** On the newest scan only: what changed since the scan before it, from
+   * our own change records (lib/scanChanges.ts). */
+  listing_changes?: ScanChangeSummary;
 }
 
 /**
@@ -764,13 +768,18 @@ export async function getRecentScoreSnapshots(
   const supabase = createClient();
   const { data, error } = await supabase
     .from("scores")
-    .select("id, total, grade, scoring_version, created_at, breakdown_json, profile_snapshot_json")
+    .select(`id, total, grade, scoring_version, created_at, breakdown_json, profile_snapshot_json, ${FP_KEY_COLUMN}`)
     .eq("business_id", businessId)
     .order("created_at", { ascending: false })
     .limit(limit);
 
   if (error || !data) return [];
-  return data as ScoreSnapshot[];
+  const rows = data as unknown as Array<ScoreSnapshot & { fp_key: string | null }>;
+  if (rows.length >= 2) {
+    const [current, previous] = rows;
+    rows[0] = { ...current, listing_changes: changesAcross([{ id: previous.id, fpKey: previous.fp_key }, { id: current.id, fpKey: current.fp_key }], await loadScanChangeRecords(supabase, [current.id])) };
+  }
+  return rows;
 }
 
 /** Request-scoped (lib/requestCache.ts): one query per page render. */

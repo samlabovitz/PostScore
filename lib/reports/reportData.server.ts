@@ -7,6 +7,7 @@
 // RLS-scoped through each action: a business the user doesn't own is
 // not_found.
 
+import { reviewCountChangeOf } from "@/lib/scanChanges";
 import { reviewGoalLines } from "@/lib/reviewGoal";
 import "server-only";
 import { scoreBusinessById } from "@/app/actions/scoring";
@@ -94,9 +95,9 @@ export async function getReportDataWithSources(businessId: string, now: Date = n
 
   const linkOptions = { referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk };
   const recs = actionPlan.status === "ok" ? reportNextSteps(topRecommendations(actionPlan.tasks, actionPlan.websiteBanner, businessId, linkOptions, Infinity, actionPlan.urgentIssues)) : [];
-  const snapshots = reports.history;
-  const latestReviews = snapshots.at(-1)?.profile_snapshot_json?.reviewCount;
-  const previousReviews = snapshots.at(-2)?.profile_snapshot_json?.reviewCount;
+  // The review count between the two latest scans, from our own change
+  // records: exact only from Business Profile, otherwise "changed".
+  const reviewChange = recap ? reviewCountChangeOf(recap.summary) : null;
 
   const sources: ReportSources = {
     recs: actionPlan.status === "ok" ? topRecommendations(actionPlan.tasks, actionPlan.websiteBanner, businessId, linkOptions, Infinity, actionPlan.urgentIssues) : [],
@@ -140,7 +141,8 @@ export async function getReportDataWithSources(businessId: string, now: Date = n
       reviews: {
         rating: business.rating,
         count: business.review_count,
-        countChange: typeof latestReviews === "number" && typeof previousReviews === "number" ? latestReviews - previousReviews : null,
+        countChange: reviewChange?.kind === "exact" ? reviewChange.delta : reviewChange?.kind === "none" ? 0 : null,
+        countChanged: reviewChange?.kind === "changed",
         nearbyAverage: benchmark.status === "ok" ? benchmark.benchmark.competitorReviewAverage : null,
         // The shared review goal (beat the leader), in the report's words.
         goalLines: benchmark.status === "ok" && benchmark.benchmark.reviewGoal ? reviewGoalLines(benchmark.benchmark.reviewGoal, benchmark.benchmark.reviewGroup, locale) : [],

@@ -6,6 +6,7 @@
 // what the real builder actually produces.
 import {
   buildMonthlyReportContent,
+  EMPTY_REPORT_EXTRAS,
   type FocusTopActionPlanTask,
   type MonthlyReportScoreRow,
 } from "@/lib/monthlyReport";
@@ -168,7 +169,10 @@ export const SAMPLE_STEADY: MonthlyReportEmailProps = {
         growthMoves: [{ id: "run_price_check", title: "Run a price check", why: "Local prices move with the seasons." }],
         monthIndex: SAMPLE_MONTH_INDEX,
         routineCheckedCount: 5,
-      }
+      },
+      true,
+      // Compared, and nothing on the listing changed.
+      { ...EMPTY_REPORT_EXTRAS, listingChanges: { available: true, records: [] } }
     );
   })(),
 };
@@ -211,7 +215,17 @@ export const SAMPLE_REAL_DELTAS: MonthlyReportEmailProps = {
         growthMoves: [{ id: "improve_website", title: "Improve your website", why: "Your site is losing points on real checks." }],
         monthIndex: SAMPLE_MONTH_INDEX,
         routineCheckedCount: 6,
-      }
+      },
+      true,
+      { ...EMPTY_REPORT_EXTRAS, listingChanges: {
+          available: true,
+          records: [
+            { field: "phone", direction: "changed", delta: null },
+            { field: "photos", direction: "up", delta: 4 },
+            { field: "rating", direction: "changed", delta: null },
+            { field: "reviews", direction: "up", delta: 24 },
+          ],
+        } }
     );
   })(),
 };
@@ -306,7 +320,15 @@ export const SAMPLE_DECLINE: MonthlyReportEmailProps = {
         growthMoves: [],
         monthIndex: SAMPLE_MONTH_INDEX,
         routineCheckedCount: 2,
-      }
+      },
+      true,
+      { ...EMPTY_REPORT_EXTRAS, listingChanges: {
+          available: true,
+          records: [
+            { field: "rating", direction: "changed", delta: null },
+            { field: "reviews", direction: "changed", delta: null },
+          ],
+        } }
     );
   })(),
 };
