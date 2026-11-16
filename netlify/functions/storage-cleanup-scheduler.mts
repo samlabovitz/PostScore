@@ -13,8 +13,10 @@ async function handler() {
   }
   try {
     const res = await fetch(`${siteUrl}/api/cron/storage-cleanup`, { method: "POST", headers: { Authorization: `Bearer ${cronSecret}` } });
-    const body = (await res.json().catch(() => null)) as { dryRun?: boolean; results?: Array<{ rule: string; count: number; skipped?: string }> } | null;
-    const counts = (body?.results ?? []).map((r) => `${r.rule}=${r.count}${r.skipped ? "(skipped)" : ""}`).join(" ");
+    const body = (await res.json().catch(() => null)) as { dryRun?: boolean; results?: Array<{ rule: string; count: number; detail?: Record<string, number>; skipped?: string }> } | null;
+    const counts = (body?.results ?? [])
+      .map((r) => `${r.rule}=${r.count}${r.detail ? `(${Object.entries(r.detail).map(([k, v]) => `${k}=${v}`).join(",")})` : ""}${r.skipped ? "(skipped)" : ""}`)
+      .join(" ");
     console.log(`[storage-cleanup-scheduler] HTTP ${res.status} ${body?.dryRun ? "dry run" : "live"} ${counts}`);
   } catch (err) {
     console.error(`[storage-cleanup-scheduler] failed: ${err instanceof Error ? err.message : String(err)}`);

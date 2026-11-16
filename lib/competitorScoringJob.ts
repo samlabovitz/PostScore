@@ -13,6 +13,8 @@ import { scoreBusinessWithClient } from "@/app/actions/scoring";
 import type { ScoreBreakdown } from "@/lib/scoring";
 import { normalizeLocale } from "@/lib/i18n";
 import { forCompetitorComparison } from "@/lib/scoring";
+import { rawCleared } from "@/lib/competitorRawCleanup";
+import { storageCleanupLive } from "@/lib/storageCleanupLive";
 
 export type ScoringJobKind = "new_scan" | "backfill";
 
@@ -116,6 +118,9 @@ export async function runCompetitorScoringJob(
       let breakdown: ScoreBreakdown | null = null;
       let websiteAnalysis: unknown = null;
       try {
+        // Google's values already cleared (Day 23 2b-3): scoring it again
+        // from blanks would be wrong — its saved result is kept.
+        if (rawCleared(row)) throw new Error("listing values cleared");
         const res = await scoreCompetitorFully(row, { locale, fetchImpl: options.fetchImpl });
         breakdown = res.breakdown;
         websiteAnalysis = res.websiteAnalysis;
@@ -146,6 +151,12 @@ export async function runCompetitorScoringJob(
         .eq("id", r.id);
     }
     await setJob({ status: "done", done, pagespeed_calls: pagespeedCalls, finished_at: new Date().toISOString() });
+    // Scored: Google's values aren't needed any more (dry run until
+    // STORAGE_CLEANUP_LIVE=true, like the rest of the cleanup).
+    if (storageCleanupLive(env)) {
+      const { clearScanRawValues } = await import("@/lib/competitorRawCleanup.server");
+      await clearScanRawValues(db, scanId);
+    }
     return { status: "done", done, total: competitors.length, pagespeedCalls };
   }
 

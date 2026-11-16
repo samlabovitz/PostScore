@@ -13,6 +13,6 @@ export async function POST(request: NextRequest) {
   if (!isAuthorized(request)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const dryRun = request.nextUrl.searchParams.get("dry") === "1" || !storageCleanupLive();
   const results = await runStorageCleanup(createAdminClient(), { dryRun });
-  console.log(`[storage-cleanup] ${dryRun ? "dry run" : "live"}: ${results.map((r) => `${r.rule}=${r.count}${r.skipped ? " (skipped)" : ""}`).join(" ")}`);
+  console.log(`[storage-cleanup] ${dryRun ? "dry run" : "live"}: ${results.map((r) => `${r.rule}=${r.count}${r.detail ? `(${Object.entries(r.detail).map(([k, v]) => `${k}=${v}`).join(",")})` : ""}${r.skipped ? " (skipped)" : ""}`).join(" ")}`);
   return NextResponse.json({ dryRun, results });
 }

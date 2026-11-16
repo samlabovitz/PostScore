@@ -852,7 +852,7 @@ function CompetitorCard({ entry, rank, view, businessId }: { entry: SavedCompeti
           <IconChevronDown size={14} className={cn("transition-transform", open && "rotate-180")} />
           {open ? t(locale, "dashboard.competitors.hideDetails") : t(locale, "dashboard.competitors.showDetails")}
         </button>
-        {!entry.isSubject && <RemoveCompetitorButton businessId={businessId} placeId={entry.placeId} name={entry.name} />}
+        {!entry.isSubject && <RemoveCompetitorButton businessId={businessId} placeId={entry.placeId} />}
       </div>
       {open && <CheckDetail entry={entry} />}
     </li>
@@ -919,7 +919,7 @@ function AlsoNearby({ listings }: { listings: AlsoNearbyListing[] }) {
         {listings.map((l) => (
           <li key={l.placeId} className="flex items-baseline justify-between gap-3 px-4 py-2.5 text-[13px]">
             <span className="min-w-0 truncate text-ink" title={l.name ?? undefined}>
-              {displayName(l.name)}
+              {l.name ? displayName(l.name) : MISSING}
             </span>
             <span className="shrink-0 text-[12px] text-ink-mute">
               {miles(l.distanceMeters, locale)} ·{" "}
@@ -927,6 +927,8 @@ function AlsoNearby({ listings }: { listings: AlsoNearbyListing[] }) {
                 <span data-testid="temporarily-closed" className="font-semibold text-[color:var(--color-amber)]">
                   {t(locale, "dashboard.competitors.temporarilyClosedTag")}
                 </span>
+              ) : l.reviewCount === null ? (
+                MISSING
               ) : (
                 tPlural(locale, "dashboard.competitors.reviewCount", l.reviewCount, { count: formatCount(l.reviewCount, locale) })
               )}

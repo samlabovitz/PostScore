@@ -3,6 +3,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
 
 import {
+  withLiveListing,
   LIVE_CACHE_MS,
   LiveCache,
   MAX_LIVE_DETAILS_PER_LOAD,
@@ -267,5 +268,14 @@ describe("liveCompetitorPlaces: one visit, as few calls as possible", () => {
     const r = await withLiveCompetitorValues("biz", SCAN, "My Salon", { lat: 1, lng: 2, includedTypes: ["hair_salon"] }, deps());
     expect(r.unavailable).toBe(false);
     expect(r.scan.entries.find((e) => e.placeId === "c2")!.name).toBe("Live c2");
+  });
+});
+
+describe("'Also nearby' listings", () => {
+  test("name and review count from the live read; missing → null and flagged", () => {
+    const saved = { placeId: "x", name: null, distanceMeters: 400, reviewCount: null };
+    expect(withLiveListing(saved, live("x", { name: "Tiny", reviewCount: 2 }))).toEqual({ placeId: "x", name: "Tiny", distanceMeters: 400, reviewCount: 2, liveMissing: false });
+    // A saved name (an old list) is never shown.
+    expect(withLiveListing({ ...saved, name: "Old saved name", reviewCount: 9 }, undefined)).toEqual({ placeId: "x", name: null, distanceMeters: 400, reviewCount: null, liveMissing: true });
   });
 });

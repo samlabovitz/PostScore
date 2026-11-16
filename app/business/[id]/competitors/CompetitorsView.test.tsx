@@ -355,3 +355,22 @@ describe("labels built from live counts, when part of the list didn't load", () 
     expect(html.match(/Price level:/g)?.length).toBe(3);
   });
 });
+
+describe("'Also nearby' and 'Removed by you': Google's values read live", () => {
+  test("a listing whose name and review count loaded shows them; one that didn't shows '—', never '0 reviews'", () => {
+    const data = {
+      ...DATA,
+      alsoNearby: [
+        { placeId: "x1", name: "Tiny Liquor", distanceMeters: 400, reviewCount: 3 },
+        { placeId: "x2", name: null, distanceMeters: 600, reviewCount: null },
+      ],
+    };
+    const html = render(data);
+    expect(html).toContain("Tiny Liquor");
+    expect(html).toMatch(/3(<!-- -->)? reviews/);
+    expect(html).not.toMatch(/>0(<!-- -->)? reviews/);
+    // The name, and the count after the distance.
+    expect(html).toMatch(/title=""?[^>]*>—<|<span class="min-w-0 truncate text-ink">—</);
+    expect(html).toMatch(/·(<!-- -->)? (<!-- -->)?—/);
+  });
+});

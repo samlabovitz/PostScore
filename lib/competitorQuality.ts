@@ -226,9 +226,11 @@ export function distanceNote(competitors: Array<{ distanceMeters: number | null;
  * "Also nearby", never ranked or scored. */
 export interface AlsoNearbyListing {
   placeId: string;
-  name: string;
+  /** Google's values: read live when shown (never kept after the scan's
+   * cleanup, Day 23 2b-3); null until then or when they didn't load. */
+  name: string | null;
   distanceMeters: number;
-  reviewCount: number;
+  reviewCount: number | null;
   /** Google shows it as temporarily closed: listed, never ranked. */
   temporarilyClosed?: boolean;
 }

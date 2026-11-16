@@ -61,14 +61,15 @@ function done(businessId: string): OverrideResult {
 }
 
 /** "Remove" with the owner's reason. */
-export async function removeCompetitor(businessId: string, placeId: string, reason: RemoveReason, name: string | null): Promise<OverrideResult> {
+export async function removeCompetitor(businessId: string, placeId: string, reason: RemoveReason): Promise<OverrideResult> {
   if (typeof placeId !== "string" || !placeId || !isRemoveReason(reason)) return { status: "invalid" };
   const { supabase, user, business } = await ownBusiness(businessId);
   if (!user) return { status: "unauthenticated" };
   if (!business || business.place_id === placeId) return { status: "not_found" };
   const { error } = await supabase
     .from("competitor_overrides")
-    .upsert({ business_id: businessId, place_id: placeId, action: "removed", reason, name: typeof name === "string" ? name.slice(0, 200) : null, created_by: user.id, created_at: new Date().toISOString() }, { onConflict: "business_id,place_id" });
+    // No name kept (Google's value): the page reads it live by place ID.
+    .upsert({ business_id: businessId, place_id: placeId, action: "removed", reason, name: null, created_by: user.id, created_at: new Date().toISOString() }, { onConflict: "business_id,place_id" });
   if (error) return { status: MISSING_TABLE.has(error.code ?? "") ? "not_enabled" : "error" };
   return done(businessId);
 }
@@ -168,7 +169,8 @@ export async function addCompetitor(businessId: string, placeId: string): Promis
 
   const { error } = await supabase
     .from("competitor_overrides")
-    .upsert({ business_id: businessId, place_id: placeId, action: "added", reason: null, name: (candidate.details?.name ?? candidate.name ?? "").slice(0, 200), created_by: user.id, created_at: new Date().toISOString() }, { onConflict: "business_id,place_id" });
+    // No name kept (Google's value): the page reads it live by place ID.
+    .upsert({ business_id: businessId, place_id: placeId, action: "added", reason: null, name: null, created_by: user.id, created_at: new Date().toISOString() }, { onConflict: "business_id,place_id" });
   if (error) return { status: MISSING_TABLE.has(error.code ?? "") ? "not_enabled" : "error" };
 
   // Join the latest saved list now, scored from the same search — dated

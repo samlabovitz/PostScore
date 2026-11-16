@@ -104,6 +104,7 @@ import {
 } from "../lib/assistant";
 import { groupSavedScans, SAVED_SCAN_COLUMNS, type SavedScanRow } from "../lib/savedCompetitorScans";
 import { ownerStanding, rankBy } from "../lib/competitorComparison";
+import { allowServerOnly } from "./allowServerOnly";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -185,19 +186,22 @@ async function readLatestCompetitorSnapshot(businessId: string): Promise<Competi
   const latestScanId = rows[0].scan_id;
   const latestRows = rows.filter((r) => r.scan_id === latestScanId);
 
+  // Google's values read live, like the app (never the saved copies).
+  allowServerOnly();
+  const { withLiveCompetitorValuesFor } = await import("../lib/placesLive.server");
+  const live = await withLiveCompetitorValuesFor(supabase, businessId, groupSavedScans(latestRows)[0]);
   return {
-    scan: groupSavedScans(latestRows)[0],
+    scan: live.scan,
     scanId: latestScanId,
     createdAt: rows[0].created_at,
-    // The saved scan as it is (Day 23 2b-3 moves this to live values).
-    liveUnavailable: false,
-    entries: latestRows.map((r) => ({
-      name: r.name,
-      isSubject: r.is_subject,
-      total: r.total,
-      grade: r.grade,
-      priceLevel: r.price_level,
-      photoCount: r.photo_count,
+    liveUnavailable: live.unavailable,
+    entries: live.scan.entries.map((e) => ({
+      name: e.name,
+      isSubject: e.isSubject,
+      total: e.total,
+      grade: e.grade,
+      priceLevel: e.priceLevel,
+      photoCount: e.photoCount,
     })),
   };
 }

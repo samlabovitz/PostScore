@@ -10,6 +10,7 @@ import { getLastScanAt, scoreBusinessById } from "@/app/actions/scoring";
 import { normalizeLocale } from "@/lib/i18n";
 import { competitorPageLines } from "@/lib/competitorSchedule";
 import { withLiveCompetitorValues } from "@/lib/placesLive.server";
+import { withLiveListing } from "@/lib/placesLive";
 
 export default async function CompetitorsPage({ params }: { params: { id: string } }) {
   // Independent loads run together.
@@ -41,10 +42,27 @@ export default async function CompetitorsPage({ params }: { params: { id: string
 
   // Google's names, ratings and review counts are read live (never the
   // saved copies) while the page's loading skeleton shows.
+  // "Also nearby" and "Removed by you" are named in the same read.
+  const alsoNearby = fetched.alsoNearby ?? [];
+  const removed = fetched.removedByOwner ?? [];
   const live = fetched.latest
-    ? await withLiveCompetitorValues(params.id, fetched.latest, fetched.businessName, fetched.liveQuery ?? { lat: null, lng: null, includedTypes: [], textQuery: null })
+    ? await withLiveCompetitorValues(
+        params.id,
+        fetched.latest,
+        fetched.businessName,
+        fetched.liveQuery ?? { lat: null, lng: null, includedTypes: [], textQuery: null },
+        undefined,
+        [...alsoNearby.map((l) => l.placeId), ...removed.map((o) => o.placeId)]
+      )
     : null;
-  const data = live ? { ...fetched, latest: live.scan } : fetched;
+  const data = live
+    ? {
+        ...fetched,
+        latest: live.scan,
+        alsoNearby: alsoNearby.map((l) => withLiveListing(l, live.extra[l.placeId])),
+        removedByOwner: removed.map((o) => ({ ...o, name: live.extra[o.placeId]?.name ?? null })),
+      }
+    : fetched;
 
   return (
     <DashboardShell

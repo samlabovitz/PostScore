@@ -170,3 +170,9 @@ export function withMissingNames<T extends { rivals: Array<{ placeId: string; na
 }
 
 export const MISSING_NAME = "—";
+
+/** An "Also nearby" listing with Google's name and review count read
+ * live (the saved list keeps only place ID and distance); missing → "—". */
+export function withLiveListing<T extends { placeId: string; name: string | null; reviewCount: number | null }>(listing: T, live: LivePlace | undefined): T & { liveMissing: boolean } {
+  return live ? { ...listing, name: live.name, reviewCount: live.reviewCount, liveMissing: false } : { ...listing, name: null, reviewCount: null, liveMissing: true };
+}

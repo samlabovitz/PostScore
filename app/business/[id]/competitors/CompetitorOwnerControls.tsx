@@ -26,7 +26,7 @@ function milesText(meters: number | null, locale: Locale): string {
 }
 
 /** "Remove" → why? (Closed / Not really a competitor / Other). */
-export function RemoveCompetitorButton({ businessId, placeId, name }: { businessId: string; placeId: string; name: string | null }) {
+export function RemoveCompetitorButton({ businessId, placeId }: { businessId: string; placeId: string }) {
   const locale = useLocale();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -36,7 +36,7 @@ export function RemoveCompetitorButton({ businessId, placeId, name }: { business
   async function remove(reason: RemoveReason) {
     setBusy(true);
     setError(null);
-    const r = await removeCompetitor(businessId, placeId, reason, name);
+    const r = await removeCompetitor(businessId, placeId, reason);
     setBusy(false);
     if (r.status === "ok") router.refresh();
     else setError(failText(r, locale));
@@ -77,7 +77,8 @@ export function RemovedByOwner({ businessId, removed }: { businessId: string; re
       <ul className="mt-1.5 flex flex-col gap-1 text-[12.5px] text-ink-soft">
         {removed.map((o) => (
           <li key={o.placeId} className="flex flex-wrap items-center gap-x-2">
-            <span className="text-ink">{o.name ?? t(locale, "dashboard.competitors.unnamedListing")}</span>
+            {/* Read live by place ID; "—" when Google couldn't give it right now. */}
+            <span className="text-ink">{o.name ?? "—"}</span>
             {o.reason && <span>· {t(locale, k(`reason.${o.reason}`))}</span>}
             <button
               type="button"

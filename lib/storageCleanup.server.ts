@@ -9,6 +9,9 @@
 //   reply_drafts       review_reply_drafts > 90 days → deleted
 //   lost_connections   Google data 30 days after a lost connection → deleted
 //   screenshots        files of deleted businesses, unused, or > 90 days → deleted
+//   competitor_raw     Google's values on saved competitor scans, once scored
+//                      or after 24 hours → blank (lib/competitorRawCleanup.server.ts);
+//                      the names saved with Remove / Add → null
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -19,17 +22,17 @@ export const EDIT_VALUE_DAYS = 30;
 export const DRAFT_DAYS = 90;
 export const LOST_CONNECTION_DAYS = 30;
 
-export type CleanupRule = "lat_lng" | "change_values" | "practice_changes" | "google_edit_values" | "reply_drafts" | "lost_connections" | "screenshots";
+export type CleanupRule = "lat_lng" | "change_values" | "practice_changes" | "google_edit_values" | "reply_drafts" | "lost_connections" | "screenshots" | "competitor_raw";
 export interface RuleResult {
   rule: CleanupRule;
   count: number;
+  /** A rule's own breakdown of `count` (counts only, never ids or values). */
+  detail?: Record<string, number>;
   /** The rule couldn't run (e.g. a column before its SQL) — nothing changed. */
   skipped?: string;
 }
 
-export function storageCleanupLive(env: Record<string, string | undefined> = process.env): boolean {
-  return env.STORAGE_CLEANUP_LIVE === "true";
-}
+export { storageCleanupLive } from "@/lib/storageCleanupLive";
 
 const iso = (now: number, days: number) => new Date(now - days * DAY).toISOString();
 const PRACTICE_OR = "kind.like.%_practice,location_name.eq.locations/practice";
@@ -120,9 +123,19 @@ export async function cleanScreenshots(admin: SupabaseClient, now: number, dryRu
   }
 }
 
+export async function cleanCompetitorRaw(admin: SupabaseClient, now: number, dryRun: boolean): Promise<RuleResult> {
+  try {
+    const { cleanCompetitorRawValues, NIGHTLY_MAX_ROWS } = await import("@/lib/competitorRawCleanup.server");
+    const c = await cleanCompetitorRawValues(admin, { now, dryRun, maxRows: NIGHTLY_MAX_ROWS });
+    return { rule: "competitor_raw", count: c.rows, detail: { scans: c.scans, expired_jobs: c.expiredJobs, override_names: c.overrideNames } };
+  } catch (err) {
+    return { rule: "competitor_raw", count: 0, skipped: (err instanceof Error ? err.message : "error").slice(0, 80) };
+  }
+}
+
 export async function runStorageCleanup(admin: SupabaseClient, options: { now?: number; dryRun: boolean }): Promise<RuleResult[]> {
   const now = options.now ?? Date.now();
-  const rules = [cleanLatLng, cleanChangeValues, cleanPracticeChanges, cleanGoogleEditValues, cleanReplyDrafts, cleanLostConnections, cleanScreenshots];
+  const rules = [cleanLatLng, cleanChangeValues, cleanPracticeChanges, cleanGoogleEditValues, cleanReplyDrafts, cleanLostConnections, cleanScreenshots, cleanCompetitorRaw];
   const out: RuleResult[] = [];
   for (const rule of rules) {
     try {

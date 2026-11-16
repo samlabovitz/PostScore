@@ -251,7 +251,7 @@ describe("the owner's Remove and Add", () => {
 
   test("Remove, Removed by you and Add a competitor (EN + ES)", () => {
     const wrap = (node: React.ReactNode, locale: "en" | "es" = "en") => renderToStaticMarkup(<LocaleProvider locale={locale}>{node}</LocaleProvider>);
-    expect(wrap(<RemoveCompetitorButton businessId="b1" placeId="p" name="P" />)).toContain(">Remove<");
+    expect(wrap(<RemoveCompetitorButton businessId="b1" placeId="p" />)).toContain(">Remove<");
     const removed = wrap(<RemovedByOwner businessId="b1" removed={[{ placeId: "p", action: "removed", reason: "not_competitor", name: "Tatiana Day Spa", createdAt: "" }]} />);
     expect(removed).toContain("Removed by you");
     expect(removed).toContain("Not really a competitor");

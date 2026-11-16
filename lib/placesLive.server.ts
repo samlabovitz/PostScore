@@ -166,13 +166,15 @@ export async function withLiveCompetitorValues(
   scan: SavedCompetitorScan,
   ownName: string | null,
   query: { lat: number | null; lng: number | null; includedTypes: string[]; textQuery?: string | null },
-  deps?: LiveDeps
-): Promise<{ scan: SavedCompetitorScan; unavailable: boolean }> {
+  deps?: LiveDeps,
+  /** More places the page names ("Also nearby", "Removed by you"), after the ranked ones. */
+  extraPlaceIds: string[] = []
+): Promise<{ scan: SavedCompetitorScan; unavailable: boolean; extra: Record<string, LivePlace> }> {
   const base = scanWithoutPlacesValues(scan, ownName);
   const live = await liveCompetitorPlaces(
     {
       businessId,
-      placeIds: placesToFetch(base),
+      placeIds: Array.from(new Set([...placesToFetch(base), ...extraPlaceIds])),
       lat: query.lat,
       lng: query.lng,
       radiusMeters: liveSearchRadius(base.entries),
@@ -182,20 +184,21 @@ export async function withLiveCompetitorValues(
     deps
   ).catch((): LiveCompetitorsResult => ({ status: "unavailable" }));
   // The order never changes: it's by our own scores.
-  if (live.status === "unavailable") return { scan: base, unavailable: true };
+  if (live.status === "unavailable") return { scan: base, unavailable: true, extra: {} };
   const merged = withLivePlaces(base, live.places);
-  return { scan: merged, unavailable: merged.entries.some((e) => e.liveMissing) };
+  const extra = Object.fromEntries(extraPlaceIds.filter((id) => live.places[id]).map((id) => [id, live.places[id]]));
+  return { scan: merged, unavailable: merged.entries.some((e) => e.liveMissing), extra };
 }
 
 /** The same, for a caller that has only the business ID (the shared
  * competitor snapshot, reports, the monthly job): reads where to search
  * from the business row and its niche. `db` may be a session or admin client. */
-export async function withLiveCompetitorValuesFor(db: SupabaseClient, businessId: string, scan: SavedCompetitorScan, deps?: LiveDeps): Promise<{ scan: SavedCompetitorScan; unavailable: boolean }> {
+export async function withLiveCompetitorValuesFor(db: SupabaseClient, businessId: string, scan: SavedCompetitorScan, deps?: LiveDeps): Promise<{ scan: SavedCompetitorScan; unavailable: boolean; extra: Record<string, LivePlace> }> {
   const [{ data }, niche] = await Promise.all([
     db.from("businesses").select(`name, ${LIVE_QUERY_COLUMNS}`).eq("id", businessId).maybeSingle(),
     loadBusinessNiche(db, businessId),
   ]);
   const row = data as (LiveQueryBusinessRow & { name: string | null }) | null;
-  if (!row) return { scan: scanWithoutPlacesValues(scan, null), unavailable: true };
+  if (!row) return { scan: scanWithoutPlacesValues(scan, null), unavailable: true, extra: {} };
   return withLiveCompetitorValues(businessId, scan, row.name, liveQueryFromRow(row, niche), deps);
 }
