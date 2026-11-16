@@ -25,6 +25,7 @@ import { buildProfileSnapshot, diffProfileSnapshots, type ProfileChange, type Pr
 import { lookupBusinessByPlaceId, type OpeningHoursPeriod } from "@/lib/google/places";
 import type { PlacesDetailsKind } from "@/lib/placesDetailsBudget";
 import { changesAcross, type GbpReviewTimes, type ScanChangeSummary } from "@/lib/scanChanges";
+import { breakdownWithoutQuotes } from "@/lib/breakdownStorage";
 import { FP_KEY_COLUMN, loadScanChangeRecords } from "@/lib/scanChanges.server";
 import { saveBusinessWithClient } from "@/app/actions/businesses";
 import { DEFAULT_LOCALE, normalizeLocale, t, type Locale } from "@/lib/i18n";
@@ -211,7 +212,9 @@ export async function saveScoreSnapshotWithClient(
       business_id: businessId,
       total: scored.result.breakdown.total,
       grade: scored.result.breakdown.grade,
-      breakdown_json: breakdownJson,
+      // Our own results only — never text quoting Google's values
+      // (lib/breakdownStorage.ts); pages show the live score's own words.
+      breakdown_json: breakdownWithoutQuotes(breakdownJson),
       scoring_version: scored.result.breakdown.scoringVersion,
       profile_snapshot_json: snapshot,
     })

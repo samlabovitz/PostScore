@@ -25,33 +25,12 @@ export const COMPETITOR_RAW_COLUMNS = [
 /** How long a scan may keep Google's values: its full scoring needs them. */
 export const COMPETITOR_RAW_HOURS = 24;
 
-/** Breakdown check fields that quote Google's values (never shown for a
- * competitor). The points, confidence and our own flags stay. */
-const QUOTED_META_KEYS = new Set(["recentReviews"]);
+// The breakdown rule is shared with the owner's own saved scores
+// (lib/breakdownStorage.ts): both lists of checks, never just the flat one.
+import { breakdownHasQuotes, breakdownWithoutQuotes } from "@/lib/breakdownStorage";
+export { breakdownWithoutQuotes };
 
-interface CheckLike {
-  explanation?: unknown;
-  note?: unknown;
-  meta?: Record<string, unknown> | null;
-  [key: string]: unknown;
-}
-
-/** A saved breakdown without the text that quotes Google's values ("Rated
- * 4.6★ on Google", "120 reviews") and without quoted counts in `meta`. */
-export function breakdownWithoutQuotes<T>(breakdown: T): T {
-  if (!breakdown || typeof breakdown !== "object") return breakdown;
-  const b = breakdown as { checks?: unknown };
-  if (!Array.isArray(b.checks)) return breakdown;
-  return {
-    ...(breakdown as object),
-    checks: (b.checks as CheckLike[]).map((c) => {
-      const { note: _note, ...rest } = c;
-      void _note;
-      const meta = c.meta && typeof c.meta === "object" ? Object.fromEntries(Object.entries(c.meta).filter(([k]) => !QUOTED_META_KEYS.has(k))) : c.meta;
-      return { ...rest, explanation: "", ...(meta !== undefined ? { meta } : {}) };
-    }),
-  } as T;
-}
+type CheckLike = { id?: unknown; meta?: Record<string, unknown> | null; [key: string]: unknown };
 
 /** A competitor's website analysis without Google's side of each
  * "website says / Google says" comparison (the website's side is ours). */
@@ -100,8 +79,7 @@ export function hasRawValues(row: CompetitorRawRow): boolean {
   if (COMPETITOR_RAW_COLUMNS.some((c) => row[c] !== null && row[c] !== undefined)) return true;
   if (JSON.stringify(row.website_analysis_json ?? null).includes('"googleValue"')) return true;
   if (Array.isArray(row.also_nearby_json) && row.also_nearby_json.some((l) => l && typeof l === "object" && ("name" in l || "reviewCount" in l))) return true;
-  const checks = (row.breakdown_json as { checks?: CheckLike[] } | null)?.checks ?? [];
-  return checks.some((c) => (typeof c.explanation === "string" && c.explanation !== "") || c.note !== undefined || Object.keys(c.meta ?? {}).some((k) => QUOTED_META_KEYS.has(k)));
+  return breakdownHasQuotes(row.breakdown_json) || breakdownHasQuotes(row.pending_breakdown_json);
 }
 
 /** The update that leaves only our own results on a row. */

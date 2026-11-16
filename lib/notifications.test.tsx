@@ -137,7 +137,7 @@ describe("lifecycle: created by a scan, never duplicated, resolved when fixed", 
 
   test("every saved scan syncs them (full scans, website re-checks, the monthly job)", () => {
     const src = readFileSync("app/actions/scoring.ts", "utf8");
-    const save = src.slice(src.indexOf("export async function saveScoreSnapshotWithClient"), src.indexOf("export async function saveScoreSnapshotWithClient") + 3000);
+    const save = src.slice(src.indexOf("export async function saveScoreSnapshotWithClient"), src.indexOf("export async function saveScoreSnapshotWithClient") + 5000);
     expect(save).toContain("await syncUrgentNotifications(createAdminClient(), businessId, issues,");
     expect(save).toContain("urgentIssues(input, scored.result.breakdown, { hasListing: !!scored.business.place_id })");
   });
