@@ -51,7 +51,9 @@ import { competitorQueryNoun, competitorTextQuery } from "@/lib/competitorQuery"
 export type { CompetitorRankPoint, SavedCompetitorEntry, SavedCompetitorScan } from "@/lib/savedCompetitorScans";
 
 // Part B (cost-first competitor scan): the Competitors page shows the
-// latest SAVED scan and never calls Google to render. A paid scan
+// latest SAVED scan's results (our scores, grades, ranks, distances) and
+// reads Google's names, ratings and reviews live (lib/placesLive.server.ts,
+// one list call per visit — never a scan, never saved). A paid scan
 // (1–3 Nearby Search calls, ~$0.035 each) runs only:
 //   - once automatically, the first time a business has none
 //     (ensureFirstCompetitorScan),
@@ -132,6 +134,9 @@ export type GetCompetitorsResult =
       timeZone: string;
       /** Niche + ranking scope (lib/businessNiche.ts); null if unreadable. */
       niche?: BusinessNicheState | null;
+      /** Where the page's live read searches (lib/placesLive.server.ts):
+       * the business's point and its own search types. */
+      liveQuery?: { lat: number | null; lng: number | null; includedTypes: string[] };
     }
   | { status: "not_found" }
   | { status: "unauthenticated" }
@@ -140,7 +145,8 @@ export type GetCompetitorsResult =
 /**
  * The Competitors page's data: the latest SAVED scan for a business
  * (RLS-scoped), its rank history, and whether a refresh is allowed.
- * Reads the database only — viewing the page never calls Google.
+ * Reads the database only; the page adds Google's live values
+ * (lib/placesLive.server.ts).
  */
 export async function getCompetitors(businessId: string): Promise<GetCompetitorsResult> {
   const plan = await getPlan();
@@ -259,6 +265,13 @@ export async function getCompetitorsWithClient(
       categories: row.categories,
       fallbackPlaceTypes: ownerTypePlaceTypes(row.business_type_override),
     }),
+    liveQuery: {
+      lat: row.lat,
+      lng: row.lng,
+      includedTypes: Array.from(
+        new Set([row.primary_type, ...((niche && nicheSearchTypes(niche.scope)?.directTypes) ?? []), ...ownerTypePlaceTypes(row.business_type_override)])
+      ).filter((type): type is string => !!type && !isGenericType(type)),
+    },
   };
 }
 

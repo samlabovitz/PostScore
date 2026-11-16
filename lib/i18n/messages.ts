@@ -1233,6 +1233,7 @@ export type MessageKey =
   | "dashboard.competitors.unscoredSuffix.one"
   | "dashboard.competitors.unscoredSuffix.other"
   | "dashboard.competitors.noRating"
+  | "dashboard.live.unavailable"
   | "dashboard.competitors.headToHead.intro.one"
   | "dashboard.competitors.headToHead.intro.other"
   | "dashboard.competitors.headToHead.label"
@@ -7073,6 +7074,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.unscoredSuffix.other":
       " {count} of them couldn't be scored — Google returned no usable details.",
     "dashboard.competitors.noRating": "No rating",
+    "dashboard.live.unavailable": "Couldn't load from Google right now",
     "dashboard.competitors.headToHead.intro.one": "Only 1 business like yours within {miles} miles — here's how you compare with {names}",
     "dashboard.competitors.headToHead.intro.other": "Only {count} {noun} like yours within {miles} miles — here's how you compare with {names}",
     "dashboard.competitors.headToHead.label": "Head-to-head",
@@ -13254,6 +13256,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.unscoredSuffix.other":
       " {count} de ellos no se pudieron evaluar — Google no devolvió detalles utilizables.",
     "dashboard.competitors.noRating": "Sin calificación",
+    "dashboard.live.unavailable": "No se pudo cargar desde Google en este momento",
     "dashboard.competitors.headToHead.intro.one": "Solo hay 1 negocio como el suyo a menos de {miles} millas: así se compara con {names}",
     "dashboard.competitors.headToHead.intro.other": "Solo hay {count} negocios como el suyo a menos de {miles} millas: así se compara con {names}",
     "dashboard.competitors.headToHead.label": "Cara a cara",

@@ -57,7 +57,7 @@ export async function logPlacesDetailsCall(businessId: string | null, kind: Plac
 
 /** The cap skipped a call: a 0-call row ("monthly_skipped"…) and a server log line. */
 export async function logPlacesDetailsSkip(businessId: string | null, kind: PlacesDetailsKind): Promise<void> {
-  console.warn(`[places-details] skipped a ${kind} call for ${businessId ?? "(no business)"}: PLACES_DETAILS_MONTHLY_CAP (${placesDetailsMonthlyCap()}) reached — keeping the saved listing data.`);
+  console.warn(`[places-details] skipped a ${kind} call for ${businessId ?? "(no business)"}: PLACES_SCAN_DETAILS_MONTHLY_CAP (${placesDetailsMonthlyCap()}) reached — keeping the saved listing data.`);
   try {
     await createAdminClient().from("places_calls").insert({ business_id: businessId, kind: skippedKind(kind), calls: 0 });
   } catch {

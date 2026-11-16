@@ -1,7 +1,12 @@
 // Google Place Details calls, logged one row per call site in places_calls
 // with its own `kind`, and capped per calendar month by
-// PLACES_DETAILS_MONTHLY_CAP (default 800) — the same pattern as
-// PLACES_SEARCH_MONTHLY_CAP (lib/placesSearchBudget.ts). Pure.
+// PLACES_SCAN_DETAILS_MONTHLY_CAP (default 700; the older name
+// PLACES_DETAILS_MONTHLY_CAP still works) — the same pattern as
+// PLACES_SEARCH_MONTHLY_CAP (lib/placesSearchBudget.ts). Pure. These calls
+// and onboarding's are the same Google SKU (Place Details Enterprise +
+// Atmosphere, 1,000 free a month): 700 + onboarding's 300 stay inside it.
+// The live page reads are a different SKU with their own caps
+// (lib/placesLive.ts).
 //
 // Over the cap a re-scan skips the Google refresh and keeps the saved
 // listing data (it never fails); the skip is logged. "photos" is logged but
@@ -12,7 +17,7 @@
 // can never use up what re-scans and the monthly job need.
 // See docs/review-scoring-plan.md, Stage 1.
 
-export const DEFAULT_PLACES_DETAILS_MONTHLY_CAP = 800;
+export const DEFAULT_PLACES_DETAILS_MONTHLY_CAP = 700;
 
 export type PlacesDetailsKind =
   /** Adding a business (the intake lookup) — its own ceiling (lib/onboardingLookupBudget.ts). */
@@ -68,8 +73,11 @@ export function isInteractiveDetailsKind(kind: PlacesDetailsKind): boolean {
 }
 
 export function placesDetailsMonthlyCap(env: Record<string, string | undefined> = process.env): number {
-  const raw = Number.parseInt(env.PLACES_DETAILS_MONTHLY_CAP ?? "", 10);
-  return Number.isFinite(raw) && raw >= 0 ? raw : DEFAULT_PLACES_DETAILS_MONTHLY_CAP;
+  for (const value of [env.PLACES_SCAN_DETAILS_MONTHLY_CAP, env.PLACES_DETAILS_MONTHLY_CAP]) {
+    const raw = Number.parseInt(value ?? "", 10);
+    if (Number.isFinite(raw) && raw >= 0) return raw;
+  }
+  return DEFAULT_PLACES_DETAILS_MONTHLY_CAP;
 }
 
 /** May a call of this kind run, with `used` billed calls this month? */

@@ -183,8 +183,8 @@ describe("Google listing photo — Google's rules, cheapest option", () => {
     expect(firstPhotoRef([{ name: "../../evil" }])).toBeNull();
   });
 
-  test("monthly cap stays under Google's 1,000 free; an unreadable log fails closed", () => {
-    expect(placePhotoMonthlyCap({})).toBe(900);
+  test("monthly cap is Google's 1,000 free; an unreadable log fails closed", () => {
+    expect(placePhotoMonthlyCap({})).toBe(1000);
     expect(placePhotoMonthlyCap({ PLACE_PHOTO_MONTHLY_CAP: "0" })).toBe(0);
     expect(canLoadPlacePhoto(899, 900)).toBe(true);
     expect(canLoadPlacePhoto(900, 900)).toBe(false);

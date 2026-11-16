@@ -210,7 +210,7 @@ describe("honest labels", () => {
   test("every competitor shows its distance; few-review ones are tagged (EN + ES)", () => {
     const view = fs.readFileSync("app/business/[id]/competitors/CompetitorsView.tsx", "utf8");
     expect(view).toContain("{!entry.isSubject && entry.distanceMeters !== null && (");
-    expect(view).toContain("{!entry.isSubject && hasFewReviews(entry.reviewCount) && (");
+    expect(view).toContain("{!entry.isSubject && !entry.liveMissing && hasFewReviews(entry.reviewCount) && (");
     const messages = fs.readFileSync("lib/i18n/messages.ts", "utf8");
     expect(messages).toContain('"dashboard.competitors.fewReviewsTag": "Few or no reviews yet"');
     expect(messages).toContain('"dashboard.competitors.fewReviewsTag": "Pocas o ninguna reseña aún"');

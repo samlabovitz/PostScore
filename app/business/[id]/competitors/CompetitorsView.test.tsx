@@ -272,3 +272,86 @@ describe("only 1–2 competitors: a head-to-head, never a rank", () => {
     expect(render()).not.toContain('data-testid="head-to-head"');
   });
 });
+
+describe("live Google values that couldn't load", () => {
+  const missing = (e: SavedCompetitorEntry): SavedCompetitorEntry =>
+    ({ ...e, name: e.isSubject ? e.name : null, rating: null, reviewCount: null, priceLevel: null, photoCount: null, liveMissing: true });
+
+  test("all of them: the one-line fallback, '—' for names, ratings, reviews and price; ranks and scores stay (EN + ES)", () => {
+    const data = { ...DATA, latest: { ...DATA.latest!, entries: DATA.latest!.entries.map(missing) } };
+    const html = renderToStaticMarkup(
+      <LocaleProvider locale="en">
+        <CompetitorsView businessId="biz" data={data} liveUnavailable />
+      </LocaleProvider>
+    ).replace(/&#x27;/g, "'");
+    expect(html).toContain("Couldn't load from Google right now");
+    expect(html).toContain("You're #3 of 4 nearby liquor stores");
+    // Unknown price: the line is hidden, not "—" and not "Not listed".
+    expect(html).not.toContain("Price level");
+    expect(html).toMatch(/—(<!-- -->)? · (<!-- -->)?—/);
+    // Unknown review count: never the "few or no reviews" badge.
+    expect(html).not.toContain('data-testid="few-reviews-tag"');
+    // At the top, right under the title: before the scan date, the hero and the list.
+    const at = html.indexOf('data-testid="live-unavailable"');
+    expect(at).toBeGreaterThan(html.indexOf("Competitors</h1>"));
+    expect(at).toBeLessThan(html.indexOf("Scanned Oct 16, 2026"));
+    expect(at).toBeLessThan(html.indexOf("You're #3 of 4"));
+    expect(html).not.toContain("(unnamed listing)");
+    expect(html).not.toContain("No rating");
+    expect(html).not.toContain("Not listed by Google");
+    const es = renderToStaticMarkup(
+      <LocaleProvider locale="es">
+        <CompetitorsView businessId="biz" data={data} liveUnavailable />
+      </LocaleProvider>
+    );
+    expect(es).toContain("No se pudo cargar desde Google en este momento");
+  });
+
+  test("a value Google really doesn't list still says so; no fallback line when everything loaded", () => {
+    const data = { ...DATA, latest: { ...DATA.latest!, entries: DATA.latest!.entries.map((e) => (e.isSubject ? e : { ...e, rating: null, liveMissing: false })) } };
+    const html = render(data);
+    expect(html).toContain("No rating");
+    expect(html).not.toContain("Couldn't load from Google right now");
+  });
+});
+
+describe("labels built from live counts, when part of the list didn't load", () => {
+  // One competitor's values missing; the rest (and the owner) loaded.
+  const partial = (): Extract<GetCompetitorsResult, { status: "ok" }> => ({
+    ...DATA,
+    latest: {
+      ...DATA.latest!,
+      entries: DATA.latest!.entries.map((e) =>
+        e.name === "Peddler's" ? { ...e, name: null, rating: null, reviewCount: null, priceLevel: null, photoCount: null, liveMissing: true } : { ...e, liveMissing: false }
+      ),
+    },
+  });
+  const view = (data: Extract<GetCompetitorsResult, { status: "ok" }>, unavailable: boolean) =>
+    renderToStaticMarkup(
+      <LocaleProvider locale="en">
+        <CompetitorsView businessId="biz" data={data} liveUnavailable={unavailable} />
+      </LocaleProvider>
+    ).replace(/&#x27;/g, "'");
+
+  test("a known low count still gets the badge; the unknown one doesn't", () => {
+    const data = partial();
+    data.latest!.entries = data.latest!.entries.map((e) => (e.name === "Corner Liquor" ? { ...e, reviewCount: 3 } : e));
+    const html = view(data, true);
+    expect(html.match(/data-testid="few-reviews-tag"/g)?.length).toBe(1);
+  });
+
+  test("the review goal and the review-count gap are hidden (a partial average would mislead); they show when everything loaded", () => {
+    const html = view(partial(), true);
+    expect(html).not.toContain('data-testid="competitors-review-goal"');
+    expect(html).not.toContain("Review count");
+    const full = view({ ...DATA, latest: { ...DATA.latest!, entries: DATA.latest!.entries.map((e) => ({ ...e, liveMissing: false })) } }, false);
+    expect(full).toContain('data-testid="competitors-review-goal"');
+    expect(full).toContain("Review count");
+    expect(full).not.toContain("Couldn't load from Google right now");
+  });
+
+  test("the price line stays for places that loaded, and only theirs", () => {
+    const html = view(partial(), true);
+    expect(html.match(/Price level:/g)?.length).toBe(3);
+  });
+});

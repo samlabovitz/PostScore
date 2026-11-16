@@ -786,3 +786,107 @@ export async function getPlaceWebsiteUri(placeId: string, fetchImpl: typeof fetc
   const data = (await outcome.res.json()) as { websiteUri?: unknown };
   return typeof data.websiteUri === "string" && /^https?:\/\//i.test(data.websiteUri) ? data.websiteUri : null;
 }
+
+// Day 23 2b: competitor values fetched live when the Competitors page is
+// shown, never saved. `rating`, `userRatingCount`, `priceLevel` and
+// `websiteUri` make these the Enterprise SKU (Text Search, Nearby Search
+// and Place Details Enterprise: 1,000 free a month each); `photos` and
+// `types` add nothing.
+export const LIVE_NEARBY_FIELD_MASK = "places.id,places.displayName,places.rating,places.userRatingCount,places.priceLevel,places.photos,places.websiteUri,places.types";
+export const LIVE_DETAILS_FIELD_MASK = "id,displayName,rating,userRatingCount,priceLevel,photos,websiteUri,types";
+
+// The same shape as LivePlace (lib/placesLive.ts).
+export interface LivePlaceValues {
+  placeId: string;
+  name: string | null;
+  rating: number | null;
+  reviewCount: number | null;
+  priceLevel: string | null;
+  photoCount: number | null;
+  hasWebsite: boolean;
+  types: string[] | null;
+}
+
+interface RawLivePlace {
+  id?: string;
+  displayName?: { text?: string };
+  rating?: number;
+  userRatingCount?: number;
+  priceLevel?: string;
+  photos?: unknown[];
+  websiteUri?: string;
+  types?: string[];
+}
+
+export function liveValuesFrom(raw: RawLivePlace): LivePlaceValues | null {
+  if (typeof raw.id !== "string" || raw.id === "") return null;
+  return {
+    placeId: raw.id,
+    name: raw.displayName?.text ?? null,
+    rating: typeof raw.rating === "number" ? raw.rating : null,
+    reviewCount: typeof raw.userRatingCount === "number" ? raw.userRatingCount : null,
+    priceLevel: typeof raw.priceLevel === "string" ? raw.priceLevel : null,
+    photoCount: Array.isArray(raw.photos) ? raw.photos.length : 0,
+    hasWebsite: typeof raw.websiteUri === "string" && raw.websiteUri !== "",
+    types: Array.isArray(raw.types) && raw.types.length > 0 ? raw.types : null,
+  };
+}
+
+async function liveListFrom(outcome: PlacesAttemptOutcome): Promise<LivePlaceValues[] | null> {
+  if (outcome.kind !== "ok") return null;
+  const data = (await outcome.res.json().catch(() => null)) as { places?: RawLivePlace[] } | null;
+  if (!data) return null;
+  return (data.places ?? []).map(liveValuesFrom).filter((p): p is LivePlaceValues => p !== null);
+}
+
+/** One Text Search with the scan's own phrase ("hair salons in Westfield,
+ * NJ"), the call that found these competitors — so it returns nearly all
+ * of them (41 of 44 in a real check, Nov 15). One attempt; null on any failure. */
+export async function searchTextLive(
+  params: { textQuery: string; lat: number | null; lng: number | null; radiusMeters: number },
+  fetchImpl: typeof fetch = fetch
+): Promise<LivePlaceValues[] | null> {
+  const body: Record<string, unknown> = { textQuery: params.textQuery, pageSize: 20 };
+  if (params.lat !== null && params.lng !== null)
+    body.locationBias = { circle: { center: { latitude: params.lat, longitude: params.lng }, radius: Math.min(params.radiusMeters, 50_000) } };
+  return liveListFrom(
+    await fetchPlacesOnce(
+      `${PLACES_API_BASE}/places:searchText`,
+      { method: "POST", headers: { "Content-Type": "application/json", "X-Goog-Api-Key": getApiKey(), "X-Goog-FieldMask": LIVE_NEARBY_FIELD_MASK }, body: JSON.stringify(body), cache: "no-store" },
+      fetchImpl
+    )
+  );
+}
+
+/** One Nearby Search for a page's live list, when there's no phrase. One attempt, never retried
+ * (a retry could be billed twice); null on any failure. */
+export async function searchNearbyLive(
+  params: { lat: number; lng: number; radiusMeters: number; includedTypes?: string[] },
+  fetchImpl: typeof fetch = fetch
+): Promise<LivePlaceValues[] | null> {
+  const body: Record<string, unknown> = {
+    maxResultCount: 20,
+    rankPreference: "DISTANCE",
+    locationRestriction: { circle: { center: { latitude: params.lat, longitude: params.lng }, radius: params.radiusMeters } },
+  };
+  if (params.includedTypes && params.includedTypes.length > 0) body.includedTypes = params.includedTypes.slice(0, 50);
+  return liveListFrom(
+    await fetchPlacesOnce(
+      `${PLACES_API_BASE}/places:searchNearby`,
+      { method: "POST", headers: { "Content-Type": "application/json", "X-Goog-Api-Key": getApiKey(), "X-Goog-FieldMask": LIVE_NEARBY_FIELD_MASK }, body: JSON.stringify(body), cache: "no-store" },
+      fetchImpl
+    )
+  );
+}
+
+/** One place's live values (Place Details). One attempt; null on any failure. */
+export async function getPlaceLive(placeId: string, fetchImpl: typeof fetch = fetch): Promise<LivePlaceValues | null> {
+  const outcome = await fetchPlacesOnce(
+    `${PLACES_API_BASE}/places/${encodeURIComponent(placeId)}`,
+    { headers: { "X-Goog-Api-Key": getApiKey(), "X-Goog-FieldMask": LIVE_DETAILS_FIELD_MASK }, cache: "no-store" },
+    fetchImpl
+  );
+  if (outcome.kind !== "ok") return null;
+  const data = (await outcome.res.json().catch(() => null)) as RawLivePlace | null;
+  return data ? liveValuesFrom(data) : null;
+}

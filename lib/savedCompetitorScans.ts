@@ -36,6 +36,9 @@ export interface SavedCompetitorEntry {
   types?: string[] | null;
   /** The owner added it ("Add a competitor") — labeled "Added by you". */
   ownerAdded?: boolean;
+  /** Google's live values for it couldn't be read (lib/placesLive.ts) —
+   * its name, rating and reviews show "—". */
+  liveMissing?: boolean;
 }
 
 export interface SavedCompetitorScan {

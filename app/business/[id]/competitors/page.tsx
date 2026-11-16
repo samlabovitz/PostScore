@@ -9,6 +9,7 @@ import { CompetitorsView } from "./CompetitorsView";
 import { getLastScanAt, scoreBusinessById } from "@/app/actions/scoring";
 import { normalizeLocale } from "@/lib/i18n";
 import { competitorPageLines } from "@/lib/competitorSchedule";
+import { withLiveCompetitorValues } from "@/lib/placesLive.server";
 
 export default async function CompetitorsPage({ params }: { params: { id: string } }) {
   // Independent loads run together.
@@ -38,6 +39,16 @@ export default async function CompetitorsPage({ params }: { params: { id: string
     );
   }
 
+  // Google's names, ratings and review counts are read live (never the
+  // saved copies) while the page's loading skeleton shows.
+  const live = fetched.latest
+    ? await withLiveCompetitorValues(params.id, fetched.latest, fetched.businessName, {
+        ...(fetched.liveQuery ?? { lat: null, lng: null, includedTypes: [] }),
+        textQuery: fetched.comparedWith?.query ?? null,
+      })
+    : null;
+  const data = live ? { ...fetched, latest: live.scan } : fetched;
+
   return (
     <DashboardShell
       upgrade={upgrade}
@@ -51,7 +62,7 @@ export default async function CompetitorsPage({ params }: { params: { id: string
     >
       <div className="flex flex-col gap-6">
         <StaleScanNotice businessId={params.id} lastScanAt={lastScanAt} now={new Date().toISOString()} />
-        <CompetitorsView businessId={params.id} data={fetched} fullScore={scored.status === "ok" ? scored.result.breakdown.total : null} />
+        <CompetitorsView businessId={params.id} data={data} liveUnavailable={live?.unavailable ?? false} fullScore={scored.status === "ok" ? scored.result.breakdown.total : null} />
         {/* When competitors update, by plan (lib/competitorScanPolicy.ts). */}
         <p data-testid="competitors-schedule" className="-mt-2 text-[12.5px] text-ink-mute">
           {competitorPageLines(upgrade.plan, fetched.latest?.createdAt ?? null, normalizeLocale(fetched.language), fetched.timeZone, new Date()).join(" ")}

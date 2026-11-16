@@ -46,11 +46,14 @@ beforeEach(() => {
 });
 
 describe("the cap — like PLACES_SEARCH_MONTHLY_CAP", () => {
-  test("default 800, env override, a bad value falls back", () => {
-    expect(DEFAULT_PLACES_DETAILS_MONTHLY_CAP).toBe(800);
-    expect(placesDetailsMonthlyCap({})).toBe(800);
+  test("default 700 (with onboarding's 300, the SKU's free 1,000), env override, a bad value falls back", () => {
+    expect(DEFAULT_PLACES_DETAILS_MONTHLY_CAP).toBe(700);
+    expect(placesDetailsMonthlyCap({})).toBe(700);
+    expect(placesDetailsMonthlyCap({ PLACES_SCAN_DETAILS_MONTHLY_CAP: "600" })).toBe(600);
+    // The older name still works; the new one wins when both are set.
     expect(placesDetailsMonthlyCap({ PLACES_DETAILS_MONTHLY_CAP: "250" })).toBe(250);
-    expect(placesDetailsMonthlyCap({ PLACES_DETAILS_MONTHLY_CAP: "lots" })).toBe(800);
+    expect(placesDetailsMonthlyCap({ PLACES_SCAN_DETAILS_MONTHLY_CAP: "600", PLACES_DETAILS_MONTHLY_CAP: "250" })).toBe(600);
+    expect(placesDetailsMonthlyCap({ PLACES_DETAILS_MONTHLY_CAP: "lots" })).toBe(700);
   });
 
   test("a re-scan may run until the month's billed calls reach the cap; adding a business and the free photo call never stop", () => {

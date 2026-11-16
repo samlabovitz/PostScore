@@ -65,6 +65,31 @@ const FIX_LABEL: Record<"reviews" | "overview" | "website", MessageKey> = {
 };
 const BRASS = "#b8862f";
 
+/** A live Google value that didn't load (entry.liveMissing) shows "—",
+ * never "No rating" or "(unnamed listing)". */
+const MISSING = "—";
+
+function entryName(entry: SavedCompetitorEntry, locale: Locale): string {
+  if (entry.name) return displayName(entry.name);
+  return entry.liveMissing ? MISSING : t(locale, "dashboard.competitors.unnamedListing");
+}
+
+/** Every competitor's live values are missing: the leader's name can't be shown. */
+function allCompetitorsMissing(scan: SavedCompetitorScan): boolean {
+  const comps = scan.entries.filter((e) => !e.isSubject);
+  return comps.length > 0 && comps.every((e) => e.liveMissing);
+}
+
+/** Any business's live values are missing: nothing built from ratings,
+ * review or photo counts is shown (an average or leader from part of the
+ * list would mislead) — unknown means hidden, never "no reviews". */
+function anyLiveMissing(scan: SavedCompetitorScan): boolean {
+  return scan.entries.some((e) => e.liveMissing);
+}
+
+/** The metrics that are Google's live values, not our own check results. */
+const LIVE_VALUE_METRICS = new Set(["visibility.rating", "visibility.review_count", "completeness.photos"]);
+
 function checkLabel(checkId: string, locale: Locale): string {
   return t(locale, `content.checks.${checkId}.label` as MessageKey);
 }
@@ -102,9 +127,10 @@ function miles(meters: number | null, locale: Locale): string {
   return `${mi < 0.1 ? "<0.1" : mi.toFixed(1)}${t(locale, "dashboard.competitors.milesSuffix")}`;
 }
 
-/** A metric value as text: "4.5★", "212", "Yes"/"No", or "Not checked". */
-function formatMetric(m: MetricDef, v: number | null, locale: Locale, asShare = false): string {
-  if (v === null) return t(locale, "dashboard.competitors.notChecked");
+/** A metric value as text: "4.5★", "212", "Yes"/"No", or "Not checked"
+ * ("—" for a Google value that didn't load). */
+function formatMetric(m: MetricDef, v: number | null, locale: Locale, asShare = false, unavailable = false): string {
+  if (v === null) return unavailable && m.kind !== "yesno" ? MISSING : t(locale, "dashboard.competitors.notChecked");
   if (m.kind === "rating") return `${v.toFixed(1)}★`;
   if (m.kind === "count") return formatCount(v, locale);
   if (asShare) return t(locale, "dashboard.competitors.shareHaveIt", { percent: Math.round(v * 100) });
@@ -117,7 +143,19 @@ function formatMetric(m: MetricDef, v: number | null, locale: Locale, asShare = 
 function socialPlatformOf(entry: SavedCompetitorEntry): string | null {
   return entry.breakdown?.checks.find((c) => c.id === "website.has_website")?.meta?.socialPlatform ?? null;
 }
-export function CompetitorsView({ businessId, data, fullScore = null }: { businessId: string; data: OkResult; /** The Overview's full PostScore. */ fullScore?: number | null }) {
+export function CompetitorsView({
+  businessId,
+  data,
+  fullScore = null,
+  liveUnavailable = false,
+}: {
+  businessId: string;
+  data: OkResult;
+  /** The Overview's full PostScore. */
+  fullScore?: number | null;
+  /** Google's live values (names, ratings, reviews) couldn't all be read. */
+  liveUnavailable?: boolean;
+}) {
   const locale = useLocale();
   const timeZone = useTimeZone();
   const [view, setView] = useState<CompareView>("overall");
@@ -143,6 +181,13 @@ export function CompetitorsView({ businessId, data, fullScore = null }: { busine
         <p className="mt-1 max-w-2xl text-sm text-ink-soft">{t(locale, "dashboard.competitors.comparableNote")}</p>
       </div>
 
+      {/* Right under the title, so it's seen before any "—". */}
+      {liveUnavailable && latest && latest.entries.some((e) => !e.isSubject) && (
+        <div role="status" data-testid="live-unavailable" className="flex items-start gap-2.5 rounded-xl border border-paper-deep bg-white px-4 py-3 text-[13px] text-ink-soft">
+          <IconAlertCircle size={15} className="mt-0.5 shrink-0 text-ink-mute" aria-hidden />
+          <span>{t(locale, "dashboard.live.unavailable")}</span>
+        </div>
+      )}
       {data.scoring && <ScoringProgressNote progress={data.scoring} />}
       {/* One time, after the competitor-picking update (no "dropped" alert across it). */}
       {data.selectionUpdated && <CompetitorSelectionNote businessId={businessId} />}
@@ -336,7 +381,7 @@ function RefreshButton({ businessId, allowed, label }: { businessId: string; all
 function CompetitorsReviewGoal({ scan, scope, noun }: { scan: SavedCompetitorScan; scope: CompetitorScope | null; noun: string }) {
   const locale = useLocale();
   const own = scan.entries.find((e) => e.isSubject)?.reviewCount ?? null;
-  const goal = reviewGoal(scan, scope, own);
+  const goal = anyLiveMissing(scan) ? null : reviewGoal(scan, scope, own);
   if (!goal) return null;
   const text = reviewGoalText(goal, scopeGroupLabel(scan, scope, locale, noun), locale);
   return (
@@ -352,7 +397,10 @@ function Hero({ scan, competitorNoun, businessId, fullScore }: { scan: SavedComp
   const locale = useLocale();
   const hero = heroSummary(scan, "overall");
   // 1–2 competitors: a head-to-head, never "#1 of 2".
-  const h2h = headToHead(scan);
+  const found = headToHead(scan);
+  const missing = new Set(scan.entries.filter((e) => e.liveMissing).map((e) => e.placeId));
+  const h2h = found ? { ...found, rivals: found.rivals.map((r) => ({ ...r, name: r.name ?? (missing.has(r.placeId) ? MISSING : null) })) } : found;
+  const topMissing = !hero.topName && allCompetitorsMissing(scan);
 
   return (
     <Card className="p-5">
@@ -386,7 +434,7 @@ function Hero({ scan, competitorNoun, businessId, fullScore }: { scan: SavedComp
         {!h2h && (
           <>
             <Stat label={t(locale, "dashboard.competitors.statLocalAverage")} value={hero.localAverage ?? "—"} />
-            <Stat label={t(locale, "dashboard.competitors.statTop")} value={hero.topScore ?? "—"} detail={hero.topName ? displayName(hero.topName) : null} />
+            <Stat label={t(locale, "dashboard.competitors.statTop")} value={hero.topScore ?? "—"} detail={hero.topName ? displayName(hero.topName) : topMissing ? MISSING : null} />
             <Stat
               label={t(locale, "dashboard.competitors.statRadius", { miles: hero.radiusMiles === null ? "—" : hero.radiusMiles.toFixed(1) })}
               value={hero.of - 1}
@@ -440,7 +488,7 @@ function Lineup({ scan }: { scan: SavedCompetitorScan }) {
   const comps = ranked.filter((r) => !r.entry.isSubject);
   const top = comps[0] ?? null;
   const lowest = comps.length > 1 ? comps[comps.length - 1] : null;
-  const name = (e: SavedCompetitorEntry) => (e.name ? displayName(e.name) : t(locale, "dashboard.competitors.unnamedListing"));
+  const name = (e: SavedCompetitorEntry) => entryName(e, locale);
 
   type Req = LabelRequest & { text: string; title?: string; strong?: boolean };
   const requests: Req[] = [];
@@ -569,6 +617,8 @@ function Bar({ label, value, fraction, highlight }: { label: string; value: stri
 
 function Comparison({ scan, view }: { scan: SavedCompetitorScan; view: CompareView }) {
   const locale = useLocale();
+  const ownerMissing = !!scan.entries.find((e) => e.isSubject)?.liveMissing;
+  const othersMissing = scan.entries.some((e) => !e.isSubject && e.liveMissing);
   const hero = heroSummary(scan, view);
   const youLabel = t(locale, "dashboard.competitors.compareYou");
   const avgLabel = t(locale, "dashboard.competitors.compareAverage");
@@ -591,16 +641,20 @@ function Comparison({ scan, view }: { scan: SavedCompetitorScan; view: CompareVi
       ) : (
         <div className="mt-5 flex flex-col gap-5 border-t border-paper-line pt-4">
           {metrics.map((m) => {
-            const c = compareMetric(scan, m);
+            const raw = compareMetric(scan, m);
+            const live = LIVE_VALUE_METRICS.has(m.checkId);
+            const c = live
+              ? { ...raw, owner: ownerMissing ? null : raw.owner, average: othersMissing ? null : raw.average, top: othersMissing ? null : raw.top }
+              : raw;
             const max =
               m.kind === "rating" ? 5 : m.kind === "yesno" ? 1 : Math.max(1, c.owner ?? 0, c.average ?? 0, c.top ?? 0);
             const frac = (v: number | null) => (v === null ? null : v / max);
             return (
               <div key={m.checkId} className="flex flex-col gap-1.5">
                 <div className="text-[13px] font-medium text-ink">{checkLabel(m.checkId, locale)}</div>
-                <Bar label={youLabel} value={formatMetric(m, c.owner, locale)} fraction={frac(c.owner)} highlight />
-                <Bar label={avgLabel} value={formatMetric(m, c.average === null ? null : m.kind === "count" ? Math.round(c.average) : c.average, locale, m.kind === "yesno")} fraction={frac(c.average)} />
-                <Bar label={t(locale, "dashboard.competitors.compareTop", { name: c.topName ? displayName(c.topName) : "—" })} value={formatMetric(m, c.top, locale)} fraction={frac(c.top)} />
+                <Bar label={youLabel} value={formatMetric(m, c.owner, locale, false, ownerMissing)} fraction={frac(c.owner)} highlight />
+                <Bar label={avgLabel} value={formatMetric(m, c.average === null ? null : m.kind === "count" ? Math.round(c.average) : c.average, locale, m.kind === "yesno", othersMissing)} fraction={frac(c.average)} />
+                <Bar label={t(locale, "dashboard.competitors.compareTop", { name: c.topName ? displayName(c.topName) : "—" })} value={formatMetric(m, c.top, locale, false, othersMissing)} fraction={frac(c.top)} />
               </div>
             );
           })}
@@ -637,7 +691,11 @@ function GapItem({ gap, businessId, trailing }: { gap: Gap; businessId: string; 
 
 function LeadTrail({ scan, businessId }: { scan: SavedCompetitorScan; businessId: string }) {
   const locale = useLocale();
-  const { leads, trails } = computeGaps(scan);
+  const all = computeGaps(scan);
+  const partial = anyLiveMissing(scan);
+  const keep = (g: Gap) => !partial || !LIVE_VALUE_METRICS.has(g.metric.checkId);
+  const leads = all.leads.filter(keep);
+  const trails = all.trails.filter(keep);
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <Card className="p-5">
@@ -685,6 +743,7 @@ function RankedList({ scan, view, businessId }: { scan: SavedCompetitorScan; vie
 
 function CompetitorCard({ entry, rank, view, businessId }: { entry: SavedCompetitorEntry; rank: number | null; view: CompareView; businessId: string }) {
   const locale = useLocale();
+  const unavailable = !!entry.liveMissing;
   const [open, setOpen] = useState(false);
   const price = priceLevelToSymbol(entry.priceLevel);
   const viewScore = entryScore(entry, view);
@@ -704,7 +763,7 @@ function CompetitorCard({ entry, rank, view, businessId }: { entry: SavedCompeti
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="min-w-0 truncate text-[14.5px] font-semibold text-ink" title={entry.name ?? undefined}>
-              {entry.name ? displayName(entry.name) : t(locale, "dashboard.competitors.unnamedListing")}
+              {entryName(entry, locale)}
             </span>
             {entry.isSubject && (
               <span className="rounded-md bg-brass/15 px-1.5 py-0.5 text-[11px] font-semibold text-brass">
@@ -721,7 +780,8 @@ function CompetitorCard({ entry, rank, view, businessId }: { entry: SavedCompeti
             )}
             {/* Kept only when there weren't enough established competitors
                 (lib/competitorQuality.ts) — said plainly. */}
-            {!entry.isSubject && hasFewReviews(entry.reviewCount) && (
+            {/* Unknown (Google couldn't be reached) is hidden, never "no reviews". */}
+            {!entry.isSubject && !entry.liveMissing && hasFewReviews(entry.reviewCount) && (
               <span data-testid="few-reviews-tag" className="rounded-md bg-paper px-1.5 py-0.5 text-[11px] font-medium text-ink-soft">
                 {t(locale, "dashboard.competitors.fewReviewsTag")}
               </span>
@@ -735,15 +795,19 @@ function CompetitorCard({ entry, rank, view, businessId }: { entry: SavedCompeti
           </div>
           <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] text-ink-soft">
             <span>
-              {entry.rating !== null ? `${entry.rating.toFixed(1)}★` : t(locale, "dashboard.competitors.noRating")}
+              {entry.rating !== null ? `${entry.rating.toFixed(1)}★` : unavailable ? MISSING : t(locale, "dashboard.competitors.noRating")}
               {" · "}
               {entry.reviewCount !== null
                 ? tPlural(locale, "dashboard.competitors.reviewCount", entry.reviewCount, { count: formatCount(entry.reviewCount, locale) })
-                : t(locale, "dashboard.competitors.noReviewCount")}
+                : unavailable
+                  ? MISSING
+                  : t(locale, "dashboard.competitors.noReviewCount")}
             </span>
-            <span>
-              {t(locale, "dashboard.competitors.priceLevelLabel")}: {price ?? t(locale, "dashboard.competitors.notListedByGoogle")}
-            </span>
+            {!unavailable && (
+              <span>
+                {t(locale, "dashboard.competitors.priceLevelLabel")}: {price ?? t(locale, "dashboard.competitors.notListedByGoogle")}
+              </span>
+            )}
             <span>
               {entry.hasWebsite === null
                 ? t(locale, "dashboard.competitors.notChecked")
