@@ -242,7 +242,8 @@ export function BusinessScoreView({
           <ScoreBreakdownPanel businessId={businessId} categories={breakdown.categories} hasWebsite={hasWebsite} scoreBasis={scoreBasis} audit websiteFixCount={null} lastScanAt={lastScanAt} accountCollapsed={uiPrefs.breakdownCollapsed} serviceOptions={serviceOptions} />
           <Card className="p-5" data-testid="free-rank">
             <h3 className="mb-3 font-serif text-[15px] font-semibold text-ink">{t(locale, "dashboard.free.rankHeading")}</h3>
-            <LocalBenchmarkTile businessId={businessId} result={benchmark} />
+            {/* No live competitor read on Free: 1–2 competitors get the locked line, not "—" names. */}
+            <LocalBenchmarkTile businessId={businessId} result={benchmark} lockedHref={`/business/${businessId}/settings#compare-plans`} />
             <RankUnlockLine />
             <GoogleMapsAttribution />
           </Card>
@@ -258,6 +259,9 @@ export function BusinessScoreView({
             reviewCount={business.review_count}
             goal={reviewGoal}
             group={reviewGroup}
+            // No live competitor read on Free: the goal is a Grow feature.
+            // 1–2 competitors: the rank card above already shows this line (once per page).
+            goalLockedHref={benchmark.status === "ok" ? `/business/${businessId}/settings#compare-plans` : null}
           >
             {replyDrafts && <ReviewReplyDrafter businessId={businessId} plan="free" placeId={business.place_id ?? null} initial={replyDrafts} embedded />}
           </FreeReviews>

@@ -7,7 +7,12 @@ import { selectionChangedBetween } from "@/lib/competitorQuality";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { parseChartCategories } from "@/lib/scoreHistory";
 import type { ProfileSnapshot } from "@/lib/profileChanges";
-import { groupSavedScans, SAVED_SCAN_COLUMNS, type SavedScanRow } from "@/lib/savedCompetitorScans";
+import { groupSavedScans, SAVED_SCAN_COLUMNS, type SavedCompetitorScan, type SavedScanRow } from "@/lib/savedCompetitorScans";
+import { withLiveCompetitorValuesFor } from "@/lib/placesLive.server";
+import { withMissingNames } from "@/lib/placesLive";
+import { withOwnerScoreAt } from "@/lib/ownerRankScore.server";
+import { getPlan } from "@/lib/premium";
+import type { CompetitorScope } from "@/lib/competitorScope";
 import { headToHead, isHeadToHead, ownerStanding, type HeadToHead } from "@/lib/competitorComparison";
 import { unfinishedNewScanIds, withoutUnfinished } from "@/lib/competitorScoringStatus";
 import { WEEKLY_CHECKLIST_ITEM_IDS } from "@/lib/weeklyChecklist";
@@ -67,7 +72,11 @@ export async function rankAt(supabase: SupabaseClient, businessId: string, at: s
     const scan = scanOf(id);
     return scan ? ownerStanding(scan, scope) : null;
   };
-  const now = standing(ids[0]);
+  // The owner on their latest score at `at` — the same rule as the
+  // Competitors page and Overview (for the week in progress, the same
+  // number). The scan before keeps the score saved with it (history).
+  const current = scanOf(ids[0]) ? await withOwnerScoreAt(supabase, businessId, scanOf(ids[0]), at) : undefined;
+  const now = current ? ownerStanding(current, scope) : null;
   if (!now) return null;
   // Across the competitor-picking update the two lists weren't picked the
   // same way — no "previous" rank, so no "moved up/down" (competitorQuality.ts).
@@ -80,8 +89,18 @@ export async function rankAt(supabase: SupabaseClient, businessId: string, at: s
     of: now.of,
     previous: before && !isHeadToHead(before) ? before.rank : null,
     scanAt: scanAt(ids[0]),
-    headToHead: isHeadToHead(now) ? headToHead(scanOf(ids[0]), scope) : null,
+    headToHead: isHeadToHead(now) && current ? await liveHeadToHead(supabase, businessId, current, scope) : null,
   };
+}
+
+/** A head-to-head with the rivals' names read live (never the saved
+ * copies); a name Google couldn't give right now shows "—". Free: none
+ * (no live competitor call; the Overview shows its locked line). */
+async function liveHeadToHead(supabase: SupabaseClient, businessId: string, scan: SavedCompetitorScan, scope: CompetitorScope | null): Promise<HeadToHead | null> {
+  if ((await getPlan()) === "free") return null;
+  const fresh = await withLiveCompetitorValuesFor(supabase, businessId, scan);
+  const found = headToHead(fresh.scan, scope);
+  return found ? withMissingNames(found, fresh.scan) : null;
 }
 
 /** Action-plan fixes a re-scan confirmed in [from, to). */

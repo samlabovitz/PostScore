@@ -137,9 +137,9 @@ type PlacesAttemptOutcome =
   | { kind: "http_error"; status: number; reason: string | null }
   | { kind: "network_error"; message: string };
 
-async function fetchPlacesOnce(url: string, init: RequestInit, fetchImpl: typeof fetch): Promise<PlacesAttemptOutcome> {
+async function fetchPlacesOnce(url: string, init: RequestInit, fetchImpl: typeof fetch, timeoutMs: number = PLACES_TIMEOUT_MS): Promise<PlacesAttemptOutcome> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), PLACES_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetchImpl(url, { ...init, signal: controller.signal });
     if (res.ok) return { kind: "ok", res };
@@ -794,6 +794,8 @@ export async function getPlaceWebsiteUri(placeId: string, fetchImpl: typeof fetc
 // `types` add nothing.
 export const LIVE_NEARBY_FIELD_MASK = "places.id,places.displayName,places.rating,places.userRatingCount,places.priceLevel,places.photos,places.websiteUri,places.types";
 export const LIVE_DETAILS_FIELD_MASK = "id,displayName,rating,userRatingCount,priceLevel,photos,websiteUri,types";
+/** A page waits at most this long for Google before showing "Couldn't load from Google right now". */
+export const LIVE_TIMEOUT_MS = 4000;
 
 // The same shape as LivePlace (lib/placesLive.ts).
 export interface LivePlaceValues {
@@ -853,7 +855,8 @@ export async function searchTextLive(
     await fetchPlacesOnce(
       `${PLACES_API_BASE}/places:searchText`,
       { method: "POST", headers: { "Content-Type": "application/json", "X-Goog-Api-Key": getApiKey(), "X-Goog-FieldMask": LIVE_NEARBY_FIELD_MASK }, body: JSON.stringify(body), cache: "no-store" },
-      fetchImpl
+      fetchImpl,
+      LIVE_TIMEOUT_MS
     )
   );
 }
@@ -874,7 +877,8 @@ export async function searchNearbyLive(
     await fetchPlacesOnce(
       `${PLACES_API_BASE}/places:searchNearby`,
       { method: "POST", headers: { "Content-Type": "application/json", "X-Goog-Api-Key": getApiKey(), "X-Goog-FieldMask": LIVE_NEARBY_FIELD_MASK }, body: JSON.stringify(body), cache: "no-store" },
-      fetchImpl
+      fetchImpl,
+      LIVE_TIMEOUT_MS
     )
   );
 }
@@ -884,7 +888,8 @@ export async function getPlaceLive(placeId: string, fetchImpl: typeof fetch = fe
   const outcome = await fetchPlacesOnce(
     `${PLACES_API_BASE}/places/${encodeURIComponent(placeId)}`,
     { headers: { "X-Goog-Api-Key": getApiKey(), "X-Goog-FieldMask": LIVE_DETAILS_FIELD_MASK }, cache: "no-store" },
-    fetchImpl
+    fetchImpl,
+    LIVE_TIMEOUT_MS
   );
   if (outcome.kind !== "ok") return null;
   const data = (await outcome.res.json().catch(() => null)) as RawLivePlace | null;

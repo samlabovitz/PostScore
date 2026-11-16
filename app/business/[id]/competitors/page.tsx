@@ -42,10 +42,7 @@ export default async function CompetitorsPage({ params }: { params: { id: string
   // Google's names, ratings and review counts are read live (never the
   // saved copies) while the page's loading skeleton shows.
   const live = fetched.latest
-    ? await withLiveCompetitorValues(params.id, fetched.latest, fetched.businessName, {
-        ...(fetched.liveQuery ?? { lat: null, lng: null, includedTypes: [] }),
-        textQuery: fetched.comparedWith?.query ?? null,
-      })
+    ? await withLiveCompetitorValues(params.id, fetched.latest, fetched.businessName, fetched.liveQuery ?? { lat: null, lng: null, includedTypes: [], textQuery: null })
     : null;
   const data = live ? { ...fetched, latest: live.scan } : fetched;
 

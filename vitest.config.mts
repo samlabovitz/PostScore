@@ -13,9 +13,13 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(dirname, "."),
+      // Tests only: Next's "server-only" guard throws outside its server build.
+      "server-only": path.resolve(dirname, "test/serverOnlyStub.ts"),
     },
   },
   test: {
     environment: "node",
+    // Never a live Google call from a test (test/noLiveGoogle.ts).
+    setupFiles: ["test/noLiveGoogle.ts"],
   },
 });

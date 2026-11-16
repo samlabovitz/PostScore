@@ -212,14 +212,16 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
           scanAt: formatShortDate(snapshot.createdAt, locale, timeZone),
           subjectRank: h2h ? null : (ownerStanding(snapshot.scan, competitorScope)?.rank ?? null),
           rankedAgainst: competitorScope ? scopeSummary(applyScope(snapshot.scan, competitorScope)) : null,
-          nearbyReviewAverage: nearbyReviewAverage(snapshot.scan, competitorScope),
+          // Live review counts: unknown when any didn't load — PostAI isn't given a partial average.
+          nearbyReviewAverage: snapshot.liveUnavailable ? null : nearbyReviewAverage(snapshot.scan, competitorScope),
           // The shared review goal in words — PostAI quotes it, never computes its own.
           reviewGoalLines: (() => {
+            if (snapshot.liveUnavailable) return [];
             const goal = reviewGoal(snapshot.scan, competitorScope, scored.business.review_count);
             return goal ? reviewGoalLines(goal, scopeGroupLabel(snapshot.scan, competitorScope, locale, profile.competitorNoun), locale) : [];
           })(),
           entries: ranked.map(({ entry }) => ({
-            name: entry.name ?? "Unnamed business",
+            name: entry.name ?? (entry.liveMissing ? "(name couldn't load from Google)" : "Unnamed business"),
             isSubject: entry.isSubject,
             total: entry.total,
             grade: entry.grade,
@@ -410,7 +412,13 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
       headToHead: competitors.available ? (competitors.headToHead ?? null) : null,
       nearbyReviewAverage: competitors.nearbyReviewAverage ?? null,
       competitors: snapshot
-        ? rankBy(snapshot.scan, "overall", competitorScope).map(({ entry }) => ({ name: entry.name ?? "Unnamed business", total: entry.total, reviews: entry.reviewCount, rating: entry.rating, isSubject: entry.isSubject }))
+        ? rankBy(snapshot.scan, "overall", competitorScope).map(({ entry }) => ({
+            name: entry.name ?? (entry.liveMissing ? "(name couldn't load from Google)" : "Unnamed business"),
+            total: entry.total,
+            reviews: entry.reviewCount,
+            rating: entry.rating,
+            isSubject: entry.isSubject,
+          }))
         : [],
     }),
   };

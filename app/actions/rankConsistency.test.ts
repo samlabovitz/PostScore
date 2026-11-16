@@ -5,6 +5,8 @@ import { describe, expect, test, vi } from "vitest";
 // and PostAI all read the latest finished scan through ownerStanding —
 // rankBy(scan, "overall") on each business's full PostScore.
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+// A paid plan unless a test says Free (Free makes no live competitor call).
+vi.mock("@/lib/premium", () => ({ getPlan: vi.fn(async () => "grow") }));
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
@@ -14,6 +16,9 @@ import { heroSummary, ownerStanding, rankBy } from "@/lib/competitorComparison";
 import { snapshotFromSavedRows } from "@/lib/monthlyReportExtras";
 import { scoreBusiness } from "@/lib/scoring";
 import { scoringInput } from "@/emails/sampleMonthlyReportContent";
+import { getPlaceLive, searchNearbyLive, searchTextLive } from "@/lib/google/places";
+import { getPlan } from "@/lib/premium";
+import { liveCache } from "@/lib/placesLive.server";
 
 // Four businesses with real breakdowns; the owner's full PostScore (94)
 // is below two competitors' (96, 95) and above one (80).
@@ -80,12 +85,20 @@ describe("the same rank everywhere", () => {
   test("only 1–2 competitors: no rank anywhere — a head-to-head on the Overview, Competitors over time, the report and PostAI", async () => {
     const two = ROWS.slice(0, 3);
     vi.mocked(createClient).mockReturnValue(fakeSupabase(two) as never);
+    // Google unreachable: the head-to-head stays, names show "—" (never the saved ones).
+    liveCache().clear();
+    const offline = await getLocalBenchmark("jg");
+    expect(offline.status === "head_to_head" && offline.headToHead.rivals.map((x) => x.name)).toEqual(["—", "—"]);
+    // Names read live from Google (the fixture's place IDs are the names).
+    vi.mocked(getPlaceLive).mockImplementation(async (placeId: string) => ({ placeId, name: `${placeId} (live)`, rating: 4.5, reviewCount: 40, priceLevel: null, photoCount: 5, hasWebsite: true, types: null }));
+    liveCache().clear();
     const overview = await getLocalBenchmark("jg");
     expect(overview.status).toBe("head_to_head");
     if (overview.status === "head_to_head") {
       expect(overview.headToHead.owner.name).toBe("J & G Italian Deli");
-      expect(overview.headToHead.rivals.map((x) => x.name)).toEqual(["Dom's Deli", "Greene County Deli"]);
+      expect(overview.headToHead.rivals.map((x) => x.name)).toEqual(["Dom's Deli (live)", "Greene County Deli (live)"]);
     }
+    vi.mocked(getPlaceLive).mockImplementation(async () => null);
     const scan = groupSavedScans(two)[0];
     expect(rankPoint(scan).headToHead).toBe(true);
     expect(snapshotFromSavedRows(two)!.headToHead?.rivals).toHaveLength(2);
@@ -114,5 +127,105 @@ describe("ties", () => {
     const b = ownerStanding(groupSavedScans([...tieRows].reverse())[0])!.rank;
     const c = ownerStanding(groupSavedScans([tieRows[1], tieRows[0], tieRows[2]])[0])!.rank;
     expect(new Set([a, b, c]).size).toBe(1);
+  });
+});
+
+describe("Day 23 2b-2: Google's competitor values are read live, never the saved copies", () => {
+  const liveCount: Record<string, number> = { "Dom's Deli": 400, "Greene County Deli": 300, "Corner Deli": 200, "J & G Italian Deli": 30 };
+  const live = async (placeId: string) => ({ placeId, name: placeId, rating: 4.4, reviewCount: liveCount[placeId] ?? 1, priceLevel: null, photoCount: 7, hasWebsite: true, types: null });
+
+  test("the Overview's nearby review average and review goal come from the live counts (saved count is 50 each)", async () => {
+    vi.mocked(createClient).mockReturnValue(fakeSupabase(ROWS) as never);
+    vi.mocked(getPlaceLive).mockImplementation(live);
+    liveCache().clear();
+    const overview = await getLocalBenchmark("jg");
+    expect(overview.status).toBe("ok");
+    if (overview.status === "ok") {
+      expect(overview.benchmark.competitorReviewAverage).toBe(300);
+      expect(overview.benchmark.reviewGoal).not.toBeNull();
+      // The rank is ours — the same either way.
+      expect(overview.benchmark.rank).toBe(3);
+    }
+    vi.mocked(getPlaceLive).mockImplementation(async () => null);
+  });
+
+  test("Google unreachable: same rank, and no review average or goal (unknown is hidden, never the saved 50)", async () => {
+    vi.mocked(createClient).mockReturnValue(fakeSupabase(ROWS) as never);
+    liveCache().clear();
+    const overview = await getLocalBenchmark("jg");
+    expect(overview.status).toBe("ok");
+    if (overview.status === "ok") {
+      expect(overview.benchmark.rank).toBe(3);
+      expect(overview.benchmark.competitorReviewAverage).toBeNull();
+      expect(overview.benchmark.reviewGoal).toBeNull();
+    }
+  });
+
+  test("one competitor missing is enough to hide them (a partial average would mislead)", async () => {
+    vi.mocked(createClient).mockReturnValue(fakeSupabase(ROWS) as never);
+    vi.mocked(getPlaceLive).mockImplementation(async (id: string) => (id === "Corner Deli" ? null : live(id)));
+    liveCache().clear();
+    const overview = await getLocalBenchmark("jg");
+    expect(overview.status === "ok" && overview.benchmark.competitorReviewAverage).toBeNull();
+    vi.mocked(getPlaceLive).mockImplementation(async () => null);
+  });
+
+  test("the monthly report: the 'top business has N more reviews' pointer only from live counts; last month's scan gives its rank only", async () => {
+    const { snapshotFromScan } = await import("@/lib/monthlyReportExtras");
+    const { scanWithoutPlacesValues, withLivePlaces } = await import("@/lib/placesLive");
+    const saved = groupSavedScans(ROWS)[0];
+    const bare = scanWithoutPlacesValues(saved);
+    expect(snapshotFromScan(bare, null, true)).toMatchObject({ rank: 3, totalCompetitors: 4, topCompetitorReviewCount: null });
+    const places = Object.fromEntries(await Promise.all(ROWS.map(async (r) => [r.place_id, await live(r.place_id)] as const)));
+    expect(snapshotFromScan(withLivePlaces(bare, places), null, false)!.topCompetitorReviewCount).toBe(400);
+  });
+
+  test("Growth's competitor photo median: none when any live value is missing", async () => {
+    const src = (await import("node:fs")).readFileSync("app/actions/growthMoves.ts", "utf8");
+    expect(src).toContain("resolvedSnapshot && !resolvedSnapshot.liveUnavailable ? competitorPhotoCounts(resolvedSnapshot.entries) : []");
+    const route = (await import("node:fs")).readFileSync("app/api/cron/monthly-reports/route.ts", "utf8");
+    expect(route).toContain("return fresh.unavailable ? [] : competitorPhotoCounts(fresh.scan.entries);");
+    // This month's standing live; last month's rank only (no Google call).
+    expect(route).toContain("readCompetitorSnapshotAsOf(supabase, businessId, new Date().toISOString(), true)");
+    expect(route).toContain("readCompetitorSnapshotAsOf(supabase, businessId, previousReport.sent_at, false)");
+  });
+
+  test("no reader outside the Competitors page's own loader takes names, ratings or counts from saved competitor rows", async () => {
+    const fs = await import("node:fs");
+    for (const f of ["app/actions/pricing.ts", "app/api/cron/monthly-reports/route.ts", "lib/weekly/weekly.server.ts"]) {
+      const src = fs.readFileSync(f, "utf8");
+      expect(src, f).not.toMatch(/\.select\("[^"]*\b(name|rating|review_count|photo_count|price_level)\b[^"]*"\)[\s\S]{0,40}competitor_scans|from\("competitor_scans"\)\s*\.select\("[^"]*\b(rating|review_count|photo_count|price_level)\b/);
+    }
+  });
+});
+
+describe("Free: the rank, no live Google competitor call", () => {
+  test("Free makes 0 live competitor calls for the Overview card; the rank stays, the review goal is locked", async () => {
+    vi.mocked(getPlan).mockResolvedValue("free");
+    vi.mocked(createClient).mockReturnValue(fakeSupabase(ROWS) as never);
+    vi.mocked(getPlaceLive).mockClear();
+    vi.mocked(searchTextLive).mockClear();
+    vi.mocked(searchNearbyLive).mockClear();
+    liveCache().clear();
+    const overview = await getLocalBenchmark("jg");
+    expect(getPlaceLive).not.toHaveBeenCalled();
+    expect(searchTextLive).not.toHaveBeenCalled();
+    expect(searchNearbyLive).not.toHaveBeenCalled();
+    expect(overview.status).toBe("ok");
+    if (overview.status === "ok") {
+      expect(overview.benchmark.rank).toBe(3);
+      expect(overview.benchmark.peerCount).toBe(4);
+      expect(overview.benchmark.competitorReviewAverage).toBeNull();
+      expect(overview.benchmark.reviewGoal).toBeNull();
+    }
+    vi.mocked(getPlan).mockResolvedValue("grow");
+  });
+
+  test("paid plans unchanged: the same visit reads Google live", async () => {
+    vi.mocked(createClient).mockReturnValue(fakeSupabase(ROWS) as never);
+    vi.mocked(getPlaceLive).mockClear();
+    liveCache().clear();
+    await getLocalBenchmark("jg");
+    expect(getPlaceLive).toHaveBeenCalled();
   });
 });

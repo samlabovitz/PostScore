@@ -36,12 +36,13 @@ import {
   type PriceAssessment,
   isPricingLanguageMismatch,
   type AssessmentBasis,
+  bandTotal,
   type PriceLevelComparison,
   type PriceRow,
   type PriceTierId,
 } from "@/lib/pricing";
 import type { BizProfile } from "@/config/bizProfiles";
-import { formatDateTime, t, useLocale, useTimeZone, type MessageKey } from "@/lib/i18n";
+import { formatDateTime, t, tPlural, useLocale, useTimeZone, type MessageKey } from "@/lib/i18n";
 
 /**
  * Not a value judgment (premium isn't "bad") — just five visually
@@ -525,8 +526,8 @@ function ServicesAndPrices({
 }
 
 /** A clean horizontal comparison strip of real Google price levels — the
- * business's own $/$$/$$$ next to nearby competitors', never a
- * fabricated number. */
+ * business's own $/$$/$$$ next to how many nearby competitors are at each
+ * level (counts only, no names), never a fabricated number. */
 function PriceLevelStrip({ context }: { context: PriceLevelComparison }) {
   const locale = useLocale();
   return (
@@ -542,15 +543,15 @@ function PriceLevelStrip({ context }: { context: PriceLevelComparison }) {
           </span>
           <span className="text-sm font-bold">{context.subjectSymbol ?? "—"}</span>
         </div>
-        {context.competitors.map((c, i) => (
+        {context.bands.map((b) => (
           <div
-            key={i}
+            key={b.symbol ?? "none"}
             className="flex flex-col items-center justify-center rounded-lg border border-paper-deep bg-white px-3.5 py-2"
           >
-            <span className="max-w-[92px] truncate text-[10px] text-ink-mute" title={c.name}>
-              {c.name}
+            <span className="max-w-[92px] truncate text-[10px] text-ink-mute">
+              {tPlural(locale, "dashboard.pricing.bandNearby", b.count, { count: b.count })}
             </span>
-            <span className="text-sm font-semibold text-ink">{c.symbol ?? "—"}</span>
+            <span className="text-sm font-semibold text-ink">{b.symbol ?? "—"}</span>
           </div>
         ))}
       </div>
@@ -586,7 +587,7 @@ function AssessmentSkeleton() {
 function AssessmentResults({ result, competitorNoun }: { result: StoredPricingAssessment; competitorNoun: string }) {
   const locale = useLocale();
   const levels = result.priceLevelContext;
-  const anyLevel = !!levels && (levels.subjectSymbol !== null || levels.competitors.some((c) => c.symbol !== null));
+  const anyLevel = !!levels && (levels.subjectSymbol !== null || levels.bands.some((b) => b.symbol !== null));
   return (
     <Card className="flex flex-col gap-5 p-5">
       <PriceMap assessments={result.assessments} />
@@ -625,7 +626,7 @@ function AssessmentResults({ result, competitorNoun }: { result: StoredPricingAs
           </li>
         ))}
       </ul>
-      {levels && levels.competitors.length > 0 && (
+      {levels && bandTotal(levels) > 0 && (
         <div className="border-t border-paper-line pt-4">
           {anyLevel ? (
             <PriceLevelStrip context={levels} />

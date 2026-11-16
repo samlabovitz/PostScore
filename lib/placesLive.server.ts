@@ -19,7 +19,10 @@ import {
   type LiveKind,
   type LivePlace,
 } from "@/lib/placesLive";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SavedCompetitorScan } from "@/lib/savedCompetitorScans";
+import { loadBusinessNiche } from "@/lib/businessNiche.server";
+import { LIVE_QUERY_COLUMNS, liveQueryFromRow, type LiveQueryBusinessRow } from "@/lib/competitorLiveQuery";
 
 const g = globalThis as { __placesLiveCache?: LiveCache };
 export function liveCache(): LiveCache {
@@ -182,4 +185,17 @@ export async function withLiveCompetitorValues(
   if (live.status === "unavailable") return { scan: base, unavailable: true };
   const merged = withLivePlaces(base, live.places);
   return { scan: merged, unavailable: merged.entries.some((e) => e.liveMissing) };
+}
+
+/** The same, for a caller that has only the business ID (the shared
+ * competitor snapshot, reports, the monthly job): reads where to search
+ * from the business row and its niche. `db` may be a session or admin client. */
+export async function withLiveCompetitorValuesFor(db: SupabaseClient, businessId: string, scan: SavedCompetitorScan, deps?: LiveDeps): Promise<{ scan: SavedCompetitorScan; unavailable: boolean }> {
+  const [{ data }, niche] = await Promise.all([
+    db.from("businesses").select(`name, ${LIVE_QUERY_COLUMNS}`).eq("id", businessId).maybeSingle(),
+    loadBusinessNiche(db, businessId),
+  ]);
+  const row = data as (LiveQueryBusinessRow & { name: string | null }) | null;
+  if (!row) return { scan: scanWithoutPlacesValues(scan, null), unavailable: true };
+  return withLiveCompetitorValues(businessId, scan, row.name, liveQueryFromRow(row, niche), deps);
 }

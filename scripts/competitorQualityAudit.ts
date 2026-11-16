@@ -12,6 +12,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { competitorScanBlocker } from "../lib/competitors";
 import { ESTABLISHED_MIN_REVIEWS, isDepartmentListing, MIN_ESTABLISHED_COMPETITORS } from "../lib/competitorQuality";
 import { MAX_CALLS_PER_SCAN, placesSearchMonthlyCap } from "../lib/placesSearchBudget";
+import { allowServerOnly } from "./allowServerOnly";
 
 interface ScanRow {
   scan_id: string;
@@ -118,6 +119,7 @@ export async function runQualityAudit(
     return listQuality((scan ?? []) as ScanRow[]);
   };
 
+  if (opts.rerun) allowServerOnly();
   const { runAndSaveCompetitorScanWithClient } = opts.rerun ? await import("../app/actions/competitors") : { runAndSaveCompetitorScanWithClient: null };
   const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString();
   const { data: used } = await db.from("places_calls").select("calls").eq("kind", "competitor_scan").gte("created_at", monthStart);

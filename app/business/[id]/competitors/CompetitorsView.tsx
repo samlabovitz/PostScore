@@ -37,6 +37,7 @@ import { reviewGoal,
   type MetricDef,
 } from "@/lib/competitorComparison";
 import { priceLevelToSymbol } from "@/lib/priceLevel";
+import { withMissingNames } from "@/lib/placesLive";
 import { MAX_SEARCH_RADIUS_MILES } from "@/lib/competitorScanPolicy";
 import { estimateLabelWidth, layoutLabels, shortName, type Lane, type LabelRequest } from "@/lib/lineupLayout";
 import { gradeFromTotal } from "@/lib/scoring";
@@ -398,8 +399,7 @@ function Hero({ scan, competitorNoun, businessId, fullScore }: { scan: SavedComp
   const hero = heroSummary(scan, "overall");
   // 1–2 competitors: a head-to-head, never "#1 of 2".
   const found = headToHead(scan);
-  const missing = new Set(scan.entries.filter((e) => e.liveMissing).map((e) => e.placeId));
-  const h2h = found ? { ...found, rivals: found.rivals.map((r) => ({ ...r, name: r.name ?? (missing.has(r.placeId) ? MISSING : null) })) } : found;
+  const h2h = found ? withMissingNames(found, scan) : null;
   const topMissing = !hero.topName && allCompetitorsMissing(scan);
 
   return (

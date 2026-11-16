@@ -1,4 +1,5 @@
-// Dev-only, READ-ONLY (by default — see --fresh-scan below) preview of
+// Dev-only, READ-ONLY (by default — see --fresh-scan below; competitor names
+// and counts are read live from Google, one list call, like a real send) preview of
 // the monthly report email for one real business. Builds content via
 // the exact same real function the cron route uses
 // (buildMonthlyReportContent, lib/monthlyReport.ts) and renders the
@@ -105,9 +106,13 @@ import { buildGrowthMoves, competitorPhotoCounts, median, weakWebsiteIssueLabels
 import { MonthlyReportEmail, monthlyReportSubject, TEST_PREVIEW_UNSUBSCRIBE_URL, testReportSubject } from "../emails/MonthlyReportEmail";
 import { normalizeLocale, reportCoverageMonthIndex, reportCoverageMonthRange } from "../lib/i18n";
 import { resolveBizProfile } from "../config/bizProfiles";
-import { runAndSaveCompetitorScanWithClient } from "../app/actions/competitors";
-import { buildReportExtras, reportTopTask, snapshotFromSavedRows } from "../lib/monthlyReportExtras";
-import { SAVED_SCAN_COLUMNS, type SavedScanRow } from "../lib/savedCompetitorScans";
+import type { runAndSaveCompetitorScanWithClient as RunCompetitorScanFn } from "../app/actions/competitors";
+import type { scoreBusinessWithClient as ScoreBusinessFn } from "../app/actions/scoring";
+import type { withLiveCompetitorValuesFor as LiveValuesFn } from "../lib/placesLive.server";
+import { allowServerOnly } from "./allowServerOnly";
+import { scanWithoutPlacesValues } from "../lib/placesLive";
+import { buildReportExtras, reportTopTask, snapshotFromScan } from "../lib/monthlyReportExtras";
+import { groupSavedScans, SAVED_SCAN_COLUMNS, type SavedScanRow } from "../lib/savedCompetitorScans";
 import { decideReportRecipient, reportPlanCheck, reportSendEnv, reportTestEmail, type ReportSendEnv } from "../lib/reportSendPolicy";
 import { planTestRun, readRecentScoreId, runMonth, TEST_RESCAN_MAX_AGE_DAYS } from "../lib/monthlyReportTestRun";
 import { backgroundPlan, isPlan } from "../lib/plan";
@@ -148,16 +153,42 @@ async function readLatestScoreRow(businessId: string): Promise<MonthlyReportScor
   return readScoreRow(data.id);
 }
 
+/** Server code (lib/placesLive.server.ts, app/actions/competitors.ts),
+ * loaded past its "server-only" guard (scripts/allowServerOnly.ts). */
+async function liveValuesFor(): Promise<typeof LiveValuesFn> {
+  allowServerOnly();
+  return (await import("../lib/placesLive.server")).withLiveCompetitorValuesFor;
+}
+async function scoreWithApp(): Promise<typeof ScoreBusinessFn> {
+  allowServerOnly();
+  return (await import("../app/actions/scoring")).scoreBusinessWithClient;
+}
+async function runCompetitorScan(): Promise<typeof RunCompetitorScanFn> {
+  allowServerOnly();
+  return (await import("../app/actions/competitors")).runAndSaveCompetitorScanWithClient;
+}
+
 /** The real competitor standing from one specific saved scan — same
- * logic as the cron route's own readCompetitorSnapshotForScan. */
-async function readCompetitorSnapshotForScan(businessId: string, scanId: string): Promise<CompetitorSnapshot | null> {
+ * logic as the cron route's own readCompetitorSnapshotForScan: this
+ * month's with Google's values read live (counted like the real send's),
+ * last month's with its rank only. */
+async function readCompetitorSnapshotForScan(businessId: string, scanId: string, live = true): Promise<CompetitorSnapshot | null> {
   const { data, error } = await supabase
     .from("competitor_scans")
     .select(SAVED_SCAN_COLUMNS)
     .eq("business_id", businessId)
     .eq("scan_id", scanId);
   if (error || !data) return null;
-  return snapshotFromSavedRows(data as SavedScanRow[]);
+  const saved = groupSavedScans(data as SavedScanRow[])[0];
+  if (!saved) return null;
+  if (!live) return snapshotFromScan(scanWithoutPlacesValues(saved), null, true);
+  // The owner on their latest score — the same rule as the real send,
+  // the Competitors page and the Overview.
+  allowServerOnly();
+  const { withOwnerScoreAt } = await import("../lib/ownerRankScore.server");
+  const ranked = await withOwnerScoreAt(supabase, businessId, saved);
+  const fresh = await (await liveValuesFor())(supabase, businessId, ranked);
+  return snapshotFromScan(fresh.scan, null, fresh.unavailable);
 }
 
 /** Runs a REAL, fresh competitor scan — the exact same real function
@@ -172,7 +203,7 @@ async function readCompetitorSnapshotForScan(businessId: string, scanId: string)
 async function runFreshCompetitorScan(
   businessId: string
 ): Promise<{ scanId: string | null; snapshot: CompetitorSnapshot | null }> {
-  const result = await runAndSaveCompetitorScanWithClient(supabase, businessId, { enforceCooldown: false });
+  const result = await (await runCompetitorScan())(supabase, businessId, { enforceCooldown: false });
   if (result.status !== "saved") return { scanId: null, snapshot: null };
   return { scanId: result.scanId, snapshot: await readCompetitorSnapshotForScan(businessId, result.scanId) };
 }
@@ -187,7 +218,8 @@ async function runFreshCompetitorScan(
  * photo-count signal. */
 async function readLatestSavedCompetitorScan(
   businessId: string,
-  cutoffIso: string
+  cutoffIso: string,
+  live = true
 ): Promise<{ scanId: string | null; snapshot: CompetitorSnapshot | null }> {
   const { data, error } = await supabase
     .from("competitor_scans")
@@ -198,7 +230,7 @@ async function readLatestSavedCompetitorScan(
     .limit(1)
     .maybeSingle();
   if (error || !data) return { scanId: null, snapshot: null };
-  return { scanId: data.scan_id, snapshot: await readCompetitorSnapshotForScan(businessId, data.scan_id) };
+  return { scanId: data.scan_id, snapshot: await readCompetitorSnapshotForScan(businessId, data.scan_id, live) };
 }
 
 /** The real competitor standing as of the last scan at or before
@@ -206,7 +238,7 @@ async function readLatestSavedCompetitorScan(
  * readLatestSavedCompetitorScan, used to find "what did standing look
  * like around the previous report." */
 async function readCompetitorSnapshotAsOf(businessId: string, cutoffIso: string): Promise<CompetitorSnapshot | null> {
-  return (await readLatestSavedCompetitorScan(businessId, cutoffIso)).snapshot;
+  return (await readLatestSavedCompetitorScan(businessId, cutoffIso, false)).snapshot;
 }
 
 /** Whether this business has EVER had a real competitor scan saved —
@@ -237,13 +269,12 @@ async function hasAnyCompetitorScan(businessId: string): Promise<boolean> {
 // ---------------------------------------------------------------------------
 
 async function readCompetitorPhotoCountsForScan(businessId: string, scanId: string): Promise<number[]> {
-  const { data, error } = await supabase
-    .from("competitor_scans")
-    .select("is_subject, photo_count")
-    .eq("business_id", businessId)
-    .eq("scan_id", scanId);
-  if (error || !data) return [];
-  return competitorPhotoCounts(data.map((r) => ({ isSubject: r.is_subject, photoCount: r.photo_count })));
+  const { data, error } = await supabase.from("competitor_scans").select(SAVED_SCAN_COLUMNS).eq("business_id", businessId).eq("scan_id", scanId);
+  const saved = !error && data ? groupSavedScans(data as SavedScanRow[])[0] : undefined;
+  if (!saved) return [];
+  // Live, like the real send (the 10-minute cache makes it the same read).
+  const fresh = await (await liveValuesFor())(supabase, businessId, saved);
+  return fresh.unavailable ? [] : competitorPhotoCounts(fresh.scan.entries);
 }
 
 async function readTaskRows(businessId: string): Promise<TaskRow[]> {
@@ -483,15 +514,19 @@ async function main() {
     business.categories,
     business.name
   );
-  const scoringInput = businessRowToScoringInput(business as unknown as BusinessScoringRow);
-
-  // LIVE score — the exact same scoreBusinessWithClient/
-  // getScoreWithSuggestions path the Growth/Website/PostAI pages call,
-  // run fresh on the current business row — never the possibly-stale
-  // saved scores.breakdown_json this preview's no-rescan default mode
-  // would otherwise trust (Day 4 Part 2a — the real Lamonsoff case: a
-  // stale saved breakdown disagreeing with the live dashboard).
-  const liveResult = getScoreWithSuggestions(scoringInput, locale);
+  // LIVE score — scoreBusinessWithClient itself, the one function the
+  // Overview, Reports page, weekly PDF and the real monthly send score
+  // with — never the possibly-stale saved scores.breakdown_json (Day 4
+  // Part 2a, the real Lamonsoff case) and never a column list of this
+  // script's own (Nov 16: one that left out the newer scoring columns
+  // made this preview say 86 (B) where the Overview said 78 (C)).
+  const scored = await (await scoreWithApp())(supabase, businessId, locale);
+  if (scored.status !== "ok") {
+    console.error(`Could not score business ${businessId}: ${scored.status}`);
+    process.exit(1);
+  }
+  const scoringInput = businessRowToScoringInput(scored.business as unknown as BusinessScoringRow);
+  const liveResult = scored.result;
   const currentForDisplay: MonthlyReportScoreRow = {
     id: currentRow.id,
     total: liveResult.breakdown.total,
@@ -554,7 +589,7 @@ async function main() {
   fs.writeFileSync(outPath, html, "utf-8");
 
   console.log(
-    `${businessName}: ${content.kind} report, locale "${locale}"${forceBaseline ? " (forced baseline)" : ""} — competitor data: ${freshScan ? "FRESH scan just run (billed)" : "latest saved scan (no cost)"}`
+    `${businessName}: ${content.kind} report, locale "${locale}"${forceBaseline ? " (forced baseline)" : ""} — competitor data: ${freshScan ? "FRESH scan just run (billed)" : "latest saved scan, Google values read live (one list call, free allowance)"}`
   );
   console.log(`Subject: ${subject}`);
   console.log(`Wrote ${outPath}`);

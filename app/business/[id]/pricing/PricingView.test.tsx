@@ -79,7 +79,7 @@ describe("Price map and the cleaned-up layout", () => {
       { service: "Bottle of Wine", price: 12, tier: "no_data", basis: "no_data", guidance: "g3", reason: "needs_brand_and_size" },
       { service: "Pappy Van Winkle 15", price: 1500, tier: "no_data", basis: "no_data", guidance: "g4", reason: "collectible", suggestedRetail: 120 },
     ],
-    priceLevelContext: { subjectSymbol: null, competitors: [{ name: "Corner Wine", symbol: null, distanceMeters: 300 }] },
+    priceLevelContext: { subjectSymbol: null, bands: [{ symbol: null, count: 1 }] },
     locale: "en",
     assessedAt: "2026-10-16T12:00:00Z",
   };
@@ -169,5 +169,27 @@ describe("Red Bowl, Oct 27: a restaurant is never told to add brand and size", (
     expect(html).not.toMatch(/needs details/);
     expect(view("es")).toContain("Sin precio típico para comparar");
     expect(view("es")).not.toContain("Agregue marca + tamaño");
+  });
+});
+
+describe("price-level context: counts per level, no names", () => {
+  test("each level shows how many nearby businesses are at it (EN + ES)", () => {
+    const assessment: StoredPricingAssessment = {
+      assessments: [{ service: "Cut", price: 40, tier: "competitive", basis: "general_estimate", guidance: "g", typicalLow: 30, typicalHigh: 50 }],
+      priceLevelContext: { subjectSymbol: "$$", bands: [{ symbol: "$", count: 1 }, { symbol: "$$$", count: 3 }] },
+      locale: "en",
+      assessedAt: "2026-11-16T12:00:00Z",
+    };
+    const render = (locale: "en" | "es") =>
+      renderToStaticMarkup(
+        <LocaleProvider locale={locale}>
+          <PricingView businessId="b" businessName="Salon" profile={bizProfileById("hair_salon", locale) ?? bizProfileById("liquor_store", locale)!} initialPrices={[]} initialAssessment={assessment} />
+        </LocaleProvider>
+      );
+    const en = render("en");
+    expect(en).toMatch(/1(<!-- -->)? nearby/);
+    expect(en).toMatch(/3(<!-- -->)? nearby/);
+    expect(en).toContain("$$$");
+    expect(render("es")).toMatch(/3(<!-- -->)? cercanos/);
   });
 });

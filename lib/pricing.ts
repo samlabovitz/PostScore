@@ -221,35 +221,39 @@ export interface PriceAssessment {
 }
 
 /** Real, honest context: the business's own Google price level next to
- * nearby competitors' — never a fabricated number, just Google's own
- * $/$$/$$$ signal where it exists. */
+ * how many nearby competitors Google lists at each level — counts only,
+ * never their names (Day 23: Google's values are read live, never kept). */
 export interface PriceLevelComparison {
   subjectSymbol: string | null;
-  competitors: Array<{
-    name: string;
-    symbol: string | null;
-    distanceMeters: number | null;
-  }>;
+  /** Cheapest first; `symbol` null = Google lists no level for them. */
+  bands: Array<{ symbol: string | null; count: number }>;
+}
+
+/** How many competitors the bands count. */
+export function bandTotal(context: PriceLevelComparison | null | undefined): number {
+  return (context?.bands ?? []).reduce((sum, b) => sum + b.count, 0);
+}
+
+/** Symbols (or null) → counts per band, cheapest first, "no level" last. */
+export function priceBands(symbols: Array<string | null>): PriceLevelComparison["bands"] {
+  const counts = new Map<string | null, number>();
+  for (const symbol of symbols) counts.set(symbol, (counts.get(symbol) ?? 0) + 1);
+  return Array.from(counts.entries())
+    .map(([symbol, count]) => ({ symbol, count }))
+    .sort((a, b) => (a.symbol === null ? 1 : b.symbol === null ? -1 : a.symbol.length - b.symbol.length));
 }
 
 /** The fields buildPriceLevelComparison reads — satisfied by a live
  * RankedCompetitor or a saved competitor_scans row. */
-export type PriceLevelSource = Pick<RankedCompetitor, "isSubject" | "priceLevel" | "distanceMeters"> & { name: string | null };
+export type PriceLevelSource = Pick<RankedCompetitor, "isSubject" | "priceLevel">;
 
 export function buildPriceLevelComparison(
   ranked: PriceLevelSource[]
 ): PriceLevelComparison {
   const subject = ranked.find((r) => r.isSubject) ?? null;
-  const competitors = ranked
-    .filter((r) => !r.isSubject)
-    .map((r) => ({
-      name: r.name ?? "Nearby business",
-      symbol: priceLevelToSymbol(r.priceLevel),
-      distanceMeters: r.distanceMeters,
-    }));
   return {
     subjectSymbol: subject ? priceLevelToSymbol(subject.priceLevel) : null,
-    competitors,
+    bands: priceBands(ranked.filter((r) => !r.isSubject).map((r) => priceLevelToSymbol(r.priceLevel))),
   };
 }
 
@@ -308,18 +312,18 @@ export function parsePricingAssessmentPayload(raw: unknown): PricingAssessmentPa
   let priceLevelContext: PriceLevelComparison | null = null;
   if (obj.priceLevelContext && typeof obj.priceLevelContext === "object") {
     const ctx = obj.priceLevelContext as Record<string, unknown>;
-    const competitors = Array.isArray(ctx.competitors)
-      ? ctx.competitors
-          .filter((c): c is Record<string, unknown> => !!c && typeof c === "object")
-          .map((c) => ({
-            name: typeof c.name === "string" ? c.name : "Nearby business",
-            symbol: typeof c.symbol === "string" ? c.symbol : null,
-            distanceMeters: typeof c.distanceMeters === "number" ? c.distanceMeters : null,
-          }))
-      : [];
+    const items = (value: unknown) => (Array.isArray(value) ? value.filter((c): c is Record<string, unknown> => !!c && typeof c === "object") : []);
+    const symbolOf = (c: Record<string, unknown>) => (typeof c.symbol === "string" ? c.symbol : null);
+    // Saved before Day 23 2b-2: one entry per competitor (with its name) —
+    // read as counts per band; the names are never shown again.
+    const bands = Array.isArray(ctx.bands)
+      ? items(ctx.bands)
+          .filter((b) => typeof b.count === "number" && b.count > 0)
+          .map((b) => ({ symbol: symbolOf(b), count: b.count as number }))
+      : priceBands(items(ctx.competitors).map(symbolOf));
     priceLevelContext = {
       subjectSymbol: typeof ctx.subjectSymbol === "string" ? ctx.subjectSymbol : null,
-      competitors,
+      bands,
     };
   }
 
@@ -342,14 +346,7 @@ export interface PricingPromptInput {
  * real distribution, not their identities, and this keeps the prompt
  * short. */
 function summarizeCompetitorPriceLevels(context: PriceLevelComparison): string {
-  const counts = new Map<string, number>();
-  for (const c of context.competitors) {
-    const key = c.symbol ?? "no data";
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  return Array.from(counts.entries())
-    .map(([symbol, count]) => `${symbol} x${count}`)
-    .join(", ");
+  return context.bands.map((b) => `${b.symbol ?? "no data"} x${b.count}`).join(", ");
 }
 
 /**
@@ -364,7 +361,7 @@ function summarizeCompetitorPriceLevels(context: PriceLevelComparison): string {
 export function buildPricingPrompt(input: PricingPromptInput): string {
   const lines: string[] = [];
   lines.push(`Business type: ${input.businessTypeLabel}`);
-  if (input.priceLevelContext && input.priceLevelContext.competitors.length > 0) {
+  if (input.priceLevelContext && bandTotal(input.priceLevelContext) > 0) {
     lines.push("Store-wide context only (Google rates whole businesses, never single items — do not base any item's tier on this):");
     lines.push(`Your Google price level: ${input.priceLevelContext.subjectSymbol ?? "not on file"}`);
     lines.push(`Nearby competitors' Google price levels: ${summarizeCompetitorPriceLevels(input.priceLevelContext)}`);
@@ -559,38 +556,6 @@ export function parsePricingAssessmentResponse(
     };
   });
 }
-
-/** A saved competitor_scans row, as much as the price check needs. */
-export interface SavedPriceLevelRow {
-  scan_id: string;
-  created_at: string;
-  is_subject: boolean;
-  name: string | null;
-  distance_meters: number | string | null;
-  price_level: string | null;
-}
-
-/**
- * Part B: the price check reuses the latest SAVED competitor scan instead
- * of a fresh paid scan on every "Assess my pricing". `rows` may span
- * several scans in any order; only the newest scan is used. null when
- * nothing is saved (the assessment then runs without local context, as
- * it always has when no competitors are known).
- */
-export function priceLevelContextFromSavedRows(rows: SavedPriceLevelRow[]): PriceLevelComparison | null {
-  if (rows.length === 0) return null;
-  const newest = rows.reduce((a, b) => (Date.parse(b.created_at) > Date.parse(a.created_at) ? b : a));
-  const latest = rows.filter((r) => r.scan_id === newest.scan_id);
-  return buildPriceLevelComparison(
-    latest.map((r) => ({
-      isSubject: r.is_subject,
-      name: r.name,
-      priceLevel: r.price_level,
-      distanceMeters: r.distance_meters === null ? null : Number(r.distance_meters),
-    }))
-  );
-}
-
 
 // ---- Price map ----
 

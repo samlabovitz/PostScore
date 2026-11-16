@@ -4,6 +4,7 @@ import {
   PRICE_TIERS,
   assessmentBasisLabel,
   buildPriceLevelComparison,
+  bandTotal,
   buildPricingPrompt,
   buildPricingSystemPrompt,
   isAssessmentBasis,
@@ -77,18 +78,34 @@ function makeCompetitor(overrides: Partial<RankedCompetitor>): RankedCompetitor 
 }
 
 describe("buildPriceLevelComparison", () => {
-  test("maps the subject and competitors' real Google price levels honestly", () => {
+  test("the subject's real Google price level, and competitors as counts per level — never their names", () => {
     const ranked: RankedCompetitor[] = [
       makeCompetitor({ isSubject: true, name: "Me", priceLevel: "PRICE_LEVEL_MODERATE" }),
-      makeCompetitor({ name: "Competitor A", priceLevel: "PRICE_LEVEL_INEXPENSIVE" }),
+      makeCompetitor({ name: "Competitor A", priceLevel: "PRICE_LEVEL_EXPENSIVE" }),
       makeCompetitor({ name: "Competitor B", priceLevel: null }),
+      makeCompetitor({ name: "Competitor C", priceLevel: "PRICE_LEVEL_INEXPENSIVE" }),
+      makeCompetitor({ name: "Competitor D", priceLevel: "PRICE_LEVEL_EXPENSIVE" }),
     ];
     const result = buildPriceLevelComparison(ranked);
     expect(result.subjectSymbol).toBe("$$");
-    expect(result.competitors).toEqual([
-      { name: "Competitor A", symbol: "$", distanceMeters: 500 },
-      { name: "Competitor B", symbol: null, distanceMeters: 500 },
+    // Cheapest first, "no level" last.
+    expect(result.bands).toEqual([
+      { symbol: "$", count: 1 },
+      { symbol: "$$$", count: 2 },
+      { symbol: null, count: 1 },
     ]);
+    expect(JSON.stringify(result)).not.toContain("Competitor");
+    expect(bandTotal(result)).toBe(4);
+  });
+
+  test("an assessment saved before (one entry per competitor, with names) reads as counts; the names are gone", () => {
+    const parsed = parsePricingAssessmentPayload({
+      assessments: [{ service: "Cut", price: 40, tier: "competitive", basis: "general_estimate", guidance: "g" }],
+      priceLevelContext: { subjectSymbol: "$$", competitors: [{ name: "Old Salon", symbol: "$$", distanceMeters: 300 }, { name: "Other", symbol: "$$", distanceMeters: 400 }] },
+      locale: "en",
+    })!;
+    expect(parsed.priceLevelContext).toEqual({ subjectSymbol: "$$", bands: [{ symbol: "$$", count: 2 }] });
+    expect(JSON.stringify(parsed)).not.toContain("Old Salon");
   });
 
   test("never fabricates a subject symbol when there is no subject entry", () => {
@@ -102,22 +119,15 @@ describe("buildPricingPrompt", () => {
     const prompt = buildPricingPrompt({
       businessTypeLabel: "Salon & Personal Care",
       services: [{ service: "Women's Haircut", price: 45 }],
-      priceLevelContext: {
-        subjectSymbol: "$$",
-        competitors: [
-          { name: "Nearby Salon", symbol: "$$$", distanceMeters: 800 },
-          { name: "Another Salon", symbol: "$$$", distanceMeters: 1200 },
-        ],
-      },
+      priceLevelContext: { subjectSymbol: "$$", bands: [{ symbol: "$$$", count: 2 }] },
     });
     expect(prompt).toContain("Salon & Personal Care");
     expect(prompt).toContain("Women's Haircut: $45.00");
     expect(prompt).toContain("Your Google price level: $$");
     // Day 4b: labeled as store-wide context, never a per-item basis.
     expect(prompt).toContain("Store-wide context only");
-    // Competitor identities are never sent — only the real price-level
-    // distribution, collapsed to counts, to keep the prompt (and cost) low.
-    expect(prompt).not.toContain("Nearby Salon");
+    // Competitor identities are never sent (or kept) — only the real
+    // price-level distribution, as counts.
     expect(prompt).toContain("$$$ x2");
   });
 
@@ -312,10 +322,7 @@ describe("parsePricingAssessmentPayload", () => {
           guidance: "Typical retail is roughly $3-5 — this is a general estimate, not verified locally.",
         },
       ],
-      priceLevelContext: {
-        subjectSymbol: "$$",
-        competitors: [{ name: "Nearby Salon", symbol: "$$$", distanceMeters: 800 }],
-      },
+      priceLevelContext: { subjectSymbol: "$$", bands: [{ symbol: "$$$", count: 1 }] },
       locale: "es",
     };
     expect(parsePricingAssessmentPayload(payload)).toEqual(payload);

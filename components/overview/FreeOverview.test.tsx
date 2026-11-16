@@ -209,3 +209,26 @@ describe("locked footers (one layout everywhere)", () => {
     expect(render(<RankUnlockLine />)).toContain('data-testid="rank-unlock"');
   });
 });
+
+describe("Free: the review goal is locked (no live Google competitor call)", () => {
+  test("one small locked line to the plans in place of the nearby average and goal (EN + ES usted)", () => {
+    const html = render(<FreeReviews placeId={null} rating={4.6} reviewCount={10} goal={null} group={null} goalLockedHref="/business/b1/settings#compare-plans" />);
+    expect(html).toMatch(/<a[^>]*href="\/business\/b1\/settings#compare-plans"[^>]*data-testid="review-goal-locked"|data-testid="review-goal-locked"[^>]*href="\/business\/b1\/settings#compare-plans"/);
+    expect(text(html)).toContain("See how many reviews you need to pass them, on Grow →");
+    expect(text(html)).not.toMatch(/nearby average|Your goal/i);
+    const es = render(<FreeReviews placeId={null} rating={4.6} reviewCount={10} goal={null} group={null} goalLockedHref="/business/b1/settings#compare-plans" />, "free", "es");
+    expect(text(es)).toContain("Vea cuántas reseñas necesita para superarlos, en Grow →");
+  });
+
+  test("no saved competitors: no locked line", () => {
+    expect(render(<FreeReviews placeId={null} rating={4.6} reviewCount={10} goal={null} group={null} />)).not.toContain("review-goal-locked");
+  });
+
+  test("the Free Overview shows the locked line once: in the Reviews card with a rank, in the rank card above it with 1–2 competitors", () => {
+    const view = readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8");
+    expect(view).toContain('goalLockedHref={benchmark.status === "ok" ? `/business/${businessId}/settings#compare-plans` : null}');
+    expect(view).toContain("<LocalBenchmarkTile businessId={businessId} result={benchmark} lockedHref={`/business/${businessId}/settings#compare-plans`} />");
+    // The rank card comes first on the page.
+    expect(view.indexOf('data-testid="free-rank"')).toBeLessThan(view.indexOf("<FreeReviews"));
+  });
+});

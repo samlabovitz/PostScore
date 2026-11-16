@@ -39,9 +39,9 @@ describe("the one nearby review average", () => {
 
   test("every place reads it: Overview/reports/PDF/unlock lines (via the benchmark), PostAI and the Competitors page", () => {
     const actions = readFileSync("app/actions/competitors.ts", "utf8");
-    expect(actions).toContain("competitorReviewAverage: nearbyReviewAverage(snapshot.scan, scope)");
+    expect(actions).toContain("competitorReviewAverage: countsKnown ? nearbyReviewAverage(snapshot.scan, scope) : null");
     expect(actions).not.toMatch(/function competitorReviewAverage/);
-    expect(readFileSync("app/actions/assistant.ts", "utf8")).toContain("nearbyReviewAverage: nearbyReviewAverage(snapshot.scan, competitorScope)");
+    expect(readFileSync("app/actions/assistant.ts", "utf8")).toContain("nearbyReviewAverage: snapshot.liveUnavailable ? null : nearbyReviewAverage(snapshot.scan, competitorScope)");
     expect(readFileSync("lib/reports/reportData.server.ts", "utf8")).toContain("benchmark.benchmark.competitorReviewAverage");
     expect(readFileSync("lib/competitorComparison.ts", "utf8")).toContain('m.checkId === "visibility.review_count" ? nearbyReviewAverage(scan, null, 1)');
     // No other place averages review counts on its own.

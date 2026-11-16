@@ -3,8 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import {
-  priceLevelContextFromSavedRows,
-  type SavedPriceLevelRow,
+  buildPriceLevelComparison,
+  bandTotal,
   buildPricingPrompt,
   buildPricingSystemPrompt,
   parsePricingAssessmentPayload,
@@ -19,6 +19,7 @@ import { callAnthropicMessage } from "@/lib/anthropicClient";
 import { normalizeLocale, t, type Locale } from "@/lib/i18n";
 import { getPlan } from "@/lib/premium";
 import { priceLevelToSymbol } from "@/lib/priceLevel";
+import { getLatestCompetitorSnapshot } from "@/app/actions/competitors";
 
 const PRICE_COLUMNS_BASE = "id, business_id, service, price, created_at";
 // Day 4b: the optional size (prices.size — ~/Desktop/pricing-size.sql).
@@ -305,20 +306,16 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
   const locale = normalizeLocale(row.language);
   const services = pricesResult.prices.map((p) => ({ service: p.service, price: p.price, size: p.size ?? null }));
 
-  // Part B: real competitor price-level context from the latest SAVED
-  // competitor scan — never a fresh paid scan per "Assess". The owner's
-  // own level comes from the business row (always current). No saved
-  // scan → honestly no local context, same as a scan finding nothing.
+  // Part B: real competitor price-level context from the latest saved
+  // competitor scan's businesses, their levels read live (never the saved
+  // copies) — never a fresh paid scan per "Assess". Counts per band, no
+  // names. The owner's own level comes from the business row. No scan, or
+  // Google couldn't be reached → honestly no local context.
   let priceLevelContext: PriceLevelComparison | null = null;
-  const { data: savedRows } = await supabase
-    .from("competitor_scans")
-    .select("scan_id, created_at, is_subject, name, distance_meters, price_level")
-    .eq("business_id", businessId)
-    .order("created_at", { ascending: false })
-    .limit(60);
-  const saved = priceLevelContextFromSavedRows((savedRows ?? []) as SavedPriceLevelRow[]);
-  if (saved && saved.competitors.length > 0) {
-    priceLevelContext = { ...saved, subjectSymbol: priceLevelToSymbol(row.price_level) };
+  const snapshot = await getLatestCompetitorSnapshot(businessId);
+  if (snapshot && !snapshot.liveUnavailable) {
+    const live = buildPriceLevelComparison(snapshot.scan.entries);
+    if (bandTotal(live) > 0) priceLevelContext = { ...live, subjectSymbol: priceLevelToSymbol(row.price_level) };
   }
 
   const pricingProfile = resolveBizProfile(

@@ -69,7 +69,8 @@ export async function getGrowthMoveSignals(
     return { status: "not_found" };
   }
 
-  const photoCounts = resolvedSnapshot ? competitorPhotoCounts(resolvedSnapshot.entries) : [];
+  // Live photo counts; a median of part of the list would mislead, so none when any didn't load.
+  const photoCounts = resolvedSnapshot && !resolvedSnapshot.liveUnavailable ? competitorPhotoCounts(resolvedSnapshot.entries) : [];
   const medianCompetitorPhotoCount = median(photoCounts);
   const hasWebsiteCheck = breakdown.checks.find((c) => c.id === "website.has_website");
 

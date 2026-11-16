@@ -161,3 +161,12 @@ export function placesToFetch(scan: SavedCompetitorScan): string[] {
   const others = scan.entries.filter((e) => !e.isSubject).map((e) => e.placeId);
   return Array.from(new Set([...subject, ...others]));
 }
+
+/** A head-to-head whose rival names Google couldn't give right now: "—",
+ * never "(unnamed listing)". */
+export function withMissingNames<T extends { rivals: Array<{ placeId: string; name: string | null }> }>(h2h: T, scan: SavedCompetitorScan): T {
+  const missing = new Set(scan.entries.filter((e) => e.liveMissing).map((e) => e.placeId));
+  return { ...h2h, rivals: h2h.rivals.map((r) => ({ ...r, name: r.name ?? (missing.has(r.placeId) ? MISSING_NAME : null) })) };
+}
+
+export const MISSING_NAME = "—";

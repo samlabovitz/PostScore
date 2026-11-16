@@ -1,8 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
-import { priceLevelContextFromSavedRows } from "@/lib/pricing";
 
-// Part B: "Assess my pricing" uses the latest SAVED competitor scan's
-// price levels — never a fresh paid scan.
+// Part B: "Assess my pricing" uses the latest saved competitor scan's
+// businesses, their price levels read live (Day 23) — never a fresh paid scan.
 const scanSpy = vi.fn();
 // A paid plan: on Free the price check refuses before any of this runs.
 vi.mock("@/lib/premium", () => ({ getPlan: () => "grow" }));
@@ -39,24 +38,31 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
+// The shared snapshot (live values in place of the saved ones).
+const snapshotMock = vi.fn();
+vi.mock("@/app/actions/competitors", () => ({ getLatestCompetitorSnapshot: (...a: unknown[]) => snapshotMock(...a) }));
+const entry = (isSubject: boolean, priceLevel: string | null) => ({ placeId: String(Math.random()), name: null, isSubject, priceLevel, liveMissing: false });
+snapshotMock.mockResolvedValue({
+  liveUnavailable: false,
+  scan: { scanId: "new", createdAt: "2026-10-11T00:00:00Z", entries: [entry(true, "PRICE_LEVEL_MODERATE"), entry(false, "PRICE_LEVEL_EXPENSIVE"), entry(false, null)] },
+  entries: [],
+});
+
 import { assessPricing } from "./pricing";
 
 describe("Pricing reuses the saved competitor scan", () => {
-  test("priceLevelContextFromSavedRows uses only the newest scan", () => {
-    const ctx = priceLevelContextFromSavedRows(TABLES.competitor_scans as Parameters<typeof priceLevelContextFromSavedRows>[0])!;
-    expect(ctx.competitors.map((c) => [c.name, c.symbol])).toEqual([
-      ["Ann's", "$$$"],
-      ["Bo's", null],
-    ]);
-    expect(priceLevelContextFromSavedRows([])).toBeNull();
-  });
-
-  test("Assess: no paid scan, and the prompt carries the saved price levels and the owner's own level", async () => {
+  test("Assess: no paid scan, and the prompt carries the live price levels (as counts) and the owner's own level", async () => {
     const result = await assessPricing("b");
     expect(result.status).toBe("ok");
     expect(scanSpy).not.toHaveBeenCalled();
     expect(prompts.at(-1)).toContain("Your Google price level: $$");
-    // Only the newest scan (Ann's $$$, Bo's none) — the old scan's "Gone" ($) isn't used.
     expect(prompts.at(-1)).toContain("Nearby competitors' Google price levels: $$$ x1, no data x1\n");
+  });
+
+  test("Google couldn't be reached: no local context (never the saved levels), the assessment still runs", async () => {
+    snapshotMock.mockResolvedValueOnce({ liveUnavailable: true, scan: { scanId: "new", createdAt: "2026-10-11T00:00:00Z", entries: [] }, entries: [] });
+    const result = await assessPricing("b");
+    expect(result.status).toBe("ok");
+    expect(prompts.at(-1)).toContain("No nearby competitor price-level data available");
   });
 });

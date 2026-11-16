@@ -24,7 +24,7 @@ import {
   SMALL_SAMPLE_BELOW,
   type AlsoNearbyListing,
 } from "@/lib/competitorQuality";
-import { bizProfileById, resolveBizProfile } from "@/config/bizProfiles";
+import { resolveBizProfile } from "@/config/bizProfiles";
 import { DEFAULT_LOCALE, normalizeLocale, t } from "@/lib/i18n";
 import { getPlan } from "@/lib/premium";
 import { competitorRefreshAvailability, refreshAvailability, rescanRefreshesCompetitors, type RefreshAvailability } from "@/lib/competitorScanPolicy";
@@ -45,7 +45,10 @@ import { canRunScan, countUnreadableAllows, nextMonthStartUtc, placesSearchMonth
 import { scopeGroupLabel, nicheSearchTypes } from "@/lib/competitorScope";
 import { applyOverrides, overridesFromRows, scanOverrides, type CompetitorOverride } from "@/lib/competitorOverrides";
 import { nicheScanFields } from "@/lib/competitorNicheRule";
-import { competitorQueryNoun, competitorTextQuery } from "@/lib/competitorQuery";
+import { withLiveCompetitorValuesFor } from "@/lib/placesLive.server";
+import { latestScoreBreakdown } from "@/lib/ownerRankScore.server";
+import { scanWithoutPlacesValues, withMissingNames } from "@/lib/placesLive";
+import { comparedWithFor, liveQueryFromRow, ownerTypePlaceTypes, type LiveCompetitorQuery } from "@/lib/competitorLiveQuery";
 
 
 export type { CompetitorRankPoint, SavedCompetitorEntry, SavedCompetitorScan } from "@/lib/savedCompetitorScans";
@@ -136,7 +139,7 @@ export type GetCompetitorsResult =
       niche?: BusinessNicheState | null;
       /** Where the page's live read searches (lib/placesLive.server.ts):
        * the business's point and its own search types. */
-      liveQuery?: { lat: number | null; lng: number | null; includedTypes: string[] };
+      liveQuery?: LiveCompetitorQuery;
     }
   | { status: "not_found" }
   | { status: "unauthenticated" }
@@ -167,8 +170,7 @@ export async function getCompetitors(businessId: string): Promise<GetCompetitors
 /** The business's latest saved score (its newest `scores` row's
  * breakdown) — what the Competitors page ranks the owner by. */
 async function latestSavedBreakdown(supabase: SupabaseClient, businessId: string): Promise<unknown> {
-  const { data } = await supabase.from("scores").select("breakdown_json").eq("business_id", businessId).order("created_at", { ascending: false }).limit(1).maybeSingle();
-  return (data as { breakdown_json: unknown } | null)?.breakdown_json ?? null;
+  return latestScoreBreakdown(supabase, businessId);
 }
 
 export async function getCompetitorsWithClient(
@@ -265,21 +267,10 @@ export async function getCompetitorsWithClient(
       categories: row.categories,
       fallbackPlaceTypes: ownerTypePlaceTypes(row.business_type_override),
     }),
-    liveQuery: {
-      lat: row.lat,
-      lng: row.lng,
-      includedTypes: Array.from(
-        new Set([row.primary_type, ...((niche && nicheSearchTypes(niche.scope)?.directTypes) ?? []), ...ownerTypePlaceTypes(row.business_type_override)])
-      ).filter((type): type is string => !!type && !isGenericType(type)),
-    },
+    liveQuery: liveQueryFromRow(row, niche),
   };
 }
 
-/** Google place types for the owner's PostScore business type (only used
- * when Google's own listing types are all generic). */
-function ownerTypePlaceTypes(businessTypeOverride: string | null): string[] {
-  return bizProfileById(businessTypeOverride)?.placesType ?? [];
-}
 
 export type SaveCompetitorScanResult =
   | { status: "saved"; scanId: string; placesCalls?: number }
@@ -580,8 +571,17 @@ export interface CompetitorSnapshot {
   createdAt: string;
   entries: CompetitorSnapshotEntry[];
   /** The same scan in the Competitors page's shape — what every rank is
-   * computed from (ownerStanding in lib/competitorComparison.ts). */
+   * computed from (ownerStanding in lib/competitorComparison.ts). Google's
+   * values (names, ratings, reviews, photos, price) are read live, never
+   * the saved copies. */
   scan: SavedCompetitorScan;
+  /** Some live values couldn't be read, or weren't (Free): anything
+   * built from ratings, review or photo counts is left out (unknown is
+   * hidden). */
+  liveUnavailable: boolean;
+  /** Free: no live Google read here at all — our own results only (the
+   * rank stays; the review goal is a Grow feature). */
+  liveSkipped?: boolean;
 }
 
 /**
@@ -612,20 +612,27 @@ async function getLatestCompetitorSnapshotUncached(businessId: string): Promise<
   const latestScanId = rows[0].scan_id;
   const latestRows = rows.filter((r) => r.scan_id === latestScanId);
   // The owner on their latest saved score — the same as the Competitors page.
-  const scan = withLatestOwnerScore(groupSavedScans(latestRows)[0], latestScore, normalizeLocale((business as { language: string | null } | null)?.language));
-  const owner = scan.entries.find((e) => e.isSubject);
+  const saved = withLatestOwnerScore(groupSavedScans(latestRows)[0], latestScore, normalizeLocale((business as { language: string | null } | null)?.language));
+  // Google's values live (one call per visit, shared with every page) —
+  // except on Free, which makes no live competitor call outside the
+  // Competitors page: our own results only.
+  const free = (await getPlan()) === "free";
+  const live = free ? { scan: scanWithoutPlacesValues(saved), unavailable: true } : await withLiveCompetitorValuesFor(supabase, businessId, saved);
+  const scan = live.scan;
 
   return {
     scan,
     scanId: latestScanId,
     createdAt: rows[0].created_at,
-    entries: latestRows.map((r) => ({
-      name: r.name,
-      isSubject: r.is_subject,
-      total: r.is_subject && owner ? owner.total : r.total,
-      grade: r.is_subject && owner ? owner.grade : r.grade,
-      priceLevel: r.price_level,
-      photoCount: r.photo_count,
+    liveUnavailable: live.unavailable,
+    ...(free ? { liveSkipped: true } : {}),
+    entries: scan.entries.map((e) => ({
+      name: e.name,
+      isSubject: e.isSubject,
+      total: e.total,
+      grade: e.grade,
+      priceLevel: e.priceLevel,
+      photoCount: e.photoCount,
     })),
   };
 }
@@ -853,10 +860,12 @@ async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBe
   if (standing.othersCount === 0) {
     return { status: "no_peers", competitorNoun };
   }
-  const h2h = headToHead(snapshot.scan, scope);
-  if (h2h) {
-    return { status: "head_to_head", competitorNoun, headToHead: h2h, scanId: snapshot.scanId, scanAt: snapshot.createdAt };
+  const found = headToHead(snapshot.scan, scope);
+  if (found) {
+    return { status: "head_to_head", competitorNoun, headToHead: withMissingNames(found, snapshot.scan), scanId: snapshot.scanId, scanAt: snapshot.createdAt };
   }
+  // Built from live review counts: unknown when any didn't load (hidden, never a partial average).
+  const countsKnown = !snapshot.liveUnavailable;
 
   return {
     status: "ok",
@@ -872,9 +881,9 @@ async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBe
       aheadCount: standing.aheadCount,
       percentileAhead: Math.round((standing.aheadCount / standing.othersCount) * 100),
       smallSample: standing.othersCount < SMALL_SAMPLE_THRESHOLD,
-      competitorReviewAverage: nearbyReviewAverage(snapshot.scan, scope),
+      competitorReviewAverage: countsKnown ? nearbyReviewAverage(snapshot.scan, scope) : null,
       // The business's current count (its row); the scan's own as a fallback.
-      reviewGoal: reviewGoal(snapshot.scan, scope, (business as { review_count?: number | null }).review_count ?? snapshot.scan.entries.find((e) => e.isSubject)?.reviewCount ?? null),
+      reviewGoal: countsKnown ? reviewGoal(snapshot.scan, scope, (business as { review_count?: number | null }).review_count ?? snapshot.scan.entries.find((e) => e.isSubject)?.reviewCount ?? null) : null,
       reviewGroup: scopeGroupLabel(snapshot.scan, scope, normalizeLocale(business.language), competitorNoun),
       selectionUpdated: await competitorSelectionNote(businessId),
       distanceNote: distanceNote(snapshot.scan.entries.filter((e) => !e.isSubject)),
@@ -905,14 +914,3 @@ async function loadCompetitorOverrides(supabase: SupabaseClient, businessId: str
   }
 }
 
-/** The query words a scan of this business uses (lib/competitorQuery.ts) —
- * the same niche rules as the scan itself. */
-function comparedWithFor(
-  row: { address: string | null; primary_type: string | null; categories: string[] | null; website: string | null; verified_website_url: string | null },
-  niche: BusinessNicheState | null
-): { noun: string | null; query: string | null } {
-  const { queryNiche } = nicheScanFields(niche?.resolved, niche?.scope, row.website ?? row.verified_website_url);
-  const primaryType = [row.primary_type, ...(row.categories ?? [])].find((t) => !!t && !isGenericType(t)) ?? null;
-  const subject = { nicheId: queryNiche?.id, nicheLabelEn: queryNiche?.labelEn, nicheParent: queryNiche?.parent, primaryType, address: row.address };
-  return { noun: competitorQueryNoun(subject), query: competitorTextQuery(subject) };
-}

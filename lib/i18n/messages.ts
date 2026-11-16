@@ -1234,6 +1234,7 @@ export type MessageKey =
   | "dashboard.competitors.unscoredSuffix.other"
   | "dashboard.competitors.noRating"
   | "dashboard.live.unavailable"
+  | "dashboard.free.reviewGoalLocked"
   | "dashboard.competitors.headToHead.intro.one"
   | "dashboard.competitors.headToHead.intro.other"
   | "dashboard.competitors.headToHead.label"
@@ -3580,6 +3581,8 @@ export type MessageKey =
   | "dashboard.pricing.examplesPrefix"
   | "dashboard.pricing.priceLevelContextHeading"
   | "dashboard.pricing.youLabel"
+  | "dashboard.pricing.bandNearby.one"
+  | "dashboard.pricing.bandNearby.other"
   | "dashboard.pricing.assessmentEmptyState"
   | "dashboard.pricing.pricingTipsHeading"
   | "dashboard.pricing.generalStrategyFootnote"
@@ -5776,6 +5779,7 @@ export type PluralKeyBase =
   | "report.fragment.reviewsLost"
   | "report.fragment.listingChanges"
   | "dashboard.competitors.reviewCount"
+  | "dashboard.pricing.bandNearby"
   | "dashboard.home.savedBusinessCount"
   | "dashboard.competitors.foundFewMessage"
   | "dashboard.competitors.unscoredSuffix"
@@ -7075,6 +7079,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       " {count} of them couldn't be scored — Google returned no usable details.",
     "dashboard.competitors.noRating": "No rating",
     "dashboard.live.unavailable": "Couldn't load from Google right now",
+    "dashboard.free.reviewGoalLocked": "See how many reviews you need to pass them, on Grow →",
     "dashboard.competitors.headToHead.intro.one": "Only 1 business like yours within {miles} miles — here's how you compare with {names}",
     "dashboard.competitors.headToHead.intro.other": "Only {count} {noun} like yours within {miles} miles — here's how you compare with {names}",
     "dashboard.competitors.headToHead.label": "Head-to-head",
@@ -9687,6 +9692,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.pricing.examplesPrefix": "Examples: {examples}",
     "dashboard.pricing.priceLevelContextHeading": "Real Google price-level context",
     "dashboard.pricing.youLabel": "You",
+    "dashboard.pricing.bandNearby.one": "{count} nearby",
+    "dashboard.pricing.bandNearby.other": "{count} nearby",
     "dashboard.pricing.assessmentEmptyState":
       "Add your prices, then click \"{button}\" to see how they compare.",
     "dashboard.pricing.pricingTipsHeading": "Pricing tips for {profile}",
@@ -13257,6 +13264,7 @@ export const messages: Record<Locale, LocaleMessages> = {
       " {count} de ellos no se pudieron evaluar — Google no devolvió detalles utilizables.",
     "dashboard.competitors.noRating": "Sin calificación",
     "dashboard.live.unavailable": "No se pudo cargar desde Google en este momento",
+    "dashboard.free.reviewGoalLocked": "Vea cuántas reseñas necesita para superarlos, en Grow →",
     "dashboard.competitors.headToHead.intro.one": "Solo hay 1 negocio como el suyo a menos de {miles} millas: así se compara con {names}",
     "dashboard.competitors.headToHead.intro.other": "Solo hay {count} negocios como el suyo a menos de {miles} millas: así se compara con {names}",
     "dashboard.competitors.headToHead.label": "Cara a cara",
@@ -15646,6 +15654,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.pricing.examplesPrefix": "Ejemplos: {examples}",
     "dashboard.pricing.priceLevelContextHeading": "Nivel de precios real según Google",
     "dashboard.pricing.youLabel": "Su negocio",
+    "dashboard.pricing.bandNearby.one": "{count} cercano",
+    "dashboard.pricing.bandNearby.other": "{count} cercanos",
     "dashboard.pricing.assessmentEmptyState":
       "Agregue sus precios y luego haga clic en \"{button}\" para ver cómo se comparan.",
     "dashboard.pricing.pricingTipsHeading": "Consejos de precios para {profile}",

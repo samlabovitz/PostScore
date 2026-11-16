@@ -8,12 +8,14 @@
 // render these.
 
 import { useState } from "react";
+import Link from "next/link";
 import { FREE_REPLY_DRAFTS } from "@/lib/reviewReplies";
 import {
   IconCopy,
   IconDownload,
   IconExternalLink,
   IconLink,
+  IconLock,
   IconStar,
 } from "@tabler/icons-react";
 import { buildGoogleReviewUrl, shortReviewLink } from "@/lib/reviews";
@@ -64,6 +66,7 @@ export function FreeReviews({
   reviewCount,
   goal,
   group,
+  goalLockedHref = null,
   children,
 }: {
   placeId: string | null;
@@ -72,6 +75,10 @@ export function FreeReviews({
   /** The shared review goal (beat the leader) and its comparison group. */
   goal: ReviewGoal | null;
   group: string | null;
+  /** Free with saved competitors: no live Google read for their review
+   * counts, so the nearby average and goal are one locked line to the
+   * plans instead (Day 23 2b-2). */
+  goalLockedHref?: string | null;
   /** "Reply to a review" (the AI reply drafter), at the bottom. */
   children?: React.ReactNode;
 }) {
@@ -102,7 +109,15 @@ export function FreeReviews({
               {text.stretch && <p className="text-[13px] text-ink" data-testid="review-stretch">{text.stretch}</p>}
             </>
           ) : (
-            <p className="text-[13.5px] font-medium leading-snug text-ink">{reviewStatLine(reviewCount, null, locale)}</p>
+            <>
+              <p className="text-[13.5px] font-medium leading-snug text-ink">{reviewStatLine(reviewCount, null, locale)}</p>
+              {goalLockedHref && (
+                <Link href={goalLockedHref} data-testid="review-goal-locked" className="inline-flex w-fit items-center gap-1 text-[12.5px] font-medium text-brass hover:underline">
+                  <IconLock size={13} aria-hidden />
+                  {t(locale, "dashboard.free.reviewGoalLocked")}
+                </Link>
+              )}
+            </>
           )}
           <p className="text-[12.5px] text-ink-soft">{t(locale, "dashboard.free.reviewWhy")}</p>
         </div>

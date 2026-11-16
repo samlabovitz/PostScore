@@ -87,7 +87,7 @@ describe("the review leader and goal (same scope as the rank)", () => {
   });
 
   test("every place uses it: benchmark (Overview, Reviews, reports, PDF, visit, unlock lines), Competitors, Growth and PostAI", () => {
-    expect(readFileSync("app/actions/competitors.ts", "utf8")).toContain("reviewGoal: reviewGoal(snapshot.scan, scope,");
+    expect(readFileSync("app/actions/competitors.ts", "utf8")).toContain("reviewGoal: countsKnown ? reviewGoal(snapshot.scan, scope,");
     expect(readFileSync("app/business/[id]/competitors/CompetitorsView.tsx", "utf8")).toContain("reviewGoal(scan, scope, own)");
     expect(readFileSync("lib/reports/reportData.server.ts", "utf8")).toContain("reviewGoalLines(benchmark.benchmark.reviewGoal");
     expect(readFileSync("app/actions/weekly.ts", "utf8")).toContain("reviewGoalLines: async () =>");

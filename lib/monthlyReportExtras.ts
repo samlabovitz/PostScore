@@ -17,10 +17,11 @@ import {
 import { headToHead, reportStanding } from "@/lib/competitorComparison";
 import { t, type Locale } from "@/lib/i18n";
 import type { CompetitorSnapshot, FocusTopActionPlanTask, ReportExtras, ReportSecurityAlert } from "@/lib/monthlyReport";
-import { groupSavedScans, type SavedScanRow } from "@/lib/savedCompetitorScans";
+import { groupSavedScans, type SavedCompetitorScan, type SavedScanRow } from "@/lib/savedCompetitorScans";
 import { hasAnalyzableWebsite, partlyCheckedScoreBasis, type BusinessScoringInput, type ScoreBreakdown } from "@/lib/scoring";
 import { keyForInfoConflict } from "@/lib/websiteTrust";
 import type { CompetitorScope } from "@/lib/competitorScope";
+import { withMissingNames } from "@/lib/placesLive";
 
 
 /** Spam or a Safe Browsing flag — only when Site security actually lost
@@ -83,13 +84,19 @@ export function reportTopTask(tasks: ActionPlanTask[], input: BusinessScoringInp
 }
 
 /** The owner's standing in one saved scan — the same ranking as the
- * Competitors page (reportStanding). */
-export function snapshotFromSavedRows(rows: SavedScanRow[], scope?: CompetitorScope | null): CompetitorSnapshot | null {
-  const scan = groupSavedScans(rows)[0];
+ * Competitors page (reportStanding). Google's values come live
+ * (lib/placesLive.server.ts); `liveUnavailable`: some didn't load, so the
+ * "top business has N more reviews" pointer is left out and a missing
+ * name shows "—". */
+export function snapshotFromScan(scan: SavedCompetitorScan | undefined, scope?: CompetitorScope | null, liveUnavailable = false): CompetitorSnapshot | null {
   const standing = scan ? reportStanding(scan, scope) : null;
   if (!scan || !standing) return null;
   // 1–2 competitors: a head-to-head, never "#1 of 2" (and no "top business" pointer).
-  const h2h = headToHead(scan, scope);
-  if (h2h) return { rank: standing.rank, totalCompetitors: standing.total, topCompetitorReviewCount: null, headToHead: h2h };
-  return { rank: standing.rank, totalCompetitors: standing.total, topCompetitorReviewCount: standing.topReviewCount };
+  const found = headToHead(scan, scope);
+  if (found) return { rank: standing.rank, totalCompetitors: standing.total, topCompetitorReviewCount: null, headToHead: withMissingNames(found, scan) };
+  return { rank: standing.rank, totalCompetitors: standing.total, topCompetitorReviewCount: liveUnavailable ? null : standing.topReviewCount };
+}
+
+export function snapshotFromSavedRows(rows: SavedScanRow[], scope?: CompetitorScope | null): CompetitorSnapshot | null {
+  return snapshotFromScan(groupSavedScans(rows)[0], scope);
 }

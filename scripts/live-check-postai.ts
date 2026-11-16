@@ -188,6 +188,8 @@ async function readLatestCompetitorSnapshot(businessId: string): Promise<Competi
     scan: groupSavedScans(latestRows)[0],
     scanId: latestScanId,
     createdAt: rows[0].created_at,
+    // The saved scan as it is (Day 23 2b-3 moves this to live values).
+    liveUnavailable: false,
     entries: latestRows.map((r) => ({
       name: r.name,
       isSubject: r.is_subject,
