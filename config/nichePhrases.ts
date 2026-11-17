@@ -242,3 +242,11 @@ export const NICHE_PHRASE_ES: Record<string, string> = {
   coffee_roaster: "Tostadora de café",
   pet_grooming: "Estética para mascotas",
 };
+
+/** The name owners see for a niche, where the sentence form doesn't read
+ * as one ("an art or pottery studio" is the studio, not its classes).
+ * Every other niche shows its sentence form without the article
+ * (lib/niches.ts nicheName). */
+export const NICHE_NAME: Record<string, { en: string; es: string }> = {
+  art_classes: { en: "Art & pottery classes", es: "Clases de arte y cerámica" },
+};

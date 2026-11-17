@@ -23,6 +23,7 @@ import { formatPoints } from "@/components/scoring/CategoryCard";
 import { updateBusinessDifferentiator, updateBusinessProfile, updateBusinessTypeOverride } from "@/app/actions/businesses";
 import { DIFFERENTIATOR_MAX, formatSpendRange, offerWording } from "@/lib/businessOffer";
 import { getBizProfileOptions } from "@/config/bizProfiles";
+import { OPEN_PICKER_PARAM } from "@/lib/niches";
 import type { AssistantBusinessProfile } from "@/lib/assistant";
 import { t, useLocale } from "@/lib/i18n";
 import { businessTypeSourceText } from "./businessTypeSource";
@@ -464,6 +465,19 @@ export function BusinessMemoryPanel({
 
         <div className="flex flex-col gap-4">
           <MemorySection title={t(locale, "dashboard.memory.fromGoogle")} testId="memory-from-google">
+            {current.nicheName ? (
+              // A saved niche: its own name, the top-level type small; changed in Settings.
+              <div data-testid="memory-niche">
+                <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-ink-mute">{t(locale, "dashboard.assistant.memory.businessTypeLabel")}</p>
+                <p className="mt-1 text-[13px] text-ink">
+                  {current.nicheName}{" "}
+                  <a href={`/business/${businessId}/settings?${OPEN_PICKER_PARAM}#business-type`} className="text-[12px] font-medium text-ink-soft underline-offset-2 hover:underline">
+                    {t(locale, "dashboard.niche.change")}
+                  </a>
+                </p>
+                <p className="text-[12px] text-ink-mute">{current.businessType}</p>
+              </div>
+            ) : (
             <BusinessTypeField
               businessId={businessId}
               businessTypeId={current.businessTypeId}
@@ -474,6 +488,7 @@ export function BusinessMemoryPanel({
                 setCurrent((prev) => ({ ...prev, businessType, businessTypeId, businessTypeOverridden: overridden }))
               }
             />
+            )}
             <div>
               <p className="text-[12px] font-medium text-ink-soft">{t(locale, "dashboard.memory.address")}</p>
               <p className="mt-0.5 text-[13px] text-ink">{current.location ?? t(locale, "dashboard.assistant.memory.notOnFile")}</p>

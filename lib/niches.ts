@@ -11,7 +11,7 @@
 
 import { getBizProfileOptions } from "@/config/bizProfiles";
 import { NICHE_PARENTS, SPECIFIC_NICHES, generalNicheSignals, type NicheDef } from "@/config/niches";
-import { NICHE_PHRASE_EN, NICHE_PHRASE_ES } from "@/config/nichePhrases";
+import { NICHE_NAME, NICHE_PHRASE_EN, NICHE_PHRASE_ES } from "@/config/nichePhrases";
 import type { BusinessTypeId } from "@/lib/tradeSearch";
 import type { Locale } from "@/lib/i18n";
 
@@ -160,6 +160,18 @@ export function isNicheParent(id: string): id is BusinessTypeId {
 /** "a" / "an" before an English niche name ("an Ice cream…", "a Skate…"). */
 export function articleFor(label: string): "a" | "an" {
   return /^[aeiou]/i.test(label.trim()) ? "an" : "a";
+}
+
+/** A niche's name as owners see it ("Chinese restaurant", "Art &
+ * pottery classes"): its own name where it has one, else nicheDisplayName. */
+export function nicheName(id: string, locale: Locale): string {
+  return NICHE_NAME[id]?.[locale] ?? nicheDisplayName(id, locale);
+}
+
+/** The business type owners see: the saved niche's name when it's more
+ * specific than the top-level type, else the top-level type's label. */
+export function ownerTypeName(nicheId: string | null | undefined, typeLabel: string, locale: Locale): string {
+  return nicheId && nicheById(nicheId) && !isGeneralNiche(nicheId) ? nicheName(nicheId, locale) : typeLabel;
 }
 
 /** The query a "Change" link adds to open the Settings picker on arrival. */

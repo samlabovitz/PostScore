@@ -131,7 +131,7 @@ describe("the UI pieces", () => {
   test("Settings: a searchable list grouped by type, the business's own type first", () => {
     // Closed: the selected type, its source, Change — no search or list.
     const closed = wrap(<NichePicker businessId="b1" nicheId="skate_snow" source="detected" suggestion={null} />);
-    expect(text(closed)).toContain("Skate & snow shop We detected this");
+    expect(text(closed)).toContain("Skate & snow shop Specialty Store · We detected this");
     expect(closed).toContain('data-testid="niche-selected"');
     expect(text(closed)).toContain("Change");
     expect(closed).not.toContain('type="search"');
@@ -147,11 +147,11 @@ describe("the UI pieces", () => {
     // Automatic detection: only after the owner chose a type.
     expect(text(html)).not.toContain("Use automatic detection");
     const chosen = text(wrap(<NichePicker businessId="b1" nicheId="chinese" source="owner" suggestion={null} initialOpen />));
-    expect(chosen).toContain("Chinese restaurant You chose this");
+    expect(chosen).toContain("Chinese restaurant Restaurant & Food Service · You chose this");
     expect(chosen).toContain("Use automatic detection");
     // Spanish.
     const es = text(wrap(<NichePicker businessId="b1" nicheId="chinese" source="owner" suggestion={null} initialOpen />, "es"));
-    expect(es).toContain("Restaurante chino Usted lo eligió");
+    expect(es).toContain("Restaurante chino Restaurante y servicio de comida · Usted lo eligió");
     expect(es).toContain("Cancelar");
     expect(es).toContain("Usar la detección automática");
     expect(text(wrap(<NichePicker businessId="b1" nicheId="chinese" source="detected" suggestion={null} />, "es"))).toContain("Lo detectamos");

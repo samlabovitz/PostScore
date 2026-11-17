@@ -54,6 +54,8 @@ import { postaiMonth, postaiMonthlyLeft, postaiMonthlyLimit } from "@/lib/postai
 import { answerWithFactCheck, buildPostaiFacts } from "@/lib/postaiFacts";
 import { planFactsText } from "@/lib/planFacts";
 import { loadCompetitorScope } from "@/lib/businessNiche.server";
+import { isGeneralNiche, nicheName, ownerTypeName } from "@/lib/niches";
+import { ownerCompetitorNoun } from "@/lib/competitorQuery";
 import { scopeGroupLabel, applyScope, scopeSummary } from "@/lib/competitorScope";
 import { isMonthlyReportsLive } from "@/lib/monthlyReportsFeatureFlag";
 
@@ -208,7 +210,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
         // 1–2 competitors: no rank anywhere — the head-to-head instead.
         const h2h = headToHead(snapshot.scan, competitorScope);
         return {
-          headToHead: h2h ? `${headToHeadIntro(h2h, profile.competitorNoun, locale)}: ${headToHeadScores(h2h, locale)}` : null,
+          headToHead: h2h ? `${headToHeadIntro(h2h, ownerCompetitorNoun(competitorScope?.nicheId, profile.competitorNoun, locale), locale)}: ${headToHeadScores(h2h, locale)}` : null,
           available: true,
           scanAt: formatShortDate(snapshot.createdAt, locale, timeZone),
           subjectRank: h2h ? null : (ownerStanding(snapshot.scan, competitorScope)?.rank ?? null),
@@ -219,7 +221,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
           reviewGoalLines: (() => {
             if (snapshot.liveUnavailable) return [];
             const goal = reviewGoal(snapshot.scan, competitorScope, scored.business.review_count);
-            return goal ? reviewGoalLines(goal, scopeGroupLabel(snapshot.scan, competitorScope, locale, profile.competitorNoun), locale) : [];
+            return goal ? reviewGoalLines(goal, scopeGroupLabel(snapshot.scan, competitorScope, locale, ownerCompetitorNoun(competitorScope?.nicheId, profile.competitorNoun, locale)), locale) : [];
           })(),
           entries: ranked.map(({ entry }) => ({
             name: entry.name ?? (entry.liveMissing ? "(name couldn't load from Google)" : "Unnamed business"),
@@ -308,6 +310,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
   const businessProfile: AssistantBusinessProfile = {
     businessType: profile.label,
     businessTypeId: profile.id,
+    nicheName: competitorScope && !isGeneralNiche(competitorScope.nicheId) ? nicheName(competitorScope.nicheId, locale) : null,
     autoDetectedBusinessType: autoDetectedProfile.label,
     autoDetectedBusinessTypeId: autoDetectedProfile.id,
     businessTypeOverridden: businessTypeOverride !== null,
@@ -333,7 +336,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     timeZone,
     listing: {
       name: scored.business.name,
-      categoryLabel: profile.label,
+      categoryLabel: ownerTypeName(competitorScope?.nicheId, profile.label, locale),
       rating: scored.business.rating,
       reviewCount: scored.business.review_count,
       phonePresent: !!scored.business.phone && scored.business.phone.trim().length > 0,

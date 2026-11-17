@@ -25,6 +25,8 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(state.query),
   usePathname: () => "/business/b1/campaigns",
 }));
+vi.mock("@/lib/businessNiche.server", () => ({ loadBusinessNiche: async () => null }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: () => ({}) }));
 vi.mock("@/components/layout/DashboardShell", () => ({ DashboardShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock("@/lib/premium", () => ({ getPlan: () => state.plan, getAddons: async () => state.addons }));
 vi.mock("@/app/actions/businesses", () => ({

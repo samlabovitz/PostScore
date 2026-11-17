@@ -10,6 +10,9 @@ import { resolveBizProfile } from "@/config/bizProfiles";
 import { getPlan } from "@/lib/premium";
 import { normalizeLocale } from "@/lib/i18n";
 import { CampaignsView } from "./CampaignsView";
+import { createClient } from "@/lib/supabase/server";
+import { loadBusinessNiche } from "@/lib/businessNiche.server";
+import { ownerTypeName } from "@/lib/niches";
 
 /**
  * Campaigns: the coupon and referral card designers (moved here from
@@ -30,6 +33,8 @@ export default async function CampaignsPage({ params }: { params: { id: string }
   const { business } = summary;
   const locale = normalizeLocale(business.language);
   const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override, locale, business.categories, business.name, business.biz_type_resolved);
+  // Labelled by the saved niche when there is one ("Art & pottery classes").
+  const shownProfile = { ...profile, label: ownerTypeName((await loadBusinessNiche(createClient(), params.id))?.resolved.nicheId, profile.label, locale) };
   const plan = await getPlan();
   const [promos, referral, printData, upgrade] = await Promise.all([
     profile.couponsOk ? listActivePromos(params.id) : Promise.resolve(null),
@@ -44,7 +49,7 @@ export default async function CampaignsPage({ params }: { params: { id: string }
         businessId={params.id}
         businessName={business.name}
         businessPhone={business.phone ?? null}
-        profile={profile}
+        profile={shownProfile}
         initialPromos={promos?.status === "ok" ? promos.promos : []}
         initialReferral={referral?.status === "ok" ? referral.referral : null}
         loadFailed={promos?.status === "error" || referral?.status === "error"}

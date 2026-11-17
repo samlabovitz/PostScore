@@ -143,6 +143,6 @@ describe("the Overview banner", () => {
     expect(en).toContain("We picked Art &amp; pottery classes for your business.");
     expect(en).toContain("Looks right");
     expect(en).toContain("Change");
-    expect(render("es")).toContain("Elegimos Clases de arte para su negocio.");
+    expect(render("es")).toContain("Elegimos Clases de arte y cerámica para su negocio.");
   });
 });

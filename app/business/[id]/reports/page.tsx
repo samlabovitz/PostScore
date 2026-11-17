@@ -15,6 +15,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getWeeklyRecapWithClient } from "@/lib/weekly/weeklyData.server";
 import { weekEndDay } from "@/lib/weekly/weeks";
 import { resolveBizProfile } from "@/config/bizProfiles";
+import { loadBusinessNiche } from "@/lib/businessNiche.server";
+import { ownerCompetitorNoun } from "@/lib/competitorQuery";
 
 export default async function ReportsPage({ params, searchParams }: { params: { id: string }; searchParams: { week?: string } }) {
   // Free: this tab is locked — its showroom, before any of its own data loads.
@@ -89,7 +91,7 @@ export default async function ReportsPage({ params, searchParams }: { params: { 
           shareHeadline={summary.business.name ? headline : null}
           weekly={weekly}
           weekLabels={weekLabels}
-          rankNoun={profile.competitorNoun}
+          rankNoun={ownerCompetitorNoun((await loadBusinessNiche(createClient(), params.id))?.resolved.nicheId, profile.competitorNoun, locale)}
         />
       </div>
     </DashboardShell>

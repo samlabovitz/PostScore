@@ -12,6 +12,10 @@ import { PricingView } from "./PricingView";
 import { getLastScanAt } from "@/app/actions/scoring";
 import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
 import { showRescanNotice } from "@/lib/rescanPolicy";
+import { createClient } from "@/lib/supabase/server";
+import { loadBusinessNiche } from "@/lib/businessNiche.server";
+import { ownerTypeName } from "@/lib/niches";
+import { ownerCompetitorNoun } from "@/lib/competitorQuery";
 
 export default async function PricingPage({ params }: { params: { id: string } }) {
   // Free: this tab is locked — its showroom, before any of its own data loads.
@@ -47,6 +51,9 @@ export default async function PricingPage({ params }: { params: { id: string } }
     business.name,
     business.biz_type_resolved
   );
+  // Labelled by the saved niche when there is one ("Art & pottery classes").
+  const nicheId = (await loadBusinessNiche(createClient(), params.id))?.resolved.nicheId;
+  const shownProfile = { ...profile, label: ownerTypeName(nicheId, profile.label, locale), competitorNoun: ownerCompetitorNoun(nicheId, profile.competitorNoun, locale) };
 
   if (pricesResult.status === "unauthenticated" || assessmentResult.status === "unauthenticated") {
     redirect("/login");
@@ -76,7 +83,7 @@ export default async function PricingPage({ params }: { params: { id: string } }
       <PricingView
         businessId={business.id}
         businessName={business.name}
-        profile={profile}
+        profile={shownProfile}
         initialPrices={pricesResult.prices}
         initialAssessment={assessmentResult.assessment}
       />

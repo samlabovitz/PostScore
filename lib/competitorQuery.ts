@@ -4,6 +4,7 @@
 // niche's own label first, else the Google primary type. Pure.
 
 import { GROUP_NOUN_ES } from "@/lib/nicheGroupNounEs";
+import { isGeneralNiche, nicheById } from "@/lib/niches";
 
 const GENERIC = new Set(["store", "point_of_interest", "establishment", "service", "food", "food_store", "health"]);
 const BROAD_FOOD = new Set(["restaurant", "meal_takeaway", "meal_delivery"]);
@@ -290,6 +291,16 @@ const GROUP_NOUN_EN: Record<string, string> = { art_classes: "art & pottery stud
  * plural search phrase (the rank adds "nearby"); Spanish: the whole plural
  * phrase, "nearby" included ("restaurantes mexicanos cercanos", as in
  * "#11 de 11 restaurantes mexicanos cercanos"). null for a general type. */
+/** "art & pottery studios" for a business with a specific niche, else
+ * its top-level type's own noun ("tutoring services"). */
+export function ownerCompetitorNoun(nicheId: string | null | undefined, typeNoun: string, locale: "en" | "es"): string {
+  const niche = nicheById(nicheId);
+  const noun = niche ? nicheGroupNoun(niche, locale, isGeneralNiche(niche.id)) : null;
+  // Spanish group names carry their own "cercanos"/"de la zona"; the
+  // sentences that take this noun add it themselves, as for the type's own noun.
+  return noun ? (locale === "es" ? noun.replace(/\s+(?:cercan[oa]s|de la zona)$/, "") : noun) : typeNoun;
+}
+
 export function nicheGroupNoun(niche: { id: string; parent: string; label: { en: string; es: string } } | null | undefined, locale: "en" | "es", general: boolean): string | null {
   if (!niche || general) return null;
   if (locale === "es") return GROUP_NOUN_ES[niche.id] ?? `${niche.label.es.toLowerCase()} de la zona`;

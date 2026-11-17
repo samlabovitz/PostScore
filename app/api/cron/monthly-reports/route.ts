@@ -101,6 +101,8 @@ import { planTestRun, readRecentScoreId, runMonth } from "@/lib/monthlyReportTes
 import { normalizeLocale, reportCoverageMonthIndex, reportCoverageMonthRange, type Locale } from "@/lib/i18n";
 import { loadCompetitorScope } from "@/lib/businessNiche.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { ownerCompetitorNoun } from "@/lib/competitorQuery";
+import { loadBusinessNiche } from "@/lib/businessNiche.server";
 
 
 export const dynamic = "force-dynamic";
@@ -766,6 +768,8 @@ export async function processBusiness(
     freshBusiness.name,
     freshBusiness.biz_type_resolved
   );
+  // The business's own niche when it has one ("art & pottery studios").
+  const ownerNoun = ownerCompetitorNoun((await loadBusinessNiche(supabase, businessId))?.resolved.nicheId, profile.competitorNoun, locale);
   // The score the Overview, Reports page and weekly PDF show
   // (scoreForDisplayWithClient — scoreBusinessById's own): this run's
   // just-saved scan, never a column list of its own (Nov 16: a shorter
@@ -855,7 +859,7 @@ export async function processBusiness(
       to: decision.to,
       subject: testReportSubject(monthlyReportSubject(businessName, reportDate, locale)),
       // Never the real unsubscribe link (or its token) in a test send.
-      react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl: TEST_PREVIEW_UNSUBSCRIBE_URL, locale, googleMapsLogoUrl: `${siteUrl}/google/GoogleMaps_Logo_Gray_2x.png`, testPreview: true, websitePageUrl, competitorNoun: profile.competitorNoun, competitorsPageUrl }),
+      react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl: TEST_PREVIEW_UNSUBSCRIBE_URL, locale, googleMapsLogoUrl: `${siteUrl}/google/GoogleMaps_Logo_Gray_2x.png`, testPreview: true, websitePageUrl, competitorNoun: ownerNoun, competitorsPageUrl }),
     });
     return testSend.status === "sent"
       ? { businessId, status: "sent", reason: `test send to REPORT_TEST_EMAIL (testing mode) — not sent to the owner` }
@@ -903,7 +907,7 @@ export async function processBusiness(
   const sendResult = await sendEmail({
     to: decision.to,
     subject: monthlyReportSubject(businessName, reportDate, locale),
-    react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale, googleMapsLogoUrl: `${siteUrl}/google/GoogleMaps_Logo_Gray_2x.png`, websitePageUrl, competitorNoun: profile.competitorNoun, competitorsPageUrl }),
+    react: createElement(MonthlyReportEmail, { businessName, reportDate, content, unsubscribeUrl, locale, googleMapsLogoUrl: `${siteUrl}/google/GoogleMaps_Logo_Gray_2x.png`, websitePageUrl, competitorNoun: ownerNoun, competitorsPageUrl }),
   });
 
   if (sendResult.status !== "sent") {

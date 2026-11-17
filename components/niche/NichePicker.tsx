@@ -16,7 +16,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { IconCheck } from "@tabler/icons-react";
 import { setBusinessNiche, updateCompetitorsForNiche, type UpdateCompetitorsResult } from "@/app/actions/niches";
-import { allNiches, nicheById, nicheDisplayName, OPEN_PICKER_PARAM } from "@/lib/niches";
+import { allNiches, isGeneralNiche, nicheById, nicheDisplayName, nicheName, OPEN_PICKER_PARAM } from "@/lib/niches";
 import { getBizProfileOptions } from "@/config/bizProfiles";
 import { formatShortDate, t, useLocale, useTimeZone, type MessageKey } from "@/lib/i18n";
 
@@ -143,7 +143,9 @@ export function NichePicker({
     });
   }
 
-  const name = nicheDisplayName(current, locale);
+  // Its name ("Art & pottery classes"); the top-level type under it, small.
+  const name = nicheName(current, locale);
+  const parentLabel = !isGeneralNiche(current) ? parents.get(nicheById(current)?.parent ?? "") ?? null : null;
   return (
     <div className="flex flex-col gap-3" data-testid="niche-picker">
       <div>
@@ -159,7 +161,10 @@ export function NichePicker({
           </span>
           <div className="min-w-0">
             <div className="break-words text-[14px] font-semibold text-ink">{name}</div>
-            <div className="text-[12px] text-ink-soft">{t(locale, nicheSourceNoteKey(currentSource))}</div>
+            <div className="text-[12px] text-ink-soft">
+              {parentLabel && <span data-testid="niche-parent">{parentLabel} · </span>}
+              {t(locale, nicheSourceNoteKey(currentSource))}
+            </div>
           </div>
         </div>
         {!open && (
@@ -188,7 +193,7 @@ export function NichePicker({
         <div data-testid="niche-picker-open" className="flex flex-col gap-3">
           {suggestion && suggestion !== current && (
             <button type="button" disabled={pending} onClick={() => choose(suggestion)} className="w-fit rounded-full border border-brass bg-brass/10 px-3 py-1 text-[12.5px] font-semibold text-ink">
-              {t(locale, "dashboard.niche.suggestedTag")}: {nicheDisplayName(suggestion, locale)}
+              {t(locale, "dashboard.niche.suggestedTag")}: {nicheName(suggestion, locale)}
             </button>
           )}
           <div className="flex items-center gap-3">
@@ -225,7 +230,7 @@ export function NichePicker({
                       onClick={() => (n.id === current ? close() : choose(n.id))}
                       className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13.5px] hover:bg-paper ${n.id === current ? "font-semibold text-ink" : "text-ink-soft"}`}
                     >
-                      {nicheDisplayName(n.id, locale)}
+                      {nicheName(n.id, locale)}
                       {n.id === current && <IconCheck size={15} aria-hidden className="shrink-0 text-ink" />}
                     </button>
                   ))}

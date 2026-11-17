@@ -23,6 +23,8 @@ import type { ChartCategoryId } from "@/lib/scoreHistory";
 import type { ScoreBreakdown } from "@/lib/scoring";
 import type { ReportData, WeeklyMeta } from "@/lib/reports/reportPdf";
 import { reportCategories } from "@/lib/reports/reportCategories";
+import { ownerCompetitorNoun } from "@/lib/competitorQuery";
+import { loadBusinessNiche } from "@/lib/businessNiche.server";
 
 export const PAST_REPORTS_FIRST = 8;
 export const PAST_REPORTS_PAGE = 12;
@@ -190,6 +192,8 @@ export async function weeklyReportDataWithClient(
   const weekHeadToHead: HeadToHead | null = liveRank?.headToHead ?? null;
   const sameCompared = !snapshot || !c || snapshot.compared_scan_id === c.from.id;
   const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override, locale, business.categories, business.name, business.biz_type_resolved);
+  // The business's own niche when it has one ("art & pottery studios").
+  const noun = ownerCompetitorNoun((await loadBusinessNiche(supabase, businessId))?.resolved.nicheId, profile.competitorNoun, locale);
   const score = snapshot?.score ?? saved.total;
   const prevScore = snapshot ? snapshot.prev_score : c?.from.total ?? null;
   const comparable = snapshot ? snapshot.prev_score !== null && snapshot.scoring_version === snapshot.prev_scoring_version : c?.comparable ?? false;
@@ -201,8 +205,8 @@ export async function weeklyReportDataWithClient(
     score: { total: score, grade: snapshot?.grade ?? saved.grade },
     period: c && prevScore !== null && sameCompared ? period(prevScore, score, comparable, c.from.createdAt, c.to.createdAt) : null,
     categories: reportCategories(saved.breakdown_json.categories ?? []),
-    rank: rank ? { rank: rank.rank, of: rank.of, noun: profile.competitorNoun, previousRank: rank.previous } : null,
-    headToHead: weekHeadToHead ? { ...weekHeadToHead, noun: profile.competitorNoun } : null,
+    rank: rank ? { rank: rank.rank, of: rank.of, noun, previousRank: rank.previous } : null,
+    headToHead: weekHeadToHead ? { ...weekHeadToHead, noun } : null,
     changes: { listing: c && sameCompared ? c.listingChanges.map((x) => x.description) : [], listingUnavailable: c ? c.changesUnavailable : false, fixesConfirmed: fixes },
     nextSteps: [],
     // Google's rating and count for a past week aren't kept: today's, labelled

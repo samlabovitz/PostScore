@@ -43,6 +43,7 @@ import { latestScoringProgress, unfinishedNewScanIds, withoutUnfinished, type Sc
 import { loadBusinessNiche, loadCompetitorScope, type BusinessNicheState } from "@/lib/businessNiche.server";
 import { canRunScan, countUnreadableAllows, nextMonthStartUtc, placesSearchMonthlyCap } from "@/lib/placesSearchBudget";
 import { scopeGroupLabel, nicheSearchTypes } from "@/lib/competitorScope";
+import { ownerCompetitorNoun } from "@/lib/competitorQuery";
 import { applyOverrides, overridesFromRows, scanOverrides, type CompetitorOverride } from "@/lib/competitorOverrides";
 import { nicheScanFields } from "@/lib/competitorNicheRule";
 import { withLiveCompetitorValuesFor } from "@/lib/placesLive.server";
@@ -203,15 +204,12 @@ export async function getCompetitorsWithClient(
     "name" | "address" | "language" | "category" | "categories" | "primary_type" | "business_type_override" | "biz_type_resolved" | "lat" | "lng" | "website" | "verified_website_url"
   >;
   const locale = normalizeLocale(row.language);
-  const competitorNoun = resolveBizProfile(
-    row.category,
-    row.primary_type,
-    row.business_type_override,
-    locale,
-    row.categories,
-    row.name,
-    row.biz_type_resolved
-  ).competitorNoun;
+  // The business's own niche when it has one ("art & pottery studios").
+  const competitorNoun = ownerCompetitorNoun(
+    niche?.resolved.nicheId,
+    resolveBizProfile(row.category, row.primary_type, row.business_type_override, locale, row.categories, row.name, row.biz_type_resolved).competitorNoun,
+    locale
+  );
 
   if (scanError) {
     return { status: "error", message: scanError.message };
@@ -834,16 +832,6 @@ async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBe
     return { status: "not_found" };
   }
 
-  const competitorNoun = resolveBizProfile(
-    business.category,
-    business.primary_type,
-    business.business_type_override,
-    normalizeLocale(business.language),
-    business.categories,
-    business.name,
-    business.biz_type_resolved
-  ).competitorNoun;
-
   const snapshot = await getLatestCompetitorSnapshot(businessId);
   if (!snapshot) {
     return { status: "no_scan" };
@@ -853,6 +841,12 @@ async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBe
   // Competitors page, the monthly report and PostAI.
   const scope = await loadCompetitorScope(supabase, businessId);
   const standing = ownerStanding(snapshot.scan, scope);
+  // The business's own niche when it has one ("art & pottery studios").
+  const competitorNoun = ownerCompetitorNoun(
+    scope?.nicheId,
+    resolveBizProfile(business.category, business.primary_type, business.business_type_override, normalizeLocale(business.language), business.categories, business.name, business.biz_type_resolved).competitorNoun,
+    normalizeLocale(business.language)
+  );
   const subject = snapshot.entries.find((e) => e.isSubject);
   if (!standing || !subject) {
     // Every real saved scan includes the subject with a real score — this

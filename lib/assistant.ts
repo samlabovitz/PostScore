@@ -210,6 +210,10 @@ export interface AssistantBusinessProfile {
   /** The resolved profile's own id (e.g. "salon") — lets the panel
    * pre-select the right dropdown option without re-deriving it. */
   businessTypeId: string;
+  /** The saved niche's own name when it's more specific than the type
+   * ("Art & pottery classes" under Tutoring & Education) — what owners
+   * see as their business type (lib/niches.ts ownerTypeName). Null: none. */
+  nicheName?: string | null;
   /** The Google-category auto-detected label, regardless of whether an
    * override is set — shown as honest reference context (e.g. "Google
    * detected: General Business") so a correction is never silently
@@ -734,7 +738,10 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
   lines.push("");
   lines.push("=== WHAT WE KNOW ABOUT THIS BUSINESS (persisted memory, carries across sessions) ===");
   lines.push(
-    !context.profile.businessTypeOverridden
+    context.profile.nicheName
+      ? // A saved niche is what the owner sees as their type.
+        `Business type: ${context.profile.nicheName} (a kind of ${context.profile.businessType} business). Location: ${context.profile.location ?? "not on file"}.`
+      : !context.profile.businessTypeOverridden
       ? `Business type: ${context.profile.businessType} (auto-detected from Google's category). Location: ${context.profile.location ?? "not on file"}.`
       : context.profile.businessTypeId === context.profile.autoDetectedBusinessTypeId
         ? // The owner's own real override happens to land on the exact

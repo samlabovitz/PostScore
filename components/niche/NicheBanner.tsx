@@ -14,7 +14,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { IconTag } from "@tabler/icons-react";
 import { confirmBusinessNiche } from "@/app/actions/niches";
-import { nicheById, nicheDisplayName, nicheSentencePhrase, OPEN_PICKER_PARAM } from "@/lib/niches";
+import { nicheById, nicheName, nicheSentencePhrase, OPEN_PICKER_PARAM } from "@/lib/niches";
 import { t, useLocale } from "@/lib/i18n";
 import type { NicheBannerKind } from "@/lib/businessNiche";
 
@@ -42,7 +42,7 @@ export function NicheBanner({ businessId, kind, nicheId, suggestion, parentLabel
   }, [businessId]);
   if (hidden) return null;
 
-  const current = nicheDisplayName(nicheId, locale);
+  const current = nicheName(nicheId, locale);
   const message =
     kind === "suggest" && suggestion
       ? t(locale, "dashboard.niche.suggest", { suggested: nicheSentencePhrase(suggestion, locale), current })

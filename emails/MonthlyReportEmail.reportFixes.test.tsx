@@ -388,7 +388,7 @@ describe("Day 16: 'See the Website page' is a real link (SITE_URL)", () => {
     const fs = await import("node:fs");
     const route = fs.readFileSync("app/api/cron/monthly-reports/route.ts", "utf8");
     expect(route).toContain("const websitePageUrl = `${siteUrl}/business/${businessId}/website`;");
-    expect(route.match(/websitePageUrl, competitorNoun: profile\.competitorNoun, competitorsPageUrl \}\),/g)).toHaveLength(2);
+    expect(route.match(/websitePageUrl, competitorNoun: ownerNoun, competitorsPageUrl \}\),/g)).toHaveLength(2);
   });
 });
 
