@@ -19,7 +19,7 @@ import { t, type Locale } from "@/lib/i18n";
 import type { CompetitorSnapshot, FocusTopActionPlanTask, ReportExtras, ReportSecurityAlert } from "@/lib/monthlyReport";
 import { groupSavedScans, type SavedCompetitorScan, type SavedScanRow } from "@/lib/savedCompetitorScans";
 import { hasAnalyzableWebsite, partlyCheckedScoreBasis, type BusinessScoringInput, type ScoreBreakdown } from "@/lib/scoring";
-import { keyForInfoConflict } from "@/lib/websiteTrust";
+import { googleSideOf, keyForInfoConflict } from "@/lib/websiteTrust";
 import type { CompetitorScope } from "@/lib/competitorScope";
 import { withMissingNames } from "@/lib/placesLive";
 
@@ -61,8 +61,10 @@ function mismatchText(input: BusinessScoringInput, locale: Locale): string | nul
   const lines = (["phone", "address", "hours"] as const).flatMap((field) =>
     trust.infoConflicts
       .filter((f) => f.field === field && f.comparison === "conflicts" && !overridden.has(keyForInfoConflict(f)))
-      .filter((f) => f.siteValue && f.googleValue)
-      .map((f) => t(locale, "report.focus.mismatch", { site: f.siteValue!, google: f.googleValue! }))
+      // Google's side from the listing values at hand — never saved.
+      .map((f) => ({ site: f.siteValue, google: googleSideOf(f, input) }))
+      .filter((v): v is { site: string; google: string } => !!v.site && !!v.google)
+      .map((v) => t(locale, "report.focus.mismatch", v))
   );
   return lines.length > 0 ? lines.join(" ") : null;
 }

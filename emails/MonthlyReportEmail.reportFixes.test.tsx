@@ -259,11 +259,13 @@ describe("the focus item follows the Growth page's rules", () => {
   test("a Google mismatch names the real values, per field (EN + ES)", () => {
     const input = inputWith({
       infoConflicts: [
-        { field: "phone", comparison: "conflicts", siteValue: "302-555-0100", googleValue: "302-555-0199" },
-        { field: "address", comparison: "matches", siteValue: "44 Riverside Ave", googleValue: "44 Riverside Ave" },
-        { field: "hours", comparison: "not_found_on_site", siteValue: null, googleValue: "Mon 7–4" },
+        { field: "phone", comparison: "conflicts", siteValue: "302-555-0100", googleValue: null },
+        { field: "address", comparison: "matches", siteValue: "44 Riverside Ave", googleValue: null },
+        { field: "hours", comparison: "not_found_on_site", siteValue: null, googleValue: null },
       ],
     });
+    // Google's side: the listing's own phone, read when the email is built.
+    input.phone = "302-555-0199";
     const tasks = [task("website.info_consistency", "website", "generic")];
     expect(reportTopTask(tasks, input, "en")?.action).toBe("Your site says 302-555-0100, Google says 302-555-0199 — update whichever is wrong.");
     expect(reportTopTask(tasks, input, "es")?.action).toBe("Su sitio dice 302-555-0100 y Google dice 302-555-0199 — actualice el que esté mal.");

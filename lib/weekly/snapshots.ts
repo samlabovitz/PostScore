@@ -31,9 +31,16 @@ export interface WeeklySnapshotRow {
   rank_of: number | null;
   prev_rank: number | null;
   fixes_confirmed: number;
+  /** No longer written (Day 23 2c-4: Google's values aren't kept); older
+   * rows were cleared. Past weeks show today's values, labelled so. */
   review_count: number | null;
   rating: number | null;
+  /** Our own record of the week: an exact number of new reviews (Business
+   * Profile) or 0 — null when it changed by an amount we can't know
+   * ("reviews" in listing_changes) or wasn't compared. */
   review_count_change: number | null;
+  /** 0 when compared and unchanged; null otherwise ("rating" in
+   * listing_changes when it changed — never by how much). */
   rating_change: number | null;
   /** Which listing fields changed (descriptions are rebuilt from the scans). */
   listing_changes: ProfileChange["field"][];
@@ -75,8 +82,8 @@ export function snapshotFromWeek(
     rank_of: extras.rankOf,
     prev_rank: extras.prevRank,
     fixes_confirmed: extras.fixesConfirmed,
-    review_count: c ? c.reviews.count : current.profile?.reviewCount ?? null,
-    rating: c ? c.reviews.rating : current.profile?.rating ?? null,
+    review_count: null,
+    rating: null,
     review_count_change: c ? c.reviews.countChange : null,
     rating_change: c ? c.reviews.ratingChange : null,
     listing_changes: c ? c.listingChanges.map((x) => x.field) : [],

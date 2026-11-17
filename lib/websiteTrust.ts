@@ -1587,6 +1587,35 @@ export function keyForInfoConflict(finding: InfoFieldFinding): string {
   return `info_conflict:${finding.field}`;
 }
 
+/** Google's side of a "website says X, Google says Y" finding, from the
+ * listing values at hand when it's shown (Day 23 2c-4: never saved with
+ * the finding). Hours: the listing's own line for the day the website
+ * disagrees on. A finding saved before keeps its old value as a fallback. */
+export function googleSideOf(
+  finding: InfoFieldFinding,
+  listing: { phone?: string | null; address?: string | null; openingHours?: string[] | null }
+): string | null {
+  const tidy = (v: string) => v.replace(/[\u202f\u2009\u00a0]/g, " ").replace(/\s+/g, " ").trim();
+  if (finding.field === "phone") return listing.phone ? tidy(listing.phone) : finding.googleValue ?? null;
+  if (finding.field === "address") return listing.address ? tidy(listing.address) : finding.googleValue ?? null;
+  const day = /^(\w+):/.exec(finding.siteValue ?? "")?.[1]?.toLowerCase();
+  const line = day ? (listing.openingHours ?? []).find((l) => tidy(l).toLowerCase().startsWith(`${day}:`)) : undefined;
+  return line ? sameHoursFormat(tidy(line)) : finding.googleValue ?? null;
+}
+
+/** Google's listing writes "3:00 – 10:00 PM" (one AM/PM when both match);
+ * the comparison has always shown "3:00 PM–10:00 PM". */
+function sameHoursFormat(line: string): string {
+  return line.replace(/(\d{1,2}:\d{2})(\s*[AP]M)?\s*[–-]\s*(\d{1,2}:\d{2})\s*([AP]M)/g, (_m, a: string, am: string | undefined, b: string, pm: string) => `${a} ${(am ?? pm).trim()}–${b} ${pm}`);
+}
+
+/** A website analysis as it may be saved: each finding without Google's
+ * side (googleSideOf rebuilds it when shown). */
+export function withoutGoogleSide<T>(analysis: T): T {
+  if (!analysis || typeof analysis !== "object") return analysis;
+  return JSON.parse(JSON.stringify(analysis), (key, value) => (key === "googleValue" ? undefined : value)) as T;
+}
+
 // Re-exported for callers that already have main-content-isolated HTML
 // and just want the plain-text extraction this module's own functions
 // expect — avoids every caller re-importing from pagePresenceDetection

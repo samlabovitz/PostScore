@@ -5092,6 +5092,7 @@ export type MessageKey =
   | "dashboard.reports.pdf.rating"
   | "dashboard.reports.pdf.reviewCount"
   | "dashboard.reports.pdf.reviewChange"
+  | "dashboard.reports.pdf.todaySuffix"
   | "dashboard.reports.pdf.reviewChanged"
   | "dashboard.reports.pdf.nearbyAverage"
   | "dashboard.reports.pdf.footer"
@@ -5535,6 +5536,7 @@ export type MessageKey =
   | "dashboard.reports.weekly.firstScanChanges"
   | "dashboard.reports.weekly.categoryMove"
   | "dashboard.reports.weekly.reviewsMove"
+  | "dashboard.reports.weekly.reviewsMoveNoTotal"
   | "dashboard.reports.weekly.reviewsChanged"
   | "dashboard.reports.weekly.nothingMoved"
   | "dashboard.reports.weekly.verifiedHeading"
@@ -11378,6 +11380,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.pdf.rating": "Google rating",
     "dashboard.reports.pdf.reviewCount": "Google reviews",
     "dashboard.reports.pdf.reviewChange": "{change} since the previous scan",
+    "dashboard.reports.pdf.todaySuffix": "{label} (today)",
     "dashboard.reports.pdf.reviewChanged": "Changed since the previous scan",
     "dashboard.reports.pdf.nearbyAverage": "Nearby average: {count} reviews",
     "dashboard.reports.pdf.footer": "Scores use real public signals; items we couldn't check are marked.",
@@ -11820,6 +11823,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.weekly.firstScanChanges": "Changes show from your next scan on.",
     "dashboard.reports.weekly.categoryMove": "{category}: {from} → {to} ({change})",
     "dashboard.reports.weekly.reviewsMove": "{change} reviews ({count} total)",
+    "dashboard.reports.weekly.reviewsMoveNoTotal": "{change} reviews",
     "dashboard.reports.weekly.reviewsChanged": "Review count changed ({count} total)",
     "dashboard.reports.weekly.nothingMoved": "No changes found between these two scans.",
     "dashboard.reports.weekly.verifiedHeading": "What we've verified this week",
@@ -17672,6 +17676,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.pdf.rating": "Calificación en Google",
     "dashboard.reports.pdf.reviewCount": "Reseñas en Google",
     "dashboard.reports.pdf.reviewChange": "{change} desde el análisis anterior",
+    "dashboard.reports.pdf.todaySuffix": "{label} (hoy)",
     "dashboard.reports.pdf.reviewChanged": "Cambió desde el análisis anterior",
     "dashboard.reports.pdf.nearbyAverage": "Promedio de la zona: {count} reseñas",
     "dashboard.reports.pdf.footer": "Las puntuaciones usan señales públicas reales; lo que no pudimos revisar está marcado.",
@@ -18114,6 +18119,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.weekly.firstScanChanges": "Los cambios se mostrarán a partir de su próximo escaneo.",
     "dashboard.reports.weekly.categoryMove": "{category}: {from} → {to} ({change})",
     "dashboard.reports.weekly.reviewsMove": "{change} reseñas ({count} en total)",
+    "dashboard.reports.weekly.reviewsMoveNoTotal": "{change} reseñas",
     "dashboard.reports.weekly.reviewsChanged": "El número de reseñas cambió ({count} en total)",
     "dashboard.reports.weekly.nothingMoved": "No se encontraron cambios entre estos dos escaneos.",
     "dashboard.reports.weekly.verifiedHeading": "Lo que verificamos esta semana",

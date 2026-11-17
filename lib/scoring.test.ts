@@ -1541,7 +1541,8 @@ describe("website trust checks (Oct 10, PROPOSED)", () => {
           { field: "hours", comparison: "matches", siteValue: "see site", googleValue: "see listing" },
         ],
       });
-      const check = scoreBusiness(input).checks.find((c) => c.id === "website.info_consistency")!;
+      // Google's side comes from the listing values at hand (never saved with the finding).
+      const check = scoreBusiness({ ...input, phone: "555-5555" }).checks.find((c) => c.id === "website.info_consistency")!;
       expect(check.earnedPoints).toBeCloseTo(1 * (2 / 3), 1);
       expect(check.explanation).toContain("555-0000");
       expect(check.explanation).toContain("555-5555");
@@ -1909,9 +1910,10 @@ describe("Step 2d additions: Website weights, social links, map evidence, contac
       listingLinkBroken: false,
       checkedAt: "2026-10-11T00:00:00Z",
     });
-    const conflict = scoreBusiness(
-      withContent({}, { websiteTrust: trust({ field: "address", comparison: "conflicts", siteValue: "45 market st", googleValue: "209 E Main St", source: "map" }) })
-    ).checks.find((c) => c.id === "website.info_consistency")!;
+    const conflict = scoreBusiness({
+      ...withContent({}, { websiteTrust: trust({ field: "address", comparison: "conflicts", siteValue: "45 market st", googleValue: null, source: "map" }) }),
+      address: "209 E Main St",
+    }).checks.find((c) => c.id === "website.info_consistency")!;
     expect(conflict.explanation).toBe("The map on your website shows 45 market st; Google says 209 E Main St.");
     const match = scoreBusiness(
       withContent({}, { websiteTrust: trust({ field: "address", comparison: "matches", siteValue: "209 e main", googleValue: "209 E Main St", source: "map" }) })

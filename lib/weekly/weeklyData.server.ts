@@ -37,12 +37,15 @@ interface BusinessBasics {
   primary_type: string | null;
   business_type_override: string | null;
   categories: string[] | null;
+  /** Today's (a past week's PDF shows these, labelled "today"). */
+  rating: number | null;
+  review_count: number | null;
 }
 
 async function loadBusiness(supabase: SupabaseClient, businessId: string): Promise<BusinessBasics | null> {
   const { data } = await supabase
     .from("businesses")
-    .select("name, address, language, lat, lng, category, primary_type, business_type_override, categories")
+    .select("name, address, language, lat, lng, category, primary_type, business_type_override, categories, rating, review_count")
     .eq("id", businessId)
     .maybeSingle();
   return (data as BusinessBasics | null) ?? null;
@@ -201,10 +204,14 @@ export async function weeklyReportDataWithClient(
     headToHead: weekHeadToHead ? { ...weekHeadToHead, noun: profile.competitorNoun } : null,
     changes: { listing: c && sameCompared ? c.listingChanges.map((x) => x.description) : [], listingUnavailable: c ? c.changesUnavailable : false, fixesConfirmed: fixes },
     nextSteps: [],
+    // Google's rating and count for a past week aren't kept: today's, labelled
+    // "(today)". The week's change is our own record.
     reviews: {
-      rating: snapshot ? (snapshot.rating === null ? null : Number(snapshot.rating)) : c?.reviews.rating ?? null,
-      count: snapshot ? snapshot.review_count : c?.reviews.count ?? null,
+      rating: business.rating ?? null,
+      count: business.review_count ?? null,
+      asOfToday: true,
       countChange: snapshot ? snapshot.review_count_change : c?.reviews.countChange ?? null,
+      countChanged: snapshot ? snapshot.review_count_change === null && snapshot.listing_changes.includes("reviews") : c?.reviews.countChanged ?? false,
       nearbyAverage: null,
     },
     weekly: { ...weekly, comparedWith: sameCompared ? weekly.comparedWith : null },

@@ -44,7 +44,7 @@ import { reachabilityReasonMessageKey, type ReachabilityFailureReason } from "@/
 import { spamTopic } from "@/lib/siteSecurity";
 import { socialPagePlatform } from "@/lib/websiteTrust";
 import { platformPage, socialProfileCounts } from "@/lib/socialLinkCheck";
-import { keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type AbandonedSiteFinding, type EmbeddedMapFinding, type InfoFieldFinding, type SpamFinding, type StaleNoticeFinding, type WebsiteKind } from "@/lib/websiteTrust";
+import { googleSideOf, keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type AbandonedSiteFinding, type EmbeddedMapFinding, type InfoFieldFinding, type SpamFinding, type StaleNoticeFinding, type WebsiteKind } from "@/lib/websiteTrust";
 import type { SpeedSample, SpeedSmoothed } from "@/lib/speedSmoothing";
 import { socialIconCount, socialLinkProblems, URGENT_LINK_KINDS, type LinkCheckResult, type LinkProblem } from "@/lib/linkProblems";
 
@@ -3335,7 +3335,7 @@ export const CHECKS: CheckDefinition[] = [
         return {
           earnedPoints,
           confidence: "VERIFIED",
-          explanation: t(locale, "content.checks.website.info_consistency.explanation.conflictHoursLabelled", { label: first.siteLabel, site: dayless(first.siteValue), google: dayless(first.googleValue) }),
+          explanation: t(locale, "content.checks.website.info_consistency.explanation.conflictHoursLabelled", { label: first.siteLabel, site: dayless(first.siteValue), google: dayless(googleSideOf(first, input)) }),
         };
       }
       const fieldKey =
@@ -3349,7 +3349,8 @@ export const CHECKS: CheckDefinition[] = [
       return {
         earnedPoints,
         confidence: "VERIFIED",
-        explanation: t(locale, fieldKey, { site: first.siteValue ?? "", google: first.googleValue ?? "" }),
+        // Google's side from the listing values at hand — never saved.
+        explanation: t(locale, fieldKey, { site: first.siteValue ?? "", google: googleSideOf(first, input) ?? "" }),
       };
     },
     simulateFix: (input) => ({

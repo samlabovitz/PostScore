@@ -1826,7 +1826,9 @@ export async function collectWebsiteTrust(
     spamSignals,
     safeBrowsingThreat: safeBrowsing.checked ? { threatFound: safeBrowsing.threatFound, threatTypes: safeBrowsing.threatTypes } : null,
     safeBrowsingChecked: safeBrowsing.checked,
-    infoConflicts: withMapAddress(compareListingInfo(wholePageText, google, contactPageText), embeddedMap, google.address),
+    // Google's side is never kept (Day 23 2c-4): googleSideOf rebuilds it
+    // from the listing values at hand when shown.
+    infoConflicts: withMapAddress(compareListingInfo(wholePageText, google, contactPageText), embeddedMap, google.address).map((f) => ({ ...f, googleValue: null })),
     embeddedMap,
     staleNotices: findStaleNotices(wholePageText, now),
     abandonedSignals: detectAbandonedSignals(wholePageText, now, listingPageHtml ? [extractMainContentVisibleText(listingPageHtml)] : []),

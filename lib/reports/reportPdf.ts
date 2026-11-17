@@ -68,7 +68,9 @@ export interface ReportData {
   headToHead?: (HeadToHead & { noun: string }) | null;
   changes: { listing: string[]; listingUnavailable: boolean; fixesConfirmed: number };
   nextSteps: ReportNextStep[];
-  reviews: { rating: number | null; count: number | null; countChange: number | null; countChanged?: boolean; nearbyAverage: number | null; goalLines?: string[] };
+  /** `asOfToday`: a past week — the rating and count are today's (Google's
+   * values for that week aren't kept), and the labels say so. */
+  reviews: { rating: number | null; count: number | null; countChange: number | null; countChanged?: boolean; asOfToday?: boolean; nearbyAverage: number | null; goalLines?: string[] };
   /** The weekly report: same page, with the week in the header and the
    * change box comparing the week's scan with the last scan before it. */
   weekly?: WeeklyMeta;
@@ -355,12 +357,13 @@ export function layoutReport(data: ReportData, m: Measurer): PrintPage {
   ly += 18;
   const r = data.reviews;
   // Rating with a drawn star (no font glyph needed).
-  text(M, ly + 6, t(locale, "dashboard.reports.pdf.rating"), 8.5, "body", C.inkMute);
+  const today = (label: string) => (r.asOfToday ? t(locale, "dashboard.reports.pdf.todaySuffix", { label }) : label);
+  text(M, ly + 6, today(t(locale, "dashboard.reports.pdf.rating")), 8.5, "body", C.inkMute);
   const ratingStr = r.rating === null ? "—" : r.rating.toFixed(1);
   const rw = text(M, ly + 26, ratingStr, 20, "headline", C.ink);
   if (r.rating !== null) els.push({ kind: "path", d: starPath(M + rw + 10, ly + 19, 6.5), fill: C.brass });
   const cX = M + leftW / 2;
-  text(cX, ly + 6, t(locale, "dashboard.reports.pdf.reviewCount"), 8.5, "body", C.inkMute);
+  text(cX, ly + 6, today(t(locale, "dashboard.reports.pdf.reviewCount")), 8.5, "body", C.inkMute);
   text(cX, ly + 26, r.count === null ? "—" : formatCount(r.count, locale), 20, "headline", C.ink);
   ly += 40;
   if (r.countChange !== null) {

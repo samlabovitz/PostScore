@@ -33,7 +33,7 @@ export interface WeeklyView {
   listingChanges: string[];
   changesUnavailable: boolean;
   fixesConfirmed: number;
-  reviews: { count: number | null; countChange: number | null; rating: number | null; ratingChange: number | null };
+  reviews: { count: number | null; countChange: number | null; countChanged?: boolean; rating: number | null; ratingChange: number | null; ratingChanged?: boolean };
   sparkline: number[];
 }
 
@@ -101,7 +101,15 @@ export function weeklyViewFromSnapshot(row: WeeklySnapshotRow, live: WeekSummary
     listingChanges: descriptions,
     changesUnavailable: row.compared_scan_id !== null && live.comparison?.changesUnavailable === true,
     fixesConfirmed: row.fixes_confirmed,
-    reviews: { count: row.review_count, countChange: row.review_count_change, rating: row.rating === null ? null : Number(row.rating), ratingChange: row.rating_change === null ? null : Number(row.rating_change) },
+    // Google's own counts aren't kept for a past week; the changes are ours.
+    reviews: {
+      count: null,
+      countChange: row.review_count_change,
+      countChanged: row.review_count_change === null && row.listing_changes.includes("reviews"),
+      rating: null,
+      ratingChange: row.rating_change === null ? null : Number(row.rating_change),
+      ratingChanged: row.listing_changes.includes("rating"),
+    },
     sparkline: live.sparkline,
   };
 }

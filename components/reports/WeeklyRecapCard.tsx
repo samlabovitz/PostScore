@@ -244,7 +244,10 @@ export function WeeklyRecapCard({
             ))}
             {view.reviews.countChange !== null && view.reviews.countChange !== 0 && (
               <Row icon={IconStar} tone={view.reviews.countChange > 0 ? "up" : "down"}>
-                {t(locale, k("reviewsMove"), { change: signed(view.reviews.countChange), count: view.reviews.count ?? 0 })}
+                {/* A past week keeps no total of its own (Google's count isn't saved). */}
+                {view.reviews.count === null
+                  ? t(locale, k("reviewsMoveNoTotal"), { change: signed(view.reviews.countChange) })
+                  : t(locale, k("reviewsMove"), { change: signed(view.reviews.countChange), count: view.reviews.count })}
               </Row>
             )}
             {moved.length === 0 && view.listingChanges.length === 0 && (view.reviews.countChange ?? 0) === 0 && (
