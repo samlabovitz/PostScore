@@ -33,15 +33,24 @@ export async function loadWeeklyScans(supabase: SupabaseClient, businessId: stri
     .order("created_at", { ascending: true });
   const rows = (data ?? []) as Array<Record<string, unknown>>;
   // Our own change records (lib/scanChanges.ts); null when unreadable.
-  const records = await loadScanChangeRecords(supabase, rows.map((r) => String(r.id)));
-  return rows.map((r) => ({
+  const [records, { data: now }] = await Promise.all([
+    loadScanChangeRecords(supabase, rows.map((r) => String(r.id))),
+    // Scans don't keep Google's rating or review count (Day 23 2c-5): the
+    // newest scan shows today's, as the Overview does; older ones none.
+    supabase.from("businesses").select("rating, review_count").eq("id", businessId).maybeSingle(),
+  ]);
+  const today = now as { rating: number | null; review_count: number | null } | null;
+  return rows.map((r, i) => ({
     id: String(r.id),
     total: Number(r.total),
     grade: String(r.grade ?? ""),
     createdAt: String(r.created_at),
     scoringVersion: typeof r.scoring_version === "string" && r.scoring_version ? r.scoring_version : null,
     categories: parseChartCategories(r.breakdown_categories),
-    profile: (r.profile_snapshot_json as ProfileSnapshot | null) ?? null,
+    profile:
+      i === rows.length - 1 && today
+        ? ({ ...((r.profile_snapshot_json as ProfileSnapshot | null) ?? {}), rating: today.rating, reviewCount: today.review_count } as ProfileSnapshot)
+        : ((r.profile_snapshot_json as ProfileSnapshot | null) ?? null),
     fpKey: typeof r.fp_key === "string" ? r.fp_key : null,
     changes: records ? records.get(String(r.id)) ?? [] : null,
   }));

@@ -207,7 +207,7 @@ describe("written at each scan", () => {
 
   test("the scan writes them right after its score is saved, and a failure never fails the scan", () => {
     const src = readFileSync("app/actions/scoring.ts", "utf8");
-    expect(src).toMatch(/profile_snapshot_json: snapshot,[\s\S]{0,900}try \{[\s\S]{0,400}await recordScanChanges\(createAdminClient\(\), businessId, data\.id, snapshot, \{ gbpReviews: options\.gbpReviews \}\);[\s\S]{0,40}\} catch/);
+    expect(src).toMatch(/profile_snapshot_json: null,[\s\S]{0,900}try \{[\s\S]{0,400}await recordScanChanges\(createAdminClient\(\), businessId, data\.id, snapshot, \{ gbpReviews: options\.gbpReviews \}\);[\s\S]{0,40}\} catch/);
     // The rescan hands over the review dates its Business Profile check just read.
     expect(src).toContain("const replyCheck = await runGbpReplyCheck(businessId);");
     expect(src).toContain('saveScoreSnapshotWithClient(supabase, businessId, undefined, { gbpReviews: replyCheck.status === "ok" ? replyCheck.reviewTimes : null })');

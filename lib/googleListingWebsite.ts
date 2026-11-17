@@ -90,8 +90,9 @@ export function resolveListingWebsite(
 }
 
 /** One real `scores` row's own real history facts — the ONLY things
- * findLastKnownWebsiteDate needs. `website` is that scan's saved
- * `profile_snapshot_json.website`; `createdAt` is that row's real
+ * findLastKnownWebsiteDate needs. `website` is set when that scan's
+ * listing showed a website (its website fingerprint, since Day 23 2c-5 —
+ * the address itself isn't kept); `createdAt` is that row's real
  * `created_at`. */
 export interface WebsiteHistorySnapshot {
   website: string | null;

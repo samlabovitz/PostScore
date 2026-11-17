@@ -216,7 +216,9 @@ export async function saveScoreSnapshotWithClient(
       // (lib/breakdownStorage.ts); pages show the live score's own words.
       breakdown_json: breakdownWithoutQuotes(breakdownJson),
       scoring_version: scored.result.breakdown.scoringVersion,
-      profile_snapshot_json: snapshot,
+      // Google's listing values aren't kept (Day 23 2c-5): what changed is
+      // recorded below from this scan's values in memory and its fingerprints.
+      profile_snapshot_json: null,
     })
     .select("id")
     .single();
@@ -619,12 +621,14 @@ export async function rescanBusinessWithClient(
       lastKnownWebsiteAt = before.google_listing_last_known_website_at;
     } else {
       // Newly confirmed THIS scan — look up the real history.
+      // A scan showed a website when its website fingerprint is set (Google's
+      // address itself isn't kept — lib/scanChanges.ts).
       const { data: history } = await supabase
         .from("scores")
-        .select("created_at, profile_snapshot_json")
+        .select("created_at, fp_website:field_fingerprints->f->>website")
         .eq("business_id", businessId);
       const snapshots = (history ?? []).map((row) => ({
-        website: (row.profile_snapshot_json as { website?: string | null } | null)?.website ?? null,
+        website: (row as { fp_website?: string | null }).fp_website ? "listed" : null,
         createdAt: row.created_at as string,
       }));
       lastKnownWebsiteAt = findLastKnownWebsiteDate(snapshots, resolvedWebsite.googleListingWebsiteRemovedSince);
