@@ -7,7 +7,7 @@ import { getBusinessSummary, listMyBusinesses } from "@/app/actions/businesses";
 import { getReportsData } from "@/app/actions/reports";
 import { logout } from "@/app/actions/auth";
 import { createClient } from "@/lib/supabase/server";
-import { bizProfile, resolveBizProfile } from "@/config/bizProfiles";
+import { autoDetectedBizProfile, resolveBizProfile } from "@/config/bizProfiles";
 import { tradeLabel } from "@/lib/tradeSearch";
 import { BusinessLanguageToggle } from "@/components/layout/BusinessLanguageToggle";
 import { MonthlyEmailReportCard } from "@/components/reports/MonthlyEmailReportCard";
@@ -57,9 +57,9 @@ export default async function SettingsPage({ params }: { params: { id: string } 
   ] = await Promise.all([supabase.auth.getUser(), loadBusinessNiche(supabase, params.id)]);
 
   const websiteChoice = await getWebsiteChoice(params.id);
-  const autoDetectedProfile = bizProfile(business.category, business.primary_type, locale, business.categories, null);
+  const autoDetectedProfile = autoDetectedBizProfile(business.category, business.primary_type, locale, business.categories, business.biz_type_resolved);
   const businessTypeOverride = business.business_type_override ?? null;
-  const profile = resolveBizProfile(business.category, business.primary_type, businessTypeOverride, locale, business.categories, business.name);
+  const profile = resolveBizProfile(business.category, business.primary_type, businessTypeOverride, locale, business.categories, business.name, business.biz_type_resolved);
   const tradeName = business.trade_id ? tradeLabel(business.trade_id, locale) : null;
   const businesses = businessesResult.status === "ok" ? businessesResult.businesses : [];
   const k = (key: string) => t(locale, `dashboard.settings.${key}` as MessageKey);

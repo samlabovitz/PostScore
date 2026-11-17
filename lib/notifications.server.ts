@@ -5,6 +5,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { urgentNotificationChanges } from "@/lib/notifications";
 import { businessRowToScoringInput, scoreBusiness, V112_SCORING_COLUMNS, type BusinessScoringRow } from "@/lib/scoring";
+import { withSavedScore, type SavedScoreRow } from "@/lib/savedScore";
+import { latestSavedScore } from "@/lib/savedScore.server";
 import { urgentIssues, type UrgentIssue } from "@/lib/urgency";
 
 /**
@@ -56,10 +58,15 @@ export async function syncUrgentNotifications(
  * saved, scored the same way the Overview scores it. No Google call, no
  * website fetch: exactly what a scan would have found then.
  */
-export function urgentIssuesFromSavedRow(row: BusinessScoringRow & { place_id?: string | null; listing_mode?: string | null }): { issues: UrgentIssue[]; listingParked: boolean } {
+export function urgentIssuesFromSavedRow(
+  row: BusinessScoringRow & { place_id?: string | null; listing_mode?: string | null },
+  /** Day 23 2d-1: the latest saved scan — its checks' points decide (lib/savedScore.ts). */
+  saved: SavedScoreRow | null = null
+): { issues: UrgentIssue[]; listingParked: boolean } {
   const input = businessRowToScoringInput(row);
   const hasListing = !!row.place_id && row.listing_mode !== "website_only";
-  return { issues: urgentIssues(input, scoreBusiness(input), { hasListing }), listingParked: input.websiteAnalysis?.websiteTrust?.listingLinkParked === true };
+  const now = scoreBusiness(input);
+  return { issues: urgentIssues(input, withSavedScore(now, saved) ?? now, { hasListing }), listingParked: input.websiteAnalysis?.websiteTrust?.listingLinkParked === true };
 }
 
 /** At most once per business per hour when pages load (lib/notifications.server.ts). */
@@ -74,7 +81,7 @@ export function savedSyncDue(lastSyncAt: Map<string, number>, businessId: string
 }
 
 /** The businesses columns the score reads — the same data the Overview scores. */
-export const SAVED_SCORING_SELECT = `id, name, place_id, listing_mode, address, phone, website, rating, review_count, category, categories, primary_type, business_type_override, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, ${V112_SCORING_COLUMNS}`;
+export const SAVED_SCORING_SELECT = `id, name, place_id, listing_mode, address, phone, website, rating, review_count, category, categories, primary_type, business_type_override, biz_type_resolved, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, ${V112_SCORING_COLUMNS}`;
 
 /** The same rules as after a scan, from the business's saved data (no
  * Google call, no website fetch). */
@@ -84,7 +91,7 @@ export async function syncNotificationsFromSavedRow(
   now: Date = new Date(),
   dryRun = false
 ) {
-  const { issues, listingParked } = urgentIssuesFromSavedRow(row);
+  const { issues, listingParked } = urgentIssuesFromSavedRow(row, await latestSavedScore(admin, row.id));
   return { issues, ...(await syncUrgentNotifications(admin, row.id, issues, { listingParked }, now, dryRun)) };
 }
 

@@ -77,7 +77,8 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
     summary.business.business_type_override,
     locale,
     summary.business.categories,
-    summary.business.name
+    summary.business.name,
+    summary.business.biz_type_resolved
   );
 
 

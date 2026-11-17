@@ -17,7 +17,7 @@ import { buildGrowthMoves, withoutWebsiteGrowthMoves } from "@/lib/growthMoves";
 import { buildAssistantSiteSecurity } from "@/lib/siteSecurity";
 import { businessWebsiteUrl, isWebsiteVerifiedElsewhereOnly, listingLinkBroken, shownWebsiteUrl } from "@/lib/businessWebsite";
 import { businessRowToScoringInput } from "@/lib/scoring";
-import { bizProfile, resolveBizProfile } from "@/config/bizProfiles";
+import { autoDetectedBizProfile, resolveBizProfile } from "@/config/bizProfiles";
 import { priceLevelToSymbol } from "@/lib/priceLevel";
 import { buildWeeklyChecklistItems } from "@/lib/weeklyChecklist";
 import { getPlan } from "@/lib/premium";
@@ -154,12 +154,12 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
   // auto-detected X" when X and the override happen to be the same
   // profile — name-based detection stays reserved for the real
   // resolution path below (`profile`), the one callers actually use.
-  const autoDetectedProfile = bizProfile(
+  const autoDetectedProfile = autoDetectedBizProfile(
     summaryResult.business.category,
     summaryResult.business.primary_type,
     locale,
     scored.business.categories,
-    null
+    summaryResult.business.biz_type_resolved
   );
   const businessTypeOverride = summaryResult.business.business_type_override ?? null;
   const profile = resolveBizProfile(
@@ -168,7 +168,8 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     businessTypeOverride,
     locale,
     scored.business.categories,
-    scored.business.name
+    scored.business.name,
+    summaryResult.business.biz_type_resolved
   );
   const input = businessRowToScoringInput(scored.business);
   const { breakdown, suggestions } = scored.result;

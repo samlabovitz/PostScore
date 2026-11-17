@@ -75,7 +75,7 @@ export async function getReportDataWithSources(businessId: string, now: Date = n
   const locale = normalizeLocale(business.language);
   const timeZone = reports.timeZone;
   const s = summary.business;
-  const profile = resolveBizProfile(s.category, s.primary_type, s.business_type_override, locale, s.categories, s.name);
+  const profile = resolveBizProfile(s.category, s.primary_type, s.business_type_override, locale, s.categories, s.name, s.biz_type_resolved);
   const { breakdown, suggestions } = scored.result;
   const recap = reports.recap;
 

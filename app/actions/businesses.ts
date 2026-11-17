@@ -15,11 +15,13 @@ import { nextCaptureLog } from "@/lib/screenshotBudget";
 import { readOwnerWebsite } from "@/lib/ownerWebsite.server";
 import type { collectWebsiteAnalysis } from "@/lib/websiteAnalysis";
 import { uploadWebsiteScreenshots } from "@/lib/websiteScreenshotUpload";
-import { bizProfileById, resolveBizProfile } from "@/config/bizProfiles";
+import { bizProfileById, resolveBizProfile, savedBizTypeId } from "@/config/bizProfiles";
 import { extraServicesKeywordsFor } from "@/lib/pagePresenceDetection";
 import { isMissingColumnError, parseListingMode } from "@/lib/listingMode";
 import { parsePublicWebsiteUrl } from "@/lib/publicUrl";
 import { businessTimeZone } from "@/lib/businessTimeZone";
+import { withSavedScore } from "@/lib/savedScore";
+import { latestSavedScores } from "@/lib/savedScore.server";
 import {
   businessRowToScoringInput,
   V112_SCORING_COLUMNS,
@@ -318,6 +320,7 @@ export async function saveBusinessWithClient(
         category: place.primaryCategory,
         primary_type: place.primaryType,
         categories: place.categories,
+        biz_type_resolved: savedBizTypeId(place.primaryCategory, place.primaryType, place.categories),
         opening_hours: place.openingHours,
         opening_hours_periods: place.openingHoursPeriods,
         business_status: place.businessStatus,
@@ -416,6 +419,9 @@ export interface BusinessSummary {
    * auto-detection.
    */
   business_type_override?: string | null;
+  /** Day 23 2d-1: our own saved business type from the last scan
+   * (savedBizTypeId) — used in place of Google's saved category. */
+  biz_type_resolved?: string | null;
   /**
    * The specific trade (lib/tradeSearch.ts's TRADES[].id) the owner
    * picked at intake, if any — set alongside business_type_override so
@@ -474,7 +480,7 @@ async function getBusinessSummaryUncached(businessId: string): Promise<GetBusine
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, category, categories, primary_type, business_type_override, trade_id, phone, services, avg_job_value_low, avg_job_value_high, language, lat, lng"
+      "id, name, address, category, categories, primary_type, business_type_override, biz_type_resolved, trade_id, phone, services, avg_job_value_low, avg_job_value_high, language, lat, lng"
     )
     .eq("id", businessId)
     .single();
@@ -782,7 +788,7 @@ export async function listMyBusinesses(): Promise<ListMyBusinessesResult> {
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      `id, name, address, category, primary_type, business_type_override, phone, website, rating, review_count, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, created_at, language, ${V112_SCORING_COLUMNS}`
+      `id, name, address, category, primary_type, business_type_override, biz_type_resolved, phone, website, rating, review_count, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, created_at, language, ${V112_SCORING_COLUMNS}`
     )
     .order("created_at", { ascending: false });
 
@@ -799,10 +805,13 @@ export async function listMyBusinesses(): Promise<ListMyBusinessesResult> {
       .map((m) => m.id)
   );
 
+  // Day 23 2d-1: each business's saved scan (lib/savedScore.ts).
+  const saved = await latestSavedScores(supabase, data.map((row) => row.id));
   const businesses: MyBusinessRow[] = data.map((row) => {
     const locale = normalizeLocale(row.language);
     const websiteOnly = websiteOnlyIds.has(row.id);
-    const breakdown = websiteOnly ? null : scoreBusiness(businessRowToScoringInput(row as BusinessScoringRow), locale);
+    const now = websiteOnly ? null : scoreBusiness(businessRowToScoringInput(row as BusinessScoringRow), locale);
+    const breakdown = now ? withSavedScore(now, saved.get(row.id) ?? null) ?? now : null;
     return {
       id: row.id,
       name: row.name,

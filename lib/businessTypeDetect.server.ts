@@ -46,7 +46,7 @@ export async function detectAndSaveBusinessTypeWithClient(
   const apply = options.apply ?? true;
   const { data: row, error } = await db
     .from("businesses")
-    .select("name, category, primary_type, categories, website, verified_website_url, niche_id, niche_source")
+    .select("name, category, primary_type, categories, biz_type_resolved, website, verified_website_url, niche_id, niche_source")
     .eq("id", businessId)
     .maybeSingle();
   if (error) return { status: "error", message: error.message };
@@ -61,7 +61,7 @@ export async function detectAndSaveBusinessTypeWithClient(
   if (!niche) return { status: "unsure", result };
   // Like the owner's own pick (setBusinessNiche): the parent type follows
   // the niche when Google's category points elsewhere.
-  const autoParent = resolveBizProfile(row.category, row.primary_type, null, "en", row.categories, row.name).id;
+  const autoParent = resolveBizProfile(row.category, row.primary_type, null, "en", row.categories, row.name, row.biz_type_resolved).id;
   const override = niche.parent !== autoParent ? niche.parent : null;
   if (!apply) return { status: "would_save", nicheId: niche.id, override, result };
 

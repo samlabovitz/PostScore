@@ -26,10 +26,10 @@ async function main() {
   for (const c of APPROVED_CORRECTIONS) {
     const niche = nicheById(c.nicheId);
     if (!niche) throw new Error(`Unknown niche ${c.nicheId}`);
-    const { data, error } = await supabase.from("businesses").select("id, name, category, primary_type, categories, business_type_override").eq("name", c.name);
+    const { data, error } = await supabase.from("businesses").select("id, name, category, primary_type, categories, business_type_override, biz_type_resolved").eq("name", c.name);
     if (error) throw error;
     for (const b of data ?? []) {
-      const autoParent = resolveBizProfile(b.category, b.primary_type, null, "en", b.categories, b.name).id;
+      const autoParent = resolveBizProfile(b.category, b.primary_type, null, "en", b.categories, b.name, b.biz_type_resolved).id;
       const override = niche.parent === autoParent ? null : niche.parent;
       console.log(`${apply ? "APPLY" : "dry run"}: ${b.name} → ${niche.label.en} (type ${niche.parent}${override ? ", set as the business type" : ""})`);
       if (!apply) continue;

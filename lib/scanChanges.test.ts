@@ -2,7 +2,9 @@ import { describe, expect, test } from "vitest";
 import { readFileSync } from "node:fs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { diffProfileSnapshots, type ProfileSnapshot } from "./profileChanges";
-import { fingerprintSnapshot, newReviewsSince, parseFieldFingerprints, scanChangeRecords } from "./scanChanges";
+import { fingerprintSnapshot, newPhotosSince, newReviewsSince, parseFieldFingerprints, scanChangeRecords } from "./scanChanges";
+import { photoTimesOf } from "./gbpMediaPosts";
+import { describeScanChanges } from "./scanChangeText";
 import { recordScanChanges, scanFingerprintKey } from "./scanChanges.server";
 
 const snap = (over: Partial<ProfileSnapshot> = {}): ProfileSnapshot => ({
@@ -147,6 +149,42 @@ describe("connected owners: exact new reviews from Business Profile", () => {
   });
 });
 
+describe("connected owners: exact new photos from Business Profile (Day 23 2d)", () => {
+  const since = "2026-11-01T00:00:00Z";
+
+  test("counts photos added after the previous scan; videos aren't photos; a cut-off list is unknown", () => {
+    const items = [
+      { mediaFormat: "PHOTO", createTime: "2026-11-10T00:00:00Z" },
+      { createTime: "2026-11-09T00:00:00Z" },
+      { mediaFormat: "VIDEO", createTime: "2026-11-08T00:00:00Z" },
+      { mediaFormat: "PHOTO", createTime: "2026-10-20T00:00:00Z" },
+    ];
+    expect(newPhotosSince(photoTimesOf(items, false), since)).toBe(2);
+    expect(newPhotosSince(photoTimesOf(items, true), since)).toBeNull();
+    expect(newPhotosSince(photoTimesOf([], false), since)).toBe(0);
+  });
+
+  test("'3 photos added' from fingerprints-only scans too — even at Google's photo cap, where the count can't move", () => {
+    const atCap = (n: number) => ({ fingerprints: fp(snap({ photoCount: n })) });
+    expect(scanChangeRecords(atCap(10), atCap(10), { newPhotos: 3 })).toEqual([{ field: "photos", direction: "up", delta: 3 }]);
+    expect(scanChangeRecords(atCap(10), atCap(10), { newPhotos: 0 })).toEqual([]);
+    // Fewer photos and none added: only that it changed, as before.
+    expect(scanChangeRecords({ fingerprints: fp(snap({ photoCount: 6 })) }, { fingerprints: fp(snap({ photoCount: 5 })) }, { newPhotos: 0 })).toEqual([{ field: "photos", direction: "changed", delta: null }]);
+    expect(scanChangeRecords({ fingerprints: fp(snap({ photoCount: 6 })) }, { fingerprints: fp(snap({ photoCount: 5 })) }, { newPhotos: null })).toEqual([{ field: "photos", direction: "changed", delta: null }]);
+    expect(describeScanChanges([{ field: "photos", direction: "up", delta: 3 }], "en")[0].description).toBe("3 photos added.");
+  });
+
+  test("a scan reads them with the photos summary and passes them through, never saving them", () => {
+    const src = (f: string) => readFileSync(f, "utf8");
+    const scoring = src("app/actions/scoring.ts");
+    expect(scoring).toContain("const photosCheck = await refreshPhotosAndPosts(createAdminClient(), businessId).catch(() => undefined);");
+    expect(scoring).toContain("gbpPhotos: photosCheck?.photoTimes ?? null,");
+    expect(scoring).toContain("{ gbpReviews: options.gbpReviews, gbpPhotos: options.gbpPhotos });");
+    expect(src("lib/scanChanges.server.ts")).toContain("newPhotos: options.gbpPhotos ? newPhotosSince(options.gbpPhotos, prev.created_at as string) : null,");
+    expect(src("lib/gbpMediaPosts.server.ts")).not.toMatch(/update\([^)]*createTimes/);
+  });
+});
+
 describe("written at each scan", () => {
   const env = { GBP_TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 3).toString("base64") };
 
@@ -207,9 +245,9 @@ describe("written at each scan", () => {
 
   test("the scan writes them right after its score is saved, and a failure never fails the scan", () => {
     const src = readFileSync("app/actions/scoring.ts", "utf8");
-    expect(src).toMatch(/profile_snapshot_json: null,[\s\S]{0,900}try \{[\s\S]{0,400}await recordScanChanges\(createAdminClient\(\), businessId, data\.id, snapshot, \{ gbpReviews: options\.gbpReviews \}\);[\s\S]{0,40}\} catch/);
+    expect(src).toMatch(/profile_snapshot_json: null,[\s\S]{0,900}try \{[\s\S]{0,400}await recordScanChanges\(createAdminClient\(\), businessId, data\.id, snapshot, \{ gbpReviews: options\.gbpReviews, gbpPhotos: options\.gbpPhotos \}\);[\s\S]{0,40}\} catch/);
     // The rescan hands over the review dates its Business Profile check just read.
     expect(src).toContain("const replyCheck = await runGbpReplyCheck(businessId);");
-    expect(src).toContain('saveScoreSnapshotWithClient(supabase, businessId, undefined, { gbpReviews: replyCheck.status === "ok" ? replyCheck.reviewTimes : null })');
+    expect(src).toContain('gbpReviews: replyCheck.status === "ok" ? replyCheck.reviewTimes : null,');
   });
 });

@@ -21,18 +21,20 @@ import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
 
 const src = (f: string) => readFileSync(f, "utf8");
 
-describe("one score: every surface scores through scoreBusinessWithClient", () => {
-  test("the Overview, Reports page and weekly PDF use scoreBusinessById; the monthly send and its preview use scoreBusinessWithClient — no column list of their own", () => {
+describe("one score: every surface scores through scoreForDisplayWithClient", () => {
+  test("the Overview, Reports page and weekly PDF use scoreBusinessById; the monthly send and its preview use scoreForDisplayWithClient — no column list of their own", () => {
     expect(src("app/business/[id]/page.tsx")).toMatch(/scoreBusinessById\(/);
     expect(src("lib/reports/reportData.server.ts")).toContain('scoreBusinessById(businessId, "business")');
     const route = src("app/api/cron/monthly-reports/route.ts");
-    expect(route).toContain("const scored = await scoreBusinessWithClient(supabase, businessId, locale);");
+    expect(route).toContain("const scored = await scoreForDisplayWithClient(supabase, businessId, locale);");
     expect(route).not.toContain("getScoreWithSuggestions(");
     const preview = src("scripts/preview-report.ts");
-    expect(preview).toContain("const scored = await (await scoreWithApp())(supabase, businessId, locale);");
+    expect(preview).toContain("const scored = await (await scoreWithApp())(supabase, businessId, locale, { save: false });");
     expect(preview).not.toContain("getScoreWithSuggestions(");
-    // scoreBusinessById is scoreBusinessWithClient on the session client.
-    expect(src("app/actions/scoring.ts")).toMatch(/async function scoreBusinessByIdUncached[\s\S]{0,900}scoreBusinessWithClient\(/);
+    // scoreBusinessById is scoreForDisplayWithClient on the session client,
+    // which scores through scoreBusinessWithClient (Day 23 2d-1).
+    expect(src("app/actions/scoring.ts")).toMatch(/async function scoreBusinessByIdUncached[\s\S]{0,900}scoreForDisplayWithClient\(/);
+    expect(src("app/actions/scoring.ts")).toMatch(/export async function scoreForDisplayWithClient[\s\S]{0,600}scoreBusinessWithClient\(supabase, businessId, locale\)/);
   });
 
   test("why: a row without the newer scoring columns leaves checks out and scores differently (the 86 vs 78 case)", () => {

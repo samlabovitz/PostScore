@@ -136,6 +136,21 @@ export function newReviewsSince(reviews: GbpReviewTimes, since: string, until?: 
   return reviews.createTimes.filter((c) => Date.parse(c) > t && Date.parse(c) <= u).length;
 }
 
+/** Connected owners: when each photo on their Business Profile was added
+ * (read at this scan, never saved). `capped`: the list was cut off. */
+export interface GbpPhotoTimes {
+  createTimes: string[];
+  capped: boolean;
+}
+
+/** How many photos were added to the Business Profile after `since`;
+ * null when the list was cut off (never a guessed minimum). */
+export function newPhotosSince(photos: GbpPhotoTimes, since: string): number | null {
+  const t = Date.parse(since);
+  if (Number.isNaN(t) || photos.capped) return null;
+  return photos.createTimes.filter((c) => Date.parse(c) > t).length;
+}
+
 export interface ScanSide {
   snapshot?: ProfileSnapshot | null;
   fingerprints?: FieldFingerprints | null;
@@ -144,8 +159,9 @@ export interface ScanSide {
 /** What changed between two scans, field by field: from the values when
  * both are on hand, else from the fingerprints when both scans have them
  * under the same key, else nothing (never guessed). `newReviews`
- * (connected owners, newReviewsSince) makes the reviews change exact. */
-export function scanChangeRecords(previous: ScanSide | null, current: ScanSide, options: { newReviews?: number | null } = {}): ScanChangeRecord[] {
+ * (connected owners, newReviewsSince) makes the reviews change exact;
+ * `newPhotos` (newPhotosSince) the photos one ("3 photos added"). */
+export function scanChangeRecords(previous: ScanSide | null, current: ScanSide, options: { newReviews?: number | null; newPhotos?: number | null } = {}): ScanChangeRecord[] {
   if (!previous) return [];
   const fpComparable = !!previous.fingerprints && !!current.fingerprints && previous.fingerprints.k === current.fingerprints.k;
   const out: ScanChangeRecord[] = [];
@@ -157,6 +173,7 @@ export function scanChangeRecords(previous: ScanSide | null, current: ScanSide, 
         ? fingerprintRecord(field, previous.fingerprints as FieldFingerprints, current.fingerprints as FieldFingerprints)
         : null;
     if (field === "reviews" && typeof options.newReviews === "number" && options.newReviews > 0) out.push({ field, direction: "up", delta: options.newReviews });
+    else if (field === "photos" && typeof options.newPhotos === "number" && options.newPhotos > 0) out.push({ field, direction: "up", delta: options.newPhotos });
     else if (record) out.push(record);
   }
   return out;

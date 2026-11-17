@@ -87,13 +87,14 @@ interface CompetitorBusinessRow {
   website_trust_overrides_json: unknown;
   primary_type: string | null;
   business_type_override: string | null;
+  biz_type_resolved?: string | null;
   price_level: string | null;
   lat: number | null;
   lng: number | null;
 }
 
 const BUSINESS_COLUMNS =
-  "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, primary_type, business_type_override, price_level, lat, lng, language";
+  "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, primary_type, business_type_override, biz_type_resolved, price_level, lat, lng, language";
 
 const SCAN_COLUMNS = SAVED_SCAN_COLUMNS;
 
@@ -183,7 +184,7 @@ export async function getCompetitorsWithClient(
   const [{ data: business, error }, { data: scanRows, error: scanError }, unfinished, scoring, niche, latestScore] = await Promise.all([
     supabase
       .from("businesses")
-      .select("name, address, language, category, categories, primary_type, business_type_override, lat, lng, website, verified_website_url")
+      .select("name, address, language, category, categories, primary_type, business_type_override, biz_type_resolved, lat, lng, website, verified_website_url")
       .eq("id", businessId)
       .single(),
     supabase.from("competitor_scans").select(SCAN_COLUMNS).eq("business_id", businessId).order("created_at", { ascending: false }).limit(600),
@@ -199,7 +200,7 @@ export async function getCompetitorsWithClient(
 
   const row = business as Pick<
     CompetitorBusinessRow,
-    "name" | "address" | "language" | "category" | "categories" | "primary_type" | "business_type_override" | "lat" | "lng" | "website" | "verified_website_url"
+    "name" | "address" | "language" | "category" | "categories" | "primary_type" | "business_type_override" | "biz_type_resolved" | "lat" | "lng" | "website" | "verified_website_url"
   >;
   const locale = normalizeLocale(row.language);
   const competitorNoun = resolveBizProfile(
@@ -208,7 +209,8 @@ export async function getCompetitorsWithClient(
     row.business_type_override,
     locale,
     row.categories,
-    row.name
+    row.name,
+    row.biz_type_resolved
   ).competitorNoun;
 
   if (scanError) {
@@ -824,7 +826,7 @@ async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBe
 
   const { data: business, error: businessError } = await supabase
     .from("businesses")
-    .select("name, category, categories, primary_type, business_type_override, language, review_count")
+    .select("name, category, categories, primary_type, business_type_override, biz_type_resolved, language, review_count")
     .eq("id", businessId)
     .single();
 
@@ -838,7 +840,8 @@ async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBe
     business.business_type_override,
     normalizeLocale(business.language),
     business.categories,
-    business.name
+    business.name,
+    business.biz_type_resolved
   ).competitorNoun;
 
   const snapshot = await getLatestCompetitorSnapshot(businessId);

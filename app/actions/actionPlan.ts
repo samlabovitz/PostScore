@@ -25,6 +25,8 @@ import {
 } from "@/lib/actionPlan";
 import { estimateStarterSiteRange, type StarterSiteTemplateData } from "@/lib/starterSiteScoring";
 import { businessRowToScoringInput, scoreBusiness, V112_SCORING_COLUMNS } from "@/lib/scoring";
+import { withSavedScore } from "@/lib/savedScore";
+import { latestSavedScore } from "@/lib/savedScore.server";
 import type { BusinessScoringInput, BusinessScoringRow, ScoreBreakdown, Suggestion } from "@/lib/scoring";
 import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
 import type { Plan } from "@/lib/plan";
@@ -215,7 +217,7 @@ export async function markTaskDone(businessId: string, checkId: string): Promise
   const { data: business, error: businessError } = await supabase
     .from("businesses")
     .select(
-      `name, rating, review_count, phone, address, opening_hours, website, categories, category, primary_type, business_type_override, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language, ${V112_SCORING_COLUMNS}`
+      `name, rating, review_count, phone, address, opening_hours, website, categories, category, primary_type, business_type_override, biz_type_resolved, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language, ${V112_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();
@@ -226,7 +228,10 @@ export async function markTaskDone(businessId: string, checkId: string): Promise
 
   const locale = normalizeLocale(business.language);
   const input = businessRowToScoringInput(business as BusinessScoringRow);
-  const breakdown = scoreBusiness(input, locale);
+  // Day 23 2d-1: the points still to win are the saved scan's (the score
+  // the owner sees), with today's breakdown only as a fallback.
+  const now = scoreBusiness(input, locale);
+  const breakdown = withSavedScore(now, await latestSavedScore(supabase, businessId)) ?? now;
   const check = breakdown.checks.find((c) => c.id === checkId);
 
   if (!check) {

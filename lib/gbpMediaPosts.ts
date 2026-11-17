@@ -34,6 +34,12 @@ export function photoSummary(items: MediaItem[]): PhotoSummary {
   return { count: photos.length, newestAt: newest };
 }
 
+/** When each photo was added (photos only, like photoSummary). */
+export function photoTimesOf(items: MediaItem[], capped: boolean): { createTimes: string[]; capped: boolean } {
+  const photos = items.filter((m) => (m.mediaFormat ?? "PHOTO") === "PHOTO");
+  return { createTimes: photos.map((m) => m.createTime).filter((t): t is string => !!t && Number.isFinite(Date.parse(t))), capped };
+}
+
 export function postSummary(posts: LocalPost[], now: number): PostSummary {
   const live = posts.filter((p) => p.createTime && Number.isFinite(Date.parse(p.createTime)) && p.state !== "REJECTED");
   const sorted = [...live].sort((a, b) => b.createTime!.localeCompare(a.createTime!));

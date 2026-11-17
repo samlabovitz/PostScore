@@ -52,7 +52,7 @@ async function Dock({ businessId }: { businessId: string }) {
     if (summary.status !== "ok" || listingMode === "website_only") return null;
     const business = summary.business;
     const locale = normalizeLocale(business.language);
-    const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override, locale, business.categories, business.name);
+    const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override, locale, business.categories, business.name, business.biz_type_resolved);
     const features = featureMapFor(plan, {
       couponsOk: profile.couponsOk,
       referralOk: profile.referralOk,

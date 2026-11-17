@@ -8,7 +8,7 @@ import { hkdfSync } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { readGbpKey } from "@/lib/gbpSecurity";
 import type { ProfileSnapshot } from "@/lib/profileChanges";
-import { changesAcross, fingerprintSnapshot, newReviewsSince, parseFieldFingerprints, scanChangeRecords, type GbpReviewTimes, type ScanChangeRecord, type ScanChangeSummary } from "@/lib/scanChanges";
+import { changesAcross, fingerprintSnapshot, newPhotosSince, newReviewsSince, parseFieldFingerprints, scanChangeRecords, type GbpPhotoTimes, type GbpReviewTimes, type ScanChangeRecord, type ScanChangeSummary } from "@/lib/scanChanges";
 
 type Env = { GBP_TOKEN_ENCRYPTION_KEY?: string; NODE_ENV?: string };
 
@@ -24,7 +24,7 @@ export async function recordScanChanges(
   businessId: string,
   scoreId: string,
   snapshot: ProfileSnapshot,
-  options: { env?: Env; at?: string; gbpReviews?: GbpReviewTimes | null } = {}
+  options: { env?: Env; at?: string; gbpReviews?: GbpReviewTimes | null; gbpPhotos?: GbpPhotoTimes | null } = {}
 ): Promise<ScanChangeRecord[]> {
   const key = scanFingerprintKey(options.env);
   const fingerprints = key ? fingerprintSnapshot(snapshot, businessId, key) : null;
@@ -47,7 +47,10 @@ export async function recordScanChanges(
   const records = scanChangeRecords(
     { snapshot: (prev.profile_snapshot_json as ProfileSnapshot | null) ?? null, fingerprints: parseFieldFingerprints(prev.field_fingerprints) },
     { snapshot, fingerprints },
-    { newReviews: options.gbpReviews ? newReviewsSince(options.gbpReviews, prev.created_at as string) : null }
+    {
+      newReviews: options.gbpReviews ? newReviewsSince(options.gbpReviews, prev.created_at as string) : null,
+      newPhotos: options.gbpPhotos ? newPhotosSince(options.gbpPhotos, prev.created_at as string) : null,
+    }
   );
   if (records.length === 0) return [];
   const at = options.at ?? new Date().toISOString();

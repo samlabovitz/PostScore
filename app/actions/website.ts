@@ -26,6 +26,8 @@ import { businessTimeZone } from "@/lib/businessTimeZone";
 import { hasStorefront } from "@/lib/starterSite";
 import { getListingMode } from "@/lib/listingMode";
 import type { OpeningHoursPeriod } from "@/lib/google/places";
+import { withSavedScore } from "@/lib/savedScore";
+import { latestSavedScore } from "@/lib/savedScore.server";
 
 export interface WebsitePageData {
   businessName: string | null;
@@ -38,6 +40,8 @@ export interface WebsitePageData {
   categories: string[] | null;
   primaryType: string | null;
   businessTypeOverride: string | null;
+  /** Our own saved business type (Day 23 2d-1). */
+  bizTypeResolved: string | null;
   /** The business's own real language column — display-only, passed
    * straight through to DashboardShell (which normalizes it). */
   language: string | null;
@@ -224,7 +228,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      `name, address, category, primary_type, business_type_override, phone, opening_hours, opening_hours_periods, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, price_level, place_id, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng, ${V112_SCORING_COLUMNS}`
+      `name, address, category, primary_type, business_type_override, biz_type_resolved, phone, opening_hours, opening_hours_periods, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, price_level, place_id, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng, ${V112_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();
@@ -266,11 +270,14 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
     data.business_type_override,
     locale,
     data.categories,
-    data.name
+    data.name,
+    data.biz_type_resolved
   );
 
   const realInput = businessRowToScoringInput(businessRow);
-  const realBreakdown = scoreBusiness(realInput, locale);
+  // Day 23 2d-1: the saved scan's points (lib/savedScore.ts), today's words.
+  const realNow = scoreBusiness(realInput, locale);
+  const realBreakdown = withSavedScore(realNow, await latestSavedScore(supabase, businessId)) ?? realNow;
   const websiteCategory = realBreakdown.categories.find((c) => c.id === "website") ?? null;
   const websiteSuggestions = generateSuggestions(realBreakdown, locale).filter((s) => s.category === "website");
   // Only trust the real score for the underperformance comparison once
@@ -304,6 +311,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       categories: data.categories,
       primaryType: data.primary_type,
       businessTypeOverride: data.business_type_override,
+      bizTypeResolved: data.biz_type_resolved ?? null,
       language: data.language,
       phone: data.phone,
       openingHours: data.opening_hours,

@@ -42,6 +42,7 @@ type Row = {
   category: string | null;
   primary_type: string | null;
   business_type_override: string | null;
+  biz_type_resolved?: string | null;
   categories: string[] | null;
   website: string | null;
   verified_website_url: string | null;
@@ -57,7 +58,7 @@ export function foodRescanTargets(rows: Row[]): Row[] {
       !!b.place_id &&
       b.listing_mode !== "website_only" &&
       !b.archived_at &&
-      isFoodBusiness(resolveBizProfile(b.category, b.primary_type, b.business_type_override, "en", b.categories, b.name).id)
+      isFoodBusiness(resolveBizProfile(b.category, b.primary_type, b.business_type_override, "en", b.categories, b.name, b.biz_type_resolved).id)
   );
 }
 
@@ -80,9 +81,9 @@ async function main(): Promise<void> {
   const db = createClient(url, key, { auth: { persistSession: false } });
 
   let rows: Row[] = [];
-  const withArchive = await db.from("businesses").select("id, name, category, primary_type, business_type_override, categories, website, verified_website_url, listing_mode, archived_at, place_id").order("name");
+  const withArchive = await db.from("businesses").select("id, name, category, primary_type, business_type_override, biz_type_resolved, categories, website, verified_website_url, listing_mode, archived_at, place_id").order("name");
   if (withArchive.error) {
-    const plain = await db.from("businesses").select("id, name, category, primary_type, business_type_override, categories, website, verified_website_url, listing_mode, place_id").order("name");
+    const plain = await db.from("businesses").select("id, name, category, primary_type, business_type_override, biz_type_resolved, categories, website, verified_website_url, listing_mode, place_id").order("name");
     if (plain.error) throw new Error(`Couldn't read businesses: ${plain.error.message}`);
     rows = (plain.data ?? []) as Row[];
   } else {

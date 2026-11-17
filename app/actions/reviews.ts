@@ -12,6 +12,8 @@ import {
 } from "@/lib/scoring";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { normalizeLocale } from "@/lib/i18n";
+import { withSavedScore } from "@/lib/savedScore";
+import { latestSavedScore } from "@/lib/savedScore.server";
 
 export interface ReviewsPageData {
   businessName: string | null;
@@ -76,7 +78,7 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      `name, address, category, primary_type, business_type_override, place_id, rating, review_count, phone, opening_hours, website, categories, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language, lat, lng, ${V112_SCORING_COLUMNS}`
+      `name, address, category, primary_type, business_type_override, biz_type_resolved, place_id, rating, review_count, phone, opening_hours, website, categories, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language, lat, lng, ${V112_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();
@@ -96,7 +98,9 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
   };
 
   const locale = normalizeLocale(row.language);
-  const breakdown = scoreBusiness(businessRowToScoringInput(row), locale);
+  // Day 23 2d-1: the saved scan's points (lib/savedScore.ts), today's words.
+  const now = scoreBusiness(businessRowToScoringInput(row), locale);
+  const breakdown = withSavedScore(now, await latestSavedScore(supabase, businessId)) ?? now;
   const visibilityCategory = breakdown.categories.find((c) => c.id === "visibility");
 
   if (!visibilityCategory) {

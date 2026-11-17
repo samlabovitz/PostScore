@@ -67,6 +67,7 @@ type BusinessRow = {
   primary_type: string | null;
   categories: string[] | null;
   business_type_override: string | null;
+  biz_type_resolved?: string | null;
   website_analysis_json: unknown;
   listing_mode: string | null;
   lat: number | null;
@@ -74,7 +75,7 @@ type BusinessRow = {
 };
 
 const BUSINESS_COLUMNS =
-  "id, name, website, verified_website_url, phone, address, opening_hours_periods, category, primary_type, categories, business_type_override, website_analysis_json, listing_mode, lat, lng";
+  "id, name, website, verified_website_url, phone, address, opening_hours_periods, category, primary_type, categories, business_type_override, biz_type_resolved, website_analysis_json, listing_mode, lat, lng";
 
 /** The site a re-check reads: the one PostScore grades, screenshots and
  * shows (lib/businessWebsite.ts gradedWebsite — the owner's confirmed
@@ -139,7 +140,7 @@ export async function recheckWebsiteWithClient(
     .maybeSingle();
   const before = (beforeRow as { total: number; breakdown_json: ScoreBreakdown } | null) ?? null;
 
-  const typeId = resolveBizProfile(row.category, row.primary_type, row.business_type_override, "en", row.categories, row.name).id;
+  const typeId = resolveBizProfile(row.category, row.primary_type, row.business_type_override, "en", row.categories, row.name, row.biz_type_resolved).id;
   let analyzed: Awaited<ReturnType<typeof analyzeWebsiteForSave>>;
   try {
     analyzed = await analyze({

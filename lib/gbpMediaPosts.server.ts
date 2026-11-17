@@ -7,7 +7,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getValidAccessTokenWithClient, markGbpReconnect } from "@/lib/gbpTokens.server";
 import { gbpFetch, logGbpCalls } from "@/lib/gbpQuota";
-import { photoSummary, postSummary, type LocalPost, type MediaItem, type MediaPostsState } from "@/lib/gbpMediaPosts";
+import { photoSummary, photoTimesOf, postSummary, type LocalPost, type MediaItem, type MediaPostsState } from "@/lib/gbpMediaPosts";
+import type { GbpPhotoTimes } from "@/lib/scanChanges";
 
 const V4 = "https://mybusiness.googleapis.com/v4";
 const MAX_PAGES = 10;
@@ -26,7 +27,7 @@ async function page<T>(f: typeof fetch, token: string, url: string, key: string)
   }
 }
 
-async function all<T>(f: typeof fetch, token: string, base: string, key: string): Promise<{ ok: true; items: T[] } | { ok: false; status: number | null }> {
+async function all<T>(f: typeof fetch, token: string, base: string, key: string): Promise<{ ok: true; items: T[]; capped: boolean } | { ok: false; status: number | null }> {
   const items: T[] = [];
   let next: string | null = null;
   for (let i = 0; i < MAX_PAGES; i++) {
@@ -39,10 +40,15 @@ async function all<T>(f: typeof fetch, token: string, base: string, key: string)
     next = p.next;
     if (!next) break;
   }
-  return { ok: true, items };
+  return { ok: true, items, capped: next !== null };
 }
 
-export async function refreshPhotosAndPosts(admin: SupabaseClient, businessId: string, fetchImpl: typeof fetch = fetch, now: Date = new Date()): Promise<{ ok: boolean; error?: string }> {
+export async function refreshPhotosAndPosts(
+  admin: SupabaseClient,
+  businessId: string,
+  fetchImpl: typeof fetch = fetch,
+  now: Date = new Date()
+): Promise<{ ok: boolean; error?: string; /** When each photo was added, for this scan's "3 photos added" (in memory only). */ photoTimes?: GbpPhotoTimes }> {
   const { data: conn } = await admin.from("gbp_connections").select("status, google_account_id, google_location_id").eq("business_id", businessId).maybeSingle();
   const c = conn as { status?: string; google_account_id?: string | null; google_location_id?: string | null } | null;
   if (c?.status !== "connected" || !c.google_account_id || !c.google_location_id) return { ok: false, error: "not connected" };
@@ -62,6 +68,7 @@ export async function refreshPhotosAndPosts(admin: SupabaseClient, businessId: s
       [media, posts] = await read(token.accessToken);
     }
     const update: Record<string, unknown> = {};
+    const photoTimes = media.ok ? photoTimesOf(media.items, media.capped) : undefined;
     if (media.ok) {
       const p = photoSummary(media.items);
       Object.assign(update, { photo_count: p.count, newest_photo_at: p.newestAt, photos_checked_at: now.toISOString() });
@@ -73,9 +80,9 @@ export async function refreshPhotosAndPosts(admin: SupabaseClient, businessId: s
     if (Object.keys(update).length > 0) await admin.from("gbp_connections").update(update).eq("business_id", businessId);
     if (!media.ok || !posts.ok) {
       console.warn(`[gbp-media-posts] read failed`, JSON.stringify({ media: media.ok ? "ok" : media.status, posts: posts.ok ? "ok" : posts.status }));
-      return { ok: false, error: `media ${media.ok ? "ok" : media.status} posts ${posts.ok ? "ok" : posts.status}` };
+      return { ok: false, error: `media ${media.ok ? "ok" : media.status} posts ${posts.ok ? "ok" : posts.status}`, photoTimes };
     }
-    return { ok: true };
+    return { ok: true, photoTimes };
   } finally {
     logGbpCalls("media-posts", counter);
   }

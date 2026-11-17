@@ -231,6 +231,7 @@ interface PricingBusinessRow {
   website_analysis_json: unknown;
   primary_type: string | null;
   business_type_override: string | null;
+  biz_type_resolved?: string | null;
   price_level: string | null;
   lat: number | null;
   lng: number | null;
@@ -283,7 +284,7 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
     supabase
       .from("businesses")
       .select(
-        "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, primary_type, business_type_override, price_level, lat, lng, language"
+        "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, primary_type, business_type_override, biz_type_resolved, price_level, lat, lng, language"
       )
       .eq("id", businessId)
       .single(),
@@ -324,7 +325,8 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
     row.business_type_override,
     locale,
     row.categories,
-    row.name
+    row.name,
+    row.biz_type_resolved
   );
   // No price check for a type it doesn't fit (a place of worship) —
   // refused before the paid AI call, matching the Pricing page.

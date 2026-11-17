@@ -24,8 +24,10 @@ import { reconcileTasks, type TaskRow } from "@/lib/actionPlan";
 import { buildProfileSnapshot, diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
 import { lookupBusinessByPlaceId, type OpeningHoursPeriod } from "@/lib/google/places";
 import type { PlacesDetailsKind } from "@/lib/placesDetailsBudget";
-import { changesAcross, type GbpReviewTimes, type ScanChangeSummary } from "@/lib/scanChanges";
+import { changesAcross, type GbpPhotoTimes, type GbpReviewTimes, type ScanChangeSummary } from "@/lib/scanChanges";
 import { breakdownWithoutQuotes } from "@/lib/breakdownStorage";
+import { sameTotal, savedScoreMatches, withSavedScore } from "@/lib/savedScore";
+import { latestSavedScore } from "@/lib/savedScore.server";
 import { FP_KEY_COLUMN, loadScanChangeRecords } from "@/lib/scanChanges.server";
 import { saveBusinessWithClient } from "@/app/actions/businesses";
 import { DEFAULT_LOCALE, normalizeLocale, t, type Locale } from "@/lib/i18n";
@@ -104,7 +106,34 @@ async function scoreBusinessByIdUncached(
     return { status: "unauthenticated" };
   }
 
-  return scoreBusinessWithClient(supabase, businessId, locale);
+  return scoreForDisplayWithClient(supabase, businessId, locale);
+}
+
+/**
+ * Day 23 2d-1: the score a page (or a report) shows — the latest SAVED
+ * scan's total, grade and points (lib/savedScore.ts), with today's
+ * words. When the saved scan no longer matches (an owner answer or a
+ * scoring update changed the score since), a new scan is saved first,
+ * exactly as the Overview did before — so it's still one score
+ * everywhere.
+ */
+export async function scoreForDisplayWithClient(
+  supabase: SupabaseClient,
+  businessId: string,
+  locale: Locale | "business" = DEFAULT_LOCALE,
+  /** false: never writes (scripts/preview-report.ts) — shows what the
+   * new scan would hold instead of saving it. */
+  options: { save?: boolean } = {}
+): Promise<ScoreBusinessResult> {
+  const [scored, saved] = await Promise.all([scoreBusinessWithClient(supabase, businessId, locale), latestSavedScore(supabase, businessId)]);
+  if (scored.status !== "ok") return scored;
+  const now = scored.result.breakdown;
+  const shown = withSavedScore(now, saved);
+  if (savedScoreMatches(now, shown)) return { ...scored, result: { ...scored.result, breakdown: shown } };
+  // Same total and grade, points moved between checks (e.g. a mobile speed
+  // measurement aged out): today's breakdown, as before — no new scan.
+  if (saved && options.save !== false && !sameTotal(now, saved)) await syncScoreSnapshotWithClient(supabase, businessId);
+  return scored;
 }
 
 /**
@@ -129,7 +158,7 @@ export async function scoreBusinessWithClient(
   const { data: business, error } = await supabase
     .from("businesses")
     .select(
-      `id, place_id, name, address, phone, website, rating, review_count, category, categories, primary_type, business_type_override, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng, ${V112_SCORING_COLUMNS}`
+      `id, place_id, name, address, phone, website, rating, review_count, category, categories, primary_type, business_type_override, biz_type_resolved, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng, ${V112_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();
@@ -199,7 +228,7 @@ export async function saveScoreSnapshotWithClient(
   /** "website_recheck" marks a website-only re-check (app/actions/websiteRecheck.ts). */
   scanKind?: ScanKind,
   /** A connected owner's review dates, read by this scan (rescanBusinessWithClient). */
-  options: { gbpReviews?: GbpReviewTimes | null } = {}
+  options: { gbpReviews?: GbpReviewTimes | null; gbpPhotos?: GbpPhotoTimes | null } = {}
 ): Promise<SaveScoreSnapshotResult> {
   const scored = await scoreBusinessWithClient(supabase, businessId);
   if (scored.status !== "ok") return scored;
@@ -233,7 +262,7 @@ export async function saveScoreSnapshotWithClient(
     // Written by the server: the score row above was saved under the
     // owner's own access, and owners can't update a saved score.
     const [{ recordScanChanges }, { createAdminClient }] = await Promise.all([import("@/lib/scanChanges.server"), import("@/lib/supabase/admin")]);
-    await recordScanChanges(createAdminClient(), businessId, data.id, snapshot, { gbpReviews: options.gbpReviews });
+    await recordScanChanges(createAdminClient(), businessId, data.id, snapshot, { gbpReviews: options.gbpReviews, gbpPhotos: options.gbpPhotos });
   } catch (err) {
     console.error(`[scan-changes] not recorded for ${businessId}:`, err instanceof Error ? err.message : err);
   }
@@ -661,13 +690,16 @@ export async function rescanBusinessWithClient(
   const replyCheck = await runGbpReplyCheck(businessId);
   // Photos and posts on the listing (summaries only); never fails the scan.
   const [{ refreshPhotosAndPosts }, { createAdminClient }] = await Promise.all([import("@/lib/gbpMediaPosts.server"), import("@/lib/supabase/admin")]);
-  await refreshPhotosAndPosts(createAdminClient(), businessId).catch(() => undefined);
+  const photosCheck = await refreshPhotosAndPosts(createAdminClient(), businessId).catch(() => undefined);
   // Google's own edits (getGoogleUpdated): read only; never fails the scan.
   const { checkGoogleEdits } = await import("@/lib/gbpGoogleEdits.server");
   await checkGoogleEdits(createAdminClient(), businessId).catch(() => undefined);
 
-  // Their own reviews, just read: exactly how many are new since the last scan.
-  const scoreResult = await saveScoreSnapshotWithClient(supabase, businessId, undefined, { gbpReviews: replyCheck.status === "ok" ? replyCheck.reviewTimes : null });
+  // Their own reviews and photos, just read: exactly how many are new since the last scan.
+  const scoreResult = await saveScoreSnapshotWithClient(supabase, businessId, undefined, {
+    gbpReviews: replyCheck.status === "ok" ? replyCheck.reviewTimes : null,
+    gbpPhotos: photosCheck?.photoTimes ?? null,
+  });
   if (scoreResult.status !== "saved") {
     return scoreResult;
   }

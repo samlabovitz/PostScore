@@ -44,7 +44,8 @@ export default async function PricingPage({ params }: { params: { id: string } }
     business.business_type_override,
     locale,
     business.categories,
-    business.name
+    business.name,
+    business.biz_type_resolved
   );
 
   if (pricesResult.status === "unauthenticated" || assessmentResult.status === "unauthenticated") {

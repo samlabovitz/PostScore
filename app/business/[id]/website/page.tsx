@@ -57,7 +57,8 @@ export default async function WebsitePage({ params }: { params: { id: string } }
     data.businessTypeOverride,
     "en",
     data.categories,
-    data.businessName
+    data.businessName,
+    data.bizTypeResolved
   );
   const profileEs = resolveBizProfile(
     data.category,
@@ -65,7 +66,8 @@ export default async function WebsitePage({ params }: { params: { id: string } }
     data.businessTypeOverride,
     "es",
     data.categories,
-    data.businessName
+    data.businessName,
+    data.bizTypeResolved
   );
   const faqEn = renderFaq(profileEn.faq, { name: data.businessName, address: data.address });
   const faqEs = renderFaq(profileEs.faq, { name: data.businessName, address: data.address });

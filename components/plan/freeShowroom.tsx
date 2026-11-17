@@ -29,7 +29,7 @@ export async function freeShowroom(businessId: string, tab: ShowroomTab) {
   if (summary.status === "unauthenticated") redirect("/login");
   if (summary.status === "not_found") notFound();
   const b = summary.business;
-  const profile = resolveBizProfile(b.category, b.primary_type, b.business_type_override, normalizeLocale(b.language), b.categories, b.name);
+  const profile = resolveBizProfile(b.category, b.primary_type, b.business_type_override, normalizeLocale(b.language), b.categories, b.name, b.biz_type_resolved);
   // The top "With Grow | Premium adds" card is this page's one plan
   // comparison: no promo cards at the bottom.
   return (

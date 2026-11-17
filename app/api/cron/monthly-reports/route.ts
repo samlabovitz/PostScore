@@ -54,7 +54,7 @@ import { createElement } from "react";
 import { NextResponse, type NextRequest } from "next/server";
 import { unfinishedNewScanIds, withoutUnfinished } from "@/lib/competitorScoringStatus";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { rescanBusinessWithClient, scoreBusinessWithClient, type RescanBusinessResult } from "@/app/actions/scoring";
+import { rescanBusinessWithClient, scoreForDisplayWithClient, type RescanBusinessResult } from "@/app/actions/scoring";
 import { runAndSaveCompetitorScanWithClient } from "@/app/actions/competitors";
 import { isScanFresh } from "@/lib/competitorScanPolicy";
 import {
@@ -725,7 +725,7 @@ export async function processBusiness(
   const { data: freshBusiness, error: freshBusinessError } = await supabase
     .from("businesses")
     .select(
-      `name, owner_id, unsubscribe_token, language, category, primary_type, business_type_override, categories, phone, address, opening_hours, website, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, rating, review_count, ${V112_SCORING_COLUMNS}`
+      `name, owner_id, unsubscribe_token, language, category, primary_type, business_type_override, biz_type_resolved, categories, phone, address, opening_hours, website, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, rating, review_count, ${V112_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();
@@ -763,15 +763,15 @@ export async function processBusiness(
     freshBusiness.business_type_override ?? null,
     locale,
     freshBusiness.categories,
-    freshBusiness.name
+    freshBusiness.name,
+    freshBusiness.biz_type_resolved
   );
-  // LIVE score — scoreBusinessWithClient itself, the one function the
-  // Overview, Reports page and weekly PDF score with (scoreBusinessById),
-  // run fresh on the business row this run just refreshed — never the
-  // saved scores.breakdown_json blob, and never a column list of its own
-  // (Nov 16: a shorter list left out three checks, so the preview said
-  // 86 (B) where the Overview said 78 (C)).
-  const scored = await scoreBusinessWithClient(supabase, businessId, locale);
+  // The score the Overview, Reports page and weekly PDF show
+  // (scoreForDisplayWithClient — scoreBusinessById's own): this run's
+  // just-saved scan, never a column list of its own (Nov 16: a shorter
+  // list left out three checks, so the preview said 86 (B) where the
+  // Overview said 78 (C)).
+  const scored = await scoreForDisplayWithClient(supabase, businessId, locale);
   if (scored.status !== "ok") return { businessId, status: "failed", reason: "could not score business after rescan" };
   const scoringInput = businessRowToScoringInput(scored.business as unknown as BusinessScoringRow);
   const liveResult = scored.result;

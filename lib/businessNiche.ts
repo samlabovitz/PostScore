@@ -16,6 +16,7 @@ export interface BusinessNicheRow {
   primary_type: string | null;
   categories: string[] | null;
   business_type_override: string | null;
+  biz_type_resolved?: string | null;
   trade_id?: string | null;
   /** Columns from supabase/business-niches.sql — undefined until it's run. */
   niche_id?: string | null;
@@ -45,7 +46,7 @@ export interface ResolvedNiche {
 }
 
 export function resolveBusinessNiche(row: BusinessNicheRow): ResolvedNiche {
-  const parent = resolveBizProfile(row.category, row.primary_type, row.business_type_override, "en", row.categories, row.name).id;
+  const parent = resolveBizProfile(row.category, row.primary_type, row.business_type_override, "en", row.categories, row.name, row.biz_type_resolved).id;
   const saved = nicheById(row.niche_id);
   const confirmed = !!row.niche_confirmed_at;
   const input = {

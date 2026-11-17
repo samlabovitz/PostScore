@@ -38,13 +38,13 @@ export type OrderLinkBlocked = { ok: false; result: { status: "blocked"; reason:
 async function businessFacts(admin: SupabaseClient, businessId: string) {
   const { data } = await admin
     .from("businesses")
-    .select("place_id, name, website, category, primary_type, business_type_override, categories, language, website_analysis_json")
+    .select("place_id, name, website, category, primary_type, business_type_override, biz_type_resolved, categories, language, website_analysis_json")
     .eq("id", businessId)
     .maybeSingle();
   const b = (data ?? {}) as Record<string, unknown>;
   const str = (v: unknown) => (typeof v === "string" ? v : null);
   const [{ resolveBizProfile }, { parseWebsiteAnalysis }] = await Promise.all([import("@/config/bizProfiles"), import("@/lib/scoring")]);
-  const profile = resolveBizProfile(str(b.category), str(b.primary_type), str(b.business_type_override), undefined, Array.isArray(b.categories) ? (b.categories as string[]) : null, str(b.name));
+  const profile = resolveBizProfile(str(b.category), str(b.primary_type), str(b.business_type_override), undefined, Array.isArray(b.categories) ? (b.categories as string[]) : null, str(b.name), str(b.biz_type_resolved));
   const analysis = parseWebsiteAnalysis(b.website_analysis_json);
   const website = str(b.website);
   return {

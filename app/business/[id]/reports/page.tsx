@@ -74,7 +74,7 @@ export default async function ReportsPage({ params, searchParams }: { params: { 
 
   const locale = normalizeLocale(summary.business.language);
   const b = summary.business;
-  const profile = resolveBizProfile(b.category, b.primary_type, b.business_type_override, locale, b.categories, b.name);
+  const profile = resolveBizProfile(b.category, b.primary_type, b.business_type_override, locale, b.categories, b.name, b.biz_type_resolved);
   // Formatted here once, so the client renders exactly the server's text.
   const weekLabels = Object.fromEntries((weekly?.weeks ?? []).map((w) => [w, compactWeekLabel(w, weekEndDay(w), locale)]));
 

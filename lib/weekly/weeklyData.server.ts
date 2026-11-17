@@ -36,6 +36,7 @@ interface BusinessBasics {
   category: string | null;
   primary_type: string | null;
   business_type_override: string | null;
+  biz_type_resolved?: string | null;
   categories: string[] | null;
   /** Today's (a past week's PDF shows these, labelled "today"). */
   rating: number | null;
@@ -45,7 +46,7 @@ interface BusinessBasics {
 async function loadBusiness(supabase: SupabaseClient, businessId: string): Promise<BusinessBasics | null> {
   const { data } = await supabase
     .from("businesses")
-    .select("name, address, language, lat, lng, category, primary_type, business_type_override, categories, rating, review_count")
+    .select("name, address, language, lat, lng, category, primary_type, business_type_override, biz_type_resolved, categories, rating, review_count")
     .eq("id", businessId)
     .maybeSingle();
   return (data as BusinessBasics | null) ?? null;
@@ -188,7 +189,7 @@ export async function weeklyReportDataWithClient(
   const rank = snapshot ? snapshotRank(snapshot) : rankOnly(liveRank);
   const weekHeadToHead: HeadToHead | null = liveRank?.headToHead ?? null;
   const sameCompared = !snapshot || !c || snapshot.compared_scan_id === c.from.id;
-  const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override, locale, business.categories, business.name);
+  const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override, locale, business.categories, business.name, business.biz_type_resolved);
   const score = snapshot?.score ?? saved.total;
   const prevScore = snapshot ? snapshot.prev_score : c?.from.total ?? null;
   const comparable = snapshot ? snapshot.prev_score !== null && snapshot.scoring_version === snapshot.prev_scoring_version : c?.comparable ?? false;

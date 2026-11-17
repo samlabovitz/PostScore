@@ -81,7 +81,8 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
     business.business_type_override,
     locale,
     business.categories,
-    business.name
+    business.name,
+    business.biz_type_resolved
   );
 
   // These need only the business, not its score — start them now.

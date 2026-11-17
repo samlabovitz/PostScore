@@ -4072,6 +4072,7 @@ export interface BusinessScoringRow {
   /** For the business type (customer details): the same fields resolveBizProfile reads. */
   primary_type?: string | null;
   business_type_override?: string | null;
+  biz_type_resolved?: string | null;
   name?: string | null;
 }
 
@@ -4630,7 +4631,7 @@ export const V112_SCORING_COLUMNS =
 /** Maps a saved business row to scoring input. Pure. */
 export function businessRowToScoringInput(row: BusinessScoringRow): BusinessScoringInput {
   const rule = customerDetailsRuleFor(
-    resolveBizProfile(row.category, row.primary_type ?? null, row.business_type_override ?? null, DEFAULT_LOCALE, row.categories, row.name ?? null).id,
+    resolveBizProfile(row.category, row.primary_type ?? null, row.business_type_override ?? null, DEFAULT_LOCALE, row.categories, row.name ?? null, row.biz_type_resolved).id,
     row.pure_service_area_business ?? null,
     { noParking: row.owner_no_parking === true, noPayment: row.owner_no_payment === true }
   );

@@ -107,7 +107,7 @@ import { MonthlyReportEmail, monthlyReportSubject, TEST_PREVIEW_UNSUBSCRIBE_URL,
 import { normalizeLocale, reportCoverageMonthIndex, reportCoverageMonthRange } from "../lib/i18n";
 import { resolveBizProfile } from "../config/bizProfiles";
 import type { runAndSaveCompetitorScanWithClient as RunCompetitorScanFn } from "../app/actions/competitors";
-import type { scoreBusinessWithClient as ScoreBusinessFn } from "../app/actions/scoring";
+import type { scoreForDisplayWithClient as ScoreBusinessFn } from "../app/actions/scoring";
 import type { withLiveCompetitorValuesFor as LiveValuesFn } from "../lib/placesLive.server";
 import { allowServerOnly } from "./allowServerOnly";
 import { scanWithoutPlacesValues } from "../lib/placesLive";
@@ -161,7 +161,7 @@ async function liveValuesFor(): Promise<typeof LiveValuesFn> {
 }
 async function scoreWithApp(): Promise<typeof ScoreBusinessFn> {
   allowServerOnly();
-  return (await import("../app/actions/scoring")).scoreBusinessWithClient;
+  return (await import("../app/actions/scoring")).scoreForDisplayWithClient;
 }
 
 /** lib/scanChanges.server.ts, loaded past its "server-only" guard. */
@@ -446,7 +446,7 @@ async function main() {
   const { data: business, error: businessError } = await supabase
     .from("businesses")
     .select(
-      "id, name, language, category, primary_type, business_type_override, categories, phone, address, opening_hours, website, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, rating, review_count"
+      "id, name, language, category, primary_type, business_type_override, biz_type_resolved, categories, phone, address, opening_hours, website, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, rating, review_count"
     )
     .eq("id", businessId)
     .single();
@@ -518,15 +518,15 @@ async function main() {
     business.business_type_override ?? null,
     locale,
     business.categories,
-    business.name
+    business.name,
+    business.biz_type_resolved
   );
-  // LIVE score — scoreBusinessWithClient itself, the one function the
-  // Overview, Reports page, weekly PDF and the real monthly send score
-  // with — never the possibly-stale saved scores.breakdown_json (Day 4
-  // Part 2a, the real Lamonsoff case) and never a column list of this
-  // script's own (Nov 16: one that left out the newer scoring columns
-  // made this preview say 86 (B) where the Overview said 78 (C)).
-  const scored = await (await scoreWithApp())(supabase, businessId, locale);
+  // The score the Overview, Reports page, weekly PDF and the real monthly
+  // send show (scoreForDisplayWithClient), read-only here — never a
+  // column list of this script's own (Nov 16: one that left out the newer
+  // scoring columns made this preview say 86 (B) where the Overview said
+  // 78 (C)).
+  const scored = await (await scoreWithApp())(supabase, businessId, locale, { save: false });
   if (scored.status !== "ok") {
     console.error(`Could not score business ${businessId}: ${scored.status}`);
     process.exit(1);

@@ -3214,6 +3214,15 @@ function optionForHaystack(haystack: string): BusinessTypeOption | null {
   return BUSINESS_TYPE_OPTIONS.find((option) => option.match.some((keyword) => keywordMatches(haystack, keyword))) ?? null;
 }
 
+/** What the business's own name alone says (a law firm's or a community
+ * center's name), checked ahead of Google's category. */
+function nameBizProfile(name: string | null | undefined, locale: Locale): BizProfile | null {
+  if (!name) return null;
+  const id = LAWYER_NAME_PATTERN.test(name) ? "lawyer" : COMMUNITY_CENTER_NAME_PATTERN.test(name) ? "community_center" : null;
+  const option = id ? BUSINESS_TYPE_OPTIONS.find((o) => o.id === id) : undefined;
+  return option ? localizeBizProfile(buildResolvedProfileSource(option), locale) : null;
+}
+
 function isLikelyLawFirm(
   primaryType: string | null | undefined,
   categories: string[] | null | undefined,
@@ -3244,15 +3253,13 @@ export function bizProfile(
   // Google itself mis-categorized. An owner's own manual correction
   // still always wins over this — see resolveBizProfile(), which only
   // ever calls this function as the no-override fallback.
-  if (isLikelyLawFirm(primaryType, categories, name)) {
+  if (isLikelyLawFirm(primaryType, categories, null)) {
     const lawyerOption = BUSINESS_TYPE_OPTIONS.find((o) => o.id === "lawyer")!;
     return localizeBizProfile(buildResolvedProfileSource(lawyerOption), locale);
   }
 
-  if (name && COMMUNITY_CENTER_NAME_PATTERN.test(name)) {
-    const communityOption = BUSINESS_TYPE_OPTIONS.find((o) => o.id === "community_center")!;
-    return localizeBizProfile(buildResolvedProfileSource(communityOption), locale);
-  }
+  const byName = nameBizProfile(name, locale);
+  if (byName) return byName;
 
   const haystack = `${category ?? ""} ${primaryType ?? ""}`.toLowerCase();
   const primaryMatch = haystack.trim() ? optionForHaystack(haystack) : null;
@@ -3315,9 +3322,38 @@ export function resolveBizProfile(
    * `categories`/`name` params — only used when there's no override to
    * apply, since a manual correction always wins regardless of either. */
   categories?: string[] | null,
-  name?: string | null
+  name?: string | null,
+  /** Day 23 2d-1: businesses.biz_type_resolved — our own saved reading of
+   * Google's category/types at the last scan (savedBizTypeId). Used in
+   * place of Google's saved fields when present. */
+  savedType?: string | null
 ): BizProfile {
-  return bizProfileById(override, locale) ?? bizProfile(category, primaryType, locale, categories, name);
+  return (
+    bizProfileById(override, locale) ??
+    // Same order as bizProfile(): legal Google types, then the name, then the category.
+    (bizProfileById(savedType, locale) ? (savedType === "lawyer" ? null : nameBizProfile(name, locale)) ?? bizProfileById(savedType, locale) : null) ??
+    bizProfile(category, primaryType, locale, categories, name)
+  );
+}
+
+/** What Google's category and types alone say — the business type
+ * without the owner's correction or the name check: our saved reading
+ * when present, else read from the given Google fields. */
+export function autoDetectedBizProfile(
+  category: string | null | undefined,
+  primaryType: string | null | undefined,
+  locale: Locale = DEFAULT_LOCALE,
+  categories?: string[] | null,
+  savedType?: string | null
+): BizProfile {
+  return bizProfileById(savedType, locale) ?? bizProfile(category, primaryType, locale, categories, null);
+}
+
+/** The value saved as businesses.biz_type_resolved at a scan: Google's
+ * category and types read into one of our business types. Ours, not
+ * Google's — the category itself is never kept. */
+export function savedBizTypeId(category: string | null | undefined, primaryType: string | null | undefined, categories?: string[] | null): string {
+  return bizProfile(category, primaryType, DEFAULT_LOCALE, categories, null).id;
 }
 
 /** Best-effort city extraction from a Google formatted address (typically

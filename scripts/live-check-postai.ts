@@ -142,7 +142,7 @@ async function readBusinessSummary(businessId: string) {
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, category, primary_type, business_type_override, trade_id, phone, services, avg_job_value_low, avg_job_value_high, language"
+      "id, name, address, category, primary_type, business_type_override, biz_type_resolved, trade_id, phone, services, avg_job_value_low, avg_job_value_high, language"
     )
     .eq("id", businessId)
     .single();
@@ -286,7 +286,8 @@ async function loadBusinessContext(businessId: string, localeOverride?: Locale):
     businessTypeOverride,
     locale,
     scored.business.categories,
-    scored.business.name
+    scored.business.name,
+    summary.biz_type_resolved
   );
   const { input } = scored;
   const { breakdown, suggestions } = scored.result;

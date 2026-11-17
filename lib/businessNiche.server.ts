@@ -6,7 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { competitorScopeFor, resolveBusinessNiche, type BusinessNicheRow, type ResolvedNiche } from "@/lib/businessNiche";
 import type { CompetitorScope } from "@/lib/competitorScope";
 
-const BASE = "name, category, primary_type, categories, business_type_override, trade_id";
+const BASE = "name, category, primary_type, categories, business_type_override, biz_type_resolved, trade_id";
 const NICHE = "niche_id, niche_source, niche_confirmed_at, competitor_areas, competitor_scope";
 
 export interface BusinessNicheState {
