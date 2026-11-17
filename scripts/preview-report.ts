@@ -531,7 +531,7 @@ async function main() {
     console.error(`Could not score business ${businessId}: ${scored.status}`);
     process.exit(1);
   }
-  const scoringInput = businessRowToScoringInput(scored.business as unknown as BusinessScoringRow);
+  const scoringInput = businessRowToScoringInput((scored.scoringBusiness ?? scored.business) as unknown as BusinessScoringRow);
   const liveResult = scored.result;
   const currentForDisplay: MonthlyReportScoreRow = {
     id: currentRow.id,

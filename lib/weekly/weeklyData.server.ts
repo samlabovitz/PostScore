@@ -48,10 +48,14 @@ interface BusinessBasics {
 async function loadBusiness(supabase: SupabaseClient, businessId: string): Promise<BusinessBasics | null> {
   const { data } = await supabase
     .from("businesses")
-    .select("name, address, language, lat, lng, category, primary_type, business_type_override, biz_type_resolved, categories, rating, review_count")
+    .select("name, address, language, lat, lng, category, primary_type, business_type_override, biz_type_resolved, categories, place_id, listing_mode, rating, review_count")
     .eq("id", businessId)
     .maybeSingle();
-  return (data as BusinessBasics | null) ?? null;
+  if (!data) return null;
+  // Day 23 2d-2: the rating and count as Google shows them now.
+  const { withLiveListingFor } = await import("@/lib/ownerListing.server");
+  const live = await withLiveListingFor(supabase, businessId, data as BusinessBasics & { place_id: string | null; listing_mode: string | null });
+  return { ...(data as BusinessBasics), rating: live.rating ?? null, review_count: live.review_count ?? null };
 }
 
 /** A compact past-report row (dates · score · change). */

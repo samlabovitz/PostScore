@@ -47,6 +47,15 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   if (!business) return reply({ photo: null }, 404);
   if (!business.place_id || business.listing_mode === "website_only") return reply({ photo: null });
 
+  // Day 23 2d-2: connected to Google — their own Business Profile photo,
+  // never a Places call.
+  const { isGbpConnected, gbpHeaderPhoto, liveListingForRow } = await import("@/lib/ownerListing.server");
+  if (await isGbpConnected(supabase, business.id)) {
+    const admin = createAdminClient();
+    const [photo, live] = await Promise.all([gbpHeaderPhoto(admin, business.id).catch(() => null), liveListingForRow(supabase, business.id, business)]);
+    return reply({ photo: photo ? { uri: photo.uri, attributions: [], googleMapsUri: live.status === "ok" ? live.values.googleMapsUri : null } : null });
+  }
+
   try {
     // Free (IDs Only SKU). No photos on the listing → no image at all.
     const ref = await getFirstPhotoRef(business.place_id);

@@ -777,7 +777,7 @@ export async function processBusiness(
   // Overview said 78 (C)).
   const scored = await scoreForDisplayWithClient(supabase, businessId, locale);
   if (scored.status !== "ok") return { businessId, status: "failed", reason: "could not score business after rescan" };
-  const scoringInput = businessRowToScoringInput(scored.business as unknown as BusinessScoringRow);
+  const scoringInput = businessRowToScoringInput((scored.scoringBusiness ?? scored.business) as unknown as BusinessScoringRow);
   const liveResult = scored.result;
   const currentForDisplay: MonthlyReportScoreRow = {
     id: currentRow.id,

@@ -32,8 +32,8 @@ export async function openHoursCompare(businessId: string): Promise<OpenHoursCom
   const { createClient } = await import("@/lib/supabase/server");
   const db = createClient();
   // RLS: only the owner's own business comes back.
-  const { data } = await db.from("businesses").select("id, website_analysis_json, opening_hours, website, owner_website_url, verified_website_url").eq("id", businessId).maybeSingle();
-  const row = data as { website_analysis_json: unknown; opening_hours: string[] | null; website: string | null; owner_website_url: string | null; verified_website_url: string | null } | null;
+  const { data } = await db.from("businesses").select("id, place_id, listing_mode, website_analysis_json, opening_hours, website, owner_website_url, verified_website_url").eq("id", businessId).maybeSingle();
+  const row = data as { place_id: string | null; listing_mode: string | null; website_analysis_json: unknown; opening_hours: string[] | null; website: string | null; owner_website_url: string | null; verified_website_url: string | null } | null;
   if (!row) return { status: "not_found" };
 
   const [{ parseWebsiteAnalysis }, edits, { WEBSITE_BUILDER_NAMES }, { managedSiteContact }] = await Promise.all([import("@/lib/scoring"), import("@/lib/gbpProfileEdits"), import("@/lib/websiteBuilder"), import("@/lib/hoursChooser")]);
@@ -68,7 +68,8 @@ export async function openHoursCompare(businessId: string): Promise<OpenHoursCom
   return {
     status: "ok",
     google,
-    googleLines: google ? null : (row.opening_hours ?? null),
+    // Not connected: Google's lines as read now (one read per visit, lib/ownerListing.server.ts).
+    googleLines: google ? null : ((await (await import("@/lib/ownerListing.server")).withLiveListingFor(db, businessId, row)).opening_hours ?? null),
     live: google !== null,
     site,
     builder: builderId ? { id: builderId, name: WEBSITE_BUILDER_NAMES[builderId] } : null,

@@ -27,7 +27,7 @@ describe("scans no longer keep a copy of Google's listing values", () => {
   test("section 6 says which fields changed, never Google's before/after values; the weekly recap's newest scan shows today's counts", () => {
     expect(src("lib/googleProfileTab.server.ts")).toContain("changes: [],");
     expect(src("lib/googleProfileTab.server.ts")).not.toContain("profile_snapshot_json");
-    expect(src("lib/weekly/weekly.server.ts")).toMatch(/i === rows\.length - 1 && today[\s\S]{0,200}rating: today\.rating, reviewCount: today\.review_count/);
+    expect(src("lib/weekly/weekly.server.ts")).toMatch(/i === rows\.length - 1 && today[\s\S]{0,200}rating: today\.rating \?\? null, reviewCount: today\.review_count \?\? null/);
   });
 });
 

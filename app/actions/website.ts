@@ -28,6 +28,7 @@ import { getListingMode } from "@/lib/listingMode";
 import type { OpeningHoursPeriod } from "@/lib/google/places";
 import { withSavedScore } from "@/lib/savedScore";
 import { latestSavedScore } from "@/lib/savedScore.server";
+import { withLiveListingFor } from "@/lib/ownerListing.server";
 
 export interface WebsitePageData {
   businessName: string | null;
@@ -55,6 +56,8 @@ export interface WebsitePageData {
   openingHoursPeriods: OpeningHoursPeriod[] | null;
   rating: number | null;
   reviewCount: number | null;
+  /** Google couldn't be read for this page (Day 23 2d-2). */
+  liveUnavailable?: boolean;
   /** Real Google-listed website, if any — used only to detect whether
    * this business already has one; never overwritten by this page. */
   website: string | null;
@@ -228,7 +231,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      `name, address, category, primary_type, business_type_override, biz_type_resolved, phone, opening_hours, opening_hours_periods, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, price_level, place_id, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng, ${V112_SCORING_COLUMNS}`
+      `name, address, category, primary_type, business_type_override, biz_type_resolved, listing_mode, phone, opening_hours, opening_hours_periods, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, price_level, place_id, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng, ${V112_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();
@@ -301,6 +304,8 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   );
 
   const builderOffer = buildBuilderOffer(hasWebsite, realWebsiteScore, templateWebsiteScore);
+  // Day 23 2d-2: Google's values shown here are read now (lib/ownerListing.ts).
+  const live = await withLiveListingFor(supabase, businessId, data as typeof data & { listing_mode?: string | null });
 
   return {
     status: "ok",
@@ -313,18 +318,19 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       businessTypeOverride: data.business_type_override,
       bizTypeResolved: data.biz_type_resolved ?? null,
       language: data.language,
-      phone: data.phone,
-      openingHours: data.opening_hours,
-      openingHoursPeriods: data.opening_hours_periods,
-      rating: data.rating,
-      reviewCount: data.review_count,
+      phone: live.phone ?? null,
+      openingHours: live.opening_hours ?? null,
+      openingHoursPeriods: live.opening_hours_periods ?? null,
+      rating: live.rating ?? null,
+      reviewCount: live.review_count ?? null,
+      liveUnavailable: live.live_unavailable === true,
       website: data.website,
       verifiedWebsiteUrl,
       gradedSite,
       googleListingMissingWebsiteSince: data.google_listing_missing_website_since,
       googleListingWebsiteRemovedSince: data.google_listing_website_removed_since,
       googleListingLastKnownWebsiteAt: data.google_listing_last_known_website_at,
-      googleMapsUri: data.google_maps_uri,
+      googleMapsUri: live.google_maps_uri ?? null,
       websiteAnalysis: realInput.websiteAnalysis,
       websiteCategory,
       scoreBasis: scoreBasisPoints(realBreakdown.categories),

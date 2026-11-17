@@ -14,6 +14,7 @@ import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { normalizeLocale } from "@/lib/i18n";
 import { withSavedScore } from "@/lib/savedScore";
 import { latestSavedScore } from "@/lib/savedScore.server";
+import { withLiveListingFor } from "@/lib/ownerListing.server";
 
 export interface ReviewsPageData {
   businessName: string | null;
@@ -30,6 +31,8 @@ export interface ReviewsPageData {
   placeId: string | null;
   rating: number | null;
   reviewCount: number | null;
+  /** Google couldn't be read for this page (Day 23 2d-2): rating and count are empty. */
+  liveUnavailable?: boolean;
   /** The real "Visibility & Reputation" category from a live
    * scoreBusiness() run — rating, review count, review recency, with
    * their actual earned/max points and confidence. Never re-derived or
@@ -78,7 +81,7 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      `name, address, category, primary_type, business_type_override, biz_type_resolved, place_id, rating, review_count, phone, opening_hours, website, categories, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language, lat, lng, ${V112_SCORING_COLUMNS}`
+      `name, address, category, primary_type, business_type_override, biz_type_resolved, place_id, listing_mode, rating, review_count, phone, opening_hours, website, categories, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language, lat, lng, ${V112_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();
@@ -112,6 +115,7 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
   }
 
   const gbpStatus = await getGbpConnectionStatus(businessId);
+  const live = await withLiveListingFor(supabase, businessId, { place_id: row.place_id, listing_mode: (data as { listing_mode?: string | null }).listing_mode ?? null, rating: row.rating, review_count: row.review_count });
 
   return {
     status: "ok",
@@ -123,8 +127,10 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
       language: row.language,
       timeZone: row.time_zone,
       placeId: row.place_id,
-      rating: row.rating,
-      reviewCount: row.review_count,
+      // Day 23 2d-2: as Google shows them now (lib/ownerListing.ts).
+      rating: live.rating ?? null,
+      reviewCount: live.review_count ?? null,
+      liveUnavailable: live.live_unavailable === true,
       visibilityCategory,
       gbpConnected: gbpStatus.status === "ok" && gbpStatus.connected,
       verifiedSocials: verifiedSocialProfiles(row.website_analysis_json),

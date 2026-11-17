@@ -173,7 +173,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     scored.business.name,
     summaryResult.business.biz_type_resolved
   );
-  const input = businessRowToScoringInput(scored.business);
+  const input = businessRowToScoringInput(scored.scoringBusiness ?? scored.business);
   const { breakdown, suggestions } = scored.result;
 
   // The action plan and the competitor scan → growth signals are

@@ -107,13 +107,13 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
     );
   }
 
-  const input = businessRowToScoringInput(scored.business);
+  const input = businessRowToScoringInput(scored.scoringBusiness ?? scored.business);
   // "Connect Google" joins the Growth recap while it isn't connected.
   const gbpEarly = await gbpPromise;
   const connectGoogle = canConnectGbp() && !(gbpEarly.status === "ok" && gbpEarly.connected);
   const [actionPlanResult, growthMovesResult, checklistStateResult, lastScanAt, gbpStatus, recheckStatus, benchmark] = await Promise.all([
     getActionPlan(params.id, input, scored.result.breakdown, scored.result.suggestions, locale, {
-      businessRow: scored.business,
+      businessRow: scored.scoringBusiness ?? scored.business,
       businessName: business.name ?? "Your business",
       googleMapsUri: scored.business.google_maps_uri ?? null,
       profileId: profile.id,

@@ -129,8 +129,8 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
     getGbpConnectionStatus(params.id),
     // The same plan the Growth page shows — Top recommendations are its
     // biggest open items.
-    getActionPlan(params.id, businessRowToScoringInput(scored.business), scored.result.breakdown, scored.result.suggestions, locale, {
-      businessRow: scored.business,
+    getActionPlan(params.id, businessRowToScoringInput(scored.scoringBusiness ?? scored.business), scored.result.breakdown, scored.result.suggestions, locale, {
+      businessRow: scored.scoringBusiness ?? scored.business,
       businessName: scored.business.name ?? "Your business",
       googleMapsUri: scored.business.google_maps_uri ?? null,
       profileId: profile.id,

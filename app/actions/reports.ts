@@ -134,7 +134,7 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
     gbpStatus,
     { data: lastReport },
   ] = await Promise.all([
-    supabase.from("businesses").select("name, monthly_report_enabled, language, lat, lng, rating, review_count").eq("id", businessId).single(),
+    supabase.from("businesses").select("name, monthly_report_enabled, language, lat, lng, place_id, listing_mode, rating, review_count").eq("id", businessId).single(),
     supabase
       .from("scores")
       .select(`id, total, grade, created_at, profile_snapshot_json, scoring_version, ${FP_KEY_COLUMN}, scan_kind:breakdown_json->>scanKind, breakdown_categories:breakdown_json->categories`)
@@ -203,7 +203,11 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
       current,
       scoreDelta: current.total - previous.total,
       daysBetween: calendarDaysAgo(previous.created_at, new Date(current.created_at), timeZone),
-      changes: describeScanChanges(summary.records, locale, { rating: business.rating, reviewCount: business.review_count }),
+      // Today's values as Google shows them now (Day 23 2d-2).
+      changes: describeScanChanges(summary.records, locale, await (async () => {
+        const live = await (await import("@/lib/ownerListing.server")).withLiveListingFor(supabase, businessId, business);
+        return { rating: live.rating ?? null, reviewCount: live.review_count ?? null };
+      })()),
       summary,
       changesUnavailable: !summary.available,
     };

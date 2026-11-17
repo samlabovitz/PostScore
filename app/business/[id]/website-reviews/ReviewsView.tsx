@@ -32,6 +32,7 @@ import { LockedPreview } from "@/components/plan/LockedPreview";
 import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 import type { ReplyDraftStatus } from "@/app/actions/reviewReplies";
 import { GbpReplyCheckConnect, type GbpReplyCheckState } from "@/components/gbp/GbpReplyCheckConnect";
+import { LiveUnavailableNote } from "@/components/LiveUnavailableNote";
 
 function StatCard({
   icon: Icon,
@@ -225,6 +226,7 @@ export function ReviewsView({
       <CounterTools plan={plan} />
 
       <div>
+        {reviews.liveUnavailable && <LiveUnavailableNote />}
         <ReviewSocialProof rating={reviews.rating} reviewCount={reviews.reviewCount} />
         <ReviewGapLine goal={nearby?.goal ?? null} group={nearby?.group ?? null} />
       </div>

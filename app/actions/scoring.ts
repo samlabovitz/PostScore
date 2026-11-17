@@ -28,6 +28,7 @@ import { changesAcross, type GbpPhotoTimes, type GbpReviewTimes, type ScanChange
 import { breakdownWithoutQuotes } from "@/lib/breakdownStorage";
 import { sameTotal, savedScoreMatches, withSavedScore } from "@/lib/savedScore";
 import { latestSavedScore } from "@/lib/savedScore.server";
+import { withLiveListing, type LiveListing } from "@/lib/ownerListing";
 import { FP_KEY_COLUMN, loadScanChangeRecords } from "@/lib/scanChanges.server";
 import { saveBusinessWithClient } from "@/app/actions/businesses";
 import { DEFAULT_LOCALE, normalizeLocale, t, type Locale } from "@/lib/i18n";
@@ -35,6 +36,11 @@ import { findLastKnownWebsiteDate, resolveListingWebsite } from "@/lib/googleLis
 
 export interface BusinessRecord extends BusinessScoringRow {
   id: string;
+  listing_mode?: string | null;
+  /** Day 23 2d-2: Google couldn't be read for this page — its values are empty (lib/ownerListing.ts). */
+  live_unavailable?: boolean;
+  /** Where this page's Google values came from. */
+  live_source?: "business_profile" | "places";
   /** The site the owner confirmed with "Wrong site?" (lib/ownerWebsite.server.ts). */
   owner_website_url?: string | null;
   /** Google's place id (null for a website-only business). */
@@ -79,7 +85,14 @@ export interface BusinessRecord extends BusinessScoringRow {
 }
 
 export type ScoreBusinessResult =
-  | { status: "ok"; business: BusinessRecord; result: ScoreWithSuggestions }
+  | {
+      status: "ok";
+      /** What the page shows: Google's values as read now (Day 23 2d-2, scoreForDisplayWithClient). */
+      business: BusinessRecord;
+      result: ScoreWithSuggestions;
+      /** The row the score and the plan's estimates were worked out from (defaults to `business`). */
+      scoringBusiness?: BusinessRecord;
+    }
   | { status: "not_found" }
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
@@ -127,13 +140,25 @@ export async function scoreForDisplayWithClient(
 ): Promise<ScoreBusinessResult> {
   const [scored, saved] = await Promise.all([scoreBusinessWithClient(supabase, businessId, locale), latestSavedScore(supabase, businessId)]);
   if (scored.status !== "ok") return scored;
+  // Day 23 2d-2: Google's values shown on the page are read now (Business
+  // Profile when connected, else one Places read per visit), never the
+  // saved columns.
+  const live = await liveListingFor(supabase, businessId, scored.business);
+  const business = withLiveListing(scored.business, live);
   const now = scored.result.breakdown;
   const shown = withSavedScore(now, saved);
-  if (savedScoreMatches(now, shown)) return { ...scored, result: { ...scored.result, breakdown: shown } };
+  const scoringBusiness = scored.business;
+  if (savedScoreMatches(now, shown)) return { ...scored, business, scoringBusiness, result: { ...scored.result, breakdown: shown } };
   // Same total and grade, points moved between checks (e.g. a mobile speed
   // measurement aged out): today's breakdown, as before — no new scan.
   if (saved && options.save !== false && !sameTotal(now, saved)) await syncScoreSnapshotWithClient(supabase, businessId);
-  return scored;
+  return { ...scored, business, scoringBusiness };
+}
+
+/** The owner's listing as Google shows it now (lib/ownerListing.server.ts). */
+async function liveListingFor(supabase: SupabaseClient, businessId: string, row: { place_id?: string | null; listing_mode?: string | null }): Promise<LiveListing> {
+  const { liveListingForRow } = await import("@/lib/ownerListing.server");
+  return liveListingForRow(supabase, businessId, row);
 }
 
 /**
@@ -158,7 +183,7 @@ export async function scoreBusinessWithClient(
   const { data: business, error } = await supabase
     .from("businesses")
     .select(
-      `id, place_id, name, address, phone, website, rating, review_count, category, categories, primary_type, business_type_override, biz_type_resolved, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng, ${V112_SCORING_COLUMNS}`
+      `id, place_id, listing_mode, name, address, phone, website, rating, review_count, category, categories, primary_type, business_type_override, biz_type_resolved, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng, ${V112_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();

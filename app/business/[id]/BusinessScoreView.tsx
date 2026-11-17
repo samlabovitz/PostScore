@@ -51,6 +51,7 @@ import { GbpReplyCheckConnect, type GbpReplyCheckState } from "@/components/gbp/
 import type { ReplyDraftStatus } from "@/app/actions/reviewReplies";
 import type { Plan } from "@/lib/plan";
 import type { ServiceOptions } from "@/lib/google/places";
+import { LiveUnavailableNote } from "@/components/LiveUnavailableNote";
 
 
 
@@ -215,6 +216,7 @@ export function BusinessScoreView({
     return (
       <div data-testid="free-overview" className="flex flex-col gap-5 nav:gap-6">
         <ClosedListingBanner businessId={businessId} status={business.business_status} archived={archived} />
+        {business.live_unavailable && <LiveUnavailableNote />}
         <PlatformLinkCard variant="alert" businessId={businessId} website={business.website ?? null} premium={false} connected={gbpConnected} />
         {showHackedBanner && <HackedSiteBanner href={`/business/${businessId}/website#check-security`} />}
 
@@ -295,6 +297,7 @@ export function BusinessScoreView({
   return (
     <div className="flex flex-col gap-5 nav:gap-6">
       <ClosedListingBanner businessId={businessId} status={business.business_status} archived={archived} />
+      {business.live_unavailable && <LiveUnavailableNote />}
       <PlatformLinkCard variant="alert" businessId={businessId} website={business.website ?? null} premium={plan === "premium" || plan === "multi"} connected={gbpConnected} />
       {showHackedBanner && <HackedSiteBanner href={`/business/${businessId}/website#check-security`} />}
 

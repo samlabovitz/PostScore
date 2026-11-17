@@ -895,3 +895,33 @@ export async function getPlaceLive(placeId: string, fetchImpl: typeof fetch = fe
   const data = (await outcome.res.json().catch(() => null)) as RawLivePlace | null;
   return data ? liveValuesFrom(data) : null;
 }
+
+/** Day 23 2d-2: the owner's own listing, read live when a page is shown
+ * (Place Details Enterprise, the cheapest SKU with the rating and review
+ * count) — the values every owner page shows next to our results. */
+export const OWNER_LISTING_FIELD_MASK = [
+  "id",
+  "rating",
+  "userRatingCount",
+  "nationalPhoneNumber",
+  "internationalPhoneNumber",
+  "websiteUri",
+  "regularOpeningHours.weekdayDescriptions",
+  "regularOpeningHours.periods",
+  "businessStatus",
+  "googleMapsUri",
+  "photos",
+].join(",");
+
+/** The owner's listing now. One attempt; null on any failure. */
+export async function getOwnerListingLive(placeId: string, fetchImpl: typeof fetch = fetch): Promise<PlaceDetails | null> {
+  const outcome = await fetchPlacesOnce(
+    `${PLACES_API_BASE}/places/${encodeURIComponent(placeId)}`,
+    { headers: { "X-Goog-Api-Key": getApiKey(), "X-Goog-FieldMask": OWNER_LISTING_FIELD_MASK }, cache: "no-store" },
+    fetchImpl,
+    LIVE_TIMEOUT_MS
+  );
+  if (outcome.kind !== "ok") return null;
+  const data = (await outcome.res.json().catch(() => null)) as RawDetailsPlace | null;
+  return data && typeof data.id === "string" ? normalizeDetails(data) : null;
+}
