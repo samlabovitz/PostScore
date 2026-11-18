@@ -4631,6 +4631,7 @@ export type MessageKey =
   | "dashboard.rescan.stale"
   | "dashboard.rescan.nextAvailable"
   | "dashboard.rescan.scanning"
+  | "dashboard.rescan.inProgress"
   | "dashboard.rescan.toastScore"
   | "dashboard.rescan.toastScoreFirst"
   | "dashboard.rescan.toastChecks.one"
@@ -10976,6 +10977,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.rescan.stale": "Scanned {count} days ago — re-scan for current results",
     "dashboard.rescan.nextAvailable": "Next re-scan available {time}",
     "dashboard.rescan.scanning": "Scanning your listing, website and reviews… about 30–60 seconds",
+    "dashboard.rescan.inProgress": "A scan is already running for this business — it finishes on its own.",
     "dashboard.rescan.toastScore": "Score {before} → {after}",
     "dashboard.rescan.toastScoreFirst": "Score {after}",
     "dashboard.rescan.toastChecks.one": "1 check changed",
@@ -17328,6 +17330,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.rescan.stale": "Escaneado hace {count} días — vuelva a escanear para ver resultados actuales",
     "dashboard.rescan.nextAvailable": "Próximo escaneo disponible: {time}",
     "dashboard.rescan.scanning": "Escaneando su ficha, su sitio web y sus reseñas… unos 30 a 60 segundos",
+    "dashboard.rescan.inProgress": "Ya hay un análisis en curso para este negocio; terminará por sí solo.",
     "dashboard.rescan.toastScore": "Puntuación {before} → {after}",
     "dashboard.rescan.toastScoreFirst": "Puntuación {after}",
     "dashboard.rescan.toastChecks.one": "1 revisión cambió",

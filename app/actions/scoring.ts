@@ -498,6 +498,8 @@ export type RescanBusinessResult =
       summary?: RescanSummary;
     }
   | { status: "too_soon"; nextAvailableAt: string; limit?: "daily" | "weekly" }
+  /** A re-scan (or competitor refresh) is already starting or running for this business. */
+  | { status: "in_progress" }
   | { status: "not_found" }
   | { status: "unauthenticated" }
   | { status: "no_results" }
@@ -572,6 +574,20 @@ export async function rescanBusiness(businessId: string): Promise<RescanBusiness
     return { status: "unauthenticated" };
   }
 
+  // A double click (or a second tab) while a run is starting or running is
+  // ignored — never a second paid scan (lib/scanRunGuard.ts).
+  const { claimScanRun } = await import("@/lib/scanRunGuard.server");
+  const run = await claimScanRun(businessId);
+  if (!run.claimed) return { status: "in_progress" };
+  try {
+    return await rescanClaimed(supabase, businessId);
+  } finally {
+    await run.release().catch(() => undefined);
+  }
+}
+
+/** rescanBusiness once this business's scan run is claimed. */
+async function rescanClaimed(supabase: ReturnType<typeof createClient>, businessId: string): Promise<RescanBusinessResult> {
   // One re-scan per business per 24 hours, and on Free one owner re-scan
   // per 7 days (lib/rescanPolicy.ts rescanGate) — checked before any paid
   // call. Website-only re-checks don't count.

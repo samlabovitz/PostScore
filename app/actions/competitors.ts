@@ -294,6 +294,8 @@ export async function getCompetitorsWithClient(
 export type SaveCompetitorScanResult =
   | { status: "saved"; scanId: string; placesCalls?: number }
   | { status: "too_soon"; nextAvailableAt: string }
+  /** A re-scan or refresh is already starting or running for this business. */
+  | { status: "in_progress" }
   /** This month's Places search allowance (PLACES_SEARCH_MONTHLY_CAP) is used up. */
   | { status: "capped"; nextAvailableAt: string }
   | { status: "no_data" }
@@ -513,6 +515,20 @@ export async function refreshCompetitors(businessId: string): Promise<SaveCompet
   if (!user) {
     return { status: "unauthenticated" };
   }
+  // A double click (or a second tab) while a run is starting or running is
+  // ignored — never a second paid scan (lib/scanRunGuard.ts).
+  const { claimScanRun } = await import("@/lib/scanRunGuard.server");
+  const run = await claimScanRun(businessId);
+  if (!run.claimed) return { status: "in_progress" };
+  try {
+    return await refreshClaimed(supabase, businessId);
+  } finally {
+    await run.release().catch(() => undefined);
+  }
+}
+
+/** refreshCompetitors once this business's scan run is claimed. */
+async function refreshClaimed(supabase: SupabaseClient, businessId: string): Promise<SaveCompetitorScanResult> {
   // Free keeps its saved list and rank; refreshing (Places searches) is
   // Grow — except when the latest scan came back with NO competitors (or
   // there's none yet): then Free may search again right away.

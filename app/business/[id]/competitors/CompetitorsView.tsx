@@ -345,12 +345,20 @@ function RefreshButton({ businessId, allowed, label }: { businessId: string; all
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const upgrade = useUpgrade();
+  // A second click while the first is starting or running does nothing
+  // (the server ignores a second request as well).
+  const busy = useRef(false);
 
   function run() {
+    if (busy.current) return;
+    busy.current = true;
     setMessage(null);
     startTransition(async () => {
-      const result = await refreshCompetitors(businessId);
+      const result = await refreshCompetitors(businessId).finally(() => {
+        busy.current = false;
+      });
       if (result.status === "saved") router.refresh();
+      else if (result.status === "in_progress") setMessage(t(locale, "dashboard.rescan.inProgress"));
       else if (result.status === "too_soon")
         setMessage(t(locale, "dashboard.competitors.availableAgain", { date: formatShortDate(result.nextAvailableAt, locale, timeZone) }));
       else if (result.status === "capped") setMessage(t(locale, "dashboard.niche.capped", { date: formatShortDate(result.nextAvailableAt, locale, timeZone) }));

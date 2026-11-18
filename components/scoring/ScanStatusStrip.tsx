@@ -7,7 +7,7 @@
 // days (amber). `now` comes from the server so the server and browser
 // render the same words (no hydration mismatch).
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconInfoCircle, IconRefresh } from "@tabler/icons-react";
 import { rescanBusiness, type RescanSummary } from "@/app/actions/scoring";
@@ -101,6 +101,8 @@ type RescanState =
   | { kind: "scanning" }
   | { kind: "done"; message: string }
   | { kind: "error"; message: string }
+  /** Another run is already starting or running — not an error. */
+  | { kind: "info"; message: string }
   | { kind: "too_soon"; at: string; weekly: boolean };
 
 /** The Re-scan action and its honest outcome, shared by the strip and
@@ -112,8 +114,21 @@ export function useRescan(businessId: string, lastScanAt: string | null, now: st
   const router = useRouter();
   const availability = rescanAvailability(lastScanAt, new Date(now));
   const [state, setState] = useState<RescanState>({ kind: "idle" });
+  // A second click while the first is starting or running does nothing
+  // (the button disables too; the server ignores a second request as well).
+  const busy = useRef(false);
 
   async function run() {
+    if (busy.current) return;
+    busy.current = true;
+    try {
+      await runOnce();
+    } finally {
+      busy.current = false;
+    }
+  }
+
+  async function runOnce() {
     setState({ kind: "scanning" });
     const result = await rescanBusiness(businessId);
     if (result.status === "ok") {
@@ -123,6 +138,8 @@ export function useRescan(businessId: string, lastScanAt: string | null, now: st
       router.refresh();
     } else if (result.status === "too_soon") {
       setState({ kind: "too_soon", at: result.nextAvailableAt, weekly: result.limit === "weekly" });
+    } else if (result.status === "in_progress") {
+      setState({ kind: "info", message: t(locale, "dashboard.rescan.inProgress") });
     } else if (result.status === "no_results") {
       setState({ kind: "error", message: t(locale, "dashboard.overview.rescanNoResultsError") });
     } else if (result.status === "error") {
@@ -188,6 +205,7 @@ export function RescanMessages({ state }: { state: RescanState }) {
   if (state.kind === "scanning") return <p className="text-[12.5px] font-medium text-ink" role="status">{t(locale, "dashboard.rescan.scanning")}</p>;
   if (state.kind === "done") return <p className="text-[12.5px] font-semibold text-green" role="status">{state.message}</p>;
   if (state.kind === "error") return <p className="text-[12.5px] text-red">{state.message}</p>;
+  if (state.kind === "info") return <p className="text-[12.5px] text-ink-soft" role="status">{state.message}</p>;
   return null;
 }
 
