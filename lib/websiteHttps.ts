@@ -21,6 +21,9 @@ import { classifyUnreachableResponse, moreSpecificReason, type ReachabilityFailu
  * succeeded moments later. Still short enough that a truly dead site
  * can't hang a save for long. */
 const TIMEOUT_MS = 8000;
+/** v1.17.0: the retry after a timeout waits longer — a slow site gets a
+ * real second chance before "couldn't verify". */
+const RETRY_TIMEOUT_MS = 20000;
 
 /** One retry when (and only when) the first attempt specifically timed
  * out (see PROBE_RETRY_DELAY_MS) — a timeout is the one outcome that
@@ -41,6 +44,12 @@ function withScheme(website: string, scheme: "https" | "http"): string {
   return `${scheme}://${withoutScheme}`;
 }
 
+/** The address that answered is https:// (the request's own, when the
+ * response doesn't say). */
+export function answeredOverHttps(responseUrl: string | undefined, requestedUrl: string): boolean {
+  return (responseUrl || requestedUrl).toLowerCase().startsWith("https://");
+}
+
 type ProbeOutcome =
   | { kind: "ok"; finalUrl: string }
   | { kind: "failed"; reason: ReachabilityFailureReason };
@@ -52,9 +61,9 @@ type ProbeOutcome =
  * error (DNS failure, connection refused, TLS error — real evidence of
  * a problem), or "blocked_automated_check"/"http_error" for a real
  * response that wasn't `ok` (see classifyUnreachableResponse). */
-async function probeOnce(url: string, fetchImpl: typeof fetch): Promise<ProbeOutcome> {
+async function probeOnce(url: string, fetchImpl: typeof fetch, timeoutMs: number = TIMEOUT_MS): Promise<ProbeOutcome> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetchImpl(url, {
       method: "GET",
@@ -63,6 +72,10 @@ async function probeOnce(url: string, fetchImpl: typeof fetch): Promise<ProbeOut
       headers: { "User-Agent": POSTSCORE_USER_AGENT },
     });
     if (res.ok) return { kind: "ok", finalUrl: res.url };
+    // v1.17.0: any real answer over https:// — a bot block's 403 included
+    // (the real Rainbow Records case) — proves the site's certificate
+    // works: fetch refuses a bad one before any status comes back.
+    if (answeredOverHttps(res.url, url)) return { kind: "ok", finalUrl: res.url || url };
     let bodySnippet: string | null = null;
     try {
       bodySnippet = (await res.text()).slice(0, BODY_SNIPPET_BYTES);
@@ -83,7 +96,7 @@ async function probeOnce(url: string, fetchImpl: typeof fetch): Promise<ProbeOut
 async function probe(url: string, fetchImpl: typeof fetch): Promise<ProbeOutcome> {
   let last: ProbeOutcome = { kind: "failed", reason: "down" };
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    last = await probeOnce(url, fetchImpl);
+    last = await probeOnce(url, fetchImpl, attempt === 1 ? TIMEOUT_MS : RETRY_TIMEOUT_MS);
     if (last.kind === "ok" || last.reason !== "timed_out") return last;
     if (attempt < MAX_ATTEMPTS) {
       await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));

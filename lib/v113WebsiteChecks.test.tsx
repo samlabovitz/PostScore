@@ -207,7 +207,7 @@ describe("3 — “Works well on phones” and the speed check, Website still 30
 
 describe("v1.13.0", () => {
   test("SCORING_VERSION is 1.15.0 and the 1.13.0 split is on", () => {
-    expect(SCORING_VERSION).toBe("1.16.0");
+    expect(SCORING_VERSION).toBe("1.17.0");
     expect(SCORING_V113).toBe(true);
   });
 

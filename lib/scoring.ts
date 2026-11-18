@@ -74,7 +74,15 @@ import { socialIconCount, socialLinkProblems, URGENT_LINK_KINDS, type LinkCheckR
 // typical 6 s+); "Works well on phones" always 1; "Uses HTTPS" 6 → 5; new
 // "No broken links or dead pages" (4); Social links only asks "do you
 // link to profiles" and a broken menu link no longer costs Services.
-export const SCORING_VERSION = "1.16.0";
+// 1.16.0: one borderline speed test (3–12 s) waits for a second.
+// 1.17.0: a website more than half of whose checks couldn't run earns at
+// most 80% of its points ("Partly checked").
+export const SCORING_VERSION = "1.17.0";
+
+/** v1.17.0: the partly-checked Website cap is on from this version. */
+export const PARTLY_CHECKED_CAP_FROM = "1.17.0";
+/** v1.17.0: a partly checked Website earns at most this share of its points. */
+export const PARTLY_CHECKED_CAP = 0.8;
 
 /** v1.16.0: "Loads in a reasonable time" needs two successful phone tests
  * within 30 days (lib/speedSmoothing.ts speedMeasurementCount) — on from
@@ -1091,6 +1099,12 @@ export interface CategoryResult {
    */
   relativeScore: number | null;
   checks: CheckResult[];
+  /** v1.17.0: the Website category, when more than half of its checks
+   * couldn't run — its points are capped at PARTLY_CHECKED_CAP. */
+  partlyChecked?: boolean;
+  /** v1.17.0: the Website category of a site that blocks automated checks
+   * (siteBlocksAutomatedChecks) — the Website page's "allow PostScoreBot" note. */
+  blocksAutomatedChecks?: boolean;
 }
 
 export interface ScoreBreakdown {
@@ -2468,7 +2482,9 @@ export const CHECKS: CheckDefinition[] = [
         return {
           earnedPoints: SCORING_V115 ? 5 : 6,
           confidence: "VERIFIED",
-          explanation: t(locale, "content.checks.website.https.explanation.https"),
+          // v1.17.0: a site that blocks automated checks answered over
+          // HTTPS (its block page proves the certificate) — never "loads".
+          explanation: t(locale, siteBlocksAutomatedChecks(input) ? "content.checks.website.https.explanation.httpsBlocked" : "content.checks.website.https.explanation.https"),
         };
       }
       if (input.httpsStatus === "http_only") {
@@ -3783,7 +3799,9 @@ export function scoreBusiness(input: BusinessScoringInput, locale: Locale = DEFA
     };
   });
 
-  return breakdownFromChecks(checks, locale, version);
+  const breakdown = breakdownFromChecks(checks, locale, version);
+  if (!hasAnalyzableWebsite(input) || !siteBlocksAutomatedChecks(input)) return breakdown;
+  return { ...breakdown, categories: breakdown.categories.map((c) => (c.id === "website" ? { ...c, blocksAutomatedChecks: true } : c)) };
 }
 
 /** Categories and the 0–100 total from a set of check results — the one
@@ -3819,13 +3837,27 @@ export function unroundedTotal(categories: Array<Pick<CategoryResult, "id" | "we
   return (totalEarnedWeight / totalPossibleWeight) * 100;
 }
 
+/** v1.17.0: more than half of a real website's checks couldn't run (a
+ * site that blocks automated checks, the real Rainbow Records case). Never
+ * for a business with no website, and never counting a check only waiting
+ * for a second speed test or one no scan has looked at yet. */
+export function websiteMostlyUnchecked(checks: Array<Pick<CheckResult, "id" | "earnedPoints" | "meta" | "excludedReason">>): boolean {
+  const hasWebsite = checks.find((c) => c.id === "website.has_website");
+  if (!hasWebsite || !(hasWebsite.earnedPoints !== null && hasWebsite.earnedPoints > 0)) return false;
+  const counted = checks.filter((c) => c.excludedReason !== "not_checked_yet" && c.meta?.noScoreCause !== "one_test");
+  const couldntRun = counted.filter((c) => c.earnedPoints === null).length;
+  return couldntRun * 2 > counted.length;
+}
+
 export function breakdownFromChecks(checks: CheckResult[], locale: Locale = DEFAULT_LOCALE, version: string = SCORING_VERSION): ScoreBreakdown {
   const categories: CategoryResult[] = (Object.keys(CATEGORY_WEIGHTS) as CategoryId[]).map(
     (categoryId) => {
       const categoryChecks = checks.filter((c) => c.category === categoryId);
       const determinable = categoryChecks.filter((c) => isDeterminable(c.confidence));
       const possiblePoints = determinable.reduce((sum, c) => sum + c.maxPoints, 0);
-      const earnedPoints = determinable.reduce((sum, c) => sum + (c.earnedPoints ?? 0), 0);
+      const checkedPoints = determinable.reduce((sum, c) => sum + (c.earnedPoints ?? 0), 0);
+      const partlyChecked = categoryId === "website" && versionAtLeast(version, PARTLY_CHECKED_CAP_FROM) && websiteMostlyUnchecked(categoryChecks);
+      const earnedPoints = partlyChecked ? Math.min(checkedPoints, roundTo(possiblePoints * PARTLY_CHECKED_CAP, 1)) : checkedPoints;
       return {
         id: categoryId,
         label: t(locale, CATEGORY_LABELS[categoryId]),
@@ -3833,6 +3865,7 @@ export function breakdownFromChecks(checks: CheckResult[], locale: Locale = DEFA
         possiblePoints,
         earnedPoints,
         relativeScore: possiblePoints > 0 ? (earnedPoints / possiblePoints) * 100 : null,
+        ...(partlyChecked ? { partlyChecked: true } : {}),
         checks: categoryChecks,
       };
     }

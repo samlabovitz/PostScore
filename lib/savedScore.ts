@@ -80,7 +80,7 @@ export function withSavedScore(now: ScoreBreakdown, saved: SavedScoreRow | null,
     const sc = savedCategory.get(c.id);
     return {
       ...c,
-      ...(sc ? { weight: sc.weight, possiblePoints: sc.possiblePoints, earnedPoints: sc.earnedPoints, relativeScore: sc.relativeScore } : {}),
+      ...(sc ? { weight: sc.weight, possiblePoints: sc.possiblePoints, earnedPoints: sc.earnedPoints, relativeScore: sc.relativeScore, partlyChecked: sc.partlyChecked === true ? true : undefined } : {}),
       checks: c.checks.map(check),
     };
   });
@@ -92,17 +92,22 @@ export function withSavedScore(now: ScoreBreakdown, saved: SavedScoreRow | null,
  * for, when the newer rules don't change that business. v1.16.0 only adds
  * the speed rule ("one test so far"): a 1.15.0 scan stands until the next
  * real scan — unless the rule applies to it (those were re-scored as
- * "PostScore updated how it scores", Day 23).
+ * "PostScore updated how it scores", Day 23). v1.17.0 only adds the
+ * partly-checked Website cap: 1.16.0 and 1.15.0 scans stand unless the cap
+ * applies (or, for a 1.15.0 scan, the speed rule).
  */
-const STANDS_IN_FOR: Record<string, { versions: string[]; unless: (now: ScoreBreakdown) => boolean }> = {
-  "1.16.0": { versions: ["1.15.0"], unless: (now) => now.checks.some((c) => c.meta?.noScoreCause === "one_test") },
+const oneTestSoFar = (now: ScoreBreakdown) => now.checks.some((c) => c.meta?.noScoreCause === "one_test");
+const websitePartlyChecked = (now: ScoreBreakdown) => now.categories.some((c) => c.id === "website" && c.partlyChecked === true);
+const STANDS_IN_FOR: Record<string, { versions: string[]; unless: (now: ScoreBreakdown, savedVersion: string) => boolean }> = {
+  "1.16.0": { versions: ["1.15.0"], unless: (now) => oneTestSoFar(now) },
+  "1.17.0": { versions: ["1.16.0", "1.15.0"], unless: (now, saved) => websitePartlyChecked(now) || (saved === "1.15.0" && oneTestSoFar(now)) },
 };
 
 /** Whether a saved scan of `savedVersion` can stand in for `now`'s version. */
 export function savedVersionStandsIn(savedVersion: string | null, now: ScoreBreakdown): boolean {
   if (savedVersion === now.scoringVersion) return true;
   const rule = STANDS_IN_FOR[now.scoringVersion];
-  return !!savedVersion && !!rule && rule.versions.includes(savedVersion) && !rule.unless(now);
+  return !!savedVersion && !!rule && rule.versions.includes(savedVersion) && !rule.unless(now, savedVersion);
 }
 
 /** The same total, grade and scoring version as the saved scan — what

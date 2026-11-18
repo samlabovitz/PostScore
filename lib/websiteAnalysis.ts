@@ -36,7 +36,7 @@ import type {
   WebsiteContentSignals,
   WebsiteTrustAnalysis,
 } from "./scoring";
-import { classifyUnreachableResponse, moreSpecificReason, type ReachabilityFailureReason } from "./websiteReachability";
+import { classifyUnreachableResponse, looksLikeBotChallenge, moreSpecificReason, type ReachabilityFailureReason } from "./websiteReachability";
 import {
   ABOUT_PAGE_KEYWORDS,
   ONLINE_ORDERING_LINK_KEYWORDS,
@@ -216,7 +216,11 @@ async function fetchHtmlOnce(url: string, fetchImpl: typeof fetch, timeoutMs: nu
     try {
       const buf = await res.arrayBuffer();
       const bytes = buf.byteLength > MAX_HTML_BYTES ? buf.slice(0, MAX_HTML_BYTES) : buf;
-      return { kind: "ok", html: new TextDecoder("utf-8").decode(bytes) };
+      const html = new TextDecoder("utf-8").decode(bytes);
+      // v1.17.0: a challenge page served as a success (AWS WAF's 202, the
+      // real Rainbow Records case) is a block, never the homepage.
+      if (looksLikeBotChallenge(html)) return { kind: "failed", reason: "blocked_automated_check", status: res.status };
+      return { kind: "ok", html };
     } catch {
       return { kind: "failed", reason: "http_error" };
     }
@@ -290,6 +294,23 @@ export async function fetchWebsiteHtml(
   // A bot block on either scheme outranks a 404 on the other — never
   // call a link missing when we were blocked.
   return { html: null, failureReason: worstReason ?? "down", missingPageStatus: worstReason === "http_error" ? missingPageStatus : null };
+}
+
+/** v1.17.0: an analyzed page with nothing on it to read — no title, no
+ * headings, almost no text and no contact or social links — that isn't a
+ * JavaScript-built shell (those are read another way). An unknown
+ * challenge page or an empty response: "couldn't read", never a 0. */
+export function isUnreadablePage(c: WebsiteContentSignals): boolean {
+  if (c.isLikelyClientRenderedShell) return false;
+  return (
+    !c.hasTitle &&
+    c.headingCount === 0 &&
+    c.visibleTextLength < 50 &&
+    !c.hasPhoneLink &&
+    !c.hasEmailLink &&
+    c.hasContactPageLink !== true &&
+    (c.socialProfiles ?? []).length === 0
+  );
 }
 
 /** A real internal page discovered on the homepage's nav or sitemap.xml,
@@ -454,6 +475,8 @@ async function fetchPresenceCandidateOnce(url: string, fetchImpl: typeof fetch):
     // type (text/xml, application/json, image/*, …) never is.
     if (contentType && !/text\/html|application\/xhtml\+xml/i.test(contentType)) return { kind: "not_html" };
     const html = await res.text();
+    // v1.17.0: a challenge page served as a success is a block, not the page.
+    if (looksLikeBotChallenge(html)) return { kind: "failed", reason: "blocked_automated_check" };
     return { kind: "ok", html };
   } catch (err) {
     const isTimeout = (err as { name?: string } | null)?.name === "AbortError";
@@ -2265,7 +2288,10 @@ export async function collectWebsiteAnalysis(
 
   // v1.11.0: each social link must lead to a real profile — one plain
   // request per link (lib/socialLinkCheck.ts), result saved per link.
-  const finalContent = rendered?.content ?? presenceHomeContent ?? content;
+  // v1.17.0: a page we read that holds nothing (no title, headings, text
+  // or contact links) is "couldn't read", never scored as missing all of it.
+  const readContent = rendered?.content ?? presenceHomeContent ?? content;
+  const finalContent = readContent && isUnreadablePage(readContent) ? null : readContent;
   const socialChecked =
     finalContent && (finalContent.socialProfiles ?? []).length > 0
       ? await checkSocialProfiles(finalContent.socialProfiles!, website, fetchImpl)

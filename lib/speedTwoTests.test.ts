@@ -120,9 +120,9 @@ describe("the check under the rule", () => {
     expect(speed(input(lab({ lcpSeconds: 2.1 }), [sample("2026-11-18T01:44:45Z"), { ...sample("2026-11-10T00:00:00Z"), lcpSeconds: 2.0, category: "FAST" }], true, 2.05)).earnedPoints).toBe(3);
   });
 
-  test("off until v1.16.0 ships (a dry run turns it on with POSTSCORE_SCORING_PREVIEW)", () => {
+  test("on since v1.16.0 shipped (a dry run turns it on with POSTSCORE_SCORING_PREVIEW)", () => {
     expect(SPEED_TWO_TESTS_FROM).toBe("1.16.0");
-    expect(SCORING_VERSION).toBe("1.16.0");
+    expect(SCORING_VERSION).toBe("1.17.0");
     expect(speed(input(lab(), [sample("2026-11-18T01:44:45Z")], false))).toMatchObject({ earnedPoints: 0, confidence: "VERIFIED" });
   });
 });

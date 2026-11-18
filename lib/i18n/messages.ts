@@ -1393,6 +1393,7 @@ export type MessageKey =
   | "content.checks.website.https.advice"
   | "content.checks.website.https.explanation.noWebsite"
   | "content.checks.website.https.explanation.https"
+  | "content.checks.website.https.explanation.httpsBlocked"
   | "content.checks.website.https.explanation.httpOnly"
   | "content.checks.website.https.explanation.unreachable"
   | "content.checks.website.https.explanation.notChecked"
@@ -1516,6 +1517,14 @@ export type MessageKey =
   | "content.checks.website.readViaBrowserNote"
   | "content.checks.website.trust.explanation.javascriptOnly"
   | "dashboard.website.partlyChecked"
+  | "dashboard.website.partlyCheckedPill"
+  | "dashboard.website.blockedNote"
+  | "dashboard.website.partlyCheckedCap"
+  | "content.actionPlan.allowBot.title"
+  | "content.actionPlan.allowBot.why"
+  | "content.actionPlan.allowBot.fix"
+  | "content.actionPlan.allowBot.linkCloudflare"
+  | "content.actionPlan.allowBot.linkAwsWaf"
   | "dashboard.website.partlyCheckedPoints"
   | "content.checks.website.performance_mobile.explanation.blockedSite"
   | "content.checks.website.performance_mobile.explanation.fieldBlockedSite"
@@ -7324,6 +7333,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.https.advice":
       'Move your website to HTTPS — browsers flag non-HTTPS sites as "not secure," which costs trust.',
     "content.checks.website.https.explanation.noWebsite": "Not applicable — no website on file to check.",
+    "content.checks.website.https.explanation.httpsBlocked": "The site answered securely over HTTPS (its security blocked our full check).",
     "content.checks.website.https.explanation.https":
       "Confirmed by a live check: the site loads successfully over HTTPS.",
     "content.checks.website.https.explanation.httpOnly":
@@ -8568,6 +8578,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.connectGoogle.why": "Unlocks your reply rate (\"Replying to reviews\") and an exact count of your recent reviews — Google otherwise shows PostScore only a few.",
     "content.actionPlan.connectGoogle.fix": "Sign in with the Google account that manages your Business Profile. PostScore only reads review counts — it never posts or changes anything.",
     "content.actionPlan.connectGoogle.link": "Connect Google",
+    "dashboard.website.partlyCheckedPill": "Partly checked",
+    "dashboard.website.blockedNote": "Your website's security blocks automated checks, so we could only check part of it. Ask your web person to allow PostScoreBot to see your full score.",
+    "dashboard.website.partlyCheckedCap": "While we can only check part of it, your website counts for at most 80% of its points.",
+    "content.actionPlan.allowBot.title": "Let PostScore check your whole website",
+    "content.actionPlan.allowBot.why": "Your website's security blocks automated checks, so we could only check part of it. Allowing PostScoreBot lets us see your full score.",
+    "content.actionPlan.allowBot.fix": "Ask your web person or hosting company to allow visits whose user agent contains \"PostScoreBot\". It only reads your public pages.\n• Cloudflare: Security → WAF → Custom rules → create a rule for User Agent contains \"PostScoreBot\" with the action Skip. Bot Fight Mode can't be skipped by a rule; if it's on, it may need to be turned off.\n• AWS WAF / CloudFront: in your web ACL, add a rule above the bot rules: User-Agent header contains \"PostScoreBot\" → Allow.\n• Wix, Squarespace, Shopify and similar: ask their support to allow the user agent \"PostScoreBot\".\nThen re-scan to see your full score.",
+    "content.actionPlan.allowBot.linkCloudflare": "Cloudflare custom rules",
+    "content.actionPlan.allowBot.linkAwsWaf": "AWS WAF rules",
     "content.actionPlan.step.hours": "About {hours} hr",
     "content.actionPlan.step.howToFix": "How to fix it",
     "content.actionPlan.link.editProfileHelp": "Google's help: edit your Business Profile",
@@ -13528,6 +13546,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.https.label": "Usa HTTPS",
     "content.checks.website.https.advice": "Migre su sitio web a HTTPS — los navegadores marcan los sitios sin HTTPS como \"no seguro\", lo que le resta confianza.",
     "content.checks.website.https.explanation.noWebsite": "No aplica — no hay ningún sitio web registrado para comprobar.",
+    "content.checks.website.https.explanation.httpsBlocked": "El sitio respondió de forma segura por HTTPS (su seguridad bloqueó nuestra revisión completa).",
     "content.checks.website.https.explanation.https": "Confirmado con una comprobación en vivo: el sitio carga correctamente por HTTPS.",
     "content.checks.website.https.explanation.httpOnly": "Confirmado con una comprobación en vivo: el sitio solo carga por HTTP — no se encontró un HTTPS funcional.",
     "content.checks.website.https.explanation.unreachable": "No se pudo verificar HTTPS — una comprobación en vivo de este sitio agotó el tiempo de espera, tuvo un error de red o fue bloqueada. Se excluye de su puntuación, no se cuenta en su contra.",
@@ -14691,6 +14710,14 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.connectGoogle.why": "Habilita su tasa de respuesta (\"Respuestas a reseñas\") y un conteo exacto de sus reseñas recientes — sin la conexión, Google le muestra a PostScore solo unas pocas.",
     "content.actionPlan.connectGoogle.fix": "Inicie sesión con la cuenta de Google que administra su Perfil de Empresa en Google. PostScore solo lee el número de reseñas — nunca publica ni cambia nada.",
     "content.actionPlan.connectGoogle.link": "Conectar Google",
+    "dashboard.website.partlyCheckedPill": "Revisado en parte",
+    "dashboard.website.blockedNote": "La seguridad de su sitio web bloquea las revisiones automáticas, así que solo pudimos revisar una parte. Pídale a la persona que administra su sitio web que permita el acceso a PostScoreBot para ver su puntuación completa.",
+    "dashboard.website.partlyCheckedCap": "Mientras solo podamos revisar una parte, su sitio web cuenta como máximo el 80% de sus puntos.",
+    "content.actionPlan.allowBot.title": "Permita que PostScore revise todo su sitio web",
+    "content.actionPlan.allowBot.why": "La seguridad de su sitio web bloquea las revisiones automáticas, así que solo pudimos revisar una parte. Si permite el acceso a PostScoreBot, podremos mostrarle su puntuación completa.",
+    "content.actionPlan.allowBot.fix": "Pídale a la persona que administra su sitio web o a su empresa de hosting que permita las visitas cuyo agente de usuario contenga \"PostScoreBot\". Solo lee sus páginas públicas.\n• Cloudflare: Security → WAF → Custom rules → cree una regla para User Agent contains \"PostScoreBot\" con la acción Skip. El Bot Fight Mode no se puede omitir con una regla; si está activado, puede que haya que desactivarlo.\n• AWS WAF / CloudFront: en su web ACL, agregue una regla antes de las reglas de bots: User-Agent header contains \"PostScoreBot\" → Allow.\n• Wix, Squarespace, Shopify y similares: pida a su soporte que permita el agente de usuario \"PostScoreBot\".\nLuego vuelva a escanear para ver su puntuación completa.",
+    "content.actionPlan.allowBot.linkCloudflare": "Reglas personalizadas de Cloudflare",
+    "content.actionPlan.allowBot.linkAwsWaf": "Reglas de AWS WAF",
     "content.actionPlan.step.hours": "Unas {hours} h",
     "content.actionPlan.step.howToFix": "Cómo corregirlo",
     "content.actionPlan.link.editProfileHelp": "Ayuda de Google: editar su Perfil de Empresa en Google",

@@ -438,7 +438,7 @@ export function TaskCard({
                   <span className="font-semibold text-ink">{t(locale, "dashboard.overview.actionPlan.doThisLabel")}</span>
                   {task.action}
                 </p>
-                <p>
+                <p className="whitespace-pre-line">
                   <span className="font-semibold text-ink">{t(locale, "dashboard.overview.actionPlan.howLabel")}</span>
                   {task.fix}
                 </p>

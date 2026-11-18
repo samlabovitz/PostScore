@@ -10,6 +10,8 @@ import {
   buildWebsiteBanner,
   GOOGLE_MISMATCH_CHECK_ID,
   buildConnectGbpWeeklyTask,
+  buildAllowBotStep,
+  needsAllowBotStep,
   buildMarkOpenStep,
   buildWeeklyPlan,
   mergeReviewTasks,
@@ -158,9 +160,13 @@ export async function getActionPlan(
   // Growth: "Connect Google" as the last step while it isn't connected — a
   // setup step (0 points, a link, never "I did this"); it unlocks replies
   // and the exact recent-review count.
-  const weeklyTasks = orderWeeklySteps(
-    stepContext?.connectGoogle ? [...weeklyPlan.weeklyTasks, buildConnectGbpWeeklyTask(businessId, locale, stepContext.plan)] : weeklyPlan.weeklyTasks
-  );
+  // v1.17.0: a site that blocks automated checks gets a setup step asking
+  // the owner to let PostScoreBot in (the Website is only partly checked).
+  const setupSteps = [
+    ...(needsAllowBotStep(breakdown, input) ? [buildAllowBotStep(locale)] : []),
+    ...(stepContext?.connectGoogle ? [buildConnectGbpWeeklyTask(businessId, locale, stepContext.plan)] : []),
+  ];
+  const weeklyTasks = orderWeeklySteps([...weeklyPlan.weeklyTasks, ...setupSteps]);
 
   // Google shows the business as permanently closed: the score is on hold
   // and marking it open is the only step (lib/businessStatus.ts).

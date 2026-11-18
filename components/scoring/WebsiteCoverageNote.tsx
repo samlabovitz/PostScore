@@ -2,6 +2,8 @@
 
 import { categoryCheckCoverage, partlyCheckedWebsiteWeight, PARTLY_CHECKED_THRESHOLD, SCORING_V1131, websitePointShare, type CategoryResult } from "@/lib/scoring";
 import { t, useLocale } from "@/lib/i18n";
+import { Pill } from "@/components/ui/Pill";
+import { cn } from "@/lib/utils";
 
 /**
  * Step 2d: "Based on {n} of {total} website checks — the rest couldn't be
@@ -30,6 +32,26 @@ export function WebsiteCoverageNote({
   const locale = useLocale();
   if (category.id !== "website" || !hasWebsite) return null;
   const { checked, total, unreachable } = categoryCheckCoverage(category);
+  // v1.17.0: more than half of the checks couldn't run — capped at 80%,
+  // and, for a site that blocks us, how to let PostScoreBot in.
+  if (category.partlyChecked) {
+    return (
+      <div data-testid="website-partly-checked" className={cn("flex flex-col items-start gap-1", className ?? "text-[12px] text-ink-mute")}>
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <Pill variant="amber" className="px-2 py-0.5 text-[11.5px]">
+            {t(locale, "dashboard.website.partlyCheckedPill")}
+          </Pill>
+          <span>{t(locale, "dashboard.website.partlyChecked", { n: checked, total })}</span>
+        </span>
+        <span>{t(locale, "dashboard.website.partlyCheckedCap")}</span>
+        {category.blocksAutomatedChecks && (
+          <span data-testid="website-blocked-note" className="font-medium text-ink-soft">
+            {t(locale, "dashboard.website.blockedNote")}
+          </span>
+        )}
+      </div>
+    );
+  }
   // Only when checks were excluded because we couldn't reach the site.
   if (unreachable === 0 || checked === 0) return null;
   const share = websitePointShare(category);

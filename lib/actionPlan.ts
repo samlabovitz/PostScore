@@ -16,6 +16,7 @@ import {
   customerDetailsPath,
   hasAnalyzableWebsite,
   scoreBusiness,
+  siteBlocksAutomatedChecks,
   unroundedTotal,
   type BusinessScoringInput,
   type CategoryId,
@@ -1305,6 +1306,34 @@ export function buildConnectGbpWeeklyTask(businessId: string, locale: Locale = D
 }
 
 export const CONNECT_GOOGLE_STEP_ID = "setup.connect_gbp";
+
+export const ALLOW_BOT_STEP_ID = "setup.allow_postscorebot";
+
+/** v1.17.0: the website blocks automated checks and is only partly
+ * checked — a setup step (0 points, never "I did this") asking the owner
+ * to let PostScoreBot in, with how-to steps for the common firewalls. */
+export function buildAllowBotStep(locale: Locale = DEFAULT_LOCALE): ActionPlanTask {
+  return {
+    ...buildConnectGbpWeeklyTask("", locale),
+    checkId: ALLOW_BOT_STEP_ID,
+    category: "website",
+    label: t(locale, "content.actionPlan.allowBot.title"),
+    why: t(locale, "content.actionPlan.allowBot.why"),
+    action: t(locale, "content.actionPlan.allowBot.title"),
+    fix: t(locale, "content.actionPlan.allowBot.fix"),
+    href: null,
+    minutes: 10,
+    links: [
+      { href: "https://developers.cloudflare.com/waf/custom-rules/", label: t(locale, "content.actionPlan.allowBot.linkCloudflare"), external: true },
+      { href: "https://docs.aws.amazon.com/waf/latest/developerguide/waf-rule-statement-type-string-match.html", label: t(locale, "content.actionPlan.allowBot.linkAwsWaf"), external: true },
+    ],
+  };
+}
+
+/** The Website category is partly checked because the site blocks automated checks. */
+export function needsAllowBotStep(breakdown: ScoreBreakdown, input: BusinessScoringInput): boolean {
+  return breakdown.categories.some((c) => c.id === "website" && c.partlyChecked === true) && siteBlocksAutomatedChecks(input);
+}
 
 /** Google shows the business as permanently closed: the plan's only step
  * (lib/businessStatus.ts) — official links, no points, never "I did this". */
