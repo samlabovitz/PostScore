@@ -92,7 +92,7 @@ describe("the check under the rule", () => {
     expect(text).toContain("— / 3");
     expect(text).toContain("Not scored yet");
     expect(text).toContain("This check doesn't count for or against your score until your next scan.");
-    expect(html).toContain('data-testid="not-scored-yet" class="pl-[25px] text-[13px] text-ink-mute"');
+    expect(html).toContain('data-testid="not-scored-yet" class="break-words pl-[25px] text-[13px] text-ink-mute"');
     expect(html).not.toMatch(/not-scored-yet"[^>]*line-clamp/);
     expect(html).toContain('<span class="whitespace-nowrap">Loads in a reasonable time</span>');
     // PostAI, the Website page's lists, and the report summaries use the same state.

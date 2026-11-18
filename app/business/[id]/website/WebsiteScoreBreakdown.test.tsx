@@ -360,3 +360,19 @@ describe("Step 2d: no doubled or misplaced 'Couldn't verify —' prefix", () => 
     expect(html).toContain("Not checked yet");
   });
 });
+
+describe("WebsiteScoreBreakdown — the full description always shows", () => {
+  test("a long description and URL are shown whole and wrap (EN + ES)", () => {
+    const long = "Found real Services/Products content at https://keesbakeshop.com/12-count-cupcakes-daily-menu/with/a/very/long/path-that-would-otherwise-run-off-the-card.";
+    for (const locale of ["en", "es"] as const) {
+      const html = renderToStaticMarkup(
+        <LocaleProvider locale={locale}>
+          <WebsiteScoreBreakdown websiteCategory={categoryWith(zeroCheck("website.services_presence", "Services / products", 1, long))} websiteAnalysis={null} websiteSuggestions={[]} />
+        </LocaleProvider>
+      );
+      expect(html).not.toContain("line-clamp");
+      expect(html).toContain(long);
+      expect(html).toMatch(/<p class="mt-2 break-words [^"]*">[^<]*https:\/\/keesbakeshop\.com/);
+    }
+  });
+});

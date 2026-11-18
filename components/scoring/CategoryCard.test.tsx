@@ -60,3 +60,28 @@ describe("CategoryCard — points rendering", () => {
     expect(html).toContain("4.0");
   });
 });
+
+describe("CategoryCard — the full description always shows", () => {
+  const LONG = "Your phone number (302-382-1054) is on the page but isn't tap-to-call — make it a link so phone visitors can call in one tap. Found real Services/Products content at https://keesbakeshop.com/12-count-cupcakes-daily-menu/with/a/very/long/path.";
+  const category: CategoryResult = {
+    ...FLOAT_ARTIFACT_CATEGORY,
+    checks: [
+      { ...FLOAT_ARTIFACT_CATEGORY.checks[0], id: "website.contact_conversion", label: "Contact & conversion", category: "website", maxPoints: 3, earnedPoints: 2, explanation: LONG },
+      { ...FLOAT_ARTIFACT_CATEGORY.checks[0], id: "completeness.customer_details", label: "Customer details", maxPoints: 3, earnedPoints: 1, explanation: LONG, meta: { parts: "accessibility,payment", present: "payment" } },
+    ],
+  };
+
+  test("never cut to two lines; long URLs wrap instead of running off (EN + ES)", () => {
+    for (const locale of ["en", "es"] as const) {
+      const html = renderToStaticMarkup(
+        <LocaleProvider locale={locale}>
+          <CategoryCard category={category} />
+        </LocaleProvider>
+      );
+      expect(html).not.toContain("line-clamp");
+      expect(html.replace(/&#x27;/g, "'")).toContain(LONG);
+      expect(html).toMatch(/data-testid="row-status" class="[^"]*break-words/);
+      expect(html).toMatch(/data-testid="customer-details-status" class="[^"]*break-words/);
+    }
+  });
+});

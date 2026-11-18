@@ -161,7 +161,7 @@ function CheckRows({
   );
 }
 
-/** The row's status: ONE short sentence on what's missing (max 2 lines).
+/** The row's status: what's missing, always in full (long URLs wrap).
  * Customer details: the scored groups still missing on Google. */
 function RowStatus({ check, businessId = null }: { check: CheckResult; businessId?: string | null }) {
   const locale = useLocale();
@@ -170,16 +170,16 @@ function RowStatus({ check, businessId = null }: { check: CheckResult; businessI
   if (check.liveDiffers === "changed") return <ChangedOnGoogleNote businessId={businessId} />;
   if (check.liveDiffers === "unavailable") return null;
   // Waiting for a second speed test: the whole explanation, never cut off.
-  if (isNotScoredYet(check)) return <p data-testid="not-scored-yet" className="pl-[25px] text-[13px] text-ink-mute">{check.explanation}</p>;
+  if (isNotScoredYet(check)) return <p data-testid="not-scored-yet" className="break-words pl-[25px] text-[13px] text-ink-mute">{check.explanation}</p>;
   const missing = missingParts(check);
   if (check.id === "completeness.customer_details" && missing !== null) {
     return (
-      <p data-testid="customer-details-status" className="line-clamp-2 pl-[25px] text-[13px] text-ink-mute">
+      <p data-testid="customer-details-status" className="break-words pl-[25px] text-[13px] text-ink-mute">
         {missing.length === 0 ? check.explanation : t(locale, "dashboard.breakdown.missingParts", { parts: partList(missing, locale) })}
       </p>
     );
   }
-  return <p className="line-clamp-2 pl-[25px] text-[13px] text-ink-mute">{check.explanation}</p>;
+  return <p data-testid="row-status" className="break-words pl-[25px] text-[13px] text-ink-mute">{check.explanation}</p>;
 }
 
 /** Customer details: the scored groups not on Google yet (null: not known). */

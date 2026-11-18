@@ -242,7 +242,7 @@ function CheckRow({
           )}
         </div>
 
-        <p className="mt-2 text-[13px] text-ink-soft">
+        <p className="mt-2 break-words text-[13px] text-ink-soft">
           {state === "excluded" && !excludedReasonKey && showCouldntVerifyPrefix(check) && (
             <span className="mr-1.5 font-medium text-ink-mute">
               {t(locale, "dashboard.website.couldntVerifyPrefix")}
@@ -252,11 +252,11 @@ function CheckRow({
           {check.liveDiffers ? null : excludedReasonKey ? t(locale, excludedReasonKey) : check.explanation}
         </p>
         {check.liveDiffers === "changed" && <ChangedOnGoogleNote businessId={null} />}
-        {check.note && !excludedReasonKey && <p className="mt-0.5 text-[11.5px] text-ink-mute">{check.note}</p>}
+        {check.note && !excludedReasonKey && <p className="mt-0.5 break-words text-[11.5px] text-ink-mute">{check.note}</p>}
         <LinkIssues check={check} className="mt-1 text-left text-[12.5px] font-semibold text-ink underline-offset-2 hover:text-brass hover:underline" />
 
         {(state === "partial" || state === "zero") && suggestion && !spamFinding && (
-          <p className="mt-1 text-[12.5px] text-ink-mute">{suggestion.advice}</p>
+          <p className="mt-1 break-words text-[12.5px] text-ink-mute">{suggestion.advice}</p>
         )}
         {fixes.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
