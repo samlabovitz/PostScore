@@ -19,6 +19,11 @@ export interface ScoringProgress {
  * (lib/competitorRawCleanup.server.ts) — never "paused", just replaced. */
 export const SUPERSEDED_JOB_ERROR = "Superseded by a newer scan; closed after 24 hours.";
 
+/** A running job updates after every site (each has 5 minutes at most), so
+ * one silent this long has stopped — never shown as "Updating"; the page
+ * keeps the last finished scan until the 24-hour cleanup closes it. */
+export const SCORING_STALL_MS = 15 * 60 * 1000;
+
 /** Scan ids of NEW scans not fully scored yet (to leave out). */
 export async function unfinishedNewScanIds(supabase: SupabaseClient, businessId: string): Promise<Set<string>> {
   const { data, error } = await supabase
@@ -40,20 +45,25 @@ export function withoutUnfinished<T extends { scan_id: string }>(rows: T[], unfi
 /** The business's newest job, while it isn't done — for "Checking 7 of
  * 11…" / "paused". An older unfinished job is never shown (a newer scan
  * replaced it), nor one closed as superseded. */
-export async function latestScoringProgress(supabase: SupabaseClient, businessId: string): Promise<ScoringProgress | null> {
+export async function latestScoringProgress(supabase: SupabaseClient, businessId: string, now: Date = new Date()): Promise<ScoringProgress | null> {
   const { data, error } = await supabase
     .from("competitor_scoring_jobs")
-    .select("scan_id, kind, status, done, total, error")
+    .select("scan_id, kind, status, done, total, error, updated_at")
     .eq("business_id", businessId)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error || !data) return null;
-  return scoringProgressOf(data);
+  return scoringProgressOf(data, now);
 }
 
-/** A job row as progress to show, or null (done, or superseded). Pure. */
-export function scoringProgressOf(job: { scan_id: string; kind: ScoringProgress["kind"]; status: ScoringProgress["status"]; done: number; total: number; error: string | null }): ScoringProgress | null {
+/** A job row as progress to show, or null (done, superseded, or stalled). Pure. */
+export function scoringProgressOf(
+  job: { scan_id: string; kind: ScoringProgress["kind"]; status: ScoringProgress["status"]; done: number; total: number; error: string | null; updated_at?: string | null },
+  now: Date = new Date()
+): ScoringProgress | null {
   if (job.status === "done" || job.error === SUPERSEDED_JOB_ERROR) return null;
+  const active = job.status === "queued" || job.status === "running";
+  if (active && job.updated_at && now.getTime() - Date.parse(job.updated_at) > SCORING_STALL_MS) return null;
   return { scanId: job.scan_id, kind: job.kind, status: job.status, done: job.done, total: job.total, error: job.error };
 }

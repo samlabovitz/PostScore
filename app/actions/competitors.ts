@@ -200,7 +200,7 @@ export async function getCompetitorsWithClient(
       .then(async (r) => (r.data ? { ...r, data: await withLiveListingFor(supabase, businessId, r.data) } : r)),
     supabase.from("competitor_scans").select(SCAN_COLUMNS).eq("business_id", businessId).order("created_at", { ascending: false }).limit(600),
     unfinishedNewScanIds(supabase, businessId),
-    latestScoringProgress(supabase, businessId),
+    latestScoringProgress(supabase, businessId, now),
     loadBusinessNiche(supabase, businessId),
     latestSavedBreakdown(supabase, businessId),
   ]);

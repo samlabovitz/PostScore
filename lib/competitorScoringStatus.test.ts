@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- a tiny stand-in for the Supabase query builder */
 import { describe, expect, test } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { latestScoringProgress, scoringProgressOf, SUPERSEDED_JOB_ERROR } from "./competitorScoringStatus";
+import { latestScoringProgress, SCORING_STALL_MS, scoringProgressOf, SUPERSEDED_JOB_ERROR } from "./competitorScoringStatus";
 
 const job = (over: Record<string, unknown> = {}) => ({ scan_id: "s", kind: "new_scan" as const, status: "running" as const, done: 4, total: 10, error: null as string | null, ...over });
 
@@ -40,5 +40,19 @@ describe("the 'Checking competitor websites…' note", () => {
   test("the cleanup closes a replaced scan with the same marker", async () => {
     const src = (await import("node:fs")).readFileSync("lib/competitorRawCleanup.server.ts", "utf8");
     expect(src).toContain("error: SUPERSEDED_JOB_ERROR");
+  });
+});
+
+describe("a job that stopped is never shown as 'Updating' (the real Hair Express case: running 4/10, silent since 15:25)", () => {
+  const now = new Date("2026-11-18T19:00:00Z");
+  test("running or queued but silent for 15+ minutes: nothing shown; the last finished scan stays", () => {
+    expect(SCORING_STALL_MS).toBe(15 * 60 * 1000);
+    expect(scoringProgressOf(job({ updated_at: "2026-11-18T15:25:28Z" }), now)).toBeNull();
+    expect(scoringProgressOf(job({ status: "queued", updated_at: "2026-11-18T18:40:00Z" }), now)).toBeNull();
+  });
+
+  test("a job that updated in the last 15 minutes is shown; a real pause still says so", () => {
+    expect(scoringProgressOf(job({ updated_at: "2026-11-18T18:50:00Z" }), now)).toMatchObject({ status: "running", done: 4 });
+    expect(scoringProgressOf(job({ status: "failed", error: "Paused: today's PageSpeed budget…", updated_at: "2026-11-18T10:00:00Z" }), now)).toMatchObject({ status: "failed" });
   });
 });
