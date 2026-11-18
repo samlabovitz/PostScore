@@ -24,7 +24,7 @@ export default async (req: Request) => {
     console.error("[competitor-scoring-batch] unauthorized");
     return;
   }
-  const { scanId, inputs } = (await req.json().catch(() => ({}))) as { scanId?: string; inputs?: unknown };
+  const { scanId, inputs, addedPlaceId } = (await req.json().catch(() => ({}))) as { scanId?: string; inputs?: unknown; addedPlaceId?: string };
   const siteUrl = process.env.URL ?? process.env.SITE_URL;
   if (!scanId || !siteUrl) {
     console.error("[competitor-scoring-batch] missing scanId or site URL");
@@ -35,7 +35,7 @@ export default async (req: Request) => {
     const res = await fetch(`${siteUrl}/api/cron/competitor-scoring`, {
       method: "POST",
       headers: { Authorization: `Bearer ${process.env.CRON_SECRET}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ scanId, inputs: inputs ?? null }),
+      body: JSON.stringify({ scanId, inputs: inputs ?? null, ...(addedPlaceId ? { addedPlaceId } : {}) }),
     }).catch((err) => {
       console.error(`[competitor-scoring-batch] step ${step} request failed:`, err);
       return null;

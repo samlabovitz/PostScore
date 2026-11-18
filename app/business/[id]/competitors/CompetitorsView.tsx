@@ -27,6 +27,7 @@ import { reviewGoal,
   headToHead,
   heroSummary,
   metricValue,
+  listingLinkProblem,
   websiteNotChecked,
   websiteNotCheckedReason,
   isFullScored,
@@ -784,6 +785,12 @@ function CompetitorCard({ entry, rank, view, businessId }: { entry: SavedCompeti
             {!entry.isSubject && !entry.liveMissing && hasFewReviews(entry.reviewCount) && (
               <span data-testid="few-reviews-tag" className="rounded-md bg-paper px-1.5 py-0.5 text-[11px] font-medium text-ink-soft">
                 {t(locale, "dashboard.competitors.fewReviewsTag")}
+              </span>
+            )}
+            {!entry.isSubject && listingLinkProblem(entry) && (
+              <span data-testid="listing-link-problem" className="inline-flex items-center gap-1 rounded-md border border-paper-deep bg-paper px-1.5 py-0.5 text-[11px] font-medium text-ink-soft">
+                <IconAlertCircle size={12} aria-hidden />
+                {t(locale, listingLinkProblem(entry) === "parked" ? "dashboard.competitors.listingLinkParked" : "dashboard.competitors.listingLinkBroken")}
               </span>
             )}
             {websiteCouldntBeChecked(entry) && (

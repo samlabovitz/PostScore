@@ -208,3 +208,54 @@ export async function runCompetitorScoringJob(
   await setJob(stopped === "max_sites" ? { status: "running" } : { status: "failed", error: reason ?? "Stopped before every competitor was scored." });
   return { status: stopped === "max_sites" ? "running" : "failed", done, total: competitors.length, pagespeedCalls, stopped };
 }
+
+export type AddedScoringOutcome = "done" | "kept_first_score" | "pagespeed_budget" | "pagespeed_limit_not_set" | "missing";
+
+/**
+ * A competitor the owner added ("Add a competitor") joins a scan whose
+ * scoring already finished: its website gets the same full scoring as
+ * every other competitor (the owner's rules — a parked or 404 listing
+ * link is "Website link doesn't work", never full website points). Its
+ * listing comes in memory from the owner's own name search, or one live
+ * re-read. Published on its own row right away; never re-scores the rest.
+ */
+export async function scoreAddedCompetitor(
+  db: SupabaseClient,
+  scanId: string,
+  placeId: string,
+  options: {
+    input?: CompetitorListingInput | null;
+    env?: Record<string, string | undefined>;
+    fetchImpl?: typeof fetch;
+    reread?: (placeId: string, businessId: string) => Promise<CompetitorListingInput | null>;
+  } = {}
+): Promise<AddedScoringOutcome> {
+  const env = options.env ?? process.env;
+  const budget = pagespeedDailyBudget(env);
+  if (budget === null) return "pagespeed_limit_not_set";
+  const { data } = await db.from("competitor_scans").select(`${JOB_COLUMNS}, business_id`).eq("scan_id", scanId).eq("place_id", placeId).maybeSingle();
+  const row = data as unknown as (ScanRow & { business_id: string }) | null;
+  if (!row || row.is_subject) return "missing";
+  if (!canSpendPagespeed(await pagespeedUsedToday(db), budget)) return "pagespeed_budget";
+  const { data: business } = await db.from("businesses").select("language").eq("id", row.business_id).maybeSingle();
+  const locale = normalizeLocale(business?.language ?? null);
+  const listing = options.input ?? (await (options.reread ?? defaultReread)(placeId, row.business_id));
+  if (!listing) {
+    // Couldn't be read: its first score stays, marked "Website couldn't be checked".
+    const kept = breakdownWithoutQuotes(closedFirstScore(row.breakdown_json as ScoreBreakdown | null));
+    if (kept) await db.from("competitor_scans").update({ breakdown_json: kept }).eq("id", row.id);
+    return "kept_first_score";
+  }
+  const res = await scoreCompetitorFully({ ...listing, place_id: placeId, breakdown_json: row.breakdown_json }, { locale, fetchImpl: options.fetchImpl });
+  const b = breakdownWithoutQuotes(res.breakdown);
+  await db
+    .from("competitor_scans")
+    .update({ breakdown_json: b, total: b.total, grade: b.grade, scoring_version: b.scoringVersion, website_analysis_json: websiteAnalysisWithoutGoogle(res.websiteAnalysis) })
+    .eq("id", row.id);
+  // Its PageSpeed calls count toward today's budget, on the scan's job row.
+  if (res.pagespeedCalls > 0) {
+    const { data: job } = await db.from("competitor_scoring_jobs").select("pagespeed_calls").eq("scan_id", scanId).maybeSingle();
+    if (job) await db.from("competitor_scoring_jobs").update({ pagespeed_calls: (job.pagespeed_calls ?? 0) + res.pagespeedCalls, updated_at: new Date().toISOString() }).eq("scan_id", scanId);
+  }
+  return "done";
+}

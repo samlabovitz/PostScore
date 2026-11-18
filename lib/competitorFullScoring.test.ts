@@ -271,3 +271,75 @@ describe("the scoring job", () => {
     expect(again.status).toBe("done");
   });
 });
+
+describe("an added competitor ('Add a competitor') gets the same full scoring", () => {
+  const ownerScore = scoreBusiness(scoringInput());
+  const first = () => scoreBusiness(scoringInput()); // its first, listing-only score
+  const addedState = (): State => ({
+    jobs: [{ scan_id: "s", business_id: "b", status: "done", done: 1, total: 1, pagespeed_calls: 3, started_at: null }],
+    scans: [scanRow("o", true), { ...scanRow("c1", false), breakdown_json: ownerScore }, { ...scanRow("kathy", false), business_id: "b", breakdown_json: first() }],
+    scores: 0,
+    saved: ownerScore,
+  });
+
+  test("a parked listing link: flagged like the owner's own ('Website link doesn't work'), no website points — not 4/4", async () => {
+    const { scoreAddedCompetitor } = await import("./competitorScoringJob");
+    const { listingLinkProblem } = await import("./competitorComparison");
+    // A real-shaped analysis (the sample business's) whose listing link is a parked domain.
+    const real = scoringInput().websiteAnalysis!;
+    analyzeWebsiteForSave.mockResolvedValueOnce({
+      websiteAnalysis: { ...real, websiteTrust: { ...real.websiteTrust!, checkedAt: "2026-11-18T15:00:00Z", verifiedElsewhereUrl: null, listingLinkBroken: true, listingLinkParked: true, listingLinkErrorPageUrl: "http://kathys.example/" } },
+      httpsStatus: "ok",
+    });
+    const state = addedState();
+    const out = await scoreAddedCompetitor(fakeDb(state), "s", "kathy", { env: ENV, input: listing({ has_website: true, website_url: "http://kathys.example/" }), reread: noReread });
+    expect(out).toBe("done");
+    const row = state.scans.find((r) => r.id === "kathy")!;
+    const hasSite = row.breakdown_json.checks.find((c: any) => c.id === "website.has_website");
+    expect(hasSite.earnedPoints).toBe(0);
+    expect(hasSite.gaps).toContain("listing_parked");
+    expect(row.breakdown_json.checks.find((c: any) => c.id === "completeness.website_link").earnedPoints).toBe(0);
+    expect(row.total).toBe(row.breakdown_json.total);
+    expect(listingLinkProblem({ placeId: "kathy", isSubject: false, breakdown: row.breakdown_json } as any)).toBe("parked");
+    // Our own results only; the rest of the scan untouched.
+    expect(JSON.stringify(row)).not.toContain("1 Main St");
+    for (const c of COMPETITOR_RAW_COLUMNS) expect(row).not.toHaveProperty(c);
+    expect(state.scans.find((r) => r.id === "c1")!.breakdown_json).toBe(ownerScore);
+  });
+
+  test("its PageSpeed calls count toward today's budget, on the scan's job row", async () => {
+    const { scoreAddedCompetitor } = await import("./competitorScoringJob");
+    analyzeWebsiteForSave.mockImplementationOnce(async (p: { fetchImpl: typeof fetch }) => {
+      await p.fetchImpl("https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=x").catch(() => null);
+      return { websiteAnalysis: null, httpsStatus: "ok" };
+    });
+    const state = addedState();
+    const fetchImpl = (async () => new Response("{}")) as unknown as typeof fetch;
+    await scoreAddedCompetitor(fakeDb(state), "s", "kathy", { env: ENV, input: listing({ has_website: true, website_url: "https://rival.example" }), reread: noReread, fetchImpl });
+    expect(state.jobs[0].pagespeed_calls).toBe(4);
+  });
+
+  test("its listing couldn't be read: the first score stays, 'Website couldn't be checked' — never full website points from nothing", async () => {
+    const { scoreAddedCompetitor } = await import("./competitorScoringJob");
+    const state = addedState();
+    const reread = vi.fn(async () => null);
+    expect(await scoreAddedCompetitor(fakeDb(state), "s", "kathy", { env: ENV, reread })).toBe("kept_first_score");
+    expect(reread).toHaveBeenCalledWith("kathy", "b");
+    const hasSite = state.scans.find((r) => r.id === "kathy")!.breakdown_json.checks.find((c: any) => c.id === "website.has_website");
+    expect(hasSite.meta).toMatchObject({ fullScore: "1" });
+  });
+
+  test("over the PageSpeed budget or without a limit: nothing scored", async () => {
+    const { scoreAddedCompetitor } = await import("./competitorScoringJob");
+    expect(await scoreAddedCompetitor(fakeDb({ ...addedState(), scores: 10000 }), "s", "kathy", { env: ENV, input: listing(), reread: noReread })).toBe("pagespeed_budget");
+    expect(await scoreAddedCompetitor(fakeDb(addedState()), "s", "kathy", { env: {}, input: listing() })).toBe("pagespeed_limit_not_set");
+    expect(await scoreAddedCompetitor(fakeDb(addedState()), "s", "nobody", { env: ENV, input: listing() })).toBe("missing");
+  });
+
+  test("'Add a competitor' starts it, with the listing from the owner's own search (in memory)", async () => {
+    const src = (await import("node:fs")).readFileSync("app/actions/competitorOverrides.ts", "utf8");
+    expect(src).toContain("startAddedCompetitorScoring(latest.scan_id, placeId, competitorListingInput(ranked));");
+    const route = (await import("node:fs")).readFileSync("app/api/cron/competitor-scoring/route.ts", "utf8");
+    expect(route).toContain("scoreAddedCompetitor(createAdminClient(), scanId, placeId, { input: listingInputsFromBody(body.inputs)?.[placeId] ?? null })");
+  });
+});

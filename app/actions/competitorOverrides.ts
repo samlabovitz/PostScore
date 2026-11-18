@@ -163,7 +163,7 @@ export async function addCompetitor(businessId: string, placeId: string): Promis
   const addedCount = ((existing ?? []) as Array<{ place_id: string; action: string }>).filter((r) => r.action === "added" && r.place_id !== placeId).length;
   if (addedCount >= MAX_ADDED) return { status: "limit" };
 
-  const { distanceMetersBetween, rankedFromCandidate, savedScanRow } = await import("@/lib/competitors");
+  const { competitorListingInput, distanceMetersBetween, rankedFromCandidate, savedScanRow } = await import("@/lib/competitors");
   const distanceMeters = candidate.location ? distanceMetersBetween({ lat: business.lat, lng: business.lng }, candidate.location) : null;
   if (distanceMeters === null || distanceMeters > MAX_COMPETITOR_DISTANCE_METERS) return { status: "invalid" };
 
@@ -180,7 +180,17 @@ export async function addCompetitor(businessId: string, placeId: string): Promis
     const { data: already } = await supabase.from("competitor_scans").select("place_id").eq("scan_id", latest.scan_id).eq("place_id", placeId).maybeSingle();
     if (!already) {
       const ranked = rankedFromCandidate(candidate, distanceMeters, normalizeLocale(business.language));
-      await supabase.from("competitor_scans").insert({ ...savedScanRow(ranked, latest.scan_id, businessId), created_at: latest.created_at });
+      const { error: insertError } = await supabase.from("competitor_scans").insert({ ...savedScanRow(ranked, latest.scan_id, businessId), created_at: latest.created_at });
+      // Its website gets the same full scoring as the rest, in the
+      // background (its listing from this search, in memory).
+      if (!insertError) {
+        try {
+          const { startAddedCompetitorScoring } = await import("@/lib/competitorScoringTrigger");
+          startAddedCompetitorScoring(latest.scan_id, placeId, competitorListingInput(ranked));
+        } catch (err) {
+          console.error("[competitors] could not start the added competitor's scoring:", err);
+        }
+      }
     }
   }
   picked.delete(`${businessId}:${placeId}`);

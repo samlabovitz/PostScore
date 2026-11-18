@@ -4932,6 +4932,8 @@ export type MessageKey =
   | "dashboard.competitors.notCheckedReason.unreachable"
   | "dashboard.competitors.websiteCouldntCheckReason"
   | "dashboard.competitors.websiteCouldntBeCheckedReason"
+  | "dashboard.competitors.listingLinkParked"
+  | "dashboard.competitors.listingLinkBroken"
   | "dashboard.competitors.notCheckedReason.no_address"
   | "dashboard.competitors.websiteNotCheckedYet"
   | "dashboard.competitors.checkNotCheckedYet"
@@ -11269,6 +11271,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.notCheckedReason.unreachable": "the site didn’t respond",
     "dashboard.competitors.websiteCouldntCheckReason": "couldn’t check: {reason}",
     "dashboard.competitors.websiteCouldntBeCheckedReason": "Website couldn’t be checked: {reason}",
+    "dashboard.competitors.listingLinkParked": "Website link on Google goes to a parked domain",
+    "dashboard.competitors.listingLinkBroken": "Website link on Google doesn’t work",
     "dashboard.competitors.notCheckedReason.no_address": "no website address was saved for it",
     "dashboard.competitors.websiteNotCheckedYet": "not checked yet",
     "dashboard.competitors.checkNotCheckedYet": "Not checked yet",
@@ -17613,6 +17617,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.notCheckedReason.unreachable": "el sitio no respondió",
     "dashboard.competitors.websiteCouldntCheckReason": "no se pudo revisar: {reason}",
     "dashboard.competitors.websiteCouldntBeCheckedReason": "No se pudo revisar el sitio web: {reason}",
+    "dashboard.competitors.listingLinkParked": "El enlace al sitio web en Google lleva a un dominio estacionado",
+    "dashboard.competitors.listingLinkBroken": "El enlace al sitio web en Google no funciona",
     "dashboard.competitors.notCheckedReason.no_address": "no se guardó la dirección de su sitio web",
     "dashboard.competitors.websiteNotCheckedYet": "aún no revisado",
     "dashboard.competitors.checkNotCheckedYet": "Aún no revisado",

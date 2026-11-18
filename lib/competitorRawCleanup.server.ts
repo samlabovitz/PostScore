@@ -9,6 +9,7 @@
 // live on the page). Counts only in logs.
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { SUPERSEDED_JOB_ERROR } from "@/lib/competitorScoringStatus";
 import { COMPETITOR_RAW_COLUMNS, COMPETITOR_RAW_HOURS, clearedRowPatch, closedFirstScore, hasRawValues, type CompetitorRawRow } from "@/lib/competitorRawCleanup";
 
 const ROW_COLUMNS = `id, scan_id, business_id, created_at, is_subject, ${COMPETITOR_RAW_COLUMNS.join(", ")}, breakdown_json, pending_breakdown_json, website_analysis_json, also_nearby_json`;
@@ -57,7 +58,7 @@ async function closeExpiredJob(db: SupabaseClient, scanId: string, rows: Row[], 
     ? await db.from("competitor_scans").select("scan_id").eq("business_id", first.business_id).eq("is_subject", true).gt("created_at", first.created_at).limit(1)
     : { data: [] };
   if ((newer ?? []).length > 0) {
-    await db.from("competitor_scoring_jobs").update({ status: "failed", error: "Superseded by a newer scan; closed after 24 hours.", updated_at: stamp }).eq("scan_id", scanId);
+    await db.from("competitor_scoring_jobs").update({ status: "failed", error: SUPERSEDED_JOB_ERROR, updated_at: stamp }).eq("scan_id", scanId);
     for (const r of rows) r.pending_breakdown_json = null;
     await db.from("competitor_scans").update({ pending_breakdown_json: null }).eq("scan_id", scanId);
     return;

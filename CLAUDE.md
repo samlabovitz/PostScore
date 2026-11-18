@@ -58,4 +58,4 @@ Next.js 14 + Supabase. These rules are standing: follow them in every session.
 
 ## Dev
 - `npm run dev`: the usual dev server (webpack).
-- `npm run dev:fast`: Turbopack (`next dev --turbo`), much faster to start and compile. If something behaves oddly there, check with `npm run dev` before debugging it.
+- `npm run dev:fast`: Turbopack (`next dev --turbo`). **Not supported yet: use `npm run dev`.** It breaks the Competitors page (`Cannot read properties of null (reading 'useContext')`).

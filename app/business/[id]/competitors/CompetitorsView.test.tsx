@@ -374,3 +374,23 @@ describe("'Also nearby' and 'Removed by you': Google's values read live", () => 
     expect(html).toMatch(/·(<!-- -->)? (<!-- -->)?—/);
   });
 });
+
+describe("a competitor whose Google website link doesn't reach a real site", () => {
+  const flagged = (gap: string) => {
+    const e = entry("Kathy's Crusty Creations", 60);
+    const checks = e.breakdown!.checks.map((c) => (c.id === "website.has_website" ? { ...c, earnedPoints: 0, gaps: [gap], meta: { fullScore: "1" } } : c));
+    return { ...e, breakdown: { ...e.breakdown!, checks } };
+  };
+  const withEntry = (e: SavedCompetitorEntry) => ({ ...DATA, latest: { ...DATA.latest!, entries: [...DATA.latest!.entries, e] } });
+
+  test("is flagged on its card like the owner's own dead-link check (EN + ES)", () => {
+    expect(render(withEntry(flagged("listing_parked")))).toContain("Website link on Google goes to a parked domain");
+    expect(render(withEntry(flagged("listing_broken")))).toContain("Website link on Google doesn’t work");
+    expect(render(withEntry(flagged("listing_parked")), "es")).toContain("El enlace al sitio web en Google lleva a un dominio estacionado");
+    expect(render(withEntry(flagged("listing_broken")), "es")).toContain("El enlace al sitio web en Google no funciona");
+  });
+
+  test("a working link shows no flag", () => {
+    expect(render()).not.toContain('data-testid="listing-link-problem"');
+  });
+});

@@ -85,6 +85,13 @@ export function checkStatus(entry: SavedCompetitorEntry, check: { id: string; ca
   return { kind: "couldnt", reason: check.meta?.notCheckedReason ?? null };
 }
 
+/** The listing's own website link doesn't reach a real site — a parked
+ * page, or a 404/410 (the same rule as the owner's own listing link). */
+export function listingLinkProblem(entry: SavedCompetitorEntry): "parked" | "broken" | null {
+  const gaps = entry.breakdown?.checks.find((c) => c.id === "website.has_website")?.gaps ?? [];
+  return gaps.includes("listing_parked") ? "parked" : gaps.includes("listing_broken") ? "broken" : null;
+}
+
 /** The observed reason a site's website checks couldn't run, if saved. */
 export function websiteNotCheckedReason(entry: SavedCompetitorEntry): string | null {
   return entry.breakdown?.checks.find((c) => c.id === "website.has_website")?.meta?.websiteNotChecked ?? null;

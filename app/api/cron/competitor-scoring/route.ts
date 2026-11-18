@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { runCompetitorScoringJob } from "@/lib/competitorScoringJob";
+import { runCompetitorScoringJob, scoreAddedCompetitor } from "@/lib/competitorScoringJob";
 import { listingInputsFromBody } from "@/lib/competitorListingInputs";
 
 // One step of a scan's full competitor scoring: scores at most ONE
@@ -24,9 +24,15 @@ function authorized(req: Request): boolean {
 
 export async function POST(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const body = (await req.json().catch(() => null)) as { scanId?: unknown; inputs?: unknown } | null;
+  const body = (await req.json().catch(() => null)) as { scanId?: unknown; inputs?: unknown; addedPlaceId?: unknown } | null;
   const scanId = typeof body?.scanId === "string" && /^[0-9a-f-]{36}$/i.test(body.scanId) ? body.scanId : null;
   if (!scanId) return NextResponse.json({ error: "scanId required" }, { status: 400 });
+  // "Add a competitor": that one competitor only (one site, one step).
+  if (typeof body?.addedPlaceId === "string" && body.addedPlaceId.length > 0 && body.addedPlaceId.length <= 300) {
+    const placeId = body.addedPlaceId;
+    const added = await scoreAddedCompetitor(createAdminClient(), scanId, placeId, { input: listingInputsFromBody(body.inputs)?.[placeId] ?? null });
+    return NextResponse.json({ status: "done", added });
+  }
   const outcome = await runCompetitorScoringJob(createAdminClient(), scanId, { maxSites: 1, inputs: listingInputsFromBody(body?.inputs) });
   return NextResponse.json(outcome);
 }
