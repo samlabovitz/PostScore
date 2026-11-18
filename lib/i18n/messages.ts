@@ -4599,6 +4599,7 @@ export type MessageKey =
   | "dashboard.checkResult.done"
   | "dashboard.checkResult.needsWork"
   | "dashboard.checkResult.couldntCheck"
+  | "dashboard.checkResult.notScoredYet"
   | "content.checks.website.has_website.explanation.socialPage"
   | "content.checks.website.has_website.advice.socialPage"
   | "dashboard.competitors.socialPageOnly"
@@ -4662,6 +4663,7 @@ export type MessageKey =
   | "content.checks.website.performance_mobile.explanation.typicalOfTestsV115"
   | "content.checks.website.performance_mobile.explanation.lastMeasuredNoteV115"
   | "content.checks.website.performance_mobile.explanation.noSecondsV115"
+  | "content.checks.website.performance_mobile.explanation.oneTestSoFar"
   | "content.checks.website.services_presence.explanation.brokenLinkV115"
   | "content.checks.website.links.label"
   | "content.checks.website.links.advice"
@@ -4845,6 +4847,8 @@ export type MessageKey =
   | "dashboard.overview.breakdown.needsWork.other"
   | "dashboard.overview.breakdown.couldntCheck.one"
   | "dashboard.overview.breakdown.couldntCheck.other"
+  | "dashboard.overview.breakdown.notScoredYet.one"
+  | "dashboard.overview.breakdown.notScoredYet.other"
   | "dashboard.overview.band.points.one"
   | "dashboard.overview.band.points.other"
   | "dashboard.overview.connectPremiumPill"
@@ -5819,6 +5823,7 @@ export type PluralKeyBase =
   | "dashboard.overview.breakdown.done"
   | "dashboard.overview.breakdown.needsWork"
   | "dashboard.overview.breakdown.couldntCheck"
+  | "dashboard.overview.breakdown.notScoredYet"
   | "dashboard.overview.tiles.fixes"
   | "dashboard.overview.tiles.lookAt"
   | "dashboard.rescan.freshDays"
@@ -10922,6 +10927,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.checkResult.done": "Done",
     "dashboard.checkResult.needsWork": "Needs work",
     "dashboard.checkResult.couldntCheck": "Couldn't check",
+    "dashboard.checkResult.notScoredYet": "Not scored yet",
     "content.checks.website.has_website.explanation.socialPage": "Your Google listing's website link goes to your {platform} page, not a website. A {platform} page doesn't count as a website — customers can't find your full info there, and you don't control it.",
     "content.checks.website.has_website.advice.socialPage": "Add a real website (or your PostScore starter site) to your listing.",
     "dashboard.competitors.socialPageOnly": "{platform} page only",
@@ -10985,6 +10991,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.performance_mobile.explanation.typicalOfTestsV115": "Typical of your last {count} tests.",
     "content.checks.website.performance_mobile.explanation.lastMeasuredNoteV115": "Last measured {date}.",
     "content.checks.website.performance_mobile.explanation.noSecondsV115": "Not scored: Google's test didn't say how many seconds your page takes to show.",
+    "content.checks.website.performance_mobile.explanation.oneTestSoFar": "We need one more speed test to be sure. Your first test took {seconds} s on Google's slow-phone test. This check doesn't count for or against your score until your next scan.",
     "content.checks.website.services_presence.explanation.brokenLinkV115": "Your menu link ({url}) is broken — it's counted under “No broken links or dead pages”, not here.",
     "content.checks.website.links.label": "No broken links or dead pages",
     "content.checks.website.links.advice": "Fix or remove each link that doesn't open the page it promises — your web person can usually do it in a few minutes.",
@@ -11168,6 +11175,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.breakdown.needsWork.other": "{count} need work",
     "dashboard.overview.breakdown.couldntCheck.one": "{count} couldn't check",
     "dashboard.overview.breakdown.couldntCheck.other": "{count} couldn't check",
+    "dashboard.overview.breakdown.notScoredYet.one": "{count} not scored yet",
+    "dashboard.overview.breakdown.notScoredYet.other": "{count} not scored yet",
     "dashboard.overview.band.points.one": "{count} point",
     "dashboard.overview.band.points.other": "{count} points",
     "dashboard.overview.connectPremiumPill": "PostScore Premium",
@@ -17253,6 +17262,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.checkResult.done": "Listo",
     "dashboard.checkResult.needsWork": "Por mejorar",
     "dashboard.checkResult.couldntCheck": "No se pudo revisar",
+    "dashboard.checkResult.notScoredYet": "Aún no se puntúa",
     "content.checks.website.has_website.explanation.socialPage": "El enlace de sitio web de su ficha de Google lleva a su página de {platform}, no a un sitio web. Una página de {platform} no cuenta como sitio web: los clientes no encuentran allí toda su información y usted no la controla.",
     "content.checks.website.has_website.advice.socialPage": "Agregue un sitio web real (o su sitio inicial de PostScore) a su ficha.",
     "dashboard.competitors.socialPageOnly": "Solo página de {platform}",
@@ -17316,6 +17326,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.performance_mobile.explanation.typicalOfTestsV115": "Lo habitual en sus últimas {count} pruebas.",
     "content.checks.website.performance_mobile.explanation.lastMeasuredNoteV115": "Última medición: {date}.",
     "content.checks.website.performance_mobile.explanation.noSecondsV115": "No se califica: la prueba de Google no indicó cuántos segundos tarda su página en mostrarse.",
+    "content.checks.website.performance_mobile.explanation.oneTestSoFar": "Necesitamos una prueba de velocidad más para estar seguros. Su primera prueba tardó {seconds} s en la prueba de Google con un teléfono lento. Esta comprobación no cuenta a favor ni en contra de su puntuación hasta su próximo escaneo.",
     "content.checks.website.services_presence.explanation.brokenLinkV115": "El enlace a su menú ({url}) no funciona; se cuenta en «Sin enlaces rotos ni páginas sin contenido», no aquí.",
     "content.checks.website.links.label": "Sin enlaces rotos ni páginas sin contenido",
     "content.checks.website.links.advice": "Corrija o quite cada enlace que no abre la página que promete; quien maneja su sitio web suele poder hacerlo en unos minutos.",
@@ -17499,6 +17510,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.breakdown.needsWork.other": "{count} por mejorar",
     "dashboard.overview.breakdown.couldntCheck.one": "{count} sin revisar",
     "dashboard.overview.breakdown.couldntCheck.other": "{count} sin revisar",
+    "dashboard.overview.breakdown.notScoredYet.one": "{count} aún no se puntúa",
+    "dashboard.overview.breakdown.notScoredYet.other": "{count} aún no se puntúan",
     "dashboard.overview.band.points.one": "{count} punto",
     "dashboard.overview.band.points.other": "{count} puntos",
     "dashboard.overview.connectPremiumPill": "PostScore Premium",

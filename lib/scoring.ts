@@ -46,6 +46,7 @@ import { socialPagePlatform } from "@/lib/websiteTrust";
 import { platformPage, socialProfileCounts } from "@/lib/socialLinkCheck";
 import { googleSideOf, keyForInfoConflict, keyForStaleNotice, trimNoticeToSentences, type AbandonedSiteFinding, type EmbeddedMapFinding, type InfoFieldFinding, type SpamFinding, type StaleNoticeFinding, type WebsiteKind } from "@/lib/websiteTrust";
 import type { SpeedSample, SpeedSmoothed } from "@/lib/speedSmoothing";
+import { MIN_SPEED_MEASUREMENTS, speedMeasurementCount } from "@/lib/speedSmoothing";
 import { socialIconCount, socialLinkProblems, URGENT_LINK_KINDS, type LinkCheckResult, type LinkProblem } from "@/lib/linkProblems";
 
 // ---------------------------------------------------------------------------
@@ -73,7 +74,16 @@ import { socialIconCount, socialLinkProblems, URGENT_LINK_KINDS, type LinkCheckR
 // typical 6 s+); "Works well on phones" always 1; "Uses HTTPS" 6 → 5; new
 // "No broken links or dead pages" (4); Social links only asks "do you
 // link to profiles" and a broken menu link no longer costs Services.
-export const SCORING_VERSION = "1.15.0";
+export const SCORING_VERSION = "1.16.0";
+
+/** v1.16.0: "Loads in a reasonable time" needs two successful phone tests
+ * within 30 days (lib/speedSmoothing.ts speedMeasurementCount) — on from
+ * that version, or a dry run's POSTSCORE_SCORING_PREVIEW. */
+export const SPEED_TWO_TESTS_FROM = "1.16.0";
+/** v1.16.0: a single test this fast passes on its own… */
+export const CLEAR_PASS_SECONDS = 3;
+/** …and this slow (double REASONABLE_LOAD_SECONDS) fails on its own. */
+export const CLEAR_FAIL_SECONDS = 12;
 
 /**
  * v1.13.0's speed / phone split and Content depth without the viewport —
@@ -351,6 +361,9 @@ export interface MobilePerformanceMeasurement {
    * seconds — real visitors' 75th percentile (field) or the lab median
    * (largest contentful paint). Absent on older rows. */
   lcpSeconds?: number;
+  /** v1.16.0: how many of the scan's speed-test runs measured the page (a
+   * lab median is of these). Absent on older rows — counted as one. */
+  labRuns?: number;
   /** v1.13.0: Google's phone-usability audits from the same run (see
    * website.mobile_friendly). Absent on older rows. */
   mobileUsability?: MobileUsability;
@@ -1011,6 +1024,8 @@ export interface BusinessScoringInput {
    * (lib/gbpReviewReplies.ts). null = not connected. Only ever the
    * business's OWN counts; competitors never have them. */
   gbpReplies?: { reviewsInWindow: number; replied: number; hasRecentReview: boolean; recentReviews?: 0 | 1 | 2 | 3 | null } | null;
+  /** Tests only: the v1.16.0 two-tests speed rule on or off regardless of the version. */
+  speedNeedsTwoTests?: boolean;
 }
 
 /** A single check's result, always expressed on the same 0–100 point scale as the total. */
@@ -1500,6 +1515,24 @@ function loadsReasonableV115(input: BusinessScoringInput, locale: Locale): Retur
   const smoothed = wa.speedSmoothed && m.measuredUrl && sameMeasuredSite(wa.speedSmoothed.measuredUrl, m.measuredUrl) ? wa.speedSmoothed : null;
   const seconds = smoothed?.seconds ?? (typeof m.lcpSeconds === "number" ? m.lcpSeconds : null);
   if (seconds === null) return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.performance_mobile.explanation.noSecondsV115") };
+  // v1.16.0: one phone test counts on its own only when its result is
+  // clear (≤ 3 s, or ≥ 12 s — double the limit); in between it takes two
+  // within 30 days (this scan's runs and earlier scans'), since one test
+  // alone isn't the site's typical speed (the real Hair Express case:
+  // 8.6 s on the only run in months that could measure the page).
+  // Real-visitor (field) data always counts on its own.
+  const count = speedMeasurementCount(wa.speedHistory, m);
+  const clear = seconds <= CLEAR_PASS_SECONDS || seconds >= CLEAR_FAIL_SECONDS;
+  if ((input.speedNeedsTwoTests ?? scoringAtLeast(SPEED_TWO_TESTS_FROM)) && count < MIN_SPEED_MEASUREMENTS && !clear) {
+    return {
+      earnedPoints: null,
+      confidence: "NOT_FOUND",
+      explanation: t(locale, "content.checks.website.performance_mobile.explanation.oneTestSoFar", {
+        seconds: new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.round(seconds * 10) / 10),
+      }),
+      meta: { noScoreCause: "one_test", seconds: String(Math.round(seconds * 10) / 10) },
+    };
+  }
   const time = new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.round(seconds * 10) / 10);
   const pass = seconds < REASONABLE_LOAD_SECONDS;
   const lastMeasured = m.carriedForward && m.measuredAt ? formatShortDate(m.measuredAt, locale, input.timeZone || undefined) : null;
@@ -4259,6 +4292,7 @@ function parseMobilePerformance(value: unknown): MobilePerformanceMeasurement | 
   const u = v.mobileUsability && typeof v.mobileUsability === "object" ? (v.mobileUsability as Record<string, unknown>) : null;
   const extra = {
     ...(typeof v.lcpSeconds === "number" && v.lcpSeconds > 0 ? { lcpSeconds: v.lcpSeconds } : {}),
+    ...(typeof v.labRuns === "number" && v.labRuns > 0 ? { labRuns: Math.floor(v.labRuns) } : {}),
     ...(u ? { mobileUsability: { tapTargets: tri(u.tapTargets), textReadable: tri(u.textReadable), fitsScreen: tri(u.fitsScreen) } } : {}),
   };
   if (v.method === "field" && isFieldSpeedCategory(v.fieldCategory)) {
@@ -4462,7 +4496,13 @@ function parseSpeedHistory(value: unknown): SpeedSample[] | null {
   return value
     .filter((s): s is Record<string, unknown> => !!s && typeof s === "object")
     .filter((s) => typeof s.measuredAt === "string" && typeof s.measuredUrl === "string" && SPEED_CATEGORIES.has(String(s.category)))
-    .map((s) => ({ measuredAt: s.measuredAt as string, measuredUrl: s.measuredUrl as string, lcpSeconds: typeof s.lcpSeconds === "number" ? s.lcpSeconds : null, category: s.category as FieldSpeedCategory }));
+    .map((s) => ({
+      measuredAt: s.measuredAt as string,
+      measuredUrl: s.measuredUrl as string,
+      lcpSeconds: typeof s.lcpSeconds === "number" ? s.lcpSeconds : null,
+      category: s.category as FieldSpeedCategory,
+      ...(typeof s.runs === "number" && s.runs > 0 ? { runs: Math.floor(s.runs) } : {}),
+    }));
 }
 
 const LINK_KINDS = new Set(["order", "book", "contact", "menu", "directions", "nav", "social"]);

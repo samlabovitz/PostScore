@@ -33,18 +33,20 @@ export function categoryBarShares(category: Pick<CategoryResult, "checks" | "ear
   return { earned, missing: Math.max(0, 1 - earned - unchecked), unchecked };
 }
 
-/** Done / needs work / couldn't check, per the same rule the check rows use. */
-export function categoryOutcomeCounts(category: Pick<CategoryResult, "checks">): { done: number; needsWork: number; couldntCheck: number } {
+/** Done / needs work / couldn't check / not scored yet, per the same rule the check rows use. */
+export function categoryOutcomeCounts(category: Pick<CategoryResult, "checks">): { done: number; needsWork: number; couldntCheck: number; notScoredYet: number } {
   let done = 0;
   let needsWork = 0;
   let couldntCheck = 0;
+  let notScoredYet = 0;
   for (const check of category.checks) {
     const outcome = checkOutcome(check);
     if (outcome === "couldnt_check") couldntCheck++;
+    else if (outcome === "not_scored_yet") notScoredYet++;
     else if (outcome === "needs_work") needsWork++;
     else done++;
   }
-  return { done, needsWork, couldntCheck };
+  return { done, needsWork, couldntCheck, notScoredYet };
 }
 
 export type ScoreChange =

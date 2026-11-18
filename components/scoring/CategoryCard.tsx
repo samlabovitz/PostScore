@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { cn } from "@/lib/utils";
 import type { CategoryResult, CheckResult } from "@/lib/scoring";
-import { checkOutcome, formatPoints, type CheckOutcome } from "@/lib/checkOutcome";
+import { checkOutcome, formatPoints, isNotScoredYet, type CheckOutcome } from "@/lib/checkOutcome";
 import { ChangedOnGoogleNote } from "@/components/scoring/ChangedOnGoogleNote";
 
 // Kept here for the UI that already imports them from this file.
@@ -29,6 +29,7 @@ const OUTCOME_PILL: Record<CheckOutcome, { variant: "green" | "amber" | "neutral
   done: { variant: "green", labelKey: "dashboard.checkResult.done" },
   needs_work: { variant: "amber", labelKey: "dashboard.checkResult.needsWork" },
   couldnt_check: { variant: "neutral", labelKey: "dashboard.checkResult.couldntCheck" },
+  not_scored_yet: { variant: "neutral", labelKey: "dashboard.checkResult.notScoredYet" },
   excellent: { variant: "green", labelKey: "dashboard.checkResult.excellent" },
   good: { variant: "green", labelKey: "dashboard.checkResult.good" },
 };
@@ -42,6 +43,7 @@ function OutcomeIcon({ outcome }: { outcome: CheckOutcome }) {
     case "needs_work":
       return <IconAlertTriangle size={17} className="shrink-0 text-amber" />;
     case "couldnt_check":
+    case "not_scored_yet":
       return <IconMinus size={17} className="shrink-0 text-ink-mute" />;
   }
 }
@@ -129,11 +131,12 @@ function CheckRows({
           className="flex scroll-mt-20 flex-col gap-1 rounded-lg py-3 transition-colors duration-700 first:pt-0 last:pb-0"
         >
           <div className="flex items-center justify-between gap-3">
-            <span className="flex items-center gap-2 text-sm font-medium text-ink">
+            <span className="flex min-w-0 items-center gap-2 text-sm font-medium text-ink">
               <OutcomeIcon outcome={outcome} />
-              {check.label}
+              {/* One line, like every row (the status goes under the points when it's longer). */}
+              <span className={cn(outcome === "not_scored_yet" && "whitespace-nowrap")}>{check.label}</span>
             </span>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className={cn("flex shrink-0 gap-2", outcome === "not_scored_yet" ? "flex-col items-end gap-0.5" : "items-center")}>
               <span
                 className={cn(
                   "text-sm tabular-nums",
@@ -166,6 +169,8 @@ function RowStatus({ check, businessId = null }: { check: CheckResult; businessI
   // never words that contradict it; the page's own note covers "couldn't load".
   if (check.liveDiffers === "changed") return <ChangedOnGoogleNote businessId={businessId} />;
   if (check.liveDiffers === "unavailable") return null;
+  // Waiting for a second speed test: the whole explanation, never cut off.
+  if (isNotScoredYet(check)) return <p data-testid="not-scored-yet" className="pl-[25px] text-[13px] text-ink-mute">{check.explanation}</p>;
   const missing = missingParts(check);
   if (check.id === "completeness.customer_details" && missing !== null) {
     return (

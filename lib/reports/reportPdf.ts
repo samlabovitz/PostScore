@@ -38,6 +38,7 @@ export interface ReportCategory {
   done: number;
   needsWork: number;
   couldntCheck: number;
+  notScoredYet?: number;
 }
 
 export interface ReportNextStep {
@@ -315,6 +316,7 @@ export function layoutReport(data: ReportData, m: Measurer): PrintPage {
       tPlural(locale, "dashboard.overview.breakdown.done", cat.done, { count: cat.done }),
       tPlural(locale, "dashboard.overview.breakdown.needsWork", cat.needsWork, { count: cat.needsWork }),
       ...(cat.couldntCheck > 0 ? [tPlural(locale, "dashboard.overview.breakdown.couldntCheck", cat.couldntCheck, { count: cat.couldntCheck })] : []),
+      ...((cat.notScoredYet ?? 0) > 0 ? [tPlural(locale, "dashboard.overview.breakdown.notScoredYet", cat.notScoredYet ?? 0, { count: cat.notScoredYet ?? 0 })] : []),
     ].join(" · ");
     text(M, by + bh + 12, counts, 8.5, "body", C.inkMute);
     y = by + bh + 36;

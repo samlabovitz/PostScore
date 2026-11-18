@@ -1663,6 +1663,8 @@ export async function fetchMobilePerformance(
       method: "lab",
       fieldCategory: null,
       labScore: median(labScores),
+      // v1.16.0: the speed check counts each run that measured.
+      labRuns: labScores.length,
       measuredAt: new Date().toISOString(),
       measuredUrl: website,
       ...(labLcp.length > 0 ? { lcpSeconds: roundSeconds(median(labLcp)) } : {}),

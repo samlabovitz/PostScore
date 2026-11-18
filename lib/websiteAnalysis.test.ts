@@ -104,6 +104,7 @@ describe("fetchMobilePerformance: method order a) URL field -> b) origin field -
       method: "lab",
       fieldCategory: null,
       labScore: 55,
+      labRuns: 3,
       measuredAt: expect.any(String),
       measuredUrl: "example.com",
     });
@@ -125,6 +126,7 @@ describe("fetchMobilePerformance: method order a) URL field -> b) origin field -
       method: "lab",
       fieldCategory: null,
       labScore: 70,
+      labRuns: 2,
       measuredAt: expect.any(String),
       measuredUrl: "example.com",
     });
@@ -193,6 +195,7 @@ describe("fetchMobilePerformance: Day 4 Part 3a retry on timeout, 429, and 5xx",
       method: "lab",
       fieldCategory: null,
       labScore: 80,
+      labRuns: 3,
       measuredAt: expect.any(String),
       measuredUrl: "example.com",
     });
@@ -211,6 +214,7 @@ describe("fetchMobilePerformance: Day 4 Part 3a retry on timeout, 429, and 5xx",
       method: "lab",
       fieldCategory: null,
       labScore: 80,
+      labRuns: 3,
       measuredAt: expect.any(String),
       measuredUrl: "example.com",
     });

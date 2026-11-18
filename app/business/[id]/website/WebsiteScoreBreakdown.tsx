@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangedOnGoogleNote } from "@/components/scoring/ChangedOnGoogleNote";
+import { isNotScoredYet } from "@/lib/checkOutcome";
 import { IconAlertTriangle, IconCheck, IconMinus, IconX } from "@tabler/icons-react";
 import { LockFooter } from "@/components/plan/LockedPreview";
 import { Card } from "@/components/ui/Card";
@@ -101,7 +102,7 @@ type RowState = "full" | "partial" | "zero" | "excluded";
  * on a "not checked yet" row — nothing failed there, no scan has looked
  * yet. */
 function showCouldntVerifyPrefix(check: CheckResult): boolean {
-  if (check.excludedReason === "not_checked_yet") return false;
+  if (check.excludedReason === "not_checked_yet" || isNotScoredYet(check)) return false;
   return !/^\s*(couldn['’]t|could not|no se pudo|no pudimos)/i.test(check.explanation);
 }
 
@@ -505,6 +506,8 @@ const STATUS_CHIP: Record<RowState, { key: MessageKey; className: string }> = {
   zero: { key: "dashboard.checkResult.needsWork", className: "bg-red/10 text-red" },
   excluded: { key: "dashboard.checkResult.couldntCheck", className: "bg-ink/5 text-ink-mute" },
 };
+/** v1.16.0: waiting for a second speed test (lib/checkOutcome.ts). */
+const NOT_SCORED_YET_CHIP = { key: "dashboard.checkResult.notScoredYet" as MessageKey, className: "bg-ink/5 text-ink-mute" };
 
 /** Points with a half shown as "½" (0.5 → "½", 2.5 → "2½"); others as usual. */
 export function halfPoints(n: number | null): string {
@@ -537,7 +540,7 @@ export function WebsiteScoreCompact({ websiteCategory }: { websiteCategory: Cate
       <ul className="flex flex-col divide-y divide-paper-line">
         {websiteCategory.checks.map((check) => {
           const state = deriveRowState(check);
-          const chip = STATUS_CHIP[state];
+          const chip = isNotScoredYet(check) ? NOT_SCORED_YET_CHIP : STATUS_CHIP[state];
           return (
             <li key={check.id} className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0" data-testid="compact-check">
               <span className="min-w-0 text-[13.5px] text-ink">{check.label}</span>

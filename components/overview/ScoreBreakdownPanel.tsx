@@ -114,6 +114,7 @@ function CategorySummary({
           tPlural(locale, "dashboard.overview.breakdown.done", counts.done, { count: counts.done }),
           tPlural(locale, "dashboard.overview.breakdown.needsWork", counts.needsWork, { count: counts.needsWork }),
           ...(counts.couldntCheck > 0 ? [tPlural(locale, "dashboard.overview.breakdown.couldntCheck", counts.couldntCheck, { count: counts.couldntCheck })] : []),
+          ...(counts.notScoredYet > 0 ? [tPlural(locale, "dashboard.overview.breakdown.notScoredYet", counts.notScoredYet, { count: counts.notScoredYet })] : []),
         ].join(" · ")}
       </p>
       <p className="text-[12px] text-ink">

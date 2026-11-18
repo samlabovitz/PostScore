@@ -367,7 +367,40 @@ describe("pages: live or 'couldn't load', never a saved Google value, never a co
     expect(db.tables.scores).toEqual([]);
   });
 
-  test("a page load never saves a scan for a Google change — only an owner's own change or a scoring update does", async () => {
+  test("a page load never saves a score — not for a Google change, not for a scoring update (the Hair Express case after the 1.16.0 bump)", async () => {
+    const { scoreForDisplayWithClient } = await import("@/app/actions/scoring");
+    // Hair Express after the bump: its saved scan is 1.15.0, and the new speed rule applies to it.
+    db.tables.businesses[0] = {
+      ...SAVED,
+      website_analysis_json: {
+        ...ANALYSIS,
+        checkedAt: "2026-11-18T01:44:45Z",
+        mobilePerformance: { method: "lab", fieldCategory: null, labScore: 75, lcpSeconds: 8.6, measuredAt: "2026-11-18T01:44:45Z", measuredUrl: "https://zebranails.example" },
+        speedHistory: [{ measuredAt: "2026-11-18T01:44:45Z", measuredUrl: "https://zebranails.example", lcpSeconds: 8.6, category: "SLOW" }],
+        speedSmoothed: { category: "SLOW", seconds: 8.6, samples: 1, measuredUrl: "https://zebranails.example" },
+      },
+      website: "https://zebranails.example",
+    };
+    rememberOwnerListing("b1", liveListingFromPlaces(PLACE));
+    const now = await scoreBusinessWithClient(db.client, "b1", "business");
+    const speedCheck = now.status === "ok" ? now.result.breakdown.checks.find((c) => c.id === "website.performance_mobile") : null;
+    expect(speedCheck?.meta?.noScoreCause, JSON.stringify(speedCheck)).toBe("one_test");
+    const old = JSON.parse(JSON.stringify(now.status === "ok" ? now.result.breakdown : null));
+    old.scoringVersion = "1.15.0";
+    db.tables.scores = [{ id: "s0", business_id: "b1", total: 75, grade: "C", scoring_version: "1.15.0", created_at: "2026-11-18T01:44:51Z", breakdown_json: old }];
+    // Opening the Overview (the display path) and the page's own sync: nothing saved.
+    await scoreForDisplayWithClient(db.client, "b1", "business");
+    expect(await syncScoreSnapshotWithClient(db.client, "b1", "page", Date.now() + 300_000)).toEqual({ saved: false, before: null, after: null });
+    expect(db.tables.scores).toHaveLength(1);
+    expect(db.writes.filter((w) => w.table === "scores")).toEqual([]);
+    const scoring = src("app/actions/scoring.ts");
+    expect(scoring).toContain('if (kind === "page") return { saved: false, before: null, after: null };');
+    expect(scoring.slice(scoring.indexOf("export async function scoreForDisplayWithClient"), scoring.indexOf("/** The owner's listing as Google shows it now"))).not.toContain("syncScoreSnapshotWithClient");
+    for (const page of ["app/business/[id]/page.tsx", "app/business/[id]/reports/page.tsx"]) expect(src(page), page).toContain("await syncScoreSnapshot(params.id);");
+    expect(scoring).toContain('await syncScoreSnapshotWithClient(createClient(), businessId, "page");');
+  });
+
+  test("an owner's own change and connecting Google still save (they aren't page loads)", async () => {
     rememberOwnerListing("b1", liveListingFromPlaces(PLACE));
     const live = await scoreBusinessWithClient(db.client, "b1", "business");
     const version = live.status === "ok" ? live.result.breakdown.scoringVersion : "";

@@ -264,6 +264,7 @@ export async function buildWeeklyReportV2Data(
       tPlural(locale, "dashboard.overview.breakdown.done", cat.done, { count: cat.done }),
       tPlural(locale, "dashboard.overview.breakdown.needsWork", cat.needsWork, { count: cat.needsWork }),
       ...(cat.couldntCheck - waitingHere > 0 ? [tPlural(locale, "dashboard.overview.breakdown.couldntCheck", cat.couldntCheck - waitingHere, { count: cat.couldntCheck - waitingHere })] : []),
+      ...((cat.notScoredYet ?? 0) > 0 ? [tPlural(locale, "dashboard.overview.breakdown.notScoredYet", cat.notScoredYet ?? 0, { count: cat.notScoredYet ?? 0 })] : []),
       ...(waitingHere > 0 ? [t(locale, waitingHere === 1 ? K("waitingInlineOne") : K("waitingInline"), { count: waitingHere })] : []),
     ];
     return parts.join(" · ");

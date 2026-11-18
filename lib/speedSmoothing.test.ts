@@ -119,7 +119,7 @@ describe("at save, and in the score", () => {
     expect(speed.speedHistory.map((s) => s.measuredUrl)).toEqual([other]);
     expect(speed.speedSmoothed).toMatchObject({ category: "SLOW", samples: 1 });
     // In the score: a stored typical result of another site is ignored.
-    const wa = analysis(lab(7, 0, { measuredUrl: other }), { speedSmoothed: { category: "FAST", seconds: 1.5, samples: 3, measuredUrl: SITE } });
+    const wa = analysis(lab(7, 0, { measuredUrl: other, labRuns: 2 }), { speedSmoothed: { category: "FAST", seconds: 1.5, samples: 3, measuredUrl: SITE } });
     expect(scoreBusiness({ ...scoringInput(), websiteAnalysis: wa }).checks.find((x) => x.id === "website.performance_mobile")!.earnedPoints).toBe(0);
   });
 

@@ -238,7 +238,7 @@ describe("buildWeeklyPlan", () => {
           isLikelyClientRenderedShell: false,
           renderedContentSignals: null,
         },
-        mobilePerformance: { method: "lab", fieldCategory: null, labScore: 10, lcpSeconds: 9 },
+        mobilePerformance: { method: "lab", fieldCategory: null, labScore: 10, lcpSeconds: 9, labRuns: 2 },
         mobilePerformanceFailureReason: null,
         contentFetchFailureReason: null,
         httpsUnreachableReason: null,

@@ -875,7 +875,7 @@ describe("businessRowToScoringInput adapter", () => {
     expect(input.mostRecentReviewDaysAgo).toBeNull();
     expect(input.httpsStatus).toBe("https");
     const breakdown = scoreBusiness(input);
-    expect(breakdown.scoringVersion).toBe("1.15.0");
+    expect(breakdown.scoringVersion).toBe("1.16.0");
   });
 
   test("degrades an unexpected https_status value to null (excluded) rather than trusting a bad cast", () => {
@@ -1192,7 +1192,7 @@ describe("website.performance_mobile: field-vs-lab measurement (Day 3b)", () => 
   });
 
   test("6 seconds or more: 0/1 — the lab test alike, tagged meta.method 'lab'", () => {
-    const check = scoreBusiness(withMeasurement({ method: "lab", fieldCategory: null, labScore: 65, lcpSeconds: 6 })).checks.find((c) => c.id === "website.performance_mobile")!;
+    const check = scoreBusiness(withMeasurement({ method: "lab", fieldCategory: null, labScore: 65, lcpSeconds: 6, labRuns: 2 })).checks.find((c) => c.id === "website.performance_mobile")!;
     expect(check.earnedPoints).toBe(0);
     expect(check.meta).toEqual({ method: "lab", seconds: "6" });
     expect(check.explanation).toBe("Your site takes about 6.0 seconds to load on phones — many customers leave before it shows.");
@@ -1225,7 +1225,7 @@ describe("website.performance_mobile: field-vs-lab measurement (Day 3b)", () => 
   // carryForwardMobilePerformance's own doc for the real Blue Bottle
   // Coffee case this fixes.
   test("a carried-forward measurement still scores normally, with the honest 'last measured {date}' wording (lab and field)", () => {
-    const lab = scoreBusiness(withMeasurement({ method: "lab", fieldCategory: null, labScore: 27, lcpSeconds: 8.1, measuredAt: "2026-10-06T20:40:00.000Z", carriedForward: true })).checks.find((c) => c.id === "website.performance_mobile")!;
+    const lab = scoreBusiness(withMeasurement({ method: "lab", fieldCategory: null, labScore: 27, lcpSeconds: 8.1, labRuns: 2, measuredAt: "2026-10-06T20:40:00.000Z", carriedForward: true })).checks.find((c) => c.id === "website.performance_mobile")!;
     expect(lab.earnedPoints).toBe(0);
     expect(lab.confidence).toBe("VERIFIED");
     expect(lab.explanation).toBe("Your site takes about 8.1 seconds to load on phones — many customers leave before it shows. Last measured Oct 6, 2026.");
@@ -1235,7 +1235,7 @@ describe("website.performance_mobile: field-vs-lab measurement (Day 3b)", () => 
   });
 
   test("a FRESH measurement (carriedForward false/absent) never gets the carried-forward wording, even with a real measuredAt", () => {
-    const breakdown = scoreBusiness(withMeasurement({ method: "lab", fieldCategory: null, labScore: 50, lcpSeconds: 3.5, measuredAt: new Date().toISOString() }));
+    const breakdown = scoreBusiness(withMeasurement({ method: "lab", fieldCategory: null, labScore: 50, lcpSeconds: 3.5, labRuns: 2, measuredAt: new Date().toISOString() }));
     const check = breakdown.checks.find((c) => c.id === "website.performance_mobile")!;
     expect(check.explanation.toLowerCase()).not.toContain("last measured");
     expect(check.explanation).toBe("Your site loads in a reasonable time on phones (about 3.5 seconds).");

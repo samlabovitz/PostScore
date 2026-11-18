@@ -29,7 +29,7 @@ import { lookupBusinessByPlaceId, type OpeningHoursPeriod } from "@/lib/google/p
 import type { PlacesDetailsKind } from "@/lib/placesDetailsBudget";
 import { changesAcross, type GbpPhotoTimes, type GbpReviewTimes, type ScanChangeRecord, type ScanChangeSummary } from "@/lib/scanChanges";
 import { breakdownWithoutQuotes } from "@/lib/breakdownStorage";
-import { withSavedScore } from "@/lib/savedScore";
+import { savedVersionStandsIn, withSavedScore } from "@/lib/savedScore";
 import { latestSavedScore } from "@/lib/savedScore.server";
 import type { LiveListing } from "@/lib/ownerListing";
 import { emptyListingColumns, listingScoringRow, type ListingScoringColumns } from "@/lib/listingScoringRow";
@@ -160,9 +160,10 @@ export async function scoreForDisplayWithClient(
   const shown = withSavedScore(now, saved, { liveUnavailable: scored.live === "unavailable" });
   const scoringBusiness = scored.business;
   if (shown) return { ...scored, business, scoringBusiness, result: { ...scored.result, breakdown: shown } };
-  // No saved scan to stand in (a scoring update changed the checks): save
-  // one first, as before — still one score everywhere.
-  if (saved && options.save !== false && scored.live !== "unavailable") await syncScoreSnapshotWithClient(supabase, businessId, "page");
+  // No saved scan can stand in (a scoring update changed this business's
+  // checks): today's breakdown, never saved from a page — only a real scan
+  // or the re-score script saves a score (Scoring 1.16.0).
+  void options;
   return { ...scored, business, scoringBusiness };
 }
 
@@ -324,7 +325,13 @@ export async function saveScoreSnapshotWithClient(
     // Written by the server: the score row above was saved under the
     // owner's own access, and owners can't update a saved score.
     const [{ recordScanChanges }, { createAdminClient }] = await Promise.all([import("@/lib/scanChanges.server"), import("@/lib/supabase/admin")]);
-    listingChanges = await recordScanChanges(createAdminClient(), businessId, data.id, snapshot, { gbpReviews: options.gbpReviews, gbpPhotos: options.gbpPhotos });
+    if (scanKind === "scoring_update") {
+      // A scoring update re-scores the last scan without reading Google:
+      // its fingerprints are that scan's, and nothing changed on the listing.
+      await keepPreviousFingerprints(createAdminClient(), businessId, data.id);
+    } else {
+      listingChanges = await recordScanChanges(createAdminClient(), businessId, data.id, snapshot, { gbpReviews: options.gbpReviews, gbpPhotos: options.gbpPhotos });
+    }
   } catch (err) {
     console.error(`[scan-changes] not recorded for ${businessId}:`, err instanceof Error ? err.message : err);
   }
@@ -362,6 +369,13 @@ export async function saveScoreSnapshotWithClient(
   };
 }
 
+/** A scoring update's fingerprints: the previous scan's (nothing on the listing was read). */
+async function keepPreviousFingerprints(admin: SupabaseClient, businessId: string, scoreId: string): Promise<void> {
+  const { data: prev } = await admin.from("scores").select("field_fingerprints").eq("business_id", businessId).neq("id", scoreId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const p = prev as Record<string, unknown> | null;
+  if (p?.field_fingerprints) await admin.from("scores").update({ field_fingerprints: p.field_fingerprints }).eq("id", scoreId);
+}
+
 /** When each business last saved a catch-up snapshot (this server process) —
  * two page loads at once save one, not two. */
 const recentSyncs = new Map<string, number>();
@@ -386,6 +400,12 @@ export async function syncScoreSnapshotWithClient(
   kind: "data_update" | "google_connected" | "page" = "data_update",
   now: number = Date.now()
 ): Promise<{ saved: boolean; before: number | null; after: number | null }> {
+  // A page load never saves a score — not for a Google change, not for a
+  // scoring update (the real Hair Express case: re-scored by opening the
+  // Overview right after the 1.16.0 bump). Only real scans and the
+  // re-score script do; an owner's own change ("data_update") or connecting
+  // Google ("google_connected") still saves here.
+  if (kind === "page") return { saved: false, before: null, after: null };
   try {
     const [scored, { data: latest }] = await Promise.all([
       scoreBusinessWithClient(supabase, businessId, "business"),
@@ -395,14 +415,14 @@ export async function syncScoreSnapshotWithClient(
     const live = scored.result.breakdown;
     const last = latest as { total: number; grade: string; scoring_version: string } | null;
     if (!last) return { saved: false, before: null, after: live.total };
-    const versionChanged = last.scoring_version !== live.scoringVersion;
-    if (kind === "page" && !versionChanged) return { saved: false, before: last.total, after: live.total };
+    // A scan of an older version that the current rules don't change still stands (lib/savedScore.ts).
+    const versionChanged = !savedVersionStandsIn(last.scoring_version, live);
     // Connecting Google always gets its own labeled snapshot, even at +0.
     if (kind !== "google_connected" && !versionChanged && last.total === live.total && last.grade === live.grade) return { saved: false, before: last.total, after: live.total };
     const lastSync = recentSyncs.get(businessId);
     if (kind !== "google_connected" && lastSync !== undefined && now - lastSync < SYNC_DEDUPE_MS) return { saved: false, before: last.total, after: live.total };
     recentSyncs.set(businessId, now);
-    const saved = await saveScoreSnapshotWithClient(supabase, businessId, versionChanged && kind !== "google_connected" ? "scoring_update" : kind === "page" ? "data_update" : kind);
+    const saved = await saveScoreSnapshotWithClient(supabase, businessId, versionChanged && kind !== "google_connected" ? "scoring_update" : kind);
     return { saved: saved.status === "saved", before: last.total, after: live.total };
   } catch (err) {
     console.error(`[scores] snapshot sync failed for ${businessId}:`, err instanceof Error ? err.message : err);

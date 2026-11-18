@@ -26,6 +26,34 @@ export interface SpeedSample {
   lcpSeconds: number | null;
   /** The band this one measurement alone would give. */
   category: FieldSpeedCategory;
+  /** v1.16.0: how many of that scan's test runs measured the page (absent: one). */
+  runs?: number;
+}
+
+/** v1.16.0: a phone test is scored only once this many have measured the
+ * site within the 30 days — one slow (or fast) test alone isn't typical. */
+export const MIN_SPEED_MEASUREMENTS = 2;
+
+/**
+ * How many successful phone tests of this site the check can count: this
+ * scan's runs plus earlier scans', within SPEED_WINDOW_DAYS of the newest
+ * one. Real-visitor (field) data is a 28-day average of real visits —
+ * always enough on its own.
+ */
+export function speedMeasurementCount(history: SpeedSample[] | null | undefined, current: Pick<MobilePerformanceMeasurement, "method" | "measuredAt" | "measuredUrl" | "labRuns" | "carriedForward"> | null | undefined): number {
+  if (!current) return 0;
+  if (current.method === "field") return Infinity;
+  const site = current.measuredUrl ?? null;
+  const samples = (history ?? []).filter((s) => !site || sameMeasuredSite(s.measuredUrl, site));
+  const newest = Math.max(...samples.map((s) => Date.parse(s.measuredAt)), current.measuredAt ? Date.parse(current.measuredAt) : -Infinity);
+  const cutoff = newest - SPEED_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const counted = samples.filter((s) => Date.parse(s.measuredAt) >= cutoff);
+  // The measurement itself, when the history doesn't have it yet (older
+  // analyses, or one saved without its date). A carried-forward copy is the
+  // earlier test — counted once, never twice.
+  const ownInHistory = !!current.measuredAt && counted.some((s) => s.measuredAt === current.measuredAt);
+  const own = ownInHistory ? 0 : current.labRuns ?? 1;
+  return counted.reduce((n, s) => n + (s.runs ?? 1), 0) + own;
 }
 
 /** The typical result the check scores. */
@@ -54,7 +82,13 @@ export function sampleFrom(m: MobilePerformanceMeasurement | null | undefined): 
   if (!m || m.carriedForward || !m.measuredAt || !m.measuredUrl) return null;
   const usable = m.method === "field" ? m.fieldCategory !== null : m.labScore !== null;
   if (!usable) return null;
-  return { measuredAt: m.measuredAt, measuredUrl: m.measuredUrl, lcpSeconds: typeof m.lcpSeconds === "number" ? m.lcpSeconds : null, category: sampleCategory(m) };
+  return {
+    measuredAt: m.measuredAt,
+    measuredUrl: m.measuredUrl,
+    lcpSeconds: typeof m.lcpSeconds === "number" ? m.lcpSeconds : null,
+    category: sampleCategory(m),
+    ...(m.method === "lab" && typeof m.labRuns === "number" ? { runs: m.labRuns } : {}),
+  };
 }
 
 function median(values: number[]): number {

@@ -6,6 +6,7 @@
 // owner gets a short, safe answer built from the facts alone
 // (answerWithFactCheck). Pure.
 
+import { isNotScoredYet } from "@/lib/checkOutcome";
 import { shortName } from "@/lib/displayName";
 import { closureOf } from "@/lib/businessStatus";
 import { RATING_CONFIDENCE_FULL_AT_REVIEWS, REVIEW_COUNT_SATURATION, type ScoreBreakdown } from "@/lib/scoring";
@@ -68,7 +69,7 @@ export interface PostaiFacts {
   /** The saved competitor scan, in rank order (this business included):
    * name, PostScore, review count and rating as stored. Empty = not known. */
   competitors: Array<{ name: string; total: number | null; reviews: number | null; rating: number | null; isSubject: boolean }>;
-  checks: Array<{ label: string; status: "done" | "needs work" | "couldn't check"; earned: number | null; max: number; explanation: string }>;
+  checks: Array<{ label: string; status: "done" | "needs work" | "couldn't check" | "not scored yet"; earned: number | null; max: number; explanation: string }>;
   /** Review-reply counts from the owner's connected Google profile (null =
    * not connected or not checked yet). Not scored yet. */
   replyCounts: GbpReplyCounts | null;
@@ -147,7 +148,8 @@ export function buildPostaiFacts(
     competitors: b.competitors ?? [],
     checks: breakdown.checks.map((c) => ({
       label: c.label,
-      status: c.earnedPoints === null ? "couldn't check" : c.earnedPoints >= c.maxPoints ? "done" : "needs work",
+      // v1.16.0: measured once, close to the limit — waiting for a second test (not "couldn't check").
+      status: isNotScoredYet(c) ? "not scored yet" : c.earnedPoints === null ? "couldn't check" : c.earnedPoints >= c.maxPoints ? "done" : "needs work",
       earned: c.earnedPoints,
       max: c.maxPoints,
       explanation: c.explanation,

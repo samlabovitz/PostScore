@@ -245,7 +245,10 @@ describe("written at each scan", () => {
 
   test("the scan writes them right after its score is saved, and a failure never fails the scan", () => {
     const src = readFileSync("app/actions/scoring.ts", "utf8");
-    expect(src).toMatch(/profile_snapshot_json: null,[\s\S]{0,900}try \{[\s\S]{0,400}await recordScanChanges\(createAdminClient\(\), businessId, data\.id, snapshot, \{ gbpReviews: options\.gbpReviews, gbpPhotos: options\.gbpPhotos \}\);[\s\S]{0,40}\} catch/);
+    expect(src).toMatch(/profile_snapshot_json: null,[\s\S]{0,900}try \{[\s\S]{0,700}listingChanges = await recordScanChanges\(createAdminClient\(\), businessId, data\.id, snapshot, \{ gbpReviews: options\.gbpReviews, gbpPhotos: options\.gbpPhotos \}\);[\s\S]{0,60}\} catch/);
+    // A scoring update reads nothing from Google: it keeps the last scan's fingerprints and records no changes.
+    expect(src).toContain('if (scanKind === "scoring_update") {\n      // A scoring update re-scores the last scan without reading Google:');
+    expect(src).toContain("await keepPreviousFingerprints(createAdminClient(), businessId, data.id);");
     // The rescan hands over the review dates its Business Profile check just read.
     expect(src).toContain("const replyCheck = await runGbpReplyCheck(businessId);");
     expect(src).toContain('gbpReviews: replyCheck.status === "ok" ? replyCheck.reviewTimes : null,');

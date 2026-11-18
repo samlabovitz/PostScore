@@ -72,11 +72,11 @@ describe("pages show the saved score (Day 23 2d-1)", () => {
     expect(withSavedScore(now, saved(now, { breakdown_json: null }))).toBeNull();
   });
 
-  test("every page, report and notification reads the saved scan; only a changed check set (a scoring update) saves a new one first, the preview never writes", () => {
+  test("every page, report and notification reads the saved scan; a page never saves one (Scoring 1.16.0), the preview never writes", () => {
     const scoring = src("app/actions/scoring.ts");
     expect(scoring).toContain("return scoreForDisplayWithClient(supabase, businessId, locale);");
-    // Day 23 2d-4: a Google change never saves a scan from a page (it's marked instead).
-    expect(scoring).toMatch(/if \(shown\) return \{ \.\.\.scored, business, scoringBusiness, result: \{ \.\.\.scored\.result, breakdown: shown \} \};[\s\S]{0,300}if \(saved && options\.save !== false && scored\.live !== "unavailable"\) await syncScoreSnapshotWithClient\(supabase, businessId, "page"\);/);
+    // Day 23 2d-4 / 1.16.0: no save from a page — not for a Google change (it's marked), not for a scoring update.
+    expect(scoring).toMatch(/if \(shown\) return \{ \.\.\.scored, business, scoringBusiness, result: \{ \.\.\.scored\.result, breakdown: shown \} \};[\s\S]{0,300}never saved from a page/);
     expect(src("app/api/cron/monthly-reports/route.ts")).toContain("await scoreForDisplayWithClient(supabase, businessId, locale)");
     expect(src("scripts/preview-report.ts")).toContain("(supabase, businessId, locale, { save: false })");
     expect(src("lib/notifications.server.ts")).toContain("urgentIssuesFromSavedRow(row, await latestSavedScore(admin, row.id))");

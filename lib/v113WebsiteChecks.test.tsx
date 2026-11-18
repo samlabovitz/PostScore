@@ -207,7 +207,7 @@ describe("3 — “Works well on phones” and the speed check, Website still 30
 
 describe("v1.13.0", () => {
   test("SCORING_VERSION is 1.15.0 and the 1.13.0 split is on", () => {
-    expect(SCORING_VERSION).toBe("1.15.0");
+    expect(SCORING_VERSION).toBe("1.16.0");
     expect(SCORING_V113).toBe(true);
   });
 
@@ -222,10 +222,10 @@ describe("v1.13.0", () => {
     const es = speed({ method: "field", fieldCategory: "AVERAGE", labScore: null, lcpSeconds: 3.04 }, "es");
     expect(es.label).toBe("Carga en un tiempo razonable");
     expect(es.explanation).toBe("Su sitio carga en un tiempo razonable en teléfonos (unos 3,0 segundos).");
-    const slow = speed({ method: "lab", fieldCategory: null, labScore: 65, lcpSeconds: 6.82 });
+    const slow = speed({ method: "lab", fieldCategory: null, labScore: 65, lcpSeconds: 6.82, labRuns: 2 });
     expect(slow.explanation).toBe("Your site takes about 6.8 seconds to load on phones — many customers leave before it shows.");
     expect(slow.note).toBe("Based on Google's phone test");
-    expect(speed({ method: "lab", fieldCategory: null, labScore: 65, lcpSeconds: 6.82 }, "es").explanation).toBe("Su sitio tarda unos 6,8 segundos en cargar en teléfonos; muchos clientes se van antes de que aparezca.");
+    expect(speed({ method: "lab", fieldCategory: null, labScore: 65, lcpSeconds: 6.82, labRuns: 2 }, "es").explanation).toBe("Su sitio tarda unos 6,8 segundos en cargar en teléfonos; muchos clientes se van antes de que aparezca.");
     for (const c of [ok, es, slow]) expect(c.explanation).not.toMatch(/\/100|Chrome|Lighthouse|PageSpeed|CrUX|lab/i);
   });
 
@@ -233,12 +233,12 @@ describe("v1.13.0", () => {
     // The real National 5 & 10 case: Google rates it Slow overall, but its page shows in 2.1 s.
     const n510 = speed({ method: "field", fieldCategory: "SLOW", labScore: null, lcpSeconds: 2.1 });
     expect([n510.earnedPoints, n510.maxPoints]).toEqual([3, 3]);
-    expect([4.1, 5.9, 5.99, 6, 6.8, 13.8].map((sec) => speed({ method: "lab", fieldCategory: null, labScore: 40, lcpSeconds: sec }).earnedPoints)).toEqual([3, 3, 3, 0, 0, 0]);
-    expect(speed({ method: "lab", fieldCategory: null, labScore: 40, lcpSeconds: 7 }).gaps).toEqual(["too_slow"]);
+    expect([4.1, 5.9, 5.99, 6, 6.8, 13.8].map((sec) => speed({ method: "lab", fieldCategory: null, labScore: 40, lcpSeconds: sec, labRuns: 2 }).earnedPoints)).toEqual([3, 3, 3, 0, 0, 0]);
+    expect(speed({ method: "lab", fieldCategory: null, labScore: 40, lcpSeconds: 7, labRuns: 2 }).gaps).toEqual(["too_slow"]);
     const unmeasured = speed({ method: "field", fieldCategory: "SLOW", labScore: null });
     expect(unmeasured.earnedPoints).toBeNull();
     expect(unmeasured.explanation).toBe("Not scored: Google's test didn't say how many seconds your page takes to show.");
-    const carried = speed({ method: "lab", fieldCategory: null, labScore: 27, lcpSeconds: 7.2, measuredAt: "2026-10-06T20:40:00.000Z", carriedForward: true });
+    const carried = speed({ method: "lab", fieldCategory: null, labScore: 27, lcpSeconds: 7.2, labRuns: 2, measuredAt: "2026-10-06T20:40:00.000Z", carriedForward: true });
     expect(carried.earnedPoints).toBe(0);
     expect(carried.explanation).toMatch(/Last measured Oct 6, 2026\.$/);
   });

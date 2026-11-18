@@ -72,7 +72,7 @@ function savedCheck(now: CheckResult, saved: CheckResult, liveUnavailable: boole
 export function withSavedScore(now: ScoreBreakdown, saved: SavedScoreRow | null, options: { liveUnavailable?: boolean } = {}): ScoreBreakdown | null {
   if (!saved || !isBreakdown(saved.breakdown_json)) return null;
   const s = saved.breakdown_json;
-  if ((saved.scoring_version ?? s.scoringVersion) !== now.scoringVersion || !sameChecks(now.checks, s.checks)) return null;
+  if (!savedVersionStandsIn(saved.scoring_version ?? s.scoringVersion ?? null, now) || !sameChecks(now.checks, s.checks)) return null;
   const savedById = new Map(s.checks.map((c) => [c.id, c]));
   const check = (c: CheckResult) => savedCheck(c, savedById.get(c.id)!, options.liveUnavailable === true);
   const savedCategory = new Map(s.categories.map((c) => [c.id, c]));
@@ -85,6 +85,24 @@ export function withSavedScore(now: ScoreBreakdown, saved: SavedScoreRow | null,
     };
   });
   return { ...now, total: saved.total, grade: saved.grade as ScoreBreakdown["grade"], categories, checks: now.checks.map(check) };
+}
+
+/**
+ * Scoring versions whose rules a business's saved scan can still stand in
+ * for, when the newer rules don't change that business. v1.16.0 only adds
+ * the speed rule ("one test so far"): a 1.15.0 scan stands until the next
+ * real scan — unless the rule applies to it (those were re-scored as
+ * "PostScore updated how it scores", Day 23).
+ */
+const STANDS_IN_FOR: Record<string, { versions: string[]; unless: (now: ScoreBreakdown) => boolean }> = {
+  "1.16.0": { versions: ["1.15.0"], unless: (now) => now.checks.some((c) => c.meta?.noScoreCause === "one_test") },
+};
+
+/** Whether a saved scan of `savedVersion` can stand in for `now`'s version. */
+export function savedVersionStandsIn(savedVersion: string | null, now: ScoreBreakdown): boolean {
+  if (savedVersion === now.scoringVersion) return true;
+  const rule = STANDS_IN_FOR[now.scoringVersion];
+  return !!savedVersion && !!rule && rule.versions.includes(savedVersion) && !rule.unless(now);
 }
 
 /** The same total, grade and scoring version as the saved scan — what
