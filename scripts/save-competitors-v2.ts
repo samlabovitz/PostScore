@@ -66,9 +66,9 @@ const COUNT_ONLY = argv.includes("--count");
     const before = groupSavedScans(((await db.from("competitor_scans").select(SAVED_SCAN_COLUMNS).eq("business_id", b.id).order("created_at", { ascending: false }).limit(60)).data ?? []))[0];
     const result = await runAndSaveCompetitorScanWithClient(db, b.id, {
       enforceCooldown: false,
-      startScoring: async (scanId: string, businessId: string, count: number) => {
+      startScoring: async (scanId: string, businessId: string, count: number, inputs: unknown) => {
         await queueScoringJob(db, scanId, businessId, "new_scan", count);
-        const out = await runCompetitorScoringJob(db, scanId, { log: (l: string) => console.log(`${b.name}:${l}`) });
+        const out = await runCompetitorScoringJob(db, scanId, { inputs, log: (l: string) => console.log(`${b.name}:${l}`) });
         console.log(`${b.name}: full scoring ${JSON.stringify(out)}`);
       },
     });

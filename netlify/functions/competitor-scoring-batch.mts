@@ -4,6 +4,8 @@
 // out of time — the same chunked pattern as monthly-reports-batch.mts.
 // Progress is saved after every site, so an interrupted run loses at most
 // the one site in flight and a later run picks up where this one stopped.
+// The scan's listings (`inputs`, Day 23 2d-4b) are passed on to every step
+// in memory — never saved or logged.
 import type { Config } from "@netlify/functions";
 import { timingSafeEqual } from "crypto";
 
@@ -22,7 +24,7 @@ export default async (req: Request) => {
     console.error("[competitor-scoring-batch] unauthorized");
     return;
   }
-  const { scanId } = (await req.json().catch(() => ({}))) as { scanId?: string };
+  const { scanId, inputs } = (await req.json().catch(() => ({}))) as { scanId?: string; inputs?: unknown };
   const siteUrl = process.env.URL ?? process.env.SITE_URL;
   if (!scanId || !siteUrl) {
     console.error("[competitor-scoring-batch] missing scanId or site URL");
@@ -33,7 +35,7 @@ export default async (req: Request) => {
     const res = await fetch(`${siteUrl}/api/cron/competitor-scoring`, {
       method: "POST",
       headers: { Authorization: `Bearer ${process.env.CRON_SECRET}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ scanId }),
+      body: JSON.stringify({ scanId, inputs: inputs ?? null }),
     }).catch((err) => {
       console.error(`[competitor-scoring-batch] step ${step} request failed:`, err);
       return null;

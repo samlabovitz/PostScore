@@ -10,6 +10,7 @@ import { isBusinessArchived } from "@/lib/businessArchive.server";
 import { businessTimeZone } from "@/lib/businessTimeZone";
 import {
   competitorFallbackTypes,
+  competitorListingInput,
   competitorScanBlocker,
   findAndScoreCompetitors,
   isGenericType,
@@ -51,6 +52,8 @@ import { nicheScanFields } from "@/lib/competitorNicheRule";
 import { withLiveCompetitorValuesFor } from "@/lib/placesLive.server";
 import { latestScoreBreakdown } from "@/lib/ownerRankScore.server";
 import { scanWithoutPlacesValues, withMissingNames } from "@/lib/placesLive";
+import { alsoNearbyWithoutGoogle } from "@/lib/competitorRawCleanup";
+import type { CompetitorListingInputs } from "@/lib/competitorScoringJob";
 import { comparedWithFor, liveQueryFromRow, ownerTypePlaceTypes, type LiveCompetitorQuery } from "@/lib/competitorLiveQuery";
 
 
@@ -315,8 +318,9 @@ export async function runAndSaveCompetitorScanWithClient(
     plan?: Plan;
     now?: Date;
     scan?: typeof findAndScoreCompetitors;
-    /** Starts the background full scoring (tests replace it). */
-    startScoring?: (scanId: string, businessId: string, competitorCount: number) => Promise<void>;
+    /** Starts the background full scoring (tests replace it), with each
+     * competitor's listing from this scan's search — in memory, never saved. */
+    startScoring?: (scanId: string, businessId: string, competitorCount: number, inputs: CompetitorListingInputs) => Promise<void>;
     /** This month's Places search calls so far (tests replace it);
      * `unreadable`: the count couldn't be read. */
     budget?: () => Promise<{ used: number | null; unreadable?: boolean }>;
@@ -359,9 +363,11 @@ export async function runAndSaveCompetitorScanWithClient(
     return { status: "capped", nextAvailableAt: nextMonthStartUtc(now) };
   }
 
-  const [{ data: business, error }, niche] = await Promise.all([
+  const [{ data: business, error }, niche, savedBreakdown] = await Promise.all([
     supabase.from("businesses").select(BUSINESS_COLUMNS).eq("id", businessId).single(),
     loadBusinessNiche(supabase, businessId),
+    // Day 23 2d-4b: the owner's row is ranked by their latest saved score.
+    latestSavedBreakdown(supabase, businessId),
   ]);
   if (error || !business) {
     return { status: "not_found" };
@@ -400,6 +406,7 @@ export async function runAndSaveCompetitorScanWithClient(
     niche: niche ? nicheSearchTypes(niche.scope) : null,
     ...nicheScanFields(niche?.resolved, niche?.scope, row.website ?? row.verified_website_url),
     ownerOverrides: scanOverrides(await loadCompetitorOverrides(supabase, businessId)),
+    savedBreakdown,
   };
 
   let result;
@@ -426,21 +433,21 @@ export async function runAndSaveCompetitorScanWithClient(
   }
 
   const scanId = randomUUID();
+  // Day 23 2d-4b: PostScore's own results only (lib/competitors.ts savedScanRow).
   const rows = result.ranked.map((r) => savedScanRow(r, scanId, businessId));
+  // Each competitor's listing as this search returned it, for its full
+  // scoring — handed over in memory, never saved.
+  const inputs: CompetitorListingInputs = Object.fromEntries(result.ranked.filter((r) => !r.isSubject).map((r) => [r.placeId, competitorListingInput(r)]));
 
-  // "Also nearby" rides on the owner's own row (supabase/competitor-also-nearby.sql);
-  // before that file is run the scan saves without it.
+  // "Also nearby" rides on the owner's own row (supabase/competitor-also-nearby.sql),
+  // place IDs and distances only (names read live); before that file is run
+  // the scan saves without it.
   const subjectIndex = rows.findIndex((r) => r.is_subject);
-  const withAlsoNearby = rows.map((r, i) => (i === subjectIndex ? { ...r, also_nearby_json: result.alsoNearby ?? [] } : r));
-  // Newest columns first; each missing one (its SQL not run yet) is dropped in turn.
+  const withAlsoNearby = rows.map((r, i) => (i === subjectIndex ? { ...r, also_nearby_json: alsoNearbyWithoutGoogle(result.alsoNearby ?? []) } : r));
   const missingColumn = (e: { code?: string } | null) => !!e && (e.code === "PGRST204" || e.code === "42703");
-  const withoutServiceOptions = (list: Array<Record<string, unknown>>) => list.map((r) => Object.fromEntries(Object.entries(r).filter(([k]) => k !== "service_options")));
   let { error: insertError } = await supabase.from("competitor_scans").insert(withAlsoNearby);
   if (missingColumn(insertError)) {
-    ({ error: insertError } = await supabase.from("competitor_scans").insert(withoutServiceOptions(withAlsoNearby)));
-  }
-  if (missingColumn(insertError)) {
-    ({ error: insertError } = await supabase.from("competitor_scans").insert(withoutServiceOptions(rows)));
+    ({ error: insertError } = await supabase.from("competitor_scans").insert(rows));
   }
   if (insertError) {
     return { status: "error", message: insertError.message };
@@ -448,7 +455,7 @@ export async function runAndSaveCompetitorScanWithClient(
   // Each competitor's full PostScore is worked out in the background; the
   // page keeps showing the last finished scan until this one is done.
   try {
-    await (options.startScoring ?? defaultStartScoring)(scanId, businessId, result.ranked.filter((r) => !r.isSubject).length);
+    await (options.startScoring ?? defaultStartScoring)(scanId, businessId, result.ranked.filter((r) => !r.isSubject).length, inputs);
   } catch (err) {
     console.error(`[competitors] could not queue full scoring for ${scanId}:`, err);
   }
@@ -465,7 +472,7 @@ async function logPlacesSearchCalls(businessId: string, calls: number): Promise<
   await log(businessId, calls);
 }
 
-async function defaultStartScoring(scanId: string, businessId: string, competitorCount: number): Promise<void> {
+async function defaultStartScoring(scanId: string, businessId: string, competitorCount: number, inputs: CompetitorListingInputs): Promise<void> {
   // Loaded only when a job actually starts (server-only modules).
   const [{ createAdminClient }, { queueScoringJob }, { startCompetitorScoring }] = await Promise.all([
     import("@/lib/supabase/admin"),
@@ -473,7 +480,7 @@ async function defaultStartScoring(scanId: string, businessId: string, competito
     import("@/lib/competitorScoringTrigger"),
   ]);
   await queueScoringJob(createAdminClient(), scanId, businessId, "new_scan", competitorCount);
-  startCompetitorScoring(scanId);
+  startCompetitorScoring(scanId, inputs);
 }
 
 /** "Refresh competitors" — one paid scan, as often as the plan allows

@@ -268,3 +268,46 @@ describe("a search that didn't run is never shown as “found none”", () => {
     expect(b.refresh.allowed).toBe(false);
   });
 });
+
+describe("Day 23 2d-4b: a competitor refresh saves no Google value", () => {
+  const RIVAL = {
+    isSubject: false, placeId: "p-1", name: "Main Street Liquors", address: "12 Main St, Newark, DE", distanceMeters: 639, rating: 4.7, reviewCount: 104, hasWebsite: true, websiteUrl: "https://mainstreetliquors.example/",
+    listing: { phone: "+1 302-555-0110", openingHours: ["Monday: 10 AM – 9 PM"], openingHoursPeriods: null, categories: ["liquor_store"], businessStatus: "OPERATIONAL" },
+    googleMapsUri: "https://maps.google.com/?cid=9", priceLevel: "PRICE_LEVEL_MODERATE", photoCount: 10, serviceOptions: { delivery: true },
+    breakdown: { total: 80, grade: "B", scoringVersion: "1.9.0", categories: [], checks: [{ id: "completeness.phone", explanation: "Phone on Google: +1 302-555-0110", earnedPoints: 5 }] },
+  };
+  const SCAN = {
+    status: "ok", placesCalls: 1,
+    ranked: [{ ...OK_SCAN.ranked[0], name: "Modern Liquors", rating: 4.5, reviewCount: 15 }, RIVAL],
+    alsoNearby: [{ placeId: "p-near", name: "Corner Wine Shop", reviewCount: 2, distanceMeters: 300 }],
+  };
+
+  test("every row and also-nearby hold our own results only; each listing goes to full scoring in memory; the owner is ranked by their saved score", async () => {
+    scanSpy.mockResolvedValue(SCAN);
+    const { client, inserted } = fakeSupabase({ businesses: [BUSINESS], competitor_scans: [], scores: [{ breakdown_json: SAVED_BREAKDOWN }] });
+    const startScoring = vi.fn(async () => undefined);
+    const result = await runAndSaveCompetitorScanWithClient(client, "biz", { enforceCooldown: false, now: NOW, budget: async () => ({ used: 0 }), logCalls: async () => undefined, startScoring });
+    expect(result.status).toBe("saved");
+    const rows = inserted.competitor_scans as Array<Record<string, unknown>>;
+    expect(rows).toHaveLength(2);
+    const { COMPETITOR_RAW_COLUMNS } = await import("@/lib/competitorRawCleanup");
+    for (const row of rows) for (const c of COMPETITOR_RAW_COLUMNS) expect(row).not.toHaveProperty(c);
+    const text = JSON.stringify(rows);
+    for (const g of ["Main Street Liquors", "Modern Liquors", "12 Main St", "302-555-0110", "mainstreetliquors", "Monday: 10 AM", "PRICE_LEVEL_MODERATE", "Corner Wine Shop", "maps.google.com", "delivery"]) expect(text).not.toContain(g);
+    expect(rows.find((r) => r.is_subject)!.also_nearby_json).toEqual([{ placeId: "p-near", distanceMeters: 300 }]);
+    expect(rows.find((r) => !r.is_subject)).toMatchObject({ place_id: "p-1", distance_meters: 639, total: 80, grade: "B" });
+    // The listing reaches full scoring in memory, as the search returned it.
+    expect(startScoring).toHaveBeenCalledTimes(1);
+    const [, , count, inputs] = startScoring.mock.calls[0] as unknown as [string, string, number, Record<string, Record<string, unknown>>];
+    expect(count).toBe(1);
+    expect(Object.keys(inputs)).toEqual(["p-1"]);
+    expect(inputs["p-1"]).toMatchObject({ address: "12 Main St, Newark, DE", rating: 4.7, review_count: 104, phone: "+1 302-555-0110", website_url: "https://mainstreetliquors.example/", business_status: "OPERATIONAL" });
+    // The scan ranks the owner by their latest saved score.
+    expect((scanSpy.mock.calls.at(-1)![0] as { savedBreakdown: unknown }).savedBreakdown).toEqual(SAVED_BREAKDOWN);
+  });
+
+  test("'Add a competitor' saves the same results-only row", async () => {
+    const src = (await import("node:fs")).readFileSync("app/actions/competitorOverrides.ts", "utf8");
+    expect(src).toContain('.insert({ ...savedScanRow(ranked, latest.scan_id, businessId), created_at: latest.created_at })');
+  });
+});

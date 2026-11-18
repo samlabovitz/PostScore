@@ -401,10 +401,27 @@ describe("competitor distance", () => {
     expect((result.alsoNearby ?? []).map((a) => a.placeId)).toEqual(["malaysias", "beulah", "kathys"]);
     for (const a of result.alsoNearby ?? []) expect(rankedIds).not.toContain(a.placeId);
     const save = fs.readFileSync("app/actions/competitors.ts", "utf8");
-    expect(save).toContain("also_nearby_json: result.alsoNearby ?? []");
+    // Day 23 2d-4b: place IDs and distances only (names read live).
+    expect(save).toContain("also_nearby_json: alsoNearbyWithoutGoogle(result.alsoNearby ?? [])");
     expect(fs.readFileSync("supabase/competitor-also-nearby.sql", "utf8")).toContain("add column if not exists also_nearby_json jsonb");
     const view = fs.readFileSync("app/business/[id]/competitors/CompetitorsView.tsx", "utf8");
     expect(view).toContain("{(data.alsoNearby ?? []).length > 0 && <AlsoNearby listings={data.alsoNearby!} />}");
     expect(view.indexOf("<RankedList scan={scan} view={view} />")).toBeLessThan(view.indexOf("<AlsoNearby listings"));
+  });
+});
+
+describe("Day 23 2d-4b: the owner's row in a scan", () => {
+  test("is ranked by the owner's saved score (compared like for like), not by Google's values read here", async () => {
+    respond = () => KEES_NEARBY;
+    const { scoreBusiness, forCompetitorComparison, businessRowToScoringInput } = await import("./scoring");
+    // A saved score that's clearly not what this row's values would score.
+    const saved = forCompetitorComparison(scoreBusiness(businessRowToScoringInput({ ...KEES, rating: null, review_count: 0, phone: null, website: null, photo_count: 0 })));
+    const fromRow = forCompetitorComparison(scoreBusiness(businessRowToScoringInput(KEES)));
+    expect(saved.total).not.toBe(fromRow.total);
+    const withSaved = await findAndScoreCompetitors({ ...KEES, savedBreakdown: saved }, "en");
+    expect(withSaved.ranked.find((r) => r.isSubject)!.breakdown.total).toBe(saved.total);
+    // No saved score yet (a brand-new business): scored from the row as before.
+    const without = await findAndScoreCompetitors(KEES, "en");
+    expect(without.ranked.find((r) => r.isSubject)!.breakdown.total).toBe(fromRow.total);
   });
 });

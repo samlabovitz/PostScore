@@ -7,12 +7,14 @@
 // or blocked site gets "couldn't check" on what a plain fetch can't read,
 // exactly as the engine already handles it for anyone.
 //
-// Listing facts: a scan saves the competitor's phone, hours, categories and
-// status from the Google data it already fetched, so the listing checks and
-// "matches your Google listing" are scored from real values. Scans saved
-// before that kept only the CHECK RESULTS for the listing — those saved
-// results are reused as they are, and "matches your Google listing" is
-// "couldn't check" (the phone and hours it compares weren't saved).
+// Listing facts (Day 23 2d-4b): the scan hands each competitor's listing,
+// as its search returned it, to the scoring job in memory
+// (CompetitorListingInput) — never saved — so the listing checks and
+// "matches your Google listing" are scored from real values. Without that
+// hand-off the job reads the listing live once (lib/competitorReread.server.ts).
+// A listing with neither a status nor types keeps the scan's saved CHECK
+// RESULTS for the listing, and "matches your Google listing" is "couldn't
+// check".
 
 import { analyzeWebsiteForSave } from "@/lib/websiteAnalysisForSave";
 import {
@@ -25,11 +27,12 @@ import {
   type ScoreBreakdown,
   type WebsiteAnalysis,
 } from "@/lib/scoring";
-import type { OpeningHoursPeriod } from "@/lib/google/places";
+import type { OpeningHoursPeriod, PlaceDetails } from "@/lib/google/places";
 import { t } from "@/lib/i18n/messages";
 import type { Locale } from "@/lib/i18n/locale";
 
-/** The saved competitor_scans fields full scoring reads. */
+/** What full scoring reads: the competitor's listing (in memory) plus its
+ * saved first score. */
 export interface CompetitorScoringRow {
   place_id: string;
   address: string | null;
@@ -45,6 +48,28 @@ export interface CompetitorScoringRow {
   breakdown_json: unknown;
 }
 
+/** A competitor's listing as Google returned it — the scan's search answer
+ * or one live re-read. In memory only (Day 23 2d-4b): handed to the
+ * scoring job, never written to the database. */
+export type CompetitorListingInput = Omit<CompetitorScoringRow, "place_id" | "breakdown_json">;
+
+/** The same input from a Place Details answer (the job's live re-read),
+ * mapped exactly as the scan maps its search answer (rankedFromCandidate). */
+export function listingInputFromPlace(place: PlaceDetails): CompetitorListingInput {
+  return {
+    address: place.formattedAddress,
+    rating: place.rating,
+    review_count: place.userRatingCount,
+    photo_count: place.photoCount,
+    has_website: isRealWebsite(place.website),
+    website_url: place.website ?? null,
+    phone: place.phone,
+    opening_hours: { weekday: place.openingHours, periods: place.openingHoursPeriods },
+    categories: place.categories,
+    business_status: place.businessStatus,
+  };
+}
+
 export interface CompetitorFullScore {
   breakdown: ScoreBreakdown;
   websiteAnalysis: WebsiteAnalysis | null;
@@ -52,7 +77,7 @@ export interface CompetitorFullScore {
   pagespeedCalls: number;
 }
 
-/** True when the scan saved this competitor's listing facts (new scans). */
+/** True when the listing came with its facts (status or types). */
 export function hasSavedListingFacts(row: Pick<CompetitorScoringRow, "business_status" | "categories">): boolean {
   return (row.business_status ?? null) !== null || (row.categories ?? null) !== null;
 }

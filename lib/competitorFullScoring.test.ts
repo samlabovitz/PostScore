@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- an in-memory stand-in for the Supabase query builder */
 import { describe, expect, test, vi } from "vitest";
 
-// The website analysis and the owner's own score come from the real owner
-// pipeline; here they're replaced so no network is touched.
+// The website analysis comes from the real owner pipeline; here it's
+// replaced so no network is touched.
 const analyzeWebsiteForSave = vi.fn();
 vi.mock("@/lib/websiteAnalysisForSave", () => ({ analyzeWebsiteForSave: (...a: unknown[]) => analyzeWebsiteForSave(...a) }));
-const scoreBusinessWithClient = vi.fn();
-vi.mock("@/app/actions/scoring", () => ({ scoreBusinessWithClient: (...a: unknown[]) => scoreBusinessWithClient(...a) }));
 
-import { breakdownFromChecks, scoreBusiness } from "@/lib/scoring";
+import { breakdownFromChecks, forCompetitorComparison, scoreBusiness } from "@/lib/scoring";
 import { scoringInput } from "@/emails/sampleMonthlyReportContent";
 import { countingFetch, hasSavedListingFacts, mergeLegacyListing, scoreCompetitorFully, withoutUnmeasuredWebsite } from "./competitorFullScoring";
 import { canSpendPagespeed, pacificDayStart, pagespeedDailyBudget, scoringConcurrency } from "./pagespeedBudget";
-import { runCompetitorScoringJob } from "./competitorScoringJob";
+import { runCompetitorScoringJob, type CompetitorListingInputs } from "./competitorScoringJob";
+import type { CompetitorListingInput } from "./competitorFullScoring";
+import { COMPETITOR_RAW_COLUMNS } from "./competitorRawCleanup";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 describe("one scoring engine", () => {
@@ -122,29 +122,44 @@ describe("PageSpeed budget", () => {
 });
 
 // ---- job runner against an in-memory table store ----
-function fakeDb(state: { jobs: Record<string, any>[]; scans: Record<string, any>[]; scores: number }) {
+type State = { jobs: Record<string, any>[]; scans: Record<string, any>[]; scores: number; saved?: unknown; selected?: string[]; writes?: Record<string, unknown>[] };
+function fakeDb(state: State) {
   const db = {
     from(table: string) {
       const filters: [string, string, unknown][] = [];
       let patch: Record<string, unknown> | null = null;
       const rows = () =>
-        (table === "competitor_scoring_jobs" ? state.jobs : table === "competitor_scans" ? state.scans : table === "businesses" ? [{ id: "b", language: "en" }] : []).filter((r) =>
-          filters.every(([op, k, v]) => (op === "eq" ? r[k] === v : true))
-        );
+        (table === "competitor_scoring_jobs"
+          ? state.jobs
+          : table === "competitor_scans"
+            ? state.scans
+            : table === "businesses"
+              ? [{ id: "b", language: "en" }]
+              : table === "scores"
+                ? state.saved
+                  ? [{ breakdown_json: state.saved }]
+                  : []
+                : []
+        ).filter((r) => filters.every(([op, k, v]) => (op === "eq" && k in r ? r[k] === v : true)));
       const chain: any = {
-        select: (_cols?: string, opts?: { count?: string; head?: boolean }) => {
+        select: (cols?: string, opts?: { count?: string; head?: boolean }) => {
           if (opts?.head) return { gte: async () => ({ count: state.scores, error: null }) };
+          if (table === "competitor_scans" && cols) (state.selected ??= []).push(cols);
           return chain;
         },
         eq: (k: string, v: unknown) => {
           filters.push(["eq", k, v]);
           if (patch) {
+            if (table === "competitor_scans") (state.writes ??= []).push(patch);
             for (const r of rows()) Object.assign(r, patch);
             return Promise.resolve({ error: null });
           }
           return chain;
         },
         gte: () => chain,
+        lte: () => chain,
+        order: () => chain,
+        limit: () => chain,
         maybeSingle: async () => ({ data: rows()[0] ?? null, error: null }),
         update: (p: Record<string, unknown>) => {
           patch = p;
@@ -158,50 +173,101 @@ function fakeDb(state: { jobs: Record<string, any>[]; scans: Record<string, any>
   return db as unknown as SupabaseClient;
 }
 
+/** A saved row as 2d-4b writes it: our own results only. */
 function scanRow(id: string, isSubject: boolean): Record<string, any> {
-  return { id, scan_id: "s", is_subject: isSubject, place_id: id, address: null, rating: 4.5, review_count: 50, photo_count: 5, has_website: false, website_url: null, breakdown_json: null, pending_breakdown_json: null };
+  return { id, scan_id: "s", is_subject: isSubject, place_id: id, breakdown_json: null, pending_breakdown_json: null };
 }
+
+/** A competitor's listing as the scan's search returned it (in memory). */
+function listing(over: Partial<CompetitorListingInput> = {}): CompetitorListingInput {
+  return { address: "1 Main St", rating: 4.5, review_count: 50, photo_count: 5, has_website: false, website_url: null, phone: "+1 555 0100", opening_hours: { weekday: ["Monday: 9 AM – 5 PM"], periods: [] }, categories: ["deli"], business_status: "OPERATIONAL", ...over };
+}
+const inputsFor = (...ids: string[]): CompetitorListingInputs => Object.fromEntries(ids.map((id) => [id, listing()]));
+const noReread = vi.fn(async () => null);
+const ENV = { PAGESPEED_DAILY_LIMIT: "25000" };
 
 describe("the scoring job", () => {
   const ownerScore = scoreBusiness(scoringInput());
 
-  test("scores every competitor, uses the owner's own score, and publishes all rows together", async () => {
-    scoreBusinessWithClient.mockResolvedValue({ status: "ok", result: { breakdown: ownerScore } });
-    const state = { jobs: [{ scan_id: "s", business_id: "b", status: "queued", done: 0, total: 2, pagespeed_calls: 0, started_at: null }], scans: [scanRow("o", true), scanRow("c1", false), scanRow("c2", false)], scores: 0 };
-    const out = await runCompetitorScoringJob(fakeDb(state), "s", { env: { PAGESPEED_DAILY_LIMIT: "25000" } });
+  test("scores every competitor from the scan's listings, ranks the owner by their saved score, and publishes all rows together", async () => {
+    noReread.mockClear();
+    const state: State = { jobs: [{ scan_id: "s", business_id: "b", status: "queued", done: 0, total: 2, pagespeed_calls: 0, started_at: null }], scans: [scanRow("o", true), scanRow("c1", false), scanRow("c2", false)], scores: 0, saved: ownerScore };
+    const out = await runCompetitorScoringJob(fakeDb(state), "s", { env: ENV, inputs: inputsFor("c1", "c2"), reread: noReread });
     expect(out).toMatchObject({ status: "done", done: 2, total: 2 });
+    expect(noReread).not.toHaveBeenCalled();
     expect(state.jobs[0].status).toBe("done");
-    expect(state.scans.find((r) => r.id === "o")!.total).toBe(ownerScore.total);
+    expect(state.scans.find((r) => r.id === "o")!.total).toBe(forCompetitorComparison(ownerScore).total);
     expect(state.scans.every((r) => r.pending_breakdown_json === null && r.breakdown_json)).toBe(true);
+    // Scored from the same values the scan read: the listing checks have points.
+    expect(state.scans.find((r) => r.id === "c1")!.breakdown_json.checks.find((c: any) => c.id === "completeness.phone").earnedPoints).toBeGreaterThan(0);
+  });
+
+  test("Day 23 2d-4b: writes no Google value — no listing column, no quoted text, no Google side of a comparison — and reads only our own columns", async () => {
+    analyzeWebsiteForSave.mockResolvedValue({ websiteAnalysis: { infoConsistency: { phone: { websiteValue: "555-0100", googleValue: "+1 555 0100" } } }, httpsStatus: "ok" });
+    const state: State = { jobs: [{ scan_id: "s", business_id: "b", status: "queued", done: 0, total: 1, pagespeed_calls: 0, started_at: null }], scans: [scanRow("o", true), scanRow("c1", false)], scores: 0, saved: ownerScore };
+    await runCompetitorScoringJob(fakeDb(state), "s", { env: ENV, inputs: { c1: listing({ has_website: true, website_url: "https://rival.example" }) }, reread: noReread });
+    analyzeWebsiteForSave.mockReset();
+    expect(state.selected).toEqual(["id, is_subject, place_id, breakdown_json, pending_breakdown_json"]);
+    expect(state.writes!.length).toBeGreaterThan(0);
+    for (const w of state.writes!) {
+      for (const c of COMPETITOR_RAW_COLUMNS) expect(w).not.toHaveProperty(c);
+      const text = JSON.stringify(w);
+      expect(text).not.toContain("googleValue");
+      expect(text).not.toContain("+1 555 0100");
+      expect(text).not.toContain("1 Main St");
+      for (const key of ["breakdown_json", "pending_breakdown_json"]) {
+        const b = w[key] as { checks?: Array<{ explanation?: string }> } | null | undefined;
+        for (const c of b?.checks ?? []) expect(c.explanation ?? "").toBe("");
+      }
+    }
+  });
+
+  test("the hand-off didn't arrive: exactly one live re-read per competitor; one that can't be read keeps its first score, 'Website couldn't be checked'", async () => {
+    const first = scoreBusiness(scoringInput());
+    const reread = vi.fn<(placeId: string, businessId: string) => Promise<CompetitorListingInput | null>>(async (placeId) => (placeId === "c1" ? listing() : null));
+    const state: State = { jobs: [{ scan_id: "s", business_id: "b", status: "queued", done: 0, total: 2, pagespeed_calls: 0, started_at: null }], scans: [scanRow("o", true), { ...scanRow("c1", false), breakdown_json: first }, { ...scanRow("c2", false), breakdown_json: first }], scores: 0, saved: ownerScore };
+    const out = await runCompetitorScoringJob(fakeDb(state), "s", { env: ENV, reread });
+    expect(out.status).toBe("done");
+    expect(reread.mock.calls.map((c) => c[0]).sort()).toEqual(["c1", "c2"]);
+    expect(reread.mock.calls.every((c) => c[1] === "b")).toBe(true);
+    const kept = state.scans.find((r) => r.id === "c2")!.breakdown_json;
+    expect(kept.total).toBe(first.total);
+    expect(kept.checks.find((c: any) => c.id === "website.has_website").meta).toMatchObject({ fullScore: "1" });
+  });
+
+  test("a listing in the hand-off is used; only the missing one is re-read", async () => {
+    const reread = vi.fn<(placeId: string, businessId: string) => Promise<CompetitorListingInput | null>>(async () => listing());
+    const state: State = { jobs: [{ scan_id: "s", business_id: "b", status: "queued", done: 0, total: 2, pagespeed_calls: 0, started_at: null }], scans: [scanRow("o", true), scanRow("c1", false), scanRow("c2", false)], scores: 0, saved: ownerScore };
+    await runCompetitorScoringJob(fakeDb(state), "s", { env: ENV, inputs: inputsFor("c1"), reread });
+    expect(reread.mock.calls.map((c) => c[0])).toEqual(["c2"]);
   });
 
   test("stops at the PageSpeed budget — nothing published, the rest resumes later", async () => {
-    const state = { jobs: [{ scan_id: "s", business_id: "b", status: "queued", done: 0, total: 2, pagespeed_calls: 0, started_at: null }], scans: [scanRow("o", true), scanRow("c1", false), scanRow("c2", false)], scores: 10000 };
+    const state: State = { jobs: [{ scan_id: "s", business_id: "b", status: "queued", done: 0, total: 2, pagespeed_calls: 0, started_at: null }], scans: [scanRow("o", true), scanRow("c1", false), scanRow("c2", false)], scores: 10000, saved: ownerScore };
     // 10,000 owner scans × 2 = 20,000 = the whole 80% budget.
-    const out = await runCompetitorScoringJob(fakeDb(state), "s", { env: { PAGESPEED_DAILY_LIMIT: "25000" } });
+    const out = await runCompetitorScoringJob(fakeDb(state), "s", { env: ENV, inputs: inputsFor("c1", "c2"), reread: noReread });
     expect(out).toMatchObject({ status: "failed", stopped: "pagespeed_budget", done: 0 });
     expect(state.scans.filter((r) => !r.is_subject).every((r) => r.breakdown_json === null)).toBe(true);
   });
 
   test("more workers than sites: every site scored exactly once, no crash", async () => {
-    scoreBusinessWithClient.mockResolvedValue({ status: "ok", result: { breakdown: ownerScore } });
-    const state = { jobs: [{ scan_id: "s", business_id: "b", status: "queued", done: 0, total: 1, pagespeed_calls: 0, started_at: null }], scans: [scanRow("o", true), scanRow("c1", false)], scores: 0 };
-    const out = await runCompetitorScoringJob(fakeDb(state), "s", { env: { PAGESPEED_DAILY_LIMIT: "25000" } });
+    const state: State = { jobs: [{ scan_id: "s", business_id: "b", status: "queued", done: 0, total: 1, pagespeed_calls: 0, started_at: null }], scans: [scanRow("o", true), scanRow("c1", false)], scores: 0, saved: ownerScore };
+    const out = await runCompetitorScoringJob(fakeDb(state), "s", { env: ENV, inputs: inputsFor("c1"), reread: noReread });
     expect(out).toMatchObject({ status: "done", done: 1, total: 1 });
   });
 
   test("won't run without a configured daily limit", async () => {
-    const state = { jobs: [{ scan_id: "s", business_id: "b", status: "queued", done: 0, total: 1, pagespeed_calls: 0, started_at: null }], scans: [scanRow("c1", false)], scores: 0 };
+    const state: State = { jobs: [{ scan_id: "s", business_id: "b", status: "queued", done: 0, total: 1, pagespeed_calls: 0, started_at: null }], scans: [scanRow("c1", false)], scores: 0 };
     const out = await runCompetitorScoringJob(fakeDb(state), "s", { env: {} });
     expect(out.stopped).toBe("pagespeed_limit_not_set");
   });
 
   test("one site per call (the Netlify step route) — progress saved, status stays running", async () => {
-    const state = { jobs: [{ scan_id: "s", business_id: "b", status: "queued", done: 0, total: 2, pagespeed_calls: 0, started_at: null }], scans: [scanRow("o", true), scanRow("c1", false), scanRow("c2", false)], scores: 0 };
-    const out = await runCompetitorScoringJob(fakeDb(state), "s", { maxSites: 1, env: { PAGESPEED_DAILY_LIMIT: "25000", PAGESPEED_PER_100S_LIMIT: "5" } });
+    const env = { ...ENV, PAGESPEED_PER_100S_LIMIT: "5" };
+    const state: State = { jobs: [{ scan_id: "s", business_id: "b", status: "queued", done: 0, total: 2, pagespeed_calls: 0, started_at: null }], scans: [scanRow("o", true), scanRow("c1", false), scanRow("c2", false)], scores: 0, saved: ownerScore };
+    const out = await runCompetitorScoringJob(fakeDb(state), "s", { maxSites: 1, env, inputs: inputsFor("c1", "c2"), reread: noReread });
     expect(out).toMatchObject({ status: "running", done: 1, stopped: "max_sites" });
-    const again = await runCompetitorScoringJob(fakeDb(state), "s", { maxSites: 1, env: { PAGESPEED_DAILY_LIMIT: "25000", PAGESPEED_PER_100S_LIMIT: "5" } });
+    const again = await runCompetitorScoringJob(fakeDb(state), "s", { maxSites: 1, env, inputs: inputsFor("c1", "c2"), reread: noReread });
     expect(again.status).toBe("done");
   });
 });
-

@@ -247,10 +247,11 @@ describe("when the nightly rule clears a scan", () => {
 });
 
 describe("nothing reads a cleared value back", () => {
-  test("the scoring job keeps a cleared row's saved result instead of re-scoring it from blanks, and clears after scoring only when the cleanup is live", async () => {
+  test("the scoring job never reads a saved Google value (Day 23 2d-4b: listings in memory or read live), and clears after scoring only when the cleanup is live", async () => {
     const fs = await import("node:fs");
     const job = fs.readFileSync("lib/competitorScoringJob.ts", "utf8");
-    expect(job).toContain('if (rawCleared(row)) throw new Error("listing values cleared");');
+    expect(job).toContain('const JOB_COLUMNS = "id, is_subject, place_id, breakdown_json, pending_breakdown_json";');
+    expect(job).not.toContain('from("competitor_scans").select("*")');
     expect(job).toMatch(/if \(storageCleanupLive\(env\)\) \{[\s\S]{0,200}clearScanRawValues\(db, scanId\)/);
   });
 

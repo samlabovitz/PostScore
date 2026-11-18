@@ -5,15 +5,23 @@
 // all are published together, so the page always shows a complete,
 // consistent ranking (the last finished one meanwhile). Progress
 // ("Checking 7 of 11…") and PageSpeed calls are kept on the job row.
+//
+// Day 23 2d-4b: the rows hold PostScore's own results only. Each
+// competitor's listing comes in memory from the scan's own search
+// (`inputs`), or — when that hand-off was lost — from one live re-read
+// (lib/competitorReread.server.ts: counted, capped, logged). The owner's
+// row is their latest SAVED score, compared like for like. Nothing this
+// job writes holds a Google value.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { scoreCompetitorFully, type CompetitorScoringRow } from "@/lib/competitorFullScoring";
+import { scoreCompetitorFully, type CompetitorListingInput } from "@/lib/competitorFullScoring";
 import { canSpendPagespeed, pacificDayStart, pagespeedDailyBudget, PAGESPEED_CALLS_PER_SCAN_MAX, scoringConcurrency } from "@/lib/pagespeedBudget";
-import { scoreBusinessWithClient } from "@/app/actions/scoring";
 import type { ScoreBreakdown } from "@/lib/scoring";
 import { normalizeLocale } from "@/lib/i18n";
 import { forCompetitorComparison } from "@/lib/scoring";
-import { rawCleared } from "@/lib/competitorRawCleanup";
+import { breakdownWithoutQuotes } from "@/lib/breakdownStorage";
+import { closedFirstScore, websiteAnalysisWithoutGoogle } from "@/lib/competitorRawCleanup";
+import { latestScoreBreakdown } from "@/lib/ownerRankScore.server";
 import { storageCleanupLive } from "@/lib/storageCleanupLive";
 
 export type ScoringJobKind = "new_scan" | "backfill";
@@ -50,16 +58,43 @@ export async function queueScoringJob(db: SupabaseClient, scanId: string, busine
   if (error) throw new Error(error.message);
 }
 
-interface ScanRow extends CompetitorScoringRow {
+/** Each competitor's listing from the scan's own search, by place ID — in memory only. */
+export type CompetitorListingInputs = Record<string, CompetitorListingInput>;
+
+/** The only columns the job reads: our own results. */
+const JOB_COLUMNS = "id, is_subject, place_id, breakdown_json, pending_breakdown_json";
+
+interface ScanRow {
   id: string;
   is_subject: boolean;
+  place_id: string;
+  breakdown_json: unknown;
   pending_breakdown_json: unknown;
+}
+
+function isBreakdown(value: unknown): value is ScoreBreakdown {
+  const v = value as Partial<ScoreBreakdown> | null;
+  return !!v && typeof v === "object" && Array.isArray(v.checks) && Array.isArray(v.categories) && typeof v.total === "number";
+}
+
+async function defaultReread(placeId: string, businessId: string): Promise<CompetitorListingInput | null> {
+  const { rereadCompetitorListing } = await import("@/lib/competitorReread.server");
+  return rereadCompetitorListing(placeId, businessId);
 }
 
 export async function runCompetitorScoringJob(
   db: SupabaseClient,
   scanId: string,
-  options: { maxSites?: number; env?: Record<string, string | undefined>; fetchImpl?: typeof fetch; log?: (line: string) => void } = {}
+  options: {
+    maxSites?: number;
+    env?: Record<string, string | undefined>;
+    fetchImpl?: typeof fetch;
+    log?: (line: string) => void;
+    /** The scan's own listings, in memory (never saved). */
+    inputs?: CompetitorListingInputs | null;
+    /** A listing the hand-off didn't bring: one live re-read (tests replace it). */
+    reread?: (placeId: string, businessId: string) => Promise<CompetitorListingInput | null>;
+  } = {}
 ): Promise<ScoringJobOutcome> {
   const env = options.env ?? process.env;
   const log = options.log ?? (() => {});
@@ -75,24 +110,26 @@ export async function runCompetitorScoringJob(
     return { status: "failed", done: job.done, total: job.total, pagespeedCalls: job.pagespeed_calls, stopped: "pagespeed_limit_not_set" };
   }
 
-  const { data: rowsData, error: rowsError } = await db.from("competitor_scans").select("*").eq("scan_id", scanId);
+  const { data: rowsData, error: rowsError } = await db.from("competitor_scans").select(JOB_COLUMNS).eq("scan_id", scanId);
   if (rowsError || !rowsData) throw new Error(rowsError?.message ?? "Could not read the scan.");
-  const rows = rowsData as ScanRow[];
+  const rows = rowsData as unknown as ScanRow[];
   const { data: business } = await db.from("businesses").select("language").eq("id", job.business_id).maybeSingle();
   const locale = normalizeLocale(business?.language ?? null);
   await setJob({ status: "running", started_at: job.started_at ?? new Date().toISOString(), error: null });
 
-  // The owner's row: their own current PostScore — the same number as the Overview.
+  // The owner's row: their latest SAVED score — the same number as the
+  // Overview (Day 23 2d-4b: never re-scored here, no Google call).
   const owner = rows.find((r) => r.is_subject);
   if (owner && !owner.pending_breakdown_json) {
-    const scored = await scoreBusinessWithClient(db, job.business_id, locale);
-    if (scored.status === "ok") {
+    const saved = await latestScoreBreakdown(db, job.business_id);
+    if (isBreakdown(saved)) {
       // Like for like (v1.15.0): without the checks competitors aren't scored on.
-      const comparable = forCompetitorComparison(scored.result.breakdown, locale);
+      const comparable = breakdownWithoutQuotes(forCompetitorComparison(saved, locale));
       owner.pending_breakdown_json = comparable;
       await db.from("competitor_scans").update({ pending_breakdown_json: comparable }).eq("id", owner.id);
     }
   }
+  const reread = options.reread ?? defaultReread;
 
   const competitors = rows.filter((r) => !r.is_subject);
   const todo = competitors.filter((r) => !r.pending_breakdown_json);
@@ -118,20 +155,27 @@ export async function runCompetitorScoringJob(
       let breakdown: ScoreBreakdown | null = null;
       let websiteAnalysis: unknown = null;
       try {
-        // Google's values already cleared (Day 23 2b-3): scoring it again
-        // from blanks would be wrong — its saved result is kept.
-        if (rawCleared(row)) throw new Error("listing values cleared");
-        const res = await scoreCompetitorFully(row, { locale, fetchImpl: options.fetchImpl });
-        breakdown = res.breakdown;
-        websiteAnalysis = res.websiteAnalysis;
-        pagespeedCalls += res.pagespeedCalls;
+        const listing = options.inputs?.[row.place_id] ?? (await reread(row.place_id, job.business_id));
+        if (listing) {
+          const res = await scoreCompetitorFully({ ...listing, place_id: row.place_id, breakdown_json: row.breakdown_json }, { locale, fetchImpl: options.fetchImpl });
+          breakdown = res.breakdown;
+          websiteAnalysis = res.websiteAnalysis;
+          pagespeedCalls += res.pagespeedCalls;
+        } else {
+          // Google couldn't be read (or the month's re-reads are used up):
+          // its first score is kept, "Website couldn't be checked" — never invented.
+          log(`  ${row.place_id}: listing not available, first score kept`);
+          breakdown = closedFirstScore(row.breakdown_json as ScoreBreakdown | null) ?? null;
+        }
       } catch (err) {
         // Shouldn't happen (website problems are recorded, not thrown) —
         // keep this competitor's saved result rather than invent one.
         log(`  ${row.place_id}: scoring error, saved result kept (${err instanceof Error ? err.message : String(err)})`);
         breakdown = (row.breakdown_json as ScoreBreakdown | null) ?? null;
       }
-      await db.from("competitor_scans").update({ pending_breakdown_json: breakdown, website_analysis_json: websiteAnalysis }).eq("id", row.id);
+      // Our own results only: no quoted text, no Google side of a comparison.
+      breakdown = breakdownWithoutQuotes(breakdown);
+      await db.from("competitor_scans").update({ pending_breakdown_json: breakdown, website_analysis_json: websiteAnalysisWithoutGoogle(websiteAnalysis) }).eq("id", row.id);
       row.pending_breakdown_json = breakdown;
       done++;
       await setJob({ done, pagespeed_calls: pagespeedCalls });

@@ -896,6 +896,38 @@ export async function getPlaceLive(placeId: string, fetchImpl: typeof fetch = fe
   return data ? liveValuesFrom(data) : null;
 }
 
+/** Day 23 2d-4b: a competitor's listing for its full scoring, when the
+ * scan's own answer didn't reach the job (lib/competitorReread.server.ts).
+ * Only what the scoring reads — Place Details Enterprise (phone, hours,
+ * rating and website are Enterprise fields; no Atmosphere field). */
+export const COMPETITOR_SCORING_FIELD_MASK = [
+  "id",
+  "formattedAddress",
+  "nationalPhoneNumber",
+  "internationalPhoneNumber",
+  "websiteUri",
+  "regularOpeningHours.weekdayDescriptions",
+  "regularOpeningHours.periods",
+  "rating",
+  "userRatingCount",
+  "types",
+  "businessStatus",
+  "photos",
+].join(",");
+
+/** One competitor's listing now. One attempt; null on any failure. */
+export async function getCompetitorScoringListing(placeId: string, fetchImpl: typeof fetch = fetch): Promise<PlaceDetails | null> {
+  const outcome = await fetchPlacesOnce(
+    `${PLACES_API_BASE}/places/${encodeURIComponent(placeId)}`,
+    { headers: { "X-Goog-Api-Key": getApiKey(), "X-Goog-FieldMask": COMPETITOR_SCORING_FIELD_MASK }, cache: "no-store" },
+    fetchImpl,
+    LIVE_TIMEOUT_MS
+  );
+  if (outcome.kind !== "ok") return null;
+  const data = (await outcome.res.json().catch(() => null)) as RawDetailsPlace | null;
+  return data && typeof data.id === "string" ? normalizeDetails(data) : null;
+}
+
 /** Day 23 2d-2: the owner's own listing, read live when a page is shown
  * (Place Details Enterprise, the cheapest SKU with the rating and review
  * count) — the values every owner page shows next to our results. */

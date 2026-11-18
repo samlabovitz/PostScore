@@ -31,6 +31,8 @@ import { onePerBrand } from "@/lib/competitorChains";
 import { classifyCompetitor, nicheById } from "@/lib/niches";
 import type { NicheRule } from "@/lib/competitorNicheRule";
 import { t, tPlural, type Locale } from "@/lib/i18n";
+import type { CompetitorListingInput } from "@/lib/competitorFullScoring";
+import { breakdownWithoutQuotes } from "@/lib/breakdownStorage";
 
 /** How many nearest comparable competitors to score and show, at most —
  * never padded to this number: `comparable` below is built by filtering
@@ -173,6 +175,11 @@ export interface CompetitorSourceBusiness extends BusinessScoringRow {
    * comparison. Optional/undefined for callers (like the Competitors
    * page) that don't select it — never fabricated when absent. */
   priceLevel?: string | null;
+  /** Day 23 2d-4b: the owner's latest saved score (their newest `scores`
+   * breakdown). The owner's row is ranked by its points, compared like for
+   * like — never a score worked out from Google's values here. Absent or
+   * unreadable: scored from this business row as before. */
+  savedBreakdown?: unknown;
 }
 
 export interface RankedCompetitor {
@@ -647,7 +654,7 @@ export async function findAndScoreCompetitors(
 
   const subjectLocation = { lat: subject.lat, lng: subject.lng };
   // Like for like (v1.15.0): competitors aren't link-checked, so neither is the owner here.
-  const subjectBreakdown = forCompetitorComparison(scoreBusiness(businessRowToScoringInput(subject), locale), locale);
+  const subjectBreakdown = forCompetitorComparison(savedScoreBreakdown(subject.savedBreakdown) ?? scoreBusiness(businessRowToScoringInput(subject), locale), locale);
 
   type Comparable = { candidate: NearbyCandidate; distanceMeters: number };
   let comparable: Comparable[] = [];
@@ -1109,32 +1116,46 @@ export function rankedFromCandidate(candidate: NearbyCandidate, distanceMeters: 
   };
 }
 
-/** The competitor_scans row saved for one ranked entry. */
+/** A saved score breakdown (categories + checks), or null. */
+function savedScoreBreakdown(value: unknown): ScoreBreakdown | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Partial<ScoreBreakdown>;
+  return Array.isArray(v.checks) && Array.isArray(v.categories) && typeof v.total === "number" ? (value as ScoreBreakdown) : null;
+}
+
+/** The competitor_scans row saved for one ranked entry — PostScore's own
+ * results only (Day 23 2d-4b): the place ID, distance, score, grade,
+ * version and points. Google's values are read live when shown; the full
+ * scoring gets them in memory (competitorListingInput). */
 export function savedScanRow(r: RankedCompetitor, scanId: string, businessId: string) {
   return {
     scan_id: scanId,
     business_id: businessId,
     is_subject: r.isSubject,
     place_id: r.placeId,
-    name: r.name,
-    address: r.address,
     distance_meters: r.distanceMeters,
-    rating: r.rating,
-    review_count: r.reviewCount,
-    has_website: r.hasWebsite,
     total: r.breakdown.total,
     grade: r.breakdown.grade,
     scoring_version: r.breakdown.scoringVersion,
-    breakdown_json: r.breakdown,
-    price_level: r.priceLevel,
+    breakdown_json: breakdownWithoutQuotes(r.breakdown),
+  };
+}
+
+/** What a competitor's full scoring reads from this scan's search answer
+ * (lib/competitorFullScoring.ts) — in memory only, never saved. The same
+ * fields, mapped the same way, as the saved columns it used to read. */
+export function competitorListingInput(r: RankedCompetitor): CompetitorListingInput {
+  return {
+    address: r.address,
+    rating: r.rating,
+    review_count: r.reviewCount,
     photo_count: r.photoCount,
+    has_website: r.hasWebsite,
     website_url: r.websiteUrl ?? null,
     phone: r.listing?.phone ?? null,
     opening_hours: r.listing ? { weekday: r.listing.openingHours, periods: r.listing.openingHoursPeriods } : null,
     categories: r.listing?.categories ?? null,
     business_status: r.listing?.businessStatus ?? null,
-    // supabase/service-options.sql (dropped by the caller before it's run).
-    service_options: r.serviceOptions ?? null,
   };
 }
 

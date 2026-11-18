@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runCompetitorScoringJob } from "@/lib/competitorScoringJob";
+import { listingInputsFromBody } from "@/lib/competitorListingInputs";
 
 // One step of a scan's full competitor scoring: scores at most ONE
 // competitor site, saves it, and reports progress. Called repeatedly by
 //.netlify/functions/competitor-scoring-batch.mts (a standard
 // function has a short time limit; one site's analysis fits, a whole scan
-// may not). Secret-protected like the monthly-report cron route.
+// may not). Secret-protected like the monthly-report cron route. The scan's
+// listings (Day 23 2d-4b) come in the body, in memory only.
 
 export const dynamic = "force-dynamic";
 
@@ -22,9 +24,9 @@ function authorized(req: Request): boolean {
 
 export async function POST(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const body = (await req.json().catch(() => null)) as { scanId?: unknown } | null;
+  const body = (await req.json().catch(() => null)) as { scanId?: unknown; inputs?: unknown } | null;
   const scanId = typeof body?.scanId === "string" && /^[0-9a-f-]{36}$/i.test(body.scanId) ? body.scanId : null;
   if (!scanId) return NextResponse.json({ error: "scanId required" }, { status: 400 });
-  const outcome = await runCompetitorScoringJob(createAdminClient(), scanId, { maxSites: 1 });
+  const outcome = await runCompetitorScoringJob(createAdminClient(), scanId, { maxSites: 1, inputs: listingInputsFromBody(body?.inputs) });
   return NextResponse.json(outcome);
 }

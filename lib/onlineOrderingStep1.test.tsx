@@ -45,7 +45,7 @@ describe("asked for, and saved as Google states them", () => {
     expect(parseServiceOptions({ dineIn: true, junk: 1 })).toEqual({ dineIn: true });
   });
 
-  test("a competitor search returns them from the same call (mocked), and the scan row saves them", async () => {
+  test("a competitor search returns them from the same call (mocked); Day 23 2d-4b: the scan row never saves them", async () => {
     vi.stubEnv("GOOGLE_PLACES_API_KEY", "test-key");
     let mask = "";
     const fetchImpl = (async (_url: unknown, init?: RequestInit) => {
@@ -56,16 +56,16 @@ describe("asked for, and saved as Google states them", () => {
     expect(mask).toContain("places.takeout,places.delivery,places.curbsidePickup,places.dineIn");
     expect(hit.details.serviceOptions).toEqual({ takeout: true, curbsidePickup: false });
     const row = savedScanRow({ placeId: "p1", name: "Taco Place", isSubject: false, address: null, distanceMeters: 100, rating: null, reviewCount: null, hasWebsite: false, googleMapsUri: null, breakdown: scoreBusiness(scoringInput()), priceLevel: null, photoCount: 0, serviceOptions: hit.details.serviceOptions } as RankedCompetitor, "scan", "biz");
-    expect(row.service_options).toEqual({ takeout: true, curbsidePickup: false });
+    expect(row).not.toHaveProperty("service_options");
   });
 
-  test("Day 23 2d-4: the owner's service options are read when shown, never saved by a scan; competitors' still drop cleanly before the SQL", () => {
+  test("Day 23 2d-4: the owner's service options are read when shown, never saved by a scan; nor are competitors' (2d-4b)", () => {
     const save = readFileSync("app/actions/businesses.ts", "utf8");
     expect(save).not.toContain("google_service_options");
     expect(readFileSync("lib/listingScoringRow.ts", "utf8")).toContain("google_service_options: place.serviceOptions");
     expect(readFileSync("lib/serviceOptions.server.ts", "utf8")).toContain("live.columns.google_service_options");
     const scans = readFileSync("app/actions/competitors.ts", "utf8");
-    expect(scans).toContain('filter(([k]) => k !== "service_options")');
+    expect(scans).not.toContain("service_options");
   });
 });
 

@@ -16,6 +16,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { competitorScanBlocker } from "../lib/competitors";
 import { ESTABLISHED_MIN_REVIEWS, isDepartmentListing, MIN_ESTABLISHED_COMPETITORS } from "../lib/competitorQuality";
 import { MAX_CALLS_PER_SCAN, placesSearchMonthlyCap } from "../lib/placesSearchBudget";
+import type { CompetitorListingInputs } from "../lib/competitorScoringJob";
 import { allowServerOnly } from "./allowServerOnly";
 
 interface ScanRow {
@@ -88,11 +89,11 @@ export function isBigChange(before: ListQuality | null, after: ListQuality | nul
  * competitors' websites, within the PageSpeed daily budget) runs to the
  * end here instead of in the background — otherwise the Competitors page
  * would keep showing the previous finished scan. */
-async function scoreNow(db: SupabaseClient, scanId: string, businessId: string, competitorCount: number): Promise<void> {
+async function scoreNow(db: SupabaseClient, scanId: string, businessId: string, competitorCount: number, inputs: CompetitorListingInputs): Promise<void> {
   const [{ queueScoringJob, runCompetitorScoringJob }] = await Promise.all([import("../lib/competitorScoringJob")]);
   await queueScoringJob(db, scanId, businessId, "new_scan", competitorCount);
   for (let pass = 0; pass < 20; pass++) {
-    const outcome = await runCompetitorScoringJob(db, scanId);
+    const outcome = await runCompetitorScoringJob(db, scanId, { inputs });
     if (outcome.status !== "running") return;
   }
 }
@@ -155,7 +156,7 @@ export async function runQualityAudit(
     } else {
       const result = await runAndSaveCompetitorScanWithClient(db as never, b.id, {
         enforceCooldown: false,
-        startScoring: (scanId, businessId, count) => scoreNow(db, scanId, businessId, count),
+        startScoring: (scanId, businessId, count, inputs) => scoreNow(db, scanId, businessId, count, inputs),
       });
       budget -= "placesCalls" in result && typeof result.placesCalls === "number" ? result.placesCalls : MAX_CALLS_PER_SCAN;
       after = await latest(b.id);
