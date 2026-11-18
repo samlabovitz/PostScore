@@ -1,5 +1,7 @@
 "use server";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { withLiveListingFor } from "@/lib/ownerListing.server";
 import { createClient } from "@/lib/supabase/server";
 import {
   applyGrowthWebsiteRules,
@@ -15,7 +17,9 @@ import {
   V112_STEP_CHECK_IDS,
   withStepLinks,
   mergeWebsiteTasks,
-  weeklyTrackedMetricValue,
+  weeklyReviewGap,
+  encodeReviewGap,
+  reviewsGainedSince,
   WEEKLY_PLAN_CAP,
   type ActionPlanTask,
   type CompletedTask,
@@ -104,7 +108,7 @@ export async function getActionPlan(
     return { status: "error", message: error.message };
   }
 
-  const rows = (data ?? []) as TaskRow[];
+  const rows = await withReviewsGained(supabase, businessId, (data ?? []) as TaskRow[]);
   const rawTasks = buildActionPlan(breakdown, suggestions, rows, input, locale);
   // Merge the review checks (rating/review_count/review_recency) into
   // one card whenever more than one is an open gap, and the
@@ -203,6 +207,18 @@ export type MarkTaskDoneResult =
  * (never trusted from the client) so the eventual "points gained" record
  * is honest.
  */
+/** Each pending task with the new reviews our scans recorded since it was
+ * marked (scan_changes) — for its "1 of 3" progress. */
+async function withReviewsGained(supabase: SupabaseClient, businessId: string, rows: TaskRow[]): Promise<TaskRow[]> {
+  const marked = rows.filter((r) => r.status === "pending_verification" && r.marked_done_at && r.marked_metric_value !== null);
+  if (marked.length === 0) return rows;
+  const since = marked.map((r) => r.marked_done_at as string).sort()[0];
+  const { data, error } = await supabase.from("scan_changes").select("field, direction, delta, at").eq("business_id", businessId).eq("field", "reviews").gt("at", since);
+  if (error) return rows;
+  const changes = (data ?? []) as Array<{ field: string; direction: string; delta: number | null; at: string }>;
+  return rows.map((r) => (marked.includes(r) ? { ...r, reviews_gained_since_mark: reviewsGainedSince(changes, r.marked_done_at as string) } : r));
+}
+
 export async function markTaskDone(businessId: string, checkId: string): Promise<MarkTaskDoneResult> {
   const supabase = createClient();
 
@@ -214,24 +230,26 @@ export async function markTaskDone(businessId: string, checkId: string): Promise
     return { status: "unauthenticated" };
   }
 
-  const { data: business, error: businessError } = await supabase
+  const { data: saved, error: businessError } = await supabase
     .from("businesses")
     .select(
-      `name, rating, review_count, phone, address, opening_hours, website, categories, category, primary_type, business_type_override, biz_type_resolved, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language, ${V112_SCORING_COLUMNS}`
+      `name, place_id, listing_mode, rating, review_count, phone, address, opening_hours, website, categories, category, primary_type, business_type_override, biz_type_resolved, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language, ${V112_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();
 
-  if (businessError || !business) {
+  if (businessError || !saved) {
     return { status: "not_found" };
   }
+  // Day 23 2d-4: Google's values as read now, never the saved columns.
+  const business = await withLiveListingFor(supabase, businessId, saved as typeof saved & { listing_mode?: string | null });
 
   const locale = normalizeLocale(business.language);
-  const input = businessRowToScoringInput(business as BusinessScoringRow);
+  const input = businessRowToScoringInput(business as unknown as BusinessScoringRow);
   // Day 23 2d-1: the points still to win are the saved scan's (the score
   // the owner sees), with today's breakdown only as a fallback.
   const now = scoreBusiness(input, locale);
-  const breakdown = withSavedScore(now, await latestSavedScore(supabase, businessId)) ?? now;
+  const breakdown = withSavedScore(now, await latestSavedScore(supabase, businessId), { liveUnavailable: business.live_unavailable === true }) ?? now;
   const check = breakdown.checks.find((c) => c.id === checkId);
 
   if (!check) {
@@ -239,11 +257,11 @@ export async function markTaskDone(businessId: string, checkId: string): Promise
   }
 
   const promisedPoints = Math.round((check.maxPoints - (check.earnedPoints ?? 0)) * 10) / 10;
-  // The real raw metric (e.g. review count) at this exact moment, for a
-  // gradual check with a numeric weekly target — lets a later re-scan
-  // show honest "1 of 3, X to go" progress against the real baseline
-  // instead of just a points gap. Null for one-shot checks.
-  const markedMetricValue = weeklyTrackedMetricValue(checkId, input);
+  // The reviews this week's ask needs ("3 more"), for a gradual check with
+  // a numeric weekly target — a later scan shows "1 of 3" from our own
+  // records of new reviews (lib/actionPlan.ts reviewsGainedSince). Our own
+  // gap, never Google's count (Day 23 2d-4). Null for one-shot checks.
+  const markedMetricValue = encodeReviewGap(weeklyReviewGap(checkId, input));
 
   const { error } = await supabase.from("tasks").upsert(
     {

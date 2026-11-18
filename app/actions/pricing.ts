@@ -1,5 +1,6 @@
 "use server";
 
+import { withLiveListingFor } from "@/lib/ownerListing.server";
 import { createClient } from "@/lib/supabase/server";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import {
@@ -211,6 +212,13 @@ export async function getPricingAssessment(businessId: string): Promise<GetPrici
     return { status: "ok", assessment: null };
   }
 
+  // The owner's own price level: Google's, as shown now (never saved).
+  const ctx = payload.priceLevelContext;
+  if (ctx) {
+    const { data: listing } = await supabase.from("businesses").select("place_id, listing_mode").eq("id", businessId).maybeSingle();
+    const live = listing ? await withLiveListingFor(supabase, businessId, { ...listing, price_level: null as string | null }) : null;
+    return { status: "ok", assessment: { ...payload, priceLevelContext: { ...ctx, subjectSymbol: priceLevelToSymbol(live?.price_level ?? null) }, assessedAt: row.pricing_assessed_at } };
+  }
   return { status: "ok", assessment: { ...payload, assessedAt: row.pricing_assessed_at } };
 }
 
@@ -284,10 +292,12 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
     supabase
       .from("businesses")
       .select(
-        "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, primary_type, business_type_override, biz_type_resolved, price_level, lat, lng, language"
+        "place_id, listing_mode, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, primary_type, business_type_override, biz_type_resolved, price_level, lat, lng, language"
       )
       .eq("id", businessId)
-      .single(),
+      .single()
+      // Day 23 2d-4: the listing (price level, type) as Google shows it now.
+      .then(async (r) => (r.data ? { ...r, data: await withLiveListingFor(supabase, businessId, r.data) } : r)),
     getPrices(businessId),
   ]);
 
@@ -362,7 +372,9 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
   }
 
   const assessedAt = new Date().toISOString();
-  const payload: PricingAssessmentPayload = { assessments, priceLevelContext, locale };
+  // Saved: our own assessment and the competitor band counts — not the
+  // owner's own price level from Google (read live when shown, Day 23 2d-4).
+  const payload: PricingAssessmentPayload = { assessments, priceLevelContext: priceLevelContext ? { ...priceLevelContext, subjectSymbol: null } : null, locale };
 
   // Best-effort cache write: the assessment we just paid for is already
   // valid and worth returning even if this update fails for some reason

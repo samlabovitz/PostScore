@@ -2,7 +2,11 @@
 // grade, category points and each check's points (our own results in
 // scores.breakdown_json) — instead of re-scoring Google's saved listing
 // values. The saved breakdown keeps no words (lib/breakdownStorage.ts),
-// so labels and explanations come from the breakdown built now. Pure.
+// so labels and explanations come from the breakdown built now. Day 23
+// 2d-4: "now" is built from Google's live values, so a Google-side check
+// that reads differently now than its saved points is marked — the page
+// shows the saved result with "Changed on Google since your last scan".
+// Pure.
 
 import type { CategoryResult, CheckResult, ScoreBreakdown } from "@/lib/scoring";
 
@@ -28,11 +32,29 @@ function sameChecks(a: CheckResult[], b: CheckResult[]): boolean {
   return b.every((c) => ids.has(c.id));
 }
 
+/**
+ * The checks scored from Google's listing (rating, reviews, phone, hours,
+ * photos, …, and whether the listing links a website). The rest are our
+ * own website results, re-checked only by a scan, so their saved points
+ * always go with today's words.
+ */
+export function isGoogleSideCheck(id: string): boolean {
+  return id.startsWith("visibility.") || id.startsWith("completeness.") || id === "website.has_website";
+}
+
+/** Google reads differently now than when the saved points were scored. */
+function readsDifferently(now: CheckResult, saved: CheckResult): boolean {
+  return now.earnedPoints !== saved.earnedPoints || now.confidence !== saved.confidence || now.maxPoints !== saved.maxPoints;
+}
+
 /** One check: the saved points and flags, today's words. The meta keys
- * a saved check no longer keeps (quoted counts) come from now. */
-function savedCheck(now: CheckResult, saved: CheckResult): CheckResult {
+ * a saved check no longer keeps (quoted counts) come from now. A
+ * Google-side check that reads differently now is marked `liveDiffers`. */
+function savedCheck(now: CheckResult, saved: CheckResult, liveUnavailable: boolean): CheckResult {
+  const differs = isGoogleSideCheck(now.id) && (liveUnavailable || readsDifferently(now, saved));
   return {
     ...now,
+    ...(differs ? { liveDiffers: liveUnavailable ? ("unavailable" as const) : ("changed" as const) } : {}),
     maxPoints: saved.maxPoints,
     earnedPoints: saved.earnedPoints,
     confidence: saved.confidence,
@@ -47,12 +69,12 @@ function savedCheck(now: CheckResult, saved: CheckResult): CheckResult {
  * different scoring version, or a different set of checks — and the
  * caller saves a new scan first (syncScoreSnapshot).
  */
-export function withSavedScore(now: ScoreBreakdown, saved: SavedScoreRow | null): ScoreBreakdown | null {
+export function withSavedScore(now: ScoreBreakdown, saved: SavedScoreRow | null, options: { liveUnavailable?: boolean } = {}): ScoreBreakdown | null {
   if (!saved || !isBreakdown(saved.breakdown_json)) return null;
   const s = saved.breakdown_json;
   if ((saved.scoring_version ?? s.scoringVersion) !== now.scoringVersion || !sameChecks(now.checks, s.checks)) return null;
   const savedById = new Map(s.checks.map((c) => [c.id, c]));
-  const check = (c: CheckResult) => savedCheck(c, savedById.get(c.id)!);
+  const check = (c: CheckResult) => savedCheck(c, savedById.get(c.id)!, options.liveUnavailable === true);
   const savedCategory = new Map(s.categories.map((c) => [c.id, c]));
   const categories: CategoryResult[] = now.categories.map((c) => {
     const sc = savedCategory.get(c.id);

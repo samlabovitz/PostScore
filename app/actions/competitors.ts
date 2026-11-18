@@ -4,6 +4,7 @@ import { withOwnerDetailsFor } from "@/lib/ownerDetails.server";
 import { requestCache } from "@/lib/requestCache";
 import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { liveListingForRow, withLiveListingFor } from "@/lib/ownerListing.server";
 import { createClient } from "@/lib/supabase/server";
 import { isBusinessArchived } from "@/lib/businessArchive.server";
 import { businessTimeZone } from "@/lib/businessTimeZone";
@@ -96,7 +97,7 @@ interface CompetitorBusinessRow {
 }
 
 const BUSINESS_COLUMNS =
-  "place_id, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, primary_type, business_type_override, biz_type_resolved, price_level, lat, lng, language";
+  "place_id, listing_mode, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, primary_type, business_type_override, biz_type_resolved, price_level, lat, lng, language";
 
 const SCAN_COLUMNS = SAVED_SCAN_COLUMNS;
 
@@ -186,9 +187,11 @@ export async function getCompetitorsWithClient(
   const [{ data: business, error }, { data: scanRows, error: scanError }, unfinished, scoring, niche, latestScore] = await Promise.all([
     supabase
       .from("businesses")
-      .select("name, address, language, category, categories, primary_type, business_type_override, biz_type_resolved, lat, lng, website, verified_website_url")
+      .select("name, address, place_id, listing_mode, language, category, categories, primary_type, business_type_override, biz_type_resolved, lat, lng, website, verified_website_url")
       .eq("id", businessId)
-      .single(),
+      .single()
+      // Day 23 2d-4: the address, types and website the live query uses, as Google shows them now.
+      .then(async (r) => (r.data ? { ...r, data: await withLiveListingFor(supabase, businessId, r.data) } : r)),
     supabase.from("competitor_scans").select(SCAN_COLUMNS).eq("business_id", businessId).order("created_at", { ascending: false }).limit(600),
     unfinishedNewScanIds(supabase, businessId),
     latestScoringProgress(supabase, businessId),
@@ -363,7 +366,9 @@ export async function runAndSaveCompetitorScanWithClient(
   if (error || !business) {
     return { status: "not_found" };
   }
-  const row = business as CompetitorBusinessRow;
+  // Day 23 2d-4: the owner's own listing as Google shows it now (right
+  // after a re-scan, that scan's read — no second call), never the saved columns.
+  const row = (await withLiveListingFor(supabase, businessId, business as unknown as CompetitorBusinessRow & { listing_mode?: string | null })) as CompetitorBusinessRow;
   // lat/lng cleared after 30 days (Places terms): read them again for this search.
   if (row.lat === null || row.lng === null) {
     const { ensureLatLng } = await import("@/lib/placesLocation.server");
@@ -827,7 +832,7 @@ async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBe
 
   const { data: business, error: businessError } = await supabase
     .from("businesses")
-    .select("name, category, categories, primary_type, business_type_override, biz_type_resolved, language, review_count")
+    .select("name, category, categories, primary_type, business_type_override, biz_type_resolved, language")
     .eq("id", businessId)
     .single();
 
@@ -883,7 +888,8 @@ async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBe
       smallSample: standing.othersCount < SMALL_SAMPLE_THRESHOLD,
       competitorReviewAverage: countsKnown ? nearbyReviewAverage(snapshot.scan, scope) : null,
       // The business's current count (its row); the scan's own as a fallback.
-      reviewGoal: countsKnown ? reviewGoal(snapshot.scan, scope, (business as { review_count?: number | null }).review_count ?? snapshot.scan.entries.find((e) => e.isSubject)?.reviewCount ?? null) : null,
+      // Day 23 2d-4: the owner's review count as Google shows it now.
+      reviewGoal: countsKnown ? reviewGoal(snapshot.scan, scope, (await liveReviewCount(supabase, businessId)) ?? snapshot.scan.entries.find((e) => e.isSubject)?.reviewCount ?? null) : null,
       reviewGroup: scopeGroupLabel(snapshot.scan, scope, normalizeLocale(business.language), competitorNoun),
       selectionUpdated: await competitorSelectionNote(businessId),
       distanceNote: distanceNote(snapshot.scan.entries.filter((e) => !e.isSubject)),
@@ -914,3 +920,11 @@ async function loadCompetitorOverrides(supabase: SupabaseClient, businessId: str
   }
 }
 
+
+/** The owner's review count as Google shows it now (the visit's live read); null when it couldn't be read. */
+async function liveReviewCount(supabase: SupabaseClient, businessId: string): Promise<number | null> {
+  const { data } = await supabase.from("businesses").select("place_id, listing_mode").eq("id", businessId).maybeSingle();
+  if (!data) return null;
+  const live = await liveListingForRow(supabase, businessId, data as { place_id: string | null; listing_mode: string | null });
+  return live.status === "ok" ? live.values.reviewCount : null;
+}

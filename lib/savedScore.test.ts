@@ -72,17 +72,19 @@ describe("pages show the saved score (Day 23 2d-1)", () => {
     expect(withSavedScore(now, saved(now, { breakdown_json: null }))).toBeNull();
   });
 
-  test("every page, report and notification reads the saved scan; a mismatch saves a new scan first, the preview never writes", () => {
+  test("every page, report and notification reads the saved scan; only a changed check set (a scoring update) saves a new one first, the preview never writes", () => {
     const scoring = src("app/actions/scoring.ts");
     expect(scoring).toContain("return scoreForDisplayWithClient(supabase, businessId, locale);");
-    expect(scoring).toMatch(/if \(savedScoreMatches\(now, shown\)\)[\s\S]{0,300}if \(saved && options\.save !== false && !sameTotal\(now, saved\)\) await syncScoreSnapshotWithClient\(supabase, businessId\);/);
+    // Day 23 2d-4: a Google change never saves a scan from a page (it's marked instead).
+    expect(scoring).toMatch(/if \(shown\) return \{ \.\.\.scored, business, scoringBusiness, result: \{ \.\.\.scored\.result, breakdown: shown \} \};[\s\S]{0,300}if \(saved && options\.save !== false && scored\.live !== "unavailable"\) await syncScoreSnapshotWithClient\(supabase, businessId, "page"\);/);
     expect(src("app/api/cron/monthly-reports/route.ts")).toContain("await scoreForDisplayWithClient(supabase, businessId, locale)");
     expect(src("scripts/preview-report.ts")).toContain("(supabase, businessId, locale, { save: false })");
     expect(src("lib/notifications.server.ts")).toContain("urgentIssuesFromSavedRow(row, await latestSavedScore(admin, row.id))");
-    expect(src("app/actions/actionPlan.ts")).toContain("withSavedScore(now, await latestSavedScore(supabase, businessId)) ?? now");
-    expect(src("app/actions/reviews.ts")).toContain("withSavedScore(now, await latestSavedScore(supabase, businessId)) ?? now");
-    expect(src("app/actions/website.ts")).toContain("withSavedScore(realNow, await latestSavedScore(supabase, businessId)) ?? realNow");
-    expect(src("app/actions/businesses.ts")).toContain("withSavedScore(now, saved.get(row.id) ?? null) ?? now");
+    expect(src("app/actions/actionPlan.ts")).toContain("withSavedScore(now, await latestSavedScore(supabase, businessId), { liveUnavailable:");
+    expect(src("app/actions/reviews.ts")).toContain("withSavedScore(now, await latestSavedScore(supabase, businessId), { liveUnavailable:");
+    expect(src("app/actions/website.ts")).toContain("withSavedScore(realNow, await latestSavedScore(supabase, businessId), { liveUnavailable:");
+    // The switcher: the saved scan's own total and grade, no re-score.
+    expect(src("app/actions/businesses.ts")).toContain("const breakdown = last ? { total: last.total, grade: last.grade as Grade } : null;");
   });
 });
 

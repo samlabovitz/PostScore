@@ -164,6 +164,12 @@ async function scoreWithApp(): Promise<typeof ScoreBusinessFn> {
   return (await import("../app/actions/scoring")).scoreForDisplayWithClient;
 }
 
+/** lib/ownerListing.server.ts (Google's values as read now — Day 23 2d-4), loaded past its "server-only" guard. */
+async function ownerListingServer() {
+  allowServerOnly();
+  return import("../lib/ownerListing.server");
+}
+
 /** lib/scanChanges.server.ts, loaded past its "server-only" guard. */
 async function scanChangesBetween() {
   allowServerOnly();
@@ -312,7 +318,8 @@ async function computeFiringGrowthMoves(
   locale: ReturnType<typeof normalizeLocale>
 ): Promise<FocusGrowthMove[]> {
   const [businessResult, promoResult, referralResult, photoCounts] = await Promise.all([
-    supabase.from("businesses").select("photo_count, pricing_assessed_at, website, verified_website_url, lat, lng").eq("id", businessId).single(),
+    // Day 23 2d-4: photos and the website link as Google shows them now.
+    supabase.from("businesses").select("place_id, listing_mode, photo_count, pricing_assessed_at, website, verified_website_url, lat, lng").eq("id", businessId).single().then(async (r) => (r.data ? { ...r, data: await (await ownerListingServer()).withLiveListingFor(supabase, businessId, r.data) } : r)),
     supabase.from("promos").select("id").eq("business_id", businessId).limit(1),
     supabase.from("referrals").select("id").eq("business_id", businessId).limit(1),
     competitorScanId ? readCompetitorPhotoCountsForScan(businessId, competitorScanId) : Promise.resolve([]),
@@ -443,13 +450,17 @@ async function main() {
   // growth-move signals, action-plan scoring input) — same columns as
   // the cron route's own freshBusiness select, one query reused for all
   // of it.
-  const { data: business, error: businessError } = await supabase
+  const { data: savedBusiness, error: businessError } = await supabase
     .from("businesses")
     .select(
-      "id, name, language, category, primary_type, business_type_override, biz_type_resolved, categories, phone, address, opening_hours, website, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, rating, review_count"
+      "id, name, place_id, listing_mode, language, category, primary_type, business_type_override, biz_type_resolved, categories, phone, address, opening_hours, website, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, rating, review_count"
     )
     .eq("id", businessId)
     .single();
+  // Day 23 2d-4: built at send time from Google's values as read now (one
+  // live read, logged and capped; Business Profile when connected) —
+  // never the saved columns.
+  const business = savedBusiness ? await (await ownerListingServer()).withLiveListingFor(supabase, businessId, savedBusiness) : null;
   if (businessError || !business) {
     console.error(`Could not find business ${businessId}: ${businessError?.message ?? "not found"}`);
     process.exit(1);

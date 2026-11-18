@@ -1236,6 +1236,9 @@ export type MessageKey =
   | "dashboard.competitors.unscoredSuffix.other"
   | "dashboard.competitors.noRating"
   | "dashboard.live.unavailable"
+  | "dashboard.breakdown.changedOnGoogle"
+  | "dashboard.breakdown.rescanToUpdate"
+  | "dashboard.scan.refreshSkipped"
   | "dashboard.free.reviewGoalLocked"
   | "dashboard.competitors.headToHead.intro.one"
   | "dashboard.competitors.headToHead.intro.other"
@@ -7129,6 +7132,9 @@ export const messages: Record<Locale, LocaleMessages> = {
       " {count} of them couldn't be scored — Google returned no usable details.",
     "dashboard.competitors.noRating": "No rating",
     "dashboard.live.unavailable": "Couldn't load from Google right now",
+    "dashboard.breakdown.changedOnGoogle": "Changed on Google since your last scan",
+    "dashboard.breakdown.rescanToUpdate": "Re-scan to update your score",
+    "dashboard.scan.refreshSkipped": "Couldn't refresh from Google right now — PostScore's Google limit for this month was reached. Your score is still the one from your last scan.",
     "dashboard.free.reviewGoalLocked": "See how many reviews you need to pass them, on Grow →",
     "dashboard.competitors.headToHead.intro.one": "Only 1 business like yours within {miles} miles — here's how you compare with {names}",
     "dashboard.competitors.headToHead.intro.other": "Only {count} {noun} like yours within {miles} miles — here's how you compare with {names}",
@@ -13362,6 +13368,9 @@ export const messages: Record<Locale, LocaleMessages> = {
       " {count} de ellos no se pudieron evaluar — Google no devolvió detalles utilizables.",
     "dashboard.competitors.noRating": "Sin calificación",
     "dashboard.live.unavailable": "No se pudo cargar desde Google en este momento",
+    "dashboard.breakdown.changedOnGoogle": "Cambió en Google desde su último escaneo",
+    "dashboard.breakdown.rescanToUpdate": "Vuelva a escanear para actualizar su puntuación",
+    "dashboard.scan.refreshSkipped": "No se pudo actualizar desde Google en este momento: se alcanzó el límite mensual de PostScore con Google. Su puntuación sigue siendo la de su último escaneo.",
     "dashboard.free.reviewGoalLocked": "Vea cuántas reseñas necesita para superarlos, en Grow →",
     "dashboard.competitors.headToHead.intro.one": "Solo hay 1 negocio como el suyo a menos de {miles} millas: así se compara con {names}",
     "dashboard.competitors.headToHead.intro.other": "Solo hay {count} negocios como el suyo a menos de {miles} millas: así se compara con {names}",

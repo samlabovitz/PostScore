@@ -598,11 +598,36 @@ export interface TaskRow {
   promised_points: number;
   marked_done_at: string | null;
   verified_at: string | null;
-  /** The real raw metric value (e.g. review count) at the moment this
-   * task was marked done — see weeklyTrackedMetricValue below. Null for
-   * one-shot checks (no numeric weekly target exists for them) and for
-   * rows marked before this column existed. */
+  /** Day 23 2d-4: our own gap when marked ("3 more reviews"), stored as
+   * −3 (encodeReviewGap) — never Google's count. A positive value is a
+   * row marked before 2d-4 (Google's count then): no numeric progress for
+   * it. Null for one-shot checks. */
   marked_metric_value: number | null;
+  /** Loaded with the row, not a column: new reviews our scans recorded
+   * since it was marked (scan_changes), null when a scan only knew the
+   * direction (not connected to Google). */
+  reviews_gained_since_mark?: number | null;
+}
+
+/** The review gap a task was marked with, stored as a negative number so
+ * it's never mistaken for a pre-2d-4 review count. */
+export function encodeReviewGap(gap: number | null): number | null {
+  return gap === null || gap <= 0 ? null : -gap;
+}
+export function decodeReviewGap(stored: number | null | undefined): number | null {
+  return typeof stored === "number" && stored < 0 ? -stored : null;
+}
+
+/** New reviews our own scan records show since `since` — exact only when
+ * every recorded review change carried a count (connected owners). */
+export function reviewsGainedSince(changes: Array<{ field: string; direction: string; delta: number | null; at: string }>, since: string): number | null {
+  let gained = 0;
+  for (const c of changes) {
+    if (c.field !== "reviews" || c.at <= since) continue;
+    if (c.delta === null) return null;
+    if (c.delta > 0) gained += c.delta;
+  }
+  return gained;
 }
 
 export interface ActionPlanTask {
@@ -637,6 +662,8 @@ export interface ActionPlanTask {
    * progress against weeklyTargetDelta (see weeklyMetricProgress). Null
    * when never marked, or marked before this tracking existed. */
   markedMetricValue: number | null;
+  /** New reviews our own scans recorded since the task was marked (TaskRow.reviews_gained_since_mark). */
+  reviewsGainedSinceMark?: number | null;
   /** See TaskEffort — drives which tasks can appear in the Growth recap. */
   effort: TaskEffort;
   /**
@@ -837,7 +864,8 @@ export function buildActionPlan(
       status: row?.status === "pending_verification" ? "pending_verification" : "open",
       markedDoneAt: row?.marked_done_at ?? null,
       markedPromisedPoints: row?.status === "pending_verification" ? row.promised_points : null,
-      markedMetricValue: row?.status === "pending_verification" ? row.marked_metric_value : null,
+      markedMetricValue: row?.status === "pending_verification" ? decodeReviewGap(row.marked_metric_value) : null,
+      reviewsGainedSinceMark: row?.status === "pending_verification" ? row.reviews_gained_since_mark ?? null : null,
       effort: copy.effort,
       weeklyTarget: null,
       weeklyTargetDelta: null,
@@ -1146,19 +1174,20 @@ export interface WeeklyMetricProgress {
  */
 export function weeklyMetricProgress(task: ActionPlanTask, lastScanAt: string | null): WeeklyMetricProgress | null {
   if (task.status !== "pending_verification") return null;
-  if (task.weeklyTargetDelta === null || task.markedMetricValue === null) return null;
-  if (task.currentMetricValue === null) return null;
+  // Day 23 2d-4: the gap it was marked with, and the new reviews our own
+  // scans recorded since — never Google's counts.
+  if (task.markedMetricValue === null || task.reviewsGainedSinceMark === null || task.reviewsGainedSinceMark === undefined) return null;
 
-  const baseline = task.markedMetricValue;
-  const targetDelta = task.weeklyTargetDelta;
-  const current = task.currentMetricValue;
+  const baseline = 0;
+  const targetDelta = task.markedMetricValue;
+  const current = task.reviewsGainedSinceMark;
 
   const checked = !!task.markedDoneAt && !!lastScanAt && lastScanAt > task.markedDoneAt;
   if (!checked) {
     return { kind: "not_yet_checked", current, baseline, targetDelta, gained: 0 };
   }
 
-  const gained = Math.max(0, current - baseline);
+  const gained = Math.max(0, current);
 
   if (gained >= targetDelta) {
     return { kind: "complete", current, baseline, targetDelta, gained };
@@ -1411,6 +1440,15 @@ export interface WeeklyPlan {
  * future weeklyFix moves a different field, extend this and
  * deriveWeeklyTargetInfo together.
  */
+/** The reviews a task asks for this week ("3 more"): its gap when marked. */
+export function weeklyReviewGap(checkId: string, input: BusinessScoringInput): number | null {
+  const copy = ACTION_PLAN_COPY[checkId];
+  if (!copy?.weeklyFix) return null;
+  const before = weeklyTrackedMetricValue(checkId, input) ?? 0;
+  const after = weeklyTrackedMetricValue(checkId, copy.weeklyFix(input)) ?? before;
+  return after > before ? after - before : null;
+}
+
 export function weeklyTrackedMetricValue(checkId: string, input: BusinessScoringInput): number | null {
   const copy = ACTION_PLAN_COPY[checkId];
   if (!copy?.weeklyFix) return null;

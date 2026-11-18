@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 
 vi.mock("server-only", () => ({}));
 
-import { liveValuesFromBusinessProfile, liveValuesFromPlaces, placesPeriodsFromGbp, placesStylePhone, withLiveListing, type LiveListing } from "./ownerListing";
+import { liveListingFromPlaces, liveValuesFromBusinessProfile, placesPeriodsFromGbp, placesStylePhone, withLiveListing, type LiveListing } from "./ownerListing";
 import { cachedOwnerListing, ownerListingLive, pickHeaderPhoto, type OwnerListingDeps } from "./ownerListing.server";
 import { liveCache } from "./placesLive.server";
 import type { PlaceDetails } from "./google/places";
@@ -34,7 +34,7 @@ function deps(over: Partial<OwnerListingDeps> = {}) {
     },
     gbp: async () => {
       calls.gbp++;
-      return { status: "ok", source: "business_profile", values: liveValuesFromPlaces(PLACE) };
+      return { ...liveListingFromPlaces(PLACE), source: "business_profile" };
     },
     used: async () => 0,
     log: async (_id, kind, n) => {
@@ -99,10 +99,11 @@ describe("the owner's listing, read live when shown (Day 23 2d-2)", () => {
   });
 
   test("pages show Google's values as read now; unavailable leaves them empty (never the saved ones) and says so", () => {
-    const live: LiveListing = { status: "ok", source: "places", values: liveValuesFromPlaces(PLACE) };
+    const live: LiveListing = liveListingFromPlaces(PLACE);
     const shown = withLiveListing(ROW, live);
     expect(shown).toMatchObject({ rating: 4.7, review_count: 31, phone: "+1 908-555-0100", photo_count: 10, google_maps_uri: "https://maps.google.com/?cid=1", live_source: "places" });
-    expect(shown.website).toBe("https://site.example");
+    // Day 23 2d-4: the listing's website link is Google's too — read now, never the saved one.
+    expect(shown.website).toBe("https://hairexpress.example");
     const down = withLiveListing(ROW, { status: "unavailable" });
     expect(down).toMatchObject({ rating: null, review_count: null, phone: null, opening_hours: null, photo_count: null, live_unavailable: true });
     expect(withLiveListing(ROW, { status: "none" })).toEqual(ROW);
@@ -151,12 +152,14 @@ describe("the owner's listing, read live when shown (Day 23 2d-2)", () => {
 
   test("every owner page reads them: the shared score's record, Reviews, Website, the hours chooser, Reports and the weekly recap and PDF", () => {
     const scoring = src("app/actions/scoring.ts");
-    expect(scoring).toContain("withLiveListing(scored.business, live)");
+    // Day 23 2d-4: every Google scoring input from the visit's read (or the scan's own, in memory).
+    expect(scoring).toContain("{ ...business, ...liveListing.columns }");
+    expect(scoring).toContain("row = { ...business, ...options.listing };");
     // The score and the plan's estimates stay on the scan's own row.
     expect(scoring).toContain("const scoringBusiness = scored.business;");
     expect(src("app/actions/reviews.ts")).toContain("await withLiveListingFor(supabase, businessId,");
     expect(src("app/actions/website.ts")).toContain("await withLiveListingFor(supabase, businessId,");
-    expect(src("app/actions/hoursChooser.ts")).toContain("withLiveListingFor(db, businessId, row)");
+    expect(src("app/actions/hoursChooser.ts")).toContain("withLiveListingFor(db, businessId, saved)");
     expect(src("app/actions/reports.ts")).toContain("withLiveListingFor(supabase, businessId, business)");
     expect(src("lib/weekly/weekly.server.ts")).toContain("withLiveListingFor(supabase, businessId, row)");
     expect(src("lib/weekly/weeklyData.server.ts")).toContain("await withLiveListingFor(supabase, businessId,");

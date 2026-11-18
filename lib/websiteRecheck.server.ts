@@ -8,6 +8,7 @@
 // per local day (lib/websiteRecheckPolicy.ts), separate from the daily
 // full re-scan.
 
+import { withLiveListingFor } from "@/lib/ownerListing.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { analyzeWebsiteForSave } from "@/lib/websiteAnalysisForSave";
 import { gradedWebsite } from "@/lib/businessWebsite";
@@ -75,7 +76,7 @@ type BusinessRow = {
 };
 
 const BUSINESS_COLUMNS =
-  "id, name, website, verified_website_url, phone, address, opening_hours_periods, category, primary_type, categories, business_type_override, biz_type_resolved, website_analysis_json, listing_mode, lat, lng";
+  "id, place_id, name, website, verified_website_url, phone, address, opening_hours_periods, category, primary_type, categories, business_type_override, biz_type_resolved, website_analysis_json, listing_mode, lat, lng";
 
 /** The site a re-check reads: the one PostScore grades, screenshots and
  * shows (lib/businessWebsite.ts gradedWebsite — the owner's confirmed
@@ -99,7 +100,12 @@ async function recentRecheckDates(supabase: SupabaseClient, businessId: string, 
 
 async function loadBusiness(supabase: SupabaseClient, businessId: string): Promise<(BusinessRow & { owner_website_url: string | null }) | null> {
   const { data } = await supabase.from("businesses").select(BUSINESS_COLUMNS).eq("id", businessId).maybeSingle();
-  return data ? withOwnerWebsite(supabase, businessId, data as BusinessRow) : null;
+  if (!data) return null;
+  // Day 23 2d-4: the listing's link, phone, address and hours as Google
+  // shows them now (one counted, capped read — shared with the visit), for
+  // the website-vs-Google comparisons. Never the saved columns.
+  const live = await withLiveListingFor(supabase, businessId, data as unknown as Record<string, unknown> & { place_id: string | null; listing_mode: string | null });
+  return withOwnerWebsite(supabase, businessId, live as unknown as BusinessRow);
 }
 
 export async function getWebsiteRecheckStatusWithClient(supabase: SupabaseClient, businessId: string, now: Date = new Date()): Promise<WebsiteRecheckStatus> {

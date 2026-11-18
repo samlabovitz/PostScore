@@ -5,5 +5,6 @@ import { vi } from "vitest";
 vi.mock("@/lib/google/places", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/google/places")>();
   // vi.fn, so a test can give its own live values (vi.mocked(getPlaceLive)…).
-  return { ...actual, searchTextLive: vi.fn(async () => null), searchNearbyLive: vi.fn(async () => null), getPlaceLive: vi.fn(async () => null) };
+  // getOwnerListingLive: the owner's own listing on a visit (Day 23 2d-2/2d-4).
+  return { ...actual, searchTextLive: vi.fn(async () => null), searchNearbyLive: vi.fn(async () => null), getPlaceLive: vi.fn(async () => null), getOwnerListingLive: vi.fn(async () => null) };
 });

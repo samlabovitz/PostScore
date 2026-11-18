@@ -43,6 +43,7 @@
 // 15-minute budget to make many small, safe calls here. See
 // netlify/functions/monthly-reports-batch.mts's own top comment for the
 // full reasoning.
+import { withLiveListingFor } from "@/lib/ownerListing.server";
 import { withOwnerDetailsFor } from "@/lib/ownerDetails.server";
 import { isBusinessArchived } from "@/lib/businessArchive.server";
 import { selectionChangedBetween } from "@/lib/competitorQuality";
@@ -439,7 +440,8 @@ export async function computeFiringGrowthMoves(
   locale: Locale
 ): Promise<FocusGrowthMove[]> {
   const [businessResult, promoResult, referralResult, photoCounts] = await Promise.all([
-    supabase.from("businesses").select("photo_count, pricing_assessed_at, website, verified_website_url, lat, lng").eq("id", businessId).single(),
+    // Day 23 2d-4: photos and the website link as Google shows them now.
+    supabase.from("businesses").select("place_id, listing_mode, photo_count, pricing_assessed_at, website, verified_website_url, lat, lng").eq("id", businessId).single().then(async (r) => (r.data ? { ...r, data: await withLiveListingFor(supabase, businessId, r.data) } : r)),
     supabase.from("promos").select("id").eq("business_id", businessId).limit(1),
     supabase.from("referrals").select("id").eq("business_id", businessId).limit(1),
     competitorScanId ? readCompetitorPhotoCountsForScan(supabase, businessId, competitorScanId) : Promise.resolve([]),
@@ -725,17 +727,21 @@ export async function processBusiness(
   // (business-type resolution, growth-move signals, action-plan
   // scoring input) — one query, reused for all of it, never a second
   // "duplicated" business read.
-  const { data: freshBusiness, error: freshBusinessError } = await supabase
+  const { data: savedBusiness, error: freshBusinessError } = await supabase
     .from("businesses")
     .select(
-      `name, owner_id, unsubscribe_token, language, category, primary_type, business_type_override, biz_type_resolved, categories, phone, address, opening_hours, website, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, rating, review_count, ${V112_SCORING_COLUMNS}`
+      `name, owner_id, unsubscribe_token, language, place_id, listing_mode, category, primary_type, business_type_override, biz_type_resolved, categories, phone, address, opening_hours, website, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, rating, review_count, ${V112_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();
 
-  if (freshBusinessError || !freshBusiness) {
+  if (freshBusinessError || !savedBusiness) {
     return { businessId, status: "failed", reason: "could not re-read business after rescan" };
   }
+  // Day 23 2d-4: the report is built now, from Google's values as the
+  // re-scan above just read them (kept as the visit's read — no second
+  // call; Business Profile for a connected owner). Never the saved columns.
+  const freshBusiness = await withLiveListingFor(supabase, businessId, savedBusiness as typeof savedBusiness & { listing_mode?: string | null });
 
   // A bad/unknown value can never reach the email render or subject
   // builder — same discipline as saveBusinessWithClient's own write-time

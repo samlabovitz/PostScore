@@ -42,6 +42,8 @@ function table(name: string) {
 const client = { auth: { getUser: async () => ({ data: { user: { id: "owner" } } }) }, from: table };
 vi.mock("@/lib/supabase/server", () => ({ createClient: () => client }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => client }));
+// Day 23 2d-4: Google's values as read now = the test row's own (test/liveListingFromRow.ts).
+vi.mock("@/lib/ownerListing.server", async (orig) => (await import("@/test/liveListingFromRow")).ownerListingFromRows(await orig()));
 
 import { syncScoreSnapshotWithClient, scoreBusinessWithClient } from "@/app/actions/scoring";
 import { scoreChangeSinceLastScan } from "@/lib/overviewTiles";

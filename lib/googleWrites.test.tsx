@@ -15,6 +15,8 @@ import type { ReactNode } from "react";
 // NEVER calls Google: the real fetch throws in this file, and the
 // "Google" that answers reads below is a local stub that refuses writes.
 
+// Day 23 2d-4: Google's values as read now = the test row's own (test/liveListingFromRow.ts).
+vi.mock("@/lib/ownerListing.server", async (orig) => (await import("@/test/liveListingFromRow")).ownerListingFromRows(await orig()));
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));

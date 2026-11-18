@@ -11,6 +11,8 @@
 // screenshot is taken even inside the 30-day window, within the month's
 // ScreenshotOne cap. Nothing here writes to Google.
 
+import { withLiveListingFor } from "@/lib/ownerListing.server";
+import { withOwnerDetailsFor } from "@/lib/ownerDetails.server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { gradedWebsite, listingLinkBroken, type WebsiteSource } from "@/lib/businessWebsite";
@@ -65,11 +67,13 @@ async function owned(businessId: string) {
   if (!user) return { supabase, business: null, status: "unauthenticated" as const };
   const { data } = await supabase
     .from("businesses")
-    .select("id, name, phone, address, website, verified_website_url, website_analysis_json")
+    .select("id, place_id, listing_mode, name, phone, address, website, verified_website_url, website_analysis_json")
     .eq("id", businessId)
     .eq("owner_id", user.id)
     .maybeSingle();
-  return { supabase, business: (data as OwnedBusiness | null) ?? null, status: data ? ("ok" as const) : ("not_found" as const) };
+  // Day 23 2d-4: the listing's link, name, phone and address as Google (or the owner) shows them now.
+  const business = data ? ((await withLiveListingFor(supabase, businessId, await withOwnerDetailsFor(supabase, businessId, data))) as unknown as OwnedBusiness) : null;
+  return { supabase, business, status: data ? ("ok" as const) : ("not_found" as const) };
 }
 
 /** The popover's choices. Reads only. */

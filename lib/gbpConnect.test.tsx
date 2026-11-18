@@ -7,6 +7,8 @@ import { NextRequest } from "next/server";
 import { LocaleProvider, type Locale } from "@/lib/i18n";
 import type { Plan } from "@/lib/plan";
 
+// Day 23 2d-4: Google's values as read now = the test row's own (test/liveListingFromRow.ts).
+vi.mock("@/lib/ownerListing.server", async (orig) => (await import("@/test/liveListingFromRow")).ownerListingFromRows(await orig()));
 vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 

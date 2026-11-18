@@ -95,8 +95,9 @@ describe("review recency", () => {
     const row = businessRowToScoringInput({ ...ROW, recent_reviews_seen: 2, gbp_reviews_in_window: 10, gbp_replied: 4, gbp_has_recent_review: true, gbp_recent_reviews: 7 });
     expect(row.recentReviewsSeen).toBe(2);
     expect(row.gbpReplies?.recentReviews).toBe(3);
-    const save = fs.readFileSync("app/actions/businesses.ts", "utf8");
-    expect(save).toContain("recent_reviews_seen: recentReviewsSeenFrom(place.reviewPublishTimes, new Date())");
+    // Day 23 2d-4: computed from the scan's read in memory, never saved.
+    expect(fs.readFileSync("lib/listingScoringRow.ts", "utf8")).toContain("recent_reviews_seen: recentReviewsSeenFrom(place.reviewPublishTimes, now)");
+    expect(fs.readFileSync("app/actions/businesses.ts", "utf8")).not.toContain("recent_reviews_seen");
   });
 
   test("from Place Details: true only for a review in the last 90 days (never stored as text or dates)", () => {
@@ -104,9 +105,10 @@ describe("review recency", () => {
     expect(hasRecentReviewFrom(["2026-09-17T12:00:00Z", "2025-01-01T00:00:00Z"], now)).toBe(true);
     expect(hasRecentReviewFrom(["2026-07-16T00:00:00Z"], now)).toBeNull();
     expect(hasRecentReviewFrom(null, now)).toBeNull();
-    const save = fs.readFileSync("app/actions/businesses.ts", "utf8");
-    expect(save).toContain("has_recent_review: hasRecentReviewFrom(place.reviewPublishTimes, new Date())");
-    expect(save).not.toMatch(/review_text|publish_time|reviews_json/);
+    const mapping = fs.readFileSync("lib/listingScoringRow.ts", "utf8");
+    expect(mapping).toContain("has_recent_review: hasRecentReviewFrom(place.reviewPublishTimes, now)");
+    expect(mapping).not.toMatch(/review_text|publish_time|reviews_json/);
+    expect(fs.readFileSync("app/actions/businesses.ts", "utf8")).not.toContain("has_recent_review");
   });
 });
 

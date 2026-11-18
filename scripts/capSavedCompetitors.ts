@@ -1,3 +1,7 @@
+// ⚠ Day 23 2d-4: this script reads the SAVED Google columns (businesses /
+// competitor_scans) as they were before 2d-5 clears them. Scans stopped
+// writing them in 2d-4, so they're stale — never use what it prints as
+// current data. (Left as is until 2d-5.)
 // One-time (Day 19): the latest saved competitor list of every business,
 // capped at the 10 most relevant (lib/competitorQuality.ts
 // selectCompetitors) — from saved data only, no Google or PageSpeed calls.

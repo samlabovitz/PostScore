@@ -1,3 +1,7 @@
+// ⚠ Day 23 2d-4: this script reads the SAVED Google columns (businesses /
+// competitor_scans) as they were before 2d-5 clears them. Scans stopped
+// writing them in 2d-4, so they're stale — never use what it prints as
+// current data. (Left as is until 2d-5.)
 // Dev-only, READ-ONLY live check of PostAI's real answers across several
 // real businesses — built to confirm Day 3's starter-prompt variety work
 // (buildAssistantStarterPrompts, lib/assistant.ts) actually produces good,

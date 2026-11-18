@@ -1,5 +1,6 @@
 "use server";
 
+import { withOwnerDetailsFor } from "@/lib/ownerDetails.server";
 import { parseChartCategories, type ChartCategoryId, type ChartCategoryScore } from "@/lib/scoreHistory";
 import { createClient } from "@/lib/supabase/server";
 import type { ProfileChange, ProfileSnapshot } from "@/lib/profileChanges";
@@ -218,7 +219,8 @@ export async function getReportsData(businessId: string, options: { live?: boole
 
   return {
     status: "ok",
-    businessName: business.name,
+    // Day 23 2d-3/2d-4: the owner's confirmed name, else the listing's as read now.
+    businessName: (await withOwnerDetailsFor(supabase, businessId, { name: business.name as string | null }, { live: options.live !== false })).name,
     history,
     confirmedFixCount: tasksError || confirmedFixCount === null ? 0 : confirmedFixCount,
     listingChangesDetected,

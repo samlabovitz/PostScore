@@ -25,20 +25,20 @@ describe("the first score snapshot", () => {
   test("no saved scan yet: saves one", async () => {
     const save = vi.fn(async () => ({ status: "saved" }));
     const { db, queries } = fakeDb(0);
-    expect(await saveFirstScoreSnapshotWithClient(db, "jts", save)).toEqual({ status: "saved" });
-    expect(save).toHaveBeenCalledWith(db, "jts");
+    expect(await saveFirstScoreSnapshotWithClient(db, "jts", undefined, save)).toEqual({ status: "saved" });
+    expect(save).toHaveBeenCalledWith(db, "jts", undefined);
     expect(queries).toEqual(["scores"]);
   });
 
   test("already has a saved scan (re-adding the same listing): never a second one", async () => {
     const save = vi.fn();
-    expect(await saveFirstScoreSnapshotWithClient(fakeDb(2).db, "jts", save)).toEqual({ status: "already_saved" });
+    expect(await saveFirstScoreSnapshotWithClient(fakeDb(2).db, "jts", undefined, save)).toEqual({ status: "already_saved" });
     expect(save).not.toHaveBeenCalled();
   });
 
   test("a read error: nothing saved, the error returned", async () => {
     const save = vi.fn();
-    expect(await saveFirstScoreSnapshotWithClient(fakeDb(0, { message: "timeout" }).db, "jts", save)).toEqual({ status: "error", message: "timeout" });
+    expect(await saveFirstScoreSnapshotWithClient(fakeDb(0, { message: "timeout" }).db, "jts", undefined, save)).toEqual({ status: "error", message: "timeout" });
     expect(save).not.toHaveBeenCalled();
   });
 });
@@ -60,7 +60,22 @@ describe("after a business is added", () => {
     expect(ensureCompetitors).toHaveBeenCalledTimes(1);
   });
 
-  test("saveBusiness runs it for every saved business", () => {
-    expect(readFileSync("app/actions/businesses.ts", "utf8")).toContain('if (result.status === "saved") await afterBusinessAdded(supabase, result.businessId);');
+  test("saveBusiness runs it for every saved business, with the add's own Google read in memory (Day 23 2d-4)", () => {
+    const src = readFileSync("app/actions/businesses.ts", "utf8");
+    expect(src).toContain("await afterBusinessAdded(supabase, result.businessId, { listing: result.listing });");
+    // The listing never goes back to the browser.
+    expect(src).toContain('return { status: "saved", businessId: result.businessId };');
+  });
+
+  test("the first score and the type detection get the add's listing — nothing re-read from the saved columns", async () => {
+    const listing = { name: "JT's" } as never;
+    const seen: string[] = [];
+    await afterBusinessAdded(fakeDb(0).db, "jts", {
+      listing,
+      detectType: async (_s, _id, l) => (seen.push(`type:${l === listing}`), { status: "unsure" }),
+      saveFirst: async (_s, _id, l) => (seen.push(`score:${l === listing}`), { status: "saved" }),
+      ensureCompetitors: async () => undefined,
+    });
+    expect(seen).toEqual(["type:true", "score:true"]);
   });
 });

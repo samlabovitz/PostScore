@@ -4,7 +4,7 @@
 // an honest empty state instead.
 
 import { isScoringUpdate } from "@/lib/websiteRecheckPolicy";
-import { checkOutcome } from "@/components/scoring/CategoryCard";
+import { checkOutcome } from "@/lib/checkOutcome";
 import type { ActionPlanTask, WebsiteBanner } from "@/lib/actionPlan";
 import { reviewCountChangeOf, type ReviewCountChange, type ScanChangeSummary } from "@/lib/scanChanges";
 import { resolveLinkTarget, type LinkOptions } from "@/lib/postaiLinks";

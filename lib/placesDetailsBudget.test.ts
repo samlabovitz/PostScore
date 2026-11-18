@@ -96,17 +96,17 @@ describe("every Place Details call is logged with its own kind", () => {
     expect(logCall).not.toHaveBeenCalled();
   });
 
-  test("over the cap: no Google call, the skip is logged, the saved listing is kept (re-scored as it is)", async () => {
+  test("over the cap (Day 23 2d-4, D5): no Google call, the skip is logged, nothing re-scored — the last scan stands and the owner is told why", async () => {
     allowed = false;
     const { rescanBusinessWithClient } = await import("@/app/actions/scoring");
-    // (This fake database can't save the re-score — only the Google side is checked here.)
-    await rescanBusinessWithClient(businessDb(), "b1", false, { detailsKind: "monthly" }).catch(() => undefined);
+    const { t } = await import("@/lib/i18n");
+    expect(await rescanBusinessWithClient(businessDb(), "b1", false, { detailsKind: "monthly" })).toEqual({ status: "error", message: t("en", "dashboard.scan.refreshSkipped") });
     expect(lookup).not.toHaveBeenCalled();
     expect(logSkip).toHaveBeenCalledWith("b1", "monthly");
     const src = fs.readFileSync("app/actions/scoring.ts", "utf8");
     const skip = src.slice(src.indexOf("if (!(await details.detailsCallAllowed(detailsKind))) {"), src.indexOf("const lookup = await lookupBusinessByPlaceId"));
-    expect(skip).toContain("saveScoreSnapshotWithClient(supabase, businessId)");
-    expect(skip).toContain("listingRefreshSkipped: true");
+    expect(skip).not.toContain("saveScoreSnapshotWithClient");
+    expect(t("es", "dashboard.scan.refreshSkipped")).toContain("último escaneo");
   });
 
   test("each caller passes its kind; the website retry, sign-up and the photo are logged too", () => {

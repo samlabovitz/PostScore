@@ -1,3 +1,7 @@
+// ⚠ Day 23 2d-4: this script reads the SAVED Google columns (businesses /
+// competitor_scans) as they were before 2d-5 clears them. Scans stopped
+// writing them in 2d-4, so they're stale — never use what it prints as
+// current data. (Left as is until 2d-5.)
 // Dev-only, READ-ONLY dry run for the Oct 10 site-trust detection
 // (hacked/spam, Safe Browsing, info-consistency vs. the Google listing,
 // stale notices, abandoned-site signals) plus the Santa Fe keyword-

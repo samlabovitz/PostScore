@@ -6,6 +6,7 @@
 // once the owner confirmed their details (lib/ownerDetails.ts) the card
 // prints those; until then, the listing as Google shows it now.
 
+import { emptyListingColumns } from "@/lib/listingScoringRow";
 import { createClient } from "@/lib/supabase/server";
 import { formatOpeningHours } from "@/lib/hours";
 import { normalizeLocale, type Locale } from "@/lib/i18n";
@@ -40,7 +41,7 @@ export async function getPrintStudioData(businessId: string, options: { live?: b
   if (error || !data) return { status: "not_found" };
 
   const locale = normalizeLocale(data.language);
-  const [owner, live] = await Promise.all([loadOwnerDetails(supabase, businessId), options.live === false ? Promise.resolve({ ...data, opening_hours: null, opening_hours_periods: null, google_maps_uri: null }) : withLiveListingFor(supabase, businessId, data)]);
+  const [owner, live] = await Promise.all([loadOwnerDetails(supabase, businessId), options.live === false ? Promise.resolve({ ...data, ...emptyListingColumns(), name: data.name, address: data.address }) : withLiveListingFor(supabase, businessId, data)]);
   const ownerDetails = owner?.details ?? null;
   // Before the owner confirms: the listing's name and address as read now.
   const shown = await withOwnerDetailsFor(supabase, businessId, { name: data.name as string | null, address: data.address as string | null }, { live: options.live !== false });
@@ -56,10 +57,11 @@ export async function getPrintStudioData(businessId: string, options: { live?: b
       placeId: data.place_id,
       googleMapsUri: live.google_maps_uri ?? null,
       // The site PostScore shows, with the owner's confirmed one (null before supabase/owner-website.sql).
-      website: realWebsite(await withOwnerWebsite(supabase, businessId, data)),
+      // Day 23 2d-4: the listing's link as Google shows it now (none on the showroom).
+      website: realWebsite(await withOwnerWebsite(supabase, businessId, live)),
       address: shown.address,
       hours: hours && hours.length ? hours : null,
-      icon: iconForBusiness(data.category, data.primary_type, data.categories as string[] | null, data.name),
+      icon: iconForBusiness(live.category ?? null, live.primary_type ?? null, (live.categories as string[] | null) ?? null, data.name),
     },
   };
 }

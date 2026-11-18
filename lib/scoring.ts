@@ -1032,6 +1032,11 @@ export interface CheckResult {
   /** v1.13.0: a small muted line under the explanation ("Based on real
    * visitors in the last 28 days"). */
   note?: string;
+  /** Day 23 2d-4, pages only (never saved): Google reads differently now
+   * than when the shown (saved) points were scored ("changed"), or couldn't
+   * be read ("unavailable") — the page shows the saved result, not words
+   * that would contradict it (lib/savedScore.ts). */
+  liveDiffers?: "changed" | "unavailable";
   /** Optional machine-readable detail about HOW this check's value was
    * determined — currently set only by website.performance_mobile
    * (`{ method: "field" | "lab" }`), read by lib/scoreChanges.ts to tell

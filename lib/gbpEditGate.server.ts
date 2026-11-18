@@ -3,6 +3,7 @@
 // online"): the signed-in owner (RLS), the plan when the action needs
 // Premium, not archived, Google connected with a matched location, and a
 // usable token. Never trusts anything from the browser.
+import { withLiveListingFor } from "@/lib/ownerListing.server";
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { getPlan } from "@/lib/premium";
@@ -33,7 +34,9 @@ export async function gbpEditGate(businessId: string, options: { requirePremium:
   } = await supabase.auth.getUser();
   if (!user) return blocked("unauthenticated");
   // RLS: only the owner's own business comes back.
-  const { data: business } = await supabase.from("businesses").select("id, language, website, verified_website_url, place_id").eq("id", businessId).eq("owner_id", user.id).maybeSingle();
+  const { data: saved } = await supabase.from("businesses").select("id, language, website, verified_website_url, place_id, listing_mode").eq("id", businessId).eq("owner_id", user.id).maybeSingle();
+  // Day 23 2d-4: the listing's website link as Google shows it now.
+  const business = saved ? await withLiveListingFor(supabase, businessId, saved) : null;
   if (!business) return blocked("not_found");
   const plan = await getPlan();
   if (options.requirePremium && !isPremiumPlan(plan)) return blocked("not_premium");

@@ -35,7 +35,12 @@ export async function getMyNotifications(now: Date = new Date()): Promise<MyNoti
     payload: row.payload && typeof row.payload === "object" ? row.payload : {},
     business_name: (Array.isArray(businesses) ? businesses[0]?.name : businesses?.name) ?? null,
   }));
-  return { status: "ok", items };
+  // Day 23 2d-3/2d-4: each business's confirmed name, else its listing's
+  // from a read this visit already made (no Google call per business).
+  const ids = Array.from(new Set(items.map((i) => i.business_id)));
+  const [{ loadOwnerDetailsMany }, { cachedOwnerListing }, { withOwnerDetails }] = await Promise.all([import("@/lib/ownerDetails.server"), import("@/lib/ownerListing.server"), import("@/lib/ownerDetails")]);
+  const owners = await loadOwnerDetailsMany(supabase, ids);
+  return { status: "ok", items: items.map((i) => ({ ...i, business_name: withOwnerDetails({ name: i.business_name }, owners.get(i.business_id)?.details ?? null, cachedOwnerListing(i.business_id)).name ?? null })) };
 }
 
 /** The owner clicked this notification (or its fix): just that one is read. */

@@ -9,6 +9,7 @@ import "server-only";
 // when no type is set — never over a type the owner chose. One plain fetch
 // of the homepage for its words; no Google call.
 
+import type { ListingScoringColumns } from "@/lib/listingScoringRow";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { nicheById } from "@/lib/niches";
@@ -41,14 +42,17 @@ export async function websiteWords(url: string | null, fetchImpl: typeof fetch =
 export async function detectAndSaveBusinessTypeWithClient(
   db: SupabaseClient,
   businessId: string,
-  options: { apply?: boolean; fetchImpl?: typeof fetch; readWebsite?: typeof websiteWords } = {}
+  /** `listing`: the add's own Google read, in memory (Day 23 2d-4) — the saved columns are never read for it. */
+  options: { apply?: boolean; fetchImpl?: typeof fetch; readWebsite?: typeof websiteWords; listing?: ListingScoringColumns } = {}
 ): Promise<DetectSaveResult> {
   const apply = options.apply ?? true;
-  const { data: row, error } = await db
+  const { data: saved, error } = await db
     .from("businesses")
     .select("name, category, primary_type, categories, biz_type_resolved, website, verified_website_url, niche_id, niche_source")
     .eq("id", businessId)
     .maybeSingle();
+  const l = options.listing;
+  const row = saved && l ? { ...saved, name: l.name, category: l.category, primary_type: l.primary_type, categories: l.categories, website: l.website } : saved;
   if (error) return { status: "error", message: error.message };
   if (!row) return { status: "not_found" };
   // A type is already set (by the owner, or picked before): never touched.

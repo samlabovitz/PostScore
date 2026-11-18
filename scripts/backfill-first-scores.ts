@@ -1,3 +1,8 @@
+// ⚠ Day 23 2d-4: scores go through the shared scorer, which now reads each
+// listing LIVE (one counted, capped Places read per business unless it's
+// cached; Business Profile when connected) — running this costs Google
+// calls. Other values it reads from businesses are the pre-2d-5 saved
+// columns: stale, never current data.
 // Saves a first score snapshot for every business that has none — added
 // before saveBusiness saved one (lib/businessAdded.server.ts), so its
 // history, "Since your last scan" and Competitors had nothing to start
@@ -72,7 +77,7 @@ async function main() {
 
   let saved = 0;
   for (const t of targets) {
-    const result = await saveFirstScoreSnapshotWithClient(supabase, t.id, (s, id) => saveScoreSnapshotWithClient(s, id, SCORING_UPDATE_KIND));
+    const result = await saveFirstScoreSnapshotWithClient(supabase, t.id, undefined, (s, id) => saveScoreSnapshotWithClient(s, id, SCORING_UPDATE_KIND));
     if (result.status === "saved") saved++;
     else console.error(`  FAILED ${t.name}: ${result.message ?? result.status}`);
   }

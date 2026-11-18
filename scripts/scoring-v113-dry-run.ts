@@ -1,3 +1,8 @@
+// ⚠ Day 23 2d-4: scores go through the shared scorer, which now reads each
+// listing LIVE (one counted, capped Places read per business unless it's
+// cached; Business Profile when connected) — running this costs Google
+// calls. Other values it reads from businesses are the pre-2d-5 saved
+// columns: stale, never current data.
 // Scoring v1.13.0 dry run — every business scored from its SAVED data
 // (the businesses row and its saved website analysis; no Google, PageSpeed
 // or page fetches, nothing written). Run once as today (1.12.0) and once

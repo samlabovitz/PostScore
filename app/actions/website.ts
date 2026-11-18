@@ -232,7 +232,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
     return { status: "unauthenticated" };
   }
 
-  const { data, error } = await supabase
+  const { data: saved, error } = await supabase
     .from("businesses")
     .select(
       `name, address, category, primary_type, business_type_override, biz_type_resolved, listing_mode, phone, opening_hours, opening_hours_periods, rating, review_count, website, categories, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, price_level, place_id, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng, ${V112_SCORING_COLUMNS}`
@@ -240,9 +240,12 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
     .eq("id", businessId)
     .single();
 
-  if (error || !data) {
+  if (error || !saved) {
     return { status: "not_found" };
   }
+  // Day 23 2d-4: Google's values as read now (lib/ownerListing.server.ts) —
+  // the page's words, website and listing facts; never the saved columns.
+  const data = await withLiveListingFor(supabase, businessId, saved as typeof saved & { listing_mode?: string | null });
 
   // Owner-entered starter-site hours, read on their own so the page still
   // works before supabase/hours.sql has been run (website only, never
@@ -284,7 +287,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const realInput = businessRowToScoringInput(businessRow);
   // Day 23 2d-1: the saved scan's points (lib/savedScore.ts), today's words.
   const realNow = scoreBusiness(realInput, locale);
-  const realBreakdown = withSavedScore(realNow, await latestSavedScore(supabase, businessId)) ?? realNow;
+  const realBreakdown = withSavedScore(realNow, await latestSavedScore(supabase, businessId), { liveUnavailable: data.live_unavailable === true }) ?? realNow;
   const websiteCategory = realBreakdown.categories.find((c) => c.id === "website") ?? null;
   const websiteSuggestions = generateSuggestions(realBreakdown, locale).filter((s) => s.category === "website");
   // Only trust the real score for the underperformance comparison once
@@ -309,7 +312,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
 
   const builderOffer = buildBuilderOffer(hasWebsite, realWebsiteScore, templateWebsiteScore);
   // Day 23 2d-2: Google's values shown here are read now (lib/ownerListing.ts).
-  const live = await withLiveListingFor(supabase, businessId, data as typeof data & { listing_mode?: string | null });
+  const live = data;
   // Day 23 2d-3: the owner's confirmed details (lib/ownerDetails.ts).
   const owner = (await loadOwnerDetails(supabase, businessId))?.details ?? null;
   const shownName = await withOwnerDetailsFor(supabase, businessId, { name: data.name as string | null, address: data.address as string | null });

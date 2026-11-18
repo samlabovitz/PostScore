@@ -8,6 +8,7 @@
 // once every 10 minutes per business). Read only, except "Change it back",
 // which goes through the normal safety flow (lib/gbpFieldWrite.server.ts):
 // saved first, one PATCH, read back, 7-day undo.
+import { withLiveListingFor } from "@/lib/ownerListing.server";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getValidAccessTokenWithClient, markGbpReconnect } from "@/lib/gbpTokens.server";
@@ -110,9 +111,11 @@ export async function checkGoogleEdits(admin: SupabaseClient, businessId: string
   const found = googleEditsFrom(reads.diffMask, reads.owner, reads.google);
   const plan = syncGoogleEdits(open, found, kept);
   const at = now.toISOString();
-  // What our own scan found (website, phone): a field Google filled in that matches it is info only — no notification.
-  const { data: biz } = await admin.from("businesses").select("website, phone").eq("id", businessId).maybeSingle();
-  const scan = (biz as { website?: string | null; phone?: string | null } | null) ?? {};
+  // What the listing shows (website, phone): a field Google filled in that
+  // matches it is info only — no notification. Day 23 2d-4: read now
+  // (Business Profile — connected), never the saved columns.
+  const { data: biz } = await admin.from("businesses").select("place_id, listing_mode, website, phone").eq("id", businessId).maybeSingle();
+  const scan = ((biz ? await withLiveListingFor(admin, businessId, biz) : null) as { website?: string | null; phone?: string | null } | null) ?? {};
   for (const e of plan.create) {
     // 23505: another check just opened the same field — fine.
     await admin.from("gbp_google_edits").insert({ business_id: businessId, field: e.field, owner_value: e.ownerValue, google_value: e.googleValue, detected_at: at, practice });

@@ -16,6 +16,8 @@
 //   GOOGLE_WRITES_LIVE_PLACES (default: none).
 // Editing never marks a recommendation done: a later scan confirms it.
 
+import { withLiveListingFor } from "@/lib/ownerListing.server";
+import { withOwnerDetailsFor } from "@/lib/ownerDetails.server";
 import { revalidatePath } from "next/cache";
 import type { GbpEditBlock } from "@/lib/gbpEditGate.server";
 import { googleWritesAllowed, reviewRepliesPracticeOn } from "@/lib/gbpReviewPractice";
@@ -241,10 +243,11 @@ export async function draftProfileDescription(businessId: string): Promise<Draft
   if (!c.ok) return c.result.status === "blocked" ? c.result : { status: "unavailable" };
   const { data } = await c.admin
     .from("businesses")
-    .select("name, category, primary_type, address, services, differentiator, language, listing_has_accessibility, listing_has_parking, listing_has_payment")
+    .select("place_id, listing_mode, name, category, primary_type, address, services, differentiator, language, listing_has_accessibility, listing_has_parking, listing_has_payment")
     .eq("id", businessId)
     .maybeSingle();
-  const b = (data ?? {}) as Record<string, unknown>;
+  // Day 23 2d-4: the listing's facts as Google shows them now (Business Profile — this is a connected owner).
+  const b = (data ? await withLiveListingFor(c.admin, businessId, await withOwnerDetailsFor(c.admin, businessId, data)) : {}) as Record<string, unknown>;
   const { normalizeLocale } = await import("@/lib/i18n");
   const { extractCityFromAddress } = await import("@/lib/websiteTrust");
   const locale = normalizeLocale(typeof b.language === "string" ? b.language : null);

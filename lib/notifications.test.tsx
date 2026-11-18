@@ -284,12 +284,29 @@ describe("sync from saved data — no wait for a new scan", () => {
     expect(urgentIssuesFromSavedRow(CYN_ROW)).toEqual({ issues: ["listing_link", "phone_mismatch"], listingParked: true });
   });
 
-  test("a page load creates the missing ones from saved data — reading the row through the owner's session first", async () => {
+  test("a page load creates the missing ones — with the visit's live read, reading the row through the owner's session first", async () => {
     const { rows, admin } = memAdmin();
     adminFor = admin;
     const owner = { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: CYN_ROW, error: null }) }) }) }) } as never;
-    await syncNotificationsForPage(owner, "cyn", new Date("2026-11-09T15:00:00Z"), new Map());
+    const at = new Date("2026-11-09T15:00:00Z");
+    // Day 23 2d-4: Google's values from a read this visit already made.
+    const { rememberOwnerListing } = await import("./ownerListing.server");
+    const { liveFromRow } = await import("@/test/liveListingFromRow");
+    rememberOwnerListing("cyn", liveFromRow({ ...(CYN_ROW as Record<string, unknown>), place_id: "p-cyn" }), at.getTime());
+    await syncNotificationsForPage(owner, "cyn", at, new Map());
     expect(rows.map((r) => r.key)).toEqual(["listing_link", "phone_mismatch"]);
+  });
+
+  test("no live read this visit yet (e.g. Settings first): no sync and no Google call — the next scan syncs", async () => {
+    const { rows, admin } = memAdmin();
+    adminFor = admin;
+    const read = vi.fn(async () => ({ data: CYN_ROW, error: null }));
+    const owner = { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: read }) }) }) } as never;
+    const places = await import("@/lib/google/places");
+    await syncNotificationsForPage(owner, "cyn-no-read", new Date("2026-11-09T15:00:00Z"), new Map());
+    expect(read).not.toHaveBeenCalled();
+    expect(vi.mocked(places.getOwnerListingLive)).not.toHaveBeenCalled();
+    expect(rows).toEqual([]);
   });
 
   test("not their business (RLS returns nothing): nothing is written", async () => {

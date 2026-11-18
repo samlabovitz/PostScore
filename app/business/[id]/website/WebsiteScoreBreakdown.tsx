@@ -1,5 +1,6 @@
 "use client";
 
+import { ChangedOnGoogleNote } from "@/components/scoring/ChangedOnGoogleNote";
 import { IconAlertTriangle, IconCheck, IconMinus, IconX } from "@tabler/icons-react";
 import { LockFooter } from "@/components/plan/LockedPreview";
 import { Card } from "@/components/ui/Card";
@@ -246,8 +247,10 @@ function CheckRow({
               {t(locale, "dashboard.website.couldntVerifyPrefix")}
             </span>
           )}
-          {excludedReasonKey ? t(locale, excludedReasonKey) : check.explanation}
+          {/* Day 23 2d-4: Google reads differently now than this saved result. */}
+          {check.liveDiffers ? null : excludedReasonKey ? t(locale, excludedReasonKey) : check.explanation}
         </p>
+        {check.liveDiffers === "changed" && <ChangedOnGoogleNote businessId={null} />}
         {check.note && !excludedReasonKey && <p className="mt-0.5 text-[11.5px] text-ink-mute">{check.note}</p>}
         <LinkIssues check={check} className="mt-1 text-left text-[12.5px] font-semibold text-ink underline-offset-2 hover:text-brass hover:underline" />
 

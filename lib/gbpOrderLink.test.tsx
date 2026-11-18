@@ -10,6 +10,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 // mode's fake Google, the live allow list, and never in production.
 // NEVER calls Google: the real fetch throws in this file.
 
+// Day 23 2d-4: Google's values as read now = the test row's own (test/liveListingFromRow.ts).
+vi.mock("@/lib/ownerListing.server", async (orig) => (await import("@/test/liveListingFromRow")).ownerListingFromRows(await orig()));
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/gbpTokens.server", () => ({ markGbpReconnect: vi.fn() }));

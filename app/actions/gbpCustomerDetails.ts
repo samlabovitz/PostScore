@@ -14,6 +14,7 @@
 //   refused here ("editing_off", nothing sent) unless the business is on
 //   GOOGLE_WRITES_LIVE_PLACES (default: none).
 
+import { withLiveListingFor } from "@/lib/ownerListing.server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getPlan } from "@/lib/premium";
@@ -104,11 +105,12 @@ export async function loadCustomerDetailsEditorAction(businessId: string): Promi
 async function ownerState(businessId: string): Promise<CustomerDetailsOwnerState> {
   const { data } = await createClient()
     .from("businesses")
-    .select("name, category, primary_type, categories, business_type_override, biz_type_resolved, pure_service_area_business, owner_no_parking, owner_no_payment")
+    .select("place_id, listing_mode, name, category, primary_type, categories, business_type_override, biz_type_resolved, pure_service_area_business, owner_no_parking, owner_no_payment")
     .eq("id", businessId)
     .maybeSingle();
   if (!data) return { canRemove: [], removed: [] };
-  const rule = businessRowToScoringInput(data as unknown as BusinessScoringRow).customerDetailsRule;
+  // Day 23 2d-4: service area as Google shows it now.
+  const rule = businessRowToScoringInput((await withLiveListingFor(createClient(), businessId, data)) as unknown as BusinessScoringRow).customerDetailsRule;
   const owned = (parts: string[] | undefined) => (parts ?? []).filter((p): p is "parking" | "payment" => p === "parking" || p === "payment");
   return { canRemove: owned(rule?.ownerCanRemove), removed: owned(rule?.ownerRemoved) };
 }

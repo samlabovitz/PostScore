@@ -1,5 +1,6 @@
 "use server";
 
+import { withLiveListingFor } from "@/lib/ownerListing.server";
 import { businessTimeZone } from "@/lib/businessTimeZone";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -59,7 +60,8 @@ export async function getGrowthMoveSignals(
   }
 
   const [businessResult, promoResult, referralResult, resolvedSnapshot] = await Promise.all([
-    supabase.from("businesses").select("photo_count, pricing_assessed_at, website, verified_website_url, lat, lng").eq("id", businessId).single(),
+    // Day 23 2d-4: photos and the website link as Google shows them now.
+    supabase.from("businesses").select("place_id, listing_mode, photo_count, pricing_assessed_at, website, verified_website_url, lat, lng").eq("id", businessId).single().then(async (r) => (r.data ? { ...r, data: await withLiveListingFor(supabase, businessId, r.data) } : r)),
     supabase.from("promos").select("id").eq("business_id", businessId).limit(1),
     supabase.from("referrals").select("id").eq("business_id", businessId).limit(1),
     snapshot !== undefined ? Promise.resolve(snapshot) : getLatestCompetitorSnapshot(businessId),

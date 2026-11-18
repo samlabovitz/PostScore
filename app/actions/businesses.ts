@@ -1,5 +1,6 @@
 "use server";
 
+import { listingScoringRow, type ListingScoringColumns } from "@/lib/listingScoringRow";
 import { withOwnerDetails } from "@/lib/ownerDetails";
 import { loadOwnerDetailsMany, withOwnerDetailsFor, type OwnerNameLive } from "@/lib/ownerDetails.server";
 import { cachedOwnerListing } from "@/lib/ownerListing.server";
@@ -8,7 +9,7 @@ import { afterBusinessAdded } from "@/lib/businessAdded.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { DIFFERENTIATOR_MAX } from "@/lib/businessOffer";
-import { hasRecentReviewFrom, recentReviewsSeenFrom, type PlaceDetails } from "@/lib/google/places";
+import type { PlaceDetails } from "@/lib/google/places";
 import { normalizeLocale, SUPPORTED_LOCALES, t, type Locale } from "@/lib/i18n";
 import { getPlan, unlimitedBusinessesAllowed } from "@/lib/premium";
 import { locationLimit, type Plan } from "@/lib/plan";
@@ -23,19 +24,12 @@ import { extraServicesKeywordsFor } from "@/lib/pagePresenceDetection";
 import { isMissingColumnError, parseListingMode } from "@/lib/listingMode";
 import { parsePublicWebsiteUrl } from "@/lib/publicUrl";
 import { businessTimeZone } from "@/lib/businessTimeZone";
-import { withSavedScore } from "@/lib/savedScore";
 import { latestSavedScores } from "@/lib/savedScore.server";
-import {
-  businessRowToScoringInput,
-  V112_SCORING_COLUMNS,
-  scoreBusiness,
-  type BusinessScoringRow,
-  type Grade,
-  type WebsiteAnalysis,
-} from "@/lib/scoring";
+import { V112_SCORING_COLUMNS, type Grade, type WebsiteAnalysis } from "@/lib/scoring";
 
 export type SaveBusinessResult =
-  | { status: "saved"; businessId: string }
+  /** `listing`: the scan's Google values in memory, for its score (server only — never returned to the browser). */
+  | { status: "saved"; businessId: string; listing?: ListingScoringColumns }
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
 
@@ -106,7 +100,10 @@ export async function saveBusiness(
   const result = await saveBusinessWithClient(supabase, user.id, place, language, businessTypeOverride, tradeId);
   // Its first saved score, then (Part B) its first competitor scan — see
   // lib/businessAdded.server.ts. Never fails the save.
-  if (result.status === "saved") await afterBusinessAdded(supabase, result.businessId);
+  if (result.status === "saved") {
+    await afterBusinessAdded(supabase, result.businessId, { listing: result.listing });
+    return { status: "saved", businessId: result.businessId };
+  }
   return result;
 }
 
@@ -294,42 +291,20 @@ export async function saveBusinessWithClient(
   }
   const { websiteAnalysis, httpsStatus, checkedAt, captureScreenshots, analysis } = saved;
 
-  // Scoring v1.12.0 facts (supabase/scoring-v1-12.sql) — yes/no only.
-  const v112Facts =
-    place.reviewPublishTimes === undefined
-      ? {}
-      : {
-          has_recent_review: hasRecentReviewFrom(place.reviewPublishTimes, new Date()),
-          recent_reviews_seen: recentReviewsSeenFrom(place.reviewPublishTimes, new Date()),
-          listing_has_accessibility: place.listingHasAccessibility ?? null,
-          listing_has_payment: place.listingHasPayment ?? null,
-          listing_has_parking: place.listingHasParking ?? null,
-          pure_service_area_business: place.pureServiceAreaBusiness ?? null,
-        };
-  const upsertBusiness = (facts: Record<string, unknown>) =>
+  // Day 23 2d-4: a scan saves only the place ID, lat/lng (30 days) and our
+  // own results. Google's listing values — name, address, phone, website,
+  // rating, reviews, categories, hours, status, photos, price level,
+  // service options and the yes/no facts — are scored in memory
+  // (lib/listingScoringRow.ts) and never written.
+  const upsertBusiness = () =>
     supabase
     .from("businesses")
     .upsert(
       {
-        ...facts,
         owner_id: ownerId,
         place_id: place.placeId,
-        name: place.name,
-        address: place.formattedAddress,
-        phone: place.phone,
-        website: place.website,
-        rating: place.rating,
-        review_count: place.userRatingCount,
-        category: place.primaryCategory,
-        primary_type: place.primaryType,
-        categories: place.categories,
+        // Our own result: the business type we resolved from this read.
         biz_type_resolved: savedBizTypeId(place.primaryCategory, place.primaryType, place.categories),
-        opening_hours: place.openingHours,
-        opening_hours_periods: place.openingHoursPeriods,
-        business_status: place.businessStatus,
-        photo_count: place.photoCount,
-        google_maps_uri: place.googleMapsUri,
-        price_level: place.priceLevel,
         lat: place.location?.lat ?? null,
         lng: place.location?.lng ?? null,
         https_status: httpsStatus,
@@ -352,16 +327,7 @@ export async function saveBusinessWithClient(
     )
     .select("id")
     .single();
-  const missingColumn = (e: { code?: string } | null) => !!e && (e.code === "PGRST204" || e.code === "42703");
-  let { data, error } = await upsertBusiness(v112Facts);
-  // Before supabase/scoring-v1-12-recency-details.sql: without the bucket.
-  if (missingColumn(error) && "recent_reviews_seen" in v112Facts) {
-    ({ data, error } = await upsertBusiness(Object.fromEntries(Object.entries(v112Facts).filter(([k]) => k !== "recent_reviews_seen"))));
-  }
-  // Before supabase/scoring-v1-12.sql has been run: save without them.
-  if (missingColumn(error) && Object.keys(v112Facts).length > 0) {
-    ({ data, error } = await upsertBusiness({}));
-  }
+  const { data, error } = await upsertBusiness();
   // When lat/lng were read from Places (kept at most 30 days — lib/storageCleanup.server.ts).
   // Its own update, so a save never fails before supabase/storage-cleanup.sql has run.
   if (!error && data && place.location) {
@@ -376,20 +342,12 @@ export async function saveBusinessWithClient(
     return { status: "error", message: error?.message ?? "Save failed." };
   }
 
-  // Google's service options (supabase/service-options.sql) — information
-  // only, no points. Saved on their own so a missing column never fails the save.
-  if (place.serviceOptions !== undefined) {
-    await supabase.from("businesses").update({ google_service_options: place.serviceOptions }).eq("id", data.id).then(
-      () => undefined,
-      () => undefined
-    );
-  }
-
   if (captureScreenshots && websiteAnalysis) {
     await finishAutoScreenshots(supabase, data.id, websiteAnalysis, analysis, analysisUrl);
   }
 
-  return { status: "saved", businessId: data.id };
+  // Google's values this scan read, for its score — in memory only.
+  return { status: "saved", businessId: data.id, listing: listingScoringRow(place) };
 }
 
 export interface BusinessSummary {
@@ -754,10 +712,9 @@ export interface MyBusinessRow {
   name: string | null;
   address: string | null;
   category: string | null;
-  /** A live score computed the same way scoreBusinessById does (never a
-   * separately-saved value that could drift) — null only if this
-   * business's row is somehow missing the scoring-relevant columns,
-   * which shouldn't happen for a normally-saved business. */
+  /** The latest saved scan's total and grade — the score every page shows
+   * (Day 23 2d-1/2d-4). Null before a business's first scan, and for a
+   * website-only business. */
   score: { total: number; grade: Grade } | null;
   /** Day 2b: no Google listing — the list shows "Website only", never a
    * PostScore (score is null for these). */
@@ -819,10 +776,11 @@ export async function listMyBusinesses(): Promise<ListMyBusinessesResult> {
   // from this visit's read when there is one (never a Google call per business).
   const owners = await loadOwnerDetailsMany(supabase, data.map((row) => row.id));
   const businesses: MyBusinessRow[] = data.map((row) => {
-    const locale = normalizeLocale(row.language);
     const websiteOnly = websiteOnlyIds.has(row.id);
-    const now = websiteOnly ? null : scoreBusiness(businessRowToScoringInput(row as BusinessScoringRow), locale);
-    const breakdown = now ? withSavedScore(now, saved.get(row.id) ?? null) ?? now : null;
+    // Day 23 2d-4: the latest saved scan's score (our own result) — never a
+    // re-score of Google's saved columns, and no Google call per business.
+    const last = websiteOnly ? null : saved.get(row.id) ?? null;
+    const breakdown = last ? { total: last.total, grade: last.grade as Grade } : null;
     const shown = withOwnerDetails({ name: row.name, address: row.address }, owners.get(row.id)?.details ?? null, cachedOwnerListing(row.id));
     return {
       id: row.id,

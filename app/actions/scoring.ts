@@ -1,5 +1,6 @@
 "use server";
 
+import { gradedSiteUrl } from "@/lib/gradedSite";
 import { withOwnerDetails } from "@/lib/ownerDetails";
 import { loadOwnerDetails } from "@/lib/ownerDetails.server";
 import { requestCache } from "@/lib/requestCache";
@@ -23,14 +24,15 @@ import {
 } from "@/lib/scoring";
 import { isFullScan } from "@/lib/websiteRecheckPolicy";
 import { reconcileTasks, type TaskRow } from "@/lib/actionPlan";
-import { buildProfileSnapshot, diffProfileSnapshots, type ProfileChange, type ProfileSnapshot } from "@/lib/profileChanges";
+import { buildProfileSnapshot, type ProfileSnapshot } from "@/lib/profileChanges";
 import { lookupBusinessByPlaceId, type OpeningHoursPeriod } from "@/lib/google/places";
 import type { PlacesDetailsKind } from "@/lib/placesDetailsBudget";
-import { changesAcross, type GbpPhotoTimes, type GbpReviewTimes, type ScanChangeSummary } from "@/lib/scanChanges";
+import { changesAcross, type GbpPhotoTimes, type GbpReviewTimes, type ScanChangeRecord, type ScanChangeSummary } from "@/lib/scanChanges";
 import { breakdownWithoutQuotes } from "@/lib/breakdownStorage";
-import { sameTotal, savedScoreMatches, withSavedScore } from "@/lib/savedScore";
+import { withSavedScore } from "@/lib/savedScore";
 import { latestSavedScore } from "@/lib/savedScore.server";
-import { withLiveListing, type LiveListing } from "@/lib/ownerListing";
+import type { LiveListing } from "@/lib/ownerListing";
+import { emptyListingColumns, listingScoringRow, type ListingScoringColumns } from "@/lib/listingScoringRow";
 import { FP_KEY_COLUMN, loadScanChangeRecords } from "@/lib/scanChanges.server";
 import { saveBusinessWithClient } from "@/app/actions/businesses";
 import { DEFAULT_LOCALE, normalizeLocale, t, type Locale } from "@/lib/i18n";
@@ -94,6 +96,12 @@ export type ScoreBusinessResult =
       result: ScoreWithSuggestions;
       /** The row the score and the plan's estimates were worked out from (defaults to `business`). */
       scoringBusiness?: BusinessRecord;
+      /** Day 23 2d-4: where the Google values came from — the scan's own read
+       * ("scan"), the visit's live read ("ok"), Google couldn't be read
+       * ("unavailable": every Google value empty), or no listing ("none"). */
+      live?: "scan" | "ok" | "unavailable" | "none";
+      /** The visit's live read itself, when there was one. */
+      liveListing?: LiveListing;
     }
   | { status: "not_found" }
   | { status: "unauthenticated" }
@@ -142,20 +150,19 @@ export async function scoreForDisplayWithClient(
 ): Promise<ScoreBusinessResult> {
   const [scored, saved] = await Promise.all([scoreBusinessWithClient(supabase, businessId, locale), latestSavedScore(supabase, businessId)]);
   if (scored.status !== "ok") return scored;
-  // Day 23 2d-2: Google's values shown on the page are read now (Business
-  // Profile when connected, else one Places read per visit), never the
-  // saved columns.
-  const live = await liveListingFor(supabase, businessId, scored.business);
-  // Day 23 2d-3: the owner's confirmed name and address (lib/ownerDetails.ts).
+  // Day 23 2d-3: the owner's confirmed name and address (lib/ownerDetails.ts);
   // before that, the listing's as this visit read it.
-  const business = withOwnerDetails(withLiveListing(scored.business, live), (await loadOwnerDetails(supabase, businessId))?.details ?? null, live);
+  const business = withOwnerDetails(scored.business, (await loadOwnerDetails(supabase, businessId))?.details ?? null, scored.liveListing ?? null);
   const now = scored.result.breakdown;
-  const shown = withSavedScore(now, saved);
+  // Day 23 2d-4: the saved scan's points with the words built from Google
+  // now; a Google-side check that reads differently now is marked
+  // (lib/savedScore.ts) — a page never saves a scan for a Google change.
+  const shown = withSavedScore(now, saved, { liveUnavailable: scored.live === "unavailable" });
   const scoringBusiness = scored.business;
-  if (savedScoreMatches(now, shown)) return { ...scored, business, scoringBusiness, result: { ...scored.result, breakdown: shown } };
-  // Same total and grade, points moved between checks (e.g. a mobile speed
-  // measurement aged out): today's breakdown, as before — no new scan.
-  if (saved && options.save !== false && !sameTotal(now, saved)) await syncScoreSnapshotWithClient(supabase, businessId);
+  if (shown) return { ...scored, business, scoringBusiness, result: { ...scored.result, breakdown: shown } };
+  // No saved scan to stand in (a scoring update changed the checks): save
+  // one first, as before — still one score everywhere.
+  if (saved && options.save !== false && scored.live !== "unavailable") await syncScoreSnapshotWithClient(supabase, businessId, "page");
   return { ...scored, business, scoringBusiness };
 }
 
@@ -182,7 +189,11 @@ async function liveListingFor(supabase: SupabaseClient, businessId: string, row:
 export async function scoreBusinessWithClient(
   supabase: SupabaseClient,
   businessId: string,
-  locale: Locale | "business" = DEFAULT_LOCALE
+  locale: Locale | "business" = DEFAULT_LOCALE,
+  /** Day 23 2d-4: the listing this scan just read (lib/listingScoringRow.ts),
+   * in memory. Omitted: the visit's live read (pages, syncs, re-scores).
+   * The saved Google columns are never scored. */
+  options: { listing?: ListingScoringColumns } = {}
 ): Promise<ScoreBusinessResult> {
   const { data: business, error } = await supabase
     .from("businesses")
@@ -196,19 +207,36 @@ export async function scoreBusinessWithClient(
     return { status: "not_found" };
   }
 
+  // Google's values: this scan's read, else the visit's live read
+  // (Business Profile when connected, else one Places read per visit —
+  // lib/ownerListing.server.ts); empty when Google can't be read.
+  let row: Record<string, unknown> = business;
+  let live: "scan" | "ok" | "unavailable" | "none";
+  let liveListing: LiveListing | undefined;
+  if (options.listing) {
+    row = { ...business, ...options.listing };
+    live = "scan";
+  } else {
+    liveListing = await liveListingFor(supabase, businessId, business);
+    live = liveListing.status;
+    row = liveListing.status === "ok" ? { ...business, ...liveListing.columns } : liveListing.status === "unavailable" ? { ...business, ...emptyListingColumns() } : business;
+  }
+
   // The business's own time zone (Day 5 prep) — for DashboardShell and
   // any date inside a check explanation.
   // The owner's confirmed site (read on its own — null before supabase/owner-website.sql).
   const { withOwnerWebsite } = await import("@/lib/ownerWebsite.server");
-  const zoned = await withOwnerWebsite(supabase, businessId, withTimeZone(business));
-  const input = businessRowToScoringInput(zoned as BusinessScoringRow);
+  const zoned = await withOwnerWebsite(supabase, businessId, withTimeZone(row));
+  const input = businessRowToScoringInput(zoned as unknown as BusinessScoringRow);
   const result = getScoreWithSuggestions(input, locale === "business" ? normalizeLocale(business.language) : locale);
 
-  return { status: "ok", business: zoned as BusinessRecord, result };
+  // Can't be read: the header keeps the name and address (until 2d-5), and the page says so.
+  const shownRow = live === "unavailable" ? { ...zoned, name: business.name, address: business.address, live_unavailable: true } : live === "ok" ? { ...zoned, live_source: liveListing?.status === "ok" ? liveListing.source : undefined } : zoned;
+  return { status: "ok", business: shownRow as BusinessRecord, result, live, ...(liveListing ? { liveListing } : {}) };
 }
 
 export type SaveScoreSnapshotResult =
-  | { status: "saved"; scoreId: string; tasksConfirmed: number; tasksReopened: number; pointsConfirmed: number }
+  | { status: "saved"; scoreId: string; tasksConfirmed: number; tasksReopened: number; pointsConfirmed: number; listingChanges?: ScanChangeRecord[] }
   | { status: "not_found" }
   | { status: "unauthenticated" }
   | { status: "error"; message: string };
@@ -256,11 +284,15 @@ export async function saveScoreSnapshotWithClient(
   businessId: string,
   /** "website_recheck" marks a website-only re-check (app/actions/websiteRecheck.ts). */
   scanKind?: ScanKind,
-  /** A connected owner's review dates, read by this scan (rescanBusinessWithClient). */
-  options: { gbpReviews?: GbpReviewTimes | null; gbpPhotos?: GbpPhotoTimes | null } = {}
+  /** A connected owner's review dates, read by this scan (rescanBusinessWithClient).
+   * `listing`: Google's values this scan just read, in memory (Day 23 2d-4) —
+   * omitted, the visit's live read (syncs, re-scores, website re-checks). */
+  options: { gbpReviews?: GbpReviewTimes | null; gbpPhotos?: GbpPhotoTimes | null; listing?: ListingScoringColumns } = {}
 ): Promise<SaveScoreSnapshotResult> {
-  const scored = await scoreBusinessWithClient(supabase, businessId);
+  const scored = await scoreBusinessWithClient(supabase, businessId, DEFAULT_LOCALE, { listing: options.listing });
   if (scored.status !== "ok") return scored;
+  // Never a scan built on empty Google values.
+  if (scored.live === "unavailable") return { status: "error", message: t(DEFAULT_LOCALE, "dashboard.live.unavailable") };
   const breakdownJson: ScoreBreakdown = scanKind && scanKind !== "full" ? { ...scored.result.breakdown, scanKind } : scored.result.breakdown;
   const snapshot = buildProfileSnapshot(scored.business);
 
@@ -287,11 +319,12 @@ export async function saveScoreSnapshotWithClient(
 
   // Our own record of what changed since the last scan, and this scan's
   // fingerprints (lib/scanChanges.server.ts). Never fails the scan.
+  let listingChanges: ScanChangeRecord[] = [];
   try {
     // Written by the server: the score row above was saved under the
     // owner's own access, and owners can't update a saved score.
     const [{ recordScanChanges }, { createAdminClient }] = await Promise.all([import("@/lib/scanChanges.server"), import("@/lib/supabase/admin")]);
-    await recordScanChanges(createAdminClient(), businessId, data.id, snapshot, { gbpReviews: options.gbpReviews, gbpPhotos: options.gbpPhotos });
+    listingChanges = await recordScanChanges(createAdminClient(), businessId, data.id, snapshot, { gbpReviews: options.gbpReviews, gbpPhotos: options.gbpPhotos });
   } catch (err) {
     console.error(`[scan-changes] not recorded for ${businessId}:`, err instanceof Error ? err.message : err);
   }
@@ -325,6 +358,7 @@ export async function saveScoreSnapshotWithClient(
     tasksConfirmed: toComplete,
     tasksReopened: toReopen,
     pointsConfirmed,
+    listingChanges,
   };
 }
 
@@ -334,19 +368,22 @@ const recentSyncs = new Map<string, number>();
 const SYNC_DEDUPE_MS = 15_000;
 
 /**
- * One score everywhere: if the score the ring shows now (scored live
- * from the saved data) isn't the latest saved snapshot's — Google
- * connected, an owner answer, a Google refresh changed the data since —
- * save a snapshot, so the ring, "Since last scan", "Since your last scan"
- * and Reports show the same number. A changed scoring version is saved
- * as a scoring update (no delta). Nothing before a business's first
- * snapshot (lib/businessAdded.server.ts saves it). Never fails a page.
- * `kind`: "google_connected" right after a connect (the callback).
+ * One score everywhere: if the score the ring shows now isn't the latest
+ * saved snapshot's — Google connected, an owner answer changed our own
+ * inputs — save a snapshot, so the ring, "Since last scan", "Since your
+ * last scan" and Reports show the same number. A changed scoring version
+ * is saved as a scoring update (no delta). Nothing before a business's
+ * first snapshot (lib/businessAdded.server.ts saves it). Never fails a page.
+ * `kind`: "data_update" after an owner's own change; "google_connected"
+ * right after a connect (the callback); "page" on a page load — Day 23
+ * 2d-4: Google's values are read live now, so a page saves only for a
+ * changed scoring version, never for a Google change (the page marks it:
+ * "Changed on Google since your last scan").
  */
 export async function syncScoreSnapshotWithClient(
   supabase: SupabaseClient,
   businessId: string,
-  kind: "data_update" | "google_connected" = "data_update",
+  kind: "data_update" | "google_connected" | "page" = "data_update",
   now: number = Date.now()
 ): Promise<{ saved: boolean; before: number | null; after: number | null }> {
   try {
@@ -359,12 +396,13 @@ export async function syncScoreSnapshotWithClient(
     const last = latest as { total: number; grade: string; scoring_version: string } | null;
     if (!last) return { saved: false, before: null, after: live.total };
     const versionChanged = last.scoring_version !== live.scoringVersion;
+    if (kind === "page" && !versionChanged) return { saved: false, before: last.total, after: live.total };
     // Connecting Google always gets its own labeled snapshot, even at +0.
     if (kind !== "google_connected" && !versionChanged && last.total === live.total && last.grade === live.grade) return { saved: false, before: last.total, after: live.total };
     const lastSync = recentSyncs.get(businessId);
-    if (kind === "data_update" && lastSync !== undefined && now - lastSync < SYNC_DEDUPE_MS) return { saved: false, before: last.total, after: live.total };
+    if (kind !== "google_connected" && lastSync !== undefined && now - lastSync < SYNC_DEDUPE_MS) return { saved: false, before: last.total, after: live.total };
     recentSyncs.set(businessId, now);
-    const saved = await saveScoreSnapshotWithClient(supabase, businessId, versionChanged && kind === "data_update" ? "scoring_update" : kind);
+    const saved = await saveScoreSnapshotWithClient(supabase, businessId, versionChanged && kind !== "google_connected" ? "scoring_update" : kind === "page" ? "data_update" : kind);
     return { saved: saved.status === "saved", before: last.total, after: live.total };
   } catch (err) {
     console.error(`[scores] snapshot sync failed for ${businessId}:`, err instanceof Error ? err.message : err);
@@ -372,9 +410,9 @@ export async function syncScoreSnapshotWithClient(
   }
 }
 
-/** syncScoreSnapshotWithClient for the signed-in owner's page (RLS). */
+/** syncScoreSnapshotWithClient on a page load, for the signed-in owner (RLS). */
 export async function syncScoreSnapshot(businessId: string): Promise<void> {
-  await syncScoreSnapshotWithClient(createClient(), businessId);
+  await syncScoreSnapshotWithClient(createClient(), businessId, "page");
 }
 
 /**
@@ -432,10 +470,8 @@ export type RescanBusinessResult =
       tasksConfirmed: number;
       tasksReopened: number;
       pointsConfirmed: number;
-      changes: ProfileChange[];
-      /** PLACES_DETAILS_MONTHLY_CAP was reached: Google wasn't asked again
-       * — the saved listing data was re-scored as it is. */
-      listingRefreshSkipped?: boolean;
+      /** What changed on the listing since the last scan (our own records). */
+      changes: ScanChangeRecord[];
       /** Interactive re-scans only (rescanBusiness): the score before and
        * after, whether PostScore's scoring version changed in between,
        * and how many checks changed — for the honest summary toast. */
@@ -591,7 +627,8 @@ export async function rescanBusinessWithClient(
   const { data: before, error: beforeError } = await supabase
     .from("businesses")
     .select(
-      "owner_id, place_id, phone, website, opening_hours, categories, photo_count, rating, review_count, business_status, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at"
+      // Day 23 2d-4: our own columns only — never Google's saved values.
+      "owner_id, place_id, language, website_analysis_json, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at"
     )
     .eq("id", businessId)
     .single();
@@ -608,17 +645,18 @@ export async function rescanBusinessWithClient(
   }
 
   const locale = normalizeLocale(before.language);
-  const previousSnapshot: ProfileSnapshot = buildProfileSnapshot(before);
+  // The listing's website at the last scan (D6): whether it showed one (its
+  // fingerprint), and the site we graded — our own result, never Google's
+  // saved link.
+  const previousWebsite = await previousListingWebsite(supabase, businessId, before.website_analysis_json);
 
   // Loaded here (admin client, server only) so importing this file stays light.
   const details = await import("@/lib/placesDetailsBudget.server");
-  // Over this month's Place Details cap: keep the saved listing data —
-  // re-score it as it is (never fail the scan) and log the skip.
+  // Over this month's Place Details cap (D5): no Google read, so nothing
+  // to score — the last scan stands, and the owner is told why.
   if (!(await details.detailsCallAllowed(detailsKind))) {
     await details.logPlacesDetailsSkip(businessId, detailsKind);
-    const kept = await saveScoreSnapshotWithClient(supabase, businessId);
-    if (kept.status !== "saved") return kept;
-    return { status: "ok", scoreId: kept.scoreId, tasksConfirmed: kept.tasksConfirmed, tasksReopened: kept.tasksReopened, pointsConfirmed: kept.pointsConfirmed, changes: [], listingRefreshSkipped: true };
+    return { status: "error", message: t(locale, "dashboard.scan.refreshSkipped") };
   }
 
   const lookup = await lookupBusinessByPlaceId(before.place_id);
@@ -648,13 +686,13 @@ export async function rescanBusinessWithClient(
   // anything. See resolveListingWebsite (lib/googleListingWebsite.ts)
   // for the exact decision this feeds.
   let retryLookupWebsite: string | null | undefined;
-  if (!lookup.place.website && before.website && (await details.detailsCallAllowed("website_retry", { interactive: detailsKind === "owner_rescan" }))) {
+  if (!lookup.place.website && previousWebsite && (await details.detailsCallAllowed("website_retry", { interactive: detailsKind === "owner_rescan" }))) {
     const retry = await lookupBusinessByPlaceId(before.place_id);
     if (retry.status !== "error") await details.logPlacesDetailsCall(businessId, "website_retry");
     retryLookupWebsite = retry.status === "found" ? retry.place.website : null;
   }
   const resolvedWebsite = resolveListingWebsite(
-    before.website,
+    previousWebsite,
     lookup.place.website,
     retryLookupWebsite,
     before.google_listing_missing_website_since,
@@ -662,6 +700,13 @@ export async function rescanBusinessWithClient(
     new Date().toISOString()
   );
   const placeToSave = { ...lookup.place, website: resolvedWebsite.website };
+  // This read is the visit's read too (not connected: connected owners'
+  // pages read Business Profile) — no second call right after a scan.
+  {
+    const { isGbpConnected, rememberOwnerListing } = await import("@/lib/ownerListing.server");
+    const { liveListingFromPlaces } = await import("@/lib/ownerListing");
+    if (!(await isGbpConnected(supabase, businessId))) rememberOwnerListing(businessId, liveListingFromPlaces(placeToSave));
+  }
 
   // The REAL "it last showed one on {date}" date — see
   // findLastKnownWebsiteDate's own doc (lib/googleListingWebsite.ts) for
@@ -724,31 +769,17 @@ export async function rescanBusinessWithClient(
   const { checkGoogleEdits } = await import("@/lib/gbpGoogleEdits.server");
   await checkGoogleEdits(createAdminClient(), businessId).catch(() => undefined);
 
-  // Their own reviews and photos, just read: exactly how many are new since the last scan.
+  // Their own reviews and photos, just read: exactly how many are new since
+  // the last scan. Scored from this scan's listing in memory (Day 23 2d-4) —
+  // none of Google's values were saved.
   const scoreResult = await saveScoreSnapshotWithClient(supabase, businessId, undefined, {
     gbpReviews: replyCheck.status === "ok" ? replyCheck.reviewTimes : null,
     gbpPhotos: photosCheck?.photoTimes ?? null,
+    listing: listingScoringRow(placeToSave),
   });
   if (scoreResult.status !== "saved") {
     return scoreResult;
   }
-
-  const currentSnapshot: ProfileSnapshot = buildProfileSnapshot({
-    phone: lookup.place.phone,
-    // The real, resolved website — never Google's raw empty response
-    // when that was overridden by resolveListingWebsite above, so the
-    // "what changed" diff never reports a website as removed when it
-    // was actually kept.
-    website: resolvedWebsite.website,
-    opening_hours: lookup.place.openingHours,
-    categories: lookup.place.categories,
-    photo_count: lookup.place.photoCount,
-    rating: lookup.place.rating,
-    review_count: lookup.place.userRatingCount,
-    business_status: lookup.place.businessStatus,
-    name: lookup.place.name,
-    address: lookup.place.formattedAddress,
-  });
 
   return {
     status: "ok",
@@ -756,8 +787,29 @@ export async function rescanBusinessWithClient(
     tasksConfirmed: scoreResult.tasksConfirmed,
     tasksReopened: scoreResult.tasksReopened,
     pointsConfirmed: scoreResult.pointsConfirmed,
-    changes: diffProfileSnapshots(previousSnapshot, currentSnapshot, locale),
+    // What changed since the last scan: our own records of it (lib/scanChanges.ts).
+    changes: scoreResult.listingChanges ?? [],
   };
+}
+
+/** Whether the listing showed a website at the last scan (its fingerprint)
+ * and, if so, the site we graded then (our website analysis) — what a
+ * single empty answer from Google keeps scoring with (lib/googleListingWebsite.ts). */
+async function previousListingWebsite(supabase: SupabaseClient, businessId: string, analysisJson: unknown): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from("scores")
+      .select("fp_website:field_fingerprints->f->>website")
+      .eq("business_id", businessId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!(data as { fp_website?: string | null } | null)?.fp_website) return null;
+    return gradedSiteUrl(analysisJson);
+  } catch {
+    // Unknown: treated as no website at the last scan (never fails the scan).
+    return null;
+  }
 }
 
 /** When the business's most recent scan ran, or null if it's never been

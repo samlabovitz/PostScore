@@ -8,6 +8,8 @@
 
 import type { OpeningHoursPeriod, PlaceDetails } from "@/lib/google/places";
 import { formatOpeningHours } from "@/lib/hours";
+import { emptyListingColumns, listingScoringRow, type ListingScoringColumns } from "@/lib/listingScoringRow";
+import { partOfAttribute } from "@/lib/gbpAttributes";
 
 export interface LiveListingValues {
   /** The listing's name and address: only the "Your business details"
@@ -27,7 +29,8 @@ export interface LiveListingValues {
 }
 
 export type LiveListing =
-  | { status: "ok"; source: "business_profile" | "places"; values: LiveListingValues }
+  /** `columns`: every scoring input Google's listing gives (Day 23 2d-4), for the page's words. */
+  | { status: "ok"; source: "business_profile" | "places"; values: LiveListingValues; columns: ListingScoringColumns }
   /** Google couldn't be reached (or a cap): show our results and the fallback line. */
   | { status: "unavailable" }
   /** No Google listing (website only, or no place id): nothing to read. */
@@ -130,6 +133,55 @@ export function liveValuesFromBusinessProfile(input: {
   };
 }
 
+/** Business Profile's category id without its prefix ("categories/gcid:hair_salon" → "hair_salon"). */
+const categoryId = (name: string | undefined) => (name ?? "").replace(/^categories\//, "").replace(/^gcid:/, "") || null;
+
+/**
+ * A connected owner's scoring inputs from Business Profile (Day 23 2d-4,
+ * D4): 0 Places calls. Categories as ids (the categories check needs a
+ * list), the customer details Google shows from the owner's attributes
+ * (any yes or no set counts, like Places), service area when there's no
+ * storefront. Review recency comes from the owner's own reply counts.
+ */
+export function columnsFromBusinessProfile(input: {
+  location: Parameters<typeof liveValuesFromBusinessProfile>[0]["location"] & {
+    categories?: { primaryCategory?: { name?: string; displayName?: string }; additionalCategories?: Array<{ name?: string; displayName?: string }> };
+    serviceArea?: unknown;
+  };
+  attributes: Array<{ name: string; values?: unknown[] }>;
+  values: LiveListingValues;
+}): ListingScoringColumns {
+  const v = input.values;
+  const cats = [input.location.categories?.primaryCategory, ...(input.location.categories?.additionalCategories ?? [])].map((c) => categoryId(c?.name)).filter((c): c is string => !!c);
+  const shown = (part: "payment" | "parking" | "accessibility") => input.attributes.some((a) => partOfAttribute(a.name) === part && (a.values ?? []).some((x) => typeof x === "boolean"));
+  return {
+    ...emptyListingColumns(),
+    name: v.name ?? null,
+    address: v.address ?? null,
+    phone: v.phone,
+    website: v.website,
+    rating: v.rating,
+    review_count: v.reviewCount,
+    category: input.location.categories?.primaryCategory?.displayName?.trim() || null,
+    primary_type: categoryId(input.location.categories?.primaryCategory?.name),
+    categories: cats.length ? cats : null,
+    opening_hours: v.openingHours,
+    opening_hours_periods: v.openingHoursPeriods,
+    business_status: v.businessStatus,
+    photo_count: v.photoCount,
+    google_maps_uri: v.googleMapsUri,
+    listing_has_accessibility: shown("accessibility"),
+    listing_has_payment: shown("payment"),
+    listing_has_parking: shown("parking"),
+    pure_service_area_business: !input.location.storefrontAddress && !!input.location.serviceArea,
+  };
+}
+
+/** Places' answer as the live read: the values pages show and every scoring input. */
+export function liveListingFromPlaces(place: PlaceDetails, now: Date = new Date()): LiveListing {
+  return { status: "ok", source: "places", values: liveValuesFromPlaces(place), columns: listingScoringRow(place, now) };
+}
+
 /** The listing columns a page shows (businesses row names). */
 export interface ListingColumns {
   rating?: number | null;
@@ -152,30 +204,15 @@ export interface ListingColumns {
 export function withLiveListing<T extends ListingColumns>(row: T, live: LiveListing): T & { live_unavailable?: boolean; live_source?: "business_profile" | "places" } {
   if (live.status === "none") return row;
   if (live.status === "unavailable") {
-    return {
-      ...row,
-      rating: null,
-      review_count: null,
-      phone: null,
-      opening_hours: null,
-      opening_hours_periods: null,
-      business_status: null,
-      photo_count: null,
-      google_maps_uri: null,
-      live_unavailable: true,
-    };
+    // Every Google value empty; the name and address stay for the header
+    // (lib/ownerDetails.ts withOwnerDetails) until 2d-5.
+    const { name: _n, address: _a, ...empty } = emptyListingColumns();
+    void _n;
+    void _a;
+    return { ...row, ...empty, live_unavailable: true };
   }
-  const v = live.values;
-  return {
-    ...row,
-    rating: v.rating,
-    review_count: v.reviewCount,
-    phone: v.phone,
-    opening_hours: v.openingHours,
-    opening_hours_periods: v.openingHoursPeriods,
-    business_status: v.businessStatus,
-    photo_count: v.photoCount,
-    google_maps_uri: v.googleMapsUri,
-    live_source: live.source,
-  };
+  // Day 23 2d-4: every Google value as Google shows it now — the name and
+  // address too (what the website-vs-Google checks compare with); the
+  // header shows the owner's confirmed ones over them (withOwnerDetails).
+  return { ...row, ...live.columns, live_source: live.source };
 }

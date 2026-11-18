@@ -17,7 +17,7 @@ import type { PlaceActionLink } from "@/lib/gbpPlaceActions";
 
 const INFO = "https://mybusinessbusinessinformation.googleapis.com/v1";
 const ACTIONS = "https://mybusinessplaceactions.googleapis.com/v1";
-export const REAL_LISTING_READ_MASK = "name,title,phoneNumbers,categories,storefrontAddress,websiteUri,regularHours,specialHours,serviceItems,profile,metadata,openInfo";
+export const REAL_LISTING_READ_MASK = "name,title,phoneNumbers,categories,storefrontAddress,websiteUri,regularHours,specialHours,serviceItems,profile,metadata,openInfo,serviceArea";
 
 export interface RealLocation {
   name?: string;
@@ -33,6 +33,8 @@ export interface RealLocation {
   metadata?: { placeId?: string; mapsUri?: string; hasVoiceOfMerchant?: boolean };
   /** Open, or closed for now or for good (the pages' live listing, lib/ownerListing.ts). */
   openInfo?: { status?: string };
+  /** Set for a listing that serves customers at their place (with no storefront: a service-area business). */
+  serviceArea?: { businessType?: string; places?: unknown; regionCode?: string };
 }
 
 export interface RealListing {

@@ -1,3 +1,8 @@
+// ⚠ Day 23 2d-4: scores go through the shared scorer, which now reads each
+// listing LIVE (one counted, capped Places read per business unless it's
+// cached; Business Profile when connected) — running this costs Google
+// calls. Other values it reads from businesses are the pre-2d-5 saved
+// columns: stale, never current data.
 // Re-scores every business from its latest saved data with the current
 // scoring code — after a scoring change, so every page shows the same
 // number (the real Colorful Yun Nan case: the score card said 80 while

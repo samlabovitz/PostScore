@@ -33,7 +33,9 @@ export async function setCustomerDetailsOwnerAnswer(
   // Before the SQL file has been run: say so, never pretend it saved.
   if (error) return error.code === "PGRST204" || error.code === "42703" ? { status: "not_enabled" } : { status: "error" };
   if (!data) return { status: "error" };
-  // Every page scores the saved row live, so the next render has it.
+  // Our own scoring input changed: save the score now (a page load saves
+  // only for a scoring update — Day 23 2d-4).
+  await (await import("@/app/actions/scoring")).syncScoreSnapshotWithClient(supabase, businessId, "data_update");
   revalidatePath(`/business/${businessId}`, "layout");
   return { status: "ok" };
 }

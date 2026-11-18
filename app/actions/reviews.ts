@@ -1,5 +1,6 @@
 "use server";
 
+import { emptyListingColumns } from "@/lib/listingScoringRow";
 import { withOwnerDetailsFor } from "@/lib/ownerDetails.server";
 import { withTimeZone } from "@/lib/businessTimeZone";
 import { createClient } from "@/lib/supabase/server";
@@ -93,7 +94,14 @@ export async function getReviewsPageData(businessId: string, options: { live?: b
     return { status: "not_found" };
   }
 
-  const row = withTimeZone(data) as BusinessScoringRow & {
+  // Day 23 2d-4: scored from Google's values as read now (never the saved
+  // columns); Free's locked-tab showroom (`live: false`) makes no call and
+  // shows no Google values.
+  const liveRow =
+    options.live === false
+      ? { ...data, ...emptyListingColumns(), name: data.name, address: data.address, live_unavailable: false }
+      : await withLiveListingFor(supabase, businessId, data as typeof data & { listing_mode?: string | null });
+  const row = withTimeZone(liveRow) as unknown as BusinessScoringRow & {
     time_zone: string;
     name: string | null;
     address: string | null;
@@ -106,7 +114,7 @@ export async function getReviewsPageData(businessId: string, options: { live?: b
   const locale = normalizeLocale(row.language);
   // Day 23 2d-1: the saved scan's points (lib/savedScore.ts), today's words.
   const now = scoreBusiness(businessRowToScoringInput(row), locale);
-  const breakdown = withSavedScore(now, await latestSavedScore(supabase, businessId)) ?? now;
+  const breakdown = withSavedScore(now, await latestSavedScore(supabase, businessId), { liveUnavailable: (liveRow as { live_unavailable?: boolean }).live_unavailable === true }) ?? now;
   const visibilityCategory = breakdown.categories.find((c) => c.id === "visibility");
 
   if (!visibilityCategory) {
@@ -119,8 +127,7 @@ export async function getReviewsPageData(businessId: string, options: { live?: b
 
   const gbpStatus = await getGbpConnectionStatus(businessId);
   const owner = await withOwnerDetailsFor(supabase, businessId, { name: row.name, address: row.address }, { live: options.live !== false });
-  const listingRow = { place_id: row.place_id, listing_mode: (data as { listing_mode?: string | null }).listing_mode ?? null, rating: row.rating, review_count: row.review_count };
-  const live = options.live === false ? { ...listingRow, rating: null, review_count: null, live_unavailable: false } : await withLiveListingFor(supabase, businessId, listingRow);
+  const live = liveRow as typeof liveRow & { rating?: number | null; review_count?: number | null; live_unavailable?: boolean };
 
   return {
     status: "ok",

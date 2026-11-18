@@ -7,13 +7,14 @@
 //   - otherwise (Free and paid): one Place Details call, logged and capped
 //     as a live_read (lib/placesLive.ts).
 // Any failure or the cap: "unavailable", and the page says so.
+import { gradedSiteUrl } from "@/lib/gradedSite";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getOwnerListingLive } from "@/lib/google/places";
 import { canMakeLiveCall, placesLiveMonthlyCap } from "@/lib/placesLive";
 import { liveCache, liveCallsThisMonth } from "@/lib/placesLive.server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { liveValuesFromBusinessProfile, liveValuesFromPlaces, withLiveListing, type ListingColumns, type LiveListing } from "@/lib/ownerListing";
+import { columnsFromBusinessProfile, liveListingFromPlaces, liveValuesFromBusinessProfile, withLiveListing, type ListingColumns, type LiveListing } from "@/lib/ownerListing";
 import { gbpFetch, logGbpCalls } from "@/lib/gbpQuota";
 import { getValidAccessTokenWithClient, markGbpReconnect } from "@/lib/gbpTokens.server";
 
@@ -96,11 +97,29 @@ export async function gbpOwnerListing(admin: SupabaseClient, businessId: string)
     gbpListingSummary(admin, businessId, c.google_account_id, c.google_location_id).catch(() => null),
   ]);
   if (!listing?.ok || !summary) return { status: "unavailable" };
+  const fromProfile = liveValuesFromBusinessProfile({ location: listing.listing.location, reviews: summary, photoCount: summary.photoCount });
+  // Business Profile can leave out a website Places still shows (the real
+  // Hair Express case: no websiteUri, the site on Places). Scans score with
+  // Places, so a page keeps the site our last scan graded (our own result,
+  // like the website-removed check) — never "no website" from this alone.
+  const values = fromProfile.website ? fromProfile : { ...fromProfile, website: await gradedSiteOfLastScan(admin, businessId) };
   return {
     status: "ok",
     source: "business_profile",
-    values: liveValuesFromBusinessProfile({ location: listing.listing.location, reviews: summary, photoCount: summary.photoCount }),
+    values,
+    // Day 23 2d-4 (D4): every scoring input from Business Profile — 0 Places calls.
+    columns: columnsFromBusinessProfile({ location: listing.listing.location, attributes: listing.listing.attributes, values }),
   };
+}
+
+/** The site the last scan graded (website_analysis_json, our own result); null when none. */
+async function gradedSiteOfLastScan(admin: SupabaseClient, businessId: string): Promise<string | null> {
+  try {
+    const { data } = await admin.from("businesses").select("website_analysis_json").eq("id", businessId).maybeSingle();
+    return gradedSiteUrl((data as { website_analysis_json?: unknown } | null)?.website_analysis_json);
+  } catch {
+    return null;
+  }
 }
 
 const defaultDeps = (): OwnerListingDeps => ({
@@ -155,10 +174,17 @@ async function readOwnerListing(businessId: string, listing: { placeId: string; 
   } else {
     const place = await deps.places(listing.placeId).catch(() => null);
     await deps.log(businessId, "live_read", 1);
-    result = place ? { status: "ok", source: "places", values: liveValuesFromPlaces(place) } : { status: "unavailable" };
+    result = place ? liveListingFromPlaces(place) : { status: "unavailable" };
   }
   cache.set(key(businessId), result, deps.now());
   return result;
+}
+
+/** A scan's own Places read, kept as the visit's read (Day 23 2d-4): the
+ * pages and the monthly email right after a scan make no second call.
+ * Not for connected owners — their pages read Business Profile. */
+export function rememberOwnerListing(businessId: string, live: LiveListing, now: number = Date.now()): void {
+  liveCache().set(key(businessId), live, now);
 }
 
 /** After a write from PostScore to the listing: the next view reads Google again. */

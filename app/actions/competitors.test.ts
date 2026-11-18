@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 // a scan goes through findAndScoreCompetitors (lib/competitors.ts); these
 // tests replace it with a spy so "no paid call" is checked directly.
 const scanSpy = vi.fn();
+// Day 23 2d-4: Google's values as read now = the test row's own (test/liveListingFromRow.ts).
+vi.mock("@/lib/ownerListing.server", async (orig) => (await import("@/test/liveListingFromRow")).ownerListingFromRows(await orig()));
 vi.mock("@/lib/competitors", async () => {
   const actual = await vi.importActual<typeof import("@/lib/competitors")>("@/lib/competitors");
   return { ...actual, findAndScoreCompetitors: (...args: unknown[]) => scanSpy(...args) };

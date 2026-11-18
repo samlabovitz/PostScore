@@ -14,6 +14,7 @@ vi.mock("@/lib/ownerListing.server", () => ({ liveListingForRow: (...args: unkno
 import { LocaleProvider } from "@/lib/i18n";
 import { ownerDetailsPrefill, ownerHoursInput, ownerHoursLines, ownerHoursSummary, sameOwnerDetails, sanitizeOwnerDetails, usuallyByAppointment, withOwnerDetails, type OwnerDetails } from "./ownerDetails";
 import { closedWeek, type WeeklyHours } from "./gbpProfileEdits";
+import { emptyListingColumns } from "./listingScoringRow";
 import { gbpAddressLine, liveValuesFromBusinessProfile, liveValuesFromPlaces, type LiveListingValues } from "./ownerListing";
 import { withOwnerDetailsFor } from "./ownerDetails.server";
 import { getOwnerDetailsCardWithClient, saveOwnerDetailsWithClient, type OwnerDetailsCard as CardData } from "@/app/actions/ownerDetails";
@@ -148,12 +149,14 @@ describe("owner-confirmed business details (Day 23 2d-3)", () => {
       name: "Hair Express",
       address: "1 Broadway, Bayonne",
     });
-    expect(src("lib/google/places.ts")).toMatch(/OWNER_LISTING_FIELD_MASK = \[\n  "id",\n  "displayName",\n  "formattedAddress",/);
+    // Day 23 2d-4: the visit read asks for everything a scan does (names and addresses included).
+    expect(src("lib/google/places.ts")).toContain("export const OWNER_LISTING_FIELD_MASK = DETAILS_FIELD_MASK;");
+    expect(src("lib/google/places.ts")).toMatch(/const DETAILS_FIELD_MASK = \[\n  "id",\n  "displayName",\n  "formattedAddress",/);
   });
 
   test("name and address shown: the owner's once confirmed; before, the visit's live read; the saved row only when Google couldn't be read", () => {
     const row = { id: "b1", name: "Saved Name", address: "Saved St", phone: "+1 973-555-0100" };
-    const ok = { status: "ok" as const, source: "places" as const, values: LIVE };
+    const ok = { status: "ok" as const, source: "places" as const, values: LIVE, columns: emptyListingColumns() };
     expect(withOwnerDetails(row, CONFIRMED, ok)).toEqual({ ...row, name: "Centered Clay", address: "12 Main Street, Springfield" });
     expect(withOwnerDetails(row, null, ok)).toEqual({ ...row, name: "Centered Clay Studio", address: "12 Main St, Springfield, NJ 07081, USA" });
     // Google has no address (a service-area listing): none shown, never the saved one.
@@ -313,7 +316,7 @@ describe("owner-confirmed business details (Day 23 2d-3)", () => {
   test("where they show: header (every page's record), switcher, emails, Print studio and the starter site; Free's showroom makes no Google call", () => {
     expect(src("app/actions/businesses.ts")).toContain("const shown = await withOwnerDetailsFor(supabase, businessId, rest, options);");
     expect(src("app/actions/businesses.ts")).toContain("owners.get(row.id)?.details ?? null");
-    expect(src("app/actions/scoring.ts")).toContain("const business = withOwnerDetails(withLiveListing(scored.business, live),");
+    expect(src("app/actions/scoring.ts")).toContain("const business = withOwnerDetails(scored.business,");
     // The score itself never reads them.
     expect(src("app/actions/scoring.ts")).toContain("const scoringBusiness = scored.business;");
     expect(src("lib/scoring.ts")).not.toContain("owner_details");
@@ -329,13 +332,13 @@ describe("owner-confirmed business details (Day 23 2d-3)", () => {
     expect(src("components/plan/freeShowroom.tsx")).toContain("getPrintStudioData(businessId, { live: false })");
     expect(src("components/plan/freeShowroom.tsx")).toContain("ownerPrintPhone(createClient(), businessId, { live: false })");
     // Before confirming: the visit's live read; the switcher and monthly email only a read already made.
-    expect(src("app/actions/scoring.ts")).toContain("?.details ?? null, live);");
+    expect(src("app/actions/scoring.ts")).toContain("?.details ?? null, scored.liveListing ?? null);");
     expect(src("app/actions/businesses.ts")).toContain("owners.get(row.id)?.details ?? null, cachedOwnerListing(row.id));");
     expect(src("app/api/cron/monthly-reports/route.ts")).toContain('{ live: "cached" }');
     // Free's locked tabs: no Google call, the header's name included (decision 3).
     expect(src("components/plan/freeShowroom.tsx")).toContain("getBusinessSummary(businessId, { live: false })");
     expect(src("components/plan/freeShowroom.tsx")).toContain("getReviewsPageData(businessId, { live: false })");
-    expect(src("app/actions/reviews.ts")).toContain("options.live === false ? { ...listingRow, rating: null, review_count: null, live_unavailable: false }");
+    expect(src("app/actions/reviews.ts")).toContain("? { ...data, ...emptyListingColumns(), name: data.name, address: data.address, live_unavailable: false }");
     // Settings once confirmed: 0 Places calls — the card and header read the owner's own,
     // the monthly email toggle and the visit check make no Google call.
     expect(src("app/business/[id]/settings/page.tsx")).toContain("getReportsData(params.id, { live: false })");

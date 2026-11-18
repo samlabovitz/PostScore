@@ -55,6 +55,9 @@ export async function setBusinessNiche(businessId: string, nicheId: string | nul
   }
   const after = await loadBusinessNiche(supabase, businessId);
   const nowId = after?.resolved.nicheId ?? niche?.id ?? "default";
+  // The type can change the score: save it now (Day 23 2d-4 — a page load
+  // saves only for a scoring update).
+  await (await import("@/app/actions/scoring")).syncScoreSnapshotWithClient(supabase, businessId, "data_update");
   return { status: "ok", changed: before?.resolved.nicheId !== nowId, nicheId: nowId };
 }
 

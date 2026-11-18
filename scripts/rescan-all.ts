@@ -82,7 +82,7 @@ for (const line of fs.readFileSync(".env.local", "utf-8").split("\n")) {
 
 import { createClient } from "@supabase/supabase-js";
 import { createRequire } from "module";
-import { businessRowToScoringInput, parseWebsiteAnalysis, scoreBusiness, type BusinessScoringRow, type ScoreBreakdown, type WebsiteAnalysis } from "../lib/scoring";
+import { parseWebsiteAnalysis, type ScoreBreakdown, type WebsiteAnalysis } from "../lib/scoring";
 import { businessWebsiteUrl } from "../lib/businessWebsite";
 import {
   canAutoCapture,
@@ -92,7 +92,6 @@ import {
   screenshotAutoMonthlyCap,
   screenshotCallsThisMonth,
 } from "../lib/screenshotBudget";
-import { normalizeLocale } from "../lib/i18n";
 import { browserRenderMonthlyCap, browserRendersThisMonth, MAX_BROWSER_RENDERS_PER_SCAN } from "../lib/browserRender";
 import type { rescanBusinessWithClient as RescanBusinessWithClientFn } from "../app/actions/scoring";
 import type { runAndSaveCompetitorScanWithClient as RunCompetitorScanFn } from "../app/actions/competitors";
@@ -375,36 +374,11 @@ async function main() {
       console.log(`  ${b.name ?? "(unnamed)"} (${b.id})${willCaptureIds.has(b.id) ? " — first screenshot capture" : ""}`);
     }
 
-    // What the CURRENT scoring code says about each business's already-
-    // stored data, vs. its latest saved score — no fetches, no writes.
-    // A rescan would also refresh the underlying data, so this isolates
-    // changes caused by code (e.g. Step 2d's blocked = couldn't check).
-    console.log(`\nScore changes from current scoring code on stored data (no fetch, nothing saved):`);
-    let changed = 0;
-    for (const b of businesses) {
-      const { data: latest } = await supabase
-        .from("scores")
-        .select("total, breakdown_json")
-        .eq("business_id", b.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (!latest) continue;
-      const now = scoreBusiness(businessRowToScoringInput(b as unknown as BusinessScoringRow), normalizeLocale(b.language ?? null));
-      const before = (latest.breakdown_json as ScoreBreakdown | null)?.checks ?? [];
-      const reasons = now.checks
-        .map((c) => {
-          const old = before.find((x) => x.id === c.id);
-          const fmt = (v: number | null | undefined) => (v === null || v === undefined ? "not scored" : String(v));
-          return old && (old.earnedPoints ?? null) !== (c.earnedPoints ?? null) ? `${c.id}: ${fmt(old.earnedPoints)} -> ${fmt(c.earnedPoints)}` : null;
-        })
-        .filter((r): r is string => r !== null);
-      if (latest.total !== now.total || reasons.length > 0) {
-        changed++;
-        console.log(`  ${b.name ?? "(unnamed)"}: ${latest.total} -> ${now.total}${reasons.length ? ` (${reasons.join("; ")})` : ""}`);
-      }
-    }
-    if (changed === 0) console.log("  none");
+    // Day 23 2d-4: a scan no longer saves Google's listing values, so the
+    // saved columns aren't current data — re-scoring them would mislead.
+    // To compare scores old vs new from one live read, use
+    // scripts/day23-2d4-live-check.ts.
+    console.log(`\n(No stored-data score comparison: since Day 23 2d-4 the saved Google columns aren't current — see scripts/day23-2d4-live-check.ts.)`);
 
     const placesCost = businesses.length * PLACES_DETAILS_COST_USD;
     console.log(`\nEstimated real, billed cost:`);

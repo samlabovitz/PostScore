@@ -9,6 +9,7 @@
 // - otherwise the real gate (lib/gbpEditGate.server.ts) and real links,
 //   with changes allowed only when the business's place id is in
 //   GOOGLE_WRITES_LIVE_PLACES (default: none — read-only).
+import { withLiveListingFor } from "@/lib/ownerListing.server";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { GbpEditBlock } from "@/lib/gbpEditGate.server";
@@ -38,10 +39,11 @@ export type OrderLinkBlocked = { ok: false; result: { status: "blocked"; reason:
 async function businessFacts(admin: SupabaseClient, businessId: string) {
   const { data } = await admin
     .from("businesses")
-    .select("place_id, name, website, category, primary_type, business_type_override, biz_type_resolved, categories, language, website_analysis_json")
+    .select("place_id, listing_mode, name, website, category, primary_type, business_type_override, biz_type_resolved, categories, language, website_analysis_json")
     .eq("id", businessId)
     .maybeSingle();
-  const b = (data ?? {}) as Record<string, unknown>;
+  // Day 23 2d-4: the listing's link as Google shows it now (Business Profile — connected).
+  const b = (data ? await withLiveListingFor(admin, businessId, data) : {}) as Record<string, unknown>;
   const str = (v: unknown) => (typeof v === "string" ? v : null);
   const [{ resolveBizProfile }, { parseWebsiteAnalysis }] = await Promise.all([import("@/config/bizProfiles"), import("@/lib/scoring")]);
   const profile = resolveBizProfile(str(b.category), str(b.primary_type), str(b.business_type_override), undefined, Array.isArray(b.categories) ? (b.categories as string[]) : null, str(b.name), str(b.biz_type_resolved));

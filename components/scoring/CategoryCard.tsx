@@ -5,6 +5,11 @@ import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { cn } from "@/lib/utils";
 import type { CategoryResult, CheckResult } from "@/lib/scoring";
+import { checkOutcome, formatPoints, type CheckOutcome } from "@/lib/checkOutcome";
+import { ChangedOnGoogleNote } from "@/components/scoring/ChangedOnGoogleNote";
+
+// Kept here for the UI that already imports them from this file.
+export { checkOutcome, formatPoints, ChangedOnGoogleNote };
 import { t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
 import { LockedFixRow } from "@/components/overview/FixPlanUpsell";
 import { checkAnchorId } from "@/lib/postaiLinks";
@@ -18,21 +23,6 @@ export interface BreakdownFix {
   href: string;
   label: string;
   howTo?: CheckHowTo;
-}
-
-/** Day 4 Step 3: each row is labeled by its RESULT — never by how sure
- * we are of it (the old green "Verified" read as a pass even at 0 / 1):
- * full points → "Done", fewer → "Needs work", excluded → "Couldn't check". */
-type CheckOutcome = "done" | "needs_work" | "couldnt_check" | "excellent" | "good";
-
-/** The Star rating row is labeled by the rating itself (ratingBand in
- * lib/scoring.ts): 4.5★+ "Excellent" and 4.3★+ "Good" are never "Needs
- * work", even while more reviews would still add points. */
-export function checkOutcome(check: Pick<CheckResult, "id" | "earnedPoints" | "maxPoints" | "meta">): CheckOutcome {
-  if (check.earnedPoints === null) return "couldnt_check";
-  if (check.id === "visibility.rating" && check.meta?.ratingBand === "excellent") return "excellent";
-  if (check.id === "visibility.rating" && check.meta?.ratingBand === "good") return "good";
-  return check.earnedPoints >= check.maxPoints ? "done" : "needs_work";
 }
 
 const OUTCOME_PILL: Record<CheckOutcome, { variant: "green" | "amber" | "neutral"; labelKey: MessageKey }> = {
@@ -56,10 +46,6 @@ function OutcomeIcon({ outcome }: { outcome: CheckOutcome }) {
   }
 }
 
-export function formatPoints(value: number | null): string {
-  if (value === null) return "—";
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
 
 /** Renders one scoring category's real checks — label, earned/max
  * points, and confidence — straight off a live ScoreBreakdown. Used by
@@ -163,7 +149,7 @@ function CheckRows({
               <Pill variant={pill.variant}>{t(locale, pill.labelKey)}</Pill>
             </div>
           </div>
-          <RowStatus check={check} />
+          <RowStatus check={check} businessId={businessId} />
           <RowActions check={check} outcome={outcome} fix={fixLinks?.[check.id]} lockedFixes={lockedFixes} businessId={businessId} />
         </div>
       );
@@ -174,8 +160,12 @@ function CheckRows({
 
 /** The row's status: ONE short sentence on what's missing (max 2 lines).
  * Customer details: the scored groups still missing on Google. */
-function RowStatus({ check }: { check: CheckResult }) {
+function RowStatus({ check, businessId = null }: { check: CheckResult; businessId?: string | null }) {
   const locale = useLocale();
+  // Day 23 2d-4: Google reads differently now than this saved result —
+  // never words that contradict it; the page's own note covers "couldn't load".
+  if (check.liveDiffers === "changed") return <ChangedOnGoogleNote businessId={businessId} />;
+  if (check.liveDiffers === "unavailable") return null;
   const missing = missingParts(check);
   if (check.id === "completeness.customer_details" && missing !== null) {
     return (

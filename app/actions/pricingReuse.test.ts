@@ -4,6 +4,8 @@ import { describe, expect, test, vi } from "vitest";
 // businesses, their price levels read live (Day 23) — never a fresh paid scan.
 const scanSpy = vi.fn();
 // A paid plan: on Free the price check refuses before any of this runs.
+// Day 23 2d-4: Google's values as read now = the test row's own (test/liveListingFromRow.ts).
+vi.mock("@/lib/ownerListing.server", async (orig) => (await import("@/test/liveListingFromRow")).ownerListingFromRows(await orig()));
 vi.mock("@/lib/premium", () => ({ getPlan: () => "grow" }));
 vi.mock("@/lib/competitors", () => ({ findAndScoreCompetitors: (...a: unknown[]) => scanSpy(...a), MAX_COMPETITORS: 10 }));
 const prompts: string[] = [];

@@ -899,21 +899,10 @@ export async function getPlaceLive(placeId: string, fetchImpl: typeof fetch = fe
 /** Day 23 2d-2: the owner's own listing, read live when a page is shown
  * (Place Details Enterprise, the cheapest SKU with the rating and review
  * count) — the values every owner page shows next to our results. */
-export const OWNER_LISTING_FIELD_MASK = [
-  "id",
-  "displayName",
-  "formattedAddress",
-  "rating",
-  "userRatingCount",
-  "nationalPhoneNumber",
-  "internationalPhoneNumber",
-  "websiteUri",
-  "regularOpeningHours.weekdayDescriptions",
-  "regularOpeningHours.periods",
-  "businessStatus",
-  "googleMapsUri",
-  "photos",
-].join(",");
+// Day 23 2d-4 (D3): the visit read asks for everything a scan does, so a
+// page's words come from the same values the score was built from — one
+// call per visit, billed at Enterprise + Atmosphere like a scan.
+export const OWNER_LISTING_FIELD_MASK = DETAILS_FIELD_MASK;
 
 /** The owner's listing now. One attempt; null on any failure. */
 export async function getOwnerListingLive(placeId: string, fetchImpl: typeof fetch = fetch): Promise<PlaceDetails | null> {

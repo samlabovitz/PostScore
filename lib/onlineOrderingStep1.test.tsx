@@ -59,9 +59,11 @@ describe("asked for, and saved as Google states them", () => {
     expect(row.service_options).toEqual({ takeout: true, curbsidePickup: false });
   });
 
-  test("the save never fails before supabase/service-options.sql is run", () => {
+  test("Day 23 2d-4: the owner's service options are read when shown, never saved by a scan; competitors' still drop cleanly before the SQL", () => {
     const save = readFileSync("app/actions/businesses.ts", "utf8");
-    expect(save).toContain("update({ google_service_options: place.serviceOptions })");
+    expect(save).not.toContain("google_service_options");
+    expect(readFileSync("lib/listingScoringRow.ts", "utf8")).toContain("google_service_options: place.serviceOptions");
+    expect(readFileSync("lib/serviceOptions.server.ts", "utf8")).toContain("live.columns.google_service_options");
     const scans = readFileSync("app/actions/competitors.ts", "utf8");
     expect(scans).toContain('filter(([k]) => k !== "service_options")');
   });

@@ -99,8 +99,9 @@ export async function syncNotificationsFromSavedRow(
 const lastSavedSync = new Map<string, number>();
 
 /**
- * A business page loads: brings its notifications up to date with its
- * saved data — so owners never wait for a new scan (the real Colorful Yun
+ * A business page loads: brings its notifications up to date — with
+ * Google's values from the visit's live read, when it made one — so owners
+ * never wait for a new scan (the real Colorful Yun
  * Nan case: scanned before the notifications table existed). At most once
  * per business per hour per server; never fails the page.
  *
@@ -108,12 +109,18 @@ const lastSavedSync = new Map<string, number>();
  * is what proves the business is theirs before the service role writes.
  */
 export async function syncNotificationsForPage(supabase: SupabaseClient, businessId: string, now: Date = new Date(), lastSyncAt: Map<string, number> = lastSavedSync): Promise<void> {
+  // Day 23 2d-4: Google's values only from a read this visit already made
+  // (never a Google call on every page); none yet — skip (every scan syncs).
+  const { cachedOwnerListing } = await import("@/lib/ownerListing.server");
+  const live = cachedOwnerListing(businessId, now.getTime());
+  if (live?.status !== "ok") return;
   if (!savedSyncDue(lastSyncAt, businessId, now.getTime())) return;
   try {
     const { data, error } = await supabase.from("businesses").select(SAVED_SCORING_SELECT).eq("id", businessId).maybeSingle();
     if (error || !data) return;
     const { createAdminClient } = await import("@/lib/supabase/admin");
-    await syncNotificationsFromSavedRow(createAdminClient(), data as unknown as BusinessScoringRow & { id: string }, now);
+    const { withLiveListing } = await import("@/lib/ownerListing");
+    await syncNotificationsFromSavedRow(createAdminClient(), withLiveListing(data as unknown as BusinessScoringRow & { id: string }, live), now);
   } catch (err) {
     console.error(`[notifications] page sync failed for ${businessId}:`, err instanceof Error ? err.message : err);
   }

@@ -1,3 +1,7 @@
+// ⚠ Day 23 2d-4: this script reads the SAVED Google columns (businesses /
+// competitor_scans) as they were before 2d-5 clears them. Scans stopped
+// writing them in 2d-4, so they're stale — never use what it prints as
+// current data. (Left as is until 2d-5.)
 // Online ordering, step 1: re-scans ONLY the food businesses (restaurants,
 // cafés, bakeries, dessert shops — lib/serviceOptions.ts FOOD_PROFILE_IDS)
 // so their Google service options (takeout, delivery, curbside, dine-in)
