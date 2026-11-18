@@ -12,7 +12,7 @@
 // Green for done, neutral or amber while waiting, red only for real failures.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { IconCheck, IconClock, IconFlask, IconLock, IconPlus, IconSparkles, IconX } from "@tabler/icons-react";
+import { IconCheck, IconClock, IconFlask, IconLock, IconSparkles } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import {
   applyProfileEditAction,
@@ -28,12 +28,9 @@ import {
   formatTime,
   hoursProblems,
   MAX_RANGES_PER_DAY,
-  parseTimeInput,
   PROFILE_DESCRIPTION_MAX,
-  timeInput,
   usPhone,
   WEEK_ORDER,
-  type DayHours,
   type DescriptionProblem,
   type HoursProblem,
   type ProfileField,
@@ -44,14 +41,14 @@ import { formatShortDate, t, useLocale, useTimeZone, type Locale, type MessageKe
 import { cn } from "@/lib/utils";
 import { ApproveButton, LockedButton, TONE } from "@/components/gbp/googleEditBits";
 import { OrderLinkOnGoogle } from "@/components/gbp/OrderLinkOnGoogle";
+import { WeekHoursEditor } from "@/components/hours/WeekHoursEditor";
+import { dayName } from "@/lib/hoursEditor";
 
 const K = (key: string) => `dashboard.gbpProfileEdits.${key}` as MessageKey;
 type Outcome = "accept" | "refuse" | "hold";
 
-/** "Monday" in the owner's language (Google's day numbers: 0 = Sunday). */
-export function dayName(day: number, locale: Locale): string {
-  return new Intl.DateTimeFormat(locale === "es" ? "es-US" : "en-US", { weekday: "long", timeZone: "UTC" }).format(new Date(Date.UTC(2026, 0, 4 + day)));
-}
+/** "Monday" in the owner's language — lib/hoursEditor.ts. */
+export { dayName };
 
 /** One line per day, Monday first: "Monday · 9:00 AM – 6:00 PM". */
 export function weekLines(week: WeeklyHours | null, locale: Locale): string[] {
@@ -101,88 +98,12 @@ export function hoursProblemText(p: HoursProblem, locale: Locale): string {
   return `${dayName(p.day, locale)}: ${t(locale, K(`hours.problem.${p.problem}`))}`;
 }
 
+/** The shared week editor (components/hours/WeekHoursEditor.tsx), as Settings → "Your business details" uses it. */
 function HoursEditor({ value, onChange }: { value: WeeklyHours; onChange: (w: WeeklyHours) => void }) {
   const locale = useLocale();
-  const problems = hoursProblems(value);
-  const setDay = (day: number, d: DayHours) => onChange(value.map((x, i) => (i === day ? d : x)));
   return (
-    <div className="flex flex-col gap-2" data-testid="hours-editor">
-      {WEEK_ORDER.map((day) => {
-        const d = value[day];
-        const dayProblems = problems.filter((p) => p.day === day);
-        return (
-          <div key={day} className={cn("flex flex-col gap-1.5 rounded-lg border bg-white p-2.5", dayProblems.length ? "border-red/50" : "border-paper-deep")}>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="w-24 text-[13px] font-semibold text-ink">{dayName(day, locale)}</span>
-              <select
-                aria-label={dayName(day, locale)}
-                value={d.mode}
-                onChange={(e) => setDay(day, e.target.value === "open" ? { mode: "open", ranges: d.mode === "open" ? d.ranges : [{ open: 9 * 60, close: 17 * 60 }] } : { mode: e.target.value as "closed" | "open24" })}
-                className="rounded-lg border border-paper-deep bg-white px-2 py-1 text-[13px] text-ink focus:border-brass focus:outline-none"
-              >
-                <option value="open">{t(locale, K("hours.open"))}</option>
-                <option value="closed">{t(locale, K("hours.closed"))}</option>
-                <option value="open24">{t(locale, K("hours.open24"))}</option>
-              </select>
-            </div>
-            {d.mode === "open" && (
-              <div className="flex flex-col gap-1.5 sm:pl-[104px]">
-                {d.ranges.map((r, i) => (
-                  <div key={i} className="flex flex-wrap items-center gap-1.5 text-[13px] text-ink">
-                    <input
-                      type="time"
-                      aria-label={`${dayName(day, locale)} — ${t(locale, K("hours.opens"))}`}
-                      value={timeInput(r.open)}
-                      onChange={(e) => {
-                        const open = parseTimeInput(e.target.value);
-                        if (open !== null) setDay(day, { mode: "open", ranges: d.ranges.map((x, j) => (j === i ? { ...x, open } : x)) });
-                      }}
-                      className="rounded-lg border border-paper-deep px-2 py-1"
-                    />
-                    <span aria-hidden>–</span>
-                    <input
-                      type="time"
-                      aria-label={`${dayName(day, locale)} — ${t(locale, K("hours.closes"))}`}
-                      value={timeInput(r.close)}
-                      onChange={(e) => {
-                        const close = parseTimeInput(e.target.value);
-                        if (close !== null) setDay(day, { mode: "open", ranges: d.ranges.map((x, j) => (j === i ? { ...x, close } : x)) });
-                      }}
-                      className="rounded-lg border border-paper-deep px-2 py-1"
-                    />
-                    {r.close <= r.open && r.close !== r.open && <span className="text-[12px] text-ink-soft">{t(locale, K(r.close === 0 ? "hours.midnight" : "hours.nextDay"))}</span>}
-                    {d.ranges.length > 1 && (
-                      <button type="button" onClick={() => setDay(day, { mode: "open", ranges: d.ranges.filter((_, j) => j !== i) })} className="inline-flex items-center gap-0.5 text-[12px] font-medium text-ink-soft hover:text-ink">
-                        <IconX size={12} aria-hidden />
-                        {t(locale, K("hours.remove"))}
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {d.ranges.length < MAX_RANGES_PER_DAY && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const last = d.ranges[d.ranges.length - 1];
-                      const start = last ? Math.min(last.close + 60, 23 * 60) : 9 * 60;
-                      setDay(day, { mode: "open", ranges: [...d.ranges, { open: start, close: Math.min(start + 120, 23 * 60 + 59) }] });
-                    }}
-                    className="inline-flex w-fit items-center gap-1 text-[12.5px] font-semibold text-ink-soft hover:text-ink"
-                  >
-                    <IconPlus size={13} aria-hidden />
-                    {t(locale, K("hours.addRange"))}
-                  </button>
-                )}
-              </div>
-            )}
-            {dayProblems.map((p, i) => (
-              <p key={i} role="alert" className="text-[12.5px] text-red sm:pl-[104px]">
-                {t(locale, K(`hours.problem.${p.problem}`))}
-              </p>
-            ))}
-          </div>
-        );
-      })}
+    <div className="flex flex-col gap-2">
+      <WeekHoursEditor value={value} onChange={onChange} maxRanges={MAX_RANGES_PER_DAY} />
       <p className="text-[12px] text-ink-mute">{t(locale, K("hours.special"))}</p>
     </div>
   );

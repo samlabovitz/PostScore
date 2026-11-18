@@ -901,6 +901,8 @@ export async function getPlaceLive(placeId: string, fetchImpl: typeof fetch = fe
  * count) — the values every owner page shows next to our results. */
 export const OWNER_LISTING_FIELD_MASK = [
   "id",
+  "displayName",
+  "formattedAddress",
   "rating",
   "userRatingCount",
   "nationalPhoneNumber",

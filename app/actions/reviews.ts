@@ -1,5 +1,6 @@
 "use server";
 
+import { withOwnerDetailsFor } from "@/lib/ownerDetails.server";
 import { withTimeZone } from "@/lib/businessTimeZone";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -67,7 +68,9 @@ function verifiedSocialProfiles(json: unknown): Array<{ platform: string; url: s
  * Reviews page needs: real rating/review count/place_id, plus the real
  * visibility-category breakdown for the rubric section.
  */
-export async function getReviewsPageData(businessId: string): Promise<GetReviewsPageDataResult> {
+/** `live: false` (Free's locked-tab showroom): no Google call — the
+ * listing's values are left empty. */
+export async function getReviewsPageData(businessId: string, options: { live?: boolean } = {}): Promise<GetReviewsPageDataResult> {
   const supabase = createClient();
 
   const {
@@ -115,13 +118,16 @@ export async function getReviewsPageData(businessId: string): Promise<GetReviews
   }
 
   const gbpStatus = await getGbpConnectionStatus(businessId);
-  const live = await withLiveListingFor(supabase, businessId, { place_id: row.place_id, listing_mode: (data as { listing_mode?: string | null }).listing_mode ?? null, rating: row.rating, review_count: row.review_count });
+  const owner = await withOwnerDetailsFor(supabase, businessId, { name: row.name, address: row.address }, { live: options.live !== false });
+  const listingRow = { place_id: row.place_id, listing_mode: (data as { listing_mode?: string | null }).listing_mode ?? null, rating: row.rating, review_count: row.review_count };
+  const live = options.live === false ? { ...listingRow, rating: null, review_count: null, live_unavailable: false } : await withLiveListingFor(supabase, businessId, listingRow);
 
   return {
     status: "ok",
     data: {
-      businessName: row.name,
-      address: row.address,
+      // Day 23 2d-3: the owner's confirmed name and address.
+      businessName: owner.name,
+      address: owner.address,
       category: row.category,
       primaryType: row.primary_type,
       language: row.language,

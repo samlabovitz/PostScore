@@ -113,7 +113,9 @@ export type GetReportsDataResult =
  * honestly show. RLS-scoped to the current user via the same
  * business-ownership checks every other business-scoped query here uses.
  */
-export async function getReportsData(businessId: string): Promise<GetReportsDataResult> {
+/** `live: false` (Settings, which shows only the monthly email toggle): no
+ * Google call — the recap's "now" values are left empty. */
+export async function getReportsData(businessId: string, options: { live?: boolean } = {}): Promise<GetReportsDataResult> {
   const supabase = createClient();
 
   const {
@@ -205,6 +207,7 @@ export async function getReportsData(businessId: string): Promise<GetReportsData
       daysBetween: calendarDaysAgo(previous.created_at, new Date(current.created_at), timeZone),
       // Today's values as Google shows them now (Day 23 2d-2).
       changes: describeScanChanges(summary.records, locale, await (async () => {
+        if (options.live === false) return { rating: null, reviewCount: null };
         const live = await (await import("@/lib/ownerListing.server")).withLiveListingFor(supabase, businessId, business);
         return { rating: live.rating ?? null, reviewCount: live.review_count ?? null };
       })()),

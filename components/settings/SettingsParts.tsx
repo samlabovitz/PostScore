@@ -6,7 +6,7 @@
 // button here does something real — or isn't shown.
 
 import { useEffect, useState, type ReactNode } from "react";
-import { IconBell, IconBuildingStore, IconCheck, IconCoin, IconCreditCard, IconCrown, IconTag, IconUser, IconUserCircle, IconWorld, type Icon } from "@tabler/icons-react";
+import { IconBell, IconBuildingStore, IconCheck, IconCoin, IconCreditCard, IconCrown, IconMapPin, IconTag, IconUser, IconUserCircle, IconWorld, type Icon } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { unsubscribeFromAllEmails } from "@/app/actions/businesses";
@@ -23,6 +23,7 @@ import { PostStudioBullets, PostStudioOptions } from "@/components/studio/PostSt
 export const SETTINGS_ICONS = {
   user: IconUser,
   store: IconBuildingStore,
+  pin: IconMapPin,
   card: IconCreditCard,
   bell: IconBell,
   tag: IconTag,

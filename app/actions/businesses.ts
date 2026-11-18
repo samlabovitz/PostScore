@@ -1,5 +1,8 @@
 "use server";
 
+import { withOwnerDetails } from "@/lib/ownerDetails";
+import { loadOwnerDetailsMany, withOwnerDetailsFor, type OwnerNameLive } from "@/lib/ownerDetails.server";
+import { cachedOwnerListing } from "@/lib/ownerListing.server";
 import { requestCache } from "@/lib/requestCache";
 import { afterBusinessAdded } from "@/lib/businessAdded.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -466,7 +469,9 @@ export type GetBusinessSummaryResult =
  * business they're for — the sidebar header and not-yet-built section
  * placeholders — without paying for a full score computation.
  */
-async function getBusinessSummaryUncached(businessId: string): Promise<GetBusinessSummaryResult> {
+/** `live: false`: no Google call for the header's name and address (Free's
+ * locked-tab showrooms — lib/ownerDetails.server.ts OwnerNameLive). */
+async function getBusinessSummaryUncached(businessId: string, options: { live?: OwnerNameLive } = {}): Promise<GetBusinessSummaryResult> {
   const supabase = createClient();
 
   const {
@@ -490,7 +495,10 @@ async function getBusinessSummaryUncached(businessId: string): Promise<GetBusine
   }
 
   const { lat, lng, ...rest } = data as BusinessSummary & { lat: number | null; lng: number | null };
-  return { status: "ok", business: { ...rest, time_zone: businessTimeZone(lat, lng) } };
+  // Day 23 2d-3: the owner's confirmed name and address, else the listing's
+  // as this visit reads it (lib/ownerDetails.ts).
+  const shown = await withOwnerDetailsFor(supabase, businessId, rest, options);
+  return { status: "ok", business: { ...shown, time_zone: businessTimeZone(lat, lng) } };
 }
 
 export type UpdateBusinessProfileResult =
@@ -807,15 +815,19 @@ export async function listMyBusinesses(): Promise<ListMyBusinessesResult> {
 
   // Day 23 2d-1: each business's saved scan (lib/savedScore.ts).
   const saved = await latestSavedScores(supabase, data.map((row) => row.id));
+  // Day 23 2d-3: each one's confirmed name and address, else the listing's
+  // from this visit's read when there is one (never a Google call per business).
+  const owners = await loadOwnerDetailsMany(supabase, data.map((row) => row.id));
   const businesses: MyBusinessRow[] = data.map((row) => {
     const locale = normalizeLocale(row.language);
     const websiteOnly = websiteOnlyIds.has(row.id);
     const now = websiteOnly ? null : scoreBusiness(businessRowToScoringInput(row as BusinessScoringRow), locale);
     const breakdown = now ? withSavedScore(now, saved.get(row.id) ?? null) ?? now : null;
+    const shown = withOwnerDetails({ name: row.name, address: row.address }, owners.get(row.id)?.details ?? null, cachedOwnerListing(row.id));
     return {
       id: row.id,
-      name: row.name,
-      address: row.address,
+      name: shown.name,
+      address: shown.address,
       category: row.category,
       score: breakdown ? { total: breakdown.total, grade: breakdown.grade } : null,
       websiteOnly,

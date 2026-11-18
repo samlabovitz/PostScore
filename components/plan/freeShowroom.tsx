@@ -15,16 +15,20 @@ import { getPrintStudioData } from "@/app/actions/printStudio";
 import { getReviewsPageData } from "@/app/actions/reviews";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { normalizeLocale } from "@/lib/i18n";
+import { ownerPrintPhone } from "@/lib/ownerDetails.server";
+import { createClient } from "@/lib/supabase/server";
 
 export async function freeShowroom(businessId: string, tab: ShowroomTab) {
   const plan = await getPlan();
   if (!tabLocked(plan, tab)) return null;
-  const [summary, upgrade, print, reviews] = await Promise.all([
-    getBusinessSummary(businessId),
+  const [summary, upgrade, print, printPhone, reviews] = await Promise.all([
+    // No Google call on a locked tab (the header's name included).
+    getBusinessSummary(businessId, { live: false }),
     loadUpgradeContext(businessId, SHOWROOM_PAGE[tab], plan),
     // The real designers' own data (DB only), for the tabs that show them.
-    tab === "campaigns" ? getPrintStudioData(businessId).catch(() => null) : Promise.resolve(null),
-    tab === "reviews" ? getReviewsPageData(businessId).catch(() => null) : Promise.resolve(null),
+    tab === "campaigns" ? getPrintStudioData(businessId, { live: false }).catch(() => null) : Promise.resolve(null),
+    tab === "campaigns" ? ownerPrintPhone(createClient(), businessId, { live: false }).catch(() => null) : Promise.resolve(null),
+    tab === "reviews" ? getReviewsPageData(businessId, { live: false }).catch(() => null) : Promise.resolve(null),
   ]);
   if (summary.status === "unauthenticated") redirect("/login");
   if (summary.status === "not_found") notFound();
@@ -38,7 +42,7 @@ export async function freeShowroom(businessId: string, tab: ShowroomTab) {
         tab={tab}
         businessId={businessId}
         businessName={summary.business.name}
-        designer={print?.status === "ok" ? { profile, printBusiness: print.business, businessPhone: b.phone ?? null } : null}
+        designer={print?.status === "ok" ? { profile, printBusiness: print.business, businessPhone: printPhone } : null}
         reviews={reviews?.status === "ok" ? reviews.data : null}
       />
     </DashboardShell>

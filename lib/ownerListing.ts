@@ -10,6 +10,10 @@ import type { OpeningHoursPeriod, PlaceDetails } from "@/lib/google/places";
 import { formatOpeningHours } from "@/lib/hours";
 
 export interface LiveListingValues {
+  /** The listing's name and address: only the "Your business details"
+   * card's pre-fill reads them (lib/ownerDetails.ts). */
+  name?: string | null;
+  address?: string | null;
   rating: number | null;
   reviewCount: number | null;
   phone: string | null;
@@ -32,6 +36,8 @@ export type LiveListing =
 /** From a Place Details answer (OWNER_LISTING_FIELD_MASK). */
 export function liveValuesFromPlaces(place: PlaceDetails): LiveListingValues {
   return {
+    name: place.name ?? null,
+    address: place.formattedAddress ?? null,
     rating: place.rating,
     reviewCount: place.userRatingCount,
     phone: place.phone,
@@ -81,11 +87,22 @@ export function placesStylePhone(phone: string | null | undefined): string | nul
   return m ? `+1 ${m[1]}-${m[2]}-${m[3]}` : p;
 }
 
+/** Business Profile's storefront address as one line, the way Places
+ * writes it ("12 Main St, Springfield, NJ 07081"). Null when there's none. */
+export function gbpAddressLine(a: { addressLines?: string[]; locality?: string; administrativeArea?: string; postalCode?: string } | undefined): string | null {
+  if (!a) return null;
+  const region = [a.administrativeArea, a.postalCode].map((v) => v?.trim()).filter(Boolean).join(" ");
+  const parts = [...(a.addressLines ?? []), a.locality, region].map((v) => v?.trim()).filter(Boolean);
+  return parts.length ? parts.join(", ") : null;
+}
+
 /** From the connected owner's Business Profile: the location (phone,
  * website, hours, maps link, open/closed), its reviews summary and the
  * photos summary the last scan or Google tab read. */
 export function liveValuesFromBusinessProfile(input: {
   location: {
+    title?: string;
+    storefrontAddress?: { addressLines?: string[]; locality?: string; administrativeArea?: string; postalCode?: string };
     phoneNumbers?: { primaryPhone?: string };
     websiteUri?: string;
     regularHours?: { periods?: unknown[] };
@@ -98,6 +115,8 @@ export function liveValuesFromBusinessProfile(input: {
   const periods = placesPeriodsFromGbp(input.location.regularHours?.periods);
   const status = input.location.openInfo?.status;
   return {
+    name: input.location.title?.trim() || null,
+    address: gbpAddressLine(input.location.storefrontAddress),
     rating: input.reviews?.averageRating ?? null,
     reviewCount: input.reviews?.totalReviewCount ?? null,
     phone: placesStylePhone(input.location.phoneNumbers?.primaryPhone),

@@ -43,6 +43,7 @@
 // 15-minute budget to make many small, safe calls here. See
 // netlify/functions/monthly-reports-batch.mts's own top comment for the
 // full reasoning.
+import { withOwnerDetailsFor } from "@/lib/ownerDetails.server";
 import { isBusinessArchived } from "@/lib/businessArchive.server";
 import { selectionChangedBetween } from "@/lib/competitorQuality";
 import { businessTimeZone } from "@/lib/businessTimeZone";
@@ -821,7 +822,9 @@ export async function processBusiness(
       ...(baselineRow ? { listingChanges: await scanChangesBetweenScores(supabase, businessId, baselineRow.id, currentForDisplay.id) } : {}),
     }
   );
-  const businessName = freshBusiness.name ?? "Your business";
+  // Day 23 2d-3: the owner's confirmed name; else the listing's from a read
+  // already made (no extra Google call), else the row the re-scan just saved.
+  const businessName = (await withOwnerDetailsFor(supabase, businessId, { name: freshBusiness.name as string | null }, { live: "cached" })).name ?? "Your business";
   // A real, working unsubscribe link — app/unsubscribe/page.tsx validates
   // this exact businessId+token pair (the real per-business
   // unsubscribe_token from supabase/schema.sql, never a guessable id

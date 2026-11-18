@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 vi.mock("server-only", () => ({}));
 
 import { liveValuesFromBusinessProfile, liveValuesFromPlaces, placesPeriodsFromGbp, placesStylePhone, withLiveListing, type LiveListing } from "./ownerListing";
-import { ownerListingLive, pickHeaderPhoto, type OwnerListingDeps } from "./ownerListing.server";
+import { cachedOwnerListing, ownerListingLive, pickHeaderPhoto, type OwnerListingDeps } from "./ownerListing.server";
 import { liveCache } from "./placesLive.server";
 import type { PlaceDetails } from "./google/places";
 
@@ -68,6 +68,20 @@ describe("the owner's listing, read live when shown (Day 23 2d-2)", () => {
     const later = deps({ now: () => 1_000_000 + 10 * 60 * 1000 });
     await ownerListingLive("b1", { placeId: "p1", websiteOnly: false, connected: false }, later.d);
     expect(later.calls.places).toBe(1);
+  });
+
+  test("parts of one page asking at once share the one read", async () => {
+    let release!: (p: PlaceDetails) => void;
+    const { d, calls } = deps({ places: () => new Promise<PlaceDetails>((r) => { calls.places++; release = r; }) });
+    const a = ownerListingLive("b1", { placeId: "p1", websiteOnly: false, connected: false }, d);
+    const b = ownerListingLive("b1", { placeId: "p1", websiteOnly: false, connected: false }, d);
+    await new Promise((r) => setTimeout(r, 0));
+    release(PLACE);
+    expect(await a).toEqual(await b);
+    expect(calls.places).toBe(1);
+    expect(calls.logs).toEqual(["live_read:1"]);
+    expect(cachedOwnerListing("b1", 1_000_000)).toEqual(await a);
+    expect(cachedOwnerListing("b9", 1_000_000)).toBeNull();
   });
 
   test("over the monthly cap or Google failing: unavailable, never a guess; website-only: nothing to read", async () => {
@@ -137,7 +151,7 @@ describe("the owner's listing, read live when shown (Day 23 2d-2)", () => {
 
   test("every owner page reads them: the shared score's record, Reviews, Website, the hours chooser, Reports and the weekly recap and PDF", () => {
     const scoring = src("app/actions/scoring.ts");
-    expect(scoring).toContain("const business = withLiveListing(scored.business, live);");
+    expect(scoring).toContain("withLiveListing(scored.business, live)");
     // The score and the plan's estimates stay on the scan's own row.
     expect(scoring).toContain("const scoringBusiness = scored.business;");
     expect(src("app/actions/reviews.ts")).toContain("await withLiveListingFor(supabase, businessId,");

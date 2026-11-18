@@ -1,5 +1,6 @@
 "use server";
 
+import { loadOwnerDetails, withOwnerDetailsFor } from "@/lib/ownerDetails.server";
 import { gradedWebsite, listingLinkBroken } from "@/lib/businessWebsite";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -31,6 +32,7 @@ import { latestSavedScore } from "@/lib/savedScore.server";
 import { withLiveListingFor } from "@/lib/ownerListing.server";
 
 export interface WebsitePageData {
+  /** The owner's confirmed name (and address below) once confirmed (lib/ownerDetails.ts). */
   businessName: string | null;
   address: string | null;
   category: string | null;
@@ -47,6 +49,8 @@ export interface WebsitePageData {
    * straight through to DashboardShell (which normalizes it). */
   language: string | null;
   phone: string | null;
+  /** The phone the owner confirmed (Settings → "Your business details"); null = none. */
+  ownerPhone: string | null;
   openingHours: string[] | null;
   /** Google's structured regularOpeningHours.periods (see
    * lib/google/places.ts) — passed straight through to the starter-site
@@ -306,12 +310,15 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const builderOffer = buildBuilderOffer(hasWebsite, realWebsiteScore, templateWebsiteScore);
   // Day 23 2d-2: Google's values shown here are read now (lib/ownerListing.ts).
   const live = await withLiveListingFor(supabase, businessId, data as typeof data & { listing_mode?: string | null });
+  // Day 23 2d-3: the owner's confirmed details (lib/ownerDetails.ts).
+  const owner = (await loadOwnerDetails(supabase, businessId))?.details ?? null;
+  const shownName = await withOwnerDetailsFor(supabase, businessId, { name: data.name as string | null, address: data.address as string | null });
 
   return {
     status: "ok",
     data: {
-      businessName: data.name,
-      address: data.address,
+      businessName: shownName.name,
+      address: shownName.address,
       category: data.category,
       categories: data.categories,
       primaryType: data.primary_type,
@@ -319,6 +326,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       bizTypeResolved: data.biz_type_resolved ?? null,
       language: data.language,
       phone: live.phone ?? null,
+      ownerPhone: owner?.phone || null,
       openingHours: live.opening_hours ?? null,
       openingHoursPeriods: live.opening_hours_periods ?? null,
       rating: live.rating ?? null,

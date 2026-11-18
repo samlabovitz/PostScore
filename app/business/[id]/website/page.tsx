@@ -88,7 +88,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       businessName={businessName}
       businessLanguage={data.language}
       category={data.category}
-      phone={data.phone}
+      phone={data.ownerPhone ?? data.phone}
       address={data.address}
       listingWebsite={data.website}
       openingHoursPeriods={data.openingHoursPeriods}

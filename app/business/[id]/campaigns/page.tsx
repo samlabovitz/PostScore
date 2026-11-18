@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { ownerPrintPhone } from "@/lib/ownerDetails.server";
 import { freeShowroom } from "@/components/plan/freeShowroom";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { loadUpgradeContext } from "@/lib/upgradePromos.server";
@@ -43,12 +44,15 @@ export default async function CampaignsPage({ params }: { params: { id: string }
     loadUpgradeContext(params.id, "campaigns"),
   ]);
 
+  const printPhone = await ownerPrintPhone(createClient(), params.id);
+
   return (
     <DashboardShell upgrade={upgrade} business={business}>
       <CampaignsView
         businessId={params.id}
         businessName={business.name}
-        businessPhone={business.phone ?? null}
+        // Day 23 2d-3: the phone the owner confirmed, else the listing's now.
+        businessPhone={printPhone}
         profile={shownProfile}
         initialPromos={promos?.status === "ok" ? promos.promos : []}
         initialReferral={referral?.status === "ok" ? referral.referral : null}

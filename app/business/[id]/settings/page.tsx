@@ -25,6 +25,8 @@ import { NichePicker } from "@/components/niche/NichePicker";
 import { loadBusinessNiche } from "@/lib/businessNiche.server";
 import { ScanningLine } from "@/components/website/ScanningLine";
 import { getWebsiteChoice } from "@/app/actions/ownerWebsite";
+import { getOwnerDetailsCard } from "@/app/actions/ownerDetails";
+import { OwnerDetailsCard } from "@/components/settings/OwnerDetailsCard";
 
 /**
  * Settings — owner-only (getBusinessSummary, RLS-scoped). Every control
@@ -37,7 +39,8 @@ import { getWebsiteChoice } from "@/app/actions/ownerWebsite";
 export default async function SettingsPage({ params }: { params: { id: string } }) {
   const [summary, reportsResult, hasSubscription, businessesResult] = await Promise.all([
     getBusinessSummary(params.id),
-    getReportsData(params.id),
+    // Only the monthly email toggle is shown here: no Google call.
+    getReportsData(params.id, { live: false }),
     hasActiveSubscription(params.id),
     listMyBusinesses(),
   ]);
@@ -56,7 +59,7 @@ export default async function SettingsPage({ params }: { params: { id: string } 
     niche,
   ] = await Promise.all([supabase.auth.getUser(), loadBusinessNiche(supabase, params.id)]);
 
-  const websiteChoice = await getWebsiteChoice(params.id);
+  const [websiteChoice, ownerDetails] = await Promise.all([getWebsiteChoice(params.id), getOwnerDetailsCard(params.id)]);
   const autoDetectedProfile = autoDetectedBizProfile(business.category, business.primary_type, locale, business.categories, business.biz_type_resolved);
   const businessTypeOverride = business.business_type_override ?? null;
   const profile = resolveBizProfile(business.category, business.primary_type, businessTypeOverride, locale, business.categories, business.name, business.biz_type_resolved);
@@ -66,6 +69,7 @@ export default async function SettingsPage({ params }: { params: { id: string } 
 
   const sections = [
     { id: "profile", label: k("nav.profile"), icon: "user" as const },
+    { id: "details", label: k("nav.details"), icon: "pin" as const },
     { id: "businesses", label: k("nav.businesses"), icon: "store" as const },
     { id: "plan", label: k("nav.plan"), icon: "card" as const },
     { id: "email", label: k("nav.email"), icon: "bell" as const },
@@ -100,6 +104,13 @@ export default async function SettingsPage({ params }: { params: { id: string } 
                 <BusinessLanguageToggle businessId={params.id} language={business.language} />
               </div>
             </SettingsSection>
+
+            {/* Day 23 2d-3: the details the owner confirms (lib/ownerDetails.ts). */}
+            {ownerDetails.status === "ok" && (
+              <SettingsSection id="details" icon="pin" title={k("nav.details")} helper={k("details.helper")}>
+                <OwnerDetailsCard businessId={params.id} card={ownerDetails.card} />
+              </SettingsSection>
+            )}
 
             <SettingsSection id="businesses" icon="store" title={k("nav.businesses")} helper={k("businesses.helper")}>
               <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">

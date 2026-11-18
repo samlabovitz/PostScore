@@ -1,0 +1,95 @@
+// Server-only. Day 23 2d-3: reads the owner-confirmed business details
+// (lib/ownerDetails.ts). Read on their own, so every page still works
+// before supabase/owner-details.sql is run (an error reads as "not
+// confirmed").
+import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { cachedOwnerListing, liveListingForRow } from "@/lib/ownerListing.server";
+import { sanitizeOwnerDetails, withOwnerDetails, type OwnerDetails } from "@/lib/ownerDetails";
+
+export interface SavedOwnerDetails {
+  details: OwnerDetails;
+  confirmedAt: string;
+}
+
+/**
+ * How a page gets the listing's name and address before the owner confirms:
+ * - true (default): this visit's live read (one per 10 minutes, shared with
+ *   the page's other parts — lib/ownerListing.server.ts);
+ * - "cached": only when this visit already read it (the business switcher,
+ *   the monthly email) — never a Google call;
+ * - false: no Google call (Free's locked-tab showrooms).
+ */
+export type OwnerNameLive = boolean | "cached";
+
+interface DetailsRow {
+  id: string;
+  owner_details: unknown;
+  owner_details_confirmed_at: string | null;
+}
+
+async function readRows(db: SupabaseClient, businessIds: string[]): Promise<DetailsRow[]> {
+  if (businessIds.length === 0) return [];
+  try {
+    const { data, error } = await db.from("businesses").select("id, owner_details, owner_details_confirmed_at").in("id", businessIds);
+    return error || !data ? [] : (data as DetailsRow[]);
+  } catch {
+    // Not confirmed, as far as any page can tell.
+    return [];
+  }
+}
+
+const saved = (row: DetailsRow | undefined): SavedOwnerDetails | null => {
+  const details = row ? sanitizeOwnerDetails(row.owner_details) : null;
+  return details && row?.owner_details_confirmed_at ? { details, confirmedAt: row.owner_details_confirmed_at } : null;
+};
+
+/** The owner's confirmed details; null when not confirmed (or unreadable). */
+export async function loadOwnerDetails(db: SupabaseClient, businessId: string): Promise<SavedOwnerDetails | null> {
+  return saved((await readRows(db, [businessId]))[0]);
+}
+
+/** For several businesses at once (the business switcher). */
+export async function loadOwnerDetailsMany(db: SupabaseClient, businessIds: string[]): Promise<Map<string, SavedOwnerDetails>> {
+  const out = new Map<string, SavedOwnerDetails>();
+  for (const row of await readRows(db, businessIds)) {
+    const s = saved(row);
+    if (s) out.set(row.id, s);
+  }
+  return out;
+}
+
+/** The listing's place and mode, for the live read. */
+async function listingRow(db: SupabaseClient, businessId: string): Promise<{ place_id: string | null; listing_mode: string | null } | null> {
+  try {
+    const { data } = await db.from("businesses").select("place_id, listing_mode").eq("id", businessId).maybeSingle();
+    return (data as { place_id: string | null; listing_mode: string | null } | null) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** `row` with the name and address to show (lib/ownerDetails.ts withOwnerDetails). */
+export async function withOwnerDetailsFor<T extends { name?: string | null; address?: string | null }>(db: SupabaseClient, businessId: string, row: T, options: { live?: OwnerNameLive } = {}): Promise<T> {
+  const owner = await loadOwnerDetails(db, businessId);
+  if (owner) return withOwnerDetails(row, owner.details);
+  const live = options.live ?? true;
+  if (live === false) return row;
+  if (live === "cached") return withOwnerDetails(row, null, cachedOwnerListing(businessId));
+  const listing = await listingRow(db, businessId);
+  return withOwnerDetails(row, null, listing ? await liveListingForRow(db, businessId, listing) : null);
+}
+
+/** The phone a coupon or referral card prints: the owner's confirmed one
+ * (none when they left it empty), else the listing's as Google shows it
+ * now — null when it couldn't be read (or `live: false`: no Google call). */
+export async function ownerPrintPhone(db: SupabaseClient, businessId: string, options: { live?: boolean } = {}): Promise<string | null> {
+  const owner = await loadOwnerDetails(db, businessId);
+  if (owner) return owner.details.phone || null;
+  if (options.live === false) return null;
+  const listing = await listingRow(db, businessId);
+  if (!listing) return null;
+  // No phone on the card rather than a failed page.
+  const live = await liveListingForRow(db, businessId, listing).catch(() => null);
+  return live?.status === "ok" ? live.values.phone : null;
+}

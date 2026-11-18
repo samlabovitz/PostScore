@@ -3,6 +3,7 @@
 // pass their own RLS-scoped Supabase client (a business the user doesn't
 // own reads as not found).
 
+import { withOwnerDetailsFor } from "@/lib/ownerDetails.server";
 import { isFullScanKind } from "@/lib/websiteRecheckPolicy";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { businessTimeZone } from "@/lib/businessTimeZone";
@@ -45,13 +46,15 @@ interface BusinessBasics {
   review_count: number | null;
 }
 
-async function loadBusiness(supabase: SupabaseClient, businessId: string): Promise<BusinessBasics | null> {
+/** `live: false`: no Google call (the visit check reads only the language and location). */
+async function loadBusiness(supabase: SupabaseClient, businessId: string, options: { live?: boolean } = {}): Promise<BusinessBasics | null> {
   const { data } = await supabase
     .from("businesses")
     .select("name, address, language, lat, lng, category, primary_type, business_type_override, biz_type_resolved, categories, place_id, listing_mode, rating, review_count")
     .eq("id", businessId)
     .maybeSingle();
   if (!data) return null;
+  if (options.live === false) return { ...(data as BusinessBasics), rating: null, review_count: null };
   // Day 23 2d-2: the rating and count as Google shows them now.
   const { withLiveListingFor } = await import("@/lib/ownerListing.server");
   const live = await withLiveListingFor(supabase, businessId, data as BusinessBasics & { place_id: string | null; listing_mode: string | null });
@@ -205,7 +208,11 @@ export async function weeklyReportDataWithClient(
     locale,
     timeZone,
     generatedAt: now.toISOString(),
-    business: { name: business.name ?? "", address: business.address },
+    // Day 23 2d-3: the owner's confirmed name and address.
+    business: await (async () => {
+      const shown = await withOwnerDetailsFor(supabase, businessId, { name: business.name as string | null, address: business.address as string | null });
+      return { name: shown.name ?? "", address: shown.address };
+    })(),
     score: { total: score, grade: snapshot?.grade ?? saved.grade },
     period: c && prevScore !== null && sameCompared ? period(prevScore, score, comparable, c.from.createdAt, c.to.createdAt) : null,
     categories: reportCategories(saved.breakdown_json.categories ?? []),
@@ -262,7 +269,8 @@ export async function openBusinessVisitWithClient(
   deps: { nextSteps: () => Promise<SinceLastVisitData["nextSteps"]>; reviewGoalLines?: () => Promise<string[]> },
   now: Date = new Date()
 ): Promise<VisitResult> {
-  const business = await loadBusiness(supabase, businessId);
+  // Opened on every page's first visit (Settings too): no Google call.
+  const business = await loadBusiness(supabase, businessId, { live: false });
   if (!business) return { status: "not_found" };
   const { data: seen, error } = await supabase.from("business_last_seen").select("last_seen_at").eq("user_id", userId).eq("business_id", businessId).maybeSingle();
   if (error) return isMissingTable(error) ? { status: "not_enabled" } : { status: "ok", show: false };

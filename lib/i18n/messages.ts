@@ -5147,6 +5147,38 @@ export type MessageKey =
   | "dashboard.settings.averageVisit.error.failed"
   | "dashboard.settings.nav.website"
   | "dashboard.settings.website.helper"
+  | "dashboard.settings.nav.details"
+  | "dashboard.settings.details.helper"
+  | "dashboard.settings.details.introPrefilled"
+  | "dashboard.settings.details.introEmpty"
+  | "dashboard.settings.details.intro"
+  | "dashboard.settings.details.name"
+  | "dashboard.settings.details.address"
+  | "dashboard.settings.details.phone"
+  | "dashboard.settings.details.hours"
+  | "dashboard.hoursEditor.later"
+  | "dashboard.hoursEditor.earlier"
+  | "dashboard.hoursEditor.sameEveryDay"
+  | "dashboard.hoursEditor.copyWeekdays"
+  | "dashboard.hoursEditor.untilNextDay"
+  | "dashboard.hoursEditor.untilMidnight"
+  | "dashboard.hoursEditor.byAppointment"
+  | "dashboard.settings.details.hoursMode.regular"
+  | "dashboard.settings.details.hoursMode.appointment"
+  | "dashboard.settings.details.hoursMode.none"
+  | "dashboard.settings.details.appointmentNote"
+  | "dashboard.settings.details.noGoogleHours"
+  | "dashboard.settings.details.invalidHours"
+  | "dashboard.settings.details.confirm"
+  | "dashboard.settings.details.edit"
+  | "dashboard.settings.details.cancel"
+  | "dashboard.settings.details.saving"
+  | "dashboard.settings.details.statusConfirmed"
+  | "dashboard.settings.details.statusNotConfirmed"
+  | "dashboard.settings.details.nameRequired"
+  | "dashboard.settings.details.notSaved"
+  | "dashboard.settings.details.notEnabled"
+  | "dashboard.overview.confirmDetails"
   | "dashboard.settings.nav.account"
   | "dashboard.settings.profile.helper"
   | "dashboard.settings.profile.emailHelp"
@@ -11435,6 +11467,38 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.averageVisit.error.failed": "Couldn't save. Please try again.",
     "dashboard.settings.nav.website": "Website",
     "dashboard.settings.website.helper": "The site PostScore grades, screenshots and shows for this business.",
+    "dashboard.settings.nav.details": "Your business details",
+    "dashboard.settings.details.helper": "Your name, address, phone and hours as you want them on your prints, emails and PostScore pages.",
+    "dashboard.settings.details.introPrefilled": "Filled in from your Google listing as it shows right now. Check them, change anything that's off, then confirm. We save only what you confirm.",
+    "dashboard.settings.details.introEmpty": "Enter your details, then confirm. We save only what you confirm.",
+    "dashboard.settings.details.intro": "Provided by you. Change anything and confirm again.",
+    "dashboard.settings.details.name": "Business name",
+    "dashboard.settings.details.address": "Address",
+    "dashboard.settings.details.phone": "Phone",
+    "dashboard.settings.details.hours": "Hours",
+    "dashboard.hoursEditor.later": "Later",
+    "dashboard.hoursEditor.earlier": "Earlier",
+    "dashboard.hoursEditor.sameEveryDay": "Same every day",
+    "dashboard.hoursEditor.copyWeekdays": "Copy to all weekdays",
+    "dashboard.hoursEditor.untilNextDay": "until {time} next day",
+    "dashboard.hoursEditor.untilMidnight": "until midnight",
+    "dashboard.hoursEditor.byAppointment": "By appointment only",
+    "dashboard.settings.details.hoursMode.regular": "Regular hours",
+    "dashboard.settings.details.hoursMode.appointment": "By appointment only",
+    "dashboard.settings.details.hoursMode.none": "No hours",
+    "dashboard.settings.details.appointmentNote": "Customers book a time with you.",
+    "dashboard.settings.details.noGoogleHours": "Google doesn't show hours for you yet.",
+    "dashboard.settings.details.invalidHours": "Check the hours marked in red, then confirm again.",
+    "dashboard.settings.details.confirm": "Confirm details",
+    "dashboard.settings.details.edit": "Edit details",
+    "dashboard.settings.details.cancel": "Cancel",
+    "dashboard.settings.details.saving": "Saving…",
+    "dashboard.settings.details.statusConfirmed": "Confirmed · provided by you",
+    "dashboard.settings.details.statusNotConfirmed": "Not confirmed yet",
+    "dashboard.settings.details.nameRequired": "Add your business name first.",
+    "dashboard.settings.details.notSaved": "Couldn't save your details right now. Please try again.",
+    "dashboard.settings.details.notEnabled": "Saving your details isn't available yet.",
+    "dashboard.overview.confirmDetails": "Confirm your business details",
     "dashboard.settings.nav.account": "Account",
     "dashboard.settings.profile.helper": "Your login and the language PostScore uses for this business.",
     "dashboard.settings.profile.emailHelp": "This is your login email.",
@@ -17731,6 +17795,38 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.averageVisit.error.failed": "No se pudo guardar. Inténtelo de nuevo.",
     "dashboard.settings.nav.website": "Sitio web",
     "dashboard.settings.website.helper": "El sitio que PostScore evalúa, captura y muestra para este negocio.",
+    "dashboard.settings.nav.details": "Datos de su negocio",
+    "dashboard.settings.details.helper": "Su nombre, dirección, teléfono y horario tal como desea que aparezcan en sus impresos, correos y páginas de PostScore.",
+    "dashboard.settings.details.introPrefilled": "Completados con su ficha de Google tal como aparece ahora. Revíselos, cambie lo que no esté bien y confírmelos. Solo guardamos lo que usted confirma.",
+    "dashboard.settings.details.introEmpty": "Ingrese sus datos y confírmelos. Solo guardamos lo que usted confirma.",
+    "dashboard.settings.details.intro": "Proporcionados por usted. Cambie lo que desee y confírmelos de nuevo.",
+    "dashboard.settings.details.name": "Nombre del negocio",
+    "dashboard.settings.details.address": "Dirección",
+    "dashboard.settings.details.phone": "Teléfono",
+    "dashboard.settings.details.hours": "Horario",
+    "dashboard.hoursEditor.later": "Más tarde",
+    "dashboard.hoursEditor.earlier": "Más temprano",
+    "dashboard.hoursEditor.sameEveryDay": "Igual todos los días",
+    "dashboard.hoursEditor.copyWeekdays": "Copiar a todos los días entre semana",
+    "dashboard.hoursEditor.untilNextDay": "hasta las {time} del día siguiente",
+    "dashboard.hoursEditor.untilMidnight": "hasta la medianoche",
+    "dashboard.hoursEditor.byAppointment": "Solo con cita",
+    "dashboard.settings.details.hoursMode.regular": "Horario regular",
+    "dashboard.settings.details.hoursMode.appointment": "Solo con cita",
+    "dashboard.settings.details.hoursMode.none": "Sin horario",
+    "dashboard.settings.details.appointmentNote": "Sus clientes reservan una hora con usted.",
+    "dashboard.settings.details.noGoogleHours": "Google aún no muestra un horario para su negocio.",
+    "dashboard.settings.details.invalidHours": "Revise los horarios marcados en rojo y vuelva a confirmar.",
+    "dashboard.settings.details.confirm": "Confirmar datos",
+    "dashboard.settings.details.edit": "Editar datos",
+    "dashboard.settings.details.cancel": "Cancelar",
+    "dashboard.settings.details.saving": "Guardando…",
+    "dashboard.settings.details.statusConfirmed": "Confirmados · proporcionados por usted",
+    "dashboard.settings.details.statusNotConfirmed": "Aún sin confirmar",
+    "dashboard.settings.details.nameRequired": "Primero agregue el nombre de su negocio.",
+    "dashboard.settings.details.notSaved": "No se pudieron guardar sus datos en este momento. Inténtelo de nuevo.",
+    "dashboard.settings.details.notEnabled": "Guardar sus datos aún no está disponible.",
+    "dashboard.overview.confirmDetails": "Confirme los datos de su negocio",
     "dashboard.settings.nav.account": "Cuenta",
     "dashboard.settings.profile.helper": "Su inicio de sesión y el idioma que PostScore usa para este negocio.",
     "dashboard.settings.profile.emailHelp": "Este es el correo con el que inicia sesión.",

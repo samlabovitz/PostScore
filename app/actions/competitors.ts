@@ -1,5 +1,6 @@
 "use server";
 
+import { withOwnerDetailsFor } from "@/lib/ownerDetails.server";
 import { requestCache } from "@/lib/requestCache";
 import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -227,12 +228,14 @@ export async function getCompetitorsWithClient(
   const scans = groupSavedScans(withoutUnfinished(allRows, unfinished)).map((s, i) => (i === 0 ? withLatestOwnerScore(s, latestScore, locale) : s));
   const latest = scans[0] ? applyOverrides(scans[0], overrides) : null;
   const newestSavedAt = allRows[0]?.created_at ?? null;
+  const owner = await withOwnerDetailsFor(supabase, businessId, { name: row.name as string | null, address: row.address as string | null });
 
   return {
     status: "ok",
     scoring,
-    businessName: row.name,
-    businessAddress: row.address,
+    // Day 23 2d-3: the owner's confirmed name and address.
+    businessName: owner.name,
+    businessAddress: owner.address,
     language: row.language,
     timeZone: businessTimeZone(row.lat, row.lng),
     competitorNoun,

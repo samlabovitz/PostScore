@@ -71,7 +71,8 @@ describe("paid plans keep their pre-batch layout, page by page", () => {
     expect(tags(read("app/business/[id]/pricing/page.tsx"))).toEqual(["DashboardShell", "Card", "DashboardShell", "Card", "DashboardShell", "StaleScanNotice", "PricingView"]);
     expect(tags(read("app/business/[id]/reports/page.tsx"))).toEqual(["DashboardShell", "StaleScanNotice", "ReportsView"]);
     expect(tags(read("app/business/[id]/settings/page.tsx"))).toEqual([
-      "DashboardShell", "Link", "SettingsNav", "SettingsSection", "BusinessLanguageToggle", "SettingsSection", "Link", "Link", "Link", "SettingsSection", "PlanCard", "CancelPlanButton", "Link", "SettingsSection", "MonthlyEmailFreeNote", "MonthlyEmailReportCard", "Card", "UnsubscribeAllButton", "SettingsSection", "NichePicker", "BusinessTypeSetting", "SettingsSection", "ScanningLine", "SettingsSection", "AverageVisitSetting", "SettingsSection", "LegalLinks", "SavedToast",
+      // Day 23 2d-3: + "Your business details" (OwnerDetailsCard).
+      "DashboardShell", "Link", "SettingsNav", "SettingsSection", "BusinessLanguageToggle", "SettingsSection", "OwnerDetailsCard", "SettingsSection", "Link", "Link", "Link", "SettingsSection", "PlanCard", "CancelPlanButton", "Link", "SettingsSection", "MonthlyEmailFreeNote", "MonthlyEmailReportCard", "Card", "UnsubscribeAllButton", "SettingsSection", "NichePicker", "BusinessTypeSetting", "SettingsSection", "ScanningLine", "SettingsSection", "AverageVisitSetting", "SettingsSection", "LegalLinks", "SavedToast",
     ]);
   });
 

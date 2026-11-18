@@ -1,5 +1,7 @@
 "use server";
 
+import { withOwnerDetails } from "@/lib/ownerDetails";
+import { loadOwnerDetails } from "@/lib/ownerDetails.server";
 import { requestCache } from "@/lib/requestCache";
 import { withTimeZone } from "@/lib/businessTimeZone";
 import { rescanGate } from "@/lib/rescanPolicy";
@@ -144,7 +146,9 @@ export async function scoreForDisplayWithClient(
   // Profile when connected, else one Places read per visit), never the
   // saved columns.
   const live = await liveListingFor(supabase, businessId, scored.business);
-  const business = withLiveListing(scored.business, live);
+  // Day 23 2d-3: the owner's confirmed name and address (lib/ownerDetails.ts).
+  // before that, the listing's as this visit read it.
+  const business = withOwnerDetails(withLiveListing(scored.business, live), (await loadOwnerDetails(supabase, businessId))?.details ?? null, live);
   const now = scored.result.breakdown;
   const shown = withSavedScore(now, saved);
   const scoringBusiness = scored.business;

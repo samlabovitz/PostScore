@@ -128,6 +128,24 @@ export async function ownerListingLive(
   const cache = liveCache();
   const hit = cache.get<LiveListing>(key(businessId), deps.now());
   if (hit) return hit;
+  // Parts of one page asking at the same moment share the one read.
+  const pending = inFlight.get(businessId);
+  if (pending) return pending;
+  const read = readOwnerListing(businessId, listing as { placeId: string; connected: boolean }, deps).finally(() => inFlight.delete(businessId));
+  inFlight.set(businessId, read);
+  return read;
+}
+
+// On globalThis like the live cache, so a dev reload keeps one map.
+const inFlight: Map<string, Promise<LiveListing>> = ((globalThis as { __ownerListingInFlight?: Map<string, Promise<LiveListing>> }).__ownerListingInFlight ??= new Map());
+
+/** The listing from this visit's read when there is one — never a Google call. */
+export function cachedOwnerListing(businessId: string, now: number = Date.now()): LiveListing | null {
+  return liveCache().get<LiveListing>(key(businessId), now) ?? null;
+}
+
+async function readOwnerListing(businessId: string, listing: { placeId: string; connected: boolean }, deps: OwnerListingDeps): Promise<LiveListing> {
+  const cache = liveCache();
   let result: LiveListing;
   if (listing.connected) {
     result = await deps.gbp(deps.admin(), businessId).catch((): LiveListing => ({ status: "unavailable" }));
