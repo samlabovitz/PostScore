@@ -126,7 +126,12 @@ export function mergeLegacyListing(fresh: ScoreBreakdown, saved: ScoreBreakdown 
 
 /** Why a site's website checks couldn't run — only ever a real, observed
  * reason; null when the site was read. */
-export type WebsiteNotCheckedReason = "blocked" | "timed_out" | "js_only" | "error_page" | "unreachable" | "no_address";
+export type WebsiteNotCheckedReason = "blocked" | "timed_out" | "js_only" | "error_page" | "unreachable" | "no_address" | "deadline";
+
+/** A competitor's whole website check gets at most this long; past it the
+ * website is "couldn't be checked (timed out)" and tried again on the
+ * next refresh (a check that never finished is never reused). */
+export const WEBSITE_CHECK_DEADLINE_MS = 5 * 60 * 1000;
 
 export function websiteNotCheckedReason(a: WebsiteAnalysis | null): WebsiteNotCheckedReason | null {
   if (!a) return null;
@@ -150,7 +155,7 @@ const isMeasured = (c: CheckResult) =>
  */
 /** The homepage itself couldn't be read — a transport check like HTTPS on
  * its own must not stand in for the whole Website category. */
-const PAGE_UNREADABLE: readonly WebsiteNotCheckedReason[] = ["blocked", "timed_out", "error_page", "unreachable"];
+const PAGE_UNREADABLE: readonly WebsiteNotCheckedReason[] = ["blocked", "timed_out", "error_page", "unreachable", "deadline"];
 
 export function withoutUnmeasuredWebsite(b: ScoreBreakdown, reason: WebsiteNotCheckedReason | null, locale: Locale): ScoreBreakdown {
   const hasSite = b.checks.find((c) => c.id === "website.has_website");
@@ -217,14 +222,14 @@ export function annotateWebsiteChecks(b: ScoreBreakdown, siteReason: string | nu
  * engine records it as "couldn't check". */
 export async function scoreCompetitorFully(
   row: CompetitorScoringRow,
-  options: { locale: Locale; fetchImpl?: typeof fetch }
+  options: { locale: Locale; fetchImpl?: typeof fetch; deadlineMs?: number }
 ): Promise<CompetitorFullScore> {
   const counter = countingFetch(options.fetchImpl);
   const url = row.has_website !== false && row.website_url && isRealWebsite(row.website_url) ? row.website_url : null;
   const listingFacts = hasSavedListingFacts(row);
 
-  const site = url
-    ? await analyzeWebsiteForSave({
+  const analysis = url
+    ? analyzeWebsiteForSave({
         analysisUrl: url,
         listingWebsite: url,
         existingAnalysisJson: null,
@@ -241,6 +246,15 @@ export async function scoreCompetitorFully(
         fetchImpl: counter.fetchImpl,
       })
     : null;
+  // Never longer than the deadline: a site that hangs is "timed out", not waited on.
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<"deadline">((resolve) => {
+    timer = setTimeout(() => resolve("deadline"), options.deadlineMs ?? WEBSITE_CHECK_DEADLINE_MS);
+  });
+  const settled = analysis ? await Promise.race([analysis, deadline]) : null;
+  clearTimeout(timer);
+  const timedOut = settled === "deadline";
+  const site = settled === "deadline" ? null : settled;
 
   const scoringRow: BusinessScoringRow = {
     rating: toNumber(row.rating),
@@ -261,7 +275,7 @@ export async function scoreCompetitorFully(
   const fresh = scoreBusiness(businessRowToScoringInput(scoringRow), options.locale);
   const saved = row.breakdown_json && typeof row.breakdown_json === "object" ? (row.breakdown_json as ScoreBreakdown) : null;
   const merged = listingFacts ? fresh : mergeLegacyListing(fresh, saved, options.locale);
-  const siteReason = url ? websiteNotCheckedReason(site?.websiteAnalysis ?? null) : row.has_website === true ? "no_address" : null;
+  const siteReason = timedOut ? "deadline" : url ? websiteNotCheckedReason(site?.websiteAnalysis ?? null) : row.has_website === true ? "no_address" : null;
   const scored = url
     ? withoutUnmeasuredWebsite(merged, siteReason as WebsiteNotCheckedReason | null, options.locale)
     : row.has_website === true

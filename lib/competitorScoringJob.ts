@@ -12,6 +12,13 @@
 // (lib/competitorReread.server.ts: counted, capped, logged). The owner's
 // row is their latest SAVED score, compared like for like. Nothing this
 // job writes holds a Google value.
+//
+// Speed-up: a NEW scan shows on the Competitors page right away, so each
+// competitor's row is published the moment it's scored ("Updating — 3 of
+// 7 websites checked"); a backfill still publishes everything together.
+// A competitor whose own website PostScore fully checked in the last 14
+// days reuses that result (lib/competitorWebsiteReuse.ts). On Netlify the
+// Background Function runs one named competitor per step, several at once.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { scoreCompetitorFully, type CompetitorListingInput } from "@/lib/competitorFullScoring";
@@ -22,6 +29,7 @@ import { forCompetitorComparison } from "@/lib/scoring";
 import { breakdownWithoutQuotes } from "@/lib/breakdownStorage";
 import { closedFirstScore, websiteAnalysisWithoutGoogle } from "@/lib/competitorRawCleanup";
 import { latestScoreBreakdown } from "@/lib/ownerRankScore.server";
+import { pickReusableWebsite, withReusedWebsite, WEBSITE_REUSE_DAYS, type PriorWebsiteRow } from "@/lib/competitorWebsiteReuse";
 import { storageCleanupLive } from "@/lib/storageCleanupLive";
 
 export type ScoringJobKind = "new_scan" | "backfill";
@@ -77,6 +85,20 @@ function isBreakdown(value: unknown): value is ScoreBreakdown {
   return !!v && typeof v === "object" && Array.isArray(v.checks) && Array.isArray(v.categories) && typeof v.total === "number";
 }
 
+/** This competitor's own rows from the last 14 days (any business's scans) — our own results only. */
+async function defaultPriorRows(db: SupabaseClient, placeId: string, now: number): Promise<PriorWebsiteRow[]> {
+  const since = new Date(now - WEBSITE_REUSE_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data } = await db
+    .from("competitor_scans")
+    .select("scan_id, scoring_version, breakdown_json, website_analysis_json")
+    .eq("place_id", placeId)
+    .eq("is_subject", false)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(10);
+  return (data ?? []) as PriorWebsiteRow[];
+}
+
 async function defaultReread(placeId: string, businessId: string): Promise<CompetitorListingInput | null> {
   const { rereadCompetitorListing } = await import("@/lib/competitorReread.server");
   return rereadCompetitorListing(placeId, businessId);
@@ -94,6 +116,11 @@ export async function runCompetitorScoringJob(
     inputs?: CompetitorListingInputs | null;
     /** A listing the hand-off didn't bring: one live re-read (tests replace it). */
     reread?: (placeId: string, businessId: string) => Promise<CompetitorListingInput | null>;
+    /** One step scores this competitor only (the Netlify steps run several at once). */
+    onlyPlaceId?: string | null;
+    /** This competitor's rows from the last 14 days, for reuse (tests replace it). */
+    priorRows?: (placeId: string) => Promise<PriorWebsiteRow[]>;
+    now?: number;
   } = {}
 ): Promise<ScoringJobOutcome> {
   const env = options.env ?? process.env;
@@ -119,6 +146,11 @@ export async function runCompetitorScoringJob(
 
   // The owner's row: their latest SAVED score — the same number as the
   // Overview (Day 23 2d-4b: never re-scored here, no Google call).
+  // A new scan is on the page while it's scored: each row is published as it's done.
+  const publishNow = job.kind !== "backfill";
+  const now = options.now ?? Date.now();
+  const scoredPatch = (b: ScoreBreakdown | null) =>
+    publishNow && b ? { pending_breakdown_json: b, breakdown_json: b, total: b.total, grade: b.grade, scoring_version: b.scoringVersion } : { pending_breakdown_json: b };
   const owner = rows.find((r) => r.is_subject);
   if (owner && !owner.pending_breakdown_json) {
     const saved = await latestScoreBreakdown(db, job.business_id);
@@ -126,13 +158,13 @@ export async function runCompetitorScoringJob(
       // Like for like (v1.15.0): without the checks competitors aren't scored on.
       const comparable = breakdownWithoutQuotes(forCompetitorComparison(saved, locale));
       owner.pending_breakdown_json = comparable;
-      await db.from("competitor_scans").update({ pending_breakdown_json: comparable }).eq("id", owner.id);
+      await db.from("competitor_scans").update(scoredPatch(comparable)).eq("id", owner.id);
     }
   }
   const reread = options.reread ?? defaultReread;
 
   const competitors = rows.filter((r) => !r.is_subject);
-  const todo = competitors.filter((r) => !r.pending_breakdown_json);
+  const todo = competitors.filter((r) => !r.pending_breakdown_json && (!options.onlyPlaceId || r.place_id === options.onlyPlaceId));
   let done = competitors.length - todo.length;
   let pagespeedCalls = job.pagespeed_calls ?? 0;
   let started = 0;
@@ -156,7 +188,17 @@ export async function runCompetitorScoringJob(
       let websiteAnalysis: unknown = null;
       try {
         const listing = options.inputs?.[row.place_id] ?? (await reread(row.place_id, job.business_id));
-        if (listing) {
+        // Checked in the last 14 days (not a backfill): that website result, no new check.
+        const first = isBreakdown(row.breakdown_json) ? row.breakdown_json : null;
+        const reusable =
+          listing && first && publishNow
+            ? pickReusableWebsite(await (options.priorRows ?? ((id: string) => defaultPriorRows(db, id, now)))(row.place_id), { listingWebsite: listing.website_url, scanId, now })
+            : null;
+        if (listing && first && reusable && isBreakdown(reusable.row.breakdown_json)) {
+          breakdown = withReusedWebsite(first, reusable.row.breakdown_json, reusable.checkedAt, locale);
+          websiteAnalysis = reusable.row.website_analysis_json;
+          log(`  ${row.place_id}: website checked ${reusable.checkedAt.slice(0, 10)}, reused`);
+        } else if (listing) {
           const res = await scoreCompetitorFully({ ...listing, place_id: row.place_id, breakdown_json: row.breakdown_json }, { locale, fetchImpl: options.fetchImpl });
           breakdown = res.breakdown;
           websiteAnalysis = res.websiteAnalysis;
@@ -175,15 +217,31 @@ export async function runCompetitorScoringJob(
       }
       // Our own results only: no quoted text, no Google side of a comparison.
       breakdown = breakdownWithoutQuotes(breakdown);
-      await db.from("competitor_scans").update({ pending_breakdown_json: breakdown, website_analysis_json: websiteAnalysisWithoutGoogle(websiteAnalysis) }).eq("id", row.id);
+      await db.from("competitor_scans").update({ ...scoredPatch(breakdown), website_analysis_json: websiteAnalysisWithoutGoogle(websiteAnalysis) }).eq("id", row.id);
       row.pending_breakdown_json = breakdown;
       done++;
+      if (options.onlyPlaceId) {
+        // Other steps run at the same time: count what's done now, and add
+        // this site's PageSpeed calls to the latest total.
+        const [{ count }, { data: latestJob }] = await Promise.all([
+          db.from("competitor_scans").select("id", { count: "exact", head: true }).eq("scan_id", scanId).eq("is_subject", false).not("pending_breakdown_json", "is", null),
+          db.from("competitor_scoring_jobs").select("pagespeed_calls").eq("scan_id", scanId).maybeSingle(),
+        ]);
+        if (typeof count === "number") done = count;
+        pagespeedCalls = (latestJob?.pagespeed_calls ?? 0) + (pagespeedCalls - (job.pagespeed_calls ?? 0));
+      }
       await setJob({ done, pagespeed_calls: pagespeedCalls });
       log(`  ${done}/${competitors.length} scored`);
     }
   }
-  await Promise.all(Array.from({ length: Math.max(1, Math.min(scoringConcurrency(env), todo.length || 1)) }, worker));
+  // Never more workers than sites this call may score (a one-site step is one site).
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(scoringConcurrency(env), todo.length || 1, options.maxSites ?? Infinity)) }, worker));
 
+  // One step of several: the closing step (no competitor named) publishes.
+  if (options.onlyPlaceId && stopped !== "pagespeed_budget") {
+    await setJob({ status: "running" });
+    return { status: "running", done, total: competitors.length, pagespeedCalls, stopped };
+  }
   if (competitors.every((r) => r.pending_breakdown_json)) {
     // Publish every row's new full score together.
     for (const r of rows) {

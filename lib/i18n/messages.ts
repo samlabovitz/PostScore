@@ -4934,6 +4934,7 @@ export type MessageKey =
   | "dashboard.competitors.websiteCouldntBeCheckedReason"
   | "dashboard.competitors.listingLinkParked"
   | "dashboard.competitors.listingLinkBroken"
+  | "dashboard.competitors.websiteLinkBroken"
   | "dashboard.competitors.notCheckedReason.no_address"
   | "dashboard.competitors.websiteNotCheckedYet"
   | "dashboard.competitors.checkNotCheckedYet"
@@ -4942,6 +4943,11 @@ export type MessageKey =
   | "dashboard.competitors.notCheckedReason.listing_facts"
   | "dashboard.competitors.notCheckedReason.speed_test"
   | "dashboard.competitors.notCheckedReason.unknown"
+  | "dashboard.competitors.notCheckedReason.deadline"
+  | "dashboard.competitors.websiteTimedOutRetry"
+  | "dashboard.competitors.websiteChecking"
+  | "dashboard.competitors.websiteCheckedOn"
+  | "dashboard.competitors.updatingProgress"
   | "dashboard.rescan.staleNotice"
   | "dashboard.overview.growBanner.tools.coupons.desc"
   | "dashboard.overview.growBanner.tools.referral.desc"
@@ -11273,6 +11279,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.websiteCouldntBeCheckedReason": "Website couldn’t be checked: {reason}",
     "dashboard.competitors.listingLinkParked": "Website link on Google goes to a parked domain",
     "dashboard.competitors.listingLinkBroken": "Website link on Google doesn’t work",
+    "dashboard.competitors.websiteLinkBroken": "Website link broken",
     "dashboard.competitors.notCheckedReason.no_address": "no website address was saved for it",
     "dashboard.competitors.websiteNotCheckedYet": "not checked yet",
     "dashboard.competitors.checkNotCheckedYet": "Not checked yet",
@@ -11281,6 +11288,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.notCheckedReason.listing_facts": "the listing’s phone and hours weren’t saved with this scan",
     "dashboard.competitors.notCheckedReason.speed_test": "Google’s speed test failed for this site",
     "dashboard.competitors.notCheckedReason.unknown": "no result",
+    "dashboard.competitors.notCheckedReason.deadline": "timed out — we’ll try again next refresh",
+    "dashboard.competitors.websiteTimedOutRetry": "Website couldn’t be checked (timed out) — we’ll try again next refresh",
+    "dashboard.competitors.websiteChecking": "checking…",
+    "dashboard.competitors.websiteCheckedOn": "Website checked {date}",
+    "dashboard.competitors.updatingProgress": "Updating — {done} of {total} websites checked",
     "dashboard.rescan.staleNotice": "Scanned {days} days ago — re-scan for current results.",
     "dashboard.overview.growBanner.tools.coupons.desc": "Bring people back with a simple offer",
     "dashboard.overview.growBanner.tools.referral.desc": "Turn happy customers into new ones",
@@ -17619,6 +17631,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.websiteCouldntBeCheckedReason": "No se pudo revisar el sitio web: {reason}",
     "dashboard.competitors.listingLinkParked": "El enlace al sitio web en Google lleva a un dominio estacionado",
     "dashboard.competitors.listingLinkBroken": "El enlace al sitio web en Google no funciona",
+    "dashboard.competitors.websiteLinkBroken": "Enlace al sitio web roto",
     "dashboard.competitors.notCheckedReason.no_address": "no se guardó la dirección de su sitio web",
     "dashboard.competitors.websiteNotCheckedYet": "aún no revisado",
     "dashboard.competitors.checkNotCheckedYet": "Aún no revisado",
@@ -17627,6 +17640,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.competitors.notCheckedReason.listing_facts": "este análisis no guardó el teléfono ni el horario de la ficha",
     "dashboard.competitors.notCheckedReason.speed_test": "la prueba de velocidad de Google falló para este sitio",
     "dashboard.competitors.notCheckedReason.unknown": "sin resultado",
+    "dashboard.competitors.notCheckedReason.deadline": "se agotó el tiempo; lo intentaremos de nuevo en la próxima actualización",
+    "dashboard.competitors.websiteTimedOutRetry": "No se pudo revisar el sitio web (se agotó el tiempo); lo intentaremos de nuevo en la próxima actualización",
+    "dashboard.competitors.websiteChecking": "revisando…",
+    "dashboard.competitors.websiteCheckedOn": "Sitio web revisado el {date}",
+    "dashboard.competitors.updatingProgress": "Actualizando: {done} de {total} sitios web revisados",
     "dashboard.rescan.staleNotice": "Escaneado hace {days} días: vuelva a escanear para ver resultados actuales.",
     "dashboard.overview.growBanner.tools.coupons.desc": "Haga que los clientes vuelvan con una oferta sencilla",
     "dashboard.overview.growBanner.tools.referral.desc": "Convierta a sus clientes satisfechos en clientes nuevos",

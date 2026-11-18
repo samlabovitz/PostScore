@@ -24,7 +24,7 @@ function authorized(req: Request): boolean {
 
 export async function POST(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const body = (await req.json().catch(() => null)) as { scanId?: unknown; inputs?: unknown; addedPlaceId?: unknown } | null;
+  const body = (await req.json().catch(() => null)) as { scanId?: unknown; inputs?: unknown; addedPlaceId?: unknown; placeId?: unknown } | null;
   const scanId = typeof body?.scanId === "string" && /^[0-9a-f-]{36}$/i.test(body.scanId) ? body.scanId : null;
   if (!scanId) return NextResponse.json({ error: "scanId required" }, { status: 400 });
   // "Add a competitor": that one competitor only (one site, one step).
@@ -33,6 +33,11 @@ export async function POST(req: Request) {
     const added = await scoreAddedCompetitor(createAdminClient(), scanId, placeId, { input: listingInputsFromBody(body.inputs)?.[placeId] ?? null });
     return NextResponse.json({ status: "done", added });
   }
-  const outcome = await runCompetitorScoringJob(createAdminClient(), scanId, { maxSites: 1, inputs: listingInputsFromBody(body?.inputs) });
+  const outcome = await runCompetitorScoringJob(createAdminClient(), scanId, {
+    maxSites: 1,
+    inputs: listingInputsFromBody(body?.inputs),
+    // One named competitor per step (the Background Function runs several at once).
+    onlyPlaceId: typeof body?.placeId === "string" && body.placeId.length > 0 && body.placeId.length <= 300 ? body.placeId : null,
+  });
   return NextResponse.json(outcome);
 }

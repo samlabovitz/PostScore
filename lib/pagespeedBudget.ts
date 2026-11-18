@@ -11,7 +11,8 @@ export const PAGESPEED_CALLS_PER_SCAN_MAX = 2;
 /** Upper bound on PageSpeed requests one competitor worker makes per 100 s
  * (each request takes 10 s or more). */
 const PAGESPEED_CALLS_PER_WORKER_PER_100S = 10;
-export const MAX_SCORING_CONCURRENCY = 4;
+/** Competitor sites checked at once (speed-up: 5). */
+export const MAX_SCORING_CONCURRENCY = 5;
 
 function positiveInt(raw: string | undefined): number | null {
   const n = Number.parseInt(raw ?? "", 10);

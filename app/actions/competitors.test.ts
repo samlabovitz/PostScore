@@ -311,3 +311,29 @@ describe("Day 23 2d-4b: a competitor refresh saves no Google value", () => {
     expect(src).toContain('.insert({ ...savedScanRow(ranked, latest.scan_id, businessId), created_at: latest.created_at })');
   });
 });
+
+describe("speed-up: a new scan shows right away while its websites are checked", () => {
+  const rows = [
+    savedRow("new", "2026-10-11T18:00:00Z", true, "Modern Liquors", 72),
+    savedRow("new", "2026-10-11T18:00:00Z", false, "Main Street Liquors", 80),
+    savedRow("old", "2026-09-20T18:00:00Z", true, "Modern Liquors", 74),
+    savedRow("old", "2026-09-20T18:00:00Z", false, "Main Street Liquors", 79),
+  ];
+
+  test("the scan being scored is the one shown, with 'Updating — X of Y'; history keeps finished scans only", async () => {
+    const { client } = fakeSupabase({ businesses: [BUSINESS], competitor_scans: rows, competitor_scoring_jobs: [{ scan_id: "new", kind: "new_scan", status: "running", done: 1, total: 2, error: null }] });
+    const result = await getCompetitorsWithClient(client, "biz", NOW);
+    if (result.status !== "ok") throw new Error(result.status);
+    expect(result.latest?.scanId).toBe("new");
+    expect(result.updating).toEqual({ done: 1, total: 2 });
+    expect(result.rankHistory.map((p) => p.scanId)).toEqual(["old"]);
+  });
+
+  test("paused (PageSpeed budget): the last finished scan stays, as before", async () => {
+    const { client } = fakeSupabase({ businesses: [BUSINESS], competitor_scans: rows, competitor_scoring_jobs: [{ scan_id: "new", kind: "new_scan", status: "failed", done: 1, total: 2, error: "Paused: today's PageSpeed budget…" }] });
+    const result = await getCompetitorsWithClient(client, "biz", NOW);
+    if (result.status !== "ok") throw new Error(result.status);
+    expect(result.latest?.scanId).toBe("old");
+    expect(result.updating).toBeNull();
+  });
+});

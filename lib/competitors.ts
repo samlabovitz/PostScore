@@ -9,6 +9,7 @@ import { alsoNearby, establishedCount, MAX_COMPETITOR_DISTANCE_MILES, MIN_ESTABL
 import { MAX_CALLS_PER_SCAN } from "@/lib/placesSearchBudget";
 import { GOOGLE_TABLE_A_TYPES } from "@/lib/google/placeTypesTableA";
 import {
+  breakdownFromChecks,
   businessRowToScoringInput,
   isRealWebsite,
   scoreBusiness,
@@ -1086,10 +1087,23 @@ export async function findAndScoreCompetitors(
   };
 }
 
+/** A competitor's first score before its website is checked: "Has a
+ * website" isn't counted until the site is (the engine would otherwise give
+ * its 4 points for a link alone) — so the list shown right away never
+ * credits a website nobody checked. The full scoring replaces it. Pure. */
+export function withWebsitePending(breakdown: ScoreBreakdown, locale: Locale): ScoreBreakdown {
+  const hasSite = breakdown.checks.find((c) => c.id === "website.has_website");
+  if (!hasSite || !hasSite.earnedPoints) return breakdown;
+  return breakdownFromChecks(
+    breakdown.checks.map((c) => (c.id === "website.has_website" ? { ...c, earnedPoints: null, confidence: "UNCERTAIN" as const, meta: { ...(c.meta ?? {}), websitePending: "1" } } : c)),
+    locale
+  );
+}
+
 /** One competitor, scored from its own search listing (no network call). */
 export function rankedFromCandidate(candidate: NearbyCandidate, distanceMeters: number, locale: Locale): RankedCompetitor {
   const place = candidate.details;
-  const breakdown = scoreBusiness(businessRowToScoringInput(placeDetailsToScoringRow(place)), locale);
+  const breakdown = withWebsitePending(scoreBusiness(businessRowToScoringInput(placeDetailsToScoringRow(place)), locale), locale);
   return {
     placeId: candidate.placeId,
     name: place.name ?? candidate.name ?? "(unnamed listing)",

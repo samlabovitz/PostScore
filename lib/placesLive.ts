@@ -20,6 +20,10 @@ export const DEFAULT_PLACES_LIVE_LIST_MONTHLY_CAP = 1000;
 export const DEFAULT_PLACES_LIVE_READ_MONTHLY_CAP = 1000;
 /** Saved competitors the list call didn't return, read one by one — at most this many per page load. */
 export const MAX_LIVE_DETAILS_PER_LOAD = 5;
+/** More places the page names ("Also nearby", "Removed by you") get their
+ * own few reads, so a name is never left as "—" because the ranked list
+ * used the allowance. Same cache, same monthly cap. */
+export const MAX_LIVE_EXTRA_DETAILS_PER_LOAD = 5;
 
 export type LiveKind = "live_list" | "live_read";
 

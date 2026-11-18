@@ -110,8 +110,8 @@ describe("PageSpeed budget", () => {
   });
 
   test("slows down for the per-100-seconds limit", () => {
-    expect(scoringConcurrency({})).toBe(4);
-    expect(scoringConcurrency({ PAGESPEED_PER_100S_LIMIT: "400" })).toBe(4);
+    expect(scoringConcurrency({})).toBe(5);
+    expect(scoringConcurrency({ PAGESPEED_PER_100S_LIMIT: "400" })).toBe(5);
     expect(scoringConcurrency({ PAGESPEED_PER_100S_LIMIT: "25" })).toBe(2);
     expect(scoringConcurrency({ PAGESPEED_PER_100S_LIMIT: "5" })).toBe(1);
   });

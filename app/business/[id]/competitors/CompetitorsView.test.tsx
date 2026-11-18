@@ -394,3 +394,59 @@ describe("a competitor whose Google website link doesn't reach a real site", () 
     expect(render()).not.toContain('data-testid="listing-link-problem"');
   });
 });
+
+describe("speed-up wording (EN + ES)", () => {
+  const withHasSite = (meta: Record<string, string>, earned: number | null = 4) => {
+    const e = entry("Rival Bakery", 70);
+    const checks = e.breakdown!.checks.map((c) => (c.id === "website.has_website" ? { ...c, earnedPoints: earned, meta } : c.category === "website" && earned === null ? { ...c, earnedPoints: null } : c));
+    return { ...e, breakdown: { ...e.breakdown!, checks } };
+  };
+  const withEntry = (e: SavedCompetitorEntry, extra: Partial<typeof DATA> = {}) => ({ ...DATA, ...extra, latest: { ...DATA.latest!, entries: [...DATA.latest!.entries, e] } });
+
+  test("'Updating — X of Y websites checked' while the new scan's websites fill in", () => {
+    const data = { ...DATA, scoring: { scanId: "s", kind: "new_scan" as const, status: "running" as const, done: 3, total: 7, error: null }, updating: { done: 3, total: 7 } };
+    expect(render(data)).toContain("Updating — 3 of 7 websites checked");
+    expect(render(data, "es")).toContain("Actualizando: 3 de 7 sitios web revisados");
+    expect(render(data)).not.toContain("The new scan appears when every site is done.");
+  });
+
+  test("a site still being checked: 'checking…'", () => {
+    const pending = withHasSite({ websitePending: "1" }, null);
+    expect(render(withEntry(pending, { updating: { done: 1, total: 2 } }))).toContain("Website checking…");
+    expect(render(withEntry(pending, { updating: { done: 1, total: 2 } }), "es")).toContain("revisando…");
+  });
+
+  test("a reused result: 'Website checked {date}'", () => {
+    const reused = withHasSite({ fullScore: "1", websiteCheckedAt: "2026-11-15T15:00:00Z" });
+    expect(render(withEntry(reused))).toContain("Website checked Nov 15, 2026");
+    expect(render(withEntry(reused), "es")).toContain("Sitio web revisado el 15 nov 2026");
+  });
+
+  test("past the 5-minute limit: 'couldn't be checked (timed out) — we'll try again next refresh'", () => {
+    const slow = withHasSite({ fullScore: "1", websiteNotChecked: "deadline" }, null);
+    expect(render(withEntry(slow))).toContain("Website couldn’t be checked (timed out) — we’ll try again next refresh");
+    expect(render(withEntry(slow), "es")).toContain("No se pudo revisar el sitio web (se agotó el tiempo); lo intentaremos de nuevo en la próxima actualización");
+  });
+});
+
+describe("Browser-check fixes", () => {
+  test("a broken or parked listing link says 'Website link broken', never 'Has website' (EN + ES)", () => {
+    const e = entry("Kathy's Crusty Creations", 42);
+    const checks = e.breakdown!.checks.map((c) => (c.id === "website.has_website" ? { ...c, earnedPoints: 0, gaps: ["listing_broken"], meta: { fullScore: "1" } } : c));
+    const data = { ...DATA, latest: { ...DATA.latest!, entries: [...DATA.latest!.entries, { ...e, breakdown: { ...e.breakdown!, checks } }] } };
+    // Her card in the ranked list (the chart at the top names her too).
+    const card = (html: string) => {
+      const at = html.lastIndexOf("<li", html.lastIndexOf("Kathy's Crusty Creations</span>"));
+      return html.slice(at, html.indexOf("</li>", at));
+    };
+    expect(card(render(data))).toContain("Website link broken");
+    expect(card(render(data))).not.toContain("Has website");
+    expect(card(render(data, "es"))).toContain("Enlace al sitio web roto");
+  });
+
+  test("'Also nearby' rows whose name couldn't be read are left out, never shown as '—'", async () => {
+    const page = (await import("node:fs")).readFileSync("app/business/[id]/competitors/page.tsx", "utf8");
+    expect(page).toContain("alsoNearby: alsoNearby.map((l) => withLiveListing(l, live.extra[l.placeId])).filter((l) => !!l.name),");
+    expect(page).toContain("{ ...fetched, alsoNearby: [] }");
+  });
+});

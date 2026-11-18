@@ -42,6 +42,7 @@ import { withMissingNames } from "@/lib/placesLive";
 import { MAX_SEARCH_RADIUS_MILES } from "@/lib/competitorScanPolicy";
 import { estimateLabelWidth, layoutLabels, shortName, type Lane, type LabelRequest } from "@/lib/lineupLayout";
 import { gradeFromTotal } from "@/lib/scoring";
+import { websiteCheckedAt } from "@/lib/competitorWebsiteReuse";
 import { formatCount, formatShortDate, t, tPlural, useLocale, useTimeZone, type Locale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { placeTypeList } from "@/lib/placeTypeLabels";
@@ -98,17 +99,18 @@ function checkLabel(checkId: string, locale: Locale): string {
 
 /** The Website chip's value: "67%", "No website" / "Facebook page only",
  * or "couldn't check" — never a made-up number. */
-function websiteChipValue(entry: SavedCompetitorEntry, score: number | null, locale: Locale): string {
+function websiteChipValue(entry: SavedCompetitorEntry, score: number | null, locale: Locale, updating = false): string {
   if (entry.hasWebsite === false) {
     const platform = socialPlatformOf(entry);
     return platform ? t(locale, "dashboard.competitors.socialPageOnly", { platform }) : t(locale, "dashboard.competitors.noWebsite");
   }
   if (score !== null) return `${score}%`;
-  if (!isFullScored(entry)) return t(locale, "dashboard.competitors.websiteNotCheckedYet");
+  // The new scan is being scored: this site is next ("checking…").
+  if (!isFullScored(entry)) return t(locale, updating ? "dashboard.competitors.websiteChecking" : "dashboard.competitors.websiteNotCheckedYet");
   return t(locale, "dashboard.competitors.websiteCouldntCheckReason", { reason: reasonText(websiteNotCheckedReason(entry), locale) });
 }
 
-const KNOWN_REASONS = ["blocked", "timed_out", "js_only", "error_page", "unreachable", "no_address", "listing_facts", "speed_test"];
+const KNOWN_REASONS = ["blocked", "timed_out", "js_only", "error_page", "unreachable", "no_address", "listing_facts", "speed_test", "deadline"];
 
 /** An observed reason in words ("couldn't check" alone when none was recorded). */
 function reasonText(reason: string | null, locale: Locale): string {
@@ -190,7 +192,7 @@ export function CompetitorsView({
           <span>{t(locale, "dashboard.live.unavailable")}</span>
         </div>
       )}
-      {data.scoring && <ScoringProgressNote progress={data.scoring} />}
+      {data.scoring && <ScoringProgressNote progress={data.scoring} updating={!!data.updating} />}
       {/* One time, after the competitor-picking update (no "dropped" alert across it). */}
       {data.selectionUpdated && <CompetitorSelectionNote businessId={businessId} />}
 
@@ -268,7 +270,7 @@ export function CompetitorsView({
             />
             <ComparedWithLine businessId={businessId} count={scan.entries.filter((e) => !e.isSubject).length} comparedWith={data.comparedWith ?? null} fallbackNoun={data.competitorNoun} />
             {data.distanceNote && <DistanceNote note={data.distanceNote} noun={data.competitorNoun} />}
-            <RankedList scan={scan} view={view} businessId={businessId} />
+            <RankedList scan={scan} view={view} businessId={businessId} updating={!!data.updating} />
             {(data.alsoNearby ?? []).length > 0 && <AlsoNearby listings={data.alsoNearby!} />}
             <RemovedByOwner businessId={businessId} removed={data.removedByOwner ?? []} />
             <AddCompetitor businessId={businessId} />
@@ -286,7 +288,7 @@ export function CompetitorsView({
 /** "Checking 7 of 11 competitor websites…" while a scan is being fully
  * scored in the background (the last finished results stay on the page
  * meanwhile). Refreshes itself every few seconds while it runs. */
-function ScoringProgressNote({ progress }: { progress: NonNullable<OkResult["scoring"]> }) {
+function ScoringProgressNote({ progress, updating = false }: { progress: NonNullable<OkResult["scoring"]>; updating?: boolean }) {
   const locale = useLocale();
   const router = useRouter();
   const active = progress.status === "queued" || progress.status === "running";
@@ -299,10 +301,13 @@ function ScoringProgressNote({ progress }: { progress: NonNullable<OkResult["sco
     <div role="status" className="flex items-start gap-2.5 rounded-xl border border-paper-deep bg-white px-4 py-3 text-[13px] text-ink-soft">
       {active ? <IconRefresh size={15} className="mt-0.5 shrink-0 animate-spin text-brass motion-reduce:animate-none" aria-hidden /> : <IconAlertCircle size={15} className="mt-0.5 shrink-0 text-ink-mute" aria-hidden />}
       <span>
-        {active
-          ? t(locale, "dashboard.competitors.scoringProgress", { done: progress.done, total: progress.total })
-          : t(locale, "dashboard.competitors.scoringPaused", { done: progress.done, total: progress.total })}
-        {active && <span className="text-ink-mute"> {t(locale, progress.kind === "backfill" ? "dashboard.competitors.scoringProgressBackfill" : "dashboard.competitors.scoringProgressNew")}</span>}
+        {active && updating
+          ? // The new scan is already on the page; its websites fill in as they finish.
+            t(locale, "dashboard.competitors.updatingProgress", { done: progress.done, total: progress.total })
+          : active
+            ? t(locale, "dashboard.competitors.scoringProgress", { done: progress.done, total: progress.total })
+            : t(locale, "dashboard.competitors.scoringPaused", { done: progress.done, total: progress.total })}
+        {active && !updating && <span className="text-ink-mute"> {t(locale, progress.kind === "backfill" ? "dashboard.competitors.scoringProgressBackfill" : "dashboard.competitors.scoringProgressNew")}</span>}
       </span>
     </div>
   );
@@ -725,7 +730,7 @@ function LeadTrail({ scan, businessId }: { scan: SavedCompetitorScan; businessId
   );
 }
 
-function RankedList({ scan, view, businessId }: { scan: SavedCompetitorScan; view: CompareView; businessId: string }) {
+function RankedList({ scan, view, businessId, updating = false }: { scan: SavedCompetitorScan; view: CompareView; businessId: string; updating?: boolean }) {
   const locale = useLocale();
   const ranked = rankBy(scan, view);
   const showRank = headToHead(scan) === null;
@@ -735,15 +740,17 @@ function RankedList({ scan, view, businessId }: { scan: SavedCompetitorScan; vie
       {anyNotChecked && <p className="mb-2.5 text-[12.5px] text-ink-soft">{t(locale, "dashboard.competitors.someWebsitesNotChecked")}</p>}
       <ol className="flex flex-col gap-2.5">
         {ranked.map((r) => (
-          <CompetitorCard key={r.entry.placeId} entry={r.entry} rank={showRank ? r.rank : null} view={view} businessId={businessId} />
+          <CompetitorCard key={r.entry.placeId} entry={r.entry} rank={showRank ? r.rank : null} view={view} businessId={businessId} updating={updating} />
         ))}
       </ol>
     </>
   );
 }
 
-function CompetitorCard({ entry, rank, view, businessId }: { entry: SavedCompetitorEntry; rank: number | null; view: CompareView; businessId: string }) {
+function CompetitorCard({ entry, rank, view, businessId, updating = false }: { entry: SavedCompetitorEntry; rank: number | null; view: CompareView; businessId: string; updating?: boolean }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
+  const checkedAt = entry.isSubject ? null : websiteCheckedAt(entry.breakdown);
   const unavailable = !!entry.liveMissing;
   const [open, setOpen] = useState(false);
   const price = priceLevelToSymbol(entry.priceLevel);
@@ -796,7 +803,15 @@ function CompetitorCard({ entry, rank, view, businessId }: { entry: SavedCompeti
             {websiteCouldntBeChecked(entry) && (
               <span className="inline-flex items-center gap-1 rounded-md border border-paper-deep bg-paper px-1.5 py-0.5 text-[11px] font-medium text-ink-soft">
                 <IconAlertCircle size={12} aria-hidden />
-                {t(locale, "dashboard.competitors.websiteCouldntBeCheckedReason", { reason: reasonText(websiteNotCheckedReason(entry), locale) })}
+                {websiteNotCheckedReason(entry) === "deadline"
+                  ? t(locale, "dashboard.competitors.websiteTimedOutRetry")
+                  : t(locale, "dashboard.competitors.websiteCouldntBeCheckedReason", { reason: reasonText(websiteNotCheckedReason(entry), locale) })}
+              </span>
+            )}
+            {/* A website result from the last 14 days, reused (not checked again this refresh). */}
+            {checkedAt && (
+              <span data-testid="website-checked-on" className="rounded-md bg-paper px-1.5 py-0.5 text-[11px] font-medium text-ink-mute">
+                {t(locale, "dashboard.competitors.websiteCheckedOn", { date: formatShortDate(checkedAt, locale, timeZone) })}
               </span>
             )}
           </div>
@@ -816,20 +831,23 @@ function CompetitorCard({ entry, rank, view, businessId }: { entry: SavedCompeti
               </span>
             )}
             <span>
-              {entry.hasWebsite === null
-                ? t(locale, "dashboard.competitors.notChecked")
-                : entry.hasWebsite
-                  ? t(locale, "dashboard.competitors.hasWebsite")
-                  : socialPlatformOf(entry)
-                    ? t(locale, "dashboard.competitors.socialPageOnly", { platform: socialPlatformOf(entry)! })
-                    : t(locale, "dashboard.competitors.noWebsite")}
+              {/* A parked or broken listing link is never "Has website". */}
+              {!entry.isSubject && listingLinkProblem(entry)
+                ? t(locale, "dashboard.competitors.websiteLinkBroken")
+                : entry.hasWebsite === null
+                  ? t(locale, "dashboard.competitors.notChecked")
+                  : entry.hasWebsite
+                    ? t(locale, "dashboard.competitors.hasWebsite")
+                    : socialPlatformOf(entry)
+                      ? t(locale, "dashboard.competitors.socialPageOnly", { platform: socialPlatformOf(entry)! })
+                      : t(locale, "dashboard.competitors.noWebsite")}
             </span>
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {categoryScores.map(({ v, score }) =>
               v === "website" ? (
                 <span key={v} className={cn("rounded-md px-1.5 py-0.5 text-[11.5px]", v === view ? "bg-[color:color-mix(in_srgb,var(--color-ink)_10%,transparent)] font-semibold text-ink" : "bg-paper text-ink-soft")}>
-                  {t(locale, VIEW_LABEL.website)} {websiteChipValue(entry, score, locale)}
+                  {t(locale, VIEW_LABEL.website)} {websiteChipValue(entry, score, locale, updating)}
                 </span>
               ) : (
                 <span key={v} className={cn("rounded-md px-1.5 py-0.5 text-[11.5px]", v === view ? "bg-[color:color-mix(in_srgb,var(--color-ink)_10%,transparent)] font-semibold text-ink" : "bg-paper text-ink-soft")}>

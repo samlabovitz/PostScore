@@ -59,10 +59,11 @@ export default async function CompetitorsPage({ params }: { params: { id: string
     ? {
         ...fetched,
         latest: live.scan,
-        alsoNearby: alsoNearby.map((l) => withLiveListing(l, live.extra[l.placeId])),
+        // A name that couldn't be read leaves its row out — never a "—" list.
+        alsoNearby: alsoNearby.map((l) => withLiveListing(l, live.extra[l.placeId])).filter((l) => !!l.name),
         removedByOwner: removed.map((o) => ({ ...o, name: live.extra[o.placeId]?.name ?? null })),
       }
-    : fetched;
+    : { ...fetched, alsoNearby: [] };
 
   return (
     <DashboardShell

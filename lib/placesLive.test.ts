@@ -7,6 +7,7 @@ import {
   LIVE_CACHE_MS,
   LiveCache,
   MAX_LIVE_DETAILS_PER_LOAD,
+  MAX_LIVE_EXTRA_DETAILS_PER_LOAD,
   canMakeLiveCall,
   liveSearchRadius,
   placesLiveMonthlyCap,
@@ -222,6 +223,20 @@ describe("liveCompetitorPlaces: one visit, as few calls as possible", () => {
     await liveCompetitorPlaces({ ...QUERY, placeIds: ids }, d);
     expect(d.details).toHaveBeenCalledTimes(MAX_LIVE_DETAILS_PER_LOAD);
     expect((d.details as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0])).toEqual(ids.slice(0, MAX_LIVE_DETAILS_PER_LOAD));
+  });
+
+  test(`"Also nearby" / "Removed by you" names get their own ${MAX_LIVE_EXTRA_DETAILS_PER_LOAD} reads — never left as "—" because the ranked list used the allowance`, async () => {
+    const ids = ["own", ...Array.from({ length: 9 }, (_, i) => `x${i}`)];
+    const extra = ["n1", "n2", "n3", "x0"];
+    const d = deps({ nearby: vi.fn(async () => []) });
+    const r = await liveCompetitorPlaces({ ...QUERY, placeIds: ids, extraPlaceIds: extra }, d);
+    const asked = (d.details as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
+    expect(asked).toEqual([...ids.slice(0, MAX_LIVE_DETAILS_PER_LOAD), "n1", "n2", "n3"]);
+    expect(r.status === "ok" && ["n1", "n2", "n3"].every((id) => r.places[id])).toBe(true);
+    const many = Array.from({ length: 9 }, (_, i) => `n${i}`);
+    const d2 = deps({ nearby: vi.fn(async () => []) });
+    await liveCompetitorPlaces({ ...QUERY, placeIds: ["own"], extraPlaceIds: many }, d2);
+    expect(d2.details).toHaveBeenCalledTimes(1 + MAX_LIVE_EXTRA_DETAILS_PER_LOAD);
   });
 
   test("Details answers are kept under the saved place ID (Google may answer with a newer one)", async () => {

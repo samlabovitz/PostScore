@@ -10,6 +10,7 @@ import { getPlaceLive, searchNearbyLive, searchTextLive } from "@/lib/google/pla
 import {
   LiveCache,
   MAX_LIVE_DETAILS_PER_LOAD,
+  MAX_LIVE_EXTRA_DETAILS_PER_LOAD,
   canMakeLiveCall,
   liveSearchRadius,
   placesLiveMonthlyCap,
@@ -96,18 +97,22 @@ export async function liveCompetitorPlaces(
     includedTypes: string[];
     /** The phrase the scan searched ("hair salons in Westfield, NJ"), or null. */
     textQuery?: string | null;
+    /** More places the page names ("Also nearby", "Removed by you") — their own allowance. */
+    extraPlaceIds?: string[];
   },
   deps: LiveDeps = defaultDeps()
 ): Promise<LiveCompetitorsResult> {
   const { cache } = deps;
   const places: Record<string, LivePlace> = {};
   const fromCache = () => {
-    for (const id of input.placeIds) {
+    for (const id of allIds) {
       const hit = cache.get<LivePlace>(placeKey(id), deps.now());
       if (hit) places[id] = hit;
     }
   };
-  const missing = () => input.placeIds.filter((id) => !places[id]);
+  const extraIds = (input.extraPlaceIds ?? []).filter((id) => !input.placeIds.includes(id));
+  const allIds = [...input.placeIds, ...extraIds];
+  const missing = () => allIds.filter((id) => !places[id]);
   fromCache();
   if (missing().length === 0) return { status: "ok", places };
 
@@ -136,7 +141,10 @@ export async function liveCompetitorPlaces(
     }
   }
 
-  const rest = missing().slice(0, MAX_LIVE_DETAILS_PER_LOAD);
+  const rest = [
+    ...missing().filter((id) => input.placeIds.includes(id)).slice(0, MAX_LIVE_DETAILS_PER_LOAD),
+    ...missing().filter((id) => extraIds.includes(id)).slice(0, MAX_LIVE_EXTRA_DETAILS_PER_LOAD),
+  ];
   if (rest.length > 0) {
     const used = await deps.used("live_read");
     const cap = placesLiveMonthlyCap("live_read");
@@ -174,7 +182,8 @@ export async function withLiveCompetitorValues(
   const live = await liveCompetitorPlaces(
     {
       businessId,
-      placeIds: Array.from(new Set([...placesToFetch(base), ...extraPlaceIds])),
+      placeIds: placesToFetch(base),
+      extraPlaceIds: Array.from(new Set(extraPlaceIds)),
       lat: query.lat,
       lng: query.lng,
       radiusMeters: liveSearchRadius(base.entries),

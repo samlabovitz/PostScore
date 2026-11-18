@@ -118,6 +118,9 @@ export type GetCompetitorsResult =
       latest: SavedCompetitorScan | null;
       /** A scan still being fully scored ("Checking 7 of 11…"), or null. */
       scoring: ScoringProgress | null;
+      /** The scan shown is the new one still being scored: "Updating — 3 of
+       * 7 websites checked" (its sites fill in as they finish). */
+      updating?: { done: number; total: number } | null;
       /** Owner's rank per saved scan, oldest first (one point per scan). */
       rankHistory: CompetitorRankPoint[];
       /** Show the one-time "We updated how we pick your competitors" note. */
@@ -232,13 +235,20 @@ export async function getCompetitorsWithClient(
   // number, rank and chart dot match the score card); earlier scans keep
   // the score saved with them — that's the history.
   const scans = groupSavedScans(withoutUnfinished(allRows, unfinished)).map((s, i) => (i === 0 ? withLatestOwnerScore(s, latestScore, locale) : s));
-  const latest = scans[0] ? applyOverrides(scans[0], overrides) : null;
+  // Speed-up: a new scan still being scored is shown right away, its
+  // websites filling in as they finish. History ("Compared over time"),
+  // reports, the recap and PostAI keep using finished scans only.
+  const active = scoring && scoring.kind === "new_scan" && (scoring.status === "queued" || scoring.status === "running") ? scoring : null;
+  const inProgress = active ? groupSavedScans(allRows.filter((r) => r.scan_id === active.scanId))[0] : undefined;
+  const shown = inProgress ? withLatestOwnerScore(inProgress, latestScore, locale) : scans[0];
+  const latest = shown ? applyOverrides(shown, overrides) : null;
   const newestSavedAt = allRows[0]?.created_at ?? null;
   const owner = await withOwnerDetailsFor(supabase, businessId, { name: row.name as string | null, address: row.address as string | null });
 
   return {
     status: "ok",
     scoring,
+    updating: inProgress && active ? { done: active.done, total: active.total } : null,
     // Day 23 2d-3: the owner's confirmed name and address.
     businessName: owner.name,
     businessAddress: owner.address,
