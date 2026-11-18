@@ -42,3 +42,6 @@ next-env.d.ts
 
 # scratch output from scripts/live-check-postai.ts — never a project artifact
 scripts/.live-check-postai-output.json
+
+# signed-in self-check screenshots (scripts/devShot.ts)
+/.devshots/

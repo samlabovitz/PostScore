@@ -41,6 +41,13 @@ Next.js 14 + Supabase. These rules are standing: follow them in every session.
 ## Self-check before reporting a UI change as done
 - Open the affected pages on localhost (signed in) with Playwright, take screenshots, check them in EN and ES where the change has wording, and fix obvious problems before reporting.
 - Name the pages checked in the report. If a page couldn't be checked, say so.
+- **How:** with the dev server running, `npx --no-install tsx --env-file=.env.local scripts/devShot.ts /business/<id>/website [more paths] [--lang=es] [--plan=premium] [--width=1280]`. Screenshots go to `.devshots/` (gitignored); open them with Read.
+  - It signs in through `/dev/test-login` as `DEV_TEST_LOGIN_EMAIL` / `DEV_TEST_LOGIN_PASSWORD` from `.env.local`, which the server reads. Never type, print or commit them.
+  - The route only works under `next dev` on localhost. It returns 404 in production, in tests, from another host or machine, or when those variables aren't set; the `x-dev-test-login` header says why.
+  - Only that account's businesses can be checked.
+  - `--lang=es` sets those businesses' saved language for the screenshots and always puts the owner's setting back.
+  - `--plan=free|grow|premium|multi` views the pages as that plan, in the script's own browser only. Free and paid plans show different Website cards, so check both.
+  - It uses `playwright-core` with the installed Google Chrome (no browser download).
 
 ## Committing
 - **Never commit until Sam has tested in the browser** and says so. Push only when Sam says push.

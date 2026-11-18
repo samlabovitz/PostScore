@@ -537,6 +537,8 @@ export function WebsiteScoreCompact({ websiteCategory }: { websiteCategory: Cate
           </div>
         </div>
       </div>
+      {/* v1.17.0: Free sees "Partly checked" and the allow-PostScoreBot note too. */}
+      {websiteCategory.partlyChecked && <WebsiteCoverageNote category={websiteCategory} hasWebsite className="text-[13px] text-ink-soft" />}
       <ul className="flex flex-col divide-y divide-paper-line">
         {websiteCategory.checks.map((check) => {
           const state = deriveRowState(check);
